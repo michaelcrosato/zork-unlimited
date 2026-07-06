@@ -91,6 +91,9 @@ Make discovered overworld quest leads start real RPG sessions.
 - World graph route helpers now project coordinates, movement deltas, and
   Manhattan step distances through `world_path`, route listings, and quest-start
   metadata.
+- `world_path` now defaults to compact `path_v: 1` rows shaped as
+  `[id, name, kind, coord, route_from_previous, distance_from_previous]`;
+  `compact_path: false` preserves the full world/path objects for debug callers.
 - World graph helpers now derive compact map bounds from the coordinate matrix;
   `list_world({ include_graph: true })` exposes those bounds without pack paths.
 - World graph edge projection now includes endpoint coordinates, deltas, and

@@ -366,28 +366,41 @@ describe("MCP tools — validate / load (§9.4)", () => {
     const r = api().world_path({ world_quest_id: "sunken_barrow" });
     expect(r.graph_node).toBe("sunken_barrow");
     expect(r.world_quest_id).toBe("sunken_barrow");
+    expect(r.path_v).toBe(1);
+    expect(r.path).toEqual([
+      ["charterhaven", "Charterhaven", "hub", [0, 0], null, null],
+      ["moor_road", "Moor Road", "route", [-2, 2], "moor road", 4],
+      ["sunken_barrow", "The Sunken Barrow", "quest", [-3, 3], "barrow causeway", 2],
+    ]);
+    expect("world" in r).toBe(false);
+    expect("path_from_hub" in r).toBe(false);
+
+    const full = api().world_path({ world_quest_id: "sunken_barrow", compact_path: false });
+    expect(full.world.hub).toBe("Charterhaven");
+    expect(full.graph_node).toBe("sunken_barrow");
+    expect(full.world_quest_id).toBe("sunken_barrow");
     expect("quest_path" in r).toBe(false);
-    expect(r.path_from_hub.map((step) => step.name)).toEqual([
+    expect(full.path_from_hub.map((step) => step.name)).toEqual([
       "Charterhaven",
       "Moor Road",
       "The Sunken Barrow",
     ]);
-    expect(r.path_from_hub.map((step) => step.coord)).toEqual([
+    expect(full.path_from_hub.map((step) => step.coord)).toEqual([
       [0, 0],
       [-2, 2],
       [-3, 3],
     ]);
-    expect(r.path_from_hub[1]?.route_from_previous).toBe("moor road");
-    expect(r.path_from_hub[1]?.delta_from_previous).toEqual([-2, 2]);
-    expect(r.path_from_hub[1]?.distance_from_previous).toBe(4);
-    expect(r.path_from_hub[2]?.delta_from_previous).toEqual([-1, 1]);
-    expect(r.path_from_hub[2]?.distance_from_previous).toBe(2);
+    expect(full.path_from_hub[1]?.route_from_previous).toBe("moor road");
+    expect(full.path_from_hub[1]?.delta_from_previous).toEqual([-2, 2]);
+    expect(full.path_from_hub[1]?.distance_from_previous).toBe(4);
+    expect(full.path_from_hub[2]?.delta_from_previous).toEqual([-1, 1]);
+    expect(full.path_from_hub[2]?.distance_from_previous).toBe(2);
 
     const byCoord = api().world_path({ coord: [-2, 2] });
     expect(byCoord.world_quest_id).toBeNull();
     expect(byCoord.graph_node).toBe("moor_road");
-    expect(byCoord.path_from_hub.map((step) => step.name)).toEqual(["Charterhaven", "Moor Road"]);
-    expect(byCoord.path_from_hub.at(-1)?.coord).toEqual([-2, 2]);
+    expect(byCoord.path.map((step) => step[1])).toEqual(["Charterhaven", "Moor Road"]);
+    expect(byCoord.path.at(-1)?.[3]).toEqual([-2, 2]);
 
     expect(() => api().world_path({})).toThrow(/requires world_quest_id or coord/);
     expect(() => api().world_path({ world_quest_id: "sunken_barrow", coord: [-2, 2] })).toThrow(

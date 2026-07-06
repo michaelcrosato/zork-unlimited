@@ -1,10 +1,19 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 483 -->
+<!-- historical_cycle_count: 484 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - compact_world_path_rows
+
+- Pre-cycle: `C:\dev\agent-cleaner` measure/gates passed through WSL; optional secret scanner remains absent, and WSL git-dir warnings still print after the green gate summary.
+- Engine/loop surface: `world_path` now defaults to `path_v: 1` compact rows `[id, name, kind, coord, route_from_previous, distance_from_previous]`, while `compact_path: false` preserves the previous full `world` plus `path_from_hub` object response.
+- Loop effect: measured `sunken_barrow` route lookup drops from 569 to 265 bytes; full opt-out remains 569 bytes for debug callers.
+- Self-critique: this trims setup/navigation planning rather than per-turn play, but it removes repeated route-object field names without hiding the useful map facts agents need.
+- Guard: focused MCP ToolApi and server-registration regressions pin compact defaults, full-path opt-out, coordinate lookup rows, and ToolSearch schema budget.
+- VERIFY: `C:\dev\agent-cleaner`, focused MCP regressions, payload probe, `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, `npm test`, `npm run health`, and `npm run assess` passed after loop-state rotation.
 
 ### Cycle result - save_content_hash_opt_in
 
@@ -131,12 +140,3 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Self-critique: this is a catalog-read win rather than a per-turn engine win, but it trims the ordinary target-selection surface blind agents and maintenance loops touch before play starts.
 - Guard: focused MCP catalog, assessor, AI-loop, and MCP registration regressions pin tuple defaults, detailed object opt-ins, and the public tool description.
 - VERIFY: `C:\dev\agent-cleaner`, focused catalog/assessor/AI-loop/schema regressions, payload probe, `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, `npm test`, and `npm run health` passed after loop-state rotation.
-
-### Cycle result - rpg_compact_prose_caps_v11
-
-- Pre-cycle: `C:\dev\agent-cleaner` measure/gates passed through WSL; optional secret scanner remains absent.
-- Engine/loop surface: compact RPG observations now use `v: 11`, trim trailing compact prose whitespace, and cap room/ending prose at 560 chars, dialogue at 420, blocked-exit hints at 240.
-- Loop effect: default `get_observation` on the current first shipped quest drops from 1232 to 1073 bytes; `start_world_quest` drops from 1471 to 1131 bytes while full observations remain opt-in.
-- Self-critique: this is a direct hot-path shrink, but it still pays prose cost each changed room; unchanged hash polling remains the main repeat-turn savings.
-- Guard: focused compact-observation/MCP start tests pin exported caps, versioning, clone behavior, and full-observation opt-out.
-- VERIFY: `C:\dev\agent-cleaner`, focused compact-observation/MCP tests, payload probes, `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, `npm test`, and `npm run health` passed after loop-state rotation.

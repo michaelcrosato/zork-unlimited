@@ -88,10 +88,11 @@ tool(
 );
 tool(
   "world_path",
-  "Return the route from Charterhaven to a world graph node.",
+  "Path rows [id,name,kind,coord,route,dist].",
   {
-    world_quest_id: z.string().optional().describe("World quest id."),
-    coord: z.tuple([z.number().int(), z.number().int()]).optional().describe("Node coordinate."),
+    world_quest_id: z.string().optional().describe("Quest."),
+    coord: z.tuple([z.number().int(), z.number().int()]).optional().describe("Coord."),
+    compact_path: z.boolean().optional().describe("Full."),
   },
   (a) => api.world_path(a),
 );

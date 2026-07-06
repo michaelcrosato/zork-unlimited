@@ -131,6 +131,39 @@ type WorldListResponse<Args extends WorldListOptions> = {
   quests: WorldListQuest<Args>[];
 } & (Args extends { include_graph: true } ? { graph: PublicWorldGraph } : Record<string, never>);
 
+type WorldPathOptions = {
+  world_quest_id?: string;
+  coord?: WorldCoord;
+  compact_path?: boolean;
+};
+
+type CompactWorldRouteStep = readonly [
+  id: string,
+  name: string,
+  kind: WorldRouteStep["kind"],
+  coord: WorldCoord | null,
+  route_from_previous: string | null,
+  distance_from_previous: number | null,
+];
+
+type CompactWorldPathResponse = {
+  world_quest_id: string | null;
+  graph_node: string | null;
+  path_v: 1;
+  path: CompactWorldRouteStep[];
+};
+
+type FullWorldPathResponse = {
+  world: PublicWorldSummary;
+  world_quest_id: string | null;
+  graph_node: string | null;
+  path_from_hub: WorldRouteStep[];
+};
+
+type WorldPathResponse<Args extends WorldPathOptions> = Args extends { compact_path: false }
+  ? FullWorldPathResponse
+  : CompactWorldPathResponse;
+
 type RpgViewOptions = {
   compact_actions?: boolean;
   compact_observation?: boolean;
@@ -380,6 +413,17 @@ function compactInspectTraceStepSummary(
   ]);
 }
 
+function compactWorldRouteStep(step: WorldRouteStep): CompactWorldRouteStep {
+  return [
+    step.id,
+    step.name,
+    step.kind,
+    step.coord ?? null,
+    step.route_from_previous ?? null,
+    step.distance_from_previous ?? null,
+  ];
+}
+
 type RpgWorldQuestStartPayload<Args extends RpgStartWorldQuestArgs> =
   RpgRuntimeWorldQuestStartPayload<Args>;
 
@@ -507,12 +551,7 @@ export function createToolApi(opts: { root: string }) {
       return catalog as WorldListResponse<Args>;
     },
 
-    world_path(args: { world_quest_id?: string; coord?: WorldCoord }): {
-      world: Pick<WorldManifest, "id" | "name" | "hub">;
-      world_quest_id: string | null;
-      graph_node: string | null;
-      path_from_hub: WorldRouteStep[];
-    } {
+    world_path<Args extends WorldPathOptions>(args: Args): WorldPathResponse<Args> {
       if ((args as { quest_path?: unknown }).quest_path !== undefined) {
         throw new Error("world_path accepts world_quest_id, not quest_path.");
       }
@@ -534,6 +573,15 @@ export function createToolApi(opts: { root: string }) {
             : `world quest "${args.world_quest_id}"`;
         throw new Error(`Unknown world graph ${source}.`);
       }
+      const pathFromHub = worldRouteFromHub(world, node.id) ?? [];
+      if (args.compact_path !== false) {
+        return {
+          world_quest_id: node.kind === "quest" ? node.id : null,
+          graph_node: node.id,
+          path_v: 1,
+          path: pathFromHub.map(compactWorldRouteStep),
+        } as WorldPathResponse<Args>;
+      }
       return {
         world: {
           id: world.id,
@@ -542,8 +590,8 @@ export function createToolApi(opts: { root: string }) {
         },
         world_quest_id: node.kind === "quest" ? node.id : null,
         graph_node: node.id,
-        path_from_hub: worldRouteFromHub(world, node.id) ?? [],
-      };
+        path_from_hub: pathFromHub,
+      } as WorldPathResponse<Args>;
     },
 
     ...createOverworldToolHandlers({
