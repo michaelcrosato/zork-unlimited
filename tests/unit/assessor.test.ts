@@ -403,6 +403,21 @@ describe("blind-pass rotation (bug_0128)", () => {
 4. Confusion / friction points. None.
 5. Bugs or design flaws. None.
 6. Verdict: A real player would finish satisfied.
+
+\`\`\`json exit-interview
+{
+  "clarity": 4,
+  "enjoyment": 4,
+  "goal_understood": true,
+  "got_stuck": false,
+  "confusions": [],
+  "bugs": [],
+  "best_moment": "The evidence chain paying off.",
+  "worst_moment": "Nothing stood out.",
+  "would_replay": true,
+  "verdict": "A real player would finish satisfied; the finding lands."
+}
+\`\`\`
 `,
       );
       writeFileSync(

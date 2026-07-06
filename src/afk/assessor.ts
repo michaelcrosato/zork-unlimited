@@ -197,9 +197,6 @@ export function findStaleDocRefs(docText: string, exists: (relPath: string) => b
  */
 const DOC_STALENESS_EXCLUDED_DOCS = new Set([
   "DECISION_LOG.md",
-  "RPG-STANDARDIZATION-PLAN.md",
-  "ULTRAPLAN-2026-06-02.md",
-  "stage4_rpg_gate.md",
 ]);
 
 function docStalenessDocs(root: string): string[] {
