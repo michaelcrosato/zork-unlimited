@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 438 -->
+<!-- historical_cycle_count: 439 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - validation_report_source_id
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/loop surface: `ValidationReport` now carries `source_id` and formats optional `Source:` diagnostics instead of package-era `pack_id` / `Pack:` identity.
+- Loop effect: MCP validation, load, generation, and patch responses no longer serialize report-level `pack_id`; recurring validate/inspect CLI outputs stay keyed by `world_quest_id` without report source headers.
+- Guard: focused report, MCP tool, assessor, author CLI, validation-bar, and trace CLI regressions pin `source_id` plus absence of public report `pack_id`.
+- VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused report/MCP/CLI regressions, `npm test`, and `npm run health` passed after loop-state rotation.
 
 ### Cycle result - rpg_source_file_loader_private
 
@@ -117,11 +125,3 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Loop effect: persistence callers cannot smuggle package identity through a compatibility argument, and MCP `save_game` writes directly from session content hash plus `source_ref` metadata.
 - Guard: focused save/trace, forged-save, save referential, determinism, stage4, and MCP save/load regressions passed.
 - VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused persistence/API regressions, `npm test`, and `npm run health` passed after loop-state rotation.
-
-### Cycle result - session_pack_id_retired
-
-- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
-- Engine/loop surface: MCP RPG `Session` and `SessionInit` no longer carry package-era `packId`; runtime startup stores only content hash plus canonical world/generated source identity.
-- Loop effect: `save_game` derives its save-write guard from `worldQuestId` or `generatedRpgSeed`, so live sessions cannot leak package ids back into persisted save bytes.
-- Guard: focused MCP session/tool, save/trace, forged-save, and save referential regressions passed.
-- VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused MCP/session/persistence regressions, `npm test`, and `npm run health` passed after loop-state rotation.

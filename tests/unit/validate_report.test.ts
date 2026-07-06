@@ -48,17 +48,17 @@ describe("validation report formatting", () => {
     expect(formatReport(report)).toContain("Result: OK  (0 error(s), 1 warning(s))");
   });
 
-  it("keeps pack ids by default for internal diagnostics", () => {
+  it("keeps source ids by default for internal diagnostics", () => {
     const text = formatReport(makeReport("generated_rpg_7", []));
 
-    expect(text).toContain("Pack: generated_rpg_7");
+    expect(text).toContain("Source: generated_rpg_7");
     expect(text).toContain("Result: OK");
   });
 
-  it("can omit pack ids for world-quest keyed CLI gates", () => {
-    const text = formatReport(makeReport("sunken_barrow_v1", []), { includePackId: false });
+  it("can omit source ids for world-quest keyed CLI gates", () => {
+    const text = formatReport(makeReport("sunken_barrow_v1", []), { includeSourceId: false });
 
-    expect(text).not.toContain("Pack:");
+    expect(text).not.toContain("Source:");
     expect(text).toContain("Result: OK");
   });
 });

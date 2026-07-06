@@ -270,17 +270,17 @@ describe("allGeneratedChecksClean", () => {
   it("is true only when every generated pack report has zero findings", () => {
     expect(
       allGeneratedChecksClean([
-        { seed: 1, report: { pack_id: "a", ok: true, findings: [] } },
-        { seed: 2, report: { pack_id: "b", ok: true, findings: [] } },
+        { seed: 1, report: { source_id: "a", ok: true, findings: [] } },
+        { seed: 2, report: { source_id: "b", ok: true, findings: [] } },
       ]),
     ).toBe(true);
     expect(
       allGeneratedChecksClean([
-        { seed: 1, report: { pack_id: "a", ok: true, findings: [] } },
+        { seed: 1, report: { source_id: "a", ok: true, findings: [] } },
         {
           seed: 2,
           report: {
-            pack_id: "b",
+            source_id: "b",
             ok: true,
             findings: [
               { severity: "warning", code: "X", message: "unclean generated pack", where: [] },
@@ -296,7 +296,7 @@ describe("allGeneratedChecksClean", () => {
       {
         seed: 7,
         report: {
-          pack_id: "generated_rpg_7",
+          source_id: "generated_rpg_7",
           ok: true,
           findings: [
             { severity: "warning", code: "X", message: "unclean generated pack", where: [] },

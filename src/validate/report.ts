@@ -1,7 +1,7 @@
 /**
  * ValidationReport (spec §10.3).
  *
- * A pack with ANY error-severity finding is unplayable; warnings are advisory.
+ * A source with ANY error-severity finding is unplayable; warnings are advisory.
  * Authoring agents iterate until the report is green (§10).
  */
 export type Severity = "error" | "warning";
@@ -14,7 +14,7 @@ export type Finding = {
 };
 
 export type ValidationReport = {
-  pack_id: string;
+  source_id: string;
   ok: boolean;
   findings: Finding[];
 };
@@ -26,24 +26,24 @@ function freezeFinding(finding: Finding): Finding {
   });
 }
 
-export function makeReport(packId: string, findings: Finding[]): ValidationReport {
+export function makeReport(sourceId: string, findings: Finding[]): ValidationReport {
   const frozenFindings = Object.freeze(findings.map(freezeFinding)) as Finding[];
   return Object.freeze({
-    pack_id: packId,
+    source_id: sourceId,
     ok: !frozenFindings.some((f) => f.severity === "error"),
     findings: frozenFindings,
   });
 }
 
 type FormatReportOptions = {
-  includePackId?: boolean;
+  includeSourceId?: boolean;
 };
 
 /** Human-readable formatting for the CLI. */
 export function formatReport(report: ValidationReport, opts: FormatReportOptions = {}): string {
-  const includePackId = opts.includePackId ?? true;
+  const includeSourceId = opts.includeSourceId ?? true;
   const lines: string[] = [];
-  if (includePackId) lines.push(`Pack: ${report.pack_id}`);
+  if (includeSourceId) lines.push(`Source: ${report.source_id}`);
   const errors = report.findings.filter((f) => f.severity === "error").length;
   const warnings = report.findings.filter((f) => f.severity === "warning").length;
   lines.push(

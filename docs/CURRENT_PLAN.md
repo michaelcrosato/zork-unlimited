@@ -442,14 +442,14 @@ Make discovered overworld quest leads start real RPG sessions.
   raw pack summaries and explicit `--pack` are rejected.
 - CLI inspect summaries no longer repeat `mode: rpg`; the RPG-only view keeps
   world quest id, pack title, counts, and hash.
-- CLI inspect summaries also omit internal `Pack:` identifiers for shipped world
+- CLI inspect summaries also omit internal source identifiers for shipped world
   quests; the public summary stays keyed by world quest id plus title/hash.
 - CLI validate now defaults through the canonical world graph and accepts
   targeted `world_quest_id` values; positional raw pack files and explicit
   `--pack` mode are rejected.
 - CLI validate output no longer repeats `mode: rpg` for every shipped quest; the
   RPG-only gate prints world quest id, report, and content hash.
-- CLI validate output also omits internal `Pack:` identifiers for shipped world
+- CLI validate output also omits internal source identifiers for shipped world
   quests, keeping the recurring gate output keyed by world quest id plus hash.
 - CLI authoring now writes draft RPG packs only; direct `content/rpg/pack` output
   is rejected until the quest is deliberately registered in the canonical world

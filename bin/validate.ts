@@ -45,12 +45,12 @@ function validateOne(target: ValidationTarget): boolean {
   console.log(`== ${target.label} ==`);
   const result = target.result;
   if (!result.ok) {
-    console.log(formatReport(result.report, { includePackId: false }));
+    console.log(formatReport(result.report, { includeSourceId: false }));
     return false;
   }
 
   const report = result.report;
-  console.log(formatReport(report, { includePackId: false }));
+  console.log(formatReport(report, { includeSourceId: false }));
   console.log(`content_hash: ${result.compiled.contentHash}`);
   return report.ok;
 }

@@ -36,7 +36,7 @@ describe("author CLI RPG-only public surface", () => {
 
     expect(result.status, output).toBe(0);
     expect(output).toContain("Adapter reached a GREEN rpg pack");
-    expect(output).toContain("Pack: lighthouse_rpg_v1");
+    expect(output).toContain("Source: lighthouse_rpg_v1");
     expect(output).not.toContain("GREEN cyoa");
     expect(output).not.toContain("GREEN parser");
   });

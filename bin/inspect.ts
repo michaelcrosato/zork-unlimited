@@ -154,7 +154,7 @@ function inspectRpgPack(result: RpgLoadResult, worldQuestId: string): void {
   console.log(
     `  enemies: ${pack.enemies.map((e) => `${e.id}(hp${e.hp})`).join(", ") || "none"}  skill checks: ${skillChecks}`,
   );
-  console.log("\n" + formatReport(result.report, { includePackId: false }));
+  console.log("\n" + formatReport(result.report, { includeSourceId: false }));
 }
 
 main();

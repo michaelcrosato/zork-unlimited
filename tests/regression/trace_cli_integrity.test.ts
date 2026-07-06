@@ -81,6 +81,7 @@ describe("trace CLI integrity gate", () => {
     );
     expect(output).not.toContain("mode: rpg");
     expect(output).not.toContain("Pack:");
+    expect(output).not.toContain("Source:");
     expect(output).not.toContain("sunken_barrow_v1");
     expect(output).not.toContain(PACK);
   });
