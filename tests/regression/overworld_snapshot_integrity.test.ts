@@ -111,7 +111,7 @@ function addRenown(
 
 function exportedSnapshotAfterTwoRoads() {
   const a = api();
-  const started = a.start_overworld();
+  const started = a.start_overworld({ compact_context: false });
   const firstRoad =
     started.observation.exits.find((edge) => edge.destination.id === "colonie_town") ??
     started.observation.exits[0];
@@ -143,7 +143,7 @@ function exportedSnapshotAfterTwoRoads() {
 
 function exportedSnapshotWithResolvedInitialEvent() {
   const a = api();
-  const started = a.start_overworld();
+  const started = a.start_overworld({ compact_context: false });
   const poi = started.observation.pois[0];
   const contact = started.observation.characters[0];
   const event = started.observation.events[0];
@@ -170,7 +170,7 @@ function exportedSnapshotWithResolvedInitialEvent() {
 
 function exportedSnapshotAfterRoadStrategy(strategy: "assist_travelers" | "cautious_scout") {
   const a = api();
-  const started = a.start_overworld();
+  const started = a.start_overworld({ compact_context: false });
   const firstRoad =
     started.observation.exits.find((edge) => edge.destination.id === "colonie_town") ??
     started.observation.exits[0];
@@ -246,7 +246,7 @@ function resolveCurrentOverworldSessionEvent(a: ReturnType<typeof api>, sessionI
 
 function exportedSnapshotWithCompletedRegionalArc() {
   const a = api();
-  const started = a.start_overworld();
+  const started = a.start_overworld({ compact_context: false });
   const arc = overworld.regional_arcs.find((candidate) => candidate.region === "Capital / Mohawk");
   if (!arc) throw new Error("expected Capital / Mohawk regional arc");
 
@@ -262,7 +262,7 @@ function exportedSnapshotWithCompletedRegionalArc() {
 
 function exportedSnapshotWithPendingRoad() {
   const a = api();
-  const started = a.start_overworld();
+  const started = a.start_overworld({ compact_context: false });
   const road =
     started.observation.exits.find((edge) => overworldRoadEventFor(overworld, edge.id) !== null) ??
     started.observation.exits[0];
@@ -755,7 +755,7 @@ describe("overworld snapshot restore integrity", () => {
 
   it("rejects pending road encounters without a travel arrival", () => {
     const a = api();
-    const started = a.start_overworld();
+    const started = a.start_overworld({ compact_context: false });
     const road =
       started.observation.exits.find(
         (edge) => overworldRoadEventFor(overworld, edge.id) !== null,
@@ -935,7 +935,7 @@ describe("overworld snapshot restore integrity", () => {
 
   it("rejects local area journal entries recorded before area discovery", () => {
     const a = api();
-    const started = a.start_overworld();
+    const started = a.start_overworld({ compact_context: false });
     const firstArea = started.observation.areas[0]!;
     const exploredFirstArea = a.explore_overworld_session_area({
       session_id: started.session_id,
@@ -976,7 +976,7 @@ describe("overworld snapshot restore integrity", () => {
 
   it("rejects discovered local areas without local action replay proof", () => {
     const a = api();
-    const started = a.start_overworld();
+    const started = a.start_overworld({ compact_context: false });
     const snapshot = a.export_overworld_session({ session_id: started.session_id }).snapshot;
     const currentAreas = overworldAreasAt(overworld, snapshot.currentId);
     const extraArea = currentAreas.find((area) => !snapshot.discoveredAreaIds.includes(area.id));
@@ -993,7 +993,7 @@ describe("overworld snapshot restore integrity", () => {
 
   it("rejects missing local areas earned by local action replay", () => {
     const a = api();
-    const started = a.start_overworld();
+    const started = a.start_overworld({ compact_context: false });
     const poi = started.observation.pois[0];
     if (!poi) throw new Error("expected an initial-area point of interest");
     const scouted = a.scout_overworld_session_poi({
@@ -1023,7 +1023,7 @@ describe("overworld snapshot restore integrity", () => {
 
   it("rejects local job journal entries recorded before job discovery", () => {
     const a = api();
-    const started = a.start_overworld();
+    const started = a.start_overworld({ compact_context: false });
     const firstArea = started.observation.areas[0]!;
     const exploredFirstArea = a.explore_overworld_session_area({
       session_id: started.session_id,
@@ -1058,7 +1058,7 @@ describe("overworld snapshot restore integrity", () => {
 
   it("rejects local job journal entries recorded before that job's reveal order", () => {
     const a = api();
-    const started = a.start_overworld();
+    const started = a.start_overworld({ compact_context: false });
     const poi = started.observation.pois[0];
     const contact = started.observation.characters[0];
     if (!poi || !contact) throw new Error("expected initial local action sources");
@@ -1119,7 +1119,7 @@ describe("overworld snapshot restore integrity", () => {
 
   it("rejects local site journal entries recorded before site discovery", () => {
     const a = api();
-    const started = a.start_overworld();
+    const started = a.start_overworld({ compact_context: false });
     const site = overworld.exploration_sites.find(
       (candidate) => candidate.area === started.observation.currentArea?.id,
     );
@@ -1155,7 +1155,7 @@ describe("overworld snapshot restore integrity", () => {
 
   it("rejects discovered jobs without enough local action proof", () => {
     const a = api();
-    const started = a.start_overworld();
+    const started = a.start_overworld({ compact_context: false });
     const snapshot = a.export_overworld_session({ session_id: started.session_id }).snapshot;
     const job = overworldJobsAt(overworld, snapshot.currentId).find(
       (candidate) => candidate.area === snapshot.currentAreaId,
@@ -1173,7 +1173,7 @@ describe("overworld snapshot restore integrity", () => {
 
   it("rejects missing discovered jobs earned by local action replay", () => {
     const a = api();
-    const started = a.start_overworld();
+    const started = a.start_overworld({ compact_context: false });
     const poi = started.observation.pois[0];
     if (!poi) throw new Error("expected an initial-area point of interest");
     const scouted = a.scout_overworld_session_poi({
@@ -1195,7 +1195,7 @@ describe("overworld snapshot restore integrity", () => {
 
   it("rejects discovered sites without enough local action proof", () => {
     const a = api();
-    const started = a.start_overworld();
+    const started = a.start_overworld({ compact_context: false });
     const snapshot = a.export_overworld_session({ session_id: started.session_id }).snapshot;
     if (!snapshot.currentAreaId) throw new Error("expected a current area");
     const site = overworldExplorationSitesInArea(overworld, snapshot.currentAreaId)[0];
@@ -1212,7 +1212,7 @@ describe("overworld snapshot restore integrity", () => {
 
   it("rejects missing discovered sites earned by local action replay", () => {
     const a = api();
-    const started = a.start_overworld();
+    const started = a.start_overworld({ compact_context: false });
     const poi = started.observation.pois[0];
     if (!poi) throw new Error("expected an initial-area point of interest");
     const scouted = a.scout_overworld_session_poi({
@@ -1234,7 +1234,7 @@ describe("overworld snapshot restore integrity", () => {
 
   it("rejects discovered quests without enough local action proof", () => {
     const a = api();
-    const started = a.start_overworld();
+    const started = a.start_overworld({ compact_context: false });
     const snapshot = a.export_overworld_session({ session_id: started.session_id }).snapshot;
     const quest = overworldQuestsAt(overworld, snapshot.currentId)[0];
     if (!quest) throw new Error("expected a local quest lead");
@@ -1257,7 +1257,7 @@ describe("overworld snapshot restore integrity", () => {
 
   it("rejects missing discovered quests earned by local action replay", () => {
     const a = api();
-    const started = a.start_overworld();
+    const started = a.start_overworld({ compact_context: false });
     const localActions = [
       () => {
         const poi = started.observation.pois[0];
@@ -1807,7 +1807,7 @@ describe("overworld snapshot restore integrity", () => {
 
   it("rejects snapshots before the starting clock", () => {
     const a = api();
-    const started = a.start_overworld();
+    const started = a.start_overworld({ compact_context: false });
     const snapshot = a.export_overworld_session({ session_id: started.session_id }).snapshot;
     const forgedEarlyClock = {
       ...snapshot,
@@ -1821,7 +1821,7 @@ describe("overworld snapshot restore integrity", () => {
 
   it("rejects local action journals before their action duration can elapse", () => {
     const a = api();
-    const started = a.start_overworld();
+    const started = a.start_overworld({ compact_context: false });
     const poi = started.observation.pois[0];
     if (!poi) throw new Error("expected an initial point of interest");
 

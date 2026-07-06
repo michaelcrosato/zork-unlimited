@@ -182,10 +182,10 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
       return summary as OverworldListResponse<Args>;
     },
 
-    start_overworld<Args extends OverworldResponseOptions = Record<string, never>>(
+    start_overworld<Args extends OverworldResponseOptions = { compact_context: true }>(
       args?: Args,
     ): OverworldStartResponse<Args> {
-      const responseOptions = (args ?? {}) as Args;
+      const responseOptions = { compact_context: true, ...(args ?? {}) } as Args;
       return overworldSessions.startResponse(responseOptions);
     },
 

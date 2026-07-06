@@ -508,7 +508,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
 
   it("plays a stateful New York overworld session through MCP", () => {
     const a = api();
-    const started = a.start_overworld();
+    const started = a.start_overworld({ compact_context: false });
     expect(started.session_id).toMatch(/^oworld_/);
     expect(started.observation.current.id).toBe("albany_city");
     expect(started.observation.journal).toEqual([]);
@@ -926,7 +926,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
 
   it("syncs ended RPG quest sessions back into overworld progress", () => {
     const a = api();
-    const started = a.start_overworld();
+    const started = a.start_overworld({ compact_context: false });
     revealOverworldQuest(a, started.session_id, "sunken_barrow");
 
     const launched = a.start_overworld_session_quest({
@@ -1045,7 +1045,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
 
   it("returns compact stateful overworld context for repeated loop turns", () => {
     const a = api();
-    const started = a.start_overworld();
+    const started = a.start_overworld({ compact_context: false });
     expect(started.snapshot_hash).toMatch(/^[0-9a-f]{64}$/);
     const fullRead = a.get_overworld_session({
       include_observation: true,
@@ -1055,6 +1055,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
     const defaultRead = a.get_overworld_session({ session_id: started.session_id });
     const compact = a.get_overworld_session_context({ session_id: started.session_id });
     const compactStarted = a.start_overworld({ compact_context: true });
+    const defaultStarted = a.start_overworld();
 
     expect(defaultRead).toMatchObject({ ok: true, session_id: started.session_id });
     expect(defaultRead.context).toEqual(compact.context);
@@ -1064,6 +1065,9 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(defaultRead.snapshot_hash).toBe(started.snapshot_hash);
     expect(compact.snapshot_hash).toBe(started.snapshot_hash);
     expect(compactStarted.snapshot_hash).toMatch(/^[0-9a-f]{64}$/);
+    expect(defaultStarted.snapshot_hash).toMatch(/^[0-9a-f]{64}$/);
+    expect(defaultStarted.context.v).toBe(9);
+    expect("observation" in defaultStarted).toBe(false);
     const repeatedCompactRead = a.get_overworld_session_context({
       session_id: started.session_id,
     });
@@ -1314,7 +1318,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
 
   it("invalidates cached compact overworld context after local discovery actions", () => {
     const a = api();
-    const started = a.start_overworld();
+    const started = a.start_overworld({ compact_context: false });
     const poi = started.observation.pois[0]!;
     const before = a.get_overworld_session_context({ session_id: started.session_id });
 
@@ -1356,7 +1360,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
 
   it("returns compact overworld action results when requested", () => {
     const a = api();
-    const fullAreaStart = a.start_overworld();
+    const fullAreaStart = a.start_overworld({ compact_context: false });
     const area = fullAreaStart.observation.areas[0]!;
     const fullExplore = a.explore_overworld_session_area({
       session_id: fullAreaStart.session_id,
@@ -1386,7 +1390,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
     );
     expect("observation" in compactExplore).toBe(false);
 
-    const fullTravelStart = a.start_overworld();
+    const fullTravelStart = a.start_overworld({ compact_context: false });
     const road = fullTravelStart.observation.exits.find(
       (candidate) => candidate.destination.id === "colonie_town",
     );
@@ -1447,7 +1451,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
 
   it("exports and restores stateful New York overworld sessions through MCP", () => {
     const a = api();
-    const started = a.start_overworld();
+    const started = a.start_overworld({ compact_context: false });
     a.scout_overworld_session_poi({
       session_id: started.session_id,
       poi_id: started.observation.pois[0]!.id,
@@ -1578,7 +1582,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
 
   it("maps local areas through stateful MCP overworld play", () => {
     const a = api();
-    const started = a.start_overworld();
+    const started = a.start_overworld({ compact_context: false });
     const area = started.observation.areas[0]!;
     const localAreas = overworld.areas
       .filter((candidate) => candidate.home === started.observation.current.id)
@@ -1613,7 +1617,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
 
   it("moves through local area routes through stateful MCP overworld play", () => {
     const a = api();
-    const started = a.start_overworld();
+    const started = a.start_overworld({ compact_context: false });
     const firstArea = started.observation.areas[0]!;
     const explored = a.explore_overworld_session_area({
       session_id: started.session_id,
@@ -1652,7 +1656,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
 
   it("discovers and works local jobs through stateful MCP overworld play", () => {
     const a = api();
-    const started = a.start_overworld();
+    const started = a.start_overworld({ compact_context: false });
     const area = started.observation.areas[0]!;
     const hiddenJob = overworld.local_jobs.find(
       (candidate) => candidate.home === started.observation.current.id,
@@ -1702,7 +1706,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
 
   it("adds elapsed travel delay to MCP overworld sessions when condition degrades", () => {
     const a = api();
-    const started = a.start_overworld();
+    const started = a.start_overworld({ compact_context: false });
     travelOverworldSessionTo(a, started.session_id, "buffalo_city");
     const worn = a.get_overworld_session({
       include_observation: true,
@@ -1733,7 +1737,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
 
   it("discovers and explores regional sites through stateful MCP overworld play", () => {
     const a = api();
-    const started = a.start_overworld();
+    const started = a.start_overworld({ compact_context: false });
     const site = overworld.exploration_sites.find(
       (candidate) => candidate.area === started.observation.currentArea?.id,
     );
@@ -1780,7 +1784,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
 
   it("completes a regional arc through stateful MCP overworld play", () => {
     const a = api();
-    const started = a.start_overworld();
+    const started = a.start_overworld({ compact_context: false });
     const arc = overworld.regional_arcs.find(
       (candidate) => candidate.region === "Capital / Mohawk",
     );

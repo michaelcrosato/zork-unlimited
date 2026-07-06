@@ -1,10 +1,19 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 450 -->
+<!-- historical_cycle_count: 451 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - overworld_start_compact_default
+
+- Pre-cycle: `C:\dev\agent-cleaner` passed; optional secret scanner remains absent.
+- Engine/loop surface: ToolApi `start_overworld` now defaults to compact overworld context; full start observations require `compact_context: false`.
+- Loop effect: direct harness/agent starts no longer pull the full New York observation before switching into compact poll/action loops.
+- Self-critique: narrow API-default work, but it closes the start-of-session payload path that blind playtest agents would not flag as an in-game error.
+- Guard: focused MCP and overworld snapshot regressions keep full-observation tests explicit while pinning the compact default start.
+- VERIFY: `C:\dev\agent-cleaner`, `npm run typecheck`, focused MCP/overworld regressions, `npm run lint`, `npm run format:check`, `npm run validate`, `npm test`, and `npm run health` passed after loop-state rotation.
 
 ### Cycle result - overworld_read_compact_default
 
@@ -122,11 +131,3 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Loop effect: RPG source runtime owns the private world-quest-to-file dereference, so save/trace/world-source callers cannot depend on a path-bearing source API.
 - Guard: source-runtime regression rejects `WorldQuestPackSource` and `resolveWorldQuestPackPath` from both world source and runtime source files.
 - VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused world-source/source-runtime/validation-bar regressions, `npm test`, and `npm run health` passed after loop-state rotation.
-
-### Cycle result - game_source_world_quest
-
-- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
-- Engine/loop surface: save/trace game-source resolution now returns `kind: "worldQuest"` or `kind: "generated"` and no longer exposes `packPath` through the resolved game-source union.
-- Loop effect: loaded saves and replayed traces carry canonical world quest identity into MCP runtime loading; disk package paths stay private to the source loader dereference point.
-- Guard: source-runtime regressions reject the retired `kind: "pack"`, `GamePackSource`, `resolvePackSource`, and `resolveTracePackSource` names from the source layer.
-- VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused world-source/source-runtime/MCP trace regressions, `npm test`, and `npm run health` passed after loop-state rotation.

@@ -488,15 +488,15 @@ Make discovered overworld quest leads start real RPG sessions.
   lifecycles, and tampered pending road encounter options.
 - MCP now exposes compact overworld context for repeated loop turns: stable ids,
   vitals, local actions, capped route options, pending roads, and recent journal.
-- ToolApi/public MCP `get_overworld_session` now returns compact context by
-  default; callers can pass `include_observation: true` only when they need the
-  full observation object.
+- ToolApi/public MCP `start_overworld` and `get_overworld_session` now return
+  compact context by default; callers can pass `compact_context: false` or
+  `include_observation: true` only when they need full observation objects.
 - `get_overworld_session({ if_snapshot_hash })` and
   `get_overworld_session_context({ if_snapshot_hash })` can return hash-only
   `unchanged` responses when the overworld snapshot has not changed.
 - Stateful overworld MCP actions now accept `compact_context` so repeated loop
   turns can avoid full observations after movement or local actions.
-- Compact overworld context is now versioned as `v: 4` for tuple-packed progress
+- Compact overworld context is now versioned as `v: 9` for tuple-packed progress
   and hidden-count shapes plus the expanded progress-id tuple shape that includes
   started/completed quest ids.
 - Overworld MCP start and restore also accept `compact_context`, so long-running
