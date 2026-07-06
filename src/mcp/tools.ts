@@ -84,6 +84,7 @@ export type ToolApi = ReturnType<typeof createToolApi>;
 type PublicWorldSummary = Pick<WorldManifest, "id" | "name" | "hub">;
 
 type WorldListOptions = {
+  include_details?: boolean;
   include_graph?: boolean;
   include_routes?: boolean;
 };
@@ -92,6 +93,9 @@ type WorldQuestCatalogEntry = {
   title: string;
   playable: boolean;
   world_quest_id: string;
+};
+
+type WorldQuestDetails = {
   district: string;
   quest: string;
   role: string;
@@ -103,6 +107,8 @@ type WorldQuestRouteDetails = {
 };
 
 type WorldListQuest<Args extends WorldListOptions> = WorldQuestCatalogEntry &
+  (Args extends { include_details: true } ? WorldQuestDetails : Record<string, never>) &
+  (Args extends { include_routes: true } ? WorldQuestDetails : Record<string, never>) &
   (Args extends { include_routes: true } ? WorldQuestRouteDetails : Record<string, never>);
 
 type WorldListResponse<Args extends WorldListOptions> = {
@@ -428,19 +434,22 @@ export function createToolApi(opts: { root: string }) {
       args?: Args,
     ): WorldListResponse<Args> {
       const world = rpgSources.loadWorldManifest();
+      const includeDetails = args?.include_details === true || args?.include_routes === true;
       const quests = rpgSources
         .discoverWorldQuestSources(world)
         .filter((s) => s.world?.id === world.id)
         .map((s) => {
-          const quest: WorldQuestCatalogEntry = {
+          const quest: WorldQuestCatalogEntry & Partial<WorldQuestDetails> = {
             title: s.title,
             playable: s.playable,
             world_quest_id: s.world_quest_id,
-            district: s.world?.district ?? "",
-            quest: s.world?.quest ?? "",
-            role: s.world?.role ?? "",
-            connection: s.world?.connection ?? "",
           };
+          if (includeDetails) {
+            quest.district = s.world?.district ?? "";
+            quest.quest = s.world?.quest ?? "";
+            quest.role = s.world?.role ?? "";
+            quest.connection = s.world?.connection ?? "";
+          }
           if (args?.include_routes === true) {
             return {
               ...quest,

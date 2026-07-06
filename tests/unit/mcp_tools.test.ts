@@ -252,6 +252,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
     const a = api();
     expect((a as unknown as Record<string, unknown>).list_stories).toBeUndefined();
     const world = a.list_world();
+    const detailed = a.list_world({ include_details: true });
     const expanded = a.list_world({ include_graph: true, include_routes: true });
     expect("main_story" in world).toBe(false);
     expect("main_world_quest_id" in world).toBe(false);
@@ -263,6 +264,14 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(world.quests.every((q) => !("mode" in q))).toBe(true);
     expect(world.quests.every((q) => !("id" in q))).toBe(true);
     expect(world.quests.every((q) => !("graph_node" in q))).toBe(true);
+    expect(world.quests.every((q) => !("district" in q))).toBe(true);
+    expect(world.quests.every((q) => !("quest" in q))).toBe(true);
+    expect(world.quests.every((q) => !("role" in q))).toBe(true);
+    expect(world.quests.every((q) => !("connection" in q))).toBe(true);
+    expect(detailed.quests.find((s) => s.world_quest_id === "breaking_weir")?.connection).toContain(
+      "Charterhaven",
+    );
+    expect(detailed.quests.every((q) => !("path_from_hub" in q))).toBe(true);
     expect(expanded.graph.nodes.every((node) => !("pack" in node))).toBe(true);
     expect(expanded.graph.nodes.every((node) => !("source" in node))).toBe(true);
     expect(world.quests.some((s) => s.world_quest_id === "sunken_barrow")).toBe(true);
@@ -279,7 +288,8 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(world.quests.map((q) => q.world_quest_id)).toEqual(
       expanded.graph.nodes.filter((node) => node.kind === "quest").map((node) => node.id),
     );
-    expect(JSON.stringify(world).length).toBeLessThanOrEqual(5300);
+    expect(JSON.stringify(world).length).toBeLessThan(JSON.stringify(detailed).length);
+    expect(JSON.stringify(world).length).toBeLessThanOrEqual(2700);
   });
 
   it("lists the unified world as a hub plus quest areas", () => {
