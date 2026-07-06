@@ -441,7 +441,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
     const first = a.start_world_quest({ world_quest_id: "sunken_barrow", seed: 1 });
     const second = a.start_world_quest({ world_quest_id: "sunken_barrow", seed: 2 });
     const saved = a.save_game({ session_id: first.session_id });
-    const loaded = a.load_game({ save: saved.save });
+    const loaded = a.load_game({ save: saved.save, compact_observation: false });
     const firstSession = a.sessions.get(first.session_id);
     const secondSession = a.sessions.get(second.session_id);
     const loadedSession = a.sessions.get(loaded.session_id);
@@ -2526,7 +2526,10 @@ describe("MCP tools — the play loop (§9.1)", () => {
     expect("mode" in saved).toBe(false);
     expect(saved.world_quest_id).toBe("sunken_barrow");
     expect("generated_rpg_seed" in saved).toBe(false);
-    const loaded = a.load_game({ save: saved.save });
+    const loaded = a.load_game({
+      save: saved.save,
+      compact_observation: false,
+    });
     expect("pack_path" in loaded).toBe(false);
     expect("packPath" in a.sessions.get(loaded.session_id)).toBe(false);
     expect(loaded.world_quest_id).toBe("sunken_barrow");
@@ -2961,7 +2964,16 @@ describe("MCP tools — save / load round-trip (§8.7)", () => {
     stepByCommand(a, game.session_id, "go down");
     const after = a.get_observation({ session_id: game.session_id }).state_hash;
     const saved = a.save_game({ session_id: game.session_id });
-    const fullReload = a.load_game({ save: saved.save, hide_graph: true, compact_actions: true });
+    const fullReload = a.load_game({
+      save: saved.save,
+      hide_graph: true,
+      compact_actions: true,
+      compact_observation: false,
+    });
+    const defaultReload = a.load_game({
+      save: saved.save,
+      hide_graph: true,
+    });
     const compactReload = a.load_game({
       save: saved.save,
       hide_graph: true,
@@ -2970,6 +2982,8 @@ describe("MCP tools — save / load round-trip (§8.7)", () => {
 
     expect(saved.state_hash).toBe(after);
     expect(compactReload.state_hash).toBe(after);
+    expect(defaultReload.context).toEqual(compactReload.context);
+    expect("observation" in defaultReload).toBe(false);
     expect("pack_path" in compactReload).toBe(false);
     expect(compactReload.world_quest_id).toBe("sunken_barrow");
     expect("generated_rpg_seed" in compactReload).toBe(false);
@@ -2990,7 +3004,11 @@ describe("MCP tools — save / load round-trip (§8.7)", () => {
     const after = a.get_observation({ session_id: game.session_id }).state_hash;
 
     const saved = a.save_game({ session_id: game.session_id });
-    const reloaded = a.load_game({ world_quest_id: "sunken_barrow", save: saved.save });
+    const reloaded = a.load_game({
+      world_quest_id: "sunken_barrow",
+      save: saved.save,
+      compact_observation: false,
+    });
     const inferred = a.load_game({ save: saved.save });
     expect("mode" in reloaded).toBe(false);
     expect("pack_id" in saved).toBe(false);

@@ -1,10 +1,19 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 455 -->
+<!-- historical_cycle_count: 456 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - rpg_load_compact_default
+
+- Pre-cycle: `C:\dev\agent-cleaner` passed; optional secret scanner remains absent.
+- Engine/loop surface: ToolApi `load_game` now defaults to compact RPG context; full restored observations require `compact_observation: false`.
+- Loop effect: direct harness/agent resumes no longer emit full room/action/state observations before compact poll/action loops continue.
+- Self-critique: closes the remaining direct RPG full-payload default; deeper savings now move to payload shape and persistence internals rather than API defaults.
+- Guard: MCP reload regressions pin no-flag compact restored context while full-observation reload readers opt out explicitly.
+- VERIFY: `C:\dev\agent-cleaner`, `npm run typecheck`, focused MCP reload/save regressions, `npm run lint`, `npm run format:check`, `npm run validate`, `npm test`, and `npm run health` passed after loop-state rotation.
 
 ### Cycle result - rpg_step_compact_default
 
@@ -127,11 +136,3 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Loop effect: validate, world loading, and MCP source runtime dereference world quest sources without teaching future loops a graph-level package field.
 - Guard: single-world, world-source, source-runtime, catalog, and validation-bar regressions cover `source` graph bindings and reject private `source`/old `pack` fields from public graph output.
 - VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused world/source regressions, `npm test`, and `npm run health` passed after loop-state rotation.
-
-### Cycle result - rpg_source_loader_module
-
-- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
-- Engine/loop surface: RPG compile/load imports now come from `src/rpg/source.ts`; the old `src/rpg/pack.ts` module and generic `ContentPack` compiler abstraction are retired.
-- Loop effect: MCP runtime, CLI, and regression loops import a source loader with `CompiledRpgSource`, `compileRpgSource`, and `loadRpgSourceFile` names instead of reusing package-era loader names.
-- Guard: standalone RPG contract regression asserts `src/rpg/pack.ts` is absent, the source loader has no generic content-pack exports, and MCP runtime imports `../rpg/source.js`.
-- VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused source/runtime regressions, `npm test`, and `npm run health` passed after loop-state rotation.

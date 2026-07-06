@@ -517,8 +517,17 @@ export function createToolApi(opts: { root: string }) {
       return runRpgSaveGame({ sessions }, args) as RpgSaveResponse<Args>;
     },
 
-    load_game<Args extends RpgLoadGameArgs>(args: Args): RpgSessionPayload<Args> {
-      return runRpgLoadGame({ root, sessions, rpgRuntime, rpgSources }, args);
+    load_game<Args extends RpgLoadGameArgs>(
+      args: Args,
+    ): RpgSessionPayload<DefaultCompactRpgView<Args>> {
+      const responseOptions = {
+        compact_observation: true,
+        ...args,
+      } as DefaultCompactRpgView<Args>;
+      return runRpgLoadGame(
+        { root, sessions, rpgRuntime, rpgSources },
+        responseOptions,
+      ) as RpgSessionPayload<DefaultCompactRpgView<Args>>;
     },
 
     async adapt_story(args: { premise: string }) {
