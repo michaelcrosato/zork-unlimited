@@ -8,7 +8,7 @@
  * Breckel must retire mechanically as well as narratively.
  */
 import { describe, it, expect } from "vitest";
-import { loadRpgPackFile } from "../../src/rpg/pack.js";
+import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import {
   indexRpgPack,
   buildRpgRules,
@@ -20,7 +20,7 @@ import { makeStep } from "../../src/core/engine.js";
 import { validateRpg } from "../../src/validate/rpg_validator.js";
 import type { GameState } from "../../src/core/state.js";
 
-const loaded = loadRpgPackFile("content/rpg/pack/factors_mark.yaml");
+const loaded = loadRpgSourceFile("content/rpg/pack/factors_mark.yaml");
 if (!loaded.ok) throw new Error("factors_mark must compile");
 const pack = loaded.compiled.pack;
 const index = indexRpgPack(pack);

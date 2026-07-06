@@ -10,7 +10,7 @@
  *  5. Legal ⊇ executable: every action the driver issues was in the legal set.
  */
 import { describe, it, expect } from "vitest";
-import { loadRpgPackFile } from "../../src/rpg/pack.js";
+import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import { validateRpg } from "../../src/validate/rpg_validator.js";
 import { indexRpgPack, buildRpgRules, initStateForRpgPack } from "../../src/rpg/runner.js";
 import { buildRpgObservation } from "../../src/rpg/observation.js";
@@ -23,7 +23,7 @@ import type { RpgAction } from "../../src/api/types.js";
 import type { GameState } from "../../src/core/state.js";
 
 const PACK = "content/rpg/pack/sunken_barrow.yaml";
-const loaded = loadRpgPackFile(PACK);
+const loaded = loadRpgSourceFile(PACK);
 if (!loaded.ok) throw new Error("sunken_barrow failed to compile");
 const compiled = loaded.compiled;
 const index = indexRpgPack(compiled.pack);

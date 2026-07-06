@@ -6,7 +6,7 @@
 import { describe, expect, it } from "vitest";
 import { makeStep } from "../../src/core/engine.js";
 import type { GameState } from "../../src/core/state.js";
-import { loadRpgPackFile } from "../../src/rpg/pack.js";
+import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import {
   buildRpgRules,
   enumerateRpgActions,
@@ -15,7 +15,7 @@ import {
 } from "../../src/rpg/runner.js";
 import { buildRpgObservation } from "../../src/rpg/observation.js";
 
-const loaded = loadRpgPackFile("content/rpg/pack/breaking_weir.yaml");
+const loaded = loadRpgSourceFile("content/rpg/pack/breaking_weir.yaml");
 if (!loaded.ok) throw new Error("breaking_weir must compile");
 const index = indexRpgPack(loaded.compiled.pack);
 const rules = buildRpgRules(index);

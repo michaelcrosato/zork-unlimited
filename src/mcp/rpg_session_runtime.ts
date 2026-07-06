@@ -6,7 +6,7 @@ import {
   type ObservationOptions,
   type RpgObservation,
 } from "../rpg/observation.js";
-import type { CompiledRpgPack } from "../rpg/pack.js";
+import type { CompiledRpgSource } from "../rpg/source.js";
 import type { RpgPack } from "../rpg/schema.js";
 import { assertRpgStateReferences } from "../rpg/state_integrity.js";
 import {
@@ -148,7 +148,7 @@ export class RpgMcpSessionRuntime {
   }
 
   startSession(
-    compiled: CompiledRpgPack,
+    compiled: CompiledRpgSource,
     state?: GameState,
     opts: RpgSessionStartOptions = {},
   ): Session {
@@ -199,7 +199,7 @@ export class RpgMcpSessionRuntime {
   }
 
   startRpgSession<Args extends RpgViewOptions>(
-    compiled: CompiledRpgPack,
+    compiled: CompiledRpgSource,
     args: Args & { seed?: number; hide_graph?: boolean },
     source: RpgSessionSource,
   ): RpgSessionPayload<Args> {

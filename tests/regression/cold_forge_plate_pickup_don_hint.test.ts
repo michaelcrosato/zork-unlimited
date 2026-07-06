@@ -8,7 +8,7 @@ import { makeStep, actionEquals } from "../../src/core/engine.js";
 import type { RpgAction } from "../../src/api/types.js";
 import type { GameEvent } from "../../src/core/events.js";
 import type { GameState } from "../../src/core/state.js";
-import { loadRpgPackFile } from "../../src/rpg/pack.js";
+import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import {
   buildRpgRules,
   enumerateRpgActions,
@@ -16,7 +16,7 @@ import {
   initStateForRpgPack,
 } from "../../src/rpg/runner.js";
 
-const loaded = loadRpgPackFile("content/rpg/pack/cold_forge.yaml");
+const loaded = loadRpgSourceFile("content/rpg/pack/cold_forge.yaml");
 if (!loaded.ok) throw new Error("cold_forge must compile");
 const index = indexRpgPack(loaded.compiled.pack);
 const rules = buildRpgRules(index);

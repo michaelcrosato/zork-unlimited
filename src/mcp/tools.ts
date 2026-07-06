@@ -14,7 +14,7 @@ import { readFileSync } from "node:fs";
 import type { RpgAction } from "../api/types.js";
 import type { GameState } from "../core/state.js";
 
-import type { CompiledRpgPack } from "../rpg/pack.js";
+import type { CompiledRpgSource } from "../rpg/source.js";
 import { assertRpgStateReferences } from "../rpg/state_integrity.js";
 
 import type { ValidationReport } from "../validate/report.js";
@@ -383,7 +383,7 @@ export function createToolApi(opts: { root: string }) {
     load_quest(args: { world_quest_id?: string }): {
       ok: boolean;
       world_quest_id: string | null;
-      meta?: CompiledRpgPack["pack"]["meta"];
+      meta?: CompiledRpgSource["pack"]["meta"];
       content_hash?: string;
       report: ValidationReport;
     } {
@@ -403,7 +403,7 @@ export function createToolApi(opts: { root: string }) {
       ok: boolean;
       content_hash: string;
       seed: number;
-      meta: CompiledRpgPack["pack"]["meta"];
+      meta: CompiledRpgSource["pack"]["meta"];
       room_count: number;
       enemy_count: number;
       ending_count: number;

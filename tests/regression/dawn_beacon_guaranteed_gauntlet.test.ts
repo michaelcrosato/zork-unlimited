@@ -34,7 +34,7 @@
  * witness, not a vacuous green.
  */
 import { describe, it, expect } from "vitest";
-import { loadRpgPackFile } from "../../src/rpg/pack.js";
+import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import { validateRpg } from "../../src/validate/rpg_validator.js";
 import type { RpgPack } from "../../src/rpg/schema.js";
 import type { Effect } from "../../src/core/effects.js";
@@ -42,7 +42,7 @@ import type { Effect } from "../../src/core/effects.js";
 const PACK_PATH = "content/rpg/pack/dawn_beacon.yaml";
 
 function loadPack(): RpgPack {
-  const r = loadRpgPackFile(PACK_PATH);
+  const r = loadRpgSourceFile(PACK_PATH);
   expect(r.ok, "dawn_beacon must load").toBe(true);
   if (!r.ok) throw new Error("unreachable");
   return r.compiled.pack;
@@ -115,7 +115,7 @@ describe("bug_0187 — The Dawn Beacon: the first curated combat_guaranteed gaun
       "content/rpg/pack/cold_forge.yaml",
       "content/rpg/pack/sunken_barrow.yaml",
     ]) {
-      const r = loadRpgPackFile(path);
+      const r = loadRpgSourceFile(path);
       expect(r.ok).toBe(true);
       if (!r.ok) return;
       expect(r.compiled.pack.meta.combat_guaranteed).toBeUndefined();

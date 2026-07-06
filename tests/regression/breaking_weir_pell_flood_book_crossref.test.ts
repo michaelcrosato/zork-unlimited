@@ -14,11 +14,11 @@
  * want it to go by." Pure prose — no flag, score, condition, gate, or ending changed.
  */
 import { describe, it, expect } from "vitest";
-import { loadRpgPackFile } from "../../src/rpg/pack.js";
+import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import type { RpgPack } from "../../src/rpg/schema.js";
 
 const PACK_PATH = "content/rpg/pack/breaking_weir.yaml";
-const loaded = loadRpgPackFile(PACK_PATH);
+const loaded = loadRpgSourceFile(PACK_PATH);
 if (!loaded.ok) throw new Error("breaking_weir must compile");
 const pack: RpgPack = loaded.compiled.pack;
 

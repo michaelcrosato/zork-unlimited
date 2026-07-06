@@ -34,7 +34,7 @@
 import { describe, it, expect } from "vitest";
 import { makeStep } from "../../src/core/engine.js";
 import { buildRpgObservation } from "../../src/rpg/observation.js";
-import { loadRpgPackFile } from "../../src/rpg/pack.js";
+import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import { indexRpgPack, buildRpgRules, initStateForRpgPack } from "../../src/rpg/runner.js";
 import type { RpgAction } from "../../src/api/types.js";
 import type { GameState } from "../../src/core/state.js";
@@ -48,7 +48,7 @@ const fixedRng = (): Rng => ({
 });
 
 function setup() {
-  const loaded = loadRpgPackFile(PACK_PATH);
+  const loaded = loadRpgSourceFile(PACK_PATH);
   expect(loaded.ok, "wolf_winter must load").toBe(true);
   if (!loaded.ok) throw new Error("unreachable");
   const index = indexRpgPack(loaded.compiled.pack);

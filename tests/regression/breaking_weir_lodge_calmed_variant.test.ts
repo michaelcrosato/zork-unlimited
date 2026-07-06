@@ -38,13 +38,13 @@
  *       structural pin that keeps the prose robust to the stage regression.
  */
 import { describe, it, expect } from "vitest";
-import { loadRpgPackFile } from "../../src/rpg/pack.js";
+import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import { indexRpgPack, buildRpgRules, initStateForRpgPack } from "../../src/rpg/runner.js";
 import { buildRpgObservation } from "../../src/rpg/observation.js";
 import type { GameState } from "../../src/core/state.js";
 
 const PACK = "content/rpg/pack/breaking_weir.yaml";
-const loaded = loadRpgPackFile(PACK);
+const loaded = loadRpgSourceFile(PACK);
 if (!loaded.ok) throw new Error("breaking_weir must compile");
 const index = indexRpgPack(loaded.compiled.pack);
 buildRpgRules(index); // parity with the engine wiring the runtime uses

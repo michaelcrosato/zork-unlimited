@@ -24,7 +24,7 @@
  * must relabel consistently for the twin's census to match.
  */
 import { describe, it, expect } from "vitest";
-import { loadRpgPackFile } from "../../src/rpg/pack.js";
+import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import { indexRpgPack, initStateForRpgPack, buildRpgRules } from "../../src/rpg/runner.js";
 import { buildRpgObservation } from "../../src/rpg/observation.js";
 import { validateRpg } from "../../src/validate/rpg_validator.js";
@@ -35,7 +35,7 @@ import type { RpgPack } from "../../src/rpg/schema.js";
 import type { RpgAction } from "../../src/api/types.js";
 
 const PACK_PATH = "content/rpg/pack/breaking_weir.yaml";
-const loaded = loadRpgPackFile(PACK_PATH);
+const loaded = loadRpgSourceFile(PACK_PATH);
 if (!loaded.ok) throw new Error("breaking_weir must compile");
 const pack: RpgPack = loaded.compiled.pack;
 const index = indexRpgPack(pack);

@@ -57,7 +57,7 @@ import { readdirSync } from "node:fs";
 import { join } from "node:path";
 import type { GameState } from "../../src/core/state.js";
 import type { Rng } from "../../src/core/rng.js";
-import { loadRpgPackFile } from "../../src/rpg/pack.js";
+import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import { indexRpgPack, buildRpgRules, initStateForRpgPack } from "../../src/rpg/runner.js";
 import { RpgPackSchema, type RpgPack } from "../../src/rpg/schema.js";
 import { validateRpg } from "../../src/validate/rpg_validator.js";
@@ -122,7 +122,7 @@ describe("bug_0212 — RPG pack behaviour is invariant under a consistent identi
       `${file}: the relabeled twin is reachability-, state-count-, and validation-isomorphic`,
       () => {
         const path = join(PACK_DIR, file);
-        const loaded = loadRpgPackFile(path);
+        const loaded = loadRpgSourceFile(path);
         expect(loaded.ok).toBe(true);
         if (!loaded.ok) return;
         const original = loaded.compiled.pack;

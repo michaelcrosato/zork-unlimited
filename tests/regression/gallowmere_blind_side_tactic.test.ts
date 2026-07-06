@@ -9,7 +9,7 @@
  * and no score change.
  */
 import { describe, it, expect } from "vitest";
-import { loadRpgPackFile } from "../../src/rpg/pack.js";
+import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import {
   buildRpgRules,
   enumerateRpgActions,
@@ -22,7 +22,7 @@ import { makeStep } from "../../src/core/engine.js";
 import type { GameState } from "../../src/core/state.js";
 import type { Rng } from "../../src/core/rng.js";
 
-const loaded = loadRpgPackFile("content/rpg/pack/gallowmere.yaml");
+const loaded = loadRpgSourceFile("content/rpg/pack/gallowmere.yaml");
 if (!loaded.ok) throw new Error("gallowmere must compile");
 const pack = loaded.compiled.pack;
 const index = indexRpgPack(pack);

@@ -14,7 +14,7 @@ import { initState, type GameState } from "../../src/core/state.js";
 import { resolveSkillCheck } from "../../src/core/skill_check.js";
 import { resolveAttack, enemyHp, enemyAlive } from "../../src/rpg/combat.js";
 import { enemyHpVar, RpgPackSchema, type Enemy } from "../../src/rpg/schema.js";
-import { loadRpgPackFile } from "../../src/rpg/pack.js";
+import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import { buildRpgRules, indexRpgPack, initStateForRpgPack } from "../../src/rpg/runner.js";
 import type { RpgAction } from "../../src/api/types.js";
 
@@ -135,7 +135,7 @@ describe("seeded skill checks (§8.5)", () => {
 
 describe("RPG action boundary", () => {
   it("rejects non-RPG CHOOSE actions before RPG resolution", () => {
-    const loaded = loadRpgPackFile("content/rpg/pack/sunken_barrow.yaml");
+    const loaded = loadRpgSourceFile("content/rpg/pack/sunken_barrow.yaml");
     if (!loaded.ok) throw new Error("sunken_barrow must compile");
     const index = indexRpgPack(loaded.compiled.pack);
     const rules = buildRpgRules(index);

@@ -36,7 +36,7 @@ import { describe, it, expect } from "vitest";
 import { makeStep, type Rules } from "../../src/core/engine.js";
 import { initState, type GameState } from "../../src/core/state.js";
 import type { RpgAction } from "../../src/api/types.js";
-import { loadRpgPackFile } from "../../src/rpg/pack.js";
+import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import { validateRpg } from "../../src/validate/rpg_validator.js";
 import { indexRpgPack, buildRpgRules, initStateForRpgPack } from "../../src/rpg/runner.js";
 
@@ -88,7 +88,7 @@ describe("bug_0056 — engine post-RpgAction win hook (checkWin)", () => {
 });
 
 describe("bug_0056 — The Sunken Barrow wins on the claim, not on entry", () => {
-  const loaded = loadRpgPackFile("content/rpg/pack/sunken_barrow.yaml");
+  const loaded = loadRpgSourceFile("content/rpg/pack/sunken_barrow.yaml");
   if (!loaded.ok) throw new Error("sunken_barrow must compile");
   const pack = loaded.compiled.pack;
   const index = indexRpgPack(pack);

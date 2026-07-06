@@ -15,7 +15,7 @@ describe("RPG owns the live content/runtime contract", () => {
       "src/rpg/legal_actions.ts",
       "src/rpg/runner.ts",
       "src/rpg/observation.ts",
-      "src/rpg/pack.ts",
+      "src/rpg/source.ts",
       "src/validate/rpg_foundation_validator.ts",
       "src/validate/rpg_validator.ts",
       "src/mcp/tools.ts",
@@ -94,5 +94,22 @@ describe("RPG owns the live content/runtime contract", () => {
     expect(sourceRef).not.toContain('["pack"');
     expect(sourceRef).not.toContain('tag === "pack"');
     expect(sourceRef).not.toContain("pack fallback");
+  });
+
+  it("uses an RPG source loader instead of a package-era loader module", () => {
+    expect(existsSync("src/rpg/pack.ts")).toBe(false);
+
+    const sourceLoader = readFileSync("src/rpg/source.ts", "utf8");
+    const sourceRuntime = readFileSync("src/mcp/rpg_source_runtime.ts", "utf8");
+
+    expect(sourceLoader).toContain("export type CompiledRpgSource");
+    expect(sourceLoader).toContain("export function compileRpgSource");
+    expect(sourceLoader).toContain("export function loadRpgSourceFile");
+    expect(sourceLoader).not.toContain("CompiledContentPack");
+    expect(sourceLoader).not.toContain("ContentCompileResult");
+    expect(sourceLoader).not.toContain("compileContentPack");
+    expect(sourceLoader).not.toContain("loadContentPackFile");
+    expect(sourceRuntime).toContain("../rpg/source.js");
+    expect(sourceRuntime).not.toContain("../rpg/pack.js");
   });
 });

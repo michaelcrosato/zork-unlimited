@@ -5,7 +5,7 @@
  */
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
-import { loadRpgPackFile } from "../../src/rpg/pack.js";
+import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import { indexRpgPack, buildRpgRules } from "../../src/rpg/runner.js";
 import { replayTrace } from "../../src/trace/replay.js";
 import type { Trace } from "../../src/trace/record.js";
@@ -16,7 +16,7 @@ describe("rpg barrow victory trace", () => {
     const trace = JSON.parse(
       readFileSync("traces/rpg/barrow_victory.json", "utf8"),
     ) as Trace<RpgAction>;
-    const loaded = loadRpgPackFile("content/rpg/pack/sunken_barrow.yaml");
+    const loaded = loadRpgSourceFile("content/rpg/pack/sunken_barrow.yaml");
     expect(loaded.ok).toBe(true);
     if (!loaded.ok) return;
     // The trace must match the pack it was recorded against (content-hash, §8.8).

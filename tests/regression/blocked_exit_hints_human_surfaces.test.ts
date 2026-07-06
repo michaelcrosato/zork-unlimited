@@ -23,7 +23,7 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { render as renderRpg } from "../../bin/rpg_play.js";
-import { loadRpgPackFile } from "../../src/rpg/pack.js";
+import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import { indexRpgPack, buildRpgRules, initStateForRpgPack } from "../../src/rpg/runner.js";
 import { buildRpgObservation } from "../../src/rpg/observation.js";
 import { makeStep } from "../../src/core/engine.js";
@@ -32,7 +32,7 @@ import type { GameState } from "../../src/core/state.js";
 import type { RpgAction } from "../../src/api/types.js";
 
 // --- RPG pack: Sunken Barrow. guard_crypt's east is barred while the wight stands. ---
-const rloaded = loadRpgPackFile("content/rpg/pack/sunken_barrow.yaml");
+const rloaded = loadRpgSourceFile("content/rpg/pack/sunken_barrow.yaml");
 if (!rloaded.ok) throw new Error("sunken_barrow must compile");
 const rindex = indexRpgPack(rloaded.compiled.pack);
 const rstep = makeStep(buildRpgRules(rindex));

@@ -2,7 +2,7 @@ import { readFileSync, statSync } from "node:fs";
 import { parse as parseYaml } from "yaml";
 import { hashState } from "../core/hash.js";
 import type { RpgAction } from "../api/types.js";
-import { compileRpgPack, type CompiledRpgPack } from "../rpg/pack.js";
+import { compileRpgSource, type CompiledRpgSource } from "../rpg/source.js";
 import { generateRpgPack } from "../gen/rpg_generator.js";
 import { assertGeneratedRpgSeed } from "../gen/seed.js";
 import { validateRpg } from "../validate/rpg_validator.js";
@@ -31,10 +31,10 @@ import { safeResolve } from "./paths.js";
 import { isRpgPackShape } from "./types.js";
 
 export type RpgLoadResult =
-  | { ok: true; compiled: CompiledRpgPack; report: ValidationReport }
+  | { ok: true; compiled: CompiledRpgSource; report: ValidationReport }
   | { ok: false; report: ValidationReport };
 
-type RpgPackLoadCacheEntry = {
+type RpgSourceLoadCacheEntry = {
   ctimeMs: number;
   mtimeMs: number;
   size: number;
@@ -42,7 +42,7 @@ type RpgPackLoadCacheEntry = {
 };
 
 export type GeneratedRpgCacheEntry = {
-  compiled: CompiledRpgPack;
+  compiled: CompiledRpgSource;
   report: ValidationReport;
 };
 
@@ -66,19 +66,19 @@ export type RpgTraceSource =
       kind: "worldQuest";
       worldQuestId: string;
       generateRpgSeed: null;
-      compiled: CompiledRpgPack;
+      compiled: CompiledRpgSource;
     }
   | {
       kind: "generated";
       worldQuestId: null;
       generateRpgSeed: number;
-      compiled: CompiledRpgPack;
+      compiled: CompiledRpgSource;
     };
 
 export type RpgWorldQuestPlayableSource = {
   world: WorldManifest;
   node: WorldGraphNode;
-  compiled: CompiledRpgPack;
+  compiled: CompiledRpgSource;
 };
 
 export type RpgWorldQuestReportSource = {
@@ -90,7 +90,7 @@ export type RpgWorldQuestReportSource = {
 type RpgWorldQuestSource = {
   world: WorldManifest;
   node: WorldGraphNode;
-  packPath: string;
+  sourcePath: string;
 };
 
 export const RPG_SOURCE_RUNTIME_CACHE_LIMIT = 8;
@@ -119,7 +119,7 @@ function rememberSourceCacheEntry<Key, Entry>(
 }
 
 function schemaFindings(
-  packPath: string,
+  sourcePath: string,
   error: { issues: { message: string; path: (string | number)[] }[] },
 ): Finding[] {
   return error.issues.map((i) => ({
@@ -147,16 +147,16 @@ function freezeGeneratedEntry(entry: GeneratedRpgCacheEntry): GeneratedRpgCacheE
 }
 
 export class RpgSourceRuntime {
-  private readonly packLoadCache = new Map<string, RpgPackLoadCacheEntry>();
+  private readonly sourceLoadCache = new Map<string, RpgSourceLoadCacheEntry>();
   private readonly generatedRpgCache = new Map<number, GeneratedRpgCacheEntry>();
 
   constructor(private readonly root: string) {}
 
-  /** Read an RPG pack, compile, and validate it with the single runtime loader. */
-  private loadFileBackedReport(packPath: string): RpgLoadResult {
-    const abs = safeResolve(this.root, packPath);
+  /** Read an RPG source, compile, and validate it with the single runtime loader. */
+  private loadSourceBackedReport(sourcePath: string): RpgLoadResult {
+    const abs = safeResolve(this.root, sourcePath);
     const stat = statSync(abs);
-    const cached = refreshSourceCacheEntry(this.packLoadCache, abs);
+    const cached = refreshSourceCacheEntry(this.sourceLoadCache, abs);
     if (
       cached &&
       cached.ctimeMs === stat.ctimeMs &&
@@ -171,16 +171,16 @@ export class RpgSourceRuntime {
     if (!isRpgPackShape(parseYaml(source) as unknown)) {
       result = freezeLoadResult({
         ok: false,
-        report: makeReport(packPath, [
+        report: makeReport(sourcePath, [
           {
             severity: "error",
             code: "UNSUPPORTED_LEGACY_PACK",
-            message: "MCP pack loading is RPG-only; legacy pack shapes are migration data.",
-            where: [packPath],
+            message: "MCP source loading is RPG-only; legacy shapes are migration data.",
+            where: [sourcePath],
           },
         ]),
       });
-      rememberSourceCacheEntry(this.packLoadCache, abs, {
+      rememberSourceCacheEntry(this.sourceLoadCache, abs, {
         ctimeMs: stat.ctimeMs,
         mtimeMs: stat.mtimeMs,
         size: stat.size,
@@ -188,13 +188,13 @@ export class RpgSourceRuntime {
       });
       return result;
     }
-    const compileRes = compileRpgPack(source);
+    const compileRes = compileRpgSource(source);
     if (!compileRes.ok) {
       result = freezeLoadResult({
         ok: false,
-        report: makeReport(packPath, schemaFindings(packPath, compileRes.error)),
+        report: makeReport(sourcePath, schemaFindings(sourcePath, compileRes.error)),
       });
-      rememberSourceCacheEntry(this.packLoadCache, abs, {
+      rememberSourceCacheEntry(this.sourceLoadCache, abs, {
         ctimeMs: stat.ctimeMs,
         mtimeMs: stat.mtimeMs,
         size: stat.size,
@@ -205,7 +205,7 @@ export class RpgSourceRuntime {
     const pack = compileRes.compiled.pack;
     const report = validateRpg(pack);
     result = freezeLoadResult({ ok: true, compiled: compileRes.compiled, report });
-    rememberSourceCacheEntry(this.packLoadCache, abs, {
+    rememberSourceCacheEntry(this.sourceLoadCache, abs, {
       ctimeMs: stat.ctimeMs,
       mtimeMs: stat.mtimeMs,
       size: stat.size,
@@ -214,16 +214,16 @@ export class RpgSourceRuntime {
     return result;
   }
 
-  /** Compile + validate, refusing to play an invalid pack (§0, §10). */
-  private requireFileBackedPlayable(packPath: string): CompiledRpgPack {
-    const lr = this.loadFileBackedReport(packPath);
+  /** Compile + validate, refusing to play an invalid source. */
+  private requireSourceBackedPlayable(sourcePath: string): CompiledRpgSource {
+    const lr = this.loadSourceBackedReport(sourcePath);
     if (!lr.ok || !lr.report.ok) {
-      throw new Error(`Pack is not playable:\n${formatReport(lr.report)}`);
+      throw new Error(`RPG source is not playable:\n${formatReport(lr.report)}`);
     }
     return lr.compiled;
   }
 
-  requireGameSourcePlayable(source: GameSource): CompiledRpgPack {
+  requireGameSourcePlayable(source: GameSource): CompiledRpgSource {
     return source.kind === "generated"
       ? this.requireGeneratedRpgPlayable(source.generateRpgSeed)
       : this.requireWorldQuestPlayable(source.worldQuestId).compiled;
@@ -247,7 +247,7 @@ export class RpgSourceRuntime {
    * Mint a fresh RPG pack from a seed and refuse to play it unless it clears the
    * same validator gate the curated RPG packs clear.
    */
-  requireGeneratedRpgPlayable(seed: number): CompiledRpgPack {
+  requireGeneratedRpgPlayable(seed: number): CompiledRpgSource {
     const { compiled, report } = this.generatedRpg(seed);
     if (!report.ok) {
       throw new Error(
@@ -297,7 +297,7 @@ export class RpgSourceRuntime {
     if (!node.pack) {
       throw new Error(`World quest "${worldQuestId}" does not declare an RPG source.`);
     }
-    return { world, node, packPath: normalizePackPath(node.pack) };
+    return { world, node, sourcePath: normalizePackPath(node.pack) };
   }
 
   requireWorldQuestPlayable(worldQuestId: string): RpgWorldQuestPlayableSource {
@@ -305,7 +305,7 @@ export class RpgSourceRuntime {
     return {
       world: source.world,
       node: source.node,
-      compiled: this.requireFileBackedPlayable(source.packPath),
+      compiled: this.requireSourceBackedPlayable(source.sourcePath),
     };
   }
 
@@ -317,7 +317,7 @@ export class RpgSourceRuntime {
     return {
       world: source.world,
       node: source.node,
-      result: this.loadFileBackedReport(source.packPath),
+      result: this.loadSourceBackedReport(source.sourcePath),
     };
   }
 

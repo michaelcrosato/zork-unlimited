@@ -17,7 +17,7 @@
  * strength wall. Mechanics are intentionally untouched.
  */
 import { describe, it, expect } from "vitest";
-import { loadRpgPackFile } from "../../src/rpg/pack.js";
+import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import {
   indexRpgPack,
   buildRpgRules,
@@ -31,7 +31,7 @@ import type { GameEvent } from "../../src/core/events.js";
 import type { GameState } from "../../src/core/state.js";
 import { validateRpg } from "../../src/validate/rpg_validator.js";
 
-const loaded = loadRpgPackFile("content/rpg/pack/sunken_barrow.yaml");
+const loaded = loadRpgSourceFile("content/rpg/pack/sunken_barrow.yaml");
 if (!loaded.ok) throw new Error("sunken_barrow must compile");
 const pack = loaded.compiled.pack;
 const index = indexRpgPack(pack);

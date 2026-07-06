@@ -19,12 +19,12 @@
  *       slab and reaches ending_victory at full score.
  */
 import { describe, it, expect } from "vitest";
-import { loadRpgPackFile } from "../../src/rpg/pack.js";
+import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import { indexRpgPack, buildRpgRules, initStateForRpgPack } from "../../src/rpg/runner.js";
 import { makeStep } from "../../src/core/engine.js";
 import type { RpgAction } from "../../src/api/types.js";
 
-const loaded = loadRpgPackFile("content/rpg/pack/sunken_barrow.yaml");
+const loaded = loadRpgSourceFile("content/rpg/pack/sunken_barrow.yaml");
 if (!loaded.ok) throw new Error("sunken_barrow must compile");
 const index = indexRpgPack(loaded.compiled.pack);
 const pack = loaded.compiled.pack;

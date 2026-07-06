@@ -104,7 +104,7 @@ import { describe, it, expect } from "vitest";
 import { readdirSync } from "node:fs";
 import { isDeepStrictEqual } from "node:util";
 import { join } from "node:path";
-import { loadRpgPackFile } from "../../src/rpg/pack.js";
+import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import {
   indexRpgPack,
   buildRpgRules,
@@ -444,7 +444,7 @@ describe("bug_0215 — RPG per-step observation stream is invariant under a cons
       `${file}: every observation across the bracketed reachable graph is isomorphic on the relabeled twin`,
       () => {
         const path = join(PACK_DIR, file);
-        const loaded = loadRpgPackFile(path);
+        const loaded = loadRpgSourceFile(path);
         expect(loaded.ok).toBe(true);
         if (!loaded.ok) return;
         const original = loaded.compiled.pack;

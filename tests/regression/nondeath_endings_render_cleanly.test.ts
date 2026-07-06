@@ -51,7 +51,7 @@ import { readdirSync } from "node:fs";
 import { join } from "node:path";
 import type { GameState } from "../../src/core/state.js";
 import type { Rng } from "../../src/core/rng.js";
-import { loadRpgPackFile } from "../../src/rpg/pack.js";
+import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import { indexRpgPack, buildRpgRules, initStateForRpgPack } from "../../src/rpg/runner.js";
 import { endingText } from "../../src/rpg/model.js";
 import type { Ending } from "../../src/rpg/schema.js";
@@ -156,7 +156,7 @@ describe("every non-death ending of every RPG pack renders cleanly when reached"
   it("discovers non-death endings to render-check (guard against a vacuous pass)", () => {
     let total = 0;
     for (const f of rpgFiles) {
-      const l = loadRpgPackFile(join(RPG_DIR, f));
+      const l = loadRpgSourceFile(join(RPG_DIR, f));
       if (l.ok) total += nonDeathEndingsOf(l.compiled.pack.endings).length;
     }
     expect(total).toBeGreaterThanOrEqual(10);
@@ -164,7 +164,7 @@ describe("every non-death ending of every RPG pack renders cleanly when reached"
 
   for (const file of rpgFiles) {
     it(`${file} (rpg): each declared non-death ending renders cleanly when reached`, () => {
-      const loaded = loadRpgPackFile(join(RPG_DIR, file));
+      const loaded = loadRpgSourceFile(join(RPG_DIR, file));
       expect(loaded.ok).toBe(true);
       if (!loaded.ok) return;
       const pack = loaded.compiled.pack;

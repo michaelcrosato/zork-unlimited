@@ -29,13 +29,13 @@
  * no `name`, so the bug_0197 reactive-name pins on head_rack/race_winch are untouched).
  */
 import { describe, it, expect } from "vitest";
-import { loadRpgPackFile } from "../../src/rpg/pack.js";
+import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import { indexRpgPack, initStateForRpgPack } from "../../src/rpg/runner.js";
 import { roomDescription, objectDescription, objectName } from "../../src/rpg/model.js";
 import type { GameState } from "../../src/core/state.js";
 
 const PACK_PATH = "content/rpg/pack/breaking_weir.yaml";
-const loaded = loadRpgPackFile(PACK_PATH);
+const loaded = loadRpgSourceFile(PACK_PATH);
 if (!loaded.ok) throw new Error("breaking_weir must compile");
 const pack = loaded.compiled.pack;
 const index = indexRpgPack(pack);

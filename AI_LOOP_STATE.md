@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 440 -->
+<!-- historical_cycle_count: 441 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - rpg_source_loader_module
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/loop surface: RPG compile/load imports now come from `src/rpg/source.ts`; the old `src/rpg/pack.ts` module and generic `ContentPack` compiler abstraction are retired.
+- Loop effect: MCP runtime, CLI, and regression loops import a source loader with `CompiledRpgSource`, `compileRpgSource`, and `loadRpgSourceFile` names instead of reusing package-era loader names.
+- Guard: standalone RPG contract regression asserts `src/rpg/pack.ts` is absent, the source loader has no generic content-pack exports, and MCP runtime imports `../rpg/source.js`.
+- VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused source/runtime regressions, `npm test`, and `npm run health` passed after loop-state rotation.
 
 ### Cycle result - rpg_index_pack_alias_retired
 
@@ -117,11 +125,3 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Loop effect: start/load session code no longer manually threads disk package paths while resolving live sessions, and README quickstart now teaches world quest ids for validate/inspect.
 - Guard: focused MCP source/runtime, session/tool, save/trace, play CLI, validation-bar, and trace CLI regressions cover world-id loading plus doc contract.
 - VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused source/interface regressions, `npm test`, and `npm run health` passed after loop-state rotation.
-
-### Cycle result - session_pack_path_retired
-
-- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
-- Engine/loop surface: live MCP RPG `Session` and runtime start options no longer carry disk `packPath`; sessions retain only content hash plus canonical world/generated source identity.
-- Loop effect: path-based package loading remains a resolver concern, so the engine loop cannot leak raw package paths back through session metadata, save/load, or repeated MCP turns.
-- Guard: focused MCP session/tool/source/save regressions cover world quest start, save reload, and metadata absence on live sessions.
-- VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused MCP/source/save regressions, `npm test`, and `npm run health` passed after loop-state rotation.

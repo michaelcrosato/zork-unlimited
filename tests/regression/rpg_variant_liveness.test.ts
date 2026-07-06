@@ -74,7 +74,7 @@
 import { describe, it, expect } from "vitest";
 import { readdirSync } from "node:fs";
 import { join } from "node:path";
-import { compileRpgPack, loadRpgPackFile } from "../../src/rpg/pack.js";
+import { compileRpgSource, loadRpgSourceFile } from "../../src/rpg/source.js";
 import {
   indexRpgPack,
   buildRpgRules,
@@ -256,7 +256,7 @@ describe("bug_0147 — every reactive variant of every RPG pack is reachable as 
 
   for (const file of packFiles) {
     it(`${file}: every declared variant is the first match in some viewing state`, () => {
-      const loaded = loadRpgPackFile(join(PACK_DIR, file));
+      const loaded = loadRpgSourceFile(join(PACK_DIR, file));
       expect(loaded.ok).toBe(true);
       if (!loaded.ok) return;
       const pack = loaded.compiled.pack;
@@ -300,7 +300,7 @@ rooms:
 win_conditions: [{ id: w, conditions: [{ visited: b }], ending: e }]
 endings: [{ id: e, title: E, text: "done" }]
 `;
-    const r = compileRpgPack(src);
+    const r = compileRpgSource(src);
     expect(r.ok).toBe(true);
     if (!r.ok) return;
     const { displayed } = analyze(indexRpgPack(r.compiled.pack));
@@ -346,7 +346,7 @@ endings:
   - { id: e, title: E, text: "you live" }
   - { id: dead, title: D, text: "the ogre kills you" }
 `;
-    const r = compileRpgPack(src);
+    const r = compileRpgSource(src);
     expect(r.ok).toBe(true);
     if (!r.ok) return;
     const index = indexRpgPack(r.compiled.pack);

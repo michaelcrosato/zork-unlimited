@@ -4,7 +4,7 @@
  * blocking the road once the charge was safe.
  */
 import { describe, it, expect } from "vitest";
-import { loadRpgPackFile } from "../../src/rpg/pack.js";
+import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import { indexRpgPack, buildRpgRules, initStateForRpgPack } from "../../src/rpg/runner.js";
 import { buildRpgObservation } from "../../src/rpg/observation.js";
 import { makeStep, actionEquals } from "../../src/core/engine.js";
@@ -13,7 +13,7 @@ import type { GameEvent } from "../../src/core/events.js";
 import type { Rng } from "../../src/core/rng.js";
 import type { GameState } from "../../src/core/state.js";
 
-const loaded = loadRpgPackFile("content/rpg/pack/powder_mill_surety.yaml");
+const loaded = loadRpgSourceFile("content/rpg/pack/powder_mill_surety.yaml");
 if (!loaded.ok) throw new Error("powder_mill_surety must compile");
 const index = indexRpgPack(loaded.compiled.pack);
 

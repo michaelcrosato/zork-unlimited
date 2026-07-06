@@ -8,11 +8,11 @@ import { makeStep, actionEquals } from "../../src/core/engine.js";
 import type { RpgAction } from "../../src/api/types.js";
 import type { GameState } from "../../src/core/state.js";
 import type { GameEvent } from "../../src/core/events.js";
-import { loadRpgPackFile } from "../../src/rpg/pack.js";
+import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import { buildRpgRules, indexRpgPack, initStateForRpgPack } from "../../src/rpg/runner.js";
 import { buildRpgObservation } from "../../src/rpg/observation.js";
 
-const loaded = loadRpgPackFile("content/rpg/pack/bellfounders_alarm.yaml");
+const loaded = loadRpgSourceFile("content/rpg/pack/bellfounders_alarm.yaml");
 if (!loaded.ok) throw new Error("bellfounders_alarm must compile");
 const index = indexRpgPack(loaded.compiled.pack);
 const rules = buildRpgRules(index);

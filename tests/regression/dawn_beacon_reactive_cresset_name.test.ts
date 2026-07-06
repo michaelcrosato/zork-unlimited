@@ -29,12 +29,12 @@
  *       states — the fallback is intact, so the capability is opt-in per variant.
  */
 import { describe, it, expect } from "vitest";
-import { loadRpgPackFile } from "../../src/rpg/pack.js";
+import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import { indexRpgPack, initStateForRpgPack } from "../../src/rpg/runner.js";
 import { buildRpgObservation } from "../../src/rpg/observation.js";
 import type { GameState } from "../../src/core/state.js";
 
-const loaded = loadRpgPackFile("content/rpg/pack/dawn_beacon.yaml");
+const loaded = loadRpgSourceFile("content/rpg/pack/dawn_beacon.yaml");
 if (!loaded.ok) throw new Error("dawn_beacon must compile");
 const index = indexRpgPack(loaded.compiled.pack);
 

@@ -35,7 +35,7 @@ import { describe, it, expect } from "vitest";
 import { makeStep } from "../../src/core/engine.js";
 import type { GameState } from "../../src/core/state.js";
 import type { RpgAction } from "../../src/api/types.js";
-import { loadRpgPackFile } from "../../src/rpg/pack.js";
+import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import { validateRpg } from "../../src/validate/rpg_validator.js";
 import {
   indexRpgPack,
@@ -45,7 +45,7 @@ import {
 } from "../../src/rpg/runner.js";
 
 describe("bug_0226 — The Dawn Beacon wins on the deliberate light act, not on bare entry", () => {
-  const loaded = loadRpgPackFile("content/rpg/pack/dawn_beacon.yaml");
+  const loaded = loadRpgSourceFile("content/rpg/pack/dawn_beacon.yaml");
   if (!loaded.ok) throw new Error("dawn_beacon must compile");
   const pack = loaded.compiled.pack;
   const index = indexRpgPack(pack);

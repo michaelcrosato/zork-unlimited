@@ -22,7 +22,7 @@
 import { describe, it, expect, beforeAll } from "vitest";
 import { writeFileSync, mkdirSync } from "node:fs";
 import { createToolApi } from "../../src/mcp/tools.js";
-import { loadRpgPackFile } from "../../src/rpg/pack.js";
+import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import { indexRpgPack, buildRpgRules, initStateForRpgPack } from "../../src/rpg/runner.js";
 import { recordTrace, type Trace } from "../../src/trace/record.js";
 import type { RpgAction } from "../../src/api/types.js";
@@ -59,7 +59,7 @@ function write(path: string, trace: Trace) {
 }
 
 beforeAll(() => {
-  const compiled = loadRpgPackFile(PACK);
+  const compiled = loadRpgSourceFile(PACK);
   if (!compiled.ok) throw new Error("pack must compile");
   const index = indexRpgPack(compiled.compiled.pack);
   const rules = buildRpgRules(index);

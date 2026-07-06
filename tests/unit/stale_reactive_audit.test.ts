@@ -48,7 +48,7 @@ describe("stale reactive room-item audit", () => {
     const source = readFileSync("src/afk/stale_reactive_audit.ts", "utf8");
     expect(source).toContain("RpgSourceRuntime");
     expect(source).toContain("loadWorldQuestReport");
-    expect(source).not.toContain("loadRpgPackFile");
+    expect(source).not.toContain("loadRpgSourceFile");
     expect(source).not.toContain("worldQuestNodeForPack");
     expect(source).not.toContain("content/rpg/pack");
   });

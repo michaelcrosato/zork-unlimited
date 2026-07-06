@@ -5,7 +5,7 @@ import { RPG_COMPACT_OBSERVATION_VERSION } from "../../src/mcp/compact_rpg_obser
 import { RPG_COMPACT_EVENT_VERSION } from "../../src/mcp/compact_rpg_event.js";
 import { RPG_COMPACT_STATE_VERSION } from "../../src/mcp/compact_rpg_state.js";
 import { PathEscapeError } from "../../src/mcp/paths.js";
-import { loadRpgPackFile } from "../../src/rpg/pack.js";
+import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import { indexRpgPack, buildRpgRules, initStateForRpgPack } from "../../src/rpg/runner.js";
 import { buildRpgObservation } from "../../src/rpg/observation.js";
 import { makeStep } from "../../src/core/engine.js";
@@ -2883,7 +2883,7 @@ describe("MCP tools — save / load round-trip (§8.7)", () => {
 describe("MCP tools — replay + path confinement", () => {
   beforeAll(() => {
     // Record a trace to disk for replay_trace to read.
-    const compiled = loadRpgPackFile(PACK);
+    const compiled = loadRpgSourceFile(PACK);
     if (!compiled.ok) throw new Error("pack must compile");
     const index = indexRpgPack(compiled.compiled.pack);
     const rules = buildRpgRules(index);

@@ -43,7 +43,7 @@ import { z } from "zod";
 import { ObjectSchema } from "../../src/rpg/schema.js";
 import { objectDescription } from "../../src/rpg/model.js";
 import { resolveRpgAction } from "../../src/rpg/legal_actions.js";
-import { loadRpgPackFile } from "../../src/rpg/pack.js";
+import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import {
   indexRpgPack,
   buildRpgRules,
@@ -96,7 +96,7 @@ describe("bug_0023 — reactive object descriptions (objectDescription)", () => 
 });
 
 describe("bug_0023 — live on The Cold Forge: the slag grate stops reading 'welded shut' once levered open", () => {
-  const loaded = loadRpgPackFile("content/rpg/pack/cold_forge.yaml");
+  const loaded = loadRpgSourceFile("content/rpg/pack/cold_forge.yaml");
   if (!loaded.ok) throw new Error("cold_forge must compile");
   const pack = loaded.compiled.pack;
   const index = indexRpgPack(pack);

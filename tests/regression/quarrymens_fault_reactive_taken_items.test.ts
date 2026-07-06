@@ -3,7 +3,7 @@
  * placing the survey chain on its starting block after it was taken.
  */
 import { describe, it, expect } from "vitest";
-import { loadRpgPackFile } from "../../src/rpg/pack.js";
+import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import {
   indexRpgPack,
   buildRpgRules,
@@ -16,7 +16,7 @@ import { makeStep } from "../../src/core/engine.js";
 import type { GameState } from "../../src/core/state.js";
 import { validateRpg } from "../../src/validate/rpg_validator.js";
 
-const loaded = loadRpgPackFile("content/rpg/pack/quarrymens_fault.yaml");
+const loaded = loadRpgSourceFile("content/rpg/pack/quarrymens_fault.yaml");
 if (!loaded.ok) throw new Error("quarrymens_fault must compile");
 const pack = loaded.compiled.pack;
 const index = indexRpgPack(pack);

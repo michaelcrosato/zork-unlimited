@@ -68,10 +68,10 @@ function waitForTimestampTick(): void {
 function writeTempWorldQuest(root: string, packSource = TEMP_PACK_SOURCE): string {
   mkdirSync(join(root, "content", "world"), { recursive: true });
   mkdirSync(join(root, "content", "rpg", "pack"), { recursive: true });
-  const packPath = join(root, "content", "rpg", "pack", `${TEMP_WORLD_QUEST_ID}.yaml`);
+  const sourcePath = join(root, "content", "rpg", "pack", `${TEMP_WORLD_QUEST_ID}.yaml`);
   writeFileSync(join(root, "content", "world", "charter_marches.yaml"), TEMP_WORLD_MANIFEST);
-  writeFileSync(packPath, packSource, "utf8");
-  return packPath;
+  writeFileSync(sourcePath, packSource, "utf8");
+  return sourcePath;
 }
 
 describe("RpgSourceRuntime caches", () => {
@@ -87,8 +87,8 @@ describe("RpgSourceRuntime caches", () => {
     const worldSource = readFileSync("src/world/source.ts", "utf8");
     const testSource = readFileSync("tests/unit/mcp_rpg_source_runtime.test.ts", "utf8");
     expect(runtimeSource).toContain("loadWorldQuestReport(worldQuestId, world)");
-    expect(runtimeSource).toContain("private loadFileBackedReport(packPath: string)");
-    expect(runtimeSource).toContain("private requireFileBackedPlayable(packPath: string)");
+    expect(runtimeSource).toContain("private loadSourceBackedReport(sourcePath: string)");
+    expect(runtimeSource).toContain("private requireSourceBackedPlayable(sourcePath: string)");
     expect(runtimeSource).not.toContain("worldQuestNodeForPack");
     expect(runtimeSource).not.toContain("worldQuestPackPaths");
     expect(runtimeSource).not.toContain('kind: "pack"');
@@ -174,17 +174,17 @@ describe("RpgSourceRuntime caches", () => {
 
   it("invalidates file-backed reports after same-size rewrites with restored mtime", () => {
     withTempRoot((root) => {
-      const packPath = writeTempWorldQuest(root);
+      const sourcePath = writeTempWorldQuest(root);
       const fixedTime = new Date("2026-01-01T00:00:00.000Z");
-      utimesSync(packPath, fixedTime, fixedTime);
+      utimesSync(sourcePath, fixedTime, fixedTime);
 
       const runtime = new RpgSourceRuntime(root);
       const first = runtime.loadWorldQuestReport(TEMP_WORLD_QUEST_ID).result;
-      const firstStat = statSync(packPath);
+      const firstStat = statSync(sourcePath);
       waitForTimestampTick();
-      writeFileSync(packPath, TEMP_PACK_SOURCE, "utf8");
-      utimesSync(packPath, fixedTime, fixedTime);
-      const secondStat = statSync(packPath);
+      writeFileSync(sourcePath, TEMP_PACK_SOURCE, "utf8");
+      utimesSync(sourcePath, fixedTime, fixedTime);
+      const secondStat = statSync(sourcePath);
       const second = runtime.loadWorldQuestReport(TEMP_WORLD_QUEST_ID).result;
 
       expect(secondStat.size).toBe(firstStat.size);

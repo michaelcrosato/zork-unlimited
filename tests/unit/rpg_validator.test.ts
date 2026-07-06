@@ -1,10 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { loadRpgPackFile } from "../../src/rpg/pack.js";
+import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import { validateRpg } from "../../src/validate/rpg_validator.js";
 
 describe("RPG validator — shipped pack", () => {
   it("content/rpg/pack/sunken_barrow.yaml validates with no errors or warnings", () => {
-    const loaded = loadRpgPackFile("content/rpg/pack/sunken_barrow.yaml");
+    const loaded = loadRpgSourceFile("content/rpg/pack/sunken_barrow.yaml");
     expect(loaded.ok).toBe(true);
     if (!loaded.ok) return;
     const report = validateRpg(loaded.compiled.pack);
@@ -15,7 +15,7 @@ describe("RPG validator — shipped pack", () => {
 
 describe("RPG validator — negative fixture must fail", () => {
   it("rpg_unwinnable fails with COMBAT_UNWINNABLE", () => {
-    const loaded = loadRpgPackFile("content/broken-fixtures/rpg_unwinnable.yaml");
+    const loaded = loadRpgSourceFile("content/broken-fixtures/rpg_unwinnable.yaml");
     expect(loaded.ok).toBe(true);
     if (!loaded.ok) return;
     const report = validateRpg(loaded.compiled.pack);

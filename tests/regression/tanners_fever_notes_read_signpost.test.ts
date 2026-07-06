@@ -8,7 +8,7 @@
  * instead of disclosing the load-bearing numbers without the matching state.
  */
 import { describe, it, expect } from "vitest";
-import { loadRpgPackFile } from "../../src/rpg/pack.js";
+import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import {
   indexRpgPack,
   buildRpgRules,
@@ -20,7 +20,7 @@ import { validateRpg } from "../../src/validate/rpg_validator.js";
 import type { GameEvent } from "../../src/core/events.js";
 import type { GameState } from "../../src/core/state.js";
 
-const loaded = loadRpgPackFile("content/rpg/pack/tanners_fever.yaml");
+const loaded = loadRpgSourceFile("content/rpg/pack/tanners_fever.yaml");
 if (!loaded.ok) throw new Error("tanners_fever must compile");
 const pack = loaded.compiled.pack;
 const index = indexRpgPack(pack);

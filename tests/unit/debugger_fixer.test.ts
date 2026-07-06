@@ -8,7 +8,7 @@
 import { describe, it, expect } from "vitest";
 import { initState } from "../../src/core/state.js";
 import type { Rules } from "../../src/core/engine.js";
-import { loadRpgPackFile } from "../../src/rpg/pack.js";
+import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import { diagnose, toBugArtifact } from "../../agents/debugger.js";
 import {
   applyContentPatch,
@@ -66,7 +66,7 @@ describe("debugger.diagnose", () => {
 });
 
 describe("fixer.applyContentPatch", () => {
-  const loaded = loadRpgPackFile("content/rpg/pack/cold_forge.yaml");
+  const loaded = loadRpgSourceFile("content/rpg/pack/cold_forge.yaml");
   if (!loaded.ok) throw new Error("cold_forge failed to compile");
   const rawPack = loaded.compiled.pack;
 
@@ -131,7 +131,7 @@ describe("fixer.regressionTestStub", () => {
 
     expect(source).toContain("RpgSourceRuntime");
     expect(source).toContain('requireWorldQuestPlayable("cold_forge")');
-    expect(source).not.toContain("loadRpgPackFile");
+    expect(source).not.toContain("loadRpgSourceFile");
     expect(source).not.toContain("content/rpg/pack");
     expect(source).not.toContain("packPath");
   });

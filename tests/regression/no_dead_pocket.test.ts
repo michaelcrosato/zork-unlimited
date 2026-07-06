@@ -55,7 +55,7 @@ import type { GameState } from "../../src/core/state.js";
 import type { Rng } from "../../src/core/rng.js";
 import { stateKey, exhaustiveEndingsMulti } from "./support/exhaustive_endings.js";
 
-import { loadRpgPackFile, compileRpgPack } from "../../src/rpg/pack.js";
+import { loadRpgSourceFile, compileRpgSource } from "../../src/rpg/source.js";
 import { indexRpgPack, buildRpgRules, initStateForRpgPack } from "../../src/rpg/runner.js";
 import { HP_VAR } from "../../src/rpg/schema.js";
 
@@ -220,7 +220,7 @@ describe("bug_0150 — every progress-reachable state of every shipped pack is L
     it(
       `RPG ${file}: no soft-lock pocket`,
       () => {
-        const loaded = loadRpgPackFile(join("content/rpg/pack", file));
+        const loaded = loadRpgSourceFile(join("content/rpg/pack", file));
         expect(loaded.ok).toBe(true);
         if (!loaded.ok) return;
         const pack = loaded.compiled.pack;
@@ -273,7 +273,7 @@ enemies: []
 `;
 
   function rpgLiveness(src: string): LivenessResult {
-    const r = compileRpgPack(src);
+    const r = compileRpgSource(src);
     expect(r.ok).toBe(true);
     if (!r.ok) throw new Error("control pack must compile");
     const index = indexRpgPack(r.compiled.pack);

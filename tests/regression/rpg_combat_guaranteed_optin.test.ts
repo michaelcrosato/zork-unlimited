@@ -22,7 +22,7 @@
  *       no false positive against deliberate design.
  */
 import { describe, it, expect } from "vitest";
-import { compileRpgPack, loadRpgPackFile } from "../../src/rpg/pack.js";
+import { compileRpgSource, loadRpgSourceFile } from "../../src/rpg/source.js";
 import { validateRpg } from "../../src/validate/rpg_validator.js";
 
 /**
@@ -78,7 +78,7 @@ endings:
 `;
 
 function codes(src: string): string[] {
-  const r = compileRpgPack(src);
+  const r = compileRpgSource(src);
   expect(r.ok).toBe(true);
   if (!r.ok) return [];
   return validateRpg(r.compiled.pack).findings.map((f) => f.code);
@@ -174,7 +174,7 @@ endings:
 `;
 
 function gauntletCodes(src: string): string[] {
-  const r = compileRpgPack(src);
+  const r = compileRpgSource(src);
   expect(r.ok).toBe(true);
   if (!r.ok) return [];
   return validateRpg(r.compiled.pack).findings.map((f) => f.code);
@@ -219,7 +219,7 @@ describe("bug_0114 — opt-in combat fairness guarantee", () => {
   // (bug_0101) and does NOT set combat_guaranteed, so the new check never fires on
   // it. (The health bar separately asserts it validates 0 error / 0 warning.)
   it("never flags the shipped gamble pack cold_forge, which does not opt in", () => {
-    const r = loadRpgPackFile("content/rpg/pack/cold_forge.yaml");
+    const r = loadRpgSourceFile("content/rpg/pack/cold_forge.yaml");
     expect(r.ok).toBe(true);
     if (!r.ok) return;
     expect(r.compiled.pack.meta.combat_guaranteed).toBeUndefined();

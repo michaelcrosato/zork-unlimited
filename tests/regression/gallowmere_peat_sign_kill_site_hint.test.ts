@@ -3,14 +3,14 @@
  * direct player that the optional east kill-site is the combat-prep clue.
  */
 import { describe, it, expect } from "vitest";
-import { loadRpgPackFile } from "../../src/rpg/pack.js";
+import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import { indexRpgPack, buildRpgRules, initStateForRpgPack } from "../../src/rpg/runner.js";
 import { makeStep, actionEquals } from "../../src/core/engine.js";
 import type { RpgAction } from "../../src/api/types.js";
 import type { GameEvent } from "../../src/core/events.js";
 import type { GameState } from "../../src/core/state.js";
 
-const loaded = loadRpgPackFile("content/rpg/pack/gallowmere.yaml");
+const loaded = loadRpgSourceFile("content/rpg/pack/gallowmere.yaml");
 if (!loaded.ok) throw new Error("gallowmere must compile");
 const index = indexRpgPack(loaded.compiled.pack);
 const rules = buildRpgRules(index);

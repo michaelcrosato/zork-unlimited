@@ -40,15 +40,15 @@
  * them fails — genuine, not vacuous.
  */
 import { describe, it, expect } from "vitest";
-import { loadRpgPackFile } from "../../src/rpg/pack.js";
-import { compileRpgPack } from "../../src/rpg/pack.js";
+import { loadRpgSourceFile } from "../../src/rpg/source.js";
+import { compileRpgSource } from "../../src/rpg/source.js";
 import { indexRpgPack, buildRpgRules, initStateForRpgPack } from "../../src/rpg/runner.js";
 import { buildRpgObservation } from "../../src/rpg/observation.js";
 import { makeStep } from "../../src/core/engine.js";
 import type { GameState } from "../../src/core/state.js";
 import type { RpgAction } from "../../src/api/types.js";
 
-const compiled = loadRpgPackFile("content/rpg/pack/sunken_barrow.yaml");
+const compiled = loadRpgSourceFile("content/rpg/pack/sunken_barrow.yaml");
 if (!compiled.ok) throw new Error("sunken_barrow must compile");
 const rindex = indexRpgPack(compiled.compiled.pack);
 const rstep = makeStep(buildRpgRules(rindex));
@@ -141,7 +141,7 @@ endings:
   - { id: done, title: "Done", text: "Done." }
 enemies: []
 `;
-    const c = compileRpgPack(FIXTURE);
+    const c = compileRpgSource(FIXTURE);
     if (!c.ok) throw new Error("fixture must compile");
     const pindex = indexRpgPack(c.compiled.pack);
     const obs = buildRpgObservation(pindex, initStateForRpgPack(pindex, 0));

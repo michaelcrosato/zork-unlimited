@@ -5,7 +5,7 @@
  * was never opened.
  */
 import { describe, it, expect } from "vitest";
-import { loadRpgPackFile } from "../../src/rpg/pack.js";
+import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import { validateRpg } from "../../src/validate/rpg_validator.js";
 import { indexRpgPack, buildRpgRules, initStateForRpgPack } from "../../src/rpg/runner.js";
 import { buildRpgObservation } from "../../src/rpg/observation.js";
@@ -14,7 +14,7 @@ import type { Rng } from "../../src/core/rng.js";
 import type { RpgAction } from "../../src/api/types.js";
 import type { GameState } from "../../src/core/state.js";
 
-const loaded = loadRpgPackFile("content/rpg/pack/lockkeepers_toll.yaml");
+const loaded = loadRpgSourceFile("content/rpg/pack/lockkeepers_toll.yaml");
 if (!loaded.ok) throw new Error("lockkeepers_toll must compile");
 const pack = loaded.compiled.pack;
 const index = indexRpgPack(pack);

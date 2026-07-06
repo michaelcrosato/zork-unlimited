@@ -5,7 +5,7 @@
  * making the live tray safe.
  */
 import { describe, it, expect } from "vitest";
-import { loadRpgPackFile } from "../../src/rpg/pack.js";
+import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import { validateRpg } from "../../src/validate/rpg_validator.js";
 import { indexRpgPack, buildRpgRules, initStateForRpgPack } from "../../src/rpg/runner.js";
 import { buildRpgObservation } from "../../src/rpg/observation.js";
@@ -14,7 +14,7 @@ import type { RpgAction } from "../../src/api/types.js";
 import type { GameEvent } from "../../src/core/events.js";
 import type { GameState } from "../../src/core/state.js";
 
-const loaded = loadRpgPackFile("content/rpg/pack/powder_mill_surety.yaml");
+const loaded = loadRpgSourceFile("content/rpg/pack/powder_mill_surety.yaml");
 if (!loaded.ok) throw new Error("powder_mill_surety must compile");
 const pack = loaded.compiled.pack;
 const index = indexRpgPack(pack);

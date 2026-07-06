@@ -1,4 +1,4 @@
-import type { CompiledRpgPack } from "../rpg/pack.js";
+import type { CompiledRpgSource } from "../rpg/source.js";
 import type { ValidationReport } from "../validate/report.js";
 import { resolveWorldQuestSourceId, type WorldQuestSourceArgs } from "../world/source.js";
 import type { RpgWorldQuestReportSource } from "./rpg_source_runtime.js";
@@ -14,7 +14,7 @@ export type WorldQuestValidationReportResponse = {
 export type WorldQuestLoadReportResponse = {
   ok: boolean;
   world_quest_id: string | null;
-  meta?: CompiledRpgPack["pack"]["meta"];
+  meta?: CompiledRpgSource["pack"]["meta"];
   content_hash?: string;
   report: ValidationReport;
 };

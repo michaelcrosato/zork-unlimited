@@ -24,7 +24,7 @@
  *       ends at 25/50 — the score now distinguishes the true win from the doom.
  */
 import { describe, it, expect } from "vitest";
-import { compileRpgPack, loadRpgPackFile } from "../../src/rpg/pack.js";
+import { compileRpgSource, loadRpgSourceFile } from "../../src/rpg/source.js";
 import {
   indexRpgPack,
   buildRpgRules,
@@ -65,7 +65,7 @@ enemies: []
 
 describe("bug_0107 — take_effects: the first-class TAKE content hook", () => {
   it("(1) fire on pickup (after add_item): a takeable gem's take_effects mutate state", () => {
-    const r = compileRpgPack(
+    const r = compileRpgSource(
       gemPack("      - inc_var: { name: score, by: 5 }\n      - set_flag: got_gem"),
     );
     expect(r.ok).toBe(true);
@@ -88,7 +88,7 @@ describe("bug_0107 — take_effects: the first-class TAKE content hook", () => {
   });
 
   it("(2) the award is one-shot: drop/re-take cannot re-fire take_effects", () => {
-    const r = compileRpgPack(gemPack("      - inc_var: { name: score, by: 5 }"));
+    const r = compileRpgSource(gemPack("      - inc_var: { name: score, by: 5 }"));
     expect(r.ok).toBe(true);
     if (!r.ok) return;
     const index = indexRpgPack(r.compiled.pack);
@@ -150,13 +150,13 @@ win_conditions: [{ id: w, conditions: [{ visited: b }], ending: e }]
 endings: [{ id: e, title: E, text: "done" }]
 enemies: []
 `;
-    const r = compileRpgPack(src);
+    const r = compileRpgSource(src);
     expect(r.ok).toBe(false);
   });
 
   it("(4) the validator folds take_effects into the SCORE_UNREACHABLE upper bound", () => {
     // The only award lives in take_effects; declared max matches it → no finding.
-    const ok = compileRpgPack(gemPack("      - inc_var: { name: score, by: 5 }", 5));
+    const ok = compileRpgSource(gemPack("      - inc_var: { name: score, by: 5 }", 5));
     expect(ok.ok).toBe(true);
     if (ok.ok)
       expect(
@@ -165,7 +165,7 @@ enemies: []
 
     // Declared max exceeds the take_effects award → SCORE_UNREACHABLE still fires
     // (proving the +5 really is being counted, not ignored).
-    const under = compileRpgPack(gemPack("      - inc_var: { name: score, by: 5 }", 10));
+    const under = compileRpgSource(gemPack("      - inc_var: { name: score, by: 5 }", 10));
     expect(under.ok).toBe(true);
     if (under.ok)
       expect(
@@ -175,7 +175,7 @@ enemies: []
 });
 
 describe("bug_0107 — The Sunken Barrow: the +25 rides the claim, not chamber entry", () => {
-  const loaded = loadRpgPackFile("content/rpg/pack/sunken_barrow.yaml");
+  const loaded = loadRpgSourceFile("content/rpg/pack/sunken_barrow.yaml");
   if (!loaded.ok) throw new Error("sunken_barrow must compile");
   const index = indexRpgPack(loaded.compiled.pack);
   const step = makeStep(buildRpgRules(index));

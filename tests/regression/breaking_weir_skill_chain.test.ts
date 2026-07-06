@@ -31,7 +31,7 @@
  * behavioural witness, not a vacuous green.
  */
 import { describe, it, expect } from "vitest";
-import { loadRpgPackFile } from "../../src/rpg/pack.js";
+import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import { validateRpg } from "../../src/validate/rpg_validator.js";
 import { resolveSkillCheck } from "../../src/core/skill_check.js";
 import { initState } from "../../src/core/state.js";
@@ -53,7 +53,7 @@ function freshState(pack: RpgPack, vars: Record<string, number>): GameState {
 const PACK_PATH = "content/rpg/pack/breaking_weir.yaml";
 
 function loadPack(): RpgPack {
-  const r = loadRpgPackFile(PACK_PATH);
+  const r = loadRpgSourceFile(PACK_PATH);
   expect(r.ok, "breaking_weir must load").toBe(true);
   if (!r.ok) throw new Error("unreachable");
   return r.compiled.pack;

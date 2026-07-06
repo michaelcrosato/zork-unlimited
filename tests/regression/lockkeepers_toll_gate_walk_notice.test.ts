@@ -3,7 +3,7 @@
  * peaceful route and did not surface the risk of rushing the sluice-chain check.
  */
 import { describe, it, expect } from "vitest";
-import { loadRpgPackFile } from "../../src/rpg/pack.js";
+import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import { indexRpgPack, buildRpgRules, initStateForRpgPack } from "../../src/rpg/runner.js";
 import { buildRpgObservation } from "../../src/rpg/observation.js";
 import { makeStep, actionEquals } from "../../src/core/engine.js";
@@ -11,7 +11,7 @@ import type { RpgAction } from "../../src/api/types.js";
 import type { GameEvent } from "../../src/core/events.js";
 import type { GameState } from "../../src/core/state.js";
 
-const loaded = loadRpgPackFile("content/rpg/pack/lockkeepers_toll.yaml");
+const loaded = loadRpgSourceFile("content/rpg/pack/lockkeepers_toll.yaml");
 if (!loaded.ok) throw new Error("lockkeepers_toll must compile");
 const index = indexRpgPack(loaded.compiled.pack);
 const rules = buildRpgRules(index);

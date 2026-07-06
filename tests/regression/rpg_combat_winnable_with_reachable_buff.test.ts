@@ -17,7 +17,7 @@
  * (a debuff) is never credited.
  */
 import { describe, it, expect } from "vitest";
-import { compileRpgPack } from "../../src/rpg/pack.js";
+import { compileRpgSource } from "../../src/rpg/source.js";
 import { validateRpg } from "../../src/validate/rpg_validator.js";
 
 /**
@@ -73,7 +73,7 @@ endings:
 `;
 
 const codes = (yaml: string): string[] => {
-  const loaded = compileRpgPack(yaml);
+  const loaded = compileRpgSource(yaml);
   expect(loaded.ok).toBe(true);
   if (!loaded.ok) throw new Error("fixture failed to compile");
   return validateRpg(loaded.compiled.pack).findings.map((f) => f.code);
@@ -86,7 +86,7 @@ describe("bug_0097 — combat winnability credits best reachable stats", () => {
     const yaml = PACK(ATTACK_PLUS_6);
     expect(codes(yaml)).not.toContain("COMBAT_UNWINNABLE");
     // …and the buff variant is fully shippable (no other findings either).
-    const loaded = compileRpgPack(yaml);
+    const loaded = compileRpgSource(yaml);
     expect(loaded.ok && validateRpg(loaded.compiled.pack).ok).toBe(true);
   });
 
@@ -112,12 +112,12 @@ describe("bug_0097 — combat winnability credits best reachable stats", () => {
 
 describe("bug_0097 — shipped RPG packs stay green (no new findings)", () => {
   it("sunken_barrow and cold_forge still validate with zero findings", async () => {
-    const { loadRpgPackFile } = await import("../../src/rpg/pack.js");
+    const { loadRpgSourceFile } = await import("../../src/rpg/source.js");
     for (const path of [
       "content/rpg/pack/sunken_barrow.yaml",
       "content/rpg/pack/cold_forge.yaml",
     ]) {
-      const loaded = loadRpgPackFile(path);
+      const loaded = loadRpgSourceFile(path);
       expect(loaded.ok).toBe(true);
       if (!loaded.ok) return;
       const report = validateRpg(loaded.compiled.pack);

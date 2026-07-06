@@ -69,7 +69,7 @@
 import { describe, it, expect } from "vitest";
 import { readdirSync } from "node:fs";
 import { join } from "node:path";
-import { compileRpgPack, loadRpgPackFile } from "../../src/rpg/pack.js";
+import { compileRpgSource, loadRpgSourceFile } from "../../src/rpg/source.js";
 import {
   indexRpgPack,
   buildRpgRules,
@@ -220,7 +220,7 @@ describe("bug_0152 — every reachable action menu of every RPG pack has unique 
 
   for (const file of packFiles) {
     it(`${file}: no reachable state ever offers two actions with the same id`, () => {
-      const loaded = loadRpgPackFile(join(PACK_DIR, file));
+      const loaded = loadRpgSourceFile(join(PACK_DIR, file));
       expect(loaded.ok).toBe(true);
       if (!loaded.ok) return;
       const pack = loaded.compiled.pack;
@@ -275,7 +275,7 @@ rooms:
 win_conditions: [{ id: w, conditions: [{ visited: b }], ending: e }]
 endings: [{ id: e, title: E, text: "done" }]
 `;
-    const r = compileRpgPack(src);
+    const r = compileRpgSource(src);
     expect(r.ok).toBe(true);
     if (!r.ok) return;
     const { collisions, statesChecked } = analyze(indexRpgPack(r.compiled.pack));
@@ -309,7 +309,7 @@ endings:
   - { id: e, title: E, text: "win" }
   - { id: dead, title: D, text: "the guards kill you" }
 `;
-    const r = compileRpgPack(src);
+    const r = compileRpgSource(src);
     expect(r.ok).toBe(true);
     if (!r.ok) return;
     const { collisions, statesChecked } = analyze(indexRpgPack(r.compiled.pack));
@@ -346,7 +346,7 @@ endings:
   - { id: e, title: E, text: "win" }
   - { id: dead, title: D, text: "the guards kill you" }
 `;
-    const r = compileRpgPack(src);
+    const r = compileRpgSource(src);
     expect(r.ok).toBe(true);
     if (!r.ok) return;
     const { collisions } = analyze(indexRpgPack(r.compiled.pack));

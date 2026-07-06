@@ -35,7 +35,7 @@ import { makeStep } from "../../src/core/engine.js";
 import type { RpgAction } from "../../src/api/types.js";
 import type { GameState } from "../../src/core/state.js";
 import type { Rng } from "../../src/core/rng.js";
-import { loadRpgPackFile } from "../../src/rpg/pack.js";
+import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import { indexRpgPack, buildRpgRules, initStateForRpgPack } from "../../src/rpg/runner.js";
 import { HP_VAR } from "../../src/rpg/schema.js";
 
@@ -77,7 +77,7 @@ const worstRng = (): Rng => fixedSeqRng([LOW, HIGH]);
  * The greedy policy terminates: every ATTACK strictly lowers an HP, every MOVE advances.
  */
 function rushNorthUnprepared(rng: () => Rng): GameState {
-  const loaded = loadRpgPackFile(PACK_PATH);
+  const loaded = loadRpgSourceFile(PACK_PATH);
   expect(loaded.ok, "wolf_winter must load").toBe(true);
   if (!loaded.ok) throw new Error("unreachable");
   const index = indexRpgPack(loaded.compiled.pack);
@@ -125,7 +125,7 @@ describe("bug_0195 — The Wolf-Winter: skipping prep is a GAMBLE, not certain d
 
   it("the SAME unprepared rush DIES on the player's WORST rolls (the 'gamble it on the night's luck' half)", () => {
     const state = rushNorthUnprepared(worstRng);
-    const loaded = loadRpgPackFile(PACK_PATH);
+    const loaded = loadRpgSourceFile(PACK_PATH);
     expect(loaded.ok).toBe(true);
     if (!loaded.ok) return;
     const ending = loaded.compiled.pack.endings.find((e) => e.id === state.endingId);

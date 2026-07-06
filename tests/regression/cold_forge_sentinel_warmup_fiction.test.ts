@@ -29,7 +29,7 @@
  *       canonical buffed route (seed 1) still reaches ending_victory at full score.
  */
 import { describe, it, expect } from "vitest";
-import { loadRpgPackFile } from "../../src/rpg/pack.js";
+import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import {
   indexRpgPack,
   buildRpgRules,
@@ -41,7 +41,7 @@ import { makeStep } from "../../src/core/engine.js";
 import type { Action } from "../../src/api/types.js";
 import type { GameState } from "../../src/core/state.js";
 
-const loaded = loadRpgPackFile("content/rpg/pack/cold_forge.yaml");
+const loaded = loadRpgSourceFile("content/rpg/pack/cold_forge.yaml");
 if (!loaded.ok) throw new Error("cold_forge must compile");
 const pack = loaded.compiled.pack;
 const index = indexRpgPack(pack);

@@ -10,7 +10,7 @@ import { spawnSync } from "node:child_process";
 import { describe, it, expect } from "vitest";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { loadRpgPackFile } from "../../src/rpg/pack.js";
+import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import { validateRpg } from "../../src/validate/rpg_validator.js";
 import { loadWorldManifest } from "../../src/world/source.js";
 
@@ -68,7 +68,7 @@ describe("single-engine RPG validation bar", () => {
   });
 
   it.each(packs)("%s loads and validates with zero errors", (path) => {
-    const loaded = loadRpgPackFile(path);
+    const loaded = loadRpgSourceFile(path);
     expect(loaded.ok, `${path} failed to load as RPG`).toBe(true);
     if (!loaded.ok) return;
 
@@ -118,7 +118,7 @@ describe("single-engine RPG validation bar", () => {
   it("validate CLI loads shipped quests through the source runtime boundary", () => {
     expect(validateCli).toContain("RpgSourceRuntime");
     expect(validateCli).toContain("loadWorldQuestReport");
-    expect(validateCli).not.toContain("loadRpgPackFile");
+    expect(validateCli).not.toContain("loadRpgSourceFile");
     expect(validateCli).not.toContain("resolveWorldQuestPackPath");
   });
 

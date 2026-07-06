@@ -26,7 +26,7 @@
  *     journal it emits credits no one the player never spoke to.
  */
 import { describe, it, expect } from "vitest";
-import { loadRpgPackFile } from "../../src/rpg/pack.js";
+import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import { indexRpgPack, initStateForRpgPack } from "../../src/rpg/runner.js";
 import { buildRpgObservation } from "../../src/rpg/observation.js";
 import { resolveSkillCheck } from "../../src/core/skill_check.js";
@@ -36,7 +36,7 @@ import type { RpgPack } from "../../src/rpg/schema.js";
 import type { Rng } from "../../src/core/rng.js";
 
 const PACK_PATH = "content/rpg/pack/breaking_weir.yaml";
-const loaded = loadRpgPackFile(PACK_PATH);
+const loaded = loadRpgSourceFile(PACK_PATH);
 if (!loaded.ok) throw new Error("breaking_weir must compile");
 const pack: RpgPack = loaded.compiled.pack;
 const index = indexRpgPack(pack);
