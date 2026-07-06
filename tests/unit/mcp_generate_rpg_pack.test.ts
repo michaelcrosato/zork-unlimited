@@ -108,7 +108,10 @@ describe("bug_0160 — new_game(generate_rpg_seed) plays a fresh minted RPG pack
     // Descend to the gallery where the guardian stands (entry → hall → gallery).
     a.step_action({ session_id: sid, action_id: "go_down" });
     a.step_action({ session_id: sid, action_id: "go_north" });
-    const gallery = a.get_observation({ session_id: sid }).observation;
+    const gallery = a.get_observation({
+      session_id: sid,
+      compact_observation: false,
+    }).observation;
     if (gallery.mode !== "rpg") throw new Error("expected an RPG observation in the gallery");
 
     // The foe is present and attackable...
@@ -127,7 +130,10 @@ describe("bug_0160 — new_game(generate_rpg_seed) plays a fresh minted RPG pack
 
     // Down to the hall, where the spirit waits.
     a.step_action({ session_id: sid, action_id: "go_down" });
-    const hall = a.get_observation({ session_id: sid }).observation;
+    const hall = a.get_observation({
+      session_id: sid,
+      compact_observation: false,
+    }).observation;
     if (hall.mode !== "rpg") throw new Error("expected an RPG observation in the hall");
     expect(hall.stats.attack).toBe(4); // base attack before any counsel
     expect(hall.available_actions.map((x) => x.id)).toContain("talk_spirit");
@@ -135,7 +141,10 @@ describe("bug_0160 — new_game(generate_rpg_seed) plays a fresh minted RPG pack
     // Talk, then ask how to beat the guardian — the node grants +2 attack on entry.
     a.step_action({ session_id: sid, action_id: "talk_spirit" });
     a.step_action({ session_id: sid, action_id: "ask_ask_foe" });
-    const after = a.get_observation({ session_id: sid }).observation;
+    const after = a.get_observation({
+      session_id: sid,
+      compact_observation: false,
+    }).observation;
     if (after.mode !== "rpg") throw new Error("expected an RPG observation after the counsel");
     expect(after.stats.attack).toBe(6); // +2, applied live through the engine
   });

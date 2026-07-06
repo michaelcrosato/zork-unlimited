@@ -111,6 +111,12 @@ type RpgViewOptions = {
   compact_observation?: boolean;
 };
 
+type DefaultCompactRpgView<Args extends RpgViewOptions> = Args extends {
+  compact_observation: false;
+}
+  ? Args
+  : Args & { compact_observation: true };
+
 type RpgEventOptions = {
   compact_events?: boolean;
 };
@@ -438,8 +444,17 @@ export function createToolApi(opts: { root: string }) {
       ) as RpgWorldQuestStartPayload<Args>;
     },
 
-    get_observation<Args extends RpgGetObservationArgs>(args: Args): RpgObservationResponse<Args> {
-      return runRpgGetObservation({ sessions, rpgRuntime }, args) as RpgObservationResponse<Args>;
+    get_observation<Args extends RpgGetObservationArgs>(
+      args: Args,
+    ): RpgObservationResponse<DefaultCompactRpgView<Args>> {
+      const responseOptions = {
+        compact_observation: true,
+        ...args,
+      } as DefaultCompactRpgView<Args>;
+      return runRpgGetObservation(
+        { sessions, rpgRuntime },
+        responseOptions,
+      ) as RpgObservationResponse<DefaultCompactRpgView<Args>>;
     },
 
     list_legal_actions<Args extends RpgLegalActionsArgs>(

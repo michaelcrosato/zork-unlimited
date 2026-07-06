@@ -39,7 +39,11 @@ describe("bug_0299 — hide_graph per-call override on observation tools", () =>
   it("(1) override on, session off: get_observation hides exits", () => {
     const a = api();
     const g = a.start_world_quest({ world_quest_id: WORLD_QUEST_ID }); // session default: hide_graph absent (false)
-    const r = a.get_observation({ session_id: g.session_id, hide_graph: true });
+    const r = a.get_observation({
+      session_id: g.session_id,
+      hide_graph: true,
+      compact_observation: false,
+    });
     const exits = exitsOf(r.observation);
     expect(exits.length).toBeGreaterThan(0);
     for (const e of exits) {
@@ -50,7 +54,11 @@ describe("bug_0299 — hide_graph per-call override on observation tools", () =>
   it("(2) override off, session on: get_observation reveals exits", () => {
     const a = api();
     const g = a.start_world_quest({ world_quest_id: WORLD_QUEST_ID, hide_graph: true }); // session default: hidden
-    const r = a.get_observation({ session_id: g.session_id, hide_graph: false });
+    const r = a.get_observation({
+      session_id: g.session_id,
+      hide_graph: false,
+      compact_observation: false,
+    });
     const exits = exitsOf(r.observation);
     expect(exits.length).toBeGreaterThan(0);
     for (const e of exits) {
@@ -61,7 +69,10 @@ describe("bug_0299 — hide_graph per-call override on observation tools", () =>
   it("(3) override absent, session on: session default preserved (exits hidden)", () => {
     const a = api();
     const g = a.start_world_quest({ world_quest_id: WORLD_QUEST_ID, hide_graph: true }); // session default: hidden
-    const r = a.get_observation({ session_id: g.session_id }); // no override
+    const r = a.get_observation({
+      session_id: g.session_id,
+      compact_observation: false,
+    }); // no override
     const exits = exitsOf(r.observation);
     expect(exits.length).toBeGreaterThan(0);
     for (const e of exits) {
@@ -88,7 +99,10 @@ describe("bug_0299 — hide_graph per-call override on observation tools", () =>
       expect(e.to).toBeUndefined();
     }
     // Now call get_observation WITHOUT override — session default (show graph) should be preserved
-    const plain = a.get_observation({ session_id: g.session_id });
+    const plain = a.get_observation({
+      session_id: g.session_id,
+      compact_observation: false,
+    });
     const plainExits = exitsOf(plain.observation);
     expect(plainExits.length).toBeGreaterThan(0);
     expect(plainExits.some((e) => typeof e.to === "string")).toBe(true);
@@ -97,7 +111,11 @@ describe("bug_0299 — hide_graph per-call override on observation tools", () =>
   it("(5) non-vacuity: in override-off / session-on case exits genuinely carry destinations", () => {
     const a = api();
     const g = a.start_world_quest({ world_quest_id: WORLD_QUEST_ID, hide_graph: true }); // session: hidden
-    const r = a.get_observation({ session_id: g.session_id, hide_graph: false }); // override: show
+    const r = a.get_observation({
+      session_id: g.session_id,
+      hide_graph: false,
+      compact_observation: false,
+    }); // override: show
     const exits = exitsOf(r.observation);
     // At least one exit must carry a string `to` — guards against vacuous pass with empty exits
     const hasStringTo = exits.some((e) => typeof e.to === "string");

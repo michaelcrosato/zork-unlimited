@@ -353,7 +353,10 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(started.world_quest_id).toBe("sunken_barrow");
     expect("generated_rpg_seed" in started).toBe(false);
     expect(started.observation.world?.id).toBe("charter_marches");
-    const followUp = a.get_observation({ session_id: started.session_id }).observation;
+    const followUp = a.get_observation({
+      session_id: started.session_id,
+      compact_observation: false,
+    }).observation;
     expect(followUp.title).toBe(started.observation.title);
     expect(followUp).not.toHaveProperty("world");
 
@@ -731,9 +734,12 @@ describe("MCP tools — validate / load (§9.4)", () => {
         },
       }),
     ).toThrow(/started quest id/i);
-    expect(a.get_observation({ session_id: startedQuest.rpg_session_id }).observation.title).toBe(
-      startedQuest.rpg_session.observation.title,
-    );
+    expect(
+      a.get_observation({
+        session_id: startedQuest.rpg_session_id,
+        compact_observation: false,
+      }).observation.title,
+    ).toBe(startedQuest.rpg_session.observation.title);
     const compactSource = a.restore_overworld_session({
       snapshot: beforeQuestStart.snapshot,
       compact_context: true,
@@ -1893,7 +1899,10 @@ describe("MCP tools — the play loop (§9.1)", () => {
     expect("generated_rpg_seed" in game).toBe(false);
     expect(game.observation.mode).toBe("rpg");
     expect(
-      a.get_observation({ session_id: game.session_id }).observation.available_actions.length,
+      a.get_observation({
+        session_id: game.session_id,
+        compact_observation: false,
+      }).observation.available_actions.length,
     ).toBeGreaterThan(0);
 
     const last = playSunkenBarrowToVictory(a, game.session_id);
@@ -2339,7 +2348,10 @@ describe("MCP tools — the play loop (§9.1)", () => {
     });
     assertCompactAction(compactWorldQuest.observation.available_actions[0]);
     assertPublicAction(
-      a.get_observation({ session_id: game.session_id }).observation.available_actions[0],
+      a.get_observation({
+        session_id: game.session_id,
+        compact_observation: false,
+      }).observation.available_actions[0],
     );
     const listed = a.list_legal_actions({ session_id: game.session_id });
     expect(listed.state_hash).toBe(game.state_hash);
@@ -2348,6 +2360,7 @@ describe("MCP tools — the play loop (§9.1)", () => {
     const compact = a.get_observation({
       session_id: game.session_id,
       compact_actions: true,
+      compact_observation: false,
     }).observation;
     assertCompactAction(compact.available_actions[0]);
     expect(JSON.stringify(compact.available_actions).length).toBeLessThan(
@@ -2478,9 +2491,12 @@ describe("MCP tools — the play loop (§9.1)", () => {
     expect(loaded.world_quest_id).toBe("sunken_barrow");
     expect("generated_rpg_seed" in loaded).toBe(false);
     expect(loaded.observation.world?.id).toBe("charter_marches");
-    expect(a.get_observation({ session_id: loaded.session_id }).observation).not.toHaveProperty(
-      "world",
-    );
+    expect(
+      a.get_observation({
+        session_id: loaded.session_id,
+        compact_observation: false,
+      }).observation,
+    ).not.toHaveProperty("world");
     assertPublicAction(loaded.observation.available_actions[0]);
   });
 
@@ -2501,12 +2517,16 @@ describe("MCP tools — the play loop (§9.1)", () => {
       actions: cachedActions,
     };
 
-    const full = a.get_observation({ session_id: game.session_id }).observation;
+    const full = a.get_observation({
+      session_id: game.session_id,
+      compact_observation: false,
+    }).observation;
     expect(full.available_actions).toEqual([{ id: "cached_inventory", command: "inventory" }]);
 
     const compact = a.get_observation({
       session_id: game.session_id,
       compact_actions: true,
+      compact_observation: false,
     }).observation;
     expect(compact.available_actions).toEqual([{ id: "cached_inventory" }]);
   });
@@ -2566,6 +2586,9 @@ describe("MCP tools — the play loop (§9.1)", () => {
       hide_graph: true,
       compact_observation: true,
     });
+    const defaultObservation = a.get_observation({ session_id: fullStart.session_id });
+    expect(defaultObservation.context).toEqual(compactObservation.context);
+    expect("observation" in defaultObservation).toBe(false);
     expect(compactObservation.context.exits?.[0]).toEqual(expect.any(String));
     expect(compactObservation.context.actions?.[0]).toEqual(expect.any(String));
     expect("mode" in compactObservation.context).toBe(false);
@@ -2593,10 +2616,12 @@ describe("MCP tools — the play loop (§9.1)", () => {
     const fullObservation = a.get_observation({
       session_id: fullStart.session_id,
       hide_graph: true,
+      compact_observation: false,
     });
     const repeatedFullObservation = a.get_observation({
       session_id: fullStart.session_id,
       hide_graph: true,
+      compact_observation: false,
     });
     expect(repeatedFullObservation.observation).toEqual(fullObservation.observation);
     expect(repeatedFullObservation.observation).not.toBe(fullObservation.observation);
@@ -2616,6 +2641,7 @@ describe("MCP tools — the play loop (§9.1)", () => {
     const afterFullObservationMutation = a.get_observation({
       session_id: fullStart.session_id,
       hide_graph: true,
+      compact_observation: false,
     });
     expect(afterFullObservationMutation.observation.exits[0]?.direction).toBe(fullExitDirection);
     expect(afterFullObservationMutation.observation.state.flags).toEqual(fullFlags);
