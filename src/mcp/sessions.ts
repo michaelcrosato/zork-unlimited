@@ -367,7 +367,7 @@ export class SessionStore {
 
   create(init: SessionInit): Session {
     assertSessionSourceIdentity(init);
-    const id = `sess_${++this.counter}`;
+    const id = `r${++this.counter}`;
     const state = cloneFrozenGameState(init.state);
     const transcript = cloneTranscriptRows(init.transcript);
     const session: Session = {

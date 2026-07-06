@@ -581,7 +581,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
   it("plays a stateful New York overworld session through MCP", () => {
     const a = api();
     const started = a.start_overworld({ compact_context: false });
-    expect(started.session_id).toMatch(/^oworld_/);
+    expect(started.session_id).toMatch(/^o\d+$/);
     expect(started.observation.current.id).toBe("albany_city");
     expect(started.observation.journal).toEqual([]);
     expect(started.observation.areas).toHaveLength(1);
@@ -2622,7 +2622,7 @@ describe("MCP tools — the play loop (§9.1)", () => {
       seed: 1,
       compact_observation: false,
     });
-    expect(game.session_id).toBe("sess_1");
+    expect(game.session_id).toBe("r1");
     expect("mode" in game).toBe(false);
     expect(game.observation.available_actions.map((x) => x.id)).toContain("go_down");
 

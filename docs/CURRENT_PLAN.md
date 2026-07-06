@@ -185,6 +185,9 @@ Make discovered overworld quest leads start real RPG sessions.
 - MCP session projections for compact action rows, observations, transcript
   summaries, and transcript rows now share one cache helper plus centralized
   state/transcript invalidation rules.
+- Live RPG and overworld MCP session ids are compact deterministic counter tokens
+  (`r1`, `o1`, ...), so start/read/action responses and follow-up tool calls do
+  not pay long textual id prefixes.
 - MCP hash-only unchanged and stale-hash rejection replies now share helper
   constructors across RPG state polling, transcript polling, save/step guards,
   and overworld snapshot polling.

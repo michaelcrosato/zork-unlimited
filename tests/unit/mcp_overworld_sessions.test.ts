@@ -15,8 +15,8 @@ describe("OverworldMcpSessionStore", () => {
     const first = store.create();
     const second = store.create();
 
-    expect(first.session_id).toBe("oworld_9007199254740992");
-    expect(second.session_id).toBe("oworld_9007199254740993");
+    expect(first.session_id).toBe("o9007199254740992");
+    expect(second.session_id).toBe("o9007199254740993");
     expect(store.get(first.session_id)).toBe(first.session);
     expect(store.get(second.session_id)).toBe(second.session);
   });

@@ -110,21 +110,21 @@ describe("SessionStore", () => {
     const first = store.create(sessionInit({ worldQuestId: "first" }));
     const second = store.create(sessionInit({ worldQuestId: "second" }));
 
-    expect(first.id).toBe("sess_1");
-    expect(second.id).toBe("sess_2");
+    expect(first.id).toBe("r1");
+    expect(second.id).toBe("r2");
     expect(first.stateHash).toBe(hashState(first.state));
     expect(second.stateHash).toBe(hashState(second.state));
     expect("mode" in first).toBe(false);
     expect("packId" in first).toBe(false);
-    expect(store.get("sess_1").worldQuestId).toBe("first");
-    expect(store.get("sess_2").worldQuestId).toBe("second");
+    expect(store.get("r1").worldQuestId).toBe("first");
+    expect(store.get("r2").worldQuestId).toBe("second");
 
     const forged = store.create({
       ...sessionInit({ worldQuestId: "forged" }),
       id: "forged_session",
     } as unknown as SessionInit);
-    expect(forged.id).toBe("sess_3");
-    expect(store.get("sess_3")).toBe(forged);
+    expect(forged.id).toBe("r3");
+    expect(store.get("r3")).toBe(forged);
     expect(() => store.get("forged_session")).toThrow('Unknown session "forged_session".');
   });
 
@@ -135,8 +135,8 @@ describe("SessionStore", () => {
     const first = store.create(sessionInit({ worldQuestId: "first" }));
     const second = store.create(sessionInit({ worldQuestId: "second" }));
 
-    expect(first.id).toBe("sess_9007199254740992");
-    expect(second.id).toBe("sess_9007199254740993");
+    expect(first.id).toBe("r9007199254740992");
+    expect(second.id).toBe("r9007199254740993");
     expect(store.get(first.id)).toBe(first);
     expect(store.get(second.id)).toBe(second);
   });
@@ -174,9 +174,9 @@ describe("SessionStore", () => {
     );
     const validGenerated = store.create(sessionInit({ generatedRpgSeed: 9 }));
 
-    expect(validWorld.id).toBe("sess_1");
-    expect(validGenerated.id).toBe("sess_2");
-    expect(() => store.get("sess_3")).toThrow('Unknown session "sess_3".');
+    expect(validWorld.id).toBe("r1");
+    expect(validGenerated.id).toBe("r2");
+    expect(() => store.get("r3")).toThrow('Unknown session "r3".');
   });
 
   it("bounds stored sessions and keeps recently accessed sessions", () => {
@@ -190,7 +190,7 @@ describe("SessionStore", () => {
 
     expect(store.get(first.id)).toBe(first);
     expect(store.get(third.id)).toBe(third);
-    expect(() => store.get(second.id)).toThrow('Unknown session "sess_2".');
+    expect(() => store.get(second.id)).toThrow('Unknown session "r2".');
   });
 
   it("updates only the addressed session while preserving session metadata", () => {

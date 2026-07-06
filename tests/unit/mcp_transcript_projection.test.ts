@@ -24,19 +24,19 @@ describe("MCP transcript projection", () => {
   });
 
   it("emits compact event versions only when compact event rows are visible", () => {
-    expect(transcriptEventVersion({ session_id: "sess_1", compact_events: true })).toEqual({
+    expect(transcriptEventVersion({ session_id: "r1", compact_events: true })).toEqual({
       event_v: RPG_COMPACT_EVENT_VERSION,
     });
     expect(
       transcriptEventVersion({
-        session_id: "sess_1",
+        session_id: "r1",
         compact_events: true,
         compact_turns: true,
       }),
     ).toEqual({});
     expect(
       transcriptEventVersion({
-        session_id: "sess_1",
+        session_id: "r1",
         compact_events: true,
         summary_only: true,
       }),

@@ -278,14 +278,14 @@ export class OverworldMcpSessionStore {
 
   create(): OverworldMcpSessionEntry {
     const session = new OverworldSession(this.loadManifest());
-    const session_id = `oworld_${++this.counter}`;
+    const session_id = `o${++this.counter}`;
     rememberOverworldSessionEntry(this.sessions, session_id, session, this.maxSessions);
     return { session_id, session };
   }
 
   restore(snapshot: unknown): OverworldMcpSessionEntry {
     const session = OverworldSession.restore(this.loadManifest(), snapshot);
-    const session_id = `oworld_${++this.counter}`;
+    const session_id = `o${++this.counter}`;
     rememberOverworldSessionEntry(this.sessions, session_id, session, this.maxSessions);
     return { session_id, session };
   }
