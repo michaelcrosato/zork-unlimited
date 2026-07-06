@@ -69,6 +69,7 @@ each change blind-playtested and gated green.
 npm install
 npm run health                                   # the full verification bar (see below)
 npm run validate                                 # validate all 16 shipped quests
+npm run validate -- sunken_barrow               # validate one quest by world quest id
 npm run play -- sunken_barrow                    # play a shipped world quest
 npm run inspect -- sunken_barrow                 # summarize a world quest
 npm run replay                                   # replay the committed RPG smoke trace
@@ -80,8 +81,8 @@ Non-interactive play (scriptable / CI): add
 `--commands "go north; take rope; attack wight; ..."`. Use
 `--record traces/run.json` to save a replayable trace; shipped quest traces
 embed their `worldQuestId`, so `npm run replay -- <recorded-trace>` needs no
-pack path. Play, validation, inspection, and replay all select by **world quest
-id** — raw pack paths are internal source metadata.
+pack path. All public play, validation, inspection, and replay selectors take a **world
+quest id** — raw pack paths are internal source metadata.
 
 `npm run health` is the bar the loop and CI must leave green: the integrity
 guard (`scripts/verify-integrity.ts`, which also forbids retired-runtime assets
