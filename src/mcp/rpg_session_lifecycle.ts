@@ -74,7 +74,6 @@ export function runRpgStartWorldQuest<Args extends RpgStartWorldQuestToolArgs>(
     deps.rpgSources.requirePlayable(resolved.packPath),
     args,
     {
-      packPath: resolved.packPath,
       worldQuestId: resolved.node.id,
       ...(args.overworldSessionId ? { overworldSessionId: args.overworldSessionId } : {}),
     },
@@ -102,7 +101,6 @@ export function runRpgLoadGame<Args extends RpgLoadGameToolArgs>(
       : deps.rpgSources.requirePlayable(source.packPath);
   assertSaveContentHash(bundle, compiled.contentHash);
   const session = deps.rpgRuntime.startSession(compiled, bundle.state, {
-    ...(source.packPath ? { packPath: source.packPath } : {}),
     ...(source.worldQuestId ? { worldQuestId: source.worldQuestId } : {}),
     ...(source.generateRpgSeed !== null ? { generatedRpgSeed: source.generateRpgSeed } : {}),
     ...(args.hide_graph ? { hideGraph: true } : {}),

@@ -322,6 +322,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
     ]);
     expect("mode" in started).toBe(false);
     expect("pack_path" in started).toBe(false);
+    expect("packPath" in a.sessions.get(started.session_id)).toBe(false);
     expect(started.world_quest_id).toBe("sunken_barrow");
     expect("generated_rpg_seed" in started).toBe(false);
     expect(started.observation.world?.id).toBe("charter_marches");
@@ -2406,6 +2407,7 @@ describe("MCP tools — the play loop (§9.1)", () => {
     expect("generated_rpg_seed" in saved).toBe(false);
     const loaded = a.load_game({ save: saved.save });
     expect("pack_path" in loaded).toBe(false);
+    expect("packPath" in a.sessions.get(loaded.session_id)).toBe(false);
     expect(loaded.world_quest_id).toBe("sunken_barrow");
     expect("generated_rpg_seed" in loaded).toBe(false);
     expect(loaded.observation.world?.id).toBe("charter_marches");

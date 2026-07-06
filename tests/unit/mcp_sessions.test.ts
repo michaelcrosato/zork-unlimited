@@ -156,17 +156,9 @@ describe("SessionStore", () => {
     expect(() =>
       store.create(sessionInit({ worldQuestId: "test_quest", generatedRpgSeed: 9 })),
     ).toThrow(/worldQuestId and generatedRpgSeed/);
-    expect(() =>
-      store.create(sessionInit({ packPath: "content/rpg/pack/test.yaml", generatedRpgSeed: 9 })),
-    ).toThrow(/packPath and generatedRpgSeed/);
     expect(() => store.create(sessionInit({ worldQuestId: undefined }))).toThrow(
       /requires worldQuestId or generatedRpgSeed/,
     );
-    expect(() =>
-      store.create(
-        sessionInit({ packPath: "content/rpg/pack/test.yaml", worldQuestId: undefined }),
-      ),
-    ).toThrow(/packPath requires worldQuestId/);
     expect(() =>
       store.create(sessionInit({ overworldSessionId: "ow_1", worldQuestId: undefined })),
     ).toThrow(/requires worldQuestId/);
@@ -176,7 +168,6 @@ describe("SessionStore", () => {
 
     const validWorld = store.create(
       sessionInit({
-        packPath: "content/rpg/pack/test.yaml",
         worldQuestId: "test_quest",
         overworldSessionId: "ow_1",
       }),
@@ -412,7 +403,6 @@ describe("SessionStore", () => {
     const replacementStep = makeStep(rules);
     const session = store.create(
       sessionInit({
-        packPath: "content/rpg/pack/test.yaml",
         worldQuestId: "test_quest",
         overworldSessionId: "ow_1",
         hideGraph: true,
@@ -421,7 +411,6 @@ describe("SessionStore", () => {
     const immutableFields = [
       "id",
       "contentHash",
-      "packPath",
       "worldQuestId",
       "overworldSessionId",
       "index",
@@ -437,6 +426,7 @@ describe("SessionStore", () => {
       });
     }
     expect("packId" in session).toBe(false);
+    expect("packPath" in session).toBe(false);
     expect(Object.isExtensible(session)).toBe(true);
     expect(Object.getOwnPropertyDescriptor(session, "state")).toMatchObject({ writable: true });
     expect(() => {

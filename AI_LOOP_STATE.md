@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 425 -->
+<!-- historical_cycle_count: 426 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - session_pack_path_retired
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/loop surface: live MCP RPG `Session` and runtime start options no longer carry disk `packPath`; sessions retain only content hash plus canonical world/generated source identity.
+- Loop effect: path-based package loading remains a resolver concern, so the engine loop cannot leak raw package paths back through session metadata, save/load, or repeated MCP turns.
+- Guard: focused MCP session/tool/source/save regressions cover world quest start, save reload, and metadata absence on live sessions.
+- VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused MCP/source/save regressions, `npm test`, and `npm run health` passed after loop-state rotation.
 
 ### Cycle result - save_api_pack_id_retired
 
@@ -117,11 +125,3 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Loop effect: generated RPG traces carry explicit generated-seed metadata, and malformed or conflicting trace source identity fails at the replay boundary.
 - Guard: save/trace, world-source, and trace CLI focused regressions cover generated trace identity plus replay-boundary source-ref rejection.
 - VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused trace/source regressions, `npm test`, and `npm run health` passed.
-
-### Cycle result - source_discovery_identity_trimmed
-
-- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
-- Engine/loop surface: internal world quest source discovery no longer returns package-era `path` or pack `id`; entries carry title, playability, world binding, and canonical `world_quest_id`.
-- Loop effect: `list_world` and AFK discovery stay on world graph identity before public catalog packing, with less stale package identity available to re-leak.
-- Guard: focused RPG catalog test asserts source discovery has no `path`/`id` and matches `list_world` world quest ids.
-- VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused RPG catalog test, `npm test`, and `npm run health` passed.

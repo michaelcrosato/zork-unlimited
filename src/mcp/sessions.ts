@@ -94,7 +94,6 @@ function assertOptionalNonEmptyString(value: unknown, label: string): void {
 }
 
 function assertSessionSourceIdentity(init: SessionInit): void {
-  assertOptionalNonEmptyString(init.packPath, "MCP session packPath");
   assertOptionalNonEmptyString(init.worldQuestId, "MCP session worldQuestId");
   assertOptionalNonEmptyString(init.overworldSessionId, "MCP session overworldSessionId");
   if (init.generatedRpgSeed !== undefined && !isGeneratedRpgSeed(init.generatedRpgSeed)) {
@@ -104,12 +103,6 @@ function assertSessionSourceIdentity(init: SessionInit): void {
   }
   if (init.generatedRpgSeed !== undefined && init.worldQuestId !== undefined) {
     throw new Error("MCP session source cannot carry both worldQuestId and generatedRpgSeed.");
-  }
-  if (init.generatedRpgSeed !== undefined && init.packPath !== undefined) {
-    throw new Error("MCP session source cannot carry both packPath and generatedRpgSeed.");
-  }
-  if (init.packPath !== undefined && init.worldQuestId === undefined) {
-    throw new Error("MCP session packPath requires worldQuestId.");
   }
   if (init.overworldSessionId !== undefined && init.worldQuestId === undefined) {
     throw new Error("MCP session overworldSessionId requires worldQuestId.");
@@ -226,7 +219,6 @@ function cloneFrozenGameState(state: GameState): GameState {
 const SESSION_IMMUTABLE_FIELDS = [
   "id",
   "contentHash",
-  "packPath",
   "worldQuestId",
   "overworldSessionId",
   "generatedRpgSeed",
@@ -322,8 +314,6 @@ function retainedTranscript(
 export type Session = SessionRuntimeCaches<TranscriptSummary> & {
   id: string;
   contentHash: string;
-  /** Compatibility source path for disk-backed sessions. Generated sessions omit it. */
-  packPath?: string;
   /** Canonical Charter Marches quest graph node id for shipped quest sessions. */
   worldQuestId?: string;
   /** Overworld session that launched this RPG quest, when started through the bridge. */
