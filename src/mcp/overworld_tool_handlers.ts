@@ -49,7 +49,11 @@ import {
   overworldQuestCompletionFromRpgSession,
   startOverworldQuestThroughRpg,
 } from "./overworld_quest_bridge.js";
-import { rpgStateHashRejection, type RpgStateHashRejection } from "./rpg_state_guards.js";
+import {
+  rpgStateHashMatches,
+  rpgStateHashRejection,
+  type RpgStateHashRejection,
+} from "./rpg_state_guards.js";
 import type {
   RpgStartWorldQuestToolArgs,
   RpgWorldQuestStartPayload,
@@ -602,7 +606,7 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
       const rpgSession = sessions.get(args.rpg_session_id);
       if (
         args.expected_rpg_state_hash !== undefined &&
-        args.expected_rpg_state_hash !== rpgSession.stateHash
+        !rpgStateHashMatches(args.expected_rpg_state_hash, rpgSession.stateHash)
       ) {
         return rpgStateHashRejection(rpgSession.stateHash) as Args extends {
           expected_rpg_state_hash: string;

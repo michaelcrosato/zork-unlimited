@@ -22,9 +22,11 @@ import { createToolApi } from "../../src/mcp/tools.js";
 import { generateRpgPack } from "../../src/gen/rpg_generator.js";
 import { hashState } from "../../src/core/hash.js";
 import { RPG_COMPACT_OBSERVATION_VERSION } from "../../src/mcp/compact_rpg_observation.js";
+import { RPG_PUBLIC_STATE_HASH_LENGTH } from "../../src/mcp/rpg_state_guards.js";
 
 const ROOT = process.cwd();
 const api = () => createToolApi({ root: ROOT });
+const PUBLIC_RPG_STATE_HASH_RE = new RegExp(`^[0-9a-f]{${RPG_PUBLIC_STATE_HASH_LENGTH}}$`);
 
 describe("bug_0160 — generate_rpg_pack MCP tool mints + validates a fresh RPG pack", () => {
   it("rejects unsafe integer seeds before minting", () => {
@@ -92,7 +94,7 @@ describe("bug_0160 — new_game(generate_rpg_seed) plays a fresh minted RPG pack
     expect(g.context.here[0]).toEqual(expect.any(String));
     expect(g.context.vitals).toEqual([20, 4, 2, 0, expect.any(Number)]);
     expect(g.generated_rpg_seed).toBe(3);
-    expect(g.state_hash).toMatch(/^[0-9a-f]{64}$/);
+    expect(g.state_hash).toMatch(PUBLIC_RPG_STATE_HASH_RE);
   });
 
   it("starts a session on a generated RPG pack with no file on disk", () => {
@@ -105,7 +107,7 @@ describe("bug_0160 — new_game(generate_rpg_seed) plays a fresh minted RPG pack
     expect("world_quest_id" in g).toBe(false);
     expect(g.generated_rpg_seed).toBe(3);
     expect(g.observation.ended).toBe(false);
-    expect(g.state_hash).toMatch(/^[0-9a-f]{64}$/);
+    expect(g.state_hash).toMatch(PUBLIC_RPG_STATE_HASH_RE);
     // Init stats from the generated meta.vars_init, surfaced live in the RPG observation.
     expect(g.observation.mode === "rpg" && g.observation.stats).toEqual({
       hp: 20,

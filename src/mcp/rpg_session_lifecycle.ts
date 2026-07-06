@@ -7,6 +7,7 @@ import {
   type RpgMcpSessionRuntime,
   type RpgSessionPayload,
 } from "./rpg_session_runtime.js";
+import { publicRpgStateHash } from "./rpg_state_guards.js";
 import type { RpgSourceRuntime } from "./rpg_source_runtime.js";
 import type { SessionStore } from "./sessions.js";
 
@@ -132,6 +133,6 @@ export function runRpgLoadGame<Args extends RpgLoadGameToolArgs>(
       openingOpts,
     ),
     ...rpgSourceFields(session),
-    state_hash: session.stateHash,
+    state_hash: publicRpgStateHash(session.stateHash),
   } as RpgSessionPayload<Args>;
 }

@@ -1,7 +1,12 @@
 import type { RpgActionOption } from "../rpg/legal_actions.js";
 import { rpgRoomTitle, type RpgMcpSessionRuntime } from "./rpg_session_runtime.js";
 import type { SessionStore } from "./sessions.js";
-import { rpgStateHashRejection, type RpgStateHashRejection } from "./rpg_state_guards.js";
+import {
+  publicRpgStateHash,
+  rpgStateHashMatches,
+  rpgStateHashRejection,
+  type RpgStateHashRejection,
+} from "./rpg_state_guards.js";
 import {
   rpgStepEventVersion,
   rpgStepEvents,
@@ -60,7 +65,10 @@ export function runRpgStepAction<Args extends RpgStepActionArgs>(
   const { sessions, rpgRuntime } = deps;
   const s = sessions.get(args.session_id);
   const currentStateHash = s.stateHash;
-  if (args.expected_state_hash !== undefined && args.expected_state_hash !== currentStateHash) {
+  if (
+    args.expected_state_hash !== undefined &&
+    !rpgStateHashMatches(args.expected_state_hash, currentStateHash)
+  ) {
     return rpgStateHashRejection(currentStateHash) as RpgStepActionResponse<Args>;
   }
   const actionOptions = rpgRuntime.legalActionsFor(s);
@@ -97,7 +105,7 @@ export function runRpgStepAction<Args extends RpgStepActionArgs>(
         args,
         beforeObsOpts,
       ),
-      state_hash: currentStateHash,
+      state_hash: publicRpgStateHash(currentStateHash),
     } as RpgStepActionResponse<Args>;
   }
   const result = s.step(s.state, actionOption.action);
@@ -124,7 +132,7 @@ export function runRpgStepAction<Args extends RpgStepActionArgs>(
       events: rpgStepEvents(result.events, args),
       ...rpgStepEventVersion(args),
       ...rpgViewField(sessions, s, after, args, afterObsOpts),
-      state_hash: s.stateHash,
+      state_hash: publicRpgStateHash(s.stateHash),
     } as RpgStepActionResponse<Args>;
   }
   return {
@@ -132,6 +140,6 @@ export function runRpgStepAction<Args extends RpgStepActionArgs>(
     events: rpgStepEvents(result.events, args),
     ...rpgStepEventVersion(args),
     ...rpgViewField(sessions, s, after, args, afterObsOpts),
-    state_hash: s.stateHash,
+    state_hash: publicRpgStateHash(s.stateHash),
   } as RpgStepActionResponse<Args>;
 }

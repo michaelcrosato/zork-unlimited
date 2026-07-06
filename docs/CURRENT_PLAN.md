@@ -188,6 +188,8 @@ Make discovered overworld quest leads start real RPG sessions.
 - MCP hash-only unchanged and stale-hash rejection replies now share helper
   constructors across RPG state polling, transcript polling, save/step guards,
   and overworld snapshot polling.
+- Public RPG MCP/ToolApi `state_hash` values are compact 24-hex tokens; RPG
+  stale guards accept either that token or the full internal session hash.
 - Compact overworld MCP reads/actions now call `OverworldSession.compactView()`
   directly, avoiding full view construction before capped context projection.
 - Compact overworld MCP contexts now keep immediate `roads` by default but omit
@@ -240,8 +242,9 @@ Make discovered overworld quest leads start real RPG sessions.
 - `get_transcript({ if_transcript_hash })` can return a hash-only `unchanged`
   response, avoiding repeated transcript summary payloads when transcript rows
   have not changed.
-- Transcript freshness uses a cached session log hash plus `state_hash`, so
-  repeated transcript polls do not re-hash full turn history.
+- Transcript freshness uses a cached session log hash plus the full internal
+  RPG state hash, so repeated transcript polls do not re-hash full turn history
+  while public responses still carry the compact `state_hash` token.
 - Transcript summaries are cached per session state/transcript hash and
   invalidated on state or transcript mutation, so repeated non-unchanged
   transcript reads do not rescan full transcript history and public state arrays.

@@ -74,7 +74,7 @@ PLAY:
 - Each live compact context gives scene text, state/vitals, context.exits, and
   visible objects/NPCs. Fetch stable action ids with list_legal_actions using
   compact_actions = true, then choose one with step_action(session_id,
-  action_id, expected_state_hash = latest state_hash, hide_graph = true,
+  action_id, expected_state_hash = latest state_hash token, hide_graph = true,
   compact_observation = true). Step events are compact tuples by default; request
   compact_events = false only for event-history debugging. Repeat until
   context.ended is true. If an action id is unclear, call list_legal_actions with
@@ -91,7 +91,7 @@ PLAY:
   empty inventory/flag/journal lists. Avoid full transcripts unless diagnosing a
   specific event-history bug.
 - For a mechanical state audit, call get_state(session_id, compact_state = true,
-  if_state_hash = latest state hash when rechecking unchanged state). Do not request
+  if_state_hash = latest state_hash token when rechecking unchanged state). Do not request
   include_state = true unless diagnosing a raw engine-state bug.
 - Make decisions a curious, sensible human would: follow clues, pursue the apparent
   goal, investigate what seems important. Don't pick randomly. Narrate your reasoning

@@ -14,6 +14,7 @@ import {
   omittedCount,
 } from "./compact_truncation.js";
 import { compactMcpTranscriptSceneId, compactMcpTranscriptSummaryValue } from "./action_labels.js";
+import { publicRpgStateHash } from "./rpg_state_guards.js";
 
 export type RpgEventOptions = {
   compact_events?: boolean;
@@ -131,7 +132,7 @@ export function transcriptUnchanged(
   transcriptHash: string,
 ): TranscriptUnchanged {
   return {
-    state_hash: stateHash,
+    state_hash: publicRpgStateHash(stateHash),
     transcript_hash: transcriptHash,
     unchanged: true,
   };

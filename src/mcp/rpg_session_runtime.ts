@@ -22,6 +22,7 @@ import {
   type RpgViewField,
   type RpgViewOptions,
 } from "./rpg_view_projection.js";
+import { publicRpgStateHash } from "./rpg_state_guards.js";
 import { SessionStore, type RpgStep, type Session } from "./sessions.js";
 
 export type RpgRuntimeCacheEntry = {
@@ -232,7 +233,7 @@ export class RpgMcpSessionRuntime {
         openingOpts,
       ),
       ...rpgSourceFields(session),
-      state_hash: session.stateHash,
+      state_hash: publicRpgStateHash(session.stateHash),
     } as RpgSessionPayload<Args>;
   }
 }

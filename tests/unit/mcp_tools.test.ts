@@ -12,6 +12,10 @@ import {
   RPG_COMPACT_EVENT_VERSION,
 } from "../../src/mcp/compact_rpg_event.js";
 import { RPG_COMPACT_STATE_VERSION } from "../../src/mcp/compact_rpg_state.js";
+import {
+  publicRpgStateHash,
+  RPG_PUBLIC_STATE_HASH_LENGTH,
+} from "../../src/mcp/rpg_state_guards.js";
 import { PathEscapeError } from "../../src/mcp/paths.js";
 import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import { indexRpgPack, buildRpgRules, initStateForRpgPack } from "../../src/rpg/runner.js";
@@ -37,6 +41,7 @@ const FULL_OVERWORLD_QUEST_START = {
   ...FULL_OVERWORLD_RESPONSE,
   compact_observation: false,
 } as const;
+const PUBLIC_RPG_STATE_HASH_RE = new RegExp(`^[0-9a-f]{${RPG_PUBLIC_STATE_HASH_LENGTH}}$`);
 
 function numberedIds(prefix: string, count: number): string[] {
   return Array.from({ length: count }, (_, i) => `${prefix}_${i.toString().padStart(2, "0")}`);
@@ -1043,8 +1048,12 @@ describe("MCP tools — validate / load (§9.4)", () => {
     ).toThrow(/not started from this overworld session/i);
 
     const ended = playSunkenBarrowToVictory(a, launched.rpg_session_id);
+    const fullEndedStateHash = hashState(
+      a.get_state({ session_id: launched.rpg_session_id, include_state: true }).state,
+    );
     expect(ended.observation.ended).toBe(true);
     expect(ended.observation.ending_id).toBe("ending_victory");
+    expect(ended.state_hash).toBe(publicRpgStateHash(fullEndedStateHash));
 
     const staleCompletion = a.complete_overworld_session_quest({
       ...FULL_OVERWORLD_RESPONSE,
@@ -1083,7 +1092,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
       session_id: started.session_id,
       rpg_session_id: launched.rpg_session_id,
       expected_snapshot_hash: launched.snapshot_hash,
-      expected_rpg_state_hash: ended.state_hash,
+      expected_rpg_state_hash: fullEndedStateHash,
     });
     expect(completed.ok).toBe(true);
     if (!completed.ok) throw new Error("expected quest completion");
@@ -2363,7 +2372,7 @@ describe("MCP tools — the play loop (§9.1)", () => {
     });
     expect("event_v" in compactTurnsWithCompactEvents).toBe(false);
     expect(compactTurnsWithCompactEvents.turns[0]).not.toHaveProperty("events");
-    expect(currentStateHash).toMatch(/^[0-9a-f]{64}$/);
+    expect(currentStateHash).toMatch(PUBLIC_RPG_STATE_HASH_RE);
     expect(
       transcript.turns.some((turn) =>
         turn.events.some(
@@ -3209,7 +3218,11 @@ describe("MCP tools — the play loop (§9.1)", () => {
     });
     const menu = a.list_legal_actions({ session_id: game.session_id, compact_actions: true });
     const moveActionId = menu.actions.find((action) => action === "go_down");
+    const initialState = a.get_state({ session_id: game.session_id, include_state: true });
+    const fullInitialStateHash = hashState(initialState.state);
 
+    expect(menu.state_hash).toMatch(PUBLIC_RPG_STATE_HASH_RE);
+    expect(menu.state_hash).toBe(publicRpgStateHash(fullInitialStateHash));
     expect(moveActionId).toBe("go_down");
     const moved = a.step_action({
       session_id: game.session_id,
@@ -3221,6 +3234,7 @@ describe("MCP tools — the play loop (§9.1)", () => {
     if (!moved.ok) throw new Error("expected state-matched action to move");
     expect("rejection_reason" in moved).toBe(false);
     expect(moved.state_hash).not.toBe(menu.state_hash);
+    expect(moved.state_hash).toMatch(PUBLIC_RPG_STATE_HASH_RE);
     const transcriptRowsAfterMove = a.get_transcript({
       session_id: game.session_id,
       summary_only: false,
@@ -3308,6 +3322,11 @@ describe("MCP tools — save / load round-trip (§8.7)", () => {
     const before = a.get_observation({ session_id: game.session_id }).state_hash;
     stepByCommand(a, game.session_id, "go down");
     const after = a.get_observation({ session_id: game.session_id }).state_hash;
+    const afterFullStateHash = hashState(
+      a.get_state({ session_id: game.session_id, include_state: true }).state,
+    );
+    expect(afterFullStateHash).toMatch(/^[0-9a-f]{64}$/);
+    expect(after).toBe(publicRpgStateHash(afterFullStateHash));
 
     const stale = a.save_game({
       session_id: game.session_id,
@@ -3323,7 +3342,7 @@ describe("MCP tools — save / load round-trip (§8.7)", () => {
 
     const saved = a.save_game({
       session_id: game.session_id,
-      expected_state_hash: after,
+      expected_state_hash: afterFullStateHash,
     });
     expect(saved.ok).toBe(true);
     if (!saved.ok) throw new Error("expected guarded save success");
@@ -3335,8 +3354,8 @@ describe("MCP tools — save / load round-trip (§8.7)", () => {
 
     const unchanged = a.save_game({
       session_id: game.session_id,
-      expected_state_hash: after,
-      if_state_hash: after,
+      expected_state_hash: afterFullStateHash,
+      if_state_hash: afterFullStateHash,
     });
     expect(unchanged).toEqual({ state_hash: after, unchanged: true });
     expect("ok" in unchanged).toBe(false);

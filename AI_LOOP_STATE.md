@@ -1,10 +1,19 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 478 -->
+<!-- historical_cycle_count: 479 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - rpg_public_state_hash_tokens
+
+- Pre-cycle: `C:\dev\agent-cleaner` measure/gates passed through WSL; optional secret scanner remains absent, and WSL git-dir warnings still print after the green gate summary.
+- Engine/loop surface: public RPG MCP/ToolApi `state_hash` values are now compact 24-hex tokens, while internal session hashes, save content hashes, and transcript hashing keep full SHA-256; stale guards accept compact or full hashes.
+- Loop effect: `breaking_weir` default `start_world_quest` drops from 729 to 689 bytes, `get_observation` from 674 to 634, `list_legal_actions` from 255 to 215, `step_action(go_north)` from 845 to 805, and `step_action(read_flood_book)` from 1505 to 1465.
+- Self-critique: this is a fixed 40-byte win on every stateful RPG response rather than a gameplay-content improvement; overworld `snapshot_hash` and transcript hashes remain full-length follow-up surfaces.
+- Guard: focused MCP lifecycle/session/bridge regressions pin 24-hex public state tokens, public-to-full derivation, and compact/full stale-guard compatibility without weakening internal state hashing.
+- VERIFY: `C:\dev\agent-cleaner`, focused MCP regressions, payload probe, `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm test`, `npm run health`, and `npm run assess` passed; post-rotation `npm run verify:integrity`, `npm run format:check`, broad `prettier --check .`, and `git diff --check` also passed.
 
 ### Cycle result - compact_visible_refs_id_only_v15
 
@@ -131,12 +140,3 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Self-critique: authoring is lower-frequency than live play, but its full-pack payload was one of the largest remaining hidden MCP responses.
 - Guard: focused MCP authoring and registration regressions pin default omission, opt-in pack echo, RPG-only mode rejection, and schema-size limits.
 - VERIFY: `C:\dev\agent-cleaner`, focused MCP authoring/schema regressions, `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, `npm test`, and `npm run health` passed after loop-state rotation.
-
-### Cycle result - patch_pack_echo_opt_in
-
-- Pre-cycle: `C:\dev\agent-cleaner` measure/gates passed through WSL; optional secret scanner remains absent.
-- Engine/loop surface: `apply_content_patch` no longer returns the full modified RPG pack by default; callers opt in with `include_pack: true`.
-- Loop effect: fix/debug loops can apply deterministic content patches and read validation proof without echoing complete quest content after every candidate patch.
-- Self-critique: this is a fix-loop payload, not a live player turn path; the next deeper wins remain authoring payloads and full validation reports.
-- Guard: focused MCP patch and registration regressions pin default omission, opt-in full-pack echo, source identity, and schema-size limits.
-- VERIFY: `C:\dev\agent-cleaner`, focused MCP patch/schema regressions, `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, `npm test`, and `npm run health` passed after loop-state rotation.

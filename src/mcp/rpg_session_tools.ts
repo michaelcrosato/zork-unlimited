@@ -17,6 +17,8 @@ import {
 } from "./rpg_view_projection.js";
 import { rpgSourceFields, type RpgMcpSessionRuntime } from "./rpg_session_runtime.js";
 import {
+  publicRpgStateHash,
+  rpgStateHashMatches,
   rpgStateHashRejection,
   rpgStateUnchanged,
   type RpgStateHashRejection,
@@ -180,7 +182,7 @@ export function runRpgGetObservation<Args extends RpgGetObservationToolArgs>(
   const { sessions, rpgRuntime } = deps;
   const s = sessions.get(args.session_id);
   const stateHash = s.stateHash;
-  if (args.if_state_hash !== undefined && args.if_state_hash === stateHash) {
+  if (args.if_state_hash !== undefined && rpgStateHashMatches(args.if_state_hash, stateHash)) {
     return rpgStateUnchanged(stateHash) as RpgObservationToolResponse<Args>;
   }
   const obsOpts = {
@@ -194,7 +196,7 @@ export function runRpgGetObservation<Args extends RpgGetObservationToolArgs>(
       args,
       obsOpts,
     ),
-    state_hash: stateHash,
+    state_hash: publicRpgStateHash(stateHash),
   } as RpgObservationToolResponse<Args>;
 }
 
@@ -205,13 +207,13 @@ export function runRpgListLegalActions<Args extends RpgLegalActionsToolArgs>(
   const { sessions, rpgRuntime } = deps;
   const s = sessions.get(args.session_id);
   const stateHash = s.stateHash;
-  if (args.if_state_hash !== undefined && args.if_state_hash === stateHash) {
+  if (args.if_state_hash !== undefined && rpgStateHashMatches(args.if_state_hash, stateHash)) {
     return rpgStateUnchanged(stateHash) as RpgLegalActionsToolResponse<Args>;
   }
   const actions = rpgRuntime.legalActionsFor(s);
   return {
     actions: legalActionRowsFor(sessions, s, actions, args),
-    state_hash: stateHash,
+    state_hash: publicRpgStateHash(stateHash),
   } as RpgLegalActionsToolResponse<Args>;
 }
 
@@ -221,12 +223,12 @@ export function runRpgGetState<Args extends RpgGetStateToolArgs>(
 ): RpgStateToolResponse<Args> {
   const s = deps.sessions.get(args.session_id);
   const stateHash = s.stateHash;
-  if (args.if_state_hash !== undefined && args.if_state_hash === stateHash) {
+  if (args.if_state_hash !== undefined && rpgStateHashMatches(args.if_state_hash, stateHash)) {
     return rpgStateUnchanged(stateHash) as RpgStateToolResponse<Args>;
   }
   const response: RpgStateHashToolPayload &
     Partial<RpgRawStateToolField & RpgCompactStateToolField> = {
-    state_hash: stateHash,
+    state_hash: publicRpgStateHash(stateHash),
   };
   if (args.include_state === true) {
     response.state = cloneGameState(s.state);
@@ -265,7 +267,7 @@ export function runRpgGetTranscript<Args extends TranscriptArgs>(
   const response = {
     session_id: s.id,
     ...(args.include_source === true ? rpgSourceFields(s) : {}),
-    state_hash: stateHash,
+    state_hash: publicRpgStateHash(stateHash),
     transcript_hash: currentTranscriptHash,
     ...transcriptEventVersion(args),
     ...(args.summary_only
@@ -285,10 +287,13 @@ export function runRpgSaveGame<Args extends RpgSaveToolArgs>(
 ): RpgSaveToolResponse<Args> {
   const s = deps.sessions.get(args.session_id);
   const stateHash = s.stateHash;
-  if (args.expected_state_hash !== undefined && args.expected_state_hash !== stateHash) {
+  if (
+    args.expected_state_hash !== undefined &&
+    !rpgStateHashMatches(args.expected_state_hash, stateHash)
+  ) {
     return rpgStateHashRejection(stateHash) as RpgSaveToolResponse<Args>;
   }
-  if (args.if_state_hash !== undefined && args.if_state_hash === stateHash) {
+  if (args.if_state_hash !== undefined && rpgStateHashMatches(args.if_state_hash, stateHash)) {
     return rpgStateUnchanged(stateHash) as RpgSaveToolResponse<Args>;
   }
   const saveMetadata = {
@@ -300,6 +305,6 @@ export function runRpgSaveGame<Args extends RpgSaveToolArgs>(
     save: save(s.state, s.contentHash, SAVE_MODE, saveMetadata),
     ...(args.include_source === true ? rpgSourceFields(s) : {}),
     content_hash: s.contentHash,
-    state_hash: stateHash,
+    state_hash: publicRpgStateHash(stateHash),
   } as RpgSaveToolResponse<Args>;
 }
