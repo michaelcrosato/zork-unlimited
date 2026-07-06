@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { GameEvent } from "../../src/core/events.js";
 import {
   playerVisibleEvents,
+  rpgStepEventVersion,
   rpgStepEvents,
   transcriptEventVersion,
 } from "../../src/mcp/transcript_projection.js";
@@ -24,13 +25,19 @@ describe("MCP transcript projection", () => {
   });
 
   it("emits compact event versions only when compact event rows are visible", () => {
-    expect(transcriptEventVersion({ session_id: "r1", compact_events: true })).toEqual({
-      event_v: RPG_COMPACT_EVENT_VERSION,
-    });
+    expect(transcriptEventVersion({ session_id: "r1", compact_events: true })).toEqual({});
     expect(
       transcriptEventVersion({
         session_id: "r1",
         compact_events: true,
+        include_event_version: true,
+      }),
+    ).toEqual({ event_v: RPG_COMPACT_EVENT_VERSION });
+    expect(
+      transcriptEventVersion({
+        session_id: "r1",
+        compact_events: true,
+        include_event_version: true,
         compact_turns: true,
       }),
     ).toEqual({});
@@ -38,9 +45,14 @@ describe("MCP transcript projection", () => {
       transcriptEventVersion({
         session_id: "r1",
         compact_events: true,
+        include_event_version: true,
         summary_only: true,
       }),
     ).toEqual({});
+    expect(rpgStepEventVersion({ compact_events: true })).toEqual({});
+    expect(rpgStepEventVersion({ compact_events: true, include_event_version: true })).toEqual({
+      event_v: RPG_COMPACT_EVENT_VERSION,
+    });
   });
 
   it("applies the same internal-event filter to compact step events", () => {

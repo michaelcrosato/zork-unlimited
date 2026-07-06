@@ -18,6 +18,7 @@ import { publicRpgStateHash } from "./rpg_state_guards.js";
 
 export type RpgEventOptions = {
   compact_events?: boolean;
+  include_event_version?: boolean;
 };
 
 export type RpgStepEvents<Args extends RpgEventOptions> = Args extends { compact_events: true }
@@ -26,6 +27,7 @@ export type RpgStepEvents<Args extends RpgEventOptions> = Args extends { compact
 
 export type RpgStepEventVersion<Args extends RpgEventOptions> = Args extends {
   compact_events: true;
+  include_event_version: true;
 }
   ? { event_v: typeof RPG_COMPACT_EVENT_VERSION }
   : Record<string, never>;
@@ -37,6 +39,7 @@ export type TranscriptArgs = {
   summary_only?: boolean;
   compact_turns?: boolean;
   compact_events?: boolean;
+  include_event_version?: boolean;
   compact_summary?: boolean;
   if_transcript_hash?: string;
   turn_limit?: number;
@@ -106,7 +109,7 @@ type TranscriptEventVersion<Args extends TranscriptArgs> = Args extends { summar
   ? Record<string, never>
   : Args extends { compact_turns: true }
     ? Record<string, never>
-    : Args extends { compact_events: true }
+    : Args extends { compact_events: true; include_event_version: true }
       ? { event_v: typeof RPG_COMPACT_EVENT_VERSION }
       : Record<string, never>;
 export type TranscriptPayload<Args extends TranscriptArgs> = TranscriptPayloadBase<Args> &
@@ -370,7 +373,9 @@ export function rpgStepEventVersion<Args extends RpgEventOptions>(
   args: Args,
 ): RpgStepEventVersion<Args> {
   return (
-    args.compact_events === true ? { event_v: RPG_COMPACT_EVENT_VERSION } : {}
+    args.compact_events === true && args.include_event_version === true
+      ? { event_v: RPG_COMPACT_EVENT_VERSION }
+      : {}
   ) as RpgStepEventVersion<Args>;
 }
 
@@ -378,7 +383,10 @@ export function transcriptEventVersion<Args extends TranscriptArgs>(
   args: Args,
 ): TranscriptEventVersion<Args> {
   return (
-    args.compact_events === true && args.summary_only !== true && args.compact_turns !== true
+    args.compact_events === true &&
+    args.include_event_version === true &&
+    args.summary_only !== true &&
+    args.compact_turns !== true
       ? { event_v: RPG_COMPACT_EVENT_VERSION }
       : {}
   ) as TranscriptEventVersion<Args>;

@@ -1,10 +1,19 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 487 -->
+<!-- historical_cycle_count: 488 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - compact_event_version_opt_in
+
+- Pre-cycle: `C:\dev\agent-cleaner` measure/gates passed through WSL; optional secret scanner remains absent, and WSL git-dir warnings still print after the green gate summary.
+- Engine/loop surface: compact RPG step/transcript event rows still use stable `event_v: 6`, but default responses no longer repeat the static top-level `event_v`; `include_event_version: true` restores it.
+- Loop effect: measured `breaking_weir` `step_action(read_flood_book)` drops from 1465 to 1453 bytes, `sunken_barrow` movement from 676 to 664, and an illegal-action compact rejection from 943 to 931.
+- Self-critique: this is a very small fixed envelope trim, not a gameplay or persistence upgrade; it is aligned because the version tag is static metadata and remains available when an audit client needs to branch on event-row schema.
+- Guard: focused compact-event, MCP ToolApi, internal-event hiding, and server-registration regressions pin default omission, opt-in version tags, transcript compatibility, and ToolSearch schema budget.
+- VERIFY: `C:\dev\agent-cleaner`, focused compact-event/MCP regressions, payload probe, `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, `npm test`, `npm run health`, and `npm run assess` passed after loop-state rotation.
 
 ### Cycle result - transcript_session_id_opt_in
 
@@ -131,12 +140,3 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Self-critique: this trims per-action transient prose without changing reducer events, observation context, or full debug reads; callers still use `compact_events: false` for uncapped event objects.
 - Guard: compact-event unit tests and MCP ToolApi regressions pin `event_v: 6`, named cap constants, default prose-step response under 1800 bytes, and compact-vs-full event savings.
 - VERIFY: `C:\dev\agent-cleaner`, focused compact-event/MCP regressions, payload probe, `npm run health`, and `npm run assess` passed after loop-state rotation; post-rotation `npm run verify:integrity`, `npm run format:check`, broad `prettier --check .`, and `git diff --check` also passed.
-
-### Cycle result - overworld_ids_opt_in_context
-
-- Pre-cycle: `C:\dev\agent-cleaner` initially caught docs/CURRENT_PLAN.md broad-Prettier drift; after the doc wording fix, measure/gates passed through WSL; optional secret scanner remains absent.
-- Engine/loop surface: compact overworld MCP contexts keep exact `id_counts` by default but omit global id buckets unless `include_ids: true`; route opt-in remains independent.
-- Loop effect: default `start_overworld` drops from 1041 to 843 bytes and repeated `get_overworld_session_context` drops from 1051 to 853 bytes, while `include_ids` preserves the old 1041/1051-byte debug/recovery shape.
-- Self-critique: this trims repeated overworld loop context without changing session/snapshot semantics; callers that inspect global discovery ids now need the explicit opt-in.
-- Guard: focused MCP overworld and server-registration regressions pin default id omission, `include_ids` clone safety, discovery-id cache invalidation, and schema budget.
-- VERIFY: `C:\dev\agent-cleaner`, focused MCP overworld/schema regressions, payload probe, `npm run assess`, `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, `npm test`, and `npm run health` passed after loop-state rotation; post-rotation `npm run verify:integrity`, `npm run format:check`, broad `prettier --check .`, and `git diff --check` also passed.

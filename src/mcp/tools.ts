@@ -184,6 +184,7 @@ type DefaultCompactRpgActions<Args extends Pick<RpgViewOptions, "compact_actions
 
 type RpgEventOptions = {
   compact_events?: boolean;
+  include_event_version?: boolean;
 };
 
 type DefaultCompactRpgEvents<Args extends RpgEventOptions> = Args extends {

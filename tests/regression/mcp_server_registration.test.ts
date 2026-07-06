@@ -344,7 +344,7 @@ describe("MCP server registration", () => {
       "type RpgLegalActionRows",
     );
     expect(legalActionArgs).not.toContain("hide_graph");
-    expect(legalActions).toContain("Labels?");
+    expect(legalActions).toContain("Lbl.");
     expect(legalActions).toContain("IF_STATE_HASH");
     expect(legalActions).not.toContain("HIDE_GRAPH");
     expect(legalActions).not.toContain("hide_graph");
@@ -352,6 +352,7 @@ describe("MCP server registration", () => {
     expect(registeredToolBlock("get_observation")).toContain("IF_STATE_HASH");
     expect(sharedSchemaBlock()).toContain("include_actions");
     expect(sharedSchemaBlock()).toContain("compact_events");
+    expect(sharedSchemaBlock()).toContain("include_event_version");
     expect(registeredToolBlock("step_action")).toContain("COMPACT_EVENTS");
     expect(registeredToolBlock("get_state")).not.toContain("defaultCompactRpg");
   });
@@ -369,10 +370,11 @@ describe("MCP server registration", () => {
     expect(args).not.toContain("if_state_hash");
     expect(args).toContain("if_transcript_hash");
     expect(args).toContain("include_session_id");
+    expect(args).toContain("include_event_version");
     expect(args).toContain("turn_limit");
     expect(block).toContain("...S");
     expect(block).toContain("No turns.");
-    expect(block).toContain("Capped lists.");
+    expect(block).toContain("Caps.");
     expect(block).toContain("turn_limit");
     expect(block).toContain("COMPACT_EVENTS");
     const defaultTranscript = serverSourceBlock(
@@ -388,7 +390,7 @@ describe("MCP server registration", () => {
     expect(block).toContain("compactMcpState(a)");
     expect(block).toContain("IF_STATE_HASH");
     expect(block).toContain("include_state");
-    expect(block).toContain("State hash");
+    expect(block).toContain("Hash.");
     expect(block).not.toContain("include_state === true");
     const saveBlock = registeredToolBlock("save_game");
     expect(saveBlock).toContain("IF_STATE_HASH");

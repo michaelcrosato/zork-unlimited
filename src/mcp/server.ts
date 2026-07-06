@@ -58,6 +58,7 @@ const COMPACT_ACTIONS = {
 };
 const COMPACT_EVENTS = {
   compact_events: B("Ev."),
+  include_event_version: B("V."),
 };
 const COMPACT_OBSERVATION = {
   compact_observation: B("Obs."),
@@ -67,7 +68,7 @@ const IF_STATE_HASH = {
   if_state_hash: z.string().optional().describe("Same."),
 };
 const IF_TRANSCRIPT_HASH = {
-  if_transcript_hash: z.string().optional().describe("If same tx."),
+  if_transcript_hash: z.string().optional().describe("Tx."),
 };
 const EXPECTED_STATE_HASH = {
   expected_state_hash: z.string().optional().describe("Stale."),
@@ -480,17 +481,17 @@ tool(
   {
     ...SESSION,
     ...IF_STATE_HASH,
-    compact_actions: z.boolean().optional().describe("Labels?"),
+    compact_actions: z.boolean().optional().describe("Lbl."),
   },
   (a) => api.list_legal_actions(defaultCompactActions(a)),
 );
 
 tool(
   "step_action",
-  "Step action.",
+  "Step.",
   {
     ...SESSION,
-    action_id: z.string().describe("Action id."),
+    action_id: z.string().describe("Act."),
     ...EXPECTED_STATE_HASH,
     ...HIDE_GRAPH,
     ...COMPACT_ACTIONS,
@@ -501,7 +502,7 @@ tool(
 );
 tool(
   "get_state",
-  "State hash.",
+  "Hash.",
   {
     ...SESSION,
     ...IF_STATE_HASH,
@@ -519,7 +520,7 @@ tool(
     include_source: z.boolean().optional(),
     ...IF_TRANSCRIPT_HASH,
     summary_only: z.boolean().optional().describe("No turns."),
-    compact_summary: z.boolean().optional().describe("Capped lists."),
+    compact_summary: z.boolean().optional().describe("Caps."),
     compact_turns: z.boolean().optional().describe("Rows."),
     turn_limit: z.number().int().min(0).optional().describe("Rows."),
     ...COMPACT_EVENTS,

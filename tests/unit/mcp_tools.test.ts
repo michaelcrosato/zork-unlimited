@@ -2430,7 +2430,15 @@ describe("MCP tools — the play loop (§9.1)", () => {
       summary_only: false,
       compact_events: true,
     });
-    expect(compactEventTranscript.event_v).toBe(RPG_COMPACT_EVENT_VERSION);
+    expect("event_v" in compactEventTranscript).toBe(false);
+    const versionedCompactEventTranscript = a.get_transcript({
+      session_id: game.session_id,
+      summary_only: false,
+      compact_events: true,
+      include_event_version: true,
+    });
+    expect(versionedCompactEventTranscript.event_v).toBe(RPG_COMPACT_EVENT_VERSION);
+    expect(versionedCompactEventTranscript.turns).toEqual(compactEventTranscript.turns);
     const compactEventTurn = compactEventTranscript.turns.find((turn) => turn.events.length > 0);
     const fullEventTurn = transcript.turns.find((turn) => turn.events.length > 0);
     expect(compactEventTurn).toBeDefined();
@@ -2814,7 +2822,16 @@ describe("MCP tools — the play loop (§9.1)", () => {
       "r",
       "That action is not available right now.",
     ]);
-    expect(compactEventRejected.event_v).toBe(RPG_COMPACT_EVENT_VERSION);
+    expect("event_v" in compactEventRejected).toBe(false);
+    const versionedCompactEventRejected = a.step_action({
+      session_id: game.session_id,
+      action_id: "missing",
+      compact_events: true,
+      compact_observation: true,
+      include_event_version: true,
+    });
+    expect(versionedCompactEventRejected.event_v).toBe(RPG_COMPACT_EVENT_VERSION);
+    expect(versionedCompactEventRejected.events).toEqual(compactEventRejected.events);
     expect(JSON.stringify(compactEventRejected.events).length).toBeLessThan(
       JSON.stringify(rejected.events).length,
     );
@@ -2847,7 +2864,15 @@ describe("MCP tools — the play loop (§9.1)", () => {
       compact_observation: true,
     });
     expect(compactEventMoved.events[0]).toEqual(["m", moveEvent.from, moveEvent.to]);
-    expect(compactEventMoved.event_v).toBe(RPG_COMPACT_EVENT_VERSION);
+    expect("event_v" in compactEventMoved).toBe(false);
+    const versionedCompactEventMoved = a.step_action({
+      session_id: compactEventGame.session_id,
+      action_id: "go_north",
+      compact_events: true,
+      compact_observation: true,
+      include_event_version: true,
+    });
+    expect(versionedCompactEventMoved.event_v).toBe(RPG_COMPACT_EVENT_VERSION);
     expect(JSON.stringify(compactEventMoved.events).length).toBeLessThan(
       JSON.stringify(moved.events).length,
     );
@@ -2867,7 +2892,14 @@ describe("MCP tools — the play loop (§9.1)", () => {
     const compactJournal = compactProseStep.events.find(
       (event) => event[0] === "s" && event[1] === "j",
     );
-    expect(compactProseStep.event_v).toBe(RPG_COMPACT_EVENT_VERSION);
+    expect("event_v" in compactProseStep).toBe(false);
+    const versionedProseEventGame = a.start_world_quest({ world_quest_id: "breaking_weir" });
+    const versionedCompactProseStep = a.step_action({
+      session_id: versionedProseEventGame.session_id,
+      action_id: "read_flood_book",
+      include_event_version: true,
+    });
+    expect(versionedCompactProseStep.event_v).toBe(RPG_COMPACT_EVENT_VERSION);
     expect(compactNarration).toBeDefined();
     expect(compactJournal).toBeDefined();
     expect(String(compactNarration?.[1]).length).toBeLessThanOrEqual(
@@ -3171,8 +3203,15 @@ describe("MCP tools — the play loop (§9.1)", () => {
     expect(defaultRejectedStep.ok).toBe(false);
     expect("observation" in defaultRejectedStep).toBe(false);
     expect(defaultRejectedStep.context.here[0]).toBe(fullStart.observation.room);
-    expect(defaultRejectedStep.event_v).toBe(RPG_COMPACT_EVENT_VERSION);
+    expect("event_v" in defaultRejectedStep).toBe(false);
     expect(defaultRejectedStep.events[0]).toEqual(["r", "That action is not available right now."]);
+    const versionedDefaultRejectedStep = a.step_action({
+      session_id: fullStart.session_id,
+      action_id: "missing",
+      include_event_version: true,
+    });
+    expect(versionedDefaultRejectedStep.event_v).toBe(RPG_COMPACT_EVENT_VERSION);
+    expect(versionedDefaultRejectedStep.events).toEqual(defaultRejectedStep.events);
 
     const rejected = a.step_action({
       session_id: fullStart.session_id,
