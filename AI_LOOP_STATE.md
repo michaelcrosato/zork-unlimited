@@ -1,10 +1,19 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 461 -->
+<!-- historical_cycle_count: 462 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - save_source_opt_in
+
+- Pre-cycle: `C:\dev\agent-cleaner` measure/gates passed through WSL; optional secret scanner remains absent.
+- Engine/loop surface: `save_game` no longer echoes `world_quest_id` / `generated_rpg_seed` by default; callers opt in with `include_source: true`.
+- Loop effect: checkpoint loops keep source identity inside the compact save `source_ref` instead of repeating it in every save response envelope.
+- Self-critique: save blobs remain large by design; this only trims redundant response metadata around guarded checkpoint calls.
+- Guard: focused MCP save/load and registration regressions pin default omission, opt-in source echo, stale hash-only saves, and source-ref reload integrity.
+- VERIFY: `C:\dev\agent-cleaner`, focused MCP save/source regressions, `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, `npm test`, and `npm run health` passed after loop-state rotation.
 
 ### Cycle result - overworld_actions_compact_default
 
@@ -131,12 +140,3 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Self-critique: broad mechanical migration, but it removes real package-era structure instead of only hiding it behind APIs.
 - Guard: focused world-source, source-runtime, author, validation-bar, UI, and full-suite regressions cover the path change.
 - VERIFY: `C:\dev\agent-cleaner`, `npm run typecheck`, focused migration regressions, `npm run validate`, `npm test`, and `npm run health` passed after loop-state rotation.
-
-### Cycle result - archive_guard_wsl_git_fallback
-
-- Pre-cycle: `C:\dev\agent-cleaner` initially exposed a WSL-only test failure in the archive tracking guard; rerun passed after the fix.
-- Engine/loop surface: `verify-integrity` now retries tracked-file checks through a translated Windows `.git` pointer when running under WSL.
-- Loop effect: the token-heavy loop archive guard stays enforced in both Windows health runs and the WSL cleaner path used before cycles.
-- Self-critique: maintenance-focused, but it fixes a real verification portability hole from the prior cycle.
-- Guard: focused verifier/loop-state regressions cover the guard path.
-- VERIFY: `C:\dev\agent-cleaner`, `npm run typecheck`, focused verifier/loop-state regressions, `npm run validate`, `npm test`, and `npm run health` passed after loop-state rotation.

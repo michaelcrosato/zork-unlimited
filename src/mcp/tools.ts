@@ -301,21 +301,22 @@ type RpgSaveArgs = {
   session_id: string;
   expected_state_hash?: string;
   if_state_hash?: string;
+  include_source?: boolean;
 };
 
-type RpgSaveSuccess = {
+type RpgSaveSuccess<Args extends RpgSaveArgs> = {
   ok: true;
   save: string;
   content_hash: string;
   state_hash: string;
-} & RpgSourceFields;
+} & (Args extends { include_source: true } ? RpgSourceFields : Record<string, never>);
 
 type RpgSaveRejection = RpgStateHashRejection;
 
 type RpgSaveUnchanged = RpgStateUnchanged;
 
 type RpgSaveResponse<Args extends RpgSaveArgs> =
-  | RpgSaveSuccess
+  | RpgSaveSuccess<Args>
   | (Args extends { expected_state_hash: string } ? RpgSaveRejection : never)
   | (Args extends { if_state_hash: string } ? RpgSaveUnchanged : never);
 

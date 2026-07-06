@@ -438,6 +438,9 @@ Make discovered overworld quest leads start real RPG sessions.
   through the world graph without a separate raw pack-path argument.
 - `save_game` now returns the current `state_hash`, letting checkpoint loops bind
   saved state without a follow-up observation/state read.
+- `save_game` source echo is opt-in with `include_source: true`; the default
+  checkpoint response relies on the save blob's compact `source_ref` instead of
+  repeating `world_quest_id` / generated-seed fields.
 - `save_game({ expected_state_hash })` and
   `export_overworld_session({ expected_snapshot_hash })` reject stale checkpoint
   requests before serializing save/snapshot blobs, without echoing the caller's

@@ -490,7 +490,12 @@ tool(
 tool(
   "save_game",
   "Serialize save; hash guards.",
-  { ...SESSION, ...EXPECTED_STATE_HASH, ...IF_STATE_HASH },
+  {
+    ...SESSION,
+    ...EXPECTED_STATE_HASH,
+    ...IF_STATE_HASH,
+    include_source: z.boolean().optional().describe("Echo source id."),
+  },
   (a) => api.save_game(a),
 );
 tool(

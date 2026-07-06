@@ -2679,7 +2679,7 @@ describe("MCP tools — the play loop (§9.1)", () => {
     expect("pack_id" in saved).toBe(false);
     expect("pack_path" in saved).toBe(false);
     expect("mode" in saved).toBe(false);
-    expect(saved.world_quest_id).toBe("sunken_barrow");
+    expect("world_quest_id" in saved).toBe(false);
     expect("generated_rpg_seed" in saved).toBe(false);
     const loaded = a.load_game({
       save: saved.save,
@@ -3061,6 +3061,7 @@ describe("MCP tools — save / load round-trip (§8.7)", () => {
     const after = a.get_observation({ session_id: game.session_id }).state_hash;
 
     const saved = a.save_game({ session_id: game.session_id });
+    const sourcedSave = a.save_game({ session_id: game.session_id, include_source: true });
     const reloaded = a.load_game({ save: saved.save });
     const saveBundle = JSON.parse(saved.save) as {
       mode?: string;
@@ -3072,8 +3073,11 @@ describe("MCP tools — save / load round-trip (§8.7)", () => {
     expect("pack_id" in saved).toBe(false);
     expect("pack_path" in saved).toBe(false);
     expect("mode" in saved).toBe(false);
-    expect(saved.world_quest_id).toBe("sunken_barrow");
+    expect("world_quest_id" in saved).toBe(false);
     expect("generated_rpg_seed" in saved).toBe(false);
+    expect(sourcedSave.world_quest_id).toBe("sunken_barrow");
+    expect("generated_rpg_seed" in sourcedSave).toBe(false);
+    expect(sourcedSave.save).toBe(saved.save);
     expect(saved.state_hash).toBe(after);
     expect(saveBundle.mode).toBe("rpg");
     expect("packId" in saveBundle).toBe(false);
@@ -3183,7 +3187,7 @@ describe("MCP tools — save / load round-trip (§8.7)", () => {
     expect("mode" in reloaded).toBe(false);
     expect("pack_id" in saved).toBe(false);
     expect("pack_path" in saved).toBe(false);
-    expect(saved.world_quest_id).toBe("sunken_barrow");
+    expect("world_quest_id" in saved).toBe(false);
     expect("generated_rpg_seed" in saved).toBe(false);
     expect(saved.state_hash).toBe(after);
     expect("pack_path" in reloaded).toBe(false);

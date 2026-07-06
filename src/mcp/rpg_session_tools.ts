@@ -106,16 +106,20 @@ export type RpgSaveToolArgs = {
   session_id: string;
   expected_state_hash?: string;
   if_state_hash?: string;
+  include_source?: boolean;
 };
 
-type RpgSaveToolSuccess = {
+type RpgSaveSourceToolFields = {
+  world_quest_id?: string;
+  generated_rpg_seed?: number;
+};
+
+type RpgSaveToolSuccess<Args extends RpgSaveToolArgs> = {
   ok: true;
   save: string;
   content_hash: string;
   state_hash: string;
-  world_quest_id?: string;
-  generated_rpg_seed?: number;
-};
+} & (Args extends { include_source: true } ? RpgSaveSourceToolFields : Record<string, never>);
 
 type RpgSaveToolRejected<Args extends RpgSaveToolArgs> = Args extends {
   expected_state_hash: string;
@@ -130,7 +134,7 @@ type RpgSaveToolUnchanged<Args extends RpgSaveToolArgs> = Args extends {
   : never;
 
 export type RpgSaveToolResponse<Args extends RpgSaveToolArgs> =
-  | RpgSaveToolSuccess
+  | RpgSaveToolSuccess<Args>
   | RpgSaveToolRejected<Args>
   | RpgSaveToolUnchanged<Args>;
 
@@ -294,7 +298,7 @@ export function runRpgSaveGame<Args extends RpgSaveToolArgs>(
   return {
     ok: true,
     save: save(s.state, s.contentHash, SAVE_MODE, saveMetadata),
-    ...rpgSourceFields(s),
+    ...(args.include_source === true ? rpgSourceFields(s) : {}),
     content_hash: s.contentHash,
     state_hash: stateHash,
   } as RpgSaveToolResponse<Args>;
