@@ -154,6 +154,18 @@ export class GameSession {
     return { ok: r.ok, narration: narrationsOf(r.events), rejection: r.rejectionReason ?? null };
   }
 
+  /**
+   * The pack's ending record once the session has ended (null while play
+   * continues) — the completion payload the overworld quest bridge needs.
+   * Death endings must NOT be completed back into the overworld (the engine
+   * rejects them), so callers branch on `death`.
+   */
+  ending(): { id: string; title: string; death: boolean } | null {
+    if (!this.state.ended || !this.state.endingId) return null;
+    const ending = this.index.pack.endings.find((e) => e.id === this.state.endingId);
+    return ending ? { id: ending.id, title: ending.title, death: ending.death } : null;
+  }
+
   /** Restart from a fresh initial state. */
   reset(): void {
     this.state = this.fresh();

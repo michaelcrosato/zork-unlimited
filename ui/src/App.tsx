@@ -235,13 +235,32 @@ export default function App(): JSX.Element {
   function choose(id: string, label: string): void {
     if (!questSession) return;
     const out = questSession.choose(id);
-    setLog((prev) => [
-      `> ${label}`,
-      ...out.narration,
-      ...(out.rejection ? [`(${out.rejection})`] : []),
-      ...prev,
-    ]);
-    setQuestView(questSession.view());
+    const view = questSession.view();
+    setQuestView(view);
+    const lines = [`> ${label}`, ...out.narration, ...(out.rejection ? [`(${out.rejection})`] : [])];
+    // Close a finished quest back into the overworld (MCP-bridge parity,
+    // src/mcp/overworld_quest_bridge.ts): a non-death ending completes the lead
+    // (journal entry + completedQuestIds); a death ending must not — the engine
+    // rejects it and the lead stays permanently open for this journey.
+    if (view.ended && activeQuest) {
+      const ending = questSession.ending();
+      if (ending && !ending.death) {
+        try {
+          const result = worldSession.completeQuest(activeQuest.id, {
+            endingId: ending.id,
+            endingTitle: ending.title,
+            death: ending.death,
+          });
+          setWorldView(worldSession.view());
+          lines.unshift(`Completed ${result.quest.title}: ${result.entry.text}`);
+        } catch (e) {
+          setError((e as Error).message);
+        }
+      } else if (ending?.death) {
+        lines.unshift(`${activeQuest.title} ends in death — the lead stays open in the journal.`);
+      }
+    }
+    setLog((prev) => [...lines, ...prev]);
   }
 
   function returnToRoad(): void {
