@@ -1,10 +1,19 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 448 -->
+<!-- historical_cycle_count: 449 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - transcript_source_opt_in
+
+- Pre-cycle: `C:\dev\agent-cleaner` initially failed on README table formatting; Prettier fixed the drift and the cleaner rerun passed.
+- Engine/loop surface: `get_transcript` no longer echoes `world_quest_id` / `generated_rpg_seed` by default; callers opt in with `include_source: true`.
+- Loop effect: repeated transcript polls keep source identity out of the hot MCP payload while start/save/load still expose source when needed.
+- Self-critique: narrow token-efficiency win, but it hits a recurring blind-agent loop call instead of gameplay content.
+- Guard: MCP tool and generated-source tests pin default omission plus opt-in source echo; registration tests keep ToolSearch schema budgets strict.
+- VERIFY: `C:\dev\agent-cleaner`, `npm run typecheck`, focused MCP/registration regressions, `npm run lint`, `npm run format:check`, `npm run validate`, `npm test`, and `npm run health` passed after loop-state rotation.
 
 ### Cycle result - quest_source_directory_migration
 
@@ -120,11 +129,3 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Loop effect: world graph callers must route by canonical node/world quest id instead of deriving playable identity from package paths.
 - Guard: single-world regression now iterates graph quest bindings by `world_quest_id`, opens play through that id, and rejects the retired helper names in graph source.
 - VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused single-world/source-runtime regressions, `npm test`, and `npm run health` passed after loop-state rotation.
-
-### Cycle result - source_catalog_world_id
-
-- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
-- Engine/loop surface: `RpgSourceRuntime.discoverWorldQuestSources` now catalogs quests from world graph ids and loads reports through `loadWorldQuestReport`.
-- Loop effect: public world catalog discovery no longer reverse-maps normalized package paths back into graph nodes before producing `world_quest_id` entries.
-- Guard: focused source-runtime/catalog regressions pin string world quest ids and reject `worldQuestNodeForPack` / `worldQuestPackPaths` in the source runtime.
-- VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused source-runtime/catalog regressions, `npm test`, and `npm run health` passed after loop-state rotation.

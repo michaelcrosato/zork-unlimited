@@ -157,6 +157,15 @@ describe("bug_0160 — new_game(generate_rpg_seed) plays a fresh minted RPG pack
     const a = api();
     const g = a.new_game({ generate_rpg_seed: 3, seed: 7 });
     const before = a.get_state({ session_id: g.session_id, include_state: true });
+    const transcript = a.get_transcript({ session_id: g.session_id });
+    expect("world_quest_id" in transcript).toBe(false);
+    expect("generated_rpg_seed" in transcript).toBe(false);
+    const sourcedTranscript = a.get_transcript({
+      session_id: g.session_id,
+      include_source: true,
+    });
+    expect("world_quest_id" in sourcedTranscript).toBe(false);
+    expect(sourcedTranscript.generated_rpg_seed).toBe(3);
     const saved = a.save_game({ session_id: g.session_id });
     const raw = JSON.parse(saved.save) as {
       source_ref?: unknown;

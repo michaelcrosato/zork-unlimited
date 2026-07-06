@@ -196,8 +196,9 @@ Make discovered overworld quest leads start real RPG sessions.
 - `get_observation({ if_state_hash })` can return hash-only `unchanged`
   responses, avoiding repeated context payloads for polling or resume loops; the
   old `get_scene` alias is no longer part of the live MCP/ToolApi loop.
-- `get_transcript({ summary_only: true })` keeps session/end-state metadata while
-  omitting the `turns` field for token-light checks.
+- `get_transcript({ summary_only: true })` keeps end-state metadata while omitting
+  the `turns` field for token-light checks; source identity is opt-in with
+  `include_source: true`.
 - `get_transcript({ compact_events: true })` keeps full transcript turn metadata
   while encoding each turn's visible events as the same compact `event_v: 3`
   tuples used by `step_action`.

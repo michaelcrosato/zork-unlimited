@@ -80,7 +80,7 @@ roll flowing through the PRNG so fights replay exactly (§8.5).
 | RPG runner (legal-action menu + `ATTACK`) + observation                                      | `src/rpg/runner.ts`, `src/rpg/observation.ts`          |
 | RPG validator (winnability, skill passability, stat/death-ending checks)                     | `src/validate/rpg_validator.ts`                        |
 | Gated core DSL additions: `set_quest_stage` effect, `quest_stage` condition, `ATTACK` action | `src/core/`, `src/api/types.ts`                        |
-| Sample pack: _The Sunken Barrow_                                                             | `content/rpg/quests/sunken_barrow.yaml`                  |
+| Sample pack: _The Sunken Barrow_                                                             | `content/rpg/quests/sunken_barrow.yaml`                |
 | Negative fixture (`COMBAT_UNWINNABLE`)                                                       | `content/broken-fixtures/rpg_unwinnable.yaml`          |
 | §14 gate record (all six items)                                                              | [`docs/stage4_rpg_gate.md`](./docs/stage4_rpg_gate.md) |
 | Acceptance + unit + regression tests, recorded victory trace                                 | `tests/`, `traces/rpg/barrow_victory.json`             |
@@ -159,8 +159,8 @@ fresh pack, read-only) and is playable in-memory via `new_game`'s
 The shipped, validated content — every pack passes the validator and is wired into
 `npm run health`:
 
-| Pack                     | File                                        |
-| ------------------------ | ------------------------------------------- |
+| Pack                     | File                                          |
+| ------------------------ | --------------------------------------------- |
 | The Advocate's Case      | `content/rpg/quests/advocates_case.yaml`      |
 | The Bellfounder's Alarm  | `content/rpg/quests/bellfounders_alarm.yaml`  |
 | The Breaking Weir        | `content/rpg/quests/breaking_weir.yaml`       |

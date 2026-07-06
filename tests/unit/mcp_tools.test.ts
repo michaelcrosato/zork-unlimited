@@ -1848,8 +1848,14 @@ describe("MCP tools — the play loop (§9.1)", () => {
     expect("pack_id" in transcript).toBe(false);
     expect("pack_path" in transcript).toBe(false);
     expect("mode" in transcript).toBe(false);
-    expect(transcript.world_quest_id).toBe("sunken_barrow");
+    expect("world_quest_id" in transcript).toBe(false);
     expect("generated_rpg_seed" in transcript).toBe(false);
+    const sourcedTranscript = a.get_transcript({
+      session_id: game.session_id,
+      include_source: true,
+    });
+    expect(sourcedTranscript.world_quest_id).toBe("sunken_barrow");
+    expect("generated_rpg_seed" in sourcedTranscript).toBe(false);
     expect(transcript.summary.ended).toBe(true);
     expect(transcript.summary.ending_id).toBe("ending_victory");
     expect(transcript.turns.map((t) => t.action_id)).toContain("take_circlet");

@@ -31,6 +31,7 @@ export type RpgStepEventVersion<Args extends RpgEventOptions> = Args extends {
 
 export type TranscriptArgs = {
   session_id: string;
+  include_source?: boolean;
   summary_only?: boolean;
   compact_turns?: boolean;
   compact_events?: boolean;
@@ -83,9 +84,12 @@ type TranscriptPayloadBase<Args extends TranscriptArgs> = {
   transcript_hash: string;
   summary: TranscriptSummaryFor<Args>;
   turns_omitted?: number;
-  world_quest_id?: string;
-  generated_rpg_seed?: number;
-};
+} & (Args extends { include_source: true }
+  ? {
+      world_quest_id?: string;
+      generated_rpg_seed?: number;
+    }
+  : Record<string, never>);
 type TranscriptTurnFor<Args extends TranscriptArgs> = Args extends { compact_turns: true }
   ? TranscriptCompactTurn
   : Args extends { compact_events: true }

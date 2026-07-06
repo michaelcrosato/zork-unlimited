@@ -260,7 +260,7 @@ export function runRpgGetTranscript<Args extends TranscriptArgs>(
   const turnsOmitted = args.summary_only ? 0 : transcriptTurnsOmitted(s, args);
   const response = {
     session_id: s.id,
-    ...rpgSourceFields(s),
+    ...(args.include_source === true ? rpgSourceFields(s) : {}),
     state_hash: stateHash,
     transcript_hash: currentTranscriptHash,
     ...transcriptEventVersion(args),

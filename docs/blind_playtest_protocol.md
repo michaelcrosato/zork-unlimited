@@ -79,7 +79,8 @@ PLAY:
   compact_actions = false once for command text.
 - For an end-of-run transcript audit, call get_transcript(session_id,
   summary_only = true, compact_summary = true, if_transcript_hash = latest
-  transcript hash when rechecking unchanged history). Use compact_turns = true
+  transcript hash when rechecking unchanged history). Use include_source = true
+  only when the audit did not retain the start response. Use compact_turns = true
   only when route rows are needed; compact rows are [step, scene_id, action_id,
   result_scene_id].
   Compact summaries include ending_id only after an ending exists and may omit
