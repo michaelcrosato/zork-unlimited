@@ -37,6 +37,37 @@ The report is written to `blind-tester/reports/<stamp>_<quest>_seed<n>.md`
 (and the raw `--output-format json` envelope alongside as `.json`). `reports/` is
 gitignored.
 
+## Watching a playthrough live (spectate mode)
+
+To see what the LLM is doing while it plays — and verify it with your own eyes —
+run the playtest in spectate mode and tail the feed from a second terminal:
+
+```bash
+# terminal 1: the playtest, with a 1.5s pause per tool response so a human can follow
+npm run blind -- --spectate --delay-ms 1500
+
+# terminal 2: the live feed (every tool call: args + the scene the agent saw)
+npm run spectate
+```
+
+The feed (default `ai-runs/spectate.log`, gitignored) is written by the MCP
+server itself, so it works for ANY client — not just blind runs. To spectate any
+MCP session, start the server with `npm run mcp -- --spectate [path]
+--spectate-delay-ms <n>` (or env `AF_SPECTATE=1|<path>`,
+`AF_SPECTATE_DELAY_MS=<n>`). The delay paces every tool response; leave it off
+for a full-speed feed. Spectate is fully inert when not enabled.
+
+## Platforms
+
+Works natively on Linux, macOS, WSL, and Windows (PowerShell, cmd, or Git Bash —
+`npm run blind` resolves Git Bash itself, so the System32 WSL `bash.exe` can
+never hijack the run). One Windows-specific rule the harness already handles:
+the MCP server launch never relies on the client honoring a `cwd` field
+(`npm --prefix` self-cds instead), because the Claude CLI on Windows silently
+ignores stdio-server `cwd`. Note a checkout `npm install`-ed on Windows cannot
+run under WSL's Linux node (native esbuild binary mismatch) — the runner detects
+this and says so instead of failing cryptically.
+
 ## How blindness is enforced (two levels)
 
 1. **No source access (interface-level).** The agent runs from an isolated temp
@@ -75,9 +106,13 @@ the prompt in [`prompt.md`](./prompt.md) reuses its report format (clarity/enjoy
 --model <alias>  claude model alias: sonnet (default, best value) | opus
 --out <prefix>   report path prefix (default: reports/<stamp>_<quest>_seed<n>)
 --smoke          run the no-LLM MCP smoke test instead of a real playtest
+--spectate       write the human-watchable feed (watch with: npm run spectate)
+--delay-ms <n>   pace every tool response by n ms (implies --spectate)
 ```
 
-Environment: `BLIND_QUEST_ID`, `BLIND_MODEL`, `BLIND_TIMEOUT` (seconds, default 900).
+Environment: `BLIND_QUEST_ID`, `BLIND_MODEL`, `BLIND_TIMEOUT` (seconds, default 900),
+`BLIND_SPECTATE=1`, `BLIND_SPECTATE_DELAY_MS`, `BLIND_BASH` (Windows: path to Git
+Bash if auto-detection fails).
 
 ## Provider-agnostic — bring another agent (e.g. a local LLM)
 

@@ -18,24 +18,102 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { z, type ZodRawShape } from "zod";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { fileURLToPath } from "node:url";
-import { resolve } from "node:path";
+import { dirname, resolve } from "node:path";
+import { appendFileSync, mkdirSync } from "node:fs";
 import { createToolApi } from "./tools.js";
 import { TRANSCRIPT_TURN_LIMIT_DEFAULT } from "./transcript_projection.js";
 import { isGeneratedRpgSeed as genSeed } from "../gen/seed.js";
 
 const api = createToolApi({ root: process.cwd() });
 
+// ── Spectate mode ─────────────────────────────────────────────────────────────
+// A human-facing live feed of every tool call (plus an optional pacing delay
+// before each response returns) so a person can watch an LLM playthrough in
+// real time and verify what is happening — `npm run spectate` tails the feed
+// from another terminal. Configure via CLI args (`npm run mcp -- --spectate
+// [path] --spectate-delay-ms N` — args survive every MCP client) or env
+// (AF_SPECTATE=1|<path>, AF_SPECTATE_DELAY_MS=N). Entirely inert when unset:
+// no files are touched and no delay is added, so importing this module (tests)
+// and normal blind/loop runs are unaffected. The feed goes to a FILE — stdout
+// is the JSON-RPC transport and must stay clean.
+const SPECTATE_DEFAULT_LOG = "ai-runs/spectate.log";
+
+function argValue(flag: string): string | undefined {
+  const i = process.argv.indexOf(flag);
+  return i >= 0 ? process.argv[i + 1] : undefined;
+}
+
+const SPECTATE_LOG: string | null = (() => {
+  const fromArg = process.argv.includes("--spectate")
+    ? (argValue("--spectate") ?? "")
+    : (process.env.AF_SPECTATE ?? "");
+  if (!fromArg && !process.argv.includes("--spectate") && !process.env.AF_SPECTATE) return null;
+  const isPath = fromArg !== "" && fromArg !== "1" && !fromArg.startsWith("--");
+  return resolve(isPath ? fromArg : SPECTATE_DEFAULT_LOG);
+})();
+
+const SPECTATE_DELAY_MS: number = Math.max(
+  0,
+  Number(argValue("--spectate-delay-ms") ?? process.env.AF_SPECTATE_DELAY_MS ?? 0) || 0,
+);
+
+function spectateTrim(text: string, max: number): string {
+  return text.length <= max ? text : `${text.slice(0, max)} … (+${text.length - max} chars)`;
+}
+
+/** On startup (direct run only): banner into the feed + a stderr pointer. */
+function announceSpectate(): void {
+  if (!SPECTATE_LOG) return;
+  try {
+    mkdirSync(dirname(SPECTATE_LOG), { recursive: true });
+    appendFileSync(
+      SPECTATE_LOG,
+      `\n═══ adventureforge spectate — session started ${new Date().toISOString()}${SPECTATE_DELAY_MS > 0 ? ` (delay ${SPECTATE_DELAY_MS}ms)` : ""} ═══\n`,
+    );
+  } catch {
+    // best-effort
+  }
+  process.stderr.write(
+    `spectate feed → ${SPECTATE_LOG}${SPECTATE_DELAY_MS > 0 ? ` (delay ${SPECTATE_DELAY_MS}ms per tool response)` : ""} — watch with: npm run spectate\n`,
+  );
+}
+
+/** Append one human-readable entry per tool call; never let the feed break play. */
+function spectateRecord(name: string, args: unknown, result: CallToolResult): void {
+  if (!SPECTATE_LOG) return;
+  const first = result.content?.[0];
+  const body = first && first.type === "text" ? first.text : "";
+  const entry = [
+    `\n── ${new Date().toISOString()}  ${name}${result.isError ? "  ✗ ERROR" : ""}`,
+    `   args: ${spectateTrim(JSON.stringify(args ?? {}), 400)}`,
+    `   ${spectateTrim(body, 4000)}`,
+  ].join("\n");
+  try {
+    mkdirSync(dirname(SPECTATE_LOG), { recursive: true });
+    appendFileSync(SPECTATE_LOG, `${entry}\n`);
+  } catch {
+    // Spectating is best-effort; a feed write failure must not fail the tool call.
+  }
+}
+
 function ok(value: unknown): CallToolResult {
   return { content: [{ type: "text", text: JSON.stringify(value) }] };
 }
 
-function wrap<A>(handler: (args: A) => unknown) {
+function wrap<A>(name: string, handler: (args: A) => unknown) {
   return async (args: A): Promise<CallToolResult> => {
+    let result: CallToolResult;
     try {
-      return ok(await handler(args)); // await is a no-op for the sync handlers
+      result = ok(await handler(args)); // await is a no-op for the sync handlers
     } catch (e) {
-      return { content: [{ type: "text", text: `Error: ${(e as Error).message}` }], isError: true };
+      result = {
+        content: [{ type: "text", text: `Error: ${(e as Error).message}` }],
+        isError: true,
+      };
     }
+    spectateRecord(name, args, result);
+    if (SPECTATE_DELAY_MS > 0) await new Promise((r) => setTimeout(r, SPECTATE_DELAY_MS));
+    return result;
   };
 }
 
@@ -53,7 +131,7 @@ function tool(
   handler: (args: never) => unknown,
 ): void {
   TOOL_REGISTRATIONS.push({ name, description });
-  server.registerTool(name, { description, inputSchema }, wrap(handler) as never);
+  server.registerTool(name, { description, inputSchema }, wrap(name, handler) as never);
 }
 
 const WORLD_QUEST_SOURCE = {
@@ -637,6 +715,7 @@ async function main(): Promise<void> {
   await server.connect(transport);
   // Log to stderr only — stdout is the MCP transport.
   process.stderr.write("adventureforge MCP server ready on stdio\n");
+  announceSpectate();
 }
 
 // Connect the stdio transport only when this module is the process entrypoint
