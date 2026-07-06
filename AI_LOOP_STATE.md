@@ -1,10 +1,19 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 466 -->
+<!-- historical_cycle_count: 467 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - start_world_route_context_opt_in
+
+- Pre-cycle: `C:\dev\agent-cleaner` measure/gates passed through WSL; optional secret scanner remains absent.
+- Engine/loop surface: `start_world_quest` now omits the extra world/quest route envelope by default; callers opt in with `include_world_context: true`.
+- Loop effect: blind starts keep `world_quest_id` plus compact opening context without echoing route arrays already available through `world_path`.
+- Self-critique: this trims a start payload, not the hot per-turn path, but the payload probe showed it as the largest remaining ordinary default response after catalog compaction.
+- Guard: focused MCP start/catalog regressions pin default omission, explicit route-context opt-in, compact starts, and schema registration.
+- VERIFY: `C:\dev\agent-cleaner`, focused MCP start/catalog regressions, `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, `npm test`, and `npm run health` passed after loop-state rotation.
 
 ### Cycle result - list_world_compact_default
 
@@ -131,12 +140,3 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Self-critique: world-quest start only; generated `new_game`, `step_action`, and `load_game` direct defaults remain follow-up surfaces.
 - Guard: MCP unit/regression tests keep full-start readers explicit while pinning the no-flag compact start.
 - VERIFY: `C:\dev\agent-cleaner`, `npm run typecheck`, focused MCP/RPG start regressions, `npm run lint`, `npm run format:check`, `npm run validate`, `npm test`, and `npm run health` passed after loop-state rotation.
-
-### Cycle result - rpg_read_compact_default
-
-- Pre-cycle: `C:\dev\agent-cleaner` passed; optional secret scanner remains absent.
-- Engine/loop surface: ToolApi `get_observation` now returns compact RPG context by default; full observations require `compact_observation: false`.
-- Loop effect: direct harness/agent RPG reads no longer pull the full room/action/state observation when a compact context plus state hash is enough.
-- Self-critique: read-path only; start/step/load direct defaults still remain separate follow-up surfaces.
-- Guard: MCP unit/regression tests keep full-observation readers explicit while pinning the no-flag compact read.
-- VERIFY: `C:\dev\agent-cleaner`, `npm run typecheck`, focused MCP/RPG observation regressions, `npm run lint`, `npm run format:check`, `npm run validate`, `npm test`, and `npm run health` passed after loop-state rotation.

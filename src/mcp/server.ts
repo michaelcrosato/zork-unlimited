@@ -43,32 +43,32 @@ function tool(
 }
 
 const WORLD_QUEST_SOURCE = {
-  world_quest_id: z.string().describe("World quest id."),
+  world_quest_id: z.string().describe("Quest."),
 };
 const G = z.number().int().refine(genSeed);
 const SESSION = {
-  session_id: z.string().describe("Session."),
+  session_id: z.string().describe("S."),
 };
 const HIDE_GRAPH = {
-  hide_graph: z.boolean().optional().describe("Hide exits."),
+  hide_graph: z.boolean().optional().describe("Hide."),
 };
 const COMPACT_ACTIONS = {
-  compact_actions: z.boolean().optional().describe("Ids."),
+  compact_actions: z.boolean().optional().describe("Id."),
 };
 const COMPACT_EVENTS = {
-  compact_events: z.boolean().optional().describe("Full events?"),
+  compact_events: z.boolean().optional().describe("Ev."),
 };
 const COMPACT_OBSERVATION = {
-  compact_observation: z.boolean().optional().describe("Full obs?"),
+  compact_observation: z.boolean().optional().describe("Obs."),
 };
 const IF_STATE_HASH = {
-  if_state_hash: z.string().optional().describe("If same."),
+  if_state_hash: z.string().optional().describe("Same."),
 };
 const IF_TRANSCRIPT_HASH = {
   if_transcript_hash: z.string().optional().describe("If same tx."),
 };
 const EXPECTED_STATE_HASH = {
-  expected_state_hash: z.string().optional().describe("Reject stale."),
+  expected_state_hash: z.string().optional().describe("Stale."),
 };
 tool(
   "list_world",
@@ -422,8 +422,9 @@ tool(
   "start_world_quest",
   "Start RPG.",
   {
-    world_quest_id: z.string().describe("World quest id."),
+    world_quest_id: z.string().describe("Quest."),
     seed: z.number().int().safe().optional(),
+    include_world_context: z.boolean().optional(),
     ...HIDE_GRAPH,
     ...COMPACT_ACTIONS,
     ...COMPACT_OBSERVATION,
@@ -482,7 +483,7 @@ tool(
     ...IF_TRANSCRIPT_HASH,
     summary_only: z.boolean().optional().describe("No turns."),
     compact_summary: z.boolean().optional().describe("Capped lists."),
-    compact_turns: z.boolean().optional().describe("Row tuples."),
+    compact_turns: z.boolean().optional().describe("Rows."),
     turn_limit: z.number().int().min(0).optional().describe("Rows."),
     ...COMPACT_EVENTS,
   },

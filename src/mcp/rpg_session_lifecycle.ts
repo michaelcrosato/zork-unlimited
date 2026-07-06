@@ -20,6 +20,7 @@ export type RpgStartWorldQuestToolArgs = {
   world_quest_id: string;
   seed?: number;
   hide_graph?: boolean;
+  include_world_context?: boolean;
   /** Internal bridge binding for RPG sessions launched from an overworld session. */
   overworldSessionId?: string;
 } & RpgViewOptions;
@@ -32,14 +33,23 @@ export type RpgLoadGameToolArgs = {
   hide_graph?: boolean;
 } & RpgViewOptions;
 
-export type RpgWorldQuestStartPayload<Args extends RpgViewOptions> = {
+type RpgWorldQuestStartContextFields = {
   world: { id: string; name: string; hub: string };
   quest: {
     id: string;
     name: string;
     path_from_hub: WorldRouteStep[];
   };
-} & RpgSessionPayload<Args>;
+};
+
+type RpgWorldQuestStartContext<Args extends RpgStartWorldQuestToolArgs> = Args extends {
+  include_world_context: true;
+}
+  ? RpgWorldQuestStartContextFields
+  : Record<string, never>;
+
+export type RpgWorldQuestStartPayload<Args extends RpgStartWorldQuestToolArgs> =
+  RpgSessionPayload<Args> & RpgWorldQuestStartContext<Args>;
 
 type RpgLifecycleDeps = {
   root: string;
@@ -74,15 +84,18 @@ export function runRpgStartWorldQuest<Args extends RpgStartWorldQuestToolArgs>(
     worldQuestId: source.node.id,
     ...(args.overworldSessionId ? { overworldSessionId: args.overworldSessionId } : {}),
   });
-  return {
-    world: { id: source.world.id, name: source.world.name, hub: source.world.hub },
-    quest: {
-      id: source.node.id,
-      name: source.node.name,
-      path_from_hub: worldRouteFromHub(source.world, source.node.id) ?? [],
-    },
-    ...started,
-  } as RpgWorldQuestStartPayload<Args>;
+  if (args.include_world_context === true) {
+    return {
+      world: { id: source.world.id, name: source.world.name, hub: source.world.hub },
+      quest: {
+        id: source.node.id,
+        name: source.node.name,
+        path_from_hub: worldRouteFromHub(source.world, source.node.id) ?? [],
+      },
+      ...started,
+    } as unknown as RpgWorldQuestStartPayload<Args>;
+  }
+  return started as RpgWorldQuestStartPayload<Args>;
 }
 
 export function runRpgLoadGame<Args extends RpgLoadGameToolArgs>(

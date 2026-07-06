@@ -364,6 +364,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
       world_quest_id: "sunken_barrow",
       seed: 1,
       compact_observation: false,
+      include_world_context: true,
     });
     expect(started.quest).toMatchObject({
       id: "sunken_barrow",
@@ -389,6 +390,8 @@ describe("MCP tools — validate / load (§9.4)", () => {
 
     const viaWorldQuest = a.start_world_quest({ world_quest_id: "breaking_weir", seed: 1 });
     expect("pack_path" in viaWorldQuest).toBe(false);
+    expect("world" in viaWorldQuest).toBe(false);
+    expect("quest" in viaWorldQuest).toBe(false);
     expect(viaWorldQuest.world_quest_id).toBe("breaking_weir");
     expect("generated_rpg_seed" in viaWorldQuest).toBe(false);
     expect(() => a.new_game({ world_quest_id: "breaking_weir" } as never)).toThrow(
@@ -2478,6 +2481,7 @@ describe("MCP tools — the play loop (§9.1)", () => {
     const byWorldQuestId = a.start_world_quest({
       world_quest_id: "sunken_barrow",
       seed: 1,
+      include_world_context: true,
     }) as unknown as {
       world_quest_id: string | null;
       quest: { id: string; path_from_hub: { name: string }[] };
@@ -2770,9 +2774,13 @@ describe("MCP tools — the play loop (§9.1)", () => {
     });
 
     expect("observation" in compactStart).toBe(false);
+    expect("world" in compactStart).toBe(false);
+    expect("quest" in compactStart).toBe(false);
     expect("mode" in compactStart.context).toBe(false);
     expect(defaultStart.context).toEqual(compactStart.context);
     expect("observation" in defaultStart).toBe(false);
+    expect("world" in defaultStart).toBe(false);
+    expect("quest" in defaultStart).toBe(false);
     expect(compactStart.context).toMatchObject({
       v: RPG_COMPACT_OBSERVATION_VERSION,
       here: [fullStart.observation.room, fullStart.observation.title],

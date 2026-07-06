@@ -243,6 +243,7 @@ type RpgStartWorldQuestArgs = {
   world_quest_id: string;
   seed?: number;
   hide_graph?: boolean;
+  include_world_context?: boolean;
   /** Internal bridge binding; not registered as public MCP input. */
   overworldSessionId?: string;
 } & RpgViewOptions;
@@ -362,7 +363,7 @@ function compactInspectTraceStepSummary(
   ]);
 }
 
-type RpgWorldQuestStartPayload<Args extends RpgViewOptions> =
+type RpgWorldQuestStartPayload<Args extends RpgStartWorldQuestArgs> =
   RpgRuntimeWorldQuestStartPayload<Args>;
 
 type RpgStartWorldQuestInvoker = {

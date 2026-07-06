@@ -163,8 +163,9 @@ Make discovered overworld quest leads start real RPG sessions.
 - Core reducer `Rules`/`makeStep` and trace records now default to `RpgAction`,
   so new engine and trace call sites bind to the single RPG action contract by
   default instead of the legacy-compatible `Action` alias.
-- RPG start/load responses now carry one-time world context; follow-up
-  observations omit that repeated binding to lower per-turn MCP payload.
+- RPG start responses keep `world_quest_id` and compact opening context by
+  default; callers can pass `include_world_context: true` for world/route
+  metadata, while follow-up observations omit that repeated binding.
 - Compact RPG observations carry action ids as strings without repeated command
   labels; full labels remain available on demand.
 - ToolApi/public MCP `list_legal_actions` defaults to compact action-id strings;
