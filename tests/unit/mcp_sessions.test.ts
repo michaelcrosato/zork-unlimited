@@ -49,7 +49,6 @@ function sessionInit(overrides: SessionInitOverrides = {}): SessionInit {
       ? {}
       : { worldQuestId: "test_quest" };
   return {
-    packId: "test-pack",
     contentHash: "0".repeat(64),
     ...sourceDefaults,
     index: {} as RpgIndex,
@@ -108,19 +107,20 @@ describe("SessionStore", () => {
   it("allocates deterministic monotonically increasing session ids", () => {
     const store = new SessionStore();
 
-    const first = store.create(sessionInit({ packId: "first" }));
-    const second = store.create(sessionInit({ packId: "second" }));
+    const first = store.create(sessionInit({ worldQuestId: "first" }));
+    const second = store.create(sessionInit({ worldQuestId: "second" }));
 
     expect(first.id).toBe("sess_1");
     expect(second.id).toBe("sess_2");
     expect(first.stateHash).toBe(hashState(first.state));
     expect(second.stateHash).toBe(hashState(second.state));
     expect("mode" in first).toBe(false);
-    expect(store.get("sess_1").packId).toBe("first");
-    expect(store.get("sess_2").packId).toBe("second");
+    expect("packId" in first).toBe(false);
+    expect(store.get("sess_1").worldQuestId).toBe("first");
+    expect(store.get("sess_2").worldQuestId).toBe("second");
 
     const forged = store.create({
-      ...sessionInit({ packId: "forged" }),
+      ...sessionInit({ worldQuestId: "forged" }),
       id: "forged_session",
     } as unknown as SessionInit);
     expect(forged.id).toBe("sess_3");
@@ -132,8 +132,8 @@ describe("SessionStore", () => {
     const store = new SessionStore();
     (store as unknown as { counter: bigint }).counter = BigInt(Number.MAX_SAFE_INTEGER);
 
-    const first = store.create(sessionInit({ packId: "first" }));
-    const second = store.create(sessionInit({ packId: "second" }));
+    const first = store.create(sessionInit({ worldQuestId: "first" }));
+    const second = store.create(sessionInit({ worldQuestId: "second" }));
 
     expect(first.id).toBe("sess_9007199254740992");
     expect(second.id).toBe("sess_9007199254740993");
@@ -191,11 +191,11 @@ describe("SessionStore", () => {
   it("bounds stored sessions and keeps recently accessed sessions", () => {
     const store = new SessionStore(2);
 
-    const first = store.create(sessionInit({ packId: "first" }));
-    const second = store.create(sessionInit({ packId: "second" }));
+    const first = store.create(sessionInit({ worldQuestId: "first" }));
+    const second = store.create(sessionInit({ worldQuestId: "second" }));
     expect(store.get(first.id)).toBe(first);
 
-    const third = store.create(sessionInit({ packId: "third" }));
+    const third = store.create(sessionInit({ worldQuestId: "third" }));
 
     expect(store.get(first.id)).toBe(first);
     expect(store.get(third.id)).toBe(third);
@@ -218,7 +218,7 @@ describe("SessionStore", () => {
       },
     ];
     const first = store.create(sessionInit({ transcript, hideGraph: true }));
-    const second = store.create(sessionInit({ packId: "other", state: state("other") }));
+    const second = store.create(sessionInit({ worldQuestId: "other", state: state("other") }));
 
     const nextState = state("next");
     const updated = store.update(first.id, nextState);
@@ -232,7 +232,7 @@ describe("SessionStore", () => {
     expect(store.get(first.id).hideGraph).toBe(true);
     expect(store.get(second.id).state.current).toBe("other");
     expect(store.get(second.id).stateHash).toBe(hashState(store.get(second.id).state));
-    expect(store.get(second.id).packId).toBe("other");
+    expect(store.get(second.id).worldQuestId).toBe("other");
 
     nextState.current = "mutated_after_update";
     transcript[0]!.scene_id = "mutated_after_create";
@@ -420,7 +420,6 @@ describe("SessionStore", () => {
     );
     const immutableFields = [
       "id",
-      "packId",
       "contentHash",
       "packPath",
       "worldQuestId",
@@ -437,11 +436,9 @@ describe("SessionStore", () => {
         writable: false,
       });
     }
+    expect("packId" in session).toBe(false);
     expect(Object.isExtensible(session)).toBe(true);
     expect(Object.getOwnPropertyDescriptor(session, "state")).toMatchObject({ writable: true });
-    expect(() => {
-      (session as { packId: string }).packId = "mutated_pack";
-    }).toThrow();
     expect(() => {
       (session as { overworldSessionId: string }).overworldSessionId = "ow_2";
     }).toThrow();

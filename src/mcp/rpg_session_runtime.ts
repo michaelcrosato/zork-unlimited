@@ -157,7 +157,6 @@ export class RpgMcpSessionRuntime {
     const initialState = state ?? initStateForRpgPack(index, opts.seed ?? 1);
     if (state !== undefined) assertRpgStateReferences(index, initialState);
     const session = this.sessions.create({
-      packId: compiled.pack.meta.id,
       contentHash: compiled.contentHash,
       ...(opts.packPath ? { packPath: opts.packPath } : {}),
       ...(opts.worldQuestId ? { worldQuestId: opts.worldQuestId } : {}),

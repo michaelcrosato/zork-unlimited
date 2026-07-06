@@ -275,6 +275,12 @@ export function runRpgGetTranscript<Args extends TranscriptArgs>(
   return response as unknown as TranscriptResponse<Args>;
 }
 
+function sessionSaveSourceId(session: Pick<Session, "worldQuestId" | "generatedRpgSeed">): string {
+  if (session.worldQuestId) return session.worldQuestId;
+  if (session.generatedRpgSeed !== undefined) return `generated:${session.generatedRpgSeed}`;
+  throw new Error("MCP RPG session is missing canonical save source identity.");
+}
+
 export function runRpgSaveGame<Args extends RpgSaveToolArgs>(
   deps: Pick<RpgSessionToolDeps, "sessions">,
   args: Args,
@@ -293,7 +299,7 @@ export function runRpgSaveGame<Args extends RpgSaveToolArgs>(
   };
   return {
     ok: true,
-    save: save(s.state, s.packId, s.contentHash, SAVE_MODE, saveMetadata),
+    save: save(s.state, sessionSaveSourceId(s), s.contentHash, SAVE_MODE, saveMetadata),
     ...rpgSourceFields(s),
     content_hash: s.contentHash,
     state_hash: stateHash,

@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 423 -->
+<!-- historical_cycle_count: 424 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - session_pack_id_retired
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/loop surface: MCP RPG `Session` and `SessionInit` no longer carry package-era `packId`; runtime startup stores only content hash plus canonical world/generated source identity.
+- Loop effect: `save_game` derives its save-write guard from `worldQuestId` or `generatedRpgSeed`, so live sessions cannot leak package ids back into persisted save bytes.
+- Guard: focused MCP session/tool, save/trace, forged-save, and save referential regressions passed.
+- VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused MCP/session/persistence regressions, `npm test`, and `npm run health` passed after loop-state rotation.
 
 ### Cycle result - save_pack_id_retired
 
@@ -117,11 +125,3 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Loop effect: public world discovery and AFK ranking stay world-graph keyed while catalog payload size drops to about 5.1 KB.
 - Guard: catalog, RPG tool, world manifest, and assessor focused regressions cover the compact identity contract.
 - VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused regressions, `npm test`, and `npm run health` passed.
-
-### Cycle result - mcp_play_compact_context
-
-- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
-- Engine/loop surface: `scripts/mcp_play.ts` now calls the MCP server with compact hidden-graph RPG args and renders `context` instead of stale full observations.
-- Loop effect: the external MCP play harness exercises the same compact payload path blind agents use, including compact step events and action ids.
-- Guard: blind-runner contract now asserts compact harness args/context shape, and a live `npx tsx scripts/mcp_play.ts breaking_weir --seed 1` MCP round trip passed.
-- VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused regression, `npm test`, and `npm run health` passed.

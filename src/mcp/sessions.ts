@@ -225,7 +225,6 @@ function cloneFrozenGameState(state: GameState): GameState {
 
 const SESSION_IMMUTABLE_FIELDS = [
   "id",
-  "packId",
   "contentHash",
   "packPath",
   "worldQuestId",
@@ -322,7 +321,6 @@ function retainedTranscript(
 
 export type Session = SessionRuntimeCaches<TranscriptSummary> & {
   id: string;
-  packId: string;
   contentHash: string;
   /** Compatibility source path for disk-backed sessions. Generated sessions omit it. */
   packPath?: string;
