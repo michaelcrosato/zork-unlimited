@@ -186,6 +186,8 @@ Make discovered overworld quest leads start real RPG sessions.
   and overworld snapshot polling.
 - Compact overworld MCP reads/actions now call `OverworldSession.compactView()`
   directly, avoiding full view construction before capped context projection.
+- Compact overworld MCP contexts now keep immediate `roads` by default but omit
+  multi-hop `route_options` unless `include_route_options: true` is explicit.
 - Live compact overworld ID payloads now build from bounded ID buckets, so
   progress counts stay exact without sorting and materializing every discovered
   id list before emitting capped loop context.

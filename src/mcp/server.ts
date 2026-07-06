@@ -160,6 +160,7 @@ type McpOverworldReadArgs = {
   session_id: string;
   include_observation?: boolean;
   if_snapshot_hash?: string;
+  include_route_options?: boolean;
 };
 
 function compactMcpOverworldSession(args: McpOverworldReadArgs): unknown {
@@ -169,16 +170,20 @@ function compactMcpOverworldSession(args: McpOverworldReadArgs): unknown {
 }
 
 const EXPECTED_SNAPSHOT_HASH = {
-  expected_snapshot_hash: z.string().optional().describe("Hash-only reject when stale."),
+  expected_snapshot_hash: z.string().optional().describe("Stale."),
 };
 const IF_SNAPSHOT_HASH = {
-  if_snapshot_hash: z.string().optional().describe("Hash-only when unchanged."),
+  if_snapshot_hash: z.string().optional().describe("Same."),
+};
+const ROUTES = {
+  include_route_options: z.boolean().optional().describe("Routes."),
 };
 const COMPACT_OVERWORLD_CONTEXT = {
-  compact_context: z.boolean().optional().describe("Default true; false full obs."),
+  compact_context: z.boolean().optional().describe("Full obs."),
+  ...ROUTES,
 };
 const COMPACT_OVERWORLD_RESULT = {
-  compact_result: z.boolean().optional().describe("Default true; false full result."),
+  compact_result: z.boolean().optional().describe("Full result."),
 };
 const OVERWORLD_ACTION_CONTEXT = {
   ...EXPECTED_SNAPSHOT_HASH,
@@ -206,10 +211,11 @@ tool(
 );
 tool(
   "get_overworld_session_context",
-  "Read compact overworld; hash-only if same.",
+  "Read compact overworld; hash if same.",
   {
     ...SESSION,
     ...IF_SNAPSHOT_HASH,
+    ...ROUTES,
   },
   (a) => api.get_overworld_session_context(a),
 );
