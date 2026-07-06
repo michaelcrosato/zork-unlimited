@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 431 -->
+<!-- historical_cycle_count: 432 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - afk_stale_audit_world_id
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/loop surface: the stale reactive-description AFK audit now enumerates shipped quests by `world_quest_id` and loads reports through `RpgSourceRuntime.loadWorldQuestReport`.
+- Loop effect: structural loop planning no longer scans `content/rpg/pack` or reopens pack files directly for this recurring audit class.
+- Guard: focused stale-audit regression runs the root scanner, pins world-id-only site output, and rejects old raw pack-loader references in the audit implementation.
+- VERIFY: `npm run typecheck` and focused stale-audit/assessor regressions passed before full verification.
 
 ### Cycle result - cli_validate_loader_world_id
 
@@ -117,11 +125,3 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Loop effect: loose legacy `worldQuestId`/`generatedRpgSeed` fields no longer drive CLI/MCP replay or inspect alone, while explicit historical `["pack", id]` trace refs remain replay-compatible.
 - Guard: focused trace replay, world-source, MCP trace, and CLI trace regressions cover missing, conflicting, generated, shipped, and historical source refs.
 - VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused trace/source regressions, `npm test`, and `npm run health` passed after loop-state rotation.
-
-### Cycle result - save_source_ref_required
-
-- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
-- Engine/loop surface: `load()` now requires compact `source_ref` on every save bundle before accepting persisted state.
-- Loop effect: loose legacy `worldQuestId`/`generatedRpgSeed` fields no longer pass the persistence boundary alone, while explicit historical `["pack", id]` source refs remain load-only compatibility.
-- Guard: focused save/trace, forged-save, world-source, MCP save/load, and generated-pack regressions cover the stricter load boundary.
-- VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused persistence/source tests, `npm test`, and `npm run health` passed after loop-state rotation.

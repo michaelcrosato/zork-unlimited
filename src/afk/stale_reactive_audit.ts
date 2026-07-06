@@ -6,14 +6,10 @@
  * audit gives the loop a deterministic, suppression-aware signal it can tune before
  * converting any subset into a hard content bar.
  */
-import { existsSync, readdirSync } from "node:fs";
-import { join } from "node:path";
 import type { Condition } from "../core/conditions.js";
 import type { Effect } from "../core/effects.js";
-import { loadRpgPackFile } from "../rpg/pack.js";
+import { RpgSourceRuntime } from "../mcp/rpg_source_runtime.js";
 import type { RpgPack } from "../rpg/schema.js";
-import { worldQuestNodeForPack } from "../world/graph.js";
-import { loadWorldManifest } from "../world/source.js";
 
 type Room = RpgPack["rooms"][number];
 type GameObject = RpgPack["objects"][number];
@@ -31,25 +27,25 @@ export type StaleReactiveAudit = {
   sites: StaleReactiveRoomItemSite[];
 };
 
-const RPG_PACK_DIR = "content/rpg/pack";
-
 const MIN_TERM_LENGTH = 4;
 
 export function auditStaleReactiveRoomItems(root: string): StaleReactiveAudit {
   const sites: StaleReactiveRoomItemSite[] = [];
-  const abs = join(root, RPG_PACK_DIR);
-  if (!existsSync(abs)) return { sites };
-  const world = loadWorldManifest(root);
-  for (const file of readdirSync(abs).sort()) {
-    if (!file.endsWith(".yaml")) continue;
-    const path = `${RPG_PACK_DIR}/${file}`;
-    const node = worldQuestNodeForPack(world, path);
-    if (!node) continue;
-    const loaded = loadRpgPackFile(join(root, path));
-    if (!loaded.ok) continue;
-    sites.push(...auditRpgPackForStaleRoomItems(loaded.compiled.pack, node.id));
+  const rpgSources = new RpgSourceRuntime(root);
+  for (const worldQuestId of shippedWorldQuestIds(rpgSources)) {
+    const source = rpgSources.loadWorldQuestReport(worldQuestId);
+    if (!source.result.ok) continue;
+    sites.push(...auditRpgPackForStaleRoomItems(source.result.compiled.pack, source.node.id));
   }
   return { sites };
+}
+
+function shippedWorldQuestIds(rpgSources: RpgSourceRuntime): string[] {
+  return rpgSources
+    .loadWorldManifest()
+    .graph.nodes.filter((node) => node.kind === "quest")
+    .map((node) => node.id)
+    .sort((a, b) => a.localeCompare(b));
 }
 
 export function auditRpgPackForStaleRoomItems(

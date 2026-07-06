@@ -1,6 +1,10 @@
 import { describe, it, expect } from "vitest";
+import { readFileSync } from "node:fs";
 import { RpgPackSchema, type RpgPack } from "../../src/rpg/schema.js";
-import { auditRpgPackForStaleRoomItems } from "../../src/afk/stale_reactive_audit.js";
+import {
+  auditRpgPackForStaleRoomItems,
+  auditStaleReactiveRoomItems,
+} from "../../src/afk/stale_reactive_audit.js";
 
 const basePack = (): RpgPack =>
   RpgPackSchema.parse({
@@ -33,6 +37,22 @@ const basePack = (): RpgPack =>
   });
 
 describe("stale reactive room-item audit", () => {
+  it("loads shipped audit inputs through the world quest source runtime", () => {
+    const audit = auditStaleReactiveRoomItems(process.cwd());
+
+    expect(audit.sites.every((site) => site.worldQuestId.length > 0)).toBe(true);
+    for (const site of audit.sites) {
+      expect(site).not.toHaveProperty("packPath");
+    }
+
+    const source = readFileSync("src/afk/stale_reactive_audit.ts", "utf8");
+    expect(source).toContain("RpgSourceRuntime");
+    expect(source).toContain("loadWorldQuestReport");
+    expect(source).not.toContain("loadRpgPackFile");
+    expect(source).not.toContain("worldQuestNodeForPack");
+    expect(source).not.toContain("content/rpg/pack");
+  });
+
   it("finds room base prose that names a takeable room object without an item-state variant", () => {
     const sites = auditRpgPackForStaleRoomItems(basePack(), "fixture_quest");
 
