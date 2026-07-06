@@ -126,6 +126,18 @@ export const TRANSCRIPT_SUMMARY_PROJECTION_COMPACT = "compact-summary:v1";
 const TRANSCRIPT_SUMMARY_LIST_LIMIT = 16;
 const TRANSCRIPT_SUMMARY_JOURNAL_LIMIT = 5;
 export const TRANSCRIPT_TURN_LIMIT_DEFAULT = 64;
+export const RPG_PUBLIC_TRANSCRIPT_HASH_LENGTH = 24;
+
+export function publicRpgTranscriptHash(transcriptHash: string): string {
+  return transcriptHash.slice(0, RPG_PUBLIC_TRANSCRIPT_HASH_LENGTH);
+}
+
+export function rpgTranscriptHashMatches(expectedTranscriptHash: string, transcriptHash: string) {
+  return (
+    expectedTranscriptHash === transcriptHash ||
+    expectedTranscriptHash === publicRpgTranscriptHash(transcriptHash)
+  );
+}
 
 export function transcriptUnchanged(
   stateHash: string,
@@ -133,7 +145,7 @@ export function transcriptUnchanged(
 ): TranscriptUnchanged {
   return {
     state_hash: publicRpgStateHash(stateHash),
-    transcript_hash: transcriptHash,
+    transcript_hash: publicRpgTranscriptHash(transcriptHash),
     unchanged: true,
   };
 }

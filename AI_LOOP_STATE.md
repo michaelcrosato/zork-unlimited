@@ -1,10 +1,19 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 480 -->
+<!-- historical_cycle_count: 481 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - rpg_public_transcript_hash_tokens
+
+- Pre-cycle: `C:\dev\agent-cleaner` measure/gates passed through WSL; optional secret scanner remains absent, and WSL git-dir warnings still print after the green gate summary.
+- Engine/loop surface: public RPG MCP/ToolApi `transcript_hash` values are now compact 24-hex tokens, while transcript freshness still derives from the full internal transcript hash over the cached log hash plus full RPG state hash; stale guards accept compact or full transcript hashes.
+- Loop effect: post-run transcript summary drops from 262 to 222 bytes, full transcript from 1227 to 1187, compact-turn transcript from 441 to 401, and unchanged transcript polls from 143 to 103.
+- Self-critique: this is another fixed 40-byte response-envelope win rather than a world-structure or loop-strategy change; it closes the obvious public hash overhead left after RPG state and overworld snapshot compaction.
+- Guard: focused MCP regressions pin 24-hex public transcript tokens, public-to-full derivation, and compact/full `if_transcript_hash` compatibility without weakening internal transcript hashing.
+- VERIFY: `C:\dev\agent-cleaner`, focused MCP/session regressions, payload probe, `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm test`, `npm run health`, and `npm run assess` passed.
 
 ### Cycle result - overworld_public_snapshot_hash_tokens
 
@@ -131,12 +140,3 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Self-critique: this trims a start payload, not the hot per-turn path, but the payload probe showed it as the largest remaining ordinary default response after catalog compaction.
 - Guard: focused MCP start/catalog regressions pin default omission, explicit route-context opt-in, compact starts, and schema registration.
 - VERIFY: `C:\dev\agent-cleaner`, focused MCP start/catalog regressions, `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, `npm test`, and `npm run health` passed after loop-state rotation.
-
-### Cycle result - list_world_compact_default
-
-- Pre-cycle: `C:\dev\agent-cleaner` measure/gates passed through WSL; optional secret scanner remains absent.
-- Engine/loop surface: `list_world` default quest rows now omit district/quest/role/connection prose; callers opt in with `include_details: true` or `include_routes: true`.
-- Loop effect: blind/AFK catalog reads keep title/playable/id discovery without echoing every quest hook before a target is chosen.
-- Self-critique: catalog reads are not as hot as per-turn stepping, but the payload probe showed `list_world` was the largest ordinary default ToolApi response.
-- Guard: focused catalog regressions pin compact default rows, details opt-in, route-expanded details, and the smaller default byte ceiling.
-- VERIFY: `C:\dev\agent-cleaner`, focused catalog regressions, `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, `npm test`, and `npm run health` passed after loop-state rotation.

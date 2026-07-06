@@ -20,6 +20,11 @@ import {
   publicOverworldSnapshotHash,
   OVERWORLD_PUBLIC_SNAPSHOT_HASH_LENGTH,
 } from "../../src/mcp/overworld_sessions.js";
+import {
+  hashTranscript,
+  publicRpgTranscriptHash,
+  RPG_PUBLIC_TRANSCRIPT_HASH_LENGTH,
+} from "../../src/mcp/transcript_projection.js";
 import { PathEscapeError } from "../../src/mcp/paths.js";
 import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import { indexRpgPack, buildRpgRules, initStateForRpgPack } from "../../src/rpg/runner.js";
@@ -46,6 +51,9 @@ const FULL_OVERWORLD_QUEST_START = {
   compact_observation: false,
 } as const;
 const PUBLIC_RPG_STATE_HASH_RE = new RegExp(`^[0-9a-f]{${RPG_PUBLIC_STATE_HASH_LENGTH}}$`);
+const PUBLIC_RPG_TRANSCRIPT_HASH_RE = new RegExp(
+  `^[0-9a-f]{${RPG_PUBLIC_TRANSCRIPT_HASH_LENGTH}}$`,
+);
 const PUBLIC_OVERWORLD_SNAPSHOT_HASH_RE = new RegExp(
   `^[0-9a-f]{${OVERWORLD_PUBLIC_SNAPSHOT_HASH_LENGTH}}$`,
 );
@@ -2199,7 +2207,11 @@ describe("MCP tools — the play loop (§9.1)", () => {
     });
     const currentStateHash = a.get_state({ session_id: game.session_id }).state_hash;
     expect(transcript.state_hash).toBe(currentStateHash);
-    expect(transcript.transcript_hash).toMatch(/^[0-9a-f]{64}$/);
+    const currentSession = a.sessions.get(game.session_id);
+    const fullTranscriptHash = hashTranscript(currentSession, currentSession.stateHash);
+    expect(fullTranscriptHash).toMatch(/^[0-9a-f]{64}$/);
+    expect(transcript.transcript_hash).toMatch(PUBLIC_RPG_TRANSCRIPT_HASH_RE);
+    expect(transcript.transcript_hash).toBe(publicRpgTranscriptHash(fullTranscriptHash));
     const hashOnlyState = a.get_state({ session_id: game.session_id });
     expect(hashOnlyState).toEqual({ state_hash: currentStateHash });
     expect("state" in hashOnlyState).toBe(false);
@@ -2301,7 +2313,7 @@ describe("MCP tools — the play loop (§9.1)", () => {
       session_id: game.session_id,
       summary_only: true,
       compact_summary: true,
-      if_transcript_hash: transcript.transcript_hash,
+      if_transcript_hash: fullTranscriptHash,
     });
     expect("unchanged" in unchangedTranscript).toBe(true);
     if (!("unchanged" in unchangedTranscript)) throw new Error("expected unchanged transcript");

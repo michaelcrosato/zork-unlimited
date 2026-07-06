@@ -236,15 +236,16 @@ Make discovered overworld quest leads start real RPG sessions.
   flags, and journal entries for blind end-of-run audits, and omits empty
   inventory/flag/journal lists; omission counts use
   `more: [scenes, inventory, flags, journal]`.
-- Transcript responses include `state_hash` and `transcript_hash`, so compact
-  end-of-run audits can bind rows to reducer state and poll transcript history
-  directly.
+- Transcript responses include compact `state_hash` and `transcript_hash`
+  tokens, so compact end-of-run audits can bind rows to reducer state and poll
+  transcript history directly.
 - `get_transcript({ if_transcript_hash })` can return a hash-only `unchanged`
   response, avoiding repeated transcript summary payloads when transcript rows
-  have not changed.
+  have not changed; the guard accepts either the compact public token or the
+  full internal transcript hash.
 - Transcript freshness uses a cached session log hash plus the full internal
   RPG state hash, so repeated transcript polls do not re-hash full turn history
-  while public responses still carry the compact `state_hash` token.
+  while public responses still carry compact hash tokens.
 - Transcript summaries are cached per session state/transcript hash and
   invalidated on state or transcript mutation, so repeated non-unchanged
   transcript reads do not rescan full transcript history and public state arrays.

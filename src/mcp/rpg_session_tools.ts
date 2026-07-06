@@ -30,6 +30,8 @@ import {
   cloneTranscriptSummary,
   compactTranscriptSummary,
   hashTranscript,
+  publicRpgTranscriptHash,
+  rpgTranscriptHashMatches,
   transcriptEventVersion,
   transcriptTurnsFor,
   transcriptTurnsOmitted,
@@ -253,7 +255,10 @@ export function runRpgGetTranscript<Args extends TranscriptArgs>(
   const s = sessions.get(args.session_id);
   const stateHash = s.stateHash;
   const currentTranscriptHash = hashTranscript(s, stateHash);
-  if (args.if_transcript_hash !== undefined && args.if_transcript_hash === currentTranscriptHash) {
+  if (
+    args.if_transcript_hash !== undefined &&
+    rpgTranscriptHashMatches(args.if_transcript_hash, currentTranscriptHash)
+  ) {
     return transcriptUnchanged(stateHash, currentTranscriptHash) as TranscriptResponse<Args>;
   }
   const summarySource =
@@ -268,7 +273,7 @@ export function runRpgGetTranscript<Args extends TranscriptArgs>(
     session_id: s.id,
     ...(args.include_source === true ? rpgSourceFields(s) : {}),
     state_hash: publicRpgStateHash(stateHash),
-    transcript_hash: currentTranscriptHash,
+    transcript_hash: publicRpgTranscriptHash(currentTranscriptHash),
     ...transcriptEventVersion(args),
     ...(args.summary_only
       ? {}
