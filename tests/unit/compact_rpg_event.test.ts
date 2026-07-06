@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 
-import { compactPlayerEvent, RPG_COMPACT_EVENT_VERSION } from "../../src/mcp/compact_rpg_event.js";
+import {
+  COMPACT_EVENT_DIAGNOSTIC_CHAR_LIMIT,
+  COMPACT_EVENT_JOURNAL_CHAR_LIMIT,
+  COMPACT_EVENT_NARRATION_CHAR_LIMIT,
+  COMPACT_EVENT_REJECTION_CHAR_LIMIT,
+  compactPlayerEvent,
+  RPG_COMPACT_EVENT_VERSION,
+} from "../../src/mcp/compact_rpg_event.js";
 import {
   MCP_TRANSCRIPT_SCENE_ID_CHAR_LIMIT,
   MCP_TRANSCRIPT_SUMMARY_VALUE_CHAR_LIMIT,
@@ -8,8 +15,8 @@ import {
 import type { GameEvent } from "../../src/core/events.js";
 
 describe("compactPlayerEvent", () => {
-  it("uses the v5 single-character event contract", () => {
-    expect(RPG_COMPACT_EVENT_VERSION).toBe(5);
+  it("uses the v6 single-character event contract", () => {
+    expect(RPG_COMPACT_EVENT_VERSION).toBe(6);
     expect(compactPlayerEvent({ type: "rejected", reason: "no" })).toEqual(["r", "no"]);
     expect(compactPlayerEvent({ type: "move", from: "yard", to: "road" })).toEqual([
       "m",
@@ -127,14 +134,14 @@ describe("compactPlayerEvent", () => {
       text: longFallback,
     });
 
-    expect(narration[1].length).toBeLessThanOrEqual(500);
+    expect(narration[1].length).toBeLessThanOrEqual(COMPACT_EVENT_NARRATION_CHAR_LIMIT);
     expect(narration[1]).toMatch(/\.\.\.\(\+\d+ chars\)$/);
-    expect(rejection[1].length).toBeLessThanOrEqual(240);
+    expect(rejection[1].length).toBeLessThanOrEqual(COMPACT_EVENT_REJECTION_CHAR_LIMIT);
     expect(rejection[1]).toMatch(/\.\.\.\(\+\d+ chars\)$/);
-    expect(journal[2]!.length).toBeLessThanOrEqual(320);
+    expect(journal[2]!.length).toBeLessThanOrEqual(COMPACT_EVENT_JOURNAL_CHAR_LIMIT);
     expect(journal[2]).toMatch(/\.\.\.\(\+\d+ chars\)$/);
     expect(diagnostic[3]).toBe(1);
-    expect(String(diagnostic[4]).length).toBeLessThanOrEqual(240);
+    expect(String(diagnostic[4]).length).toBeLessThanOrEqual(COMPACT_EVENT_DIAGNOSTIC_CHAR_LIMIT);
     expect(String(diagnostic[4])).toMatch(/\.\.\.\(\+\d+ chars\)$/);
     expect(String(fallback[2]).length).toBeLessThanOrEqual(320);
     expect(String(fallback[2])).toHaveLength(MCP_TRANSCRIPT_SUMMARY_VALUE_CHAR_LIMIT);

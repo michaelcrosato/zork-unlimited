@@ -2,10 +2,10 @@ import type { GameEvent } from "../core/events.js";
 import { compactText } from "./compact_truncation.js";
 import { compactMcpTranscriptSceneId, compactMcpTranscriptSummaryValue } from "./action_labels.js";
 
-const COMPACT_NARRATION_CHAR_LIMIT = 500;
-const COMPACT_REJECTION_CHAR_LIMIT = 240;
-const COMPACT_JOURNAL_CHAR_LIMIT = 320;
-const COMPACT_DIAGNOSTIC_CHAR_LIMIT = 240;
+export const COMPACT_EVENT_NARRATION_CHAR_LIMIT = 280;
+export const COMPACT_EVENT_REJECTION_CHAR_LIMIT = 180;
+export const COMPACT_EVENT_JOURNAL_CHAR_LIMIT = 220;
+export const COMPACT_EVENT_DIAGNOSTIC_CHAR_LIMIT = 180;
 
 export type RpgCompactEvent =
   | readonly ["r", reason: string]
@@ -26,7 +26,7 @@ export type RpgCompactEvent =
   | readonly ["q", npc: string, node: string]
   | readonly ["e", endingId: string];
 
-export const RPG_COMPACT_EVENT_VERSION = 5 as const;
+export const RPG_COMPACT_EVENT_VERSION = 6 as const;
 
 type RpgStateChangeEvent = Extract<GameEvent, { type: "state_change" }>;
 
@@ -42,7 +42,7 @@ function stringField(event: GameEvent, key: string): string {
 function diagnosticField(event: GameEvent): string | undefined {
   const diagnostic = field(event, "diagnostic");
   return typeof diagnostic === "string"
-    ? compactText(diagnostic, COMPACT_DIAGNOSTIC_CHAR_LIMIT)
+    ? compactText(diagnostic, COMPACT_EVENT_DIAGNOSTIC_CHAR_LIMIT)
     : undefined;
 }
 
@@ -107,7 +107,7 @@ function compactStateChangeEvent(event: RpgStateChangeEvent): RpgCompactEvent {
       return withDiagnostic(event, [
         "s",
         "j",
-        compactText(stringField(event, "text"), COMPACT_JOURNAL_CHAR_LIMIT),
+        compactText(stringField(event, "text"), COMPACT_EVENT_JOURNAL_CHAR_LIMIT),
       ]);
     case "set_object_locked":
       return withDiagnostic(event, [
@@ -151,9 +151,9 @@ function compactStateChangeEvent(event: RpgStateChangeEvent): RpgCompactEvent {
 export function compactPlayerEvent(event: GameEvent): RpgCompactEvent {
   switch (event.type) {
     case "rejected":
-      return ["r", compactText(event.reason, COMPACT_REJECTION_CHAR_LIMIT)];
+      return ["r", compactText(event.reason, COMPACT_EVENT_REJECTION_CHAR_LIMIT)];
     case "narration":
-      return ["n", compactText(event.text, COMPACT_NARRATION_CHAR_LIMIT)];
+      return ["n", compactText(event.text, COMPACT_EVENT_NARRATION_CHAR_LIMIT)];
     case "state_change":
       return compactStateChangeEvent(event);
     case "unlock_exit":

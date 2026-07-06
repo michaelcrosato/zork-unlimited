@@ -2,7 +2,11 @@ import { describe, it, expect, beforeAll } from "vitest";
 import { writeFileSync, mkdirSync, readFileSync } from "node:fs";
 import { createToolApi } from "../../src/mcp/tools.js";
 import { RPG_COMPACT_OBSERVATION_VERSION } from "../../src/mcp/compact_rpg_observation.js";
-import { RPG_COMPACT_EVENT_VERSION } from "../../src/mcp/compact_rpg_event.js";
+import {
+  COMPACT_EVENT_JOURNAL_CHAR_LIMIT,
+  COMPACT_EVENT_NARRATION_CHAR_LIMIT,
+  RPG_COMPACT_EVENT_VERSION,
+} from "../../src/mcp/compact_rpg_event.js";
 import { RPG_COMPACT_STATE_VERSION } from "../../src/mcp/compact_rpg_state.js";
 import { PathEscapeError } from "../../src/mcp/paths.js";
 import { loadRpgSourceFile } from "../../src/rpg/source.js";
@@ -2748,6 +2752,35 @@ describe("MCP tools — the play loop (§9.1)", () => {
     expect(compactEventMoved.event_v).toBe(RPG_COMPACT_EVENT_VERSION);
     expect(JSON.stringify(compactEventMoved.events).length).toBeLessThan(
       JSON.stringify(moved.events).length,
+    );
+
+    const proseEventGame = a.start_world_quest({ world_quest_id: "breaking_weir" });
+    const compactProseStep = a.step_action({
+      session_id: proseEventGame.session_id,
+      action_id: "read_flood_book",
+    });
+    const fullProseEventGame = a.start_world_quest({ world_quest_id: "breaking_weir" });
+    const fullProseStep = a.step_action({
+      session_id: fullProseEventGame.session_id,
+      action_id: "read_flood_book",
+      compact_events: false,
+    });
+    const compactNarration = compactProseStep.events.find((event) => event[0] === "n");
+    const compactJournal = compactProseStep.events.find(
+      (event) => event[0] === "s" && event[1] === "j",
+    );
+    expect(compactProseStep.event_v).toBe(RPG_COMPACT_EVENT_VERSION);
+    expect(compactNarration).toBeDefined();
+    expect(compactJournal).toBeDefined();
+    expect(String(compactNarration?.[1]).length).toBeLessThanOrEqual(
+      COMPACT_EVENT_NARRATION_CHAR_LIMIT,
+    );
+    expect(String(compactJournal?.[2]).length).toBeLessThanOrEqual(
+      COMPACT_EVENT_JOURNAL_CHAR_LIMIT,
+    );
+    expect(JSON.stringify(compactProseStep).length).toBeLessThan(1800);
+    expect(JSON.stringify(compactProseStep.events).length).toBeLessThan(
+      JSON.stringify(fullProseStep.events).length,
     );
     expect(
       a.list_legal_actions({ session_id: game.session_id, compact_actions: true }).state_hash,

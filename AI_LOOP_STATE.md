@@ -1,10 +1,19 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 473 -->
+<!-- historical_cycle_count: 474 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - compact_event_prose_caps_v6
+
+- Pre-cycle: `C:\dev\agent-cleaner` measure/gates passed through WSL; optional secret scanner remains absent, and WSL git-dir warnings still print after the green gate summary.
+- Engine/loop surface: compact RPG step/transcript events are now `event_v: 6` and cap transient narration at 280 chars, journal text at 220, and rejection/diagnostic text at 180.
+- Loop effect: prose-heavy default `step_action(read_flood_book)` drops from 2077 to 1759 bytes and `step_action(talk_pell)` drops from 1637 to 1576 bytes; movement steps remain unchanged at 969.
+- Self-critique: this trims per-action transient prose without changing reducer events, observation context, or full debug reads; callers still use `compact_events: false` for uncapped event objects.
+- Guard: compact-event unit tests and MCP ToolApi regressions pin `event_v: 6`, named cap constants, default prose-step response under 1800 bytes, and compact-vs-full event savings.
+- VERIFY: `C:\dev\agent-cleaner`, focused compact-event/MCP regressions, payload probe, `npm run health`, and `npm run assess` passed after loop-state rotation; post-rotation `npm run verify:integrity`, `npm run format:check`, broad `prettier --check .`, and `git diff --check` also passed.
 
 ### Cycle result - overworld_ids_opt_in_context
 
@@ -131,12 +140,3 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Self-critique: test-loop efficiency only; the tracked world JSON remains large and runtime payload surfaces still need deeper shrinking.
 - Guard: focused overworld/session/UI regressions exercise the cached loader path with immutable manifests.
 - VERIFY: `C:\dev\agent-cleaner`, focused overworld loader/cache regressions, `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, `npm test`, and `npm run health` passed after loop-state rotation.
-
-### Cycle result - ignored_run_artifact_tracking_guard
-
-- Pre-cycle: `C:\dev\agent-cleaner` measure/gates passed through WSL; optional secret scanner remains absent.
-- Engine/loop surface: verifier integrity now blocks tracked `ai-runs/` artifacts in addition to the ignored loop archive file.
-- Loop effect: per-cycle logs, playtests, and cost evidence can stay local without becoming recurring clone/context payload.
-- Self-critique: prevention guard only; it does not shrink the already-large world JSON or runtime payloads.
-- Guard: verifier regressions pin prefix matching for nested `ai-runs/` paths and prove the real repo has no tracked ignored loop artifacts.
-- VERIFY: `C:\dev\agent-cleaner`, focused verifier regressions, `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, `npm test`, and `npm run health` passed after loop-state rotation.

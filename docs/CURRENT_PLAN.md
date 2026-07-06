@@ -203,9 +203,10 @@ Make discovered overworld quest leads start real RPG sessions.
   of receiving a duplicate observation/event payload.
 - Public MCP and ToolApi `step_action` default to compact event tuples; callers
   can pass `compact_events: false` when they need full reducer event objects.
-- Compact `step_action` event replies are versioned as `event_v: 5` with
-  single-character tuple tags and compact state-effect codes, so loop clients can
-  branch on shape without reading full reducer events.
+- Compact `step_action` event replies are versioned as `event_v: 6` with
+  single-character tuple tags, compact state-effect codes, and tighter transient
+  prose caps, so loop clients can branch on shape without reading full reducer
+  events.
 - Compact RPG MCP observations now cap inventory/flags and keep only recent
   journal entries, with omission counts trimmed for trailing zero buckets and
   opt-in string action ids under context `v: 12`.
@@ -222,7 +223,7 @@ Make discovered overworld quest leads start real RPG sessions.
   the `turns` field for token-light checks; source identity is opt-in with
   `include_source: true`.
 - `get_transcript({ compact_events: true })` keeps full transcript turn metadata
-  while encoding each turn's visible events as the same compact `event_v: 3`
+  while encoding each turn's visible events as the same compact `event_v: 6`
   tuples used by `step_action`.
 - `get_transcript({ compact_summary: true })` caps summary scenes, inventory,
   flags, and journal entries for blind end-of-run audits, and omits empty
