@@ -3312,7 +3312,17 @@ describe("MCP tools — replay + path confinement", () => {
       steps: number;
       diverged_at_step: number | null;
       diagnosis: { type: string };
-      step_summary: { ended: boolean; ending_id: string | null }[];
+      step_summary_v: number;
+      step_summary: ReadonlyArray<
+        readonly [
+          i: number,
+          action: string,
+          ok: boolean,
+          location: string,
+          ended: boolean,
+          ending_id: string | null,
+        ]
+      >;
     };
     expect(r.ok).toBe(true);
     expect("mode" in r).toBe(false);
@@ -3324,7 +3334,24 @@ describe("MCP tools — replay + path confinement", () => {
     // divergence to localize.
     expect(r.diverged_at_step).toBeNull();
     expect(r.diagnosis.type).toBe("no_failure");
-    expect(r.step_summary.at(-1)?.ending_id).toBe("ending_victory");
+    expect(r.step_summary_v).toBe(1);
+    expect(r.step_summary.at(-1)?.[5]).toBe("ending_victory");
+    expect("action" in (r.step_summary[0] as object)).toBe(false);
+  });
+
+  it("inspect_trace full step rows are opt-in", () => {
+    const compact = api().inspect_trace({ trace_path: "traces/mcp_replay.json" });
+    const full = api().inspect_trace({
+      trace_path: "traces/mcp_replay.json",
+      compact_summary: false,
+    }) as {
+      step_summary_v?: number;
+      step_summary: { action: RpgAction; ended: boolean; ending_id: string | null }[];
+    };
+    expect("step_summary_v" in full).toBe(false);
+    expect(full.step_summary.at(-1)?.ending_id).toBe("ending_victory");
+    expect(full.step_summary[0]?.action).toMatchObject({ type: "MOVE" });
+    expect(JSON.stringify(compact).length).toBeLessThan(JSON.stringify(full).length);
   });
 
   it("inspect_trace accepts a world graph quest id for shipped traces", () => {

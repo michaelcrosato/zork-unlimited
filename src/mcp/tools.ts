@@ -46,6 +46,7 @@ import {
   type RpgStepActionResponse as RpgRuntimeStepActionResponse,
 } from "./rpg_step_action.js";
 import type { RpgStateHashRejection, RpgStateUnchanged } from "./rpg_state_guards.js";
+import { compactMcpTranscriptSummaryValue } from "./action_labels.js";
 import {
   TRANSCRIPT_TURN_LIMIT_DEFAULT,
   type TranscriptArgs,
@@ -262,6 +263,85 @@ type RpgLoadGameArgs = {
   save: string;
   hide_graph?: boolean;
 } & RpgViewOptions;
+
+type InspectTraceArgs = {
+  trace_path: string;
+  world_quest_id?: string;
+  pack_path?: never;
+  compact_summary?: boolean;
+};
+
+type InspectTraceStepSummary = {
+  i: number;
+  action: RpgAction;
+  ok: boolean;
+  location: string;
+  ended: boolean;
+  ending_id: string | null;
+};
+
+type CompactInspectTraceStepSummary = readonly [
+  i: number,
+  action: string,
+  ok: boolean,
+  location: string,
+  ended: boolean,
+  ending_id: string | null,
+];
+
+const INSPECT_TRACE_STEP_SUMMARY_VERSION = 1 as const;
+
+function compactTraceActionLabel(action: RpgAction): string {
+  switch (action.type) {
+    case "LOOK":
+      return compactMcpTranscriptSummaryValue(
+        action.target === undefined ? "LOOK" : `LOOK:${action.target}`,
+      );
+    case "MOVE":
+      return compactMcpTranscriptSummaryValue(`MOVE:${action.direction}`);
+    case "TAKE":
+      return compactMcpTranscriptSummaryValue(`TAKE:${action.item}`);
+    case "DROP":
+      return compactMcpTranscriptSummaryValue(`DROP:${action.item}`);
+    case "OPEN":
+      return compactMcpTranscriptSummaryValue(`OPEN:${action.target}`);
+    case "CLOSE":
+      return compactMcpTranscriptSummaryValue(`CLOSE:${action.target}`);
+    case "UNLOCK":
+      return compactMcpTranscriptSummaryValue(`UNLOCK:${action.target}:${action.with}`);
+    case "USE":
+      return compactMcpTranscriptSummaryValue(
+        action.item === undefined ? `USE:${action.target}` : `USE:${action.item}:${action.target}`,
+      );
+    case "TALK":
+      return compactMcpTranscriptSummaryValue(`TALK:${action.npc}`);
+    case "ASK":
+      return compactMcpTranscriptSummaryValue(`ASK:${action.npc}:${action.topic}`);
+    case "GIVE":
+      return compactMcpTranscriptSummaryValue(`GIVE:${action.item}:${action.npc}`);
+    case "READ":
+      return compactMcpTranscriptSummaryValue(`READ:${action.target}`);
+    case "INSPECT":
+      return compactMcpTranscriptSummaryValue(`INSPECT:${action.target}`);
+    case "INVENTORY":
+      return "INVENTORY";
+    case "ATTACK":
+      return compactMcpTranscriptSummaryValue(`ATTACK:${action.enemy}`);
+  }
+}
+
+function compactInspectTraceStepSummary(
+  steps: InspectTraceStepSummary[],
+): CompactInspectTraceStepSummary[] {
+  return steps.map((step) => [
+    step.i,
+    compactTraceActionLabel(step.action),
+    step.ok,
+    compactMcpTranscriptSummaryValue(step.location),
+    step.ended,
+    step.ending_id === null ? null : compactMcpTranscriptSummaryValue(step.ending_id),
+  ]);
+}
 
 type RpgWorldQuestStartPayload<Args extends RpgViewOptions> =
   RpgRuntimeWorldQuestStartPayload<Args>;
@@ -635,7 +715,7 @@ export function createToolApi(opts: { root: string }) {
       return replayTrace(trace, rules);
     },
 
-    inspect_trace(args: { trace_path: string; world_quest_id?: string; pack_path?: never }) {
+    inspect_trace(args: InspectTraceArgs) {
       // Summarize a recorded trace and surface suspected bugs (§9.4). Replays the
       // actions through the engine for a per-step location/event summary, asserts
       // the recorded final hash, localizes the first divergent step when the trace
@@ -659,14 +739,7 @@ export function createToolApi(opts: { root: string }) {
       const { index, rules, step } = rpgRuntime.runtimeFor(compiled.pack);
       assertRpgStateReferences(index, trace.initial_state);
       let state = trace.initial_state;
-      const steps: {
-        i: number;
-        action: RpgAction;
-        ok: boolean;
-        location: string;
-        ended: boolean;
-        ending_id: string | null;
-      }[] = [];
+      const steps: InspectTraceStepSummary[] = [];
       trace.actions.forEach((action, i) => {
         const r = step(state, action);
         state = r.state;
@@ -681,6 +754,7 @@ export function createToolApi(opts: { root: string }) {
       });
       const replay = replayTrace(trace, rules);
       const d = diagnose(rules, trace.initial_state, trace.actions);
+      const compactSummary = args.compact_summary !== false;
       return {
         ok: true,
         world_quest_id: source.worldQuestId,
@@ -697,7 +771,8 @@ export function createToolApi(opts: { root: string }) {
         // mid-trace divergence that a self-correcting final hash would miss.
         diverged_at_step: replay.divergedAtStep ?? null,
         diagnosis: d,
-        step_summary: steps,
+        ...(compactSummary ? { step_summary_v: INSPECT_TRACE_STEP_SUMMARY_VERSION } : {}),
+        step_summary: compactSummary ? compactInspectTraceStepSummary(steps) : steps,
       };
     },
 

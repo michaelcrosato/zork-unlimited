@@ -514,9 +514,9 @@ tool(
 
 tool(
   "replay_trace",
-  "Replay an RPG trace and verify its final-state hash.",
+  "Replay trace; verify final hash.",
   {
-    trace_path: z.string().describe("Trace JSON path."),
+    trace_path: z.string().describe("Trace path."),
     world_quest_id: z.string().optional().describe("World quest id."),
   },
   (a) => api.replay_trace(a),
@@ -533,10 +533,11 @@ tool(
 
 tool(
   "inspect_trace",
-  "Summarize an RPG trace with replay diagnostics.",
+  "Inspect trace diagnostics.",
   {
-    trace_path: z.string().describe("Trace JSON path."),
+    trace_path: z.string().describe("Trace path."),
     world_quest_id: z.string().optional().describe("World quest id."),
+    compact_summary: z.boolean().optional().describe("Tuple rows."),
   },
   (a) => api.inspect_trace(a),
 );

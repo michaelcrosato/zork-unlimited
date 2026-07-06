@@ -1,10 +1,19 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 462 -->
+<!-- historical_cycle_count: 463 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - trace_inspect_compact_default
+
+- Pre-cycle: `C:\dev\agent-cleaner` measure/gates passed through WSL; optional secret scanner remains absent.
+- Engine/loop surface: `inspect_trace` now defaults to versioned compact step-summary tuples; full per-step action objects require `compact_summary: false`.
+- Loop effect: trace/debug loops can inspect replay health, divergence, locations, endings, and diagnosis without echoing repeated object keys and structured actions for every step.
+- Self-critique: trace inspection is lower-frequency than live turn stepping, but it is exactly the debug payload blind playtest agents will not flag as an in-game problem.
+- Guard: focused MCP trace regressions pin compact default, full opt-out rows, divergence reporting, and trace load integrity.
+- VERIFY: `C:\dev\agent-cleaner`, focused MCP trace regressions, `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, `npm test`, and `npm run health` passed after loop-state rotation.
 
 ### Cycle result - save_source_opt_in
 
@@ -131,12 +140,3 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Self-critique: narrow token-efficiency win, but it hits a recurring blind-agent loop call instead of gameplay content.
 - Guard: MCP tool and generated-source tests pin default omission plus opt-in source echo; registration tests keep ToolSearch schema budgets strict.
 - VERIFY: `C:\dev\agent-cleaner`, `npm run typecheck`, focused MCP/registration regressions, `npm run lint`, `npm run format:check`, `npm run validate`, `npm test`, and `npm run health` passed after loop-state rotation.
-
-### Cycle result - quest_source_directory_migration
-
-- Pre-cycle: `C:\dev\agent-cleaner` passed after rerun with a longer timeout; the first short run killed Vitest mid-output.
-- Engine/loop surface: shipped RPG YAML moved out of the package-named folder into `content/rpg/quests`; world graph, overworld bindings, source discovery, author guards, tests, and traces now follow quest-source paths.
-- Loop effect: the single-world runtime no longer relies on a package-named content directory when resolving canonical world quest sources.
-- Self-critique: broad mechanical migration, but it removes real package-era structure instead of only hiding it behind APIs.
-- Guard: focused world-source, source-runtime, author, validation-bar, UI, and full-suite regressions cover the path change.
-- VERIFY: `C:\dev\agent-cleaner`, `npm run typecheck`, focused migration regressions, `npm run validate`, `npm test`, and `npm run health` passed after loop-state rotation.

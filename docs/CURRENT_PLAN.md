@@ -144,6 +144,8 @@ Make discovered overworld quest leads start real RPG sessions.
 - `replay_trace` and `inspect_trace` now advertise shipped `world_quest_id` on
   public MCP; `inspect_trace` replies use that graph id plus content hashes
   instead of public `pack_id`, and CLI replay/inspect now also reject raw pack paths.
+- `inspect_trace` defaults to versioned compact step-summary tuples; callers can
+  pass `compact_summary: false` when they need full action objects per step.
 - ToolApi `replay_trace` and `inspect_trace` now reject raw `pack_path`; shipped
   traces infer their source from embedded `worldQuestId` or explicit
   `world_quest_id`.
