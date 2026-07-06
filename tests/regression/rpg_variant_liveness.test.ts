@@ -5,8 +5,7 @@
  * present to examine) — exactly the text a real player sees. The RPG completion of the
  * dead-reactive-prose liveness trilogy: CYOA (bug_0145) + parser (bug_0146) closed the
  * two deterministic modes; this closes the last, genuinely-harder mode. Together with the
- * static shadowing checks (bug_0085 CYOA / bug_0091 parser — RPG rooms/objects reuse the
- * parser schema, so `parser_variant_shadowing` already covers their SHADOWING half) the
+ * static shadowing checks the
  * "dead reactive prose" defect class is now closed across all three modes.
  *
  * The defect class has two causes; this proves the LIVE half directly against ground
@@ -18,8 +17,7 @@
  *     viewing context can satisfy — a flag set only on a branch that never returns, a var
  *     threshold the gating never reaches, an enemy never defeated. Not shadowed; its guard
  *     is simply unreachable, so its text is dead and no blind playtest is guaranteed to
- *     surface it. RPG rooms/objects carry the parser variants (RpgIndex extends ParserIndex);
- *     RPG endings reuse ParserEndingSchema, which has no `variants`, so room + object
+ *     surface it. RPG rooms/objects and endings carry reactive variants, so room + object
  *     variants are the whole scope, exactly as in the parser proof.
  *
  * ── Why RPG is the harder mode, and how this stays SOUND ─────────────────────────────
@@ -69,14 +67,14 @@
  * so read-flag, post-combat, and skill-outcome display states are all visited. The search
  * FAILS on `cappedOut`, so it can never pass by truncating an unexplored region.
  *
- * Packs are auto-discovered from content/rpg/pack, so a new RPG pack is covered the moment
+ * Packs are auto-discovered from content/rpg/quests, so a new RPG pack is covered the moment
  * it ships (the health-covers-all-packs bar, bug_0096). The negative controls below prove
  * the check bites on a genuinely dead guard AND that stepping combat is load-bearing.
  */
 import { describe, it, expect } from "vitest";
 import { readdirSync } from "node:fs";
 import { join } from "node:path";
-import { compileRpgPack, loadRpgPackFile } from "../../src/rpg/pack.js";
+import { compileRpgSource, loadRpgSourceFile } from "../../src/rpg/source.js";
 import {
   indexRpgPack,
   buildRpgRules,
@@ -84,15 +82,15 @@ import {
   type RpgIndex,
 } from "../../src/rpg/runner.js";
 import { HP_VAR } from "../../src/rpg/schema.js";
-import { visibleObjectIds } from "../../src/parser/model.js";
+import { visibleObjectIds } from "../../src/rpg/model.js";
 import { evalConditions } from "../../src/core/conditions.js";
 import type { GameState } from "../../src/core/state.js";
 import type { Rng } from "../../src/core/rng.js";
-import type { RoomVariant, ObjectVariant, ParserEndingVariant } from "../../src/parser/schema.js";
+import type { RoomVariant, ObjectVariant, EndingVariant } from "../../src/rpg/schema.js";
 import type { Action } from "../../src/api/types.js";
 import { exhaustiveEndingsMulti } from "./support/exhaustive_endings.js";
 
-const PACK_DIR = "content/rpg/pack";
+const PACK_DIR = "content/rpg/quests";
 const packFiles = readdirSync(PACK_DIR)
   .filter((f) => f.endsWith(".yaml"))
   .sort();
@@ -181,7 +179,7 @@ function readsHpInCondition(node: unknown): boolean {
 /** The index of the first variant whose `when` holds in `state` (first-match-wins,
  *  identical to model.ts roomDescription/objectDescription), or -1 for the base text. */
 function firstMatch(
-  variants: readonly (RoomVariant | ObjectVariant | ParserEndingVariant)[],
+  variants: readonly (RoomVariant | ObjectVariant | EndingVariant)[],
   state: GameState,
 ): number {
   for (let i = 0; i < variants.length; i++) {
@@ -258,7 +256,7 @@ describe("bug_0147 — every reactive variant of every RPG pack is reachable as 
 
   for (const file of packFiles) {
     it(`${file}: every declared variant is the first match in some viewing state`, () => {
-      const loaded = loadRpgPackFile(join(PACK_DIR, file));
+      const loaded = loadRpgSourceFile(join(PACK_DIR, file));
       expect(loaded.ok).toBe(true);
       if (!loaded.ok) return;
       const pack = loaded.compiled.pack;
@@ -302,7 +300,7 @@ rooms:
 win_conditions: [{ id: w, conditions: [{ visited: b }], ending: e }]
 endings: [{ id: e, title: E, text: "done" }]
 `;
-    const r = compileRpgPack(src);
+    const r = compileRpgSource(src);
     expect(r.ok).toBe(true);
     if (!r.ok) return;
     const { displayed } = analyze(indexRpgPack(r.compiled.pack));
@@ -348,7 +346,7 @@ endings:
   - { id: e, title: E, text: "you live" }
   - { id: dead, title: D, text: "the ogre kills you" }
 `;
-    const r = compileRpgPack(src);
+    const r = compileRpgSource(src);
     expect(r.ok).toBe(true);
     if (!r.ok) return;
     const index = indexRpgPack(r.compiled.pack);

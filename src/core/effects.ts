@@ -32,7 +32,7 @@ export const EffectSchema = z.union([
     .strict(),
   z.object({ open_object: z.string().min(1) }).strict(),
   // The inverse of open_object (first-class CLOSE verb). Open-state is NOT
-  // monotone once this exists: the parser validator's `is_open` win-stability
+  // monotone once this exists: the RPG validator's `is_open` win-stability
   // check tracks close_object falsifiers exactly as relocks falsify
   // is_unlocked. Additive — no shipped pack emits it, so every existing pack
   // compiles byte-identically and all recorded traces replay unchanged.
@@ -119,7 +119,7 @@ export function applyEffect(
   }
   if ("add_item" in effect) {
     const inventory = state.inventory.includes(effect.add_item)
-      ? state.inventory
+      ? [...state.inventory]
       : [...state.inventory, effect.add_item];
     return {
       state: { ...state, inventory },

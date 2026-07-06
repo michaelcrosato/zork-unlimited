@@ -8,10 +8,15 @@
  */
 import { describe, it, expect } from "vitest";
 import { applyEffect } from "../../src/core/effects.js";
+import { makeStep } from "../../src/core/engine.js";
 import { evalCondition } from "../../src/core/conditions.js";
 import { initState, type GameState } from "../../src/core/state.js";
-import { resolveAttack, resolveSkillCheck, enemyHp, enemyAlive } from "../../src/rpg/combat.js";
-import { enemyHpVar, type Enemy } from "../../src/rpg/schema.js";
+import { resolveSkillCheck } from "../../src/core/skill_check.js";
+import { resolveAttack, enemyHp, enemyAlive } from "../../src/rpg/combat.js";
+import { enemyHpVar, RpgPackSchema, type Enemy } from "../../src/rpg/schema.js";
+import { loadRpgSourceFile } from "../../src/rpg/source.js";
+import { buildRpgRules, indexRpgPack, initStateForRpgPack } from "../../src/rpg/runner.js";
+import type { RpgAction } from "../../src/api/types.js";
 
 const baseState = () => ({
   ...initState({ seed: 1, start: "room" }),
@@ -30,6 +35,20 @@ const wight: Enemy = {
   death_ending: "ending_fallen",
   on_defeat: [{ set_flag: "spoils" }],
 };
+
+function minimalPackWithVars(varsInit: Record<string, number>) {
+  return {
+    meta: {
+      id: "vars_fixture",
+      title: "Vars Fixture",
+      start_room: "room",
+      vars_init: varsInit,
+    },
+    rooms: [{ id: "room", name: "Room", description: "A room." }],
+    win_conditions: [{ id: "win", conditions: [{ has_flag: "won" }], ending: "ending_win" }],
+    endings: [{ id: "ending_win", title: "Win", text: "Done." }],
+  };
+}
 
 describe("gated DSL: quest stages (§13, §14)", () => {
   it("set_quest_stage writes questStage and quest_stage reads it", () => {
@@ -111,5 +130,42 @@ describe("seeded skill checks (§8.5)", () => {
       if (res.effects.some((e) => "set_flag" in e && e.set_flag === "moved")) succeeded = true;
     }
     expect(succeeded).toBe(true);
+  });
+});
+
+describe("RPG action boundary", () => {
+  it("rejects non-RPG CHOOSE actions before RPG resolution", () => {
+    const loaded = loadRpgSourceFile("content/rpg/quests/sunken_barrow.yaml");
+    if (!loaded.ok) throw new Error("sunken_barrow must compile");
+    const index = indexRpgPack(loaded.compiled.pack);
+    const rules = buildRpgRules(index);
+    const state = initStateForRpgPack(index, 1);
+    const legacyAction = { type: "CHOOSE", choiceId: "legacy_choice" } as unknown as RpgAction;
+    const result = makeStep(rules)(state, legacyAction);
+    expect(result.ok).toBe(false);
+    expect(result.state).toBe(state);
+  });
+});
+
+describe("RPG pack state initialization boundary", () => {
+  it("rejects non-finite meta.vars_init values before engine state creation", () => {
+    expect(RpgPackSchema.safeParse(minimalPackWithVars({ hp: Infinity })).success).toBe(false);
+    expect(RpgPackSchema.safeParse(minimalPackWithVars({ hp: NaN })).success).toBe(false);
+  });
+
+  it("accepts finite meta.vars_init values", () => {
+    const parsed = RpgPackSchema.safeParse(minimalPackWithVars({ hp: 20, attack: 4 }));
+
+    expect(parsed.success).toBe(true);
+    if (!parsed.success) return;
+    expect(parsed.data.meta.vars_init).toEqual({ hp: 20, attack: 4 });
+  });
+
+  it("indexes RPG sources without a duplicate package-era rpgPack alias", () => {
+    const parsed = RpgPackSchema.parse(minimalPackWithVars({ hp: 20, attack: 4 }));
+    const index = indexRpgPack(parsed);
+
+    expect(index.pack).toBe(parsed);
+    expect("rpgPack" in index).toBe(false);
   });
 });

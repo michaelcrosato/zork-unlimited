@@ -1,6 +1,6 @@
 /**
  * Regression (§15) for bug_0204 — blind-playtest polish for The Breaking Weir
- * (content/rpg/pack/breaking_weir.yaml, seed 11). The fresh blind playtester won the
+ * (content/rpg/quests/breaking_weir.yaml, seed 11). The fresh blind playtester won the
  * pack 50/50 with clarity 5/5 and surfaced ONE design-honesty gap (no winnability
  * effect): the lethal storm-walk's "go cold and rash, the water decides" gamble is
  * heavily advertised in the prose, but at the moment of crossing the room/object read
@@ -29,13 +29,13 @@
  * no `name`, so the bug_0197 reactive-name pins on head_rack/race_winch are untouched).
  */
 import { describe, it, expect } from "vitest";
-import { loadRpgPackFile } from "../../src/rpg/pack.js";
+import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import { indexRpgPack, initStateForRpgPack } from "../../src/rpg/runner.js";
-import { roomDescription, objectDescription, objectName } from "../../src/parser/model.js";
+import { roomDescription, objectDescription, objectName } from "../../src/rpg/model.js";
 import type { GameState } from "../../src/core/state.js";
 
-const PACK_PATH = "content/rpg/pack/breaking_weir.yaml";
-const loaded = loadRpgPackFile(PACK_PATH);
+const PACK_PATH = "content/rpg/quests/breaking_weir.yaml";
+const loaded = loadRpgSourceFile(PACK_PATH);
 if (!loaded.ok) throw new Error("breaking_weir must compile");
 const pack = loaded.compiled.pack;
 const index = indexRpgPack(pack);

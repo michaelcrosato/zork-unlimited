@@ -1,6 +1,6 @@
 id: bug_0447_gallowmere_blind_side_tactic
 title: "Gallowmere prep now creates a visible blind-side fight tactic"
-pack: content/rpg/pack/gallowmere.yaml
+pack: content/rpg/quests/gallowmere.yaml
 reported_by: blind-playtest
 report: blind-tester/reports/20260622T164710Z_gallowmere_seed7.md
 severity: S2
@@ -20,5 +20,5 @@ tests:
   - tests/regression/gallowmere_blind_side_tactic.test.ts
 verification:
   - npm test -- --run tests/regression/gallowmere_blind_side_tactic.test.ts tests/regression/gallowmere_peat_sign_kill_site_hint.test.ts tests/regression/rpg_combat_guaranteed_optin.test.ts
-  - npm run validate -- content/rpg/pack/gallowmere.yaml
+  - npm run validate -- content/rpg/quests/gallowmere.yaml
   - npm run health

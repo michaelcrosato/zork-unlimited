@@ -5,28 +5,28 @@
  * making the live tray safe.
  */
 import { describe, it, expect } from "vitest";
-import { loadRpgPackFile } from "../../src/rpg/pack.js";
+import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import { validateRpg } from "../../src/validate/rpg_validator.js";
 import { indexRpgPack, buildRpgRules, initStateForRpgPack } from "../../src/rpg/runner.js";
 import { buildRpgObservation } from "../../src/rpg/observation.js";
 import { makeStep, actionEquals } from "../../src/core/engine.js";
-import type { Action } from "../../src/api/types.js";
+import type { RpgAction } from "../../src/api/types.js";
 import type { GameEvent } from "../../src/core/events.js";
 import type { GameState } from "../../src/core/state.js";
 
-const loaded = loadRpgPackFile("content/rpg/pack/powder_mill_surety.yaml");
+const loaded = loadRpgSourceFile("content/rpg/quests/powder_mill_surety.yaml");
 if (!loaded.ok) throw new Error("powder_mill_surety must compile");
 const pack = loaded.compiled.pack;
 const index = indexRpgPack(pack);
 const rules = buildRpgRules(index);
 const step = makeStep(rules);
 
-function act(state: GameState, action: Action): { state: GameState; text: string } {
+function act(state: GameState, RpgAction: RpgAction): { state: GameState; text: string } {
   expect(
-    rules.legalActions(state).some((a) => actionEquals(a, action)),
-    `action ${JSON.stringify(action)} must be legal in ${state.current}`,
+    rules.legalActions(state).some((a) => actionEquals(a, RpgAction)),
+    `RpgAction ${JSON.stringify(RpgAction)} must be legal in ${state.current}`,
   ).toBe(true);
-  const result = step(state, action);
+  const result = step(state, RpgAction);
   expect(result.ok, result.rejectionReason).toBe(true);
   return {
     state: result.state,

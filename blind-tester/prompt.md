@@ -3,22 +3,37 @@ game and must play it BLIND — like a first-time player who only sees what the 
 shows you.
 
 STRICT RULES:
+
 - The game's tools are named `mcp__adventureforge__*` and are DEFERRED — load their
   schemas first with one ToolSearch call, then call them:
-  `ToolSearch("select:mcp__adventureforge__start_game,mcp__adventureforge__get_scene,mcp__adventureforge__list_legal_actions,mcp__adventureforge__step_action,mcp__adventureforge__get_transcript")`.
+  `ToolSearch("select:mcp__adventureforge__start_world_quest,mcp__adventureforge__get_observation,mcp__adventureforge__list_legal_actions,mcp__adventureforge__step_action,mcp__adventureforge__get_state,mcp__adventureforge__get_transcript")`.
 - Play ONLY through those `mcp__adventureforge__*` tools. ToolSearch (to load them)
   is the only other tool you may use.
 - DO NOT read, open, grep, cat, or list ANY files. Do not use shell, file, or web
   tools — you have none and don't need them. Your ONLY window into the game is the
-  observations the MCP tools return. No peeking at the YAML, the source, or the
-  solution.
+  MCP tool responses. No peeking at the YAML, the source, or the solution.
 
 PLAY:
-- Start: `mcp__adventureforge__start_game` with story_path = "__PACK__", seed = __SEED__.
-- Each observation gives scene text, your state, and `available_actions` (each with
-  an `id` and player-facing text/command). Choose one by id with
-  `mcp__adventureforge__step_action` (session_id, action_id). Repeat until the scene
-  is an ending.
+
+- {{START_INSTRUCTION}}
+- Use `hide_graph: true` and `compact_observation: true` on start, observe, and
+  step calls. Each compact `context` gives scene text and state/vitals. Fetch
+  stable ids with `mcp__adventureforge__list_legal_actions` using
+  `compact_actions: true`, then choose one by id with
+  `mcp__adventureforge__step_action` (session_id, action_id,
+  expected_state_hash: latest state_hash, hide_graph: true,
+  compact_observation: true). Repeat until `context.ended` is true. If an action
+  id is unclear, call `mcp__adventureforge__list_legal_actions` once with
+  `compact_actions: false` for player-facing command text. Leave
+  `compact_events` at its default unless diagnosing event-history details.
+- For an end-of-run transcript sanity check, call
+  `mcp__adventureforge__get_transcript` with `summary_only: true` and
+  `compact_summary: true`; pass the latest `if_state_hash` when rechecking an
+  unchanged state. If you need route rows, use `compact_turns: true`; avoid full
+  transcripts unless diagnosing a specific event-history bug.
+- For a mechanical state audit, call `mcp__adventureforge__get_state` with
+  `compact_state: true`; pass `if_state_hash` when rechecking. Do not use
+  `include_state: true` unless you are diagnosing a raw engine-state bug.
 - Make decisions a curious, sensible human would: follow clues, pursue the apparent
   goal, investigate what seems important. Do NOT pick randomly. Narrate your
   reasoning each turn in ONE short line. Do ONE thorough playthrough to an ending;
@@ -29,6 +44,7 @@ PLAY:
   unfair/unsignposted deaths.
 
 REPORT (end your reply with these sections, in this order):
+
 1. Playthrough log: route(s) taken (scene titles/gist) and ending(s) reached, with
    final score if shown.
 2. Did it work mechanically? rejected actions, broken state, loops, soft-locks?
@@ -38,6 +54,24 @@ REPORT (end your reply with these sections, in this order):
 5. Bugs or design flaws — concrete, each tagged with the scene where you hit it and
    a severity S0(cosmetic)–S4(blocking).
 6. Verdict: would a real player finish satisfied? one paragraph.
+7. EXIT INTERVIEW (mandatory — the report is REJECTED without it): a single fenced
+   block, exactly this shape, restating your findings as data. Integers only for
+   scores; severities S0–S4; empty arrays are fine.
+
+```json exit-interview
+{
+  "clarity": 3,
+  "enjoyment": 3,
+  "goal_understood": true,
+  "got_stuck": false,
+  "confusions": ["<short phrase per confusion, or empty>"],
+  "bugs": [{ "where": "<scene/area>", "severity": "S2", "note": "<one line>" }],
+  "best_moment": "<one line>",
+  "worst_moment": "<one line>",
+  "would_replay": false,
+  "verdict": "<the one-paragraph verdict, restated>"
+}
+```
 
 Be honest, specific, and ruthless. A critical, well-observed report is far more
 useful than a flattering one.

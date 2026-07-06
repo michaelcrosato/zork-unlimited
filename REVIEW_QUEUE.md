@@ -14,6 +14,7 @@ question (two autonomous systems can't co-develop one `main`; the contention cra
 claude loop twice with exit 255).
 
 **Your call — pick one:**
+
 - **(a)** agy keeps `main` → I leave the loop down. I can `git reset --hard origin/main` to
   drop my local commit if you don't want claude's pack on agy's history (recoverable via reflog).
 - **(b)** claude loop resumes on `main` (only safe if agy is truly off) → I push and relaunch.
@@ -27,7 +28,7 @@ Until you choose, I stay stood down (no push, no relaunch).
 ## 2. DONE THIS SESSION (GREEN, reversible) — rescued an orphaned cycle's work
 
 Cycle `2026-06-09T14-33-42-532Z` authored a complete, valid 11th RPG pack
-(`content/rpg/pack/printers_night.yaml`) but **died before committing** — leaving it
+(`content/rpg/quests/printers_night.yaml`) but **died before committing** — leaving it
 uncommitted with no cycle result. The loop's blunt self-recovery (commit 7bd9bc0) would
 have **discarded** it as scratch on next start. I judged it worth keeping after verifying:
 

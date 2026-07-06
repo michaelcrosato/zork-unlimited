@@ -6,7 +6,7 @@
  * GameSession compiles on demand. Broken fixtures are excluded; only playable
  * quests in the single Charter Marches world are offered.
  */
-import { detectMode, type Mode } from "./engine.js";
+import type { Mode } from "./engine.js";
 import { parse as parseYaml } from "yaml";
 
 export type WorldBinding = {
@@ -63,8 +63,8 @@ export type WorldEntry = {
   };
 };
 
-// All shipped packs, as raw strings (cyoa / parser / rpg "pack" directories).
-const raw = import.meta.glob("../../content/**/pack/*.yaml", {
+// Shipped RPG quest packs, as raw strings.
+const raw = import.meta.glob("../../content/rpg/quests/*.yaml", {
   query: "?raw",
   import: "default",
   eager: true,
@@ -180,13 +180,12 @@ function routeForPack(path: string): { graphNode: string | null; route: WorldRou
 
 export const PACKS: PackEntry[] = Object.entries(raw)
   .map(([path, source]) => {
-    const mode = detectMode(source);
     const meta = readPackMeta(source);
     const route = routeForPack(path);
     return {
       path,
       name: meta.title,
-      mode,
+      mode: "rpg" as const,
       source,
       world: meta.world,
       graphNode: route.graphNode,

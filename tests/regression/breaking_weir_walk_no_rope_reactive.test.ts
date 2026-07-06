@@ -16,13 +16,13 @@
  *   - walk_crossed → crossed variant wins regardless of rope state
  */
 import { describe, it, expect } from "vitest";
-import { loadRpgPackFile } from "../../src/rpg/pack.js";
+import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import { indexRpgPack, initStateForRpgPack } from "../../src/rpg/runner.js";
-import { roomDescription } from "../../src/parser/model.js";
+import { roomDescription } from "../../src/rpg/model.js";
 import type { GameState } from "../../src/core/state.js";
 
-const PACK_PATH = "content/rpg/pack/breaking_weir.yaml";
-const loaded = loadRpgPackFile(PACK_PATH);
+const PACK_PATH = "content/rpg/quests/breaking_weir.yaml";
+const loaded = loadRpgSourceFile(PACK_PATH);
 if (!loaded.ok) throw new Error("breaking_weir must compile");
 const pack = loaded.compiled.pack;
 const index = indexRpgPack(pack);

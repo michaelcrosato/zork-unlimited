@@ -29,7 +29,7 @@ evidence:
 failure:
   type: misleading_mechanic_fiction
   where:
-    - content:content/rpg/pack/cold_forge.yaml
+    - content:content/rpg/quests/cold_forge.yaml
   description: >
     Four sentinel-prose sites framed the cold as a COUNTDOWN the player must race
     rather than a settled, permanent advantage: (1) the bellows_walk room read "cold

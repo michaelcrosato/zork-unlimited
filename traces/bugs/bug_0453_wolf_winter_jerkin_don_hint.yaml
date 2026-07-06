@@ -1,6 +1,6 @@
 id: bug_0453_wolf_winter_jerkin_don_hint
 title: "Wolf Winter jerkin pickup warns that it must be donned"
-pack: content/rpg/pack/wolf_winter.yaml
+pack: content/rpg/quests/wolf_winter.yaml
 reported_by: blind-playtest
 report: blind-tester/reports/20260622T182608Z_wolf_winter_seed7.md
 severity: S1
@@ -21,5 +21,5 @@ tests:
   - tests/regression/wolf_winter_reactive_taken_items.test.ts
 verification:
   - npm test -- --run tests/regression/wolf_winter_reactive_taken_items.test.ts tests/regression/wolf_winter_prep_carries_score.test.ts
-  - npm run validate -- content/rpg/pack/wolf_winter.yaml
+  - npm run validate -- content/rpg/quests/wolf_winter.yaml
   - npm run health

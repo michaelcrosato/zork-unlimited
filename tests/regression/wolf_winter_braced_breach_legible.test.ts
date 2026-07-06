@@ -29,18 +29,18 @@
  * or add an inc_var to on_success and a case below flips RED.
  */
 import { describe, it, expect } from "vitest";
-import { loadRpgPackFile } from "../../src/rpg/pack.js";
-import { roomDescription, objectDescription } from "../../src/parser/model.js";
-import { resolveSkillCheck } from "../../src/rpg/combat.js";
+import { loadRpgSourceFile } from "../../src/rpg/source.js";
+import { roomDescription, objectDescription } from "../../src/rpg/model.js";
+import { resolveSkillCheck } from "../../src/core/skill_check.js";
 import { initState } from "../../src/core/state.js";
 import type { RpgPack } from "../../src/rpg/schema.js";
 import type { GameState } from "../../src/core/state.js";
 import type { Rng } from "../../src/core/rng.js";
 
-const PACK_PATH = "content/rpg/pack/wolf_winter.yaml";
+const PACK_PATH = "content/rpg/quests/wolf_winter.yaml";
 
 function loadPack(): RpgPack {
-  const r = loadRpgPackFile(PACK_PATH);
+  const r = loadRpgSourceFile(PACK_PATH);
   expect(r.ok, "wolf_winter must load").toBe(true);
   if (!r.ok) throw new Error("unreachable");
   return r.compiled.pack;

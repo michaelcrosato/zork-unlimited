@@ -9,12 +9,10 @@ import {
   overworldExplorationSitesNear,
   overworldJobsAt,
   planOverworldRoute,
-  parseOverworldManifest,
 } from "../../src/world/overworld.js";
+import { loadOverworldManifest } from "../../src/world/source.js";
 
-const world = parseOverworldManifest(
-  JSON.parse(readFileSync("content/world/new_york_overworld.json", "utf8")),
-);
+const world = loadOverworldManifest(process.cwd());
 
 describe("New York overworld graph", () => {
   it("uses New York as a town-and-road overworld, not a global quest menu", () => {
@@ -22,7 +20,7 @@ describe("New York overworld graph", () => {
     expect(world.start).toBe("albany_city");
     expect(world.scale.population_floor).toBe(10_000);
     expect(world.nodes.length).toBeGreaterThanOrEqual(240);
-    expect(world.quests.length).toBe(43);
+    expect(world.quests.length).toBe(11);
     expect(world.design_rules.join(" ")).toContain("not globally selectable");
     expect(world.design_rules.join(" ")).toContain("notice boards start empty");
     expect(world.design_rules.join(" ")).toContain("one local quest lead");
@@ -74,11 +72,11 @@ describe("New York overworld graph", () => {
     );
   });
 
-  it("places old quest packs locally instead of exposing all of them at start", () => {
+  it("places old quest sources locally instead of exposing all of them at start", () => {
     const local = world.quests.filter((quest) => quest.home === world.start);
     expect(local.length).toBeGreaterThan(0);
     expect(local.length).toBeLessThan(world.quests.length);
-    expect(new Set(world.quests.map((quest) => quest.pack)).size).toBe(world.quests.length);
+    expect(new Set(world.quests.map((quest) => quest.source)).size).toBe(world.quests.length);
     expect(world.design_rules.join(" ")).toContain("anchored to specific local areas");
 
     const areasById = new Map(world.areas.map((area) => [area.id, area]));

@@ -1,6 +1,6 @@
 id: bug_0456_falconers_ransom_confrontation_retry
 title: "Falconer's Ransom evidence confrontation survives a failed roll"
-pack: content/rpg/pack/falconers_ransom.yaml
+pack: content/rpg/quests/falconers_ransom.yaml
 reported_by: blind-playtest
 report: blind-tester/reports/20260622T190305Z_falconers_ransom_seed7.md
 severity: S2
@@ -23,5 +23,5 @@ tests:
   - tests/regression/falconers_ransom_confrontation_retry.test.ts
 verification:
   - npm test -- --run tests/regression/falconers_ransom_confrontation_retry.test.ts
-  - npm run validate -- content/rpg/pack/falconers_ransom.yaml
+  - npm run validate -- content/rpg/quests/falconers_ransom.yaml
   - npm run health

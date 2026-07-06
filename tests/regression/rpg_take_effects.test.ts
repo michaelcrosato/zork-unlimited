@@ -24,24 +24,20 @@
  *       ends at 25/50 — the score now distinguishes the true win from the doom.
  */
 import { describe, it, expect } from "vitest";
-import { compileParserPack } from "../../src/parser/pack.js";
-import { indexParserPack, initStateForParserPack } from "../../src/parser/model.js";
-import { buildParserRules } from "../../src/parser/runner.js";
-import { enumerateActions } from "../../src/parser/legal_actions.js";
-import { validateParser } from "../../src/validate/parser_validator.js";
-import { loadRpgPackFile } from "../../src/rpg/pack.js";
+import { compileRpgSource, loadRpgSourceFile } from "../../src/rpg/source.js";
 import {
   indexRpgPack,
   buildRpgRules,
   initStateForRpgPack,
   enumerateRpgActions,
 } from "../../src/rpg/runner.js";
-import { buildParserObservation } from "../../src/parser/observation.js";
+import { validateRpg } from "../../src/validate/rpg_validator.js";
+import { buildRpgObservation } from "../../src/rpg/observation.js";
 import { makeStep } from "../../src/core/engine.js";
 import type { GameState } from "../../src/core/state.js";
 import type { Action } from "../../src/api/types.js";
 
-// A minimal parser pack: start room `a` holds a takeable `gem` carrying take_effects;
+// A minimal zero-enemy RPG pack: start room `a` holds a takeable `gem` carrying take_effects;
 // `${award}` is spliced into the gem's take_effects; win = reach `b`.
 const gemPack = (award: string, maxScore = 5): string => `
 meta: { id: t, title: T, start_room: a, max_score: ${maxScore} }
@@ -64,22 +60,23 @@ objects:
 ${award}
 win_conditions: [{ id: w, conditions: [{ visited: b }], ending: e }]
 endings: [{ id: e, title: E, text: "done" }]
+enemies: []
 `;
 
 describe("bug_0107 — take_effects: the first-class TAKE content hook", () => {
   it("(1) fire on pickup (after add_item): a takeable gem's take_effects mutate state", () => {
-    const r = compileParserPack(
+    const r = compileRpgSource(
       gemPack("      - inc_var: { name: score, by: 5 }\n      - set_flag: got_gem"),
     );
     expect(r.ok).toBe(true);
     if (!r.ok) return;
-    const index = indexParserPack(r.compiled.pack);
-    const step = makeStep(buildParserRules(index));
-    let s = initStateForParserPack(index, 1);
+    const index = indexRpgPack(r.compiled.pack);
+    const step = makeStep(buildRpgRules(index));
+    let s = initStateForRpgPack(index, 1);
     expect(s.vars["score"] ?? 0).toBe(0);
     expect(s.flags["got_gem"]).toBeFalsy();
 
-    const take = enumerateActions(index, s).find((o) => o.action.type === "TAKE")!;
+    const take = enumerateRpgActions(index, s).find((o) => o.action.type === "TAKE")!;
     const res = step(s, take.action);
     expect(res.ok).toBe(true);
     if (!res.ok) return;
@@ -91,14 +88,14 @@ describe("bug_0107 — take_effects: the first-class TAKE content hook", () => {
   });
 
   it("(2) the award is one-shot: drop/re-take cannot re-fire take_effects", () => {
-    const r = compileParserPack(gemPack("      - inc_var: { name: score, by: 5 }"));
+    const r = compileRpgSource(gemPack("      - inc_var: { name: score, by: 5 }"));
     expect(r.ok).toBe(true);
     if (!r.ok) return;
-    const index = indexParserPack(r.compiled.pack);
-    const step = makeStep(buildParserRules(index));
-    let s = initStateForParserPack(index, 1);
-    const take = () => enumerateActions(index, s).find((o) => o.id === "take_gem")!.action;
-    const drop = () => enumerateActions(index, s).find((o) => o.id === "drop_gem")!.action;
+    const index = indexRpgPack(r.compiled.pack);
+    const step = makeStep(buildRpgRules(index));
+    let s = initStateForRpgPack(index, 1);
+    const take = () => enumerateRpgActions(index, s).find((o) => o.id === "take_gem")!.action;
+    const drop = () => enumerateRpgActions(index, s).find((o) => o.id === "drop_gem")!.action;
 
     s = (
       step(s, take()) as {
@@ -108,7 +105,7 @@ describe("bug_0107 — take_effects: the first-class TAKE content hook", () => {
     ).state;
     expect(s.vars["score"]).toBe(5);
     // No TAKE for the gem remains in the legal set (it's in inventory), so +5 is unfarmable.
-    expect(enumerateActions(index, s).some((o) => o.action.type === "TAKE")).toBe(false);
+    expect(enumerateRpgActions(index, s).some((o) => o.action.type === "TAKE")).toBe(false);
 
     s = (
       step(s, drop()) as {
@@ -117,7 +114,7 @@ describe("bug_0107 — take_effects: the first-class TAKE content hook", () => {
       }
     ).state;
     expect(s.objectState["gem"]?.takenBy).toBe("player");
-    expect(enumerateActions(index, s).map((o) => o.id)).toContain("take_gem");
+    expect(enumerateRpgActions(index, s).map((o) => o.id)).toContain("take_gem");
 
     s = (
       step(s, take()) as {
@@ -151,37 +148,38 @@ objects:
       - inc_var: { name: score, by: 5 }
 win_conditions: [{ id: w, conditions: [{ visited: b }], ending: e }]
 endings: [{ id: e, title: E, text: "done" }]
+enemies: []
 `;
-    const r = compileParserPack(src);
+    const r = compileRpgSource(src);
     expect(r.ok).toBe(false);
   });
 
   it("(4) the validator folds take_effects into the SCORE_UNREACHABLE upper bound", () => {
     // The only award lives in take_effects; declared max matches it → no finding.
-    const ok = compileParserPack(gemPack("      - inc_var: { name: score, by: 5 }", 5));
+    const ok = compileRpgSource(gemPack("      - inc_var: { name: score, by: 5 }", 5));
     expect(ok.ok).toBe(true);
     if (ok.ok)
       expect(
-        validateParser(ok.compiled.pack).findings.some((f) => f.code === "SCORE_UNREACHABLE"),
+        validateRpg(ok.compiled.pack).findings.some((f) => f.code === "SCORE_UNREACHABLE"),
       ).toBe(false);
 
     // Declared max exceeds the take_effects award → SCORE_UNREACHABLE still fires
     // (proving the +5 really is being counted, not ignored).
-    const under = compileParserPack(gemPack("      - inc_var: { name: score, by: 5 }", 10));
+    const under = compileRpgSource(gemPack("      - inc_var: { name: score, by: 5 }", 10));
     expect(under.ok).toBe(true);
     if (under.ok)
       expect(
-        validateParser(under.compiled.pack).findings.some((f) => f.code === "SCORE_UNREACHABLE"),
+        validateRpg(under.compiled.pack).findings.some((f) => f.code === "SCORE_UNREACHABLE"),
       ).toBe(true);
   });
 });
 
 describe("bug_0107 — The Sunken Barrow: the +25 rides the claim, not chamber entry", () => {
-  const loaded = loadRpgPackFile("content/rpg/pack/sunken_barrow.yaml");
+  const loaded = loadRpgSourceFile("content/rpg/quests/sunken_barrow.yaml");
   if (!loaded.ok) throw new Error("sunken_barrow must compile");
   const index = indexRpgPack(loaded.compiled.pack);
   const step = makeStep(buildRpgRules(index));
-  const score = (s: GameState): number => buildParserObservation(index, s).score;
+  const score = (s: GameState): number => buildRpgObservation(index, s).score;
   const find = (s: GameState, pred: (a: Action) => boolean) =>
     enumerateRpgActions(index, s).find((o) => pred(o.action));
   const act = (s: GameState, pred: (a: Action) => boolean): GameState => {

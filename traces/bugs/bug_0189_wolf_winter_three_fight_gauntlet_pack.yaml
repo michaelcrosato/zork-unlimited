@@ -2,7 +2,7 @@ id: bug_0189
 title: "The Wolf-Winter — the project's 13th pack, 4th RPG, and FIRST curated THREE-fight combat_guaranteed gauntlet (breadth lever; stresses the cumulative-HP bound)"
 kind: content_new
 mode: rpg
-pack: content/rpg/pack/wolf_winter.yaml
+pack: content/rpg/quests/wolf_winter.yaml
 content_hash: fae4039e373c616009f024bfc4cc2af5fb35fd94e4f79363d330336ac8f00596
 # Informational. No test pins this pack's content_hash (only watchtower_road pins a content_hash
 # in test files), so nothing was forced; the disk hash is whatever `npm run validate` reports.
@@ -36,7 +36,7 @@ mandated_blind_playtest:
     clean pack.
 
 new_pack:
-  pack: content/rpg/pack/wolf_winter.yaml
+  pack: content/rpg/quests/wolf_winter.yaml
   proven: >
     Auto-discovered by every structural suite the moment it shipped: rpg_all_endings_reachable reaches
     BOTH declared endings by concrete best/worst-roll play (ending_held via the prepared route, ending_pulled_down
@@ -86,7 +86,7 @@ within_the_bar: >
   Additive content only — no engine/validator/schema change, and a NEW pack pins no production hash, so NO
   hash pin moved. validate_story 0/0 (zero errors AND zero warnings; combat_guaranteed audited GREEN — both
   guarantee codes absent). Wired into the bar per [[verification-bar-covers-all-packs]]: added a
-  `validate -- content/rpg/pack/wolf_winter.yaml` step to the `health` npm script, and extended the
+  `validate -- content/rpg/quests/wolf_winter.yaml` step to the `health` npm script, and extended the
   all_packs_validated_by_bar discovery list (twelve -> thirteen, "twelve" -> "thirteen"). list_stories and the
   UI catalog auto-discover it (the UI globs content/**/pack/*.yaml). README content table brought current
   (12 -> 13 packs; The Wolf-Winter listed). The benchmark curated split (discovered from content/*/pack) gains

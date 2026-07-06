@@ -9,8 +9,23 @@
  * (`divergedAtStep`); a v1 trace (final hash only) replays exactly as before.
  */
 import { hashState } from "../core/hash.js";
-import type { Rules } from "../core/engine.js";
+import type { EngineAction, Rules } from "../core/engine.js";
 import { runActions, type Trace } from "./record.js";
+import { SAVE_MODE, SaveIntegrityError } from "../persist/save_load.js";
+import {
+  assertTraceActions,
+  assertTraceExpectedFinalHash,
+  assertTraceIdentityFields,
+  assertTraceSourceRefConsistency,
+  assertTraceState,
+  assertTraceStepHashes,
+  type TraceActionFields,
+  type TraceExpectedFinalHashFields,
+  type TraceIdentityFields,
+  type TraceSourceRefFields,
+  type TraceStateFields,
+  type TraceStepHashFields,
+} from "./integrity.js";
 
 export type ReplayResult = {
   ok: boolean;
@@ -26,13 +41,59 @@ export type ReplayResult = {
   message?: string;
 };
 
-/** First index where two hash arrays differ, comparing only the overlap; -1 if none. */
+/** First index where two same-length hash arrays differ; -1 if none. */
 function firstDivergentStep(actual: string[], baseline: string[]): number {
-  const n = Math.min(actual.length, baseline.length);
-  for (let i = 0; i < n; i++) {
+  for (let i = 0; i < actual.length; i++) {
     if (actual[i] !== baseline[i]) return i;
   }
   return -1;
+}
+
+export function assertTraceMode<A extends EngineAction>(
+  trace: Trace<A>,
+): asserts trace is Trace<A> & { mode: typeof SAVE_MODE } & TraceSourceRefFields;
+export function assertTraceMode(trace: {
+  mode?: unknown;
+  trace_id?: unknown;
+  content_hash?: unknown;
+  seed?: unknown;
+  initial_state?: unknown;
+  actions?: unknown;
+  expected_final_hash?: unknown;
+  per_step_hashes?: unknown;
+  source_ref?: unknown;
+  worldQuestId?: unknown;
+  generatedRpgSeed?: unknown;
+}): asserts trace is { mode: typeof SAVE_MODE } & TraceIdentityFields &
+  TraceActionFields &
+  TraceStateFields &
+  TraceExpectedFinalHashFields &
+  TraceStepHashFields &
+  TraceSourceRefFields;
+export function assertTraceMode(trace: {
+  mode?: unknown;
+  trace_id?: unknown;
+  content_hash?: unknown;
+  seed?: unknown;
+  initial_state?: unknown;
+  actions?: unknown;
+  expected_final_hash?: unknown;
+  per_step_hashes?: unknown;
+  source_ref?: unknown;
+  worldQuestId?: unknown;
+  generatedRpgSeed?: unknown;
+}): void {
+  if (trace.mode !== SAVE_MODE) {
+    throw new SaveIntegrityError(
+      `Trace mode must be "${SAVE_MODE}", got ${JSON.stringify(trace.mode)}.`,
+    );
+  }
+  assertTraceIdentityFields(trace);
+  assertTraceState(trace);
+  assertTraceActions(trace);
+  assertTraceExpectedFinalHash(trace);
+  assertTraceStepHashes(trace);
+  assertTraceSourceRefConsistency(trace);
 }
 
 /**
@@ -41,7 +102,11 @@ function firstDivergentStep(actual: string[], baseline: string[]): number {
  * carries `per_step_hashes` (Trace v2), `divergedAtStep` localizes the first
  * action whose post-state diverged — the actual debugging value (§15).
  */
-export function replayTrace(trace: Trace, rules: Rules): ReplayResult {
+export function replayTrace<A extends EngineAction>(
+  trace: Trace<A>,
+  rules: Rules<A>,
+): ReplayResult {
+  assertTraceMode(trace);
   const run = runActions(rules, trace.initial_state, trace.actions);
   const finalHash = hashState(run.finalState);
 
@@ -83,7 +148,7 @@ export function replayTrace(trace: Trace, rules: Rules): ReplayResult {
 }
 
 /** Best-effort, side-effect-free label for the action at a divergent step. */
-function describeAction(trace: Trace, step: number): string {
+function describeAction<A extends EngineAction>(trace: Trace<A>, step: number): string {
   const action = trace.actions[step];
   if (action === undefined) return "out of range";
   const id = (action as { id?: unknown }).id;

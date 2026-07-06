@@ -1,6 +1,6 @@
 id: bug_0452_sunken_barrow_ward_pacing
 title: "Sunken Barrow trims the shade's warding counsel without losing its promises"
-pack: content/rpg/pack/sunken_barrow.yaml
+pack: content/rpg/quests/sunken_barrow.yaml
 reported_by: blind-playtest
 report: blind-tester/reports/20260622T181122Z_sunken_barrow_seed7.md
 severity: S0
@@ -20,5 +20,5 @@ tests:
   - tests/regression/rpg_barrow_ward_no_more_aid.test.ts
 verification:
   - npm test -- --run tests/regression/rpg_barrow_ward_no_more_aid.test.ts tests/regression/rpg_barrow_ward_honest_odds.test.ts tests/regression/rpg_barrow_reaver_shade.test.ts tests/regression/sunken_barrow_shade_signposting.test.ts
-  - npm run validate -- content/rpg/pack/sunken_barrow.yaml
+  - npm run validate -- content/rpg/quests/sunken_barrow.yaml
   - npm run health

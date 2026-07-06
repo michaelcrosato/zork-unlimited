@@ -2,7 +2,7 @@ id: bug_0226
 title: "The Dawn Beacon blind-pass: the climax fired on bare room entry — climbing `up` to the crown auto-lit the beacon (+15 on the room on_enter) and ended the game, with no light verb to perform, though the orders-board and watchman both say plainly 'LIGHT THE BEACON'. Reshaped to the deliberate light act (the sunken_barrow visited+has-act win): an explicit `light beacon with flint` carries the +15 and fires the win."
 kind: content_fix
 mode: rpg
-pack: content/rpg/pack/dawn_beacon.yaml
+pack: content/rpg/quests/dawn_beacon.yaml
 # Content reshape of ONE pack's climax. Adds two crown objects (beacon_fire + flint), moves
 # the +15 capstone off beacon_crown.on_enter onto the new light interaction, and adds a
 # `has_flag: beacon_lit` term to the (kept) `visited: beacon_crown` win. No change to the
@@ -69,7 +69,7 @@ regression_test: tests/regression/dawn_beacon_explicit_light_act.test.ts
 # ends ending_lit at the full 50 with exactly one ending event; (e) the pack validates green.
 
 verify:
-  - "validate_story content/rpg/pack/dawn_beacon.yaml -> ok, max_score 50, 0 findings"
+  - "validate_story content/rpg/quests/dawn_beacon.yaml -> ok, max_score 50, 0 findings"
   - "npx vitest run tests/regression/dawn_beacon_explicit_light_act.test.ts -> 5 passed"
   - "rpg_all_endings_reachable + rpg_score_economy_sound + rpg_combat_guaranteed_optin + parser_score_peaks_before_win + rpg_variant_liveness + rpg_metamorphic_observation_stream -> all green"
   - "npm run health -> green (verify:integrity + typecheck + lint + format + tests + validate + playtest)"

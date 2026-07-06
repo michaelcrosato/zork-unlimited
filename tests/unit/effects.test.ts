@@ -28,6 +28,17 @@ describe("effect reducer", () => {
     expect(s.journal).toEqual(["hi"]);
   });
 
+  it("detaches inventory when duplicate add_item is idempotent", () => {
+    const s = applyEffect({ add_item: "key" }, base()).state;
+    const r = applyEffect({ add_item: "key" }, s);
+
+    expect(r.state.inventory).toEqual(["key"]);
+    expect(r.state.inventory).not.toBe(s.inventory);
+
+    r.state.inventory.push("coin");
+    expect(s.inventory).toEqual(["key"]);
+  });
+
   it("goto sets current, marks visited, and emits move", () => {
     const r = applyEffect({ goto: "room1" }, base());
     expect(r.state.current).toBe("room1");

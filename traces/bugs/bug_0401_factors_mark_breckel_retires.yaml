@@ -26,7 +26,7 @@ tests: tests/regression/factors_mark_breckel_retires.test.ts
 
 verification:
   - npm test -- --run tests/regression/factors_mark_breckel_retires.test.ts
-  - npm run validate -- content/rpg/pack/factors_mark.yaml
+  - npm run validate -- content/rpg/quests/factors_mark.yaml
 
 trace_repin: >
   None. The change updates pack content and adds a regression test; there is no

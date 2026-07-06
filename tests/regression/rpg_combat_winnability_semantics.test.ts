@@ -16,7 +16,7 @@
  * stated contract dishonestly implied it could not happen.
  */
 import { describe, it, expect } from "vitest";
-import { compileRpgPack } from "../../src/rpg/pack.js";
+import { compileRpgSource } from "../../src/rpg/source.js";
 import { validateRpg } from "../../src/validate/rpg_validator.js";
 
 /**
@@ -74,7 +74,7 @@ endings:
 `;
 
 function codes(src: string): string[] {
-  const r = compileRpgPack(src);
+  const r = compileRpgSource(src);
   expect(r.ok).toBe(true);
   if (!r.ok) return [];
   return validateRpg(r.compiled.pack).findings.map((f) => f.code);

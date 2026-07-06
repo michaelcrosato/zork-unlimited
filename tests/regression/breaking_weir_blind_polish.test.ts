@@ -1,6 +1,6 @@
 /**
  * Regression (§15) for bug_0197 — blind-playtest polish for The Breaking Weir
- * (content/rpg/pack/breaking_weir.yaml, seed 7). A fresh blind playtester won the
+ * (content/rpg/quests/breaking_weir.yaml, seed 7). A fresh blind playtester won the
  * pack 50/50 with clarity 5/5 and flagged two ways the prose contradicted the actual
  * game state — both narration-vs-state honesty bugs, neither affecting winnability:
  *
@@ -26,17 +26,17 @@
  *     journal it emits credits no one the player never spoke to.
  */
 import { describe, it, expect } from "vitest";
-import { loadRpgPackFile } from "../../src/rpg/pack.js";
+import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import { indexRpgPack, initStateForRpgPack } from "../../src/rpg/runner.js";
 import { buildRpgObservation } from "../../src/rpg/observation.js";
-import { resolveSkillCheck } from "../../src/rpg/combat.js";
+import { resolveSkillCheck } from "../../src/core/skill_check.js";
 import { initState } from "../../src/core/state.js";
 import type { GameState } from "../../src/core/state.js";
 import type { RpgPack } from "../../src/rpg/schema.js";
 import type { Rng } from "../../src/core/rng.js";
 
-const PACK_PATH = "content/rpg/pack/breaking_weir.yaml";
-const loaded = loadRpgPackFile(PACK_PATH);
+const PACK_PATH = "content/rpg/quests/breaking_weir.yaml";
+const loaded = loadRpgSourceFile(PACK_PATH);
 if (!loaded.ok) throw new Error("breaking_weir must compile");
 const pack: RpgPack = loaded.compiled.pack;
 const index = indexRpgPack(pack);

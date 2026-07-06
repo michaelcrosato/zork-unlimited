@@ -9,7 +9,7 @@ import type { GameEvent } from "../../src/core/events.js";
 import type { Rng } from "../../src/core/rng.js";
 import type { GameState } from "../../src/core/state.js";
 import { buildRpgObservation } from "../../src/rpg/observation.js";
-import { loadRpgPackFile } from "../../src/rpg/pack.js";
+import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import {
   buildRpgRules,
   enumerateRpgActions,
@@ -29,7 +29,7 @@ function queuedRng(rolls: number[]): Rng {
   };
 }
 
-const loaded = loadRpgPackFile("content/rpg/pack/factors_mark.yaml");
+const loaded = loadRpgSourceFile("content/rpg/quests/factors_mark.yaml");
 if (!loaded.ok) throw new Error("factors_mark must compile");
 const pack = loaded.compiled.pack;
 const index = indexRpgPack(pack);

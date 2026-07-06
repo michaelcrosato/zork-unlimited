@@ -2,7 +2,7 @@ id: bug_0200
 title: "The Breaking Weir — storm-walk FAILURE narration over-claimed a 'never clipped' line the player did clip"
 kind: content_fix
 mode: rpg
-pack: content/rpg/pack/breaking_weir.yaml
+pack: content/rpg/quests/breaking_weir.yaml
 # Informational. No test pins breaking_weir's content_hash, so nothing was forced; this
 # content edit moves the pack hash, and the regression pins the BEHAVIOUR (narration-vs-state
 # honesty + the lethal nerve mechanic), not the bytes. The SYMMETRIC SUCCESS-path instance of
@@ -55,5 +55,5 @@ verification: >
   uniqueness, variant liveness) stay green — text-only change, no structural change.
 
 files_changed:
-  - content/rpg/pack/breaking_weir.yaml  # storm-walk on_failure narrate: nerve-failing death, not a 'never clipped' line
+  - content/rpg/quests/breaking_weir.yaml  # storm-walk on_failure narrate: nerve-failing death, not a 'never clipped' line
   - tests/regression/breaking_weir_skill_chain.test.ts  # new honesty assertion on the failure narration

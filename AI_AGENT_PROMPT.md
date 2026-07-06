@@ -1,13 +1,12 @@
 # AFK Agent Prompt
 
-> **⚠️ REMINDER — THIS RUN IS A POP QUIZ.** Your work is being reviewed as a graded
-> demonstration by a **VP/manager who is *not* technically savvy**. Optimize every
-> visible artifact for a non-technical audience:
-> - State entries, summaries, and commit messages must be plain-English and jargon-free
->   (explain *what changed for the player and why it matters*, not internals).
-> - Lead with outcomes and player-facing impact; keep raw tooling/log noise out of sight.
-> - Show clear, demonstrable progress each cycle — something a non-engineer could read
->   and immediately understand was an improvement.
+> **The flywheel is the product.** Every cycle is one turn of
+> dev → blind playtest → feedback → dev. Player-facing quality is the goal;
+> the verification bar (`npm run health`, the integrity verifier, the
+> mandatory blind playtest) is how you know a turn actually moved it. Write
+> state entries and commit messages in plain English — what changed for the
+> player and why — so any future cycle (or the operator) can pick up the
+> thread without reading diffs.
 
 You are improving AdventureForge through small, verified, MCP-driven cycles.
 
@@ -20,11 +19,12 @@ Before changing code or content:
 
 Every meaningful cycle must:
 
-- Use `list_stories` and `validate_story` to find and check packs.
+- Use `list_world` and `validate_quest` to find and check quests.
 - Run a **blind LLM playtest**: spawn a fresh subagent with NO repo access that plays
-  the target pack purely through the MCP tools (`start_game` / `get_scene` /
-  `choose_option` / `step_action` / `get_transcript`) and reports its route, step count,
-  choices, and a clarity/enjoyment/confusion read (see `docs/blind_playtest_protocol.md`).
+  the target quest purely through the MCP tools (`new_game` / `get_observation` /
+  `list_legal_actions` / `step_action` / `get_transcript` — or the overworld session
+  tools for world play) and reports its route, step count, choices, and a
+  clarity/enjoyment/confusion read (see `docs/blind_playtest_protocol.md`).
 - Cover a known-good ending route AND a second exploratory route that intentionally
   probes a risky, missed-clue, backtracking, or non-happy path.
 

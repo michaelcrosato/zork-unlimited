@@ -1,7 +1,6 @@
 /**
- * The procedural RPG generator (src/gen/rpg_generator.ts) — the MODE-WIDENING slice of "evolve
- * the eval distribution" (docs/CURRENT_PLAN.md), the RPG analogue of the CYOA generator's first
- * slice (bug_0156). A generator is only useful if every pack it mints clears the SAME bar the
+ * The procedural RPG generator (src/gen/rpg_generator.ts) is the only supported moving-target
+ * content generator. A generator is only useful if every pack it mints clears the SAME bar the
  * hand-authored RPG packs clear, so this suite holds generated packs to exactly that bar,
  * reusing the production RPG validator and the shared best/worst-roll exhaustive solver — no
  * weaker, generator-specific check:
@@ -15,7 +14,7 @@
  *      RPG bar (HP/attack/defense present, enemy in a real room with a declared death ending,
  *      the fight WINNABLE on best reachable stats, the skill check PASSABLE). A minted pack is
  *      as clean as a shipped one — and crucially this exercises the COMBAT and SCORE-ECONOMY
- *      validators the CYOA generator never touches, the whole point of widening the mode.
+ *      validators that define the RPG mode.
  *   4. EXHAUSTIVELY SOLVABLE — the shared `exhaustiveEndingsMulti` best/worst-roll bracket (the
  *      ground-truth proof behind bug_0124/0147) reaches EVERY declared ending by concrete play
  *      and no undeclared one, without hitting the state cap. After the bug_0171 two-fight
@@ -26,7 +25,7 @@
  *      HP-gate assumption guard the shipped RPG suites use protects the bracket's completeness.
  *   5. LOAD-BEARING GATES — the only path to victory runs through BOTH fights (each room's east
  *      exit gated on that enemy's defeat flag) and the skill check (down exit gated on the levered
- *      quest stage), the RPG analogue of the CYOA generator's truth-gate proof.
+ *      quest stage).
  *
  * Run across a spread of seeds so the proof covers the whole emitted distribution, not one
  * lucky pack. If a future change emits an unsolvable/unclean/unwinnable pack, the seed fails here.
@@ -90,6 +89,10 @@ function readsHpInCondition(node: unknown): boolean {
 }
 
 describe("the procedural RPG generator emits packs that clear the shipped RPG bar", () => {
+  it("rejects unsafe integer seeds before generation", () => {
+    expect(() => generateRpgPack(Number.MAX_SAFE_INTEGER + 1)).toThrow(/safe range/);
+  });
+
   it("is deterministic: the same seed yields a byte-identical pack", () => {
     for (const seed of [0, 3, 7, 19]) {
       expect(generateRpgPack(seed)).toEqual(generateRpgPack(seed));
@@ -179,8 +182,8 @@ describe("the procedural RPG generator emits packs that clear the shipped RPG ba
   });
 
   it("the path to victory is gated on BOTH fights and the skill check", () => {
-    // Prove every gate is load-bearing, not decorative (the RPG analogue of the CYOA generator's
-    // truth-gate proof): the gallery's east exit requires the SENTINEL's defeat flag, the span's
+    // Prove every gate is load-bearing, not decorative: the gallery's east exit requires
+    // the SENTINEL's defeat flag, the span's
     // east exit requires the GUARDIAN's defeat flag, and the hearth's down exit requires the
     // levered quest stage — so victory cannot be reached without winning BOTH fights AND passing
     // the lever check. (The exhaustive solver above proves the dynamic counterpart: no win without

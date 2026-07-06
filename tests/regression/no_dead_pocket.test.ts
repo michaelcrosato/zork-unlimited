@@ -4,8 +4,8 @@
  * SOFT-LOCK POCKET — a place normal play can wander into and never finish from.
  *
  * Why this is a real gap the existing net does NOT cover:
- *   - The every-ending-reachable proofs (cyoa/parser/rpg_all_endings_reachable, bug_0121/
- *     0122/0124) certify `declared endings ⊆ reachable-FROM-START`. That is a statement about
+ *   - The every-ending-reachable proofs certify `declared endings ⊆ reachable-FROM-START`.
+ *     That is a statement about
  *     the START state only. It says NOTHING about interior states: a pack can have every
  *     declared ending reachable by some route AND still contain a reachable pocket — a region
  *     you enter by a legal progress move and from which no ending is reachable at all. The
@@ -35,11 +35,11 @@
  *     reach of every ending. It deliberately does NOT claim DROP/CLOSE cannot self-strand — no
  *     shipped route gates on a drop (the helper's MONOTONE-RESTRICTION note), and a player who
  *     drops a needed key in a sealed room is self-inflicting, out of this invariant's scope.
- *   - PASS is sound: within the deterministic CYOA/parser modes the BFS is exact; for RPG the
- *     best/worst-roll bracket (`exhaustiveEndingsMulti`) reaches every routing-relevant outcome
- *     (monotone in the roll), so a state LIVE under the bracketed edges is LIVE under some real
- *     play, and a state dead under BOTH extremes is genuinely dead — guarded, as in the RPG
- *     ending proof, by asserting no condition gates on a raw HP value.
+ *   - PASS is sound: RPG uses best/worst-roll brackets (`exhaustiveEndingsMulti`) so
+ *     skill-check/combat outcomes that
+ *     are monotone in the roll are represented in the graph. A state LIVE under the bracketed
+ *     edges is LIVE under some real play, and a state dead under BOTH extremes is genuinely
+ *     dead — guarded, for RPG, by asserting no condition gates on a raw HP value.
  *   - A cap-out makes the graph partial and the result unproven → the test FAILS (never a
  *     silent pass), matching the ending suites.
  *
@@ -50,20 +50,12 @@
 import { describe, it, expect } from "vitest";
 import { readdirSync } from "node:fs";
 import { join } from "node:path";
-import type { Rules } from "../../src/core/engine.js";
+import type { EngineAction, Rules } from "../../src/core/engine.js";
 import type { GameState } from "../../src/core/state.js";
 import type { Rng } from "../../src/core/rng.js";
 import { stateKey, exhaustiveEndingsMulti } from "./support/exhaustive_endings.js";
 
-// CYOA wiring
-import { loadPackFile, compilePack } from "../../src/cyoa/pack.js";
-import { indexPack, buildRules, initStateForPack } from "../../src/cyoa/runner.js";
-// Parser wiring
-import { loadParserPackFile, compileParserPack } from "../../src/parser/pack.js";
-import { indexParserPack, initStateForParserPack } from "../../src/parser/model.js";
-import { buildParserRules } from "../../src/parser/runner.js";
-// RPG wiring
-import { loadRpgPackFile } from "../../src/rpg/pack.js";
+import { loadRpgSourceFile, compileRpgSource } from "../../src/rpg/source.js";
 import { indexRpgPack, buildRpgRules, initStateForRpgPack } from "../../src/rpg/runner.js";
 import { HP_VAR } from "../../src/rpg/schema.js";
 
@@ -92,7 +84,10 @@ type LivenessResult = {
  * cannot reach any terminal (the soft-lock pockets). Mode-agnostic: the caller supplies the
  * compiled rules + initial state, exactly as the ending suites do.
  */
-function analyzeLiveness(ruleSets: Rules[], start: GameState): LivenessResult {
+function analyzeLiveness<A extends EngineAction>(
+  ruleSets: Rules<A>[],
+  start: GameState,
+): LivenessResult {
   // Intern fingerprints to integer ids so the ~80k-state graphs stay light (number[] reverse
   // adjacency instead of arrays of long strings).
   const id = new Map<string, number>();
@@ -210,61 +205,22 @@ function readsHpInCondition(node: unknown): boolean {
   return false;
 }
 
-// ── Positive coverage: every shipped pack, all three modes ──────────────────────────────────
+// ── Positive coverage: every shipped RPG pack ───────────────────────────────────────────────
 describe("bug_0150 — every progress-reachable state of every shipped pack is LIVE", () => {
-  const cyoaPacks = readdirSync("content/cyoa/pack")
-    .filter((f) => f.endsWith(".yaml"))
-    .sort();
-  const parserPacks = readdirSync("content/parser/pack")
-    .filter((f) => f.endsWith(".yaml"))
-    .sort();
-  const rpgPacks = readdirSync("content/rpg/pack")
+  const rpgPacks = readdirSync("content/rpg/quests")
     .filter((f) => f.endsWith(".yaml"))
     .sort();
 
   it("discovers the shipped packs", () => {
     // Guard: an empty glob would make every per-pack assertion vacuously pass.
-    expect(cyoaPacks.length).toBeGreaterThanOrEqual(2);
-    expect(parserPacks.length).toBeGreaterThanOrEqual(2);
     expect(rpgPacks.length).toBeGreaterThanOrEqual(2);
   });
-
-  for (const file of cyoaPacks) {
-    it(
-      `CYOA ${file}: no soft-lock pocket`,
-      () => {
-        const loaded = loadPackFile(join("content/cyoa/pack", file));
-        expect(loaded.ok).toBe(true);
-        if (!loaded.ok) return;
-        const index = indexPack(loaded.compiled.pack);
-        expectAllLive(file, analyzeLiveness([buildRules(index)], initStateForPack(index, 7)));
-      },
-      TEST_TIMEOUT_MS,
-    );
-  }
-
-  for (const file of parserPacks) {
-    it(
-      `PARSER ${file}: no soft-lock pocket`,
-      () => {
-        const loaded = loadParserPackFile(join("content/parser/pack", file));
-        expect(loaded.ok).toBe(true);
-        if (!loaded.ok) return;
-        const index = indexParserPack(loaded.compiled.pack);
-        expectAllLive(
-          file,
-          analyzeLiveness([buildParserRules(index)], initStateForParserPack(index, 7)),
-        );
-      },
-      TEST_TIMEOUT_MS,
-    );
-  }
 
   for (const file of rpgPacks) {
     it(
       `RPG ${file}: no soft-lock pocket`,
       () => {
-        const loaded = loadRpgPackFile(join("content/rpg/pack", file));
+        const loaded = loadRpgSourceFile(join("content/rpg/quests", file));
         expect(loaded.ok).toBe(true);
         if (!loaded.ok) return;
         const pack = loaded.compiled.pack;
@@ -291,53 +247,10 @@ describe("bug_0150 — every progress-reachable state of every shipped pack is L
 
 // ── Negative + positive controls: the detector BITES, and is not trigger-happy ──────────────
 // The liveness analysis is fully mode-agnostic (it operates on rules + state), so a control in
-// any one mode proves the algorithm itself; we exercise both deterministic modes for good
-// measure. Each pair shares a structure that differs ONLY in whether the trap region has a
-// progress-action route onward.
+// any one mode proves the algorithm itself. The pair shares a structure that differs ONLY in
+// whether the trap region has a progress-action route onward.
 describe("bug_0150 — the soft-lock-pocket detector bites (and only when it should)", () => {
-  const cyoaPack = (trapEscapes: boolean): string => `
-meta: { id: t, title: T, start: s, flags_init: [], vars_init: {} }
-scenes:
-  - id: s
-    title: S
-    text: "Branch."
-    choices:
-      - { id: g, text: win, next: e_good }
-      - { id: t, text: trap, next: trap }
-  - id: trap
-    title: TRAP
-    text: "A pit."
-    choices:
-${
-  trapEscapes
-    ? "      - { id: out, text: climb out, next: e_good }"
-    : "      - { id: stay, text: stay, next: trap }"
-}
-endings:
-  - { id: e_good, title: EG, text: "You win." }
-`;
-
-  function cyoaLiveness(src: string): LivenessResult {
-    const r = compilePack(src);
-    expect(r.ok).toBe(true);
-    if (!r.ok) throw new Error("control pack must compile");
-    const index = indexPack(r.compiled.pack);
-    return analyzeLiveness([buildRules(index)], initStateForPack(index, 7));
-  }
-
-  it("CYOA: a self-looping trap scene with no exit is flagged a soft-lock pocket", () => {
-    const r = cyoaLiveness(cyoaPack(false));
-    expect(r.cappedOut).toBe(false);
-    expect(r.deadCount).toBeGreaterThan(0);
-  });
-
-  it("CYOA: the SAME trap with an exit to an ending is fully live (no false positive)", () => {
-    const r = cyoaLiveness(cyoaPack(true));
-    expect(r.cappedOut).toBe(false);
-    expect(r.deadCount).toBe(0);
-  });
-
-  const parserPack = (trapEscapes: boolean): string => `
+  const rpgPack = (trapEscapes: boolean): string => `
 meta: { id: t, title: T, start_room: s }
 rooms:
   - id: s
@@ -356,24 +269,28 @@ win_conditions:
   - { id: w, conditions: [{ visited: good }], ending: e_good }
 endings:
   - { id: e_good, title: EG, text: "You win." }
+enemies: []
 `;
 
-  function parserLiveness(src: string): LivenessResult {
-    const r = compileParserPack(src);
+  function rpgLiveness(src: string): LivenessResult {
+    const r = compileRpgSource(src);
     expect(r.ok).toBe(true);
     if (!r.ok) throw new Error("control pack must compile");
-    const index = indexParserPack(r.compiled.pack);
-    return analyzeLiveness([buildParserRules(index)], initStateForParserPack(index, 7));
+    const index = indexRpgPack(r.compiled.pack);
+    return analyzeLiveness(
+      [buildRpgRules(index, bestRng), buildRpgRules(index, worstRng)],
+      initStateForRpgPack(index, 7),
+    );
   }
 
-  it("PARSER: an exit-less trap room is flagged a soft-lock pocket", () => {
-    const r = parserLiveness(parserPack(false));
+  it("RPG: an exit-less trap room is flagged a soft-lock pocket", () => {
+    const r = rpgLiveness(rpgPack(false));
     expect(r.cappedOut).toBe(false);
     expect(r.deadCount).toBeGreaterThan(0);
   });
 
-  it("PARSER: the SAME trap room with a way back is fully live (no false positive)", () => {
-    const r = parserLiveness(parserPack(true));
+  it("RPG: the SAME trap room with a way back is fully live (no false positive)", () => {
+    const r = rpgLiveness(rpgPack(true));
     expect(r.cappedOut).toBe(false);
     expect(r.deadCount).toBe(0);
   });

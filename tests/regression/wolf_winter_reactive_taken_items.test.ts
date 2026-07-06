@@ -3,7 +3,7 @@
  * kept placing taken preparation items at their starting positions.
  */
 import { describe, it, expect } from "vitest";
-import { loadRpgPackFile } from "../../src/rpg/pack.js";
+import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import {
   indexRpgPack,
   buildRpgRules,
@@ -11,12 +11,12 @@ import {
   enumerateRpgActions,
 } from "../../src/rpg/runner.js";
 import { buildRpgObservation } from "../../src/rpg/observation.js";
-import { resolveParserAction } from "../../src/parser/legal_actions.js";
+import { resolveRpgAction } from "../../src/rpg/legal_actions.js";
 import { makeStep } from "../../src/core/engine.js";
 import type { GameEvent } from "../../src/core/events.js";
 import type { GameState } from "../../src/core/state.js";
 
-const loaded = loadRpgPackFile("content/rpg/pack/wolf_winter.yaml");
+const loaded = loadRpgSourceFile("content/rpg/quests/wolf_winter.yaml");
 if (!loaded.ok) throw new Error("wolf_winter must compile");
 const index = indexRpgPack(loaded.compiled.pack);
 const step = makeStep(buildRpgRules(index));
@@ -53,7 +53,7 @@ function narrations(events: GameEvent[]): string {
 }
 
 function lookNarration(s: GameState): string {
-  const res = resolveParserAction(index, s, { type: "LOOK" });
+  const res = resolveRpgAction(index, s, { type: "LOOK" });
   const effect = res?.effects[0];
   if (!effect || !("narrate" in effect)) throw new Error("LOOK produced no narration");
   return effect.narrate;

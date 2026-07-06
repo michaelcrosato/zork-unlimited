@@ -1,51 +1,89 @@
 #!/usr/bin/env -S npx tsx
 /**
- * bin/inspect — summarize a content pack or a trace (spec §5).
+ * bin/inspect — summarize an RPG world quest or RPG trace (spec §5).
  *
  * Usage:
- *   npm run inspect -- <pack.yaml>     # stats, reachability, validator findings
- *   npm run inspect -- <trace.json> --pack <pack.yaml>   # replay summary + suspected bugs
+ *   npm run inspect -- <world_quest_id>    # stats, validator findings
+ *   npm run inspect -- <trace.json>        # infer shipped/generated trace source
+ *   npm run inspect -- <trace.json> <world_quest_id>
  *
- * Auto-detects: a `.json` argument (or one carrying `trace_id`) is treated as a
- * trace; otherwise it is a content pack. Read-only; never writes files (§16).
+ * Auto-detects: a `.json` argument is treated as a trace; otherwise positional
+ * targets are Charter Marches world quest ids. Read-only; never writes files (§16).
  */
 import { readFileSync } from "node:fs";
-import { parse as parseYaml } from "yaml";
-import { loadPackFile } from "../src/cyoa/pack.js";
-import { indexPack, buildRules, initStateForPack } from "../src/cyoa/runner.js";
-import { buildObservation } from "../src/cyoa/observation.js";
-import { validateCyoa } from "../src/validate/cyoa_validator.js";
-import { loadParserPackFile } from "../src/parser/pack.js";
-import { validateParser } from "../src/validate/parser_validator.js";
-import { loadRpgPackFile } from "../src/rpg/pack.js";
-import { validateRpg } from "../src/validate/rpg_validator.js";
+import { indexRpgPack, buildRpgRules } from "../src/rpg/runner.js";
 import { makeStep } from "../src/core/engine.js";
 import { diagnose } from "../agents/debugger.js";
-import { replayTrace } from "../src/trace/replay.js";
-import type { Trace } from "../src/trace/record.js";
+import { assertTraceMode, replayTrace } from "../src/trace/replay.js";
+import { traceSourceLabel, type Trace } from "../src/trace/record.js";
 import { formatReport } from "../src/validate/report.js";
+import type { RpgAction } from "../src/api/types.js";
+import { assertWellFormedState } from "../src/persist/save_load.js";
+import { assertRpgStateReferences } from "../src/rpg/state_integrity.js";
+import { RpgSourceRuntime, type RpgLoadResult } from "../src/mcp/rpg_source_runtime.js";
+import type { TraceSourceArgs } from "../src/world/source.js";
 
 function arg(name: string): string | undefined {
   const i = process.argv.indexOf(name);
   return i >= 0 ? process.argv[i + 1] : undefined;
 }
 
-function inspectTrace(tracePath: string, packPath: string): void {
-  const trace = JSON.parse(readFileSync(tracePath, "utf8")) as Trace;
-  const loaded = loadPackFile(packPath);
-  if (!loaded.ok) {
-    console.error(`Pack ${packPath} failed to compile (inspect-trace expects a CYOA pack).`);
-    process.exit(1);
+function positionalSourceArg(): string | undefined {
+  for (let i = 3; i < process.argv.length; i += 1) {
+    const value = process.argv[i]!;
+    if (value === "--world-quest-id" || value === "--world_quest_id") {
+      i += 1;
+      continue;
+    }
+    if (value === "--" || value.startsWith("--")) continue;
+    return value;
   }
-  const rules = buildRules(indexPack(loaded.compiled.pack));
-  console.log(
-    `Trace: ${trace.trace_id}  pack: ${trace.pack_id}  seed: ${trace.seed}  steps: ${trace.actions.length}`,
-  );
-  if (trace.content_hash !== loaded.compiled.contentHash) {
-    console.log(
-      `  ! content hash mismatch: trace ${trace.content_hash} ≠ pack ${loaded.compiled.contentHash}`,
+  return undefined;
+}
+
+function looksLikeRawPackSelector(value: string): boolean {
+  return /\.ya?ml$/i.test(value) || value.includes("/") || value.includes("\\");
+}
+
+function traceSourceArgs(): TraceSourceArgs {
+  if (arg("--pack") !== undefined || process.argv.includes("--pack")) {
+    throw new Error("inspect accepts world_quest_id or embedded trace source_ref, not --pack.");
+  }
+  const worldQuestId = arg("--world-quest-id") ?? arg("--world_quest_id");
+  const positional = positionalSourceArg();
+  const count = [worldQuestId !== undefined, positional !== undefined].filter(Boolean).length;
+  if (count > 1) {
+    throw new Error(
+      "inspect accepts exactly one trace source: --world-quest-id or a positional world quest id.",
     );
   }
+  if (worldQuestId !== undefined) return { world_quest_id: worldQuestId };
+  if (positional === undefined) return {};
+  if (looksLikeRawPackSelector(positional)) {
+    throw new Error("inspect trace sources are world quest ids; raw pack paths are not accepted.");
+  }
+  return { world_quest_id: positional };
+}
+
+function inspectTrace(tracePath: string, sourceArgs: TraceSourceArgs): void {
+  const trace = JSON.parse(readFileSync(tracePath, "utf8")) as Trace<RpgAction>;
+  assertTraceMode(trace);
+  const root = process.cwd();
+  const rpgSources = new RpgSourceRuntime(root);
+  const { compiled } = rpgSources.resolveTraceSource(sourceArgs, trace, "inspect");
+  console.log(
+    `Trace: ${trace.trace_id}  source: ${traceSourceLabel(trace)}  seed: ${trace.seed}  steps: ${trace.actions.length}`,
+  );
+  if (trace.content_hash !== compiled.contentHash) {
+    console.log(
+      `  ! content hash mismatch: trace ${trace.content_hash} != source ${compiled.contentHash}`,
+    );
+    process.exit(1);
+  }
+  assertWellFormedState(trace.initial_state);
+  const index = indexRpgPack(compiled.pack);
+  assertRpgStateReferences(index, trace.initial_state);
+  const rules = buildRpgRules(index);
   const step = makeStep(rules);
   let state = trace.initial_state;
   trace.actions.forEach((action, i) => {
@@ -62,104 +100,48 @@ function inspectTrace(tracePath: string, packPath: string): void {
   console.log(`Suspected bug: ${d.type} (${d.severity}) — ${d.description}`);
 }
 
-function inspectCyoaPack(path: string): void {
-  const result = loadPackFile(path);
-  if (!result.ok) {
-    console.error(`Schema error in ${path}.`);
-    process.exit(1);
-  }
-  const { pack, contentHash } = result.compiled;
-  const index = indexPack(pack);
-  // Structural coverage: BFS over choice.next from start.
-  const reachable = new Set<string>([pack.meta.start]);
-  const queue = [pack.meta.start];
-  while (queue.length) {
-    const id = queue.shift()!;
-    for (const c of index.scenes.get(id)?.choices ?? []) {
-      // A plain choice routes via `next`; a skill-checked one via the goto/end_game in its
-      // on_success / on_failure branches. Collect either as the choice's transition targets.
-      const targets: string[] = c.next !== undefined ? [c.next] : [];
-      for (const e of c.skill_check
-        ? [...c.skill_check.on_success, ...c.skill_check.on_failure]
-        : [])
-        if ("goto" in e) targets.push(e.goto);
-        else if ("end_game" in e) targets.push(e.end_game);
-      for (const t of targets) {
-        if (!reachable.has(t)) {
-          reachable.add(t);
-          queue.push(t);
-        }
-      }
-    }
-  }
-  const sceneIds = pack.scenes.map((s) => s.id);
-  const unreachable = sceneIds.filter((s) => !reachable.has(s));
-  const obs = buildObservation(index, initStateForPack(index, 1));
-  console.log(`Pack: ${pack.meta.id} "${pack.meta.title}"  mode: cyoa  hash: ${contentHash}`);
-  console.log(
-    `  scenes: ${pack.scenes.length}  endings: ${pack.endings.length}  start: ${pack.meta.start}`,
-  );
-  console.log(
-    `  ending scenes: ${index.endingSceneIds.size}  reachable scenes: ${reachable.size - index.endingIds.size}/${sceneIds.length}`,
-  );
-  if (unreachable.length) console.log(`  unreachable (by static next): ${unreachable.join(", ")}`);
-  console.log(`  opening actions: ${obs.available_actions.map((a) => a.id).join(", ")}`);
-  console.log("\n" + formatReport(validateCyoa(pack)));
-}
-
-function inspectParserPack(path: string): void {
-  const result = loadParserPackFile(path);
-  if (!result.ok) {
-    console.error(`Schema error in ${path}.`);
-    process.exit(1);
-  }
-  const { pack, contentHash } = result.compiled;
-  console.log(`Pack: ${pack.meta.id} "${pack.meta.title}"  mode: parser  hash: ${contentHash}`);
-  console.log(
-    `  rooms: ${pack.rooms.length}  objects: ${pack.objects.length}  npcs: ${pack.npcs.length}  win_conditions: ${pack.win_conditions.length}`,
-  );
-  console.log(`  start_room: ${pack.meta.start_room}  max_score: ${pack.meta.max_score}`);
-  const containers = pack.objects.filter((o) => o.container).length;
-  const lockedExits = pack.rooms
-    .flatMap((r) => r.exits)
-    .filter((e) => e.conditions.length > 0).length;
-  console.log(
-    `  containers: ${containers}  quest_critical: ${pack.objects.filter((o) => o.quest_critical).length}  locked exits: ${lockedExits}`,
-  );
-  console.log("\n" + formatReport(validateParser(pack)));
-}
-
 function main(): void {
-  const path = process.argv[2];
-  if (!path || path.startsWith("--")) {
-    console.error("Usage: npm run inspect -- <pack.yaml> | <trace.json> --pack <pack.yaml>");
+  const target = process.argv[2];
+  if (!target) {
+    console.error("Usage: npm run inspect -- <world_quest_id> | <trace.json> [world_quest_id]");
     process.exit(2);
   }
-  const raw = parseYaml(readFileSync(path, "utf8")) as Record<string, unknown> | null;
-  const isTrace = !!raw && typeof raw === "object" && "trace_id" in raw;
-  if (isTrace) {
-    const pack = arg("--pack");
-    if (!pack) {
-      console.error("Inspecting a trace needs --pack <pack.yaml>.");
-      process.exit(2);
+  if (target === "--pack") {
+    console.error("inspect accepts world quest ids or RPG trace files, not --pack.");
+    process.exit(2);
+  }
+  if (target.startsWith("--")) {
+    console.error("Usage: npm run inspect -- <world_quest_id> | <trace.json> [world_quest_id]");
+    process.exit(2);
+  }
+  if (/\.json$/i.test(target)) {
+    const raw = JSON.parse(readFileSync(target, "utf8")) as Record<string, unknown> | null;
+    const isTrace = !!raw && typeof raw === "object" && "trace_id" in raw;
+    if (!isTrace) {
+      console.error("Inspect JSON inputs must be RPG trace files.");
+      process.exit(1);
     }
-    inspectTrace(path, pack);
+    inspectTrace(target, traceSourceArgs());
     return;
   }
-  const isObj = !!raw && typeof raw === "object";
-  if (isObj && "enemies" in raw) inspectRpgPack(path);
-  else if (isObj && "rooms" in raw) inspectParserPack(path);
-  else inspectCyoaPack(path);
+  if (looksLikeRawPackSelector(target)) {
+    console.error(
+      `inspect targets are world quest ids; raw pack paths are not accepted: ${target}`,
+    );
+    process.exit(2);
+  }
+  const source = new RpgSourceRuntime(process.cwd()).loadWorldQuestReport(target);
+  inspectRpgPack(source.result, source.node.id);
 }
 
-function inspectRpgPack(path: string): void {
-  const result = loadRpgPackFile(path);
+function inspectRpgPack(result: RpgLoadResult, worldQuestId: string): void {
   if (!result.ok) {
-    console.error(`Schema error in ${path}.`);
+    console.error(`Schema error in world quest ${worldQuestId}.`);
     process.exit(1);
   }
   const { pack, contentHash } = result.compiled;
-  console.log(`Pack: ${pack.meta.id} "${pack.meta.title}"  mode: rpg  hash: ${contentHash}`);
+  console.log(`World quest: ${worldQuestId}`);
+  console.log(`Title: "${pack.meta.title}"  hash: ${contentHash}`);
   console.log(
     `  rooms: ${pack.rooms.length}  objects: ${pack.objects.length}  enemies: ${pack.enemies.length}  win_conditions: ${pack.win_conditions.length}`,
   );
@@ -172,7 +154,7 @@ function inspectRpgPack(path: string): void {
   console.log(
     `  enemies: ${pack.enemies.map((e) => `${e.id}(hp${e.hp})`).join(", ") || "none"}  skill checks: ${skillChecks}`,
   );
-  console.log("\n" + formatReport(validateRpg(pack)));
+  console.log("\n" + formatReport(result.report, { includeSourceId: false }));
 }
 
 main();

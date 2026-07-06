@@ -2,7 +2,7 @@ id: bug_0225
 title: "Breaking-Weir blind-pass: the storm-walk north-exit locked_msg named no precondition — a player who left the life-line behind stood on the awash walk with ominous prose, a blocked north, and no signpost to what was missing. Reworded to name the precondition (the line clipped to the run-wire), the lamplighters harbour_head house style."
 kind: content_fix
 mode: rpg
-pack: content/rpg/pack/breaking_weir.yaml
+pack: content/rpg/quests/breaking_weir.yaml
 # Informational. The edit changes ONE locked_msg STRING on the weir_walk → race_house exit.
 # It touches no action, gate, flag, score, ending, or the discovered pack set, and the
 # heuristic benchmark bot never reads locked_msg text (a blocked exit is simply not a legal
@@ -60,6 +60,6 @@ regression_test: tests/regression/breaking_weir_blind_polish.test.ts
 # still green.
 
 verify:
-  - "validate_story content/rpg/pack/breaking_weir.yaml → ok, max_score 50, 0 findings"
+  - "validate_story content/rpg/quests/breaking_weir.yaml → ok, max_score 50, 0 findings"
   - "npx vitest run tests/regression/breaking_weir_blind_polish.test.ts → all passed"
   - "npm run health → green (verify:integrity + typecheck + lint + format + tests + validate + playtest)"

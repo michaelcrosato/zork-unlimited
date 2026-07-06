@@ -32,7 +32,7 @@ failure:
     the one tool that fits.
 fix:
   layer: content   # reactive-prose signpost only; honours the existing gating + score economy
-  pack: content/rpg/pack/cold_forge.yaml
+  pack: content/rpg/quests/cold_forge.yaml
   summary: >
     A reactive Forge Heart room `variant` now carries the cue the static locked_msg
     cannot: when the pry-bar is NOT in hand and the grate is not yet open, the room reads

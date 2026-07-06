@@ -1,6 +1,6 @@
 id: bug_0455_factors_mark_confrontation_retry
 title: "Factor's Mark social confrontation survives a failed roll"
-pack: content/rpg/pack/factors_mark.yaml
+pack: content/rpg/quests/factors_mark.yaml
 reported_by: blind-playtest
 report: blind-tester/reports/20260622T184929Z_factors_mark_seed7.md
 severity: S3
@@ -21,5 +21,5 @@ tests:
   - tests/regression/factors_mark_confrontation_retry.test.ts
 verification:
   - npm test -- --run tests/regression/factors_mark_confrontation_retry.test.ts tests/regression/factors_mark_breckel_retires.test.ts
-  - npm run validate -- content/rpg/pack/factors_mark.yaml
+  - npm run validate -- content/rpg/quests/factors_mark.yaml
   - npm run health

@@ -2,7 +2,7 @@ id: bug_0187
 title: "The Dawn Beacon — the project's 12th pack, 3rd RPG, and FIRST curated combat_guaranteed FAIR GAUNTLET (breadth lever)"
 kind: content_new
 mode: rpg
-pack: content/rpg/pack/dawn_beacon.yaml
+pack: content/rpg/quests/dawn_beacon.yaml
 content_hash: f5a8b65e520b59527d1c9944aae0b91d13aa1d700ea46acdd0a88056ee6164ea
 # Informational. No test pins this pack's content_hash (only watchtower_road pins a content_hash
 # in test files), so nothing was forced; recorded for accuracy.
@@ -35,7 +35,7 @@ mandated_blind_playtest:
     discipline the cycle spent the signal on the named breadth lever, not on churning a clean pack.
 
 new_pack:
-  pack: content/rpg/pack/dawn_beacon.yaml
+  pack: content/rpg/quests/dawn_beacon.yaml
   proven: >
     Auto-discovered by every structural suite the moment it shipped: rpg_all_endings_reachable reaches
     BOTH declared endings by concrete best/worst-roll play (ending_lit via the prepared route, ending_fallen
@@ -79,7 +79,7 @@ within_the_bar: >
   Additive content only — no engine/validator/schema change, and a NEW pack pins no production hash, so NO
   hash pin moved. validate_story 0/0 (zero errors AND zero warnings; combat_guaranteed audited GREEN — both
   guarantee codes absent). Wired into the bar per [[verification-bar-covers-all-packs]]: added a
-  `validate -- content/rpg/pack/dawn_beacon.yaml` step to the `health` npm script, and extended the
+  `validate -- content/rpg/quests/dawn_beacon.yaml` step to the `health` npm script, and extended the
   all_packs_validated_by_bar discovery list (eleven -> twelve, "eleven" -> "twelve"). list_stories and the UI
   catalog auto-discover it (the UI globs content/**/pack/*.yaml). The benchmark curated split (discovered
   from content/*/pack) gains one low-scoring RPG puzzle row, which benchmark_headline_no_regression confirms

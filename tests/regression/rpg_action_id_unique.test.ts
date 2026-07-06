@@ -39,13 +39,8 @@
  *     is the orthogonal property: two DISTINCT, individually-resolvable options can still
  *     collide on their id string.
  *
- * Note the CYOA mode needs no dynamic analogue: a CYOA observation's action ids ARE the
- * scene's declared choice ids (`available_actions = scene.choices.filter(cond).map(c => c.id)`,
- * src/cyoa/observation.ts), and the CYOA validator already dup-checks choice ids WITHIN each
- * scene (cyoa_validator.ts DUPLICATE_ID). The runtime menu is a condition-filtered SUBSET of
- * those statically-unique ids, so it is unique by construction — menu-integrity holds for
- * CYOA statically. PARSER (bug_0151) and RPG (here) are the modes whose enumerators MINT ids
- * the static checks cannot see, so they are the two that need a runtime proof.
+ * Parser (bug_0151) and RPG (here) are the modes whose enumerators mint ids the static
+ * checks cannot see, so they are the two that need a runtime proof.
  *
  * ── How it is proven (sound + exhaustive) ───────────────────────────────────────────
  * For each auto-discovered RPG pack it runs the shared exhaustive concrete BFS
@@ -74,7 +69,7 @@
 import { describe, it, expect } from "vitest";
 import { readdirSync } from "node:fs";
 import { join } from "node:path";
-import { compileRpgPack, loadRpgPackFile } from "../../src/rpg/pack.js";
+import { compileRpgSource, loadRpgSourceFile } from "../../src/rpg/source.js";
 import {
   indexRpgPack,
   buildRpgRules,
@@ -88,7 +83,7 @@ import type { Rng } from "../../src/core/rng.js";
 import type { Action } from "../../src/api/types.js";
 import { exhaustiveEndingsMulti } from "./support/exhaustive_endings.js";
 
-const PACK_DIR = "content/rpg/pack";
+const PACK_DIR = "content/rpg/quests";
 const packFiles = readdirSync(PACK_DIR)
   .filter((f) => f.endsWith(".yaml"))
   .sort();
@@ -225,7 +220,7 @@ describe("bug_0152 — every reachable action menu of every RPG pack has unique 
 
   for (const file of packFiles) {
     it(`${file}: no reachable state ever offers two actions with the same id`, () => {
-      const loaded = loadRpgPackFile(join(PACK_DIR, file));
+      const loaded = loadRpgSourceFile(join(PACK_DIR, file));
       expect(loaded.ok).toBe(true);
       if (!loaded.ok) return;
       const pack = loaded.compiled.pack;
@@ -280,7 +275,7 @@ rooms:
 win_conditions: [{ id: w, conditions: [{ visited: b }], ending: e }]
 endings: [{ id: e, title: E, text: "done" }]
 `;
-    const r = compileRpgPack(src);
+    const r = compileRpgSource(src);
     expect(r.ok).toBe(true);
     if (!r.ok) return;
     const { collisions, statesChecked } = analyze(indexRpgPack(r.compiled.pack));
@@ -314,7 +309,7 @@ endings:
   - { id: e, title: E, text: "win" }
   - { id: dead, title: D, text: "the guards kill you" }
 `;
-    const r = compileRpgPack(src);
+    const r = compileRpgSource(src);
     expect(r.ok).toBe(true);
     if (!r.ok) return;
     const { collisions, statesChecked } = analyze(indexRpgPack(r.compiled.pack));
@@ -351,7 +346,7 @@ endings:
   - { id: e, title: E, text: "win" }
   - { id: dead, title: D, text: "the guards kill you" }
 `;
-    const r = compileRpgPack(src);
+    const r = compileRpgSource(src);
     expect(r.ok).toBe(true);
     if (!r.ok) return;
     const { collisions } = analyze(indexRpgPack(r.compiled.pack));

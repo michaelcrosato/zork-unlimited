@@ -32,14 +32,14 @@
  */
 import { describe, it, expect } from "vitest";
 import { makeStep } from "../../src/core/engine.js";
-import type { Action } from "../../src/api/types.js";
+import type { RpgAction } from "../../src/api/types.js";
 import type { GameState } from "../../src/core/state.js";
 import type { Rng } from "../../src/core/rng.js";
-import { loadRpgPackFile } from "../../src/rpg/pack.js";
+import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import { indexRpgPack, buildRpgRules, initStateForRpgPack } from "../../src/rpg/runner.js";
 import { HP_VAR } from "../../src/rpg/schema.js";
 
-const PACK_PATH = "content/rpg/pack/wolf_winter.yaml";
+const PACK_PATH = "content/rpg/quests/wolf_winter.yaml";
 const SEED = 7;
 
 /**
@@ -77,7 +77,7 @@ const worstRng = (): Rng => fixedSeqRng([LOW, HIGH]);
  * The greedy policy terminates: every ATTACK strictly lowers an HP, every MOVE advances.
  */
 function rushNorthUnprepared(rng: () => Rng): GameState {
-  const loaded = loadRpgPackFile(PACK_PATH);
+  const loaded = loadRpgSourceFile(PACK_PATH);
   expect(loaded.ok, "wolf_winter must load").toBe(true);
   if (!loaded.ok) throw new Error("unreachable");
   const index = indexRpgPack(loaded.compiled.pack);
@@ -86,16 +86,19 @@ function rushNorthUnprepared(rng: () => Rng): GameState {
   let state = initStateForRpgPack(index, SEED);
   for (let guard = 0; guard < 200 && !state.ended; guard += 1) {
     const legal = rules.legalActions(state);
-    const attack = legal.find((a): a is Extract<Action, { type: "ATTACK" }> => a.type === "ATTACK");
-    const north = legal.find(
-      (a): a is Extract<Action, { type: "MOVE" }> => a.type === "MOVE" && a.direction === "north",
+    const attack = legal.find(
+      (a): a is Extract<RpgAction, { type: "ATTACK" }> => a.type === "ATTACK",
     );
-    const action = attack ?? north;
+    const north = legal.find(
+      (a): a is Extract<RpgAction, { type: "MOVE" }> =>
+        a.type === "MOVE" && a.direction === "north",
+    );
+    const RpgAction = attack ?? north;
     expect(
-      action,
+      RpgAction,
       `rush got stuck with no fight and no way north: ${JSON.stringify(legal)}`,
     ).toBeTruthy();
-    const res = step(state, action as Action);
+    const res = step(state, RpgAction as RpgAction);
     expect(res.ok, `engine rejected the rush step: ${res.rejectionReason}`).toBe(true);
     state = res.state;
   }
@@ -122,7 +125,7 @@ describe("bug_0195 — The Wolf-Winter: skipping prep is a GAMBLE, not certain d
 
   it("the SAME unprepared rush DIES on the player's WORST rolls (the 'gamble it on the night's luck' half)", () => {
     const state = rushNorthUnprepared(worstRng);
-    const loaded = loadRpgPackFile(PACK_PATH);
+    const loaded = loadRpgSourceFile(PACK_PATH);
     expect(loaded.ok).toBe(true);
     if (!loaded.ok) return;
     const ending = loaded.compiled.pack.endings.find((e) => e.id === state.endingId);

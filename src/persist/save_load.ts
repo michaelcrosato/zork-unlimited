@@ -1,16 +1,26 @@
 /**
  * Save / load (spec §8.7).
  *
- * A save = the full GameState + the content-pack id + its content hash. Loading
- * MUST verify the content hash against the pack it will be played on; a mismatch
- * is a hard error, never a silent re-interpretation (§8.8, §16 "integrity at
- * load"). This prevents replaying a save against edited content and corrupting it.
+ * A save = the full GameState + compact RPG source identity + content hash.
+ * Loading MUST verify the content hash against the content it will be played on;
+ * a mismatch is a hard error, never a silent re-interpretation (§8.8, §16
+ * "integrity at load"). This prevents replaying a save against edited content
+ * and corrupting it.
  */
 import { z } from "zod";
-import type { GameState } from "../core/state.js";
+import { MAX_ENGINE_STEP, cloneGameState, isRuntimeSeed, type GameState } from "../core/state.js";
 import { canonicalize } from "../core/hash.js";
+import { generatedRpgSeedValidationMessage, isGeneratedRpgSeed } from "../gen/seed.js";
+import {
+  compactSourceRefFromMetadata,
+  compactSourceRefLegacyConsistency,
+  compactSourceRefValidationError,
+  type CompactSourceRef,
+} from "../world/source_ref.js";
 
 export const SAVE_VERSION = 1 as const;
+export const SAVE_MODE = "rpg" as const;
+export type SaveMode = typeof SAVE_MODE;
 
 /**
  * Structural + finiteness validator for a loaded GameState (§16 "integrity at
@@ -18,7 +28,7 @@ export const SAVE_VERSION = 1 as const;
  * the load-side complement to the effects-layer `guardFinite` (effects.ts) —
  * which only ever runs on EFFECT APPLICATION during play and so never sees a
  * value injected by a forged save. The contentHash check below guards WHICH
- * pack a save was made against; this guards WHETHER the state is well-formed.
+ * source a save was made against; this guards WHETHER the state is well-formed.
  *
  * The load-bearing gate is `vars: z.record(z.number().finite())`:
  * `JSON.parse('{"...":1e999}')` yields `Infinity`, which — left unguarded —
@@ -26,15 +36,14 @@ export const SAVE_VERSION = 1 as const;
  * always-true (NaN makes every `var_*` always-false). The gate REJECTS such a
  * save (throws `SaveIntegrityError`); it never coerces/clamps.
  *
- * `seed`/`step` are gated to the INTEGER domain `rngForStep` (rng.ts:44)
- * consumes via `seed >>> 0` / `step >>> 0` — a non-integer would silently
- * truncate to a DIFFERENT value than the one the save's content hash
- * (hash.ts `canonicalize`) committed to. This restores entry↔disk symmetry
- * with the MCP entry boundary (server.ts:147), which already gates
- * `seed: z.number().int()`; `step` is a counter from 0 (state.ts:20), so it is
- * additionally `.nonnegative()`. No sign/range bound is placed on `seed` —
- * negative seeds are legitimate (`mulberry32` does `seed >>> 0`, defined for
- * negatives) and the entry boundary accepts them.
+ * `seed`/`step` are gated to the safe INTEGER domain. `rngForStep`
+ * (rng.ts:44) consumes both via `>>> 0`, so non-integers silently truncate to a
+ * DIFFERENT value than the one the save's content hash (hash.ts `canonicalize`)
+ * committed to. `step` is also bounded to the engine's safe increment domain;
+ * an unsafe integer can make `step + 1` stop advancing precisely. `seed` stays
+ * signed — negative seeds are legitimate (`mulberry32` does `seed >>> 0`,
+ * defined for negatives) — but unsafe integers are rejected before persistence
+ * can commit an imprecise identity.
  *
  * `objectState` mirrors `ObjectRuntime` (state.ts:9–15) with `.strict()` so an
  * unknown or wrong-typed key is rejected, not silently carried into the engine.
@@ -54,9 +63,11 @@ const GameStateSchema = z
     // identity / determinism — INTEGER domain only (the values rngForStep
     // consumes via `>>> 0`); rejects non-integers AND Infinity/-Infinity/NaN.
     // Matches the MCP entry gate (server.ts:147) exactly: bare .int() on seed
-    // (negative seeds are legitimate); step is a counter from 0 so .nonnegative().
-    seed: z.number().int(),
-    step: z.number().int().nonnegative(),
+    // (negative seeds are legitimate); step is a bounded monotonic counter.
+    seed: z.number().int().refine(isRuntimeSeed, {
+      message: "GameState seed must be within JavaScript's safe integer range.",
+    }),
+    step: z.number().int().nonnegative().max(MAX_ENGINE_STEP),
     // location
     current: z.string(),
     visited: z.record(z.boolean()),
@@ -78,9 +89,9 @@ const GameStateSchema = z
 /**
  * Assert a (possibly untrusted) GameState is well-formed + FINITE per §16
  * "integrity at load". REUSED at every untrusted-state-from-disk boundary: the
- * save load() guard below AND the trace-load gate in src/mcp/tools.ts
- * (replay_trace/inspect_trace). Same safeParse-without-substitution path as
- * load() — a valid state's bytes/hash stay identical. Throws (never coerces).
+ * save load() guard below and the trace/CLI load gates. Same
+ * safeParse-without-substitution path as load() — a valid state's bytes/hash stay
+ * identical. Throws (never coerces).
  */
 export function assertWellFormedState(state: unknown): GameState {
   const parsed = GameStateSchema.safeParse(state);
@@ -92,38 +103,179 @@ export function assertWellFormedState(state: unknown): GameState {
 
 export type SaveBundle = {
   version: typeof SAVE_VERSION;
-  packId: string;
   contentHash: string;
-  /** Pack mode (cyoa|parser|rpg). Optional for backward-compat with v1 saves
-   *  written before multi-mode; when present, load can refuse a mode mismatch. */
-  mode?: string;
+  /** Pack mode. Required so persisted state is bound to the unified RPG engine. */
+  mode: SaveMode;
+  /** Compact canonical source identity for world quests or generated RPG runs. */
+  source_ref: SaveSourceRef;
   state: GameState;
 };
 
+export type SaveSourceRef = CompactSourceRef;
+
+export type SaveMetadata = {
+  worldQuestId?: string | null;
+  generatedRpgSeed?: number | null;
+};
+
+function assertNonEmptyString(value: unknown, label: string): asserts value is string {
+  if (typeof value !== "string" || value.length === 0) {
+    throw new SaveIntegrityError(
+      `${label} must be a non-empty string, got ${JSON.stringify(value)}.`,
+    );
+  }
+}
+
+function deepFreezeSaveBundle<T>(value: T, seen = new WeakSet<object>()): T {
+  if (value === null || (typeof value !== "object" && typeof value !== "function")) return value;
+  const object = value as object;
+  if (seen.has(object) || Object.isFrozen(object)) return value;
+  seen.add(object);
+  for (const child of Object.values(value as Record<string, unknown>)) {
+    deepFreezeSaveBundle(child, seen);
+  }
+  return Object.freeze(value);
+}
+
+function cloneSaveSourceRef(sourceRef: SaveSourceRef): SaveSourceRef {
+  return [sourceRef[0], sourceRef[1]] as SaveSourceRef;
+}
+
+function immutableLoadedSaveBundle(bundle: SaveBundle): SaveBundle {
+  const sourceRef = cloneSaveSourceRef(bundle.source_ref);
+  const {
+    worldQuestId: _legacyWorldQuestId,
+    generatedRpgSeed: _legacyGeneratedRpgSeed,
+    ...canonicalBundle
+  } = bundle as SaveBundle & {
+    worldQuestId?: unknown;
+    generatedRpgSeed?: unknown;
+  };
+  return deepFreezeSaveBundle({
+    ...canonicalBundle,
+    state: cloneGameState(bundle.state),
+    source_ref: sourceRef,
+  });
+}
+
+const SAVE_SOURCE_LABELS = {
+  source: "Save source",
+  worldQuestId: "Save worldQuestId",
+  generatedRpgSeed: "Save generatedRpgSeed",
+} as const;
+const SAVE_SOURCE_REF_CONSISTENCY_MESSAGES = {
+  sourceConflict: "Save source cannot carry both worldQuestId and generatedRpgSeed.",
+  worldQuestMismatch: (sourceRefWorldQuestId: string, worldQuestId: string) =>
+    `Save source_ref world quest ${JSON.stringify(
+      sourceRefWorldQuestId,
+    )} does not match worldQuestId ${JSON.stringify(worldQuestId)}.`,
+  generatedSeedMismatch: (sourceRefGeneratedSeed: number, generatedRpgSeed: number) =>
+    `Save source_ref generated seed ${JSON.stringify(
+      sourceRefGeneratedSeed,
+    )} does not match generatedRpgSeed ${JSON.stringify(generatedRpgSeed)}.`,
+  sourceRefConflictsWithGeneratedRpgSeed:
+    "Save source_ref world quest conflicts with generatedRpgSeed.",
+  sourceRefConflictsWithWorldQuestId: "Save source_ref generated seed conflicts with worldQuestId.",
+} as const;
+
 /** Serialize a save to canonical bytes (stable across machines/runs). */
-export function save(state: GameState, packId: string, contentHash: string, mode?: string): string {
+export function save(
+  state: GameState,
+  contentHash: string,
+  mode: SaveMode = SAVE_MODE,
+  metadata: SaveMetadata = {},
+): string {
+  assertRpgMode(mode, "Save mode");
+  assertNonEmptyString(contentHash, "Save contentHash");
+  assertWellFormedState(state);
+  const sourceRef = saveSourceRef(metadata);
   const bundle: SaveBundle = {
     version: SAVE_VERSION,
-    packId,
     contentHash,
     state,
-    ...(mode !== undefined ? { mode } : {}),
+    mode,
+    source_ref: sourceRef,
   };
   return canonicalize(bundle);
 }
 
 export class SaveIntegrityError extends Error {}
 
+export function assertSaveContentHash(
+  bundle: Pick<SaveBundle, "contentHash">,
+  expectedContentHash: string,
+): void {
+  if (bundle.contentHash !== expectedContentHash) {
+    throw new SaveIntegrityError(
+      `Content hash mismatch: save was made against ${bundle.contentHash}, ` +
+        `but the loaded source is ${expectedContentHash}.`,
+    );
+  }
+}
+
+function assertRpgMode(mode: unknown, label: string): asserts mode is SaveMode {
+  if (mode !== SAVE_MODE) {
+    throw new SaveIntegrityError(`${label} must be "${SAVE_MODE}", got ${JSON.stringify(mode)}.`);
+  }
+}
+
+function assertOptionalRpgMode(mode: unknown, label: string): asserts mode is SaveMode | undefined {
+  if (mode !== undefined) assertRpgMode(mode, label);
+}
+
+function assertGeneratedRpgSeed(seed: unknown, label: string): asserts seed is number {
+  if (!isGeneratedRpgSeed(seed)) {
+    throw new SaveIntegrityError(generatedRpgSeedValidationMessage(label, seed));
+  }
+}
+
+function saveSourceRef(metadata: SaveMetadata): SaveSourceRef {
+  const sourceRef = compactSourceRefFromMetadata(metadata, SAVE_SOURCE_LABELS);
+  if (!sourceRef.ok) throw new SaveIntegrityError(sourceRef.error);
+  return sourceRef.sourceRef;
+}
+
+function assertSaveSourceRef(raw: unknown): asserts raw is SaveSourceRef {
+  if (raw === undefined) {
+    throw new SaveIntegrityError("Save source_ref is required.");
+  }
+  const error = compactSourceRefValidationError(raw, "Save source_ref");
+  if (error !== undefined) throw new SaveIntegrityError(error);
+}
+
+function assertSaveSourceRefConsistency(bundle: SaveBundle): void {
+  const sourceRef = (bundle as { source_ref?: unknown }).source_ref;
+  assertSaveSourceRef(sourceRef);
+  const legacyMirror = bundle as SaveBundle & {
+    worldQuestId?: string;
+    generatedRpgSeed?: number;
+  };
+  const consistency = compactSourceRefLegacyConsistency(
+    sourceRef,
+    {
+      ...(legacyMirror.worldQuestId !== undefined
+        ? { worldQuestId: legacyMirror.worldQuestId }
+        : {}),
+      ...(legacyMirror.generatedRpgSeed !== undefined
+        ? { generatedRpgSeed: legacyMirror.generatedRpgSeed }
+        : {}),
+    },
+    SAVE_SOURCE_REF_CONSISTENCY_MESSAGES,
+  );
+  if (!consistency.ok) throw new SaveIntegrityError(consistency.error);
+}
+
 /**
  * Deserialize a save. If `expectedContentHash` is given, the save's contentHash
- * must match it exactly (§8.7). If `expectedMode` is given AND the save records a
- * mode, the modes must match too — a save can't be loaded against a different
- * mode. A pre-mode (v1) save carries no mode and skips that check (backward-compat).
+ * must match it exactly (§8.7). Saves must carry the RPG mode; missing or
+ * legacy modes are integrity failures, not migration inputs. Legacy
+ * worldQuestId/generatedRpgSeed mirror fields are accepted only to check old
+ * artifacts against source_ref, and are dropped from the returned bundle.
  */
 export function load(
   bytes: string,
   expectedContentHash?: string,
-  expectedMode?: string,
+  expectedMode?: SaveMode,
 ): SaveBundle {
   let parsed: unknown;
   try {
@@ -135,26 +287,47 @@ export function load(
   if (bundle.version !== SAVE_VERSION) {
     throw new SaveIntegrityError(`Unsupported save version: ${String(bundle.version)}`);
   }
-  if (expectedContentHash !== undefined && bundle.contentHash !== expectedContentHash) {
+  if ("packId" in (bundle as Record<string, unknown>)) {
+    throw new SaveIntegrityError("Save packId is retired; use source_ref plus contentHash.");
+  }
+  assertRpgMode((bundle as { mode?: unknown }).mode, "Save mode");
+  assertOptionalRpgMode(expectedMode, "Expected mode");
+  assertNonEmptyString((bundle as { contentHash?: unknown }).contentHash, "Save contentHash");
+  if (
+    "worldQuestId" in (bundle as Record<string, unknown>) &&
+    typeof (bundle as { worldQuestId?: unknown }).worldQuestId !== "string"
+  ) {
     throw new SaveIntegrityError(
-      `Content hash mismatch: save was made against ${bundle.contentHash}, ` +
-        `but the loaded pack is ${expectedContentHash}.`,
+      `Save worldQuestId must be a string when present, got ${JSON.stringify(
+        (bundle as { worldQuestId?: unknown }).worldQuestId,
+      )}.`,
     );
   }
-  if (expectedMode !== undefined && bundle.mode !== undefined && bundle.mode !== expectedMode) {
-    throw new SaveIntegrityError(
-      `Mode mismatch: save is a "${bundle.mode}" game, but the loaded pack is "${expectedMode}".`,
+  if ("generatedRpgSeed" in (bundle as Record<string, unknown>)) {
+    assertGeneratedRpgSeed(
+      (bundle as { generatedRpgSeed?: unknown }).generatedRpgSeed,
+      "Save generatedRpgSeed",
     );
   }
+  if (
+    (bundle as { worldQuestId?: unknown }).worldQuestId !== undefined &&
+    (bundle as { generatedRpgSeed?: unknown }).generatedRpgSeed !== undefined
+  ) {
+    throw new SaveIntegrityError(
+      "Save source cannot carry both worldQuestId and generatedRpgSeed.",
+    );
+  }
+  assertSaveSourceRefConsistency(bundle);
+  if (expectedContentHash !== undefined) assertSaveContentHash(bundle, expectedContentHash);
   // §16 integrity at load: the state must be a well-formed, FINITE GameState
   // before it is handed back to the engine. Reject (never coerce) — a poisoned
-  // save is an integrity failure, not a value to repair. We validate WITHOUT
-  // substituting parsedState.data, so a valid state's bytes/hash stay identical.
+  // save is an integrity failure, not a value to repair. We validate before
+  // cloning/freezing, so a valid state's bytes/hash stay identical.
   const parsedState = GameStateSchema.safeParse((bundle as { state?: unknown }).state);
   if (!parsedState.success) {
     throw new SaveIntegrityError(
       `Save state is malformed or non-finite: ${parsedState.error.message}`,
     );
   }
-  return bundle;
+  return immutableLoadedSaveBundle(bundle);
 }

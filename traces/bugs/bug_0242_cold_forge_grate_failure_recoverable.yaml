@@ -51,7 +51,7 @@ locked_by:
   - tests/regression/cold_forge_grate_failure_recoverable.test.ts
 notes:
   no_content_change: >
-    content/rpg/pack/cold_forge.yaml is UNTOUCHED — this cycle adds an oracle, not a pack edit. No
+    content/rpg/quests/cold_forge.yaml is UNTOUCHED — this cycle adds an oracle, not a pack edit. No
     content hash moves, no validator re-pin, no protected source touched, no override used. The blind
     pass confirmed the pack is clean (5/5 clarity, both endings, zero bugs), so the cycle's lever went
     to closing the verified-OPEN soundness gap the pass surfaced (recoverability of a failed

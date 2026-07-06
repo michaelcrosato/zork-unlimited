@@ -22,26 +22,32 @@
 import { describe, it, expect, beforeAll } from "vitest";
 import { writeFileSync, mkdirSync } from "node:fs";
 import { createToolApi } from "../../src/mcp/tools.js";
-import { loadPackFile } from "../../src/cyoa/pack.js";
-import { indexPack, buildRules, initStateForPack } from "../../src/cyoa/runner.js";
+import { loadRpgSourceFile } from "../../src/rpg/source.js";
+import { indexRpgPack, buildRpgRules, initStateForRpgPack } from "../../src/rpg/runner.js";
 import { recordTrace, type Trace } from "../../src/trace/record.js";
+import type { RpgAction } from "../../src/api/types.js";
 
 const ROOT = process.cwd();
-const PACK = "content/cyoa/pack/watchtower_road.yaml";
+const PACK = "content/rpg/quests/sunken_barrow.yaml";
 const api = () => createToolApi({ root: ROOT });
 
 type InspectResult = {
   ok: boolean;
+  world_quest_id: string | null;
   hash_ok: boolean;
   steps: number;
   diverged_at_step: number | null;
 };
 
-// A real 5-action route through watchtower_road (the ending_escape branch), so the
+// A real 5-action route through sunken_barrow's opening and shade dialogue, so the
 // recorded trace carries a genuine per_step_hashes baseline of length 5.
-const ACTIONS = ["go_west", "ford_brook", "cross_north", "slip_into_woods", "slip_away"].map(
-  (id) => ({ type: "CHOOSE" as const, choiceId: id }),
-);
+const ACTIONS: RpgAction[] = [
+  { type: "MOVE", direction: "down" },
+  { type: "TAKE", item: "iron_bar" },
+  { type: "MOVE", direction: "west" },
+  { type: "TALK", npc: "reaver_shade" },
+  { type: "ASK", npc: "reaver_shade", topic: "ask_wight" },
+];
 
 let cleanTrace: Trace;
 
@@ -53,13 +59,14 @@ function write(path: string, trace: Trace) {
 }
 
 beforeAll(() => {
-  const compiled = loadPackFile(PACK);
+  const compiled = loadRpgSourceFile(PACK);
   if (!compiled.ok) throw new Error("pack must compile");
-  const rules = buildRules(indexPack(compiled.compiled.pack));
-  cleanTrace = recordTrace(rules, initStateForPack(indexPack(compiled.compiled.pack), 1), ACTIONS, {
+  const index = indexRpgPack(compiled.compiled.pack);
+  const rules = buildRpgRules(index);
+  cleanTrace = recordTrace(rules, initStateForRpgPack(index, 1), ACTIONS, {
     trace_id: "tr_0143",
-    pack_id: compiled.compiled.pack.meta.id,
     content_hash: compiled.compiled.contentHash,
+    worldQuestId: "sunken_barrow",
   });
 });
 
@@ -68,8 +75,9 @@ describe("bug_0143 — inspect_trace surfaces per-step divergence (§8.8, §9.4)
     write(FIXTURE("clean"), cleanTrace);
     const r = api().inspect_trace({
       trace_path: FIXTURE("clean"),
-      pack_path: PACK,
     }) as InspectResult;
+    expect("pack_id" in r).toBe(false);
+    expect(r.world_quest_id).toBe("sunken_barrow");
     expect(r.hash_ok).toBe(true);
     expect(r.diverged_at_step).toBeNull();
     expect(r.steps).toBe(5);
@@ -84,7 +92,6 @@ describe("bug_0143 — inspect_trace surfaces per-step divergence (§8.8, §9.4)
     write(FIXTURE("middiverge"), { ...cleanTrace, per_step_hashes: hashes });
     const r = api().inspect_trace({
       trace_path: FIXTURE("middiverge"),
-      pack_path: PACK,
     }) as InspectResult;
     expect(r.diverged_at_step).toBe(2);
     expect(r.hash_ok).toBe(false);
@@ -95,7 +102,6 @@ describe("bug_0143 — inspect_trace surfaces per-step divergence (§8.8, §9.4)
     write(FIXTURE("v1"), v1 as Trace);
     const r = api().inspect_trace({
       trace_path: FIXTURE("v1"),
-      pack_path: PACK,
     }) as InspectResult;
     expect(r.hash_ok).toBe(true);
     expect(r.diverged_at_step).toBeNull();

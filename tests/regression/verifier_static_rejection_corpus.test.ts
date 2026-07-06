@@ -8,7 +8,7 @@
  * trusts. bug_0182 built the first SoundnessBench-style negative corpus (a checker is
  * only proven sound if its FAILING branches are exercised on input that SHOULD fail —
  * arXiv:2412.03154; the single-checker blind spot arXiv:2510.14253) for `validateRpg`;
- * bug_0218 completed the validator trilogy for `validateCyoa` + `validateParser`. That
+ * bug_0218 completed the validator negative corpus for legacy validators. That
  * discipline was NEVER applied to `scripts/verify-integrity.ts` — the meta-verifier the
  * entire trust-but-verify bar rests on. Its own `error`-emitting branches —
  * PROTECTED_MISSING, TEST_COUNT_FLOOR, ASSERTION_COUNT_FLOOR, STRONG_ASSERTION_FLOOR
@@ -37,7 +37,7 @@
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import {
   runStatic,
   runDrift,
@@ -150,7 +150,26 @@ describe("bug_0227 — runDrift GIT_DIFF_FAILED on a bogus ref (the runDrift err
     // The bogus all-zeros ref makes `git diff` throw; runDrift's catch returns
     // GIT_DIFF_FAILED BEFORE the guard-self readFileSync, so the missing
     // scripts/verify-integrity.ts in the synthetic root is irrelevant here.
-    const res = runDrift(syntheticRoot, BOGUS_REF);
+    const stderrWrite = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+    const { res, stderrOutput } = (() => {
+      try {
+        const driftResult = runDrift(syntheticRoot, BOGUS_REF);
+        const capturedStderr = stderrWrite.mock.calls
+          .map(([chunk]) =>
+            typeof chunk === "string"
+              ? chunk
+              : Buffer.isBuffer(chunk)
+                ? chunk.toString("utf8")
+                : String(chunk),
+          )
+          .join("");
+        return { res: driftResult, stderrOutput: capturedStderr };
+      } finally {
+        stderrWrite.mockRestore();
+      }
+    })();
+
+    expect(stderrOutput).toMatch(new RegExp(`bad object ${BOGUS_REF}|Not a git repository`));
     expect(res.ok).toBe(false);
     const hit = res.findings.find((f) => f.code === "GIT_DIFF_FAILED");
     expect(hit).toBeDefined();

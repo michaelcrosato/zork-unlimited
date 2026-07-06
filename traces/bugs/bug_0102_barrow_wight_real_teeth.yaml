@@ -31,7 +31,7 @@ evidence:
 improvement:
   layer: content        # three enemy stats only — no prose/flag/score/ending/exit/effect change
   content:
-    - content/rpg/pack/sunken_barrow.yaml: >
+    - content/rpg/quests/sunken_barrow.yaml: >
         Retuned the barrow_wight from hp12/atk3/def1 to hp22/atk5/def2 (the bug_0101 move
         applied to this pack's cosmetic lever). Combat is one ATTACK = one round: player
         deals d6+atk(4)-def2, the wight (if it survives) deals d6+5-playerDef (min 1). The

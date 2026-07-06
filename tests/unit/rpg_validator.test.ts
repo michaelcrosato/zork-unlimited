@@ -1,21 +1,10 @@
-/**
- * RPG validator (§10, §13 Stage 4) + negative fixture (§10.4) + §14 backward-compat.
- *
- * The shipped RPG pack validates green; a deliberately unwinnable fight is
- * rejected. The §14 gate requires that adding Stage 4 leaves every prior pack
- * byte-identical — so we assert the existing parser/CYOA pack content hashes are
- * unchanged by the new optional schema fields.
- */
 import { describe, it, expect } from "vitest";
-import { loadRpgPackFile } from "../../src/rpg/pack.js";
+import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import { validateRpg } from "../../src/validate/rpg_validator.js";
-import { loadParserPackFile } from "../../src/parser/pack.js";
-import { validateParser } from "../../src/validate/parser_validator.js";
-import { loadPackFile } from "../../src/cyoa/pack.js";
 
-describe("RPG validator — shipped pack (§13 Stage 4)", () => {
-  it("content/rpg/pack/sunken_barrow.yaml validates with no errors or warnings", () => {
-    const loaded = loadRpgPackFile("content/rpg/pack/sunken_barrow.yaml");
+describe("RPG validator — shipped pack", () => {
+  it("content/rpg/quests/sunken_barrow.yaml validates with no errors or warnings", () => {
+    const loaded = loadRpgSourceFile("content/rpg/quests/sunken_barrow.yaml");
     expect(loaded.ok).toBe(true);
     if (!loaded.ok) return;
     const report = validateRpg(loaded.compiled.pack);
@@ -24,121 +13,13 @@ describe("RPG validator — shipped pack (§13 Stage 4)", () => {
   });
 });
 
-describe("RPG validator — negative fixture must fail (§10.4)", () => {
+describe("RPG validator — negative fixture must fail", () => {
   it("rpg_unwinnable fails with COMBAT_UNWINNABLE", () => {
-    const loaded = loadRpgPackFile("content/broken-fixtures/rpg_unwinnable.yaml");
+    const loaded = loadRpgSourceFile("content/broken-fixtures/rpg_unwinnable.yaml");
     expect(loaded.ok).toBe(true);
     if (!loaded.ok) return;
     const report = validateRpg(loaded.compiled.pack);
     expect(report.ok).toBe(false);
     expect(report.findings.map((f) => f.code)).toContain("COMBAT_UNWINNABLE");
-  });
-});
-
-describe("§14 backward-compatibility — prior packs unchanged", () => {
-  // The Stage-4 additions are optional (skill_check) or top-level (enemies), so
-  // existing packs compile to identical content and still validate green.
-  it("the parser packs still validate green and unchanged", () => {
-    for (const path of ["content/parser/pack/sealed_crypt.yaml", "content/parser/pack/alchemists_tower.yaml"]) {
-      const loaded = loadParserPackFile(path);
-      expect(loaded.ok).toBe(true);
-      if (!loaded.ok) return;
-      expect(validateParser(loaded.compiled.pack).ok).toBe(true);
-    }
-  });
-
-  it("the CYOA pack compiles to its pinned content hash (determinism snapshot)", () => {
-    const loaded = loadPackFile("content/cyoa/pack/watchtower_road.yaml");
-    expect(loaded.ok).toBe(true);
-    if (!loaded.ok) return;
-    // Pinned snapshot of the current pack. The gated Stage-4 DSL additions did not
-    // change it (was df85b4f…); this value updated only when the pack content was
-    // deliberately edited to fix blind-playtest findings (stale text, duplicate
-    // journal, ledger inventory), bug_0003 cellar discoverability, bug_0004 —
-    // the hermit's tower lore now journals + de-loops (was c49b4424…) — and
-    // bug_0005: the lantern-less cellar door now gives an in-fiction "too dark"
-    // nudge instead of silently offering only "step back" (was 8094e553…); and
-    // bug_0006 — the hermit's letter reveal now sets seal_broken + journals and
-    // can't re-break an opened seal, and ending_truth no longer presumes the
-    // "broken seal" / "oil in the cellar" the player may not have produced
-    // (was 7f322e4c…); and bug_0007 — the hidden_cache no longer re-renders the
-    // "ledger lies forgotten" text after the ledger is taken (take_ledger now
-    // exits to the cellar) and its description no longer presumes the player saw
-    // the letter (was 46ac6142…); and bug_0055 — confront_smuggler's scene text is
-    // now reactive (a not_flag learned_truth variant so the no-proof bluff branch no
-    // longer follows text that narrates the sergeant reading his own name)
-    // (was 7e3392b6…); and bug_0062 — confront_smuggler's retreat choice is now
-    // flag-gated (the "find real proof first" line only shows to the no-proof bluffer;
-    // the learned_truth player gets a coherent "hold your tongue" retreat)
-    // (was 3947f07b…); and bug_0098 — the lit signal beacon's `raised_alarm` flag
-    // now fires reactive variants on all three endings (the beacon's "help — or
-    // trouble — is coming" finally materialises in the epilogue instead of being a
-    // dead flag) (was 4c971d43…); and bug_0104 — the new INERT_FLAG validator check
-    // surfaced two genuinely dead flags here (met_hermit, saw_watchtower: set on the
-    // talk_hermit / go_east choices but read by no condition — the scene transition
-    // already carries that state), and their no-op `set_flag` effects were removed
-    // (was 95cf3665…); and bug_0108 — the take_letter pickup journal now foreshadows
-    // the letter's two real uses (papers to present at the checkpoint via show_papers;
-    // a seal a "knowing eye" — the hermit — can break) instead of the bare, inert-
-    // reading "addressed to no one." A blind playtester (seed 7,
-    // ai-runs/2026-06-02T08-37-28-787Z/playtest.md §5) took the letter on the tower/
-    // beacon route, never reached the hermit or checkpoint, and reported it as a
-    // Chekhov's gun that never fires; this hint_text-only nudge signposts its purpose
-    // (was f6b64fd9…); and bug_0120 — tower_top now gates light_beacon one-shot on
-    // not_flag raised_alarm and carries a raised_alarm scene variant so a player who
-    // relit the beacon no longer saw "a cold brazier waits, begging for a flame" while
-    // the already-done "Light the signal beacon" choice was re-offered (blind seed 11,
-    // ai-runs/2026-06-02T11-34-06-334Z/playtest.md §5; was 862b33ad…); and bug_0127 —
-    // bug_0108's take_letter journal still read "a knowing eye could break open and read"
-    // as a SELF-affordance, so a fresh blind playtester on the east-only route (seed 12,
-    // ai-runs/2026-06-02T13-20-51-530Z/playtest.md §4/§5) hunted for a way to crack the
-    // seal themselves and never found one (only the hermit, west, breaks it). The journal
-    // now says "the right pair of eyes — not your own; the seal is set too hard for that —
-    // could break open and read," disclaiming the self-action while keeping bug_0108's
-    // two-use foreshadow (was cd749bd5…); and bug_0134 — hermit_talk now carries a
-    // reactive re-entry variant (any_of heard_hermit_lore/seal_broken) so a player who
-    // returns to the conversation after already hearing the lore or breaking the seal no
-    // longer meets the cold first-meeting greeting "You look lost, traveler" as a stranger
-    // (blind seed 88, ai-runs/2026-06-02T15-08-35-167Z/playtest.md §4; was f989028090…);
-    // and the RPG-mechanic standardization — ending_captured is now flagged `death: true`
-    // (the CYOA death/failure-ending palette lift, RPG-STANDARDIZATION-PLAN), a deliberate
-    // metadata edit that changes the content hash without changing runtime state or any
-    // recorded trace (was 8990abbad9…).
-    // ...and the quest_stage palette lift — a `the_road` progression (set_quest_stage
-    // milestones + a reactive `on_the_trail` scene variant), another deliberate edit that
-    // gates nothing (was 59f7225260...);
-    // ...and the scoring palette lift — one-shot `inc_var: score` awards (six at first, then
-    // seven with bug_0265's show_letter; see below) summing to `max_score` (45, then 50 with
-    // bug_0265; reachable max is proven equal by the cyoa_score_economy_sound proof), a
-    // deliberate, gating-nothing edit (was 45b8dbee0b...);
-    // ...and the skill-check palette lift — a `nerve` var + an optional `force_door` d20 check whose
-    // success/failure both route to the same scene (a convergent tension beat that gates nothing, so
-    // the exhaustive proofs stay sound), another deliberate edit (was 83826e0fc8...).
-    // ...and bug_0248 — the ruined_watchtower `on_the_trail` reactive variant now also carries a
-    // `not_flag: learned_truth` guard. forest_crossroads' on_enter unconditionally re-seats the quest
-    // to `setting_out` on every revisit, so a player who learned the truth then looped back through the
-    // crossroads re-advanced the stage to `on_the_trail` and saw the "the trail you came to follow runs
-    // in there" line a second time as if arriving fresh (stale-on-re-entry, the bug_0120/bug_0134 class;
-    // reproduced live via MCP, seed 23). Gating the variant on not_flag learned_truth suppresses it once
-    // the truth is out; the un-informed first-timer still sees it verbatim. Reactive TEXT ONLY — every
-    // state_hash on the repro route is byte-identical pre/post-fix (was a1226aa17f...).
-    // ...and bug_0265 — the western route's key discovery now scores. show_letter (the hermit
-    // breaking the seal and naming the checkpoint man) previously awarded 0 while the
-    // mechanically-equivalent eastern evidence trail paid +20, so a blind playtester (seed 7,
-    // ai-runs/2026-06-05T01-31-00-798Z/playtest.md §4/§5) reaching the win via the hermit felt
-    // under-rewarded. show_letter now grants +5 (one-shot on its existing not_flag seal_broken
-    // guard, the ask_about_tower pattern) and max_score lifts 45 → 50. Deliberate scoring edit:
-    // the new award rides the seal_broken flag dimension (so no new states), and reachable max
-    // == 50 stays proven exhaustively by cyoa_score_economy_sound (was d3090c6586...).
-    // Any *unintended* change to compilation trips this.
-    // bug_0283: re-pinned after adding tower_top not_item:lantern variant (was 24aaf2b940ad...).
-    // bug_0309: re-pinned after adding hermit_camp reactive re-entry variant (was 9fed38439d61...).
-    // single-world migration: meta.world now binds every shipped pack to the Charter Marches.
-    // bug_0408: re-pinned after removing transient early quest-stage writes from the
-    // Watchtower hub/go_east loop so `the_road=truth_known` stays monotonic.
-    // bug_0462: re-pinned after adding a no-paper checkpoint `identify_as_warden`
-    // redirect so west-first wardens get an in-character evidence hint instead of
-    // only death/backtrack options.
-    expect(loaded.compiled.contentHash).toBe("8189a1e66863da7be5e3e7cd28ee3d14895b842cfbff28bd48551ad32f26f145");
   });
 });

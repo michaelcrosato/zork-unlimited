@@ -35,7 +35,7 @@ failure:
     would funnel them" attributed a promise to Cade he never actually made about the rail.
 fix:
   layer: content   # reactive/spoken-prose signpost only; honours the deliberate optional, stat-neutral wedge
-  pack: content/rpg/pack/wolf_winter.yaml
+  pack: content/rpg/quests/wolf_winter.yaml
   summary: >
     Old Cade's "how the byre is held" counsel (the cade_byre dialogue node — the natural
     in-fiction info path the player walks BEFORE the paling) now SIGNPOSTS the wedge:

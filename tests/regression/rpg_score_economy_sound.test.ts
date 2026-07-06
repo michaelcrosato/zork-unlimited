@@ -80,13 +80,13 @@
  * settle well under the 200k cap (the same bracket+policy as bug_0147: cold_forge ~19k,
  * sunken_barrow ~1.9k states).
  *
- * Packs are auto-discovered from content/rpg/pack, so a new RPG pack is covered the moment
+ * Packs are auto-discovered from content/rpg/quests, so a new RPG pack is covered the moment
  * it ships (the health-covers-all-packs bar, bug_0096).
  */
 import { describe, it, expect } from "vitest";
 import { readdirSync } from "node:fs";
 import { join } from "node:path";
-import { compileRpgPack, loadRpgPackFile } from "../../src/rpg/pack.js";
+import { compileRpgSource, loadRpgSourceFile } from "../../src/rpg/source.js";
 import {
   indexRpgPack,
   buildRpgRules,
@@ -97,7 +97,7 @@ import { HP_VAR } from "../../src/rpg/schema.js";
 import type { Rng } from "../../src/core/rng.js";
 import { exhaustiveEndingsMulti } from "./support/exhaustive_endings.js";
 
-const PACK_DIR = "content/rpg/pack";
+const PACK_DIR = "content/rpg/quests";
 const packFiles = readdirSync(PACK_DIR)
   .filter((f) => f.endsWith(".yaml"))
   .sort();
@@ -241,7 +241,7 @@ describe("bug_0149 — every RPG pack's reachable max score equals its declared 
   // economy (max_score > 0), or the per-pack equality below would be 0 === 0 noise.
   it("the shipped corpus actually exercises scoring (some pack declares max_score > 0)", () => {
     const maxima = packFiles.map((f) => {
-      const loaded = loadRpgPackFile(join(PACK_DIR, f));
+      const loaded = loadRpgSourceFile(join(PACK_DIR, f));
       if (!loaded.ok) throw new Error(`pack must compile: ${f}`);
       return loaded.compiled.pack.meta.max_score;
     });
@@ -250,7 +250,7 @@ describe("bug_0149 — every RPG pack's reachable max score equals its declared 
 
   for (const file of packFiles) {
     it(`${file}: the reachable maximum score equals the declared max_score (no overflow, no phantom points)`, () => {
-      const loaded = loadRpgPackFile(join(PACK_DIR, file));
+      const loaded = loadRpgSourceFile(join(PACK_DIR, file));
       expect(loaded.ok).toBe(true);
       if (!loaded.ok) return;
       const pack = loaded.compiled.pack;
@@ -328,7 +328,7 @@ objects:
 win_conditions: [{ id: w, conditions: [{ visited: b }], ending: e }]
 endings: [{ id: e, title: E, text: "done" }]
 `;
-    const r = compileRpgPack(src);
+    const r = compileRpgSource(src);
     expect(r.ok).toBe(true);
     if (!r.ok) return;
     const { max, cappedOut } = maxReachableScore(indexRpgPack(r.compiled.pack));
@@ -367,7 +367,7 @@ objects:
 win_conditions: [{ id: w, conditions: [{ visited: b }], ending: e }]
 endings: [{ id: e, title: E, text: "done" }]
 `;
-    const r = compileRpgPack(src);
+    const r = compileRpgSource(src);
     expect(r.ok).toBe(true);
     if (!r.ok) return;
     const { max, cappedOut } = maxReachableScore(indexRpgPack(r.compiled.pack));
@@ -414,7 +414,7 @@ endings:
   - { id: e, title: E, text: "you live" }
   - { id: dead, title: D, text: "the ogre kills you" }
 `;
-    const r = compileRpgPack(src);
+    const r = compileRpgSource(src);
     expect(r.ok).toBe(true);
     if (!r.ok) return;
     const index = indexRpgPack(r.compiled.pack);
@@ -476,14 +476,14 @@ objects:
 win_conditions: [{ id: w, conditions: [{ visited: b }], ending: e }]
 endings: [{ id: e, title: E, text: "done" }]
 `;
-    const bad = compileRpgPack(awardsOnFailure);
+    const bad = compileRpgSource(awardsOnFailure);
     expect(bad.ok).toBe(true);
     if (!bad.ok) return;
     expect(scoreAwardOnFailure(bad.compiled.pack)).toBe(true);
 
     // Both shipped packs (whose on_failure only narrates "keep at it") must NOT trip it.
     for (const file of packFiles) {
-      const loaded = loadRpgPackFile(join(PACK_DIR, file));
+      const loaded = loadRpgSourceFile(join(PACK_DIR, file));
       expect(loaded.ok).toBe(true);
       if (!loaded.ok) return;
       expect(scoreAwardOnFailure(loaded.compiled.pack)).toBe(false);

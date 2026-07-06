@@ -1,6 +1,6 @@
 id: bug_0444_bridgewrights_visible_crack_trap
 title: "Bridgewrights plan warning maps to a real visible-crack trap"
-pack: content/rpg/pack/bridgewrights_proof.yaml
+pack: content/rpg/quests/bridgewrights_proof.yaml
 reported_by: blind-playtest
 report: blind-tester/reports/20260622T161435Z_bridgewrights_proof_seed7.md
 severity: S2
@@ -19,5 +19,5 @@ tests:
   - tests/regression/bridgewrights_proof_visible_crack_trap.test.ts
 verification:
   - npm test -- --run tests/regression/bridgewrights_proof_visible_crack_trap.test.ts tests/regression/bridgewrights_proof_route_specific_ending.test.ts
-  - npm run validate -- content/rpg/pack/bridgewrights_proof.yaml
+  - npm run validate -- content/rpg/quests/bridgewrights_proof.yaml
   - npm run health

@@ -1,0 +1,560 @@
+# The Dawn Beacon — a Stage 4 (Hero's-Quest) pack (spec §13, §14 gate).
+#
+# The game's THIRD RPG pack, and the FIRST — in any mode — to set
+# `meta.combat_guaranteed: true`. The two existing RPG packs are deliberate
+# GAMBLES: The Sunken Barrow (bug_0102) and The Cold Forge (bug_0101) tune their
+# one fight so that even a fully-prepared player can DIE on bad rolls — the
+# validator's default combat proof is a conservative LOWER bound that permits
+# exactly that (bug_0113). Every RPG blind playtest of those packs lands the same
+# note: an unlucky prepared player dies with no recourse. For a gamble pack that is
+# by design; this pack is the OPPOSITE design pole, and the opt-in fairness flag
+# (bug_0114) is built to express it: here a fully-prepared soldier is PROMISED to
+# survive every fight on every roll, and the validator AUDITS that promise via the
+# UPPER bound (`COMBAT_NOT_GUARANTEED`) AND — because this is a two-fight GAUNTLET —
+# the cumulative-HP bound across the whole sequence (`COMBAT_GAUNTLET_NOT_GUARANTEED`,
+# bug_0172). No curated pack exercised those two checks GREEN before this one (only
+# the generator, bug_0173, and the negative corpus, bug_0182, ever did).
+#
+# The fiction earns the mechanic. This is not a haunted barrow or a slag golem but a
+# frontier watch-keep the night a raiding host means to ford the river below at first
+# light — and the one thing that can wake the valley is the keep's warning-beacon,
+# which two raiders have slipped in to keep dark. You are the last of the watch. The
+# antagonists are LIVING men, evenly matched with a trained soldier: skill and
+# preparation decide the fights, not luck, so the old watchman on the lower ward can
+# make a TRUE promise the barrow's hedging shade never could — "warded and counseled,
+# no raider on this stair will put you down." That promise is the combat_guaranteed
+# flag spoken aloud, and it is honest precisely BECAUSE the validator proves it: arm
+# yourself from the armory (the garrison mail, +2 defense) AND mind his counsel (where
+# the captain's guard rides high, +2 attack) and you cannot fall. Skip the prep and
+# the fights are a real, lethal gamble again (the death ending stays reachable for the
+# under-armed and unlucky) — the guarantee only ever covers the BEST-prepared player,
+# exactly as bug_0114 defines it.
+#
+#   muster_yard ─N─ lower_ward (watchman; orders-board +5; winch-bar)
+#   (start)          │ W: armory (garrison mail, +2 defense)
+#                    │ N: gate_arch (the gate-raider — FIGHT 1)
+#                         │ N*: stair_head (the raider-captain — FIGHT 2)
+#                              │ N*: beacon_stage (toppled cresset; might check to right it, +10)
+#                                   │ up*: beacon_crown (strike the flint to the laid fire — WIN, +15)
+#   (* each gated on the prior beat: fight 1 won / fight 2 won / cresset righted)
+#
+# Score (max 50, the milestone economy the two existing RPG packs share so the curve
+# reads familiar): read the dead serjeant's last orders (+5, the §17 clue that names
+# the raiders' plan and points at the mail and the bar), cut down the gate-raider
+# (+10) and the raider-captain (+10), heave the toppled cresset upright with the
+# winch-bar and a strong back (+10, the one seeded might check), and light the beacon
+# (+15 — the climactic act: strike the watch's flint to the laid fire at the crown).
+# The perfect 50 coincides with the struck flame, never before it. The win turns on
+# `visited: beacon_crown` AND `has_flag: beacon_lit` together — the sunken_barrow
+# claim_relic shape: the `visited` term keeps the parser validator's soft-lock guard fed
+# with a real win-room, while the `has_flag` term means bare entry no longer wins, so the
+# player performs the deliberate LIGHT act the orders-board and watchman both call for
+# (the dawn_beacon blind pass found the old auto-on-entry climax read as narrated-AT-the-
+# player, the same finding sunken_barrow's seed-71 pass surfaced, bug_0107). SCORE_PEAKS_-
+# BEFORE_WIN now actively proves the capstone rides that act (35 reachable without it < 50),
+# where the old locomotion win was merely exempt (bug_0116). A fall to either raider is
+# recoverable via an earlier save (§8.7); both fights are telegraphed in place per the
+# bug_0123 "never an ambush" discipline.
+
+meta:
+  id: dawn_beacon_v1
+  title: "The Dawn Beacon"
+  world:
+    id: charter_marches
+    name: "The Charter Marches"
+    hub: "Charterhaven"
+    district: "Dawn Beacon Muster"
+    quest: "light the beacon through the gauntlet"
+    role: "beacon runner"
+    connection: "Charterhaven's warning chain begins at the dawn beacon, and one dark tower blinds the Marches."
+  start_room: muster_yard
+  vars_init: { hp: 26, attack: 4, defense: 2, might: 3 }
+  flags_init: []
+  # The opt-in fairness promise (bug_0114). With this set, the validator proves the
+  # UPPER bound for every fight AND the cumulative-HP bound across the whole gauntlet
+  # (bug_0172): with the player's BEST reachable stats (init + the watchman's +2 attack
+  # + the garrison mail's +2 defense = atk6/def4/hp26) but the player's WORST rolls,
+  # the total damage taken across both fights must stay below reachable HP. Tuned so it
+  # does, with margin (per-fight worst-case 7 and 14; cumulative 21 < 26) — see the
+  # enemies block. base-stat play (no counsel, no mail) can still die, by design.
+  combat_guaranteed: true
+  # The milestone economy: 5 + 10 + 10 + 10 + 15 = 50. Each award rides a beat that
+  # fires once (the read retires on read_orders; each raider dies once; the cresset
+  # check retires after success; the +15 light retires on beacon_lit, the game-ending
+  # act), so the score cannot be farmed and the intended path reaches the full 50. The RPG validator folds the
+  # combat/skill awards into the SCORE_UNREACHABLE upper bound (cf. bug_0016).
+  max_score: 50
+
+rooms:
+  - id: muster_yard
+    name: "The Muster Yard"
+    description: >
+      The cobbled muster yard of a frontier watch-keep, empty now but for you. Below
+      the wall the river runs black, and somewhere across it a raiding host is gathering
+      to ford at first light — unseen, unless the keep's warning-beacon is lit to wake
+      the valley. The watch is dead or fled; the beacon is dark; dawn is coming. The
+      lower ward lies through the arch to the north.
+    exits:
+      - { direction: north, to: lower_ward }
+
+  - id: lower_ward
+    name: "The Lower Ward"
+    description: >
+      A narrow ward under the beacon-tower's root. An old watchman sits propped against
+      the cold wall with a spear across his knees, breathing hard but living. A
+      serjeant's orders-board is nailed by the gate, and a long iron winch-bar leans in
+      a rack beside it. The armory stands open to the west, the gate-arch climbs north
+      toward the beacon-stair, and the muster yard is back to the south.
+    # Reactive room text (bug_0023): once the winch-bar is lifted the rack reads bare,
+    # so the static line cannot contradict the empty rack and the bar in the player's
+    # own hands on every revisit (the cold_forge pry-bar treatment, bug_0094).
+    variants:
+      - when: [{ has_item: winch_bar }]
+        text: >
+          A narrow ward under the beacon-tower's root. The old watchman sits propped
+          against the cold wall with a spear across his knees, breathing hard but
+          living. A serjeant's orders-board is nailed by the gate; the rack beside it
+          stands empty, the long iron winch-bar now in your own hands. The armory stands
+          open to the west, the gate-arch climbs north toward the beacon-stair, and the
+          muster yard is back to the south.
+    objects: [orders_board, winch_bar]
+    exits:
+      - { direction: south, to: muster_yard }
+      - { direction: west, to: armory }
+      - { direction: north, to: gate_arch }
+
+  - id: armory
+    name: "The Armory"
+    description: >
+      A cramped stone armory, its racks stripped bare by the fled watch — all but one
+      suit of the old garrison mail, too heavy for a running man to bother with, left
+      hanging on its peg. The lower ward is back to the east.
+    # Reactive room text (bug_0323): once the garrison mail is taken the peg is bare;
+    # the static "left hanging on its peg" phrase must not contradict the empty peg
+    # and the mail in the player's own hands (the lower_ward winch-bar treatment).
+    variants:
+      - when: [{ has_item: garrison_mail }]
+        text: >
+          A cramped stone armory, its racks stripped bare by the fled watch, the peg
+          where the garrison mail hung now bare. The lower ward is back to the east.
+    objects: [garrison_mail]
+    exits:
+      - { direction: east, to: lower_ward }
+
+  - id: gate_arch
+    name: "The Gate-Arch"
+    description: >
+      The arch where the beacon-stair begins its climb. A raider stands square in the
+      mouth of it, sword drawn, set there to keep any of the watch from reaching the
+      beacon above — and to keep the stair dark until his host is across the ford. He is
+      a living man and no swifter than you; he means to hold the arch, and you mean to
+      pass. The lower ward is back to the south.
+    variants:
+      - when: [{ has_flag: gate_raider_slain }]
+        text: >
+          The arch where the beacon-stair begins its climb. The gate-raider lies dead
+          across the threshold, his sword fallen, and the stair runs up into the dark
+          beyond him. The lower ward is back to the south.
+    exits:
+      - { direction: south, to: lower_ward }
+      - direction: north
+        to: stair_head
+        conditions: [{ has_flag: gate_raider_slain }]
+        locked_msg: "The gate-raider holds the arch sword in hand; you cannot pass while he stands."
+
+  - id: stair_head
+    name: "The Stair-Head"
+    description: >
+      A turn of the spiral stair opens onto a landing under the beacon-stage. Here the
+      raiders' captain waits — a broad, scarred man who has clearly soldiered longer
+      than the boy below, and who knows exactly why you have come. He sets his feet and
+      lifts his shield. The arch is back down to the south; the beacon-stage is above.
+    variants:
+      - when: [{ has_flag: captain_slain }]
+        text: >
+          A turn of the spiral stair opens onto a landing under the beacon-stage. The
+          raiders' captain lies fallen against the rail, his shield split, and the way
+          up to the beacon stands clear. The arch is back down to the south.
+    exits:
+      - { direction: south, to: gate_arch }
+      - direction: north
+        to: beacon_stage
+        conditions: [{ has_flag: captain_slain }]
+        locked_msg: "The raider-captain bars the stair, shield set; you cannot pass while he stands."
+
+  - id: beacon_stage
+    name: "The Beacon-Stage"
+    description: >
+      The high stage of the beacon-tower, open to the cold dawn wind. The great iron
+      cresset that should hold the warning-fire has been heaved off its pivot and lies
+      toppled on its side — the raiders' work, to keep the beacon dark. Its worn socket
+      and the long lip of its frame are plainly made to be levered upright by a bar and
+      a strong back; if it rocks back once, set your feet and heave again until the
+      pivot catches. The stair drops back down to the south.
+    variants:
+      - when: [{ quest_stage: { quest: beacon, stage: cresset_raised } }]
+        text: >
+          The high stage of the beacon-tower, open to the cold dawn wind. The great iron
+          cresset stands upright on its pivot once more, righted and steady, its fire-bed
+          baring the dry pitch-pine the watch laid by — ready for the flame. A ladder
+          climbs up to the crown of the tower above. The stair drops back down to the south.
+    objects: [cresset]
+    exits:
+      - { direction: south, to: stair_head }
+      - direction: up
+        to: beacon_crown
+        conditions: [{ quest_stage: { quest: beacon, stage: cresset_raised } }]
+        locked_msg: "The cresset lies toppled across the foot of the ladder; the way to the crown is blocked until it is righted."
+
+  - id: beacon_crown
+    name: "The Crown of the Tower"
+    description: >
+      The crown of the beacon-tower, the whole black valley spread below and the first
+      grey of dawn coming up over the river. The righted cresset's deep fire-bed stands
+      at your hand, heaped with the dry pitch-pine the watch laid ready, and the watch's
+      own flint lies in the bed beside it. It wants only a struck spark to wake the valley.
+    # The win fires on the deliberate LIGHT act, not on bare room entry — the sunken_barrow
+    # claim_relic treatment (bug_0107 and its seed-71 blind finding), mirrored here after
+    # this pack's own blind pass found the same smell: the climax was narrated AT the player
+    # the instant they climbed up, with no light verb to perform, though the orders-board
+    # and the watchman both say plainly "LIGHT THE BEACON". Now the crown shows the laid
+    # fire (beacon_fire) and the flint and offers "light beacon with flint"; the +15 capstone
+    # rides THAT act (set_flag beacon_lit), and the win turns on `visited: beacon_crown` AND
+    # `has_flag: beacon_lit` together — entering no longer wins (the beacon is still dark),
+    # yet the `visited` term is KEPT so the parser validator's soft-lock guard still has its
+    # win-room. The full 50 coincides with the struck flame, and SCORE_PEAKS_BEFORE_WIN now
+    # actively proves it (35 reachable without the light act < 50). Reaching the crown still
+    # requires the cresset righted (the up-exit gate); the `down` exit keeps the crown from
+    # being a soft-lock if the player climbs up before striking the spark.
+    variants:
+      # Reactive: once the player picks up the flint the bed no longer holds it.
+      # Same reactive-description-blindness class as bugs 0282–0322.
+      - when: [{ has_item: flint }]
+        text: >
+          The crown of the beacon-tower, the whole black valley spread below and the first
+          grey of dawn coming up over the river. The righted cresset's deep fire-bed stands
+          at your hand, heaped with the dry pitch-pine the watch laid ready. The flint is in
+          your hand — one struck spark to wake the valley.
+    objects: [beacon_fire, flint]
+    exits:
+      - { direction: down, to: beacon_stage }
+
+objects:
+  - id: orders_board
+    name: "orders-board"
+    aliases: [board, orders, roster, serjeant, note, notice]
+    description: "A serjeant's orders-board nailed by the gate, a single fresh order chalked across it in a hard hand."
+    read_text: >
+      The last order reads: 'RAIDERS OVER THE FORD AT DAWN — THE BEACON IS THE ONLY
+      WARNING THE VALLEY WILL GET. THEY HAVE PUT MEN ON THE STAIR TO HOLD IT DARK. THE
+      OLD GARRISON MAIL HANGS IN THE ARMORY; THE WINCH-BAR IS BY THIS BOARD. ARM, AND
+      HEED THE WATCHMAN. LIGHT THE BEACON. — SERJ. HALE'
+    interactions:
+      - verb: READ
+        target: orders_board
+        conditions: [{ not_flag: read_orders }]
+        effects:
+          - set_flag: read_orders
+          - inc_var: { name: score, by: 5 }
+
+  - id: winch_bar
+    name: "iron winch-bar"
+    aliases: [bar, winch-bar, winchbar, winch, lever, iron]
+    description: "A long iron winch-bar from the beacon's own gear, cold but sound — a lever, for an arm strong enough to right the cresset."
+    takeable: true
+    # Not quest_critical, and the map is strongly connected, so it can be neither lost
+    # nor soft-lock the quest (cf. cold_forge's pry-bar): a player who climbs past it can
+    # always walk back down the cleared stair and fetch it before righting the cresset.
+
+  - id: garrison_mail
+    name: "garrison mail"
+    aliases: [mail, armour, armor, hauberk, suit, coat]
+    description: "A heavy suit of the old garrison's ring-mail, left where the fleeing watch could not be bothered to carry it — whole and sound, the kind of weight a raider's blade rings off rather than bites through."
+    # Reactive examine (bug_0023): once buckled on it is gear you wear, not a loose suit
+    # to consider (its self-USE "don" interaction has retired behind mail_donned).
+    variants:
+      - when: [{ has_flag: mail_donned }]
+        text: "The old garrison mail, buckled on now over your own gear; its weight sits steady between you and the next blow."
+    takeable: true
+    interactions:
+      # Self-USE = "wear this thing" (cold_forge plate / bug_0074). command_verb: don
+      # makes the offered and typed verb match the prose ("don" is not a builtin verb).
+      # One-shot (gated none_of mail_donned) so the +2 cannot be farmed. The +2 defense
+      # is HALF of the watchman's promised safety; with his +2-attack counsel it is what
+      # makes the combat_guaranteed bound hold for the fully-prepared player.
+      - verb: USE
+        item: garrison_mail
+        target: garrison_mail
+        command_verb: don
+        conditions: [{ none_of: [{ has_flag: mail_donned }] }]
+        effects:
+          - set_flag: mail_donned
+          - inc_var: { name: defense, by: 2 }
+          - add_journal: "You buckle the old garrison mail over your own gear; it will turn the worst of a raider's blow (+2 defense)."
+          - narrate: "You haul the garrison mail down off its peg and buckle it on. It is heavy and cold, but it sits steady between you and the next blow — half of the watchman's promise, the iron half."
+
+  - id: cresset
+    name: "toppled cresset"
+    aliases: [cresset, basket, fire-basket, brazier, frame]
+    description: "The great iron fire-cresset, heaved off its pivot and lying on its side. Its worn socket and the long lip of its frame are made to be levered, by a bar and a strong back."
+    # Reactive examine (bug_0023), the object twin of the room variant: once righted the
+    # cresset must stop telling the player to lever it (the cold_forge grate treatment).
+    # The variant also swaps the object's NAME (bug_0188): the base name encodes the
+    # transient "toppled" state, so once righted "look at toppled cresset" /
+    # "visible_objects: toppled cresset" would contradict the room and examine text that
+    # have moved on. The reactive `name` re-labels it "upright cresset" everywhere the
+    # name renders, the name analogue of this same reactive-text treatment.
+    variants:
+      - when: [{ quest_stage: { quest: beacon, stage: cresset_raised } }]
+        name: "upright cresset"
+        text: "The great iron cresset, levered upright on its pivot and steady once more, its fire-bed laid with dry pitch-pine and waiting only for the flame."
+    takeable: false
+    interactions:
+      - verb: USE
+        item: winch_bar
+        target: cresset
+        # The prose primes "lever" (the bar is "a lever", the cresset "made to be
+        # levered"), so the natural command reads "lever toppled cresset with iron
+        # winch-bar" via command_verb + command_template (bug_0078). The generic "use
+        # iron winch-bar on toppled cresset" still parses; the id stays stable.
+        command_verb: lever
+        command_template: "lever {target} with {item}"
+        # One-shot puzzle: once the cresset is righted the check retires, so the bar can
+        # never re-roll "it will not lift" while the cresset already stands (bug_0015).
+        conditions: [{ none_of: [{ quest_stage: { quest: beacon, stage: cresset_raised } }] }]
+        skill_check:
+          skill: might
+          difficulty: 10
+          on_success:
+            - set_quest_stage: { quest: beacon, stage: cresset_raised }
+            - add_journal: "You lever the great cresset back upright on its pivot; the way up to the crown stands clear."
+            - inc_var: { name: score, by: 10 }
+            - narrate: "You wedge the bar beneath the frame's lip and throw your weight on it — the iron grinds, swings, and the cresset heaves up onto its pivot and settles. The way to the crown is clear."
+          on_failure:
+            - narrate: "The bar bites under the lip and your shoulders strain; the heavy iron rocks a handspan toward its socket, then grinds back down. Nothing is lost — set your feet, keep the bar under the lip, and heave again until the pivot catches."
+
+  - id: beacon_fire
+    name: "beacon"
+    aliases: [beacon, fire, fire-bed, firebed, bed, pitch-pine, pitch pine, pine, laid fire]
+    # The explicit climactic act the blind pass asked for: the laid fire at the crown, lit
+    # with the watch's flint. command_verb `light` + template so the offered command reads
+    # "light beacon with flint" (bug_0078), matching the orders-board and the watchman's
+    # repeated "light the beacon". One-shot (not_flag beacon_lit); HARD-requires the flint
+    # in hand (has_item, the USE-offer rule). Lighting sets beacon_lit and awards the +15
+    # capstone, and the engine's post-action checkWin fires the `visited beacon_crown +
+    # has_flag beacon_lit` win the same frame (the sunken_barrow circlet pattern). NOT
+    # takeable — you light the bed, you do not carry it off. No lit `variant` is declared:
+    # the win ends the game on the same action, so a beacon_lit variant would be unreachable
+    # text under the reactive-variant liveness oracle (bug_0145) — the ending prose carries
+    # the blaze. Gates nothing but its own one award, so it adds no soft-lock surface.
+    description: >
+      The great cresset's fire-bed at the crown, heaped deep with the dry resinous
+      pitch-pine the watch laid by against this very night. It is bone-dry and ready; set
+      a spark to it with the flint and it will stand up in a column of fire over the river.
+    takeable: false
+    interactions:
+      - verb: USE
+        item: flint
+        target: beacon_fire
+        command_verb: light
+        command_template: "light {target} with {item}"
+        conditions: [{ has_item: flint }, { not_flag: beacon_lit }]
+        effects:
+          - set_flag: beacon_lit
+          - inc_var: { name: score, by: 15 }
+          - add_journal: "You struck the watch's flint to the laid pitch-pine, and the great beacon took and stood up in fire over the valley."
+          - narrate: >
+              You kneel to the fire-bed and strike the flint down its iron edge — a spray of
+              sparks, a catch, and the dry pitch-pine takes all at once with a soft roar. The
+              great beacon stands up in a column of fire over the black river, and below you
+              the dark valley begins, hill by hill, to wake.
+
+  - id: flint
+    name: "flint"
+    aliases: [flint, steel, flint and steel, striker, fire-steel, firesteel]
+    # The held striker the light act needs (a USE is only offered when its item is in hand).
+    # Laid ready in the fire-bed at the crown, so
+    # it is taken and used in the same room as the beacon — no carry-distance, no soft-lock
+    # surface (and the map is strongly connected besides). Not quest_critical: the winch_bar
+    # rationale (a connected map cannot lose it); it gates nothing but the one light act.
+    description: "The watch's own flint-and-steel, laid ready in the beacon's fire-bed — a hard edge and a fire-steel, enough to strike the spark the pitch-pine wants."
+    takeable: true
+
+npcs:
+  - id: watchman
+    name: "the old watchman"
+    description: >
+      An old soldier in the watch's grey, propped against the wall with a spear-cut
+      bound at his side and a spear across his knees. Past fighting himself, but clear-
+      eyed, and plainly glad someone living has come up the yard.
+    room: lower_ward
+    # Every npc_text is PURE SPOKEN words (the bug_0071 convention): the engine renders
+    # `the old watchman: "<npc_text>"`, so no node carries its own quote marks or
+    # third-person stage narration. The counsel topic retires once told (gated not_flag
+    # heard_counsel) so the +2 attack is one-shot; the ungated `leave` keeps the root
+    # TERMINATING (a gated-only node would trip DIALOGUE_NONTERMINATING, bug_0014).
+    dialogue:
+      root: watch_root
+      nodes:
+        - id: watch_root
+          npc_text: >
+            You came up the yard — good lad. I cannot climb the stair myself, this side
+            of me is done. But you can, and you must: the beacon is the only warning the
+            valley gets, and there are two of them on the stair set to keep it dark. Ask,
+            if you would — I have soldiered these walls thirty years and there is little
+            on them I do not know.
+          # Reactive hub line (§7.3, the bug_0204 breaking_weir keeper treatment): the
+          # blind pass found the watchman re-delivering his whole opening every time the
+          # player came back to the menu after a topic. Once he has counseled OR briefed
+          # you (either retiring flag set), the return greeting drops to a terse "what
+          # else, lad?" instead of the full emergency. Two entries to express the OR
+          # (a single `when` is all_of); only the SPOKEN text varies, so the node's
+          # effects/topics — and dialogue termination/reachability — are unchanged.
+          variants:
+            - when: [{ has_flag: heard_counsel }, { not_flag: read_orders }]
+              text: >
+                Aye, lad — what else? Ask quick; the dark won't hold past dawn. And
+                read Hale's board before you climb; my tongue has the drill, but his
+                chalk has the whole order.
+            - when: [{ has_flag: heard_beacon }, { not_flag: read_orders }]
+              text: >
+                Aye, lad — what else? Ask quick; the dark won't hold past dawn. And
+                read Hale's board before you climb; my tongue has the drill, but his
+                chalk has the whole order.
+            - when: [{ has_flag: heard_counsel }]
+              text: >
+                Aye, lad — what else? Ask quick; the dark won't hold past dawn, and there
+                is little on these walls I cannot tell you.
+            - when: [{ has_flag: heard_beacon }]
+              text: >
+                Aye, lad — what else? Ask quick; the dark won't hold past dawn, and there
+                is little on these walls I cannot tell you.
+          topics:
+            - id: ask_fight
+              prompt: "Ask how to get past the two raiders."
+              conditions: [{ not_flag: heard_counsel }]
+              goto: watch_fight
+            - id: ask_beacon
+              prompt: "Ask what lighting the beacon will take."
+              conditions: [{ not_flag: heard_beacon }]
+              goto: watch_beacon
+            - id: leave_watch
+              prompt: "Leave the watchman and climb."
+              end: true
+        - id: watch_fight
+          # The combat_guaranteed promise spoken aloud — and TRUE, because the validator
+          # proves it for the fully-prepared player (mail + this counsel). Unlike the
+          # barrow shade's hedged ward (bug_0132, which must admit ~12% of warded fights
+          # still lose), this counsel can make a flat promise: warded AND counseled, the
+          # gauntlet is survivable on EVERY roll. It names BOTH halves of the prep
+          # plainly, so the player who heeds it is the player the guarantee covers.
+          npc_text: >
+            Living men, both of them, and no faster than you — this is no ghost-fight to
+            be lost on a bad night. The boy at the arch is all edge and no guard; take him
+            hard and early. The captain above is the soldier — he carries his shield high,
+            so come in low under it, here. There. That is where his guard is weak; let it
+            ride your arm. And mind me on this: go to the armory first and put the old
+            garrison mail on your back. Do that — the mail AND what I have just shown
+            you — and I will give you a drillmaster's word, not a song's: warded and
+            counseled, no raider on that stair will put you down. Skip either, and you are
+            gambling with the valley's dawn.
+          effects:
+            - set_flag: heard_counsel
+            - inc_var: { name: attack, by: 2 }
+            - add_journal: "The watchman shows you where the captain's high guard leaves him open — you feel you could strike truer now (+2 attack)."
+          topics:
+            - id: fight_back
+              prompt: "Nod, and ask something else."
+              goto: watch_root
+        - id: watch_beacon
+          npc_text: >
+            The beacon? The cresset itself is the trouble — they heaved it off its pivot
+            so it cannot hold a fire, and a toppled cresset is dead iron. There is a
+            winch-bar by the orders-board, by my hand here; take it up. Set it under the
+            frame's lip on the stage above and lever the cresset upright — it wants a
+            strong back, not a trick — and the watch left dry pitch-pine and a flint laid
+            ready in the bed. Right it, climb to the crown, and light it. That is all the
+            valley needs of you.
+          effects:
+            - set_flag: heard_beacon
+            - add_journal: "The watchman says the toppled cresset must be levered upright with the winch-bar by the orders-board, then the beacon lit from the crown above."
+          topics:
+            - id: beacon_back
+              prompt: "Thank him, and ask something else."
+              goto: watch_root
+
+enemies:
+  # The fair gauntlet (combat_guaranteed). Combat is one ATTACK = one round: the player
+  # deals d6 + attack - enemy.defense (min 1), and the enemy, if it survives, deals
+  # d6 + enemy.attack - playerDef (min 1). The player strikes first each round.
+  #
+  # Tuned so the fully-prepared player (best reachable stats: atk 6 from the watchman's
+  # counsel, def 4 from the garrison mail, hp 26) survives the WHOLE gauntlet on the
+  # WORST rolls — the property combat_guaranteed promises and the validator audits:
+  #   - gate-raider (hp12/atk5/def1): worst player damage d6=1 -> 1+6-1 = 6, so 2 rounds
+  #     to kill; worst incoming d6=6 -> 6+5-4 = 7, taken on the 1 round he survives = 7.
+  #   - raider-captain (hp13/atk5/def2): worst player damage 1+6-2 = 5, so 3 rounds;
+  #     worst incoming 6+5-4 = 7, over the 2 rounds he survives = 14.
+  #   - cumulative worst-case = 7 + 14 = 21 < 26 reachable HP, with margin, so the
+  #     gauntlet clears COMBAT_NOT_GUARANTEED (each fight) AND the cumulative-HP bound
+  #     COMBAT_GAUNTLET_NOT_GUARANTEED (bug_0172) — the first curated pack to do so.
+  # Skipping the prep makes it a real gamble: under base stats (atk4/def2) and worst
+  # rolls the captain fells the player (incoming 6+5-2 = 9 over 4 rounds = 36 > the HP
+  # left after the gate-raider), so the death ending stays genuinely reachable for the
+  # under-armed and unlucky — the guarantee only ever covers the BEST-prepared player
+  # (bug_0114). Both raiders are telegraphed in the room prose (men set to hold the
+  # stair), never an ambush (bug_0123); a fall is save-recoverable (§8.7).
+  - id: gate_raider
+    name: "gate-raider"
+    description: "A young raider set to hold the gate-arch, all edge and no guard, sword already drawn."
+    room: gate_arch
+    hp: 12
+    attack: 5
+    defense: 1
+    defeat_flag: gate_raider_slain
+    death_ending: ending_fallen
+    on_defeat:
+      - add_journal: "The gate-raider goes down across the threshold; the stair runs up open beyond him."
+      - inc_var: { name: score, by: 10 }
+  - id: raider_captain
+    name: "raider-captain"
+    description: "The raiders' captain on the stair-head: a broad, scarred soldier with his shield set high, who knows exactly why you have come."
+    room: stair_head
+    hp: 13
+    attack: 5
+    defense: 2
+    defeat_flag: captain_slain
+    death_ending: ending_fallen
+    on_defeat:
+      - add_journal: "The raider-captain falls against the rail, his shield split; the way up to the beacon stands clear."
+      - inc_var: { name: score, by: 10 }
+
+win_conditions:
+  # The win turns on the deliberate LIGHT act, the sunken_barrow claim_relic shape: BOTH
+  # `visited: beacon_crown` AND `has_flag: beacon_lit` must hold (implicit all_of). The
+  # `visited` term is KEPT so the parser validator still derives its soft-lock guard (every
+  # reachable room can reach a win) from a real win-room; the `has_flag` term means bare
+  # entry no longer wins — the player must strike the flint to the laid fire (beacon_fire),
+  # which the engine's post-action checkWin then resolves the same frame. Reaching the crown
+  # already requires both raiders down AND the cresset righted (the chained up-exit gates).
+  - id: light_beacon
+    conditions: [{ visited: beacon_crown }, { has_flag: beacon_lit }]
+    ending: ending_lit
+
+endings:
+  - id: ending_lit
+    title: "The Valley Wakes"
+    text: >
+      The pitch-pine catches and the beacon stands up in a column of fire over the
+      river, and across the valley the answering beacons take it up one by one, hill to
+      hill, faster than any raider can ride. Below the ford, the dark host that meant to
+      cross unseen hears the bells begin and knows it is undone. You hold the rail and
+      watch the dawn come up over a valley that is awake, and warned, and yours to have
+      saved. *** You have won. ***
+  - id: ending_fallen
+    title: "The Beacon Stayed Dark"
+    text: >
+      The raider's blade finds you on the cold stair, and the beacon-tower keeps its
+      dark above you. Down at the ford, in the grey before dawn, a host that no one
+      warned begins to cross. *** You have fallen. ***
+    death: true

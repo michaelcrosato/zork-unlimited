@@ -40,7 +40,7 @@ root_cause: >
 improvement:
   layer: content
   content:
-    - content/rpg/pack/cold_forge.yaml: >
+    - content/rpg/quests/cold_forge.yaml: >
         Appended an honest threat-and-preparation beat to the bellows_walk base description, AFTER
         the preserved bug_0029 settled-cold lines: "Slow is not the same as soft, though: it is a
         man-high weight of fused slag, and the blows it does land fall like a dropped anvil. Better
@@ -51,7 +51,7 @@ improvement:
         the +2 buff stays optional and one-shot, the fight stays the identical static 16-HP encounter
         the bug_0021 proofs require, and the canonical buffed route still wins 50/50.
 verification:
-  - npm run validate -- content/rpg/pack/cold_forge.yaml          # OK 0/0; content_hash 7f8c9542...
+  - npm run validate -- content/rpg/quests/cold_forge.yaml          # OK 0/0; content_hash 7f8c9542...
   - mcp_replay: new_game seed 47 -> down -> north (bellows_walk)   # rendered room carries the new "dropped anvil" / "every edge you can bring to bear" cue AND still "no swifter than it is now"; no warm-up verb
   - tests/regression/cold_forge_sentinel_threat_telegraph.test.ts  # 4 cases (below), all green
   - tests/regression/cold_forge_sentinel_warmup_fiction.test.ts    # bug_0029 still green — the two fixes coexist
@@ -60,7 +60,7 @@ locked_by:
   - tests/regression/cold_forge_sentinel_threat_telegraph.test.ts  # (a) base prose carries the honest threat/prep cue and does NOT declare the buff mandatory; (b) still honours every bug_0029 invariant (no warm-up verb, keeps "no swifter than it is now" + "holds no fire to rouse it"); (c) LIVE render carries the new cue; (d) sentinel stats untouched + +2 topic still optional/retiring + buffed route (seed 1) still wins 50/50
 notes:
   verifier_integrity: >
-    content/rpg/pack/cold_forge.yaml is NOT a protected file and NO test pins its content hash
+    content/rpg/quests/cold_forge.yaml is NOT a protected file and NO test pins its content hash
     (only watchtower_road is hash-pinned) and there is no canonical cold_forge trace under traces/rpg,
     so the prose addition moves the pack's content hash but requires no re-pin and trips no HASH_PIN
     drift. No protected source touched, no override used. The new test asserts behaviour (the cue is

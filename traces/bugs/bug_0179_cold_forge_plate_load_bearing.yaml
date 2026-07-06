@@ -5,7 +5,7 @@ mode: meta
 severity: enhancement
 layer: verification
 artifact:
-  source: content/rpg/pack/cold_forge.yaml
+  source: content/rpg/quests/cold_forge.yaml
   test: tests/regression/cold_forge_plate_load_bearing.test.ts
 
 summary: >

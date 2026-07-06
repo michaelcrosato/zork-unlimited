@@ -28,7 +28,7 @@ evidence:
 improvement:
   layer: content        # one number (the shade's defense ward) + its journal/comment text — no wight/prose/flag/score/ending/exit change
   content:
-    - content/rpg/pack/sunken_barrow.yaml: >
+    - content/rpg/quests/sunken_barrow.yaml: >
         Raised the reaver-shade's ward inc_var defense by 2 -> by 3 (defense 2 -> 5), and ONLY
         the ward; the wight (hp22/atk5/def2) is untouched, so the under-armed gamble stays
         exactly the bug_0102 ~43% lethal one and the prep gap WIDENS (43% vs 88%). Combat is

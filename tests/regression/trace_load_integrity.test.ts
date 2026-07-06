@@ -6,7 +6,7 @@
  * `replay_trace` / `inspect_trace` each `JSON.parse(readFileSync(trace_path))` an
  * UNTRUSTED on-disk trace and feed `trace.initial_state` straight into the engine
  * (replay.ts:45 runActions; inspect's own per-step loop + diagnose). The
- * content-hash check on each handler guards WHICH pack the trace was recorded
+ * content-hash check on each handler guards WHICH source the trace was recorded
  * against — NOT WHETHER the state is well-formed — so a forged trace carrying the
  * CORRECT content_hash and a poisoned `initial_state` previously sailed past it.
  * `Trace.initial_state` is a bare `GameState` with no Zod schema, so the same
@@ -19,7 +19,7 @@
  * Each WITNESS forges ONE field of a CLEAN recorded trace and asserts BOTH
  * `replay_trace` AND `inspect_trace` throw `SaveIntegrityError`. The GREEN
  * false-rejection guards prove a legitimate fresh-init trace — and a legitimately
- * mid-game CYOA trace — still replays + inspects unchanged, so the gate never
+ * mid-game RPG trace — still replays + inspects unchanged, so the gate never
  * false-rejects a state a real recording could carry.
  *
  * GENUINE-WITNESS NOTE: with the two-line gate reverted in BOTH tools.ts handlers,
@@ -30,21 +30,26 @@
 import { describe, it, expect, beforeAll } from "vitest";
 import { writeFileSync, mkdirSync } from "node:fs";
 import { createToolApi } from "../../src/mcp/tools.js";
-import { loadPackFile } from "../../src/cyoa/pack.js";
-import { indexPack, buildRules, initStateForPack } from "../../src/cyoa/runner.js";
+import { loadRpgSourceFile } from "../../src/rpg/source.js";
+import { indexRpgPack, buildRpgRules, initStateForRpgPack } from "../../src/rpg/runner.js";
 import { recordTrace, runActions, type Trace } from "../../src/trace/record.js";
 import { SaveIntegrityError } from "../../src/persist/save_load.js";
 import type { GameState } from "../../src/core/state.js";
+import type { RpgAction } from "../../src/api/types.js";
 
 const ROOT = process.cwd();
-const PACK = "content/cyoa/pack/watchtower_road.yaml";
+const PACK = "content/rpg/quests/sunken_barrow.yaml";
 const api = () => createToolApi({ root: ROOT });
 
-// A real 5-action route through watchtower_road (the ending_escape branch) — the
+// A real 5-action route through sunken_barrow's opening and shade dialogue — the
 // exact recipe reused from tests/regression/inspect_trace_divergence.test.ts.
-const ACTIONS = ["go_west", "ford_brook", "cross_north", "slip_into_woods", "slip_away"].map(
-  (id) => ({ type: "CHOOSE" as const, choiceId: id }),
-);
+const ACTIONS: RpgAction[] = [
+  { type: "MOVE", direction: "down" },
+  { type: "TAKE", item: "iron_bar" },
+  { type: "MOVE", direction: "west" },
+  { type: "TALK", npc: "reaver_shade" },
+  { type: "ASK", npc: "reaver_shade", topic: "ask_wight" },
+];
 
 let cleanTrace: Trace;
 let midGameTrace: Trace;
@@ -57,34 +62,39 @@ function write(path: string, trace: Trace) {
 }
 
 beforeAll(() => {
-  const compiled = loadPackFile(PACK);
+  const compiled = loadRpgSourceFile(PACK);
   if (!compiled.ok) throw new Error("pack must compile");
-  const index = indexPack(compiled.compiled.pack);
-  const rules = buildRules(index);
+  const index = indexRpgPack(compiled.compiled.pack);
+  const rules = buildRpgRules(index);
   const meta = {
     trace_id: "tr_0190",
-    pack_id: compiled.compiled.pack.meta.id,
     content_hash: compiled.compiled.contentHash,
+    worldQuestId: "sunken_barrow",
   };
   // GREEN guard #1 base: a clean fresh-init recorded trace.
-  cleanTrace = recordTrace(rules, initStateForPack(index, 1), ACTIONS, meta);
+  cleanTrace = recordTrace(rules, initStateForRpgPack(index, 1), ACTIONS, meta);
 
   // GREEN guard #2 base: a legitimately MID-GAME initial_state (current = a real
-  // non-start scene reached by stepping, endingId still null), then record a short
+  // non-start room reached by stepping, endingId still null), then record a short
   // tail from THERE — proving the gate accepts any state a real recording carries,
-  // not only the init state. After "go_west" the player is at a real scene.
-  const midState = runActions(rules, initStateForPack(index, 1), [
-    { type: "CHOOSE", choiceId: "go_west" },
+  // not only the init state. After "down" the player is in a real non-start room.
+  const midState = runActions(rules, initStateForRpgPack(index, 1), [
+    { type: "MOVE", direction: "down" },
   ]).finalState;
-  midGameTrace = recordTrace(
-    rules,
-    midState,
-    [{ type: "CHOOSE", choiceId: "search_rubble" }],
-    meta,
-  );
+  midGameTrace = recordTrace(rules, midState, [{ type: "TAKE", item: "iron_bar" }], meta);
 });
 
 describe("bug_0190 — trace-load integrity gate: forged-trace REJECTION (§16 trace twin)", () => {
+  it("WITNESS (mode) omitted trace mode — both handlers throw before stepping", () => {
+    const { mode: _drop, ...withoutMode } = cleanTrace;
+    write(FIXTURE("missing_mode"), withoutMode as Trace);
+    const path = FIXTURE("missing_mode");
+    expect(() => api().replay_trace({ trace_path: path })).toThrow(SaveIntegrityError);
+    expect(() => api().replay_trace({ trace_path: path })).toThrow(/Trace mode/);
+    expect(() => api().inspect_trace({ trace_path: path })).toThrow(SaveIntegrityError);
+    expect(() => api().inspect_trace({ trace_path: path })).toThrow(/Trace mode/);
+  });
+
   it("WITNESS (a) finiteness: initial_state.vars -> Infinity (1e999) — both handlers throw", () => {
     // Splice the literal 1e999 token into the serialized trace so it parses back to
     // Infinity (JSON.stringify(Infinity) === "null", so this is unforgeable through a
@@ -104,33 +114,21 @@ describe("bug_0190 — trace-load integrity gate: forged-trace REJECTION (§16 t
     mkdirSync("traces", { recursive: true });
     writeFileSync(path, forged);
     // Genuine witness: with the gate reverted, both calls return WITHOUT throwing.
-    expect(() => api().replay_trace({ trace_path: path, pack_path: PACK })).toThrow(
-      SaveIntegrityError,
-    );
-    expect(() => api().inspect_trace({ trace_path: path, pack_path: PACK })).toThrow(
-      SaveIntegrityError,
-    );
+    expect(() => api().replay_trace({ trace_path: path })).toThrow(SaveIntegrityError);
+    expect(() => api().inspect_trace({ trace_path: path })).toThrow(SaveIntegrityError);
   });
 
-  it("WITNESS (b) referential: phantom initial_state.current — both handlers throw /unknown scene/", () => {
+  it("WITNESS (b) referential: phantom initial_state.current — both handlers throw /unknown room/", () => {
     const poisoned: Trace = {
       ...cleanTrace,
       initial_state: { ...cleanTrace.initial_state, current: "no_such_room" },
     };
     write(FIXTURE("phantom_current"), poisoned);
     const path = FIXTURE("phantom_current");
-    expect(() => api().replay_trace({ trace_path: path, pack_path: PACK })).toThrow(
-      SaveIntegrityError,
-    );
-    expect(() => api().replay_trace({ trace_path: path, pack_path: PACK })).toThrow(
-      /unknown scene/,
-    );
-    expect(() => api().inspect_trace({ trace_path: path, pack_path: PACK })).toThrow(
-      SaveIntegrityError,
-    );
-    expect(() => api().inspect_trace({ trace_path: path, pack_path: PACK })).toThrow(
-      /unknown scene/,
-    );
+    expect(() => api().replay_trace({ trace_path: path })).toThrow(SaveIntegrityError);
+    expect(() => api().replay_trace({ trace_path: path })).toThrow(/unknown room/);
+    expect(() => api().inspect_trace({ trace_path: path })).toThrow(SaveIntegrityError);
+    expect(() => api().inspect_trace({ trace_path: path })).toThrow(/unknown room/);
   });
 
   it("WITNESS (c) referential: phantom initial_state.endingId — both handlers throw /unknown ending/", () => {
@@ -140,18 +138,39 @@ describe("bug_0190 — trace-load integrity gate: forged-trace REJECTION (§16 t
     };
     write(FIXTURE("phantom_ending"), poisoned);
     const path = FIXTURE("phantom_ending");
-    expect(() => api().replay_trace({ trace_path: path, pack_path: PACK })).toThrow(
-      SaveIntegrityError,
-    );
-    expect(() => api().replay_trace({ trace_path: path, pack_path: PACK })).toThrow(
-      /unknown ending/,
-    );
-    expect(() => api().inspect_trace({ trace_path: path, pack_path: PACK })).toThrow(
-      SaveIntegrityError,
-    );
-    expect(() => api().inspect_trace({ trace_path: path, pack_path: PACK })).toThrow(
-      /unknown ending/,
-    );
+    expect(() => api().replay_trace({ trace_path: path })).toThrow(SaveIntegrityError);
+    expect(() => api().replay_trace({ trace_path: path })).toThrow(/unknown ending/);
+    expect(() => api().inspect_trace({ trace_path: path })).toThrow(SaveIntegrityError);
+    expect(() => api().inspect_trace({ trace_path: path })).toThrow(/unknown ending/);
+  });
+
+  it("WITNESS (d) referential: phantom initial_state flag — both handlers throw /unknown flag/", () => {
+    const poisoned: Trace = {
+      ...cleanTrace,
+      initial_state: { ...cleanTrace.initial_state, flags: { no_such_flag: true } },
+    };
+    write(FIXTURE("phantom_flag"), poisoned);
+    const path = FIXTURE("phantom_flag");
+    expect(() => api().replay_trace({ trace_path: path })).toThrow(SaveIntegrityError);
+    expect(() => api().replay_trace({ trace_path: path })).toThrow(/unknown flag/);
+    expect(() => api().inspect_trace({ trace_path: path })).toThrow(SaveIntegrityError);
+    expect(() => api().inspect_trace({ trace_path: path })).toThrow(/unknown flag/);
+  });
+
+  it("WITNESS (e) referential: phantom initial_state var — both handlers throw /unknown var/", () => {
+    const poisoned: Trace = {
+      ...cleanTrace,
+      initial_state: {
+        ...cleanTrace.initial_state,
+        vars: { ...cleanTrace.initial_state.vars, no_such_var: 1 },
+      },
+    };
+    write(FIXTURE("phantom_var"), poisoned);
+    const path = FIXTURE("phantom_var");
+    expect(() => api().replay_trace({ trace_path: path })).toThrow(SaveIntegrityError);
+    expect(() => api().replay_trace({ trace_path: path })).toThrow(/unknown var/);
+    expect(() => api().inspect_trace({ trace_path: path })).toThrow(SaveIntegrityError);
+    expect(() => api().inspect_trace({ trace_path: path })).toThrow(/unknown var/);
   });
 });
 
@@ -159,9 +178,9 @@ describe("bug_0190 — trace-load integrity gate: GREEN false-rejection guards",
   it("a clean fresh-init recorded trace still replays + inspects unchanged", () => {
     write(FIXTURE("clean"), cleanTrace);
     const path = FIXTURE("clean");
-    const replay = api().replay_trace({ trace_path: path, pack_path: PACK }) as { ok: boolean };
+    const replay = api().replay_trace({ trace_path: path }) as { ok: boolean };
     expect(replay.ok).toBe(true);
-    const inspect = api().inspect_trace({ trace_path: path, pack_path: PACK }) as {
+    const inspect = api().inspect_trace({ trace_path: path }) as {
       ok: boolean;
       hash_ok: boolean;
       steps: number;
@@ -173,23 +192,23 @@ describe("bug_0190 — trace-load integrity gate: GREEN false-rejection guards",
     expect(inspect.diverged_at_step).toBeNull();
   });
 
-  it("a legitimately MID-GAME CYOA trace (current = a real reached scene) still replays + inspects", () => {
+  it("a legitimately MID-GAME RPG trace (current = a real reached room) still replays + inspects", () => {
     // Sanity: this trace's initial_state is NOT the init state — it is a real
-    // non-start scene with empty inventory and endingId null, exactly what a save
+    // non-start room with empty inventory and endingId null, exactly what a save
     // recorded mid-playthrough would carry. The gate must accept it.
     const init = (() => {
-      const compiled = loadPackFile(PACK);
+      const compiled = loadRpgSourceFile(PACK);
       if (!compiled.ok) throw new Error("pack must compile");
-      return initStateForPack(indexPack(compiled.compiled.pack), 1) as GameState;
+      return initStateForRpgPack(indexRpgPack(compiled.compiled.pack), 1) as GameState;
     })();
     expect(midGameTrace.initial_state.current).not.toBe(init.current);
     expect(midGameTrace.initial_state.endingId).toBeNull();
 
     write(FIXTURE("midgame"), midGameTrace);
     const path = FIXTURE("midgame");
-    const replay = api().replay_trace({ trace_path: path, pack_path: PACK }) as { ok: boolean };
+    const replay = api().replay_trace({ trace_path: path }) as { ok: boolean };
     expect(replay.ok).toBe(true);
-    const inspect = api().inspect_trace({ trace_path: path, pack_path: PACK }) as {
+    const inspect = api().inspect_trace({ trace_path: path }) as {
       ok: boolean;
       hash_ok: boolean;
     };

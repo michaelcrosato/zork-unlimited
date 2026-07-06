@@ -1,0 +1,14 @@
+# MUST FAIL: SCORE_UNREACHABLE
+# Declared max_score exceeds the points the pack can ever award (§13 Stage 3).
+meta: { id: bad_score, title: "Bad Score", start_room: a, max_score: 100, vars_init: { hp: 10, attack: 2, defense: 1 } }
+rooms:
+  - id: a
+    name: "A"
+    description: "Room A."
+    exits: [{ direction: north, to: b }]
+  - id: b
+    name: "B"
+    description: "Room B."
+    exits: [{ direction: south, to: a }]
+win_conditions: [{ id: w, conditions: [{ visited: b }], ending: e }]
+endings: [{ id: e, title: "End", text: "Done." }]

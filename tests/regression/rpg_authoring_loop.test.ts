@@ -1,33 +1,28 @@
 /**
- * Regression (§15) for bug_0140 — the author → validate → revise loop now covers RPG
- * packs, closing the authoring pipeline over ALL THREE engine modes (ULTRAPLAN §Week.4:
- * the richest validators behind a real authoring loop). bug_0139 added the parser mode
- * (validateParser); this adds the RPG mode, routed through `validateRpg` — the project's
- * RICHEST validator: every parser invariant (reference integrity / reachability /
- * soft-lock / win-reachability) PLUS the Stage-4 layer (player stat vars, enemies in real
- * rooms naming declared DEATH endings, combat winnability, skill-check passability).
+ * Regression (§15) for bug_0140 — the author → validate → revise loop targets RPG
+ * packs through `validateRpg`, the project's richest validator: every room/object/exit
+ * invariant PLUS the Stage-4 layer (player stat vars, enemies in real rooms naming
+ * declared DEATH endings, combat winnability, skill-check passability).
  *
- * `runRpgAdapter` reuses the same deterministic mock author + revise machinery as
- * `runAdapter`/`runParserAdapter`. Mirroring the CYOA mock's dangling choice and the
- * parser mock's dangling exit, the RPG mock's first attempt ships an RPG-SPECIFIC defect
- * — a wight whose `death_ending` names no declared ending — which ONLY the Stage-4 layer
- * of `validateRpg` catches (ENEMY_DEATH_ENDING_UNDECLARED). Once the validator's errors
- * are fed back, it returns the corrected, green pack.
+ * `runRpgAdapter` uses the deterministic mock author + revise machinery. The RPG mock's
+ * first attempt ships an RPG-specific defect — a wight whose `death_ending` names no
+ * declared ending — which only the Stage-4 layer of `validateRpg` catches
+ * (ENEMY_DEATH_ENDING_UNDECLARED). Once the validator's errors are fed back, it returns
+ * the corrected, green pack.
  *
  * This pins: (a) the first attempt is genuinely rejected by the RPG validator with an
- * RPG-specific code the parser validator alone would NOT raise — so the loop is decided
- * by the richest validator, not the model (§16); (b) the loop converges to a GREEN RPG
+ * RPG-specific code, so the loop is decided by the richest validator, not the model (§16);
+ * (b) the loop converges to a GREEN RPG
  * pack in a corrective round; (c) the produced pack independently re-validates green
  * AND is a genuine RPG shape (enemies + player stats + a skill check); (d) it is actually
  * playable to its win through the RPG engine — combat AND the skill check both required;
- * (e) the parser/CYOA paths are unaffected by the shared-loop refactor.
+ * (e) the emitted pack does not fall back to a legacy CYOA shape.
  */
 import { describe, it, expect } from "vitest";
 import { MockAuthorProvider } from "../../agents/authoring/mock_author.js";
 import { loadEngineContract, runWriter } from "../../agents/authoring/writer.js";
-import { runAdapter, runParserAdapter, runRpgAdapter } from "../../agents/authoring/adapter.js";
+import { runRpgAdapter } from "../../agents/authoring/adapter.js";
 import { validateRpg } from "../../src/validate/rpg_validator.js";
-import { validateParser } from "../../src/validate/parser_validator.js";
 import {
   indexRpgPack,
   buildRpgRules,
@@ -75,12 +70,6 @@ describe("rpg authoring loop (bug_0140, §12.2–3, §13 Stage 4)", () => {
     expect(first.rounds).toBe(1);
     const codes = first.report.findings.filter((f) => f.severity === "error").map((f) => f.code);
     expect(codes).toContain("ENEMY_DEATH_ENDING_UNDECLARED");
-    // The defect lives in the Stage-4 layer: validating the SAME pack as a plain parser
-    // pack would NOT raise it — proving the richest validator is what decides correctness.
-    const parserCodes = validateParser(first.pack)
-      .findings.filter((f) => f.severity === "error")
-      .map((f) => f.code);
-    expect(parserCodes).not.toContain("ENEMY_DEATH_ENDING_UNDECLARED");
   });
 
   it("loops against the RPG validator and converges to a GREEN pack", async () => {
@@ -92,7 +81,7 @@ describe("rpg authoring loop (bug_0140, §12.2–3, §13 Stage 4)", () => {
     expect(result.rounds).toBeGreaterThanOrEqual(2);
     // The produced pack independently re-validates green through the RPG validator.
     expect(validateRpg(result.pack).ok).toBe(true);
-    // It is a genuine RPG pack: enemies + player stats + a skill check, not a bare parser.
+    // It is a genuine RPG pack: enemies + player stats + a skill check.
     expect(result.pack.enemies.length).toBeGreaterThanOrEqual(1);
     for (const stat of [HP_VAR, ATTACK_VAR, DEFENSE_VAR])
       expect(result.pack.meta.vars_init[stat]).toBeGreaterThan(0);
@@ -142,13 +131,12 @@ describe("rpg authoring loop (bug_0140, §12.2–3, §13 Stage 4)", () => {
     expect(state.endingId).toBe("ending_saved");
   });
 
-  it("the shared-loop refactor leaves the parser and CYOA paths green", async () => {
+  it("emits the single RPG authoring shape, not a legacy parser or CYOA pack", async () => {
     const story = await runWriter(provider, { premise: PREMISE, contract });
-    const parser = await runParserAdapter(provider, { story, contract });
-    expect(parser.ok).toBe(true);
-    expect("rooms" in parser.pack && !("enemies" in parser.pack)).toBe(true); // parser, not rpg
-    const cyoa = await runAdapter(provider, { story, contract });
-    expect(cyoa.ok).toBe(true);
-    expect("scenes" in cyoa.pack).toBe(true); // a CYOA pack
+    const result = await runRpgAdapter(provider, { story, contract });
+    expect("rooms" in result.pack).toBe(true);
+    expect("enemies" in result.pack).toBe(true);
+    expect("scenes" in result.pack).toBe(false);
+    expect(result.pack.win_conditions.length).toBeGreaterThanOrEqual(1);
   });
 });

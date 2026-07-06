@@ -12,22 +12,23 @@ export const WorldGraphNodeSchema = z
     name: z.string().min(1),
     kind: WorldGraphNodeKindSchema,
     district: z.string().min(1).optional(),
-    pack: z.string().min(1).optional(),
+    coord: z.tuple([z.number().int(), z.number().int()]).optional(),
+    source: z.string().min(1).optional(),
   })
   .strict()
   .superRefine((node, ctx) => {
-    if (node.kind === "quest" && !node.pack) {
+    if (node.kind === "quest" && !node.source) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "quest graph nodes must declare a pack path",
-        path: ["pack"],
+        message: "quest graph nodes must declare an RPG source path",
+        path: ["source"],
       });
     }
-    if (node.kind !== "quest" && node.pack) {
+    if (node.kind !== "quest" && node.source) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "only quest graph nodes may declare a pack path",
-        path: ["pack"],
+        message: "only quest graph nodes may declare an RPG source path",
+        path: ["source"],
       });
     }
   });
@@ -67,12 +68,12 @@ export type WorldGraph = z.infer<typeof WorldGraphSchema>;
 export type WorldManifest = z.infer<typeof WorldManifestSchema>;
 
 /**
- * Shared world binding for shipped packs.
+ * Shared world binding for shipped RPG sources.
  *
  * This is optional at the schema layer so minimal test fixtures and generated eval
- * packs can stay focused. The shipped-content regression suite makes it mandatory
- * for content/{cyoa,parser,rpg}/pack: those are no longer separate campaigns, but
- * quest/area entries in the Charter Marches world.
+ * sources can stay focused. The shipped-content regression suite makes it mandatory
+ * for content/rpg/quests: those files are no longer separate campaigns, but quest/area
+ * entries in the Charter Marches world.
  */
 export const WorldBindingSchema = z
   .object({

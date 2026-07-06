@@ -30,20 +30,20 @@
  *       peaceful canonical route still reaches ending_victory at full 50/50.
  */
 import { describe, it, expect } from "vitest";
-import { loadRpgPackFile } from "../../src/rpg/pack.js";
+import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import {
   indexRpgPack,
   buildRpgRules,
   initStateForRpgPack,
   enumerateRpgActions,
 } from "../../src/rpg/runner.js";
-import { buildParserObservation } from "../../src/parser/observation.js";
+import { buildRpgObservation } from "../../src/rpg/observation.js";
 import { makeStep } from "../../src/core/engine.js";
-import type { Action } from "../../src/api/types.js";
+import type { Action, RpgAction } from "../../src/api/types.js";
 import type { GameState } from "../../src/core/state.js";
 import type { Effect } from "../../src/core/effects.js";
 
-const loaded = loadRpgPackFile("content/rpg/pack/sunken_barrow.yaml");
+const loaded = loadRpgSourceFile("content/rpg/quests/sunken_barrow.yaml");
 if (!loaded.ok) throw new Error("sunken_barrow must compile");
 const pack = loaded.compiled.pack;
 const index = indexRpgPack(pack);
@@ -51,9 +51,9 @@ const rules = buildRpgRules(index);
 const step = makeStep(rules);
 
 const options = (s: GameState) => enumerateRpgActions(index, s);
-const score = (s: GameState): number => buildParserObservation(index, s).score;
+const score = (s: GameState): number => buildRpgObservation(index, s).score;
 
-const EXAMINE_SARC: Action = { type: "LOOK", target: "sarcophagus" };
+const EXAMINE_SARC: RpgAction = { type: "LOOK", target: "sarcophagus" };
 
 const narrations = (effects: readonly Effect[]): string[] =>
   effects

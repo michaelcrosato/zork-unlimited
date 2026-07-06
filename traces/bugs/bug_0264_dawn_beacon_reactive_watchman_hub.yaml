@@ -2,7 +2,7 @@ id: bug_0264
 title: "Content polish: The Dawn Beacon's old watchman now greets the player tersely on return to his topic hub instead of re-delivering his whole first-meeting opening every time. A CONTENT application of the bug_0246 reactive-dialogue engine feature to the second NPC that needed it, motivated by this cycle's mandated blind pass."
 kind: content_fix
 mode: rpg
-pack: content/rpg/pack/dawn_beacon.yaml
+pack: content/rpg/quests/dawn_beacon.yaml
 # Pure content_fix — no engine/schema/validator change. The reactive-`variants` capability on
 # dialogue nodes already shipped (bug_0246) and is exercised by breaking_weir; this is the second
 # NPC to adopt it. dawn_beacon carries NO pinned content hash (only watchtower_road is pinned), and
@@ -54,7 +54,7 @@ regression_test: tests/regression/dawn_beacon_reactive_watchman_hub.test.ts
 # path (their when-flags must relabel consistently for the contamination-twin census to match).
 
 verify:
-  - "validate content/rpg/pack/dawn_beacon.yaml → OK, 0 error(s), 0 warning(s), max_score 50"
+  - "validate content/rpg/quests/dawn_beacon.yaml → OK, 0 error(s), 0 warning(s), max_score 50"
   - "MCP replay (seed 7): TALK → full 'You came up the yard' opening; ASK ask_fight → counsel + heard_counsel; ASK fight_back → terse 'Aye, lad — what else?' return line, ask_fight topic correctly retired"
   - "npx vitest run tests/regression/dawn_beacon_reactive_watchman_hub.test.ts → 4 passed"
   - "npm run health → green (verify:integrity + typecheck + lint + format + tests + validate + playtest)"

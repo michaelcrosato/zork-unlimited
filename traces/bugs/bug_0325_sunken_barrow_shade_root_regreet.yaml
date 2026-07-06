@@ -1,6 +1,6 @@
 id: bug_0325
 title: "sunken_barrow: reaver's shade re-shows full greeting on every return to shade_root"
-pack: content/rpg/pack/sunken_barrow.yaml
+pack: content/rpg/quests/sunken_barrow.yaml
 class: dialogue-regreet (mechanical dialogue loop)
 severity: minor
 found_by: blind_playtest (seed 7, 2026-06-08T14-06-03-284Z)

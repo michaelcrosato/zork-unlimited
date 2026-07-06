@@ -1,24 +1,35 @@
 /**
  * Trace recording (spec §8.8).
  *
- * A Trace is a fully replayable artifact: pack id, content hash, seed, the
+ * A Trace is a fully replayable artifact: source ref, content hash, seed, the
  * initial state, and the ordered actions. It is the backbone of regression
  * testing and bug reproduction (§15). The recorder runs the actions through the
  * engine and stamps the resulting final state hash so replay can assert it.
  */
 import type { GameState } from "../core/state.js";
 import { hashState } from "../core/hash.js";
-import type { Action, StepResult } from "../api/types.js";
-import type { Rules } from "../core/engine.js";
+import type { RpgAction, StepResult } from "../api/types.js";
+import type { EngineAction, Rules } from "../core/engine.js";
 import { makeStep } from "../core/engine.js";
+import { SaveIntegrityError, SAVE_MODE, type SaveMode } from "../persist/save_load.js";
+import { assertTraceIdentityFields } from "./integrity.js";
+import {
+  compactSourceRefFromMetadata,
+  compactSourceRefLabel,
+  type CompactSourceRef,
+} from "../world/source_ref.js";
 
-export type Trace = {
+export type TraceSourceRef = CompactSourceRef;
+
+export type Trace<A extends EngineAction = RpgAction> = {
+  mode: SaveMode;
+  /** Compact canonical world quest or generated-RPG source identity. */
+  source_ref: TraceSourceRef;
   trace_id: string;
-  pack_id: string;
   content_hash: string;
   seed: number;
   initial_state: GameState;
-  actions: Action[];
+  actions: A[];
   /** Optional; asserted on replay (§8.8). */
   expected_final_hash?: string;
   /**
@@ -38,7 +49,11 @@ export type RunResult = {
 };
 
 /** Apply a sequence of actions through the engine. Pure end to end. */
-export function runActions(rules: Rules, initialState: GameState, actions: Action[]): RunResult {
+export function runActions<A extends EngineAction>(
+  rules: Rules<A>,
+  initialState: GameState,
+  actions: A[],
+): RunResult {
   const step = makeStep(rules);
   let state = initialState;
   const steps: StepResult[] = [];
@@ -54,21 +69,41 @@ export function runActions(rules: Rules, initialState: GameState, actions: Actio
 
 export type RecordOptions = {
   trace_id: string;
-  pack_id: string;
   content_hash: string;
+  worldQuestId?: string | null;
+  generatedRpgSeed?: number | null;
 };
 
+const TRACE_SOURCE_LABELS = {
+  source: "Trace source",
+  worldQuestId: "Trace worldQuestId",
+  generatedRpgSeed: "Trace generatedRpgSeed",
+} as const;
+
+function traceSourceRef(opts: RecordOptions): TraceSourceRef {
+  const sourceRef = compactSourceRefFromMetadata(opts, TRACE_SOURCE_LABELS);
+  if (!sourceRef.ok) throw new SaveIntegrityError(sourceRef.error);
+  return sourceRef.sourceRef;
+}
+
+export function traceSourceLabel(trace: { source_ref: TraceSourceRef }): string {
+  return compactSourceRefLabel(trace.source_ref);
+}
+
 /** Run the actions and produce a Trace stamped with the final-state hash. */
-export function recordTrace(
-  rules: Rules,
+export function recordTrace<A extends EngineAction>(
+  rules: Rules<A>,
   initialState: GameState,
-  actions: Action[],
+  actions: A[],
   opts: RecordOptions,
-): Trace {
+): Trace<A> {
+  assertTraceIdentityFields(opts);
   const run = runActions(rules, initialState, actions);
+  const sourceRef = traceSourceRef(opts);
   return {
+    mode: SAVE_MODE,
+    source_ref: sourceRef,
     trace_id: opts.trace_id,
-    pack_id: opts.pack_id,
     content_hash: opts.content_hash,
     seed: initialState.seed,
     initial_state: initialState,

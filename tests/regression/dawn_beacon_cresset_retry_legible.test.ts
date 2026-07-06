@@ -20,7 +20,7 @@ import type { Action } from "../../src/api/types.js";
 import type { GameState } from "../../src/core/state.js";
 import type { Effect } from "../../src/core/effects.js";
 import type { Rng } from "../../src/core/rng.js";
-import { loadRpgPackFile } from "../../src/rpg/pack.js";
+import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import {
   buildRpgRules,
   enumerateRpgActions,
@@ -29,8 +29,8 @@ import {
 } from "../../src/rpg/runner.js";
 import { validateRpg } from "../../src/validate/rpg_validator.js";
 
-const PACK_PATH = "content/rpg/pack/dawn_beacon.yaml";
-const loaded = loadRpgPackFile(PACK_PATH);
+const PACK_PATH = "content/rpg/quests/dawn_beacon.yaml";
+const loaded = loadRpgSourceFile(PACK_PATH);
 if (!loaded.ok) throw new Error("dawn_beacon must compile");
 const pack = loaded.compiled.pack;
 const index = indexRpgPack(pack);

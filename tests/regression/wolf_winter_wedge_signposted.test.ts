@@ -5,10 +5,10 @@
  * This is the sequential sibling of bug_0256. bug_0256 made the wedge's payoff LEGIBLE
  * AFTER you do it (reactive prose on the room + rail once `breach_braced`). But a
  * 2026-06-05 blind playtest (seed 11, ai-runs/2026-06-05T05-48-14-545Z/playtest.md)
- * showed a fresh player never DISCOVERS the wedge at all: the USE/wedge action only
+ * showed a fresh player never DISCOVERS the wedge at all: the USE/wedge RpgAction only
  * surfaces once the rail is IN HAND, so a player whose instinct is to fight the obvious
  * wolf threat never takes the rail, and reads it as a vestigial dead clue ("no USE/wedge
- * action anywhere"). The pack's ONLY skill_check — and all the bug_0256 prose built for
+ * RpgAction anywhere"). The pack's ONLY skill_check — and all the bug_0256 prose built for
  * it — was effectively dead content.
  *
  * The fix is a content-only SIGNPOST in old Cade's "how the byre is held" counsel
@@ -22,8 +22,8 @@
  *       payoff (in both the spoken npc_text surfaced by the runner AND the persisted
  *       journal note), so the affordance is discoverable on the natural path;
  *   (2) DISCOVERABILITY of the mechanic the signpost points at — at the paling, taking the
- *       rail surfaces the wedge USE action (a USE on paling_rail with command_verb "wedge"),
- *       proving the signposted action genuinely exists and is reachable;
+ *       rail surfaces the wedge USE RpgAction (a USE on paling_rail with command_verb "wedge"),
+ *       proving the signposted RpgAction genuinely exists and is reachable;
  *   (3) PROSE-ONLY — the signpost adds no mechanical effect: cade_byre's effects are still
  *       exactly {set_flag heard_plan, add_journal}, and the wedge skill_check still gates
  *       nothing (no exit/win/ending turns on breach_braced — it stays an optional aid).
@@ -34,13 +34,13 @@
 import { describe, it, expect } from "vitest";
 import { makeStep } from "../../src/core/engine.js";
 import { buildRpgObservation } from "../../src/rpg/observation.js";
-import { loadRpgPackFile } from "../../src/rpg/pack.js";
+import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import { indexRpgPack, buildRpgRules, initStateForRpgPack } from "../../src/rpg/runner.js";
-import type { Action } from "../../src/api/types.js";
+import type { RpgAction } from "../../src/api/types.js";
 import type { GameState } from "../../src/core/state.js";
 import type { Rng } from "../../src/core/rng.js";
 
-const PACK_PATH = "content/rpg/pack/wolf_winter.yaml";
+const PACK_PATH = "content/rpg/quests/wolf_winter.yaml";
 
 const fixedRng = (): Rng => ({
   next: () => 0,
@@ -48,7 +48,7 @@ const fixedRng = (): Rng => ({
 });
 
 function setup() {
-  const loaded = loadRpgPackFile(PACK_PATH);
+  const loaded = loadRpgSourceFile(PACK_PATH);
   expect(loaded.ok, "wolf_winter must load").toBe(true);
   if (!loaded.ok) throw new Error("unreachable");
   const index = indexRpgPack(loaded.compiled.pack);
@@ -57,7 +57,7 @@ function setup() {
   return { pack: loaded.compiled.pack, index, rules, step };
 }
 
-/** Step the one legal action matching `want` (type + given fields); assert it exists. */
+/** Step the one legal RpgAction matching `want` (type + given fields); assert it exists. */
 function driver(rules: ReturnType<typeof setup>["rules"], step: ReturnType<typeof setup>["step"]) {
   let state: GameState = null as unknown as GameState;
   return {
@@ -65,10 +65,10 @@ function driver(rules: ReturnType<typeof setup>["rules"], step: ReturnType<typeo
       state = initStateForRpgPack(index, 11);
       return this;
     },
-    legal: (): Action[] => rules.legalActions(state) as Action[],
+    legal: (): RpgAction[] => rules.legalActions(state) as RpgAction[],
     state: () => state,
-    act(want: Partial<Action> & { type: Action["type"] }) {
-      const legal = rules.legalActions(state) as Action[];
+    act(want: Partial<RpgAction> & { type: RpgAction["type"] }) {
+      const legal = rules.legalActions(state) as RpgAction[];
       const match = legal.find((a) =>
         Object.entries(want).every(([k, v]) => (a as Record<string, unknown>)[k] === v),
       );
@@ -76,7 +76,7 @@ function driver(rules: ReturnType<typeof setup>["rules"], step: ReturnType<typeo
         match,
         `expected a legal ${JSON.stringify(want)} but the legal set was ${JSON.stringify(legal)}`,
       ).toBeTruthy();
-      const res = step(state, match as Action);
+      const res = step(state, match as RpgAction);
       expect(res.ok, `engine rejected ${JSON.stringify(want)}: ${res.rejectionReason}`).toBe(true);
       state = res.state;
       return this;
@@ -127,12 +127,12 @@ describe("bug_0258 — The Wolf-Winter: the optional wedge is signposted and dis
     expect(journal).toContain("wedge it across the breach");
   });
 
-  it("the signposted wedge genuinely exists: taking the rail surfaces a USE 'wedge' action", () => {
+  it("the signposted wedge genuinely exists: taking the rail surfaces a USE 'wedge' RpgAction", () => {
     const { index, rules, step } = setup();
     const d = driver(rules, step).start(index);
     d.act({ type: "MOVE", direction: "north" }); // -> byre_yard
     d.act({ type: "MOVE", direction: "north" }); // -> paling_gap (rail here, wolf alive)
-    // Before taking the rail there is no wedge action — it requires the rail in hand.
+    // Before taking the rail there is no wedge RpgAction — it requires the rail in hand.
     const beforeUse = d
       .legal()
       .some((a) => a.type === "USE" && (a as { item?: string }).item === "paling_rail");
@@ -141,7 +141,7 @@ describe("bug_0258 — The Wolf-Winter: the optional wedge is signposted and dis
     const wedge = buildRpgObservation(index, d.state()).available_actions.find((a) =>
       a.command.toLowerCase().startsWith("wedge"),
     );
-    expect(wedge, "after taking the rail, a 'wedge' action must be offered").toBeTruthy();
+    expect(wedge, "after taking the rail, a 'wedge' RpgAction must be offered").toBeTruthy();
     expect(wedge!.action).toMatchObject({
       type: "USE",
       item: "paling_rail",

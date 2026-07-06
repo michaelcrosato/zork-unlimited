@@ -3,7 +3,7 @@
  * chambers kept placing the folded bill at the satchel after it was taken.
  */
 import { describe, it, expect } from "vitest";
-import { loadRpgPackFile } from "../../src/rpg/pack.js";
+import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import {
   indexRpgPack,
   buildRpgRules,
@@ -11,11 +11,11 @@ import {
   enumerateRpgActions,
 } from "../../src/rpg/runner.js";
 import { buildRpgObservation } from "../../src/rpg/observation.js";
-import { resolveParserAction } from "../../src/parser/legal_actions.js";
+import { resolveRpgAction } from "../../src/rpg/legal_actions.js";
 import { makeStep } from "../../src/core/engine.js";
 import type { GameState } from "../../src/core/state.js";
 
-const loaded = loadRpgPackFile("content/rpg/pack/falconers_ransom.yaml");
+const loaded = loadRpgSourceFile("content/rpg/quests/falconers_ransom.yaml");
 if (!loaded.ok) throw new Error("falconers_ransom must compile");
 const index = indexRpgPack(loaded.compiled.pack);
 const step = makeStep(buildRpgRules(index));
@@ -40,7 +40,7 @@ function play(s: GameState, ids: string[]): GameState {
 const desc = (s: GameState): string => buildRpgObservation(index, s).description;
 
 function lookNarration(s: GameState): string {
-  const res = resolveParserAction(index, s, { type: "LOOK" });
+  const res = resolveRpgAction(index, s, { type: "LOOK" });
   const effect = res?.effects[0];
   if (!effect || !("narrate" in effect)) throw new Error("LOOK produced no narration");
   return effect.narrate;
