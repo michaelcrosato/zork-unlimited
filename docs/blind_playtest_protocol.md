@@ -72,12 +72,15 @@ PLAY:
   world_quest_id = "<QUEST_ID>", seed = <SEED>, hide_graph = true,
   compact_observation = true.
 - Each live compact context gives scene text, state/vitals, context.exits, and
-  context.actions (stable ids). Terminal contexts may omit empty exits/actions.
-  Choose one with step_action(session_id, action_id, hide_graph = true,
+  visible objects/NPCs. Fetch stable action ids with list_legal_actions using
+  compact_actions = true, then choose one with step_action(session_id,
+  action_id, expected_state_hash = latest state_hash, hide_graph = true,
   compact_observation = true). Step events are compact tuples by default; request
   compact_events = false only for event-history debugging. Repeat until
   context.ended is true. If an action id is unclear, call list_legal_actions with
-  compact_actions = false once for command text.
+  compact_actions = false once for command text. Use include_actions = true on
+  compact observations only when a one-call bundled action menu is worth the
+  extra payload.
 - For an end-of-run transcript audit, call get_transcript(session_id,
   summary_only = true, compact_summary = true, if_transcript_hash = latest
   transcript hash when rechecking unchanged history). Use include_source = true

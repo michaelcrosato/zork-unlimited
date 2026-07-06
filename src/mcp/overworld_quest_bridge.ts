@@ -7,6 +7,7 @@ export type OverworldQuestRpgStartOptions = {
   hide_graph?: boolean;
   compact_actions?: boolean;
   compact_observation?: boolean;
+  include_actions?: boolean;
 };
 
 export type OverworldQuestRpgStartArgs = {
@@ -42,6 +43,7 @@ function rpgStartArgsForOverworldQuest(
     ...(options.compact_observation !== undefined
       ? { compact_observation: options.compact_observation }
       : {}),
+    ...(options.include_actions !== undefined ? { include_actions: options.include_actions } : {}),
   };
 }
 

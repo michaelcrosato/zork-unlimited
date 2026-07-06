@@ -542,6 +542,7 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
         hide_graph?: boolean;
         compact_actions?: boolean;
         compact_observation?: boolean;
+        include_actions?: boolean;
       } & OverworldResponseOptions,
     >(args: Args): OverworldQuestStartResponse<DefaultCompactOverworldQuestStart<Args>> {
       const responseOptions = defaultCompactOverworldQuestStart(args);

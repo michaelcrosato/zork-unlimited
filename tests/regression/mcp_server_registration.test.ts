@@ -327,6 +327,7 @@ describe("MCP server registration", () => {
     ].join("\n");
     const stepArgs = toolApiSourceBlock("type RpgStepActionArgs", "type RpgLoadGameArgs");
     expect(rpgViewOptions).toContain("compact_observation");
+    expect(rpgViewOptions).toContain("include_actions");
     expect(rpgViewOptions).not.toContain("compact_events");
     expect(rpgEventOptions).toContain("compact_events");
     expect(viewOnlyRpgArgs).not.toContain("compact_events");
@@ -349,6 +350,7 @@ describe("MCP server registration", () => {
     expect(legalActions).not.toContain("hide_graph");
     expect(legalActions).not.toContain("defaultCompactRpg");
     expect(registeredToolBlock("get_observation")).toContain("IF_STATE_HASH");
+    expect(sharedSchemaBlock()).toContain("include_actions");
     expect(sharedSchemaBlock()).toContain("compact_events");
     expect(registeredToolBlock("step_action")).toContain("COMPACT_EVENTS");
     expect(registeredToolBlock("get_state")).not.toContain("defaultCompactRpg");

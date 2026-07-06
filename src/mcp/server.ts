@@ -46,20 +46,22 @@ const WORLD_QUEST_SOURCE = {
   world_quest_id: z.string().describe("Quest."),
 };
 const G = z.number().int().refine(genSeed);
+const B = (d: string) => z.boolean().optional().describe(d);
 const SESSION = {
   session_id: z.string().describe("S."),
 };
 const HIDE_GRAPH = {
-  hide_graph: z.boolean().optional().describe("Hide."),
+  hide_graph: B("Hide."),
 };
 const COMPACT_ACTIONS = {
-  compact_actions: z.boolean().optional().describe("Id."),
+  compact_actions: B("Id."),
 };
 const COMPACT_EVENTS = {
-  compact_events: z.boolean().optional().describe("Ev."),
+  compact_events: B("Ev."),
 };
 const COMPACT_OBSERVATION = {
-  compact_observation: z.boolean().optional().describe("Obs."),
+  compact_observation: B("Obs."),
+  include_actions: B("Ids."),
 };
 const IF_STATE_HASH = {
   if_state_hash: z.string().optional().describe("Same."),
@@ -442,7 +444,13 @@ tool(
 tool(
   "get_observation",
   "Observe.",
-  { ...SESSION, ...HIDE_GRAPH, ...IF_STATE_HASH, ...COMPACT_ACTIONS, ...COMPACT_OBSERVATION },
+  {
+    ...SESSION,
+    ...HIDE_GRAPH,
+    ...IF_STATE_HASH,
+    ...COMPACT_ACTIONS,
+    ...COMPACT_OBSERVATION,
+  },
   (a) => api.get_observation(defaultCompactRpg(a)),
 );
 tool(

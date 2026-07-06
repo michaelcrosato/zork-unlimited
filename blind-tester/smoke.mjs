@@ -75,10 +75,6 @@ function viewOf(payload) {
   return payload?.context ?? payload?.observation ?? payload;
 }
 
-function actionsOf(view) {
-  return view?.actions ?? view?.available_actions ?? [];
-}
-
 function actionIdOf(action) {
   return typeof action === "string" ? action : action?.id;
 }
@@ -108,6 +104,7 @@ async function main() {
     for (const required of [
       startTool,
       "get_observation",
+      "list_legal_actions",
       "step_action",
       "get_state",
       "get_transcript",
@@ -129,14 +126,22 @@ async function main() {
     if (!start.session_id) throw new Error(`${startTool} returned no session_id (${SOURCE_LABEL})`);
     const session_id = start.session_id;
     let view = viewOf(start);
+    let stateHash = start.state_hash;
+    let actionMenu = parseResult(
+      await client.callTool({
+        name: "list_legal_actions",
+        arguments: { session_id, compact_actions: true },
+      }),
+    );
+    let actions = actionMenu.actions ?? [];
+    stateHash = actionMenu.state_hash ?? stateHash;
     const sceneText = (view?.scene?.text ?? view?.text ?? "").slice(0, 90).replace(/\s+/g, " ");
     console.log(`• ${startTool} ok → session ${session_id} · ${SOURCE_LABEL}`);
-    console.log(`  scene: "${sceneText}…"  (${actionsOf(view).length} actions)`);
+    console.log(`  scene: "${sceneText}…"  (${actions.length} actions)`);
 
     // Step a few actions (first legal action each turn) to prove stepping works.
     let stepped = 0;
     for (let i = 0; i < STEPS; i++) {
-      const actions = actionsOf(view);
       if (view?.ended || actions.length === 0) break;
       const actionId = actionIdOf(actions[0]);
       if (typeof actionId !== "string") fail("first legal action did not expose an action id");
@@ -146,14 +151,26 @@ async function main() {
           arguments: {
             session_id,
             action_id: actionId,
+            expected_state_hash: stateHash,
             hide_graph: true,
             compact_observation: true,
           },
         }),
       );
       view = viewOf(res);
+      stateHash = res.state_hash ?? stateHash;
       stepped++;
       console.log(`  step ${i + 1}: ${actionId} → ${view?.ended ? "[ended]" : "ok"}`);
+      actionMenu = view?.ended
+        ? { actions: [], state_hash: stateHash }
+        : parseResult(
+            await client.callTool({
+              name: "list_legal_actions",
+              arguments: { session_id, compact_actions: true },
+            }),
+          );
+      actions = actionMenu.actions ?? [];
+      stateHash = actionMenu.state_hash ?? stateHash;
     }
 
     if (stepped === 0) fail("could not step any action from the opening scene");

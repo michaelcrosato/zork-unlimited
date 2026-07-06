@@ -12,6 +12,7 @@ import {
 export type RpgViewOptions = {
   compact_actions?: boolean;
   compact_observation?: boolean;
+  include_actions?: boolean;
 };
 
 export type RpgViewField<Args extends RpgViewOptions> = Args extends {
@@ -182,14 +183,19 @@ export function rpgViewField<Args extends RpgViewOptions>(
   opts: RpgObservationViewOptions = {},
 ): RpgViewField<Args> {
   if (args.compact_observation === true) {
+    const includeActions = args.include_actions === true;
     const context = sessions.observationProjection(
       session.id,
-      `${OBSERVATION_PROJECTION_COMPACT}:${observationProjectionSuffix(opts, "ids")}`,
+      `${OBSERVATION_PROJECTION_COMPACT}:${observationProjectionSuffix(
+        opts,
+        `ids:actions:${includeActions ? 1 : 0}`,
+      )}`,
       () => {
         const built = observationFrom(obs);
         return compactRpgObservation(
           built,
           built.available_actions.map((action) => action.id),
+          { includeActions },
         );
       },
     );

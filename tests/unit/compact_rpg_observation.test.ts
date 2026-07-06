@@ -65,7 +65,7 @@ describe("compactRpgObservation", () => {
     expect(compact.flags).toEqual(ids("flag", 16));
     expect(compact.journal).toEqual(ids("journal", 10).slice(-5));
     expect(compact.more).toEqual([4, 4, 0, 5]);
-    expect(compact.actions).toEqual(["look"]);
+    expect(compact.actions).toBeUndefined();
     expect(compact.vitals[3]).toBe(5);
     expect(compact.vars).toEqual({ lore: 3 });
     expect(JSON.stringify(compact).length).toBeLessThan(JSON.stringify(obs).length);
@@ -120,6 +120,14 @@ describe("compactRpgObservation", () => {
     expect(compact.actions).toBeUndefined();
   });
 
+  it("includes action ids only when explicitly requested", () => {
+    const compact = compactRpgObservation(observationWithLargeState(), ["look"], {
+      includeActions: true,
+    });
+
+    expect(compact.actions).toEqual(["look"]);
+  });
+
   it("caps action and visible world buckets with compact omission counts", () => {
     const actionCount = COMPACT_ACTION_LIMIT + 3;
     const exitCount = COMPACT_EXIT_LIMIT + 4;
@@ -158,7 +166,7 @@ describe("compactRpgObservation", () => {
     };
     const actionIds = ids("action", actionCount);
 
-    const compact = compactRpgObservation(obs, actionIds);
+    const compact = compactRpgObservation(obs, actionIds, { includeActions: true });
 
     expect(compact.actions).toEqual(actionIds.slice(0, COMPACT_ACTION_LIMIT));
     expect(compact.exits).toHaveLength(COMPACT_EXIT_LIMIT);
@@ -258,7 +266,7 @@ describe("compactRpgObservation", () => {
     expect(obs.ending?.text).toBe(longEndingText);
   });
 
-  it("caps compact scalar identity fields while preserving executable action ids", () => {
+  it("caps compact scalar identity fields while preserving opted-in executable action ids", () => {
     const longRoom = `room_${"x".repeat(400)}a`;
     const longTitle = `Room ${"x".repeat(400)}a`;
     const longId = `id_${"x".repeat(400)}a`;
@@ -292,7 +300,7 @@ describe("compactRpgObservation", () => {
       },
     };
 
-    const compact = compactRpgObservation(obs, [longActionId]);
+    const compact = compactRpgObservation(obs, [longActionId], { includeActions: true });
     const compactExit = compact.exits?.[0];
     const compactVarKey = Object.keys(compact.vars ?? {})[0];
 

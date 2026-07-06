@@ -26,7 +26,7 @@ export const COMPACT_DESCRIPTION_CHAR_LIMIT = 560;
 export const COMPACT_DIALOGUE_CHAR_LIMIT = 420;
 export const COMPACT_BLOCKED_EXIT_CHAR_LIMIT = 240;
 export const COMPACT_ENDING_TEXT_CHAR_LIMIT = 560;
-export const RPG_COMPACT_OBSERVATION_VERSION = 11 as const;
+export const RPG_COMPACT_OBSERVATION_VERSION = 12 as const;
 
 export type RpgCompactRef = readonly [id: string, name: string];
 export type RpgCompactExit = string | readonly [direction: string, to: string];
@@ -75,6 +75,10 @@ export type RpgCompactObservation = {
   ending?: RpgObservation["ending"];
 };
 
+export type CompactRpgObservationOptions = {
+  includeActions?: boolean;
+};
+
 function compactProse(value: string, limit: number): string {
   return compactText(value.trimEnd(), limit);
 }
@@ -114,9 +118,11 @@ function compactVars(vars: Record<string, number>): CompactVarsResult {
 export function compactRpgObservation(
   obs: RpgObservation,
   actionIds: string[],
+  opts: CompactRpgObservationOptions = {},
 ): RpgCompactObservation {
   const vars = compactVars(obs.state.vars);
-  const actions = compactHead(actionIds, COMPACT_ACTION_LIMIT);
+  const includeActions = opts.includeActions === true;
+  const actions = includeActions ? compactHead(actionIds, COMPACT_ACTION_LIMIT) : [];
   const inv = compactHead(obs.inventory, COMPACT_INVENTORY_LIMIT).map(
     compactMcpTranscriptSummaryValue,
   );
@@ -131,7 +137,7 @@ export function compactRpgObservation(
   const compactNpcs = compactHead(obs.npcs_present, COMPACT_VISIBLE_REF_LIMIT);
   const compactBlockedExits = compactHead(obs.blocked_exits, COMPACT_BLOCKED_EXIT_LIMIT);
   const compactEnemies = compactHead(obs.enemies_present, COMPACT_ENEMY_LIMIT);
-  const omittedActions = omittedCount(actionIds, actions);
+  const omittedActions = includeActions ? omittedCount(actionIds, actions) : 0;
   const omittedInv = omittedCount(obs.inventory, inv);
   const omittedFlags = omittedCount(obs.state.flags, flags);
   const omittedJournal = omittedCount(obs.state.journal, journal);
@@ -188,7 +194,7 @@ export function compactRpgObservation(
     text: compactProse(obs.description, COMPACT_DESCRIPTION_CHAR_LIMIT),
     ...(exits.length > 0 ? { exits } : {}),
     vitals: [obs.stats.hp, obs.stats.attack, obs.stats.defense, obs.score, obs.max_score],
-    ...(actions.length > 0 ? { actions } : {}),
+    ...(includeActions && actions.length > 0 ? { actions } : {}),
     ...(objects.length > 0 ? { objects } : {}),
     ...(npcs.length > 0 ? { npcs } : {}),
     ...(blocked.length > 0 ? { blocked } : {}),

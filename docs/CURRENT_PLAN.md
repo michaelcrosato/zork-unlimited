@@ -167,8 +167,9 @@ Make discovered overworld quest leads start real RPG sessions.
 - RPG start responses keep `world_quest_id` and compact opening context by
   default; callers can pass `include_world_context: true` for world/route
   metadata, while follow-up observations omit that repeated binding.
-- Compact RPG observations carry action ids as strings without repeated command
-  labels; full labels remain available on demand.
+- Compact RPG observations omit action ids by default; callers use
+  `list_legal_actions` for the state-bound menu, or pass `include_actions: true`
+  when a bundled compact context is worth the extra payload.
 - ToolApi/public MCP `list_legal_actions` defaults to compact action-id strings;
   callers can pass `compact_actions: false` when they need player-facing command
   labels.
@@ -204,8 +205,8 @@ Make discovered overworld quest leads start real RPG sessions.
   single-character tuple tags and compact state-effect codes, so loop clients can
   branch on shape without reading full reducer events.
 - Compact RPG MCP observations now cap inventory/flags and keep only recent
-  journal entries, with `more: [inventory, flags, journal]` omission counts
-  trimmed for trailing zero buckets and string action ids under context `v: 11`.
+  journal entries, with omission counts trimmed for trailing zero buckets and
+  opt-in string action ids under context `v: 12`.
 - Compact RPG observations and compact transcript summaries now share the same
   capped-list, recent-list, omission-count, and trailing-zero `more` tuple
   helper, keeping loop context and end-of-run audit payload rules aligned.
@@ -540,15 +541,16 @@ Make discovered overworld quest leads start real RPG sessions.
   `step_action`, and `load_game` also default to compact observation context,
   keeping local harness starts/reads/turns/resumes aligned with the public MCP
   loop default.
-- Compact RPG observation context is now versioned as `v: 11` for the mode-free,
-  compact-action loop payload shape with duplicate score vars filtered out and
-  tighter compact prose caps.
-- Compact RPG observation context omits empty exit and action lists when no
-  navigation or action ids are available, usually after terminal endings.
+- Compact RPG observation context is now versioned as `v: 12` for the mode-free
+  loop payload shape with duplicate score vars filtered out, tighter prose caps,
+  and action ids omitted unless `include_actions: true` is explicit.
+- Compact RPG observation context omits empty exit lists when no navigation is
+  available, usually after terminal endings.
 - ToolApi/public MCP `list_legal_actions` now defaults to compact string ids;
   callers can pass `compact_actions: false` for command labels.
-- RPG session start tools and overworld quest handoff now accept compact action
-  menus, avoiding repeated command labels on the opening RPG observation.
+- RPG session start tools and overworld quest handoff accept `include_actions:
+  true` when a compact opening observation should bundle action ids; the default
+  loop keeps action menus in `list_legal_actions`.
 - RPG compact transcript turns are `[step, scene_id, action_id, result_scene_id]`
   tuples for route debugging without replaying event text or repeated row keys.
 - RPG compact transcript summaries omit `ending_id` until an actual ending exists;

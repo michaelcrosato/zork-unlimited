@@ -796,6 +796,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
       compact_context: true,
       compact_actions: true,
       compact_observation: true,
+      include_actions: true,
     });
     expect(compactStartedQuest.context.here[0]).toBe(started.observation.current.id);
     expect("observation" in compactStartedQuest).toBe(false);
@@ -2823,7 +2824,15 @@ describe("MCP tools — the play loop (§9.1)", () => {
       fullStart.observation.score,
       fullStart.observation.max_score,
     ]);
-    expect(compactStart.context.actions?.[0]).toEqual(expect.any(String));
+    expect("actions" in compactStart.context).toBe(false);
+    const actionBundledStart = a.start_world_quest({
+      world_quest_id: "sunken_barrow",
+      seed: 1,
+      hide_graph: true,
+      compact_observation: true,
+      include_actions: true,
+    });
+    expect(actionBundledStart.context.actions?.[0]).toEqual(expect.any(String));
     expect(compactStart.context.vars).toMatchObject({ might: expect.any(Number) });
     expect(compactStart.context.vars).not.toHaveProperty("hp");
     expect(compactStart.context.vars).not.toHaveProperty("score");
@@ -2854,7 +2863,7 @@ describe("MCP tools — the play loop (§9.1)", () => {
     expect(defaultObservation.context).toEqual(compactObservation.context);
     expect("observation" in defaultObservation).toBe(false);
     expect(compactObservation.context.exits?.[0]).toEqual(expect.any(String));
-    expect(compactObservation.context.actions?.[0]).toEqual(expect.any(String));
+    expect("actions" in compactObservation.context).toBe(false);
     expect("mode" in compactObservation.context).toBe(false);
 
     const repeatedCompactObservation = a.get_observation({
@@ -2866,16 +2875,37 @@ describe("MCP tools — the play loop (§9.1)", () => {
     expect(repeatedCompactObservation.context).not.toBe(compactObservation.context);
     expect(repeatedCompactObservation.context.here).not.toBe(compactObservation.context.here);
     const compactRoom = compactObservation.context.here[0];
-    const compactActions = [...(compactObservation.context.actions ?? [])];
     (repeatedCompactObservation.context.here as [string, string])[0] = "mutated_room";
-    repeatedCompactObservation.context.actions?.push("mutated_action");
     const afterCompactObservationMutation = a.get_observation({
       session_id: fullStart.session_id,
       hide_graph: true,
       compact_observation: true,
     });
     expect(afterCompactObservationMutation.context.here[0]).toBe(compactRoom);
-    expect(afterCompactObservationMutation.context.actions).toEqual(compactActions);
+    expect("actions" in afterCompactObservationMutation.context).toBe(false);
+
+    const actionBundledObservation = a.get_observation({
+      session_id: fullStart.session_id,
+      hide_graph: true,
+      compact_observation: true,
+      include_actions: true,
+    });
+    expect(actionBundledObservation.context.actions?.[0]).toEqual(expect.any(String));
+    const repeatedActionBundledObservation = a.get_observation({
+      session_id: fullStart.session_id,
+      hide_graph: true,
+      compact_observation: true,
+      include_actions: true,
+    });
+    const compactActions = [...(actionBundledObservation.context.actions ?? [])];
+    repeatedActionBundledObservation.context.actions?.push("mutated_action");
+    const afterActionBundledObservationMutation = a.get_observation({
+      session_id: fullStart.session_id,
+      hide_graph: true,
+      compact_observation: true,
+      include_actions: true,
+    });
+    expect(afterActionBundledObservationMutation.context.actions).toEqual(compactActions);
 
     const fullObservation = a.get_observation({
       session_id: fullStart.session_id,
@@ -2948,7 +2978,11 @@ describe("MCP tools — the play loop (§9.1)", () => {
     expect("observation" in rejected).toBe(false);
     expect(rejected.context.here[0]).toBe(fullStart.observation.room);
 
-    const moveActionId = compactObservation.context.actions?.find((action) => action === "go_down");
+    const legalMenu = a.list_legal_actions({
+      session_id: fullStart.session_id,
+      compact_actions: true,
+    });
+    const moveActionId = legalMenu.actions.find((action) => action === "go_down");
     expect(moveActionId).toBe("go_down");
     const moved = a.step_action({
       session_id: fullStart.session_id,
@@ -3224,8 +3258,16 @@ describe("MCP tools — save / load round-trip (§8.7)", () => {
       fullReload.observation.title,
     ]);
     expect(compactReload.context.exits?.[0]).toEqual(expect.any(String));
-    expect(compactReload.context.actions?.[0]).toEqual(expect.any(String));
+    expect("actions" in compactReload.context).toBe(false);
     expect(JSON.stringify(compactReload).length).toBeLessThan(JSON.stringify(fullReload).length);
+
+    const actionBundledReload = a.load_game({
+      save: saved.save,
+      hide_graph: true,
+      compact_observation: true,
+      include_actions: true,
+    });
+    expect(actionBundledReload.context.actions?.[0]).toEqual(expect.any(String));
   });
 
   it("a shipped world quest save reloads by world graph id", () => {

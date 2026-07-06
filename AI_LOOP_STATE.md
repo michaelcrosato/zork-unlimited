@@ -1,10 +1,19 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 471 -->
+<!-- historical_cycle_count: 472 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - rpg_actions_opt_in_context_v12
+
+- Pre-cycle: `C:\dev\agent-cleaner` measure/gates passed through WSL; optional secret scanner remains absent.
+- Engine/loop surface: compact RPG observations are now `v: 12` and omit action ids by default; `include_actions: true` preserves the bundled-id escape hatch, including overworld quest handoff.
+- Loop effect: `breaking_weir` default `get_observation` is 914 bytes vs 1088 with bundled actions, and default `start_world_quest` is 1003 vs 1177; `list_legal_actions` remains the state-bound 255-byte action menu.
+- Self-critique: this trims the hot observe/start/step context surface, but live players still pay a separate menu read when they need choices; the win is clearest on observation polling, stale-step refresh, and state-bound action-menu reuse.
+- Guard: focused compact-observation, MCP loop, server-registration, blind-smoke, and docs-coherence regressions pin default omission, opt-in action ids, cache clone separation, schema budget, and the blind agent loop contract.
+- VERIFY: `C:\dev\agent-cleaner`, focused regressions, payload probe, `node blind-tester/smoke.mjs --quest breaking_weir --seed 7`, `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, `npm test`, and `npm run health` passed; post-rotation `npm run verify:integrity`, `npm run format:check`, and `git diff --check` also passed.
 
 ### Cycle result - overworld_destination_roads_v10
 
@@ -131,12 +140,3 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Self-critique: closes another API-default payload path; deeper wins remain in the large tracked world JSON and generated trace/log footprint.
 - Guard: MCP action-menu regressions pin no-flag compact ids while command-search helpers opt into full labels.
 - VERIFY: `C:\dev\agent-cleaner`, `npm run typecheck`, focused action-menu regressions, `npm run lint`, `npm run format:check`, `npm run validate`, `npm test`, and `npm run health` passed after loop-state rotation.
-
-### Cycle result - rpg_transcript_compact_default
-
-- Pre-cycle: `C:\dev\agent-cleaner` passed; optional secret scanner remains absent.
-- Engine/loop surface: ToolApi `get_transcript` now defaults to compact summary-only transcript metadata, matching the public MCP transcript wrapper.
-- Loop effect: direct harness/agent transcript polls no longer emit full turn arrays unless `summary_only: false` is explicit.
-- Self-critique: transcript default only; deeper wins remain in compact summary/event tuple shape and persisted trace payloads.
-- Guard: MCP transcript regressions pin no-flag summary-only behavior while full-turn readers opt out explicitly.
-- VERIFY: `C:\dev\agent-cleaner`, `npm run typecheck`, focused transcript regressions, `npm run lint`, `npm run format:check`, `npm run validate`, `npm test`, and `npm run health` passed after loop-state rotation.

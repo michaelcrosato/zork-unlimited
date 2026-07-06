@@ -129,6 +129,7 @@ type WorldListResponse<Args extends WorldListOptions> = {
 type RpgViewOptions = {
   compact_actions?: boolean;
   compact_observation?: boolean;
+  include_actions?: boolean;
 };
 
 type DefaultCompactRpgView<Args extends RpgViewOptions> = Args extends {

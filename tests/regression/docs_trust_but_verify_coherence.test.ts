@@ -82,8 +82,10 @@ describe("bug_0049 — the current-process docs on the REAL repo (charter-cohere
     const protocol = read("docs/blind_playtest_protocol.md");
     expect(protocol).toContain("compact_observation = true");
     expect(protocol).toContain("hide_graph = true");
-    expect(protocol).toContain("context.actions");
     expect(protocol).toContain("list_legal_actions");
+    expect(protocol).toContain("compact_actions = true");
+    expect(protocol).toContain("expected_state_hash = latest state_hash");
+    expect(protocol).toContain("include_actions = true");
     expect(protocol).toContain("compact_actions = false");
     expect(protocol).toContain("get_state");
     expect(protocol).toContain("compact_state = true");
