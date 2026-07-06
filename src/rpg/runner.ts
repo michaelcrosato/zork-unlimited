@@ -115,7 +115,12 @@ export function buildRpgRules(
           if (!present(index, state, action.target)) return null;
           if (action.item !== undefined && !state.inventory.includes(action.item)) return null;
           if (!evalConditions(it.conditions, state)) return null;
-          return resolveSkillCheck(state, it.skill_check, rngFor(state));
+          // Base `effects` fire before the roll's outcome effects — CYOA
+          // ordering, and what the validator has always counted (see the
+          // parser runner's twin comment; regression:
+          // parser_skill_check_base_effects.test.ts).
+          const roll = resolveSkillCheck(state, it.skill_check, rngFor(state));
+          return { conditions: roll.conditions, effects: [...it.effects, ...roll.effects] };
         }
       }
       return resolveParserAction(index, state, action);

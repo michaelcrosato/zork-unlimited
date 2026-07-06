@@ -169,6 +169,7 @@ export function relabelEffect(
   if ("unlock_exit" in e)
     return { unlock_exit: { from: r(e.unlock_exit.from), to: r(e.unlock_exit.to) } };
   if ("open_object" in e) return { open_object: r(e.open_object) };
+  if ("close_object" in e) return { close_object: r(e.close_object) };
   if ("set_object_locked" in e)
     return {
       set_object_locked: { id: r(e.set_object_locked.id), locked: e.set_object_locked.locked },

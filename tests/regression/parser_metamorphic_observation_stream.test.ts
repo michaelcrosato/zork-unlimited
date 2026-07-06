@@ -162,6 +162,8 @@ function optionId(a: Action): string {
       return `take_${a.item}`;
     case "OPEN":
       return `open_${a.target}`;
+    case "CLOSE":
+      return `close_${a.target}`;
     case "UNLOCK":
       return `unlock_${a.target}`;
     case "DROP":
@@ -181,7 +183,6 @@ function optionId(a: Action): string {
     case "INVENTORY":
       return "inventory";
     case "CHOOSE":
-    case "CLOSE":
     case "GIVE":
     case "INSPECT":
     case "ATTACK":

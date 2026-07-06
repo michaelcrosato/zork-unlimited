@@ -320,6 +320,7 @@ export function validateParser(
   for (const e of allEffects(pack)) {
     let objId: string | undefined;
     if ("open_object" in e) objId = e.open_object;
+    else if ("close_object" in e) objId = e.close_object;
     else if ("set_object_locked" in e) objId = e.set_object_locked.id;
     else if ("place_object" in e) objId = e.place_object.id;
     if (objId !== undefined && !objById.has(objId))
@@ -1000,6 +1001,10 @@ export function validateParser(
   const writtenLocked = new Set<string>();
   for (const e of allEffects(pack)) {
     if ("open_object" in e) writtenOpen.add(e.open_object);
+    // A close_object write raises the same liveness question as open_object —
+    // "does any condition read is_open for this id?" — independent of the
+    // boolean written (the bug_0263 principle applied to the CLOSE verb).
+    else if ("close_object" in e) writtenOpen.add(e.close_object);
     else if ("set_object_locked" in e) {
       if (e.set_object_locked.locked === false) writtenUnlocked.add(e.set_object_locked.id);
       else writtenLocked.add(e.set_object_locked.id);
@@ -1245,10 +1250,12 @@ type Falsifiers = {
   removedItems: Set<string>;
   varWrites: Map<string, VarWrite[]>;
   // Objects a `set_object_locked: { locked: true }` can re-lock — the only effect
-  // that falsifies an `is_unlocked` condition. (There is NO object-CLOSE effect in
-  // the closed effect DSL and the CLOSE verb is unresolvable, so `is_open` has no
-  // falsifier set: once open, an object stays open — see winStaysTrueForever.)
+  // that falsifies an `is_unlocked` condition.
   relockedObjects: Set<string>;
+  // Objects a `close_object` effect (or the built-in CLOSE verb, which emits it)
+  // can shut — the falsifiers of an `is_open` condition. Open-state stopped being
+  // monotone when CLOSE became a first-class verb; see winStaysTrueForever.
+  closedObjects: Set<string>;
 };
 
 /** Every mutation the pack can make (all declared parser effects + any extra RPG
@@ -1259,6 +1266,7 @@ function collectFalsifiers(pack: ParserPack, extra: Effect[]): Falsifiers {
   const addedItems = new Set<string>();
   const removedItems = new Set<string>();
   const relockedObjects = new Set<string>();
+  const closedObjects = new Set<string>();
   const varWrites = new Map<string, VarWrite[]>();
   const pushVar = (name: string, w: VarWrite): void => {
     const arr = varWrites.get(name) ?? [];
@@ -1274,6 +1282,7 @@ function collectFalsifiers(pack: ParserPack, extra: Effect[]): Falsifiers {
       else if ("remove_item" in e) removedItems.add(e.remove_item);
       else if ("set_object_locked" in e && e.set_object_locked.locked)
         relockedObjects.add(e.set_object_locked.id);
+      else if ("close_object" in e) closedObjects.add(e.close_object);
       else if ("inc_var" in e) pushVar(e.inc_var.name, { kind: "inc", amount: e.inc_var.by });
       else if ("dec_var" in e) pushVar(e.dec_var.name, { kind: "dec", amount: e.dec_var.by });
       else if ("set_var" in e) pushVar(e.set_var.name, { kind: "set", amount: e.set_var.value });
@@ -1281,7 +1290,15 @@ function collectFalsifiers(pack: ParserPack, extra: Effect[]): Falsifiers {
   };
   scan(allEffects(pack));
   scan(extra);
-  return { clearedFlags, setFlags, addedItems, removedItems, varWrites, relockedObjects };
+  return {
+    clearedFlags,
+    setFlags,
+    addedItems,
+    removedItems,
+    varWrites,
+    relockedObjects,
+    closedObjects,
+  };
 }
 
 // A var that holds `>= floor` keeps holding it iff no write can push it below floor:
@@ -1337,11 +1354,13 @@ function winStaysTrueForever(
     else if ("visited" in c) {
       /* `visited` is monotone — once true it stays true; nothing un-visits. */
     } else if ("is_open" in c) {
-      // Object open-state is monotone: the closed effect DSL has no object-CLOSE
-      // effect (only `open_object`, which sets open=true), and the CLOSE verb is
-      // unresolvable (`resolveParserAction` has no CLOSE case, so it is never
-      // enumerated or applied). Nothing can shut an opened object, so an `is_open`
-      // win that holds at start can never be falsified — always stable.
+      // Open-state stopped being monotone when CLOSE became a first-class
+      // verb: an authored `close_object` (and the built-in close it powers)
+      // falsifies is_open. Stable iff nothing can shut this object — the
+      // exact mirror of the is_unlocked/relock rule below. The built-in
+      // CLOSE verb only ever emits close_object for its own target, so the
+      // authored-effect scan is the complete falsifier set.
+      stable = !f.closedObjects.has(c.is_open);
     } else if ("is_unlocked" in c) {
       // A lock CAN be re-set: `set_object_locked: { locked: true }` is the sole
       // effect that falsifies an `is_unlocked` win. Stable iff no such relock

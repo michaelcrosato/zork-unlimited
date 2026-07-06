@@ -118,7 +118,19 @@ export const BUILTIN_VERBS: ReadonlySet<string> = new Set([
 
 /** A puzzle step: a verb applied to a target (optionally with an item), gated by
  *  conditions, producing effects. The Stage-2 puzzle mechanic (§7.3). A Stage-4
- *  interaction may additionally carry a `skill_check` resolved by the RPG runner. */
+ *  interaction may additionally carry a `skill_check` resolved by the runner —
+ *  base `effects` fire first, then the roll's on_success/on_failure (CYOA order).
+ *  Verb semantics (every admitted verb is runtime-reachable):
+ *    USE     — fires on `use item on target` / `use target` (self-use);
+ *    READ    — fires on `read target`, merged with `read_text`;
+ *    INSPECT — fires on `look at target`, per-interaction gated, composing after
+ *              the base description (a one-shot clue retires itself without
+ *              retiring examine);
+ *    OPEN    — fires on an open ATTEMPT (not-yet-open target), even on a
+ *              non-openable or locked object (warning/trap shapes), after the
+ *              built-in open when the object really opens;
+ *    CLOSE   — fires on closing an OPEN object, after the built-in
+ *              `close_object` when it is openable. */
 export const InteractionSchema = z
   .object({
     verb: z.enum(["USE", "READ", "INSPECT", "OPEN", "CLOSE"]),
