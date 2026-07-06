@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 437 -->
+<!-- historical_cycle_count: 438 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - rpg_source_file_loader_private
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/loop surface: `RpgSourceRuntime` no longer exposes path-taking `loadAndReport` or `requirePlayable` methods; file-backed quest loading is private to the source runtime.
+- Loop effect: public runtime/tests now exercise file cache behavior through canonical `world_quest_id` loading, including a temp world-manifest fixture for same-size rewrite invalidation.
+- Guard: source-runtime regression rejects direct `.loadAndReport(...)` and `.requirePlayable(...)` callers while pinning the private file-backed loader boundary.
+- VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused source-runtime/world-source/validation-bar regressions, `npm test`, and `npm run health` passed after loop-state rotation.
 
 ### Cycle result - quest_source_path_private
 
@@ -117,11 +125,3 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Loop effect: `save_game` derives its save-write guard from `worldQuestId` or `generatedRpgSeed`, so live sessions cannot leak package ids back into persisted save bytes.
 - Guard: focused MCP session/tool, save/trace, forged-save, and save referential regressions passed.
 - VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused MCP/session/persistence regressions, `npm test`, and `npm run health` passed after loop-state rotation.
-
-### Cycle result - save_pack_id_retired
-
-- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
-- Engine/loop surface: persisted `SaveBundle` bytes no longer serialize package-era `packId`; `load()` rejects forged or historical `packId` fields and requires `source_ref` plus `contentHash`.
-- Loop effect: save/load identity cannot fall back to package ids while the live `save(..., packId, ...)` call still validates existing runtime callers during staged consolidation.
-- Guard: focused save/trace, forged-save, save referential, and MCP save/load regressions passed.
-- VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused persistence/MCP regressions, `npm test`, and `npm run health` passed after loop-state rotation.

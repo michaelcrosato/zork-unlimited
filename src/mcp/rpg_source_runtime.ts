@@ -153,7 +153,7 @@ export class RpgSourceRuntime {
   constructor(private readonly root: string) {}
 
   /** Read an RPG pack, compile, and validate it with the single runtime loader. */
-  loadAndReport(packPath: string): RpgLoadResult {
+  private loadFileBackedReport(packPath: string): RpgLoadResult {
     const abs = safeResolve(this.root, packPath);
     const stat = statSync(abs);
     const cached = refreshSourceCacheEntry(this.packLoadCache, abs);
@@ -215,8 +215,8 @@ export class RpgSourceRuntime {
   }
 
   /** Compile + validate, refusing to play an invalid pack (§0, §10). */
-  requirePlayable(packPath: string): CompiledRpgPack {
-    const lr = this.loadAndReport(packPath);
+  private requireFileBackedPlayable(packPath: string): CompiledRpgPack {
+    const lr = this.loadFileBackedReport(packPath);
     if (!lr.ok || !lr.report.ok) {
       throw new Error(`Pack is not playable:\n${formatReport(lr.report)}`);
     }
@@ -305,7 +305,7 @@ export class RpgSourceRuntime {
     return {
       world: source.world,
       node: source.node,
-      compiled: this.requirePlayable(source.packPath),
+      compiled: this.requireFileBackedPlayable(source.packPath),
     };
   }
 
@@ -317,7 +317,7 @@ export class RpgSourceRuntime {
     return {
       world: source.world,
       node: source.node,
-      result: this.loadAndReport(source.packPath),
+      result: this.loadFileBackedReport(source.packPath),
     };
   }
 
