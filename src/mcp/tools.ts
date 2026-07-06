@@ -14,10 +14,10 @@ import { readFileSync } from "node:fs";
 import type { RpgAction } from "../api/types.js";
 import type { GameState } from "../core/state.js";
 
-import { loadRpgPackFile, type CompiledRpgPack } from "../rpg/pack.js";
+import type { CompiledRpgPack } from "../rpg/pack.js";
 import { assertRpgStateReferences } from "../rpg/state_integrity.js";
 
-import { makeReport, type ValidationReport } from "../validate/report.js";
+import type { ValidationReport } from "../validate/report.js";
 import { assertWellFormedState } from "../persist/save_load.js";
 import { assertTraceMode, replayTrace } from "../trace/replay.js";
 import type { Trace } from "../trace/record.js";
@@ -59,7 +59,7 @@ import {
 } from "../world/graph.js";
 import {
   loadOverworldManifest as loadOverworldManifestFromRoot,
-  resolvePackSource,
+  resolveWorldQuestSourceId,
 } from "../world/source.js";
 import { loadWorldQuestReport, validateWorldQuestReport } from "./world_quest_reports.js";
 import { MockAuthorProvider } from "../../agents/authoring/mock_author.js";
@@ -596,36 +596,29 @@ export function createToolApi(opts: { root: string }) {
       // pack + validation report (§9.4, §12.5). The model never writes files: a
       // patch is data, validated before it can be played (§16). The fixer is RPG-only,
       // matching the public catalog and runtime.
-      const source = resolvePackSource(root, args, "apply_content_patch");
+      const requestedWorldQuestId = resolveWorldQuestSourceId(args, "apply_content_patch");
       const proposal = ContentPatchProposalSchema.parse(args.proposal);
-      const abs = safeResolve(root, source.packPath);
-      const loaded = loadRpgPackFile(abs);
+      const source = rpgSources.loadWorldQuestReport(requestedWorldQuestId);
+      const loaded = source.result;
       if (!loaded.ok) {
         return {
           ok: false,
-          world_quest_id: source.worldQuestId,
-          report: makeReport(source.packPath, [
-            {
-              severity: "error" as const,
-              code: "SCHEMA",
-              message: "pack failed to compile",
-              where: [source.packPath],
-            },
-          ]),
+          world_quest_id: source.node.id,
+          report: loaded.report,
         };
       }
       const result = applyContentPatch(loaded.compiled.pack, proposal);
       return result.ok
         ? {
             ok: true,
-            world_quest_id: source.worldQuestId,
+            world_quest_id: source.node.id,
             applied: result.applied,
             report: result.report,
             pack: result.pack,
           }
         : {
             ok: false,
-            world_quest_id: source.worldQuestId,
+            world_quest_id: source.node.id,
             report: result.report,
           };
     },

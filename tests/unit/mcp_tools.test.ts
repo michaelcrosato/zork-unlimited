@@ -3119,11 +3119,14 @@ describe("MCP tools — apply_content_patch (§9.4, §16)", () => {
     }) as {
       ok: boolean;
       world_quest_id: string | null;
-      report: { ok: boolean };
+      report: { ok: boolean; pack_id: string };
     };
     expect(r.ok).toBe(true);
     expect("pack_path" in r).toBe(false);
     expect(r.world_quest_id).toBe("cold_forge");
+    expect(r.report.pack_id).toBe("cold_forge_v1");
+    expect(r.report.pack_id).not.toContain("/");
+    expect(r.report.pack_id).not.toContain("\\");
     expect(r.report.ok).toBe(true);
   });
 
@@ -3138,11 +3141,14 @@ describe("MCP tools — apply_content_patch (§9.4, §16)", () => {
     }) as {
       ok: boolean;
       world_quest_id: string | null;
-      report: { findings: { code: string }[] };
+      report: { pack_id: string; findings: { code: string }[] };
     };
     expect(r.ok).toBe(false);
     expect("pack_path" in r).toBe(false);
     expect(r.world_quest_id).toBe("cold_forge");
+    expect(r.report.pack_id).toBe("cold_forge_v1");
+    expect(r.report.pack_id).not.toContain("/");
+    expect(r.report.pack_id).not.toContain("\\");
     expect(r.report.findings[0]?.code).toBe("PATCH_TARGET_MISSING");
   });
 

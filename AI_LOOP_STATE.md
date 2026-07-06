@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 428 -->
+<!-- historical_cycle_count: 429 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - mcp_patch_loader_world_id
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/loop surface: MCP `apply_content_patch` now resolves args to `world_quest_id` and loads the source through `RpgSourceRuntime.loadWorldQuestReport`; raw `packPath` no longer appears in the patch tool handler.
+- Loop effect: structured content patches operate on compiled quest data from the unified source runtime instead of re-opening package files in ToolApi code.
+- Guard: focused MCP patch regression covers world-id output, absence of `pack_path`, and canonical non-path report identity for accepted and rejected patches.
+- VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused MCP tool regression, `npm test`, and `npm run health` passed after loop-state rotation.
 
 ### Cycle result - mcp_report_loader_world_id
 
@@ -117,11 +125,3 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Loop effect: new persisted artifacts stay tied to world/generated identity while historical `["pack", id]` save/trace artifacts remain load/replay-only compatibility inputs.
 - Guard: focused save/trace, stage4, determinism, and source-integrity regressions cover write rejection plus legacy load/replay tolerance.
 - VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused changed tests, `npm test`, and `npm run health` passed after loop-state rotation.
-
-### Cycle result - session_source_identity_guarded
-
-- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
-- Engine/loop surface: `SessionStore.create` now rejects contradictory MCP RPG source identity before retaining a session.
-- Loop effect: generated sessions cannot also carry world quest or pack-path identity, and overworld-launched RPG sessions must bind to a world quest.
-- Guard: focused session-store regression covers conflict rejection, safe generated-seed validation, id preservation after rejected creates, and metadata locks for shipped/generated sessions.
-- VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused session regression, `npm test`, and `npm run health` passed after loop-state rotation.
