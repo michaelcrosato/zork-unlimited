@@ -538,6 +538,9 @@ Make discovered overworld quest leads start real RPG sessions.
   early or state-light audit polls.
 - World source loading now caches parsed Charter Marches and New York overworld
   manifests per process.
+- Overworld-heavy tests use the cached production `loadOverworldManifest` loader
+  instead of direct JSON fixture parsing, keeping the 3.1 MB world manifest on
+  one cache path per process.
 - MCP pack loading now caches unchanged RPG compile/validate reports within each
   API instance.
 - `list_overworld` now keeps source/design-rule prose behind

@@ -10,7 +10,7 @@ import { indexRpgPack, buildRpgRules, initStateForRpgPack } from "../../src/rpg/
 import { buildRpgObservation } from "../../src/rpg/observation.js";
 import { makeStep } from "../../src/core/engine.js";
 import { recordTrace } from "../../src/trace/record.js";
-import { parseOverworldManifest } from "../../src/world/overworld.js";
+import { loadOverworldManifest } from "../../src/world/source.js";
 import { hashState } from "../../src/core/hash.js";
 import { generateRpgPack } from "../../src/gen/rpg_generator.js";
 import type { RpgAction } from "../../src/api/types.js";
@@ -20,9 +20,7 @@ const ROOT = process.cwd();
 const PACK = "content/rpg/quests/sunken_barrow.yaml";
 const NON_RPG_PACK = "content/broken-fixtures/duplicate_id.yaml";
 const api = () => createToolApi({ root: ROOT });
-const overworld = parseOverworldManifest(
-  JSON.parse(readFileSync("content/world/new_york_overworld.json", "utf8")),
-);
+const overworld = loadOverworldManifest(ROOT);
 
 function numberedIds(prefix: string, count: number): string[] {
   return Array.from({ length: count }, (_, i) => `${prefix}_${i.toString().padStart(2, "0")}`);

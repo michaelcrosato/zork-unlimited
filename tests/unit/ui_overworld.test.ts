@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { readFileSync } from "node:fs";
-import { parseOverworldManifest } from "../../src/world/overworld.js";
+import { loadOverworldManifest } from "../../src/world/source.js";
 import {
   OVERWORLD_COMPACT_COMPLETED_ARC_LIMIT,
   OVERWORLD_COMPACT_LABEL_CHAR_LIMIT,
@@ -17,9 +16,7 @@ import {
 import { buildOverworldSessionCompactView } from "../../src/world/session_compact_view.js";
 import { OverworldSession } from "../../ui/src/overworld.js";
 
-const world = parseOverworldManifest(
-  JSON.parse(readFileSync("content/world/new_york_overworld.json", "utf8")),
-);
+const world = loadOverworldManifest(process.cwd());
 
 function roadPath(from: string, to: string): string[] {
   const queue: { town: string; roadIds: string[] }[] = [{ town: from, roadIds: [] }];

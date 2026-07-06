@@ -9,12 +9,10 @@ import {
   overworldExplorationSitesNear,
   overworldJobsAt,
   planOverworldRoute,
-  parseOverworldManifest,
 } from "../../src/world/overworld.js";
+import { loadOverworldManifest } from "../../src/world/source.js";
 
-const world = parseOverworldManifest(
-  JSON.parse(readFileSync("content/world/new_york_overworld.json", "utf8")),
-);
+const world = loadOverworldManifest(process.cwd());
 
 describe("New York overworld graph", () => {
   it("uses New York as a town-and-road overworld, not a global quest menu", () => {

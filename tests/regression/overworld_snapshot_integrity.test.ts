@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { readFileSync } from "node:fs";
 import { createToolApi } from "../../src/mcp/tools.js";
 import {
   overworldAreasAt,
@@ -8,13 +7,11 @@ import {
   overworldJobsAt,
   overworldQuestsAt,
   overworldRoadEventFor,
-  parseOverworldManifest,
 } from "../../src/world/overworld.js";
+import { loadOverworldManifest } from "../../src/world/source.js";
 
 const api = () => createToolApi({ root: process.cwd() });
-const overworld = parseOverworldManifest(
-  JSON.parse(readFileSync("content/world/new_york_overworld.json", "utf8")),
-);
+const overworld = loadOverworldManifest(process.cwd());
 
 type Snapshot = ReturnType<typeof exportedSnapshotAfterTwoRoads>["snapshot"];
 type JournalEntry = Snapshot["journalEntries"][number];

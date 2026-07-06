@@ -1,11 +1,8 @@
-import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { parseOverworldManifest } from "../../src/world/overworld.js";
+import { loadOverworldManifest } from "../../src/world/source.js";
 import { OverworldSession } from "../../src/world/session.js";
 
-const world = parseOverworldManifest(
-  JSON.parse(readFileSync("content/world/new_york_overworld.json", "utf8")),
-);
+const world = loadOverworldManifest(process.cwd());
 
 describe("overworld session view clone", () => {
   it("keeps returned full views from mutating cached session state", () => {

@@ -1,10 +1,19 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 459 -->
+<!-- historical_cycle_count: 460 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - overworld_loader_cache_tests
+
+- Pre-cycle: `C:\dev\agent-cleaner` measure/gates passed through WSL; optional secret scanner remains absent.
+- Engine/loop surface: overworld-heavy tests now use the cached production `loadOverworldManifest` path instead of direct JSON reads/parses.
+- Loop effect: local and CI test loops stop duplicating manual parses of the 3.1 MB overworld manifest in read-only fixture setup.
+- Self-critique: test-loop efficiency only; the tracked world JSON remains large and runtime payload surfaces still need deeper shrinking.
+- Guard: focused overworld/session/UI regressions exercise the cached loader path with immutable manifests.
+- VERIFY: `C:\dev\agent-cleaner`, focused overworld loader/cache regressions, `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, `npm test`, and `npm run health` passed after loop-state rotation.
 
 ### Cycle result - ignored_run_artifact_tracking_guard
 
@@ -131,11 +140,3 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Self-critique: not player-facing, but it locks a real token-regression class instead of relying on ignore-file convention.
 - Guard: focused verifier/loop-state regressions cover forbidden tracked artifacts and guard-self weakening.
 - VERIFY: `npm run typecheck`, focused verifier/loop-state regressions, `npm run validate`, `npm test`, and `npm run health` passed after loop-state rotation.
-
-### Cycle result - trace_source_ref_diagnostics
-
-- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
-- Engine/loop surface: trace replay/inspect fixtures and diagnostics now use embedded `source_ref` and source-hash language instead of legacy `worldQuestId` / package wording.
-- Loop effect: future trace debugging starts from the same compact source identity that current saves and traces serialize, reducing package-era recovery cues in operator loops.
-- Guard: focused trace CLI/MCP/source regressions cover source-ref inference, raw pack rejection, and explicit-source conflict diagnostics.
-- VERIFY: `npm run typecheck`, focused trace/source/MCP regressions, `npm run validate`, `npm test`, and `npm run health` passed after loop-state rotation.
