@@ -1,4 +1,8 @@
-import type { OverworldCompactView } from "../world/compact_view.js";
+import {
+  OVERWORLD_COMPACT_LEGEND,
+  type OverworldCompactLegend,
+  type OverworldCompactView,
+} from "../world/compact_view.js";
 import type { OverworldManifest } from "../world/overworld.js";
 import { OverworldSession, type OverworldSessionSnapshot } from "../world/session.js";
 import type { OverworldView } from "../world/session_view.js";
@@ -49,12 +53,16 @@ export type OverworldMcpViewField<Args extends OverworldMcpResponseOptions> = Ar
 export type OverworldMcpStartResponse<Args extends OverworldMcpResponseOptions> = {
   session_id: string;
   snapshot_hash: string;
+  /** Field guide for the compact context; sent only on session-creating responses. */
+  legend?: OverworldCompactLegend;
 } & OverworldMcpViewField<Args>;
 
 export type OverworldMcpRestoreResponse<Args extends OverworldMcpResponseOptions> = {
   ok: true;
   session_id: string;
   snapshot_hash: string;
+  /** Field guide for the compact context; sent only on session-creating responses. */
+  legend?: OverworldCompactLegend;
 } & OverworldMcpViewField<Args>;
 
 type OverworldMcpSessionPayload<Key extends string, Value> = {
@@ -379,6 +387,9 @@ export class OverworldMcpSessionStore {
     return {
       session_id: created.session_id,
       snapshot_hash: this.snapshotHash(created.session),
+      // The legend rides only on session-creating responses (here and in
+      // restoreResponse), keeping every subsequent per-action payload lean.
+      ...(args.compact_context === true ? { legend: OVERWORLD_COMPACT_LEGEND } : {}),
       ...this.viewField(args, created.session),
     } as OverworldMcpStartResponse<Args>;
   }
@@ -392,6 +403,7 @@ export class OverworldMcpSessionStore {
       ok: true,
       session_id: restored.session_id,
       snapshot_hash: this.snapshotHash(restored.session),
+      ...(args.compact_context === true ? { legend: OVERWORLD_COMPACT_LEGEND } : {}),
       ...this.viewField(args, restored.session),
     } as OverworldMcpRestoreResponse<Args>;
   }

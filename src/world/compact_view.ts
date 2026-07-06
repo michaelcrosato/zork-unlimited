@@ -197,6 +197,59 @@ export type OverworldCompactView = {
   ids: OverworldCompactIdMap;
 };
 
+/**
+ * Agent-facing legend for the positional encodings above. Co-located with the
+ * encoders in this file so the two cannot drift: the `satisfies` clause forces an
+ * entry for every OverworldCompactView field, and tests/unit/compact_legend.test.ts
+ * asserts emitted contexts stay covered. Sent ONCE per session (start_overworld /
+ * restore_overworld_session), never repeated in per-action payloads.
+ */
+export const OVERWORLD_COMPACT_LEGEND = {
+  v: "compact context schema version",
+  world: "world name (include_world_name only)",
+  time: "in-game clock 'Day N, HH:MM'",
+  here: "[town_id, town_name, region_name, area_id|null, area_name|null] current location",
+  vitals: "[supplies, max_supplies, fatigue_0to100, condition_label] travel readiness",
+  hidden:
+    "[areas, jobs, sites, quests] counts still undiscovered at this town; scout/talk/explore to reveal them",
+  roads:
+    "[[dest_town_id, est_minutes_incl_delays, supplies_needed, fatigue_0to100_on_arrival], ...] direct roads from here",
+  roads_truncated: "true when more roads exist than listed",
+  area_routes:
+    "[[area_route_id, dest_area_id, minutes], ...] walking routes for move_overworld_session_area",
+  area_routes_truncated: "true when more area routes exist than listed",
+  route_options:
+    "[[dest_town_id, est_minutes, supplies_needed, fatigue_0to100_on_arrival, [road_id, ...]], ...] multi-leg plans (include_route_options only)",
+  route_options_truncated: "true when more route options exist than listed",
+  route_paths_truncated: "true when a route's road_id list was capped",
+  areas: "[[area_id, name], ...] known local areas (explore_overworld_session_area)",
+  poi: "[[poi_id, title], ...] points of interest (scout_overworld_session_poi)",
+  contacts: "[[character_id, name], ...] people here (talk_overworld_session_contact)",
+  events: "[[event_id, title], ...] local events (investigate/resolve_overworld_session_event)",
+  local_refs_truncated:
+    "keys among areas/poi/contacts/events/jobs/sites/quests whose lists were capped",
+  jobs: "[[job_id, title], ...] discovered jobs (work_overworld_session_job)",
+  sites: "[[site_id, title], ...] discovered sites (explore_overworld_session_site)",
+  quests: "[[quest_id, title], ...] discovered quests (start_overworld_session_quest)",
+  pending_road:
+    "{id, edge: road_id, event: [road_event_id, risk_text], options: [[strategy, minutes, supplies_cost, fatigue_gained, renown_gained], ...]} unresolved road encounter; resolve it before traveling on",
+  journal: "[[kind, title, 'Day N, HH:MM'], ...] recent journal entries",
+  travel_log:
+    "[[road_id, from_town_id, to_town_id, minutes, supplies_used, fatigue_gained, road_event_id|null], ...] recent trips",
+  travel_log_truncated: "true when older trips were omitted",
+  progress: "[towns_visited, towns_total]",
+  renown: "[[region_name, renown_points], ...] reputation per region",
+  renown_truncated: "true when more regions have renown than listed",
+  completed_arcs: "completed regional arc ids",
+  completed_arcs_truncated: "true when more completed arcs exist than listed",
+  id_counts:
+    "[discovered_towns, discovered_areas, visited_areas, discovered_jobs, completed_jobs, discovered_sites, explored_sites, discovered_quests, started_quests, completed_quests, resolved_events] running totals",
+  ids: "map from the id_counts categories to their ids, capped per list (include_ids only)",
+  ids_truncated: "id categories whose ids lists were capped",
+} as const satisfies Record<keyof OverworldCompactView, string>;
+
+export type OverworldCompactLegend = typeof OVERWORLD_COMPACT_LEGEND;
+
 export function compactOverworldLabel(value: string): string {
   return compactText(value, OVERWORLD_COMPACT_LABEL_CHAR_LIMIT);
 }

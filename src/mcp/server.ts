@@ -5,12 +5,20 @@
  * unit-tested source of truth). The server confines all paths to the project
  * root and treats content/traces as data only — never code or shell (§16).
  *
+ * Tool descriptions are the agent-facing contract: each one is a single sentence
+ * that says what the tool does and when to use it (blind playtesters have no
+ * other manual). The compact positional payloads are documented by the `legend`
+ * field on session-creating responses; tests/unit/compact_legend.test.ts guards
+ * both halves of that contract via the exported TOOL_REGISTRATIONS registry.
+ *
  * Run: `npm run mcp` (or register the project's .mcp.json in an MCP client).
  */
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z, type ZodRawShape } from "zod";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
+import { fileURLToPath } from "node:url";
+import { resolve } from "node:path";
 import { createToolApi } from "./tools.js";
 import { TRANSCRIPT_TURN_LIMIT_DEFAULT } from "./transcript_projection.js";
 import { isGeneratedRpgSeed as genSeed } from "../gen/seed.js";
@@ -33,50 +41,59 @@ function wrap<A>(handler: (args: A) => unknown) {
 
 const server = new McpServer({ name: "adventureforge", version: "0.1.0" });
 
+export type ToolRegistration = { name: string; description: string };
+
+/** Every registered tool, exported so tests can hold descriptions to a floor. */
+export const TOOL_REGISTRATIONS: ToolRegistration[] = [];
+
 function tool(
   name: string,
   description: string,
   inputSchema: ZodRawShape,
   handler: (args: never) => unknown,
 ): void {
+  TOOL_REGISTRATIONS.push({ name, description });
   server.registerTool(name, { description, inputSchema }, wrap(handler) as never);
 }
 
 const WORLD_QUEST_SOURCE = {
-  world_quest_id: z.string().describe("Quest."),
+  world_quest_id: z.string().describe("World quest id from list_world."),
 };
 const G = z.number().int().refine(genSeed);
 const B = (d: string) => z.boolean().optional().describe(d);
 const SESSION = {
-  session_id: z.string().describe("S."),
+  session_id: z.string().describe("Session id from the tool that created the session."),
 };
 const HIDE_GRAPH = {
-  hide_graph: B("H."),
+  hide_graph: B("Omit the world graph from observations."),
 };
 const COMPACT_ACTIONS = {
-  compact_actions: B("I."),
+  compact_actions: B("Bare action ids instead of labeled options."),
 };
 const COMPACT_EVENTS = {
-  compact_events: B("E."),
-  include_event_version: B("V."),
+  compact_events: B("Events as tagged tuples per the session legend."),
+  include_event_version: B("Echo the event schema version."),
 };
 const COMPACT_OBSERVATION = {
-  compact_observation: B("O."),
-  include_actions: B("I."),
-  include_context_version: B("V."),
+  compact_observation: B("False swaps the compact context for the verbose observation."),
+  include_actions: B("Bundle legal action ids into the compact context."),
+  include_context_version: B("Echo the context schema version."),
 };
 const IF_STATE_HASH = {
-  if_state_hash: z.string().optional().describe("H."),
+  if_state_hash: z.string().optional().describe("Reply unchanged:true if this state hash holds."),
 };
 const IF_TRANSCRIPT_HASH = {
-  if_transcript_hash: z.string().optional().describe("T."),
+  if_transcript_hash: z
+    .string()
+    .optional()
+    .describe("Reply unchanged:true if this transcript hash holds."),
 };
 const EXPECTED_STATE_HASH = {
-  expected_state_hash: z.string().optional().describe("S."),
+  expected_state_hash: z.string().optional().describe("Reject if the state hash went stale."),
 };
 tool(
   "list_world",
-  "List shipped RPG quest ids as [id,playable]; titles/details/graph/routes opt in.",
+  "List playable RPG world quest ids as [id, playable] rows; titles, prose details, graph, and hub routes are opt-in.",
   {
     include_details: z.boolean().optional().describe("Include quest prose hooks."),
     include_graph: z
@@ -90,17 +107,17 @@ tool(
 );
 tool(
   "world_path",
-  "Path rows [id,name,kind,coord,route,dist].",
+  "Trace the hub-to-target route for a world quest or coordinate as [id, name, kind, coord, route, distance] rows.",
   {
-    world_quest_id: z.string().optional().describe("Quest."),
-    coord: z.tuple([z.number().int(), z.number().int()]).optional().describe("Coord."),
-    compact_path: z.boolean().optional().describe("Full."),
+    world_quest_id: z.string().optional().describe("Target world quest id (or pass coord)."),
+    coord: z.tuple([z.number().int(), z.number().int()]).optional().describe("Target [x, y]."),
+    compact_path: z.boolean().optional().describe("False returns verbose path objects."),
   },
   (a) => api.world_path(a),
 );
 tool(
   "list_overworld",
-  "List overworld counts and the start town; design notes are opt-in.",
+  "Summarize the overworld: town, road, and content counts plus the start town; design notes are opt-in.",
   {
     include_design_notes: z.boolean().optional().describe("Include sources and design rules."),
   },
@@ -177,31 +194,34 @@ function compactMcpOverworldSession(args: McpOverworldReadArgs): unknown {
 }
 
 const EXPECTED_SNAPSHOT_HASH = {
-  expected_snapshot_hash: z.string().optional().describe("Stale."),
+  expected_snapshot_hash: z.string().optional().describe("Reject if the snapshot hash is stale."),
 };
 const IF_SNAPSHOT_HASH = {
-  if_snapshot_hash: z.string().optional().describe("Same."),
+  if_snapshot_hash: z
+    .string()
+    .optional()
+    .describe("Reply unchanged:true if this snapshot hash holds."),
 };
 const ROUTES = {
-  include_route_options: z.boolean().optional().describe("Routes."),
+  include_route_options: B("Include multi-leg route_options in the context."),
 };
 const IDS = {
-  include_ids: z.boolean().optional().describe("Ids."),
+  include_ids: B("Include discovered/completed id lists in the context."),
 };
 const W = {
-  include_world_name: z.boolean().optional().describe("W."),
+  include_world_name: B("Include the world name in the context."),
 };
 const S = {
-  include_session_id: z.boolean().optional().describe("S."),
+  include_session_id: B("Echo the session id."),
 };
 const COMPACT_OVERWORLD_CONTEXT = {
-  compact_context: z.boolean().optional().describe("Full obs."),
+  compact_context: B("False swaps the compact context for the verbose observation."),
   ...W,
   ...IDS,
   ...ROUTES,
 };
 const COMPACT_OVERWORLD_RESULT = {
-  compact_result: z.boolean().optional().describe("Full result."),
+  compact_result: B("False returns the verbose action result."),
 };
 const OVERWORLD_ACTION_CONTEXT = {
   ...EXPECTED_SNAPSHOT_HASH,
@@ -211,7 +231,7 @@ const OVERWORLD_ACTION_CONTEXT = {
 
 tool(
   "start_overworld",
-  "Start OW.",
+  "Start a stateful overworld run at the start town; returns session_id, snapshot_hash, and a compact context with its legend.",
   {
     ...COMPACT_OVERWORLD_CONTEXT,
   },
@@ -219,11 +239,11 @@ tool(
 );
 tool(
   "get_overworld_session",
-  "Read OW.",
+  "Re-read an overworld session without acting; include_observation swaps the compact context for the verbose view.",
   {
     ...SESSION,
     ...IF_SNAPSHOT_HASH,
-    include_observation: z.boolean().optional().describe("Obs."),
+    include_observation: z.boolean().optional().describe("Return the verbose observation."),
     ...S,
     ...W,
     ...IDS,
@@ -233,7 +253,7 @@ tool(
 );
 tool(
   "get_overworld_session_context",
-  "Read ctx.",
+  "Re-read only the compact context of an overworld session, with if_snapshot_hash change detection.",
   {
     ...SESSION,
     ...IF_SNAPSHOT_HASH,
@@ -246,7 +266,7 @@ tool(
 );
 tool(
   "export_overworld_session",
-  "Export OW.",
+  "Export a resumable overworld snapshot; pass it to restore_overworld_session to continue the run later.",
   {
     ...SESSION,
     ...EXPECTED_SNAPSHOT_HASH,
@@ -256,39 +276,39 @@ tool(
 );
 tool(
   "restore_overworld_session",
-  "Restore OW.",
+  "Restore an exported overworld snapshot as a new session; the response repeats the compact-context legend.",
   {
-    snapshot: z.record(z.unknown()).describe("Snapshot."),
+    snapshot: z.record(z.unknown()).describe("Snapshot from export_overworld_session."),
     ...COMPACT_OVERWORLD_CONTEXT,
   },
   (a) => api.restore_overworld_session(defaultCompactOverworld(a)),
 );
 tool(
   "travel_overworld_session",
-  "Travel.",
+  "Travel to another town, spending minutes and supplies and gaining fatigue; may trigger a road encounter.",
   {
     ...SESSION,
-    destination_town_id: z.string().optional().describe("Town."),
-    road_id: z.string().optional().describe("Road."),
+    destination_town_id: z.string().optional().describe("Destination town; routes multi-leg."),
+    road_id: z.string().optional().describe("Single road to walk instead."),
     ...OVERWORLD_ACTION_CONTEXT,
   },
   (a) => api.travel_overworld_session(defaultCompactOverworld(a)),
 );
 tool(
   "resolve_overworld_session_road_encounter",
-  "Resolve road encounter.",
+  "Choose a strategy for the pending road encounter; travel stays blocked until it is resolved.",
   {
     ...SESSION,
     strategy: z
       .enum(["cautious_scout", "assist_travelers", "press_on"])
-      .describe("Encounter option."),
+      .describe("Option from pending_road.options."),
     ...OVERWORLD_ACTION_CONTEXT,
   },
   (a) => api.resolve_overworld_session_road_encounter(defaultCompactOverworld(a)),
 );
 tool(
   "resupply_overworld_session",
-  "Resupply.",
+  "Buy supplies back up to the cap at the current town, spending time.",
   {
     ...SESSION,
     ...OVERWORLD_ACTION_CONTEXT,
@@ -297,7 +317,7 @@ tool(
 );
 tool(
   "rest_overworld_session",
-  "Rest.",
+  "Rest at the current town to lower fatigue, spending time.",
   {
     ...SESSION,
     ...OVERWORLD_ACTION_CONTEXT,
@@ -306,17 +326,17 @@ tool(
 );
 tool(
   "plan_overworld_session_route",
-  "Plan route.",
+  "Preview the best route to a town — minutes, supplies, fatigue — without moving.",
   {
     ...SESSION,
-    destination_town_id: z.string().describe("Town id."),
+    destination_town_id: z.string().describe("Destination town id."),
     ...OVERWORLD_ACTION_CONTEXT,
   },
   (a) => api.plan_overworld_session_route(defaultCompactOverworld(a)),
 );
 tool(
   "scout_overworld_session_poi",
-  "Scout POI.",
+  "Scout a point of interest in the current area; can reveal hidden areas, jobs, sites, or quests.",
   {
     ...SESSION,
     poi_id: z.string().describe("POI id."),
@@ -326,7 +346,7 @@ tool(
 );
 tool(
   "talk_overworld_session_contact",
-  "Talk contact.",
+  "Talk to a local contact; can reveal leads, jobs, quests, or renown.",
   {
     ...SESSION,
     character_id: z.string().describe("Contact id."),
@@ -336,7 +356,7 @@ tool(
 );
 tool(
   "investigate_overworld_session_event",
-  "Investigate event.",
+  "Investigate a local event to uncover details before resolving it.",
   {
     ...SESSION,
     event_id: z.string().describe("Event id."),
@@ -346,7 +366,7 @@ tool(
 );
 tool(
   "resolve_overworld_session_event",
-  "Resolve event.",
+  "Resolve an investigated local event, spending time and earning renown.",
   {
     ...SESSION,
     event_id: z.string().describe("Event id."),
@@ -356,7 +376,7 @@ tool(
 );
 tool(
   "explore_overworld_session_site",
-  "Explore site.",
+  "Explore a discovered exploration site for renown and journal finds.",
   {
     ...SESSION,
     site_id: z.string().describe("Site id."),
@@ -366,7 +386,7 @@ tool(
 );
 tool(
   "explore_overworld_session_area",
-  "Explore area.",
+  "Survey the current local area to reveal its points of interest, contacts, events, and exits.",
   {
     ...SESSION,
     area_id: z.string().describe("Area id."),
@@ -376,17 +396,17 @@ tool(
 );
 tool(
   "move_overworld_session_area",
-  "Move area route.",
+  "Walk an area route to another local area inside the current town.",
   {
     ...SESSION,
-    area_route_id: z.string().describe("Area route id."),
+    area_route_id: z.string().describe("Route id from area_routes."),
     ...OVERWORLD_ACTION_CONTEXT,
   },
   (a) => api.move_overworld_session_area(defaultCompactOverworld(a)),
 );
 tool(
   "work_overworld_session_job",
-  "Work job.",
+  "Work a discovered local job, spending time to earn renown.",
   {
     ...SESSION,
     job_id: z.string().describe("Job id."),
@@ -396,7 +416,7 @@ tool(
 );
 tool(
   "start_overworld_session_quest",
-  "Start local quest; compact overworld/RPG.",
+  "Start a discovered quest as an embedded RPG session; play it via step_action, then complete_overworld_session_quest.",
   {
     ...SESSION,
     quest_id: z.string().describe("Quest id."),
@@ -410,7 +430,7 @@ tool(
 );
 tool(
   "complete_overworld_session_quest",
-  "Sync an ended RPG quest session into overworld progress.",
+  "Fold an ended RPG quest session's outcome back into overworld progress and renown.",
   {
     ...SESSION,
     rpg_session_id: z.string().describe("Ended RPG session."),
@@ -419,19 +439,22 @@ tool(
   },
   (a) => api.complete_overworld_session_quest(defaultCompactOverworld(a)),
 );
-tool("validate_quest", "Validate one shipped RPG quest by id.", WORLD_QUEST_SOURCE, (a) =>
-  api.validate_quest(a),
+tool(
+  "validate_quest",
+  "Validate one shipped RPG quest by id and return its validation report.",
+  WORLD_QUEST_SOURCE,
+  (a) => api.validate_quest(a),
 );
 tool(
   "load_quest",
-  "Compile a shipped RPG quest; return metadata, hash, and report.",
+  "Compile a shipped RPG quest and return its metadata, content hash, and validation report.",
   WORLD_QUEST_SOURCE,
   (a) => api.load_quest(a),
 );
 
 tool(
   "generate_rpg_pack",
-  "Mint and validate a deterministic RPG pack from a seed; writes nothing.",
+  "Mint and validate a deterministic RPG pack from a seed, writing nothing; play it via new_game's generate_rpg_seed.",
   {
     seed: G.describe("Generation seed."),
   },
@@ -440,10 +463,10 @@ tool(
 
 tool(
   "new_game",
-  "Start RPG.",
+  "Start an RPG session on the default or a generated pack; returns session_id, state_hash, and a compact context with its legend.",
   {
-    generate_rpg_seed: G.optional().describe("Gen seed."),
-    seed: z.number().int().safe().optional().describe("Seed."),
+    generate_rpg_seed: G.optional().describe("Seed from generate_rpg_pack."),
+    seed: z.number().int().safe().optional().describe("Runtime seed."),
     ...HIDE_GRAPH,
     ...COMPACT_ACTIONS,
     ...COMPACT_OBSERVATION,
@@ -452,11 +475,11 @@ tool(
 );
 tool(
   "start_world_quest",
-  "Start RPG.",
+  "Start an RPG session for a shipped world quest; returns session_id, state_hash, and a compact context with its legend.",
   {
-    world_quest_id: z.string().describe("Quest."),
-    seed: z.number().int().safe().optional(),
-    include_world_context: z.boolean().optional(),
+    world_quest_id: z.string().describe("World quest id from list_world."),
+    seed: z.number().int().safe().optional().describe("Runtime seed."),
+    include_world_context: z.boolean().optional().describe("Echo world and route context."),
     ...HIDE_GRAPH,
     ...COMPACT_ACTIONS,
     ...COMPACT_OBSERVATION,
@@ -466,7 +489,7 @@ tool(
 
 tool(
   "get_observation",
-  "Observe.",
+  "Re-read the current RPG context without acting; if_state_hash skips unchanged payloads.",
   {
     ...SESSION,
     ...HIDE_GRAPH,
@@ -478,21 +501,21 @@ tool(
 );
 tool(
   "list_legal_actions",
-  "Acts.",
+  "List the legal action ids for an RPG session; feed one to step_action.",
   {
     ...SESSION,
     ...IF_STATE_HASH,
-    compact_actions: z.boolean().optional().describe("Lbl."),
+    compact_actions: z.boolean().optional().describe("False returns labeled options."),
   },
   (a) => api.list_legal_actions(defaultCompactActions(a)),
 );
 
 tool(
   "step_action",
-  "Step.",
+  "Apply one action id to the RPG session; returns tagged event tuples and the updated compact context.",
   {
     ...SESSION,
-    action_id: z.string().describe("Act."),
+    action_id: z.string().describe("Action id from list_legal_actions."),
     ...EXPECTED_STATE_HASH,
     ...HIDE_GRAPH,
     ...COMPACT_ACTIONS,
@@ -503,34 +526,34 @@ tool(
 );
 tool(
   "get_state",
-  "Hash.",
+  "Read the RPG session's state hash for change detection; raw or compact state is opt-in.",
   {
     ...SESSION,
     ...IF_STATE_HASH,
-    include_state: z.boolean().optional().describe("Raw."),
-    compact_state: z.boolean().optional().describe("Compact."),
+    include_state: z.boolean().optional().describe("Include the raw state object."),
+    compact_state: z.boolean().optional().describe("Include a compact state summary."),
   },
   (a) => compactMcpState(a),
 );
 tool(
   "get_transcript",
-  "Transcript.",
+  "Summarize an RPG session's play history; per-turn rows and events are opt-in.",
   {
     ...SESSION,
     ...S,
     include_source: z.boolean().optional(),
     ...IF_TRANSCRIPT_HASH,
-    summary_only: z.boolean().optional().describe("No turns."),
-    compact_summary: z.boolean().optional().describe("Caps."),
-    compact_turns: z.boolean().optional().describe("Rows."),
-    turn_limit: z.number().int().min(0).optional().describe("Rows."),
+    summary_only: z.boolean().optional().describe("False adds per-turn rows."),
+    compact_summary: z.boolean().optional().describe("False keeps verbose summary labels."),
+    compact_turns: z.boolean().optional().describe("Turn rows as tuples."),
+    turn_limit: z.number().int().min(0).optional().describe("Max turn rows."),
     ...COMPACT_EVENTS,
   },
   (a) => api.get_transcript(defaultCompactTranscript(a)),
 );
 tool(
   "save_game",
-  "Serialize save; hash guards.",
+  "Serialize the RPG session to a save string for load_game; hash guards reject stale saves.",
   {
     ...SESSION,
     ...EXPECTED_STATE_HASH,
@@ -542,11 +565,11 @@ tool(
 );
 tool(
   "load_game",
-  "Restore save; compact.",
+  "Restore an RPG session from a save string; returns a new session_id and a compact context with its legend.",
   {
     world_quest_id: z.string().optional().describe("World quest id."),
-    generate_rpg_seed: G.optional().describe("Gen seed."),
-    save: z.string().describe("Save string."),
+    generate_rpg_seed: G.optional().describe("Seed for generated-pack saves."),
+    save: z.string().describe("Save string from save_game."),
     ...HIDE_GRAPH,
     ...COMPACT_ACTIONS,
     ...COMPACT_OBSERVATION,
@@ -556,7 +579,7 @@ tool(
 
 tool(
   "replay_trace",
-  "Replay trace; verify final hash.",
+  "Replay a recorded action trace through the engine and verify the final state hash.",
   {
     trace_path: z.string().describe("Trace path."),
     world_quest_id: z.string().optional().describe("World quest id."),
@@ -566,31 +589,31 @@ tool(
 
 tool(
   "adapt_story",
-  "Author RPG; report.",
+  "Author and validate a new RPG pack from a story premise; returns the authoring report.",
   {
     premise: z.string().describe("Story premise."),
-    include_pack: z.boolean().optional().describe("Echo pack."),
+    include_pack: z.boolean().optional().describe("Echo the authored pack."),
   },
   (a) => api.adapt_story(a),
 );
 
 tool(
   "inspect_trace",
-  "Inspect trace diagnostics.",
+  "Inspect a recorded trace with per-step summaries, hash checks, and bug diagnosis.",
   {
     trace_path: z.string().describe("Trace path."),
     world_quest_id: z.string().optional().describe("World quest id."),
-    compact_summary: z.boolean().optional().describe("Tuple rows."),
+    compact_summary: z.boolean().optional().describe("Step summaries as tuple rows."),
   },
   (a) => api.inspect_trace(a),
 );
 
 tool(
   "apply_content_patch",
-  "Patch quest; report.",
+  "Apply a validated op-based content patch to a shipped quest and return proof; writes nothing.",
   {
     ...WORLD_QUEST_SOURCE,
-    include_pack: z.boolean().optional().describe("Echo pack."),
+    include_pack: z.boolean().optional().describe("Echo the patched pack."),
     proposal: z
       .object({
         layer: z.enum([
@@ -616,7 +639,17 @@ async function main(): Promise<void> {
   process.stderr.write("adventureforge MCP server ready on stdio\n");
 }
 
-main().catch((e) => {
-  process.stderr.write(`Fatal: ${(e as Error).message}\n`);
-  process.exit(1);
-});
+// Connect the stdio transport only when this module is the process entrypoint
+// (`npm run mcp` / `tsx src/mcp/server.ts`). Importing it — e.g. from
+// tests/unit/compact_legend.test.ts to read TOOL_REGISTRATIONS — must not
+// hijack stdin/stdout.
+const entryPath = process.argv[1] === undefined ? "" : resolve(process.argv[1]);
+const isDirectRun =
+  entryPath !== "" && entryPath.toLowerCase() === fileURLToPath(import.meta.url).toLowerCase();
+
+if (isDirectRun) {
+  main().catch((e) => {
+    process.stderr.write(`Fatal: ${(e as Error).message}\n`);
+    process.exit(1);
+  });
+}

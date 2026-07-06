@@ -11,6 +11,7 @@ import {
   compactMcpTranscriptSummaryValue,
   compactMcpTranscriptTitle,
 } from "./action_labels.js";
+import { RPG_COMPACT_EVENT_LEGEND } from "./compact_rpg_event.js";
 const CORE_STATE_VARS = new Set(["attack", "defense", "hp", "max_score", "score"]);
 export const COMPACT_ACTION_LIMIT = 24;
 export const COMPACT_EXIT_LIMIT = 12;
@@ -73,6 +74,39 @@ export type RpgCompactObservation = {
   ending_id?: string;
   ending?: RpgObservation["ending"];
 };
+
+/**
+ * Agent-facing legend for the positional fields of RpgCompactObservation, plus the
+ * compact step_action event tuples. Co-located with the encoder so they cannot
+ * drift: the `satisfies` clause forces an entry for every observation field, and
+ * tests/unit/compact_legend.test.ts asserts emitted contexts stay covered. Sent
+ * ONCE per RPG session (new_game / start_world_quest / load_game), never repeated
+ * in per-step payloads.
+ */
+export const RPG_COMPACT_LEGEND = {
+  v: "compact observation schema version",
+  here: "[room_id, room_title] current room",
+  text: "room description",
+  exits: "open exits: 'direction' or [direction, dest_room_id]",
+  vitals: "[hp, attack, defense, score, max_score]",
+  actions: "legal action ids (include_actions only; list_legal_actions always has them)",
+  objects: "visible object ids",
+  npcs: "ids of NPCs present",
+  blocked: "[[direction, reason], ...] blocked exits",
+  inv: "carried item ids",
+  flags: "set story flags",
+  vars: "story variables (core stats already shown in vitals are omitted)",
+  journal: "recent journal entries",
+  more: "[inv, flags, vars, journal, actions, exits, objects, npcs, blocked, enemies] counts omitted by truncation, trailing zeros dropped",
+  dialogue: "[npc_id, npc_line] active dialogue",
+  enemies: "[[enemy_id, hp], ...] enemies present",
+  ended: "true when the quest has ended",
+  ending_id: "ending id when ended",
+  ending: "{id, title, text} ending details when ended",
+  events: RPG_COMPACT_EVENT_LEGEND,
+} as const satisfies Record<keyof RpgCompactObservation | "events", string>;
+
+export type RpgCompactLegend = typeof RPG_COMPACT_LEGEND;
 
 export type CompactRpgObservationOptions = {
   includeActions?: boolean;

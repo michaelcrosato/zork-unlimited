@@ -167,6 +167,10 @@ describe("MCP server registration", () => {
     }
   });
 
+  // Schema-source budgets: every tool must fit ONE informative sentence plus
+  // meaningful arg describes (the blind-agent contract guarded by
+  // tests/unit/compact_legend.test.ts), while these caps stop the schemas from
+  // regrowing into the multi-paragraph prose the token-efficiency pass removed.
   it("keeps the blind-playtest ToolSearch schema source terse", () => {
     const blindToolSchemaSource = [
       sharedSchemaBlock(),
@@ -178,7 +182,7 @@ describe("MCP server registration", () => {
       registeredToolBlock("get_transcript"),
     ].join("\n");
 
-    expect(blindToolSchemaSource.length).toBeLessThanOrEqual(2600);
+    expect(blindToolSchemaSource.length).toBeLessThanOrEqual(4300);
     expect(blindToolSchemaSource).not.toContain("Token economy:");
     expect(blindToolSchemaSource).toContain("compact_observation");
     expect(blindToolSchemaSource).toContain("compact_state");
@@ -200,7 +204,7 @@ describe("MCP server registration", () => {
       registeredToolBlock("inspect_trace"),
     ].join("\n");
 
-    expect(restoreTraceSchemaSource.length).toBeLessThanOrEqual(1200);
+    expect(restoreTraceSchemaSource.length).toBeLessThanOrEqual(1750);
     expect(restoreTraceSchemaSource).toContain("world_quest_id");
     expect(restoreTraceSchemaSource).toContain("generate_rpg_seed");
     expect(restoreTraceSchemaSource).not.toContain("list_world().quests[].graph_node");
@@ -217,7 +221,7 @@ describe("MCP server registration", () => {
       registeredToolBlock("apply_content_patch"),
     ].join("\n");
 
-    expect(authoringFixSchemaSource.length).toBeLessThanOrEqual(1450);
+    expect(authoringFixSchemaSource.length).toBeLessThanOrEqual(2250);
     expect(authoringFixSchemaSource).not.toContain("writer→adapter→validator");
     expect(authoringFixSchemaSource).not.toContain("model-issued code");
     expect(authoringFixSchemaSource).not.toContain("combat-winnability and score-economy");
@@ -228,7 +232,7 @@ describe("MCP server registration", () => {
       registeredToolBlock(toolName),
     ).join("\n");
 
-    expect(overworldSchemaSource.length).toBeLessThanOrEqual(5000);
+    expect(overworldSchemaSource.length).toBeLessThanOrEqual(7250);
     expect(overworldSchemaSource).not.toContain("Session id returned by start_overworld");
     expect(overworldSchemaSource).not.toContain("returns compact context by default");
     expect(overworldSchemaSource).not.toContain("from the session observation");
@@ -242,7 +246,7 @@ describe("MCP server registration", () => {
       registeredToolBlock("load_game"),
     ].join("\n");
 
-    expect(rpgUtilitySchemaSource.length).toBeLessThanOrEqual(1400);
+    expect(rpgUtilitySchemaSource.length).toBeLessThanOrEqual(2100);
     expect(rpgUtilitySchemaSource).not.toContain("returns compact context by default");
     expect(rpgUtilitySchemaSource).not.toContain("Deterministic runtime seed");
     expect(rpgUtilitySchemaSource).not.toContain("Include raw reducer state");
@@ -364,7 +368,7 @@ describe("MCP server registration", () => {
       "type RpgLegalActionRows",
     );
     expect(legalActionArgs).not.toContain("hide_graph");
-    expect(legalActions).toContain("Lbl.");
+    expect(legalActions).toContain("labeled options");
     expect(legalActions).toContain("IF_STATE_HASH");
     expect(legalActions).not.toContain("HIDE_GRAPH");
     expect(legalActions).not.toContain("hide_graph");
@@ -393,8 +397,8 @@ describe("MCP server registration", () => {
     expect(args).toContain("include_event_version");
     expect(args).toContain("turn_limit");
     expect(block).toContain("...S");
-    expect(block).toContain("No turns.");
-    expect(block).toContain("Caps.");
+    expect(block).toContain("per-turn rows");
+    expect(block).toContain("summary labels");
     expect(block).toContain("turn_limit");
     expect(block).toContain("COMPACT_EVENTS");
     const defaultTranscript = serverSourceBlock(
@@ -410,7 +414,7 @@ describe("MCP server registration", () => {
     expect(block).toContain("compactMcpState(a)");
     expect(block).toContain("IF_STATE_HASH");
     expect(block).toContain("include_state");
-    expect(block).toContain("Hash.");
+    expect(block).toContain("state hash");
     expect(block).not.toContain("include_state === true");
     const saveBlock = registeredToolBlock("save_game");
     expect(saveBlock).toContain("IF_STATE_HASH");

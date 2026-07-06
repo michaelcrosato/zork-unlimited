@@ -23,6 +23,7 @@ import {
   type RpgViewField,
   type RpgViewOptions,
 } from "./rpg_view_projection.js";
+import { RPG_COMPACT_LEGEND, type RpgCompactLegend } from "./compact_rpg_observation.js";
 import { publicRpgStateHash } from "./rpg_state_guards.js";
 import { SessionStore, type RpgStep, type Session } from "./sessions.js";
 
@@ -40,6 +41,8 @@ export type RpgSourceFields = {
 export type RpgSessionPayload<Args extends RpgViewOptions = RpgViewOptions> = {
   session_id: string;
   state_hash: string;
+  /** Field guide for the compact context/events; sent only on session-creating responses. */
+  legend?: RpgCompactLegend;
 } & RpgSourceFields &
   RpgViewField<Args>;
 
@@ -228,6 +231,9 @@ export class RpgMcpSessionRuntime {
     openingOpts.includeAvailableActions = rpgObservationNeedsActions(args);
     return {
       session_id: session.id,
+      // The legend rides only on session-creating responses, keeping every
+      // subsequent per-step payload lean.
+      ...(args.compact_observation === true ? { legend: RPG_COMPACT_LEGEND } : {}),
       ...rpgViewField(
         this.sessions,
         session,

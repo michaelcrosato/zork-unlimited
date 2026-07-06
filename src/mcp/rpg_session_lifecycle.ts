@@ -14,6 +14,7 @@ import {
 import { publicRpgStateHash } from "./rpg_state_guards.js";
 import type { RpgSourceRuntime } from "./rpg_source_runtime.js";
 import type { SessionStore } from "./sessions.js";
+import { RPG_COMPACT_LEGEND } from "./compact_rpg_observation.js";
 
 export type RpgNewGameToolArgs = {
   generate_rpg_seed?: number;
@@ -124,6 +125,9 @@ export function runRpgLoadGame<Args extends RpgLoadGameToolArgs>(
   openingOpts.includeAvailableActions = rpgObservationNeedsActions(args);
   return {
     session_id: session.id,
+    // Session-creating response: carry the compact-context legend once, like
+    // new_game/start_world_quest do via RpgMcpSessionRuntime.startRpgSession.
+    ...(args.compact_observation === true ? { legend: RPG_COMPACT_LEGEND } : {}),
     ...rpgViewField(
       deps.sessions,
       session,

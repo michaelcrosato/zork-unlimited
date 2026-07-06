@@ -25,7 +25,7 @@ import type { Trace } from "../trace/record.js";
 import { safeResolve } from "./paths.js";
 import { SessionStore } from "./sessions.js";
 import { type McpActionOption, type McpObservation } from "./types.js";
-import type { RpgCompactObservation } from "./compact_rpg_observation.js";
+import type { RpgCompactLegend, RpgCompactObservation } from "./compact_rpg_observation.js";
 import type { RpgCompactState } from "./compact_rpg_state.js";
 import { RpgMcpSessionRuntime } from "./rpg_session_runtime.js";
 import {
@@ -241,6 +241,8 @@ type RpgSourceFields = {
 type RpgSessionPayload<Args extends RpgViewOptions = RpgViewOptions> = {
   session_id: string;
   state_hash: string;
+  /** Field guide for the compact context/events; sent only on session-creating responses. */
+  legend?: RpgCompactLegend;
 } & RpgSourceFields &
   RpgViewField<Args>;
 

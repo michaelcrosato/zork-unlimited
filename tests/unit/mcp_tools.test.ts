@@ -3073,7 +3073,11 @@ describe("MCP tools — the play loop (§9.1)", () => {
     );
     expect(proseBudgetStart.context.objects).toEqual(["flood_book", "life_line", "weir_iron"]);
     expect(proseBudgetStart.context.npcs).toEqual(["pell"]);
-    expect(JSON.stringify(proseBudgetStart).length).toBeLessThan(750);
+    // The one-time legend rides only on session-creating responses; the recurring
+    // payload (everything except the legend) still has to clear the prose budget.
+    expect(proseBudgetStart.legend).toBeDefined();
+    const { legend: _proseBudgetLegend, ...proseBudgetRecurring } = proseBudgetStart;
+    expect(JSON.stringify(proseBudgetRecurring).length).toBeLessThan(750);
     const proseBudgetTalk = a.step_action({
       session_id: proseBudgetStart.session_id,
       action_id: "talk_pell",
@@ -3535,7 +3539,14 @@ describe("MCP tools — save / load round-trip (§8.7)", () => {
     ]);
     expect(compactReload.context.exits?.[0]).toEqual(expect.any(String));
     expect("actions" in compactReload.context).toBe(false);
-    expect(JSON.stringify(compactReload).length).toBeLessThan(JSON.stringify(fullReload).length);
+    // load_game creates a session, so it carries the one-time legend; the
+    // recurring payload (minus legend) must stay under the verbose reload.
+    expect(compactReload.legend).toBeDefined();
+    expect("legend" in fullReload).toBe(false);
+    const { legend: _compactReloadLegend, ...compactReloadRecurring } = compactReload;
+    expect(JSON.stringify(compactReloadRecurring).length).toBeLessThan(
+      JSON.stringify(fullReload).length,
+    );
 
     const actionBundledReload = a.load_game({
       save: saved.save,
