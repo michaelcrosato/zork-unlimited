@@ -10,55 +10,46 @@
  * world graph. Raw pack paths and legacy CYOA/parser packs are intentionally not
  * accepted here.
  */
-import { loadRpgPackFile } from "../src/rpg/pack.js";
-import { validateRpg } from "../src/validate/rpg_validator.js";
-import { formatReport, makeReport, type Finding } from "../src/validate/report.js";
-import { loadWorldManifest, resolveWorldQuestPackPath } from "../src/world/source.js";
+import { formatReport } from "../src/validate/report.js";
+import { RpgSourceRuntime, type RpgLoadResult } from "../src/mcp/rpg_source_runtime.js";
 
 const ROOT = process.cwd();
+const rpgSources = new RpgSourceRuntime(ROOT);
 
 type ValidationTarget = {
   label: string;
-  path: string;
+  result: RpgLoadResult;
 };
-
-function schemaFindings(error: {
-  issues: { message: string; path: (string | number)[] }[];
-}): Finding[] {
-  return error.issues.map((i) => ({
-    severity: "error" as const,
-    code: "SCHEMA",
-    message: `${i.message} (${i.path.join(".") || "<root>"})`,
-    where: [i.path.join(".") || "<root>"],
-  }));
-}
 
 function looksLikeRawPackSelector(value: string): boolean {
   return /\.ya?ml$/i.test(value) || value.includes("/") || value.includes("\\");
 }
 
+function worldQuestTarget(worldQuestId: string): ValidationTarget {
+  const source = rpgSources.loadWorldQuestReport(worldQuestId);
+  return {
+    label: `world_quest_id: ${source.node.id}`,
+    result: source.result,
+  };
+}
+
 function discoverWorldQuestTargets(): ValidationTarget[] {
-  return loadWorldManifest(ROOT)
+  return rpgSources
+    .loadWorldManifest()
     .graph.nodes.filter((node) => node.kind === "quest" && node.pack !== undefined)
     .sort((a, b) => a.id.localeCompare(b.id))
-    .map((node) => ({
-      label: `world_quest_id: ${node.id}`,
-      path: resolveWorldQuestPackPath(ROOT, node.id).packPath,
-    }));
+    .map((node) => worldQuestTarget(node.id));
 }
 
 function validateOne(target: ValidationTarget): boolean {
   console.log(`== ${target.label} ==`);
-  const path = target.path;
-  const result = loadRpgPackFile(path);
+  const result = target.result;
   if (!result.ok) {
-    console.log(
-      formatReport(makeReport(path, schemaFindings(result.error)), { includePackId: false }),
-    );
+    console.log(formatReport(result.report, { includePackId: false }));
     return false;
   }
 
-  const report = validateRpg(result.compiled.pack);
+  const report = result.report;
   console.log(formatReport(report, { includePackId: false }));
   console.log(`content_hash: ${result.compiled.contentHash}`);
   return report.ok;
@@ -75,10 +66,7 @@ function parseTargets(args: string[]): ValidationTarget[] {
       `validate targets are world quest ids; raw pack paths are not accepted: ${raw}`,
     );
   }
-  return args.map((worldQuestId) => {
-    const source = resolveWorldQuestPackPath(ROOT, worldQuestId);
-    return { label: `world_quest_id: ${source.node.id}`, path: source.packPath };
-  });
+  return args.map((worldQuestId) => worldQuestTarget(worldQuestId));
 }
 
 function main(): void {

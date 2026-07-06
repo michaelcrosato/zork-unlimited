@@ -28,6 +28,7 @@ const pkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8")) as {
   scripts: Record<string, string | undefined>;
 };
 const readme = readFileSync(join(root, "README.md"), "utf8");
+const validateCli = readFileSync(join(root, "bin", "validate.ts"), "utf8");
 
 function runNpm(command: string, timeout = 120_000) {
   return spawnSync(command, {
@@ -111,6 +112,13 @@ describe("single-engine RPG validation bar", () => {
     for (const worldQuestId of worldQuestIds) {
       expect(output).toContain(`== world_quest_id: ${worldQuestId} ==`);
     }
+  });
+
+  it("validate CLI loads shipped quests through the source runtime boundary", () => {
+    expect(validateCli).toContain("RpgSourceRuntime");
+    expect(validateCli).toContain("loadWorldQuestReport");
+    expect(validateCli).not.toContain("loadRpgPackFile");
+    expect(validateCli).not.toContain("resolveWorldQuestPackPath");
   });
 
   it("npm run validate accepts targeted world quest ids without raw pack paths", () => {
