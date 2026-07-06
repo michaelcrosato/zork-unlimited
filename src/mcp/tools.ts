@@ -13,6 +13,7 @@
 import { readFileSync } from "node:fs";
 import type { RpgAction } from "../api/types.js";
 import type { GameState } from "../core/state.js";
+import { hashState } from "../core/hash.js";
 
 import type { CompiledRpgSource } from "../rpg/source.js";
 import { assertRpgStateReferences } from "../rpg/state_integrity.js";
@@ -276,6 +277,11 @@ type ApplyContentPatchArgs = {
   pack_path?: never;
   include_pack?: boolean;
   proposal: ContentPatchProposal;
+};
+
+type AdaptStoryArgs = {
+  premise: string;
+  include_pack?: boolean;
 };
 
 type InspectTraceStepSummary = {
@@ -673,14 +679,14 @@ export function createToolApi(opts: { root: string }) {
       ) as RpgSessionPayload<DefaultCompactRpgView<Args>>;
     },
 
-    async adapt_story(args: { premise: string }) {
+    async adapt_story(args: AdaptStoryArgs) {
       // Author a pack from a premise via the writer → adapter → validator loop
       // (§12.1–3). Uses a REAL frontier model when a provider key is present
       // (ANTHROPIC/OPENAI/GOOGLE, or AF_LLM_PROVIDER), falling back to the
       // deterministic MockAuthorProvider when none is set — so CI and key-less runs
       // stay green and offline while a keyed run exercises the genuine §1 author.
-      // Mirrors bin/author.ts. Returns the story, the green/red pack, the validation
-      // report, and the per-beat classification (§11). Never writes files.
+      // Mirrors bin/author.ts. Returns compact story/validation proof by default;
+      // callers opt into echoing the full authored pack. Never writes files.
       if ((args as { mode?: unknown }).mode !== undefined) {
         throw new Error("adapt_story is RPG-only; mode is no longer supported.");
       }
@@ -693,7 +699,8 @@ export function createToolApi(opts: { root: string }) {
         rounds: result.rounds,
         story: { title: story.title, beats: story.beats.map((b) => b.id) },
         classifications: result.classifications,
-        pack: result.ok ? result.pack : undefined,
+        ...(result.ok ? { content_hash: hashState(result.pack) } : {}),
+        ...(args.include_pack === true && result.ok ? { pack: result.pack } : {}),
         report: result.report,
       };
     },

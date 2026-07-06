@@ -524,9 +524,10 @@ tool(
 
 tool(
   "adapt_story",
-  "Author an RPG pack from a premise; return pack, report, and classifications.",
+  "Author RPG; report.",
   {
     premise: z.string().describe("Story premise."),
+    include_pack: z.boolean().optional().describe("Echo pack."),
   },
   (a) => api.adapt_story(a),
 );

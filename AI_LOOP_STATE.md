@@ -1,10 +1,19 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 464 -->
+<!-- historical_cycle_count: 465 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - adapt_story_pack_echo_opt_in
+
+- Pre-cycle: `C:\dev\agent-cleaner` measure/gates passed through WSL; optional secret scanner remains absent.
+- Engine/loop surface: `adapt_story` now returns compact story/validation proof plus `content_hash` by default; full authored RPG packs require `include_pack: true`.
+- Loop effect: authoring loops can verify rounds, beat classifications, report health, and content identity without echoing complete generated quest data.
+- Self-critique: authoring is lower-frequency than live play, but its full-pack payload was one of the largest remaining hidden MCP responses.
+- Guard: focused MCP authoring and registration regressions pin default omission, opt-in pack echo, RPG-only mode rejection, and schema-size limits.
+- VERIFY: `C:\dev\agent-cleaner`, focused MCP authoring/schema regressions, `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, `npm test`, and `npm run health` passed after loop-state rotation.
 
 ### Cycle result - patch_pack_echo_opt_in
 
@@ -130,13 +139,4 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Loop effect: direct harness/agent starts no longer pull the full New York observation before switching into compact poll/action loops.
 - Self-critique: narrow API-default work, but it closes the start-of-session payload path that blind playtest agents would not flag as an in-game error.
 - Guard: focused MCP and overworld snapshot regressions keep full-observation tests explicit while pinning the compact default start.
-- VERIFY: `C:\dev\agent-cleaner`, `npm run typecheck`, focused MCP/overworld regressions, `npm run lint`, `npm run format:check`, `npm run validate`, `npm test`, and `npm run health` passed after loop-state rotation.
-
-### Cycle result - overworld_read_compact_default
-
-- Pre-cycle: `C:\dev\agent-cleaner` passed; optional secret scanner remains absent.
-- Engine/loop surface: ToolApi `get_overworld_session` now returns compact overworld context by default; full observations require `include_observation: true`.
-- Loop effect: direct harness/agent overworld reads no longer accidentally pull the full New York view when they only need ids, vitals, route tuples, and hash polling.
-- Self-critique: not a content/world-map reduction, but it closes a hidden full-payload path beneath the MCP wrapper.
-- Guard: focused MCP and overworld snapshot regressions pin compact default plus explicit full reads.
 - VERIFY: `C:\dev\agent-cleaner`, `npm run typecheck`, focused MCP/overworld regressions, `npm run lint`, `npm run format:check`, `npm run validate`, `npm test`, and `npm run health` passed after loop-state rotation.
