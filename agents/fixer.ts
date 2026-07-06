@@ -182,10 +182,16 @@ export function proposeFix(diagnosis: Diagnosis, ctx: { location?: string }): Co
 }
 
 /** A regression-test source stub asserting the diagnosed failure cannot recur (§15). */
-export function regressionTestStub(bugId: string, replayPath: string, packPath: string): string {
+export function regressionTestStub(
+  bugId: string,
+  replayPath: string,
+  worldQuestId: string,
+): string {
+  const replayPathLiteral = JSON.stringify(replayPath);
+  const worldQuestIdLiteral = JSON.stringify(worldQuestId);
   return `import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
-import { loadRpgPackFile } from "../../src/rpg/pack.js";
+import { RpgSourceRuntime } from "../../src/mcp/rpg_source_runtime.js";
 import { indexRpgPack, buildRpgRules } from "../../src/rpg/runner.js";
 import { replayTrace } from "../../src/trace/replay.js";
 import type { Trace } from "../../src/trace/record.js";
@@ -194,10 +200,9 @@ import type { Trace } from "../../src/trace/record.js";
 // hash forever — if a future change reintroduces the failure, this goes red.
 describe("${bugId}", () => {
   it("replays the fixed trace to its expected final hash", () => {
-    const trace = JSON.parse(readFileSync("${replayPath}", "utf8")) as Trace;
-    const loaded = loadRpgPackFile("${packPath}");
-    if (!loaded.ok) throw new Error("pack failed to compile");
-    const rules = buildRpgRules(indexRpgPack(loaded.compiled.pack));
+    const trace = JSON.parse(readFileSync(${replayPathLiteral}, "utf8")) as Trace;
+    const source = new RpgSourceRuntime(process.cwd()).requireWorldQuestPlayable(${worldQuestIdLiteral});
+    const rules = buildRpgRules(indexRpgPack(source.compiled.pack));
     expect(replayTrace(trace, rules).ok).toBe(true);
   });
 });

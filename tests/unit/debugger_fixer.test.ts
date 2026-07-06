@@ -10,7 +10,12 @@ import { initState } from "../../src/core/state.js";
 import type { Rules } from "../../src/core/engine.js";
 import { loadRpgPackFile } from "../../src/rpg/pack.js";
 import { diagnose, toBugArtifact } from "../../agents/debugger.js";
-import { applyContentPatch, proposeFix, type ContentPatchProposal } from "../../agents/fixer.js";
+import {
+  applyContentPatch,
+  proposeFix,
+  regressionTestStub,
+  type ContentPatchProposal,
+} from "../../agents/fixer.js";
 
 const startState = () => initState({ seed: 1, start: "a" });
 
@@ -113,5 +118,21 @@ describe("fixer.proposeFix", () => {
     expect(p.layer).toBe("hint_text");
     expect(p.ops).toHaveLength(1);
     expect(p.ops[0]?.op).toBe("add_room_journal_hint");
+  });
+});
+
+describe("fixer.regressionTestStub", () => {
+  it("generates replay regressions that load by world_quest_id through the source runtime", () => {
+    const source = regressionTestStub(
+      "bug_test_0002",
+      "traces/bugs/bug_test_0002.yaml",
+      "cold_forge",
+    );
+
+    expect(source).toContain("RpgSourceRuntime");
+    expect(source).toContain('requireWorldQuestPlayable("cold_forge")');
+    expect(source).not.toContain("loadRpgPackFile");
+    expect(source).not.toContain("content/rpg/pack");
+    expect(source).not.toContain("packPath");
   });
 });
