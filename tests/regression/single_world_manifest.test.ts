@@ -22,8 +22,7 @@ import {
   worldMapBounds,
   worldMapEdges,
   worldNodeAtCoord,
-  worldQuestNodeForPack,
-  worldRouteForPack,
+  worldRouteFromHub,
 } from "../../src/world/graph.js";
 import { createToolApi } from "../../src/mcp/tools.js";
 
@@ -64,8 +63,19 @@ function loadWorldManifest() {
   return WorldManifestSchema.parse(loadYaml("content/world/charter_marches.yaml"));
 }
 
+function discoverQuestBindings(): { path: string; worldQuestId: string }[] {
+  return loadWorldManifest()
+    .graph.nodes.filter((node) => node.kind === "quest")
+    .map((node) => ({
+      path: normalizePackPath(node.pack ?? ""),
+      worldQuestId: node.id,
+    }))
+    .sort((a, b) => a.path.localeCompare(b.path));
+}
+
 describe("single-world library contract", () => {
   const packs = discoverPacks();
+  const questBindings = discoverQuestBindings();
   const api = createToolApi({ root });
 
   it("declares the canonical hub world once", () => {
@@ -143,19 +153,23 @@ describe("single-world library contract", () => {
     expect(
       world.graph.nodes.filter((node) => !reached.has(node.id)).map((node) => node.id),
     ).toEqual([]);
-    for (const path of packs) {
-      const route = worldRouteForPack(world, path);
-      expect(route?.[0]?.name, `${path} route must start at the hub`).toBe(CANONICAL_HUB_CITY);
-      expect(route?.at(-1)?.kind, `${path} route must end at the quest`).toBe("quest");
+    for (const node of world.graph.nodes.filter((worldNode) => worldNode.kind === "quest")) {
+      const route = worldRouteFromHub(world, node.id);
+      expect(route?.[0]?.name, `${node.id} route must start at the hub`).toBe(CANONICAL_HUB_CITY);
+      expect(route?.at(-1)?.kind, `${node.id} route must end at the quest`).toBe("quest");
       expect(
         route?.every((step) => Array.isArray(step.coord)),
-        `${path} route must carry map coordinates`,
+        `${node.id} route must carry map coordinates`,
       ).toBe(true);
       expect(
         route?.slice(1).every((step) => Array.isArray(step.delta_from_previous)),
-        `${path} route must carry map deltas`,
+        `${node.id} route must carry map deltas`,
       ).toBe(true);
     }
+
+    const graphSource = readFileSync(join(root, "src/world/graph.ts"), "utf8");
+    expect(graphSource).not.toContain("worldQuestNodeForPack");
+    expect(graphSource).not.toContain("worldRouteForPack");
   });
 
   it.each(packs)("%s is bound to the Charter Marches, not a separate campaign", (path) => {
@@ -178,20 +192,22 @@ describe("single-world library contract", () => {
     ).toBeGreaterThan(24);
   });
 
-  it.each(packs)("%s opens as a Charterhaven RPG quest in play", (path) => {
-    const pack = loadYaml(path) as RawPack;
-    const packWorld = pack.meta?.world;
-    const quest = worldQuestNodeForPack(loadWorldManifest(), path);
-    const game = api.start_world_quest({ world_quest_id: quest?.id ?? "" });
-    if (game.observation.mode !== "rpg") throw new Error("expected RPG observation");
-    const opening = game.observation.description;
+  it.each(questBindings)(
+    "$path opens as a Charterhaven RPG quest in play",
+    ({ path, worldQuestId }) => {
+      const pack = loadYaml(path) as RawPack;
+      const packWorld = pack.meta?.world;
+      const game = api.start_world_quest({ world_quest_id: worldQuestId });
+      if (game.observation.mode !== "rpg") throw new Error("expected RPG observation");
+      const opening = game.observation.description;
 
-    expect(game.observation.world?.id).toBe(CANONICAL_WORLD_ID);
-    expect(opening).toContain(CANONICAL_HUB_CITY);
-    expect(opening).toContain(packWorld?.district);
-    expect(opening).toContain(packWorld?.role);
-    expect(opening).toContain(packWorld?.quest);
-  });
+      expect(game.observation.world?.id).toBe(CANONICAL_WORLD_ID);
+      expect(opening).toContain(CANONICAL_HUB_CITY);
+      expect(opening).toContain(packWorld?.district);
+      expect(opening).toContain(packWorld?.role);
+      expect(opening).toContain(packWorld?.quest);
+    },
+  );
 
   it("exposes graph routes through the MCP world listing", () => {
     const world = api.list_world({ include_graph: true, include_routes: true });

@@ -109,18 +109,6 @@ export function worldMapEdges(manifest: WorldManifest): WorldMapEdge[] {
   });
 }
 
-export function worldQuestNodeForPack(
-  manifest: WorldManifest,
-  packPath: string,
-): WorldGraphNode | null {
-  const normalized = normalizePackPath(packPath);
-  return (
-    manifest.graph.nodes.find(
-      (node) => node.kind === "quest" && node.pack && normalizePackPath(node.pack) === normalized,
-    ) ?? null
-  );
-}
-
 export function worldQuestNodeById(
   manifest: WorldManifest,
   questNodeId: string,
@@ -187,12 +175,4 @@ export function worldRouteFromHub(
     }
     return step;
   });
-}
-
-export function worldRouteForPack(
-  manifest: WorldManifest,
-  packPath: string,
-): WorldRouteStep[] | null {
-  const node = worldQuestNodeForPack(manifest, packPath);
-  return node ? worldRouteFromHub(manifest, node.id) : null;
 }

@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 434 -->
+<!-- historical_cycle_count: 435 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - graph_pack_route_retired
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/loop surface: `src/world/graph.ts` no longer exports pack-path reverse lookup helpers for quest nodes or hub routes.
+- Loop effect: world graph callers must route by canonical node/world quest id instead of deriving playable identity from package paths.
+- Guard: single-world regression now iterates graph quest bindings by `world_quest_id`, opens play through that id, and rejects the retired helper names in graph source.
+- VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused single-world/source-runtime regressions, `npm test`, and `npm run health` passed after loop-state rotation.
 
 ### Cycle result - source_catalog_world_id
 
@@ -117,11 +125,3 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Loop effect: package-only persisted artifacts cannot re-enter load, replay, source resolution, or CLI trace labels as a valid engine source identity.
 - Guard: focused save/trace, world-source, trace CLI, play CLI, and schema-standalone regressions cover rejection plus canonical labels.
 - VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused source/persistence/CLI regressions, `npm test`, and `npm run health` passed after loop-state rotation.
-
-### Cycle result - source_ref_types_required
-
-- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
-- Engine/loop surface: `SaveBundle` and `Trace` now declare compact `source_ref` as required, matching the runtime load/replay/source-resolution gates.
-- Loop effect: new code can no longer treat persisted save/trace source identity as optional at the typed boundary; permissive optional shapes remain only at raw untrusted parse/forgery tests.
-- Guard: schema-standalone regression now pins required save/trace source refs, and focused save/trace, world-source, MCP save/load, and generated-save tests passed.
-- VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused source/persistence regressions, `npm test`, and `npm run health` passed after loop-state rotation.
