@@ -197,7 +197,10 @@ describe("single-world library contract", () => {
     ({ path, worldQuestId }) => {
       const pack = loadYaml(path) as RawPack;
       const packWorld = pack.meta?.world;
-      const game = api.start_world_quest({ world_quest_id: worldQuestId });
+      const game = api.start_world_quest({
+        world_quest_id: worldQuestId,
+        compact_observation: false,
+      });
       if (game.observation.mode !== "rpg") throw new Error("expected RPG observation");
       const opening = game.observation.description;
 

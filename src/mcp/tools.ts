@@ -372,7 +372,11 @@ export function createToolApi(opts: { root: string }) {
       ): RpgWorldQuestStartPayload<Args> => {
         const current = apiRef.current;
         if (!current) throw new Error("Tool API is not initialized.");
-        return current.start_world_quest(startArgs);
+        const responseOptions = {
+          compact_observation: false,
+          ...startArgs,
+        } as Args;
+        return current.start_world_quest(responseOptions) as RpgWorldQuestStartPayload<Args>;
       },
     }),
 
@@ -437,11 +441,15 @@ export function createToolApi(opts: { root: string }) {
 
     start_world_quest<Args extends RpgStartWorldQuestArgs>(
       args: Args,
-    ): RpgWorldQuestStartPayload<Args> {
+    ): RpgWorldQuestStartPayload<DefaultCompactRpgView<Args>> {
+      const responseOptions = {
+        compact_observation: true,
+        ...args,
+      } as DefaultCompactRpgView<Args>;
       return runRpgStartWorldQuest(
         { rpgRuntime, rpgSources },
-        args,
-      ) as RpgWorldQuestStartPayload<Args>;
+        responseOptions,
+      ) as RpgWorldQuestStartPayload<DefaultCompactRpgView<Args>>;
     },
 
     get_observation<Args extends RpgGetObservationArgs>(

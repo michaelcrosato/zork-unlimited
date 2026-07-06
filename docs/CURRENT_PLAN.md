@@ -513,8 +513,9 @@ Make discovered overworld quest leads start real RPG sessions.
 - Public MCP RPG start/read/step/load tools now default to compact observation
   context; callers can pass `compact_observation: false` when they need full
   observations.
-- Direct ToolApi `get_observation` also defaults to compact observation context,
-  keeping local harness reads aligned with the public MCP loop default.
+- Direct ToolApi `start_world_quest` and `get_observation` also default to
+  compact observation context, keeping local harness starts/reads aligned with
+  the public MCP loop default.
 - Compact RPG observation context is now versioned as `v: 10` for the mode-free,
   compact-action loop payload shape with duplicate score vars filtered out.
 - Compact RPG observation context omits empty exit and action lists when no

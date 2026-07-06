@@ -51,7 +51,10 @@ function exitsOf(obs: unknown): { direction: string; to?: string }[] {
 describe("bug_0137 — hide_graph difficulty: exits hide their destination", () => {
   for (const quest of RPG_QUESTS) {
     it(`${quest.label}: DEFAULT exits carry a string destination (full graph, legacy)`, () => {
-      const g = api().start_world_quest({ world_quest_id: quest.world_quest_id });
+      const g = api().start_world_quest({
+        world_quest_id: quest.world_quest_id,
+        compact_observation: false,
+      });
       const exits = exitsOf(g.observation);
       expect(exits.length).toBeGreaterThan(0);
       for (const e of exits) {
@@ -63,10 +66,17 @@ describe("bug_0137 — hide_graph difficulty: exits hide their destination", () 
     it(`${quest.label}: HIDDEN drops every exit's destination but keeps the same directions`, () => {
       const a = api();
       const open = exitsOf(
-        a.start_world_quest({ world_quest_id: quest.world_quest_id }).observation,
+        a.start_world_quest({
+          world_quest_id: quest.world_quest_id,
+          compact_observation: false,
+        }).observation,
       );
       const hidden = exitsOf(
-        a.start_world_quest({ world_quest_id: quest.world_quest_id, hide_graph: true }).observation,
+        a.start_world_quest({
+          world_quest_id: quest.world_quest_id,
+          hide_graph: true,
+          compact_observation: false,
+        }).observation,
       );
       // Same exits exist (you still see you CAN go each direction)…
       expect(hidden.map((e) => e.direction)).toEqual(open.map((e) => e.direction));
@@ -88,7 +98,11 @@ describe("bug_0137 — hide_graph difficulty: exits hide their destination", () 
 
     it(`${quest.label}: still playable under hide_graph — a MOVE relocates the player`, () => {
       const a = api();
-      const g = a.start_world_quest({ world_quest_id: quest.world_quest_id, hide_graph: true });
+      const g = a.start_world_quest({
+        world_quest_id: quest.world_quest_id,
+        hide_graph: true,
+        compact_observation: false,
+      });
       const before = exitsOf(g.observation);
       const startRoom = (g.observation as { room: string }).room;
       // Take the first available MOVE action (its destination is hidden from us).
@@ -116,10 +130,17 @@ describe("bug_0137 — hide_graph difficulty: exits hide their destination", () 
 
   it("start_world_quest world-id starts honor hide_graph", () => {
     const a = api();
-    const g = a.start_world_quest({ world_quest_id: "sunken_barrow", hide_graph: true });
+    const g = a.start_world_quest({
+      world_quest_id: "sunken_barrow",
+      hide_graph: true,
+      compact_observation: false,
+    });
     for (const e of exitsOf(g.observation)) expect(e.to).toBeUndefined();
     // And without the flag the supported start keeps the full graph.
-    const plain = a.start_world_quest({ world_quest_id: "sunken_barrow" });
+    const plain = a.start_world_quest({
+      world_quest_id: "sunken_barrow",
+      compact_observation: false,
+    });
     expect(exitsOf(plain.observation).some((e) => typeof e.to === "string")).toBe(true);
   });
 });

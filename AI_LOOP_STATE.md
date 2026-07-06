@@ -1,10 +1,19 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 452 -->
+<!-- historical_cycle_count: 453 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - rpg_start_compact_default
+
+- Pre-cycle: `C:\dev\agent-cleaner` passed; optional secret scanner remains absent.
+- Engine/loop surface: ToolApi `start_world_quest` now defaults to compact RPG context; full start observations require `compact_observation: false`.
+- Loop effect: direct harness/agent world-quest starts no longer emit the full opening room/action/state observation before compact reads take over.
+- Self-critique: world-quest start only; generated `new_game`, `step_action`, and `load_game` direct defaults remain follow-up surfaces.
+- Guard: MCP unit/regression tests keep full-start readers explicit while pinning the no-flag compact start.
+- VERIFY: `C:\dev\agent-cleaner`, `npm run typecheck`, focused MCP/RPG start regressions, `npm run lint`, `npm run format:check`, `npm run validate`, `npm test`, and `npm run health` passed after loop-state rotation.
 
 ### Cycle result - rpg_read_compact_default
 
@@ -124,11 +133,3 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Loop effect: MCP validation, load, generation, and patch responses no longer serialize report-level `pack_id`; recurring validate/inspect CLI outputs stay keyed by `world_quest_id` without report source headers.
 - Guard: focused report, MCP tool, assessor, author CLI, validation-bar, and trace CLI regressions pin `source_id` plus absence of public report `pack_id`.
 - VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused report/MCP/CLI regressions, `npm test`, and `npm run health` passed after loop-state rotation.
-
-### Cycle result - rpg_source_file_loader_private
-
-- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
-- Engine/loop surface: `RpgSourceRuntime` no longer exposes path-taking `loadAndReport` or `requirePlayable` methods; file-backed quest loading is private to the source runtime.
-- Loop effect: public runtime/tests now exercise file cache behavior through canonical `world_quest_id` loading, including a temp world-manifest fixture for same-size rewrite invalidation.
-- Guard: source-runtime regression rejects direct `.loadAndReport(...)` and `.requirePlayable(...)` callers while pinning the private file-backed loader boundary.
-- VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused source-runtime/world-source/validation-bar regressions, `npm test`, and `npm run health` passed after loop-state rotation.

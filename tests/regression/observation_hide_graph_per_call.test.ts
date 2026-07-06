@@ -82,7 +82,10 @@ describe("bug_0299 — hide_graph per-call override on observation tools", () =>
 
   it("(4) step_action per-call: override affects returned observation but does NOT mutate session", () => {
     const a = api();
-    const g = a.start_world_quest({ world_quest_id: WORLD_QUEST_ID }); // session default: show graph
+    const g = a.start_world_quest({
+      world_quest_id: WORLD_QUEST_ID,
+      compact_observation: false,
+    }); // session default: show graph
     // step_action with per-call hide_graph: true — returned observation should hide exits
     const moveAction = g.observation.available_actions.find(
       (act) => act.id.startsWith("go_") || (act.command ?? "").startsWith("go "),
