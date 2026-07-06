@@ -713,3 +713,46 @@ instead of requiring the live content corpus to keep a known stale site around.
 
 **Next after this:** if the stale room/item audit is empty, promote the low-FP subset
 into validation or move to the next ranked assessment item.
+
+### Consolidation decision — 2026-07-06 (recorded during PR #12 remediation; merge HEAD = 3914c4ef + remediation series)
+
+**Decision: the repo is normalized around ONE live game engine — the RPG
+foundation — inside one persistent world (Charter Marches hub + the New York
+overworld).** The CYOA and parser runtimes are retired; their validator lives
+on wholesale as `src/validate/rpg_foundation_validator.ts` (all ~40 finding
+codes preserved), and their best mechanics (skill checks, USE puzzles,
+dialogue trees, containers, scoring) are first-class in the RPG layer. This
+records — belatedly, which was itself a process failure — the product
+decision embodied in the 670-commit `codex/token-efficiency-cleanup` branch
+(PR #12). An append-only log entry MUST land in the same change as any future
+decision of this size.
+
+**Story retirement + recovery:** 36 of 52 shipped stories (all CYOA + parser
+packs) were retired with the runtimes, each carrying blind-playtest-driven
+fixes worth preserving. The last full 52-story tree is tagged
+`stories-52-pre-rpg-consolidation` (= the pre-merge develop/main heads).
+Porting retired stories to RPG quests one at a time — reusing their tested
+prose, puzzle chains, and endings — is standing flywheel work: each port is a
+well-scoped cycle (adapt → validate → blind-playtest → gate).
+
+**Remediation required before merge (all landed with the merge):**
+1. Rejection-direction coverage restored: the deleted parser negative
+   fixtures were converted to RPG-foundation format with a data-driven
+   corpus test, so ~36 foundation finding codes regain witnesses
+   (SoundnessBench discipline, bug_0182).
+2. Validator/runner parity fixes ported from develop 60bf106a: skill_check
+   interactions no longer drop their base effects; INSPECT/OPEN/CLOSE
+   interaction verbs are runtime-reachable (new additive `close_object`
+   core effect; `is_open` win-stability now tracks close falsifiers).
+3. The compact MCP interface was made self-describing for blind agents:
+   one-sentence tool descriptions and a session-start `legend` documenting
+   every positional field of the compact context, co-located with the
+   encoder so they cannot drift.
+
+**Why merge rather than reject:** the compact-observation engine is the
+difference between an AI-playable overworld (762 B/observation) and an
+unplayable one (94-110 KB/observation measured on develop); the integrity
+verifier got strictly stronger (FORBIDDEN_* guards, protected→forbidden
+migration enforcement); CI is green on the full bar; and the one-engine
+consolidation matches the project's stated direction — a single deep world
+under TTRPG-style rules, evolved by the dev↔playtest↔feedback flywheel.

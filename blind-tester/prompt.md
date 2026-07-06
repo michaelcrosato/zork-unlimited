@@ -54,6 +54,24 @@ REPORT (end your reply with these sections, in this order):
 5. Bugs or design flaws — concrete, each tagged with the scene where you hit it and
    a severity S0(cosmetic)–S4(blocking).
 6. Verdict: would a real player finish satisfied? one paragraph.
+7. EXIT INTERVIEW (mandatory — the report is REJECTED without it): a single fenced
+   block, exactly this shape, restating your findings as data. Integers only for
+   scores; severities S0–S4; empty arrays are fine.
+
+```json exit-interview
+{
+  "clarity": 3,
+  "enjoyment": 3,
+  "goal_understood": true,
+  "got_stuck": false,
+  "confusions": ["<short phrase per confusion, or empty>"],
+  "bugs": [{ "where": "<scene/area>", "severity": "S2", "note": "<one line>" }],
+  "best_moment": "<one line>",
+  "worst_moment": "<one line>",
+  "would_replay": false,
+  "verdict": "<the one-paragraph verdict, restated>"
+}
+```
 
 Be honest, specific, and ruthless. A critical, well-observed report is far more
 useful than a flattering one.
