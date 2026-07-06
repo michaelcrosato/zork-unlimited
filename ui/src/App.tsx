@@ -19,12 +19,16 @@ import {
 import { PACKS } from "./packs.js";
 import { OVERWORLD } from "./worldData.js";
 import type { OverworldQuest } from "../../src/world/overworld.js";
+import type { OverworldQuestView } from "../../src/world/session_local_discovery.js";
 
 function normalizePackPath(path: string): string {
   return path.replace(/^(\.\.\/)+/, "");
 }
 
 const packsByPath = new Map(PACKS.map((pack) => [normalizePackPath(pack.path), pack]));
+// The session exposes quests as OverworldQuestView (no pack source — the view
+// is what a PLAYER knows); the pack path lives only on the manifest quest.
+const questsById = new Map<string, OverworldQuest>(OVERWORLD.quests.map((q) => [q.id, q]));
 const OVERWORLD_SAVE_KEY = "adventureforge:new-york-overworld:v1";
 
 type InitialWorldSession = {
@@ -84,7 +88,7 @@ export default function App(): JSX.Element {
   const [worldView, setWorldView] = useState<OverworldView>(() => worldSession.view());
   const [questSession, setQuestSession] = useState<GameSession | null>(null);
   const [questView, setQuestView] = useState<View | null>(null);
-  const [activeQuest, setActiveQuest] = useState<OverworldQuest | null>(null);
+  const [activeQuest, setActiveQuest] = useState<OverworldQuestView | null>(null);
   const [log, setLog] = useState<string[]>(() => {
     const opener = worldState.restored
       ? `Resumed in ${worldView.current.name}.`
@@ -106,7 +110,7 @@ export default function App(): JSX.Element {
     [worldView.exits],
   );
 
-  function questAreaName(quest: OverworldQuest): string {
+  function questAreaName(quest: OverworldQuestView): string {
     return OVERWORLD.areas.find((area) => area.id === quest.area)?.name ?? quest.area;
   }
 
@@ -131,10 +135,12 @@ export default function App(): JSX.Element {
     }
   }
 
-  function startQuest(quest: OverworldQuest): void {
-    const pack = packsByPath.get(quest.pack);
+  function startQuest(quest: OverworldQuestView): void {
+    const manifestQuest = questsById.get(quest.id);
+    const source = manifestQuest ? normalizePackPath(manifestQuest.source) : undefined;
+    const pack = source ? packsByPath.get(source) : undefined;
     if (!pack) {
-      setError(`Quest pack is missing: ${quest.pack}`);
+      setError(`Quest pack is missing: ${source ?? quest.id}`);
       return;
     }
     try {

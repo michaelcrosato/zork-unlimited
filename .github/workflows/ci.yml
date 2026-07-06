@@ -6,7 +6,7 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, develop]
   pull_request:
 
 # Least-privilege CI token: this workflow only READS the repo (checkout, install,
@@ -41,16 +41,22 @@ jobs:
         run: npm run format:check
       - name: Tests (unit + property + determinism)
         run: npm test
-      - name: Health (validate + playtest across packs)
-        run: npm run health
-      # The web UI (Stage 5) is a separate package under ui/ that bundles the headless
-      # engine (ui/src imports ../src, which pulls root deps like zod/yaml — installed
-      # by `npm ci` above). CI previously never touched it, so it could rot green: a
-      # break in ui/ or in an engine API the UI consumes would pass CI unnoticed. The
-      # vite build resolves every import and fails on real breakage — the meaningful
-      # gate (vite/esbuild does not typecheck cross-package, so a naive UI tsc would
-      # false-positive on the engine's node: imports under the browser tsconfig).
+      # The granular steps above are exactly `npm run health` minus pack
+      # validation, so only the validate step remains — running health here
+      # would double-execute the entire pipeline (~2x CI time, doubled flake
+      # surface, zero added signal).
+      - name: Validate every shipped quest
+        run: npm run validate
+      # The web UI is a separate package under ui/ that bundles the headless
+      # engine (ui/src imports ../src, which pulls root deps like zod/yaml —
+      # installed by `npm ci` above). The vite build resolves every import and
+      # fails on real breakage; the tsc step catches the type-level drift the
+      # build can't (esbuild strips types without checking — exactly how six
+      # real App.tsx type errors against a changed engine API shipped green
+      # before this gate existed).
       - name: Install UI deps
         run: npm --prefix ui ci
+      - name: Typecheck UI
+        run: npx tsc -p ui/tsconfig.json --noEmit
       - name: Build UI (catch UI rot)
         run: npm run ui:build

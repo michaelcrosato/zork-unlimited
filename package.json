@@ -19,7 +19,7 @@
     "lint": "eslint src bin scripts agents tests blind-tester ui",
     "test": "vitest run --reporter=dot",
     "verify:integrity": "tsx scripts/verify-integrity.ts",
-    "health": "npm run verify:integrity && npm run typecheck && npm run lint && npm run format:check && npm test && npm run validate",
+    "health": "npm run verify:integrity && npm run typecheck && npm run lint && npm run format:check && npm test && npm run ui:typecheck && npm run validate",
     "test:watch": "vitest",
     "replay": "tsx bin/replay.ts",
     "validate": "tsx bin/validate.ts",
@@ -35,7 +35,8 @@
     "mcp": "tsx src/mcp/server.ts",
     "ai:loop": "tsx src/ai-loop.ts",
     "loop:status": "bash scripts/loop-status.sh",
-    "loop:stop": "bash scripts/loop-stop.sh"
+    "loop:stop": "bash scripts/loop-stop.sh",
+    "ui:typecheck": "tsc -p ui/tsconfig.json --noEmit"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
