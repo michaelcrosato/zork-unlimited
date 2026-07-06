@@ -69,13 +69,15 @@ describe("RPG play CLI world quest source", () => {
     const trace = JSON.parse(readFileSync(RECORDED_TRACE, "utf8")) as {
       mode?: string;
       source_ref?: unknown;
-      worldQuestId?: string;
+      worldQuestId?: unknown;
+      generatedRpgSeed?: unknown;
       trace_id?: string;
     };
     expect(trace.mode).toBe("rpg");
     expect(trace.trace_id).toBe("tr_rpg_play");
     expect(trace.source_ref).toEqual(["wq", "sunken_barrow"]);
-    expect(trace.worldQuestId).toBe("sunken_barrow");
+    expect(trace.worldQuestId).toBeUndefined();
+    expect(trace.generatedRpgSeed).toBeUndefined();
     expect("pack_id" in trace).toBe(false);
 
     const replay = runBin("bin/replay.ts", [RECORDED_TRACE]);

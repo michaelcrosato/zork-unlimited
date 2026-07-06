@@ -12,7 +12,6 @@ import { MAX_ENGINE_STEP, cloneGameState, isRuntimeSeed, type GameState } from "
 import { canonicalize } from "../core/hash.js";
 import { generatedRpgSeedValidationMessage, isGeneratedRpgSeed } from "../gen/seed.js";
 import {
-  compactSourceLegacyMetadata,
   compactSourceRefFromMetadata,
   compactSourceRefLegacyConsistency,
   compactSourceRefValidationError,
@@ -29,7 +28,7 @@ export type SaveMode = typeof SAVE_MODE;
  * the load-side complement to the effects-layer `guardFinite` (effects.ts) —
  * which only ever runs on EFFECT APPLICATION during play and so never sees a
  * value injected by a forged save. The contentHash check below guards WHICH
- * pack a save was made against; this guards WHETHER the state is well-formed.
+ * source a save was made against; this guards WHETHER the state is well-formed.
  *
  * The load-bearing gate is `vars: z.record(z.number().finite())`:
  * `JSON.parse('{"...":1e999}')` yields `Infinity`, which — left unguarded —
@@ -107,12 +106,8 @@ export type SaveBundle = {
   contentHash: string;
   /** Pack mode. Required so persisted state is bound to the unified RPG engine. */
   mode: SaveMode;
-  /** Compact canonical source identity. Legacy fields below remain compatibility mirrors. */
+  /** Compact canonical source identity for world quests or generated RPG runs. */
   source_ref: SaveSourceRef;
-  /** Shipped world quest id, when the save belongs to the open-world graph. */
-  worldQuestId?: string;
-  /** Procedural RPG generation seed, when the save belongs to an in-memory generated pack. */
-  generatedRpgSeed?: number;
   state: GameState;
 };
 
@@ -148,8 +143,16 @@ function cloneSaveSourceRef(sourceRef: SaveSourceRef): SaveSourceRef {
 
 function immutableLoadedSaveBundle(bundle: SaveBundle): SaveBundle {
   const sourceRef = cloneSaveSourceRef(bundle.source_ref);
+  const {
+    worldQuestId: _legacyWorldQuestId,
+    generatedRpgSeed: _legacyGeneratedRpgSeed,
+    ...canonicalBundle
+  } = bundle as SaveBundle & {
+    worldQuestId?: unknown;
+    generatedRpgSeed?: unknown;
+  };
   return deepFreezeSaveBundle({
-    ...bundle,
+    ...canonicalBundle,
     state: cloneGameState(bundle.state),
     source_ref: sourceRef,
   });
@@ -186,19 +189,12 @@ export function save(
   assertNonEmptyString(contentHash, "Save contentHash");
   assertWellFormedState(state);
   const sourceRef = saveSourceRef(metadata);
-  const sourceMetadata = compactSourceLegacyMetadata(sourceRef);
   const bundle: SaveBundle = {
     version: SAVE_VERSION,
     contentHash,
     state,
     mode,
     source_ref: sourceRef,
-    ...(sourceMetadata.worldQuestId !== undefined
-      ? { worldQuestId: sourceMetadata.worldQuestId }
-      : {}),
-    ...(sourceMetadata.generatedRpgSeed !== undefined
-      ? { generatedRpgSeed: sourceMetadata.generatedRpgSeed }
-      : {}),
   };
   return canonicalize(bundle);
 }
@@ -212,7 +208,7 @@ export function assertSaveContentHash(
   if (bundle.contentHash !== expectedContentHash) {
     throw new SaveIntegrityError(
       `Content hash mismatch: save was made against ${bundle.contentHash}, ` +
-        `but the loaded pack is ${expectedContentHash}.`,
+        `but the loaded source is ${expectedContentHash}.`,
     );
   }
 }
@@ -250,14 +246,18 @@ function assertSaveSourceRef(raw: unknown): asserts raw is SaveSourceRef {
 function assertSaveSourceRefConsistency(bundle: SaveBundle): void {
   const sourceRef = (bundle as { source_ref?: unknown }).source_ref;
   assertSaveSourceRef(sourceRef);
+  const legacyMirror = bundle as SaveBundle & {
+    worldQuestId?: string;
+    generatedRpgSeed?: number;
+  };
   const consistency = compactSourceRefLegacyConsistency(
     sourceRef,
     {
-      ...((bundle as { worldQuestId?: string }).worldQuestId !== undefined
-        ? { worldQuestId: (bundle as { worldQuestId: string }).worldQuestId }
+      ...(legacyMirror.worldQuestId !== undefined
+        ? { worldQuestId: legacyMirror.worldQuestId }
         : {}),
-      ...((bundle as { generatedRpgSeed?: number }).generatedRpgSeed !== undefined
-        ? { generatedRpgSeed: (bundle as { generatedRpgSeed: number }).generatedRpgSeed }
+      ...(legacyMirror.generatedRpgSeed !== undefined
+        ? { generatedRpgSeed: legacyMirror.generatedRpgSeed }
         : {}),
     },
     SAVE_SOURCE_REF_CONSISTENCY_MESSAGES,
@@ -268,7 +268,9 @@ function assertSaveSourceRefConsistency(bundle: SaveBundle): void {
 /**
  * Deserialize a save. If `expectedContentHash` is given, the save's contentHash
  * must match it exactly (§8.7). Saves must carry the RPG mode; missing or
- * legacy modes are integrity failures, not migration inputs.
+ * legacy modes are integrity failures, not migration inputs. Legacy
+ * worldQuestId/generatedRpgSeed mirror fields are accepted only to check old
+ * artifacts against source_ref, and are dropped from the returned bundle.
  */
 export function load(
   bytes: string,

@@ -73,13 +73,6 @@ export function compactSourceRefFromMetadata(
   };
 }
 
-export function compactSourceLegacyMetadata(
-  sourceRef: CompactSourceRef,
-): CompactSourceLegacyMetadata {
-  if (sourceRef[0] === "wq") return { worldQuestId: sourceRef[1] };
-  return { generatedRpgSeed: sourceRef[1] };
-}
-
 export function compactSourceRefLabel(sourceRef: CompactSourceRef): string {
   if (sourceRef[0] === "wq") return `world_quest_id:${sourceRef[1]}`;
   return `generate_rpg_seed:${sourceRef[1]}`;

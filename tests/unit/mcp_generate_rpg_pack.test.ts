@@ -169,7 +169,7 @@ describe("bug_0160 — new_game(generate_rpg_seed) plays a fresh minted RPG pack
     expect(saved.generated_rpg_seed).toBe(3);
     expect(raw.source_ref).toEqual(["gen", 3]);
     expect(raw.worldQuestId).toBeUndefined();
-    expect(raw.generatedRpgSeed).toBe(3);
+    expect(raw.generatedRpgSeed).toBeUndefined();
 
     const loaded = a.load_game({ save: saved.save });
     expect("pack_path" in loaded).toBe(false);

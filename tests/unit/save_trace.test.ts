@@ -55,7 +55,10 @@ describe("save / load (§8.7)", () => {
     expect(loaded.mode).toBe(SAVE_MODE);
     expect(loaded.source_ref).toEqual(["wq", MICRO_WORLD_QUEST_ID]);
     expect("packId" in loaded).toBe(false);
-    expect("packId" in (JSON.parse(bytes) as Record<string, unknown>)).toBe(false);
+    const raw = JSON.parse(bytes) as Record<string, unknown>;
+    expect("packId" in raw).toBe(false);
+    expect("worldQuestId" in raw).toBe(false);
+    expect("generatedRpgSeed" in raw).toBe(false);
   });
 
   it("returns immutable loaded bundles after validation", () => {
@@ -134,7 +137,7 @@ describe("save / load (§8.7)", () => {
     expect(() => load(JSON.stringify(bundle), MICRO_CONTENT_HASH)).toThrow(/packId is retired/);
   });
 
-  it("checks a loaded save bundle against a resolved pack hash", () => {
+  it("checks a loaded save bundle against a resolved source hash", () => {
     const bytes = saveMicro();
     const loaded = load(bytes);
     expect(() => assertSaveContentHash(loaded, MICRO_CONTENT_HASH)).not.toThrow();
@@ -146,20 +149,22 @@ describe("save / load (§8.7)", () => {
     expect(load(bytes).contentHash).toBe(MICRO_CONTENT_HASH);
   });
 
-  it("round-trips optional world quest identity", () => {
+  it("emits only compact world quest identity", () => {
     const bytes = saveMicro();
     const loaded = load(bytes, MICRO_CONTENT_HASH);
-    expect(loaded.worldQuestId).toBe(MICRO_WORLD_QUEST_ID);
     expect(loaded.source_ref).toEqual(["wq", MICRO_WORLD_QUEST_ID]);
+    expect("worldQuestId" in loaded).toBe(false);
+    expect("generatedRpgSeed" in loaded).toBe(false);
   });
 
-  it("round-trips optional generated RPG identity", () => {
+  it("emits only compact generated RPG identity", () => {
     const bytes = save(microInitState(), MICRO_CONTENT_HASH, SAVE_MODE, {
       generatedRpgSeed: 3,
     });
     const loaded = load(bytes, MICRO_CONTENT_HASH);
-    expect(loaded.generatedRpgSeed).toBe(3);
     expect(loaded.source_ref).toEqual(["gen", 3]);
+    expect("worldQuestId" in loaded).toBe(false);
+    expect("generatedRpgSeed" in loaded).toBe(false);
   });
 
   it("rejects unsafe generated RPG source identities", () => {
@@ -173,7 +178,6 @@ describe("save / load (§8.7)", () => {
       generatedRpgSeed: 3,
     });
     const bundle = JSON.parse(bytes) as Record<string, unknown>;
-    bundle.generatedRpgSeed = UNSAFE_GENERATED_RPG_SEED;
     bundle.source_ref = ["gen", UNSAFE_GENERATED_RPG_SEED];
 
     expect(() => load(JSON.stringify(bundle), MICRO_CONTENT_HASH)).toThrow(SaveIntegrityError);
@@ -206,9 +210,10 @@ describe("save / load (§8.7)", () => {
     expect(() => load(JSON.stringify(bundle), MICRO_CONTENT_HASH)).toThrow(/worldQuestId/);
   });
 
-  it("rejects conflicting compact save source identity", () => {
+  it("rejects conflicting legacy save source mirrors", () => {
     const bytes = saveMicro();
     const bundle = JSON.parse(bytes) as Record<string, unknown>;
+    bundle.worldQuestId = MICRO_WORLD_QUEST_ID;
     bundle.source_ref = ["wq", "cold_forge"];
     expect(() => load(JSON.stringify(bundle), MICRO_CONTENT_HASH)).toThrow(SaveIntegrityError);
     expect(() => load(JSON.stringify(bundle), MICRO_CONTENT_HASH)).toThrow(/source_ref/);
@@ -255,7 +260,8 @@ describe("trace record / replay (§8.8)", () => {
     const trace = recordTrace(microRules, microInitState(), WIN, traceOptions());
     expect(trace.mode).toBe(SAVE_MODE);
     expect(trace.source_ref).toEqual(["wq", MICRO_WORLD_QUEST_ID]);
-    expect(trace.worldQuestId).toBe(MICRO_WORLD_QUEST_ID);
+    expect("worldQuestId" in trace).toBe(false);
+    expect("generatedRpgSeed" in trace).toBe(false);
     expect("pack_id" in trace).toBe(false);
     expect(trace.expected_final_hash).toBeDefined();
     const result = replayTrace(trace, microRules);
@@ -270,8 +276,8 @@ describe("trace record / replay (§8.8)", () => {
       generatedRpgSeed: 3,
     });
     expect(trace.source_ref).toEqual(["gen", 3]);
-    expect(trace.generatedRpgSeed).toBe(3);
-    expect(trace.worldQuestId).toBeUndefined();
+    expect("generatedRpgSeed" in trace).toBe(false);
+    expect("worldQuestId" in trace).toBe(false);
     expect(traceSourceLabel(trace)).toBe("generate_rpg_seed:3");
     expect(replayTrace(trace, microRules).ok).toBe(true);
   });
@@ -423,12 +429,17 @@ describe("trace record / replay (§8.8)", () => {
       generatedRpgSeed: 3,
     });
 
-    const mismatchedGenerated = { ...trace, source_ref: ["gen", 4] } as unknown as typeof trace;
+    const mismatchedGenerated = {
+      ...trace,
+      generatedRpgSeed: 3,
+      source_ref: ["gen", 4],
+    } as unknown as typeof trace;
     expect(() => replayTrace(mismatchedGenerated, microRules)).toThrow(SaveIntegrityError);
     expect(() => replayTrace(mismatchedGenerated, microRules)).toThrow(/source_ref/);
 
     const conflictingWorldQuest = {
       ...trace,
+      generatedRpgSeed: 3,
       source_ref: ["wq", "sunken_barrow"],
     } as unknown as typeof trace;
     expect(() => replayTrace(conflictingWorldQuest, microRules)).toThrow(SaveIntegrityError);

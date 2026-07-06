@@ -14,7 +14,6 @@ import { makeStep } from "../core/engine.js";
 import { SaveIntegrityError, SAVE_MODE, type SaveMode } from "../persist/save_load.js";
 import { assertTraceIdentityFields } from "./integrity.js";
 import {
-  compactSourceLegacyMetadata,
   compactSourceRefFromMetadata,
   compactSourceRefLabel,
   type CompactSourceRef,
@@ -26,10 +25,6 @@ export type Trace<A extends EngineAction = RpgAction> = {
   mode: SaveMode;
   /** Compact canonical world quest or generated-RPG source identity. */
   source_ref: TraceSourceRef;
-  /** Shipped world quest id, when the trace belongs to the open-world graph. */
-  worldQuestId?: string;
-  /** Procedural RPG generation seed, when the trace belongs to an in-memory generated pack. */
-  generatedRpgSeed?: number;
   trace_id: string;
   content_hash: string;
   seed: number;
@@ -105,16 +100,9 @@ export function recordTrace<A extends EngineAction>(
   assertTraceIdentityFields(opts);
   const run = runActions(rules, initialState, actions);
   const sourceRef = traceSourceRef(opts);
-  const sourceMetadata = compactSourceLegacyMetadata(sourceRef);
   return {
     mode: SAVE_MODE,
     source_ref: sourceRef,
-    ...(sourceMetadata.worldQuestId !== undefined
-      ? { worldQuestId: sourceMetadata.worldQuestId }
-      : {}),
-    ...(sourceMetadata.generatedRpgSeed !== undefined
-      ? { generatedRpgSeed: sourceMetadata.generatedRpgSeed }
-      : {}),
     trace_id: opts.trace_id,
     content_hash: opts.content_hash,
     seed: initialState.seed,

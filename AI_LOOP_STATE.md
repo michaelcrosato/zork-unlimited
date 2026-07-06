@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 443 -->
+<!-- historical_cycle_count: 444 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - source_ref_mirror_write_retired
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/loop surface: new save and trace artifacts now serialize only compact `source_ref`; legacy `worldQuestId` / `generatedRpgSeed` mirrors are accepted for old-artifact validation but dropped from loaded bundles.
+- Loop effect: persistence and replay state carry one canonical source identity, reducing duplicated context in save/trace blobs while preserving source-integrity checks.
+- Guard: focused save/trace, world-source, MCP save/load, generated-source, and recorded-play regressions cover source-ref-only emission plus legacy mirror rejection.
+- VERIFY: `npm run typecheck`, focused save/trace/world-source/MCP regressions, `npm run validate`, `npm test`, and `npm run health` passed after loop-state rotation.
 
 ### Cycle result - overworld_quest_source_field
 
@@ -117,11 +125,3 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Loop effect: human/debug CLI loops no longer reopen package files after resolving world identity; they share the MCP loader boundary for trace replay, quest inspection, and terminal play.
 - Guard: focused source-runtime and CLI regressions cover path-free trace sources, replay/inspect inference, world-id quest summaries, and world-bound recorded play traces.
 - VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused runtime/CLI regressions, `npm test`, and `npm run health` passed after loop-state rotation.
-
-### Cycle result - mcp_patch_loader_world_id
-
-- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
-- Engine/loop surface: MCP `apply_content_patch` now resolves args to `world_quest_id` and loads the source through `RpgSourceRuntime.loadWorldQuestReport`; raw `packPath` no longer appears in the patch tool handler.
-- Loop effect: structured content patches operate on compiled quest data from the unified source runtime instead of re-opening package files in ToolApi code.
-- Guard: focused MCP patch regression covers world-id output, absence of `pack_path`, and canonical non-path report identity for accepted and rejected patches.
-- VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused MCP tool regression, `npm test`, and `npm run health` passed after loop-state rotation.
