@@ -193,7 +193,7 @@ const OVERWORLD_ACTION_CONTEXT = {
 
 tool(
   "start_overworld",
-  "Start overworld; compact.",
+  "Start OW.",
   {
     ...COMPACT_OVERWORLD_CONTEXT,
   },
@@ -201,17 +201,17 @@ tool(
 );
 tool(
   "get_overworld_session",
-  "Read overworld; hash-only if same.",
+  "Read OW.",
   {
     ...SESSION,
     ...IF_SNAPSHOT_HASH,
-    include_observation: z.boolean().optional().describe("Return full obs."),
+    include_observation: z.boolean().optional().describe("Full obs."),
   },
   (a) => compactMcpOverworldSession(a),
 );
 tool(
   "get_overworld_session_context",
-  "Read compact overworld; hash if same.",
+  "Read compact OW.",
   {
     ...SESSION,
     ...IF_SNAPSHOT_HASH,
@@ -221,7 +221,7 @@ tool(
 );
 tool(
   "export_overworld_session",
-  "Export overworld snapshot; hash guards.",
+  "Export OW.",
   {
     ...SESSION,
     ...EXPECTED_SNAPSHOT_HASH,
@@ -231,19 +231,20 @@ tool(
 );
 tool(
   "restore_overworld_session",
-  "Restore overworld snapshot; compact.",
+  "Restore OW.",
   {
-    snapshot: z.record(z.unknown()).describe("Exported snapshot."),
+    snapshot: z.record(z.unknown()).describe("Snapshot."),
     ...COMPACT_OVERWORLD_CONTEXT,
   },
   (a) => api.restore_overworld_session(defaultCompactOverworld(a)),
 );
 tool(
   "travel_overworld_session",
-  "Travel road.",
+  "Travel.",
   {
     ...SESSION,
-    road_id: z.string().describe("Road id."),
+    destination_town_id: z.string().optional().describe("Town."),
+    road_id: z.string().optional().describe("Road."),
     ...OVERWORLD_ACTION_CONTEXT,
   },
   (a) => api.travel_overworld_session(defaultCompactOverworld(a)),

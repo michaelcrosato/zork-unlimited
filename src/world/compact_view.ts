@@ -16,7 +16,7 @@ export const OVERWORLD_COMPACT_COMPLETED_ARC_LIMIT = 16;
 export const OVERWORLD_COMPACT_LABEL_CHAR_LIMIT = 96;
 export const OVERWORLD_COMPACT_TITLE_CHAR_LIMIT = 140;
 export const OVERWORLD_COMPACT_RISK_CHAR_LIMIT = 160;
-export const OVERWORLD_COMPACT_VIEW_VERSION = 9 as const;
+export const OVERWORLD_COMPACT_VIEW_VERSION = 10 as const;
 
 export type OverworldCompactRef = readonly [id: string, name: string];
 export type OverworldCompactQuestRef = readonly [id: string, title: string];
@@ -41,7 +41,6 @@ export type OverworldCompactHiddenCounts = readonly [
 ];
 export type OverworldCompactProgress = readonly [visited: number, total: number];
 export type OverworldCompactRoad = readonly [
-  roadId: string,
   toId: string,
   minutes: number,
   suppliesNeeded: number,
@@ -379,7 +378,6 @@ export function compactOverworldRoads(
     const exit = exits[index]!;
     const plan = routeByDestination.get(exit.destination.id);
     compact.push([
-      exit.id,
       exit.destination.id,
       plan?.estimate.elapsedMinutes ?? exit.travel_minutes,
       plan?.estimate.suppliesNeeded ?? 0,

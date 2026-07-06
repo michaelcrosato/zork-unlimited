@@ -521,9 +521,9 @@ Make discovered overworld quest leads start real RPG sessions.
   context/result payloads, so repeated loop turns avoid full observations and
   full action results after movement or local actions unless explicit false flags
   are passed.
-- Compact overworld context is now versioned as `v: 9` for tuple-packed progress
-  and hidden-count shapes plus the expanded progress-id tuple shape that includes
-  started/completed quest ids.
+- Compact overworld context is now versioned as `v: 10`; immediate road tuples
+  are destination-first `[destination_town_id, minutes, supplies, fatigue]`, and
+  MCP travel accepts `destination_town_id` while preserving full `road_id` calls.
 - ToolApi/public MCP overworld start and restore default to compact context, so
   long-running agents can stay compact from the first session or restore payload.
 - Direct overworld quest handoff now also defaults its RPG start payload to

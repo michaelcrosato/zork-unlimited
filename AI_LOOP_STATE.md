@@ -1,10 +1,19 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 470 -->
+<!-- historical_cycle_count: 471 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - overworld_destination_roads_v10
+
+- Pre-cycle: `C:\dev\agent-cleaner` measure/gates passed through WSL; optional secret scanner remains absent.
+- Engine/loop surface: compact overworld context is now `v: 10`; immediate road tuples are `[destination_town_id, minutes, supplies, fatigue]` and MCP travel accepts `destination_town_id` while preserving full `road_id`.
+- Loop effect: default `start_overworld` drops from 1256 to 1041 bytes and repeated `get_overworld_session_context` drops from 1266 to 1051 bytes by removing repeated manifest road ids from the ordinary movement menu.
+- Self-critique: this trims the hot overworld loop surface and keeps the command directly actionable, but route-option opt-ins and travel logs still carry full road ids for debug/replay integrity.
+- Guard: focused overworld MCP, UI compact-view, server-registration, and snapshot-integrity regressions pin tuple shape, destination travel, compatibility `road_id` travel, and schema budget.
+- VERIFY: `C:\dev\agent-cleaner`, focused overworld/schema regressions, payload probe, `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, `npm test`, and `npm run health` passed after loop-state rotation.
 
 ### Cycle result - list_world_tuple_default
 
@@ -131,12 +140,3 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Self-critique: transcript default only; deeper wins remain in compact summary/event tuple shape and persisted trace payloads.
 - Guard: MCP transcript regressions pin no-flag summary-only behavior while full-turn readers opt out explicitly.
 - VERIFY: `C:\dev\agent-cleaner`, `npm run typecheck`, focused transcript regressions, `npm run lint`, `npm run format:check`, `npm run validate`, `npm test`, and `npm run health` passed after loop-state rotation.
-
-### Cycle result - rpg_load_compact_default
-
-- Pre-cycle: `C:\dev\agent-cleaner` passed; optional secret scanner remains absent.
-- Engine/loop surface: ToolApi `load_game` now defaults to compact RPG context; full restored observations require `compact_observation: false`.
-- Loop effect: direct harness/agent resumes no longer emit full room/action/state observations before compact poll/action loops continue.
-- Self-critique: closes the remaining direct RPG full-payload default; deeper savings now move to payload shape and persistence internals rather than API defaults.
-- Guard: MCP reload regressions pin no-flag compact restored context while full-observation reload readers opt out explicitly.
-- VERIFY: `C:\dev\agent-cleaner`, `npm run typecheck`, focused MCP reload/save regressions, `npm run lint`, `npm run format:check`, `npm run validate`, `npm test`, and `npm run health` passed after loop-state rotation.

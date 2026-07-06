@@ -1149,7 +1149,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(compact.snapshot_hash).toBe(started.snapshot_hash);
     expect(compactStarted.snapshot_hash).toMatch(/^[0-9a-f]{64}$/);
     expect(defaultStarted.snapshot_hash).toMatch(/^[0-9a-f]{64}$/);
-    expect(defaultStarted.context.v).toBe(9);
+    expect(defaultStarted.context.v).toBe(10);
     expect("observation" in defaultStarted).toBe(false);
     expect("route_options" in defaultStarted.context).toBe(false);
     const defaultRoute = a.plan_overworld_session_route({
@@ -1164,14 +1164,14 @@ describe("MCP tools — validate / load (§9.4)", () => {
     const defaultTravelRoad = defaultStarted.context.roads[0]!;
     const defaultTravel = a.travel_overworld_session({
       session_id: defaultStarted.session_id,
-      road_id: defaultTravelRoad[0],
+      destination_town_id: defaultTravelRoad[0],
       expected_snapshot_hash: defaultStarted.snapshot_hash,
     });
     expect(defaultTravel.ok).toBe(true);
     if (!defaultTravel.ok) throw new Error("default compact travel should pass snapshot guard");
     expect(defaultTravel.travel).toHaveLength(7);
     expect("baseMinutes" in defaultTravel.travel).toBe(false);
-    expect(defaultTravel.context.here[0]).toBe(defaultTravelRoad[1]);
+    expect(defaultTravel.context.here[0]).toBe(defaultTravelRoad[0]);
     expect("observation" in defaultTravel).toBe(false);
     const exportedForRestore = a.export_overworld_session({ session_id: started.session_id });
     expect(exportedForRestore.ok).toBe(true);
@@ -1290,7 +1290,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
       session_id: started.session_id,
       include_route_options: true,
     });
-    expect(compact.context.v).toBe(9);
+    expect(compact.context.v).toBe(10);
     expect(compact.context.here).toEqual([
       full.current.id,
       full.current.name,
@@ -1310,14 +1310,14 @@ describe("MCP tools — validate / load (§9.4)", () => {
       full.hiddenSiteCount,
       full.hiddenQuestCount,
     ]);
-    expect(compact.context.roads.map(([roadId]) => roadId)).toEqual(
-      full.exits.map((edge) => edge.id),
+    expect(compact.context.roads.map(([destinationTownId]) => destinationTownId)).toEqual(
+      full.exits.map((edge) => edge.destination.id),
     );
     expect(compactStarted.context.here[0]).toBe("albany_city");
     expect("observation" in compactStarted).toBe(false);
     expect(compact.context.poi.map(([id]) => id)).toEqual(full.pois.map((poi) => poi.id));
-    expect(compact.context.roads[0]).toHaveLength(5);
-    expect(compact.context.roads[0]?.[2]).toEqual(expect.any(Number));
+    expect(compact.context.roads[0]).toHaveLength(4);
+    expect(compact.context.roads[0]?.[1]).toEqual(expect.any(Number));
     if (compact.context.area_routes?.[0]) {
       expect(compact.context.area_routes[0]).toHaveLength(3);
       expect(compact.context.area_routes[0][2]).toEqual(expect.any(Number));
@@ -1366,6 +1366,16 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(compactPlan.context.route_options?.[0]).toHaveLength(5);
     expect(compactPlan.context.here[0]).toBe(full.current.id);
     expect("observation" in compactPlan).toBe(false);
+    expect(() => a.travel_overworld_session({ session_id: started.session_id } as never)).toThrow(
+      /exactly one of road_id or destination_town_id/,
+    );
+    expect(() =>
+      a.travel_overworld_session({
+        session_id: started.session_id,
+        road_id: road!.id,
+        destination_town_id: road!.destination.id,
+      } as never),
+    ).toThrow(/exactly one of road_id or destination_town_id/);
 
     const compactTravel = a.travel_overworld_session({
       session_id: started.session_id,

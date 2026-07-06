@@ -289,7 +289,11 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
     },
 
     travel_overworld_session<
-      Args extends { session_id: string; road_id: string } & OverworldResponseOptions,
+      Args extends {
+        session_id: string;
+        road_id?: string;
+        destination_town_id?: string;
+      } & OverworldResponseOptions,
     >(
       args: Args,
     ): OverworldSessionResponse<
@@ -299,11 +303,34 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
       OverworldCompactTravelLogEntry
     > {
       const responseOptions = defaultCompactOverworldResponse(args);
+      const travelByRoadId = args.road_id !== undefined;
+      const travelByDestination = args.destination_town_id !== undefined;
+      if (travelByRoadId === travelByDestination) {
+        throw new Error(
+          "travel_overworld_session requires exactly one of road_id or destination_town_id.",
+        );
+      }
+      if (args.road_id !== undefined) {
+        const roadId = args.road_id;
+        return overworldSessions.run(
+          responseOptions,
+          args.session_id,
+          "travel",
+          (session) => session.travel(roadId),
+          compactTravelLogEntry,
+        );
+      }
+      const destinationTownId = args.destination_town_id;
+      if (destinationTownId === undefined) {
+        throw new Error(
+          "travel_overworld_session requires exactly one of road_id or destination_town_id.",
+        );
+      }
       return overworldSessions.run(
         responseOptions,
         args.session_id,
         "travel",
-        (session) => session.travel(args.road_id),
+        (session) => session.travelTo(destinationTownId),
         compactTravelLogEntry,
       );
     },

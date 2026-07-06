@@ -413,7 +413,7 @@ describe("OverworldSession", () => {
     expect(view.discovered.length).toBeGreaterThan(24);
     const compact = compactOverworldView(view);
     expect(session.compactView()).toEqual(compact);
-    expect(compact.v).toBe(9);
+    expect(compact.v).toBe(10);
     expect(compact.hidden).toEqual([
       view.hiddenAreaCount,
       view.hiddenJobCount,
@@ -616,7 +616,7 @@ describe("OverworldSession", () => {
     const cloned = cloneOverworldCompactView(compact);
     expect(cloned.roads_truncated).toBe(true);
     expect(cloned.area_routes_truncated).toBe(true);
-    cloned.roads.push(["mutated_by_test", "mutated", 1, 0, 0]);
+    cloned.roads.push(["mutated_by_test", 1, 0, 0]);
     cloned.area_routes?.push(["mutated_by_test", "mutated", 1]);
     expect(compact.roads).toHaveLength(OVERWORLD_COMPACT_MOVEMENT_LIMIT);
     expect(compact.area_routes).toHaveLength(OVERWORLD_COMPACT_MOVEMENT_LIMIT);

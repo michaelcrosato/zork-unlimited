@@ -851,4 +851,21 @@ export class OverworldSession {
     this.clearSessionCaches();
     return cloneOverworldTravelLogEntry(recorded.entry);
   }
+
+  travelTo(destinationTownId: string): TravelLogEntry {
+    const matchingRoads = this.roadsFrom(this.currentId).filter(
+      (road) => road.destination.id === destinationTownId,
+    );
+    if (matchingRoads.length === 0) {
+      throw new Error(
+        `No road from "${this.currentId}" reaches destination town "${destinationTownId}".`,
+      );
+    }
+    if (matchingRoads.length > 1) {
+      throw new Error(
+        `Multiple roads from "${this.currentId}" reach "${destinationTownId}"; use road_id.`,
+      );
+    }
+    return this.travel(matchingRoads[0]!.id);
+  }
 }
