@@ -5,7 +5,9 @@
  */
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
+import { parse as parseYaml } from "yaml";
 import { GameSession, isRpgSource } from "../../ui/src/engine.js";
+import { RpgPackSchema } from "../../src/rpg/schema.js";
 
 const read = (p: string): string => readFileSync(p, "utf8");
 const NON_RPG_SOURCE = `
@@ -35,6 +37,9 @@ describe("GameSession — RPG-only structured play", () => {
     const out = s.choose("not_an_action");
     expect(out.ok).toBe(false);
     expect(s.view().stateHash).toBe(before);
+    // No ending record while play continues — the overworld completion bridge
+    // must have nothing to act on.
+    expect(s.ending()).toBeNull();
   });
 
   it("reset restores the deterministic initial RPG state", () => {
@@ -84,6 +89,18 @@ describe("GameSession — RPG-only structured play", () => {
       const v = s.view();
       expect(v.ended).toBe(true);
       expect(v.endingId).toBe("ending_victory");
+      // ending() surfaces the pack's own ending record ({id, title, death}) —
+      // the exact completion payload OverworldSession.completeQuest needs, so
+      // the web UI can close a finished quest back into the overworld the same
+      // way the MCP bridge and terminal CLI do (death passthrough included).
+      const pack = RpgPackSchema.parse(parseYaml(read("content/rpg/quests/sunken_barrow.yaml")));
+      const expected = pack.endings.find((e) => e.id === "ending_victory")!;
+      expect(s.ending()).toEqual({
+        id: expected.id,
+        title: expected.title,
+        death: expected.death,
+      });
+      expect(s.ending()!.death).toBe(false);
       return v.stateHash;
     };
     expect(play()).toBe(play()); // identical final hash — determinism through the UI client
