@@ -368,7 +368,9 @@ describe("MCP server registration", () => {
     expect(block).toContain("IF_TRANSCRIPT_HASH");
     expect(args).not.toContain("if_state_hash");
     expect(args).toContain("if_transcript_hash");
+    expect(args).toContain("include_session_id");
     expect(args).toContain("turn_limit");
+    expect(block).toContain("...S");
     expect(block).toContain("No turns.");
     expect(block).toContain("Capped lists.");
     expect(block).toContain("turn_limit");

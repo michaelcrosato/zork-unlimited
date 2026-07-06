@@ -2210,6 +2210,7 @@ describe("MCP tools — the play loop (§9.1)", () => {
     (stepEvent as { type: string }).type = "rejected";
     (stepEvent as { reason?: string }).reason = "mutated_step_event";
     const defaultTranscript = a.get_transcript({ session_id: game.session_id });
+    expect("session_id" in defaultTranscript).toBe(false);
     expect("turns" in defaultTranscript).toBe(false);
     expect(defaultTranscript.summary.ended).toBe(true);
     expect(defaultTranscript.summary.ending_id).toBe("ending_victory");
@@ -2219,6 +2220,7 @@ describe("MCP tools — the play loop (§9.1)", () => {
       compact_events: false,
       compact_summary: false,
     });
+    expect("session_id" in transcript).toBe(false);
     expect("pack_id" in transcript).toBe(false);
     expect("pack_path" in transcript).toBe(false);
     expect("mode" in transcript).toBe(false);
@@ -2230,6 +2232,14 @@ describe("MCP tools — the play loop (§9.1)", () => {
     });
     expect(sourcedTranscript.world_quest_id).toBe("sunken_barrow");
     expect("generated_rpg_seed" in sourcedTranscript).toBe(false);
+    expect("session_id" in sourcedTranscript).toBe(false);
+    const transcriptWithSessionId = a.get_transcript({
+      session_id: game.session_id,
+      include_session_id: true,
+    });
+    expect(transcriptWithSessionId.session_id).toBe(game.session_id);
+    expect(transcriptWithSessionId.summary).toEqual(defaultTranscript.summary);
+    expect("turns" in transcriptWithSessionId).toBe(false);
     expect(transcript.summary.ended).toBe(true);
     expect(transcript.summary.ending_id).toBe("ending_victory");
     expect(JSON.stringify(defaultTranscript).length).toBeLessThan(

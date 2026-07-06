@@ -515,6 +515,7 @@ tool(
   "Transcript.",
   {
     ...SESSION,
+    ...S,
     include_source: z.boolean().optional(),
     ...IF_TRANSCRIPT_HASH,
     summary_only: z.boolean().optional().describe("No turns."),

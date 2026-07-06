@@ -277,7 +277,7 @@ export function runRpgGetTranscript<Args extends TranscriptArgs>(
   const summary = cloneTranscriptSummary(summarySource);
   const turnsOmitted = args.summary_only ? 0 : transcriptTurnsOmitted(s, args);
   const response = {
-    session_id: s.id,
+    ...(args.include_session_id === true ? { session_id: s.id } : {}),
     ...(args.include_source === true ? rpgSourceFields(s) : {}),
     state_hash: publicRpgStateHash(stateHash),
     transcript_hash: publicRpgTranscriptHash(currentTranscriptHash),

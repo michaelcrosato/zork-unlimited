@@ -235,6 +235,8 @@ Make discovered overworld quest leads start real RPG sessions.
 - `get_transcript({ summary_only: true })` keeps end-state metadata while omitting
   the `turns` field for token-light checks; source identity is opt-in with
   `include_source: true`.
+- `get_transcript` omits the echoed `session_id` by default because callers
+  already hold the handle; `include_session_id: true` restores it for audits.
 - `get_transcript({ compact_events: true })` keeps full transcript turn metadata
   while encoding each turn's visible events as the same compact `event_v: 6`
   tuples used by `step_action`.
