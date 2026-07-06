@@ -1,10 +1,19 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 457 -->
+<!-- historical_cycle_count: 458 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - rpg_actions_compact_default
+
+- Pre-cycle: `C:\dev\agent-cleaner` measure/gates passed through WSL; optional secret scanner remains absent.
+- Engine/loop surface: ToolApi `list_legal_actions` now defaults to compact action-id arrays, matching the public MCP wrapper.
+- Loop effect: direct harness/agent menu polls no longer emit repeated command labels unless `compact_actions: false` is explicit.
+- Self-critique: closes another API-default payload path; deeper wins remain in the large tracked world JSON and generated trace/log footprint.
+- Guard: MCP action-menu regressions pin no-flag compact ids while command-search helpers opt into full labels.
+- VERIFY: `C:\dev\agent-cleaner`, `npm run typecheck`, focused action-menu regressions, `npm run lint`, `npm run format:check`, `npm run validate`, `npm test`, and `npm run health` passed after loop-state rotation.
 
 ### Cycle result - rpg_transcript_compact_default
 
@@ -129,11 +138,3 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Loop effect: persistence and replay state carry one canonical source identity, reducing duplicated context in save/trace blobs while preserving source-integrity checks.
 - Guard: focused save/trace, world-source, MCP save/load, generated-source, and recorded-play regressions cover source-ref-only emission plus legacy mirror rejection.
 - VERIFY: `npm run typecheck`, focused save/trace/world-source/MCP regressions, `npm run validate`, `npm test`, and `npm run health` passed after loop-state rotation.
-
-### Cycle result - overworld_quest_source_field
-
-- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
-- Engine/loop surface: New York overworld quest entries now declare `source` instead of package-era `pack`, matching canonical world graph quest bindings.
-- Loop effect: overworld/world binding validation normalizes one private source field across the open-world manifest path instead of carrying a second quest package alias.
-- Guard: focused overworld, world-source, and world-session regressions cover source binding uniqueness, mismatch detection, and fixture shape.
-- VERIFY: `npm run typecheck`, focused overworld/world-source/session regressions, `npm run validate`, `npm test`, and `npm run health` passed after loop-state rotation.

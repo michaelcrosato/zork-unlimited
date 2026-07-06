@@ -156,8 +156,9 @@ Make discovered overworld quest leads start real RPG sessions.
   observations omit that repeated binding to lower per-turn MCP payload.
 - Compact RPG observations carry action ids as strings without repeated command
   labels; full labels remain available on demand.
-- Public MCP `list_legal_actions` defaults to compact action-id strings; callers
-  can pass `compact_actions: false` when they need player-facing command labels.
+- ToolApi/public MCP `list_legal_actions` defaults to compact action-id strings;
+  callers can pass `compact_actions: false` when they need player-facing command
+  labels.
 - `list_legal_actions` also returns `state_hash`, so compact action menus can be
   bound to the reducer state without a follow-up state read.
 - `list_legal_actions({ if_state_hash })` can return a hash-only `unchanged`
@@ -522,8 +523,8 @@ Make discovered overworld quest leads start real RPG sessions.
   compact-action loop payload shape with duplicate score vars filtered out.
 - Compact RPG observation context omits empty exit and action lists when no
   navigation or action ids are available, usually after terminal endings.
-- Public MCP `list_legal_actions` now defaults to compact string ids; callers can
-  pass `compact_actions: false` for command labels.
+- ToolApi/public MCP `list_legal_actions` now defaults to compact string ids;
+  callers can pass `compact_actions: false` for command labels.
 - RPG session start tools and overworld quest handoff now accept compact action
   menus, avoiding repeated command labels on the opening RPG observation.
 - RPG compact transcript turns are `[step, scene_id, action_id, result_scene_id]`

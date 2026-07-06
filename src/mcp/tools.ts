@@ -121,6 +121,12 @@ type DefaultCompactRpgView<Args extends RpgViewOptions> = Args extends {
   ? Args
   : Args & { compact_observation: true };
 
+type DefaultCompactRpgActions<Args extends Pick<RpgViewOptions, "compact_actions">> = Args extends {
+  compact_actions: false;
+}
+  ? Args
+  : Args & { compact_actions: true };
+
 type RpgEventOptions = {
   compact_events?: boolean;
 };
@@ -519,11 +525,15 @@ export function createToolApi(opts: { root: string }) {
 
     list_legal_actions<Args extends RpgLegalActionsArgs>(
       args: Args,
-    ): RpgLegalActionsResponse<Args> {
+    ): RpgLegalActionsResponse<DefaultCompactRpgActions<Args>> {
+      const responseOptions = {
+        compact_actions: true,
+        ...args,
+      } as DefaultCompactRpgActions<Args>;
       return runRpgListLegalActions(
         { sessions, rpgRuntime },
-        args,
-      ) as RpgLegalActionsResponse<Args>;
+        responseOptions,
+      ) as RpgLegalActionsResponse<DefaultCompactRpgActions<Args>>;
     },
 
     step_action<Args extends RpgStepActionArgs>(

@@ -45,9 +45,9 @@ describe("MCP step_action / get_transcript hide internal __-prefixed events (bug
     const game = a.start_world_quest({ world_quest_id: WORLD_QUEST_ID, seed: 1 });
     const sid = game.session_id;
     const byCmd = (needle: string): string | undefined =>
-      (a.list_legal_actions({ session_id: sid }).actions as LegalAction[]).find((x) =>
-        x.command.includes(needle),
-      )?.id;
+      (
+        a.list_legal_actions({ session_id: sid, compact_actions: false }).actions as LegalAction[]
+      ).find((x) => x.command.includes(needle))?.id;
 
     // down → take iron bar → north → the barrow-wight stands in the guard crypt.
     expect(a.step_action({ session_id: sid, action_id: byCmd("go down")! }).ok).toBe(true);
@@ -100,9 +100,9 @@ describe("MCP step_action / get_transcript hide internal __-prefixed events (bug
     const game = a.start_world_quest({ world_quest_id: WORLD_QUEST_ID, seed: 1 });
     const sid = game.session_id;
     const byCmd = (needle: string): string | undefined =>
-      (a.list_legal_actions({ session_id: sid }).actions as LegalAction[]).find((x) =>
-        x.command.includes(needle),
-      )?.id;
+      (
+        a.list_legal_actions({ session_id: sid, compact_actions: false }).actions as LegalAction[]
+      ).find((x) => x.command.includes(needle))?.id;
 
     // down → west → talk to the reaver's shade (opens the dialogue, sets __dlg).
     expect(a.step_action({ session_id: sid, action_id: byCmd("go down")! }).ok).toBe(true);

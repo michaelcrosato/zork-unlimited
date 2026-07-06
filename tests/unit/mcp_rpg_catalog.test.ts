@@ -80,9 +80,12 @@ describe("RPG pack plays through the structured tool API", () => {
     expect(game.observation.stats.hp).toBeGreaterThan(0);
 
     const byCmd = (sid: string, needle: string): string | undefined =>
-      (a.list_legal_actions({ session_id: sid }).actions as { id: string; command: string }[]).find(
-        (x) => x.command.includes(needle),
-      )?.id;
+      (
+        a.list_legal_actions({ session_id: sid, compact_actions: false }).actions as {
+          id: string;
+          command: string;
+        }[]
+      ).find((x) => x.command.includes(needle))?.id;
 
     expect(
       a.step_action({ session_id: game.session_id, action_id: byCmd(game.session_id, "go down")! })

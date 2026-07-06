@@ -29,7 +29,8 @@ function numberedIds(prefix: string, count: number): string[] {
 }
 
 function actionIdByCommand(a: ReturnType<typeof api>, sessionId: string, needle: string): string {
-  const actions = a.list_legal_actions({ session_id: sessionId }).actions as {
+  const actions = a.list_legal_actions({ session_id: sessionId, compact_actions: false })
+    .actions as {
     id: string;
     command?: string;
   }[];
@@ -2416,7 +2417,13 @@ describe("MCP tools — the play loop (§9.1)", () => {
     );
     const listed = a.list_legal_actions({ session_id: game.session_id });
     expect(listed.state_hash).toBe(game.state_hash);
-    assertPublicAction(listed.actions[0]);
+    assertCompactActionId(listed.actions[0]);
+    const fullListed = a.list_legal_actions({
+      session_id: game.session_id,
+      compact_actions: false,
+    });
+    expect(fullListed.state_hash).toBe(game.state_hash);
+    assertPublicAction(fullListed.actions[0]);
 
     const compact = a.get_observation({
       session_id: game.session_id,
@@ -2433,8 +2440,9 @@ describe("MCP tools — the play loop (§9.1)", () => {
     });
     expect(compactListed.state_hash).toBe(game.state_hash);
     assertCompactActionId(compactListed.actions[0]);
+    expect(compactListed.actions).toEqual(listed.actions);
     expect(JSON.stringify(compactListed.actions).length).toBeLessThan(
-      JSON.stringify(listed.actions).length,
+      JSON.stringify(fullListed.actions).length,
     );
     const repeatedCompactListed = a.list_legal_actions({
       session_id: game.session_id,
@@ -2442,18 +2450,24 @@ describe("MCP tools — the play loop (§9.1)", () => {
     });
     expect(repeatedCompactListed.actions).toEqual(compactListed.actions);
     expect(repeatedCompactListed.actions).not.toBe(compactListed.actions);
-    const repeatedListed = a.list_legal_actions({ session_id: game.session_id });
-    expect(repeatedListed.actions).toEqual(listed.actions);
-    expect(repeatedListed.actions).not.toBe(listed.actions);
+    const repeatedListed = a.list_legal_actions({
+      session_id: game.session_id,
+      compact_actions: false,
+    });
+    expect(repeatedListed.actions).toEqual(fullListed.actions);
+    expect(repeatedListed.actions).not.toBe(fullListed.actions);
     compactListed.actions.push("mutated_action");
-    listed.actions[0]!.id = "mutated_action";
+    fullListed.actions[0]!.id = "mutated_action";
     const afterActionMutation = a.list_legal_actions({
       session_id: game.session_id,
       compact_actions: true,
     });
     expect(afterActionMutation.actions).toEqual(repeatedCompactListed.actions);
     expect(afterActionMutation.actions).not.toContain("mutated_action");
-    const afterFullActionMutation = a.list_legal_actions({ session_id: game.session_id });
+    const afterFullActionMutation = a.list_legal_actions({
+      session_id: game.session_id,
+      compact_actions: false,
+    });
     expect(afterFullActionMutation.actions).toEqual(repeatedListed.actions);
     expect(afterFullActionMutation.actions[0]?.id).not.toBe("mutated_action");
     const unchangedMenu = a.list_legal_actions({

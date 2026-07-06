@@ -45,7 +45,8 @@ function forgeSave(poison: (state: Record<string, unknown>) => void): string {
 }
 
 function actionIdByCommand(a: ReturnType<typeof api>, sessionId: string, needle: string): string {
-  const actions = a.list_legal_actions({ session_id: sessionId }).actions as {
+  const actions = a.list_legal_actions({ session_id: sessionId, compact_actions: false })
+    .actions as {
     id: string;
     command?: string;
   }[];
