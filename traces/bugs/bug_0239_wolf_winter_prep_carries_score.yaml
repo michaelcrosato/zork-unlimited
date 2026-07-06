@@ -3,7 +3,7 @@ title: "wolf_winter: preparation bought an HP cushion but almost no SCORE — th
 kind: content_fix
 mode: rpg
 severity: minor
-pack: content/rpg/pack/wolf_winter.yaml
+pack: content/rpg/quests/wolf_winter.yaml
 content_hash: 7b3a504794d188df7934374c1cc65ff9280b50513e30b9d1103b34297bc626af
 
 summary: >
@@ -17,7 +17,7 @@ summary: >
   optimising for points barely needed the prep. The "do both" advice and the score economy were misaligned.
 
 reproduction:
-  pack: content/rpg/pack/wolf_winter.yaml
+  pack: content/rpg/quests/wolf_winter.yaml
   route: "compare two wins: (A) read day-book, heed Cade, don jerkin, fight all three, reach cattle; (B) skip all prep, rush north, fight all three, reach cattle"
   observed: >
     Route A (fully prepared) scored 50; route B (reckless) scored 45 — a 5-point gap that is ENTIRELY the

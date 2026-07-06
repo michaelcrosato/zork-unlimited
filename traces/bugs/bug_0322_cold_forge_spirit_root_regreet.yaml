@@ -1,6 +1,6 @@
 id: bug_0322
 title: "cold_forge: lantern-spirit re-shows full greeting on every return to spirit_root"
-pack: content/rpg/pack/cold_forge.yaml
+pack: content/rpg/quests/cold_forge.yaml
 class: dialogue-regreet (mechanical dialogue loop)
 severity: minor
 found_by: blind_playtest (seed 7, 2026-06-08T13-34-50-175Z)

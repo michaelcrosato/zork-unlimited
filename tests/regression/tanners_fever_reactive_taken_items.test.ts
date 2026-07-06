@@ -15,7 +15,7 @@ import { resolveRpgAction } from "../../src/rpg/legal_actions.js";
 import { makeStep } from "../../src/core/engine.js";
 import type { GameState } from "../../src/core/state.js";
 
-const loaded = loadRpgSourceFile("content/rpg/pack/tanners_fever.yaml");
+const loaded = loadRpgSourceFile("content/rpg/quests/tanners_fever.yaml");
 if (!loaded.ok) throw new Error("tanners_fever must compile");
 const index = indexRpgPack(loaded.compiled.pack);
 const step = makeStep(buildRpgRules(index));

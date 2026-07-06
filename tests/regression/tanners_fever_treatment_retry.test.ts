@@ -30,7 +30,7 @@ function queuedRng(rolls: number[]): Rng {
   };
 }
 
-const loaded = loadRpgSourceFile("content/rpg/pack/tanners_fever.yaml");
+const loaded = loadRpgSourceFile("content/rpg/quests/tanners_fever.yaml");
 if (!loaded.ok) throw new Error("tanners_fever must compile");
 const pack = loaded.compiled.pack;
 const index = indexRpgPack(pack);

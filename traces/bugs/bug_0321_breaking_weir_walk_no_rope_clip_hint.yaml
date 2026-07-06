@@ -1,6 +1,6 @@
 id: bug_0321
 title: "breaking_weir: storm-walk room shows 'clip on' hint when life-line not held"
-pack: content/rpg/pack/breaking_weir.yaml
+pack: content/rpg/quests/breaking_weir.yaml
 class: reactive-description-blindness
 severity: moderate
 found_by: blind_playtest (seed 7, 2026-06-08T13-20-49-598Z)

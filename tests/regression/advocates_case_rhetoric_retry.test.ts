@@ -23,7 +23,7 @@ import type { GameState } from "../../src/core/state.js";
 
 const forcedRng = (roll: number): Rng => ({ int: () => roll }) as unknown as Rng;
 
-const loaded = loadRpgSourceFile("content/rpg/pack/advocates_case.yaml");
+const loaded = loadRpgSourceFile("content/rpg/quests/advocates_case.yaml");
 if (!loaded.ok) throw new Error("advocates_case must compile");
 const pack = loaded.compiled.pack;
 const index = indexRpgPack(pack);

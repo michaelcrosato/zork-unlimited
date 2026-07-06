@@ -1,10 +1,19 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 447 -->
+<!-- historical_cycle_count: 448 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - quest_source_directory_migration
+
+- Pre-cycle: `C:\dev\agent-cleaner` passed after rerun with a longer timeout; the first short run killed Vitest mid-output.
+- Engine/loop surface: shipped RPG YAML moved out of the package-named folder into `content/rpg/quests`; world graph, overworld bindings, source discovery, author guards, tests, and traces now follow quest-source paths.
+- Loop effect: the single-world runtime no longer relies on a package-named content directory when resolving canonical world quest sources.
+- Self-critique: broad mechanical migration, but it removes real package-era structure instead of only hiding it behind APIs.
+- Guard: focused world-source, source-runtime, author, validation-bar, UI, and full-suite regressions cover the path change.
+- VERIFY: `C:\dev\agent-cleaner`, `npm run typecheck`, focused migration regressions, `npm run validate`, `npm test`, and `npm run health` passed after loop-state rotation.
 
 ### Cycle result - archive_guard_wsl_git_fallback
 
@@ -119,11 +128,3 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Loop effect: public world catalog discovery no longer reverse-maps normalized package paths back into graph nodes before producing `world_quest_id` entries.
 - Guard: focused source-runtime/catalog regressions pin string world quest ids and reject `worldQuestNodeForPack` / `worldQuestPackPaths` in the source runtime.
 - VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused source-runtime/catalog regressions, `npm test`, and `npm run health` passed after loop-state rotation.
-
-### Cycle result - fixer_regression_world_id
-
-- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
-- Engine/loop surface: fixer-generated replay regression stubs now take a `world_quest_id` and load quest sources through `RpgSourceRuntime.requireWorldQuestPlayable`.
-- Loop effect: bug-fix loop tooling no longer templates raw package paths or `loadRpgPackFile` into future regression tests.
-- Guard: focused fixer regression pins source-runtime loading and rejects `loadRpgPackFile`, `packPath`, and `content/rpg/pack` in generated stubs.
-- VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused fixer regressions, `npm test`, and `npm run health` passed after loop-state rotation.

@@ -64,7 +64,7 @@ export type WorldEntry = {
 };
 
 // Shipped RPG quest packs, as raw strings.
-const raw = import.meta.glob("../../content/rpg/pack/*.yaml", {
+const raw = import.meta.glob("../../content/rpg/quests/*.yaml", {
   query: "?raw",
   import: "default",
   eager: true,

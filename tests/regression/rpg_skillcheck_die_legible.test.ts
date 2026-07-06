@@ -38,7 +38,7 @@ const stateWith = (vars: Record<string, number>): GameState => ({
   vars,
 });
 
-// The barrow's slab lever: a might check at DC 12 (content/rpg/pack/sunken_barrow.yaml).
+// The barrow's slab lever: a might check at DC 12 (content/rpg/quests/sunken_barrow.yaml).
 const slabCheck = {
   skill: "might",
   difficulty: 12,

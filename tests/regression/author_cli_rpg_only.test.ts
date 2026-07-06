@@ -71,7 +71,7 @@ describe("author CLI RPG-only public surface", () => {
 
   it("rejects direct writes into shipped RPG pack storage", () => {
     const result = runAuthor(
-      'npm run author -- "A keeper must relight a dead lighthouse before a ship wrecks." -- --out content/rpg/pack/new_lighthouse.yaml',
+      'npm run author -- "A keeper must relight a dead lighthouse before a ship wrecks." -- --out content/rpg/quests/new_lighthouse.yaml',
       30_000,
     );
     const output = outputOf(result);

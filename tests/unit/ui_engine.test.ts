@@ -24,13 +24,13 @@ endings:
 
 describe("GameSession — RPG-only structured play", () => {
   it("accepts RPG sources and rejects legacy pack shapes", () => {
-    expect(isRpgSource(read("content/rpg/pack/sunken_barrow.yaml"))).toBe(true);
+    expect(isRpgSource(read("content/rpg/quests/sunken_barrow.yaml"))).toBe(true);
     expect(isRpgSource(NON_RPG_SOURCE)).toBe(false);
     expect(() => GameSession.start(NON_RPG_SOURCE, 1)).toThrow(/RPG-only/i);
   });
 
   it("rejects an illegal action id without advancing", () => {
-    const s = GameSession.start(read("content/rpg/pack/sunken_barrow.yaml"), 1);
+    const s = GameSession.start(read("content/rpg/quests/sunken_barrow.yaml"), 1);
     const before = s.view().stateHash;
     const out = s.choose("not_an_action");
     expect(out.ok).toBe(false);
@@ -38,7 +38,7 @@ describe("GameSession — RPG-only structured play", () => {
   });
 
   it("reset restores the deterministic initial RPG state", () => {
-    const s = GameSession.start(read("content/rpg/pack/sunken_barrow.yaml"), 1);
+    const s = GameSession.start(read("content/rpg/quests/sunken_barrow.yaml"), 1);
     const initial = s.view().stateHash;
     const down = s.view().choices.find((c) => c.label === "go down");
     expect(down).toBeTruthy();
@@ -50,7 +50,7 @@ describe("GameSession — RPG-only structured play", () => {
 
   it("plays the RPG pack (combat + skill check) to victory and is deterministic", () => {
     const play = (): string => {
-      const s = GameSession.start(read("content/rpg/pack/sunken_barrow.yaml"), 1);
+      const s = GameSession.start(read("content/rpg/quests/sunken_barrow.yaml"), 1);
       const byLabel = (needle: string): string | undefined =>
         s.view().choices.find((c) => c.label.includes(needle))?.id;
       expect(s.choose(byLabel("go down")!).ok).toBe(true);

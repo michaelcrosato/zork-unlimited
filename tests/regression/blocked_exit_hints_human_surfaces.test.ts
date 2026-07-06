@@ -32,7 +32,7 @@ import type { GameState } from "../../src/core/state.js";
 import type { RpgAction } from "../../src/api/types.js";
 
 // --- RPG pack: Sunken Barrow. guard_crypt's east is barred while the wight stands. ---
-const rloaded = loadRpgSourceFile("content/rpg/pack/sunken_barrow.yaml");
+const rloaded = loadRpgSourceFile("content/rpg/quests/sunken_barrow.yaml");
 if (!rloaded.ok) throw new Error("sunken_barrow must compile");
 const rindex = indexRpgPack(rloaded.compiled.pack);
 const rstep = makeStep(buildRpgRules(rindex));
@@ -67,7 +67,7 @@ describe("bug_0206 — blocked_exits reaches the active human renderers (RPG CLI
   });
 
   it("UI view(): an RPG session surfaces the barred way as a 'blocked:' fact too", () => {
-    const s = GameSession.start(readFileSync("content/rpg/pack/sunken_barrow.yaml", "utf8"), 1);
+    const s = GameSession.start(readFileSync("content/rpg/quests/sunken_barrow.yaml", "utf8"), 1);
     expect(s.mode).toBe("rpg");
     const byLabel = (needle: string): string | undefined =>
       s.view().choices.find((c) => c.label === needle)?.id;

@@ -43,7 +43,7 @@ import { validateRpg } from "../../src/validate/rpg_validator.js";
 import type { RpgPack } from "../../src/rpg/schema.js";
 import type { Effect } from "../../src/core/effects.js";
 
-const PACK_PATH = "content/rpg/pack/wolf_winter.yaml";
+const PACK_PATH = "content/rpg/quests/wolf_winter.yaml";
 
 function loadPack(): RpgPack {
   const r = loadRpgSourceFile(PACK_PATH);

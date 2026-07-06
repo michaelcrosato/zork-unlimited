@@ -18,7 +18,7 @@ evidence:
 failure:
   type: prose_over_promise
   where:
-    - content:content/rpg/pack/sunken_barrow.yaml  # npcs[reaver_shade].dialogue.shade_wight
+    - content:content/rpg/quests/sunken_barrow.yaml  # npcs[reaver_shade].dialogue.shade_wight
   description: >
     The shade's wight-counsel promised a STRENGTH/ATTACK drain ("the strength runs out of
     your arm") that the engine never cashes: barrow_wight has no effect that reduces the

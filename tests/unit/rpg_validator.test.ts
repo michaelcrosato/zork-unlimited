@@ -3,8 +3,8 @@ import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import { validateRpg } from "../../src/validate/rpg_validator.js";
 
 describe("RPG validator — shipped pack", () => {
-  it("content/rpg/pack/sunken_barrow.yaml validates with no errors or warnings", () => {
-    const loaded = loadRpgSourceFile("content/rpg/pack/sunken_barrow.yaml");
+  it("content/rpg/quests/sunken_barrow.yaml validates with no errors or warnings", () => {
+    const loaded = loadRpgSourceFile("content/rpg/quests/sunken_barrow.yaml");
     expect(loaded.ok).toBe(true);
     if (!loaded.ok) return;
     const report = validateRpg(loaded.compiled.pack);

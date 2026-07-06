@@ -17,7 +17,7 @@ import type { RpgAction } from "../../src/api/types.js";
 import type { RpgActionOption } from "../../src/rpg/legal_actions.js";
 
 const ROOT = process.cwd();
-const PACK = "content/rpg/pack/sunken_barrow.yaml";
+const PACK = "content/rpg/quests/sunken_barrow.yaml";
 const NON_RPG_PACK = "content/broken-fixtures/duplicate_id.yaml";
 const api = () => createToolApi({ root: ROOT });
 const overworld = parseOverworldManifest(
@@ -3166,14 +3166,14 @@ describe("MCP tools — apply_content_patch (§9.4, §16)", () => {
     expect(() => api().apply_content_patch({ proposal })).toThrow(/requires world_quest_id/);
     expect(() =>
       api().apply_content_patch({
-        pack_path: "content/rpg/pack/cold_forge.yaml",
+        pack_path: "content/rpg/quests/cold_forge.yaml",
         proposal,
       } as never),
     ).toThrow(/not pack_path/);
     expect(() =>
       api().apply_content_patch({
         world_quest_id: "cold_forge",
-        pack_path: "content/rpg/pack/cold_forge.yaml",
+        pack_path: "content/rpg/quests/cold_forge.yaml",
         proposal,
       } as never),
     ).toThrow(/not pack_path/);

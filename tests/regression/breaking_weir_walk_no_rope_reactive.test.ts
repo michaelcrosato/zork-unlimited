@@ -21,7 +21,7 @@ import { indexRpgPack, initStateForRpgPack } from "../../src/rpg/runner.js";
 import { roomDescription } from "../../src/rpg/model.js";
 import type { GameState } from "../../src/core/state.js";
 
-const PACK_PATH = "content/rpg/pack/breaking_weir.yaml";
+const PACK_PATH = "content/rpg/quests/breaking_weir.yaml";
 const loaded = loadRpgSourceFile(PACK_PATH);
 if (!loaded.ok) throw new Error("breaking_weir must compile");
 const pack = loaded.compiled.pack;

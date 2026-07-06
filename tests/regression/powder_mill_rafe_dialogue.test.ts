@@ -14,7 +14,7 @@ import type { RpgAction } from "../../src/api/types.js";
 import type { GameEvent } from "../../src/core/events.js";
 import type { GameState } from "../../src/core/state.js";
 
-const loaded = loadRpgSourceFile("content/rpg/pack/powder_mill_surety.yaml");
+const loaded = loadRpgSourceFile("content/rpg/quests/powder_mill_surety.yaml");
 if (!loaded.ok) throw new Error("powder_mill_surety must compile");
 const pack = loaded.compiled.pack;
 const index = indexRpgPack(pack);

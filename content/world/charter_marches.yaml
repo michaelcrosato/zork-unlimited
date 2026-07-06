@@ -87,82 +87,82 @@ graph:
       name: "The Advocate's Case"
       kind: quest
       coord: [-2, 0]
-      source: "content/rpg/pack/advocates_case.yaml"
+      source: "content/rpg/quests/advocates_case.yaml"
     - id: bellfounders_alarm
       name: "The Bellfounder's Alarm"
       kind: quest
       coord: [3, -1]
-      source: "content/rpg/pack/bellfounders_alarm.yaml"
+      source: "content/rpg/quests/bellfounders_alarm.yaml"
     - id: breaking_weir
       name: "The Breaking Weir"
       kind: quest
       coord: [4, 0]
-      source: "content/rpg/pack/breaking_weir.yaml"
+      source: "content/rpg/quests/breaking_weir.yaml"
     - id: bridgewrights_proof
       name: "The Bridgewright's Proof"
       kind: quest
       coord: [3, 1]
-      source: "content/rpg/pack/bridgewrights_proof.yaml"
+      source: "content/rpg/quests/bridgewrights_proof.yaml"
     - id: cold_forge
       name: "The Cold Forge"
       kind: quest
       coord: [4, -1]
-      source: "content/rpg/pack/cold_forge.yaml"
+      source: "content/rpg/quests/cold_forge.yaml"
     - id: dawn_beacon
       name: "The Dawn Beacon"
       kind: quest
       coord: [-4, 2]
-      source: "content/rpg/pack/dawn_beacon.yaml"
+      source: "content/rpg/quests/dawn_beacon.yaml"
     - id: factors_mark
       name: "The Factor's Mark"
       kind: quest
       coord: [4, 1]
-      source: "content/rpg/pack/factors_mark.yaml"
+      source: "content/rpg/quests/factors_mark.yaml"
     - id: falconers_ransom
       name: "The Falconer's Ransom"
       kind: quest
       coord: [-1, 3]
-      source: "content/rpg/pack/falconers_ransom.yaml"
+      source: "content/rpg/quests/falconers_ransom.yaml"
     - id: gallowmere
       name: "The Gallowmere"
       kind: quest
       coord: [-2, 3]
-      source: "content/rpg/pack/gallowmere.yaml"
+      source: "content/rpg/quests/gallowmere.yaml"
     - id: lockkeepers_toll
       name: "The Lock-Keeper's Toll"
       kind: quest
       coord: [2, 1]
-      source: "content/rpg/pack/lockkeepers_toll.yaml"
+      source: "content/rpg/quests/lockkeepers_toll.yaml"
     - id: printers_night
       name: "The Printer's Night"
       kind: quest
       coord: [0, -2]
-      source: "content/rpg/pack/printers_night.yaml"
+      source: "content/rpg/quests/printers_night.yaml"
     - id: quarrymens_fault
       name: "The Quarrymen's Fault"
       kind: quest
       coord: [0, 3]
-      source: "content/rpg/pack/quarrymens_fault.yaml"
+      source: "content/rpg/quests/quarrymens_fault.yaml"
     - id: powder_mill_surety
       name: "The Powder Mill Surety"
       kind: quest
       coord: [2, -1]
-      source: "content/rpg/pack/powder_mill_surety.yaml"
+      source: "content/rpg/quests/powder_mill_surety.yaml"
     - id: sunken_barrow
       name: "The Sunken Barrow"
       kind: quest
       coord: [-3, 3]
-      source: "content/rpg/pack/sunken_barrow.yaml"
+      source: "content/rpg/quests/sunken_barrow.yaml"
     - id: tanners_fever
       name: "The Tanner's Fever"
       kind: quest
       coord: [1, 1]
-      source: "content/rpg/pack/tanners_fever.yaml"
+      source: "content/rpg/quests/tanners_fever.yaml"
     - id: wolf_winter
       name: "The Wolf-Winter"
       kind: quest
       coord: [2, 2]
-      source: "content/rpg/pack/wolf_winter.yaml"
+      source: "content/rpg/quests/wolf_winter.yaml"
   edges:
     - from: charterhaven
       to: guildhall_yard

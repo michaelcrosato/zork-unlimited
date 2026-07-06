@@ -29,7 +29,7 @@ evidence:
 improvement:
   layer: content        # two enemy stats only — no prose/flag/score/ending/exit/effect change
   content:
-    - content/rpg/pack/cold_forge.yaml: >
+    - content/rpg/quests/cold_forge.yaml: >
         Retuned the slag_sentinel from hp16/atk4 to hp18/atk7 (defense unchanged at 2).
         Combat is one ATTACK = one round: player deals d6+atk-2, the sentinel (if it
         survives) deals d6+7-def (min 1). Verified live over seeds 1-40 (__probe.ts):

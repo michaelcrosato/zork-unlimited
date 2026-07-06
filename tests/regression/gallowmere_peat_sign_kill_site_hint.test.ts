@@ -10,7 +10,7 @@ import type { RpgAction } from "../../src/api/types.js";
 import type { GameEvent } from "../../src/core/events.js";
 import type { GameState } from "../../src/core/state.js";
 
-const loaded = loadRpgSourceFile("content/rpg/pack/gallowmere.yaml");
+const loaded = loadRpgSourceFile("content/rpg/quests/gallowmere.yaml");
 if (!loaded.ok) throw new Error("gallowmere must compile");
 const index = indexRpgPack(loaded.compiled.pack);
 const rules = buildRpgRules(index);

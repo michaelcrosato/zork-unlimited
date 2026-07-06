@@ -17,7 +17,7 @@ import {
 } from "../../src/rpg/runner.js";
 import { validateRpg } from "../../src/validate/rpg_validator.js";
 
-const loaded = loadRpgSourceFile("content/rpg/pack/advocates_case.yaml");
+const loaded = loadRpgSourceFile("content/rpg/quests/advocates_case.yaml");
 if (!loaded.ok) throw new Error("advocates_case must compile");
 const pack = loaded.compiled.pack;
 const index = indexRpgPack(pack);

@@ -1,7 +1,7 @@
 id: bug_0318
 title: "breaking_weir flood-book READ awards +5 silently — no journal entry"
 severity: content
-pack: content/rpg/pack/breaking_weir.yaml
+pack: content/rpg/quests/breaking_weir.yaml
 scene: keeper_lodge / flood_book (READ interaction)
 class: silent-score-no-journal
 

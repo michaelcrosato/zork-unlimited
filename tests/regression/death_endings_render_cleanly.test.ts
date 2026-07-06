@@ -135,7 +135,7 @@ function assertCleanDeathRender(
   }
 }
 
-const RPG_DIR = "content/rpg/pack";
+const RPG_DIR = "content/rpg/quests";
 const rpgFiles = readdirSync(RPG_DIR)
   .filter((f) => f.endsWith(".yaml"))
   .sort();

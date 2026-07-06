@@ -451,7 +451,7 @@ Make discovered overworld quest leads start real RPG sessions.
   RPG-only gate prints world quest id, report, and content hash.
 - CLI validate output also omits internal source identifiers for shipped world
   quests, keeping the recurring gate output keyed by world quest id plus hash.
-- CLI authoring now writes draft RPG packs only; direct `content/rpg/pack` output
+- CLI authoring now writes draft RPG packs only; direct `content/rpg/quests` output
   is rejected until the quest is deliberately registered in the canonical world
   graph.
 - CLI play now accepts/defaults to shipped `world_quest_id` sources and records

@@ -2,7 +2,7 @@ id: bug_0196
 title: "The Breaking Weir — the project's 14th pack, 5th RPG, and FIRST COMBATLESS one (breadth lever; a non-combat skill-check chain over the RPG core)"
 kind: content_new
 mode: rpg
-pack: content/rpg/pack/breaking_weir.yaml
+pack: content/rpg/quests/breaking_weir.yaml
 content_hash: cd5907417c0c0697e69eb8e45be4a960189416a98c1d118d462d4700d71f0bdd
 # Informational. No test pins this pack's content_hash; the disk hash is whatever
 # `npm run validate` reports. The scorecard freshness pin (bug_0194) DID require a
@@ -41,7 +41,7 @@ mandated_blind_playtest:
     signal on the named breadth lever, not on churning a clean pack.
 
 new_pack:
-  pack: content/rpg/pack/breaking_weir.yaml
+  pack: content/rpg/quests/breaking_weir.yaml
   proven: >
     Auto-discovered by every structural suite the moment it shipped: rpg_all_endings_reachable
     reaches BOTH declared endings by concrete best/worst-roll play (ending_held via the
@@ -102,9 +102,9 @@ design:
       note: "death: true; reachable by worst-roll play, recoverable from an earlier save (§8.7); the prep-vs-gamble stake"
 
 wiring:
-  - "content/rpg/pack/breaking_weir.yaml (new; validates 0 errors / 0 warnings)"
-  - "package.json scripts.health: added `npm run validate -- content/rpg/pack/breaking_weir.yaml`"
-  - "tests/regression/all_packs_validated_by_bar.test.ts: pinned pack list 13 -> 14 (breaking_weir added to content/rpg/pack/* group, alphabetical)"
+  - "content/rpg/quests/breaking_weir.yaml (new; validates 0 errors / 0 warnings)"
+  - "package.json scripts.health: added `npm run validate -- content/rpg/quests/breaking_weir.yaml`"
+  - "tests/regression/all_packs_validated_by_bar.test.ts: pinned pack list 13 -> 14 (breaking_weir added to content/rpg/quests/* group, alphabetical)"
   - "tests/regression/breaking_weir_skill_chain.test.ts (new; pins combatless + lethal-walk prep-vs-gamble + score economy)"
   - "traces/benchmark/scorecard.{json,md}: regenerated at runs=50 (the bug_0194 freshness pin requires a regen the same cycle as any new pack)"
 

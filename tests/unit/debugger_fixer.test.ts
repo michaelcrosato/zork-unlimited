@@ -66,7 +66,7 @@ describe("debugger.diagnose", () => {
 });
 
 describe("fixer.applyContentPatch", () => {
-  const loaded = loadRpgSourceFile("content/rpg/pack/cold_forge.yaml");
+  const loaded = loadRpgSourceFile("content/rpg/quests/cold_forge.yaml");
   if (!loaded.ok) throw new Error("cold_forge failed to compile");
   const rawPack = loaded.compiled.pack;
 
@@ -132,7 +132,7 @@ describe("fixer.regressionTestStub", () => {
     expect(source).toContain("RpgSourceRuntime");
     expect(source).toContain('requireWorldQuestPlayable("cold_forge")');
     expect(source).not.toContain("loadRpgSourceFile");
-    expect(source).not.toContain("content/rpg/pack");
+    expect(source).not.toContain("content/rpg/quests");
     expect(source).not.toContain("packPath");
   });
 });

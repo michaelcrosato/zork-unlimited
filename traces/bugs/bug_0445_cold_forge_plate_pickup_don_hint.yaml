@@ -1,6 +1,6 @@
 id: bug_0445_cold_forge_plate_pickup_don_hint
 title: "Cold Forge plate pickup hints that armor must be donned"
-pack: content/rpg/pack/cold_forge.yaml
+pack: content/rpg/quests/cold_forge.yaml
 reported_by: blind-playtest
 report: blind-tester/reports/20260622T162422Z_cold_forge_seed7.md
 severity: S0
@@ -19,5 +19,5 @@ tests:
   - tests/regression/cold_forge_plate_pickup_don_hint.test.ts
 verification:
   - npm test -- --run tests/regression/cold_forge_plate_pickup_don_hint.test.ts tests/regression/cold_forge_founder_plate.test.ts tests/regression/cold_forge_unworn_plate_nudge.test.ts tests/regression/cold_forge_grate_failure_recoverable.test.ts
-  - npm run validate -- content/rpg/pack/cold_forge.yaml
+  - npm run validate -- content/rpg/quests/cold_forge.yaml
   - npm run health

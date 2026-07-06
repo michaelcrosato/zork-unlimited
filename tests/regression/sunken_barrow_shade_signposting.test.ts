@@ -31,7 +31,7 @@ import type { GameEvent } from "../../src/core/events.js";
 import type { GameState } from "../../src/core/state.js";
 import { validateRpg } from "../../src/validate/rpg_validator.js";
 
-const loaded = loadRpgSourceFile("content/rpg/pack/sunken_barrow.yaml");
+const loaded = loadRpgSourceFile("content/rpg/quests/sunken_barrow.yaml");
 if (!loaded.ok) throw new Error("sunken_barrow must compile");
 const pack = loaded.compiled.pack;
 const index = indexRpgPack(pack);

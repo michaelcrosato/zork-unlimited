@@ -26,7 +26,7 @@ evidence:
           slab set flush with the floor."
 failure:
   type: stale_room_text
-  where: [content:content/rpg/pack/sunken_barrow.yaml]
+  where: [content:content/rpg/quests/sunken_barrow.yaml]
   description: >
     Two rooms whose state the player changes (a slain wight clearing the cold
     arch; a levered slab baring the stair) kept narrating the pre-change world —
@@ -39,7 +39,7 @@ fix:
   layer: content
   summary: >
     Pure content fix — apply the existing reactive-room `variants` feature to the
-    two stale rooms in content/rpg/pack/sunken_barrow.yaml:
+    two stale rooms in content/rpg/quests/sunken_barrow.yaml:
       - guard_crypt gains a variant `when: [{ has_flag: wight_slain }]` whose text
         narrates the niche's risen tenant crumbled to grave-dust and the cold
         lifted from the east arch (now open).

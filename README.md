@@ -80,7 +80,7 @@ roll flowing through the PRNG so fights replay exactly (§8.5).
 | RPG runner (legal-action menu + `ATTACK`) + observation                                      | `src/rpg/runner.ts`, `src/rpg/observation.ts`          |
 | RPG validator (winnability, skill passability, stat/death-ending checks)                     | `src/validate/rpg_validator.ts`                        |
 | Gated core DSL additions: `set_quest_stage` effect, `quest_stage` condition, `ATTACK` action | `src/core/`, `src/api/types.ts`                        |
-| Sample pack: _The Sunken Barrow_                                                             | `content/rpg/pack/sunken_barrow.yaml`                  |
+| Sample pack: _The Sunken Barrow_                                                             | `content/rpg/quests/sunken_barrow.yaml`                  |
 | Negative fixture (`COMBAT_UNWINNABLE`)                                                       | `content/broken-fixtures/rpg_unwinnable.yaml`          |
 | §14 gate record (all six items)                                                              | [`docs/stage4_rpg_gate.md`](./docs/stage4_rpg_gate.md) |
 | Acceptance + unit + regression tests, recorded victory trace                                 | `tests/`, `traces/rpg/barrow_victory.json`             |
@@ -161,22 +161,22 @@ The shipped, validated content — every pack passes the validator and is wired 
 
 | Pack                     | File                                        |
 | ------------------------ | ------------------------------------------- |
-| The Advocate's Case      | `content/rpg/pack/advocates_case.yaml`      |
-| The Bellfounder's Alarm  | `content/rpg/pack/bellfounders_alarm.yaml`  |
-| The Breaking Weir        | `content/rpg/pack/breaking_weir.yaml`       |
-| The Bridgewright's Proof | `content/rpg/pack/bridgewrights_proof.yaml` |
-| The Cold Forge           | `content/rpg/pack/cold_forge.yaml`          |
-| The Dawn Beacon          | `content/rpg/pack/dawn_beacon.yaml`         |
-| The Factor's Mark        | `content/rpg/pack/factors_mark.yaml`        |
-| The Falconer's Ransom    | `content/rpg/pack/falconers_ransom.yaml`    |
-| The Gallowmere           | `content/rpg/pack/gallowmere.yaml`          |
-| The Lock-Keeper's Toll   | `content/rpg/pack/lockkeepers_toll.yaml`    |
-| The Powder Mill Surety   | `content/rpg/pack/powder_mill_surety.yaml`  |
-| The Printer's Night      | `content/rpg/pack/printers_night.yaml`      |
-| The Quarrymen's Fault    | `content/rpg/pack/quarrymens_fault.yaml`    |
-| The Sunken Barrow        | `content/rpg/pack/sunken_barrow.yaml`       |
-| The Tanner's Fever       | `content/rpg/pack/tanners_fever.yaml`       |
-| The Wolf-Winter          | `content/rpg/pack/wolf_winter.yaml`         |
+| The Advocate's Case      | `content/rpg/quests/advocates_case.yaml`      |
+| The Bellfounder's Alarm  | `content/rpg/quests/bellfounders_alarm.yaml`  |
+| The Breaking Weir        | `content/rpg/quests/breaking_weir.yaml`       |
+| The Bridgewright's Proof | `content/rpg/quests/bridgewrights_proof.yaml` |
+| The Cold Forge           | `content/rpg/quests/cold_forge.yaml`          |
+| The Dawn Beacon          | `content/rpg/quests/dawn_beacon.yaml`         |
+| The Factor's Mark        | `content/rpg/quests/factors_mark.yaml`        |
+| The Falconer's Ransom    | `content/rpg/quests/falconers_ransom.yaml`    |
+| The Gallowmere           | `content/rpg/quests/gallowmere.yaml`          |
+| The Lock-Keeper's Toll   | `content/rpg/quests/lockkeepers_toll.yaml`    |
+| The Powder Mill Surety   | `content/rpg/quests/powder_mill_surety.yaml`  |
+| The Printer's Night      | `content/rpg/quests/printers_night.yaml`      |
+| The Quarrymen's Fault    | `content/rpg/quests/quarrymens_fault.yaml`    |
+| The Sunken Barrow        | `content/rpg/quests/sunken_barrow.yaml`       |
+| The Tanner's Fever       | `content/rpg/quests/tanners_fever.yaml`       |
+| The Wolf-Winter          | `content/rpg/quests/wolf_winter.yaml`         |
 
 Most of this library — plus engine refinements like reactive room/scene descriptions
 (`variants`), an opt-in `meta.deadline` timer, and natural USE-verbs — was produced

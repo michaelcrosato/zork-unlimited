@@ -21,7 +21,7 @@ evidence:
 failure:
   type: missing_opening_objective
   where:
-    - content:content/rpg/pack/sunken_barrow.yaml
+    - content:content/rpg/quests/sunken_barrow.yaml
   description: >
     The start room barrow_mouth's description ("A low arch of turf-bound stone opens
     into the hillside. Cold air sighs up from the dark. The only way is down.") gave

@@ -22,7 +22,7 @@ import { indexRpgPack, initStateForRpgPack } from "../../src/rpg/runner.js";
 import { roomDescription } from "../../src/rpg/model.js";
 import { validateRpg } from "../../src/validate/rpg_validator.js";
 
-const PACK_PATH = "content/rpg/pack/dawn_beacon.yaml";
+const PACK_PATH = "content/rpg/quests/dawn_beacon.yaml";
 const loaded = loadRpgSourceFile(PACK_PATH);
 if (!loaded.ok) throw new Error("dawn_beacon must compile");
 const pack = loaded.compiled.pack;

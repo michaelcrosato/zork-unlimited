@@ -1,6 +1,6 @@
 id: bug_0315
 title: "The Breaking Weir — pell_weir speech has no cross-reference to the flood-book"
-pack: content/rpg/pack/breaking_weir.yaml
+pack: content/rpg/quests/breaking_weir.yaml
 class: content / signposting gap
 severity: minor
 discovered_by: blind_playtest (seed 7, 2026-06-08T11-40-56-741Z)

@@ -48,7 +48,7 @@ improvement:
         updated (the "out of scope for v1" limitation is resolved).
     - src/rpg/runner.ts: implemented checkWin identically (the RPG runner has its own buildRpgRules).
   content:
-    - content/rpg/pack/sunken_barrow.yaml: >
+    - content/rpg/quests/sunken_barrow.yaml: >
         win_conditions.claim_relic now requires BOTH `{ visited: relic_chamber }` AND
         `{ has_item: circlet }` (implicit all_of). Entering the chamber no longer wins (you do not hold
         the crown yet) — the room shows the circlet on its plinth and offers "take circlet"; the win
@@ -60,7 +60,7 @@ improvement:
         chamber's on_enter +25 (chamber-reached milestone) is unchanged; max score is in hand as the
         player makes the final grab. No flag/exit/reachable-ending/score-total change.
 verification:
-  - validate_pack content/rpg/pack/sunken_barrow.yaml             # ok:true, findings:[] (win still references reachable room + obtainable item; soft-lock guard intact)
+  - validate_pack content/rpg/quests/sunken_barrow.yaml             # ok:true, findings:[] (win still references reachable room + obtainable item; soft-lock guard intact)
   - live MCP replay (seed 71, pre-rebuild server confirmed entry+take path structurally; engine behavior proven by tests against fresh build)
   - npm run health                                                # exit 0 (verify:integrity static + typecheck + ESLint + Prettier + tests + every pack validate + watchtower coverage + mandated playtest record present)
 locked_by:

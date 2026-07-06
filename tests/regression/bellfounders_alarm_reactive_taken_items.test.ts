@@ -15,7 +15,7 @@ import { resolveRpgAction } from "../../src/rpg/legal_actions.js";
 import { makeStep } from "../../src/core/engine.js";
 import type { GameState } from "../../src/core/state.js";
 
-const loaded = loadRpgSourceFile("content/rpg/pack/bellfounders_alarm.yaml");
+const loaded = loadRpgSourceFile("content/rpg/quests/bellfounders_alarm.yaml");
 if (!loaded.ok) throw new Error("bellfounders_alarm must compile");
 const index = indexRpgPack(loaded.compiled.pack);
 const step = makeStep(buildRpgRules(index));

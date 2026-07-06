@@ -37,7 +37,7 @@ import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import { indexRpgPack, buildRpgRules, initStateForRpgPack } from "../../src/rpg/runner.js";
 import { HP_VAR } from "../../src/rpg/schema.js";
 
-const PACK_PATH = "content/rpg/pack/wolf_winter.yaml";
+const PACK_PATH = "content/rpg/quests/wolf_winter.yaml";
 const SEED = 7;
 
 // The unprepared-rush score the companion bug_0195 test pins (3 wolves × 10 + 15 cattle,

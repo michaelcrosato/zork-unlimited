@@ -15,7 +15,7 @@ import { resolveRpgAction } from "../../src/rpg/legal_actions.js";
 import { makeStep } from "../../src/core/engine.js";
 import type { GameState } from "../../src/core/state.js";
 
-const loaded = loadRpgSourceFile("content/rpg/pack/falconers_ransom.yaml");
+const loaded = loadRpgSourceFile("content/rpg/quests/falconers_ransom.yaml");
 if (!loaded.ok) throw new Error("falconers_ransom must compile");
 const index = indexRpgPack(loaded.compiled.pack);
 const step = makeStep(buildRpgRules(index));

@@ -2,7 +2,7 @@ id: bug_0188
 title: "Reactive OBJECT NAME — a thing whose name encodes transient state could re-narrate its examine text but not its NAME"
 kind: engine_fix
 mode: parser # shared parser/RPG object surface; surfaced on an RPG pack
-pack: content/rpg/pack/dawn_beacon.yaml
+pack: content/rpg/quests/dawn_beacon.yaml
 # Informational. No test pins dawn_beacon's content_hash (only watchtower_road pins one),
 # so nothing was forced. The cresset variant edit moved the pack hash:
 #   f5a8b65e520b59527d1c9944aae0b91d13aa1d700ea46acdd0a88056ee6164ea  (bug_0187, as shipped)
@@ -20,7 +20,7 @@ summary: >
 
 surfaced_by_blind_playtest:
   run: ai-runs/2026-06-03T16-28-18-783Z/playtest.md
-  pack: content/rpg/pack/dawn_beacon.yaml
+  pack: content/rpg/quests/dawn_beacon.yaml
   seed: 7
   result: "prepared 50/50 + under-prepared 45/50, both ending_lit; clarity 5/5, enjoyment 4/5; ZERO mechanical bugs"
   finding: >
@@ -65,5 +65,5 @@ files_changed:
   - src/parser/model.ts             # new objectName(object, state) helper
   - src/parser/observation.ts       # visible_objects uses objectName
   - src/parser/legal_actions.ts     # state-aware objName + command labels use reactive name
-  - content/rpg/pack/dawn_beacon.yaml  # righted cresset variant: name "upright cresset"
+  - content/rpg/quests/dawn_beacon.yaml  # righted cresset variant: name "upright cresset"
   - tests/regression/dawn_beacon_reactive_cresset_name.test.ts

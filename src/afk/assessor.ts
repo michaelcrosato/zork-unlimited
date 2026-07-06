@@ -154,7 +154,7 @@ const DOC_REF_PREFIXES = [
 const DOC_REF_RE = new RegExp(`(?:${DOC_REF_PREFIXES.join("|")})/[A-Za-z0-9_./-]+`, "g");
 const DOC_REF_EXT = /\.(?:ts|tsx|js|mjs|cjs|json|yaml|yml|md|sh)$/;
 // A path token is NOT a liveness claim when it is a glob/brace/placeholder pattern
-// (content/rpg/pack/*.yaml, traces/bugs/bug_0001_*.yaml, ai-runs/<id>/playtest.md)…
+// (content/rpg/quests/*.yaml, traces/bugs/bug_0001_*.yaml, ai-runs/<id>/playtest.md)…
 const DOC_REF_PATTERN_CHARS = /[*{}?[\]<>]|\.\.\./;
 // …or a command-line OUTPUT DESTINATION (`--record traces/run.json`, `--out …`,
 // `-o file`, `> file`): the doc tells you to CREATE it, not that it already exists.
@@ -223,7 +223,7 @@ function docStalenessDocs(root: string): string[] {
  * Normalize a quest reference — a full source path, a bare world quest id, OR a
  * pack id — to its stem, so an attendance line that names a quest any of those ways
  * maps to the same key.
- * E.g. "content/rpg/pack/cold_forge.yaml" -> "cold_forge", a bare
+ * E.g. "content/rpg/quests/cold_forge.yaml" -> "cold_forge", a bare
  * "sunken_barrow" is unchanged, and the pack ID "cold_forge_v1" also -> it.
  *
  * The trailing `_v\d+` strip matters for attendance keying (bug_0293): legacy log

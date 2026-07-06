@@ -11,7 +11,7 @@ import type { RpgAction } from "../../src/api/types.js";
 import type { GameEvent } from "../../src/core/events.js";
 import type { GameState } from "../../src/core/state.js";
 
-const loaded = loadRpgSourceFile("content/rpg/pack/lockkeepers_toll.yaml");
+const loaded = loadRpgSourceFile("content/rpg/quests/lockkeepers_toll.yaml");
 if (!loaded.ok) throw new Error("lockkeepers_toll must compile");
 const index = indexRpgPack(loaded.compiled.pack);
 const rules = buildRpgRules(index);

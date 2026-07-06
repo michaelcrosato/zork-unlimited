@@ -21,7 +21,7 @@ evidence:
 failure:
   type: stale_room_text
   where:
-    - content:content/rpg/pack/sunken_barrow.yaml
+    - content:content/rpg/quests/sunken_barrow.yaml
   description: >
     The Entry Hall room had a single static `description` that hard-codes the iron bar
     "lies among fallen rubble". The bar is takeable; once taken the engine removes it

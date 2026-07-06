@@ -1,6 +1,6 @@
 id: bug_0323
 title: "dawn_beacon: armory still says 'hanging on its peg' after garrison mail taken"
-pack: content/rpg/pack/dawn_beacon.yaml
+pack: content/rpg/quests/dawn_beacon.yaml
 class: reactive-description-blindness
 severity: minor
 found_by: blind_playtest (seed 7, 2026-06-08T13-46-38-837Z)

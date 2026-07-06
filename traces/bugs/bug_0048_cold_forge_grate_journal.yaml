@@ -34,7 +34,7 @@ root_cause: >
 improvement:
   layer: content
   content:
-    - content/rpg/pack/cold_forge.yaml: >
+    - content/rpg/quests/cold_forge.yaml: >
         stone_grate's USE skill_check on_success gains ONE add_journal line — "You lever the slag
         grate up off its lip; the way down into the forge's root stands open." Placed alongside the
         set_quest_stage milestone, mirroring the sentinel/ember journal beats. The check is gated
@@ -42,14 +42,14 @@ improvement:
         entry fires EXACTLY ONCE and can never stack. No flag/item/score/DC/exit/gating/reachable-
         ending change — the narrate, +15 award, and one-shot retire are all untouched.
 verification:
-  - npm run validate -- content/rpg/pack/cold_forge.yaml          # OK 0/0; content_hash 51ce57a8...
+  - npm run validate -- content/rpg/quests/cold_forge.yaml          # OK 0/0; content_hash 51ce57a8...
   - tests/regression/cold_forge_grate_journal.test.ts             # 4 cases (below), all green
   - npm run health                                                # exit 0 (verify:integrity static + typecheck + ESLint + Prettier + tests + every pack validate + watchtower coverage)
 locked_by:
   - tests/regression/cold_forge_grate_journal.test.ts             # (a) no grate line before lever; (b) exactly one entry after success + no dup journal; (c) entry can't stack — lever retired + forced re-USE rejected; (d) canonical route still wins 50/50
 notes:
   verifier_integrity: >
-    content/rpg/pack/cold_forge.yaml is NOT a protected file and NO test pins its content hash
+    content/rpg/quests/cold_forge.yaml is NOT a protected file and NO test pins its content hash
     (only watchtower_road is hash-pinned), so adding the journal line moves the pack's content hash
     but requires no re-pin and trips no HASH_PIN drift. No protected source touched, no override used.
   content_hash: >

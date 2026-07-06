@@ -38,7 +38,7 @@ import type { GameState } from "../../src/core/state.js";
 import type { RpgAction } from "../../src/api/types.js";
 
 const ROOT = process.cwd();
-const PACK = "content/rpg/pack/sunken_barrow.yaml";
+const PACK = "content/rpg/quests/sunken_barrow.yaml";
 const api = () => createToolApi({ root: ROOT });
 
 // A real 5-action route through sunken_barrow's opening and shade dialogue — the

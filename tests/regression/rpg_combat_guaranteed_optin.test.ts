@@ -219,7 +219,7 @@ describe("bug_0114 — opt-in combat fairness guarantee", () => {
   // (bug_0101) and does NOT set combat_guaranteed, so the new check never fires on
   // it. (The health bar separately asserts it validates 0 error / 0 warning.)
   it("never flags the shipped gamble pack cold_forge, which does not opt in", () => {
-    const r = loadRpgSourceFile("content/rpg/pack/cold_forge.yaml");
+    const r = loadRpgSourceFile("content/rpg/quests/cold_forge.yaml");
     expect(r.ok).toBe(true);
     if (!r.ok) return;
     expect(r.compiled.pack.meta.combat_guaranteed).toBeUndefined();

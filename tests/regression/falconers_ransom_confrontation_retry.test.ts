@@ -30,7 +30,7 @@ function queuedRng(rolls: number[]): Rng {
   };
 }
 
-const loaded = loadRpgSourceFile("content/rpg/pack/falconers_ransom.yaml");
+const loaded = loadRpgSourceFile("content/rpg/quests/falconers_ransom.yaml");
 if (!loaded.ok) throw new Error("falconers_ransom must compile");
 const pack = loaded.compiled.pack;
 const index = indexRpgPack(pack);

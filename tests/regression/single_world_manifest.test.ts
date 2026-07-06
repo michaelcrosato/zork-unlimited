@@ -27,7 +27,7 @@ import {
 import { createToolApi } from "../../src/mcp/tools.js";
 
 const root = process.cwd();
-const PACK_DIRS = ["content/rpg/pack"];
+const PACK_DIRS = ["content/rpg/quests"];
 
 type RawPack = {
   meta?: {

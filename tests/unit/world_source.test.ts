@@ -22,7 +22,7 @@ import type { RpgAction } from "../../src/api/types.js";
 import type { WorldManifest } from "../../src/world/schema.js";
 
 const ROOT = process.cwd();
-const SOURCE = "content/rpg/pack/sunken_barrow.yaml";
+const SOURCE = "content/rpg/quests/sunken_barrow.yaml";
 const UNSAFE_GENERATED_RPG_SEED = Number.MAX_SAFE_INTEGER + 1;
 const overworld = loadOverworldManifest(ROOT);
 
@@ -158,7 +158,7 @@ describe("world source resolution", () => {
     expect(() =>
       assertOverworldQuestSourceBindings(world, {
         ...overworld,
-        quests: [{ ...overworld.quests[0]!, source: "content/rpg/pack/cold_forge.yaml" }],
+        quests: [{ ...overworld.quests[0]!, source: "content/rpg/quests/cold_forge.yaml" }],
       }),
     ).toThrow(/does not match canonical world graph source/);
   });
@@ -259,7 +259,7 @@ describe("world source resolution", () => {
     expect(() =>
       assertWorldQuestSourceCoverage(
         worldWithQuestSources([{ id: "sunken_barrow", source: SOURCE }]),
-        [SOURCE, "content/rpg/pack/cold_forge.yaml"],
+        [SOURCE, "content/rpg/quests/cold_forge.yaml"],
       ),
     ).toThrow(/missing shipped RPG source binding/);
 
@@ -277,11 +277,11 @@ describe("world source resolution", () => {
       assertWorldQuestSourceCoverage(
         worldWithQuestSources([
           { id: "sunken_barrow", source: SOURCE },
-          { id: "cold_forge", source: "content/rpg/pack/cold_forge.yaml" },
+          { id: "cold_forge", source: "content/rpg/quests/cold_forge.yaml" },
         ]),
         [SOURCE],
       ),
-    ).toThrow(/not shipped in content\/rpg\/pack/);
+    ).toThrow(/not shipped in content\/rpg\/quests/);
   });
 
   it("resolves live world quest source ids without raw pack selectors", () => {

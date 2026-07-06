@@ -37,7 +37,7 @@ validated data; agents interact only through structured APIs.
 
 - `content/world/new_york_overworld.json` holds the contiguous overworld data.
 - `content/world/charter_marches.json` holds the shipped RPG quest graph.
-- `content/rpg/pack/*.yaml` holds RPG quest packs registered through the world
+- `content/rpg/quests/*.yaml` holds RPG quest packs registered through the world
   graph.
 - Raw pack paths are edit metadata, not public play or validation sources.
 

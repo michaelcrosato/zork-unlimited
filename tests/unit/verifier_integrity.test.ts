@@ -254,7 +254,7 @@ describe("classifyDrift — legitimate re-pin vs launder vs weakening (research-
   it("ALLOWS (warns) a hash re-pin ACCOMPANIED by a content change — the user's loop case", () => {
     // The exact thing that was wrongly blocking the loop: improve a pack, re-pin its hash.
     const fs = classifyDrift(
-      ["content/rpg/pack/sunken_barrow.yaml", "tests/unit/rpg_validator.test.ts"],
+      ["content/rpg/quests/sunken_barrow.yaml", "tests/unit/rpg_validator.test.ts"],
       () => true,
     );
     expect(errs(fs)).toEqual([]); // no hard error → the cycle commits

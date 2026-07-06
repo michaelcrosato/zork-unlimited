@@ -18,7 +18,7 @@ evidence:
 failure:
   type: missing_signpost
   where:
-    - content:content/rpg/pack/sunken_barrow.yaml
+    - content:content/rpg/quests/sunken_barrow.yaml
   description: >
     The Entry Hall is the pack's real fork — west to the optional shade (the prepared
     path), north into the under-armed, ~43%-lethal wight (bug_0102). The shade's ward

@@ -67,7 +67,7 @@
  * so read-flag, post-combat, and skill-outcome display states are all visited. The search
  * FAILS on `cappedOut`, so it can never pass by truncating an unexplored region.
  *
- * Packs are auto-discovered from content/rpg/pack, so a new RPG pack is covered the moment
+ * Packs are auto-discovered from content/rpg/quests, so a new RPG pack is covered the moment
  * it ships (the health-covers-all-packs bar, bug_0096). The negative controls below prove
  * the check bites on a genuinely dead guard AND that stepping combat is load-bearing.
  */
@@ -90,7 +90,7 @@ import type { RoomVariant, ObjectVariant, EndingVariant } from "../../src/rpg/sc
 import type { Action } from "../../src/api/types.js";
 import { exhaustiveEndingsMulti } from "./support/exhaustive_endings.js";
 
-const PACK_DIR = "content/rpg/pack";
+const PACK_DIR = "content/rpg/quests";
 const packFiles = readdirSync(PACK_DIR)
   .filter((f) => f.endsWith(".yaml"))
   .sort();

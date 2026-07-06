@@ -37,7 +37,7 @@ root_cause: >
 improvement:
   layer: content
   content:
-    - content/rpg/pack/cold_forge.yaml: >
+    - content/rpg/quests/cold_forge.yaml: >
         Rewrote the four lantern-spirit npc_text nodes (spirit_root, spirit_sentinel, spirit_heart,
         spirit_forge) as pure spoken words — stripped the third-person flame-gestures ("The flame leans
         toward you", "The flame gutters/dips/steadies") and every interior quote mark — so the engine's
@@ -49,7 +49,7 @@ improvement:
         flag/effect/exit/combat/score/ending change; the +2 buff stays optional and one-shot, the fight
         is the identical static encounter, and the buffed route still wins 50/50.
 verification:
-  - npm run validate -- content/rpg/pack/cold_forge.yaml          # OK 0/0; content_hash 503294470750...
+  - npm run validate -- content/rpg/quests/cold_forge.yaml          # OK 0/0; content_hash 503294470750...
   - mcp_replay: new_game seed 23 -> down -> talk; ask each topic   # every rendered line is `lantern-spirit: "<words>"` with exactly two quote chars, no "The flame" inside the quotes
   - tests/regression/cold_forge_spirit_pure_speech.test.ts        # 4 cases (below), all green
   - tests/regression/cold_forge_sentinel_warmup_fiction.test.ts   # bug_0029 still green (asserted spirit counsel substrings preserved)
@@ -60,7 +60,7 @@ locked_by:
   - tests/regression/cold_forge_spirit_pure_speech.test.ts        # (a) every cold_forge dialogue node's npc_text is quote-free and does not open with "The flame…"; (b) the LIVE greeting + every topic render as `lantern-spirit: "<words>"` with exactly the wrapper's two quotes and no interior quote; (c) the sentinel/heart/forge clues survive the rewrite; (d) pack validates green + buffed route (seed 1) still wins ending_victory 50/50
 notes:
   verifier_integrity: >
-    content/rpg/pack/cold_forge.yaml is NOT a protected file and NO test pins its content hash (only
+    content/rpg/quests/cold_forge.yaml is NOT a protected file and NO test pins its content hash (only
     watchtower_road is hash-pinned) and there is no canonical cold_forge trace under traces/rpg, so the
     prose rewrite moves the pack's content hash but requires no re-pin and trips no HASH_PIN drift. No
     protected source touched, no override used. The new test asserts behaviour (render is well-formed,

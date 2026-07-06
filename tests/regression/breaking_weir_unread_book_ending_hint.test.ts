@@ -15,7 +15,7 @@ import {
 } from "../../src/rpg/runner.js";
 import { buildRpgObservation } from "../../src/rpg/observation.js";
 
-const loaded = loadRpgSourceFile("content/rpg/pack/breaking_weir.yaml");
+const loaded = loadRpgSourceFile("content/rpg/quests/breaking_weir.yaml");
 if (!loaded.ok) throw new Error("breaking_weir must compile");
 const index = indexRpgPack(loaded.compiled.pack);
 const rules = buildRpgRules(index);

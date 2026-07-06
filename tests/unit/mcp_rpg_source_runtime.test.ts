@@ -42,7 +42,7 @@ graph:
     - id: ${TEMP_WORLD_QUEST_ID}
       name: Same Size
       kind: quest
-      source: content/rpg/pack/${TEMP_WORLD_QUEST_ID}.yaml
+      source: content/rpg/quests/${TEMP_WORLD_QUEST_ID}.yaml
   edges:
     - from: hub
       to: ${TEMP_WORLD_QUEST_ID}
@@ -67,8 +67,8 @@ function waitForTimestampTick(): void {
 
 function writeTempWorldQuest(root: string, packSource = TEMP_PACK_SOURCE): string {
   mkdirSync(join(root, "content", "world"), { recursive: true });
-  mkdirSync(join(root, "content", "rpg", "pack"), { recursive: true });
-  const sourcePath = join(root, "content", "rpg", "pack", `${TEMP_WORLD_QUEST_ID}.yaml`);
+  mkdirSync(join(root, "content", "rpg", "quests"), { recursive: true });
+  const sourcePath = join(root, "content", "rpg", "quests", `${TEMP_WORLD_QUEST_ID}.yaml`);
   writeFileSync(join(root, "content", "world", "charter_marches.yaml"), TEMP_WORLD_MANIFEST);
   writeFileSync(sourcePath, packSource, "utf8");
   return sourcePath;

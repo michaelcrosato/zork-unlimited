@@ -44,7 +44,7 @@ describe("bug_0045 — findStaleDocRefs (the predicate that flags doc rot)", () 
     // These name a SHAPE, not a specific tracked file — must never be flagged even
     // though `exists` returns false for the literal glob/placeholder string.
     const text = [
-      "validate `content/rpg/pack/*.yaml`",
+      "validate `content/rpg/quests/*.yaml`",
       "lock it in `traces/bugs/bug_0001_*.yaml`",
       "write to `ai-runs/<id>/playtest.md`",
       "scan `docs/**/*.md`",

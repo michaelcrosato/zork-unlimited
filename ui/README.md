@@ -29,6 +29,6 @@ From the repo root you can also use `npm run ui:dev` / `npm run ui:build`.
 - **Tested without a browser.** `tests/unit/ui_engine.test.ts` drives
   `GameSession` in Node, proving the UI uses only the structured API and stays
   deterministic.
-- **Quests are data.** Vite bundles the shipped `content/rpg/pack/*.yaml` and
+- **Quests are data.** Vite bundles the shipped `content/rpg/quests/*.yaml` and
   `content/world/charter_marches.yaml` as raw text; the browser never touches the
   filesystem and content never runs as code (§16).

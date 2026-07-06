@@ -45,7 +45,7 @@ root_cause: >
 improvement:
   layer: content
   content:
-    - content/rpg/pack/sunken_barrow.yaml: >
+    - content/rpg/quests/sunken_barrow.yaml: >
         stone_slab gains ONE reactive `variant`, when [{ quest_stage: { quest: barrow, stage: slab_moved } }]
         → "The great slab is levered aside now, dragged half off the bed where it lay flush with the
         floor; its iron-gripped lip juts at an angle and a stair drops away beneath it into the dark of
@@ -55,7 +55,7 @@ improvement:
         (bug_0027, DC 12 unchanged) are untouched.
 verification:
   - live MCP replay (seed 59): pre-lever examine = "Wedge the bar beneath the lip…"; post-lever examine = "levered aside now … a stair drops away…"; room = "Levered aside now … bared a stair"; full route still wins ending_victory 50/50
-  - npm run validate -- content/rpg/pack/sunken_barrow.yaml      # OK 0/0 (variants carry no effects; reachability/scoring unanalyzed)
+  - npm run validate -- content/rpg/quests/sunken_barrow.yaml      # OK 0/0 (variants carry no effects; reachability/scoring unanalyzed)
   - replay_trace traces/rpg/barrow_victory.json                  # OK — finalHash 871ddf3e… == expected_final_hash (prose-only: identical seed-1 final state)
   - npm run health                                               # exit 0 (verify:integrity static + typecheck + ESLint + Prettier + tests + every pack validate + watchtower coverage)
 locked_by:

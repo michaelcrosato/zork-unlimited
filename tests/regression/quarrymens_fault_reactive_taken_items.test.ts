@@ -16,7 +16,7 @@ import { makeStep } from "../../src/core/engine.js";
 import type { GameState } from "../../src/core/state.js";
 import { validateRpg } from "../../src/validate/rpg_validator.js";
 
-const loaded = loadRpgSourceFile("content/rpg/pack/quarrymens_fault.yaml");
+const loaded = loadRpgSourceFile("content/rpg/quests/quarrymens_fault.yaml");
 if (!loaded.ok) throw new Error("quarrymens_fault must compile");
 const pack = loaded.compiled.pack;
 const index = indexRpgPack(pack);

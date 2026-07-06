@@ -35,7 +35,7 @@ import { makeStep, actionEquals } from "../../src/core/engine.js";
 import type { RpgAction } from "../../src/api/types.js";
 import type { GameState } from "../../src/core/state.js";
 
-const loaded = loadRpgSourceFile("content/rpg/pack/sunken_barrow.yaml");
+const loaded = loadRpgSourceFile("content/rpg/quests/sunken_barrow.yaml");
 if (!loaded.ok) throw new Error("sunken_barrow must compile");
 const index = indexRpgPack(loaded.compiled.pack);
 const rules = buildRpgRules(index);

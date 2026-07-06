@@ -57,7 +57,7 @@
  * stay reachable and the 3-ending census holds — preparation is now a guaranteed-sufficient
  * strategy, not a hope, the player-experience contract every RPG blind playtest asks for.
  *
- * What it is NOT. Generated packs are NOT committed under content/rpg/pack: this is an
+ * What it is NOT. Generated packs are NOT committed under content/rpg/quests: this is an
  * on-demand eval distribution, not curated showcase content. They ARE persisted as the
  * sealed held-out corpus behind a generator_version bump + re-seal.
  */

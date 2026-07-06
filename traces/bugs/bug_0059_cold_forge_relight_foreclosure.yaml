@@ -38,7 +38,7 @@ root_cause: >
 improvement:
   layer: content
   content:
-    - content/rpg/pack/cold_forge.yaml: >
+    - content/rpg/quests/cold_forge.yaml: >
         Added a THIRD one-shot lantern-spirit topic, ask_forge ("Ask whether the dead forge could
         ever be lit again"), gated not_flag heard_forge exactly like ask_sentinel/ask_heart, plus its
         node spirit_forge. The node denies relighting outright ("Lit again? No — never ... no bellows,
@@ -49,7 +49,7 @@ improvement:
         DIALOGUE_NONTERMINATING, bug_0014). No stat/effect/DC/exit/combat/score change — the +2
         sentinel blessing, the fight, the grate check, and the 50/50 path are untouched.
 verification:
-  - npm run validate -- content/rpg/pack/cold_forge.yaml          # OK 0/0; content_hash 94b092c2...
+  - npm run validate -- content/rpg/quests/cold_forge.yaml          # OK 0/0; content_hash 94b092c2...
   - mcp_replay: new_game seed 29 -> down -> talk -> ask_forge      # sets heard_forge, adds 1 journal line, prose forecloses relight; forge_back returns to root with ask_forge retired (only sentinel/heart/leave remain); no journal restack
   - tests/regression/cold_forge_relight_foreclosure.test.ts        # 4 cases (below), all green
   - npm run health                                                # exit 0 (verify:integrity static + typecheck + ESLint + Prettier + tests + every pack validate + watchtower coverage)
@@ -57,7 +57,7 @@ locked_by:
   - tests/regression/cold_forge_relight_foreclosure.test.ts        # (a) topic offered + prose forecloses relight & names the Heart; (b) asking sets heard_forge + exactly one journal line, no dup; (c) retires after telling — root drops it, forced re-ASK rejected, no re-journal; (d) validates green + buffed route still wins 50/50 even when the topic is asked en route
 notes:
   verifier_integrity: >
-    content/rpg/pack/cold_forge.yaml is NOT a protected file and NO test pins its content hash
+    content/rpg/quests/cold_forge.yaml is NOT a protected file and NO test pins its content hash
     (only watchtower_road is hash-pinned), so adding the topic+node moves the pack's content hash
     but requires no re-pin and trips no HASH_PIN drift. No protected source touched, no override used.
     The new test asserts behavior (topic offered/retires, journal fires once, win path intact), not

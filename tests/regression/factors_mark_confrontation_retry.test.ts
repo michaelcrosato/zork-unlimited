@@ -29,7 +29,7 @@ function queuedRng(rolls: number[]): Rng {
   };
 }
 
-const loaded = loadRpgSourceFile("content/rpg/pack/factors_mark.yaml");
+const loaded = loadRpgSourceFile("content/rpg/quests/factors_mark.yaml");
 if (!loaded.ok) throw new Error("factors_mark must compile");
 const pack = loaded.compiled.pack;
 const index = indexRpgPack(pack);

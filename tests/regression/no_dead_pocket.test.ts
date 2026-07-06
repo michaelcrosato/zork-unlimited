@@ -207,7 +207,7 @@ function readsHpInCondition(node: unknown): boolean {
 
 // ── Positive coverage: every shipped RPG pack ───────────────────────────────────────────────
 describe("bug_0150 — every progress-reachable state of every shipped pack is LIVE", () => {
-  const rpgPacks = readdirSync("content/rpg/pack")
+  const rpgPacks = readdirSync("content/rpg/quests")
     .filter((f) => f.endsWith(".yaml"))
     .sort();
 
@@ -220,7 +220,7 @@ describe("bug_0150 — every progress-reachable state of every shipped pack is L
     it(
       `RPG ${file}: no soft-lock pocket`,
       () => {
-        const loaded = loadRpgSourceFile(join("content/rpg/pack", file));
+        const loaded = loadRpgSourceFile(join("content/rpg/quests", file));
         expect(loaded.ok).toBe(true);
         if (!loaded.ok) return;
         const pack = loaded.compiled.pack;

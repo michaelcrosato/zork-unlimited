@@ -80,7 +80,7 @@
  * settle well under the 200k cap (the same bracket+policy as bug_0147: cold_forge ~19k,
  * sunken_barrow ~1.9k states).
  *
- * Packs are auto-discovered from content/rpg/pack, so a new RPG pack is covered the moment
+ * Packs are auto-discovered from content/rpg/quests, so a new RPG pack is covered the moment
  * it ships (the health-covers-all-packs bar, bug_0096).
  */
 import { describe, it, expect } from "vitest";
@@ -97,7 +97,7 @@ import { HP_VAR } from "../../src/rpg/schema.js";
 import type { Rng } from "../../src/core/rng.js";
 import { exhaustiveEndingsMulti } from "./support/exhaustive_endings.js";
 
-const PACK_DIR = "content/rpg/pack";
+const PACK_DIR = "content/rpg/quests";
 const packFiles = readdirSync(PACK_DIR)
   .filter((f) => f.endsWith(".yaml"))
   .sort();

@@ -50,7 +50,7 @@ function freshState(pack: RpgPack, vars: Record<string, number>): GameState {
   return { ...s, vars: { ...s.vars, ...vars } };
 }
 
-const PACK_PATH = "content/rpg/pack/breaking_weir.yaml";
+const PACK_PATH = "content/rpg/quests/breaking_weir.yaml";
 
 function loadPack(): RpgPack {
   const r = loadRpgSourceFile(PACK_PATH);

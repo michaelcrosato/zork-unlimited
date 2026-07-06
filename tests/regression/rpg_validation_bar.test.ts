@@ -15,7 +15,7 @@ import { validateRpg } from "../../src/validate/rpg_validator.js";
 import { loadWorldManifest } from "../../src/world/source.js";
 
 const root = process.cwd();
-const RPG_PACK_DIR = "content/rpg/pack";
+const RPG_PACK_DIR = "content/rpg/quests";
 
 function discoverRpgPacks(): string[] {
   return readdirSync(join(root, RPG_PACK_DIR))
@@ -48,22 +48,22 @@ describe("single-engine RPG validation bar", () => {
 
   it("discovers the shipped RPG corpus and no legacy content packs", () => {
     expect(packs).toEqual([
-      "content/rpg/pack/advocates_case.yaml",
-      "content/rpg/pack/bellfounders_alarm.yaml",
-      "content/rpg/pack/breaking_weir.yaml",
-      "content/rpg/pack/bridgewrights_proof.yaml",
-      "content/rpg/pack/cold_forge.yaml",
-      "content/rpg/pack/dawn_beacon.yaml",
-      "content/rpg/pack/factors_mark.yaml",
-      "content/rpg/pack/falconers_ransom.yaml",
-      "content/rpg/pack/gallowmere.yaml",
-      "content/rpg/pack/lockkeepers_toll.yaml",
-      "content/rpg/pack/powder_mill_surety.yaml",
-      "content/rpg/pack/printers_night.yaml",
-      "content/rpg/pack/quarrymens_fault.yaml",
-      "content/rpg/pack/sunken_barrow.yaml",
-      "content/rpg/pack/tanners_fever.yaml",
-      "content/rpg/pack/wolf_winter.yaml",
+      "content/rpg/quests/advocates_case.yaml",
+      "content/rpg/quests/bellfounders_alarm.yaml",
+      "content/rpg/quests/breaking_weir.yaml",
+      "content/rpg/quests/bridgewrights_proof.yaml",
+      "content/rpg/quests/cold_forge.yaml",
+      "content/rpg/quests/dawn_beacon.yaml",
+      "content/rpg/quests/factors_mark.yaml",
+      "content/rpg/quests/falconers_ransom.yaml",
+      "content/rpg/quests/gallowmere.yaml",
+      "content/rpg/quests/lockkeepers_toll.yaml",
+      "content/rpg/quests/powder_mill_surety.yaml",
+      "content/rpg/quests/printers_night.yaml",
+      "content/rpg/quests/quarrymens_fault.yaml",
+      "content/rpg/quests/sunken_barrow.yaml",
+      "content/rpg/quests/tanners_fever.yaml",
+      "content/rpg/quests/wolf_winter.yaml",
     ]);
   });
 
@@ -108,7 +108,7 @@ describe("single-engine RPG validation bar", () => {
     expect(output).not.toContain("mode: rpg");
     expect(output).not.toContain("Pack:");
     expect(output).not.toContain("Source:");
-    expect(output).not.toContain("content/rpg/pack/");
+    expect(output).not.toContain("content/rpg/quests/");
     expect(output.match(/content_hash: [0-9a-f]{64}/g)?.length ?? 0).toBe(worldQuestIds.length);
     for (const worldQuestId of worldQuestIds) {
       expect(output).toContain(`== world_quest_id: ${worldQuestId} ==`);
@@ -128,7 +128,7 @@ describe("single-engine RPG validation bar", () => {
 
     expect(result.status, output).toBe(0);
     expect(output).toContain("== world_quest_id: sunken_barrow ==");
-    expect(output).not.toContain("content/rpg/pack/sunken_barrow.yaml");
+    expect(output).not.toContain("content/rpg/quests/sunken_barrow.yaml");
     expect(output).not.toContain("mode: rpg");
     expect(output).not.toContain("Pack:");
     expect(output).not.toContain("Source:");
@@ -136,7 +136,7 @@ describe("single-engine RPG validation bar", () => {
   });
 
   it("npm run validate rejects positional raw pack path targets", () => {
-    const result = runNpm("npm run validate -- content/rpg/pack/sunken_barrow.yaml", 30_000);
+    const result = runNpm("npm run validate -- content/rpg/quests/sunken_barrow.yaml", 30_000);
     const output = `${result.stdout ?? ""}\n${result.stderr ?? ""}\n${result.error?.message ?? ""}`;
 
     expect(result.status, output).toBe(2);
@@ -161,8 +161,8 @@ describe("single-engine RPG validation bar", () => {
     expect(readme).toContain("npm run validate -- sunken_barrow");
     expect(readme).toContain("npm run inspect -- sunken_barrow");
     expect(readme).toContain("public play, validation, inspection,");
-    expect(readme).not.toContain("npm run validate -- content/rpg/pack/");
-    expect(readme).not.toContain("npm run inspect -- content/rpg/pack/");
+    expect(readme).not.toContain("npm run validate -- content/rpg/quests/");
+    expect(readme).not.toContain("npm run inspect -- content/rpg/quests/");
     expect(readme).not.toContain("Raw pack paths remain accepted");
   });
 });

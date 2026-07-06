@@ -22,7 +22,7 @@ import { save, load } from "../../src/persist/save_load.js";
 import type { RpgAction } from "../../src/api/types.js";
 import type { GameState } from "../../src/core/state.js";
 
-const PACK = "content/rpg/pack/sunken_barrow.yaml";
+const PACK = "content/rpg/quests/sunken_barrow.yaml";
 const loaded = loadRpgSourceFile(PACK);
 if (!loaded.ok) throw new Error("sunken_barrow failed to compile");
 const compiled = loaded.compiled;

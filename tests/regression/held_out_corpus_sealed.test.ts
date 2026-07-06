@@ -4,7 +4,7 @@
  * The procedural RPG generator mints fresh, validator-clean packs the assessor checks every cycle
  * — but those windows were minted-and-DISCARDED in memory. bin/
  * seal-corpus.ts persists a FIXED seed window as a committed, content-hash-sealed artifact under
- * the top-level `corpus/` dir (NEVER under content/rpg/pack, so it adds no blind-playtest
+ * the top-level `corpus/` dir (NEVER under content/rpg/quests, so it adds no blind-playtest
  * obligation and keeps all_packs_validated_by_bar.test.ts's discovery on curated packs). This is
  * the contamination-control substrate the benchmark thesis requires: a
  * sealed, timestamped, held-out split (docs/CURRENT_PLAN.md "HELD-OUT CORPUS PERSISTENCE";

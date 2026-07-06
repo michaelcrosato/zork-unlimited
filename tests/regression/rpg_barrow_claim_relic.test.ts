@@ -88,7 +88,7 @@ describe("bug_0056 — engine post-RpgAction win hook (checkWin)", () => {
 });
 
 describe("bug_0056 — The Sunken Barrow wins on the claim, not on entry", () => {
-  const loaded = loadRpgSourceFile("content/rpg/pack/sunken_barrow.yaml");
+  const loaded = loadRpgSourceFile("content/rpg/quests/sunken_barrow.yaml");
   if (!loaded.ok) throw new Error("sunken_barrow must compile");
   const pack = loaded.compiled.pack;
   const index = indexRpgPack(pack);

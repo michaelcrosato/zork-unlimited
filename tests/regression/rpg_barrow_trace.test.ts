@@ -16,7 +16,7 @@ describe("rpg barrow victory trace", () => {
     const trace = JSON.parse(
       readFileSync("traces/rpg/barrow_victory.json", "utf8"),
     ) as Trace<RpgAction>;
-    const loaded = loadRpgSourceFile("content/rpg/pack/sunken_barrow.yaml");
+    const loaded = loadRpgSourceFile("content/rpg/quests/sunken_barrow.yaml");
     expect(loaded.ok).toBe(true);
     if (!loaded.ok) return;
     // The trace must match the pack it was recorded against (content-hash, §8.8).

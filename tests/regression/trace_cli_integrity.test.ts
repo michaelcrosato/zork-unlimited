@@ -10,7 +10,7 @@ import type { Trace } from "../../src/trace/record.js";
 import type { RpgAction } from "../../src/api/types.js";
 
 const ROOT = process.cwd();
-const PACK = "content/rpg/pack/sunken_barrow.yaml";
+const PACK = "content/rpg/quests/sunken_barrow.yaml";
 const SOURCE_TRACE = "traces/rpg/barrow_victory.json";
 const PHANTOM_CURRENT = "traces/bug_cli_phantom_current.json";
 const MISSING_MODE = "traces/bug_cli_missing_mode.json";

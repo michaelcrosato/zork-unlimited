@@ -64,7 +64,7 @@ import { validateRpg } from "../../src/validate/rpg_validator.js";
 import { exhaustiveEndingsMulti, type ExhaustiveResult } from "./support/exhaustive_endings.js";
 import { relabelRpgPack } from "./support/relabel_rpg.js";
 
-const PACK_DIR = "content/rpg/pack";
+const PACK_DIR = "content/rpg/quests";
 const packFiles = readdirSync(PACK_DIR)
   .filter((f) => f.endsWith(".yaml"))
   .sort();

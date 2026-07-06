@@ -71,7 +71,7 @@ and full-fight reproducibility; skill-check determinism and passability.
 ## 4. Scenario test in a real pack
 
 `tests/acceptance/stage4_barrow.test.ts` — an AI completes
-`content/rpg/pack/sunken_barrow.yaml` via the structured legal-action API
+`content/rpg/quests/sunken_barrow.yaml` via the structured legal-action API
 (fight + skill check + quest-stage gate), and a death is shown recoverable from a
 save.
 

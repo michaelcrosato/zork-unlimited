@@ -31,7 +31,7 @@ import { indexRpgPack, buildRpgRules, initStateForRpgPack } from "../../src/rpg/
 import { buildRpgObservation } from "../../src/rpg/observation.js";
 import type { GameState } from "../../src/core/state.js";
 
-const PACK = "content/rpg/pack/breaking_weir.yaml";
+const PACK = "content/rpg/quests/breaking_weir.yaml";
 const loaded = loadRpgSourceFile(PACK);
 if (!loaded.ok) throw new Error("breaking_weir must compile");
 const index = indexRpgPack(loaded.compiled.pack);

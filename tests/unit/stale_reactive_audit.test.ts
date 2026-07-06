@@ -50,7 +50,7 @@ describe("stale reactive room-item audit", () => {
     expect(source).toContain("loadWorldQuestReport");
     expect(source).not.toContain("loadRpgSourceFile");
     expect(source).not.toContain("worldQuestNodeForPack");
-    expect(source).not.toContain("content/rpg/pack");
+    expect(source).not.toContain("content/rpg/quests");
   });
 
   it("finds room base prose that names a takeable room object without an item-state variant", () => {

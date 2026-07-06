@@ -74,7 +74,7 @@ function corruptAt(trace: RpgTrace, ...indices: number[]): RpgTrace {
 // MCP fixture support (case 4) — write a trace to disk for inspect_trace.
 // ------------------------------------------------------------------
 const ROOT = process.cwd();
-const PACK = "content/rpg/pack/sunken_barrow.yaml";
+const PACK = "content/rpg/quests/sunken_barrow.yaml";
 const FIXTURE = (name: string) => `traces/bug_0290_${name}.json`;
 
 const ACTIONS_RPG: RpgAction[] = [

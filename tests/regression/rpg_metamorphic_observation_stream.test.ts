@@ -121,7 +121,7 @@ import type { RpgRelabeler } from "./support/relabel_rpg.js";
 import type { RpgAction } from "../../src/api/types.js";
 import type { GameState } from "../../src/core/state.js";
 
-const PACK_DIR = "content/rpg/pack";
+const PACK_DIR = "content/rpg/quests";
 const packFiles = readdirSync(PACK_DIR)
   .filter((f) => f.endsWith(".yaml"))
   .sort();

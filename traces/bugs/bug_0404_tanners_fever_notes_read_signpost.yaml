@@ -28,7 +28,7 @@ tests: tests/regression/tanners_fever_notes_read_signpost.test.ts
 
 verification:
   - npm test -- --run tests/regression/tanners_fever_notes_read_signpost.test.ts
-  - npm run validate -- content/rpg/pack/tanners_fever.yaml
+  - npm run validate -- content/rpg/quests/tanners_fever.yaml
 
 trace_repin: >
   None. The change updates pack content and adds a regression test; there is no

@@ -1,6 +1,6 @@
 /**
  * Regression (§15) for bug_0197 — blind-playtest polish for The Breaking Weir
- * (content/rpg/pack/breaking_weir.yaml, seed 7). A fresh blind playtester won the
+ * (content/rpg/quests/breaking_weir.yaml, seed 7). A fresh blind playtester won the
  * pack 50/50 with clarity 5/5 and flagged two ways the prose contradicted the actual
  * game state — both narration-vs-state honesty bugs, neither affecting winnability:
  *
@@ -35,7 +35,7 @@ import type { GameState } from "../../src/core/state.js";
 import type { RpgPack } from "../../src/rpg/schema.js";
 import type { Rng } from "../../src/core/rng.js";
 
-const PACK_PATH = "content/rpg/pack/breaking_weir.yaml";
+const PACK_PATH = "content/rpg/quests/breaking_weir.yaml";
 const loaded = loadRpgSourceFile(PACK_PATH);
 if (!loaded.ok) throw new Error("breaking_weir must compile");
 const pack: RpgPack = loaded.compiled.pack;

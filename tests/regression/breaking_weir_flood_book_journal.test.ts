@@ -32,7 +32,7 @@ import type { Action } from "../../src/api/types.js";
 import type { GameState } from "../../src/core/state.js";
 import type { RpgPack } from "../../src/rpg/schema.js";
 
-const PACK = "content/rpg/pack/breaking_weir.yaml";
+const PACK = "content/rpg/quests/breaking_weir.yaml";
 const loaded = loadRpgSourceFile(PACK);
 if (!loaded.ok) throw new Error("breaking_weir must compile");
 const pack: RpgPack = loaded.compiled.pack;

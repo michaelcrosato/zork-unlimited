@@ -92,7 +92,7 @@ describe("RPG play CLI world quest source", () => {
   it("rejects raw pack-path starts on the public play surface", () => {
     const viaFlag = runBin("bin/rpg_play.ts", [
       "--pack",
-      "content/rpg/pack/sunken_barrow.yaml",
+      "content/rpg/quests/sunken_barrow.yaml",
       "--commands",
       "look",
     ]);
@@ -103,7 +103,7 @@ describe("RPG play CLI world quest source", () => {
     expect(viaFlagOutput).toContain("not --pack");
 
     const viaPositional = runBin("bin/rpg_play.ts", [
-      "content/rpg/pack/sunken_barrow.yaml",
+      "content/rpg/quests/sunken_barrow.yaml",
       "--commands",
       "look",
     ]);

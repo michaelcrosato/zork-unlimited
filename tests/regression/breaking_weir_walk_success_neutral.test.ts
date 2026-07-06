@@ -36,7 +36,7 @@ const maxRollRng = (): Rng => ({
   int: (_min: number, max: number) => Math.floor(max),
 });
 
-const PACK_PATH = "content/rpg/pack/breaking_weir.yaml";
+const PACK_PATH = "content/rpg/quests/breaking_weir.yaml";
 const loaded = loadRpgSourceFile(PACK_PATH);
 if (!loaded.ok) throw new Error("breaking_weir must compile");
 const pack: RpgPack = loaded.compiled.pack;

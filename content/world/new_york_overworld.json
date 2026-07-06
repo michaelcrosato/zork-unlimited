@@ -46286,7 +46286,7 @@
     {
       "id": "advocates_case",
       "title": "The Advocate's Case",
-      "source": "content/rpg/pack/advocates_case.yaml",
+      "source": "content/rpg/quests/advocates_case.yaml",
       "home": "oswego_city",
       "discovery": "Ask around Oswego city for work tied to The Advocate's Case. The lead is posted in Oswego Market Streets.",
       "visibility": "local_notice_board",
@@ -46295,7 +46295,7 @@
     {
       "id": "breaking_weir",
       "title": "The Breaking Weir",
-      "source": "content/rpg/pack/breaking_weir.yaml",
+      "source": "content/rpg/quests/breaking_weir.yaml",
       "home": "rome_city",
       "discovery": "Ask around Rome city for work tied to The Breaking Weir. The lead is posted in Rome Market Streets.",
       "visibility": "local_notice_board",
@@ -46304,7 +46304,7 @@
     {
       "id": "cold_forge",
       "title": "The Cold Forge",
-      "source": "content/rpg/pack/cold_forge.yaml",
+      "source": "content/rpg/quests/cold_forge.yaml",
       "home": "greece_town",
       "discovery": "Ask around Greece town for work tied to The Cold Forge. The lead is posted in Greece Market Streets.",
       "visibility": "local_notice_board",
@@ -46313,7 +46313,7 @@
     {
       "id": "dawn_beacon",
       "title": "The Dawn Beacon",
-      "source": "content/rpg/pack/dawn_beacon.yaml",
+      "source": "content/rpg/quests/dawn_beacon.yaml",
       "home": "amherst_town",
       "discovery": "Ask around Amherst town for work tied to The Dawn Beacon. The lead is posted in Amherst Market Streets.",
       "visibility": "local_notice_board",
@@ -46322,7 +46322,7 @@
     {
       "id": "factors_mark",
       "title": "The Factor's Mark",
-      "source": "content/rpg/pack/factors_mark.yaml",
+      "source": "content/rpg/quests/factors_mark.yaml",
       "home": "cheektowaga_town",
       "discovery": "Ask around Cheektowaga town for work tied to The Factor's Mark. The lead is posted in Cheektowaga Market Streets.",
       "visibility": "local_notice_board",
@@ -46331,7 +46331,7 @@
     {
       "id": "falconers_ransom",
       "title": "The Falconer's Ransom",
-      "source": "content/rpg/pack/falconers_ransom.yaml",
+      "source": "content/rpg/quests/falconers_ransom.yaml",
       "home": "tonawanda_town",
       "discovery": "Ask around Tonawanda town for work tied to The Falconer's Ransom. The lead is posted in Tonawanda Market Streets.",
       "visibility": "local_notice_board",
@@ -46340,7 +46340,7 @@
     {
       "id": "gallowmere",
       "title": "The Gallowmere",
-      "source": "content/rpg/pack/gallowmere.yaml",
+      "source": "content/rpg/quests/gallowmere.yaml",
       "home": "queensbury_town",
       "discovery": "Ask around Queensbury town for work tied to The Gallowmere. The lead is posted in Queensbury Market Streets.",
       "visibility": "local_notice_board",
@@ -46349,7 +46349,7 @@
     {
       "id": "printers_night",
       "title": "The Printer's Night",
-      "source": "content/rpg/pack/printers_night.yaml",
+      "source": "content/rpg/quests/printers_night.yaml",
       "home": "southampton_town",
       "discovery": "Ask around Southampton town for work tied to The Printer's Night. The lead is posted in Southampton Market Streets.",
       "visibility": "local_notice_board",
@@ -46358,7 +46358,7 @@
     {
       "id": "sunken_barrow",
       "title": "The Sunken Barrow",
-      "source": "content/rpg/pack/sunken_barrow.yaml",
+      "source": "content/rpg/quests/sunken_barrow.yaml",
       "home": "riverhead_town",
       "discovery": "Ask around Riverhead town for work tied to The Sunken Barrow. The lead is posted in Riverhead Market Streets.",
       "visibility": "local_notice_board",
@@ -46367,7 +46367,7 @@
     {
       "id": "tanners_fever",
       "title": "The Tanner's Fever",
-      "source": "content/rpg/pack/tanners_fever.yaml",
+      "source": "content/rpg/quests/tanners_fever.yaml",
       "home": "oneonta_city",
       "discovery": "Ask around Oneonta city for work tied to The Tanner's Fever. The lead is posted in Oneonta Market Streets.",
       "visibility": "local_notice_board",
@@ -46376,7 +46376,7 @@
     {
       "id": "wolf_winter",
       "title": "The Wolf-Winter",
-      "source": "content/rpg/pack/wolf_winter.yaml",
+      "source": "content/rpg/quests/wolf_winter.yaml",
       "home": "albany_city",
       "discovery": "Ask around Albany city for work tied to The Wolf-Winter. The lead is posted in Albany Station Quarter.",
       "visibility": "local_notice_board",

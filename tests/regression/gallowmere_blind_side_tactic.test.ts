@@ -22,7 +22,7 @@ import { makeStep } from "../../src/core/engine.js";
 import type { GameState } from "../../src/core/state.js";
 import type { Rng } from "../../src/core/rng.js";
 
-const loaded = loadRpgSourceFile("content/rpg/pack/gallowmere.yaml");
+const loaded = loadRpgSourceFile("content/rpg/quests/gallowmere.yaml");
 if (!loaded.ok) throw new Error("gallowmere must compile");
 const pack = loaded.compiled.pack;
 const index = indexRpgPack(pack);

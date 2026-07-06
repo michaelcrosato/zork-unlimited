@@ -23,7 +23,7 @@ import { validateRpg } from "../../src/validate/rpg_validator.js";
 import type { Action } from "../../src/api/types.js";
 import type { GameState } from "../../src/core/state.js";
 
-const loaded = loadRpgSourceFile("content/rpg/pack/wolf_winter.yaml");
+const loaded = loadRpgSourceFile("content/rpg/quests/wolf_winter.yaml");
 if (!loaded.ok) throw new Error("wolf_winter must compile");
 const pack = loaded.compiled.pack;
 const index = indexRpgPack(pack);

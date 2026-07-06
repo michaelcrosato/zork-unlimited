@@ -29,7 +29,7 @@ import { describe, it, expect } from "vitest";
 import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import type { RpgPack } from "../../src/rpg/schema.js";
 
-const PACK_PATH = "content/rpg/pack/wolf_winter.yaml";
+const PACK_PATH = "content/rpg/quests/wolf_winter.yaml";
 
 function loadPack(): RpgPack {
   const r = loadRpgSourceFile(PACK_PATH);

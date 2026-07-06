@@ -39,7 +39,7 @@ import { validateRpg } from "../../src/validate/rpg_validator.js";
 import type { RpgPack } from "../../src/rpg/schema.js";
 import type { Effect } from "../../src/core/effects.js";
 
-const PACK_PATH = "content/rpg/pack/dawn_beacon.yaml";
+const PACK_PATH = "content/rpg/quests/dawn_beacon.yaml";
 
 function loadPack(): RpgPack {
   const r = loadRpgSourceFile(PACK_PATH);
@@ -112,8 +112,8 @@ describe("bug_0187 — The Dawn Beacon: the first curated combat_guaranteed gaun
 
   it("the two existing RPG packs remain gambles (do NOT opt in) — no false guarantee", () => {
     for (const path of [
-      "content/rpg/pack/cold_forge.yaml",
-      "content/rpg/pack/sunken_barrow.yaml",
+      "content/rpg/quests/cold_forge.yaml",
+      "content/rpg/quests/sunken_barrow.yaml",
     ]) {
       const r = loadRpgSourceFile(path);
       expect(r.ok).toBe(true);

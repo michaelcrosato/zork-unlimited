@@ -83,7 +83,7 @@ import type { Rng } from "../../src/core/rng.js";
 import type { Action } from "../../src/api/types.js";
 import { exhaustiveEndingsMulti } from "./support/exhaustive_endings.js";
 
-const PACK_DIR = "content/rpg/pack";
+const PACK_DIR = "content/rpg/quests";
 const packFiles = readdirSync(PACK_DIR)
   .filter((f) => f.endsWith(".yaml"))
   .sort();

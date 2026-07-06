@@ -1,6 +1,6 @@
 id: bug_0458_tanners_fever_treatment_retry
 title: "Tanner's Fever treatment survives a failed physick roll"
-pack: content/rpg/pack/tanners_fever.yaml
+pack: content/rpg/quests/tanners_fever.yaml
 reported_by: blind-playtest
 report: blind-tester/reports/20260622T193113Z_tanners_fever_seed7.md
 severity: S3
@@ -23,5 +23,5 @@ tests:
   - tests/regression/tanners_fever_treatment_retry.test.ts
 verification:
   - npm test -- --run tests/regression/tanners_fever_treatment_retry.test.ts
-  - npm run validate -- content/rpg/pack/tanners_fever.yaml
+  - npm run validate -- content/rpg/quests/tanners_fever.yaml
   - npm run health

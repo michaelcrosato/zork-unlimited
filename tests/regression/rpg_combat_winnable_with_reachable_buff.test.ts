@@ -114,8 +114,8 @@ describe("bug_0097 — shipped RPG packs stay green (no new findings)", () => {
   it("sunken_barrow and cold_forge still validate with zero findings", async () => {
     const { loadRpgSourceFile } = await import("../../src/rpg/source.js");
     for (const path of [
-      "content/rpg/pack/sunken_barrow.yaml",
-      "content/rpg/pack/cold_forge.yaml",
+      "content/rpg/quests/sunken_barrow.yaml",
+      "content/rpg/quests/cold_forge.yaml",
     ]) {
       const loaded = loadRpgSourceFile(path);
       expect(loaded.ok).toBe(true);

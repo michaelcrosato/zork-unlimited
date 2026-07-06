@@ -16,7 +16,7 @@ import { makeStep } from "../../src/core/engine.js";
 import type { GameEvent } from "../../src/core/events.js";
 import type { GameState } from "../../src/core/state.js";
 
-const loaded = loadRpgSourceFile("content/rpg/pack/wolf_winter.yaml");
+const loaded = loadRpgSourceFile("content/rpg/quests/wolf_winter.yaml");
 if (!loaded.ok) throw new Error("wolf_winter must compile");
 const index = indexRpgPack(loaded.compiled.pack);
 const step = makeStep(buildRpgRules(index));

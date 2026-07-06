@@ -1,6 +1,6 @@
 id: bug_0450_printers_proof_sheet_claim
 title: "Printer's Night proof sheet can be claimed without replacing the block objective"
-pack: content/rpg/pack/printers_night.yaml
+pack: content/rpg/quests/printers_night.yaml
 reported_by: blind-playtest
 report: blind-tester/reports/20260622T173319Z_printers_night_seed7.md
 severity: S2
@@ -23,5 +23,5 @@ tests:
   - tests/regression/printers_night_proof_sheet_claim.test.ts
 verification:
   - npm test -- --run tests/regression/printers_night_proof_sheet_claim.test.ts tests/regression/printers_night_reactive_taken_items.test.ts
-  - npm run validate -- content/rpg/pack/printers_night.yaml
+  - npm run validate -- content/rpg/quests/printers_night.yaml
   - npm run health

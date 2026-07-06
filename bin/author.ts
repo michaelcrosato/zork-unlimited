@@ -10,7 +10,7 @@
  * authoring mode is exposed. Prints the per-beat classification and validation
  * report; with --out, writes the green draft RPG pack as YAML. Shipped content
  * must be registered through the world graph instead of writing directly into
- * content/rpg/pack. A real provider slots in behind an env var (§12.7).
+ * content/rpg/quests. A real provider slots in behind an env var (§12.7).
  */
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, isAbsolute, relative, resolve } from "node:path";
@@ -21,10 +21,10 @@ import { loadEngineContract, runWriter } from "../agents/authoring/writer.js";
 import { runRpgAdapter } from "../agents/authoring/adapter.js";
 import { formatReport } from "../src/validate/report.js";
 
-const SHIPPED_PACK_DIR = resolve(process.cwd(), "content", "rpg", "pack");
+const SHIPPED_QUEST_SOURCE_DIR = resolve(process.cwd(), "content", "rpg", "quests");
 
-function isShippedPackOutput(path: string): boolean {
-  const rel = relative(SHIPPED_PACK_DIR, resolve(process.cwd(), path));
+function isShippedQuestSourceOutput(path: string): boolean {
+  const rel = relative(SHIPPED_QUEST_SOURCE_DIR, resolve(process.cwd(), path));
   return rel === "" || (!rel.startsWith("..") && !isAbsolute(rel));
 }
 
@@ -46,9 +46,9 @@ async function main(): Promise<void> {
       process.exit(2);
     }
   }
-  if (out && isShippedPackOutput(out)) {
+  if (out && isShippedQuestSourceOutput(out)) {
     console.error(
-      "author writes draft RPG packs only; shipped quests must be registered through the canonical world graph, not written directly under content/rpg/pack.",
+      "author writes draft RPG packs only; shipped quests must be registered through the canonical world graph, not written directly under content/rpg/quests.",
     );
     process.exit(2);
   }

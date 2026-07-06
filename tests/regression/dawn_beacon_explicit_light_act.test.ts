@@ -45,7 +45,7 @@ import {
 } from "../../src/rpg/runner.js";
 
 describe("bug_0226 — The Dawn Beacon wins on the deliberate light act, not on bare entry", () => {
-  const loaded = loadRpgSourceFile("content/rpg/pack/dawn_beacon.yaml");
+  const loaded = loadRpgSourceFile("content/rpg/quests/dawn_beacon.yaml");
   if (!loaded.ok) throw new Error("dawn_beacon must compile");
   const pack = loaded.compiled.pack;
   const index = indexRpgPack(pack);

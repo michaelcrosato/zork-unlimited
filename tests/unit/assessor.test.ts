@@ -37,7 +37,7 @@ function realRepoAttendanceOffsets(): Map<string, number> {
 function withStaleAuditFixtureRoot(run: (root: string) => void): void {
   const root = mkdtempSync(join(tmpdir(), "af-assessor-"));
   try {
-    mkdirSync(join(root, "content", "rpg", "pack"), { recursive: true });
+    mkdirSync(join(root, "content", "rpg", "quests"), { recursive: true });
     mkdirSync(join(root, "content", "world"), { recursive: true });
     writeFileSync(
       join(root, "content", "world", "charter_marches.yaml"),
@@ -54,7 +54,7 @@ function withStaleAuditFixtureRoot(run: (root: string) => void): void {
         "    - id: stale_fixture",
         '      name: "Stale Fixture"',
         "      kind: quest",
-        "      source: content/rpg/pack/stale_fixture.yaml",
+        "      source: content/rpg/quests/stale_fixture.yaml",
         "  edges:",
         "    - from: charterhaven",
         "      to: stale_fixture",
@@ -63,7 +63,7 @@ function withStaleAuditFixtureRoot(run: (root: string) => void): void {
       ].join("\n"),
     );
     writeFileSync(
-      join(root, "content", "rpg", "pack", "stale_fixture.yaml"),
+      join(root, "content", "rpg", "quests", "stale_fixture.yaml"),
       [
         "meta:",
         "  id: stale_audit_fixture_v1",
@@ -165,7 +165,7 @@ describe("assess()", () => {
     expect(reviews.length).toBeGreaterThan(0);
     for (const r of reviews) {
       expect(r.score).toBeLessThan(1); // ranked below real fixes + new content
-      expect(r.target).not.toMatch(/^content\/rpg\/pack\//);
+      expect(r.target).not.toMatch(/^content\/rpg\/quests\//);
     }
   });
 
@@ -181,7 +181,7 @@ describe("assess()", () => {
       expect(candidate?.score).toBeGreaterThan(SATURATION_FLOOR);
       expect(candidate?.evidence[0]).toContain("item/take-effect state");
       expect(candidate?.evidence[0]).toContain("world_quest_id:stale_fixture");
-      expect(candidate?.evidence[0]).not.toContain("content/rpg/pack/");
+      expect(candidate?.evidence[0]).not.toContain("content/rpg/quests/");
     });
   });
 
@@ -311,13 +311,13 @@ describe("allGeneratedChecksClean", () => {
 
 describe("blind-pass rotation (bug_0128)", () => {
   it("packStem normalizes a pack path OR a bare id to the same stem", () => {
-    expect(packStem("content/rpg/pack/cold_forge.yml")).toBe("cold_forge");
+    expect(packStem("content/rpg/quests/cold_forge.yml")).toBe("cold_forge");
     expect(packStem("cold_forge")).toBe("cold_forge");
     // bug_0293: a pack ID carries a _vN suffix the file stem does not; both must converge
     // so the code-written `Blind-playtest "<id>"` attendance line keys to the candidate's
     // path-derived stem.
     expect(packStem("cold_forge_v1")).toBe("cold_forge");
-    expect(packStem("content/rpg/pack/cold_forge.yaml")).toBe(packStem("cold_forge_v1"));
+    expect(packStem("content/rpg/quests/cold_forge.yaml")).toBe(packStem("cold_forge_v1"));
   });
 
   it("parseAttendanceOffsets keeps the MOST RECENT (topmost) mention in the newest-first log (bug_0128)", () => {
@@ -340,7 +340,8 @@ describe("blind-pass rotation (bug_0128)", () => {
   });
 
   it("parseAttendanceOffsets still recognizes the legacy structured-header marker", () => {
-    const text = "- Mandatory LLM playtest target this cycle: content/rpg/pack/sunken_barrow.yaml.";
+    const text =
+      "- Mandatory LLM playtest target this cycle: content/rpg/quests/sunken_barrow.yaml.";
     const offsets = parseAttendanceOffsets(text);
     expect(offsets.has("sunken_barrow")).toBe(true);
   });
@@ -450,7 +451,7 @@ describe("isSaturated — the saturation-triggered ultraplan signal", () => {
   const candidate = (score: number): ImprovementCandidate => ({
     id: "c",
     category: "content_fix",
-    target: "content/rpg/pack/x.yaml",
+    target: "content/rpg/quests/x.yaml",
     title: "t",
     rationale: "r",
     evidence: ["e"],

@@ -96,7 +96,7 @@ describe("bug_0023 — reactive object descriptions (objectDescription)", () => 
 });
 
 describe("bug_0023 — live on The Cold Forge: the slag grate stops reading 'welded shut' once levered open", () => {
-  const loaded = loadRpgSourceFile("content/rpg/pack/cold_forge.yaml");
+  const loaded = loadRpgSourceFile("content/rpg/quests/cold_forge.yaml");
   if (!loaded.ok) throw new Error("cold_forge must compile");
   const pack = loaded.compiled.pack;
   const index = indexRpgPack(pack);

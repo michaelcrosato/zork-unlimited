@@ -178,9 +178,9 @@ function coordKey(coord: readonly [number, number]): string {
 
 function discoverShippedRpgSourcePaths(root: string): string[] {
   try {
-    return readdirSync(join(root, "content", "rpg", "pack"))
+    return readdirSync(join(root, "content", "rpg", "quests"))
       .filter((file) => file.endsWith(".yaml"))
-      .map((file) => normalizeSourcePath(`content/rpg/pack/${file}`))
+      .map((file) => normalizeSourcePath(`content/rpg/quests/${file}`))
       .sort();
   } catch {
     return [];
@@ -217,7 +217,7 @@ export function assertWorldQuestSourceCoverage(
   }
   if (extra.length > 0) {
     throw new Error(
-      `Canonical world graph references RPG source(s) not shipped in content/rpg/pack: ${extra.join(
+      `Canonical world graph references RPG source(s) not shipped in content/rpg/quests: ${extra.join(
         ", ",
       )}.`,
     );

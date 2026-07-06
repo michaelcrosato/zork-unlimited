@@ -1,6 +1,6 @@
 id: bug_0451_quarrymens_cale_confrontation
 title: "Quarrymen's Fault makes Cale's proof-route concession playable"
-pack: content/rpg/pack/quarrymens_fault.yaml
+pack: content/rpg/quests/quarrymens_fault.yaml
 reported_by: blind-playtest
 report: blind-tester/reports/20260622T174413Z_quarrymens_fault_seed7.md
 severity: S2
@@ -21,5 +21,5 @@ tests:
   - tests/regression/quarrymens_fault_reactive_taken_items.test.ts
 verification:
   - npm test -- --run tests/regression/quarrymens_fault_reactive_taken_items.test.ts
-  - npm run validate -- content/rpg/pack/quarrymens_fault.yaml
+  - npm run validate -- content/rpg/quests/quarrymens_fault.yaml
   - npm run health

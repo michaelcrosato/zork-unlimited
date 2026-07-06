@@ -27,7 +27,7 @@ tests: tests/regression/falconers_ransom_thorn_retires.test.ts
 
 verification:
   - npm test -- --run tests/regression/falconers_ransom_thorn_retires.test.ts
-  - npm run validate -- content/rpg/pack/falconers_ransom.yaml
+  - npm run validate -- content/rpg/quests/falconers_ransom.yaml
 
 trace_repin: >
   None. The change updates pack content and adds a regression test; there is no

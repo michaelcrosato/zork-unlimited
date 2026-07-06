@@ -65,5 +65,5 @@ notes: >
   behind its real validator. The API-keyed keystone (a REAL frontier model driving
   runWriter/runRpgAdapter) stays deferred per docs/ULTRAPLAN-2026-06-02.md; this lands the
   key-free half — a real provider slots in behind the env var with no further wiring. The mock
-  RPG pack is in-memory only (not under content/rpg/pack), so it does not enter the
+  RPG pack is in-memory only (not under content/rpg/quests), so it does not enter the
   health-covers-all-packs bar or the exhaustive RPG ending-reachability solver.

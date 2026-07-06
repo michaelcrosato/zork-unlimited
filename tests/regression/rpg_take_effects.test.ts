@@ -175,7 +175,7 @@ enemies: []
 });
 
 describe("bug_0107 — The Sunken Barrow: the +25 rides the claim, not chamber entry", () => {
-  const loaded = loadRpgSourceFile("content/rpg/pack/sunken_barrow.yaml");
+  const loaded = loadRpgSourceFile("content/rpg/quests/sunken_barrow.yaml");
   if (!loaded.ok) throw new Error("sunken_barrow must compile");
   const index = indexRpgPack(loaded.compiled.pack);
   const step = makeStep(buildRpgRules(index));

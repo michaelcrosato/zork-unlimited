@@ -28,7 +28,7 @@ import { recordTrace, type Trace } from "../../src/trace/record.js";
 import type { RpgAction } from "../../src/api/types.js";
 
 const ROOT = process.cwd();
-const PACK = "content/rpg/pack/sunken_barrow.yaml";
+const PACK = "content/rpg/quests/sunken_barrow.yaml";
 const api = () => createToolApi({ root: ROOT });
 
 type InspectResult = {
