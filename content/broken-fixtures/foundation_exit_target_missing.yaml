@@ -1,0 +1,16 @@
+# MUST FAIL: EXIT_TARGET_MISSING
+# An exit points at a room that does not exist.
+meta: { id: bad_exit_target, title: "Bad Exit", start_room: a, vars_init: { hp: 10, attack: 2, defense: 1 } }
+rooms:
+  - id: a
+    name: "A"
+    description: "Room A."
+    exits:
+      - { direction: north, to: b }
+      - { direction: east, to: nowhere_room }
+  - id: b
+    name: "B"
+    description: "Room B."
+    exits: [{ direction: south, to: a }]
+win_conditions: [{ id: w, conditions: [{ visited: b }], ending: e }]
+endings: [{ id: e, title: "End", text: "Done." }]

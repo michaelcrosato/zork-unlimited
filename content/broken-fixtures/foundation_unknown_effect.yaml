@@ -1,0 +1,25 @@
+# MUST FAIL: SCHEMA
+# An interaction uses an effect outside the closed vocabulary (§7.1, §16) — content
+# can never introduce new effect kinds; rejected at the load boundary.
+meta: { id: bad_effect, title: "Bad Effect", start_room: a, vars_init: { hp: 10, attack: 2, defense: 1 } }
+rooms:
+  - id: a
+    name: "A"
+    description: "Room A."
+    objects: [lever]
+    exits: [{ direction: north, to: b }]
+  - id: b
+    name: "B"
+    description: "Room B."
+    exits: [{ direction: south, to: a }]
+objects:
+  - id: lever
+    name: "lever"
+    description: "A suspicious lever."
+    interactions:
+      - verb: USE
+        item: lever
+        target: lever
+        effects: [{ teleport_player: anywhere }]
+win_conditions: [{ id: w, conditions: [{ visited: b }], ending: e }]
+endings: [{ id: e, title: "End", text: "Done." }]

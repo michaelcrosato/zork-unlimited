@@ -1,0 +1,29 @@
+# MUST FAIL: SOFTLOCK_QUEST_ITEM
+# A quest_critical takeable item plus a one-way region means the item could be
+# dropped where it can never be retrieved. (The one-way pit also raises SOFTLOCK —
+# a cascade of the same single map defect.)
+meta: { id: bad_quest_item, title: "Bad Quest Item", start_room: a, vars_init: { hp: 10, attack: 2, defense: 1 } }
+rooms:
+  - id: a
+    name: "A"
+    description: "Room A."
+    objects: [amulet]
+    exits:
+      - { direction: north, to: b }
+      - { direction: down, to: oubliette }
+  - id: b
+    name: "B"
+    description: "Room B."
+    exits: [{ direction: south, to: a }]
+  - id: oubliette
+    name: "Oubliette"
+    description: "A one-way drop. You cannot climb back."
+    exits: []
+objects:
+  - id: amulet
+    name: "amulet"
+    description: "A quest-critical amulet."
+    takeable: true
+    quest_critical: true
+win_conditions: [{ id: w, conditions: [{ visited: b }], ending: e }]
+endings: [{ id: e, title: "End", text: "Done." }]
