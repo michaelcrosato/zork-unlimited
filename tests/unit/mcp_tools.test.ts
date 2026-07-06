@@ -111,10 +111,14 @@ function travelOverworldSessionTo(
   sessionId: string,
   townId: string,
 ): void {
-  const start = a.get_overworld_session({ session_id: sessionId }).observation.current.id;
+  const start = a.get_overworld_session({ include_observation: true, session_id: sessionId })
+    .observation.current.id;
   for (const roadId of overworldRoadPath(start, townId)) {
     a.travel_overworld_session({ session_id: sessionId, road_id: roadId });
-    const observation = a.get_overworld_session({ session_id: sessionId }).observation;
+    const observation = a.get_overworld_session({
+      include_observation: true,
+      session_id: sessionId,
+    }).observation;
     if (observation.pendingRoadEncounter) {
       a.resolve_overworld_session_road_encounter({
         session_id: sessionId,
@@ -129,27 +133,40 @@ function revealOverworldQuest(a: ReturnType<typeof api>, sessionId: string, ques
   if (!quest) throw new Error(`Unknown overworld quest "${questId}".`);
 
   for (const roadId of overworldRoadPath(
-    a.get_overworld_session({ session_id: sessionId }).observation.current.id,
+    a.get_overworld_session({ include_observation: true, session_id: sessionId }).observation
+      .current.id,
     quest.home,
   )) {
     a.travel_overworld_session({ session_id: sessionId, road_id: roadId });
-    let view = a.get_overworld_session({ session_id: sessionId }).observation;
+    let view = a.get_overworld_session({
+      include_observation: true,
+      session_id: sessionId,
+    }).observation;
     if (view.pendingRoadEncounter) {
       a.resolve_overworld_session_road_encounter({
         session_id: sessionId,
         strategy: "press_on",
       });
-      view = a.get_overworld_session({ session_id: sessionId }).observation;
+      view = a.get_overworld_session({
+        include_observation: true,
+        session_id: sessionId,
+      }).observation;
     }
     if (view.supplies <= 2) a.resupply_overworld_session({ session_id: sessionId });
     if (view.fatigue >= 70) a.rest_overworld_session({ session_id: sessionId });
   }
 
-  let view = a.get_overworld_session({ session_id: sessionId }).observation;
+  let view = a.get_overworld_session({
+    include_observation: true,
+    session_id: sessionId,
+  }).observation;
   for (let i = 0; i < 8 && !view.discoveredAreaIds.includes(quest.area); i += 1) {
     if (!view.currentArea) throw new Error(`No current area in ${view.current.id}.`);
     a.explore_overworld_session_area({ session_id: sessionId, area_id: view.currentArea.id });
-    view = a.get_overworld_session({ session_id: sessionId }).observation;
+    view = a.get_overworld_session({
+      include_observation: true,
+      session_id: sessionId,
+    }).observation;
   }
   if (!view.discoveredAreaIds.includes(quest.area)) {
     throw new Error(`Quest area "${quest.area}" was not discovered.`);
@@ -161,11 +178,13 @@ function revealOverworldQuest(a: ReturnType<typeof api>, sessionId: string, ques
 
   const revealActions = [
     () => {
-      const poi = a.get_overworld_session({ session_id: sessionId }).observation.pois[0];
+      const poi = a.get_overworld_session({ include_observation: true, session_id: sessionId })
+        .observation.pois[0];
       if (poi) a.scout_overworld_session_poi({ session_id: sessionId, poi_id: poi.id });
     },
     () => {
-      const contact = a.get_overworld_session({ session_id: sessionId }).observation.characters[0];
+      const contact = a.get_overworld_session({ include_observation: true, session_id: sessionId })
+        .observation.characters[0];
       if (contact) {
         a.talk_overworld_session_contact({
           session_id: sessionId,
@@ -174,19 +193,23 @@ function revealOverworldQuest(a: ReturnType<typeof api>, sessionId: string, ques
       }
     },
     () => {
-      const event = a.get_overworld_session({ session_id: sessionId }).observation.events[0];
+      const event = a.get_overworld_session({ include_observation: true, session_id: sessionId })
+        .observation.events[0];
       if (event) {
         a.investigate_overworld_session_event({ session_id: sessionId, event_id: event.id });
       }
     },
   ];
   for (const action of revealActions) {
-    view = a.get_overworld_session({ session_id: sessionId }).observation;
+    view = a.get_overworld_session({
+      include_observation: true,
+      session_id: sessionId,
+    }).observation;
     if (view.discoveredQuestIds.includes(quest.id)) return;
     action();
   }
 
-  view = a.get_overworld_session({ session_id: sessionId }).observation;
+  view = a.get_overworld_session({ include_observation: true, session_id: sessionId }).observation;
   if (!view.discoveredQuestIds.includes(quest.id)) {
     throw new Error(`Quest "${quest.id}" was not discovered.`);
   }
@@ -196,7 +219,10 @@ function resolveCurrentOverworldSessionEvent(
   a: ReturnType<typeof api>,
   sessionId: string,
 ): ReturnType<ReturnType<typeof api>["resolve_overworld_session_event"]> {
-  const view = a.get_overworld_session({ session_id: sessionId }).observation;
+  const view = a.get_overworld_session({
+    include_observation: true,
+    session_id: sessionId,
+  }).observation;
   const event = view.events.find((candidate) => !view.resolvedEventIds.includes(candidate.id));
   if (!event) throw new Error(`No unresolved event in ${view.current.id}.`);
   a.scout_overworld_session_poi({ session_id: sessionId, poi_id: view.pois[0]!.id });
@@ -1021,13 +1047,21 @@ describe("MCP tools — validate / load (§9.4)", () => {
     const a = api();
     const started = a.start_overworld();
     expect(started.snapshot_hash).toMatch(/^[0-9a-f]{64}$/);
-    const fullRead = a.get_overworld_session({ session_id: started.session_id });
+    const fullRead = a.get_overworld_session({
+      include_observation: true,
+      session_id: started.session_id,
+    });
     const full = fullRead.observation;
+    const defaultRead = a.get_overworld_session({ session_id: started.session_id });
     const compact = a.get_overworld_session_context({ session_id: started.session_id });
     const compactStarted = a.start_overworld({ compact_context: true });
 
+    expect(defaultRead).toMatchObject({ ok: true, session_id: started.session_id });
+    expect(defaultRead.context).toEqual(compact.context);
+    expect("observation" in defaultRead).toBe(false);
     expect(compact).toMatchObject({ ok: true, session_id: started.session_id });
     expect(fullRead.snapshot_hash).toBe(started.snapshot_hash);
+    expect(defaultRead.snapshot_hash).toBe(started.snapshot_hash);
     expect(compact.snapshot_hash).toBe(started.snapshot_hash);
     expect(compactStarted.snapshot_hash).toMatch(/^[0-9a-f]{64}$/);
     const repeatedCompactRead = a.get_overworld_session_context({
@@ -1052,7 +1086,10 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(afterCompactMutationRead.context.ids.discovered_towns).toEqual(
       compact.context.ids.discovered_towns,
     );
-    const repeatedFullRead = a.get_overworld_session({ session_id: started.session_id });
+    const repeatedFullRead = a.get_overworld_session({
+      include_observation: true,
+      session_id: started.session_id,
+    });
     expect(repeatedFullRead.snapshot_hash).toBe(started.snapshot_hash);
     expect(repeatedFullRead.observation).toEqual(full);
     expect(repeatedFullRead.observation).not.toBe(full);
@@ -1066,7 +1103,10 @@ describe("MCP tools — validate / load (§9.4)", () => {
     repeatedFullRead.observation.exits[0]!.travel_minutes = -1;
     repeatedFullRead.observation.discoveredAreaIds.push("mutated_by_test");
     repeatedFullRead.observation.routeOptions[0]!.estimate.elapsedMinutes = -1;
-    const afterRouteMutationRead = a.get_overworld_session({ session_id: started.session_id });
+    const afterRouteMutationRead = a.get_overworld_session({
+      include_observation: true,
+      session_id: started.session_id,
+    });
     expect(afterRouteMutationRead.observation.exits[0]?.travel_minutes).toBe(
       full.exits[0]?.travel_minutes,
     );
@@ -1083,7 +1123,10 @@ describe("MCP tools — validate / load (§9.4)", () => {
     );
     repeatedFullRead.observation.regionalArcs[0]!.resolvedInRegion = -1;
     repeatedFullRead.observation.regionalArcs[0]!.anchorTowns.length = 0;
-    const afterArcMutationRead = a.get_overworld_session({ session_id: started.session_id });
+    const afterArcMutationRead = a.get_overworld_session({
+      include_observation: true,
+      session_id: started.session_id,
+    });
     expect(afterArcMutationRead.observation.regionalArcs[0]?.resolvedInRegion).toBe(
       full.regionalArcs[0]?.resolvedInRegion,
     );
@@ -1092,6 +1135,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
     ).toEqual(full.regionalArcs[0]?.anchorTowns.map((town) => town.id));
 
     const unchangedFullRead = a.get_overworld_session({
+      include_observation: true,
       session_id: started.session_id,
       if_snapshot_hash: started.snapshot_hash,
     });
@@ -1230,6 +1274,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(JSON.stringify(staleTravel).length).toBeLessThan(JSON.stringify(compactTravel).length);
 
     const traveledFullRead = a.get_overworld_session({
+      include_observation: true,
       session_id: started.session_id,
       if_snapshot_hash: started.snapshot_hash,
     });
@@ -1408,11 +1453,14 @@ describe("MCP tools — validate / load (§9.4)", () => {
       poi_id: started.observation.pois[0]!.id,
     });
     const road = a
-      .get_overworld_session({ session_id: started.session_id })
+      .get_overworld_session({ include_observation: true, session_id: started.session_id })
       .observation.exits.find((exit) => exit.destination.id === "colonie_town");
     expect(road).toBeDefined();
     a.travel_overworld_session({ session_id: started.session_id, road_id: road!.id });
-    const beforeRead = a.get_overworld_session({ session_id: started.session_id });
+    const beforeRead = a.get_overworld_session({
+      include_observation: true,
+      session_id: started.session_id,
+    });
     const before = beforeRead.observation;
     expect(before.pendingRoadEncounter).toBeDefined();
 
@@ -1513,10 +1561,12 @@ describe("MCP tools — validate / load (§9.4)", () => {
       strategy: "press_on",
     });
     expect(
-      a.get_overworld_session({ session_id: restored.session_id }).observation.pendingRoadEncounter,
+      a.get_overworld_session({ include_observation: true, session_id: restored.session_id })
+        .observation.pendingRoadEncounter,
     ).toBeNull();
     expect(
-      a.get_overworld_session({ session_id: started.session_id }).observation.pendingRoadEncounter,
+      a.get_overworld_session({ include_observation: true, session_id: started.session_id })
+        .observation.pendingRoadEncounter,
     ).not.toBeNull();
 
     expect(() =>
@@ -1654,7 +1704,10 @@ describe("MCP tools — validate / load (§9.4)", () => {
     const a = api();
     const started = a.start_overworld();
     travelOverworldSessionTo(a, started.session_id, "buffalo_city");
-    const worn = a.get_overworld_session({ session_id: started.session_id }).observation;
+    const worn = a.get_overworld_session({
+      include_observation: true,
+      session_id: started.session_id,
+    }).observation;
     expect(worn.fatigue).toBeGreaterThanOrEqual(25);
 
     const nextRoad = worn.exits[0]!;
@@ -1738,7 +1791,10 @@ describe("MCP tools — validate / load (§9.4)", () => {
       resolveCurrentOverworldSessionEvent(a, started.session_id);
     }
 
-    const after = a.get_overworld_session({ session_id: started.session_id }).observation;
+    const after = a.get_overworld_session({
+      include_observation: true,
+      session_id: started.session_id,
+    }).observation;
     expect(after.completedRegionalArcIds).toContain(arc!.id);
     expect(after.regionalArcs.find((candidate) => candidate.id === arc!.id)).toMatchObject({
       completed: true,

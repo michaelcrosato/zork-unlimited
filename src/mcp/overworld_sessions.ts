@@ -73,6 +73,7 @@ export type OverworldMcpReadUnchanged = {
 export type OverworldMcpReadArgs = {
   session_id: string;
   if_snapshot_hash?: string;
+  include_observation?: boolean;
 };
 
 export type OverworldMcpFullReadPayload = {
@@ -88,11 +89,17 @@ export type OverworldMcpContextPayload = {
   context: OverworldCompactView;
 };
 
+type OverworldMcpReadPayload<Args extends OverworldMcpReadArgs> = Args extends {
+  include_observation: true;
+}
+  ? OverworldMcpFullReadPayload
+  : OverworldMcpContextPayload;
+
 export type OverworldMcpReadResponse<Args extends OverworldMcpReadArgs> = Args extends {
   if_snapshot_hash: string;
 }
-  ? OverworldMcpFullReadPayload | OverworldMcpReadUnchanged
-  : OverworldMcpFullReadPayload;
+  ? OverworldMcpReadPayload<Args> | OverworldMcpReadUnchanged
+  : OverworldMcpReadPayload<Args>;
 
 export type OverworldMcpContextResponse<Args extends OverworldMcpReadArgs> = Args extends {
   if_snapshot_hash: string;
@@ -284,6 +291,14 @@ export class OverworldMcpSessionStore {
     const snapshotHash = this.snapshotHash(session);
     if (args.if_snapshot_hash !== undefined && args.if_snapshot_hash === snapshotHash) {
       return overworldReadUnchanged(snapshotHash) as OverworldMcpReadResponse<Args>;
+    }
+    if (args.include_observation !== true) {
+      return {
+        ok: true,
+        session_id: args.session_id,
+        snapshot_hash: snapshotHash,
+        context: session.compactView(),
+      } as OverworldMcpReadResponse<Args>;
     }
     return {
       session_id: args.session_id,

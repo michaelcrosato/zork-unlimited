@@ -123,7 +123,10 @@ function exportedSnapshotAfterTwoRoads() {
     strategy: "press_on",
   });
 
-  const afterFirstRoad = a.get_overworld_session({ session_id: started.session_id }).observation;
+  const afterFirstRoad = a.get_overworld_session({
+    include_observation: true,
+    session_id: started.session_id,
+  }).observation;
   const secondRoad = afterFirstRoad.exits[0];
   if (!secondRoad) throw new Error("expected a second overworld road");
   a.travel_overworld_session({ session_id: started.session_id, road_id: secondRoad.id });
@@ -208,10 +211,14 @@ function travelOverworldSessionTo(
   sessionId: string,
   townId: string,
 ): void {
-  const start = a.get_overworld_session({ session_id: sessionId }).observation.current.id;
+  const start = a.get_overworld_session({ include_observation: true, session_id: sessionId })
+    .observation.current.id;
   for (const roadId of overworldRoadPath(start, townId)) {
     a.travel_overworld_session({ session_id: sessionId, road_id: roadId });
-    const observation = a.get_overworld_session({ session_id: sessionId }).observation;
+    const observation = a.get_overworld_session({
+      include_observation: true,
+      session_id: sessionId,
+    }).observation;
     if (observation.pendingRoadEncounter) {
       a.resolve_overworld_session_road_encounter({
         session_id: sessionId,
@@ -222,7 +229,10 @@ function travelOverworldSessionTo(
 }
 
 function resolveCurrentOverworldSessionEvent(a: ReturnType<typeof api>, sessionId: string): void {
-  const view = a.get_overworld_session({ session_id: sessionId }).observation;
+  const view = a.get_overworld_session({
+    include_observation: true,
+    session_id: sessionId,
+  }).observation;
   const event = view.events.find((candidate) => !view.resolvedEventIds.includes(candidate.id));
   if (!event) throw new Error(`expected unresolved event in ${view.current.id}`);
   const poi = view.pois[0];
@@ -1066,7 +1076,10 @@ describe("overworld snapshot restore integrity", () => {
       throw new Error("expected two discovered jobs after two local actions");
     }
 
-    const beforeMove = a.get_overworld_session({ session_id: started.session_id }).observation;
+    const beforeMove = a.get_overworld_session({
+      include_observation: true,
+      session_id: started.session_id,
+    }).observation;
     const routeToJobArea = beforeMove.areaExits.find(
       (route) => route.destination.id === secondJob.area,
     );

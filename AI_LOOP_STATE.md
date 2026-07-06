@@ -1,10 +1,19 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 449 -->
+<!-- historical_cycle_count: 450 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - overworld_read_compact_default
+
+- Pre-cycle: `C:\dev\agent-cleaner` passed; optional secret scanner remains absent.
+- Engine/loop surface: ToolApi `get_overworld_session` now returns compact overworld context by default; full observations require `include_observation: true`.
+- Loop effect: direct harness/agent overworld reads no longer accidentally pull the full New York view when they only need ids, vitals, route tuples, and hash polling.
+- Self-critique: not a content/world-map reduction, but it closes a hidden full-payload path beneath the MCP wrapper.
+- Guard: focused MCP and overworld snapshot regressions pin compact default plus explicit full reads.
+- VERIFY: `C:\dev\agent-cleaner`, `npm run typecheck`, focused MCP/overworld regressions, `npm run lint`, `npm run format:check`, `npm run validate`, `npm test`, and `npm run health` passed after loop-state rotation.
 
 ### Cycle result - transcript_source_opt_in
 
@@ -121,11 +130,3 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Loop effect: loaded saves and replayed traces carry canonical world quest identity into MCP runtime loading; disk package paths stay private to the source loader dereference point.
 - Guard: source-runtime regressions reject the retired `kind: "pack"`, `GamePackSource`, `resolvePackSource`, and `resolveTracePackSource` names from the source layer.
 - VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused world-source/source-runtime/MCP trace regressions, `npm test`, and `npm run health` passed after loop-state rotation.
-
-### Cycle result - graph_pack_route_retired
-
-- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
-- Engine/loop surface: `src/world/graph.ts` no longer exports pack-path reverse lookup helpers for quest nodes or hub routes.
-- Loop effect: world graph callers must route by canonical node/world quest id instead of deriving playable identity from package paths.
-- Guard: single-world regression now iterates graph quest bindings by `world_quest_id`, opens play through that id, and rejects the retired helper names in graph source.
-- VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused single-world/source-runtime regressions, `npm test`, and `npm run health` passed after loop-state rotation.

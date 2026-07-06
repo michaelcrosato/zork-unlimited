@@ -488,9 +488,9 @@ Make discovered overworld quest leads start real RPG sessions.
   lifecycles, and tampered pending road encounter options.
 - MCP now exposes compact overworld context for repeated loop turns: stable ids,
   vitals, local actions, capped route options, pending roads, and recent journal.
-- Public MCP `get_overworld_session` now returns compact context by default;
-  callers can pass `include_observation: true` only when they need the full
-  observation object.
+- ToolApi/public MCP `get_overworld_session` now returns compact context by
+  default; callers can pass `include_observation: true` only when they need the
+  full observation object.
 - `get_overworld_session({ if_snapshot_hash })` and
   `get_overworld_session_context({ if_snapshot_hash })` can return hash-only
   `unchanged` responses when the overworld snapshot has not changed.
