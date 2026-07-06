@@ -88,7 +88,7 @@ export const FORBIDDEN_FILES = [
 
 /** Token-heavy local artifacts may exist in a developer worktree, but must never
  *  ship in Git where every clone and agent context can rediscover them. */
-export const FORBIDDEN_TRACKED_FILES = ["AI_LOOP_STATE_ARCHIVE.md"];
+export const FORBIDDEN_TRACKED_FILES = ["AI_LOOP_STATE_ARCHIVE.md", "ai-runs/"];
 
 /** Glob-like path patterns for retired test families that should not reappear
  *  under a new filename while the repo is locked to the RPG runtime. */
@@ -247,7 +247,13 @@ export function detectForbiddenTrackedFiles(
 ): Finding[] {
   const forbiddenSet = new Set(forbidden);
   return trackedPaths
-    .filter((path) => forbiddenSet.has(path))
+    .filter((path) =>
+      forbidden.some((forbiddenPath) =>
+        forbiddenPath.endsWith("/")
+          ? path === forbiddenPath.slice(0, -1) || path.startsWith(forbiddenPath)
+          : forbiddenSet.has(path),
+      ),
+    )
     .map((path) => ({
       severity: "error" as const,
       code: "FORBIDDEN_TRACKED_FILE",

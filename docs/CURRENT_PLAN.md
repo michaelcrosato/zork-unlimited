@@ -118,6 +118,9 @@ Make discovered overworld quest leads start real RPG sessions.
   reports run id, budget, target, and compact recommendation identity.
 - Verifier integrity now enforces the `AI_LOOP_STATE.md` live rotation window so
   the tracked cycle handoff cannot quietly grow beyond the token-small budget.
+- Verifier integrity forbids tracked `AI_LOOP_STATE_ARCHIVE.md` and `ai-runs/`
+  artifacts, so local loop evidence remains ignored instead of becoming clone
+  and context ballast.
 - Verifier integrity now also forbids retired CYOA/parser CLI entrypoints and
   unit-test filename families from reappearing in the single-RPG runtime.
 - AFK blind-test rotation now parses quest-labeled titles and compact

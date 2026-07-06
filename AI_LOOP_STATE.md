@@ -1,10 +1,19 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 458 -->
+<!-- historical_cycle_count: 459 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - ignored_run_artifact_tracking_guard
+
+- Pre-cycle: `C:\dev\agent-cleaner` measure/gates passed through WSL; optional secret scanner remains absent.
+- Engine/loop surface: verifier integrity now blocks tracked `ai-runs/` artifacts in addition to the ignored loop archive file.
+- Loop effect: per-cycle logs, playtests, and cost evidence can stay local without becoming recurring clone/context payload.
+- Self-critique: prevention guard only; it does not shrink the already-large world JSON or runtime payloads.
+- Guard: verifier regressions pin prefix matching for nested `ai-runs/` paths and prove the real repo has no tracked ignored loop artifacts.
+- VERIFY: `C:\dev\agent-cleaner`, focused verifier regressions, `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, `npm test`, and `npm run health` passed after loop-state rotation.
 
 ### Cycle result - rpg_actions_compact_default
 
@@ -130,11 +139,3 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Loop effect: future trace debugging starts from the same compact source identity that current saves and traces serialize, reducing package-era recovery cues in operator loops.
 - Guard: focused trace CLI/MCP/source regressions cover source-ref inference, raw pack rejection, and explicit-source conflict diagnostics.
 - VERIFY: `npm run typecheck`, focused trace/source/MCP regressions, `npm run validate`, `npm test`, and `npm run health` passed after loop-state rotation.
-
-### Cycle result - source_ref_mirror_write_retired
-
-- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
-- Engine/loop surface: new save and trace artifacts now serialize only compact `source_ref`; legacy `worldQuestId` / `generatedRpgSeed` mirrors are accepted for old-artifact validation but dropped from loaded bundles.
-- Loop effect: persistence and replay state carry one canonical source identity, reducing duplicated context in save/trace blobs while preserving source-integrity checks.
-- Guard: focused save/trace, world-source, MCP save/load, generated-source, and recorded-play regressions cover source-ref-only emission plus legacy mirror rejection.
-- VERIFY: `npm run typecheck`, focused save/trace/world-source/MCP regressions, `npm run validate`, `npm test`, and `npm run health` passed after loop-state rotation.

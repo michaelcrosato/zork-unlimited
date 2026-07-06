@@ -194,14 +194,24 @@ describe("detectForbiddenPathPatterns — retired test families stay gone", () =
 });
 
 describe("detectForbiddenTrackedFiles — token-heavy local artifacts stay out of Git", () => {
-  it("blocks the ignored loop archive if it becomes tracked", () => {
+  it("blocks ignored loop artifacts if they become tracked", () => {
     const findings = detectForbiddenTrackedFiles([
       "AI_LOOP_STATE.md",
       LOOP_ARCHIVE_FILE,
+      "ai-runs/agent-cleaner-cycle459.log",
+      "ai-runs/2026-07-06T00-00-00-000Z/playtest.md",
       "src/core/engine.ts",
     ]);
-    expect(findings.map((f) => f.code)).toEqual(["FORBIDDEN_TRACKED_FILE"]);
-    expect(findings[0]!.where).toBe(LOOP_ARCHIVE_FILE);
+    expect(findings.map((f) => f.code)).toEqual([
+      "FORBIDDEN_TRACKED_FILE",
+      "FORBIDDEN_TRACKED_FILE",
+      "FORBIDDEN_TRACKED_FILE",
+    ]);
+    expect(findings.map((f) => f.where)).toEqual([
+      LOOP_ARCHIVE_FILE,
+      "ai-runs/agent-cleaner-cycle459.log",
+      "ai-runs/2026-07-06T00-00-00-000Z/playtest.md",
+    ]);
     expect(findings[0]!.message).toContain("untracked");
   });
 });
@@ -521,6 +531,7 @@ describe("runStatic on the real repo (this is the bar)", () => {
 
   it("token-heavy ignored loop archives are not tracked in the real repo", () => {
     expect(FORBIDDEN_TRACKED_FILES).toContain(LOOP_ARCHIVE_FILE);
+    expect(FORBIDDEN_TRACKED_FILES).toContain("ai-runs/");
     expect(res.findings.filter((f) => f.code === "FORBIDDEN_TRACKED_FILE")).toEqual([]);
   });
 
