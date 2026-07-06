@@ -81,9 +81,10 @@ Make discovered overworld quest leads start real RPG sessions.
   quest-start metadata expose quest ids/titles/areas without raw pack paths.
 - `list_world` exposes sanitized world graph/quest-id entries without raw
   `pack` or `path` fields.
-- `list_world` default quest rows are compact `[world_quest_id, title, playable]`
-  tuples; `include_details: true` or `include_routes: true` opt into object rows
-  with prose hooks.
+- `list_world` default quest rows are compact `[world_quest_id, playable]`
+  tuples; `include_titles: true` restores titled tuples, while
+  `include_details: true` or `include_routes: true` opt into object rows with
+  prose hooks.
 - The canonical Charter Marches graph now carries unique integer coordinates for
   every node; loader integrity rejects partial/duplicate coordinate maps before
   play starts, and MCP exposes the pack-free coordinates through `list_world`.

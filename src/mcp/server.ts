@@ -74,7 +74,7 @@ const EXPECTED_STATE_HASH = {
 };
 tool(
   "list_world",
-  "List shipped RPG quest ids as [id,title,playable]; graph and routes are opt-in.",
+  "List shipped RPG quest ids as [id,playable]; titles/details/graph/routes opt in.",
   {
     include_details: z.boolean().optional().describe("Include quest prose hooks."),
     include_graph: z
@@ -82,6 +82,7 @@ tool(
       .optional()
       .describe("Include the pack-free world graph with map coordinates."),
     include_routes: z.boolean().optional().describe("Include every quest route from the hub."),
+    include_titles: z.boolean().optional().describe("Include titles in default quest tuples."),
   },
   (a) => api.list_world(a),
 );

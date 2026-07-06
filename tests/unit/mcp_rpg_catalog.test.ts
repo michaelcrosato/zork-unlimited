@@ -38,12 +38,19 @@ describe("list_world is the single RPG quest catalog", () => {
     const a = api();
     expect((a as unknown as Record<string, unknown>).list_stories).toBeUndefined();
     const world = a.list_world();
+    const titled = a.list_world({ include_titles: true });
     const expanded = a.list_world({ include_graph: true });
     expect("main_world_quest_id" in world).toBe(false);
     expect("graph" in world).toBe(false);
     expect(world.quests).toHaveLength(16);
     expect(world.quests.every((q) => Array.isArray(q))).toBe(true);
-    expect(world.quests.every((q) => q.length === 3)).toBe(true);
+    expect(world.quests.every((q) => q.length === 2)).toBe(true);
+    expect(world.quests.every((q) => typeof q[1] === "boolean")).toBe(true);
+    expect(titled.quests.find((q) => q[0] === "breaking_weir")).toEqual([
+      "breaking_weir",
+      "The Breaking Weir",
+      true,
+    ]);
     expect(world.quests.every((q) => !("path" in q))).toBe(true);
     expect(world.quests.every((q) => !("path_from_hub" in q))).toBe(true);
     expect(world.quests.every((q) => !("id" in q))).toBe(true);

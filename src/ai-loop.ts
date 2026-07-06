@@ -35,7 +35,7 @@ import { createToolApi } from "./mcp/tools.js";
 import { rotateLoopState } from "./afk/loop_state.js";
 
 type WorldCatalog = {
-  quests: readonly (readonly [world_quest_id: string, title: string, playable: boolean])[];
+  quests: readonly (readonly [world_quest_id: string, playable: boolean])[];
 };
 
 // ── Saturation-triggered ultraplan (docs/afk_loop.md) ──────────────────────────
@@ -87,9 +87,9 @@ function cycleStamp(): string {
 }
 
 function requireMainWorldQuestId(catalog: WorldCatalog): string {
-  const preferred = catalog.quests.find((quest) => quest[0] === MAIN_WORLD_QUEST_ID && quest[2]);
+  const preferred = catalog.quests.find((quest) => quest[0] === MAIN_WORLD_QUEST_ID && quest[1]);
   if (preferred) return preferred[0];
-  const fallback = catalog.quests.find((quest) => quest[2]);
+  const fallback = catalog.quests.find((quest) => quest[1]);
   if (fallback) return fallback[0];
   throw new Error("AFK loop requires at least one shipped RPG quest to blind-playtest.");
 }

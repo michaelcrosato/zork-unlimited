@@ -87,6 +87,7 @@ type WorldListOptions = {
   include_details?: boolean;
   include_graph?: boolean;
   include_routes?: boolean;
+  include_titles?: boolean;
 };
 
 type WorldQuestCatalogEntry = {
@@ -95,7 +96,9 @@ type WorldQuestCatalogEntry = {
   world_quest_id: string;
 };
 
-type WorldListQuestRef = readonly [world_quest_id: string, title: string, playable: boolean];
+type WorldListQuestRef = readonly [world_quest_id: string, playable: boolean];
+
+type WorldListTitledQuestRef = readonly [world_quest_id: string, title: string, playable: boolean];
 
 type WorldQuestDetails = {
   district: string;
@@ -117,7 +120,9 @@ type WorldListQuest<Args extends WorldListOptions> = Args extends
   | { include_details: true }
   | { include_routes: true }
   ? WorldListDetailedQuest<Args>
-  : WorldListQuestRef;
+  : Args extends { include_titles: true }
+    ? WorldListTitledQuestRef
+    : WorldListQuestRef;
 
 type WorldListResponse<Args extends WorldListOptions> = {
   world: PublicWorldSummary;
@@ -450,7 +455,9 @@ export function createToolApi(opts: { root: string }) {
         .filter((s) => s.world?.id === world.id)
         .map((s) => {
           if (!includeDetails) {
-            return [s.world_quest_id, s.title, s.playable] as unknown as WorldListQuest<Args>;
+            return (args?.include_titles === true
+              ? [s.world_quest_id, s.title, s.playable]
+              : [s.world_quest_id, s.playable]) as unknown as WorldListQuest<Args>;
           }
           const quest: WorldQuestCatalogEntry & Partial<WorldQuestDetails> = {
             title: s.title,

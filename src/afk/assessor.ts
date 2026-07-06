@@ -390,7 +390,7 @@ export function assess(root: string): Assessment {
   const quests: AssessedQuest[] = api.list_world().quests.map((quest) => ({
     target_ref: quest[0],
     target_label: quest[0],
-    playable: quest[2],
+    playable: quest[1],
     world_quest_id: quest[0],
   }));
 

@@ -1,10 +1,19 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 475 -->
+<!-- historical_cycle_count: 476 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - list_world_titles_opt_in
+
+- Pre-cycle: `C:\dev\agent-cleaner` measure/gates passed through WSL; optional secret scanner remains absent, and the same WSL git-dir warnings print after the green gate summary.
+- Engine/loop surface: default `list_world` quest rows are now `[world_quest_id, playable]`; `include_titles: true` restores `[world_quest_id, title, playable]`, while details/routes keep titled object rows.
+- Loop effect: default `list_world` drops from 863 to 517 bytes, with titled opt-in preserving the old 863-byte catalog response.
+- Self-critique: this trims target-selection and catalog discovery reads, not per-turn stepping; state-hash/envelope overhead and detailed graph reads remain separate follow-up surfaces.
+- Guard: catalog, AI-loop, assessor, and server-registration regressions pin tuple shape, title opt-in, playable-index consumers, and schema budget.
+- VERIFY: `C:\dev\agent-cleaner`, focused catalog/assessor/schema regressions, payload probe, `npm run health`, and `npm run assess` passed; post-rotation `npm run verify:integrity`, `npm run format:check`, broad `prettier --check .`, and `git diff --check` also passed.
 
 ### Cycle result - compact_observation_prose_caps_v13
 
@@ -131,12 +140,3 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Self-critique: save blobs remain large by design; this only trims redundant response metadata around guarded checkpoint calls.
 - Guard: focused MCP save/load and registration regressions pin default omission, opt-in source echo, stale hash-only saves, and source-ref reload integrity.
 - VERIFY: `C:\dev\agent-cleaner`, focused MCP save/source regressions, `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, `npm test`, and `npm run health` passed after loop-state rotation.
-
-### Cycle result - overworld_actions_compact_default
-
-- Pre-cycle: `C:\dev\agent-cleaner` measure/gates passed through WSL; optional secret scanner remains absent.
-- Engine/loop surface: direct ToolApi overworld actions, restore, and quest handoff now default to compact context/result payloads; explicit false flags keep full readers available.
-- Loop effect: local harnesses and direct agents no longer get full overworld observations/action result objects after every travel, local action, quest sync, or restore.
-- Self-critique: API-default work only; full export snapshots and the tracked world JSON remain large follow-up surfaces.
-- Guard: focused MCP/overworld regressions keep full-payload assertions explicit while pinning no-flag compact route, travel, and restore payloads.
-- VERIFY: `C:\dev\agent-cleaner`, focused MCP/overworld compact-default regressions, `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, `npm test`, and `npm run health` passed after loop-state rotation.
