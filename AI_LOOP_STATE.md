@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 436 -->
+<!-- historical_cycle_count: 437 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - quest_source_path_private
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/loop surface: `src/world/source.ts` no longer exports `WorldQuestPackSource` or `resolveWorldQuestPackPath`; world-source resolution validates canonical quest identity without returning disk package paths.
+- Loop effect: RPG source runtime owns the private world-quest-to-file dereference, so save/trace/world-source callers cannot depend on a path-bearing source API.
+- Guard: source-runtime regression rejects `WorldQuestPackSource` and `resolveWorldQuestPackPath` from both world source and runtime source files.
+- VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused world-source/source-runtime/validation-bar regressions, `npm test`, and `npm run health` passed after loop-state rotation.
 
 ### Cycle result - game_source_world_quest
 
@@ -117,11 +125,3 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Loop effect: save/load identity cannot fall back to package ids while the live `save(..., packId, ...)` call still validates existing runtime callers during staged consolidation.
 - Guard: focused save/trace, forged-save, save referential, and MCP save/load regressions passed.
 - VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused persistence/MCP regressions, `npm test`, and `npm run health` passed after loop-state rotation.
-
-### Cycle result - trace_pack_id_retired
-
-- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
-- Engine/loop surface: trace recording, replay integrity, and canonical RPG trace fixtures no longer require or emit package-era `pack_id`.
-- Loop effect: replayable trace identity now flows through compact `source_ref` plus content hash, reducing package identity available to leak back into CLI/MCP/debug paths.
-- Guard: focused save/trace, world-source, MCP trace, trace CLI, play CLI, trace divergence, trace load-integrity, stage4, and schema-standalone regressions passed.
-- VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused trace/source regressions, `npm test`, and `npm run health` passed after loop-state rotation.

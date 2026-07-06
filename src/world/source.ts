@@ -23,10 +23,9 @@ import {
   compactSourceRefValidationError,
 } from "./source_ref.js";
 
-export type WorldQuestPackSource = {
+type WorldQuestSourceBinding = {
   world: WorldManifest;
   node: WorldGraphNode;
-  packPath: string;
 };
 
 const SAVE_SOURCE_REF_CONSISTENCY_MESSAGES = {
@@ -325,16 +324,16 @@ export function loadWorldManifest(root: string): WorldManifest {
   return world;
 }
 
-export function resolveWorldQuestPackPath(
+function resolveWorldQuestSourceBinding(
   root: string,
   worldQuestId: string,
-): WorldQuestPackSource {
+): WorldQuestSourceBinding {
   const world = loadWorldManifest(root);
   const node = worldQuestNodeById(world, worldQuestId);
   if (!node?.pack) {
     throw new Error(`Unknown Charter Marches quest "${worldQuestId}".`);
   }
-  return { world, node, packPath: normalizePackPath(node.pack) };
+  return { world, node };
 }
 
 export function assertOverworldQuestSourceBindings(
@@ -382,7 +381,7 @@ export function resolveWorldQuestSourceId(args: WorldQuestSourceArgs, operation:
 }
 
 function resolveWorldQuestGameSource(root: string, worldQuestId: string): WorldQuestGameSource {
-  const resolved = resolveWorldQuestPackPath(root, worldQuestId);
+  const resolved = resolveWorldQuestSourceBinding(root, worldQuestId);
   return {
     kind: "worldQuest",
     worldQuestId: resolved.node.id,

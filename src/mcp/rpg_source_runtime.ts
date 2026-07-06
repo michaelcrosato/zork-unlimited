@@ -13,7 +13,7 @@ import {
   type ValidationReport,
 } from "../validate/report.js";
 import type { Trace } from "../trace/record.js";
-import type { WorldBinding, WorldManifest } from "../world/schema.js";
+import type { WorldBinding, WorldGraphNode, WorldManifest } from "../world/schema.js";
 import {
   normalizePackPath,
   worldMapBounds,
@@ -26,7 +26,6 @@ import {
   loadWorldManifest as loadWorldManifestFromRoot,
   resolveTraceGameSource,
   type GameSource,
-  type WorldQuestPackSource,
 } from "../world/source.js";
 import { safeResolve } from "./paths.js";
 import { isRpgPackShape } from "./types.js";
@@ -76,12 +75,22 @@ export type RpgTraceSource =
       compiled: CompiledRpgPack;
     };
 
-export type RpgWorldQuestPlayableSource = Omit<WorldQuestPackSource, "packPath"> & {
+export type RpgWorldQuestPlayableSource = {
+  world: WorldManifest;
+  node: WorldGraphNode;
   compiled: CompiledRpgPack;
 };
 
-export type RpgWorldQuestReportSource = Omit<WorldQuestPackSource, "packPath"> & {
+export type RpgWorldQuestReportSource = {
+  world: WorldManifest;
+  node: WorldGraphNode;
   result: RpgLoadResult;
+};
+
+type RpgWorldQuestSource = {
+  world: WorldManifest;
+  node: WorldGraphNode;
+  packPath: string;
 };
 
 export const RPG_SOURCE_RUNTIME_CACHE_LIMIT = 8;
@@ -277,10 +286,10 @@ export class RpgSourceRuntime {
     };
   }
 
-  resolveWorldQuestPackPath(
+  private resolveWorldQuestRpgSource(
     worldQuestId: string,
     world = this.loadWorldManifest(),
-  ): WorldQuestPackSource {
+  ): RpgWorldQuestSource {
     const node = worldQuestNodeById(world, worldQuestId);
     if (!node) {
       throw new Error(`Unknown Charter Marches quest "${worldQuestId}".`);
@@ -292,7 +301,7 @@ export class RpgSourceRuntime {
   }
 
   requireWorldQuestPlayable(worldQuestId: string): RpgWorldQuestPlayableSource {
-    const source = this.resolveWorldQuestPackPath(worldQuestId);
+    const source = this.resolveWorldQuestRpgSource(worldQuestId);
     return {
       world: source.world,
       node: source.node,
@@ -304,7 +313,7 @@ export class RpgSourceRuntime {
     worldQuestId: string,
     world = this.loadWorldManifest(),
   ): RpgWorldQuestReportSource {
-    const source = this.resolveWorldQuestPackPath(worldQuestId, world);
+    const source = this.resolveWorldQuestRpgSource(worldQuestId, world);
     return {
       world: source.world,
       node: source.node,

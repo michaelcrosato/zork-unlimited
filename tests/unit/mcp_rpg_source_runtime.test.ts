@@ -64,6 +64,10 @@ describe("RpgSourceRuntime caches", () => {
     expect(worldSource).not.toContain("GamePackSource");
     expect(worldSource).not.toContain("resolvePackSource");
     expect(worldSource).not.toContain("resolveTracePackSource");
+    expect(worldSource).not.toContain("WorldQuestPackSource");
+    expect(worldSource).not.toContain("resolveWorldQuestPackPath");
+    expect(runtimeSource).not.toContain("WorldQuestPackSource");
+    expect(runtimeSource).not.toContain("resolveWorldQuestPackPath");
   });
 
   it("loads world quests by canonical id without returning raw pack paths", () => {
