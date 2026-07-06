@@ -14,12 +14,14 @@ export type RpgNewGameToolArgs = {
   generate_rpg_seed?: number;
   seed?: number;
   hide_graph?: boolean;
+  include_world_intro?: boolean;
 } & RpgViewOptions;
 
 export type RpgStartWorldQuestToolArgs = {
   world_quest_id: string;
   seed?: number;
   hide_graph?: boolean;
+  include_world_intro?: boolean;
   include_world_context?: boolean;
   /** Internal bridge binding for RPG sessions launched from an overworld session. */
   overworldSessionId?: string;
@@ -31,6 +33,7 @@ export type RpgLoadGameToolArgs = {
   pack_path?: never;
   save: string;
   hide_graph?: boolean;
+  include_world_intro?: boolean;
 } & RpgViewOptions;
 
 type RpgWorldQuestStartContextFields = {
@@ -111,7 +114,9 @@ export function runRpgLoadGame<Args extends RpgLoadGameToolArgs>(
     ...(source.generateRpgSeed !== null ? { generatedRpgSeed: source.generateRpgSeed } : {}),
     ...(args.hide_graph ? { hideGraph: true } : {}),
   });
-  const openingOpts = deps.rpgRuntime.openingObservationOptions(session);
+  const openingOpts = deps.rpgRuntime.openingObservationOptions(session, {
+    includeWorldIntro: args.compact_observation !== true || args.include_world_intro === true,
+  });
   return {
     session_id: session.id,
     ...rpgViewField(

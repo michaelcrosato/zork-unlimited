@@ -165,9 +165,10 @@ Make discovered overworld quest leads start real RPG sessions.
 - Core reducer `Rules`/`makeStep` and trace records now default to `RpgAction`,
   so new engine and trace call sites bind to the single RPG action contract by
   default instead of the legacy-compatible `Action` alias.
-- RPG start responses keep `world_quest_id` and compact opening context by
-  default; callers can pass `include_world_context: true` for world/route
-  metadata, while follow-up observations omit that repeated binding.
+- RPG start responses keep `world_quest_id` and compact room context by default;
+  full observations preserve the world intro, and callers can pass
+  `include_world_context: true` for world/route metadata while follow-up
+  observations omit that repeated binding.
 - Compact RPG observations omit action ids by default; callers use
   `list_legal_actions` for the state-bound menu, or pass `include_actions: true`
   when a bundled compact context is worth the extra payload.
@@ -208,10 +209,10 @@ Make discovered overworld quest leads start real RPG sessions.
   single-character tuple tags, compact state-effect codes, and tighter transient
   prose caps, so loop clients can branch on shape without reading full reducer
   events.
-- Compact RPG MCP observations now cap room/ending prose at 420 chars, dialogue
+- Compact RPG MCP observations now cap room/ending prose at 360 chars, dialogue
   at 280, blocked-exit hints at 180, inventory/flags, and recent journal
   entries, with omission counts trimmed for trailing zero buckets and opt-in
-  string action ids under context `v: 13`.
+  string action ids under context `v: 14`.
 - Compact RPG observations and compact transcript summaries now share the same
   capped-list, recent-list, omission-count, and trailing-zero `more` tuple
   helper, keeping loop context and end-of-run audit payload rules aligned.
@@ -547,7 +548,7 @@ Make discovered overworld quest leads start real RPG sessions.
   `step_action`, and `load_game` also default to compact observation context,
   keeping local harness starts/reads/turns/resumes aligned with the public MCP
   loop default.
-- Compact RPG observation context is now versioned as `v: 13` for the mode-free
+- Compact RPG observation context is now versioned as `v: 14` for the mode-free
   loop payload shape with duplicate score vars filtered out, tighter prose caps,
   and action ids omitted unless `include_actions: true` is explicit.
 - Compact RPG observation context omits empty exit lists when no navigation is

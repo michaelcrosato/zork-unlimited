@@ -41,6 +41,10 @@ export type RpgSessionPayload<Args extends RpgViewOptions = RpgViewOptions> = {
 } & RpgSourceFields &
   RpgViewField<Args>;
 
+type RpgOpeningViewOptions = RpgViewOptions & {
+  include_world_intro?: boolean;
+};
+
 export type RpgSessionSource = {
   worldQuestId?: string | null;
   overworldSessionId?: string | null;
@@ -183,10 +187,13 @@ export class RpgMcpSessionRuntime {
     return session;
   }
 
-  openingObservationOptions(session: Session): RpgObservationViewOptions {
+  openingObservationOptions(
+    session: Session,
+    opts: { includeWorldIntro?: boolean } = {},
+  ): RpgObservationViewOptions {
     return {
       hideGraph: session.hideGraph ?? false,
-      includeWorldIntro: true,
+      includeWorldIntro: opts.includeWorldIntro ?? true,
     };
   }
 
@@ -198,7 +205,7 @@ export class RpgMcpSessionRuntime {
     return this.observationOf(session, opts, cacheObservation);
   }
 
-  startRpgSession<Args extends RpgViewOptions>(
+  startRpgSession<Args extends RpgOpeningViewOptions>(
     compiled: CompiledRpgSource,
     args: Args & { seed?: number; hide_graph?: boolean },
     source: RpgSessionSource,
@@ -212,7 +219,9 @@ export class RpgMcpSessionRuntime {
         ? { generatedRpgSeed: source.generatedRpgSeed }
         : {}),
     });
-    const openingOpts = this.openingObservationOptions(session);
+    const openingOpts = this.openingObservationOptions(session, {
+      includeWorldIntro: args.compact_observation !== true || args.include_world_intro === true,
+    });
     return {
       session_id: session.id,
       ...rpgViewField(

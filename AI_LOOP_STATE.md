@@ -1,10 +1,19 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 476 -->
+<!-- historical_cycle_count: 477 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - compact_observation_prose_caps_v14
+
+- Pre-cycle: `C:\dev\agent-cleaner` measure/gates passed through WSL; optional secret scanner remains absent, and WSL git-dir warnings still print after the green gate summary.
+- Engine/loop surface: compact RPG observations are now `v: 14`, cap room/ending prose at 360 chars, and compact start/load openings omit the full world-intro paragraph unless a ToolApi caller requests `include_world_intro`.
+- Loop effect: `breaking_weir` default `start_world_quest` drops from 863 to 801 bytes, `get_observation` from 806 to 746, `step_action(go_north)` from 926 to 866, and `step_action(read_flood_book)` from 1637 to 1577.
+- Self-critique: this is a straightforward hot-path prose-cap reduction; it preserves full observations for debug reads, but the remaining 66-byte state hash and response envelope are still visible overhead.
+- Guard: compact-observation, MCP ToolApi, schema-budget, and session-cache regressions pin `v: 14`, named cap constants, compact intro omission, full-observation intro preservation, and measured response budgets.
+- VERIFY: `C:\dev\agent-cleaner`, focused compact-observation/MCP/schema/cache regressions, payload probe, `npm run health`, and `npm run assess` passed; post-rotation `npm run verify:integrity`, `npm run format:check`, broad `prettier --check .`, and `git diff --check` also passed.
 
 ### Cycle result - list_world_titles_opt_in
 
@@ -131,12 +140,3 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Self-critique: trace inspection is lower-frequency than live turn stepping, but it is exactly the debug payload blind playtest agents will not flag as an in-game problem.
 - Guard: focused MCP trace regressions pin compact default, full opt-out rows, divergence reporting, and trace load integrity.
 - VERIFY: `C:\dev\agent-cleaner`, focused MCP trace regressions, `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, `npm test`, and `npm run health` passed after loop-state rotation.
-
-### Cycle result - save_source_opt_in
-
-- Pre-cycle: `C:\dev\agent-cleaner` measure/gates passed through WSL; optional secret scanner remains absent.
-- Engine/loop surface: `save_game` no longer echoes `world_quest_id` / `generated_rpg_seed` by default; callers opt in with `include_source: true`.
-- Loop effect: checkpoint loops keep source identity inside the compact save `source_ref` instead of repeating it in every save response envelope.
-- Self-critique: save blobs remain large by design; this only trims redundant response metadata around guarded checkpoint calls.
-- Guard: focused MCP save/load and registration regressions pin default omission, opt-in source echo, stale hash-only saves, and source-ref reload integrity.
-- VERIFY: `C:\dev\agent-cleaner`, focused MCP save/source regressions, `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, `npm test`, and `npm run health` passed after loop-state rotation.

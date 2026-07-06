@@ -2883,6 +2883,13 @@ describe("MCP tools — the play loop (§9.1)", () => {
       seed: 1,
       hide_graph: true,
     });
+    const introStart = a.start_world_quest({
+      world_quest_id: "sunken_barrow",
+      seed: 1,
+      hide_graph: true,
+      compact_observation: true,
+      include_world_intro: true,
+    });
 
     expect("observation" in compactStart).toBe(false);
     expect("world" in compactStart).toBe(false);
@@ -2896,6 +2903,18 @@ describe("MCP tools — the play loop (§9.1)", () => {
       v: RPG_COMPACT_OBSERVATION_VERSION,
       here: [fullStart.observation.room, fullStart.observation.title],
     });
+    expect(fullStart.observation.world?.id).toBe("charter_marches");
+    expect(fullStart.observation.description).toContain("You have come from Charterhaven");
+    expect(compactStart.context.text).not.toContain("You have come from Charterhaven");
+    expect(introStart.context.text).toContain("You have come from Charterhaven");
+    expect(JSON.stringify(compactStart.context).length).toBeLessThan(
+      JSON.stringify(introStart.context).length,
+    );
+    const startSave = a.save_game({ session_id: compactStart.session_id });
+    const compactReload = a.load_game({ save: startSave.save });
+    const introReload = a.load_game({ save: startSave.save, include_world_intro: true });
+    expect(compactReload.context.text).not.toContain("You have come from Charterhaven");
+    expect(introReload.context.text).toContain("You have come from Charterhaven");
     expect(compactStart.context.vitals).toEqual([
       fullStart.observation.stats.hp,
       fullStart.observation.stats.attack,
@@ -2922,7 +2941,7 @@ describe("MCP tools — the play loop (§9.1)", () => {
     expect(proseBudgetStart.context.text.length).toBeLessThanOrEqual(
       COMPACT_DESCRIPTION_CHAR_LIMIT,
     );
-    expect(JSON.stringify(proseBudgetStart).length).toBeLessThan(900);
+    expect(JSON.stringify(proseBudgetStart).length).toBeLessThan(825);
     const proseBudgetTalk = a.step_action({
       session_id: proseBudgetStart.session_id,
       action_id: "talk_pell",

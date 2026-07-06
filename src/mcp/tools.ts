@@ -251,12 +251,14 @@ type RpgNewGameArgs = {
   generate_rpg_seed?: number;
   seed?: number;
   hide_graph?: boolean;
+  include_world_intro?: boolean;
 } & RpgViewOptions;
 
 type RpgStartWorldQuestArgs = {
   world_quest_id: string;
   seed?: number;
   hide_graph?: boolean;
+  include_world_intro?: boolean;
   include_world_context?: boolean;
   /** Internal bridge binding; not registered as public MCP input. */
   overworldSessionId?: string;
@@ -284,6 +286,7 @@ type RpgLoadGameArgs = {
   pack_path?: never;
   save: string;
   hide_graph?: boolean;
+  include_world_intro?: boolean;
 } & RpgViewOptions;
 
 type InspectTraceArgs = {
