@@ -27,7 +27,6 @@ import {
   resolveTraceGameSource,
   resolveWorldQuestPackPath as resolveWorldQuestPackPathFromRoot,
   type GamePackSource,
-  type TraceGameSource,
   type WorldQuestPackSource,
 } from "../world/source.js";
 import { safeResolve } from "./paths.js";
@@ -64,9 +63,19 @@ export type PublicWorldGraph = Omit<WorldManifest["graph"], "nodes" | "edges"> &
   edges: WorldMapEdge[];
 };
 
-export type RpgTraceSource = TraceGameSource & {
-  compiled: CompiledRpgPack;
-};
+export type RpgTraceSource =
+  | {
+      kind: "pack";
+      worldQuestId: string | null;
+      generateRpgSeed: null;
+      compiled: CompiledRpgPack;
+    }
+  | {
+      kind: "generated";
+      worldQuestId: null;
+      generateRpgSeed: number;
+      compiled: CompiledRpgPack;
+    };
 
 export type RpgWorldQuestPlayableSource = Omit<WorldQuestPackSource, "packPath"> & {
   compiled: CompiledRpgPack;
@@ -298,7 +307,19 @@ export class RpgSourceRuntime {
   ): RpgTraceSource {
     const source = resolveTraceGameSource(this.root, args, trace, operation);
     const compiled = this.requireGameSourcePlayable(source);
-    return { ...source, compiled };
+    return source.kind === "generated"
+      ? {
+          kind: "generated",
+          worldQuestId: null,
+          generateRpgSeed: source.generateRpgSeed,
+          compiled,
+        }
+      : {
+          kind: "pack",
+          worldQuestId: source.worldQuestId,
+          generateRpgSeed: null,
+          compiled,
+        };
   }
 
   loadWorldManifest(): WorldManifest {

@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { mkdirSync, mkdtempSync, rmSync, statSync, utimesSync, writeFileSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  utimesSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -54,6 +62,17 @@ describe("RpgSourceRuntime caches", () => {
     expect(source.node.id).toBe("sunken_barrow");
     expect(source.result.ok).toBe(true);
     expect(source.result.report.ok).toBe(true);
+    expect("packPath" in source).toBe(false);
+  });
+
+  it("loads trace sources by embedded world id without returning raw pack paths", () => {
+    const runtime = new RpgSourceRuntime(ROOT);
+    const trace = JSON.parse(readFileSync("traces/rpg/barrow_victory.json", "utf8"));
+    const source = runtime.resolveTraceSource({}, trace, "test");
+
+    expect(source.kind).toBe("pack");
+    expect(source.worldQuestId).toBe("sunken_barrow");
+    expect(source.compiled.pack.meta.title).toBe("The Sunken Barrow");
     expect("packPath" in source).toBe(false);
   });
 

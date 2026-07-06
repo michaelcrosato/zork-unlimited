@@ -19,14 +19,11 @@ import { pathToFileURL } from "node:url";
 import { makeStep, actionEquals } from "../src/core/engine.js";
 import { evalConditions } from "../src/core/conditions.js";
 import type { RpgAction } from "../src/api/types.js";
-import { loadRpgPackFile } from "../src/rpg/pack.js";
-import { validateRpg } from "../src/validate/rpg_validator.js";
-import { formatReport } from "../src/validate/report.js";
 import { indexRpgPack, buildRpgRules, initStateForRpgPack } from "../src/rpg/runner.js";
 import { buildRpgObservation, type RpgObservation } from "../src/rpg/observation.js";
 import { parseCommand } from "../src/rpg/command_map.js";
 import { recordTrace } from "../src/trace/record.js";
-import { resolveWorldQuestPackPath } from "../src/world/source.js";
+import { RpgSourceRuntime } from "../src/mcp/rpg_source_runtime.js";
 
 const DEFAULT_WORLD_QUEST_ID = "breaking_weir";
 const SOURCE_FLAGS = new Set(["--world-quest-id", "--world_quest_id"]);
@@ -90,7 +87,7 @@ function resolve(
 }
 
 async function main(): Promise<void> {
-  const source = resolveWorldQuestPackPath(process.cwd(), playWorldQuestId());
+  const source = new RpgSourceRuntime(process.cwd()).requireWorldQuestPlayable(playWorldQuestId());
   const seed = Number(arg("--seed") ?? 1);
   const rawCommands = arg("--commands");
   const commands =
@@ -102,18 +99,7 @@ async function main(): Promise<void> {
           .filter(Boolean);
   const record = arg("--record") ?? null;
 
-  const loaded = loadRpgPackFile(source.packPath);
-  if (!loaded.ok) {
-    console.error("Pack failed schema validation. Run `npm run validate` for details.");
-    process.exit(1);
-  }
-  const report = validateRpg(loaded.compiled.pack);
-  if (!report.ok) {
-    console.error("Pack is not playable — validation errors:\n" + formatReport(report));
-    process.exit(1);
-  }
-
-  const index = indexRpgPack(loaded.compiled.pack);
+  const index = indexRpgPack(source.compiled.pack);
   const rules = buildRpgRules(index);
   const step = makeStep(rules);
   let state = initStateForRpgPack(index, seed);
@@ -175,7 +161,7 @@ async function main(): Promise<void> {
   if (record) {
     const trace = recordTrace(rules, initStateForRpgPack(index, seed), taken, {
       trace_id: "tr_rpg_play",
-      content_hash: loaded.compiled.contentHash,
+      content_hash: source.compiled.contentHash,
       worldQuestId: source.node.id,
     });
     writeFileSync(record, JSON.stringify(trace, null, 2));

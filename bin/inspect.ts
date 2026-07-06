@@ -11,9 +11,7 @@
  * targets are Charter Marches world quest ids. Read-only; never writes files (§16).
  */
 import { readFileSync } from "node:fs";
-import { loadRpgPackFile } from "../src/rpg/pack.js";
 import { indexRpgPack, buildRpgRules } from "../src/rpg/runner.js";
-import { validateRpg } from "../src/validate/rpg_validator.js";
 import { makeStep } from "../src/core/engine.js";
 import { diagnose } from "../agents/debugger.js";
 import { assertTraceMode, replayTrace } from "../src/trace/replay.js";
@@ -22,12 +20,8 @@ import { formatReport } from "../src/validate/report.js";
 import type { RpgAction } from "../src/api/types.js";
 import { assertWellFormedState } from "../src/persist/save_load.js";
 import { assertRpgStateReferences } from "../src/rpg/state_integrity.js";
-import { RpgSourceRuntime } from "../src/mcp/rpg_source_runtime.js";
-import {
-  resolveTraceGameSource,
-  resolveWorldQuestPackPath,
-  type TraceSourceArgs,
-} from "../src/world/source.js";
+import { RpgSourceRuntime, type RpgLoadResult } from "../src/mcp/rpg_source_runtime.js";
+import type { TraceSourceArgs } from "../src/world/source.js";
 
 function arg(name: string): string | undefined {
   const i = process.argv.indexOf(name);
@@ -75,12 +69,8 @@ function inspectTrace(tracePath: string, sourceArgs: TraceSourceArgs): void {
   const trace = JSON.parse(readFileSync(tracePath, "utf8")) as Trace<RpgAction>;
   assertTraceMode(trace);
   const root = process.cwd();
-  const source = resolveTraceGameSource(root, sourceArgs, trace, "inspect");
   const rpgSources = new RpgSourceRuntime(root);
-  const compiled =
-    source.kind === "generated"
-      ? rpgSources.requireGeneratedRpgPlayable(source.generateRpgSeed)
-      : rpgSources.requirePlayable(source.packPath);
+  const { compiled } = rpgSources.resolveTraceSource(sourceArgs, trace, "inspect");
   console.log(
     `Trace: ${trace.trace_id}  source: ${traceSourceLabel(trace)}  seed: ${trace.seed}  steps: ${trace.actions.length}`,
   );
@@ -140,14 +130,13 @@ function main(): void {
     );
     process.exit(2);
   }
-  const source = resolveWorldQuestPackPath(process.cwd(), target);
-  inspectRpgPack(source.packPath, source.node.id);
+  const source = new RpgSourceRuntime(process.cwd()).loadWorldQuestReport(target);
+  inspectRpgPack(source.result, source.node.id);
 }
 
-function inspectRpgPack(path: string, worldQuestId: string): void {
-  const result = loadRpgPackFile(path);
+function inspectRpgPack(result: RpgLoadResult, worldQuestId: string): void {
   if (!result.ok) {
-    console.error(`Schema error in ${path}.`);
+    console.error(`Schema error in world quest ${worldQuestId}.`);
     process.exit(1);
   }
   const { pack, contentHash } = result.compiled;
@@ -165,7 +154,7 @@ function inspectRpgPack(path: string, worldQuestId: string): void {
   console.log(
     `  enemies: ${pack.enemies.map((e) => `${e.id}(hp${e.hp})`).join(", ") || "none"}  skill checks: ${skillChecks}`,
   );
-  console.log("\n" + formatReport(validateRpg(pack), { includePackId: false }));
+  console.log("\n" + formatReport(result.report, { includePackId: false }));
 }
 
 main();

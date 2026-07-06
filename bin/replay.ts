@@ -15,7 +15,7 @@ import type { RpgAction } from "../src/api/types.js";
 import { assertWellFormedState } from "../src/persist/save_load.js";
 import { assertRpgStateReferences } from "../src/rpg/state_integrity.js";
 import { RpgSourceRuntime } from "../src/mcp/rpg_source_runtime.js";
-import { resolveTraceGameSource, type TraceSourceArgs } from "../src/world/source.js";
+import type { TraceSourceArgs } from "../src/world/source.js";
 
 const DEFAULT_TRACE = "traces/rpg/barrow_victory.json";
 
@@ -62,12 +62,8 @@ function main(): void {
   const trace = JSON.parse(readFileSync(tracePath, "utf8")) as Trace<RpgAction>;
   assertTraceMode(trace);
   const root = process.cwd();
-  const source = resolveTraceGameSource(root, traceSourceArgs(), trace, "replay");
   const rpgSources = new RpgSourceRuntime(root);
-  const compiled =
-    source.kind === "generated"
-      ? rpgSources.requireGeneratedRpgPlayable(source.generateRpgSeed)
-      : rpgSources.requirePlayable(source.packPath);
+  const { compiled } = rpgSources.resolveTraceSource(traceSourceArgs(), trace, "replay");
 
   if (trace.content_hash !== compiled.contentHash) {
     console.error(

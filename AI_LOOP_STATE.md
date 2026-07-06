@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 429 -->
+<!-- historical_cycle_count: 430 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - cli_trace_loader_world_id
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/loop surface: `RpgSourceRuntime.resolveTraceSource` now returns compiled trace sources without raw `packPath`, and replay/inspect/play CLIs load shipped quests through the source runtime.
+- Loop effect: human/debug CLI loops no longer reopen package files after resolving world identity; they share the MCP loader boundary for trace replay, quest inspection, and terminal play.
+- Guard: focused source-runtime and CLI regressions cover path-free trace sources, replay/inspect inference, world-id quest summaries, and world-bound recorded play traces.
+- VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused runtime/CLI regressions, `npm test`, and `npm run health` passed after loop-state rotation.
 
 ### Cycle result - mcp_patch_loader_world_id
 
@@ -117,11 +125,3 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Loop effect: pack-only sessions fail at the session boundary instead of surviving until save serialization, and disk `packPath` remains valid only when bound to a world quest.
 - Guard: focused MCP session/tool/generated-pack regressions cover source-less, pack-path-only, overworld, world, and generated session paths.
 - VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused MCP/session tests, `npm test`, and `npm run health` passed after loop-state rotation.
-
-### Cycle result - write_source_pack_fallback_retired
-
-- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
-- Engine/loop surface: save and trace writers now require canonical `worldQuestId` or `generatedRpgSeed` instead of minting package-only `source_ref` fallback.
-- Loop effect: new persisted artifacts stay tied to world/generated identity while historical `["pack", id]` save/trace artifacts remain load/replay-only compatibility inputs.
-- Guard: focused save/trace, stage4, determinism, and source-integrity regressions cover write rejection plus legacy load/replay tolerance.
-- VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused changed tests, `npm test`, and `npm run health` passed after loop-state rotation.
