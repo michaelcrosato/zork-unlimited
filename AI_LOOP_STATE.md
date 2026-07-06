@@ -1,10 +1,19 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 472 -->
+<!-- historical_cycle_count: 473 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - overworld_ids_opt_in_context
+
+- Pre-cycle: `C:\dev\agent-cleaner` initially caught docs/CURRENT_PLAN.md broad-Prettier drift; after the doc wording fix, measure/gates passed through WSL; optional secret scanner remains absent.
+- Engine/loop surface: compact overworld MCP contexts keep exact `id_counts` by default but omit global id buckets unless `include_ids: true`; route opt-in remains independent.
+- Loop effect: default `start_overworld` drops from 1041 to 843 bytes and repeated `get_overworld_session_context` drops from 1051 to 853 bytes, while `include_ids` preserves the old 1041/1051-byte debug/recovery shape.
+- Self-critique: this trims repeated overworld loop context without changing session/snapshot semantics; callers that inspect global discovery ids now need the explicit opt-in.
+- Guard: focused MCP overworld and server-registration regressions pin default id omission, `include_ids` clone safety, discovery-id cache invalidation, and schema budget.
+- VERIFY: `C:\dev\agent-cleaner`, focused MCP overworld/schema regressions, payload probe, `npm run assess`, `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, `npm test`, and `npm run health` passed after loop-state rotation; post-rotation `npm run verify:integrity`, `npm run format:check`, broad `prettier --check .`, and `git diff --check` also passed.
 
 ### Cycle result - rpg_actions_opt_in_context_v12
 
@@ -131,12 +140,3 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Self-critique: prevention guard only; it does not shrink the already-large world JSON or runtime payloads.
 - Guard: verifier regressions pin prefix matching for nested `ai-runs/` paths and prove the real repo has no tracked ignored loop artifacts.
 - VERIFY: `C:\dev\agent-cleaner`, focused verifier regressions, `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, `npm test`, and `npm run health` passed after loop-state rotation.
-
-### Cycle result - rpg_actions_compact_default
-
-- Pre-cycle: `C:\dev\agent-cleaner` measure/gates passed through WSL; optional secret scanner remains absent.
-- Engine/loop surface: ToolApi `list_legal_actions` now defaults to compact action-id arrays, matching the public MCP wrapper.
-- Loop effect: direct harness/agent menu polls no longer emit repeated command labels unless `compact_actions: false` is explicit.
-- Self-critique: closes another API-default payload path; deeper wins remain in the large tracked world JSON and generated trace/log footprint.
-- Guard: MCP action-menu regressions pin no-flag compact ids while command-search helpers opt into full labels.
-- VERIFY: `C:\dev\agent-cleaner`, `npm run typecheck`, focused action-menu regressions, `npm run lint`, `npm run format:check`, `npm run validate`, `npm test`, and `npm run health` passed after loop-state rotation.

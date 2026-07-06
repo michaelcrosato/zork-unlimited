@@ -190,9 +190,11 @@ Make discovered overworld quest leads start real RPG sessions.
   directly, avoiding full view construction before capped context projection.
 - Compact overworld MCP contexts now keep immediate `roads` by default but omit
   multi-hop `route_options` unless `include_route_options: true` is explicit.
+- Compact overworld MCP contexts now keep exact `id_counts` by default but omit
+  global id buckets unless `include_ids: true` is explicit.
 - Live compact overworld ID payloads now build from bounded ID buckets, so
   progress counts stay exact without sorting and materializing every discovered
-  id list before emitting capped loop context.
+  id list for opt-in debug/recovery context.
 - `step_action` accepts `expected_state_hash` and rejects stale action menus
   before mutating reducer state or transcript history; the old `choose_option`
   alias is no longer part of the live MCP/ToolApi loop.
@@ -510,8 +512,9 @@ Make discovered overworld quest leads start real RPG sessions.
   asks for the loaded manifest.
 - Overworld session restore now rejects duplicate save maps, invalid discovery
   lifecycles, and tampered pending road encounter options.
-- MCP now exposes compact overworld context for repeated loop turns: stable ids,
-  vitals, local actions, capped route options, pending roads, and recent journal.
+- MCP now exposes compact overworld context for repeated loop turns: vitals,
+  immediate movement/local refs, opt-in global ids/routes, pending roads, and
+  recent journal.
 - ToolApi/public MCP `start_overworld` and `get_overworld_session` now return
   compact context by default; callers can pass `compact_context: false` or
   `include_observation: true` only when they need full observation objects.
@@ -548,9 +551,9 @@ Make discovered overworld quest leads start real RPG sessions.
   available, usually after terminal endings.
 - ToolApi/public MCP `list_legal_actions` now defaults to compact string ids;
   callers can pass `compact_actions: false` for command labels.
-- RPG session start tools and overworld quest handoff accept `include_actions:
-  true` when a compact opening observation should bundle action ids; the default
-  loop keeps action menus in `list_legal_actions`.
+- RPG session start tools and overworld quest handoff accept `include_actions`
+  when a compact opening observation should bundle action ids; the default loop
+  keeps action menus in `list_legal_actions`.
 - RPG compact transcript turns are `[step, scene_id, action_id, result_scene_id]`
   tuples for route debugging without replaying event text or repeated row keys.
 - RPG compact transcript summaries omit `ending_id` until an actual ending exists;

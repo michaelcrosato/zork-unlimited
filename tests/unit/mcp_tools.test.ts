@@ -1085,8 +1085,8 @@ describe("MCP tools — validate / load (§9.4)", () => {
       kind: "quest_done",
     });
     expect(
-      a.get_overworld_session_context({ session_id: started.session_id }).context.ids
-        .completed_quests,
+      a.get_overworld_session_context({ session_id: started.session_id, include_ids: true }).context
+        .ids?.completed_quests,
     ).toEqual(["sunken_barrow"]);
 
     const repeated = a.complete_overworld_session_quest({
@@ -1143,7 +1143,9 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(defaultRead.context).toEqual(compact.context);
     expect("observation" in defaultRead).toBe(false);
     expect("route_options" in defaultRead.context).toBe(false);
+    expect("ids" in defaultRead.context).toBe(false);
     expect("route_options" in compact.context).toBe(false);
+    expect("ids" in compact.context).toBe(false);
     expect(compact).toMatchObject({ ok: true, session_id: started.session_id });
     expect(fullRead.snapshot_hash).toBe(started.snapshot_hash);
     expect(defaultRead.snapshot_hash).toBe(started.snapshot_hash);
@@ -1191,13 +1193,26 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(repeatedCompactRead.context).not.toBe(compact.context);
     expect(repeatedCompactRead.context.roads).not.toBe(compact.context.roads);
     (repeatedCompactRead.context.here as unknown as string[])[0] = "mutated_by_test";
-    repeatedCompactRead.context.ids.discovered_towns?.push("mutated_by_test");
     const afterCompactMutationRead = a.get_overworld_session_context({
       session_id: started.session_id,
     });
     expect(afterCompactMutationRead.context.here[0]).toBe(full.current.id);
-    expect(afterCompactMutationRead.context.ids.discovered_towns).toEqual(
-      compact.context.ids.discovered_towns,
+    expect("ids" in afterCompactMutationRead.context).toBe(false);
+    const idBundledRead = a.get_overworld_session_context({
+      session_id: started.session_id,
+      include_ids: true,
+    });
+    expect(idBundledRead.context.ids?.discovered_towns).toEqual(
+      full.discovered.map((town) => town.id),
+    );
+    const expectedDiscoveredTownIds = [...(idBundledRead.context.ids?.discovered_towns ?? [])];
+    idBundledRead.context.ids?.discovered_towns?.push("mutated_by_test");
+    const afterIdBundledMutationRead = a.get_overworld_session_context({
+      session_id: started.session_id,
+      include_ids: true,
+    });
+    expect(afterIdBundledMutationRead.context.ids?.discovered_towns).toEqual(
+      expectedDiscoveredTownIds,
     );
     const routedCompactRead = a.get_overworld_session_context({
       session_id: started.session_id,
@@ -1291,6 +1306,10 @@ describe("MCP tools — validate / load (§9.4)", () => {
       session_id: started.session_id,
       include_route_options: true,
     });
+    const compactWithIds = a.get_overworld_session_context({
+      session_id: started.session_id,
+      include_ids: true,
+    });
     expect(compact.context.v).toBe(10);
     expect(compact.context.here).toEqual([
       full.current.id,
@@ -1335,17 +1354,20 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(compact.context.progress).toEqual([full.visitedCount, full.totalTowns]);
     expect("renown" in compact.context).toBe(false);
     expect("completed_arcs" in compact.context).toBe(false);
-    expect(compact.context.ids.discovered_towns).toEqual(full.discovered.map((town) => town.id));
-    expect(compact.context.ids.discovered_areas).toEqual(full.discoveredAreaIds);
-    expect("visited_areas" in compact.context.ids).toBe(false);
-    expect("discovered_jobs" in compact.context.ids).toBe(false);
-    expect("completed_jobs" in compact.context.ids).toBe(false);
-    expect("discovered_sites" in compact.context.ids).toBe(false);
-    expect("explored_sites" in compact.context.ids).toBe(false);
-    expect("discovered_quests" in compact.context.ids).toBe(false);
-    expect("started_quests" in compact.context.ids).toBe(false);
-    expect("completed_quests" in compact.context.ids).toBe(false);
-    expect("resolved_events" in compact.context.ids).toBe(false);
+    expect("ids" in compact.context).toBe(false);
+    expect(compactWithIds.context.ids?.discovered_towns).toEqual(
+      full.discovered.map((town) => town.id),
+    );
+    expect(compactWithIds.context.ids?.discovered_areas).toEqual(full.discoveredAreaIds);
+    expect("visited_areas" in (compactWithIds.context.ids ?? {})).toBe(false);
+    expect("discovered_jobs" in (compactWithIds.context.ids ?? {})).toBe(false);
+    expect("completed_jobs" in (compactWithIds.context.ids ?? {})).toBe(false);
+    expect("discovered_sites" in (compactWithIds.context.ids ?? {})).toBe(false);
+    expect("explored_sites" in (compactWithIds.context.ids ?? {})).toBe(false);
+    expect("discovered_quests" in (compactWithIds.context.ids ?? {})).toBe(false);
+    expect("started_quests" in (compactWithIds.context.ids ?? {})).toBe(false);
+    expect("completed_quests" in (compactWithIds.context.ids ?? {})).toBe(false);
+    expect("resolved_events" in (compactWithIds.context.ids ?? {})).toBe(false);
     expect("pending_road" in compact.context).toBe(false);
     expect("route_options_truncated" in compact.context).toBe(false);
     expect("route_paths_truncated" in compact.context).toBe(false);
@@ -1462,18 +1484,24 @@ describe("MCP tools — validate / load (§9.4)", () => {
     const a = api();
     const started = a.start_overworld({ compact_context: false });
     const poi = started.observation.pois[0]!;
-    const before = a.get_overworld_session_context({ session_id: started.session_id });
+    const before = a.get_overworld_session_context({
+      session_id: started.session_id,
+      include_ids: true,
+    });
 
     expect(before.snapshot_hash).toBe(started.snapshot_hash);
     expect("journal" in before.context).toBe(false);
-    expect("discovered_jobs" in before.context.ids).toBe(false);
-    expect("discovered_sites" in before.context.ids).toBe(false);
+    const beforeIds = before.context.ids;
+    if (!beforeIds) throw new Error("expected opt-in compact ids before discovery");
+    expect("discovered_jobs" in beforeIds).toBe(false);
+    expect("discovered_sites" in beforeIds).toBe(false);
 
     const scouted = a.scout_overworld_session_poi({
       session_id: started.session_id,
       poi_id: poi.id,
       compact_context: true,
       compact_result: false,
+      include_ids: true,
     });
     const discoveredJobIds = scouted.result.discoveredJobs?.map((job) => job.id) ?? [];
     const discoveredSiteIds = scouted.result.discoveredSites?.map((site) => site.id) ?? [];
@@ -1481,8 +1509,10 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(scouted.snapshot_hash).not.toBe(before.snapshot_hash);
     expect(discoveredJobIds.length).toBeGreaterThan(0);
     expect(discoveredSiteIds.length).toBeGreaterThan(0);
-    expect(scouted.context.ids.discovered_jobs).toEqual(discoveredJobIds);
-    expect(scouted.context.ids.discovered_sites).toEqual(discoveredSiteIds);
+    const scoutedIds = scouted.context.ids;
+    if (!scoutedIds) throw new Error("expected opt-in compact ids after discovery");
+    expect(scoutedIds.discovered_jobs).toEqual(discoveredJobIds);
+    expect(scoutedIds.discovered_sites).toEqual(discoveredSiteIds);
     expect(scouted.context.journal?.[0]).toEqual([
       scouted.result.entry.kind,
       scouted.result.entry.title,
@@ -1492,12 +1522,15 @@ describe("MCP tools — validate / load (§9.4)", () => {
     const changed = a.get_overworld_session_context({
       session_id: started.session_id,
       if_snapshot_hash: before.snapshot_hash,
+      include_ids: true,
     });
     expect("unchanged" in changed).toBe(false);
     if ("unchanged" in changed) throw new Error("expected changed compact context");
     expect(changed.snapshot_hash).toBe(scouted.snapshot_hash);
-    expect(changed.context.ids.discovered_jobs).toEqual(discoveredJobIds);
-    expect(changed.context.ids.discovered_sites).toEqual(discoveredSiteIds);
+    const changedIds = changed.context.ids;
+    if (!changedIds) throw new Error("expected opt-in compact ids on changed context");
+    expect(changedIds.discovered_jobs).toEqual(discoveredJobIds);
+    expect(changedIds.discovered_sites).toEqual(discoveredSiteIds);
     expect(changed.context.journal).toEqual(scouted.context.journal);
   });
 

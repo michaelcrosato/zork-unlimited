@@ -162,6 +162,7 @@ type McpOverworldReadArgs = {
   session_id: string;
   include_observation?: boolean;
   if_snapshot_hash?: string;
+  include_ids?: boolean;
   include_route_options?: boolean;
 };
 
@@ -180,8 +181,12 @@ const IF_SNAPSHOT_HASH = {
 const ROUTES = {
   include_route_options: z.boolean().optional().describe("Routes."),
 };
+const IDS = {
+  include_ids: z.boolean().optional().describe("Ids."),
+};
 const COMPACT_OVERWORLD_CONTEXT = {
   compact_context: z.boolean().optional().describe("Full obs."),
+  ...IDS,
   ...ROUTES,
 };
 const COMPACT_OVERWORLD_RESULT = {
@@ -208,6 +213,8 @@ tool(
     ...SESSION,
     ...IF_SNAPSHOT_HASH,
     include_observation: z.boolean().optional().describe("Full obs."),
+    ...IDS,
+    ...ROUTES,
   },
   (a) => compactMcpOverworldSession(a),
 );
@@ -217,6 +224,7 @@ tool(
   {
     ...SESSION,
     ...IF_SNAPSHOT_HASH,
+    ...IDS,
     ...ROUTES,
   },
   (a) => api.get_overworld_session_context(a),

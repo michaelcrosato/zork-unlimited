@@ -13,17 +13,22 @@ type OverworldMcpSnapshotGuardOptions = {
 export type OverworldMcpResponseOptions = OverworldMcpSnapshotGuardOptions & {
   compact_context?: boolean;
   compact_result?: boolean;
+  include_ids?: boolean;
   include_route_options?: boolean;
 };
 
 export type OverworldMcpCompactContext = Omit<
   OverworldCompactView,
-  "route_options" | "route_options_truncated" | "route_paths_truncated"
+  "ids" | "ids_truncated" | "route_options" | "route_options_truncated" | "route_paths_truncated"
 > &
   Partial<
     Pick<
       OverworldCompactView,
-      "route_options" | "route_options_truncated" | "route_paths_truncated"
+      | "ids"
+      | "ids_truncated"
+      | "route_options"
+      | "route_options_truncated"
+      | "route_paths_truncated"
     >
   >;
 
@@ -86,6 +91,7 @@ export type OverworldMcpReadArgs = {
   session_id: string;
   if_snapshot_hash?: string;
   include_observation?: boolean;
+  include_ids?: boolean;
   include_route_options?: boolean;
 };
 
@@ -180,16 +186,31 @@ function rememberOverworldSessionEntry<Key, Entry>(
 
 function projectOverworldCompactContext(
   context: OverworldCompactView,
-  args: Pick<OverworldMcpResponseOptions, "include_route_options">,
+  args: Pick<OverworldMcpResponseOptions, "include_ids" | "include_route_options">,
 ): OverworldMcpCompactContext {
-  if (args.include_route_options === true) return context;
+  if (args.include_ids === true && args.include_route_options === true) return context;
   const {
+    ids: _ids,
+    ids_truncated: _idsTruncated,
     route_options: _routeOptions,
     route_options_truncated: _routeOptionsTruncated,
     route_paths_truncated: _routePathsTruncated,
     ...loopContext
   } = context;
-  return loopContext;
+  return {
+    ...loopContext,
+    ...(args.include_ids === true ? { ids: context.ids } : {}),
+    ...(args.include_ids === true && context.ids_truncated
+      ? { ids_truncated: context.ids_truncated }
+      : {}),
+    ...(args.include_route_options === true ? { route_options: context.route_options } : {}),
+    ...(args.include_route_options === true && context.route_options_truncated
+      ? { route_options_truncated: context.route_options_truncated }
+      : {}),
+    ...(args.include_route_options === true && context.route_paths_truncated
+      ? { route_paths_truncated: context.route_paths_truncated }
+      : {}),
+  };
 }
 
 type OverworldMcpExportRejected<Args extends OverworldMcpExportArgs> = Args extends {
