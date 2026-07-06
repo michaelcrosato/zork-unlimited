@@ -1,6 +1,6 @@
 import type { CompiledRpgPack } from "../rpg/pack.js";
 import type { ValidationReport } from "../validate/report.js";
-import { resolveWorldQuestSourceId, type PackSourceArgs } from "../world/source.js";
+import { resolveWorldQuestSourceId, type WorldQuestSourceArgs } from "../world/source.js";
 import type { RpgWorldQuestReportSource } from "./rpg_source_runtime.js";
 
 export type WorldQuestReportLoader = (worldQuestId: string) => RpgWorldQuestReportSource;
@@ -20,7 +20,7 @@ export type WorldQuestLoadReportResponse = {
 };
 
 export function validateWorldQuestReport(
-  args: PackSourceArgs,
+  args: WorldQuestSourceArgs,
   operation: string,
   loadWorldQuest: WorldQuestReportLoader,
 ): WorldQuestValidationReportResponse {
@@ -35,7 +35,7 @@ export function validateWorldQuestReport(
 }
 
 export function loadWorldQuestReport(
-  args: PackSourceArgs,
+  args: WorldQuestSourceArgs,
   operation: string,
   loadWorldQuest: WorldQuestReportLoader,
 ): WorldQuestLoadReportResponse {

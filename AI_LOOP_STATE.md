@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 435 -->
+<!-- historical_cycle_count: 436 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - game_source_world_quest
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/loop surface: save/trace game-source resolution now returns `kind: "worldQuest"` or `kind: "generated"` and no longer exposes `packPath` through the resolved game-source union.
+- Loop effect: loaded saves and replayed traces carry canonical world quest identity into MCP runtime loading; disk package paths stay private to the source loader dereference point.
+- Guard: source-runtime regressions reject the retired `kind: "pack"`, `GamePackSource`, `resolvePackSource`, and `resolveTracePackSource` names from the source layer.
+- VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused world-source/source-runtime/MCP trace regressions, `npm test`, and `npm run health` passed after loop-state rotation.
 
 ### Cycle result - graph_pack_route_retired
 
@@ -117,11 +125,3 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Loop effect: replayable trace identity now flows through compact `source_ref` plus content hash, reducing package identity available to leak back into CLI/MCP/debug paths.
 - Guard: focused save/trace, world-source, MCP trace, trace CLI, play CLI, trace divergence, trace load-integrity, stage4, and schema-standalone regressions passed.
 - VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused trace/source regressions, `npm test`, and `npm run health` passed after loop-state rotation.
-
-### Cycle result - pack_source_ref_retired
-
-- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
-- Engine/loop surface: compact save/trace `source_ref` now admits only world quest or generated RPG identity; package-id tuples are malformed input.
-- Loop effect: package-only persisted artifacts cannot re-enter load, replay, source resolution, or CLI trace labels as a valid engine source identity.
-- Guard: focused save/trace, world-source, trace CLI, play CLI, and schema-standalone regressions cover rejection plus canonical labels.
-- VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused source/persistence/CLI regressions, `npm test`, and `npm run health` passed after loop-state rotation.

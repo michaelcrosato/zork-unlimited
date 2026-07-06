@@ -55,9 +55,15 @@ describe("RpgSourceRuntime caches", () => {
     expect(sources.map((source) => source.world_quest_id)).toContain("sunken_barrow");
 
     const runtimeSource = readFileSync("src/mcp/rpg_source_runtime.ts", "utf8");
+    const worldSource = readFileSync("src/world/source.ts", "utf8");
     expect(runtimeSource).toContain("loadWorldQuestReport(worldQuestId, world)");
     expect(runtimeSource).not.toContain("worldQuestNodeForPack");
     expect(runtimeSource).not.toContain("worldQuestPackPaths");
+    expect(runtimeSource).not.toContain('kind: "pack"');
+    expect(worldSource).not.toContain('kind: "pack"');
+    expect(worldSource).not.toContain("GamePackSource");
+    expect(worldSource).not.toContain("resolvePackSource");
+    expect(worldSource).not.toContain("resolveTracePackSource");
   });
 
   it("loads world quests by canonical id without returning raw pack paths", () => {
@@ -84,7 +90,7 @@ describe("RpgSourceRuntime caches", () => {
     const trace = JSON.parse(readFileSync("traces/rpg/barrow_victory.json", "utf8"));
     const source = runtime.resolveTraceSource({}, trace, "test");
 
-    expect(source.kind).toBe("pack");
+    expect(source.kind).toBe("worldQuest");
     expect(source.worldQuestId).toBe("sunken_barrow");
     expect(source.compiled.pack.meta.title).toBe("The Sunken Barrow");
     expect("packPath" in source).toBe(false);

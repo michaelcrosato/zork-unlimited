@@ -10,10 +10,9 @@ import {
   loadOverworldManifest,
   loadWorldManifest,
   resolveGameSource,
-  resolvePackSource,
   resolveSaveGameSource,
   resolveTraceGameSource,
-  resolveTracePackSource,
+  resolveWorldQuestSourceId,
   saveGeneratedRpgSeed,
   saveWorldQuestId,
   traceGeneratedRpgSeed,
@@ -284,21 +283,19 @@ describe("world source resolution", () => {
     ).toThrow(/not shipped in content\/rpg\/pack/);
   });
 
-  it("resolves live pack sources by world quest id only", () => {
-    expect(resolvePackSource(ROOT, { world_quest_id: "sunken_barrow" }, "test")).toEqual({
-      packPath: PACK,
-      worldQuestId: "sunken_barrow",
-    });
-    expect(() => resolvePackSource(ROOT, { pack_path: PACK } as never, "test")).toThrow(
+  it("resolves live world quest source ids without raw pack selectors", () => {
+    expect(resolveWorldQuestSourceId({ world_quest_id: "sunken_barrow" }, "test")).toBe(
+      "sunken_barrow",
+    );
+    expect(() => resolveWorldQuestSourceId({ pack_path: PACK } as never, "test")).toThrow(
       /not pack_path/,
     );
-    expect(() => resolvePackSource(ROOT, {}, "test")).toThrow(/requires world_quest_id/);
+    expect(() => resolveWorldQuestSourceId({}, "test")).toThrow(/requires world_quest_id/);
   });
 
   it("resolves generated new-game sources only", () => {
     expect(resolveGameSource(ROOT, { generate_rpg_seed: 3 }, "new_game")).toEqual({
       kind: "generated",
-      packPath: null,
       worldQuestId: null,
       generateRpgSeed: 3,
     });
@@ -326,46 +323,41 @@ describe("world source resolution", () => {
   });
 
   it("infers trace and save sources from embedded worldQuestId", () => {
-    expect(resolveTracePackSource(ROOT, {}, trace, "trace_test")).toEqual({
-      packPath: PACK,
+    expect(resolveTraceGameSource(ROOT, {}, trace, "trace_test")).toEqual({
+      kind: "worldQuest",
       worldQuestId: "sunken_barrow",
+      generateRpgSeed: null,
     });
     const traceWithSourceRefOnly = { ...trace };
     delete (traceWithSourceRefOnly as { worldQuestId?: string }).worldQuestId;
-    expect(resolveTracePackSource(ROOT, {}, traceWithSourceRefOnly, "trace_test")).toEqual({
-      packPath: PACK,
+    expect(resolveTraceGameSource(ROOT, {}, traceWithSourceRefOnly, "trace_test")).toEqual({
+      kind: "worldQuest",
       worldQuestId: "sunken_barrow",
+      generateRpgSeed: null,
     });
     expect(resolveTraceGameSource(ROOT, {}, trace, "trace_test")).toEqual({
-      kind: "pack",
-      packPath: PACK,
+      kind: "worldQuest",
       worldQuestId: "sunken_barrow",
       generateRpgSeed: null,
     });
     expect(resolveTraceGameSource(ROOT, {}, generatedTrace, "trace_test")).toEqual({
       kind: "generated",
-      packPath: null,
       worldQuestId: null,
       generateRpgSeed: 3,
     });
     expect(traceGeneratedRpgSeed(generatedTrace, "trace_test")).toBe(3);
     expect(() =>
-      resolveTracePackSource(ROOT, { pack_path: PACK } as never, trace, "trace_test"),
+      resolveTraceGameSource(ROOT, { pack_path: PACK } as never, trace, "trace_test"),
     ).toThrow(/not pack_path/);
-    expect(() => resolveTracePackSource(ROOT, {}, generatedTrace, "trace_test")).toThrow(
-      /world quest trace source/,
-    );
     expect(
       resolveSaveGameSource(ROOT, {}, { source_ref: ["wq", "sunken_barrow"] }, "save_test"),
     ).toEqual({
-      kind: "pack",
-      packPath: PACK,
+      kind: "worldQuest",
       worldQuestId: "sunken_barrow",
       generateRpgSeed: null,
     });
     expect(resolveSaveGameSource(ROOT, {}, { source_ref: ["gen", 3] }, "save_test")).toEqual({
       kind: "generated",
-      packPath: null,
       worldQuestId: null,
       generateRpgSeed: 3,
     });
@@ -499,7 +491,7 @@ describe("world source resolution", () => {
     ).toThrow(SaveIntegrityError);
 
     expect(() =>
-      resolveTracePackSource(
+      resolveTraceGameSource(
         ROOT,
         {},
         { ...trace, source_ref: ["wq", "cold_forge"] },
@@ -508,14 +500,14 @@ describe("world source resolution", () => {
     ).toThrow(SaveIntegrityError);
 
     expect(() =>
-      resolveTracePackSource(ROOT, {}, { ...trace, source_ref: ["gen", 3] }, "trace_test"),
+      resolveTraceGameSource(ROOT, {}, { ...trace, source_ref: ["gen", 3] }, "trace_test"),
     ).toThrow(SaveIntegrityError);
 
     const malformedPackTraceRef = {
       ...trace,
       source_ref: ["pack", "sunken_barrow_v1"],
     } as unknown as Trace<RpgAction>;
-    expect(() => resolveTracePackSource(ROOT, {}, malformedPackTraceRef, "trace_test")).toThrow(
+    expect(() => resolveTraceGameSource(ROOT, {}, malformedPackTraceRef, "trace_test")).toThrow(
       SaveIntegrityError,
     );
 
@@ -525,7 +517,7 @@ describe("world source resolution", () => {
     } as unknown as Trace<RpgAction>;
     delete (malformedGeneratedTraceRef as { worldQuestId?: string }).worldQuestId;
     expect(() =>
-      resolveTracePackSource(ROOT, {}, malformedGeneratedTraceRef, "trace_test"),
+      resolveTraceGameSource(ROOT, {}, malformedGeneratedTraceRef, "trace_test"),
     ).toThrow(SaveIntegrityError);
 
     expect(() =>
@@ -543,9 +535,6 @@ describe("world source resolution", () => {
     delete (traceWithoutWorldQuest as { worldQuestId?: string }).worldQuestId;
     delete (traceWithoutWorldQuest as { source_ref?: unknown }).source_ref;
 
-    expect(() => resolveTracePackSource(ROOT, {}, traceWithoutWorldQuest, "trace_test")).toThrow(
-      /source_ref/,
-    );
     expect(() => resolveTraceGameSource(ROOT, {}, traceWithoutWorldQuest, "trace_test")).toThrow(
       /source_ref/,
     );
@@ -574,12 +563,6 @@ describe("world source resolution", () => {
     const traceWithoutSourceRef = { ...trace };
     delete (traceWithoutSourceRef as { source_ref?: unknown }).source_ref;
 
-    expect(() => resolveTracePackSource(ROOT, {}, traceWithoutSourceRef, "trace_test")).toThrow(
-      SaveIntegrityError,
-    );
-    expect(() => resolveTracePackSource(ROOT, {}, traceWithoutSourceRef, "trace_test")).toThrow(
-      /source_ref/,
-    );
     expect(() => resolveTraceGameSource(ROOT, {}, traceWithoutSourceRef, "trace_test")).toThrow(
       SaveIntegrityError,
     );
