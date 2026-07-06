@@ -85,7 +85,7 @@ type WorldListOptions = {
 type WorldQuestCatalogEntry = {
   title: string;
   playable: boolean;
-  world_quest_id: string | null;
+  world_quest_id: string;
   district: string;
   quest: string;
   role: string;
@@ -282,11 +282,10 @@ export function createToolApi(opts: { root: string }) {
         .discoverWorldQuestSources(world)
         .filter((s) => s.world?.id === world.id)
         .map((s) => {
-          const node = s.world_quest_id ? worldQuestNodeById(world, s.world_quest_id) : null;
           const quest: WorldQuestCatalogEntry = {
             title: s.title,
             playable: s.playable,
-            world_quest_id: node?.id ?? null,
+            world_quest_id: s.world_quest_id,
             district: s.world?.district ?? "",
             quest: s.world?.quest ?? "",
             role: s.world?.role ?? "",
@@ -295,7 +294,7 @@ export function createToolApi(opts: { root: string }) {
           if (args?.include_routes === true) {
             return {
               ...quest,
-              path_from_hub: node ? (worldRouteFromHub(world, node.id) ?? []) : [],
+              path_from_hub: worldRouteFromHub(world, s.world_quest_id) ?? [],
             } as unknown as WorldListQuest<Args>;
           }
           return quest as WorldListQuest<Args>;

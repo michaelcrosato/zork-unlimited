@@ -18,14 +18,13 @@ import {
   normalizePackPath,
   worldMapBounds,
   worldMapEdges,
-  worldQuestNodeForPack,
+  worldQuestNodeById,
   type WorldMapBounds,
   type WorldMapEdge,
 } from "../world/graph.js";
 import {
   loadWorldManifest as loadWorldManifestFromRoot,
   resolveTraceGameSource,
-  resolveWorldQuestPackPath as resolveWorldQuestPackPathFromRoot,
   type GamePackSource,
   type WorldQuestPackSource,
 } from "../world/source.js";
@@ -52,7 +51,7 @@ export type WorldQuestSourceEntry = {
   title: string;
   playable: boolean;
   world: WorldBinding | null;
-  world_quest_id: string | null;
+  world_quest_id: string;
 };
 
 type PublicWorldGraphNode = Omit<WorldManifest["graph"]["nodes"][number], "pack">;
@@ -250,14 +249,14 @@ export class RpgSourceRuntime {
   }
 
   discoverWorldQuestSources(world = this.loadWorldManifest()): WorldQuestSourceEntry[] {
-    return this.worldQuestPackPaths(world).map((path) => {
-      const lr = this.loadAndReport(path);
-      const node = worldQuestNodeForPack(world, path);
+    return worldQuestIds(world).map((worldQuestId) => {
+      const source = this.loadWorldQuestReport(worldQuestId, world);
+      const lr = source.result;
       return {
-        title: lr.ok ? lr.compiled.pack.meta.title : (node?.name ?? "Unknown world quest"),
+        title: lr.ok ? lr.compiled.pack.meta.title : source.node.name,
         playable: lr.ok && lr.report.ok,
         world: lr.ok ? (lr.compiled.pack.meta.world ?? null) : null,
-        world_quest_id: node?.id ?? null,
+        world_quest_id: source.node.id,
       };
     });
   }
@@ -278,8 +277,18 @@ export class RpgSourceRuntime {
     };
   }
 
-  resolveWorldQuestPackPath(worldQuestId: string): WorldQuestPackSource {
-    return resolveWorldQuestPackPathFromRoot(this.root, worldQuestId);
+  resolveWorldQuestPackPath(
+    worldQuestId: string,
+    world = this.loadWorldManifest(),
+  ): WorldQuestPackSource {
+    const node = worldQuestNodeById(world, worldQuestId);
+    if (!node) {
+      throw new Error(`Unknown Charter Marches quest "${worldQuestId}".`);
+    }
+    if (!node.pack) {
+      throw new Error(`World quest "${worldQuestId}" does not declare an RPG source.`);
+    }
+    return { world, node, packPath: normalizePackPath(node.pack) };
   }
 
   requireWorldQuestPlayable(worldQuestId: string): RpgWorldQuestPlayableSource {
@@ -291,8 +300,11 @@ export class RpgSourceRuntime {
     };
   }
 
-  loadWorldQuestReport(worldQuestId: string): RpgWorldQuestReportSource {
-    const source = this.resolveWorldQuestPackPath(worldQuestId);
+  loadWorldQuestReport(
+    worldQuestId: string,
+    world = this.loadWorldManifest(),
+  ): RpgWorldQuestReportSource {
+    const source = this.resolveWorldQuestPackPath(worldQuestId, world);
     return {
       world: source.world,
       node: source.node,
@@ -325,10 +337,8 @@ export class RpgSourceRuntime {
   loadWorldManifest(): WorldManifest {
     return loadWorldManifestFromRoot(this.root);
   }
+}
 
-  private worldQuestPackPaths(world: WorldManifest): string[] {
-    return world.graph.nodes
-      .filter((node) => node.kind === "quest" && node.pack)
-      .map((node) => normalizePackPath(node.pack ?? ""));
-  }
+function worldQuestIds(world: WorldManifest): string[] {
+  return world.graph.nodes.filter((node) => node.kind === "quest").map((node) => node.id);
 }

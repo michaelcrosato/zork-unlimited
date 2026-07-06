@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 433 -->
+<!-- historical_cycle_count: 434 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - source_catalog_world_id
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/loop surface: `RpgSourceRuntime.discoverWorldQuestSources` now catalogs quests from world graph ids and loads reports through `loadWorldQuestReport`.
+- Loop effect: public world catalog discovery no longer reverse-maps normalized package paths back into graph nodes before producing `world_quest_id` entries.
+- Guard: focused source-runtime/catalog regressions pin string world quest ids and reject `worldQuestNodeForPack` / `worldQuestPackPaths` in the source runtime.
+- VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused source-runtime/catalog regressions, `npm test`, and `npm run health` passed after loop-state rotation.
 
 ### Cycle result - fixer_regression_world_id
 
@@ -116,12 +124,4 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Engine/loop surface: `SaveBundle` and `Trace` now declare compact `source_ref` as required, matching the runtime load/replay/source-resolution gates.
 - Loop effect: new code can no longer treat persisted save/trace source identity as optional at the typed boundary; permissive optional shapes remain only at raw untrusted parse/forgery tests.
 - Guard: schema-standalone regression now pins required save/trace source refs, and focused save/trace, world-source, MCP save/load, and generated-save tests passed.
-- VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused source/persistence regressions, `npm test`, and `npm run health` passed after loop-state rotation.
-
-### Cycle result - save_source_ref_resolver_required
-
-- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
-- Engine/loop surface: save source resolution now requires compact `source_ref` before deriving world/generated identity from a persisted save bundle.
-- Loop effect: loose legacy `worldQuestId`/`generatedRpgSeed` fields no longer drive save source inference below `load()`, while explicit historical `["pack", id]` saves remain sourceable with caller-supplied world or generated identity.
-- Guard: focused world-source, save/trace, MCP save/load, generated-save, and save referential regressions cover missing, conflicting, generated, shipped, and historical compact source refs.
 - VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused source/persistence regressions, `npm test`, and `npm run health` passed after loop-state rotation.

@@ -46,6 +46,20 @@ function waitForTimestampTick(): void {
 }
 
 describe("RpgSourceRuntime caches", () => {
+  it("discovers world quest catalog entries by graph ids instead of reverse pack lookup", () => {
+    const runtime = new RpgSourceRuntime(ROOT);
+    const sources = runtime.discoverWorldQuestSources();
+
+    expect(sources).toHaveLength(16);
+    expect(sources.every((source) => typeof source.world_quest_id === "string")).toBe(true);
+    expect(sources.map((source) => source.world_quest_id)).toContain("sunken_barrow");
+
+    const runtimeSource = readFileSync("src/mcp/rpg_source_runtime.ts", "utf8");
+    expect(runtimeSource).toContain("loadWorldQuestReport(worldQuestId, world)");
+    expect(runtimeSource).not.toContain("worldQuestNodeForPack");
+    expect(runtimeSource).not.toContain("worldQuestPackPaths");
+  });
+
   it("loads world quests by canonical id without returning raw pack paths", () => {
     const runtime = new RpgSourceRuntime(ROOT);
     const source = runtime.requireWorldQuestPlayable("sunken_barrow");
