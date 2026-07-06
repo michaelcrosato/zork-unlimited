@@ -38,6 +38,15 @@ function waitForTimestampTick(): void {
 }
 
 describe("RpgSourceRuntime caches", () => {
+  it("loads world quests by canonical id without returning raw pack paths", () => {
+    const runtime = new RpgSourceRuntime(ROOT);
+    const source = runtime.requireWorldQuestPlayable("sunken_barrow");
+
+    expect(source.node.id).toBe("sunken_barrow");
+    expect(source.compiled.pack.meta.title).toBe("The Sunken Barrow");
+    expect("packPath" in source).toBe(false);
+  });
+
   it("bounds generated RPG cache entries while preserving recent seed reuse", () => {
     const runtime = new RpgSourceRuntime(ROOT);
     const entries = Array.from({ length: RPG_SOURCE_RUNTIME_CACHE_LIMIT }, (_, seed) =>

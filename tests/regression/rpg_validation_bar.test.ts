@@ -27,6 +27,7 @@ function discoverRpgPacks(): string[] {
 const pkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8")) as {
   scripts: Record<string, string | undefined>;
 };
+const readme = readFileSync(join(root, "README.md"), "utf8");
 
 function runNpm(command: string, timeout = 120_000) {
   return spawnSync(command, {
@@ -144,5 +145,14 @@ describe("single-engine RPG validation bar", () => {
     expect(output).toContain("validate accepts world quest ids");
     expect(output).toContain("not --pack");
     expect(output).not.toContain("unsupported legacy pack");
+  });
+
+  it("README quickstart documents world quest ids instead of raw pack-path selectors", () => {
+    expect(readme).toContain("npm run validate -- sunken_barrow");
+    expect(readme).toContain("npm run inspect -- sunken_barrow");
+    expect(readme).toContain("public play, validation, inspection,");
+    expect(readme).not.toContain("npm run validate -- content/rpg/pack/");
+    expect(readme).not.toContain("npm run inspect -- content/rpg/pack/");
+    expect(readme).not.toContain("Raw pack paths remain accepted");
   });
 });

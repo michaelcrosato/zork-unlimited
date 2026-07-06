@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 426 -->
+<!-- historical_cycle_count: 427 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - mcp_world_loader_path_hidden
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/loop surface: MCP RPG lifecycle now asks `RpgSourceRuntime` for playable world quests by `world_quest_id`; raw `packPath` handling stays inside the source loader boundary.
+- Loop effect: start/load session code no longer manually threads disk package paths while resolving live sessions, and README quickstart now teaches world quest ids for validate/inspect.
+- Guard: focused MCP source/runtime, session/tool, save/trace, play CLI, validation-bar, and trace CLI regressions cover world-id loading plus doc contract.
+- VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused source/interface regressions, `npm test`, and `npm run health` passed after loop-state rotation.
 
 ### Cycle result - session_pack_path_retired
 
@@ -117,11 +125,3 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Loop effect: generated RPG traces replay from compact source metadata through the same generated-pack validator/cache as live generated sessions, without raw pack paths or world-quest backsolves.
 - Guard: focused world-source and MCP trace regressions cover generated-source inference, conflict rejection, and inspect payload identity.
 - VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused regressions, `npm test`, and `npm run health` passed after loop-state rotation.
-
-### Cycle result - trace_source_ref_replay_guarded
-
-- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
-- Engine/loop surface: trace replay now validates compact `source_ref` consistency with `worldQuestId`/`generatedRpgSeed` before stepping untrusted trace state through the engine.
-- Loop effect: generated RPG traces carry explicit generated-seed metadata, and malformed or conflicting trace source identity fails at the replay boundary.
-- Guard: save/trace, world-source, and trace CLI focused regressions cover generated trace identity plus replay-boundary source-ref rejection.
-- VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused trace/source regressions, `npm test`, and `npm run health` passed.

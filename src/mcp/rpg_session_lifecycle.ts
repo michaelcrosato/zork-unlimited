@@ -69,21 +69,17 @@ export function runRpgStartWorldQuest<Args extends RpgStartWorldQuestToolArgs>(
   if ((args as { world_quest_id?: unknown }).world_quest_id === undefined) {
     throw new Error("start_world_quest requires world_quest_id.");
   }
-  const resolved = deps.rpgSources.resolveWorldQuestPackPath(args.world_quest_id);
-  const started = deps.rpgRuntime.startRpgSession(
-    deps.rpgSources.requirePlayable(resolved.packPath),
-    args,
-    {
-      worldQuestId: resolved.node.id,
-      ...(args.overworldSessionId ? { overworldSessionId: args.overworldSessionId } : {}),
-    },
-  );
+  const source = deps.rpgSources.requireWorldQuestPlayable(args.world_quest_id);
+  const started = deps.rpgRuntime.startRpgSession(source.compiled, args, {
+    worldQuestId: source.node.id,
+    ...(args.overworldSessionId ? { overworldSessionId: args.overworldSessionId } : {}),
+  });
   return {
-    world: { id: resolved.world.id, name: resolved.world.name, hub: resolved.world.hub },
+    world: { id: source.world.id, name: source.world.name, hub: source.world.hub },
     quest: {
-      id: resolved.node.id,
-      name: resolved.node.name,
-      path_from_hub: worldRouteFromHub(resolved.world, resolved.node.id) ?? [],
+      id: source.node.id,
+      name: source.node.name,
+      path_from_hub: worldRouteFromHub(source.world, source.node.id) ?? [],
     },
     ...started,
   } as RpgWorldQuestStartPayload<Args>;
@@ -95,10 +91,7 @@ export function runRpgLoadGame<Args extends RpgLoadGameToolArgs>(
 ): RpgSessionPayload<Args> {
   const bundle = load(args.save, undefined, SAVE_MODE);
   const source = resolveSaveGameSource(deps.root, args, bundle, "load_game");
-  const compiled =
-    source.kind === "generated"
-      ? deps.rpgSources.requireGeneratedRpgPlayable(source.generateRpgSeed)
-      : deps.rpgSources.requirePlayable(source.packPath);
+  const compiled = deps.rpgSources.requireGameSourcePlayable(source);
   assertSaveContentHash(bundle, compiled.contentHash);
   const session = deps.rpgRuntime.startSession(compiled, bundle.state, {
     ...(source.worldQuestId ? { worldQuestId: source.worldQuestId } : {}),

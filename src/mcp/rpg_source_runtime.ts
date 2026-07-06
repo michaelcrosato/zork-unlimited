@@ -26,6 +26,7 @@ import {
   loadWorldManifest as loadWorldManifestFromRoot,
   resolveTraceGameSource,
   resolveWorldQuestPackPath as resolveWorldQuestPackPathFromRoot,
+  type GamePackSource,
   type TraceGameSource,
   type WorldQuestPackSource,
 } from "../world/source.js";
@@ -64,6 +65,10 @@ export type PublicWorldGraph = Omit<WorldManifest["graph"], "nodes" | "edges"> &
 };
 
 export type RpgTraceSource = TraceGameSource & {
+  compiled: CompiledRpgPack;
+};
+
+export type RpgWorldQuestPlayableSource = Omit<WorldQuestPackSource, "packPath"> & {
   compiled: CompiledRpgPack;
 };
 
@@ -197,6 +202,12 @@ export class RpgSourceRuntime {
     return lr.compiled;
   }
 
+  requireGameSourcePlayable(source: GamePackSource): CompiledRpgPack {
+    return source.kind === "generated"
+      ? this.requireGeneratedRpgPlayable(source.generateRpgSeed)
+      : this.requirePlayable(source.packPath);
+  }
+
   generatedRpg(seed: number): GeneratedRpgCacheEntry {
     assertGeneratedRpgSeed(seed, "Generated RPG seed");
     const cached = refreshSourceCacheEntry(this.generatedRpgCache, seed);
@@ -258,16 +269,22 @@ export class RpgSourceRuntime {
     return resolveWorldQuestPackPathFromRoot(this.root, worldQuestId);
   }
 
+  requireWorldQuestPlayable(worldQuestId: string): RpgWorldQuestPlayableSource {
+    const source = this.resolveWorldQuestPackPath(worldQuestId);
+    return {
+      world: source.world,
+      node: source.node,
+      compiled: this.requirePlayable(source.packPath),
+    };
+  }
+
   resolveTraceSource(
     args: { world_quest_id?: string; pack_path?: never },
     trace: Trace<RpgAction>,
     operation: string,
   ): RpgTraceSource {
     const source = resolveTraceGameSource(this.root, args, trace, operation);
-    const compiled =
-      source.kind === "generated"
-        ? this.requireGeneratedRpgPlayable(source.generateRpgSeed)
-        : this.requirePlayable(source.packPath);
+    const compiled = this.requireGameSourcePlayable(source);
     return { ...source, compiled };
   }
 

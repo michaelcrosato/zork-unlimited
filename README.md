@@ -195,10 +195,10 @@ npm run format:check                                     # Prettier (use `npm ru
 npm test                                                  # unit + property tests
 npm run replay                                            # replay the committed RPG smoke trace
 npm run validate                                           # validate all shipped RPG packs
-npm run validate -- content/rpg/pack/sunken_barrow.yaml    # validate one RPG pack
+npm run validate -- sunken_barrow                          # validate one world quest
 npm run play                                                # play the default world quest
 npm run play -- sunken_barrow                               # play a shipped world quest
-npm run inspect -- content/rpg/pack/sunken_barrow.yaml      # summarize a pack (or a trace)
+npm run inspect -- sunken_barrow                            # summarize a world quest
 npm run author -- "your one-line premise here"             # author an RPG pack from prose (§12.1-3)
 npm run ui:dev                                             # Stage 5: web UI (after npm --prefix ui install)
 ```
@@ -207,9 +207,9 @@ Non-interactive play (scriptable / CI): add
 `--commands "go north; take rope; attack wight; ..."`. Use
 `--record traces/run.json` to save a replayable trace; shipped quest traces embed
 their `worldQuestId`, so `npm run replay -- <recorded-trace>` needs no pack path.
-Raw pack paths remain accepted only for offline validation/replay/inspection
-compatibility. `npm run validate` is the RPG content gate and rejects non-RPG pack
-shapes.
+Raw pack paths are internal source metadata; public play, validation, inspection,
+and replay source selectors use world quest ids. `npm run validate` is the RPG
+content gate and rejects non-RPG pack shapes.
 
 ### MCP server — how an agent plays the game (§9.4)
 
