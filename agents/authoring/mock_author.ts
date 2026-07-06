@@ -1,13 +1,12 @@
 /**
  * Deterministic mock author provider (spec §12.7).
  *
- * The DEFAULT backend for the writer/adapter agents, so the whole authoring
- * pipeline runs in tests and CI with no live calls and no API keys. It returns
- * canned, schema-valid JSON keyed by `schemaName`. To exercise the adapter →
- * validator → revise loop honestly, the adapter's FIRST attempt ships a pack with
- * an RPG-layer reference error; once the validator's errors are fed back (present
- * in the prompt) it returns the corrected pack. A real provider implementing the
- * same `completeJson` would slot in behind an env var.
+ * The backend for the writer/adapter agents, so the whole authoring pipeline runs
+ * with no live calls and no API keys. It returns canned, schema-valid JSON keyed by
+ * `schemaName`. To exercise the adapter → validator → revise loop honestly, the
+ * adapter's FIRST attempt ships a pack with an RPG-layer reference error; once the
+ * validator's errors are fed back (present in the prompt) it returns the corrected
+ * pack.
  */
 import type { Provider, CompletionRequest } from "../llm/provider.js";
 

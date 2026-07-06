@@ -1,14 +1,12 @@
 /**
- * bug_0238 — `extractJson` resilience to off-shape live-model replies.
+ * bug_0238 — `extractJson` resilience to off-shape model replies.
  *
- * `extractJson` (agents/llm/providers.ts) is the single funnel every real backend
- * (OpenAI/Anthropic/Google) runs its reply through before the Zod schema sees it,
- * so it sits directly on the keyed-real-model-run path ([[ultraplan-true-goal-pivot]]).
- * The bug_0236/0237 catch-blocks now TOLERATE a thrown completion — but tolerating
- * means "fail this round and revise," so a brittle extractor makes a keyed run burn
- * rounds (or never converge) on replies that plainly contain valid JSON.
+ * `extractJson` (agents/llm/extract_json.ts) pulls a JSON answer out of a model
+ * reply before a Zod schema sees it. A brittle extractor makes an authoring run
+ * burn revise rounds (or never converge) on replies that plainly contain valid
+ * JSON.
  *
- * Two such replies a frontier model routinely emits crashed the OLD extractor:
+ * Two such replies a model routinely emits crashed the OLD extractor:
  *   (1) reasoning in one ``` fence and the JSON answer in a SECOND fence — the old
  *       `text.match(/```…/)` grabbed only the FIRST fence (the reasoning) and threw
  *       "No JSON found" though the answer was right there;
@@ -20,8 +18,7 @@
  * parses to the same value (no regression).
  */
 import { describe, it, expect } from "vitest";
-import { z } from "zod";
-import { extractJson, AnthropicProvider } from "../../agents/llm/providers.js";
+import { extractJson } from "../../agents/llm/extract_json.js";
 
 describe("bug_0238 — extractJson tolerates off-shape live-model replies", () => {
   it("finds the JSON when reasoning sits in an EARLIER code fence (old: grabbed only the first fence)", () => {
@@ -62,16 +59,13 @@ describe("bug_0238 — extractJson tolerates off-shape live-model replies", () =
     expect(() => extractJson("```\nstill no json\n```")).toThrow(/no parseable json/i);
   });
 
-  it("flows through a real adapter: a reasoning-fence + answer-fence reply validates against the schema", async () => {
-    const Schema = z.object({ action_id: z.string() }).strict();
-    const p = new AnthropicProvider("key", "claude-test", async () => ({
-      content: [
-        { type: "text", text: "```\nlet me think: I should open the safe\n```\n" },
-        { type: "text", text: '```json\n{"action_id":"open_safe"}\n```' },
-      ],
-    }));
-    expect(
-      await p.completeJson({ system: "s", user: "u", schemaName: "X", schema: Schema }),
-    ).toEqual({ action_id: "open_safe" });
+  it("extracts the answer from a joined reasoning-fence + answer-fence reply", () => {
+    // The concatenation a multi-block model reply produces: reasoning in one fence,
+    // the JSON answer in a second. extractJson must find the answer, not the fence
+    // that only holds reasoning.
+    const reply =
+      "```\nlet me think: I should open the safe\n```\n" +
+      '```json\n{"action_id":"open_safe"}\n```';
+    expect(extractJson(reply)).toEqual({ action_id: "open_safe" });
   });
 });

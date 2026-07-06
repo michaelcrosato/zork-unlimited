@@ -69,7 +69,6 @@ import {
 } from "../world/source.js";
 import { loadWorldQuestReport, validateWorldQuestReport } from "./world_quest_reports.js";
 import { MockAuthorProvider } from "../../agents/authoring/mock_author.js";
-import { resolveProvider } from "../../agents/llm/providers.js";
 import { loadEngineContract, runWriter } from "../../agents/authoring/writer.js";
 import { runRpgAdapter } from "../../agents/authoring/adapter.js";
 import { diagnose } from "../../agents/debugger.js";
@@ -768,16 +767,14 @@ export function createToolApi(opts: { root: string }) {
 
     async adapt_story(args: AdaptStoryArgs) {
       // Author a pack from a premise via the writer → adapter → validator loop
-      // (§12.1–3). Uses a REAL frontier model when a provider key is present
-      // (ANTHROPIC/OPENAI/GOOGLE, or AF_LLM_PROVIDER), falling back to the
-      // deterministic MockAuthorProvider when none is set — so CI and key-less runs
-      // stay green and offline while a keyed run exercises the genuine §1 author.
-      // Mirrors bin/author.ts. Returns compact story/validation proof by default;
-      // callers opt into echoing the full authored pack. Never writes files.
+      // (§12.1–3) using the deterministic, keyless MockAuthorProvider — so it runs
+      // fully offline with no API keys. Mirrors bin/author.ts. Returns compact
+      // story/validation proof by default; callers opt into echoing the full
+      // authored pack. Never writes files.
       if ((args as { mode?: unknown }).mode !== undefined) {
         throw new Error("adapt_story is RPG-only; mode is no longer supported.");
       }
-      const provider = resolveProvider({ mock: new MockAuthorProvider() });
+      const provider = new MockAuthorProvider();
       const contract = loadEngineContract();
       const story = await runWriter(provider, { premise: args.premise, contract });
       const result = await runRpgAdapter(provider, { story, contract });

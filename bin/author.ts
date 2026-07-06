@@ -10,13 +10,12 @@
  * authoring mode is exposed. Prints the per-beat classification and validation
  * report; with --out, writes the green draft RPG pack as YAML. Shipped content
  * must be registered through the world graph instead of writing directly into
- * content/rpg/quests. A real provider slots in behind an env var (§12.7).
+ * content/rpg/quests. Authoring uses the deterministic, keyless MockAuthorProvider.
  */
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, isAbsolute, relative, resolve } from "node:path";
 import { stringify as toYaml } from "yaml";
 import { MockAuthorProvider } from "../agents/authoring/mock_author.js";
-import { resolveProvider } from "../agents/llm/providers.js";
 import { loadEngineContract, runWriter } from "../agents/authoring/writer.js";
 import { runRpgAdapter } from "../agents/authoring/adapter.js";
 import { formatReport } from "../src/validate/report.js";
@@ -53,10 +52,8 @@ async function main(): Promise<void> {
     process.exit(2);
   }
 
-  // Deterministic mock by default; a real backend is used only when its key is
-  // present in the environment (§12.7) — CI and key-less runs stay fully offline.
-  const provider = resolveProvider({ mock: new MockAuthorProvider() });
-  if (provider.name !== "mock:author") console.log(`Using live provider: ${provider.name}`);
+  // Deterministic, keyless mock: authoring runs fully offline with no API keys.
+  const provider = new MockAuthorProvider();
   const contract = loadEngineContract();
 
   const story = await runWriter(provider, { premise, contract });

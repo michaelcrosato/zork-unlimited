@@ -4,7 +4,7 @@ severity: medium
 layer: engine_rule
 status: fixed
 discovered_by: AFK improvement cycle (engine de-risk of the keyed real-model run)
-component: agents/llm/providers.ts
+component: agents/llm/extract_json.ts
 
 summary: >
   extractJson is the single funnel every real LLM backend (OpenAI/Anthropic/Google)

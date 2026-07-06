@@ -148,10 +148,11 @@ npm run blind:smoke                               # harness check, no LLM, no to
 The blind harness drives the external Claude Code CLI on the operator's
 subscription (default model `sonnet`; `BLIND_AGENT_CMD` overrides) and is NOT
 part of CI or the health bar. Separately, the authoring/repair agents
-(`bin/author.ts`, the debugger/fixer) use a provider-agnostic LLM client
-(`agents/llm/providers.ts`): real OpenAI/Anthropic/Google backends sit behind
-env vars and fall back to a deterministic keyless mock, so their vitest
-coverage runs in CI with no API keys.
+(`bin/author.ts`, the debugger/fixer) run against a deterministic, keyless
+`MockAuthorProvider` behind the small `Provider` interface (`agents/llm/`), so
+their vitest coverage runs in CI with no live LLM calls and no API keys. (This is
+a public, no-runtime-LLM repo — there are no third-party LLM API keys or key-based
+provider backends anywhere in it.)
 
 ## The flywheel — AFK loop
 
