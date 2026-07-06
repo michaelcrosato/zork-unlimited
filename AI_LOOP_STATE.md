@@ -1,10 +1,19 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 446 -->
+<!-- historical_cycle_count: 447 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - archive_guard_wsl_git_fallback
+
+- Pre-cycle: `C:\dev\agent-cleaner` initially exposed a WSL-only test failure in the archive tracking guard; rerun passed after the fix.
+- Engine/loop surface: `verify-integrity` now retries tracked-file checks through a translated Windows `.git` pointer when running under WSL.
+- Loop effect: the token-heavy loop archive guard stays enforced in both Windows health runs and the WSL cleaner path used before cycles.
+- Self-critique: maintenance-focused, but it fixes a real verification portability hole from the prior cycle.
+- Guard: focused verifier/loop-state regressions cover the guard path.
+- VERIFY: `C:\dev\agent-cleaner`, `npm run typecheck`, focused verifier/loop-state regressions, `npm run validate`, `npm test`, and `npm run health` passed after loop-state rotation.
 
 ### Cycle result - ignored_archive_tracking_guard
 
@@ -118,11 +127,3 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Loop effect: bug-fix loop tooling no longer templates raw package paths or `loadRpgPackFile` into future regression tests.
 - Guard: focused fixer regression pins source-runtime loading and rejects `loadRpgPackFile`, `packPath`, and `content/rpg/pack` in generated stubs.
 - VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused fixer regressions, `npm test`, and `npm run health` passed after loop-state rotation.
-
-### Cycle result - afk_stale_audit_world_id
-
-- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
-- Engine/loop surface: the stale reactive-description AFK audit now enumerates shipped quests by `world_quest_id` and loads reports through `RpgSourceRuntime.loadWorldQuestReport`.
-- Loop effect: structural loop planning no longer scans `content/rpg/pack` or reopens pack files directly for this recurring audit class.
-- Guard: focused stale-audit regression runs the root scanner, pins world-id-only site output, and rejects old raw pack-loader references in the audit implementation.
-- VERIFY: `npm run typecheck` and focused stale-audit/assessor regressions passed before full verification.

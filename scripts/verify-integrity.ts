@@ -376,6 +376,12 @@ function readAll(root: string, paths: string[]): { path: string; text: string }[
   return paths.map((p) => ({ path: p, text: readFileSync(join(root, p), "utf8") }));
 }
 
+function windowsPathToWslPath(path: string): string | null {
+  const m = /^([A-Za-z]):[\\/](.*)$/.exec(path);
+  if (!m) return null;
+  return `/mnt/${m[1]!.toLowerCase()}/${m[2]!.replaceAll("\\", "/")}`;
+}
+
 function gitTrackedFiles(root: string, paths: string[]): string[] {
   if (paths.length === 0) return [];
   try {
@@ -387,7 +393,27 @@ function gitTrackedFiles(root: string, paths: string[]): string[] {
       .map((s) => s.trim())
       .filter(Boolean);
   } catch {
-    return [];
+    const gitFile = join(root, ".git");
+    if (!existsSync(gitFile)) return [];
+    const gitDirLine = readFileSync(gitFile, "utf8").trim();
+    const rawGitDir = /^gitdir:\s*(.+)$/i.exec(gitDirLine)?.[1];
+    const gitDir = rawGitDir ? (windowsPathToWslPath(rawGitDir) ?? rawGitDir) : null;
+    if (!gitDir || !existsSync(gitDir)) return [];
+    try {
+      return execFileSync(
+        "git",
+        ["--git-dir", gitDir, "--work-tree", root, "ls-files", "--", ...paths],
+        {
+          cwd: root,
+          encoding: "utf8",
+        },
+      )
+        .split("\n")
+        .map((s) => s.trim())
+        .filter(Boolean);
+    } catch {
+      return [];
+    }
   }
 }
 

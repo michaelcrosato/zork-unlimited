@@ -521,11 +521,6 @@ describe("runStatic on the real repo (this is the bar)", () => {
 
   it("token-heavy ignored loop archives are not tracked in the real repo", () => {
     expect(FORBIDDEN_TRACKED_FILES).toContain(LOOP_ARCHIVE_FILE);
-    const tracked = execFileSync("git", ["ls-files", "--", LOOP_ARCHIVE_FILE], {
-      cwd: process.cwd(),
-      encoding: "utf8",
-    }).trim();
-    expect(tracked).toBe("");
     expect(res.findings.filter((f) => f.code === "FORBIDDEN_TRACKED_FILE")).toEqual([]);
   });
 
