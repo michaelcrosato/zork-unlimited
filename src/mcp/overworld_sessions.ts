@@ -102,6 +102,7 @@ export type OverworldMcpReadArgs = {
   include_ids?: boolean;
   include_route_options?: boolean;
   include_world_name?: boolean;
+  include_session_id?: boolean;
 };
 
 export type OverworldMcpFullReadPayload = {
@@ -110,18 +111,26 @@ export type OverworldMcpFullReadPayload = {
   observation: OverworldView;
 };
 
-export type OverworldMcpContextPayload = {
+type OverworldMcpReadSessionIdField<Args extends Pick<OverworldMcpReadArgs, "include_session_id">> =
+  Args extends {
+    include_session_id: true;
+  }
+    ? { session_id: string }
+    : Record<string, never>;
+
+export type OverworldMcpContextPayload<
+  Args extends Pick<OverworldMcpReadArgs, "include_session_id"> = Record<string, never>,
+> = {
   ok: true;
-  session_id: string;
   snapshot_hash: string;
   context: OverworldMcpCompactContext;
-};
+} & OverworldMcpReadSessionIdField<Args>;
 
 type OverworldMcpReadPayload<Args extends OverworldMcpReadArgs> = Args extends {
   include_observation: true;
 }
   ? OverworldMcpFullReadPayload
-  : OverworldMcpContextPayload;
+  : OverworldMcpContextPayload<Args>;
 
 export type OverworldMcpReadResponse<Args extends OverworldMcpReadArgs> = Args extends {
   if_snapshot_hash: string;
@@ -132,8 +141,8 @@ export type OverworldMcpReadResponse<Args extends OverworldMcpReadArgs> = Args e
 export type OverworldMcpContextResponse<Args extends OverworldMcpReadArgs> = Args extends {
   if_snapshot_hash: string;
 }
-  ? OverworldMcpContextPayload | OverworldMcpReadUnchanged
-  : OverworldMcpContextPayload;
+  ? OverworldMcpContextPayload<Args> | OverworldMcpReadUnchanged
+  : OverworldMcpContextPayload<Args>;
 
 export type OverworldMcpRejectedSessionPayload = {
   ok: false;
@@ -231,6 +240,19 @@ function projectOverworldCompactContext(
       ? { route_paths_truncated: context.route_paths_truncated }
       : {}),
   };
+}
+
+function overworldCompactReadPayload<Args extends OverworldMcpReadArgs>(
+  args: Args,
+  snapshotHash: string,
+  context: OverworldMcpCompactContext,
+): OverworldMcpContextPayload<Args> {
+  return {
+    ok: true,
+    ...(args.include_session_id === true ? { session_id: args.session_id } : {}),
+    snapshot_hash: publicOverworldSnapshotHash(snapshotHash),
+    context,
+  } as OverworldMcpContextPayload<Args>;
 }
 
 type OverworldMcpExportRejected<Args extends OverworldMcpExportArgs> = Args extends {
@@ -384,12 +406,11 @@ export class OverworldMcpSessionStore {
       return overworldReadUnchanged(snapshotHash) as OverworldMcpReadResponse<Args>;
     }
     if (args.include_observation !== true) {
-      return {
-        ok: true,
-        session_id: args.session_id,
-        snapshot_hash: publicOverworldSnapshotHash(snapshotHash),
-        context: projectOverworldCompactContext(session.compactView(), args),
-      } as OverworldMcpReadResponse<Args>;
+      return overworldCompactReadPayload(
+        args,
+        snapshotHash,
+        projectOverworldCompactContext(session.compactView(), args),
+      ) as OverworldMcpReadResponse<Args>;
     }
     return {
       session_id: args.session_id,
@@ -407,12 +428,11 @@ export class OverworldMcpSessionStore {
     ) {
       return overworldReadUnchanged(snapshotHash) as OverworldMcpContextResponse<Args>;
     }
-    return {
-      ok: true,
-      session_id: args.session_id,
-      snapshot_hash: publicOverworldSnapshotHash(snapshotHash),
-      context: projectOverworldCompactContext(session.compactView(), args),
-    } as OverworldMcpContextResponse<Args>;
+    return overworldCompactReadPayload(
+      args,
+      snapshotHash,
+      projectOverworldCompactContext(session.compactView(), args),
+    ) as OverworldMcpContextResponse<Args>;
   }
 
   exportSnapshot<Args extends OverworldMcpExportArgs>(

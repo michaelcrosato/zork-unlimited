@@ -1199,8 +1199,9 @@ describe("MCP tools — validate / load (§9.4)", () => {
     const compactStarted = a.start_overworld({ compact_context: true });
     const defaultStarted = a.start_overworld();
 
-    expect(defaultRead).toMatchObject({ ok: true, session_id: started.session_id });
+    expect(defaultRead).toMatchObject({ ok: true });
     expect(defaultRead.context).toEqual(compact.context);
+    expect("session_id" in defaultRead).toBe(false);
     expect("observation" in defaultRead).toBe(false);
     expect("world" in defaultRead.context).toBe(false);
     expect("route_options" in defaultRead.context).toBe(false);
@@ -1208,7 +1209,14 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect("world" in compact.context).toBe(false);
     expect("route_options" in compact.context).toBe(false);
     expect("ids" in compact.context).toBe(false);
-    expect(compact).toMatchObject({ ok: true, session_id: started.session_id });
+    expect(compact).toMatchObject({ ok: true });
+    expect("session_id" in compact).toBe(false);
+    const compactWithSessionId = a.get_overworld_session_context({
+      session_id: started.session_id,
+      include_session_id: true,
+    });
+    expect(compactWithSessionId.session_id).toBe(started.session_id);
+    expect(compactWithSessionId.context).toEqual(compact.context);
     expect(fullRead.snapshot_hash).toBe(started.snapshot_hash);
     expect(defaultRead.snapshot_hash).toBe(started.snapshot_hash);
     expect(compact.snapshot_hash).toBe(started.snapshot_hash);
@@ -1259,6 +1267,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
     });
     expect(repeatedCompactRead.snapshot_hash).toBe(started.snapshot_hash);
     expect(repeatedCompactRead.context).toEqual(compact.context);
+    expect("session_id" in repeatedCompactRead).toBe(false);
     expect(repeatedCompactRead.context).not.toBe(compact.context);
     expect(repeatedCompactRead.context.roads).not.toBe(compact.context.roads);
     expect("world" in repeatedCompactRead.context).toBe(false);

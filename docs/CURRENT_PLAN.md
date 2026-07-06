@@ -538,6 +538,8 @@ Make discovered overworld quest leads start real RPG sessions.
 - ToolApi/public MCP `start_overworld` and `get_overworld_session` now return
   compact context by default; callers can pass `compact_context: false` or
   `include_observation: true` only when they need full observation objects.
+- Repeated compact overworld read/context responses omit the echoed
+  `session_id` by default; `include_session_id: true` restores it.
 - `get_overworld_session({ if_snapshot_hash })` and
   `get_overworld_session_context({ if_snapshot_hash })` can return hash-only
   `unchanged` responses when the overworld snapshot has not changed.

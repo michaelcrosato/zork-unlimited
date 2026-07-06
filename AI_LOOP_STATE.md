@@ -1,10 +1,19 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 485 -->
+<!-- historical_cycle_count: 486 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - overworld_read_session_id_opt_in
+
+- Pre-cycle: `C:\dev\agent-cleaner` measure/gates passed through WSL; optional secret scanner remains absent, and WSL git-dir warnings still print after the green gate summary.
+- Engine/loop surface: compact overworld read/context responses now omit the echoed `session_id` by default, while `include_session_id: true` restores it; full observation reads still include the session id.
+- Loop effect: measured repeated `get_overworld_session_context` and default `get_overworld_session` reads drop from 772 to 754 bytes; `include_session_id: true` preserves the 772-byte envelope.
+- Self-critique: this is a small hot-read envelope trim, not a mechanics upgrade; it is still aligned because the caller already carries the session handle on every repeated read.
+- Guard: focused MCP overworld and server-registration regressions pin default omission, session-id opt-in, unchanged hash-only responses, and ToolSearch schema budget.
+- VERIFY: `C:\dev\agent-cleaner`, focused MCP regressions, payload probe, `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, `npm test`, `npm run health`, and `npm run assess` passed after loop-state rotation.
 
 ### Cycle result - overworld_world_name_opt_in
 
@@ -131,12 +140,3 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Self-critique: this trims the hot observe/start/step context surface, but live players still pay a separate menu read when they need choices; the win is clearest on observation polling, stale-step refresh, and state-bound action-menu reuse.
 - Guard: focused compact-observation, MCP loop, server-registration, blind-smoke, and docs-coherence regressions pin default omission, opt-in action ids, cache clone separation, schema budget, and the blind agent loop contract.
 - VERIFY: `C:\dev\agent-cleaner`, focused regressions, payload probe, `node blind-tester/smoke.mjs --quest breaking_weir --seed 7`, `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, `npm test`, and `npm run health` passed; post-rotation `npm run verify:integrity`, `npm run format:check`, and `git diff --check` also passed.
-
-### Cycle result - overworld_destination_roads_v10
-
-- Pre-cycle: `C:\dev\agent-cleaner` measure/gates passed through WSL; optional secret scanner remains absent.
-- Engine/loop surface: compact overworld context is now `v: 10`; immediate road tuples are `[destination_town_id, minutes, supplies, fatigue]` and MCP travel accepts `destination_town_id` while preserving full `road_id`.
-- Loop effect: default `start_overworld` drops from 1256 to 1041 bytes and repeated `get_overworld_session_context` drops from 1266 to 1051 bytes by removing repeated manifest road ids from the ordinary movement menu.
-- Self-critique: this trims the hot overworld loop surface and keeps the command directly actionable, but route-option opt-ins and travel logs still carry full road ids for debug/replay integrity.
-- Guard: focused overworld MCP, UI compact-view, server-registration, and snapshot-integrity regressions pin tuple shape, destination travel, compatibility `road_id` travel, and schema budget.
-- VERIFY: `C:\dev\agent-cleaner`, focused overworld/schema regressions, payload probe, `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, `npm test`, and `npm run health` passed after loop-state rotation.

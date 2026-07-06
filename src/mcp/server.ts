@@ -186,12 +186,15 @@ const ROUTES = {
 const IDS = {
   include_ids: z.boolean().optional().describe("Ids."),
 };
-const WN = {
+const W = {
   include_world_name: z.boolean().optional().describe("W."),
+};
+const S = {
+  include_session_id: z.boolean().optional().describe("S."),
 };
 const COMPACT_OVERWORLD_CONTEXT = {
   compact_context: z.boolean().optional().describe("Full obs."),
-  ...WN,
+  ...W,
   ...IDS,
   ...ROUTES,
 };
@@ -218,8 +221,9 @@ tool(
   {
     ...SESSION,
     ...IF_SNAPSHOT_HASH,
-    include_observation: z.boolean().optional().describe("Full obs."),
-    ...WN,
+    include_observation: z.boolean().optional().describe("Obs."),
+    ...S,
+    ...W,
     ...IDS,
     ...ROUTES,
   },
@@ -227,11 +231,12 @@ tool(
 );
 tool(
   "get_overworld_session_context",
-  "Read compact OW.",
+  "Read ctx.",
   {
     ...SESSION,
     ...IF_SNAPSHOT_HASH,
-    ...WN,
+    ...S,
+    ...W,
     ...IDS,
     ...ROUTES,
   },
