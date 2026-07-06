@@ -44,7 +44,7 @@ beforeAll(() => {
 });
 
 describe("trace CLI integrity gate", () => {
-  it("npm run replay infers a shipped trace source from embedded worldQuestId", () => {
+  it("npm run replay infers a shipped trace source from embedded source_ref", () => {
     const result = run(`npm run replay -- ${SOURCE_TRACE}`);
     const output = outputOf(result);
 
@@ -57,7 +57,7 @@ describe("trace CLI integrity gate", () => {
     expect(output).toContain("REPLAY OK");
   });
 
-  it("npm run inspect infers a shipped trace source from embedded worldQuestId", () => {
+  it("npm run inspect infers a shipped trace source from embedded source_ref", () => {
     const result = run(`npm run inspect -- ${SOURCE_TRACE}`);
     const output = outputOf(result);
 
@@ -103,14 +103,14 @@ describe("trace CLI integrity gate", () => {
     expect(output).toContain("not --pack");
   });
 
-  it("trace CLIs reject an explicit source that conflicts with the trace world quest id", () => {
+  it("trace CLIs reject an explicit source that conflicts with the trace source_ref", () => {
     const replay = run(`npm run replay -- ${SOURCE_TRACE} --world-quest-id cold_forge`);
     const inspect = run(`npm run inspect -- ${SOURCE_TRACE} --world-quest-id cold_forge`);
 
     expect(replay.status, outputOf(replay)).not.toBe(0);
-    expect(outputOf(replay)).toContain("worldQuestId");
+    expect(outputOf(replay)).toContain("source_ref");
     expect(inspect.status, outputOf(inspect)).not.toBe(0);
-    expect(outputOf(inspect)).toContain("worldQuestId");
+    expect(outputOf(inspect)).toContain("source_ref");
   });
 
   it("trace CLIs reject positional raw pack paths as source selectors", () => {

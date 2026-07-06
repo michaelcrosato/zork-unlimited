@@ -504,11 +504,11 @@ export function createToolApi(opts: { root: string }) {
       if (trace.content_hash !== compiled.contentHash) {
         return {
           ok: false,
-          message: `Trace was recorded against content ${trace.content_hash}, but the pack is ${compiled.contentHash}.`,
+          message: `Trace was recorded against content ${trace.content_hash}, but the source is ${compiled.contentHash}.`,
         };
       }
       // §16 integrity at load: trace.initial_state came off an UNTRUSTED file (the
-      // content-hash check above guards WHICH pack, not WHETHER the state is well-
+      // content-hash check above guards WHICH source, not WHETHER the state is well-
       // formed). Gate it the same way a loaded save is gated, BEFORE any engine call.
       assertWellFormedState(trace.initial_state);
       const { index, rules } = rpgRuntime.runtimeFor(compiled.pack);
@@ -534,7 +534,7 @@ export function createToolApi(opts: { root: string }) {
       if (trace.content_hash !== compiled.contentHash) {
         return {
           ok: false,
-          message: `Trace content ${trace.content_hash} ≠ pack ${compiled.contentHash}.`,
+          message: `Trace content ${trace.content_hash} != source ${compiled.contentHash}.`,
         };
       }
       // §16 integrity at load: same untrusted-file gate as replay_trace — the state

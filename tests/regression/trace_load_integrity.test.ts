@@ -6,7 +6,7 @@
  * `replay_trace` / `inspect_trace` each `JSON.parse(readFileSync(trace_path))` an
  * UNTRUSTED on-disk trace and feed `trace.initial_state` straight into the engine
  * (replay.ts:45 runActions; inspect's own per-step loop + diagnose). The
- * content-hash check on each handler guards WHICH pack the trace was recorded
+ * content-hash check on each handler guards WHICH source the trace was recorded
  * against — NOT WHETHER the state is well-formed — so a forged trace carrying the
  * CORRECT content_hash and a poisoned `initial_state` previously sailed past it.
  * `Trace.initial_state` is a bare `GameState` with no Zod schema, so the same

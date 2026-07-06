@@ -39,7 +39,7 @@ function positionalSourceArg(): string | undefined {
 
 function traceSourceArgs(): TraceSourceArgs {
   if (arg("--pack") !== undefined || process.argv.includes("--pack")) {
-    throw new Error("replay accepts world_quest_id or embedded trace worldQuestId, not --pack.");
+    throw new Error("replay accepts world_quest_id or embedded trace source_ref, not --pack.");
   }
   const worldQuestId = arg("--world-quest-id") ?? arg("--world_quest_id");
   const positional = positionalSourceArg();
@@ -67,7 +67,7 @@ function main(): void {
 
   if (trace.content_hash !== compiled.contentHash) {
     console.error(
-      `Trace content ${trace.content_hash} does not match pack ${compiled.contentHash}.`,
+      `Trace content ${trace.content_hash} does not match source ${compiled.contentHash}.`,
     );
     process.exit(1);
   }

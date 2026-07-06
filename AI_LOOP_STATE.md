@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 444 -->
+<!-- historical_cycle_count: 445 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - trace_source_ref_diagnostics
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/loop surface: trace replay/inspect fixtures and diagnostics now use embedded `source_ref` and source-hash language instead of legacy `worldQuestId` / package wording.
+- Loop effect: future trace debugging starts from the same compact source identity that current saves and traces serialize, reducing package-era recovery cues in operator loops.
+- Guard: focused trace CLI/MCP/source regressions cover source-ref inference, raw pack rejection, and explicit-source conflict diagnostics.
+- VERIFY: `npm run typecheck`, focused trace/source/MCP regressions, `npm run validate`, `npm test`, and `npm run health` passed after loop-state rotation.
 
 ### Cycle result - source_ref_mirror_write_retired
 
@@ -117,11 +125,3 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Loop effect: the public content gate no longer resolves world ids into raw package paths or reopens pack files outside the unified source runtime.
 - Guard: validation-bar regression pins source-runtime loading and rejects `loadRpgPackFile` / `resolveWorldQuestPackPath` in the validate CLI.
 - VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused validation/source regressions, `npm test`, and `npm run health` passed after loop-state rotation.
-
-### Cycle result - cli_trace_loader_world_id
-
-- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
-- Engine/loop surface: `RpgSourceRuntime.resolveTraceSource` now returns compiled trace sources without raw `packPath`, and replay/inspect/play CLIs load shipped quests through the source runtime.
-- Loop effect: human/debug CLI loops no longer reopen package files after resolving world identity; they share the MCP loader boundary for trace replay, quest inspection, and terminal play.
-- Guard: focused source-runtime and CLI regressions cover path-free trace sources, replay/inspect inference, world-id quest summaries, and world-bound recorded play traces.
-- VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused runtime/CLI regressions, `npm test`, and `npm run health` passed after loop-state rotation.

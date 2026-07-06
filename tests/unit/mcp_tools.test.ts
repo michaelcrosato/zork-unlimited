@@ -2872,13 +2872,13 @@ describe("MCP tools — save / load round-trip (§8.7)", () => {
     );
   });
 
-  it("load_game rejects a source that conflicts with the save world quest id", () => {
+  it("load_game rejects a source that conflicts with the save source_ref", () => {
     const a = api();
     const game = a.start_world_quest({ world_quest_id: "sunken_barrow", seed: 1 });
     const saved = a.save_game({ session_id: game.session_id });
 
     expect(() => a.load_game({ world_quest_id: "cold_forge", save: saved.save })).toThrow(
-      /worldQuestId/,
+      /source_ref/,
     );
   });
 });
@@ -2948,12 +2948,12 @@ describe("MCP tools — replay + path confinement", () => {
     expect(r.ok).toBe(true);
   });
 
-  it("replay_trace can infer a shipped trace source from embedded worldQuestId", () => {
+  it("replay_trace can infer a shipped trace source from embedded source_ref", () => {
     const r = api().replay_trace({ trace_path: "traces/mcp_replay.json" });
     expect(r.ok).toBe(true);
   });
 
-  it("replay_trace can infer a generated trace source from embedded generatedRpgSeed", () => {
+  it("replay_trace can infer a generated trace source from embedded source_ref", () => {
     const r = api().replay_trace({ trace_path: "traces/mcp_generated_replay.json" });
     expect(r.ok).toBe(true);
   });
@@ -2999,7 +2999,7 @@ describe("MCP tools — replay + path confinement", () => {
     expect(r.diagnosis.type).toBe("no_failure");
   });
 
-  it("inspect_trace can infer a shipped trace source from embedded worldQuestId", () => {
+  it("inspect_trace can infer a shipped trace source from embedded source_ref", () => {
     const r = api().inspect_trace({ trace_path: "traces/mcp_replay.json" }) as {
       ok: boolean;
       world_quest_id: string | null;
@@ -3014,7 +3014,7 @@ describe("MCP tools — replay + path confinement", () => {
     expect(r.diagnosis.type).toBe("no_failure");
   });
 
-  it("inspect_trace can infer a generated trace source from embedded generatedRpgSeed", () => {
+  it("inspect_trace can infer a generated trace source from embedded source_ref", () => {
     const r = api().inspect_trace({ trace_path: "traces/mcp_generated_replay.json" }) as {
       ok: boolean;
       world_quest_id: string | null;
@@ -3065,32 +3065,32 @@ describe("MCP tools — replay + path confinement", () => {
     ).toThrow(/source_ref/);
   });
 
-  it("trace tools reject a source that conflicts with the trace world quest id", () => {
+  it("trace tools reject a source that conflicts with the trace source_ref", () => {
     const a = api();
     expect(() =>
       a.replay_trace({
         trace_path: "traces/mcp_replay.json",
         world_quest_id: "cold_forge",
       }),
-    ).toThrow(/worldQuestId/);
+    ).toThrow(/source_ref/);
     expect(() =>
       a.inspect_trace({
         trace_path: "traces/mcp_replay.json",
         world_quest_id: "cold_forge",
       }),
-    ).toThrow(/worldQuestId/);
+    ).toThrow(/source_ref/);
     expect(() =>
       a.replay_trace({
         trace_path: "traces/mcp_generated_replay.json",
         world_quest_id: "sunken_barrow",
       }),
-    ).toThrow(/generatedRpgSeed/);
+    ).toThrow(/source_ref/);
     expect(() =>
       a.inspect_trace({
         trace_path: "traces/mcp_generated_replay.json",
         world_quest_id: "sunken_barrow",
       }),
-    ).toThrow(/generatedRpgSeed/);
+    ).toThrow(/source_ref/);
   });
 
   it("rejects a path that escapes the project root", () => {

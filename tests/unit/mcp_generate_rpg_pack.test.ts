@@ -180,16 +180,14 @@ describe("bug_0160 — new_game(generate_rpg_seed) plays a fresh minted RPG pack
     );
   });
 
-  it("generated RPG save source mismatches are integrity errors", () => {
+  it("generated RPG save source_ref mismatches are integrity errors", () => {
     const a = api();
     const g = a.new_game({ generate_rpg_seed: 3 });
     const saved = a.save_game({ session_id: g.session_id });
 
-    expect(() => a.load_game({ save: saved.save, generate_rpg_seed: 4 })).toThrow(
-      /generatedRpgSeed/,
-    );
+    expect(() => a.load_game({ save: saved.save, generate_rpg_seed: 4 })).toThrow(/source_ref/);
     expect(() => a.load_game({ save: saved.save, world_quest_id: "breaking_weir" })).toThrow(
-      /generatedRpgSeed/,
+      /source_ref/,
     );
   });
 });

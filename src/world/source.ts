@@ -567,7 +567,7 @@ export function resolveSaveGameSource(
     source = resolveWorldQuestGameSource(root, embeddedWorldQuestId);
   } else {
     throw new Error(
-      `${operation} requires world_quest_id, generate_rpg_seed, or a save with worldQuestId/generatedRpgSeed.`,
+      `${operation} requires world_quest_id, generate_rpg_seed, or a save with source_ref.`,
     );
   }
 
@@ -576,7 +576,7 @@ export function resolveSaveGameSource(
     (source.kind !== "worldQuest" || source.worldQuestId !== embeddedWorldQuestId)
   ) {
     throw new SaveIntegrityError(
-      `Save worldQuestId ${JSON.stringify(
+      `Save source_ref world quest ${JSON.stringify(
         embeddedWorldQuestId,
       )} does not match requested source ${JSON.stringify(gameSourceIdentityForError(source))}.`,
     );
@@ -586,7 +586,7 @@ export function resolveSaveGameSource(
     (source.kind !== "generated" || source.generateRpgSeed !== embeddedGeneratedRpgSeed)
   ) {
     throw new SaveIntegrityError(
-      `Save generatedRpgSeed ${JSON.stringify(
+      `Save source_ref generated seed ${JSON.stringify(
         embeddedGeneratedRpgSeed,
       )} does not match requested source ${JSON.stringify(gameSourceIdentityForError(source))}.`,
     );
@@ -603,7 +603,7 @@ export function resolveTraceGameSource(
   rejectRetiredWorldQuestSourceAliases(
     args,
     operation,
-    "world_quest_id or embedded trace worldQuestId/generatedRpgSeed",
+    "world_quest_id or embedded trace source_ref",
   );
   const embeddedSource = traceEmbeddedSource(trace, operation);
   const embeddedWorldQuestId = embeddedSource.worldQuestId;
@@ -617,9 +617,7 @@ export function resolveTraceGameSource(
   } else if (embeddedWorldQuestId !== undefined) {
     source = resolveWorldQuestGameSource(root, embeddedWorldQuestId);
   } else {
-    throw new Error(
-      `${operation} requires world_quest_id or a trace with worldQuestId/generatedRpgSeed.`,
-    );
+    throw new Error(`${operation} requires world_quest_id or a trace with source_ref.`);
   }
 
   if (
@@ -627,7 +625,7 @@ export function resolveTraceGameSource(
     (source.kind !== "worldQuest" || source.worldQuestId !== embeddedWorldQuestId)
   ) {
     throw new SaveIntegrityError(
-      `Trace worldQuestId ${JSON.stringify(
+      `Trace source_ref world quest ${JSON.stringify(
         embeddedWorldQuestId,
       )} does not match requested source ${JSON.stringify(gameSourceIdentityForError(source))}.`,
     );
@@ -637,7 +635,7 @@ export function resolveTraceGameSource(
     (source.kind !== "generated" || source.generateRpgSeed !== embeddedGeneratedRpgSeed)
   ) {
     throw new SaveIntegrityError(
-      `Trace generatedRpgSeed ${JSON.stringify(
+      `Trace source_ref generated seed ${JSON.stringify(
         embeddedGeneratedRpgSeed,
       )} does not match requested source ${JSON.stringify(gameSourceIdentityForError(source))}.`,
     );
