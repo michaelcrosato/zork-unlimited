@@ -67,8 +67,9 @@ export function illegalReason(
   return "You can't do that right now.";
 }
 
-/** Resolve a raw command: `attack <foe>` against enemies here, else base RPG commands. */
-function resolve(
+/** Resolve a raw command: `attack <foe>` against enemies here, else base RPG commands.
+ * Exported so bin/overworld_play.ts's quest handoff drives the identical grammar. */
+export function resolve(
   index: ReturnType<typeof indexRpgPack>,
   state: import("../src/core/state.js").GameState,
   raw: string,

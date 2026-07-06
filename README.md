@@ -71,6 +71,7 @@ npm run health                                   # the full verification bar (se
 npm run validate                                 # validate all 16 shipped quests
 npm run validate -- sunken_barrow               # validate one quest by world quest id
 npm run play -- sunken_barrow                    # play a shipped world quest
+npm run overworld                                # play the full game: overworld map -> quests
 npm run inspect -- sunken_barrow                 # summarize a world quest
 npm run replay                                   # replay the committed RPG smoke trace
 npm run author -- "your one-line premise here"   # author a quest from prose
