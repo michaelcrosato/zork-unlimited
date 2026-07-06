@@ -58,24 +58,15 @@ const TRACE_SOURCE_REF_CONSISTENCY_MESSAGES = {
 
 export type TraceSourceArgs = {
   world_quest_id?: string;
-  pack_path?: never;
-  quest_id?: never;
-  quest_path?: never;
 };
 
 export type SaveSourceArgs = {
   world_quest_id?: string;
   generate_rpg_seed?: number;
-  pack_path?: never;
-  quest_id?: never;
-  quest_path?: never;
 };
 
 export type GameSourceArgs = {
   generate_rpg_seed?: number;
-  pack_path?: never;
-  quest_id?: never;
-  quest_path?: never;
 };
 
 export type SaveWorldSource = {
@@ -102,9 +93,6 @@ export type GeneratedGameSource = Extract<GameSource, { kind: "generated" }>;
 export type TraceGameSource = GameSource;
 export type WorldQuestSourceArgs = {
   world_quest_id?: string;
-  pack_path?: never;
-  quest_id?: never;
-  quest_path?: never;
 };
 
 const worldManifestCache = new Map<string, WorldManifest>();

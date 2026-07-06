@@ -147,6 +147,26 @@ describe("MCP server registration", () => {
     expect(registeredToolBlock("apply_content_patch")).not.toContain("mode:");
   });
 
+  it("keeps retired source aliases out of public ToolApi argument types", () => {
+    const sourceArgs = sourceBlock(
+      "src/world/source.ts",
+      "export type TraceSourceArgs",
+      "const worldManifestCache",
+    );
+    const lifecycleArgs = sourceBlock(
+      "src/mcp/rpg_session_lifecycle.ts",
+      "export type RpgNewGameToolArgs",
+      "type RpgWorldQuestStartContextFields",
+    );
+    const toolApiArgs = toolApiSourceBlock("type RpgNewGameArgs", "type AdaptStoryArgs");
+
+    for (const block of [sourceArgs, lifecycleArgs, toolApiArgs]) {
+      expect(block).not.toContain("pack_path?: never");
+      expect(block).not.toContain("quest_id?: never");
+      expect(block).not.toContain("quest_path?: never");
+    }
+  });
+
   it("keeps the blind-playtest ToolSearch schema source terse", () => {
     const blindToolSchemaSource = [
       sharedSchemaBlock(),

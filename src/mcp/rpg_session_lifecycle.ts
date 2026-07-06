@@ -31,7 +31,6 @@ export type RpgStartWorldQuestToolArgs = {
 export type RpgLoadGameToolArgs = {
   world_quest_id?: string;
   generate_rpg_seed?: number;
-  pack_path?: never;
   save: string;
   hide_graph?: boolean;
   include_world_intro?: boolean;

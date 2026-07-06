@@ -322,7 +322,7 @@ export class RpgSourceRuntime {
   }
 
   resolveTraceSource(
-    args: { world_quest_id?: string; pack_path?: never },
+    args: { world_quest_id?: string },
     trace: Trace<RpgAction>,
     operation: string,
   ): RpgTraceSource {

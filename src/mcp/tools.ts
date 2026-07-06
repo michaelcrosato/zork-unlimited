@@ -317,7 +317,6 @@ type RpgStepActionResponse<Args extends RpgStepActionArgs> = RpgRuntimeStepActio
 type RpgLoadGameArgs = {
   world_quest_id?: string;
   generate_rpg_seed?: number;
-  pack_path?: never;
   save: string;
   hide_graph?: boolean;
   include_world_intro?: boolean;
@@ -326,13 +325,11 @@ type RpgLoadGameArgs = {
 type InspectTraceArgs = {
   trace_path: string;
   world_quest_id?: string;
-  pack_path?: never;
   compact_summary?: boolean;
 };
 
 type ApplyContentPatchArgs = {
   world_quest_id?: string;
-  pack_path?: never;
   include_pack?: boolean;
   proposal: ContentPatchProposal;
 };
@@ -793,7 +790,7 @@ export function createToolApi(opts: { root: string }) {
       };
     },
 
-    replay_trace(args: { trace_path: string; world_quest_id?: string; pack_path?: never }) {
+    replay_trace(args: { trace_path: string; world_quest_id?: string }) {
       const traceAbs = safeResolve(root, args.trace_path);
       const trace = JSON.parse(readFileSync(traceAbs, "utf8")) as Trace<RpgAction>;
       assertTraceMode(trace);
