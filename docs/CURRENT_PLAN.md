@@ -207,9 +207,10 @@ Make discovered overworld quest leads start real RPG sessions.
   single-character tuple tags, compact state-effect codes, and tighter transient
   prose caps, so loop clients can branch on shape without reading full reducer
   events.
-- Compact RPG MCP observations now cap inventory/flags and keep only recent
-  journal entries, with omission counts trimmed for trailing zero buckets and
-  opt-in string action ids under context `v: 12`.
+- Compact RPG MCP observations now cap room/ending prose at 420 chars, dialogue
+  at 280, blocked-exit hints at 180, inventory/flags, and recent journal
+  entries, with omission counts trimmed for trailing zero buckets and opt-in
+  string action ids under context `v: 13`.
 - Compact RPG observations and compact transcript summaries now share the same
   capped-list, recent-list, omission-count, and trailing-zero `more` tuple
   helper, keeping loop context and end-of-run audit payload rules aligned.
@@ -545,7 +546,7 @@ Make discovered overworld quest leads start real RPG sessions.
   `step_action`, and `load_game` also default to compact observation context,
   keeping local harness starts/reads/turns/resumes aligned with the public MCP
   loop default.
-- Compact RPG observation context is now versioned as `v: 12` for the mode-free
+- Compact RPG observation context is now versioned as `v: 13` for the mode-free
   loop payload shape with duplicate score vars filtered out, tighter prose caps,
   and action ids omitted unless `include_actions: true` is explicit.
 - Compact RPG observation context omits empty exit lists when no navigation is

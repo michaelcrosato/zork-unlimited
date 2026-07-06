@@ -1,7 +1,11 @@
 import { describe, it, expect, beforeAll } from "vitest";
 import { writeFileSync, mkdirSync, readFileSync } from "node:fs";
 import { createToolApi } from "../../src/mcp/tools.js";
-import { RPG_COMPACT_OBSERVATION_VERSION } from "../../src/mcp/compact_rpg_observation.js";
+import {
+  COMPACT_DESCRIPTION_CHAR_LIMIT,
+  COMPACT_DIALOGUE_CHAR_LIMIT,
+  RPG_COMPACT_OBSERVATION_VERSION,
+} from "../../src/mcp/compact_rpg_observation.js";
 import {
   COMPACT_EVENT_JOURNAL_CHAR_LIMIT,
   COMPACT_EVENT_NARRATION_CHAR_LIMIT,
@@ -2905,6 +2909,20 @@ describe("MCP tools — the play loop (§9.1)", () => {
     expect(JSON.stringify(compactStart.context).length).toBeLessThan(
       JSON.stringify(fullStart.observation).length,
     );
+    const proseBudgetStart = a.start_world_quest({ world_quest_id: "breaking_weir" });
+    expect(proseBudgetStart.context.text.length).toBeLessThanOrEqual(
+      COMPACT_DESCRIPTION_CHAR_LIMIT,
+    );
+    expect(JSON.stringify(proseBudgetStart).length).toBeLessThan(900);
+    const proseBudgetTalk = a.step_action({
+      session_id: proseBudgetStart.session_id,
+      action_id: "talk_pell",
+    });
+    expect(proseBudgetTalk.context.text.length).toBeLessThanOrEqual(COMPACT_DESCRIPTION_CHAR_LIMIT);
+    expect(proseBudgetTalk.context.dialogue?.[1].length).toBeLessThanOrEqual(
+      COMPACT_DIALOGUE_CHAR_LIMIT,
+    );
+    expect(JSON.stringify(proseBudgetTalk).length).toBeLessThan(1450);
     const compactStartSession = a.sessions.get(compactStart.session_id);
     expect(compactStartSession.observationCache).toBeUndefined();
     expect(compactStartSession.observationProjectionCaches?.size).toBe(1);

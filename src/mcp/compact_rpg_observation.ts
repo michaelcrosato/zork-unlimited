@@ -22,11 +22,11 @@ export const COMPACT_VAR_LIMIT = 16;
 const COMPACT_INVENTORY_LIMIT = 16;
 const COMPACT_FLAG_LIMIT = 16;
 const COMPACT_JOURNAL_LIMIT = 5;
-export const COMPACT_DESCRIPTION_CHAR_LIMIT = 560;
-export const COMPACT_DIALOGUE_CHAR_LIMIT = 420;
-export const COMPACT_BLOCKED_EXIT_CHAR_LIMIT = 240;
-export const COMPACT_ENDING_TEXT_CHAR_LIMIT = 560;
-export const RPG_COMPACT_OBSERVATION_VERSION = 12 as const;
+export const COMPACT_DESCRIPTION_CHAR_LIMIT = 420;
+export const COMPACT_DIALOGUE_CHAR_LIMIT = 280;
+export const COMPACT_BLOCKED_EXIT_CHAR_LIMIT = 180;
+export const COMPACT_ENDING_TEXT_CHAR_LIMIT = 420;
+export const RPG_COMPACT_OBSERVATION_VERSION = 13 as const;
 
 export type RpgCompactRef = readonly [id: string, name: string];
 export type RpgCompactExit = string | readonly [direction: string, to: string];

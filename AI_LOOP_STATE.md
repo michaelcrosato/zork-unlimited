@@ -1,10 +1,19 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 474 -->
+<!-- historical_cycle_count: 475 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - compact_observation_prose_caps_v13
+
+- Pre-cycle: `C:\dev\agent-cleaner` measure/gates passed through WSL; optional secret scanner remains absent, and the same WSL git-dir warnings print after the green gate summary.
+- Engine/loop surface: compact RPG observations are now `v: 13` and cap room/ending prose at 420 chars, dialogue at 280, and blocked-exit hints at 180 while preserving full observations behind `compact_observation: false`.
+- Loop effect: `breaking_weir` default `start_world_quest` drops from 1005 to 863 bytes, `get_observation` from 916 to 808, `step_action(read_flood_book)` from 1759 to 1651, and `step_action(talk_pell)` from 1576 to 1438.
+- Self-critique: this directly trims the post-step context surface agents see every turn, but it is still a prose-cap win rather than a structural reduction in the remaining state-hash/envelope overhead.
+- Guard: compact-observation and MCP ToolApi regressions pin `v: 13`, named cap constants, prose-heavy start under 900 bytes, and prose-heavy talk step under 1450.
+- VERIFY: `C:\dev\agent-cleaner`, focused compact-observation/MCP regressions, payload probe, `npm run health`, and `npm run assess` passed after loop-state rotation; post-rotation `npm run verify:integrity`, `npm run format:check`, broad `prettier --check .`, and `git diff --check` also passed.
 
 ### Cycle result - compact_event_prose_caps_v6
 
@@ -131,12 +140,3 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Self-critique: API-default work only; full export snapshots and the tracked world JSON remain large follow-up surfaces.
 - Guard: focused MCP/overworld regressions keep full-payload assertions explicit while pinning no-flag compact route, travel, and restore payloads.
 - VERIFY: `C:\dev\agent-cleaner`, focused MCP/overworld compact-default regressions, `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, `npm test`, and `npm run health` passed after loop-state rotation.
-
-### Cycle result - overworld_loader_cache_tests
-
-- Pre-cycle: `C:\dev\agent-cleaner` measure/gates passed through WSL; optional secret scanner remains absent.
-- Engine/loop surface: overworld-heavy tests now use the cached production `loadOverworldManifest` path instead of direct JSON reads/parses.
-- Loop effect: local and CI test loops stop duplicating manual parses of the 3.1 MB overworld manifest in read-only fixture setup.
-- Self-critique: test-loop efficiency only; the tracked world JSON remains large and runtime payload surfaces still need deeper shrinking.
-- Guard: focused overworld/session/UI regressions exercise the cached loader path with immutable manifests.
-- VERIFY: `C:\dev\agent-cleaner`, focused overworld loader/cache regressions, `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, `npm test`, and `npm run health` passed after loop-state rotation.
