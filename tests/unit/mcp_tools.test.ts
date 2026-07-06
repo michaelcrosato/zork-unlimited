@@ -16,6 +16,10 @@ import {
   publicRpgStateHash,
   RPG_PUBLIC_STATE_HASH_LENGTH,
 } from "../../src/mcp/rpg_state_guards.js";
+import {
+  publicOverworldSnapshotHash,
+  OVERWORLD_PUBLIC_SNAPSHOT_HASH_LENGTH,
+} from "../../src/mcp/overworld_sessions.js";
 import { PathEscapeError } from "../../src/mcp/paths.js";
 import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import { indexRpgPack, buildRpgRules, initStateForRpgPack } from "../../src/rpg/runner.js";
@@ -42,6 +46,9 @@ const FULL_OVERWORLD_QUEST_START = {
   compact_observation: false,
 } as const;
 const PUBLIC_RPG_STATE_HASH_RE = new RegExp(`^[0-9a-f]{${RPG_PUBLIC_STATE_HASH_LENGTH}}$`);
+const PUBLIC_OVERWORLD_SNAPSHOT_HASH_RE = new RegExp(
+  `^[0-9a-f]{${OVERWORLD_PUBLIC_SNAPSHOT_HASH_LENGTH}}$`,
+);
 
 function numberedIds(prefix: string, count: number): string[] {
   return Array.from({ length: count }, (_, i) => `${prefix}_${i.toString().padStart(2, "0")}`);
@@ -1154,7 +1161,13 @@ describe("MCP tools — validate / load (§9.4)", () => {
   it("returns compact stateful overworld context for repeated loop turns", () => {
     const a = api();
     const started = a.start_overworld({ compact_context: false });
-    expect(started.snapshot_hash).toMatch(/^[0-9a-f]{64}$/);
+    const startedSnapshotExport = a.export_overworld_session({ session_id: started.session_id });
+    expect(startedSnapshotExport.ok).toBe(true);
+    if (!startedSnapshotExport.ok) throw new Error("expected start snapshot export");
+    const fullStartedSnapshotHash = hashState(startedSnapshotExport.snapshot);
+    expect(fullStartedSnapshotHash).toMatch(/^[0-9a-f]{64}$/);
+    expect(started.snapshot_hash).toMatch(PUBLIC_OVERWORLD_SNAPSHOT_HASH_RE);
+    expect(started.snapshot_hash).toBe(publicOverworldSnapshotHash(fullStartedSnapshotHash));
     const fullRead = a.get_overworld_session({
       include_observation: true,
       session_id: started.session_id,
@@ -1176,8 +1189,8 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(fullRead.snapshot_hash).toBe(started.snapshot_hash);
     expect(defaultRead.snapshot_hash).toBe(started.snapshot_hash);
     expect(compact.snapshot_hash).toBe(started.snapshot_hash);
-    expect(compactStarted.snapshot_hash).toMatch(/^[0-9a-f]{64}$/);
-    expect(defaultStarted.snapshot_hash).toMatch(/^[0-9a-f]{64}$/);
+    expect(compactStarted.snapshot_hash).toMatch(PUBLIC_OVERWORLD_SNAPSHOT_HASH_RE);
+    expect(defaultStarted.snapshot_hash).toMatch(PUBLIC_OVERWORLD_SNAPSHOT_HASH_RE);
     expect(defaultStarted.context.v).toBe(10);
     expect("observation" in defaultStarted).toBe(false);
     expect("route_options" in defaultStarted.context).toBe(false);
@@ -1694,12 +1707,14 @@ describe("MCP tools — validate / load (§9.4)", () => {
     if (!exported.ok) throw new Error("expected guarded export success");
     expect(exported.snapshot.worldId).toBe("new_york_overworld");
     expect(exported.snapshot.worldHash).toMatch(/^[0-9a-f]{64}$/);
-    expect(exported.snapshot_hash).toBe(hashState(exported.snapshot));
+    const fullExportedSnapshotHash = hashState(exported.snapshot);
+    expect(fullExportedSnapshotHash).toMatch(/^[0-9a-f]{64}$/);
+    expect(exported.snapshot_hash).toBe(publicOverworldSnapshotHash(fullExportedSnapshotHash));
     expect(JSON.stringify(staleExport).length).toBeLessThan(JSON.stringify(exported).length);
     const unchangedExport = a.export_overworld_session({
       session_id: started.session_id,
-      expected_snapshot_hash: exported.snapshot_hash,
-      if_snapshot_hash: exported.snapshot_hash,
+      expected_snapshot_hash: fullExportedSnapshotHash,
+      if_snapshot_hash: fullExportedSnapshotHash,
     });
     expect(unchangedExport).toEqual({
       snapshot_hash: exported.snapshot_hash,
@@ -1710,7 +1725,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect("snapshot" in unchangedExport).toBe(false);
     const repeatedExport = a.export_overworld_session({
       session_id: started.session_id,
-      expected_snapshot_hash: exported.snapshot_hash,
+      expected_snapshot_hash: fullExportedSnapshotHash,
     });
     expect(repeatedExport.ok).toBe(true);
     if (!repeatedExport.ok) throw new Error("expected repeated guarded export success");

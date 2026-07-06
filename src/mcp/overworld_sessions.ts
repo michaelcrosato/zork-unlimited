@@ -5,6 +5,7 @@ import type { OverworldView } from "../world/session_view.js";
 
 export const OVERWORLD_SNAPSHOT_HASH_MISMATCH_REASON =
   "Snapshot hash mismatch; refresh the current overworld context.";
+export const OVERWORLD_PUBLIC_SNAPSHOT_HASH_LENGTH = 24;
 
 type OverworldMcpSnapshotGuardOptions = {
   expected_snapshot_hash?: string;
@@ -230,9 +231,20 @@ export type OverworldMcpExportResponse<Args extends OverworldMcpExportArgs> =
   | OverworldMcpExportRejected<Args>
   | OverworldMcpExportUnchanged<Args>;
 
+export function publicOverworldSnapshotHash(snapshotHash: string): string {
+  return snapshotHash.slice(0, OVERWORLD_PUBLIC_SNAPSHOT_HASH_LENGTH);
+}
+
+export function overworldSnapshotHashMatches(expectedSnapshotHash: string, snapshotHash: string) {
+  return (
+    expectedSnapshotHash === snapshotHash ||
+    expectedSnapshotHash === publicOverworldSnapshotHash(snapshotHash)
+  );
+}
+
 export function overworldReadUnchanged(snapshotHash: string): OverworldMcpReadUnchanged {
   return {
-    snapshot_hash: snapshotHash,
+    snapshot_hash: publicOverworldSnapshotHash(snapshotHash),
     unchanged: true,
   };
 }
@@ -242,7 +254,7 @@ export function overworldSnapshotHashRejection(
 ): OverworldMcpRejectedSessionPayload {
   return {
     ok: false,
-    snapshot_hash: snapshotHash,
+    snapshot_hash: publicOverworldSnapshotHash(snapshotHash),
     rejection_reason: OVERWORLD_SNAPSHOT_HASH_MISMATCH_REASON,
   };
 }
@@ -284,8 +296,12 @@ export class OverworldMcpSessionStore {
     return session;
   }
 
-  snapshotHash(session: OverworldSession): string {
+  private fullSnapshotHash(session: OverworldSession): string {
     return session.snapshotHash();
+  }
+
+  snapshotHash(session: OverworldSession): string {
+    return publicOverworldSnapshotHash(this.fullSnapshotHash(session));
   }
 
   guardedSession<Args extends OverworldMcpSnapshotGuardOptions>(
@@ -293,8 +309,11 @@ export class OverworldMcpSessionStore {
     sessionId: string,
   ): OverworldMcpGuardedSession {
     const session = this.get(sessionId);
-    const snapshotHash = this.snapshotHash(session);
-    if (args.expected_snapshot_hash !== undefined && args.expected_snapshot_hash !== snapshotHash) {
+    const snapshotHash = this.fullSnapshotHash(session);
+    if (
+      args.expected_snapshot_hash !== undefined &&
+      !overworldSnapshotHashMatches(args.expected_snapshot_hash, snapshotHash)
+    ) {
       return overworldSnapshotHashRejection(snapshotHash);
     }
     return { session_id: sessionId, session };
@@ -338,35 +357,41 @@ export class OverworldMcpSessionStore {
 
   read<Args extends OverworldMcpReadArgs>(args: Args): OverworldMcpReadResponse<Args> {
     const session = this.get(args.session_id);
-    const snapshotHash = this.snapshotHash(session);
-    if (args.if_snapshot_hash !== undefined && args.if_snapshot_hash === snapshotHash) {
+    const snapshotHash = this.fullSnapshotHash(session);
+    if (
+      args.if_snapshot_hash !== undefined &&
+      overworldSnapshotHashMatches(args.if_snapshot_hash, snapshotHash)
+    ) {
       return overworldReadUnchanged(snapshotHash) as OverworldMcpReadResponse<Args>;
     }
     if (args.include_observation !== true) {
       return {
         ok: true,
         session_id: args.session_id,
-        snapshot_hash: snapshotHash,
+        snapshot_hash: publicOverworldSnapshotHash(snapshotHash),
         context: projectOverworldCompactContext(session.compactView(), args),
       } as OverworldMcpReadResponse<Args>;
     }
     return {
       session_id: args.session_id,
-      snapshot_hash: snapshotHash,
+      snapshot_hash: publicOverworldSnapshotHash(snapshotHash),
       observation: session.view(),
     } as OverworldMcpReadResponse<Args>;
   }
 
   readContext<Args extends OverworldMcpReadArgs>(args: Args): OverworldMcpContextResponse<Args> {
     const session = this.get(args.session_id);
-    const snapshotHash = this.snapshotHash(session);
-    if (args.if_snapshot_hash !== undefined && args.if_snapshot_hash === snapshotHash) {
+    const snapshotHash = this.fullSnapshotHash(session);
+    if (
+      args.if_snapshot_hash !== undefined &&
+      overworldSnapshotHashMatches(args.if_snapshot_hash, snapshotHash)
+    ) {
       return overworldReadUnchanged(snapshotHash) as OverworldMcpContextResponse<Args>;
     }
     return {
       ok: true,
       session_id: args.session_id,
-      snapshot_hash: snapshotHash,
+      snapshot_hash: publicOverworldSnapshotHash(snapshotHash),
       context: projectOverworldCompactContext(session.compactView(), args),
     } as OverworldMcpContextResponse<Args>;
   }
@@ -379,14 +404,17 @@ export class OverworldMcpSessionStore {
       return guarded as OverworldMcpExportResponse<Args>;
     }
     const { session } = guarded;
-    const snapshotHash = this.snapshotHash(session);
-    if (args.if_snapshot_hash !== undefined && args.if_snapshot_hash === snapshotHash) {
+    const snapshotHash = this.fullSnapshotHash(session);
+    if (
+      args.if_snapshot_hash !== undefined &&
+      overworldSnapshotHashMatches(args.if_snapshot_hash, snapshotHash)
+    ) {
       return overworldReadUnchanged(snapshotHash) as OverworldMcpExportResponse<Args>;
     }
     return {
       ok: true,
       session_id: args.session_id,
-      snapshot_hash: snapshotHash,
+      snapshot_hash: publicOverworldSnapshotHash(snapshotHash),
       snapshot: session.snapshot(),
     } as OverworldMcpExportResponse<Args>;
   }

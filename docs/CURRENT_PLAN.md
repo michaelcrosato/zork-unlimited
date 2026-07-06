@@ -530,6 +530,8 @@ Make discovered overworld quest leads start real RPG sessions.
 - `get_overworld_session({ if_snapshot_hash })` and
   `get_overworld_session_context({ if_snapshot_hash })` can return hash-only
   `unchanged` responses when the overworld snapshot has not changed.
+- Public overworld MCP/ToolApi `snapshot_hash` values are compact 24-hex tokens;
+  stale guards accept either that token or the full internal snapshot hash.
 - ToolApi/public MCP stateful overworld actions now default to compact
   context/result payloads, so repeated loop turns avoid full observations and
   full action results after movement or local actions unless explicit false flags
@@ -586,10 +588,11 @@ Make discovered overworld quest leads start real RPG sessions.
 - Overworld pending-road session snapshots now persist only the edge id and
   reconstruct road event/options from the content-bound world manifest.
 - Overworld session start/read/action/export/restore responses now return
-  `snapshot_hash`, letting checkpoint loops verify session identity without
-  re-exporting.
+  compact `snapshot_hash` tokens, letting checkpoint loops verify session
+  identity without re-exporting.
 - Stateful overworld action tools accept `expected_snapshot_hash` and reject stale
-  compact menus before mutating route, local-action, or quest-handoff state.
+  compact menus before mutating route, local-action, or quest-handoff state;
+  guards accept current compact tokens and full internal snapshot hashes.
 - Stale overworld action rejections return only `ok`, `snapshot_hash`, and
   `rejection_reason`; callers refresh context explicitly instead of receiving a
   duplicate compact/full overworld view.
