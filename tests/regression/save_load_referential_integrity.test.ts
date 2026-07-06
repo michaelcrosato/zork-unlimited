@@ -58,6 +58,7 @@ function stepByCommand(a: ReturnType<typeof api>, sessionId: string, needle: str
   return a.step_action({
     session_id: sessionId,
     action_id: actionIdByCommand(a, sessionId, needle),
+    compact_observation: false,
   });
 }
 

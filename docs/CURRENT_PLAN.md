@@ -182,9 +182,9 @@ Make discovered overworld quest leads start real RPG sessions.
 - Stale `step_action({ expected_state_hash })` rejections return only
   `ok`, `state_hash`, and `rejection_reason`; callers refresh explicitly instead
   of receiving a duplicate observation/event payload.
-- Public MCP `step_action` defaults to compact event tuples; callers can pass
-  `compact_events: false` when they need full reducer event objects.
-- Compact `step_action` event replies are versioned as `event_v: 3` with
+- Public MCP and ToolApi `step_action` default to compact event tuples; callers
+  can pass `compact_events: false` when they need full reducer event objects.
+- Compact `step_action` event replies are versioned as `event_v: 5` with
   single-character tuple tags and compact state-effect codes, so loop clients can
   branch on shape without reading full reducer events.
 - Compact RPG MCP observations now cap inventory/flags and keep only recent
@@ -193,9 +193,9 @@ Make discovered overworld quest leads start real RPG sessions.
 - Compact RPG observations and compact transcript summaries now share the same
   capped-list, recent-list, omission-count, and trailing-zero `more` tuple
   helper, keeping loop context and end-of-run audit payload rules aligned.
-- ToolApi/public MCP `new_game` and `get_observation` now return compact context
-  by default; callers can pass `compact_observation: false` only when they need
-  the full observation object.
+- ToolApi/public MCP `new_game`, `get_observation`, and `step_action` now return
+  compact context by default; callers can pass `compact_observation: false` only
+  when they need the full observation object.
 - `get_observation({ if_state_hash })` can return hash-only `unchanged`
   responses, avoiding repeated context payloads for polling or resume loops; the
   old `get_scene` alias is no longer part of the live MCP/ToolApi loop.
@@ -513,9 +513,9 @@ Make discovered overworld quest leads start real RPG sessions.
 - Public MCP RPG start/read/step/load tools now default to compact observation
   context; callers can pass `compact_observation: false` when they need full
   observations.
-- Direct ToolApi `new_game`, `start_world_quest`, and `get_observation` also
-  default to compact observation context, keeping local harness starts/reads
-  aligned with the public MCP loop default.
+- Direct ToolApi `new_game`, `start_world_quest`, `get_observation`, and
+  `step_action` also default to compact observation context, keeping local
+  harness starts/reads/turns aligned with the public MCP loop default.
 - Compact RPG observation context is now versioned as `v: 10` for the mode-free,
   compact-action loop payload shape with duplicate score vars filtered out.
 - Compact RPG observation context omits empty exit and action lists when no

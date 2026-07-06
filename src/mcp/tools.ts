@@ -121,6 +121,16 @@ type RpgEventOptions = {
   compact_events?: boolean;
 };
 
+type DefaultCompactRpgEvents<Args extends RpgEventOptions> = Args extends {
+  compact_events: false;
+}
+  ? Args
+  : Args & { compact_events: true };
+
+type DefaultCompactRpgStep<Args extends RpgViewOptions & RpgEventOptions> = DefaultCompactRpgView<
+  DefaultCompactRpgEvents<Args>
+>;
+
 type RpgViewField<Args extends RpgViewOptions> = Args extends {
   compact_observation: true;
 }
@@ -482,8 +492,17 @@ export function createToolApi(opts: { root: string }) {
       ) as RpgLegalActionsResponse<Args>;
     },
 
-    step_action<Args extends RpgStepActionArgs>(args: Args): RpgStepActionResponse<Args> {
-      return runRpgStepAction({ sessions, rpgRuntime }, args);
+    step_action<Args extends RpgStepActionArgs>(
+      args: Args,
+    ): RpgStepActionResponse<DefaultCompactRpgStep<Args>> {
+      const responseOptions = {
+        compact_events: true,
+        compact_observation: true,
+        ...args,
+      } as DefaultCompactRpgStep<Args>;
+      return runRpgStepAction({ sessions, rpgRuntime }, responseOptions) as RpgStepActionResponse<
+        DefaultCompactRpgStep<Args>
+      >;
     },
 
     get_state<Args extends RpgGetStateArgs>(args: Args): RpgStateResponse<Args> {

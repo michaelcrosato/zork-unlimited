@@ -42,6 +42,8 @@ function stepByCommand(a: ReturnType<typeof api>, sessionId: string, needle: str
   return a.step_action({
     session_id: sessionId,
     action_id: actionIdByCommand(a, sessionId, needle),
+    compact_events: false,
+    compact_observation: false,
   });
 }
 
@@ -2437,7 +2439,12 @@ describe("MCP tools — the play loop (§9.1)", () => {
     expect("actions" in unchangedMenu).toBe(false);
     expect(JSON.stringify(unchangedMenu).length).toBeLessThan(JSON.stringify(compactListed).length);
 
-    const rejected = a.step_action({ session_id: game.session_id, action_id: "missing" });
+    const rejected = a.step_action({
+      session_id: game.session_id,
+      action_id: "missing",
+      compact_events: false,
+      compact_observation: false,
+    });
     expect(rejected.ok).toBe(false);
     expect("rejection_reason" in rejected).toBe(true);
     expect("event_v" in rejected).toBe(false);
@@ -2447,6 +2454,8 @@ describe("MCP tools — the play loop (§9.1)", () => {
       session_id: game.session_id,
       action_id: "missing",
       compact_actions: true,
+      compact_events: false,
+      compact_observation: false,
     });
     expect(compactRejected.ok).toBe(false);
     expect("rejection_reason" in compactRejected).toBe(true);
@@ -2472,6 +2481,8 @@ describe("MCP tools — the play loop (§9.1)", () => {
       session_id: game.session_id,
       action_id: moveActionId!,
       compact_actions: true,
+      compact_events: false,
+      compact_observation: false,
     });
     expect(moved.ok).toBe(true);
     expect("rejection_reason" in moved).toBe(false);
@@ -2700,6 +2711,16 @@ describe("MCP tools — the play loop (§9.1)", () => {
     expect(JSON.stringify(unchangedObservation).length).toBeLessThan(
       JSON.stringify(compactObservation).length,
     );
+
+    const defaultRejectedStep = a.step_action({
+      session_id: fullStart.session_id,
+      action_id: "missing",
+    });
+    expect(defaultRejectedStep.ok).toBe(false);
+    expect("observation" in defaultRejectedStep).toBe(false);
+    expect(defaultRejectedStep.context.here[0]).toBe(fullStart.observation.room);
+    expect(defaultRejectedStep.event_v).toBe(RPG_COMPACT_EVENT_VERSION);
+    expect(defaultRejectedStep.events[0]).toEqual(["r", "That action is not available right now."]);
 
     const rejected = a.step_action({
       session_id: fullStart.session_id,

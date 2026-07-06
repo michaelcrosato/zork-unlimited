@@ -95,6 +95,7 @@ describe("bug_0299 — hide_graph per-call override on observation tools", () =>
       session_id: g.session_id,
       action_id: moveAction!.id,
       hide_graph: true,
+      compact_observation: false,
     });
     expect(stepped.ok).toBe(true);
     // The returned observation should have hidden exits (per-call override applied)

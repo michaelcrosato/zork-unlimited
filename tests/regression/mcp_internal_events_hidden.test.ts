@@ -56,7 +56,11 @@ describe("MCP step_action / get_transcript hide internal __-prefixed events (bug
 
     const attackId = byCmd("attack");
     expect(attackId).toBeTruthy();
-    const r = a.step_action({ session_id: sid, action_id: attackId! }) as {
+    const r = a.step_action({
+      session_id: sid,
+      action_id: attackId!,
+      compact_events: false,
+    }) as {
       ok: boolean;
       events: GameEvent[];
     };
@@ -101,7 +105,11 @@ describe("MCP step_action / get_transcript hide internal __-prefixed events (bug
     expect(a.step_action({ session_id: sid, action_id: byCmd("go west")! }).ok).toBe(true);
     const talkId = byCmd("talk to");
     expect(talkId).toBeTruthy();
-    const talk = a.step_action({ session_id: sid, action_id: talkId! }) as {
+    const talk = a.step_action({
+      session_id: sid,
+      action_id: talkId!,
+      compact_events: false,
+    }) as {
       ok: boolean;
       events: GameEvent[];
     };

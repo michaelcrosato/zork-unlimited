@@ -110,7 +110,11 @@ describe("bug_0137 — hide_graph difficulty: exits hide their destination", () 
         (act) => act.id.startsWith("go_") || (act.command ?? "").startsWith("go "),
       );
       expect(moveAction).toBeDefined();
-      const r = a.step_action({ session_id: g.session_id, action_id: moveAction!.id });
+      const r = a.step_action({
+        session_id: g.session_id,
+        action_id: moveAction!.id,
+        compact_observation: false,
+      });
       expect(r.ok).toBe(true);
       const afterRoom = (r.observation as { room: string }).room;
       // The engine resolved the destination the observation never showed us.

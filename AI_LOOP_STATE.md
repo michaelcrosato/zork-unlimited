@@ -1,10 +1,19 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 454 -->
+<!-- historical_cycle_count: 455 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - rpg_step_compact_default
+
+- Pre-cycle: `C:\dev\agent-cleaner` passed; optional secret scanner remains absent.
+- Engine/loop surface: ToolApi `step_action` now defaults to compact RPG context and compact event tuples; full turn observations/events require explicit opt-out flags.
+- Loop effect: direct harness/agent turns no longer emit full room/action/state observations or reducer event objects on the hot repeated action path.
+- Self-critique: turn stepping is the highest-frequency hidden payload surface; `load_game` direct default remains a follow-up surface.
+- Guard: MCP loop regressions pin no-flag compact `step_action`, while full observation/event regressions opt out explicitly.
+- VERIFY: `C:\dev\agent-cleaner`, `npm run typecheck`, focused MCP step/action regressions, `npm run lint`, `npm run format:check`, `npm run validate`, `npm test`, and `npm run health` passed after loop-state rotation.
 
 ### Cycle result - rpg_generated_start_compact_default
 
@@ -126,11 +135,3 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Loop effect: MCP runtime, CLI, and regression loops import a source loader with `CompiledRpgSource`, `compileRpgSource`, and `loadRpgSourceFile` names instead of reusing package-era loader names.
 - Guard: standalone RPG contract regression asserts `src/rpg/pack.ts` is absent, the source loader has no generic content-pack exports, and MCP runtime imports `../rpg/source.js`.
 - VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused source/runtime regressions, `npm test`, and `npm run health` passed after loop-state rotation.
-
-### Cycle result - rpg_index_pack_alias_retired
-
-- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
-- Engine/loop surface: `RpgIndex` no longer duplicates the model source as a package-era `rpgPack` alias; runtime code uses the single `index.pack` field inherited from the RPG model index.
-- Loop effect: legal actions, combat, scoring, and state initialization share one indexed source reference instead of carrying a redundant alias through the hot runtime object.
-- Guard: focused RPG unit regression asserts `indexRpgPack` returns the original `pack` reference without a `rpgPack` runtime field.
-- VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused RPG regression, `npm test`, and `npm run health` passed after loop-state rotation.

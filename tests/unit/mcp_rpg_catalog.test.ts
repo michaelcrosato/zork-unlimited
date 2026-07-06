@@ -100,7 +100,11 @@ describe("RPG pack plays through the structured tool API", () => {
     ).toBe(true);
     const attackId = byCmd(game.session_id, "attack");
     expect(attackId).toBeTruthy();
-    const r = a.step_action({ session_id: game.session_id, action_id: attackId! });
+    const r = a.step_action({
+      session_id: game.session_id,
+      action_id: attackId!,
+      compact_events: false,
+    });
     expect(r.ok).toBe(true);
     expect(r.events.some((e) => e.type === "narration" && /strike/i.test(e.text))).toBe(true);
   });
