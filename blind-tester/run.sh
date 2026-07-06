@@ -143,6 +143,18 @@ if [[ "$SMOKE" == "1" ]]; then
   exec "$NODE_CMD" "$SMOKE_SCRIPT" --quest "$QUEST_ID" --seed "$SEED"
 fi
 
+# Fail fast on a bad quest id BEFORE spending agent tokens. The classic mangled
+# invocation (PowerShell strips `--`, npm eats the flags, an orphaned value
+# becomes the "quest") used to launch a doomed run; the launcher recovers those
+# flags now, and this guard catches anything else with the fix spelled out.
+if ! ( cd "$GAME_DIR" && npm --silent run validate -- "$QUEST_ID" >/dev/null 2>&1 ); then
+  echo "Unknown or unplayable quest id \"$QUEST_ID\" (npm run validate -- \"$QUEST_ID\" failed)." >&2
+  echo "Passing flags from PowerShell: use the equals form without '--', e.g." >&2
+  echo "  npm run blind --quest=breaking_weir --spectate --delay-ms=1500" >&2
+  echo "(or set BLIND_QUEST_ID / BLIND_SPECTATE / BLIND_SPECTATE_DELAY_MS env vars)." >&2
+  exit 2
+fi
+
 case "$GAME_DIR" in
   *\'*|*\"*) echo "Refusing: game path contains a quote, which breaks the MCP launch command." >&2; exit 4 ;;
 esac

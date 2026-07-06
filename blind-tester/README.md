@@ -61,7 +61,15 @@ for a full-speed feed. Spectate is fully inert when not enabled.
 
 Works natively on Linux, macOS, WSL, and Windows (PowerShell, cmd, or Git Bash —
 `npm run blind` resolves Git Bash itself, so the System32 WSL `bash.exe` can
-never hijack the run). One Windows-specific rule the harness already handles:
+never hijack the run).
+
+**Passing flags from PowerShell:** PowerShell strips a bare `--` (it's PS's own
+end-of-options token), after which npm eats `--flags` as npm configs. The
+launcher recovers them automatically, but the reliable shapes are the equals
+form without `--` — `npm run blind --quest=breaking_weir --spectate
+--delay-ms=1500` — or `BLIND_*` env vars. In Git Bash / Linux / macOS,
+`npm run blind -- --quest breaking_weir` also works as usual. A bad quest id is
+rejected before any tokens are spent. One Windows-specific rule the harness already handles:
 the MCP server launch never relies on the client honoring a `cwd` field
 (`npm --prefix` self-cds instead), because the Claude CLI on Windows silently
 ignores stdio-server `cwd`. Note a checkout `npm install`-ed on Windows cannot
