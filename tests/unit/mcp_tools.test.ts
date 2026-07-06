@@ -3499,12 +3499,25 @@ describe("MCP tools — apply_content_patch (§9.4, §16)", () => {
     };
     expect(r.ok).toBe(true);
     expect("pack_path" in r).toBe(false);
+    expect("pack" in r).toBe(false);
     expect(r.world_quest_id).toBe("cold_forge");
     expect("pack_id" in r.report).toBe(false);
     expect(r.report.source_id).toBe("cold_forge_v1");
     expect(r.report.source_id).not.toContain("/");
     expect(r.report.source_id).not.toContain("\\");
     expect(r.report.ok).toBe(true);
+
+    const withPack = a.apply_content_patch({
+      world_quest_id: "cold_forge",
+      include_pack: true,
+      proposal,
+    }) as {
+      ok: boolean;
+      pack?: { meta: { id: string } };
+    };
+    expect(withPack.ok).toBe(true);
+    expect(withPack.pack?.meta.id).toBe("cold_forge_v1");
+    expect(JSON.stringify(r).length).toBeLessThan(JSON.stringify(withPack).length);
   });
 
   it("refuses a patch whose target is missing (no file written)", () => {

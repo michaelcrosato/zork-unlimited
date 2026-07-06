@@ -544,9 +544,10 @@ tool(
 
 tool(
   "apply_content_patch",
-  "Apply a whitelisted content patch to a world quest; return pack and report.",
+  "Patch quest; report.",
   {
     ...WORLD_QUEST_SOURCE,
+    include_pack: z.boolean().optional().describe("Echo pack."),
     proposal: z
       .object({
         layer: z.enum([

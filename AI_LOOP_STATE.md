@@ -1,10 +1,19 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 463 -->
+<!-- historical_cycle_count: 464 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - patch_pack_echo_opt_in
+
+- Pre-cycle: `C:\dev\agent-cleaner` measure/gates passed through WSL; optional secret scanner remains absent.
+- Engine/loop surface: `apply_content_patch` no longer returns the full modified RPG pack by default; callers opt in with `include_pack: true`.
+- Loop effect: fix/debug loops can apply deterministic content patches and read validation proof without echoing complete quest content after every candidate patch.
+- Self-critique: this is a fix-loop payload, not a live player turn path; the next deeper wins remain authoring payloads and full validation reports.
+- Guard: focused MCP patch and registration regressions pin default omission, opt-in full-pack echo, source identity, and schema-size limits.
+- VERIFY: `C:\dev\agent-cleaner`, focused MCP patch/schema regressions, `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, `npm test`, and `npm run health` passed after loop-state rotation.
 
 ### Cycle result - trace_inspect_compact_default
 
@@ -131,12 +140,3 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Self-critique: not a content/world-map reduction, but it closes a hidden full-payload path beneath the MCP wrapper.
 - Guard: focused MCP and overworld snapshot regressions pin compact default plus explicit full reads.
 - VERIFY: `C:\dev\agent-cleaner`, `npm run typecheck`, focused MCP/overworld regressions, `npm run lint`, `npm run format:check`, `npm run validate`, `npm test`, and `npm run health` passed after loop-state rotation.
-
-### Cycle result - transcript_source_opt_in
-
-- Pre-cycle: `C:\dev\agent-cleaner` initially failed on README table formatting; Prettier fixed the drift and the cleaner rerun passed.
-- Engine/loop surface: `get_transcript` no longer echoes `world_quest_id` / `generated_rpg_seed` by default; callers opt in with `include_source: true`.
-- Loop effect: repeated transcript polls keep source identity out of the hot MCP payload while start/save/load still expose source when needed.
-- Self-critique: narrow token-efficiency win, but it hits a recurring blind-agent loop call instead of gameplay content.
-- Guard: MCP tool and generated-source tests pin default omission plus opt-in source echo; registration tests keep ToolSearch schema budgets strict.
-- VERIFY: `C:\dev\agent-cleaner`, `npm run typecheck`, focused MCP/registration regressions, `npm run lint`, `npm run format:check`, `npm run validate`, `npm test`, and `npm run health` passed after loop-state rotation.

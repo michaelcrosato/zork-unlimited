@@ -271,6 +271,13 @@ type InspectTraceArgs = {
   compact_summary?: boolean;
 };
 
+type ApplyContentPatchArgs = {
+  world_quest_id?: string;
+  pack_path?: never;
+  include_pack?: boolean;
+  proposal: ContentPatchProposal;
+};
+
 type InspectTraceStepSummary = {
   i: number;
   action: RpgAction;
@@ -776,15 +783,11 @@ export function createToolApi(opts: { root: string }) {
       };
     },
 
-    apply_content_patch(args: {
-      world_quest_id?: string;
-      pack_path?: never;
-      proposal: ContentPatchProposal;
-    }) {
-      // Apply a structured patch with deterministic code and return the modified
-      // pack + validation report (§9.4, §12.5). The model never writes files: a
-      // patch is data, validated before it can be played (§16). The fixer is RPG-only,
-      // matching the public catalog and runtime.
+    apply_content_patch(args: ApplyContentPatchArgs) {
+      // Apply a structured patch with deterministic code and return validation
+      // proof; the full modified pack is an explicit debug echo. The model never
+      // writes files: a patch is data, validated before it can be played (§16).
+      // The fixer is RPG-only, matching the public catalog and runtime.
       const requestedWorldQuestId = resolveWorldQuestSourceId(args, "apply_content_patch");
       const proposal = ContentPatchProposalSchema.parse(args.proposal);
       const source = rpgSources.loadWorldQuestReport(requestedWorldQuestId);
@@ -797,19 +800,20 @@ export function createToolApi(opts: { root: string }) {
         };
       }
       const result = applyContentPatch(loaded.compiled.pack, proposal);
-      return result.ok
-        ? {
-            ok: true,
-            world_quest_id: source.node.id,
-            applied: result.applied,
-            report: result.report,
-            pack: result.pack,
-          }
-        : {
-            ok: false,
-            world_quest_id: source.node.id,
-            report: result.report,
-          };
+      if (!result.ok) {
+        return {
+          ok: false,
+          world_quest_id: source.node.id,
+          report: result.report,
+        };
+      }
+      return {
+        ok: true,
+        world_quest_id: source.node.id,
+        applied: result.applied,
+        report: result.report,
+        ...(args.include_pack === true ? { pack: result.pack } : {}),
+      };
     },
   };
   apiRef.current = api;

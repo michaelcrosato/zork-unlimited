@@ -141,6 +141,8 @@ Make discovered overworld quest leads start real RPG sessions.
   shipped quests and return world identity without echoing raw pack paths.
 - `apply_content_patch` now accepts shipped `world_quest_id` in ToolApi/public
   MCP and returns world identity only.
+- `apply_content_patch` no longer echoes the full modified pack by default;
+  callers can pass `include_pack: true` for full-pack debugging.
 - `replay_trace` and `inspect_trace` now advertise shipped `world_quest_id` on
   public MCP; `inspect_trace` replies use that graph id plus content hashes
   instead of public `pack_id`, and CLI replay/inspect now also reject raw pack paths.
