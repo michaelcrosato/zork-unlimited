@@ -34,6 +34,8 @@ MODEL="${BLIND_MODEL:-sonnet}"   # sonnet = strong + best subscription value; ov
 OUT=""
 SMOKE=0
 TIMEOUT="${BLIND_TIMEOUT:-900}"
+SPECTATE="${BLIND_SPECTATE:-0}"                   # 1 = server writes a human-watchable feed
+SPECTATE_DELAY_MS="${BLIND_SPECTATE_DELAY_MS:-}"  # optional pacing delay per tool response
 QUEST_EXPLICIT=0
 POSITIONAL=()
 
@@ -84,6 +86,8 @@ while [[ $# -gt 0 ]]; do
     --model)            MODEL="$2"; shift 2 ;;
     --out)              OUT="$2"; shift 2 ;;
     --smoke)            SMOKE=1; shift ;;
+    --spectate)         SPECTATE=1; shift ;;
+    --delay-ms)         SPECTATE_DELAY_MS="$2"; SPECTATE=1; shift 2 ;;
     -h|--help)
       sed -n '3,20p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
       exit 0 ;;
@@ -121,6 +125,18 @@ SOURCE_LABEL="quest=$QUEST_ID"
 SOURCE_SLUG="$QUEST_ID"
 START_INSTRUCTION="Start: \`mcp__adventureforge__start_world_quest\` with world_quest_id = \"$QUEST_ID\", seed = $SEED, hide_graph = true, compact_observation = true."
 
+# A Windows-installed node_modules cannot run under WSL's Linux node: only the
+# @esbuild/win32-x64 native binary is present, so tsx (and with it the MCP
+# server) dies with a cryptic "MCP error -32000: Connection closed". Fail with
+# an actionable message instead.
+if [[ "$OSTYPE" == linux* && "$GAME_DIR" == /mnt/* \
+      && -d "$GAME_DIR/node_modules/@esbuild/win32-x64" \
+      && ! -d "$GAME_DIR/node_modules/@esbuild/linux-x64" ]]; then
+  echo "This checkout's node_modules was installed on Windows; WSL's Linux node cannot run it." >&2
+  echo "Run from Git Bash/PowerShell instead, or 'npm ci' inside WSL first." >&2
+  exit 4
+fi
+
 # Smoke mode: prove the MCP path with no LLM and no token spend.
 if [[ "$SMOKE" == "1" ]]; then
   SMOKE_SCRIPT="$(node_path_arg "$SCRIPT_DIR/smoke.mjs")"
@@ -131,15 +147,49 @@ case "$GAME_DIR" in
   *\'*|*\"*) echo "Refusing: game path contains a quote, which breaks the MCP launch command." >&2; exit 4 ;;
 esac
 
-# The MCP server is launched with cwd = game dir (NOT the agent's temp cwd), so packs
-# resolve relative to the project root. stdout stays a clean JSON-RPC channel (no -l).
+# The MCP server must be launched so packs resolve from the project root — but
+# it must NOT depend on the client honoring a `cwd` field: the Claude CLI on
+# Windows silently ignores stdio-server `cwd`, so the server would inherit the
+# agent's isolated temp cwd and `npm run mcp` would die with "Missing script"
+# (tools never load; the report verifier then rejects the run). `npm --prefix`
+# makes npm itself change to the game dir, which is cwd-independent on every
+# platform. stdout stays a clean JSON-RPC channel (no -l).
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
 MCP_CONFIG="$WORK/mcp.json"
+
+# Spectate pass-through: forwarded as SERVER argv (clients can ignore env/cwd
+# fields, but args always survive). The server writes the human-watchable feed;
+# watch it from another terminal with `npm run spectate`.
+SPECTATE_ARGS_JSON=""
+SPECTATE_CMD_SUFFIX=""
+if [[ "$SPECTATE" == "1" ]]; then
+  if [[ -n "$SPECTATE_DELAY_MS" ]]; then
+    case "$SPECTATE_DELAY_MS" in
+      *[!0-9]*) echo "--delay-ms takes a whole number of milliseconds." >&2; exit 2 ;;
+    esac
+    SPECTATE_ARGS_JSON=", \"--\", \"--spectate\", \"--spectate-delay-ms\", \"$SPECTATE_DELAY_MS\""
+    SPECTATE_CMD_SUFFIX=" -- --spectate --spectate-delay-ms $SPECTATE_DELAY_MS"
+  else
+    SPECTATE_ARGS_JSON=", \"--\", \"--spectate\""
+    SPECTATE_CMD_SUFFIX=" -- --spectate"
+  fi
+fi
+
 GAME_DIR_WIN=""
 if command -v wslpath >/dev/null 2>&1 && [[ "$GAME_DIR" == /mnt/* ]]; then
   GAME_DIR_WIN="$(wslpath -w "$GAME_DIR")"
 fi
+
+# The npm --prefix path in native form: Git Bash's /c/... is meaningless to the
+# native claude.exe-spawned npm, so convert with cygpath on msys/cygwin.
+GAME_DIR_MCP="$GAME_DIR"
+if [[ "$OSTYPE" == msys* || "$OSTYPE" == cygwin* ]] && command -v cygpath >/dev/null 2>&1; then
+  GAME_DIR_MCP="$(cygpath -m "$GAME_DIR")"
+fi
+case "$GAME_DIR_MCP" in
+  *\"*|*\\*) echo "Refusing: game path breaks MCP config JSON quoting." >&2; exit 4 ;;
+esac
 
 if [[ -n "$GAME_DIR_WIN" ]]; then
   case "$GAME_DIR_WIN" in
@@ -151,7 +201,7 @@ if [[ -n "$GAME_DIR_WIN" ]]; then
   "mcpServers": {
     "adventureforge": {
       "command": "cmd.exe",
-      "args": ["/c", "cd /d $GAME_DIR_WIN_JSON && npm --silent run mcp"]
+      "args": ["/c", "cd /d $GAME_DIR_WIN_JSON && npm --silent run mcp$SPECTATE_CMD_SUFFIX"]
     }
   }
 }
@@ -162,8 +212,7 @@ else
   "mcpServers": {
     "adventureforge": {
       "command": "npm",
-      "args": ["--silent", "run", "mcp"],
-      "cwd": "$GAME_DIR"
+      "args": ["--silent", "--prefix", "$GAME_DIR_MCP", "run", "mcp"$SPECTATE_ARGS_JSON]
     }
   }
 }
@@ -189,7 +238,19 @@ if [[ -n "${BLIND_AGENT_CMD:-}" ]]; then
   echo "Using BLIND_AGENT_CMD override."
   BLIND_MCP_CONFIG="$MCP_CONFIG" BLIND_QUEST_ID="$QUEST_ID" BLIND_SEED="$SEED" \
     timeout "$TIMEOUT" bash -c "$BLIND_AGENT_CMD" <<<"$PROMPT" | tee "$OUT.md"
-  exit "${PIPESTATUS[0]}"
+  AGENT_STATUS="${PIPESTATUS[0]}"
+  if [[ "$AGENT_STATUS" -ne 0 ]]; then
+    exit "$AGENT_STATUS"
+  fi
+  # The override agent's report is NOT exempt from the gate: run the same
+  # verifier as the default path (MCP-failure text, sections, exit interview).
+  REPORT_MD="$OUT.md"
+  if command -v wslpath >/dev/null 2>&1 && [[ "$REPORT_MD" == /mnt/* ]]; then
+    REPORT_MD="$(wslpath -w "$REPORT_MD")"
+  fi
+  ( cd "$GAME_DIR" && npm --silent exec tsx -- scripts/verify-blind-report.ts "$REPORT_MD" )
+  echo "✓ Blind report saved: $OUT.md"
+  exit 0
 fi
 
 # Default blind player: Claude Code on your subscription. NOTE the blind player is
@@ -233,11 +294,14 @@ if [[ $STATUS -ne 0 ]]; then
   exit $STATUS
 fi
 
-# Extract the agent's final report text from the JSON envelope.
+# Extract the agent's final report text from the JSON envelope. jq when
+# available, else node (always present) — copying the raw envelope would leave
+# the exit-interview block JSON-escaped and the verifier would reject a good run.
 if command -v jq >/dev/null 2>&1; then
   jq -r '.result // .text // empty' "$OUT.json" > "$OUT.md" 2>/dev/null || cp "$OUT.json" "$OUT.md"
 else
-  cp "$OUT.json" "$OUT.md"
+  OUT_JSON_ARG="$(node_path_arg "$OUT.json")"
+  "$NODE_CMD" -e 'const fs=require("node:fs");let t="";try{const j=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));t=j.result??j.text??"";}catch{}process.stdout.write(String(t));' "$OUT_JSON_ARG" > "$OUT.md" || cp "$OUT.json" "$OUT.md"
 fi
 
 REPORT_MD="$OUT.md"

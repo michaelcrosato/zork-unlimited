@@ -3,16 +3,31 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 describe("blind runner MCP config contract", () => {
-  it("uses a Claude-compatible Windows launch on WSL and an npm cwd fallback elsewhere", () => {
+  it("launches the MCP server cwd-independently on every platform", () => {
     const runner = readFileSync(join(process.cwd(), "blind-tester", "run.sh"), "utf8");
 
     expect(runner).toContain('"command": "cmd.exe"');
     expect(runner).toContain("cd /d");
     expect(runner).toContain('"command": "npm"');
-    expect(runner).toContain('"args": ["--silent", "run", "mcp"]');
-    expect(runner).toContain('"cwd": "$GAME_DIR"');
+    // npm --prefix makes npm itself cd to the game dir. The config must NOT rely
+    // on a `cwd` field: the Claude CLI on Windows silently ignores stdio-server
+    // cwd, so the server would inherit the agent's isolated temp cwd and die
+    // ("Missing script: mcp") — tools never load and the report is rejected.
+    expect(runner).toContain('"args": ["--silent", "--prefix", "$GAME_DIR_MCP", "run", "mcp"');
+    expect(runner).not.toContain('"cwd":');
+    // Native Windows (Git Bash) must hand the native path form to claude.exe.
+    expect(runner).toContain("cygpath -m");
     expect(runner).not.toContain('"command": "bash"');
     expect(runner).not.toContain('"command": "wsl.exe"');
+  });
+
+  it("forwards spectate mode to the server as argv (clients may ignore env/cwd)", () => {
+    const runner = readFileSync(join(process.cwd(), "blind-tester", "run.sh"), "utf8");
+    expect(runner).toContain("--spectate");
+    expect(runner).toContain("--spectate-delay-ms");
+    // The launcher shim keeps `npm run blind` off the WSL System32 bash trap.
+    const pkg = readFileSync(join(process.cwd(), "package.json"), "utf8");
+    expect(pkg).toContain('"blind": "node blind-tester/blind-launch.mjs"');
   });
 
   it("defaults shipped blind runs to world quest ids instead of raw pack starts", () => {
