@@ -1,30 +1,18 @@
-# AI context/index budget: open these explicitly when a task needs them.
+# Cursor BLOCKS these from AI access entirely (not just indexing) — keep only
+# paths that never belong in AI context: build output, logs, local runtime
+# scratch. Tracked-but-heavy assets (traces, regression tests, packs) live in
+# .cursorindexingignore instead, so agents can still open them when the
+# bug-lock workflow (AGENTS.md) requires it.
 node_modules/
-ui/node_modules/
 dist/
-ui/dist/
 coverage/
 ai-runs/
 blind-tester/reports/
 .agent-cleaner/
-.codex/
+.codex/*
+!.codex/config.toml
 saves/
 transcripts/
 *.log
 *.tmp
 *.tsbuildinfo
-
-# High-volume tracked assets that are usually noise for default semantic indexing.
-AI_LOOP_STATE_ARCHIVE.md
-ADVENTUREFORGE_BUILD_SPEC.md
-docs/DECISION_LOG.md
-docs/ULTRAPLAN-*.md
-package-lock.json
-ui/package-lock.json
-content/world/new_york_overworld.json
-content/cyoa/pack/*.yaml
-content/parser/pack/*.yaml
-content/rpg/pack/*.yaml
-traces/
-corpus/
-tests/regression/

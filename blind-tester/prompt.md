@@ -28,8 +28,8 @@ PLAY:
   `compact_events` at its default unless diagnosing event-history details.
 - For an end-of-run transcript sanity check, call
   `mcp__adventureforge__get_transcript` with `summary_only: true` and
-  `compact_summary: true`; pass the latest `if_state_hash` when rechecking an
-  unchanged state. If you need route rows, use `compact_turns: true`; avoid full
+  `compact_summary: true`; pass the latest `if_transcript_hash` when rechecking
+  unchanged history. If you need route rows, use `compact_turns: true`; avoid full
   transcripts unless diagnosing a specific event-history bug.
 - For a mechanical state audit, call `mcp__adventureforge__get_state` with
   `compact_state: true`; pass `if_state_hash` when rechecking. Do not use

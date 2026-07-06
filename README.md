@@ -4,7 +4,7 @@ An **AI-coded, AI-playtested** text RPG: one deterministic engine, one
 persistent world, and a feedback flywheel — dev agent → verification bar →
 blind playtest → structured exit interview — that compounds quality every
 cycle. The why lives in [`docs/VISION.md`](./docs/VISION.md); what's next in
-[`docs/ROADMAP.md`](./docs/ROADMAP.md); the original design brief is
+[`docs/ROADMAP.md`](./docs/ROADMAP.md); the standing architecture contract is
 [`ADVENTUREFORGE_BUILD_SPEC.md`](./ADVENTUREFORGE_BUILD_SPEC.md).
 
 > **Trust, but verify.** The coding agent has free rein over all game code — no
@@ -30,7 +30,7 @@ persistent world (the 2026-07-06 consolidation — see
   doors, NPC dialogue, USE puzzles, scoring, character stats, seeded turn-based
   combat, and d20 skill checks, behind a legal-action menu runner and structured
   observations. Two validators (`src/validate/rpg_validator.ts`,
-  `src/validate/rpg_foundation_validator.ts` — ~40 finding codes) plus an
+  `src/validate/rpg_foundation_validator.ts` — dozens of finding codes) plus an
   exhaustive solver prove every declared ending reachable, no path soft-locked,
   and the score economy sound.
 - **The Charter Marches** (`content/world/charter_marches.yaml`) — the hub world
@@ -73,7 +73,7 @@ npm run validate -- sunken_barrow               # validate one quest by world qu
 npm run play -- sunken_barrow                    # play a shipped world quest
 npm run inspect -- sunken_barrow                 # summarize a world quest
 npm run replay                                   # replay the committed RPG smoke trace
-npm run author -- "your one-line premise here"   # author a quest from prose (§12.1-3)
+npm run author -- "your one-line premise here"   # author a quest from prose
 npm run ui:dev                                   # web UI (after: npm --prefix ui install)
 ```
 
@@ -90,7 +90,7 @@ from reappearing), typecheck, ESLint, Prettier, the vitest suite, the UI
 typecheck (`npm run ui:typecheck`), and validation of every shipped quest. CI
 runs the same sequence and builds the UI.
 
-## MCP server — how an agent plays (§9.4)
+## MCP server — how an agent plays
 
 The engine is exposed as an MCP server (`npm run mcp`, `src/mcp/server.ts`) so
 any agent harness (Claude Code, Codex, Gemini CLI, …) plays via native tool
@@ -119,15 +119,15 @@ payloads — terse enough for a blind agent to play a long session in one contex
 window. `tests/unit/compact_legend.test.ts` holds the tool descriptions and
 legend to that contract; the handlers (`src/mcp/tools.ts`) are unit-tested
 without a live client. All paths are confined to the project root; content and
-traces are data only (§16).
+traces are data only.
 
 ## Testing: two modes, coupled by an exit interview
 
 - **Dev tests** (full knowledge, specific assertions): the vitest
   unit/property/regression suite, the validators, and the exhaustive solver —
   all inside `npm run health`. Rejection-direction witnesses live in the
-  negative-fixture corpus (`content/broken-fixtures/`, `foundation_*.yaml`), a
-  data-driven test proving each validator finding code actually fires.
+  negative-fixture corpus (`content/broken-fixtures/`, mostly `foundation_*.yaml`),
+  a data-driven test proving each validator finding code actually fires.
 - **Blind LLM playtest**: a fresh agent with NO repo access plays a shipped
   quest purely through the MCP tools (harness in `blind-tester/`, protocol in
   [`docs/blind_playtest_protocol.md`](./docs/blind_playtest_protocol.md)) — the
@@ -145,9 +145,13 @@ npm run blind -- --quest sunken_barrow --seed 7   # omit --quest for the default
 npm run blind:smoke                               # harness check, no LLM, no tokens
 ```
 
-The LLM client (`agents/llm/providers.ts`) is provider-agnostic: real
-OpenAI/Anthropic/Google backends sit behind env vars and fall back to a
-deterministic keyless mock, so everything runs in CI with no API keys.
+The blind harness drives the external Claude Code CLI on the operator's
+subscription (default model `sonnet`; `BLIND_AGENT_CMD` overrides) and is NOT
+part of CI or the health bar. Separately, the authoring/repair agents
+(`bin/author.ts`, the debugger/fixer) use a provider-agnostic LLM client
+(`agents/llm/providers.ts`): real OpenAI/Anthropic/Google backends sit behind
+env vars and fall back to a deterministic keyless mock, so their vitest
+coverage runs in CI with no API keys.
 
 ## The flywheel — AFK loop
 

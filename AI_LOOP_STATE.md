@@ -3,8 +3,17 @@
 <!-- historical_cycle_count: 491 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
-2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
-history only when deep recovery is truly needed. Keep future entries terse.
+token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
+moves aged entries into the local, gitignored AI_LOOP_STATE_ARCHIVE.md, and Git
+history of this file is the source of truth for older detail.
+
+Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts):
+
+- PREPEND each new entry directly below this intro — the log is NEWEST-FIRST.
+- Keep the exact heading form "### Cycle result - slug" (rotation and cycle counting match it at line start).
+- Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
+- The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
+- Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
 
 ### Cycle result - compact_context_version_opt_in
 

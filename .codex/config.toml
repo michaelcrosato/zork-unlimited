@@ -1,8 +1,14 @@
+# Codex loads this project-scoped config ONLY once the project is trusted —
+# run `codex` interactively in the repo once before headless `codex exec` use,
+# or the adventureforge MCP server below is silently absent (loop.sh's codex
+# fallback would then run without engine tools). Keep in sync with .mcp.json,
+# which defines the identical server for Claude Code.
 [mcp_servers.adventureforge]
 command = "npm"
 args = ["--silent", "run", "mcp"]
 cwd = "."
+# npm + tsx cold start needs more than the 10s default; 60s tool timeout and
+# enabled are the documented defaults, restated here for visibility.
 startup_timeout_sec = 20
 tool_timeout_sec = 60
 enabled = true
-

@@ -5,22 +5,22 @@ This project runs on **trust, but verify**.
 ## Authority
 
 - Agents may change engine code, schemas, DSLs, mechanics, content, tooling, and docs.
-- Normal implementation decisions have no human-approval gate and no §14 ceremony.
+- Normal implementation decisions have no human-approval gate and no §14 ceremony
+  (the retired engine-extension approval gate from the original numbered build
+  spec; its history lives in `docs/archive/`).
 - Keep changes scoped to the task and the repo's existing patterns.
 
 ## Verification Bar
 
-Before finishing substantive work, run the relevant checks. For normal repo changes,
-the full bar is:
+`npm run health` is the bar for anything that lands. The granular scripts
+(`npm run typecheck`, `npm run lint`, `npm run format:check`, `npm test`) are
+strict subsets of it — use them for fast iteration, not as an additional
+requirement on top of health.
 
-- `npm run typecheck`
-- `npm run lint`
-- `npm run format:check`
-- `npm test`
-- `npm run health`
-
-`npm run health` runs verifier integrity, typecheck, lint, format check, tests, and
-pack validation. Do not commit or merge red.
+`npm run health` runs verifier integrity, typecheck, lint, format check, tests,
+UI typecheck, and pack validation. The UI typecheck means UI deps
+(`npm --prefix ui install`) are required for the bar, not just for running the
+UI server. Do not commit or merge red.
 
 ## Do Not Weaken Verification
 
@@ -34,8 +34,11 @@ pack validation. Do not commit or merge red.
 
 - Node.js 22+.
 - Install root deps with `npm install`.
-- Install UI deps with `npm --prefix ui install`.
+- Install UI deps with `npm --prefix ui install` (required for `npm run health`).
 - Optional UI server: `npm run ui:dev` at `http://localhost:5173`.
+- Codex agents: the repo-local `.codex/config.toml` registers the engine MCP
+  server, but Codex loads project config only once the project is trusted (run
+  `codex` interactively in the repo once).
 - CLI RPG play requires no server: `npm run play`.
 - MCP and live LLM playtests are optional; CI uses deterministic mocks.
 
@@ -53,8 +56,11 @@ pack validation. Do not commit or merge red.
 ## Git
 
 - Commit in clear increments when asked to land work.
-- Branch policy: `develop` is the default working branch (push CI covers it);
-  substantial work lands via feature branch → PR, and `main` tracks `develop`
-  through merged PRs. Keep every landing green — the bar is `npm run health`.
+- Branch policy: `main` is the only long-lived branch and the default. Work lands
+  through short-lived feature branches merged into `main` via PR; the required
+  status check is `verify` (`.github/workflows/ci.yml`). A direct push to `main`
+  is rejected unless that commit already has a green `verify` run, so fresh work
+  always goes through a branch. Keep every landing green — the bar is
+  `npm run health`.
 - Never print or commit secrets. Use local env files only when a task explicitly needs
   credentials.
