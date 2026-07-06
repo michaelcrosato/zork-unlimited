@@ -60,7 +60,7 @@ function quest(id: string, areaId: string, home = "town_a"): OverworldQuest {
   return {
     id,
     title: `${id} title`,
-    pack: `${id}_pack`,
+    source: `${id}_source`,
     home,
     area: areaId,
     discovery: `${id} discovery`,

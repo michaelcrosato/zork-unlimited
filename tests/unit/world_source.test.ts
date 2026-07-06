@@ -158,7 +158,7 @@ describe("world source resolution", () => {
     expect(() =>
       assertOverworldQuestSourceBindings(world, {
         ...overworld,
-        quests: [{ ...overworld.quests[0]!, pack: "content/rpg/pack/cold_forge.yaml" }],
+        quests: [{ ...overworld.quests[0]!, source: "content/rpg/pack/cold_forge.yaml" }],
       }),
     ).toThrow(/does not match canonical world graph source/);
   });

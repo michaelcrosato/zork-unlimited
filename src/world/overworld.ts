@@ -197,7 +197,7 @@ export const OverworldQuestSchema = z
   .object({
     id: z.string().min(1),
     title: z.string().min(1),
-    pack: z.string().min(1),
+    source: z.string().min(1),
     home: z.string().min(1),
     area: z.string().min(1),
     discovery: z.string().min(1),

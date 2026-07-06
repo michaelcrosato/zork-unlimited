@@ -345,7 +345,7 @@ export function assertOverworldQuestSourceBindings(
     if (!node?.source) {
       throw new Error(`Overworld quest "${quest.id}" is missing from the canonical world graph.`);
     }
-    const actualSource = normalizeSourcePath(quest.pack);
+    const actualSource = normalizeSourcePath(quest.source);
     const expectedSource = normalizeSourcePath(node.source);
     if (actualSource !== expectedSource) {
       throw new Error(

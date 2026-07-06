@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 442 -->
+<!-- historical_cycle_count: 443 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - overworld_quest_source_field
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/loop surface: New York overworld quest entries now declare `source` instead of package-era `pack`, matching canonical world graph quest bindings.
+- Loop effect: overworld/world binding validation normalizes one private source field across the open-world manifest path instead of carrying a second quest package alias.
+- Guard: focused overworld, world-source, and world-session regressions cover source binding uniqueness, mismatch detection, and fixture shape.
+- VERIFY: `npm run typecheck`, focused overworld/world-source/session regressions, `npm run validate`, `npm test`, and `npm run health` passed after loop-state rotation.
 
 ### Cycle result - world_graph_source_field
 
@@ -117,11 +125,3 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Loop effect: structured content patches operate on compiled quest data from the unified source runtime instead of re-opening package files in ToolApi code.
 - Guard: focused MCP patch regression covers world-id output, absence of `pack_path`, and canonical non-path report identity for accepted and rejected patches.
 - VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused MCP tool regression, `npm test`, and `npm run health` passed after loop-state rotation.
-
-### Cycle result - mcp_report_loader_world_id
-
-- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
-- Engine/loop surface: MCP `validate_quest` and `load_quest` report helpers now resolve source args to `world_quest_id` and call `RpgSourceRuntime.loadWorldQuestReport`; raw `packPath` stays inside source runtime.
-- Loop effect: quest report code no longer passes package paths through ToolApi helper callbacks, keeping public report/load surfaces aligned with world graph identity.
-- Guard: focused MCP source/runtime, tool, world-source, and server-registration regressions cover world-id report loading plus absence of raw path fields.
-- VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused report/source regressions, `npm test`, and `npm run health` passed after loop-state rotation.

@@ -41,7 +41,7 @@ function quest(id = "lost_letter", areaId = "market", home = "town_a"): Overworl
   return {
     id,
     title: `${id} title`,
-    pack: `${id}_pack`,
+    source: `${id}_source`,
     home,
     area: areaId,
     discovery: `${id} discovery`,

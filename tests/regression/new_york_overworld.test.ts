@@ -74,11 +74,11 @@ describe("New York overworld graph", () => {
     );
   });
 
-  it("places old quest packs locally instead of exposing all of them at start", () => {
+  it("places old quest sources locally instead of exposing all of them at start", () => {
     const local = world.quests.filter((quest) => quest.home === world.start);
     expect(local.length).toBeGreaterThan(0);
     expect(local.length).toBeLessThan(world.quests.length);
-    expect(new Set(world.quests.map((quest) => quest.pack)).size).toBe(world.quests.length);
+    expect(new Set(world.quests.map((quest) => quest.source)).size).toBe(world.quests.length);
     expect(world.design_rules.join(" ")).toContain("anchored to specific local areas");
 
     const areasById = new Map(world.areas.map((area) => [area.id, area]));
