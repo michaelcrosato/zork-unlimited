@@ -1,6 +1,28 @@
 # Agent Charter
 
-This project runs on **trust, but verify**.
+This is the entry point every coding agent (Codex, Claude, Gemini, …) reads
+first. This project runs on **trust, but verify**.
+
+## What this is
+
+AdventureForge is a deterministic, text-based TTRPG engine **designed to be
+AI-coded and AI-playtested**. The engine and content are the product; the web UI
+(`ui/`) is only a human-facing layer. Quality compounds through an autonomous
+improvement loop, and this charter orients the agent driving it.
+
+## The loop (one cycle)
+
+`loop.sh` runs it; `docs/afk_loop.md` is the full protocol. Each cycle:
+
+1. **Assess** — `npm run ai:loop` ranks the next-best improvement.
+2. **One change** — make a single focused improvement (engine, content, or tooling).
+3. **Blind playtest** — spawn a fresh, no-repo-access sub-agent that plays the
+   target quest ONLY through the `mcp__adventureforge__*` MCP tools, then writes a
+   structured report ending in a JSON exit interview. This blind feedback — what
+   the game logs show plus the exit interview — is the quality oracle. Protocol and
+   driver-agnostic harness (`npm run blind`): `docs/blind_playtest_protocol.md`.
+4. **Verify** — `npm run health` must pass (see below); no playtest report ⇒ no commit.
+5. **Commit** — one green increment, with a terse note in `AI_LOOP_STATE.md`.
 
 ## Authority
 
@@ -37,8 +59,11 @@ UI server. Do not commit or merge red.
 - Install UI deps with `npm --prefix ui install` (required for `npm run health`).
 - Optional UI server: `npm run ui:dev` at `http://localhost:5173`.
 - Codex agents: the repo-local `.codex/config.toml` registers the engine MCP
-  server, but Codex loads project config only once the project is trusted (run
-  `codex` interactively in the repo once).
+  server, but Codex loads project config **only when the project is trusted**
+  (trust does not cascade from a parent dir — trust this exact repo path). Most
+  robust for the autonomous loop: register the server once at the user level so
+  it works regardless of project trust —
+  `codex mcp add adventureforge -- npm --silent run mcp`.
 - CLI RPG play requires no server: `npm run play`.
 - MCP and live LLM playtests are optional; CI uses deterministic mocks.
 

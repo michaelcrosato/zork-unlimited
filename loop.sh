@@ -1,13 +1,19 @@
 #!/usr/bin/env bash
 # The AFK loop driver. Usage: ./loop.sh [--once]   (protocol: docs/afk_loop.md)
 #
+# CODEX-PRIMARY: the routine improvement loop is meant to run OpenAI Codex /
+# ChatGPT indefinitely; Claude Code and Gemini are for heavy restructuring, not
+# the routine cycle. `auto` therefore prefers Codex when it is installed + authed.
+#
 # Env knobs (defaults in brackets):
 #   AI_LOOP_COMMIT=1                 commit green cycles [0 = evidence-only]
 #   AI_LOOP_PUSH=1                   push after commit [0]; see the push note below
 #   AI_LOOP_MAX_CYCLES=N             stop after N cycles [unbounded]
 #   AI_LOOP_DELAY_SECONDS=N          pause between cycles [10]
-#   AI_AGENT_CMD="..."               agent command [claude -p, else codex exec]
-#   AI_LOOP_MODEL / AI_LOOP_EFFORT / AI_LOOP_BUDGET_USD   claude flags [sonnet/-/-]
+#   AI_AGENT_CMD="..."               explicit full agent command (overrides all below)
+#   AI_LOOP_AGENT=codex|claude|auto  which driver [auto = Codex-primary, Claude fallback]
+#   AI_CODEX_SANDBOX=...             codex sandbox [workspace-write]
+#   AI_LOOP_MODEL / AI_LOOP_EFFORT / AI_LOOP_BUDGET_USD   claude-only flags [sonnet/-/-]
 #   AI_AGENT_TIMEOUT_SECONDS=N       hang-kill budget per agent turn [2400]
 #   AI_LOOP_MAX_CONSECUTIVE_FAILURES / AI_LOOP_MAX_TOTAL_FAILURES   breakers [5 / 15]
 #   AI_LOOP_ALLOW_DIRTY=1            start on a dirty tree (risky; see below) [0]
@@ -64,31 +70,42 @@ latest_prompt() {
 
 # Resolve the headless agent command that does each cycle's WORK (incl. the
 # mandatory blind LLM playtest). Precedence:
-#   1. $AI_AGENT_CMD  — explicit, e.g. "claude -p --dangerously-skip-permissions"
-#   2. Claude Code    — `claude -p` (preferred: it has the Task tool, so it can
-#                        spawn the blind-playtest subagent the prompt requires)
-#   3. Codex          — `codex exec` if installed + authed
-#   4. (none)         — evidence-only: the prompt is written but no work is done
-# The chosen command must read the prompt from STDIN (claude -p and codex `-` both do).
+#   1. $AI_AGENT_CMD           — explicit full command, wins over everything
+#   2. $AI_LOOP_AGENT=codex    — force Codex   (evidence-only if codex unavailable)
+#      $AI_LOOP_AGENT=claude   — force Claude  (evidence-only if claude unavailable)
+#   3. auto (default)          — Codex-primary: prefer `codex exec`, else `claude -p`
+#   4. (none available)        — evidence-only: the prompt is written, no work is done
+# Codex runs non-interactively per OpenAI's documented autonomous pattern
+# (`codex exec -a never --sandbox workspace-write`). The blind playtest works under
+# either driver: a Codex driver uses `npm run blind` or a nested `codex exec`; a
+# Claude driver uses its Task tool (see docs/blind_playtest_protocol.md — the
+# packaged `npm run blind` harness is the driver-agnostic path). The chosen command
+# must read the prompt from STDIN (both `codex exec -` and `claude -p` do).
 agent_cmd() {
   if [[ -n "${AI_AGENT_CMD:-}" ]]; then echo "$AI_AGENT_CMD"; return 0; fi
-  if command -v claude >/dev/null 2>&1; then
-    # Token-efficient defaults (all overridable). The loop's work is well-scoped and
-    # health-gated, so Sonnet (≈5x cheaper than Opus and far easier on the weekly usage
-    # limit) is plenty; set AI_LOOP_MODEL=opus to restore max capability. Optional
-    # per-cycle compute guards: AI_LOOP_EFFORT (low|medium|high|xhigh|max — trims Opus
-    # 4.8's default-high thinking on routine cycles) and AI_LOOP_BUDGET_USD (a
-    # runaway-spend cap). Left unset by default so behaviour stays unsurprising.
-    local flags="--model ${AI_LOOP_MODEL:-sonnet} --dangerously-skip-permissions"
-    [[ -n "${AI_LOOP_EFFORT:-}" ]] && flags="--effort ${AI_LOOP_EFFORT} ${flags}"
-    [[ -n "${AI_LOOP_BUDGET_USD:-}" ]] && flags="${flags} --max-budget-usd ${AI_LOOP_BUDGET_USD}"
-    echo "claude -p ${flags}"
-    return 0
-  fi
-  if command -v codex >/dev/null 2>&1 && [[ -f "${CODEX_HOME:-$HOME/.codex}/auth.json" ]]; then
-    echo "codex -a never exec --sandbox ${AI_CODEX_SANDBOX:-workspace-write} --cd $PWD -"; return 0
-  fi
-  echo ""
+
+  local want="${AI_LOOP_AGENT:-auto}"
+  local have_codex=0 have_claude=0
+  command -v codex >/dev/null 2>&1 && [[ -f "${CODEX_HOME:-$HOME/.codex}/auth.json" ]] && have_codex=1
+  command -v claude >/dev/null 2>&1 && have_claude=1
+
+  local codex_cmd="codex -a never exec --sandbox ${AI_CODEX_SANDBOX:-workspace-write} --cd $PWD -"
+  # Claude flags are token-efficient defaults (all overridable): Sonnet is well-scoped
+  # and health-gated; AI_LOOP_MODEL=opus restores max capability; AI_LOOP_EFFORT and
+  # AI_LOOP_BUDGET_USD are optional per-cycle compute/spend guards.
+  local claude_flags="--model ${AI_LOOP_MODEL:-sonnet} --dangerously-skip-permissions"
+  [[ -n "${AI_LOOP_EFFORT:-}" ]] && claude_flags="--effort ${AI_LOOP_EFFORT} ${claude_flags}"
+  [[ -n "${AI_LOOP_BUDGET_USD:-}" ]] && claude_flags="${claude_flags} --max-budget-usd ${AI_LOOP_BUDGET_USD}"
+  local claude_cmd="claude -p ${claude_flags}"
+
+  case "$want" in
+    codex)  [[ "$have_codex"  == 1 ]] && echo "$codex_cmd" ;;
+    claude) [[ "$have_claude" == 1 ]] && echo "$claude_cmd" ;;
+    *)      # auto — Codex-primary, Claude fallback
+            if   [[ "$have_codex"  == 1 ]]; then echo "$codex_cmd"
+            elif [[ "$have_claude" == 1 ]]; then echo "$claude_cmd"
+            fi ;;
+  esac
 }
 
 run_agent() {
@@ -97,7 +114,7 @@ run_agent() {
   if [[ -z "$prompt" ]]; then echo "No AFK agent prompt found; skipping agent handoff."; return 0; fi
   if [[ "${AI_LOOP_RUN_AGENT:-1}" != "1" ]]; then echo "AI_LOOP_RUN_AGENT is not 1; prompt is ready at $prompt."; return 0; fi
   cmd="$(agent_cmd)"
-  if [[ -z "$cmd" ]]; then echo "No agent available (set AI_AGENT_CMD, e.g. 'claude -p --dangerously-skip-permissions'); evidence-only. Prompt at $prompt."; return 0; fi
+  if [[ -z "$cmd" ]]; then echo "No agent available (install+auth codex, or set AI_AGENT_CMD, e.g. 'codex -a never exec --sandbox workspace-write -'); evidence-only. Prompt at $prompt."; return 0; fi
   local budget="${AI_AGENT_TIMEOUT_SECONDS:-2400}"
   # Per-cycle override: ai-loop.ts writes agentTimeoutSeconds into latest-cycle.json
   # for ultraplan cycles, which run a bounded multi-agent Workflow and need a larger
@@ -175,8 +192,8 @@ run_cycle() {
     git clean -fdq content traces tests >/dev/null 2>&1 || true
   }
   npm run ai:loop || { echo "ai:loop failed"; _revert_failed_cycle; return 1; }
-  # The agent (claude -p by default) does the actual work + the mandatory blind LLM
-  # playtest. If it is unavailable the cycle simply makes no changes and the gates
+  # The agent (codex exec by default; see agent_cmd) does the actual work + the
+  # mandatory blind LLM playtest. If it is unavailable the cycle makes no changes and the gates
   # below skip the commit.
   run_agent || echo "(agent step reported an error — continuing to verify)"
   # Trust, but verify: health is a BLOCKING gate (runs the static verifier-integrity
