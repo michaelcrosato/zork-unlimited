@@ -54,7 +54,7 @@ function withStaleAuditFixtureRoot(run: (root: string) => void): void {
         "    - id: stale_fixture",
         '      name: "Stale Fixture"',
         "      kind: quest",
-        "      pack: content/rpg/pack/stale_fixture.yaml",
+        "      source: content/rpg/pack/stale_fixture.yaml",
         "  edges:",
         "    - from: charterhaven",
         "      to: stale_fixture",

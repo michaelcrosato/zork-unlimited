@@ -42,7 +42,7 @@ function runNpm(command: string, timeout = 120_000) {
 describe("single-engine RPG validation bar", () => {
   const packs = discoverRpgPacks();
   const worldQuestIds = loadWorldManifest(root)
-    .graph.nodes.filter((node) => node.kind === "quest" && node.pack !== undefined)
+    .graph.nodes.filter((node) => node.kind === "quest" && node.source !== undefined)
     .map((node) => node.id)
     .sort();
 

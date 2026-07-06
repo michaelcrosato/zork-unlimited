@@ -17,7 +17,7 @@ import {
   type WorldGraphNode,
   type WorldManifest,
 } from "./schema.js";
-import { normalizePackPath, worldQuestNodeById } from "./graph.js";
+import { normalizeSourcePath, worldQuestNodeById } from "./graph.js";
 import {
   compactSourceRefLegacyConsistency,
   compactSourceRefValidationError,
@@ -176,48 +176,48 @@ function coordKey(coord: readonly [number, number]): string {
   return `${coord[0]},${coord[1]}`;
 }
 
-function discoverShippedRpgPackPaths(root: string): string[] {
+function discoverShippedRpgSourcePaths(root: string): string[] {
   try {
     return readdirSync(join(root, "content", "rpg", "pack"))
       .filter((file) => file.endsWith(".yaml"))
-      .map((file) => normalizePackPath(`content/rpg/pack/${file}`))
+      .map((file) => normalizeSourcePath(`content/rpg/pack/${file}`))
       .sort();
   } catch {
     return [];
   }
 }
 
-export function assertWorldQuestPackCoverage(
+export function assertWorldQuestSourceCoverage(
   world: WorldManifest,
-  shippedPackPaths: string[],
+  shippedSourcePaths: string[],
 ): void {
-  const shipped = [...new Set(shippedPackPaths.map(normalizePackPath))].sort();
-  const questPacks = world.graph.nodes
+  const shipped = [...new Set(shippedSourcePaths.map(normalizeSourcePath))].sort();
+  const questSources = world.graph.nodes
     .filter((node) => node.kind === "quest")
-    .map((node) => normalizePackPath(node.pack ?? ""));
+    .map((node) => normalizeSourcePath(node.source ?? ""));
 
-  const duplicates = duplicateValues(questPacks);
+  const duplicates = duplicateValues(questSources);
   if (duplicates.length > 0) {
     throw new Error(
-      `Canonical world graph binds the same shipped RPG pack more than once: ${duplicates.join(
+      `Canonical world graph binds the same shipped RPG source more than once: ${duplicates.join(
         ", ",
       )}.`,
     );
   }
 
-  const questPackSet = new Set(questPacks);
+  const questSourceSet = new Set(questSources);
   const shippedSet = new Set(shipped);
-  const missing = shipped.filter((path) => !questPackSet.has(path));
-  const extra = questPacks.filter((path) => !shippedSet.has(path)).sort();
+  const missing = shipped.filter((path) => !questSourceSet.has(path));
+  const extra = questSources.filter((path) => !shippedSet.has(path)).sort();
 
   if (missing.length > 0) {
     throw new Error(
-      `Canonical world graph is missing shipped RPG pack binding(s): ${missing.join(", ")}.`,
+      `Canonical world graph is missing shipped RPG source binding(s): ${missing.join(", ")}.`,
     );
   }
   if (extra.length > 0) {
     throw new Error(
-      `Canonical world graph references RPG pack(s) not shipped in content/rpg/pack: ${extra.join(
+      `Canonical world graph references RPG source(s) not shipped in content/rpg/pack: ${extra.join(
         ", ",
       )}.`,
     );
@@ -317,7 +317,7 @@ export function loadWorldManifest(root: string): WorldManifest {
   }
   assertWorldGraphIntegrity(world);
   if (loadedFromDisk) {
-    assertWorldQuestPackCoverage(world, discoverShippedRpgPackPaths(root));
+    assertWorldQuestSourceCoverage(world, discoverShippedRpgSourcePaths(root));
   }
   deepFreeze(world);
   worldManifestCache.set(root, world);
@@ -330,7 +330,7 @@ function resolveWorldQuestSourceBinding(
 ): WorldQuestSourceBinding {
   const world = loadWorldManifest(root);
   const node = worldQuestNodeById(world, worldQuestId);
-  if (!node?.pack) {
+  if (!node?.source) {
     throw new Error(`Unknown Charter Marches quest "${worldQuestId}".`);
   }
   return { world, node };
@@ -342,16 +342,16 @@ export function assertOverworldQuestSourceBindings(
 ): void {
   for (const quest of overworld.quests) {
     const node = worldQuestNodeById(world, quest.id);
-    if (!node?.pack) {
+    if (!node?.source) {
       throw new Error(`Overworld quest "${quest.id}" is missing from the canonical world graph.`);
     }
-    const actualPack = normalizePackPath(quest.pack);
-    const expectedPack = normalizePackPath(node.pack);
-    if (actualPack !== expectedPack) {
+    const actualSource = normalizeSourcePath(quest.pack);
+    const expectedSource = normalizeSourcePath(node.source);
+    if (actualSource !== expectedSource) {
       throw new Error(
-        `Overworld quest "${quest.id}" pack ${JSON.stringify(
-          actualPack,
-        )} does not match canonical world graph pack ${JSON.stringify(expectedPack)}.`,
+        `Overworld quest "${quest.id}" source ${JSON.stringify(
+          actualSource,
+        )} does not match canonical world graph source ${JSON.stringify(expectedSource)}.`,
       );
     }
   }

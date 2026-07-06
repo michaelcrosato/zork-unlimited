@@ -42,7 +42,7 @@ graph:
     - id: ${TEMP_WORLD_QUEST_ID}
       name: Same Size
       kind: quest
-      pack: content/rpg/pack/${TEMP_WORLD_QUEST_ID}.yaml
+      source: content/rpg/pack/${TEMP_WORLD_QUEST_ID}.yaml
   edges:
     - from: hub
       to: ${TEMP_WORLD_QUEST_ID}

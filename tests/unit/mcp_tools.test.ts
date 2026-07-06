@@ -225,6 +225,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(world.quests.every((q) => !("id" in q))).toBe(true);
     expect(world.quests.every((q) => !("graph_node" in q))).toBe(true);
     expect(expanded.graph.nodes.every((node) => !("pack" in node))).toBe(true);
+    expect(expanded.graph.nodes.every((node) => !("source" in node))).toBe(true);
     expect(world.quests.some((s) => s.world_quest_id === "sunken_barrow")).toBe(true);
     expect(world.quests.some((s) => s.world_quest_id === "breaking_weir")).toBe(true);
     expect(

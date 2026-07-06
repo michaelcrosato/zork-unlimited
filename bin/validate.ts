@@ -36,7 +36,7 @@ function worldQuestTarget(worldQuestId: string): ValidationTarget {
 function discoverWorldQuestTargets(): ValidationTarget[] {
   return rpgSources
     .loadWorldManifest()
-    .graph.nodes.filter((node) => node.kind === "quest" && node.pack !== undefined)
+    .graph.nodes.filter((node) => node.kind === "quest" && node.source !== undefined)
     .sort((a, b) => a.id.localeCompare(b.id))
     .map((node) => worldQuestTarget(node.id));
 }

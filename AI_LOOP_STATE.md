@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 441 -->
+<!-- historical_cycle_count: 442 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - world_graph_source_field
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/loop surface: canonical world graph quest nodes now declare `source` instead of package-era `pack`; graph normalization and coverage use `normalizeSourcePath` plus `assertWorldQuestSourceCoverage`.
+- Loop effect: validate, world loading, and MCP source runtime dereference world quest sources without teaching future loops a graph-level package field.
+- Guard: single-world, world-source, source-runtime, catalog, and validation-bar regressions cover `source` graph bindings and reject private `source`/old `pack` fields from public graph output.
+- VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused world/source regressions, `npm test`, and `npm run health` passed after loop-state rotation.
 
 ### Cycle result - rpg_source_loader_module
 
@@ -117,11 +125,3 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Loop effect: quest report code no longer passes package paths through ToolApi helper callbacks, keeping public report/load surfaces aligned with world graph identity.
 - Guard: focused MCP source/runtime, tool, world-source, and server-registration regressions cover world-id report loading plus absence of raw path fields.
 - VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused report/source regressions, `npm test`, and `npm run health` passed after loop-state rotation.
-
-### Cycle result - mcp_world_loader_path_hidden
-
-- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
-- Engine/loop surface: MCP RPG lifecycle now asks `RpgSourceRuntime` for playable world quests by `world_quest_id`; raw `packPath` handling stays inside the source loader boundary.
-- Loop effect: start/load session code no longer manually threads disk package paths while resolving live sessions, and README quickstart now teaches world quest ids for validate/inspect.
-- Guard: focused MCP source/runtime, session/tool, save/trace, play CLI, validation-bar, and trace CLI regressions cover world-id loading plus doc contract.
-- VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused source/interface regressions, `npm test`, and `npm run health` passed after loop-state rotation.

@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { SaveIntegrityError } from "../../src/persist/save_load.js";
 import {
   assertWorldGraphIntegrity,
-  assertWorldQuestPackCoverage,
+  assertWorldQuestSourceCoverage,
   assertOverworldQuestSourceBindings,
   loadOverworldManifest,
   loadWorldManifest,
@@ -22,11 +22,11 @@ import type { RpgAction } from "../../src/api/types.js";
 import type { WorldManifest } from "../../src/world/schema.js";
 
 const ROOT = process.cwd();
-const PACK = "content/rpg/pack/sunken_barrow.yaml";
+const SOURCE = "content/rpg/pack/sunken_barrow.yaml";
 const UNSAFE_GENERATED_RPG_SEED = Number.MAX_SAFE_INTEGER + 1;
 const overworld = loadOverworldManifest(ROOT);
 
-function worldWithQuestPacks(quests: Array<{ id: string; pack: string }>): WorldManifest {
+function worldWithQuestSources(quests: Array<{ id: string; source: string }>): WorldManifest {
   return {
     id: "charter_marches",
     name: "The Charter Marches",
@@ -39,7 +39,7 @@ function worldWithQuestPacks(quests: Array<{ id: string; pack: string }>): World
           id: quest.id,
           name: quest.id,
           kind: "quest" as const,
-          pack: quest.pack,
+          source: quest.source,
         })),
       ],
       edges: [],
@@ -60,7 +60,7 @@ function connectedWorld(): WorldManifest {
           id: "sunken_barrow",
           name: "Sunken Barrow",
           kind: "quest",
-          pack: PACK,
+          source: SOURCE,
         },
       ],
       edges: [{ from: "hub", to: "sunken_barrow", route: "barrow road" }],
@@ -160,7 +160,7 @@ describe("world source resolution", () => {
         ...overworld,
         quests: [{ ...overworld.quests[0]!, pack: "content/rpg/pack/cold_forge.yaml" }],
       }),
-    ).toThrow(/does not match canonical world graph pack/);
+    ).toThrow(/does not match canonical world graph source/);
   });
 
   it("rejects malformed canonical world graph topology before play starts", () => {
@@ -248,37 +248,38 @@ describe("world source resolution", () => {
     ).toThrow(/duplicate coordinate/);
   });
 
-  it("rejects detached, duplicate, or unshipped RPG pack bindings in the world graph", () => {
+  it("rejects detached, duplicate, or unshipped RPG source bindings in the world graph", () => {
     expect(() =>
-      assertWorldQuestPackCoverage(worldWithQuestPacks([{ id: "sunken_barrow", pack: PACK }]), [
-        PACK,
-      ]),
+      assertWorldQuestSourceCoverage(
+        worldWithQuestSources([{ id: "sunken_barrow", source: SOURCE }]),
+        [SOURCE],
+      ),
     ).not.toThrow();
 
     expect(() =>
-      assertWorldQuestPackCoverage(worldWithQuestPacks([{ id: "sunken_barrow", pack: PACK }]), [
-        PACK,
-        "content/rpg/pack/cold_forge.yaml",
-      ]),
-    ).toThrow(/missing shipped RPG pack binding/);
+      assertWorldQuestSourceCoverage(
+        worldWithQuestSources([{ id: "sunken_barrow", source: SOURCE }]),
+        [SOURCE, "content/rpg/pack/cold_forge.yaml"],
+      ),
+    ).toThrow(/missing shipped RPG source binding/);
 
     expect(() =>
-      assertWorldQuestPackCoverage(
-        worldWithQuestPacks([
-          { id: "sunken_barrow", pack: PACK },
-          { id: "duplicate_barrow", pack: PACK },
+      assertWorldQuestSourceCoverage(
+        worldWithQuestSources([
+          { id: "sunken_barrow", source: SOURCE },
+          { id: "duplicate_barrow", source: SOURCE },
         ]),
-        [PACK],
+        [SOURCE],
       ),
     ).toThrow(/more than once/);
 
     expect(() =>
-      assertWorldQuestPackCoverage(
-        worldWithQuestPacks([
-          { id: "sunken_barrow", pack: PACK },
-          { id: "cold_forge", pack: "content/rpg/pack/cold_forge.yaml" },
+      assertWorldQuestSourceCoverage(
+        worldWithQuestSources([
+          { id: "sunken_barrow", source: SOURCE },
+          { id: "cold_forge", source: "content/rpg/pack/cold_forge.yaml" },
         ]),
-        [PACK],
+        [SOURCE],
       ),
     ).toThrow(/not shipped in content\/rpg\/pack/);
   });
@@ -287,7 +288,7 @@ describe("world source resolution", () => {
     expect(resolveWorldQuestSourceId({ world_quest_id: "sunken_barrow" }, "test")).toBe(
       "sunken_barrow",
     );
-    expect(() => resolveWorldQuestSourceId({ pack_path: PACK } as never, "test")).toThrow(
+    expect(() => resolveWorldQuestSourceId({ pack_path: SOURCE } as never, "test")).toThrow(
       /not pack_path/,
     );
     expect(() => resolveWorldQuestSourceId({}, "test")).toThrow(/requires world_quest_id/);
@@ -300,7 +301,7 @@ describe("world source resolution", () => {
       generateRpgSeed: 3,
     });
     expect(() => resolveGameSource(ROOT, {}, "new_game")).toThrow(/requires generate_rpg_seed/);
-    expect(() => resolveGameSource(ROOT, { pack_path: PACK } as never, "new_game")).toThrow(
+    expect(() => resolveGameSource(ROOT, { pack_path: SOURCE } as never, "new_game")).toThrow(
       /not pack_path/,
     );
     expect(() =>
@@ -347,7 +348,7 @@ describe("world source resolution", () => {
     });
     expect(traceGeneratedRpgSeed(generatedTrace, "trace_test")).toBe(3);
     expect(() =>
-      resolveTraceGameSource(ROOT, { pack_path: PACK } as never, trace, "trace_test"),
+      resolveTraceGameSource(ROOT, { pack_path: SOURCE } as never, trace, "trace_test"),
     ).toThrow(/not pack_path/);
     expect(
       resolveSaveGameSource(ROOT, {}, { source_ref: ["wq", "sunken_barrow"] }, "save_test"),
@@ -424,7 +425,7 @@ describe("world source resolution", () => {
     expect(() =>
       resolveSaveGameSource(
         ROOT,
-        { pack_path: PACK } as never,
+        { pack_path: SOURCE } as never,
         { generatedRpgSeed: 3, source_ref: ["gen", 3] },
         "save_test",
       ),
@@ -432,7 +433,7 @@ describe("world source resolution", () => {
     expect(() =>
       resolveSaveGameSource(
         ROOT,
-        { pack_path: PACK } as never,
+        { pack_path: SOURCE } as never,
         { worldQuestId: "sunken_barrow", source_ref: ["wq", "sunken_barrow"] },
         "save_test",
       ),

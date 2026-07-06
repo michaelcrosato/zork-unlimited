@@ -27,7 +27,7 @@ export type WorldRouteStep = {
   distance_from_previous?: number;
 };
 
-export function normalizePackPath(path: string): string {
+export function normalizeSourcePath(path: string): string {
   return path.replaceAll("\\", "/").replace(/^(\.\.\/)+/, "");
 }
 

@@ -3,7 +3,7 @@
  *
  * Schemas keep `meta.world` optional so tiny validator fixtures and generated eval
  * packs stay minimal. Shipped packs are different: every YAML under
- * content/rpg/pack must bind to the same canonical world and hub.
+ * shipped RPG sources must bind to the same canonical world and hub.
  * MCP play is RPG-only, so the shipped quest graph is now the same set that
  * play tools can start.
  */
@@ -18,7 +18,7 @@ import {
   WorldManifestSchema,
 } from "../../src/world/schema.js";
 import {
-  normalizePackPath,
+  normalizeSourcePath,
   worldMapBounds,
   worldMapEdges,
   worldNodeAtCoord,
@@ -67,7 +67,7 @@ function discoverQuestBindings(): { path: string; worldQuestId: string }[] {
   return loadWorldManifest()
     .graph.nodes.filter((node) => node.kind === "quest")
     .map((node) => ({
-      path: normalizePackPath(node.pack ?? ""),
+      path: normalizeSourcePath(node.source ?? ""),
       worldQuestId: node.id,
     }))
     .sort((a, b) => a.path.localeCompare(b.path));
@@ -84,7 +84,7 @@ describe("single-world library contract", () => {
     expect(world.id).toBe(CANONICAL_WORLD_ID);
     expect(world.name).toBe(CANONICAL_WORLD_NAME);
     expect(world.hub).toBe(CANONICAL_HUB_CITY);
-    expect(world.rule).toContain("Every shipped pack");
+    expect(world.rule).toContain("Every shipped RPG source");
     expect(world.graph.hub).toBe("charterhaven");
     expect(world.graph.nodes.find((node) => node.id === world.graph.hub)).toMatchObject({
       name: CANONICAL_HUB_CITY,
@@ -92,18 +92,18 @@ describe("single-world library contract", () => {
     });
   });
 
-  it("connects every shipped quest pack into one reachable world graph", () => {
+  it("connects every shipped quest source into one reachable world graph", () => {
     const world = loadWorldManifest();
     const nodes = new Map(world.graph.nodes.map((node) => [node.id, node]));
-    const questPacks = world.graph.nodes
+    const questSources = world.graph.nodes
       .filter((node) => node.kind === "quest")
-      .map((node) => normalizePackPath(node.pack ?? ""))
+      .map((node) => normalizeSourcePath(node.source ?? ""))
       .sort();
     const coordKeys = world.graph.nodes.map((node) => node.coord?.join(","));
 
     expect(new Set(world.graph.nodes.map((node) => node.id)).size).toBe(world.graph.nodes.length);
-    expect(new Set(questPacks).size).toBe(questPacks.length);
-    expect(questPacks).toEqual(packs);
+    expect(new Set(questSources).size).toBe(questSources.length);
+    expect(questSources).toEqual(packs);
     expect(world.graph.nodes.every((node) => node.coord !== undefined)).toBe(true);
     expect(nodes.get(world.graph.hub)?.coord).toEqual([0, 0]);
     expect(new Set(coordKeys).size).toBe(world.graph.nodes.length);
@@ -230,6 +230,7 @@ describe("single-world library contract", () => {
       distance: 4,
     });
     expect(world.graph.nodes.every((node) => !("pack" in node))).toBe(true);
+    expect(world.graph.nodes.every((node) => !("source" in node))).toBe(true);
     expect(world.graph.nodes.every((node) => Array.isArray(node.coord))).toBe(true);
     expect(world.graph.nodes.find((node) => node.id === "charterhaven")?.coord).toEqual([0, 0]);
     expect("graph" in world.world).toBe(false);

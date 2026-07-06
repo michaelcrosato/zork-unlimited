@@ -15,7 +15,7 @@ import {
 import type { Trace } from "../trace/record.js";
 import type { WorldBinding, WorldGraphNode, WorldManifest } from "../world/schema.js";
 import {
-  normalizePackPath,
+  normalizeSourcePath,
   worldMapBounds,
   worldMapEdges,
   worldQuestNodeById,
@@ -53,7 +53,7 @@ export type WorldQuestSourceEntry = {
   world_quest_id: string;
 };
 
-type PublicWorldGraphNode = Omit<WorldManifest["graph"]["nodes"][number], "pack">;
+type PublicWorldGraphNode = Omit<WorldManifest["graph"]["nodes"][number], "source">;
 
 export type PublicWorldGraph = Omit<WorldManifest["graph"], "nodes" | "edges"> & {
   bounds?: WorldMapBounds;
@@ -294,10 +294,10 @@ export class RpgSourceRuntime {
     if (!node) {
       throw new Error(`Unknown Charter Marches quest "${worldQuestId}".`);
     }
-    if (!node.pack) {
+    if (!node.source) {
       throw new Error(`World quest "${worldQuestId}" does not declare an RPG source.`);
     }
-    return { world, node, sourcePath: normalizePackPath(node.pack) };
+    return { world, node, sourcePath: normalizeSourcePath(node.source) };
   }
 
   requireWorldQuestPlayable(worldQuestId: string): RpgWorldQuestPlayableSource {
