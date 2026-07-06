@@ -2850,6 +2850,7 @@ describe("MCP tools — the play loop (§9.1)", () => {
     expect("mode" in saved).toBe(false);
     expect("world_quest_id" in saved).toBe(false);
     expect("generated_rpg_seed" in saved).toBe(false);
+    expect("content_hash" in saved).toBe(false);
     const loaded = a.load_game({
       save: saved.save,
       compact_observation: false,
@@ -3315,8 +3316,10 @@ describe("MCP tools — save / load round-trip (§8.7)", () => {
 
     const saved = a.save_game({ session_id: game.session_id });
     const sourcedSave = a.save_game({ session_id: game.session_id, include_source: true });
+    const hashedSave = a.save_game({ session_id: game.session_id, include_content_hash: true });
     const reloaded = a.load_game({ save: saved.save });
     const saveBundle = JSON.parse(saved.save) as {
+      contentHash?: unknown;
       mode?: string;
       packId?: unknown;
       source_ref?: unknown;
@@ -3328,9 +3331,14 @@ describe("MCP tools — save / load round-trip (§8.7)", () => {
     expect("mode" in saved).toBe(false);
     expect("world_quest_id" in saved).toBe(false);
     expect("generated_rpg_seed" in saved).toBe(false);
+    expect("content_hash" in saved).toBe(false);
+    expect("content_hash" in sourcedSave).toBe(false);
     expect(sourcedSave.world_quest_id).toBe("sunken_barrow");
     expect("generated_rpg_seed" in sourcedSave).toBe(false);
     expect(sourcedSave.save).toBe(saved.save);
+    expect(hashedSave.save).toBe(saved.save);
+    expect(hashedSave.content_hash).toBe(saveBundle.contentHash);
+    expect(hashedSave.content_hash).toMatch(/^[0-9a-f]{64}$/);
     expect(saved.state_hash).toBe(after);
     expect(saveBundle.mode).toBe("rpg");
     expect("packId" in saveBundle).toBe(false);
@@ -3375,6 +3383,7 @@ describe("MCP tools — save / load round-trip (§8.7)", () => {
     if (!saved.ok) throw new Error("expected guarded save success");
     expect("pack_id" in saved).toBe(false);
     expect("mode" in saved).toBe(false);
+    expect("content_hash" in saved).toBe(false);
     expect(saved.state_hash).toBe(after);
     expect(a.load_game({ save: saved.save }).state_hash).toBe(after);
     expect(JSON.stringify(stale).length).toBeLessThan(JSON.stringify(saved).length);

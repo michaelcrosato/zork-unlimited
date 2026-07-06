@@ -1,10 +1,19 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 482 -->
+<!-- historical_cycle_count: 483 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - save_content_hash_opt_in
+
+- Pre-cycle: `C:\dev\agent-cleaner` measure/gates passed through WSL; optional secret scanner remains absent, and WSL git-dir warnings still print after the green gate summary.
+- Engine/loop surface: `save_game` now omits duplicate public `content_hash` by default because the save blob already embeds the full content hash that `load_game` verifies; callers can request `include_content_hash: true` for explicit audit reads.
+- Loop effect: default checkpoint response drops from 617 to 535 bytes on the measured `breaking_weir` save, while `include_content_hash: true` preserves the old 617-byte envelope; `include_source: true` still omits the duplicate hash unless explicitly requested.
+- Self-critique: this trims checkpoint payloads, not per-turn stepping; the save blob still dominates response size, but removing the repeated hash is a clean response-envelope reduction without weakening persistence integrity.
+- Guard: focused MCP save/load and server-registration regressions pin default omission, opt-in full hash echo, save-embedded hash verification, stale-save rejection behavior, and compact reload compatibility.
+- VERIFY: `C:\dev\agent-cleaner`, focused MCP regressions, payload probe, `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, `npm test`, `npm run health`, and `npm run assess` passed.
 
 ### Cycle result - compact_session_id_tokens
 
@@ -131,12 +140,3 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Self-critique: this is a direct hot-path shrink, but it still pays prose cost each changed room; unchanged hash polling remains the main repeat-turn savings.
 - Guard: focused compact-observation/MCP start tests pin exported caps, versioning, clone behavior, and full-observation opt-out.
 - VERIFY: `C:\dev\agent-cleaner`, focused compact-observation/MCP tests, payload probes, `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, `npm test`, and `npm run health` passed after loop-state rotation.
-
-### Cycle result - overworld_route_options_opt_in
-
-- Pre-cycle: `C:\dev\agent-cleaner` measure/gates passed through WSL; optional secret scanner remains absent.
-- Engine/loop surface: compact overworld MCP contexts now omit multi-hop `route_options` by default; callers opt in with `include_route_options: true`.
-- Loop effect: repeated overworld starts/reads/actions keep immediate `roads` but stop echoing route summaries unless the agent is actively planning routes.
-- Self-critique: this trims the overworld loop payload, not world manifest size; route planning remains available through the explicit route tool and opt-in context flag.
-- Guard: focused MCP overworld and registration regressions pin default omission, opt-in route arrays, clone safety, and schema-size budget.
-- VERIFY: `C:\dev\agent-cleaner`, focused MCP overworld/schema regressions, payload probes, `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, `npm test`, and `npm run health` passed after loop-state rotation.

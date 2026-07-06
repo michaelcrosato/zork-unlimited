@@ -467,8 +467,10 @@ Make discovered overworld quest leads start real RPG sessions.
 - `save_game` now returns the current `state_hash`, letting checkpoint loops bind
   saved state without a follow-up observation/state read.
 - `save_game` source echo is opt-in with `include_source: true`; the default
-  checkpoint response relies on the save blob's compact `source_ref` instead of
-  repeating `world_quest_id` / generated-seed fields.
+  checkpoint response relies on the save blob's compact `source_ref` and
+  embedded full content hash instead of repeating `world_quest_id`,
+  generated-seed, or `content_hash` fields. Callers can pass
+  `include_content_hash: true` for explicit hash audits.
 - `save_game({ expected_state_hash })` and
   `export_overworld_session({ expected_snapshot_hash })` reject stale checkpoint
   requests before serializing save/snapshot blobs, without echoing the caller's

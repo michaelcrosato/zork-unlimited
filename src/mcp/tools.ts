@@ -419,14 +419,21 @@ type RpgSaveArgs = {
   expected_state_hash?: string;
   if_state_hash?: string;
   include_source?: boolean;
+  include_content_hash?: boolean;
 };
+
+type RpgSaveContentHashField<Args extends RpgSaveArgs> = Args extends {
+  include_content_hash: true;
+}
+  ? { content_hash: string }
+  : Record<string, never>;
 
 type RpgSaveSuccess<Args extends RpgSaveArgs> = {
   ok: true;
   save: string;
-  content_hash: string;
   state_hash: string;
-} & (Args extends { include_source: true } ? RpgSourceFields : Record<string, never>);
+} & RpgSaveContentHashField<Args> &
+  (Args extends { include_source: true } ? RpgSourceFields : Record<string, never>);
 
 type RpgSaveRejection = RpgStateHashRejection;
 

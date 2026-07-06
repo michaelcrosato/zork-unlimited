@@ -521,6 +521,7 @@ tool(
     ...EXPECTED_STATE_HASH,
     ...IF_STATE_HASH,
     include_source: z.boolean().optional().describe("Echo source id."),
+    include_content_hash: z.boolean().optional().describe("Echo content hash."),
   },
   (a) => api.save_game(a),
 );
