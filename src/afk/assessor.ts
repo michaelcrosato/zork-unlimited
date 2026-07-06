@@ -195,9 +195,7 @@ export function findStaleDocRefs(docText: string, exists: (relPath: string) => b
  * variant paths. Active current docs such as docs/ROADMAP.md and
  * ADVENTUREFORGE_BUILD_SPEC.md stay inside the scan.
  */
-const DOC_STALENESS_EXCLUDED_DOCS = new Set([
-  "DECISION_LOG.md",
-]);
+const DOC_STALENESS_EXCLUDED_DOCS = new Set(["DECISION_LOG.md"]);
 
 function docStalenessDocs(root: string): string[] {
   const out: string[] = [];
