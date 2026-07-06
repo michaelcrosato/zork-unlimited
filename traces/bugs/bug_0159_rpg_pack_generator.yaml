@@ -27,7 +27,7 @@ summary: >
 
 mandated_blind_playtest:
   run: ai-runs/2026-06-03T07-43-13-701Z/playtest.md
-  pack: content/rpg/pack/cold_forge.yaml
+  pack: content/rpg/quests/cold_forge.yaml
   seeds: [47, 3]
   result: >
     Three runs to both declared endings — ending_victory (50/50, full-prep and partial-prep) and
@@ -57,7 +57,7 @@ what:
     genuinely varies without any path becoming unprovable, the fight unwinnable, or the score
     unreachable. The emitted object is run through RpgPackSchema.parse as a generator self-check.
   - >
-    The generated packs are NOT committed under content/rpg/pack: an on-demand eval distribution, not
+    The generated packs are NOT committed under content/rpg/quests: an on-demand eval distribution, not
     curated showcase content — so they incur NO blind-playtest obligation and never pollute the
     hand-authored set. Additive new files only; no engine/validator/schema/content change.
 

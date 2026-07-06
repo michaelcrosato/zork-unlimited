@@ -31,7 +31,7 @@ tests: tests/regression/wolf_winter_day_book_signpost.test.ts
 
 verification:
   - npm test -- --run tests/regression/wolf_winter_day_book_signpost.test.ts tests/regression/wolf_winter_prep_carries_score.test.ts
-  - npm run validate -- content/rpg/pack/wolf_winter.yaml
+  - npm run validate -- content/rpg/quests/wolf_winter.yaml
 
 trace_repin: >
   None. The change updates pack prose and adds a regression test; no committed

@@ -1,0 +1,21 @@
+# MUST FAIL: HELD_ALSO_PLACED
+# A `held` object is carried from the start, so listing it ALSO in a room gives it
+# two homes (inventory wins, the room copy is dead) — an authoring slip.
+meta: { id: bad_held, title: "Bad Held", start_room: a, vars_init: { hp: 10, attack: 2, defense: 1 } }
+rooms:
+  - id: a
+    name: "A"
+    description: "Room A."
+    objects: [lantern]
+    exits: [{ direction: north, to: b }]
+  - id: b
+    name: "B"
+    description: "Room B."
+    exits: [{ direction: south, to: a }]
+objects:
+  - id: lantern
+    name: "lantern"
+    description: "A carried lantern that is wrongly also placed in room A."
+    held: true
+win_conditions: [{ id: w, conditions: [{ visited: b }], ending: e }]
+endings: [{ id: e, title: "End", text: "Done." }]

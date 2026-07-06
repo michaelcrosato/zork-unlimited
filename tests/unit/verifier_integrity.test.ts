@@ -17,6 +17,10 @@ import {
   countStrongAssertions,
   detectTautologies,
   countTautologyAssertions,
+  detectLoopStateOverflow,
+  detectForbiddenPathPatterns,
+  detectForbiddenTrackedFiles,
+  detectForbiddenLegacyImports,
   detectCountRegressions,
   parseGuardConstants,
   detectGuardWeakening,
@@ -24,13 +28,18 @@ import {
   runDrift,
   classifyDrift,
   PROTECTED_FILES,
+  FORBIDDEN_FILES,
+  FORBIDDEN_TRACKED_FILES,
+  FORBIDDEN_PATH_PATTERNS,
   HASH_PIN_FILES,
   MIN_TEST_CASES,
   MIN_ASSERTIONS,
   MIN_STRONG_ASSERTIONS,
   MAX_TAUTOLOGY_ASSERTIONS,
+  MAX_LIVE_LOOP_STATE_ENTRIES,
   type GuardConstants,
 } from "../../scripts/verify-integrity.js";
+import { LOOP_ARCHIVE_FILE } from "../../src/afk/loop_state.js";
 
 describe("detectDisabledTests catches every disabled/focused marker", () => {
   // Markers are assembled at runtime (not written verbatim) so this test file does
@@ -146,13 +155,116 @@ describe("detectCountRegressions — counts cannot drop and tautologies cannot r
   });
 });
 
+describe("detectLoopStateOverflow — live handoff stays token-small", () => {
+  const log = (n: number): string =>
+    Array.from({ length: n }, (_, i) => `### Cycle result - compact_${i}\n\n- done.\n`).join("\n");
+
+  it("allows the configured live rotation window", () => {
+    expect(detectLoopStateOverflow(log(MAX_LIVE_LOOP_STATE_ENTRIES))).toEqual([]);
+  });
+
+  it("blocks an overgrown live AI_LOOP_STATE.md", () => {
+    const findings = detectLoopStateOverflow(log(MAX_LIVE_LOOP_STATE_ENTRIES + 1));
+    expect(findings.map((f) => f.code)).toEqual(["LOOP_STATE_OVER_ROTATED"]);
+    expect(findings[0]!.message).toContain(`${MAX_LIVE_LOOP_STATE_ENTRIES + 1}`);
+  });
+});
+
+describe("detectForbiddenPathPatterns — retired test families stay gone", () => {
+  it("blocks recreated CYOA/parser unit test families by path pattern", () => {
+    const findings = detectForbiddenPathPatterns([
+      "tests/unit/cyoa_engine.test.ts",
+      "tests/unit/parser_grammar.test.ts",
+      "tests/regression/cyoa_score_economy.test.ts",
+      "tests/regression/parser_all_endings_reachable.test.ts",
+      "tests/property/cyoa_determinism.test.ts",
+      "tests/property/parser_determinism.test.ts",
+      "tests/unit/rpg.test.ts",
+    ]);
+    expect(findings.map((f) => f.where)).toEqual([
+      "tests/unit/cyoa_engine.test.ts",
+      "tests/unit/parser_grammar.test.ts",
+      "tests/regression/cyoa_score_economy.test.ts",
+      "tests/regression/parser_all_endings_reachable.test.ts",
+      "tests/property/cyoa_determinism.test.ts",
+      "tests/property/parser_determinism.test.ts",
+    ]);
+    expect(findings.every((f) => f.code === "FORBIDDEN_PATH_PATTERN")).toBe(true);
+  });
+});
+
+describe("detectForbiddenTrackedFiles — token-heavy local artifacts stay out of Git", () => {
+  it("blocks ignored loop artifacts if they become tracked", () => {
+    const findings = detectForbiddenTrackedFiles([
+      "AI_LOOP_STATE.md",
+      LOOP_ARCHIVE_FILE,
+      "ai-runs/agent-cleaner-cycle459.log",
+      "ai-runs/2026-07-06T00-00-00-000Z/playtest.md",
+      "src/core/engine.ts",
+    ]);
+    expect(findings.map((f) => f.code)).toEqual([
+      "FORBIDDEN_TRACKED_FILE",
+      "FORBIDDEN_TRACKED_FILE",
+      "FORBIDDEN_TRACKED_FILE",
+    ]);
+    expect(findings.map((f) => f.where)).toEqual([
+      LOOP_ARCHIVE_FILE,
+      "ai-runs/agent-cleaner-cycle459.log",
+      "ai-runs/2026-07-06T00-00-00-000Z/playtest.md",
+    ]);
+    expect(findings[0]!.message).toContain("untracked");
+  });
+});
+
+describe("detectForbiddenLegacyImports — live source stays RPG-only", () => {
+  it("blocks imports of retired CYOA/parser modules in runtime code", () => {
+    const findings = detectForbiddenLegacyImports([
+      {
+        path: "src/rpg/runner.ts",
+        text: [
+          'import { build } from "../parser/model.js";',
+          'export { choose } from "./cyoa/engine.js";',
+          'const validator = await import("../validate/parser_validator.js");',
+          'import { hashState } from "../core/hash.js";',
+        ].join("\n"),
+      },
+    ]);
+
+    expect(findings.map((f) => f.code)).toEqual([
+      "FORBIDDEN_LEGACY_IMPORT",
+      "FORBIDDEN_LEGACY_IMPORT",
+      "FORBIDDEN_LEGACY_IMPORT",
+    ]);
+    expect(findings.map((f) => f.where)).toEqual([
+      "src/rpg/runner.ts:1",
+      "src/rpg/runner.ts:2",
+      "src/rpg/runner.ts:3",
+    ]);
+  });
+
+  it("allows RPG/core imports and prose references", () => {
+    const findings = detectForbiddenLegacyImports([
+      {
+        path: "src/rpg/schema.ts",
+        text: [
+          'import { hashState } from "../core/hash.js";',
+          'import { buildRpgRules } from "./runner.js";',
+          'const note = "legacy parser text is allowed in prose, not imports";',
+        ].join("\n"),
+      },
+    ]);
+
+    expect(findings).toEqual([]);
+  });
+});
+
 describe("classifyDrift — legitimate re-pin vs launder vs weakening (research-aligned)", () => {
   const errs = (fs: { severity: string }[]) => fs.filter((f) => f.severity === "error");
 
   it("ALLOWS (warns) a hash re-pin ACCOMPANIED by a content change — the user's loop case", () => {
     // The exact thing that was wrongly blocking the loop: improve a pack, re-pin its hash.
     const fs = classifyDrift(
-      ["content/cyoa/pack/watchtower_road.yaml", "tests/unit/rpg_validator.test.ts"],
+      ["content/rpg/quests/sunken_barrow.yaml", "tests/unit/rpg_validator.test.ts"],
       () => true,
     );
     expect(errs(fs)).toEqual([]); // no hard error → the cycle commits
@@ -187,6 +299,9 @@ describe("parseGuardConstants — pure parse of the guard's own defensive surfac
     expect(parsed!.minAssertions).toBe(MIN_ASSERTIONS);
     expect(parsed!.minStrongAssertions).toBe(MIN_STRONG_ASSERTIONS);
     expect(parsed!.protectedFiles).toEqual(PROTECTED_FILES);
+    expect(parsed!.forbiddenFiles).toEqual(FORBIDDEN_FILES);
+    expect(parsed!.forbiddenTrackedFiles).toEqual(FORBIDDEN_TRACKED_FILES);
+    expect(parsed!.forbiddenPathPatterns).toEqual(FORBIDDEN_PATH_PATTERNS);
     expect(parsed!.hashPinFiles).toEqual(HASH_PIN_FILES);
   });
 
@@ -208,6 +323,9 @@ describe("detectGuardWeakening — lowering a floor or dropping a protected entr
     minAssertions: 400,
     minStrongAssertions: 400,
     protectedFiles: ["a.ts", "b.ts"],
+    forbiddenFiles: ["legacy.ts"],
+    forbiddenTrackedFiles: ["archive.md"],
+    forbiddenPathPatterns: ["^legacy/.*$"],
     hashPinFiles: ["pin.ts"],
   };
   const codes = (fs: { code: string }[]) => fs.map((f) => f.code);
@@ -222,6 +340,9 @@ describe("detectGuardWeakening — lowering a floor or dropping a protected entr
       minTestCases: 130,
       minAssertions: 410,
       protectedFiles: ["a.ts", "b.ts", "c.ts"],
+      forbiddenFiles: ["legacy.ts", "legacy2.ts"],
+      forbiddenTrackedFiles: ["archive.md", "local-heavy.md"],
+      forbiddenPathPatterns: ["^legacy/.*$", "^retired/.*$"],
       hashPinFiles: ["pin.ts", "pin2.ts"],
     };
     expect(detectGuardWeakening(base, stronger)).toEqual([]);
@@ -250,10 +371,42 @@ describe("detectGuardWeakening — lowering a floor or dropping a protected entr
     expect(fs[0]!.message).toContain("b.ts");
   });
 
+  it("moving a retired file from PROTECTED_FILES to FORBIDDEN_FILES is not weakening", () => {
+    const before: GuardConstants = {
+      ...base,
+      protectedFiles: ["a.ts", "retired.ts"],
+      forbiddenFiles: [],
+    };
+    const now: GuardConstants = {
+      ...before,
+      protectedFiles: ["a.ts"],
+      forbiddenFiles: ["retired.ts"],
+    };
+    expect(detectGuardWeakening(before, now)).toEqual([]);
+  });
+
   it("removing a HASH_PIN_FILES entry → GUARD_WEAKENED error", () => {
     const fs = detectGuardWeakening(base, { ...base, hashPinFiles: [] });
     expect(codes(fs)).toEqual(["GUARD_WEAKENED"]);
     expect(fs[0]!.message).toContain("pin.ts");
+  });
+
+  it("removing a FORBIDDEN_FILES entry → GUARD_WEAKENED error", () => {
+    const fs = detectGuardWeakening(base, { ...base, forbiddenFiles: [] });
+    expect(codes(fs)).toEqual(["GUARD_WEAKENED"]);
+    expect(fs[0]!.message).toContain("legacy.ts");
+  });
+
+  it("removing a FORBIDDEN_TRACKED_FILES entry → GUARD_WEAKENED error", () => {
+    const fs = detectGuardWeakening(base, { ...base, forbiddenTrackedFiles: [] });
+    expect(codes(fs)).toEqual(["GUARD_WEAKENED"]);
+    expect(fs[0]!.message).toContain("archive.md");
+  });
+
+  it("removing a FORBIDDEN_PATH_PATTERNS entry → GUARD_WEAKENED error", () => {
+    const fs = detectGuardWeakening(base, { ...base, forbiddenPathPatterns: [] });
+    expect(codes(fs)).toEqual(["GUARD_WEAKENED"]);
+    expect(fs[0]!.message).toContain("^legacy/.*$");
   });
 
   it("mentions the AI_LOOP_ALLOW_VERIFIER_EDITS override so a deliberate loosening has a path", () => {
@@ -318,6 +471,9 @@ describe("runDrift surfaces GUARD_WEAKENED (and the env override downgrades it)"
       minAssertions: 400,
       minStrongAssertions: 400,
       protectedFiles: ["a.ts"],
+      forbiddenFiles: [],
+      forbiddenTrackedFiles: [],
+      forbiddenPathPatterns: [],
       hashPinFiles: [],
     };
     const now: GuardConstants = { ...before, minTestCases: 120 };
@@ -347,6 +503,36 @@ describe("runStatic on the real repo (this is the bar)", () => {
     // sanity: the protected list includes the determinism property tests + the guard itself
     expect(PROTECTED_FILES).toContain("tests/property/determinism.test.ts");
     expect(PROTECTED_FILES).toContain("scripts/verify-integrity.ts");
+  });
+
+  it("forbidden legacy assets are absent from the real repo", () => {
+    expect(FORBIDDEN_FILES).toContain("src/gen/cyoa_generator.ts");
+    expect(FORBIDDEN_FILES).toContain("src/gen/parser_generator.ts");
+    expect(FORBIDDEN_FILES).toContain("bin/play.ts");
+    expect(FORBIDDEN_FILES).toContain("bin/cyoa.ts");
+    expect(FORBIDDEN_FILES).toContain("bin/parser.ts");
+    expect(FORBIDDEN_FILES).toContain("bin/parser_play.ts");
+    expect(FORBIDDEN_FILES).toContain("src/cyoa");
+    expect(FORBIDDEN_FILES).toContain("src/validate/cyoa_validator.ts");
+    expect(FORBIDDEN_FILES).toContain("content/cyoa");
+    expect(FORBIDDEN_FILES).toContain("src/parser");
+    expect(FORBIDDEN_FILES).toContain("src/validate/parser_validator.ts");
+    expect(FORBIDDEN_FILES).toContain("content/parser");
+    expect(FORBIDDEN_FILES).toContain("tests/property/parser_determinism.test.ts");
+    expect(FORBIDDEN_PATH_PATTERNS).toContain("^tests/unit/cyoa.*\\.test\\.ts$");
+    expect(FORBIDDEN_PATH_PATTERNS).toContain("^tests/unit/parser.*\\.test\\.ts$");
+    expect(FORBIDDEN_PATH_PATTERNS).toContain("^tests/(?:regression|property)/cyoa.*\\.test\\.ts$");
+    expect(FORBIDDEN_PATH_PATTERNS).toContain(
+      "^tests/(?:regression|property)/parser.*\\.test\\.ts$",
+    );
+    expect(res.findings.filter((f) => f.code === "FORBIDDEN_FILE_PRESENT")).toEqual([]);
+    expect(res.findings.filter((f) => f.code === "FORBIDDEN_PATH_PATTERN")).toEqual([]);
+  });
+
+  it("token-heavy ignored loop archives are not tracked in the real repo", () => {
+    expect(FORBIDDEN_TRACKED_FILES).toContain(LOOP_ARCHIVE_FILE);
+    expect(FORBIDDEN_TRACKED_FILES).toContain("ai-runs/");
+    expect(res.findings.filter((f) => f.code === "FORBIDDEN_TRACKED_FILE")).toEqual([]);
   });
 
   it("the repo is comfortably above the test-count floor", () => {

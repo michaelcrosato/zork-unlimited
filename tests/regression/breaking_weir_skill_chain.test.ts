@@ -26,14 +26,14 @@
  *       player can never be hard-locked out of the valley — only the walk can kill.)
  *
  * Out-of-band teeth: the prepared/unprepared split is computed from the REAL roll mechanic
- * (combat.ts resolveSkillCheck: total = d20 + state.vars[skill]); flip the counsel's +5 to
+ * (core resolveSkillCheck: total = d20 + state.vars[skill]); flip the counsel's +5 to
  * +0 and the prepared case would fail the worst-roll assertion, so this is a genuine
  * behavioural witness, not a vacuous green.
  */
 import { describe, it, expect } from "vitest";
-import { loadRpgPackFile } from "../../src/rpg/pack.js";
+import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import { validateRpg } from "../../src/validate/rpg_validator.js";
-import { resolveSkillCheck } from "../../src/rpg/combat.js";
+import { resolveSkillCheck } from "../../src/core/skill_check.js";
 import { initState } from "../../src/core/state.js";
 import type { RpgPack } from "../../src/rpg/schema.js";
 import type { GameState } from "../../src/core/state.js";
@@ -50,10 +50,10 @@ function freshState(pack: RpgPack, vars: Record<string, number>): GameState {
   return { ...s, vars: { ...s.vars, ...vars } };
 }
 
-const PACK_PATH = "content/rpg/pack/breaking_weir.yaml";
+const PACK_PATH = "content/rpg/quests/breaking_weir.yaml";
 
 function loadPack(): RpgPack {
-  const r = loadRpgPackFile(PACK_PATH);
+  const r = loadRpgSourceFile(PACK_PATH);
   expect(r.ok, "breaking_weir must load").toBe(true);
   if (!r.ok) throw new Error("unreachable");
   return r.compiled.pack;

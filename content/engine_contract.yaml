@@ -18,6 +18,9 @@ engine_capabilities:
     - cutscenes
     - score          # Stage 3: a numeric var, awarded via inc_var
     - death_endings  # Stage 3: terminal non-win endings, recoverable via load
+    - skill_checks # Stage 4: seeded d20 + skill var vs difficulty on an interaction; base effects fire first, then on_success/on_failure
+    - quest_stages # Stage 4: named quest progression (set_quest_stage effect + quest_stage condition)
+    - stats_and_combat # Stage 4: hp/attack/defense vars + seeded turn-based enemies (RPG packs)
 
   supported_actions:
     - look
@@ -43,6 +46,10 @@ engine_capabilities:
     - not_item
     - visited
     - not_visited
+    - in_room # "are you here RIGHT NOW" (visited is monotone; this is not)
+    - is_open # object opened and still standing open (CLOSE can shut it again)
+    - is_unlocked # lock currently open (set_object_locked can re-lock)
+    - quest_stage # quest is at the named stage (written by set_quest_stage)
     - var_gte
     - var_lte
     - var_eq
@@ -61,8 +68,10 @@ engine_capabilities:
     - goto
     - unlock_exit
     - open_object
+    - close_object # inverse of open_object (first-class CLOSE verb)
     - set_object_locked
     - place_object
+    - set_quest_stage # advance a named quest to a named stage
     - narrate
     - end_game       # win or death endings
 

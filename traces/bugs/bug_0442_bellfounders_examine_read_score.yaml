@@ -1,6 +1,6 @@
 id: bug_0442_bellfounders_examine_read_score
 title: "Bellfounders examine-first route signposts the scored close-read"
-pack: content/rpg/pack/bellfounders_alarm.yaml
+pack: content/rpg/quests/bellfounders_alarm.yaml
 reported_by: blind-playtest
 report: blind-tester/reports/20260622T155247Z_bellfounders_alarm_seed7.md
 severity: S1
@@ -20,5 +20,5 @@ tests:
   - tests/regression/bellfounders_alarm_examine_read_score.test.ts
 verification:
   - npm test -- --run tests/regression/bellfounders_alarm_examine_read_score.test.ts tests/regression/bellfounders_alarm_rusk_yields.test.ts tests/regression/bellfounders_alarm_reactive_taken_items.test.ts
-  - npm run validate -- content/rpg/pack/bellfounders_alarm.yaml
+  - npm run validate -- content/rpg/quests/bellfounders_alarm.yaml
   - npm run health

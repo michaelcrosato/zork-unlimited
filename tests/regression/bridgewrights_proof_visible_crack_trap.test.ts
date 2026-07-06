@@ -1,13 +1,13 @@
 /**
  * Regression for bug_0444: Bridgewrights' Proof warned players not to strike
- * the visible crack, but no such wrong action existed. The warning now maps to
- * a real trap action while the proper engineering route remains full-score.
+ * the visible crack, but no such wrong RpgAction existed. The warning now maps to
+ * a real trap RpgAction while the proper engineering route remains full-score.
  */
 import { describe, expect, it } from "vitest";
 import { makeStep, actionEquals } from "../../src/core/engine.js";
-import type { Action } from "../../src/api/types.js";
+import type { RpgAction } from "../../src/api/types.js";
 import type { GameState } from "../../src/core/state.js";
-import { loadRpgPackFile } from "../../src/rpg/pack.js";
+import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import {
   buildRpgRules,
   enumerateRpgActions,
@@ -16,18 +16,18 @@ import {
 } from "../../src/rpg/runner.js";
 import { buildRpgObservation } from "../../src/rpg/observation.js";
 
-const loaded = loadRpgPackFile("content/rpg/pack/bridgewrights_proof.yaml");
+const loaded = loadRpgSourceFile("content/rpg/quests/bridgewrights_proof.yaml");
 if (!loaded.ok) throw new Error("bridgewrights_proof must compile");
 const index = indexRpgPack(loaded.compiled.pack);
 const rules = buildRpgRules(index);
 const step = makeStep(rules);
 
-function act(state: GameState, action: Action): GameState {
+function act(state: GameState, RpgAction: RpgAction): GameState {
   expect(
-    rules.legalActions(state).some((legal) => actionEquals(legal, action)),
-    `action ${JSON.stringify(action)} must be legal in ${state.current}`,
+    rules.legalActions(state).some((legal) => actionEquals(legal, RpgAction)),
+    `RpgAction ${JSON.stringify(RpgAction)} must be legal in ${state.current}`,
   ).toBe(true);
-  const result = step(state, action);
+  const result = step(state, RpgAction);
   expect(result.ok, result.rejectionReason).toBe(true);
   return result.state;
 }

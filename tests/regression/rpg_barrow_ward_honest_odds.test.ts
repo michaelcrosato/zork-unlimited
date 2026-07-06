@@ -23,7 +23,7 @@
  *       ~12% warded loss the design demands is intact (the over-promise was the only bug).
  */
 import { describe, it, expect } from "vitest";
-import { loadRpgPackFile } from "../../src/rpg/pack.js";
+import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import {
   indexRpgPack,
   buildRpgRules,
@@ -35,7 +35,7 @@ import type { GameState } from "../../src/core/state.js";
 import type { Action } from "../../src/api/types.js";
 import type { Effect } from "../../src/core/effects.js";
 
-const loaded = loadRpgPackFile("content/rpg/pack/sunken_barrow.yaml");
+const loaded = loadRpgSourceFile("content/rpg/quests/sunken_barrow.yaml");
 if (!loaded.ok) throw new Error("sunken_barrow must compile");
 const pack = loaded.compiled.pack;
 const index = indexRpgPack(pack);

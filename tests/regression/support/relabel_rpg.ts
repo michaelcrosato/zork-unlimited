@@ -1,121 +1,346 @@
-/**
- * Metamorphic relabeling for RPG packs — the RPG-mode extension of the
- * contamination-robustness oracle (bug_0212), completing the trilogy the CYOA relabeler
- * (bug_0209, relabel_cyoa.ts) and the PARSER relabeler (bug_0211, relabel_parser.ts)
- * began. This is the last of the three modes, following the exact growth path the
- * bug_0121 reachability oracle took (CYOA → parser → rpg).
- *
- * WHAT IT DOES. An RPG pack IS a parser pack PLUS `enemies` and an optional
- * `meta.combat_guaranteed` (src/rpg/schema.ts). So the relabeler REUSES the parser body
- * walk verbatim — `relabelParserBody`, the typed traversal over the closed
- * Condition/Effect DSLs and the parser schema (relabel_parser.ts) — driven by one shared
- * bijection, then relabels the RPG-only surface on top:
- *   - every ENEMY's id, its `room` (a room-id ref), optional `conditions`
- *     (closed-DSL ids), its `defeat_flag` (a flag), its `death_ending` (an ending id),
- *     and its `on_defeat` effects (via `relabelEffect`);
- *   - `meta.combat_guaranteed` is a boolean fairness opt-in, not an id — carried through
- *     byte-identical (and absent-vs-present preserved so a pack that omits it stays
- *     byte-identical, matching its content hash).
- * Enemy `name`/`description` are prose and `hp`/`attack`/`defense` are numbers — all
- * untouched. As in the other two relabelers, all PROSE and player-facing COMMAND
- * VOCABULARY (object aliases, exit directions, USE command_verb/template) stay
- * byte-identical.
- *
- * THE RPG-SPECIFIC RESERVED VARS. The parser relabeler holds only `score` (SCORE_VAR)
- * fixed, because the runner/observation/validator special-case it. RPG special-cases
- * THREE more player-stat vars by LITERAL name: `hp`, `attack`, `defense` (HP_VAR /
- * ATTACK_VAR / DEFENSE_VAR) are read as `state.vars[HP_VAR]` etc. by the combat resolver
- * (src/rpg/combat.ts:71-73) and the observation builder (src/rpg/observation.ts:43-45).
- * They are ENGINE KEYWORDS, not author-chosen ids — so this relabeler widens the reserved
- * set to `{score, hp, attack, defense}` and holds all four fixed (passed to
- * `makeParserRelabeler`). A SKILL-CHECK's `skill` (e.g. "might") is by contrast a normal
- * author var read via `state.vars[check.skill]`, so it relabels — consistently at both its
- * `skill_check.skill` site and its `vars_init` key (the parser walk already routes both
- * through the reserved-aware `rvar`).
- *
- * THE DERIVED ENEMY-HP VAR follows for free. The runner tracks an enemy's remaining HP in
- * a hidden var `__enemy_hp_<id>` SYNTHESISED from the enemy id (enemyHpVar, schema.ts:74),
- * exactly as the parser runner synthesises `__dlg_<npcid>` from an npc id (the bug_0211
- * note). Because we relabel the enemy id consistently, the synthesised var name follows;
- * no pack ever AUTHORS `__enemy_hp_*` (the rpg reachability oracle asserts no condition
- * even reads an HP var), so there is no author site to relabel and the state-graph
- * isomorphism holds.
- *
- * WHY IT IS AN ORACLE / SOUNDNESS — identical argument to the CYOA and parser relabelers:
- * the engine is content-free and id-driven, so a pack's solvability is a property of its
- * STRUCTURE not its id strings; rpg_metamorphic_relabel.test.ts ASSERTS that invariance
- * (exhaustive ending-reachability census under the best/worst-roll bracket, distinct-state
- * count, and validateRpg finding-code multiset all identical modulo the bijection). The
- * walk is TYPED, so prose can never be corrupted; the bijection is memoized hence injective
- * and consistent; completeness is self-checked by the oracle (a missed id site → a dangling
- * reference → a loud census/validation divergence, never a silent pass).
- */
-import type { RpgPack, Enemy } from "../../../src/rpg/schema.js";
-import { HP_VAR, ATTACK_VAR, DEFENSE_VAR } from "../../../src/rpg/schema.js";
-import {
-  makeParserRelabeler,
-  relabelParserBody,
-  relabelCondition,
-  relabelEffect,
-  PARSER_RESERVED_VARS,
-  type ParserRelabeler,
-} from "./relabel_parser.js";
+import type { Condition } from "../../../src/core/conditions.js";
+import type { Effect } from "../../../src/core/effects.js";
+import type {
+  DialogueNode,
+  DialogueNodeVariant,
+  DialogueTopic,
+  Ending,
+  Enemy,
+  Exit,
+  GameObject,
+  Interaction,
+  Npc,
+  ObjectVariant,
+  Room,
+  RoomVariant,
+  RpgPack,
+  SkillCheck,
+  WinCondition,
+} from "../../../src/rpg/schema.js";
+import { ATTACK_VAR, DEFENSE_VAR, HP_VAR, SCORE_VAR } from "../../../src/rpg/schema.js";
 
-/**
- * The RPG engine-keyword vars, held FIXED by the relabel: the parser's `score` plus the
- * three player-stat vars the combat resolver / observation read by literal name. Kept in
- * sync with src/rpg/schema.ts (HP_VAR/ATTACK_VAR/DEFENSE_VAR) and parser SCORE_VAR.
- */
+export type RpgRelabeler = {
+  r: (id: string) => string;
+  rvar: (name: string) => string;
+  map: ReadonlyMap<string, string>;
+};
+
 export const RPG_RESERVED_VARS: ReadonlySet<string> = new Set([
-  ...PARSER_RESERVED_VARS,
+  SCORE_VAR,
   HP_VAR,
   ATTACK_VAR,
   DEFENSE_VAR,
 ]);
 
+export function makeRpgRelabeler(reserved: ReadonlySet<string> = RPG_RESERVED_VARS): RpgRelabeler {
+  const map = new Map<string, string>();
+  let n = 0;
+  const r = (id: string): string => {
+    let v = map.get(id);
+    if (v === undefined) {
+      v = `mx_${n++}`;
+      map.set(id, v);
+    }
+    return v;
+  };
+  const rvar = (name: string): string => (reserved.has(name) ? name : r(name));
+  return { r, rvar, map };
+}
+
+function relabelCondition(
+  c: Condition,
+  r: (id: string) => string,
+  rv: (n: string) => string,
+): Condition {
+  if ("has_flag" in c) return { has_flag: r(c.has_flag) };
+  if ("not_flag" in c) return { not_flag: r(c.not_flag) };
+  if ("has_item" in c) return { has_item: r(c.has_item) };
+  if ("not_item" in c) return { not_item: r(c.not_item) };
+  if ("visited" in c) return { visited: r(c.visited) };
+  if ("not_visited" in c) return { not_visited: r(c.not_visited) };
+  if ("in_room" in c) return { in_room: r(c.in_room) };
+  if ("is_open" in c) return { is_open: r(c.is_open) };
+  if ("is_unlocked" in c) return { is_unlocked: r(c.is_unlocked) };
+  if ("var_gte" in c) return { var_gte: { name: rv(c.var_gte.name), value: c.var_gte.value } };
+  if ("var_lte" in c) return { var_lte: { name: rv(c.var_lte.name), value: c.var_lte.value } };
+  if ("var_eq" in c) return { var_eq: { name: rv(c.var_eq.name), value: c.var_eq.value } };
+  if ("quest_stage" in c)
+    return { quest_stage: { quest: r(c.quest_stage.quest), stage: r(c.quest_stage.stage) } };
+  if ("all_of" in c) return { all_of: c.all_of.map((x) => relabelCondition(x, r, rv)) };
+  if ("any_of" in c) return { any_of: c.any_of.map((x) => relabelCondition(x, r, rv)) };
+  if ("none_of" in c) return { none_of: c.none_of.map((x) => relabelCondition(x, r, rv)) };
+  const _exhaustive: never = c;
+  return _exhaustive;
+}
+
+function relabelEffect(e: Effect, r: (id: string) => string, rv: (n: string) => string): Effect {
+  if ("set_flag" in e) return { set_flag: r(e.set_flag) };
+  if ("clear_flag" in e) return { clear_flag: r(e.clear_flag) };
+  if ("add_item" in e) return { add_item: r(e.add_item) };
+  if ("remove_item" in e) return { remove_item: r(e.remove_item) };
+  if ("set_var" in e) return { set_var: { name: rv(e.set_var.name), value: e.set_var.value } };
+  if ("inc_var" in e) return { inc_var: { name: rv(e.inc_var.name), by: e.inc_var.by } };
+  if ("dec_var" in e) return { dec_var: { name: rv(e.dec_var.name), by: e.dec_var.by } };
+  if ("add_journal" in e) return { add_journal: e.add_journal };
+  if ("goto" in e) return { goto: r(e.goto) };
+  if ("unlock_exit" in e)
+    return { unlock_exit: { from: r(e.unlock_exit.from), to: r(e.unlock_exit.to) } };
+  if ("open_object" in e) return { open_object: r(e.open_object) };
+  if ("close_object" in e) return { close_object: r(e.close_object) };
+  if ("set_object_locked" in e)
+    return {
+      set_object_locked: { id: r(e.set_object_locked.id), locked: e.set_object_locked.locked },
+    };
+  if ("place_object" in e)
+    return {
+      place_object: {
+        id: r(e.place_object.id),
+        room: r(e.place_object.room),
+        ...(e.place_object.takenBy !== undefined ? { takenBy: e.place_object.takenBy } : {}),
+      },
+    };
+  if ("set_quest_stage" in e)
+    return {
+      set_quest_stage: { quest: r(e.set_quest_stage.quest), stage: r(e.set_quest_stage.stage) },
+    };
+  if ("narrate" in e) return { narrate: e.narrate };
+  if ("end_game" in e) return { end_game: r(e.end_game) };
+  const _exhaustive: never = e;
+  return _exhaustive;
+}
+
+function relabelExit(x: Exit, r: (id: string) => string, rv: (n: string) => string): Exit {
+  return {
+    direction: x.direction,
+    to: r(x.to),
+    conditions: x.conditions.map((c) => relabelCondition(c, r, rv)),
+    ...(x.locked_msg !== undefined ? { locked_msg: x.locked_msg } : {}),
+  };
+}
+
+function relabelRoomVariant(
+  v: RoomVariant,
+  r: (id: string) => string,
+  rv: (n: string) => string,
+): RoomVariant {
+  return { when: v.when.map((c) => relabelCondition(c, r, rv)), text: v.text };
+}
+
+function relabelRoom(room: Room, r: (id: string) => string, rv: (n: string) => string): Room {
+  return {
+    id: r(room.id),
+    name: room.name,
+    description: room.description,
+    ...(room.variants ? { variants: room.variants.map((v) => relabelRoomVariant(v, r, rv)) } : {}),
+    objects: room.objects.map((o) => r(o)),
+    exits: room.exits.map((x) => relabelExit(x, r, rv)),
+    on_enter: room.on_enter.map((e) => relabelEffect(e, r, rv)),
+  };
+}
+
+function relabelObjectVariant(
+  v: ObjectVariant,
+  r: (id: string) => string,
+  rv: (n: string) => string,
+): ObjectVariant {
+  return {
+    when: v.when.map((c) => relabelCondition(c, r, rv)),
+    text: v.text,
+    ...(v.name !== undefined ? { name: v.name } : {}),
+  };
+}
+
+function relabelSkillCheck(
+  s: SkillCheck,
+  r: (id: string) => string,
+  rv: (n: string) => string,
+): SkillCheck {
+  return {
+    skill: rv(s.skill),
+    difficulty: s.difficulty,
+    on_success: s.on_success.map((e) => relabelEffect(e, r, rv)),
+    on_failure: s.on_failure.map((e) => relabelEffect(e, r, rv)),
+  };
+}
+
+function relabelInteraction(
+  it: Interaction,
+  r: (id: string) => string,
+  rv: (n: string) => string,
+): Interaction {
+  return {
+    verb: it.verb,
+    ...(it.item !== undefined ? { item: r(it.item) } : {}),
+    ...(it.target !== undefined ? { target: r(it.target) } : {}),
+    conditions: it.conditions.map((c) => relabelCondition(c, r, rv)),
+    effects: it.effects.map((e) => relabelEffect(e, r, rv)),
+    ...(it.skill_check ? { skill_check: relabelSkillCheck(it.skill_check, r, rv) } : {}),
+    ...(it.command_verb !== undefined ? { command_verb: it.command_verb } : {}),
+    ...(it.command_template !== undefined ? { command_template: it.command_template } : {}),
+  };
+}
+
+function relabelObject(
+  o: GameObject,
+  r: (id: string) => string,
+  rv: (n: string) => string,
+): GameObject {
+  return {
+    id: r(o.id),
+    name: o.name,
+    aliases: o.aliases,
+    description: o.description,
+    ...(o.variants ? { variants: o.variants.map((v) => relabelObjectVariant(v, r, rv)) } : {}),
+    takeable: o.takeable,
+    ...(o.held !== undefined ? { held: o.held } : {}),
+    quest_critical: o.quest_critical,
+    ...(o.read_text !== undefined ? { read_text: o.read_text } : {}),
+    container: o.container,
+    openable: o.openable,
+    locked: o.locked,
+    ...(o.key_id !== undefined ? { key_id: r(o.key_id) } : {}),
+    ...(o.unlock_narrate !== undefined ? { unlock_narrate: o.unlock_narrate } : {}),
+    ...(o.unlock_effects !== undefined
+      ? { unlock_effects: o.unlock_effects.map((e) => relabelEffect(e, r, rv)) }
+      : {}),
+    ...(o.take_effects !== undefined
+      ? { take_effects: o.take_effects.map((e) => relabelEffect(e, r, rv)) }
+      : {}),
+    contents: o.contents.map((c) => r(c)),
+    interactions: o.interactions.map((it) => relabelInteraction(it, r, rv)),
+  };
+}
+
+function relabelTopic(
+  t: DialogueTopic,
+  r: (id: string) => string,
+  rv: (n: string) => string,
+): DialogueTopic {
+  return {
+    id: r(t.id),
+    prompt: t.prompt,
+    ...(t.conditions !== undefined
+      ? { conditions: t.conditions.map((c) => relabelCondition(c, r, rv)) }
+      : {}),
+    ...(t.goto !== undefined ? { goto: r(t.goto) } : {}),
+    end: t.end,
+  };
+}
+
+function relabelNodeVariant(
+  v: DialogueNodeVariant,
+  r: (id: string) => string,
+  rv: (n: string) => string,
+): DialogueNodeVariant {
+  return { when: v.when.map((c) => relabelCondition(c, r, rv)), text: v.text };
+}
+
+function relabelNode(
+  node: DialogueNode,
+  r: (id: string) => string,
+  rv: (n: string) => string,
+): DialogueNode {
+  return {
+    id: r(node.id),
+    npc_text: node.npc_text,
+    ...(node.variants ? { variants: node.variants.map((v) => relabelNodeVariant(v, r, rv)) } : {}),
+    effects: node.effects.map((e) => relabelEffect(e, r, rv)),
+    topics: node.topics.map((t) => relabelTopic(t, r, rv)),
+  };
+}
+
+function relabelNpc(npc: Npc, r: (id: string) => string, rv: (n: string) => string): Npc {
+  return {
+    id: r(npc.id),
+    name: npc.name,
+    description: npc.description,
+    room: r(npc.room),
+    ...(npc.conditions !== undefined
+      ? { conditions: npc.conditions.map((c) => relabelCondition(c, r, rv)) }
+      : {}),
+    dialogue: {
+      root: r(npc.dialogue.root),
+      nodes: npc.dialogue.nodes.map((n) => relabelNode(n, r, rv)),
+    },
+  };
+}
+
+function relabelWinCondition(
+  w: WinCondition,
+  r: (id: string) => string,
+  rv: (n: string) => string,
+): WinCondition {
+  return {
+    id: r(w.id),
+    conditions: w.conditions.map((c) => relabelCondition(c, r, rv)),
+    ending: r(w.ending),
+  };
+}
+
+function relabelEnding(e: Ending, r: (id: string) => string, rv: (n: string) => string): Ending {
+  return {
+    id: r(e.id),
+    title: e.title,
+    text: e.text,
+    ...(e.variants
+      ? {
+          variants: e.variants.map((v) => ({
+            when: v.when.map((c) => relabelCondition(c, r, rv)),
+            text: v.text,
+          })),
+        }
+      : {}),
+    death: e.death,
+  };
+}
+
 function relabelEnemy(e: Enemy, r: (id: string) => string, rv: (n: string) => string): Enemy {
   return {
     id: r(e.id),
-    name: e.name, // prose
-    description: e.description, // prose
+    name: e.name,
+    description: e.description,
     room: r(e.room),
-    hp: e.hp, // number
-    attack: e.attack, // number
-    defense: e.defense, // number
+    hp: e.hp,
+    attack: e.attack,
+    defense: e.defense,
     ...(e.conditions !== undefined
       ? { conditions: e.conditions.map((c) => relabelCondition(c, r, rv)) }
       : {}),
-    // Preserve absent-vs-present so an unused field stays absent (schema/hash parity).
     ...(e.defeat_flag !== undefined ? { defeat_flag: r(e.defeat_flag) } : {}),
     death_ending: r(e.death_ending),
     on_defeat: e.on_defeat.map((eff) => relabelEffect(eff, r, rv)),
   };
 }
 
-/**
- * Relabel a whole RPG pack into a structurally isomorphic twin. Returns the twin plus the
- * bijection that produced it (so a caller maps the original's reached/declared ending ids
- * through `r` to compare against the twin's census). The bijection holds `{score, hp,
- * attack, defense}` fixed; every other identifier — including enemy ids and the
- * synthesised `__enemy_hp_<id>` they drive — is renamed.
- */
 export function relabelRpgPack(pack: RpgPack): {
   pack: RpgPack;
-  relabeler: ParserRelabeler;
+  relabeler: RpgRelabeler;
 } {
-  const relabeler = makeParserRelabeler(RPG_RESERVED_VARS);
+  const relabeler = makeRpgRelabeler();
   const { r, rvar } = relabeler;
-  const body = relabelParserBody(pack, relabeler);
-  const relabeled: RpgPack = {
-    ...body,
-    meta: {
-      ...body.meta,
-      // boolean fairness opt-in — not an id; carried through, absent-vs-present preserved.
-      ...(pack.meta.combat_guaranteed !== undefined
-        ? { combat_guaranteed: pack.meta.combat_guaranteed }
-        : {}),
+  return {
+    relabeler,
+    pack: {
+      meta: {
+        id: r(pack.meta.id),
+        title: pack.meta.title,
+        ...(pack.meta.world !== undefined ? { world: pack.meta.world } : {}),
+        start_room: r(pack.meta.start_room),
+        vars_init: Object.fromEntries(
+          Object.entries(pack.meta.vars_init).map(([k, v]) => [rvar(k), v]),
+        ),
+        flags_init: pack.meta.flags_init.map((f) => r(f)),
+        max_score: pack.meta.max_score,
+        ...(pack.meta.combat_guaranteed !== undefined
+          ? { combat_guaranteed: pack.meta.combat_guaranteed }
+          : {}),
+      },
+      rooms: pack.rooms.map((room) => relabelRoom(room, r, rvar)),
+      objects: pack.objects.map((o) => relabelObject(o, r, rvar)),
+      npcs: pack.npcs.map((npc) => relabelNpc(npc, r, rvar)),
+      win_conditions: pack.win_conditions.map((w) => relabelWinCondition(w, r, rvar)),
+      endings: pack.endings.map((e) => relabelEnding(e, r, rvar)),
+      enemies: pack.enemies.map((e) => relabelEnemy(e, r, rvar)),
     },
-    enemies: pack.enemies.map((e) => relabelEnemy(e, r, rvar)),
   };
-  return { pack: relabeled, relabeler };
 }

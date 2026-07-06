@@ -18,7 +18,7 @@ root_cause: >
 
 fix:
   type: content_only
-  file: content/rpg/pack/breaking_weir.yaml
+  file: content/rpg/quests/breaking_weir.yaml
   change: >
     Added three new variants to keeper_lodge, ordered after the existing race_open
     variant (first-match-wins):

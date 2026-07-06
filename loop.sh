@@ -7,6 +7,22 @@ if [[ "${1:-}" == "--once" ]]; then
   once=1
 fi
 
+# Refuse to start on a dirty tree: _revert_failed_cycle hard-resets to the
+# cycle-start ref and git-cleans untracked content/traces/tests scratch, which
+# would destroy uncommitted HUMAN work lying around when the loop started. The
+# loop's own scratch is always either committed (green cycle) or reverted (red
+# cycle), so a clean start stays clean between cycles. AI_LOOP_ALLOW_DIRTY=1
+# opts back in deliberately — the operator then explicitly accepts that a
+# failed cycle reverts the tree to the cycle-start ref, uncommitted edits
+# included.
+if [[ "${AI_LOOP_ALLOW_DIRTY:-0}" != "1" ]] && [[ -n "$(git status --porcelain)" ]]; then
+  echo "Refusing to start: the working tree is dirty, and a failed cycle's"
+  echo "self-recovery would hard-reset it (git reset --hard + git clean of"
+  echo "content/ traces/ tests/), destroying uncommitted work."
+  echo "Commit or stash first, or set AI_LOOP_ALLOW_DIRTY=1 to accept the risk."
+  exit 1
+fi
+
 status_filter=(. ':(exclude)ai-runs' ':(exclude)node_modules' ':(exclude)dist' ':(exclude)coverage' ':(exclude)traces/*.json')
 
 # ── Project-scoped PID files (so orchestrator tooling tracks THIS loop only) ──────
@@ -168,7 +184,13 @@ run_cycle() {
 
 count=0
 fails=0
+fails_total=0
 max_fails="${AI_LOOP_MAX_CONSECUTIVE_FAILURES:-5}"
+# The consecutive-failure breaker never fires on an alternating pass/fail
+# pattern, so an unattended loop could churn indefinitely at ~50% waste. A
+# total-failure budget bounds that: generous enough for a long healthy run,
+# small enough to stop a structurally sick one.
+max_fails_total="${AI_LOOP_MAX_TOTAL_FAILURES:-15}"
 delay="${AI_LOOP_DELAY_SECONDS:-10}"
 while true; do
   if run_cycle; then
@@ -176,9 +198,14 @@ while true; do
     echo "✓ cycle $((count + 1)) complete."
   else
     fails=$((fails + 1))
-    echo "✗ cycle $((count + 1)) made no committed progress ($fails/$max_fails consecutive)."
+    fails_total=$((fails_total + 1))
+    echo "✗ cycle $((count + 1)) made no committed progress ($fails/$max_fails consecutive, $fails_total/$max_fails_total total)."
     if [[ "$fails" -ge "$max_fails" ]]; then
       echo "Circuit breaker: $max_fails consecutive cycles without progress — stopping. Check ai-runs/ and AI_LOOP_STATE.md."
+      break
+    fi
+    if [[ "$fails_total" -ge "$max_fails_total" ]]; then
+      echo "Circuit breaker: $fails_total total failed cycles — stopping. Check ai-runs/ and AI_LOOP_STATE.md."
       break
     fi
   fi

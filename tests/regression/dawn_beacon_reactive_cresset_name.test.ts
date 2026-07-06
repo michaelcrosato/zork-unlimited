@@ -1,6 +1,6 @@
 /**
  * Regression (§15) for bug_0188 — reactive OBJECT NAME, surfaced by a blind playtest
- * of The Dawn Beacon (content/rpg/pack/dawn_beacon.yaml, seed 7).
+ * of The Dawn Beacon (content/rpg/quests/dawn_beacon.yaml, seed 7).
  *
  * The engine already carried reactive room `variants` (bug_0011) and reactive object
  * examine `variants` (bug_0023) — a thing could narrate state it CHANGED on examine.
@@ -29,12 +29,12 @@
  *       states — the fallback is intact, so the capability is opt-in per variant.
  */
 import { describe, it, expect } from "vitest";
-import { loadRpgPackFile } from "../../src/rpg/pack.js";
+import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import { indexRpgPack, initStateForRpgPack } from "../../src/rpg/runner.js";
 import { buildRpgObservation } from "../../src/rpg/observation.js";
 import type { GameState } from "../../src/core/state.js";
 
-const loaded = loadRpgPackFile("content/rpg/pack/dawn_beacon.yaml");
+const loaded = loadRpgSourceFile("content/rpg/quests/dawn_beacon.yaml");
 if (!loaded.ok) throw new Error("dawn_beacon must compile");
 const index = indexRpgPack(loaded.compiled.pack);
 

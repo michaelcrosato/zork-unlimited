@@ -57,7 +57,7 @@ improvement:
         — and every reachability / item-grant / SCORE_UNREACHABLE bound built on it —
         is unchanged. The feature cannot affect any validator verdict.
   content:
-    - content/rpg/pack/cold_forge.yaml: >
+    - content/rpg/quests/cold_forge.yaml: >
         stone_grate gains a `variants` entry gated on quest_stage forge/grate_open,
         reading "The great hearth-grate, levered up off its lip and standing open ...
         below it a low way drops down into the warmth." Examine-only: no flag / item /

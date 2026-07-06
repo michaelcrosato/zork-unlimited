@@ -1,14 +1,15 @@
 #!/usr/bin/env -S npx tsx
 /**
- * bin/rpg_play — play a Stage-4 (Hero's-Quest) RPG pack from the terminal.
+ * bin/rpg_play — play a Charter Marches RPG world quest from the terminal.
  *
  * Usage:
- *   npm run play:rpg -- <pack.yaml> [--seed N]
- *   npm run play:rpg -- <pack.yaml> --commands "down; take iron bar; north; attack wight; ..."
+ *   npm run play                                      # play the default world quest
+ *   npm run play -- <world_quest_id> [--seed N]
+ *   npm run play -- <world_quest_id> --commands "down; take iron bar; ..."
  *
- * Reuses the Stage-2 controlled command parser and adds an `attack <enemy>` verb.
- * A pack must pass the RPG validator before it is playable (§0, §10). The
- * legal-action set (parser actions + ATTACK) is ground truth; combat and skill
+ * Uses the controlled command grammar and adds an `attack <enemy>` verb.
+ * The quest's bound pack must pass the RPG validator before it is playable (§0, §10). The
+ * legal-action set (base RPG actions + ATTACK) is ground truth; combat and skill
  * checks are seeded, so a recorded run replays exactly (§8.5).
  */
 import { writeFileSync } from "node:fs";
@@ -17,14 +18,16 @@ import { stdin, stdout } from "node:process";
 import { pathToFileURL } from "node:url";
 import { makeStep, actionEquals } from "../src/core/engine.js";
 import { evalConditions } from "../src/core/conditions.js";
-import type { Action } from "../src/api/types.js";
-import { loadRpgPackFile } from "../src/rpg/pack.js";
-import { validateRpg } from "../src/validate/rpg_validator.js";
-import { formatReport } from "../src/validate/report.js";
+import type { RpgAction } from "../src/api/types.js";
 import { indexRpgPack, buildRpgRules, initStateForRpgPack } from "../src/rpg/runner.js";
 import { buildRpgObservation, type RpgObservation } from "../src/rpg/observation.js";
-import { parseCommand } from "../src/parser/command_map.js";
+import { parseCommand } from "../src/rpg/command_map.js";
 import { recordTrace } from "../src/trace/record.js";
+import { RpgSourceRuntime } from "../src/mcp/rpg_source_runtime.js";
+
+const DEFAULT_WORLD_QUEST_ID = "breaking_weir";
+const SOURCE_FLAGS = new Set(["--world-quest-id", "--world_quest_id"]);
+const VALUE_FLAGS = new Set([...SOURCE_FLAGS, "--seed", "--commands", "--record"]);
 
 export function render(obs: RpgObservation): string {
   const lines = [`\n=== ${obs.title} ===`, obs.description.trim()];
@@ -34,8 +37,8 @@ export function render(obs: RpgObservation): string {
   if (obs.visible_objects.length)
     lines.push(`You see: ${obs.visible_objects.map((o) => o.name).join(", ")}.`);
   if (obs.exits.length) lines.push(`Exits: ${obs.exits.map((e) => e.direction).join(", ")}.`);
-  // Blocked-exit hints (bug_0201) — see bin/parser_play.ts; RpgObservation inherits the
-  // field, so the human RPG surface gets the same "a barred way exists here, because X" cue.
+  // Blocked-exit hints keep the human RPG surface aligned with structured observations:
+  // "a barred way exists here, because X" without revealing the hidden unlock action.
   for (const b of obs.blocked_exits) lines.push(`Blocked (${b.direction}): ${b.message}`);
   if (obs.inventory.length) lines.push(`[carrying: ${obs.inventory.join(", ")}]`);
   if (obs.ended) lines.push(`\n*** ${obs.ending_id} *** — THE END`);
@@ -43,17 +46,16 @@ export function render(obs: RpgObservation): string {
 }
 
 /**
- * A friendly reason a parsed-but-illegal action failed — parity with bin/parser_play.ts
- * (bug_0206 follow-on): an attempted MOVE onto a barred-but-present exit surfaces the
+ * A friendly reason a parsed-but-illegal action failed. An attempted MOVE onto a barred
+ * but present exit surfaces the
  * author's `locked_msg` (the same string the structured `blocked_exits` hint carries),
  * not a flat "You can't do that right now." It never reveals HOW to clear the exit (that
- * stays a hidden, not-yet-legal command). RpgIndex extends ParserIndex, so `.rooms` and
- * each exit's `conditions`/`locked_msg` are the same shape the parser bin reads.
+ * stays a hidden, not-yet-legal command).
  */
 export function illegalReason(
   index: ReturnType<typeof indexRpgPack>,
   state: import("../src/core/state.js").GameState,
-  action: Action,
+  action: RpgAction,
 ): string {
   if (action.type === "MOVE") {
     const exit = index.rooms
@@ -65,12 +67,12 @@ export function illegalReason(
   return "You can't do that right now.";
 }
 
-/** Resolve a raw command: `attack <foe>` against enemies here, else the parser. */
+/** Resolve a raw command: `attack <foe>` against enemies here, else base RPG commands. */
 function resolve(
   index: ReturnType<typeof indexRpgPack>,
   state: import("../src/core/state.js").GameState,
   raw: string,
-): { ok: true; action: Action } | { ok: false; reason: string } {
+): { ok: true; action: RpgAction } | { ok: false; reason: string } {
   const text = raw.trim().toLowerCase();
   const m = text.match(/^(attack|fight|kill|hit)\s+(.*)$/);
   if (m) {
@@ -85,43 +87,23 @@ function resolve(
 }
 
 async function main(): Promise<void> {
-  const path = process.argv[2];
-  if (!path || path.startsWith("--")) {
-    console.error(
-      'Usage: npm run play:rpg -- <pack.yaml> [--seed N] [--commands "a; b"] [--record file]',
-    );
-    process.exit(2);
-  }
-  let seed = 1;
-  let commands: string[] | null = null;
-  let record: string | null = null;
-  for (let i = 3; i < process.argv.length; i++) {
-    const a = process.argv[i];
-    if (a === "--seed") seed = Number(process.argv[++i]);
-    else if (a === "--commands")
-      commands = (process.argv[++i] ?? "")
-        .split(/[;,]/)
-        .map((s) => s.trim())
-        .filter(Boolean);
-    else if (a === "--record") record = process.argv[++i] ?? null;
-  }
+  const source = new RpgSourceRuntime(process.cwd()).requireWorldQuestPlayable(playWorldQuestId());
+  const seed = Number(arg("--seed") ?? 1);
+  const rawCommands = arg("--commands");
+  const commands =
+    rawCommands === undefined
+      ? null
+      : rawCommands
+          .split(/[;,]/)
+          .map((s) => s.trim())
+          .filter(Boolean);
+  const record = arg("--record") ?? null;
 
-  const loaded = loadRpgPackFile(path);
-  if (!loaded.ok) {
-    console.error("Pack failed schema validation. Run `npm run validate` for details.");
-    process.exit(1);
-  }
-  const report = validateRpg(loaded.compiled.pack);
-  if (!report.ok) {
-    console.error("Pack is not playable — validation errors:\n" + formatReport(report));
-    process.exit(1);
-  }
-
-  const index = indexRpgPack(loaded.compiled.pack);
+  const index = indexRpgPack(source.compiled.pack);
   const rules = buildRpgRules(index);
   const step = makeStep(rules);
   let state = initStateForRpgPack(index, seed);
-  const taken: Action[] = [];
+  const taken: RpgAction[] = [];
 
   const interactive = commands === null;
   const rl = interactive ? createInterface({ input: stdin, output: stdout }) : null;
@@ -179,12 +161,59 @@ async function main(): Promise<void> {
   if (record) {
     const trace = recordTrace(rules, initStateForRpgPack(index, seed), taken, {
       trace_id: "tr_rpg_play",
-      pack_id: loaded.compiled.pack.meta.id,
-      content_hash: loaded.compiled.contentHash,
+      content_hash: source.compiled.contentHash,
+      worldQuestId: source.node.id,
     });
     writeFileSync(record, JSON.stringify(trace, null, 2));
     console.log(`\nTrace written to ${record}`);
   }
+}
+
+function arg(name: string): string | undefined {
+  const i = process.argv.indexOf(name);
+  return i >= 0 ? process.argv[i + 1] : undefined;
+}
+
+function looksLikePackPath(value: string): boolean {
+  return /\.ya?ml$/i.test(value) || value.includes("/") || value.includes("\\");
+}
+
+function positionalSourceArg(): string | undefined {
+  for (let i = 2; i < process.argv.length; i += 1) {
+    const value = process.argv[i]!;
+    if (VALUE_FLAGS.has(value)) {
+      i += 1;
+      continue;
+    }
+    if (value === "--" || value.startsWith("--")) continue;
+    return value;
+  }
+  return undefined;
+}
+
+function playWorldQuestId(): string {
+  const pack = arg("--pack");
+  const worldQuestId = arg("--world-quest-id") ?? arg("--world_quest_id");
+  const positional = positionalSourceArg();
+  if (pack !== undefined) {
+    throw new Error(
+      "play starts shipped quests by world quest id only; use --world-quest-id or a positional quest id, not --pack.",
+    );
+  }
+  const sourceCount = [worldQuestId !== undefined, positional !== undefined].filter(Boolean).length;
+  if (sourceCount > 1) {
+    throw new Error(
+      "play accepts exactly one quest source: --world-quest-id or positional quest id.",
+    );
+  }
+  if (worldQuestId !== undefined) return worldQuestId;
+  if (positional === undefined) return DEFAULT_WORLD_QUEST_ID;
+  if (looksLikePackPath(positional)) {
+    throw new Error(
+      "play starts shipped quests by world quest id only; run `npm run validate -- <world_quest_id>` to inspect a shipped quest.",
+    );
+  }
+  return positional;
 }
 
 // Run only when invoked directly (not when imported for testing the pure render()),

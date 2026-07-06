@@ -18,7 +18,7 @@ evidence:
 failure:
   type: legibility_gap_player_may_abandon_winnable_fight
   where:
-    - content:content/rpg/pack/sunken_barrow.yaml
+    - content:content/rpg/quests/sunken_barrow.yaml
   description: >
     This is the SAME failure mode as bug_0027 (a player quits a winnable game hunting
     for a missing item the pack never has), here on the wight rather than the slab. The

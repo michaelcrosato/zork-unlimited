@@ -38,7 +38,7 @@ root_cause: >
 improvement:
   layer: content
   content:
-    - content/rpg/pack/sunken_barrow.yaml: >
+    - content/rpg/quests/sunken_barrow.yaml: >
         stone_slab base `description` reworded from "…not by one heroic effort, but by setting your feet and
         heaving again and again until the old stone gives" to "…set your stubborn weight to it: it may give
         on the first heave or take several, but leverage — not raw strength — is what works the old stone
@@ -52,7 +52,7 @@ verification:
   - live engine replay (seeds 1 & 2): base examine reads the new first-heave-or-several prose, names no grind-
     promise and no "real might"; seed-1 first lever still SUCCEEDS and wins ending_victory 50/50; seed-2 first
     lever still FAILS penalty-free, surfaces the bug_0027 "keep at it" retry guidance, and is retryable
-  - npm run validate -- content/rpg/pack/sunken_barrow.yaml       # OK 0/0
+  - npm run validate -- content/rpg/quests/sunken_barrow.yaml       # OK 0/0
   - replay_trace traces/rpg/barrow_victory.json                   # OK — expected_final_hash e6de3a9c… UNCHANGED (prose-only; identical seed-1 final state)
   - npm run health                                                # exit 0
 locked_by:

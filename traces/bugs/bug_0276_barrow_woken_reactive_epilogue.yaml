@@ -6,7 +6,7 @@ severity: polish
 layer: content/reactive-epilogue
 artifact:
   source:
-    - content/rpg/pack/sunken_barrow.yaml
+    - content/rpg/quests/sunken_barrow.yaml
     - traces/rpg/barrow_victory.json
   test:
     - tests/regression/rpg_barrow_woken_reactive_epilogue.test.ts
@@ -35,7 +35,7 @@ root_cause: >
   cycle spends it on the sibling defect the very next blind pass surfaced.
 
 fix: >
-  CONTENT (content/rpg/pack/sunken_barrow.yaml): ending_woken gets a `variants` block (the bug_0275
+  CONTENT (content/rpg/quests/sunken_barrow.yaml): ending_woken gets a `variants` block (the bug_0275
   parser/RPG ending-variant surface, first-match-wins). The base `text` drops the shade callback so
   it reads true for a player who never met the shade ("and some instinct older than reason tells you
   the land was the better for his sleeping"); a `when: [ has_flag: heard_lord_lore ]` variant ABOVE
@@ -59,7 +59,7 @@ witness: >
   variant would fail LOUD there too.
 
 verification: >
-  validate(content/rpg/pack/sunken_barrow.yaml) -> ok, 0 findings. npx vitest run on the new lock
+  validate(content/rpg/quests/sunken_barrow.yaml) -> ok, 0 findings. npx vitest run on the new lock
   (3), rpg_variant_liveness, rpg_validator, stage4_barrow acceptance (content-hash recomputed live
   from the pack, replays to the unchanged state hash), rpg_all_endings_reachable -> all GREEN.
   npm run health -> GREEN (exit 0); net test count ROSE by exactly the 3 new cases. No pack
@@ -74,7 +74,7 @@ scope_honesty: >
   endings, and the canonical victory all untouched. One deliberate, surfaced content-hash re-pin.
 
 files_changed:
-  - content/rpg/pack/sunken_barrow.yaml (ending_woken gains a heard_lord_lore variant; base text de-presumes the shade)
+  - content/rpg/quests/sunken_barrow.yaml (ending_woken gains a heard_lord_lore variant; base text de-presumes the shade)
   - traces/rpg/barrow_victory.json (content_hash re-pinned 32c55798… → d2343930…)
   - tests/regression/rpg_barrow_woken_reactive_epilogue.test.ts (NEW)
   - traces/bugs/bug_0276_barrow_woken_reactive_epilogue.yaml (NEW, this file)

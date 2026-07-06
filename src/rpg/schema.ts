@@ -1,83 +1,367 @@
 /**
- * RPG content schema (spec §13 Stage 4 — Hero's-Quest hybrid; §14 gate).
+ * RPG content schema.
  *
- * An RPG pack is a parser pack (Stage 2/3) PLUS enemies. Character stats (HP,
- * attack, defense, gold, skills) are plain numeric `vars` (§6) seeded from
- * meta.vars_init — no new state shape. Combat and skill checks add randomness,
- * but that randomness lives in the resolver and flows through the seeded PRNG
- * (core/rng.ts), so every fight is replayable (§8.5). Reusing ParserPackSchema
- * means every Stage-2/3 invariant (reachability, soft-locks, dialogue) is checked
- * for free, and existing parser packs are untouched (their hashes are stable).
+ * This file intentionally owns the full RPG pack contract instead of extending
+ * the legacy parser schema. The shape is still compatible with existing packs,
+ * but the RPG mode now has a standalone schema surface that can keep evolving
+ * after parser/CYOA code is removed.
  */
 import { z } from "zod";
 import { ConditionSchema } from "../core/conditions.js";
 import { EffectSchema } from "../core/effects.js";
-import { ParserMetaSchema, ParserPackSchema } from "../parser/schema.js";
+import { SkillCheckSchema } from "../core/skill_check.js";
+import { WorldBindingSchema } from "../world/schema.js";
 
-/** Conventional player-stat var names (§13 Stage 4). The validator checks they exist. */
+export const SCORE_VAR = "score";
 export const HP_VAR = "hp";
 export const ATTACK_VAR = "attack";
 export const DEFENSE_VAR = "defense";
 
-/**
- * A foe that occupies a room. Combat is turn-based (one ATTACK action = one
- * round) and resolved entirely in code from the seeded PRNG. `death_ending` is
- * reached if the player falls; it must be a declared death ending. `on_defeat`
- * effects (set a flag, award score/gold, open a way) fire when the enemy dies.
- */
+export const ExitSchema = z
+  .object({
+    direction: z.string().min(1),
+    to: z.string().min(1),
+    conditions: z.array(ConditionSchema).default([]),
+    locked_msg: z.string().min(1).optional(),
+  })
+  .strict();
+
+export const RoomVariantSchema = z
+  .object({
+    when: z.array(ConditionSchema).min(1),
+    text: z.string().min(1),
+  })
+  .strict();
+
+export const RoomSchema = z
+  .object({
+    id: z.string().min(1),
+    name: z.string().min(1),
+    description: z.string().min(1),
+    variants: z.array(RoomVariantSchema).optional(),
+    objects: z.array(z.string().min(1)).default([]),
+    exits: z.array(ExitSchema).default([]),
+    on_enter: z.array(EffectSchema).default([]),
+  })
+  .strict();
+
+export const BUILTIN_VERBS: ReadonlySet<string> = new Set([
+  "look",
+  "l",
+  "examine",
+  "x",
+  "inspect",
+  "read",
+  "go",
+  "move",
+  "take",
+  "get",
+  "grab",
+  "drop",
+  "open",
+  "close",
+  "unlock",
+  "use",
+  "talk",
+  "inventory",
+  "inv",
+  "i",
+  "north",
+  "n",
+  "south",
+  "s",
+  "east",
+  "e",
+  "west",
+  "w",
+  "up",
+  "u",
+  "down",
+  "d",
+  "ask",
+  "say",
+  "topic",
+  "bye",
+  "goodbye",
+  "leave",
+]);
+
+/** A puzzle step: a verb applied to a target (optionally with an item), gated by
+ *  conditions, producing effects. The Stage-2 puzzle mechanic (§7.3). A Stage-4
+ *  interaction may additionally carry a `skill_check` resolved by the runner —
+ *  base `effects` fire first, then the roll's on_success/on_failure (CYOA order).
+ *  Verb semantics (every admitted verb is runtime-reachable):
+ *    USE     — fires on `use item on target` / `use target` (self-use);
+ *    READ    — fires on `read target`, merged with `read_text`;
+ *    INSPECT — fires on `look at target`, per-interaction gated, composing after
+ *              the base description (a one-shot clue retires itself without
+ *              retiring examine);
+ *    OPEN    — fires on an open ATTEMPT (not-yet-open target), even on a
+ *              non-openable or locked object (warning/trap shapes), after the
+ *              built-in open when the object really opens;
+ *    CLOSE   — fires on closing an OPEN object, after the built-in
+ *              `close_object` when it is openable. */
+export const InteractionSchema = z
+  .object({
+    verb: z.enum(["USE", "READ", "INSPECT", "OPEN", "CLOSE"]),
+    item: z.string().min(1).optional(),
+    target: z.string().min(1).optional(),
+    conditions: z.array(ConditionSchema).default([]),
+    effects: z.array(EffectSchema).default([]),
+    skill_check: SkillCheckSchema.optional(),
+    command_verb: z
+      .string()
+      .regex(/^[a-z]+$/, "command_verb must be a single lowercase word")
+      .optional(),
+    command_template: z.string().min(1).optional(),
+  })
+  .strict()
+  .superRefine((it, ctx) => {
+    if (it.command_verb !== undefined) {
+      if (it.verb !== "USE" || it.target === undefined) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["command_verb"],
+          message: "command_verb is only valid on a USE interaction with a target",
+        });
+      } else if (BUILTIN_VERBS.has(it.command_verb)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["command_verb"],
+          message: `command_verb "${it.command_verb}" shadows a built-in RPG command verb`,
+        });
+      }
+    }
+
+    if (it.command_template !== undefined) {
+      if (it.command_verb === undefined) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["command_template"],
+          message: "command_template requires a command_verb",
+        });
+      } else if (it.command_template.trim().split(/\s+/)[0] !== it.command_verb) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["command_template"],
+          message:
+            "command_template must begin with command_verb (the displayed command's first word is the RPG command resolver key)",
+        });
+      }
+      if (it.item !== undefined && it.item === it.target) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["command_template"],
+          message:
+            'command_template is only for an item-on-target USE (item !== target); a self-USE shows a single noun (e.g. "drink phial")',
+        });
+      }
+      if (it.item === undefined || it.target === undefined) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["command_template"],
+          message: "command_template requires both an item and a target",
+        });
+      } else if (
+        !it.command_template.includes("{item}") ||
+        !it.command_template.includes("{target}")
+      ) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["command_template"],
+          message: "command_template must contain both {item} and {target} placeholders",
+        });
+      }
+    }
+  });
+
+export const ObjectVariantSchema = z
+  .object({
+    when: z.array(ConditionSchema).min(1),
+    text: z.string().min(1),
+    name: z.string().min(1).optional(),
+  })
+  .strict();
+
+export const ObjectSchema = z
+  .object({
+    id: z.string().min(1),
+    name: z.string().min(1),
+    aliases: z.array(z.string().min(1)).default([]),
+    description: z.string().min(1),
+    variants: z.array(ObjectVariantSchema).optional(),
+    takeable: z.boolean().default(false),
+    held: z.boolean().optional(),
+    quest_critical: z.boolean().default(false),
+    read_text: z.string().min(1).optional(),
+    container: z.boolean().default(false),
+    openable: z.boolean().default(false),
+    locked: z.boolean().default(false),
+    key_id: z.string().min(1).optional(),
+    unlock_narrate: z.string().min(1).optional(),
+    unlock_effects: z.array(EffectSchema).optional(),
+    take_effects: z.array(EffectSchema).optional(),
+    contents: z.array(z.string().min(1)).default([]),
+    interactions: z.array(InteractionSchema).default([]),
+  })
+  .strict()
+  .superRefine((o, ctx) => {
+    if (
+      (o.unlock_narrate !== undefined || o.unlock_effects !== undefined) &&
+      o.key_id === undefined
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["unlock_effects"],
+        message:
+          "unlock_narrate/unlock_effects require a key_id (they fire on the first-class UNLOCK)",
+      });
+    }
+    if (o.take_effects !== undefined && !o.takeable) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["take_effects"],
+        message: "take_effects require takeable: true (they fire on the first-class TAKE)",
+      });
+    }
+    if (o.held && o.takeable) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["held"],
+        message: "a held object is already carried and must not also be takeable",
+      });
+    }
+  });
+
+export const DialogueTopicSchema = z
+  .object({
+    id: z.string().min(1),
+    prompt: z.string().min(1),
+    conditions: z.array(ConditionSchema).optional(),
+    goto: z.string().min(1).optional(),
+    end: z.boolean().default(false),
+  })
+  .strict();
+
+export const DialogueNodeVariantSchema = z
+  .object({
+    when: z.array(ConditionSchema).min(1),
+    text: z.string().min(1),
+  })
+  .strict();
+
+export const DialogueNodeSchema = z
+  .object({
+    id: z.string().min(1),
+    npc_text: z.string().min(1),
+    variants: z.array(DialogueNodeVariantSchema).optional(),
+    effects: z.array(EffectSchema).default([]),
+    topics: z.array(DialogueTopicSchema).default([]),
+  })
+  .strict();
+
+export const NpcSchema = z
+  .object({
+    id: z.string().min(1),
+    name: z.string().min(1),
+    description: z.string().min(1),
+    room: z.string().min(1),
+    conditions: z.array(ConditionSchema).optional(),
+    dialogue: z
+      .object({
+        root: z.string().min(1),
+        nodes: z.array(DialogueNodeSchema).min(1),
+      })
+      .strict(),
+  })
+  .strict();
+
+export const WinConditionSchema = z
+  .object({
+    id: z.string().min(1),
+    conditions: z.array(ConditionSchema).min(1),
+    ending: z.string().min(1),
+  })
+  .strict();
+
+export const EndingVariantSchema = z
+  .object({
+    when: z.array(ConditionSchema).min(1),
+    text: z.string().min(1),
+  })
+  .strict();
+
+export const EndingSchema = z
+  .object({
+    id: z.string().min(1),
+    title: z.string().min(1),
+    text: z.string().min(1),
+    variants: z.array(EndingVariantSchema).optional(),
+    death: z.boolean().default(false),
+  })
+  .strict();
+
 export const EnemySchema = z
   .object({
     id: z.string().min(1),
     name: z.string().min(1),
     description: z.string().min(1),
     room: z.string().min(1),
-    /**
-     * Optional state gate for whether the enemy is presently confrontable. While
-     * any condition fails, the enemy is absent from observations and ATTACK is
-     * illegal. `.optional()` preserves byte-identical packs that do not use it.
-     */
     conditions: z.array(ConditionSchema).optional(),
     hp: z.number().int().positive(),
     attack: z.number().int().nonnegative(),
     defense: z.number().int().nonnegative(),
-    /** Flag set when the enemy is defeated (gate exits / win conditions on it). */
     defeat_flag: z.string().min(1).optional(),
-    /** Ending reached if the player dies fighting this enemy (death ending). */
     death_ending: z.string().min(1),
     on_defeat: z.array(EffectSchema).default([]),
   })
   .strict();
 
-/**
- * RPG meta = the parser meta PLUS an optional fairness opt-in.
- *
- * `combat_guaranteed` lets a pack PROMISE its fights are not a gamble. By default
- * the combat-winnability proof is a deliberately conservative LOWER bound: it
- * forbids only a TRULY impossible fight and PERMITS a luck-dependent one a
- * fully-prepared player can still lose on bad rolls (bug_0101/0102's intentional
- * "preparation is a real gamble" tuning, contract made honest in bug_0113). Every
- * RPG blind playtest names that same gap — an unlucky prepared player dies with no
- * recourse — but for a gamble pack that is by design. When a pack sets
- * `combat_guaranteed: true`, the validator additionally proves the UPPER bound:
- * with best reachable stats but the WORST rolls, the player must still survive
- * every fight (`COMBAT_NOT_GUARANTEED` errors otherwise). `.optional()` (not a
- * default) so an absent field stays absent in the compiled pack ⇒ packs that don't
- * use it compile byte-identically and their content hashes are unchanged (mirrors
- * RoomSchema.variants / skill_check). bug_0114.
- */
-export const RpgMetaSchema = ParserMetaSchema.extend({
-  combat_guaranteed: z.boolean().optional(),
-}).strict();
+export const RpgMetaSchema = z
+  .object({
+    id: z.string().min(1),
+    title: z.string().min(1),
+    world: WorldBindingSchema.optional(),
+    start_room: z.string().min(1),
+    vars_init: z.record(z.string(), z.number().finite()).default({}),
+    flags_init: z.array(z.string()).default([]),
+    max_score: z.number().int().nonnegative().default(0),
+    combat_guaranteed: z.boolean().optional(),
+  })
+  .strict();
 
-export const RpgPackSchema = ParserPackSchema.extend({
-  meta: RpgMetaSchema,
-  enemies: z.array(EnemySchema).default([]),
-}).strict();
+export const RpgPackSchema = z
+  .object({
+    meta: RpgMetaSchema,
+    rooms: z.array(RoomSchema).min(1),
+    objects: z.array(ObjectSchema).default([]),
+    npcs: z.array(NpcSchema).default([]),
+    win_conditions: z.array(WinConditionSchema).min(1),
+    endings: z.array(EndingSchema).default([]),
+    enemies: z.array(EnemySchema).default([]),
+  })
+  .strict();
 
+export type Exit = z.infer<typeof ExitSchema>;
+export type RoomVariant = z.infer<typeof RoomVariantSchema>;
+export type Room = z.infer<typeof RoomSchema>;
+export type SkillCheck = z.infer<typeof SkillCheckSchema>;
+export type Interaction = z.infer<typeof InteractionSchema>;
+export type ObjectVariant = z.infer<typeof ObjectVariantSchema>;
+export type GameObject = z.infer<typeof ObjectSchema>;
+export type DialogueTopic = z.infer<typeof DialogueTopicSchema>;
+export type DialogueNodeVariant = z.infer<typeof DialogueNodeVariantSchema>;
+export type DialogueNode = z.infer<typeof DialogueNodeSchema>;
+export type Npc = z.infer<typeof NpcSchema>;
+export type WinCondition = z.infer<typeof WinConditionSchema>;
+export type EndingVariant = z.infer<typeof EndingVariantSchema>;
+export type Ending = z.infer<typeof EndingSchema>;
 export type Enemy = z.infer<typeof EnemySchema>;
 export type RpgPack = z.infer<typeof RpgPackSchema>;
 
-/** Internal var holding an enemy's remaining HP (hidden from observations, `__`). */
+export { SkillCheckSchema };
+
+/** Internal var holding an enemy's remaining HP. */
 export function enemyHpVar(enemyId: string): string {
   return `__enemy_hp_${enemyId}`;
 }

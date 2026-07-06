@@ -11,6 +11,7 @@ export type GameEvent =
   | { type: "narration"; text: string }
   | { type: "unlock_exit"; from: string; to: string }
   | { type: "open_object"; id: string }
+  | { type: "close_object"; id: string }
   | { type: "move"; from: string; to: string }
   | { type: "take"; item: string }
   | { type: "drop"; item: string }
@@ -24,6 +25,7 @@ export const EVENT_TYPES = [
   "narration",
   "unlock_exit",
   "open_object",
+  "close_object",
   "move",
   "take",
   "drop",

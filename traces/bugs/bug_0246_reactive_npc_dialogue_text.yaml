@@ -2,7 +2,7 @@ id: bug_0246
 title: "Engine DEPTH + content: reactive NPC dialogue text. DialogueNode now carries the same optional `variants` (first-match-wins `when` → `text`) that rooms and objects already have, so an NPC line can react to state it/the player changed instead of replaying one fixed line. Motivated by a blind-pass finding — Breaking-Weir's Pell re-delivered his whole first-meeting emergency every time the player returned to his topic menu (read 'robotic'). His root node now greets you fully on first contact and tersely on return."
 kind: engine
 mode: rpg
-pack: content/rpg/pack/breaking_weir.yaml
+pack: content/rpg/quests/breaking_weir.yaml
 # Engine/schema feature (not a pure content_fix). The change is reusable across all 17 packs'
 # NPCs; the Breaking-Weir Pell edit is the first consumer. breaking_weir carries NO pinned
 # content hash (only watchtower_road is pinned), so adding the node `variants` re-pins nothing.
@@ -64,7 +64,7 @@ regression_test: tests/regression/dialogue_reactive_npc_text.test.ts
 
 verify:
   - "npx tsc --noEmit → clean"
-  - "validate content/rpg/pack/breaking_weir.yaml → OK, 0 error(s), 0 warning(s), max_score 50"
+  - "validate content/rpg/quests/breaking_weir.yaml → OK, 0 error(s), 0 warning(s), max_score 50"
   - "npx vitest run tests/regression/dialogue_reactive_npc_text.test.ts → 6 passed"
   - "npx vitest run rpg_metamorphic_relabel + breaking_weir_{blind_polish,skill_chain,gamble_legible} → 22 passed"
   - "npm run health → green (verify:integrity + typecheck + lint + format + tests + validate + playtest)"

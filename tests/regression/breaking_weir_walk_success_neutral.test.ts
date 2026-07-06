@@ -24,8 +24,8 @@
  *   - success narrate still contains "nerve" (the theme of the check).
  */
 import { describe, it, expect } from "vitest";
-import { loadRpgPackFile } from "../../src/rpg/pack.js";
-import { resolveSkillCheck } from "../../src/rpg/combat.js";
+import { loadRpgSourceFile } from "../../src/rpg/source.js";
+import { resolveSkillCheck } from "../../src/core/skill_check.js";
 import { initState } from "../../src/core/state.js";
 import type { RpgPack } from "../../src/rpg/schema.js";
 import type { Rng } from "../../src/core/rng.js";
@@ -36,8 +36,8 @@ const maxRollRng = (): Rng => ({
   int: (_min: number, max: number) => Math.floor(max),
 });
 
-const PACK_PATH = "content/rpg/pack/breaking_weir.yaml";
-const loaded = loadRpgPackFile(PACK_PATH);
+const PACK_PATH = "content/rpg/quests/breaking_weir.yaml";
+const loaded = loadRpgSourceFile(PACK_PATH);
 if (!loaded.ok) throw new Error("breaking_weir must compile");
 const pack: RpgPack = loaded.compiled.pack;
 

@@ -3,7 +3,7 @@ title: "wolf_winter: phantom-spear clue (no spear item exists) + stale 'the way 
 kind: content_fix
 mode: rpg
 severity: minor
-pack: content/rpg/pack/wolf_winter.yaml
+pack: content/rpg/quests/wolf_winter.yaml
 content_hash: e7e1e4b1037fc0f9b0a9c7958fd97ee773d43079fca033be68dde5cb99d80c38
 
 summary: >
@@ -19,7 +19,7 @@ summary: >
   journal read "the way Cade said" even on the route where the player never spoke to Cade.
 
 reproduction:
-  pack: content/rpg/pack/wolf_winter.yaml
+  pack: content/rpg/quests/wolf_winter.yaml
   route: "read day-book -> (skip Cade) -> store: take/don jerkin -> paling: kill yearling"
   observed: >
     The day-book demands 'SPEAR AND PADDING OR NOTHING' and Cade promises safety only if 'speared

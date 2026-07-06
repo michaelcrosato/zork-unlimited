@@ -19,7 +19,7 @@ evidence:
 failure:
   type: named_object_not_interactable_chekhovs_gun
   where:
-    - content:content/rpg/pack/cold_forge.yaml  # room founder_cell
+    - content:content/rpg/quests/cold_forge.yaml  # room founder_cell
   description: >
     The Founder's Cell names "a smith's hammer across his knees" in its room
     description, and the founder's own plate-taken examine variant repeats "his hammer

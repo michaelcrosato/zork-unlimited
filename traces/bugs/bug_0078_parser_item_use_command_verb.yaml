@@ -61,11 +61,11 @@ improvement:
         the rope→old_well USE gains `command_verb: tie` + `command_template: "tie {item} to {target}"`.
         No flag/item/score/effect/exit/gating change; "use rope on old well" still parses; the rope
         is still SPENT on tie (bug_0034). content_hash moves (unpinned).
-    - content/rpg/pack/sunken_barrow.yaml: >
+    - content/rpg/quests/sunken_barrow.yaml: >
         the iron_bar→stone_slab USE gains `command_verb: lever` + `command_template: "lever {target}
         with {item}"`. The skill_check (might vs 12) and one-shot retire are untouched. content_hash
         moves (unpinned).
-    - content/rpg/pack/cold_forge.yaml: >
+    - content/rpg/quests/cold_forge.yaml: >
         the pry_bar→stone_grate USE gains `command_verb: lever` + `command_template: "lever {target}
         with {item}"`. The skill_check, the bug_0048 journal line, and the one-shot retire are
         untouched. content_hash moves (unpinned).

@@ -22,7 +22,7 @@ evidence:
 failure:
   type: stale_skill_check_action
   where:
-    - content:content/rpg/pack/sunken_barrow.yaml
+    - content:content/rpg/quests/sunken_barrow.yaml
     - engine:src/rpg/runner.ts
   description: >
     A one-shot skill-check puzzle (lever the slab) never retired after it

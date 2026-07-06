@@ -31,7 +31,7 @@
  *   (4) the observation's dialogue.npc_text agrees with the rendered narration.
  */
 import { describe, it, expect } from "vitest";
-import { loadRpgPackFile } from "../../src/rpg/pack.js";
+import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import { indexRpgPack, initStateForRpgPack, buildRpgRules } from "../../src/rpg/runner.js";
 import { buildRpgObservation } from "../../src/rpg/observation.js";
 import { validateRpg } from "../../src/validate/rpg_validator.js";
@@ -39,10 +39,10 @@ import { makeStep } from "../../src/core/engine.js";
 import type { GameState } from "../../src/core/state.js";
 import type { GameEvent } from "../../src/core/events.js";
 import type { RpgPack } from "../../src/rpg/schema.js";
-import type { Action } from "../../src/api/types.js";
+import type { RpgAction } from "../../src/api/types.js";
 
-const PACK_PATH = "content/rpg/pack/dawn_beacon.yaml";
-const loaded = loadRpgPackFile(PACK_PATH);
+const PACK_PATH = "content/rpg/quests/dawn_beacon.yaml";
+const loaded = loadRpgSourceFile(PACK_PATH);
 if (!loaded.ok) throw new Error("dawn_beacon must compile");
 const pack: RpgPack = loaded.compiled.pack;
 const index = indexRpgPack(pack);
@@ -60,8 +60,8 @@ function narration(events: GameEvent[]): string {
     .join(" ");
 }
 
-function run(state: GameState, action: Action): { state: GameState; text: string } {
-  const res = step(state, action);
+function run(state: GameState, RpgAction: RpgAction): { state: GameState; text: string } {
+  const res = step(state, RpgAction);
   expect(res.ok).toBe(true);
   return { state: res.state, text: narration(res.events) };
 }

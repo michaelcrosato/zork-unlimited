@@ -1,8 +1,6 @@
 /**
  * Regression (§15) for bug_0275 — The Cold Forge's endings carry REACTIVE epilogues
- * (the terminal-state sibling of its already fully-reactive rooms/objects, and the
- * port of CYOA's EndingSchema.variants to parser/RPG that completes the reactive-prose
- * trilogy across all 3 modes).
+ * (the terminal-state sibling of its already fully-reactive rooms/objects).
  *
  * A fresh source-blind MCP playtester (seeds 17 & 3,
  * ai-runs/2026-06-05T06-39-54-147Z/playtest.md §5) found the pack bug-free but noted
@@ -27,21 +25,20 @@
  *     variant is flagged UNREACHABLE_VARIANT / UNSATISFIABLE_CONDITION.
  */
 import { describe, it, expect } from "vitest";
-import { loadRpgPackFile } from "../../src/rpg/pack.js";
+import { compileRpgSource, loadRpgSourceFile } from "../../src/rpg/source.js";
 import {
   indexRpgPack,
   buildRpgRules,
   initStateForRpgPack,
   enumerateRpgActions,
 } from "../../src/rpg/runner.js";
-import { buildParserObservation } from "../../src/parser/observation.js";
-import { compileParserPack } from "../../src/parser/pack.js";
-import { validateParser } from "../../src/validate/parser_validator.js";
+import { buildRpgObservation } from "../../src/rpg/observation.js";
+import { validateRpg } from "../../src/validate/rpg_validator.js";
 import { makeStep } from "../../src/core/engine.js";
 import type { GameState } from "../../src/core/state.js";
 import type { Action } from "../../src/api/types.js";
 
-const loaded = loadRpgPackFile("content/rpg/pack/cold_forge.yaml");
+const loaded = loadRpgSourceFile("content/rpg/quests/cold_forge.yaml");
 if (!loaded.ok) throw new Error("cold_forge must compile");
 const pack = loaded.compiled.pack;
 const index = indexRpgPack(pack);
@@ -115,7 +112,7 @@ describe("bug_0275 — The Cold Forge's reactive epilogues reward knowing the la
     expect(s.flags["heard_founder"]).toBeUndefined();
     expect(s.visited["founder_cell"]).toBeUndefined();
 
-    const obs = buildParserObservation(index, s);
+    const obs = buildRpgObservation(index, s);
     expect(obs.ending!.id).toBe("ending_victory");
     expect(obs.ending!.text).toContain("the old forge is breathing again");
     expect(obs.ending!.text.toLowerCase()).not.toContain("last master");
@@ -137,7 +134,7 @@ describe("bug_0275 — The Cold Forge's reactive epilogues reward knowing the la
     s = finishToWin(s);
     expect(s.visited["founder_cell"]).toBe(true);
 
-    const obs = buildParserObservation(index, s);
+    const obs = buildRpgObservation(index, s);
     expect(obs.ending!.id).toBe("ending_victory");
     expect(obs.ending!.text.toLowerCase()).toContain("last master");
     expect(obs.ending!.text).toContain("you are the hand that kept it so");
@@ -154,7 +151,7 @@ describe("bug_0275 — The Cold Forge's reactive epilogues reward knowing the la
     s = finishToWin(s);
     expect(s.visited["founder_cell"]).toBeUndefined(); // the OTHER leg
 
-    const obs = buildParserObservation(index, s);
+    const obs = buildRpgObservation(index, s);
     expect(obs.ending!.text.toLowerCase()).toContain("last master");
   });
 
@@ -170,7 +167,7 @@ describe("bug_0275 — The Cold Forge's reactive epilogues reward knowing the la
     }
     expect(s.endingId).toBe("ending_fallen");
 
-    const obs = buildParserObservation(index, s);
+    const obs = buildRpgObservation(index, s);
     expect(obs.ending!.text).toContain("grave chill closes over you");
     expect(obs.ending!.text.toLowerCase()).not.toContain("last master");
     expect(obs.description).toContain("grave chill closes over you");
@@ -191,7 +188,7 @@ describe("bug_0275 — The Cold Forge's reactive epilogues reward knowing the la
     expect(s.endingId).toBe("ending_fallen");
     expect(s.visited["founder_cell"]).toBe(true);
 
-    const obs = buildParserObservation(index, s);
+    const obs = buildRpgObservation(index, s);
     expect(obs.ending!.text).toContain("keep him company");
     expect(obs.ending!.text).toContain("one more set of bones");
     expect(obs.description).toContain("keep him company");
@@ -217,11 +214,12 @@ endings:
     text: "done"
     variants:
 ${variants}
+enemies: []
 `;
-    const r = compileParserPack(src);
+    const r = compileRpgSource(src);
     expect(r.ok).toBe(true);
     if (!r.ok) return [];
-    return validateParser(r.compiled.pack).findings.map((f) => f.code);
+    return validateRpg(r.compiled.pack).findings.map((f) => f.code);
   }
 
   it("flags a SHADOWED ending variant (general-before-specific) — UNREACHABLE_VARIANT", () => {

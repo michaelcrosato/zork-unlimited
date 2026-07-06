@@ -10,7 +10,7 @@ artifact:
     - src/parser/model.ts
     - src/parser/observation.ts
     - src/validate/parser_validator.ts
-    - content/rpg/pack/cold_forge.yaml
+    - content/rpg/quests/cold_forge.yaml
   test:
     - tests/regression/cold_forge_reactive_epilogue.test.ts
     - tests/regression/parser_variant_liveness.test.ts
@@ -60,7 +60,7 @@ fix: >
       (UNREACHABLE_VARIANT shadowing + UNSATISFIABLE_CONDITION), and ending-variant `when`s join
       the collectFlagReads / collectObjectStateReads walks so an ending-only flag/state read is
       not mis-flagged inert.
-  CONTENT (content/rpg/pack/cold_forge.yaml): both endings get a `variants` block gated on a
+  CONTENT (content/rpg/quests/cold_forge.yaml): both endings get a `variants` block gated on a
   `knows_founder` predicate — any_of[ visited: founder_cell, has_flag: heard_founder ] — ABOVE
   the base text. ending_victory reframes to name the last master and the legacy carried out;
   ending_fallen reframes to a death that joins him in the cold he too came to understand. Honors
@@ -83,7 +83,7 @@ witness: >
   validator finding codes unchanged).
 
 verification: >
-  npm run typecheck -> clean. validate(content/rpg/pack/cold_forge.yaml) -> ok, 0 findings (the
+  npm run typecheck -> clean. validate(content/rpg/quests/cold_forge.yaml) -> ok, 0 findings (the
   knows_founder variants on reachable-both-ways endings raise no dead-fallback / unreachable-variant
   warning). npx vitest run on cold_forge_reactive_epilogue (8) + parser/rpg/cyoa variant-liveness
   (25) + relabel/metamorphic + cold_forge suite -> all GREEN. npm run health -> GREEN (exit 0); net
@@ -105,7 +105,7 @@ files_changed:
   - src/parser/model.ts (endingText resolver)
   - src/parser/observation.ts (resolve epilogue via endingText for description + structured ending.text)
   - src/validate/parser_validator.ts (ending-variant shadowing/unsatisfiable + flag/object-state read walks)
-  - content/rpg/pack/cold_forge.yaml (knows_founder variants on ending_victory + ending_fallen)
+  - content/rpg/quests/cold_forge.yaml (knows_founder variants on ending_victory + ending_fallen)
   - tests/regression/cold_forge_reactive_epilogue.test.ts (NEW)
   - tests/regression/parser_variant_liveness.test.ts (credit + declare ending variants)
   - tests/regression/rpg_variant_liveness.test.ts (credit + declare ending variants)

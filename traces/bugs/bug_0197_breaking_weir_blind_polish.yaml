@@ -2,7 +2,7 @@ id: bug_0197
 title: "The Breaking Weir blind-playtest polish — two stale object names + a journal crediting unheard counsel"
 kind: content_fix
 mode: rpg
-pack: content/rpg/pack/breaking_weir.yaml
+pack: content/rpg/quests/breaking_weir.yaml
 # Informational. No test pins breaking_weir's content_hash (only watchtower_road pins one),
 # so nothing was forced. These content edits move the pack hash; the regression pins the
 # behaviour, not the bytes.
@@ -17,7 +17,7 @@ summary: >
 
 surfaced_by_blind_playtest:
   run: ai-runs/2026-06-03T18-54-37-935Z/playtest.md
-  pack: content/rpg/pack/breaking_weir.yaml
+  pack: content/rpg/quests/breaking_weir.yaml
   seed: 7
   result: "WON 50/50 (ending_held) + survived gamble run; clarity 5/5, enjoyment 4/5; ZERO mechanical bugs"
   findings:
@@ -70,5 +70,5 @@ verification: >
   uniqueness, variant liveness) stay green — this change is name/journal text only, no structural change.
 
 files_changed:
-  - content/rpg/pack/breaking_weir.yaml  # rack_freed/ race_open variants gain `name`; success journal drops Pell attribution
+  - content/rpg/quests/breaking_weir.yaml  # rack_freed/ race_open variants gain `name`; success journal drops Pell attribution
   - tests/regression/breaking_weir_blind_polish.test.ts

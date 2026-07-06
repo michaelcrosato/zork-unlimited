@@ -1,10 +1,37 @@
 /**
  * UNIFIED STATE MODEL (spec §6).
  *
- * One state shape carries the game from CYOA all the way to RPG. Later stages
- * ADD fields; they never replace this model. The engine treats GameState as
- * immutable — every transition returns a fresh value (see core/engine.ts).
+ * One state shape carries the RPG world runtime. The engine treats GameState
+ * as immutable — every transition returns a fresh value (see core/engine.ts).
  */
+
+/**
+ * Highest persisted action counter the engine will accept. The reducer needs
+ * one safe integer of headroom for `step + 1`; beyond this, JavaScript number
+ * precision can stop the monotonic counter from advancing.
+ */
+export const MAX_ENGINE_STEP = Number.MAX_SAFE_INTEGER - 1;
+
+export function isRuntimeSeed(seed: unknown): seed is number {
+  return typeof seed === "number" && Number.isSafeInteger(seed);
+}
+
+export function runtimeSeedValidationMessage(label: string, seed: unknown): string {
+  return `${label} must be an integer within JavaScript's safe range, got ${JSON.stringify(seed)}.`;
+}
+
+export function assertRuntimeSeed(seed: unknown, label: string): asserts seed is number {
+  if (!isRuntimeSeed(seed)) throw new Error(runtimeSeedValidationMessage(label, seed));
+}
+
+function assertFiniteVars(vars: Record<string, number> | undefined, label: string): void {
+  if (vars === undefined) return;
+  for (const [name, value] of Object.entries(vars)) {
+    if (!Number.isFinite(value)) {
+      throw new Error(`${label}.${name} must be finite, got ${String(value)}.`);
+    }
+  }
+}
 
 export type ObjectRuntime = {
   open?: boolean;
@@ -20,14 +47,14 @@ export type GameState = {
   step: number; // monotonically increasing action counter
 
   // location
-  current: string; // scene_id (CYOA) or room_id (parser)
+  current: string; // room/site id in the active RPG world graph
   visited: Record<string, boolean>;
 
   // world state
   flags: Record<string, boolean>; // boolean switches
   vars: Record<string, number>; // numeric variables / stats (HP, gold, skills…)
   inventory: string[]; // object ids carried by the player
-  objectState: Record<string, ObjectRuntime>; // open/locked/contents per object (parser+)
+  objectState: Record<string, ObjectRuntime>; // open/locked/contents per world object
 
   // narrative
   journal: string[]; // append-only player-visible log
@@ -47,6 +74,8 @@ export type InitOptions = {
 
 /** Build a fresh GameState. Pure: no clock, no global RNG. */
 export function initState(opts: InitOptions): GameState {
+  assertRuntimeSeed(opts.seed, "GameState seed");
+  assertFiniteVars(opts.varsInit, "GameState varsInit");
   const flags: Record<string, boolean> = {};
   for (const f of opts.flagsInit ?? []) flags[f] = true;
   return {
@@ -62,5 +91,25 @@ export function initState(opts: InitOptions): GameState {
     questStage: {},
     ended: false,
     endingId: null,
+  };
+}
+
+export function cloneGameState(state: GameState): GameState {
+  const objectState: GameState["objectState"] = {};
+  for (const [id, object] of Object.entries(state.objectState)) {
+    objectState[id] = {
+      ...object,
+      ...(object.contents ? { contents: [...object.contents] } : {}),
+    };
+  }
+  return {
+    ...state,
+    visited: { ...state.visited },
+    flags: { ...state.flags },
+    vars: { ...state.vars },
+    inventory: [...state.inventory],
+    objectState,
+    journal: [...state.journal],
+    questStage: { ...state.questStage },
   };
 }

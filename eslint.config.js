@@ -5,7 +5,7 @@
 // the two never disagree.
 //
 // Scope is first-party engine/tooling TS (src, bin, scripts, agents), tests/
-// (bug_0036), AND ui/ (the React/Vite package, brought under the gate in bug_0038 —
+// (bug_0036), blind-tester/ (Node ESM MCP smoke harness), AND ui/ (the React/Vite package, brought under the gate in bug_0038 —
 // see the ui-specific block below: typescript-eslint recommended over its .tsx PLUS
 // the canonical react-hooks rules). Deliberately still NOT linting content/ (YAML —
 // content-hash-sensitive) or traces/ (frozen verification snapshots).
@@ -57,6 +57,18 @@ export default tseslint.config(
         "error",
         { argsIgnorePattern: "^_", varsIgnorePattern: "^_", caughtErrorsIgnorePattern: "^_" },
       ],
+    },
+  },
+  {
+    // blind-tester/ is Node ESM loop tooling. Root-wide cleaner runs `eslint .`, so
+    // keep the smoke harness in the lint gate with Node globals instead of carrying
+    // false no-undef noise for process/console.
+    files: ["blind-tester/**/*.mjs"],
+    languageOptions: {
+      globals: {
+        console: "readonly",
+        process: "readonly",
+      },
     },
   },
   {

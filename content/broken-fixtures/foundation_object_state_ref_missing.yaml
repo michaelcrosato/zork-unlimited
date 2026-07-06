@@ -1,0 +1,23 @@
+# MUST FAIL: OBJECT_STATE_REF_MISSING
+# An open_object effect targets an object id that does not exist (the phantom id
+# would silently populate openableObjects with a string that has no declared
+# object, no description, and no interaction entries).
+meta: { id: bad_object_state_ref, title: "Bad Object State Ref", start_room: a, vars_init: { hp: 10, attack: 2, defense: 1 } }
+rooms:
+  - id: a
+    name: "A"
+    description: "Room A."
+    objects: [chest]
+    exits: [{ direction: north, to: b }]
+  - id: b
+    name: "B"
+    description: "Room B."
+    exits: [{ direction: south, to: a }]
+objects:
+  - id: chest
+    name: chest
+    description: "An old chest."
+    interactions:
+      - { verb: OPEN, effects: [ { open_object: phantom_box } ] }
+win_conditions: [{ id: w, conditions: [{ visited: b }], ending: e }]
+endings: [{ id: e, title: "End", text: "Done." }]

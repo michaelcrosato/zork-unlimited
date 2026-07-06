@@ -23,11 +23,11 @@ evidence:
 improvement:
   layer: content_new
   what: >
-    Authored a SECOND RPG pack, content/rpg/pack/cold_forge.yaml ("The Cold Forge")
+    Authored a SECOND RPG pack, content/rpg/quests/cold_forge.yaml ("The Cold Forge")
     — a tight micro-dungeon on the proven Stage-4 core (one seeded fight, one seeded
     might check, Stage-3 milestone scoring to max_score 50, reactive room text, a
     save-recoverable death ending, retire-after-success lever). It is auto-discovered
-    by list_stories (directory scan of content/rpg/pack), so no registry edit was
+    by list_stories (directory scan of content/rpg/quests), so no registry edit was
     needed.
   broadens_beyond_barrow: >
     Deliberately covers ground the barrow does not and answers the barrow's standing
@@ -56,7 +56,7 @@ verification:
   reachable_endings: [ending_victory, ending_fallen]
   score_full_route: 0 -> 15 (sentinel) -> 30 (grate) -> 50 (Ember-Heart) at ending_victory
 health_wiring:
-  - package.json "health": added `npm run validate -- content/rpg/pack/cold_forge.yaml` so the new pack is re-validated every cycle (mirrors how sunken_barrow is gated; not coverage-gated, since the deterministic bot cannot solve seeded combat + skill check + dialogue, the same known limit as the barrow)
+  - package.json "health": added `npm run validate -- content/rpg/quests/cold_forge.yaml` so the new pack is re-validated every cycle (mirrors how sunken_barrow is gated; not coverage-gated, since the deterministic bot cannot solve seeded combat + skill check + dialogue, the same known limit as the barrow)
 regression_test: tests/regression/cold_forge_pack.test.ts  # 4 cases: validates green; buffed seed-1 route → ending_victory 50/50 + attack 4→6; the +2 topic is one-shot (retires, cannot be farmed); no-buff seed-2 fight kills the player → ending_fallen (combat teeth + death ending reachable)
 deferred:
   - reactive OBJECT descriptions — after the grate is levered open its OBJECT name/examine still reads "slag grate" (the ROOM text reacts via variants, but object descriptions are static). A generic engine feature for its own cycle, not specific to this pack.

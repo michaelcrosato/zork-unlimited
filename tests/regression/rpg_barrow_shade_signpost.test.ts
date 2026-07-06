@@ -21,24 +21,26 @@
  *   (3) the cue is text-only — taking the bar yields no incidental state change.
  */
 import { describe, it, expect } from "vitest";
-import { loadRpgPackFile } from "../../src/rpg/pack.js";
+import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import { indexRpgPack, buildRpgRules, initStateForRpgPack } from "../../src/rpg/runner.js";
 import { buildRpgObservation } from "../../src/rpg/observation.js";
 import { makeStep, actionEquals } from "../../src/core/engine.js";
-import type { Action } from "../../src/api/types.js";
+import type { RpgAction } from "../../src/api/types.js";
 import type { GameState } from "../../src/core/state.js";
 
-const loaded = loadRpgPackFile("content/rpg/pack/sunken_barrow.yaml");
+const loaded = loadRpgSourceFile("content/rpg/quests/sunken_barrow.yaml");
 if (!loaded.ok) throw new Error("sunken_barrow must compile");
 const index = indexRpgPack(loaded.compiled.pack);
 const rules = buildRpgRules(index);
 const step = makeStep(rules);
 
-/** Issue an action, asserting it was legal first (legal ⊇ executable). */
-function act(state: GameState, action: Action): GameState {
-  const legal = rules.legalActions(state).some((a) => actionEquals(a, action));
-  expect(legal, `action ${JSON.stringify(action)} must be legal in ${state.current}`).toBe(true);
-  const r = step(state, action);
+/** Issue an RpgAction, asserting it was legal first (legal ⊇ executable). */
+function act(state: GameState, RpgAction: RpgAction): GameState {
+  const legal = rules.legalActions(state).some((a) => actionEquals(a, RpgAction));
+  expect(legal, `RpgAction ${JSON.stringify(RpgAction)} must be legal in ${state.current}`).toBe(
+    true,
+  );
+  const r = step(state, RpgAction);
   expect(r.ok).toBe(true);
   return r.state;
 }

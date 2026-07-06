@@ -27,7 +27,7 @@ import { createToolApi } from "../../src/mcp/tools.js";
 import type { GameEvent } from "../../src/core/events.js";
 
 const ROOT = process.cwd();
-const RPG = "content/rpg/pack/sunken_barrow.yaml";
+const WORLD_QUEST_ID = "sunken_barrow";
 
 const isInternalStateChange = (e: GameEvent): boolean => {
   if (e.type !== "state_change") return false;
@@ -42,12 +42,12 @@ const api = () => createToolApi({ root: ROOT });
 describe("MCP step_action / get_transcript hide internal __-prefixed events (bug_0260)", () => {
   it("a combat round writes __enemy_hp internally but never surfaces it as an event", () => {
     const a = api();
-    const game = a.new_game({ pack_path: RPG, seed: 1 });
+    const game = a.start_world_quest({ world_quest_id: WORLD_QUEST_ID, seed: 1 });
     const sid = game.session_id;
     const byCmd = (needle: string): string | undefined =>
-      (a.list_legal_actions({ session_id: sid }).actions as LegalAction[]).find((x) =>
-        x.command.includes(needle),
-      )?.id;
+      (
+        a.list_legal_actions({ session_id: sid, compact_actions: false }).actions as LegalAction[]
+      ).find((x) => x.command.includes(needle))?.id;
 
     // down → take iron bar → north → the barrow-wight stands in the guard crypt.
     expect(a.step_action({ session_id: sid, action_id: byCmd("go down")! }).ok).toBe(true);
@@ -56,7 +56,11 @@ describe("MCP step_action / get_transcript hide internal __-prefixed events (bug
 
     const attackId = byCmd("attack");
     expect(attackId).toBeTruthy();
-    const r = a.step_action({ session_id: sid, action_id: attackId! }) as {
+    const r = a.step_action({
+      session_id: sid,
+      action_id: attackId!,
+      compact_events: false,
+    }) as {
       ok: boolean;
       events: GameEvent[];
     };
@@ -73,7 +77,9 @@ describe("MCP step_action / get_transcript hide internal __-prefixed events (bug
 
     // (2) Not vacuous: the combat round DID write the hidden enemy-HP var — the raw
     // GameState (get_state, the debug window, deliberately unfiltered) proves it.
-    const raw = a.get_state({ session_id: sid }) as { state: { vars: Record<string, number> } };
+    const raw = a.get_state({ session_id: sid, include_state: true }) as {
+      state: { vars: Record<string, number> };
+    };
     const enemyHpKey = Object.keys(raw.state.vars).find((k) => k.startsWith("__enemy_hp_"));
     expect(enemyHpKey).toBeTruthy();
 
@@ -81,25 +87,33 @@ describe("MCP step_action / get_transcript hide internal __-prefixed events (bug
     expect(r.events.some((e) => e.type === "narration" && /strike/i.test(e.text))).toBe(true);
 
     // The transcript get_transcript shows is filtered the same way.
-    const tx = a.get_transcript({ session_id: sid }) as { turns: { events: GameEvent[] }[] };
+    const tx = a.get_transcript({
+      session_id: sid,
+      summary_only: false,
+      compact_events: false,
+    }) as { turns: { events: GameEvent[] }[] };
     expect(tx.turns.flatMap((t) => t.events).some(isInternalStateChange)).toBe(false);
   });
 
   it("a dialogue topic writes __dlg internally but never surfaces it as an event", () => {
     const a = api();
-    const game = a.new_game({ pack_path: RPG, seed: 1 });
+    const game = a.start_world_quest({ world_quest_id: WORLD_QUEST_ID, seed: 1 });
     const sid = game.session_id;
     const byCmd = (needle: string): string | undefined =>
-      (a.list_legal_actions({ session_id: sid }).actions as LegalAction[]).find((x) =>
-        x.command.includes(needle),
-      )?.id;
+      (
+        a.list_legal_actions({ session_id: sid, compact_actions: false }).actions as LegalAction[]
+      ).find((x) => x.command.includes(needle))?.id;
 
     // down → west → talk to the reaver's shade (opens the dialogue, sets __dlg).
     expect(a.step_action({ session_id: sid, action_id: byCmd("go down")! }).ok).toBe(true);
     expect(a.step_action({ session_id: sid, action_id: byCmd("go west")! }).ok).toBe(true);
     const talkId = byCmd("talk to");
     expect(talkId).toBeTruthy();
-    const talk = a.step_action({ session_id: sid, action_id: talkId! }) as {
+    const talk = a.step_action({
+      session_id: sid,
+      action_id: talkId!,
+      compact_events: false,
+    }) as {
       ok: boolean;
       events: GameEvent[];
     };
@@ -115,12 +129,18 @@ describe("MCP step_action / get_transcript hide internal __-prefixed events (bug
     ).toBe(false);
 
     // ...yet the raw state proves the __dlg var was genuinely written.
-    const raw = a.get_state({ session_id: sid }) as { state: { vars: Record<string, number> } };
+    const raw = a.get_state({ session_id: sid, include_state: true }) as {
+      state: { vars: Record<string, number> };
+    };
     expect(Object.keys(raw.state.vars).some((v) => v.startsWith("__dlg_"))).toBe(true);
 
     // And the dialogue node text the player should read still surfaces via the
     // observation (a `dialogue` event), not via a leaked flag.
-    const tx = a.get_transcript({ session_id: sid }) as { turns: { events: GameEvent[] }[] };
+    const tx = a.get_transcript({
+      session_id: sid,
+      summary_only: false,
+      compact_events: false,
+    }) as { turns: { events: GameEvent[] }[] };
     expect(tx.turns.flatMap((t) => t.events).some(isInternalStateChange)).toBe(false);
   });
 });

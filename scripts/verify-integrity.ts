@@ -38,34 +38,23 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
+import { countCycleEntries, LOOP_STATE_FILE, ROTATE_KEEP } from "../src/afk/loop_state.js";
 
 /** Verification assets the project's correctness rests on. Must always exist. */
 export const PROTECTED_FILES = [
   "tests/property/determinism.test.ts",
-  "tests/property/parser_determinism.test.ts",
   "src/core/rng.ts",
   "src/core/hash.ts",
   "src/core/sha256.ts",
   "src/core/engine.ts",
-  "src/validate/cyoa_validator.ts",
-  "src/validate/parser_validator.ts",
   "src/validate/rpg_validator.ts",
   "src/persist/save_load.ts",
-  // The generator program is the eval-distribution credibility anchor. These files
-  // mint the never-frozen procedural packs the assessor mint-and-check levers confront
-  // every cycle (CYOA bug_0158 / RPG bug_0162 / parser bug_0166) AND seal the committed
-  // held-out corpus the benchmark thesis rests on (bug_0163/bug_0165). A SILENT
-  // weakening of a generator or the seal CLI would let a degraded eval distribution
-  // through the OUTPUT gates unnoticed, so the SOURCE is guarded too: deleting one is
-  // now a hard error and editing one (a deliberate deepen cycle behind a
-  // generator_version bump) surfaces a VERIFIER_TOUCHED warning for review. bug_0167,
-  // the bug_0164 deferred item c.
+  // The RPG generator program is the only supported moving-target content generator.
+  // Retired non-RPG generators move to FORBIDDEN_FILES below instead of staying protected.
   //
   // NOTE: keep this comment free of apostrophes/quotes/brackets — parseGuardConstants
   // pure-parses this array literal and a stray quote would read as a phantom entry.
-  "src/gen/cyoa_generator.ts",
   "src/gen/rpg_generator.ts",
-  "src/gen/parser_generator.ts",
   "bin/seal-corpus.ts",
   // The sealed held-out corpus manifest is the OUTPUT of the seal CLI above and the
   // committed pin the contamination-free benchmark rests on (bug_0163/bug_0165): each
@@ -79,6 +68,36 @@ export const PROTECTED_FILES = [
   "corpus/manifest.json",
   "scripts/verify-integrity.ts",
 ];
+
+/** Paths that must not reappear while the repo normalizes to RPG-only authoring. */
+export const FORBIDDEN_FILES = [
+  "src/gen/cyoa_generator.ts",
+  "src/gen/parser_generator.ts",
+  "bin/play.ts",
+  "bin/cyoa.ts",
+  "bin/parser.ts",
+  "bin/parser_play.ts",
+  "src/cyoa",
+  "src/validate/cyoa_validator.ts",
+  "content/cyoa",
+  "src/parser",
+  "src/validate/parser_validator.ts",
+  "content/parser",
+  "tests/property/parser_determinism.test.ts",
+];
+
+/** Token-heavy local artifacts may exist in a developer worktree, but must never
+ *  ship in Git where every clone and agent context can rediscover them. */
+export const FORBIDDEN_TRACKED_FILES = ["AI_LOOP_STATE_ARCHIVE.md", "ai-runs/"];
+
+/** Glob-like path patterns for retired test families that should not reappear
+ *  under a new filename while the repo is locked to the RPG runtime. */
+export const FORBIDDEN_PATH_PATTERNS = [
+  "^tests/unit/cyoa.*\\.test\\.ts$",
+  "^tests/unit/parser.*\\.test\\.ts$",
+  "^tests/(?:regression|property)/cyoa.*\\.test\\.ts$",
+  "^tests/(?:regression|property)/parser.*\\.test\\.ts$",
+] as const;
 
 /** Files holding committed hash pins / known-answer vectors that should not change
  *  silently — a change here in a cycle's diff is surfaced for human review. */
@@ -136,6 +155,10 @@ export type Finding = {
  *  guard fires on any INCREASE across a cycle. */
 export const MAX_TAUTOLOGY_ASSERTIONS = 0;
 
+/** Live loop-state handoff must stay bounded; old cycle detail belongs in git
+ *  history or ignored local archives, not in every agent prompt. */
+export const MAX_LIVE_LOOP_STATE_ENTRIES = ROTATE_KEEP;
+
 /** Matches vacuous assertion patterns the three-count system cannot catch:
  *  (a) literal-bool:   expect(true).toBe(true)  / expect(false).toBe(false)
  *  (b) literal-null:   expect(null).toBe(null)  / expect(undefined).toBe(undefined)
@@ -146,6 +169,11 @@ export const MAX_TAUTOLOGY_ASSERTIONS = 0;
  *  not matched — the actual and expected must be IDENTICAL. */
 const TAUTOLOGY_RE =
   /\bexpect\s*\(\s*(true|false|null|undefined|\d[\d.]*|"[^"]*"|'[^']*'|`[^`]*`|[A-Za-z_$][A-Za-z0-9_$.]*)\s*\)\s*\.\s*(?:toBe|toEqual|toStrictEqual)\s*\(\s*\1\s*\)/g;
+const SOURCE_FILE_RE = /\.(?:ts|tsx|js|jsx|mjs|cjs)$/;
+const RUNTIME_SOURCE_DIRS = ["src", "bin", "scripts", "agents", "ui/src", "blind-tester"];
+const DYNAMIC_IMPORT_RE = /\bimport\s*\(\s*["']([^"']+)["']\s*\)/g;
+const FORBIDDEN_LEGACY_IMPORT_RE =
+  /(?:^|[\\/])(?:cyoa|parser)(?:[\\/]|$)|(?:^|[\\/])(?:cyoa|parser)_(?:generator|validator)(?:\.|$)/i;
 
 /** Detect count-preserving semantic tautologies: assertions that keep a STRONG
  *  matcher (so the strong-matcher count is unchanged) but make it vacuous by
@@ -175,6 +203,124 @@ export function countTautologyAssertions(files: { text: string }[]): number {
   }, 0);
 }
 
+export function detectLoopStateOverflow(
+  text: string,
+  keep: number = MAX_LIVE_LOOP_STATE_ENTRIES,
+  where: string = LOOP_STATE_FILE,
+): Finding[] {
+  const entries = countCycleEntries(text);
+  if (entries <= keep) return [];
+  return [
+    {
+      severity: "error",
+      code: "LOOP_STATE_OVER_ROTATED",
+      message: `${LOOP_STATE_FILE} carries ${entries} live cycle entries; limit is ${keep}. Rotate before committing so old detail stays in git history or ignored local archives instead of every agent context.`,
+      where,
+    },
+  ];
+}
+
+export function detectForbiddenPathPatterns(
+  paths: string[],
+  patterns: readonly string[] = FORBIDDEN_PATH_PATTERNS,
+): Finding[] {
+  const compiled = patterns.map((pattern) => ({ pattern, re: new RegExp(pattern) }));
+  const findings: Finding[] = [];
+  for (const path of paths) {
+    for (const { pattern, re } of compiled) {
+      if (!re.test(path)) continue;
+      findings.push({
+        severity: "error",
+        code: "FORBIDDEN_PATH_PATTERN",
+        message: `legacy CYOA/parser test family must not reappear in the RPG-only runtime: ${path} matches ${pattern}`,
+        where: path,
+      });
+      break;
+    }
+  }
+  return findings;
+}
+
+export function detectForbiddenTrackedFiles(
+  trackedPaths: string[],
+  forbidden: readonly string[] = FORBIDDEN_TRACKED_FILES,
+): Finding[] {
+  const forbiddenSet = new Set(forbidden);
+  return trackedPaths
+    .filter((path) =>
+      forbidden.some((forbiddenPath) =>
+        forbiddenPath.endsWith("/")
+          ? path === forbiddenPath.slice(0, -1) || path.startsWith(forbiddenPath)
+          : forbiddenSet.has(path),
+      ),
+    )
+    .map((path) => ({
+      severity: "error" as const,
+      code: "FORBIDDEN_TRACKED_FILE",
+      message: `token-heavy local artifact must stay ignored and untracked: ${path}`,
+      where: path,
+    }));
+}
+
+export function detectForbiddenLegacyImports(files: { path: string; text: string }[]): Finding[] {
+  const findings: Finding[] = [];
+  for (const f of files) {
+    for (const hit of importSpecifiers(f.text)) {
+      const specifier = hit.specifier;
+      if (!FORBIDDEN_LEGACY_IMPORT_RE.test(specifier)) continue;
+      const lineNo = f.text.slice(0, hit.index).split("\n").length;
+      findings.push({
+        severity: "error",
+        code: "FORBIDDEN_LEGACY_IMPORT",
+        message: `live source must not import retired CYOA/parser modules in the RPG-only runtime: ${specifier}`,
+        where: `${f.path}:${lineNo}`,
+      });
+    }
+  }
+  return findings;
+}
+
+function importSpecifiers(text: string): { specifier: string; index: number }[] {
+  const hits: { specifier: string; index: number }[] = [];
+  const lines = text.split("\n");
+  let offset = 0;
+  let pending: { text: string; index: number } | null = null;
+
+  for (const line of lines) {
+    const trimmed = line.trimStart();
+    const lineOffset = offset;
+    offset += line.length + 1;
+
+    if (!trimmed.startsWith("//")) {
+      let dynamic: RegExpExecArray | null;
+      const dynamicRe = new RegExp(DYNAMIC_IMPORT_RE.source, DYNAMIC_IMPORT_RE.flags);
+      while ((dynamic = dynamicRe.exec(line)) !== null) {
+        hits.push({ specifier: dynamic[1]!, index: lineOffset + dynamic.index });
+      }
+    }
+
+    if (pending === null) {
+      if (trimmed.startsWith("//")) continue;
+      if (!/^(?:import\b(?!\s*\()|export\s+(?:\*|\{))/.test(trimmed)) continue;
+      pending = { text: line, index: lineOffset };
+    } else {
+      pending.text += `\n${line}`;
+    }
+
+    const sideEffectImport = /^\s*import\s+["']([^"']+)["']/.exec(pending.text);
+    const fromImport = /\bfrom\s+["']([^"']+)["']/.exec(pending.text);
+    const specifier = sideEffectImport?.[1] ?? fromImport?.[1];
+    if (specifier !== undefined) {
+      hits.push({ specifier, index: pending.index });
+      pending = null;
+      continue;
+    }
+    if (/;\s*(?:\/\/.*)?$/.test(line)) pending = null;
+  }
+
+  return hits;
+}
+
 function listFiles(root: string, dir: string, match: (p: string) => boolean): string[] {
   const abs = join(root, dir);
   if (!existsSync(abs)) return [];
@@ -192,6 +338,14 @@ function listFiles(root: string, dir: string, match: (p: string) => boolean): st
 
 export function listTestFiles(root: string): string[] {
   return listFiles(root, "tests", (p) => /\.test\.ts$/.test(p));
+}
+
+export function listRuntimeSourceFiles(root: string): string[] {
+  return [
+    ...new Set(
+      RUNTIME_SOURCE_DIRS.flatMap((dir) => listFiles(root, dir, (p) => SOURCE_FILE_RE.test(p))),
+    ),
+  ].sort();
 }
 
 /** Test files that contain a disabled/focused marker. Pure over the given texts. */
@@ -228,6 +382,47 @@ function readAll(root: string, paths: string[]): { path: string; text: string }[
   return paths.map((p) => ({ path: p, text: readFileSync(join(root, p), "utf8") }));
 }
 
+function windowsPathToWslPath(path: string): string | null {
+  const m = /^([A-Za-z]):[\\/](.*)$/.exec(path);
+  if (!m) return null;
+  return `/mnt/${m[1]!.toLowerCase()}/${m[2]!.replaceAll("\\", "/")}`;
+}
+
+function gitTrackedFiles(root: string, paths: string[]): string[] {
+  if (paths.length === 0) return [];
+  try {
+    return execFileSync("git", ["ls-files", "--", ...paths], {
+      cwd: root,
+      encoding: "utf8",
+    })
+      .split("\n")
+      .map((s) => s.trim())
+      .filter(Boolean);
+  } catch {
+    const gitFile = join(root, ".git");
+    if (!existsSync(gitFile)) return [];
+    const gitDirLine = readFileSync(gitFile, "utf8").trim();
+    const rawGitDir = /^gitdir:\s*(.+)$/i.exec(gitDirLine)?.[1];
+    const gitDir = rawGitDir ? (windowsPathToWslPath(rawGitDir) ?? rawGitDir) : null;
+    if (!gitDir || !existsSync(gitDir)) return [];
+    try {
+      return execFileSync(
+        "git",
+        ["--git-dir", gitDir, "--work-tree", root, "ls-files", "--", ...paths],
+        {
+          cwd: root,
+          encoding: "utf8",
+        },
+      )
+        .split("\n")
+        .map((s) => s.trim())
+        .filter(Boolean);
+    } catch {
+      return [];
+    }
+  }
+}
+
 /** Static integrity: protected files present, no disabled tests, count above floor. */
 export function runStatic(root: string): { ok: boolean; findings: Finding[] } {
   const findings: Finding[] = [];
@@ -240,7 +435,21 @@ export function runStatic(root: string): { ok: boolean; findings: Finding[] } {
         where: f,
       });
   }
-  const testFiles = readAll(root, listTestFiles(root));
+  for (const f of FORBIDDEN_FILES) {
+    if (existsSync(join(root, f)))
+      findings.push({
+        severity: "error",
+        code: "FORBIDDEN_FILE_PRESENT",
+        message: `legacy file must not reappear in the RPG-only runtime: ${f}`,
+        where: f,
+      });
+  }
+  findings.push(...detectForbiddenTrackedFiles(gitTrackedFiles(root, FORBIDDEN_TRACKED_FILES)));
+  const sourceFiles = readAll(root, listRuntimeSourceFiles(root));
+  findings.push(...detectForbiddenLegacyImports(sourceFiles));
+  const testPaths = listTestFiles(root);
+  findings.push(...detectForbiddenPathPatterns(testPaths));
+  const testFiles = readAll(root, testPaths);
   findings.push(...detectDisabledTests(testFiles));
   const cases = countTestCases(testFiles);
   if (cases < MIN_TEST_CASES) {
@@ -278,6 +487,10 @@ export function runStatic(root: string): { ok: boolean; findings: Finding[] } {
       message: `${tautologies} tautological assertion(s) found; floor is ${MAX_TAUTOLOGY_ASSERTIONS} (vacuous expect(x).toBe(x) patterns keep the strong-matcher count but assert nothing)`,
       where: "tests/",
     });
+  }
+  const loopState = join(root, LOOP_STATE_FILE);
+  if (existsSync(loopState)) {
+    findings.push(...detectLoopStateOverflow(readFileSync(loopState, "utf8")));
   }
   return { ok: !findings.some((f) => f.severity === "error"), findings };
 }
@@ -440,6 +653,9 @@ export type GuardConstants = {
   minStrongAssertions: number;
   maxTautologyAssertions?: number;
   protectedFiles: string[];
+  forbiddenFiles: string[];
+  forbiddenTrackedFiles: string[];
+  forbiddenPathPatterns: string[];
   hashPinFiles: string[];
 };
 
@@ -460,13 +676,18 @@ export function parseGuardConstants(text: string): GuardConstants | null {
     if (!m) return null;
     const entries = m[1]!.match(/"([^"]*)"|'([^']*)'/g);
     if (!entries) return null;
-    return entries.map((e) => e.slice(1, -1));
+    return entries.map((e) =>
+      e.startsWith('"') ? (JSON.parse(e) as string) : e.slice(1, -1).replace(/\\\\/g, "\\"),
+    );
   };
   const minTestCases = num("MIN_TEST_CASES");
   const minAssertions = num("MIN_ASSERTIONS");
   const minStrongAssertions = num("MIN_STRONG_ASSERTIONS");
   const maxTautologyAssertions = num("MAX_TAUTOLOGY_ASSERTIONS");
   const protectedFiles = arr("PROTECTED_FILES");
+  const forbiddenFiles = arr("FORBIDDEN_FILES") ?? [];
+  const forbiddenTrackedFiles = arr("FORBIDDEN_TRACKED_FILES") ?? [];
+  const forbiddenPathPatterns = arr("FORBIDDEN_PATH_PATTERNS") ?? [];
   const hashPinFiles = arr("HASH_PIN_FILES");
   if (
     minTestCases === null ||
@@ -481,6 +702,9 @@ export function parseGuardConstants(text: string): GuardConstants | null {
     minAssertions,
     minStrongAssertions,
     protectedFiles,
+    forbiddenFiles,
+    forbiddenTrackedFiles,
+    forbiddenPathPatterns,
     hashPinFiles,
   };
   if (maxTautologyAssertions !== null) result.maxTautologyAssertions = maxTautologyAssertions;
@@ -520,7 +744,14 @@ export function detectGuardWeakening(before: GuardConstants, now: GuardConstants
     for (const entry of was)
       if (!nowSet.has(entry)) weakened.push(`${name} entry removed: ${entry}`);
   };
-  removedFrom("PROTECTED_FILES", before.protectedFiles, now.protectedFiles);
+  const nowProtected = new Set(now.protectedFiles);
+  const nowForbidden = new Set(now.forbiddenFiles);
+  for (const entry of before.protectedFiles)
+    if (!nowProtected.has(entry) && !nowForbidden.has(entry))
+      weakened.push(`PROTECTED_FILES entry removed: ${entry}`);
+  removedFrom("FORBIDDEN_FILES", before.forbiddenFiles, now.forbiddenFiles);
+  removedFrom("FORBIDDEN_TRACKED_FILES", before.forbiddenTrackedFiles, now.forbiddenTrackedFiles);
+  removedFrom("FORBIDDEN_PATH_PATTERNS", before.forbiddenPathPatterns, now.forbiddenPathPatterns);
   removedFrom("HASH_PIN_FILES", before.hashPinFiles, now.hashPinFiles);
   if (weakened.length === 0) return [];
   return [

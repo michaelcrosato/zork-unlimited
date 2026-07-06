@@ -29,7 +29,7 @@ evidence:
 improvement:
   layer: content
   content:
-    - content/rpg/pack/cold_forge.yaml: >
+    - content/rpg/quests/cold_forge.yaml: >
         Added a reactive room `variant` to `outer_forge` gated on `has_item: pry_bar`
         that drops the pry-bar clause and names the trough now bare ("The cold trough
         stands bare now — the stout iron pry-bar that lay beside it is in your own

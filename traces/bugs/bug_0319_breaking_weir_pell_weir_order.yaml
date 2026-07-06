@@ -20,7 +20,7 @@ reproduction:
   - Observe: pell_weir says "the storm-walk, which I've told you of" with heard_walk=false.
 
 fix:
-  file: content/rpg/pack/breaking_weir.yaml
+  file: content/rpg/quests/breaking_weir.yaml
   change: >
     Added a variants block to the pell_weir dialogue node.
     - Base npc_text (heard_walk NOT set): "Then the storm-walk — ask me about that

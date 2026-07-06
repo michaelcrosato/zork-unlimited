@@ -45,7 +45,7 @@ fix:
     enemy d6=1, max skill roll d20=20) and WORST (min strike d6=1, max damage taken enemy
     d6=6, min skill roll d20=1). The shared BFS (now exhaustiveEndingsMulti) steps every
     legal action under BOTH and unions the reachable states, asserting the endings ACTUALLY
-    reached equal the set declared in pack.endings. Auto-discovered from content/rpg/pack
+    reached equal the set declared in pack.endings. Auto-discovered from content/rpg/quests
     (health-covers-all-packs bar, bug_0096).
   engine_seam:
     - >

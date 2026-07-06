@@ -6,7 +6,7 @@ severity: enhancement
 layer: content/reactive-prose
 artifact:
   source:
-    - content/rpg/pack/wolf_winter.yaml
+    - content/rpg/quests/wolf_winter.yaml
   test:
     - tests/regression/wolf_winter_braced_breach_legible.test.ts
 

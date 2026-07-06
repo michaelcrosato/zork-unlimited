@@ -1,0 +1,30 @@
+# AI context/index budget: open these explicitly when a task needs them.
+node_modules/
+ui/node_modules/
+dist/
+ui/dist/
+coverage/
+ai-runs/
+blind-tester/reports/
+.agent-cleaner/
+.codex/
+saves/
+transcripts/
+*.log
+*.tmp
+*.tsbuildinfo
+
+# High-volume tracked assets that are usually noise for default semantic indexing.
+AI_LOOP_STATE_ARCHIVE.md
+ADVENTUREFORGE_BUILD_SPEC.md
+docs/DECISION_LOG.md
+docs/ULTRAPLAN-*.md
+package-lock.json
+ui/package-lock.json
+content/world/new_york_overworld.json
+content/cyoa/pack/*.yaml
+content/parser/pack/*.yaml
+content/rpg/pack/*.yaml
+traces/
+corpus/
+tests/regression/

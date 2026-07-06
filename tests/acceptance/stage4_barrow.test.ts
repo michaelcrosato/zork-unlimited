@@ -10,7 +10,7 @@
  *  5. Legal ⊇ executable: every action the driver issues was in the legal set.
  */
 import { describe, it, expect } from "vitest";
-import { loadRpgPackFile } from "../../src/rpg/pack.js";
+import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import { validateRpg } from "../../src/validate/rpg_validator.js";
 import { indexRpgPack, buildRpgRules, initStateForRpgPack } from "../../src/rpg/runner.js";
 import { buildRpgObservation } from "../../src/rpg/observation.js";
@@ -19,11 +19,11 @@ import { hashState } from "../../src/core/hash.js";
 import { recordTrace } from "../../src/trace/record.js";
 import { replayTrace } from "../../src/trace/replay.js";
 import { save, load } from "../../src/persist/save_load.js";
-import type { Action } from "../../src/api/types.js";
+import type { RpgAction } from "../../src/api/types.js";
 import type { GameState } from "../../src/core/state.js";
 
-const PACK = "content/rpg/pack/sunken_barrow.yaml";
-const loaded = loadRpgPackFile(PACK);
+const PACK = "content/rpg/quests/sunken_barrow.yaml";
+const loaded = loadRpgSourceFile(PACK);
 if (!loaded.ok) throw new Error("sunken_barrow failed to compile");
 const compiled = loaded.compiled;
 const index = indexRpgPack(compiled.pack);
@@ -31,7 +31,7 @@ const rules = buildRpgRules(index);
 const step = makeStep(rules);
 
 /** Issue an action, asserting it was legal first (legal ⊇ executable, §14). */
-function act(state: GameState, action: Action, log: Action[]): GameState {
+function act(state: GameState, action: RpgAction, log: RpgAction[]): GameState {
   const legal = rules.legalActions(state).some((a) => actionEquals(a, action));
   expect(legal, `action ${JSON.stringify(action)} must be legal in ${state.current}`).toBe(true);
   const r = step(state, action);
@@ -41,8 +41,8 @@ function act(state: GameState, action: Action, log: Action[]): GameState {
 }
 
 /** A mainline hero: descend, arm, fight the wight, lever the slab, claim the relic. */
-function playToVictory(seed: number): { state: GameState; actions: Action[] } {
-  const actions: Action[] = [];
+function playToVictory(seed: number): { state: GameState; actions: RpgAction[] } {
+  const actions: RpgAction[] = [];
   let state = initStateForRpgPack(index, seed);
   state = act(state, { type: "MOVE", direction: "down" }, actions); // entry_hall
   state = act(state, { type: "TAKE", item: "iron_bar" }, actions);
@@ -93,8 +93,8 @@ describe("Stage 4 — The Sunken Barrow", () => {
     const { state, actions } = playToVictory(1);
     const trace = recordTrace(rules, initStateForRpgPack(index, 1), actions, {
       trace_id: "tr_barrow_victory",
-      pack_id: compiled.pack.meta.id,
       content_hash: compiled.contentHash,
+      worldQuestId: "sunken_barrow",
     });
     const replay = replayTrace(trace, rules);
     expect(replay.ok).toBe(true);
@@ -103,12 +103,14 @@ describe("Stage 4 — The Sunken Barrow", () => {
 
   it("a fatal fight is recoverable from an earlier save (§8.7, death/restore)", () => {
     // Reach the wight at full strength and save there.
-    const setup: Action[] = [];
+    const setup: RpgAction[] = [];
     let state = initStateForRpgPack(index, 7);
     state = act(state, { type: "MOVE", direction: "down" }, setup);
     state = act(state, { type: "TAKE", item: "iron_bar" }, setup);
     state = act(state, { type: "MOVE", direction: "north" }, setup);
-    const saveStr = save(state, compiled.pack.meta.id, compiled.contentHash);
+    const saveStr = save(state, compiled.contentHash, undefined, {
+      worldQuestId: "sunken_barrow",
+    });
 
     // A wounded hero (hp 1) walks into the same fight and dies — a real death ending.
     let doomed: GameState = { ...state, vars: { ...state.vars, hp: 1 } };

@@ -8,7 +8,7 @@
  * presentation can present the register-led sequence and still win legally.
  */
 import { describe, it, expect } from "vitest";
-import { loadRpgPackFile } from "../../src/rpg/pack.js";
+import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import {
   indexRpgPack,
   buildRpgRules,
@@ -23,7 +23,7 @@ import type { GameState } from "../../src/core/state.js";
 
 const forcedRng = (roll: number): Rng => ({ int: () => roll }) as unknown as Rng;
 
-const loaded = loadRpgPackFile("content/rpg/pack/advocates_case.yaml");
+const loaded = loadRpgSourceFile("content/rpg/quests/advocates_case.yaml");
 if (!loaded.ok) throw new Error("advocates_case must compile");
 const pack = loaded.compiled.pack;
 const index = indexRpgPack(pack);

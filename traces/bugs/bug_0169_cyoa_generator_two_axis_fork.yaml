@@ -26,7 +26,7 @@ summary: >
 
 mandated_blind_playtest:
   run: ai-runs/2026-06-03T11-19-32-362Z/playtest.md
-  pack: content/rpg/pack/cold_forge.yaml
+  pack: content/rpg/quests/cold_forge.yaml
   seed: 61
   result: "reached ending_victory (50/50, full-prep: spirit +2 attack, founder's plate +2 defense, sentinel slain, grate levered, Ember-Heart lifted) and ending_fallen (under-armed rush, death on round two); clarity 5/5, enjoyment 4/5; ZERO mechanical bugs; reactive prose, combat math, one-shot dialogue, determinism, and the 50/50 economy all confirmed live"
   triage: >

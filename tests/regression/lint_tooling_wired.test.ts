@@ -35,6 +35,12 @@ describe("bug_0031 — ESLint + Prettier are wired as real gates", () => {
     expect(health).toContain("npm run format:check");
   });
 
+  it("the blind MCP smoke harness is included in lint and format gates", () => {
+    for (const key of ["lint", "format:check", "format"]) {
+      expect(pkg.scripts[key]).toMatch(/(^|\s)blind-tester(\s|$)/);
+    }
+  });
+
   it("the ESLint and Prettier config files ship", () => {
     expect(existsSync(join(root, "eslint.config.js"))).toBe(true);
     expect(existsSync(join(root, ".prettierrc.json"))).toBe(true);
@@ -51,5 +57,13 @@ describe("bug_0031 — ESLint + Prettier are wired as real gates", () => {
     expect(bad[0]!.errorCount).toBeGreaterThan(0);
     const good = await eslint.lintText("export const x = 1;\n", { filePath: probePath });
     expect(good[0]!.errorCount).toBe(0);
+  }, 120_000);
+
+  it("ESLint treats the blind MCP smoke harness as Node ESM", async () => {
+    const eslint = new ESLint({ cwd: root });
+    const results = await eslint.lintFiles(["blind-tester/smoke.mjs"]);
+    expect(results).toHaveLength(1);
+    expect(results[0]!.errorCount).toBe(0);
+    expect(results[0]!.messages.map((m) => m.ruleId)).not.toContain("no-undef");
   }, 120_000);
 });

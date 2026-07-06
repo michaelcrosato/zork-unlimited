@@ -38,7 +38,7 @@ tests: tests/regression/sunken_barrow_shade_signposting.test.ts
 
 verification:
   - npm test -- --run tests/regression/sunken_barrow_shade_signposting.test.ts tests/regression/sunken_barrow_shade_root_short_greeting.test.ts
-  - npm run validate -- content/rpg/pack/sunken_barrow.yaml
+  - npm run validate -- content/rpg/quests/sunken_barrow.yaml
 
 trace_repin: >
   Deliberate, surfaced re-pin of traces/rpg/barrow_victory.json content_hash

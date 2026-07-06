@@ -1,6 +1,6 @@
 id: bug_0446_dawn_beacon_cresset_retry_legible
 title: "Dawn Beacon cresset retries are easier and explicitly recoverable"
-pack: content/rpg/pack/dawn_beacon.yaml
+pack: content/rpg/quests/dawn_beacon.yaml
 reported_by: blind-playtest
 report: blind-tester/reports/20260622T163600Z_dawn_beacon_seed7.md
 severity: S1
@@ -20,5 +20,5 @@ tests:
   - tests/regression/dawn_beacon_cresset_retry_legible.test.ts
 verification:
   - npm test -- --run tests/regression/dawn_beacon_cresset_retry_legible.test.ts tests/regression/dawn_beacon_explicit_light_act.test.ts tests/regression/dawn_beacon_reactive_cresset_name.test.ts
-  - npm run validate -- content/rpg/pack/dawn_beacon.yaml
+  - npm run validate -- content/rpg/quests/dawn_beacon.yaml
   - npm run health

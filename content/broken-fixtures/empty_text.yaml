@@ -1,9 +1,0 @@
-# Expect: SCHEMA — an empty text field is rejected by the schema contract.
-meta: { id: bad_empty, title: "Bad Empty", start: s1 }
-scenes:
-  - id: s1
-    title: "Start"
-    text: ""
-    choices: [ { id: go, text: "Leave.", next: e_win } ]
-endings:
-  - { id: e_win, title: "Win", text: "You made it." }

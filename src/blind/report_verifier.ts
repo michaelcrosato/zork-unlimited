@@ -1,6 +1,9 @@
 import { readFileSync } from "node:fs";
+import { extractExitInterview, type ExitInterview } from "./exit_interview.js";
 
-export type BlindReportVerification = { ok: true } | { ok: false; reason: string };
+export type BlindReportVerification =
+  | { ok: true; interview: ExitInterview }
+  | { ok: false; reason: string };
 
 const MCP_FAILURE_PATTERNS: ReadonlyArray<RegExp> = [
   /\badventureforge\b[\s\S]{0,80}\bMCP server has failed to connect\b/i,
@@ -52,7 +55,15 @@ export function verifyBlindReportText(text: string): BlindReportVerification {
       return { ok: false, reason };
     }
   }
-  return { ok: true };
+  // The structured exit interview is mandatory: prose sections keep the
+  // report human-readable, but only the validated JSON block lets the dev
+  // loop RANK feedback (sort by clarity, aggregate S3+ bugs) instead of
+  // re-reading markdown. No valid interview ⇒ the playtest doesn't count.
+  const interview = extractExitInterview(text);
+  if (!interview.ok) {
+    return { ok: false, reason: interview.reason };
+  }
+  return { ok: true, interview: interview.interview };
 }
 
 export function verifyBlindReportFile(path: string): BlindReportVerification {

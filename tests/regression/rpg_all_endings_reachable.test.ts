@@ -51,7 +51,7 @@
  * Failure modes (all loud, none silent): a declared-but-unreachable ending fails; a
  * reached-but-undeclared ending fails; a severed route fails; a cap-out (truncated,
  * unproven search) fails; an HP-gated condition fails the assumption guard. Packs are
- * auto-discovered from content/rpg/pack, so a new RPG pack is covered the moment it ships
+ * auto-discovered from content/rpg/quests, so a new RPG pack is covered the moment it ships
  * (the health-covers-all-packs bar, bug_0096).
  */
 import { describe, it, expect } from "vitest";
@@ -59,12 +59,12 @@ import { readdirSync } from "node:fs";
 import { join } from "node:path";
 import type { GameState } from "../../src/core/state.js";
 import type { Rng } from "../../src/core/rng.js";
-import { loadRpgPackFile } from "../../src/rpg/pack.js";
+import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import { indexRpgPack, buildRpgRules, initStateForRpgPack } from "../../src/rpg/runner.js";
 import { HP_VAR } from "../../src/rpg/schema.js";
 import { exhaustiveEndingsMulti } from "./support/exhaustive_endings.js";
 
-const PACK_DIR = "content/rpg/pack";
+const PACK_DIR = "content/rpg/quests";
 const packFiles = readdirSync(PACK_DIR)
   .filter((f) => f.endsWith(".yaml"))
   .sort();
@@ -146,7 +146,7 @@ describe("every declared ending of every RPG pack is reachable by concrete play"
   for (const file of packFiles) {
     it(`${file}: the exhaustive solver reaches every declared ending`, () => {
       const path = join(PACK_DIR, file);
-      const loaded = loadRpgPackFile(path);
+      const loaded = loadRpgSourceFile(path);
       expect(loaded.ok).toBe(true);
       if (!loaded.ok) return;
       const pack = loaded.compiled.pack;

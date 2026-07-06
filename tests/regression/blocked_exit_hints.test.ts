@@ -1,22 +1,22 @@
 /**
  * Regression (§15) for bug_0201 — engine/observation: a locked exit's authored
  * `locked_msg` is now surfaced in the structured observation as a `blocked_exits`
- * HINT, bringing the MCP/structured interface to parity with the free-text parser.
+ * HINT, bringing the MCP/structured interface to parity with the free-text command surface.
  *
  * TWO independent blind playtests (bug_0197 on breaking_weir, and the sunken_barrow
  * pass of this cycle, ai-runs/2026-06-03T20-14-24-953Z) reported the SAME friction:
  * a room's prose mentions a way out ("an archway east, choked with the cold") but no
  * such exit appears in `available_actions`/`exits`, leaving a blind player hunting
  * for an option that isn't there — unable to tell a gated-but-present way from a
- * non-existent one. The free-text parser already answered this: attempting the
- * blocked move prints the exit's `locked_msg` (bin/parser_play.ts). But the
- * structured observation filtered locked exits out entirely (observation.ts), so the
+ * non-existent one. Free-text command handling already answered this by printing the
+ * exit's `locked_msg` after an attempted blocked move. But the structured observation
+ * filtered locked exits out entirely (observation.ts), so the
  * `locked_msg` strings authored across ~10 packs were DEAD in the structured surface.
  *
- * The fix is strictly ADDITIVE and preserves the deliberate "the action set never
+ * The fix is strictly ADDITIVE and preserves the deliberate "the RpgAction set never
  * spoils HOW to open a locked exit" design: `blocked_exits` is a hint list, NOT a
- * selectable action and NOT in `exits` — it tells the player a way exists here and
- * WHY it's blocked, never how to clear it (that action stays hidden until legal).
+ * selectable RpgAction and NOT in `exits` — it tells the player a way exists here and
+ * WHY it's blocked, never how to clear it (that RpgAction stays hidden until legal).
  * Opt-in per exit: only a locked exit whose author gave it a `locked_msg` appears.
  *
  * Locked here (real packs + a synthetic opt-in fixture, no combat-seed dependence on
@@ -32,33 +32,32 @@
  *   (4) OPT-IN: a gated exit WITHOUT a `locked_msg` stays silent (absent from BOTH
  *       lists), while a gated exit WITH one is surfaced and an open exit stays in
  *       `exits` — the author controls what is hinted;
- *   (5) RPG inherits the field from the parser observation (the same builder).
+ *   (5) a synthetic zero-enemy RPG fixture proves the opt-in rule independently
+ *       of shipped content.
  *
  * WITNESS: before this change `blocked_exits` does not exist on the observation, so
  * cases (1) and (4)'s `.blocked_exits` reads are `undefined` and every assertion on
  * them fails — genuine, not vacuous.
  */
 import { describe, it, expect } from "vitest";
-import { loadRpgPackFile } from "../../src/rpg/pack.js";
+import { loadRpgSourceFile } from "../../src/rpg/source.js";
+import { compileRpgSource } from "../../src/rpg/source.js";
 import { indexRpgPack, buildRpgRules, initStateForRpgPack } from "../../src/rpg/runner.js";
 import { buildRpgObservation } from "../../src/rpg/observation.js";
-import { compileParserPack } from "../../src/parser/pack.js";
-import { indexParserPack, initStateForParserPack } from "../../src/parser/runner.js";
-import { buildParserObservation } from "../../src/parser/observation.js";
 import { makeStep } from "../../src/core/engine.js";
 import type { GameState } from "../../src/core/state.js";
-import type { Action } from "../../src/api/types.js";
+import type { RpgAction } from "../../src/api/types.js";
 
-const compiled = loadRpgPackFile("content/rpg/pack/sunken_barrow.yaml");
+const compiled = loadRpgSourceFile("content/rpg/quests/sunken_barrow.yaml");
 if (!compiled.ok) throw new Error("sunken_barrow must compile");
 const rindex = indexRpgPack(compiled.compiled.pack);
 const rstep = makeStep(buildRpgRules(rindex));
 
 const WIGHT_MSG = "The barrow-wight bars the way; you cannot pass while it stands.";
 
-function ract(s: GameState, action: Action): GameState {
-  const r = rstep(s, action);
-  expect(r.ok, `action ${JSON.stringify(action)} should resolve in ${s.current}`).toBe(true);
+function ract(s: GameState, RpgAction: RpgAction): GameState {
+  const r = rstep(s, RpgAction);
+  expect(r.ok, `RpgAction ${JSON.stringify(RpgAction)} should resolve in ${s.current}`).toBe(true);
   return r.state;
 }
 
@@ -140,11 +139,12 @@ win_conditions:
   - { id: w, conditions: [{ visited: c }], ending: done }
 endings:
   - { id: done, title: "Done", text: "Done." }
+enemies: []
 `;
-    const c = compileParserPack(FIXTURE);
+    const c = compileRpgSource(FIXTURE);
     if (!c.ok) throw new Error("fixture must compile");
-    const pindex = indexParserPack(c.compiled.pack);
-    const obs = buildParserObservation(pindex, initStateForParserPack(pindex, 0));
+    const pindex = indexRpgPack(c.compiled.pack);
+    const obs = buildRpgObservation(pindex, initStateForRpgPack(pindex, 0));
 
     // Open exit → traversable; gated exits → never traversable.
     expect(obs.exits.map((e) => e.direction)).toEqual(["north"]);

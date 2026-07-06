@@ -5,7 +5,7 @@ mode: meta
 severity: enhancement
 layer: verification
 artifact:
-  source: content/rpg/pack/sunken_barrow.yaml
+  source: content/rpg/quests/sunken_barrow.yaml
   test: tests/regression/rpg_barrow_ward_load_bearing.test.ts
 
 summary: >

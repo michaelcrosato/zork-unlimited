@@ -1,6 +1,6 @@
 id: bug_0460_advocates_case_missing_precedent_hint
 title: "Advocate's Case antechamber signposts missing guild precedent"
-pack: content/rpg/pack/advocates_case.yaml
+pack: content/rpg/quests/advocates_case.yaml
 reported_by: blind-playtest
 report: blind-tester/reports/20260622T195456Z_advocates_case_seed7.md
 severity: S3
@@ -23,5 +23,5 @@ tests:
   - tests/regression/advocates_case_missing_precedent_hint.test.ts
 verification:
   - npm test -- --run tests/regression/advocates_case_missing_precedent_hint.test.ts
-  - npm run validate -- content/rpg/pack/advocates_case.yaml
+  - npm run validate -- content/rpg/quests/advocates_case.yaml
   - npm run health

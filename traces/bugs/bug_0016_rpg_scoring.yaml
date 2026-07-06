@@ -19,7 +19,7 @@ evidence:
 failure:
   type: dead_score_field
   where:
-    - content:content/rpg/pack/sunken_barrow.yaml
+    - content:content/rpg/quests/sunken_barrow.yaml
     - validator:src/validate/parser_validator.ts
     - validator:src/validate/rpg_validator.ts
   description: >

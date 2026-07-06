@@ -20,7 +20,7 @@
  */
 import { describe, it, expect } from "vitest";
 import { initState, type GameState } from "../../src/core/state.js";
-import { resolveSkillCheck } from "../../src/rpg/combat.js";
+import { resolveSkillCheck } from "../../src/core/skill_check.js";
 import type { Rng } from "../../src/core/rng.js";
 import type { Effect } from "../../src/core/effects.js";
 
@@ -38,7 +38,7 @@ const stateWith = (vars: Record<string, number>): GameState => ({
   vars,
 });
 
-// The barrow's slab lever: a might check at DC 12 (content/rpg/pack/sunken_barrow.yaml).
+// The barrow's slab lever: a might check at DC 12 (content/rpg/quests/sunken_barrow.yaml).
 const slabCheck = {
   skill: "might",
   difficulty: 12,

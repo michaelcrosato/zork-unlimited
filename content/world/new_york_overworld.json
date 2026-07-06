@@ -56,7 +56,7 @@
     "Regional exploration sites are area-anchored, not a global checklist: scouting the current area reveals nearby wild, civic, industrial, ruin, or waterway sites, and exploring them consumes time before adding journal knowledge and renown.",
     "Known-route planning reports distance-based road time separately from condition-based delay, supply use, and fatigue gain so travel preparation is visible before committing.",
     "Every town has first-class local areas, and the number of areas scales by population tier so bigger cities expose more internal exploration before their leads are exhausted.",
-    "Every local area has at least one discoverable local job, so even towns without a full authored quest pack still provide timed work, renown, and local texture through exploration.",
+    "Every local area has at least one discoverable local job, so even towns without a full authored quest source still provide timed work, renown, and local texture through exploration.",
     "Road events are actionable travel beats: after a road leg, the traveler must scout, assist, or press on before choosing the next road, making travel more than a distance button.",
     "Every town has a connected, looped local-area route graph; larger cities gain shortcuts and cross-district links so city exploration is not a single linear corridor.",
     "Pack-backed quest leads are anchored to specific local areas; discovering a notice is not enough to start it until the traveler reaches the area where the lead is posted.",
@@ -46284,297 +46284,9 @@
   ],
   "quests": [
     {
-      "id": "alnagers_fault",
-      "title": "The Alnager's Fault",
-      "pack": "content/cyoa/pack/alnagers_fault.yaml",
-      "home": "albany_city",
-      "discovery": "Ask around Albany city for work tied to The Alnager's Fault. The lead is posted in Albany Market Streets.",
-      "visibility": "local_notice_board",
-      "area": "albany_city__market"
-    },
-    {
-      "id": "bellmans_round",
-      "title": "The Bellman's Round",
-      "pack": "content/cyoa/pack/bellmans_round.yaml",
-      "home": "buffalo_city",
-      "discovery": "Ask around Buffalo city for work tied to The Bellman's Round. The lead is posted in Buffalo Market Streets.",
-      "visibility": "local_notice_board",
-      "area": "buffalo_city__market"
-    },
-    {
-      "id": "clockwork_heist",
-      "title": "The Clockwork Heist",
-      "pack": "content/cyoa/pack/clockwork_heist.yaml",
-      "home": "rochester_city",
-      "discovery": "Ask around Rochester city for work tied to The Clockwork Heist. The lead is posted in Rochester Market Streets.",
-      "visibility": "local_notice_board",
-      "area": "rochester_city__market"
-    },
-    {
-      "id": "croft_inquest",
-      "title": "The Croft Inquest",
-      "pack": "content/cyoa/pack/croft_inquest.yaml",
-      "home": "syracuse_city",
-      "discovery": "Ask around Syracuse city for work tied to The Croft Inquest. The lead is posted in Syracuse Market Streets.",
-      "visibility": "local_notice_board",
-      "area": "syracuse_city__market"
-    },
-    {
-      "id": "dead_reckoning",
-      "title": "Dead Reckoning",
-      "pack": "content/cyoa/pack/dead_reckoning.yaml",
-      "home": "new_york_city",
-      "discovery": "Ask around New York city for work tied to Dead Reckoning. The lead is posted in New York Market Streets.",
-      "visibility": "local_notice_board",
-      "area": "new_york_city__market"
-    },
-    {
-      "id": "examiners_commission",
-      "title": "The Examiner's Commission",
-      "pack": "content/cyoa/pack/examiners_commission.yaml",
-      "home": "yonkers_city",
-      "discovery": "Ask around Yonkers city for work tied to The Examiner's Commission. The lead is posted in Yonkers Market Streets.",
-      "visibility": "local_notice_board",
-      "area": "yonkers_city__market"
-    },
-    {
-      "id": "excise_surveyors_round",
-      "title": "The Surveyor's Round",
-      "pack": "content/cyoa/pack/excise_surveyors_round.yaml",
-      "home": "utica_city",
-      "discovery": "Ask around Utica city for work tied to The Surveyor's Round. The lead is posted in Utica Market Streets.",
-      "visibility": "local_notice_board",
-      "area": "utica_city__market"
-    },
-    {
-      "id": "ferrymansprice",
-      "title": "The Ferryman's Price",
-      "pack": "content/cyoa/pack/ferrymansprice.yaml",
-      "home": "binghamton_city",
-      "discovery": "Ask around Binghamton city for work tied to The Ferryman's Price. The lead is posted in Binghamton Market Streets.",
-      "visibility": "local_notice_board",
-      "area": "binghamton_city__market"
-    },
-    {
-      "id": "fire_office_examiner",
-      "title": "The Fire Office Examiner",
-      "pack": "content/cyoa/pack/fire_office_examiner.yaml",
-      "home": "ithaca_city",
-      "discovery": "Ask around Ithaca city for work tied to The Fire Office Examiner. The lead is posted in Ithaca Market Streets.",
-      "visibility": "local_notice_board",
-      "area": "ithaca_city__market"
-    },
-    {
-      "id": "fishermans_privilege",
-      "title": "The Fisherman's Privilege",
-      "pack": "content/cyoa/pack/fishermans_privilege.yaml",
-      "home": "schenectady_city",
-      "discovery": "Ask around Schenectady city for work tied to The Fisherman's Privilege. The lead is posted in Schenectady Market Streets.",
-      "visibility": "local_notice_board",
-      "area": "schenectady_city__market"
-    },
-    {
-      "id": "midnight_edition",
-      "title": "The Midnight Edition",
-      "pack": "content/cyoa/pack/midnight_edition.yaml",
-      "home": "troy_city",
-      "discovery": "Ask around Troy city for work tied to The Midnight Edition. The lead is posted in Troy Market Streets.",
-      "visibility": "local_notice_board",
-      "area": "troy_city__market"
-    },
-    {
-      "id": "night_dispensary",
-      "title": "The Night Dispensary",
-      "pack": "content/cyoa/pack/night_dispensary.yaml",
-      "home": "niagara_falls_city",
-      "discovery": "Ask around Niagara Falls city for work tied to The Night Dispensary. The lead is posted in Niagara Falls Market Streets.",
-      "visibility": "local_notice_board",
-      "area": "niagara_falls_city__market"
-    },
-    {
-      "id": "priors_cellar",
-      "title": "The Prior's Cellar",
-      "pack": "content/cyoa/pack/priors_cellar.yaml",
-      "home": "poughkeepsie_city",
-      "discovery": "Ask around Poughkeepsie city for work tied to The Prior's Cellar. The lead is posted in Poughkeepsie Market Streets.",
-      "visibility": "local_notice_board",
-      "area": "poughkeepsie_city__market"
-    },
-    {
-      "id": "tidewaiters_watch",
-      "title": "The Tidewaiter's Watch",
-      "pack": "content/cyoa/pack/tidewaiters_watch.yaml",
-      "home": "kingston_city",
-      "discovery": "Ask around Kingston city for work tied to The Tidewaiter's Watch. The lead is posted in Kingston Market Streets.",
-      "visibility": "local_notice_board",
-      "area": "kingston_city__market"
-    },
-    {
-      "id": "tithe_barn",
-      "title": "The Tithe-Barn",
-      "pack": "content/cyoa/pack/tithe_barn.yaml",
-      "home": "watertown_city",
-      "discovery": "Ask around Watertown city for work tied to The Tithe-Barn. The lead is posted in Watertown Market Streets.",
-      "visibility": "local_notice_board",
-      "area": "watertown_city__market"
-    },
-    {
-      "id": "watchtower_road",
-      "title": "The Watchtower Road",
-      "pack": "content/cyoa/pack/watchtower_road.yaml",
-      "home": "plattsburgh_city",
-      "discovery": "Ask around Plattsburgh city for work tied to The Watchtower Road. The lead is posted in Plattsburgh Market Streets.",
-      "visibility": "local_notice_board",
-      "area": "plattsburgh_city__market"
-    },
-    {
-      "id": "white_stag",
-      "title": "The White Stag",
-      "pack": "content/cyoa/pack/white_stag.yaml",
-      "home": "hempstead_town",
-      "discovery": "Ask around Hempstead town for work tied to The White Stag. The lead is posted in Hempstead Market Streets.",
-      "visibility": "local_notice_board",
-      "area": "hempstead_town__market"
-    },
-    {
-      "id": "wreckers_light",
-      "title": "The Wrecker's Light",
-      "pack": "content/cyoa/pack/wreckers_light.yaml",
-      "home": "brookhaven_town",
-      "discovery": "Ask around Brookhaven town for work tied to The Wrecker's Light. The lead is posted in Brookhaven Market Streets.",
-      "visibility": "local_notice_board",
-      "area": "brookhaven_town__market"
-    },
-    {
-      "id": "alchemists_tower",
-      "title": "The Alchemist's Tower",
-      "pack": "content/parser/pack/alchemists_tower.yaml",
-      "home": "islip_town",
-      "discovery": "Ask around Islip town for work tied to The Alchemist's Tower. The lead is posted in Islip Market Streets.",
-      "visibility": "local_notice_board",
-      "area": "islip_town__market"
-    },
-    {
-      "id": "apothecaries_standard",
-      "title": "The Apothecary's Standard",
-      "pack": "content/parser/pack/apothecaries_standard.yaml",
-      "home": "oyster_bay_town",
-      "discovery": "Ask around Oyster Bay town for work tied to The Apothecary's Standard. The lead is posted in Oyster Bay Market Streets.",
-      "visibility": "local_notice_board",
-      "area": "oyster_bay_town__market"
-    },
-    {
-      "id": "assayers_mark",
-      "title": "The Assayer's Mark",
-      "pack": "content/parser/pack/assayers_mark.yaml",
-      "home": "huntington_town",
-      "discovery": "Ask around Huntington town for work tied to The Assayer's Mark. The lead is posted in Huntington Market Streets.",
-      "visibility": "local_notice_board",
-      "area": "huntington_town__market"
-    },
-    {
-      "id": "cellarmans_dark",
-      "title": "The Cellarman's Dark",
-      "pack": "content/parser/pack/cellarmans_dark.yaml",
-      "home": "ramapo_town",
-      "discovery": "Ask around Ramapo town for work tied to The Cellarman's Dark. The lead is posted in Ramapo Market Streets.",
-      "visibility": "local_notice_board",
-      "area": "ramapo_town__market"
-    },
-    {
-      "id": "collectors_warrant",
-      "title": "The Collector's Warrant",
-      "pack": "content/parser/pack/collectors_warrant.yaml",
-      "home": "white_plains_city",
-      "discovery": "Ask around White Plains city for work tied to The Collector's Warrant. The lead is posted in White Plains Market Streets.",
-      "visibility": "local_notice_board",
-      "area": "white_plains_city__market"
-    },
-    {
-      "id": "coroners_errand",
-      "title": "The Coroner's Errand",
-      "pack": "content/parser/pack/coroners_errand.yaml",
-      "home": "new_rochelle_city",
-      "discovery": "Ask around New Rochelle city for work tied to The Coroner's Errand. The lead is posted in New Rochelle Market Streets.",
-      "visibility": "local_notice_board",
-      "area": "new_rochelle_city__market"
-    },
-    {
-      "id": "dyers_weight",
-      "title": "The Dyer's Weight",
-      "pack": "content/parser/pack/dyers_weight.yaml",
-      "home": "mount_vernon_city",
-      "discovery": "Ask around Mount Vernon city for work tied to The Dyer's Weight. The lead is posted in Mount Vernon Market Streets.",
-      "visibility": "local_notice_board",
-      "area": "mount_vernon_city__market"
-    },
-    {
-      "id": "friars_postern",
-      "title": "The Friars' Postern",
-      "pack": "content/parser/pack/friars_postern.yaml",
-      "home": "saratoga_springs_city",
-      "discovery": "Ask around Saratoga Springs city for work tied to The Friars' Postern. The lead is posted in Saratoga Springs Market Streets.",
-      "visibility": "local_notice_board",
-      "area": "saratoga_springs_city__market"
-    },
-    {
-      "id": "gaugers_register",
-      "title": "The Gauger's Register",
-      "pack": "content/parser/pack/gaugers_register.yaml",
-      "home": "newburgh_town",
-      "discovery": "Ask around Newburgh town for work tied to The Gauger's Register. The lead is posted in Newburgh Market Streets.",
-      "visibility": "local_notice_board",
-      "area": "newburgh_town__market"
-    },
-    {
-      "id": "lamplighters_round",
-      "title": "The Lamplighter's Round",
-      "pack": "content/parser/pack/lamplighters_round.yaml",
-      "home": "middletown_city",
-      "discovery": "Ask around Middletown city for work tied to The Lamplighter's Round. The lead is posted in Middletown Market Streets.",
-      "visibility": "local_notice_board",
-      "area": "middletown_city__market"
-    },
-    {
-      "id": "scriveners_proof",
-      "title": "The Scrivener's Proof",
-      "pack": "content/parser/pack/scriveners_proof.yaml",
-      "home": "jamestown_city",
-      "discovery": "Ask around Jamestown city for work tied to The Scrivener's Proof. The lead is posted in Jamestown Market Streets.",
-      "visibility": "local_notice_board",
-      "area": "jamestown_city__market"
-    },
-    {
-      "id": "sealed_crypt",
-      "title": "The Sealed Crypt",
-      "pack": "content/parser/pack/sealed_crypt.yaml",
-      "home": "elmira_city",
-      "discovery": "Ask around Elmira city for work tied to The Sealed Crypt. The lead is posted in Elmira Market Streets.",
-      "visibility": "local_notice_board",
-      "area": "elmira_city__market"
-    },
-    {
-      "id": "tide_mill",
-      "title": "The Tide-Mill",
-      "pack": "content/parser/pack/tide_mill.yaml",
-      "home": "corning_city",
-      "discovery": "Ask around Corning city for work tied to The Tide-Mill. The lead is posted in Corning Market Streets.",
-      "visibility": "local_notice_board",
-      "area": "corning_city__market"
-    },
-    {
-      "id": "weighmasters_round",
-      "title": "The Weighmaster's Round",
-      "pack": "content/parser/pack/weighmasters_round.yaml",
-      "home": "auburn_city",
-      "discovery": "Ask around Auburn city for work tied to The Weighmaster's Round. The lead is posted in Auburn Market Streets.",
-      "visibility": "local_notice_board",
-      "area": "auburn_city__market"
-    },
-    {
       "id": "advocates_case",
       "title": "The Advocate's Case",
-      "pack": "content/rpg/pack/advocates_case.yaml",
+      "source": "content/rpg/quests/advocates_case.yaml",
       "home": "oswego_city",
       "discovery": "Ask around Oswego city for work tied to The Advocate's Case. The lead is posted in Oswego Market Streets.",
       "visibility": "local_notice_board",
@@ -46583,7 +46295,7 @@
     {
       "id": "breaking_weir",
       "title": "The Breaking Weir",
-      "pack": "content/rpg/pack/breaking_weir.yaml",
+      "source": "content/rpg/quests/breaking_weir.yaml",
       "home": "rome_city",
       "discovery": "Ask around Rome city for work tied to The Breaking Weir. The lead is posted in Rome Market Streets.",
       "visibility": "local_notice_board",
@@ -46592,7 +46304,7 @@
     {
       "id": "cold_forge",
       "title": "The Cold Forge",
-      "pack": "content/rpg/pack/cold_forge.yaml",
+      "source": "content/rpg/quests/cold_forge.yaml",
       "home": "greece_town",
       "discovery": "Ask around Greece town for work tied to The Cold Forge. The lead is posted in Greece Market Streets.",
       "visibility": "local_notice_board",
@@ -46601,7 +46313,7 @@
     {
       "id": "dawn_beacon",
       "title": "The Dawn Beacon",
-      "pack": "content/rpg/pack/dawn_beacon.yaml",
+      "source": "content/rpg/quests/dawn_beacon.yaml",
       "home": "amherst_town",
       "discovery": "Ask around Amherst town for work tied to The Dawn Beacon. The lead is posted in Amherst Market Streets.",
       "visibility": "local_notice_board",
@@ -46610,7 +46322,7 @@
     {
       "id": "factors_mark",
       "title": "The Factor's Mark",
-      "pack": "content/rpg/pack/factors_mark.yaml",
+      "source": "content/rpg/quests/factors_mark.yaml",
       "home": "cheektowaga_town",
       "discovery": "Ask around Cheektowaga town for work tied to The Factor's Mark. The lead is posted in Cheektowaga Market Streets.",
       "visibility": "local_notice_board",
@@ -46619,7 +46331,7 @@
     {
       "id": "falconers_ransom",
       "title": "The Falconer's Ransom",
-      "pack": "content/rpg/pack/falconers_ransom.yaml",
+      "source": "content/rpg/quests/falconers_ransom.yaml",
       "home": "tonawanda_town",
       "discovery": "Ask around Tonawanda town for work tied to The Falconer's Ransom. The lead is posted in Tonawanda Market Streets.",
       "visibility": "local_notice_board",
@@ -46628,7 +46340,7 @@
     {
       "id": "gallowmere",
       "title": "The Gallowmere",
-      "pack": "content/rpg/pack/gallowmere.yaml",
+      "source": "content/rpg/quests/gallowmere.yaml",
       "home": "queensbury_town",
       "discovery": "Ask around Queensbury town for work tied to The Gallowmere. The lead is posted in Queensbury Market Streets.",
       "visibility": "local_notice_board",
@@ -46637,7 +46349,7 @@
     {
       "id": "printers_night",
       "title": "The Printer's Night",
-      "pack": "content/rpg/pack/printers_night.yaml",
+      "source": "content/rpg/quests/printers_night.yaml",
       "home": "southampton_town",
       "discovery": "Ask around Southampton town for work tied to The Printer's Night. The lead is posted in Southampton Market Streets.",
       "visibility": "local_notice_board",
@@ -46646,7 +46358,7 @@
     {
       "id": "sunken_barrow",
       "title": "The Sunken Barrow",
-      "pack": "content/rpg/pack/sunken_barrow.yaml",
+      "source": "content/rpg/quests/sunken_barrow.yaml",
       "home": "riverhead_town",
       "discovery": "Ask around Riverhead town for work tied to The Sunken Barrow. The lead is posted in Riverhead Market Streets.",
       "visibility": "local_notice_board",
@@ -46655,7 +46367,7 @@
     {
       "id": "tanners_fever",
       "title": "The Tanner's Fever",
-      "pack": "content/rpg/pack/tanners_fever.yaml",
+      "source": "content/rpg/quests/tanners_fever.yaml",
       "home": "oneonta_city",
       "discovery": "Ask around Oneonta city for work tied to The Tanner's Fever. The lead is posted in Oneonta Market Streets.",
       "visibility": "local_notice_board",
@@ -46664,7 +46376,7 @@
     {
       "id": "wolf_winter",
       "title": "The Wolf-Winter",
-      "pack": "content/rpg/pack/wolf_winter.yaml",
+      "source": "content/rpg/quests/wolf_winter.yaml",
       "home": "albany_city",
       "discovery": "Ask around Albany city for work tied to The Wolf-Winter. The lead is posted in Albany Station Quarter.",
       "visibility": "local_notice_board",

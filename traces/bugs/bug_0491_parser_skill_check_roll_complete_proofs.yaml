@@ -1,0 +1,36 @@
+id: bug_0491
+title: "Parser structural proofs sampled only one skill-check roll branch"
+pack: content/parser/pack
+reported_by: ultraplan_20260625_engine_review
+severity: high
+symptom: >
+  Parser USE interactions can carry seeded skill checks, but several parser
+  exhaustive structural proofs still used a single rule set. A branch reachable
+  only on skill-check success or only on skill-check failure could be absent from
+  the proof's reachable region.
+root_cause: >
+  buildParserRules gained an rngFor verification seam for parser skill checks,
+  but the parser proof suites did not consistently switch from exhaustiveEndings
+  to exhaustiveEndingsMulti with forced best/worst d20 rule sets.
+fix: >
+  Added a shared parser roll helper that builds forced best and forced worst
+  parser rule sets, then updated parser structural reachability, score,
+  variant-liveness, menu-integrity, relabel, generator, soft-lock, and ending
+  render witness proofs to union both rule sets. Added a synthetic regression
+  whose success and failure skill-check branches route to different endings.
+tests:
+  - tests/regression/support/parser_rolls.ts
+  - tests/regression/parser_all_endings_reachable.test.ts
+  - tests/regression/parser_score_economy_sound.test.ts
+  - tests/regression/parser_variant_liveness.test.ts
+  - tests/regression/parser_action_id_unique.test.ts
+  - tests/regression/parser_metamorphic_relabel.test.ts
+  - tests/regression/parser_generator_depth_floor.test.ts
+  - tests/regression/parser_generator_two_tier_chain.test.ts
+  - tests/unit/parser_generator.test.ts
+  - tests/regression/no_dead_pocket.test.ts
+  - tests/regression/death_endings_render_cleanly.test.ts
+  - tests/regression/nondeath_endings_render_cleanly.test.ts
+verification:
+  - npm test -- tests/regression/parser_all_endings_reachable.test.ts tests/regression/parser_score_economy_sound.test.ts tests/regression/parser_variant_liveness.test.ts tests/regression/parser_action_id_unique.test.ts tests/regression/parser_metamorphic_relabel.test.ts
+  - npm test -- tests/unit/parser_generator.test.ts tests/regression/parser_generator_depth_floor.test.ts tests/regression/parser_generator_two_tier_chain.test.ts tests/regression/no_dead_pocket.test.ts tests/regression/death_endings_render_cleanly.test.ts tests/regression/nondeath_endings_render_cleanly.test.ts

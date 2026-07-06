@@ -8,7 +8,7 @@ cannot remember what was already ruled out; this file is **append-only** and nev
 
 - **Reviewers read this file FIRST.** Do **not** re-nominate any gap listed under "Confirmed closed"
   below — it is already implemented, with the file:line proof recorded. Re-investigating it is the
-  exact redundant fan-out this log exists to stop (re-aim #19 alone confirmed *six* such false alarms).
+  exact redundant fan-out this log exists to stop (re-aim #19 alone confirmed _six_ such false alarms).
 - **The synthesis APPENDS** a dated entry recording the gaps it confirmed closed this cycle (with
   proof) and the one move it chose. Append only; never edit or delete prior entries.
 - If a "confirmed closed" entry is genuinely wrong (the feature regressed or never existed), say so
@@ -34,8 +34,8 @@ Seeded 2026-06-08 from `docs/CURRENT_PLAN.md` re-aim #19 (and #17/#18) "false al
 - **LRU blind-pass rotation correctness** — three regression tests confirm correct recency rotation;
   no lock-in path (`tests/regression/assessor_blind_pass_rotation.test.ts`, bug_0128/0235/0293). (re-aim #19)
 - **`DIALOGUE_GOTO_MISSING`** — already implemented. (re-aim #17)
-- **Per-call `hide_graph` override** — landed (bug_0299); spread into the 5 observation tools in
-  `src/mcp/server.ts`. (re-aim #17, #18)
+- **Per-call `hide_graph` override** — landed (bug_0299); applies to observation-returning RPG
+  tools in `src/mcp/server.ts`, not action-menu reads. (re-aim #17, #18)
 - **`ITEM_UNPLACED` orphan-object validator** — landed (bug_0317) in `src/validate/parser_validator.ts`;
   regression `tests/regression/parser_validator_item_unplaced.test.ts`. (chosen by re-aim #19)
 
@@ -46,8 +46,8 @@ Seeded 2026-06-08 from `docs/CURRENT_PLAN.md` re-aim #19 (and #17/#18) "false al
 - **Multi-line tautology** — `TAUTOLOGY_RE` has no dotall flag; split-line `expect(foo)\n.toBe(foo)`
   escapes. S-effort; deferred (real test code writes tautologies single-line; narrow risk).
 - **🚫 ANTI-PATTERN — do NOT keep raising `TARGET_PER_MODE` (orchestrator ruling 2026-06-09).**
-  Re-aims #19→bug_0332, mid-cycle→bug_0335, #21→bug_0336 each raised `TARGET_PER_MODE`
-  (`src/afk/assessor.ts:68`) to *current counts + a little headroom*. Each raise is consumed by a
+  Re-aims #19→bug*0332, mid-cycle→bug_0335, #21→bug_0336 each raised `TARGET_PER_MODE`
+  (`src/afk/assessor.ts:68`) to \_current counts + a little headroom*. Each raise is consumed by a
   burst of `content_new` authoring, which re-saturates, which makes the NEXT ultraplan raise it
   again — a self-perpetuating loop the re-aims themselves flagged as a "structural trap" yet kept
   feeding. **The ceiling is now intentionally FIXED at `{cyoa:20, parser:16, rpg:16}` (the bug_0336
@@ -669,6 +669,28 @@ audit work in `wolf_winter`.
 `wolf_winter`, or promote the low-FP subset once the remaining false positives are
 tuned out.
 
+### Ultraplan cycle — 2026-06-25 (HEAD = token-efficiency branch; next move = parser skill-check roll-complete proofs)
+
+**Confirmed this cycle:**
+
+- `aleconners_seal` blind playtest passed mechanically and found polish, not a blocker:
+  `check_empty_finding` reads as a no-op, partial finding feedback is generic, and the
+  retest ending can contradict a full-evidence journal.
+- Parser skill checks are live in shipped packs, while several parser structural proofs
+  still used one deterministic rule set. That could miss success-only or failure-only
+  branches in reachability, score, variant, menu, render, relabel, and soft-lock proofs.
+
+**Chosen move — make parser structural proofs roll-complete**
+
+Added `tests/regression/support/parser_rolls.ts` with forced best/worst parser d20
+rule sets and moved parser structural exhaustive callers to `exhaustiveEndingsMulti`
+where branch coverage matters. The parser all-endings suite now includes a synthetic
+pack where success and failure route to different endings, proving the bracket is
+load-bearing.
+
+**Next after this:** fix the Aleconner playtest polish or add per-cycle token/cost
+telemetry so future token-efficiency work is measured directly.
+
 ### Standard cycle — 2026-06-19 (HEAD = 6aef3d6; next move = wolf winter prep-item prose)
 
 **Confirmed CLOSED since tanner notes and meadowsweet prose:**
@@ -691,3 +713,46 @@ instead of requiring the live content corpus to keep a known stale site around.
 
 **Next after this:** if the stale room/item audit is empty, promote the low-FP subset
 into validation or move to the next ranked assessment item.
+
+### Consolidation decision — 2026-07-06 (recorded during PR #12 remediation; merge HEAD = 3914c4ef + remediation series)
+
+**Decision: the repo is normalized around ONE live game engine — the RPG
+foundation — inside one persistent world (Charter Marches hub + the New York
+overworld).** The CYOA and parser runtimes are retired; their validator lives
+on wholesale as `src/validate/rpg_foundation_validator.ts` (all ~40 finding
+codes preserved), and their best mechanics (skill checks, USE puzzles,
+dialogue trees, containers, scoring) are first-class in the RPG layer. This
+records — belatedly, which was itself a process failure — the product
+decision embodied in the 670-commit `codex/token-efficiency-cleanup` branch
+(PR #12). An append-only log entry MUST land in the same change as any future
+decision of this size.
+
+**Story retirement + recovery:** 36 of 52 shipped stories (all CYOA + parser
+packs) were retired with the runtimes, each carrying blind-playtest-driven
+fixes worth preserving. The last full 52-story tree is tagged
+`stories-52-pre-rpg-consolidation` (= the pre-merge develop/main heads).
+Porting retired stories to RPG quests one at a time — reusing their tested
+prose, puzzle chains, and endings — is standing flywheel work: each port is a
+well-scoped cycle (adapt → validate → blind-playtest → gate).
+
+**Remediation required before merge (all landed with the merge):**
+1. Rejection-direction coverage restored: the deleted parser negative
+   fixtures were converted to RPG-foundation format with a data-driven
+   corpus test, so ~36 foundation finding codes regain witnesses
+   (SoundnessBench discipline, bug_0182).
+2. Validator/runner parity fixes ported from develop 60bf106a: skill_check
+   interactions no longer drop their base effects; INSPECT/OPEN/CLOSE
+   interaction verbs are runtime-reachable (new additive `close_object`
+   core effect; `is_open` win-stability now tracks close falsifiers).
+3. The compact MCP interface was made self-describing for blind agents:
+   one-sentence tool descriptions and a session-start `legend` documenting
+   every positional field of the compact context, co-located with the
+   encoder so they cannot drift.
+
+**Why merge rather than reject:** the compact-observation engine is the
+difference between an AI-playable overworld (762 B/observation) and an
+unplayable one (94-110 KB/observation measured on develop); the integrity
+verifier got strictly stronger (FORBIDDEN_* guards, protected→forbidden
+migration enforcement); CI is green on the full bar; and the one-engine
+consolidation matches the project's stated direction — a single deep world
+under TTRPG-style rules, evolved by the dev↔playtest↔feedback flywheel.

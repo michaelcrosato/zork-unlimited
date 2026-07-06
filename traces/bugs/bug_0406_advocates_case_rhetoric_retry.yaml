@@ -28,7 +28,7 @@ tests: tests/regression/advocates_case_rhetoric_retry.test.ts
 
 verification:
   - npm test -- --run tests/regression/advocates_case_rhetoric_retry.test.ts
-  - npm run validate -- content/rpg/pack/advocates_case.yaml
+  - npm run validate -- content/rpg/quests/advocates_case.yaml
 
 trace_repin: >
   None. The change updates pack content and adds a regression test; there is no

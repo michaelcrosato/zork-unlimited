@@ -25,7 +25,7 @@ evidence:
 failure:
   type: misleading_skill_check_framing
   where:
-    - content:content/rpg/pack/sunken_barrow.yaml
+    - content:content/rpg/quests/sunken_barrow.yaml
   description: >
     The slab might-check is mechanically a FAIR, PASSABLE, penalty-free, infinitely
     retryable d20 + might(=3) vs DC 12 (~60% per attempt; the RPG validator's

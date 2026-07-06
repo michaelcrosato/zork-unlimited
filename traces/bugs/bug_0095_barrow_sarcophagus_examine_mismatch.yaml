@@ -30,7 +30,7 @@ evidence:
 improvement:
   layer: content        # hint_text / examine prose only
   content:
-    - content/rpg/pack/sunken_barrow.yaml: >
+    - content/rpg/quests/sunken_barrow.yaml: >
         Reworded the `sarcophagus` object `description` so it no longer claims the
         prise is "the same as the slab did". It still names the iron bar (genuinely
         required — `item: iron_bar` on the interaction) but now reads true to the

@@ -3,7 +3,7 @@ title: "wolf_winter: day-book 'BOTH, OR NOTHING' over-claimed the stakes — ski
 kind: content_fix
 mode: rpg
 severity: minor
-pack: content/rpg/pack/wolf_winter.yaml
+pack: content/rpg/quests/wolf_winter.yaml
 content_hash: 7d43e6518b4219343c69283f7515fd5584c58eaa72c93dc7207594e726fbd66e
 
 summary: >
@@ -21,7 +21,7 @@ summary: >
   day-book's binary framing was not.
 
 reproduction:
-  pack: content/rpg/pack/wolf_winter.yaml
+  pack: content/rpg/quests/wolf_winter.yaml
   route: "skip the day-book/Cade/store -> march north -> fight yearling, flank-wolf, grey leader -> reach the cattle"
   observed: >
     The day-book promises "BOTH, OR NOTHING" and Cade's counsel is framed as the line between living and

@@ -30,14 +30,14 @@
  */
 import { describe, it, expect } from "vitest";
 import { makeStep } from "../../src/core/engine.js";
-import type { Action } from "../../src/api/types.js";
+import type { RpgAction } from "../../src/api/types.js";
 import type { GameState } from "../../src/core/state.js";
 import type { Rng } from "../../src/core/rng.js";
-import { loadRpgPackFile } from "../../src/rpg/pack.js";
+import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import { indexRpgPack, buildRpgRules, initStateForRpgPack } from "../../src/rpg/runner.js";
 import { HP_VAR } from "../../src/rpg/schema.js";
 
-const PACK_PATH = "content/rpg/pack/wolf_winter.yaml";
+const PACK_PATH = "content/rpg/quests/wolf_winter.yaml";
 const SEED = 7;
 
 // The unprepared-rush score the companion bug_0195 test pins (3 wolves × 10 + 15 cattle,
@@ -69,12 +69,12 @@ function bestRng(): Rng {
  * Drive a FULLY-PREPARED playthrough along the explicit intended route: north to the byre,
  * read the day-book, ask Cade his counsel and leave the conversation, west to the store to
  * take and don the jerkin, then hold the corridor — fighting each wolf until the way north
- * opens. Each step asserts its action is actually in the legal set first (so a content-id
+ * opens. Each step asserts its RpgAction is actually in the legal set first (so a content-id
  * drift fails LOUDLY here rather than silently skipping a scoring prep act), while the fights
  * loop on the legal set so they stay robust to round count.
  */
 function playPrepared(): GameState {
-  const loaded = loadRpgPackFile(PACK_PATH);
+  const loaded = loadRpgSourceFile(PACK_PATH);
   expect(loaded.ok, "wolf_winter must load").toBe(true);
   if (!loaded.ok) throw new Error("unreachable");
   const index = indexRpgPack(loaded.compiled.pack);
@@ -84,9 +84,9 @@ function playPrepared(): GameState {
   const step = makeStep(rules);
   let state = initStateForRpgPack(index, SEED);
 
-  const legal = (): Action[] => rules.legalActions(state) as Action[];
-  // Step the one legal action matching `want` (type + the fields given); assert it exists.
-  const act = (want: Partial<Action> & { type: Action["type"] }): void => {
+  const legal = (): RpgAction[] => rules.legalActions(state) as RpgAction[];
+  // Step the one legal RpgAction matching `want` (type + the fields given); assert it exists.
+  const act = (want: Partial<RpgAction> & { type: RpgAction["type"] }): void => {
     const match = legal().find((a) =>
       Object.entries(want).every(([k, v]) => (a as Record<string, unknown>)[k] === v),
     );
@@ -94,7 +94,7 @@ function playPrepared(): GameState {
       match,
       `prepared route expected a legal ${JSON.stringify(want)} but the legal set was ${JSON.stringify(legal())}`,
     ).toBeTruthy();
-    const res = step(state, match as Action);
+    const res = step(state, match as RpgAction);
     expect(res.ok, `engine rejected ${JSON.stringify(want)}: ${res.rejectionReason}`).toBe(true);
     state = res.state;
   };
@@ -106,7 +106,7 @@ function playPrepared(): GameState {
       if (north) return; // the wolf is down; the way north has opened
       const attack = legal().find((a) => a.type === "ATTACK");
       expect(attack, `no ATTACK and no way north — stuck: ${JSON.stringify(legal())}`).toBeTruthy();
-      const res = step(state, attack as Action);
+      const res = step(state, attack as RpgAction);
       expect(res.ok, `engine rejected ATTACK: ${res.rejectionReason}`).toBe(true);
       state = res.state;
     }

@@ -23,7 +23,7 @@ summary: >
 
 mandated_blind_playtest:
   run: ai-runs/2026-06-03T09-13-43-464Z/playtest.md
-  pack: content/rpg/pack/sunken_barrow.yaml
+  pack: content/rpg/quests/sunken_barrow.yaml
   seed: 7
   result: "reached ending_victory (50/50) and ending_woken (death, 25/50); clarity 5/5, enjoyment 4/5; ZERO bugs; transparent combat (d6 rolls shown), the +3-defense ward a real def 2→5 effect, might check vs DC 12, score tallies exactly to max_score"
   triage: >
@@ -74,7 +74,7 @@ scope_deliberately_excluded: >
   COMBAT/SCORE validators into a LIVE self-renewing eval signal — the actual cure for the 0.5-floor stall
   on the RPG axis), persistence of a held-out corpus, and deepening the RPG generator (multiple enemies,
   a combat_guaranteed fairness variant, deeper maps). Generated packs remain in-memory only — never written
-  under content/rpg/pack — so they incur no blind-playtest obligation and never pollute the curated set.
+  under content/rpg/quests — so they incur no blind-playtest obligation and never pollute the curated set.
 
 regression:
   test: tests/unit/mcp_generate_rpg_pack.test.ts

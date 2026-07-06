@@ -1,0 +1,20 @@
+# MUST FAIL: WIN_UNREACHABLE
+# The win condition needs a room nothing reaches. (The unreachable island also
+# cascades into UNREACHABLE_ROOM/SOFTLOCK findings — all from the same single
+# defect.)
+meta: { id: bad_win, title: "Bad Win", start_room: a, vars_init: { hp: 10, attack: 2, defense: 1 } }
+rooms:
+  - id: a
+    name: "A"
+    description: "Room A."
+    exits: [{ direction: north, to: b }]
+  - id: b
+    name: "B"
+    description: "Room B."
+    exits: [{ direction: south, to: a }]
+  - id: island
+    name: "Island"
+    description: "No exit leads here."
+    exits: [{ direction: south, to: a }]
+win_conditions: [{ id: w, conditions: [{ visited: island }], ending: e }]
+endings: [{ id: e, title: "End", text: "Done." }]

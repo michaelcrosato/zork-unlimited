@@ -28,25 +28,25 @@
  *       reaches ending_victory at the full 50/50.
  */
 import { describe, it, expect } from "vitest";
-import { loadRpgPackFile } from "../../src/rpg/pack.js";
+import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import {
   indexRpgPack,
   buildRpgRules,
   initStateForRpgPack,
   enumerateRpgActions,
 } from "../../src/rpg/runner.js";
-import { buildParserObservation } from "../../src/parser/observation.js";
+import { buildRpgObservation } from "../../src/rpg/observation.js";
 import { makeStep, actionEquals } from "../../src/core/engine.js";
 import type { Action } from "../../src/api/types.js";
 import type { GameState } from "../../src/core/state.js";
 
-const loaded = loadRpgPackFile("content/rpg/pack/cold_forge.yaml");
+const loaded = loadRpgSourceFile("content/rpg/quests/cold_forge.yaml");
 if (!loaded.ok) throw new Error("cold_forge must compile");
 const index = indexRpgPack(loaded.compiled.pack);
 const rules = buildRpgRules(index);
 const step = makeStep(rules);
 
-const score = (s: GameState): number => buildParserObservation(index, s).score;
+const score = (s: GameState): number => buildRpgObservation(index, s).score;
 const options = (s: GameState) => enumerateRpgActions(index, s);
 
 function act(s: GameState, pred: (a: Action) => boolean): GameState {

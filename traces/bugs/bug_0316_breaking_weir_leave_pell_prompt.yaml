@@ -30,7 +30,7 @@ fix:
     honest (ends dialogue only), conveys mission intent without implying
     tool pickup.
   files_changed:
-    - content/rpg/pack/breaking_weir.yaml
+    - content/rpg/quests/breaking_weir.yaml
   no_change: flags, scores, conditions, exits, endings, routes
 
 regression_test: tests/regression/breaking_weir_leave_pell_prompt.test.ts

@@ -2,7 +2,7 @@ id: bug_0204
 title: "The Breaking Weir — the lethal storm-walk gamble was hidden behind a stat; un-counselled crossing now reads as the gamble it is"
 kind: content_fix
 mode: rpg
-pack: content/rpg/pack/breaking_weir.yaml
+pack: content/rpg/quests/breaking_weir.yaml
 # Informational. No test pins breaking_weir's content_hash, so nothing was forced; this
 # content edit moves the pack hash, and the regression pins the BEHAVIOUR (the gamble cue
 # keyed on heard_walk across the three storm-walk states), not the bytes.
@@ -56,5 +56,5 @@ verification: >
   uniqueness, variant liveness) stay green — additive text-only variants, no structural change.
 
 files_changed:
-  - content/rpg/pack/breaking_weir.yaml  # weir_walk room + walk_span object: not_flag heard_walk gamble-cue variants
+  - content/rpg/quests/breaking_weir.yaml  # weir_walk room + walk_span object: not_flag heard_walk gamble-cue variants
   - tests/regression/breaking_weir_gamble_legible.test.ts  # new; pins the gamble cue across the 3 storm-walk states + name-unchanged

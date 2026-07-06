@@ -31,27 +31,27 @@
  *       ending_victory 50/50 even when the new topic is asked en route.
  */
 import { describe, it, expect } from "vitest";
-import { loadRpgPackFile } from "../../src/rpg/pack.js";
+import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import {
   indexRpgPack,
   buildRpgRules,
   initStateForRpgPack,
   enumerateRpgActions,
 } from "../../src/rpg/runner.js";
-import { buildParserObservation } from "../../src/parser/observation.js";
+import { buildRpgObservation } from "../../src/rpg/observation.js";
 import { validateRpg } from "../../src/validate/rpg_validator.js";
 import { makeStep, actionEquals } from "../../src/core/engine.js";
 import type { Action } from "../../src/api/types.js";
 import type { GameState } from "../../src/core/state.js";
 
-const loaded = loadRpgPackFile("content/rpg/pack/cold_forge.yaml");
+const loaded = loadRpgSourceFile("content/rpg/quests/cold_forge.yaml");
 if (!loaded.ok) throw new Error("cold_forge must compile");
 const pack = loaded.compiled.pack;
 const index = indexRpgPack(pack);
 const rules = buildRpgRules(index);
 const step = makeStep(rules);
 
-const score = (s: GameState): number => buildParserObservation(index, s).score;
+const score = (s: GameState): number => buildRpgObservation(index, s).score;
 const options = (s: GameState) => enumerateRpgActions(index, s);
 const askIds = (s: GameState): string[] =>
   options(s)

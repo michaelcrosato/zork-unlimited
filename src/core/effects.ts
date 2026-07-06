@@ -31,6 +31,12 @@ export const EffectSchema = z.union([
     .object({ unlock_exit: z.object({ from: z.string().min(1), to: z.string().min(1) }).strict() })
     .strict(),
   z.object({ open_object: z.string().min(1) }).strict(),
+  // The inverse of open_object (first-class CLOSE verb). Open-state is NOT
+  // monotone once this exists: the RPG validator's `is_open` win-stability
+  // check tracks close_object falsifiers exactly as relocks falsify
+  // is_unlocked. Additive — no shipped pack emits it, so every existing pack
+  // compiles byte-identically and all recorded traces replay unchanged.
+  z.object({ close_object: z.string().min(1) }).strict(),
   z
     .object({
       set_object_locked: z.object({ id: z.string().min(1), locked: z.boolean() }).strict(),
@@ -113,7 +119,7 @@ export function applyEffect(
   }
   if ("add_item" in effect) {
     const inventory = state.inventory.includes(effect.add_item)
-      ? state.inventory
+      ? [...state.inventory]
       : [...state.inventory, effect.add_item];
     return {
       state: { ...state, inventory },
@@ -211,6 +217,12 @@ export function applyEffect(
     return {
       state: { ...state, objectState: patchObject(state, effect.open_object, { open: true }) },
       event: { type: "open_object", id: effect.open_object },
+    };
+  }
+  if ("close_object" in effect) {
+    return {
+      state: { ...state, objectState: patchObject(state, effect.close_object, { open: false }) },
+      event: { type: "close_object", id: effect.close_object },
     };
   }
   if ("set_object_locked" in effect) {

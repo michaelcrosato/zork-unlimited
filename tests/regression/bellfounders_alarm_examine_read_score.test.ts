@@ -1,29 +1,29 @@
 /**
  * Regression for bug_0442: examining the cracked bell used to reveal the same
- * flaw diagnosis as the scored READ action, so a careful examine-first player
+ * flaw diagnosis as the scored READ RpgAction, so a careful examine-first player
  * could reasonably finish at 40/50 without knowing a close read was still owed.
  */
 import { describe, expect, it } from "vitest";
 import { makeStep, actionEquals } from "../../src/core/engine.js";
-import type { Action } from "../../src/api/types.js";
+import type { RpgAction } from "../../src/api/types.js";
 import type { GameState } from "../../src/core/state.js";
 import type { GameEvent } from "../../src/core/events.js";
-import { loadRpgPackFile } from "../../src/rpg/pack.js";
+import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import { buildRpgRules, indexRpgPack, initStateForRpgPack } from "../../src/rpg/runner.js";
 import { buildRpgObservation } from "../../src/rpg/observation.js";
 
-const loaded = loadRpgPackFile("content/rpg/pack/bellfounders_alarm.yaml");
+const loaded = loadRpgSourceFile("content/rpg/quests/bellfounders_alarm.yaml");
 if (!loaded.ok) throw new Error("bellfounders_alarm must compile");
 const index = indexRpgPack(loaded.compiled.pack);
 const rules = buildRpgRules(index);
 const step = makeStep(rules);
 
-function act(state: GameState, action: Action): { state: GameState; events: GameEvent[] } {
+function act(state: GameState, RpgAction: RpgAction): { state: GameState; events: GameEvent[] } {
   expect(
-    rules.legalActions(state).some((a) => actionEquals(a, action)),
-    `action ${JSON.stringify(action)} must be legal in ${state.current}`,
+    rules.legalActions(state).some((a) => actionEquals(a, RpgAction)),
+    `RpgAction ${JSON.stringify(RpgAction)} must be legal in ${state.current}`,
   ).toBe(true);
-  const result = step(state, action);
+  const result = step(state, RpgAction);
   expect(result.ok, result.rejectionReason).toBe(true);
   return { state: result.state, events: result.events };
 }
@@ -64,7 +64,7 @@ describe("bug_0442 - cracked bell examine signposts the scored close-read", () =
 
   it("keeps the examine-first full-score route reachable once the bell is read", () => {
     let state = initStateForRpgPack(index, 7);
-    for (const action of [
+    for (const RpgAction of [
       { type: "MOVE", direction: "east" },
       { type: "LOOK", target: "cracked_bell" },
       { type: "READ", target: "cracked_bell" },
@@ -79,8 +79,8 @@ describe("bug_0442 - cracked bell examine signposts the scored close-read", () =
       { type: "MOVE", direction: "west" },
       { type: "MOVE", direction: "north" },
       { type: "MOVE", direction: "north" },
-    ] satisfies Action[]) {
-      state = act(state, action).state;
+    ] satisfies RpgAction[]) {
+      state = act(state, RpgAction).state;
     }
 
     expect(state.ended).toBe(true);

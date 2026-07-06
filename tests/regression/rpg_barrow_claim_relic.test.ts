@@ -9,11 +9,11 @@
  * the climax was narrated AT the player instead of earned by a final grab. This is the
  * shared gap flagged across bug_0047/0052/0054: the parser/RPG runners evaluated
  * win_conditions ONLY in onEnter (on a room transition), so a win that should turn on a
- * deliberate non-move action (claiming the relic) could only ever fire on bare entry.
+ * deliberate non-move RpgAction (claiming the relic) could only ever fire on bare entry.
  *
  * The fix has two layers:
- *  - ENGINE (src/core/engine.ts §8.4.5): a backward-compatible post-action `checkWin`
- *    hook. After an action's effects (and any onEnter), if the game has NOT already
+ *  - ENGINE (src/core/engine.ts §8.4.5): a backward-compatible post-RpgAction `checkWin`
+ *    hook. After an RpgAction's effects (and any onEnter), if the game has NOT already
  *    ended, the runner's checkWin may append an end_game. So a win can fire on a TAKE
  *    with no move. It is skipped once ended, so an onEnter/effect-level win never
  *    double-fires. Runners that only win on entry omit checkWin (CYOA) — unchanged.
@@ -25,7 +25,7 @@
  *    it would silently disable that check.
  *
  * Locked here:
- *   (a) ENGINE CONTRACT (synthetic Rules): checkWin fires a win on a non-move action,
+ *   (a) ENGINE CONTRACT (synthetic Rules): checkWin fires a win on a non-move RpgAction,
  *       is skipped once the game has ended (no double-fire), and is optional.
  *   (b) CONTENT: entering relic_chamber does NOT end (score 25, win pending); taking the
  *       circlet awards the final +25 via take_effects AND ends with ending_victory at
@@ -35,15 +35,15 @@
 import { describe, it, expect } from "vitest";
 import { makeStep, type Rules } from "../../src/core/engine.js";
 import { initState, type GameState } from "../../src/core/state.js";
-import type { Action } from "../../src/api/types.js";
-import { loadRpgPackFile } from "../../src/rpg/pack.js";
+import type { RpgAction } from "../../src/api/types.js";
+import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import { validateRpg } from "../../src/validate/rpg_validator.js";
 import { indexRpgPack, buildRpgRules, initStateForRpgPack } from "../../src/rpg/runner.js";
 
-describe("bug_0056 — engine post-action win hook (checkWin)", () => {
-  // A minimal world: one action CLAIM (no move) sets a flag; checkWin ends the game
+describe("bug_0056 — engine post-RpgAction win hook (checkWin)", () => {
+  // A minimal world: one RpgAction CLAIM (no move) sets a flag; checkWin ends the game
   // once that flag is set. This isolates the engine contract from any content.
-  const claim: Action = { type: "TAKE", item: "prize" };
+  const claim: RpgAction = { type: "TAKE", item: "prize" };
   const baseRules = (): Rules => ({
     legalActions: (s) => (s.ended ? [] : [claim]),
     resolve: () => ({ conditions: [], effects: [{ set_flag: "claimed" }] }),
@@ -51,7 +51,7 @@ describe("bug_0056 — engine post-action win hook (checkWin)", () => {
   });
   const fresh = (): GameState => initState({ seed: 1, start: "room" });
 
-  it("fires a win on a non-move action (the deliberate claim)", () => {
+  it("fires a win on a non-move RpgAction (the deliberate claim)", () => {
     const step = makeStep(baseRules());
     const r = step(fresh(), claim);
     expect(r.ok).toBe(true);
@@ -62,8 +62,8 @@ describe("bug_0056 — engine post-action win hook (checkWin)", () => {
   });
 
   it("is skipped once the game has ended — no double-fire", () => {
-    // A rule set whose action's OWN effect already ends the game, plus a checkWin that
-    // would also fire: the post-action hook must NOT append a second end_game.
+    // A rule set whose RpgAction's OWN effect already ends the game, plus a checkWin that
+    // would also fire: the post-RpgAction hook must NOT append a second end_game.
     const rules: Rules = {
       legalActions: (s) => (s.ended ? [] : [claim]),
       resolve: () => ({ effects: [{ end_game: "ending_first" }], conditions: [] }),
@@ -88,7 +88,7 @@ describe("bug_0056 — engine post-action win hook (checkWin)", () => {
 });
 
 describe("bug_0056 — The Sunken Barrow wins on the claim, not on entry", () => {
-  const loaded = loadRpgPackFile("content/rpg/pack/sunken_barrow.yaml");
+  const loaded = loadRpgSourceFile("content/rpg/quests/sunken_barrow.yaml");
   if (!loaded.ok) throw new Error("sunken_barrow must compile");
   const pack = loaded.compiled.pack;
   const index = indexRpgPack(pack);
@@ -98,9 +98,9 @@ describe("bug_0056 — The Sunken Barrow wins on the claim, not on entry", () =>
   /** Play the canonical route to the relic chamber (not yet claimed). */
   function toRelicChamber(seed: number): GameState {
     let s = initStateForRpgPack(index, seed);
-    const drive = (a: Action) => {
+    const drive = (a: RpgAction) => {
       const r = step(s, a);
-      expect(r.ok, `action ${JSON.stringify(a)} in ${s.current}`).toBe(true);
+      expect(r.ok, `RpgAction ${JSON.stringify(a)} in ${s.current}`).toBe(true);
       s = r.state;
     };
     drive({ type: "MOVE", direction: "down" });

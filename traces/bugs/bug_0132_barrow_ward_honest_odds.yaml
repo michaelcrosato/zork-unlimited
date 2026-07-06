@@ -18,7 +18,7 @@ evidence:
 failure:
   type: text_over_promises_contract_engine_does_not_cash
   where:
-    - content:content/rpg/pack/sunken_barrow.yaml   # npc reaver_shade, node shade_wight
+    - content:content/rpg/quests/sunken_barrow.yaml   # npc reaver_shade, node shade_wight
   description: >
     bug_0119 added "that is the wight's way of wearing a man down, not the truth of the
     odds. Set your feet and keep striking." to stop a prepared player retreating from a

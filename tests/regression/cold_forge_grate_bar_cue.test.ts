@@ -24,26 +24,26 @@
  *       while the bar is (still) held — the open prose is never shadowed.
  */
 import { describe, it, expect } from "vitest";
-import { loadRpgPackFile } from "../../src/rpg/pack.js";
+import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import {
   indexRpgPack,
   buildRpgRules,
   initStateForRpgPack,
   enumerateRpgActions,
 } from "../../src/rpg/runner.js";
-import { buildParserObservation } from "../../src/parser/observation.js";
+import { buildRpgObservation } from "../../src/rpg/observation.js";
 import { validateRpg } from "../../src/validate/rpg_validator.js";
 import { makeStep } from "../../src/core/engine.js";
 import type { GameState } from "../../src/core/state.js";
 import type { Action } from "../../src/api/types.js";
 
-const loaded = loadRpgPackFile("content/rpg/pack/cold_forge.yaml");
+const loaded = loadRpgSourceFile("content/rpg/quests/cold_forge.yaml");
 if (!loaded.ok) throw new Error("cold_forge must compile");
 const pack = loaded.compiled.pack;
 const index = indexRpgPack(pack);
 const step = makeStep(buildRpgRules(index));
 
-const obs = (s: GameState) => buildParserObservation(index, s);
+const obs = (s: GameState) => buildRpgObservation(index, s);
 const options = (s: GameState) => enumerateRpgActions(index, s);
 const norm = (s: string) => s.replace(/\s+/g, " ").trim();
 
