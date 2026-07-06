@@ -72,6 +72,10 @@ export type RpgWorldQuestPlayableSource = Omit<WorldQuestPackSource, "packPath">
   compiled: CompiledRpgPack;
 };
 
+export type RpgWorldQuestReportSource = Omit<WorldQuestPackSource, "packPath"> & {
+  result: RpgLoadResult;
+};
+
 export const RPG_SOURCE_RUNTIME_CACHE_LIMIT = 8;
 
 function refreshSourceCacheEntry<Key, Entry>(cache: Map<Key, Entry>, key: Key): Entry | undefined {
@@ -275,6 +279,15 @@ export class RpgSourceRuntime {
       world: source.world,
       node: source.node,
       compiled: this.requirePlayable(source.packPath),
+    };
+  }
+
+  loadWorldQuestReport(worldQuestId: string): RpgWorldQuestReportSource {
+    const source = this.resolveWorldQuestPackPath(worldQuestId);
+    return {
+      world: source.world,
+      node: source.node,
+      result: this.loadAndReport(source.packPath),
     };
   }
 

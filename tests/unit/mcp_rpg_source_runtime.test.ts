@@ -47,6 +47,16 @@ describe("RpgSourceRuntime caches", () => {
     expect("packPath" in source).toBe(false);
   });
 
+  it("loads world quest reports by canonical id without returning raw pack paths", () => {
+    const runtime = new RpgSourceRuntime(ROOT);
+    const source = runtime.loadWorldQuestReport("sunken_barrow");
+
+    expect(source.node.id).toBe("sunken_barrow");
+    expect(source.result.ok).toBe(true);
+    expect(source.result.report.ok).toBe(true);
+    expect("packPath" in source).toBe(false);
+  });
+
   it("bounds generated RPG cache entries while preserving recent seed reuse", () => {
     const runtime = new RpgSourceRuntime(ROOT);
     const entries = Array.from({ length: RPG_SOURCE_RUNTIME_CACHE_LIMIT }, (_, seed) =>

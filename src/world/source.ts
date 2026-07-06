@@ -383,12 +383,17 @@ export function resolvePackSource(
   args: PackSourceArgs,
   operation: string,
 ): TracePackSource {
+  const worldQuestId = resolveWorldQuestSourceId(args, operation);
+  const resolved = resolveWorldQuestPackPath(root, worldQuestId);
+  return { packPath: resolved.packPath, worldQuestId: resolved.node.id };
+}
+
+export function resolveWorldQuestSourceId(args: PackSourceArgs, operation: string): string {
   rejectRetiredWorldQuestSourceAliases(args, operation, "world_quest_id");
   if (args.world_quest_id === undefined) {
     throw new Error(`${operation} requires world_quest_id.`);
   }
-  const resolved = resolveWorldQuestPackPath(root, args.world_quest_id);
-  return { packPath: resolved.packPath, worldQuestId: resolved.node.id };
+  return args.world_quest_id;
 }
 
 export function resolveGameSource(

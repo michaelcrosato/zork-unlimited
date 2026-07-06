@@ -376,8 +376,8 @@ export function createToolApi(opts: { root: string }) {
       world_quest_id: string | null;
       report: ValidationReport;
     } {
-      return validateWorldQuestReport(root, args, "validate_quest", (packPath) =>
-        rpgSources.loadAndReport(packPath),
+      return validateWorldQuestReport(args, "validate_quest", (worldQuestId) =>
+        rpgSources.loadWorldQuestReport(worldQuestId),
       );
     },
 
@@ -388,8 +388,8 @@ export function createToolApi(opts: { root: string }) {
       content_hash?: string;
       report: ValidationReport;
     } {
-      return loadWorldQuestReport(root, args, "load_quest", (packPath) =>
-        rpgSources.loadAndReport(packPath),
+      return loadWorldQuestReport(args, "load_quest", (worldQuestId) =>
+        rpgSources.loadWorldQuestReport(worldQuestId),
       );
     },
 

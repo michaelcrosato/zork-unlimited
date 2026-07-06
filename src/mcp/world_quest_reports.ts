@@ -1,12 +1,9 @@
 import type { CompiledRpgPack } from "../rpg/pack.js";
 import type { ValidationReport } from "../validate/report.js";
-import { resolvePackSource, type PackSourceArgs } from "../world/source.js";
+import { resolveWorldQuestSourceId, type PackSourceArgs } from "../world/source.js";
+import type { RpgWorldQuestReportSource } from "./rpg_source_runtime.js";
 
-export type WorldQuestReportLoadResult =
-  | { ok: true; compiled: CompiledRpgPack; report: ValidationReport }
-  | { ok: false; report: ValidationReport };
-
-export type WorldQuestReportLoader = (packPath: string) => WorldQuestReportLoadResult;
+export type WorldQuestReportLoader = (worldQuestId: string) => RpgWorldQuestReportSource;
 
 export type WorldQuestValidationReportResponse = {
   ok: boolean;
@@ -23,38 +20,38 @@ export type WorldQuestLoadReportResponse = {
 };
 
 export function validateWorldQuestReport(
-  root: string,
   args: PackSourceArgs,
   operation: string,
-  loadAndReport: WorldQuestReportLoader,
+  loadWorldQuest: WorldQuestReportLoader,
 ): WorldQuestValidationReportResponse {
-  const source = resolvePackSource(root, args, operation);
-  const lr = loadAndReport(source.packPath);
+  const requestedWorldQuestId = resolveWorldQuestSourceId(args, operation);
+  const source = loadWorldQuest(requestedWorldQuestId);
+  const lr = source.result;
   return {
     ok: lr.report.ok,
-    world_quest_id: source.worldQuestId,
+    world_quest_id: source.node.id,
     report: lr.report,
   };
 }
 
 export function loadWorldQuestReport(
-  root: string,
   args: PackSourceArgs,
   operation: string,
-  loadAndReport: WorldQuestReportLoader,
+  loadWorldQuest: WorldQuestReportLoader,
 ): WorldQuestLoadReportResponse {
-  const source = resolvePackSource(root, args, operation);
-  const lr = loadAndReport(source.packPath);
+  const requestedWorldQuestId = resolveWorldQuestSourceId(args, operation);
+  const source = loadWorldQuest(requestedWorldQuestId);
+  const lr = source.result;
   if (!lr.ok) {
     return {
       ok: false,
-      world_quest_id: source.worldQuestId,
+      world_quest_id: source.node.id,
       report: lr.report,
     };
   }
   return {
     ok: lr.report.ok,
-    world_quest_id: source.worldQuestId,
+    world_quest_id: source.node.id,
     meta: lr.compiled.pack.meta,
     content_hash: lr.compiled.contentHash,
     report: lr.report,
