@@ -160,4 +160,12 @@ describe("RPG pack state initialization boundary", () => {
     if (!parsed.success) return;
     expect(parsed.data.meta.vars_init).toEqual({ hp: 20, attack: 4 });
   });
+
+  it("indexes RPG sources without a duplicate package-era rpgPack alias", () => {
+    const parsed = RpgPackSchema.parse(minimalPackWithVars({ hp: 20, attack: 4 }));
+    const index = indexRpgPack(parsed);
+
+    expect(index.pack).toBe(parsed);
+    expect("rpgPack" in index).toBe(false);
+  });
 });

@@ -32,7 +32,6 @@ import { decorateRpgScoreEvents } from "./score_events.js";
 import { endGameEffects } from "./terminal_effects.js";
 
 export type RpgIndex = RpgModelIndex & {
-  rpgPack: RpgPack;
   enemies: Map<string, Enemy>;
   enemyByRoom: Map<string, Enemy[]>;
 };
@@ -46,7 +45,7 @@ export function indexRpgPack(pack: RpgPack): RpgIndex {
     list.push(e);
     enemyByRoom.set(e.room, list);
   }
-  return { ...base, rpgPack: pack, enemies, enemyByRoom };
+  return { ...base, enemies, enemyByRoom };
 }
 
 /** A foe that is alive and whose authored state gate, if any, currently holds. */
