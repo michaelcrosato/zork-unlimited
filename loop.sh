@@ -124,6 +124,22 @@ require_playtest_record() {
   echo "✓ mandatory playtest record present: $rec"
 }
 
+# Refuse to start on a dirty tree: _revert_failed_cycle hard-resets to the
+# cycle-start ref and git-cleans untracked content/traces/tests scratch, which
+# would destroy uncommitted HUMAN work lying around when the loop started. The
+# loop's own scratch is always either committed (green cycle) or reverted (red
+# cycle), so a clean start stays clean between cycles. AI_LOOP_ALLOW_DIRTY=1
+# opts back in deliberately — the operator then explicitly accepts that a
+# failed cycle reverts the tree to the cycle-start ref, uncommitted edits
+# included.
+if [[ "${AI_LOOP_ALLOW_DIRTY:-0}" != "1" ]] && [[ -n "$(git status --porcelain)" ]]; then
+  echo "Refusing to start: the working tree is dirty, and a failed cycle's"
+  echo "self-recovery would hard-reset it (git reset --hard + git clean of"
+  echo "content/ traces/ tests/), destroying uncommitted work."
+  echo "Commit or stash first, or set AI_LOOP_ALLOW_DIRTY=1 to accept the risk."
+  exit 1
+fi
+
 run_cycle() {
   # Each gate fails the cycle EXPLICITLY (|| return 1) rather than relying on
   # `set -e`, so a bad cycle skips its commit and the outer loop continues to the
@@ -165,22 +181,6 @@ run_cycle() {
   fi
   return 0
 }
-
-# Refuse to start on a dirty tree: _revert_failed_cycle hard-resets to the
-# cycle-start ref and git-cleans untracked content/traces/tests scratch, which
-# would destroy uncommitted HUMAN work lying around when the loop started. The
-# loop's own scratch is always either committed (green cycle) or reverted (red
-# cycle), so a clean start stays clean between cycles. AI_LOOP_ALLOW_DIRTY=1
-# opts back in deliberately — the operator then explicitly accepts that a
-# failed cycle reverts the tree to the cycle-start ref, uncommitted edits
-# included.
-if [[ "${AI_LOOP_ALLOW_DIRTY:-0}" != "1" ]] && [[ -n "$(git status --porcelain)" ]]; then
-  echo "Refusing to start: the working tree is dirty, and a failed cycle's"
-  echo "self-recovery would hard-reset it (git reset --hard + git clean of"
-  echo "content/ traces/ tests/), destroying uncommitted work."
-  echo "Commit or stash first, or set AI_LOOP_ALLOW_DIRTY=1 to accept the risk."
-  exit 1
-fi
 
 count=0
 fails=0

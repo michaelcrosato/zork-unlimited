@@ -82,7 +82,7 @@ roll flowing through the PRNG so fights replay exactly (§8.5).
 | Gated core DSL additions: `set_quest_stage` effect, `quest_stage` condition, `ATTACK` action | `src/core/`, `src/api/types.ts`                        |
 | Sample pack: _The Sunken Barrow_                                                             | `content/rpg/quests/sunken_barrow.yaml`                |
 | Negative fixture (`COMBAT_UNWINNABLE`)                                                       | `content/broken-fixtures/rpg_unwinnable.yaml`          |
-| §14 gate record (all six items)                                                              | [`docs/stage4_rpg_gate.md`](./docs/stage4_rpg_gate.md) |
+| §14 gate record (all six items)                                                              | [`docs/archive/stage4_rpg_gate.md`](./docs/archive/stage4_rpg_gate.md) |
 | Acceptance + unit + regression tests, recorded victory trace                                 | `tests/`, `traces/rpg/barrow_victory.json`             |
 
 Stage 4 made RPG the canonical runtime surface; old CYOA and parser code/content
