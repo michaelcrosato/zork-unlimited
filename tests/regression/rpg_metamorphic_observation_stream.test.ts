@@ -204,6 +204,8 @@ function rpgOptionId(a: RpgAction): string {
       return `take_${a.item}`;
     case "OPEN":
       return `open_${a.target}`;
+    case "CLOSE":
+      return `close_${a.target}`;
     case "UNLOCK":
       return `unlock_${a.target}`;
     case "DROP":
@@ -222,7 +224,6 @@ function rpgOptionId(a: RpgAction): string {
       return `ask_${a.topic}`;
     case "INVENTORY":
       return "inventory";
-    case "CLOSE":
     case "GIVE":
     case "INSPECT":
       throw new Error(`action type "${a.type}" is not enumerated by the RPG runner`);

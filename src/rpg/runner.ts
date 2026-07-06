@@ -119,7 +119,14 @@ export function buildRpgRules(
           if (!present(index, state, action.target)) return null;
           if (action.item !== undefined && !state.inventory.includes(action.item)) return null;
           if (!evalConditions(it.conditions, state)) return null;
-          return resolveSkillCheck(state, it.skill_check, rngFor(state));
+          // Base `effects` fire BEFORE the roll's outcome effects — the CYOA
+          // ordering (choice.effects, then on_success/on_failure), and what
+          // the validator's interactionEffects has always counted as firable.
+          // Dropping them made a pack whose only win gate lived in those base
+          // effects validate green yet be unwinnable at runtime (regression:
+          // rpg_skill_check_base_effects.test.ts).
+          const roll = resolveSkillCheck(state, it.skill_check, rngFor(state));
+          return { conditions: roll.conditions, effects: [...it.effects, ...roll.effects] };
         }
       }
       return resolveRpgAction(index, state, action);

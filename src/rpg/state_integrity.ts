@@ -135,6 +135,12 @@ function assertNonnegativeIntegerVar(id: string, value: number, label: string): 
 
 type ObjectRuntimeTargets = {
   open: Set<string>;
+  // Ids whose open-state can be written FALSE at runtime: an authored
+  // `close_object` target, or any openable object (the built-in CLOSE verb
+  // emits close_object for its own target). Split from `open` because a
+  // non-openable fixture opened by an authored open_object effect can hold
+  // open:true yet never open:false unless something can actually close it.
+  closed: Set<string>;
   locked: Map<string, Set<boolean>>;
 };
 
@@ -158,6 +164,8 @@ function collectObjectRuntimeTargets(
     for (const [k, v] of Object.entries(node)) {
       if (k === "open_object" && typeof v === "string") {
         acc.open.add(v);
+      } else if (k === "close_object" && typeof v === "string") {
+        acc.closed.add(v);
       } else if (k === "set_object_locked" && v !== null && typeof v === "object") {
         const ref = v as Record<string, unknown>;
         if (typeof ref.id === "string" && typeof ref.locked === "boolean") {
@@ -189,6 +197,7 @@ export function assertRpgStateReferences(index: RpgIndex, state: GameState): voi
   const heldItems = new Set<string>();
   const objectRuntimeTargets = collectObjectRuntimeTargets(index.pack, {
     open: new Set<string>(),
+    closed: new Set<string>(),
     locked: new Map<string, Set<boolean>>(),
   });
   const dialogueVars = new Map<string, { room: string; maxOrdinal: number }>();
@@ -198,7 +207,12 @@ export function assertRpgStateReferences(index: RpgIndex, state: GameState): voi
   for (const object of index.pack.objects) {
     if (object.takeable || object.held) items.add(object.id);
     if (object.held) heldItems.add(object.id);
-    if (object.openable) objectRuntimeTargets.open.add(object.id);
+    if (object.openable) {
+      objectRuntimeTargets.open.add(object.id);
+      // The built-in CLOSE verb closes any openable object standing open, so
+      // open:false is a reachable saved state for every openable object.
+      objectRuntimeTargets.closed.add(object.id);
+    }
     if (object.locked && object.key_id !== undefined) {
       addLockedRuntimeTarget(objectRuntimeTargets.locked, object.id, false);
     }
@@ -316,7 +330,11 @@ export function assertRpgStateReferences(index: RpgIndex, state: GameState): voi
       throw new SaveIntegrityError(`Save references unknown object "${id}".`);
     }
     if (runtime.open !== undefined) {
-      if (runtime.open !== true || !objectRuntimeTargets.open.has(id)) {
+      const reachable =
+        runtime.open === true
+          ? objectRuntimeTargets.open.has(id)
+          : runtime.open === false && objectRuntimeTargets.closed.has(id);
+      if (!reachable) {
         throw new SaveIntegrityError(`Save references invalid object open state for "${id}".`);
       }
     }

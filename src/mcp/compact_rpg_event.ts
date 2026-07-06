@@ -20,6 +20,7 @@ export type RpgCompactEvent =
     ]
   | readonly ["u", from: string, to: string]
   | readonly ["o", id: string]
+  | readonly ["c", id: string]
   | readonly ["m", from: string, to: string]
   | readonly ["t", item: string]
   | readonly ["d", item: string]
@@ -27,6 +28,18 @@ export type RpgCompactEvent =
   | readonly ["e", endingId: string];
 
 export const RPG_COMPACT_EVENT_VERSION = 6 as const;
+
+/**
+ * Agent-facing one-line legend for the RpgCompactEvent tuples above; co-located
+ * with the encoder so it cannot drift, and folded into RPG_COMPACT_LEGEND.events
+ * so blind agents receive it once per session.
+ */
+export const RPG_COMPACT_EVENT_LEGEND =
+  "step_action events are [tag, ...]: r=rejected[reason], n=narration[text], " +
+  "s=state_change[code, key, value?, extra?] with codes f=set_flag x=clear_flag v=set_var " +
+  "+=inc_var[name,delta,new] -=dec_var[name,delta,new] j=journal l=set_locked p=place_object " +
+  "q=quest_stage, u=unlock_exit[from,to], o=open_object[id], c=close_object[id], " +
+  "m=move[from,to], t=take[item], d=drop[item], q=dialogue[npc_id,node_id], e=ending[ending_id]";
 
 type RpgStateChangeEvent = Extract<GameEvent, { type: "state_change" }>;
 
@@ -160,6 +173,8 @@ export function compactPlayerEvent(event: GameEvent): RpgCompactEvent {
       return ["u", compactMcpTranscriptSceneId(event.from), compactMcpTranscriptSceneId(event.to)];
     case "open_object":
       return ["o", compactMcpTranscriptSummaryValue(event.id)];
+    case "close_object":
+      return ["c", compactMcpTranscriptSummaryValue(event.id)];
     case "move":
       return ["m", compactMcpTranscriptSceneId(event.from), compactMcpTranscriptSceneId(event.to)];
     case "take":

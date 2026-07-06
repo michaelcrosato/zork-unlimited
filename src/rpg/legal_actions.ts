@@ -73,6 +73,21 @@ function readInteractions(index: RpgModelIndex, target: string): Interaction[] {
   return (index.objects.get(target)?.interactions ?? []).filter((it) => it.verb === "READ");
 }
 
+/** The object's interactions for a state-reactive verb (INSPECT/OPEN/CLOSE),
+ *  pre-filtered to those whose conditions hold NOW. Gated per-interaction —
+ *  deliberately not the READ pattern of ANDing every condition into the
+ *  action, so a retired one-shot clue never retires the verb itself. */
+function firingInteractions(
+  index: RpgModelIndex,
+  state: GameState,
+  target: string,
+  verb: "INSPECT" | "OPEN" | "CLOSE",
+): Interaction[] {
+  return (index.objects.get(target)?.interactions ?? []).filter(
+    (it) => it.verb === verb && evalConditions(it.conditions, state),
+  );
+}
+
 /**
  * Resolve a structured action into conditions + effects for the engine, or null
  * if the action is structurally impossible in this state (wrong room, object not
@@ -94,7 +109,20 @@ export function resolveRpgAction(
       }
       if (!present(index, state, action.target)) return null;
       const o = index.objects.get(action.target);
-      return o ? { conditions: [], effects: [{ narrate: objectDescription(o, state) }] } : null;
+      if (!o) return null;
+      // INSPECT interactions ride on examine (bug: schema admitted the verb
+      // since Stage 2 but no runtime path ever fired it — shipped clue
+      // narrations in collectors_warrant/weighmasters_round silently never
+      // showed). Fired per-interaction so a one-shot clue retires itself
+      // while the base description stays examinable forever.
+      const inspects = firingInteractions(index, state, action.target, "INSPECT");
+      return {
+        conditions: [],
+        effects: [
+          { narrate: objectDescription(o, state) },
+          ...inspects.flatMap((it) => it.effects),
+        ],
+      };
     }
     case "INVENTORY": {
       const items = state.inventory.length
@@ -150,15 +178,49 @@ export function resolveRpgAction(
     }
     case "OPEN": {
       const o = index.objects.get(action.target);
-      if (!o || !o.openable || !present(index, state, action.target)) return null;
-      if (isLocked(index, state, action.target) || isOpen(state, action.target)) return null;
-      const reveal = o.contents.length
-        ? ` Inside: ${o.contents.map((c) => objName(index, state, c)).join(", ")}.`
-        : "";
-      return {
-        conditions: [],
-        effects: [{ open_object: action.target }, { narrate: `You open the ${o.name}.${reveal}` }],
-      };
+      if (!o || !present(index, state, action.target)) return null;
+      // OPEN interactions fire on the ATTEMPT — even on a non-openable
+      // object (the weighmasters north_door "warning on try" shape) or a
+      // locked one ("it's locked, and something shifts inside"). The
+      // built-in open still requires openable ∧ unlocked; opening something
+      // already standing open is nonsense, so an open object offers neither.
+      if (isOpen(state, action.target)) return null;
+      const opens = firingInteractions(index, state, action.target, "OPEN");
+      const builtin = o.openable && !isLocked(index, state, action.target);
+      if (!builtin && opens.length === 0) return null;
+      const effects: Effect[] = [];
+      if (builtin) {
+        const reveal = o.contents.length
+          ? ` Inside: ${o.contents.map((c) => objName(index, state, c)).join(", ")}.`
+          : "";
+        effects.push(
+          { open_object: action.target },
+          { narrate: `You open the ${o.name}.${reveal}` },
+        );
+      }
+      for (const it of opens) effects.push(...it.effects);
+      return { conditions: [], effects };
+    }
+    case "CLOSE": {
+      const o = index.objects.get(action.target);
+      if (!o || !present(index, state, action.target)) return null;
+      // First-class CLOSE (the schema admitted the verb since Stage 2; the
+      // resolver never had a case, so `close X` was parsed then always
+      // rejected). Only an object standing open can be closed — which also
+      // means a CLOSE interaction on a never-openable object is dead
+      // content, the exact hole this fix removes for INSPECT/OPEN, so the
+      // gate is on open-state, not openable-ness (an `open_object` effect
+      // can open a non-openable fixture; closing it then works).
+      if (!isOpen(state, action.target)) return null;
+      const closes = firingInteractions(index, state, action.target, "CLOSE");
+      const builtin = o.openable;
+      if (!builtin && closes.length === 0) return null;
+      const effects: Effect[] = [];
+      if (builtin) {
+        effects.push({ close_object: action.target }, { narrate: `You close the ${o.name}.` });
+      }
+      for (const it of closes) effects.push(...it.effects);
+      return { conditions: [], effects };
     }
     case "UNLOCK": {
       const o = index.objects.get(action.target);
@@ -304,6 +366,7 @@ export function enumerateRpgBaseActions(index: RpgModelIndex, state: GameState):
     push(option(index, state, `read_${oid}`, `read ${oName}`, { type: "READ", target: oid }));
     push(option(index, state, `take_${oid}`, `take ${oName}`, { type: "TAKE", item: oid }));
     push(option(index, state, `open_${oid}`, `open ${oName}`, { type: "OPEN", target: oid }));
+    push(option(index, state, `close_${oid}`, `close ${oName}`, { type: "CLOSE", target: oid }));
     if (o.key_id !== undefined) {
       push(
         option(

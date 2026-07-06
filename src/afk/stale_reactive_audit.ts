@@ -94,6 +94,7 @@ function effectStateWrites(effect: Effect): string[] {
   if ("inc_var" in effect) return [stateRef("var", effect.inc_var.name)];
   if ("dec_var" in effect) return [stateRef("var", effect.dec_var.name)];
   if ("open_object" in effect) return [stateRef("object", effect.open_object)];
+  if ("close_object" in effect) return [stateRef("object", effect.close_object)];
   if ("set_object_locked" in effect) return [stateRef("object", effect.set_object_locked.id)];
   if ("set_quest_stage" in effect) return [stateRef("quest", effect.set_quest_stage.quest)];
   return [];
