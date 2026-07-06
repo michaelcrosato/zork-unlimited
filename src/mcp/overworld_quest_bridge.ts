@@ -38,8 +38,10 @@ function rpgStartArgsForOverworldQuest(
     overworldSessionId,
     ...(options.seed !== undefined ? { seed: options.seed } : {}),
     ...(options.hide_graph ? { hide_graph: true } : {}),
-    ...(options.compact_actions ? { compact_actions: true } : {}),
-    ...(options.compact_observation ? { compact_observation: true } : {}),
+    ...(options.compact_actions !== undefined ? { compact_actions: options.compact_actions } : {}),
+    ...(options.compact_observation !== undefined
+      ? { compact_observation: options.compact_observation }
+      : {}),
   };
 }
 

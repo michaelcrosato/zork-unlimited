@@ -423,7 +423,7 @@ export function createToolApi(opts: { root: string }) {
         const current = apiRef.current;
         if (!current) throw new Error("Tool API is not initialized.");
         const responseOptions = {
-          compact_observation: false,
+          compact_observation: true,
           ...startArgs,
         } as Args;
         return current.start_world_quest(responseOptions) as RpgWorldQuestStartPayload<Args>;

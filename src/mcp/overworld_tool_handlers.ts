@@ -60,6 +60,57 @@ import type { SessionStore } from "./sessions.js";
 
 type OverworldResponseOptions = OverworldMcpResponseOptions;
 
+type DefaultCompactOverworldContext<Args extends OverworldResponseOptions> = Args extends {
+  compact_context: false;
+}
+  ? Args
+  : Args & { compact_context: true };
+
+type DefaultCompactOverworldResult<Args extends OverworldResponseOptions> = Args extends {
+  compact_result: false;
+}
+  ? Args
+  : Args & { compact_result: true };
+
+type DefaultCompactOverworldResponse<Args extends OverworldResponseOptions> =
+  DefaultCompactOverworldResult<DefaultCompactOverworldContext<Args>>;
+
+type DefaultCompactRpgObservation<Args extends RpgViewOptions> = Args extends {
+  compact_observation: false;
+}
+  ? Args
+  : Args & { compact_observation: true };
+
+type DefaultCompactOverworldQuestStart<Args extends OverworldResponseOptions & RpgViewOptions> =
+  DefaultCompactRpgObservation<DefaultCompactOverworldResponse<Args>>;
+
+function defaultCompactOverworldContext<Args extends OverworldResponseOptions>(
+  args: Args,
+): DefaultCompactOverworldContext<Args> {
+  return { compact_context: true, ...args } as DefaultCompactOverworldContext<Args>;
+}
+
+function defaultCompactOverworldResponse<Args extends OverworldResponseOptions>(
+  args: Args,
+): DefaultCompactOverworldResponse<Args> {
+  return {
+    compact_context: true,
+    compact_result: true,
+    ...args,
+  } as DefaultCompactOverworldResponse<Args>;
+}
+
+function defaultCompactOverworldQuestStart<Args extends OverworldResponseOptions & RpgViewOptions>(
+  args: Args,
+): DefaultCompactOverworldQuestStart<Args> {
+  return {
+    compact_context: true,
+    compact_result: true,
+    compact_observation: true,
+    ...args,
+  } as DefaultCompactOverworldQuestStart<Args>;
+}
+
 type OverworldListOptions = {
   include_design_notes?: boolean;
 };
@@ -184,8 +235,8 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
 
     start_overworld<Args extends OverworldResponseOptions = { compact_context: true }>(
       args?: Args,
-    ): OverworldStartResponse<Args> {
-      const responseOptions = { compact_context: true, ...(args ?? {}) } as Args;
+    ): OverworldStartResponse<DefaultCompactOverworldContext<Args>> {
+      const responseOptions = defaultCompactOverworldContext((args ?? {}) as Args);
       return overworldSessions.startResponse(responseOptions);
     },
 
@@ -209,8 +260,9 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
 
     restore_overworld_session<Args extends { snapshot: unknown } & OverworldResponseOptions>(
       args: Args,
-    ): OverworldRestoreResponse<Args> {
-      return overworldSessions.restoreResponse(args, args.snapshot);
+    ): OverworldRestoreResponse<DefaultCompactOverworldContext<Args>> {
+      const responseOptions = defaultCompactOverworldContext(args);
+      return overworldSessions.restoreResponse(responseOptions, args.snapshot);
     },
 
     plan_overworld_session_route<
@@ -223,11 +275,12 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
     ): OverworldSessionResponse<
       "route",
       OverworldSessionRoutePlan,
-      Args,
+      DefaultCompactOverworldResponse<Args>,
       OverworldCompactRouteOption
     > {
+      const responseOptions = defaultCompactOverworldResponse(args);
       return overworldSessions.run(
-        args,
+        responseOptions,
         args.session_id,
         "route",
         (session) => session.planRoute(args.destination_town_id),
@@ -239,9 +292,15 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
       Args extends { session_id: string; road_id: string } & OverworldResponseOptions,
     >(
       args: Args,
-    ): OverworldSessionResponse<"travel", TravelLogEntry, Args, OverworldCompactTravelLogEntry> {
+    ): OverworldSessionResponse<
+      "travel",
+      TravelLogEntry,
+      DefaultCompactOverworldResponse<Args>,
+      OverworldCompactTravelLogEntry
+    > {
+      const responseOptions = defaultCompactOverworldResponse(args);
       return overworldSessions.run(
-        args,
+        responseOptions,
         args.session_id,
         "travel",
         (session) => session.travel(args.road_id),
@@ -259,11 +318,12 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
     ): OverworldSessionResponse<
       "result",
       OverworldRoadEncounterResult,
-      Args,
+      DefaultCompactOverworldResponse<Args>,
       OverworldCompactRoadEncounterResult
     > {
+      const responseOptions = defaultCompactOverworldResponse(args);
       return overworldSessions.run(
-        args,
+        responseOptions,
         args.session_id,
         "result",
         (session) => session.resolveRoadEncounter(args.strategy),
@@ -276,11 +336,12 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
     ): OverworldSessionResponse<
       "result",
       OverworldServiceResult,
-      Args,
+      DefaultCompactOverworldResponse<Args>,
       OverworldCompactServiceResult
     > {
+      const responseOptions = defaultCompactOverworldResponse(args);
       return overworldSessions.run(
-        args,
+        responseOptions,
         args.session_id,
         "result",
         (session) => session.resupplyAtTown(),
@@ -293,11 +354,12 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
     ): OverworldSessionResponse<
       "result",
       OverworldServiceResult,
-      Args,
+      DefaultCompactOverworldResponse<Args>,
       OverworldCompactServiceResult
     > {
+      const responseOptions = defaultCompactOverworldResponse(args);
       return overworldSessions.run(
-        args,
+        responseOptions,
         args.session_id,
         "result",
         (session) => session.restAtTown(),
@@ -312,11 +374,12 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
     ): OverworldSessionResponse<
       "result",
       OverworldActionResult,
-      Args,
+      DefaultCompactOverworldResponse<Args>,
       OverworldCompactActionResult
     > {
+      const responseOptions = defaultCompactOverworldResponse(args);
       return overworldSessions.run(
-        args,
+        responseOptions,
         args.session_id,
         "result",
         (session) => session.scoutPoi(args.poi_id),
@@ -331,11 +394,12 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
     ): OverworldSessionResponse<
       "result",
       OverworldActionResult,
-      Args,
+      DefaultCompactOverworldResponse<Args>,
       OverworldCompactActionResult
     > {
+      const responseOptions = defaultCompactOverworldResponse(args);
       return overworldSessions.run(
-        args,
+        responseOptions,
         args.session_id,
         "result",
         (session) => session.talkToCharacter(args.character_id),
@@ -350,11 +414,12 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
     ): OverworldSessionResponse<
       "result",
       OverworldActionResult,
-      Args,
+      DefaultCompactOverworldResponse<Args>,
       OverworldCompactActionResult
     > {
+      const responseOptions = defaultCompactOverworldResponse(args);
       return overworldSessions.run(
-        args,
+        responseOptions,
         args.session_id,
         "result",
         (session) => session.investigateEvent(args.event_id),
@@ -369,11 +434,12 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
     ): OverworldSessionResponse<
       "result",
       OverworldActionResult,
-      Args,
+      DefaultCompactOverworldResponse<Args>,
       OverworldCompactActionResult
     > {
+      const responseOptions = defaultCompactOverworldResponse(args);
       return overworldSessions.run(
-        args,
+        responseOptions,
         args.session_id,
         "result",
         (session) => session.resolveEvent(args.event_id),
@@ -388,11 +454,12 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
     ): OverworldSessionResponse<
       "result",
       OverworldActionResult,
-      Args,
+      DefaultCompactOverworldResponse<Args>,
       OverworldCompactActionResult
     > {
+      const responseOptions = defaultCompactOverworldResponse(args);
       return overworldSessions.run(
-        args,
+        responseOptions,
         args.session_id,
         "result",
         (session) => session.exploreSite(args.site_id),
@@ -407,11 +474,12 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
     ): OverworldSessionResponse<
       "result",
       OverworldActionResult,
-      Args,
+      DefaultCompactOverworldResponse<Args>,
       OverworldCompactActionResult
     > {
+      const responseOptions = defaultCompactOverworldResponse(args);
       return overworldSessions.run(
-        args,
+        responseOptions,
         args.session_id,
         "result",
         (session) => session.exploreArea(args.area_id),
@@ -426,11 +494,12 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
     ): OverworldSessionResponse<
       "result",
       OverworldActionResult,
-      Args,
+      DefaultCompactOverworldResponse<Args>,
       OverworldCompactActionResult
     > {
+      const responseOptions = defaultCompactOverworldResponse(args);
       return overworldSessions.run(
-        args,
+        responseOptions,
         args.session_id,
         "result",
         (session) => session.workLocalJob(args.job_id),
@@ -447,21 +516,24 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
         compact_actions?: boolean;
         compact_observation?: boolean;
       } & OverworldResponseOptions,
-    >(args: Args): OverworldQuestStartResponse<Args> {
-      const guarded = overworldSessions.guardedSession(args, args.session_id);
+    >(args: Args): OverworldQuestStartResponse<DefaultCompactOverworldQuestStart<Args>> {
+      const responseOptions = defaultCompactOverworldQuestStart(args);
+      const guarded = overworldSessions.guardedSession(responseOptions, args.session_id);
       if (isOverworldMcpRejectedSessionPayload(guarded)) {
-        return guarded as OverworldQuestStartResponse<Args>;
+        return guarded as OverworldQuestStartResponse<DefaultCompactOverworldQuestStart<Args>>;
       }
       const { session } = guarded;
       const started = startOverworldQuestThroughRpg({
         session,
         overworldSessionId: args.session_id,
         questId: args.quest_id,
-        startOptions: args,
+        startOptions: responseOptions,
         startWorldQuest: deps.startWorldQuest,
       });
       const questResult =
-        args.compact_result === true ? compactOverworldQuestRef(started.quest) : started.quest;
+        responseOptions.compact_result === true
+          ? compactOverworldQuestRef(started.quest)
+          : started.quest;
       return {
         ok: true,
         session_id: args.session_id,
@@ -469,8 +541,8 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
         quest: questResult,
         rpg_session_id: started.rpgSession.session_id,
         rpg_session: started.rpgSession,
-        ...overworldSessions.viewField(args, session),
-      } as unknown as OverworldQuestStartResponse<Args>;
+        ...overworldSessions.viewField(responseOptions, session),
+      } as unknown as OverworldQuestStartResponse<DefaultCompactOverworldQuestStart<Args>>;
     },
 
     complete_overworld_session_quest<
@@ -485,16 +557,17 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
       | OverworldSessionResponse<
           "result",
           OverworldQuestCompletionResult,
-          Args,
+          DefaultCompactOverworldResponse<Args>,
           OverworldCompactQuestCompletionResult
         >
       | (Args extends { expected_rpg_state_hash: string } ? RpgStateHashRejection : never) {
-      const guarded = overworldSessions.guardedSession(args, args.session_id);
+      const responseOptions = defaultCompactOverworldResponse(args);
+      const guarded = overworldSessions.guardedSession(responseOptions, args.session_id);
       if (isOverworldMcpRejectedSessionPayload(guarded)) {
         return guarded as OverworldSessionResponse<
           "result",
           OverworldQuestCompletionResult,
-          Args,
+          DefaultCompactOverworldResponse<Args>,
           OverworldCompactQuestCompletionResult
         >;
       }
@@ -513,17 +586,19 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
       const completion = overworldQuestCompletionFromRpgSession(rpgSession, args.session_id);
       const result = session.completeQuest(completion.questId, completion.outcome);
       const responseValue =
-        args.compact_result === true ? compactOverworldQuestCompletionResult(result) : result;
+        responseOptions.compact_result === true
+          ? compactOverworldQuestCompletionResult(result)
+          : result;
       return {
         ok: true,
         session_id: args.session_id,
         snapshot_hash: overworldSessions.snapshotHash(session),
         result: responseValue,
-        ...overworldSessions.viewField(args, session),
+        ...overworldSessions.viewField(responseOptions, session),
       } as OverworldSessionResponse<
         "result",
         OverworldQuestCompletionResult,
-        Args,
+        DefaultCompactOverworldResponse<Args>,
         OverworldCompactQuestCompletionResult
       >;
     },
@@ -535,11 +610,12 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
     ): OverworldSessionResponse<
       "result",
       OverworldAreaTravelResult,
-      Args,
+      DefaultCompactOverworldResponse<Args>,
       OverworldCompactAreaTravelResult
     > {
+      const responseOptions = defaultCompactOverworldResponse(args);
       return overworldSessions.run(
-        args,
+        responseOptions,
         args.session_id,
         "result",
         (session) => session.moveArea(args.area_route_id),

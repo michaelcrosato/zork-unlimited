@@ -12,6 +12,10 @@ import { loadOverworldManifest } from "../../src/world/source.js";
 
 const api = () => createToolApi({ root: process.cwd() });
 const overworld = loadOverworldManifest(process.cwd());
+const FULL_OVERWORLD_RESPONSE = {
+  compact_context: false,
+  compact_result: false,
+} as const;
 
 type Snapshot = ReturnType<typeof exportedSnapshotAfterTwoRoads>["snapshot"];
 type JournalEntry = Snapshot["journalEntries"][number];
@@ -116,6 +120,7 @@ function exportedSnapshotAfterTwoRoads() {
 
   a.travel_overworld_session({ session_id: started.session_id, road_id: firstRoad.id });
   a.resolve_overworld_session_road_encounter({
+    ...FULL_OVERWORLD_RESPONSE,
     session_id: started.session_id,
     strategy: "press_on",
   });
@@ -128,6 +133,7 @@ function exportedSnapshotAfterTwoRoads() {
   if (!secondRoad) throw new Error("expected a second overworld road");
   a.travel_overworld_session({ session_id: started.session_id, road_id: secondRoad.id });
   a.resolve_overworld_session_road_encounter({
+    ...FULL_OVERWORLD_RESPONSE,
     session_id: started.session_id,
     strategy: "press_on",
   });
@@ -148,14 +154,17 @@ function exportedSnapshotWithResolvedInitialEvent() {
 
   a.scout_overworld_session_poi({ session_id: started.session_id, poi_id: poi.id });
   a.talk_overworld_session_contact({
+    ...FULL_OVERWORLD_RESPONSE,
     session_id: started.session_id,
     character_id: contact.id,
   });
   a.investigate_overworld_session_event({
+    ...FULL_OVERWORLD_RESPONSE,
     session_id: started.session_id,
     event_id: event.id,
   });
   a.resolve_overworld_session_event({
+    ...FULL_OVERWORLD_RESPONSE,
     session_id: started.session_id,
     event_id: event.id,
   });
@@ -175,6 +184,7 @@ function exportedSnapshotAfterRoadStrategy(strategy: "assist_travelers" | "cauti
 
   a.travel_overworld_session({ session_id: started.session_id, road_id: firstRoad.id });
   a.resolve_overworld_session_road_encounter({
+    ...FULL_OVERWORLD_RESPONSE,
     session_id: started.session_id,
     strategy,
   });
@@ -218,6 +228,7 @@ function travelOverworldSessionTo(
     }).observation;
     if (observation.pendingRoadEncounter) {
       a.resolve_overworld_session_road_encounter({
+        ...FULL_OVERWORLD_RESPONSE,
         session_id: sessionId,
         strategy: "press_on",
       });
@@ -935,6 +946,7 @@ describe("overworld snapshot restore integrity", () => {
     const started = a.start_overworld({ compact_context: false });
     const firstArea = started.observation.areas[0]!;
     const exploredFirstArea = a.explore_overworld_session_area({
+      ...FULL_OVERWORLD_RESPONSE,
       session_id: started.session_id,
       area_id: firstArea.id,
     });
@@ -942,10 +954,12 @@ describe("overworld snapshot restore integrity", () => {
     if (!route) throw new Error("expected a local route after discovering a second area");
 
     a.move_overworld_session_area({
+      ...FULL_OVERWORLD_RESPONSE,
       session_id: started.session_id,
       area_route_id: route.id,
     });
     a.explore_overworld_session_area({
+      ...FULL_OVERWORLD_RESPONSE,
       session_id: started.session_id,
       area_id: route.destination.id,
     });
@@ -994,6 +1008,7 @@ describe("overworld snapshot restore integrity", () => {
     const poi = started.observation.pois[0];
     if (!poi) throw new Error("expected an initial-area point of interest");
     const scouted = a.scout_overworld_session_poi({
+      ...FULL_OVERWORLD_RESPONSE,
       session_id: started.session_id,
       poi_id: poi.id,
     });
@@ -1023,6 +1038,7 @@ describe("overworld snapshot restore integrity", () => {
     const started = a.start_overworld({ compact_context: false });
     const firstArea = started.observation.areas[0]!;
     const exploredFirstArea = a.explore_overworld_session_area({
+      ...FULL_OVERWORLD_RESPONSE,
       session_id: started.session_id,
       area_id: firstArea.id,
     });
@@ -1030,6 +1046,7 @@ describe("overworld snapshot restore integrity", () => {
     if (!job) throw new Error("expected an initial-area job after local discovery");
 
     a.work_overworld_session_job({
+      ...FULL_OVERWORLD_RESPONSE,
       session_id: started.session_id,
       job_id: job.id,
     });
@@ -1061,10 +1078,12 @@ describe("overworld snapshot restore integrity", () => {
     if (!poi || !contact) throw new Error("expected initial local action sources");
 
     const scouted = a.scout_overworld_session_poi({
+      ...FULL_OVERWORLD_RESPONSE,
       session_id: started.session_id,
       poi_id: poi.id,
     });
     const talked = a.talk_overworld_session_contact({
+      ...FULL_OVERWORLD_RESPONSE,
       session_id: started.session_id,
       character_id: contact.id,
     });
@@ -1082,10 +1101,12 @@ describe("overworld snapshot restore integrity", () => {
     );
     if (!routeToJobArea) throw new Error("expected a route to the second job area");
     a.move_overworld_session_area({
+      ...FULL_OVERWORLD_RESPONSE,
       session_id: started.session_id,
       area_route_id: routeToJobArea.id,
     });
     a.work_overworld_session_job({
+      ...FULL_OVERWORLD_RESPONSE,
       session_id: started.session_id,
       job_id: secondJob.id,
     });
@@ -1123,10 +1144,12 @@ describe("overworld snapshot restore integrity", () => {
     if (!site) throw new Error("expected an initial-area exploration site");
 
     a.scout_overworld_session_poi({
+      ...FULL_OVERWORLD_RESPONSE,
       session_id: started.session_id,
       poi_id: started.observation.pois[0]!.id,
     });
     a.explore_overworld_session_site({
+      ...FULL_OVERWORLD_RESPONSE,
       session_id: started.session_id,
       site_id: site.id,
     });
@@ -1174,6 +1197,7 @@ describe("overworld snapshot restore integrity", () => {
     const poi = started.observation.pois[0];
     if (!poi) throw new Error("expected an initial-area point of interest");
     const scouted = a.scout_overworld_session_poi({
+      ...FULL_OVERWORLD_RESPONSE,
       session_id: started.session_id,
       poi_id: poi.id,
     });
@@ -1213,6 +1237,7 @@ describe("overworld snapshot restore integrity", () => {
     const poi = started.observation.pois[0];
     if (!poi) throw new Error("expected an initial-area point of interest");
     const scouted = a.scout_overworld_session_poi({
+      ...FULL_OVERWORLD_RESPONSE,
       session_id: started.session_id,
       poi_id: poi.id,
     });
@@ -1260,6 +1285,7 @@ describe("overworld snapshot restore integrity", () => {
         const poi = started.observation.pois[0];
         if (!poi) throw new Error("expected an initial-area point of interest");
         return a.scout_overworld_session_poi({
+          ...FULL_OVERWORLD_RESPONSE,
           session_id: started.session_id,
           poi_id: poi.id,
         }).result;
@@ -1268,6 +1294,7 @@ describe("overworld snapshot restore integrity", () => {
         const contact = started.observation.characters[0];
         if (!contact) throw new Error("expected an initial-area contact");
         return a.talk_overworld_session_contact({
+          ...FULL_OVERWORLD_RESPONSE,
           session_id: started.session_id,
           character_id: contact.id,
         }).result;
@@ -1276,6 +1303,7 @@ describe("overworld snapshot restore integrity", () => {
         const event = started.observation.events[0];
         if (!event) throw new Error("expected an initial-area event");
         return a.investigate_overworld_session_event({
+          ...FULL_OVERWORLD_RESPONSE,
           session_id: started.session_id,
           event_id: event.id,
         }).result;
@@ -1443,6 +1471,7 @@ describe("overworld snapshot restore integrity", () => {
 
     expect(() =>
       resolved.a.restore_overworld_session({
+        ...FULL_OVERWORLD_RESPONSE,
         snapshot: missingPrerequisite,
       }),
     ).toThrow(pattern);
@@ -1823,6 +1852,7 @@ describe("overworld snapshot restore integrity", () => {
     if (!poi) throw new Error("expected an initial point of interest");
 
     a.scout_overworld_session_poi({
+      ...FULL_OVERWORLD_RESPONSE,
       session_id: started.session_id,
       poi_id: poi.id,
     });

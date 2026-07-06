@@ -1,10 +1,19 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 460 -->
+<!-- historical_cycle_count: 461 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - overworld_actions_compact_default
+
+- Pre-cycle: `C:\dev\agent-cleaner` measure/gates passed through WSL; optional secret scanner remains absent.
+- Engine/loop surface: direct ToolApi overworld actions, restore, and quest handoff now default to compact context/result payloads; explicit false flags keep full readers available.
+- Loop effect: local harnesses and direct agents no longer get full overworld observations/action result objects after every travel, local action, quest sync, or restore.
+- Self-critique: API-default work only; full export snapshots and the tracked world JSON remain large follow-up surfaces.
+- Guard: focused MCP/overworld regressions keep full-payload assertions explicit while pinning no-flag compact route, travel, and restore payloads.
+- VERIFY: `C:\dev\agent-cleaner`, focused MCP/overworld compact-default regressions, `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, `npm test`, and `npm run health` passed after loop-state rotation.
 
 ### Cycle result - overworld_loader_cache_tests
 
@@ -131,12 +140,3 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Self-critique: maintenance-focused, but it fixes a real verification portability hole from the prior cycle.
 - Guard: focused verifier/loop-state regressions cover the guard path.
 - VERIFY: `C:\dev\agent-cleaner`, `npm run typecheck`, focused verifier/loop-state regressions, `npm run validate`, `npm test`, and `npm run health` passed after loop-state rotation.
-
-### Cycle result - ignored_archive_tracking_guard
-
-- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
-- Engine/loop surface: verifier integrity now blocks `AI_LOOP_STATE_ARCHIVE.md` if it becomes tracked, preserving the intended gitignored archive boundary.
-- Loop effect: future agents can keep local deep history without shipping a token-heavy archive into every clone or recurring context scan.
-- Self-critique: not player-facing, but it locks a real token-regression class instead of relying on ignore-file convention.
-- Guard: focused verifier/loop-state regressions cover forbidden tracked artifacts and guard-self weakening.
-- VERIFY: `npm run typecheck`, focused verifier/loop-state regressions, `npm run validate`, `npm test`, and `npm run health` passed after loop-state rotation.

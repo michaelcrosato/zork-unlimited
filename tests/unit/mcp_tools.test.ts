@@ -21,6 +21,14 @@ const PACK = "content/rpg/quests/sunken_barrow.yaml";
 const NON_RPG_PACK = "content/broken-fixtures/duplicate_id.yaml";
 const api = () => createToolApi({ root: ROOT });
 const overworld = loadOverworldManifest(ROOT);
+const FULL_OVERWORLD_RESPONSE = {
+  compact_context: false,
+  compact_result: false,
+} as const;
+const FULL_OVERWORLD_QUEST_START = {
+  ...FULL_OVERWORLD_RESPONSE,
+  compact_observation: false,
+} as const;
 
 function numberedIds(prefix: string, count: number): string[] {
   return Array.from({ length: count }, (_, i) => `${prefix}_${i.toString().padStart(2, "0")}`);
@@ -122,6 +130,7 @@ function travelOverworldSessionTo(
     }).observation;
     if (observation.pendingRoadEncounter) {
       a.resolve_overworld_session_road_encounter({
+        ...FULL_OVERWORLD_RESPONSE,
         session_id: sessionId,
         strategy: "press_on",
       });
@@ -145,6 +154,7 @@ function revealOverworldQuest(a: ReturnType<typeof api>, sessionId: string, ques
     }).observation;
     if (view.pendingRoadEncounter) {
       a.resolve_overworld_session_road_encounter({
+        ...FULL_OVERWORLD_RESPONSE,
         session_id: sessionId,
         strategy: "press_on",
       });
@@ -188,6 +198,7 @@ function revealOverworldQuest(a: ReturnType<typeof api>, sessionId: string, ques
         .observation.characters[0];
       if (contact) {
         a.talk_overworld_session_contact({
+          ...FULL_OVERWORLD_RESPONSE,
           session_id: sessionId,
           character_id: contact.id,
         });
@@ -228,6 +239,7 @@ function resolveCurrentOverworldSessionEvent(
   if (!event) throw new Error(`No unresolved event in ${view.current.id}.`);
   a.scout_overworld_session_poi({ session_id: sessionId, poi_id: view.pois[0]!.id });
   a.talk_overworld_session_contact({
+    ...FULL_OVERWORLD_RESPONSE,
     session_id: sessionId,
     character_id: view.characters[0]!.id,
   });
@@ -559,6 +571,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
       .sort((a, b) => a.title.localeCompare(b.title));
     expect(localQuests.length).toBeGreaterThan(0);
     const planned = a.plan_overworld_session_route({
+      ...FULL_OVERWORLD_RESPONSE,
       session_id: started.session_id,
       destination_town_id: "colonie_town",
     });
@@ -573,6 +586,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(planned.observation.routeOptions[0]?.estimate.suppliesNeeded).toBeGreaterThan(0);
     expect(() =>
       a.plan_overworld_session_route({
+        ...FULL_OVERWORLD_RESPONSE,
         session_id: started.session_id,
         destination_town_id: "buffalo_city",
       }),
@@ -580,12 +594,14 @@ describe("MCP tools — validate / load (§9.4)", () => {
 
     expect(() =>
       a.resolve_overworld_session_event({
+        ...FULL_OVERWORLD_RESPONSE,
         session_id: started.session_id,
         event_id: event.id,
       }),
     ).toThrow(/Before resolving/i);
 
     const scouted = a.scout_overworld_session_poi({
+      ...FULL_OVERWORLD_RESPONSE,
       session_id: started.session_id,
       poi_id: poi.id,
     });
@@ -607,6 +623,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
     const stagingRoute = scouted.observation.areaExits[0]!;
     expect(stagingRoute.destination.id).not.toBe(questAreaId);
     let areaObservation = a.move_overworld_session_area({
+      ...FULL_OVERWORLD_RESPONSE,
       session_id: started.session_id,
       area_route_id: stagingRoute.id,
     }).observation;
@@ -614,6 +631,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
 
     const questLeadPoi = areaObservation.pois[0]!;
     const scoutedQuestLead = a.scout_overworld_session_poi({
+      ...FULL_OVERWORLD_RESPONSE,
       session_id: started.session_id,
       poi_id: questLeadPoi.id,
     });
@@ -642,6 +660,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(scoutedQuestLead.observation.currentArea?.id).not.toBe(discoveredQuest.area);
     expect(() =>
       a.start_overworld_session_quest({
+        ...FULL_OVERWORLD_QUEST_START,
         session_id: started.session_id,
         quest_id: discoveredQuest.id,
       }),
@@ -652,6 +671,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
     );
     expect(routeToQuestArea).toBeDefined();
     areaObservation = a.move_overworld_session_area({
+      ...FULL_OVERWORLD_RESPONSE,
       session_id: started.session_id,
       area_route_id: routeToQuestArea!.id,
     }).observation;
@@ -668,6 +688,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
     try {
       expect(() =>
         a.start_overworld_session_quest({
+          ...FULL_OVERWORLD_QUEST_START,
           session_id: started.session_id,
           quest_id: discoveredQuest.id,
         }),
@@ -684,6 +705,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(afterFailedQuestStart.snapshot).toEqual(beforeQuestStart.snapshot);
     expect(afterFailedQuestStart.snapshot.startedQuestIds).toEqual([]);
     const startedQuest = a.start_overworld_session_quest({
+      ...FULL_OVERWORLD_QUEST_START,
       session_id: started.session_id,
       quest_id: discoveredQuest.id,
     });
@@ -707,12 +729,14 @@ describe("MCP tools — validate / load (§9.4)", () => {
     });
     expect(() =>
       a.start_overworld_session_quest({
+        ...FULL_OVERWORLD_QUEST_START,
         session_id: started.session_id,
         quest_id: discoveredQuest.id,
       }),
     ).toThrow(/already been started/i);
     expect(() =>
       a.complete_overworld_session_quest({
+        ...FULL_OVERWORLD_RESPONSE,
         session_id: started.session_id,
         rpg_session_id: startedQuest.rpg_session_id,
       }),
@@ -726,11 +750,13 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(afterQuestStart.snapshot.startedQuestIds).toEqual([discoveredQuest.id]);
     expect(() =>
       a.restore_overworld_session({
+        ...FULL_OVERWORLD_RESPONSE,
         snapshot: { ...afterQuestStart.snapshot, startedQuestIds: [] },
       }),
     ).toThrow(/started quest id/i);
     expect(() =>
       a.restore_overworld_session({
+        ...FULL_OVERWORLD_RESPONSE,
         snapshot: {
           ...afterQuestStart.snapshot,
           journalEntries: afterQuestStart.snapshot.journalEntries.filter(
@@ -766,6 +792,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
 
     expect(() =>
       a.scout_overworld_session_poi({
+        ...FULL_OVERWORLD_RESPONSE,
         session_id: started.session_id,
         poi_id: poi.id,
       }),
@@ -775,12 +802,14 @@ describe("MCP tools — validate / load (§9.4)", () => {
       started.observation.currentArea!.id,
     )) {
       a.move_overworld_session_area({
+        ...FULL_OVERWORLD_RESPONSE,
         session_id: started.session_id,
         area_route_id: routeId,
       });
     }
 
     const repeated = a.scout_overworld_session_poi({
+      ...FULL_OVERWORLD_RESPONSE,
       session_id: started.session_id,
       poi_id: poi.id,
     });
@@ -792,6 +821,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(repeated.observation.journal).toHaveLength(3);
 
     const talked = a.talk_overworld_session_contact({
+      ...FULL_OVERWORLD_RESPONSE,
       session_id: started.session_id,
       character_id: contact.id,
     });
@@ -802,6 +832,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(talked.observation.journal).toHaveLength(4);
 
     const investigated = a.investigate_overworld_session_event({
+      ...FULL_OVERWORLD_RESPONSE,
       session_id: started.session_id,
       event_id: event.id,
     });
@@ -810,6 +841,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(investigated.observation.timeLabel).not.toBe(started.observation.timeLabel);
 
     const resolved = a.resolve_overworld_session_event({
+      ...FULL_OVERWORLD_RESPONSE,
       session_id: started.session_id,
       event_id: event.id,
     });
@@ -826,6 +858,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
       completed: false,
     });
     const repeatedResolved = a.resolve_overworld_session_event({
+      ...FULL_OVERWORLD_RESPONSE,
       session_id: started.session_id,
       event_id: event.id,
     });
@@ -840,6 +873,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
     const road = resolved.observation.exits.find((edge) => edge.destination.id === "colonie_town");
     expect(road).toBeTruthy();
     const traveled = a.travel_overworld_session({
+      ...FULL_OVERWORLD_RESPONSE,
       session_id: started.session_id,
       road_id: road!.id,
     });
@@ -868,23 +902,27 @@ describe("MCP tools — validate / load (§9.4)", () => {
 
     expect(() =>
       a.travel_overworld_session({
+        ...FULL_OVERWORLD_RESPONSE,
         session_id: started.session_id,
         road_id: traveled.observation.exits[0]!.id,
       }),
     ).toThrow(/pending road encounter/i);
     expect(() =>
       a.resupply_overworld_session({
+        ...FULL_OVERWORLD_RESPONSE,
         session_id: started.session_id,
       }),
     ).toThrow(/pending road encounter/i);
     expect(() =>
       a.plan_overworld_session_route({
+        ...FULL_OVERWORLD_RESPONSE,
         session_id: started.session_id,
         destination_town_id: traveled.observation.exits[0]!.destination.id,
       }),
     ).toThrow(/pending road encounter/i);
 
     const roadEncounter = a.resolve_overworld_session_road_encounter({
+      ...FULL_OVERWORLD_RESPONSE,
       session_id: started.session_id,
       strategy: "cautious_scout",
     });
@@ -897,7 +935,10 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(roadEncounter.observation.pendingRoadEncounter).toBeNull();
     expect(roadEncounter.observation.journal[0]?.kind).toBe("road");
 
-    const resupplied = a.resupply_overworld_session({ session_id: started.session_id });
+    const resupplied = a.resupply_overworld_session({
+      ...FULL_OVERWORLD_RESPONSE,
+      session_id: started.session_id,
+    });
     expect(resupplied.result).toMatchObject({
       action: "resupply",
       changed: true,
@@ -911,7 +952,10 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(resupplied.observation.supplies).toBe(resupplied.observation.maxSupplies);
     expect(resupplied.observation.journal[0]?.title).toContain("Resupplied");
 
-    const rested = a.rest_overworld_session({ session_id: started.session_id });
+    const rested = a.rest_overworld_session({
+      ...FULL_OVERWORLD_RESPONSE,
+      session_id: started.session_id,
+    });
     expect(rested.result.action).toBe("rest");
     expect(rested.result.changed).toBe(true);
     expect(rested.result.minutes).toBeGreaterThan(0);
@@ -923,12 +967,14 @@ describe("MCP tools — validate / load (§9.4)", () => {
 
     expect(() =>
       a.talk_overworld_session_contact({
+        ...FULL_OVERWORLD_RESPONSE,
         session_id: started.session_id,
         character_id: contact.id,
       }),
     ).toThrow(/not in this town/i);
     expect(() =>
       a.travel_overworld_session({
+        ...FULL_OVERWORLD_RESPONSE,
         session_id: started.session_id,
         road_id: "road_buffalo_city__tonawanda_town",
       }),
@@ -941,6 +987,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
     revealOverworldQuest(a, started.session_id, "sunken_barrow");
 
     const launched = a.start_overworld_session_quest({
+      ...FULL_OVERWORLD_QUEST_START,
       session_id: started.session_id,
       quest_id: "sunken_barrow",
       seed: 1,
@@ -948,6 +995,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
     const generated = a.new_game({ generate_rpg_seed: 1 });
     expect(() =>
       a.complete_overworld_session_quest({
+        ...FULL_OVERWORLD_RESPONSE,
         session_id: started.session_id,
         rpg_session_id: generated.session_id,
       }),
@@ -955,6 +1003,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
     const directWorldQuest = a.start_world_quest({ world_quest_id: "sunken_barrow", seed: 1 });
     expect(() =>
       a.complete_overworld_session_quest({
+        ...FULL_OVERWORLD_RESPONSE,
         session_id: started.session_id,
         rpg_session_id: directWorldQuest.session_id,
       }),
@@ -965,6 +1014,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(ended.observation.ending_id).toBe("ending_victory");
 
     const staleCompletion = a.complete_overworld_session_quest({
+      ...FULL_OVERWORLD_RESPONSE,
       session_id: started.session_id,
       rpg_session_id: launched.rpg_session_id,
       expected_snapshot_hash: started.snapshot_hash,
@@ -976,6 +1026,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect("observation" in staleCompletion).toBe(false);
 
     const staleRpgCompletion = a.complete_overworld_session_quest({
+      ...FULL_OVERWORLD_RESPONSE,
       session_id: started.session_id,
       rpg_session_id: launched.rpg_session_id,
       expected_snapshot_hash: launched.snapshot_hash,
@@ -995,6 +1046,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect("observation" in staleRpgCompletion).toBe(false);
 
     const completed = a.complete_overworld_session_quest({
+      ...FULL_OVERWORLD_RESPONSE,
       session_id: started.session_id,
       rpg_session_id: launched.rpg_session_id,
       expected_snapshot_hash: launched.snapshot_hash,
@@ -1022,6 +1074,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
     ).toEqual(["sunken_barrow"]);
 
     const repeated = a.complete_overworld_session_quest({
+      ...FULL_OVERWORLD_RESPONSE,
       session_id: started.session_id,
       rpg_session_id: launched.rpg_session_id,
     });
@@ -1039,11 +1092,13 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(exported.snapshot.completedQuestIds).toEqual(["sunken_barrow"]);
     expect(() =>
       a.restore_overworld_session({
+        ...FULL_OVERWORLD_RESPONSE,
         snapshot: { ...exported.snapshot, completedQuestIds: [] },
       }),
     ).toThrow(/completed quest id/i);
     expect(() =>
       a.restore_overworld_session({
+        ...FULL_OVERWORLD_RESPONSE,
         snapshot: {
           ...exported.snapshot,
           journalEntries: exported.snapshot.journalEntries.filter(
@@ -1079,6 +1134,35 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(defaultStarted.snapshot_hash).toMatch(/^[0-9a-f]{64}$/);
     expect(defaultStarted.context.v).toBe(9);
     expect("observation" in defaultStarted).toBe(false);
+    const defaultRoute = a.plan_overworld_session_route({
+      session_id: started.session_id,
+      destination_town_id: full.exits[0]!.destination.id,
+    });
+    expect(defaultRoute.route).toHaveLength(5);
+    expect("destination" in defaultRoute.route).toBe(false);
+    expect(defaultRoute.context.here[0]).toBe(full.current.id);
+    expect("observation" in defaultRoute).toBe(false);
+    const defaultTravelRoad = defaultStarted.context.roads[0]!;
+    const defaultTravel = a.travel_overworld_session({
+      session_id: defaultStarted.session_id,
+      road_id: defaultTravelRoad[0],
+      expected_snapshot_hash: defaultStarted.snapshot_hash,
+    });
+    expect(defaultTravel.ok).toBe(true);
+    if (!defaultTravel.ok) throw new Error("default compact travel should pass snapshot guard");
+    expect(defaultTravel.travel).toHaveLength(7);
+    expect("baseMinutes" in defaultTravel.travel).toBe(false);
+    expect(defaultTravel.context.here[0]).toBe(defaultTravelRoad[1]);
+    expect("observation" in defaultTravel).toBe(false);
+    const exportedForRestore = a.export_overworld_session({ session_id: started.session_id });
+    expect(exportedForRestore.ok).toBe(true);
+    if (!exportedForRestore.ok) throw new Error("expected export for compact restore default");
+    const defaultRestored = a.restore_overworld_session({
+      snapshot: exportedForRestore.snapshot,
+    });
+    expect(defaultRestored.snapshot_hash).toBe(exportedForRestore.snapshot_hash);
+    expect(defaultRestored.context.here[0]).toBe(full.current.id);
+    expect("observation" in defaultRestored).toBe(false);
     const repeatedCompactRead = a.get_overworld_session_context({
       session_id: started.session_id,
     });
@@ -1241,6 +1325,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
       session_id: started.session_id,
       destination_town_id: "colonie_town",
       compact_context: true,
+      compact_result: false,
     });
     expect(compactPlan.route.destination.id).toBe("colonie_town");
     expect(compactPlan.snapshot_hash).toBe(started.snapshot_hash);
@@ -1253,6 +1338,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
       road_id: road!.id,
       expected_snapshot_hash: started.snapshot_hash,
       compact_context: true,
+      compact_result: false,
     });
     expect(compactTravel.ok).toBe(true);
     if (!compactTravel.ok) throw new Error("matching snapshot hash should travel");
@@ -1342,6 +1428,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
       session_id: started.session_id,
       poi_id: poi.id,
       compact_context: true,
+      compact_result: false,
     });
     const discoveredJobIds = scouted.result.discoveredJobs?.map((job) => job.id) ?? [];
     const discoveredSiteIds = scouted.result.discoveredSites?.map((site) => site.id) ?? [];
@@ -1374,6 +1461,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
     const fullAreaStart = a.start_overworld({ compact_context: false });
     const area = fullAreaStart.observation.areas[0]!;
     const fullExplore = a.explore_overworld_session_area({
+      ...FULL_OVERWORLD_RESPONSE,
       session_id: fullAreaStart.session_id,
       area_id: area.id,
     });
@@ -1407,6 +1495,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
     );
     expect(road).toBeDefined();
     const fullTravel = a.travel_overworld_session({
+      ...FULL_OVERWORLD_RESPONSE,
       session_id: fullTravelStart.session_id,
       road_id: road!.id,
     });
@@ -1432,6 +1521,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
     );
 
     const fullResolved = a.resolve_overworld_session_road_encounter({
+      ...FULL_OVERWORLD_RESPONSE,
       session_id: fullTravelStart.session_id,
       strategy: "press_on",
     });
@@ -1464,6 +1554,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
     const a = api();
     const started = a.start_overworld({ compact_context: false });
     a.scout_overworld_session_poi({
+      ...FULL_OVERWORLD_RESPONSE,
       session_id: started.session_id,
       poi_id: started.observation.pois[0]!.id,
     });
@@ -1551,7 +1642,10 @@ describe("MCP tools — validate / load (§9.4)", () => {
     );
     expect(afterMutationExport.snapshot.pendingRoadEncounter?.edgeId).not.toBe("mutated_by_test");
 
-    const restored = a.restore_overworld_session({ snapshot: exported.snapshot });
+    const restored = a.restore_overworld_session({
+      ...FULL_OVERWORLD_RESPONSE,
+      snapshot: exported.snapshot,
+    });
     expect(restored.session_id).not.toBe(started.session_id);
     expect(restored.snapshot_hash).toBe(exported.snapshot_hash);
     expect(restored.observation).toEqual(before);
@@ -1566,12 +1660,14 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect("observation" in compactRestored).toBe(false);
     expect(() =>
       a.travel_overworld_session({
+        ...FULL_OVERWORLD_RESPONSE,
         session_id: restored.session_id,
         road_id: restored.observation.exits[0]!.id,
       }),
     ).toThrow(/pending road encounter/i);
 
     a.resolve_overworld_session_road_encounter({
+      ...FULL_OVERWORLD_RESPONSE,
       session_id: restored.session_id,
       strategy: "press_on",
     });
@@ -1586,6 +1682,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
 
     expect(() =>
       a.restore_overworld_session({
+        ...FULL_OVERWORLD_RESPONSE,
         snapshot: { ...exported.snapshot, worldHash: "0".repeat(64) },
       }),
     ).toThrow(/different world manifest/i);
@@ -1604,6 +1701,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
 
     expect(localAreas.length).toBeGreaterThan(1);
     const explored = a.explore_overworld_session_area({
+      ...FULL_OVERWORLD_RESPONSE,
       session_id: started.session_id,
       area_id: area.id,
     });
@@ -1619,6 +1717,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(explored.observation.hiddenAreaCount).toBe(localAreas.length - 2);
 
     const repeated = a.explore_overworld_session_area({
+      ...FULL_OVERWORLD_RESPONSE,
       session_id: started.session_id,
       area_id: area.id,
     });
@@ -1631,6 +1730,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
     const started = a.start_overworld({ compact_context: false });
     const firstArea = started.observation.areas[0]!;
     const explored = a.explore_overworld_session_area({
+      ...FULL_OVERWORLD_RESPONSE,
       session_id: started.session_id,
       area_id: firstArea.id,
     });
@@ -1639,12 +1739,14 @@ describe("MCP tools — validate / load (§9.4)", () => {
 
     expect(() =>
       a.explore_overworld_session_area({
+        ...FULL_OVERWORLD_RESPONSE,
         session_id: started.session_id,
         area_id: destination.id,
       }),
     ).toThrow(/Move to that local area/i);
 
     const moved = a.move_overworld_session_area({
+      ...FULL_OVERWORLD_RESPONSE,
       session_id: started.session_id,
       area_route_id: route.id,
     });
@@ -1658,6 +1760,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(moved.observation.areaExits.map((exit) => exit.destination.id)).toContain(firstArea.id);
 
     const exploredDestination = a.explore_overworld_session_area({
+      ...FULL_OVERWORLD_RESPONSE,
       session_id: started.session_id,
       area_id: destination.id,
     });
@@ -1676,12 +1779,14 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(started.observation.jobs).toEqual([]);
     expect(() =>
       a.work_overworld_session_job({
+        ...FULL_OVERWORLD_RESPONSE,
         session_id: started.session_id,
         job_id: hiddenJob!.id,
       }),
     ).toThrow(/Explore local areas/i);
 
     const explored = a.explore_overworld_session_area({
+      ...FULL_OVERWORLD_RESPONSE,
       session_id: started.session_id,
       area_id: area.id,
     });
@@ -1692,6 +1797,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(explored.observation.hiddenJobCount).toBeGreaterThan(0);
 
     const worked = a.work_overworld_session_job({
+      ...FULL_OVERWORLD_RESPONSE,
       session_id: started.session_id,
       job_id: job.id,
     });
@@ -1707,6 +1813,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(worked.observation.journal[0]?.kind).toBe("job");
 
     const repeated = a.work_overworld_session_job({
+      ...FULL_OVERWORLD_RESPONSE,
       session_id: started.session_id,
       job_id: job.id,
     });
@@ -1727,6 +1834,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
 
     const nextRoad = worn.exits[0]!;
     const planned = a.plan_overworld_session_route({
+      ...FULL_OVERWORLD_RESPONSE,
       session_id: started.session_id,
       destination_town_id: nextRoad.destination.id,
     });
@@ -1736,6 +1844,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
     );
 
     const traveled = a.travel_overworld_session({
+      ...FULL_OVERWORLD_RESPONSE,
       session_id: started.session_id,
       road_id: nextRoad.id,
     });
@@ -1756,18 +1865,21 @@ describe("MCP tools — validate / load (§9.4)", () => {
 
     expect(() =>
       a.explore_overworld_session_site({
+        ...FULL_OVERWORLD_RESPONSE,
         session_id: started.session_id,
         site_id: site!.id,
       }),
     ).toThrow(/Scout a local point of interest/i);
 
     const scouted = a.scout_overworld_session_poi({
+      ...FULL_OVERWORLD_RESPONSE,
       session_id: started.session_id,
       poi_id: started.observation.pois[0]!.id,
     });
     expect(scouted.observation.discoveredSiteIds).toContain(site!.id);
 
     const explored = a.explore_overworld_session_site({
+      ...FULL_OVERWORLD_RESPONSE,
       session_id: started.session_id,
       site_id: site!.id,
     });
@@ -1781,6 +1893,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
       site!.danger,
     );
     const repeated = a.explore_overworld_session_site({
+      ...FULL_OVERWORLD_RESPONSE,
       session_id: started.session_id,
       site_id: site!.id,
     });
