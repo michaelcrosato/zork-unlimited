@@ -22,11 +22,11 @@ export const COMPACT_VAR_LIMIT = 16;
 const COMPACT_INVENTORY_LIMIT = 16;
 const COMPACT_FLAG_LIMIT = 16;
 const COMPACT_JOURNAL_LIMIT = 5;
-const COMPACT_DESCRIPTION_CHAR_LIMIT = 900;
-const COMPACT_DIALOGUE_CHAR_LIMIT = 700;
-const COMPACT_BLOCKED_EXIT_CHAR_LIMIT = 320;
-const COMPACT_ENDING_TEXT_CHAR_LIMIT = 900;
-export const RPG_COMPACT_OBSERVATION_VERSION = 10 as const;
+export const COMPACT_DESCRIPTION_CHAR_LIMIT = 560;
+export const COMPACT_DIALOGUE_CHAR_LIMIT = 420;
+export const COMPACT_BLOCKED_EXIT_CHAR_LIMIT = 240;
+export const COMPACT_ENDING_TEXT_CHAR_LIMIT = 560;
+export const RPG_COMPACT_OBSERVATION_VERSION = 11 as const;
 
 export type RpgCompactRef = readonly [id: string, name: string];
 export type RpgCompactExit = string | readonly [direction: string, to: string];
@@ -75,6 +75,10 @@ export type RpgCompactObservation = {
   ending?: RpgObservation["ending"];
 };
 
+function compactProse(value: string, limit: number): string {
+  return compactText(value.trimEnd(), limit);
+}
+
 function compactEnding(ending: RpgObservation["ending"]): RpgObservation["ending"] {
   return ending === null
     ? null
@@ -82,7 +86,7 @@ function compactEnding(ending: RpgObservation["ending"]): RpgObservation["ending
         ...ending,
         id: compactMcpTranscriptSummaryValue(ending.id),
         title: compactMcpTranscriptTitle(ending.title),
-        text: compactText(ending.text, COMPACT_ENDING_TEXT_CHAR_LIMIT),
+        text: compactProse(ending.text, COMPACT_ENDING_TEXT_CHAR_LIMIT),
       };
 }
 
@@ -155,7 +159,7 @@ export function compactRpgObservation(
   for (const exit of compactBlockedExits) {
     blocked.push([
       compactMcpTranscriptSummaryValue(exit.direction),
-      compactText(exit.message, COMPACT_BLOCKED_EXIT_CHAR_LIMIT),
+      compactProse(exit.message, COMPACT_BLOCKED_EXIT_CHAR_LIMIT),
     ]);
   }
   const enemies: RpgCompactEnemy[] = [];
@@ -181,7 +185,7 @@ export function compactRpgObservation(
   return {
     v: RPG_COMPACT_OBSERVATION_VERSION,
     here: [compactMcpTranscriptSceneId(obs.room), compactMcpTranscriptTitle(obs.title)],
-    text: compactText(obs.description, COMPACT_DESCRIPTION_CHAR_LIMIT),
+    text: compactProse(obs.description, COMPACT_DESCRIPTION_CHAR_LIMIT),
     ...(exits.length > 0 ? { exits } : {}),
     vitals: [obs.stats.hp, obs.stats.attack, obs.stats.defense, obs.score, obs.max_score],
     ...(actions.length > 0 ? { actions } : {}),
@@ -197,7 +201,7 @@ export function compactRpgObservation(
       ? {
           dialogue: [
             compactMcpTranscriptSummaryValue(obs.dialogue.npc),
-            compactText(obs.dialogue.npc_text, COMPACT_DIALOGUE_CHAR_LIMIT),
+            compactProse(obs.dialogue.npc_text, COMPACT_DIALOGUE_CHAR_LIMIT),
           ] as const,
         }
       : {}),

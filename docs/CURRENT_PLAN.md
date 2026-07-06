@@ -204,7 +204,7 @@ Make discovered overworld quest leads start real RPG sessions.
   branch on shape without reading full reducer events.
 - Compact RPG MCP observations now cap inventory/flags and keep only recent
   journal entries, with `more: [inventory, flags, journal]` omission counts
-  trimmed for trailing zero buckets and string action ids under context `v: 10`.
+  trimmed for trailing zero buckets and string action ids under context `v: 11`.
 - Compact RPG observations and compact transcript summaries now share the same
   capped-list, recent-list, omission-count, and trailing-zero `more` tuple
   helper, keeping loop context and end-of-run audit payload rules aligned.
@@ -539,8 +539,9 @@ Make discovered overworld quest leads start real RPG sessions.
   `step_action`, and `load_game` also default to compact observation context,
   keeping local harness starts/reads/turns/resumes aligned with the public MCP
   loop default.
-- Compact RPG observation context is now versioned as `v: 10` for the mode-free,
-  compact-action loop payload shape with duplicate score vars filtered out.
+- Compact RPG observation context is now versioned as `v: 11` for the mode-free,
+  compact-action loop payload shape with duplicate score vars filtered out and
+  tighter compact prose caps.
 - Compact RPG observation context omits empty exit and action lists when no
   navigation or action ids are available, usually after terminal endings.
 - ToolApi/public MCP `list_legal_actions` now defaults to compact string ids;

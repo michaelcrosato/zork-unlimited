@@ -3,7 +3,11 @@ import { describe, expect, it } from "vitest";
 import {
   COMPACT_ACTION_LIMIT,
   COMPACT_BLOCKED_EXIT_LIMIT,
+  COMPACT_BLOCKED_EXIT_CHAR_LIMIT,
+  COMPACT_DESCRIPTION_CHAR_LIMIT,
+  COMPACT_DIALOGUE_CHAR_LIMIT,
   COMPACT_ENEMY_LIMIT,
+  COMPACT_ENDING_TEXT_CHAR_LIMIT,
   COMPACT_EXIT_LIMIT,
   COMPACT_VAR_LIMIT,
   COMPACT_VISIBLE_REF_LIMIT,
@@ -215,10 +219,10 @@ describe("compactRpgObservation", () => {
   });
 
   it("caps long prose fields in compact loop context only", () => {
-    const longDescription = "room ".repeat(260);
-    const longDialogue = "dialogue ".repeat(120);
-    const longBlockedExit = "blocked ".repeat(80);
-    const longEndingText = "ending ".repeat(180);
+    const longDescription = `${"room ".repeat(260)}\n\n`;
+    const longDialogue = `${"dialogue ".repeat(120)}\n`;
+    const longBlockedExit = `${"blocked ".repeat(80)}\n`;
+    const longEndingText = `${"ending ".repeat(180)}\n`;
     const obs: RpgObservation = {
       ...observationWithLargeState(),
       description: longDescription,
@@ -236,14 +240,18 @@ describe("compactRpgObservation", () => {
 
     const compact = compactRpgObservation(obs, ["look"]);
 
-    expect(compact.text.length).toBeLessThanOrEqual(900);
+    expect(compact.text.length).toBeLessThanOrEqual(COMPACT_DESCRIPTION_CHAR_LIMIT);
     expect(compact.text).toMatch(/\.\.\.\(\+\d+ chars\)$/);
-    expect(compact.dialogue?.[1].length).toBeLessThanOrEqual(700);
+    expect(compact.dialogue?.[1].length).toBeLessThanOrEqual(COMPACT_DIALOGUE_CHAR_LIMIT);
     expect(compact.dialogue?.[1]).toMatch(/\.\.\.\(\+\d+ chars\)$/);
-    expect(compact.blocked?.[0]?.[1].length).toBeLessThanOrEqual(320);
+    expect(compact.blocked?.[0]?.[1].length).toBeLessThanOrEqual(COMPACT_BLOCKED_EXIT_CHAR_LIMIT);
     expect(compact.blocked?.[0]?.[1]).toMatch(/\.\.\.\(\+\d+ chars\)$/);
-    expect(compact.ending?.text.length).toBeLessThanOrEqual(900);
+    expect(compact.ending?.text.length).toBeLessThanOrEqual(COMPACT_ENDING_TEXT_CHAR_LIMIT);
     expect(compact.ending?.text).toMatch(/\.\.\.\(\+\d+ chars\)$/);
+    expect(compact.text.endsWith("\n")).toBe(false);
+    expect(compact.dialogue?.[1].endsWith("\n")).toBe(false);
+    expect(compact.blocked?.[0]?.[1].endsWith("\n")).toBe(false);
+    expect(compact.ending?.text.endsWith("\n")).toBe(false);
     expect(obs.description).toBe(longDescription);
     expect(obs.dialogue?.npc_text).toBe(longDialogue);
     expect(obs.blocked_exits[0]?.message).toBe(longBlockedExit);
