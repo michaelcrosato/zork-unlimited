@@ -24,6 +24,7 @@
     "replay": "tsx bin/replay.ts",
     "validate": "tsx bin/validate.ts",
     "play": "tsx bin/rpg_play.ts",
+    "overworld": "tsx bin/overworld_play.ts",
     "author": "tsx bin/author.ts",
     "inspect": "tsx bin/inspect.ts",
     "assess": "tsx bin/assess.ts",
