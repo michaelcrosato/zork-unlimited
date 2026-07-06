@@ -32,9 +32,15 @@ are a primary input to the fix.
    solution. The subagent reaches the game **only** through the
    `mcp__adventureforge__*` MCP tools (discoverable via ToolSearch).
 
-3. **Collect the structured report** (sections 1–6 in the template): the route(s)
+3. **Collect the structured report** (sections 1–7 in the template): the route(s)
    taken, whether it worked mechanically, clarity/enjoyment ratings, confusion
-   points, concrete bugs/flaws (each with a scene), and a verdict.
+   points, concrete bugs/flaws (each with a scene), a verdict, and — mandatory —
+   the **exit interview**: a fenced ```json exit-interview``` block restating the
+   findings as data (integer clarity/enjoyment, S0–S4 bug list, confusions,
+   would_replay, verdict). The report verifier (`src/blind/report_verifier.ts`)
+   REJECTS a report without a schema-valid block, so a playtest only counts when
+   its feedback is machine-rankable; the parsed interview is what the assessor
+   ranks the next cycle's work from.
 
 4. **Triage findings into one focused fix.** Classify each finding by fix layer
    (`content | hint_text | quest_structure | engine_rule | validator | test`).
@@ -106,6 +112,10 @@ REPORT (return these sections):
 4. Confusion / friction points.
 5. Bugs or design flaws — concrete, each with the scene where you hit it.
 6. Verdict: would a real player finish satisfied? one paragraph.
+7. EXIT INTERVIEW (mandatory): one fenced json exit-interview block restating the
+   findings as data — integer clarity/enjoyment 1-5, goal_understood, got_stuck,
+   confusions[], bugs[{where, severity S0-S4, note}], best_moment, worst_moment,
+   would_replay, verdict. (Exact shape: blind-tester/prompt.md section 7.)
 Be honest and specific; a critical, well-observed report is more useful than a flattering one.
 ```
 

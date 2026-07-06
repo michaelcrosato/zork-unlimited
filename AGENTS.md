@@ -53,6 +53,8 @@ pack validation. Do not commit or merge red.
 ## Git
 
 - Commit in clear increments when asked to land work.
-- Owner preference is to land on `main`, but keep protected-branch checks green.
+- Branch policy: `develop` is the default working branch (push CI covers it);
+  substantial work lands via feature branch → PR, and `main` tracks `develop`
+  through merged PRs. Keep every landing green — the bar is `npm run health`.
 - Never print or commit secrets. Use local env files only when a task explicitly needs
   credentials.
