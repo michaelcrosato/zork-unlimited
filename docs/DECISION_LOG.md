@@ -815,3 +815,22 @@ Revisit breadth only on an explicit human authoring goal.
   out of sequence (it sits before the 2026-06-19 wolf_winter entry);
   chronologically it belongs between that entry and the 2026-07-06
   consolidation entry. Recorded here rather than reordered.
+
+### Removed the real LLM API-key backends — 2026-07-06 (public-repo hygiene)
+
+**Decision: this public repo carries NO third-party LLM API-key surface.** The
+`OpenAIProvider` / `AnthropicProvider` / `GoogleProvider` adapters and the
+`resolveProvider` env-key selector (spec §12.7, `agents/llm/providers.ts`,
+`tests/unit/llm_providers.test.ts`) were deleted. The engine is pure and has no
+runtime LLM; the authoring writer/adapter now run only against the deterministic,
+keyless `MockAuthorProvider` (`bin/author.ts` and `src/mcp/tools.ts` construct it
+directly). `.gitignore` now blocks `.env`/`*.pem`/`*.key`/secret files. No secret
+was ever committed — this removes the *surface*, not a leak.
+
+**Supersedes prior recorded facts:** the "still valid: `resolveProvider` in
+`src/mcp/tools.ts`" note above is now stale (that call site uses
+`new MockAuthorProvider()`), and the frontier/benchmark scorecard lever — recorded
+as "meaningful only with a live API-key path" — is **retired as moot**: a public,
+key-free repo has no such path. The pure JSON extractor `extractJson` was NOT
+key-related and is retained, moved to `agents/llm/extract_json.ts` (regression
+`tests/regression/extract_json_resilience.test.ts`, bug_0238).

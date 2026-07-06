@@ -34,3 +34,14 @@ blind-tester/reports/*
 # Agent metadata and requests
 .agents/
 ORIGINAL_REQUEST.md
+
+# Secrets — never commit. This is a public repo and the engine needs no API keys;
+# any local credentials stay in an ignored env file.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+secrets.json
+**/credentials.json
