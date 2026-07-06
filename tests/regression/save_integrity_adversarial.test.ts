@@ -19,11 +19,11 @@ import { describe, it, expect } from "vitest";
 import { save, load, SaveIntegrityError } from "../../src/persist/save_load.js";
 import { hashState } from "../../src/core/hash.js";
 import { MAX_ENGINE_STEP, type GameState } from "../../src/core/state.js";
-import { microInitState, MICRO_PACK_ID, MICRO_CONTENT_HASH } from "../../src/demo/micro.js";
+import { microInitState, MICRO_CONTENT_HASH } from "../../src/demo/micro.js";
 
 /** Build the canonical clean save bytes for the micro pack. */
 function cleanBytes(state: GameState = microInitState()): string {
-  return save(state, MICRO_PACK_ID, MICRO_CONTENT_HASH, undefined, {
+  return save(state, MICRO_CONTENT_HASH, undefined, {
     worldQuestId: "micro_adversarial",
   });
 }

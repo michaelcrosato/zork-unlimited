@@ -1,10 +1,18 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 424 -->
+<!-- historical_cycle_count: 425 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - save_api_pack_id_retired
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/loop surface: `save()` no longer accepts package-era `packId`; save writes now take state, content hash, RPG mode, and canonical world/generated source metadata only.
+- Loop effect: persistence callers cannot smuggle package identity through a compatibility argument, and MCP `save_game` writes directly from session content hash plus `source_ref` metadata.
+- Guard: focused save/trace, forged-save, save referential, determinism, stage4, and MCP save/load regressions passed.
+- VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused persistence/API regressions, `npm test`, and `npm run health` passed after loop-state rotation.
 
 ### Cycle result - session_pack_id_retired
 
@@ -117,11 +125,3 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Loop effect: `list_world` and AFK discovery stay on world graph identity before public catalog packing, with less stale package identity available to re-leak.
 - Guard: focused RPG catalog test asserts source discovery has no `path`/`id` and matches `list_world` world quest ids.
 - VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused RPG catalog test, `npm test`, and `npm run health` passed.
-
-### Cycle result - world_catalog_identity_compacted
-
-- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
-- Engine/loop surface: `list_world` quest rows now expose canonical `world_quest_id` without duplicate row `id` or `graph_node`; `world_path` keeps graph node identity for coordinate/path lookups.
-- Loop effect: public world discovery and AFK ranking stay world-graph keyed while catalog payload size drops to about 5.1 KB.
-- Guard: catalog, RPG tool, world manifest, and assessor focused regressions cover the compact identity contract.
-- VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused regressions, `npm test`, and `npm run health` passed.

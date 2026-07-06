@@ -108,7 +108,7 @@ describe("Stage 4 — The Sunken Barrow", () => {
     state = act(state, { type: "MOVE", direction: "down" }, setup);
     state = act(state, { type: "TAKE", item: "iron_bar" }, setup);
     state = act(state, { type: "MOVE", direction: "north" }, setup);
-    const saveStr = save(state, compiled.pack.meta.id, compiled.contentHash, undefined, {
+    const saveStr = save(state, compiled.contentHash, undefined, {
       worldQuestId: "sunken_barrow",
     });
 

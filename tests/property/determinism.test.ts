@@ -20,7 +20,6 @@ import type { RpgAction } from "../../src/api/types.js";
 import {
   microRules,
   microInitState,
-  MICRO_PACK_ID,
   MICRO_CONTENT_HASH,
 } from "../../src/demo/micro.js";
 
@@ -102,7 +101,7 @@ describe("determinism contract (§8.5)", () => {
       fc.property(picksArb, seedArb, (picks, seed) => {
         for (const s of walk(picks, seed).states) {
           const restored = load(
-            save(s, MICRO_PACK_ID, MICRO_CONTENT_HASH, undefined, {
+            save(s, MICRO_CONTENT_HASH, undefined, {
               worldQuestId: "micro_determinism",
             }),
             MICRO_CONTENT_HASH,

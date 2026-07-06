@@ -30,7 +30,7 @@ const MICRO_WORLD_QUEST_ID = "sunken_barrow";
 const MICRO_SAVE_SOURCE: SaveMetadata = { worldQuestId: MICRO_WORLD_QUEST_ID };
 
 function saveMicro(state = microInitState(), metadata: SaveMetadata = MICRO_SAVE_SOURCE): string {
-  return save(state, MICRO_PACK_ID, MICRO_CONTENT_HASH, SAVE_MODE, metadata);
+  return save(state, MICRO_CONTENT_HASH, SAVE_MODE, metadata);
 }
 
 function traceOptions(overrides: Partial<RecordOptions> = {}): RecordOptions {
@@ -98,21 +98,13 @@ describe("save / load (§8.7)", () => {
   });
 
   it("rejects malformed save envelope identity at the write boundary", () => {
-    expect(() => save(microInitState(), "", MICRO_CONTENT_HASH)).toThrow(SaveIntegrityError);
-    expect(() => save(microInitState(), MICRO_PACK_ID, "")).toThrow(SaveIntegrityError);
-    expect(() => save(microInitState(), 12 as unknown as string, MICRO_CONTENT_HASH)).toThrow(
-      SaveIntegrityError,
-    );
-    expect(() => save(microInitState(), MICRO_PACK_ID, 12 as unknown as string)).toThrow(
-      SaveIntegrityError,
-    );
+    expect(() => save(microInitState(), "")).toThrow(SaveIntegrityError);
+    expect(() => save(microInitState(), 12 as unknown as string)).toThrow(SaveIntegrityError);
   });
 
   it("rejects package-only source fallback at the write boundary", () => {
-    expect(() => save(microInitState(), MICRO_PACK_ID, MICRO_CONTENT_HASH)).toThrow(
-      SaveIntegrityError,
-    );
-    expect(() => save(microInitState(), MICRO_PACK_ID, MICRO_CONTENT_HASH)).toThrow(
+    expect(() => save(microInitState(), MICRO_CONTENT_HASH)).toThrow(SaveIntegrityError);
+    expect(() => save(microInitState(), MICRO_CONTENT_HASH)).toThrow(
       /worldQuestId or generatedRpgSeed/,
     );
   });
@@ -162,7 +154,7 @@ describe("save / load (§8.7)", () => {
   });
 
   it("round-trips optional generated RPG identity", () => {
-    const bytes = save(microInitState(), MICRO_PACK_ID, MICRO_CONTENT_HASH, SAVE_MODE, {
+    const bytes = save(microInitState(), MICRO_CONTENT_HASH, SAVE_MODE, {
       generatedRpgSeed: 3,
     });
     const loaded = load(bytes, MICRO_CONTENT_HASH);
@@ -172,12 +164,12 @@ describe("save / load (§8.7)", () => {
 
   it("rejects unsafe generated RPG source identities", () => {
     expect(() =>
-      save(microInitState(), MICRO_PACK_ID, MICRO_CONTENT_HASH, SAVE_MODE, {
+      save(microInitState(), MICRO_CONTENT_HASH, SAVE_MODE, {
         generatedRpgSeed: UNSAFE_GENERATED_RPG_SEED,
       }),
     ).toThrow(SaveIntegrityError);
 
-    const bytes = save(microInitState(), MICRO_PACK_ID, MICRO_CONTENT_HASH, SAVE_MODE, {
+    const bytes = save(microInitState(), MICRO_CONTENT_HASH, SAVE_MODE, {
       generatedRpgSeed: 3,
     });
     const bundle = JSON.parse(bytes) as Record<string, unknown>;
@@ -253,12 +245,7 @@ describe("save / load (§8.7)", () => {
 
   it("rejects attempts to write a non-RPG mode", () => {
     expect(() =>
-      save(
-        microInitState(),
-        MICRO_PACK_ID,
-        MICRO_CONTENT_HASH,
-        "parser" as unknown as typeof SAVE_MODE,
-      ),
+      save(microInitState(), MICRO_CONTENT_HASH, "parser" as unknown as typeof SAVE_MODE),
     ).toThrow(SaveIntegrityError);
   });
 });

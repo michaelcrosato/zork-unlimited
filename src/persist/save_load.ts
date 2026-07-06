@@ -178,13 +178,11 @@ const SAVE_SOURCE_REF_CONSISTENCY_MESSAGES = {
 /** Serialize a save to canonical bytes (stable across machines/runs). */
 export function save(
   state: GameState,
-  packId: string,
   contentHash: string,
   mode: SaveMode = SAVE_MODE,
   metadata: SaveMetadata = {},
 ): string {
   assertRpgMode(mode, "Save mode");
-  assertNonEmptyString(packId, "Save packId");
   assertNonEmptyString(contentHash, "Save contentHash");
   assertWellFormedState(state);
   const sourceRef = saveSourceRef(metadata);
