@@ -86,6 +86,10 @@ export const FORBIDDEN_FILES = [
   "tests/property/parser_determinism.test.ts",
 ];
 
+/** Token-heavy local artifacts may exist in a developer worktree, but must never
+ *  ship in Git where every clone and agent context can rediscover them. */
+export const FORBIDDEN_TRACKED_FILES = ["AI_LOOP_STATE_ARCHIVE.md"];
+
 /** Glob-like path patterns for retired test families that should not reappear
  *  under a new filename while the repo is locked to the RPG runtime. */
 export const FORBIDDEN_PATH_PATTERNS = [
@@ -237,6 +241,21 @@ export function detectForbiddenPathPatterns(
   return findings;
 }
 
+export function detectForbiddenTrackedFiles(
+  trackedPaths: string[],
+  forbidden: readonly string[] = FORBIDDEN_TRACKED_FILES,
+): Finding[] {
+  const forbiddenSet = new Set(forbidden);
+  return trackedPaths
+    .filter((path) => forbiddenSet.has(path))
+    .map((path) => ({
+      severity: "error" as const,
+      code: "FORBIDDEN_TRACKED_FILE",
+      message: `token-heavy local artifact must stay ignored and untracked: ${path}`,
+      where: path,
+    }));
+}
+
 export function detectForbiddenLegacyImports(files: { path: string; text: string }[]): Finding[] {
   const findings: Finding[] = [];
   for (const f of files) {
@@ -357,6 +376,21 @@ function readAll(root: string, paths: string[]): { path: string; text: string }[
   return paths.map((p) => ({ path: p, text: readFileSync(join(root, p), "utf8") }));
 }
 
+function gitTrackedFiles(root: string, paths: string[]): string[] {
+  if (paths.length === 0) return [];
+  try {
+    return execFileSync("git", ["ls-files", "--", ...paths], {
+      cwd: root,
+      encoding: "utf8",
+    })
+      .split("\n")
+      .map((s) => s.trim())
+      .filter(Boolean);
+  } catch {
+    return [];
+  }
+}
+
 /** Static integrity: protected files present, no disabled tests, count above floor. */
 export function runStatic(root: string): { ok: boolean; findings: Finding[] } {
   const findings: Finding[] = [];
@@ -378,6 +412,7 @@ export function runStatic(root: string): { ok: boolean; findings: Finding[] } {
         where: f,
       });
   }
+  findings.push(...detectForbiddenTrackedFiles(gitTrackedFiles(root, FORBIDDEN_TRACKED_FILES)));
   const sourceFiles = readAll(root, listRuntimeSourceFiles(root));
   findings.push(...detectForbiddenLegacyImports(sourceFiles));
   const testPaths = listTestFiles(root);
@@ -587,6 +622,7 @@ export type GuardConstants = {
   maxTautologyAssertions?: number;
   protectedFiles: string[];
   forbiddenFiles: string[];
+  forbiddenTrackedFiles: string[];
   forbiddenPathPatterns: string[];
   hashPinFiles: string[];
 };
@@ -618,6 +654,7 @@ export function parseGuardConstants(text: string): GuardConstants | null {
   const maxTautologyAssertions = num("MAX_TAUTOLOGY_ASSERTIONS");
   const protectedFiles = arr("PROTECTED_FILES");
   const forbiddenFiles = arr("FORBIDDEN_FILES") ?? [];
+  const forbiddenTrackedFiles = arr("FORBIDDEN_TRACKED_FILES") ?? [];
   const forbiddenPathPatterns = arr("FORBIDDEN_PATH_PATTERNS") ?? [];
   const hashPinFiles = arr("HASH_PIN_FILES");
   if (
@@ -634,6 +671,7 @@ export function parseGuardConstants(text: string): GuardConstants | null {
     minStrongAssertions,
     protectedFiles,
     forbiddenFiles,
+    forbiddenTrackedFiles,
     forbiddenPathPatterns,
     hashPinFiles,
   };
@@ -680,6 +718,7 @@ export function detectGuardWeakening(before: GuardConstants, now: GuardConstants
     if (!nowProtected.has(entry) && !nowForbidden.has(entry))
       weakened.push(`PROTECTED_FILES entry removed: ${entry}`);
   removedFrom("FORBIDDEN_FILES", before.forbiddenFiles, now.forbiddenFiles);
+  removedFrom("FORBIDDEN_TRACKED_FILES", before.forbiddenTrackedFiles, now.forbiddenTrackedFiles);
   removedFrom("FORBIDDEN_PATH_PATTERNS", before.forbiddenPathPatterns, now.forbiddenPathPatterns);
   removedFrom("HASH_PIN_FILES", before.hashPinFiles, now.hashPinFiles);
   if (weakened.length === 0) return [];

@@ -1,10 +1,19 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 445 -->
+<!-- historical_cycle_count: 446 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - ignored_archive_tracking_guard
+
+- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
+- Engine/loop surface: verifier integrity now blocks `AI_LOOP_STATE_ARCHIVE.md` if it becomes tracked, preserving the intended gitignored archive boundary.
+- Loop effect: future agents can keep local deep history without shipping a token-heavy archive into every clone or recurring context scan.
+- Self-critique: not player-facing, but it locks a real token-regression class instead of relying on ignore-file convention.
+- Guard: focused verifier/loop-state regressions cover forbidden tracked artifacts and guard-self weakening.
+- VERIFY: `npm run typecheck`, focused verifier/loop-state regressions, `npm run validate`, `npm test`, and `npm run health` passed after loop-state rotation.
 
 ### Cycle result - trace_source_ref_diagnostics
 
@@ -117,11 +126,3 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Loop effect: structural loop planning no longer scans `content/rpg/pack` or reopens pack files directly for this recurring audit class.
 - Guard: focused stale-audit regression runs the root scanner, pins world-id-only site output, and rejects old raw pack-loader references in the audit implementation.
 - VERIFY: `npm run typecheck` and focused stale-audit/assessor regressions passed before full verification.
-
-### Cycle result - cli_validate_loader_world_id
-
-- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
-- Engine/loop surface: `npm run validate` now discovers and targets shipped quests by `world_quest_id` and loads validation reports through `RpgSourceRuntime.loadWorldQuestReport`.
-- Loop effect: the public content gate no longer resolves world ids into raw package paths or reopens pack files outside the unified source runtime.
-- Guard: validation-bar regression pins source-runtime loading and rejects `loadRpgPackFile` / `resolveWorldQuestPackPath` in the validate CLI.
-- VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused validation/source regressions, `npm test`, and `npm run health` passed after loop-state rotation.

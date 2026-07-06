@@ -70,6 +70,7 @@ describe("bug_0176 — the sealed corpus manifest is guarded", () => {
       minStrongAssertions: 400,
       protectedFiles: [...PROTECTED_FILES],
       forbiddenFiles: [],
+      forbiddenTrackedFiles: [],
       forbiddenPathPatterns: [],
       hashPinFiles: [],
     };

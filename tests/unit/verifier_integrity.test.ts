@@ -19,6 +19,7 @@ import {
   countTautologyAssertions,
   detectLoopStateOverflow,
   detectForbiddenPathPatterns,
+  detectForbiddenTrackedFiles,
   detectForbiddenLegacyImports,
   detectCountRegressions,
   parseGuardConstants,
@@ -28,6 +29,7 @@ import {
   classifyDrift,
   PROTECTED_FILES,
   FORBIDDEN_FILES,
+  FORBIDDEN_TRACKED_FILES,
   FORBIDDEN_PATH_PATTERNS,
   HASH_PIN_FILES,
   MIN_TEST_CASES,
@@ -37,6 +39,7 @@ import {
   MAX_LIVE_LOOP_STATE_ENTRIES,
   type GuardConstants,
 } from "../../scripts/verify-integrity.js";
+import { LOOP_ARCHIVE_FILE } from "../../src/afk/loop_state.js";
 
 describe("detectDisabledTests catches every disabled/focused marker", () => {
   // Markers are assembled at runtime (not written verbatim) so this test file does
@@ -190,6 +193,19 @@ describe("detectForbiddenPathPatterns — retired test families stay gone", () =
   });
 });
 
+describe("detectForbiddenTrackedFiles — token-heavy local artifacts stay out of Git", () => {
+  it("blocks the ignored loop archive if it becomes tracked", () => {
+    const findings = detectForbiddenTrackedFiles([
+      "AI_LOOP_STATE.md",
+      LOOP_ARCHIVE_FILE,
+      "src/core/engine.ts",
+    ]);
+    expect(findings.map((f) => f.code)).toEqual(["FORBIDDEN_TRACKED_FILE"]);
+    expect(findings[0]!.where).toBe(LOOP_ARCHIVE_FILE);
+    expect(findings[0]!.message).toContain("untracked");
+  });
+});
+
 describe("detectForbiddenLegacyImports — live source stays RPG-only", () => {
   it("blocks imports of retired CYOA/parser modules in runtime code", () => {
     const findings = detectForbiddenLegacyImports([
@@ -274,6 +290,7 @@ describe("parseGuardConstants — pure parse of the guard's own defensive surfac
     expect(parsed!.minStrongAssertions).toBe(MIN_STRONG_ASSERTIONS);
     expect(parsed!.protectedFiles).toEqual(PROTECTED_FILES);
     expect(parsed!.forbiddenFiles).toEqual(FORBIDDEN_FILES);
+    expect(parsed!.forbiddenTrackedFiles).toEqual(FORBIDDEN_TRACKED_FILES);
     expect(parsed!.forbiddenPathPatterns).toEqual(FORBIDDEN_PATH_PATTERNS);
     expect(parsed!.hashPinFiles).toEqual(HASH_PIN_FILES);
   });
@@ -297,6 +314,7 @@ describe("detectGuardWeakening — lowering a floor or dropping a protected entr
     minStrongAssertions: 400,
     protectedFiles: ["a.ts", "b.ts"],
     forbiddenFiles: ["legacy.ts"],
+    forbiddenTrackedFiles: ["archive.md"],
     forbiddenPathPatterns: ["^legacy/.*$"],
     hashPinFiles: ["pin.ts"],
   };
@@ -313,6 +331,7 @@ describe("detectGuardWeakening — lowering a floor or dropping a protected entr
       minAssertions: 410,
       protectedFiles: ["a.ts", "b.ts", "c.ts"],
       forbiddenFiles: ["legacy.ts", "legacy2.ts"],
+      forbiddenTrackedFiles: ["archive.md", "local-heavy.md"],
       forbiddenPathPatterns: ["^legacy/.*$", "^retired/.*$"],
       hashPinFiles: ["pin.ts", "pin2.ts"],
     };
@@ -366,6 +385,12 @@ describe("detectGuardWeakening — lowering a floor or dropping a protected entr
     const fs = detectGuardWeakening(base, { ...base, forbiddenFiles: [] });
     expect(codes(fs)).toEqual(["GUARD_WEAKENED"]);
     expect(fs[0]!.message).toContain("legacy.ts");
+  });
+
+  it("removing a FORBIDDEN_TRACKED_FILES entry → GUARD_WEAKENED error", () => {
+    const fs = detectGuardWeakening(base, { ...base, forbiddenTrackedFiles: [] });
+    expect(codes(fs)).toEqual(["GUARD_WEAKENED"]);
+    expect(fs[0]!.message).toContain("archive.md");
   });
 
   it("removing a FORBIDDEN_PATH_PATTERNS entry → GUARD_WEAKENED error", () => {
@@ -437,6 +462,7 @@ describe("runDrift surfaces GUARD_WEAKENED (and the env override downgrades it)"
       minStrongAssertions: 400,
       protectedFiles: ["a.ts"],
       forbiddenFiles: [],
+      forbiddenTrackedFiles: [],
       forbiddenPathPatterns: [],
       hashPinFiles: [],
     };
@@ -491,6 +517,16 @@ describe("runStatic on the real repo (this is the bar)", () => {
     );
     expect(res.findings.filter((f) => f.code === "FORBIDDEN_FILE_PRESENT")).toEqual([]);
     expect(res.findings.filter((f) => f.code === "FORBIDDEN_PATH_PATTERN")).toEqual([]);
+  });
+
+  it("token-heavy ignored loop archives are not tracked in the real repo", () => {
+    expect(FORBIDDEN_TRACKED_FILES).toContain(LOOP_ARCHIVE_FILE);
+    const tracked = execFileSync("git", ["ls-files", "--", LOOP_ARCHIVE_FILE], {
+      cwd: process.cwd(),
+      encoding: "utf8",
+    }).trim();
+    expect(tracked).toBe("");
+    expect(res.findings.filter((f) => f.code === "FORBIDDEN_TRACKED_FILE")).toEqual([]);
   });
 
   it("the repo is comfortably above the test-count floor", () => {
