@@ -6,7 +6,7 @@ name: CI
 
 on:
   push:
-    branches: [main, develop]
+    branches: [main]
   pull_request:
 
 # Least-privilege CI token: this workflow only READS the repo (checkout, install,

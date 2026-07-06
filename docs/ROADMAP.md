@@ -1,7 +1,8 @@
 # AdventureForge Roadmap
 
 This roadmap is current operational guidance. Historical multi-mode plans live in
-git history, not in the active roadmap.
+`docs/archive/` (the convention for superseded planning docs) and git history,
+not in the active roadmap.
 
 AdventureForge is converging on one product: a deterministic, text-based,
 open-world RPG engine whose shipped content is placed through a contiguous world
@@ -10,7 +11,8 @@ graph.
 ## North Star
 
 - One runtime mode: `rpg`.
-- One shipped-content catalog: `list_world`.
+- One shipped quest catalog: `list_world` (the overworld data source has its own
+  catalog tool, `list_overworld` — not a retirement target).
 - One shipped-content source key: `world_quest_id`.
 - One shipped quest start path: `start_world_quest`.
 - One autonomous loop: inspect, change one aligned surface, verify, commit.
@@ -20,7 +22,9 @@ graph.
 ## Current Anchors
 
 - `AGENTS.md` is the trust-but-verify charter.
-- `ADVENTUREFORGE_BUILD_SPEC.md` is the active build spec.
+- `ADVENTUREFORGE_BUILD_SPEC.md` is the standing architecture contract.
+- `docs/VISION.md` is the why; `docs/DECISION_LOG.md` is the append-only memory
+  of settled questions.
 - `content/world/charter_marches.yaml` is the shipped RPG quest graph.
 - `content/world/new_york_overworld.json` is the large contiguous overworld data
   source.
@@ -28,8 +32,10 @@ graph.
 - `src/mcp/tools.ts` is the tested ToolApi source of truth.
 - `src/validate/rpg_foundation_validator.ts` carries high-depth RPG foundation
   checks.
-- `AI_LOOP_STATE.md` is the compact cycle handoff; old detail belongs in git
-  history or ignored local artifacts.
+- `docs/CURRENT_PLAN.md` is the rolling plan (overwritten each ultraplan; the
+  implementation subagent's sole hand-off), while `AI_LOOP_STATE.md` is the
+  rotating per-cycle result log (machine-parsed). Superseded planning docs move
+  to `docs/archive/`; detail not worth keeping goes to git history.
 
 ## Priority Order
 
@@ -47,25 +53,30 @@ graph.
 
 ## Near-Term Work Queue
 
-- Split large world-session behavior into smaller tested subsystems without
-  changing public tool contracts.
-- Add more restore-time proofs for event lifecycle consistency and derived
-  progress state.
-- Make compact overworld/RPG responses more uniform: ids first, labels only where
-  needed, omitted counts for capped lists.
-- Continue retiring package-path exposure from public CLI, MCP, docs, and loop
-  prompts.
-- Expand RPG mechanics only with deterministic tests and validator coverage.
-- Keep active docs short and current; move old planning detail to git history.
+(Refreshed 2026-07-06. The prior queue is substantially landed: the world-session
+split into tested `session_*` submodules, id-first/omitted-count compact
+responses, package-path retirement from public surfaces, and coordinate
+navigation all shipped — see `docs/DECISION_LOG.md` and git history.)
+
+- Port retired stories back as RPG world quests one at a time (36 retired packs
+  are tagged `stories-52-pre-rpg-consolidation`; each port reuses playtested
+  prose and is a well-scoped cycle: adapt → validate → blind-playtest → gate).
+- Deepen gameplay per Priority 2: combat formulas, stat tables, scaling, and
+  stateful NPC/event consequences, each with deterministic tests and validator
+  coverage.
+- Tighten the remaining restore-time sequencing proofs beyond discovery prefixes.
+- Add lightweight token/cost telemetry under ignored run output so loop
+  efficiency is measured, not guessed.
+- Shrink low-level debug helpers that still leak raw pack paths in diagnostics.
+- Keep active docs short and current; move superseded planning docs to
+  `docs/archive/`.
 
 ## Verification
 
 Every cycle that changes source, docs, tests, content, schemas, or tooling must
-finish with:
-
-- `npm run health`
-- `npm run validate`
-- `npm test`
+finish with `npm run health` — the bar already chains `npm run validate` and
+`npm test` (plus integrity, typecheck, lint, format, and UI typecheck), so do not
+re-run them on top of it.
 
 Focused tests should run first when a change has a clear local guard. Do not
 weaken validators, protected assets, or `scripts/verify-integrity.ts` to make a
@@ -73,14 +84,13 @@ change pass.
 
 ## Completion Checks
 
-The roadmap is achieved only when current evidence proves:
+The consolidation-era checks were all met as of 2026-07-06 and are now standing
+invariants (regressions are bugs): world-graph identity everywhere (raw package
+paths rejected at every public boundary), no active docs or prompts directing
+work at retired variants, restore paths rejecting malformed/forged/stale/
+cross-source snapshots, compact loop surfaces bounded enough for long blind
+sessions, and a green bar (`npm run validate` and `npm test` via health).
 
-- shipped play, validation, replay, inspection, save/load, and blind playtests all
-  use world graph identity instead of raw package paths;
-- active docs and agent prompts no longer direct work toward retired engine
-  variants;
-- the world graph is the visible content structure for shipped play;
-- state persistence rejects malformed, forged, stale, or cross-source restores;
-- compact loop surfaces let long-running agents play and audit with bounded
-  context;
-- `npm run validate` and `npm test` pass on the final tree.
+The roadmap's open horizon is Priority 2 (gameplay depth) and Priority 5
+(content expansion through story ports) — the Near-Term Work Queue above is the
+live frontier.

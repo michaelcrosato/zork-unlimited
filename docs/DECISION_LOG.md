@@ -18,6 +18,11 @@ cannot remember what was already ruled out; this file is **append-only** and nev
 
 ## Confirmed CLOSED — do not re-nominate (with proof)
 
+_(Seeded 2026-06-08. The gaps below remain CLOSED, but several proof paths were
+renamed by the 2026-07-06 RPG-only consolidation — see the "Post-consolidation
+re-baseline" entry at the bottom for the current path mapping before treating a
+dead path as a regression.)_
+
 Seeded 2026-06-08 from `docs/CURRENT_PLAN.md` re-aim #19 (and #17/#18) "false alarm" findings:
 
 - **BFS forward-reachability validator** — implemented. `UNREACHABLE_ROOM` and `SOFTLOCK` in
@@ -40,6 +45,10 @@ Seeded 2026-06-08 from `docs/CURRENT_PLAN.md` re-aim #19 (and #17/#18) "false al
   regression `tests/regression/parser_validator_item_unplaced.test.ts`. (chosen by re-aim #19)
 
 ## Known OPEN / deliberately deferred (not "closed" — fair game, but note the deferral reason)
+
+_(As of 2026-06-09 — superseded. The current OPEN/retired status of every bullet
+below is restated in the 2026-07-06 re-baseline entry at the bottom; read that
+first.)_
 
 - **Stale docstring in `scripts/verify-integrity.ts`** (lines ~31–33 still say the tautology gap "is
   not caught" after bug_0308 closed it) — S-effort doc fix; deferred, blocks no detection.
@@ -756,3 +765,53 @@ verifier got strictly stronger (FORBIDDEN_* guards, protected→forbidden
 migration enforcement); CI is green on the full bar; and the one-engine
 consolidation matches the project's stated direction — a single deep world
 under TTRPG-style rules, evolved by the dev↔playtest↔feedback flywheel.
+
+### Post-consolidation re-baseline — 2026-07-06 (docs/branches cleanup session)
+
+**Why this entry exists:** the 2026-07-06 consolidation renamed or deleted
+several paths recorded as PROOF in the standing "Confirmed CLOSED" section, and
+a reviewer verifying those proofs today would be steered into declaring false
+regressions — the exact churn this log exists to stop. Per the header contract,
+this appends the correction instead of editing history. **Standing norm
+(extends the 2026-07-06 consolidation entry's rule): any repo-wide rename or
+consolidation that invalidates a recorded proof path MUST append a re-baseline
+entry like this one in the same change.**
+
+**Proof-path remapping (all still CLOSED — these are renames, not regressions):**
+
+- `src/validate/parser_validator.ts` no longer exists. Its checks live on
+  wholesale in `src/validate/rpg_foundation_validator.ts`: `ITEM_UNPLACED`
+  (~line 219), `UNREACHABLE_ROOM` (~385), `SOFTLOCK` (~433),
+  `DIALOGUE_GOTO_MISSING` (~697).
+- `tests/regression/parser_validator_item_unplaced.test.ts` was deleted; its
+  witness lives in the data-driven negative-fixture corpus test over
+  `content/broken-fixtures/`.
+- `tests/regression/support/parser_rolls.ts` (cited by the out-of-sequence
+  2026-06-25 entry) was removed with the parser runtime.
+- Still valid as recorded: `resolveProvider`/`MockAuthorProvider` in
+  `src/mcp/tools.ts`; `TAUTOLOGY_RE` in `scripts/verify-integrity.ts`;
+  `guardFinite` in `src/core/effects.ts`; `divergedAtStep` in
+  `src/trace/replay.ts`; `tests/regression/assessor_blind_pass_rotation.test.ts`;
+  per-call `hide_graph` in `src/mcp/server.ts`.
+
+**Ruling retired as moot:** the 🚫 TARGET_PER_MODE anti-pattern ruling
+(2026-06-09). The constant was deleted with the CYOA/parser runtimes and the
+"Gaps A/B/F/G are open" escape hatch is long-closed (A/B, F, and G were each
+confirmed closed in later entries). **The ruling's spirit stands against the
+successor lever: never cure assessor saturation by inflating the world-graph
+breadth target in `src/afk/assessor.ts` — pack count is not the objective.**
+Revisit breadth only on an explicit human authoring goal.
+
+**Current boundary snapshot (supersedes the seeded top sections):**
+
+- OPEN: multi-line tautology (`TAUTOLOGY_RE` still has no dotall handling);
+  playtest-trend "groove detector" (design first); assessor frontier/benchmark
+  scorecard (meaningful only with a live API-key path).
+- CLOSED since the seeded list: the verify-integrity stale docstring (7382a58);
+  the class-level stale-reactive-description check (implemented as the
+  suppression-tuned audit in `src/afk/stale_reactive_audit.ts` and driven
+  across the corpus in the 2026-06-19 entries).
+- Ordering correction: the "Ultraplan cycle — 2026-06-25" entry was inserted
+  out of sequence (it sits before the 2026-06-19 wolf_winter entry);
+  chronologically it belongs between that entry and the 2026-07-06
+  consolidation entry. Recorded here rather than reordered.

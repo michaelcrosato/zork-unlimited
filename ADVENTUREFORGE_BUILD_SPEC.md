@@ -2,17 +2,20 @@
 
 ## Unified Open-World RPG Engine
 
-This is the active build specification for AdventureForge. The project is no
+This is the standing architecture contract for AdventureForge. The project is no
 longer a staged text-game sampler. It is a single deterministic, text-based,
-open-world RPG engine backed by a contiguous world graph.
+open-world RPG engine backed by a contiguous world graph. The consolidation this
+document originally specified was completed on 2026-07-06 (see the dated entry in
+`docs/DECISION_LOG.md`); what remains here is the settled architecture and the
+rules that keep it true.
 
 `AGENTS.md` is the operating charter. The short version is trust, but verify:
 agents may change engine code, schemas, content, tooling, and docs, but every
 substantive change must keep the repo green.
 
-## Current Objective
+## The Architecture Baseline
 
-AdventureForge should converge on one architecture:
+AdventureForge converged on one architecture:
 
 - One runtime mode: `rpg`.
 - One public shipped-content source key: `world_quest_id`.
@@ -36,7 +39,7 @@ validated data; agents interact only through structured APIs.
 ### Layer 1: World And Content Data
 
 - `content/world/new_york_overworld.json` holds the contiguous overworld data.
-- `content/world/charter_marches.json` holds the shipped RPG quest graph.
+- `content/world/charter_marches.yaml` holds the shipped RPG quest graph.
 - `content/rpg/quests/*.yaml` holds RPG quest packs registered through the world
   graph.
 - Raw pack paths are edit metadata, not public play or validation sources.
@@ -57,15 +60,19 @@ produce the same state hash.
 
 - `src/mcp/server.ts` exposes tools over MCP.
 - `src/mcp/tools.ts` is the tested ToolApi source of truth.
-- `bin/validate.ts`, `bin/replay.ts`, `bin/inspect.ts`, and `bin/rpg_play.ts`
-  are operator surfaces.
-- `agents/` and `src/ai-loop.ts` coordinate autonomous improvement cycles.
+- `bin/validate.ts`, `bin/replay.ts`, `bin/inspect.ts`, `bin/rpg_play.ts`,
+  `bin/author.ts`, and `bin/assess.ts` are operator surfaces.
+- `agents/`, `src/ai-loop.ts`, and `src/afk/` (the assessor) coordinate
+  autonomous improvement cycles; `src/gen/` mints procedural eval packs;
+  `src/blind/` verifies blind-playtest reports.
 
-Adapters should be thin. Engine behavior belongs below the MCP and CLI layers.
+This layer map names the primary surfaces, not every module. Adapters should be
+thin. Engine behavior belongs below the MCP and CLI layers.
 
 ## Public Gameplay Contract
 
-Use these surfaces for shipped world play:
+Use these surfaces for shipped world play (the listed args are the primary
+options, not exhaustive signatures — `src/mcp/tools.ts` is the source of truth):
 
 - `list_world({ include_graph?, include_routes? })`
 - `world_path({ world_quest_id })`
@@ -126,26 +133,19 @@ Required patterns:
 - Prefer ids over repeated labels in compact payloads.
 - Cap compact inventory, flag, journal, action, and transcript arrays with omitted
   counts when needed.
-- Keep `AI_LOOP_STATE.md` to the tested live window; old detail belongs in git
-  history or ignored local artifacts.
+- Keep `AI_LOOP_STATE.md` to the tested live window; superseded planning docs
+  move to `docs/archive/`, and detail not worth keeping in the tree belongs in
+  git history or ignored local artifacts.
 - Keep raw logs, blind reports, generated evidence, and run output out of tracked
   files unless they are curated bug artifacts.
 
 ## Verification Bar
 
-For normal repo changes, run:
-
-- `npm run typecheck`
-- `npm run lint`
-- `npm run format:check`
-- `npm test`
-- `npm run validate`
-- `npm run health`
-
-`npm run health` already includes integrity, typecheck, lint, format check, full
-tests, and validation. The autonomous cycle still runs explicit `npm run
-validate` and `npm test` before commit because the current operator contract
-requires it.
+`npm run health` is the bar for anything that lands (see `AGENTS.md`, the single
+authoritative description). It chains verifier integrity, typecheck, lint, format
+check, the full test suite (`npm test`), UI typecheck, and quest validation
+(`npm run validate`) — so do not run those again on top of health; the granular
+scripts are for fast iteration only.
 
 Do not weaken tests, validators, protected assets, or `scripts/verify-integrity.ts`
 to make a change pass.
@@ -162,28 +162,17 @@ When fixing a bug:
 
 ## Agent Cycle
 
-Each cycle is:
+The autonomous cycle is owned by `docs/afk_loop.md` (the protocol) and `loop.sh`
+(the driver); `AGENTS.md` is the charter. In short: assess, make one focused
+change, blind-playtest, pass `npm run health`, record a terse `AI_LOOP_STATE.md`
+entry, and commit only green (commit/push are env-gated by `loop.sh`).
 
-1. Run the configured maintenance cleaner.
-2. Inspect current state with targeted `rg`, `git`, and ranged reads.
-3. Pick one change that makes the unified RPG end state more true.
-4. Edit code, docs, schema, tooling, or tests.
-5. Run focused tests.
-6. Run `npm run health`, `npm run validate`, and `npm test`.
-7. Record a terse `AI_LOOP_STATE.md` entry.
-8. Commit and push.
-9. Pause at the cycle boundary when the operator requests it.
+## Consolidation Audit (passed 2026-07-06)
 
-## Completion Audit
-
-The goal is not complete until current evidence proves all of these:
-
-- No active CYOA runtime, content tree, binary, or test fixture remains.
-- No active semantic-command runtime, content tree, binary, or test fixture
-  remains.
-- Public shipped play starts through `world_quest_id`.
-- Shipped content is discoverable through a contiguous world graph.
-- Saves, traces, and sessions are RPG-mode only.
-- Core engine, gameplay, persistence, and token-efficiency checks are mature and
-  covered by tests.
-- `npm run validate` and `npm test` pass on the final state.
+The consolidation goal was audited complete on 2026-07-06: no active CYOA or
+semantic-command runtime, content tree, binary, or test fixture remains; public
+shipped play starts through `world_quest_id`; shipped content is discoverable
+through the contiguous world graph; saves, traces, and sessions are RPG-mode
+only; and the full bar passed on the final state. These are now standing
+invariants — regressions against any of them are bugs, and the do-not-rebuild
+rules above stay binding.

@@ -199,7 +199,7 @@ const DOC_STALENESS_EXCLUDED_DOCS = new Set(["DECISION_LOG.md"]);
 
 function docStalenessDocs(root: string): string[] {
   const out: string[] = [];
-  for (const f of ["AGENTS.md", "README.md", "AI_AGENT_PROMPT.md"]) {
+  for (const f of ["AGENTS.md", "README.md"]) {
     if (existsSync(join(root, f))) out.push(f);
   }
   const docsDir = join(root, "docs");

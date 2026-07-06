@@ -1,0 +1,15 @@
+# Kept out of Cursor's semantic index for context budget, but still openable as
+# AI context (unlike .cursorignore, which blocks AI access): open these
+# explicitly when a task needs them — e.g. traces/bugs/ artifacts and
+# tests/regression/ when locking a bug fix per AGENTS.md.
+AI_LOOP_STATE_ARCHIVE.md
+ADVENTUREFORGE_BUILD_SPEC.md
+docs/DECISION_LOG.md
+docs/archive/
+package-lock.json
+ui/package-lock.json
+content/world/new_york_overworld.json
+content/rpg/quests/*.yaml
+traces/
+corpus/
+tests/regression/

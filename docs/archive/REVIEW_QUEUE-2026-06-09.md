@@ -1,4 +1,12 @@
-# REVIEW QUEUE — operator dashboard
+# REVIEW QUEUE — operator dashboard (ARCHIVED 2026-07-06; every item resolved)
+
+> **Historical snapshot — nothing here is live.** §1's stand-down was resolved as
+> option (b): the loop resumed and the local commit (printers_night, d2bcbbd3)
+> was pushed; ~870 commits and ~490 cycles landed after this was written. §3's
+> printers_night note was fixed 2026-06-20 (bug_0396); the watchtower_road items
+> died with that pack in the 2026-07-06 RPG-only consolidation. §2's pack-wiring
+> procedure (per-pack health steps, all_packs_validated_by_bar.test.ts) was
+> replaced by the single `npm run validate` discovery in bin/validate.ts.
 
 _Last updated by orchestrator: 2026-06-09 (session resuming a stopped loop)._
 Read top-to-bottom; ranked by what needs your judgment.

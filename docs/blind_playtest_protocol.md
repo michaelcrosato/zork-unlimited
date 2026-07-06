@@ -1,4 +1,4 @@
-# Blind playtest protocol (the §12.4 "fresh player" step)
+# Blind playtest protocol (the "fresh player" step)
 
 This is the canonical, repeatable procedure for the playtest step of an
 improvement cycle — manual or autonomous (AFK). It is one of the project's two
@@ -13,9 +13,10 @@ the solution, the test is worthless.
 
 ## When to run it
 
-Once per improvement cycle, after the pack validates green. In the AFK loop it is
-the step that follows `validate_pack` and precedes "pick one fix" — its findings
-are a primary input to the fix.
+Once per improvement cycle, with the target quest validating green
+(`validate_quest` over MCP, or `npm run validate`; for a content_new cycle,
+validate the new quest first). In the AFK loop it is step 1 of the WORK phase —
+before "make ONE improvement" — and its findings are a primary input to the fix.
 
 ## Procedure (5 steps)
 
@@ -31,6 +32,12 @@ are a primary input to the fix.
    prompt template below. Never paste in design notes, the YAML, scene ids, or the
    solution. The subagent reaches the game **only** through the
    `mcp__adventureforge__*` MCP tools (discoverable via ToolSearch).
+   The packaged implementation of this isolation is `npm run blind`
+   (blind-tester/run.sh: isolated temp cwd, hard-disallowed file/shell/web tools,
+   automatic report save + verification; its locked prompt is
+   blind-tester/prompt.md, this template's operational twin — keep the two in
+   sync). Use it when running outside an Agent-tool context, and
+   `npm run blind:smoke` to prove the MCP path with no tokens.
 
 3. **Collect the structured report** (sections 1–7 in the template): the route(s)
    taken, whether it worked mechanically, clarity/enjoyment ratings, confusion
@@ -39,8 +46,9 @@ are a primary input to the fix.
    findings as data (integer clarity/enjoyment, S0–S4 bug list, confusions,
    would_replay, verdict). The report verifier (`src/blind/report_verifier.ts`)
    REJECTS a report without a schema-valid block, so a playtest only counts when
-   its feedback is machine-rankable; the parsed interview is what the assessor
-   ranks the next cycle's work from.
+   its feedback is machine-rankable; that pass/fail is what lets the assessor
+   count the playtest and rotate targets, and the structured fields keep the
+   feedback rankable as the assessor grows into consuming them.
 
 4. **Triage findings into one focused fix.** Classify each finding by fix layer
    (`content | hint_text | quest_structure | engine_rule | validator | test`).
@@ -54,7 +62,7 @@ are a primary input to the fix.
      regression test for the new behaviour. Don't route around the verifier.
    - Re-run `validate_*` until green and replay the affected route.
 
-5. **Lock the fix (§15).** Write/refresh a bug artifact in `traces/bugs/` and add a
+5. **Lock the fix.** Write/refresh a bug artifact in `traces/bugs/` and add a
    regression test in `tests/regression/` that fails if the flaw returns. Run
    `npm run health`. Commit in one small green increment with durable notes in
    `AI_LOOP_STATE.md`.
@@ -101,7 +109,8 @@ PLAY:
   include_state = true unless diagnosing a raw engine-state bug.
 - Make decisions a curious, sensible human would: follow clues, pursue the apparent
   goal, investigate what seems important. Don't pick randomly. Narrate your reasoning
-  each turn. Do at most 2-3 playthroughs (try a different strategy on later runs).
+  each turn. Do ONE thorough playthrough to an ending; add a SECOND only if a
+  different early choice clearly opens a distinct route (this runs under a time budget).
 - WATCH FOR: loops with no progress, options that don't make sense, dead ends, clues
   that point nowhere, stale/contradictory scene text, an ending you can't find.
 
@@ -110,7 +119,8 @@ REPORT (return these sections):
 2. Did it work mechanically? rejected actions, broken state, loops?
 3. Understandable & fun? could you tell the goal? clues legible? clarity 1-5 + enjoyment 1-5.
 4. Confusion / friction points.
-5. Bugs or design flaws — concrete, each with the scene where you hit it.
+5. Bugs or design flaws — concrete, each with the scene where you hit it and a
+   severity S0(cosmetic)-S4(blocking).
 6. Verdict: would a real player finish satisfied? one paragraph.
 7. EXIT INTERVIEW (mandatory): one fenced json exit-interview block restating the
    findings as data — integer clarity/enjoyment 1-5, goal_understood, got_stuck,
@@ -119,12 +129,13 @@ REPORT (return these sections):
 Be honest and specific; a critical, well-observed report is more useful than a flattering one.
 ```
 
-## Worked example
+## Worked example (historical — this quest was retired in the 2026-07-06 consolidation)
 
 The first run of this protocol on _The Watchtower Road_ (seed 7) reached both
 `ending_truth` and `ending_escape`, confirmed mechanics/save-load, and surfaced
 four content-polish findings (stale cart/cellar-door text, a journal entry that
 stacked on cellar re-entry, and a ledger referenced by an ending but never carried).
 All four were fixed as `content`/`hint_text`, locked by
-`traces/bugs/bug_0002_watchtower_blind_polish.yaml` and a regression test. That is the loop closing:
-write → play (blind) → find → fix → lock.
+`traces/bugs/bug_0002_watchtower_blind_polish.yaml` (the quest and its regression
+test were later retired with the pack; the artifact survives as history). That is
+the loop closing: write → play (blind) → find → fix → lock.

@@ -1,4 +1,23 @@
 #!/usr/bin/env bash
+# The AFK loop driver. Usage: ./loop.sh [--once]   (protocol: docs/afk_loop.md)
+#
+# Env knobs (defaults in brackets):
+#   AI_LOOP_COMMIT=1                 commit green cycles [0 = evidence-only]
+#   AI_LOOP_PUSH=1                   push after commit [0]; see the push note below
+#   AI_LOOP_MAX_CYCLES=N             stop after N cycles [unbounded]
+#   AI_LOOP_DELAY_SECONDS=N          pause between cycles [10]
+#   AI_AGENT_CMD="..."               agent command [claude -p, else codex exec]
+#   AI_LOOP_MODEL / AI_LOOP_EFFORT / AI_LOOP_BUDGET_USD   claude flags [sonnet/-/-]
+#   AI_AGENT_TIMEOUT_SECONDS=N       hang-kill budget per agent turn [2400]
+#   AI_LOOP_MAX_CONSECUTIVE_FAILURES / AI_LOOP_MAX_TOTAL_FAILURES   breakers [5 / 15]
+#   AI_LOOP_ALLOW_DIRTY=1            start on a dirty tree (risky; see below) [0]
+#   AI_LOOP_ALLOW_VERIFIER_EDITS=1   acknowledge a deliberate verifier change [0]
+#   AI_LOOP_COMMIT_MESSAGE="..."     commit message override
+#
+# Companions: npm run loop:status / loop:stop (project-scoped, pid-file based).
+# loop-status.sh's breaker/velocity telemetry reads ai-runs/wrapper.log, which
+# this script does NOT write — launch with `./loop.sh 2>&1 | tee ai-runs/wrapper.log`
+# when you want that telemetry.
 set -euo pipefail
 
 cycles="${AI_LOOP_MAX_CYCLES:-}"
@@ -22,8 +41,6 @@ if [[ "${AI_LOOP_ALLOW_DIRTY:-0}" != "1" ]] && [[ -n "$(git status --porcelain)"
   echo "Commit or stash first, or set AI_LOOP_ALLOW_DIRTY=1 to accept the risk."
   exit 1
 fi
-
-status_filter=(. ':(exclude)ai-runs' ':(exclude)node_modules' ':(exclude)dist' ':(exclude)coverage' ':(exclude)traces/*.json')
 
 # ── Project-scoped PID files (so orchestrator tooling tracks THIS loop only) ──────
 # With several projects running identical-looking `./loop.sh` / `claude -p` processes,
@@ -113,7 +130,6 @@ safe_commit_if_enabled() {
   # health` passed in run_cycle (it aborts the cycle before reaching here on a red
   # check). So commits are unconstrained in scope yet always verified. ai-runs/ and
   # other ignored scratch are excluded only because .gitignore handles them.
-  local baseline="$1"  # unused; the loop does not refuse on a dirty baseline
   if [[ "${AI_LOOP_COMMIT:-0}" != "1" ]]; then
     return 0
   fi
@@ -144,8 +160,7 @@ run_cycle() {
   # Each gate fails the cycle EXPLICITLY (|| return 1) rather than relying on
   # `set -e`, so a bad cycle skips its commit and the outer loop continues to the
   # next one (resilient unattended operation) instead of the whole script dying.
-  local baseline start_ref
-  baseline="$(git status --porcelain -- "${status_filter[@]}")"
+  local start_ref
   start_ref="$(git rev-parse HEAD)"
   # Self-recovery: revert a FAILED cycle's uncommitted scratch back to the pre-cycle
   # state. Without this, a single bad authored artifact (observed: an over-complex RPG
@@ -171,13 +186,21 @@ run_cycle() {
   # real content change is the legitimate snapshot-update workflow → surfaced, allowed.
   # This blocks only actual weakening: deleted/disabled tests, a dropped test count,
   # a deleted protected asset, or a re-pin with NO content change (the launder pattern).
-  # AI_LOOP_ALLOW_VERIFIER_EDITS=1 overrides only the unaccompanied-re-pin case.
+  # AI_LOOP_ALLOW_VERIFIER_EDITS=1 overrides only the unaccompanied-re-pin and
+  # acknowledged guard-loosening cases; real test weakening is never downgradable.
   npm run verify:integrity -- --against "$start_ref" || { echo "verifier weakened/laundered — reverting, skipping commit"; _revert_failed_cycle; return 1; }
   # Quality feedback is mandatory: no blind-playtest record ⇒ no commit.
   require_playtest_record || { _revert_failed_cycle; return 1; }
-  safe_commit_if_enabled "$baseline" || { echo "commit failed"; return 1; }
+  safe_commit_if_enabled || { echo "commit failed"; return 1; }
   if [[ "${AI_LOOP_PUSH:-0}" == "1" ]]; then
-    git push || { echo "push failed"; return 1; }
+    # A push failure must not fail the cycle: the verified commit is real progress
+    # (the comment above _revert_failed_cycle already forbids reverting it), and
+    # counting it as "no progress" would let rejected pushes trip the circuit
+    # breakers. Note: main is protected by a required 'verify' status check, so a
+    # bare push of a fresh local commit is ALWAYS rejected — land loop commits via
+    # a scratch branch/PR instead, and leave AI_LOOP_PUSH=0 in normal operation.
+    git push || echo "⚠ committed locally but push was rejected (protected main" \
+      "needs a green 'verify' run on the commit first) — not counted as a failure."
   fi
   return 0
 }

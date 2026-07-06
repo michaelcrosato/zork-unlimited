@@ -1,13 +1,16 @@
-# Keep the repo map focused. Add ignored files manually when editing that area.
+# Keeps aider's repo map lean. NOTE aider's real semantics: it REFUSES to /add
+# any path matched here (there is no manual-add escape hatch). The bug-lock
+# workflow (AGENTS.md: traces/bugs/ artifact + tests/regression/ test) and
+# quest-pack editing therefore need a tool that can see those paths (Claude
+# Code / Codex) — do not attempt them via aider with this file in place.
 node_modules/
-ui/node_modules/
 dist/
-ui/dist/
 coverage/
 ai-runs/
 blind-tester/reports/
 .agent-cleaner/
-.codex/
+.codex/*
+!.codex/config.toml
 saves/
 transcripts/
 *.log
@@ -17,13 +20,11 @@ transcripts/
 AI_LOOP_STATE_ARCHIVE.md
 ADVENTUREFORGE_BUILD_SPEC.md
 docs/DECISION_LOG.md
-docs/ULTRAPLAN-*.md
+docs/archive/
 package-lock.json
 ui/package-lock.json
 content/world/new_york_overworld.json
-content/cyoa/pack/*.yaml
-content/parser/pack/*.yaml
-content/rpg/pack/*.yaml
+content/rpg/quests/*.yaml
 traces/
 corpus/
 tests/regression/

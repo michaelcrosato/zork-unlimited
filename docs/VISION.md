@@ -15,10 +15,10 @@ that loop, not an input to it.
    │                                                        │
    ▼                                                        │
  AI dev cycle ──► verification bar ──► blind AI playtest ──► exit interview
- (explore →        (npm run health:      (fresh agent, NO      (structured,
-  plan → code →     validator, tests,     repo access, plays    machine-ranked
-  commit)           integrity guard,      only through the      feedback)
-                    UI typecheck)         MCP server)
+ (explore →        (npm run health —      (fresh agent, NO      (structured,
+  plan → code →     the full bar: types,   repo access, plays    machine-validated
+  commit)           lint, format, tests,   only through the      feedback)
+                    integrity, UI, packs)  MCP server)
 ```
 
 - **The dev is an AI** (any capable coding agent — the loop harness is
@@ -33,8 +33,10 @@ that loop, not an input to it.
 - **The exit interview is the coupling.** Every playtest ends with a
   validated `json exit-interview` block (clarity/enjoyment scores, bug list
   with severities, confusions, verdict). The report verifier rejects a
-  playtest without one; the assessor ranks the next cycle's work from it.
-  Feedback that can't be ranked is feedback that gets lost.
+  playtest without one; a schema-valid interview is what lets the assessor
+  count the playtest and rotate targets, and its structured scores are the
+  rankable substrate the assessor grows into consuming. Feedback that can't
+  be ranked is feedback that gets lost.
 
 If the flywheel turns correctly, quality compounds: stories accumulate
 playtested fixes, the engine accumulates mechanics the stories demanded, and
@@ -72,8 +74,8 @@ seed ⇒ same story) so playtests are replayable evidence, not anecdotes.
   finishing.
 - **For the AI playtester**: observations terse enough to play a long session
   in one context window (compact projections + a one-time legend), and an
-  action surface honest enough that everything offered is executable
-  (legal ⊇ executable, always).
+  action surface honest enough that the listed and executable sets coincide —
+  everything offered executes, and everything executed was offered.
 - **For the AI dev**: a verification bar strong enough to trust its own
   changes — validators with rejection-direction witnesses, an integrity
   guard against test-weakening, determinism property checks — so autonomy
