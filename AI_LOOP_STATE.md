@@ -1,10 +1,19 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 484 -->
+<!-- historical_cycle_count: 485 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - overworld_world_name_opt_in
+
+- Pre-cycle: `C:\dev\agent-cleaner` measure/gates passed through WSL; optional secret scanner remains absent, and WSL git-dir warnings still print after the green gate summary.
+- Engine/loop surface: MCP compact overworld projections now omit repeated `context.world` by default, while `include_world_name: true` restores the world label; underlying UI/engine compact views still carry the name.
+- Loop effect: measured `start_overworld` drops from 797 to 762 bytes, repeated `get_overworld_session_context` from 807 to 772, route planning from 873 to 838, and travel from 1224 to 1189; opt-in world-name reads remain 807 bytes.
+- Self-critique: this is a small repeated-envelope win rather than a mechanic upgrade, but it removes static metadata from the hot overworld loop without hiding current town, area, or region.
+- Guard: focused MCP overworld and server-registration regressions pin default omission, world-name opt-in, clone safety, and ToolSearch schema budget.
+- VERIFY: `C:\dev\agent-cleaner`, focused MCP regressions, payload probe, `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, `npm test`, `npm run health`, and `npm run assess` passed after loop-state rotation.
 
 ### Cycle result - compact_world_path_rows
 
@@ -131,12 +140,3 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Self-critique: this trims the hot overworld loop surface and keeps the command directly actionable, but route-option opt-ins and travel logs still carry full road ids for debug/replay integrity.
 - Guard: focused overworld MCP, UI compact-view, server-registration, and snapshot-integrity regressions pin tuple shape, destination travel, compatibility `road_id` travel, and schema budget.
 - VERIFY: `C:\dev\agent-cleaner`, focused overworld/schema regressions, payload probe, `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, `npm test`, and `npm run health` passed after loop-state rotation.
-
-### Cycle result - list_world_tuple_default
-
-- Pre-cycle: `C:\dev\agent-cleaner` measure/gates passed through WSL; optional secret scanner remains absent.
-- Engine/loop surface: default `list_world` quest rows are now compact `[world_quest_id, title, playable]` tuples; `include_details`/`include_routes` keep object rows for readable graph/debug callers.
-- Loop effect: the shipped quest catalog default drops from 1439 to 863 bytes, and AFK target selection decodes the tuple directly instead of pulling object fields.
-- Self-critique: this is a catalog-read win rather than a per-turn engine win, but it trims the ordinary target-selection surface blind agents and maintenance loops touch before play starts.
-- Guard: focused MCP catalog, assessor, AI-loop, and MCP registration regressions pin tuple defaults, detailed object opt-ins, and the public tool description.
-- VERIFY: `C:\dev\agent-cleaner`, focused catalog/assessor/AI-loop/schema regressions, payload probe, `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, `npm test`, and `npm run health` passed after loop-state rotation.

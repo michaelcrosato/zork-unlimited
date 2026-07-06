@@ -533,6 +533,8 @@ Make discovered overworld quest leads start real RPG sessions.
 - MCP now exposes compact overworld context for repeated loop turns: vitals,
   immediate movement/local refs, opt-in global ids/routes, pending roads, and
   recent journal.
+- MCP compact overworld projections omit the repeated world-name label by
+  default; `include_world_name: true` restores it for debug or standalone reads.
 - ToolApi/public MCP `start_overworld` and `get_overworld_session` now return
   compact context by default; callers can pass `compact_context: false` or
   `include_observation: true` only when they need full observation objects.

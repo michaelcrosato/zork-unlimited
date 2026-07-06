@@ -1202,8 +1202,10 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(defaultRead).toMatchObject({ ok: true, session_id: started.session_id });
     expect(defaultRead.context).toEqual(compact.context);
     expect("observation" in defaultRead).toBe(false);
+    expect("world" in defaultRead.context).toBe(false);
     expect("route_options" in defaultRead.context).toBe(false);
     expect("ids" in defaultRead.context).toBe(false);
+    expect("world" in compact.context).toBe(false);
     expect("route_options" in compact.context).toBe(false);
     expect("ids" in compact.context).toBe(false);
     expect(compact).toMatchObject({ ok: true, session_id: started.session_id });
@@ -1214,7 +1216,14 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(defaultStarted.snapshot_hash).toMatch(PUBLIC_OVERWORLD_SNAPSHOT_HASH_RE);
     expect(defaultStarted.context.v).toBe(10);
     expect("observation" in defaultStarted).toBe(false);
+    expect("world" in defaultStarted.context).toBe(false);
     expect("route_options" in defaultStarted.context).toBe(false);
+    const worldNamedRead = a.get_overworld_session_context({
+      session_id: started.session_id,
+      include_world_name: true,
+    });
+    expect(worldNamedRead.context.world).toBe(full.world);
+    expect("route_options" in worldNamedRead.context).toBe(false);
     const defaultRoute = a.plan_overworld_session_route({
       session_id: started.session_id,
       destination_town_id: full.exits[0]!.destination.id,
@@ -1252,12 +1261,20 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(repeatedCompactRead.context).toEqual(compact.context);
     expect(repeatedCompactRead.context).not.toBe(compact.context);
     expect(repeatedCompactRead.context.roads).not.toBe(compact.context.roads);
+    expect("world" in repeatedCompactRead.context).toBe(false);
     (repeatedCompactRead.context.here as unknown as string[])[0] = "mutated_by_test";
     const afterCompactMutationRead = a.get_overworld_session_context({
       session_id: started.session_id,
     });
     expect(afterCompactMutationRead.context.here[0]).toBe(full.current.id);
+    expect("world" in afterCompactMutationRead.context).toBe(false);
     expect("ids" in afterCompactMutationRead.context).toBe(false);
+    worldNamedRead.context.world = "mutated_by_test";
+    const afterWorldNamedMutationRead = a.get_overworld_session_context({
+      session_id: started.session_id,
+      include_world_name: true,
+    });
+    expect(afterWorldNamedMutationRead.context.world).toBe(full.world);
     const idBundledRead = a.get_overworld_session_context({
       session_id: started.session_id,
       include_ids: true,

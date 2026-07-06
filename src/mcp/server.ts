@@ -186,8 +186,12 @@ const ROUTES = {
 const IDS = {
   include_ids: z.boolean().optional().describe("Ids."),
 };
+const WN = {
+  include_world_name: z.boolean().optional().describe("W."),
+};
 const COMPACT_OVERWORLD_CONTEXT = {
   compact_context: z.boolean().optional().describe("Full obs."),
+  ...WN,
   ...IDS,
   ...ROUTES,
 };
@@ -215,6 +219,7 @@ tool(
     ...SESSION,
     ...IF_SNAPSHOT_HASH,
     include_observation: z.boolean().optional().describe("Full obs."),
+    ...WN,
     ...IDS,
     ...ROUTES,
   },
@@ -226,6 +231,7 @@ tool(
   {
     ...SESSION,
     ...IF_SNAPSHOT_HASH,
+    ...WN,
     ...IDS,
     ...ROUTES,
   },

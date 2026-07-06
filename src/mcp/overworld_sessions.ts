@@ -16,15 +16,22 @@ export type OverworldMcpResponseOptions = OverworldMcpSnapshotGuardOptions & {
   compact_result?: boolean;
   include_ids?: boolean;
   include_route_options?: boolean;
+  include_world_name?: boolean;
 };
 
 export type OverworldMcpCompactContext = Omit<
   OverworldCompactView,
-  "ids" | "ids_truncated" | "route_options" | "route_options_truncated" | "route_paths_truncated"
+  | "world"
+  | "ids"
+  | "ids_truncated"
+  | "route_options"
+  | "route_options_truncated"
+  | "route_paths_truncated"
 > &
   Partial<
     Pick<
       OverworldCompactView,
+      | "world"
       | "ids"
       | "ids_truncated"
       | "route_options"
@@ -94,6 +101,7 @@ export type OverworldMcpReadArgs = {
   include_observation?: boolean;
   include_ids?: boolean;
   include_route_options?: boolean;
+  include_world_name?: boolean;
 };
 
 export type OverworldMcpFullReadPayload = {
@@ -187,10 +195,20 @@ function rememberOverworldSessionEntry<Key, Entry>(
 
 function projectOverworldCompactContext(
   context: OverworldCompactView,
-  args: Pick<OverworldMcpResponseOptions, "include_ids" | "include_route_options">,
+  args: Pick<
+    OverworldMcpResponseOptions,
+    "include_ids" | "include_route_options" | "include_world_name"
+  >,
 ): OverworldMcpCompactContext {
-  if (args.include_ids === true && args.include_route_options === true) return context;
+  if (
+    args.include_ids === true &&
+    args.include_route_options === true &&
+    args.include_world_name === true
+  ) {
+    return context;
+  }
   const {
+    world: _world,
     ids: _ids,
     ids_truncated: _idsTruncated,
     route_options: _routeOptions,
@@ -200,6 +218,7 @@ function projectOverworldCompactContext(
   } = context;
   return {
     ...loopContext,
+    ...(args.include_world_name === true ? { world: context.world } : {}),
     ...(args.include_ids === true ? { ids: context.ids } : {}),
     ...(args.include_ids === true && context.ids_truncated
       ? { ids_truncated: context.ids_truncated }
