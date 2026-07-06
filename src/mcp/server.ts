@@ -51,27 +51,28 @@ const SESSION = {
   session_id: z.string().describe("S."),
 };
 const HIDE_GRAPH = {
-  hide_graph: B("Hide."),
+  hide_graph: B("H."),
 };
 const COMPACT_ACTIONS = {
-  compact_actions: B("Id."),
+  compact_actions: B("I."),
 };
 const COMPACT_EVENTS = {
-  compact_events: B("Ev."),
+  compact_events: B("E."),
   include_event_version: B("V."),
 };
 const COMPACT_OBSERVATION = {
-  compact_observation: B("Obs."),
-  include_actions: B("Ids."),
+  compact_observation: B("O."),
+  include_actions: B("I."),
+  include_context_version: B("V."),
 };
 const IF_STATE_HASH = {
-  if_state_hash: z.string().optional().describe("Same."),
+  if_state_hash: z.string().optional().describe("H."),
 };
 const IF_TRANSCRIPT_HASH = {
-  if_transcript_hash: z.string().optional().describe("Tx."),
+  if_transcript_hash: z.string().optional().describe("T."),
 };
 const EXPECTED_STATE_HASH = {
-  expected_state_hash: z.string().optional().describe("Stale."),
+  expected_state_hash: z.string().optional().describe("S."),
 };
 tool(
   "list_world",
@@ -477,7 +478,7 @@ tool(
 );
 tool(
   "list_legal_actions",
-  "Actions.",
+  "Acts.",
   {
     ...SESSION,
     ...IF_STATE_HASH,

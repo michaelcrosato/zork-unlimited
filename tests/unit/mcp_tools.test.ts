@@ -3017,10 +3017,18 @@ describe("MCP tools — the play loop (§9.1)", () => {
     expect("observation" in defaultStart).toBe(false);
     expect("world" in defaultStart).toBe(false);
     expect("quest" in defaultStart).toBe(false);
+    expect("v" in compactStart.context).toBe(false);
     expect(compactStart.context).toMatchObject({
-      v: RPG_COMPACT_OBSERVATION_VERSION,
       here: [fullStart.observation.room, fullStart.observation.title],
     });
+    const versionedStart = a.start_world_quest({
+      world_quest_id: "sunken_barrow",
+      seed: 1,
+      hide_graph: true,
+      compact_observation: true,
+      include_context_version: true,
+    });
+    expect(versionedStart.context.v).toBe(RPG_COMPACT_OBSERVATION_VERSION);
     expect(fullStart.observation.world?.id).toBe("charter_marches");
     expect(fullStart.observation.description).toContain("You have come from Charterhaven");
     expect(compactStart.context.text).not.toContain("You have come from Charterhaven");

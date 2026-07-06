@@ -89,8 +89,10 @@ describe("bug_0160 — new_game(generate_rpg_seed) plays a fresh minted RPG pack
 
   it("defaults generated RPG starts to compact context", () => {
     const g = api().new_game({ generate_rpg_seed: 3 });
+    const versioned = api().new_game({ generate_rpg_seed: 3, include_context_version: true });
     expect("observation" in g).toBe(false);
-    expect(g.context.v).toBe(RPG_COMPACT_OBSERVATION_VERSION);
+    expect("v" in g.context).toBe(false);
+    expect(versioned.context.v).toBe(RPG_COMPACT_OBSERVATION_VERSION);
     expect(g.context.here[0]).toEqual(expect.any(String));
     expect(g.context.vitals).toEqual([20, 4, 2, 0, expect.any(Number)]);
     expect(g.generated_rpg_seed).toBe(3);

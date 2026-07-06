@@ -1,10 +1,19 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 490 -->
+<!-- historical_cycle_count: 491 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - compact_context_version_opt_in
+
+- Pre-cycle: `C:\dev\agent-cleaner` measure/gates passed through WSL; optional secret scanner remains absent, and WSL git-dir warnings still print after the green gate summary.
+- Engine/loop surface: default compact RPG observations now omit static `v`; `include_context_version: true` restores `RPG_COMPACT_OBSERVATION_VERSION` (`v: 15`) for audit clients, with separate projection cache keys.
+- Loop effect: measured `sunken_barrow` compact `start_world_quest` drops from 510 to 503 bytes and repeated `get_observation` from 459 to 452 bytes; redundant public MCP schema labels were also tightened to keep the blind-playtest ToolSearch source under its 2600-character guard.
+- Self-critique: this is a 7-byte fixed envelope trim, not a mechanics improvement; it follows the event-version opt-in pattern and removes repeated static metadata from hot loop contexts.
+- Guard: focused compact-observation, generated-RPG start, MCP ToolApi, and server-registration regressions pin default omission, opt-in version tags, compact projection cache separation, and ToolSearch schema budget.
+- VERIFY: `C:\dev\agent-cleaner`, focused compact-context/MCP regressions, payload probe, `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, `npm test`, `npm run health`, `npm run assess`, broad `prettier --check .`, and `git diff --check` passed after plan update.
 
 ### Cycle result - compact_observation_action_cache_skip
 
@@ -131,12 +140,3 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Self-critique: this is a straightforward hot-path prose-cap reduction; it preserves full observations for debug reads, but the remaining 66-byte state hash and response envelope are still visible overhead.
 - Guard: compact-observation, MCP ToolApi, schema-budget, and session-cache regressions pin `v: 14`, named cap constants, compact intro omission, full-observation intro preservation, and measured response budgets.
 - VERIFY: `C:\dev\agent-cleaner`, focused compact-observation/MCP/schema/cache regressions, payload probe, `npm run health`, and `npm run assess` passed; post-rotation `npm run verify:integrity`, `npm run format:check`, broad `prettier --check .`, and `git diff --check` also passed.
-
-### Cycle result - list_world_titles_opt_in
-
-- Pre-cycle: `C:\dev\agent-cleaner` measure/gates passed through WSL; optional secret scanner remains absent, and the same WSL git-dir warnings print after the green gate summary.
-- Engine/loop surface: default `list_world` quest rows are now `[world_quest_id, playable]`; `include_titles: true` restores `[world_quest_id, title, playable]`, while details/routes keep titled object rows.
-- Loop effect: default `list_world` drops from 863 to 517 bytes, with titled opt-in preserving the old 863-byte catalog response.
-- Self-critique: this trims target-selection and catalog discovery reads, not per-turn stepping; state-hash/envelope overhead and detailed graph reads remain separate follow-up surfaces.
-- Guard: catalog, AI-loop, assessor, and server-registration regressions pin tuple shape, title opt-in, playable-index consumers, and schema budget.
-- VERIFY: `C:\dev\agent-cleaner`, focused catalog/assessor/schema regressions, payload probe, `npm run health`, and `npm run assess` passed; post-rotation `npm run verify:integrity`, `npm run format:check`, broad `prettier --check .`, and `git diff --check` also passed.

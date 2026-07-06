@@ -53,7 +53,7 @@ export type RpgCompactVitals = readonly [
 ];
 
 export type RpgCompactObservation = {
-  v: typeof RPG_COMPACT_OBSERVATION_VERSION;
+  v?: typeof RPG_COMPACT_OBSERVATION_VERSION;
   here: readonly [room: string, title: string];
   text: string;
   exits?: RpgCompactExit[];
@@ -76,6 +76,7 @@ export type RpgCompactObservation = {
 
 export type CompactRpgObservationOptions = {
   includeActions?: boolean;
+  includeVersion?: boolean;
 };
 
 function compactProse(value: string, limit: number): string {
@@ -121,6 +122,7 @@ export function compactRpgObservation(
 ): RpgCompactObservation {
   const vars = compactVars(obs.state.vars);
   const includeActions = opts.includeActions === true;
+  const includeVersion = opts.includeVersion === true;
   const actions = includeActions ? compactHead(actionIds, COMPACT_ACTION_LIMIT) : [];
   const inv = compactHead(obs.inventory, COMPACT_INVENTORY_LIMIT).map(
     compactMcpTranscriptSummaryValue,
@@ -184,7 +186,7 @@ export function compactRpgObservation(
     omittedEnemies ?? 0,
   ]) as RpgCompactMore | undefined;
   return {
-    v: RPG_COMPACT_OBSERVATION_VERSION,
+    ...(includeVersion ? { v: RPG_COMPACT_OBSERVATION_VERSION } : {}),
     here: [compactMcpTranscriptSceneId(obs.room), compactMcpTranscriptTitle(obs.title)],
     text: compactProse(obs.description, COMPACT_DESCRIPTION_CHAR_LIMIT),
     ...(exits.length > 0 ? { exits } : {}),

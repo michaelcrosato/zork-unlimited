@@ -226,7 +226,8 @@ Make discovered overworld quest leads start real RPG sessions.
 - Compact RPG MCP observations now cap room/ending prose at 360 chars, dialogue
   at 280, blocked-exit hints at 180, inventory/flags, and recent journal
   entries, with omission counts trimmed for trailing zero buckets and opt-in
-  string action ids under context `v: 15`.
+  string action ids; the static context version tag is opt-in with
+  `include_context_version: true`.
 - Compact RPG visible object/NPC refs are ID arrays by default, and enemy refs
   are `[id, hp]`; full observations remain the label-rich debug surface.
 - Compact RPG observations and compact transcript summaries now share the same
@@ -577,10 +578,10 @@ Make discovered overworld quest leads start real RPG sessions.
   `step_action`, and `load_game` also default to compact observation context,
   keeping local harness starts/reads/turns/resumes aligned with the public MCP
   loop default.
-- Compact RPG observation context is now versioned as `v: 15` for the mode-free
-  loop payload shape with duplicate score vars filtered out, tighter prose caps,
-  ID-only visible refs, and action ids omitted unless `include_actions: true` is
-  explicit.
+- Compact RPG observation context keeps the `v: 15` schema tag only when
+  `include_context_version: true` is explicit; the default mode-free loop
+  payload filters duplicate score vars, caps prose tightly, keeps ID-only visible
+  refs, and omits action ids unless `include_actions: true` is explicit.
 - Compact RPG observation context omits empty exit lists when no navigation is
   available, usually after terminal endings.
 - ToolApi/public MCP `list_legal_actions` now defaults to compact string ids;
