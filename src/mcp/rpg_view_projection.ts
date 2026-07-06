@@ -148,8 +148,8 @@ export function cloneCompactRpgObservation(context: RpgCompactObservation): RpgC
         }
       : {}),
     ...(context.actions ? { actions: [...context.actions] } : {}),
-    ...(context.objects ? { objects: cloneCompactTupleList(context.objects) } : {}),
-    ...(context.npcs ? { npcs: cloneCompactTupleList(context.npcs) } : {}),
+    ...(context.objects ? { objects: [...context.objects] } : {}),
+    ...(context.npcs ? { npcs: [...context.npcs] } : {}),
     ...(context.blocked ? { blocked: cloneCompactTupleList(context.blocked) } : {}),
     ...(context.inv ? { inv: [...context.inv] } : {}),
     ...(context.flags ? { flags: [...context.flags] } : {}),

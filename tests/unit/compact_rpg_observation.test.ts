@@ -15,7 +15,6 @@ import {
   compactRpgObservation,
 } from "../../src/mcp/compact_rpg_observation.js";
 import {
-  MCP_ACTION_LABEL_CHAR_LIMIT,
   MCP_TRANSCRIPT_SCENE_ID_CHAR_LIMIT,
   MCP_TRANSCRIPT_SUMMARY_VALUE_CHAR_LIMIT,
   MCP_TRANSCRIPT_TITLE_CHAR_LIMIT,
@@ -174,6 +173,9 @@ describe("compactRpgObservation", () => {
     expect(compact.npcs).toHaveLength(COMPACT_VISIBLE_REF_LIMIT);
     expect(compact.blocked).toHaveLength(COMPACT_BLOCKED_EXIT_LIMIT);
     expect(compact.enemies).toHaveLength(COMPACT_ENEMY_LIMIT);
+    expect(compact.objects?.[0]).toBe("obj_0");
+    expect(compact.npcs?.[0]).toBe("npc_0");
+    expect(compact.enemies?.[0]).toEqual(["enemy_0", 1]);
     expect(compact.more).toEqual([0, 0, 0, 0, 3, 4, 5, 5, 2, 6]);
     expect(obs.exits).toHaveLength(exitCount);
     expect(obs.visible_objects).toHaveLength(refCount);
@@ -315,14 +317,12 @@ describe("compactRpgObservation", () => {
       expect.stringMatching(/\.\.\.\(\+\d+ chars\)#[0-9a-f]{12}$/),
       expect.stringMatching(/\.\.\.\(\+\d+ chars\)#[0-9a-f]{12}$/),
     ]);
-    expect(compact.objects?.[0]?.[0]).toHaveLength(MCP_TRANSCRIPT_SUMMARY_VALUE_CHAR_LIMIT);
-    expect(compact.objects?.[0]?.[1]).toHaveLength(MCP_ACTION_LABEL_CHAR_LIMIT);
-    expect(compact.npcs?.[0]?.[0]).toHaveLength(MCP_TRANSCRIPT_SUMMARY_VALUE_CHAR_LIMIT);
-    expect(compact.npcs?.[0]?.[1]).toHaveLength(MCP_ACTION_LABEL_CHAR_LIMIT);
+    expect(compact.objects?.[0]).toHaveLength(MCP_TRANSCRIPT_SUMMARY_VALUE_CHAR_LIMIT);
+    expect(compact.npcs?.[0]).toHaveLength(MCP_TRANSCRIPT_SUMMARY_VALUE_CHAR_LIMIT);
     expect(compact.blocked?.[0]?.[0]).toHaveLength(MCP_TRANSCRIPT_SUMMARY_VALUE_CHAR_LIMIT);
     expect(compact.dialogue?.[0]).toHaveLength(MCP_TRANSCRIPT_SUMMARY_VALUE_CHAR_LIMIT);
     expect(compact.enemies?.[0]?.[0]).toHaveLength(MCP_TRANSCRIPT_SUMMARY_VALUE_CHAR_LIMIT);
-    expect(compact.enemies?.[0]?.[1]).toHaveLength(MCP_ACTION_LABEL_CHAR_LIMIT);
+    expect(compact.enemies?.[0]?.[1]).toBe(4);
     expect(compact.ending_id).toHaveLength(MCP_TRANSCRIPT_SUMMARY_VALUE_CHAR_LIMIT);
     expect(compact.ending?.id).toHaveLength(MCP_TRANSCRIPT_SUMMARY_VALUE_CHAR_LIMIT);
     expect(compact.ending?.title).toHaveLength(MCP_TRANSCRIPT_TITLE_CHAR_LIMIT);

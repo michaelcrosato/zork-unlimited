@@ -2941,7 +2941,9 @@ describe("MCP tools — the play loop (§9.1)", () => {
     expect(proseBudgetStart.context.text.length).toBeLessThanOrEqual(
       COMPACT_DESCRIPTION_CHAR_LIMIT,
     );
-    expect(JSON.stringify(proseBudgetStart).length).toBeLessThan(825);
+    expect(proseBudgetStart.context.objects).toEqual(["flood_book", "life_line", "weir_iron"]);
+    expect(proseBudgetStart.context.npcs).toEqual(["pell"]);
+    expect(JSON.stringify(proseBudgetStart).length).toBeLessThan(750);
     const proseBudgetTalk = a.step_action({
       session_id: proseBudgetStart.session_id,
       action_id: "talk_pell",
@@ -2994,6 +2996,13 @@ describe("MCP tools — the play loop (§9.1)", () => {
       compact_observation: true,
     });
     expect(afterCompactObservationMutation.context.here[0]).toBe(compactRoom);
+    const refStart = a.start_world_quest({ world_quest_id: "breaking_weir" });
+    const repeatedRefObservation = a.get_observation({ session_id: refStart.session_id });
+    repeatedRefObservation.context.objects![0] = "mutated_object";
+    repeatedRefObservation.context.npcs![0] = "mutated_npc";
+    const afterRefMutation = a.get_observation({ session_id: refStart.session_id });
+    expect(afterRefMutation.context.objects).toEqual(["flood_book", "life_line", "weir_iron"]);
+    expect(afterRefMutation.context.npcs).toEqual(["pell"]);
     expect("actions" in afterCompactObservationMutation.context).toBe(false);
 
     const actionBundledObservation = a.get_observation({

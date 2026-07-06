@@ -7,7 +7,6 @@ import {
   omittedCount,
 } from "./compact_truncation.js";
 import {
-  compactMcpActionLabel,
   compactMcpTranscriptSceneId,
   compactMcpTranscriptSummaryValue,
   compactMcpTranscriptTitle,
@@ -26,13 +25,13 @@ export const COMPACT_DESCRIPTION_CHAR_LIMIT = 360;
 export const COMPACT_DIALOGUE_CHAR_LIMIT = 280;
 export const COMPACT_BLOCKED_EXIT_CHAR_LIMIT = 180;
 export const COMPACT_ENDING_TEXT_CHAR_LIMIT = 360;
-export const RPG_COMPACT_OBSERVATION_VERSION = 14 as const;
+export const RPG_COMPACT_OBSERVATION_VERSION = 15 as const;
 
-export type RpgCompactRef = readonly [id: string, name: string];
+export type RpgCompactRef = string;
 export type RpgCompactExit = string | readonly [direction: string, to: string];
 export type RpgCompactBlockedExit = readonly [direction: string, message: string];
 export type RpgCompactDialogue = readonly [npc: string, text: string];
-export type RpgCompactEnemy = readonly [id: string, name: string, hp: number];
+export type RpgCompactEnemy = readonly [id: string, hp: number];
 export type RpgCompactMore = readonly [
   inventory: number,
   flags?: number,
@@ -155,11 +154,11 @@ export function compactRpgObservation(
   }
   const objects: RpgCompactRef[] = [];
   for (const object of compactObjects) {
-    objects.push([compactMcpTranscriptSummaryValue(object.id), compactMcpActionLabel(object.name)]);
+    objects.push(compactMcpTranscriptSummaryValue(object.id));
   }
   const npcs: RpgCompactRef[] = [];
   for (const npc of compactNpcs) {
-    npcs.push([compactMcpTranscriptSummaryValue(npc.id), compactMcpActionLabel(npc.name)]);
+    npcs.push(compactMcpTranscriptSummaryValue(npc.id));
   }
   const blocked: RpgCompactBlockedExit[] = [];
   for (const exit of compactBlockedExits) {
@@ -170,11 +169,7 @@ export function compactRpgObservation(
   }
   const enemies: RpgCompactEnemy[] = [];
   for (const enemy of compactEnemies) {
-    enemies.push([
-      compactMcpTranscriptSummaryValue(enemy.id),
-      compactMcpActionLabel(enemy.name),
-      enemy.hp,
-    ]);
+    enemies.push([compactMcpTranscriptSummaryValue(enemy.id), enemy.hp]);
   }
   const more = compactTrailingOmissionCounts([
     omittedInv ?? 0,

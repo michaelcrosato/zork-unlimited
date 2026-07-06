@@ -44,7 +44,7 @@ function printCompactContext(current: RpgCompactObservation): void {
   console.log(`\n[hp ${hp} | attack ${attack} | defense ${defense} | score ${score}/${maxScore}]`);
   if (current.enemies?.length) {
     console.log(
-      `[enemies: ${current.enemies.map((enemy) => `${enemy[1]} hp${enemy[2]}`).join(", ")}]`,
+      `[enemies: ${current.enemies.map((enemy) => `${enemy[0]} hp${enemy[1]}`).join(", ")}]`,
     );
   }
   if (current.inv?.length) console.log(`[inventory: ${current.inv.join(", ")}]`);
