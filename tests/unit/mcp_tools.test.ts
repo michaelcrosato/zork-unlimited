@@ -259,6 +259,8 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect("graph" in world).toBe(false);
     expect("graph" in world.world).toBe(false);
     expect(world.quests).toHaveLength(16);
+    expect(world.quests.every((q) => Array.isArray(q))).toBe(true);
+    expect(world.quests.every((q) => q.length === 3)).toBe(true);
     expect(world.quests.every((q) => !("path" in q))).toBe(true);
     expect(world.quests.every((q) => !("path_from_hub" in q))).toBe(true);
     expect(world.quests.every((q) => !("mode" in q))).toBe(true);
@@ -274,8 +276,6 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(detailed.quests.every((q) => !("path_from_hub" in q))).toBe(true);
     expect(expanded.graph.nodes.every((node) => !("pack" in node))).toBe(true);
     expect(expanded.graph.nodes.every((node) => !("source" in node))).toBe(true);
-    expect(world.quests.some((s) => s.world_quest_id === "sunken_barrow")).toBe(true);
-    expect(world.quests.some((s) => s.world_quest_id === "breaking_weir")).toBe(true);
     expect(
       expanded.quests.find((s) => s.world_quest_id === "breaking_weir")?.path_from_hub.at(-1)?.name,
     ).toBe("The Breaking Weir");
@@ -285,11 +285,13 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(world.hub).toBe("Charterhaven");
     expect(world.world.hub).toBe("Charterhaven");
     expect(expanded.graph.hub).toBe("charterhaven");
-    expect(world.quests.map((q) => q.world_quest_id)).toEqual(
+    expect(world.quests.some((s) => s[0] === "sunken_barrow")).toBe(true);
+    expect(world.quests.some((s) => s[0] === "breaking_weir")).toBe(true);
+    expect(world.quests.map((q) => q[0])).toEqual(
       expanded.graph.nodes.filter((node) => node.kind === "quest").map((node) => node.id),
     );
     expect(JSON.stringify(world).length).toBeLessThan(JSON.stringify(detailed).length);
-    expect(JSON.stringify(world).length).toBeLessThanOrEqual(2700);
+    expect(JSON.stringify(world).length).toBeLessThanOrEqual(2200);
   });
 
   it("lists the unified world as a hub plus quest areas", () => {
@@ -516,7 +518,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
     const a = api();
     const r = a.list_overworld();
     const withDesignNotes = a.list_overworld({ include_design_notes: true });
-    const canonicalQuestIds = new Set(a.list_world().quests.map((quest) => quest.world_quest_id));
+    const canonicalQuestIds = new Set(a.list_world().quests.map((quest) => quest[0]));
     expect(r.world.id).toBe("new_york_overworld");
     expect(r.start.id).toBe("albany_city");
     expect(r.town_count).toBeGreaterThanOrEqual(240);

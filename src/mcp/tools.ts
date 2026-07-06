@@ -95,6 +95,8 @@ type WorldQuestCatalogEntry = {
   world_quest_id: string;
 };
 
+type WorldListQuestRef = readonly [world_quest_id: string, title: string, playable: boolean];
+
 type WorldQuestDetails = {
   district: string;
   quest: string;
@@ -106,10 +108,16 @@ type WorldQuestRouteDetails = {
   path_from_hub: WorldRouteStep[];
 };
 
-type WorldListQuest<Args extends WorldListOptions> = WorldQuestCatalogEntry &
+type WorldListDetailedQuest<Args extends WorldListOptions> = WorldQuestCatalogEntry &
   (Args extends { include_details: true } ? WorldQuestDetails : Record<string, never>) &
   (Args extends { include_routes: true } ? WorldQuestDetails : Record<string, never>) &
   (Args extends { include_routes: true } ? WorldQuestRouteDetails : Record<string, never>);
+
+type WorldListQuest<Args extends WorldListOptions> = Args extends
+  | { include_details: true }
+  | { include_routes: true }
+  ? WorldListDetailedQuest<Args>
+  : WorldListQuestRef;
 
 type WorldListResponse<Args extends WorldListOptions> = {
   world: PublicWorldSummary;
@@ -440,6 +448,9 @@ export function createToolApi(opts: { root: string }) {
         .discoverWorldQuestSources(world)
         .filter((s) => s.world?.id === world.id)
         .map((s) => {
+          if (!includeDetails) {
+            return [s.world_quest_id, s.title, s.playable] as unknown as WorldListQuest<Args>;
+          }
           const quest: WorldQuestCatalogEntry & Partial<WorldQuestDetails> = {
             title: s.title,
             playable: s.playable,

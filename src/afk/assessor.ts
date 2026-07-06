@@ -388,10 +388,10 @@ export function isSaturated(a: Assessment): boolean {
 export function assess(root: string): Assessment {
   const api = createToolApi({ root });
   const quests: AssessedQuest[] = api.list_world().quests.map((quest) => ({
-    target_ref: quest.world_quest_id ?? `unbound:${quest.title}`,
-    target_label: quest.world_quest_id ?? quest.title,
-    playable: quest.playable,
-    world_quest_id: quest.world_quest_id,
+    target_ref: quest[0],
+    target_label: quest[0],
+    playable: quest[2],
+    world_quest_id: quest[0],
   }));
 
   const questHealth: QuestHealth[] = [];

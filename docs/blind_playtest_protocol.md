@@ -20,7 +20,8 @@ are a primary input to the fix.
 ## Procedure (5 steps)
 
 1. **Pick the target.** A playable world quest id + a fixed seed. Discover quest
-   ids from `list_world().quests[].world_quest_id`; default to `breaking_weir`,
+   ids from default `list_world().quests[][0]`; detailed catalog calls expose
+   object rows with `world_quest_id`. Default to `breaking_weir`,
    seed `7`. For variety across cycles, rotate the seed and, when more than one
    quest is playable, rotate the quest id.
 

@@ -30,7 +30,7 @@ describe("list_world is the single RPG quest catalog", () => {
     expect(sources.map((source) => source.world_quest_id)).toEqual(
       api()
         .list_world()
-        .quests.map((quest) => quest.world_quest_id),
+        .quests.map((quest) => quest[0]),
     );
   });
 
@@ -42,6 +42,8 @@ describe("list_world is the single RPG quest catalog", () => {
     expect("main_world_quest_id" in world).toBe(false);
     expect("graph" in world).toBe(false);
     expect(world.quests).toHaveLength(16);
+    expect(world.quests.every((q) => Array.isArray(q))).toBe(true);
+    expect(world.quests.every((q) => q.length === 3)).toBe(true);
     expect(world.quests.every((q) => !("path" in q))).toBe(true);
     expect(world.quests.every((q) => !("path_from_hub" in q))).toBe(true);
     expect(world.quests.every((q) => !("id" in q))).toBe(true);
@@ -50,12 +52,12 @@ describe("list_world is the single RPG quest catalog", () => {
     expect(world.quests.every((q) => !("connection" in q))).toBe(true);
     expect(expanded.graph.nodes.every((node) => !("pack" in node))).toBe(true);
     expect(expanded.graph.nodes.every((node) => !("source" in node))).toBe(true);
-    expect(world.quests.map((q) => q.world_quest_id)).toEqual(
+    expect(world.quests.map((q) => q[0])).toEqual(
       expanded.graph.nodes.filter((node) => node.kind === "quest").map((node) => node.id),
     );
     expect(world.quests.every((s) => !("mode" in s))).toBe(true);
-    expect(world.quests.some((s) => s.world_quest_id === "sunken_barrow")).toBe(true);
-    expect(world.quests.some((s) => s.world_quest_id === "breaking_weir")).toBe(true);
+    expect(world.quests.some((s) => s[0] === "sunken_barrow")).toBe(true);
+    expect(world.quests.some((s) => s[0] === "breaking_weir")).toBe(true);
   });
 });
 

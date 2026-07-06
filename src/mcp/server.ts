@@ -72,7 +72,7 @@ const EXPECTED_STATE_HASH = {
 };
 tool(
   "list_world",
-  "List shipped RPG quest ids; graph and all routes are opt-in.",
+  "List shipped RPG quest ids as [id,title,playable]; graph and routes are opt-in.",
   {
     include_details: z.boolean().optional().describe("Include quest prose hooks."),
     include_graph: z
