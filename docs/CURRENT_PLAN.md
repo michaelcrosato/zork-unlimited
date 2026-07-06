@@ -252,9 +252,10 @@ Make discovered overworld quest leads start real RPG sessions.
 - Live RPG observations now project visible objects, NPCs, exits, blocked exits,
   enemies, and action rows through direct loops, avoiding repeated observation
   `map`/`filter` chains per turn.
-- Public MCP `get_transcript` defaults to compact summary-only output; callers can
-  pass `summary_only: false` and `compact_summary: false` when they need full
-  route/event history.
+- ToolApi/public MCP `get_transcript` defaults to compact summary-only output
+  with capped summaries, compact event tuples, and the default turn limit
+  prefilled; callers can pass `summary_only: false`, `compact_events: false`,
+  and `compact_summary: false` when they need full route/event history.
 - ToolApi/public MCP `get_state` defaults to hash-only output; callers can pass
   `compact_state: true` for capped state audits, and reserve `include_state: true`
   for raw reducer-state debugging.

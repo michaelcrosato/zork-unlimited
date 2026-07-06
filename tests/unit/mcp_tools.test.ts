@@ -1923,7 +1923,16 @@ describe("MCP tools — the play loop (§9.1)", () => {
     if (stepEvent === undefined) throw new Error("expected final step ending event");
     (stepEvent as { type: string }).type = "rejected";
     (stepEvent as { reason?: string }).reason = "mutated_step_event";
-    const transcript = a.get_transcript({ session_id: game.session_id });
+    const defaultTranscript = a.get_transcript({ session_id: game.session_id });
+    expect("turns" in defaultTranscript).toBe(false);
+    expect(defaultTranscript.summary.ended).toBe(true);
+    expect(defaultTranscript.summary.ending_id).toBe("ending_victory");
+    const transcript = a.get_transcript({
+      session_id: game.session_id,
+      summary_only: false,
+      compact_events: false,
+      compact_summary: false,
+    });
     expect("pack_id" in transcript).toBe(false);
     expect("pack_path" in transcript).toBe(false);
     expect("mode" in transcript).toBe(false);
@@ -1937,6 +1946,9 @@ describe("MCP tools — the play loop (§9.1)", () => {
     expect("generated_rpg_seed" in sourcedTranscript).toBe(false);
     expect(transcript.summary.ended).toBe(true);
     expect(transcript.summary.ending_id).toBe("ending_victory");
+    expect(JSON.stringify(defaultTranscript).length).toBeLessThan(
+      JSON.stringify(transcript).length,
+    );
     expect(transcript.turns.map((t) => t.action_id)).toContain("take_circlet");
     expect(transcript.turns[0]).toMatchObject({
       scene_id: game.observation.room,
@@ -2020,6 +2032,7 @@ describe("MCP tools — the play loop (§9.1)", () => {
     const summaryOnlyTranscript = a.get_transcript({
       session_id: game.session_id,
       summary_only: true,
+      compact_summary: false,
     });
     expect(summaryOnlyTranscript.state_hash).toBe(currentStateHash);
     expect(summaryOnlyTranscript.transcript_hash).toBe(transcript.transcript_hash);
@@ -2076,7 +2089,9 @@ describe("MCP tools — the play loop (§9.1)", () => {
     expect(transcriptHashUnchanged.transcript_hash).toBe(transcript.transcript_hash);
     const compactTranscript = a.get_transcript({
       session_id: game.session_id,
+      summary_only: false,
       compact_turns: true,
+      compact_summary: false,
     });
     expect(compactTranscript.state_hash).toBe(currentStateHash);
     expect(compactTranscript.transcript_hash).toBe(transcript.transcript_hash);
@@ -2100,7 +2115,9 @@ describe("MCP tools — the play loop (§9.1)", () => {
     );
     const cappedCompactTranscript = a.get_transcript({
       session_id: game.session_id,
+      summary_only: false,
       compact_turns: true,
+      compact_summary: false,
       turn_limit: 2,
     });
     expect(cappedCompactTranscript.state_hash).toBe(currentStateHash);
@@ -2110,6 +2127,7 @@ describe("MCP tools — the play loop (§9.1)", () => {
     expect(cappedCompactTranscript.turns_omitted).toBe(compactTranscript.turns.length - 2);
     const compactEventTranscript = a.get_transcript({
       session_id: game.session_id,
+      summary_only: false,
       compact_events: true,
     });
     expect(compactEventTranscript.event_v).toBe(RPG_COMPACT_EVENT_VERSION);
@@ -2124,6 +2142,7 @@ describe("MCP tools — the play loop (§9.1)", () => {
     );
     const compactTurnsWithCompactEvents = a.get_transcript({
       session_id: game.session_id,
+      summary_only: false,
       compact_turns: true,
       compact_events: true,
     });
@@ -2147,7 +2166,12 @@ describe("MCP tools — the play loop (§9.1)", () => {
     transcript.summary.scenes.push("mutated_scene");
     (compactTranscript.turns[0] as unknown as string[])[1] = "mutated_scene";
     (compactEventTurn!.events[0] as unknown as string[])[0] = "x";
-    const afterTranscriptMutation = a.get_transcript({ session_id: game.session_id });
+    const afterTranscriptMutation = a.get_transcript({
+      session_id: game.session_id,
+      summary_only: false,
+      compact_events: false,
+      compact_summary: false,
+    });
     expect(afterTranscriptMutation.summary.scenes).not.toContain("mutated_scene");
     expect(afterTranscriptMutation.turns[0]?.scene_id).toBe(game.observation.room);
     expect(
@@ -2165,11 +2189,13 @@ describe("MCP tools — the play loop (§9.1)", () => {
     ).toBe(false);
     const afterCompactTranscriptMutation = a.get_transcript({
       session_id: game.session_id,
+      summary_only: false,
       compact_turns: true,
     });
     expect(afterCompactTranscriptMutation.turns[0]?.[1]).toBe(game.observation.room);
     const afterCompactEventTranscriptMutation = a.get_transcript({
       session_id: game.session_id,
+      summary_only: false,
       compact_events: true,
     });
     const afterCompactEventTurn = afterCompactEventTranscriptMutation.turns.find(
@@ -2216,7 +2242,11 @@ describe("MCP tools — the play loop (§9.1)", () => {
       journal: numberedIds("journal", 10),
     });
 
-    const full = a.get_transcript({ session_id: game.session_id, summary_only: true });
+    const full = a.get_transcript({
+      session_id: game.session_id,
+      summary_only: true,
+      compact_summary: false,
+    });
     const compact = a.get_transcript({
       session_id: game.session_id,
       summary_only: true,
@@ -2801,7 +2831,12 @@ describe("MCP tools — the play loop (§9.1)", () => {
     expect(r.rejection_reason).toBeTruthy();
     expect(r.state_hash).toBe(before);
     expect(second.state_hash).toBe(before);
-    const transcriptAfter = a.get_transcript({ session_id: game.session_id });
+    const transcriptAfter = a.get_transcript({
+      session_id: game.session_id,
+      summary_only: false,
+      compact_events: false,
+      compact_summary: false,
+    });
     const rejectedTurn = transcriptAfter.turns[transcriptAfter.turns.length - 2]!;
     const secondRejectedTurn = transcriptAfter.turns[transcriptAfter.turns.length - 1]!;
     expect(transcriptAfter.state_hash).toBe(before);
@@ -2849,7 +2884,12 @@ describe("MCP tools — the play loop (§9.1)", () => {
     if (!moved.ok) throw new Error("expected state-matched action to move");
     expect("rejection_reason" in moved).toBe(false);
     expect(moved.state_hash).not.toBe(menu.state_hash);
-    const transcriptRowsAfterMove = a.get_transcript({ session_id: game.session_id }).turns.length;
+    const transcriptRowsAfterMove = a.get_transcript({
+      session_id: game.session_id,
+      summary_only: false,
+      compact_events: false,
+      compact_summary: false,
+    }).turns.length;
 
     const stale = a.step_action({
       session_id: game.session_id,
@@ -2867,9 +2907,14 @@ describe("MCP tools — the play loop (§9.1)", () => {
     expect("context" in stale).toBe(false);
     expect("observation" in stale).toBe(false);
     expect(JSON.stringify(stale).length).toBeLessThan(JSON.stringify(moved).length);
-    expect(a.get_transcript({ session_id: game.session_id }).turns).toHaveLength(
-      transcriptRowsAfterMove,
-    );
+    expect(
+      a.get_transcript({
+        session_id: game.session_id,
+        summary_only: false,
+        compact_events: false,
+        compact_summary: false,
+      }).turns,
+    ).toHaveLength(transcriptRowsAfterMove);
   });
 
   it("refuses to start a game from a raw pack path", () => {

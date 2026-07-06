@@ -46,7 +46,11 @@ import {
   type RpgStepActionResponse as RpgRuntimeStepActionResponse,
 } from "./rpg_step_action.js";
 import type { RpgStateHashRejection, RpgStateUnchanged } from "./rpg_state_guards.js";
-import type { TranscriptArgs, TranscriptResponse } from "./transcript_projection.js";
+import {
+  TRANSCRIPT_TURN_LIMIT_DEFAULT,
+  type TranscriptArgs,
+  type TranscriptResponse,
+} from "./transcript_projection.js";
 import { OverworldMcpSessionStore } from "./overworld_sessions.js";
 import { createOverworldToolHandlers } from "./overworld_tool_handlers.js";
 import type { WorldManifest } from "../world/schema.js";
@@ -129,6 +133,36 @@ type DefaultCompactRpgEvents<Args extends RpgEventOptions> = Args extends {
 
 type DefaultCompactRpgStep<Args extends RpgViewOptions & RpgEventOptions> = DefaultCompactRpgView<
   DefaultCompactRpgEvents<Args>
+>;
+
+type DefaultTranscriptSummaryOnly<Args extends TranscriptArgs> = Args extends {
+  summary_only: false;
+}
+  ? Args
+  : Args & { summary_only: true };
+
+type DefaultTranscriptCompactEvents<Args extends TranscriptArgs> = Args extends {
+  compact_events: false;
+}
+  ? Args
+  : Args & { compact_events: true };
+
+type DefaultTranscriptCompactSummary<Args extends TranscriptArgs> = Args extends {
+  compact_summary: false;
+}
+  ? Args
+  : Args & { compact_summary: true };
+
+type DefaultTranscriptTurnLimit<Args extends TranscriptArgs> = Args extends {
+  turn_limit: number;
+}
+  ? Args
+  : Args & { turn_limit: typeof TRANSCRIPT_TURN_LIMIT_DEFAULT };
+
+type DefaultCompactTranscript<Args extends TranscriptArgs> = DefaultTranscriptTurnLimit<
+  DefaultTranscriptCompactSummary<
+    DefaultTranscriptCompactEvents<DefaultTranscriptSummaryOnly<Args>>
+  >
 >;
 
 type RpgViewField<Args extends RpgViewOptions> = Args extends {
@@ -509,8 +543,19 @@ export function createToolApi(opts: { root: string }) {
       return runRpgGetState({ sessions }, args) as RpgStateResponse<Args>;
     },
 
-    get_transcript<Args extends TranscriptArgs>(args: Args): TranscriptResponse<Args> {
-      return runRpgGetTranscript({ sessions }, args) as TranscriptResponse<Args>;
+    get_transcript<Args extends TranscriptArgs>(
+      args: Args,
+    ): TranscriptResponse<DefaultCompactTranscript<Args>> {
+      const responseOptions = {
+        summary_only: true,
+        compact_events: true,
+        compact_summary: true,
+        turn_limit: TRANSCRIPT_TURN_LIMIT_DEFAULT,
+        ...args,
+      } as DefaultCompactTranscript<Args>;
+      return runRpgGetTranscript({ sessions }, responseOptions) as TranscriptResponse<
+        DefaultCompactTranscript<Args>
+      >;
     },
 
     save_game<Args extends RpgSaveArgs>(args: Args): RpgSaveResponse<Args> {

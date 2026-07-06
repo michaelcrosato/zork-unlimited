@@ -87,7 +87,11 @@ describe("MCP step_action / get_transcript hide internal __-prefixed events (bug
     expect(r.events.some((e) => e.type === "narration" && /strike/i.test(e.text))).toBe(true);
 
     // The transcript get_transcript shows is filtered the same way.
-    const tx = a.get_transcript({ session_id: sid }) as { turns: { events: GameEvent[] }[] };
+    const tx = a.get_transcript({
+      session_id: sid,
+      summary_only: false,
+      compact_events: false,
+    }) as { turns: { events: GameEvent[] }[] };
     expect(tx.turns.flatMap((t) => t.events).some(isInternalStateChange)).toBe(false);
   });
 
@@ -132,7 +136,11 @@ describe("MCP step_action / get_transcript hide internal __-prefixed events (bug
 
     // And the dialogue node text the player should read still surfaces via the
     // observation (a `dialogue` event), not via a leaked flag.
-    const tx = a.get_transcript({ session_id: sid }) as { turns: { events: GameEvent[] }[] };
+    const tx = a.get_transcript({
+      session_id: sid,
+      summary_only: false,
+      compact_events: false,
+    }) as { turns: { events: GameEvent[] }[] };
     expect(tx.turns.flatMap((t) => t.events).some(isInternalStateChange)).toBe(false);
   });
 });

@@ -1,10 +1,19 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 456 -->
+<!-- historical_cycle_count: 457 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - rpg_transcript_compact_default
+
+- Pre-cycle: `C:\dev\agent-cleaner` passed; optional secret scanner remains absent.
+- Engine/loop surface: ToolApi `get_transcript` now defaults to compact summary-only transcript metadata, matching the public MCP transcript wrapper.
+- Loop effect: direct harness/agent transcript polls no longer emit full turn arrays unless `summary_only: false` is explicit.
+- Self-critique: transcript default only; deeper wins remain in compact summary/event tuple shape and persisted trace payloads.
+- Guard: MCP transcript regressions pin no-flag summary-only behavior while full-turn readers opt out explicitly.
+- VERIFY: `C:\dev\agent-cleaner`, `npm run typecheck`, focused transcript regressions, `npm run lint`, `npm run format:check`, `npm run validate`, `npm test`, and `npm run health` passed after loop-state rotation.
 
 ### Cycle result - rpg_load_compact_default
 
@@ -128,11 +137,3 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Loop effect: overworld/world binding validation normalizes one private source field across the open-world manifest path instead of carrying a second quest package alias.
 - Guard: focused overworld, world-source, and world-session regressions cover source binding uniqueness, mismatch detection, and fixture shape.
 - VERIFY: `npm run typecheck`, focused overworld/world-source/session regressions, `npm run validate`, `npm test`, and `npm run health` passed after loop-state rotation.
-
-### Cycle result - world_graph_source_field
-
-- Pre-cycle: ran `C:\dev\agent-cleaner` measure + gates; cleaner passed Prettier, ESLint, typecheck, and tests; optional secret scanner remains absent.
-- Engine/loop surface: canonical world graph quest nodes now declare `source` instead of package-era `pack`; graph normalization and coverage use `normalizeSourcePath` plus `assertWorldQuestSourceCoverage`.
-- Loop effect: validate, world loading, and MCP source runtime dereference world quest sources without teaching future loops a graph-level package field.
-- Guard: single-world, world-source, source-runtime, catalog, and validation-bar regressions cover `source` graph bindings and reject private `source`/old `pack` fields from public graph output.
-- VERIFY: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, focused world/source regressions, `npm test`, and `npm run health` passed after loop-state rotation.
