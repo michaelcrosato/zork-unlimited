@@ -192,9 +192,17 @@ if [[ -n "${BLIND_AGENT_CMD:-}" ]]; then
   exit "${PIPESTATUS[0]}"
 fi
 
-# Default: Claude Code on your subscription.
+# Default blind player: Claude Code on your subscription. NOTE the blind player is
+# INDEPENDENT of the loop's driver — a Codex-primary loop can (and, for a diverse
+# playtester, may prefer to) run any MCP-capable agent here via BLIND_AGENT_CMD.
+# For Codex, register the engine MCP server at user level first
+# (`codex mcp add adventureforge -- npm --silent run mcp`), then e.g.:
+#   BLIND_AGENT_CMD='codex exec -a never --sandbox read-only -'
+# (On the BLIND_AGENT_CMD override path, enforcing blindness — no repo reads — is
+# the operator's responsibility; the built-in Claude path isolates cwd + denies
+# file/shell/web tools for you.)
 if ! command -v claude >/dev/null 2>&1; then
-  echo "claude CLI not found on PATH. Install Claude Code (or set BLIND_AGENT_CMD)." >&2
+  echo "claude CLI not found. Set BLIND_AGENT_CMD to an MCP-capable agent (e.g. a 'codex exec' invocation) or install Claude Code." >&2
   exit 3
 fi
 
