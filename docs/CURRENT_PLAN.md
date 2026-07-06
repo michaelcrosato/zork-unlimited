@@ -178,6 +178,9 @@ Make discovered overworld quest leads start real RPG sessions.
 - Compact RPG observations omit action ids by default; callers use
   `list_legal_actions` for the state-bound menu, or pass `include_actions: true`
   when a bundled compact context is worth the extra payload.
+- Default compact RPG observations also skip legal-action enumeration when
+  `include_actions` is absent, so no-action context reads do not populate
+  `legalActionsCache` just to discard action ids.
 - ToolApi/public MCP `list_legal_actions` defaults to compact action-id strings;
   callers can pass `compact_actions: false` when they need player-facing command
   labels.

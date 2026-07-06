@@ -14,7 +14,12 @@ import {
   type RpgStepEvents,
   type RpgStepEventVersion,
 } from "./transcript_projection.js";
-import { rpgViewField, type RpgViewField, type RpgViewOptions } from "./rpg_view_projection.js";
+import {
+  rpgObservationNeedsActions,
+  rpgViewField,
+  type RpgViewField,
+  type RpgViewOptions,
+} from "./rpg_view_projection.js";
 import {
   compactMcpActionLabel,
   compactMcpTranscriptActionId,
@@ -81,6 +86,7 @@ export function runRpgStepAction<Args extends RpgStepActionArgs>(
     const rejectionEvents = [{ type: "rejected" as const, reason: rejectionReason }];
     const beforeObsOpts = {
       hideGraph: args.hide_graph ?? s.hideGraph ?? false,
+      includeAvailableActions: rpgObservationNeedsActions(args),
     };
     sessions.appendTranscript(s.id, {
       step: beforeStep,
@@ -112,6 +118,7 @@ export function runRpgStepAction<Args extends RpgStepActionArgs>(
   sessions.update(s.id, result.state);
   const afterObsOpts = {
     hideGraph: args.hide_graph ?? s.hideGraph ?? false,
+    includeAvailableActions: rpgObservationNeedsActions(args),
   };
   const after = rpgRuntime.observationOf(s, afterObsOpts, args.compact_observation !== true);
   sessions.appendTranscript(s.id, {

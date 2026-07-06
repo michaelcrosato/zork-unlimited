@@ -75,8 +75,14 @@ describe("MCP RPG view projection", () => {
 
   it("uses stable projection suffixes for observation cache keys", () => {
     expect(observationProjectionSuffix({ hideGraph: true, includeWorldIntro: false }, "ids")).toBe(
-      "hide:1:intro:0:ids",
+      "hide:1:intro:0:actions:1:ids",
     );
+    expect(
+      observationProjectionSuffix(
+        { hideGraph: true, includeWorldIntro: false, includeAvailableActions: false },
+        "ids",
+      ),
+    ).toBe("hide:1:intro:0:actions:0:ids");
   });
 
   it("projects observations with the same public action rules", () => {

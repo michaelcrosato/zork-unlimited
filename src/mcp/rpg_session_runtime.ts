@@ -17,6 +17,7 @@ import {
   type RpgIndex,
 } from "../rpg/runner.js";
 import {
+  rpgObservationNeedsActions,
   rpgViewField,
   type RpgObservationViewOptions,
   type RpgViewField,
@@ -137,9 +138,10 @@ export class RpgMcpSessionRuntime {
   }
 
   private buildObservation(session: Session, opts: ObservationOptions = {}): RpgObservation {
+    const includeAvailableActions = opts.includeAvailableActions !== false;
     return buildRpgObservation(session.index, session.state, {
       ...opts,
-      availableActions: this.legalActionsFor(session),
+      ...(includeAvailableActions ? { availableActions: this.legalActionsFor(session) } : {}),
     });
   }
 
@@ -223,6 +225,7 @@ export class RpgMcpSessionRuntime {
     const openingOpts = this.openingObservationOptions(session, {
       includeWorldIntro: args.compact_observation !== true || args.include_world_intro === true,
     });
+    openingOpts.includeAvailableActions = rpgObservationNeedsActions(args);
     return {
       session_id: session.id,
       ...rpgViewField(

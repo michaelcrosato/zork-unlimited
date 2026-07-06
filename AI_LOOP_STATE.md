@@ -1,10 +1,19 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 489 -->
+<!-- historical_cycle_count: 490 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 2026-06-25 token-efficiency cleanup was removed from the working tree; use Git
 history only when deep recovery is truly needed. Keep future entries terse.
+
+### Cycle result - compact_observation_action_cache_skip
+
+- Pre-cycle: `C:\dev\agent-cleaner` measure/gates passed through WSL; optional secret scanner remains absent, and WSL git-dir warnings still print after the green gate summary.
+- Engine/loop surface: default compact RPG observations now set `includeAvailableActions: false`, so start/read/load/step contexts that omit `include_actions` no longer enumerate or cache legal actions just to discard ids.
+- Loop effect: no MCP JSON byte change; this trims hot-loop CPU/cache work and keeps `legalActionsCache` empty for no-action compact starts, while `include_actions: true` and full observations still populate action rows.
+- Self-critique: this is an internal runtime efficiency win, not a player-visible mechanics change; it matters because long blind-agent loops ask for compact observations constantly and legal-action enumeration can be requested separately with state hashes.
+- Guard: focused MCP tool, session-cache, view-projection, compact-observation, and server-registration regressions pin no-action cache skipping, action-including cache separation, and unchanged compact response shape.
+- VERIFY: `C:\dev\agent-cleaner`, focused MCP cache/projection regressions, `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, `npm test`, `npm run health`, `npm run assess`, broad `prettier --check .`, and `git diff --check` passed after loop-state rotation.
 
 ### Cycle result - legacy_source_alias_type_cleanup
 
@@ -131,12 +140,3 @@ history only when deep recovery is truly needed. Keep future entries terse.
 - Self-critique: this trims target-selection and catalog discovery reads, not per-turn stepping; state-hash/envelope overhead and detailed graph reads remain separate follow-up surfaces.
 - Guard: catalog, AI-loop, assessor, and server-registration regressions pin tuple shape, title opt-in, playable-index consumers, and schema budget.
 - VERIFY: `C:\dev\agent-cleaner`, focused catalog/assessor/schema regressions, payload probe, `npm run health`, and `npm run assess` passed; post-rotation `npm run verify:integrity`, `npm run format:check`, broad `prettier --check .`, and `git diff --check` also passed.
-
-### Cycle result - compact_observation_prose_caps_v13
-
-- Pre-cycle: `C:\dev\agent-cleaner` measure/gates passed through WSL; optional secret scanner remains absent, and the same WSL git-dir warnings print after the green gate summary.
-- Engine/loop surface: compact RPG observations are now `v: 13` and cap room/ending prose at 420 chars, dialogue at 280, and blocked-exit hints at 180 while preserving full observations behind `compact_observation: false`.
-- Loop effect: `breaking_weir` default `start_world_quest` drops from 1005 to 863 bytes, `get_observation` from 916 to 808, `step_action(read_flood_book)` from 1759 to 1651, and `step_action(talk_pell)` from 1576 to 1438.
-- Self-critique: this directly trims the post-step context surface agents see every turn, but it is still a prose-cap win rather than a structural reduction in the remaining state-hash/envelope overhead.
-- Guard: compact-observation and MCP ToolApi regressions pin `v: 13`, named cap constants, prose-heavy start under 900 bytes, and prose-heavy talk step under 1450.
-- VERIFY: `C:\dev\agent-cleaner`, focused compact-observation/MCP regressions, payload probe, `npm run health`, and `npm run assess` passed after loop-state rotation; post-rotation `npm run verify:integrity`, `npm run format:check`, broad `prettier --check .`, and `git diff --check` also passed.

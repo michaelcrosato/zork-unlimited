@@ -1,7 +1,11 @@
 import { SAVE_MODE, assertSaveContentHash, load } from "../persist/save_load.js";
 import { worldRouteFromHub, type WorldRouteStep } from "../world/graph.js";
 import { resolveGameSource, resolveSaveGameSource } from "../world/source.js";
-import { rpgViewField, type RpgViewOptions } from "./rpg_view_projection.js";
+import {
+  rpgObservationNeedsActions,
+  rpgViewField,
+  type RpgViewOptions,
+} from "./rpg_view_projection.js";
 import {
   rpgSourceFields,
   type RpgMcpSessionRuntime,
@@ -117,6 +121,7 @@ export function runRpgLoadGame<Args extends RpgLoadGameToolArgs>(
   const openingOpts = deps.rpgRuntime.openingObservationOptions(session, {
     includeWorldIntro: args.compact_observation !== true || args.include_world_intro === true,
   });
+  openingOpts.includeAvailableActions = rpgObservationNeedsActions(args);
   return {
     session_id: session.id,
     ...rpgViewField(

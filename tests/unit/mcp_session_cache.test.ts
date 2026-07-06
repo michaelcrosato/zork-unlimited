@@ -36,6 +36,7 @@ function populatedCaches(): SessionRuntimeCaches<TranscriptSummary> {
       stateHash: "state-1",
       hideGraph: false,
       includeWorldIntro: false,
+      includeAvailableActions: true,
       observation,
     },
     observationProjectionCaches: new Map([["obs:v1", { stateHash: "state-1", projection: {} }]]),

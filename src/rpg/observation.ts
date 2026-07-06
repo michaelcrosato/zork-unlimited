@@ -28,6 +28,7 @@ import { enemyActive, enumerateRpgActions, type RpgIndex } from "./runner.js";
 export type ObservationOptions = {
   hideGraph?: boolean;
   includeWorldIntro?: boolean;
+  includeAvailableActions?: boolean;
   availableActions?: readonly RpgActionOption[];
 };
 
@@ -122,13 +123,15 @@ export function buildRpgObservation(
   }
 
   const availableActions: RpgObservation["available_actions"] = [];
-  for (const option of opts.availableActions ?? enumerateRpgActions(index, state)) {
-    availableActions.push({
-      id: option.id,
-      command: option.command,
-      action: option.action,
-      ...(option.skill_check ? { skill_check: option.skill_check } : {}),
-    });
+  if (opts.includeAvailableActions !== false) {
+    for (const option of opts.availableActions ?? enumerateRpgActions(index, state)) {
+      availableActions.push({
+        id: option.id,
+        command: option.command,
+        action: option.action,
+        ...(option.skill_check ? { skill_check: option.skill_check } : {}),
+      });
+    }
   }
 
   return {

@@ -930,6 +930,33 @@ describe("SessionStore", () => {
     expect(session.observationCache?.stateHash).toBe(hashState(nextState));
   });
 
+  it("caches observations separately by available-action inclusion", () => {
+    const store = new SessionStore();
+    const session = store.create(sessionInit());
+    const fullObservation = observation("full");
+    const lightObservation = observation("light");
+    let builds = 0;
+
+    const full = store.observation(session.id, {}, () => {
+      builds += 1;
+      return fullObservation;
+    });
+    const light = store.observation(session.id, { includeAvailableActions: false }, () => {
+      builds += 1;
+      return lightObservation;
+    });
+    const cachedLight = store.observation(session.id, { includeAvailableActions: false }, () => {
+      builds += 1;
+      return fullObservation;
+    });
+
+    expect(full).toBe(fullObservation);
+    expect(light).toBe(lightObservation);
+    expect(cachedLight).toBe(lightObservation);
+    expect(builds).toBe(2);
+    expect(session.observationCache?.includeAvailableActions).toBe(false);
+  });
+
   it("caches observation projections until state changes", () => {
     const store = new SessionStore();
     const session = store.create(sessionInit());

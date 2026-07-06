@@ -3049,6 +3049,10 @@ describe("MCP tools — the play loop (§9.1)", () => {
       include_actions: true,
     });
     expect(actionBundledStart.context.actions?.[0]).toEqual(expect.any(String));
+    expect(a.sessions.get(compactStart.session_id).legalActionsCache).toBeUndefined();
+    expect(
+      a.sessions.get(actionBundledStart.session_id).legalActionsCache?.actions.length,
+    ).toBeGreaterThan(0);
     expect(compactStart.context.vars).toMatchObject({ might: expect.any(Number) });
     expect(compactStart.context.vars).not.toHaveProperty("hp");
     expect(compactStart.context.vars).not.toHaveProperty("score");

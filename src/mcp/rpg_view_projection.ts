@@ -33,7 +33,10 @@ export type RpgLegalActionRows<Args extends RpgLegalActionsArgs> = Args extends 
 
 export type PublicObservationOptions = { compactActions?: boolean };
 
-export type RpgObservationViewOptions = Pick<ObservationOptions, "hideGraph" | "includeWorldIntro">;
+export type RpgObservationViewOptions = Pick<
+  ObservationOptions,
+  "hideGraph" | "includeWorldIntro" | "includeAvailableActions"
+>;
 
 const OBSERVATION_PROJECTION_COMPACT = `compact-observation:v${RPG_COMPACT_OBSERVATION_VERSION}`;
 const OBSERVATION_PROJECTION_PUBLIC = "public-observation:v1";
@@ -166,7 +169,11 @@ export function observationProjectionSuffix(
   opts: RpgObservationViewOptions,
   extra: string,
 ): string {
-  return `hide:${opts.hideGraph === true ? 1 : 0}:intro:${opts.includeWorldIntro === true ? 1 : 0}:${extra}`;
+  return `hide:${opts.hideGraph === true ? 1 : 0}:intro:${opts.includeWorldIntro === true ? 1 : 0}:actions:${opts.includeAvailableActions === false ? 0 : 1}:${extra}`;
+}
+
+export function rpgObservationNeedsActions(args: RpgViewOptions): boolean {
+  return args.compact_observation !== true || args.include_actions === true;
 }
 
 type RpgObservationSource = RpgObservation | (() => RpgObservation);
@@ -192,11 +199,8 @@ export function rpgViewField<Args extends RpgViewOptions>(
       )}`,
       () => {
         const built = observationFrom(obs);
-        return compactRpgObservation(
-          built,
-          built.available_actions.map((action) => action.id),
-          { includeActions },
-        );
+        const actionIds = includeActions ? built.available_actions.map((action) => action.id) : [];
+        return compactRpgObservation(built, actionIds, { includeActions });
       },
     );
     return {

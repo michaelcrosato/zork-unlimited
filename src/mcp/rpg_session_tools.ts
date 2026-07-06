@@ -9,6 +9,7 @@ import {
 } from "./compact_rpg_state.js";
 import {
   legalActionRowsFor,
+  rpgObservationNeedsActions,
   rpgViewField,
   type RpgLegalActionRows,
   type RpgLegalActionsArgs as RpgViewLegalActionsArgs,
@@ -196,6 +197,7 @@ export function runRpgGetObservation<Args extends RpgGetObservationToolArgs>(
   }
   const obsOpts = {
     hideGraph: args.hide_graph ?? s.hideGraph ?? false,
+    includeAvailableActions: rpgObservationNeedsActions(args),
   };
   return {
     ...rpgViewField(

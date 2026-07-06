@@ -30,6 +30,7 @@ export type SessionRuntimeCaches<TranscriptSummary> = {
     stateHash: string;
     hideGraph: boolean;
     includeWorldIntro: boolean;
+    includeAvailableActions: boolean;
     observation: RpgObservation;
   };
   observationProjectionCaches?: Map<string, StateProjectionCacheEntry>;

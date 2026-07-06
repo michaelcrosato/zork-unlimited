@@ -351,7 +351,10 @@ export type SessionInit = Omit<
   | "transcriptProjectionCaches"
 >;
 
-type ObservationCacheOptions = Pick<ObservationOptions, "hideGraph" | "includeWorldIntro">;
+type ObservationCacheOptions = Pick<
+  ObservationOptions,
+  "hideGraph" | "includeWorldIntro" | "includeAvailableActions"
+>;
 
 export class SessionStore {
   private counter = 0n;
@@ -455,10 +458,12 @@ export class SessionStore {
     const session = this.get(id);
     const hideGraph = opts.hideGraph === true;
     const includeWorldIntro = opts.includeWorldIntro === true;
+    const includeAvailableActions = opts.includeAvailableActions !== false;
     if (
       session.observationCache?.stateHash === session.stateHash &&
       session.observationCache.hideGraph === hideGraph &&
-      session.observationCache.includeWorldIntro === includeWorldIntro
+      session.observationCache.includeWorldIntro === includeWorldIntro &&
+      session.observationCache.includeAvailableActions === includeAvailableActions
     ) {
       return session.observationCache.observation;
     }
@@ -467,6 +472,7 @@ export class SessionStore {
       stateHash: session.stateHash,
       hideGraph,
       includeWorldIntro,
+      includeAvailableActions,
       observation,
     };
     return observation;
