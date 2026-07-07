@@ -41,6 +41,7 @@ export type MutableOverworldSessionQuestStartState = OverworldActionJournalState
 
 export type MutableOverworldSessionQuestCompletionState = OverworldActionJournalState & {
   completedQuestIds: Set<string>;
+  regionRenown: Map<string, number>;
 };
 
 export type OverworldSessionQuestStartState = OverworldSessionQuestStartPlanState &
@@ -102,9 +103,18 @@ export function applyOverworldSessionQuestCompletion(
   plan: OverworldQuestCompletionPlan,
 ): OverworldAppliedSessionQuestCompletion {
   const applied = recordOverworldSessionAction(state, plan.entryDraft, plan.minutes);
-  if (!applied.result.alreadyKnown) {
-    applyOverworldQuestCompletion({ completedQuestIds: state.completedQuestIds }, plan);
-  }
+  // Renown is awarded exactly once: a repeat completion (alreadyKnown) reports
+  // zero gained and the standing total, never a double award.
+  const award = applied.result.alreadyKnown
+    ? {
+        renownRegion: plan.renownRegion,
+        renownGained: 0,
+        renownAfter: state.regionRenown.get(plan.renownRegion) ?? 0,
+      }
+    : applyOverworldQuestCompletion(
+        { completedQuestIds: state.completedQuestIds, regionRenown: state.regionRenown },
+        plan,
+      );
   return {
     result: {
       minutes: applied.result.minutes,
@@ -112,6 +122,9 @@ export function applyOverworldSessionQuestCompletion(
       quest: plan.quest,
       endingId: plan.endingId,
       endingTitle: plan.endingTitle,
+      renownRegion: award.renownRegion,
+      renownGained: award.renownGained,
+      renownAfter: award.renownAfter,
       entry: applied.result.entry,
     },
     minutesAfter: applied.minutesAfter,

@@ -39,6 +39,7 @@ export type OverworldCompactQuestCompletionResult = {
   known?: true;
   quest: OverworldCompactQuestRef;
   ending: readonly [id: string, title: string];
+  renown: readonly [region: string, gained: number, after: number];
   entry: OverworldCompactJournalEntry;
 };
 
@@ -139,6 +140,7 @@ export function compactOverworldQuestCompletionResult(
     ...(result.alreadyKnown ? { known: true as const } : {}),
     quest: compactOverworldQuestRef(result.quest),
     ending: [result.endingId, compactOverworldTitle(result.endingTitle)],
+    renown: [result.renownRegion, result.renownGained, result.renownAfter],
     entry: compactOverworldJournalEntry(result.entry),
   };
 }

@@ -76,6 +76,9 @@ describe("compactOverworldActionResult", () => {
       },
       endingId: "ending:long",
       endingTitle: longEndingTitle,
+      renownRegion: "Capital Region",
+      renownGained: 8,
+      renownAfter: 15,
       entry: {
         id: "entry",
         kind: "quest_done",
@@ -91,6 +94,7 @@ describe("compactOverworldActionResult", () => {
     expect(compact.ending[0]).toBe("ending:long");
     expect(compact.ending[1]).not.toBe(longEndingTitle);
     expect(compact.ending[1]).toHaveLength(OVERWORLD_COMPACT_TITLE_CHAR_LIMIT);
+    expect(compact.renown).toEqual(["Capital Region", 8, 15]);
     expect(JSON.stringify(compact)).not.toContain(longEndingTitle);
   });
 

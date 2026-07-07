@@ -1,0 +1,27 @@
+id: bug_0495
+title: "Completing a quest through the overworld bridge awarded ZERO renown — reward hierarchy inverted"
+pack: n/a (overworld session runtime)
+reported_by: blind_playtest_20260707_overworld_seed7
+severity: medium
+symptom: >
+  S1 from the first default-mode overworld blind run: finishing The Wolf-Winter
+  (score 50/60, ending reached) awarded no overworld renown, while a minor
+  ledger-run job paid 3 and a road assist 2. "The reward hierarchy is
+  inverted." The complete_overworld_session_quest tool description had always
+  promised folding the outcome "back into overworld progress and renown" — the
+  renown half was never implemented.
+root_cause: >
+  planOverworldQuestCompletion/applyOverworldQuestCompletion only marked
+  completedQuestIds and wrote the journal entry; nothing touched regionRenown,
+  the same map every local job, site exploration, and road assist credits.
+fix: >
+  Quest completion now awards QUEST_COMPLETION_RENOWN (8 — deliberately above
+  the 1-5 job-difficulty/site-danger economy) in the quest's home-town region,
+  exactly once (a repeat completion reports 0 gained and the standing total,
+  and leaves the snapshot hash unchanged). The full and compact completion
+  results both surface renownRegion/renownGained/renownAfter so the player
+  SEES the payoff (compact: renown = [region, gained, after]).
+tests:
+  - tests/unit/world_session_quests.test.ts (plan + apply award; > max job)
+  - tests/unit/mcp_tools.test.ts (bridge awards once; repeat gains 0)
+  - tests/unit/compact_overworld_result.test.ts (compact renown tuple)

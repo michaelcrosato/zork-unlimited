@@ -164,6 +164,8 @@ describe("overworld quest lifecycle planning", () => {
       },
       endingId: "ending_victory",
       endingTitle: "Victory",
+      renownRegion: "Test Region",
+      renown: 8,
       entryDraft: {
         id: `quest_done:${lead.id}`,
         kind: "quest_done",
@@ -189,11 +191,18 @@ describe("overworld quest lifecycle planning", () => {
       startedQuestIds: new Set([lead.id]),
     });
     const completedQuestIds = new Set<string>();
+    const regionRenown = new Map<string, number>([["Test Region", 3]]);
 
-    expect(applyOverworldQuestCompletion({ completedQuestIds }, plan)).toEqual({
+    expect(applyOverworldQuestCompletion({ completedQuestIds, regionRenown }, plan)).toEqual({
       questId: lead.id,
+      renownRegion: "Test Region",
+      renownGained: 8,
+      renownAfter: 11,
     });
     expect([...completedQuestIds]).toEqual([lead.id]);
+    // The marquee accomplishment must top any single job (difficulty 1-5).
+    expect(plan.renown).toBeGreaterThan(5);
+    expect(regionRenown.get("Test Region")).toBe(11);
   });
 
   it("rejects quest completion attempts that cannot close overworld progress", () => {

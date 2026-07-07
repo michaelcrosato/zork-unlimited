@@ -1129,6 +1129,12 @@ describe("MCP tools — validate / load (§9.4)", () => {
       endingId: "ending_victory",
       quest: { id: "sunken_barrow" },
     });
+    // bug_0495 — the tool description always promised "progress and renown";
+    // completing the marquee content must visibly TOP any single local job
+    // (difficulty 1-5), or the reward hierarchy reads inverted.
+    expect(completed.result.renownGained).toBeGreaterThan(5);
+    expect(completed.result.renownRegion).toBeTruthy();
+    expect(completed.result.renownAfter).toBeGreaterThanOrEqual(completed.result.renownGained);
     expect(completed.result.entry).toMatchObject({
       id: "quest_done:sunken_barrow",
       kind: "quest_done",
@@ -1151,6 +1157,9 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(repeated.ok).toBe(true);
     if (!repeated.ok) throw new Error("expected idempotent quest completion");
     expect(repeated.result.alreadyKnown).toBe(true);
+    // Renown is awarded exactly once: the repeat reports 0 gained, same total.
+    expect(repeated.result.renownGained).toBe(0);
+    expect(repeated.result.renownAfter).toBe(completed.result.renownAfter);
     expect(repeated.snapshot_hash).toBe(completed.snapshot_hash);
 
     const exported = a.export_overworld_session({

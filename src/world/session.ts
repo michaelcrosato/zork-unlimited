@@ -593,6 +593,7 @@ export class OverworldSession {
     const applied = applyOverworldSessionQuestCompletionFromState({
       ...this.actionJournalState(),
       completedQuestIds: this.completedQuestIds,
+      regionRenown: this.regionRenown,
       questId,
       outcome,
       questsById: this.questsById,
