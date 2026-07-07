@@ -108,8 +108,58 @@ export function formatSpectateEntry(
       );
       break;
     }
-    default:
-      head(`· ${name}`);
+    // ── Overworld (the core-game open world) ──────────────────────────────────
+    case "start_overworld":
+    case "restore_overworld_session": {
+      const here = Array.isArray(ctx.here) ? ctx.here : [];
+      const loc = typeof here[1] === "string" ? here[1] : "the open world";
+      const region = typeof here[2] === "string" ? `, ${here[2]}` : "";
+      const time = typeof ctx.time === "string" ? `  (${ctx.time})` : "";
+      head(`▶ enter the world — ${loc}${region}${time}`);
+      break;
+    }
+    case "start_overworld_session_quest": {
+      const q = asRecord(p.quest);
+      head(`▶ enter quest: ${String(q.title ?? a.quest_id ?? "a discovered quest")}`);
+      const rctx = asRecord(asRecord(p.rpg_session).context);
+      const rtitle = sceneTitleOf(rctx);
+      if (rtitle) out.push(`   ┌ ${rtitle}`);
+      if (typeof rctx.text === "string") out.push(`   ${rctx.text}`);
+      break;
+    }
+    default: {
+      // Overworld action results carry a journal `entry` = [kind, title, when]
+      // plus optional discovery lists — render that as a readable beat. This
+      // covers scout / talk / explore / move / travel / work / investigate /
+      // resolve / rest / resupply / road-encounter uniformly.
+      const entry = Array.isArray(p.entry) ? p.entry : null;
+      const mins = typeof p.m === "number" && p.m > 0 ? `  [+${p.m}m]` : "";
+      if (entry && typeof entry[1] === "string") {
+        head(`▷ ${name}${mins}`);
+        out.push(`   ${entry[1]}`);
+        const discoveries: Array<readonly [string, string]> = [
+          ["areas", "area"],
+          ["jobs", "job"],
+          ["sites", "site"],
+          ["quests", "quest lead"],
+          ["contacts", "contact"],
+          ["events", "event"],
+        ];
+        for (const [key, label] of discoveries) {
+          const arr = p[key];
+          if (!Array.isArray(arr) || arr.length === 0) continue;
+          const names = arr
+            .map((x) => (Array.isArray(x) ? x[1] : x))
+            .filter((s): s is string => typeof s === "string");
+          if (names.length) out.push(`   ↳ found ${label}: ${names.join(", ")}`);
+        }
+      } else {
+        head(`· ${name}`);
+      }
+      // A pending road encounter blocks all further travel — flag it loudly.
+      if (asRecord(ctx.pending_road).id !== undefined || asRecord(p.pending_road).id !== undefined)
+        out.push(`   ⚠ road encounter — resolve before travelling on`);
+    }
   }
   return `${out.join("\n")}\n`;
 }

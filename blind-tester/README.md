@@ -19,18 +19,35 @@ This harness is the right-hand column: the model is an external player that reac
 the game **only** through the `mcp__adventureforge__*` MCP tools. That uses your
 subscription allowance, which is the best value — exactly per the project goal.
 
+## Two blind modes
+
+- **Quest mode (default):** drop the agent straight into one shipped quest and
+  have it play that quest to an ending. Targeted — good for testing a specific
+  piece of content (this is what the AFK loop runs each cycle on the quest it just
+  changed).
+- **Overworld mode (`--overworld`):** the genuine _new-player_ test. The agent
+  starts the **core game** — the New York open world — from a fresh start in the
+  starting town, orients, discovers local work by scouting/talking/exploring,
+  travels a road (resolving encounters), and discovers+plays a quest through the
+  overworld→quest bridge, then reports on the _opening experience_. This is "how
+  does a first-time player actually experience the game," not a quest snippet.
+
 ## Quickstart
 
 ```bash
 # 0) Prove the MCP path works — NO LLM, NO tokens (the reliability backbone):
 npm run blind:smoke
 
-# 1) Run a real blind playtest on your subscription (default: breaking_weir, seed 7):
+# 1) Quest mode — a real blind playtest (default: breaking_weir, seed 7):
 npm run blind
+
+# 2) Overworld mode — play the CORE GAME from a fresh start, watched live:
+npm run blind --overworld --spectate      # then `npm run spectate` in another terminal
 
 # Custom source/model without npm argument-forwarding warnings:
 bash blind-tester/run.sh --smoke --quest sunken_barrow --seed 11
 bash blind-tester/run.sh --quest sunken_barrow --seed 11 --model opus
+bash blind-tester/run.sh --overworld --model opus
 ```
 
 The report is written to `blind-tester/reports/<stamp>_<quest>_seed<n>.md`
@@ -114,6 +131,7 @@ the prompt in [`prompt.md`](./prompt.md) reuses its report format (clarity/enjoy
 --model <alias>  claude model alias: sonnet (default, best value) | opus
 --out <prefix>   report path prefix (default: reports/<stamp>_<quest>_seed<n>)
 --smoke          run the no-LLM MCP smoke test instead of a real playtest
+--overworld      play the core game open world from a fresh start (vs one quest)
 --spectate       write the human-watchable feed (watch with: npm run spectate)
 --delay-ms <n>   pace every tool response by n ms (implies --spectate)
 ```

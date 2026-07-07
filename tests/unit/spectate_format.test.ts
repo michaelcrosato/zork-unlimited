@@ -83,6 +83,65 @@ describe("formatSpectateEntry", () => {
     expect(out).toContain("take life-line");
   });
 
+  it("renders the overworld: entering the world, an action's journal + discoveries, quest handoff", () => {
+    const start = at(
+      "start_overworld",
+      {},
+      JSON.stringify({
+        session_id: "o1",
+        context: {
+          here: ["colonie_town", "Colonie town", "Capital / Mohawk", null, null],
+          time: "Day 1, 09:41",
+        },
+      }),
+    );
+    expect(start).toContain("enter the world — Colonie town, Capital / Mohawk");
+    expect(start).toContain("Day 1, 09:41");
+
+    const scout = at(
+      "scout_overworld_session_poi",
+      { poi_id: "notice_hall" },
+      JSON.stringify({
+        m: 25,
+        entry: ["poi", "Scouted the Notice Hall", "Day 1, 10:06"],
+        quests: [["wolf_winter", "The Wolf-Winter"]],
+      }),
+    );
+    expect(scout).toContain("Scouted the Notice Hall");
+    expect(scout).toContain("found quest lead: The Wolf-Winter");
+
+    const travel = at(
+      "travel_overworld_session",
+      { destination_town_id: "albany_city" },
+      JSON.stringify({
+        m: 6,
+        entry: ["road", "Took I-90 to Albany", "Day 1, 10:12"],
+        context: { pending_road: { id: "enc1" } },
+      }),
+    );
+    expect(travel).toContain("Took I-90 to Albany");
+    expect(travel).toContain("⚠ road encounter");
+
+    const enter = at(
+      "start_overworld_session_quest",
+      { quest_id: "wolf_winter" },
+      JSON.stringify({
+        ok: true,
+        quest: { title: "The Wolf-Winter" },
+        rpg_session_id: "r2",
+        rpg_session: {
+          context: {
+            here: ["yard", "The Steading Yard"],
+            text: "A lone hill-steading in the black of winter.",
+          },
+        },
+      }),
+    );
+    expect(enter).toContain("enter quest: The Wolf-Winter");
+    expect(enter).toContain("The Steading Yard");
+    expect(enter).toContain("black of winter");
+  });
+
   it("falls back to a trimmed raw dump on non-JSON or error bodies", () => {
     const out = at("step_action", {}, "Error: boom", true);
     expect(out).toContain("✗ ERROR");
