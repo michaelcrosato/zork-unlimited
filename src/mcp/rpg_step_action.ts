@@ -1,4 +1,5 @@
 import type { RpgActionOption } from "../rpg/legal_actions.js";
+import { activeDialogue } from "../rpg/model.js";
 import { rpgRoomTitle, type RpgMcpSessionRuntime } from "./rpg_session_runtime.js";
 import type { SessionStore } from "./sessions.js";
 import {
@@ -82,7 +83,16 @@ export function runRpgStepAction<Args extends RpgStepActionArgs>(
   const beforeSceneId = s.state.current;
   const beforeTitle = rpgRoomTitle(s.index, s.state);
   if (actionOption === null) {
-    const rejectionReason = "That action is not available right now.";
+    // Dialogue is modal, but that constraint was invisible at the exact moment it
+    // bites: a player acting from a menu fetched BEFORE starting a conversation
+    // gets a bare "not available" and has to guess why (bug_0494, found by an
+    // overworld blind playtest). Name the modality only in that case — every
+    // other unknown-id rejection keeps the terse default (rejections live in
+    // transcripts, so idle words cost tokens on every future read).
+    const inDialogue = activeDialogue(s.index, s.state) !== null;
+    const rejectionReason = inDialogue
+      ? "That action is not available right now: you are mid-conversation, and only the listed ask topics are legal until one of them ends the talk."
+      : "That action is not available right now.";
     const rejectionEvents = [{ type: "rejected" as const, reason: rejectionReason }];
     const beforeObsOpts = {
       hideGraph: args.hide_graph ?? s.hideGraph ?? false,

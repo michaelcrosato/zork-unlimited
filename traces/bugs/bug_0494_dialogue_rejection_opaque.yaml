@@ -1,0 +1,26 @@
+id: bug_0494
+title: "Mid-dialogue action rejection never said WHY — dialogue modality was invisible"
+pack: content/rpg/quests/wolf_winter.yaml (engine-wide MCP surface)
+reported_by: blind_playtest_20260707_overworld_seed7
+severity: medium
+symptom: >
+  S2 from the first overworld core-game blind run: after talking to old Cade,
+  the player stepped `read_day_book` off a menu fetched before the TALK and got
+  the bare "That action is not available right now." — three calls were wasted
+  discovering that dialogue is modal and only the current node's ask topics are
+  legal. The report called it "the most disorienting moment in the session:
+  actions listed as legal fail silently, forcing re-query."
+root_cause: >
+  Dialogue modality is enforced correctly (enumeration returns only the active
+  node's topics; verified by a deterministic repro), but the MCP unknown-id
+  rejection in runRpgStepAction used one context-free message, so the player
+  could not distinguish "wrong moment (mid-conversation)" from "nonexistent
+  action".
+fix: >
+  The MCP rejection now names the modality exactly when it bites: mid-dialogue
+  unknown ids get "...you are mid-conversation, and only the listed ask topics
+  are legal until one of them ends the talk." All other unknown-id rejections
+  keep the terse default (rejections live in transcripts; idle words cost
+  tokens on every future read). Engine-level rejections are untouched.
+tests:
+  - tests/regression/rpg_step_rejection_dialogue_diagnostic.test.ts
