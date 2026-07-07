@@ -1,0 +1,26 @@
+id: bug_0492
+title: "replay_trace/inspect_trace leaked absolute filesystem paths to MCP clients"
+pack: n/a (MCP tool surface)
+reported_by: repo_audit_20260706_mcp_world_review
+severity: medium
+symptom: >
+  Calling replay_trace or inspect_trace with a missing trace_path surfaced the
+  raw Node fs error — "ENOENT: no such file or directory, open
+  'C:\...\traces\x.json'" — through the server's generic error wrapper, exposing
+  the resolved ABSOLUTE project path (and, for malformed files, JSON.parse
+  internals) to any MCP client. Blind playtest agents are meant to see nothing
+  of the host filesystem beyond the observations the tools return.
+root_cause: >
+  Both handlers called readFileSync + JSON.parse directly on the safeResolve'd
+  absolute path; safeResolve sanitizes its own rejections (echoing only the
+  client-provided path) but the happy-path file I/O had no equivalent
+  sanitization, and src/mcp/server.ts intentionally returns thrown error
+  messages verbatim.
+fix: >
+  Added readTraceJson(root, trace_path) in src/mcp/tools.ts: path confinement
+  first (unchanged), then read and parse with catch-and-rethrow errors that
+  echo ONLY the client-provided trace_path — "was not found or could not be
+  read" / "is not valid JSON". Both trace tools now go through it.
+tests:
+  - tests/unit/mcp_tools.test.ts (trace tools sanitize missing-file errors;
+    trace tools sanitize malformed-JSON errors)

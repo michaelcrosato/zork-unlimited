@@ -360,6 +360,29 @@ type CompactInspectTraceStepSummary = readonly [
 
 const INSPECT_TRACE_STEP_SUMMARY_VERSION = 1 as const;
 
+/**
+ * Read + parse a client-named trace file with SANITIZED errors. `trace_path` is
+ * client input, and the raw failures leak internals to a (possibly blind) MCP
+ * client: Node fs errors embed the resolved ABSOLUTE path ("ENOENT: ... open
+ * 'C:\\...\\traces\\x.json'") and JSON.parse embeds parser positions. Echo only
+ * the path the client itself sent. Path confinement (safeResolve) still runs
+ * first and keeps its own message, which names nothing but that client path.
+ */
+function readTraceJson(root: string, tracePath: string): Trace<RpgAction> {
+  const abs = safeResolve(root, tracePath);
+  let raw: string;
+  try {
+    raw = readFileSync(abs, "utf8");
+  } catch {
+    throw new Error(`Trace "${tracePath}" was not found or could not be read.`);
+  }
+  try {
+    return JSON.parse(raw) as Trace<RpgAction>;
+  } catch {
+    throw new Error(`Trace "${tracePath}" is not valid JSON.`);
+  }
+}
+
 function compactTraceActionLabel(action: RpgAction): string {
   switch (action.type) {
     case "LOOK":
@@ -790,8 +813,7 @@ export function createToolApi(opts: { root: string }) {
     },
 
     replay_trace(args: { trace_path: string; world_quest_id?: string }) {
-      const traceAbs = safeResolve(root, args.trace_path);
-      const trace = JSON.parse(readFileSync(traceAbs, "utf8")) as Trace<RpgAction>;
+      const trace = readTraceJson(root, args.trace_path);
       assertTraceMode(trace);
       const { compiled } = rpgSources.resolveTraceSource(args, trace, "replay_trace");
       if (trace.content_hash !== compiled.contentHash) {
@@ -819,8 +841,7 @@ export function createToolApi(opts: { root: string }) {
       // the recorded final hash, localizes the first divergent step when the trace
       // carries a Trace-v2 per-step baseline (§8.8), and runs the debugger's
       // classifier (§12.5).
-      const traceAbs = safeResolve(root, args.trace_path);
-      const trace = JSON.parse(readFileSync(traceAbs, "utf8")) as Trace<RpgAction>;
+      const trace = readTraceJson(root, args.trace_path);
       assertTraceMode(trace);
       const source = rpgSources.resolveTraceSource(args, trace, "inspect_trace");
       const { compiled } = source;

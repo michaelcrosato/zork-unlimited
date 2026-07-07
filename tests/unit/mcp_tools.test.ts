@@ -3792,6 +3792,44 @@ describe("MCP tools — replay + path confinement", () => {
     expect(r.diagnosis.type).toBe("no_failure");
   });
 
+  it("trace tools sanitize missing-file errors — no absolute paths for blind clients (bug_0492)", () => {
+    const a = api();
+    for (const call of [
+      (): unknown => a.replay_trace({ trace_path: "traces/does_not_exist.json" }),
+      (): unknown => a.inspect_trace({ trace_path: "traces/does_not_exist.json" }),
+    ]) {
+      let message = "";
+      try {
+        call();
+      } catch (e) {
+        message = (e as Error).message;
+      }
+      // The raw Node error is "ENOENT: no such file or directory, open 'C:\...'"
+      // — the resolved ABSOLUTE path. Clients may only see the path THEY sent.
+      expect(message).toContain('Trace "traces/does_not_exist.json" was not found');
+      expect(message).not.toContain("ENOENT");
+      expect(message).not.toContain(process.cwd());
+    }
+  });
+
+  it("trace tools sanitize malformed-JSON errors — no parser internals (bug_0492)", () => {
+    writeFileSync("traces/mcp_malformed.json", "{ this is not json");
+    const a = api();
+    for (const call of [
+      (): unknown => a.replay_trace({ trace_path: "traces/mcp_malformed.json" }),
+      (): unknown => a.inspect_trace({ trace_path: "traces/mcp_malformed.json" }),
+    ]) {
+      let message = "";
+      try {
+        call();
+      } catch (e) {
+        message = (e as Error).message;
+      }
+      expect(message).toContain('Trace "traces/mcp_malformed.json" is not valid JSON');
+      expect(message).not.toMatch(/position|Unexpected token/i);
+    }
+  });
+
   it("trace tools reject raw pack paths on the ToolApi surface", () => {
     const a = api();
     expect(() =>
