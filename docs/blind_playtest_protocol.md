@@ -47,7 +47,7 @@ before "make ONE improvement" — and its findings are a primary input to the fi
 3. **Collect the structured report** (sections 1–7 in the template): the route(s)
    taken, whether it worked mechanically, clarity/enjoyment ratings, confusion
    points, concrete bugs/flaws (each with a scene), a verdict, and — mandatory —
-   the **exit interview**: a fenced ```json exit-interview``` block restating the
+   the **exit interview**: a fenced `json exit-interview` block restating the
    findings as data (integer clarity/enjoyment, S0–S4 bug list, confusions,
    would_replay, verdict). The report verifier (`src/blind/report_verifier.ts`)
    REJECTS a report without a schema-valid block, so a playtest only counts when
@@ -134,13 +134,20 @@ REPORT (return these sections):
 Be honest and specific; a critical, well-observed report is more useful than a flattering one.
 ```
 
-## Worked example (historical — this quest was retired in the 2026-07-06 consolidation)
+## Worked example — the first default-mode core-game run (2026-07-07)
 
-The first run of this protocol on _The Watchtower Road_ (seed 7) reached both
-`ending_truth` and `ending_escape`, confirmed mechanics/save-load, and surfaced
-four content-polish findings (stale cart/cellar-door text, a journal entry that
-stacked on cellar re-entry, and a ledger referenced by an ending but never carried).
-All four were fixed as `content`/`hint_text`, locked by
-`traces/bugs/bug_0002_watchtower_blind_polish.yaml` (the quest and its regression
-test were later retired with the pack; the artifact survives as history). That is
-the loop closing: write → play (blind) → find → fix → lock.
+The first `npm run blind` after the overworld became the default played the
+core game end to end on one subscription run (49 tool turns, ~7.6 min): a
+fresh start in Albany, the discovery loop (explore/scout/talk revealing areas,
+jobs, and the Wolf-Winter lead), the full quest through the overworld→quest
+bridge to the "Byre Held" ending, a road travel with its encounter resolved,
+and a verified report (clarity 4/5, enjoyment 4/5) with a schema-valid exit
+interview. Its findings drove immediate fixes, each locked with a regression
+test: the opaque mid-dialogue rejection
+(`traces/bugs/bug_0494_dialogue_rejection_opaque.yaml`) and the zero-renown
+quest completion (`traces/bugs/bug_0495_quest_completion_no_renown.yaml`); its
+suspected PRNG repeat was disproved by a deterministic repro (retries roll
+fresh d20s per step). That is the loop closing: play (blind) → find → verify →
+fix → lock. (The protocol's very first run, on the since-retired _The
+Watchtower Road_, survives as history in
+`traces/bugs/bug_0002_watchtower_blind_polish.yaml`.)
