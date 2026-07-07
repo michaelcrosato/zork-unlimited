@@ -1,0 +1,27 @@
+id: bug_0493
+title: "Source-backed quest loads let raw fs errors (absolute paths) escape after the manifest coverage check"
+pack: n/a (MCP source runtime)
+reported_by: repo_audit_20260706_mcp_world_review
+severity: low
+symptom: >
+  RpgSourceRuntime.loadSourceBackedReport called statSync/readFileSync directly
+  on the resolved absolute source path. A source missing at manifest-load time
+  is rejected cleanly by assertWorldQuestSourceCoverage, but a file deleted in
+  the gap AFTER that check (or unreadable on open — permissions, EISDIR)
+  escaped as Node's raw error carrying the resolved ABSOLUTE project path to
+  MCP clients, and the throw broke every catalog caller (one broken row took
+  down all of list_world) instead of marking that quest unplayable.
+root_cause: >
+  Same class as bug_0492 one layer deeper: sanitization existed at the path-
+  confinement boundary (safeResolve) but not around the actual file I/O, and
+  the loader threw instead of folding fs failure into its existing not-ok
+  RpgLoadResult report shape.
+fix: >
+  loadSourceBackedReport now wraps statSync and readFileSync; on failure it
+  returns a normal not-ok load report with a SOURCE_UNREADABLE finding that
+  echoes only the manifest-relative source path (the same path reports already
+  use). The catalog lists the quest as unplayable; the playable gate throws
+  the sanitized report text.
+tests:
+  - tests/unit/mcp_rpg_source_runtime.test.ts (source vanishes AFTER the
+    manifest coverage check; verified red without the fix)

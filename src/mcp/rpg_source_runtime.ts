@@ -155,7 +155,31 @@ export class RpgSourceRuntime {
   /** Read an RPG source, compile, and validate it with the single runtime loader. */
   private loadSourceBackedReport(sourcePath: string): RpgLoadResult {
     const abs = safeResolve(this.root, sourcePath);
-    const stat = statSync(abs);
+    // A manifest may name a source file that is missing or unreadable on disk.
+    // Surface that as a normal not-ok load report instead of letting the raw fs
+    // error escape: Node's message embeds the resolved ABSOLUTE path, which no
+    // MCP client may see (bug_0492's class), and a throw here would also let one
+    // broken quest row break the whole list_world catalog. Echo only the
+    // manifest-relative source path the reports already use. Not cached: there
+    // is no stat identity to key on, and the error path is cold.
+    const unreadable = (): RpgLoadResult =>
+      freezeLoadResult({
+        ok: false,
+        report: makeReport(sourcePath, [
+          {
+            severity: "error",
+            code: "SOURCE_UNREADABLE",
+            message: `RPG source "${sourcePath}" is missing or unreadable.`,
+            where: [sourcePath],
+          },
+        ]),
+      });
+    let stat: ReturnType<typeof statSync>;
+    try {
+      stat = statSync(abs);
+    } catch {
+      return unreadable();
+    }
     const cached = refreshSourceCacheEntry(this.sourceLoadCache, abs);
     if (
       cached &&
@@ -166,7 +190,12 @@ export class RpgSourceRuntime {
       return cached.result;
     }
 
-    const source = readFileSync(abs, "utf8");
+    let source: string;
+    try {
+      source = readFileSync(abs, "utf8");
+    } catch {
+      return unreadable();
+    }
     let result: RpgLoadResult;
     if (!isRpgPackShape(parseYaml(source) as unknown)) {
       result = freezeLoadResult({

@@ -124,6 +124,35 @@ describe("RpgSourceRuntime caches", () => {
     expect("packPath" in source).toBe(false);
   });
 
+  it("reports a source that vanishes AFTER the manifest coverage check as not-ok — no raw fs error, no absolute path (bug_0493)", () => {
+    withTempRoot((root) => {
+      // A source missing at manifest-load time is already rejected cleanly by
+      // assertWorldQuestSourceCoverage. The remaining hole is the gap AFTER that
+      // check: a file deleted mid-session (or unreadable on open) used to escape
+      // as Node's raw fs error carrying the resolved ABSOLUTE path — which no
+      // MCP client may see — and broke every catalog caller. Model the race by
+      // loading the manifest green, then deleting the source out from under it.
+      const sourcePath = writeTempWorldQuest(root);
+      const runtime = new RpgSourceRuntime(root);
+      const world = runtime.loadWorldManifest();
+      rmSync(sourcePath);
+
+      // The catalog stays intact: the broken row reports unplayable.
+      const sources = runtime.discoverWorldQuestSources(world);
+      expect(
+        sources.some((source) => source.world_quest_id === TEMP_WORLD_QUEST_ID && !source.playable),
+      ).toBe(true);
+
+      const report = runtime.loadWorldQuestReport(TEMP_WORLD_QUEST_ID, world);
+      expect(report.result.ok).toBe(false);
+      expect(report.result.report.findings.some((f) => f.code === "SOURCE_UNREADABLE")).toBe(true);
+      const text = JSON.stringify(report.result);
+      expect(text).toContain(`content/rpg/quests/${TEMP_WORLD_QUEST_ID}.yaml`);
+      expect(text).not.toContain("ENOENT");
+      expect(text).not.toContain(JSON.stringify(root).slice(1, -1));
+    });
+  });
+
   it("loads trace sources by embedded world id without returning raw pack paths", () => {
     const runtime = new RpgSourceRuntime(ROOT);
     const trace = JSON.parse(readFileSync("traces/rpg/barrow_victory.json", "utf8"));
