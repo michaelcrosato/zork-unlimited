@@ -2,10 +2,12 @@
 /**
  * Blind-tester smoke test — proves the MCP plumbing end to end with NO LLM and NO
  * API key. It spawns the adventureforge MCP server exactly the way the blind agent
- * will reach it (stdio JSON-RPC), lists tools, starts a game, and steps a few
- * actions, asserting the whole path works. Run it before (or instead of) a real
- * `claude -p` blind run to confirm the harness is wired correctly without spending
- * any subscription/token budget.
+ * will reach it (stdio JSON-RPC), lists tools, and exercises BOTH blind-run start
+ * surfaces: the overworld CORE GAME (the default blind mode — start_overworld +
+ * a context re-read) and a targeted quest drop-in (start_world_quest + a few
+ * stepped actions). Run it before (or instead of) a real `claude -p` blind run to
+ * confirm the harness is wired correctly without spending any subscription/token
+ * budget.
  *
  *   node blind-tester/smoke.mjs [--quest <id>] [--seed <n>] [--steps <n>]
  */
@@ -108,9 +110,44 @@ async function main() {
       "step_action",
       "get_state",
       "get_transcript",
+      // The default blind mode plays the overworld CORE GAME — its start
+      // surface must be present too.
+      "start_overworld",
+      "get_overworld_session_context",
     ]) {
       if (!names.has(required)) fail(`MCP server is missing the "${required}" tool`);
     }
+
+    // Leg 1 — the DEFAULT blind mode: start the overworld core game from a
+    // fresh start, keep the one-time compact legend, and prove the guarded
+    // context re-read round-trips.
+    const overworld = parseResult(
+      await client.callTool({
+        name: "start_overworld",
+        arguments: { compact_context: true },
+      }),
+    );
+    if (!overworld.session_id) throw new Error("start_overworld returned no session_id");
+    if (!overworld.snapshot_hash) fail("start_overworld returned no snapshot_hash");
+    if (!overworld.legend) fail("start_overworld did not include the one-time compact legend");
+    if (!overworld.context) fail("start_overworld did not include a compact context");
+    const overworldUnchanged = parseResult(
+      await client.callTool({
+        name: "get_overworld_session_context",
+        arguments: {
+          session_id: overworld.session_id,
+          if_snapshot_hash: overworld.snapshot_hash,
+        },
+      }),
+    );
+    if (overworldUnchanged.unchanged !== true) {
+      fail("overworld context freshness check did not return hash-only unchanged");
+    }
+    console.log(
+      `• start_overworld ok → session ${overworld.session_id} (legend + snapshot_hash present)`,
+    );
+
+    // Leg 2 — the targeted quest drop-in mode.
 
     const start = parseResult(
       await client.callTool({

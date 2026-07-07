@@ -21,36 +21,42 @@ subscription allowance, which is the best value — exactly per the project goal
 
 ## Two blind modes
 
-- **Quest mode (default):** drop the agent straight into one shipped quest and
-  have it play that quest to an ending. Targeted — good for testing a specific
-  piece of content (this is what the AFK loop runs each cycle on the quest it just
-  changed).
-- **Overworld mode (`--overworld`):** the genuine _new-player_ test. The agent
+- **Overworld mode (the DEFAULT):** the genuine _new-player_ test. The agent
   starts the **core game** — the New York open world — from a fresh start in the
   starting town, orients, discovers local work by scouting/talking/exploring,
   travels a road (resolving encounters), and discovers+plays a quest through the
   overworld→quest bridge, then reports on the _opening experience_. This is "how
   does a first-time player actually experience the game," not a quest snippet.
+- **Quest mode (`--quest <id>`, targeted/legacy):** drop the agent straight into
+  one shipped quest and have it play that quest to an ending. Kept for testing a
+  specific piece of content (this is what the AFK loop runs each cycle on the
+  quest it just changed) — it is NOT how a new player meets the game, so it is
+  never the default.
 
 ## Quickstart
 
 ```bash
-# 0) Prove the MCP path works — NO LLM, NO tokens (the reliability backbone):
+# 0) Prove the MCP path works — NO LLM, NO tokens (the reliability backbone).
+#    The smoke covers BOTH start surfaces: the overworld core game and a quest drop-in.
 npm run blind:smoke
 
-# 1) Quest mode — a real blind playtest (default: breaking_weir, seed 7):
+# 1) The default blind playtest — the CORE GAME open world from a fresh start:
 npm run blind
 
-# 2) Overworld mode — play the CORE GAME from a fresh start, watched live:
-npm run blind --overworld --spectate      # then `npm run spectate` in another terminal
+# 2) Same, watched live:
+npm run blind --spectate                  # then `npm run spectate` in another terminal
+
+# 3) Targeted quest mode — blind-test ONE shipped quest (what the AFK loop uses):
+npm run blind --quest=sunken_barrow --seed=11
 
 # Custom source/model without npm argument-forwarding warnings:
 bash blind-tester/run.sh --smoke --quest sunken_barrow --seed 11
 bash blind-tester/run.sh --quest sunken_barrow --seed 11 --model opus
-bash blind-tester/run.sh --overworld --model opus
+bash blind-tester/run.sh --model opus     # overworld (default), opus player
 ```
 
-The report is written to `blind-tester/reports/<stamp>_<quest>_seed<n>.md`
+The report is written to `blind-tester/reports/<stamp>_<source>_seed<n>.md`
+(`<source>` is `overworld` for the default core-game run, or the quest id)
 (and the raw `--output-format json` envelope alongside as `.json`). `reports/` is
 gitignored.
 
@@ -126,12 +132,13 @@ the prompt in [`prompt.md`](./prompt.md) reuses its report format (clarity/enjoy
 ## Options
 
 ```
---quest <id>     shipped Charter Marches quest id to test (default: breaking_weir)
+--quest <id>     targeted quest mode: blind-test ONE shipped Charter Marches quest
+                 (without it, the run plays the CORE GAME open world — the default)
 --seed <n>       deterministic seed (default: 7)
 --model <alias>  claude model alias: sonnet (default, best value) | opus
---out <prefix>   report path prefix (default: reports/<stamp>_<quest>_seed<n>)
+--out <prefix>   report path prefix (default: reports/<stamp>_<source>_seed<n>)
 --smoke          run the no-LLM MCP smoke test instead of a real playtest
---overworld      play the core game open world from a fresh start (vs one quest)
+--overworld      explicit form of the default core-game mode (rejects a --quest mix)
 --spectate       write the human-watchable feed (watch with: npm run spectate)
 --delay-ms <n>   pace every tool response by n ms (implies --spectate)
 ```

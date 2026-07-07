@@ -20,11 +20,15 @@ before "make ONE improvement" — and its findings are a primary input to the fi
 
 ## Procedure (5 steps)
 
-1. **Pick the target.** A playable world quest id + a fixed seed. Discover quest
-   ids from default `list_world().quests[][0]`; detailed catalog calls expose
-   object rows with `world_quest_id`. Default to `breaking_weir`,
-   seed `7`. For variety across cycles, rotate the seed and, when more than one
-   quest is playable, rotate the quest id.
+1. **Pick the target.** The default target is the **core game itself**: the
+   open-world overworld from a fresh start (`npm run blind` with no quest id) —
+   that is how a real new player meets the game. A cycle that changed ONE quest
+   instead targets that quest id + a fixed seed (`--quest <id> --seed <n>`);
+   discover quest ids from default `list_world().quests[][0]` (detailed catalog
+   calls expose object rows with `world_quest_id`). For variety across targeted
+   cycles, rotate the seed and, when more than one quest is playable, rotate the
+   quest id. The single-quest drop-in is a targeted/legacy instrument — never
+   treat it as the default experience test.
 
 2. **Spawn a blind subagent with a FRESH context.** Use whatever isolation your
    harness provides — the `Agent` tool (`subagent_type: general-purpose`), a new
@@ -34,9 +38,10 @@ before "make ONE improvement" — and its findings are a primary input to the fi
    `mcp__adventureforge__*` MCP tools (discoverable via ToolSearch).
    The packaged implementation of this isolation is `npm run blind`
    (blind-tester/run.sh: isolated temp cwd, hard-disallowed file/shell/web tools,
-   automatic report save + verification; its locked prompt is
-   blind-tester/prompt.md, this template's operational twin — keep the two in
-   sync). Use it when running outside an Agent-tool context, and
+   automatic report save + verification). Its default run plays the core-game
+   overworld with the locked prompt blind-tester/prompt-overworld.md; targeted
+   `--quest` runs use blind-tester/prompt.md, this template's operational twin —
+   keep the two in sync. Use it when running outside an Agent-tool context, and
    `npm run blind:smoke` to prove the MCP path with no tokens.
 
 3. **Collect the structured report** (sections 1–7 in the template): the route(s)

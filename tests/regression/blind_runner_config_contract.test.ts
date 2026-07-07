@@ -30,7 +30,7 @@ describe("blind runner MCP config contract", () => {
     expect(pkg).toContain('"blind": "node blind-tester/blind-launch.mjs"');
   });
 
-  it("has an --overworld mode that plays the CORE GAME from a fresh start", () => {
+  it("DEFAULTS to the CORE GAME overworld; quest mode is a targeted opt-in", () => {
     const runner = readFileSync(join(process.cwd(), "blind-tester", "run.sh"), "utf8");
     const owPrompt = readFileSync(
       join(process.cwd(), "blind-tester", "prompt-overworld.md"),
@@ -38,8 +38,14 @@ describe("blind runner MCP config contract", () => {
     );
     const launcher = readFileSync(join(process.cwd(), "blind-tester", "blind-launch.mjs"), "utf8");
 
-    // run.sh branches to the overworld prompt + start instruction, but keeps the
-    // quest path intact (pinned strings below in the quest-default test).
+    // The overworld core game is the DEFAULT blind test: with no quest id from
+    // any source, run.sh resolves to overworld mode. Naming a quest selects the
+    // targeted single-quest mode; naming both is rejected as ambiguous. The
+    // original single-quest drop-in must never silently become the default again.
+    expect(runner).toContain('if [[ -z "$QUEST_ID" ]]; then\n  OVERWORLD=1\nfi');
+    expect(runner).toContain('if [[ "$OVERWORLD" == "1" && -n "$QUEST_ID" ]]; then');
+    expect(runner).toContain("Ambiguous: --overworld and a quest id were both given");
+    expect(runner).not.toContain('QUEST_ID="breaking_weir"');
     expect(runner).toContain("--overworld");
     expect(runner).toContain("prompt-overworld.md");
     expect(runner).toContain("mcp__adventureforge__start_overworld");
@@ -54,13 +60,23 @@ describe("blind runner MCP config contract", () => {
     expect(launcher).toContain('"--overworld"');
   });
 
-  it("defaults shipped blind runs to world quest ids instead of raw pack starts", () => {
+  it("smokes BOTH start surfaces — the default overworld and the quest drop-in", () => {
+    const smoke = readFileSync(join(process.cwd(), "blind-tester", "smoke.mjs"), "utf8");
+    expect(smoke).toContain('"start_overworld"');
+    expect(smoke).toContain('"get_overworld_session_context"');
+    expect(smoke).toContain("compact_context: true");
+    expect(smoke).toContain("if_snapshot_hash");
+  });
+
+  it("starts targeted quest runs by world quest id instead of raw pack starts", () => {
     const runner = readFileSync(join(process.cwd(), "blind-tester", "run.sh"), "utf8");
     const prompt = readFileSync(join(process.cwd(), "blind-tester", "prompt.md"), "utf8");
     const smoke = readFileSync(join(process.cwd(), "blind-tester", "smoke.mjs"), "utf8");
     const mcpHarness = readFileSync(join(process.cwd(), "scripts", "mcp_play.ts"), "utf8");
 
-    expect(runner).toContain('QUEST_ID="breaking_weir"');
+    // The smoke's quest leg keeps a fallback id, but the real-run default is
+    // the overworld — no quest id is baked into the run itself.
+    expect(runner).toContain('"${QUEST_ID:-breaking_weir}"');
     expect(runner).toContain("--quest|--quest-id");
     expect(runner).toContain("mcp__adventureforge__start_world_quest");
     expect(runner).toContain("compact_observation = true");

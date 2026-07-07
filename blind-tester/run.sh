@@ -8,8 +8,9 @@
 # own CLAUDE.md.
 #
 # Usage:
-#   blind-tester/run.sh [--quest <id>] [--seed <n>] [--model <alias>] [--out <prefix>]
-#   blind-tester/run.sh --smoke [--quest <id>] [--seed <n>]   # no LLM, no tokens
+#   blind-tester/run.sh [--seed <n>] [--model <alias>] [--out <prefix>]   # CORE GAME (overworld, the default)
+#   blind-tester/run.sh --quest <id> [--seed <n>] ...                     # targeted: drop into ONE shipped quest
+#   blind-tester/run.sh --smoke [--quest <id>] [--seed <n>]               # no LLM, no tokens
 #
 # Provider-agnostic: set BLIND_AGENT_CMD to use a different MCP-capable agent CLI
 # (e.g. a future local-LLM runner). It receives the prompt on stdin and these env
@@ -26,9 +27,6 @@ if [[ -n "$PACK" ]]; then
   echo "BLIND_PACK is no longer supported; blind runs start shipped quests by --quest id." >&2
   exit 2
 fi
-if [[ -z "$QUEST_ID" ]]; then
-  QUEST_ID="breaking_weir"
-fi
 SEED=7
 MODEL="${BLIND_MODEL:-sonnet}"   # sonnet = strong + best subscription value; override per run
 OUT=""
@@ -36,7 +34,7 @@ SMOKE=0
 TIMEOUT="${BLIND_TIMEOUT:-900}"
 SPECTATE="${BLIND_SPECTATE:-0}"                   # 1 = server writes a human-watchable feed
 SPECTATE_DELAY_MS="${BLIND_SPECTATE_DELAY_MS:-}"  # optional pacing delay per tool response
-OVERWORLD="${BLIND_OVERWORLD:-0}"                 # 1 = play the CORE GAME open world from a fresh start
+OVERWORLD="${BLIND_OVERWORLD:-0}"                 # CORE-GAME open-world mode — the DEFAULT unless a quest is named
 QUEST_EXPLICIT=0
 POSITIONAL=()
 
@@ -118,15 +116,25 @@ if [[ ${#POSITIONAL[@]} -gt 3 ]]; then
   exit 2
 fi
 
-if [[ -z "$QUEST_ID" ]]; then
-  echo "A blind run needs --quest <id>." >&2
+# Mode resolution — the CORE GAME (overworld, fresh start) is the DEFAULT blind
+# test: it is how a real new player actually meets the game. Naming a quest
+# (--quest <id>, a positional id, or BLIND_QUEST_ID) selects the targeted
+# single-quest mode instead — a legacy drop-in kept for testing ONE shipped
+# quest (what the AFK loop runs on the quest it just changed). Asking for both
+# at once is ambiguous.
+if [[ "$OVERWORLD" == "1" && -n "$QUEST_ID" ]]; then
+  echo "Ambiguous: --overworld and a quest id were both given; drop one (the overworld IS the default)." >&2
   exit 2
 fi
+if [[ -z "$QUEST_ID" ]]; then
+  OVERWORLD=1
+fi
 
-# Two blind modes: the default single-QUEST test (drop into one shipped quest and
-# play it to an ending) and the --overworld CORE-GAME test (start the open world
-# from a fresh start and experience it as a new player). They use different
-# prompts and start instructions; the report format + verifier are identical.
+# Two blind modes: the default CORE-GAME test (start the open world from a
+# fresh start and experience it as a new player) and the targeted single-QUEST
+# test (drop into one shipped quest and play it to an ending). They use
+# different prompts and start instructions; the report format + verifier are
+# identical.
 if [[ "$OVERWORLD" == "1" ]]; then
   SOURCE_LABEL="overworld"
   SOURCE_SLUG="overworld"
@@ -151,10 +159,12 @@ if [[ "$OSTYPE" == linux* && "$GAME_DIR" == /mnt/* \
   exit 4
 fi
 
-# Smoke mode: prove the MCP path with no LLM and no token spend.
+# Smoke mode: prove the MCP path with no LLM and no token spend. The smoke
+# always exercises BOTH start surfaces (the default overworld core game AND a
+# quest drop-in), so the quest id here only picks which quest the quest leg uses.
 if [[ "$SMOKE" == "1" ]]; then
   SMOKE_SCRIPT="$(node_path_arg "$SCRIPT_DIR/smoke.mjs")"
-  exec "$NODE_CMD" "$SMOKE_SCRIPT" --quest "$QUEST_ID" --seed "$SEED"
+  exec "$NODE_CMD" "$SMOKE_SCRIPT" --quest "${QUEST_ID:-breaking_weir}" --seed "$SEED"
 fi
 
 # Fail fast on a bad quest id BEFORE spending agent tokens (quest mode only — the

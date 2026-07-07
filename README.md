@@ -129,10 +129,13 @@ traces are data only.
   all inside `npm run health`. Rejection-direction witnesses live in the
   negative-fixture corpus (`content/broken-fixtures/`, mostly `foundation_*.yaml`),
   a data-driven test proving each validator finding code actually fires.
-- **Blind LLM playtest**: a fresh agent with NO repo access plays a shipped
-  quest purely through the MCP tools (harness in `blind-tester/`, protocol in
+- **Blind LLM playtest**: a fresh agent with NO repo access plays the game
+  purely through the MCP tools (harness in `blind-tester/`, protocol in
   [`docs/blind_playtest_protocol.md`](./docs/blind_playtest_protocol.md)) — the
-  only judge of player-facing quality a static check can't see.
+  only judge of player-facing quality a static check can't see. The **default
+  blind run plays the core game**: the open world from a fresh start, quests
+  discovered through the overworld. Targeted single-quest runs (`--quest <id>`)
+  are the legacy drop-in kept for testing one piece of content.
 
 Every playtest MUST end with a **structured exit interview** — a fenced
 `json exit-interview` block (clarity/enjoyment 1–5, bugs with S0–S4 severities,
@@ -142,7 +145,8 @@ exactly as it rejects one that never touched the MCP tools — feedback that
 can't be ranked is feedback that gets lost.
 
 ```bash
-npm run blind -- --quest sunken_barrow --seed 7   # omit --quest for the default (breaking_weir)
+npm run blind                                     # DEFAULT: the core game — overworld, fresh start
+npm run blind -- --quest sunken_barrow --seed 7   # targeted: one shipped quest (legacy drop-in)
 npm run blind:smoke                               # harness check, no LLM, no tokens
 ```
 
