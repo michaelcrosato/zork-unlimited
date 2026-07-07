@@ -413,7 +413,7 @@ describe("OverworldSession", () => {
     expect(view.discovered.length).toBeGreaterThan(24);
     const compact = compactOverworldView(view);
     expect(session.compactView()).toEqual(compact);
-    expect(compact.v).toBe(10);
+    expect(compact.v).toBe(11);
     expect(compact.hidden).toEqual([
       view.hiddenAreaCount,
       view.hiddenJobCount,

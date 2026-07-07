@@ -584,6 +584,9 @@ describe("MCP tools — validate / load (§9.4)", () => {
     ).toEqual([
       scoutedQuestLead.observation.quests[0]!.id,
       scoutedQuestLead.observation.quests[0]!.title,
+      // The compact quest lead now carries its anchor area id so a blind agent can
+      // walk there before start_overworld_session_quest (the 49/50 friction fix).
+      scoutedQuestLead.observation.quests[0]!.area,
     ]);
     expect(scoutedQuestLead.observation.hiddenQuestCount).toBe(localQuests.length - 1);
 
@@ -1100,7 +1103,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(compact.snapshot_hash).toBe(started.snapshot_hash);
     expect(compactStarted.snapshot_hash).toMatch(PUBLIC_OVERWORLD_SNAPSHOT_HASH_RE);
     expect(defaultStarted.snapshot_hash).toMatch(PUBLIC_OVERWORLD_SNAPSHOT_HASH_RE);
-    expect(defaultStarted.context.v).toBe(10);
+    expect(defaultStarted.context.v).toBe(11);
     expect("observation" in defaultStarted).toBe(false);
     expect("world" in defaultStarted.context).toBe(false);
     expect("route_options" in defaultStarted.context).toBe(false);
@@ -1274,7 +1277,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
       session_id: started.session_id,
       include_ids: true,
     });
-    expect(compact.context.v).toBe(10);
+    expect(compact.context.v).toBe(11);
     expect(compact.context.here).toEqual([
       full.current.id,
       full.current.name,

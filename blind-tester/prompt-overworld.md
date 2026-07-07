@@ -26,8 +26,9 @@ READING THE WORLD (it is COMPACT):
   [supplies, max_supplies, fatigue, condition]; `hidden` = [areas, jobs, sites,
   quests] STILL-UNDISCOVERED here; `roads` = [[dest_town_id, minutes, supplies,
   fatigue], ...]; and the local lists `areas` / `poi` / `contacts` / `events` /
-  `jobs` / `sites` / `quests`, each [[id, name], ...] — a list is OMITTED entirely
-  until you have discovered something in it.
+  `jobs` / `sites`, each [[id, name], ...]; and `quests` =
+  [[id, name, anchor_area_id], ...] — a list is OMITTED entirely until you have
+  discovered something in it.
 - Every overworld tool takes `session_id` (from start_overworld). Guard writes and
   re-read state with `expected_snapshot_hash` / `if_snapshot_hash` = the latest
   `snapshot_hash`. NOTE the two phases use different hash names: the OVERWORLD uses
@@ -54,8 +55,12 @@ HOW A NEW PLAYER PLAYS (do this, in this spirit):
    `resolve_overworld_session_road_encounter` with `strategy` = one of
    "cautious_scout" | "assist_travelers" | "press_on" (the choices are listed
    inside `pending_road`). Resolve it BEFORE any other overworld action.
-4. ENTER A QUEST (if budget allows). When a quest LEAD shows up in `quests`, start
-   it with `start_overworld_session_quest` (session_id, quest_id). That returns an
+4. ENTER A QUEST (if budget allows). When a quest LEAD shows up in `quests`, note
+   its anchor area — the 3rd field of its tuple (anchor_area_id). You must be
+   STANDING in that area to start it: if anchor_area_id differs from your current
+   area (`here`[3]), walk there first with `move_overworld_session_area` (match
+   `area_routes` on dest_area_id). Then start it with
+   `start_overworld_session_quest` (session_id, quest_id). That returns an
    `rpg_session_id` and drops you INTO the quest. Play it via `list_legal_actions`
    (session_id = rpg_session_id, compact_actions: true) and `step_action`
    (session_id = rpg_session_id, action_id, expected_state_hash = latest state_hash,

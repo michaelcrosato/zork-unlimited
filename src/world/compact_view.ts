@@ -16,10 +16,10 @@ export const OVERWORLD_COMPACT_COMPLETED_ARC_LIMIT = 16;
 export const OVERWORLD_COMPACT_LABEL_CHAR_LIMIT = 96;
 export const OVERWORLD_COMPACT_TITLE_CHAR_LIMIT = 140;
 export const OVERWORLD_COMPACT_RISK_CHAR_LIMIT = 160;
-export const OVERWORLD_COMPACT_VIEW_VERSION = 10 as const;
+export const OVERWORLD_COMPACT_VIEW_VERSION = 11 as const;
 
 export type OverworldCompactRef = readonly [id: string, name: string];
-export type OverworldCompactQuestRef = readonly [id: string, title: string];
+export type OverworldCompactQuestRef = readonly [id: string, title: string, areaId: string];
 export type OverworldCompactHere = readonly [
   id: string,
   name: string,
@@ -230,7 +230,8 @@ export const OVERWORLD_COMPACT_LEGEND = {
     "keys among areas/poi/contacts/events/jobs/sites/quests whose lists were capped",
   jobs: "[[job_id, title], ...] discovered jobs (work_overworld_session_job)",
   sites: "[[site_id, title], ...] discovered sites (explore_overworld_session_site)",
-  quests: "[[quest_id, title], ...] discovered quests (start_overworld_session_quest)",
+  quests:
+    "[[quest_id, title, anchor_area_id], ...] discovered quest leads; you must be IN anchor_area_id (compare to here[3]; walk there via area_routes) before start_overworld_session_quest",
   pending_road:
     "{id, edge: road_id, event: [road_event_id, risk_text], options: [[strategy, minutes, supplies_cost, fatigue_gained, renown_gained], ...]} unresolved road encounter; resolve it before traveling on",
   journal: "[[kind, title, 'Day N, HH:MM'], ...] recent journal entries",
@@ -276,8 +277,9 @@ export function compactOverworldTitleRef(value: {
 export function compactOverworldQuestRef(value: {
   id: string;
   title: string;
+  area: string;
 }): OverworldCompactQuestRef {
-  return [value.id, compactOverworldTitle(value.title)];
+  return [value.id, compactOverworldTitle(value.title), value.area];
 }
 
 export function compactOverworldRefs(
@@ -303,7 +305,7 @@ export function compactOverworldTitleRefs(
 }
 
 export function compactOverworldQuestRefs(
-  values: readonly { id: string; title: string }[],
+  values: readonly { id: string; title: string; area: string }[],
   limit = OVERWORLD_COMPACT_LOCAL_REF_LIMIT,
 ): OverworldCompactQuestRef[] {
   const refs: OverworldCompactQuestRef[] = [];
