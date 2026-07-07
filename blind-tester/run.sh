@@ -36,6 +36,7 @@ SMOKE=0
 TIMEOUT="${BLIND_TIMEOUT:-900}"
 SPECTATE="${BLIND_SPECTATE:-0}"                   # 1 = server writes a human-watchable feed
 SPECTATE_DELAY_MS="${BLIND_SPECTATE_DELAY_MS:-}"  # optional pacing delay per tool response
+OVERWORLD="${BLIND_OVERWORLD:-0}"                 # 1 = play the CORE GAME open world from a fresh start
 QUEST_EXPLICIT=0
 POSITIONAL=()
 
@@ -88,6 +89,7 @@ while [[ $# -gt 0 ]]; do
     --smoke)            SMOKE=1; shift ;;
     --spectate)         SPECTATE=1; shift ;;
     --delay-ms)         SPECTATE_DELAY_MS="$2"; SPECTATE=1; shift 2 ;;
+    --overworld)        OVERWORLD=1; shift ;;
     -h|--help)
       sed -n '3,20p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
       exit 0 ;;
@@ -121,9 +123,21 @@ if [[ -z "$QUEST_ID" ]]; then
   exit 2
 fi
 
-SOURCE_LABEL="quest=$QUEST_ID"
-SOURCE_SLUG="$QUEST_ID"
-START_INSTRUCTION="Start: \`mcp__adventureforge__start_world_quest\` with world_quest_id = \"$QUEST_ID\", seed = $SEED, hide_graph = true, compact_observation = true."
+# Two blind modes: the default single-QUEST test (drop into one shipped quest and
+# play it to an ending) and the --overworld CORE-GAME test (start the open world
+# from a fresh start and experience it as a new player). They use different
+# prompts and start instructions; the report format + verifier are identical.
+if [[ "$OVERWORLD" == "1" ]]; then
+  SOURCE_LABEL="overworld"
+  SOURCE_SLUG="overworld"
+  START_INSTRUCTION="Start: \`mcp__adventureforge__start_overworld\` with compact_context = true. Capture the \`legend\` from the response — it decodes the compact positional fields and is sent only ONCE, at the start."
+  PROMPT_FILE="$SCRIPT_DIR/prompt-overworld.md"
+else
+  SOURCE_LABEL="quest=$QUEST_ID"
+  SOURCE_SLUG="$QUEST_ID"
+  START_INSTRUCTION="Start: \`mcp__adventureforge__start_world_quest\` with world_quest_id = \"$QUEST_ID\", seed = $SEED, hide_graph = true, compact_observation = true."
+  PROMPT_FILE="$SCRIPT_DIR/prompt.md"
+fi
 
 # A Windows-installed node_modules cannot run under WSL's Linux node: only the
 # @esbuild/win32-x64 native binary is present, so tsx (and with it the MCP
@@ -143,11 +157,12 @@ if [[ "$SMOKE" == "1" ]]; then
   exec "$NODE_CMD" "$SMOKE_SCRIPT" --quest "$QUEST_ID" --seed "$SEED"
 fi
 
-# Fail fast on a bad quest id BEFORE spending agent tokens. The classic mangled
+# Fail fast on a bad quest id BEFORE spending agent tokens (quest mode only — the
+# overworld starts the whole world, no quest id to validate). The classic mangled
 # invocation (PowerShell strips `--`, npm eats the flags, an orphaned value
 # becomes the "quest") used to launch a doomed run; the launcher recovers those
 # flags now, and this guard catches anything else with the fix spelled out.
-if ! ( cd "$GAME_DIR" && npm --silent run validate -- "$QUEST_ID" >/dev/null 2>&1 ); then
+if [[ "$OVERWORLD" != "1" ]] && ! ( cd "$GAME_DIR" && npm --silent run validate -- "$QUEST_ID" >/dev/null 2>&1 ); then
   echo "Unknown or unplayable quest id \"$QUEST_ID\" (npm run validate -- \"$QUEST_ID\" failed)." >&2
   echo "Passing flags from PowerShell: use the equals form without '--', e.g." >&2
   echo "  npm run blind --quest=breaking_weir --spectate --delay-ms=1500" >&2
@@ -233,7 +248,7 @@ fi
 
 # Fill the locked blind prompt.
 START_INSTRUCTION_ESCAPED="$(printf '%s' "$START_INSTRUCTION" | sed -e 's/[&#]/\\&/g')"
-PROMPT="$(sed -e "s#{{START_INSTRUCTION}}#${START_INSTRUCTION_ESCAPED}#g" -e "s#__SEED__#${SEED}#g" "$SCRIPT_DIR/prompt.md")"
+PROMPT="$(sed -e "s#{{START_INSTRUCTION}}#${START_INSTRUCTION_ESCAPED}#g" -e "s#__SEED__#${SEED}#g" "$PROMPT_FILE")"
 
 # Report destination.
 if [[ -z "$OUT" ]]; then

@@ -30,6 +30,30 @@ describe("blind runner MCP config contract", () => {
     expect(pkg).toContain('"blind": "node blind-tester/blind-launch.mjs"');
   });
 
+  it("has an --overworld mode that plays the CORE GAME from a fresh start", () => {
+    const runner = readFileSync(join(process.cwd(), "blind-tester", "run.sh"), "utf8");
+    const owPrompt = readFileSync(
+      join(process.cwd(), "blind-tester", "prompt-overworld.md"),
+      "utf8",
+    );
+    const launcher = readFileSync(join(process.cwd(), "blind-tester", "blind-launch.mjs"), "utf8");
+
+    // run.sh branches to the overworld prompt + start instruction, but keeps the
+    // quest path intact (pinned strings below in the quest-default test).
+    expect(runner).toContain("--overworld");
+    expect(runner).toContain("prompt-overworld.md");
+    expect(runner).toContain("mcp__adventureforge__start_overworld");
+    // The overworld prompt starts the world, warns about the road-encounter wedge,
+    // uses the quest bridge, and keeps the mandatory exit-interview report format.
+    expect(owPrompt).toContain("mcp__adventureforge__start_overworld");
+    expect(owPrompt).toContain("resolve_overworld_session_road_encounter");
+    expect(owPrompt).toContain("start_overworld_session_quest");
+    expect(owPrompt).toContain("json exit-interview");
+    expect(owPrompt).not.toContain("pack_path");
+    // The flag survives PowerShell's `--` stripping via the launcher recovery list.
+    expect(launcher).toContain('"--overworld"');
+  });
+
   it("defaults shipped blind runs to world quest ids instead of raw pack starts", () => {
     const runner = readFileSync(join(process.cwd(), "blind-tester", "run.sh"), "utf8");
     const prompt = readFileSync(join(process.cwd(), "blind-tester", "prompt.md"), "utf8");
