@@ -17,8 +17,9 @@ improvement loop, and this charter orients the agent driving it.
 1. **Assess** — `npm run ai:loop` ranks the next-best improvement.
 2. **One change** — make a single focused improvement (engine, content, or tooling).
 3. **Blind playtest** — spawn a fresh, no-repo-access sub-agent that plays the
-   target quest ONLY through the `mcp__adventureforge__*` MCP tools, then writes a
-   structured report ending in a JSON exit interview. This blind feedback — what
+   cycle's target — the CORE GAME (overworld fresh start, the default) or one
+   targeted quest — ONLY through the `mcp__adventureforge__*` MCP tools, then
+   writes a structured report ending in a JSON exit interview. This blind feedback — what
    the game logs show plus the exit interview — is the quality oracle. Protocol and
    driver-agnostic harness (`npm run blind`): `docs/blind_playtest_protocol.md`.
 4. **Verify** — `npm run health` must pass (see below); no playtest report ⇒ no commit.

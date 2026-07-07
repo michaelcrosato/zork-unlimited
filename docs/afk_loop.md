@@ -23,7 +23,9 @@ loop.sh  (outer driver — orchestration + the bar)
 ├─ 2. WORK          the operating agent (claude -p / codex exec / Agent tool)
 │     Reads the cycle prompt and:
 │       a. MANDATORY LLM PLAYTEST — spawns a fresh, no-context subagent that plays
-│          the target quest purely through the mcp__adventureforge__* tools
+│          the cycle's target — the CORE GAME (overworld fresh start; the baseline
+│          for engine/repo cycles and the default `npm run blind`) or one targeted
+│          quest — purely through the mcp__adventureforge__* tools
 │          (docs/blind_playtest_protocol.md) and writes a structured report
 │          (route, mechanics, clarity 1-5, enjoyment 1-5, findings, verdict, and
 │          the mandatory fenced json exit-interview block — reports without a

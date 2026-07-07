@@ -5,8 +5,9 @@
  * tooling (not the engine): it
  *   1. ASSESSES the whole project (src/afk/assessor.ts) to rank the next-best
  *      improvement across content_new / content_fix / engine / repo;
- *   2. picks a target source to playtest (the candidate's quest, or the main
- *      story quest as a regression baseline for engine/repo work);
+ *   2. picks a target to playtest (the candidate's quest, or the CORE GAME —
+ *      the overworld from a fresh start — as the regression baseline for
+ *      engine/repo work, matching the default `npm run blind`);
  *   3. writes the cycle artifacts to an ignored ai-runs/<id>/ dir, including the
  *      exact path where the operating agent must drop its MANDATORY LLM playtest
  *      report; and
@@ -27,6 +28,7 @@ import {
   assess,
   formatAssessment,
   isSaturated,
+  OVERWORLD_PLAYTEST_TARGET,
   type Assessment,
   type ImprovementCandidate,
   type QuestHealth,
@@ -60,7 +62,6 @@ const CURRENT_PLAN_DOC = "docs/CURRENT_PLAN.md";
 // reviewers' missing "already closed" boundary (re-aim #19 alone re-confirmed six
 // false alarms). See docs/DECISION_LOG.md and docs/afk_loop.md.
 const DECISION_LOG_DOC = "docs/DECISION_LOG.md";
-const MAIN_WORLD_QUEST_ID = "breaking_weir";
 
 /** Pure decision: should THIS cycle run an ultraplan? Saturated AND off cooldown. */
 export function shouldRunUltraplan(
@@ -86,35 +87,41 @@ function cycleStamp(): string {
   return new Date().toISOString().replace(/[:.]/g, "-");
 }
 
-function requireMainWorldQuestId(catalog: WorldCatalog): string {
-  const preferred = catalog.quests.find((quest) => quest[0] === MAIN_WORLD_QUEST_ID && quest[1]);
-  if (preferred) return preferred[0];
-  const fallback = catalog.quests.find((quest) => quest[1]);
-  if (fallback) return fallback[0];
-  throw new Error("AFK loop requires at least one shipped RPG quest to blind-playtest.");
+function requirePlayableWorldQuest(catalog: WorldCatalog): void {
+  // The overworld baseline run discovers and bridges into shipped quests, so the
+  // loop still needs at least one playable quest node in the world graph.
+  if (!catalog.quests.some((quest) => quest[1])) {
+    throw new Error("AFK loop requires at least one shipped RPG quest to blind-playtest.");
+  }
+}
+
+/** True when a playtest target means the CORE GAME (overworld fresh start), not one quest. */
+export function isOverworldPlaytestTarget(target: string | null | undefined): boolean {
+  return target === OVERWORLD_PLAYTEST_TARGET;
 }
 
 /** Which source the mandatory playtest targets this cycle. */
-export function playtestTarget(
-  a: Assessment,
-  top: ImprovementCandidate | null,
-  mainWorldQuestId: string,
-): string {
+export function playtestTarget(top: ImprovementCandidate | null): string {
   if (top && top.category === "content_fix") return top.target;
-  // content_new / engine / repo: playtest the main quest as a regression baseline.
-  return mainWorldQuestId;
+  // content_new / engine / repo: playtest the CORE GAME — the overworld from a
+  // fresh start — as the regression baseline. Engine/repo changes affect the
+  // whole game, and the overworld run exercises the world runtime, discovery,
+  // travel, AND a bridged quest in one pass (it is also what `npm run blind`
+  // plays by default). Replaying one fixed quest was the legacy baseline.
+  return OVERWORLD_PLAYTEST_TARGET;
 }
 
 export function playtestTargetWorldQuestId(
   top: ImprovementCandidate | null,
-  mainWorldQuestId: string | null,
   targetWorldQuestId: string | null = null,
 ): string | null {
   if (top?.category === "content_fix") {
+    if (isOverworldPlaytestTarget(targetWorldQuestId)) return null;
     return targetWorldQuestId && !targetWorldQuestId.includes("/") ? targetWorldQuestId : null;
   }
-  if (top && top.category !== "engine" && top.category !== "repo") return null;
-  return mainWorldQuestId;
+  // content_new plays the quest authored THIS cycle; engine/repo/none play the
+  // overworld core game — neither resolves to a pre-existing world quest id.
+  return null;
 }
 
 type LatestCycleMetadata = {
@@ -177,12 +184,10 @@ function main(): void {
 
   const a = assess(root);
   const top = a.top;
-  const catalog = createToolApi({ root }).list_world();
-  const mainWorldQuestId = requireMainWorldQuestId(catalog);
-  const target = playtestTarget(a, top, mainWorldQuestId);
+  requirePlayableWorldQuest(createToolApi({ root }).list_world());
+  const target = playtestTarget(top);
   const targetWorldQuestId = playtestTargetWorldQuestId(
     top,
-    mainWorldQuestId,
     top?.category === "content_fix" ? target : null,
   );
   const playtestRecord = join(runDir, "playtest.md").replaceAll("\\", "/");
@@ -264,26 +269,21 @@ export function buildPrompt(ctx: {
     .map((c, i) => `  ${i + 1}. [${c.score}] (${c.category}/${c.effort}) ${c.title}`);
   const health = targetHealth
     ? `${targetHealth.warnings} validator warning(s)`
-    : "(engine/repo work; the target quest is the regression baseline)";
+    : "(engine/repo work; the core game is the regression baseline)";
   // For content_new the world quest to playtest does NOT exist at assess time (the
   // agent authors + registers it this cycle), so `target` is just the regression
   // baseline. The quality oracle is far more valuable spent on the NEW world quest
   // than re-playing the baseline a 20th time. So content_new flips the order:
   // author/register first, then blind-playtest the quest id you just added.
   const isContentNew = top?.category === "content_new";
-  if (!isContentNew && !targetWorldQuestId) {
+  const isOverworld = !targetWorldQuestId && isOverworldPlaytestTarget(target);
+  if (!isContentNew && !isOverworld && !targetWorldQuestId) {
     throw new Error(
       `AFK blind playtests require a world quest id for shipped targets; could not resolve ${JSON.stringify(
         target,
       )}.`,
     );
   }
-  const targetLabel =
-    targetWorldQuestId && top?.category === "content_fix"
-      ? `${targetWorldQuestId} (${health})`
-      : targetWorldQuestId
-        ? `${targetWorldQuestId} (${health})`
-        : `${target}  (${health})`;
   const playtestStep = isContentNew
     ? [
         "## STEP 1 — Add the new world quest, THEN blind-playtest IT (quality feedback)",
@@ -297,22 +297,40 @@ export function buildPrompt(ctx: {
         `- WRITE its structured report (route, mechanics, clarity 1-5, enjoyment 1-5, confusion,`,
         `  concrete findings, verdict) to: ${playtestRecord}  (REQUIRED — no record ⇒ no commit).`,
         "- Let the blind read of YOUR new world quest drive a final polish pass before you commit it, so it",
-        `  ships experience-tested through the quest-id MCP path, not just structurally valid. (Baseline ${target} need not be replayed.)`,
+        "  ships experience-tested through the quest-id MCP path, not just structurally valid.",
       ]
-    : [
-        "## STEP 1 — MANDATORY LLM playtest (quality feedback, every cycle)",
-        "",
-        `Playtest target this cycle: ${targetLabel}`,
-        "",
-        "- Spawn a FRESH subagent with NO design context (Agent tool general-purpose, or a",
-        "  clean `claude -p` / `codex exec`). Hand it ONLY the locked-down prompt in",
-        `  docs/blind_playtest_protocol.md, with world_quest_id=${targetWorldQuestId} and a seed. It must play purely`,
-        "  through the mcp__adventureforge__* tools and must NOT read content/, src/, ui/, tests/.",
-        `- WRITE its structured report (route, mechanics, clarity 1-5, enjoyment 1-5,`,
-        `  confusion, concrete findings, verdict) to: ${playtestRecord}`,
-        "  This file is REQUIRED — loop.sh refuses to commit a cycle with no playtest record.",
-        "- Let the playtest's findings inform the improvement you choose.",
-      ];
+    : isOverworld
+      ? [
+          "## STEP 1 — MANDATORY LLM playtest (quality feedback, every cycle)",
+          "",
+          "Playtest target this cycle: the CORE GAME — the open-world overworld from a",
+          `fresh start ${health}`,
+          "",
+          "- Run the packaged DEFAULT blind harness: `npm run blind` (no quest id — it plays",
+          "  the overworld from a fresh start per blind-tester/prompt-overworld.md, then",
+          "  verifies the report). Or spawn a FRESH subagent with NO design context per",
+          "  docs/blind_playtest_protocol.md pointed at the overworld (no quest id). Either",
+          "  way it must play purely through the mcp__adventureforge__* tools and must NOT",
+          "  read content/, src/, ui/, tests/.",
+          `- WRITE/COPY its structured report (orientation, discovery, travel, the bridged`,
+          `  quest, clarity 1-5, enjoyment 1-5, findings, verdict) to: ${playtestRecord}`,
+          "  This file is REQUIRED — loop.sh refuses to commit a cycle with no playtest record.",
+          "- Let the playtest's findings inform the improvement you choose.",
+        ]
+      : [
+          "## STEP 1 — MANDATORY LLM playtest (quality feedback, every cycle)",
+          "",
+          `Playtest target this cycle: ${targetWorldQuestId} (${health})`,
+          "",
+          "- Spawn a FRESH subagent with NO design context (Agent tool general-purpose, or a",
+          "  clean `claude -p` / `codex exec`). Hand it ONLY the locked-down prompt in",
+          `  docs/blind_playtest_protocol.md, with world_quest_id=${targetWorldQuestId} and a seed. It must play purely`,
+          "  through the mcp__adventureforge__* tools and must NOT read content/, src/, ui/, tests/.",
+          `- WRITE its structured report (route, mechanics, clarity 1-5, enjoyment 1-5,`,
+          `  confusion, concrete findings, verdict) to: ${playtestRecord}`,
+          "  This file is REQUIRED — loop.sh refuses to commit a cycle with no playtest record.",
+          "- Let the playtest's findings inform the improvement you choose.",
+        ];
 
   return [
     "# AdventureForge AFK improvement cycle (trust, but verify)",
@@ -418,7 +436,8 @@ function buildUltraplanPrompt(ctx: {
   playtestRecord: string;
 }): string {
   const { target, targetWorldQuestId, targetHealth, playtestRecord } = ctx;
-  if (!targetWorldQuestId) {
+  const isOverworld = !targetWorldQuestId && isOverworldPlaytestTarget(target);
+  if (!isOverworld && !targetWorldQuestId) {
     throw new Error(
       `AFK ultraplan blind playtests require a world quest id; could not resolve ${JSON.stringify(
         target,
@@ -428,6 +447,12 @@ function buildUltraplanPrompt(ctx: {
   const health = targetHealth
     ? `${targetHealth.warnings} validator warning(s)`
     : "(regression baseline)";
+  const playtestLine = isOverworld
+    ? "- Blind-playtest the CORE GAME — the overworld from a fresh start — via the packaged"
+    : `- Blind-playtest world_quest_id=${targetWorldQuestId} (${health}) per docs/blind_playtest_protocol.md → write its`;
+  const playtestLine2 = isOverworld
+    ? `  default \`npm run blind\` (or per docs/blind_playtest_protocol.md, no quest id) → write its structured report to ${playtestRecord} (REQUIRED — loop.sh refuses to commit without it).`
+    : `  structured report to ${playtestRecord} (REQUIRED — loop.sh refuses to commit without it).`;
   return [
     "# AdventureForge AFK cycle — ULTRAPLAN MODE (the assessor is saturated)",
     "",
@@ -472,8 +497,8 @@ function buildUltraplanPrompt(ctx: {
     "  test for a bug; tests for new behaviour).",
     "",
     "## STEP 4 — Mandatory blind playtest + verify (same bar as every cycle)",
-    `- Blind-playtest world_quest_id=${targetWorldQuestId} (${health}) per docs/blind_playtest_protocol.md → write its`,
-    `  structured report to ${playtestRecord} (REQUIRED — loop.sh refuses to commit without it).`,
+    playtestLine,
+    playtestLine2,
     "- `npm run health` must pass; verify:integrity must stay green; never weaken a check.",
     "- Update AI_LOOP_STATE.md TERSELY (≤8 lines): that this was an ULTRAPLAN cycle, the",
     "  re-aim it chose, evidence. Keep it compact — the log is re-read every cycle.",

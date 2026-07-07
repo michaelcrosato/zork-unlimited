@@ -71,6 +71,12 @@ export type AssessmentFormatOptions = {
 // YAML files, so this lever cannot reintroduce standalone package authoring.
 const WORLD_QUEST_TARGET = 16;
 
+// The blind-playtest target that means "the CORE GAME itself": the open-world
+// overworld from a fresh start — what `npm run blind` plays by default and what
+// every new player meets first. It shares the rotation's attendance namespace
+// (report slugs and loop-state mentions both say "overworld").
+export const OVERWORLD_PLAYTEST_TARGET = "overworld";
+
 function listSourceFiles(root: string): string[] {
   const out: string[] = [];
   const walk = (d: string): void => {
@@ -483,6 +489,27 @@ export function assess(root: string): Assessment {
       });
     }
   }
+
+  // The CORE GAME's opening experience is a first-class blind-playtest target: the
+  // overworld fresh start is what every new player meets FIRST (and what the default
+  // `npm run blind` plays), so it joins the same low-priority recency rotation as the
+  // per-quest reviews instead of never being re-judged. Same floor score: the recency
+  // tiebreak (below) decides when it is due, exactly like a structurally-clean quest.
+  candidates.push({
+    id: `playtest-${OVERWORLD_PLAYTEST_TARGET}`,
+    category: "content_fix",
+    target: OVERWORLD_PLAYTEST_TARGET,
+    title:
+      "Blind-playtest the CORE GAME opening — the overworld from a fresh start (the default blind run)",
+    rationale:
+      "The overworld opening is the first thing every new player experiences; only a fresh blind LLM playthrough of the core game can judge its orientation, signposting, discovery, and pacing.",
+    evidence: [
+      "the default blind run (npm run blind) plays exactly this surface; due on the same recency rotation as quest reviews",
+    ],
+    impact: 1,
+    effort: "M",
+    score: score(1, "M", "content_fix"),
+  });
 
   // ── content_new: contiguous world graph breadth ───────────────────────────────
   if (worldQuestCount < WORLD_QUEST_TARGET) {
