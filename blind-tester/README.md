@@ -99,6 +99,20 @@ ignores stdio-server `cwd`. Note a checkout `npm install`-ed on Windows cannot
 run under WSL's Linux node (native esbuild binary mismatch) — the runner detects
 this and says so instead of failing cryptically.
 
+## Telemetry — measured, not guessed
+
+Every completed run appends one JSONL row (turns, duration, token usage, the
+run's NOMINAL API cost — the subscription covers it; it's an efficiency signal,
+not a bill) to the gitignored `ai-runs/blind-telemetry.jsonl`:
+
+```bash
+npm run blind:telemetry     # per-source summary: runs, mean turns/minutes, tokens, nominal $
+```
+
+Recording is best-effort (a telemetry failure never fails the run) and only
+happens on the built-in `claude` path — a `BLIND_AGENT_CMD` override produces
+no claude envelope to measure.
+
 ## How blindness is enforced (two levels)
 
 1. **No source access (interface-level).** The agent runs from an isolated temp

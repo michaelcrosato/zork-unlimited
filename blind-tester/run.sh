@@ -347,5 +347,12 @@ if command -v wslpath >/dev/null 2>&1 && [[ "$REPORT_MD" == /mnt/* ]]; then
 fi
 ( cd "$GAME_DIR" && npm --silent exec tsx -- scripts/verify-blind-report.ts "$REPORT_MD" )
 
+# Token/cost telemetry (measure loop efficiency instead of guessing): fold the
+# claude envelope's usage into the gitignored ai-runs/blind-telemetry.jsonl.
+# Best-effort — measurement must never fail the run it measures.
+"$NODE_CMD" "$(node_path_arg "$SCRIPT_DIR/telemetry.mjs")" record "$(node_path_arg "$OUT.json")" \
+  --source "$SOURCE_SLUG" --seed "$SEED" --model "$MODEL" \
+  || echo "(telemetry append failed — non-fatal)" >&2
+
 echo "✓ Blind report saved: $OUT.md"
 grep -iE 'clarity .*[0-9]|enjoyment .*[0-9]' "$OUT.md" | head -2 || true

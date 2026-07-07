@@ -41,8 +41,8 @@ Port ONE retired story back as an RPG world quest.
 
 ## Deferred Levers
 
-- Lightweight token/cost telemetry under ignored run output (measure loop
-  efficiency instead of guessing).
+- Extend token/cost telemetry to agent work turns (the blind-run half landed
+  2026-07-06: ai-runs/blind-telemetry.jsonl + `npm run blind:telemetry`).
 - Shrink low-level debug helpers that still leak raw pack paths in diagnostics.
 - Tighten the remaining restore-time local action sequencing beyond discovery
   prefixes (most sequencing properties are already enforced; state the specific

@@ -31,6 +31,7 @@
     "corpus:seal": "npx tsx bin/seal-corpus.ts",
     "blind": "node blind-tester/blind-launch.mjs",
     "blind:smoke": "node blind-tester/smoke.mjs",
+    "blind:telemetry": "node blind-tester/telemetry.mjs summary",
     "spectate": "tsx bin/spectate.ts",
     "ui:dev": "npm --prefix ui run dev",
     "ui:build": "npm --prefix ui run build",

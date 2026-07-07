@@ -65,8 +65,10 @@ navigation all shipped — see `docs/DECISION_LOG.md` and git history.)
   stateful NPC/event consequences, each with deterministic tests and validator
   coverage.
 - Tighten the remaining restore-time sequencing proofs beyond discovery prefixes.
-- Add lightweight token/cost telemetry under ignored run output so loop
-  efficiency is measured, not guessed.
+- Extend token/cost telemetry to the loop's agent work turns (blind-run
+  telemetry landed 2026-07-06: `blind-tester/telemetry.mjs` records every run
+  to the ignored `ai-runs/blind-telemetry.jsonl`; `npm run blind:telemetry`
+  summarizes) so the whole cycle's efficiency is measured, not guessed.
 - Shrink low-level debug helpers that still leak raw pack paths in diagnostics.
 - Keep active docs short and current; move superseded planning docs to
   `docs/archive/`.
