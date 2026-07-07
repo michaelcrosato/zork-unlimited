@@ -1,14 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import { SaveIntegrityError } from "../../src/persist/save_load.js";
 import {
-  assertWorldGraphIntegrity,
-  assertWorldQuestSourceCoverage,
-  assertOverworldQuestSourceBindings,
+  assertOverworldQuestSourceCoverage,
   loadOverworldManifest,
-  loadWorldManifest,
   resolveGameSource,
   resolveSaveGameSource,
   resolveTraceGameSource,
@@ -17,56 +11,14 @@ import {
   saveWorldQuestId,
   traceGeneratedRpgSeed,
 } from "../../src/world/source.js";
+import type { OverworldManifest } from "../../src/world/overworld.js";
 import type { Trace } from "../../src/trace/record.js";
 import type { RpgAction } from "../../src/api/types.js";
-import type { WorldManifest } from "../../src/world/schema.js";
 
 const ROOT = process.cwd();
 const SOURCE = "content/rpg/quests/sunken_barrow.yaml";
 const UNSAFE_GENERATED_RPG_SEED = Number.MAX_SAFE_INTEGER + 1;
 const overworld = loadOverworldManifest(ROOT);
-
-function worldWithQuestSources(quests: Array<{ id: string; source: string }>): WorldManifest {
-  return {
-    id: "charter_marches",
-    name: "The Charter Marches",
-    hub: "Charterhaven",
-    graph: {
-      hub: "hub",
-      nodes: [
-        { id: "hub", name: "Hub", kind: "hub" },
-        ...quests.map((quest) => ({
-          id: quest.id,
-          name: quest.id,
-          kind: "quest" as const,
-          source: quest.source,
-        })),
-      ],
-      edges: [],
-    },
-  };
-}
-
-function connectedWorld(): WorldManifest {
-  return {
-    id: "charter_marches",
-    name: "The Charter Marches",
-    hub: "Charterhaven",
-    graph: {
-      hub: "hub",
-      nodes: [
-        { id: "hub", name: "Hub", kind: "hub" },
-        {
-          id: "sunken_barrow",
-          name: "Sunken Barrow",
-          kind: "quest",
-          source: SOURCE,
-        },
-      ],
-      edges: [{ from: "hub", to: "sunken_barrow", route: "barrow road" }],
-    },
-  };
-}
 
 const trace = {
   mode: "rpg",
@@ -92,193 +44,49 @@ const generatedTrace = {
   expected_final_hash: "unused",
 } as unknown as Trace<RpgAction>;
 
-function withTempRoot(run: (root: string) => void): void {
-  const root = mkdtempSync(join(tmpdir(), "world-source-"));
-  try {
-    run(root);
-  } finally {
-    rmSync(root, { recursive: true, force: true });
-  }
-}
-
 describe("world source resolution", () => {
-  it("reuses parsed canonical manifests within a process", () => {
-    expect(loadWorldManifest(ROOT)).toBe(loadWorldManifest(ROOT));
+  it("reuses parsed overworld manifests within a process", () => {
     expect(loadOverworldManifest(ROOT)).toBe(loadOverworldManifest(ROOT));
   });
 
-  it("keeps cached canonical manifests immutable across callers", () => {
-    const world = loadWorldManifest(ROOT);
+  it("keeps cached overworld manifests immutable across callers", () => {
     const overworldManifest = loadOverworldManifest(ROOT);
-    const worldNodeName = world.graph.nodes[0]!.name;
     const overworldNodeName = overworldManifest.nodes[0]!.name;
 
-    expect(Object.isFrozen(world)).toBe(true);
-    expect(Object.isFrozen(world.graph)).toBe(true);
-    expect(Object.isFrozen(world.graph.nodes)).toBe(true);
-    expect(Object.isFrozen(world.graph.nodes[0])).toBe(true);
     expect(Object.isFrozen(overworldManifest)).toBe(true);
     expect(Object.isFrozen(overworldManifest.nodes)).toBe(true);
     expect(Object.isFrozen(overworldManifest.nodes[0])).toBe(true);
 
     expect(() => {
-      world.graph.nodes[0]!.name = "Mutated Hub";
-    }).toThrow(TypeError);
-    expect(() => {
       overworldManifest.nodes[0]!.name = "Mutated Town";
     }).toThrow(TypeError);
-    expect(loadWorldManifest(ROOT).graph.nodes[0]!.name).toBe(worldNodeName);
     expect(loadOverworldManifest(ROOT).nodes[0]!.name).toBe(overworldNodeName);
   });
 
-  it("falls back only when the canonical world manifest is absent, not malformed", () => {
-    withTempRoot((root) => {
-      expect(loadWorldManifest(root).graph.hub).toBe("charterhaven");
-    });
+  it("binds overworld quests one-to-one with the shipped RPG packs (no orphans)", () => {
+    const realSources = overworld.quests.map((quest) => quest.source);
+    expect(() => assertOverworldQuestSourceCoverage(overworld, realSources)).not.toThrow();
 
-    withTempRoot((root) => {
-      mkdirSync(join(root, "content", "world"), { recursive: true });
-      writeFileSync(join(root, "content", "world", "charter_marches.yaml"), "graph: [broken]\n");
+    const withQuestSources = (sources: string[]): OverworldManifest =>
+      ({ quests: sources.map((source) => ({ source })) }) as unknown as OverworldManifest;
 
-      expect(() => loadWorldManifest(root)).toThrow();
-    });
-  });
-
-  it("binds New York overworld quests to canonical world graph quest sources", () => {
-    const world = loadWorldManifest(ROOT);
-    expect(() => assertOverworldQuestSourceBindings(world, overworld)).not.toThrow();
-
+    // A shipped pack that no overworld quest binds is an orphan — rejected.
     expect(() =>
-      assertOverworldQuestSourceBindings(world, {
-        ...overworld,
-        quests: [{ ...overworld.quests[0]!, id: "missing_quest" }],
-      }),
-    ).toThrow(/missing from the canonical world graph/);
+      assertOverworldQuestSourceCoverage(withQuestSources([SOURCE]), [
+        SOURCE,
+        "content/rpg/quests/cold_forge.yaml",
+      ]),
+    ).toThrow(/not bound to any overworld quest/);
 
+    // Two quests naming the same pack — rejected.
     expect(() =>
-      assertOverworldQuestSourceBindings(world, {
-        ...overworld,
-        quests: [{ ...overworld.quests[0]!, source: "content/rpg/quests/cold_forge.yaml" }],
-      }),
-    ).toThrow(/does not match canonical world graph source/);
-  });
-
-  it("rejects malformed canonical world graph topology before play starts", () => {
-    expect(() => assertWorldGraphIntegrity(connectedWorld())).not.toThrow();
-
-    expect(() =>
-      assertWorldGraphIntegrity({
-        ...connectedWorld(),
-        graph: {
-          ...connectedWorld().graph,
-          nodes: [...connectedWorld().graph.nodes, { id: "hub", name: "Again", kind: "route" }],
-        },
-      }),
-    ).toThrow(/duplicate node id/);
-
-    expect(() =>
-      assertWorldGraphIntegrity({
-        ...connectedWorld(),
-        graph: { ...connectedWorld().graph, hub: "missing_hub" },
-      }),
-    ).toThrow(/hub "missing_hub" is missing/);
-
-    expect(() =>
-      assertWorldGraphIntegrity({
-        ...connectedWorld(),
-        graph: {
-          ...connectedWorld().graph,
-          nodes: connectedWorld().graph.nodes.map((node) =>
-            node.id === "hub" ? { ...node, kind: "route" as const } : node,
-          ),
-        },
-      }),
-    ).toThrow(/must be a hub node/);
-
-    expect(() =>
-      assertWorldGraphIntegrity({
-        ...connectedWorld(),
-        graph: {
-          ...connectedWorld().graph,
-          edges: [{ from: "hub", to: "missing_quest", route: "lost road" }],
-        },
-      }),
-    ).toThrow(/references missing node/);
-
-    expect(() =>
-      assertWorldGraphIntegrity({
-        ...connectedWorld(),
-        graph: {
-          ...connectedWorld().graph,
-          edges: [{ from: "hub", to: "hub", route: "loop road" }],
-        },
-      }),
-    ).toThrow(/cannot loop to itself/);
-
-    expect(() =>
-      assertWorldGraphIntegrity({
-        ...connectedWorld(),
-        graph: { ...connectedWorld().graph, edges: [] },
-      }),
-    ).toThrow(/disconnected from hub/);
-
-    expect(() =>
-      assertWorldGraphIntegrity({
-        ...connectedWorld(),
-        graph: {
-          ...connectedWorld().graph,
-          nodes: connectedWorld().graph.nodes.map((node) =>
-            node.id === "hub" ? { ...node, coord: [0, 0] as [number, number] } : node,
-          ),
-        },
-      }),
-    ).toThrow(/coordinate map is incomplete/);
-
-    expect(() =>
-      assertWorldGraphIntegrity({
-        ...connectedWorld(),
-        graph: {
-          ...connectedWorld().graph,
-          nodes: connectedWorld().graph.nodes.map((node) => ({
-            ...node,
-            coord: [0, 0] as [number, number],
-          })),
-        },
-      }),
-    ).toThrow(/duplicate coordinate/);
-  });
-
-  it("rejects detached, duplicate, or unshipped RPG source bindings in the world graph", () => {
-    expect(() =>
-      assertWorldQuestSourceCoverage(
-        worldWithQuestSources([{ id: "sunken_barrow", source: SOURCE }]),
-        [SOURCE],
-      ),
-    ).not.toThrow();
-
-    expect(() =>
-      assertWorldQuestSourceCoverage(
-        worldWithQuestSources([{ id: "sunken_barrow", source: SOURCE }]),
-        [SOURCE, "content/rpg/quests/cold_forge.yaml"],
-      ),
-    ).toThrow(/missing shipped RPG source binding/);
-
-    expect(() =>
-      assertWorldQuestSourceCoverage(
-        worldWithQuestSources([
-          { id: "sunken_barrow", source: SOURCE },
-          { id: "duplicate_barrow", source: SOURCE },
-        ]),
-        [SOURCE],
-      ),
+      assertOverworldQuestSourceCoverage(withQuestSources([SOURCE, SOURCE]), [SOURCE]),
     ).toThrow(/more than once/);
 
+    // A quest naming a pack that is not shipped on disk — rejected.
     expect(() =>
-      assertWorldQuestSourceCoverage(
-        worldWithQuestSources([
-          { id: "sunken_barrow", source: SOURCE },
-          { id: "cold_forge", source: "content/rpg/quests/cold_forge.yaml" },
-        ]),
+      assertOverworldQuestSourceCoverage(
+        withQuestSources([SOURCE, "content/rpg/quests/cold_forge.yaml"]),
         [SOURCE],
       ),
     ).toThrow(/not shipped in content\/rpg\/quests/);
@@ -310,7 +118,7 @@ describe("world source resolution", () => {
         { world_quest_id: "sunken_barrow", generate_rpg_seed: 3 } as never,
         "new_game",
       ),
-    ).toThrow(/start_world_quest/);
+    ).toThrow(/start_overworld_session_quest/);
     expect(() => resolveGameSource(ROOT, { generate_rpg_seed: 3.5 } as never, "new_game")).toThrow(
       /must be an integer/,
     );

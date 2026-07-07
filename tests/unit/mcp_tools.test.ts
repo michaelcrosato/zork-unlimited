@@ -276,169 +276,37 @@ function resolveCurrentOverworldSessionEvent(
 }
 
 describe("MCP tools — validate / load (§9.4)", () => {
-  it("keeps world discovery RPG-only and removes the legacy story catalog", () => {
-    const a = api();
-    expect((a as unknown as Record<string, unknown>).list_stories).toBeUndefined();
-    const world = a.list_world();
-    const titled = a.list_world({ include_titles: true });
-    const detailed = a.list_world({ include_details: true });
-    const expanded = a.list_world({ include_graph: true, include_routes: true });
-    expect("main_story" in world).toBe(false);
-    expect("main_world_quest_id" in world).toBe(false);
-    expect("graph" in world).toBe(false);
-    expect("graph" in world.world).toBe(false);
-    expect(world.quests).toHaveLength(16);
-    expect(world.quests.every((q) => Array.isArray(q))).toBe(true);
-    expect(world.quests.every((q) => q.length === 2)).toBe(true);
-    expect(world.quests.every((q) => typeof q[1] === "boolean")).toBe(true);
-    expect(titled.quests.every((q) => q.length === 3)).toBe(true);
-    expect(titled.quests.find((q) => q[0] === "breaking_weir")).toEqual([
-      "breaking_weir",
-      "The Breaking Weir",
-      true,
-    ]);
-    expect(world.quests.every((q) => !("path" in q))).toBe(true);
-    expect(world.quests.every((q) => !("path_from_hub" in q))).toBe(true);
-    expect(world.quests.every((q) => !("mode" in q))).toBe(true);
-    expect(world.quests.every((q) => !("id" in q))).toBe(true);
-    expect(world.quests.every((q) => !("graph_node" in q))).toBe(true);
-    expect(world.quests.every((q) => !("district" in q))).toBe(true);
-    expect(world.quests.every((q) => !("quest" in q))).toBe(true);
-    expect(world.quests.every((q) => !("role" in q))).toBe(true);
-    expect(world.quests.every((q) => !("connection" in q))).toBe(true);
-    expect(detailed.quests.find((s) => s.world_quest_id === "breaking_weir")?.connection).toContain(
-      "Charterhaven",
-    );
-    expect(detailed.quests.every((q) => !("path_from_hub" in q))).toBe(true);
-    expect(expanded.graph.nodes.every((node) => !("pack" in node))).toBe(true);
-    expect(expanded.graph.nodes.every((node) => !("source" in node))).toBe(true);
-    expect(
-      expanded.quests.find((s) => s.world_quest_id === "breaking_weir")?.path_from_hub.at(-1)?.name,
-    ).toBe("The Breaking Weir");
-    expect(expanded.graph.nodes.find((node) => node.id === "breaking_weir")?.name).toBe(
-      "The Breaking Weir",
-    );
-    expect(world.hub).toBe("Charterhaven");
-    expect(world.world.hub).toBe("Charterhaven");
-    expect(expanded.graph.hub).toBe("charterhaven");
-    expect(world.quests.some((s) => s[0] === "sunken_barrow")).toBe(true);
-    expect(world.quests.some((s) => s[0] === "breaking_weir")).toBe(true);
-    expect(world.quests.map((q) => q[0])).toEqual(
-      expanded.graph.nodes.filter((node) => node.kind === "quest").map((node) => node.id),
-    );
-    expect(JSON.stringify(world).length).toBeLessThan(JSON.stringify(detailed).length);
-    expect(JSON.stringify(world).length).toBeLessThan(JSON.stringify(titled).length);
-    expect(JSON.stringify(world).length).toBeLessThanOrEqual(650);
+  it("exposes no legacy story catalog or Charter-Marches world/quest-menu tools", () => {
+    const a = api() as unknown as Record<string, unknown>;
+    expect(a.list_stories).toBeUndefined();
+    expect(a.list_world).toBeUndefined();
+    expect(a.world_path).toBeUndefined();
   });
 
-  it("lists the unified world as a hub plus quest areas", () => {
-    const r = api().list_world({ include_graph: true, include_routes: true });
-    expect(r.world.id).toBe("charter_marches");
-    expect(r.hub).toBe("Charterhaven");
-    expect(r.graph.hub).toBe("charterhaven");
-    expect(r.graph.edges.find((edge) => edge.route === "moor road")).toMatchObject({
-      from_coord: [0, 0],
-      to_coord: [-2, 2],
-      delta: [-2, 2],
-      distance: 4,
-    });
-    expect(r.quest_count).toBe(16);
-    expect(r.quests.every((q) => !("mode" in q))).toBe(true);
-    expect(r.quests.every((q) => !("id" in q))).toBe(true);
-    expect(r.quests.every((q) => !("graph_node" in q))).toBe(true);
-    const breakingWeir = r.quests.find((q) => q.world_quest_id === "breaking_weir");
-    expect(breakingWeir).toMatchObject({
-      district: "Breaking Weir",
-      quest: "restore the flood works before the village breaks",
-      role: "weir keeper",
-      playable: true,
-      world_quest_id: "breaking_weir",
-    });
-    expect("path" in (breakingWeir ?? {})).toBe(false);
-    expect(breakingWeir?.path_from_hub.map((step) => step.name)).toEqual([
-      "Charterhaven",
-      "Industrial Cut",
-      "The Breaking Weir",
-    ]);
-  });
-
-  it("returns the graph path from Charterhaven to a quest", () => {
-    const r = api().world_path({ world_quest_id: "sunken_barrow" });
-    expect(r.graph_node).toBe("sunken_barrow");
-    expect(r.world_quest_id).toBe("sunken_barrow");
-    expect(r.path_v).toBe(1);
-    expect(r.path).toEqual([
-      ["charterhaven", "Charterhaven", "hub", [0, 0], null, null],
-      ["moor_road", "Moor Road", "route", [-2, 2], "moor road", 4],
-      ["sunken_barrow", "The Sunken Barrow", "quest", [-3, 3], "barrow causeway", 2],
-    ]);
-    expect("world" in r).toBe(false);
-    expect("path_from_hub" in r).toBe(false);
-
-    const full = api().world_path({ world_quest_id: "sunken_barrow", compact_path: false });
-    expect(full.world.hub).toBe("Charterhaven");
-    expect(full.graph_node).toBe("sunken_barrow");
-    expect(full.world_quest_id).toBe("sunken_barrow");
-    expect("quest_path" in r).toBe(false);
-    expect(full.path_from_hub.map((step) => step.name)).toEqual([
-      "Charterhaven",
-      "Moor Road",
-      "The Sunken Barrow",
-    ]);
-    expect(full.path_from_hub.map((step) => step.coord)).toEqual([
-      [0, 0],
-      [-2, 2],
-      [-3, 3],
-    ]);
-    expect(full.path_from_hub[1]?.route_from_previous).toBe("moor road");
-    expect(full.path_from_hub[1]?.delta_from_previous).toEqual([-2, 2]);
-    expect(full.path_from_hub[1]?.distance_from_previous).toBe(4);
-    expect(full.path_from_hub[2]?.delta_from_previous).toEqual([-1, 1]);
-    expect(full.path_from_hub[2]?.distance_from_previous).toBe(2);
-
-    const byCoord = api().world_path({ coord: [-2, 2] });
-    expect(byCoord.world_quest_id).toBeNull();
-    expect(byCoord.graph_node).toBe("moor_road");
-    expect(byCoord.path.map((step) => step[1])).toEqual(["Charterhaven", "Moor Road"]);
-    expect(byCoord.path.at(-1)?.[3]).toEqual([-2, 2]);
-
-    expect(() => api().world_path({})).toThrow(/requires world_quest_id or coord/);
-    expect(() => api().world_path({ world_quest_id: "sunken_barrow", coord: [-2, 2] })).toThrow(
-      /either world_quest_id or coord/,
-    );
-    expect(() => api().world_path({ coord: [99, 99] })).toThrow(/Unknown world graph coord/);
-    expect(() => api().world_path({ quest_path: PACK } as never)).toThrow(/not quest_path/);
-  });
-
-  it("starts shipped quests by world graph id instead of raw pack path", () => {
+  it("starts shipped quests by overworld quest id instead of raw pack path", () => {
     const a = api();
     const started = a.start_world_quest({
       world_quest_id: "sunken_barrow",
       seed: 1,
       compact_observation: false,
-      include_world_context: true,
     });
-    expect(started.quest).toMatchObject({
-      id: "sunken_barrow",
-    });
-    expect("pack" in started.quest).toBe(false);
-    expect(started.quest.path_from_hub.map((step) => step.name)).toEqual([
-      "Charterhaven",
-      "Moor Road",
-      "The Sunken Barrow",
-    ]);
     expect("mode" in started).toBe(false);
     expect("pack_path" in started).toBe(false);
+    expect("quest" in started).toBe(false);
     expect("packPath" in a.sessions.get(started.session_id)).toBe(false);
     expect(started.world_quest_id).toBe("sunken_barrow");
     expect("generated_rpg_seed" in started).toBe(false);
-    expect(started.observation.world?.id).toBe("charter_marches");
+    // Shipped packs carry no world binding; the overworld frames every quest locally,
+    // so no "Charterhaven / The Charter Marches" intro leaks into the observation.
+    expect(started.observation.world ?? null).toBeNull();
+    const startedText = JSON.stringify(started);
+    expect(startedText).not.toContain("Charterhaven");
+    expect(startedText).not.toContain("Charter Marches");
     const followUp = a.get_observation({
       session_id: started.session_id,
       compact_observation: false,
     }).observation;
     expect(followUp.title).toBe(started.observation.title);
-    expect(followUp).not.toHaveProperty("world");
 
     const viaWorldQuest = a.start_world_quest({ world_quest_id: "breaking_weir", seed: 1 });
     expect("pack_path" in viaWorldQuest).toBe(false);
@@ -447,14 +315,14 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(viaWorldQuest.world_quest_id).toBe("breaking_weir");
     expect("generated_rpg_seed" in viaWorldQuest).toBe(false);
     expect(() => a.new_game({ world_quest_id: "breaking_weir" } as never)).toThrow(
-      /start_world_quest/,
+      /start_overworld_session_quest/,
     );
     expect(() => a.start_world_quest({} as never)).toThrow(/requires world_quest_id/);
     expect(() => a.start_world_quest({ quest_id: "sunken_barrow" } as never)).toThrow(
       /not quest_id/,
     );
     expect(() => a.start_world_quest({ world_quest_id: "missing_quest" })).toThrow(
-      /Unknown Charter Marches quest/,
+      /Unknown overworld quest/,
     );
   });
 
@@ -568,7 +436,6 @@ describe("MCP tools — validate / load (§9.4)", () => {
     const a = api();
     const r = a.list_overworld();
     const withDesignNotes = a.list_overworld({ include_design_notes: true });
-    const canonicalQuestIds = new Set(a.list_world().quests.map((quest) => quest[0]));
     expect(r.world.id).toBe("new_york_overworld");
     expect(r.start.id).toBe("albany_city");
     expect(r.town_count).toBeGreaterThanOrEqual(240);
@@ -588,7 +455,9 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(JSON.stringify(r).length).toBeLessThan(1700);
     expect(withDesignNotes.sources.length).toBeGreaterThan(0);
     expect(withDesignNotes.design_rules.join(" ")).toContain("not globally selectable");
-    expect(overworld.quests.every((quest) => canonicalQuestIds.has(quest.id))).toBe(true);
+    // The overworld is the sole quest registry: its quest list backs the count.
+    expect(overworld.quests).toHaveLength(r.quest_count);
+    expect(new Set(overworld.quests.map((quest) => quest.id)).size).toBe(overworld.quests.length);
   });
 
   it("plays a stateful New York overworld session through MCP", () => {
@@ -2662,23 +2531,11 @@ describe("MCP tools — the play loop (§9.1)", () => {
     expect(last.observation.ending_id).toBe("ending_victory");
     expect(a.get_transcript({ session_id: game.session_id }).summary.ended).toBe(true);
 
-    const byWorldQuestId = a.start_world_quest({
-      world_quest_id: "sunken_barrow",
-      seed: 1,
-      include_world_context: true,
-    }) as unknown as {
-      world_quest_id: string | null;
-      quest: { id: string; path_from_hub: { name: string }[] };
-    };
+    const byWorldQuestId = a.start_world_quest({ world_quest_id: "sunken_barrow", seed: 1 });
     expect("mode" in byWorldQuestId).toBe(false);
     expect("pack_path" in byWorldQuestId).toBe(false);
+    expect("quest" in byWorldQuestId).toBe(false);
     expect(byWorldQuestId.world_quest_id).toBe("sunken_barrow");
-    expect(byWorldQuestId.quest.id).toBe("sunken_barrow");
-    expect(byWorldQuestId.quest.path_from_hub.map((step) => step.name)).toEqual([
-      "Charterhaven",
-      "Moor Road",
-      "The Sunken Barrow",
-    ]);
   });
 
   it("an agent can play a whole game via observe → choose → step", () => {
@@ -2949,7 +2806,7 @@ describe("MCP tools — the play loop (§9.1)", () => {
     expect("packPath" in a.sessions.get(loaded.session_id)).toBe(false);
     expect(loaded.world_quest_id).toBe("sunken_barrow");
     expect("generated_rpg_seed" in loaded).toBe(false);
-    expect(loaded.observation.world?.id).toBe("charter_marches");
+    expect(loaded.observation.world ?? null).toBeNull();
     expect(
       a.get_observation({
         session_id: loaded.session_id,
@@ -3038,18 +2895,21 @@ describe("MCP tools — the play loop (§9.1)", () => {
       include_context_version: true,
     });
     expect(versionedStart.context.v).toBe(RPG_COMPACT_OBSERVATION_VERSION);
-    expect(fullStart.observation.world?.id).toBe("charter_marches");
-    expect(fullStart.observation.description).toContain("You have come from Charterhaven");
-    expect(compactStart.context.text).not.toContain("You have come from Charterhaven");
-    expect(introStart.context.text).toContain("You have come from Charterhaven");
-    expect(JSON.stringify(compactStart.context).length).toBeLessThan(
-      JSON.stringify(introStart.context).length,
-    );
+    // Shipped packs carry no world binding, so the (dormant) world-intro is a no-op:
+    // no "You have come from Charterhaven" framing leaks into any observation, and
+    // include_world_intro produces byte-identical context to the default.
+    expect(fullStart.observation.world ?? null).toBeNull();
+    expect(fullStart.observation.description).not.toContain("Charterhaven");
+    expect(fullStart.observation.description).not.toContain("You have come from");
+    expect(compactStart.context.text).not.toContain("Charterhaven");
+    expect(introStart.context.text).not.toContain("Charterhaven");
+    expect(introStart.context.text).toBe(compactStart.context.text);
     const startSave = a.save_game({ session_id: compactStart.session_id });
     const compactReload = a.load_game({ save: startSave.save });
     const introReload = a.load_game({ save: startSave.save, include_world_intro: true });
-    expect(compactReload.context.text).not.toContain("You have come from Charterhaven");
-    expect(introReload.context.text).toContain("You have come from Charterhaven");
+    expect(compactReload.context.text).not.toContain("Charterhaven");
+    expect(introReload.context.text).not.toContain("Charterhaven");
+    expect(introReload.context.text).toBe(compactReload.context.text);
     expect(compactStart.context.vitals).toEqual([
       fullStart.observation.stats.hp,
       fullStart.observation.stats.attack,
@@ -3589,7 +3449,7 @@ describe("MCP tools — save / load round-trip (§8.7)", () => {
     expect(reloaded.world_quest_id).toBe("sunken_barrow");
     expect("generated_rpg_seed" in reloaded).toBe(false);
     expect(reloaded.state_hash).toBe(after);
-    expect(reloaded.observation.world?.id).toBe("charter_marches");
+    expect(reloaded.observation.world ?? null).toBeNull();
     expect("pack_path" in inferred).toBe(false);
     expect(inferred.world_quest_id).toBe("sunken_barrow");
     expect("generated_rpg_seed" in inferred).toBe(false);

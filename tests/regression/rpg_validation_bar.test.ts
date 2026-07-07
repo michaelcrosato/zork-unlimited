@@ -12,7 +12,7 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import { validateRpg } from "../../src/validate/rpg_validator.js";
-import { loadWorldManifest } from "../../src/world/source.js";
+import { loadOverworldManifest } from "../../src/world/source.js";
 
 const root = process.cwd();
 const RPG_PACK_DIR = "content/rpg/quests";
@@ -41,30 +41,28 @@ function runNpm(command: string, timeout = 120_000) {
 
 describe("single-engine RPG validation bar", () => {
   const packs = discoverRpgPacks();
-  const worldQuestIds = loadWorldManifest(root)
-    .graph.nodes.filter((node) => node.kind === "quest" && node.source !== undefined)
-    .map((node) => node.id)
+  const worldQuestIds = loadOverworldManifest(root)
+    .quests.map((quest) => quest.id)
     .sort();
 
   it("discovers the shipped RPG corpus and no legacy content packs", () => {
     expect(packs).toEqual([
       "content/rpg/quests/advocates_case.yaml",
-      "content/rpg/quests/bellfounders_alarm.yaml",
       "content/rpg/quests/breaking_weir.yaml",
-      "content/rpg/quests/bridgewrights_proof.yaml",
       "content/rpg/quests/cold_forge.yaml",
       "content/rpg/quests/dawn_beacon.yaml",
       "content/rpg/quests/factors_mark.yaml",
       "content/rpg/quests/falconers_ransom.yaml",
       "content/rpg/quests/gallowmere.yaml",
-      "content/rpg/quests/lockkeepers_toll.yaml",
-      "content/rpg/quests/powder_mill_surety.yaml",
       "content/rpg/quests/printers_night.yaml",
-      "content/rpg/quests/quarrymens_fault.yaml",
       "content/rpg/quests/sunken_barrow.yaml",
       "content/rpg/quests/tanners_fever.yaml",
       "content/rpg/quests/wolf_winter.yaml",
     ]);
+  });
+
+  it("binds every shipped pack to exactly one overworld quest (single-world registry)", () => {
+    expect(worldQuestIds).toEqual(packs.map((path) => path.replace(/^.*\/(.+)\.yaml$/, "$1")));
   });
 
   it.each(packs)("%s loads and validates with zero errors", (path) => {

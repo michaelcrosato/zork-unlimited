@@ -87,14 +87,6 @@
 meta:
   id: printers_night_v1
   title: "The Printer's Night"
-  world:
-    id: charter_marches
-    name: "The Charter Marches"
-    hub: "Charterhaven"
-    district: "Printers' Night Court"
-    quest: "retrieve the dangerous pamphlet proof"
-    role: "printer's runner"
-    connection: "Charterhaven's presses can topple offices overnight, and the Barfleur proof is a city weapon."
   start_room: shop_floor
   # `stealth` (3 base): physical concealment and silent movement — the ability to
   # occupy a space without claiming it. First in the RPG corpus to use a physical-

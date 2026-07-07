@@ -11,13 +11,13 @@ graph.
 ## North Star
 
 - One runtime mode: `rpg`.
-- One shipped quest catalog: `list_world` (the overworld data source has its own
-  catalog tool, `list_overworld` — not a retirement target).
+- One world AND quest registry: the New York overworld (`list_overworld`); every
+  shipped quest is anchored to a town and discovered from its local notice board.
 - One shipped-content source key: `world_quest_id`.
-- One shipped quest start path: `start_world_quest`.
+- One shipped quest start path: from the overworld via `start_overworld_session_quest`.
 - One autonomous loop: inspect, change one aligned surface, verify, commit.
-- One world model: grow from graph routes toward a dense coordinate or matrix map
-  without adding another game mode.
+- One world model: a single seamless open world (like Skyrim/Cyberpunk) where every
+  quest is reached in-world — no second world or game mode.
 
 ## Current Anchors
 
@@ -25,9 +25,9 @@ graph.
 - `ADVENTUREFORGE_BUILD_SPEC.md` is the standing architecture contract.
 - `docs/VISION.md` is the why; `docs/DECISION_LOG.md` is the append-only memory
   of settled questions.
-- `content/world/charter_marches.yaml` is the shipped RPG quest graph.
-- `content/world/new_york_overworld.json` is the large contiguous overworld data
-  source.
+- `content/world/new_york_overworld.json` is the single world: the large contiguous
+  overworld data source AND the shipped RPG quest registry (each quest maps a
+  `world_quest_id` to its `content/rpg/quests/*.yaml` source).
 - `src/world/session.ts` is the primary stateful overworld runtime.
 - `src/mcp/tools.ts` is the tested ToolApi source of truth.
 - `src/validate/rpg_foundation_validator.ts` carries high-depth RPG foundation

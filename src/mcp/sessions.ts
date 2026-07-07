@@ -314,7 +314,7 @@ function retainedTranscript(
 export type Session = SessionRuntimeCaches<TranscriptSummary> & {
   id: string;
   contentHash: string;
-  /** Canonical Charter Marches quest graph node id for shipped quest sessions. */
+  /** Shipped quest id (from the New York overworld quest registry) for quest sessions. */
   worldQuestId?: string;
   /** Overworld session that launched this RPG quest, when started through the bridge. */
   overworldSessionId?: string;

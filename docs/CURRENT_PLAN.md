@@ -11,9 +11,10 @@ history and `docs/DECISION_LOG.md`, not here.
 ## Synthesis
 
 The RPG-only consolidation is complete and audited (see the 2026-07-06 entries
-in `docs/DECISION_LOG.md`): one engine, one world, 16 shipped quests, single
-protected `main` branch, compact MCP surfaces, and a green bar. The overworld
-quest bridge (the previous chosen move) is implemented and regression-tested.
+in `docs/DECISION_LOG.md`): one engine, one world (the New York overworld), 11
+shipped quests, single protected `main` branch, compact MCP surfaces, and a green
+bar. The overworld quest bridge (the previous chosen move) is implemented and
+regression-tested.
 The open frontier per `docs/ROADMAP.md` is content restoration (story ports)
 and gameplay depth — not more consolidation.
 
@@ -24,9 +25,9 @@ Port ONE retired story back as an RPG world quest.
 - The 36 retired packs live at tag `stories-52-pre-rpg-consolidation`; pick one
   whose prose and puzzle chain port cleanly (prefer a parser-era single-location
   story over a long CYOA branch tree for the first port).
-- Adapt it to an RPG quest pack under `content/rpg/quests/`, register it in
-  `content/world/charter_marches.yaml`, and route all play/validation through
-  its `world_quest_id`.
+- Adapt it to an RPG quest pack under `content/rpg/quests/`, register it as a
+  quest in `content/world/new_york_overworld.json` (anchored to a town/area), and
+  route all play/validation through its `world_quest_id`.
 - Reuse the original's playtested prose and endings; convert puzzle gates to the
   condition/effect DSL and USE verbs; keep scoring sound (the validators prove
   ending reachability and score economy).

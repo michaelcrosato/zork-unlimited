@@ -24,11 +24,11 @@ before "make ONE improvement" — and its findings are a primary input to the fi
    open-world overworld from a fresh start (`npm run blind` with no quest id) —
    that is how a real new player meets the game. A cycle that changed ONE quest
    instead targets that quest id + a fixed seed (`--quest <id> --seed <n>`);
-   discover quest ids from default `list_world().quests[][0]` (detailed catalog
-   calls expose object rows with `world_quest_id`). For variety across targeted
-   cycles, rotate the seed and, when more than one quest is playable, rotate the
-   quest id. The single-quest drop-in is a targeted/legacy instrument — never
-   treat it as the default experience test.
+   discover quest ids from the shipped `content/rpg/quests/*.yaml` filenames (or
+   `npm run validate`, which lists them). For variety across targeted cycles,
+   rotate the seed and, when more than one quest is playable, rotate the quest id.
+   The single-quest drop-in is a dev/QA instrument — never treat it as the default
+   experience test; a real player reaches quests in-world through the overworld.
 
 2. **Spawn a blind subagent with a FRESH context.** Use whatever isolation your
    harness provides — the `Agent` tool (`subagent_type: general-purpose`), a new

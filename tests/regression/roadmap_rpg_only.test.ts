@@ -19,7 +19,7 @@ describe("active roadmap is RPG-only and scanned", () => {
   it("names the current RPG world architecture and gates", () => {
     expect(roadmap).toContain("One runtime mode: `rpg`");
     expect(roadmap).toContain("world_quest_id");
-    expect(roadmap).toContain("content/world/charter_marches.yaml");
+    expect(roadmap).toContain("content/world/new_york_overworld.json");
     expect(roadmap).toContain("src/world/session.ts");
     expect(roadmap).toContain("npm run validate");
     expect(roadmap).toContain("npm test");

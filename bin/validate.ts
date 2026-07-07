@@ -6,8 +6,8 @@
  *   npm run validate
  *   npm run validate -- sunken_barrow [...more world_quest_ids]
  *
- * With no arguments this validates every shipped RPG quest through the canonical
- * world graph. Raw pack paths and legacy CYOA/parser packs are intentionally not
+ * With no arguments this validates every shipped RPG quest in the New York overworld
+ * quest registry. Raw pack paths and legacy CYOA/parser packs are intentionally not
  * accepted here.
  */
 import { formatReport } from "../src/validate/report.js";
@@ -28,17 +28,13 @@ function looksLikeRawPackSelector(value: string): boolean {
 function worldQuestTarget(worldQuestId: string): ValidationTarget {
   const source = rpgSources.loadWorldQuestReport(worldQuestId);
   return {
-    label: `world_quest_id: ${source.node.id}`,
+    label: `world_quest_id: ${source.questId}`,
     result: source.result,
   };
 }
 
 function discoverWorldQuestTargets(): ValidationTarget[] {
-  return rpgSources
-    .loadWorldManifest()
-    .graph.nodes.filter((node) => node.kind === "quest" && node.source !== undefined)
-    .sort((a, b) => a.id.localeCompare(b.id))
-    .map((node) => worldQuestTarget(node.id));
+  return rpgSources.shippedWorldQuestIds().map((worldQuestId) => worldQuestTarget(worldQuestId));
 }
 
 function validateOne(target: ValidationTarget): boolean {
@@ -79,7 +75,7 @@ function main(): void {
   }
 
   if (targets.length === 0) {
-    console.error(`No RPG quests found in the canonical world graph.`);
+    console.error(`No shipped RPG quests found in the New York overworld quest registry.`);
     process.exit(2);
   }
 

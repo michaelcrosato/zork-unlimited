@@ -298,7 +298,9 @@ describe("buildPrompt blind-playtest contract", () => {
     });
 
     expect(prompt).toContain("## STEP 1 — Add the new world quest, THEN blind-playtest IT");
-    expect(prompt).toContain("Author/register the RPG quest in the world graph/overworld manifest");
+    expect(prompt).toContain(
+      "Author the RPG quest and register it in the overworld quest registry",
+    );
     expect(prompt).toContain("pointed at the QUEST_ID YOU JUST REGISTERED");
     expect(prompt).toContain(
       "Let the blind read of YOUR new world quest drive a final polish pass",

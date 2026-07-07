@@ -1,6 +1,6 @@
 #!/usr/bin/env -S npx tsx
 /**
- * bin/rpg_play — play a Charter Marches RPG world quest from the terminal.
+ * bin/rpg_play — play a shipped New York overworld RPG quest from the terminal.
  *
  * Usage:
  *   npm run play                                      # play the default world quest
@@ -163,7 +163,7 @@ async function main(): Promise<void> {
     const trace = recordTrace(rules, initStateForRpgPack(index, seed), taken, {
       trace_id: "tr_rpg_play",
       content_hash: source.compiled.contentHash,
-      worldQuestId: source.node.id,
+      worldQuestId: source.questId,
     });
     writeFileSync(record, JSON.stringify(trace, null, 2));
     console.log(`\nTrace written to ${record}`);

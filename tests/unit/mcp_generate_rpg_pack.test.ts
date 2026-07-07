@@ -177,7 +177,7 @@ describe("bug_0160 — new_game(generate_rpg_seed) plays a fresh minted RPG pack
         world_quest_id: "breaking_weir",
         generate_rpg_seed: 3,
       } as never),
-    ).toThrow(/start_world_quest/);
+    ).toThrow(/start_overworld_session_quest/);
   });
 
   it("generated RPG saves embed the generation seed and load without a pack path", () => {

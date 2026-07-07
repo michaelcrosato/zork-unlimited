@@ -50,9 +50,11 @@ The original staged bootstrap (CYOA → parser → scoring → RPG) proved the
 deterministic core; the consolidation (DECISION_LOG, 2026-07-06) retired the
 training stages and normalized on their union: **one RPG foundation engine**
 — rooms, objects, containers, dialogue, puzzles, scoring, stats, seeded
-combat, d20 skill checks — inside **one persistent world**: the Charter
-Marches hub binding every quest, and the New York overworld for travel,
-discovery, jobs, encounters, and renown.
+combat, d20 skill checks — inside **one persistent world**: the New York
+overworld, a single seamless open world (like Skyrim or Cyberpunk 2077) that
+hosts travel, discovery, jobs, encounters, and renown AND is the sole registry
+for every shipped quest, each discovered in-world from a town's local notice
+board.
 
 The engine's ambition is TTRPG-grade breadth: the closed condition/effect DSL
 plus the interaction-verb system should let writers express *nearly any

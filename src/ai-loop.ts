@@ -33,12 +33,7 @@ import {
   type ImprovementCandidate,
   type QuestHealth,
 } from "./afk/assessor.js";
-import { createToolApi } from "./mcp/tools.js";
 import { rotateLoopState } from "./afk/loop_state.js";
-
-type WorldCatalog = {
-  quests: readonly (readonly [world_quest_id: string, playable: boolean])[];
-};
 
 // ── Saturation-triggered ultraplan (docs/afk_loop.md) ──────────────────────────
 // When the deterministic assessor runs dry (isSaturated), a cycle re-aims the
@@ -87,10 +82,10 @@ function cycleStamp(): string {
   return new Date().toISOString().replace(/[:.]/g, "-");
 }
 
-function requirePlayableWorldQuest(catalog: WorldCatalog): void {
+function requirePlayableWorldQuest(quests: readonly { playable: boolean }[]): void {
   // The overworld baseline run discovers and bridges into shipped quests, so the
-  // loop still needs at least one playable quest node in the world graph.
-  if (!catalog.quests.some((quest) => quest[1])) {
+  // loop still needs at least one playable quest in the overworld registry.
+  if (!quests.some((quest) => quest.playable)) {
     throw new Error("AFK loop requires at least one shipped RPG quest to blind-playtest.");
   }
 }
@@ -184,7 +179,7 @@ function main(): void {
 
   const a = assess(root);
   const top = a.top;
-  requirePlayableWorldQuest(createToolApi({ root }).list_world());
+  requirePlayableWorldQuest(a.quests);
   const target = playtestTarget(top);
   const targetWorldQuestId = playtestTargetWorldQuestId(
     top,
@@ -288,8 +283,8 @@ export function buildPrompt(ctx: {
     ? [
         "## STEP 1 — Add the new world quest, THEN blind-playtest IT (quality feedback)",
         "",
-        "You are expanding the single Charter Marches RPG world this cycle. Order for content_new:",
-        "1. Author/register the RPG quest in the world graph/overworld manifest, and get it validating green (validate_quest / npm run validate).",
+        "You are expanding the single New York overworld RPG world this cycle. Order for content_new:",
+        "1. Author the RPG quest and register it in the overworld quest registry (content/world/new_york_overworld.json), and get it validating green (validate_quest / npm run validate).",
         "2. THEN spawn a FRESH subagent with NO design context (Agent tool general-purpose, or a",
         "   clean `claude -p`). Hand it ONLY the locked-down prompt in docs/blind_playtest_protocol.md,",
         "   pointed at the QUEST_ID YOU JUST REGISTERED + a seed. It must play purely through",

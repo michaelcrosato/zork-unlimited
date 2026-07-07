@@ -20,7 +20,11 @@ describe("active build spec is RPG-only", () => {
   it("names the current unified RPG surfaces and gates", () => {
     expect(spec).toContain("One runtime mode: `rpg`");
     expect(spec).toContain("start_world_quest(world_quest_id)");
-    expect(spec).toContain("list_world");
+    // The overworld is the single world AND quest registry; the Charter-Marches
+    // quest catalog/route tools (list_world / world_path) are retired.
+    expect(spec).toContain("list_overworld");
+    expect(spec).not.toContain("list_world");
+    expect(spec).not.toContain("world_path");
     expect(spec).toContain("npm run validate");
     expect(spec).toContain("npm test");
   });

@@ -33,17 +33,15 @@ persistent world (the 2026-07-06 consolidation — see
   `src/validate/rpg_foundation_validator.ts` — dozens of finding codes) plus an
   exhaustive solver prove every declared ending reachable, no path soft-locked,
   and the score economy sound.
-- **The Charter Marches** (`content/world/charter_marches.yaml`) — the hub world
-  binding all **16 shipped quests** under `content/rpg/quests/`:
-  `advocates_case`, `bellfounders_alarm`, `breaking_weir`,
-  `bridgewrights_proof`, `cold_forge`, `dawn_beacon`, `factors_mark`,
-  `falconers_ransom`, `gallowmere`, `lockkeepers_toll`, `powder_mill_surety`,
-  `printers_night`, `quarrymens_fault`, `sunken_barrow`, `tanners_fever`,
-  `wolf_winter`.
 - **The New York overworld** (`content/world/new_york_overworld.json`,
-  `src/world/`) — a 247-node, 9-region open world for travel, discovery, road
-  encounters, jobs, local events, and renown; overworld leads hand off into
-  playable RPG quest sessions.
+  `src/world/`) — the single seamless world (like Skyrim or Cyberpunk 2077):
+  a 247-node, 9-region open world for travel, discovery, road encounters, jobs,
+  local events, and renown, AND the sole registry for the **11 shipped quests**
+  under `content/rpg/quests/` (`advocates_case`, `breaking_weir`, `cold_forge`,
+  `dawn_beacon`, `factors_mark`, `falconers_ransom`, `gallowmere`,
+  `printers_night`, `sunken_barrow`, `tanners_fever`, `wolf_winter`). Each quest
+  is anchored to a town and discovered from its local notice board, then handed
+  off into a playable RPG quest session — everything is reached in-world.
 - **Web UI** (`ui/`) — a React + Vite view over the same headless engine; it
   renders observations and never decides legality. See
   [`ui/README.md`](./ui/README.md).
@@ -98,18 +96,20 @@ any agent harness (Claude Code, Codex, Gemini CLI, …) plays via native tool
 calls over the structured observation/action loop — never a raw parser. The
 repo ships `.mcp.json`, so an MCP client opened here connects automatically.
 
-**39 tools**, in four groups:
+**37 tools**, in four groups:
 
-- **World catalog** (3): `list_world`, `world_path`, `list_overworld`.
+- **World catalog** (1): `list_overworld` — the overworld is both the world and
+  the quest registry.
 - **Overworld sessions** (20): `start_overworld`, then travel, rest, resupply,
   route planning, POI scouting, contacts, events, jobs, area exploration,
   export/restore — and `start_overworld_session_quest` /
   `complete_overworld_session_quest` bridging a discovered lead into quest play.
-- **RPG quest sessions** (12): `start_world_quest` (or `new_game`, which also
-  plays generated packs) → `get_observation` / `list_legal_actions` →
-  `step_action`, repeated until the session ends; plus `get_state`,
-  `get_transcript`, `save_game`, `load_game`, `validate_quest`, `load_quest`,
-  and `generate_rpg_pack`.
+  This is how a player reaches a shipped quest: in-world, through the overworld.
+- **RPG quest sessions** (12): `start_world_quest` (a dev/QA entry point that
+  starts a shipped quest by id; `new_game` does the same for generated packs) →
+  `get_observation` / `list_legal_actions` → `step_action`, repeated until the
+  session ends; plus `get_state`, `get_transcript`, `save_game`, `load_game`,
+  `validate_quest`, `load_quest`, and `generate_rpg_pack`.
 - **Authoring & repair** (4): `adapt_story`, `apply_content_patch`,
   `replay_trace`, `inspect_trace`.
 

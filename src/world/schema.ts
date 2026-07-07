@@ -1,79 +1,15 @@
 import { z } from "zod";
 
-export const CANONICAL_WORLD_ID = "charter_marches";
-export const CANONICAL_WORLD_NAME = "The Charter Marches";
-export const CANONICAL_HUB_CITY = "Charterhaven";
-
-export const WorldGraphNodeKindSchema = z.enum(["hub", "district", "route", "quest"]);
-
-export const WorldGraphNodeSchema = z
-  .object({
-    id: z.string().min(1),
-    name: z.string().min(1),
-    kind: WorldGraphNodeKindSchema,
-    district: z.string().min(1).optional(),
-    coord: z.tuple([z.number().int(), z.number().int()]).optional(),
-    source: z.string().min(1).optional(),
-  })
-  .strict()
-  .superRefine((node, ctx) => {
-    if (node.kind === "quest" && !node.source) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "quest graph nodes must declare an RPG source path",
-        path: ["source"],
-      });
-    }
-    if (node.kind !== "quest" && node.source) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "only quest graph nodes may declare an RPG source path",
-        path: ["source"],
-      });
-    }
-  });
-
-export const WorldGraphEdgeSchema = z
-  .object({
-    from: z.string().min(1),
-    to: z.string().min(1),
-    route: z.string().min(1),
-  })
-  .strict();
-
-export const WorldGraphSchema = z
-  .object({
-    hub: z.string().min(1),
-    nodes: z.array(WorldGraphNodeSchema).min(1),
-    edges: z.array(WorldGraphEdgeSchema),
-  })
-  .strict();
-
-export const WorldManifestSchema = z
-  .object({
-    id: z.string().min(1),
-    name: z.string().min(1),
-    hub: z.string().min(1),
-    premise: z.string().min(1).optional(),
-    rule: z.string().min(1).optional(),
-    hub_districts: z.array(z.string().min(1)).optional(),
-    frontiers: z.array(z.string().min(1)).optional(),
-    graph: WorldGraphSchema,
-  })
-  .strict();
-
-export type WorldGraphNode = z.infer<typeof WorldGraphNodeSchema>;
-export type WorldGraphEdge = z.infer<typeof WorldGraphEdgeSchema>;
-export type WorldGraph = z.infer<typeof WorldGraphSchema>;
-export type WorldManifest = z.infer<typeof WorldManifestSchema>;
-
 /**
- * Shared world binding for shipped RPG sources.
+ * Optional per-pack world binding — dormant, content-agnostic scaffolding.
  *
- * This is optional at the schema layer so minimal test fixtures and generated eval
- * sources can stay focused. The shipped-content regression suite makes it mandatory
- * for content/rpg/quests: those files are no longer separate campaigns, but quest/area
- * entries in the Charter Marches world.
+ * A quest pack MAY carry a one-time `meta.world` framing ("You have come from
+ * {hub} to {district} …") rendered by `openingWorldText` (src/world/observation.ts).
+ * Shipped packs no longer carry it: the New York overworld
+ * (content/world/new_york_overworld.json) is the single world AND the shipped quest
+ * registry, and it frames every quest through its own local notice-board discovery.
+ * The field stays OPTIONAL so generated/eval packs and any future authored pack can
+ * opt into a bespoke intro without an engine fork.
  */
 export const WorldBindingSchema = z
   .object({

@@ -67,14 +67,6 @@
 meta:
   id: gallowmere_v1
   title: "The Gallowmere"
-  world:
-    id: charter_marches
-    name: "The Charter Marches"
-    hub: "Charterhaven"
-    district: "Gallowmere Moor"
-    quest: "cross the moor and answer its gallows claim"
-    role: "moor traveller"
-    connection: "Gallowmere is Charterhaven's feared outer road, where old sentences still decide who reaches the city."
   start_room: moor_edge
   # Two new skill vars alongside the standard combat pair and hp:
   # `tracking`: reading spoor, hoof-sign, and ground evidence.

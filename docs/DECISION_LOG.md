@@ -834,3 +834,70 @@ as "meaningful only with a live API-key path" — is **retired as moot**: a publ
 key-free repo has no such path. The pure JSON extractor `extractJson` was NOT
 key-related and is retained, moved to `agents/llm/extract_json.ts` (regression
 `tests/regression/extract_json_resilience.test.ts`, bug_0238).
+
+### Single-world consolidation: the New York overworld is the whole game — 2026-07-07
+
+**Decision: there is now exactly ONE world, the New York overworld. The legacy
+"Charter Marches" world (id `charter_marches`, hub "Charterhaven") is removed
+entirely — as a manifest, a graph, a set of MCP tools, a per-quest binding, and
+an identity that ever surfaces to a player.** This supersedes the 2026-07-06
+consolidation entry's framing of "one persistent world (Charter Marches hub + the
+New York overworld)": that was still TWO stacked worlds (the overworld sat on top
+of the Charter Marches quest graph). The game is now a single seamless open world
+(Skyrim/Cyberpunk-style): a player enters via `start_overworld`, travels New York,
+and discovers every quest in-world from a town's local notice board.
+
+**Removed:**
+- `content/world/charter_marches.yaml` (the world manifest + hub-and-route graph).
+- `CANONICAL_WORLD_ID` / `CANONICAL_WORLD_NAME` / `CANONICAL_HUB_CITY`,
+  `WorldManifestSchema`, `WorldGraph*` (from `src/world/schema.ts`), and
+  `src/world/graph.ts` wholesale (its one survivor, `normalizeSourcePath`, moved to
+  `src/world/overworld.ts`).
+- MCP tools `list_world` and `world_path` (the Charter-Marches quest catalog + route
+  tracer). The overworld's `list_overworld` is the single world/quest catalog.
+- The per-pack `meta.world` Charter-Marches binding: stripped from all 11 surviving
+  packs, so no "You have come from Charterhaven …" world-intro ever renders. The
+  generic optional `WorldBinding` schema + `openingWorldText` are KEPT as dormant,
+  content-agnostic scaffolding (no shipped pack carries `meta.world`).
+- The 5 quests reachable only via the old world graph, never from the overworld:
+  `bellfounders_alarm`, `bridgewrights_proof`, `lockkeepers_toll`,
+  `powder_mill_surety`, `quarrymens_fault` — with their dedicated regression tests
+  and `traces/bugs/` artifacts (legitimate deletion of tests for deleted content,
+  not verification-weakening; the corpus stays far above the `MIN_TEST_CASES` /
+  `MIN_ASSERTIONS` floors).
+
+**New model:** the overworld manifest (`content/world/new_york_overworld.json`) is
+the sole quest registry — its `quests[]` map each `world_quest_id` to a
+`content/rpg/quests/*.yaml` source. `assertOverworldQuestSourceCoverage`
+(`src/world/source.ts`) enforces a **bijection** between overworld quests and shipped
+packs: no orphan pack, no dangling quest source. `RpgSourceRuntime` resolves quest
+id → source through the overworld (`overworldQuestById`), never a world graph;
+`loadWorldManifest` is gone. `WORLD_QUEST_TARGET` in `src/afk/assessor.ts` was
+LOWERED 16 → 11 to the actual shipped count (this is matching reality after removing
+5 orphans, NOT the DECISION_LOG anti-pattern of inflating breadth to force
+`content_new`).
+
+**`start_world_quest` kept, de-branded.** It remains a registered MCP tool but is
+now a dev/QA entry point into the RPG runtime (start a shipped quest by id), exactly
+parallel to `new_game` for generated packs — it surfaces zero Charter-Marches
+content and is not a second world. The player-facing path to a shipped quest is
+in-world via `start_overworld_session_quest`. Its `include_world_context` option
+(which depended on the deleted world graph/route) was removed.
+
+**Content-hash ripple (recorded so a future reviewer doesn't read it as a launder):**
+stripping `meta.world` changed every pack's `contentHash`. The load-bearing trace
+fixtures that pin `sunken_barrow`'s hash — `traces/rpg/barrow_victory.json`,
+`traces/bug_cli_phantom_current.json`, `traces/bug_cli_missing_mode.json` — and the
+`tests/regression/trace_cli_integrity.test.ts` pin were updated
+`1400a6d4… → 27ef2e9a…`. State/`expected_final_hash` values are unchanged
+(`meta.world` never affected runtime state), so no gameplay regression is masked.
+
+**Proof-path remapping (per the standing re-baseline norm):** `loadWorldManifest`,
+`fallbackWorldManifest`, `assertWorldGraphIntegrity`,
+`assertWorldQuestSourceCoverage`, `assertOverworldQuestSourceBindings`,
+`worldRouteFromHub`/`worldQuestNodeById`/`worldMap*`/`publicWorldGraph` no longer
+exist. The `RpgWorldQuestPlayableSource`/`…ReportSource` shape dropped its
+`{world, node}` for `{questId, title}`.
+
+**Verified:** `npm run health` green (verifier integrity, typecheck, lint, format,
+1673 tests, UI typecheck, pack validation), plus a blind overworld playtest.

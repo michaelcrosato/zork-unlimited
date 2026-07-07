@@ -32,20 +32,12 @@ const MIN_TERM_LENGTH = 4;
 export function auditStaleReactiveRoomItems(root: string): StaleReactiveAudit {
   const sites: StaleReactiveRoomItemSite[] = [];
   const rpgSources = new RpgSourceRuntime(root);
-  for (const worldQuestId of shippedWorldQuestIds(rpgSources)) {
+  for (const worldQuestId of rpgSources.shippedWorldQuestIds()) {
     const source = rpgSources.loadWorldQuestReport(worldQuestId);
     if (!source.result.ok) continue;
-    sites.push(...auditRpgPackForStaleRoomItems(source.result.compiled.pack, source.node.id));
+    sites.push(...auditRpgPackForStaleRoomItems(source.result.compiled.pack, source.questId));
   }
   return { sites };
-}
-
-function shippedWorldQuestIds(rpgSources: RpgSourceRuntime): string[] {
-  return rpgSources
-    .loadWorldManifest()
-    .graph.nodes.filter((node) => node.kind === "quest")
-    .map((node) => node.id)
-    .sort((a, b) => a.localeCompare(b));
 }
 
 export function auditRpgPackForStaleRoomItems(

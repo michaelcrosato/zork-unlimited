@@ -26,6 +26,14 @@ import {
 
 const a = assess(process.cwd());
 
+// The overworld is the single quest registry; a fixture root reuses the real,
+// integrity-passing overworld but swaps its quest list for the one stale-audit
+// fixture quest, anchored to a real Albany area, so the shipped-source bijection
+// holds with exactly the fixture pack on disk.
+const REAL_OVERWORLD = JSON.parse(
+  readFileSync(join(process.cwd(), "content", "world", "new_york_overworld.json"), "utf8"),
+) as Record<string, unknown>;
+
 function realRepoAttendanceOffsets(): Map<string, number> {
   const loopState = join(process.cwd(), "AI_LOOP_STATE.md");
   const loopOffsets = existsSync(loopState)
@@ -40,27 +48,21 @@ function withStaleAuditFixtureRoot(run: (root: string) => void): void {
     mkdirSync(join(root, "content", "rpg", "quests"), { recursive: true });
     mkdirSync(join(root, "content", "world"), { recursive: true });
     writeFileSync(
-      join(root, "content", "world", "charter_marches.yaml"),
-      [
-        "id: charter_marches",
-        'name: "The Charter Marches"',
-        'hub: "Charterhaven"',
-        "graph:",
-        "  hub: charterhaven",
-        "  nodes:",
-        "    - id: charterhaven",
-        '      name: "Charterhaven"',
-        "      kind: hub",
-        "    - id: stale_fixture",
-        '      name: "Stale Fixture"',
-        "      kind: quest",
-        "      source: content/rpg/quests/stale_fixture.yaml",
-        "  edges:",
-        "    - from: charterhaven",
-        "      to: stale_fixture",
-        "      route: fixture road",
-        "",
-      ].join("\n"),
+      join(root, "content", "world", "new_york_overworld.json"),
+      JSON.stringify({
+        ...REAL_OVERWORLD,
+        quests: [
+          {
+            id: "stale_fixture",
+            title: "Stale Fixture",
+            source: "content/rpg/quests/stale_fixture.yaml",
+            home: "albany_city",
+            area: "albany_city__transport_hub",
+            discovery: "Ask around Albany city for the Stale Fixture lead.",
+            visibility: "local_notice_board",
+          },
+        ],
+      }),
     );
     writeFileSync(
       join(root, "content", "rpg", "quests", "stale_fixture.yaml"),
@@ -114,8 +116,8 @@ function withStaleAuditFixtureRoot(run: (root: string) => void): void {
 describe("assess()", () => {
   it("counts the RPG catalog and does not track retired legacy modes", () => {
     expect("packsByMode" in a).toBe(false);
-    expect(a.rpgQuestCount).toBeGreaterThanOrEqual(16);
-    expect(a.worldQuestCount).toBeGreaterThanOrEqual(16);
+    expect(a.rpgQuestCount).toBe(11);
+    expect(a.worldQuestCount).toBe(11);
     expect(a.quests.filter((p) => p.playable).every((p) => p.world_quest_id !== null)).toBe(true);
     expect(a.quests.every((p) => !("pack_id" in p))).toBe(true);
     expect(a.quests.every((p) => !("path" in p))).toBe(true);
@@ -186,11 +188,12 @@ describe("assess()", () => {
   });
 
   it("raises content_new only for contiguous world-quest breadth", () => {
-    // Breadth work is now a world graph target, not a mode/pack target. Legacy
-    // content is no longer a breadth target, and raw RPG packs must not be raised
-    // as detached authoring work.
-    expect(a.rpgQuestCount).toBeGreaterThanOrEqual(16);
-    expect(a.worldQuestCount).toBeGreaterThanOrEqual(16);
+    // Breadth work is now an overworld-registry target, not a mode/pack target.
+    // Legacy content is no longer a breadth target, and raw RPG packs must not be
+    // raised as detached authoring work. The 11 shipped quests meet the target, so
+    // content_new disarms.
+    expect(a.rpgQuestCount).toBe(11);
+    expect(a.worldQuestCount).toBe(11);
     expect(
       a.candidates.find((c) => c.category === "content_new" && c.target === "rpg"),
     ).toBeUndefined();
@@ -215,7 +218,7 @@ describe("assess()", () => {
       expect(candidate?.category).toBe("content_new");
       expect(candidate?.target).toBe("world");
       expect(candidate?.title).toContain("world-graph RPG quest");
-      expect(candidate?.rationale).toContain("contiguous Charter Marches graph");
+      expect(candidate?.rationale).toContain("single New York overworld");
     });
   });
 

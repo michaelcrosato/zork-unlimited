@@ -19,12 +19,16 @@ AdventureForge converged on one architecture:
 
 - One runtime mode: `rpg`.
 - One public shipped-content source key: `world_quest_id`.
-- One world catalog: `list_world`.
-- One shipped quest start surface: `start_world_quest(world_quest_id)`.
+- One world AND quest registry: the New York overworld (`list_overworld`); it is
+  the single world, and every shipped quest is anchored to a town and discovered
+  from its local notice board.
+- One player quest-start surface: in-world, from the overworld
+  (`start_overworld_session_quest`). `start_world_quest(world_quest_id)` remains a
+  dev/QA entry point into the RPG runtime, not a second world.
 - One action loop: observe, list legal actions when needed, step by stable
   `action_id`, checkpoint by state hash.
-- One contiguous world model: a hub-and-route graph that can grow toward a dense
-  coordinate or matrix world without adding another game mode.
+- One contiguous world model: a single seamless open world (like Skyrim or
+  Cyberpunk 2077) — no second world or game mode.
 
 Retired variants are not implementation targets. Do not rebuild the old CYOA
 engine, the old semantic-command engine, or standalone package-mode authoring
@@ -38,10 +42,11 @@ validated data; agents interact only through structured APIs.
 
 ### Layer 1: World And Content Data
 
-- `content/world/new_york_overworld.json` holds the contiguous overworld data.
-- `content/world/charter_marches.yaml` holds the shipped RPG quest graph.
-- `content/rpg/quests/*.yaml` holds RPG quest packs registered through the world
-  graph.
+- `content/world/new_york_overworld.json` is the single world: the contiguous
+  overworld data AND the shipped RPG quest registry (each quest maps a
+  `world_quest_id` to its `content/rpg/quests/*.yaml` source).
+- `content/rpg/quests/*.yaml` holds RPG quest packs registered through the
+  overworld quest registry.
 - Raw pack paths are edit metadata, not public play or validation sources.
 
 ### Layer 2: Deterministic Engine
@@ -74,10 +79,11 @@ thin. Engine behavior belongs below the MCP and CLI layers.
 Use these surfaces for shipped world play (the listed args are the primary
 options, not exhaustive signatures — `src/mcp/tools.ts` is the source of truth):
 
-- `list_world({ include_graph?, include_routes? })`
-- `world_path({ world_quest_id })`
+- `list_overworld({ include_design_notes? })` — the world + quest registry summary
+- `start_overworld({ … })` then travel/scout/talk/explore to discover and
+  `start_overworld_session_quest({ session_id, quest_id, … })` — the player path
 - `start_world_quest` with `world_quest_id`, optional `seed`, `hide_graph`, and
-  `compact_observation`
+  `compact_observation` — dev/QA entry point into a shipped quest by id
 - `get_observation({ session_id, if_state_hash?, compact_observation? })`
 - `list_legal_actions({ session_id, if_state_hash?, compact_actions? })`
 - `step_action({ session_id, action_id, expected_state_hash? })`

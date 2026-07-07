@@ -23,14 +23,6 @@
 meta:
   id: cold_forge_v1
   title: "The Cold Forge"
-  world:
-    id: charter_marches
-    name: "The Charter Marches"
-    hub: "Charterhaven"
-    district: "Cold Forge"
-    quest: "rekindle the forge and face its sentinel"
-    role: "forge delver"
-    connection: "The cold forge once armed Charterhaven; its silence leaves the hub dependent on weaker hands."
   start_room: forge_steps
   vars_init: { hp: 20, attack: 4, defense: 2, might: 3 }
   flags_init: []

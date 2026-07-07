@@ -128,7 +128,7 @@ function tool(
 }
 
 const WORLD_QUEST_SOURCE = {
-  world_quest_id: z.string().describe("World quest id from list_world."),
+  world_quest_id: z.string().describe("Shipped quest id (from the overworld quest registry)."),
 };
 const G = z.number().int().refine(genSeed);
 const B = (d: string) => z.boolean().optional().describe(d);
@@ -162,30 +162,6 @@ const IF_TRANSCRIPT_HASH = {
 const EXPECTED_STATE_HASH = {
   expected_state_hash: z.string().optional().describe("Reject if the state hash went stale."),
 };
-tool(
-  "list_world",
-  "List playable RPG world quest ids as [id, playable] rows; titles, prose details, graph, and hub routes are opt-in.",
-  {
-    include_details: z.boolean().optional().describe("Include quest prose hooks."),
-    include_graph: z
-      .boolean()
-      .optional()
-      .describe("Include the pack-free world graph with map coordinates."),
-    include_routes: z.boolean().optional().describe("Include every quest route from the hub."),
-    include_titles: z.boolean().optional().describe("Include titles in default quest tuples."),
-  },
-  (a) => api.list_world(a),
-);
-tool(
-  "world_path",
-  "Trace the hub-to-target route for a world quest or coordinate as [id, name, kind, coord, route, distance] rows.",
-  {
-    world_quest_id: z.string().optional().describe("Target world quest id (or pass coord)."),
-    coord: z.tuple([z.number().int(), z.number().int()]).optional().describe("Target [x, y]."),
-    compact_path: z.boolean().optional().describe("False returns verbose path objects."),
-  },
-  (a) => api.world_path(a),
-);
 tool(
   "list_overworld",
   "Summarize the overworld: town, road, and content counts plus the start town; design notes are opt-in.",
@@ -546,11 +522,10 @@ tool(
 );
 tool(
   "start_world_quest",
-  "Start an RPG session for a shipped world quest; returns session_id, state_hash, and a compact context with its legend.",
+  "Start an RPG session for a shipped quest by id — a dev/QA entry point into the RPG runtime; players reach quests in-world via the overworld. Returns session_id, state_hash, and a compact context with its legend.",
   {
-    world_quest_id: z.string().describe("World quest id from list_world."),
+    world_quest_id: z.string().describe("Shipped quest id (from the overworld quest registry)."),
     seed: z.number().int().safe().optional().describe("Runtime seed."),
-    include_world_context: z.boolean().optional().describe("Echo world and route context."),
     ...HIDE_GRAPH,
     ...COMPACT_ACTIONS,
     ...COMPACT_OBSERVATION,

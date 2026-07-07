@@ -29,7 +29,7 @@ export function validateWorldQuestReport(
   const lr = source.result;
   return {
     ok: lr.report.ok,
-    world_quest_id: source.node.id,
+    world_quest_id: source.questId,
     report: lr.report,
   };
 }
@@ -45,13 +45,13 @@ export function loadWorldQuestReport(
   if (!lr.ok) {
     return {
       ok: false,
-      world_quest_id: source.node.id,
+      world_quest_id: source.questId,
       report: lr.report,
     };
   }
   return {
     ok: lr.report.ok,
-    world_quest_id: source.node.id,
+    world_quest_id: source.questId,
     meta: lr.compiled.pack.meta,
     content_hash: lr.compiled.contentHash,
     report: lr.report,

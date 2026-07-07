@@ -34,7 +34,7 @@ import {
   runRpgStartWorldQuest,
   type RpgWorldQuestStartPayload as RpgRuntimeWorldQuestStartPayload,
 } from "./rpg_session_lifecycle.js";
-import { RpgSourceRuntime, type PublicWorldGraph } from "./rpg_source_runtime.js";
+import { RpgSourceRuntime } from "./rpg_source_runtime.js";
 import {
   runRpgGetObservation,
   runRpgGetState,
@@ -55,14 +55,6 @@ import {
 } from "./transcript_projection.js";
 import { OverworldMcpSessionStore } from "./overworld_sessions.js";
 import { createOverworldToolHandlers } from "./overworld_tool_handlers.js";
-import type { WorldManifest } from "../world/schema.js";
-import {
-  worldNodeAtCoord,
-  worldQuestNodeById,
-  worldRouteFromHub,
-  type WorldCoord,
-  type WorldRouteStep,
-} from "../world/graph.js";
 import {
   loadOverworldManifest as loadOverworldManifestFromRoot,
   resolveWorldQuestSourceId,
@@ -79,89 +71,6 @@ import {
 } from "../../agents/fixer.js";
 
 export type ToolApi = ReturnType<typeof createToolApi>;
-
-type PublicWorldSummary = Pick<WorldManifest, "id" | "name" | "hub">;
-
-type WorldListOptions = {
-  include_details?: boolean;
-  include_graph?: boolean;
-  include_routes?: boolean;
-  include_titles?: boolean;
-};
-
-type WorldQuestCatalogEntry = {
-  title: string;
-  playable: boolean;
-  world_quest_id: string;
-};
-
-type WorldListQuestRef = readonly [world_quest_id: string, playable: boolean];
-
-type WorldListTitledQuestRef = readonly [world_quest_id: string, title: string, playable: boolean];
-
-type WorldQuestDetails = {
-  district: string;
-  quest: string;
-  role: string;
-  connection: string;
-};
-
-type WorldQuestRouteDetails = {
-  path_from_hub: WorldRouteStep[];
-};
-
-type WorldListDetailedQuest<Args extends WorldListOptions> = WorldQuestCatalogEntry &
-  (Args extends { include_details: true } ? WorldQuestDetails : Record<string, never>) &
-  (Args extends { include_routes: true } ? WorldQuestDetails : Record<string, never>) &
-  (Args extends { include_routes: true } ? WorldQuestRouteDetails : Record<string, never>);
-
-type WorldListQuest<Args extends WorldListOptions> = Args extends
-  | { include_details: true }
-  | { include_routes: true }
-  ? WorldListDetailedQuest<Args>
-  : Args extends { include_titles: true }
-    ? WorldListTitledQuestRef
-    : WorldListQuestRef;
-
-type WorldListResponse<Args extends WorldListOptions> = {
-  world: PublicWorldSummary;
-  hub: string;
-  quest_count: number;
-  quests: WorldListQuest<Args>[];
-} & (Args extends { include_graph: true } ? { graph: PublicWorldGraph } : Record<string, never>);
-
-type WorldPathOptions = {
-  world_quest_id?: string;
-  coord?: WorldCoord;
-  compact_path?: boolean;
-};
-
-type CompactWorldRouteStep = readonly [
-  id: string,
-  name: string,
-  kind: WorldRouteStep["kind"],
-  coord: WorldCoord | null,
-  route_from_previous: string | null,
-  distance_from_previous: number | null,
-];
-
-type CompactWorldPathResponse = {
-  world_quest_id: string | null;
-  graph_node: string | null;
-  path_v: 1;
-  path: CompactWorldRouteStep[];
-};
-
-type FullWorldPathResponse = {
-  world: PublicWorldSummary;
-  world_quest_id: string | null;
-  graph_node: string | null;
-  path_from_hub: WorldRouteStep[];
-};
-
-type WorldPathResponse<Args extends WorldPathOptions> = Args extends { compact_path: false }
-  ? FullWorldPathResponse
-  : CompactWorldPathResponse;
 
 type RpgViewOptions = {
   compact_actions?: boolean;
@@ -294,7 +203,6 @@ type RpgStartWorldQuestArgs = {
   seed?: number;
   hide_graph?: boolean;
   include_world_intro?: boolean;
-  include_world_context?: boolean;
   /** Internal bridge binding; not registered as public MCP input. */
   overworldSessionId?: string;
 } & RpgViewOptions;
@@ -435,17 +343,6 @@ function compactInspectTraceStepSummary(
   ]);
 }
 
-function compactWorldRouteStep(step: WorldRouteStep): CompactWorldRouteStep {
-  return [
-    step.id,
-    step.name,
-    step.kind,
-    step.coord ?? null,
-    step.route_from_previous ?? null,
-    step.distance_from_previous ?? null,
-  ];
-}
-
 type RpgWorldQuestStartPayload<Args extends RpgStartWorldQuestArgs> =
   RpgRuntimeWorldQuestStartPayload<Args>;
 
@@ -520,101 +417,6 @@ export function createToolApi(opts: { root: string }) {
 
   const api = {
     sessions,
-
-    list_world<Args extends WorldListOptions = Record<string, never>>(
-      args?: Args,
-    ): WorldListResponse<Args> {
-      const world = rpgSources.loadWorldManifest();
-      const includeDetails = args?.include_details === true || args?.include_routes === true;
-      const quests = rpgSources
-        .discoverWorldQuestSources(world)
-        .filter((s) => s.world?.id === world.id)
-        .map((s) => {
-          if (!includeDetails) {
-            return (args?.include_titles === true
-              ? [s.world_quest_id, s.title, s.playable]
-              : [s.world_quest_id, s.playable]) as unknown as WorldListQuest<Args>;
-          }
-          const quest: WorldQuestCatalogEntry & Partial<WorldQuestDetails> = {
-            title: s.title,
-            playable: s.playable,
-            world_quest_id: s.world_quest_id,
-          };
-          if (includeDetails) {
-            quest.district = s.world?.district ?? "";
-            quest.quest = s.world?.quest ?? "";
-            quest.role = s.world?.role ?? "";
-            quest.connection = s.world?.connection ?? "";
-          }
-          if (args?.include_routes === true) {
-            return {
-              ...quest,
-              path_from_hub: worldRouteFromHub(world, s.world_quest_id) ?? [],
-            } as unknown as WorldListQuest<Args>;
-          }
-          return quest as WorldListQuest<Args>;
-        });
-      const catalog = {
-        world: {
-          id: world.id,
-          name: world.name,
-          hub: world.hub,
-        },
-        hub: world.hub,
-        quest_count: quests.length,
-        quests,
-      };
-      if (args?.include_graph === true) {
-        return {
-          ...catalog,
-          graph: rpgSources.publicWorldGraph(world),
-        } as unknown as WorldListResponse<Args>;
-      }
-      return catalog as WorldListResponse<Args>;
-    },
-
-    world_path<Args extends WorldPathOptions>(args: Args): WorldPathResponse<Args> {
-      if ((args as { quest_path?: unknown }).quest_path !== undefined) {
-        throw new Error("world_path accepts world_quest_id, not quest_path.");
-      }
-      if (args.world_quest_id !== undefined && args.coord !== undefined) {
-        throw new Error("world_path accepts either world_quest_id or coord, not both.");
-      }
-      if (args.world_quest_id === undefined && args.coord === undefined) {
-        throw new Error("world_path requires world_quest_id or coord.");
-      }
-      const world = rpgSources.loadWorldManifest();
-      const node =
-        args.world_quest_id === undefined
-          ? worldNodeAtCoord(world, args.coord!)
-          : worldQuestNodeById(world, args.world_quest_id);
-      if (!node) {
-        const source =
-          args.world_quest_id === undefined
-            ? `coord ${JSON.stringify(args.coord)}`
-            : `world quest "${args.world_quest_id}"`;
-        throw new Error(`Unknown world graph ${source}.`);
-      }
-      const pathFromHub = worldRouteFromHub(world, node.id) ?? [];
-      if (args.compact_path !== false) {
-        return {
-          world_quest_id: node.kind === "quest" ? node.id : null,
-          graph_node: node.id,
-          path_v: 1,
-          path: pathFromHub.map(compactWorldRouteStep),
-        } as WorldPathResponse<Args>;
-      }
-      return {
-        world: {
-          id: world.id,
-          name: world.name,
-          hub: world.hub,
-        },
-        world_quest_id: node.kind === "quest" ? node.id : null,
-        graph_node: node.id,
-        path_from_hub: pathFromHub,
-      } as WorldPathResponse<Args>;
-    },
 
     ...createOverworldToolHandlers({
       sessions,
@@ -907,7 +709,7 @@ export function createToolApi(opts: { root: string }) {
       if (!loaded.ok) {
         return {
           ok: false,
-          world_quest_id: source.node.id,
+          world_quest_id: source.questId,
           report: loaded.report,
         };
       }
@@ -915,13 +717,13 @@ export function createToolApi(opts: { root: string }) {
       if (!result.ok) {
         return {
           ok: false,
-          world_quest_id: source.node.id,
+          world_quest_id: source.questId,
           report: result.report,
         };
       }
       return {
         ok: true,
-        world_quest_id: source.node.id,
+        world_quest_id: source.questId,
         applied: result.applied,
         report: result.report,
         ...(args.include_pack === true ? { pack: result.pack } : {}),

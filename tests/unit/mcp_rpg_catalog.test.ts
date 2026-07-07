@@ -7,6 +7,7 @@
 import { describe, it, expect } from "vitest";
 import { createToolApi } from "../../src/mcp/tools.js";
 import { RpgSourceRuntime } from "../../src/mcp/rpg_source_runtime.js";
+import { loadOverworldManifest } from "../../src/world/source.js";
 import { isRpgPackShape } from "../../src/mcp/types.js";
 
 const ROOT = process.cwd();
@@ -20,51 +21,35 @@ describe("isRpgPackShape keeps RPG structural priority", () => {
   });
 });
 
-describe("list_world is the single RPG quest catalog", () => {
-  it("keeps source discovery keyed by the canonical world graph", () => {
+describe("the New York overworld is the single RPG quest registry", () => {
+  it("discovers exactly the shipped quests, keyed by the overworld quest registry", () => {
     const sources = new RpgSourceRuntime(ROOT).discoverWorldQuestSources();
-    expect(sources).toHaveLength(16);
+    const overworldQuestIds = loadOverworldManifest(ROOT)
+      .quests.map((quest) => quest.id)
+      .sort();
+    expect(overworldQuestIds).toHaveLength(11);
+    expect(sources).toHaveLength(overworldQuestIds.length);
+    expect(sources.map((source) => source.world_quest_id)).toEqual(overworldQuestIds);
+    expect(sources.every((source) => source.world_quest_id !== null)).toBe(true);
+    expect(sources.every((source) => typeof source.playable === "boolean")).toBe(true);
     expect(sources.every((source) => !("path" in source))).toBe(true);
     expect(sources.every((source) => !("id" in source))).toBe(true);
-    expect(sources.every((source) => source.world_quest_id !== null)).toBe(true);
-    expect(sources.map((source) => source.world_quest_id)).toEqual(
-      api()
-        .list_world()
-        .quests.map((quest) => quest[0]),
-    );
+    expect(sources.some((source) => source.world_quest_id === "sunken_barrow")).toBe(true);
+    expect(sources.some((source) => source.world_quest_id === "breaking_weir")).toBe(true);
   });
 
-  it("discovers RPG quests from the world graph without the retired story catalog", () => {
-    const a = api();
-    expect((a as unknown as Record<string, unknown>).list_stories).toBeUndefined();
-    const world = a.list_world();
-    const titled = a.list_world({ include_titles: true });
-    const expanded = a.list_world({ include_graph: true });
-    expect("main_world_quest_id" in world).toBe(false);
-    expect("graph" in world).toBe(false);
-    expect(world.quests).toHaveLength(16);
-    expect(world.quests.every((q) => Array.isArray(q))).toBe(true);
-    expect(world.quests.every((q) => q.length === 2)).toBe(true);
-    expect(world.quests.every((q) => typeof q[1] === "boolean")).toBe(true);
-    expect(titled.quests.find((q) => q[0] === "breaking_weir")).toEqual([
-      "breaking_weir",
-      "The Breaking Weir",
-      true,
-    ]);
-    expect(world.quests.every((q) => !("path" in q))).toBe(true);
-    expect(world.quests.every((q) => !("path_from_hub" in q))).toBe(true);
-    expect(world.quests.every((q) => !("id" in q))).toBe(true);
-    expect(world.quests.every((q) => !("graph_node" in q))).toBe(true);
-    expect(world.quests.every((q) => !("district" in q))).toBe(true);
-    expect(world.quests.every((q) => !("connection" in q))).toBe(true);
-    expect(expanded.graph.nodes.every((node) => !("pack" in node))).toBe(true);
-    expect(expanded.graph.nodes.every((node) => !("source" in node))).toBe(true);
-    expect(world.quests.map((q) => q[0])).toEqual(
-      expanded.graph.nodes.filter((node) => node.kind === "quest").map((node) => node.id),
-    );
-    expect(world.quests.every((s) => !("mode" in s))).toBe(true);
-    expect(world.quests.some((s) => s[0] === "sunken_barrow")).toBe(true);
-    expect(world.quests.some((s) => s[0] === "breaking_weir")).toBe(true);
+  it("has no retired story catalog or Charter-Marches world/quest-menu tools", () => {
+    const a = api() as unknown as Record<string, unknown>;
+    expect(a.list_stories).toBeUndefined();
+    expect(a.list_world).toBeUndefined();
+    expect(a.world_path).toBeUndefined();
+    const breaking = new RpgSourceRuntime(ROOT)
+      .discoverWorldQuestSources()
+      .find((source) => source.world_quest_id === "breaking_weir");
+    expect(breaking?.title).toBe("The Breaking Weir");
+    expect(breaking?.playable).toBe(true);
+    // Shipped packs carry no world binding: the overworld frames every quest locally.
+    expect(breaking?.world).toBeNull();
   });
 });
 

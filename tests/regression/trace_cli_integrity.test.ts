@@ -77,7 +77,7 @@ describe("trace CLI integrity gate", () => {
     expect(output).toContain("World quest: sunken_barrow");
     expect(output).toContain('Title: "The Sunken Barrow"');
     expect(output).toContain(
-      "hash: 1400a6d4d3e3f9eb3443b9c0daf1ebb539754c293da8e531a133de815bbd2a9a",
+      "hash: 27ef2e9ac97448cfeb96d4e940a638382b59907592bb3d68e669759bed2c3f67",
     );
     expect(output).not.toContain("mode: rpg");
     expect(output).not.toContain("Pack:");

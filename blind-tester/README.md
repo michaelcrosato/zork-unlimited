@@ -146,7 +146,7 @@ the prompt in [`prompt.md`](./prompt.md) reuses its report format (clarity/enjoy
 ## Options
 
 ```
---quest <id>     targeted quest mode: blind-test ONE shipped Charter Marches quest
+--quest <id>     targeted quest mode: blind-test ONE shipped quest by id (a dev/QA drop-in)
                  (without it, the run plays the CORE GAME open world — the default)
 --seed <n>       deterministic seed (default: 7)
 --model <alias>  claude model alias: sonnet (default, best value) | opus

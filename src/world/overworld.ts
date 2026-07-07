@@ -288,6 +288,19 @@ export function parseOverworldManifest(input: unknown): OverworldManifest {
   return OverworldManifestSchema.parse(input);
 }
 
+/** Normalize a manifest source path to forward slashes with any leading `../` stripped. */
+export function normalizeSourcePath(path: string): string {
+  return path.replaceAll("\\", "/").replace(/^(\.\.\/)+/, "");
+}
+
+/** Resolve a shipped quest by id from the overworld's quest registry (null if absent). */
+export function overworldQuestById(
+  world: OverworldManifest,
+  questId: string,
+): OverworldQuest | null {
+  return world.quests.find((quest) => quest.id === questId) ?? null;
+}
+
 export function overworldNodesById(world: OverworldManifest): Map<string, OverworldNode> {
   return new Map(world.nodes.map((node) => [node.id, node]));
 }

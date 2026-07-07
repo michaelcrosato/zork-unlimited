@@ -66,8 +66,8 @@ function registeredToolBlock(name: string): string {
 function sharedSchemaBlock(): string {
   const text = readFileSync("src/mcp/server.ts", "utf8");
   const start = text.indexOf("const WORLD_QUEST_SOURCE");
-  const listWorldTool = /tool\(\r?\n\s+"list_world"/.exec(text);
-  const end = listWorldTool?.index ?? -1;
+  const firstTool = /tool\(\r?\n\s+"list_overworld"/.exec(text);
+  const end = firstTool?.index ?? -1;
   if (start < 0 || end < 0) throw new Error("missing shared schema block");
   return text.slice(start, end);
 }
@@ -102,12 +102,12 @@ describe("MCP server registration", () => {
     expect(registeredServerTools()).toEqual(apiHandlers);
   });
 
-  it("advertises world-bound starts instead of raw pack-path gameplay starts", () => {
+  it("advertises world-bound and generated starts, not the retired Charter-Marches quest menu", () => {
     const newGame = registeredToolBlock("new_game");
     const startWorldQuest = registeredToolBlock("start_world_quest");
     const validateQuest = registeredToolBlock("validate_quest");
-    const worldPath = registeredToolBlock("world_path");
     const loadGame = registeredToolBlock("load_game");
+    const registered = registeredServerTools();
 
     expect(newGame).toContain("generate_rpg_seed");
     expect(newGame).not.toContain("world_quest_id");
@@ -118,11 +118,16 @@ describe("MCP server registration", () => {
     expect(startWorldQuest).toContain("world_quest_id");
     expect(startWorldQuest).not.toMatch(/\n\s+quest_id:/);
     expect(startWorldQuest).not.toContain("quest_path");
+    expect(startWorldQuest).not.toContain("include_world_context");
     expect(validateQuest).toContain("WORLD_QUEST_SOURCE");
     expect(validateQuest).not.toContain("QUEST_ID_SOURCE");
     expect(validateQuest).not.toContain("quest_path");
-    expect(worldPath).toContain("world_quest_id");
-    expect(worldPath).not.toContain("quest_path");
+    // The retired Charter-Marches quest CATALOG/route tools are gone (the overworld
+    // is the sole world + quest registry); players reach quests in-world, and
+    // start_world_quest survives only as a dev/QA entry point.
+    expect(registered).not.toContain("list_world");
+    expect(registered).not.toContain("world_path");
+    expect(registered).toContain("start_overworld_session_quest");
   });
 
   it("keeps public MCP content and trace tools quest-id first", () => {
@@ -151,12 +156,12 @@ describe("MCP server registration", () => {
     const sourceArgs = sourceBlock(
       "src/world/source.ts",
       "export type TraceSourceArgs",
-      "const worldManifestCache",
+      "const overworldManifestCache",
     );
     const lifecycleArgs = sourceBlock(
       "src/mcp/rpg_session_lifecycle.ts",
       "export type RpgNewGameToolArgs",
-      "type RpgWorldQuestStartContextFields",
+      "export type RpgWorldQuestStartPayload",
     );
     const toolApiArgs = toolApiSourceBlock("type RpgNewGameArgs", "type AdaptStoryArgs");
 
@@ -198,13 +203,12 @@ describe("MCP server registration", () => {
 
   it("keeps restore and trace ToolSearch schema source terse", () => {
     const restoreTraceSchemaSource = [
-      registeredToolBlock("world_path"),
       registeredToolBlock("load_game"),
       registeredToolBlock("replay_trace"),
       registeredToolBlock("inspect_trace"),
     ].join("\n");
 
-    expect(restoreTraceSchemaSource.length).toBeLessThanOrEqual(1750);
+    expect(restoreTraceSchemaSource.length).toBeLessThanOrEqual(1300);
     expect(restoreTraceSchemaSource).toContain("world_quest_id");
     expect(restoreTraceSchemaSource).toContain("generate_rpg_seed");
     expect(restoreTraceSchemaSource).not.toContain("list_world().quests[].graph_node");

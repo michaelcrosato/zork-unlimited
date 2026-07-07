@@ -13,20 +13,9 @@ import {
   type ValidationReport,
 } from "../validate/report.js";
 import type { Trace } from "../trace/record.js";
-import type { WorldBinding, WorldGraphNode, WorldManifest } from "../world/schema.js";
-import {
-  normalizeSourcePath,
-  worldMapBounds,
-  worldMapEdges,
-  worldQuestNodeById,
-  type WorldMapBounds,
-  type WorldMapEdge,
-} from "../world/graph.js";
-import {
-  loadWorldManifest as loadWorldManifestFromRoot,
-  resolveTraceGameSource,
-  type GameSource,
-} from "../world/source.js";
+import type { WorldBinding } from "../world/schema.js";
+import { normalizeSourcePath, overworldQuestById } from "../world/overworld.js";
+import { loadOverworldManifest, resolveTraceGameSource, type GameSource } from "../world/source.js";
 import { safeResolve } from "./paths.js";
 import { isRpgPackShape } from "./types.js";
 
@@ -53,14 +42,6 @@ export type WorldQuestSourceEntry = {
   world_quest_id: string;
 };
 
-type PublicWorldGraphNode = Omit<WorldManifest["graph"]["nodes"][number], "source">;
-
-export type PublicWorldGraph = Omit<WorldManifest["graph"], "nodes" | "edges"> & {
-  bounds?: WorldMapBounds;
-  nodes: PublicWorldGraphNode[];
-  edges: WorldMapEdge[];
-};
-
 export type RpgTraceSource =
   | {
       kind: "worldQuest";
@@ -76,20 +57,20 @@ export type RpgTraceSource =
     };
 
 export type RpgWorldQuestPlayableSource = {
-  world: WorldManifest;
-  node: WorldGraphNode;
+  questId: string;
+  title: string;
   compiled: CompiledRpgSource;
 };
 
 export type RpgWorldQuestReportSource = {
-  world: WorldManifest;
-  node: WorldGraphNode;
+  questId: string;
+  title: string;
   result: RpgLoadResult;
 };
 
 type RpgWorldQuestSource = {
-  world: WorldManifest;
-  node: WorldGraphNode;
+  questId: string;
+  title: string;
   sourcePath: string;
 };
 
@@ -159,7 +140,7 @@ export class RpgSourceRuntime {
     // Surface that as a normal not-ok load report instead of letting the raw fs
     // error escape: Node's message embeds the resolved ABSOLUTE path, which no
     // MCP client may see (bug_0492's class), and a throw here would also let one
-    // broken quest row break the whole list_world catalog. Echo only the
+    // broken quest row break the whole overworld quest catalog. Echo only the
     // manifest-relative source path the reports already use. Not cached: there
     // is no stat identity to key on, and the error path is cold.
     const unreadable = (): RpgLoadResult =>
@@ -286,66 +267,53 @@ export class RpgSourceRuntime {
     return compiled;
   }
 
-  discoverWorldQuestSources(world = this.loadWorldManifest()): WorldQuestSourceEntry[] {
-    return worldQuestIds(world).map((worldQuestId) => {
-      const source = this.loadWorldQuestReport(worldQuestId, world);
+  /** Shipped quest ids, from the overworld quest registry (the single source of truth). */
+  shippedWorldQuestIds(): string[] {
+    return loadOverworldManifest(this.root)
+      .quests.map((quest) => quest.id)
+      .sort();
+  }
+
+  discoverWorldQuestSources(): WorldQuestSourceEntry[] {
+    return this.shippedWorldQuestIds().map((worldQuestId) => {
+      const source = this.loadWorldQuestReport(worldQuestId);
       const lr = source.result;
       return {
-        title: lr.ok ? lr.compiled.pack.meta.title : source.node.name,
+        title: lr.ok ? lr.compiled.pack.meta.title : source.title,
         playable: lr.ok && lr.report.ok,
         world: lr.ok ? (lr.compiled.pack.meta.world ?? null) : null,
-        world_quest_id: source.node.id,
+        world_quest_id: source.questId,
       };
     });
   }
 
-  publicWorldGraph(world: WorldManifest): PublicWorldGraph {
-    const bounds = worldMapBounds(world);
+  private resolveWorldQuestRpgSource(worldQuestId: string): RpgWorldQuestSource {
+    const overworld = loadOverworldManifest(this.root);
+    const quest = overworldQuestById(overworld, worldQuestId);
+    if (!quest) {
+      throw new Error(`Unknown overworld quest "${worldQuestId}".`);
+    }
     return {
-      hub: world.graph.hub,
-      ...(bounds === null ? {} : { bounds }),
-      nodes: world.graph.nodes.map((node) => ({
-        id: node.id,
-        name: node.name,
-        kind: node.kind,
-        ...(node.district === undefined ? {} : { district: node.district }),
-        ...(node.coord === undefined ? {} : { coord: node.coord }),
-      })),
-      edges: worldMapEdges(world),
+      questId: quest.id,
+      title: quest.title,
+      sourcePath: normalizeSourcePath(quest.source),
     };
-  }
-
-  private resolveWorldQuestRpgSource(
-    worldQuestId: string,
-    world = this.loadWorldManifest(),
-  ): RpgWorldQuestSource {
-    const node = worldQuestNodeById(world, worldQuestId);
-    if (!node) {
-      throw new Error(`Unknown Charter Marches quest "${worldQuestId}".`);
-    }
-    if (!node.source) {
-      throw new Error(`World quest "${worldQuestId}" does not declare an RPG source.`);
-    }
-    return { world, node, sourcePath: normalizeSourcePath(node.source) };
   }
 
   requireWorldQuestPlayable(worldQuestId: string): RpgWorldQuestPlayableSource {
     const source = this.resolveWorldQuestRpgSource(worldQuestId);
     return {
-      world: source.world,
-      node: source.node,
+      questId: source.questId,
+      title: source.title,
       compiled: this.requireSourceBackedPlayable(source.sourcePath),
     };
   }
 
-  loadWorldQuestReport(
-    worldQuestId: string,
-    world = this.loadWorldManifest(),
-  ): RpgWorldQuestReportSource {
-    const source = this.resolveWorldQuestRpgSource(worldQuestId, world);
+  loadWorldQuestReport(worldQuestId: string): RpgWorldQuestReportSource {
+    const source = this.resolveWorldQuestRpgSource(worldQuestId);
     return {
-      world: source.world,
-      node: source.node,
+      questId: source.questId,
+      title: source.title,
       result: this.loadSourceBackedReport(source.sourcePath),
     };
   }
@@ -371,12 +339,4 @@ export class RpgSourceRuntime {
           compiled,
         };
   }
-
-  loadWorldManifest(): WorldManifest {
-    return loadWorldManifestFromRoot(this.root);
-  }
-}
-
-function worldQuestIds(world: WorldManifest): string[] {
-  return world.graph.nodes.filter((node) => node.kind === "quest").map((node) => node.id);
 }

@@ -19,35 +19,25 @@ import {
 const ROOT = process.cwd();
 const WORLD_QUEST_IDS = [
   "advocates_case",
-  "bellfounders_alarm",
   "breaking_weir",
-  "bridgewrights_proof",
   "cold_forge",
   "dawn_beacon",
   "factors_mark",
   "falconers_ransom",
   "gallowmere",
+  "printers_night",
+  "sunken_barrow",
 ] as const;
 const TEMP_WORLD_QUEST_ID = "same_size";
 const TEMP_PACK_SOURCE = "not: rpg\n";
-const TEMP_WORLD_MANIFEST = `id: charter_marches
-name: The Charter Marches
-hub: Charterhaven
-graph:
-  hub: hub
-  nodes:
-    - id: hub
-      name: Hub
-      kind: hub
-    - id: ${TEMP_WORLD_QUEST_ID}
-      name: Same Size
-      kind: quest
-      source: content/rpg/quests/${TEMP_WORLD_QUEST_ID}.yaml
-  edges:
-    - from: hub
-      to: ${TEMP_WORLD_QUEST_ID}
-      route: test road
-`;
+
+// The overworld is the single quest registry. A temp root reuses the real,
+// integrity-passing overworld manifest but swaps its quest list for one temp quest,
+// so the shipped-source bijection (assertOverworldQuestSourceCoverage) holds with
+// exactly the temp pack on disk. The temp quest is anchored to a real Albany area.
+const REAL_OVERWORLD = JSON.parse(
+  readFileSync(join(ROOT, "content", "world", "new_york_overworld.json"), "utf8"),
+) as Record<string, unknown>;
 
 function withTempRoot(run: (root: string) => void): void {
   const root = mkdtempSync(join(tmpdir(), "rpg-source-cache-"));
@@ -69,28 +59,47 @@ function writeTempWorldQuest(root: string, packSource = TEMP_PACK_SOURCE): strin
   mkdirSync(join(root, "content", "world"), { recursive: true });
   mkdirSync(join(root, "content", "rpg", "quests"), { recursive: true });
   const sourcePath = join(root, "content", "rpg", "quests", `${TEMP_WORLD_QUEST_ID}.yaml`);
-  writeFileSync(join(root, "content", "world", "charter_marches.yaml"), TEMP_WORLD_MANIFEST);
+  const overworld = {
+    ...REAL_OVERWORLD,
+    quests: [
+      {
+        id: TEMP_WORLD_QUEST_ID,
+        title: "Same Size",
+        source: `content/rpg/quests/${TEMP_WORLD_QUEST_ID}.yaml`,
+        home: "albany_city",
+        area: "albany_city__transport_hub",
+        discovery: "Ask around Albany city for the Same Size lead.",
+        visibility: "local_notice_board",
+      },
+    ],
+  };
+  writeFileSync(
+    join(root, "content", "world", "new_york_overworld.json"),
+    JSON.stringify(overworld),
+  );
   writeFileSync(sourcePath, packSource, "utf8");
   return sourcePath;
 }
 
 describe("RpgSourceRuntime caches", () => {
-  it("discovers world quest catalog entries by graph ids instead of reverse pack lookup", () => {
+  it("discovers quest catalog entries from the overworld quest registry", () => {
     const runtime = new RpgSourceRuntime(ROOT);
     const sources = runtime.discoverWorldQuestSources();
 
-    expect(sources).toHaveLength(16);
+    expect(sources).toHaveLength(11);
     expect(sources.every((source) => typeof source.world_quest_id === "string")).toBe(true);
     expect(sources.map((source) => source.world_quest_id)).toContain("sunken_barrow");
 
     const runtimeSource = readFileSync("src/mcp/rpg_source_runtime.ts", "utf8");
     const worldSource = readFileSync("src/world/source.ts", "utf8");
     const testSource = readFileSync("tests/unit/mcp_rpg_source_runtime.test.ts", "utf8");
-    expect(runtimeSource).toContain("loadWorldQuestReport(worldQuestId, world)");
+    expect(runtimeSource).toContain("overworldQuestById(overworld, worldQuestId)");
+    expect(runtimeSource).toContain("loadWorldQuestReport(worldQuestId: string)");
     expect(runtimeSource).toContain("private loadSourceBackedReport(sourcePath: string)");
     expect(runtimeSource).toContain("private requireSourceBackedPlayable(sourcePath: string)");
     expect(runtimeSource).not.toContain("worldQuestNodeForPack");
     expect(runtimeSource).not.toContain("worldQuestPackPaths");
+    expect(runtimeSource).not.toContain("loadWorldManifest");
     expect(runtimeSource).not.toContain('kind: "pack"');
     expect(worldSource).not.toContain('kind: "pack"');
     expect(worldSource).not.toContain("GamePackSource");
@@ -105,45 +114,45 @@ describe("RpgSourceRuntime caches", () => {
     }
   });
 
-  it("loads world quests by canonical id without returning raw pack paths", () => {
+  it("loads world quests by overworld id without returning raw pack paths", () => {
     const runtime = new RpgSourceRuntime(ROOT);
     const source = runtime.requireWorldQuestPlayable("sunken_barrow");
 
-    expect(source.node.id).toBe("sunken_barrow");
+    expect(source.questId).toBe("sunken_barrow");
     expect(source.compiled.pack.meta.title).toBe("The Sunken Barrow");
     expect("packPath" in source).toBe(false);
   });
 
-  it("loads world quest reports by canonical id without returning raw pack paths", () => {
+  it("loads world quest reports by overworld id without returning raw pack paths", () => {
     const runtime = new RpgSourceRuntime(ROOT);
     const source = runtime.loadWorldQuestReport("sunken_barrow");
 
-    expect(source.node.id).toBe("sunken_barrow");
+    expect(source.questId).toBe("sunken_barrow");
     expect(source.result.ok).toBe(true);
     expect(source.result.report.ok).toBe(true);
     expect("packPath" in source).toBe(false);
   });
 
-  it("reports a source that vanishes AFTER the manifest coverage check as not-ok — no raw fs error, no absolute path (bug_0493)", () => {
+  it("reports a source that vanishes AFTER the overworld coverage check as not-ok — no raw fs error, no absolute path (bug_0493)", () => {
     withTempRoot((root) => {
       // A source missing at manifest-load time is already rejected cleanly by
-      // assertWorldQuestSourceCoverage. The remaining hole is the gap AFTER that
-      // check: a file deleted mid-session (or unreadable on open) used to escape
-      // as Node's raw fs error carrying the resolved ABSOLUTE path — which no
-      // MCP client may see — and broke every catalog caller. Model the race by
-      // loading the manifest green, then deleting the source out from under it.
+      // assertOverworldQuestSourceCoverage. The remaining hole is the gap AFTER
+      // that check: a file deleted mid-session (or unreadable on open) used to
+      // escape as Node's raw fs error carrying the resolved ABSOLUTE path — which
+      // no MCP client may see — and broke every catalog caller. Model the race by
+      // loading + caching the overworld green, then deleting the source under it.
       const sourcePath = writeTempWorldQuest(root);
       const runtime = new RpgSourceRuntime(root);
-      const world = runtime.loadWorldManifest();
+      runtime.shippedWorldQuestIds();
       rmSync(sourcePath);
 
       // The catalog stays intact: the broken row reports unplayable.
-      const sources = runtime.discoverWorldQuestSources(world);
+      const sources = runtime.discoverWorldQuestSources();
       expect(
         sources.some((source) => source.world_quest_id === TEMP_WORLD_QUEST_ID && !source.playable),
       ).toBe(true);
 
-      const report = runtime.loadWorldQuestReport(TEMP_WORLD_QUEST_ID, world);
+      const report = runtime.loadWorldQuestReport(TEMP_WORLD_QUEST_ID);
       expect(report.result.ok).toBe(false);
       expect(report.result.report.findings.some((f) => f.code === "SOURCE_UNREADABLE")).toBe(true);
       const text = JSON.stringify(report.result);

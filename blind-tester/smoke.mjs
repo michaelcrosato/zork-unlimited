@@ -5,7 +5,8 @@
  * will reach it (stdio JSON-RPC), lists tools, and exercises BOTH blind-run start
  * surfaces: the overworld CORE GAME (the default blind mode — start_overworld +
  * a context re-read) and a targeted quest drop-in (start_world_quest + a few
- * stepped actions). Run it before (or instead of) a real `claude -p` blind run to
+ * stepped actions; a dev/QA entry point — players reach quests in-world via the
+ * overworld). Run it before (or instead of) a real `claude -p` blind run to
  * confirm the harness is wired correctly without spending any subscription/token
  * budget.
  *
@@ -110,12 +111,18 @@ async function main() {
       "step_action",
       "get_state",
       "get_transcript",
-      // The default blind mode plays the overworld CORE GAME — its start
-      // surface must be present too.
+      // The default blind mode plays the overworld CORE GAME — its start surface
+      // must be present, as must the quest bridge that reaches shipped quests
+      // in-world.
       "start_overworld",
       "get_overworld_session_context",
+      "start_overworld_session_quest",
     ]) {
       if (!names.has(required)) fail(`MCP server is missing the "${required}" tool`);
+    }
+    // The retired Charter-Marches quest CATALOG/route tools must be gone.
+    for (const retired of ["list_world", "world_path"]) {
+      if (names.has(retired)) fail(`MCP server still advertises the retired "${retired}" tool`);
     }
 
     // Leg 1 — the DEFAULT blind mode: start the overworld core game from a
@@ -147,7 +154,9 @@ async function main() {
       `• start_overworld ok → session ${overworld.session_id} (legend + snapshot_hash present)`,
     );
 
-    // Leg 2 — the targeted quest drop-in mode.
+    // Leg 2 — the targeted quest drop-in (a dev/QA entry point into the RPG
+    // runtime; the player-facing path reaches this quest in-world through the
+    // overworld).
 
     const start = parseResult(
       await client.callTool({

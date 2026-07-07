@@ -1,5 +1,4 @@
 import { SAVE_MODE, assertSaveContentHash, load } from "../persist/save_load.js";
-import { worldRouteFromHub, type WorldRouteStep } from "../world/graph.js";
 import { resolveGameSource, resolveSaveGameSource } from "../world/source.js";
 import {
   rpgObservationNeedsActions,
@@ -28,7 +27,6 @@ export type RpgStartWorldQuestToolArgs = {
   seed?: number;
   hide_graph?: boolean;
   include_world_intro?: boolean;
-  include_world_context?: boolean;
   /** Internal bridge binding for RPG sessions launched from an overworld session. */
   overworldSessionId?: string;
 } & RpgViewOptions;
@@ -41,23 +39,8 @@ export type RpgLoadGameToolArgs = {
   include_world_intro?: boolean;
 } & RpgViewOptions;
 
-type RpgWorldQuestStartContextFields = {
-  world: { id: string; name: string; hub: string };
-  quest: {
-    id: string;
-    name: string;
-    path_from_hub: WorldRouteStep[];
-  };
-};
-
-type RpgWorldQuestStartContext<Args extends RpgStartWorldQuestToolArgs> = Args extends {
-  include_world_context: true;
-}
-  ? RpgWorldQuestStartContextFields
-  : Record<string, never>;
-
 export type RpgWorldQuestStartPayload<Args extends RpgStartWorldQuestToolArgs> =
-  RpgSessionPayload<Args> & RpgWorldQuestStartContext<Args>;
+  RpgSessionPayload<Args>;
 
 type RpgLifecycleDeps = {
   root: string;
@@ -89,20 +72,9 @@ export function runRpgStartWorldQuest<Args extends RpgStartWorldQuestToolArgs>(
   }
   const source = deps.rpgSources.requireWorldQuestPlayable(args.world_quest_id);
   const started = deps.rpgRuntime.startRpgSession(source.compiled, args, {
-    worldQuestId: source.node.id,
+    worldQuestId: source.questId,
     ...(args.overworldSessionId ? { overworldSessionId: args.overworldSessionId } : {}),
   });
-  if (args.include_world_context === true) {
-    return {
-      world: { id: source.world.id, name: source.world.name, hub: source.world.hub },
-      quest: {
-        id: source.node.id,
-        name: source.node.name,
-        path_from_hub: worldRouteFromHub(source.world, source.node.id) ?? [],
-      },
-      ...started,
-    } as unknown as RpgWorldQuestStartPayload<Args>;
-  }
   return started as RpgWorldQuestStartPayload<Args>;
 }
 

@@ -8,9 +8,9 @@
  *   - engine       : code-level debt (TODO/FIXME markers, pending mechanics)
  *   - repo         : project hygiene (missing tooling, docs, etc.)
  *
- * The assessor gathers evidence DETERMINISTICALLY through the same tool API the MCP
- * server exposes (list_world / validate) — no clock, no RNG, no network — scores
- * candidates, and recommends the single highest-value next action.
+ * The assessor gathers evidence DETERMINISTICALLY through the same engine surfaces the
+ * MCP server exposes (the overworld quest registry / validate) — no clock, no RNG, no
+ * network — scores candidates, and recommends the single highest-value next action.
  * It is the deterministic *evaluator*; the actual quality judgement each cycle comes
  * from a mandatory LLM playtest (see docs/afk_loop.md). Pure enough to unit-test:
  * same repo ⇒ same ranking.
@@ -18,6 +18,7 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 import { createToolApi } from "../mcp/tools.js";
+import { RpgSourceRuntime } from "../mcp/rpg_source_runtime.js";
 import { verifyBlindReportText } from "../blind/report_verifier.js";
 import { auditStaleReactiveRoomItems } from "./stale_reactive_audit.js";
 import { score, type ImprovementCandidate } from "./assessment_model.js";
@@ -66,10 +67,13 @@ export type AssessmentFormatOptions = {
   maxCandidates?: number;
 };
 
-// How many playable quest nodes in the contiguous world graph is "healthy" before
+// How many shipped quests in the New York overworld registry is "healthy" before
 // net-new world expansion is deprioritized. Count world_quest_id entries, not raw
-// YAML files, so this lever cannot reintroduce standalone package authoring.
-const WORLD_QUEST_TARGET = 16;
+// YAML files, so this lever cannot reintroduce standalone package authoring. This
+// is the actual shipped count (11 after the Charter-Marches consolidation removed
+// the 5 overworld-orphaned quests), NOT an inflated target — per the DECISION_LOG
+// anti-pattern ruling, breadth is never padded to force content_new.
+const WORLD_QUEST_TARGET = 11;
 
 // The blind-playtest target that means "the CORE GAME itself": the open-world
 // overworld from a fresh start — what `npm run blind` plays by default and what
@@ -388,12 +392,14 @@ export function isSaturated(a: Assessment): boolean {
 /** Deterministically assess the repo and rank the next-best improvements. */
 export function assess(root: string): Assessment {
   const api = createToolApi({ root });
-  const quests: AssessedQuest[] = api.list_world().quests.map((quest) => ({
-    target_ref: quest[0],
-    target_label: quest[0],
-    playable: quest[1],
-    world_quest_id: quest[0],
-  }));
+  const quests: AssessedQuest[] = new RpgSourceRuntime(root)
+    .discoverWorldQuestSources()
+    .map((quest) => ({
+      target_ref: quest.world_quest_id,
+      target_label: quest.world_quest_id,
+      playable: quest.playable,
+      world_quest_id: quest.world_quest_id,
+    }));
 
   const questHealth: QuestHealth[] = [];
   const candidates: ImprovementCandidate[] = [];
@@ -520,7 +526,7 @@ export function assess(root: string): Assessment {
       target: "world",
       title: `Add a new world-graph RPG quest (${worldQuestCount}/${WORLD_QUEST_TARGET})`,
       rationale:
-        "Breadth work must expand the contiguous Charter Marches graph, not create a detached source file. A registered world quest exercises the overworld handoff, RPG runtime, save metadata, and MCP quest-id path together.",
+        "Breadth work must expand the single New York overworld, not create a detached source file. A registered overworld quest exercises the overworld handoff, RPG runtime, save metadata, and MCP quest-id path together.",
       evidence: [`${worldQuestCount} playable world quest node(s), target ${WORLD_QUEST_TARGET}`],
       impact,
       effort: "L",

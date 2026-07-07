@@ -1,32 +1,19 @@
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { parse as parseYaml } from "yaml";
 import { SaveIntegrityError, type SaveSourceRef } from "../persist/save_load.js";
 import type { Trace, TraceSourceRef } from "../trace/record.js";
 import { generatedRpgSeedValidationMessage, isGeneratedRpgSeed } from "../gen/seed.js";
 import {
   assertOverworldIntegrity,
+  normalizeSourcePath,
+  overworldQuestById,
   parseOverworldManifest,
   type OverworldManifest,
 } from "./overworld.js";
 import {
-  CANONICAL_HUB_CITY,
-  CANONICAL_WORLD_ID,
-  CANONICAL_WORLD_NAME,
-  WorldManifestSchema,
-  type WorldGraphNode,
-  type WorldManifest,
-} from "./schema.js";
-import { normalizeSourcePath, worldQuestNodeById } from "./graph.js";
-import {
   compactSourceRefLegacyConsistency,
   compactSourceRefValidationError,
 } from "./source_ref.js";
-
-type WorldQuestSourceBinding = {
-  world: WorldManifest;
-  node: WorldGraphNode;
-};
 
 const SAVE_SOURCE_REF_CONSISTENCY_MESSAGES = {
   sourceConflict: "Save source cannot carry both worldQuestId and generatedRpgSeed.",
@@ -95,7 +82,6 @@ export type WorldQuestSourceArgs = {
   world_quest_id?: string;
 };
 
-const worldManifestCache = new Map<string, WorldManifest>();
 const overworldManifestCache = new Map<string, OverworldManifest>();
 
 function deepFreeze<T>(value: T): T {
@@ -131,25 +117,6 @@ function rejectRetiredWorldQuestSourceAliases(
   }
 }
 
-export function fallbackWorldManifest(): WorldManifest {
-  return {
-    id: CANONICAL_WORLD_ID,
-    name: CANONICAL_WORLD_NAME,
-    hub: CANONICAL_HUB_CITY,
-    graph: {
-      hub: "charterhaven",
-      nodes: [
-        {
-          id: "charterhaven",
-          name: CANONICAL_HUB_CITY,
-          kind: "hub",
-        },
-      ],
-      edges: [],
-    },
-  };
-}
-
 function duplicateValues(values: string[]): string[] {
   const seen = new Set<string>();
   const duplicates = new Set<string>();
@@ -158,10 +125,6 @@ function duplicateValues(values: string[]): string[] {
     seen.add(value);
   }
   return [...duplicates].sort();
-}
-
-function coordKey(coord: readonly [number, number]): string {
-  return `${coord[0]},${coord[1]}`;
 }
 
 function discoverShippedRpgSourcePaths(root: string): string[] {
@@ -175,173 +138,41 @@ function discoverShippedRpgSourcePaths(root: string): string[] {
   }
 }
 
-export function assertWorldQuestSourceCoverage(
-  world: WorldManifest,
+/**
+ * The single-world invariant: the New York overworld's quest registry and the shipped
+ * RPG packs are the SAME set. Every overworld quest names a real pack, and every shipped
+ * pack is bound to exactly one overworld quest — no orphan packs reachable only outside
+ * the overworld, and no dangling quest sources. This replaced the retired Charter Marches
+ * world-graph coverage check: the overworld is now the sole quest registry.
+ */
+export function assertOverworldQuestSourceCoverage(
+  overworld: OverworldManifest,
   shippedSourcePaths: string[],
 ): void {
   const shipped = [...new Set(shippedSourcePaths.map(normalizeSourcePath))].sort();
-  const questSources = world.graph.nodes
-    .filter((node) => node.kind === "quest")
-    .map((node) => normalizeSourcePath(node.source ?? ""));
+  const questSources = overworld.quests.map((quest) => normalizeSourcePath(quest.source));
 
   const duplicates = duplicateValues(questSources);
   if (duplicates.length > 0) {
     throw new Error(
-      `Canonical world graph binds the same shipped RPG source more than once: ${duplicates.join(
-        ", ",
-      )}.`,
+      `Overworld binds the same shipped RPG source more than once: ${duplicates.join(", ")}.`,
     );
   }
 
   const questSourceSet = new Set(questSources);
   const shippedSet = new Set(shipped);
-  const missing = shipped.filter((path) => !questSourceSet.has(path));
   const extra = questSources.filter((path) => !shippedSet.has(path)).sort();
+  const missing = shipped.filter((path) => !questSourceSet.has(path));
 
-  if (missing.length > 0) {
-    throw new Error(
-      `Canonical world graph is missing shipped RPG source binding(s): ${missing.join(", ")}.`,
-    );
-  }
   if (extra.length > 0) {
     throw new Error(
-      `Canonical world graph references RPG source(s) not shipped in content/rpg/quests: ${extra.join(
-        ", ",
-      )}.`,
+      `Overworld references RPG source(s) not shipped in content/rpg/quests: ${extra.join(", ")}.`,
     );
   }
-}
-
-export function assertWorldGraphIntegrity(world: WorldManifest): void {
-  const nodeIds = world.graph.nodes.map((node) => node.id);
-  const duplicateNodeIds = duplicateValues(nodeIds);
-  if (duplicateNodeIds.length > 0) {
+  if (missing.length > 0) {
     throw new Error(
-      `Canonical world graph has duplicate node id(s): ${duplicateNodeIds.join(", ")}.`,
+      `Shipped RPG source(s) not bound to any overworld quest: ${missing.join(", ")}.`,
     );
-  }
-
-  const nodes = new Map(world.graph.nodes.map((node) => [node.id, node]));
-  const hub = nodes.get(world.graph.hub);
-  if (!hub) {
-    throw new Error(`Canonical world graph hub "${world.graph.hub}" is missing from nodes.`);
-  }
-  if (hub.kind !== "hub") {
-    throw new Error(`Canonical world graph hub "${world.graph.hub}" must be a hub node.`);
-  }
-
-  const mappedNodes = world.graph.nodes.filter((node) => node.coord !== undefined);
-  if (mappedNodes.length > 0 && mappedNodes.length !== world.graph.nodes.length) {
-    const unmapped = world.graph.nodes
-      .filter((node) => node.coord === undefined)
-      .map((node) => node.id)
-      .sort();
-    throw new Error(
-      `Canonical world graph coordinate map is incomplete; missing coordinate(s): ${unmapped.join(
-        ", ",
-      )}.`,
-    );
-  }
-  const duplicateCoords = duplicateValues(mappedNodes.map((node) => coordKey(node.coord!)));
-  if (duplicateCoords.length > 0) {
-    throw new Error(
-      `Canonical world graph has duplicate coordinate(s): ${duplicateCoords.join(", ")}.`,
-    );
-  }
-
-  const adjacency = new Map(world.graph.nodes.map((node) => [node.id, [] as string[]]));
-  for (const edge of world.graph.edges) {
-    const missing = [edge.from, edge.to].filter((id) => !nodes.has(id));
-    if (missing.length > 0) {
-      throw new Error(
-        `Canonical world graph edge "${edge.route}" references missing node(s): ${missing.join(
-          ", ",
-        )}.`,
-      );
-    }
-    if (edge.from === edge.to) {
-      throw new Error(`Canonical world graph edge "${edge.route}" cannot loop to itself.`);
-    }
-    adjacency.get(edge.from)?.push(edge.to);
-    adjacency.get(edge.to)?.push(edge.from);
-  }
-
-  const queue = [world.graph.hub];
-  const reached = new Set(queue);
-  for (let i = 0; i < queue.length; i += 1) {
-    for (const next of adjacency.get(queue[i]!) ?? []) {
-      if (reached.has(next)) continue;
-      reached.add(next);
-      queue.push(next);
-    }
-  }
-
-  const unreachable = world.graph.nodes
-    .filter((node) => !reached.has(node.id))
-    .map((node) => node.id)
-    .sort();
-  if (unreachable.length > 0) {
-    throw new Error(
-      `Canonical world graph is disconnected from hub "${world.graph.hub}": ${unreachable.join(
-        ", ",
-      )}.`,
-    );
-  }
-}
-
-export function loadWorldManifest(root: string): WorldManifest {
-  const cached = worldManifestCache.get(root);
-  if (cached) return cached;
-
-  let world: WorldManifest;
-  let loadedFromDisk = false;
-  const manifestPath = join(root, "content", "world", "charter_marches.yaml");
-  if (existsSync(manifestPath)) {
-    const raw = parseYaml(readFileSync(manifestPath, "utf8"));
-    world = WorldManifestSchema.parse(raw);
-    loadedFromDisk = true;
-  } else {
-    world = fallbackWorldManifest();
-  }
-  assertWorldGraphIntegrity(world);
-  if (loadedFromDisk) {
-    assertWorldQuestSourceCoverage(world, discoverShippedRpgSourcePaths(root));
-  }
-  deepFreeze(world);
-  worldManifestCache.set(root, world);
-  return world;
-}
-
-function resolveWorldQuestSourceBinding(
-  root: string,
-  worldQuestId: string,
-): WorldQuestSourceBinding {
-  const world = loadWorldManifest(root);
-  const node = worldQuestNodeById(world, worldQuestId);
-  if (!node?.source) {
-    throw new Error(`Unknown Charter Marches quest "${worldQuestId}".`);
-  }
-  return { world, node };
-}
-
-export function assertOverworldQuestSourceBindings(
-  world: WorldManifest,
-  overworld: OverworldManifest,
-): void {
-  for (const quest of overworld.quests) {
-    const node = worldQuestNodeById(world, quest.id);
-    if (!node?.source) {
-      throw new Error(`Overworld quest "${quest.id}" is missing from the canonical world graph.`);
-    }
-    const actualSource = normalizeSourcePath(quest.source);
-    const expectedSource = normalizeSourcePath(node.source);
-    if (actualSource !== expectedSource) {
-      throw new Error(
-        `Overworld quest "${quest.id}" source ${JSON.stringify(
-          actualSource,
-        )} does not match canonical world graph source ${JSON.stringify(expectedSource)}.`,
-      );
-    }
   }
 }
 
@@ -354,7 +185,7 @@ export function loadOverworldManifest(root: string): OverworldManifest {
   );
   const overworld = parseOverworldManifest(raw);
   assertOverworldIntegrity(overworld);
-  assertOverworldQuestSourceBindings(loadWorldManifest(root), overworld);
+  assertOverworldQuestSourceCoverage(overworld, discoverShippedRpgSourcePaths(root));
   deepFreeze(overworld);
   overworldManifestCache.set(root, overworld);
   return overworld;
@@ -368,11 +199,16 @@ export function resolveWorldQuestSourceId(args: WorldQuestSourceArgs, operation:
   return args.world_quest_id;
 }
 
+/** Resolve a shipped quest id to a playable game source via the overworld quest registry. */
 function resolveWorldQuestGameSource(root: string, worldQuestId: string): WorldQuestGameSource {
-  const resolved = resolveWorldQuestSourceBinding(root, worldQuestId);
+  const overworld = loadOverworldManifest(root);
+  const quest = overworldQuestById(overworld, worldQuestId);
+  if (!quest) {
+    throw new Error(`Unknown overworld quest "${worldQuestId}".`);
+  }
   return {
     kind: "worldQuest",
-    worldQuestId: resolved.node.id,
+    worldQuestId: quest.id,
     generateRpgSeed: null,
   };
 }
@@ -396,7 +232,9 @@ export function resolveGameSource(
 ): GeneratedGameSource {
   rejectRetiredWorldQuestSourceAliases(args, operation, "generate_rpg_seed");
   if ((args as { world_quest_id?: unknown }).world_quest_id !== undefined) {
-    throw new Error(`${operation} starts generated RPG packs only; use start_world_quest.`);
+    throw new Error(
+      `${operation} starts generated RPG packs only; start a shipped quest from the overworld with start_overworld_session_quest.`,
+    );
   }
   if (args.generate_rpg_seed === undefined) {
     throw new Error(`${operation} requires generate_rpg_seed.`);

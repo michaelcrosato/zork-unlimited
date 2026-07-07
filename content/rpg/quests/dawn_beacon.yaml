@@ -59,14 +59,6 @@
 meta:
   id: dawn_beacon_v1
   title: "The Dawn Beacon"
-  world:
-    id: charter_marches
-    name: "The Charter Marches"
-    hub: "Charterhaven"
-    district: "Dawn Beacon Muster"
-    quest: "light the beacon through the gauntlet"
-    role: "beacon runner"
-    connection: "Charterhaven's warning chain begins at the dawn beacon, and one dark tower blinds the Marches."
   start_room: muster_yard
   vars_init: { hp: 26, attack: 4, defense: 2, might: 3 }
   flags_init: []

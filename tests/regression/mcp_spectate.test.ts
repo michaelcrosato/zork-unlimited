@@ -45,10 +45,10 @@ describe("MCP spectate mode", () => {
     try {
       await withServer(["--spectate", feed, "--spectate-delay-ms", "250"], async (client) => {
         const before = Date.now();
-        await client.callTool({ name: "list_world", arguments: {} });
+        await client.callTool({ name: "list_overworld", arguments: {} });
         await client.callTool({
-          name: "start_world_quest",
-          arguments: { world_quest_id: "breaking_weir", seed: 7, compact_observation: true },
+          name: "start_overworld",
+          arguments: { compact_context: true },
         });
         const elapsed = Date.now() - before;
         // Two calls x 250ms pacing; generous floor to stay timing-tolerant.
@@ -57,9 +57,9 @@ describe("MCP spectate mode", () => {
       const text = readFileSync(feed, "utf8");
       expect(text).toContain("adventureforge spectate — session started");
       // Human-readable play-by-play, not a raw JSON dump.
-      expect(text).toContain("start breaking_weir"); // the action, readable
-      expect(text).toMatch(/lodge|weir/i); // the game's scene content is visible
-      expect(text).not.toContain('"state_hash"'); // not raw MCP JSON
+      expect(text).toContain("enter the world"); // the action, readable
+      expect(text).toMatch(/albany/i); // the game's scene content (the start town) is visible
+      expect(text).not.toContain('"snapshot_hash"'); // not raw MCP JSON
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
@@ -70,7 +70,7 @@ describe("MCP spectate mode", () => {
     const feed = join(dir, "feed.log");
     try {
       await withServer([], async (client) => {
-        await client.callTool({ name: "list_world", arguments: {} });
+        await client.callTool({ name: "list_overworld", arguments: {} });
       });
       expect(existsSync(feed)).toBe(false);
     } finally {

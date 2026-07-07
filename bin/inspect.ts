@@ -8,7 +8,7 @@
  *   npm run inspect -- <trace.json> <world_quest_id>
  *
  * Auto-detects: a `.json` argument is treated as a trace; otherwise positional
- * targets are Charter Marches world quest ids. Read-only; never writes files (§16).
+ * targets are shipped world quest ids. Read-only; never writes files (§16).
  */
 import { readFileSync } from "node:fs";
 import { indexRpgPack, buildRpgRules } from "../src/rpg/runner.js";
@@ -131,7 +131,7 @@ function main(): void {
     process.exit(2);
   }
   const source = new RpgSourceRuntime(process.cwd()).loadWorldQuestReport(target);
-  inspectRpgPack(source.result, source.node.id);
+  inspectRpgPack(source.result, source.questId);
 }
 
 function inspectRpgPack(result: RpgLoadResult, worldQuestId: string): void {

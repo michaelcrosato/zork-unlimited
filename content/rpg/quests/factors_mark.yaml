@@ -49,14 +49,6 @@
 meta:
   id: factors_mark_v1
   title: "The Factor's Mark"
-  world:
-    id: charter_marches
-    name: "The Charter Marches"
-    hub: "Charterhaven"
-    district: "Waystation Yard"
-    quest: "break the factor's extortion mark"
-    role: "drovers' advocate"
-    connection: "Charterhaven's road trade passes through the factor's yard, where a false mark can tax every drove."
   start_room: waystation_yard
   # `authority` (3 base): projects official bearing, institutional command, the
   # ability to make a formal argument stick in front of a witness. New to the corpus —
