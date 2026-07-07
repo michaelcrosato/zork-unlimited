@@ -56,10 +56,10 @@ describe("MCP spectate mode", () => {
       });
       const text = readFileSync(feed, "utf8");
       expect(text).toContain("adventureforge spectate — session started");
-      expect(text).toContain("list_world");
-      expect(text).toContain("start_world_quest");
-      expect(text).toContain('"world_quest_id":"breaking_weir"'); // args echoed
-      expect(text).toContain("weir"); // the scene payload is visible to the human
+      // Human-readable play-by-play, not a raw JSON dump.
+      expect(text).toContain("start breaking_weir"); // the action, readable
+      expect(text).toMatch(/lodge|weir/i); // the game's scene content is visible
+      expect(text).not.toContain('"state_hash"'); // not raw MCP JSON
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

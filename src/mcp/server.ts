@@ -23,6 +23,7 @@ import { appendFileSync, mkdirSync } from "node:fs";
 import { createToolApi } from "./tools.js";
 import { TRANSCRIPT_TURN_LIMIT_DEFAULT } from "./transcript_projection.js";
 import { isGeneratedRpgSeed as genSeed } from "../gen/seed.js";
+import { formatSpectateEntry } from "./spectate.js";
 
 const api = createToolApi({ root: process.cwd() });
 
@@ -57,10 +58,6 @@ const SPECTATE_DELAY_MS: number = Math.max(
   Number(argValue("--spectate-delay-ms") ?? process.env.AF_SPECTATE_DELAY_MS ?? 0) || 0,
 );
 
-function spectateTrim(text: string, max: number): string {
-  return text.length <= max ? text : `${text.slice(0, max)} … (+${text.length - max} chars)`;
-}
-
 /** On startup (direct run only): banner into the feed + a stderr pointer. */
 function announceSpectate(): void {
   if (!SPECTATE_LOG) return;
@@ -78,19 +75,15 @@ function announceSpectate(): void {
   );
 }
 
-/** Append one human-readable entry per tool call; never let the feed break play. */
+/** Append one human-readable play-by-play entry per tool call. Best-effort. */
 function spectateRecord(name: string, args: unknown, result: CallToolResult): void {
   if (!SPECTATE_LOG) return;
   const first = result.content?.[0];
   const body = first && first.type === "text" ? first.text : "";
-  const entry = [
-    `\n── ${new Date().toISOString()}  ${name}${result.isError ? "  ✗ ERROR" : ""}`,
-    `   args: ${spectateTrim(JSON.stringify(args ?? {}), 400)}`,
-    `   ${spectateTrim(body, 4000)}`,
-  ].join("\n");
+  const entry = formatSpectateEntry(name, args, body, result.isError === true, new Date());
   try {
     mkdirSync(dirname(SPECTATE_LOG), { recursive: true });
-    appendFileSync(SPECTATE_LOG, `${entry}\n`);
+    appendFileSync(SPECTATE_LOG, entry);
   } catch {
     // Spectating is best-effort; a feed write failure must not fail the tool call.
   }
