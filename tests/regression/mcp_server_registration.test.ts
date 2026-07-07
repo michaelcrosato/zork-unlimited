@@ -9,6 +9,7 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { createToolApi } from "../../src/mcp/tools.js";
+import { READ_ONLY_TOOLS, TOOL_REGISTRATIONS } from "../../src/mcp/server.js";
 
 const RETIRED_STATIC_OVERWORLD_TOOLS = [
   "explore_overworld_area",
@@ -100,6 +101,37 @@ describe("MCP server registration", () => {
       .sort();
 
     expect(registeredServerTools()).toEqual(apiHandlers);
+  });
+
+  it("annotates every tool: closed + non-destructive engine, read-only tools flagged", () => {
+    expect(TOOL_REGISTRATIONS.length).toBeGreaterThan(0);
+    const registeredNames = new Set(TOOL_REGISTRATIONS.map((t) => t.name));
+    // The read-only set must reference only real registered tools (no stale names).
+    for (const name of READ_ONLY_TOOLS) {
+      expect(registeredNames.has(name), `READ_ONLY_TOOLS names an unregistered tool: ${name}`).toBe(
+        true,
+      );
+    }
+    for (const reg of TOOL_REGISTRATIONS) {
+      // Deterministic, closed engine: no tool is destructive or open-world.
+      expect(reg.annotations.destructiveHint, reg.name).toBe(false);
+      expect(reg.annotations.openWorldHint, reg.name).toBe(false);
+      if (READ_ONLY_TOOLS.has(reg.name)) {
+        expect(reg.annotations.readOnlyHint, reg.name).toBe(true);
+        expect(reg.annotations.idempotentHint, reg.name).toBe(true);
+      } else {
+        // Session-mutating tools must not claim read-only.
+        expect(reg.annotations.readOnlyHint ?? false, reg.name).toBe(false);
+      }
+    }
+    const byName = new Map(TOOL_REGISTRATIONS.map((t) => [t.name, t]));
+    expect(byName.get("list_overworld")?.annotations.readOnlyHint).toBe(true);
+    expect(byName.get("get_observation")?.annotations.readOnlyHint).toBe(true);
+    expect(byName.get("step_action")?.annotations.readOnlyHint ?? false).toBe(false);
+    expect(byName.get("start_overworld")?.annotations.readOnlyHint ?? false).toBe(false);
+    expect(byName.get("start_overworld_session_quest")?.annotations.readOnlyHint ?? false).toBe(
+      false,
+    );
   });
 
   it("advertises world-bound and generated starts, not the retired Charter-Marches quest menu", () => {

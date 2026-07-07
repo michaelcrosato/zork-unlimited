@@ -112,10 +112,50 @@ function wrap<A>(name: string, handler: (args: A) => unknown) {
 
 const server = new McpServer({ name: "adventureforge", version: "0.1.0" });
 
-export type ToolRegistration = { name: string; description: string };
+/** MCP behavioral hints (see the spec's tool annotations). */
+export type ToolAnnotations = {
+  readOnlyHint?: boolean;
+  destructiveHint?: boolean;
+  idempotentHint?: boolean;
+  openWorldHint?: boolean;
+};
 
-/** Every registered tool, exported so tests can hold descriptions to a floor. */
+export type ToolRegistration = {
+  name: string;
+  description: string;
+  annotations: ToolAnnotations;
+};
+
+/** Every registered tool, exported so tests can hold descriptions + annotations to a floor. */
 export const TOOL_REGISTRATIONS: ToolRegistration[] = [];
+
+/**
+ * Tools that neither mutate session/engine state nor have side effects — pure reads,
+ * previews, serializers, and deterministic mint/validate/replay analyses. Everything
+ * else creates or advances a session (a session-store mutation), so it is left as the
+ * mutating default. This engine is closed and deterministic, so EVERY tool is
+ * non-destructive and non-open-world (no external entities); read-only tools are also
+ * idempotent (same args ⇒ same result).
+ */
+export const READ_ONLY_TOOLS = new Set<string>([
+  "list_overworld",
+  "get_overworld_session",
+  "get_overworld_session_context",
+  "export_overworld_session",
+  "plan_overworld_session_route",
+  "get_observation",
+  "list_legal_actions",
+  "get_state",
+  "get_transcript",
+  "save_game",
+  "validate_quest",
+  "load_quest",
+  "generate_rpg_pack",
+  "replay_trace",
+  "inspect_trace",
+  "adapt_story",
+  "apply_content_patch",
+]);
 
 function tool(
   name: string,
@@ -123,8 +163,20 @@ function tool(
   inputSchema: ZodRawShape,
   handler: (args: never) => unknown,
 ): void {
-  TOOL_REGISTRATIONS.push({ name, description });
-  server.registerTool(name, { description, inputSchema }, wrap(name, handler) as never);
+  const readOnly = READ_ONLY_TOOLS.has(name);
+  const annotations: ToolAnnotations = {
+    // Deterministic, closed engine: no external entities, and nothing is destroyed
+    // (sessions are in-memory; saves/snapshots are returned strings).
+    openWorldHint: false,
+    destructiveHint: false,
+    ...(readOnly ? { readOnlyHint: true, idempotentHint: true } : {}),
+  };
+  TOOL_REGISTRATIONS.push({ name, description, annotations });
+  server.registerTool(
+    name,
+    { description, inputSchema, annotations },
+    wrap(name, handler) as never,
+  );
 }
 
 const WORLD_QUEST_SOURCE = {
