@@ -68,6 +68,7 @@ describe("Tide-Mill second-fault repair narration", () => {
   it("says both faults are fixed when the head-race is cleared second", () => {
     const text = useOnce(stateAt("head_race", ["billhook"], { pawl_free: true }), {
       type: "USE",
+      item: "billhook",
       target: "choked_sluice",
     });
 

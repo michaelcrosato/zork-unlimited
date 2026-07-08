@@ -6,7 +6,7 @@ implementation subagent reads ONLY this doc and the files it names. Keep it
 current, terse, dated, and under ~60 lines — completed work belongs in git
 history and `docs/DECISION_LOG.md`, not here.
 
-## Cycle: 2026-07-08 - Tide-Mill Billhook-Specific Race Action
+## Cycle: 2026-07-08 - Tide-Mill Head-Race Action Alias Stability
 
 ## Synthesis
 
@@ -29,37 +29,40 @@ does not alter score or repair state. An attempted journal/flag reminder was
 rejected during implementation because it pushed multiple exhaustive graph
 proofs over the 200k cap; the shipped fix stays state-neutral.
 
-The latest 20-run Codex blind batch, seeds 281-300, all exited 0 and scored
-55/55. Clarity was 20x5/5, enjoyment 20x4/5, and `would_replay` was 20x false.
-The "clear before billhook" complaint softened, but compact reports still call
-`use_choked_sluice` vague, especially after the billhook is already held. The
-next step should make the decisive repair action name the billhook.
+The post-billhook race repair is now item-specific:
+`use_billhook_on_choked_sluice` / `cut choked head-race with billhook`. The
+latest 20-run Codex blind batch, seeds 301-320, all exited 0 and scored 55/55.
+Clarity was 20x5/5, enjoyment 20x4/5, and `would_replay` was 20x false.
+
+The billhook-specific action reduced generic-action complaints, but introduced
+a fresh S1: seeds 311 and 318 reused the earlier `use_choked_sluice` id after
+obtaining the billhook and hit rejection. This violates the action-stability
+lesson from the prior Head-Race pass.
 
 ## Chosen Move
 
-Make the post-billhook race repair interaction item-specific so compact action
-ids and commands show the billhook doing the decisive work.
+Preserve `use_choked_sluice` as a legal post-billhook alias while keeping the
+new billhook-specific repair action visible.
 
 - Target `content/rpg/quests/tide_mill.yaml` around `choked_sluice`.
-- Keep the post-billhook seeded craft checks, score award, state flags, and
-  repair narrations unchanged unless a tiny wording adjustment is required.
 - Preserve the pre-billhook `check choked head-race` no-progress beat and its
   `use_choked_sluice` id.
-- Convert only the held-billhook repair interactions to `item: billhook` +
-  `target: choked_sluice`, with a natural command like `cut choked head-race
-  with billhook`.
-- Accept and update the post-billhook action id honestly if it becomes
-  `use_billhook_on_choked_sluice`; avoid broad object-id renames in this cycle.
-- Update all focused route tests that step the race repair after obtaining the
-  billhook.
+- Keep `use_billhook_on_choked_sluice` / `cut choked head-race with billhook`
+  as the explicit repair affordance.
+- Add a held-billhook target-only alias for `use_choked_sluice` if it can share
+  the same seeded craft checks, score award, flags, and narrations without graph
+  blowup or duplicate-id menus.
+- Prefer ordering the billhook-specific action first so compact action lists
+  still show the better affordance, with the old id present as compatibility.
 - Do not weaken the telegraphing around the flood-hatch or the tool-shed fight.
 
 ## Acceptance
 
 1. `npm run validate -- tide_mill` reports 0 errors / 0 warnings.
 2. Focused tests prove pre-billhook remains `check`/no-progress, post-billhook
-   legal actions include a billhook-specific repair id/command, and the old
-   generic repair id is not offered once the billhook is held.
+   legal actions include both the billhook-specific repair id and the old
+   `use_choked_sluice` alias, and either route produces the same score-bearing
+   repair result.
 3. `npm run health` passes.
 4. Run blind after the fix. Target a 20-seed Codex sample when runner capacity
    permits; at minimum one schema-valid `tide_mill` report must land before
@@ -71,6 +74,8 @@ ids and commands show the billhook doing the decisive work.
   says he was driven off.
 - Ives advice boosts: explicit stat labels are gone, but a few reports still
   find the large hidden craft/might jumps artificial and checklist-like.
+- No-progress pre-billhook check: seed 320 thought the check changed state hash;
+  avoid adding state flags/journals here unless the proof graph budget changes.
 - Solved Head-Race refs: compact reports still see `choked_sluice` after repair
   because compact refs expose ids, not variant display names.
 - Coin-bag branch: several reports still read it as bait or moral decoy because
