@@ -50,7 +50,7 @@ function narrationEvents(events: unknown[]): string[] {
 }
 
 describe("Tide-Mill head-race reconnaissance", () => {
-  it("lets a pre-billhook player try the race, learn the shed tool, and keep score unchanged", () => {
+  it("lets a pre-billhook player check the race, learn the shed tool, and keep score unchanged", () => {
     const api = createToolApi({ root: ROOT });
     const started = api.start_world_quest({
       world_quest_id: "tide_mill",
@@ -72,7 +72,7 @@ describe("Tide-Mill head-race reconnaissance", () => {
     const beforeActions = actionRows(api, started.session_id);
     expect(beforeActions).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ id: "use_choked_sluice", command: "clear choked head-race" }),
+        expect.objectContaining({ id: "use_choked_sluice", command: "check choked head-race" }),
       ]),
     );
 
@@ -84,14 +84,15 @@ describe("Tide-Mill head-race reconnaissance", () => {
     expect(text).toMatch(/tool-shed/i);
     expect(text).toMatch(/yard knife-man/i);
     const raw = api.get_state({ session_id: started.session_id, include_state: true }) as {
-      state: { vars: Record<string, number> };
+      state: { flags: Record<string, boolean>; vars: Record<string, number> };
     };
+    expect(raw.state.flags.sluice_clear).toBeUndefined();
     expect(raw.state.vars.score).toBe(5);
 
     const afterActions = actionRows(api, started.session_id);
     expect(afterActions).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ id: "use_choked_sluice", command: "clear choked head-race" }),
+        expect.objectContaining({ id: "use_choked_sluice", command: "check choked head-race" }),
       ]),
     );
 

@@ -367,12 +367,12 @@ objects:
     interactions:
       - verb: USE
         target: choked_sluice
-        command_verb: clear
+        command_verb: check
         conditions: [{ not_item: billhook }, { not_flag: sluice_clear }]
         effects:
           - narrate: >
-              You haul at the weed with bare hands and it comes away in wet strings, not
-              enough to shift the drowned bough. This is billhook work: reach the tool-shed
+              You test the weed with both hands. It comes away in wet strings, but the
+              drowned bough does not move. This is billhook work: reach the tool-shed
               past the yard knife-man, then come back and cut the race properly.
       - verb: USE
         target: choked_sluice

@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 512 -->
+<!-- historical_cycle_count: 513 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,14 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - tide_mill_head_race_inspection_affordance
+
+- Content surface: changed pre-billhook `tide_mill` Head-Race interaction from `clear choked head-race` to `check choked head-race`, keeping the stable `use_choked_sluice` id and billhook/tool-shed nudge.
+- Loop effect: regression proves the check command gives no score/progress before the billhook, while the post-billhook repair still becomes `clear choked head-race`; no new state flag was kept because it pushed exhaustive proofs over cap.
+- Blind playtest: 20-run `tide_mill` Codex batch seeds 281-300 all exited 0 and scored 55/55; clarity 20x5/5, enjoyment 20x4/5, replay 20x false.
+- Self-critique: "clear before billhook" friction softened, but compact agents still complain about generic `use_choked_sluice`; next S1 is making the decisive repair action billhook-specific.
+- Guard: focused head-race/regression graph checks, `npm run validate -- tide_mill`, `npm run health`, and reports `20260708T125954Z`-`20260708T131451Z` seeds 281-300 passed.
 
 ### Cycle result - tide_mill_diegetic_prep_feedback
 
@@ -127,12 +135,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Blind playtest: `tide_mill` seed 163 reached `ending_saved` at 55/55 with clarity 5/5 and enjoyment 4/5; seed 161 exposed the no-tools harness failure and is not counted.
 - Self-critique: the fork is now noticed, but "one last account" sounds a little required; next lever is making the same fork read as optional temptation without reducing discoverability.
 - Guard: focused visibility/prompt/verifier regressions, `npm run validate -- tide_mill`, `npm run health`, and report `20260708T080834Z_tide_mill_seed163.md` passed.
-
-### Cycle result - tide_mill_takings_branch
-
-- Content surface: added a late `tide_mill` takings fork after `gate_up`: pocket the coin-bag, return it, save the boat while keeping it, or steal it outright.
-- Loop effect: clean rescue remains the only 55/55 route; takings choices branch to lower-score returned/kept endings or the thief ending, with `droppable: false` preserving finite proof state.
-- Regression: `tests/regression/tide_mill_takings_branch.test.ts` pins the clean, returned, kept, and stolen outcomes plus no generic coin-bag drop.
-- Blind playtest: accepted `tide_mill` seeds 157 and 159 both reached `ending_saved` at 55/55 with clarity 5/5 and enjoyment 4/5; parallel seeds 158/160 failed harness tool discovery and are not counted.
-- Self-critique: the branch is structurally real but blind players still beeline the clean checklist; next lever is surfacing the late ethical fork after the gate rises without weakening first-run clarity.
-- Guard: `npm run validate -- tide_mill`, focused branch/variant/hash regressions, `npm run health`, and reports `20260708T074305Z_tide_mill_seed157.md` / `20260708T074755Z_tide_mill_seed159.md` passed.
