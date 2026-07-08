@@ -237,9 +237,9 @@ objects:
     aliases: [board, notice, orders, chalk, sign]
     description: "A slate millboard by the door, the night orders chalked in Ives's block hand."
     read_text: >
-      Orders: wheel runs after both faults. Clear choked race; free brake-pawl.
-      Tools are in the shed, behind the knife-man: take gaff-pole and oilskin
-      before him. Wind the sea-gate open, then go down. Never lever the rotten
+      Orders: wheel runs when choked race is clear and brake-pawl free. Tools
+      are in the shed, behind the knife-man: take gaff-pole and oilskin before
+      him. Wind the sea-gate open, then go down. Never lever the rotten
       flood-hatch. Ives's takings stay in the nook.
     interactions:
       - verb: READ
@@ -248,7 +248,7 @@ objects:
         effects:
           - set_flag: read_board
           - inc_var: { name: score, by: 5 }
-          - add_journal: "The millboard gives the order: clear the race, free the pawl, wind the sea-gate, and never force the rotten flood-hatch."
+          - add_journal: "The millboard says the wheel needs the race clear and pawl free, then the sea-gate wound open; never force the rotten flood-hatch."
 
   - id: gaff_hook
     name: "gaff-pole"

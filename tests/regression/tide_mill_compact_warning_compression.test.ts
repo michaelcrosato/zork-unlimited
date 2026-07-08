@@ -36,10 +36,11 @@ describe("Tide-Mill compact warning compression", () => {
 
     expect(text.length).toBeLessThanOrEqual(COMPACT_EVENT_NARRATION_CHAR_LIMIT);
     expect(text).not.toMatch(/\(\+\d+ chars\)/);
-    expect(text).toMatch(/both faults/i);
-    expect(text).toMatch(/clear choked race/i);
-    expect(text).toMatch(/free brake-pawl/i);
+    expect(text).toMatch(/wheel runs when/i);
+    expect(text).toMatch(/choked race is clear/i);
+    expect(text).toMatch(/brake-pawl free/i);
     expect(text).toMatch(/tools are in the shed/i);
+    expect(text).not.toMatch(/clear choked race;\s*free brake-pawl/i);
     expect(text).not.toMatch(/billhook/i);
     expect(text).not.toMatch(/crow-bar/i);
     expect(text).toMatch(/gaff-pole and oilskin/i);

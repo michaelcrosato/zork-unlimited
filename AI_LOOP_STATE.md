@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 510 -->
+<!-- historical_cycle_count: 511 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,14 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - tide_mill_millboard_fault_order_wording
+
+- Content surface: retuned `tide_mill` millboard text from imperative "clear race; free pawl" order to a condition clue: the wheel runs when race is clear and brake-pawl free.
+- Loop effect: compact board and head-race regressions now prove both faults, shed access, gaff/oilskin, sea-gate, hatch, and takings warnings fit without exact tool mapping or race-first phrasing.
+- Blind playtest: 20-run `tide_mill` Codex batch seeds 241-260 all exited 0; reports reached the clean rescue at 55/55, with clarity 20x5/5, enjoyment 20x4/5, replay 20x false.
+- Self-critique: board-order friction did not recur; the common S1 is broader checklist feel from board plus Ives, with smaller repeats around gamey stat journals, saboteur continuity, and vague sluice action labels.
+- Guard: focused compact/head-race regressions, `npm run validate -- tide_mill`, `npm run health`, and reports `20260708T120216Z`-`20260708T121553Z` seeds 241-260 passed.
 
 ### Cycle result - tide_mill_coin_bag_temptation_texture
 
@@ -129,11 +137,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Blind playtest: `tide_mill` seed 143 reached `ending_saved` at 55/55, clarity 5/5 and enjoyment 4/5; no bugs, but replay desire is low because the optimal route is heavily signposted.
 - Self-critique: the stale narration class is closed; next lever is a real replay branch around the takings/ethical fork, not more clarity polish.
 - Guard: focused second-fault regression, `npm run validate -- tide_mill`, `npm run blind:smoke`, `npm run health`, and schema-verified blind report `blind-tester/reports/20260708T070307Z_tide_mill_seed143.md` passed.
-
-### Cycle result - tide_mill_mill_house_compact_orientation
-
-- Content surface: tightened `tide_mill` Mill-House base and reactive prose so compact start text opens with north=wheel-room/yard path and east=counting-nook.
-- Loop effect: added a compact ToolApi start-view regression that keeps the opening map, objective, gaff/board affordances, and Ives visible under the 360-char cap.
-- Blind playtest: `tide_mill` seed 127 reached `ending_saved` at 55/55, clarity 5/5 and enjoyment 4/5; the opening east/counting-nook confusion did not recur.
-- Self-critique: compact entry orientation is tighter, but the next stale-state mismatch is repair narration that still says "one fault" when the pawl is the second fixed fault.
-- Guard: `npm run validate -- tide_mill`, focused opening compact regression, `npm run health`, and schema-verified blind report `blind-tester/reports/20260708T063559Z_tide_mill_seed127.md` passed.

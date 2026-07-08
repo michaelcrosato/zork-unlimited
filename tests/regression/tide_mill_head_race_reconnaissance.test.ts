@@ -59,7 +59,12 @@ describe("Tide-Mill head-race reconnaissance", () => {
       compact_observation: true,
     });
 
-    step(api, started.session_id, "read_millboard");
+    const board = step(api, started.session_id, "read_millboard");
+    const boardText = narrationEvents(board.events).join(" ");
+    expect(boardText).toMatch(/wheel runs when choked race is clear and brake-pawl free/i);
+    expect(boardText).toMatch(/tools are in the shed/i);
+    expect(boardText).not.toMatch(/clear choked race;\s*free brake-pawl/i);
+
     step(api, started.session_id, "go_north");
     const atRace = step(api, started.session_id, "go_west");
     expect(atRace.context.here).toEqual(["head_race", "The Head-Race"]);
