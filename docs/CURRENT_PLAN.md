@@ -6,72 +6,63 @@ implementation subagent reads ONLY this doc and the files it names. Keep it
 current, terse, dated, and under ~60 lines — completed work belongs in git
 history and `docs/DECISION_LOG.md`, not here.
 
-## Cycle: 2026-07-08 — Tide-Mill replay pressure
+## Cycle: 2026-07-08 — Tide-Mill late-fork visibility
 
 ## Synthesis
 
-The first benchmark slice is now live as `world_quest_id=tide_mill`, anchored to
-`new_york_city__waterfront` in the New York overworld. It ports the retired
-Tide-Mill DAG into the RPG engine with required seeded combat, prep-backed seeded
-skill checks, telegraphed greed/death forks, and a win-only score capstone.
-The seed-73 stale Wheel-Room crank-handle finding is closed and pinned by
-`tests/regression/tide_mill_crank_handle_reactive.test.ts`. The seed-89 blind
-Ives dialogue pacing finding is closed and pinned by
-`tests/regression/tide_mill_ives_dialogue_flow.test.ts`. The seed-101 blind pass
-Wheel-Room compact finding is closed and pinned by
-`tests/regression/tide_mill_wheel_room_compact_orientation.test.ts`. The seed-113
-opening-orientation finding is closed and pinned by
-`tests/regression/tide_mill_mill_house_compact_orientation.test.ts`. The seed-127
-second-fault narration finding is closed and pinned by
-`tests/regression/tide_mill_second_fault_narration.test.ts`. The Codex blind-runner
-override is also repaired in `blind-tester/run.sh`: it now injects the AdventureForge
-MCP server and the required deferred-MCP feature flag for Codex. Seed 143 reached
-`ending_saved` at 55/55 with clarity 5/5 and enjoyment 4/5, no bugs, and one design
-critique: the optimal route is so heavily signposted that replay desire is low.
+The benchmark slice is `world_quest_id=tide_mill`, anchored to
+`new_york_city__waterfront` in the New York overworld. It now has the core mill
+DAG, seeded combat, prep-backed seeded skill checks, telegraphed death forks, a
+win-only +20 capstone, and a late takings fork after `gate_up`: pocket, return,
+keep-through-rescue, or steal the coin-bag. `tests/regression/tide_mill_takings_branch.test.ts`
+pins those outcomes and proves the clean route is still the only 55/55 route.
+
+The branch had to be late-gated because letting the coin-bag duplicate the whole
+quest state blew the exhaustive proof cap; explicit `droppable: false` is now an
+optional object affordance and does not perturb legacy pack hashes. Full health
+is green. Accepted blind seeds 157 and 159 both reached the clean 55/55 rescue
+with clarity 5/5 and enjoyment 4/5. Common feedback: compact truncation and low
+replay curiosity; seed 159 also hit a recoverable stale dialogue action id after
+conversation state changed. Neither accepted run noticed the new late takings
+choice.
 
 ## Chosen Move
 
-Open one deeper replay branch inside Tide-Mill without reducing first-run clarity.
+Make the new late takings fork discoverable from normal play after the sea-gate
+rises, without making the optimal route vaguer or adding another quest.
 
 - Target file: `content/rpg/quests/tide_mill.yaml`.
-- Prefer a real ethical/mechanical fork around the counting-nook takings, because
-  the route already foregrounds the coin-bag and the full-score ending rewards
-  leaving it.
-- The branch must be an informed gamble with telegraphed consequence, not a hidden
-  punishment: taking, returning, or leaving the money should affect score/ending
-  texture while preserving the rescue route when fair.
-- Keep Ives and the board useful, but do not add more direct instructions to the
-  already-clean optimal path.
-- Add regression coverage for the new branch and run a broader blind sample if the
-  branch changes route comprehension; target 20 Codex blind seeds when practical,
-  at minimum one schema-valid blind gate before commit.
+- Start from the `gate_up` Wheel-Room / Mill-House / Counting-Nook compact prose;
+  the player currently sees a strong "go down now" finish and no reason to check
+  the counting-nook again.
+- Surface the fork as temptation and consequence, not instruction: the clean
+  route should remain obvious, while a curious player can recognize the coin-bag
+  is now a deliberate replay choice.
+- Keep prose compact enough that the important affordance survives compact
+  observation truncation.
+- Add or extend regression coverage for the specific post-`gate_up` observation
+  that is meant to expose the fork.
 
 ## Acceptance
 
 1. `npm run validate -- tide_mill` reports 0 errors / 0 warnings.
-2. The new branch has distinct, deterministic score/ending consequences and does
-   not steal the win-only capstone from the clean rescue route.
-3. `npm run health` passes, then re-run `npm run blind --quest=tide_mill` with a
-   new seed and use its exit interview as the next lever.
+2. The post-`gate_up` route still reaches clean `ending_saved` at 55/55, while
+   the takings branch remains reachable and lower-scored.
+3. `npm run health` passes.
+4. Run blind seeds after the fix. Target a broad Codex sample when practical
+   (up to 20 seeds); at minimum one schema-valid report is required before
+   commit, and count only reports that pass the verifier.
 
 ## Deferred Levers
 
-- The seed-143 "optimal route heavily signposted" critique is the active lever;
-  do not respond by making clues vaguer. Add consequence/replay depth instead.
-- The seed-113 coin-bag uncertainty is already covered by `ending_thief`; only
-  revisit if the active takings branch proves too large for one clean cycle.
-- Add richer saboteur combat texture: seed 101 flagged that once combat starts,
-  the only visible moment-to-moment choice is repeated attack even though prep is
-  fair and load-bearing.
+- Compact truncation is now recurring. Fix it through shorter load-bearing prose
+  and pinned compact observations, not by widening compact mode blindly.
+- The seed-159 stale dialogue action id rejection is an engine/client ergonomics
+  issue; consider stable dialogue action ids or clearer client expectations after
+  the active branch-visibility lever.
+- Add richer saboteur combat texture: once combat starts, the only visible
+  moment-to-moment choice is repeated attack even though prep is fair.
 - Review flood-hatch temptation wording: the bad crow-bar choice is intentional
-  and strongly warned, but seed 89 flagged that completionist players may still
-  read the action wording as a required use.
-- Deepen replayability once the first blind polish finding is closed: add a
-  real alternate repair ordering payoff, a second branch around the takings, or
-  another informed gamble inside the same Tide-Mill slice.
-- Extend token/cost telemetry to agent work turns (the blind-run half landed
-  2026-07-06: ai-runs/blind-telemetry.jsonl + `npm run blind:telemetry`).
-- Shrink low-level debug helpers that still leak raw pack paths in diagnostics.
-- Tighten the remaining restore-time local action sequencing beyond discovery
-  prefixes (most sequencing properties are already enforced; state the specific
-  remaining gap when picking this up).
+  and strongly warned, but completionist players may still read it as required.
+- Extend token/cost telemetry to agent work turns; blind-run telemetry already
+  exists in `ai-runs/blind-telemetry.jsonl` plus `npm run blind:telemetry`.

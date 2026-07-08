@@ -192,6 +192,7 @@ function relabelObject(
     description: o.description,
     ...(o.variants ? { variants: o.variants.map((v) => relabelObjectVariant(v, r, rv)) } : {}),
     takeable: o.takeable,
+    ...(o.droppable !== undefined ? { droppable: o.droppable } : {}),
     ...(o.held !== undefined ? { held: o.held } : {}),
     quest_critical: o.quest_critical,
     ...(o.read_text !== undefined ? { read_text: o.read_text } : {}),

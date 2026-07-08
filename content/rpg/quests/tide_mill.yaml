@@ -4,10 +4,10 @@
 # engine. The core loop is a contained dependency DAG rather than a chain:
 # defeat the tool-shed guard, then solve two independent mill faults in either
 # order, then wind the sea-gate and go down to the staith to save the boat.
-# The failure forks are explicit and telegraphed: steal the takings, force the
-# rotten flood-hatch, or fight the saboteur barehanded and lose to the seeded
-# combat. The final +20 capstone pays only when the player reaches the saved
-# staith, so full score and the win coincide.
+# The failure forks are explicit and telegraphed: walk off with the takings,
+# force the rotten flood-hatch, or fight the saboteur barehanded and lose to the
+# seeded combat. The final +20 capstone pays only when the player reaches the
+# saved staith, so full score and the win coincide only on the clean route.
 
 meta:
   id: tide_mill_v1
@@ -51,6 +51,40 @@ rooms:
       mill-coat hangs by the peg rail, stiff with salt and thick enough to turn a glancing
       knife. The mill-floor is back west.
     variants:
+      - when: [{ has_item: coin_bag }, { has_flag: oilskin_taken }]
+        text: >
+          A cramped nook off the mill-floor. The counting-desk is bare where the
+          coin-bag sat, and the peg rail is bare where the oilskin mill-coat hung.
+          Return the takings here if you mean to save the boat cleanly. The mill-floor
+          is back west.
+      - when: [{ has_item: coin_bag }]
+        text: >
+          A cramped nook off the mill-floor. The counting-desk is bare where the
+          coin-bag sat; its weight is in your coat now. The oilskin mill-coat still
+          hangs by the peg rail. Return the takings here if you mean to save the boat
+          cleanly. The mill-floor is back west.
+      - when: [{ has_flag: coin_bag_returned }, { has_flag: oilskin_taken }]
+        text: >
+          A cramped nook off the mill-floor. The coin-bag is back on the counting-desk,
+          its mouth cinched tight after your second thought, and the peg rail is bare
+          where the oilskin mill-coat hung. The mill-floor is back west.
+      - when: [{ has_flag: coin_bag_returned }]
+        text: >
+          A cramped nook off the mill-floor. The coin-bag is back on the counting-desk,
+          its mouth cinched tight after your second thought. The oilskin mill-coat still
+          hangs by the peg rail. The mill-floor is back west.
+      - when: [{ has_flag: gate_up }, { has_flag: oilskin_taken }]
+        text: >
+          A cramped nook off the mill-floor. The gate is up and the boat waits one stair
+          away; the coin-bag still sits on the counting-desk, suddenly a choice instead
+          of clutter. The peg rail is bare where the oilskin mill-coat hung. The mill-floor
+          is back west.
+      - when: [{ has_flag: gate_up }]
+        text: >
+          A cramped nook off the mill-floor. The gate is up and the boat waits one stair
+          away; the coin-bag still sits on the counting-desk, suddenly a choice instead
+          of clutter. The oilskin mill-coat hangs by the peg rail. The mill-floor is back
+          west.
       - when: [{ has_flag: oilskin_taken }]
         text: >
           A cramped nook off the mill-floor where the miller keeps his tallies and his cash.
@@ -237,13 +271,49 @@ objects:
     name: "coin-bag"
     aliases: [bag, coin bag, purse, takings, toll, money, silver, cash]
     description: >
-      A fat leather coin-bag on the counting-desk, the week's toll-takings in it. To lift it
-      is to put it in your coat and walk off the mill into the dark, the gate unwound and
-      the boat above the weir left to the falling tide. There is no taking it and staying an
-      honest hand the same night.
-    takeable: true
-    take_effects:
-      - end_game: ending_thief
+      A fat leather coin-bag on the counting-desk, the week's toll-takings in it. While the
+      gate is shut it is not part of the work. Once the sea-gate is up, you can pocket it
+      before the final stair, return it here, steal it outright, or save the boat while
+      keeping it; the score will remember the hand that closed around it.
+    variants:
+      - when: [{ has_item: coin_bag }]
+        name: "pocketed coin-bag"
+        text: >
+          The miller's toll-takings ride heavy in your coat. In the counting-nook you can
+          still put the bag back on the desk; outside it, keeping it is no clean rescue.
+      - when: [{ has_flag: coin_bag_returned }]
+        text: >
+          The coin-bag sits back on the counting-desk, mouth cinched tight. It is still
+          Ives's money, and now it has the look of a thing almost stolen.
+    droppable: false
+    interactions:
+      - verb: USE
+        target: coin_bag
+        command_verb: pocket
+        conditions: [{ has_flag: gate_up }, { not_flag: coin_bag_returned }, { not_item: coin_bag }]
+        effects:
+          - add_item: coin_bag
+          - dec_var: { name: score, by: 5 }
+          - add_journal: "You pocketed Ives's toll-takings after the sea-gate was ready. You can return the coin-bag in the counting-nook, but the clean-score trust is already gone (-5 score)."
+          - narrate: "The coin-bag drags at your coat like a second conscience. Put it back on the counting-desk if you mean to save the boat with any kind of clean hands."
+      - verb: USE
+        item: coin_bag
+        target: coin_bag
+        command_verb: return
+        conditions: [{ has_item: coin_bag }, { in_room: counting_nook }]
+        effects:
+          - remove_item: coin_bag
+          - place_object: { id: coin_bag, room: counting_nook, takenBy: player }
+          - set_flag: coin_bag_returned
+          - add_journal: "You put the toll-takings back on the counting-desk before finishing the rescue."
+          - narrate: "You set the coin-bag back on the counting-desk and pull your hand away. The silver is where Ives left it, though not quite untouched."
+      - verb: USE
+        item: coin_bag
+        target: coin_bag
+        command_verb: steal
+        conditions: [{ has_item: coin_bag }, { none_of: [{ in_room: counting_nook }] }]
+        effects:
+          - end_game: ending_thief
 
   - id: oilskin_coat
     name: "oilskin mill-coat"
@@ -551,6 +621,12 @@ enemies:
       - add_journal: "You drove the tool-shed saboteur off the yard and reached the mill tools."
 
 win_conditions:
+  - id: save_boat_with_takings
+    conditions: [{ visited: the_staith }, { has_item: coin_bag }]
+    ending: ending_saved_with_takings
+  - id: save_boat_after_returning_takings
+    conditions: [{ visited: the_staith }, { has_flag: coin_bag_returned }, { not_item: coin_bag }]
+    ending: ending_saved_returned_takings
   - id: save_boat
     conditions: [{ visited: the_staith }]
     ending: ending_saved
@@ -571,6 +647,21 @@ endings:
       the tools, and ran the wheel the way the mill was built to be run. Ives will have names
       for the harbor board by dawn, and the miller's takings are still on the desk where they
       belong. *** You have won. ***
+  - id: ending_saved_returned_takings
+    title: "The Boat Comes Down, The Bag Put Back"
+    text: >
+      The boat comes down easy through the open gate, finds the deep channel, and slides past
+      the staith with her crew safe aboard. The toll-takings are back on Ives's desk, though
+      your hand knew their weight before your conscience won. Ives will live, the crew will
+      live, and the miller's accounts will balance with one private stain left off the chalk.
+      *** You have won. ***
+  - id: ending_saved_with_takings
+    title: "The Boat Comes Down, Silver in Your Coat"
+    text: >
+      The boat comes down easy through the open gate, finds the deep channel, and slides past
+      the staith with her crew safe aboard. You saved them, and the miller's silver rides cold
+      in your coat while Ives lies upstairs trusting the sound of the wheel. Some victories
+      still have to be hidden on the walk home. *** You have won. ***
   - id: ending_thief
     title: "The Week's Takings"
     text: >

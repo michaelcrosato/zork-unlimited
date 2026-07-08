@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 497 -->
+<!-- historical_cycle_count: 498 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,15 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - tide_mill_takings_branch
+
+- Content surface: added a late `tide_mill` takings fork after `gate_up`: pocket the coin-bag, return it, save the boat while keeping it, or steal it outright.
+- Loop effect: clean rescue remains the only 55/55 route; takings choices branch to lower-score returned/kept endings or the thief ending, with `droppable: false` preserving finite proof state.
+- Regression: `tests/regression/tide_mill_takings_branch.test.ts` pins the clean, returned, kept, and stolen outcomes plus no generic coin-bag drop.
+- Blind playtest: accepted `tide_mill` seeds 157 and 159 both reached `ending_saved` at 55/55 with clarity 5/5 and enjoyment 4/5; parallel seeds 158/160 failed harness tool discovery and are not counted.
+- Self-critique: the branch is structurally real but blind players still beeline the clean checklist; next lever is surfacing the late ethical fork after the gate rises without weakening first-run clarity.
+- Guard: `npm run validate -- tide_mill`, focused branch/variant/hash regressions, `npm run health`, and reports `20260708T074305Z_tide_mill_seed157.md` / `20260708T074755Z_tide_mill_seed159.md` passed.
 
 ### Cycle result - tide_mill_second_fault_narration
 
@@ -135,12 +144,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Self-critique: this trims setup/navigation planning rather than per-turn play, but it removes repeated route-object field names without hiding the useful map facts agents need.
 - Guard: focused MCP ToolApi and server-registration regressions pin compact defaults, full-path opt-out, coordinate lookup rows, and ToolSearch schema budget.
 - VERIFY: `C:\dev\agent-cleaner`, focused MCP regressions, payload probe, `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, `npm test`, `npm run health`, and `npm run assess` passed after loop-state rotation.
-
-### Cycle result - save_content_hash_opt_in
-
-- Pre-cycle: `C:\dev\agent-cleaner` measure/gates passed through WSL; optional secret scanner remains absent, and WSL git-dir warnings still print after the green gate summary.
-- Engine/loop surface: `save_game` now omits duplicate public `content_hash` by default because the save blob already embeds the full content hash that `load_game` verifies; callers can request `include_content_hash: true` for explicit audit reads.
-- Loop effect: default checkpoint response drops from 617 to 535 bytes on the measured `breaking_weir` save, while `include_content_hash: true` preserves the old 617-byte envelope; `include_source: true` still omits the duplicate hash unless explicitly requested.
-- Self-critique: this trims checkpoint payloads, not per-turn stepping; the save blob still dominates response size, but removing the repeated hash is a clean response-envelope reduction without weakening persistence integrity.
-- Guard: focused MCP save/load and server-registration regressions pin default omission, opt-in full hash echo, save-embedded hash verification, stale-save rejection behavior, and compact reload compatibility.
-- VERIFY: `C:\dev\agent-cleaner`, focused MCP regressions, payload probe, `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, `npm test`, `npm run health`, and `npm run assess` passed.

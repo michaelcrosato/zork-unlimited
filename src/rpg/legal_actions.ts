@@ -166,9 +166,9 @@ export function resolveRpgAction(
       if (!state.inventory.includes(action.item)) return null;
       const o = index.objects.get(action.item);
       if (!o) return null;
-      // A held (worn/equipped/bound) object can never be set down — the player
-      // carries it the whole game (schema `held: true`); DROP simply isn't offered.
-      if (o.held) return null;
+      // A held (worn/equipped/bound) or deliberately non-droppable object can
+      // never be set down; DROP simply isn't offered.
+      if (o.held || o.droppable === false) return null;
       return {
         conditions: [],
         effects: [

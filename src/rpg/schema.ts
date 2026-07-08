@@ -191,6 +191,7 @@ export const ObjectSchema = z
     description: z.string().min(1),
     variants: z.array(ObjectVariantSchema).optional(),
     takeable: z.boolean().default(false),
+    droppable: z.boolean().optional(),
     held: z.boolean().optional(),
     quest_critical: z.boolean().default(false),
     read_text: z.string().min(1).optional(),
