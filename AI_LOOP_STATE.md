@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 503 -->
+<!-- historical_cycle_count: 504 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,14 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - tide_mill_compact_ending_payoff
+
+- Content surface: shortened the clean and returned-takings `tide_mill` rescue endings so compact ending payloads keep the final payoff without mid-word truncation.
+- Loop effect: new compact ending regression drives clean, no-board, returned-takings, and kept-takings rescues, proving distinct compact win text stays under the ending limit.
+- Blind playtest: `tide_mill` seed 187 reached `ending_saved` at 55/55 with clarity 5/5 and enjoyment 4/5; bugs array empty and no ending-truncation complaint recurred.
+- Self-critique: next recurring interface friction is Ives dialogue action IDs like `ask_ask_race`; coin-bag moral-route curiosity remains a content branch lever after UI noise is lower.
+- Guard: focused compact-ending/takings/no-board regressions, `npm run validate -- tide_mill`, `npm run health`, and report `20260708T094117Z_tide_mill_seed187.md` passed.
 
 ### Cycle result - tide_mill_compact_warning_compression
 
@@ -131,12 +139,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Self-critique: this is an internal runtime efficiency win, not a player-visible mechanics change; it matters because long blind-agent loops ask for compact observations constantly and legal-action enumeration can be requested separately with state hashes.
 - Guard: focused MCP tool, session-cache, view-projection, compact-observation, and server-registration regressions pin no-action cache skipping, action-including cache separation, and unchanged compact response shape.
 - VERIFY: `C:\dev\agent-cleaner`, focused MCP cache/projection regressions, `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, `npm test`, `npm run health`, `npm run assess`, broad `prettier --check .`, and `git diff --check` passed after loop-state rotation.
-
-### Cycle result - legacy_source_alias_type_cleanup
-
-- Pre-cycle: `C:\dev\agent-cleaner` measure/gates passed through WSL; optional secret scanner remains absent, and WSL git-dir warnings still print after the green gate summary.
-- Engine/loop surface: retired `pack_path`, `quest_id`, and `quest_path` selectors no longer appear as `never` fields in live world-source, ToolApi, or RPG lifecycle argument types; runtime rejection paths still reject those keys explicitly.
-- Loop effect: no MCP response-byte change this cycle; this is context/API surface cleanup so maintainers and agent code inspection see the single RPG source contract (`world_quest_id` or generated seed) instead of compatibility ghosts.
-- Self-critique: this is not a payload optimization and will not show up in blind-agent play reports; it is useful because it removes misleading typed affordances at engine and tool boundaries while keeping boundary errors honest.
-- Guard: focused world-source, MCP ToolApi, validation-bar, and server-registration regressions pin alias rejection plus the absence of retired alias declarations from public argument type blocks.
-- VERIFY: `C:\dev\agent-cleaner`, focused source/MCP/schema regressions, `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, `npm test`, `npm run health`, `npm run assess`, broad `prettier --check .`, and `git diff --check` passed after loop-state rotation.

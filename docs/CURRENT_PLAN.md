@@ -6,7 +6,7 @@ implementation subagent reads ONLY this doc and the files it names. Keep it
 current, terse, dated, and under ~60 lines — completed work belongs in git
 history and `docs/DECISION_LOG.md`, not here.
 
-## Cycle: 2026-07-08 - Tide-Mill compact ending payoff
+## Cycle: 2026-07-08 - Tide-Mill Ives dialogue action IDs
 
 ## Synthesis
 
@@ -29,34 +29,31 @@ and enjoyment 4/5. Seed 173, run before the final hatch wording tweak, skipped
 `read_millboard` and felt dinged at 50/55; seed 179 read the board and praised
 the clue chain, so treat that as a sample signal rather than a confirmed common
 defect. The repeated compact truncation around the millboard/yard warning
-surfaces is now closed by concise board and yard prose plus regressions. Blind
-seed 183 reached `ending_saved` at 55/55 with clarity 5/5 and enjoyment 4/5.
-Its remaining content-local finding is that compact ending text truncates
-mid-word, making the final payoff less satisfying in compact mode.
+surfaces is now closed by concise board and yard prose plus regressions. The
+clean and returned-takings ending texts are also compact-safe. Blind seed 187
+reached `ending_saved` at 55/55 with clarity 5/5 and enjoyment 4/5, no bugs,
+and no ending truncation complaint.
 
 ## Chosen Move
 
-Compress the clean rescue ending variants so the final payoff survives compact
-mode without truncating mid-word.
+Rename Ives dialogue topic IDs so compact action IDs are readable, while keeping
+the same dialogue graph, rewards, and one-pass advice flow.
 
 - Target file first: `content/rpg/quests/tide_mill.yaml`.
-- Prefer concise prose edits and pinned compact regressions over engine or
-  compact-width changes.
-- Preserve the ending distinctions: clean 55/55 rescue, no-board rescue,
-  returned-takings rescue, kept-takings rescue, thief, and deaths.
-- Keep the win-only +20 capstone on entering the staith; do not add sea-gate
-  score feedback unless that lever repeats across samples and is handled without
-  breaking the capstone.
-- Add compact ending regressions that drive real routes to the relevant endings
-  and assert compact ending text stays under the compact limit without `(+N
-  chars)` truncation.
+- Prefer content topic-id relabeling over engine/action-id changes.
+- Remove `ask_ask_*` style IDs from the Ives root; target readable action IDs
+  such as `ask_race`, `ask_pawl`, `ask_yard`, and readable follow-ups.
+- Preserve all topic prompts, dialogue text, reward effects, and follow-up
+  reachability; update existing tests honestly to the new IDs.
+- Add or update a compact/action regression proving Ives's dialogue action IDs
+  are readable in the compact action list and still grant race/pawl/yard prep.
 - Keep `max_score`, win-only capstone, and existing takings branch unchanged.
 
 ## Acceptance
 
 1. `npm run validate -- tide_mill` reports 0 errors / 0 warnings.
-2. Focused tests prove compact ending payloads preserve the final payoff without
-   truncation and keep the distinct ending branches intact.
+2. Focused tests prove Ives dialogue has readable compact action IDs and still
+   grants the same craft/might/combat advice progression.
 3. `npm run health` passes.
 4. Run blind after the fix. Target a 20-seed Codex sample when runner capacity
    permits, parallel or sequential, and aggregate common issues; at minimum one
@@ -76,6 +73,6 @@ mode without truncating mid-word.
   the capstone must still pay only on the win; handle through prose/journal if
   this repeats across samples.
 - Coin-bag branch still feels vestigial to some 55/55 players; address after the
-  compact warning friction is closed or measured across a wider sample.
+  dialogue-ID friction is closed or measured across a wider sample.
 - Collect a wider blind sample when the harness is stable; count only verifier
   reports that actually started and played `tide_mill`.

@@ -688,18 +688,16 @@ endings:
           like this deserved. Ives will live to write the report himself. *** You have won. ***
     text: >
       The boat comes down easy through the open gate, finds the deep channel, and slides past
-      the staith with her crew safe aboard. You put both faults right, drove the saboteur from
-      the tools, and ran the wheel the way the mill was built to be run. Ives will have names
-      for the harbor board by dawn, and the miller's takings are still on the desk where they
-      belong. *** You have won. ***
+      the staith with her crew safe. You put both faults right, drove the saboteur from the
+      tools, and ran the wheel as built. Ives will have names for the harbor board by dawn,
+      and his takings are still on the desk. *** You have won. ***
   - id: ending_saved_returned_takings
     title: "The Boat Comes Down, The Bag Put Back"
     text: >
-      The boat comes down easy through the open gate, finds the deep channel, and slides past
-      the staith with her crew safe aboard. The toll-takings are back on Ives's desk, though
-      your hand knew their weight before your conscience won. Ives will live, the crew will
-      live, and the miller's accounts will balance with one private stain left off the chalk.
-      *** You have won. ***
+      The boat comes down easy through the open gate, finds deep water, and slides past the
+      staith with her crew safe. The toll-takings are back on Ives's desk, though your hand
+      knew their weight before conscience won. Ives and the crew live, and the accounts
+      balance with one private stain left off the chalk. *** You have won. ***
   - id: ending_saved_with_takings
     title: "The Boat Comes Down, Silver in Your Coat"
     text: >
