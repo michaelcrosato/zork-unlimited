@@ -24,6 +24,7 @@ describe("Tide-Mill Mill-House compact prose keeps the opening map visible", () 
     expect(started.context.text).toMatch(/north=wheel-room/i);
     expect(started.context.text).toMatch(/yard\/tool-shed/i);
     expect(started.context.text).toMatch(/east=counting-nook/i);
+    expect(started.context.text).toMatch(/written night-order millboard/i);
     expect(started.context.text).toMatch(/boat is caught/i);
     expect(started.context.exits).toEqual(expect.arrayContaining(["east", "north"]));
     expect(started.context.objects).toEqual(expect.arrayContaining(["millboard", "gaff_hook"]));

@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 506 -->
+<!-- historical_cycle_count: 507 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,14 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - tide_mill_board_obligation_clarity
+
+- Content surface: named the opening board as Ives's written night-order, had Ives distinguish board order from his live tricks, and softened the no-board rescue ending away from "less clean."
+- Loop effect: compact opening/no-board/ending regressions now pin the board affordance, the 50/55 Ives-advice rescue, and a non-scolding compact no-board payoff.
+- Blind playtest: 20-run `tide_mill` Codex batch seeds 195-214 all reached `ending_saved` at 55/55; clarity was 19x5/5 and 1x4/5, enjoyment 20x4/5, no stuck runs.
+- Self-critique: the hidden-board complaint did not recur; next repeated lever is race/tool order friction plus checklist feel, with all 20 still saying no to replay.
+- Guard: focused compact opening/no-board/ending regressions, `npm run validate -- tide_mill`, `npm run health`, and reports `20260708T102109Z`-`20260708T104018Z` seeds 195-214 passed.
 
 ### Cycle result - tide_mill_millboard_discovery_tension
 
@@ -129,11 +137,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Blind playtest: `tide_mill` seed 89 reached `ending_saved` at 55/55, clarity 5/5 and enjoyment 4/5; stale crank prose did not recur.
 - Self-critique: the slice is cleaner but still not saturated; next lever is the Ives dialogue back-action friction, with flood-hatch temptation wording behind it.
 - Guard: `npm run validate -- tide_mill`, focused regression, `npm run health`, and schema-verified blind report `blind-tester/reports/20260708T054924Z_tide_mill_seed89.md` passed.
-
-### Cycle result - tide_mill_benchmark_slice
-
-- Content surface: added `tide_mill` as a New York Waterfront RPG world quest, porting the retired Tide-Mill dependency DAG into the live engine with a required seeded fight, prep-backed seeded skill checks, telegraphed greed/death forks, and a +20 win-only capstone.
-- Loop effect: RPG catalog and overworld registry are now 12/12; `tide_mill` validates clean and the auto-discovered ending, score-economy, variant-liveness, combat, and registry suites cover it.
-- Blind playtest: `tide_mill` seed 73 reached `ending_saved` at 55/55, clarity 5/5 and enjoyment 4/5, with one S1 finding: Wheel-Room text can still say the crank-handle hangs on its peg after it is held.
-- Self-critique: the first slice is structurally sound and readable, but not saturated; next lever is the crank-handle stale-room variant, then replayability/deeper branch pressure.
-- Guard: targeted validation/tests, prepared-route MCP smoke, `npm run assess`, `npm run health`, and schema-verified blind report `blind-tester/reports/20260708T053410Z_tide_mill_seed73.md` passed.

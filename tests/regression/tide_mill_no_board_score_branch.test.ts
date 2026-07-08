@@ -96,6 +96,8 @@ describe("Tide-Mill no-board score branch", () => {
     expect(state.endingId).toBe("ending_saved");
     expect(state.flags["read_board"]).not.toBe(true);
     expect(observation.score).toBe(50);
-    expect(observation.description).toMatch(/without ever taking the millboard's order/i);
+    expect(observation.description).toMatch(/Ives's living advice/i);
+    expect(observation.description).toMatch(/not the written millboard order/i);
+    expect(observation.description).not.toMatch(/less clean/i);
   });
 });

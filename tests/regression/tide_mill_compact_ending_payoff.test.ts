@@ -118,7 +118,8 @@ describe("Tide-Mill compact ending payoff", () => {
 
     const noBoard = act(raiseGate(false), "go_down");
     expect(noBoard.endingId).toBe("ending_saved");
-    expectCompactPayoff(noBoard, /without ever taking the millboard's order/i);
+    expectCompactPayoff(noBoard, /not the written millboard order/i);
+    expect(compactEndingText(noBoard)).not.toMatch(/less clean/i);
   });
 
   it("keeps the returned and kept takings endings distinct without compact truncation", () => {

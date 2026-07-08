@@ -22,9 +22,9 @@ rooms:
     name: "The Mill-House"
     description: >
       Ways: north=wheel-room (then east to yard/tool-shed);
-      east=counting-nook. A millboard hangs by the door, and a hooked gaff-pole
-      leans under the sill. Miller Ives lies by flour sacks, hurt but awake.
-      Outside, a boat is caught above the weir with the tide falling.
+      east=counting-nook. Ives's written night-order millboard hangs by the door,
+      and a hooked gaff-pole leans under the sill. Miller Ives lies by flour sacks,
+      hurt but awake. Outside, a boat is caught above the weir with the tide falling.
     variants:
       - when: [{ has_flag: gate_up }]
         text: >
@@ -35,9 +35,9 @@ rooms:
       - when: [{ has_flag: hook_taken }]
         text: >
           Ways: north=wheel-room (then east to yard/tool-shed);
-          east=counting-nook. The millboard still hangs by the door, and the sill
-          is bare where the gaff-pole rested. Miller Ives lies by flour sacks,
-          hurt but awake, while the trapped boat waits outside.
+          east=counting-nook. Ives's written night-order millboard still hangs by
+          the door, and the sill is bare where the gaff-pole rested. Miller Ives
+          lies by flour sacks, hurt but awake, while the trapped boat waits outside.
     objects: [millboard, gaff_hook]
     exits:
       - { direction: north, to: wheel_room }
@@ -552,8 +552,9 @@ npcs:
       nodes:
         - id: ives_root
           npc_text: >
-            If you can stand, you can save them. The wheel has two faults and that knife-man
-            means to keep the tools from you. Ask fast and then work faster.
+            If you can stand, you can save them. My written order is on the board;
+            I can give you the tricks. The wheel has two faults and that knife-man
+            means to keep the tools from you. Ask fast, then work faster.
           variants:
             - when:
                 - any_of:
@@ -682,9 +683,9 @@ endings:
       - when: [{ not_flag: read_board }]
         text: >
           The boat comes down easy through the open gate, finds the deep channel, and slides
-          past the staith with her crew safe aboard. You did the work without ever taking the
-          millboard's order into your hand: brave, lucky, and a little less clean than a night
-          like this deserved. Ives will live to write the report himself. *** You have won. ***
+          past the staith with her crew safe aboard. You saved them from Ives's living advice,
+          not the written millboard order: brave, quick, and one step less official until Ives
+          writes the report himself. *** You have won. ***
     text: >
       The boat comes down easy through the open gate, finds the deep channel, and slides past
       the staith with her crew safe. You put both faults right, drove the saboteur from the
