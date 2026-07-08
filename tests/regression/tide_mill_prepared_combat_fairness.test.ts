@@ -79,7 +79,7 @@ describe("Tide-Mill prepared combat stays fair under worst rolls", () => {
   it("survives with meaningful damage after taking Ives's advice, the gaff, and the oilskin", () => {
     let state = enterYardWith([
       "talk_ives",
-      "ask_ask_yard",
+      "ask_yard",
       "ask_yard_leave",
       "take_gaff_hook",
       "go_east",

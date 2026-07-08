@@ -62,7 +62,7 @@ function raiseGate(readBoard: boolean): GameState {
   const opening = [
     ...(readBoard ? ["read_millboard"] : []),
     "talk_ives",
-    "ask_ask_race",
+    "ask_race",
     "ask_race_to_pawl",
     "ask_pawl_to_yard",
     "ask_yard_leave",

@@ -58,7 +58,7 @@ describe("Tide-Mill no-board score branch", () => {
     let state = initStateForRpgPack(index, 181);
     for (const id of [
       "talk_ives",
-      "ask_ask_race",
+      "ask_race",
       "ask_race_to_pawl",
       "ask_pawl_to_yard",
       "ask_yard_leave",

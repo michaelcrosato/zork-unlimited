@@ -563,19 +563,19 @@ npcs:
                     - { has_flag: heard_yard_trick }
               text: "What else do you need? Race, pawl, knife-man. Those are the night."
           topics:
-            - id: ask_race
+            - id: race
               prompt: "Ask how to clear the choked race."
               conditions: [{ not_flag: heard_race_trick }]
               goto: race_trick
-            - id: ask_pawl
+            - id: pawl
               prompt: "Ask how to free the brake-pawl and wind the gate."
               conditions: [{ not_flag: heard_pawl_trick }]
               goto: pawl_trick
-            - id: ask_yard
+            - id: yard
               prompt: "Ask about the saboteur at the tool-shed."
               conditions: [{ not_flag: heard_yard_trick }]
               goto: yard_trick
-            - id: leave_ives
+            - id: leave
               prompt: "Leave Ives and work the mill."
               end: true
         - id: race_trick

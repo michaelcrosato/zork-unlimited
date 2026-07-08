@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 504 -->
+<!-- historical_cycle_count: 505 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,14 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - tide_mill_ives_dialogue_ids
+
+- Content surface: renamed Ives root dialogue topic IDs from `ask_*` to clean roots so compact action IDs read `ask_race`, `ask_pawl`, `ask_yard` instead of `ask_ask_*`.
+- Loop effect: dialogue-flow regression now pins readable root action IDs while preserving direct race/pawl/yard follow-ups and the same craft/might/advice rewards.
+- Blind playtest: `tide_mill` seed 191 reached `ending_saved` at 55/55 with clarity 5/5 and enjoyment 4/5; the compact dialogue-ID complaint did not recur.
+- Self-critique: UI noise is lower; next highest-leverage S1 is that the millboard over-prescribes the optimal solution and weakens discovery despite excellent clarity.
+- Guard: focused dialogue/prep/route regressions, `npm run validate -- tide_mill`, `npm run health`, and report `20260708T095501Z_tide_mill_seed191.md` passed.
 
 ### Cycle result - tide_mill_compact_ending_payoff
 
@@ -130,12 +138,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Self-critique: this is a 7-byte fixed envelope trim, not a mechanics improvement; it follows the event-version opt-in pattern and removes repeated static metadata from hot loop contexts.
 - Guard: focused compact-observation, generated-RPG start, MCP ToolApi, and server-registration regressions pin default omission, opt-in version tags, compact projection cache separation, and ToolSearch schema budget.
 - VERIFY: `C:\dev\agent-cleaner`, focused compact-context/MCP regressions, payload probe, `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, `npm test`, `npm run health`, `npm run assess`, broad `prettier --check .`, and `git diff --check` passed after plan update.
-
-### Cycle result - compact_observation_action_cache_skip
-
-- Pre-cycle: `C:\dev\agent-cleaner` measure/gates passed through WSL; optional secret scanner remains absent, and WSL git-dir warnings still print after the green gate summary.
-- Engine/loop surface: default compact RPG observations now set `includeAvailableActions: false`, so start/read/load/step contexts that omit `include_actions` no longer enumerate or cache legal actions just to discard ids.
-- Loop effect: no MCP JSON byte change; this trims hot-loop CPU/cache work and keeps `legalActionsCache` empty for no-action compact starts, while `include_actions: true` and full observations still populate action rows.
-- Self-critique: this is an internal runtime efficiency win, not a player-visible mechanics change; it matters because long blind-agent loops ask for compact observations constantly and legal-action enumeration can be requested separately with state hashes.
-- Guard: focused MCP tool, session-cache, view-projection, compact-observation, and server-registration regressions pin no-action cache skipping, action-including cache separation, and unchanged compact response shape.
-- VERIFY: `C:\dev\agent-cleaner`, focused MCP cache/projection regressions, `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, `npm test`, `npm run health`, `npm run assess`, broad `prettier --check .`, and `git diff --check` passed after loop-state rotation.

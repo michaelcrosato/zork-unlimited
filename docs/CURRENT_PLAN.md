@@ -6,7 +6,7 @@ implementation subagent reads ONLY this doc and the files it names. Keep it
 current, terse, dated, and under ~60 lines — completed work belongs in git
 history and `docs/DECISION_LOG.md`, not here.
 
-## Cycle: 2026-07-08 - Tide-Mill Ives dialogue action IDs
+## Cycle: 2026-07-08 - Tide-Mill millboard discovery tension
 
 ## Synthesis
 
@@ -32,28 +32,36 @@ defect. The repeated compact truncation around the millboard/yard warning
 surfaces is now closed by concise board and yard prose plus regressions. The
 clean and returned-takings ending texts are also compact-safe. Blind seed 187
 reached `ending_saved` at 55/55 with clarity 5/5 and enjoyment 4/5, no bugs,
-and no ending truncation complaint.
+and no ending truncation complaint. Ives root dialogue IDs are now readable
+(`ask_race`, `ask_pawl`, `ask_yard`), and blind seed 191 did not repeat that
+friction.
+
+Seed 191's strongest new finding is design, not mechanics: the millboard gives
+nearly the whole optimal route immediately. It is fair onboarding, but it makes
+the run feel checklist-driven and lowers replay desire. Secondary S0: "drop the
+held water" in winch text is muddy beside "raise/open the sea-gate."
 
 ## Chosen Move
 
-Rename Ives dialogue topic IDs so compact action IDs are readable, while keeping
-the same dialogue graph, rewards, and one-pass advice flow.
+Retune the millboard so it remains the fastest operational order but no longer
+spells out the whole optimal route as a checklist.
 
 - Target file first: `content/rpg/quests/tide_mill.yaml`.
-- Prefer content topic-id relabeling over engine/action-id changes.
-- Remove `ask_ask_*` style IDs from the Ives root; target readable action IDs
-  such as `ask_race`, `ask_pawl`, `ask_yard`, and readable follow-ups.
-- Preserve all topic prompts, dialogue text, reward effects, and follow-up
-  reachability; update existing tests honestly to the new IDs.
-- Add or update a compact/action regression proving Ives's dialogue action IDs
-  are readable in the compact action list and still grant race/pawl/yard prep.
+- Preserve first-run clarity: the board should still point to two faults,
+  saboteur/tools, sea-gate, flood-hatch danger, and takings morality.
+- Move one piece of solution specificity into Ives, object descriptions, or
+  local room feedback so the player gets a deduction beat without obscure
+  gating.
+- Do not remove the 5-point scored board read or the no-board 50/55 branch.
+- Add/update compact and route regressions to prove the board remains readable,
+  does not truncate, and no-board rescue still works.
 - Keep `max_score`, win-only capstone, and existing takings branch unchanged.
 
 ## Acceptance
 
 1. `npm run validate -- tide_mill` reports 0 errors / 0 warnings.
-2. Focused tests prove Ives dialogue has readable compact action IDs and still
-   grants the same craft/might/combat advice progression.
+2. Focused tests prove the millboard is less checklist-like while preserving
+   clue sufficiency, compact fit, and the 50/55 no-board branch.
 3. `npm run health` passes.
 4. Run blind after the fix. Target a 20-seed Codex sample when runner capacity
    permits, parallel or sequential, and aggregate common issues; at minimum one
@@ -69,10 +77,9 @@ the same dialogue graph, rewards, and one-pass advice flow.
   are limited because compact object refs expose ids, not variant display names.
 - Add richer saboteur combat texture beyond repeated attack once fairness is
   calibrated.
-- Sea-gate feedback: seed 179 flagged no immediate score on the winch as S1, but
-  the capstone must still pay only on the win; handle through prose/journal if
-  this repeats across samples.
+- Sea-gate wording: seed 191 flagged "drop the held water" as muddy beside
+  raise/open gate language; fix with prose when touching Wheel-Room/winch.
 - Coin-bag branch still feels vestigial to some 55/55 players; address after the
-  dialogue-ID friction is closed or measured across a wider sample.
+  millboard discovery tension is closed or measured across a wider sample.
 - Collect a wider blind sample when the harness is stable; count only verifier
   reports that actually started and played `tide_mill`.

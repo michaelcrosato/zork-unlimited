@@ -53,6 +53,10 @@ function legalTopicIds(state: GameState): string[] {
     .map((option) => (option.action as { topic: string }).topic);
 }
 
+function legalActionIds(state: GameState): string[] {
+  return enumerateRpgActions(index, state).map((option) => option.id);
+}
+
 describe("Tide-Mill Ives dialogue supports direct urgent follow-ups", () => {
   it("the pack still validates green", () => {
     const report = validateRpg(pack);
@@ -60,10 +64,19 @@ describe("Tide-Mill Ives dialogue supports direct urgent follow-ups", () => {
     expect(report.findings.filter((finding) => finding.severity === "error")).toEqual([]);
   });
 
+  it("uses readable compact action ids at the root advice menu", () => {
+    let state = initStateForRpgPack(index, 89);
+    state = act(state, talkIves);
+
+    const ids = legalActionIds(state);
+    expect(ids).toEqual(expect.arrayContaining(["ask_race", "ask_pawl", "ask_yard"]));
+    expect(ids.some((id) => id.startsWith("ask_ask_"))).toBe(false);
+  });
+
   it("one advice topic does not auto-grant the others", () => {
     let state = initStateForRpgPack(index, 89);
     state = act(state, talkIves);
-    state = act(state, ask("ask_race"));
+    state = act(state, ask("race"));
 
     expect(state.flags["heard_race_trick"]).toBe(true);
     expect(state.flags["heard_pawl_trick"]).toBeUndefined();
@@ -79,7 +92,7 @@ describe("Tide-Mill Ives dialogue supports direct urgent follow-ups", () => {
     let state = initStateForRpgPack(index, 89);
     state = act(state, talkIves);
 
-    const route = ["ask_race", "race_to_pawl", "pawl_to_yard", "yard_leave"];
+    const route = ["race", "race_to_pawl", "pawl_to_yard", "yard_leave"];
     expect(route.every((topic) => !topic.endsWith("_back"))).toBe(true);
     for (const topic of route) state = act(state, ask(topic));
 
