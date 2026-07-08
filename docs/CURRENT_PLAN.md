@@ -6,7 +6,7 @@ implementation subagent reads ONLY this doc and the files it names. Keep it
 current, terse, dated, and under ~60 lines — completed work belongs in git
 history and `docs/DECISION_LOG.md`, not here.
 
-## Cycle: 2026-07-08 - Tide-Mill meaningful temptation branches
+## Cycle: 2026-07-08 - Tide-Mill compact warning compression
 
 ## Synthesis
 
@@ -17,39 +17,42 @@ win-only +20 capstone, and a late optional takings fork after `gate_up`: pocket,
 return, keep-through-rescue, or steal the coin-bag. The clean rescue remains the
 only 55/55 route.
 
-Prepared combat is now fairer without defanging the yard. The saboteur has 8 HP
-instead of 12 HP; `tests/regression/tide_mill_prepared_combat_fairness.test.ts`
-pins that a player with Ives's warning, the gaff-pole, and oilskin survives
-worst combat rolls with meaningful HP loss, while barehanded yard combat still
-dies under the same hostile roll regime. Accepted blind seed 169 reached clean
-`ending_saved` at 55/55 with clarity 5/5 and enjoyment 4/5.
+The flood-hatch no longer sits as a stale late death action. It is now a hard
+seeded might gamble before `sluice_clear`, with failure ending at
+`ending_drowned`; on a strong roll it answers the race fault and then collapses
+onto the normal `sluice_clear` state so the exhaustive proof graph stays under
+cap. Once the safe sluice repair is done, the hatch is described as obsolete and
+has no lever action.
 
-Seed 169's strongest finding is now branch value, not readability or combat:
-the flood-hatch remains a legal warned death/trap option even after the correct
-sluice repair, and the coin-bag detour is visible but feels vestigial because
-the perfect route ignores it. That keeps enjoyment at 4/5 and `would_replay`
-false despite full clarity.
+Final-content blind seed 179 reached `ending_saved` at 55/55 with clarity 5/5
+and enjoyment 4/5. Seed 173, run before the final hatch wording tweak, skipped
+`read_millboard` and felt dinged at 50/55; seed 179 read the board and praised
+the clue chain, so treat that as a sample signal rather than a confirmed common
+defect. The repeated finding across both seeds is compact truncation around the
+millboard/yard warning surfaces.
 
 ## Chosen Move
 
-Turn one of the current temptations, preferably the Head-Race flood-hatch, from
-an obvious punished choice into a tighter informed gamble or reactive branch.
+Compress the compact-facing millboard and yard warning surfaces so load-bearing
+warnings survive the compact view without widening compact mode.
 
 - Target file first: `content/rpg/quests/tide_mill.yaml`.
-- Preserve telegraphing: no gotcha death, no hidden required failure.
-- The bad crow-bar choice can stay dangerous, but after the sluice is correctly
-  cleared it should either disappear, clearly become obsolete, or pay off in a
-  different deterministic branch instead of sitting as a stale trap.
-- Prefer content state/prose/action gating before engine changes.
-- Add a focused regression for the chosen branch so compact actions and endings
-  do not drift.
+- Preserve urgency: the boat and Ives should still matter immediately.
+- Prefer concise prose edits and pinned compact regressions over engine or
+  compact-width changes.
+- Keep the millboard as an optional-but-scored read; do not auto-award the board
+  score for unrelated actions unless the content explicitly makes that
+  information equivalent.
+- Add compact/start or route regressions proving the board warning and yard
+  saboteur setup do not truncate the operational information a first-time
+  player needs.
 - Keep `max_score`, win-only capstone, and existing takings branch unchanged.
 
 ## Acceptance
 
 1. `npm run validate -- tide_mill` reports 0 errors / 0 warnings.
-2. Focused tests prove the flood-hatch or equivalent temptation is no longer a
-   stale late trap while the intended danger remains telegraphed.
+2. Focused tests prove compact observations keep board/yard warnings legible and
+   preserve the 50/55 no-board branch.
 3. `npm run health` passes.
 4. Run blind after the fix. Target a 20-seed Codex sample when runner capacity
    permits, parallel or sequential, and aggregate common issues; at minimum one
@@ -64,5 +67,10 @@ an obvious punished choice into a tighter informed gamble or reactive branch.
   pinned compact observations, not by widening compact mode blindly.
 - Add richer saboteur combat texture beyond repeated attack once fairness is
   calibrated.
+- Sea-gate feedback: seed 179 flagged no immediate score on the winch as S1, but
+  the capstone must still pay only on the win; handle through prose/journal if
+  this repeats across samples.
+- Coin-bag branch still feels vestigial to some 55/55 players; address after the
+  compact warning friction is closed or measured across a wider sample.
 - Collect a wider blind sample when the harness is stable; count only verifier
   reports that actually started and played `tide_mill`.

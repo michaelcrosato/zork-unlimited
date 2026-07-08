@@ -214,9 +214,9 @@ rooms:
     variants:
       - when: [{ has_flag: sluice_clear }]
         text: >
-          The stone channel runs free and full at last, the weed and drowned bough cut away
-          and the water sliding fast down onto the wheel. The old flood-hatch still sags
-          rotten in its frame, the wheel-pit black below it. The wheel-room is east.
+          The stone channel runs free and full at last, the water sliding fast down onto
+          the wheel. The old flood-hatch sags unused
+          in its frame; there is no work left for that rotten shortcut. The wheel-room is east.
     objects: [choked_sluice, flood_hatch]
     exits:
       - { direction: east, to: wheel_room }
@@ -368,7 +368,7 @@ objects:
     variants:
       - when: [{ has_flag: sluice_clear }]
         name: "head-race"
-        text: "The head-race runs free where the choke was cut away, water sliding fast down onto the wheel."
+        text: "The head-race runs free, water sliding fast down onto the wheel."
     interactions:
       - verb: USE
         item: billhook
@@ -382,7 +382,7 @@ objects:
           on_success:
             - set_flag: sluice_clear
             - inc_var: { name: score, by: 10 }
-            - add_journal: "You cut the weed and drowned bough clear of the head-race; the water ran free down onto the wheel."
+            - add_journal: "You got water running down the head-race and onto the wheel."
             - narrate: "You hook the downstream braid first, as Ives said, and the whole mat begins to move. Cut by cut the weed and drowned bough tear loose, and the held water slides fast down the channel. With the pawl already pinned back, both faults are now put right."
           on_failure:
             - narrate: "The billhook bites and a strip of weed tears free, but the bough twists and jams the cut back on itself. It is coming away; no other tool is missing. Set the blade lower and cut again."
@@ -398,7 +398,7 @@ objects:
           on_success:
             - set_flag: sluice_clear
             - inc_var: { name: score, by: 10 }
-            - add_journal: "You cut the weed and drowned bough clear of the head-race; the water ran free down onto the wheel."
+            - add_journal: "You got water running down the head-race and onto the wheel."
             - narrate: "You hook the downstream braid first, as Ives said, and the whole mat begins to move. Cut by cut the weed and drowned bough tear loose, and the held water slides fast down the channel. One fault of the two is put right."
           on_failure:
             - narrate: "The billhook bites and a strip of weed tears free, but the bough twists and jams the cut back on itself. It is coming away; no other tool is missing. Set the blade lower and cut again."
@@ -453,17 +453,65 @@ objects:
     description: >
       The old flood-hatch sags in its frame at the head of the race. Its staging is soft
       and black with rot, and the wheel-pit drops away deep and dark right under where you
-      would have to stand to lever it. The board was plain: this is the quick way to let the
-      water through, and the quick way down under the wheel.
+      would have to stand to lever it. With the billhook to snag the ring, a crow-bar from
+      the stone lip might drop it enough to run the wheel, but one slipped foot would put
+      you under the wheel instead.
+    variants:
+      - when: [{ has_flag: sluice_clear }]
+        text: >
+          The hatch sags rotten and useless beside a race that already runs. Levering it now
+          would mean standing over the wheel-pit for no gain.
     interactions:
       - verb: USE
         item: crow_bar
         target: flood_hatch
         command_verb: lever
         command_template: "lever {target} with {item}"
-        conditions: [{ has_item: crow_bar }]
-        effects:
-          - end_game: ending_drowned
+        conditions: [{ has_item: crow_bar }, { has_item: billhook }, { not_flag: sluice_clear }, { has_flag: pawl_free }]
+        skill_check:
+          skill: might
+          difficulty: 16
+          on_success:
+            - set_flag: sluice_clear
+            - inc_var: { name: score, by: 10 }
+            - add_journal: "You got water running down the head-race and onto the wheel."
+            - narrate: >
+                You keep both feet on the stone lip, set the crow-bar through the hatch ring,
+                and heave before the rotten staging can invite you onto it. The chain snaps,
+                the hatch drops crooked, and water punches through under your boots. With the
+                pawl already pinned back, both faults are answered.
+          on_failure:
+            - add_journal: "You tried the rotten flood-hatch shortcut and the staging took you into the wheel-pit."
+            - narrate: >
+                You set the crow-bar to the hatch ring and lean for the shortcut. The rotten
+                staging takes the first hard shift of your weight, exactly as the board warned,
+                and drops away under you. The held water follows.
+            - end_game: ending_drowned
+      - verb: USE
+        item: crow_bar
+        target: flood_hatch
+        command_verb: lever
+        command_template: "lever {target} with {item}"
+        conditions: [{ has_item: crow_bar }, { has_item: billhook }, { not_flag: sluice_clear }, { not_flag: pawl_free }]
+        skill_check:
+          skill: might
+          difficulty: 16
+          on_success:
+            - set_flag: sluice_clear
+            - inc_var: { name: score, by: 10 }
+            - add_journal: "You got water running down the head-race and onto the wheel."
+            - narrate: >
+                You keep both feet on the stone lip, set the crow-bar through the hatch ring,
+                and heave before the rotten staging can invite you onto it. The chain snaps,
+                the hatch drops crooked, and water punches through under your boots. One fault
+                of the two is answered.
+          on_failure:
+            - add_journal: "You tried the rotten flood-hatch shortcut and the staging took you into the wheel-pit."
+            - narrate: >
+                You set the crow-bar to the hatch ring and lean for the shortcut. The rotten
+                staging takes the first hard shift of your weight, exactly as the board warned,
+                and drops away under you. The held water follows.
+            - end_game: ending_drowned
 
   - id: sea_winch
     name: "sea-gate winch"
