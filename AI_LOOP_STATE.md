@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 505 -->
+<!-- historical_cycle_count: 506 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,14 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - tide_mill_millboard_discovery_tension
+
+- Content surface: retuned `tide_mill` millboard from exact billhook/crow-bar checklist to a compact operational order, and changed Wheel-Room winch prose to "wind the sea-gate open."
+- Loop effect: compact board regression now proves clue sufficiency without the exact race/pawl tool mapping; tool specificity lives in the shed, object descriptions, and Ives advice.
+- Blind playtest: `tide_mill` seed 193 reached `ending_saved` at 50/55 with clarity 5/5 and enjoyment 4/5; sea-gate wording did not recur, but skipping the board made the 5-point loss feel hidden.
+- Self-critique: discovery is less checklist-driven, but the scored board read needs a stronger up-front affordance or gentler no-board ending tone; compact final score text also needs another look.
+- Guard: focused compact/no-board/dialogue regressions, `npm run validate -- tide_mill`, `npm run health`, and report `20260708T100922Z_tide_mill_seed193.md` passed.
 
 ### Cycle result - tide_mill_ives_dialogue_ids
 
@@ -129,12 +137,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Blind playtest: `tide_mill` seed 73 reached `ending_saved` at 55/55, clarity 5/5 and enjoyment 4/5, with one S1 finding: Wheel-Room text can still say the crank-handle hangs on its peg after it is held.
 - Self-critique: the first slice is structurally sound and readable, but not saturated; next lever is the crank-handle stale-room variant, then replayability/deeper branch pressure.
 - Guard: targeted validation/tests, prepared-route MCP smoke, `npm run assess`, `npm run health`, and schema-verified blind report `blind-tester/reports/20260708T053410Z_tide_mill_seed73.md` passed.
-
-### Cycle result - compact_context_version_opt_in
-
-- Pre-cycle: `C:\dev\agent-cleaner` measure/gates passed through WSL; optional secret scanner remains absent, and WSL git-dir warnings still print after the green gate summary.
-- Engine/loop surface: default compact RPG observations now omit static `v`; `include_context_version: true` restores `RPG_COMPACT_OBSERVATION_VERSION` (`v: 15`) for audit clients, with separate projection cache keys.
-- Loop effect: measured `sunken_barrow` compact `start_world_quest` drops from 510 to 503 bytes and repeated `get_observation` from 459 to 452 bytes; redundant public MCP schema labels were also tightened to keep the blind-playtest ToolSearch source under its 2600-character guard.
-- Self-critique: this is a 7-byte fixed envelope trim, not a mechanics improvement; it follows the event-version opt-in pattern and removes repeated static metadata from hot loop contexts.
-- Guard: focused compact-observation, generated-RPG start, MCP ToolApi, and server-registration regressions pin default omission, opt-in version tags, compact projection cache separation, and ToolSearch schema budget.
-- VERIFY: `C:\dev\agent-cleaner`, focused compact-context/MCP regressions, payload probe, `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, `npm test`, `npm run health`, `npm run assess`, broad `prettier --check .`, and `git diff --check` passed after plan update.

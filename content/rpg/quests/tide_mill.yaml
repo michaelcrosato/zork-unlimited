@@ -113,14 +113,13 @@ rooms:
         text: >
           Ways: west=head-race, east=yard/tool-shed, south=mill-floor, down=gated
           staith. The wheel turns free and strong: brake-pawl up, race running fast.
-          The winch socket is empty and the crank-handle is in your kit. Wind it to
-          drop the held water.
+          The winch socket is empty and the crank-handle is in your kit. Wind the
+          sea-gate open.
       - when: [{ has_flag: sluice_clear }, { has_flag: pawl_free }]
         text: >
           Ways: west=head-race, east=yard/tool-shed, south=mill-floor, down=gated
           staith. The wheel turns free and strong: brake-pawl up, race running fast.
-          The sea-gate winch waits for its crank-handle. Wind it to drop the held
-          water.
+          The sea-gate winch waits for its crank-handle. Wind the sea-gate open.
       - when: [{ has_flag: sluice_clear }, { has_flag: crank_handle_taken }]
         text: >
           Ways: west=head-race, east=yard/tool-shed, south=mill-floor, down=gated
@@ -239,10 +238,10 @@ objects:
     aliases: [board, notice, orders, chalk, sign]
     description: "A slate millboard by the door, the night orders chalked in Ives's block hand."
     read_text: >
-      Orders: wheel runs after both faults. Cut choked race with billhook; free
-      brake-pawl with crow-bar. Face knife-man with gaff-pole and oilskin. Wind
-      the sea-gate, go down. Never lever the rotten flood-hatch. Ives's takings
-      stay in the nook.
+      Orders: wheel runs after both faults. Clear choked race; free brake-pawl.
+      Tools are in the shed, behind the knife-man: take gaff-pole and oilskin
+      before him. Wind the sea-gate open, then go down. Never lever the rotten
+      flood-hatch. Ives's takings stay in the nook.
     interactions:
       - verb: READ
         target: millboard

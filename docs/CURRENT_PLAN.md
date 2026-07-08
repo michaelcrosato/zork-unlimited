@@ -6,7 +6,7 @@ implementation subagent reads ONLY this doc and the files it names. Keep it
 current, terse, dated, and under ~60 lines — completed work belongs in git
 history and `docs/DECISION_LOG.md`, not here.
 
-## Cycle: 2026-07-08 - Tide-Mill millboard discovery tension
+## Cycle: 2026-07-08 - Tide-Mill board obligation clarity
 
 ## Synthesis
 
@@ -29,39 +29,45 @@ and enjoyment 4/5. Seed 173, run before the final hatch wording tweak, skipped
 `read_millboard` and felt dinged at 50/55; seed 179 read the board and praised
 the clue chain, so treat that as a sample signal rather than a confirmed common
 defect. The repeated compact truncation around the millboard/yard warning
-surfaces is now closed by concise board and yard prose plus regressions. The
-clean and returned-takings ending texts are also compact-safe. Blind seed 187
-reached `ending_saved` at 55/55 with clarity 5/5 and enjoyment 4/5, no bugs,
-and no ending truncation complaint. Ives root dialogue IDs are now readable
-(`ask_race`, `ask_pawl`, `ask_yard`), and blind seed 191 did not repeat that
-friction.
+surfaces is now closed by concise board and yard prose plus regressions. Ives
+root dialogue IDs are readable (`ask_race`, `ask_pawl`, `ask_yard`).
 
-Seed 191's strongest new finding is design, not mechanics: the millboard gives
-nearly the whole optimal route immediately. It is fair onboarding, but it makes
-the run feel checklist-driven and lowers replay desire. Secondary S0: "drop the
-held water" in winch text is muddy beside "raise/open the sea-gate."
+Seed 191 found the millboard too prescriptive: it handed over exact billhook and
+crow-bar mapping and made the route feel checklist-driven. That is now closed:
+the board keeps the operational order and critical warnings, while tool
+specificity lives in Ives, the tool shed, and object descriptions. Wheel-Room
+winch text now says "wind the sea-gate open" instead of "drop the held water."
+
+Seed 193 reached `ending_saved` at 50/55 with clarity 5/5 and enjoyment 4/5
+after asking Ives, skipping the millboard, and following the rescue cleanly.
+The new common-risk pattern is not "board too helpful" but "board score/moral
+weight is under-signposted beside the urgent Ives/tool path." It also reported
+compact final score text truncation even though vitals preserved `50/55`.
 
 ## Chosen Move
 
-Retune the millboard so it remains the fastest operational order but no longer
-spells out the whole optimal route as a checklist.
+Make the millboard's scored importance feel intentional without restoring the
+old checklist.
 
 - Target file first: `content/rpg/quests/tide_mill.yaml`.
-- Preserve first-run clarity: the board should still point to two faults,
-  saboteur/tools, sea-gate, flood-hatch danger, and takings morality.
-- Move one piece of solution specificity into Ives, object descriptions, or
-  local room feedback so the player gets a deduction beat without obscure
-  gating.
-- Do not remove the 5-point scored board read or the no-board 50/55 branch.
-- Add/update compact and route regressions to prove the board remains readable,
-  does not truncate, and no-board rescue still works.
+- Consider first-room affordance, Ives root wording, and/or no-board ending tone
+  before changing score math. The player should understand the board is the
+  miller's formal night order, not optional scenery.
+- Preserve the less-checklist board: do not reintroduce exact billhook/crow-bar
+  mapping into `read_millboard`.
+- Do not remove the 5-point scored board read, the no-board 50/55 branch, or the
+  clean 55/55 branch.
+- If touching ending text, keep compact payloads under limit and check the
+  reported final score truncation.
+- Update focused regressions for board affordance/no-board tone and compact fit.
 - Keep `max_score`, win-only capstone, and existing takings branch unchanged.
 
 ## Acceptance
 
 1. `npm run validate -- tide_mill` reports 0 errors / 0 warnings.
-2. Focused tests prove the millboard is less checklist-like while preserving
-   clue sufficiency, compact fit, and the 50/55 no-board branch.
+2. Focused tests prove the board is better signposted without becoming a
+   solution checklist, and no-board rescue still lands at 50/55 without feeling
+   like a hidden gotcha.
 3. `npm run health` passes.
 4. Run blind after the fix. Target a 20-seed Codex sample when runner capacity
    permits, parallel or sequential, and aggregate common issues; at minimum one
@@ -77,8 +83,6 @@ spells out the whole optimal route as a checklist.
   are limited because compact object refs expose ids, not variant display names.
 - Add richer saboteur combat texture beyond repeated attack once fairness is
   calibrated.
-- Sea-gate wording: seed 191 flagged "drop the held water" as muddy beside
-  raise/open gate language; fix with prose when touching Wheel-Room/winch.
 - Coin-bag branch still feels vestigial to some 55/55 players; address after the
   millboard discovery tension is closed or measured across a wider sample.
 - Collect a wider blind sample when the harness is stable; count only verifier
