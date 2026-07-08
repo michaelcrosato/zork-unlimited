@@ -130,15 +130,23 @@ describe("New York overworld graph", () => {
 
     expect(albany?.description).toContain("Hudson roads");
     expect(civic?.summary).toContain("winter-relief petitions");
-    expect(station?.summary).toContain("freight tags");
-    expect(station?.discovery).toContain("Old Cade's byre");
+    expect(station?.summary).toContain("Rowan's circled petition");
+    expect(station?.summary).toContain("hill-road dispatch");
+    expect(station?.discovery).toContain("wolf-winter packet linking Albany's relief desk");
+    expect(stationPoi?.summary).toContain("Hayden's route pin");
     expect(stationPoi?.summary).toContain("Old Cade waiting");
-    expect(hayden?.agenda).toContain("hill steading");
+    expect(hayden?.agenda).toContain("packet Rowan flagged");
+    expect(hayden?.agenda).toContain("Old Cade's hill steading");
+    expect(stationEvent?.summary).toContain("Hayden's route pin");
     expect(stationEvent?.summary).toContain("Old Cade's cattle");
     expect(stationJob?.summary).toMatch(/wolf-winter/i);
+    expect(stationSite?.discovery).toContain("Rowan's docket mark");
     expect(stationSite?.discovery).toContain("Old Cade's byre tag");
     expect(wolfWinter?.discovery).toContain("Albany Station Quarter");
     expect(wolfWinter?.discovery).toContain("cattle byre");
+    expect(wolfWinter?.discovery).toContain("Albany's civic records");
+    expect(wolfWinter?.discovery).toContain("live dispatch");
+    expect(wolfWinter?.discovery).not.toContain("posted on the station board");
 
     const authoredBridge = [
       albany?.description,
@@ -158,6 +166,7 @@ describe("New York overworld graph", () => {
     expect(authoredBridge).not.toContain("concrete local lead point");
     expect(authoredBridge).not.toContain("Ask around Albany city for work tied to");
     expect(authoredBridge).not.toContain("make Albany City feel worked-in rather than decorative");
+    expect(authoredBridge).not.toContain("from the station board");
   });
 
   it("populates every town and road with exploration substrate", () => {

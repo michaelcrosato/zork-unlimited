@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 525 -->
+<!-- historical_cycle_count: 526 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,14 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - albany_wolf_winter_relief_bridge
+
+- Content surface: Albany Station Quarter now frames Wolf-Winter as a Rowan-to-Hayden relief dispatch, and Wolf-Winter opens with the Albany relief packet becoming a hill-road steading crisis.
+- Loop effect: regressions pin the source-neutral civic-records/route-desk quest lead, ban the station-board-only contradiction, and prove the RPG opening/Cade handoff names Albany's relief rider while keeping the spear already in hand.
+- Blind playtest: 25-run `overworld` Codex batch seeds 591-615 all exited 0; clarity 25x4/5, enjoyment 25x4/5, replay 25x true; feedback ledger now has 436 accepted reports.
+- Self-critique: bridge/tone complaints dropped from 12/25 to 1/25 and positive relief-chain mentions hit 25/25; compact journal hash/truncation, generic civic resolutions, and road arrival/progress wording remain loud.
+- Guard: focused affected tests, `npm run health`, `npm run blind:feedback`, and reports `20260708T210747Z`-`20260708T213426Z` seeds 591-615 passed.
 
 ### Cycle result - off_area_job_memory
 
@@ -126,11 +134,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Blind playtest: 20-run `tide_mill` Codex batch seeds 261-280 all exited 0 and scored 55/55; clarity 20x5/5, enjoyment 20x4/5, replay 20x false.
 - Self-critique: explicit stat-label text mostly closed, but the mechanical boost still reads artificial in a couple reports; the common next S1 is pre-billhook Head-Race action wording/affordance.
 - Guard: focused combat/dialogue regressions, stat-label scan, `npm run validate -- tide_mill`, `npm run health`, and reports `20260708T122937Z`-`20260708T124352Z` seeds 261-280 passed.
-
-### Cycle result - tide_mill_millboard_fault_order_wording
-
-- Content surface: retuned `tide_mill` millboard text from imperative "clear race; free pawl" order to a condition clue: the wheel runs when race is clear and brake-pawl free.
-- Loop effect: compact board and head-race regressions now prove both faults, shed access, gaff/oilskin, sea-gate, hatch, and takings warnings fit without exact tool mapping or race-first phrasing.
-- Blind playtest: 20-run `tide_mill` Codex batch seeds 241-260 all exited 0; reports reached the clean rescue at 55/55, with clarity 20x5/5, enjoyment 20x4/5, replay 20x false.
-- Self-critique: board-order friction did not recur; the common S1 is broader checklist feel from board plus Ives, with smaller repeats around gamey stat journals, saboteur continuity, and vague sluice action labels.
-- Guard: focused compact/head-race regressions, `npm run validate -- tide_mill`, `npm run health`, and reports `20260708T120216Z`-`20260708T121553Z` seeds 241-260 passed.

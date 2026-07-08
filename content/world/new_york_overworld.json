@@ -9327,8 +9327,8 @@
       "home": "albany_city",
       "name": "Albany Station Quarter",
       "kind": "transport_hub",
-      "summary": "Rail sidings, bus bays, road-warden desks, and stable yards collect travelers with snow on their boots and freight tags wired to their packs. The first strong lead is usually not a job title; it is a route that failed to close.",
-      "discovery": "Exploring it can reveal road conditions, stranded travelers, and the winter-relief packet pointing toward Old Cade's byre.",
+      "summary": "Rail sidings, bus bays, road-warden desks, and stable yards hold Albany's emergency traffic: Rowan's circled petition comes here as a route tag, and Hayden's board turns it from paperwork into a hill-road dispatch.",
+      "discovery": "Exploring it can reveal road conditions, stranded travelers, and the wolf-winter packet linking Albany's relief desk to Old Cade's byre.",
       "travel_minutes": 19,
       "services": [
         "rail_terminal",
@@ -17419,7 +17419,7 @@
       "area": "albany_city__transport_hub",
       "kind": "route_yard",
       "title": "Albany Station Quarter Relief Board",
-      "summary": "A slate board mixes I-90 delays with a hand-tied hill-farm tag: cattle feed, lamp oil, byre jerkin, Old Cade waiting. Scouting here reveals why The Wolf-Winter notice is posted in Albany."
+      "summary": "A slate board mixes I-90 delays with a hand-tied hill-farm tag: Rowan's docket mark, Hayden's route pin, cattle feed, lamp oil, byre jerkin, Old Cade waiting. Scouting here shows how The Wolf-Winter leaves Albany for the hill road."
     },
     {
       "id": "albany_city__industrial__poi",
@@ -23235,7 +23235,7 @@
       "role": "route dispatcher",
       "faction": "Road Wardens",
       "summary": "Hayden Hale dispatches road wardens from Albany Station Quarter, matching late coaches, snow reports, and relief freight to travelers who can move faster than official crews.",
-      "agenda": "Needs someone to carry a wolf-winter packet from the station board to a hill steading before the cattle are lost; he can point you to the posted lead."
+      "agenda": "Needs someone to carry the packet Rowan flagged from the Station Quarter route desk to Old Cade's hill steading before the cattle are lost; he can point you to the active lead."
     },
     {
       "id": "albany_city__industrial__contact",
@@ -30130,7 +30130,7 @@
       "title": "Albany Station Quarter: winter relief packet",
       "pressure": "conflict",
       "intensity": 3,
-      "summary": "A northbound relief packet sits open at the route desk: no team returned from the hill road, Old Cade's cattle are penned at a byre, and the weather report keeps worsening. Resolving it requires scouting this area, talking to its contact, and investigating on site."
+      "summary": "A northbound relief packet sits open at the route desk: Rowan's docket mark, Hayden's route pin, no team back from the hill road, Old Cade's cattle penned at a byre, and the weather report worsening. Resolving it requires scouting this area, talking to its contact, and investigating on site."
     },
     {
       "id": "albany_city__industrial__event",
@@ -39161,7 +39161,7 @@
       "kind": "industrial",
       "title": "Albany Station Quarter Signal Yard",
       "summary": "Albany Station Quarter opens into a compact exploration site around snow-caked coaches, relief crates, freight slips, ramp closures, and drivers arguing over which hill road is still passable. It is close enough to feel local, but risky enough to reward preparation before leaving the main street.",
-      "discovery": "A lead in Albany Station Quarter points toward the relief crates, Old Cade's byre tag, and the road crew that failed to return; locals say the Albany problem is bigger than one notice-board errand.",
+      "discovery": "A lead in Albany Station Quarter points toward relief crates, Rowan's docket mark, Old Cade's byre tag, and the road crew that failed to return; locals say the Albany problem is bigger than one notice-board errand.",
       "danger": 3,
       "reward": "You secure route notes that improve travel judgment around the corridor, gaining 3 Capital / Mohawk renown."
     },
@@ -46387,7 +46387,7 @@
       "title": "The Wolf-Winter",
       "source": "content/rpg/quests/wolf_winter.yaml",
       "home": "albany_city",
-      "discovery": "A winter-relief tag at Albany Station Quarter names Old Cade's hill steading, a cattle byre, and a wolf pack coming down with the weather. The Wolf-Winter lead is posted on the station board.",
+      "discovery": "A winter-relief tag moves from Albany's civic records to the Albany Station Quarter route desk: Old Cade's hill steading, a cattle byre, and a wolf pack coming down with the weather. The Wolf-Winter lead is the live dispatch attached to that hill road.",
       "visibility": "local_notice_board",
       "area": "albany_city__transport_hub"
     }

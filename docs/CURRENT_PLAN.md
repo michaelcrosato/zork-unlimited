@@ -6,60 +6,59 @@ implementation subagent reads ONLY this doc and the files it names. Keep it
 current, terse, dated, and under ~60 lines - completed work belongs in git
 history and `docs/DECISION_LOG.md`, not here.
 
-## Cycle: 2026-07-08 - Albany-to-Wolf-Winter Bridge
+## Cycle: 2026-07-08 - Compact Journal Hash Cleanup
 
 ## Synthesis
 
-The off-area job memory surface now keeps discovered unfinished jobs visible when
-the player leaves their local area. Full views expose `rememberedJobs`; compact
-views expose `remembered_jobs` as `[job_id, title, area_id]`; active `jobs`
-remains current-area only; remote work still requires walking to the job area;
-completed jobs leave both active and memory lists while remaining in completed
-ids and journal history.
+The Albany-to-Wolf-Winter bridge now frames the quest as a local relief chain:
+Rowan's civic-records lead reaches Hayden's Station Quarter route desk, and the
+RPG opening carries that Albany winter-relief packet into the steading before
+the byre crisis takes over. Cade now reads the player as Albany's relief rider,
+not an unexplained steading hunter, while the spear remains already in hand.
 
-Fresh-game Codex seeds 566-590 all exited 0; clarity 25x4/5, enjoyment 25x4/5,
-replay 25x true. The ledger now has 411 accepted reports. Direct vanished-job
-complaints did not recur, though 5/25 still mention area-route/memory friction.
+Fresh-game Codex seeds 591-615 all exited 0; clarity 25x4/5, enjoyment 25x4/5,
+replay 25x true. The ledger now has 436 accepted reports. Bridge/tone complaints
+dropped from 12/25 to 1/25, and all 25 reports noticed the Albany relief-chain
+context positively or neutrally.
 
-The broader goal is now the New York opening slice, not a single quest in
-isolation. The strongest player-facing issue is that Albany's civic/rail
-opening still hard-cuts into Wolf-Winter's mythic steading. 12/25 fresh reports
-call the tone bridge abrupt, often as S2. Opening civic stakes also feel thin in
-nearly every report. Compact hash/truncation remains loud, but the bridge is the
-better next content lever because it shapes first-session motivation.
+The loudest current quality issue is compact text hygiene: 25/25 fresh reports
+mention compact truncation, hash-like journal suffixes, or tuple readability.
+This is not a new system; it is the player-facing text surface the blind agents
+actually read. Cleaning it should improve every future slice playtest and make
+the existing New York opening feel less debug-like.
 
 ## Chosen Move
 
-Strengthen the Albany Station Quarter to Wolf-Winter handoff so the quest feels
-like a discovered New York relief crisis instead of an unrelated genre jump.
+Remove hash-like compact journal/truncation artifacts from the fresh-game slice
+without increasing compact payloads enough to reintroduce context bloat.
 
-- Rework only the first-starting-area bridge: Albany Civic Center / Station
-  Quarter lead prose, quest-start framing, and any tight Wolf-Winter opening
-  lines needed to carry the same handoff.
-- Preserve `wolf_winter` mechanics, score economy, seeded combat, endings, and
-  existing spec citations.
-- Resolve the Rowan/board discovery-source contradiction called out in seed 570.
-- Add focused regressions that pin the local bridge language and prevent a return
-  to generic "station board opens mythic steading" framing.
-- Keep prose compact-view safe; do not take on broad compact hash/truncation this
-  cycle unless the bridge text itself exposes it.
+- Focus on compact RPG/overworld journal and prose shortening paths that emit
+  `#...` suffixes or clip actionable Wolf-Winter/Albany lines.
+- Preserve deterministic state hashes, snapshot hashes, and guard semantics; do
+  not hide or weaken hashes used for concurrency/versioning.
+- Keep the compact view bounded: prefer cleaner summaries or non-debug ellipses
+  over simply raising every limit.
+- Add focused regressions using Wolf-Winter/Albany observations that prove compact
+  journal entries and compact descriptions do not expose hash-like fragments.
+- Do not broaden into tuple-label redesign this cycle unless required to remove
+  the hash artifact.
 
 ## Acceptance
 
-1. Focused content/UI tests prove the revealed quest lead names the local Albany
-   relief/rail handoff and matches the actual discovery source.
-2. Focused quest-start tests prove Wolf-Winter's opening gives a concise bridge
-   from Albany to the winter steading without changing quest mechanics.
+1. Focused compact-output tests fail on current hash-like journal/truncation text
+   and pass with cleaner player-facing compact prose.
+2. Focused tests prove state/snapshot hashes still exist where tools need them.
 3. `npm run health` passes.
 4. Run a 25-seed fresh-game `npm run blind` batch, regenerate
-   `docs/BLIND_FEEDBACK_LEDGER.md`, and confirm bridge/tone complaints drop
-   before committing.
+   `docs/BLIND_FEEDBACK_LEDGER.md`, and confirm compact hash/truncation complaints
+   drop before committing.
 
 ## Deferred Levers
 
-- Compact-view polish: stale/hash-like journal artifacts and tuple labels.
-- Colonie and nearby towns still feel templated after Albany.
+- Albany Civic Center charter backlog and Civic Ledger Run resolutions still feel
+  generic compared with their setup.
+- Related Station Quarter winter-relief event can remain active after Wolf-Winter
+  completion.
 - Road encounter arrival/progress wording still repeats in fresh samples.
 - Hidden counts remain useful but system-facing.
-- Tide-Mill levers still open: tactical saboteur branch, coin-bag consequence,
-  compact stale-ref cleanup.
+- Colonie and nearby towns still feel templated after Albany.
