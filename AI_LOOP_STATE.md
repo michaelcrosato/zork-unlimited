@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 524 -->
+<!-- historical_cycle_count: 525 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,14 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - off_area_job_memory
+
+- Engine surface: full and compact overworld views now expose `rememberedJobs` / `remembered_jobs` for discovered unfinished jobs in other known local areas while active `jobs` stays current-area only.
+- Loop effect: focused UI regressions pin off-area discovered jobs as remembered leads, reject remote execution until the player moves to that area, and filter completed jobs from active/memory surfaces.
+- Blind playtest: 25-run `overworld` Codex batch seeds 566-590 all exited 0; clarity 25x4/5, enjoyment 25x4/5, replay 25x true; feedback ledger now has 411 accepted reports.
+- Self-critique: direct vanished-job complaints did not recur, but 5/25 still mention area-route/memory friction; the louder blockers are Albany-to-Wolf-Winter tone bridge, compact hash/truncation, and thin civic opening stakes.
+- Guard: focused affected tests, `npm run health`, `npm run blind:feedback`, and reports `20260708T201937Z`-`20260708T204724Z` seeds 566-590 passed.
 
 ### Cycle result - wolf_winter_dialogue_surface
 
@@ -126,11 +134,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Blind playtest: 20-run `tide_mill` Codex batch seeds 241-260 all exited 0; reports reached the clean rescue at 55/55, with clarity 20x5/5, enjoyment 20x4/5, replay 20x false.
 - Self-critique: board-order friction did not recur; the common S1 is broader checklist feel from board plus Ives, with smaller repeats around gamey stat journals, saboteur continuity, and vague sluice action labels.
 - Guard: focused compact/head-race regressions, `npm run validate -- tide_mill`, `npm run health`, and reports `20260708T120216Z`-`20260708T121553Z` seeds 241-260 passed.
-
-### Cycle result - tide_mill_coin_bag_temptation_texture
-
-- Content surface: retuned post-gate Wheel-Room/Mill-House/Counting-Nook prose from meta "detour/tempts/choice" labels to concrete coin-bag-on-counting-desk details.
-- Loop effect: compact takings regression still proves the fork is visible and `pocket coin-bag` reachable, while banning the blunt meta wording from the final-stair path.
-- Blind playtest: `tide_mill` seed 239 reached `ending_saved` at 55/55 with clarity 5/5 and enjoyment 4/5; no coin-bag meta complaint recurred.
-- Self-critique: the next S1 is the millboard's race-first wording clashing with needing shed tools first; flood-hatch temptation also remains noisy but intentional.
-- Guard: focused takings/ending regressions, `npm run validate -- tide_mill`, `npm run health`, and report `20260708T114929Z_tide_mill_seed239.md` passed.

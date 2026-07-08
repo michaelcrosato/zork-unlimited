@@ -19,6 +19,7 @@ export const OVERWORLD_COMPACT_RISK_CHAR_LIMIT = 160;
 export const OVERWORLD_COMPACT_VIEW_VERSION = 13 as const;
 
 export type OverworldCompactRef = readonly [id: string, name: string];
+export type OverworldCompactJobLeadRef = readonly [id: string, title: string, areaId: string];
 export type OverworldCompactQuestRef = readonly [id: string, title: string, areaId: string];
 export type OverworldCompactHere = readonly [
   id: string,
@@ -106,6 +107,7 @@ export type OverworldCompactLocalRefKey =
   | "contacts"
   | "events"
   | "jobs"
+  | "remembered_jobs"
   | "sites"
   | "quests";
 
@@ -115,6 +117,7 @@ const OVERWORLD_COMPACT_LOCAL_REF_KEYS: readonly OverworldCompactLocalRefKey[] =
   "contacts",
   "events",
   "jobs",
+  "remembered_jobs",
   "sites",
   "quests",
 ];
@@ -182,6 +185,7 @@ export type OverworldCompactView = {
   events: OverworldCompactRef[];
   local_refs_truncated?: OverworldCompactLocalRefTruncation;
   jobs?: OverworldCompactRef[];
+  remembered_jobs?: OverworldCompactJobLeadRef[];
   sites?: OverworldCompactRef[];
   quests?: OverworldCompactQuestRef[];
   pending_road?: OverworldCompactRoadEncounter;
@@ -230,6 +234,8 @@ export const OVERWORLD_COMPACT_LEGEND = {
   local_refs_truncated:
     "keys among areas/poi/contacts/events/jobs/sites/quests whose lists were capped",
   jobs: "[[job_id, title], ...] discovered jobs (work_overworld_session_job)",
+  remembered_jobs:
+    "[[job_id, title, area_id], ...] discovered unfinished jobs in other known areas; walk to area_id via area_routes before work_overworld_session_job",
   sites: "[[site_id, title], ...] discovered sites (explore_overworld_session_site)",
   quests:
     "[[quest_id, title, anchor_area_id], ...] discovered quest leads; you must be IN anchor_area_id (compare to here[3]; walk there via area_routes) before start_overworld_session_quest",
@@ -275,6 +281,14 @@ export function compactOverworldTitleRef(value: {
   return [value.id, compactOverworldTitle(value.title)];
 }
 
+export function compactOverworldJobLeadRef(value: {
+  id: string;
+  title: string;
+  area: string;
+}): OverworldCompactJobLeadRef {
+  return [value.id, compactOverworldTitle(value.title), value.area];
+}
+
 export function compactOverworldQuestRef(value: {
   id: string;
   title: string;
@@ -301,6 +315,18 @@ export function compactOverworldTitleRefs(
   const capped = Math.min(values.length, limit);
   for (let index = 0; index < capped; index += 1) {
     refs.push(compactOverworldTitleRef(values[index]!));
+  }
+  return refs;
+}
+
+export function compactOverworldJobLeadRefs(
+  values: readonly { id: string; title: string; area: string }[],
+  limit = OVERWORLD_COMPACT_LOCAL_REF_LIMIT,
+): OverworldCompactJobLeadRef[] {
+  const refs: OverworldCompactJobLeadRef[] = [];
+  const capped = Math.min(values.length, limit);
+  for (let index = 0; index < capped; index += 1) {
+    refs.push(compactOverworldJobLeadRef(values[index]!));
   }
   return refs;
 }
@@ -640,6 +666,7 @@ export function cloneOverworldCompactView(view: OverworldCompactView): Overworld
   if (view.route_options_truncated) clone.route_options_truncated = true;
   if (view.route_paths_truncated) clone.route_paths_truncated = true;
   if (view.jobs) clone.jobs = cloneTupleList(view.jobs);
+  if (view.remembered_jobs) clone.remembered_jobs = cloneTupleList(view.remembered_jobs);
   if (view.sites) clone.sites = cloneTupleList(view.sites);
   if (view.quests) clone.quests = cloneTupleList(view.quests);
   if (view.local_refs_truncated) clone.local_refs_truncated = [...view.local_refs_truncated];
@@ -671,6 +698,7 @@ export function compactOverworldView(view: OverworldView): OverworldCompactView 
   const roadsTruncated = compactOverworldMovementTruncated(view.exits);
   const areaRoutesTruncated = compactOverworldMovementTruncated(view.areaExits);
   const jobs = compactOverworldTitleRefs(view.jobs);
+  const rememberedJobs = compactOverworldJobLeadRefs(view.rememberedJobs);
   const sites = compactOverworldTitleRefs(view.sites);
   const quests = compactOverworldQuestRefs(view.quests);
   const localRefsTruncated = compactLocalRefTruncation({
@@ -679,6 +707,7 @@ export function compactOverworldView(view: OverworldView): OverworldCompactView 
     contacts: view.characters.length,
     events: view.events.length,
     jobs: view.jobs.length,
+    remembered_jobs: view.rememberedJobs.length,
     sites: view.sites.length,
     quests: view.quests.length,
   });
@@ -736,6 +765,7 @@ export function compactOverworldView(view: OverworldView): OverworldCompactView 
     events: compactOverworldTitleRefs(view.events),
     ...(localRefsTruncated.length > 0 ? { local_refs_truncated: localRefsTruncated } : {}),
     ...(jobs.length > 0 ? { jobs } : {}),
+    ...(rememberedJobs.length > 0 ? { remembered_jobs: rememberedJobs } : {}),
     ...(sites.length > 0 ? { sites } : {}),
     ...(quests.length > 0 ? { quests } : {}),
     ...(pendingRoad ? { pending_road: pendingRoad } : {}),

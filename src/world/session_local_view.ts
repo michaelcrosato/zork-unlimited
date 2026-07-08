@@ -10,6 +10,7 @@ export type OverworldSessionLocalView = {
   areas: OverworldArea[];
   hiddenAreaCount: number;
   jobs: OverworldLocalJob[];
+  rememberedJobs: OverworldLocalJob[];
   hiddenJobCount: number;
   sites: OverworldExplorationSite[];
   hiddenSiteCount: number;
@@ -72,6 +73,25 @@ function discoveredCurrentAreaJobs(
   return discovered;
 }
 
+function discoveredOtherAreaJobs(
+  jobs: readonly OverworldLocalJob[],
+  currentAreaId: string,
+  discoveredJobIds: ReadonlySet<string>,
+  completedJobIds: ReadonlySet<string>,
+): OverworldLocalJob[] {
+  const discovered: OverworldLocalJob[] = [];
+  for (const job of jobs) {
+    if (
+      job.area !== currentAreaId &&
+      discoveredJobIds.has(job.id) &&
+      !completedJobIds.has(job.id)
+    ) {
+      discovered.push(job);
+    }
+  }
+  return discovered;
+}
+
 function discoveredQuestViews(
   quests: readonly OverworldQuest[],
   discoveredQuestIds: ReadonlySet<string>,
@@ -93,6 +113,12 @@ export function buildOverworldSessionLocalView(
     areas: discoveredValues(state.localAreas, state.discoveredAreaIds),
     hiddenAreaCount: hiddenCount(state.localAreas, state.discoveredAreaIds),
     jobs: discoveredCurrentAreaJobs(
+      state.localJobs,
+      state.currentAreaId,
+      state.discoveredJobIds,
+      state.completedJobIds,
+    ),
+    rememberedJobs: discoveredOtherAreaJobs(
       state.localJobs,
       state.currentAreaId,
       state.discoveredJobIds,

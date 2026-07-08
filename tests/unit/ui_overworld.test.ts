@@ -82,6 +82,7 @@ describe("OverworldSession", () => {
     expect(view.sites).toEqual([]);
     expect(view.hiddenSiteCount).toBeGreaterThan(0);
     expect(view.jobs).toEqual([]);
+    expect(view.rememberedJobs).toEqual([]);
     expect(view.hiddenJobCount).toBeGreaterThan(0);
     expect(view.discoveredJobIds).toEqual([]);
     expect(view.completedJobIds).toEqual([]);
@@ -244,11 +245,13 @@ describe("OverworldSession", () => {
     const after = session.view();
     expect(after.completedJobIds).toContain(job.id);
     expect(after.jobs.map((candidate) => candidate.id)).not.toContain(job.id);
+    expect(after.rememberedJobs.map((candidate) => candidate.id)).not.toContain(job.id);
     expect(after.regionRenown[start.current.region]).toBe(job.difficulty);
     expect(after.journal[0]?.kind).toBe("job");
 
     const compactAfter = session.compactView();
     expect(compactAfter.jobs?.map(([id]) => id) ?? []).not.toContain(job.id);
+    expect(compactAfter.remembered_jobs?.map(([id]) => id) ?? []).not.toContain(job.id);
     expect(compactAfter.ids.completed_jobs ?? []).toContain(job.id);
     expect(compactAfter.journal?.[0]?.[0]).toBe("job");
 
@@ -256,6 +259,52 @@ describe("OverworldSession", () => {
     expect(repeated.alreadyKnown).toBe(true);
     expect(repeated.minutes).toBe(0);
     expect(repeated.discoveredJobs).toEqual([]);
+  });
+
+  it("remembers unfinished jobs discovered outside the current local area", () => {
+    const session = new OverworldSession(world);
+    const start = session.view();
+    const currentAreaId = start.currentArea!.id;
+
+    session.talkToCharacter(start.characters[0]!.id);
+    const scouted = session.scoutPoi(start.pois[0]!.id);
+    const rememberedJob = (scouted.discoveredJobs ?? []).find((job) => job.area !== currentAreaId);
+    expect(rememberedJob).toBeDefined();
+
+    const afterDiscovery = session.view();
+    expect(afterDiscovery.currentArea?.id).toBe(currentAreaId);
+    expect(afterDiscovery.jobs.map((job) => job.id)).not.toContain(rememberedJob!.id);
+    expect(afterDiscovery.rememberedJobs.map((job) => job.id)).toContain(rememberedJob!.id);
+    expect(afterDiscovery.rememberedJobs[0]).toMatchObject({
+      id: rememberedJob!.id,
+      area: rememberedJob!.area,
+    });
+    expect(() => session.workLocalJob(rememberedJob!.id)).toThrow(/Move to that local area/i);
+
+    const compactAfterDiscovery = session.compactView();
+    expect(compactAfterDiscovery.jobs?.map(([id]) => id) ?? []).not.toContain(rememberedJob!.id);
+    expect(compactAfterDiscovery.remembered_jobs).toContainEqual([
+      rememberedJob!.id,
+      rememberedJob!.title,
+      rememberedJob!.area,
+    ]);
+
+    const routeToRememberedJob = afterDiscovery.areaExits.find(
+      (exit) => exit.destination.id === rememberedJob!.area,
+    );
+    expect(routeToRememberedJob).toBeDefined();
+    session.moveArea(routeToRememberedJob!.id);
+
+    const inJobArea = session.view();
+    expect(inJobArea.currentArea?.id).toBe(rememberedJob!.area);
+    expect(inJobArea.jobs.map((job) => job.id)).toContain(rememberedJob!.id);
+    expect(inJobArea.rememberedJobs.map((job) => job.id)).not.toContain(rememberedJob!.id);
+
+    session.workLocalJob(rememberedJob!.id);
+    const afterCompletion = session.view();
+    expect(afterCompletion.completedJobIds).toContain(rememberedJob!.id);
+    expect(afterCompletion.jobs.map((job) => job.id)).not.toContain(rememberedJob!.id);
+    expect(afterCompletion.rememberedJobs.map((job) => job.id)).not.toContain(rememberedJob!.id);
   });
 
   it("advances location, clock, supplies, and fatigue by the selected road travel time", () => {
@@ -572,6 +621,7 @@ describe("OverworldSession", () => {
       contacts: view.characters,
       events: view.events,
       jobs: view.jobs,
+      rememberedJobs: view.rememberedJobs,
       sites: view.sites,
       quests: view.quests,
       hiddenAreaCount: view.hiddenAreaCount,
@@ -670,6 +720,7 @@ describe("OverworldSession", () => {
       contacts: view.characters,
       events: view.events,
       jobs: view.jobs,
+      rememberedJobs: view.rememberedJobs,
       sites: view.sites,
       quests: view.quests,
       hiddenAreaCount: view.hiddenAreaCount,
@@ -755,6 +806,7 @@ describe("OverworldSession", () => {
       contacts: view.characters,
       events: view.events,
       jobs: view.jobs,
+      rememberedJobs: view.rememberedJobs,
       sites: view.sites,
       quests: view.quests,
       hiddenAreaCount: view.hiddenAreaCount,
@@ -808,6 +860,11 @@ describe("OverworldSession", () => {
       id: `dense_title_${index}`,
       title: `Dense Title ${index}`,
     }));
+    const denseRememberedJobs = denseTitles.map((value, index) => ({
+      ...world.local_jobs[0]!,
+      ...value,
+      area: `dense_area_${index}`,
+    }));
     const compact = compactOverworldView({
       ...view,
       areas: denseNames.map((value) => ({ ...view.areas[0]!, ...value })),
@@ -815,6 +872,7 @@ describe("OverworldSession", () => {
       characters: denseNames.map((value) => ({ ...view.characters[0]!, ...value })),
       events: denseTitles.map((value) => ({ ...view.events[0]!, ...value })),
       jobs: denseTitles as typeof view.jobs,
+      rememberedJobs: denseRememberedJobs,
       sites: denseTitles as typeof view.sites,
       quests: denseTitles as typeof view.quests,
     });
@@ -824,6 +882,7 @@ describe("OverworldSession", () => {
     expect(compact.contacts).toHaveLength(OVERWORLD_COMPACT_LOCAL_REF_LIMIT);
     expect(compact.events).toHaveLength(OVERWORLD_COMPACT_LOCAL_REF_LIMIT);
     expect(compact.jobs).toHaveLength(OVERWORLD_COMPACT_LOCAL_REF_LIMIT);
+    expect(compact.remembered_jobs).toHaveLength(OVERWORLD_COMPACT_LOCAL_REF_LIMIT);
     expect(compact.sites).toHaveLength(OVERWORLD_COMPACT_LOCAL_REF_LIMIT);
     expect(compact.quests).toHaveLength(OVERWORLD_COMPACT_LOCAL_REF_LIMIT);
     expect(compact.local_refs_truncated).toEqual([
@@ -832,6 +891,7 @@ describe("OverworldSession", () => {
       "contacts",
       "events",
       "jobs",
+      "remembered_jobs",
       "sites",
       "quests",
     ]);
@@ -852,6 +912,7 @@ describe("OverworldSession", () => {
       contacts: denseNames.map((value) => ({ ...view.characters[0]!, ...value })),
       events: denseTitles.map((value) => ({ ...view.events[0]!, ...value })),
       jobs: denseTitles as typeof view.jobs,
+      rememberedJobs: denseRememberedJobs,
       sites: denseTitles as typeof view.sites,
       quests: denseTitles as typeof view.quests,
       hiddenAreaCount: view.hiddenAreaCount,
@@ -882,9 +943,13 @@ describe("OverworldSession", () => {
     expect(built.local_refs_truncated).toEqual(compact.local_refs_truncated);
     expect(built.areas).toHaveLength(OVERWORLD_COMPACT_LOCAL_REF_LIMIT);
     expect(built.jobs).toHaveLength(OVERWORLD_COMPACT_LOCAL_REF_LIMIT);
+    expect(built.remembered_jobs).toHaveLength(OVERWORLD_COMPACT_LOCAL_REF_LIMIT);
 
     const cloned = cloneOverworldCompactView(compact);
     expect(cloned.local_refs_truncated).toEqual(compact.local_refs_truncated);
+    expect(cloned.remembered_jobs).toEqual(compact.remembered_jobs);
+    cloned.remembered_jobs?.push(["mutated_job", "Mutated job", "mutated_area"]);
+    expect(compact.remembered_jobs).toHaveLength(OVERWORLD_COMPACT_LOCAL_REF_LIMIT);
     cloned.local_refs_truncated?.push("areas");
     expect(compact.local_refs_truncated).toEqual([
       "areas",
@@ -892,6 +957,7 @@ describe("OverworldSession", () => {
       "contacts",
       "events",
       "jobs",
+      "remembered_jobs",
       "sites",
       "quests",
     ]);

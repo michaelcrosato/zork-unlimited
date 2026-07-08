@@ -26,6 +26,7 @@ export function cloneOverworldView(view: OverworldView): OverworldView {
     characters: view.characters.map(cloneOverworldCharacter),
     events: view.events.map(cloneOverworldLocalEvent),
     jobs: view.jobs.map(cloneOverworldLocalJob),
+    rememberedJobs: view.rememberedJobs.map(cloneOverworldLocalJob),
     sites: view.sites.map(cloneOverworldExplorationSite),
     quests: view.quests.map((quest) => ({ ...quest })),
     routeOptions: view.routeOptions.map((plan) => cloneOverworldRouteOption(plan)),
