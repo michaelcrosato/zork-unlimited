@@ -1,5 +1,10 @@
 # AdventureForge — Ultraplan (2026-06-02)
 
+> **ARCHIVED — historical ultraplan (2026-06-02); not current guidance.** Superseded by
+> the live `docs/ROADMAP.md` and the 2026-07-06/07 RPG-only consolidation
+> (`docs/DECISION_LOG.md`). The "supersedes `ROADMAP.md`" line below reflects 2026-06-02
+> only and no longer holds.
+
 Produced by a local multi-agent ultraplan: 6 parallel repo reviewers + 5 web-research
 agents (frontier-LLM capability, IF/agentic benchmarks, current AI-narrative products,
 autonomous-improvement/reward-hacking research, distribution paths) → one synthesis,
