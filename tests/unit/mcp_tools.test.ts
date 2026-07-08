@@ -449,7 +449,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(r.local_job_count).toBe(r.area_count);
     expect(r.road_event_count).toBe(r.road_count);
     expect(r.exploration_site_count).toBeGreaterThanOrEqual(r.region_count * 3);
-    expect(r.quest_count).toBe(11);
+    expect(r.quest_count).toBe(12);
     expect(r).not.toHaveProperty("sources");
     expect(r).not.toHaveProperty("design_rules");
     expect(JSON.stringify(r).length).toBeLessThan(1700);

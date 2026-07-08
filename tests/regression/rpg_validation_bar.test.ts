@@ -57,6 +57,7 @@ describe("single-engine RPG validation bar", () => {
       "content/rpg/quests/printers_night.yaml",
       "content/rpg/quests/sunken_barrow.yaml",
       "content/rpg/quests/tanners_fever.yaml",
+      "content/rpg/quests/tide_mill.yaml",
       "content/rpg/quests/wolf_winter.yaml",
     ]);
   });

@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 491 -->
+<!-- historical_cycle_count: 492 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,14 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - tide_mill_benchmark_slice
+
+- Content surface: added `tide_mill` as a New York Waterfront RPG world quest, porting the retired Tide-Mill dependency DAG into the live engine with a required seeded fight, prep-backed seeded skill checks, telegraphed greed/death forks, and a +20 win-only capstone.
+- Loop effect: RPG catalog and overworld registry are now 12/12; `tide_mill` validates clean and the auto-discovered ending, score-economy, variant-liveness, combat, and registry suites cover it.
+- Blind playtest: `tide_mill` seed 73 reached `ending_saved` at 55/55, clarity 5/5 and enjoyment 4/5, with one S1 finding: Wheel-Room text can still say the crank-handle hangs on its peg after it is held.
+- Self-critique: the first slice is structurally sound and readable, but not saturated; next lever is the crank-handle stale-room variant, then replayability/deeper branch pressure.
+- Guard: targeted validation/tests, prepared-route MCP smoke, `npm run assess`, `npm run health`, and schema-verified blind report `blind-tester/reports/20260708T053410Z_tide_mill_seed73.md` passed.
 
 ### Cycle result - compact_context_version_opt_in
 
@@ -139,13 +147,4 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Loop effect: `breaking_weir` default `start_world_quest` drops from 801 to 729 bytes, `get_observation` from 746 to 674, `step_action(go_north)` from 866 to 845, and `step_action(read_flood_book)` from 1577 to 1505.
 - Self-critique: this trims repeated loop context without touching gameplay state, but agents now rely on prose/action ids or full observations when they need display labels.
 - Guard: compact-observation, MCP ToolApi, schema-budget, cache-clone, and play-harness regressions pin `v: 15`, ID-only visible refs, `[id,hp]` enemies, mutation-safe cached clones, and measured response budgets.
-- VERIFY: `C:\dev\agent-cleaner`, focused compact-observation/MCP/schema/cache regressions, payload probe, `npm run health`, and `npm run assess` passed; post-rotation `npm run verify:integrity`, `npm run format:check`, broad `prettier --check .`, and `git diff --check` also passed.
-
-### Cycle result - compact_observation_prose_caps_v14
-
-- Pre-cycle: `C:\dev\agent-cleaner` measure/gates passed through WSL; optional secret scanner remains absent, and WSL git-dir warnings still print after the green gate summary.
-- Engine/loop surface: compact RPG observations are now `v: 14`, cap room/ending prose at 360 chars, and compact start/load openings omit the full world-intro paragraph unless a ToolApi caller requests `include_world_intro`.
-- Loop effect: `breaking_weir` default `start_world_quest` drops from 863 to 801 bytes, `get_observation` from 806 to 746, `step_action(go_north)` from 926 to 866, and `step_action(read_flood_book)` from 1637 to 1577.
-- Self-critique: this is a straightforward hot-path prose-cap reduction; it preserves full observations for debug reads, but the remaining 66-byte state hash and response envelope are still visible overhead.
-- Guard: compact-observation, MCP ToolApi, schema-budget, and session-cache regressions pin `v: 14`, named cap constants, compact intro omission, full-observation intro preservation, and measured response budgets.
 - VERIFY: `C:\dev\agent-cleaner`, focused compact-observation/MCP/schema/cache regressions, payload probe, `npm run health`, and `npm run assess` passed; post-rotation `npm run verify:integrity`, `npm run format:check`, broad `prettier --check .`, and `git diff --check` also passed.

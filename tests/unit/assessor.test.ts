@@ -116,8 +116,8 @@ function withStaleAuditFixtureRoot(run: (root: string) => void): void {
 describe("assess()", () => {
   it("counts the RPG catalog and does not track retired legacy modes", () => {
     expect("packsByMode" in a).toBe(false);
-    expect(a.rpgQuestCount).toBe(11);
-    expect(a.worldQuestCount).toBe(11);
+    expect(a.rpgQuestCount).toBe(12);
+    expect(a.worldQuestCount).toBe(12);
     expect(a.quests.filter((p) => p.playable).every((p) => p.world_quest_id !== null)).toBe(true);
     expect(a.quests.every((p) => !("pack_id" in p))).toBe(true);
     expect(a.quests.every((p) => !("path" in p))).toBe(true);
@@ -190,10 +190,10 @@ describe("assess()", () => {
   it("raises content_new only for contiguous world-quest breadth", () => {
     // Breadth work is now an overworld-registry target, not a mode/pack target.
     // Legacy content is no longer a breadth target, and raw RPG packs must not be
-    // raised as detached authoring work. The 11 shipped quests meet the target, so
+    // raised as detached authoring work. The 12 shipped quests meet the target, so
     // content_new disarms.
-    expect(a.rpgQuestCount).toBe(11);
-    expect(a.worldQuestCount).toBe(11);
+    expect(a.rpgQuestCount).toBe(12);
+    expect(a.worldQuestCount).toBe(12);
     expect(
       a.candidates.find((c) => c.category === "content_new" && c.target === "rpg"),
     ).toBeUndefined();

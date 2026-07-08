@@ -46365,6 +46365,15 @@
       "area": "riverhead_town__market"
     },
     {
+      "id": "tide_mill",
+      "title": "The Tide-Mill",
+      "source": "content/rpg/quests/tide_mill.yaml",
+      "home": "new_york_city",
+      "discovery": "Ask around New York city for work tied to The Tide-Mill. The lead is posted in New York Waterfront.",
+      "visibility": "local_notice_board",
+      "area": "new_york_city__waterfront"
+    },
+    {
       "id": "tanners_fever",
       "title": "The Tanner's Fever",
       "source": "content/rpg/quests/tanners_fever.yaml",

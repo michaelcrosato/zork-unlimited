@@ -27,6 +27,9 @@ const WORLD_QUEST_IDS = [
   "gallowmere",
   "printers_night",
   "sunken_barrow",
+  "tanners_fever",
+  "tide_mill",
+  "wolf_winter",
 ] as const;
 const TEMP_WORLD_QUEST_ID = "same_size";
 const TEMP_PACK_SOURCE = "not: rpg\n";
@@ -86,7 +89,7 @@ describe("RpgSourceRuntime caches", () => {
     const runtime = new RpgSourceRuntime(ROOT);
     const sources = runtime.discoverWorldQuestSources();
 
-    expect(sources).toHaveLength(11);
+    expect(sources).toHaveLength(12);
     expect(sources.every((source) => typeof source.world_quest_id === "string")).toBe(true);
     expect(sources.map((source) => source.world_quest_id)).toContain("sunken_barrow");
 
