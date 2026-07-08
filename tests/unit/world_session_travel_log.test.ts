@@ -130,6 +130,8 @@ describe("overworld session travel log restoration", () => {
         to: "Colonie",
         route: "Test Road",
         arrivedAt: "Day 1, 09:06",
+        timing:
+          "On the road from Albany to Colonie at Day 1, 09:06; resolve this route trouble before doing town business in Colonie.",
         event,
       },
     });
@@ -255,6 +257,11 @@ describe("overworld session travel log restoration", () => {
         restoreIndexes({ roadEventsByEdgeId: new Map() }),
       ).roadEvent,
     ).toBeNull();
+    expect(
+      restoreOverworldTravelLogEntry(travelEntry({ roadEventId: null }), restoreIndexes()),
+    ).toMatchObject({
+      roadEvent: null,
+    });
   });
 
   it("rejects forged travel log entries against manifest roads and towns", () => {
@@ -267,6 +274,12 @@ describe("overworld session travel log restoration", () => {
     expect(() =>
       restoreOverworldTravelLogEntry(travelEntry({ minutes: 66 }), restoreIndexes()),
     ).toThrow(/travel minutes do not match/);
+    expect(() =>
+      restoreOverworldTravelLogEntry(
+        travelEntry({ roadEventId: "different_event" }),
+        restoreIndexes(),
+      ),
+    ).toThrow(/road event.*does not match/);
     expect(() =>
       restoreOverworldTravelLogEntry(
         travelEntry(),

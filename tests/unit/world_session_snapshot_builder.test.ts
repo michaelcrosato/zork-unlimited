@@ -48,6 +48,8 @@ function pendingRoadEncounter(): OverworldPendingRoadEncounter {
     to: "Troy",
     route: "NY-7",
     arrivedAt: "Day 1, 08:27",
+    timing:
+      "On the road from Albany to Troy at Day 1, 08:27; resolve this route trouble before doing town business in Troy.",
     event: {
       id: "washout",
       edge: "road:albany:troy",
@@ -111,6 +113,7 @@ describe("overworld session snapshot builder", () => {
       edgeId: "road:albany:troy",
       fromId: "albany",
       toId: "troy",
+      roadEventId: null,
       delayMinutes: 3,
       minutes: 27,
       arrivedAt: 507,

@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 518 -->
+<!-- historical_cycle_count: 519 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,14 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - road_encounter_travel_timing
+
+- Engine surface: road travel snapshots now record `roadEventId`, pending road trouble carries route/timing text plus compact `where`, replay/restore respects no-event travel, and immediate same-edge repeats are suppressed.
+- Loop effect: focused UI/MCP/snapshot/resource-replay regressions prove pending road blockers restore cleanly, explicit no-event travel stays plain, and the Albany-Colonie return trip avoids the just-resolved event.
+- Blind playtest: 25-run `overworld` Codex batch seeds 416-440 all exited 0; clarity 25x4/5, enjoyment 25x4/5, replay 25x true; feedback ledger now has 260 accepted reports.
+- Self-critique: same-road-repeat complaints did not recur, but players still read pending road trouble as after-arrival because location already shows the destination; next lever is a true mid-route pending state.
+- Guard: Codex-aware blind runner prompt fallback, focused affected tests, `npm run health`, `npm run blind:feedback`, and reports `20260708T165436Z`-`20260708T174127Z` seeds 416-440 passed.
 
 ### Cycle result - overworld_quest_time_accounting
 
@@ -126,11 +134,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Blind playtest: `tide_mill` seed 191 reached `ending_saved` at 55/55 with clarity 5/5 and enjoyment 4/5; the compact dialogue-ID complaint did not recur.
 - Self-critique: UI noise is lower; next highest-leverage S1 is that the millboard over-prescribes the optimal solution and weakens discovery despite excellent clarity.
 - Guard: focused dialogue/prep/route regressions, `npm run validate -- tide_mill`, `npm run health`, and report `20260708T095501Z_tide_mill_seed191.md` passed.
-
-### Cycle result - tide_mill_compact_ending_payoff
-
-- Content surface: shortened the clean and returned-takings `tide_mill` rescue endings so compact ending payloads keep the final payoff without mid-word truncation.
-- Loop effect: new compact ending regression drives clean, no-board, returned-takings, and kept-takings rescues, proving distinct compact win text stays under the ending limit.
-- Blind playtest: `tide_mill` seed 187 reached `ending_saved` at 55/55 with clarity 5/5 and enjoyment 4/5; bugs array empty and no ending-truncation complaint recurred.
-- Self-critique: next recurring interface friction is Ives dialogue action IDs like `ask_ask_race`; coin-bag moral-route curiosity remains a content branch lever after UI noise is lower.
-- Guard: focused compact-ending/takings/no-board regressions, `npm run validate -- tide_mill`, `npm run health`, and report `20260708T094117Z_tide_mill_seed187.md` passed.

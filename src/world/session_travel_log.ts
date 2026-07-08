@@ -36,6 +36,21 @@ export type OverworldTravelLogRestoreIndex = {
   roadEventsByEdgeId: ReadonlyMap<string, OverworldRoadEvent>;
 };
 
+export function roadEventForTravelLogSnapshot(
+  entry: TravelLogEntrySnapshot,
+  indexes: Pick<OverworldTravelLogRestoreIndex, "roadEventsByEdgeId">,
+): OverworldRoadEvent | null {
+  const manifestEvent = indexes.roadEventsByEdgeId.get(entry.edgeId) ?? null;
+  if (entry.roadEventId === undefined) return manifestEvent;
+  if (entry.roadEventId === null) return null;
+  if (!manifestEvent || manifestEvent.id !== entry.roadEventId) {
+    throw new Error(
+      `Overworld session snapshot travel road event "${entry.roadEventId}" does not match the world.`,
+    );
+  }
+  return manifestEvent;
+}
+
 export function applyOverworldTravelLeg(
   from: OverworldNode,
   to: OverworldNode,
@@ -135,7 +150,7 @@ export function restoreOverworldTravelLogEntry(
     suppliesAfter: entry.suppliesAfter,
     fatigueGained: entry.fatigueGained,
     fatigueAfter: entry.fatigueAfter,
-    roadEvent: indexes.roadEventsByEdgeId.get(entry.edgeId) ?? null,
+    roadEvent: roadEventForTravelLogSnapshot(entry, indexes),
   };
 }
 

@@ -238,6 +238,9 @@ describe("OverworldSession", () => {
       from: "Albany city",
       to: "Colonie town",
     });
+    expect(after.pendingRoadEncounter?.timing).toBe(
+      `On the road from Albany city to Colonie town at ${after.pendingRoadEncounter?.arrivedAt}; resolve this route trouble before doing town business in Colonie town.`,
+    );
     expect(after.pendingRoadEncounter?.options.map((option) => option.strategy)).toEqual([
       "cautious_scout",
       "assist_travelers",
@@ -283,9 +286,18 @@ describe("OverworldSession", () => {
       kind: "road",
       title: `${option!.label}: ${encounter!.event.title}`,
     });
+    expect(after.journal[0]?.text).toContain("On the road from Albany city to Colonie town");
     expect(session.compactView()).toEqual(compactOverworldView(after));
     expect(after.regionRenown[arrived.current.region]).toBe(option!.renownGained);
-    expect(() => session.travel(after.exits[0]!.id)).not.toThrow();
+    const returnRoad = after.exits.find((candidate) => candidate.destination.id === "albany_city");
+    expect(returnRoad).toBeDefined();
+    const returned = session.travel(returnRoad!.id);
+    const returnedView = session.view();
+    expect(returned.edgeId).toBe(road!.id);
+    expect(returned.roadEvent).toBeNull();
+    expect(returnedView.pendingRoadEncounter).toBeNull();
+    expect(returnedView.log[0]?.roadEvent).toBeNull();
+    expect(session.snapshot().travelLog[0]?.roadEventId).toBeNull();
   });
 
   it("round-trips stateful sessions through content-bound snapshots", () => {
@@ -313,6 +325,7 @@ describe("OverworldSession", () => {
       edgeId: road!.id,
       fromId: start.current.id,
       toId: road!.destination.id,
+      roadEventId: before.log[0]!.roadEvent?.id,
       minutes: before.log[0]!.minutes,
       arrivedAt: before.log[0]!.arrivedAt,
     });
@@ -390,6 +403,7 @@ describe("OverworldSession", () => {
       typeof session.snapshot
     >;
     tamperedTravelLogSnapshot.travelLog[0]!.edgeId = "missing_road";
+    delete tamperedTravelLogSnapshot.travelLog[0]!.roadEventId;
     expect(() => OverworldSession.restore(world, tamperedTravelLogSnapshot)).toThrow(
       /unknown travel road/i,
     );
@@ -414,7 +428,7 @@ describe("OverworldSession", () => {
     expect(view.discovered.length).toBeGreaterThan(24);
     const compact = compactOverworldView(view);
     expect(session.compactView()).toEqual(compact);
-    expect(compact.v).toBe(11);
+    expect(compact.v).toBe(12);
     expect(compact.hidden).toEqual([
       view.hiddenAreaCount,
       view.hiddenJobCount,
@@ -853,6 +867,8 @@ describe("OverworldSession", () => {
       ],
       pendingRoadEncounter: {
         ...pendingRoadEncounter,
+        from: longLabel,
+        to: longLabel,
         event: {
           ...pendingRoadEncounter.event,
           risk: longRisk as typeof pendingRoadEncounter.event.risk,
@@ -871,6 +887,8 @@ describe("OverworldSession", () => {
     expect(compact.events[0]?.[1]).toHaveLength(OVERWORLD_COMPACT_TITLE_CHAR_LIMIT);
     expect(compact.journal?.[0]?.[1]).toHaveLength(OVERWORLD_COMPACT_TITLE_CHAR_LIMIT);
     expect(compact.pending_road?.event[1]).toHaveLength(OVERWORLD_COMPACT_RISK_CHAR_LIMIT);
+    expect(compact.pending_road?.where[0]).toHaveLength(OVERWORLD_COMPACT_LABEL_CHAR_LIMIT);
+    expect(compact.pending_road?.where[1]).toHaveLength(OVERWORLD_COMPACT_LABEL_CHAR_LIMIT);
     expect(compact.renown?.[0]?.[0]).toHaveLength(OVERWORLD_COMPACT_LABEL_CHAR_LIMIT);
     expect(compact.world).toMatch(/\.\.\.\(\+\d+ chars\)$/);
   });

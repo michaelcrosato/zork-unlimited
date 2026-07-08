@@ -297,7 +297,6 @@ if [[ "\${1:-}" == exec || "\${1:-}" == e || "\${1:-}" == review ]]; then
     unset "args[\$last_index]"
   fi
   exec "$REAL_CODEX" "\$sub" "\${args[@]}" \\
-    -c 'features.tool_search_always_defer_mcp_tools=true' \\
     -c 'mcp_servers.adventureforge.command="$CODEX_MCP_CMD"' \\
     -c 'mcp_servers.adventureforge.args=$CODEX_MCP_ARGS_TOML' \\
     -c 'mcp_servers.adventureforge.startup_timeout_sec=20' \\
@@ -353,9 +352,9 @@ fi
 # no game source, and (2) every file/shell/web tool is hard-DISALLOWED (a deny that
 # overrides bypassPermissions). bypassPermissions makes the MCP tool calls run
 # unattended in headless mode; --strict-mcp-config drops any global MCP servers so
-# only adventureforge is reachable. ToolSearch is left available because the
-# adventureforge tools are deferred and must be loaded with it first. The prompt is
-# delivered on stdin so the variadic --disallowedTools cannot swallow it.
+# only adventureforge is reachable. ToolSearch is left available for clients that
+# defer MCP tools, but the prompts also allow direct adventureforge tool calls.
+# The prompt is delivered on stdin so the variadic --disallowedTools cannot swallow it.
 set +e
 printf '%s' "$PROMPT" | ( cd "$WORK" && timeout "$TIMEOUT" claude \
   --print \

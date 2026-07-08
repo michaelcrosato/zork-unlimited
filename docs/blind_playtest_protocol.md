@@ -35,7 +35,9 @@ before "make ONE improvement" — and its findings are a primary input to the fi
    `claude -p`, or `codex exec` in a clean working context. Hand it _only_ the
    prompt template below. Never paste in design notes, the YAML, scene ids, or the
    solution. The subagent reaches the game **only** through the
-   `mcp__adventureforge__*` MCP tools (discoverable via ToolSearch).
+   `mcp__adventureforge__*` MCP tools (directly callable when the runner exposes
+   them; one startup ToolSearch fallback is allowed for clients that expose MCP
+   tools through discovery instead of the active tool list).
    The packaged implementation of this isolation is `npm run blind`
    (blind-tester/run.sh: isolated temp cwd, hard-disallowed file/shell/web tools,
    automatic report save + verification). Its default run plays the core-game
@@ -80,12 +82,13 @@ game and must play it BLIND — like a first-time player who only sees what the 
 shows you.
 
 STRICT RULES:
-- Play ONLY through the MCP tools named `mcp__adventureforge__*`. Find their schemas
-  with ToolSearch: "select:mcp__adventureforge__start_world_quest,mcp__adventureforge__step_action,mcp__adventureforge__get_observation,mcp__adventureforge__list_legal_actions,mcp__adventureforge__get_state,mcp__adventureforge__get_transcript".
-- If that exact selector returns zero tools or no matches, make one fallback
-  ToolSearch query for "adventureforge start_world_quest list_legal_actions
-  step_action get_state get_transcript", then continue only with the loaded
-  `mcp__adventureforge__*` tools.
+- Play ONLY through the MCP tools named `mcp__adventureforge__*` (or
+  `adventureforge/*` in Codex logs). Your first game action must start
+  AdventureForge with `mcp__adventureforge__start_world_quest`. If that direct
+  start tool is not visible in the active tool list, call ToolSearch exactly once
+  for AdventureForge start tools, then immediately use the returned start tool.
+  Do not claim the tool is unavailable unless both the direct tool is unavailable
+  and the one ToolSearch fallback exposes no AdventureForge start tool.
 - DO NOT read, open, grep, or cat ANY repo files — especially nothing under
   content/, src/, ui/, or tests/. No peeking at the YAML or the solution. Your only
   window into the game is the MCP tool responses.

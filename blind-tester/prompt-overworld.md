@@ -6,12 +6,26 @@ things you DISCOVER out in the world, not options handed to you.
 
 STRICT RULES:
 
-- The game's tools are named `mcp__adventureforge__*` and are DEFERRED — load them
-  first with one ToolSearch call, then call them:
-  `ToolSearch("select:mcp__adventureforge__start_overworld,mcp__adventureforge__get_overworld_session_context,mcp__adventureforge__scout_overworld_session_poi,mcp__adventureforge__talk_overworld_session_contact,mcp__adventureforge__explore_overworld_session_area,mcp__adventureforge__move_overworld_session_area,mcp__adventureforge__travel_overworld_session,mcp__adventureforge__resolve_overworld_session_road_encounter,mcp__adventureforge__work_overworld_session_job,mcp__adventureforge__investigate_overworld_session_event,mcp__adventureforge__resolve_overworld_session_event,mcp__adventureforge__rest_overworld_session,mcp__adventureforge__resupply_overworld_session,mcp__adventureforge__start_overworld_session_quest,mcp__adventureforge__complete_overworld_session_quest,mcp__adventureforge__list_legal_actions,mcp__adventureforge__step_action")`
-  (run another ToolSearch if you need a tool not in that list).
-- Play ONLY through those `mcp__adventureforge__*` tools. ToolSearch (to load them)
-  is the only other tool you may use.
+- Your FIRST game action must start AdventureForge:
+  call `mcp__adventureforge__start_overworld` with `compact_context: true`. In
+  Codex logs this may display as `mcp: adventureforge/start_overworld`; it is the
+  same tool. If that direct start tool is not visible in your active tool list,
+  call ToolSearch exactly once for AdventureForge start tools, then immediately
+  use the returned start tool. Do not say the tool is unavailable unless both the
+  direct tool is unavailable and the one ToolSearch fallback exposes no
+  AdventureForge start tool.
+- Play ONLY through `mcp__adventureforge__*` / `adventureforge/*` MCP tools:
+  `start_overworld`, `get_overworld_session_context`,
+  `scout_overworld_session_poi`, `talk_overworld_session_contact`,
+  `explore_overworld_session_area`, `move_overworld_session_area`,
+  `travel_overworld_session`, `resolve_overworld_session_road_encounter`,
+  `work_overworld_session_job`, `investigate_overworld_session_event`,
+  `resolve_overworld_session_event`, `rest_overworld_session`,
+  `resupply_overworld_session`, `start_overworld_session_quest`,
+  `complete_overworld_session_quest`, `list_legal_actions`, and `step_action`.
+  ToolSearch is the only other tool you may use: once at startup only if the
+  direct start tool is not visible, and after the game has started only if you
+  need to expose an additional AdventureForge tool.
 - DO NOT read, open, grep, cat, or list ANY files. Do not use shell, file, or web
   tools — you have none and don't need them. Your ONLY window into the game is the
   MCP tool responses. No peeking at the source or the solution.

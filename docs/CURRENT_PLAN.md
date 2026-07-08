@@ -6,47 +6,53 @@ implementation subagent reads ONLY this doc and the files it names. Keep it
 current, terse, dated, and under ~60 lines — completed work belongs in git
 history and `docs/DECISION_LOG.md`, not here.
 
-## Cycle: 2026-07-08 - Road Encounter Travel Timing
+## Cycle: 2026-07-08 - True Mid-Route Road Interruptions
 
 ## Synthesis
 
-Quest completion time accounting shipped. Completed world quests now spend
-deterministic overworld minutes from quest-area travel plus marquee quest renown;
-`wolf_winter` spends 139 minutes and the journal says so. Focused lifecycle,
-UI/MCP, local-journal, and resource-replay tests pin it.
+Road encounter timing shipped as a first pass. Pending road trouble now carries
+route/timing text, compact `pending_road.where`, snapshot `roadEventId` proof,
+resource replay integrity, and immediate same-edge repeat suppression on the
+Albany-Colonie loop. The Codex blind runner now injects AdventureForge MCP for
+Codex and allows one ToolSearch fallback when direct tools are not surfaced.
 
-Fresh-game Codex seeds 391-415 all exited 0; clarity 24x4/5 + 1x3/5, enjoyment
-23x4/5 + 2x3/5, replay 23x true / 2x false. The ledger now has 235 accepted
-reports, with no fresh zero-overworld-time complaint.
+Fresh-game Codex seeds 416-440 all exited 0; clarity 25x4/5, enjoyment 25x4/5,
+replay 25x true. The ledger now has 260 accepted reports. No fresh same-road
+repeat complaint appeared, but the dominant fresh/common issue is still that
+road trouble feels like it fires after arrival because the session is already
+located in the destination town while pending.
 
-Newest issues: road encounters appear after arrival, the same Albany-Colonie
-road event repeats quickly, completed content remains unclearly listed, compact
-journal suffixes look hash-like, and nearby towns still feel templated. Keep one
-benchmark quest; do not start a second quest or touch CYOA/parser.
+Newest issues: true road pending state, completed quest/event/job status still
+listed unclearly, generic civic overworld texture, abrupt Albany-to-Wolf-Winter
+tone bridge, compact journal hash/truncation, and remote discovered jobs being
+hard to review. The updated goal is broader starting-area/open-world depth, but
+keep strengthening this same benchmark slice.
 
 ## Chosen Move
 
-Make road encounters read and behave as during-travel interruptions, not
-after-arrival town blockers, and stop the same road event from immediately
-repeating on the short Albany-Colonie return loop.
+Make road encounters truly occupy a mid-route interruption state: while
+`pending_road` exists, the compact/full context should read as being on the road
+between origin and destination, town actions remain blocked, and arrival fiction
+should land only after resolution.
 
-- Target `src/world/session_travel_log.ts`, `src/world/session_road_encounters.ts`,
-  `src/world/session_road_travel.ts`, compact/view shaping, and focused tests.
+- Target `src/world/session_road_travel.ts`, `src/world/session_road_encounters.ts`,
+  context/compact view shaping, snapshot restore/replay, and focused UI/MCP
+  tests.
 - Keep deterministic seeded-free overworld behavior; no clocks or `Math.random`.
-- Prefer a narrow state/prose fix: frame the event as route trouble encountered
-  while traveling, and suppress immediate same-edge repeats after resolution.
-- Preserve snapshot restore integrity; update replay/proof tests honestly if the
-  pending/resolved road model changes.
+- Prefer the smallest state model that makes the player's location/timing
+  truthful; avoid a second quest or broad map scaffolding.
+- Preserve snapshot restore integrity and compact payload limits.
 
 ## Acceptance
 
-1. Focused tests prove Albany-Colonie road trouble is framed as a travel
-   interruption and blocks town actions only until resolved.
-2. Focused tests prove resolving a road event suppresses the same edge event on
-   the immediate return trip.
+1. Focused tests prove a pending Albany-Colonie road encounter reports the player
+   as on the route, not simply arrived in Colonie.
+2. Focused tests prove resolving the encounter produces the destination-arrival
+   beat and then restores normal town actions.
 3. `npm run health` passes.
 4. Run a 25-seed fresh-game `npm run blind` batch, regenerate
-   `docs/BLIND_FEEDBACK_LEDGER.md`, and commit only after reports verify.
+   `docs/BLIND_FEEDBACK_LEDGER.md`, and confirm the after-arrival complaint drops
+   before committing.
 
 ## Deferred Levers
 
@@ -54,6 +60,7 @@ repeating on the short Albany-Colonie return loop.
 - Colonie and nearby towns still feel templated after Albany.
 - Compact-view polish: stale/hash-like artifacts and clearer completed-state
   labels.
-- Tool-surface blind reports sometimes miss local area/job/site actions.
+- Albany-to-Wolf-Winter bridge still needs a stronger genre/fiction handoff.
+- Remote discovered jobs need a review surface outside their current area.
 - Tide-Mill levers still open: tactical saboteur branch, coin-bag consequence,
   compact stale-ref cleanup.

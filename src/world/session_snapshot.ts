@@ -31,6 +31,7 @@ export type TravelLogEntrySnapshot = {
   edgeId: string;
   fromId: string;
   toId: string;
+  roadEventId?: string | null | undefined;
   delayMinutes: number;
   minutes: number;
   arrivedAt: number;
@@ -45,6 +46,7 @@ const TravelLogEntrySnapshotSchema = z
     edgeId: z.string().min(1),
     fromId: z.string().min(1),
     toId: z.string().min(1),
+    roadEventId: z.string().min(1).nullable().optional(),
     delayMinutes: z.number().int().nonnegative(),
     minutes: z.number().int().nonnegative(),
     arrivedAt: z.number().int().nonnegative(),
@@ -62,6 +64,7 @@ export type OverworldPendingRoadEncounter = {
   to: string;
   route: string;
   arrivedAt: string;
+  timing: string;
   event: OverworldRoadEvent;
   options: OverworldRoadEncounterOption[];
 };
@@ -215,6 +218,7 @@ export function snapshotTravelLogEntry(entry: TravelLogEntry): TravelLogEntrySna
     edgeId: entry.edgeId,
     fromId: entry.fromId,
     toId: entry.toId,
+    roadEventId: entry.roadEvent?.id ?? null,
     delayMinutes: entry.delayMinutes,
     minutes: entry.minutes,
     arrivedAt: entry.arrivedAt,

@@ -46,6 +46,13 @@ export type OverworldRecordedRoadTravelArrival = OverworldRecordedTravelLeg & {
   stateChanged: true;
 };
 
+function suppressImmediateRepeatRoadEvent(
+  edgeId: string,
+  travelLog: readonly OverworldRecordedTravelLeg["entry"][],
+): boolean {
+  return travelLog[0]?.edgeId === edgeId;
+}
+
 export function applyOverworldSessionRoadEncounter(
   state: OverworldSessionRoadEncounterState,
   strategy: OverworldRoadEncounterStrategy,
@@ -72,7 +79,11 @@ export function applyOverworldSessionRoadTravel(
   }
   const edge = state.roadExitsByTownAndId.get(state.currentId)?.get(edgeId);
   if (!edge) throw new Error("That road is not reachable from here.");
-  const roadEvent = state.roadEventsByEdgeId.get(edge.id) ?? null;
+  const manifestRoadEvent = state.roadEventsByEdgeId.get(edge.id) ?? null;
+  const roadEvent =
+    manifestRoadEvent && !suppressImmediateRepeatRoadEvent(edge.id, state.travelLog)
+      ? manifestRoadEvent
+      : null;
   const applied = applyOverworldTravelLeg(state.current, edge.destination, edge, roadEvent, {
     minutes: state.minutes,
     fatigue: state.fatigue,

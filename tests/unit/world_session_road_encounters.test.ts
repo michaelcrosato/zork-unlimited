@@ -117,6 +117,8 @@ describe("overworld session road encounters", () => {
       to: "Colonie",
       route: "Test Road",
       arrivedAt: "Day 1, 09:00",
+      timing:
+        "On the road from Albany to Colonie at Day 1, 09:00; resolve this route trouble before doing town business in Colonie.",
       event: roadEvent(),
     });
     expect(pending.options.map((option) => option.strategy)).toEqual([
@@ -151,6 +153,8 @@ describe("overworld session road encounters", () => {
       to: "Colonie",
       route: "Test Road",
       arrivedAt: "Day 1, 09:00",
+      timing:
+        "On the road from Albany to Colonie at Day 1, 09:00; resolve this route trouble before doing town business in Colonie.",
       event: roadEvent(),
     });
     expect(restored?.options.map((option) => option.strategy)).toEqual([
@@ -200,6 +204,18 @@ describe("overworld session road encounters", () => {
         { ...indexes, latestTravel: null },
       ),
     ).toThrow(/pending road encounter has no travel log/);
+    expect(() =>
+      restoreOverworldPendingRoadEncounter(
+        { edgeId: "road:a-b" },
+        { ...indexes, latestTravel: travelEntry({ roadEventId: null }) },
+      ),
+    ).toThrow(/did not fire/);
+    expect(() =>
+      restoreOverworldPendingRoadEncounter(
+        { edgeId: "road:a-b" },
+        { ...indexes, latestTravel: travelEntry({ roadEventId: "other_event" }) },
+      ),
+    ).toThrow(/does not match latest travel road event/);
     expect(() =>
       restoreOverworldPendingRoadEncounter(
         { edgeId: "road:b-c" },
@@ -260,6 +276,7 @@ describe("overworld session road encounters", () => {
       },
     });
     expect(resolution.result.entry.text).toContain("Lacking supplies");
+    expect(resolution.result.entry.text).toContain("On the road from TOWN_A to TOWN_B");
   });
 
   it("resolves press-on encounters without supply spend or renown", () => {

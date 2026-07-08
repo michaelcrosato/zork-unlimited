@@ -16,7 +16,7 @@ export const OVERWORLD_COMPACT_COMPLETED_ARC_LIMIT = 16;
 export const OVERWORLD_COMPACT_LABEL_CHAR_LIMIT = 96;
 export const OVERWORLD_COMPACT_TITLE_CHAR_LIMIT = 140;
 export const OVERWORLD_COMPACT_RISK_CHAR_LIMIT = 160;
-export const OVERWORLD_COMPACT_VIEW_VERSION = 11 as const;
+export const OVERWORLD_COMPACT_VIEW_VERSION = 12 as const;
 
 export type OverworldCompactRef = readonly [id: string, name: string];
 export type OverworldCompactQuestRef = readonly [id: string, title: string, areaId: string];
@@ -68,6 +68,7 @@ export type OverworldCompactRoadEncounterOption = readonly [
 export type OverworldCompactRoadEncounter = {
   id: string;
   edge: string;
+  where: readonly [from: string, to: string, at: string];
   event: readonly [id: string, risk: string];
   options: readonly OverworldCompactRoadEncounterOption[];
 };
@@ -233,7 +234,7 @@ export const OVERWORLD_COMPACT_LEGEND = {
   quests:
     "[[quest_id, title, anchor_area_id], ...] discovered quest leads; you must be IN anchor_area_id (compare to here[3]; walk there via area_routes) before start_overworld_session_quest",
   pending_road:
-    "{id, edge: road_id, event: [road_event_id, risk_text], options: [[strategy, minutes, supplies_cost, fatigue_gained, renown_gained], ...]} unresolved road encounter; resolve it before traveling on",
+    "{id, edge: road_id, where: [from_town, to_town, at_time], event: [road_event_id, risk_text], options: [[strategy, minutes, supplies_cost, fatigue_gained, renown_gained], ...]} unresolved on-route encounter; resolve it before town actions or more travel",
   journal: "[[kind, title, 'Day N, HH:MM'], ...] recent journal entries",
   travel_log:
     "[[road_id, from_town_id, to_town_id, minutes, supplies_used, fatigue_gained, road_event_id|null], ...] recent trips",
@@ -466,6 +467,11 @@ export function compactPendingRoad(
   return {
     id: encounter.id,
     edge: encounter.edgeId,
+    where: [
+      compactOverworldLabel(encounter.from),
+      compactOverworldLabel(encounter.to),
+      encounter.arrivedAt,
+    ],
     event: [encounter.event.id, compactOverworldRisk(encounter.event.risk)],
     options,
   };
@@ -640,6 +646,7 @@ export function cloneOverworldCompactView(view: OverworldCompactView): Overworld
   if (view.pending_road) {
     clone.pending_road = {
       ...view.pending_road,
+      where: [...view.pending_road.where] as readonly [from: string, to: string, at: string],
       event: [...view.pending_road.event] as readonly [id: string, risk: string],
       options: cloneTupleList(view.pending_road.options),
     };

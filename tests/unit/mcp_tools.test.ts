@@ -833,6 +833,9 @@ describe("MCP tools — validate / load (§9.4)", () => {
       from: "Albany city",
       to: "Colonie town",
     });
+    expect(traveled.observation.pendingRoadEncounter?.timing).toBe(
+      `On the road from Albany city to Colonie town at ${traveled.observation.pendingRoadEncounter?.arrivedAt}; resolve this route trouble before doing town business in Colonie town.`,
+    );
     expect(
       traveled.observation.pendingRoadEncounter?.options.map((option) => option.strategy),
     ).toEqual(["cautious_scout", "assist_travelers", "press_on"]);
@@ -871,6 +874,9 @@ describe("MCP tools — validate / load (§9.4)", () => {
       renownGained: 1,
     });
     expect(roadEncounter.result.entry.kind).toBe("road");
+    expect(roadEncounter.result.entry.text).toContain(
+      "On the road from Albany city to Colonie town",
+    );
     expect(roadEncounter.observation.pendingRoadEncounter).toBeNull();
     expect(roadEncounter.observation.journal[0]?.kind).toBe("road");
 
@@ -1129,7 +1135,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(compact.snapshot_hash).toBe(started.snapshot_hash);
     expect(compactStarted.snapshot_hash).toMatch(PUBLIC_OVERWORLD_SNAPSHOT_HASH_RE);
     expect(defaultStarted.snapshot_hash).toMatch(PUBLIC_OVERWORLD_SNAPSHOT_HASH_RE);
-    expect(defaultStarted.context.v).toBe(11);
+    expect(defaultStarted.context.v).toBe(12);
     expect("observation" in defaultStarted).toBe(false);
     expect("world" in defaultStarted.context).toBe(false);
     expect("route_options" in defaultStarted.context).toBe(false);
@@ -1303,7 +1309,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
       session_id: started.session_id,
       include_ids: true,
     });
-    expect(compact.context.v).toBe(11);
+    expect(compact.context.v).toBe(12);
     expect(compact.context.here).toEqual([
       full.current.id,
       full.current.name,
@@ -1456,6 +1462,11 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect("pending_road" in traveledCompact).toBe(true);
     expect(traveledCompact.pending_road).toMatchObject({
       edge: road!.id,
+      where: [
+        traveledFull.pendingRoadEncounter!.from,
+        traveledFull.pendingRoadEncounter!.to,
+        traveledFull.pendingRoadEncounter!.arrivedAt,
+      ],
       event: [
         traveledFull.pendingRoadEncounter!.event.id,
         traveledFull.pendingRoadEncounter!.event.risk,
@@ -1664,6 +1675,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
     const fullExportedSnapshotHash = hashState(exported.snapshot);
     expect(fullExportedSnapshotHash).toMatch(/^[0-9a-f]{64}$/);
     expect(exported.snapshot_hash).toBe(publicOverworldSnapshotHash(fullExportedSnapshotHash));
+    expect(exported.snapshot.travelLog[0]?.roadEventId).toBe(before.log[0]?.roadEvent?.id ?? null);
     expect(JSON.stringify(staleExport).length).toBeLessThan(JSON.stringify(exported).length);
     const unchangedExport = a.export_overworld_session({
       session_id: started.session_id,
@@ -1730,6 +1742,11 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(compactRestored.snapshot_hash).toBe(exported.snapshot_hash);
     expect(compactRestored.context.here[0]).toBe(before.current.id);
     expect(compactRestored.context.pending_road?.edge).toBe(before.pendingRoadEncounter?.edgeId);
+    expect(compactRestored.context.pending_road?.where).toEqual([
+      before.pendingRoadEncounter?.from,
+      before.pendingRoadEncounter?.to,
+      before.pendingRoadEncounter?.arrivedAt,
+    ]);
     expect("observation" in compactRestored).toBe(false);
     expect(() =>
       a.travel_overworld_session({

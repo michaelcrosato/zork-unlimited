@@ -203,6 +203,29 @@ describe("overworld snapshot resource replay", () => {
     expect([...pendingResolution.requiredKeys]).toEqual([]);
   });
 
+  it("treats explicit null road event ids as suppressed plain travel", () => {
+    const snapshotValue = snapshot([travelEntry({ roadEventId: null })]);
+    const travelTimeline = timeline(snapshotValue);
+    const roadJournal = roadJournalResolutionIndex(
+      sources([roadEvent()]),
+      { roadJournalEntries: [] },
+      travelTimeline,
+      null,
+    );
+
+    expect([...roadJournal.requiredKeys]).toEqual([]);
+    expect(() =>
+      assertSnapshotResourceReplay(
+        snapshotValue,
+        sources([roadEvent()]),
+        travelTimeline,
+        roadJournal,
+        { entries: [] },
+        { entries: [] },
+      ),
+    ).not.toThrow();
+  });
+
   it("replays road encounter and rest service costs in chronological order", () => {
     const snapshotValue = snapshot([travelEntry({ fatigueGained: 3, fatigueAfter: 3 })], {
       minutes: 770,

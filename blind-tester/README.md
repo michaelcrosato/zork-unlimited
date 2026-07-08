@@ -174,9 +174,8 @@ BLIND_AGENT_CMD='gemini -p' npm run blind
 ```
 
 When `BLIND_AGENT_CMD` invokes `codex`, the runner temporarily shadows `codex` on
-`PATH` and injects the AdventureForge MCP server with Codex `-c` overrides, plus
-the deferred-MCP feature flag this Codex CLI line needs. No user-level
-`codex mcp add` or project trust is required for blind runs.
+`PATH` and injects the AdventureForge MCP server with Codex `-c` overrides. No
+user-level `codex mcp add` or project trust is required for blind runs.
 
 **Future — local LLM.** This game is small and its action space is structured, so a
 local model (served via an MCP-capable runner) may be able to play and critique it
