@@ -119,10 +119,6 @@ describe("Tide-Mill head-race reconnaissance", () => {
           id: "use_billhook_on_choked_sluice",
           command: "cut choked head-race with billhook",
         }),
-      ]),
-    );
-    expect(actionRows(api, started.session_id)).not.toEqual(
-      expect.arrayContaining([
         expect.objectContaining({ id: "use_choked_sluice", command: "clear choked head-race" }),
       ]),
     );

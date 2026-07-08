@@ -43,6 +43,10 @@ function narration(events: GameEvent[]): string {
 }
 
 function useOnce(state: GameState, action: RpgAction): string {
+  return narration(useOnceResult(state, action).events);
+}
+
+function useOnceResult(state: GameState, action: RpgAction) {
   const matches = enumerateRpgActions(index, state).filter((option) =>
     actionEquals(option.action, action),
   );
@@ -50,7 +54,7 @@ function useOnce(state: GameState, action: RpgAction): string {
 
   const result = step(state, action);
   expect(result.ok).toBe(true);
-  return narration(result.events);
+  return result;
 }
 
 describe("Tide-Mill second-fault repair narration", () => {
@@ -74,5 +78,16 @@ describe("Tide-Mill second-fault repair narration", () => {
 
     expect(text).toMatch(/both faults are now put right/i);
     expect(text).not.toMatch(/one fault of the two/i);
+  });
+
+  it("keeps the generic head-race alias legal after taking the billhook", () => {
+    const result = useOnceResult(stateAt("head_race", ["billhook"], {}), {
+      type: "USE",
+      target: "choked_sluice",
+    });
+
+    expect(result.state.flags["sluice_clear"]).toBe(true);
+    expect(result.state.vars.score).toBe(10);
+    expect(narration(result.events)).toMatch(/one fault of the two is put right/i);
   });
 });

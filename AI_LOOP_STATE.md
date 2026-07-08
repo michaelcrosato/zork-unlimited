@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 514 -->
+<!-- historical_cycle_count: 515 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,14 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - tide_mill_head_race_alias_stability
+
+- Content surface: kept `tide_mill` billhook-specific Head-Race repair while adding a held-billhook `use_choked_sluice` / `clear choked head-race` alias for action-id continuity.
+- Loop effect: focused regressions now prove pre-billhook checking stays no-progress, post-billhook menus offer both ids, and either repair path scores/fixes the race.
+- Blind playtest: 20-run `tide_mill` Codex batch seeds 321-340 all exited 0 and scored 55/55; clarity 20x5/5, enjoyment 20x4/5, replay 20x false.
+- Self-critique: old-id rejection did not recur; strongest repeated next signals are tactical saboteur texture/continuity, underdeveloped coin-bag branch, and the new broader starting-area/open-world direction.
+- Guard: focused route/alias/graph regressions, `npm run validate -- tide_mill`, `npm run health`, and reports `20260708T135657Z`-`20260708T141239Z` seeds 321-340 passed.
 
 ### Cycle result - tide_mill_billhook_specific_race_action
 
@@ -126,11 +134,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Blind playtest: `tide_mill` seed 169 reached `ending_saved` at 55/55 with clarity 5/5 and enjoyment 4/5; no mechanical faults, but replay desire stayed low.
 - Self-critique: combat fairness is calibrated; next lever is making the flood-hatch and coin-bag temptations feel like meaningful branches instead of obvious trap/flavor options.
 - Guard: focused fairness/takings/dialogue regressions, exhaustive RPG cluster, `npm run validate -- tide_mill`, `npm run health`, and report `20260708T084343Z_tide_mill_seed169.md` passed.
-
-### Cycle result - tide_mill_optional_fork_wording
-
-- Content surface: retuned `tide_mill` post-`gate_up` Wheel-Room/Mill-House compact prose from "one last account" to a clear optional detour if Ives's coin-bag tempts the player.
-- Loop effect: compact regression now pins `down saves the boat now`, `south is a detour`, and no `last account` phrasing while keeping the pocket branch reachable.
-- Blind playtest: `tide_mill` seed 167 reached `ending_saved` at 55/55 with clarity 5/5 and enjoyment 4/5; the required-account wording complaint did not recur.
-- Self-critique: the next real friction is mandatory combat swinginess despite correct prep; secondary recurring issue is dialogue mode looking like a normal room in compact observations.
-- Guard: focused visibility/branch regressions, `npm run validate -- tide_mill`, `npm run health`, and report `20260708T082008Z_tide_mill_seed167.md` passed.

@@ -406,6 +406,34 @@ objects:
             - narrate: "You hook the downstream braid first, as Ives said, and the whole mat begins to move. Cut by cut the weed and drowned bough tear loose, and the held water slides fast down the channel. One fault of the two is put right."
           on_failure:
             - narrate: "The billhook bites and a strip of weed tears free, but the bough twists and jams the cut back on itself. It is coming away; no other tool is missing. Set the blade lower and cut again."
+      - verb: USE
+        target: choked_sluice
+        command_verb: clear
+        conditions: [{ has_item: billhook }, { not_flag: sluice_clear }, { has_flag: pawl_free }]
+        skill_check:
+          skill: craft
+          difficulty: 9
+          on_success:
+            - set_flag: sluice_clear
+            - inc_var: { name: score, by: 10 }
+            - add_journal: "You got water running down the head-race and onto the wheel."
+            - narrate: "You hook the downstream braid first, as Ives said, and the whole mat begins to move. Cut by cut the weed and drowned bough tear loose, and the held water slides fast down the channel. With the pawl already pinned back, both faults are now put right."
+          on_failure:
+            - narrate: "The billhook bites and a strip of weed tears free, but the bough twists and jams the cut back on itself. It is coming away; no other tool is missing. Set the blade lower and cut again."
+      - verb: USE
+        target: choked_sluice
+        command_verb: clear
+        conditions: [{ has_item: billhook }, { not_flag: sluice_clear }, { not_flag: pawl_free }]
+        skill_check:
+          skill: craft
+          difficulty: 9
+          on_success:
+            - set_flag: sluice_clear
+            - inc_var: { name: score, by: 10 }
+            - add_journal: "You got water running down the head-race and onto the wheel."
+            - narrate: "You hook the downstream braid first, as Ives said, and the whole mat begins to move. Cut by cut the weed and drowned bough tear loose, and the held water slides fast down the channel. One fault of the two is put right."
+          on_failure:
+            - narrate: "The billhook bites and a strip of weed tears free, but the bough twists and jams the cut back on itself. It is coming away; no other tool is missing. Set the blade lower and cut again."
 
   - id: brake_pawl
     name: "brake-pawl"
