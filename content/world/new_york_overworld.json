@@ -35908,9 +35908,9 @@
     {
       "id": "road_event_colonie_town__albany_city",
       "edge": "road_colonie_town__albany_city",
-      "title": "I-90 / New York State Thruway road report",
+      "title": "Thruway shoulder flare-up",
       "risk": "low",
-      "summary": "The Colonie town to Albany city leg follows I-90 / New York State Thruway for 5.8 miles; expect truck stops, state police turnouts, and fast-moving freight before arrival."
+      "summary": "Between Albany city and Colonie town, I-90 squeezes past warehouse ramps where a jackknifed box truck and state-police flares narrow the shoulder; scouting, hands-on help, or a hard push all have visible costs."
     },
     {
       "id": "road_event_colonie_town__watervliet_city",

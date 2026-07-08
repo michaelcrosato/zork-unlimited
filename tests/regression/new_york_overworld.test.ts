@@ -72,6 +72,26 @@ describe("New York overworld graph", () => {
     );
   });
 
+  it("hand-authors the Albany-Colonie road event as direction-safe starting-area texture", () => {
+    const albanyExit = overworldEdgesFrom(world, "albany_city").find(
+      (edge) => edge.destination.id === "colonie_town",
+    );
+    const colonieExit = overworldEdgesFrom(world, "colonie_town").find(
+      (edge) => edge.destination.id === "albany_city",
+    );
+    expect(albanyExit).toBeDefined();
+    expect(colonieExit).toBeDefined();
+    expect(colonieExit?.id).toBe(albanyExit?.id);
+
+    const event = world.road_events.find((roadEvent) => roadEvent.edge === albanyExit?.id);
+    expect(event).toBeDefined();
+    expect(event?.title).toBe("Thruway shoulder flare-up");
+    expect(event?.title.toLowerCase()).not.toContain("road report");
+    expect(event?.summary).toContain("Between Albany city and Colonie town");
+    expect(event?.summary).toContain("jackknifed box truck");
+    expect(event?.summary).not.toMatch(/Albany city to Colonie town|Colonie town to Albany city/);
+  });
+
   it("places old quest sources locally instead of exposing all of them at start", () => {
     const local = world.quests.filter((quest) => quest.home === world.start);
     expect(local.length).toBeGreaterThan(0);

@@ -6,48 +6,51 @@ implementation subagent reads ONLY this doc and the files it names. Keep it
 current, terse, dated, and under ~60 lines — completed work belongs in git
 history and `docs/DECISION_LOG.md`, not here.
 
-## Cycle: 2026-07-08 - Directional Road Event Texture
+## Cycle: 2026-07-08 - Starting-Area Action Signposting
 
 ## Synthesis
 
-True mid-route road interruptions shipped. While `pending_road` exists, full and
-compact context now present a route location (`road:<edge_id>`) with no town
-roads/local affordances; resolving the encounter lands the arrival beat and
-restores destination-town actions. Compact overworld context is now v13.
+Albany-Colonie's first road event is now a hand-authored Thruway shoulder
+incident with direction-neutral prose. Focused manifest/UI/MCP tests pin that it
+no longer says "road report" or encodes Colonie->Albany while the player travels
+Albany->Colonie, and full/compact pending-road v13 behavior still holds.
 
-Fresh-game Codex seeds 441-465 all exited 0; clarity 25x4/5, enjoyment 25x4/5,
-replay 25x true. The ledger now has 285 accepted reports. The explicit
-after-arrival road complaint did not recur in the fresh batch.
+Fresh-game Codex seeds 466-490 all exited 0; clarity 25x4/5, enjoyment 25x4/5,
+replay 25x true. The ledger now has 310 accepted reports. Road-direction and
+literal "road report" complaints dropped to 0/25; residual road feedback was
+one vague-road-premise report and one "pending road says arrived" wording report.
 
-Newest issues: several reports now call the Albany-Colonie road event generic or
-directionally awkward ("road report" text can read like the opposite travel
-direction), completed quest/event/job status is still unclearly listed, dialogue
-ids/quotes are noisy, compact journal hash/truncation persists, and the
-Albany-to-Wolf-Winter tone bridge still needs stronger fiction.
+The updated goal is broader: make the starting area and nearby overworld feel
+like a deep open-world slice, not only a quest launcher. In the fresh batch,
+hidden-count/action-discovery friction appeared in 25/25 reports; dialogue
+formatting/action ids appeared in 22/25; compact hash/truncation in 19/25; and
+completed quest/list status in 11/25.
 
 ## Chosen Move
 
-Make early road encounters read as concrete, direction-safe incidents rather than
-generic road reports. The Albany-Colonie road is the priority because it is the
-first-route benchmark path hit by the blind batch.
+Make the opening Albany Civic Center read like a place with natural first moves,
+not a raw hidden-count checklist. Keep this as one focused starting-area
+improvement: stronger fiction around why scouting/talking/exploring exposes
+nearby work, and clearer first-action affordance text where the fresh player
+actually starts.
 
-- Target the New York overworld road-event generation/content surface and focused
-  tests around the Albany-Colonie road event title/summary/resolution text.
+- Target the New York overworld starting view/content surface and focused tests
+  around Albany Civic Center / first local actions.
 - Keep deterministic seeded-free overworld behavior; no clocks or `Math.random`.
-- Prefer direction-neutral or route-relative wording when an edge can be traveled
-  both ways.
-- Avoid broad map scaffolding or a second quest.
+- Prefer fiction-forward prompts over tutorial paragraphs or visible rule prose.
+- Avoid broad map scaffolding, a second quest, or compact-format churn unless it
+  directly supports the first-start read.
 
 ## Acceptance
 
-1. Focused tests prove Albany-Colonie road-event prose no longer says generic
-   "road report" or names the wrong direction for either travel direction.
-2. Focused tests prove the compact/full pending-road and resolution text still
-   preserve the v13 mid-route state.
+1. Focused tests prove Albany's first visible local affordances point players
+   toward concrete scout/talk/explore choices without exposing raw tutorial copy.
+2. Focused tests prove the opening still reveals the same Albany Station Quarter,
+   Wolf-Winter lead, local jobs, and sites through normal deterministic actions.
 3. `npm run health` passes.
 4. Run a 25-seed fresh-game `npm run blind` batch, regenerate
-   `docs/BLIND_FEEDBACK_LEDGER.md`, and confirm road-direction/generic-road
-   complaints drop before committing.
+   `docs/BLIND_FEEDBACK_LEDGER.md`, and confirm hidden-count/first-action
+   friction drops before committing.
 
 ## Deferred Levers
 

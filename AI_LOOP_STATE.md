@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 520 -->
+<!-- historical_cycle_count: 521 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,14 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - directional_road_event_texture
+
+- Content surface: Albany-Colonie's first-road event is now a hand-authored Thruway shoulder incident with direction-neutral prose instead of a generic one-way road report.
+- Loop effect: focused manifest/UI/MCP tests pin the direction-safe event while preserving compact/full v13 mid-route pending-road and arrival resolution behavior.
+- Blind playtest: 25-run `overworld` Codex batch seeds 466-490 all exited 0; clarity 25x4/5, enjoyment 25x4/5, replay 25x true; feedback ledger now has 310 accepted reports.
+- Self-critique: road-direction and literal "road report" complaints dropped to 0/25, with one vague-road-premise report and one residual "arrived" wording report; fresh-start hidden-count/action signposting is now the broadest starting-area issue.
+- Guard: focused affected tests, `npm run health`, `npm run blind:feedback`, and reports `20260708T183739Z`-`20260708T184424Z` seeds 466-490 passed.
 
 ### Cycle result - mid_route_road_interruptions
 
@@ -126,11 +134,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Blind playtest: 20-run `tide_mill` Codex batch seeds 195-214 all reached `ending_saved` at 55/55; clarity was 19x5/5 and 1x4/5, enjoyment 20x4/5, no stuck runs.
 - Self-critique: the hidden-board complaint did not recur; next repeated lever is race/tool order friction plus checklist feel, with all 20 still saying no to replay.
 - Guard: focused compact opening/no-board/ending regressions, `npm run validate -- tide_mill`, `npm run health`, and reports `20260708T102109Z`-`20260708T104018Z` seeds 195-214 passed.
-
-### Cycle result - tide_mill_millboard_discovery_tension
-
-- Content surface: retuned `tide_mill` millboard from exact billhook/crow-bar checklist to a compact operational order, and changed Wheel-Room winch prose to "wind the sea-gate open."
-- Loop effect: compact board regression now proves clue sufficiency without the exact race/pawl tool mapping; tool specificity lives in the shed, object descriptions, and Ives advice.
-- Blind playtest: `tide_mill` seed 193 reached `ending_saved` at 50/55 with clarity 5/5 and enjoyment 4/5; sea-gate wording did not recur, but skipping the board made the 5-point loss feel hidden.
-- Self-critique: discovery is less checklist-driven, but the scored board read needs a stronger up-front affordance or gentler no-board ending tone; compact final score text also needs another look.
-- Guard: focused compact/no-board/dialogue regressions, `npm run validate -- tide_mill`, `npm run health`, and report `20260708T100922Z_tide_mill_seed193.md` passed.
