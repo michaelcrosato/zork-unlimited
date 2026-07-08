@@ -1,0 +1,123 @@
+/**
+ * Wolf-Winter dialogue polish from the fresh-overworld blind batch:
+ * players repeatedly read `ask_ask_wolves` as generated UI and saw the Cade
+ * return line render as nested speaker/quote text. The pack keeps its mechanics,
+ * but its visible topic ids are now authored while old direct routes remain aliases.
+ */
+import { describe, expect, it } from "vitest";
+import { makeStep } from "../../src/core/engine.js";
+import type { GameEvent } from "../../src/core/events.js";
+import type { GameState } from "../../src/core/state.js";
+import type { RpgAction } from "../../src/api/types.js";
+import { createToolApi } from "../../src/mcp/tools.js";
+import {
+  buildRpgRules,
+  enumerateRpgActions,
+  indexRpgPack,
+  initStateForRpgPack,
+} from "../../src/rpg/runner.js";
+import { loadRpgSourceFile } from "../../src/rpg/source.js";
+import { validateRpg } from "../../src/validate/rpg_validator.js";
+
+const loaded = loadRpgSourceFile("content/rpg/quests/wolf_winter.yaml");
+if (!loaded.ok) throw new Error("wolf_winter must compile");
+const pack = loaded.compiled.pack;
+const index = indexRpgPack(pack);
+const rules = buildRpgRules(index);
+const step = makeStep(rules);
+
+type StepResult = { ok: boolean };
+
+function narrations(events: readonly GameEvent[]): string[] {
+  return events
+    .filter(
+      (event): event is Extract<GameEvent, { type: "narration" }> => event.type === "narration",
+    )
+    .map((event) => event.text);
+}
+
+function act(state: GameState, want: Partial<RpgAction> & { type: RpgAction["type"] }): GameState {
+  const match = enumerateRpgActions(index, state).find((option) =>
+    Object.entries(want).every(
+      ([key, value]) => (option.action as Record<string, unknown>)[key] === value,
+    ),
+  );
+  expect(
+    match,
+    `expected ${JSON.stringify(want)} in legal ids [${enumerateRpgActions(index, state)
+      .map((option) => option.id)
+      .join(", ")}]`,
+  ).toBeTruthy();
+  const result = step(state, match!.action);
+  expect(result.ok).toBe(true);
+  if (!result.ok) throw new Error("unreachable");
+  return result.state;
+}
+
+function startCadeDialogue(): GameState {
+  let state = initStateForRpgPack(index, 541);
+  state = act(state, { type: "MOVE", direction: "north" });
+  return act(state, { type: "TALK", npc: "houndsman" });
+}
+
+function legalActionIds(state: GameState): string[] {
+  return enumerateRpgActions(index, state).map((option) => option.id);
+}
+
+describe("Wolf-Winter dialogue surface", () => {
+  it("the pack still validates green", () => {
+    const report = validateRpg(pack);
+    expect(report.ok).toBe(true);
+    expect(report.findings.filter((finding) => finding.severity === "error")).toEqual([]);
+  });
+
+  it("uses authored topic ids instead of doubled ask_ask ids", () => {
+    const state = startCadeDialogue();
+    const ids = legalActionIds(state);
+
+    expect(ids).toEqual(expect.arrayContaining(["ask_wolves", "ask_byre", "ask_leave"]));
+    expect(ids).not.toContain("ask_ask_wolves");
+    expect(ids).not.toContain("ask_ask_byre");
+    expect(ids).not.toContain("ask_leave_cade");
+  });
+
+  it("keeps old MCP action ids as hidden aliases without listing them", () => {
+    const api = createToolApi({ root: process.cwd() });
+    const started = api.start_world_quest({ world_quest_id: "wolf_winter", seed: 541 });
+    const sessionId = started.session_id;
+    const stepAction = (actionId: string): StepResult =>
+      api.step_action({ session_id: sessionId, action_id: actionId }) as unknown as StepResult;
+
+    expect(stepAction("go_north").ok).toBe(true);
+    expect(stepAction("talk_houndsman").ok).toBe(true);
+    const listed = api.list_legal_actions({ session_id: sessionId, compact_actions: false })
+      .actions as { id: string }[];
+    expect(listed.map((action) => action.id)).toContain("ask_wolves");
+    expect(listed.map((action) => action.id)).not.toContain("ask_ask_wolves");
+
+    const result = stepAction("ask_ask_wolves");
+    expect(result.ok).toBe(true);
+  });
+
+  it("offers direct follow-ups and a leave option after Cade gives advice", () => {
+    let state = startCadeDialogue();
+    state = act(state, { type: "ASK", npc: "houndsman", topic: "wolves" });
+
+    const ids = legalActionIds(state);
+    expect(ids).toEqual(expect.arrayContaining(["ask_byre", "ask_leave"]));
+    expect(ids).not.toContain("ask_ask_byre");
+  });
+
+  it("returns to Cade's root menu without nested speaker or quote text", () => {
+    let state = startCadeDialogue();
+    state = act(state, { type: "ASK", npc: "houndsman", topic: "wolves" });
+    const back = step(state, { type: "ASK", npc: "houndsman", topic: "wolves_back" });
+
+    expect(back.ok).toBe(true);
+    if (!back.ok) throw new Error("unreachable");
+    const text = narrations(back.events).join(" ");
+    expect(text).toContain('old Cade the houndsman: "Ask what else you need');
+    expect(text).not.toContain("Old Cade shifts");
+    expect(text).not.toMatch(/: "Old Cade\b/);
+  });
+});

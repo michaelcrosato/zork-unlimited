@@ -219,6 +219,7 @@ function relabelTopic(
 ): DialogueTopic {
   return {
     id: r(t.id),
+    ...(t.aliases !== undefined ? { aliases: t.aliases.map((alias) => r(alias)) } : {}),
     prompt: t.prompt,
     ...(t.conditions !== undefined
       ? { conditions: t.conditions.map((c) => relabelCondition(c, r, rv)) }

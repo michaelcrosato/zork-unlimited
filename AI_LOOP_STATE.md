@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 523 -->
+<!-- historical_cycle_count: 524 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,14 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - wolf_winter_dialogue_surface
+
+- Content/engine surface: Wolf-Winter Cade topics now expose authored ids (`ask_wolves`, `ask_byre`, `ask_leave`), old doubled ids remain hidden MCP aliases, and Cade's return line is pure spoken text with direct follow-ups/leave.
+- Loop effect: regressions pin no visible `ask_ask_wolves`/`ask_ask_byre`, stale `ask_ask_wolves` still steps through MCP, and root return narration no longer nests speaker/quote prose.
+- Blind playtest: 25-run `overworld` Codex batch seeds 541-565 all exited 0; clarity 25x4/5, enjoyment 25x4/5, replay 25x true; feedback ledger now has 385 accepted reports.
+- Self-critique: dialogue-id/quote complaints fell to 0/25 targeted repeats; off-area discovered jobs feeling lost, hidden-count direction, compact hash truncation, and Albany-to-Wolf-Winter tone remain loud.
+- Guard: focused affected tests, `npm run health`, `npm run blind:feedback`, and reports `20260708T195405Z`-`20260708T200030Z` seeds 541-565 passed.
 
 ### Cycle result - completed_state_active_lists
 
@@ -126,11 +134,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Blind playtest: `tide_mill` seed 239 reached `ending_saved` at 55/55 with clarity 5/5 and enjoyment 4/5; no coin-bag meta complaint recurred.
 - Self-critique: the next S1 is the millboard's race-first wording clashing with needing shed tools first; flood-hatch temptation also remains noisy but intentional.
 - Guard: focused takings/ending regressions, `npm run validate -- tide_mill`, `npm run health`, and report `20260708T114929Z_tide_mill_seed239.md` passed.
-
-### Cycle result - tide_mill_dialogue_action_stability
-
-- Content surface: renamed Ives follow-up dialogue topic ids to stable `race`/`pawl`/`yard`/`leave` ids across all advice nodes instead of contextual `race_to_pawl` shapes.
-- Loop effect: focused dialogue regression now proves `ask_pawl`/`ask_yard` remain valid after a prior topic while rewards, flags, and direct urgent follow-ups stay unchanged.
-- Blind playtest: `tide_mill` seed 237 reached `ending_saved` at 55/55 with clarity 5/5 and enjoyment 4/5; no rejected actions and the dialogue-id complaint did not recur.
-- Self-critique: dialogue friction is closed; next repeated content issue is the late coin-bag temptation reading too meta/blunt, with the overall route still very guided.
-- Guard: focused dialogue/route regressions, `npm run validate -- tide_mill`, `npm run health`, and report `20260708T113742Z_tide_mill_seed237.md` passed.

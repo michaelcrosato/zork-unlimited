@@ -12,7 +12,7 @@ import type { Effect } from "../core/effects.js";
 import type { RpgAction } from "../api/types.js";
 import type { Resolution } from "../core/engine.js";
 import type { GameState } from "../core/state.js";
-import type { Interaction } from "./schema.js";
+import type { DialogueTopic, Interaction } from "./schema.js";
 import {
   type RpgModelIndex,
   activeDialogue,
@@ -42,6 +42,10 @@ export type RpgActionOption = {
   action: RpgAction;
   skill_check?: { skill: string; difficulty: number; die: string };
 };
+
+function dialogueTopicMatches(topic: DialogueTopic, id: string): boolean {
+  return topic.id === id || (topic.aliases ?? []).includes(id);
+}
 
 // State-aware so an enumerated command shows the object's REACTIVE name (bug_0188):
 // a righted "toppled cresset" re-labels itself rather than freezing the stale word
@@ -276,7 +280,7 @@ export function resolveRpgAction(
     case "ASK": {
       const active = activeDialogue(index, state);
       if (!active || active.npc.id !== action.npc) return null;
-      const topic = active.node.topics.find((t) => t.id === action.topic);
+      const topic = active.node.topics.find((t) => dialogueTopicMatches(t, action.topic));
       if (!topic) return null;
       // A gated topic is filtered from the legal set (via `option`) and re-checked
       // here by the engine, so a told-once info topic can retire itself.

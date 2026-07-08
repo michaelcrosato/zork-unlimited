@@ -118,7 +118,7 @@ describe("bug_0258 — The Wolf-Winter: the optional wedge is signposted and dis
     const d = driver(rules, step).start(index);
     d.act({ type: "MOVE", direction: "north" }); // steading_yard -> byre_yard
     d.act({ type: "TALK", npc: "houndsman" });
-    d.act({ type: "ASK", npc: "houndsman", topic: "ask_byre" });
+    d.act({ type: "ASK", npc: "houndsman", topic: "byre" });
     const obs = buildRpgObservation(index, d.state());
     const spoken = (obs.dialogue?.npc_text ?? "").toLowerCase();
     expect(spoken).toContain("wedge it back across");

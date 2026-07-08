@@ -237,6 +237,7 @@ export const ObjectSchema = z
 export const DialogueTopicSchema = z
   .object({
     id: z.string().min(1),
+    aliases: z.array(z.string().min(1)).optional(),
     prompt: z.string().min(1),
     conditions: z.array(ConditionSchema).optional(),
     goto: z.string().min(1).optional(),

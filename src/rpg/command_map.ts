@@ -146,6 +146,9 @@ export function parseCommand(index: RpgModelIndex, state: GameState, raw: string
     const arg = rest.replace(/^about\s+/, "").trim();
     const topic =
       active.node.topics.find((t) => t.id.toLowerCase() === arg) ??
+      active.node.topics.find((t) =>
+        (t.aliases ?? []).some((alias) => alias.toLowerCase() === arg),
+      ) ??
       active.node.topics.find((t) => t.prompt.toLowerCase().includes(arg) && arg.length > 0) ??
       (arg === "" ? undefined : undefined);
     if (!topic)

@@ -417,18 +417,20 @@ npcs:
           variants:
             - when: [{ any_of: [{ has_flag: heard_counsel }, { has_flag: heard_plan }] }]
               text: >
-                Old Cade shifts his ruined hands under the blanket. "Ask what else
-                you need, lad. The wolves won't wait on either of us."
+                Ask what else you need, lad. The wolves will not wait on either of us.
           topics:
-            - id: ask_wolves
+            - id: wolves
+              aliases: [ask_wolves]
               prompt: "Ask how to fight the wolves and live."
               conditions: [{ not_flag: heard_counsel }]
               goto: cade_wolves
-            - id: ask_byre
+            - id: byre
+              aliases: [ask_byre]
               prompt: "Ask how the byre is to be held."
               conditions: [{ not_flag: heard_plan }]
               goto: cade_byre
-            - id: leave_cade
+            - id: leave
+              aliases: [leave_cade]
               prompt: "Leave old Cade and hold the byre."
               end: true
         - id: cade_wolves
@@ -455,9 +457,18 @@ npcs:
             - inc_var: { name: score, by: 5 }
             - add_journal: "Old Cade shows you where a wolf's rush leaves its throat and shoulder open — you feel you could strike truer now (+2 attack)."
           topics:
+            - id: byre
+              aliases: [ask_byre]
+              prompt: "Ask next how the byre is to be held."
+              conditions: [{ not_flag: heard_plan }]
+              goto: cade_byre
             - id: wolves_back
               prompt: "Nod, and ask something else."
               goto: cade_root
+            - id: leave
+              aliases: [leave_cade]
+              prompt: "Leave old Cade and hold the byre."
+              end: true
         - id: cade_byre
           npc_text: >
             The byre's simple enough: there's the one way in, past the broken paling and
@@ -474,9 +485,18 @@ npcs:
             - set_flag: heard_plan
             - add_journal: "Old Cade says to hold the byre's one corridor and work forward — paling to door to the back wall — and the pack will break once its three boldest are down. He says too there's a fallen rail at the paling: take it up and wedge it across the breach to half-shut the gap."
           topics:
+            - id: wolves
+              aliases: [ask_wolves]
+              prompt: "Ask next how to fight the wolves and live."
+              conditions: [{ not_flag: heard_counsel }]
+              goto: cade_wolves
             - id: byre_back
               prompt: "Thank him, and ask something else."
               goto: cade_root
+            - id: leave
+              aliases: [leave_cade]
+              prompt: "Leave old Cade and hold the byre."
+              end: true
 
 enemies:
   # The fair three-fight gauntlet (combat_guaranteed). Combat is one ATTACK = one round:
