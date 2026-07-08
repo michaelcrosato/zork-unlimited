@@ -14,6 +14,7 @@ import {
   compactOverworldView,
 } from "../../src/world/compact_view.js";
 import { buildOverworldSessionCompactView } from "../../src/world/session_compact_view.js";
+import { questCompletionMinutes } from "../../src/world/session_quests.js";
 import { OverworldSession } from "../../ui/src/overworld.js";
 
 const world = loadOverworldManifest(process.cwd());
@@ -1076,20 +1077,31 @@ describe("OverworldSession", () => {
       }),
     ).toThrow(/death ending/i);
 
+    const beforeCompletionMinutes = session.snapshot().minutes;
     const completedQuest = session.completeQuest(discoveredQuest.id, {
       endingId: "ending_victory",
       endingTitle: "Victory",
       death: false,
     });
+    const questSource = world.quests.find((quest) => quest.id === discoveredQuest.id);
+    if (!questSource) throw new Error("expected quest source");
+    const expectedMinutes = questCompletionMinutes(
+      questSource,
+      new Map(world.areas.map((area) => [area.id, area])),
+    );
     expect(completedQuest).toMatchObject({
       alreadyKnown: false,
+      minutes: expectedMinutes,
       endingId: "ending_victory",
       quest: { id: discoveredQuest.id },
     });
+    expect(completedQuest.entry.recordedAt).toBe(session.view().timeLabel);
+    expect(completedQuest.entry.text).toContain(`${expectedMinutes} minutes`);
     expect(completedQuest.entry).toMatchObject({
       id: `quest_done:${discoveredQuest.id}`,
       kind: "quest_done",
     });
+    expect(session.snapshot().minutes).toBe(beforeCompletionMinutes + expectedMinutes);
     expect(session.view().completedQuestIds).toEqual([discoveredQuest.id]);
     expect(session.view().journal[0]).toMatchObject({
       id: `quest_done:${discoveredQuest.id}`,
@@ -1102,6 +1114,7 @@ describe("OverworldSession", () => {
       death: false,
     });
     expect(repeatedCompletion.alreadyKnown).toBe(true);
+    expect(repeatedCompletion.minutes).toBe(0);
     expect(session.view().completedQuestIds).toEqual([discoveredQuest.id]);
   });
 

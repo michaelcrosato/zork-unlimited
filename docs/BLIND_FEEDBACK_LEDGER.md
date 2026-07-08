@@ -5,46 +5,71 @@ Generated deterministically from verified blind reports. The latest entries stay
 ## Summary
 
 - Reports dir: `blind-tester/reports`
-- Accepted reports: 210
+- Accepted reports: 235
 - Rejected or ignored markdown reports: 8
-- Latest report stamp: 20260708T153614Z
+- Latest report stamp: 20260708T162233Z
 - Recent entry limit: 100
-- Archived accepted entries collapsed into traits: 110
+- Archived accepted entries collapsed into traits: 135
 
 ## Recent Common Traits
 
 | Count | Latest | Category | Trait | Sources |
 | ---: | --- | --- | --- | --- |
-| 50 | 20260708T141239Z | replay | player would not replay | tide_mill |
-| 8 | 20260708T153614Z | confusion | road encounter appears after arrival | overworld |
+| 27 | 20260708T161306Z | replay | player would not replay | overworld, tide_mill |
+| 13 | 20260708T162233Z | confusion | road encounter appears after arrival | overworld |
 | 5 | 20260708T153614Z | confusion | road encounter resolves after arrival | overworld |
 | 4 | 20260708T153614Z | confusion | quest takes no overworld time | overworld |
+| 3 | 20260708T161738Z | confusion | completed quest still listed | overworld |
+| 3 | 20260708T161307Z | confusion | awkward dialogue action ids | overworld |
 | 3 | 20260708T153614Z | confusion | quest took no overworld time | overworld |
 | 3 | 20260708T151632Z | confusion | quest consumes no overworld time | overworld |
+| 2 | 20260708T162233Z | confusion | compact journal hash suffixes | overworld |
+| 2 | 20260708T162233Z | confusion | road encounter resolved after arrival | overworld |
+| 2 | 20260708T162233Z | confusion | same road encounter repeated quickly | overworld |
+| 2 | 20260708T161738Z | confusion | dialogue action ids look generated | overworld |
+| 2 | 20260708T161738Z | confusion | jobs discovered elsewhere are easy to lose track of | overworld |
+| 2 | 20260708T161307Z | confusion | completed content still appears active | overworld |
+| 2 | 20260708T161306Z | confusion | quest tone disconnected from New York overworld | overworld |
+| 2 | 20260708T160811Z | confusion | quest tone disconnected from Albany lead | overworld |
+| 2 | 20260708T160257Z | confusion | resolved events remain listed | overworld |
 | 2 | 20260708T153614Z | confusion | completed jobs and quests still listed | overworld |
 | 2 | 20260708T150956Z | confusion | same road event repeated immediately | overworld |
-| 2 | 20260708T144545Z | confusion | awkward dialogue action ids | overworld |
 | 2 | 20260708T143326Z | confusion | second town felt templated | overworld |
 | 2 | 20260708T140955Z | confusion | choked_sluice remains visible after clearing | tide_mill |
 | 2 | 20260708T140614Z | confusion | saboteur falls but later is driven off | tide_mill |
 | 2 | 20260708T140200Z | bug S0 | Head-Race: choked_sluice remains visible after the race is cleared | tide_mill |
-| 1 | 20260708T153614Z | bug S0 | The Wolf-Winter / Cade dialogue: Dialogue back text contains awkward nested stray quotes. | overworld |
-| 1 | 20260708T153614Z | bug S0 | Wolf-Winter / houndsman dialogue: Dialogue backtracking produced doubled quotation marks | overworld |
-| 1 | 20260708T153614Z | bug S1 | Albany and Colonie civic cores: Repeated civic backlog and ledger-run structure makes towns feel cloned. | overworld |
-| 1 | 20260708T153614Z | bug S1 | Albany area movement: Visited-area count stayed at 0 after walking between local areas. | overworld |
-| 1 | 20260708T153614Z | bug S1 | Albany Civic Center: Jobs discovered for other areas are not visible in current context, making them easy to lose tra... | overworld |
-| 1 | 20260708T153614Z | bug S1 | Albany Civic Center: Overworld job and event discovery is mechanically clear but too flavorless in compact output. | overworld |
-| 1 | 20260708T153614Z | bug S1 | Albany local lists: Completed quest and job remain listed without completed status. | overworld |
-| 1 | 20260708T153614Z | bug S1 | Albany Station Quarter / overworld context: visited_areas did not include current transport hub area | overworld |
-| 1 | 20260708T153614Z | bug S1 | Albany Station Quarter / The Wolf-Winter: Completed full quest returns with zero overworld time elapsed. | overworld |
-| 1 | 20260708T153614Z | bug S1 | Albany-Colonie road encounter: Assist travelers resolves as generic I-90 road report text rather than a concrete enco... | overworld |
-| 1 | 20260708T153614Z | bug S1 | Albany-to-Colonie road: Road encounter becomes pending after the destination has already been reached. | overworld |
-| 1 | 20260708T153614Z | bug S1 | Colonie-Albany road: Same low road report encounter repeated immediately on return travel. | overworld |
+| 1 | 20260708T162233Z | bug S0 | The Wolf-Winter compact journal: truncated journal entries include hash-like suffixes | overworld |
+| 1 | 20260708T162233Z | bug S0 | Wolf-Winter / Old Cade dialogue: Dialogue back line has duplicated speaker and quote formatting. | overworld |
 
 ## Recent Entries
 
 | Stamp | Source | Seed | C/E | Stuck | Replay | Report | Signal |
 | --- | --- | ---: | --- | --- | --- | --- | --- |
+| 20260708T162233Z | overworld | 415 | 4/4 | no | yes | `blind-tester/reports/20260708T162233Z_overworld_seed415.md` | confusions: overworld events lacked narrative detail; same road encounter repeated quickly; quest anchor requires UI signposting \| bugs: S2 Albany-Colonie road: same l... |
+| 20260708T162233Z | overworld | 414 | 4/4 | no | yes | `blind-tester/reports/20260708T162233Z_overworld_seed414.md` | confusions: quest tone disconnected from Albany overworld; road encounter repeated on same short road; compact journal hash fragments \| bugs: S1 Wolf-Winter / Cade dia... |
+| 20260708T162233Z | overworld | 413 | 4/4 | no | yes | `blind-tester/reports/20260708T162233Z_overworld_seed413.md` | confusions: road encounter appears after arrival; compact tuples depend heavily on the one-time legend; generic overworld job text feels thin \| bugs: S1 The Wolf-Winte... |
+| 20260708T162233Z | overworld | 412 | 4/4 | no | yes | `blind-tester/reports/20260708T162233Z_overworld_seed412.md` | confusions: road encounter resolved after arrival; visited area tracking looked stale; dialogue back option did not exit \| bugs: S1 Albany Station Quarter / Colonie Ci... |
+| 20260708T162233Z | overworld | 411 | 4/4 | no | yes | `blind-tester/reports/20260708T162233Z_overworld_seed411.md` | confusions: abrupt tonal shift into quest; resolved content remains listed; repeated same road encounter; compact journal hash suffixes \| bugs: S1 Albany Station Quart... |
+| 20260708T161738Z | overworld | 410 | 4/4 | no | yes | `blind-tester/reports/20260708T161738Z_overworld_seed410.md` | confusions: modern New York overworld led into medieval wolf quest; road encounter had little narrative context; hidden work discovery depends on trying POI/contact \|... |
+| 20260708T161738Z | overworld | 409 | 4/4 | no | yes | `blind-tester/reports/20260708T161738Z_overworld_seed409.md` | confusions: quest premise disconnected from Albany lead; overworld actions too abstract; compact journal hash suffixes \| bugs: S1 The Wolf-Winter/Cade dialogue: Dialog... |
+| 20260708T161738Z | overworld | 408 | 4/4 | no | yes | `blind-tester/reports/20260708T161738Z_overworld_seed408.md` | confusions: road encounter appears after arrival; ask_wolves_back label unclear; quest tone disconnected from New York lead \| bugs: S1 Albany/Colonie Civic Centers: Ge... |
+| 20260708T161738Z | overworld | 407 | 4/4 | no | yes | `blind-tester/reports/20260708T161738Z_overworld_seed407.md` | confusions: jobs discovered elsewhere are easy to lose track of; visited area counts do not match physical arrival; road encounter appears after already arriving \| bug... |
+| 20260708T161738Z | overworld | 406 | 4/4 | no | yes | `blind-tester/reports/20260708T161738Z_overworld_seed406.md` | confusions: resolved event still listed; completed quest still listed; compact text truncates useful prose; dialogue action ids look generated \| bugs: S2 Albany Civic... |
+| 20260708T161307Z | overworld | 405 | 4/4 | no | yes | `blind-tester/reports/20260708T161307Z_overworld_seed405.md` | confusions: tuple fields need UI labels; jobs revealed outside current area feel hidden again; quest tone disconnects from overworld \| bugs: S1 Albany-Colonie road: sa... |
+| 20260708T161307Z | overworld | 404 | 4/4 | no | yes | `blind-tester/reports/20260708T161307Z_overworld_seed404.md` | confusions: completed content still appears active; compact truncation hides details; repeated short-road encounter \| bugs: S1 Albany Station Quarter / event list: Res... |
+| 20260708T161307Z | overworld | 403 | 4/4 | no | yes | `blind-tester/reports/20260708T161307Z_overworld_seed403.md` | confusions: jobs revealed globally but listed locally; generic civic content; debug-like truncated journal suffixes; awkward dialogue action ids \| bugs: S1 Wolf-Winter... |
+| 20260708T161306Z | overworld | 402 | 4/4 | no | yes | `blind-tester/reports/20260708T161306Z_overworld_seed402.md` | confusions: overworld hidden counts carry more signposting than fiction; quest tone disconnected from New York overworld; road encounter fiction too generic \| bugs: S2... |
+| 20260708T161306Z | overworld | 401 | 3/3 | no | no | `blind-tester/reports/20260708T161306Z_overworld_seed401.md` | confusions: quest anchor required local movement but move action was unavailable; revealed jobs outside current area were not visible in jobs list; compact context fel... |
+| 20260708T160811Z | overworld | 400 | 4/4 | no | yes | `blind-tester/reports/20260708T160811Z_overworld_seed400.md` | confusions: quest tone disconnected from Albany lead; road encounter appears after arrival; dialogue back action did not exit; compact overworld lacks flavor \| bugs: S... |
+| 20260708T160811Z | overworld | 399 | 4/4 | no | yes | `blind-tester/reports/20260708T160811Z_overworld_seed399.md` | confusions: event prerequisite only appeared after rejection; hidden counts felt town-wide then area-local; quest combat narrowed to repeated attacks \| bugs: S1 Albany... |
+| 20260708T160811Z | overworld | 398 | 4/4 | no | yes | `blind-tester/reports/20260708T160811Z_overworld_seed398.md` | confusions: completed event still listed; completed quest still listed; quest theme felt disconnected from Albany lead \| bugs: S1 Albany Civic Center / charter backlog... |
+| 20260708T160810Z | overworld | 397 | 4/4 | no | yes | `blind-tester/reports/20260708T160810Z_overworld_seed397.md` | confusions: quest anchor area requires tuple awareness; road encounter appears after arrival; quest tone differs sharply from New York overworld \| bugs: S2 Albany Stat... |
+| 20260708T160810Z | overworld | 396 | 4/4 | no | yes | `blind-tester/reports/20260708T160810Z_overworld_seed396.md` | confusions: modern Albany quest abruptly becomes mythic winter steading; resolved events and completed jobs still appear available; compact overworld results lack narr... |
+| 20260708T160257Z | overworld | 395 | 4/4 | no | yes | `blind-tester/reports/20260708T160257Z_overworld_seed395.md` | confusions: resolved events remain listed; road encounter appeared after arrival; discovered remote jobs not shown locally; quest tone jump from New York to mythic win... |
+| 20260708T160257Z | overworld | 394 | 4/4 | no | yes | `blind-tester/reports/20260708T160257Z_overworld_seed394.md` | confusions: event prerequisites only appear after failed resolve; compact overworld unlocks lack local flavor; modern road-report wording clashes with fantasy quest \|... |
+| 20260708T160257Z | overworld | 393 | 4/4 | no | yes | `blind-tester/reports/20260708T160257Z_overworld_seed393.md` | confusions: road encounter appears after arrival; road event risk text too sparse; quest lead did not preview embedded quest tone \| bugs: S1 The Wolf-Winter quest jour... |
+| 20260708T160257Z | overworld | 392 | 4/4 | no | yes | `blind-tester/reports/20260708T160257Z_overworld_seed392.md` | confusions: compact tuples need legend; quest tone disconnected from Albany lead; jobs reveal across unrelated districts; repeated road event on same short road \| bugs... |
+| 20260708T160257Z | overworld | 391 | 4/3 | yes | no | `blind-tester/reports/20260708T160257Z_overworld_seed391.md` | confusions: discovered jobs but no callable job tool; quest anchor required area movement but move tool unavailable; sites discovered but no site exploration tool; rep... |
 | 20260708T153614Z | overworld | 390 | 4/4 | no | yes | `blind-tester/reports/20260708T153614Z_overworld_seed390.md` | confusions: road risk labels are too abstract; overworld jobs and events lack fiction; quest time does not advance overworld clock \| bugs: S1 Albany Civic Center: Over... |
 | 20260708T153614Z | overworld | 389 | 4/4 | no | yes | `blind-tester/reports/20260708T153614Z_overworld_seed389.md` | confusions: quest tonal jump from Albany to winter steading; road encounter resolves after arrival; quest took no overworld time \| bugs: S2 Albany Station Quarter / qu... |
 | 20260708T153614Z | overworld | 388 | 4/4 | no | yes | `blind-tester/reports/20260708T153614Z_overworld_seed388.md` | confusions: overworld event results lack flavor; quest consumed zero overworld time; road encounter text felt generic; dialogue action ids expose implementation naming... |
@@ -120,38 +145,15 @@ Generated deterministically from verified blind reports. The latest entries stay
 | 20260708T134037Z | tide_mill | 318 | 5/4 | no | no | `blind-tester/reports/20260708T134037Z_tide_mill_seed318.md` | confusions: sluice action changed after getting billhook \| bugs: S1 Head-Race: Previously available use_choked_sluice becomes invalid after taking the billhook; player... |
 | 20260708T134011Z | tide_mill | 317 | 5/4 | no | no | `blind-tester/reports/20260708T134011Z_tide_mill_seed317.md` | confusions: flood-hatch action remains tempting despite clear warnings \| bugs: S1 Head-Race: cleared sluice still appears under the choked_sluice object id; S1 Head-Ra... |
 | 20260708T134009Z | tide_mill | 316 | 5/4 | no | no | `blind-tester/reports/20260708T134009Z_tide_mill_seed316.md` | confusions: route felt overly guided; coin-bag temptation felt too easily dismissed \| bugs: S0 Wheel-Room: Final instruction 'Down saves the boat now' is very direct a... |
-| 20260708T133849Z | tide_mill | 315 | 5/4 | no | no | `blind-tester/reports/20260708T133849Z_tide_mill_seed315.md` | confusions: optimal route felt heavily signposted; coin-bag temptation was easy to ignore \| would not replay |
-| 20260708T133752Z | tide_mill | 314 | 5/4 | no | no | `blind-tester/reports/20260708T133752Z_tide_mill_seed314.md` | confusions: coin-bag may imply untested alternate ending; solution is very strongly signposted \| bugs: S1 Mill-House / Ives dialogue: Exhausting dialogue gives large s... |
-| 20260708T133705Z | tide_mill | 313 | 5/4 | no | no | `blind-tester/reports/20260708T133705Z_tide_mill_seed313.md` | confusions: bad choices were very strongly signposted \| bugs: S1 Head-Race: Rotten flood-hatch has a legal crow-bar action despite repeated warnings, which may feel li... |
-| 20260708T133649Z | tide_mill | 312 | 5/4 | no | no | `blind-tester/reports/20260708T133649Z_tide_mill_seed312.md` | confusions: mandatory combat may be swingy; guidance sometimes over-explicit \| bugs: S1 Mill-Yard: Mandatory saboteur fight can still punish correct preparation throug... |
-| 20260708T133632Z | tide_mill | 311 | 5/4 | no | no | `blind-tester/reports/20260708T133632Z_tide_mill_seed311.md` | confusions: Generic sluice action changed after getting billhook \| bugs: S1 Head-Race: Previously available use_choked_sluice became rejected and changed to use_billho... |
-| 20260708T133404Z | tide_mill | 310 | 5/4 | no | no | `blind-tester/reports/20260708T133404Z_tide_mill_seed310.md` | confusions: route becomes very linear after reading clues \| bugs: S1 The Mill-Yard: Mandatory saboteur fight can cost significant HP due to random rolls.; S0 Head-Race... |
-| 20260708T133355Z | tide_mill | 309 | 5/4 | no | no | `blind-tester/reports/20260708T133355Z_tide_mill_seed309.md` | confusions: ask_back label unclear; generic attack command despite tactical setup \| bugs: S1 The Mill-House: Mid-dialogue rejection is valid but abrupt if the player h... |
-| 20260708T133337Z | tide_mill | 308 | 5/4 | no | no | `blind-tester/reports/20260708T133337Z_tide_mill_seed308.md` | confusions: first sluice attempt needs billhook despite seeming like the right action; combat has no visible tactical branch after preparation \| bugs: S1 Head-Race: Da... |
-| 20260708T133321Z | tide_mill | 307 | 5/4 | no | no | `blind-tester/reports/20260708T133321Z_tide_mill_seed307.md` | confusions: coin-bag felt like possible optional content \| bugs: S1 Mill-Yard: Saboteur is described as both falling and being driven off into the dark. \| would not re... |
-| 20260708T133241Z | tide_mill | 306 | 5/4 | no | no | `blind-tester/reports/20260708T133241Z_tide_mill_seed306.md` | confusions: urgency implied but no visible timer; coin-bag temptation unexplored on optimal route \| bugs: S1 The Mill-House / Ives dialogue: Narrative says ask fast an... |
-| 20260708T132919Z | tide_mill | 305 | 5/4 | no | no | `blind-tester/reports/20260708T132919Z_tide_mill_seed305.md` | confusions: coin-bag felt teased but not actionable \| bugs: S1 Mill-Yard: Saboteur combat says he falls, later text says he was driven off into the dark.; S1 Counting-... |
-| 20260708T132919Z | tide_mill | 304 | 5/4 | no | no | `blind-tester/reports/20260708T132919Z_tide_mill_seed304.md` | confusions: coin-bag purpose after max-score ending; flood-hatch bad action remains available \| bugs: S1 Head-Race: Dangerous flood-hatch action remains available desp... |
-| 20260708T132919Z | tide_mill | 303 | 5/4 | no | no | `blind-tester/reports/20260708T132919Z_tide_mill_seed303.md` | confusions: urgency implied but no time pressure observed; ending still exposes an exit \| bugs: S1 The Mill-House: Ives says to ask fast, but no timer or pressure was... |
-| 20260708T132919Z | tide_mill | 302 | 5/4 | no | no | `blind-tester/reports/20260708T132919Z_tide_mill_seed302.md` | confusions: compact directional ids slightly opaque; coin-bag temptation felt too explicitly marked as wrong \| would not replay |
-| 20260708T132919Z | tide_mill | 301 | 5/4 | no | no | `blind-tester/reports/20260708T132919Z_tide_mill_seed301.md` | confusions: optimal route is very heavily signposted \| bugs: S0 Wheel-Room / Counting-Nook: Coin-bag temptation is clear in flavor but lightly developed mechanically.;... |
-| 20260708T131451Z | tide_mill | 300 | 5/4 | no | no | `blind-tester/reports/20260708T131451Z_tide_mill_seed300.md` | confusions: flood-hatch trap action is very visible; saboteur falls then is described as driven off \| bugs: S1 The Mill-Yard: Saboteur combat says he falls, but later... |
-| 20260708T131338Z | tide_mill | 299 | 5/4 | no | no | `blind-tester/reports/20260708T131338Z_tide_mill_seed299.md` | confusions: use_choked_sluice action id was slightly vague; saboteur defeated vs driven off wording mismatch \| bugs: S1 Head-Race: use_choked_sluice is less clear than... |
-| 20260708T131314Z | tide_mill | 298 | 5/4 | no | no | `blind-tester/reports/20260708T131314Z_tide_mill_seed298.md` | confusions: Ives dialogue boosts stats in a visibly gamey way \| bugs: S1 The Mill-House/Ives dialogue: Advice grants large craft/might boosts, which works but feels ar... |
-| 20260708T131158Z | tide_mill | 297 | 5/4 | no | no | `blind-tester/reports/20260708T131158Z_tide_mill_seed297.md` | confusions: pre-billhook sluice attempt looks like failure but is signposting; solved head-race objects remain visible \| bugs: S0 Head-Race: choked_sluice and flood_ha... |
-| 20260708T131135Z | tide_mill | 296 | 5/4 | no | no | `blind-tester/reports/20260708T131135Z_tide_mill_seed296.md` | confusions: use_choked_sluice label felt weak after getting billhook; coin-bag seemed like a branch but did not affect max score \| bugs: S1 Head-Race: Decisive billhoo... |
-| 20260708T130936Z | tide_mill | 295 | 5/4 | no | no | `blind-tester/reports/20260708T130936Z_tide_mill_seed295.md` | confusions: Very guided once board and Ives clues were read; Coin-bag looked like a temptation but its consequence was unexplored \| would not replay |
-| 20260708T130923Z | tide_mill | 294 | 5/4 | no | no | `blind-tester/reports/20260708T130923Z_tide_mill_seed294.md` | confusions: compact action use_choked_sluice did not name the billhook; coin-bag reminder briefly distracts after gate opens \| bugs: S1 Head-Race: Compact action id fo... |
-| 20260708T130855Z | tide_mill | 293 | 5/4 | no | no | `blind-tester/reports/20260708T130855Z_tide_mill_seed293.md` | confusions: use_choked_sluice action id slightly abstract; coin-bag suggests possible moral branch \| bugs: S1 The Mill-Yard: Prepared combat is fair, but post-damage r... |
-| 20260708T130822Z | tide_mill | 292 | 5/4 | no | no | `blind-tester/reports/20260708T130822Z_tide_mill_seed292.md` | confusions: hook low clue made gaff-pole seem briefly plausible for the sluice \| bugs: S0 Head-Race: Race-clearing clue says hook low, but the required tool is billhoo... |
-| 20260708T130755Z | tide_mill | 291 | 5/4 | no | no | `blind-tester/reports/20260708T130755Z_tide_mill_seed291.md` | confusions: solution path is very heavily signposted \| bugs: S0 The Head-Race: choked_sluice remains visible after the sluice is cleared; S1 Overall: critical path is... |
 
 ## Archived Trait Categories
 
 | Count | Latest | Category | Trait | Sources |
 | ---: | --- | --- | --- | --- |
-| 110 | 20260708T130507Z | replay | player would not replay | tide_mill |
+| 135 | 20260708T133849Z | replay | player would not replay | tide_mill |
 | 3 | 20260708T125954Z | bug S0 | Head-Race: choked_sluice remains listed after the race is cleared | tide_mill |
+| 2 | 20260708T130755Z | bug S0 | The Head-Race: choked_sluice remains visible after the sluice is cleared | tide_mill |
+| 2 | 20260708T130755Z | confusion | solution path is very heavily signposted | tide_mill |
 | 2 | 20260708T130456Z | bug S0 | Head-Race: choked_sluice remains visible after the race is cleared | tide_mill |
 | 2 | 20260708T124145Z | confusion | critical path is very explicit | tide_mill |
 | 2 | 20260708T123900Z | confusion | saboteur falls but later is driven off | tide_mill |
@@ -161,17 +163,15 @@ Generated deterministically from verified blind reports. The latest entries stay
 | 2 | 20260708T102926Z | confusion | optimal route felt checklist-like | tide_mill |
 | 2 | 20260708T102110Z | bug S0 | Head-Race: choked_sluice remains visible after the sluice is cleared | tide_mill |
 | 2 | 20260708T090502Z | confusion | compact text truncation hid some prose | tide_mill |
-| 1 | 20260708T130507Z | bug S0 | head_race: choked_sluice remains visible after the race is cleared | tide_mill |
-| 1 | 20260708T130507Z | bug S1 | wheel_room/head_race: compact action wording hides the billhook-specific solution | tide_mill |
-| 1 | 20260708T130507Z | confusion | generic sluice action id in compact mode | tide_mill |
-| 1 | 20260708T130507Z | worst moment | The main route was so directly signposted that there was little uncertainty once the board and Ives were consulted. | tide_mill |
-| 1 | 20260708T130456Z | confusion | action list mildly noisy with repeated inventory actions | tide_mill |
-| 1 | 20260708T130456Z | confusion | solved choked sluice still appears as object | tide_mill |
-| 1 | 20260708T130456Z | worst moment | The repeated examine/drop inventory actions made legal action lists slightly harder to scan. | tide_mill |
-| 1 | 20260708T130434Z | bug S0 | The Head-Race: choked_sluice remains visible after the sluice is cleared | tide_mill |
-| 1 | 20260708T130434Z | bug S0 | The Mill-Yard: saboteur falls in combat text but is later described as driven off | tide_mill |
-| 1 | 20260708T130434Z | confusion | coin-bag temptation had little practical ambiguity | tide_mill |
-| 1 | 20260708T130434Z | confusion | critical path felt checklist-like | tide_mill |
-| 1 | 20260708T130434Z | worst moment | The route became almost too obvious after reading the board and exhausting Ives's dialogue. | tide_mill |
-| 1 | 20260708T130416Z | bug S1 | Head-Race: Dangerous flood-hatch action remains legal despite strong warnings, likely intentional but risky trap design | tide_mill |
-| 1 | 20260708T130416Z | confusion | coin-bag temptation is repeated a bit heavily | tide_mill |
+| 1 | 20260708T133849Z | confusion | coin-bag temptation was easy to ignore | tide_mill |
+| 1 | 20260708T133849Z | confusion | optimal route felt heavily signposted | tide_mill |
+| 1 | 20260708T133849Z | worst moment | The saboteur fight was necessary but mechanically just repeated attacks. | tide_mill |
+| 1 | 20260708T133752Z | bug S0 | Wheel-Room after gate opens: Text points to the correct final action very bluntly. | tide_mill |
+| 1 | 20260708T133752Z | bug S1 | Mill-House / Ives dialogue: Exhausting dialogue gives large stat boosts and reduces tension despite the urgent setup. | tide_mill |
+| 1 | 20260708T133752Z | confusion | coin-bag may imply untested alternate ending | tide_mill |
+| 1 | 20260708T133752Z | confusion | solution is very strongly signposted | tide_mill |
+| 1 | 20260708T133752Z | worst moment | The optimal path was so clearly marked that there was little real uncertainty after reading the board. | tide_mill |
+| 1 | 20260708T133705Z | bug S1 | Head-Race: Rotten flood-hatch has a legal crow-bar action despite repeated warnings, which may feel like parser bait. | tide_mill |
+| 1 | 20260708T133705Z | confusion | bad choices were very strongly signposted | tide_mill |
+| 1 | 20260708T133705Z | worst moment | The route was so well signposted that there was little uncertainty after reading the board and talking to Ives. | tide_mill |
+| 1 | 20260708T133649Z | bug S1 | Mill-Yard: Mandatory saboteur fight can still punish correct preparation through RNG. | tide_mill |

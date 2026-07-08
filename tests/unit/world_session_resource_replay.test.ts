@@ -247,6 +247,41 @@ describe("overworld snapshot resource replay", () => {
     ).not.toThrow();
   });
 
+  it("rejects quest completion journals recorded before enough time elapsed", () => {
+    const forgedEarlyCompletion = snapshot([], {
+      minutes: 540,
+      supplies: 6,
+      fatigue: 0,
+    });
+    const travelTimeline = timeline(forgedEarlyCompletion);
+    const roadJournal = roadJournalResolutionIndex(
+      sources(),
+      { roadJournalEntries: [] },
+      travelTimeline,
+      null,
+    );
+    const localActionJournal = {
+      entries: [
+        {
+          entry: journalEntry("quest_done", "quest_done:quest_a", "Day 1, 09:00"),
+          recordedAt: 540,
+          duration: 140,
+        },
+      ],
+    };
+
+    expect(() =>
+      assertSnapshotResourceReplay(
+        forgedEarlyCompletion,
+        sources(),
+        travelTimeline,
+        roadJournal,
+        { entries: [] },
+        localActionJournal,
+      ),
+    ).toThrow(/quest_done.*before enough clock time elapsed/);
+  });
+
   it("records road and service replay entries from journal rows", () => {
     const roadEntries: OverworldRoadJournalResolutionEntry[] = [];
     const serviceEntries: OverworldServiceJournalReplayEntry[] = [];

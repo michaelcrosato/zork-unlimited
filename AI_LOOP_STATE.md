@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 517 -->
+<!-- historical_cycle_count: 518 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,14 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - overworld_quest_time_accounting
+
+- Engine surface: completed world quests now advance deterministic overworld time from local quest-area travel plus marquee quest renown; `wolf_winter` spends 139 minutes and says so in the quest-done journal.
+- Loop effect: focused lifecycle, UI, MCP, local-journal, and resource-replay tests prove completion advances snapshots/journal time, while repeat completion remains zero-change.
+- Blind playtest: 25-run `overworld` Codex batch seeds 391-415 all exited 0; clarity 24x4/5 + 1x3/5, enjoyment 23x4/5 + 2x3/5, replay 23x true / 2x false.
+- Self-critique: no fresh report repeated the zero-overworld-time complaint; road encounters appearing after arrival/repeating on the same short road are now the dominant starting-area state issue.
+- Guard: focused affected tests, `npm run health`, `npm run blind:feedback`, and reports `20260708T160257Z`-`20260708T162233Z` seeds 391-415 passed.
 
 ### Cycle result - albany_station_quarter_bridge
 
@@ -126,11 +134,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Blind playtest: `tide_mill` seed 187 reached `ending_saved` at 55/55 with clarity 5/5 and enjoyment 4/5; bugs array empty and no ending-truncation complaint recurred.
 - Self-critique: next recurring interface friction is Ives dialogue action IDs like `ask_ask_race`; coin-bag moral-route curiosity remains a content branch lever after UI noise is lower.
 - Guard: focused compact-ending/takings/no-board regressions, `npm run validate -- tide_mill`, `npm run health`, and report `20260708T094117Z_tide_mill_seed187.md` passed.
-
-### Cycle result - tide_mill_compact_warning_compression
-
-- Content surface: compressed `tide_mill` millboard read text and Mill-Yard saboteur prose so compact MCP payloads keep the board order and gaff/oilskin warning without truncation.
-- Loop effect: new compact regressions pin the full board warning and yard fight setup under compact limits; a no-board branch regression preserves the 50/55 Ives-advice rescue.
-- Blind playtest: `tide_mill` seed 183 reached `ending_saved` at 55/55 with clarity 5/5 and enjoyment 4/5; the board/yard truncation complaint did not recur.
-- Self-critique: the next content-local finding is compact ending payoff truncating mid-word; stale `choked_sluice` compact id is noted but lower leverage until compact refs carry display names.
-- Guard: focused compact/no-board/takings regressions, `npm run validate -- tide_mill`, `npm run health`, and report `20260708T093001Z_tide_mill_seed183.md` passed.

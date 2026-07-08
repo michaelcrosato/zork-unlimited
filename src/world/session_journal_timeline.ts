@@ -286,6 +286,7 @@ function recordLocalActionJournalEntry(
     case "event":
     case "job":
     case "poi":
+    case "quest_done":
     case "resolution":
     case "site":
       entries.push({ entry, recordedAt });

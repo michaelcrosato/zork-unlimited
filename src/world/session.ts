@@ -597,6 +597,7 @@ export class OverworldSession {
       questId,
       outcome,
       questsById: this.questsById,
+      areasById: this.areasById,
       nodesById: this.nodes,
       startedQuestIds: this.startedQuestIds,
     });

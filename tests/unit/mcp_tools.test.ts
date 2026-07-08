@@ -32,6 +32,7 @@ import { buildRpgObservation } from "../../src/rpg/observation.js";
 import { makeStep } from "../../src/core/engine.js";
 import { recordTrace } from "../../src/trace/record.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
+import { questCompletionMinutes } from "../../src/world/session_quests.js";
 import { hashState } from "../../src/core/hash.js";
 import { generateRpgPack } from "../../src/gen/rpg_generator.js";
 import type { RpgAction } from "../../src/api/types.js";
@@ -987,6 +988,12 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect("context" in staleRpgCompletion).toBe(false);
     expect("observation" in staleRpgCompletion).toBe(false);
 
+    const launchedSnapshot = a.export_overworld_session({
+      session_id: started.session_id,
+      expected_snapshot_hash: launched.snapshot_hash,
+    });
+    expect(launchedSnapshot.ok).toBe(true);
+    if (!launchedSnapshot.ok) throw new Error("expected launched snapshot export");
     const completed = a.complete_overworld_session_quest({
       ...FULL_OVERWORLD_RESPONSE,
       session_id: started.session_id,
@@ -996,11 +1003,19 @@ describe("MCP tools — validate / load (§9.4)", () => {
     });
     expect(completed.ok).toBe(true);
     if (!completed.ok) throw new Error("expected quest completion");
+    const completedQuestSource = overworld.quests.find((quest) => quest.id === "sunken_barrow");
+    if (!completedQuestSource) throw new Error("expected sunken_barrow source");
+    const expectedQuestMinutes = questCompletionMinutes(
+      completedQuestSource,
+      new Map(overworld.areas.map((area) => [area.id, area])),
+    );
     expect(completed.result).toMatchObject({
       alreadyKnown: false,
+      minutes: expectedQuestMinutes,
       endingId: "ending_victory",
       quest: { id: "sunken_barrow" },
     });
+    expect(completed.result.entry.text).toContain(`${expectedQuestMinutes} minutes`);
     // bug_0495 — the tool description always promised "progress and renown";
     // completing the marquee content must visibly TOP any single local job
     // (difficulty 1-5), or the reward hierarchy reads inverted.
@@ -1010,12 +1025,22 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(completed.result.entry).toMatchObject({
       id: "quest_done:sunken_barrow",
       kind: "quest_done",
+      recordedAt: completed.observation.timeLabel,
     });
     expect(completed.observation.completedQuestIds).toEqual(["sunken_barrow"]);
     expect(completed.observation.journal[0]).toMatchObject({
       id: "quest_done:sunken_barrow",
       kind: "quest_done",
     });
+    const completedSnapshot = a.export_overworld_session({
+      session_id: started.session_id,
+      expected_snapshot_hash: completed.snapshot_hash,
+    });
+    expect(completedSnapshot.ok).toBe(true);
+    if (!completedSnapshot.ok) throw new Error("expected completed snapshot export");
+    expect(completedSnapshot.snapshot.minutes).toBe(
+      launchedSnapshot.snapshot.minutes + expectedQuestMinutes,
+    );
     expect(
       a.get_overworld_session_context({ session_id: started.session_id, include_ids: true }).context
         .ids?.completed_quests,
@@ -1029,6 +1054,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(repeated.ok).toBe(true);
     if (!repeated.ok) throw new Error("expected idempotent quest completion");
     expect(repeated.result.alreadyKnown).toBe(true);
+    expect(repeated.result.minutes).toBe(0);
     // Renown is awarded exactly once: the repeat reports 0 gained, same total.
     expect(repeated.result.renownGained).toBe(0);
     expect(repeated.result.renownAfter).toBe(completed.result.renownAfter);
