@@ -101,9 +101,12 @@ describe("Tide-Mill Ives dialogue supports direct urgent follow-ups", () => {
     expect(state.flags["heard_yard_trick"]).toBe(true);
     expect(state.vars.craft).toBe(8);
     expect(state.vars.might).toBe(8);
-    expect(state.journal.join(" ")).toContain("head-race trick");
-    expect(state.journal.join(" ")).toContain("pawl and winch angle");
-    expect(state.journal.join(" ")).toContain("gaff-pole and oilskin");
+    const adviceJournal = state.journal.join(" ");
+    expect(adviceJournal).toContain("head-race trick");
+    expect(adviceJournal).toContain("pawl and winch angle");
+    expect(adviceJournal).toContain("gaff-pole");
+    expect(adviceJournal).toContain("oilskin");
+    expect(adviceJournal).not.toMatch(/\+\d+\s*(attack|defense|craft|might)/i);
     expect(buildRpgObservation(index, state).dialogue).toBeNull();
   });
 });

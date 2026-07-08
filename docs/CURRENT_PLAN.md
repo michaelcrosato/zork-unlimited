@@ -6,7 +6,7 @@ implementation subagent reads ONLY this doc and the files it names. Keep it
 current, terse, dated, and under ~60 lines — completed work belongs in git
 history and `docs/DECISION_LOG.md`, not here.
 
-## Cycle: 2026-07-08 - Tide-Mill Diegetic Prep Feedback
+## Cycle: 2026-07-08 - Tide-Mill Head-Race Inspection Affordance
 
 ## Synthesis
 
@@ -19,43 +19,45 @@ Recent closed loops: compact board/yard/ending truncation, flood-hatch stale
 death action, prepared-combat fairness, no-board scoring tone, Ives dialogue IDs,
 late coin-bag texture, and board fault-order wording. The millboard now says the
 wheel runs when the choked race is clear and the brake-pawl free, without exact
-billhook/crow-bar mapping or race-first imperative phrasing.
+billhook/crow-bar mapping or race-first imperative phrasing. Prep journal text
+is now diegetic: gaff/oilskin/Ives advice still grant the same variables, but
+the text no longer prints explicit attack/defense/craft/might bonus labels.
 
-The latest 20-run Codex blind batch, seeds 241-260, all exited 0 and completed
-the clean rescue at 55/55. Clarity was 20x5/5, enjoyment 20x4/5, and
-`would_replay` was 20x false. The board-order complaint did not recur.
+The latest 20-run Codex blind batch, seeds 261-280, all exited 0 and scored
+55/55. Clarity was 20x5/5, enjoyment 20x4/5, and `would_replay` was 20x false.
+The explicit stat-label complaint mostly disappeared, though a couple reports
+still dislike the existence of large advice boosts.
 
-The common S1 is now broader game feel: many reports say the board plus Ives
-make the route checklist-like. Smaller repeats point at the same surface:
-item/dialogue journals expose explicit `+attack` / `+defense` / stat-reward
-language, the gaff-pole journal names the tool-shed saboteur before the player
-meets that threat, and Ives advice can feel like optimal-route transcription.
+The common S1 is now Head-Race affordance. The pre-billhook
+`use_choked_sluice` / `clear choked head-race` action is useful as a state-neutral
+reconnaissance beat, but many reports read it as a viable repair command before
+the needed billhook. Several specifically ask for the first beat to feel like
+inspection/reminder instead of a dead no-progress turn.
 
 ## Chosen Move
 
-Retune prep feedback to be diegetic and less checklist/game-stat flavored while
-preserving the same mechanics and score structure.
+Retune the pre-billhook Head-Race interaction so it reads as inspection/tool
+diagnosis, not a failed clear attempt, while preserving the post-billhook repair
+route and stable action handling.
 
-- Target `content/rpg/quests/tide_mill.yaml` first: gaff-pole, oilskin, Ives
-  advice journals, and any visible stat-reward prose touched by those beats.
-- Keep the actual rewards, seeded combat math, topic ids, board score, no-board
-  branch, and 55/55 clean route unchanged.
-- Remove explicit `(+2 attack)`, `(+2 defense)`, `(+3 craft)`, `(+2 might)`, and
-  similar game-stat labels from player-facing journal/prose where a tight
-  fiction line can carry the same information.
-- Do not hide fair warnings: gaff/oilskin must still read as useful protection,
-  Ives must still make prepared combat a rational choice, and unprepared combat
-  must remain knowingly risky.
-- Avoid revealing "tool-shed saboteur" from the gaff-pole pickup before the yard
-  establishes the knife-man.
-- Update focused regressions to prove rewards still apply, clue sufficiency
-  remains, and the gamey stat labels / premature saboteur reveal stay out.
+- Target `content/rpg/quests/tide_mill.yaml` around `choked_sluice`.
+- Keep the post-billhook seeded craft checks, score award, state flags, and
+  repair narrations unchanged unless a tiny wording adjustment is required.
+- Prefer making the no-billhook command read like `inspect choked head-race` or
+  equivalent, with narration/journal that says the bough needs the billhook from
+  the shed past the knife-man.
+- Preserve the stable action id if the engine's action-id derivation allows it;
+  otherwise update regressions honestly and avoid the previous ID-swap failure.
+- Keep the no-score reconnaissance beat, but give it a persistent reminder so
+  players do not have to remember the one-off nudge after leaving for the shed.
+- Do not weaken the telegraphing around the flood-hatch or the tool-shed fight.
 
 ## Acceptance
 
 1. `npm run validate -- tide_mill` reports 0 errors / 0 warnings.
-2. Focused tests prove prep rewards and dialogue flow still work while banning
-   explicit stat-label prose in the touched surfaces.
+2. Focused tests prove the pre-billhook command reads as inspection, creates no
+   score/progress, leaves a billhook reminder, and the post-billhook repair
+   command remains legal and score-bearing.
 3. `npm run health` passes.
 4. Run blind after the fix. Target a 20-seed Codex sample when runner capacity
    permits; at minimum one schema-valid `tide_mill` report must land before
@@ -63,13 +65,15 @@ preserving the same mechanics and score structure.
 
 ## Deferred Levers
 
-- Head-Race action label: seeds 247/251/260 still found `use_choked_sluice`
-  vague before the billhook, though the nudge is now useful and nonblocking.
 - Saboteur continuity: several reports saw combat say he falls while later prose
   says he was driven off.
+- Ives advice boosts: explicit stat labels are gone, but a few reports still
+  find the large hidden craft/might jumps artificial and checklist-like.
 - Coin-bag branch: several reports still read it as bait or moral decoy because
   the urgent full-score rescue can ignore it.
 - Flood-hatch temptation: repeatedly fair but obvious, and still visible as a
   warned danger action.
+- Dialogue compactness: a few reports dislike `ask_back` / `ask_leave` labels or
+  trying room actions while still in dialogue.
 - Replay remains low; after checklist/game-stat texture, prefer a deeper
   optional branch over further signpost polish.

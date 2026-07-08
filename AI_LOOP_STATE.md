@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 511 -->
+<!-- historical_cycle_count: 512 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,14 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - tide_mill_diegetic_prep_feedback
+
+- Content surface: retuned `tide_mill` prep journals so gaff/oilskin/Ives advice describe reach, padding, and tricks instead of explicit attack/defense/craft/might bonus labels.
+- Loop effect: focused combat/dialogue regressions still prove the prep variables and stable Ives flow, while banning numeric stat prose and the premature gaff-pickup "tool-shed saboteur" reveal.
+- Blind playtest: 20-run `tide_mill` Codex batch seeds 261-280 all exited 0 and scored 55/55; clarity 20x5/5, enjoyment 20x4/5, replay 20x false.
+- Self-critique: explicit stat-label text mostly closed, but the mechanical boost still reads artificial in a couple reports; the common next S1 is pre-billhook Head-Race action wording/affordance.
+- Guard: focused combat/dialogue regressions, stat-label scan, `npm run validate -- tide_mill`, `npm run health`, and reports `20260708T122937Z`-`20260708T124352Z` seeds 261-280 passed.
 
 ### Cycle result - tide_mill_millboard_fault_order_wording
 
@@ -128,12 +136,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Blind playtest: accepted `tide_mill` seeds 157 and 159 both reached `ending_saved` at 55/55 with clarity 5/5 and enjoyment 4/5; parallel seeds 158/160 failed harness tool discovery and are not counted.
 - Self-critique: the branch is structurally real but blind players still beeline the clean checklist; next lever is surfacing the late ethical fork after the gate rises without weakening first-run clarity.
 - Guard: `npm run validate -- tide_mill`, focused branch/variant/hash regressions, `npm run health`, and reports `20260708T074305Z_tide_mill_seed157.md` / `20260708T074755Z_tide_mill_seed159.md` passed.
-
-### Cycle result - tide_mill_second_fault_narration
-
-- Content surface: split `tide_mill` sluice and brake-pawl USE interactions into first-fault and final-fault variants so the second repair says both faults are now put right.
-- Loop effect: USE resolution is now condition-aware for same command-shaped interactions, with enumeration/parser guards for duplicate natural verbs.
-- Blind harness: Codex `BLIND_AGENT_CMD` runs now auto-inject the AdventureForge MCP server plus deferred-tool feature and execute from the isolated temp cwd.
-- Blind playtest: `tide_mill` seed 143 reached `ending_saved` at 55/55, clarity 5/5 and enjoyment 4/5; no bugs, but replay desire is low because the optimal route is heavily signposted.
-- Self-critique: the stale narration class is closed; next lever is a real replay branch around the takings/ethical fork, not more clarity polish.
-- Guard: focused second-fault regression, `npm run validate -- tide_mill`, `npm run blind:smoke`, `npm run health`, and schema-verified blind report `blind-tester/reports/20260708T070307Z_tide_mill_seed143.md` passed.

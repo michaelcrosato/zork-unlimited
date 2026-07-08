@@ -260,7 +260,7 @@ objects:
     take_effects:
       - set_flag: hook_taken
       - inc_var: { name: attack, by: 2 }
-      - add_journal: "You took the hooked gaff-pole; it gives you reach against the tool-shed saboteur (+2 attack)."
+      - add_journal: "You took the hooked gaff-pole; its reach should keep a knife hand outside your ribs."
 
   - id: coin_bag
     name: "coin-bag"
@@ -320,7 +320,7 @@ objects:
     take_effects:
       - set_flag: oilskin_taken
       - inc_var: { name: defense, by: 2 }
-      - add_journal: "You pulled on Ives's oilskin mill-coat; the stiff padding gives you a little protection in the yard (+2 defense)."
+      - add_journal: "You pulled on Ives's oilskin mill-coat; the stiff padding should turn a glancing cut while you work the gaff."
 
   - id: crank_handle
     name: "crank-handle"
@@ -590,7 +590,7 @@ npcs:
           effects:
             - set_flag: heard_race_trick
             - inc_var: { name: craft, by: 5 }
-            - add_journal: "Ives told you the head-race trick: cut the downstream braid first and let the water show the next cut (+5 craft)."
+            - add_journal: "Ives told you the head-race trick: cut downstream first and let the water show the next cut."
           topics:
             - id: pawl
               prompt: "Ask next about the brake-pawl and sea-gate."
@@ -614,7 +614,7 @@ npcs:
           effects:
             - set_flag: heard_pawl_trick
             - inc_var: { name: might, by: 5 }
-            - add_journal: "Ives showed you the pawl and winch angle: lift from the heel and work with the frame (+5 might)."
+            - add_journal: "Ives showed you the pawl and winch angle: lift from the heel, work with the frame, and catch the gear's rhythm."
           topics:
             - id: race
               prompt: "Ask next how to clear the choked race."
@@ -638,7 +638,7 @@ npcs:
             to love you.
           effects:
             - set_flag: heard_yard_trick
-            - add_journal: "Ives warned you to take the gaff-pole and oilskin before fighting the tool-shed saboteur; barehanded is a real gamble."
+            - add_journal: "Ives warned you to keep the gaff-pole between you and the knife-man, and to let the oilskin take the glancing cuts."
           topics:
             - id: race
               prompt: "Ask next how to clear the choked race."
