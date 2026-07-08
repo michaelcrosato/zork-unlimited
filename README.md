@@ -66,7 +66,7 @@ each change blind-playtested and gated green.
 ```bash
 npm install
 npm run health                                   # the full verification bar (see below)
-npm run validate                                 # validate all 16 shipped quests
+npm run validate                                 # validate all 11 shipped quests
 npm run validate -- sunken_barrow               # validate one quest by world quest id
 npm run play -- sunken_barrow                    # play a shipped world quest
 npm run overworld                                # play the full game: overworld map -> quests

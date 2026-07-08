@@ -13,7 +13,7 @@ _prove_ they're correct.
 loop.sh  (outer driver — orchestration + the bar)
 │
 ├─ 1. ASSESS        npm run ai:loop → src/ai-loop.ts (uses src/afk/assessor.ts)
-│     Deterministically scans every pack (all modes) + repo signals and ranks
+│     Deterministically scans every pack + repo signals and ranks
 │     improvement candidates across four categories:
 │        content_fix · content_new · engine · repo
 │     Emits: ai-runs/<id>/{assessment.md, prompt.md} plus latest-cycle.json at
@@ -66,7 +66,7 @@ circuit breakers stop it (5 consecutive / 15 total failed cycles by default).
 
 The deterministic assessor is cheap and good at routine work, but it has no
 strategic imagination: once every high-value lever has disarmed (content clean,
-modes at their breadth target, no engine/repo/frontier candidate), every remaining
+world quests at the breadth target, no engine/repo/frontier candidate), every remaining
 candidate collapses to the **0.5 routine-blind-pass floor** — `isSaturated(a)` in
 `src/afk/assessor.ts`. That is the diminishing-returns state that once pinned the
 loop to clockwork-polish.
