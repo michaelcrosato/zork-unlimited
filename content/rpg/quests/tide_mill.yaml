@@ -367,10 +367,17 @@ objects:
         text: "The head-race runs free, water sliding fast down onto the wheel."
     interactions:
       - verb: USE
-        item: billhook
         target: choked_sluice
-        command_verb: cut
-        command_template: "cut {target} with {item}"
+        command_verb: clear
+        conditions: [{ not_item: billhook }, { not_flag: sluice_clear }]
+        effects:
+          - narrate: >
+              You haul at the weed with bare hands and it comes away in wet strings, not
+              enough to shift the drowned bough. This is billhook work: reach the tool-shed
+              past the yard knife-man, then come back and cut the race properly.
+      - verb: USE
+        target: choked_sluice
+        command_verb: clear
         conditions: [{ has_item: billhook }, { not_flag: sluice_clear }, { has_flag: pawl_free }]
         skill_check:
           skill: craft
@@ -383,10 +390,8 @@ objects:
           on_failure:
             - narrate: "The billhook bites and a strip of weed tears free, but the bough twists and jams the cut back on itself. It is coming away; no other tool is missing. Set the blade lower and cut again."
       - verb: USE
-        item: billhook
         target: choked_sluice
-        command_verb: cut
-        command_template: "cut {target} with {item}"
+        command_verb: clear
         conditions: [{ has_item: billhook }, { not_flag: sluice_clear }, { not_flag: pawl_free }]
         skill_check:
           skill: craft

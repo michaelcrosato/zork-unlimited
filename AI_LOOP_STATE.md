@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 507 -->
+<!-- historical_cycle_count: 508 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,14 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - tide_mill_head_race_reconnaissance
+
+- Content surface: added a state-neutral pre-billhook `clear choked head-race` reconnaissance beat, then made the billhook repair use the same stable `use_choked_sluice` action id.
+- Loop effect: new regression proves the first race visit points to the shed/billhook without score or graph branching, and the same action remains valid after taking the billhook.
+- Blind playtest: 20-run `tide_mill` batch seeds 215-234 exposed the action-id swap; after fixing it, seed 235 reached `ending_saved` at 55/55 with clarity 5/5 and enjoyment 4/5.
+- Self-critique: race/billhook friction did not recur in the final run; the next strongest repeated S1 is Ives dialogue topic ids changing after the first answer.
+- Guard: focused head-race/route/ending regressions, `npm run validate -- tide_mill`, `npm run health`, and report `20260708T112600Z_tide_mill_seed235.md` passed.
 
 ### Cycle result - tide_mill_board_obligation_clarity
 
@@ -129,11 +137,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Blind playtest: `tide_mill` seed 101 reached `ending_saved` at 55/55, clarity 5/5 and enjoyment 4/5; the Ives backtracking complaint did not recur.
 - Self-critique: the conversation now moves at the urgency of the scene, but the slice still needs more compact-view orientation and richer combat texture.
 - Guard: `npm run validate -- tide_mill`, focused dialogue regression, `npm run health`, and schema-verified blind report `blind-tester/reports/20260708T060425Z_tide_mill_seed101.md` passed.
-
-### Cycle result - tide_mill_crank_handle_reactive
-
-- Content surface: fixed `tide_mill` Wheel-Room variants so held crank-handle states beat the broader sluice/pawl text and never claim the handle still hangs on its peg.
-- Loop effect: added a real-observation regression for the take-crank path plus held-handle `sluice_clear`, `pawl_free`, and both-faults-fixed combinations.
-- Blind playtest: `tide_mill` seed 89 reached `ending_saved` at 55/55, clarity 5/5 and enjoyment 4/5; stale crank prose did not recur.
-- Self-critique: the slice is cleaner but still not saturated; next lever is the Ives dialogue back-action friction, with flood-hatch temptation wording behind it.
-- Guard: `npm run validate -- tide_mill`, focused regression, `npm run health`, and schema-verified blind report `blind-tester/reports/20260708T054924Z_tide_mill_seed89.md` passed.

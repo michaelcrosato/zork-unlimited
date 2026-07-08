@@ -85,7 +85,7 @@ function raiseGate(readBoard: boolean): GameState {
     "go_west",
     "go_west",
     "go_west",
-    "use_billhook_on_choked_sluice",
+    "use_choked_sluice",
     "go_east",
     "use_crow_bar_on_brake_pawl",
     "use_crank_handle_on_sea_winch",

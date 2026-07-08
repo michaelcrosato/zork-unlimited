@@ -6,7 +6,7 @@ implementation subagent reads ONLY this doc and the files it names. Keep it
 current, terse, dated, and under ~60 lines — completed work belongs in git
 history and `docs/DECISION_LOG.md`, not here.
 
-## Cycle: 2026-07-08 - Tide-Mill head-race tool friction
+## Cycle: 2026-07-08 - Tide-Mill dialogue action stability
 
 ## Synthesis
 
@@ -47,35 +47,40 @@ no-board rescue ending away from "less clean." A 20-run Codex batch, seeds
 enjoyment was 20x4/5, and no run got stuck. The hidden-board complaint did not
 recur.
 
-The new common lever is race/tool ordering friction: several runs followed the
-board to the head-race before access to the billhook, then treated the required
-tool-shed detour as backtracking or checklist mismatch. Related reports say the
-route remains too prescribed and replay desire is 0/20.
+The head-race pass added a state-neutral pre-billhook `clear choked head-race`
+beat, then converted the billhook repair to the same stable `use_choked_sluice`
+action id. The first 20-run batch for seeds 215-234 exposed the initial id swap;
+after the stable-id fix, seed 235 reached `ending_saved` at 55/55 with clarity
+5/5 and enjoyment 4/5. Race/billhook friction did not recur in that final run.
+
+The next repeated S1 is now Ives dialogue action stability. Root topics are
+clean (`ask_race`, `ask_pawl`, `ask_yard`), but after asking one topic the
+follow-up node exposes contextual ids like `ask_race_to_pawl`, so agents who
+try the previously visible `ask_pawl` get a rejected action despite matching
+valid intent.
 
 ## Chosen Move
 
-Make the first head-race visit feel like intentional reconnaissance instead of
-a failed checklist step.
+Make Ives follow-up topic ids stable across dialogue nodes.
 
 - Target file first: `content/rpg/quests/tide_mill.yaml`.
-- Consider a no-item `clear`/`work` interaction, tighter Head-Race room prose, or
-  a local journal beat that points back to the shed for the billhook after the
-  player investigates the choke.
+- Rename follow-up topic ids so the visible action remains `ask_race`,
+  `ask_pawl`, or `ask_yard` whenever that topic is still available.
+- Preserve prompts, rewards, flags, and dialogue prose; this is action-surface
+  stability, not new clueing.
 - Preserve the less-checklist board: do not reintroduce exact billhook/crow-bar
   mapping into `read_millboard`.
-- Do not add score for reconnaissance; it should be clarity/state texture, not
-  another required point.
 - Do not remove the 5-point board read, no-board 50/55 branch, clean 55/55
   branch, seeded checks, or flood-hatch gamble.
-- Update focused regressions so a pre-billhook race visit/attempt is legal,
-  compact-safe, and sends the player toward the shed without a gotcha.
+- Update focused dialogue regressions to prove stale root ids do not reject
+  after each first topic and all advice rewards still apply exactly once.
 - Keep `max_score`, win-only capstone, and existing takings branch unchanged.
 
 ## Acceptance
 
 1. `npm run validate -- tide_mill` reports 0 errors / 0 warnings.
-2. Focused tests prove the head-race pre-tool beat is legal/clear, does not
-   change score, and the normal 55/55 and no-board 50/55 rescues still work.
+2. Focused tests prove `ask_race`, `ask_pawl`, and `ask_yard` remain legal from
+   follow-up dialogue states until each topic has actually been heard.
 3. `npm run health` passes.
 4. Run blind after the fix. Target a 20-seed Codex sample when runner capacity
    permits, parallel or sequential, and aggregate common issues; at minimum one
@@ -93,5 +98,5 @@ a failed checklist step.
   calibrated.
 - Coin-bag branch still feels vestigial to some 55/55 players; address after the
   millboard discovery tension is closed or measured across a wider sample.
-- Dialogue follow-up action ids (`ask_race_to_pawl` etc.) still cause QA agents
-  to try stale root ids after one answer; fix after content-local race friction.
+- The late coin-bag signpost now reads a little meta/gamey in several reports;
+  make it more diegetic after dialogue action stability.
