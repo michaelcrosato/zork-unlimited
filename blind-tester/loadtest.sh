@@ -94,8 +94,10 @@ TOOL_CALLS=0
 TOOL_ERRORS=0
 SAVED_FEED=""
 if [[ -f "$FEED" ]]; then
-  TOOL_CALLS="$(grep -c '^── ' "$FEED" 2>/dev/null || echo 0)"
-  TOOL_ERRORS="$(grep -c 'ERROR' "$FEED" 2>/dev/null || echo 0)"
+  # grep -c prints "0" AND exits non-zero on no match — capture the count, then
+  # normalize a non-zero exit to a clean 0 (avoids "0\n0" -> NaN in the record).
+  TOOL_CALLS="$(grep -c '^── ' "$FEED" 2>/dev/null)" || TOOL_CALLS=0
+  TOOL_ERRORS="$(grep -c 'ERROR' "$FEED" 2>/dev/null)" || TOOL_ERRORS=0
   SAVED_FEED="$FEEDS_DIR/$(printf '%s' "$START_ISO" | tr ':' '-')_seed${SEED}.log"
   cp "$FEED" "$SAVED_FEED" 2>/dev/null || SAVED_FEED=""
 fi
