@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 500 -->
+<!-- historical_cycle_count: 501 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,14 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - tide_mill_prepared_combat_fairness
+
+- Content surface: retuned the `tide_mill` tool-shed saboteur from 12 HP to 8 HP so a fully prepared player spends fewer rounds eating seeded counterattacks.
+- Loop effect: new fairness regression proves gaff-pole + oilskin + Ives's warning survives worst combat rolls with meaningful HP loss, while barehanded yard combat still reaches `ending_cut_down`.
+- Blind playtest: `tide_mill` seed 169 reached `ending_saved` at 55/55 with clarity 5/5 and enjoyment 4/5; no mechanical faults, but replay desire stayed low.
+- Self-critique: combat fairness is calibrated; next lever is making the flood-hatch and coin-bag temptations feel like meaningful branches instead of obvious trap/flavor options.
+- Guard: focused fairness/takings/dialogue regressions, exhaustive RPG cluster, `npm run validate -- tide_mill`, `npm run health`, and report `20260708T084343Z_tide_mill_seed169.md` passed.
 
 ### Cycle result - tide_mill_optional_fork_wording
 
@@ -134,12 +142,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Self-critique: this is a small fixed envelope trim, not a mechanics upgrade; it is still aligned because every transcript read already requires the caller-owned RPG session handle.
 - Guard: focused transcript, session, MCP ToolApi, and server-registration regressions pin default omission, session-id opt-in, source-id opt-in independence, unchanged transcript responses, and ToolSearch schema coverage.
 - VERIFY: `C:\dev\agent-cleaner`, focused transcript/MCP regressions, payload probe, `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, `npm test`, `npm run health`, and `npm run assess` passed after loop-state rotation.
-
-### Cycle result - overworld_read_session_id_opt_in
-
-- Pre-cycle: `C:\dev\agent-cleaner` measure/gates passed through WSL; optional secret scanner remains absent, and WSL git-dir warnings still print after the green gate summary.
-- Engine/loop surface: compact overworld read/context responses now omit the echoed `session_id` by default, while `include_session_id: true` restores it; full observation reads still include the session id.
-- Loop effect: measured repeated `get_overworld_session_context` and default `get_overworld_session` reads drop from 772 to 754 bytes; `include_session_id: true` preserves the 772-byte envelope.
-- Self-critique: this is a small hot-read envelope trim, not a mechanics upgrade; it is still aligned because the caller already carries the session handle on every repeated read.
-- Guard: focused MCP overworld and server-registration regressions pin default omission, session-id opt-in, unchanged hash-only responses, and ToolSearch schema budget.
-- VERIFY: `C:\dev\agent-cleaner`, focused MCP regressions, payload probe, `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, `npm test`, `npm run health`, and `npm run assess` passed after loop-state rotation.

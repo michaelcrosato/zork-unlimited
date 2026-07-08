@@ -611,7 +611,7 @@ enemies:
     name: "tool-shed saboteur"
     description: "A wet-eyed man with a short gutting knife, planted before the tool-shed door and watching your hands."
     room: mill_yard
-    hp: 12
+    hp: 8
     attack: 4
     defense: 2
     defeat_flag: yard_clear

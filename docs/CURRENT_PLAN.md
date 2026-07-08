@@ -6,7 +6,7 @@ implementation subagent reads ONLY this doc and the files it names. Keep it
 current, terse, dated, and under ~60 lines — completed work belongs in git
 history and `docs/DECISION_LOG.md`, not here.
 
-## Cycle: 2026-07-08 — Tide-Mill prepared-combat fairness
+## Cycle: 2026-07-08 - Tide-Mill meaningful temptation branches
 
 ## Synthesis
 
@@ -17,43 +17,43 @@ win-only +20 capstone, and a late optional takings fork after `gate_up`: pocket,
 return, keep-through-rescue, or steal the coin-bag. The clean rescue remains the
 only 55/55 route.
 
-The late fork is now visible but not duty-coded. `tests/regression/tide_mill_late_takings_visibility.test.ts`
-pins the compact post-gate view: `down` saves the boat now, `south` is a detour
-if Ives's coin-bag tempts the player, and the `pocket coin-bag` action remains
-reachable. Accepted blind seed 167 reached clean `ending_saved` at 55/55 with
-clarity 5/5 and enjoyment 4/5; the previous "last account" required-business
-complaint did not recur.
+Prepared combat is now fairer without defanging the yard. The saboteur has 8 HP
+instead of 12 HP; `tests/regression/tide_mill_prepared_combat_fairness.test.ts`
+pins that a player with Ives's warning, the gaff-pole, and oilskin survives
+worst combat rolls with meaningful HP loss, while barehanded yard combat still
+dies under the same hostile roll regime. Accepted blind seed 169 reached clean
+`ending_saved` at 55/55 with clarity 5/5 and enjoyment 4/5.
 
-The seed-167 exit interview's strongest new content finding is combat
-swinginess: even correctly prepared with gaff-pole, oilskin, and Ives's advice,
-the mandatory saboteur fight dropped the player from 20 HP to 8 HP in three
-rounds. That was readable and not blocking, but it risks making correct play
-feel punished on unlucky seeds. Secondary finding: compact dialogue mode still
-looks like a normal room while non-dialogue actions are rejected.
+Seed 169's strongest finding is now branch value, not readability or combat:
+the flood-hatch remains a legal warned death/trap option even after the correct
+sluice repair, and the coin-bag detour is visible but feels vestigial because
+the perfect route ignores it. That keeps enjoyment at 4/5 and `would_replay`
+false despite full clarity.
 
 ## Chosen Move
 
-Harden the prepared saboteur fight so correct prep stays tense but no longer
-feels punitive or overly swingy.
+Turn one of the current temptations, preferably the Head-Race flood-hatch, from
+an obvious punished choice into a tighter informed gamble or reactive branch.
 
 - Target file first: `content/rpg/quests/tide_mill.yaml`.
-- Preserve the death fork for underprepared/barehanded fighting; do not make
-  combat toothless or remove seeded variance.
-- Prefer a content-side mitigation tied to existing prep/advice (gaff-pole,
-  oilskin, Ives's yard warning) over a broad engine change.
-- Add a focused regression that brackets prepared combat across deterministic
-  seeds/roll regimes and proves the prepared route survives with reasonable HP
-  while underprepared combat can still reach `ending_cut_down`.
+- Preserve telegraphing: no gotcha death, no hidden required failure.
+- The bad crow-bar choice can stay dangerous, but after the sluice is correctly
+  cleared it should either disappear, clearly become obsolete, or pay off in a
+  different deterministic branch instead of sitting as a stale trap.
+- Prefer content state/prose/action gating before engine changes.
+- Add a focused regression for the chosen branch so compact actions and endings
+  do not drift.
 - Keep `max_score`, win-only capstone, and existing takings branch unchanged.
 
 ## Acceptance
 
 1. `npm run validate -- tide_mill` reports 0 errors / 0 warnings.
-2. Focused tests prove prepared combat is survivable and still meaningfully
-   costs HP, while underprepared combat remains a telegraphed death risk.
+2. Focused tests prove the flood-hatch or equivalent temptation is no longer a
+   stale late trap while the intended danger remains telegraphed.
 3. `npm run health` passes.
-4. Run blind after the fix. Target broader Codex samples when practical; at
-   minimum one schema-valid report must actually play the quest before commit.
+4. Run blind after the fix. Target a 20-seed Codex sample when runner capacity
+   permits, parallel or sequential, and aggregate common issues; at minimum one
+   schema-valid report must actually play `tide_mill` before commit.
 
 ## Deferred Levers
 
@@ -64,7 +64,5 @@ feels punitive or overly swingy.
   pinned compact observations, not by widening compact mode blindly.
 - Add richer saboteur combat texture beyond repeated attack once fairness is
   calibrated.
-- Review flood-hatch temptation wording: the bad crow-bar choice is intentional
-  and strongly warned, but completionist players may still read it as required.
 - Collect a wider blind sample when the harness is stable; count only verifier
   reports that actually started and played `tide_mill`.
