@@ -161,7 +161,7 @@ export function resolveOverworldRoadEncounter(
     kind: "road",
     town: state.townName,
     title: `${option.label}: ${encounter.event.title}`,
-    text: `${encounter.timing} ${encounter.event.summary} ${option.outcome}${supplyDeficit > 0 ? " Lacking supplies made the work more exhausting." : ""}`,
+    text: `${encounter.timing} ${encounter.event.summary} ${option.outcome} Afterward you arrive in ${encounter.to}.${supplyDeficit > 0 ? " Lacking supplies made the work more exhausting." : ""}`,
     recordedAt: timeLabel(minutesAfter),
   };
 

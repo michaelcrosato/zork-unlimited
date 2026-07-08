@@ -277,6 +277,7 @@ describe("overworld session road encounters", () => {
     });
     expect(resolution.result.entry.text).toContain("Lacking supplies");
     expect(resolution.result.entry.text).toContain("On the road from TOWN_A to TOWN_B");
+    expect(resolution.result.entry.text).toContain("Afterward you arrive in TOWN_B.");
   });
 
   it("resolves press-on encounters without supply spend or renown", () => {

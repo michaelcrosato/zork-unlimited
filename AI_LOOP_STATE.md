@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 519 -->
+<!-- historical_cycle_count: 520 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,14 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - mid_route_road_interruptions
+
+- Engine surface: pending road encounters now project a route location (`road:<edge_id>`) with no town roads/local affordances, compact overworld context is v13, and road resolution text delivers the destination arrival beat.
+- Loop effect: focused UI/MCP/road tests prove Albany-Colonie pending state reads as on-route, blocks town/road actions, restores through snapshots, and resolves into Colonie before normal town actions resume.
+- Blind playtest: 25-run `overworld` Codex batch seeds 441-465 all exited 0; clarity 25x4/5, enjoyment 25x4/5, replay 25x true; feedback ledger now has 285 accepted reports.
+- Self-critique: no fresh report repeated the after-arrival timing complaint; next road-specific issue is generic/directionally awkward "road report" prose on Albany-Colonie.
+- Guard: focused affected tests, `npm run health`, `npm run blind:feedback`, and reports `20260708T180055Z`-`20260708T181931Z` seeds 441-465 passed.
 
 ### Cycle result - road_encounter_travel_timing
 
@@ -126,11 +134,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Blind playtest: `tide_mill` seed 193 reached `ending_saved` at 50/55 with clarity 5/5 and enjoyment 4/5; sea-gate wording did not recur, but skipping the board made the 5-point loss feel hidden.
 - Self-critique: discovery is less checklist-driven, but the scored board read needs a stronger up-front affordance or gentler no-board ending tone; compact final score text also needs another look.
 - Guard: focused compact/no-board/dialogue regressions, `npm run validate -- tide_mill`, `npm run health`, and report `20260708T100922Z_tide_mill_seed193.md` passed.
-
-### Cycle result - tide_mill_ives_dialogue_ids
-
-- Content surface: renamed Ives root dialogue topic IDs from `ask_*` to clean roots so compact action IDs read `ask_race`, `ask_pawl`, `ask_yard` instead of `ask_ask_*`.
-- Loop effect: dialogue-flow regression now pins readable root action IDs while preserving direct race/pawl/yard follow-ups and the same craft/might/advice rewards.
-- Blind playtest: `tide_mill` seed 191 reached `ending_saved` at 55/55 with clarity 5/5 and enjoyment 4/5; the compact dialogue-ID complaint did not recur.
-- Self-critique: UI noise is lower; next highest-leverage S1 is that the millboard over-prescribes the optimal solution and weakens discovery despite excellent clarity.
-- Guard: focused dialogue/prep/route regressions, `npm run validate -- tide_mill`, `npm run health`, and report `20260708T095501Z_tide_mill_seed191.md` passed.

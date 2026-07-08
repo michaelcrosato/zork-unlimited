@@ -208,7 +208,17 @@ describe("OverworldSession", () => {
 
     const entry = session.travel(road!.id);
     const after = session.view();
-    expect(after.current.id).toBe("colonie_town");
+    expect(after.current.id).toBe(`road:${road!.id}`);
+    expect(after.current.name).toBe(`On ${road!.route}: Albany city to Colonie town`);
+    expect(after.current.description).toContain(
+      "You are still between Albany city and Colonie town",
+    );
+    expect(after.currentArea).toBeNull();
+    expect(after.exits).toEqual([]);
+    expect(after.areaExits).toEqual([]);
+    expect(after.areas).toEqual([]);
+    expect(after.jobs).toEqual([]);
+    expect(after.routeOptions).toEqual([]);
     expect(entry.baseMinutes).toBe(road!.travel_minutes);
     expect(entry.delayMinutes).toBe(0);
     expect(entry.minutes).toBe(road!.travel_minutes);
@@ -249,6 +259,7 @@ describe("OverworldSession", () => {
     expect(session.compactView()).toEqual(compactOverworldView(after));
     expect(() => session.planRoute("albany_city")).toThrow(/pending road encounter/i);
     session.resolveRoadEncounter("press_on");
+    expect(session.view().current.id).toBe("colonie_town");
     const backRoute = session.planRoute("albany_city");
     expect(backRoute.totalMinutes).toBe(road!.travel_minutes);
     expect(backRoute.steps.map((step) => step.to.id)).toEqual(["albany_city"]);
@@ -266,7 +277,9 @@ describe("OverworldSession", () => {
     const arrived = session.view();
     const encounter = arrived.pendingRoadEncounter;
     expect(encounter?.event.edge).toBe(road!.id);
-    expect(() => session.travel(arrived.exits[0]!.id)).toThrow(/pending road encounter/i);
+    expect(arrived.current.id).toBe(`road:${road!.id}`);
+    expect(arrived.exits).toEqual([]);
+    expect(() => session.travel(road!.id)).toThrow(/pending road encounter/i);
 
     const option = encounter!.options.find(
       (candidate) => candidate.strategy === "assist_travelers",
@@ -287,6 +300,9 @@ describe("OverworldSession", () => {
       title: `${option!.label}: ${encounter!.event.title}`,
     });
     expect(after.journal[0]?.text).toContain("On the road from Albany city to Colonie town");
+    expect(after.journal[0]?.text).toContain("Afterward you arrive in Colonie town.");
+    expect(after.current.id).toBe("colonie_town");
+    expect(after.currentArea?.home).toBe("colonie_town");
     expect(session.compactView()).toEqual(compactOverworldView(after));
     expect(after.regionRenown[arrived.current.region]).toBe(option!.renownGained);
     const returnRoad = after.exits.find((candidate) => candidate.destination.id === "albany_city");
@@ -340,7 +356,7 @@ describe("OverworldSession", () => {
     );
     const restored = OverworldSession.restore(world, snapshot);
     expect(restored.view()).toEqual(before);
-    expect(() => restored.travel(restored.view().exits[0]!.id)).toThrow(/pending road encounter/i);
+    expect(() => restored.travel(road!.id)).toThrow(/pending road encounter/i);
 
     restored.resolveRoadEncounter("press_on");
     expect(restored.view().pendingRoadEncounter).toBeNull();
@@ -428,7 +444,7 @@ describe("OverworldSession", () => {
     expect(view.discovered.length).toBeGreaterThan(24);
     const compact = compactOverworldView(view);
     expect(session.compactView()).toEqual(compact);
-    expect(compact.v).toBe(12);
+    expect(compact.v).toBe(13);
     expect(compact.hidden).toEqual([
       view.hiddenAreaCount,
       view.hiddenJobCount,
@@ -825,45 +841,48 @@ describe("OverworldSession", () => {
 
   it("caps compact context labels, titles, and risk text", () => {
     const session = new OverworldSession(world);
-    const road = session.view().exits.find((exit) => exit.destination.id === "colonie_town");
+    const localView = session.view();
+    const road = localView.exits.find((exit) => exit.destination.id === "colonie_town");
     expect(road).toBeDefined();
     session.travel(road!.id);
 
     const view = session.view();
     expect(view.pendingRoadEncounter).toBeDefined();
-    expect(view.currentArea).toBeDefined();
-    expect(view.areas[0]).toBeDefined();
-    expect(view.pois[0]).toBeDefined();
-    expect(view.characters[0]).toBeDefined();
-    expect(view.events[0]).toBeDefined();
+    expect(localView.currentArea).toBeDefined();
+    expect(localView.areas[0]).toBeDefined();
+    expect(localView.pois[0]).toBeDefined();
+    expect(localView.characters[0]).toBeDefined();
+    expect(localView.events[0]).toBeDefined();
     const longLabel = "label ".repeat(40);
     const longTitle = "title ".repeat(60);
     const longRisk = "risk ".repeat(70);
 
     const pendingRoadEncounter = view.pendingRoadEncounter!;
     const compact = compactOverworldView({
-      ...view,
+      ...localView,
       world: longLabel,
-      current: { ...view.current, name: longLabel, region: longLabel },
-      currentArea: view.currentArea ? { ...view.currentArea, name: longLabel } : null,
-      areas: view.areas.map((area, index) => (index === 0 ? { ...area, name: longLabel } : area)),
-      pois: view.pois.map((poi, index) => (index === 0 ? { ...poi, title: longTitle } : poi)),
-      characters: view.characters.map((character, index) =>
+      current: { ...localView.current, name: longLabel, region: longLabel },
+      currentArea: localView.currentArea ? { ...localView.currentArea, name: longLabel } : null,
+      areas: localView.areas.map((area, index) =>
+        index === 0 ? { ...area, name: longLabel } : area,
+      ),
+      pois: localView.pois.map((poi, index) => (index === 0 ? { ...poi, title: longTitle } : poi)),
+      characters: localView.characters.map((character, index) =>
         index === 0 ? { ...character, name: longLabel } : character,
       ),
-      events: view.events.map((event, index) =>
+      events: localView.events.map((event, index) =>
         index === 0 ? { ...event, title: longTitle } : event,
       ),
       journal: [
         {
           id: "synthetic_long_title",
           kind: "event",
-          town: view.current.id,
+          town: localView.current.id,
           title: longTitle,
           text: "Synthetic compact-title boundary row.",
-          recordedAt: view.timeLabel,
+          recordedAt: localView.timeLabel,
         },
-        ...view.journal,
+        ...localView.journal,
       ],
       pendingRoadEncounter: {
         ...pendingRoadEncounter,

@@ -16,7 +16,7 @@ export const OVERWORLD_COMPACT_COMPLETED_ARC_LIMIT = 16;
 export const OVERWORLD_COMPACT_LABEL_CHAR_LIMIT = 96;
 export const OVERWORLD_COMPACT_TITLE_CHAR_LIMIT = 140;
 export const OVERWORLD_COMPACT_RISK_CHAR_LIMIT = 160;
-export const OVERWORLD_COMPACT_VIEW_VERSION = 12 as const;
+export const OVERWORLD_COMPACT_VIEW_VERSION = 13 as const;
 
 export type OverworldCompactRef = readonly [id: string, name: string];
 export type OverworldCompactQuestRef = readonly [id: string, title: string, areaId: string];
@@ -209,7 +209,7 @@ export const OVERWORLD_COMPACT_LEGEND = {
   v: "compact context schema version",
   world: "world name (include_world_name only)",
   time: "in-game clock 'Day N, HH:MM'",
-  here: "[town_id, town_name, region_name, area_id|null, area_name|null] current location",
+  here: "[town_id, town_name, region_name, area_id|null, area_name|null] current location; when pending_road exists this is the on-route id/name instead of a town",
   vitals: "[supplies, max_supplies, fatigue_0to100, condition_label] travel readiness",
   hidden:
     "[areas, jobs, sites, quests] counts still undiscovered at this town; scout/talk/explore to reveal them",

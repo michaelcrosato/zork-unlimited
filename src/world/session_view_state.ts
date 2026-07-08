@@ -104,9 +104,59 @@ const EMPTY_AREA_CONTENT: OverworldSessionAreaContent = {
   sites: [],
 };
 
+const EMPTY_LOCAL_VIEW: OverworldSessionLocalView = {
+  areas: [],
+  hiddenAreaCount: 0,
+  jobs: [],
+  hiddenJobCount: 0,
+  quests: [],
+  hiddenQuestCount: 0,
+  sites: [],
+  hiddenSiteCount: 0,
+};
+
+function pendingRoadLocationNode(
+  encounter: OverworldPendingRoadEncounter,
+  destination: OverworldNode,
+): OverworldNode {
+  return {
+    ...destination,
+    id: `road:${encounter.edgeId}`,
+    name: `On ${encounter.route}: ${encounter.from} to ${encounter.to}`,
+    services: [],
+    description: `${encounter.event.summary} You are still between ${encounter.from} and ${encounter.to}; resolve the road encounter before doing town business in ${encounter.to}.`,
+  };
+}
+
 export function buildOverworldSessionViewModelState(
   source: OverworldSessionViewModelSourceState,
 ): OverworldSessionViewModelState {
+  if (source.pendingRoadEncounter) {
+    return {
+      worldName: source.worldName,
+      worldTownCount: source.worldTownCount,
+      current: pendingRoadLocationNode(source.pendingRoadEncounter, source.current),
+      currentArea: null,
+      minutes: source.minutes,
+      supplies: source.supplies,
+      fatigue: source.fatigue,
+      roads: [],
+      areaExits: [],
+      routeOptions: [],
+      localView: EMPTY_LOCAL_VIEW,
+      poi: [],
+      contacts: [],
+      events: [],
+      journalEntries: source.journalEntries,
+      travelLog: source.travelLog,
+      visitedCount: source.visitedCount,
+      regionRenown: source.regionRenown,
+      completedRegionalArcIds: source.completedRegionalArcIds,
+      pendingRoadEncounter: source.pendingRoadEncounter,
+      ids: source.ids,
+    };
+  }
+
   const currentAreaContent = source.currentArea
     ? currentOverworldSessionAreaContent(source.localState, source.currentArea.id)
     : EMPTY_AREA_CONTENT;

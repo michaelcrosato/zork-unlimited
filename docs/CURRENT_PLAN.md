@@ -6,53 +6,48 @@ implementation subagent reads ONLY this doc and the files it names. Keep it
 current, terse, dated, and under ~60 lines — completed work belongs in git
 history and `docs/DECISION_LOG.md`, not here.
 
-## Cycle: 2026-07-08 - True Mid-Route Road Interruptions
+## Cycle: 2026-07-08 - Directional Road Event Texture
 
 ## Synthesis
 
-Road encounter timing shipped as a first pass. Pending road trouble now carries
-route/timing text, compact `pending_road.where`, snapshot `roadEventId` proof,
-resource replay integrity, and immediate same-edge repeat suppression on the
-Albany-Colonie loop. The Codex blind runner now injects AdventureForge MCP for
-Codex and allows one ToolSearch fallback when direct tools are not surfaced.
+True mid-route road interruptions shipped. While `pending_road` exists, full and
+compact context now present a route location (`road:<edge_id>`) with no town
+roads/local affordances; resolving the encounter lands the arrival beat and
+restores destination-town actions. Compact overworld context is now v13.
 
-Fresh-game Codex seeds 416-440 all exited 0; clarity 25x4/5, enjoyment 25x4/5,
-replay 25x true. The ledger now has 260 accepted reports. No fresh same-road
-repeat complaint appeared, but the dominant fresh/common issue is still that
-road trouble feels like it fires after arrival because the session is already
-located in the destination town while pending.
+Fresh-game Codex seeds 441-465 all exited 0; clarity 25x4/5, enjoyment 25x4/5,
+replay 25x true. The ledger now has 285 accepted reports. The explicit
+after-arrival road complaint did not recur in the fresh batch.
 
-Newest issues: true road pending state, completed quest/event/job status still
-listed unclearly, generic civic overworld texture, abrupt Albany-to-Wolf-Winter
-tone bridge, compact journal hash/truncation, and remote discovered jobs being
-hard to review. The updated goal is broader starting-area/open-world depth, but
-keep strengthening this same benchmark slice.
+Newest issues: several reports now call the Albany-Colonie road event generic or
+directionally awkward ("road report" text can read like the opposite travel
+direction), completed quest/event/job status is still unclearly listed, dialogue
+ids/quotes are noisy, compact journal hash/truncation persists, and the
+Albany-to-Wolf-Winter tone bridge still needs stronger fiction.
 
 ## Chosen Move
 
-Make road encounters truly occupy a mid-route interruption state: while
-`pending_road` exists, the compact/full context should read as being on the road
-between origin and destination, town actions remain blocked, and arrival fiction
-should land only after resolution.
+Make early road encounters read as concrete, direction-safe incidents rather than
+generic road reports. The Albany-Colonie road is the priority because it is the
+first-route benchmark path hit by the blind batch.
 
-- Target `src/world/session_road_travel.ts`, `src/world/session_road_encounters.ts`,
-  context/compact view shaping, snapshot restore/replay, and focused UI/MCP
-  tests.
+- Target the New York overworld road-event generation/content surface and focused
+  tests around the Albany-Colonie road event title/summary/resolution text.
 - Keep deterministic seeded-free overworld behavior; no clocks or `Math.random`.
-- Prefer the smallest state model that makes the player's location/timing
-  truthful; avoid a second quest or broad map scaffolding.
-- Preserve snapshot restore integrity and compact payload limits.
+- Prefer direction-neutral or route-relative wording when an edge can be traveled
+  both ways.
+- Avoid broad map scaffolding or a second quest.
 
 ## Acceptance
 
-1. Focused tests prove a pending Albany-Colonie road encounter reports the player
-   as on the route, not simply arrived in Colonie.
-2. Focused tests prove resolving the encounter produces the destination-arrival
-   beat and then restores normal town actions.
+1. Focused tests prove Albany-Colonie road-event prose no longer says generic
+   "road report" or names the wrong direction for either travel direction.
+2. Focused tests prove the compact/full pending-road and resolution text still
+   preserve the v13 mid-route state.
 3. `npm run health` passes.
 4. Run a 25-seed fresh-game `npm run blind` batch, regenerate
-   `docs/BLIND_FEEDBACK_LEDGER.md`, and confirm the after-arrival complaint drops
-   before committing.
+   `docs/BLIND_FEEDBACK_LEDGER.md`, and confirm road-direction/generic-road
+   complaints drop before committing.
 
 ## Deferred Levers
 
