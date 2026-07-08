@@ -83,16 +83,16 @@ describe("Tide-Mill Ives dialogue supports direct urgent follow-ups", () => {
     expect(state.flags["heard_yard_trick"]).toBeUndefined();
     expect(state.vars.craft).toBe(8);
     expect(state.vars.might).toBe(3);
-    expect(legalTopicIds(state)).toEqual(
-      expect.arrayContaining(["race_to_pawl", "race_to_yard", "race_leave"]),
-    );
+    expect(legalTopicIds(state)).toEqual(expect.arrayContaining(["pawl", "yard", "leave"]));
+    expect(legalActionIds(state)).toEqual(expect.arrayContaining(["ask_pawl", "ask_yard"]));
+    expect(legalActionIds(state)).not.toContain("ask_race_to_pawl");
   });
 
   it("can gather race, pawl, and yard advice with no intermediate back topic", () => {
     let state = initStateForRpgPack(index, 89);
     state = act(state, talkIves);
 
-    const route = ["race", "race_to_pawl", "pawl_to_yard", "yard_leave"];
+    const route = ["race", "pawl", "yard", "leave"];
     expect(route.every((topic) => !topic.endsWith("_back"))).toBe(true);
     for (const topic of route) state = act(state, ask(topic));
 

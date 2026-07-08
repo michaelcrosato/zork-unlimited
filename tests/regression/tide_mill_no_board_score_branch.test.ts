@@ -59,9 +59,9 @@ describe("Tide-Mill no-board score branch", () => {
     for (const id of [
       "talk_ives",
       "ask_race",
-      "ask_race_to_pawl",
-      "ask_pawl_to_yard",
-      "ask_yard_leave",
+      "ask_pawl",
+      "ask_yard",
+      "ask_leave",
       "take_gaff_hook",
       "go_east",
       "take_oilskin_coat",

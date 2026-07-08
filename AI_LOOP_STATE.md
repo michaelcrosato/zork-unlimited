@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 508 -->
+<!-- historical_cycle_count: 509 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,14 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - tide_mill_dialogue_action_stability
+
+- Content surface: renamed Ives follow-up dialogue topic ids to stable `race`/`pawl`/`yard`/`leave` ids across all advice nodes instead of contextual `race_to_pawl` shapes.
+- Loop effect: focused dialogue regression now proves `ask_pawl`/`ask_yard` remain valid after a prior topic while rewards, flags, and direct urgent follow-ups stay unchanged.
+- Blind playtest: `tide_mill` seed 237 reached `ending_saved` at 55/55 with clarity 5/5 and enjoyment 4/5; no rejected actions and the dialogue-id complaint did not recur.
+- Self-critique: dialogue friction is closed; next repeated content issue is the late coin-bag temptation reading too meta/blunt, with the overall route still very guided.
+- Guard: focused dialogue/route regressions, `npm run validate -- tide_mill`, `npm run health`, and report `20260708T113742Z_tide_mill_seed237.md` passed.
 
 ### Cycle result - tide_mill_head_race_reconnaissance
 
@@ -129,11 +137,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Blind playtest: `tide_mill` seed 113 reached `ending_saved` at 55/55, clarity 5/5 and enjoyment 4/5; Wheel-Room orientation did not recur.
 - Self-critique: compact navigation is better inside the mill core, but the opening Mill-House still needs the same treatment so east=counting-nook is unambiguous.
 - Guard: `npm run validate -- tide_mill`, focused compact/crank regressions, `npm run health`, and schema-verified blind report `blind-tester/reports/20260708T061855Z_tide_mill_seed113.md` passed.
-
-### Cycle result - tide_mill_ives_dialogue_flow
-
-- Content surface: added direct Miller Ives follow-up topics so `tide_mill` players can ask race, pawl, and yard advice without a repeated back action after every answer.
-- Loop effect: advice remains deliberate and load-bearing; the regression drives all three rewards without `_back` topics and proves one topic does not auto-grant the others.
-- Blind playtest: `tide_mill` seed 101 reached `ending_saved` at 55/55, clarity 5/5 and enjoyment 4/5; the Ives backtracking complaint did not recur.
-- Self-critique: the conversation now moves at the urgency of the scene, but the slice still needs more compact-view orientation and richer combat texture.
-- Guard: `npm run validate -- tide_mill`, focused dialogue regression, `npm run health`, and schema-verified blind report `blind-tester/reports/20260708T060425Z_tide_mill_seed101.md` passed.

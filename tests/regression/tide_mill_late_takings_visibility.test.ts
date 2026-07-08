@@ -42,9 +42,9 @@ function raiseGate(api: ToolApi, sessionId: string) {
   for (const actionId of [
     "talk_ives",
     "ask_race",
-    "ask_race_to_pawl",
-    "ask_pawl_to_yard",
-    "ask_yard_leave",
+    "ask_pawl",
+    "ask_yard",
+    "ask_leave",
     "read_millboard",
     "take_gaff_hook",
     "go_east",

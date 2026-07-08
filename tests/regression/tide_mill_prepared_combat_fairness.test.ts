@@ -80,7 +80,7 @@ describe("Tide-Mill prepared combat stays fair under worst rolls", () => {
     let state = enterYardWith([
       "talk_ives",
       "ask_yard",
-      "ask_yard_leave",
+      "ask_leave",
       "take_gaff_hook",
       "go_east",
       "take_oilskin_coat",

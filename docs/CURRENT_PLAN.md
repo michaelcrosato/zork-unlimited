@@ -6,7 +6,7 @@ implementation subagent reads ONLY this doc and the files it names. Keep it
 current, terse, dated, and under ~60 lines — completed work belongs in git
 history and `docs/DECISION_LOG.md`, not here.
 
-## Cycle: 2026-07-08 - Tide-Mill dialogue action stability
+## Cycle: 2026-07-08 - Tide-Mill coin-bag temptation texture
 
 ## Synthesis
 
@@ -53,34 +53,42 @@ action id. The first 20-run batch for seeds 215-234 exposed the initial id swap;
 after the stable-id fix, seed 235 reached `ending_saved` at 55/55 with clarity
 5/5 and enjoyment 4/5. Race/billhook friction did not recur in that final run.
 
-The next repeated S1 is now Ives dialogue action stability. Root topics are
-clean (`ask_race`, `ask_pawl`, `ask_yard`), but after asking one topic the
-follow-up node exposes contextual ids like `ask_race_to_pawl`, so agents who
-try the previously visible `ask_pawl` get a rejected action despite matching
-valid intent.
+The dialogue pass renamed Ives follow-up topic ids to stable
+`race`/`pawl`/`yard`/`leave` ids across all advice nodes. Seed 237 reached
+`ending_saved` at 55/55 with clarity 5/5 and enjoyment 4/5, no rejected
+actions, and no dialogue-id complaint.
+
+The current repeated content issue is the late coin-bag temptation reading too
+meta/blunt: text like "south is a detour if Ives's coin-bag tempts you" teaches
+the branch mechanically but makes it feel author-labeled as wrong instead of a
+diegetic moral lure. Reports also still call the main route highly guided; this
+is a small, content-local way to add tension without obscuring the rescue.
 
 ## Chosen Move
 
-Make Ives follow-up topic ids stable across dialogue nodes.
+Make the late coin-bag branch feel like diegetic temptation, not UI signage.
 
 - Target file first: `content/rpg/quests/tide_mill.yaml`.
-- Rename follow-up topic ids so the visible action remains `ask_race`,
-  `ask_pawl`, or `ask_yard` whenever that topic is still available.
-- Preserve prompts, rewards, flags, and dialogue prose; this is action-surface
-  stability, not new clueing.
+- Retune post-`gate_up` Wheel-Room/Mill-House/Counting-Nook prose where it says
+  "detour" or "tempts you" so the coin-bag is visible as a concrete object, not
+  labeled as an alternate ending path.
+- Preserve discoverability: a player at the final stair must still know south
+  leads back toward the coin-bag before ending.
+- Do not alter score math, takings endings, `droppable: false`, or the clean
+  55/55 route.
 - Preserve the less-checklist board: do not reintroduce exact billhook/crow-bar
   mapping into `read_millboard`.
 - Do not remove the 5-point board read, no-board 50/55 branch, clean 55/55
   branch, seeded checks, or flood-hatch gamble.
-- Update focused dialogue regressions to prove stale root ids do not reject
-  after each first topic and all advice rewards still apply exactly once.
+- Update focused compact visibility regressions so the coin-bag fork remains
+  visible without the words "detour" or "tempts you."
 - Keep `max_score`, win-only capstone, and existing takings branch unchanged.
 
 ## Acceptance
 
 1. `npm run validate -- tide_mill` reports 0 errors / 0 warnings.
-2. Focused tests prove `ask_race`, `ask_pawl`, and `ask_yard` remain legal from
-   follow-up dialogue states until each topic has actually been heard.
+2. Focused tests prove the late takings fork remains visible from compact
+   post-gate views while avoiding meta temptation/detour wording.
 3. `npm run health` passes.
 4. Run blind after the fix. Target a 20-seed Codex sample when runner capacity
    permits, parallel or sequential, and aggregate common issues; at minimum one
@@ -98,5 +106,6 @@ Make Ives follow-up topic ids stable across dialogue nodes.
   calibrated.
 - Coin-bag branch still feels vestigial to some 55/55 players; address after the
   millboard discovery tension is closed or measured across a wider sample.
-- The late coin-bag signpost now reads a little meta/gamey in several reports;
-  make it more diegetic after dialogue action stability.
+- Overall route still reads highly guided and replay desire remains low; after
+  coin-bag texture, consider one deeper optional branch rather than more
+  signpost polish.

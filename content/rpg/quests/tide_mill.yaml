@@ -593,18 +593,18 @@ npcs:
             - inc_var: { name: craft, by: 5 }
             - add_journal: "Ives told you the head-race trick: cut the downstream braid first and let the water show the next cut (+5 craft)."
           topics:
-            - id: race_to_pawl
+            - id: pawl
               prompt: "Ask next about the brake-pawl and sea-gate."
               conditions: [{ not_flag: heard_pawl_trick }]
               goto: pawl_trick
-            - id: race_to_yard
+            - id: yard
               prompt: "Ask next about the saboteur at the tool-shed."
               conditions: [{ not_flag: heard_yard_trick }]
               goto: yard_trick
-            - id: race_back
+            - id: back
               prompt: "Nod, and ask something else."
               goto: ives_root
-            - id: race_leave
+            - id: leave
               prompt: "Leave Ives and work the mill."
               end: true
         - id: pawl_trick
@@ -617,18 +617,18 @@ npcs:
             - inc_var: { name: might, by: 5 }
             - add_journal: "Ives showed you the pawl and winch angle: lift from the heel and work with the frame (+5 might)."
           topics:
-            - id: pawl_to_race
+            - id: race
               prompt: "Ask next how to clear the choked race."
               conditions: [{ not_flag: heard_race_trick }]
               goto: race_trick
-            - id: pawl_to_yard
+            - id: yard
               prompt: "Ask next about the saboteur at the tool-shed."
               conditions: [{ not_flag: heard_yard_trick }]
               goto: yard_trick
-            - id: pawl_back
+            - id: back
               prompt: "Nod, and ask something else."
               goto: ives_root
-            - id: pawl_leave
+            - id: leave
               prompt: "Leave Ives and work the mill."
               end: true
         - id: yard_trick
@@ -641,18 +641,18 @@ npcs:
             - set_flag: heard_yard_trick
             - add_journal: "Ives warned you to take the gaff-pole and oilskin before fighting the tool-shed saboteur; barehanded is a real gamble."
           topics:
-            - id: yard_to_race
+            - id: race
               prompt: "Ask next how to clear the choked race."
               conditions: [{ not_flag: heard_race_trick }]
               goto: race_trick
-            - id: yard_to_pawl
+            - id: pawl
               prompt: "Ask next about the brake-pawl and sea-gate."
               conditions: [{ not_flag: heard_pawl_trick }]
               goto: pawl_trick
-            - id: yard_back
+            - id: back
               prompt: "Nod, and ask something else."
               goto: ives_root
-            - id: yard_leave
+            - id: leave
               prompt: "Leave Ives and work the mill."
               end: true
 
