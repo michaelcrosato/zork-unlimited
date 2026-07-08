@@ -94,16 +94,20 @@ describe("Tide-Mill compact post-gate view exposes the takings fork", () => {
     expect(gateUp.context.text).toMatch(/down=open staith/i);
     expect(gateUp.context.text).toMatch(/south=mill-floor\/counting-nook/i);
     expect(gateUp.context.text).toMatch(/down saves the boat now/i);
-    expect(gateUp.context.text).toMatch(/south is a detour/i);
-    expect(gateUp.context.text).toMatch(/tempts you/i);
+    expect(gateUp.context.text).not.toMatch(/detour/i);
+    expect(gateUp.context.text).not.toMatch(/tempts you/i);
     expect(gateUp.context.text).toMatch(/Ives's coin-bag/i);
+    expect(gateUp.context.text).toMatch(/counting-desk/i);
     expect(gateUp.context.text).not.toMatch(/last account/i);
     expect(gateUp.context.exits).toEqual(expect.arrayContaining(["down", "east", "south", "west"]));
 
     const millHouse = step(api, started.session_id, "go_south");
-    expect(millHouse.context.text).toMatch(/counting-nook if Ives's takings tempt you/i);
+    expect(millHouse.context.text).toMatch(/counting-nook where Ives's takings still sit/i);
+    expect(millHouse.context.text).not.toMatch(/tempts you/i);
     const nook = step(api, started.session_id, "go_east");
-    expect(nook.context.text).toMatch(/coin-bag.*choice/i);
+    expect(nook.context.text).toMatch(/coin-bag.*counting-desk/i);
+    expect(nook.context.text).toMatch(/heavy and unattended/i);
+    expect(nook.context.text).not.toMatch(/choice/i);
 
     const actions = api.list_legal_actions({
       session_id: started.session_id,

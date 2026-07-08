@@ -28,10 +28,10 @@ rooms:
     variants:
       - when: [{ has_flag: gate_up }]
         text: >
-          Ways: north=wheel-room and open staith, east=counting-nook if Ives's
-          takings tempt you. The orders are off the board and the wheel turns
-          beyond the north arch. The sea-gate is up; held water runs down, and
-          Ives points you north to wave the boat through.
+          Ways: north=wheel-room and open staith, east=counting-nook where Ives's
+          takings still sit. The orders are off the board and the wheel turns beyond
+          the north arch. The sea-gate is up; held water runs down, and Ives points
+          you north to wave the boat through.
       - when: [{ has_flag: hook_taken }]
         text: >
           Ways: north=wheel-room (then east to yard/tool-shed);
@@ -76,15 +76,14 @@ rooms:
       - when: [{ has_flag: gate_up }, { has_flag: oilskin_taken }]
         text: >
           A cramped nook off the mill-floor. The gate is up and the boat waits one stair
-          away; the coin-bag still sits on the counting-desk, suddenly a choice instead
-          of clutter. The peg rail is bare where the oilskin mill-coat hung. The mill-floor
-          is back west.
+          away; the coin-bag still sits on the counting-desk, heavy and unattended.
+          The peg rail is bare where the oilskin mill-coat hung. The mill-floor is back
+          west.
       - when: [{ has_flag: gate_up }]
         text: >
           A cramped nook off the mill-floor. The gate is up and the boat waits one stair
-          away; the coin-bag still sits on the counting-desk, suddenly a choice instead
-          of clutter. The oilskin mill-coat hangs by the peg rail. The mill-floor is back
-          west.
+          away; the coin-bag still sits on the counting-desk, heavy and unattended.
+          The oilskin mill-coat hangs by the peg rail. The mill-floor is back west.
       - when: [{ has_flag: oilskin_taken }]
         text: >
           A cramped nook off the mill-floor where the miller keeps his tallies and his cash.
@@ -107,8 +106,8 @@ rooms:
         text: >
           Ways: down=open staith, south=mill-floor/counting-nook,
           west=head-race, east=yard/tool-shed. The wheel runs and the sea-gate is
-          up. Down saves the boat now; south is a detour if Ives's coin-bag
-          tempts you.
+          up. Down saves the boat now; south leads back past Ives's coin-bag on
+          the counting-desk.
       - when: [{ has_flag: sluice_clear }, { has_flag: pawl_free }, { has_flag: crank_handle_taken }]
         text: >
           Ways: west=head-race, east=yard/tool-shed, south=mill-floor, down=gated

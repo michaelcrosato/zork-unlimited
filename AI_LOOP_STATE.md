@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 509 -->
+<!-- historical_cycle_count: 510 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,14 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - tide_mill_coin_bag_temptation_texture
+
+- Content surface: retuned post-gate Wheel-Room/Mill-House/Counting-Nook prose from meta "detour/tempts/choice" labels to concrete coin-bag-on-counting-desk details.
+- Loop effect: compact takings regression still proves the fork is visible and `pocket coin-bag` reachable, while banning the blunt meta wording from the final-stair path.
+- Blind playtest: `tide_mill` seed 239 reached `ending_saved` at 55/55 with clarity 5/5 and enjoyment 4/5; no coin-bag meta complaint recurred.
+- Self-critique: the next S1 is the millboard's race-first wording clashing with needing shed tools first; flood-hatch temptation also remains noisy but intentional.
+- Guard: focused takings/ending regressions, `npm run validate -- tide_mill`, `npm run health`, and report `20260708T114929Z_tide_mill_seed239.md` passed.
 
 ### Cycle result - tide_mill_dialogue_action_stability
 
@@ -129,11 +137,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Blind playtest: `tide_mill` seed 127 reached `ending_saved` at 55/55, clarity 5/5 and enjoyment 4/5; the opening east/counting-nook confusion did not recur.
 - Self-critique: compact entry orientation is tighter, but the next stale-state mismatch is repair narration that still says "one fault" when the pawl is the second fixed fault.
 - Guard: `npm run validate -- tide_mill`, focused opening compact regression, `npm run health`, and schema-verified blind report `blind-tester/reports/20260708T063559Z_tide_mill_seed127.md` passed.
-
-### Cycle result - tide_mill_wheel_room_compact_orientation
-
-- Content surface: tightened all `tide_mill` Wheel-Room variants so compact prose opens with west=head-race, east=yard/tool-shed, south=mill-floor, and down=staith gate/open state.
-- Loop effect: compact ToolApi regression pins the seed-101 Wheel-Room view under the 360-char cap while preserving the held-crank stale-prose regression.
-- Blind playtest: `tide_mill` seed 113 reached `ending_saved` at 55/55, clarity 5/5 and enjoyment 4/5; Wheel-Room orientation did not recur.
-- Self-critique: compact navigation is better inside the mill core, but the opening Mill-House still needs the same treatment so east=counting-nook is unambiguous.
-- Guard: `npm run validate -- tide_mill`, focused compact/crank regressions, `npm run health`, and schema-verified blind report `blind-tester/reports/20260708T061855Z_tide_mill_seed113.md` passed.

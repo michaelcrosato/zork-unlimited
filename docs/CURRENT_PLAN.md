@@ -6,7 +6,7 @@ implementation subagent reads ONLY this doc and the files it names. Keep it
 current, terse, dated, and under ~60 lines — completed work belongs in git
 history and `docs/DECISION_LOG.md`, not here.
 
-## Cycle: 2026-07-08 - Tide-Mill coin-bag temptation texture
+## Cycle: 2026-07-08 - Tide-Mill millboard fault-order wording
 
 ## Synthesis
 
@@ -58,37 +58,39 @@ The dialogue pass renamed Ives follow-up topic ids to stable
 `ending_saved` at 55/55 with clarity 5/5 and enjoyment 4/5, no rejected
 actions, and no dialogue-id complaint.
 
-The current repeated content issue is the late coin-bag temptation reading too
-meta/blunt: text like "south is a detour if Ives's coin-bag tempts you" teaches
-the branch mechanically but makes it feel author-labeled as wrong instead of a
-diegetic moral lure. Reports also still call the main route highly guided; this
-is a small, content-local way to add tension without obscuring the rescue.
+The coin-bag texture pass removed meta "detour/tempts/choice" labels from
+post-gate prose while keeping the counting-desk fork visible. Seed 239 reached
+`ending_saved` at 55/55 with clarity 5/5 and enjoyment 4/5; no coin-bag meta
+complaint recurred.
+
+The next S1 is the board's fault-order wording. "Clear choked race; free
+brake-pawl" reads like the first repair should happen before getting tools,
+while the real path must reach the shed/billhook first. The current recovery
+feedback is good, but the board can avoid implying a false traversal order.
 
 ## Chosen Move
 
-Make the late coin-bag branch feel like diegetic temptation, not UI signage.
+Retune the millboard so it names the two faults without implying race-first
+traversal.
 
 - Target file first: `content/rpg/quests/tide_mill.yaml`.
-- Retune post-`gate_up` Wheel-Room/Mill-House/Counting-Nook prose where it says
-  "detour" or "tempts you" so the coin-bag is visible as a concrete object, not
-  labeled as an alternate ending path.
-- Preserve discoverability: a player at the final stair must still know south
-  leads back toward the coin-bag before ending.
-- Do not alter score math, takings endings, `droppable: false`, or the clean
-  55/55 route.
 - Preserve the less-checklist board: do not reintroduce exact billhook/crow-bar
-  mapping into `read_millboard`.
+  mapping, and do not restore a full optimal checklist.
+- Prefer wording like "wheel runs when race is clear and brake-pawl free; tools
+  are in the shed..." so players infer tools before repairs.
+- Keep the shed/knife-man, gaff/oilskin, sea-gate, flood-hatch, and takings
+  warnings compact-safe.
 - Do not remove the 5-point board read, no-board 50/55 branch, clean 55/55
   branch, seeded checks, or flood-hatch gamble.
-- Update focused compact visibility regressions so the coin-bag fork remains
-  visible without the words "detour" or "tempts you."
+- Update compact board and head-race reconnaissance regressions so the board no
+  longer implies race-first traversal and still fits compact events.
 - Keep `max_score`, win-only capstone, and existing takings branch unchanged.
 
 ## Acceptance
 
 1. `npm run validate -- tide_mill` reports 0 errors / 0 warnings.
-2. Focused tests prove the late takings fork remains visible from compact
-   post-gate views while avoiding meta temptation/detour wording.
+2. Focused tests prove the board still names both faults and tool access, avoids
+   exact tool mapping, and no longer phrases the race as a first step.
 3. `npm run health` passes.
 4. Run blind after the fix. Target a 20-seed Codex sample when runner capacity
    permits, parallel or sequential, and aggregate common issues; at minimum one
@@ -104,8 +106,6 @@ Make the late coin-bag branch feel like diegetic temptation, not UI signage.
   are limited because compact object refs expose ids, not variant display names.
 - Add richer saboteur combat texture beyond repeated attack once fairness is
   calibrated.
-- Coin-bag branch still feels vestigial to some 55/55 players; address after the
-  millboard discovery tension is closed or measured across a wider sample.
 - Overall route still reads highly guided and replay desire remains low; after
-  coin-bag texture, consider one deeper optional branch rather than more
+  board order wording, consider one deeper optional branch rather than more
   signpost polish.
