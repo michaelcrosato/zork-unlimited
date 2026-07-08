@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 521 -->
+<!-- historical_cycle_count: 522 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,14 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - albany_first_action_signposts
+
+- Content surface: rewrote Albany Civic Center's opening area, Notice Hall, Rowan Quill, charter backlog, Civic Underrooms, and Civic Ledger Run prose around concrete first moves instead of generated lead-point text.
+- Loop effect: focused UI regressions prove the first screen names the Notice Hall board, Rowan's desk, and charter-backlog stair, while scout/talk/explore still reveal Market Streets, Civic Ledger Run, and Civic Underrooms deterministically.
+- Blind playtest: 25-run `overworld` Codex batch seeds 491-515 all exited 0; clarity 25x4/5, enjoyment 25x4/5, replay 25x true; feedback ledger now has 335 accepted reports.
+- Self-critique: first-action signposting improved but did not erase hidden-count scope confusion; completed quest/job/event listings and dialogue id/quote noise are now louder than opening-action uncertainty.
+- Guard: focused affected tests, `npm run health`, `npm run blind:feedback`, and reports `20260708T190115Z`-`20260708T190730Z` seeds 491-515 passed.
 
 ### Cycle result - directional_road_event_texture
 
@@ -126,11 +134,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Blind playtest: 20-run `tide_mill` batch seeds 215-234 exposed the action-id swap; after fixing it, seed 235 reached `ending_saved` at 55/55 with clarity 5/5 and enjoyment 4/5.
 - Self-critique: race/billhook friction did not recur in the final run; the next strongest repeated S1 is Ives dialogue topic ids changing after the first answer.
 - Guard: focused head-race/route/ending regressions, `npm run validate -- tide_mill`, `npm run health`, and report `20260708T112600Z_tide_mill_seed235.md` passed.
-
-### Cycle result - tide_mill_board_obligation_clarity
-
-- Content surface: named the opening board as Ives's written night-order, had Ives distinguish board order from his live tricks, and softened the no-board rescue ending away from "less clean."
-- Loop effect: compact opening/no-board/ending regressions now pin the board affordance, the 50/55 Ives-advice rescue, and a non-scolding compact no-board payoff.
-- Blind playtest: 20-run `tide_mill` Codex batch seeds 195-214 all reached `ending_saved` at 55/55; clarity was 19x5/5 and 1x4/5, enjoyment 20x4/5, no stuck runs.
-- Self-critique: the hidden-board complaint did not recur; next repeated lever is race/tool order friction plus checklist feel, with all 20 still saying no to replay.
-- Guard: focused compact opening/no-board/ending regressions, `npm run validate -- tide_mill`, `npm run health`, and reports `20260708T102109Z`-`20260708T104018Z` seeds 195-214 passed.

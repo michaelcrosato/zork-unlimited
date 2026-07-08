@@ -9299,8 +9299,8 @@
       "home": "albany_city",
       "name": "Albany Civic Center",
       "kind": "civic_core",
-      "summary": "Municipal steps and court counters face a notice wall crowded with canal claims, road reports, and winter-relief petitions from the hill farms west of the Hudson. In Albany, rumors become docket numbers before anyone admits they are trouble.",
-      "discovery": "Exploring it can reveal official notices, Capital / Mohawk authority, and which petition belongs at the Station Quarter instead of a counter.",
+      "summary": "Municipal steps and court counters face a notice wall crowded with canal claims, winter-relief petitions, and freight tags from the hill farms west of the Hudson. Three leads sit close enough to start with: the marked Notice Hall board, Rowan Quill's records desk, and a charter-backlog stair where clerks keep ducking below.",
+      "discovery": "Exploring the Civic Center follows those leads into the first ledger run, the Civic Underrooms, and the Market Streets route before the Station Quarter packet can make sense.",
       "travel_minutes": 11,
       "services": [
         "notice_board",
@@ -17403,7 +17403,7 @@
       "area": "albany_city__civic_core",
       "kind": "notice_hall",
       "title": "Albany Civic Center Notice Hall",
-      "summary": "Albany Civic Center has a concrete local lead point: records, permits, and worried petitioners. Scouting here reveals work and nearby expedition rumors tied to Albany city."
+      "summary": "The Notice Hall board is not decorative: a red-threaded civic ledger slip, a sealed-underrooms writ, and a station-stamped winter petition share one sightline. Scouting the board turns those marks into local work instead of guessing at counters."
     },
     {
       "id": "albany_city__market__poi",
@@ -23214,8 +23214,8 @@
       "name": "Rowan Quill",
       "role": "records clerk",
       "faction": "Municipal Ledger",
-      "summary": "Rowan Quill works as the records clerk in Albany Civic Center, watching how records, permits, and worried petitioners affect Albany city.",
-      "agenda": "Wants a traveler to handle Albany Civic Center's local problems before they spread through the Capital / Mohawk road network."
+      "summary": "Rowan Quill has ink on both cuffs and a clerk's memory for which petitions are real trouble.",
+      "agenda": "Ask Rowan what matters before the office closes: they can separate ledger work, basement writs, and station-yard relief tags from ordinary counter noise."
     },
     {
       "id": "albany_city__market__contact",
@@ -30112,7 +30112,7 @@
       "title": "Albany Civic Center: charter backlog",
       "pressure": "rumor",
       "intensity": 2,
-      "summary": "Albany Civic Center is under rumor pressure around records, permits, and worried petitioners. Resolving it requires scouting this area, talking to its contact, and investigating on site."
+      "summary": "Charter runners stack sealed files by the public stair while a deputy keeps sending people to the wrong counter. To clear the backlog, read the Notice Hall marks, ask Rowan which docket matters, then inspect the stair and underrooms."
     },
     {
       "id": "albany_city__market__event",
@@ -39136,8 +39136,8 @@
       "area": "albany_city__civic_core",
       "kind": "civic",
       "title": "Albany Civic Center Civic Underrooms",
-      "summary": "Albany Civic Center opens into a compact exploration site around sealed records, basement counters, and public rooms after hours. It is close enough to feel local, but risky enough to reward preparation before leaving the main street.",
-      "discovery": "A lead in Albany Civic Center points toward sealed records, basement counters, and public rooms after hours; locals say the Albany problem is bigger than one notice-board errand.",
+      "summary": "The Civic Underrooms tighten into basement counters, sealed record cages, and public rooms after hours; close enough for a first investigation, but risky enough to reward preparation before leaving the main street.",
+      "discovery": "The sealed-underrooms writ points below the Civic Center counters; locals say the Albany problem is bigger than one notice-board errand.",
       "danger": 2,
       "reward": "You secure a civic writ and a cleaner route through local offices, gaining 2 Capital / Mohawk renown."
     },
@@ -47751,9 +47751,9 @@
       "area": "albany_city__civic_core",
       "kind": "civic_errand",
       "title": "Albany Civic Center: Civic Ledger Run",
-      "summary": "Albany Civic Center has counter work, quiet favors, and official seals. The job is small enough to finish locally but specific enough to make Albany City feel worked-in rather than decorative.",
-      "objective": "Spend time in Albany Civic Center to verify notices, witness names, and town records before the clerk closes the file.",
-      "reward": "Earn 3 Capital / Mohawk renown and a concrete lead about Albany City.",
+      "summary": "The Civic Ledger Run is not make-work: a relief petition, a market license, and a basement seal all need matching before noon.",
+      "objective": "Verify the Notice Hall mark, witness names, and counter records before Rowan has to close the file.",
+      "reward": "Earn 3 Capital / Mohawk renown and leave with a cleaner Albany lead.",
       "minutes": 61,
       "difficulty": 3,
       "visibility": "local_job_board"

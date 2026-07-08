@@ -5,46 +5,71 @@ Generated deterministically from verified blind reports. The latest entries stay
 ## Summary
 
 - Reports dir: `blind-tester/reports`
-- Accepted reports: 310
+- Accepted reports: 335
 - Rejected or ignored markdown reports: 8
-- Latest report stamp: 20260708T184424Z
+- Latest report stamp: 20260708T190730Z
 - Recent entry limit: 100
-- Archived accepted entries collapsed into traits: 210
+- Archived accepted entries collapsed into traits: 235
 
 ## Recent Common Traits
 
 | Count | Latest | Category | Trait | Sources |
 | ---: | --- | --- | --- | --- |
-| 13 | 20260708T184424Z | confusion | completed quest still listed | overworld |
-| 9 | 20260708T173453Z | confusion | road encounter appears after arrival | overworld |
-| 6 | 20260708T183742Z | confusion | dialogue action ids look generated | overworld |
-| 4 | 20260708T183740Z | confusion | quest tone disconnected from Albany lead | overworld |
-| 3 | 20260708T183743Z | confusion | dialogue action ids are awkward | overworld |
-| 3 | 20260708T181509Z | bug S1 | Wolf-Winter / compact journal: Truncated journal entries expose hash-like suffixes. | overworld |
-| 3 | 20260708T181509Z | confusion | awkward dialogue action ids | overworld |
-| 3 | 20260708T180630Z | bug S0 | The Wolf-Winter / compact journal: Truncated journal entries show hash-like suffixes. | overworld |
-| 3 | 20260708T180630Z | confusion | compact journal hash suffixes | overworld |
-| 3 | 20260708T171150Z | confusion | resolved event still listed | overworld |
+| 14 | 20260708T190729Z | confusion | completed quest still listed | overworld |
+| 5 | 20260708T190728Z | confusion | dialogue action ids are awkward | overworld |
+| 5 | 20260708T183742Z | confusion | dialogue action ids look generated | overworld |
+| 4 | 20260708T190728Z | bug S0 | The Wolf-Winter / compact journal: Truncated journal entries show hash-like suffixes. | overworld |
+| 4 | 20260708T173453Z | confusion | road encounter appears after arrival | overworld |
+| 3 | 20260708T190122Z | confusion | generated dialogue action ids | overworld |
+| 3 | 20260708T190118Z | confusion | awkward dialogue action ids | overworld |
+| 2 | 20260708T190730Z | confusion | completed content remains listed | overworld |
+| 2 | 20260708T190729Z | confusion | completed jobs still listed | overworld |
+| 2 | 20260708T190728Z | worst moment | The quest start felt disconnected from the Albany overworld context. | overworld |
+| 2 | 20260708T190122Z | confusion | compact tuples depend heavily on legend | overworld |
+| 2 | 20260708T190117Z | confusion | hidden counts are abstract at first | overworld |
+| 2 | 20260708T190116Z | bug S1 | Albany Station Quarter / quest list: Completed quest remains listed without a completed marker. | overworld |
+| 2 | 20260708T190116Z | bug S1 | Wolf-Winter / dialogue actions: Action ids like ask_ask_wolves look unpolished. | overworld |
 | 2 | 20260708T184424Z | confusion | compact journal hash fragments look like debug text | overworld |
 | 2 | 20260708T184423Z | confusion | dialogue action ids expose awkward naming | overworld |
 | 2 | 20260708T184423Z | confusion | hidden counts are useful but abstract | overworld |
 | 2 | 20260708T183745Z | confusion | compact journal truncation shows hash-like suffixes | overworld |
 | 2 | 20260708T183743Z | confusion | completed quest still appears in quest list | overworld |
+| 2 | 20260708T183740Z | confusion | quest tone disconnected from Albany lead | overworld |
 | 2 | 20260708T183739Z | bug S0 | The Wolf-Winter / journal: Compact journal truncation exposes hash-like suffixes. | overworld |
 | 2 | 20260708T181931Z | bug S0 | Wolf-Winter / Old Cade dialogue: Dialogue back text has awkward nested quotation formatting | overworld |
 | 2 | 20260708T181931Z | confusion | quest setting jump from Albany to winter steading | overworld |
-| 2 | 20260708T181931Z | confusion | Quest theme felt disconnected from Albany lead | overworld |
-| 2 | 20260708T181931Z | confusion | resolved events remain listed | overworld |
+| 2 | 20260708T181509Z | bug S1 | Wolf-Winter / compact journal: Truncated journal entries expose hash-like suffixes. | overworld |
 | 2 | 20260708T181051Z | confusion | compact quest text truncates useful prose | overworld |
-| 2 | 20260708T181051Z | confusion | compact tuple state is hard to read without legend | overworld |
-| 2 | 20260708T180630Z | confusion | compact journal hash fragments | overworld |
-| 2 | 20260708T172828Z | confusion | road encounter resolves after arrival | overworld |
-| 2 | 20260708T172304Z | bug S1 | The Wolf-Winter / Broken Paling: Paling rail remains in inventory after being wedged into the breach. | overworld |
 
 ## Recent Entries
 
 | Stamp | Source | Seed | C/E | Stuck | Replay | Report | Signal |
 | --- | --- | ---: | --- | --- | --- | --- | --- |
+| 20260708T190730Z | overworld | 515 | 4/4 | no | yes | `blind-tester/reports/20260708T190730Z_overworld_seed515.md` | confusions: completed content remains listed; hidden counts are ambiguous; quest tone jumps from Albany station to rural wolf myth \| bugs: S1 Albany Civic Center / eve... |
+| 20260708T190729Z | overworld | 514 | 4/4 | no | yes | `blind-tester/reports/20260708T190729Z_overworld_seed514.md` | confusions: compact tuples require legend memory; quest text truncates useful flavor; overworld jobs feel abstract; spear text contradicts inventory \| bugs: S2 Albany... |
+| 20260708T190729Z | overworld | 513 | 4/4 | no | yes | `blind-tester/reports/20260708T190729Z_overworld_seed513.md` | confusions: completed jobs still listed; resolved events still listed; completed quest still listed; modern overworld to mythic quest transition is abrupt \| bugs: S1 A... |
+| 20260708T190729Z | overworld | 512 | 4/4 | no | yes | `blind-tester/reports/20260708T190729Z_overworld_seed512.md` | confusions: cross-area discovered jobs only visible by area; quest fiction jump from Albany to winter steading; compact tuple state is dense \| bugs: S0 Wolf-Winter / O... |
+| 20260708T190728Z | overworld | 511 | 4/4 | no | yes | `blind-tester/reports/20260708T190728Z_overworld_seed511.md` | confusions: quest lead jumps from Albany to mythic steading; some discovered areas not walkable from current area; dialogue action ids are awkward \| bugs: S1 Albany Ci... |
+| 20260708T190122Z | overworld | 510 | 4/4 | no | yes | `blind-tester/reports/20260708T190122Z_overworld_seed510.md` | confusions: compact quest text truncates important details; dialogue back/leave flow is slightly clunky; generic overworld job results feel abstract \| bugs: S1 Albany... |
+| 20260708T190122Z | overworld | 509 | 4/4 | no | yes | `blind-tester/reports/20260708T190122Z_overworld_seed509.md` | confusions: hidden counts scope unclear; generated dialogue action ids; compact tuples depend heavily on legend \| bugs: S1 Albany Station Quarter: Hidden site count re... |
+| 20260708T190122Z | overworld | 508 | 4/4 | no | yes | `blind-tester/reports/20260708T190122Z_overworld_seed508.md` | confusions: opening hidden counts feel abstract before scouting; dialogue back actions repeat awkward quoted text; paling rail can be used from spatially odd location... |
+| 20260708T190122Z | overworld | 507 | 4/4 | no | yes | `blind-tester/reports/20260708T190122Z_overworld_seed507.md` | confusions: completed items still visible; quest lead had little preview; compact tuples depend heavily on legend \| bugs: S1 Albany Civic Center/resolved event: Resolv... |
+| 20260708T190122Z | overworld | 506 | 4/4 | no | yes | `blind-tester/reports/20260708T190122Z_overworld_seed506.md` | confusions: quest anchor tuple can be easy to miss; discovered off-area jobs are not visible until moving; Albany-to-winter-steading transition is abrupt \| bugs: S2 Al... |
+| 20260708T190121Z | overworld | 505 | 4/4 | no | yes | `blind-tester/reports/20260708T190121Z_overworld_seed505.md` | confusions: modern Albany lead jumps into mythic winter quest; compact journal shows hash-like suffixes; dialogue action ids duplicate ask \| bugs: S1 The Wolf-Winter /... |
+| 20260708T190120Z | overworld | 504 | 4/4 | no | yes | `blind-tester/reports/20260708T190120Z_overworld_seed504.md` | confusions: discovered jobs not all shown in jobs list; completed quest still listed; generated dialogue action ids \| bugs: S1 Albany/Civic Center: Jobs revealed in re... |
+| 20260708T190120Z | overworld | 503 | 4/4 | no | yes | `blind-tester/reports/20260708T190120Z_overworld_seed503.md` | confusions: area-scoped job list can hide remembered work; compact journal truncation exposes hash-like suffixes \| bugs: S2 The Wolf-Winter / compact journal: Truncate... |
+| 20260708T190120Z | overworld | 502 | 4/4 | no | yes | `blind-tester/reports/20260708T190120Z_overworld_seed502.md` | confusions: quest jump from Albany to winter steading is abrupt; current-area jobs list hides discovered jobs elsewhere; compact journal hash suffixes look like debug... |
+| 20260708T190119Z | overworld | 501 | 4/4 | no | yes | `blind-tester/reports/20260708T190119Z_overworld_seed501.md` | confusions: completed hooks remain visible; hidden counters feel abstract; area-local discovery counts are not fully clear \| bugs: S1 Albany Civic Center / Station Qua... |
+| 20260708T190119Z | overworld | 500 | 4/4 | no | yes | `blind-tester/reports/20260708T190119Z_overworld_seed500.md` | confusions: discovered jobs not visible until matching area; dialogue back action did not leave conversation \| bugs: S1 Albany Civic Center / job discovery: Jobs disco... |
+| 20260708T190118Z | overworld | 499 | 4/4 | no | yes | `blind-tester/reports/20260708T190118Z_overworld_seed499.md` | confusions: completed quest still listed as available; jobs discovered elsewhere hidden from current area list; awkward dialogue action ids \| bugs: S1 Albany Station Q... |
+| 20260708T190117Z | overworld | 498 | 4/4 | no | yes | `blind-tester/reports/20260708T190117Z_overworld_seed498.md` | confusions: hidden count changed after appearing cleared; completed quest still listed; overworld text feels generic \| bugs: S2 Albany/Station Quarter: Hidden site cou... |
+| 20260708T190117Z | overworld | 497 | 4/4 | no | yes | `blind-tester/reports/20260708T190117Z_overworld_seed497.md` | confusions: event prose implied underrooms were required before resolve; compact tuples require remembering the start legend \| bugs: S2 The Wolf-Winter / compact journ... |
+| 20260708T190117Z | overworld | 496 | 4/4 | no | yes | `blind-tester/reports/20260708T190117Z_overworld_seed496.md` | confusions: hidden counts are abstract at first; discovered jobs outside current area feel hidden again; compact quest text truncates setup \| bugs: S1 The Wolf-Winter... |
+| 20260708T190116Z | overworld | 495 | 4/4 | no | yes | `blind-tester/reports/20260708T190116Z_overworld_seed495.md` | confusions: compact quest text truncates useful context; list_legal_actions unchanged response omitted actions; generated-looking dialogue action ids \| bugs: S1 Wolf-W... |
+| 20260708T190116Z | overworld | 494 | 4/4 | no | yes | `blind-tester/reports/20260708T190116Z_overworld_seed494.md` | confusions: completed events and quests still appear in local lists; journal truncation exposes hash-like suffixes; overworld compact tuples are dense at first \| bugs:... |
+| 20260708T190116Z | overworld | 493 | 4/4 | no | yes | `blind-tester/reports/20260708T190116Z_overworld_seed493.md` | confusions: compact tuple UI depends heavily on legend; town discovery content feels templated; dialogue action ids are awkward; final boss description implies tactics... |
+| 20260708T190115Z | overworld | 492 | 4/4 | no | yes | `blind-tester/reports/20260708T190115Z_overworld_seed492.md` | confusions: completed content still appears active; modern Albany abruptly shifts into winter wolf fantasy; road event choice has little fiction before resolution \| bu... |
+| 20260708T190115Z | overworld | 491 | 4/4 | no | yes | `blind-tester/reports/20260708T190115Z_overworld_seed491.md` | confusions: generic overworld completion text; dialogue back action quote formatting; hidden counts need UI translation \| bugs: S1 Albany Civic Center / charter backlo... |
 | 20260708T184424Z | overworld | 490 | 4/4 | no | yes | `blind-tester/reports/20260708T184424Z_overworld_seed490.md` | confusions: compact tuples need labels; completed quest still listed; nearby towns feel templated \| bugs: S1 The Wolf-Winter / Old Cade dialogue: Dialogue return text... |
 | 20260708T184424Z | overworld | 489 | 4/4 | no | yes | `blind-tester/reports/20260708T184424Z_overworld_seed489.md` | confusions: opening relies on hidden counts without strong first-action signposting; list_legal_actions returned unchanged instead of actions; compact journal hash fra... |
 | 20260708T184423Z | overworld | 488 | 4/4 | no | yes | `blind-tester/reports/20260708T184423Z_overworld_seed488.md` | confusions: initial town feels systemic before quest hook; second civic center felt templated; compact journal truncation was noisy \| bugs: S1 Albany Civic Center / Co... |
@@ -120,58 +145,33 @@ Generated deterministically from verified blind reports. The latest entries stay
 | 20260708T171150Z | overworld | 418 | 4/4 | no | yes | `blind-tester/reports/20260708T171150Z_overworld_seed418.md` | confusions: quest transition from Albany to winter steading felt abrupt; road encounter appeared after arriving at destination; compact journal hash suffixes looked li... |
 | 20260708T170530Z | overworld | 417 | 4/4 | no | yes | `blind-tester/reports/20260708T170530Z_overworld_seed417.md` | confusions: jobs in other areas not shown until moving; unchanged legal-action poll gives no action list; generic civic overworld flavor \| bugs: S0 The Wolf-Winter / O... |
 | 20260708T165436Z | overworld | 416 | 4/4 | no | yes | `blind-tester/reports/20260708T165436Z_overworld_seed416.md` | confusions: quest fiction disconnected from Albany; resolved event still listed; template-like second town; compact journal truncates clues \| bugs: S1 Albany Civic Cen... |
-| 20260708T162233Z | overworld | 415 | 4/4 | no | yes | `blind-tester/reports/20260708T162233Z_overworld_seed415.md` | confusions: overworld events lacked narrative detail; same road encounter repeated quickly; quest anchor requires UI signposting \| bugs: S2 Albany-Colonie road: same l... |
-| 20260708T162233Z | overworld | 414 | 4/4 | no | yes | `blind-tester/reports/20260708T162233Z_overworld_seed414.md` | confusions: quest tone disconnected from Albany overworld; road encounter repeated on same short road; compact journal hash fragments \| bugs: S1 Wolf-Winter / Cade dia... |
-| 20260708T162233Z | overworld | 413 | 4/4 | no | yes | `blind-tester/reports/20260708T162233Z_overworld_seed413.md` | confusions: road encounter appears after arrival; compact tuples depend heavily on the one-time legend; generic overworld job text feels thin \| bugs: S1 The Wolf-Winte... |
-| 20260708T162233Z | overworld | 412 | 4/4 | no | yes | `blind-tester/reports/20260708T162233Z_overworld_seed412.md` | confusions: road encounter resolved after arrival; visited area tracking looked stale; dialogue back option did not exit \| bugs: S1 Albany Station Quarter / Colonie Ci... |
-| 20260708T162233Z | overworld | 411 | 4/4 | no | yes | `blind-tester/reports/20260708T162233Z_overworld_seed411.md` | confusions: abrupt tonal shift into quest; resolved content remains listed; repeated same road encounter; compact journal hash suffixes \| bugs: S1 Albany Station Quart... |
-| 20260708T161738Z | overworld | 410 | 4/4 | no | yes | `blind-tester/reports/20260708T161738Z_overworld_seed410.md` | confusions: modern New York overworld led into medieval wolf quest; road encounter had little narrative context; hidden work discovery depends on trying POI/contact \|... |
-| 20260708T161738Z | overworld | 409 | 4/4 | no | yes | `blind-tester/reports/20260708T161738Z_overworld_seed409.md` | confusions: quest premise disconnected from Albany lead; overworld actions too abstract; compact journal hash suffixes \| bugs: S1 The Wolf-Winter/Cade dialogue: Dialog... |
-| 20260708T161738Z | overworld | 408 | 4/4 | no | yes | `blind-tester/reports/20260708T161738Z_overworld_seed408.md` | confusions: road encounter appears after arrival; ask_wolves_back label unclear; quest tone disconnected from New York lead \| bugs: S1 Albany/Colonie Civic Centers: Ge... |
-| 20260708T161738Z | overworld | 407 | 4/4 | no | yes | `blind-tester/reports/20260708T161738Z_overworld_seed407.md` | confusions: jobs discovered elsewhere are easy to lose track of; visited area counts do not match physical arrival; road encounter appears after already arriving \| bug... |
-| 20260708T161738Z | overworld | 406 | 4/4 | no | yes | `blind-tester/reports/20260708T161738Z_overworld_seed406.md` | confusions: resolved event still listed; completed quest still listed; compact text truncates useful prose; dialogue action ids look generated \| bugs: S2 Albany Civic... |
-| 20260708T161307Z | overworld | 405 | 4/4 | no | yes | `blind-tester/reports/20260708T161307Z_overworld_seed405.md` | confusions: tuple fields need UI labels; jobs revealed outside current area feel hidden again; quest tone disconnects from overworld \| bugs: S1 Albany-Colonie road: sa... |
-| 20260708T161307Z | overworld | 404 | 4/4 | no | yes | `blind-tester/reports/20260708T161307Z_overworld_seed404.md` | confusions: completed content still appears active; compact truncation hides details; repeated short-road encounter \| bugs: S1 Albany Station Quarter / event list: Res... |
-| 20260708T161307Z | overworld | 403 | 4/4 | no | yes | `blind-tester/reports/20260708T161307Z_overworld_seed403.md` | confusions: jobs revealed globally but listed locally; generic civic content; debug-like truncated journal suffixes; awkward dialogue action ids \| bugs: S1 Wolf-Winter... |
-| 20260708T161306Z | overworld | 402 | 4/4 | no | yes | `blind-tester/reports/20260708T161306Z_overworld_seed402.md` | confusions: overworld hidden counts carry more signposting than fiction; quest tone disconnected from New York overworld; road encounter fiction too generic \| bugs: S2... |
-| 20260708T161306Z | overworld | 401 | 3/3 | no | no | `blind-tester/reports/20260708T161306Z_overworld_seed401.md` | confusions: quest anchor required local movement but move action was unavailable; revealed jobs outside current area were not visible in jobs list; compact context fel... |
-| 20260708T160811Z | overworld | 400 | 4/4 | no | yes | `blind-tester/reports/20260708T160811Z_overworld_seed400.md` | confusions: quest tone disconnected from Albany lead; road encounter appears after arrival; dialogue back action did not exit; compact overworld lacks flavor \| bugs: S... |
-| 20260708T160811Z | overworld | 399 | 4/4 | no | yes | `blind-tester/reports/20260708T160811Z_overworld_seed399.md` | confusions: event prerequisite only appeared after rejection; hidden counts felt town-wide then area-local; quest combat narrowed to repeated attacks \| bugs: S1 Albany... |
-| 20260708T160811Z | overworld | 398 | 4/4 | no | yes | `blind-tester/reports/20260708T160811Z_overworld_seed398.md` | confusions: completed event still listed; completed quest still listed; quest theme felt disconnected from Albany lead \| bugs: S1 Albany Civic Center / charter backlog... |
-| 20260708T160810Z | overworld | 397 | 4/4 | no | yes | `blind-tester/reports/20260708T160810Z_overworld_seed397.md` | confusions: quest anchor area requires tuple awareness; road encounter appears after arrival; quest tone differs sharply from New York overworld \| bugs: S2 Albany Stat... |
-| 20260708T160810Z | overworld | 396 | 4/4 | no | yes | `blind-tester/reports/20260708T160810Z_overworld_seed396.md` | confusions: modern Albany quest abruptly becomes mythic winter steading; resolved events and completed jobs still appear available; compact overworld results lack narr... |
-| 20260708T160257Z | overworld | 395 | 4/4 | no | yes | `blind-tester/reports/20260708T160257Z_overworld_seed395.md` | confusions: resolved events remain listed; road encounter appeared after arrival; discovered remote jobs not shown locally; quest tone jump from New York to mythic win... |
-| 20260708T160257Z | overworld | 394 | 4/4 | no | yes | `blind-tester/reports/20260708T160257Z_overworld_seed394.md` | confusions: event prerequisites only appear after failed resolve; compact overworld unlocks lack local flavor; modern road-report wording clashes with fantasy quest \|... |
-| 20260708T160257Z | overworld | 393 | 4/4 | no | yes | `blind-tester/reports/20260708T160257Z_overworld_seed393.md` | confusions: road encounter appears after arrival; road event risk text too sparse; quest lead did not preview embedded quest tone \| bugs: S1 The Wolf-Winter quest jour... |
-| 20260708T160257Z | overworld | 392 | 4/4 | no | yes | `blind-tester/reports/20260708T160257Z_overworld_seed392.md` | confusions: compact tuples need legend; quest tone disconnected from Albany lead; jobs reveal across unrelated districts; repeated road event on same short road \| bugs... |
-| 20260708T160257Z | overworld | 391 | 4/3 | yes | no | `blind-tester/reports/20260708T160257Z_overworld_seed391.md` | confusions: discovered jobs but no callable job tool; quest anchor required area movement but move tool unavailable; sites discovered but no site exploration tool; rep... |
 
 ## Archived Trait Categories
 
 | Count | Latest | Category | Trait | Sources |
 | ---: | --- | --- | --- | --- |
-| 160 | 20260708T141239Z | replay | player would not replay | tide_mill |
-| 8 | 20260708T153614Z | confusion | road encounter appears after arrival | overworld |
+| 162 | 20260708T161306Z | replay | player would not replay | overworld, tide_mill |
+| 13 | 20260708T162233Z | confusion | road encounter appears after arrival | overworld |
 | 5 | 20260708T153614Z | confusion | road encounter resolves after arrival | overworld |
 | 4 | 20260708T153614Z | confusion | quest takes no overworld time | overworld |
 | 4 | 20260708T140614Z | confusion | saboteur falls but later is driven off | tide_mill |
 | 4 | 20260708T140200Z | bug S0 | Head-Race: choked_sluice remains visible after the race is cleared | tide_mill |
+| 3 | 20260708T161738Z | confusion | completed quest still listed | overworld |
+| 3 | 20260708T161307Z | confusion | awkward dialogue action ids | overworld |
 | 3 | 20260708T153614Z | confusion | quest took no overworld time | overworld |
 | 3 | 20260708T151632Z | confusion | quest consumes no overworld time | overworld |
 | 3 | 20260708T140955Z | bug S0 | Head-Race: choked_sluice remains listed after the sluice is cleared | tide_mill |
 | 3 | 20260708T134037Z | bug S0 | Head-Race: choked_sluice remains visible after the sluice is cleared. | tide_mill |
 | 3 | 20260708T125954Z | bug S0 | Head-Race: choked_sluice remains listed after the race is cleared | tide_mill |
+| 2 | 20260708T162233Z | confusion | compact journal hash suffixes | overworld |
+| 2 | 20260708T162233Z | confusion | road encounter resolved after arrival | overworld |
+| 2 | 20260708T162233Z | confusion | same road encounter repeated quickly | overworld |
+| 2 | 20260708T161738Z | confusion | dialogue action ids look generated | overworld |
+| 2 | 20260708T161738Z | confusion | jobs discovered elsewhere are easy to lose track of | overworld |
+| 2 | 20260708T161307Z | confusion | completed content still appears active | overworld |
+| 2 | 20260708T161306Z | confusion | quest tone disconnected from New York overworld | overworld |
+| 2 | 20260708T160811Z | confusion | quest tone disconnected from Albany lead | overworld |
+| 2 | 20260708T160257Z | confusion | resolved events remain listed | overworld |
 | 2 | 20260708T153614Z | confusion | completed jobs and quests still listed | overworld |
 | 2 | 20260708T150956Z | confusion | same road event repeated immediately | overworld |
-| 2 | 20260708T144545Z | confusion | awkward dialogue action ids | overworld |
 | 2 | 20260708T143326Z | confusion | second town felt templated | overworld |
-| 2 | 20260708T140955Z | confusion | choked_sluice remains visible after clearing | tide_mill |
-| 2 | 20260708T140704Z | bug S0 | The Mill-Yard: Saboteur falls in combat text but is later described as driven off. | tide_mill |
-| 2 | 20260708T135658Z | confusion | critical path felt very prescribed | tide_mill |
-| 2 | 20260708T134037Z | confusion | sluice action changed after getting billhook | tide_mill |
-| 2 | 20260708T130755Z | bug S0 | The Head-Race: choked_sluice remains visible after the sluice is cleared | tide_mill |
-| 2 | 20260708T130755Z | confusion | solution path is very heavily signposted | tide_mill |
-| 2 | 20260708T124145Z | confusion | critical path is very explicit | tide_mill |
-| 2 | 20260708T110855Z | confusion | dialogue action ids changed after first topic | tide_mill |
-| 2 | 20260708T110108Z | confusion | route is heavily signposted | tide_mill |
-| 2 | 20260708T102926Z | confusion | optimal route felt checklist-like | tide_mill |

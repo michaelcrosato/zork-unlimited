@@ -101,6 +101,58 @@ describe("OverworldSession", () => {
     expect(colonieOption?.estimate.elapsedMinutes).toBe(colonieOption?.totalMinutes);
     expect(colonieOption?.estimate.suppliesNeeded).toBeGreaterThan(0);
     expect(colonieOption?.estimate.fatigueGained).toBeGreaterThan(0);
+
+    const openingText = [
+      view.current.description,
+      view.currentArea?.summary,
+      view.currentArea?.discovery,
+      view.pois[0]?.summary,
+      view.characters[0]?.summary,
+      view.characters[0]?.agenda,
+      view.events[0]?.summary,
+    ].join(" ");
+    expect(openingText).toContain("Three leads sit close enough to start with");
+    expect(openingText).toContain("marked Notice Hall board");
+    expect(openingText).toContain("Rowan Quill's records desk");
+    expect(openingText).toContain("charter-backlog stair");
+    expect(openingText).toContain("Scouting the board turns those marks into local work");
+    expect(openingText).toContain("Ask Rowan what matters before the office closes");
+    expect(openingText).toContain("inspect the stair and underrooms");
+    expect(openingText).not.toMatch(
+      /concrete local lead point|local problems|hidden count|tutorial|command/i,
+    );
+  });
+
+  it("keeps Albany's first scout, talk, and explore choices on the same reveal loop", () => {
+    const scoutSession = new OverworldSession(world);
+    const scoutStart = scoutSession.view();
+    const scouted = scoutSession.scoutPoi(scoutStart.pois[0]!.id);
+    expect(scouted.discoveredAreas?.map((area) => area.id)).toEqual(["albany_city__market"]);
+    expect(scouted.discoveredJobs?.map((job) => job.id)).toEqual(["albany_city__civic_core__job"]);
+    expect(scouted.discoveredSites?.map((site) => site.id)).toEqual([
+      "albany_city__civic_core__site",
+    ]);
+    expect(scouted.discoveredQuests).toEqual([]);
+
+    const talkSession = new OverworldSession(world);
+    const talkStart = talkSession.view();
+    const talked = talkSession.talkToCharacter(talkStart.characters[0]!.id);
+    expect(talked.discoveredAreas?.map((area) => area.id)).toEqual(["albany_city__market"]);
+    expect(talked.discoveredJobs?.map((job) => job.id)).toEqual(["albany_city__civic_core__job"]);
+    expect(talked.discoveredSites?.map((site) => site.id)).toEqual([
+      "albany_city__civic_core__site",
+    ]);
+    expect(talked.discoveredQuests).toEqual([]);
+
+    const exploreSession = new OverworldSession(world);
+    const exploreStart = exploreSession.view();
+    const explored = exploreSession.exploreArea(exploreStart.currentArea!.id);
+    expect(explored.discoveredAreas?.map((area) => area.id)).toEqual(["albany_city__market"]);
+    expect(explored.discoveredJobs?.map((job) => job.id)).toEqual(["albany_city__civic_core__job"]);
+    expect(explored.discoveredSites?.map((site) => site.id)).toEqual([
+      "albany_city__civic_core__site",
+    ]);
+    expect(explored.discoveredQuests).toEqual([]);
   });
 
   it("maps local areas progressively before exhausting a town", () => {
