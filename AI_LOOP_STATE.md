@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 515 -->
+<!-- historical_cycle_count: 516 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,14 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - fresh_game_feedback_ledger_baseline
+
+- Content surface: added deterministic blind-feedback accumulation via `docs/BLIND_FEEDBACK_LEDGER.md` and `npm run blind:feedback`, keeping 100 latest entries explicit and older entries as trait counts.
+- Loop effect: the fresh-start quality oracle now has durable recency/commonality memory instead of ad hoc summaries; 185 accepted reports parse, with 85 older entries collapsed.
+- Blind playtest: 25-run `overworld` Codex batch seeds 341-365 all exited 0; reports reached `wolf_winter`, clarity 25x4/5, enjoyment 25x4/5, replay 25x true.
+- Self-critique: players keep going because `wolf_winter` is strong, but Albany/Station Quarter reads procedural, the quest bridge feels tonally abrupt, and completed/road/time state is noisy.
+- Guard: focused ledger/blind-runner regressions, `npm run blind:feedback`, `npm run health`, and reports `20260708T142738Z`-`20260708T145226Z` seeds 341-365 passed.
 
 ### Cycle result - tide_mill_head_race_alias_stability
 
@@ -126,11 +134,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Blind playtest: final-content `tide_mill` seed 179 reached `ending_saved` at 55/55 with clarity 5/5 and enjoyment 4/5; seed 173 separately exposed a no-board 50/55 friction.
 - Self-critique: the hatch complaint is structurally closed; next common lever is compact truncation around millboard/yard warnings, with sea-gate feedback noted but constrained by the win-only capstone.
 - Guard: focused hatch/repair/takings regressions, exhaustive RPG cluster, `npm run validate -- tide_mill`, `npm run health`, and report `20260708T091544Z_tide_mill_seed179.md` passed.
-
-### Cycle result - tide_mill_prepared_combat_fairness
-
-- Content surface: retuned the `tide_mill` tool-shed saboteur from 12 HP to 8 HP so a fully prepared player spends fewer rounds eating seeded counterattacks.
-- Loop effect: new fairness regression proves gaff-pole + oilskin + Ives's warning survives worst combat rolls with meaningful HP loss, while barehanded yard combat still reaches `ending_cut_down`.
-- Blind playtest: `tide_mill` seed 169 reached `ending_saved` at 55/55 with clarity 5/5 and enjoyment 4/5; no mechanical faults, but replay desire stayed low.
-- Self-critique: combat fairness is calibrated; next lever is making the flood-hatch and coin-bag temptations feel like meaningful branches instead of obvious trap/flavor options.
-- Guard: focused fairness/takings/dialogue regressions, exhaustive RPG cluster, `npm run validate -- tide_mill`, `npm run health`, and report `20260708T084343Z_tide_mill_seed169.md` passed.

@@ -6,65 +6,64 @@ implementation subagent reads ONLY this doc and the files it names. Keep it
 current, terse, dated, and under ~60 lines — completed work belongs in git
 history and `docs/DECISION_LOG.md`, not here.
 
-## Cycle: 2026-07-08 - Fresh-Game Starting-Area Baseline
+## Cycle: 2026-07-08 - Albany Opening Fiction Bridge
 
 ## Synthesis
 
-The benchmark quest remains `world_quest_id=tide_mill`, anchored to
-`new_york_city__waterfront`. It now has the contained mill DAG, seeded combat,
-prep-backed seeded skill checks, telegraphed death forks, win-only +20 capstone,
-late takings branch, and Head-Race action-id stability. The clean rescue remains
-the only 55/55 route.
+Fresh-game feedback is now tracked in `docs/BLIND_FEEDBACK_LEDGER.md`, generated
+by `npm run blind:feedback`. It parses verified blind reports, keeps the latest
+100 entries explicit, and collapses older accepted entries into trait counts.
 
-Latest closed loop: post-billhook Head-Race repair keeps the explicit
-`use_billhook_on_choked_sluice` / `cut choked head-race with billhook` affordance
-and restores `use_choked_sluice` / `clear choked head-race` as a legal held-tool
-alias. Seeds 321-340 all scored 55/55, clarity 20x5/5, enjoyment 20x4/5, replay
-20x false, and the old-id rejection did not recur.
+Baseline: 25 Codex fresh-game `overworld` runs, seeds 341-365, all exited 0 and
+reached valid reports. They consistently found `wolf_winter`; clarity 25x4/5,
+enjoyment 25x4/5, replay 25x true. The embedded quest is carrying the opening:
+prep, advice, gear, and combat payoff are strong.
 
-Direction pivot from the operator: keep the benchmark quest, but judge future
-work against the best starting-area/open-world experience from a fresh New York
-start, not only targeted quest runs. Use large blind samples (25 fresh-game
-agents when capacity permits), accumulate feedback over time, keep the most
-recent 100 usable entries available, and categorize older repeated traits. This
-is allowed scaffolding only when it directly improves the starting slice and the
-benchmark quest funnel; do not start a second quest or reopen retired formats.
+The repeated opening weakness is not solvability. It is authored-place feel.
+Agents describe Albany Civic Center / Station Quarter as procedural, list-like,
+or a compact content index before the quest begins. The `wolf_winter` handoff
+then feels like a sudden jump from New York civic/transit work into a mythic
+winter steading without enough local bridge. Secondary repeats: completed jobs
+and completed quest leads remain listed without status, road encounters resolve
+after arrival and repeat too easily, quest completion consumes no overworld
+time, and nearby towns can feel like renamed civic templates.
 
-Current repeated Tide-Mill signals to carry forward: saboteur combat is too
-attack-loop/simple and has fallen-vs-driven-off continuity noise; coin-bag is
-visible but underdeveloped; solved Head-Race ids can still read stale in compact
-refs; Ives/board route can feel checklist-like; replay remains low despite
-perfect clarity.
+Keep `tide_mill` as the benchmark quest and preserve its Head-Race aliases, but
+the next move should harden the actual fresh-start slice: Albany first, then the
+route into an authored quest.
 
 ## Chosen Move
 
-Establish the fresh-game starting-area baseline before changing content again.
+Make Albany Station Quarter and its first quest lead feel authored and
+world-coherent before changing systems.
 
-- Inspect the RPG overworld start, New York notice-board wiring, and existing
-  blind report format.
-- Add or reuse a lightweight feedback ledger for the new direction: latest 100
-  raw/parsed findings stay easy to scan; older repeats collapse into categories.
-- Run a fresh-game blind sample with varied seeds using `npm run blind
-  --seed=<n>` (no `--quest`) and aggregate common issues before choosing the next
-  content lever.
-- Keep `tide_mill` as the benchmark quest/funnel anchor; any scaffolding must
-  directly support fresh-start feedback or its route into the quest.
+- Target `content/world/new_york_overworld.json` around `albany_city`,
+  `albany_city__civic_core`, `albany_city__transport_hub`, and the local
+  `wolf_winter` quest lead/discovery text.
+- Add Albany-specific arrival/notice/lead texture that connects the station
+  quarter to the winter byre crisis through local rumor, freight, weather, or
+  relief logistics; keep prose compact and deterministic.
+- Do not create a second quest, move the start, or hide the existing discovery
+  loop. This is a framing/depth pass on the current start and first quest bridge.
+- Add a focused regression pinning the Albany-specific bridge so generator-like
+  civic boilerplate cannot return as the first impression.
 
 ## Acceptance
 
-1. The next loop records the fresh-game feedback storage shape and keeps it
-   token-small enough for repeated use.
-2. A 25-run fresh-game blind batch lands when capacity permits; if capacity is
-   lower, record the shortfall and continue the batch next cycle.
-3. `npm run health` passes.
-4. Commit only after green health and at least one schema-valid fresh-game blind
-   report; prefer committing the full 25-run aggregate if it completes cleanly.
+1. Focused tests prove Albany's starting/Station Quarter text and `wolf_winter`
+   lead are no longer generic civic-template phrasing.
+2. `npm run health` passes.
+3. Run a 25-seed fresh-game `npm run blind` batch, regenerate
+   `docs/BLIND_FEEDBACK_LEDGER.md`, and commit only after reports verify.
 
 ## Deferred Levers
 
 - Preserve Tide-Mill alias stability; do not break `use_choked_sluice` or
   `use_billhook_on_choked_sluice`.
-- Candidate content levers after the fresh-game baseline: tactical saboteur
-  branch, coin-bag consequence branch, compact stale-ref cleanup, or a better
-  starting-area funnel into the waterfront notice board.
+- Road/state bookkeeping: pending road encounter after arrival, repeated
+  same-road encounter, zero overworld quest time, and completed job/quest status.
+- Larger texture pass: Colonie and other nearby towns still feel templated after
+  Albany; address after the start slice has a stronger first impression.
+- Tide-Mill levers still open: tactical saboteur branch, coin-bag consequence,
+  compact stale-ref cleanup.
 - Do not start a second quest, add unanchored systems, or touch CYOA/parser.
