@@ -82,6 +82,10 @@ shows you.
 STRICT RULES:
 - Play ONLY through the MCP tools named `mcp__adventureforge__*`. Find their schemas
   with ToolSearch: "select:mcp__adventureforge__start_world_quest,mcp__adventureforge__step_action,mcp__adventureforge__get_observation,mcp__adventureforge__list_legal_actions,mcp__adventureforge__get_state,mcp__adventureforge__get_transcript".
+- If that exact selector returns zero tools or no matches, make one fallback
+  ToolSearch query for "adventureforge start_world_quest list_legal_actions
+  step_action get_state get_transcript", then continue only with the loaded
+  `mcp__adventureforge__*` tools.
 - DO NOT read, open, grep, or cat ANY repo files — especially nothing under
   content/, src/, ui/, or tests/. No peeking at the YAML or the solution. Your only
   window into the game is the MCP tool responses.

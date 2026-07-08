@@ -28,10 +28,10 @@ rooms:
     variants:
       - when: [{ has_flag: gate_up }]
         text: >
-          Ways: north=wheel-room and open staith, east=counting-nook. The orders
-          are off the board and the wheel turns beyond the north arch. The
-          sea-gate is up; held water runs down, and Ives points you north to wave
-          the boat through.
+          Ways: north=wheel-room and open staith, east=counting-nook with Ives's
+          takings. The orders are off the board and the wheel turns beyond the
+          north arch. The sea-gate is up; held water runs down, and Ives points
+          you north to wave the boat through.
       - when: [{ has_flag: hook_taken }]
         text: >
           Ways: north=wheel-room (then east to yard/tool-shed);
@@ -105,10 +105,10 @@ rooms:
     variants:
       - when: [{ has_flag: gate_up }]
         text: >
-          Ways: down=open staith, west=head-race, east=yard/tool-shed,
-          south=mill-floor. The great wheel turns strong over the freed race, the
-          sea-gate winch wound fully up. Held water slides through the open gate; go
-          down to wave the boat through.
+          Ways: down=open staith, south=mill-floor/counting-nook,
+          west=head-race, east=yard/tool-shed. The wheel runs and the sea-gate is
+          up. Down saves the boat; south leaves one last account with Ives's
+          coin-bag.
       - when: [{ has_flag: sluice_clear }, { has_flag: pawl_free }, { has_flag: crank_handle_taken }]
         text: >
           Ways: west=head-race, east=yard/tool-shed, south=mill-floor, down=gated

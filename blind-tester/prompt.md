@@ -7,6 +7,10 @@ STRICT RULES:
 - The game's tools are named `mcp__adventureforge__*` and are DEFERRED — load their
   schemas first with one ToolSearch call, then call them:
   `ToolSearch("select:mcp__adventureforge__start_world_quest,mcp__adventureforge__get_observation,mcp__adventureforge__list_legal_actions,mcp__adventureforge__step_action,mcp__adventureforge__get_state,mcp__adventureforge__get_transcript")`.
+- If that exact selector returns zero tools or no matches, make ONE fallback
+  ToolSearch call for `adventureforge start_world_quest list_legal_actions
+step_action get_state get_transcript`, then call only the loaded
+  `mcp__adventureforge__*` tools.
 - Play ONLY through those `mcp__adventureforge__*` tools. ToolSearch (to load them)
   is the only other tool you may use.
 - DO NOT read, open, grep, cat, or list ANY files. Do not use shell, file, or web

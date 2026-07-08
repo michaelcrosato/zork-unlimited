@@ -45,6 +45,26 @@ ToolSearch was called multiple times and every query returns nothing. The tools 
     });
   });
 
+  it("rejects reports where the exact Codex ToolSearch selector returns zero tools", () => {
+    const result = verifyBlindReportText(`
+I could not start the playtest because the required deferred AdventureForge tools did not load.
+I made the single allowed ToolSearch call exactly as requested, but it returned Found 0 tools,
+so no mcp__adventureforge__* calls were available to start tide_mill.
+
+1. Playthrough log: no route taken; no ending reached.
+2. Did it work mechanically? The test harness failed before gameplay.
+3. Understandable & fun? clarity 1/5 + enjoyment 1/5.
+4. Confusion / friction points. Required game tools were unavailable.
+5. Bugs or design flaws. S4: Required AdventureForge MCP tools were not exposed.
+6. Verdict: A real player could not begin this run.
+${INTERVIEW}`);
+
+    expect(result).toEqual({
+      ok: false,
+      reason: "report says AdventureForge MCP tools were unavailable",
+    });
+  });
+
   it("accepts a report with the required sections, ratings, and exit interview", () => {
     const result = verifyBlindReportText(`
 1. Playthrough log: I started the game, followed the investigation, and reached ending_found.

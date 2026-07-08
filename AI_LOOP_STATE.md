@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 498 -->
+<!-- historical_cycle_count: 499 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,15 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - tide_mill_late_takings_visibility
+
+- Content surface: tightened `tide_mill` post-`gate_up` Wheel-Room/Mill-House compact prose so the final-stair view names the south route back to Ives's coin-bag.
+- Loop effect: `tests/regression/tide_mill_late_takings_visibility.test.ts` drives a real compact Tool API route through seeded combat to prove the fork is visible and `pocket coin-bag` is reachable.
+- Harness: quest-mode blind prompt now allows one broad ToolSearch fallback after a zero-result exact selector, and the report verifier rejects zero-tool/no-AdventureForge reports.
+- Blind playtest: `tide_mill` seed 163 reached `ending_saved` at 55/55 with clarity 5/5 and enjoyment 4/5; seed 161 exposed the no-tools harness failure and is not counted.
+- Self-critique: the fork is now noticed, but "one last account" sounds a little required; next lever is making the same fork read as optional temptation without reducing discoverability.
+- Guard: focused visibility/prompt/verifier regressions, `npm run validate -- tide_mill`, `npm run health`, and report `20260708T080834Z_tide_mill_seed163.md` passed.
 
 ### Cycle result - tide_mill_takings_branch
 
@@ -134,13 +143,4 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Loop effect: measured `start_overworld` drops from 797 to 762 bytes, repeated `get_overworld_session_context` from 807 to 772, route planning from 873 to 838, and travel from 1224 to 1189; opt-in world-name reads remain 807 bytes.
 - Self-critique: this is a small repeated-envelope win rather than a mechanic upgrade, but it removes static metadata from the hot overworld loop without hiding current town, area, or region.
 - Guard: focused MCP overworld and server-registration regressions pin default omission, world-name opt-in, clone safety, and ToolSearch schema budget.
-- VERIFY: `C:\dev\agent-cleaner`, focused MCP regressions, payload probe, `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, `npm test`, `npm run health`, and `npm run assess` passed after loop-state rotation.
-
-### Cycle result - compact_world_path_rows
-
-- Pre-cycle: `C:\dev\agent-cleaner` measure/gates passed through WSL; optional secret scanner remains absent, and WSL git-dir warnings still print after the green gate summary.
-- Engine/loop surface: `world_path` now defaults to `path_v: 1` compact rows `[id, name, kind, coord, route_from_previous, distance_from_previous]`, while `compact_path: false` preserves the previous full `world` plus `path_from_hub` object response.
-- Loop effect: measured `sunken_barrow` route lookup drops from 569 to 265 bytes; full opt-out remains 569 bytes for debug callers.
-- Self-critique: this trims setup/navigation planning rather than per-turn play, but it removes repeated route-object field names without hiding the useful map facts agents need.
-- Guard: focused MCP ToolApi and server-registration regressions pin compact defaults, full-path opt-out, coordinate lookup rows, and ToolSearch schema budget.
 - VERIFY: `C:\dev\agent-cleaner`, focused MCP regressions, payload probe, `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, `npm test`, `npm run health`, and `npm run assess` passed after loop-state rotation.
