@@ -63,10 +63,12 @@ export function useInteraction(
   index: RpgModelIndex,
   target: string,
   item?: string,
+  state?: GameState,
 ): Interaction | undefined {
-  return index.objects
-    .get(target)
-    ?.interactions.find((it) => it.verb === "USE" && it.item === item && it.target === target);
+  return index.objects.get(target)?.interactions.find((it) => {
+    if (it.verb !== "USE" || it.item !== item || it.target !== target) return false;
+    return state === undefined || evalConditions(it.conditions, state);
+  });
 }
 
 function readInteractions(index: RpgModelIndex, target: string): Interaction[] {
@@ -243,7 +245,7 @@ export function resolveRpgAction(
       };
     }
     case "USE": {
-      const it = useInteraction(index, action.target, action.item);
+      const it = useInteraction(index, action.target, action.item, state);
       if (!it || !present(index, state, action.target)) return null;
       if (action.item !== undefined && !state.inventory.includes(action.item)) return null;
       const itemConditions: Condition[] =
@@ -403,6 +405,7 @@ export function enumerateRpgBaseActions(index: RpgModelIndex, state: GameState):
   for (const o of index.pack.objects) {
     for (const it of o.interactions) {
       if (it.verb !== "USE" || it.target === undefined) continue;
+      if (!evalConditions(it.conditions, state)) continue;
       const selfUse = it.item !== undefined && it.item === it.target;
       const id =
         it.item === undefined

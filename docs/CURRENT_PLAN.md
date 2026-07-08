@@ -6,7 +6,7 @@ implementation subagent reads ONLY this doc and the files it names. Keep it
 current, terse, dated, and under ~60 lines — completed work belongs in git
 history and `docs/DECISION_LOG.md`, not here.
 
-## Cycle: 2026-07-08 — Tide-Mill second-fault narration
+## Cycle: 2026-07-08 — Tide-Mill replay pressure
 
 ## Synthesis
 
@@ -22,36 +22,44 @@ Wheel-Room compact finding is closed and pinned by
 `tests/regression/tide_mill_wheel_room_compact_orientation.test.ts`. The seed-113
 opening-orientation finding is closed and pinned by
 `tests/regression/tide_mill_mill_house_compact_orientation.test.ts`. The seed-127
-blind pass reached `ending_saved` at 55/55 with clarity 5/5 and enjoyment 4/5,
-then reported one S1 stale narration: when the brake-pawl is repaired second, the
-success line still says "One fault of the two is put right."
+second-fault narration finding is closed and pinned by
+`tests/regression/tide_mill_second_fault_narration.test.ts`. The Codex blind-runner
+override is also repaired in `blind-tester/run.sh`: it now injects the AdventureForge
+MCP server and the required deferred-MCP feature flag for Codex. Seed 143 reached
+`ending_saved` at 55/55 with clarity 5/5 and enjoyment 4/5, no bugs, and one design
+critique: the optimal route is so heavily signposted that replay desire is low.
 
 ## Chosen Move
 
-Make repair success narration know whether it fixed the first or second fault.
+Open one deeper replay branch inside Tide-Mill without reducing first-run clarity.
 
 - Target file: `content/rpg/quests/tide_mill.yaml`.
-- Fix the brake-pawl success narration when `sluice_clear` is already true; it
-  should say both faults are now cleared, not one of two.
-- Check the symmetric route too: if `pawl_free` is already true, the final
-  head-race clear narration should not imply only one fault remains.
-- Prefer content-level conditional interaction ordering if the existing DSL can
-  express it; add a focused regression that drives both repair orders.
+- Prefer a real ethical/mechanical fork around the counting-nook takings, because
+  the route already foregrounds the coin-bag and the full-score ending rewards
+  leaving it.
+- The branch must be an informed gamble with telegraphed consequence, not a hidden
+  punishment: taking, returning, or leaving the money should affect score/ending
+  texture while preserving the rescue route when fair.
+- Keep Ives and the board useful, but do not add more direct instructions to the
+  already-clean optimal path.
+- Add regression coverage for the new branch and run a broader blind sample if the
+  branch changes route comprehension; target 20 Codex blind seeds when practical,
+  at minimum one schema-valid blind gate before commit.
 
 ## Acceptance
 
 1. `npm run validate -- tide_mill` reports 0 errors / 0 warnings.
-2. Both repair orders narrate accurately when the second fault is fixed.
+2. The new branch has distinct, deterministic score/ending consequences and does
+   not steal the win-only capstone from the clean rescue route.
 3. `npm run health` passes, then re-run `npm run blind --quest=tide_mill` with a
    new seed and use its exit interview as the next lever.
 
 ## Deferred Levers
 
-- The seed-127 yard/tool-shed/wheel-room double-check was mild and likely follows
-  from the same compact navigation class; revisit only if it repeats after the
-  second-fault narration fix.
+- The seed-143 "optimal route heavily signposted" critique is the active lever;
+  do not respond by making clues vaguer. Add consequence/replay depth instead.
 - The seed-113 coin-bag uncertainty is already covered by `ending_thief`; only
-  revisit if a future blind player takes it and finds the consequence unclear.
+  revisit if the active takings branch proves too large for one clean cycle.
 - Add richer saboteur combat texture: seed 101 flagged that once combat starts,
   the only visible moment-to-moment choice is repeated attack even though prep is
   fair and load-bearing.

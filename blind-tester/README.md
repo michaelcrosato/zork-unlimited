@@ -161,7 +161,7 @@ Environment: `BLIND_QUEST_ID`, `BLIND_MODEL`, `BLIND_TIMEOUT` (seconds, default 
 `BLIND_SPECTATE=1`, `BLIND_SPECTATE_DELAY_MS`, `BLIND_BASH` (Windows: path to Git
 Bash if auto-detection fails).
 
-## Provider-agnostic — bring another agent (e.g. a local LLM)
+## Provider-agnostic — bring another agent (e.g. Codex or a local LLM)
 
 The default agent is `claude -p`. To use a different MCP-capable agent CLI, set
 `BLIND_AGENT_CMD`: it receives the prompt on **stdin** and these env vars:
@@ -169,8 +169,14 @@ The default agent is `claude -p`. To use a different MCP-capable agent CLI, set
 `BLIND_SEED`.
 
 ```bash
+BLIND_AGENT_CMD='codex exec --ignore-user-config --ephemeral --skip-git-repo-check --sandbox read-only -' npm run blind --quest=tide_mill --seed=137
 BLIND_AGENT_CMD='gemini -p' npm run blind
 ```
+
+When `BLIND_AGENT_CMD` invokes `codex`, the runner temporarily shadows `codex` on
+`PATH` and injects the AdventureForge MCP server with Codex `-c` overrides, plus
+the deferred-MCP feature flag this Codex CLI line needs. No user-level
+`codex mcp add` or project trust is required for blind runs.
 
 **Future — local LLM.** This game is small and its action space is structured, so a
 local model (served via an MCP-capable runner) may be able to play and critique it

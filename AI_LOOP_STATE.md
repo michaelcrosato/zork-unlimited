@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 496 -->
+<!-- historical_cycle_count: 497 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,15 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - tide_mill_second_fault_narration
+
+- Content surface: split `tide_mill` sluice and brake-pawl USE interactions into first-fault and final-fault variants so the second repair says both faults are now put right.
+- Loop effect: USE resolution is now condition-aware for same command-shaped interactions, with enumeration/parser guards for duplicate natural verbs.
+- Blind harness: Codex `BLIND_AGENT_CMD` runs now auto-inject the AdventureForge MCP server plus deferred-tool feature and execute from the isolated temp cwd.
+- Blind playtest: `tide_mill` seed 143 reached `ending_saved` at 55/55, clarity 5/5 and enjoyment 4/5; no bugs, but replay desire is low because the optimal route is heavily signposted.
+- Self-critique: the stale narration class is closed; next lever is a real replay branch around the takings/ethical fork, not more clarity polish.
+- Guard: focused second-fault regression, `npm run validate -- tide_mill`, `npm run blind:smoke`, `npm run health`, and schema-verified blind report `blind-tester/reports/20260708T070307Z_tide_mill_seed143.md` passed.
 
 ### Cycle result - tide_mill_mill_house_compact_orientation
 
@@ -135,12 +144,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Self-critique: this trims checkpoint payloads, not per-turn stepping; the save blob still dominates response size, but removing the repeated hash is a clean response-envelope reduction without weakening persistence integrity.
 - Guard: focused MCP save/load and server-registration regressions pin default omission, opt-in full hash echo, save-embedded hash verification, stale-save rejection behavior, and compact reload compatibility.
 - VERIFY: `C:\dev\agent-cleaner`, focused MCP regressions, payload probe, `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, `npm test`, `npm run health`, and `npm run assess` passed.
-
-### Cycle result - compact_session_id_tokens
-
-- Pre-cycle: `C:\dev\agent-cleaner` measure/gates passed through WSL; optional secret scanner remains absent, and WSL git-dir warnings still print after the green gate summary.
-- Engine/loop surface: RPG MCP sessions now allocate `r<N>` ids and overworld MCP sessions allocate `o<N>` ids, preserving deterministic monotonic BigInt counters, LRU lookup behavior, and bridge semantics while removing long textual prefixes from public loop handles.
-- Loop effect: `breaking_weir` `start_world_quest` drops from 689 to 685 bytes, transcript summary from 182 to 178, `load_game` from 794 to 790, `start_overworld` from 803 to 797, repeated overworld reads from 813 to 807, route planning from 879 to 873, and travel from 1230 to 1224; follow-up tool calls also send shorter session ids.
-- Self-critique: this is a small fixed handle-size win, not a mechanics improvement; it is still worth taking because every long-running loop carries the session id through nearly every tool call.
-- Guard: focused RPG session, overworld session, transcript projection, MCP ToolApi, and server-registration regressions pin compact ids, safe-integer-boundary monotonicity, eviction behavior, and bridge response identity.
-- VERIFY: `C:\dev\agent-cleaner`, focused session/MCP regressions, payload probe, `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, `npm test`, `npm run health`, and `npm run assess` passed.

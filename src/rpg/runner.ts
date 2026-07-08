@@ -108,7 +108,7 @@ export function buildRpgRules(
         return resolveAttack(state, enemy, rngFor(state));
       }
       if (action.type === "USE") {
-        const it = useInteraction(index, action.target, action.item);
+        const it = useInteraction(index, action.target, action.item, state);
         if (it?.skill_check) {
           // Offer-legality still requires holding the item AND meeting the
           // interaction's own conditions. Enforcing the conditions here — not

@@ -305,7 +305,23 @@ objects:
         target: choked_sluice
         command_verb: cut
         command_template: "cut {target} with {item}"
-        conditions: [{ has_item: billhook }, { not_flag: sluice_clear }]
+        conditions: [{ has_item: billhook }, { not_flag: sluice_clear }, { has_flag: pawl_free }]
+        skill_check:
+          skill: craft
+          difficulty: 9
+          on_success:
+            - set_flag: sluice_clear
+            - inc_var: { name: score, by: 10 }
+            - add_journal: "You cut the weed and drowned bough clear of the head-race; the water ran free down onto the wheel."
+            - narrate: "You hook the downstream braid first, as Ives said, and the whole mat begins to move. Cut by cut the weed and drowned bough tear loose, and the held water slides fast down the channel. With the pawl already pinned back, both faults are now put right."
+          on_failure:
+            - narrate: "The billhook bites and a strip of weed tears free, but the bough twists and jams the cut back on itself. It is coming away; no other tool is missing. Set the blade lower and cut again."
+      - verb: USE
+        item: billhook
+        target: choked_sluice
+        command_verb: cut
+        command_template: "cut {target} with {item}"
+        conditions: [{ has_item: billhook }, { not_flag: sluice_clear }, { not_flag: pawl_free }]
         skill_check:
           skill: craft
           difficulty: 9
@@ -333,7 +349,23 @@ objects:
         target: brake_pawl
         command_verb: free
         command_template: "free {target} with {item}"
-        conditions: [{ has_item: crow_bar }, { not_flag: pawl_free }]
+        conditions: [{ has_item: crow_bar }, { not_flag: pawl_free }, { has_flag: sluice_clear }]
+        skill_check:
+          skill: might
+          difficulty: 9
+          on_success:
+            - set_flag: pawl_free
+            - inc_var: { name: score, by: 10 }
+            - add_journal: "You levered the dropped brake-pawl up out of the drive-gear with the crow-bar."
+            - narrate: "You set the crow-bar where Ives told you, under the pawl and not against the gear teeth, and throw your weight on it. The pivot screams once and gives; the catch lifts clear and pins back. With the head-race already running, both faults are now put right."
+          on_failure:
+            - narrate: "The pawl shifts a thumb's breadth and drops back with a clang. It is not too heavy and no second tool is hidden here; the pivot is only stiff. Reset the bar under the catch and heave again."
+      - verb: USE
+        item: crow_bar
+        target: brake_pawl
+        command_verb: free
+        command_template: "free {target} with {item}"
+        conditions: [{ has_item: crow_bar }, { not_flag: pawl_free }, { not_flag: sluice_clear }]
         skill_check:
           skill: might
           difficulty: 9
