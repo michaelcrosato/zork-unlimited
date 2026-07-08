@@ -243,8 +243,14 @@ describe("OverworldSession", () => {
 
     const after = session.view();
     expect(after.completedJobIds).toContain(job.id);
+    expect(after.jobs.map((candidate) => candidate.id)).not.toContain(job.id);
     expect(after.regionRenown[start.current.region]).toBe(job.difficulty);
     expect(after.journal[0]?.kind).toBe("job");
+
+    const compactAfter = session.compactView();
+    expect(compactAfter.jobs?.map(([id]) => id) ?? []).not.toContain(job.id);
+    expect(compactAfter.ids.completed_jobs ?? []).toContain(job.id);
+    expect(compactAfter.journal?.[0]?.[0]).toBe("job");
 
     const repeated = session.workLocalJob(job.id);
     expect(repeated.alreadyKnown).toBe(true);
@@ -1192,10 +1198,15 @@ describe("OverworldSession", () => {
     });
     expect(session.snapshot().minutes).toBe(beforeCompletionMinutes + expectedMinutes);
     expect(session.view().completedQuestIds).toEqual([discoveredQuest.id]);
+    expect(session.view().quests.map((quest) => quest.id)).not.toContain(discoveredQuest.id);
     expect(session.view().journal[0]).toMatchObject({
       id: `quest_done:${discoveredQuest.id}`,
       kind: "quest_done",
     });
+    const compactAfter = session.compactView();
+    expect(compactAfter.quests?.map(([id]) => id) ?? []).not.toContain(discoveredQuest.id);
+    expect(compactAfter.ids.completed_quests ?? []).toContain(discoveredQuest.id);
+    expect(compactAfter.journal?.[0]?.[0]).toBe("quest_done");
 
     const repeatedCompletion = session.completeQuest(discoveredQuest.id, {
       endingId: "ending_victory",
@@ -1298,8 +1309,14 @@ describe("OverworldSession", () => {
 
     const after = session.view();
     expect(after.resolvedEventIds).toContain(event.id);
+    expect(after.events.map((candidate) => candidate.id)).not.toContain(event.id);
     expect(after.regionRenown[start.current.region]).toBe(event.intensity);
     expect(after.journal).toHaveLength(4);
+
+    const compactAfter = session.compactView();
+    expect(compactAfter.events.map(([id]) => id)).not.toContain(event.id);
+    expect(compactAfter.ids.resolved_events ?? []).toContain(event.id);
+    expect(compactAfter.journal?.[0]?.[0]).toBe("resolution");
 
     const repeated = session.resolveEvent(event.id);
     expect(repeated.alreadyKnown).toBe(true);

@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 522 -->
+<!-- historical_cycle_count: 523 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,14 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - completed_state_active_lists
+
+- Engine surface: completed local jobs and quests, plus resolved local events, now leave active full/compact overworld lists while completed/resolved ids and journal history remain visible.
+- Loop effect: focused UI regressions pin completed Albany jobs, resolved events, and completed Wolf-Winter as history-only state in full and compact views.
+- Blind playtest: 25-run `overworld` Codex batch seeds 516-540 all exited 0; clarity 25x4/5, enjoyment 25x4/5, replay 25x true; feedback ledger now has 360 accepted reports.
+- Self-critique: completed-active-list complaints fell to 0 targeted repeats, but area-scoped off-area jobs still feel lost and Wolf-Winter dialogue ids/quote backs plus compact journal hashes dominate the new sample.
+- Guard: focused affected tests, `npm run health`, `npm run blind:feedback`, and reports `20260708T192325Z`-`20260708T193009Z` seeds 516-540 passed.
 
 ### Cycle result - albany_first_action_signposts
 
@@ -126,11 +134,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Blind playtest: `tide_mill` seed 237 reached `ending_saved` at 55/55 with clarity 5/5 and enjoyment 4/5; no rejected actions and the dialogue-id complaint did not recur.
 - Self-critique: dialogue friction is closed; next repeated content issue is the late coin-bag temptation reading too meta/blunt, with the overall route still very guided.
 - Guard: focused dialogue/route regressions, `npm run validate -- tide_mill`, `npm run health`, and report `20260708T113742Z_tide_mill_seed237.md` passed.
-
-### Cycle result - tide_mill_head_race_reconnaissance
-
-- Content surface: added a state-neutral pre-billhook `clear choked head-race` reconnaissance beat, then made the billhook repair use the same stable `use_choked_sluice` action id.
-- Loop effect: new regression proves the first race visit points to the shed/billhook without score or graph branching, and the same action remains valid after taking the billhook.
-- Blind playtest: 20-run `tide_mill` batch seeds 215-234 exposed the action-id swap; after fixing it, seed 235 reached `ending_saved` at 55/55 with clarity 5/5 and enjoyment 4/5.
-- Self-critique: race/billhook friction did not recur in the final run; the next strongest repeated S1 is Ives dialogue topic ids changing after the first answer.
-- Guard: focused head-race/route/ending regressions, `npm run validate -- tide_mill`, `npm run health`, and report `20260708T112600Z_tide_mill_seed235.md` passed.

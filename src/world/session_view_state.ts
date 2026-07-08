@@ -128,6 +128,13 @@ function pendingRoadLocationNode(
   };
 }
 
+function activeOverworldEvents(
+  events: readonly OverworldLocalEvent[],
+  resolvedEventIds: ReadonlySet<string>,
+): OverworldLocalEvent[] {
+  return events.filter((event) => !resolvedEventIds.has(event.id));
+}
+
 export function buildOverworldSessionViewModelState(
   source: OverworldSessionViewModelSourceState,
 ): OverworldSessionViewModelState {
@@ -160,6 +167,7 @@ export function buildOverworldSessionViewModelState(
   const currentAreaContent = source.currentArea
     ? currentOverworldSessionAreaContent(source.localState, source.currentArea.id)
     : EMPTY_AREA_CONTENT;
+  const events = activeOverworldEvents(currentAreaContent.events, source.ids.resolvedEventIds);
   const routeOptions = cachedOverworldSessionDiscoveredRouteOptions({
     caches: source.caches,
     routePlannerIndex: source.routePlannerIndex,
@@ -186,7 +194,7 @@ export function buildOverworldSessionViewModelState(
     localView: source.localView,
     poi: currentAreaContent.poi,
     contacts: currentAreaContent.characters,
-    events: currentAreaContent.events,
+    events,
     journalEntries: source.journalEntries,
     travelLog: source.travelLog,
     visitedCount: source.visitedCount,

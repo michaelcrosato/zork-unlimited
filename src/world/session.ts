@@ -407,8 +407,10 @@ export class OverworldSession {
       questsByTown: this.questsByTown,
       discoveredAreaIds: this.discoveredAreaIds,
       discoveredJobIds: this.discoveredJobIds,
+      completedJobIds: this.completedJobIds,
       discoveredSiteIds: this.discoveredSiteIds,
       discoveredQuestIds: this.discoveredQuestIds,
+      completedQuestIds: this.completedQuestIds,
     };
   }
 
