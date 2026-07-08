@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 502 -->
+<!-- historical_cycle_count: 503 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,14 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - tide_mill_compact_warning_compression
+
+- Content surface: compressed `tide_mill` millboard read text and Mill-Yard saboteur prose so compact MCP payloads keep the board order and gaff/oilskin warning without truncation.
+- Loop effect: new compact regressions pin the full board warning and yard fight setup under compact limits; a no-board branch regression preserves the 50/55 Ives-advice rescue.
+- Blind playtest: `tide_mill` seed 183 reached `ending_saved` at 55/55 with clarity 5/5 and enjoyment 4/5; the board/yard truncation complaint did not recur.
+- Self-critique: the next content-local finding is compact ending payoff truncating mid-word; stale `choked_sluice` compact id is noted but lower leverage until compact refs carry display names.
+- Guard: focused compact/no-board/takings regressions, `npm run validate -- tide_mill`, `npm run health`, and report `20260708T093001Z_tide_mill_seed183.md` passed.
 
 ### Cycle result - tide_mill_flood_hatch_branch
 
@@ -132,12 +140,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Self-critique: this is not a payload optimization and will not show up in blind-agent play reports; it is useful because it removes misleading typed affordances at engine and tool boundaries while keeping boundary errors honest.
 - Guard: focused world-source, MCP ToolApi, validation-bar, and server-registration regressions pin alias rejection plus the absence of retired alias declarations from public argument type blocks.
 - VERIFY: `C:\dev\agent-cleaner`, focused source/MCP/schema regressions, `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, `npm test`, `npm run health`, `npm run assess`, broad `prettier --check .`, and `git diff --check` passed after loop-state rotation.
-
-### Cycle result - compact_event_version_opt_in
-
-- Pre-cycle: `C:\dev\agent-cleaner` measure/gates passed through WSL; optional secret scanner remains absent, and WSL git-dir warnings still print after the green gate summary.
-- Engine/loop surface: compact RPG step/transcript event rows still use stable `event_v: 6`, but default responses no longer repeat the static top-level `event_v`; `include_event_version: true` restores it.
-- Loop effect: measured `breaking_weir` `step_action(read_flood_book)` drops from 1465 to 1453 bytes, `sunken_barrow` movement from 676 to 664, and an illegal-action compact rejection from 943 to 931.
-- Self-critique: this is a very small fixed envelope trim, not a gameplay or persistence upgrade; it is aligned because the version tag is static metadata and remains available when an audit client needs to branch on event-row schema.
-- Guard: focused compact-event, MCP ToolApi, internal-event hiding, and server-registration regressions pin default omission, opt-in version tags, transcript compatibility, and ToolSearch schema budget.
-- VERIFY: `C:\dev\agent-cleaner`, focused compact-event/MCP regressions, payload probe, `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, `npm test`, `npm run health`, and `npm run assess` passed after loop-state rotation.

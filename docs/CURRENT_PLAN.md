@@ -6,7 +6,7 @@ implementation subagent reads ONLY this doc and the files it names. Keep it
 current, terse, dated, and under ~60 lines — completed work belongs in git
 history and `docs/DECISION_LOG.md`, not here.
 
-## Cycle: 2026-07-08 - Tide-Mill compact warning compression
+## Cycle: 2026-07-08 - Tide-Mill compact ending payoff
 
 ## Synthesis
 
@@ -28,31 +28,35 @@ Final-content blind seed 179 reached `ending_saved` at 55/55 with clarity 5/5
 and enjoyment 4/5. Seed 173, run before the final hatch wording tweak, skipped
 `read_millboard` and felt dinged at 50/55; seed 179 read the board and praised
 the clue chain, so treat that as a sample signal rather than a confirmed common
-defect. The repeated finding across both seeds is compact truncation around the
-millboard/yard warning surfaces.
+defect. The repeated compact truncation around the millboard/yard warning
+surfaces is now closed by concise board and yard prose plus regressions. Blind
+seed 183 reached `ending_saved` at 55/55 with clarity 5/5 and enjoyment 4/5.
+Its remaining content-local finding is that compact ending text truncates
+mid-word, making the final payoff less satisfying in compact mode.
 
 ## Chosen Move
 
-Compress the compact-facing millboard and yard warning surfaces so load-bearing
-warnings survive the compact view without widening compact mode.
+Compress the clean rescue ending variants so the final payoff survives compact
+mode without truncating mid-word.
 
 - Target file first: `content/rpg/quests/tide_mill.yaml`.
-- Preserve urgency: the boat and Ives should still matter immediately.
 - Prefer concise prose edits and pinned compact regressions over engine or
   compact-width changes.
-- Keep the millboard as an optional-but-scored read; do not auto-award the board
-  score for unrelated actions unless the content explicitly makes that
-  information equivalent.
-- Add compact/start or route regressions proving the board warning and yard
-  saboteur setup do not truncate the operational information a first-time
-  player needs.
+- Preserve the ending distinctions: clean 55/55 rescue, no-board rescue,
+  returned-takings rescue, kept-takings rescue, thief, and deaths.
+- Keep the win-only +20 capstone on entering the staith; do not add sea-gate
+  score feedback unless that lever repeats across samples and is handled without
+  breaking the capstone.
+- Add compact ending regressions that drive real routes to the relevant endings
+  and assert compact ending text stays under the compact limit without `(+N
+  chars)` truncation.
 - Keep `max_score`, win-only capstone, and existing takings branch unchanged.
 
 ## Acceptance
 
 1. `npm run validate -- tide_mill` reports 0 errors / 0 warnings.
-2. Focused tests prove compact observations keep board/yard warnings legible and
-   preserve the 50/55 no-board branch.
+2. Focused tests prove compact ending payloads preserve the final payoff without
+   truncation and keep the distinct ending branches intact.
 3. `npm run health` passes.
 4. Run blind after the fix. Target a 20-seed Codex sample when runner capacity
    permits, parallel or sequential, and aggregate common issues; at minimum one
@@ -63,8 +67,9 @@ warnings survive the compact view without widening compact mode.
 - Dialogue mode visibility: seed 167 tried `read_millboard` during Ives dialogue
   because compact observation still looked like the normal room; consider a
   modal compact affordance or clearer dialogue-context text.
-- Compact truncation is recurring. Fix through shorter load-bearing prose and
-  pinned compact observations, not by widening compact mode blindly.
+- Head-Race compact refs: seed 183 noted `choked_sluice` remains visible by id
+  after repair even though the variant name is "head-race"; content-only fixes
+  are limited because compact object refs expose ids, not variant display names.
 - Add richer saboteur combat texture beyond repeated attack once fairness is
   calibrated.
 - Sea-gate feedback: seed 179 flagged no immediate score on the winch as S1, but

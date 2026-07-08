@@ -161,11 +161,10 @@ rooms:
   - id: mill_yard
     name: "The Mill-Yard"
     description: >
-      The yard outside the wheel-room is a slick square of cobble and rainwater. The
-      tool-shed door stands east, but the saboteur who struck Ives waits before it with a
-      short gutting knife, keeping you from the tools. The wheel-room is west. This is a
-      fight if you press him: a gaff-pole in hand and the oilskin coat on your shoulders
-      make it a fair one; barehanded in your shirt, it is a gamble.
+      The rain-slick yard lies between wheel-room west and tool-shed east. The saboteur
+      who struck Ives blocks the shed with a gutting knife, keeping you from the tools.
+      Pressing him means a fight: gaff-pole plus oilskin makes it fair; bare hands make it
+      a gamble.
     variants:
       - when: [{ has_flag: yard_clear }]
         text: >
@@ -240,12 +239,10 @@ objects:
     aliases: [board, notice, orders, chalk, sign]
     description: "A slate millboard by the door, the night orders chalked in Ives's block hand."
     read_text: >
-      The orders read: 'TO WIND THE SEA-GATE THE WHEEL MUST RUN, AND IT WILL NOT RUN TILL
-      BOTH FAULTS ARE PUT RIGHT. CUT THE CHOKED HEAD-RACE CLEAR WITH THE BILLHOOK, AND FREE
-      THE DROPPED BRAKE-PAWL WITH THE CROW-BAR. THE SABOTEUR HAS THE TOOL-SHED DOOR; TAKE
-      THE GAFF-POLE AND COAT BEFORE YOU FACE HIM. THEN WIND THE GATE WITH THE CRANK-HANDLE
-      AND GO DOWN TO THE STAITH. NEVER LEVER THE OLD FLOOD-HATCH. THE STAGING IS ROTTEN AND
-      THE WHEEL-PIT IS STRAIGHT UNDER IT. THE TAKINGS IN THE NOOK ARE IVES'S, NOT YOURS.'
+      Orders: wheel runs after both faults. Cut choked race with billhook; free
+      brake-pawl with crow-bar. Face knife-man with gaff-pole and oilskin. Wind
+      the sea-gate, go down. Never lever the rotten flood-hatch. Ives's takings
+      stay in the nook.
     interactions:
       - verb: READ
         target: millboard
