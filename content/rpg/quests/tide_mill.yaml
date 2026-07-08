@@ -21,26 +21,23 @@ rooms:
   - id: mill_house
     name: "The Mill-House"
     description: >
-      The floor of the tide-mill smells of old grain, salt, and hot rope. A millboard hangs
-      by the door with the night orders chalked on it, and a hooked gaff-pole leans under
-      the sill where a hand can snatch it up. Miller Ives lies against a flour sack with a
-      cut over one eye, still awake enough to talk. North, the wheel-room stands over the
-      race. East is the counting-nook. Outside the wheel-room door, somewhere in the dark,
-      a fishing boat is caught above the weir with the tide going out from under it.
+      Ways: north=wheel-room (then east to yard/tool-shed);
+      east=counting-nook. A millboard hangs by the door, and a hooked gaff-pole
+      leans under the sill. Miller Ives lies by flour sacks, hurt but awake.
+      Outside, a boat is caught above the weir with the tide falling.
     variants:
       - when: [{ has_flag: gate_up }]
         text: >
-          The floor of the tide-mill, the orders off the board and the wheel turning hard
-          beyond the north arch. The sea-gate is up now; the held water is running down to
-          the staith, and the caught boat has one last chance if you go below and wave her
-          through. Miller Ives listens to the water and points you north.
+          Ways: north=wheel-room and open staith, east=counting-nook. The orders
+          are off the board and the wheel turns beyond the north arch. The
+          sea-gate is up; held water runs down, and Ives points you north to wave
+          the boat through.
       - when: [{ has_flag: hook_taken }]
         text: >
-          The floor of the tide-mill smells of old grain, salt, and hot rope. A millboard
-          hangs by the door with the night orders chalked on it, and the sill is bare where
-          the hooked gaff-pole rested until you took it up. Miller Ives lies against a flour
-          sack with a cut over one eye, still awake enough to talk. North, the wheel-room
-          stands over the race. East is the counting-nook.
+          Ways: north=wheel-room (then east to yard/tool-shed);
+          east=counting-nook. The millboard still hangs by the door, and the sill
+          is bare where the gaff-pole rested. Miller Ives lies by flour sacks,
+          hurt but awake, while the trapped boat waits outside.
     objects: [millboard, gaff_hook]
     exits:
       - { direction: north, to: wheel_room }

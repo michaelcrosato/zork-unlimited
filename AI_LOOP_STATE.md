@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 495 -->
+<!-- historical_cycle_count: 496 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,14 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - tide_mill_mill_house_compact_orientation
+
+- Content surface: tightened `tide_mill` Mill-House base and reactive prose so compact start text opens with north=wheel-room/yard path and east=counting-nook.
+- Loop effect: added a compact ToolApi start-view regression that keeps the opening map, objective, gaff/board affordances, and Ives visible under the 360-char cap.
+- Blind playtest: `tide_mill` seed 127 reached `ending_saved` at 55/55, clarity 5/5 and enjoyment 4/5; the opening east/counting-nook confusion did not recur.
+- Self-critique: compact entry orientation is tighter, but the next stale-state mismatch is repair narration that still says "one fault" when the pawl is the second fixed fault.
+- Guard: `npm run validate -- tide_mill`, focused opening compact regression, `npm run health`, and schema-verified blind report `blind-tester/reports/20260708T063559Z_tide_mill_seed127.md` passed.
 
 ### Cycle result - tide_mill_wheel_room_compact_orientation
 
@@ -136,12 +144,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Self-critique: this is a small fixed handle-size win, not a mechanics improvement; it is still worth taking because every long-running loop carries the session id through nearly every tool call.
 - Guard: focused RPG session, overworld session, transcript projection, MCP ToolApi, and server-registration regressions pin compact ids, safe-integer-boundary monotonicity, eviction behavior, and bridge response identity.
 - VERIFY: `C:\dev\agent-cleaner`, focused session/MCP regressions, payload probe, `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, `npm test`, `npm run health`, and `npm run assess` passed.
-
-### Cycle result - rpg_public_transcript_hash_tokens
-
-- Pre-cycle: `C:\dev\agent-cleaner` measure/gates passed through WSL; optional secret scanner remains absent, and WSL git-dir warnings still print after the green gate summary.
-- Engine/loop surface: public RPG MCP/ToolApi `transcript_hash` values are now compact 24-hex tokens, while transcript freshness still derives from the full internal transcript hash over the cached log hash plus full RPG state hash; stale guards accept compact or full transcript hashes.
-- Loop effect: post-run transcript summary drops from 262 to 222 bytes, full transcript from 1227 to 1187, compact-turn transcript from 441 to 401, and unchanged transcript polls from 143 to 103.
-- Self-critique: this is another fixed 40-byte response-envelope win rather than a world-structure or loop-strategy change; it closes the obvious public hash overhead left after RPG state and overworld snapshot compaction.
-- Guard: focused MCP regressions pin 24-hex public transcript tokens, public-to-full derivation, and compact/full `if_transcript_hash` compatibility without weakening internal transcript hashing.
-- VERIFY: `C:\dev\agent-cleaner`, focused MCP/session regressions, payload probe, `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm test`, `npm run health`, and `npm run assess` passed.

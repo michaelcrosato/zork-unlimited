@@ -6,7 +6,7 @@ implementation subagent reads ONLY this doc and the files it names. Keep it
 current, terse, dated, and under ~60 lines — completed work belongs in git
 history and `docs/DECISION_LOG.md`, not here.
 
-## Cycle: 2026-07-08 — Tide-Mill opening orientation
+## Cycle: 2026-07-08 — Tide-Mill second-fault narration
 
 ## Synthesis
 
@@ -20,32 +20,36 @@ Ives dialogue pacing finding is closed and pinned by
 `tests/regression/tide_mill_ives_dialogue_flow.test.ts`. The seed-101 blind pass
 Wheel-Room compact finding is closed and pinned by
 `tests/regression/tide_mill_wheel_room_compact_orientation.test.ts`. The seed-113
+opening-orientation finding is closed and pinned by
+`tests/regression/tide_mill_mill_house_compact_orientation.test.ts`. The seed-127
 blind pass reached `ending_saved` at 55/55 with clarity 5/5 and enjoyment 4/5,
-then reported that the opening Mill-House compact text can leave east/counting
-nook versus yard/tool-shed orientation briefly ambiguous.
+then reported one S1 stale narration: when the brake-pawl is repaired second, the
+success line still says "One fault of the two is put right."
 
 ## Chosen Move
 
-Make opening Mill-House orientation survive compact observation truncation.
+Make repair success narration know whether it fixed the first or second fault.
 
 - Target file: `content/rpg/quests/tide_mill.yaml`.
-- Put the Mill-House's live exit map early and tersely enough that compact start
-  views show north=wheel-room (then east to yard/tool-shed) and
-  east=counting-nook before any truncation.
-- Preserve the opening objective, board/gaff/Ives affordances, and the
-  `hook_taken`/`gate_up` reactive variants without bloating compact prose.
-- Add or extend a compact-observation regression for the opening view.
+- Fix the brake-pawl success narration when `sluice_clear` is already true; it
+  should say both faults are now cleared, not one of two.
+- Check the symmetric route too: if `pawl_free` is already true, the final
+  head-race clear narration should not imply only one fault remains.
+- Prefer content-level conditional interaction ordering if the existing DSL can
+  express it; add a focused regression that drives both repair orders.
 
 ## Acceptance
 
 1. `npm run validate -- tide_mill` reports 0 errors / 0 warnings.
-2. A compact Mill-House start observation names north/wheel-room/yard path and
-   east/counting-nook clearly before truncation on the seed-113 route.
+2. Both repair orders narrate accurately when the second fault is fixed.
 3. `npm run health` passes, then re-run `npm run blind --quest=tide_mill` with a
    new seed and use its exit interview as the next lever.
 
 ## Deferred Levers
 
+- The seed-127 yard/tool-shed/wheel-room double-check was mild and likely follows
+  from the same compact navigation class; revisit only if it repeats after the
+  second-fault narration fix.
 - The seed-113 coin-bag uncertainty is already covered by `ending_thief`; only
   revisit if a future blind player takes it and finds the consequence unclear.
 - Add richer saboteur combat texture: seed 101 flagged that once combat starts,
