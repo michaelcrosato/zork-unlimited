@@ -67,56 +67,56 @@ rooms:
   - id: wheel_room
     name: "The Wheel-Room"
     description: >
-      The great undershot wheel stands black and still over the head-race. It will not stir:
-      its brake-pawl is dropped and locked into the gear, and the race that should drive it
-      runs choked and slack. The iron sea-gate winch stands by the wheel with a socket for
-      its crank-handle, and the handle itself hangs on a peg beside it. The head-race opens
-      west; the yard and tool-shed lie east; the mill-floor is south. Stairs lead down to the
-      staith, but the sea-gate is shut.
+      Ways: west=head-race, east=yard/tool-shed, south=mill-floor, down=gated
+      staith. The great undershot wheel stands black and still: brake-pawl dropped,
+      head-race choked, sea-gate shut. The winch waits by the wheel, its crank-handle
+      hanging on a peg.
     variants:
       - when: [{ has_flag: gate_up }]
         text: >
-          The great wheel turns strong over the freed race, driving the gear while the
-          sea-gate winch stands wound fully up. The held water is going down through the open
-          gate in a long brown slide. The way down to the staith is open; the head-race is
-          west, the yard east, and the mill-floor south.
+          Ways: down=open staith, west=head-race, east=yard/tool-shed,
+          south=mill-floor. The great wheel turns strong over the freed race, the
+          sea-gate winch wound fully up. Held water slides through the open gate; go
+          down to wave the boat through.
       - when: [{ has_flag: sluice_clear }, { has_flag: pawl_free }, { has_flag: crank_handle_taken }]
         text: >
-          The great wheel turns free and strong over the head-race now, both faults put
-          right: the brake-pawl levered up clear and the race running fast below. The
-          sea-gate winch waits with its socket empty and the crank-handle in your kit. Wind
-          it and the held water can go down to the staith.
+          Ways: west=head-race, east=yard/tool-shed, south=mill-floor, down=gated
+          staith. The wheel turns free and strong: brake-pawl up, race running fast.
+          The winch socket is empty and the crank-handle is in your kit. Wind it to
+          drop the held water.
       - when: [{ has_flag: sluice_clear }, { has_flag: pawl_free }]
         text: >
-          The great wheel turns free and strong over the head-race now, both faults put
-          right: the brake-pawl levered up clear and the race running fast below. The
-          sea-gate winch waits with its crank-handle socket. Wind it and the held water can
-          go down to the staith.
+          Ways: west=head-race, east=yard/tool-shed, south=mill-floor, down=gated
+          staith. The wheel turns free and strong: brake-pawl up, race running fast.
+          The sea-gate winch waits for its crank-handle. Wind it to drop the held
+          water.
       - when: [{ has_flag: sluice_clear }, { has_flag: crank_handle_taken }]
         text: >
-          The freed head-race runs fast under the wheel, but the dropped brake-pawl still
-          locks the gear and holds the wheel against the water. The winch peg is bare; the
-          crank-handle is already in your kit, ready once the pawl is lifted.
+          Ways: west=head-race, east=yard/tool-shed, south=mill-floor, down=gated
+          staith. The freed race runs fast, but the dropped brake-pawl still locks the
+          gear. The winch peg is bare; the crank-handle is in your kit for later.
       - when: [{ has_flag: sluice_clear }]
         text: >
-          The freed head-race runs fast under the wheel, but the dropped brake-pawl still
-          locks the gear and holds the wheel against the water. The sea-gate winch cannot
-          bite until the pawl is lifted. The crank-handle hangs on its peg beside the winch.
+          Ways: west=head-race, east=yard/tool-shed, south=mill-floor, down=gated
+          staith. The freed race runs fast, but the dropped brake-pawl still locks the
+          gear. The sea-gate winch cannot bite until the pawl is lifted; its
+          crank-handle hangs on the peg.
       - when: [{ has_flag: pawl_free }, { has_flag: crank_handle_taken }]
         text: >
-          The brake-pawl is levered up clear of the gear, but the race below the wheel is
-          still choked and slack. The wheel is free to turn, but it has no water to bite. The
-          winch peg is bare; the crank-handle is already in your kit.
+          Ways: west=head-race, east=yard/tool-shed, south=mill-floor, down=gated
+          staith. The brake-pawl is levered clear, but the race below stays choked and
+          slack. The winch peg is bare; the crank-handle is in your kit.
       - when: [{ has_flag: pawl_free }]
         text: >
-          The brake-pawl is levered up clear of the gear, but the race below the wheel is
-          still choked and slack. The wheel is free to turn, but it has no water to bite.
-          The crank-handle hangs on its peg beside the sea-gate winch.
+          Ways: west=head-race, east=yard/tool-shed, south=mill-floor, down=gated
+          staith. The brake-pawl is levered clear, but the race below stays choked and
+          slack. The wheel has no water to bite; the crank-handle hangs on the winch
+          peg.
       - when: [{ has_flag: crank_handle_taken }]
         text: >
-          The great undershot wheel stands black and still over the head-race, with both
-          faults still against it. The sea-gate winch waits by the wheel and the peg beside
-          it is bare where the crank-handle hung.
+          Ways: west=head-race, east=yard/tool-shed, south=mill-floor, down=gated
+          staith. The great wheel stands black and still with both faults against it.
+          The sea-gate winch waits by the wheel, its crank-handle peg bare.
     objects: [brake_pawl, sea_winch, crank_handle]
     exits:
       - { direction: south, to: mill_house }

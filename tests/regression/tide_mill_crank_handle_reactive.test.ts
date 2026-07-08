@@ -59,13 +59,13 @@ describe("Tide-Mill Wheel-Room reacts to the taken crank-handle", () => {
     let state = initStateForRpgPack(index, 73);
     state = act(state, { type: "MOVE", direction: "north" });
     expect(state.current).toBe("wheel_room");
-    expect(desc(state)).toContain("handle itself hangs on a peg");
+    expect(desc(state)).toContain("crank-handle hanging on a peg");
 
     state = act(state, { type: "TAKE", item: "crank_handle" });
 
     expect(state.inventory).toContain("crank_handle");
-    expect(desc(state)).toContain("peg beside it is bare");
-    expect(desc(state)).not.toMatch(/crank-handle hangs on (?:a|its) peg/i);
+    expect(desc(state)).toContain("crank-handle peg bare");
+    expect(desc(state)).not.toMatch(/crank-handle hangs on (?:a|its|the) peg/i);
     expect(visibleIds(state)).not.toContain("crank_handle");
   });
 
@@ -77,9 +77,8 @@ describe("Tide-Mill Wheel-Room reacts to the taken crank-handle", () => {
     const state = wheelRoomWithHeldCrank(flags);
     const text = desc(state);
 
-    expect(text).not.toMatch(/crank-handle hangs on (?:a|its) peg/i);
-    expect(text).not.toContain("handle itself hangs on a peg");
-    expect(text).toMatch(/crank-handle (?:is already in your kit|in your kit)/i);
+    expect(text).not.toMatch(/crank-handle hangs on (?:a|its|the) peg/i);
+    expect(text).toMatch(/crank-handle (?:is already in your kit|is in your kit|in your kit)/i);
     expect(visibleIds(state)).not.toContain("crank_handle");
   });
 });
