@@ -636,7 +636,7 @@
         "regional_court",
         "stable"
       ],
-      "description": "Albany city is a major city in Capital / Mohawk, population 101,698. Roads, work, rumor, and trouble move through it before they move into the surrounding wilds."
+      "description": "Albany city sits where Hudson roads, rail sidings, court counters, and hill-country relief wagons meet. Work reaches the capital as weather reports, freight slips, and old-family petitions before it becomes a posted notice."
     },
     {
       "id": "greenburgh_town",
@@ -9299,8 +9299,8 @@
       "home": "albany_city",
       "name": "Albany Civic Center",
       "kind": "civic_core",
-      "summary": "Municipal steps, notice boards, and official counters make this the practical center of Albany. It is where a major city's rumors become jobs, warrants, and favors.",
-      "discovery": "Exploring it can reveal official notices, regional arc leads, and who has authority in Capital / Mohawk.",
+      "summary": "Municipal steps and court counters face a notice wall crowded with canal claims, road reports, and winter-relief petitions from the hill farms west of the Hudson. In Albany, rumors become docket numbers before anyone admits they are trouble.",
+      "discovery": "Exploring it can reveal official notices, Capital / Mohawk authority, and which petition belongs at the Station Quarter instead of a counter.",
       "travel_minutes": 11,
       "services": [
         "notice_board",
@@ -9327,8 +9327,8 @@
       "home": "albany_city",
       "name": "Albany Station Quarter",
       "kind": "transport_hub",
-      "summary": "Road crews, bus stops, rail sidings, parking lots, and stable yards collect people moving through Albany. Routes out of town are easiest to read here.",
-      "discovery": "Exploring it can reveal road conditions, new route hooks, and travelers with news from adjacent towns.",
+      "summary": "Rail sidings, bus bays, road-warden desks, and stable yards collect travelers with snow on their boots and freight tags wired to their packs. The first strong lead is usually not a job title; it is a route that failed to close.",
+      "discovery": "Exploring it can reveal road conditions, stranded travelers, and the winter-relief packet pointing toward Old Cade's byre.",
       "travel_minutes": 19,
       "services": [
         "rail_terminal",
@@ -17418,8 +17418,8 @@
       "home": "albany_city",
       "area": "albany_city__transport_hub",
       "kind": "route_yard",
-      "title": "Albany Station Quarter Route Yard",
-      "summary": "Albany Station Quarter has a concrete local lead point: missed buses, blocked ramps, and anxious travelers. Scouting here reveals work and nearby expedition rumors tied to Albany city."
+      "title": "Albany Station Quarter Relief Board",
+      "summary": "A slate board mixes I-90 delays with a hand-tied hill-farm tag: cattle feed, lamp oil, byre jerkin, Old Cade waiting. Scouting here reveals why The Wolf-Winter notice is posted in Albany."
     },
     {
       "id": "albany_city__industrial__poi",
@@ -23234,8 +23234,8 @@
       "name": "Hayden Hale",
       "role": "route dispatcher",
       "faction": "Road Wardens",
-      "summary": "Hayden Hale works as the route dispatcher in Albany Station Quarter, watching how missed buses, blocked ramps, and anxious travelers affect Albany city.",
-      "agenda": "Wants a traveler to handle Albany Station Quarter's local problems before they spread through the Capital / Mohawk road network."
+      "summary": "Hayden Hale dispatches road wardens from Albany Station Quarter, matching late coaches, snow reports, and relief freight to travelers who can move faster than official crews.",
+      "agenda": "Needs someone to carry a wolf-winter packet from the station board to a hill steading before the cattle are lost; he can point you to the posted lead."
     },
     {
       "id": "albany_city__industrial__contact",
@@ -30127,10 +30127,10 @@
       "id": "albany_city__transport_hub__event",
       "home": "albany_city",
       "area": "albany_city__transport_hub",
-      "title": "Albany Station Quarter: missed arrival board",
+      "title": "Albany Station Quarter: winter relief packet",
       "pressure": "conflict",
       "intensity": 3,
-      "summary": "Albany Station Quarter is under conflict pressure around missed buses, blocked ramps, and anxious travelers. Resolving it requires scouting this area, talking to its contact, and investigating on site."
+      "summary": "A northbound relief packet sits open at the route desk: no team returned from the hill road, Old Cade's cattle are penned at a byre, and the weather report keeps worsening. Resolving it requires scouting this area, talking to its contact, and investigating on site."
     },
     {
       "id": "albany_city__industrial__event",
@@ -39160,8 +39160,8 @@
       "area": "albany_city__transport_hub",
       "kind": "industrial",
       "title": "Albany Station Quarter Signal Yard",
-      "summary": "Albany Station Quarter opens into a compact exploration site around late coaches, freight slips, ramp closures, and misdirected travelers. It is close enough to feel local, but risky enough to reward preparation before leaving the main street.",
-      "discovery": "A lead in Albany Station Quarter points toward late coaches, freight slips, ramp closures, and misdirected travelers; locals say the Albany problem is bigger than one notice-board errand.",
+      "summary": "Albany Station Quarter opens into a compact exploration site around snow-caked coaches, relief crates, freight slips, ramp closures, and drivers arguing over which hill road is still passable. It is close enough to feel local, but risky enough to reward preparation before leaving the main street.",
+      "discovery": "A lead in Albany Station Quarter points toward the relief crates, Old Cade's byre tag, and the road crew that failed to return; locals say the Albany problem is bigger than one notice-board errand.",
       "danger": 3,
       "reward": "You secure route notes that improve travel judgment around the corridor, gaining 3 Capital / Mohawk renown."
     },
@@ -46387,7 +46387,7 @@
       "title": "The Wolf-Winter",
       "source": "content/rpg/quests/wolf_winter.yaml",
       "home": "albany_city",
-      "discovery": "Ask around Albany city for work tied to The Wolf-Winter. The lead is posted in Albany Station Quarter.",
+      "discovery": "A winter-relief tag at Albany Station Quarter names Old Cade's hill steading, a cattle byre, and a wolf pack coming down with the weather. The Wolf-Winter lead is posted on the station board.",
       "visibility": "local_notice_board",
       "area": "albany_city__transport_hub"
     }
@@ -47776,10 +47776,10 @@
       "home": "albany_city",
       "area": "albany_city__transport_hub",
       "kind": "courier",
-      "title": "Albany Station Quarter: Road Packet",
-      "summary": "Albany Station Quarter has drivers, dispatchers, and travelers with fresh news. The job is small enough to finish locally but specific enough to make Albany City feel worked-in rather than decorative.",
-      "objective": "Spend time in Albany Station Quarter to carry route notes, passenger names, and road warnings through the local traffic tangle.",
-      "reward": "Earn 4 Capital / Mohawk renown and a concrete lead about Albany City.",
+      "title": "Albany Station Quarter: Relief Packet",
+      "summary": "Drivers and dispatchers sort road reports beside crates marked for hill farms; one packet keeps returning with the words wolf-winter penciled on the tag.",
+      "objective": "Spend time in Albany Station Quarter to match route notes, passenger names, and weather warnings to the relief wagon that never checked in.",
+      "reward": "Earn 4 Capital / Mohawk renown and a concrete lead about Albany's hill-country relief work.",
       "minutes": 79,
       "difficulty": 4,
       "visibility": "local_job_board"

@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 516 -->
+<!-- historical_cycle_count: 517 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,14 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - albany_station_quarter_bridge
+
+- Content surface: hand-authored Albany Civic Center / Station Quarter relief-board, Hayden, relief-packet, signal-yard, job, and `wolf_winter` discovery prose so the first quest lead has local New York footing.
+- Loop effect: focused overworld regression pins the Old Cade/byre/winter-relief bridge and bans the prior generic Albany lead boilerplate.
+- Blind playtest: 25-run `overworld` Codex batch seeds 366-390 all exited 0; reports reached `wolf_winter`, clarity 25x4/5, enjoyment 25x4/5, replay 25x true.
+- Self-critique: best-case reports now notice the town-to-quest lead network, but repeats remain around road encounters after arrival, zero overworld quest time, stale completed lists, compact artifacts, and nearby-town template feel.
+- Guard: focused overworld tests, `npm run validate -- wolf_winter`, `npm run health`, `npm run blind:feedback`, and reports `20260708T150956Z`-`20260708T153614Z` seeds 366-390 passed.
 
 ### Cycle result - fresh_game_feedback_ledger_baseline
 
@@ -126,11 +134,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Blind playtest: `tide_mill` seed 183 reached `ending_saved` at 55/55 with clarity 5/5 and enjoyment 4/5; the board/yard truncation complaint did not recur.
 - Self-critique: the next content-local finding is compact ending payoff truncating mid-word; stale `choked_sluice` compact id is noted but lower leverage until compact refs carry display names.
 - Guard: focused compact/no-board/takings regressions, `npm run validate -- tide_mill`, `npm run health`, and report `20260708T093001Z_tide_mill_seed183.md` passed.
-
-### Cycle result - tide_mill_flood_hatch_branch
-
-- Content surface: retuned the `tide_mill` flood-hatch so `lever hatch with crow-bar` is a hard seeded might gamble before `sluice_clear`, then disappears once the safe race repair is done.
-- Loop effect: new regression pins the pre-repair drowning failure, strong-roll alternate repair, and no stale post-repair hatch death action; success collapses onto normal `sluice_clear` to keep exhaustive proofs finite.
-- Blind playtest: final-content `tide_mill` seed 179 reached `ending_saved` at 55/55 with clarity 5/5 and enjoyment 4/5; seed 173 separately exposed a no-board 50/55 friction.
-- Self-critique: the hatch complaint is structurally closed; next common lever is compact truncation around millboard/yard warnings, with sea-gate feedback noted but constrained by the win-only capstone.
-- Guard: focused hatch/repair/takings regressions, exhaustive RPG cluster, `npm run validate -- tide_mill`, `npm run health`, and report `20260708T091544Z_tide_mill_seed179.md` passed.

@@ -6,64 +6,53 @@ implementation subagent reads ONLY this doc and the files it names. Keep it
 current, terse, dated, and under ~60 lines — completed work belongs in git
 history and `docs/DECISION_LOG.md`, not here.
 
-## Cycle: 2026-07-08 - Albany Opening Fiction Bridge
+## Cycle: 2026-07-08 - Overworld Quest Time Accounting
 
 ## Synthesis
 
-Fresh-game feedback is now tracked in `docs/BLIND_FEEDBACK_LEDGER.md`, generated
-by `npm run blind:feedback`. It parses verified blind reports, keeps the latest
-100 entries explicit, and collapses older accepted entries into trait counts.
+The Albany bridge shipped: Civic Center / Station Quarter / Hayden / relief
+packet / signal-yard / job / `wolf_winter` discovery now ground the first quest
+lead in local winter-relief logistics. Fresh-game Codex seeds 366-390 all exited
+0 and reached `wolf_winter`; clarity 25x4/5, enjoyment 25x4/5, replay 25x true.
 
-Baseline: 25 Codex fresh-game `overworld` runs, seeds 341-365, all exited 0 and
-reached valid reports. They consistently found `wolf_winter`; clarity 25x4/5,
-enjoyment 25x4/5, replay 25x true. The embedded quest is carrying the opening:
-prep, advice, gear, and combat payoff are strong.
+`docs/BLIND_FEEDBACK_LEDGER.md` now has 210 accepted reports. Broader goal:
+improve Albany/New York as an open-world start, not only an embedded quest. The
+slice should take time, contain local systems, and support seeded TTRPG variance.
 
-The repeated opening weakness is not solvability. It is authored-place feel.
-Agents describe Albany Civic Center / Station Quarter as procedural, list-like,
-or a compact content index before the quest begins. The `wolf_winter` handoff
-then feels like a sudden jump from New York civic/transit work into a mythic
-winter steading without enough local bridge. Secondary repeats: completed jobs
-and completed quest leads remain listed without status, road encounters resolve
-after arrival and repeat too easily, quest completion consumes no overworld
-time, and nearby towns can feel like renamed civic templates.
-
-Keep `tide_mill` as the benchmark quest and preserve its Head-Race aliases, but
-the next move should harden the actual fresh-start slice: Albany first, then the
-route into an authored quest.
+Newest issues: Albany-Colonie road encounter timing, `wolf_winter` consumes no
+overworld time, completed content is unclearly listed, compact view exposes
+hash-like artifacts, and nearby towns feel templated. Keep one benchmark quest;
+do not start a second quest or touch CYOA/parser. Preserve `tide_mill` aliases.
 
 ## Chosen Move
 
-Make Albany Station Quarter and its first quest lead feel authored and
-world-coherent before changing systems.
+Make completing a discovered world quest advance deterministic overworld time so
+the first expedition feels like a real stretch of day.
 
-- Target `content/world/new_york_overworld.json` around `albany_city`,
-  `albany_city__civic_core`, `albany_city__transport_hub`, and the local
-  `wolf_winter` quest lead/discovery text.
-- Add Albany-specific arrival/notice/lead texture that connects the station
-  quarter to the winter byre crisis through local rumor, freight, weather, or
-  relief logistics; keep prose compact and deterministic.
-- Do not create a second quest, move the start, or hide the existing discovery
-  loop. This is a framing/depth pass on the current start and first quest bridge.
-- Add a focused regression pinning the Albany-specific bridge so generator-like
-  civic boilerplate cannot return as the first impression.
+- Target `src/world/session_quests.ts`, `src/world/session_quest_lifecycle.ts`,
+  MCP/UI result shaping, and focused `wolf_winter`/shipped-quest tests.
+- Reuse existing quest metadata where possible; if a deterministic duration is
+  missing, derive a compact bounded duration from existing difficulty/risk
+  rather than adding broad new schema.
+- Result text should say time passed in-world, the observation clock should
+  advance, and repeated completion must remain idempotent.
+- State accounting only: do not change RPG combat/check randomness except
+  through already seeded quest play.
 
 ## Acceptance
 
-1. Focused tests prove Albany's starting/Station Quarter text and `wolf_winter`
-   lead are no longer generic civic-template phrasing.
+1. Focused tests prove completed discovered quests advance minutes, record
+   journal time, and keep repeated completion zero-change.
 2. `npm run health` passes.
 3. Run a 25-seed fresh-game `npm run blind` batch, regenerate
    `docs/BLIND_FEEDBACK_LEDGER.md`, and commit only after reports verify.
 
 ## Deferred Levers
 
-- Preserve Tide-Mill alias stability; do not break `use_choked_sluice` or
-  `use_billhook_on_choked_sluice`.
 - Road/state bookkeeping: pending road encounter after arrival, repeated
-  same-road encounter, zero overworld quest time, and completed job/quest status.
-- Larger texture pass: Colonie and other nearby towns still feel templated after
-  Albany; address after the start slice has a stronger first impression.
+  same-road encounter, and completed job/quest/event status.
+- Colonie and nearby towns still feel templated after Albany.
+- Compact-view polish: stale/hash-like artifacts and clearer completed-state
+  labels.
 - Tide-Mill levers still open: tactical saboteur branch, coin-bag consequence,
   compact stale-ref cleanup.
-- Do not start a second quest, add unanchored systems, or touch CYOA/parser.

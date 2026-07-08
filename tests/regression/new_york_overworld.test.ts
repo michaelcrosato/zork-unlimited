@@ -88,6 +88,58 @@ describe("New York overworld graph", () => {
     }
   });
 
+  it("hand-authors Albany's opening bridge into The Wolf-Winter", () => {
+    const nodesById = new Map(world.nodes.map((node) => [node.id, node]));
+    const areasById = new Map(world.areas.map((area) => [area.id, area]));
+    const poisById = new Map(world.points_of_interest.map((poi) => [poi.id, poi]));
+    const contactsById = new Map(world.characters.map((contact) => [contact.id, contact]));
+    const eventsById = new Map(world.local_events.map((event) => [event.id, event]));
+    const jobsById = new Map(world.local_jobs.map((job) => [job.id, job]));
+    const sitesById = new Map(world.exploration_sites.map((site) => [site.id, site]));
+    const questsById = new Map(world.quests.map((quest) => [quest.id, quest]));
+
+    const albany = nodesById.get("albany_city");
+    const civic = areasById.get("albany_city__civic_core");
+    const station = areasById.get("albany_city__transport_hub");
+    const stationPoi = poisById.get("albany_city__transport_hub__poi");
+    const hayden = contactsById.get("albany_city__transport_hub__contact");
+    const stationEvent = eventsById.get("albany_city__transport_hub__event");
+    const stationJob = jobsById.get("albany_city__transport_hub__job");
+    const stationSite = sitesById.get("albany_city__transport_hub__site");
+    const wolfWinter = questsById.get("wolf_winter");
+
+    expect(albany?.description).toContain("Hudson roads");
+    expect(civic?.summary).toContain("winter-relief petitions");
+    expect(station?.summary).toContain("freight tags");
+    expect(station?.discovery).toContain("Old Cade's byre");
+    expect(stationPoi?.summary).toContain("Old Cade waiting");
+    expect(hayden?.agenda).toContain("hill steading");
+    expect(stationEvent?.summary).toContain("Old Cade's cattle");
+    expect(stationJob?.summary).toMatch(/wolf-winter/i);
+    expect(stationSite?.discovery).toContain("Old Cade's byre tag");
+    expect(wolfWinter?.discovery).toContain("Albany Station Quarter");
+    expect(wolfWinter?.discovery).toContain("cattle byre");
+
+    const authoredBridge = [
+      albany?.description,
+      civic?.summary,
+      station?.summary,
+      station?.discovery,
+      stationPoi?.summary,
+      hayden?.summary,
+      hayden?.agenda,
+      stationEvent?.summary,
+      stationJob?.summary,
+      stationJob?.objective,
+      stationSite?.summary,
+      stationSite?.discovery,
+      wolfWinter?.discovery,
+    ].join(" ");
+    expect(authoredBridge).not.toContain("concrete local lead point");
+    expect(authoredBridge).not.toContain("Ask around Albany city for work tied to");
+    expect(authoredBridge).not.toContain("make Albany City feel worked-in rather than decorative");
+  });
+
   it("populates every town and road with exploration substrate", () => {
     expect(world.points_of_interest.length).toBeGreaterThanOrEqual(world.nodes.length);
     expect(world.areas.length).toBeGreaterThan(world.nodes.length * 2);
