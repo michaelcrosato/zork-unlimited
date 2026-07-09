@@ -26,7 +26,7 @@ describe("replayTrace", () => {
     });
 
     const { expected_final_hash: _omit, ...traceWithoutHash } = trace;
-    const result = replayTrace(traceWithoutHash as unknown as Parameters<typeof replayTrace>[0], microRules);
+    const result = replayTrace<RpgAction>(traceWithoutHash as any, microRules);
 
     expect(result.ok).toBe(true);
     expect(result.message).toBe("Replayed with no expected final hash to assert.");
@@ -55,7 +55,7 @@ describe("replayTrace", () => {
       per_step_hashes: ["badhash", "badhash", "badhash"],
     };
 
-    expect(() => replayTrace(tampered as unknown as Parameters<typeof replayTrace>[0], microRules)).toThrow(SaveIntegrityError);
+    expect(() => replayTrace<RpgAction>(tampered as any, microRules)).toThrow(SaveIntegrityError);
   });
 
   it("returns ok when final matches and no divergence", () => {
@@ -65,7 +65,7 @@ describe("replayTrace", () => {
       worldQuestId: "test_quest",
     });
 
-    const result = replayTrace(trace as unknown as Parameters<typeof replayTrace>[0], microRules);
+    const result = replayTrace<RpgAction>(trace as any, microRules);
 
     expect(result.ok).toBe(true);
     expect(result.expectedFinalHash).toBe(trace.expected_final_hash);
@@ -84,7 +84,7 @@ describe("replayTrace", () => {
       per_step_hashes: ["badhash", ...trace.per_step_hashes!.slice(1)],
     };
 
-    const result = replayTrace(tampered as unknown as Parameters<typeof replayTrace>[0], microRules);
+    const result = replayTrace<RpgAction>(tampered as any, microRules);
 
     expect(result.ok).toBe(false);
     expect(result.divergedAtStep).toBe(0);
@@ -95,12 +95,12 @@ describe("replayTrace", () => {
 describe("describeAction", () => {
   it("returns 'out of range' when action is undefined", () => {
     const trace = { actions: [] };
-    expect(describeAction(trace as unknown as Parameters<typeof describeAction>[0], 0)).toBe("out of range");
+    expect(describeAction<RpgAction>(trace as any, 0)).toBe("out of range");
   });
 
   it("returns type and id correctly", () => {
     const trace = { actions: [{ type: "MOVE", id: "north" }] };
-    expect(describeAction(trace as unknown as Parameters<typeof describeAction>[0], 0)).toBe("MOVE:north");
+    expect(describeAction<RpgAction>(trace as any, 0)).toBe("MOVE:north");
   });
 
   it("returns stringified JSON when type and id are not strings", () => {
@@ -108,6 +108,6 @@ describe("describeAction", () => {
     // describeAction's fallback handles other cases.
     const action = { type: 123, id: 456 };
     const trace = { actions: [action] };
-    expect(describeAction(trace as unknown as Parameters<typeof describeAction>[0], 0)).toBe(JSON.stringify(action));
+    expect(describeAction<RpgAction>(trace as any, 0)).toBe(JSON.stringify(action));
   });
 });
