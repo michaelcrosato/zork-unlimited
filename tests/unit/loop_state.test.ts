@@ -10,7 +10,9 @@ describe("historicalCycleCount", () => {
   it("parses valid markers", () => {
     expect(historicalCycleCount("<!-- historical_cycle_count: 42 -->")).toBe(42);
     expect(
-      historicalCycleCount("# AI Loop State\n\n<!-- historical_cycle_count: 100 -->\n\nMore content"),
+      historicalCycleCount(
+        "# AI Loop State\n\n<!-- historical_cycle_count: 100 -->\n\nMore content",
+      ),
     ).toBe(100);
   });
 
