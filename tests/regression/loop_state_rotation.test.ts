@@ -17,6 +17,7 @@ import {
   totalCycleCount,
   countCycleEntries,
   historicalCycleCount,
+  completedCycleCount,
   ROTATE_KEEP,
   LOOP_STATE_FILE,
   LOOP_ARCHIVE_FILE,
@@ -80,5 +81,30 @@ describe("AI_LOOP_STATE rotation (token efficiency)", () => {
     expect(rotateLoopState(root)).toBe(10);
     expect(rotateLoopState(root)).toBe(0);
     expect(totalCycleCount(root)).toBe(ROTATE_KEEP + 10);
+  });
+});
+
+describe("completedCycleCount", () => {
+  it("counts both historical marker and rich entries", () => {
+    const text = `# AI Loop State\n\n<!-- historical_cycle_count: 42 -->\n\n### Cycle result 1\n\n### Cycle result 2\n`;
+    expect(completedCycleCount(text)).toBe(44);
+  });
+
+  it("works with no historical marker", () => {
+    const text = `# AI Loop State\n\n### Cycle result 1\n\n### Cycle result 2\n`;
+    expect(completedCycleCount(text)).toBe(2);
+  });
+
+  it("works with no rich entries", () => {
+    const text = `# AI Loop State\n\n<!-- historical_cycle_count: 42 -->\n`;
+    expect(completedCycleCount(text)).toBe(42);
+  });
+
+  it("works with empty string", () => {
+    expect(completedCycleCount("")).toBe(0);
+  });
+
+  it("works with garbage text", () => {
+    expect(completedCycleCount("just some random text without markers")).toBe(0);
   });
 });
