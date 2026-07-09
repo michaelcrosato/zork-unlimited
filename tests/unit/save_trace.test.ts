@@ -255,16 +255,23 @@ describe("save / load (§8.7)", () => {
   });
 });
 
-
 describe("assertTraceMode", () => {
   it("rejects traces that omit the RPG mode", () => {
-    expect(() => assertTraceMode({} as Parameters<typeof assertTraceMode>[0])).toThrow(SaveIntegrityError);
-    expect(() => assertTraceMode({} as Parameters<typeof assertTraceMode>[0])).toThrow(/Trace mode/);
+    expect(() => assertTraceMode({} as Parameters<typeof assertTraceMode>[0])).toThrow(
+      SaveIntegrityError,
+    );
+    expect(() => assertTraceMode({} as Parameters<typeof assertTraceMode>[0])).toThrow(
+      /Trace mode/,
+    );
   });
 
   it("rejects traces with the wrong RPG mode", () => {
-    expect(() => assertTraceMode({ mode: "wrong" } as Parameters<typeof assertTraceMode>[0])).toThrow(SaveIntegrityError);
-    expect(() => assertTraceMode({ mode: "wrong" } as Parameters<typeof assertTraceMode>[0])).toThrow(/Trace mode/);
+    expect(() =>
+      assertTraceMode({ mode: "wrong" } as Parameters<typeof assertTraceMode>[0]),
+    ).toThrow(SaveIntegrityError);
+    expect(() =>
+      assertTraceMode({ mode: "wrong" } as Parameters<typeof assertTraceMode>[0]),
+    ).toThrow(/Trace mode/);
   });
 
   it("accepts a valid trace", () => {
