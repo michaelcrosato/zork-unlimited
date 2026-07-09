@@ -155,6 +155,19 @@ export function validateRpgFoundation(
         );
     }
   }
+  const objectToRoom = new Map<string, string>();
+  for (const r of pack.rooms) {
+    for (const oid of r.objects) {
+      objectToRoom.set(oid, r.id);
+    }
+  }
+  const objectToContainer = new Map<string, string>();
+  for (const o of pack.objects) {
+    for (const cid of o.contents) {
+      objectToContainer.set(cid, o.id);
+    }
+  }
+
   for (const o of pack.objects) {
     for (const cid of o.contents) {
       if (!objById.has(cid))
@@ -196,21 +209,21 @@ export function validateRpgFoundation(
     // a container would give it two homes (inventory wins, so the room/container
     // copy is dead) — almost certainly an authoring slip. Flag it.
     if (o.held) {
-      const inRoom = pack.rooms.find((r) => r.objects.includes(o.id));
-      if (inRoom)
+      const inRoomId = objectToRoom.get(o.id);
+      if (inRoomId)
         findings.push(
           err(
             "HELD_ALSO_PLACED",
-            `held object "${o.id}" is also listed in room "${inRoom.id}"; a held object is carried, not placed.`,
+            `held object "${o.id}" is also listed in room "${inRoomId}"; a held object is carried, not placed.`,
             [`object:${o.id}`],
           ),
         );
-      const inContainer = pack.objects.find((c) => c.contents.includes(o.id));
-      if (inContainer)
+      const inContainerId = objectToContainer.get(o.id);
+      if (inContainerId)
         findings.push(
           err(
             "HELD_ALSO_PLACED",
-            `held object "${o.id}" is also inside container "${inContainer.id}"; a held object is carried, not placed.`,
+            `held object "${o.id}" is also inside container "${inContainerId}"; a held object is carried, not placed.`,
             [`object:${o.id}`],
           ),
         );
@@ -223,17 +236,13 @@ export function validateRpgFoundation(
   // crafted/created during gameplay — they also need no initial room placement.
   // Any other object that appears in none of these maps is a true orphan.
   {
-    const placedInRoom = new Set<string>();
-    for (const r of pack.rooms) for (const oid of r.objects) placedInRoom.add(oid);
-    const placedInContainer = new Set<string>();
-    for (const o of pack.objects) for (const cid of o.contents) placedInContainer.add(cid);
     const grantedByEffect = new Set<string>();
     for (const e of allEffects(pack)) if ("add_item" in e) grantedByEffect.add(e.add_item);
 
     for (const o of pack.objects) {
       if (o.held) continue; // inventory start — no placement needed
       if (grantedByEffect.has(o.id)) continue; // crafted/created during play
-      if (!placedInRoom.has(o.id) && !placedInContainer.has(o.id)) {
+      if (!objectToRoom.has(o.id) && !objectToContainer.has(o.id)) {
         findings.push(
           warn(
             "ITEM_UNPLACED",
