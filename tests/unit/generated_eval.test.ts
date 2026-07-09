@@ -28,10 +28,10 @@ describe("generated_eval", () => {
       // genBase should be 5 * GEN_EVAL_CHECK_COUNT (5 * 4 = 20)
 
       expect(checks).toHaveLength(GEN_EVAL_CHECK_COUNT);
-      expect(checks[0].seed).toBe(20);
-      expect(checks[1].seed).toBe(21);
-      expect(checks[2].seed).toBe(22);
-      expect(checks[3].seed).toBe(23);
+      expect(checks[0]?.seed).toBe(20);
+      expect(checks[1]?.seed).toBe(21);
+      expect(checks[2]?.seed).toBe(22);
+      expect(checks[3]?.seed).toBe(23);
 
       // Verify structure
       for (const check of checks) {
@@ -53,8 +53,8 @@ describe("generated_eval", () => {
 
       expect(checks).toHaveLength(GEN_EVAL_CHECK_COUNT);
       // genBase = 0 * GEN_EVAL_CHECK_COUNT = 0
-      expect(checks[0].seed).toBe(0);
-      expect(checks[3].seed).toBe(3);
+      expect(checks[0]?.seed).toBe(0);
+      expect(checks[3]?.seed).toBe(3);
 
       rmSync(root, { recursive: true, force: true });
     });
