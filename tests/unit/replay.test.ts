@@ -34,48 +34,86 @@ describe("assertTraceMode", () => {
 
   it("throws if mode is missing", () => {
     const { mode: _mode, ...trace } = getValidTrace();
-    expect(() => assertTraceMode(trace as unknown as Parameters<typeof assertTraceMode>[0])).toThrow(SaveIntegrityError);
-    expect(() => assertTraceMode(trace as unknown as Parameters<typeof assertTraceMode>[0])).toThrow(/Trace mode/);
+    expect(() =>
+      assertTraceMode(trace as unknown as Parameters<typeof assertTraceMode>[0]),
+    ).toThrow(SaveIntegrityError);
+    expect(() =>
+      assertTraceMode(trace as unknown as Parameters<typeof assertTraceMode>[0]),
+    ).toThrow(/Trace mode/);
   });
 
   it("throws if mode is incorrect", () => {
     const trace = getValidTrace();
-    expect(() => assertTraceMode({ ...trace, mode: "rpg_invalid" } as unknown as Parameters<typeof assertTraceMode>[0])).toThrow(SaveIntegrityError);
-    expect(() => assertTraceMode({ ...trace, mode: "rpg_invalid" } as unknown as Parameters<typeof assertTraceMode>[0])).toThrow(/Trace mode/);
+    expect(() =>
+      assertTraceMode({ ...trace, mode: "rpg_invalid" } as unknown as Parameters<
+        typeof assertTraceMode
+      >[0]),
+    ).toThrow(SaveIntegrityError);
+    expect(() =>
+      assertTraceMode({ ...trace, mode: "rpg_invalid" } as unknown as Parameters<
+        typeof assertTraceMode
+      >[0]),
+    ).toThrow(/Trace mode/);
   });
 
   it("throws if trace_id is missing", () => {
     const { trace_id: _trace_id, ...trace } = getValidTrace();
-    expect(() => assertTraceMode(trace as unknown as Parameters<typeof assertTraceMode>[0])).toThrow(SaveIntegrityError);
-    expect(() => assertTraceMode(trace as unknown as Parameters<typeof assertTraceMode>[0])).toThrow(/trace_id/);
+    expect(() =>
+      assertTraceMode(trace as unknown as Parameters<typeof assertTraceMode>[0]),
+    ).toThrow(SaveIntegrityError);
+    expect(() =>
+      assertTraceMode(trace as unknown as Parameters<typeof assertTraceMode>[0]),
+    ).toThrow(/trace_id/);
   });
 
   it("throws if initial_state is missing (or malformed)", () => {
     const { initial_state: _initial_state, ...trace } = getValidTrace();
-    expect(() => assertTraceMode(trace as unknown as Parameters<typeof assertTraceMode>[0])).toThrow(SaveIntegrityError);
-    expect(() => assertTraceMode(trace as unknown as Parameters<typeof assertTraceMode>[0])).toThrow(/State is malformed/);
+    expect(() =>
+      assertTraceMode(trace as unknown as Parameters<typeof assertTraceMode>[0]),
+    ).toThrow(SaveIntegrityError);
+    expect(() =>
+      assertTraceMode(trace as unknown as Parameters<typeof assertTraceMode>[0]),
+    ).toThrow(/State is malformed/);
   });
 
   it("throws if actions are missing", () => {
     const { actions: _actions, ...trace } = getValidTrace();
-    expect(() => assertTraceMode(trace as unknown as Parameters<typeof assertTraceMode>[0])).toThrow(SaveIntegrityError);
-    expect(() => assertTraceMode(trace as unknown as Parameters<typeof assertTraceMode>[0])).toThrow(/actions/);
+    expect(() =>
+      assertTraceMode(trace as unknown as Parameters<typeof assertTraceMode>[0]),
+    ).toThrow(SaveIntegrityError);
+    expect(() =>
+      assertTraceMode(trace as unknown as Parameters<typeof assertTraceMode>[0]),
+    ).toThrow(/actions/);
   });
 
   it("does not throw if expected_final_hash is missing", () => {
     const { expected_final_hash: _expected_final_hash, ...trace } = getValidTrace();
-    expect(() => assertTraceMode(trace as unknown as Parameters<typeof assertTraceMode>[0])).not.toThrow();
+    expect(() =>
+      assertTraceMode(trace as unknown as Parameters<typeof assertTraceMode>[0]),
+    ).not.toThrow();
   });
 
   it("throws if expected_final_hash is present but invalid", () => {
     const trace = getValidTrace();
-    expect(() => assertTraceMode({ ...trace, expected_final_hash: 123 } as unknown as Parameters<typeof assertTraceMode>[0])).toThrow(SaveIntegrityError);
-    expect(() => assertTraceMode({ ...trace, expected_final_hash: "" } as unknown as Parameters<typeof assertTraceMode>[0])).toThrow(SaveIntegrityError);
+    expect(() =>
+      assertTraceMode({ ...trace, expected_final_hash: 123 } as unknown as Parameters<
+        typeof assertTraceMode
+      >[0]),
+    ).toThrow(SaveIntegrityError);
+    expect(() =>
+      assertTraceMode({ ...trace, expected_final_hash: "" } as unknown as Parameters<
+        typeof assertTraceMode
+      >[0]),
+    ).toThrow(SaveIntegrityError);
   });
 
   it("throws if source_ref is missing", () => {
     const { source_ref: _source_ref, ...trace } = getValidTrace();
-    expect(() => assertTraceMode(trace as unknown as Parameters<typeof assertTraceMode>[0])).toThrow(SaveIntegrityError);
-    expect(() => assertTraceMode(trace as unknown as Parameters<typeof assertTraceMode>[0])).toThrow(/source_ref/);
+    expect(() =>
+      assertTraceMode(trace as unknown as Parameters<typeof assertTraceMode>[0]),
+    ).toThrow(SaveIntegrityError);
+    expect(() =>
+      assertTraceMode(trace as unknown as Parameters<typeof assertTraceMode>[0]),
+    ).toThrow(/source_ref/);
   });
 });
