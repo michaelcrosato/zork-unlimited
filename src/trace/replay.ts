@@ -148,7 +148,7 @@ export function replayTrace<A extends EngineAction>(
 }
 
 /** Best-effort, side-effect-free label for the action at a divergent step. */
-function describeAction<A extends EngineAction>(trace: Trace<A>, step: number): string {
+export function describeAction<A extends EngineAction>(trace: Trace<A>, step: number): string {
   const action = trace.actions[step];
   if (action === undefined) return "out of range";
   const id = (action as { id?: unknown }).id;
