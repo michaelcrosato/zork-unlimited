@@ -2,11 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import {
-  totalCycleCount,
-  LOOP_STATE_FILE,
-  LOOP_ARCHIVE_FILE,
-} from "../../src/afk/loop_state.js";
+import { totalCycleCount, LOOP_STATE_FILE, LOOP_ARCHIVE_FILE } from "../../src/afk/loop_state.js";
 
 function makeLog(n: number, withHistoricalMarker: number | null = null): string {
   const entries: string[] = [];
@@ -15,7 +11,10 @@ function makeLog(n: number, withHistoricalMarker: number | null = null): string 
       `### Cycle result — cycle ${i} did a thing (bug_${1000 + i})\n\n- detail for ${i}.\n`,
     );
   }
-  const marker = withHistoricalMarker !== null ? `<!-- historical_cycle_count: ${withHistoricalMarker} -->\n\n` : "";
+  const marker =
+    withHistoricalMarker !== null
+      ? `<!-- historical_cycle_count: ${withHistoricalMarker} -->\n\n`
+      : "";
   return `# AI Loop State\n\n${marker}${entries.join("\n")}\n## AFK Cycle old-driver-entry\n- terse.\n`;
 }
 
