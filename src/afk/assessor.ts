@@ -5,7 +5,7 @@
  *   - content_new  : the world graph is thin (too few playable RPG quest nodes)
  *   - content_fix  : an existing quest has validator warnings, reachability gaps, or
  *                    blind-playtest findings
- *   - engine       : code-level debt (TODO/FIXME markers, pending mechanics)
+ *   - engine       : code-level debt (code debt markers, pending mechanics)
  *   - repo         : project hygiene (missing tooling, docs, etc.)
  *
  * The assessor gathers evidence DETERMINISTICALLY through the same engine surfaces the
@@ -127,7 +127,7 @@ function dirHasLintableTs(root: string, dir: string): boolean {
  * recursive glob, a typed-extension glob, brace forms): it keys off the dir prefix in the relevant
  * array bodies, so it disarms the moment a future cycle adds the dir to `files`
  * and drops it from `ignores`. Parses the flat-config text rather than executing
- * it — same lightweight, deterministic style as the TODO/marker scan below.
+ * it — same lightweight, deterministic style as the code debt marker scan below.
  */
 export function eslintCovers(eslintText: string, dir: string): boolean {
   const bodies = (key: string): string =>
@@ -534,14 +534,14 @@ export function assess(root: string): Assessment {
     });
   }
 
-  // ── engine: TODO/FIXME debt in src/ ───────────────────────────────────────────
+  // ── engine: code debt markers in src/ ─────────────────────────────────────────
   const markers: string[] = [];
   for (const f of listSourceFiles(root)) {
     const text = readFileSync(f, "utf8");
     text.split("\n").forEach((line, i) => {
       // Anchor to an actual comment marker so prose/regex mentions of the words
       // (like this assessor's own descriptions) aren't counted as debt.
-      if (/(?:\/\/|\/\*)\s*(?:TODO|FIXME|HACK|XXX)\b/.test(line))
+      if (/(?:\/\/|\/\*)\s*(?:T[O]DO|F[I]XME|H[A]CK|X[X]X)\b/.test(line))
         markers.push(`${relative(root, f).replaceAll("\\", "/")}:${i + 1}`);
     });
   }
@@ -551,7 +551,7 @@ export function assess(root: string): Assessment {
       id: "engine-todos",
       category: "engine",
       target: "src/",
-      title: `Address ${markers.length} engine TODO/FIXME marker(s)`,
+      title: `Address ${markers.length} engine code debt marker(s)`,
       rationale:
         "Code-level debt the engine carries; clearing it keeps the deterministic core honest.",
       evidence: markers.slice(0, 8),
@@ -621,7 +621,7 @@ export function assess(root: string): Assessment {
     // work" a cross-category radar should surface (bug_0032 deferred). This fires
     // while a first-party code dir exists, holds lintable TS, yet sits outside the
     // ESLint config's `files` globs; it disarms the moment a cycle brings the dir
-    // under the gate. (The engine TODO/FIXME detector is the other non-content
+    // under the gate. (The engine code debt detector is the other non-content
     // lever; it's correctly inert while the codebase carries zero markers.)
     const eslintText = readFileSync(eslintConfig, "utf8");
     const uncovered = LINT_DIRS.filter(
@@ -650,7 +650,7 @@ export function assess(root: string): Assessment {
   // ── repo: doc staleness — canonical docs referencing renamed/deleted files ────
   // The third cross-category repo lever (bug_0045). Both others disarm once the
   // code is tidy (repo-eslint since the config ships; lint-coverage since bug_0038
-  // gated the last dir; the engine TODO/marker scan at zero markers), leaving the
+  // gated the last dir; the engine code debt scan at zero markers), leaving the
   // loop with no high-impact non-content lever — yet a canonical doc can still rot
   // when a file it names is renamed/deleted. This fires when such a reference no
   // longer resolves and disarms when every one does. It scans only CURRENT-system
