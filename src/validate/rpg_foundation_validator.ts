@@ -857,7 +857,7 @@ export function validateRpgFoundation(
       // NO take_effects and no add_item) has no scriptable act list to attach score to,
       // so — like an unsettable flag — it is left to WIN_UNREACHABLE, not flagged here.
       const granters = new Set<Effect[]>();
-      const obj = pack.objects.find((o) => o.id === i);
+      const obj = objById.get(i);
       if (obj?.take_effects) granters.add(obj.take_effects);
       for (const es of lists)
         if (es.some((e) => "add_item" in e && e.add_item === i)) granters.add(es);
