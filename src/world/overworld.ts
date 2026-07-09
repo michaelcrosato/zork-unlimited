@@ -293,12 +293,23 @@ export function normalizeSourcePath(path: string): string {
   return path.replaceAll("\\", "/").replace(/^(\.\.\/)+/, "");
 }
 
+const overworldQuestsByIdCache = new WeakMap<OverworldManifest, Map<string, OverworldQuest>>();
+
+export function overworldQuestsById(world: OverworldManifest): Map<string, OverworldQuest> {
+  let map = overworldQuestsByIdCache.get(world);
+  if (!map) {
+    map = new Map(world.quests.map((quest) => [quest.id, quest]));
+    overworldQuestsByIdCache.set(world, map);
+  }
+  return map;
+}
+
 /** Resolve a shipped quest by id from the overworld's quest registry (null if absent). */
 export function overworldQuestById(
   world: OverworldManifest,
   questId: string,
 ): OverworldQuest | null {
-  return world.quests.find((quest) => quest.id === questId) ?? null;
+  return overworldQuestsById(world).get(questId) ?? null;
 }
 
 export function overworldNodesById(world: OverworldManifest): Map<string, OverworldNode> {
