@@ -1,13 +1,25 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   rpgGeneratorChecksForRoot,
   GEN_EVAL_CHECK_COUNT,
   allGeneratedChecksClean,
-  generatorRpgDriftCandidate
+  generatorRpgDriftCandidate,
+  type GeneratedPackCheck
 } from "../../src/afk/generated_eval.js";
 import { writeFileSync, mkdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
+import * as rpgGenerator from "../../src/gen/rpg_generator.js";
+import * as rpgValidator from "../../src/validate/rpg_validator.js";
+
+// Mock the heavy functions
+vi.mock("../../src/gen/rpg_generator.js", () => ({
+  generateRpgPack: vi.fn().mockReturnValue({})
+}));
+
+vi.mock("../../src/validate/rpg_validator.js", () => ({
+  validateRpg: vi.fn().mockReturnValue({ ok: true, findings: [] })
+}));
 
 describe("generated_eval", () => {
   describe("rpgGeneratorChecksForRoot", () => {
@@ -25,13 +37,12 @@ describe("generated_eval", () => {
       const checks = rpgGeneratorChecksForRoot(root);
 
       // total cycle count should be 3 (historical) + 2 (entries) = 5
-      // genBase should be 5 * GEN_EVAL_CHECK_COUNT (5 * 4 = 20)
+      const expectedGenBase = 5 * GEN_EVAL_CHECK_COUNT;
 
       expect(checks).toHaveLength(GEN_EVAL_CHECK_COUNT);
-      expect(checks[0]?.seed).toBe(20);
-      expect(checks[1]?.seed).toBe(21);
-      expect(checks[2]?.seed).toBe(22);
-      expect(checks[3]?.seed).toBe(23);
+      for (let i = 0; i < GEN_EVAL_CHECK_COUNT; i++) {
+        expect(checks[i]?.seed).toBe(expectedGenBase + i);
+      }
 
       // Verify structure
       for (const check of checks) {
@@ -40,10 +51,16 @@ describe("generated_eval", () => {
         expect(Array.isArray(check.report.findings)).toBe(true);
       }
 
+      // Verify that our mocks were called
+      expect(rpgGenerator.generateRpgPack).toHaveBeenCalledTimes(GEN_EVAL_CHECK_COUNT);
+      expect(rpgValidator.validateRpg).toHaveBeenCalledTimes(GEN_EVAL_CHECK_COUNT);
+
       rmSync(root, { recursive: true, force: true });
     });
 
     it("handles an empty root directory gracefully", () => {
+      vi.clearAllMocks(); // Clear call counts from previous test
+
       const root = join(tmpdir(), "generated_eval_test_empty");
       rmSync(root, { recursive: true, force: true });
       mkdirSync(root, { recursive: true });
@@ -53,8 +70,13 @@ describe("generated_eval", () => {
 
       expect(checks).toHaveLength(GEN_EVAL_CHECK_COUNT);
       // genBase = 0 * GEN_EVAL_CHECK_COUNT = 0
-      expect(checks[0]?.seed).toBe(0);
-      expect(checks[3]?.seed).toBe(3);
+      for (let i = 0; i < GEN_EVAL_CHECK_COUNT; i++) {
+        expect(checks[i]?.seed).toBe(i);
+      }
+
+      // Verify that our mocks were called
+      expect(rpgGenerator.generateRpgPack).toHaveBeenCalledTimes(GEN_EVAL_CHECK_COUNT);
+      expect(rpgValidator.validateRpg).toHaveBeenCalledTimes(GEN_EVAL_CHECK_COUNT);
 
       rmSync(root, { recursive: true, force: true });
     });
@@ -62,22 +84,22 @@ describe("generated_eval", () => {
 
   describe("allGeneratedChecksClean", () => {
     it("returns true if all checks have zero findings", () => {
-      const checks = [
-        { seed: 0, report: { ok: true, findings: [] } as any },
-        { seed: 1, report: { ok: true, findings: [] } as any }
+      const checks: GeneratedPackCheck[] = [
+        { seed: 0, report: { ok: true, findings: [] } as unknown as GeneratedPackCheck["report"] },
+        { seed: 1, report: { ok: true, findings: [] } as unknown as GeneratedPackCheck["report"] }
       ];
       expect(allGeneratedChecksClean(checks)).toBe(true);
     });
 
     it("returns false if any check has findings", () => {
-      const checks = [
-        { seed: 0, report: { ok: true, findings: [] } as any },
+      const checks: GeneratedPackCheck[] = [
+        { seed: 0, report: { ok: true, findings: [] } as unknown as GeneratedPackCheck["report"] },
         {
           seed: 1,
           report: {
             ok: false,
             findings: [{ severity: "error", code: "ERR", message: "boom", where: [] }]
-          } as any
+          } as unknown as GeneratedPackCheck["report"]
         }
       ];
       expect(allGeneratedChecksClean(checks)).toBe(false);
@@ -86,22 +108,22 @@ describe("generated_eval", () => {
 
   describe("generatorRpgDriftCandidate", () => {
     it("returns null when all checks are clean", () => {
-      const checks = [
-        { seed: 0, report: { ok: true, findings: [] } as any },
-        { seed: 1, report: { ok: true, findings: [] } as any }
+      const checks: GeneratedPackCheck[] = [
+        { seed: 0, report: { ok: true, findings: [] } as unknown as GeneratedPackCheck["report"] },
+        { seed: 1, report: { ok: true, findings: [] } as unknown as GeneratedPackCheck["report"] }
       ];
       expect(generatorRpgDriftCandidate(checks)).toBeNull();
     });
 
     it("returns a candidate when checks have findings", () => {
-      const checks = [
-        { seed: 0, report: { ok: true, findings: [] } as any },
+      const checks: GeneratedPackCheck[] = [
+        { seed: 0, report: { ok: true, findings: [] } as unknown as GeneratedPackCheck["report"] },
         {
           seed: 1,
           report: {
             ok: false,
             findings: [{ severity: "error", code: "TEST_ERR", message: "boom", where: [] }]
-          } as any
+          } as unknown as GeneratedPackCheck["report"]
         }
       ];
       const candidate = generatorRpgDriftCandidate(checks);
