@@ -1,5 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { assertGeneratedRpgSeed, isGeneratedRpgSeed, generatedRpgSeedValidationMessage } from "../../src/gen/seed.js";
+import {
+  assertGeneratedRpgSeed,
+  isGeneratedRpgSeed,
+  generatedRpgSeedValidationMessage,
+} from "../../src/gen/seed.js";
 
 describe("seed", () => {
   describe("isGeneratedRpgSeed", () => {
@@ -41,13 +45,13 @@ describe("seed", () => {
 
     it("throws for invalid seeds", () => {
       expect(() => assertGeneratedRpgSeed(1.5, "testLabel")).toThrowError(
-        generatedRpgSeedValidationMessage("testLabel", 1.5)
+        generatedRpgSeedValidationMessage("testLabel", 1.5),
       );
       expect(() => assertGeneratedRpgSeed("42", "testLabel")).toThrowError(
-        generatedRpgSeedValidationMessage("testLabel", "42")
+        generatedRpgSeedValidationMessage("testLabel", "42"),
       );
       expect(() => assertGeneratedRpgSeed(null, "testLabel")).toThrowError(
-        generatedRpgSeedValidationMessage("testLabel", null)
+        generatedRpgSeedValidationMessage("testLabel", null),
       );
     });
   });
