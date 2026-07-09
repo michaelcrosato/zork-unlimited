@@ -192,25 +192,42 @@ export function validateRpgFoundation(
         ]),
       );
     }
-    // A held object starts in the player's inventory; listing it ALSO in a room or
-    // a container would give it two homes (inventory wins, so the room/container
-    // copy is dead) — almost certainly an authoring slip. Flag it.
+  }
+
+  // A held object starts in the player's inventory; listing it ALSO in a room or
+  // a container would give it two homes (inventory wins, so the room/container
+  // copy is dead) — almost certainly an authoring slip. Flag it.
+  const roomByObject = new Map<string, string>();
+  for (const r of pack.rooms) {
+    for (const oid of r.objects) {
+      roomByObject.set(oid, r.id);
+    }
+  }
+
+  const containerByObject = new Map<string, string>();
+  for (const o of pack.objects) {
+    for (const cid of o.contents) {
+      containerByObject.set(cid, o.id);
+    }
+  }
+
+  for (const o of pack.objects) {
     if (o.held) {
-      const inRoom = pack.rooms.find((r) => r.objects.includes(o.id));
-      if (inRoom)
+      const inRoomId = roomByObject.get(o.id);
+      if (inRoomId)
         findings.push(
           err(
             "HELD_ALSO_PLACED",
-            `held object "${o.id}" is also listed in room "${inRoom.id}"; a held object is carried, not placed.`,
+            `held object "${o.id}" is also listed in room "${inRoomId}"; a held object is carried, not placed.`,
             [`object:${o.id}`],
           ),
         );
-      const inContainer = pack.objects.find((c) => c.contents.includes(o.id));
-      if (inContainer)
+      const inContainerId = containerByObject.get(o.id);
+      if (inContainerId)
         findings.push(
           err(
             "HELD_ALSO_PLACED",
-            `held object "${o.id}" is also inside container "${inContainer.id}"; a held object is carried, not placed.`,
+            `held object "${o.id}" is also inside container "${inContainerId}"; a held object is carried, not placed.`,
             [`object:${o.id}`],
           ),
         );
