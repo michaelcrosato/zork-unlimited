@@ -9,7 +9,7 @@ import {
 } from "../../src/persist/save_load.js";
 import { hashState } from "../../src/core/hash.js";
 import { recordTrace, traceSourceLabel, type RecordOptions } from "../../src/trace/record.js";
-import { replayTrace } from "../../src/trace/replay.js";
+import { assertTraceMode, replayTrace } from "../../src/trace/replay.js";
 import type { RpgAction } from "../../src/api/types.js";
 import {
   MICRO_ACTIONS,
@@ -252,6 +252,24 @@ describe("save / load (§8.7)", () => {
     expect(() =>
       save(microInitState(), MICRO_CONTENT_HASH, "parser" as unknown as typeof SAVE_MODE),
     ).toThrow(SaveIntegrityError);
+  });
+});
+
+
+describe("assertTraceMode", () => {
+  it("rejects traces that omit the RPG mode", () => {
+    expect(() => assertTraceMode({} as Parameters<typeof assertTraceMode>[0])).toThrow(SaveIntegrityError);
+    expect(() => assertTraceMode({} as Parameters<typeof assertTraceMode>[0])).toThrow(/Trace mode/);
+  });
+
+  it("rejects traces with the wrong RPG mode", () => {
+    expect(() => assertTraceMode({ mode: "wrong" } as Parameters<typeof assertTraceMode>[0])).toThrow(SaveIntegrityError);
+    expect(() => assertTraceMode({ mode: "wrong" } as Parameters<typeof assertTraceMode>[0])).toThrow(/Trace mode/);
+  });
+
+  it("accepts a valid trace", () => {
+    const trace = recordTrace(microRules, microInitState(), WIN, traceOptions());
+    expect(() => assertTraceMode(trace)).not.toThrow();
   });
 });
 
