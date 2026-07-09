@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { allGeneratedChecksClean, GeneratedPackCheck } from "../../src/afk/generated_eval.js";
-import { ValidationReport } from "../../src/validate/report.js";
+import { allGeneratedChecksClean, type GeneratedPackCheck } from "../../src/afk/generated_eval.js";
+import type { ValidationReport } from "../../src/validate/report.js";
 
 describe("generated_eval", () => {
   describe("allGeneratedChecksClean", () => {
