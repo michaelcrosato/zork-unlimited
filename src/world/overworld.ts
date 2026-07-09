@@ -402,11 +402,19 @@ export function overworldJobsAt(world: OverworldManifest, nodeId: string): Overw
     );
 }
 
+const roadEventCache = new WeakMap<OverworldManifest, Map<string, OverworldRoadEvent>>();
+
 export function overworldRoadEventFor(
   world: OverworldManifest,
   edgeId: string,
 ): OverworldRoadEvent | null {
-  return world.road_events.find((event) => event.edge === edgeId) ?? null;
+  let cache = roadEventCache.get(world);
+  if (!cache) {
+    cache = new Map();
+    for (const event of world.road_events) cache.set(event.edge, event);
+    roadEventCache.set(world, cache);
+  }
+  return cache.get(edgeId) ?? null;
 }
 
 export function overworldExplorationSitesNear(
