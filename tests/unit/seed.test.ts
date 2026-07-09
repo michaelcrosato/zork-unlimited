@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   isGeneratedRpgSeed,
   generatedRpgSeedValidationMessage,
-  assertGeneratedRpgSeed
+  assertGeneratedRpgSeed,
 } from "../../src/gen/seed.js";
 
 describe("seed", () => {
@@ -37,19 +37,19 @@ describe("seed", () => {
   describe("generatedRpgSeedValidationMessage", () => {
     it("formats the message correctly", () => {
       expect(generatedRpgSeedValidationMessage("testLabel", "testSeed")).toBe(
-        `testLabel must be an integer within JavaScript's safe range, got "testSeed".`
+        `testLabel must be an integer within JavaScript's safe range, got "testSeed".`,
       );
     });
 
     it("handles undefined gracefully", () => {
       expect(generatedRpgSeedValidationMessage("testLabel", undefined)).toBe(
-        `testLabel must be an integer within JavaScript's safe range, got undefined.`
+        `testLabel must be an integer within JavaScript's safe range, got undefined.`,
       );
     });
 
     it("handles objects gracefully", () => {
       expect(generatedRpgSeedValidationMessage("MyField", { a: 1 })).toBe(
-        `MyField must be an integer within JavaScript's safe range, got {"a":1}.`
+        `MyField must be an integer within JavaScript's safe range, got {"a":1}.`,
       );
     });
   });
@@ -61,7 +61,7 @@ describe("seed", () => {
 
     it("throws for invalid seeds with the correct message", () => {
       expect(() => assertGeneratedRpgSeed(1.5, "testLabel")).toThrow(
-        "testLabel must be an integer within JavaScript's safe range, got 1.5."
+        "testLabel must be an integer within JavaScript's safe range, got 1.5.",
       );
     });
   });
