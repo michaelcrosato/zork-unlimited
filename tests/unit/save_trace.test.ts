@@ -9,7 +9,7 @@ import {
 } from "../../src/persist/save_load.js";
 import { hashState } from "../../src/core/hash.js";
 import { recordTrace, traceSourceLabel, type RecordOptions } from "../../src/trace/record.js";
-import { replayTrace } from "../../src/trace/replay.js";
+import { replayTrace, assertTraceMode } from "../../src/trace/replay.js";
 import type { RpgAction } from "../../src/api/types.js";
 import {
   MICRO_ACTIONS,
@@ -252,6 +252,26 @@ describe("save / load (§8.7)", () => {
     expect(() =>
       save(microInitState(), MICRO_CONTENT_HASH, "parser" as unknown as typeof SAVE_MODE),
     ).toThrow(SaveIntegrityError);
+  });
+});
+
+describe("assertTraceMode", () => {
+  it("passes for a valid trace", () => {
+    const trace = recordTrace(microRules, microInitState(), WIN, traceOptions());
+    expect(() => assertTraceMode(trace)).not.toThrow();
+  });
+
+  it("throws SaveIntegrityError if mode is missing or incorrect", () => {
+    const trace = recordTrace(microRules, microInitState(), WIN, traceOptions());
+
+    const invalidMode = { ...trace, mode: "INVALID_MODE" } as unknown as typeof trace;
+    expect(() => assertTraceMode(invalidMode)).toThrow(SaveIntegrityError);
+    expect(() => assertTraceMode(invalidMode)).toThrow(/Trace mode must be "rpg"/);
+
+    const missingMode = { ...trace } as unknown as typeof trace;
+    delete (missingMode as { mode?: string }).mode;
+    expect(() => assertTraceMode(missingMode)).toThrow(SaveIntegrityError);
+    expect(() => assertTraceMode(missingMode)).toThrow(/Trace mode must be "rpg"/);
   });
 });
 
