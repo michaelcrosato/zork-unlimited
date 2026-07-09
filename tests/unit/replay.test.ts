@@ -26,7 +26,10 @@ describe("replayTrace", () => {
     });
 
     const { expected_final_hash: _omit, ...traceWithoutHash } = trace;
-    const result = replayTrace<RpgAction>(traceWithoutHash as unknown as import("../../src/trace/record.js").Trace<RpgAction>, microRules);
+    const result = replayTrace<RpgAction>(
+      traceWithoutHash as unknown as import("../../src/trace/record.js").Trace<RpgAction>,
+      microRules,
+    );
 
     expect(result.ok).toBe(true);
     expect(result.message).toBe("Replayed with no expected final hash to assert.");
@@ -37,11 +40,16 @@ describe("replayTrace", () => {
   // Re-enable the sparse array test, but instead of checking if replayTrace handles it correctly
   // verify it correctly throws the SaveIntegrityError because assertTraceActions checks it.
   it("throws SaveIntegrityError on sparse actions array", () => {
-    const trace = recordTrace(microRules, microInitState(), [MICRO_ACTIONS.takeTorch, MICRO_ACTIONS.enterCave], {
-      trace_id: "test_trace",
-      content_hash: MICRO_CONTENT_HASH,
-      worldQuestId: "test_quest",
-    });
+    const trace = recordTrace(
+      microRules,
+      microInitState(),
+      [MICRO_ACTIONS.takeTorch, MICRO_ACTIONS.enterCave],
+      {
+        trace_id: "test_trace",
+        content_hash: MICRO_CONTENT_HASH,
+        worldQuestId: "test_quest",
+      },
+    );
 
     // Create a sparse array
     const sparseActions = [];
@@ -55,7 +63,12 @@ describe("replayTrace", () => {
       per_step_hashes: ["badhash", "badhash", "badhash"],
     };
 
-    expect(() => replayTrace<RpgAction>(tampered as unknown as import("../../src/trace/record.js").Trace<RpgAction>, microRules)).toThrow(SaveIntegrityError);
+    expect(() =>
+      replayTrace<RpgAction>(
+        tampered as unknown as import("../../src/trace/record.js").Trace<RpgAction>,
+        microRules,
+      ),
+    ).toThrow(SaveIntegrityError);
   });
 
   it("returns ok when final matches and no divergence", () => {
@@ -65,7 +78,10 @@ describe("replayTrace", () => {
       worldQuestId: "test_quest",
     });
 
-    const result = replayTrace<RpgAction>(trace as unknown as import("../../src/trace/record.js").Trace<RpgAction>, microRules);
+    const result = replayTrace<RpgAction>(
+      trace as unknown as import("../../src/trace/record.js").Trace<RpgAction>,
+      microRules,
+    );
 
     expect(result.ok).toBe(true);
     expect(result.expectedFinalHash).toBe(trace.expected_final_hash);
@@ -84,23 +100,35 @@ describe("replayTrace", () => {
       per_step_hashes: ["badhash", ...trace.per_step_hashes!.slice(1)],
     };
 
-    const result = replayTrace<RpgAction>(tampered as unknown as import("../../src/trace/record.js").Trace<RpgAction>, microRules);
+    const result = replayTrace<RpgAction>(
+      tampered as unknown as import("../../src/trace/record.js").Trace<RpgAction>,
+      microRules,
+    );
 
     expect(result.ok).toBe(false);
     expect(result.divergedAtStep).toBe(0);
   });
 });
 
-
 describe("describeAction", () => {
   it("returns 'out of range' when action is undefined", () => {
     const trace = { actions: [] };
-    expect(describeAction<RpgAction>(trace as unknown as import("../../src/trace/record.js").Trace<RpgAction>, 0)).toBe("out of range");
+    expect(
+      describeAction<RpgAction>(
+        trace as unknown as import("../../src/trace/record.js").Trace<RpgAction>,
+        0,
+      ),
+    ).toBe("out of range");
   });
 
   it("returns type and id correctly", () => {
     const trace = { actions: [{ type: "MOVE", id: "north" }] };
-    expect(describeAction<RpgAction>(trace as unknown as import("../../src/trace/record.js").Trace<RpgAction>, 0)).toBe("MOVE:north");
+    expect(
+      describeAction<RpgAction>(
+        trace as unknown as import("../../src/trace/record.js").Trace<RpgAction>,
+        0,
+      ),
+    ).toBe("MOVE:north");
   });
 
   it("returns stringified JSON when type and id are not strings", () => {
@@ -108,6 +136,11 @@ describe("describeAction", () => {
     // describeAction's fallback handles other cases.
     const action = { type: 123, id: 456 };
     const trace = { actions: [action] };
-    expect(describeAction<RpgAction>(trace as unknown as import("../../src/trace/record.js").Trace<RpgAction>, 0)).toBe(JSON.stringify(action));
+    expect(
+      describeAction<RpgAction>(
+        trace as unknown as import("../../src/trace/record.js").Trace<RpgAction>,
+        0,
+      ),
+    ).toBe(JSON.stringify(action));
   });
 });
