@@ -39,6 +39,15 @@ describe("quest crawler", () => {
     expect(crash!.message).toContain("planted resolver bomb");
     expect(crash!.severity).toBe("S4");
     expect(crash!.repro.kind).toBe("rpg-trace");
+    // Task 6: the CRASH's repro is ddmin-minimized, and the minimized trace's
+    // action list is no bigger than the episode it was minimized from (found
+    // via the trace's own `seed` field, which recordTrace stamps from the
+    // episode's init state — robust to which episode happened to be first).
+    expect(crash!.repro.minimized).toBe(true);
+    const trace = crash!.repro.trace as { seed: number; actions: unknown[] };
+    const episode = r.episodes.find((e) => e.episodeSeed === trace.seed);
+    expect(episode).toBeDefined();
+    expect(trace.actions.length).toBeLessThanOrEqual(episode!.actions.length);
   });
 
   it("RENDER: unresolved template markers in a room description are flagged", () => {

@@ -29,34 +29,26 @@
  * fingerprint `collector.add` would just dedupe away, since throughput matters
  * over many episodes.
  */
-import type { RpgAction, StepResult } from "../api/types.js";
+import type { RpgAction } from "../api/types.js";
 import { makeStep, type Rules } from "../core/engine.js";
 import { hashState } from "../core/hash.js";
-import { mulberry32, type Rng } from "../core/rng.js";
+import { mulberry32 } from "../core/rng.js";
 import type { GameState } from "../core/state.js";
-import { load, save, SAVE_MODE, type SaveMetadata } from "../persist/save_load.js";
 import type { RpgActionOption } from "../rpg/legal_actions.js";
-import {
-  buildRpgRules,
-  enumerateRpgActions,
-  initStateForRpgPack,
-  type RpgIndex,
-} from "../rpg/runner.js";
-import { assertRpgStateReferences } from "../rpg/state_integrity.js";
-import { exhaustiveEndingsMulti } from "../solve/exhaustive_endings.js";
+import { enumerateRpgActions, initStateForRpgPack, type RpgIndex } from "../rpg/runner.js";
 import { recordTrace, type RecordOptions, type Trace } from "../trace/record.js";
-import { z } from "zod";
-import {
-  CrawlLocationSchema,
-  FindingCollector,
-  type CrawlFinding,
-  type CrawlSeverity,
-} from "./findings.js";
-import { renderDefects, sampleIllegalAction } from "./oracles.js";
+import { FindingCollector, type CrawlFinding, type CrawlSeverity } from "./findings.js";
+import { minimizeFinding } from "./minimize.js";
+import { sampleIllegalAction } from "./oracles.js";
 import { makePolicy, type PolicyName } from "./policies.js";
 import type { PreparedQuest } from "./prepare.js";
-
-type CrawlLocation = z.infer<typeof CrawlLocationSchema>;
+import {
+  describeError,
+  runStepOracles,
+  S4_SOFTLOCK_MESSAGE,
+  softlockSolverCheck,
+  type CrawlLocation,
+} from "./step_oracles.js";
 
 export type QuestCrawlOptions = {
   seed: number;
@@ -93,11 +85,6 @@ export type QuestCrawlResult = {
   totalRawFindings: number;
   coverage: { roomsVisited: string[]; actionIdsTried: string[] };
 };
-
-/** `err.name: err.message` for an Error, else `String(err)`. */
-function describeError(err: unknown): string {
-  return err instanceof Error ? `${err.name}: ${err.message}` : String(err);
-}
 
 function none(): CrawlFinding["repro"] {
   return { kind: "none", trace: null, minimized: false };
@@ -177,38 +164,6 @@ function replayEpisodeHashes(
   return { hashes, threw: null };
 }
 
-/**
- * Forced-roll RNG bracket for the SOFTLOCK(solver) oracle — same construction as
- * `tests/regression/rpg_all_endings_reachable.test.ts` (see there for the full
- * soundness argument): BEST forces the player's max strike / min damage taken / max
- * skill roll, WORST the reverse. Every successor `exhaustiveEndingsMulti` visits is a
- * real `makeStep` on a real, legal die value, so nothing spurious is ever reached; the
- * two extremes bracket every outcome a middle roll could produce, so an ending
- * reachable under SOME rolls is reached under one of the two regimes.
- */
-const ROLL_HIGH = 0.999999;
-const ROLL_LOW = 0;
-function fixedSeqRng(fracs: number[]): Rng {
-  let i = 0;
-  const next = (): number => {
-    const f = fracs[Math.min(i, fracs.length - 1)] ?? 0;
-    i += 1;
-    return f;
-  };
-  return {
-    next,
-    int(min: number, max: number): number {
-      const lo = Math.ceil(min);
-      const hi = Math.floor(max);
-      return lo + Math.floor(next() * (hi - lo + 1));
-    },
-  };
-}
-// resolveAttack draws the player's strike first, the enemy's reply second;
-// resolveSkillCheck draws once.
-const bestRng = (): Rng => fixedSeqRng([ROLL_HIGH, ROLL_LOW]);
-const worstRng = (): Rng => fixedSeqRng([ROLL_LOW, ROLL_HIGH]);
-
 /** Deterministic per-episode seed derived from the crawl seed and episode index. */
 export function episodeSeed(seed: number, episode: number): number {
   return (seed * 9973 + episode) >>> 0 || 1;
@@ -249,6 +204,14 @@ export function crawlQuest(prepared: PreparedQuest, opts: QuestCrawlOptions): Qu
    * for the one CRASH site that predates any recorded actions (episode init itself
    * threw).
    */
+  // Indices into `collector.findings` of NEW (non-deduped), non-ORPHAN findings
+  // added during the CURRENT episode — reset at the top of each episode below,
+  // drained (each minimized in place) at the end of that same episode's
+  // processing (Task 6 Step 5). `collector.findings` is the collector's own
+  // live array (not a defensive copy), so an index assignment into it mutates
+  // the collector's stored finding directly.
+  let newFindingIndices: number[] = [];
+
   const addFinding = (
     f: Omit<CrawlFinding, "seed" | "policy" | "commit" | "severity" | "repro"> & {
       severity?: CrawlSeverity;
@@ -259,7 +222,11 @@ export function crawlQuest(prepared: PreparedQuest, opts: QuestCrawlOptions): Qu
       record && !collector.has(f)
         ? { kind: "rpg-trace", trace: buildRepro(prepared, record), minimized: false }
         : none();
-    return collector.add({ ...f, repro });
+    const added = collector.add({ ...f, repro });
+    if (added && f.code !== "ORPHAN") {
+      newFindingIndices.push(collector.findings.length - 1);
+    }
+    return added;
   };
 
   const crash = (
@@ -282,6 +249,7 @@ export function crawlQuest(prepared: PreparedQuest, opts: QuestCrawlOptions): Qu
   };
 
   while (totalSteps < opts.maxSteps) {
+    newFindingIndices = [];
     const eSeed = episodeSeed(opts.seed, episodeN++);
     const rng = mulberry32(eSeed);
     const policy = makePolicy(opts.policy, rng);
@@ -347,7 +315,7 @@ export function crawlQuest(prepared: PreparedQuest, opts: QuestCrawlOptions): Qu
             step: totalSteps,
             location: loc(state),
             action: null,
-            message: "live (non-ended) state has zero legal actions",
+            message: S4_SOFTLOCK_MESSAGE,
             stateHash: hashState(state),
           },
           record,
@@ -407,120 +375,55 @@ export function crawlQuest(prepared: PreparedQuest, opts: QuestCrawlOptions): Qu
         }
       }
 
-      // 4. pick + execute a legal action (CRASH / LEGALITY-positive oracles)
+      // 4-7. pick + execute a legal action, then the per-step oracles
+      // (CRASH / INTEGRITY / RENDER / PERSIST) — `runStepOracles` (Task 6) is
+      // shared byte-for-byte with `reproducesFingerprint`'s replay so a
+      // minimized repro trace can never drift from what the live crawl saw.
       const choice = policy.pick(options, {
         visitedRooms: roomsVisited,
         triedActionIds: actionIdsTried,
       });
-      let result: StepResult;
-      try {
-        result = step(state, choice.action);
-      } catch (err) {
-        crash(
-          `step threw on legal action ${choice.id}: ${describeError(err)}`,
-          state,
-          record,
-          choice.action,
-        );
+      const outcome = runStepOracles({
+        prepared,
+        step,
+        state,
+        action: choice.action,
+        totalStep: totalSteps,
+        loc,
+        eSeed,
+        sInEpisode: s,
+        persistEvery,
+      });
+
+      if (outcome.kind === "crashed") {
+        for (const f of outcome.findings) addFinding(f, record);
         break;
       }
+
       record.actions.push(choice.action);
       actionIdsTried.add(choice.id);
-      if (!result.ok) {
+
+      if (outcome.kind === "rejected") {
         addFinding(
           {
             code: "LEGALITY",
             step: totalSteps,
             location: loc(state),
             action: choice.action,
-            message: `listed legal action rejected: ${result.rejectionReason ?? "?"} (${choice.id})`,
+            message: `listed legal action rejected: ${outcome.result.rejectionReason ?? "?"} (${choice.id})`,
             stateHash: hashState(state),
           },
           record,
         );
         continue; // state unchanged per engine contract
       }
-      state = result.state;
+
+      // outcome.kind === "applied"
+      state = outcome.state;
       roomsVisited.add(state.current);
       record.perStepHashes.push(hashState(state));
-
-      // 5. INTEGRITY
-      try {
-        assertRpgStateReferences(index, state);
-      } catch (err) {
-        addFinding(
-          {
-            code: "INTEGRITY",
-            step: totalSteps,
-            location: loc(state),
-            action: choice.action,
-            message: describeError(err),
-            stateHash: hashState(state),
-          },
-          record,
-        );
-        break;
-      }
-
-      // 6. RENDER (observation + events; CRASH oracle around the render itself)
-      try {
-        for (const m of renderDefects(index, state, result.events)) {
-          addFinding(
-            {
-              code: "RENDER",
-              step: totalSteps,
-              location: loc(state),
-              action: choice.action,
-              message: m,
-              stateHash: hashState(state),
-            },
-            record,
-          );
-        }
-      } catch (err) {
-        crash(`observation render threw: ${describeError(err)}`, state, record, choice.action);
-        break;
-      }
-
-      // 7. PERSIST: save→load must roundtrip to a byte-identical state on every state
-      // the engine itself produced. A throw from save/load on such a state is itself
-      // a finding (never propagated) — the point is that a well-formed engine state
-      // must always be persistable.
-      if (persistEvery > 0 && s % persistEvery === 0) {
-        try {
-          const metadata: SaveMetadata =
-            prepared.sourceRef && prepared.sourceRef[0] === "wq"
-              ? { worldQuestId: prepared.sourceRef[1] }
-              : { generatedRpgSeed: eSeed };
-          const bytes = save(state, prepared.contentHash, SAVE_MODE, metadata);
-          const bundle = load(bytes, prepared.contentHash);
-          if (hashState(bundle.state) !== hashState(state)) {
-            addFinding(
-              {
-                code: "PERSIST",
-                step: totalSteps,
-                location: loc(state),
-                action: choice.action,
-                message: `save→load hash mismatch at step ${s}`,
-                stateHash: hashState(state),
-              },
-              record,
-            );
-          }
-        } catch (err) {
-          addFinding(
-            {
-              code: "PERSIST",
-              step: totalSteps,
-              location: loc(state),
-              action: choice.action,
-              message: `save/load threw at step ${s}: ${describeError(err)}`,
-              stateHash: hashState(state),
-            },
-            record,
-          );
-        }
-      }
+      for (const f of outcome.findings) addFinding(f, record);
+      if (outcome.fatal) break; // INTEGRITY failure or a RENDER-render throw
 
       if (state.ended) {
         record.endingId = state.endingId;
@@ -569,41 +472,40 @@ export function crawlQuest(prepared: PreparedQuest, opts: QuestCrawlOptions): Qu
 
     // end-of-episode SOFTLOCK (solver form): the episode ended without state.ended —
     // exhaustively search from the post-episode state under a best/worst-roll
-    // bracket; an empty reached set with a completed (non-capped) search is a proven
-    // no-ending-reachable dead end. A capped-out search is UNPROVEN and never a
-    // finding. Skipped when the immediate S4 SOFTLOCK already fired this episode
-    // (`episodeSoftlockFired`) — both are true for the same dead end, and firing both
-    // is a redundant double-report, not a second bug (Task 5 review fix); the S4 one
-    // already recorded it for free (no solver budget spent) so it's the one kept.
+    // bracket (`softlockSolverCheck`, Task 6 — shared with `reproducesFingerprint`'s
+    // end-of-replay mirror so the two can never drift); an empty reached set with a
+    // completed (non-capped) search is a proven no-ending-reachable dead end. A
+    // capped-out search is UNPROVEN and never a finding. Skipped when the immediate
+    // S4 SOFTLOCK already fired this episode (`episodeSoftlockFired`) — both are true
+    // for the same dead end, and firing both is a redundant double-report, not a
+    // second bug (Task 5 review fix); the S4 one already recorded it for free (no
+    // solver budget spent) so it's the one kept.
     if (solverBudget > 0 && !state.ended && !episodeSoftlockFired) {
-      const bestRules = buildRpgRules(index, bestRng);
-      const worstRules = buildRpgRules(index, worstRng);
-      // Explicit `explore: () => true` — allow EVERY enumerated action, not the
-      // module's default progress-only policy (which skips DROP/CLOSE/LOOK/
-      // INVENTORY/READ/INSPECT). That default is sound for a reachability PROOF —
-      // restricting the action set can only HIDE an ending, surfacing as a loud
-      // "declared ending unreached" test failure — but it is INVERTED for this
-      // oracle: here a hidden ending means reached.size === 0, i.e. a FALSE
-      // softlock finding. READ in particular can carry route-gating interaction
-      // effects (see exhaustive_endings.ts's SearchOpts doc), so it must not be
-      // silently skipped here. Widening the policy can only ever grow `reached`
-      // (or cap the search out, which yields no finding either way) — the extra
-      // states explored are an acceptable cost for a sound oracle.
-      const res = exhaustiveEndingsMulti([bestRules, worstRules], state, solverBudget, undefined, {
-        explore: () => true,
-      });
-      if (res.reached.size === 0 && !res.cappedOut) {
+      const softlock = softlockSolverCheck(index, state, solverBudget);
+      if (softlock) {
         addFinding(
           {
             code: "SOFTLOCK",
             step: totalSteps,
             location: loc(state),
             action: null,
-            message: `no declared ending reachable from post-episode state (searched ${res.states} states)`,
+            message: softlock.message,
             stateHash: hashState(state),
           },
           record,
         );
+      }
+    }
+
+    // Minimization (Task 6 Step 5): every NEW (non-deduped), non-ORPHAN finding
+    // this episode produced gets its repro trace ddmin'd down to a smaller
+    // replayable subsequence — skipped, budget-guarded, when the episode's own
+    // action count is already large (a minimization re-run replays a prefix of
+    // it many times over; not worth the cost past a few thousand actions).
+    if (record.actions.length <= 2000) {
+      for (const idx of newFindingIndices) {
+        const f = collector.findings[idx];
+        if (f) collector.findings[idx] = minimizeFinding(prepared, f, record);
       }
     }
   }
