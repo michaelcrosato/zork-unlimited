@@ -46,4 +46,87 @@ describe("crawl findings", () => {
     expect(rows).toHaveLength(1);
     expect(JSON.parse(rows[0]!).code).toBe("RENDER");
   });
+
+  it("validates schema before dedup, so invalid finding throws even if fingerprint duplicates", () => {
+    const c = new FindingCollector({ seed: 7, policy: "mixed", commit: "abc1234" });
+    const base = {
+      code: "RENDER" as const,
+      step: 3,
+      location: loc,
+      action: null,
+      message: "empty description",
+      stateHash: null,
+      repro: { kind: "none" as const, trace: null, minimized: false },
+    };
+    // First add succeeds
+    expect(c.add(base)).toBe(true);
+    expect(c.findings).toHaveLength(1);
+    // Second add with same fingerprint but invalid schema (negative step) throws
+    expect(() => c.add({ ...base, step: -1, message: "empty description" })).toThrow();
+  });
+
+  it("defaults severity to S2 for RENDER findings", () => {
+    const c = new FindingCollector({ seed: 7, policy: "mixed", commit: "abc1234" });
+    const base = {
+      code: "RENDER" as const,
+      step: 3,
+      location: loc,
+      action: null,
+      message: "test message",
+      stateHash: null,
+      repro: { kind: "none" as const, trace: null, minimized: false },
+    };
+    c.add(base);
+    expect(c.findings[0]!.severity).toBe("S2");
+  });
+
+  it("allows explicit severity override on findings", () => {
+    const c = new FindingCollector({ seed: 7, policy: "mixed", commit: "abc1234" });
+    const base = {
+      code: "RENDER" as const,
+      step: 3,
+      location: loc,
+      action: null,
+      message: "test override",
+      stateHash: null,
+      repro: { kind: "none" as const, trace: null, minimized: false },
+    };
+    c.add({ ...base, severity: "S4" });
+    expect(c.findings[0]!.severity).toBe("S4");
+  });
+
+  it("counts findings by code", () => {
+    const c = new FindingCollector({ seed: 7, policy: "mixed", commit: "abc1234" });
+    const base = {
+      step: 3,
+      location: loc,
+      action: null,
+      stateHash: null,
+      repro: { kind: "none" as const, trace: null, minimized: false },
+    };
+    c.add({ ...base, code: "RENDER" as const, message: "render issue alpha" });
+    c.add({ ...base, code: "RENDER" as const, message: "render issue bravo", step: 4 });
+    c.add({ ...base, code: "CRASH" as const, message: "crash issue", step: 5 });
+
+    const counts = c.countsByCode();
+    expect(counts["RENDER"]).toBe(2);
+    expect(counts["CRASH"]).toBe(1);
+    expect(counts["ORPHAN"]).toBeUndefined();
+  });
+
+  it("toJsonl produces newline-terminated output", () => {
+    const c = new FindingCollector({ seed: 7, policy: "mixed", commit: "abc1234" });
+    const base = {
+      code: "RENDER" as const,
+      step: 3,
+      location: loc,
+      action: null,
+      message: "test message",
+      stateHash: null,
+      repro: { kind: "none" as const, trace: null, minimized: false },
+    };
+    c.add(base);
+    const jsonl = c.toJsonl();
+    expect(jsonl.endsWith("\n")).toBe(true);
+  });
 });

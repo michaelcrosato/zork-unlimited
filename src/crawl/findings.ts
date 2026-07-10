@@ -87,11 +87,19 @@ export function findingFingerprint(f: Pick<CrawlFinding, "code" | "location" | "
 export class FindingCollector {
   private base: { seed: number; policy: string; commit: string };
   private seenFingerprints = new Set<string>();
-  public findings: CrawlFinding[] = [];
-  public totalRaw = 0;
+  private _findings: CrawlFinding[] = [];
+  private _totalRaw = 0;
 
   constructor(base: { seed: number; policy: string; commit: string }) {
     this.base = base;
+  }
+
+  get findings(): CrawlFinding[] {
+    return this._findings;
+  }
+
+  get totalRaw(): number {
+    return this._totalRaw;
   }
 
   add(
@@ -99,7 +107,21 @@ export class FindingCollector {
       severity?: CrawlSeverity;
     },
   ): boolean {
-    this.totalRaw++;
+    // Build the full finding with base fields and severity
+    const severity = f.severity ?? CODE_SEVERITY[f.code];
+    const finding: CrawlFinding = {
+      ...f,
+      severity,
+      seed: this.base.seed,
+      policy: this.base.policy,
+      commit: this.base.commit,
+    };
+
+    // Validate via schema (throws on any invalid finding, unconditionally)
+    CrawlFindingSchema.parse(finding);
+
+    // Increment totalRaw after successful validation
+    this._totalRaw++;
 
     // Get fingerprint to check for dedup
     const fp = findingFingerprint({
@@ -113,35 +135,23 @@ export class FindingCollector {
       return false;
     }
 
-    // Build the full finding
-    const severity = f.severity ?? CODE_SEVERITY[f.code];
-    const finding: CrawlFinding = {
-      ...f,
-      severity,
-      seed: this.base.seed,
-      policy: this.base.policy,
-      commit: this.base.commit,
-    };
-
-    // Validate via schema
-    CrawlFindingSchema.parse(finding);
-
     // Add to collection
     this.seenFingerprints.add(fp);
-    this.findings.push(finding);
+    this._findings.push(finding);
 
     return true;
   }
 
   countsByCode(): Record<string, number> {
     const counts: Record<string, number> = {};
-    for (const finding of this.findings) {
+    for (const finding of this._findings) {
       counts[finding.code] = (counts[finding.code] ?? 0) + 1;
     }
     return counts;
   }
 
   toJsonl(): string {
-    return this.findings.map((f) => canonicalize(f)).join("\n");
+    const rows = this._findings.map((f) => canonicalize(f)).join("\n");
+    return rows.length > 0 ? rows + "\n" : "";
   }
 }
