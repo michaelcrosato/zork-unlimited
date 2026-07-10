@@ -4,6 +4,7 @@ import type {
   OverworldLocalEvent,
   OverworldLocalJob,
   OverworldNode,
+  OverworldQuest,
   OverworldRoadEvent,
 } from "../../src/world/overworld.js";
 import type { OverworldProgressJournalSourceIndex } from "../../src/world/session_progress_journal.js";
@@ -89,6 +90,18 @@ function site(id: string, region: string, danger: number): OverworldExplorationS
   };
 }
 
+function quest(id: string, home: string): OverworldQuest {
+  return {
+    id,
+    title: id,
+    source: `content/rpg/quests/${id}.yaml`,
+    home,
+    area: `${home}:area`,
+    discovery: "Discovery",
+    visibility: "local_notice_board",
+  };
+}
+
 function roadEvent(edge: string, risk: OverworldRoadEvent["risk"]): OverworldRoadEvent {
   return {
     id: `${edge}:event`,
@@ -122,6 +135,7 @@ function sources(): OverworldRegionRenownSourceIndex {
       ["town_a", node("town_a", "North")],
       ["town_b", node("town_b", "South")],
     ]),
+    questsById: new Map([["quest_a", quest("quest_a", "town_a")]]),
     roadEventsByEdgeId: new Map([["road:a-b", roadEvent("road:a-b", "medium")]]),
     sitesById: new Map([["site_a", site("site_a", "South", 2)]]),
     travelLogByArrival: new Map([["road:a-b@540", travelEntry("town_b")]]),
@@ -173,6 +187,29 @@ describe("overworld snapshot region renown replay", () => {
         }),
         sources(),
         roadJournal,
+      ),
+    ).not.toThrow();
+  });
+
+  it("replays quest-completion renown to the quest home's region", () => {
+    // Regression: quest completions award QUEST_COMPLETION_RENOWN (8) but the
+    // replay never counted them, so ANY snapshot taken after completeQuest
+    // failed to restore ("unexpected region renown"). Found by the Task 8
+    // overworld crawler's quest round-trip oracle.
+    const expected = expectedSnapshotRegionRenown(
+      progressIndex({ completedQuestIds: ["quest_a"], startedQuestIds: ["quest_a"] }),
+      sources(),
+      { entries: [] },
+    );
+
+    expect(Object.fromEntries(expected)).toEqual({ North: 8 });
+
+    expect(() =>
+      assertSnapshotRegionRenown(
+        new Map([["North", 8]]),
+        progressIndex({ completedQuestIds: ["quest_a"], startedQuestIds: ["quest_a"] }),
+        sources(),
+        { entries: [] },
       ),
     ).not.toThrow();
   });

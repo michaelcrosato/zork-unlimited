@@ -192,10 +192,12 @@ run_cycle() {
     git clean -fdq content traces tests >/dev/null 2>&1 || true
   }
   npm run ai:loop || { echo "ai:loop failed"; _revert_failed_cycle; return 1; }
+  npm run crawl:smoke || { echo "crawl:smoke red before work — world is already broken; halting cycle"; _revert_failed_cycle; return 1; }
   # The agent (codex exec by default; see agent_cmd) does the actual work + the
   # mandatory blind LLM playtest. If it is unavailable the cycle makes no changes and the gates
   # below skip the commit.
   run_agent || echo "(agent step reported an error — continuing to verify)"
+  npm run crawl:smoke || { echo "crawl:smoke red after work — reverting"; _revert_failed_cycle; return 1; }
   # Trust, but verify: health is a BLOCKING gate (runs the static verifier-integrity
   # check too). A red check ⇒ no commit this cycle.
   npm run health || { echo "health failed — reverting cycle scratch, skipping commit"; _revert_failed_cycle; return 1; }

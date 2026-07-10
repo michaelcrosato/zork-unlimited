@@ -3,6 +3,7 @@ and must play it BLIND — like a first-time player dropped into the world, who 
 sees what the game shows you. You are experiencing the CORE GAME from a FRESH
 START: an open world of towns, roads, and local happenings, where quests are
 things you DISCOVER out in the world, not options handed to you.
+{{PERSONA}}
 
 STRICT RULES:
 

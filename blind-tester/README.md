@@ -80,6 +80,42 @@ MCP session, start the server with `npm run mcp -- --spectate [path]
 `AF_SPECTATE_DELAY_MS=<n>`). The delay paces every tool response; leave it off
 for a full-speed feed. Spectate is fully inert when not enabled.
 
+## Fleet mode — N blind playtests at once
+
+`blind-tester/fleet.mjs` (Tier 2 of the testing pyramid, docs/testing_pyramid.md)
+runs N independent blind playtests with bounded concurrency, resume, and a
+manifest — each one an ordinary `run.sh` spawn under the hood:
+
+```bash
+npm run fleet -- --count 20 --concurrency 4 --model mix --personas mixed \
+  --target overworld --seed-base 1000
+npm run fleet -- --count 5 --target quest:sunken_barrow --seed-base 2000
+npm run fleet:mock -- --count 2     # zero-token dry run (see Mock mode below)
+```
+
+- **Personas**: `personas/{default,explorer,speedrunner,breaker,casual,
+lore-reader}.md`. `--personas mixed` rotates through explorer → speedrunner
+  → breaker → casual → lore-reader by run index (reproducible, not sampled);
+  `--personas <name>` pins one persona for every run.
+- **Model**: `--model <alias>` (`haiku`, `sonnet`, `opus`) or `--model mix`
+  (deterministic 9 haiku : 1 sonnet weighting by index). No temperature/top_p
+  flag exists — persona × model × seed × target is the diversity axis.
+- **Resume**: re-running the same fleet command skips any seed/target that
+  already has a verified report; failed attempts back off exponentially up to
+  `--max-retries` (default 2).
+- **Output**: reports in `reports/` (or `--out <dir>`); a manifest at
+  `ai-runs/fleet/<label>/manifest.jsonl` and a `summary.json` alongside it.
+- Live (non-mock) fleets spend real tokens — run them from a plain shell, not
+  from inside a Claude Code session (nested CLI auth returns 401 there).
+
+## Mock mode — zero-token CI fleet
+
+`--mock` sets `BLIND_AGENT_CMD` to `mock-agent.mjs`, a deterministic
+MCP-speaking scripted agent: it plays for real over the MCP tools with no LLM
+and no tokens. `npm run fleet:mock` is what CI runs (small acceptance e2e). The standalone `npm run fleet:mock -- --count 20` lane verified 20/20 in ~18s.
+exercising the full fleet → verified reports → `feedback:compile` pipeline on
+every push with no API key required.
+
 ## Platforms
 
 Works natively on Linux, macOS, WSL, and Windows (PowerShell, cmd, or Git Bash —
