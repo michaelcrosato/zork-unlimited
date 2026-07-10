@@ -14,10 +14,25 @@
  * rung, never forcing a pick):
  *   1. exact id hit — raw equals a questId / node id / region id / room|scene
  *      id (case-insensitive, trimmed).
- *   2. exact name hit — a node/region/area name or quest/room title appears
- *      as a literal substring of raw (case-insensitive).
- *   3. unique fuzzy hit — a candidate's token set is fully contained in raw's
- *      token set, and it is the only candidate for which that holds.
+ *   2. exact name hit — a node/region/area name or quest/room title, each
+ *      punctuation-normalized (lowercased; every run of non-alphanumeric
+ *      characters collapsed to a single space; trimmed), appears as a
+ *      literal substring of raw normalized the same way. Punctuation
+ *      normalization means two titles that differ only in punctuation (e.g.
+ *      "The Gate-Arch" vs "The Gate Arch") produce the identical phrase — a
+ *      raw that hits that phrase then hits every location registered under
+ *      it, and a tie across distinct locations falls through rather than
+ *      silently crediting whichever one happened to be indexed first.
+ *   3. unique contiguous fuzzy hit — strip a small fixed stopword set ("the",
+ *      "a", "an", "of", "in", "on", "at", "to", "and") from both the
+ *      candidate's normalized tokens and raw's normalized tokens. A candidate
+ *      left with fewer than 2 content tokens is ineligible for this rung —
+ *      too short to disambiguate safely, so it's skipped rather than risking
+ *      a match on a single common word. Otherwise the candidate hits iff its
+ *      content-token sequence appears CONTIGUOUSLY, in the same order,
+ *      inside raw's content-token sequence — tolerant of a little connective
+ *      noise around the name, never of its words scattered loose across an
+ *      unrelated sentence.
  *   4. otherwise: `unmapped`, raw preserved for audit.
  */
 import { listShippedQuestIds, prepareShippedQuest } from "../crawl/prepare.js";
@@ -27,11 +42,33 @@ import type { CanonicalLocation } from "./schema.js";
 /** A resolved location shape without the caller-supplied raw text attached yet. */
 type LocationTemplate = Omit<CanonicalLocation, "raw">;
 
+/**
+ * Minimal stopword set for rung 3's contiguous fuzzy match. Deliberately small —
+ * only articles/prepositions/conjunctions common enough to appear incidentally
+ * between a location name's content words in freeform reports. A bigger list would
+ * risk stripping enough of a real name to make it collide with something else,
+ * which is exactly what the "never force" mandate rules out.
+ */
+const RUNG3_STOPWORDS: ReadonlySet<string> = new Set([
+  "the",
+  "a",
+  "an",
+  "of",
+  "in",
+  "on",
+  "at",
+  "to",
+  "and",
+]);
+
 type NameCandidate = {
-  /** Lowercased, trimmed literal name/title text — used for the substring test. */
+  /** Punctuation-normalized literal name/title text — used for the rung-2 substring test. */
   phrase: string;
-  /** Lowercased tokens of `phrase` — used for the fuzzy subset test. */
-  tokens: readonly string[];
+  /**
+   * `phrase`'s tokens with the rung-3 stopword set stripped — used for the rung-3
+   * contiguous match. Fewer than 2 entries makes the candidate ineligible for rung 3.
+   */
+  contentTokens: readonly string[];
   location: LocationTemplate;
 };
 
@@ -54,6 +91,45 @@ function tokenize(lowerText: string): string[] {
   return lowerText.split(/[^a-z0-9]+/).filter((token) => token.length > 0);
 }
 
+/**
+ * Lowercases, collapses every run of non-alphanumeric characters to a single space,
+ * and trims. Used for both indexed name/title phrases and query-time raw text so
+ * punctuation-only differences (a hyphen vs a space, an apostrophe, etc.) can't cause
+ * two spellings of the same name to fail to collide at rung 2/3, nor a genuinely
+ * different name to dodge the tie-detection that keeps those rungs from forcing a pick.
+ * Deliberately separate from the id lookup's normalization, which preserves the raw
+ * string (including underscores) since ids are matched verbatim.
+ */
+function normalizePhrase(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function stripStopwords(tokens: readonly string[]): string[] {
+  return tokens.filter((token) => !RUNG3_STOPWORDS.has(token));
+}
+
+/** True iff `needle` appears as a contiguous, in-order run inside `haystack`. */
+function containsContiguousSubsequence(
+  haystack: readonly string[],
+  needle: readonly string[],
+): boolean {
+  if (needle.length === 0 || needle.length > haystack.length) return false;
+  for (let start = 0; start <= haystack.length - needle.length; start++) {
+    let matched = true;
+    for (let i = 0; i < needle.length; i++) {
+      if (haystack[start + i] !== needle[i]) {
+        matched = false;
+        break;
+      }
+    }
+    if (matched) return true;
+  }
+  return false;
+}
+
 /** Builds the location index once, compiling every shipped quest pack. Cache the result. */
 export function buildLocationIndex(root: string): LocationIndex {
   const overworld = loadOverworldManifest(root);
@@ -69,9 +145,9 @@ export function buildLocationIndex(root: string): LocationIndex {
   };
 
   const addName = (rawName: string, location: LocationTemplate): void => {
-    const phrase = rawName.trim().toLowerCase();
+    const phrase = normalizePhrase(rawName);
     if (phrase.length === 0) return;
-    names.push({ phrase, tokens: tokenize(phrase), location });
+    names.push({ phrase, contentTokens: stripStopwords(tokenize(phrase)), location });
   };
 
   const regionNameByNodeId = new Map<string, string>();
@@ -175,21 +251,29 @@ export function canonicalizeLocation(raw: string, idx: LocationIndex): Canonical
     ...location,
     raw: [raw],
   });
-  const lower = raw.trim().toLowerCase();
 
-  if (lower.length > 0) {
-    const idCandidates = uniqueLocations(idx.ids.get(lower) ?? []);
+  // Rung 1: exact id hit. Ids are matched verbatim (trim + lowercase only — no
+  // punctuation normalization, since ids like "gate_arch" rely on their underscores).
+  const idKey = raw.trim().toLowerCase();
+  if (idKey.length > 0) {
+    const idCandidates = uniqueLocations(idx.ids.get(idKey) ?? []);
     if (idCandidates.length === 1) return finalize(idCandidates[0]!);
+  }
 
-    const nameHits = idx.names.filter((candidate) => lower.includes(candidate.phrase));
+  const normalizedRaw = normalizePhrase(raw);
+  if (normalizedRaw.length > 0) {
+    // Rung 2: exact name hit, both sides punctuation-normalized (see normalizePhrase).
+    const nameHits = idx.names.filter((candidate) => normalizedRaw.includes(candidate.phrase));
     const nameCandidates = uniqueLocations(nameHits.map((hit) => hit.location));
     if (nameCandidates.length === 1) return finalize(nameCandidates[0]!);
 
-    const rawTokens = new Set(tokenize(lower));
-    if (rawTokens.size > 0) {
+    // Rung 3: unique contiguous fuzzy hit over stopword-stripped content tokens.
+    const rawContentTokens = stripStopwords(tokenize(normalizedRaw));
+    if (rawContentTokens.length > 0) {
       const fuzzyHits = idx.names.filter(
         (candidate) =>
-          candidate.tokens.length > 0 && candidate.tokens.every((token) => rawTokens.has(token)),
+          candidate.contentTokens.length >= 2 &&
+          containsContiguousSubsequence(rawContentTokens, candidate.contentTokens),
       );
       const fuzzyCandidates = uniqueLocations(fuzzyHits.map((hit) => hit.location));
       if (fuzzyCandidates.length === 1) return finalize(fuzzyCandidates[0]!);
