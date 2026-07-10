@@ -77,7 +77,7 @@ const USE_PREPS = ["on", "with", "to", "into", "onto", "under", "against", "in",
 function customUseByVerb(index: RpgModelIndex, verb: string, rest: string): RpgAction | null {
   // Every USE interaction in the pack whose natural verb is `verb`.
   const matches: { item?: string; target: string }[] = [];
-  for (const o of index.objects.values()) {
+  for (const o of index.objectsWithUseInteractions) {
     for (const it of o.interactions) {
       if (it.verb === "USE" && it.command_verb === verb && it.target) {
         const hit = { target: it.target, ...(it.item !== undefined ? { item: it.item } : {}) };

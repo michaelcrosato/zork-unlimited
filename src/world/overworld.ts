@@ -295,7 +295,7 @@ export function normalizeSourcePath(path: string): string {
 
 const overworldQuestsByIdCache = new WeakMap<OverworldManifest, Map<string, OverworldQuest>>();
 
-export function overworldQuestsById(world: OverworldManifest): Map<string, OverworldQuest> {
+function overworldQuestsById(world: OverworldManifest): Map<string, OverworldQuest> {
   let map = overworldQuestsByIdCache.get(world);
   if (!map) {
     map = new Map(world.quests.map((quest) => [quest.id, quest]));
