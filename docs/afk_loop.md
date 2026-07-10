@@ -16,11 +16,17 @@ loop.sh  (outer driver — orchestration + the bar)
 │     Deterministically scans every pack + repo signals and ranks
 │     improvement candidates across four categories:
 │        content_fix · content_new · engine · repo
+│     Compiled feedback hot spots (docs/testing_pyramid.md), when present, are
+│     a primary input to the ranking.
 │     Emits: ai-runs/<id>/{assessment.md, prompt.md} plus latest-cycle.json at
 │     the ai-runs/ root (which records the quest/source to playtest and where
 │     the playtest report must go).
 │
-├─ 2. WORK          the operating agent (claude -p / codex exec / Agent tool)
+├─ 2. CRAWL GATE (pre)   npm run crawl:smoke — Tier 1 of the testing pyramid.
+│     Must be green before the agent touches anything; red here means the
+│     world was already broken, so the cycle halts and reverts (loop.sh).
+│
+├─ 3. WORK          the operating agent (claude -p / codex exec / Agent tool)
 │     Reads the cycle prompt and:
 │       a. MANDATORY LLM PLAYTEST — spawns a fresh, no-context subagent that plays
 │          the cycle's target — the CORE GAME (overworld fresh start; the baseline
@@ -31,11 +37,16 @@ loop.sh  (outer driver — orchestration + the bar)
 │          the mandatory fenced json exit-interview block — reports without a
 │          schema-valid block are rejected by src/blind/report_verifier.ts) to
 │          the path in latest-cycle.json. This is the per-cycle quality signal.
+│          Milestone/harvest cycles run `npm run fleet -- --count N` instead of a
+│          single blind pass (docs/testing_pyramid.md).
 │       b. ONE improvement — content edit / apply_content_patch, or an engine/repo
 │          change (full authority; new mechanics need no §14 ceremony, but stay
 │          verified). Bugs get a traces/bugs/ artifact + a tests/regression/ test.
 │
-├─ 3. VERIFY        the bar, all blocking (a red gate reverts the cycle's scratch
+├─ 4. CRAWL GATE (post)  npm run crawl:smoke again — a new finding here is a
+│     regression the cycle itself just introduced; the cycle halts and reverts.
+│
+├─ 5. VERIFY        the bar, all blocking (a red gate reverts the cycle's scratch
 │                    to the pre-cycle ref, skips the commit, and the outer loop
 │                    continues under circuit breakers — see Failure handling):
 │       npm run health            (verify:integrity + typecheck + lint +
@@ -47,7 +58,11 @@ loop.sh  (outer driver — orchestration + the bar)
 │                                                      content change; legit re-pins warn)
 │       require_playtest_record    (no blind-playtest report ⇒ no commit)
 │
-└─ 4. COMMIT/PUSH   git add -A && commit (scope is free — trust; but only after the
+├─ 6. COMPILE (as needed)   when ≥3 new verified reports exist since the last
+│     compile: npm run feedback:compile → ai-runs/feedback/<ts>/hotspots.{json,md}
+│     (Tier 3 of the testing pyramid), which the NEXT cycle's ASSESS step reads.
+│
+└─ 7. COMMIT/PUSH   git add -A && commit (scope is free — trust; but only after the
        bar passed — verify). Both are env-gated: AI_LOOP_COMMIT=1 to commit,
        AI_LOOP_PUSH=1 to push. Note: a bare push of a fresh commit to protected
        main is always rejected (the required 'verify' check can't have run yet) —
@@ -121,11 +136,16 @@ fourth piece of the reviewer subagent contract — _objective · output format �
   real signals — validator warnings, thin modes, engine TODOs, missing tooling,
   generated-pack drift — into a ranked backlog, so the loop always works the
   highest-value thing and a human can see _why_.
-- **An LLM playtest is the quality oracle.** The validators + exhaustive solver prove
-  _structure_ (every ending reachable, no soft-locks, sound scoring) as dev tests; a
-  reasoning agent playing blind measures the _experience_ (clarity, fun, confusing
-  branches). The loop makes that blind playtest mandatory every cycle — it's the
-  feedback that actually improves the game. These are the only two testing modes.
+- **An LLM playtest is the quality oracle, one of three tiers, one oracle chain —
+  see docs/testing_pyramid.md.** Dev tests (validators + exhaustive solver) prove
+  _structure_ (every ending reachable, no soft-locks, sound scoring); the mechanical
+  crawler (`crawl:smoke`/`crawl:deep`) sweeps every quest and the overworld for
+  mechanical defects with zero LLM cost; a reasoning agent playing blind measures
+  the _experience_ (clarity, fun, confusing branches), and the feedback compiler
+  turns both crawler findings and blind reports into ranked hot spots. The loop
+  makes the blind playtest mandatory every cycle and the crawl gate mandatory
+  around every change — together they're the feedback that actually improves the
+  game.
 - **Externalized state + one change per cycle**: `AI_LOOP_STATE.md` is the durable
   handoff; `ai-runs/<id>/` holds the (ignored) per-cycle evidence and playtest report.
 
@@ -134,10 +154,15 @@ fourth piece of the reviewer subagent contract — _objective · output format �
 ```bash
 npm run assess          # just print the ranked next-best-improvement backlog
 npm run ai:loop         # one cycle: assess + emit the cycle prompt + artifacts
-./loop.sh --once        # full single cycle (assess → agent → verify → commit)
+./loop.sh --once        # full single cycle (crawl gate → agent → crawl gate → verify → commit)
 ./loop.sh               # continuous (AI_LOOP_MAX_CYCLES, AI_LOOP_DELAY_SECONDS to bound)
 npm run loop:status     # project-scoped status (breaker/velocity telemetry needs
 npm run loop:stop       #   a wrapper log: ./loop.sh 2>&1 | tee ai-runs/wrapper.log)
+
+npm run crawl:smoke               # the crawl gate itself, run standalone (docs/testing_pyramid.md)
+npm run fleet -- --count 20       # milestone/harvest-cycle blind fleet (real tokens)
+npm run fleet:mock -- --count 2   # zero-token fleet dry run
+npm run feedback:compile          # compile verified reports + crawl findings into hotspots.{json,md}
 ```
 
 Key env (loop.sh's header comment is the authoritative reference): `AI_LOOP_COMMIT=1`

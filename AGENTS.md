@@ -12,18 +12,20 @@ improvement loop, and this charter orients the agent driving it.
 
 ## The loop (one cycle)
 
-`loop.sh` runs it; `docs/afk_loop.md` is the full protocol. Each cycle:
+`loop.sh` runs it; `docs/afk_loop.md` is the full protocol; the three-tier
+testing pyramid behind it is `docs/testing_pyramid.md`. Each cycle:
 
-1. **Assess** — `npm run ai:loop` ranks the next-best improvement.
-2. **One change** — make a single focused improvement (engine, content, or tooling).
-3. **Blind playtest** — spawn a fresh, no-repo-access sub-agent that plays the
-   cycle's target — the CORE GAME (overworld fresh start, the default) or one
-   targeted quest — ONLY through the `mcp__adventureforge__*` MCP tools, then
-   writes a structured report ending in a JSON exit interview. This blind feedback — what
-   the game logs show plus the exit interview — is the quality oracle. Protocol and
-   driver-agnostic harness (`npm run blind`): `docs/blind_playtest_protocol.md`.
-4. **Verify** — `npm run health` must pass (see below); no playtest report ⇒ no commit.
-5. **Commit** — one green increment, with a terse note in `AI_LOOP_STATE.md`.
+1. **Assess** — `npm run ai:loop` ranks the next-best improvement (compiled hot spots, when present, are a primary input).
+2. **Crawl gate (pre)** — `npm run crawl:smoke` must be green before touching anything.
+3. **One change** — make a single focused improvement (engine, content, or tooling).
+4. **Crawl gate (post)** — `npm run crawl:smoke` again; a new finding is YOUR regression.
+5. **Blind playtest** — one fresh blind agent per normal cycle (protocol: docs/blind_playtest_protocol.md). Milestone
+   or feedback-harvest cycles (every ~10 cycles, or when the ledger's open questions outgrow single reports) run
+   `npm run fleet -- --count N` instead.
+6. **Compile feedback** — when ≥3 new verified reports exist since the last compile: `npm run feedback:compile`;
+   triage from `hotspots.md`.
+7. **Verify** — `npm run health` must pass; no playtest report ⇒ no commit.
+8. **Commit** — one green increment, terse note in `AI_LOOP_STATE.md`.
 
 ## Authority
 
@@ -44,6 +46,9 @@ requirement on top of health.
 UI typecheck, and pack validation. The UI typecheck means UI deps
 (`npm --prefix ui install`) are required for the bar, not just for running the
 UI server. Do not commit or merge red.
+
+`npm run crawl:smoke` is the mechanical gate (docs/testing_pyramid.md); it is
+deliberately NOT part of `health`.
 
 ## Do Not Weaken Verification
 

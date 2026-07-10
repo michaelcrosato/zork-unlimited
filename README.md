@@ -122,20 +122,35 @@ legend to that contract; the handlers (`src/mcp/tools.ts`) are unit-tested
 without a live client. All paths are confined to the project root; content and
 traces are data only.
 
-## Testing: two modes, coupled by an exit interview
+## Testing: a three-tier pyramid, coupled by an exit interview
 
-- **Dev tests** (full knowledge, specific assertions): the vitest
+Full reference: [`docs/testing_pyramid.md`](./docs/testing_pyramid.md).
+
+- **Tier 0 — dev tests** (full knowledge, specific assertions): the vitest
   unit/property/regression suite, the validators, and the exhaustive solver —
   all inside `npm run health`. Rejection-direction witnesses live in the
   negative-fixture corpus (`content/broken-fixtures/`, mostly `foundation_*.yaml`),
   a data-driven test proving each validator finding code actually fires.
-- **Blind LLM playtest**: a fresh agent with NO repo access plays the game
+- **Tier 1 — mechanical crawler** (`src/crawl/`, zero LLM): drives the pure
+  engine in-process across every shipped quest plus a full overworld sweep,
+  checking nine invariant oracles (crash, integrity, desync, persistence,
+  legality, softlock, render defects, world coverage) every step, emitting
+  deduped, zod-validated findings with minimized replayable repros.
+  `npm run crawl:smoke` is the loop's gate (every cycle, ~10s, deterministic);
+  `npm run crawl:deep` is a longer soak (nightly/manual).
+- **Tier 2 — blind LLM playtest**: a fresh agent with NO repo access plays the game
   purely through the MCP tools (harness in `blind-tester/`, protocol in
   [`docs/blind_playtest_protocol.md`](./docs/blind_playtest_protocol.md)) — the
   only judge of player-facing quality a static check can't see. The **default
   blind run plays the core game**: the open world from a fresh start, quests
   discovered through the overworld. Targeted single-quest runs (`--quest <id>`)
-  are the legacy drop-in kept for testing one piece of content.
+  are the legacy drop-in kept for testing one piece of content. `npm run
+  fleet` runs N of these in parallel (personas, model mix, resume) for
+  milestone/harvest cycles; `npm run fleet:mock` is a zero-token stand-in for CI.
+- **Tier 3 — feedback compiler** (`src/feedback/`): clusters and ranks Tier-1
+  findings and verified Tier-2 reports into `hotspots.{json,md}`
+  (`npm run feedback:compile`), tracks trend (improved/regressed/new/flat)
+  across compiles, and feeds the assessor's next-best-improvement ranking.
 
 Every playtest MUST end with a **structured exit interview** — a fenced
 `json exit-interview` block (clarity/enjoyment 1–5, bugs with S0–S4 severities,
@@ -145,19 +160,23 @@ exactly as it rejects one that never touched the MCP tools — feedback that
 can't be ranked is feedback that gets lost.
 
 ```bash
-npm run blind                                     # DEFAULT: the core game — overworld, fresh start
+npm run crawl:smoke                               # Tier 1: mechanical gate, all quests + overworld
+npm run blind                                     # Tier 2 DEFAULT: the core game — overworld, fresh start
 npm run blind -- --quest sunken_barrow --seed 7   # targeted: one shipped quest (legacy drop-in)
 npm run blind:smoke                               # harness check, no LLM, no tokens
+npm run fleet:mock -- --count 2                   # Tier 2 fleet, zero tokens (CI-safe)
+npm run feedback:compile                          # Tier 3: compile into ranked hot spots
 ```
 
 The blind harness drives the external Claude Code CLI on the operator's
 subscription (default model `sonnet`; `BLIND_AGENT_CMD` overrides) and is NOT
-part of CI or the health bar. Separately, the authoring/repair agents
-(`bin/author.ts`, the debugger/fixer) run against a deterministic, keyless
-`MockAuthorProvider` behind the small `Provider` interface (`agents/llm/`), so
-their vitest coverage runs in CI with no live LLM calls and no API keys. (This is
-a public, no-runtime-LLM repo — there are no third-party LLM API keys or key-based
-provider backends anywhere in it.)
+part of CI or the health bar (a mock fleet run is — see
+[`docs/testing_pyramid.md`](./docs/testing_pyramid.md)). Separately, the
+authoring/repair agents (`bin/author.ts`, the debugger/fixer) run against a
+deterministic, keyless `MockAuthorProvider` behind the small `Provider`
+interface (`agents/llm/`), so their vitest coverage runs in CI with no live
+LLM calls and no API keys. (This is a public, no-runtime-LLM repo — there are
+no third-party LLM API keys or key-based provider backends anywhere in it.)
 
 ## The flywheel — AFK loop
 

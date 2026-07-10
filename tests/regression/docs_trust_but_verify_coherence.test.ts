@@ -20,7 +20,7 @@
  * only the docs a fresh agent actually follows as current process.
  */
 import { describe, it, expect } from "vitest";
-import { readFileSync } from "node:fs";
+import { readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 // The conservative predicate now lives in a shared module (bug_0050 reuses it to
 // guard agent-facing code comments as well as these current-process docs).
@@ -108,5 +108,37 @@ describe("bug_0049 — the current-process docs on the REAL repo (charter-cohere
     const regressed =
       protocol + "\n   - engine_rule → **gated** (§14): propose only; a human\nreviews.";
     expect(instructsRetiredGateAsLive(regressed).length).toBeGreaterThan(0);
+  });
+});
+
+describe("Task 18 — the three-tier testing pyramid is wired into the charter docs", () => {
+  // afk_loop.md used to claim "these are the only two testing modes" (dev tests +
+  // blind playtest). That claim went stale the moment the mechanical crawler
+  // (Tier 1) and the feedback compiler (Tier 3) shipped alongside them — a fresh
+  // agent reading it would not know either exists. This locks the honest rewrite
+  // and the new canonical doc that backs it, so the three-tier reality can't
+  // silently regress back to "two modes" without a test noticing.
+
+  it("docs/testing_pyramid.md exists as the canonical three-tier reference", () => {
+    expect(existsSync(join(process.cwd(), "docs/testing_pyramid.md"))).toBe(true);
+  });
+
+  it("afk_loop.md no longer claims only two testing modes, and points at the pyramid doc", () => {
+    const afkLoop = read("docs/afk_loop.md");
+    expect(afkLoop).not.toMatch(/only two testing modes/i);
+    expect(afkLoop).toContain("three tiers, one oracle chain");
+    expect(afkLoop).toContain("docs/testing_pyramid.md");
+  });
+
+  it("AGENTS.md's loop and verification bar mention the crawl:smoke mechanical gate", () => {
+    const agents = read("AGENTS.md");
+    expect(agents).toContain("crawl:smoke");
+    expect(agents).toContain("docs/testing_pyramid.md");
+  });
+
+  it("the blind playtest protocol documents fleet mode and the zero-token fleet:mock CI path", () => {
+    const protocol = read("docs/blind_playtest_protocol.md");
+    expect(protocol).toContain("fleet:mock");
+    expect(protocol).toMatch(/npm run fleet\b/);
   });
 });
