@@ -21,6 +21,29 @@ export type Policy = {
   pick(options: RpgActionOption[], ctx: PolicyContext): RpgActionOption;
 };
 
+/**
+ * Internal helper for coverage-based selection logic.
+ * Makes exactly 1 rng.int call per invocation, ensuring deterministic pick counts.
+ */
+function pickCoverage(options: RpgActionOption[], ctx: PolicyContext, rng: Rng): RpgActionOption {
+  // Prefer untried MOVE options
+  const untriedMoves = options.filter(
+    (opt) => opt.action.type === "MOVE" && !ctx.triedActionIds.has(opt.id),
+  );
+  if (untriedMoves.length > 0) {
+    return untriedMoves[rng.int(0, untriedMoves.length - 1)]!;
+  }
+
+  // Then any untried option
+  const untried = options.filter((opt) => !ctx.triedActionIds.has(opt.id));
+  if (untried.length > 0) {
+    return untried[rng.int(0, untried.length - 1)]!;
+  }
+
+  // Else uniform over all
+  return options[rng.int(0, options.length - 1)]!;
+}
+
 export function makePolicy(name: PolicyName, rng: Rng): Policy {
   if (name === "random") {
     return {
@@ -36,24 +59,9 @@ export function makePolicy(name: PolicyName, rng: Rng): Policy {
   if (name === "coverage") {
     return {
       name: "coverage",
-      // 1 rng.int call per pick (always makes one selection at the end)
+      // 1 rng.int call per pick
       pick(options: RpgActionOption[], ctx: PolicyContext): RpgActionOption {
-        // Prefer untried MOVE options
-        const untriedMoves = options.filter(
-          (opt) => opt.action.type === "MOVE" && !ctx.triedActionIds.has(opt.id),
-        );
-        if (untriedMoves.length > 0) {
-          return untriedMoves[rng.int(0, untriedMoves.length - 1)]!;
-        }
-
-        // Then any untried option
-        const untried = options.filter((opt) => !ctx.triedActionIds.has(opt.id));
-        if (untried.length > 0) {
-          return untried[rng.int(0, untried.length - 1)]!;
-        }
-
-        // Else uniform over all
-        return options[rng.int(0, options.length - 1)]!;
+        return pickCoverage(options, ctx, rng);
       },
     };
   }
@@ -70,19 +78,7 @@ export function makePolicy(name: PolicyName, rng: Rng): Policy {
           return options[idx]!;
         } else {
           // 80% coverage behavior
-          const untriedMoves = options.filter(
-            (opt) => opt.action.type === "MOVE" && !ctx.triedActionIds.has(opt.id),
-          );
-          if (untriedMoves.length > 0) {
-            return untriedMoves[rng.int(0, untriedMoves.length - 1)]!;
-          }
-
-          const untried = options.filter((opt) => !ctx.triedActionIds.has(opt.id));
-          if (untried.length > 0) {
-            return untried[rng.int(0, untried.length - 1)]!;
-          }
-
-          return options[rng.int(0, options.length - 1)]!;
+          return pickCoverage(options, ctx, rng);
         }
       },
     };
