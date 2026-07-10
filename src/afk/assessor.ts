@@ -20,8 +20,10 @@ import { join, relative } from "node:path";
 import { createToolApi } from "../mcp/tools.js";
 import { RpgSourceRuntime } from "../mcp/rpg_source_runtime.js";
 import { verifyBlindReportText } from "../blind/report_verifier.js";
+import { readLatestHotspots } from "../feedback/compile.js";
+import type { Hotspot } from "../feedback/schema.js";
 import { auditStaleReactiveRoomItems } from "./stale_reactive_audit.js";
-import { score, type ImprovementCandidate } from "./assessment_model.js";
+import { score, type Category, type ImprovementCandidate } from "./assessment_model.js";
 import {
   allGeneratedChecksClean,
   generatorRpgDriftCandidate,
@@ -356,6 +358,64 @@ export function mergeAttendanceOffsets(
   return map;
 }
 
+// ── hotspot-driven candidates (Task 17): compiled feedback as a PRIMARY
+// ranking input ──────────────────────────────────────────────────────────────
+// This is the loop-closing wire: `readLatestHotspots` (src/feedback/compile.ts)
+// reads the newest ai-runs/feedback/<stamp>/hotspots.json (schema-validated;
+// null when absent/invalid), and its top hot spots become real candidates
+// below — the same shape (category/impact/effort/score) every other block
+// produces, so compiled feedback competes on ranking merit instead of being
+// bolted on separately. This machinery only reads that one file and pushes
+// candidates: it never touches quest-pack validation, so a root with no
+// ai-runs/feedback directory (today's default, and every fixture root that
+// predates this feature) sees IDENTICAL assess() output to before this
+// feature existed (baseline preservation — the Task 17 hard requirement).
+
+/** fix_layer values that name code/tooling work rather than quest content. */
+const ENGINE_FIX_LAYERS: ReadonlySet<Hotspot["fix_layer"]> = new Set([
+  "engine_rule",
+  "validator",
+  "test",
+]);
+
+/** fix_layer values cheap enough to fix inline (prose/hint copy) — mirrors the
+ *  effort convention the repo lever above already uses (repo-doc-staleness is
+ *  "S"; structural/engine levers are "M"/"L"). */
+const CHEAP_FIX_LAYERS: ReadonlySet<Hotspot["fix_layer"]> = new Set(["content", "hint_text"]);
+
+function categoryForHotspot(h: Hotspot): Category {
+  return ENGINE_FIX_LAYERS.has(h.fix_layer) ? "engine" : "content_fix";
+}
+
+function effortForHotspot(h: Hotspot): ImprovementCandidate["effort"] {
+  return CHEAP_FIX_LAYERS.has(h.fix_layer) ? "S" : "M";
+}
+
+/**
+ * Scales a hot spot's raw compiled score (unbounded — count × severity weight
+ * × diversity; see feedback/rank.ts's `scoreCluster`) into the assessor's 1-5
+ * impact range used everywhere else in this file. Normalizes against the
+ * HIGHEST hot spot score in the WHOLE compiled file (not just the top 3
+ * considered below), so the file's single worst issue always maps to impact
+ * 5 and lighter hot spots scale down proportionally; clamped to [1, 5] so a
+ * degenerate all-zero file never divides out of range.
+ */
+function impactForHotspot(h: Hotspot, maxHotspotScore: number): number {
+  if (maxHotspotScore <= 0) return 1;
+  return Math.max(1, Math.min(5, Math.round((h.score / maxHotspotScore) * 5)));
+}
+
+/**
+ * The fixable target for a hot spot's location: its world quest id when the
+ * compiler resolved one, else the shared overworld target when the location
+ * is an overworld surface, else `null` (an `unmapped` location doesn't
+ * nominate a candidate — there is nothing concrete to point the fix at).
+ */
+function hotspotTarget(h: Hotspot): string | null {
+  if (h.location.questId) return h.location.questId;
+  return h.location.kind === "overworld" ? OVERWORLD_PLAYTEST_TARGET : null;
+}
+
 /** Disk wrapper for attendance evidence; empty map when both evidence sources are absent. */
 function lastAttendanceOffsets(root: string): Map<string, number> {
   const p = join(root, "AI_LOOP_STATE.md");
@@ -687,6 +747,36 @@ export function assess(root: string): Assessment {
   const rpgGenDrift = generatorRpgDriftCandidate(rpgGenChecks);
   if (rpgGenDrift) candidates.push(rpgGenDrift);
   const allGeneratorsClean = allGeneratedChecksClean(rpgGenChecks);
+
+  // ── hotspot-driven candidates: latest compiled feedback (see helper
+  // functions above) ────────────────────────────────────────────────────────
+  const hotspotsFile = readLatestHotspots(root);
+  if (hotspotsFile) {
+    const maxHotspotScore = hotspotsFile.hotspots.reduce((max, h) => Math.max(max, h.score), 0);
+    hotspotsFile.hotspots.slice(0, 3).forEach((h, i) => {
+      const target = hotspotTarget(h);
+      if (!target) return; // unmapped hot spots don't nominate a fixable target
+      const category = categoryForHotspot(h);
+      const effort = effortForHotspot(h);
+      const impact = impactForHotspot(h, maxHotspotScore);
+      candidates.push({
+        id: `hotspot-${h.id}`,
+        category,
+        target,
+        title: `Fix compiled feedback hot spot: ${h.title}`,
+        rationale:
+          `hot spot #${i + 1}: ${h.title} (count ${h.count}, ${h.max_severity}, ` +
+          `sources ${h.sources.join("+")})`,
+        evidence: [
+          `compiled hot spot score ${h.score}, fix_layer ${h.fix_layer}, ` +
+            `${h.evidence.length} evidence excerpt(s)`,
+        ],
+        impact,
+        effort,
+        score: score(impact, effort, category),
+      });
+    });
+  }
 
   // Deterministic ordering: score desc, then — among equal scores — rotate the
   // blind-playtest pass onto the LEAST-recently-attended pack (never-attended first,

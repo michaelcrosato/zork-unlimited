@@ -54,6 +54,25 @@ export type CompileOptions = {
   prevDir: string | null;
 };
 
+// --- readLatestHotspots ------------------------------------------------------
+
+/**
+ * The assessor's (Task 17) read side of this module: the most recently
+ * compiled `hotspots.json` under `<root>/ai-runs/feedback/`, schema-validated,
+ * or `null` when there is no feedback directory yet, or every compile found
+ * there is missing/unreadable/malformed. This is exactly `loadPreviousHotspots`
+ * (trends.ts) called with no "before" cutoff — that function already scans
+ * `ai-runs/feedback/*`, picks the lexicographically-newest directory that
+ * holds a valid `HotspotsFileSchema` file, and resolves to `null` on a
+ * missing dir or an all-invalid scan — so this is a thin, purpose-named
+ * wrapper rather than a second implementation of the same disk walk. Kept in
+ * `src/feedback` (re-exported by the assessor) so the hotspots schema/file
+ * layout stays known in exactly one place.
+ */
+export function readLatestHotspots(root: string): HotspotsFile | null {
+  return loadPreviousHotspots(root, null);
+}
+
 // --- collectInputs -----------------------------------------------------------
 
 const LEDGER_RE = /^(\d{8}T\d{6}Z)_(.+)_seed(-?\d+)\.md$/;
