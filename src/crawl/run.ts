@@ -1,16 +1,20 @@
 /**
  * Crawl run orchestration — turns CLI flags into a deterministic plan of
- * per-quest (and, from Task 8, overworld) crawl jobs, runs the plan
- * single-process, and writes the run's artifacts (findings.jsonl,
- * summary.json, summary.md).
+ * per-quest (and, from Task 8, overworld) crawl jobs, runs the plan either
+ * single-process (`runPlanInProcess`) or fanned out across worker threads
+ * (`runPlanWithWorkers`, Task 10 — see `mergeSummaries`), and writes the run's
+ * artifacts (findings.jsonl, summary.json, summary.md).
  *
  * `parseCrawlArgs` and `buildPlan` are pure (no I/O beyond `listShippedQuestIds`'s
  * directory read, no wall clock) so they are unit-testable without running a
- * crawl. `runPlanInProcess` and `writeRunArtifacts` do the actual work and are
- * exercised by the live checkpoints instead (see bin/crawl.ts and the task brief).
+ * crawl; so are `mergeSummaries`, `sliceSeeds`, and `buildWorkerPlans`, the
+ * pure pieces of the worker fan-out. `runPlanInProcess`, `runPlanWithWorkers`,
+ * and `writeRunArtifacts` do the actual work and are exercised by the live
+ * checkpoints instead (see bin/crawl.ts and the task brief).
  */
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { Worker } from "node:worker_threads";
 import { canonicalize } from "../core/hash.js";
 import { renderCoverageMarkdown, type OverworldCoverageSummary } from "./coverage.js";
 import { CrawlFindingSchema, findingFingerprint, type CrawlFinding } from "./findings.js";
@@ -51,6 +55,14 @@ export type QuestCoverageSummary = {
   roomsVisited: number;
   roomsTotal: number;
   actionsTried: number;
+  /** The actual distinct action ids behind `actionsTried` (Task 10). Unlike
+   *  `roomsVisited`/`actionsTried` (counts derived from a Set at the point a
+   *  single-process run finishes), this real id list is what makes
+   *  `mergeSummaries` able to UNION a quest's action coverage exactly across
+   *  worker shards — a plain count can only be summed (double-counting any
+   *  action tried by more than one shard's seeds), but a set of ids can be
+   *  unioned precisely, the same way `endingsReached` already is. */
+  actionIdsTried: string[];
   actionsTotal: number;
   endingsReached: string[];
   endingsDeclared: string[];
@@ -301,6 +313,30 @@ export function dedupeFindings(findings: readonly CrawlFinding[]): CrawlFinding[
   return out;
 }
 
+/**
+ * Order-independent pre-sort used ONLY to decide which literal duplicate
+ * survives a fingerprint collision — by `(fingerprint, canonical JSON)`
+ * rather than by array/processing position. `dedupeFindings` keeps the FIRST
+ * occurrence, so feeding it findings in this canonical order (instead of raw
+ * concatenation/generation order) makes the surviving literal finding a pure
+ * function of the findings' own content — never of how many workers a run
+ * split its seeds across, or which shard/seed happened to run first (Task
+ * 10's `mergeSummaries` order-independence requirement). `runPlanInProcess`
+ * uses the same helper so a single-process run and any worker-split of the
+ * same seeds keep the SAME literal survivor, not just the same fingerprint
+ * SET, when two seeds happen to trip the identical bug.
+ */
+function canonicalFindingOrder(findings: readonly CrawlFinding[]): CrawlFinding[] {
+  return [...findings].sort((a, b) => {
+    const fa = findingFingerprint(a);
+    const fb = findingFingerprint(b);
+    if (fa !== fb) return fa < fb ? -1 : 1;
+    const ca = canonicalize(a);
+    const cb = canonicalize(b);
+    return ca < cb ? -1 : ca > cb ? 1 : 0;
+  });
+}
+
 function findingSortKey(f: CrawlFinding): string {
   const questId = f.location.questId ?? f.location.node ?? "";
   const step = String(f.step).padStart(12, "0");
@@ -390,6 +426,7 @@ export function runPlanInProcess(items: CrawlPlanItem[], opts: CrawlRunOptions):
         roomsVisited: roomsVisited.size,
         roomsTotal: totals.roomsTotal,
         actionsTried: actionsTried.size,
+        actionIdsTried: [...actionsTried].sort(),
         actionsTotal: totals.actionsTotal,
         endingsReached: [...endingsReached].sort(),
         endingsDeclared: totals.endingsDeclared,
@@ -410,7 +447,7 @@ export function runPlanInProcess(items: CrawlPlanItem[], opts: CrawlRunOptions):
     }
   }
 
-  const findings = dedupeFindings(allFindings);
+  const findings = dedupeFindings(canonicalFindingOrder(allFindings));
   const countsByCode: Record<string, number> = {};
   for (const f of findings) countsByCode[f.code] = (countsByCode[f.code] ?? 0) + 1;
 
@@ -428,6 +465,217 @@ export function runPlanInProcess(items: CrawlPlanItem[], opts: CrawlRunOptions):
     ...(truncated ? { truncated: true } : {}),
     ...(skippedItems.length > 0 ? { skippedItems } : {}),
   };
+}
+
+/**
+ * Split `seeds` into up to `workers` contiguous, non-overlapping, order-
+ * preserving slices (`slices.flat()` reunites to `seeds`) — never more slices
+ * than seeds (a slice is never empty; requesting more workers than seeds just
+ * yields fewer, non-empty slices). Whole seeds only: a `(quest,seed)` episode
+ * never splits across two slices. Pure, deterministic: same `(seeds,
+ * workers)` in ⇒ same slices out.
+ */
+export function sliceSeeds(seeds: readonly number[], workers: number): number[][] {
+  if (seeds.length === 0 || workers <= 0) return [];
+  const n = Math.min(workers, seeds.length);
+  const base = Math.floor(seeds.length / n);
+  const extra = seeds.length % n;
+  const slices: number[][] = [];
+  let idx = 0;
+  for (let i = 0; i < n; i++) {
+    const size = base + (i < extra ? 1 : 0);
+    slices.push(seeds.slice(idx, idx + size));
+    idx += size;
+  }
+  return slices;
+}
+
+/**
+ * Splits a plan's QUEST items into up to `workers` per-worker sub-plans, by
+ * slicing each item's own seed list via {@link sliceSeeds} (whole seeds per
+ * worker — see its doc comment). The overworld item, if any, is deliberately
+ * excluded here: Task 10 keeps it single-process, run directly by the parent
+ * (see `runPlanWithWorkers`) — it's one deterministic sweep rather than a
+ * per-seed loop, so fanning it out across workers would buy nothing. Only
+ * non-empty worker plans are returned (never spawn a worker with nothing to
+ * do). Pure: same `(items, workers)` in ⇒ same plans out, no I/O.
+ */
+export function buildWorkerPlans(
+  items: readonly CrawlPlanItem[],
+  workers: number,
+): CrawlPlanItem[][] {
+  const questItems = items.filter(
+    (i): i is Extract<CrawlPlanItem, { kind: "quest" }> => i.kind === "quest",
+  );
+  const plans: CrawlPlanItem[][] = Array.from({ length: Math.max(workers, 0) }, () => []);
+  for (const item of questItems) {
+    const slices = sliceSeeds(item.seeds, workers);
+    slices.forEach((seeds, i) => {
+      if (seeds.length > 0) plans[i]!.push({ ...item, seeds });
+    });
+  }
+  return plans.filter((p) => p.length > 0);
+}
+
+/**
+ * Merges per-quest coverage across shard summaries: rooms/endings are unioned
+ * EXACTLY (their `orphans`/`endingsReached` fields already carry the real id
+ * sets — see `QuestCoverageSummary`'s doc comments — so a room/ending is a
+ * global orphan only when EVERY shard failed to cover it); actions are
+ * unioned via `actionIdsTried` the same way. `roomsTotal`/`actionsTotal`/
+ * `endingsDeclared` are static per-quest content facts (from the prepared
+ * pack, not the seed), so they're invariant across shards — taken from
+ * whichever shard is encountered first for that quest.
+ */
+function mergeQuestCoverage(
+  summaries: readonly Partial<CrawlRunSummary>[],
+): Record<string, QuestCoverageSummary> {
+  const byQuest = new Map<string, QuestCoverageSummary[]>();
+  for (const s of summaries) {
+    for (const [questId, cov] of Object.entries(s.questCoverage ?? {})) {
+      const list = byQuest.get(questId);
+      if (list) list.push(cov);
+      else byQuest.set(questId, [cov]);
+    }
+  }
+
+  const merged: Record<string, QuestCoverageSummary> = {};
+  for (const questId of [...byQuest.keys()].sort()) {
+    const shards = byQuest.get(questId)!;
+    const first = shards[0]!;
+
+    const orphanRoomSets = shards.map((c) => new Set(c.orphans.rooms));
+    const orphanRooms = [...orphanRoomSets[0]!]
+      .filter((id) => orphanRoomSets.every((set) => set.has(id)))
+      .sort();
+
+    const endingsReached = [...new Set(shards.flatMap((c) => c.endingsReached))].sort();
+    const endingsDeclared = first.endingsDeclared;
+    const orphanEndings = endingsDeclared.filter((id) => !endingsReached.includes(id));
+
+    const actionIdsTried = [...new Set(shards.flatMap((c) => c.actionIdsTried))].sort();
+
+    merged[questId] = {
+      roomsVisited: first.roomsTotal - orphanRooms.length,
+      roomsTotal: first.roomsTotal,
+      actionsTried: actionIdsTried.length,
+      actionIdsTried,
+      actionsTotal: first.actionsTotal,
+      endingsReached,
+      endingsDeclared,
+      orphans: { rooms: orphanRooms, endings: orphanEndings },
+    };
+  }
+  return merged;
+}
+
+/**
+ * Merges shard `CrawlRunSummary`s (Task 10 worker fan-out): findings are
+ * concatenated, then re-deduped by `findingFingerprint` — using
+ * `canonicalFindingOrder` so which literal duplicate survives a collision
+ * depends only on the findings' own content, never on shard/array order (the
+ * hard invariant this function's test pins: `mergeSummaries([a,b])` equals
+ * `mergeSummaries([b,a])`) — then sorted by `(questId, code, step,
+ * fingerprint)`. `steps` is summed; per-quest coverage is unioned (see
+ * `mergeQuestCoverage`); the overworld item (single-process, run once by the
+ * parent) is carried through unchanged from whichever shard has it.
+ *
+ * Timing is NOT summed from the shards: `wallMs` reflects real parallel wall
+ * time, not each shard's own (smaller) wall time, so the caller measures it
+ * across the whole fan-out and passes it in; `stepsPerSec` is recomputed from
+ * the MERGED step count against that. Omitting `wallMs` falls back to
+ * summing shard wall times (only meaningful for tests/direct callers that
+ * don't care about real throughput).
+ *
+ * Deliberately defensive about missing fields (`?.`/`??` throughout): the
+ * merge test feeds it intentionally minimal/partial summaries.
+ */
+export function mergeSummaries(
+  summaries: readonly CrawlRunSummary[],
+  wallMs?: number,
+): CrawlRunSummary {
+  const allFindingsRaw: CrawlFinding[] = summaries.flatMap((s) => s?.findings ?? []);
+  const findings = sortFindings(dedupeFindings(canonicalFindingOrder(allFindingsRaw)));
+
+  const countsByCode: Record<string, number> = {};
+  for (const f of findings) countsByCode[f.code] = (countsByCode[f.code] ?? 0) + 1;
+
+  const steps = summaries.reduce((sum, s) => sum + (s?.steps ?? 0), 0);
+  const questCoverage = mergeQuestCoverage(summaries);
+  const overworld = summaries.map((s) => s?.overworld).find((o) => o !== undefined);
+  const truncated = summaries.some((s) => s?.truncated === true);
+  const skippedItems = [...new Set(summaries.flatMap((s) => s?.skippedItems ?? []))].sort();
+
+  const mergedWallMs = wallMs ?? summaries.reduce((sum, s) => sum + (s?.wallMs ?? 0), 0);
+  const stepsPerSec = mergedWallMs > 0 ? (steps / mergedWallMs) * 1000 : steps;
+
+  return {
+    findings,
+    countsByCode,
+    steps,
+    wallMs: mergedWallMs,
+    stepsPerSec,
+    questCoverage,
+    ...(overworld !== undefined ? { overworld } : {}),
+    ...(truncated ? { truncated: true } : {}),
+    ...(skippedItems.length > 0 ? { skippedItems } : {}),
+  };
+}
+
+/** Runs one worker thread on its slice of the plan, resolving with the
+ *  shard's `CrawlRunSummary`. Uses `worker_threads` (not a `child_process`
+ *  fallback): a live probe on this machine (Node 22+/Windows, tsx 4.19)
+ *  confirmed `new Worker(url, { execArgv: ["--import", "tsx"] })` correctly
+ *  transpiles/loads a `.ts` worker module AND its relative project imports,
+ *  so the brief's sanctioned fallback was never needed. */
+function runWorkerShard(items: CrawlPlanItem[], opts: CrawlRunOptions): Promise<CrawlRunSummary> {
+  return new Promise((resolve, reject) => {
+    const worker = new Worker(new URL("./worker_entry.ts", import.meta.url), {
+      workerData: { items, opts },
+      execArgv: ["--import", "tsx"],
+    });
+    let settled = false;
+    worker.once("message", (summary: CrawlRunSummary) => {
+      settled = true;
+      resolve(summary);
+      void worker.terminate();
+    });
+    worker.once("error", (err) => {
+      if (!settled) reject(err);
+    });
+    worker.once("exit", (code) => {
+      if (!settled && code !== 0) {
+        reject(new Error(`worker exited with code ${code} before posting a summary`));
+      }
+    });
+  });
+}
+
+/**
+ * Fans a plan's quest items out across `opts.workers` worker threads (Task
+ * 10) and merges their shard summaries back into one `CrawlRunSummary` via
+ * `mergeSummaries`. The overworld item, if present, runs single-process in
+ * THIS (parent) process — see `buildWorkerPlans`'s doc comment for why —
+ * concurrently with the worker fan-out. `wallMs` is measured across the
+ * WHOLE fan-out (workers + any parent-side overworld run), so
+ * `stepsPerSec` reflects real achieved parallelism.
+ */
+export async function runPlanWithWorkers(
+  items: CrawlPlanItem[],
+  opts: CrawlRunOptions,
+): Promise<CrawlRunSummary> {
+  const wallStart = Date.now();
+  const workerPlans = buildWorkerPlans(items, opts.workers);
+  const overworldItems = items.filter((i) => i.kind === "overworld");
+
+  const [shardSummaries, overworldSummary] = await Promise.all([
+    Promise.all(workerPlans.map((plan) => runWorkerShard(plan, opts))),
+    overworldItems.length > 0 ? runPlanInProcess(overworldItems, opts) : null,
+  ]);
+
+  const all = overworldSummary ? [...shardSummaries, overworldSummary] : shardSummaries;
+  const wallMs = Date.now() - wallStart;
+  return mergeSummaries(all, wallMs);
 }
 
 function renderSummaryMarkdown(

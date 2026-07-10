@@ -5,7 +5,7 @@
  * Usage:
  *   npm run crawl -- [flags]
  *   npm run crawl:smoke     # deterministic fixed-seed lane, all quests + overworld
- *   npm run crawl:deep      # long soak lane (worker fan-out lands in Task 10)
+ *   npm run crawl:deep      # long soak lane, worker-thread fan-out (Task 10)
  *
  * Thin main: parse -> resolve commit -> build plan -> run -> write artifacts ->
  * print summary -> exit code. All the actual logic lives in src/crawl/run.ts so
@@ -18,6 +18,7 @@ import {
   defaultOutDir,
   parseCrawlArgs,
   runPlanInProcess,
+  runPlanWithWorkers,
   sortFindings,
   writeRunArtifacts,
   type CrawlRunOptions,
@@ -33,7 +34,7 @@ function resolveCommit(): string {
   }
 }
 
-function main(): void {
+async function main(): Promise<void> {
   const argv = process.argv.slice(2);
 
   let parsed;
@@ -47,11 +48,6 @@ function main(): void {
     throw err;
   }
 
-  if (parsed.workers > 1) {
-    console.error("workers arrive in crawl:deep");
-    process.exit(2);
-  }
-
   const root = process.cwd();
   const commit = resolveCommit();
   const outDir = parsed.outDir ?? defaultOutDir();
@@ -59,7 +55,11 @@ function main(): void {
 
   const opts: CrawlRunOptions = { ...parsed, root, commit, outDir };
   const plan = buildPlan(opts);
-  const summary = runPlanInProcess(plan, opts);
+  // `--workers 1` keeps the original single-process path (unchanged since
+  // Task 8/9 — no fan-out/merge overhead); `--workers N>1` fans quest-item
+  // seeds out across N worker threads and merges their summaries (Task 10).
+  const summary =
+    opts.workers > 1 ? await runPlanWithWorkers(plan, opts) : runPlanInProcess(plan, opts);
   writeRunArtifacts(outDir, summary, { argv, commit, startedAt });
 
   for (const questId of Object.keys(summary.questCoverage).sort()) {
@@ -96,4 +96,7 @@ function main(): void {
   process.exit(nonOrphan.length > 0 ? 1 : 0);
 }
 
-main();
+main().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});
