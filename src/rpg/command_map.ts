@@ -115,11 +115,36 @@ function customUseByVerb(index: RpgModelIndex, verb: string, rest: string): RpgA
     : { type: "USE", item: hit.item, target: hit.target };
 }
 
+const npcAliasCache = new WeakMap<
+  RpgModelIndex,
+  { exact: Map<string, string>; list: Array<{ id: string; nameNorm: string }> }
+>();
+
+function npcAliasMap(index: RpgModelIndex) {
+  let cache = npcAliasCache.get(index);
+  if (!cache) {
+    const exact = new Map<string, string>();
+    const list: Array<{ id: string; nameNorm: string }> = [];
+    for (const npc of index.npcs.values()) {
+      const nameNorm = npc.name.toLowerCase();
+      exact.set(npc.id, npc.id);
+      if (!exact.has(nameNorm)) exact.set(nameNorm, npc.id);
+      list.push({ id: npc.id, nameNorm });
+    }
+    cache = { exact, list };
+    npcAliasCache.set(index, cache);
+  }
+  return cache;
+}
+
 function resolveNpc(index: RpgModelIndex, phrase: string): string | null {
   const norm = stripArticle(phrase).toLowerCase().trim();
-  for (const npc of index.npcs.values()) {
-    if (npc.id === norm || npc.name.toLowerCase() === norm || npc.name.toLowerCase().includes(norm))
-      return npc.id;
+  if (!norm) return null;
+  const cache = npcAliasMap(index);
+  const exactMatch = cache.exact.get(norm);
+  if (exactMatch) return exactMatch;
+  for (const entry of cache.list) {
+    if (entry.nameNorm.includes(norm)) return entry.id;
   }
   return null;
 }
