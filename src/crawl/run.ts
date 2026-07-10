@@ -7,9 +7,11 @@
  *
  * `parseCrawlArgs` and `buildPlan` are pure (no I/O beyond `listShippedQuestIds`'s
  * directory read, no wall clock) so they are unit-testable without running a
- * crawl; so are `mergeSummaries`, `sliceSeeds`, and `buildWorkerPlans`, the
- * pure pieces of the worker fan-out. `runPlanInProcess`, `runPlanWithWorkers`,
- * and `writeRunArtifacts` do the actual work and are exercised by the live
+ * crawl; so are `mergeSummaries`, `sliceSeeds`, `buildWorkerPlans`, and
+ * `finalizeFindings` (the shared dedupe/sort/count step `runPlanInProcess` and
+ * `mergeSummaries` both route through — see its doc comment), the pure pieces
+ * of the worker fan-out. `runPlanInProcess`, `runPlanWithWorkers`, and
+ * `writeRunArtifacts` do the actual work and are exercised by the live
  * checkpoints instead (see bin/crawl.ts and the task brief).
  */
 import { mkdirSync, writeFileSync } from "node:fs";
@@ -353,6 +355,32 @@ export function sortFindings(findings: readonly CrawlFinding[]): CrawlFinding[] 
 }
 
 /**
+ * Shared finding finalization for BOTH `runPlanInProcess` (single-process) and
+ * `mergeSummaries` (worker fan-out) — a Task 10 review fix. Before this, each
+ * hand-rolled its own dedupe/count: `runPlanInProcess` deduped via
+ * `canonicalFindingOrder` (fingerprint/code-first) and built `countsByCode`
+ * from THAT order, while `mergeSummaries` additionally applied `sortFindings`
+ * (questId-first) before counting. `findings.jsonl` was safe either way
+ * (`writeRunArtifacts` always re-sorts before writing it), but `summary.json`
+ * embeds the `findings` array and `countsByCode` object as-built — so their
+ * JSON array/key order silently depended on `--workers`, even though the
+ * VALUES were always worker-count-invariant. Routing both callers through one
+ * function makes that impossible by construction: dedupe (tie-broken by
+ * `canonicalFindingOrder` — content, never arrival order), sort into the
+ * `sortFindings` artifact order, THEN derive `countsByCode` from that same
+ * sorted array, in the one place both callers share.
+ */
+export function finalizeFindings(rawFindings: readonly CrawlFinding[]): {
+  findings: CrawlFinding[];
+  countsByCode: Record<string, number>;
+} {
+  const findings = sortFindings(dedupeFindings(canonicalFindingOrder(rawFindings)));
+  const countsByCode: Record<string, number> = {};
+  for (const f of findings) countsByCode[f.code] = (countsByCode[f.code] ?? 0) + 1;
+  return { findings, countsByCode };
+}
+
+/**
  * Overworld crawl seam (Task 8) — runs the full deterministic overworld sweep
  * (edge sweep, boards/quest discovery, quest round trips, coverage) via
  * `crawlOverworld`. `questRoundTrips` is always on here: a real run (smoke,
@@ -447,9 +475,7 @@ export function runPlanInProcess(items: CrawlPlanItem[], opts: CrawlRunOptions):
     }
   }
 
-  const findings = dedupeFindings(canonicalFindingOrder(allFindings));
-  const countsByCode: Record<string, number> = {};
-  for (const f of findings) countsByCode[f.code] = (countsByCode[f.code] ?? 0) + 1;
+  const { findings, countsByCode } = finalizeFindings(allFindings);
 
   const wallMs = Date.now() - wallStart;
   const stepsPerSec = wallMs > 0 ? (totalSteps / wallMs) * 1000 : totalSteps;
@@ -595,10 +621,7 @@ export function mergeSummaries(
   wallMs?: number,
 ): CrawlRunSummary {
   const allFindingsRaw: CrawlFinding[] = summaries.flatMap((s) => s?.findings ?? []);
-  const findings = sortFindings(dedupeFindings(canonicalFindingOrder(allFindingsRaw)));
-
-  const countsByCode: Record<string, number> = {};
-  for (const f of findings) countsByCode[f.code] = (countsByCode[f.code] ?? 0) + 1;
+  const { findings, countsByCode } = finalizeFindings(allFindingsRaw);
 
   const steps = summaries.reduce((sum, s) => sum + (s?.steps ?? 0), 0);
   const questCoverage = mergeQuestCoverage(summaries);
@@ -627,7 +650,27 @@ export function mergeSummaries(
  *  fallback): a live probe on this machine (Node 22+/Windows, tsx 4.19)
  *  confirmed `new Worker(url, { execArgv: ["--import", "tsx"] })` correctly
  *  transpiles/loads a `.ts` worker module AND its relative project imports,
- *  so the brief's sanctioned fallback was never needed. */
+ *  so the brief's sanctioned fallback was never needed.
+ *
+ *  `--seconds` deadline note: `opts` (including `secondsBudget`) is passed
+ *  through unchanged to `worker_entry.ts`'s `runPlanInProcess(items, opts)`
+ *  call, which computes ITS OWN `wallStart`/`deadline` from `Date.now()`
+ *  inside the worker thread — there is no single global deadline shared
+ *  across shards, and the parent never enforces one of its own either. This
+ *  is deliberately per-worker, not global, and is acceptable because: (1) all
+ *  workers are spawned back-to-back in one synchronous loop
+ *  (`workerPlans.map(...)` in `runPlanWithWorkers`), so their wall clocks
+ *  start within milliseconds of each other — not close enough to promise a
+ *  shared deadline to the millisecond, but close enough that a worker
+ *  drifting past `--seconds` by "however long its siblings took to spawn"
+ *  (microseconds-to-low-milliseconds) is immaterial; (2) `secondsBudget` is
+ *  already a SOFT cutoff even in the single-process path — checked only
+ *  between plan items, never mid-quest — so a shard can already run over by
+ *  up to one (quest,seed) episode's worth of time; and (3) any truncation is
+ *  loud: a shard that hits its deadline sets `truncated`/`skippedItems`,
+ *  which `mergeSummaries` ORs/unions across shards into the merged summary
+ *  (see its doc comment), so a per-worker overrun is always visible in
+ *  `summary.json`/`summary.md`, never silently swallowed. */
 function runWorkerShard(items: CrawlPlanItem[], opts: CrawlRunOptions): Promise<CrawlRunSummary> {
   return new Promise((resolve, reject) => {
     const worker = new Worker(new URL("./worker_entry.ts", import.meta.url), {
@@ -659,6 +702,14 @@ function runWorkerShard(items: CrawlPlanItem[], opts: CrawlRunOptions): Promise<
  * concurrently with the worker fan-out. `wallMs` is measured across the
  * WHOLE fan-out (workers + any parent-side overworld run), so
  * `stepsPerSec` reflects real achieved parallelism.
+ *
+ * `--seconds` (`opts.secondsBudget`) is NOT enforced as one global deadline
+ * here — this function has no clock of its own for it. Each worker shard (via
+ * `runWorkerShard`/`worker_entry.ts`) and the parent's own overworld run (via
+ * `runPlanInProcess` above) independently compute their OWN wall-clock
+ * deadline from their own `Date.now()` at the moment they start. See
+ * `runWorkerShard`'s doc comment for why a per-worker deadline (rather than
+ * one shared/global one) is an acceptable choice here.
  */
 export async function runPlanWithWorkers(
   items: CrawlPlanItem[],

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   parseCrawlArgs,
   buildPlan,
+  finalizeFindings,
   mergeSummaries,
   sliceSeeds,
   type CrawlPlanItem,
@@ -120,6 +121,78 @@ describe("mergeSummaries", () => {
     const merged = mergeSummaries([s1, s2] as never, 200);
     expect(merged.wallMs).toBe(200);
     expect(merged.stepsPerSec).toBeCloseTo((200 / 200) * 1000, 5);
+  });
+});
+
+/**
+ * Task 10 review fix: `summary.json` embeds `findings`/`countsByCode` as
+ * built, not just as sets/values — so BOTH the single-process path
+ * (`runPlanInProcess`, via `finalizeFindings`) and the worker-merge path
+ * (`mergeSummaries`, via the SAME `finalizeFindings`) must produce identical
+ * array/key ORDER for identical finding content, never an order that depends
+ * on how many workers ran, or in what order shards happened to concatenate.
+ * `quest_a`'s only code (WORLD) sorts alphabetically AFTER `quest_b`'s only
+ * code (CRASH) — so a fingerprint/code-first order (the pre-fix bug: code
+ * first, so CRASH before WORLD/LEGALITY) and a questId-first order (the
+ * correct `sortFindings` artifact order: quest_a's codes before quest_b's)
+ * disagree on which code appears first. That disagreement is exactly what
+ * pins the regression.
+ */
+describe("finalizeFindings (shared by runPlanInProcess and mergeSummaries)", () => {
+  const finding = (code: string, questId: string, seed: number, step: number, msg: string) =>
+    ({
+      code,
+      severity: "S2",
+      seed,
+      policy: "mixed",
+      step,
+      location: { region: null, node: null, questId, sceneId: "r" },
+      action: null,
+      message: msg,
+      stateHash: null,
+      commit: "x",
+      repro: { kind: "none", trace: null, minimized: false },
+    }) as const;
+
+  // Multi-code (CRASH, WORLD, LEGALITY, RENDER), multi-quest (quest_a/b/c) set,
+  // fed in an arrival order that matches neither the fingerprint/code-first
+  // order nor the correct questId-first order — so nothing "accidentally"
+  // passes by matching input order.
+  const raw = [
+    finding("RENDER", "quest_c", 1, 1, "delta"),
+    finding("CRASH", "quest_b", 1, 1, "alpha"),
+    finding("WORLD", "quest_a", 2, 1, "beta"),
+    finding("LEGALITY", "quest_a", 1, 2, "gamma"),
+  ] as never as Parameters<typeof finalizeFindings>[0];
+
+  it("orders findings/countsByCode by (questId, code) — NOT by fingerprint's code-first order", () => {
+    const { findings, countsByCode } = finalizeFindings(raw);
+    // questId-first: quest_a (LEGALITY before WORLD, alphabetically) then quest_b then quest_c.
+    expect(findings.map((f) => `${f.location.questId}:${f.code}`)).toEqual([
+      "quest_a:LEGALITY",
+      "quest_a:WORLD",
+      "quest_b:CRASH",
+      "quest_c:RENDER",
+    ]);
+    expect(Object.keys(countsByCode)).toEqual(["LEGALITY", "WORLD", "CRASH", "RENDER"]);
+    // The old bug's order (fingerprint/code-first, alphabetical by CODE alone)
+    // would have put CRASH first — assert we do NOT match that shape.
+    expect(Object.keys(countsByCode)).not.toEqual(["CRASH", "LEGALITY", "RENDER", "WORLD"]);
+  });
+
+  it("both paths agree: finalizeFindings(raw) directly vs. mergeSummaries splitting the SAME findings across shards in a different order", () => {
+    const direct = finalizeFindings(raw);
+
+    // Simulate a worker fan-out: the same findings, split into two shards in
+    // an order that differs from `raw`'s own arrival order (as a real
+    // multi-worker run's shard-completion order would).
+    const shardA = { findings: [raw[2]!, raw[0]!], steps: 0 } as never;
+    const shardB = { findings: [raw[3]!, raw[1]!], steps: 0 } as never;
+    const merged = mergeSummaries([shardA, shardB]);
+
+    expect(merged.findings).toEqual(direct.findings);
+    expect(Object.keys(merged.countsByCode)).toEqual(Object.keys(direct.countsByCode));
+    expect(merged.countsByCode).toEqual(direct.countsByCode);
   });
 });
 
