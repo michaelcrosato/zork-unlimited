@@ -5,6 +5,7 @@ import {
   compactOverworldCompletedArcs,
   compactOverworldJournalEntries,
   compactOverworldLabel,
+  compactOverworldJobLeadRefs,
   compactOverworldMovementTruncated,
   compactOverworldQuestRefs,
   compactOverworldRefs,
@@ -59,6 +60,7 @@ export type OverworldSessionCompactViewState = {
   contacts: readonly OverworldCharacter[];
   events: readonly OverworldLocalEvent[];
   jobs: readonly OverworldLocalJob[];
+  rememberedJobs: readonly OverworldLocalJob[];
   sites: readonly OverworldExplorationSite[];
   quests: readonly OverworldQuestView[];
   hiddenAreaCount: number;
@@ -84,6 +86,7 @@ export function buildOverworldSessionCompactView(
   const routePathsTruncated = compactOverworldRoutePathsTruncated(state.routeOptions);
   const idPayload = compactOverworldSessionIdPayload(state.ids);
   const jobs = compactOverworldTitleRefs(state.jobs);
+  const rememberedJobs = compactOverworldJobLeadRefs(state.rememberedJobs);
   const sites = compactOverworldTitleRefs(state.sites);
   const quests = compactOverworldQuestRefs(state.quests);
   const pendingRoad = compactPendingRoad(state.pendingRoadEncounter);
@@ -104,6 +107,7 @@ export function buildOverworldSessionCompactView(
     contacts: state.contacts.length,
     events: state.events.length,
     jobs: state.jobs.length,
+    remembered_jobs: state.rememberedJobs.length,
     sites: state.sites.length,
     quests: state.quests.length,
   });
@@ -146,6 +150,7 @@ export function buildOverworldSessionCompactView(
     events,
     ...(localRefsTruncated.length > 0 ? { local_refs_truncated: localRefsTruncated } : {}),
     ...(jobs.length > 0 ? { jobs } : {}),
+    ...(rememberedJobs.length > 0 ? { remembered_jobs: rememberedJobs } : {}),
     ...(sites.length > 0 ? { sites } : {}),
     ...(quests.length > 0 ? { quests } : {}),
     ...(pendingRoad ? { pending_road: pendingRoad } : {}),

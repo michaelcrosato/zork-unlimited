@@ -142,13 +142,13 @@ const explore = (a: RpgAction): boolean => !LIVENESS_SKIP.has(a.type);
 // Matches the RPG census/reachability oracles' bound. We walk the bracketed graph twice
 // in lock-step per pack; a cap-out surfaces as a loud failure rather than a hang.
 const MAX_STATES = 200_000;
-// Generous per-test budget. wolf_winter's bracketed graph is ~123k distinct states — by far
-// the heaviest test in the suite — so even after the native fast-path comparison below cut its
-// per-state comparison cost ~5x, it runs tens of seconds and stretches further under a loaded/shared CI
-// runner (sibling test files competing for a few vCPUs). This headroom absorbs that variance
+// Generous per-test budget. tide_mill's bracketed graph is the heaviest in the suite (~42s
+// isolated on a fast dev box; wolf_winter ~23s), and under a loaded/shared CI runner (sibling
+// test files competing for a few vCPUs) that stretches ~3x — tide_mill's leg blew past the
+// previous 120s budget on its first CI run (PR #80). This headroom absorbs that variance
 // without loosening correctness: MAX_STATES, not the clock, bounds the work, so a genuine hang
 // still fails — just with margin. (Same rationale as vitest.config.ts's testTimeout.)
-const TEST_TIMEOUT_MS = 120_000;
+const TEST_TIMEOUT_MS = 300_000;
 
 // Best/worst-roll PRNGs, identical to rpg_all_endings_reachable / rpg_metamorphic_relabel.
 // resolveAttack draws player strike first, enemy reply second; resolveSkillCheck draws once.

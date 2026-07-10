@@ -12,7 +12,7 @@ import type { Effect } from "../core/effects.js";
 import type { RpgAction } from "../api/types.js";
 import type { Resolution } from "../core/engine.js";
 import type { GameState } from "../core/state.js";
-import type { Interaction } from "./schema.js";
+import type { DialogueTopic, Interaction } from "./schema.js";
 import {
   type RpgModelIndex,
   activeDialogue,
@@ -43,6 +43,10 @@ export type RpgActionOption = {
   skill_check?: { skill: string; difficulty: number; die: string };
 };
 
+function dialogueTopicMatches(topic: DialogueTopic, id: string): boolean {
+  return topic.id === id || (topic.aliases ?? []).includes(id);
+}
+
 // State-aware so an enumerated command shows the object's REACTIVE name (bug_0188):
 // a righted "toppled cresset" re-labels itself rather than freezing the stale word
 // into "look at toppled cresset". Absent any variant `name` this is the base name.
@@ -63,10 +67,12 @@ export function useInteraction(
   index: RpgModelIndex,
   target: string,
   item?: string,
+  state?: GameState,
 ): Interaction | undefined {
-  return index.objects
-    .get(target)
-    ?.interactions.find((it) => it.verb === "USE" && it.item === item && it.target === target);
+  return index.objects.get(target)?.interactions.find((it) => {
+    if (it.verb !== "USE" || it.item !== item || it.target !== target) return false;
+    return state === undefined || evalConditions(it.conditions, state);
+  });
 }
 
 function readInteractions(index: RpgModelIndex, target: string): Interaction[] {
@@ -164,9 +170,9 @@ export function resolveRpgAction(
       if (!state.inventory.includes(action.item)) return null;
       const o = index.objects.get(action.item);
       if (!o) return null;
-      // A held (worn/equipped/bound) object can never be set down — the player
-      // carries it the whole game (schema `held: true`); DROP simply isn't offered.
-      if (o.held) return null;
+      // A held (worn/equipped/bound) or deliberately non-droppable object can
+      // never be set down; DROP simply isn't offered.
+      if (o.held || o.droppable === false) return null;
       return {
         conditions: [],
         effects: [
@@ -243,7 +249,7 @@ export function resolveRpgAction(
       };
     }
     case "USE": {
-      const it = useInteraction(index, action.target, action.item);
+      const it = useInteraction(index, action.target, action.item, state);
       if (!it || !present(index, state, action.target)) return null;
       if (action.item !== undefined && !state.inventory.includes(action.item)) return null;
       const itemConditions: Condition[] =
@@ -274,7 +280,7 @@ export function resolveRpgAction(
     case "ASK": {
       const active = activeDialogue(index, state);
       if (!active || active.npc.id !== action.npc) return null;
-      const topic = active.node.topics.find((t) => t.id === action.topic);
+      const topic = active.node.topics.find((t) => dialogueTopicMatches(t, action.topic));
       if (!topic) return null;
       // A gated topic is filtered from the legal set (via `option`) and re-checked
       // here by the engine, so a told-once info topic can retire itself.
@@ -403,6 +409,7 @@ export function enumerateRpgBaseActions(index: RpgModelIndex, state: GameState):
   for (const o of index.pack.objects) {
     for (const it of o.interactions) {
       if (it.verb !== "USE" || it.target === undefined) continue;
+      if (!evalConditions(it.conditions, state)) continue;
       const selfUse = it.item !== undefined && it.item === it.target;
       const id =
         it.item === undefined

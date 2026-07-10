@@ -191,6 +191,7 @@ export const ObjectSchema = z
     description: z.string().min(1),
     variants: z.array(ObjectVariantSchema).optional(),
     takeable: z.boolean().default(false),
+    droppable: z.boolean().optional(),
     held: z.boolean().optional(),
     quest_critical: z.boolean().default(false),
     read_text: z.string().min(1).optional(),
@@ -236,6 +237,7 @@ export const ObjectSchema = z
 export const DialogueTopicSchema = z
   .object({
     id: z.string().min(1),
+    aliases: z.array(z.string().min(1)).optional(),
     prompt: z.string().min(1),
     conditions: z.array(ConditionSchema).optional(),
     goto: z.string().min(1).optional(),

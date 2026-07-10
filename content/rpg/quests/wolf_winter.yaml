@@ -16,10 +16,10 @@
 # and preparation decide the fights, so the promise can be honest. A killing winter
 # has driven a wolf-pack down out of the high wood onto a lone steading, and three of
 # them have come over the broken paling at the byre where the last of the cattle —
-# the family's whole winter — are penned. You are the steading's hunter, the only one
-# left awake. The old houndsman by the byre door can no longer hold a spear, but he
-# has run wolves off this steading for forty winters and there is nothing about how a
-# wolf comes in that he does not know; heed him (where the rush leaves the throat open,
+# the family's whole winter — are penned. You arrive as Albany's relief rider, handed
+# the steading's only spear because the old houndsman by the byre door can no longer
+# hold it. He has run wolves off this steading for forty winters and there is nothing
+# about how a wolf comes in that he does not know; heed him (where the rush leaves the throat open,
 # +2 attack) AND pull on the padded byre-jerkin from the store (a wolf's teeth ring off
 # the layered hide, +2 defense) and he can make a true promise: "speared right and
 # padded, lad, no wolf in that pack will pull you down." That promise is the
@@ -81,11 +81,13 @@ rooms:
   - id: steading_yard
     name: "The Steading Yard"
     description: >
-      The yard of a lone hill-steading in the black of a killing winter night. The
-      house is shuttered and dark behind you and your hunting-spear is already in your
-      fist — the steading's only spear, and yours by trade; somewhere up the high wood a
-      pack is singing, close and getting closer, and down here the cattle have begun to
-      low and shove in their pen. The byre and its yard lie through the gate to the north.
+      The Albany winter-relief packet is no longer paper: the hill road has dropped you
+      into the yard of a lone steading in the black of a killing winter night. The house
+      is shuttered and dark behind you, and the hunting-spear they pressed on you is
+      already in your fist — the steading's only spear, because no one else awake can
+      hold it. Somewhere up the high wood a pack is singing, close and getting closer,
+      and down here the cattle have begun to low and shove in their pen. The byre and
+      its yard lie through the gate to the north.
     # The yard re-describes itself once the watch is taken up (quest the_watch). Reactive
     # prose only — no exit, win or ending turns on the stage. (A later byre_held variant was
     # cut: after the leader falls the player wins at cattle_stand without re-viewing the yard,
@@ -94,9 +96,10 @@ rooms:
     variants:
       - when: [{ quest_stage: { quest: the_watch, stage: watch_set } }]
         text: >
-          The steading yard, the dark house shuttered at your back and your spear in your
-          fist. The watch is taken up now — the byre is the whole of the night, and the
-          wolves are in it. The byre and its yard lie through the gate to the north.
+          The steading yard, the Albany route tag tucked cold under your coat and the
+          borrowed spear in your fist. The watch is taken up now — the byre is the whole
+          of the night, and the wolves are in it. The byre and its yard lie through the
+          gate to the north.
     exits:
       - { direction: north, to: byre_yard }
 
@@ -387,7 +390,7 @@ npcs:
     description: >
       A bent old houndsman in a wolfskin cap, propped in the byre door with a lantern and
       a stick. Too stiff in the hands to hold a spear this winter, but clear-eyed and
-      unafraid, and plainly glad the steading's hunter has come down awake.
+      unafraid, and plainly glad Albany's relief rider has reached the door awake.
     room: byre_yard
     # Every npc_text is PURE SPOKEN words (the bug_0071 convention): the engine renders
     # `old Cade the houndsman: "<npc_text>"`. The counsel topic retires once told (gated
@@ -408,7 +411,7 @@ npcs:
       nodes:
         - id: cade_root
           npc_text: >
-            You came down awake — good. I cannot hold the door myself this winter, these
+            You came up from Albany awake — good. I cannot hold the door myself this winter, these
             hands are done, but you can, and you must: the byre is the whole winter, lad,
             lose the cattle and we starve before spring. Three of them are through the
             paling already and the old grey bitch leads them. Ask, if you would — I have
@@ -417,18 +420,20 @@ npcs:
           variants:
             - when: [{ any_of: [{ has_flag: heard_counsel }, { has_flag: heard_plan }] }]
               text: >
-                Old Cade shifts his ruined hands under the blanket. "Ask what else
-                you need, lad. The wolves won't wait on either of us."
+                Ask what else you need, lad. The wolves will not wait on either of us.
           topics:
-            - id: ask_wolves
+            - id: wolves
+              aliases: [ask_wolves]
               prompt: "Ask how to fight the wolves and live."
               conditions: [{ not_flag: heard_counsel }]
               goto: cade_wolves
-            - id: ask_byre
+            - id: byre
+              aliases: [ask_byre]
               prompt: "Ask how the byre is to be held."
               conditions: [{ not_flag: heard_plan }]
               goto: cade_byre
-            - id: leave_cade
+            - id: leave
+              aliases: [leave_cade]
               prompt: "Leave old Cade and hold the byre."
               end: true
         - id: cade_wolves
@@ -455,9 +460,18 @@ npcs:
             - inc_var: { name: score, by: 5 }
             - add_journal: "Old Cade shows you where a wolf's rush leaves its throat and shoulder open — you feel you could strike truer now (+2 attack)."
           topics:
+            - id: byre
+              aliases: [ask_byre]
+              prompt: "Ask next how the byre is to be held."
+              conditions: [{ not_flag: heard_plan }]
+              goto: cade_byre
             - id: wolves_back
               prompt: "Nod, and ask something else."
               goto: cade_root
+            - id: leave
+              aliases: [leave_cade]
+              prompt: "Leave old Cade and hold the byre."
+              end: true
         - id: cade_byre
           npc_text: >
             The byre's simple enough: there's the one way in, past the broken paling and
@@ -474,9 +488,18 @@ npcs:
             - set_flag: heard_plan
             - add_journal: "Old Cade says to hold the byre's one corridor and work forward — paling to door to the back wall — and the pack will break once its three boldest are down. He says too there's a fallen rail at the paling: take it up and wedge it across the breach to half-shut the gap."
           topics:
+            - id: wolves
+              aliases: [ask_wolves]
+              prompt: "Ask next how to fight the wolves and live."
+              conditions: [{ not_flag: heard_counsel }]
+              goto: cade_wolves
             - id: byre_back
               prompt: "Thank him, and ask something else."
               goto: cade_root
+            - id: leave
+              aliases: [leave_cade]
+              prompt: "Leave old Cade and hold the byre."
+              end: true
 
 enemies:
   # The fair three-fight gauntlet (combat_guaranteed). Combat is one ATTACK = one round:

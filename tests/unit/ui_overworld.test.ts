@@ -14,6 +14,7 @@ import {
   compactOverworldView,
 } from "../../src/world/compact_view.js";
 import { buildOverworldSessionCompactView } from "../../src/world/session_compact_view.js";
+import { questCompletionMinutes } from "../../src/world/session_quests.js";
 import { OverworldSession } from "../../ui/src/overworld.js";
 
 const world = loadOverworldManifest(process.cwd());
@@ -81,6 +82,7 @@ describe("OverworldSession", () => {
     expect(view.sites).toEqual([]);
     expect(view.hiddenSiteCount).toBeGreaterThan(0);
     expect(view.jobs).toEqual([]);
+    expect(view.rememberedJobs).toEqual([]);
     expect(view.hiddenJobCount).toBeGreaterThan(0);
     expect(view.discoveredJobIds).toEqual([]);
     expect(view.completedJobIds).toEqual([]);
@@ -100,6 +102,58 @@ describe("OverworldSession", () => {
     expect(colonieOption?.estimate.elapsedMinutes).toBe(colonieOption?.totalMinutes);
     expect(colonieOption?.estimate.suppliesNeeded).toBeGreaterThan(0);
     expect(colonieOption?.estimate.fatigueGained).toBeGreaterThan(0);
+
+    const openingText = [
+      view.current.description,
+      view.currentArea?.summary,
+      view.currentArea?.discovery,
+      view.pois[0]?.summary,
+      view.characters[0]?.summary,
+      view.characters[0]?.agenda,
+      view.events[0]?.summary,
+    ].join(" ");
+    expect(openingText).toContain("Three leads sit close enough to start with");
+    expect(openingText).toContain("marked Notice Hall board");
+    expect(openingText).toContain("Rowan Quill's records desk");
+    expect(openingText).toContain("charter-backlog stair");
+    expect(openingText).toContain("Scouting the board turns those marks into local work");
+    expect(openingText).toContain("Ask Rowan what matters before the office closes");
+    expect(openingText).toContain("inspect the stair and underrooms");
+    expect(openingText).not.toMatch(
+      /concrete local lead point|local problems|hidden count|tutorial|command/i,
+    );
+  });
+
+  it("keeps Albany's first scout, talk, and explore choices on the same reveal loop", () => {
+    const scoutSession = new OverworldSession(world);
+    const scoutStart = scoutSession.view();
+    const scouted = scoutSession.scoutPoi(scoutStart.pois[0]!.id);
+    expect(scouted.discoveredAreas?.map((area) => area.id)).toEqual(["albany_city__market"]);
+    expect(scouted.discoveredJobs?.map((job) => job.id)).toEqual(["albany_city__civic_core__job"]);
+    expect(scouted.discoveredSites?.map((site) => site.id)).toEqual([
+      "albany_city__civic_core__site",
+    ]);
+    expect(scouted.discoveredQuests).toEqual([]);
+
+    const talkSession = new OverworldSession(world);
+    const talkStart = talkSession.view();
+    const talked = talkSession.talkToCharacter(talkStart.characters[0]!.id);
+    expect(talked.discoveredAreas?.map((area) => area.id)).toEqual(["albany_city__market"]);
+    expect(talked.discoveredJobs?.map((job) => job.id)).toEqual(["albany_city__civic_core__job"]);
+    expect(talked.discoveredSites?.map((site) => site.id)).toEqual([
+      "albany_city__civic_core__site",
+    ]);
+    expect(talked.discoveredQuests).toEqual([]);
+
+    const exploreSession = new OverworldSession(world);
+    const exploreStart = exploreSession.view();
+    const explored = exploreSession.exploreArea(exploreStart.currentArea!.id);
+    expect(explored.discoveredAreas?.map((area) => area.id)).toEqual(["albany_city__market"]);
+    expect(explored.discoveredJobs?.map((job) => job.id)).toEqual(["albany_city__civic_core__job"]);
+    expect(explored.discoveredSites?.map((site) => site.id)).toEqual([
+      "albany_city__civic_core__site",
+    ]);
+    expect(explored.discoveredQuests).toEqual([]);
   });
 
   it("maps local areas progressively before exhausting a town", () => {
@@ -190,13 +244,67 @@ describe("OverworldSession", () => {
 
     const after = session.view();
     expect(after.completedJobIds).toContain(job.id);
+    expect(after.jobs.map((candidate) => candidate.id)).not.toContain(job.id);
+    expect(after.rememberedJobs.map((candidate) => candidate.id)).not.toContain(job.id);
     expect(after.regionRenown[start.current.region]).toBe(job.difficulty);
     expect(after.journal[0]?.kind).toBe("job");
+
+    const compactAfter = session.compactView();
+    expect(compactAfter.jobs?.map(([id]) => id) ?? []).not.toContain(job.id);
+    expect(compactAfter.remembered_jobs?.map(([id]) => id) ?? []).not.toContain(job.id);
+    expect(compactAfter.ids.completed_jobs ?? []).toContain(job.id);
+    expect(compactAfter.journal?.[0]?.[0]).toBe("job");
 
     const repeated = session.workLocalJob(job.id);
     expect(repeated.alreadyKnown).toBe(true);
     expect(repeated.minutes).toBe(0);
     expect(repeated.discoveredJobs).toEqual([]);
+  });
+
+  it("remembers unfinished jobs discovered outside the current local area", () => {
+    const session = new OverworldSession(world);
+    const start = session.view();
+    const currentAreaId = start.currentArea!.id;
+
+    session.talkToCharacter(start.characters[0]!.id);
+    const scouted = session.scoutPoi(start.pois[0]!.id);
+    const rememberedJob = (scouted.discoveredJobs ?? []).find((job) => job.area !== currentAreaId);
+    expect(rememberedJob).toBeDefined();
+
+    const afterDiscovery = session.view();
+    expect(afterDiscovery.currentArea?.id).toBe(currentAreaId);
+    expect(afterDiscovery.jobs.map((job) => job.id)).not.toContain(rememberedJob!.id);
+    expect(afterDiscovery.rememberedJobs.map((job) => job.id)).toContain(rememberedJob!.id);
+    expect(afterDiscovery.rememberedJobs[0]).toMatchObject({
+      id: rememberedJob!.id,
+      area: rememberedJob!.area,
+    });
+    expect(() => session.workLocalJob(rememberedJob!.id)).toThrow(/Move to that local area/i);
+
+    const compactAfterDiscovery = session.compactView();
+    expect(compactAfterDiscovery.jobs?.map(([id]) => id) ?? []).not.toContain(rememberedJob!.id);
+    expect(compactAfterDiscovery.remembered_jobs).toContainEqual([
+      rememberedJob!.id,
+      rememberedJob!.title,
+      rememberedJob!.area,
+    ]);
+
+    const routeToRememberedJob = afterDiscovery.areaExits.find(
+      (exit) => exit.destination.id === rememberedJob!.area,
+    );
+    expect(routeToRememberedJob).toBeDefined();
+    session.moveArea(routeToRememberedJob!.id);
+
+    const inJobArea = session.view();
+    expect(inJobArea.currentArea?.id).toBe(rememberedJob!.area);
+    expect(inJobArea.jobs.map((job) => job.id)).toContain(rememberedJob!.id);
+    expect(inJobArea.rememberedJobs.map((job) => job.id)).not.toContain(rememberedJob!.id);
+
+    session.workLocalJob(rememberedJob!.id);
+    const afterCompletion = session.view();
+    expect(afterCompletion.completedJobIds).toContain(rememberedJob!.id);
+    expect(afterCompletion.jobs.map((job) => job.id)).not.toContain(rememberedJob!.id);
+    expect(afterCompletion.rememberedJobs.map((job) => job.id)).not.toContain(rememberedJob!.id);
   });
 
   it("advances location, clock, supplies, and fatigue by the selected road travel time", () => {
@@ -207,7 +315,17 @@ describe("OverworldSession", () => {
 
     const entry = session.travel(road!.id);
     const after = session.view();
-    expect(after.current.id).toBe("colonie_town");
+    expect(after.current.id).toBe(`road:${road!.id}`);
+    expect(after.current.name).toBe(`On ${road!.route}: Albany city to Colonie town`);
+    expect(after.current.description).toContain(
+      "You are still between Albany city and Colonie town",
+    );
+    expect(after.currentArea).toBeNull();
+    expect(after.exits).toEqual([]);
+    expect(after.areaExits).toEqual([]);
+    expect(after.areas).toEqual([]);
+    expect(after.jobs).toEqual([]);
+    expect(after.routeOptions).toEqual([]);
     expect(entry.baseMinutes).toBe(road!.travel_minutes);
     expect(entry.delayMinutes).toBe(0);
     expect(entry.minutes).toBe(road!.travel_minutes);
@@ -237,6 +355,9 @@ describe("OverworldSession", () => {
       from: "Albany city",
       to: "Colonie town",
     });
+    expect(after.pendingRoadEncounter?.timing).toBe(
+      `On the road from Albany city to Colonie town at ${after.pendingRoadEncounter?.arrivedAt}; resolve this route trouble before doing town business in Colonie town.`,
+    );
     expect(after.pendingRoadEncounter?.options.map((option) => option.strategy)).toEqual([
       "cautious_scout",
       "assist_travelers",
@@ -245,6 +366,7 @@ describe("OverworldSession", () => {
     expect(session.compactView()).toEqual(compactOverworldView(after));
     expect(() => session.planRoute("albany_city")).toThrow(/pending road encounter/i);
     session.resolveRoadEncounter("press_on");
+    expect(session.view().current.id).toBe("colonie_town");
     const backRoute = session.planRoute("albany_city");
     expect(backRoute.totalMinutes).toBe(road!.travel_minutes);
     expect(backRoute.steps.map((step) => step.to.id)).toEqual(["albany_city"]);
@@ -262,7 +384,9 @@ describe("OverworldSession", () => {
     const arrived = session.view();
     const encounter = arrived.pendingRoadEncounter;
     expect(encounter?.event.edge).toBe(road!.id);
-    expect(() => session.travel(arrived.exits[0]!.id)).toThrow(/pending road encounter/i);
+    expect(arrived.current.id).toBe(`road:${road!.id}`);
+    expect(arrived.exits).toEqual([]);
+    expect(() => session.travel(road!.id)).toThrow(/pending road encounter/i);
 
     const option = encounter!.options.find(
       (candidate) => candidate.strategy === "assist_travelers",
@@ -282,9 +406,21 @@ describe("OverworldSession", () => {
       kind: "road",
       title: `${option!.label}: ${encounter!.event.title}`,
     });
+    expect(after.journal[0]?.text).toContain("On the road from Albany city to Colonie town");
+    expect(after.journal[0]?.text).toContain("Afterward you arrive in Colonie town.");
+    expect(after.current.id).toBe("colonie_town");
+    expect(after.currentArea?.home).toBe("colonie_town");
     expect(session.compactView()).toEqual(compactOverworldView(after));
     expect(after.regionRenown[arrived.current.region]).toBe(option!.renownGained);
-    expect(() => session.travel(after.exits[0]!.id)).not.toThrow();
+    const returnRoad = after.exits.find((candidate) => candidate.destination.id === "albany_city");
+    expect(returnRoad).toBeDefined();
+    const returned = session.travel(returnRoad!.id);
+    const returnedView = session.view();
+    expect(returned.edgeId).toBe(road!.id);
+    expect(returned.roadEvent).toBeNull();
+    expect(returnedView.pendingRoadEncounter).toBeNull();
+    expect(returnedView.log[0]?.roadEvent).toBeNull();
+    expect(session.snapshot().travelLog[0]?.roadEventId).toBeNull();
   });
 
   it("round-trips stateful sessions through content-bound snapshots", () => {
@@ -312,6 +448,7 @@ describe("OverworldSession", () => {
       edgeId: road!.id,
       fromId: start.current.id,
       toId: road!.destination.id,
+      roadEventId: before.log[0]!.roadEvent?.id,
       minutes: before.log[0]!.minutes,
       arrivedAt: before.log[0]!.arrivedAt,
     });
@@ -326,7 +463,7 @@ describe("OverworldSession", () => {
     );
     const restored = OverworldSession.restore(world, snapshot);
     expect(restored.view()).toEqual(before);
-    expect(() => restored.travel(restored.view().exits[0]!.id)).toThrow(/pending road encounter/i);
+    expect(() => restored.travel(road!.id)).toThrow(/pending road encounter/i);
 
     restored.resolveRoadEncounter("press_on");
     expect(restored.view().pendingRoadEncounter).toBeNull();
@@ -389,6 +526,7 @@ describe("OverworldSession", () => {
       typeof session.snapshot
     >;
     tamperedTravelLogSnapshot.travelLog[0]!.edgeId = "missing_road";
+    delete tamperedTravelLogSnapshot.travelLog[0]!.roadEventId;
     expect(() => OverworldSession.restore(world, tamperedTravelLogSnapshot)).toThrow(
       /unknown travel road/i,
     );
@@ -413,7 +551,7 @@ describe("OverworldSession", () => {
     expect(view.discovered.length).toBeGreaterThan(24);
     const compact = compactOverworldView(view);
     expect(session.compactView()).toEqual(compact);
-    expect(compact.v).toBe(11);
+    expect(compact.v).toBe(13);
     expect(compact.hidden).toEqual([
       view.hiddenAreaCount,
       view.hiddenJobCount,
@@ -483,6 +621,7 @@ describe("OverworldSession", () => {
       contacts: view.characters,
       events: view.events,
       jobs: view.jobs,
+      rememberedJobs: view.rememberedJobs,
       sites: view.sites,
       quests: view.quests,
       hiddenAreaCount: view.hiddenAreaCount,
@@ -581,6 +720,7 @@ describe("OverworldSession", () => {
       contacts: view.characters,
       events: view.events,
       jobs: view.jobs,
+      rememberedJobs: view.rememberedJobs,
       sites: view.sites,
       quests: view.quests,
       hiddenAreaCount: view.hiddenAreaCount,
@@ -666,6 +806,7 @@ describe("OverworldSession", () => {
       contacts: view.characters,
       events: view.events,
       jobs: view.jobs,
+      rememberedJobs: view.rememberedJobs,
       sites: view.sites,
       quests: view.quests,
       hiddenAreaCount: view.hiddenAreaCount,
@@ -719,6 +860,11 @@ describe("OverworldSession", () => {
       id: `dense_title_${index}`,
       title: `Dense Title ${index}`,
     }));
+    const denseRememberedJobs = denseTitles.map((value, index) => ({
+      ...world.local_jobs[0]!,
+      ...value,
+      area: `dense_area_${index}`,
+    }));
     const compact = compactOverworldView({
       ...view,
       areas: denseNames.map((value) => ({ ...view.areas[0]!, ...value })),
@@ -726,6 +872,7 @@ describe("OverworldSession", () => {
       characters: denseNames.map((value) => ({ ...view.characters[0]!, ...value })),
       events: denseTitles.map((value) => ({ ...view.events[0]!, ...value })),
       jobs: denseTitles as typeof view.jobs,
+      rememberedJobs: denseRememberedJobs,
       sites: denseTitles as typeof view.sites,
       quests: denseTitles as typeof view.quests,
     });
@@ -735,6 +882,7 @@ describe("OverworldSession", () => {
     expect(compact.contacts).toHaveLength(OVERWORLD_COMPACT_LOCAL_REF_LIMIT);
     expect(compact.events).toHaveLength(OVERWORLD_COMPACT_LOCAL_REF_LIMIT);
     expect(compact.jobs).toHaveLength(OVERWORLD_COMPACT_LOCAL_REF_LIMIT);
+    expect(compact.remembered_jobs).toHaveLength(OVERWORLD_COMPACT_LOCAL_REF_LIMIT);
     expect(compact.sites).toHaveLength(OVERWORLD_COMPACT_LOCAL_REF_LIMIT);
     expect(compact.quests).toHaveLength(OVERWORLD_COMPACT_LOCAL_REF_LIMIT);
     expect(compact.local_refs_truncated).toEqual([
@@ -743,6 +891,7 @@ describe("OverworldSession", () => {
       "contacts",
       "events",
       "jobs",
+      "remembered_jobs",
       "sites",
       "quests",
     ]);
@@ -763,6 +912,7 @@ describe("OverworldSession", () => {
       contacts: denseNames.map((value) => ({ ...view.characters[0]!, ...value })),
       events: denseTitles.map((value) => ({ ...view.events[0]!, ...value })),
       jobs: denseTitles as typeof view.jobs,
+      rememberedJobs: denseRememberedJobs,
       sites: denseTitles as typeof view.sites,
       quests: denseTitles as typeof view.quests,
       hiddenAreaCount: view.hiddenAreaCount,
@@ -793,9 +943,13 @@ describe("OverworldSession", () => {
     expect(built.local_refs_truncated).toEqual(compact.local_refs_truncated);
     expect(built.areas).toHaveLength(OVERWORLD_COMPACT_LOCAL_REF_LIMIT);
     expect(built.jobs).toHaveLength(OVERWORLD_COMPACT_LOCAL_REF_LIMIT);
+    expect(built.remembered_jobs).toHaveLength(OVERWORLD_COMPACT_LOCAL_REF_LIMIT);
 
     const cloned = cloneOverworldCompactView(compact);
     expect(cloned.local_refs_truncated).toEqual(compact.local_refs_truncated);
+    expect(cloned.remembered_jobs).toEqual(compact.remembered_jobs);
+    cloned.remembered_jobs?.push(["mutated_job", "Mutated job", "mutated_area"]);
+    expect(compact.remembered_jobs).toHaveLength(OVERWORLD_COMPACT_LOCAL_REF_LIMIT);
     cloned.local_refs_truncated?.push("areas");
     expect(compact.local_refs_truncated).toEqual([
       "areas",
@@ -803,6 +957,7 @@ describe("OverworldSession", () => {
       "contacts",
       "events",
       "jobs",
+      "remembered_jobs",
       "sites",
       "quests",
     ]);
@@ -810,48 +965,53 @@ describe("OverworldSession", () => {
 
   it("caps compact context labels, titles, and risk text", () => {
     const session = new OverworldSession(world);
-    const road = session.view().exits.find((exit) => exit.destination.id === "colonie_town");
+    const localView = session.view();
+    const road = localView.exits.find((exit) => exit.destination.id === "colonie_town");
     expect(road).toBeDefined();
     session.travel(road!.id);
 
     const view = session.view();
     expect(view.pendingRoadEncounter).toBeDefined();
-    expect(view.currentArea).toBeDefined();
-    expect(view.areas[0]).toBeDefined();
-    expect(view.pois[0]).toBeDefined();
-    expect(view.characters[0]).toBeDefined();
-    expect(view.events[0]).toBeDefined();
+    expect(localView.currentArea).toBeDefined();
+    expect(localView.areas[0]).toBeDefined();
+    expect(localView.pois[0]).toBeDefined();
+    expect(localView.characters[0]).toBeDefined();
+    expect(localView.events[0]).toBeDefined();
     const longLabel = "label ".repeat(40);
     const longTitle = "title ".repeat(60);
     const longRisk = "risk ".repeat(70);
 
     const pendingRoadEncounter = view.pendingRoadEncounter!;
     const compact = compactOverworldView({
-      ...view,
+      ...localView,
       world: longLabel,
-      current: { ...view.current, name: longLabel, region: longLabel },
-      currentArea: view.currentArea ? { ...view.currentArea, name: longLabel } : null,
-      areas: view.areas.map((area, index) => (index === 0 ? { ...area, name: longLabel } : area)),
-      pois: view.pois.map((poi, index) => (index === 0 ? { ...poi, title: longTitle } : poi)),
-      characters: view.characters.map((character, index) =>
+      current: { ...localView.current, name: longLabel, region: longLabel },
+      currentArea: localView.currentArea ? { ...localView.currentArea, name: longLabel } : null,
+      areas: localView.areas.map((area, index) =>
+        index === 0 ? { ...area, name: longLabel } : area,
+      ),
+      pois: localView.pois.map((poi, index) => (index === 0 ? { ...poi, title: longTitle } : poi)),
+      characters: localView.characters.map((character, index) =>
         index === 0 ? { ...character, name: longLabel } : character,
       ),
-      events: view.events.map((event, index) =>
+      events: localView.events.map((event, index) =>
         index === 0 ? { ...event, title: longTitle } : event,
       ),
       journal: [
         {
           id: "synthetic_long_title",
           kind: "event",
-          town: view.current.id,
+          town: localView.current.id,
           title: longTitle,
           text: "Synthetic compact-title boundary row.",
-          recordedAt: view.timeLabel,
+          recordedAt: localView.timeLabel,
         },
-        ...view.journal,
+        ...localView.journal,
       ],
       pendingRoadEncounter: {
         ...pendingRoadEncounter,
+        from: longLabel,
+        to: longLabel,
         event: {
           ...pendingRoadEncounter.event,
           risk: longRisk as typeof pendingRoadEncounter.event.risk,
@@ -870,6 +1030,8 @@ describe("OverworldSession", () => {
     expect(compact.events[0]?.[1]).toHaveLength(OVERWORLD_COMPACT_TITLE_CHAR_LIMIT);
     expect(compact.journal?.[0]?.[1]).toHaveLength(OVERWORLD_COMPACT_TITLE_CHAR_LIMIT);
     expect(compact.pending_road?.event[1]).toHaveLength(OVERWORLD_COMPACT_RISK_CHAR_LIMIT);
+    expect(compact.pending_road?.where[0]).toHaveLength(OVERWORLD_COMPACT_LABEL_CHAR_LIMIT);
+    expect(compact.pending_road?.where[1]).toHaveLength(OVERWORLD_COMPACT_LABEL_CHAR_LIMIT);
     expect(compact.renown?.[0]?.[0]).toHaveLength(OVERWORLD_COMPACT_LABEL_CHAR_LIMIT);
     expect(compact.world).toMatch(/\.\.\.\(\+\d+ chars\)$/);
   });
@@ -1076,25 +1238,41 @@ describe("OverworldSession", () => {
       }),
     ).toThrow(/death ending/i);
 
+    const beforeCompletionMinutes = session.snapshot().minutes;
     const completedQuest = session.completeQuest(discoveredQuest.id, {
       endingId: "ending_victory",
       endingTitle: "Victory",
       death: false,
     });
+    const questSource = world.quests.find((quest) => quest.id === discoveredQuest.id);
+    if (!questSource) throw new Error("expected quest source");
+    const expectedMinutes = questCompletionMinutes(
+      questSource,
+      new Map(world.areas.map((area) => [area.id, area])),
+    );
     expect(completedQuest).toMatchObject({
       alreadyKnown: false,
+      minutes: expectedMinutes,
       endingId: "ending_victory",
       quest: { id: discoveredQuest.id },
     });
+    expect(completedQuest.entry.recordedAt).toBe(session.view().timeLabel);
+    expect(completedQuest.entry.text).toContain(`${expectedMinutes} minutes`);
     expect(completedQuest.entry).toMatchObject({
       id: `quest_done:${discoveredQuest.id}`,
       kind: "quest_done",
     });
+    expect(session.snapshot().minutes).toBe(beforeCompletionMinutes + expectedMinutes);
     expect(session.view().completedQuestIds).toEqual([discoveredQuest.id]);
+    expect(session.view().quests.map((quest) => quest.id)).not.toContain(discoveredQuest.id);
     expect(session.view().journal[0]).toMatchObject({
       id: `quest_done:${discoveredQuest.id}`,
       kind: "quest_done",
     });
+    const compactAfter = session.compactView();
+    expect(compactAfter.quests?.map(([id]) => id) ?? []).not.toContain(discoveredQuest.id);
+    expect(compactAfter.ids.completed_quests ?? []).toContain(discoveredQuest.id);
+    expect(compactAfter.journal?.[0]?.[0]).toBe("quest_done");
 
     const repeatedCompletion = session.completeQuest(discoveredQuest.id, {
       endingId: "ending_victory",
@@ -1102,6 +1280,7 @@ describe("OverworldSession", () => {
       death: false,
     });
     expect(repeatedCompletion.alreadyKnown).toBe(true);
+    expect(repeatedCompletion.minutes).toBe(0);
     expect(session.view().completedQuestIds).toEqual([discoveredQuest.id]);
   });
 
@@ -1196,8 +1375,14 @@ describe("OverworldSession", () => {
 
     const after = session.view();
     expect(after.resolvedEventIds).toContain(event.id);
+    expect(after.events.map((candidate) => candidate.id)).not.toContain(event.id);
     expect(after.regionRenown[start.current.region]).toBe(event.intensity);
     expect(after.journal).toHaveLength(4);
+
+    const compactAfter = session.compactView();
+    expect(compactAfter.events.map(([id]) => id)).not.toContain(event.id);
+    expect(compactAfter.ids.resolved_events ?? []).toContain(event.id);
+    expect(compactAfter.journal?.[0]?.[0]).toBe("resolution");
 
     const repeated = session.resolveEvent(event.id);
     expect(repeated.alreadyKnown).toBe(true);

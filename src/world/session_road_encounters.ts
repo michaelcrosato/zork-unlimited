@@ -71,13 +71,15 @@ export function buildOverworldPendingRoadEncounter(
   roadEvent: OverworldRoadEvent,
   arrivedAtMinutes: number,
 ): OverworldPendingRoadEncounter {
+  const arrivedAt = timeLabel(arrivedAtMinutes);
   return {
     id: `road:${edge.id}:${arrivedAtMinutes}`,
     edgeId: edge.id,
     from: from.name,
     to: to.name,
     route: edge.route,
-    arrivedAt: timeLabel(arrivedAtMinutes),
+    arrivedAt,
+    timing: `On the road from ${from.name} to ${to.name} at ${arrivedAt}; resolve this route trouble before doing town business in ${to.name}.`,
     event: roadEvent,
     options: roadEncounterOptionsFor(roadEvent),
   };
@@ -103,6 +105,19 @@ export function restoreOverworldPendingRoadEncounter(
   if (!manifestEvent) {
     throw new Error(
       `Overworld session snapshot has no road event for "${pendingRoadEncounter.edgeId}".`,
+    );
+  }
+  if (indexes.latestTravel?.roadEventId === null) {
+    throw new Error(
+      `Overworld session snapshot pending road encounter "${pendingRoadEncounter.edgeId}" did not fire on the latest travel log.`,
+    );
+  }
+  if (
+    indexes.latestTravel?.roadEventId !== undefined &&
+    indexes.latestTravel.roadEventId !== manifestEvent.id
+  ) {
+    throw new Error(
+      `Overworld session snapshot pending road encounter "${pendingRoadEncounter.edgeId}" does not match latest travel road event "${indexes.latestTravel.roadEventId}".`,
     );
   }
 
@@ -146,7 +161,7 @@ export function resolveOverworldRoadEncounter(
     kind: "road",
     town: state.townName,
     title: `${option.label}: ${encounter.event.title}`,
-    text: `${encounter.event.summary} ${option.outcome}${supplyDeficit > 0 ? " Lacking supplies made the work more exhausting." : ""}`,
+    text: `${encounter.timing} ${encounter.event.summary} ${option.outcome} Afterward you arrive in ${encounter.to}.${supplyDeficit > 0 ? " Lacking supplies made the work more exhausting." : ""}`,
     recordedAt: timeLabel(minutesAfter),
   };
 

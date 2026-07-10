@@ -3,48 +3,62 @@
 This is the AFK loop's token-small handoff document. It is OVERWRITTEN each
 ultraplan with the synthesis plus the one chosen next move; a fresh
 implementation subagent reads ONLY this doc and the files it names. Keep it
-current, terse, dated, and under ~60 lines — completed work belongs in git
+current, terse, dated, and under ~60 lines - completed work belongs in git
 history and `docs/DECISION_LOG.md`, not here.
 
-## Cycle: 2026-07-06 — post-consolidation re-aim
+## Cycle: 2026-07-08 - Compact Journal Hash Cleanup
 
 ## Synthesis
 
-The RPG-only consolidation is complete and audited (see the 2026-07-06 entries
-in `docs/DECISION_LOG.md`): one engine, one world (the New York overworld), 11
-shipped quests, single protected `main` branch, compact MCP surfaces, and a green
-bar. The overworld quest bridge (the previous chosen move) is implemented and
-regression-tested.
-The open frontier per `docs/ROADMAP.md` is content restoration (story ports)
-and gameplay depth — not more consolidation.
+The Albany-to-Wolf-Winter bridge now frames the quest as a local relief chain:
+Rowan's civic-records lead reaches Hayden's Station Quarter route desk, and the
+RPG opening carries that Albany winter-relief packet into the steading before
+the byre crisis takes over. Cade now reads the player as Albany's relief rider,
+not an unexplained steading hunter, while the spear remains already in hand.
+
+Fresh-game Codex seeds 591-615 all exited 0; clarity 25x4/5, enjoyment 25x4/5,
+replay 25x true. The ledger now has 436 accepted reports. Bridge/tone complaints
+dropped from 12/25 to 1/25, and all 25 reports noticed the Albany relief-chain
+context positively or neutrally.
+
+The loudest current quality issue is compact text hygiene: 25/25 fresh reports
+mention compact truncation, hash-like journal suffixes, or tuple readability.
+This is not a new system; it is the player-facing text surface the blind agents
+actually read. Cleaning it should improve every future slice playtest and make
+the existing New York opening feel less debug-like.
 
 ## Chosen Move
 
-Port ONE retired story back as an RPG world quest.
+Remove hash-like compact journal/truncation artifacts from the fresh-game slice
+without increasing compact payloads enough to reintroduce context bloat.
 
-- The 36 retired packs live at tag `stories-52-pre-rpg-consolidation`; pick one
-  whose prose and puzzle chain port cleanly (prefer a parser-era single-location
-  story over a long CYOA branch tree for the first port).
-- Adapt it to an RPG quest pack under `content/rpg/quests/`, register it as a
-  quest in `content/world/new_york_overworld.json` (anchored to a town/area), and
-  route all play/validation through its `world_quest_id`.
-- Reuse the original's playtested prose and endings; convert puzzle gates to the
-  condition/effect DSL and USE verbs; keep scoring sound (the validators prove
-  ending reachability and score economy).
+- Focus on compact RPG/overworld journal and prose shortening paths that emit
+  `#...` suffixes or clip actionable Wolf-Winter/Albany lines.
+- Preserve deterministic state hashes, snapshot hashes, and guard semantics; do
+  not hide or weaken hashes used for concurrency/versioning.
+- Keep the compact view bounded: prefer cleaner summaries or non-debug ellipses
+  over simply raising every limit.
+- Add focused regressions using Wolf-Winter/Albany observations that prove compact
+  journal entries and compact descriptions do not expose hash-like fragments.
+- Do not broaden into tuple-label redesign this cycle unless required to remove
+  the hash artifact.
 
 ## Acceptance
 
-1. The new quest validates 0 errors / 0 warnings (`npm run validate`).
-2. A blind playtest per `docs/blind_playtest_protocol.md` reaches an ending and
-   files a schema-valid exit interview.
-3. `npm run health` MUST pass before commit — it is the loop's blocking gate
-   (loop.sh reverts the cycle on failure), not a best-effort step.
+1. Focused compact-output tests fail on current hash-like journal/truncation text
+   and pass with cleaner player-facing compact prose.
+2. Focused tests prove state/snapshot hashes still exist where tools need them.
+3. `npm run health` passes.
+4. Run a 25-seed fresh-game `npm run blind` batch, regenerate
+   `docs/BLIND_FEEDBACK_LEDGER.md`, and confirm compact hash/truncation complaints
+   drop before committing.
 
 ## Deferred Levers
 
-- Extend token/cost telemetry to agent work turns (the blind-run half landed
-  2026-07-06: ai-runs/blind-telemetry.jsonl + `npm run blind:telemetry`).
-- Shrink low-level debug helpers that still leak raw pack paths in diagnostics.
-- Tighten the remaining restore-time local action sequencing beyond discovery
-  prefixes (most sequencing properties are already enforced; state the specific
-  remaining gap when picking this up).
+- Albany Civic Center charter backlog and Civic Ledger Run resolutions still feel
+  generic compared with their setup.
+- Related Station Quarter winter-relief event can remain active after Wolf-Winter
+  completion.
+- Road encounter arrival/progress wording still repeats in fresh samples.
+- Hidden counts remain useful but system-facing.
+- Colonie and nearby towns still feel templated after Albany.

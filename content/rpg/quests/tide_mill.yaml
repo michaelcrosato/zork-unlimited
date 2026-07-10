@@ -1,0 +1,766 @@
+# The Tide-Mill -- RPG benchmark slice.
+#
+# Ported from the retired parser-era Tide-Mill and upgraded for the single RPG
+# engine. The core loop is a contained dependency DAG rather than a chain:
+# defeat the tool-shed guard, then solve two independent mill faults in either
+# order, then wind the sea-gate and go down to the staith to save the boat.
+# The failure forks are explicit and telegraphed: walk off with the takings,
+# force the rotten flood-hatch, or fight the saboteur barehanded and lose to the
+# seeded combat. The final +20 capstone pays only when the player reaches the
+# saved staith, so full score and the win coincide only on the clean route.
+
+meta:
+  id: tide_mill_v1
+  title: "The Tide-Mill"
+  start_room: mill_house
+  vars_init: { hp: 20, attack: 3, defense: 1, craft: 3, might: 3 }
+  flags_init: []
+  max_score: 55
+
+rooms:
+  - id: mill_house
+    name: "The Mill-House"
+    description: >
+      Ways: north=wheel-room (then east to yard/tool-shed);
+      east=counting-nook. Ives's written night-order millboard hangs by the door,
+      and a hooked gaff-pole leans under the sill. Miller Ives lies by flour sacks,
+      hurt but awake. Outside, a boat is caught above the weir with the tide falling.
+    variants:
+      - when: [{ has_flag: gate_up }]
+        text: >
+          Ways: north=wheel-room and open staith, east=counting-nook where Ives's
+          takings still sit. The orders are off the board and the wheel turns beyond
+          the north arch. The sea-gate is up; held water runs down, and Ives points
+          you north to wave the boat through.
+      - when: [{ has_flag: hook_taken }]
+        text: >
+          Ways: north=wheel-room (then east to yard/tool-shed);
+          east=counting-nook. Ives's written night-order millboard still hangs by
+          the door, and the sill is bare where the gaff-pole rested. Miller Ives
+          lies by flour sacks, hurt but awake, while the trapped boat waits outside.
+    objects: [millboard, gaff_hook]
+    exits:
+      - { direction: north, to: wheel_room }
+      - { direction: east, to: counting_nook }
+
+  - id: counting_nook
+    name: "The Counting-Nook"
+    description: >
+      A cramped nook off the mill-floor where the miller keeps his tallies and his cash. A
+      leather coin-bag sits on the desk, heavy with the week's toll-takings. An oilskin
+      mill-coat hangs by the peg rail, stiff with salt and thick enough to turn a glancing
+      knife. The mill-floor is back west.
+    variants:
+      - when: [{ has_item: coin_bag }, { has_flag: oilskin_taken }]
+        text: >
+          A cramped nook off the mill-floor. The counting-desk is bare where the
+          coin-bag sat, and the peg rail is bare where the oilskin mill-coat hung.
+          Return the takings here if you mean to save the boat cleanly. The mill-floor
+          is back west.
+      - when: [{ has_item: coin_bag }]
+        text: >
+          A cramped nook off the mill-floor. The counting-desk is bare where the
+          coin-bag sat; its weight is in your coat now. The oilskin mill-coat still
+          hangs by the peg rail. Return the takings here if you mean to save the boat
+          cleanly. The mill-floor is back west.
+      - when: [{ has_flag: coin_bag_returned }, { has_flag: oilskin_taken }]
+        text: >
+          A cramped nook off the mill-floor. The coin-bag is back on the counting-desk,
+          its mouth cinched tight after your second thought, and the peg rail is bare
+          where the oilskin mill-coat hung. The mill-floor is back west.
+      - when: [{ has_flag: coin_bag_returned }]
+        text: >
+          A cramped nook off the mill-floor. The coin-bag is back on the counting-desk,
+          its mouth cinched tight after your second thought. The oilskin mill-coat still
+          hangs by the peg rail. The mill-floor is back west.
+      - when: [{ has_flag: gate_up }, { has_flag: oilskin_taken }]
+        text: >
+          A cramped nook off the mill-floor. The gate is up and the boat waits one stair
+          away; the coin-bag still sits on the counting-desk, heavy and unattended.
+          The peg rail is bare where the oilskin mill-coat hung. The mill-floor is back
+          west.
+      - when: [{ has_flag: gate_up }]
+        text: >
+          A cramped nook off the mill-floor. The gate is up and the boat waits one stair
+          away; the coin-bag still sits on the counting-desk, heavy and unattended.
+          The oilskin mill-coat hangs by the peg rail. The mill-floor is back west.
+      - when: [{ has_flag: oilskin_taken }]
+        text: >
+          A cramped nook off the mill-floor where the miller keeps his tallies and his cash.
+          The peg rail is bare where the oilskin mill-coat hung before you pulled it on. A
+          leather coin-bag still sits on the desk, heavy with the week's toll-takings and no
+          part of the work. The mill-floor is back west.
+    objects: [coin_bag, oilskin_coat]
+    exits:
+      - { direction: west, to: mill_house }
+
+  - id: wheel_room
+    name: "The Wheel-Room"
+    description: >
+      Ways: west=head-race, east=yard/tool-shed, south=mill-floor, down=gated
+      staith. The great undershot wheel stands black and still: brake-pawl dropped,
+      head-race choked, sea-gate shut. The winch waits by the wheel, its crank-handle
+      hanging on a peg.
+    variants:
+      - when: [{ has_flag: gate_up }]
+        text: >
+          Ways: down=open staith, south=mill-floor/counting-nook,
+          west=head-race, east=yard/tool-shed. The wheel runs and the sea-gate is
+          up. Down saves the boat now; south leads back past Ives's coin-bag on
+          the counting-desk.
+      - when: [{ has_flag: sluice_clear }, { has_flag: pawl_free }, { has_flag: crank_handle_taken }]
+        text: >
+          Ways: west=head-race, east=yard/tool-shed, south=mill-floor, down=gated
+          staith. The wheel turns free and strong: brake-pawl up, race running fast.
+          The winch socket is empty and the crank-handle is in your kit. Wind the
+          sea-gate open.
+      - when: [{ has_flag: sluice_clear }, { has_flag: pawl_free }]
+        text: >
+          Ways: west=head-race, east=yard/tool-shed, south=mill-floor, down=gated
+          staith. The wheel turns free and strong: brake-pawl up, race running fast.
+          The sea-gate winch waits for its crank-handle. Wind the sea-gate open.
+      - when: [{ has_flag: sluice_clear }, { has_flag: crank_handle_taken }]
+        text: >
+          Ways: west=head-race, east=yard/tool-shed, south=mill-floor, down=gated
+          staith. The freed race runs fast, but the dropped brake-pawl still locks the
+          gear. The winch peg is bare; the crank-handle is in your kit for later.
+      - when: [{ has_flag: sluice_clear }]
+        text: >
+          Ways: west=head-race, east=yard/tool-shed, south=mill-floor, down=gated
+          staith. The freed race runs fast, but the dropped brake-pawl still locks the
+          gear. The sea-gate winch cannot bite until the pawl is lifted; its
+          crank-handle hangs on the peg.
+      - when: [{ has_flag: pawl_free }, { has_flag: crank_handle_taken }]
+        text: >
+          Ways: west=head-race, east=yard/tool-shed, south=mill-floor, down=gated
+          staith. The brake-pawl is levered clear, but the race below stays choked and
+          slack. The winch peg is bare; the crank-handle is in your kit.
+      - when: [{ has_flag: pawl_free }]
+        text: >
+          Ways: west=head-race, east=yard/tool-shed, south=mill-floor, down=gated
+          staith. The brake-pawl is levered clear, but the race below stays choked and
+          slack. The wheel has no water to bite; the crank-handle hangs on the winch
+          peg.
+      - when: [{ has_flag: crank_handle_taken }]
+        text: >
+          Ways: west=head-race, east=yard/tool-shed, south=mill-floor, down=gated
+          staith. The great wheel stands black and still with both faults against it.
+          The sea-gate winch waits by the wheel, its crank-handle peg bare.
+    objects: [brake_pawl, sea_winch, crank_handle]
+    exits:
+      - { direction: south, to: mill_house }
+      - { direction: west, to: head_race }
+      - { direction: east, to: mill_yard }
+      - direction: down
+        to: the_staith
+        conditions: [{ has_flag: gate_up }]
+        locked_msg: "The sea-gate is still shut and the staith below is mud and dark; wind the gate up before you go down to wave the boat through."
+
+  - id: mill_yard
+    name: "The Mill-Yard"
+    description: >
+      The rain-slick yard lies between wheel-room west and tool-shed east. The saboteur
+      who struck Ives blocks the shed with a gutting knife, keeping you from the tools.
+      Pressing him means a fight: gaff-pole plus oilskin makes it fair; bare hands make it
+      a gamble.
+    variants:
+      - when: [{ has_flag: yard_clear }]
+        text: >
+          The mill-yard is slick with rainwater and scattered grain. The saboteur is gone,
+          driven off into the dark, and the tool-shed door stands open to the east. The
+          wheel-room is west.
+    exits:
+      - { direction: west, to: wheel_room }
+      - direction: east
+        to: tool_shed
+        conditions: [{ has_flag: yard_clear }]
+        locked_msg: "The saboteur blocks the tool-shed door with his knife; drive him off before you reach for the mill tools."
+
+  - id: tool_shed
+    name: "The Tool-Shed"
+    description: >
+      A lean-to of tarred board against the mill's flank, hung with the gear of the trade.
+      A long-hafted billhook leans in the corner for cutting weed from the race, and a heavy
+      crow-bar hangs on two nails for shifting a locked pawl or a jammed gate. The yard is
+      back west.
+    variants:
+      - when: [{ has_flag: billhook_taken }, { has_flag: crow_bar_taken }]
+        text: >
+          A lean-to of tarred board against the mill's flank. The corner where the billhook
+          leaned is empty now, and the nails that held the crow-bar are bare. The yard is
+          back west.
+      - when: [{ has_flag: billhook_taken }]
+        text: >
+          A lean-to of tarred board against the mill's flank. The billhook's corner is empty
+          now, but the heavy crow-bar still hangs on two nails. The yard is back west.
+      - when: [{ has_flag: crow_bar_taken }]
+        text: >
+          A lean-to of tarred board against the mill's flank. A long-hafted billhook still
+          leans in the corner, but the crow-bar nails are bare. The yard is back west.
+    objects: [billhook, crow_bar]
+    exits:
+      - { direction: west, to: mill_yard }
+
+  - id: head_race
+    name: "The Head-Race"
+    description: >
+      The stone channel that should drive the wheel is choked solid: winter weed, wrack,
+      and a drowned bough jammed across it so the water stands slack. At the channel's head
+      an old flood-hatch sags in its frame, its staging gone soft and rotten; below it the
+      wheel-pit drops away black and deep. The wheel-room is east.
+    variants:
+      - when: [{ has_flag: sluice_clear }]
+        text: >
+          The stone channel runs free and full at last, the water sliding fast down onto
+          the wheel. The old flood-hatch sags unused
+          in its frame; there is no work left for that rotten shortcut. The wheel-room is east.
+    objects: [choked_sluice, flood_hatch]
+    exits:
+      - { direction: east, to: wheel_room }
+
+  - id: the_staith
+    name: "The Staith, Water Up"
+    description: >
+      The little staith below the mill, and the held water sliding back over the ground
+      where a moment ago was only mud. Out above the weir the caught boat lifts, finds her
+      keel, and comes down easy through the open gate into the deep water. The way back up
+      to the wheel-room is behind you.
+    on_enter:
+      - inc_var: { name: score, by: 20 }
+      - add_journal: "With the gate up and the water under her again, the caught boat came down through the mill-race safe."
+    exits:
+      - { direction: up, to: wheel_room }
+
+objects:
+  - id: millboard
+    name: "millboard"
+    aliases: [board, notice, orders, chalk, sign]
+    description: "A slate millboard by the door, the night orders chalked in Ives's block hand."
+    read_text: >
+      Orders: wheel runs when choked race is clear and brake-pawl free. Tools
+      are in the shed, behind the knife-man: take gaff-pole and oilskin before
+      him. Wind the sea-gate open, then go down. Never lever the rotten
+      flood-hatch. Ives's takings stay in the nook.
+    interactions:
+      - verb: READ
+        target: millboard
+        conditions: [{ not_flag: read_board }]
+        effects:
+          - set_flag: read_board
+          - inc_var: { name: score, by: 5 }
+          - add_journal: "The millboard says the wheel needs the race clear and pawl free, then the sea-gate wound open; never force the rotten flood-hatch."
+
+  - id: gaff_hook
+    name: "gaff-pole"
+    aliases: [gaff, hook, pole, gaff hook, gaff-pole]
+    description: >
+      A hooked pole from the mill sill, long enough to keep a knife hand off you in the yard.
+      It is not a sword, but it makes the coming fight yours to manage instead of his.
+    takeable: true
+    take_effects:
+      - set_flag: hook_taken
+      - inc_var: { name: attack, by: 2 }
+      - add_journal: "You took the hooked gaff-pole; its reach should keep a knife hand outside your ribs."
+
+  - id: coin_bag
+    name: "coin-bag"
+    aliases: [bag, coin bag, purse, takings, toll, money, silver, cash]
+    description: >
+      A fat leather coin-bag on the counting-desk, the week's toll-takings in it. While the
+      gate is shut it is not part of the work. Once the sea-gate is up, you can pocket it
+      before the final stair, return it here, steal it outright, or save the boat while
+      keeping it; the score will remember the hand that closed around it.
+    variants:
+      - when: [{ has_item: coin_bag }]
+        name: "pocketed coin-bag"
+        text: >
+          The miller's toll-takings ride heavy in your coat. In the counting-nook you can
+          still put the bag back on the desk; outside it, keeping it is no clean rescue.
+      - when: [{ has_flag: coin_bag_returned }]
+        text: >
+          The coin-bag sits back on the counting-desk, mouth cinched tight. It is still
+          Ives's money, and now it has the look of a thing almost stolen.
+    droppable: false
+    interactions:
+      - verb: USE
+        target: coin_bag
+        command_verb: pocket
+        conditions: [{ has_flag: gate_up }, { not_flag: coin_bag_returned }, { not_item: coin_bag }]
+        effects:
+          - add_item: coin_bag
+          - dec_var: { name: score, by: 5 }
+          - add_journal: "You pocketed Ives's toll-takings after the sea-gate was ready. You can return the coin-bag in the counting-nook, but the clean-score trust is already gone (-5 score)."
+          - narrate: "The coin-bag drags at your coat like a second conscience. Put it back on the counting-desk if you mean to save the boat with any kind of clean hands."
+      - verb: USE
+        item: coin_bag
+        target: coin_bag
+        command_verb: return
+        conditions: [{ has_item: coin_bag }, { in_room: counting_nook }]
+        effects:
+          - remove_item: coin_bag
+          - place_object: { id: coin_bag, room: counting_nook, takenBy: player }
+          - set_flag: coin_bag_returned
+          - add_journal: "You put the toll-takings back on the counting-desk before finishing the rescue."
+          - narrate: "You set the coin-bag back on the counting-desk and pull your hand away. The silver is where Ives left it, though not quite untouched."
+      - verb: USE
+        item: coin_bag
+        target: coin_bag
+        command_verb: steal
+        conditions: [{ has_item: coin_bag }, { none_of: [{ in_room: counting_nook }] }]
+        effects:
+          - end_game: ending_thief
+
+  - id: oilskin_coat
+    name: "oilskin mill-coat"
+    aliases: [coat, oilskin, mill-coat, jacket]
+    description: >
+      A stiff oilskin coat, salt-cracked and padded with old wool at the shoulders. It will
+      not stop a knife square-on, but it will turn a glancing cut while you work the gaff.
+    takeable: true
+    take_effects:
+      - set_flag: oilskin_taken
+      - inc_var: { name: defense, by: 2 }
+      - add_journal: "You pulled on Ives's oilskin mill-coat; the stiff padding should turn a glancing cut while you work the gaff."
+
+  - id: crank_handle
+    name: "crank-handle"
+    aliases: [handle, crank, winding-handle, winch-handle]
+    description: "The sea-gate's crank-handle off its peg by the winch, forged to drop into the winch socket once the wheel is driving the gear."
+    takeable: true
+    quest_critical: true
+    take_effects:
+      - set_flag: crank_handle_taken
+
+  - id: billhook
+    name: "billhook"
+    aliases: [bill, bill-hook, blade, hedging-hook]
+    description: "A long-hafted billhook from the tool-shed wall, its curved blade kept keen for cutting weed and wrack off the race."
+    takeable: true
+    quest_critical: true
+    take_effects:
+      - set_flag: billhook_taken
+
+  - id: crow_bar
+    name: "crow-bar"
+    aliases: [crowbar, bar, crow bar, iron bar, lever, pry-bar, prybar]
+    description: >
+      A heavy iron crow-bar from the tool-shed nails, right for levering a dropped pawl up
+      out of gear. It would shift the rotten flood-hatch too, but the board and the sagging
+      staging both say that is the one use that gets a hand killed.
+    takeable: true
+    quest_critical: true
+    take_effects:
+      - set_flag: crow_bar_taken
+
+  - id: choked_sluice
+    name: "choked head-race"
+    aliases: [sluice, race, head-race, head race, weed, wrack, bough, channel, choke]
+    description: >
+      The head-race is choked solid, a mat of weed and a drowned bough holding the water
+      slack. The billhook will cut it clear. Ives's trick is to cut the downstream braid
+      first; without that advice it is still honest work, but the blade can bind and cost
+      you time.
+    variants:
+      - when: [{ has_flag: sluice_clear }]
+        name: "head-race"
+        text: "The head-race runs free, water sliding fast down onto the wheel."
+    interactions:
+      - verb: USE
+        target: choked_sluice
+        command_verb: check
+        conditions: [{ not_item: billhook }, { not_flag: sluice_clear }]
+        effects:
+          - narrate: >
+              You test the weed with both hands. It comes away in wet strings, but the
+              drowned bough does not move. This is billhook work: reach the tool-shed
+              past the yard knife-man, then come back and cut the race properly.
+      - verb: USE
+        item: billhook
+        target: choked_sluice
+        command_verb: cut
+        command_template: "cut {target} with {item}"
+        conditions: [{ not_flag: sluice_clear }, { has_flag: pawl_free }]
+        skill_check:
+          skill: craft
+          difficulty: 9
+          on_success:
+            - set_flag: sluice_clear
+            - inc_var: { name: score, by: 10 }
+            - add_journal: "You got water running down the head-race and onto the wheel."
+            - narrate: "You hook the downstream braid first, as Ives said, and the whole mat begins to move. Cut by cut the weed and drowned bough tear loose, and the held water slides fast down the channel. With the pawl already pinned back, both faults are now put right."
+          on_failure:
+            - narrate: "The billhook bites and a strip of weed tears free, but the bough twists and jams the cut back on itself. It is coming away; no other tool is missing. Set the blade lower and cut again."
+      - verb: USE
+        item: billhook
+        target: choked_sluice
+        command_verb: cut
+        command_template: "cut {target} with {item}"
+        conditions: [{ not_flag: sluice_clear }, { not_flag: pawl_free }]
+        skill_check:
+          skill: craft
+          difficulty: 9
+          on_success:
+            - set_flag: sluice_clear
+            - inc_var: { name: score, by: 10 }
+            - add_journal: "You got water running down the head-race and onto the wheel."
+            - narrate: "You hook the downstream braid first, as Ives said, and the whole mat begins to move. Cut by cut the weed and drowned bough tear loose, and the held water slides fast down the channel. One fault of the two is put right."
+          on_failure:
+            - narrate: "The billhook bites and a strip of weed tears free, but the bough twists and jams the cut back on itself. It is coming away; no other tool is missing. Set the blade lower and cut again."
+      - verb: USE
+        target: choked_sluice
+        command_verb: clear
+        conditions: [{ has_item: billhook }, { not_flag: sluice_clear }, { has_flag: pawl_free }]
+        skill_check:
+          skill: craft
+          difficulty: 9
+          on_success:
+            - set_flag: sluice_clear
+            - inc_var: { name: score, by: 10 }
+            - add_journal: "You got water running down the head-race and onto the wheel."
+            - narrate: "You hook the downstream braid first, as Ives said, and the whole mat begins to move. Cut by cut the weed and drowned bough tear loose, and the held water slides fast down the channel. With the pawl already pinned back, both faults are now put right."
+          on_failure:
+            - narrate: "The billhook bites and a strip of weed tears free, but the bough twists and jams the cut back on itself. It is coming away; no other tool is missing. Set the blade lower and cut again."
+      - verb: USE
+        target: choked_sluice
+        command_verb: clear
+        conditions: [{ has_item: billhook }, { not_flag: sluice_clear }, { not_flag: pawl_free }]
+        skill_check:
+          skill: craft
+          difficulty: 9
+          on_success:
+            - set_flag: sluice_clear
+            - inc_var: { name: score, by: 10 }
+            - add_journal: "You got water running down the head-race and onto the wheel."
+            - narrate: "You hook the downstream braid first, as Ives said, and the whole mat begins to move. Cut by cut the weed and drowned bough tear loose, and the held water slides fast down the channel. One fault of the two is put right."
+          on_failure:
+            - narrate: "The billhook bites and a strip of weed tears free, but the bough twists and jams the cut back on itself. It is coming away; no other tool is missing. Set the blade lower and cut again."
+
+  - id: brake_pawl
+    name: "brake-pawl"
+    aliases: [pawl, brake, catch, dog, ratchet, lock]
+    description: >
+      The wheel's brake-pawl, a great iron catch dropped into the drive-gear and locked in
+      its pivot. While it sits there the wheel cannot turn. The crow-bar has the weight to
+      lever it clear if you set your feet properly.
+    variants:
+      - when: [{ has_flag: pawl_free }]
+        text: "The brake-pawl is levered up and pinned back clear of the drive-gear; the wheel is free to turn."
+    interactions:
+      - verb: USE
+        item: crow_bar
+        target: brake_pawl
+        command_verb: free
+        command_template: "free {target} with {item}"
+        conditions: [{ has_item: crow_bar }, { not_flag: pawl_free }, { has_flag: sluice_clear }]
+        skill_check:
+          skill: might
+          difficulty: 9
+          on_success:
+            - set_flag: pawl_free
+            - inc_var: { name: score, by: 10 }
+            - add_journal: "You levered the dropped brake-pawl up out of the drive-gear with the crow-bar."
+            - narrate: "You set the crow-bar where Ives told you, under the pawl and not against the gear teeth, and throw your weight on it. The pivot screams once and gives; the catch lifts clear and pins back. With the head-race already running, both faults are now put right."
+          on_failure:
+            - narrate: "The pawl shifts a thumb's breadth and drops back with a clang. It is not too heavy and no second tool is hidden here; the pivot is only stiff. Reset the bar under the catch and heave again."
+      - verb: USE
+        item: crow_bar
+        target: brake_pawl
+        command_verb: free
+        command_template: "free {target} with {item}"
+        conditions: [{ has_item: crow_bar }, { not_flag: pawl_free }, { not_flag: sluice_clear }]
+        skill_check:
+          skill: might
+          difficulty: 9
+          on_success:
+            - set_flag: pawl_free
+            - inc_var: { name: score, by: 10 }
+            - add_journal: "You levered the dropped brake-pawl up out of the drive-gear with the crow-bar."
+            - narrate: "You set the crow-bar where Ives told you, under the pawl and not against the gear teeth, and throw your weight on it. The pivot screams once and gives; the catch lifts clear and pins back. One fault of the two is put right."
+          on_failure:
+            - narrate: "The pawl shifts a thumb's breadth and drops back with a clang. It is not too heavy and no second tool is hidden here; the pivot is only stiff. Reset the bar under the catch and heave again."
+
+  - id: flood_hatch
+    name: "flood-hatch"
+    aliases: [hatch, flood hatch, floodgate, flood-gate, staging, trap]
+    description: >
+      The old flood-hatch sags in its frame at the head of the race. Its staging is soft
+      and black with rot, and the wheel-pit drops away deep and dark right under where you
+      would have to stand to lever it. With the billhook to snag the ring, a crow-bar from
+      the stone lip might drop it enough to run the wheel, but one slipped foot would put
+      you under the wheel instead.
+    variants:
+      - when: [{ has_flag: sluice_clear }]
+        text: >
+          The hatch sags rotten and useless beside a race that already runs. Levering it now
+          would mean standing over the wheel-pit for no gain.
+    interactions:
+      - verb: USE
+        item: crow_bar
+        target: flood_hatch
+        command_verb: lever
+        command_template: "lever {target} with {item}"
+        conditions: [{ has_item: crow_bar }, { has_item: billhook }, { not_flag: sluice_clear }, { has_flag: pawl_free }]
+        skill_check:
+          skill: might
+          difficulty: 16
+          on_success:
+            - set_flag: sluice_clear
+            - inc_var: { name: score, by: 10 }
+            - add_journal: "You got water running down the head-race and onto the wheel."
+            - narrate: >
+                You keep both feet on the stone lip, set the crow-bar through the hatch ring,
+                and heave before the rotten staging can invite you onto it. The chain snaps,
+                the hatch drops crooked, and water punches through under your boots. With the
+                pawl already pinned back, both faults are answered.
+          on_failure:
+            - add_journal: "You tried the rotten flood-hatch shortcut and the staging took you into the wheel-pit."
+            - narrate: >
+                You set the crow-bar to the hatch ring and lean for the shortcut. The rotten
+                staging takes the first hard shift of your weight, exactly as the board warned,
+                and drops away under you. The held water follows.
+            - end_game: ending_drowned
+      - verb: USE
+        item: crow_bar
+        target: flood_hatch
+        command_verb: lever
+        command_template: "lever {target} with {item}"
+        conditions: [{ has_item: crow_bar }, { has_item: billhook }, { not_flag: sluice_clear }, { not_flag: pawl_free }]
+        skill_check:
+          skill: might
+          difficulty: 16
+          on_success:
+            - set_flag: sluice_clear
+            - inc_var: { name: score, by: 10 }
+            - add_journal: "You got water running down the head-race and onto the wheel."
+            - narrate: >
+                You keep both feet on the stone lip, set the crow-bar through the hatch ring,
+                and heave before the rotten staging can invite you onto it. The chain snaps,
+                the hatch drops crooked, and water punches through under your boots. One fault
+                of the two is answered.
+          on_failure:
+            - add_journal: "You tried the rotten flood-hatch shortcut and the staging took you into the wheel-pit."
+            - narrate: >
+                You set the crow-bar to the hatch ring and lean for the shortcut. The rotten
+                staging takes the first hard shift of your weight, exactly as the board warned,
+                and drops away under you. The held water follows.
+            - end_game: ending_drowned
+
+  - id: sea_winch
+    name: "sea-gate winch"
+    aliases: [winch, gate, sea-gate, sea gate, socket, capstan]
+    description: >
+      The iron sea-gate winch is geared off the wheel's own drive. Set the crank-handle in
+      its socket and wind once the wheel is truly turning: the race must run and the pawl
+      must be free, both, or there is no drive in the gear to lift against.
+    variants:
+      - when: [{ has_flag: gate_up }]
+        text: "The sea-gate winch is wound fully up, the gate standing open below and the held water going down through it to the staith."
+    interactions:
+      - verb: USE
+        item: crank_handle
+        target: sea_winch
+        command_verb: wind
+        command_template: "wind {target} with {item}"
+        conditions:
+          - { has_item: crank_handle }
+          - { has_flag: sluice_clear }
+          - { has_flag: pawl_free }
+          - { not_flag: gate_up }
+        skill_check:
+          skill: might
+          difficulty: 9
+          on_success:
+            - set_flag: gate_up
+            - add_journal: "With both faults put right, you wound the sea-gate up and sent the held water down to the staith."
+            - narrate: "You drop the crank-handle into the socket and the freed wheel takes the work. Tooth by tooth the winch turns under your hands, the gate rises, and the held water goes down in a long brown slide. The way to the staith is open."
+          on_failure:
+            - narrate: "The crank turns once and kicks back hard enough to numb your palms. The wheel is driving now; you only lost the rhythm. Set your feet, catch the next bite of the gear, and wind again."
+
+npcs:
+  - id: ives
+    name: "Miller Ives"
+    description: >
+      Ives is an old tide-miller with flour in his beard and blood drying at his temple,
+      too hurt to stand but too angry to sleep while his mill is being used to kill a boat.
+    room: mill_house
+    dialogue:
+      root: ives_root
+      nodes:
+        - id: ives_root
+          npc_text: >
+            If you can stand, you can save them. My written order is on the board;
+            I can give you the tricks. The wheel has two faults and that knife-man
+            means to keep the tools from you. Ask fast, then work faster.
+          variants:
+            - when:
+                - any_of:
+                    - { has_flag: heard_race_trick }
+                    - { has_flag: heard_pawl_trick }
+                    - { has_flag: heard_yard_trick }
+              text: "What else do you need? Race, pawl, knife-man. Those are the night."
+          topics:
+            - id: race
+              prompt: "Ask how to clear the choked race."
+              conditions: [{ not_flag: heard_race_trick }]
+              goto: race_trick
+            - id: pawl
+              prompt: "Ask how to free the brake-pawl and wind the gate."
+              conditions: [{ not_flag: heard_pawl_trick }]
+              goto: pawl_trick
+            - id: yard
+              prompt: "Ask about the saboteur at the tool-shed."
+              conditions: [{ not_flag: heard_yard_trick }]
+              goto: yard_trick
+            - id: leave
+              prompt: "Leave Ives and work the mill."
+              end: true
+        - id: race_trick
+          npc_text: >
+            Cut the downstream braid first. Everyone wants to hack the top of the choke, and
+            that only tightens it. Hook low, pull the bough toward the wheel, then cut what
+            the water shows you. Do it that way and the race will clear.
+          effects:
+            - set_flag: heard_race_trick
+            - inc_var: { name: craft, by: 5 }
+            - add_journal: "Ives told you the head-race trick: cut downstream first and let the water show the next cut."
+          topics:
+            - id: pawl
+              prompt: "Ask next about the brake-pawl and sea-gate."
+              conditions: [{ not_flag: heard_pawl_trick }]
+              goto: pawl_trick
+            - id: yard
+              prompt: "Ask next about the saboteur at the tool-shed."
+              conditions: [{ not_flag: heard_yard_trick }]
+              goto: yard_trick
+            - id: back
+              prompt: "Nod, and ask something else."
+              goto: ives_root
+            - id: leave
+              prompt: "Leave Ives and work the mill."
+              end: true
+        - id: pawl_trick
+          npc_text: >
+            Do not pry against the teeth. Put the crow-bar under the pawl's heel, lift with
+            the frame, and pin it before it drops back. The same rhythm will catch the winch
+            when the wheel bites. It wants a back, aye, but it wants the right angle more.
+          effects:
+            - set_flag: heard_pawl_trick
+            - inc_var: { name: might, by: 5 }
+            - add_journal: "Ives showed you the pawl and winch angle: lift from the heel, work with the frame, and catch the gear's rhythm."
+          topics:
+            - id: race
+              prompt: "Ask next how to clear the choked race."
+              conditions: [{ not_flag: heard_race_trick }]
+              goto: race_trick
+            - id: yard
+              prompt: "Ask next about the saboteur at the tool-shed."
+              conditions: [{ not_flag: heard_yard_trick }]
+              goto: yard_trick
+            - id: back
+              prompt: "Nod, and ask something else."
+              goto: ives_root
+            - id: leave
+              prompt: "Leave Ives and work the mill."
+              end: true
+        - id: yard_trick
+          npc_text: >
+            He is brave while he has reach on you. Take the gaff from the sill and the
+            oilskin from the nook if you mean to face him. Keep the hook between you and
+            his knife; make him step on the wet cobbles. Barehanded, you are asking the die
+            to love you.
+          effects:
+            - set_flag: heard_yard_trick
+            - add_journal: "Ives warned you to keep the gaff-pole between you and the knife-man, and to let the oilskin take the glancing cuts."
+          topics:
+            - id: race
+              prompt: "Ask next how to clear the choked race."
+              conditions: [{ not_flag: heard_race_trick }]
+              goto: race_trick
+            - id: pawl
+              prompt: "Ask next about the brake-pawl and sea-gate."
+              conditions: [{ not_flag: heard_pawl_trick }]
+              goto: pawl_trick
+            - id: back
+              prompt: "Nod, and ask something else."
+              goto: ives_root
+            - id: leave
+              prompt: "Leave Ives and work the mill."
+              end: true
+
+enemies:
+  - id: mill_saboteur
+    name: "tool-shed saboteur"
+    description: "A wet-eyed man with a short gutting knife, planted before the tool-shed door and watching your hands."
+    room: mill_yard
+    hp: 8
+    attack: 4
+    defense: 2
+    defeat_flag: yard_clear
+    death_ending: ending_cut_down
+    on_defeat:
+      - inc_var: { name: score, by: 10 }
+      - add_journal: "You drove the tool-shed saboteur off the yard and reached the mill tools."
+
+win_conditions:
+  - id: save_boat_with_takings
+    conditions: [{ visited: the_staith }, { has_item: coin_bag }]
+    ending: ending_saved_with_takings
+  - id: save_boat_after_returning_takings
+    conditions: [{ visited: the_staith }, { has_flag: coin_bag_returned }, { not_item: coin_bag }]
+    ending: ending_saved_returned_takings
+  - id: save_boat
+    conditions: [{ visited: the_staith }]
+    ending: ending_saved
+
+endings:
+  - id: ending_saved
+    title: "The Boat Comes Down"
+    variants:
+      - when: [{ not_flag: read_board }]
+        text: >
+          The boat comes down easy through the open gate, finds the deep channel, and slides
+          past the staith with her crew safe aboard. You saved them from Ives's living advice,
+          not the written millboard order: brave, quick, and one step less official until Ives
+          writes the report himself. *** You have won. ***
+    text: >
+      The boat comes down easy through the open gate, finds the deep channel, and slides past
+      the staith with her crew safe. You put both faults right, drove the saboteur from the
+      tools, and ran the wheel as built. Ives will have names for the harbor board by dawn,
+      and his takings are still on the desk. *** You have won. ***
+  - id: ending_saved_returned_takings
+    title: "The Boat Comes Down, The Bag Put Back"
+    text: >
+      The boat comes down easy through the open gate, finds deep water, and slides past the
+      staith with her crew safe. The toll-takings are back on Ives's desk, though your hand
+      knew their weight before conscience won. Ives and the crew live, and the accounts
+      balance with one private stain left off the chalk. *** You have won. ***
+  - id: ending_saved_with_takings
+    title: "The Boat Comes Down, Silver in Your Coat"
+    text: >
+      The boat comes down easy through the open gate, finds the deep channel, and slides past
+      the staith with her crew safe aboard. You saved them, and the miller's silver rides cold
+      in your coat while Ives lies upstairs trusting the sound of the wheel. Some victories
+      still have to be hidden on the walk home. *** You have won. ***
+  - id: ending_thief
+    title: "The Week's Takings"
+    text: >
+      The miller's silver is a good cold weight in your coat all the long walk off the mill
+      in the dark. Behind you the sea-gate stays unwound and the boat stays caught above the
+      weir with the water going out from under her. Some nights, on the falling tide, you will
+      hear the sound she makes on the stones anyway. *** You have taken the takings. ***
+  - id: ending_drowned
+    title: "Under the Wheel"
+    text: >
+      You set the crow-bar to the rotten hatch the way a frightened hand does when it wants a
+      shortcut. The staging gives under your feet exactly as the board and the black wood said
+      it would. The held water comes through in a hard rush and takes you down into the wheel-pit
+      under the dark wheel. *** You have died. ***
+    death: true
+  - id: ending_cut_down
+    title: "Knife on the Wet Cobble"
+    text: >
+      The saboteur rushes inside your guard and the knife finds you on the wet cobbles. Ives
+      warned you what the gaff and oilskin were for; without enough reach or hide between you
+      and the blade, the yard was always a gamble. The tool-shed stays shut, the wheel stays
+      still, and the tide keeps falling. *** You have died. ***
+    death: true

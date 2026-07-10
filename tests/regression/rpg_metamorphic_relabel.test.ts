@@ -73,7 +73,10 @@ const packFiles = readdirSync(PACK_DIR)
 // (original + twin), so keep the generous ceiling; a cap-out surfaces as a loud failure
 // rather than a hang.
 const MAX_STATES = 200_000;
-const TEST_TIMEOUT_MS = 90_000;
+// 300s matches rpg_metamorphic_observation_stream's budget: tide_mill's census legs
+// stretch ~3x under contended CI runners (its sibling blew a 120s budget on PR #80's
+// first CI run). MAX_STATES, not the clock, bounds the work — a hang still fails loudly.
+const TEST_TIMEOUT_MS = 300_000;
 
 // Best/worst-roll PRNGs, identical to rpg_all_endings_reachable.test.ts. resolveAttack
 // draws player strike first, enemy reply second; resolveSkillCheck draws once.

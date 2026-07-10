@@ -53,8 +53,21 @@ export type RpgStepActionResponse<Args extends RpgStepResponseOptions> =
 function actionOptionForId(
   actions: readonly RpgActionOption[],
   id: string,
+  active: ReturnType<typeof activeDialogue>,
 ): RpgActionOption | null {
-  return actions.find((action) => action.id === id) ?? null;
+  const exact = actions.find((action) => action.id === id);
+  if (exact) return exact;
+  if (!active || !id.startsWith("ask_")) return null;
+  const topicAlias = id.slice("ask_".length);
+  const aliasedTopic = active.node.topics.find((topic) =>
+    (topic.aliases ?? []).includes(topicAlias),
+  );
+  if (!aliasedTopic) return null;
+  return (
+    actions.find(
+      (action) => action.action.type === "ASK" && action.action.topic === aliasedTopic.id,
+    ) ?? null
+  );
 }
 
 function obsLocation(obs: { room: string }): string {
@@ -78,7 +91,8 @@ export function runRpgStepAction<Args extends RpgStepActionArgs>(
     return rpgStateHashRejection(currentStateHash) as RpgStepActionResponse<Args>;
   }
   const actionOptions = rpgRuntime.legalActionsFor(s);
-  const actionOption = actionOptionForId(actionOptions, args.action_id);
+  const active = activeDialogue(s.index, s.state);
+  const actionOption = actionOptionForId(actionOptions, args.action_id, active);
   const beforeStep = s.state.step;
   const beforeSceneId = s.state.current;
   const beforeTitle = rpgRoomTitle(s.index, s.state);
@@ -89,7 +103,7 @@ export function runRpgStepAction<Args extends RpgStepActionArgs>(
     // overworld blind playtest). Name the modality only in that case — every
     // other unknown-id rejection keeps the terse default (rejections live in
     // transcripts, so idle words cost tokens on every future read).
-    const inDialogue = activeDialogue(s.index, s.state) !== null;
+    const inDialogue = active !== null;
     const rejectionReason = inDialogue
       ? "That action is not available right now: you are mid-conversation, and only the listed ask topics are legal until one of them ends the talk."
       : "That action is not available right now.";

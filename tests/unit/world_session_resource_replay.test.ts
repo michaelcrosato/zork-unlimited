@@ -203,6 +203,29 @@ describe("overworld snapshot resource replay", () => {
     expect([...pendingResolution.requiredKeys]).toEqual([]);
   });
 
+  it("treats explicit null road event ids as suppressed plain travel", () => {
+    const snapshotValue = snapshot([travelEntry({ roadEventId: null })]);
+    const travelTimeline = timeline(snapshotValue);
+    const roadJournal = roadJournalResolutionIndex(
+      sources([roadEvent()]),
+      { roadJournalEntries: [] },
+      travelTimeline,
+      null,
+    );
+
+    expect([...roadJournal.requiredKeys]).toEqual([]);
+    expect(() =>
+      assertSnapshotResourceReplay(
+        snapshotValue,
+        sources([roadEvent()]),
+        travelTimeline,
+        roadJournal,
+        { entries: [] },
+        { entries: [] },
+      ),
+    ).not.toThrow();
+  });
+
   it("replays road encounter and rest service costs in chronological order", () => {
     const snapshotValue = snapshot([travelEntry({ fatigueGained: 3, fatigueAfter: 3 })], {
       minutes: 770,
@@ -245,6 +268,41 @@ describe("overworld snapshot resource replay", () => {
         { entries: [] },
       ),
     ).not.toThrow();
+  });
+
+  it("rejects quest completion journals recorded before enough time elapsed", () => {
+    const forgedEarlyCompletion = snapshot([], {
+      minutes: 540,
+      supplies: 6,
+      fatigue: 0,
+    });
+    const travelTimeline = timeline(forgedEarlyCompletion);
+    const roadJournal = roadJournalResolutionIndex(
+      sources(),
+      { roadJournalEntries: [] },
+      travelTimeline,
+      null,
+    );
+    const localActionJournal = {
+      entries: [
+        {
+          entry: journalEntry("quest_done", "quest_done:quest_a", "Day 1, 09:00"),
+          recordedAt: 540,
+          duration: 140,
+        },
+      ],
+    };
+
+    expect(() =>
+      assertSnapshotResourceReplay(
+        forgedEarlyCompletion,
+        sources(),
+        travelTimeline,
+        roadJournal,
+        { entries: [] },
+        localActionJournal,
+      ),
+    ).toThrow(/quest_done.*before enough clock time elapsed/);
   });
 
   it("records road and service replay entries from journal rows", () => {

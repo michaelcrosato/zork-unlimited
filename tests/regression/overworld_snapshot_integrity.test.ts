@@ -129,18 +129,27 @@ function exportedSnapshotAfterTwoRoads() {
     include_observation: true,
     session_id: started.session_id,
   }).observation;
-  const secondRoad = afterFirstRoad.exits[0];
+  const secondRoad =
+    afterFirstRoad.exits.find(
+      (edge) => edge.id !== firstRoad.id && overworldRoadEventFor(overworld, edge.id),
+    ) ?? afterFirstRoad.exits[0];
   if (!secondRoad) throw new Error("expected a second overworld road");
   a.travel_overworld_session({ session_id: started.session_id, road_id: secondRoad.id });
-  a.resolve_overworld_session_road_encounter({
-    ...FULL_OVERWORLD_RESPONSE,
+  const afterSecondRoad = a.get_overworld_session({
+    include_observation: true,
     session_id: started.session_id,
-    strategy: "press_on",
-  });
+  }).observation;
+  if (afterSecondRoad.pendingRoadEncounter) {
+    a.resolve_overworld_session_road_encounter({
+      ...FULL_OVERWORLD_RESPONSE,
+      session_id: started.session_id,
+      strategy: "press_on",
+    });
+  }
 
   const snapshot = a.export_overworld_session({ session_id: started.session_id }).snapshot;
   expect(snapshot.travelLog.length).toBeGreaterThanOrEqual(2);
-  expect(snapshot.journalEntries.length).toBeGreaterThanOrEqual(2);
+  expect(snapshot.journalEntries.some((entry) => entry.kind === "road")).toBe(true);
   return { a, snapshot };
 }
 
@@ -280,6 +289,7 @@ function exportedSnapshotWithPendingRoad() {
   const snapshot = a.export_overworld_session({ session_id: started.session_id }).snapshot;
   expect(snapshot.pendingRoadEncounter).toEqual({ edgeId: road.id });
   expect(snapshot.travelLog[0]?.edgeId).toBe(road.id);
+  expect(snapshot.travelLog[0]?.roadEventId).toBe(overworldRoadEventFor(overworld, road.id)?.id);
   return { a, snapshot };
 }
 
@@ -793,7 +803,36 @@ describe("overworld snapshot restore integrity", () => {
     };
 
     expect(() => a.restore_overworld_session({ snapshot: forgedPendingRoad })).toThrow(
-      /pending road encounter.*latest travel log/,
+      /pending road encounter.*does not match latest travel road event/,
+    );
+  });
+
+  it("rejects pending road encounters when the latest travel explicitly had no road event", () => {
+    const { a, snapshot } = exportedSnapshotWithPendingRoad();
+    const latestTravel = snapshot.travelLog[0]!;
+    const forgedSuppressedPendingRoad = {
+      ...snapshot,
+      travelLog: [{ ...latestTravel, roadEventId: null }, ...snapshot.travelLog.slice(1)],
+    };
+
+    expect(() => a.restore_overworld_session({ snapshot: forgedSuppressedPendingRoad })).toThrow(
+      /pending road encounter.*did not fire/,
+    );
+  });
+
+  it("rejects pending road encounters when the latest travel records a different road event", () => {
+    const { a, snapshot } = exportedSnapshotWithPendingRoad();
+    const latestTravel = snapshot.travelLog[0]!;
+    const forgedMismatchedPendingRoad = {
+      ...snapshot,
+      travelLog: [
+        { ...latestTravel, roadEventId: "road_event:forged_other" },
+        ...snapshot.travelLog.slice(1),
+      ],
+    };
+
+    expect(() => a.restore_overworld_session({ snapshot: forgedMismatchedPendingRoad })).toThrow(
+      /travel road event .*does not match the world/,
     );
   });
 

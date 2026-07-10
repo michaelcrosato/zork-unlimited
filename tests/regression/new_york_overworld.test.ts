@@ -20,7 +20,7 @@ describe("New York overworld graph", () => {
     expect(world.start).toBe("albany_city");
     expect(world.scale.population_floor).toBe(10_000);
     expect(world.nodes.length).toBeGreaterThanOrEqual(240);
-    expect(world.quests.length).toBe(11);
+    expect(world.quests.length).toBe(12);
     expect(world.design_rules.join(" ")).toContain("not globally selectable");
     expect(world.design_rules.join(" ")).toContain("notice boards start empty");
     expect(world.design_rules.join(" ")).toContain("one local quest lead");
@@ -72,6 +72,26 @@ describe("New York overworld graph", () => {
     );
   });
 
+  it("hand-authors the Albany-Colonie road event as direction-safe starting-area texture", () => {
+    const albanyExit = overworldEdgesFrom(world, "albany_city").find(
+      (edge) => edge.destination.id === "colonie_town",
+    );
+    const colonieExit = overworldEdgesFrom(world, "colonie_town").find(
+      (edge) => edge.destination.id === "albany_city",
+    );
+    expect(albanyExit).toBeDefined();
+    expect(colonieExit).toBeDefined();
+    expect(colonieExit?.id).toBe(albanyExit?.id);
+
+    const event = world.road_events.find((roadEvent) => roadEvent.edge === albanyExit?.id);
+    expect(event).toBeDefined();
+    expect(event?.title).toBe("Thruway shoulder flare-up");
+    expect(event?.title.toLowerCase()).not.toContain("road report");
+    expect(event?.summary).toContain("Between Albany city and Colonie town");
+    expect(event?.summary).toContain("jackknifed box truck");
+    expect(event?.summary).not.toMatch(/Albany city to Colonie town|Colonie town to Albany city/);
+  });
+
   it("places old quest sources locally instead of exposing all of them at start", () => {
     const local = world.quests.filter((quest) => quest.home === world.start);
     expect(local.length).toBeGreaterThan(0);
@@ -86,6 +106,67 @@ describe("New York overworld graph", () => {
       expect(area?.home, quest.id).toBe(quest.home);
       expect(quest.discovery, quest.id).toContain(area?.name);
     }
+  });
+
+  it("hand-authors Albany's opening bridge into The Wolf-Winter", () => {
+    const nodesById = new Map(world.nodes.map((node) => [node.id, node]));
+    const areasById = new Map(world.areas.map((area) => [area.id, area]));
+    const poisById = new Map(world.points_of_interest.map((poi) => [poi.id, poi]));
+    const contactsById = new Map(world.characters.map((contact) => [contact.id, contact]));
+    const eventsById = new Map(world.local_events.map((event) => [event.id, event]));
+    const jobsById = new Map(world.local_jobs.map((job) => [job.id, job]));
+    const sitesById = new Map(world.exploration_sites.map((site) => [site.id, site]));
+    const questsById = new Map(world.quests.map((quest) => [quest.id, quest]));
+
+    const albany = nodesById.get("albany_city");
+    const civic = areasById.get("albany_city__civic_core");
+    const station = areasById.get("albany_city__transport_hub");
+    const stationPoi = poisById.get("albany_city__transport_hub__poi");
+    const hayden = contactsById.get("albany_city__transport_hub__contact");
+    const stationEvent = eventsById.get("albany_city__transport_hub__event");
+    const stationJob = jobsById.get("albany_city__transport_hub__job");
+    const stationSite = sitesById.get("albany_city__transport_hub__site");
+    const wolfWinter = questsById.get("wolf_winter");
+
+    expect(albany?.description).toContain("Hudson roads");
+    expect(civic?.summary).toContain("winter-relief petitions");
+    expect(station?.summary).toContain("Rowan's circled petition");
+    expect(station?.summary).toContain("hill-road dispatch");
+    expect(station?.discovery).toContain("wolf-winter packet linking Albany's relief desk");
+    expect(stationPoi?.summary).toContain("Hayden's route pin");
+    expect(stationPoi?.summary).toContain("Old Cade waiting");
+    expect(hayden?.agenda).toContain("packet Rowan flagged");
+    expect(hayden?.agenda).toContain("Old Cade's hill steading");
+    expect(stationEvent?.summary).toContain("Hayden's route pin");
+    expect(stationEvent?.summary).toContain("Old Cade's cattle");
+    expect(stationJob?.summary).toMatch(/wolf-winter/i);
+    expect(stationSite?.discovery).toContain("Rowan's docket mark");
+    expect(stationSite?.discovery).toContain("Old Cade's byre tag");
+    expect(wolfWinter?.discovery).toContain("Albany Station Quarter");
+    expect(wolfWinter?.discovery).toContain("cattle byre");
+    expect(wolfWinter?.discovery).toContain("Albany's civic records");
+    expect(wolfWinter?.discovery).toContain("live dispatch");
+    expect(wolfWinter?.discovery).not.toContain("posted on the station board");
+
+    const authoredBridge = [
+      albany?.description,
+      civic?.summary,
+      station?.summary,
+      station?.discovery,
+      stationPoi?.summary,
+      hayden?.summary,
+      hayden?.agenda,
+      stationEvent?.summary,
+      stationJob?.summary,
+      stationJob?.objective,
+      stationSite?.summary,
+      stationSite?.discovery,
+      wolfWinter?.discovery,
+    ].join(" ");
+    expect(authoredBridge).not.toContain("concrete local lead point");
+    expect(authoredBridge).not.toContain("Ask around Albany city for work tied to");
+    expect(authoredBridge).not.toContain("make Albany City feel worked-in rather than decorative");
+    expect(authoredBridge).not.toContain("from the station board");
   });
 
   it("populates every town and road with exploration substrate", () => {

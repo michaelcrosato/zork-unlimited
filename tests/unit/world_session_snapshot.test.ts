@@ -101,6 +101,7 @@ describe("overworld session snapshots", () => {
       edgeId: "road:albany:colonie",
       fromId: "albany_city",
       toId: "colonie_town",
+      roadEventId: null,
       delayMinutes: 5,
       minutes: 25,
       arrivedAt: 505,

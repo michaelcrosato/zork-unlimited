@@ -23,6 +23,7 @@ export type OverworldQuestCompletionState = {
   questId: string;
   outcome: OverworldQuestCompletionOutcome;
   questsById: ReadonlyMap<string, OverworldQuest>;
+  areasById: ReadonlyMap<string, OverworldArea>;
   nodesById: ReadonlyMap<string, OverworldNode>;
   startedQuestIds: ReadonlySet<string>;
 };
@@ -82,6 +83,14 @@ export type OverworldQuestCompletionResult = {
 // paid 3).
 export const QUEST_COMPLETION_RENOWN = 8;
 
+export function questCompletionMinutes(
+  quest: OverworldQuest,
+  areasById: ReadonlyMap<string, OverworldArea>,
+): number {
+  const localApproachMinutes = areasById.get(quest.area)?.travel_minutes ?? 30;
+  return localApproachMinutes + QUEST_COMPLETION_RENOWN * 15;
+}
+
 function questAreaName(
   quest: OverworldQuest,
   areasById: ReadonlyMap<string, OverworldArea>,
@@ -130,8 +139,9 @@ export function planOverworldQuestCompletion(
     throw new Error("A death ending does not complete the overworld quest.");
   }
   const home = state.nodesById.get(quest.home);
+  const minutes = questCompletionMinutes(quest, state.areasById);
   return {
-    minutes: 0,
+    minutes,
     quest: questView(quest),
     endingId: state.outcome.endingId,
     endingTitle: state.outcome.endingTitle,
@@ -142,7 +152,7 @@ export function planOverworldQuestCompletion(
       kind: "quest_done",
       town: state.nodesById.get(quest.home)?.name ?? quest.home,
       title: `Completed ${quest.title}`,
-      text: `The quest closed at ${state.outcome.endingTitle}.`,
+      text: `The quest closed at ${state.outcome.endingTitle} after ${minutes} minutes of local work.`,
     },
   };
 }

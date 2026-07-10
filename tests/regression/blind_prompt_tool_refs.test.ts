@@ -1,10 +1,9 @@
 /**
- * The blind-playtest prompts (blind-tester/prompt*.md) hand the agent a ToolSearch
- * `select:` list of `mcp__adventureforge__*` tools to load. If a tool is renamed or
- * removed, a prompt that still names it silently sends the blind agent after a tool
- * that no longer exists — the playthrough (and any load/soak run built on it) breaks
- * with no static signal. This guard keeps every prompt's tool references honest
- * against the server's actual registration.
+ * The blind-playtest prompts (blind-tester/prompt*.md) name the AdventureForge MCP
+ * tools that blind agents may call directly or expose through one ToolSearch
+ * fallback. If a tool is renamed or removed, a prompt that still names it silently
+ * sends the blind agent after a tool that no longer exists. This guard keeps every
+ * prompt's tool references honest against the server's actual registration.
  */
 import { describe, expect, it } from "vitest";
 import { readFileSync, readdirSync } from "node:fs";

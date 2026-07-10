@@ -636,7 +636,7 @@
         "regional_court",
         "stable"
       ],
-      "description": "Albany city is a major city in Capital / Mohawk, population 101,698. Roads, work, rumor, and trouble move through it before they move into the surrounding wilds."
+      "description": "Albany city sits where Hudson roads, rail sidings, court counters, and hill-country relief wagons meet. Work reaches the capital as weather reports, freight slips, and old-family petitions before it becomes a posted notice."
     },
     {
       "id": "greenburgh_town",
@@ -9299,8 +9299,8 @@
       "home": "albany_city",
       "name": "Albany Civic Center",
       "kind": "civic_core",
-      "summary": "Municipal steps, notice boards, and official counters make this the practical center of Albany. It is where a major city's rumors become jobs, warrants, and favors.",
-      "discovery": "Exploring it can reveal official notices, regional arc leads, and who has authority in Capital / Mohawk.",
+      "summary": "Municipal steps and court counters face a notice wall crowded with canal claims, winter-relief petitions, and freight tags from the hill farms west of the Hudson. Three leads sit close enough to start with: the marked Notice Hall board, Rowan Quill's records desk, and a charter-backlog stair where clerks keep ducking below.",
+      "discovery": "Exploring the Civic Center follows those leads into the first ledger run, the Civic Underrooms, and the Market Streets route before the Station Quarter packet can make sense.",
       "travel_minutes": 11,
       "services": [
         "notice_board",
@@ -9327,8 +9327,8 @@
       "home": "albany_city",
       "name": "Albany Station Quarter",
       "kind": "transport_hub",
-      "summary": "Road crews, bus stops, rail sidings, parking lots, and stable yards collect people moving through Albany. Routes out of town are easiest to read here.",
-      "discovery": "Exploring it can reveal road conditions, new route hooks, and travelers with news from adjacent towns.",
+      "summary": "Rail sidings, bus bays, road-warden desks, and stable yards hold Albany's emergency traffic: Rowan's circled petition comes here as a route tag, and Hayden's board turns it from paperwork into a hill-road dispatch.",
+      "discovery": "Exploring it can reveal road conditions, stranded travelers, and the wolf-winter packet linking Albany's relief desk to Old Cade's byre.",
       "travel_minutes": 19,
       "services": [
         "rail_terminal",
@@ -17403,7 +17403,7 @@
       "area": "albany_city__civic_core",
       "kind": "notice_hall",
       "title": "Albany Civic Center Notice Hall",
-      "summary": "Albany Civic Center has a concrete local lead point: records, permits, and worried petitioners. Scouting here reveals work and nearby expedition rumors tied to Albany city."
+      "summary": "The Notice Hall board is not decorative: a red-threaded civic ledger slip, a sealed-underrooms writ, and a station-stamped winter petition share one sightline. Scouting the board turns those marks into local work instead of guessing at counters."
     },
     {
       "id": "albany_city__market__poi",
@@ -17418,8 +17418,8 @@
       "home": "albany_city",
       "area": "albany_city__transport_hub",
       "kind": "route_yard",
-      "title": "Albany Station Quarter Route Yard",
-      "summary": "Albany Station Quarter has a concrete local lead point: missed buses, blocked ramps, and anxious travelers. Scouting here reveals work and nearby expedition rumors tied to Albany city."
+      "title": "Albany Station Quarter Relief Board",
+      "summary": "A slate board mixes I-90 delays with a hand-tied hill-farm tag: Rowan's docket mark, Hayden's route pin, cattle feed, lamp oil, byre jerkin, Old Cade waiting. Scouting here shows how The Wolf-Winter leaves Albany for the hill road."
     },
     {
       "id": "albany_city__industrial__poi",
@@ -23214,8 +23214,8 @@
       "name": "Rowan Quill",
       "role": "records clerk",
       "faction": "Municipal Ledger",
-      "summary": "Rowan Quill works as the records clerk in Albany Civic Center, watching how records, permits, and worried petitioners affect Albany city.",
-      "agenda": "Wants a traveler to handle Albany Civic Center's local problems before they spread through the Capital / Mohawk road network."
+      "summary": "Rowan Quill has ink on both cuffs and a clerk's memory for which petitions are real trouble.",
+      "agenda": "Ask Rowan what matters before the office closes: they can separate ledger work, basement writs, and station-yard relief tags from ordinary counter noise."
     },
     {
       "id": "albany_city__market__contact",
@@ -23234,8 +23234,8 @@
       "name": "Hayden Hale",
       "role": "route dispatcher",
       "faction": "Road Wardens",
-      "summary": "Hayden Hale works as the route dispatcher in Albany Station Quarter, watching how missed buses, blocked ramps, and anxious travelers affect Albany city.",
-      "agenda": "Wants a traveler to handle Albany Station Quarter's local problems before they spread through the Capital / Mohawk road network."
+      "summary": "Hayden Hale dispatches road wardens from Albany Station Quarter, matching late coaches, snow reports, and relief freight to travelers who can move faster than official crews.",
+      "agenda": "Needs someone to carry the packet Rowan flagged from the Station Quarter route desk to Old Cade's hill steading before the cattle are lost; he can point you to the active lead."
     },
     {
       "id": "albany_city__industrial__contact",
@@ -30112,7 +30112,7 @@
       "title": "Albany Civic Center: charter backlog",
       "pressure": "rumor",
       "intensity": 2,
-      "summary": "Albany Civic Center is under rumor pressure around records, permits, and worried petitioners. Resolving it requires scouting this area, talking to its contact, and investigating on site."
+      "summary": "Charter runners stack sealed files by the public stair while a deputy keeps sending people to the wrong counter. To clear the backlog, read the Notice Hall marks, ask Rowan which docket matters, then inspect the stair and underrooms."
     },
     {
       "id": "albany_city__market__event",
@@ -30127,10 +30127,10 @@
       "id": "albany_city__transport_hub__event",
       "home": "albany_city",
       "area": "albany_city__transport_hub",
-      "title": "Albany Station Quarter: missed arrival board",
+      "title": "Albany Station Quarter: winter relief packet",
       "pressure": "conflict",
       "intensity": 3,
-      "summary": "Albany Station Quarter is under conflict pressure around missed buses, blocked ramps, and anxious travelers. Resolving it requires scouting this area, talking to its contact, and investigating on site."
+      "summary": "A northbound relief packet sits open at the route desk: Rowan's docket mark, Hayden's route pin, no team back from the hill road, Old Cade's cattle penned at a byre, and the weather report worsening. Resolving it requires scouting this area, talking to its contact, and investigating on site."
     },
     {
       "id": "albany_city__industrial__event",
@@ -35908,9 +35908,9 @@
     {
       "id": "road_event_colonie_town__albany_city",
       "edge": "road_colonie_town__albany_city",
-      "title": "I-90 / New York State Thruway road report",
+      "title": "Thruway shoulder flare-up",
       "risk": "low",
-      "summary": "The Colonie town to Albany city leg follows I-90 / New York State Thruway for 5.8 miles; expect truck stops, state police turnouts, and fast-moving freight before arrival."
+      "summary": "Between Albany city and Colonie town, I-90 squeezes past warehouse ramps where a jackknifed box truck and state-police flares narrow the shoulder; scouting, hands-on help, or a hard push all have visible costs."
     },
     {
       "id": "road_event_colonie_town__watervliet_city",
@@ -39136,8 +39136,8 @@
       "area": "albany_city__civic_core",
       "kind": "civic",
       "title": "Albany Civic Center Civic Underrooms",
-      "summary": "Albany Civic Center opens into a compact exploration site around sealed records, basement counters, and public rooms after hours. It is close enough to feel local, but risky enough to reward preparation before leaving the main street.",
-      "discovery": "A lead in Albany Civic Center points toward sealed records, basement counters, and public rooms after hours; locals say the Albany problem is bigger than one notice-board errand.",
+      "summary": "The Civic Underrooms tighten into basement counters, sealed record cages, and public rooms after hours; close enough for a first investigation, but risky enough to reward preparation before leaving the main street.",
+      "discovery": "The sealed-underrooms writ points below the Civic Center counters; locals say the Albany problem is bigger than one notice-board errand.",
       "danger": 2,
       "reward": "You secure a civic writ and a cleaner route through local offices, gaining 2 Capital / Mohawk renown."
     },
@@ -39160,8 +39160,8 @@
       "area": "albany_city__transport_hub",
       "kind": "industrial",
       "title": "Albany Station Quarter Signal Yard",
-      "summary": "Albany Station Quarter opens into a compact exploration site around late coaches, freight slips, ramp closures, and misdirected travelers. It is close enough to feel local, but risky enough to reward preparation before leaving the main street.",
-      "discovery": "A lead in Albany Station Quarter points toward late coaches, freight slips, ramp closures, and misdirected travelers; locals say the Albany problem is bigger than one notice-board errand.",
+      "summary": "Albany Station Quarter opens into a compact exploration site around snow-caked coaches, relief crates, freight slips, ramp closures, and drivers arguing over which hill road is still passable. It is close enough to feel local, but risky enough to reward preparation before leaving the main street.",
+      "discovery": "A lead in Albany Station Quarter points toward relief crates, Rowan's docket mark, Old Cade's byre tag, and the road crew that failed to return; locals say the Albany problem is bigger than one notice-board errand.",
       "danger": 3,
       "reward": "You secure route notes that improve travel judgment around the corridor, gaining 3 Capital / Mohawk renown."
     },
@@ -46365,6 +46365,15 @@
       "area": "riverhead_town__market"
     },
     {
+      "id": "tide_mill",
+      "title": "The Tide-Mill",
+      "source": "content/rpg/quests/tide_mill.yaml",
+      "home": "new_york_city",
+      "discovery": "Ask around New York city for work tied to The Tide-Mill. The lead is posted in New York Waterfront.",
+      "visibility": "local_notice_board",
+      "area": "new_york_city__waterfront"
+    },
+    {
       "id": "tanners_fever",
       "title": "The Tanner's Fever",
       "source": "content/rpg/quests/tanners_fever.yaml",
@@ -46378,7 +46387,7 @@
       "title": "The Wolf-Winter",
       "source": "content/rpg/quests/wolf_winter.yaml",
       "home": "albany_city",
-      "discovery": "Ask around Albany city for work tied to The Wolf-Winter. The lead is posted in Albany Station Quarter.",
+      "discovery": "A winter-relief tag moves from Albany's civic records to the Albany Station Quarter route desk: Old Cade's hill steading, a cattle byre, and a wolf pack coming down with the weather. The Wolf-Winter lead is the live dispatch attached to that hill road.",
       "visibility": "local_notice_board",
       "area": "albany_city__transport_hub"
     }
@@ -47742,9 +47751,9 @@
       "area": "albany_city__civic_core",
       "kind": "civic_errand",
       "title": "Albany Civic Center: Civic Ledger Run",
-      "summary": "Albany Civic Center has counter work, quiet favors, and official seals. The job is small enough to finish locally but specific enough to make Albany City feel worked-in rather than decorative.",
-      "objective": "Spend time in Albany Civic Center to verify notices, witness names, and town records before the clerk closes the file.",
-      "reward": "Earn 3 Capital / Mohawk renown and a concrete lead about Albany City.",
+      "summary": "The Civic Ledger Run is not make-work: a relief petition, a market license, and a basement seal all need matching before noon.",
+      "objective": "Verify the Notice Hall mark, witness names, and counter records before Rowan has to close the file.",
+      "reward": "Earn 3 Capital / Mohawk renown and leave with a cleaner Albany lead.",
       "minutes": 61,
       "difficulty": 3,
       "visibility": "local_job_board"
@@ -47767,10 +47776,10 @@
       "home": "albany_city",
       "area": "albany_city__transport_hub",
       "kind": "courier",
-      "title": "Albany Station Quarter: Road Packet",
-      "summary": "Albany Station Quarter has drivers, dispatchers, and travelers with fresh news. The job is small enough to finish locally but specific enough to make Albany City feel worked-in rather than decorative.",
-      "objective": "Spend time in Albany Station Quarter to carry route notes, passenger names, and road warnings through the local traffic tangle.",
-      "reward": "Earn 4 Capital / Mohawk renown and a concrete lead about Albany City.",
+      "title": "Albany Station Quarter: Relief Packet",
+      "summary": "Drivers and dispatchers sort road reports beside crates marked for hill farms; one packet keeps returning with the words wolf-winter penciled on the tag.",
+      "objective": "Spend time in Albany Station Quarter to match route notes, passenger names, and weather warnings to the relief wagon that never checked in.",
+      "reward": "Earn 4 Capital / Mohawk renown and a concrete lead about Albany's hill-country relief work.",
       "minutes": 79,
       "difficulty": 4,
       "visibility": "local_job_board"

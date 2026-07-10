@@ -34,6 +34,7 @@
     "crawl:deep": "tsx bin/crawl.ts --deep",
     "blind": "node blind-tester/blind-launch.mjs",
     "blind:smoke": "node blind-tester/smoke.mjs",
+    "blind:feedback": "tsx scripts/update-blind-feedback-ledger.ts",
     "blind:telemetry": "node blind-tester/telemetry.mjs summary",
     "fleet": "node blind-tester/fleet.mjs",
     "fleet:mock": "node blind-tester/fleet.mjs --mock",

@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 492 -->
+<!-- historical_cycle_count: 527 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -23,128 +23,114 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Found+fixed: real engine bug — any post-quest-completion overworld snapshot failed restore (region-renown replay gap); `traces/bugs/bug_0496_overworld_renown_restore.yaml` + regression test. Deep soak 352k steps across 8 workers: zero findings.
 - Guard: `npm run health` green end-to-end; crawler byte-identical across worker counts; no verification weakened (coherence pins grew 18→22).
 
-### Cycle result - compact_context_version_opt_in
+### Cycle result - albany_wolf_winter_relief_bridge
 
-- Pre-cycle: `C:\dev\agent-cleaner` measure/gates passed through WSL; optional secret scanner remains absent, and WSL git-dir warnings still print after the green gate summary.
-- Engine/loop surface: default compact RPG observations now omit static `v`; `include_context_version: true` restores `RPG_COMPACT_OBSERVATION_VERSION` (`v: 15`) for audit clients, with separate projection cache keys.
-- Loop effect: measured `sunken_barrow` compact `start_world_quest` drops from 510 to 503 bytes and repeated `get_observation` from 459 to 452 bytes; redundant public MCP schema labels were also tightened to keep the blind-playtest ToolSearch source under its 2600-character guard.
-- Self-critique: this is a 7-byte fixed envelope trim, not a mechanics improvement; it follows the event-version opt-in pattern and removes repeated static metadata from hot loop contexts.
-- Guard: focused compact-observation, generated-RPG start, MCP ToolApi, and server-registration regressions pin default omission, opt-in version tags, compact projection cache separation, and ToolSearch schema budget.
-- VERIFY: `C:\dev\agent-cleaner`, focused compact-context/MCP regressions, payload probe, `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, `npm test`, `npm run health`, `npm run assess`, broad `prettier --check .`, and `git diff --check` passed after plan update.
+- Content surface: Albany Station Quarter now frames Wolf-Winter as a Rowan-to-Hayden relief dispatch, and Wolf-Winter opens with the Albany relief packet becoming a hill-road steading crisis.
+- Loop effect: regressions pin the source-neutral civic-records/route-desk quest lead, ban the station-board-only contradiction, and prove the RPG opening/Cade handoff names Albany's relief rider while keeping the spear already in hand.
+- Blind playtest: 25-run `overworld` Codex batch seeds 591-615 all exited 0; clarity 25x4/5, enjoyment 25x4/5, replay 25x true; feedback ledger now has 436 accepted reports.
+- Self-critique: bridge/tone complaints dropped from 12/25 to 1/25 and positive relief-chain mentions hit 25/25; compact journal hash/truncation, generic civic resolutions, and road arrival/progress wording remain loud.
+- Guard: focused affected tests, `npm run health`, `npm run blind:feedback`, and reports `20260708T210747Z`-`20260708T213426Z` seeds 591-615 passed.
 
-### Cycle result - compact_observation_action_cache_skip
+### Cycle result - off_area_job_memory
 
-- Pre-cycle: `C:\dev\agent-cleaner` measure/gates passed through WSL; optional secret scanner remains absent, and WSL git-dir warnings still print after the green gate summary.
-- Engine/loop surface: default compact RPG observations now set `includeAvailableActions: false`, so start/read/load/step contexts that omit `include_actions` no longer enumerate or cache legal actions just to discard ids.
-- Loop effect: no MCP JSON byte change; this trims hot-loop CPU/cache work and keeps `legalActionsCache` empty for no-action compact starts, while `include_actions: true` and full observations still populate action rows.
-- Self-critique: this is an internal runtime efficiency win, not a player-visible mechanics change; it matters because long blind-agent loops ask for compact observations constantly and legal-action enumeration can be requested separately with state hashes.
-- Guard: focused MCP tool, session-cache, view-projection, compact-observation, and server-registration regressions pin no-action cache skipping, action-including cache separation, and unchanged compact response shape.
-- VERIFY: `C:\dev\agent-cleaner`, focused MCP cache/projection regressions, `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, `npm test`, `npm run health`, `npm run assess`, broad `prettier --check .`, and `git diff --check` passed after loop-state rotation.
+- Engine surface: full and compact overworld views now expose `rememberedJobs` / `remembered_jobs` for discovered unfinished jobs in other known local areas while active `jobs` stays current-area only.
+- Loop effect: focused UI regressions pin off-area discovered jobs as remembered leads, reject remote execution until the player moves to that area, and filter completed jobs from active/memory surfaces.
+- Blind playtest: 25-run `overworld` Codex batch seeds 566-590 all exited 0; clarity 25x4/5, enjoyment 25x4/5, replay 25x true; feedback ledger now has 411 accepted reports.
+- Self-critique: direct vanished-job complaints did not recur, but 5/25 still mention area-route/memory friction; the louder blockers are Albany-to-Wolf-Winter tone bridge, compact hash/truncation, and thin civic opening stakes.
+- Guard: focused affected tests, `npm run health`, `npm run blind:feedback`, and reports `20260708T201937Z`-`20260708T204724Z` seeds 566-590 passed.
 
-### Cycle result - legacy_source_alias_type_cleanup
+### Cycle result - wolf_winter_dialogue_surface
 
-- Pre-cycle: `C:\dev\agent-cleaner` measure/gates passed through WSL; optional secret scanner remains absent, and WSL git-dir warnings still print after the green gate summary.
-- Engine/loop surface: retired `pack_path`, `quest_id`, and `quest_path` selectors no longer appear as `never` fields in live world-source, ToolApi, or RPG lifecycle argument types; runtime rejection paths still reject those keys explicitly.
-- Loop effect: no MCP response-byte change this cycle; this is context/API surface cleanup so maintainers and agent code inspection see the single RPG source contract (`world_quest_id` or generated seed) instead of compatibility ghosts.
-- Self-critique: this is not a payload optimization and will not show up in blind-agent play reports; it is useful because it removes misleading typed affordances at engine and tool boundaries while keeping boundary errors honest.
-- Guard: focused world-source, MCP ToolApi, validation-bar, and server-registration regressions pin alias rejection plus the absence of retired alias declarations from public argument type blocks.
-- VERIFY: `C:\dev\agent-cleaner`, focused source/MCP/schema regressions, `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, `npm test`, `npm run health`, `npm run assess`, broad `prettier --check .`, and `git diff --check` passed after loop-state rotation.
+- Content/engine surface: Wolf-Winter Cade topics now expose authored ids (`ask_wolves`, `ask_byre`, `ask_leave`), old doubled ids remain hidden MCP aliases, and Cade's return line is pure spoken text with direct follow-ups/leave.
+- Loop effect: regressions pin no visible `ask_ask_wolves`/`ask_ask_byre`, stale `ask_ask_wolves` still steps through MCP, and root return narration no longer nests speaker/quote prose.
+- Blind playtest: 25-run `overworld` Codex batch seeds 541-565 all exited 0; clarity 25x4/5, enjoyment 25x4/5, replay 25x true; feedback ledger now has 385 accepted reports.
+- Self-critique: dialogue-id/quote complaints fell to 0/25 targeted repeats; off-area discovered jobs feeling lost, hidden-count direction, compact hash truncation, and Albany-to-Wolf-Winter tone remain loud.
+- Guard: focused affected tests, `npm run health`, `npm run blind:feedback`, and reports `20260708T195405Z`-`20260708T200030Z` seeds 541-565 passed.
 
-### Cycle result - compact_event_version_opt_in
+### Cycle result - completed_state_active_lists
 
-- Pre-cycle: `C:\dev\agent-cleaner` measure/gates passed through WSL; optional secret scanner remains absent, and WSL git-dir warnings still print after the green gate summary.
-- Engine/loop surface: compact RPG step/transcript event rows still use stable `event_v: 6`, but default responses no longer repeat the static top-level `event_v`; `include_event_version: true` restores it.
-- Loop effect: measured `breaking_weir` `step_action(read_flood_book)` drops from 1465 to 1453 bytes, `sunken_barrow` movement from 676 to 664, and an illegal-action compact rejection from 943 to 931.
-- Self-critique: this is a very small fixed envelope trim, not a gameplay or persistence upgrade; it is aligned because the version tag is static metadata and remains available when an audit client needs to branch on event-row schema.
-- Guard: focused compact-event, MCP ToolApi, internal-event hiding, and server-registration regressions pin default omission, opt-in version tags, transcript compatibility, and ToolSearch schema budget.
-- VERIFY: `C:\dev\agent-cleaner`, focused compact-event/MCP regressions, payload probe, `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, `npm test`, `npm run health`, and `npm run assess` passed after loop-state rotation.
+- Engine surface: completed local jobs and quests, plus resolved local events, now leave active full/compact overworld lists while completed/resolved ids and journal history remain visible.
+- Loop effect: focused UI regressions pin completed Albany jobs, resolved events, and completed Wolf-Winter as history-only state in full and compact views.
+- Blind playtest: 25-run `overworld` Codex batch seeds 516-540 all exited 0; clarity 25x4/5, enjoyment 25x4/5, replay 25x true; feedback ledger now has 360 accepted reports.
+- Self-critique: completed-active-list complaints fell to 0 targeted repeats, but area-scoped off-area jobs still feel lost and Wolf-Winter dialogue ids/quote backs plus compact journal hashes dominate the new sample.
+- Guard: focused affected tests, `npm run health`, `npm run blind:feedback`, and reports `20260708T192325Z`-`20260708T193009Z` seeds 516-540 passed.
 
-### Cycle result - transcript_session_id_opt_in
+### Cycle result - albany_first_action_signposts
 
-- Pre-cycle: `C:\dev\agent-cleaner` measure/gates passed through WSL; optional secret scanner remains absent, and WSL git-dir warnings still print after the green gate summary.
-- Engine/loop surface: `get_transcript` now omits the echoed `session_id` by default, while `include_session_id: true` restores it; unchanged transcript polls already stayed hash-only.
-- Loop effect: measured `breaking_weir` default transcript summary drops from 166 to 148 bytes and compact-turn transcript drops from 215 to 197 bytes; opt-in session-id audit reads preserve the 166-byte default-summary envelope.
-- Self-critique: this is a small fixed envelope trim, not a mechanics upgrade; it is still aligned because every transcript read already requires the caller-owned RPG session handle.
-- Guard: focused transcript, session, MCP ToolApi, and server-registration regressions pin default omission, session-id opt-in, source-id opt-in independence, unchanged transcript responses, and ToolSearch schema coverage.
-- VERIFY: `C:\dev\agent-cleaner`, focused transcript/MCP regressions, payload probe, `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, `npm test`, `npm run health`, and `npm run assess` passed after loop-state rotation.
+- Content surface: rewrote Albany Civic Center's opening area, Notice Hall, Rowan Quill, charter backlog, Civic Underrooms, and Civic Ledger Run prose around concrete first moves instead of generated lead-point text.
+- Loop effect: focused UI regressions prove the first screen names the Notice Hall board, Rowan's desk, and charter-backlog stair, while scout/talk/explore still reveal Market Streets, Civic Ledger Run, and Civic Underrooms deterministically.
+- Blind playtest: 25-run `overworld` Codex batch seeds 491-515 all exited 0; clarity 25x4/5, enjoyment 25x4/5, replay 25x true; feedback ledger now has 335 accepted reports.
+- Self-critique: first-action signposting improved but did not erase hidden-count scope confusion; completed quest/job/event listings and dialogue id/quote noise are now louder than opening-action uncertainty.
+- Guard: focused affected tests, `npm run health`, `npm run blind:feedback`, and reports `20260708T190115Z`-`20260708T190730Z` seeds 491-515 passed.
 
-### Cycle result - overworld_read_session_id_opt_in
+### Cycle result - directional_road_event_texture
 
-- Pre-cycle: `C:\dev\agent-cleaner` measure/gates passed through WSL; optional secret scanner remains absent, and WSL git-dir warnings still print after the green gate summary.
-- Engine/loop surface: compact overworld read/context responses now omit the echoed `session_id` by default, while `include_session_id: true` restores it; full observation reads still include the session id.
-- Loop effect: measured repeated `get_overworld_session_context` and default `get_overworld_session` reads drop from 772 to 754 bytes; `include_session_id: true` preserves the 772-byte envelope.
-- Self-critique: this is a small hot-read envelope trim, not a mechanics upgrade; it is still aligned because the caller already carries the session handle on every repeated read.
-- Guard: focused MCP overworld and server-registration regressions pin default omission, session-id opt-in, unchanged hash-only responses, and ToolSearch schema budget.
-- VERIFY: `C:\dev\agent-cleaner`, focused MCP regressions, payload probe, `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, `npm test`, `npm run health`, and `npm run assess` passed after loop-state rotation.
+- Content surface: Albany-Colonie's first-road event is now a hand-authored Thruway shoulder incident with direction-neutral prose instead of a generic one-way road report.
+- Loop effect: focused manifest/UI/MCP tests pin the direction-safe event while preserving compact/full v13 mid-route pending-road and arrival resolution behavior.
+- Blind playtest: 25-run `overworld` Codex batch seeds 466-490 all exited 0; clarity 25x4/5, enjoyment 25x4/5, replay 25x true; feedback ledger now has 310 accepted reports.
+- Self-critique: road-direction and literal "road report" complaints dropped to 0/25, with one vague-road-premise report and one residual "arrived" wording report; fresh-start hidden-count/action signposting is now the broadest starting-area issue.
+- Guard: focused affected tests, `npm run health`, `npm run blind:feedback`, and reports `20260708T183739Z`-`20260708T184424Z` seeds 466-490 passed.
 
-### Cycle result - overworld_world_name_opt_in
+### Cycle result - mid_route_road_interruptions
 
-- Pre-cycle: `C:\dev\agent-cleaner` measure/gates passed through WSL; optional secret scanner remains absent, and WSL git-dir warnings still print after the green gate summary.
-- Engine/loop surface: MCP compact overworld projections now omit repeated `context.world` by default, while `include_world_name: true` restores the world label; underlying UI/engine compact views still carry the name.
-- Loop effect: measured `start_overworld` drops from 797 to 762 bytes, repeated `get_overworld_session_context` from 807 to 772, route planning from 873 to 838, and travel from 1224 to 1189; opt-in world-name reads remain 807 bytes.
-- Self-critique: this is a small repeated-envelope win rather than a mechanic upgrade, but it removes static metadata from the hot overworld loop without hiding current town, area, or region.
-- Guard: focused MCP overworld and server-registration regressions pin default omission, world-name opt-in, clone safety, and ToolSearch schema budget.
-- VERIFY: `C:\dev\agent-cleaner`, focused MCP regressions, payload probe, `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, `npm test`, `npm run health`, and `npm run assess` passed after loop-state rotation.
+- Engine surface: pending road encounters now project a route location (`road:<edge_id>`) with no town roads/local affordances, compact overworld context is v13, and road resolution text delivers the destination arrival beat.
+- Loop effect: focused UI/MCP/road tests prove Albany-Colonie pending state reads as on-route, blocks town/road actions, restores through snapshots, and resolves into Colonie before normal town actions resume.
+- Blind playtest: 25-run `overworld` Codex batch seeds 441-465 all exited 0; clarity 25x4/5, enjoyment 25x4/5, replay 25x true; feedback ledger now has 285 accepted reports.
+- Self-critique: no fresh report repeated the after-arrival timing complaint; next road-specific issue is generic/directionally awkward "road report" prose on Albany-Colonie.
+- Guard: focused affected tests, `npm run health`, `npm run blind:feedback`, and reports `20260708T180055Z`-`20260708T181931Z` seeds 441-465 passed.
 
-### Cycle result - compact_world_path_rows
+### Cycle result - road_encounter_travel_timing
 
-- Pre-cycle: `C:\dev\agent-cleaner` measure/gates passed through WSL; optional secret scanner remains absent, and WSL git-dir warnings still print after the green gate summary.
-- Engine/loop surface: `world_path` now defaults to `path_v: 1` compact rows `[id, name, kind, coord, route_from_previous, distance_from_previous]`, while `compact_path: false` preserves the previous full `world` plus `path_from_hub` object response.
-- Loop effect: measured `sunken_barrow` route lookup drops from 569 to 265 bytes; full opt-out remains 569 bytes for debug callers.
-- Self-critique: this trims setup/navigation planning rather than per-turn play, but it removes repeated route-object field names without hiding the useful map facts agents need.
-- Guard: focused MCP ToolApi and server-registration regressions pin compact defaults, full-path opt-out, coordinate lookup rows, and ToolSearch schema budget.
-- VERIFY: `C:\dev\agent-cleaner`, focused MCP regressions, payload probe, `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, `npm test`, `npm run health`, and `npm run assess` passed after loop-state rotation.
+- Engine surface: road travel snapshots now record `roadEventId`, pending road trouble carries route/timing text plus compact `where`, replay/restore respects no-event travel, and immediate same-edge repeats are suppressed.
+- Loop effect: focused UI/MCP/snapshot/resource-replay regressions prove pending road blockers restore cleanly, explicit no-event travel stays plain, and the Albany-Colonie return trip avoids the just-resolved event.
+- Blind playtest: 25-run `overworld` Codex batch seeds 416-440 all exited 0; clarity 25x4/5, enjoyment 25x4/5, replay 25x true; feedback ledger now has 260 accepted reports.
+- Self-critique: same-road-repeat complaints did not recur, but players still read pending road trouble as after-arrival because location already shows the destination; next lever is a true mid-route pending state.
+- Guard: Codex-aware blind runner prompt fallback, focused affected tests, `npm run health`, `npm run blind:feedback`, and reports `20260708T165436Z`-`20260708T174127Z` seeds 416-440 passed.
 
-### Cycle result - save_content_hash_opt_in
+### Cycle result - overworld_quest_time_accounting
 
-- Pre-cycle: `C:\dev\agent-cleaner` measure/gates passed through WSL; optional secret scanner remains absent, and WSL git-dir warnings still print after the green gate summary.
-- Engine/loop surface: `save_game` now omits duplicate public `content_hash` by default because the save blob already embeds the full content hash that `load_game` verifies; callers can request `include_content_hash: true` for explicit audit reads.
-- Loop effect: default checkpoint response drops from 617 to 535 bytes on the measured `breaking_weir` save, while `include_content_hash: true` preserves the old 617-byte envelope; `include_source: true` still omits the duplicate hash unless explicitly requested.
-- Self-critique: this trims checkpoint payloads, not per-turn stepping; the save blob still dominates response size, but removing the repeated hash is a clean response-envelope reduction without weakening persistence integrity.
-- Guard: focused MCP save/load and server-registration regressions pin default omission, opt-in full hash echo, save-embedded hash verification, stale-save rejection behavior, and compact reload compatibility.
-- VERIFY: `C:\dev\agent-cleaner`, focused MCP regressions, payload probe, `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, `npm test`, `npm run health`, and `npm run assess` passed.
+- Engine surface: completed world quests now advance deterministic overworld time from local quest-area travel plus marquee quest renown; `wolf_winter` spends 139 minutes and says so in the quest-done journal.
+- Loop effect: focused lifecycle, UI, MCP, local-journal, and resource-replay tests prove completion advances snapshots/journal time, while repeat completion remains zero-change.
+- Blind playtest: 25-run `overworld` Codex batch seeds 391-415 all exited 0; clarity 24x4/5 + 1x3/5, enjoyment 23x4/5 + 2x3/5, replay 23x true / 2x false.
+- Self-critique: no fresh report repeated the zero-overworld-time complaint; road encounters appearing after arrival/repeating on the same short road are now the dominant starting-area state issue.
+- Guard: focused affected tests, `npm run health`, `npm run blind:feedback`, and reports `20260708T160257Z`-`20260708T162233Z` seeds 391-415 passed.
 
-### Cycle result - compact_session_id_tokens
+### Cycle result - albany_station_quarter_bridge
 
-- Pre-cycle: `C:\dev\agent-cleaner` measure/gates passed through WSL; optional secret scanner remains absent, and WSL git-dir warnings still print after the green gate summary.
-- Engine/loop surface: RPG MCP sessions now allocate `r<N>` ids and overworld MCP sessions allocate `o<N>` ids, preserving deterministic monotonic BigInt counters, LRU lookup behavior, and bridge semantics while removing long textual prefixes from public loop handles.
-- Loop effect: `breaking_weir` `start_world_quest` drops from 689 to 685 bytes, transcript summary from 182 to 178, `load_game` from 794 to 790, `start_overworld` from 803 to 797, repeated overworld reads from 813 to 807, route planning from 879 to 873, and travel from 1230 to 1224; follow-up tool calls also send shorter session ids.
-- Self-critique: this is a small fixed handle-size win, not a mechanics improvement; it is still worth taking because every long-running loop carries the session id through nearly every tool call.
-- Guard: focused RPG session, overworld session, transcript projection, MCP ToolApi, and server-registration regressions pin compact ids, safe-integer-boundary monotonicity, eviction behavior, and bridge response identity.
-- VERIFY: `C:\dev\agent-cleaner`, focused session/MCP regressions, payload probe, `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run validate`, `npm test`, `npm run health`, and `npm run assess` passed.
+- Content surface: hand-authored Albany Civic Center / Station Quarter relief-board, Hayden, relief-packet, signal-yard, job, and `wolf_winter` discovery prose so the first quest lead has local New York footing.
+- Loop effect: focused overworld regression pins the Old Cade/byre/winter-relief bridge and bans the prior generic Albany lead boilerplate.
+- Blind playtest: 25-run `overworld` Codex batch seeds 366-390 all exited 0; reports reached `wolf_winter`, clarity 25x4/5, enjoyment 25x4/5, replay 25x true.
+- Self-critique: best-case reports now notice the town-to-quest lead network, but repeats remain around road encounters after arrival, zero overworld quest time, stale completed lists, compact artifacts, and nearby-town template feel.
+- Guard: focused overworld tests, `npm run validate -- wolf_winter`, `npm run health`, `npm run blind:feedback`, and reports `20260708T150956Z`-`20260708T153614Z` seeds 366-390 passed.
 
-### Cycle result - rpg_public_transcript_hash_tokens
+### Cycle result - fresh_game_feedback_ledger_baseline
 
-- Pre-cycle: `C:\dev\agent-cleaner` measure/gates passed through WSL; optional secret scanner remains absent, and WSL git-dir warnings still print after the green gate summary.
-- Engine/loop surface: public RPG MCP/ToolApi `transcript_hash` values are now compact 24-hex tokens, while transcript freshness still derives from the full internal transcript hash over the cached log hash plus full RPG state hash; stale guards accept compact or full transcript hashes.
-- Loop effect: post-run transcript summary drops from 262 to 222 bytes, full transcript from 1227 to 1187, compact-turn transcript from 441 to 401, and unchanged transcript polls from 143 to 103.
-- Self-critique: this is another fixed 40-byte response-envelope win rather than a world-structure or loop-strategy change; it closes the obvious public hash overhead left after RPG state and overworld snapshot compaction.
-- Guard: focused MCP regressions pin 24-hex public transcript tokens, public-to-full derivation, and compact/full `if_transcript_hash` compatibility without weakening internal transcript hashing.
-- VERIFY: `C:\dev\agent-cleaner`, focused MCP/session regressions, payload probe, `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm test`, `npm run health`, and `npm run assess` passed.
+- Content surface: added deterministic blind-feedback accumulation via `docs/BLIND_FEEDBACK_LEDGER.md` and `npm run blind:feedback`, keeping 100 latest entries explicit and older entries as trait counts.
+- Loop effect: the fresh-start quality oracle now has durable recency/commonality memory instead of ad hoc summaries; 185 accepted reports parse, with 85 older entries collapsed.
+- Blind playtest: 25-run `overworld` Codex batch seeds 341-365 all exited 0; reports reached `wolf_winter`, clarity 25x4/5, enjoyment 25x4/5, replay 25x true.
+- Self-critique: players keep going because `wolf_winter` is strong, but Albany/Station Quarter reads procedural, the quest bridge feels tonally abrupt, and completed/road/time state is noisy.
+- Guard: focused ledger/blind-runner regressions, `npm run blind:feedback`, `npm run health`, and reports `20260708T142738Z`-`20260708T145226Z` seeds 341-365 passed.
 
-### Cycle result - overworld_public_snapshot_hash_tokens
+### Cycle result - tide_mill_head_race_alias_stability
 
-- Pre-cycle: `C:\dev\agent-cleaner` measure/gates passed through WSL; optional secret scanner remains absent, and WSL git-dir warnings still print after the green gate summary.
-- Engine/loop surface: public overworld MCP/ToolApi `snapshot_hash` values are now compact 24-hex tokens, while internal cached snapshot hashes and exported snapshot integrity keep full SHA-256; stale guards accept compact or full hashes.
-- Loop effect: default `start_overworld` drops from 843 to 803 bytes, repeated `get_overworld_session_context` from 853 to 813, default `get_overworld_session` to 813, `plan_overworld_session_route` to 879, `travel_overworld_session` to 1230, and stale travel rejection to 139.
-- Self-critique: this is another fixed 40-byte response-envelope win rather than a world-structure change; transcript hashes and other integrity digests remain full-length follow-up surfaces.
-- Guard: focused overworld/MCP regressions pin 24-hex public snapshot tokens, public-to-full derivation, and compact/full stale-guard compatibility without weakening internal snapshot hashing or exported snapshot payloads.
-- VERIFY: `C:\dev\agent-cleaner`, focused overworld/MCP regressions, payload probe, `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm test`, `npm run health`, and `npm run assess` passed; post-rotation `npm run verify:integrity`, `npm run format:check`, broad `prettier --check .`, and `git diff --check` also passed.
+- Content surface: kept `tide_mill` billhook-specific Head-Race repair while adding a held-billhook `use_choked_sluice` / `clear choked head-race` alias for action-id continuity.
+- Loop effect: focused regressions now prove pre-billhook checking stays no-progress, post-billhook menus offer both ids, and either repair path scores/fixes the race.
+- Blind playtest: 20-run `tide_mill` Codex batch seeds 321-340 all exited 0 and scored 55/55; clarity 20x5/5, enjoyment 20x4/5, replay 20x false.
+- Self-critique: old-id rejection did not recur; strongest repeated next signals are tactical saboteur texture/continuity, underdeveloped coin-bag branch, and the new broader starting-area/open-world direction.
+- Guard: focused route/alias/graph regressions, `npm run validate -- tide_mill`, `npm run health`, and reports `20260708T135657Z`-`20260708T141239Z` seeds 321-340 passed.
 
-### Cycle result - rpg_public_state_hash_tokens
+### Cycle result - tide_mill_billhook_specific_race_action
 
-- Pre-cycle: `C:\dev\agent-cleaner` measure/gates passed through WSL; optional secret scanner remains absent, and WSL git-dir warnings still print after the green gate summary.
-- Engine/loop surface: public RPG MCP/ToolApi `state_hash` values are now compact 24-hex tokens, while internal session hashes, save content hashes, and transcript hashing keep full SHA-256; stale guards accept compact or full hashes.
-- Loop effect: `breaking_weir` default `start_world_quest` drops from 729 to 689 bytes, `get_observation` from 674 to 634, `list_legal_actions` from 255 to 215, `step_action(go_north)` from 845 to 805, and `step_action(read_flood_book)` from 1505 to 1465.
-- Self-critique: this is a fixed 40-byte win on every stateful RPG response rather than a gameplay-content improvement; overworld `snapshot_hash` and transcript hashes remain full-length follow-up surfaces.
-- Guard: focused MCP lifecycle/session/bridge regressions pin 24-hex public state tokens, public-to-full derivation, and compact/full stale-guard compatibility without weakening internal state hashing.
-- VERIFY: `C:\dev\agent-cleaner`, focused MCP regressions, payload probe, `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm test`, `npm run health`, and `npm run assess` passed; post-rotation `npm run verify:integrity`, `npm run format:check`, broad `prettier --check .`, and `git diff --check` also passed.
+- Content surface: converted post-billhook `tide_mill` Head-Race repair interactions to item-on-target billhook uses, yielding `use_billhook_on_choked_sluice` and `cut choked head-race with billhook`.
+- Loop effect: focused route regressions now prove pre-billhook `use_choked_sluice` remains a no-progress check, while held-billhook repair is billhook-specific and score-bearing.
+- Blind playtest: 20-run `tide_mill` Codex batch seeds 301-320 all exited 0 and scored 55/55; clarity 20x5/5, enjoyment 20x4/5, replay 20x false.
+- Self-critique: billhook specificity landed, but seeds 311/318 reused the old `use_choked_sluice` id after obtaining the billhook and hit rejection; next S1 is preserving that id as a legal alias.
+- Guard: focused route/second-fault regressions, `npm run validate -- tide_mill`, `npm run health`, and reports `20260708T132919Z`-`20260708T134325Z` seeds 301-320 passed.
 
-### Cycle result - compact_visible_refs_id_only_v15
+### Cycle result - tide_mill_head_race_inspection_affordance
 
-- Pre-cycle: `C:\dev\agent-cleaner` measure/gates passed through WSL; optional secret scanner remains absent, and WSL git-dir warnings still print after the green gate summary.
-- Engine/loop surface: compact RPG observations are now `v: 15`; visible `objects` and `npcs` are ID arrays, and `enemies` are `[id, hp]` tuples while full observations remain the label-rich debug surface.
-- Loop effect: `breaking_weir` default `start_world_quest` drops from 801 to 729 bytes, `get_observation` from 746 to 674, `step_action(go_north)` from 866 to 845, and `step_action(read_flood_book)` from 1577 to 1505.
-- Self-critique: this trims repeated loop context without touching gameplay state, but agents now rely on prose/action ids or full observations when they need display labels.
-- Guard: compact-observation, MCP ToolApi, schema-budget, cache-clone, and play-harness regressions pin `v: 15`, ID-only visible refs, `[id,hp]` enemies, mutation-safe cached clones, and measured response budgets.
-- VERIFY: `C:\dev\agent-cleaner`, focused compact-observation/MCP/schema/cache regressions, payload probe, `npm run health`, and `npm run assess` passed; post-rotation `npm run verify:integrity`, `npm run format:check`, broad `prettier --check .`, and `git diff --check` also passed.
+- Content surface: changed pre-billhook `tide_mill` Head-Race interaction from `clear choked head-race` to `check choked head-race`, keeping the stable `use_choked_sluice` id and billhook/tool-shed nudge.
+- Loop effect: regression proves the check command gives no score/progress before the billhook, while the post-billhook repair still becomes `clear choked head-race`; no new state flag was kept because it pushed exhaustive proofs over cap.
+- Blind playtest: 20-run `tide_mill` Codex batch seeds 281-300 all exited 0 and scored 55/55; clarity 20x5/5, enjoyment 20x4/5, replay 20x false.
+- Self-critique: "clear before billhook" friction softened, but compact agents still complain about generic `use_choked_sluice`; next S1 is making the decisive repair action billhook-specific.
+- Guard: focused head-race/regression graph checks, `npm run validate -- tide_mill`, `npm run health`, and reports `20260708T125954Z`-`20260708T131451Z` seeds 281-300 passed.

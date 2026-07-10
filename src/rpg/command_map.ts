@@ -80,7 +80,10 @@ function customUseByVerb(index: RpgModelIndex, verb: string, rest: string): RpgA
   for (const o of index.objects.values()) {
     for (const it of o.interactions) {
       if (it.verb === "USE" && it.command_verb === verb && it.target) {
-        matches.push({ target: it.target, ...(it.item !== undefined ? { item: it.item } : {}) });
+        const hit = { target: it.target, ...(it.item !== undefined ? { item: it.item } : {}) };
+        if (!matches.some((m) => m.target === hit.target && m.item === hit.item)) {
+          matches.push(hit);
+        }
       }
     }
   }
@@ -143,6 +146,9 @@ export function parseCommand(index: RpgModelIndex, state: GameState, raw: string
     const arg = rest.replace(/^about\s+/, "").trim();
     const topic =
       active.node.topics.find((t) => t.id.toLowerCase() === arg) ??
+      active.node.topics.find((t) =>
+        (t.aliases ?? []).some((alias) => alias.toLowerCase() === arg),
+      ) ??
       active.node.topics.find((t) => t.prompt.toLowerCase().includes(arg) && arg.length > 0) ??
       (arg === "" ? undefined : undefined);
     if (!topic)

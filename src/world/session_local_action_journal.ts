@@ -4,6 +4,7 @@ import {
   describeOverworldJobAction,
   describeOverworldSiteAction,
 } from "./local_actions.js";
+import { questCompletionMinutes } from "./session_quests.js";
 import type {
   OverworldArea,
   OverworldCharacter,
@@ -105,6 +106,11 @@ function localJournalActionDuration(
       const sourceId = journalSourceId(entry, "scout:");
       const poi = sourceId ? sources.poisById.get(sourceId) : undefined;
       return poi ? 20 : null;
+    }
+    case "quest_done": {
+      const sourceId = journalSourceId(entry, "quest_done:");
+      const quest = sourceId ? sources.questsById.get(sourceId) : undefined;
+      return quest ? questCompletionMinutes(quest, sources.areasById) : null;
     }
     case "resolution": {
       const sourceId = journalSourceId(entry, "resolve:");
@@ -299,6 +305,18 @@ function localJournalSource(
         area: poi.area,
       };
     }
+    case "quest_done": {
+      const sourceId = journalSourceId(entry, "quest_done:");
+      if (!sourceId) return null;
+      const quest = sources.questsById.get(sourceId);
+      if (!quest) return null;
+      return {
+        sourceLabel: "journal completed quest",
+        sourceId,
+        home: quest.home,
+        area: quest.area,
+      };
+    }
     case "resolution": {
       const sourceId = journalSourceId(entry, "resolve:");
       if (!sourceId) return null;
@@ -345,8 +363,10 @@ export function localActionJournalReplayIndex(
       recordedAt,
       duration: localJournalActionDuration(entry, sources),
     });
-    incrementCount(localActionCountByTown, source.home);
-    incrementCount(localActionCountByArea, source.area);
+    if (entry.kind !== "quest_done") {
+      incrementCount(localActionCountByTown, source.home);
+      incrementCount(localActionCountByArea, source.area);
+    }
   }
 
   entries.sort((left, right) => left.recordedAt - right.recordedAt);

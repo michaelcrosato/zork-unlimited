@@ -27,7 +27,7 @@ describe("the New York overworld is the single RPG quest registry", () => {
     const overworldQuestIds = loadOverworldManifest(ROOT)
       .quests.map((quest) => quest.id)
       .sort();
-    expect(overworldQuestIds).toHaveLength(11);
+    expect(overworldQuestIds).toHaveLength(12);
     expect(sources).toHaveLength(overworldQuestIds.length);
     expect(sources.map((source) => source.world_quest_id)).toEqual(overworldQuestIds);
     expect(sources.every((source) => source.world_quest_id !== null)).toBe(true);
@@ -36,6 +36,7 @@ describe("the New York overworld is the single RPG quest registry", () => {
     expect(sources.every((source) => !("id" in source))).toBe(true);
     expect(sources.some((source) => source.world_quest_id === "sunken_barrow")).toBe(true);
     expect(sources.some((source) => source.world_quest_id === "breaking_weir")).toBe(true);
+    expect(sources.some((source) => source.world_quest_id === "tide_mill")).toBe(true);
   });
 
   it("has no retired story catalog or Charter-Marches world/quest-menu tools", () => {

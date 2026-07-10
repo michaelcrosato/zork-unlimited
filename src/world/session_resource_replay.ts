@@ -12,6 +12,7 @@ import type {
   OverworldSessionSnapshot,
   TravelLogEntrySnapshot,
 } from "./session_snapshot.js";
+import { roadEventForTravelLogSnapshot } from "./session_travel_log.js";
 import {
   travelResourceKey,
   type OverworldTravelTimelineIndex,
@@ -198,7 +199,7 @@ export function roadJournalResolutionIndex(
     const key = travelResourceKey(current);
     const next = travelTimeline.oldestFirst[index + 1];
     if (next) nextTravelArrivalByKey.set(key, next.arrivedAt);
-    if (sources.roadEventsByEdgeId.has(current.edgeId) && key !== pendingRoadKey) {
+    if (roadEventForTravelLogSnapshot(current, sources) && key !== pendingRoadKey) {
       requiredRoadResolutionKeys.add(key);
     }
   }
@@ -294,12 +295,8 @@ export function assertSnapshotResourceReplay(
           `Overworld session snapshot has unknown travel road "${event.entry.edgeId}".`,
         );
       }
-      assertTravelResourceTransition(
-        event.entry,
-        edge,
-        sources.roadEventsByEdgeId.get(event.entry.edgeId) ?? null,
-        state,
-      );
+      const roadEvent = roadEventForTravelLogSnapshot(event.entry, sources);
+      assertTravelResourceTransition(event.entry, edge, roadEvent, state);
       assertReplayClock(
         `travel "${travelResourceKey(event.entry)}"`,
         event.recordedAt,

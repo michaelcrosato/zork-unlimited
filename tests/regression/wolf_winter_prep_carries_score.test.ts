@@ -116,9 +116,9 @@ function playPrepared(): GameState {
   act({ type: "MOVE", direction: "north" }); // steading_yard -> byre_yard
   act({ type: "READ", target: "day_book" }); // +5
   act({ type: "TALK", npc: "houndsman" }); // open the conversation
-  act({ type: "ASK", npc: "houndsman", topic: "ask_wolves" }); // +5, +2 attack -> cade_wolves
+  act({ type: "ASK", npc: "houndsman", topic: "wolves" }); // +5, +2 attack -> cade_wolves
   act({ type: "ASK", npc: "houndsman", topic: "wolves_back" }); // back to the root node
-  act({ type: "ASK", npc: "houndsman", topic: "leave_cade" }); // end the conversation
+  act({ type: "ASK", npc: "houndsman", topic: "leave" }); // end the conversation
   act({ type: "MOVE", direction: "west" }); // byre_yard -> store
   act({ type: "TAKE", item: "byre_jerkin" });
   act({ type: "USE", item: "byre_jerkin", target: "byre_jerkin" }); // don it: +5, +2 defense

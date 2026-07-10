@@ -5,6 +5,7 @@ import {
   applyOverworldQuestStart,
   planOverworldQuestCompletion,
   planOverworldQuestStart,
+  questCompletionMinutes,
 } from "../../src/world/session_quests.js";
 
 function area(id: string, name = `${id} name`): OverworldArea {
@@ -139,6 +140,8 @@ describe("overworld quest lifecycle planning", () => {
   it("plans quest completion entries without mutating completion state", () => {
     const lead = quest("lost_letter", "market", "town_a");
     const startedQuestIds = new Set([lead.id]);
+    const areasById = new Map([[lead.area, area(lead.area, "Old Market")]]);
+    const minutes = questCompletionMinutes(lead, areasById);
 
     expect(
       planOverworldQuestCompletion({
@@ -149,11 +152,12 @@ describe("overworld quest lifecycle planning", () => {
           death: false,
         },
         questsById: new Map([[lead.id, lead]]),
+        areasById,
         nodesById: new Map([[lead.home, node(lead.home, "Alden")]]),
         startedQuestIds,
       }),
     ).toEqual({
-      minutes: 0,
+      minutes,
       quest: {
         id: lead.id,
         title: lead.title,
@@ -171,14 +175,16 @@ describe("overworld quest lifecycle planning", () => {
         kind: "quest_done",
         town: "Alden",
         title: `Completed ${lead.title}`,
-        text: "The quest closed at Victory.",
+        text: `The quest closed at Victory after ${minutes} minutes of local work.`,
       },
     });
     expect([...startedQuestIds]).toEqual([lead.id]);
+    expect(minutes).toBe(140);
   });
 
   it("applies quest completion into lifecycle state", () => {
     const lead = quest("lost_letter", "market", "town_a");
+    const areasById = new Map([[lead.area, area(lead.area, "Old Market")]]);
     const plan = planOverworldQuestCompletion({
       questId: lead.id,
       outcome: {
@@ -187,6 +193,7 @@ describe("overworld quest lifecycle planning", () => {
         death: false,
       },
       questsById: new Map([[lead.id, lead]]),
+      areasById,
       nodesById: new Map([[lead.home, node(lead.home, "Alden")]]),
       startedQuestIds: new Set([lead.id]),
     });
@@ -215,6 +222,7 @@ describe("overworld quest lifecycle planning", () => {
         death: false,
       },
       questsById: new Map([[lead.id, lead]]),
+      areasById: new Map([[lead.area, area(lead.area, "Old Market")]]),
       nodesById: new Map([[lead.home, node(lead.home, "Alden")]]),
       startedQuestIds: new Set([lead.id]),
     };

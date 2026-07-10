@@ -72,10 +72,10 @@ export type AssessmentFormatOptions = {
 // How many shipped quests in the New York overworld registry is "healthy" before
 // net-new world expansion is deprioritized. Count world_quest_id entries, not raw
 // YAML files, so this lever cannot reintroduce standalone package authoring. This
-// is the actual shipped count (11 after the Charter-Marches consolidation removed
+// is the actual shipped count (12 after the Tide-Mill benchmark slice landed, following
 // the 5 overworld-orphaned quests), NOT an inflated target — per the DECISION_LOG
 // anti-pattern ruling, breadth is never padded to force content_new.
-const WORLD_QUEST_TARGET = 11;
+const WORLD_QUEST_TARGET = 12;
 
 // The blind-playtest target that means "the CORE GAME itself": the open-world
 // overworld from a fresh start — what `npm run blind` plays by default and what

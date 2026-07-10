@@ -638,7 +638,7 @@ export function validateRpgFoundation(
         ),
       );
     }
-    if (o.takeable && !stronglyConnected) {
+    if (o.takeable && o.droppable !== false && !stronglyConnected) {
       findings.push(
         err(
           "SOFTLOCK_QUEST_ITEM",

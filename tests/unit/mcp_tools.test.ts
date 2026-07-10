@@ -32,6 +32,7 @@ import { buildRpgObservation } from "../../src/rpg/observation.js";
 import { makeStep } from "../../src/core/engine.js";
 import { recordTrace } from "../../src/trace/record.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
+import { questCompletionMinutes } from "../../src/world/session_quests.js";
 import { hashState } from "../../src/core/hash.js";
 import { generateRpgPack } from "../../src/gen/rpg_generator.js";
 import type { RpgAction } from "../../src/api/types.js";
@@ -449,7 +450,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(r.local_job_count).toBe(r.area_count);
     expect(r.road_event_count).toBe(r.road_count);
     expect(r.exploration_site_count).toBeGreaterThanOrEqual(r.region_count * 3);
-    expect(r.quest_count).toBe(11);
+    expect(r.quest_count).toBe(12);
     expect(r).not.toHaveProperty("sources");
     expect(r).not.toHaveProperty("design_rules");
     expect(JSON.stringify(r).length).toBeLessThan(1700);
@@ -822,9 +823,18 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(traveled.travel.suppliesAfter).toBeLessThan(resolved.observation.supplies);
     expect(traveled.travel.fatigueGained).toBeGreaterThan(0);
     expect(traveled.travel.fatigueAfter).toBeGreaterThan(resolved.observation.fatigue);
-    expect(traveled.observation.current.id).toBe("colonie_town");
-    expect(traveled.observation.areas).toHaveLength(1);
-    expect(traveled.observation.currentArea?.id).toBe(traveled.observation.areas[0]?.id);
+    expect(traveled.observation.current.id).toBe(`road:${road!.id}`);
+    expect(traveled.observation.current.name).toBe(
+      `On ${road!.route}: Albany city to Colonie town`,
+    );
+    expect(traveled.observation.current.description).toContain(
+      "You are still between Albany city and Colonie town",
+    );
+    expect(traveled.observation.currentArea).toBeNull();
+    expect(traveled.observation.exits).toEqual([]);
+    expect(traveled.observation.areas).toEqual([]);
+    expect(traveled.observation.jobs).toEqual([]);
+    expect(traveled.observation.routeOptions).toEqual([]);
     expect(traveled.observation.supplies).toBe(traveled.travel.suppliesAfter);
     expect(traveled.observation.fatigue).toBe(traveled.travel.fatigueAfter);
     expect(traveled.observation.pendingRoadEncounter).toMatchObject({
@@ -832,6 +842,9 @@ describe("MCP tools — validate / load (§9.4)", () => {
       from: "Albany city",
       to: "Colonie town",
     });
+    expect(traveled.observation.pendingRoadEncounter?.timing).toBe(
+      `On the road from Albany city to Colonie town at ${traveled.observation.pendingRoadEncounter?.arrivedAt}; resolve this route trouble before doing town business in Colonie town.`,
+    );
     expect(
       traveled.observation.pendingRoadEncounter?.options.map((option) => option.strategy),
     ).toEqual(["cautious_scout", "assist_travelers", "press_on"]);
@@ -842,7 +855,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
       a.travel_overworld_session({
         ...FULL_OVERWORLD_RESPONSE,
         session_id: started.session_id,
-        road_id: traveled.observation.exits[0]!.id,
+        road_id: road!.id,
       }),
     ).toThrow(/pending road encounter/i);
     expect(() =>
@@ -855,7 +868,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
       a.plan_overworld_session_route({
         ...FULL_OVERWORLD_RESPONSE,
         session_id: started.session_id,
-        destination_town_id: traveled.observation.exits[0]!.destination.id,
+        destination_town_id: "albany_city",
       }),
     ).toThrow(/pending road encounter/i);
 
@@ -870,7 +883,13 @@ describe("MCP tools — validate / load (§9.4)", () => {
       renownGained: 1,
     });
     expect(roadEncounter.result.entry.kind).toBe("road");
+    expect(roadEncounter.result.entry.text).toContain(
+      "On the road from Albany city to Colonie town",
+    );
+    expect(roadEncounter.result.entry.text).toContain("Afterward you arrive in Colonie town.");
     expect(roadEncounter.observation.pendingRoadEncounter).toBeNull();
+    expect(roadEncounter.observation.current.id).toBe("colonie_town");
+    expect(roadEncounter.observation.currentArea?.home).toBe("colonie_town");
     expect(roadEncounter.observation.journal[0]?.kind).toBe("road");
 
     const resupplied = a.resupply_overworld_session({
@@ -987,6 +1006,12 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect("context" in staleRpgCompletion).toBe(false);
     expect("observation" in staleRpgCompletion).toBe(false);
 
+    const launchedSnapshot = a.export_overworld_session({
+      session_id: started.session_id,
+      expected_snapshot_hash: launched.snapshot_hash,
+    });
+    expect(launchedSnapshot.ok).toBe(true);
+    if (!launchedSnapshot.ok) throw new Error("expected launched snapshot export");
     const completed = a.complete_overworld_session_quest({
       ...FULL_OVERWORLD_RESPONSE,
       session_id: started.session_id,
@@ -996,11 +1021,19 @@ describe("MCP tools — validate / load (§9.4)", () => {
     });
     expect(completed.ok).toBe(true);
     if (!completed.ok) throw new Error("expected quest completion");
+    const completedQuestSource = overworld.quests.find((quest) => quest.id === "sunken_barrow");
+    if (!completedQuestSource) throw new Error("expected sunken_barrow source");
+    const expectedQuestMinutes = questCompletionMinutes(
+      completedQuestSource,
+      new Map(overworld.areas.map((area) => [area.id, area])),
+    );
     expect(completed.result).toMatchObject({
       alreadyKnown: false,
+      minutes: expectedQuestMinutes,
       endingId: "ending_victory",
       quest: { id: "sunken_barrow" },
     });
+    expect(completed.result.entry.text).toContain(`${expectedQuestMinutes} minutes`);
     // bug_0495 — the tool description always promised "progress and renown";
     // completing the marquee content must visibly TOP any single local job
     // (difficulty 1-5), or the reward hierarchy reads inverted.
@@ -1010,12 +1043,22 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(completed.result.entry).toMatchObject({
       id: "quest_done:sunken_barrow",
       kind: "quest_done",
+      recordedAt: completed.observation.timeLabel,
     });
     expect(completed.observation.completedQuestIds).toEqual(["sunken_barrow"]);
     expect(completed.observation.journal[0]).toMatchObject({
       id: "quest_done:sunken_barrow",
       kind: "quest_done",
     });
+    const completedSnapshot = a.export_overworld_session({
+      session_id: started.session_id,
+      expected_snapshot_hash: completed.snapshot_hash,
+    });
+    expect(completedSnapshot.ok).toBe(true);
+    if (!completedSnapshot.ok) throw new Error("expected completed snapshot export");
+    expect(completedSnapshot.snapshot.minutes).toBe(
+      launchedSnapshot.snapshot.minutes + expectedQuestMinutes,
+    );
     expect(
       a.get_overworld_session_context({ session_id: started.session_id, include_ids: true }).context
         .ids?.completed_quests,
@@ -1029,6 +1072,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(repeated.ok).toBe(true);
     if (!repeated.ok) throw new Error("expected idempotent quest completion");
     expect(repeated.result.alreadyKnown).toBe(true);
+    expect(repeated.result.minutes).toBe(0);
     // Renown is awarded exactly once: the repeat reports 0 gained, same total.
     expect(repeated.result.renownGained).toBe(0);
     expect(repeated.result.renownAfter).toBe(completed.result.renownAfter);
@@ -1103,7 +1147,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(compact.snapshot_hash).toBe(started.snapshot_hash);
     expect(compactStarted.snapshot_hash).toMatch(PUBLIC_OVERWORLD_SNAPSHOT_HASH_RE);
     expect(defaultStarted.snapshot_hash).toMatch(PUBLIC_OVERWORLD_SNAPSHOT_HASH_RE);
-    expect(defaultStarted.context.v).toBe(11);
+    expect(defaultStarted.context.v).toBe(13);
     expect("observation" in defaultStarted).toBe(false);
     expect("world" in defaultStarted.context).toBe(false);
     expect("route_options" in defaultStarted.context).toBe(false);
@@ -1123,6 +1167,10 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect("observation" in defaultRoute).toBe(false);
     expect("route_options" in defaultRoute.context).toBe(false);
     const defaultTravelRoad = defaultStarted.context.roads[0]!;
+    const defaultTravelFullRoad = full.exits.find(
+      (candidate) => candidate.destination.id === defaultTravelRoad[0],
+    );
+    expect(defaultTravelFullRoad).toBeDefined();
     const defaultTravel = a.travel_overworld_session({
       session_id: defaultStarted.session_id,
       destination_town_id: defaultTravelRoad[0],
@@ -1132,7 +1180,12 @@ describe("MCP tools — validate / load (§9.4)", () => {
     if (!defaultTravel.ok) throw new Error("default compact travel should pass snapshot guard");
     expect(defaultTravel.travel).toHaveLength(7);
     expect("baseMinutes" in defaultTravel.travel).toBe(false);
-    expect(defaultTravel.context.here[0]).toBe(defaultTravelRoad[0]);
+    expect(defaultTravel.context.here[0]).toBe(`road:${defaultTravelFullRoad!.id}`);
+    expect(defaultTravel.context.here[3]).toBeNull();
+    expect(defaultTravel.context.roads).toEqual([]);
+    expect(defaultTravel.context.pending_road?.where[1]).toBe(
+      defaultTravelFullRoad!.destination.name,
+    );
     expect("observation" in defaultTravel).toBe(false);
     const exportedForRestore = a.export_overworld_session({ session_id: started.session_id });
     expect(exportedForRestore.ok).toBe(true);
@@ -1277,7 +1330,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
       session_id: started.session_id,
       include_ids: true,
     });
-    expect(compact.context.v).toBe(11);
+    expect(compact.context.v).toBe(13);
     expect(compact.context.here).toEqual([
       full.current.id,
       full.current.name,
@@ -1378,7 +1431,13 @@ describe("MCP tools — validate / load (§9.4)", () => {
     if (!compactTravel.ok) throw new Error("matching snapshot hash should travel");
     expect(compactTravel.travel.baseMinutes).toBe(road!.travel_minutes);
     expect(compactTravel.snapshot_hash).not.toBe(started.snapshot_hash);
-    expect(compactTravel.context.here[0]).toBe("colonie_town");
+    expect(compactTravel.context.here).toEqual([
+      `road:${road!.id}`,
+      `On ${road!.route}: ${full.current.name} to ${road!.destination.name}`,
+      full.current.region,
+      null,
+      null,
+    ]);
     expect(compactTravel.context.travel_log?.[0]).toEqual([
       road!.id,
       full.current.id,
@@ -1426,10 +1485,15 @@ describe("MCP tools — validate / load (§9.4)", () => {
 
     expect(traveledFullRead.snapshot_hash).toBe(compactTravel.snapshot_hash);
     expect(traveledCompactRead.snapshot_hash).toBe(compactTravel.snapshot_hash);
-    expect(traveledCompact.here[0]).toBe("colonie_town");
+    expect(traveledCompact.here).toEqual(compactTravel.context.here);
     expect("pending_road" in traveledCompact).toBe(true);
     expect(traveledCompact.pending_road).toMatchObject({
       edge: road!.id,
+      where: [
+        traveledFull.pendingRoadEncounter!.from,
+        traveledFull.pendingRoadEncounter!.to,
+        traveledFull.pendingRoadEncounter!.arrivedAt,
+      ],
       event: [
         traveledFull.pendingRoadEncounter!.event.id,
         traveledFull.pendingRoadEncounter!.event.risk,
@@ -1638,6 +1702,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
     const fullExportedSnapshotHash = hashState(exported.snapshot);
     expect(fullExportedSnapshotHash).toMatch(/^[0-9a-f]{64}$/);
     expect(exported.snapshot_hash).toBe(publicOverworldSnapshotHash(fullExportedSnapshotHash));
+    expect(exported.snapshot.travelLog[0]?.roadEventId).toBe(before.log[0]?.roadEvent?.id ?? null);
     expect(JSON.stringify(staleExport).length).toBeLessThan(JSON.stringify(exported).length);
     const unchangedExport = a.export_overworld_session({
       session_id: started.session_id,
@@ -1704,12 +1769,17 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(compactRestored.snapshot_hash).toBe(exported.snapshot_hash);
     expect(compactRestored.context.here[0]).toBe(before.current.id);
     expect(compactRestored.context.pending_road?.edge).toBe(before.pendingRoadEncounter?.edgeId);
+    expect(compactRestored.context.pending_road?.where).toEqual([
+      before.pendingRoadEncounter?.from,
+      before.pendingRoadEncounter?.to,
+      before.pendingRoadEncounter?.arrivedAt,
+    ]);
     expect("observation" in compactRestored).toBe(false);
     expect(() =>
       a.travel_overworld_session({
         ...FULL_OVERWORLD_RESPONSE,
         session_id: restored.session_id,
-        road_id: restored.observation.exits[0]!.id,
+        road_id: restored.observation.pendingRoadEncounter!.edgeId,
       }),
     ).toThrow(/pending road encounter/i);
 

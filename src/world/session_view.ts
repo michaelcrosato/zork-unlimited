@@ -37,6 +37,7 @@ export type OverworldView = {
   characters: OverworldCharacter[];
   events: OverworldLocalEvent[];
   jobs: OverworldLocalJob[];
+  rememberedJobs: OverworldLocalJob[];
   hiddenJobCount: number;
   sites: OverworldExplorationSite[];
   hiddenSiteCount: number;
@@ -84,6 +85,7 @@ export type OverworldSessionViewState = {
   contacts: readonly OverworldCharacter[];
   events: readonly OverworldLocalEvent[];
   jobs: readonly OverworldLocalJob[];
+  rememberedJobs: readonly OverworldLocalJob[];
   hiddenJobCount: number;
   sites: readonly OverworldExplorationSite[];
   hiddenSiteCount: number;
@@ -154,6 +156,7 @@ export function buildOverworldSessionView(state: OverworldSessionViewState): Ove
     characters: [...state.contacts],
     events: [...state.events],
     jobs: [...state.jobs],
+    rememberedJobs: [...state.rememberedJobs],
     hiddenJobCount: state.hiddenJobCount,
     sites: [...state.sites],
     hiddenSiteCount: state.hiddenSiteCount,

@@ -37,8 +37,10 @@ export type MutableOverworldSessionLocalState = {
   questsByTown: ReadonlyMap<string, readonly OverworldQuest[]>;
   discoveredAreaIds: Set<string>;
   discoveredJobIds: Set<string>;
+  completedJobIds: Set<string>;
   discoveredSiteIds: Set<string>;
   discoveredQuestIds: Set<string>;
+  completedQuestIds: Set<string>;
 };
 
 export type OverworldSessionAreaContent = {
@@ -174,8 +176,10 @@ export function buildOverworldSessionCurrentLocalView(
     localQuests: state.questsByTown.get(state.currentTownId) ?? [],
     discoveredAreaIds: state.discoveredAreaIds,
     discoveredJobIds: state.discoveredJobIds,
+    completedJobIds: state.completedJobIds,
     discoveredSiteIds: state.discoveredSiteIds,
     discoveredQuestIds: state.discoveredQuestIds,
+    completedQuestIds: state.completedQuestIds,
   });
 }
 

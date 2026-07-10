@@ -254,6 +254,22 @@ describe("overworld local action journal replay", () => {
     expect(replay.localActionCountByArea.get("area_b")).toBe(1);
   });
 
+  it("indexes completed quest journals for clock replay without inflating discovery counts", () => {
+    const replay = localActionJournalReplayIndex(
+      reachability({ discoveredQuestIds: new Set([questA.id]) }),
+      timeline([{ entry: journal("quest_done:quest_a", "quest_done", 630), recordedAt: 630 }]),
+    );
+
+    expect(replay.entries).toHaveLength(1);
+    expect(replay.entries[0]).toMatchObject({
+      entry: { id: "quest_done:quest_a", kind: "quest_done" },
+      recordedAt: 630,
+      duration: 130,
+    });
+    expect(replay.localActionCountByTown.get("town_b")).toBeUndefined();
+    expect(replay.localActionCountByArea.get("area_a")).toBeUndefined();
+  });
+
   it("rejects local journal actions before town visit or area discovery", () => {
     const beforeVisit = localActionJournalReplayIndex(
       reachability(),

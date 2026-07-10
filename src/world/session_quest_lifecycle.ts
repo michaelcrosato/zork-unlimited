@@ -31,6 +31,7 @@ export type OverworldSessionQuestCompletionPlanState = {
   questId: string;
   outcome: OverworldQuestCompletionOutcome;
   questsById: ReadonlyMap<string, OverworldQuest>;
+  areasById: ReadonlyMap<string, OverworldArea>;
   nodesById: ReadonlyMap<string, OverworldNode>;
   startedQuestIds: ReadonlySet<string>;
 };
