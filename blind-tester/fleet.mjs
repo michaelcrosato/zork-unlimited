@@ -35,7 +35,21 @@ const DEFAULT_MODEL_MIX = [
   { model: "sonnet", weight: 1 },
 ];
 
-/** Parse fleet CLI args into a plain options object (pure; exported for tests). */
+/** Throw a usage error for an out-of-range/non-integer numeric flag. `min` is
+ * the sensible floor per the brief (count/concurrency >= 1, maxRetries >= 0);
+ * pass `undefined` for flags with no floor (seedBase — negative seeds are
+ * legal, see reportPathFor's `-?\d+` ledger regex). */
+function assertFleetInt(value, flag, min) {
+  if (!Number.isInteger(value) || (min !== undefined && value < min)) {
+    const bound = min !== undefined ? `an integer >= ${min}` : "an integer";
+    throw new Error(`fleet: --${flag} must be ${bound} (got ${value})`);
+  }
+}
+
+/** Parse fleet CLI args into a plain options object (pure; exported for tests).
+ * Throws a plain Error (message prefixed "fleet: ") on invalid numeric flags —
+ * callers (main()) catch it, print the message, and exit 2 before spawning
+ * anything. Valid-input shape is unchanged/backward-compatible. */
 export function parseFleetArgs(argv) {
   const opts = {
     count: 100,
@@ -89,6 +103,10 @@ export function parseFleetArgs(argv) {
         break;
     }
   }
+  assertFleetInt(opts.count, "count", 1);
+  assertFleetInt(opts.concurrency, "concurrency", 1);
+  assertFleetInt(opts.seedBase, "seed-base", undefined);
+  assertFleetInt(opts.maxRetries, "max-retries", 0);
   return opts;
 }
 
@@ -220,32 +238,62 @@ function spawnAsync(cmd, args, opts) {
 }
 
 /** Belt-and-braces re-verification: run.sh already ran the verifier as its own
- * last step, but this is a second, independent pass, per the brief. */
+ * last step, but this is a second, independent pass, per the brief. Returns
+ * stdout/stderr too (not just ok) so failed-attempt diagnostics can surface
+ * *why* the reverify rejected an exit-0 run.sh. */
 async function verifyReport(reportMdPath) {
-  if (!existsSync(reportMdPath)) return false;
+  if (!existsSync(reportMdPath)) return { ok: false, stdout: "", stderr: "" };
   const result = await spawnAsync(
     "npm",
     ["--silent", "exec", "tsx", "--", "scripts/verify-blind-report.ts", reportMdPath],
     { cwd: GAME_DIR, shell: process.platform === "win32" },
   );
-  return result.status === 0;
+  return { ok: result.status === 0, stdout: result.stdout, stderr: result.stderr };
 }
 
-/** Stamp-agnostic resume lookup: ANY existing report matching this run's
- * source slug + seed, regardless of which fleet stamp produced it. */
+/** Pure matcher (exported for tests): which `readdirSync` entries are resume
+ * candidates for (sourceSlug, seed), newest-stamp-first. The regex is fully
+ * anchored (`^...$`) so e.g. seed `1` can never match a `seed10` filename —
+ * the literal `\.md$` immediately after the seed digits rules that out.
+ * Filenames sort newest-first by plain string descending order because the
+ * leading stamp (yyyymmddThhmmssZ) is lexicographically monotonic with time. */
+export function resumeCandidatesFor(entries, sourceSlug, seed) {
+  const re = new RegExp(
+    `^\\d{8}T\\d{6}Z_${escapeRegExp(sourceSlug)}_seed${escapeRegExp(String(seed))}\\.md$`,
+  );
+  return entries.filter((f) => re.test(f)).sort((a, b) => (a < b ? 1 : a > b ? -1 : 0));
+}
+
+/** Stamp-agnostic resume lookup: ALL existing reports matching this run's
+ * source slug + seed, regardless of which fleet stamp produced them, newest
+ * first — a stale FAILED report from an earlier invocation must not shadow a
+ * later VERIFIED one from a subsequent invocation. */
 function findExistingReport(reportsDir, target, seed) {
   const slug = sourceSlugFor(target);
-  const re = new RegExp(
-    `^\\d{8}T\\d{6}Z_${escapeRegExp(slug)}_seed${escapeRegExp(String(seed))}\\.md$`,
-  );
   let entries;
   try {
     entries = readdirSync(reportsDir);
   } catch {
-    return null;
+    return [];
   }
-  const match = entries.find((f) => re.test(f));
-  return match ? join(reportsDir, match) : null;
+  return resumeCandidatesFor(entries, slug, seed).map((f) => join(reportsDir, f));
+}
+
+/** Last ~n chars of a string — bounded tail for per-attempt diagnostic logs. */
+function tail(s, n = 2000) {
+  return s.length > n ? s.slice(-n) : s;
+}
+
+/** First error-looking line of stderr (falls back to the first non-blank
+ * line, then a placeholder) — the one-line summary printed to fleet's own
+ * stderr on a failed attempt. */
+function firstErrorLine(text) {
+  if (!text) return "(no stderr)";
+  const lines = text
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter(Boolean);
+  return lines.find((l) => /error/i.test(l)) ?? lines[0] ?? "(empty stderr)";
 }
 
 /** A promise pool of bounded size — the fleet's concurrency knob. */
@@ -263,13 +311,18 @@ async function runPool(items, size, worker) {
 
 /** Run one fleet slot to completion: resume check, then launch (with pacing
  * retries up to opts.maxRetries), returning the manifest row for this run. */
-async function executeRun(run, { reportsDir, stamp, opts, bashPath }) {
+async function executeRun(run, { reportsDir, stamp, opts, bashPath, fleetDir }) {
   const target = run.target;
   const questId = questIdFor(target);
 
-  const existing = findExistingReport(reportsDir, target, run.seed);
-  if (existing && (await verifyReport(existing))) {
-    return { report: existing, status: "skipped-resume", attempts: 0, exit: 0 };
+  // Check ALL stamp-agnostic candidates, newest-stamp-first, stopping at the
+  // first that re-verifies — a stale FAILED report must never shadow a later
+  // VERIFIED one produced by a prior fleet invocation.
+  for (const candidate of findExistingReport(reportsDir, target, run.seed)) {
+    const verify = await verifyReport(candidate);
+    if (verify.ok) {
+      return { report: candidate, status: "skipped-resume", attempts: 0, exit: 0 };
+    }
   }
 
   const reportMd = reportPathFor(reportsDir, stamp, target, run.seed);
@@ -277,6 +330,7 @@ async function executeRun(run, { reportsDir, stamp, opts, bashPath }) {
   const maxAttempts = Math.max(1, opts.maxRetries + 1);
 
   let lastExit = 1;
+  let lastLogPath = null;
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     const args = [
       "--seed",
@@ -300,14 +354,42 @@ async function executeRun(run, { reportsDir, stamp, opts, bashPath }) {
 
     const bashResult = await spawnAsync(bashPath, [RUN_SH, ...args], { cwd: GAME_DIR, env });
     lastExit = bashResult.status ?? 1;
+    let verifyResult = null;
 
     if (lastExit === 0) {
-      const verified = await verifyReport(reportMd);
-      if (verified) {
+      verifyResult = await verifyReport(reportMd);
+      if (verifyResult.ok) {
         return { report: reportMd, status: "verified", attempts: attempt + 1, exit: 0 };
       }
       lastExit = 5; // run.sh exited 0 but the belt-and-braces re-verify rejected it
     }
+
+    // Failed attempt: persist stdout/stderr tails to a per-attempt log file
+    // (verified runs never reach here — they returned above) and print a
+    // one-line stderr summary to the fleet's own stderr for live monitoring.
+    const logPath = join(fleetDir, `seed_${run.seed}_attempt_${attempt + 1}.log`);
+    const sections = [
+      `run.sh exit=${bashResult.status ?? "null"}`,
+      "--- run.sh stdout (tail) ---",
+      tail(bashResult.stdout),
+      "--- run.sh stderr (tail) ---",
+      tail(bashResult.stderr),
+    ];
+    if (verifyResult) {
+      sections.push(
+        "--- verify stdout (tail) ---",
+        tail(verifyResult.stdout),
+        "--- verify stderr (tail) ---",
+        tail(verifyResult.stderr),
+      );
+    }
+    writeFileSync(logPath, `${sections.join("\n")}\n`);
+    lastLogPath = logPath;
+    const summarySource =
+      verifyResult && verifyResult.stderr ? verifyResult.stderr : bashResult.stderr;
+    console.error(
+      `[fleet] seed=${run.seed} attempt=${attempt + 1} failed (exit ${lastExit}): ${firstErrorLine(summarySource)}`,
+    );
 
     const isLastAttempt = attempt === maxAttempts - 1;
     if (!isLastAttempt) {
@@ -315,11 +397,26 @@ async function executeRun(run, { reportsDir, stamp, opts, bashPath }) {
       if (delayMs > 0) await sleep(delayMs);
     }
   }
-  return { report: reportMd, status: "failed", attempts: maxAttempts, exit: lastExit };
+  return {
+    report: reportMd,
+    status: "failed",
+    attempts: maxAttempts,
+    exit: lastExit,
+    log: lastLogPath,
+  };
 }
 
 async function main() {
-  const opts = parseFleetArgs(process.argv.slice(2));
+  let opts;
+  try {
+    opts = parseFleetArgs(process.argv.slice(2));
+  } catch (err) {
+    // Usage error (non-finite/out-of-range numeric flag, e.g. --count 0):
+    // exit 2 before touching the filesystem or spawning anything.
+    console.error(err instanceof Error ? err.message : String(err));
+    process.exit(2);
+    return;
+  }
   const runs = planFleetRuns(opts);
 
   const reportsDir = opts.out ? resolve(opts.out) : join(HERE, "reports");
@@ -348,7 +445,7 @@ async function main() {
   const counts = { verified: 0, "skipped-resume": 0, failed: 0 };
 
   await runPool(runs, Math.max(1, opts.concurrency), async (run) => {
-    const result = await executeRun(run, { reportsDir, stamp, opts, bashPath });
+    const result = await executeRun(run, { reportsDir, stamp, opts, bashPath, fleetDir });
     counts[result.status] += 1;
     const row = {
       seed: run.seed,
@@ -359,6 +456,7 @@ async function main() {
       status: result.status,
       attempts: result.attempts,
       exit: result.exit,
+      log: result.log ?? null, // per-attempt diagnostic log path; null for verified/skipped-resume
     };
     appendFileSync(manifestPath, `${JSON.stringify(row)}\n`);
     console.log(
