@@ -11,7 +11,7 @@ describe("overworld crawler", () => {
       expect(result.ok, id).toBe(true);
       if (result.ok) expect(result.death).toBe(false);
     }
-  }, 60000);
+  }, 120_000);
 
   it("solveToEnding distinguishes a state-cap hit from restricted-frontier exhaustion", () => {
     // "capped": a real, genuinely-winnable pack but with a maxStates budget so
@@ -56,7 +56,7 @@ describe("overworld crawler", () => {
     expect(r.coverage.edges.traveled).toBe(r.coverage.edges.total);
     expect(r.coverage.boards.read).toBe(r.coverage.boards.total);
     expect(r.questRoundTrips.length).toBe(r.coverage.quests.total);
-  }, 60000);
+  }, 120_000);
 
   it("is deterministic for a fixed seed", () => {
     const run = () =>

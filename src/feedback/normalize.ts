@@ -111,6 +111,25 @@ function stripStopwords(tokens: readonly string[]): string[] {
   return tokens.filter((token) => !RUNG3_STOPWORDS.has(token));
 }
 
+/**
+ * True iff `phrase` appears inside `normalizedRaw` aligned to token
+ * boundaries — not merely as a raw character run that happens to sit inside
+ * a longer word (e.g. "store" must not match inside "restore"). Both
+ * arguments are assumed already run through `normalizePhrase` (lowercased,
+ * every run of non-alphanumeric characters collapsed to a single space,
+ * trimmed — so no leading/trailing/doubled spaces). Padding both sides with
+ * a single space turns "phrase sits at the very start/end of raw" and
+ * "phrase sits between two other tokens" into the same `includes` check.
+ * Exported for direct unit coverage (see feedback_normalize.test.ts) — no
+ * shipped location name is currently a single token short enough to trigger
+ * the old bug against real content, so the regression is pinned against this
+ * helper directly rather than through the compiled index.
+ */
+export function matchesAtTokenBoundary(normalizedRaw: string, phrase: string): boolean {
+  if (phrase.length === 0) return false;
+  return ` ${normalizedRaw} `.includes(` ${phrase} `);
+}
+
 /** True iff `needle` appears as a contiguous, in-order run inside `haystack`. */
 function containsContiguousSubsequence(
   haystack: readonly string[],
@@ -262,8 +281,12 @@ export function canonicalizeLocation(raw: string, idx: LocationIndex): Canonical
 
   const normalizedRaw = normalizePhrase(raw);
   if (normalizedRaw.length > 0) {
-    // Rung 2: exact name hit, both sides punctuation-normalized (see normalizePhrase).
-    const nameHits = idx.names.filter((candidate) => normalizedRaw.includes(candidate.phrase));
+    // Rung 2: exact name hit, both sides punctuation-normalized (see normalizePhrase)
+    // and token-boundary-aligned (see matchesAtTokenBoundary) so a short name never
+    // matches mid-word inside an unrelated longer word.
+    const nameHits = idx.names.filter((candidate) =>
+      matchesAtTokenBoundary(normalizedRaw, candidate.phrase),
+    );
     const nameCandidates = uniqueLocations(nameHits.map((hit) => hit.location));
     if (nameCandidates.length === 1) return finalize(nameCandidates[0]!);
 

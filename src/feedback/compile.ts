@@ -560,7 +560,7 @@ export function compileFeedback(opts: CompileOptions): {
   const rawHotspots = top.map(buildHotspotFromCluster);
 
   const previous = opts.prevDir
-    ? loadHotspotsFromDir(opts.prevDir)
+    ? loadHotspotsFromDir(opts.prevDir, /* isExplicit */ true)
     : loadPreviousHotspots(opts.root, basename(opts.outDir));
   const trended = applyTrends(rawHotspots, previous);
   const hotspots = applyLlmLabels(trended, opts.llmLabels);

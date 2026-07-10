@@ -7,6 +7,7 @@ import {
   loadHotspotsFromDir,
   loadPreviousHotspots,
 } from "../../src/feedback/trends.js";
+import { compileFeedback } from "../../src/feedback/compile.js";
 import { HOTSPOTS_VERSION, type Hotspot, type HotspotsFile } from "../../src/feedback/schema.js";
 
 function hotspot(overrides: Partial<Hotspot> = {}): Hotspot {
@@ -136,11 +137,15 @@ describe("loadHotspotsFromDir", () => {
     const dir = mkdtempSync(join(tmpdir(), "hotspots-explicit-missing-"));
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     loadHotspotsFromDir(dir, /* isExplicit */ true);
-    expect(warnSpy).toHaveBeenCalledWith(
-      expect.stringContaining("previous hotspots at") &&
-        expect.stringContaining("unreadable") &&
-        expect.stringContaining('trends will show "new"'),
-    );
+    // Capture the actual call-arg rather than chaining `&&` across three
+    // `expect.stringContaining(...)` matchers — `a && b && c` on truthy
+    // objects just evaluates to `c`, so that form only ever checked the LAST
+    // fragment and silently ignored the first two.
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+    const message = warnSpy.mock.calls[0]?.[0];
+    expect(message).toContain("previous hotspots at");
+    expect(message).toContain("unreadable");
+    expect(message).toContain('trends will show "new"');
     warnSpy.mockRestore();
   });
 
@@ -149,11 +154,42 @@ describe("loadHotspotsFromDir", () => {
     writeFileSync(join(dir, "hotspots.json"), JSON.stringify({ not: "a hotspots file" }));
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     loadHotspotsFromDir(dir, /* isExplicit */ true);
-    expect(warnSpy).toHaveBeenCalledWith(
-      expect.stringContaining("previous hotspots at") &&
-        expect.stringContaining("unreadable") &&
-        expect.stringContaining('trends will show "new"'),
-    );
+    // Same fix as above: assert each fragment separately against the
+    // captured call-arg instead of an `&&`-chained matcher.
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+    const message = warnSpy.mock.calls[0]?.[0];
+    expect(message).toContain("previous hotspots at");
+    expect(message).toContain("unreadable");
+    expect(message).toContain('trends will show "new"');
+    warnSpy.mockRestore();
+  });
+
+  it("warns via the REAL compileFeedback --prev path when prevDir's hotspots.json is corrupt", () => {
+    // Item 1 regression: compileFeedback previously called
+    // `loadHotspotsFromDir(opts.prevDir)` without `isExplicit=true`, so this
+    // documented warning path was dead code in production even though the
+    // unit tests above (calling loadHotspotsFromDir directly) passed. This
+    // test drives the real --prev entry point end to end.
+    const prevDir = mkdtempSync(join(tmpdir(), "hotspots-prev-corrupt-"));
+    const corruptPath = join(prevDir, "hotspots.json");
+    writeFileSync(corruptPath, "{ this is not valid json");
+    const outDir = mkdtempSync(join(tmpdir(), "feedback-out-prev-"));
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    compileFeedback({
+      root: process.cwd(),
+      inputs: [],
+      outDir,
+      topK: 5,
+      llmLabels: false,
+      prevDir,
+    });
+
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+    const message = warnSpy.mock.calls[0]?.[0];
+    expect(message).toContain(`previous hotspots at ${corruptPath}`);
+    expect(message).toContain("unreadable");
+    expect(message).toContain('trends will show "new"');
     warnSpy.mockRestore();
   });
 

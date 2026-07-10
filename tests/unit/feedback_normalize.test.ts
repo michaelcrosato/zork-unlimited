@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { buildLocationIndex, canonicalizeLocation } from "../../src/feedback/normalize.js";
+import {
+  buildLocationIndex,
+  canonicalizeLocation,
+  matchesAtTokenBoundary,
+} from "../../src/feedback/normalize.js";
 
 const idx = buildLocationIndex(process.cwd());
 const c = (raw: string) => canonicalizeLocation(raw, idx);
@@ -105,5 +109,34 @@ describe("location normalization", () => {
     expect(c("armory sounds drifted past, and the watch stayed quiet")).toMatchObject({
       kind: "unmapped",
     });
+  });
+});
+
+describe("matchesAtTokenBoundary (rung-2 substring guard)", () => {
+  // No shipped location name is currently a single short token like "store" —
+  // every real "...store..." title is multi-word ("The Herb Store", "The
+  // Apothecary's Store", "The Store-Shed"), so this can't be demonstrated
+  // against the real index (see feedback_normalize's other cases, which all
+  // exercise real content). Test the exported boundary-check helper directly
+  // instead, against the synthetic case the brief calls out: a raw containing
+  // "restore" must not match a candidate phrase "store" — a plain
+  // `normalizedRaw.includes(phrase)` substring test (the old, buggy rung 2)
+  // would incorrectly match here since "store" sits inside "restore".
+  it("does not match a short phrase mid-word inside a longer word", () => {
+    expect(matchesAtTokenBoundary("i had to restore the old fence", "store")).toBe(false);
+  });
+
+  it("still matches the same phrase when it appears as its own token", () => {
+    expect(matchesAtTokenBoundary("the store had nothing left", "store")).toBe(true);
+  });
+
+  it("matches a phrase at the very start or end of raw (no surrounding tokens)", () => {
+    expect(matchesAtTokenBoundary("store shelves are bare", "store")).toBe(true);
+    expect(matchesAtTokenBoundary("visited the store", "store")).toBe(true);
+  });
+
+  it("matches a multi-token phrase only when contiguous at token boundaries", () => {
+    expect(matchesAtTokenBoundary("the store shed had nothing in it", "store shed")).toBe(true);
+    expect(matchesAtTokenBoundary("restore shed the old habit", "store shed")).toBe(false);
   });
 });
