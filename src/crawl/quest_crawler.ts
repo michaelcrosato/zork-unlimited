@@ -130,6 +130,14 @@ function buildRepro(prepared: PreparedQuest, record: EpisodeRecord): Trace<RpgAc
   return recordTrace(prepared.rules, initial, record.actions, identity);
 }
 
+/** Result of replaying an episode's recorded actions (see `replayEpisodeHashes`). */
+type ReplayResult = {
+  hashes: string[];
+  /** Set iff the replay itself threw; carries the action index and error text so
+   *  the caller can surface a DESYNC finding instead of propagating the throw. */
+  threw: { index: number; error: string } | null;
+};
+
 /**
  * Hand-rolled replay of a recorded episode's actions, from a fresh
  * `initStateForRpgPack` and a fresh `makeStep(rules)` closure, hashing after each
@@ -139,22 +147,34 @@ function buildRepro(prepared: PreparedQuest, record: EpisodeRecord): Trace<RpgAc
  * after EVERY action regardless of `ok`, which misaligns index-for-index against
  * `perStepHashes` the moment either run ever rejects an action the other accepted —
  * so DESYNC steps its own loop rather than reusing it.
+ *
+ * The live loop already catches a throw from `rules.resolve`/`legalActions` as a
+ * CRASH finding (never propagated); a replay-only rules wrapper (hidden state keyed
+ * off a call count, say) can throw here even when the live run never did, since the
+ * two runs don't share position in that hidden state. Wrapped so a throw here becomes
+ * a reported DESYNC finding too, rather than crashing the whole crawl (Task 5 review
+ * fix).
  */
 function replayEpisodeHashes(
   rules: Rules<RpgAction>,
   index: RpgIndex,
   record: EpisodeRecord,
-): string[] {
+): ReplayResult {
   const step = makeStep(rules);
   let state = initStateForRpgPack(index, record.episodeSeed);
   const hashes: string[] = [];
-  for (const action of record.actions) {
-    const result = step(state, action);
-    if (!result.ok) continue;
-    state = result.state;
-    hashes.push(hashState(state));
+  for (let i = 0; i < record.actions.length; i++) {
+    const action = record.actions[i]!;
+    try {
+      const result = step(state, action);
+      if (!result.ok) continue;
+      state = result.state;
+      hashes.push(hashState(state));
+    } catch (err) {
+      return { hashes, threw: { index: i, error: describeError(err) } };
+    }
   }
-  return hashes;
+  return { hashes, threw: null };
 }
 
 /**
@@ -297,6 +317,11 @@ export function crawlQuest(prepared: PreparedQuest, opts: QuestCrawlOptions): Qu
     };
     episodes.push(record);
     roomsVisited.add(state.current);
+    // Set the moment the immediate S4 SOFTLOCK (zero legal actions) fires below, so
+    // the end-of-episode solver-form check can skip itself for THIS episode — both
+    // would otherwise be true but redundant findings for the same dead end (Task 5
+    // review fix); the S4 one is kept since it fired first and needs no solver budget.
+    let episodeSoftlockFired = false;
 
     for (
       let s = 0;
@@ -327,6 +352,7 @@ export function crawlQuest(prepared: PreparedQuest, opts: QuestCrawlOptions): Qu
           },
           record,
         );
+        episodeSoftlockFired = true;
         break;
       }
 
@@ -510,20 +536,34 @@ export function crawlQuest(prepared: PreparedQuest, opts: QuestCrawlOptions): Qu
     // wrapper), which is itself a defect a replay-based repro/regression tool can
     // never reproduce.
     if (desyncReplay) {
-      const replayHashes = replayEpisodeHashes(rules, index, record);
-      const firstDivergence = record.perStepHashes.findIndex((h, i) => replayHashes[i] !== h);
-      if (firstDivergence !== -1) {
+      const replay = replayEpisodeHashes(rules, index, record);
+      if (replay.threw) {
         addFinding(
           {
             code: "DESYNC",
-            step: firstDivergence,
+            step: totalSteps,
             location: loc(state),
             action: null,
-            message: `replay diverged at action index ${firstDivergence}`,
+            message: `replay threw: ${replay.threw.error} at action index ${replay.threw.index}`,
             stateHash: hashState(state),
           },
           record,
         );
+      } else {
+        const firstDivergence = record.perStepHashes.findIndex((h, i) => replay.hashes[i] !== h);
+        if (firstDivergence !== -1) {
+          addFinding(
+            {
+              code: "DESYNC",
+              step: firstDivergence,
+              location: loc(state),
+              action: null,
+              message: `replay diverged at action index ${firstDivergence}`,
+              stateHash: hashState(state),
+            },
+            record,
+          );
+        }
       }
     }
 
@@ -531,11 +571,27 @@ export function crawlQuest(prepared: PreparedQuest, opts: QuestCrawlOptions): Qu
     // exhaustively search from the post-episode state under a best/worst-roll
     // bracket; an empty reached set with a completed (non-capped) search is a proven
     // no-ending-reachable dead end. A capped-out search is UNPROVEN and never a
-    // finding.
-    if (solverBudget > 0 && !state.ended) {
+    // finding. Skipped when the immediate S4 SOFTLOCK already fired this episode
+    // (`episodeSoftlockFired`) — both are true for the same dead end, and firing both
+    // is a redundant double-report, not a second bug (Task 5 review fix); the S4 one
+    // already recorded it for free (no solver budget spent) so it's the one kept.
+    if (solverBudget > 0 && !state.ended && !episodeSoftlockFired) {
       const bestRules = buildRpgRules(index, bestRng);
       const worstRules = buildRpgRules(index, worstRng);
-      const res = exhaustiveEndingsMulti([bestRules, worstRules], state, solverBudget);
+      // Explicit `explore: () => true` — allow EVERY enumerated action, not the
+      // module's default progress-only policy (which skips DROP/CLOSE/LOOK/
+      // INVENTORY/READ/INSPECT). That default is sound for a reachability PROOF —
+      // restricting the action set can only HIDE an ending, surfacing as a loud
+      // "declared ending unreached" test failure — but it is INVERTED for this
+      // oracle: here a hidden ending means reached.size === 0, i.e. a FALSE
+      // softlock finding. READ in particular can carry route-gating interaction
+      // effects (see exhaustive_endings.ts's SearchOpts doc), so it must not be
+      // silently skipped here. Widening the policy can only ever grow `reached`
+      // (or cap the search out, which yields no finding either way) — the extra
+      // states explored are an acceptable cost for a sound oracle.
+      const res = exhaustiveEndingsMulti([bestRules, worstRules], state, solverBudget, undefined, {
+        explore: () => true,
+      });
       if (res.reached.size === 0 && !res.cappedOut) {
         addFinding(
           {

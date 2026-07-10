@@ -122,6 +122,43 @@ describe("quest crawler", () => {
     expect(r.findings.some((f) => f.code === "DESYNC")).toBe(true);
   });
 
+  it("DESYNC: a replay-only throw is caught and recorded, not propagated (Fix 3)", () => {
+    // Task 5 review fix: replayEpisodeHashes must wrap its engine interactions in a
+    // try/catch — a throw during replay is itself a DESYNC finding, not a crawl-
+    // ending crash. `calls` is shared across the live run and the replay (both go
+    // through the SAME wrapped `resolve`), so the live run's own call count is
+    // known in advance (LIVE_STEPS, one resolve call per accepted-or-rejected live
+    // step with illegalEvery/persistEvery/solverBudget all off). Throwing on EXACTLY
+    // the call right after that — never again on later calls — fires only on the
+    // very first action replayEpisodeHashes replays, and never again during the
+    // (separate) lazy repro-trace replay `addFinding` triggers for this new finding.
+    let calls = 0;
+    const LIVE_STEPS = 5;
+    const prepared = preparePack(generateRpgPack(3), {
+      wrapRules: (rules) => ({
+        ...rules,
+        resolve: (state, action) => {
+          calls += 1;
+          if (calls === LIVE_STEPS + 1) throw new Error("planted replay-only bomb");
+          return rules.resolve(state, action);
+        },
+      }),
+    });
+    const r = crawlQuest(prepared, {
+      seed: 11,
+      maxSteps: LIVE_STEPS,
+      policy: "random",
+      commit: "test",
+      persistEvery: 0,
+      illegalEvery: 0,
+      solverBudget: 0,
+    });
+    expect(r.steps).toBe(LIVE_STEPS); // the crawl ran to completion, not a throw
+    const desync = r.findings.find((f) => f.code === "DESYNC");
+    expect(desync).toBeDefined();
+    expect(desync!.message).toBe("replay threw: Error: planted replay-only bomb at action index 0");
+  });
+
   it("PERSIST: save→load roundtrip is exercised and clean on a healthy pack", () => {
     const r = crawlQuest(preparePack(generateRpgPack(6)), {
       seed: 3,
@@ -150,6 +187,54 @@ describe("quest crawler", () => {
       solverBudget: 20000,
     });
     expect(r.findings.some((f) => f.code === "SOFTLOCK")).toBe(true);
+  });
+
+  it("SOFTLOCK(solver): no false positive on a healthy generated pack (Fix 1)", () => {
+    // Task 5 review fix: the solver oracle must pass an explicit `explore: () =>
+    // true` policy to exhaustiveEndingsMulti — the module's default (correct for the
+    // reachability-PROOF callers it was built for) skips DROP/CLOSE/LOOK/INVENTORY/
+    // READ/INSPECT, which can only ever HIDE an ending from THIS search, turning a
+    // real, findable ending into a false SOFTLOCK (reached.size === 0). A healthy
+    // pack must report zero SOFTLOCK findings regardless of seed.
+    for (const seed of [1, 2, 3, 4]) {
+      const r = crawlQuest(preparePack(generateRpgPack(seed)), {
+        seed,
+        maxSteps: 800,
+        policy: "mixed",
+        commit: "test",
+        solverBudget: 20000,
+      });
+      expect(r.findings.filter((f) => f.code === "SOFTLOCK")).toEqual([]);
+    }
+  });
+
+  it("SOFTLOCK: the immediate S4 does not also fire the solver form for the same dead end (Fix 2)", () => {
+    const pack = generateRpgPack(8);
+    // A genuine, pack-native zero-legal-actions dead end, no dangling reference or
+    // rules wrapper needed: while the "spirit" NPC's dialogue is active,
+    // `enumerateRpgBaseActions` (src/rpg/legal_actions.ts) returns ONLY that node's
+    // topics and — unlike the non-dialogue branch — returns immediately rather than
+    // falling through to the always-available LOOK/INVENTORY. Emptying the root
+    // node's topics therefore yields a REAL zero-options state the instant the
+    // player talks to the spirit, which the Task-4 S4 oracle catches immediately.
+    // Task 5 review fix: the end-of-episode solver oracle must not ALSO fire for the
+    // same post-episode state — both are true findings for the one dead end, but
+    // firing both is a redundant double-report; S4 (cheaper, no solver budget spent)
+    // is the one kept.
+    const spirit = pack.npcs.find((n) => n.id === "spirit")!;
+    const root = spirit.dialogue.nodes.find((n) => n.id === spirit.dialogue.root)!;
+    root.topics = [];
+    const r = crawlQuest(preparePack(pack), {
+      seed: 5,
+      maxSteps: 1500,
+      policy: "mixed",
+      commit: "test",
+      solverBudget: 5000,
+    });
+    const softlocks = r.findings.filter((f) => f.code === "SOFTLOCK");
+    expect(softlocks).toHaveLength(1);
+    expect(softlocks[0]!.severity).toBe("S4");
+    expect(softlocks[0]!.message).toBe("live (non-ended) state has zero legal actions");
   });
 
   it("repro dedupe: a finding that fires every step builds its repro trace only once", () => {
