@@ -174,8 +174,7 @@ counts as `verified` when `run.sh` exits 0 **and** a second, independent
 that plays for real over the MCP tools but needs no LLM and spends zero
 tokens. This is what CI runs: `tests/acceptance/fleet_mock_pipeline.test.ts`
 drives a small mock fleet through fleet → verified reports → compiler
-end-to-end (20/20 verified in ~18s), so the whole Tier 2 → Tier 3 pipeline is
-exercised on every push with no API key and no external agent CLI required.
+end-to-end so the whole Tier 2 → Tier 3 pipeline is exercised on every push with no API key and no external agent CLI required. The standalone `npm run fleet:mock -- --count 20` lane verified 20/20 in ~18s.
 
 ## Sycophancy telemetry
 

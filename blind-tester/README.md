@@ -112,7 +112,7 @@ lore-reader}.md`. `--personas mixed` rotates through explorer → speedrunner
 
 `--mock` sets `BLIND_AGENT_CMD` to `mock-agent.mjs`, a deterministic
 MCP-speaking scripted agent: it plays for real over the MCP tools with no LLM
-and no tokens. `npm run fleet:mock` is what CI runs — verified 20/20 in ~18s —
+and no tokens. `npm run fleet:mock` is what CI runs (small acceptance e2e). The standalone `npm run fleet:mock -- --count 20` lane verified 20/20 in ~18s.
 exercising the full fleet → verified reports → `feedback:compile` pipeline on
 every push with no API key required.
 

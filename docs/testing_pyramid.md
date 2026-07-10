@@ -52,7 +52,7 @@ does, when it runs, and its exact shapes.
 | `crawl:deep`         | nightly / manual                                    | ≥2min soak (multi-worker; measured 352k steps @ ~1935 steps/s incl. 20k-state solver) | free                     |
 | `blind` (single)     | every normal cycle                                  | one playthrough, minutes                                       | $ (one LLM playtest)     |
 | `fleet -- --count N` | milestone / feedback-harvest cycles (~every 10, or when the ledger's open questions outgrow single reports) | N runs at `--concurrency C`                                     | $ × N (real LLM tokens)  |
-| `fleet:mock`         | every CI run (rides `npm test`)                     | 20/20 verified in ~18s                                          | zero tokens              |
+| `fleet:mock`         | every CI run (rides `npm test`)                     | small acceptance e2e (4+2 runs); standalone 20-run lane verified 20/20 in ~18s | zero tokens              |
 | `feedback:compile`   | whenever ≥3 new verified reports exist since the last compile | seconds (deterministic clustering)                              | free                     |
 
 ## 3. Exact commands
