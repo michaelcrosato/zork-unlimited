@@ -51,6 +51,19 @@ export type CrawlRunOptions = {
   persistEvery: number;
   outDir: string;
   workers: number;
+  /** Test-only dependency-injection seam: overrides how `runPlanInProcess`
+   *  turns a `questId` into a `PreparedQuest`, defaulting to
+   *  `prepareShippedQuest`. Lets unit tests hand `runPlanInProcess` an
+   *  in-memory, possibly-mutated pack (`preparePack`) under an arbitrary
+   *  `questId`, without touching disk-backed shipped-quest content — see
+   *  `tests/unit/crawl_run.test.ts`'s `describe("runPlanInProcess with
+   *  injected quests …")`. IN-PROCESS ONLY: `runPlanWithWorkers` ships each
+   *  worker its slice of `opts` through `worker_threads`' `workerData`, which
+   *  is structured-cloned — functions cannot cross that boundary — so worker
+   *  shards always fall back to the real `prepareShippedQuest` regardless of
+   *  what the parent process's `opts.prepareQuest` was set to. Never set this
+   *  from `bin/crawl.ts` or `parseCrawlArgs`; it exists purely for tests. */
+  prepareQuest?: (root: string, questId: string) => PreparedQuest;
 };
 
 export type QuestCoverageSummary = {
@@ -428,7 +441,8 @@ export function runPlanInProcess(items: CrawlPlanItem[], opts: CrawlRunOptions):
     }
 
     if (item.kind === "quest") {
-      const prepared = prepareShippedQuest(opts.root, item.questId);
+      const prepareQuest = opts.prepareQuest ?? prepareShippedQuest;
+      const prepared = prepareQuest(opts.root, item.questId);
       const totals = computeQuestTotals(prepared);
       const roomsVisited = new Set<string>();
       const actionsTried = new Set<string>();

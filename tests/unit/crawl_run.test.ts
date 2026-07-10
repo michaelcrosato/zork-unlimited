@@ -4,9 +4,13 @@ import {
   buildPlan,
   finalizeFindings,
   mergeSummaries,
+  runPlanInProcess,
   sliceSeeds,
   type CrawlPlanItem,
+  type CrawlRunOptions,
 } from "../../src/crawl/run.js";
+import { preparePack, type PreparedQuest } from "../../src/crawl/prepare.js";
+import { generateRpgPack } from "../../src/gen/rpg_generator.js";
 
 function isQuestItem(p: CrawlPlanItem): p is Extract<CrawlPlanItem, { kind: "quest" }> {
   return p.kind === "quest";
@@ -210,5 +214,122 @@ describe("sliceSeeds", () => {
   it("never hands out more slices than seeds", () => {
     const slices = sliceSeeds([1, 2], 8);
     expect(slices.filter((s) => s.length > 0)).toHaveLength(2);
+  });
+});
+
+/**
+ * Review fix (Task 10 follow-up #2): the `finalizeFindings` tests above (and
+ * `crawl_workers_determinism.test.ts`'s byte-diff test, which only ever runs
+ * clean shipped content with `--no-overworld`) never exercise `findings`/
+ * `countsByCode` with REAL findings produced by an actual `runPlanInProcess`
+ * call — they hand-build `CrawlFinding` literals and call `finalizeFindings`/
+ * `mergeSummaries` directly, or byte-diff a run whose `findings` array is
+ * always `[]`. Neither can fail on the historical defect (`runPlanInProcess`
+ * and `mergeSummaries` disagreeing on array/key order) actually firing on a
+ * live crawl.
+ *
+ * This suite uses the new `CrawlRunOptions.prepareQuest` DI seam to hand
+ * `runPlanInProcess` two in-memory, mutated packs — a RENDER template-marker
+ * mutation (`generateRpgPack(3)`) and a throwing-resolver CRASH wrapper
+ * (`generateRpgPack(4)`), both recipes proven in
+ * `tests/unit/crawl_quest_crawler.test.ts` — under two different questIds
+ * chosen so questId-alphabetical order and code-alphabetical order DISAGREE:
+ * `quest_alpha_render` (RENDER) sorts before `quest_zulu_crash` (CRASH) by
+ * questId, but "CRASH" sorts before "RENDER" alphabetically by code alone.
+ * The plan items are also fed in the OPPOSITE order (CRASH item first) so
+ * nothing "accidentally" passes by matching arrival order either.
+ */
+describe("runPlanInProcess with injected quests (real, non-empty findings)", () => {
+  const RENDER_QUEST_ID = "quest_alpha_render";
+  const CRASH_QUEST_ID = "quest_zulu_crash";
+
+  function prepareRenderQuest(): PreparedQuest {
+    const pack = generateRpgPack(3);
+    // pack.rooms is an array (src/rpg/schema.ts RpgPackSchema); pick any non-start room,
+    // same recipe as tests/unit/crawl_quest_crawler.test.ts's RENDER case.
+    const room = pack.rooms.find((r) => r.id !== pack.meta.start_room)!;
+    room.description = "You see {{treasure_name}} here.";
+    return { ...preparePack(pack), questId: RENDER_QUEST_ID };
+  }
+
+  function prepareCrashQuest(): PreparedQuest {
+    const pack = generateRpgPack(4);
+    const prepared = preparePack(pack, {
+      wrapRules: (rules) => ({
+        ...rules,
+        resolve: (state, action) => {
+          if (action.type === "TAKE") throw new Error("planted resolver bomb");
+          return rules.resolve(state, action);
+        },
+      }),
+    });
+    return { ...prepared, questId: CRASH_QUEST_ID };
+  }
+
+  function injectedPrepareQuest(_root: string, questId: string): PreparedQuest {
+    if (questId === RENDER_QUEST_ID) return prepareRenderQuest();
+    if (questId === CRASH_QUEST_ID) return prepareCrashQuest();
+    throw new Error(`test seam: unexpected questId "${questId}"`);
+  }
+
+  const baseOpts: Omit<CrawlRunOptions, "prepareQuest"> = {
+    root: process.cwd(),
+    policy: "mixed",
+    commit: "test",
+    quests: "all",
+    overworld: false,
+    seeds: [11],
+    stepsPerSeed: 400,
+    solverBudget: 0,
+    persistEvery: 37,
+    outDir: "ignored",
+    workers: 1,
+  };
+  const opts: CrawlRunOptions = { ...baseOpts, prepareQuest: injectedPrepareQuest };
+
+  // Arrival order deliberately reversed from the eventual questId-sorted order.
+  const crashItem: CrawlPlanItem = {
+    kind: "quest",
+    questId: CRASH_QUEST_ID,
+    seeds: [11],
+    stepsPerSeed: 400,
+  };
+  const renderItem: CrawlPlanItem = {
+    kind: "quest",
+    questId: RENDER_QUEST_ID,
+    seeds: [11],
+    stepsPerSeed: 600,
+  };
+  const items: CrawlPlanItem[] = [crashItem, renderItem];
+
+  it("orders findings/countsByCode by (questId, code), not by arrival order or code alone", () => {
+    const summary = runPlanInProcess(items, opts);
+    const pairs = summary.findings.map((f) => `${f.location.questId}:${f.code}`);
+    // The mutated room's template marker is rendered from two different call
+    // sites (an observation description and a narration event), so the RENDER
+    // quest legitimately produces two distinct (differently-worded, differently-
+    // stepped) RENDER findings — both still sort before the CRASH quest's one
+    // finding, since questId is the primary sort key.
+    expect(pairs).toEqual([
+      `${RENDER_QUEST_ID}:RENDER`,
+      `${RENDER_QUEST_ID}:RENDER`,
+      `${CRASH_QUEST_ID}:CRASH`,
+    ]);
+    expect(Object.keys(summary.countsByCode)).toEqual(["RENDER", "CRASH"]);
+    expect(summary.countsByCode).toEqual({ RENDER: 2, CRASH: 1 });
+  });
+
+  it("mergeSummaries over per-quest shards matches runPlanInProcess's combined findings and key order", () => {
+    const combined = runPlanInProcess(items, opts);
+
+    // Simulate a worker-per-quest fan-out: each shard sees only its own item,
+    // fed to mergeSummaries in the SAME (crash-then-render) arrival order.
+    const crashShard = runPlanInProcess([crashItem], opts);
+    const renderShard = runPlanInProcess([renderItem], opts);
+    const merged = mergeSummaries([crashShard, renderShard]);
+
+    expect(merged.findings).toEqual(combined.findings);
+    expect(Object.keys(merged.countsByCode)).toEqual(Object.keys(combined.countsByCode));
+    expect(merged.countsByCode).toEqual(combined.countsByCode);
   });
 });
