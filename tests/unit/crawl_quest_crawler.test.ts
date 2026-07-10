@@ -5,6 +5,10 @@ import { crawlQuest } from "../../src/crawl/quest_crawler.js";
 
 const OPTS = { seed: 11, maxSteps: 400, policy: "mixed" as const, commit: "test" };
 
+// The solver budget bounds this work deterministically; the longer wall-clock limit only
+// accounts for full-suite CPU contention on shared CI runners.
+const SOLVER_TEST_TIMEOUT_MS = 180_000;
+
 describe("quest crawler", () => {
   it("crawls a generated pack cleanly and deterministically", () => {
     const prepared = () => preparePack(generateRpgPack(3));
@@ -179,24 +183,28 @@ describe("quest crawler", () => {
     expect(r.findings.filter((f) => f.code === "PERSIST")).toEqual([]);
   });
 
-  it("SOFTLOCK(solver): a pack mutated into a one-way pit is caught", () => {
-    const pack = generateRpgPack(7);
-    // "cell" (src/gen/rpg_generator.ts) is a reachable, non-start, non-terminal dead
-    // end: a side room west off "hall" whose only exit runs back east. Stripping its
-    // exits makes it a genuine one-way pit — LOOK/INVENTORY/TAKE-the-ward stay legal
-    // there (so the Task-4 zero-actions SOFTLOCK never fires), but no route out
-    // exists, so only the solver oracle can catch it.
-    const cell = pack.rooms.find((r) => r.id === "cell")!;
-    cell.exits = [];
-    const r = crawlQuest(preparePack(pack), {
-      seed: 5,
-      maxSteps: 1500,
-      policy: "mixed",
-      commit: "test",
-      solverBudget: 20000,
-    });
-    expect(r.findings.some((f) => f.code === "SOFTLOCK")).toBe(true);
-  });
+  it(
+    "SOFTLOCK(solver): a pack mutated into a one-way pit is caught",
+    () => {
+      const pack = generateRpgPack(7);
+      // "cell" (src/gen/rpg_generator.ts) is a reachable, non-start, non-terminal dead
+      // end: a side room west off "hall" whose only exit runs back east. Stripping its
+      // exits makes it a genuine one-way pit — LOOK/INVENTORY/TAKE-the-ward stay legal
+      // there (so the Task-4 zero-actions SOFTLOCK never fires), but no route out
+      // exists, so only the solver oracle can catch it.
+      const cell = pack.rooms.find((r) => r.id === "cell")!;
+      cell.exits = [];
+      const r = crawlQuest(preparePack(pack), {
+        seed: 5,
+        maxSteps: 1500,
+        policy: "mixed",
+        commit: "test",
+        solverBudget: 20000,
+      });
+      expect(r.findings.some((f) => f.code === "SOFTLOCK")).toBe(true);
+    },
+    SOLVER_TEST_TIMEOUT_MS,
+  );
 
   it("SOFTLOCK(solver): no false positive on a healthy generated pack (Fix 1)", () => {
     // Task 5 review fix: the solver oracle must pass an explicit `explore: () =>

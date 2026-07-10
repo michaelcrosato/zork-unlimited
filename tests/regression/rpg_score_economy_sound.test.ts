@@ -112,6 +112,11 @@ const SCORE_VAR = "score";
 // combinatorial blowup fails LOUDLY (cap hit) rather than truncating into a silent pass.
 const MAX_STATES = 200_000;
 
+// Vitest runs the full corpus concurrently in CI, where the largest shipped-pack search
+// can take more than the generic 60-second default under runner contention. MAX_STATES
+// still bounds the actual search work, so this adds headroom without masking a runaway.
+const SOLVER_TEST_TIMEOUT_MS = 180_000;
+
 // The liveness action policy (bug_0146): step every legal action EXCEPT the ones that
 // provably cannot gate a score award — the pure-observation verbs and DROP. Crucially this
 // DOES step READ, ATTACK, and the skill-check USE, so every award state is visited.
@@ -249,46 +254,50 @@ describe("bug_0149 — every RPG pack's reachable max score equals its declared 
   });
 
   for (const file of packFiles) {
-    it(`${file}: the reachable maximum score equals the declared max_score (no overflow, no phantom points)`, () => {
-      const loaded = loadRpgSourceFile(join(PACK_DIR, file));
-      expect(loaded.ok).toBe(true);
-      if (!loaded.ok) return;
-      const pack = loaded.compiled.pack;
-      const declared = pack.meta.max_score;
+    it(
+      `${file}: the reachable maximum score equals the declared max_score (no overflow, no phantom points)`,
+      () => {
+        const loaded = loadRpgSourceFile(join(PACK_DIR, file));
+        expect(loaded.ok).toBe(true);
+        if (!loaded.ok) return;
+        const pack = loaded.compiled.pack;
+        const declared = pack.meta.max_score;
 
-      // Caveat guard A: the best/worst-roll bracket reaches the right STATES soundly only
-      // when no routing condition gates on a raw HP value the extremes skip.
-      expect(
-        readsHpInCondition(pack),
-        `pack gates a condition on an HP var — the best/worst-roll bracket assumes no ` +
-          `HP-gated routing; branch the HP in the solver before trusting the economy here`,
-      ).toBe(false);
+        // Caveat guard A: the best/worst-roll bracket reaches the right STATES soundly only
+        // when no routing condition gates on a raw HP value the extremes skip.
+        expect(
+          readsHpInCondition(pack),
+          `pack gates a condition on an HP var — the best/worst-roll bracket assumes no ` +
+            `HP-gated routing; branch the HP in the solver before trusting the economy here`,
+        ).toBe(false);
 
-      // Caveat guard B (score-specific): the bracket reaches the right SCORE soundly only
-      // when no award rides a skill-check on_failure (the one roll-losing site the best
-      // regime skips). Otherwise the bracket could under-count -> a FALSE phantom alarm.
-      expect(
-        scoreAwardOnFailure(pack),
-        `pack awards score in a skill-check on_failure — the best-roll regime never fails, ` +
-          `so the bracket would under-count the reachable maximum; branch the check before ` +
-          `trusting the economy here`,
-      ).toBe(false);
+        // Caveat guard B (score-specific): the bracket reaches the right SCORE soundly only
+        // when no award rides a skill-check on_failure (the one roll-losing site the best
+        // regime skips). Otherwise the bracket could under-count -> a FALSE phantom alarm.
+        expect(
+          scoreAwardOnFailure(pack),
+          `pack awards score in a skill-check on_failure — the best-roll regime never fails, ` +
+            `so the bracket would under-count the reachable maximum; branch the check before ` +
+            `trusting the economy here`,
+        ).toBe(false);
 
-      const { max, cappedOut } = maxReachableScore(indexRpgPack(pack));
+        const { max, cappedOut } = maxReachableScore(indexRpgPack(pack));
 
-      // The search must have exhausted the reachable region, else the observed maximum is
-      // unproven (a higher score could lie in the truncated tail).
-      expect(cappedOut, `state-space search hit the ${MAX_STATES} cap`).toBe(false);
-      // The crux: reachable max > declared is overflow/farm/under-declared max_score;
-      // reachable max < declared is phantom points (a max_score no route can reach).
-      expect(
-        max,
-        `reachable max score (${max}) != declared max_score (${declared}) — ` +
-          (max > declared
-            ? "score OVERFLOWS the declared ceiling (a farmable/double-counted award?)"
-            : "declared max_score is PHANTOM (no route reaches it)"),
-      ).toBe(declared);
-    });
+        // The search must have exhausted the reachable region, else the observed maximum is
+        // unproven (a higher score could lie in the truncated tail).
+        expect(cappedOut, `state-space search hit the ${MAX_STATES} cap`).toBe(false);
+        // The crux: reachable max > declared is overflow/farm/under-declared max_score;
+        // reachable max < declared is phantom points (a max_score no route can reach).
+        expect(
+          max,
+          `reachable max score (${max}) != declared max_score (${declared}) — ` +
+            (max > declared
+              ? "score OVERFLOWS the declared ceiling (a farmable/double-counted award?)"
+              : "declared max_score is PHANTOM (no route reaches it)"),
+        ).toBe(declared);
+      },
+      SOLVER_TEST_TIMEOUT_MS,
+    );
   }
 
   it("FAILS on a planted OVERFLOW pack (a reachable score above the declared ceiling)", () => {
