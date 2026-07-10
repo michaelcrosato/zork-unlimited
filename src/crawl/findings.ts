@@ -102,6 +102,17 @@ export class FindingCollector {
     return this._totalRaw;
   }
 
+  /**
+   * Cheap dedupe pre-check: true iff a finding with this fingerprint has already been
+   * kept. Lets a caller skip building an expensive repro trace before knowing `add`
+   * would just discard it anyway — a defect that fires every step must not pay
+   * `recordTrace`'s O(actions-so-far) replay cost on every duplicate occurrence, only
+   * on the fingerprint's first occurrence (Task 5 review fix).
+   */
+  has(f: Pick<CrawlFinding, "code" | "location" | "message">): boolean {
+    return this.seenFingerprints.has(findingFingerprint(f));
+  }
+
   add(
     f: Omit<CrawlFinding, "seed" | "policy" | "commit" | "severity"> & {
       severity?: CrawlSeverity;
