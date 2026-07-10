@@ -143,6 +143,79 @@ function validHotspotsFile(hotspotId: string): unknown {
   };
 }
 
+/** Default field values shared by every synthetic hot spot below, so each
+ *  call site only names the fields the test actually varies. */
+function baseHotspot(overrides: Record<string, unknown> & { id: string }): Record<string, unknown> {
+  return {
+    title: "quest breaks past the vault door",
+    location: {
+      kind: "quest",
+      questId: "hotspot_fixture",
+      region: null,
+      node: null,
+      sceneId: null,
+      raw: ["Hotspot Fixture"],
+    },
+    severity_band: "severe",
+    max_severity: "S4",
+    count: 6,
+    sources: ["fleet"],
+    personas: ["breaker"],
+    score: 96,
+    fix_layer: "content",
+    evidence: [
+      {
+        source: "fleet",
+        ref: "20260709T000000Z_hotspot_fixture_seed1.md",
+        excerpt: "cannot proceed past the vault door",
+      },
+    ],
+    trend: "new",
+    prev_score: null,
+    ...overrides,
+  };
+}
+
+/** A schema-valid `HotspotsFile` wrapping the given hot spots (already-built
+ *  via {@link baseHotspot}); `recommended_next_fix` cites the first one. */
+function hotspotsFileWith(hotspots: Array<Record<string, unknown>>): unknown {
+  return {
+    version: 1,
+    generated_at: "2026-07-09T00:00:00.000Z",
+    commit: "abc1234",
+    inputs: {
+      report_dirs: ["blind-tester/reports"],
+      crawl_files: [],
+      verified_reports: 1,
+      rejected_reports: 0,
+      crawl_findings: 0,
+    },
+    metrics: [],
+    sycophancy: {
+      reports: 1,
+      zero_negative_rate: 0,
+      clarity_histogram: [0, 0, 0, 1, 0],
+      enjoyment_histogram: [0, 0, 0, 1, 0],
+      by_persona_zero_negative: {},
+    },
+    hotspots,
+    recommended_next_fix: {
+      hotspot_id: (hotspots[0] as { id: string }).id,
+      rationale: "synthetic fixture for assessor hotspot ranking tests",
+    },
+  };
+}
+
+function writeHotspotsFile(
+  root: string,
+  stamp: string,
+  hotspots: Array<Record<string, unknown>>,
+): void {
+  const dir = join(root, "ai-runs", "feedback", stamp);
+  mkdirSync(dir, { recursive: true });
+  writeFileSync(join(dir, "hotspots.json"), JSON.stringify(hotspotsFileWith(hotspots)));
+}
+
 function withFixtureRoot(setup: (root: string) => void, run: (root: string) => void): void {
   const root = mkdtempSync(join(tmpdir(), "af-assessor-hotspots-"));
   try {
@@ -237,6 +310,140 @@ describe("assess() consuming compiled hotspots.json (Task 17)", () => {
       (root) => {
         const a = assess(root);
         expect(a.candidates.some((c) => c.id.startsWith("hotspot-"))).toBe(false);
+      },
+    );
+  });
+});
+
+// ── review fix: effort floor + tie-break guarantee ──────────────────────────
+// `writeFixtureQuestRoot`'s quest has an unreachable win condition
+// (`has_flag: impossible`), so it is UNPLAYABLE (validator error, not just a
+// warning) and every fixture root here also raises a `fix-unplayable-
+// hotspot_fixture` candidate (impact 5, effort M, content_fix -> score 2.5)
+// alongside whatever hotspot candidate the test's own hotspots.json adds.
+describe("hotspot candidates never outrank an unplayable-quest fix (review fix)", () => {
+  const FIX_LAYERS = [
+    "content",
+    "hint_text",
+    "quest_structure",
+    "engine_rule",
+    "validator",
+    "test",
+  ] as const;
+
+  it.each(FIX_LAYERS)(
+    "fix_layer %s: effort floors at M, and the hotspot never outranks fix-unplayable-hotspot_fixture",
+    (fixLayer) => {
+      withFixtureRoot(
+        (root) => {
+          writeHotspotsFile(root, "20260709T000000Z", [
+            baseHotspot({ id: `floor-${fixLayer}`, fix_layer: fixLayer }),
+          ]);
+        },
+        (root) => {
+          const a = assess(root);
+          const fixUnplayable = a.candidates.find((c) => c.id === "fix-unplayable-hotspot_fixture");
+          const hotspot = a.candidates.find((c) => c.id === `hotspot-floor-${fixLayer}`);
+          expect(fixUnplayable).toBeDefined();
+          expect(hotspot).toBeDefined();
+
+          // The dropped "S" tier: every hotspot candidate now floors at "M" effort,
+          // regardless of fix_layer.
+          expect(hotspot!.effort).toBe("M");
+
+          // Never outranks — at most a tie, per the chosen mechanism documented on
+          // effortForHotspot in src/afk/assessor.ts.
+          expect(hotspot!.score).toBeLessThanOrEqual(fixUnplayable!.score);
+
+          // And concretely: it never ranks AHEAD of the unplayable-quest fix in the
+          // final sorted list (the id-ascending tiebreak resolves any exact tie).
+          const fixRank = a.candidates.findIndex((c) => c.id === "fix-unplayable-hotspot_fixture");
+          const hotspotRank = a.candidates.findIndex((c) => c.id === `hotspot-floor-${fixLayer}`);
+          expect(fixRank).toBeLessThan(hotspotRank);
+        },
+      );
+    },
+  );
+
+  it("a content-fix_layer hot spot at max impact scores an EXACT tie (2.5) with the unplayable-quest fix", () => {
+    // This is the concrete review scenario (commit 38399b45 + the real checkpoint
+    // capture in .superpowers/sdd/task-17-report.md): before this fix, a sole
+    // `content`/`hint_text` hot spot got "S" effort, so
+    // score(5, "S", "content_fix") = 5.0 outranked EVERYTHING, including an
+    // unplayable-quest fix at score(5, "M", "content_fix") = 2.5. After the fix,
+    // both land on exactly 2.5 — a tie the id tiebreak resolves in the quest fix's
+    // favor.
+    withFixtureRoot(
+      (root) => {
+        writeHotspotsFile(root, "20260709T000000Z", [
+          baseHotspot({ id: "exact-tie", fix_layer: "content", trend: "new" }),
+        ]);
+      },
+      (root) => {
+        const a = assess(root);
+        const fixUnplayable = a.candidates.find((c) => c.id === "fix-unplayable-hotspot_fixture")!;
+        const hotspot = a.candidates.find((c) => c.id === "hotspot-exact-tie")!;
+        expect(fixUnplayable.score).toBe(2.5);
+        expect(hotspot.score).toBe(2.5);
+        expect(a.candidates.findIndex((c) => c.id === fixUnplayable.id)).toBeLessThan(
+          a.candidates.findIndex((c) => c.id === hotspot.id),
+        );
+      },
+    );
+  });
+});
+
+// ── review fix: trend-aware impact ──────────────────────────────────────────
+describe("trend-aware hotspot impact (review fix)", () => {
+  it('an "improved" hot spot gets impact 1 lower than an identical "new" one', () => {
+    withFixtureRoot(
+      (root) => {
+        writeHotspotsFile(root, "20260709T000000Z", [
+          baseHotspot({ id: "trend-new", trend: "new" }),
+        ]);
+      },
+      (root) => {
+        const a = assess(root);
+        const candidate = a.candidates.find((c) => c.id === "hotspot-trend-new");
+        expect(candidate).toBeDefined();
+        expect(candidate!.impact).toBe(5); // sole hot spot in file normalizes to max impact
+      },
+    );
+
+    withFixtureRoot(
+      (root) => {
+        writeHotspotsFile(root, "20260709T000000Z", [
+          baseHotspot({ id: "trend-improved", trend: "improved", prev_score: 200 }),
+        ]);
+      },
+      (root) => {
+        const a = assess(root);
+        const candidate = a.candidates.find((c) => c.id === "hotspot-trend-improved");
+        expect(candidate).toBeDefined();
+        // Identical otherwise (same sole-hot-spot-in-file normalization to base
+        // impact 5), but "improved" knocks it down by exactly 1.
+        expect(candidate!.impact).toBe(4);
+      },
+    );
+  });
+
+  it('the "improved" discount floors at impact 1 — it never reaches 0', () => {
+    withFixtureRoot(
+      (root) => {
+        writeHotspotsFile(root, "20260709T000000Z", [
+          // Dominant hot spot sets maxHotspotScore = 100 (base impact 5, trend new).
+          baseHotspot({ id: "dominant", score: 100, trend: "new" }),
+          // 5/100 * 5 = 0.25 -> rounds to base impact 1 BEFORE the trend discount;
+          // "improved" would take it to 0 without the floor.
+          baseHotspot({ id: "faint-improved", score: 5, trend: "improved", prev_score: 50 }),
+        ]);
+      },
+      (root) => {
+        const a = assess(root);
+        const dominant = a.candidates.find((c) => c.id === "hotspot-dominant");
+        const faint = a.candidates.find((c) => c.id === "hotspot-faint-improved");
+        expect(dominant?.impact).toBe(5);
+        expect(faint?.impact).toBe(1); // floored, not 0
       },
     );
   });

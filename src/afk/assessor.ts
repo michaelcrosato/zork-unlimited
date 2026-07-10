@@ -378,41 +378,81 @@ const ENGINE_FIX_LAYERS: ReadonlySet<Hotspot["fix_layer"]> = new Set([
   "test",
 ]);
 
-/** fix_layer values cheap enough to fix inline (prose/hint copy) — mirrors the
- *  effort convention the repo lever above already uses (repo-doc-staleness is
- *  "S"; structural/engine levers are "M"/"L"). */
-const CHEAP_FIX_LAYERS: ReadonlySet<Hotspot["fix_layer"]> = new Set(["content", "hint_text"]);
-
 function categoryForHotspot(h: Hotspot): Category {
   return ENGINE_FIX_LAYERS.has(h.fix_layer) ? "engine" : "content_fix";
 }
 
-function effortForHotspot(h: Hotspot): ImprovementCandidate["effort"] {
-  return CHEAP_FIX_LAYERS.has(h.fix_layer) ? "S" : "M";
+/**
+ * Effort floor for EVERY hotspot candidate is "M" — there is no "S" tier here,
+ * unlike the repo-doc-staleness lever above. A prior version gave `content`/
+ * `hint_text` fix_layers "S", which let a single hot spot outscore even an
+ * unplayable-quest fix: `score(5, "S", "content_fix")` = 5.0 vs
+ * `score(5, "M", "content_fix")` = 2.5 for `fix-unplayable-*`/`fix-unbound-*`
+ * (see tests/unit/assessor_hotspots.test.ts and the real checkpoint capture in
+ * .superpowers/sdd/task-17-report.md, where a `hint_text` hot spot legitimately
+ * ranked #1 over everything). With the floor at "M", a hotspot candidate's
+ * best-case score is exactly 2.5 — at most a TIE with, never a win over, an
+ * unplayable/unbound-quest fix. CHOSEN TIE-BREAK MECHANISM: the final sort's
+ * id-ascending tiebreak (below) already resolves that tie correctly without
+ * any impact cap — `fix-unplayable-*`/`fix-unbound-*`/`fix-<id>` ids all sort
+ * before `hotspot-<id>` ids ('f' < 'h' lexicographically), so the quest fix
+ * always wins an exact-score tie. (An impact-4 cap was considered and
+ * rejected: it would needlessly discount hotspots that never actually collide
+ * with a quest-health candidate, e.g. every `engine`-category hotspot, which
+ * tops out at `score(5, "M", "engine")` = 2.0 regardless.)
+ */
+function effortForHotspot(_h: Hotspot): ImprovementCandidate["effort"] {
+  return "M";
 }
 
 /**
  * Scales a hot spot's raw compiled score (unbounded — count × severity weight
  * × diversity; see feedback/rank.ts's `scoreCluster`) into the assessor's 1-5
- * impact range used everywhere else in this file. Normalizes against the
- * HIGHEST hot spot score in the WHOLE compiled file (not just the top 3
- * considered below), so the file's single worst issue always maps to impact
- * 5 and lighter hot spots scale down proportionally; clamped to [1, 5] so a
- * degenerate all-zero file never divides out of range.
+ * impact range used everywhere else in this file, then applies a trend-aware
+ * discount. Normalizes against the HIGHEST hot spot score in the WHOLE
+ * compiled file (not just the top 3 considered below), so the file's single
+ * worst issue always maps to impact 5 and lighter hot spots scale down
+ * proportionally; clamped to [1, 5] to guard against ROUNDING at the extremes
+ * — not because a hot spot's score can be non-positive: the schema guarantees
+ * `score: z.number().positive()`, so whenever there is at least one hot spot
+ * to normalize against, both `h.score` and `maxHotspotScore` are always > 0.
+ *
+ * Trend-aware deprioritization: a hot spot the compiler already marked
+ * "improved" (its cluster's score fell since the previous compile — see
+ * feedback/trends.ts) is an ALREADY-MOVING target; pinning the loop's top slot
+ * to something already trending toward resolved is lower value than spending
+ * that cycle on a target that isn't moving on its own. Knock its impact down
+ * by 1 (floored at 1, never 0 — a hot spot still real enough to ship in the
+ * top 3 never drops off the radar entirely) so it still competes but no
+ * longer leads purely on a severity that's already easing. Staleness caveat:
+ * `hotspots.json` is a snapshot that only refreshes on an explicit
+ * `feedback:compile` run, so between compiles a hot spot that improved
+ * further (or regressed again) still shows its last-compiled trend — the
+ * loop's compile step (AGENTS.md, Task 18) is the mitigation, not this
+ * function.
  */
 function impactForHotspot(h: Hotspot, maxHotspotScore: number): number {
-  if (maxHotspotScore <= 0) return 1;
-  return Math.max(1, Math.min(5, Math.round((h.score / maxHotspotScore) * 5)));
+  const base =
+    maxHotspotScore <= 0
+      ? 1
+      : Math.max(1, Math.min(5, Math.round((h.score / maxHotspotScore) * 5)));
+  return h.trend === "improved" ? Math.max(1, base - 1) : base;
 }
 
 /**
  * The fixable target for a hot spot's location: its world quest id when the
- * compiler resolved one, else the shared overworld target when the location
- * is an overworld surface, else `null` (an `unmapped` location doesn't
- * nominate a candidate — there is nothing concrete to point the fix at).
+ * compiler resolved one AND the location kind is actually `"quest"`, else the
+ * shared overworld target when the location is an overworld surface, else
+ * `null` (an `unmapped` location doesn't nominate a candidate — there is
+ * nothing concrete to point the fix at). The explicit `kind === "quest"` gate
+ * (rather than a bare `questId` truthiness check) matches the schema's intent
+ * precisely: `questId` is only ever populated alongside `kind: "quest"` (see
+ * feedback/normalize.ts), but the zod schema itself doesn't enforce that
+ * pairing, so checking `kind` first documents and hardens the real invariant
+ * instead of relying on a field that happens to be null everywhere else.
  */
 function hotspotTarget(h: Hotspot): string | null {
-  if (h.location.questId) return h.location.questId;
+  if (h.location.kind === "quest" && h.location.questId) return h.location.questId;
   return h.location.kind === "overworld" ? OVERWORLD_PLAYTEST_TARGET : null;
 }
 
@@ -790,6 +830,10 @@ export function assess(root: string): Assessment {
   // normalize through packStem so old loop-state attendance remains usable.
   // Reading the tracked AI_LOOP_STATE.md keeps this a pure function of repo state
   // (same repo ⇒ same ranking), curing the cold_forge lock-in (bug_0128).
+  // This id-asc tiebreak is also the mechanism (see effortForHotspot above) that
+  // guarantees a hotspot candidate never OUTRANKS an unplayable/unbound-quest fix
+  // even on an exact score tie: `fix-unplayable-*`/`fix-unbound-*`/`fix-<id>` all
+  // sort before `hotspot-<id>` ('f' < 'h'), so the quest fix wins any tie.
   const attendance = lastAttendanceOffsets(root);
   const recencyOf = (c: ImprovementCandidate): number => {
     if (!c.id.startsWith("playtest-")) return Number.MAX_SAFE_INTEGER;
