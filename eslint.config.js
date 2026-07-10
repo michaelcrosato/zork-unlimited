@@ -60,6 +60,19 @@ export default tseslint.config(
     },
   },
   {
+    // src/crawl/worker_bootstrap.mjs is plain-JS worker-thread bootstrap glue
+    // (see its doc comment) — deliberately outside the src/**/*.ts block above
+    // since it must load natively in a worker thread with no transform. Only
+    // needs the Node `URL` global (no-undef); mirrors the blind-tester/**/*.mjs
+    // block below.
+    files: ["src/**/*.mjs"],
+    languageOptions: {
+      globals: {
+        URL: "readonly",
+      },
+    },
+  },
+  {
     // blind-tester/ is Node ESM loop tooling. Root-wide cleaner runs `eslint .`, so
     // keep the smoke harness in the lint gate with Node globals instead of carrying
     // false no-undef noise for process/console/setTimeout (fleet.mjs's pacing delays).

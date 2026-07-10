@@ -7,12 +7,14 @@
  * never how a given seed is run), and post the resulting `CrawlRunSummary`
  * back to the parent for `mergeSummaries` to combine.
  *
- * Launched via `new Worker(new URL("./worker_entry.ts", import.meta.url), {
- * execArgv: ["--import", "tsx"] })` — a live probe on this machine (Node
- * 22+/Windows, tsx 4.19) confirmed this loads/transpiles a `.ts` worker
- * module (and its relative project imports) correctly, so the brief's
- * sanctioned `child_process` fallback was not needed (see `run.ts`'s
- * `runWorkerShard` doc comment and the Task 10 commit message).
+ * Launched indirectly via `worker_bootstrap.mjs` (plain JS the worker thread
+ * can load natively), which registers tsx's ESM loader inside the thread via
+ * `tsx/esm/api`'s `register()` and then imports this file — see
+ * `run.ts`'s `runWorkerShard` doc comment for why the loader is registered
+ * this way rather than via `execArgv: ["--import", "tsx"]` on the Worker
+ * constructor (that approach worked on Node 24/Windows but failed on CI's
+ * Node 22 with `ERR_MODULE_NOT_FOUND`). The brief's sanctioned
+ * `child_process` fallback was not needed either way.
  */
 import { parentPort, workerData } from "node:worker_threads";
 import { runPlanInProcess, type CrawlPlanItem, type CrawlRunOptions } from "./run.js";

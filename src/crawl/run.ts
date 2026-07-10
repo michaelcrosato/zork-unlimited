@@ -655,10 +655,16 @@ export function mergeSummaries(
 
 /** Runs one worker thread on its slice of the plan, resolving with the
  *  shard's `CrawlRunSummary`. Uses `worker_threads` (not a `child_process`
- *  fallback): a live probe on this machine (Node 22+/Windows, tsx 4.19)
- *  confirmed `new Worker(url, { execArgv: ["--import", "tsx"] })` correctly
- *  transpiles/loads a `.ts` worker module AND its relative project imports,
- *  so the brief's sanctioned fallback was never needed.
+ *  fallback): the worker loads `worker_bootstrap.mjs` — plain JS the thread
+ *  can run natively — which registers tsx's ESM loader INSIDE the thread via
+ *  `tsx/esm/api`'s `register()` and then imports the real `worker_entry.ts`.
+ *  An earlier version spawned `worker_entry.ts` directly with
+ *  `execArgv: ["--import", "tsx"]`; that worked on Node 24/Windows locally
+ *  but failed on CI's ubuntu-latest + Node 22 with `ERR_MODULE_NOT_FOUND` for
+ *  `./run.js` — `--import`'s effect on a worker thread's own module
+ *  resolution is Node-version-dependent. Registering tsx via its API from
+ *  code already running inside the thread (the bootstrap) is
+ *  version-independent by construction, so no `execArgv` is needed at all.
  *
  *  `--seconds` deadline note: `opts` (including `secondsBudget`) is passed
  *  through unchanged to `worker_entry.ts`'s `runPlanInProcess(items, opts)`
@@ -681,9 +687,8 @@ export function mergeSummaries(
  *  `summary.json`/`summary.md`, never silently swallowed. */
 function runWorkerShard(items: CrawlPlanItem[], opts: CrawlRunOptions): Promise<CrawlRunSummary> {
   return new Promise((resolve, reject) => {
-    const worker = new Worker(new URL("./worker_entry.ts", import.meta.url), {
+    const worker = new Worker(new URL("./worker_bootstrap.mjs", import.meta.url), {
       workerData: { items, opts },
-      execArgv: ["--import", "tsx"],
     });
     let settled = false;
     worker.once("message", (summary: CrawlRunSummary) => {
