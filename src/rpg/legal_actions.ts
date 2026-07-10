@@ -400,7 +400,7 @@ export function enumerateRpgBaseActions(index: RpgModelIndex, state: GameState):
   // A self-targeted USE (item === target) is the "consume this thing" pattern —
   // drink the phial, eat the bread — and reads as `use <obj>`, not the nonsensical
   // `use <obj> on <obj>`.
-  for (const o of index.pack.objects) {
+  for (const o of index.objectsWithUseInteractions) {
     for (const it of o.interactions) {
       if (it.verb !== "USE" || it.target === undefined) continue;
       const selfUse = it.item !== undefined && it.item === it.target;

@@ -33,6 +33,7 @@ export type RpgModelIndex = {
   npcByRoom: Map<string, Npc[]>;
   homeRoom: Map<string, string>;
   containerOf: Map<string, string>;
+  objectsWithUseInteractions: GameObject[];
 };
 
 export function indexRpgModel(pack: RpgPack): RpgModelIndex {
@@ -46,7 +47,19 @@ export function indexRpgModel(pack: RpgPack): RpgModelIndex {
     npcByRoom.set(n.room, list);
   }
   const { homeRoom, containerOf } = indexObjectHomes(pack.rooms, pack.objects);
-  return { pack, rooms, objects, npcs, npcByRoom, homeRoom, containerOf };
+  const objectsWithUseInteractions = pack.objects.filter((o) =>
+    o.interactions.some((it) => it.verb === "USE" && it.target !== undefined),
+  );
+  return {
+    pack,
+    rooms,
+    objects,
+    npcs,
+    npcByRoom,
+    homeRoom,
+    containerOf,
+    objectsWithUseInteractions,
+  };
 }
 
 export type Location = ObjectLocation;
