@@ -281,9 +281,18 @@ function fleetIssueRecords(
 /** The most specific structured id a crawl finding's location carries — fed
  *  through the SAME `canonicalizeLocation` ladder as fleet free text. Crawler
  *  locations are already real engine ids, so this reliably lands on rung 1
- *  (exact id hit) rather than needing the fuzzy name rungs fleet prose does. */
+ *  (exact id hit) rather than needing the fuzzy name rungs fleet prose does.
+ *  Falls back to a non-empty marker (never `""`) when every field is null —
+ *  an empty raw string would resolve to `unmapped` with `raw: [""]`, which
+ *  could otherwise surface as a blank Hotspot title. */
 function crawlerLocationRawText(location: CrawlFinding["location"]): string {
-  return location.sceneId ?? location.questId ?? location.node ?? location.region ?? "";
+  return (
+    location.sceneId ??
+    location.questId ??
+    location.node ??
+    location.region ??
+    "unmapped-crawler-finding"
+  );
 }
 
 /** Crawler IssueRecords: one per finding, `text = "<CODE>: <message>"` (parsed
