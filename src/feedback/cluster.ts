@@ -1,0 +1,329 @@
+/**
+ * Deterministic issue clustering — the analytical core of the feedback
+ * compiler. NO LLM anywhere in this path: every grouping decision is a pure
+ * function of issue content (canonical location, severity, tokenized text),
+ * never of input array order or any external judgment call.
+ *
+ * Pipeline (see `clusterIssues` below):
+ *   1. Sort issues canonically (locationKey, severity, normalized text, ref)
+ *      so nothing downstream ever depends on the order the caller happened
+ *      to supply issues in.
+ *   2. Pass 1 — exact fingerprint buckets on (locationKey, severityBand,
+ *      first 6 tokens). Cheap and coarse: two issues land in the same bucket
+ *      only when their tokenized fingerprints match exactly.
+ *   3. Pass 2 — repeatedly merge any two buckets that share a locationKey and
+ *      whose token sets are >= JACCARD_MERGE_THRESHOLD similar, iterating to
+ *      a fixpoint. The merge direction (lexicographically-smaller key always
+ *      folds into the larger) means the surviving key of any connected group
+ *      is simply the max of that group's original bucket keys — independent
+ *      of which pair got merged first. Combined with step 1, the whole
+ *      pipeline is a pure function of the *set* of input issues, never their
+ *      order (see the "input order never changes the clustering" test).
+ */
+import type { CanonicalLocation, FeedbackSource } from "./schema.js";
+
+export type IssueSeverity = "S0" | "S1" | "S2" | "S3" | "S4";
+export type SeverityBand = "minor" | "moderate" | "severe";
+
+export type IssueRecord = {
+  source: FeedbackSource;
+  ref: string; // report filename / findings.jsonl row ref
+  location: CanonicalLocation;
+  severity: IssueSeverity;
+  text: string;
+  persona: string | null;
+  target: string; // "overworld" | "quest:<id>"
+};
+
+export type IssueCluster = {
+  key: string;
+  issues: IssueRecord[];
+  tokens: string[];
+  location: CanonicalLocation;
+  maxSeverity: IssueSeverity;
+  severityBand: SeverityBand;
+  sources: FeedbackSource[];
+  personas: string[];
+};
+
+/** Jaccard similarity threshold for pass-2 cross-bucket merges. */
+export const JACCARD_MERGE_THRESHOLD = 0.5;
+
+/**
+ * Fixed ~40-word stopword list for `tokenizeIssue`. Deliberately separate
+ * from normalize.ts's `RUNG3_STOPWORDS`: that list is a tiny 9-word set
+ * tuned for conservative location-NAME matching (never strip enough to risk
+ * a false collision between two different place names). This list serves the
+ * opposite goal — collapsing near-duplicate free-text ISSUE reports together
+ * — so it can afford to be broader: clustering only ever groups issues that
+ * already share a canonical location (see `locationKey`), so a slightly
+ * looser token match here can't glom together two genuinely different
+ * places the way it could in normalize.ts.
+ */
+const STOPWORDS: ReadonlySet<string> = new Set([
+  "a",
+  "an",
+  "and",
+  "are",
+  "as",
+  "at",
+  "be",
+  "been",
+  "being",
+  "but",
+  "by",
+  "do",
+  "does",
+  "for",
+  "from",
+  "had",
+  "has",
+  "have",
+  "in",
+  "is",
+  "it",
+  "its",
+  "of",
+  "on",
+  "or",
+  "out",
+  "over",
+  "so",
+  "than",
+  "that",
+  "the",
+  "then",
+  "there",
+  "this",
+  "to",
+  "too",
+  "under",
+  "was",
+  "we",
+  "were",
+  "what",
+  "when",
+  "where",
+  "with",
+  "you",
+  "your",
+  "about",
+]);
+
+const SEVERITY_ORDER: readonly IssueSeverity[] = ["S0", "S1", "S2", "S3", "S4"];
+
+function severityRank(severity: IssueSeverity): number {
+  return SEVERITY_ORDER.indexOf(severity);
+}
+
+/** S0-S1 minor, S2 moderate, S3-S4 severe. */
+export function severityBand(severity: IssueSeverity): SeverityBand {
+  const rank = severityRank(severity);
+  if (rank <= 1) return "minor";
+  if (rank === 2) return "moderate";
+  return "severe";
+}
+
+const MIN_STEM_LENGTH = 3;
+/** Longest-first so "confusing" strips "ing" (not a shorter/wrong suffix). */
+const STEM_SUFFIXES = ["ing", "ed", "es", "s"] as const;
+
+/** Single-pass crude stemmer: strips at most one trailing suffix. */
+function stem(token: string): string {
+  for (const suffix of STEM_SUFFIXES) {
+    if (token.endsWith(suffix) && token.length - suffix.length >= MIN_STEM_LENGTH) {
+      return token.slice(0, token.length - suffix.length);
+    }
+  }
+  return token;
+}
+
+/**
+ * lowercase -> strip punctuation -> drop stopwords -> crude stem (trailing
+ * "ing"/"ed"/"es"/"s", longest suffix first, min stem length 3) -> dedupe ->
+ * sort. The sort+dedupe means two texts with the same *bag* of significant
+ * words tokenize identically regardless of word order or repetition — the
+ * property `clusterIssues` leans on for its fingerprint/Jaccard comparisons.
+ */
+export function tokenizeIssue(text: string): string[] {
+  const words = text
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]+/g, " ")
+    .split(/\s+/)
+    .filter((word) => word.length > 0);
+  const tokens = new Set<string>();
+  for (const word of words) {
+    if (STOPWORDS.has(word)) continue;
+    tokens.add(stem(word));
+  }
+  return [...tokens].sort();
+}
+
+export function jaccard(a: readonly string[], b: readonly string[]): number {
+  const setA = new Set(a);
+  const setB = new Set(b);
+  const union = new Set([...setA, ...setB]);
+  if (union.size === 0) return 1;
+  let intersection = 0;
+  for (const token of setA) {
+    if (setB.has(token)) intersection++;
+  }
+  return intersection / union.size;
+}
+
+/**
+ * Stable string identity for a CanonicalLocation, used to decide which
+ * issues are even ELIGIBLE to cluster together (pass 2 never merges across
+ * locationKeys). Built from `kind|questId|node|sceneId` — deliberately
+ * excludes `region`, which is redundant with `node` for overworld locations
+ * and always null for quest/unmapped ones, so including it would add no
+ * discriminating power.
+ *
+ * `unmapped` locations are the one exception: they carry no resolved
+ * identity beyond their raw text, so two DIFFERENT unmapped raw strings must
+ * never be treated as the same place just because they share `kind`.
+ * Unmapped locations key on `kind|raw-joined` instead, so distinct free-text
+ * reports that never resolved to a real location only cluster with
+ * themselves (or with issues sharing that exact raw text), never with each
+ * other.
+ */
+function locationKey(location: CanonicalLocation): string {
+  if (location.kind === "unmapped") {
+    return `unmapped|${location.raw.join("\x01")}`;
+  }
+  const part = (value: string | null): string => value ?? "\x00";
+  return `${location.kind}|${part(location.questId)}|${part(location.node)}|${part(location.sceneId)}`;
+}
+
+function unionTokens(a: readonly string[], b: readonly string[]): string[] {
+  return [...new Set([...a, ...b])].sort();
+}
+
+function fingerprint(locKey: string, band: SeverityBand, tokens: readonly string[]): string {
+  return `${locKey}|${band}|${tokens.slice(0, 6).join(",")}`;
+}
+
+function compareStrings(a: string, b: string): number {
+  return a < b ? -1 : a > b ? 1 : 0;
+}
+
+/** Canonical, content-only ordering — never touches input array position. */
+function compareIssues(a: IssueRecord, b: IssueRecord): number {
+  const sevDiff = severityRank(a.severity) - severityRank(b.severity);
+  if (sevDiff !== 0) return sevDiff;
+  const at = tokenizeIssue(a.text).join(" ");
+  const bt = tokenizeIssue(b.text).join(" ");
+  if (at !== bt) return compareStrings(at, bt);
+  return compareStrings(a.ref, b.ref);
+}
+
+type WorkingCluster = {
+  /** The fingerprint key of the bucket that "won" every merge it took part
+   * in — always the lexicographically largest fingerprint key among the
+   * original pass-1 buckets folded into this cluster. */
+  key: string;
+  locationKey: string;
+  issues: IssueRecord[];
+  tokens: string[];
+};
+
+function finalizeCluster(cluster: WorkingCluster): IssueCluster {
+  const sortedIssues = [...cluster.issues].sort(compareIssues);
+  const first = sortedIssues[0]!;
+  let maxSeverity = first.severity;
+  for (const issue of sortedIssues) {
+    if (severityRank(issue.severity) > severityRank(maxSeverity)) maxSeverity = issue.severity;
+  }
+
+  const sourceOrder: readonly FeedbackSource[] = ["crawler", "fleet"];
+  const sourcesPresent = new Set(sortedIssues.map((issue) => issue.source));
+  const sources = sourceOrder.filter((source) => sourcesPresent.has(source));
+
+  const personas = [
+    ...new Set(
+      sortedIssues
+        .map((issue) => issue.persona)
+        .filter((persona): persona is string => persona !== null),
+    ),
+  ].sort();
+
+  const rawUnion = [...new Set(sortedIssues.flatMap((issue) => issue.location.raw))].sort();
+  const location: CanonicalLocation = { ...first.location, raw: rawUnion };
+
+  return {
+    key: cluster.key,
+    issues: sortedIssues,
+    tokens: cluster.tokens,
+    location,
+    maxSeverity,
+    severityBand: severityBand(maxSeverity),
+    sources,
+    personas,
+  };
+}
+
+export function clusterIssues(issues: IssueRecord[]): IssueCluster[] {
+  if (issues.length === 0) return [];
+
+  const prepared = issues
+    .map((issue) => {
+      const tokens = tokenizeIssue(issue.text);
+      return {
+        issue,
+        locKey: locationKey(issue.location),
+        band: severityBand(issue.severity),
+        tokens,
+        normalizedText: tokens.join(" "),
+      };
+    })
+    .sort((a, b) => {
+      if (a.locKey !== b.locKey) return compareStrings(a.locKey, b.locKey);
+      const sevDiff = severityRank(a.issue.severity) - severityRank(b.issue.severity);
+      if (sevDiff !== 0) return sevDiff;
+      if (a.normalizedText !== b.normalizedText)
+        return compareStrings(a.normalizedText, b.normalizedText);
+      return compareStrings(a.issue.ref, b.issue.ref);
+    });
+
+  // Pass 1: exact fingerprint buckets. Bucket membership order follows the
+  // canonical sort above, so it never depends on the caller's input order.
+  const buckets = new Map<string, WorkingCluster>();
+  for (const p of prepared) {
+    const fp = fingerprint(p.locKey, p.band, p.tokens);
+    const existing = buckets.get(fp);
+    if (existing) {
+      existing.issues.push(p.issue);
+      existing.tokens = unionTokens(existing.tokens, p.tokens);
+    } else {
+      buckets.set(fp, { key: fp, locationKey: p.locKey, issues: [p.issue], tokens: p.tokens });
+    }
+  }
+
+  let clusters = [...buckets.values()].sort((a, b) => compareStrings(a.key, b.key));
+
+  // Pass 2: merge to fixpoint. On every pass, scan clusters in ascending-key
+  // order and merge the first eligible pair found; the smaller key (earlier
+  // in the scan) always folds into the larger one, so the surviving key of
+  // any connected group is that group's max original key regardless of
+  // which specific pair got merged first.
+  for (;;) {
+    let mergedAny = false;
+    outer: for (let i = 0; i < clusters.length; i++) {
+      for (let j = i + 1; j < clusters.length; j++) {
+        const smaller = clusters[i]!;
+        const larger = clusters[j]!;
+        if (smaller.locationKey !== larger.locationKey) continue;
+        if (jaccard(smaller.tokens, larger.tokens) < JACCARD_MERGE_THRESHOLD) continue;
+        larger.issues = [...larger.issues, ...smaller.issues];
+        larger.tokens = unionTokens(larger.tokens, smaller.tokens);
+        clusters.splice(i, 1);
+        mergedAny = true;
+        break outer;
+      }
+    }
+    if (!mergedAny) break;
+    clusters = clusters.sort((a, b) => compareStrings(a.key, b.key));
+  }
+
+  return clusters.map(finalizeCluster);
+}

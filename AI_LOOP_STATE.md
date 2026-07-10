@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 526 -->
+<!-- historical_cycle_count: 527 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,14 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - testing_pyramid_three_tiers
+
+- Tooling surface: three-tier testing pyramid landed — mechanical crawler (`crawl:smoke` ~10s gate / `crawl:deep` soak, 9 oracles, ddmin-minimized repros), blind fleet (`npm run fleet`, personas + calibration anchors, zero-token `fleet:mock`), feedback compiler (`feedback:compile` → ranked hotspots + sycophancy telemetry + trends); assessor consumes `hotspots.json`.
+- Loop effect: AGENTS.md cycle gains crawl gates + fleet/compile steps; CI gains a crawl-smoke job; fault-injection suite proves planted CRASH/SOFTLOCK/RENDER/corruption defects are caught; `docs/testing_pyramid.md` is canonical.
+- Blind playtest: `fleet:mock` 20/20 verified overworld reports (all five personas rotated); live fleet blocked by nested-CLI auth inside agent sessions — mock lane is the CI oracle, live runs stay plain-shell.
+- Found+fixed: real engine bug — any post-quest-completion overworld snapshot failed restore (region-renown replay gap); `traces/bugs/bug_0496_overworld_renown_restore.yaml` + regression test. Deep soak 352k steps across 8 workers: zero findings.
+- Guard: `npm run health` green end-to-end; crawler byte-identical across worker counts; no verification weakened (coherence pins grew 18→22).
 
 ### Cycle result - albany_wolf_winter_relief_bridge
 
@@ -126,11 +134,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Blind playtest: 20-run `tide_mill` Codex batch seeds 281-300 all exited 0 and scored 55/55; clarity 20x5/5, enjoyment 20x4/5, replay 20x false.
 - Self-critique: "clear before billhook" friction softened, but compact agents still complain about generic `use_choked_sluice`; next S1 is making the decisive repair action billhook-specific.
 - Guard: focused head-race/regression graph checks, `npm run validate -- tide_mill`, `npm run health`, and reports `20260708T125954Z`-`20260708T131451Z` seeds 281-300 passed.
-
-### Cycle result - tide_mill_diegetic_prep_feedback
-
-- Content surface: retuned `tide_mill` prep journals so gaff/oilskin/Ives advice describe reach, padding, and tricks instead of explicit attack/defense/craft/might bonus labels.
-- Loop effect: focused combat/dialogue regressions still prove the prep variables and stable Ives flow, while banning numeric stat prose and the premature gaff-pickup "tool-shed saboteur" reveal.
-- Blind playtest: 20-run `tide_mill` Codex batch seeds 261-280 all exited 0 and scored 55/55; clarity 20x5/5, enjoyment 20x4/5, replay 20x false.
-- Self-critique: explicit stat-label text mostly closed, but the mechanical boost still reads artificial in a couple reports; the common next S1 is pre-billhook Head-Race action wording/affordance.
-- Guard: focused combat/dialogue regressions, stat-label scan, `npm run validate -- tide_mill`, `npm run health`, and reports `20260708T122937Z`-`20260708T124352Z` seeds 261-280 passed.

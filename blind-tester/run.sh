@@ -11,6 +11,7 @@
 #   blind-tester/run.sh [--seed <n>] [--model <alias>] [--out <prefix>]   # CORE GAME (overworld, the default)
 #   blind-tester/run.sh --quest <id> [--seed <n>] ...                     # targeted: drop into ONE shipped quest
 #   blind-tester/run.sh --smoke [--quest <id>] [--seed <n>]               # no LLM, no tokens
+#   ... [--persona <name>]  # play-style overlay; see blind-tester/personas/*.md (default: "default", a no-op)
 #
 # Provider-agnostic: set BLIND_AGENT_CMD to use a different MCP-capable agent CLI.
 # Codex commands are auto-wrapped with the adventureforge MCP server config; other
@@ -36,6 +37,7 @@ TIMEOUT="${BLIND_TIMEOUT:-900}"
 SPECTATE="${BLIND_SPECTATE:-0}"                   # 1 = server writes a human-watchable feed
 SPECTATE_DELAY_MS="${BLIND_SPECTATE_DELAY_MS:-}"  # optional pacing delay per tool response
 OVERWORLD="${BLIND_OVERWORLD:-0}"                 # CORE-GAME open-world mode — the DEFAULT unless a quest is named
+PERSONA="${BLIND_PERSONA:-default}"               # play-style overlay; see blind-tester/personas/*.md
 QUEST_EXPLICIT=0
 POSITIONAL=()
 
@@ -89,6 +91,7 @@ while [[ $# -gt 0 ]]; do
     --spectate)         SPECTATE=1; shift ;;
     --delay-ms)         SPECTATE_DELAY_MS="$2"; SPECTATE=1; shift 2 ;;
     --overworld)        OVERWORLD=1; shift ;;
+    --persona)          PERSONA="$2"; shift 2 ;;
     -h|--help)
       sed -n '3,20p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
       exit 0 ;;
@@ -261,9 +264,24 @@ else
 JSON
 fi
 
-# Fill the locked blind prompt.
-START_INSTRUCTION_ESCAPED="$(printf '%s' "$START_INSTRUCTION" | sed -e 's/[&#]/\\&/g')"
-PROMPT="$(sed -e "s#{{START_INSTRUCTION}}#${START_INSTRUCTION_ESCAPED}#g" -e "s#__SEED__#${SEED}#g" "$PROMPT_FILE")"
+# Persona overlay: a play-style disposition only (NO design/solution info —
+# see blind-tester/personas/*.md). "default" is comment-only, and fill-prompt.mjs
+# collapses a comment-only/empty persona to a no-op, so the DEFAULT path fills
+# byte-identically to before personas existed.
+PERSONA_FILE="$SCRIPT_DIR/personas/$PERSONA.md"
+if [[ ! -f "$PERSONA_FILE" ]]; then
+  echo "Unknown persona \"$PERSONA\" (no such file: $PERSONA_FILE)." >&2
+  echo "Available personas: $(cd "$SCRIPT_DIR/personas" && ls -- *.md | sed 's/\.md$//' | tr '\n' ' ')" >&2
+  exit 2
+fi
+
+# Fill the locked blind prompt. fill-prompt.mjs owns {{START_INSTRUCTION}},
+# __SEED__, and the {{PERSONA}} overlay line (see that file for the exact
+# substitution rules, including the empty-persona zero-residue guarantee).
+FILL_SCRIPT="$(node_path_arg "$SCRIPT_DIR/fill-prompt.mjs")"
+PROMPT_FILE_ARG="$(node_path_arg "$PROMPT_FILE")"
+PERSONA_FILE_ARG="$(node_path_arg "$PERSONA_FILE")"
+PROMPT="$("$NODE_CMD" "$FILL_SCRIPT" "$PROMPT_FILE_ARG" --seed "$SEED" --start-instruction "$START_INSTRUCTION" --persona-file "$PERSONA_FILE_ARG")"
 
 # Report destination.
 if [[ -z "$OUT" ]]; then

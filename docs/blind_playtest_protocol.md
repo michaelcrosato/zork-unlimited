@@ -1,11 +1,15 @@
 # Blind playtest protocol (the "fresh player" step)
 
 This is the canonical, repeatable procedure for the playtest step of an
-improvement cycle — manual or autonomous (AFK). It is one of the project's two
-testing modes: the dev tests (validators + exhaustive solver) prove _structure_
-(every ending reachable, no soft-locks, sound scoring), while this step measures the
+improvement cycle — manual or autonomous (AFK). It is Tier 2 of the project's
+three-tier testing pyramid (docs/testing_pyramid.md): dev tests (Tier 0) and the
+mechanical crawler (Tier 1) prove _structure_ (every ending reachable, no
+soft-locks, sound scoring, no mechanical defects), while this step measures the
 _experience_ a real first-time player has, which only a reasoning agent that **did
-not design the game** can report.
+not design the game** can report. A fresh single blind agent covers a normal
+cycle; a **fleet** of them (`npm run fleet`, below) covers milestone and
+feedback-harvest cycles, and `fleet:mock` gives CI the same pipeline at zero
+token cost.
 
 The whole point is **isolation**: the playtester must judge the game from the
 inside, using only what the game shows it. If it reads the YAML, the source, or
@@ -140,6 +144,56 @@ REPORT (return these sections):
    would_replay, verdict. (Exact shape: blind-tester/prompt.md section 7.)
 Be honest and specific; a critical, well-observed report is more useful than a flattering one.
 ```
+
+## Fleet mode
+
+`npm run fleet -- --count N --concurrency C --model <alias|mix> --personas mixed
+--target overworld|quest:<id> --seed-base S` runs N independent blind playtests
+(each an ordinary `blind-tester/run.sh` spawn) with bounded concurrency, resume
+(a prior verified report for the same seed/target is reused, never re-run),
+pacing/backoff on failed attempts, and a manifest at
+`ai-runs/fleet/<label>/manifest.jsonl`. Reports land in
+`blind-tester/reports/` (or `--out <dir>`), named by the same
+`<stamp>_<source>_seed<n>.md` convention the ledger regex parses. A run only
+counts as `verified` when `run.sh` exits 0 **and** a second, independent
+`scripts/verify-blind-report.ts` pass agrees.
+
+- **Personas** — `blind-tester/personas/{default,explorer,speedrunner,breaker,
+  casual,lore-reader}.md`. `--personas mixed` rotates through
+  explorer/speedrunner/breaker/casual/lore-reader in index order (reproducible,
+  not sampled). Each carries a calibration anchor so scores stay comparable
+  across personas, e.g. explorer's: "3/5 = an average competent text
+  adventure. 5/5 = you would recommend it unprompted... If you report zero bugs
+  AND zero confusions, you MUST state what you TRIED that failed to surface any
+  (at least three concrete attempts)."
+- **Model mix** — `--model mix` weights 9 haiku : 1 sonnet by run index
+  (deterministic, not random). There is **no temperature/top_p flag** — persona
+  × model × seed × target is the entire diversity mechanism; do not look for a
+  sampling-temperature knob on the `claude` CLI invocation, it doesn't exist here.
+- **Resume/pacing** — a failed attempt retries with exponential backoff (up to
+  `--max-retries`, default 2); re-invoking the same fleet command later resumes
+  cleanly instead of re-running verified seeds.
+
+## Mock mode
+
+`--mock` (or `npm run fleet:mock`) sets `BLIND_AGENT_CMD` to
+`blind-tester/mock-agent.mjs` — a deterministic, MCP-speaking scripted agent
+that plays for real over the MCP tools but needs no LLM and spends zero
+tokens. This is what CI runs: `tests/acceptance/fleet_mock_pipeline.test.ts`
+drives a small mock fleet through fleet → verified reports → compiler
+end-to-end so the whole Tier 2 → Tier 3 pipeline is exercised on every push with no API key and no external agent CLI required. The standalone `npm run fleet:mock -- --count 20` lane verified 20/20 in ~18s.
+
+## Sycophancy telemetry
+
+Positive reports are **data**, never rejected for positivity — the risk this
+guards against is the opposite failure, an agent that rates everything highly
+regardless of what it actually saw. The feedback compiler (`src/feedback/
+metrics.ts`) measures this directly rather than filtering it: a "zero-negative"
+report (no bugs AND no confusions) rate, overall and per-persona, plus 1–5
+clarity/enjoyment score distributions (histograms), surfaced in
+`hotspots.json`'s `sycophancy` block and in `hotspots.md`. A persona or model
+with a suspiciously high zero-negative rate is a signal to read its reports
+more skeptically, not a report to discard.
 
 ## Worked example — the first default-mode core-game run (2026-07-07)
 

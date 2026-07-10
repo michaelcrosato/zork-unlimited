@@ -3,10 +3,12 @@ import type {
   OverworldLocalEvent,
   OverworldLocalJob,
   OverworldNode,
+  OverworldQuest,
   OverworldRoadEvent,
 } from "./overworld.js";
 import type { RoadJournalIdParts } from "./session_journal_codec.js";
 import type { OverworldProgressJournalSourceIndex } from "./session_progress_journal.js";
+import { QUEST_COMPLETION_RENOWN } from "./session_quests.js";
 import type { OverworldJournalEntry, TravelLogEntrySnapshot } from "./session_snapshot.js";
 import { roadEncounterOptionFor } from "./travel_mechanics.js";
 
@@ -14,6 +16,7 @@ export type OverworldRegionRenownSourceIndex = {
   eventsById: ReadonlyMap<string, OverworldLocalEvent>;
   jobsById: ReadonlyMap<string, OverworldLocalJob>;
   nodesById: ReadonlyMap<string, OverworldNode>;
+  questsById: ReadonlyMap<string, OverworldQuest>;
   roadEventsByEdgeId: ReadonlyMap<string, OverworldRoadEvent>;
   sitesById: ReadonlyMap<string, OverworldExplorationSite>;
   travelLogByArrival: ReadonlyMap<string, Pick<TravelLogEntrySnapshot, "toId">>;
@@ -73,6 +76,19 @@ export function expectedSnapshotRegionRenown(
       expected,
       nodeRegionFor(sources.nodesById, event.home, `resolved event "${eventId}"`),
       event.intensity,
+    );
+  }
+  // Quest completions award QUEST_COMPLETION_RENOWN to the quest home's region
+  // (see planOverworldQuestCompletion). Missing here meant NO snapshot taken
+  // after a completed quest could ever restore — found by the Task 8 overworld
+  // crawler's quest round-trip oracle on its first full pass.
+  for (const questId of stateIds.completedQuestIds) {
+    const quest = sources.questsById.get(questId);
+    if (!quest) continue;
+    addRegionRenown(
+      expected,
+      nodeRegionFor(sources.nodesById, quest.home, `completed quest "${questId}"`),
+      QUEST_COMPLETION_RENOWN,
     );
   }
   for (const resolution of roadJournal.entries) {
