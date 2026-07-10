@@ -47,12 +47,50 @@ const SKIPPED_ACTION_TYPES: ReadonlySet<string> = new Set([
   "INSPECT",
 ]);
 
-export type SolveToEndingResult = {
+/** Why `solveToEnding` found no non-death ending — the two causes need different
+ *  diagnoses (see `describeSolveToEndingFailure`): "capped" means the search was
+ *  cut off before it could prove anything either way (an honest "unknown", never
+ *  a false "unwinnable"); "exhausted-restricted" means the ENTIRE reachable region
+ *  under the restricted action set (DROP/CLOSE/LOOK/INVENTORY/READ/INSPECT
+ *  skipped) was explored and none of it reached a non-death ending — which does
+ *  NOT prove the quest unwinnable, only that no route using the unrestricted
+ *  actions exists; the restriction may be hiding a path that needs one of the
+ *  skipped actions. */
+export type SolveToEndingFailureReason = "capped" | "exhausted-restricted";
+
+export type SolveToEndingSuccess = {
+  ok: true;
   actions: RpgAction[];
   endingId: string;
   endingTitle: string;
   death: boolean;
 };
+
+export type SolveToEndingFailure = {
+  ok: false;
+  reason: SolveToEndingFailureReason;
+};
+
+export type SolveToEndingResult = SolveToEndingSuccess | SolveToEndingFailure;
+
+/** Human-readable WORLD-finding wording for a `solveToEnding` failure — kept
+ *  next to `SolveToEndingFailureReason` so the two causes' phrasing can't drift
+ *  apart from what `reason` actually distinguishes. Exported so the exact
+ *  wording is unit-testable without driving a full overworld crawl. */
+export function describeSolveToEndingFailure(
+  reason: SolveToEndingFailureReason,
+  questId: string,
+  maxStates: number,
+): string {
+  if (reason === "capped") {
+    return `no non-death ending solvable for round trip (search capped at ${maxStates} states) for quest "${questId}"`;
+  }
+  return (
+    `no non-death ending reachable under the restricted action set ` +
+    `(DROP/CLOSE/LOOK/INVENTORY/READ/INSPECT skipped) for quest "${questId}" — ` +
+    `either the quest is unwinnable or its only path needs a skipped action`
+  );
+}
 
 type SolverNode = {
   state: GameState;
@@ -64,15 +102,18 @@ type SolverNode = {
  * BFS `prepared.rules` from a fresh seeded initial state, stepping every
  * enumerated progress action, until the first state that is `ended` with a
  * declared, non-death `endingId`. Reconstructs the action path via parent
- * pointers. Returns `null` when the search exhausts the reachable region
- * without such a state, OR when it hits `maxStates` distinct states first
- * (an honest, unproven cap — never silently reported as "no ending exists").
+ * pointers. Returns an `{ ok: false, reason }` failure when no such state is
+ * found — `reason: "capped"` when the search hits `maxStates` distinct states
+ * first (an honest, unproven cap — never silently reported as "no ending
+ * exists"), or `reason: "exhausted-restricted"` when the frontier under the
+ * restricted action set is fully explored with no non-death ending reached
+ * (also not proof the quest is unwinnable — see `SolveToEndingFailureReason`).
  */
 export function solveToEnding(
   prepared: PreparedQuest,
   seed: number,
   maxStates: number,
-): SolveToEndingResult | null {
+): SolveToEndingResult {
   const { index, rules } = prepared;
   const step = makeStep(rules);
   const start = initStateForRpgPack(index, seed);
@@ -101,7 +142,7 @@ export function solveToEnding(
 
   let head = 0;
   while (head < queue.length) {
-    if (nodesByKey.size > maxStates) return null; // capped — unproven, never a false negative
+    if (nodesByKey.size > maxStates) return { ok: false, reason: "capped" }; // unproven, never a false negative
 
     const key = queue[head++]!;
     const node = nodesByKey.get(key)!;
@@ -110,6 +151,7 @@ export function solveToEnding(
     if (state.ended) {
       if (state.endingId && !deathEndingIds.has(state.endingId)) {
         return {
+          ok: true,
           actions: reconstructActions(key),
           endingId: state.endingId,
           endingTitle: endingTitleById.get(state.endingId) ?? state.endingId,
@@ -142,5 +184,5 @@ export function solveToEnding(
     }
   }
 
-  return null; // frontier exhausted without a non-death ending
+  return { ok: false, reason: "exhausted-restricted" }; // frontier exhausted without a non-death ending
 }

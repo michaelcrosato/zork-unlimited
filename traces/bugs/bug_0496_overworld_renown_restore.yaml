@@ -1,0 +1,65 @@
+id: bug_0496
+title: "Overworld session snapshot restore threw \"unexpected region renown\" after ANY completed quest"
+severity: high
+layer: engine_rule
+status: fixed
+discovered_by: >
+  Task 8 overworld crawler (src/crawl/overworld_crawler.ts) — the mechanical, deterministic
+  round-trip build for the testing pyramid. Its per-quest round trip (previewQuestStart ->
+  startQuest -> solveToEnding -> completeQuest) followed by the crawler's 25-travel snapshot
+  PERSIST probe (OverworldSession.restore(world, session.snapshot())) hit this on its very
+  first full pass over the shipped overworld, on the first quest it completed.
+component: src/world/session_region_renown.ts
+
+summary: >
+  applyOverworldQuestCompletion (src/world/session_quests.ts) awards QUEST_COMPLETION_RENOWN
+  (8, once per quest, to the quest's home-town region) when a quest is completed via
+  complete_overworld_session_quest — but expectedSnapshotRegionRenown, the restore-time
+  replay validator that recomputes expected region renown from progress-journal state and
+  asserts it against the saved snapshot, never counted quest completions. So ANY overworld
+  session snapshot exported after completing a quest failed to restore: assertSnapshotRegionRenown
+  threw "Overworld session snapshot has unexpected region renown for \"<region>\" (<n>)." (or a
+  mismatched-total variant) for the quest home's region on every restore attempt, permanently
+  (every future snapshot from that session onward would carry the same discrepancy).
+
+root_cause: >
+  expectedSnapshotRegionRenown (src/world/session_region_renown.ts) rebuilds expected
+  per-region renown by walking completedJobIds, exploredSiteIds, resolvedEventIds, and the
+  road-encounter journal — each a real renown source in the live session — but had no term
+  for stateIds.completedQuestIds at all. The live session's actual regionRenown map (written
+  by applyOverworldQuestCompletion) and the restore-time replayed expectation therefore
+  disagreed by exactly QUEST_COMPLETION_RENOWN for the quest's home region the moment any
+  quest was completed, and assertSnapshotRegionRenown (called from OverworldSession.restore)
+  rejected the mismatch.
+
+fix: >
+  Added a term to expectedSnapshotRegionRenown that iterates stateIds.completedQuestIds,
+  resolves each quest via sources.questsById, and credits QUEST_COMPLETION_RENOWN to its
+  home town's region (nodeRegionFor(sources.nodesById, quest.home, ...)) — mirroring exactly
+  what planOverworldQuestCompletion/applyOverworldQuestCompletion award live. No change to
+  the live award path itself, to save/export format, or to any other renown source term;
+  purely closes the gap in the replay-side validator.
+
+reproduction: >
+  start_overworld_session -> discover a quest -> start_overworld_session_quest -> complete
+  a quest via complete_overworld_session_quest (any quest) -> export_overworld_session ->
+  restore_overworld_session on the exported snapshot => threw "unexpected region renown"
+  pre-fix. (World-layer engine bug, not content — no RPG action trace applies; see bug_0293
+  assessor-rotation for precedent on a non-content bug artifact in this same style.)
+
+regression_test: tests/unit/world_session_region_renown.test.ts
+# "replays quest-completion renown to the quest home's region" — asserts
+# expectedSnapshotRegionRenown credits QUEST_COMPLETION_RENOWN (8) to the quest's home
+# region for a completed quest, and that assertSnapshotRegionRenown accepts a saved
+# snapshot whose region renown matches that replay.
+
+verification: >
+  npx vitest run tests/unit/world_session_region_renown.test.ts tests/unit/crawl_overworld.test.ts
+  -> GREEN. The Task 8 overworld crawler's full pass (npm run crawl:smoke) subsequently
+  completes all 11 shipped quests with 0 PERSIST/WORLD findings.
+
+notes: >
+  Found and fixed inline during Task 8 (commit 8d8eea28, "feat(crawl): overworld sweep, quest
+  round trips, coverage + orphan reporting") — this artifact files it per house convention
+  after the fact. No pack content changed; this is a pure engine/runtime fix in the session
+  snapshot restore validator.

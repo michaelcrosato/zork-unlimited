@@ -57,7 +57,7 @@ import { roadEncounterOptionsFor } from "../world/travel_mechanics.js";
 import { buildOverworldCoverageSummary, type OverworldCoverageSummary } from "./coverage.js";
 import { CrawlLocationSchema, FindingCollector, type CrawlFinding } from "./findings.js";
 import { prepareShippedQuest } from "./prepare.js";
-import { solveToEnding } from "./quest_solver.js";
+import { describeSolveToEndingFailure, solveToEnding } from "./quest_solver.js";
 import { describeError } from "./step_oracles.js";
 
 export type OverworldCrawlOptions = {
@@ -526,11 +526,11 @@ export function crawlOverworld(opts: OverworldCrawlOptions): OverworldCrawlResul
 
       const prepared = prepareShippedQuest(opts.root, quest.id);
       const solved = solveToEnding(prepared, opts.seed, opts.solverBudget);
-      if (!solved) {
+      if (!solved.ok) {
         addFinding({
           code: "WORLD",
           location: loc,
-          message: `no non-death ending solvable for round trip (capped at ${opts.solverBudget} states) for quest "${quest.id}"`,
+          message: describeSolveToEndingFailure(solved.reason, quest.id, opts.solverBudget),
         });
         return { questId: quest.id, endingId: null };
       }
