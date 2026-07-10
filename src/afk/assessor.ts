@@ -390,23 +390,15 @@ export function isSaturated(a: Assessment): boolean {
 }
 
 /** Deterministically assess the repo and rank the next-best improvements. */
-export function assess(root: string): Assessment {
-  const api = createToolApi({ root });
-  const quests: AssessedQuest[] = new RpgSourceRuntime(root)
-    .discoverWorldQuestSources()
-    .map((quest) => ({
-      target_ref: quest.world_quest_id,
-      target_label: quest.world_quest_id,
-      playable: quest.playable,
-      world_quest_id: quest.world_quest_id,
-    }));
 
+function assessQuestHealth(
+  root: string,
+  quests: AssessedQuest[],
+): { questHealth: QuestHealth[]; candidates: ImprovementCandidate[] } {
+  const api = createToolApi({ root });
   const questHealth: QuestHealth[] = [];
   const candidates: ImprovementCandidate[] = [];
-  const rpgQuestCount = quests.length;
-  const worldQuestCount = quests.filter((s) => s.playable && s.world_quest_id !== null).length;
 
-  // ── Per-quest health: validator findings (the deterministic dev-test signal) ───
   for (const s of quests) {
     if (!s.playable) {
       questHealth.push({
@@ -456,11 +448,6 @@ export function assess(root: string): Assessment {
       warnings,
     });
 
-    // content_fix is driven by VALIDATOR findings — the deterministic, code-checkable
-    // signal (the "specific dev tests"). Player-facing QUALITY (signposting, clarity,
-    // pacing) is judged only by the mandatory blind LLM playtest each cycle, so a
-    // structurally-clean quest carries a low-priority blind-playtest rotation stub rather
-    // than any heuristic-bot coverage score. (Two testing modes only: dev tests + blindtest.)
     if (warnings > 0) {
       const impact = Math.min(5, 1 + Math.ceil(warnings / 3));
       candidates.push({
@@ -476,9 +463,6 @@ export function assess(root: string): Assessment {
         score: score(impact, "M", "content_fix"),
       });
     } else {
-      // Structurally clean (the validator + exhaustive solver prove it winnable and
-      // sound): keep it on the radar as a LOW-priority blind-playtest review, rotated by
-      // recency. The blind LLM playtest is the only judge of its signposting/clarity/pacing.
       candidates.push({
         id: `playtest-${s.world_quest_id}`,
         category: "content_fix",
@@ -496,11 +480,6 @@ export function assess(root: string): Assessment {
     }
   }
 
-  // The CORE GAME's opening experience is a first-class blind-playtest target: the
-  // overworld fresh start is what every new player meets FIRST (and what the default
-  // `npm run blind` plays), so it joins the same low-priority recency rotation as the
-  // per-quest reviews instead of never being re-judged. Same floor score: the recency
-  // tiebreak (below) decides when it is due, exactly like a structurally-clean quest.
   candidates.push({
     id: `playtest-${OVERWORLD_PLAYTEST_TARGET}`,
     category: "content_fix",
@@ -517,10 +496,14 @@ export function assess(root: string): Assessment {
     score: score(1, "M", "content_fix"),
   });
 
-  // ── content_new: contiguous world graph breadth ───────────────────────────────
-  if (worldQuestCount < WORLD_QUEST_TARGET) {
-    const impact = Math.min(5, 2 + (WORLD_QUEST_TARGET - worldQuestCount));
-    candidates.push({
+  return { questHealth, candidates };
+}
+
+function assessWorldGraphBreadth(worldQuestCount: number): ImprovementCandidate[] {
+  if (worldQuestCount >= WORLD_QUEST_TARGET) return [];
+  const impact = Math.min(5, 2 + (WORLD_QUEST_TARGET - worldQuestCount));
+  return [
+    {
       id: "new-world-quest",
       category: "content_new",
       target: "world",
@@ -531,23 +514,23 @@ export function assess(root: string): Assessment {
       impact,
       effort: "L",
       score: score(impact, "L", "content_new"),
-    });
-  }
+    },
+  ];
+}
 
-  // ── engine: TODO/FIXME debt in src/ ───────────────────────────────────────────
+function assessEngineTodos(root: string): ImprovementCandidate[] {
   const markers: string[] = [];
   for (const f of listSourceFiles(root)) {
     const text = readFileSync(f, "utf8");
     text.split("\n").forEach((line, i) => {
-      // Anchor to an actual comment marker so prose/regex mentions of the words
-      // (like this assessor's own descriptions) aren't counted as debt.
       if (/(?:\/\/|\/\*)\s*(?:TODO|FIXME|HACK|XXX)\b/.test(line))
         markers.push(`${relative(root, f).replaceAll("\\", "/")}:${i + 1}`);
     });
   }
-  if (markers.length > 0) {
-    const impact = Math.min(5, 2 + Math.ceil(markers.length / 5));
-    candidates.push({
+  if (markers.length === 0) return [];
+  const impact = Math.min(5, 2 + Math.ceil(markers.length / 5));
+  return [
+    {
       id: "engine-todos",
       category: "engine",
       target: "src/",
@@ -558,25 +541,22 @@ export function assess(root: string): Assessment {
       impact,
       effort: "M",
       score: score(impact, "M", "engine"),
-    });
-  }
+    },
+  ];
+}
 
-  // ── engine/content strategy: measure the stale reactive-description class ─────
-  // The repeated bug_0282–0325 class is real, but a naive validator warning would be
-  // noisy across the current corpus. Keep it as a deterministic audit signal first:
-  // static room prose that names a takeable object in that room, with no room variant
-  // reading that object's inventory state. The suppression rule is concrete enough to
-  // tune before promoting any subset into validateRpg.
+function assessStaleReactiveAudit(root: string): ImprovementCandidate[] {
   const staleReactive = auditStaleReactiveRoomItems(root);
-  if (staleReactive.sites.length > 0) {
-    const examples = staleReactive.sites
-      .slice(0, 6)
-      .map(
-        (site) =>
-          `world_quest_id:${site.worldQuestId} room:${site.roomId} names object:${site.objectId} (` +
-          `"${site.matchedTerm}") with no room variant reading item/take-effect state`,
-      );
-    candidates.push({
+  if (staleReactive.sites.length === 0) return [];
+  const examples = staleReactive.sites
+    .slice(0, 6)
+    .map(
+      (site) =>
+        `world_quest_id:${site.worldQuestId} room:${site.roomId} names object:${site.objectId} (` +
+        `"${site.matchedTerm}") with no room variant reading item/take-effect state`,
+    );
+  return [
+    {
       id: "stale-reactive-room-item-audit",
       category: "engine",
       target: "src/validate/rpg_validator.ts",
@@ -587,10 +567,12 @@ export function assess(root: string): Assessment {
       impact: 3,
       effort: "M",
       score: score(3, "M", "engine"),
-    });
-  }
+    },
+  ];
+}
 
-  // ── repo: tooling/hygiene gaps (cheap, deterministic checks) ──────────────────
+function assessToolingHygiene(root: string): ImprovementCandidate[] {
+  const candidates: ImprovementCandidate[] = [];
   const eslintConfig = [
     "eslint.config.js",
     "eslint.config.mjs",
@@ -600,6 +582,7 @@ export function assess(root: string): Assessment {
   ]
     .map((f) => join(root, f))
     .find((p) => existsSync(p));
+
   if (!eslintConfig) {
     candidates.push({
       id: "repo-eslint",
@@ -614,15 +597,6 @@ export function assess(root: string): Assessment {
       score: score(3, "L", "repo"),
     });
   } else {
-    // ESLint IS wired (bug_0031) — the next repo lever is COVERAGE. bug_0031
-    // deliberately scoped the gate to src/bin/scripts/agents and excluded tests/
-    // and ui/ "to keep that cycle bounded", but those dirs hold real first-party TS
-    // with no static-analysis or format gate — exactly the "currently-invisible
-    // work" a cross-category radar should surface (bug_0032 deferred). This fires
-    // while a first-party code dir exists, holds lintable TS, yet sits outside the
-    // ESLint config's `files` globs; it disarms the moment a cycle brings the dir
-    // under the gate. (The engine TODO/FIXME detector is the other non-content
-    // lever; it's correctly inert while the codebase carries zero markers.)
     const eslintText = readFileSync(eslintConfig, "utf8");
     const uncovered = LINT_DIRS.filter(
       (d) => dirHasLintableTs(root, d) && !eslintCovers(eslintText, d),
@@ -646,16 +620,10 @@ export function assess(root: string): Assessment {
       });
     }
   }
+  return candidates;
+}
 
-  // ── repo: doc staleness — canonical docs referencing renamed/deleted files ────
-  // The third cross-category repo lever (bug_0045). Both others disarm once the
-  // code is tidy (repo-eslint since the config ships; lint-coverage since bug_0038
-  // gated the last dir; the engine TODO/marker scan at zero markers), leaving the
-  // loop with no high-impact non-content lever — yet a canonical doc can still rot
-  // when a file it names is renamed/deleted. This fires when such a reference no
-  // longer resolves and disarms when every one does. It scans only CURRENT-system
-  // docs (see docStalenessDocs): the historical AI_LOOP_STATE.md and the
-  // forward-looking ROADMAP/BUILD_SPEC are out of scope by construction.
+function assessDocStaleness(root: string): ImprovementCandidate[] {
   const staleDocRefs: string[] = [];
   for (const docPath of docStalenessDocs(root)) {
     const text = readFileSync(join(root, docPath), "utf8");
@@ -663,9 +631,10 @@ export function assess(root: string): Assessment {
       staleDocRefs.push(`${docPath} → ${ref}`);
     }
   }
-  if (staleDocRefs.length > 0) {
-    const impact = Math.min(5, 1 + Math.ceil(staleDocRefs.length / 3));
-    candidates.push({
+  if (staleDocRefs.length === 0) return [];
+  const impact = Math.min(5, 1 + Math.ceil(staleDocRefs.length / 3));
+  return [
+    {
       id: "repo-doc-staleness",
       category: "repo",
       target: "docs",
@@ -676,39 +645,61 @@ export function assess(root: string): Assessment {
       impact,
       effort: "S",
       score: score(impact, "S", "repo"),
-    });
-  }
+    },
+  ];
+}
 
-  // ── eval-distribution: mint-and-check a fresh RPG generator window ────────────
-  // The public runtime is now RPG-only. Each assessor cycle still confronts the RPG
-  // verifier with a fresh, deterministic seed window, but retired legacy windows
-  // no longer consume loop time or reintroduce legacy work.
+function assessGeneratorDrift(root: string): {
+  candidates: ImprovementCandidate[];
+  allGeneratorsClean: boolean;
+} {
+  const candidates: ImprovementCandidate[] = [];
   const rpgGenChecks = rpgGeneratorChecksForRoot(root);
   const rpgGenDrift = generatorRpgDriftCandidate(rpgGenChecks);
   if (rpgGenDrift) candidates.push(rpgGenDrift);
   const allGeneratorsClean = allGeneratedChecksClean(rpgGenChecks);
+  return { candidates, allGeneratorsClean };
+}
 
-  // Deterministic ordering: score desc, then — among equal scores — rotate the
-  // blind-playtest pass onto the LEAST-recently-attended pack (never-attended first,
-  // then the oldest most-recent attendance first), then id asc as the final stable
-  // tiebreak. The recency term only separates equal-scored `playtest-*` stubs (all at
-  // 0.5); every other candidate gets a sentinel (MAX_SAFE_INTEGER) so its relative
-  // order is unchanged. attendance offsets come from the NEWEST-FIRST log, so a
-  // SMALLER offset is MORE recent — we negate it so a less-recent (larger-offset) pack
-  // sorts EARLIER, and a never-attended pack (MIN_SAFE_INTEGER) sorts earliest of all.
-  // c.target is a world quest id for shipped content; legacy/path fallbacks still
-  // normalize through packStem so old loop-state attendance remains usable.
-  // Reading the tracked AI_LOOP_STATE.md keeps this a pure function of repo state
-  // (same repo ⇒ same ranking), curing the cold_forge lock-in (bug_0128).
+/** Deterministically assess the repo and rank the next-best improvements. */
+export function assess(root: string): Assessment {
+  const quests: AssessedQuest[] = new RpgSourceRuntime(root)
+    .discoverWorldQuestSources()
+    .map((quest) => ({
+      target_ref: quest.world_quest_id,
+      target_label: quest.world_quest_id,
+      playable: quest.playable,
+      world_quest_id: quest.world_quest_id,
+    }));
+
+  const rpgQuestCount = quests.length;
+  const worldQuestCount = quests.filter((s) => s.playable && s.world_quest_id !== null).length;
+
+  const { questHealth, candidates: healthCandidates } = assessQuestHealth(root, quests);
+
+  const candidates: ImprovementCandidate[] = [
+    ...healthCandidates,
+    ...assessWorldGraphBreadth(worldQuestCount),
+    ...assessEngineTodos(root),
+    ...assessStaleReactiveAudit(root),
+    ...assessToolingHygiene(root),
+    ...assessDocStaleness(root),
+  ];
+
+  const { candidates: genCandidates, allGeneratorsClean } = assessGeneratorDrift(root);
+  candidates.push(...genCandidates);
+
   const attendance = lastAttendanceOffsets(root);
   const recencyOf = (c: ImprovementCandidate): number => {
     if (!c.id.startsWith("playtest-")) return Number.MAX_SAFE_INTEGER;
     const off = attendance.get(packStem(c.target));
     return off === undefined ? Number.MIN_SAFE_INTEGER : -off;
   };
+
   candidates.sort(
     (a, b) => b.score - a.score || recencyOf(a) - recencyOf(b) || a.id.localeCompare(b.id),
   );
+
   return {
     rpgQuestCount,
     worldQuestCount,
