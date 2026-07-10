@@ -355,7 +355,7 @@ function canonicalFindingOrder(findings: readonly CrawlFinding[]): CrawlFinding[
 function findingSortKey(f: CrawlFinding): string {
   const questId = f.location.questId ?? f.location.node ?? "";
   const step = String(f.step).padStart(12, "0");
-  return `${questId} ${f.code} ${step} ${findingFingerprint(f)}`;
+  return `${questId}\x00${f.code}\x00${step}\x00${findingFingerprint(f)}`;
 }
 
 /** Deterministic order for artifacts/printing: `(questId, code, step, fingerprint)`. */

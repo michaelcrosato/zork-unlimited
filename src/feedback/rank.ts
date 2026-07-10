@@ -4,7 +4,7 @@
  * an already-built `IssueCluster` (see cluster.ts).
  */
 import type { FeedbackSource, FixLayer } from "./schema.js";
-import type { IssueCluster } from "./cluster.js";
+import type { IssueCluster, IssueSeverity } from "./cluster.js";
 
 /** S4 (blocking) outweighs S0 (cosmetic) sixteenfold — protocol polarity. */
 export const SEVERITY_WEIGHT = { S0: 1, S1: 2, S2: 4, S3: 8, S4: 16 } as const;
@@ -67,18 +67,37 @@ function fleetFixLayer(tokens: readonly string[]): FixLayer {
   return "content"; // default
 }
 
-function firstCrawlerCode(issues: ReadonlyArray<{ text: string }>): string | null {
+/**
+ * Picks the code from the HIGHEST-severity crawler-coded issue in the
+ * cluster — never the first one encountered. A merged cluster can hold
+ * issues of mixed crawler codes at different severities (e.g. a RENDER(S2)
+ * and a CRASH(S4) issue merged at the same location); routing on whichever
+ * code happened to sort first would silently downgrade a `severity_band:
+ * "severe"` cluster to a cosmetic fix layer. Ties (same severity, distinct
+ * codes) break deterministically on the code string itself so the result
+ * never depends on input array order.
+ */
+function firstCrawlerCode(
+  issues: ReadonlyArray<{ text: string; severity: IssueSeverity }>,
+): string | null {
+  let bestCode: string | null = null;
+  let bestWeight = -1;
   for (const issue of issues) {
     const code = parseCrawlerCode(issue.text);
-    if (code !== null) return code;
+    if (code === null) continue;
+    const weight = SEVERITY_WEIGHT[issue.severity];
+    if (weight > bestWeight || (weight === bestWeight && bestCode !== null && code < bestCode)) {
+      bestCode = code;
+      bestWeight = weight;
+    }
   }
-  return null;
+  return bestCode;
 }
 
 /**
  * crawler-origin (cluster.sources includes "crawler"): parse the CODE prefix
- * off the first crawler-coded issue text and route through the fixed
- * code -> layer table. fleet-origin (or a crawler-origin cluster whose
+ * off the highest-severity crawler-coded issue text and route through the
+ * fixed code -> layer table. fleet-origin (or a crawler-origin cluster whose
  * issues carry no recognized code, e.g. a mixed crawler+fleet cluster where
  * the crawler code isn't in the table): fall back to the fleet keyword
  * ladder over the cluster's tokens.

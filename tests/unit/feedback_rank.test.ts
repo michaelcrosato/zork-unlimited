@@ -58,7 +58,7 @@ describe("ranking", () => {
         asCluster({
           ...cluster(1, "S4", ["crawler"]),
           tokens: [],
-          issues: [{ text: "CRASH: step threw" }],
+          issues: [{ text: "CRASH: step threw", severity: "S4" }],
         }),
       ),
     ).toBe("engine_rule");
@@ -78,7 +78,7 @@ describe("ranking", () => {
       asCluster({
         ...cluster(1, "S4", ["crawler"]),
         tokens: [],
-        issues: [{ text: `${code}: message` }],
+        issues: [{ text: `${code}: message`, severity: "S4" }],
       });
     expect(suggestFixLayer(withCode("CRASH"))).toBe("engine_rule");
     expect(suggestFixLayer(withCode("INTEGRITY"))).toBe("engine_rule");
@@ -88,6 +88,26 @@ describe("ranking", () => {
     expect(suggestFixLayer(withCode("SOFTLOCK"))).toBe("quest_structure");
     expect(suggestFixLayer(withCode("WORLD"))).toBe("quest_structure");
     expect(suggestFixLayer(withCode("RENDER"))).toBe("content");
+  });
+
+  it("routes fix_layer by the HIGHEST-severity crawler code in a mixed-code cluster", () => {
+    // A merged cluster can hold issues of different crawler codes at the same
+    // location — e.g. a cosmetic RENDER(S2) report and a CRASH(S4) report
+    // that both fingerprinted to the same bucket. The cluster's overall
+    // severity_band is driven by maxSeverity (S4 -> "severe"), so fix_layer
+    // must be routed by CRASH ("engine_rule"), not by RENDER ("content"),
+    // even though RENDER is the lower-severity issue and — per the real
+    // clusterIssues sort (ascending severity) — sorts first in `issues`.
+    const mixed = asCluster({
+      ...cluster(2, "S4", ["crawler"]),
+      tokens: [],
+      issues: [
+        { text: "RENDER: glyph misaligned", severity: "S2" },
+        { text: "CRASH: step threw", severity: "S4" },
+      ],
+    });
+    expect(mixed.severityBand).toBe("severe");
+    expect(suggestFixLayer(mixed)).toBe("engine_rule");
   });
 
   it("routes fleet-origin keyword groups: quest_structure, content, engine_rule, and default", () => {
