@@ -37,6 +37,7 @@
     "blind:telemetry": "node blind-tester/telemetry.mjs summary",
     "fleet": "node blind-tester/fleet.mjs",
     "fleet:mock": "node blind-tester/fleet.mjs --mock",
+    "feedback:compile": "tsx bin/feedback.ts",
     "spectate": "tsx bin/spectate.ts",
     "ui:dev": "npm --prefix ui run dev",
     "ui:build": "npm --prefix ui run build",
