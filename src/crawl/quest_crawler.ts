@@ -458,10 +458,28 @@ export function crawlQuest(prepared: PreparedQuest, opts: QuestCrawlOptions): Qu
           addFinding(
             {
               code: "DESYNC",
-              step: firstDivergence,
+              step: totalSteps,
               location: loc(state),
               action: null,
               message: `replay diverged at action index ${firstDivergence}`,
+              stateHash: hashState(state),
+            },
+            record,
+          );
+        } else if (replay.hashes.length !== record.perStepHashes.length) {
+          // The replay accepted an action the live run rejected (or vice versa),
+          // producing extra (or missing) trailing hashes with no index-for-index
+          // divergence in the shared prefix — `findIndex` above can't see this, so
+          // it needs its own check.
+          addFinding(
+            {
+              code: "DESYNC",
+              step: totalSteps,
+              location: loc(state),
+              action: null,
+              message:
+                `replay hash-stream length mismatch: replay produced ${replay.hashes.length} ` +
+                `hashes, live run produced ${record.perStepHashes.length}`,
               stateHash: hashState(state),
             },
             record,

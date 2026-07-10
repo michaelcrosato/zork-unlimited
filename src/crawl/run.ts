@@ -95,10 +95,9 @@ export type CrawlRunSummary = {
   /** Set true only when the soft `secondsBudget` cutoff caused one or more plan
    *  items to be skipped (checked between items, never mid-quest). */
   truncated?: boolean;
-  /** Human-readable descriptions of any plan items that did not run — either the
-   *  seconds budget was exceeded, or (until Task 8 wires `crawlOverworld`) the
-   *  overworld item isn't implemented yet. Always populated when non-empty —
-   *  a skip is never silent. */
+  /** Human-readable descriptions of any plan items that did not run because the
+   *  seconds budget was exceeded. Always populated when non-empty — a skip is
+   *  never silent. */
   skippedItems?: string[];
 };
 
@@ -404,7 +403,7 @@ export function finalizeFindings(rawFindings: readonly CrawlFinding[]): {
 function runOverworldItem(
   item: Extract<CrawlPlanItem, { kind: "overworld" }>,
   opts: CrawlRunOptions,
-): { findings: CrawlFinding[]; overworld: OverworldCoverageSummary } | null {
+): { findings: CrawlFinding[]; overworld: OverworldCoverageSummary } {
   const result = crawlOverworld({
     root: opts.root,
     seed: item.seed,
@@ -479,13 +478,8 @@ export function runPlanInProcess(items: CrawlPlanItem[], opts: CrawlRunOptions):
       };
     } else {
       const result = runOverworldItem(item, opts);
-      if (result === null) {
-        console.error("overworld crawler lands in the next task");
-        skippedItems.push(describePlanItem(item));
-      } else {
-        allFindings.push(...result.findings);
-        overworld = result.overworld;
-      }
+      allFindings.push(...result.findings);
+      overworld = result.overworld;
     }
   }
 

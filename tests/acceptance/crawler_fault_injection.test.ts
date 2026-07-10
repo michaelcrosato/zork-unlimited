@@ -74,6 +74,11 @@ describe("fault injection: the crawler catches planted defects", () => {
     assertCaughtWithRepro(r, "CRASH", prepared);
   });
 
+  // This leg runs a 20k-state solver repeatedly (~24s isolated) against the 60s
+  // global testTimeout (vitest.config.ts) — thin headroom under CI suite
+  // contention (repo precedent: bug_0237, see vitest.config.ts's comment on
+  // `testTimeout`). Explicit 120s per-test timeout removes the flake risk
+  // without loosening correctness.
   it("catches a planted SOFTLOCK (one-way pit)", () => {
     const pack = generateRpgPack(7);
     // "cell" (src/gen/rpg_generator.ts) is a reachable, non-start, non-terminal
@@ -91,7 +96,7 @@ describe("fault injection: the crawler catches planted defects", () => {
       solverBudget: SOLVER_BUDGET,
     });
     assertCaughtWithRepro(r, "SOFTLOCK", prepared);
-  });
+  }, 120_000);
 
   it("catches a planted RENDER defect (unresolved template + [object Object])", () => {
     const pack = generateRpgPack(3);
