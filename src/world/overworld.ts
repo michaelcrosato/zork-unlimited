@@ -293,12 +293,23 @@ export function normalizeSourcePath(path: string): string {
   return path.replaceAll("\\", "/").replace(/^(\.\.\/)+/, "");
 }
 
+const overworldQuestsByIdCache = new WeakMap<OverworldManifest, Map<string, OverworldQuest>>();
+
+function overworldQuestsById(world: OverworldManifest): Map<string, OverworldQuest> {
+  let map = overworldQuestsByIdCache.get(world);
+  if (!map) {
+    map = new Map(world.quests.map((quest) => [quest.id, quest]));
+    overworldQuestsByIdCache.set(world, map);
+  }
+  return map;
+}
+
 /** Resolve a shipped quest by id from the overworld's quest registry (null if absent). */
 export function overworldQuestById(
   world: OverworldManifest,
   questId: string,
 ): OverworldQuest | null {
-  return world.quests.find((quest) => quest.id === questId) ?? null;
+  return overworldQuestsById(world).get(questId) ?? null;
 }
 
 export function overworldNodesById(world: OverworldManifest): Map<string, OverworldNode> {
@@ -402,11 +413,19 @@ export function overworldJobsAt(world: OverworldManifest, nodeId: string): Overw
     );
 }
 
+const roadEventCache = new WeakMap<OverworldManifest, Map<string, OverworldRoadEvent>>();
+
 export function overworldRoadEventFor(
   world: OverworldManifest,
   edgeId: string,
 ): OverworldRoadEvent | null {
-  return world.road_events.find((event) => event.edge === edgeId) ?? null;
+  let cache = roadEventCache.get(world);
+  if (!cache) {
+    cache = new Map();
+    for (const event of world.road_events) cache.set(event.edge, event);
+    roadEventCache.set(world, cache);
+  }
+  return cache.get(edgeId) ?? null;
 }
 
 export function overworldExplorationSitesNear(
@@ -505,13 +524,16 @@ export function planOverworldRoute(
   };
 }
 
-export function assertOverworldIntegrity(world: OverworldManifest): void {
-  const nodes = overworldNodesById(world);
+function assertNodesIntegrity(world: OverworldManifest, nodes: Map<string, OverworldNode>): void {
   if (!nodes.has(world.start)) throw new Error(`Overworld start node "${world.start}" is missing.`);
   if (nodes.size !== world.nodes.length) throw new Error("Overworld node ids must be unique.");
+}
 
-  const regionNames = new Set<string>();
-  const regionIds = new Set<string>();
+function assertRegionsIntegrity(
+  world: OverworldManifest,
+  regionNames: Set<string>,
+  regionIds: Set<string>,
+): void {
   for (const region of world.regions) {
     if (regionIds.has(region.id)) throw new Error(`Duplicate overworld region id "${region.id}".`);
     regionIds.add(region.id);
@@ -522,7 +544,13 @@ export function assertOverworldIntegrity(world: OverworldManifest): void {
       throw new Error(`Overworld node "${node.id}" references missing region "${node.region}".`);
     }
   }
+}
 
+function assertRegionalArcsIntegrity(
+  world: OverworldManifest,
+  nodes: Map<string, OverworldNode>,
+  regionNames: Set<string>,
+): void {
   const arcIds = new Set<string>();
   for (const arc of world.regional_arcs) {
     if (arcIds.has(arc.id)) throw new Error(`Duplicate overworld regional arc id "${arc.id}".`);
@@ -541,8 +569,13 @@ export function assertOverworldIntegrity(world: OverworldManifest): void {
       }
     }
   }
+}
 
-  const edgeIds = new Set<string>();
+function assertEdgesIntegrity(
+  world: OverworldManifest,
+  nodes: Map<string, OverworldNode>,
+  edgeIds: Set<string>,
+): void {
   for (const edge of world.edges) {
     if (edgeIds.has(edge.id)) throw new Error(`Duplicate overworld edge id "${edge.id}".`);
     edgeIds.add(edge.id);
@@ -560,42 +593,47 @@ export function assertOverworldIntegrity(world: OverworldManifest): void {
       throw new Error(`Overworld edge "${edge.id}" travel time is not proportional to distance.`);
     }
   }
+}
 
-  const requireHomeCoverage = (label: string, homes: string[]): void => {
-    const covered = new Set(homes);
-    for (const node of world.nodes) {
-      if (!covered.has(node.id)) throw new Error(`Overworld ${label} missing for "${node.id}".`);
-    }
-  };
+const requireHomeCoverage = (world: OverworldManifest, label: string, homes: string[]): void => {
+  const covered = new Set(homes);
+  for (const node of world.nodes) {
+    if (!covered.has(node.id)) throw new Error(`Overworld ${label} missing for "${node.id}".`);
+  }
+};
 
-  const minimumAreaCount = (node: OverworldNode): number => {
-    if (node.kind === "metropolis") return 10;
-    if (node.kind === "great_city") return 8;
-    if (node.kind === "major_city") return 6;
-    if (node.kind === "city") return 5;
-    if (node.kind === "large_town") return 3;
-    return 2;
-  };
+const minimumAreaCount = (node: OverworldNode): number => {
+  if (node.kind === "metropolis") return 10;
+  if (node.kind === "great_city") return 8;
+  if (node.kind === "major_city") return 6;
+  if (node.kind === "city") return 5;
+  if (node.kind === "large_town") return 3;
+  return 2;
+};
 
-  const minimumAreaRouteCount = (areaCount: number): number => {
-    if (areaCount <= 1) return 0;
-    return (
-      areaCount -
-      1 +
-      (areaCount >= 3 ? 1 : 0) +
-      (areaCount >= 4 ? 2 : 0) +
-      (areaCount >= 5 ? 1 : 0) +
-      (areaCount >= 6 ? 1 : 0) +
-      (areaCount >= 7 ? 1 : 0) +
-      (areaCount >= 8 ? 1 : 0) +
-      (areaCount >= 9 ? 1 : 0) +
-      (areaCount >= 10 ? 1 : 0)
-    );
-  };
+const minimumAreaRouteCount = (areaCount: number): number => {
+  if (areaCount <= 1) return 0;
+  return (
+    areaCount -
+    1 +
+    (areaCount >= 3 ? 1 : 0) +
+    (areaCount >= 4 ? 2 : 0) +
+    (areaCount >= 5 ? 1 : 0) +
+    (areaCount >= 6 ? 1 : 0) +
+    (areaCount >= 7 ? 1 : 0) +
+    (areaCount >= 8 ? 1 : 0) +
+    (areaCount >= 9 ? 1 : 0) +
+    (areaCount >= 10 ? 1 : 0)
+  );
+};
 
+function assertAreasIntegrity(
+  world: OverworldManifest,
+  nodes: Map<string, OverworldNode>,
+  areaIds: Set<string>,
+  areaHomes: Map<string, string>,
+): void {
   const seenArea = new Set<string>();
-  const areaIds = new Set<string>();
-  const areaHomes = new Map<string, string>();
   const areaCounts = new Map<string, number>();
   for (const area of world.areas) {
     if (seenArea.has(area.id)) throw new Error(`Duplicate overworld area id "${area.id}".`);
@@ -614,6 +652,7 @@ export function assertOverworldIntegrity(world: OverworldManifest): void {
     areaCounts.set(area.home, (areaCounts.get(area.home) ?? 0) + 1);
   }
   requireHomeCoverage(
+    world,
     "area",
     world.areas.map((area) => area.home),
   );
@@ -681,7 +720,15 @@ export function assertOverworldIntegrity(world: OverworldManifest): void {
       );
     }
   }
+}
 
+function assertEntitiesIntegrity(
+  world: OverworldManifest,
+  nodes: Map<string, OverworldNode>,
+  areaIds: Set<string>,
+  areaHomes: Map<string, string>,
+  edgeIds: Set<string>,
+): void {
   const seenPoi = new Set<string>();
   const poiAreas = new Set<string>();
   for (const poi of world.points_of_interest) {
@@ -695,6 +742,7 @@ export function assertOverworldIntegrity(world: OverworldManifest): void {
     poiAreas.add(poi.area);
   }
   requireHomeCoverage(
+    world,
     "point of interest",
     world.points_of_interest.map((poi) => poi.home),
   );
@@ -718,6 +766,7 @@ export function assertOverworldIntegrity(world: OverworldManifest): void {
     characterAreas.add(character.area);
   }
   requireHomeCoverage(
+    world,
     "character",
     world.characters.map((character) => character.home),
   );
@@ -742,6 +791,7 @@ export function assertOverworldIntegrity(world: OverworldManifest): void {
     eventAreas.add(event.area);
   }
   requireHomeCoverage(
+    world,
     "local event",
     world.local_events.map((event) => event.home),
   );
@@ -767,6 +817,7 @@ export function assertOverworldIntegrity(world: OverworldManifest): void {
     jobAreas.add(job.area);
   }
   requireHomeCoverage(
+    world,
     "local job",
     world.local_jobs.map((job) => job.home),
   );
@@ -800,7 +851,15 @@ export function assertOverworldIntegrity(world: OverworldManifest): void {
     if (!roadEventEdges.has(edge.id))
       throw new Error(`Overworld road event missing for "${edge.id}".`);
   }
+}
 
+function assertExplorationSitesIntegrity(
+  world: OverworldManifest,
+  nodes: Map<string, OverworldNode>,
+  regionNames: Set<string>,
+  areaIds: Set<string>,
+  areaHomes: Map<string, string>,
+): void {
   const seenSite = new Set<string>();
   const siteCountsByRegion = new Map<string, number>();
   const siteAreas = new Set<string>();
@@ -833,7 +892,14 @@ export function assertOverworldIntegrity(world: OverworldManifest): void {
       throw new Error(`Overworld region "${region}" needs at least three exploration sites.`);
     }
   }
+}
 
+function assertQuestsIntegrity(
+  world: OverworldManifest,
+  nodes: Map<string, OverworldNode>,
+  areaIds: Set<string>,
+  areaHomes: Map<string, string>,
+): void {
   const seenQuest = new Set<string>();
   for (const quest of world.quests) {
     if (seenQuest.has(quest.id)) throw new Error(`Duplicate overworld quest id "${quest.id}".`);
@@ -846,7 +912,9 @@ export function assertOverworldIntegrity(world: OverworldManifest): void {
       throw new Error(`Overworld quest "${quest.id}" is anchored outside its home town.`);
     }
   }
+}
 
+function assertGraphConnectivity(world: OverworldManifest): void {
   const reached = new Set<string>([world.start]);
   const queue = [world.start];
   for (let i = 0; i < queue.length; i += 1) {
@@ -861,4 +929,30 @@ export function assertOverworldIntegrity(world: OverworldManifest): void {
       `Overworld graph is disconnected: reached ${reached.size}/${world.nodes.length}.`,
     );
   }
+}
+
+export function assertOverworldIntegrity(world: OverworldManifest): void {
+  const nodes = overworldNodesById(world);
+  assertNodesIntegrity(world, nodes);
+
+  const regionNames = new Set<string>();
+  const regionIds = new Set<string>();
+  assertRegionsIntegrity(world, regionNames, regionIds);
+
+  assertRegionalArcsIntegrity(world, nodes, regionNames);
+
+  const edgeIds = new Set<string>();
+  assertEdgesIntegrity(world, nodes, edgeIds);
+
+  const areaIds = new Set<string>();
+  const areaHomes = new Map<string, string>();
+  assertAreasIntegrity(world, nodes, areaIds, areaHomes);
+
+  assertEntitiesIntegrity(world, nodes, areaIds, areaHomes, edgeIds);
+
+  assertExplorationSitesIntegrity(world, nodes, regionNames, areaIds, areaHomes);
+
+  assertQuestsIntegrity(world, nodes, areaIds, areaHomes);
+
+  assertGraphConnectivity(world);
 }
