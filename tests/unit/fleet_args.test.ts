@@ -3,6 +3,8 @@ import { readFileSync } from "node:fs";
 // vitest can import .mjs fine:
 // @ts-expect-error — plain .mjs module without type declarations
 import { fillPrompt } from "../../blind-tester/fill-prompt.mjs";
+// @ts-expect-error — plain .mjs module without type declarations
+import { parseFleetArgs, planFleetRuns, reportPathFor } from "../../blind-tester/fleet.mjs";
 
 describe("fill-prompt", () => {
   const template = "Intro.\n{{PERSONA}}\nRules __SEED__.\nGo: {{START_INSTRUCTION}}\n";
@@ -24,5 +26,25 @@ describe("fill-prompt", () => {
   it("real prompts contain exactly one persona slot each", () => {
     for (const p of ["blind-tester/prompt.md", "blind-tester/prompt-overworld.md"])
       expect(readFileSync(p, "utf8").match(/\{\{PERSONA\}\}/g)).toHaveLength(1);
+  });
+});
+
+describe("fleet planning", () => {
+  it("rotates personas deterministically and honors seed base", () => {
+    const runs = planFleetRuns(
+      parseFleetArgs(["--count", "7", "--personas", "mixed", "--seed-base", "100"]),
+    );
+    expect(runs.map((r: { seed: number }) => r.seed)).toEqual([100, 101, 102, 103, 104, 105, 106]);
+    expect(runs[0].persona).toBe("explorer");
+    expect(runs[5].persona).toBe("explorer"); // 5 % 5 wraps
+    expect(new Set(runs.map((r: { persona: string }) => r.persona)).size).toBe(5);
+  });
+  it("quest targets parse and reach the plan", () => {
+    const runs = planFleetRuns(parseFleetArgs(["--count", "2", "--target", "quest:sunken_barrow"]));
+    expect(runs.every((r: { target: string }) => r.target === "quest:sunken_barrow")).toBe(true);
+  });
+  it("report filenames match the ledger regex", () => {
+    const p = reportPathFor("blind-tester/reports", "20260709T010203Z", "overworld", 12);
+    expect(p.replace(/\\/g, "/").split("/").pop()).toMatch(/^\d{8}T\d{6}Z_.+_seed-?\d+\.md$/);
   });
 });

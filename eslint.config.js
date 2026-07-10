@@ -62,12 +62,13 @@ export default tseslint.config(
   {
     // blind-tester/ is Node ESM loop tooling. Root-wide cleaner runs `eslint .`, so
     // keep the smoke harness in the lint gate with Node globals instead of carrying
-    // false no-undef noise for process/console.
+    // false no-undef noise for process/console/setTimeout (fleet.mjs's pacing delays).
     files: ["blind-tester/**/*.mjs"],
     languageOptions: {
       globals: {
         console: "readonly",
         process: "readonly",
+        setTimeout: "readonly",
       },
     },
   },
