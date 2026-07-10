@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -130,6 +130,39 @@ describe("loadHotspotsFromDir", () => {
     const file = hotspotsFile([hotspot({ id: "hs_a" })]);
     writeFileSync(join(dir, "hotspots.json"), JSON.stringify(file));
     expect(loadHotspotsFromDir(dir)?.hotspots[0]?.id).toBe("hs_a");
+  });
+
+  it("warns when an explicit --prev path's hotspots.json is missing", () => {
+    const dir = mkdtempSync(join(tmpdir(), "hotspots-explicit-missing-"));
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    loadHotspotsFromDir(dir, /* isExplicit */ true);
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining("previous hotspots at") &&
+        expect.stringContaining("unreadable") &&
+        expect.stringContaining('trends will show "new"'),
+    );
+    warnSpy.mockRestore();
+  });
+
+  it("warns when an explicit path's hotspots.json fails schema validation", () => {
+    const dir = mkdtempSync(join(tmpdir(), "hotspots-explicit-bad-"));
+    writeFileSync(join(dir, "hotspots.json"), JSON.stringify({ not: "a hotspots file" }));
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    loadHotspotsFromDir(dir, /* isExplicit */ true);
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining("previous hotspots at") &&
+        expect.stringContaining("unreadable") &&
+        expect.stringContaining('trends will show "new"'),
+    );
+    warnSpy.mockRestore();
+  });
+
+  it("does NOT warn when auto-scan path is missing (isExplicit=false)", () => {
+    const dir = mkdtempSync(join(tmpdir(), "hotspots-autoscan-"));
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    loadHotspotsFromDir(dir, /* isExplicit */ false);
+    expect(warnSpy).not.toHaveBeenCalled();
+    warnSpy.mockRestore();
   });
 });
 

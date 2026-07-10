@@ -139,7 +139,7 @@ export function recommendNextFix(
   const sourceLabel = hasBothSources(best.sources) ? "crawler+fleet" : best.sources.join("+");
   const count = best.issues.length;
   const rationale =
-    `${count} report${count === 1 ? "" : "s"}, max severity ${best.maxSeverity}, ` +
+    `${count} issue mention${count === 1 ? "" : "s"}, max severity ${best.maxSeverity}, ` +
     `sources: ${sourceLabel} (score ${bestScore})`;
   return { hotspot_id: best.key, rationale };
 }

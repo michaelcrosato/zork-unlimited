@@ -23,18 +23,38 @@ import { HotspotsFileSchema, type Hotspot, type HotspotsFile } from "./schema.js
 /** Reads and schema-validates `<dir>/hotspots.json`. Null if the file is
  *  missing, unparseable, or fails `HotspotsFileSchema` — a corrupt or
  *  foreign-shaped previous compile must never crash today's compile, just
- *  make it behave as if there were no previous one. */
-export function loadHotspotsFromDir(dir: string): HotspotsFile | null {
+ *  make it behave as if there were no previous one.
+ *
+ *  When `isExplicit` is true (e.g., from --prev flag), warns to console if
+ *  the file is unreadable. Auto-scan paths remain silent (skipping invalid
+ *  dirs is normal). */
+export function loadHotspotsFromDir(dir: string, isExplicit = false): HotspotsFile | null {
   const path = join(dir, "hotspots.json");
-  if (!existsSync(path)) return null;
+  if (!existsSync(path)) {
+    if (isExplicit)
+      console.warn(
+        `previous hotspots at ${path} unreadable (file not found) — trends will show "new"`,
+      );
+    return null;
+  }
   let raw: unknown;
   try {
     raw = JSON.parse(readFileSync(path, "utf8"));
-  } catch {
+  } catch (err) {
+    const reason = err instanceof Error ? err.message : "parse error";
+    if (isExplicit)
+      console.warn(`previous hotspots at ${path} unreadable (${reason}) — trends will show "new"`);
     return null;
   }
   const parsed = HotspotsFileSchema.safeParse(raw);
-  return parsed.success ? parsed.data : null;
+  if (!parsed.success) {
+    if (isExplicit)
+      console.warn(
+        `previous hotspots at ${path} unreadable (wrong version or format) — trends will show "new"`,
+      );
+    return null;
+  }
+  return parsed.data;
 }
 
 /**
