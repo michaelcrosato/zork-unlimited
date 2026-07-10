@@ -90,6 +90,15 @@ export function minimizeActions<A>(
  * legal during shrinking, since a shrunk subsequence may break a
  * precondition the original sequence satisfied. Shared by `minimizeActions`
  * callers and the fault-injection acceptance suite (Task 9).
+ *
+ * **CRASH exception (step-throw):** When a CRASH is caused by `step` itself
+ * throwing, the recorded trace's `actions` array omits the triggering action
+ * (the crawler breaks before pushing it to keep the trace safely replayable).
+ * Callers replaying `trace.actions` alone will NOT reproduce such a finding —
+ * they must append `finding.action` to the sequence first, exactly as
+ * `minimizeFinding` does internally. All other reproducible codes (RENDER,
+ * INTEGRITY, PERSIST, and both SOFTLOCK forms) keep their trigger in the
+ * trace and self-reproduce.
  */
 export function reproducesFingerprint(
   prepared: PreparedQuest,
@@ -103,6 +112,7 @@ export function reproducesFingerprint(
   const persistEvery = opts?.persistEvery ?? 0;
   const solverBudget = opts?.solverBudget ?? 0;
 
+  // region/node are null here: findingFingerprint uses questId ?? node with prepared.questId always non-null, so they never affect the hash.
   const loc = (state: GameState): CrawlLocation => ({
     region: null,
     node: null,
