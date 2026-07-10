@@ -70,6 +70,14 @@ function main(): void {
     );
   }
 
+  if (summary.overworld) {
+    const ow = summary.overworld;
+    console.log(
+      `overworld: nodes ${ow.nodes.visited}/${ow.nodes.total}, edges ${ow.edges.traveled}/${ow.edges.total}, ` +
+        `boards ${ow.boards.read}/${ow.boards.total}, quests entered ${ow.quests.entered.length}/${ow.quests.total}`,
+    );
+  }
+
   const nonOrphan = sortFindings(summary.findings.filter((f) => f.code !== "ORPHAN"));
   for (const f of nonOrphan) {
     const loc = f.location.questId ?? f.location.node ?? "?";

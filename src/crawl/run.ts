@@ -12,10 +12,21 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { canonicalize } from "../core/hash.js";
+import { renderCoverageMarkdown, type OverworldCoverageSummary } from "./coverage.js";
 import { CrawlFindingSchema, findingFingerprint, type CrawlFinding } from "./findings.js";
+import { crawlOverworld } from "./overworld_crawler.js";
 import { POLICY_NAMES, type PolicyName } from "./policies.js";
 import { listShippedQuestIds, prepareShippedQuest, type PreparedQuest } from "./prepare.js";
 import { crawlQuest } from "./quest_crawler.js";
+
+/** `solveToEnding`'s state cap for the overworld crawler's quest round trips
+ *  (Task 8) — distinct from `CrawlRunOptions.solverBudget`, which gates the
+ *  quest crawler's own SOFTLOCK-solver oracle and defaults to 0 (off) for
+ *  `--smoke`. A round trip always needs a real solver budget to find a
+ *  playable ending, so this is a fixed constant rather than reusing that
+ *  option. Tuned against `npm run crawl:smoke`'s wall-clock budget.
+ */
+const OVERWORLD_QUEST_SOLVER_BUDGET = 30000;
 
 export type CrawlPlanItem =
   | { kind: "quest"; questId: string; seeds: number[]; stepsPerSeed: number }
@@ -34,19 +45,6 @@ export type CrawlRunOptions = {
   persistEvery: number;
   outDir: string;
   workers: number;
-};
-
-/**
- * Task 8 (`src/crawl/coverage.ts`) owns the canonical definition; mirrored here
- * so `CrawlRunSummary` compiles before that file exists. Task 8 modifies this
- * file anyway (to wire the `overworld` plan item) and is expected to import the
- * real type and drop this local copy at that point.
- */
-export type OverworldCoverageSummary = {
-  nodes: { visited: number; total: number; orphans: string[] };
-  edges: { traveled: number; total: number; orphans: string[] };
-  boards: { read: number; total: number };
-  quests: { entered: string[]; total: number };
 };
 
 export type QuestCoverageSummary = {
@@ -319,16 +317,26 @@ export function sortFindings(findings: readonly CrawlFinding[]): CrawlFinding[] 
 }
 
 /**
- * Overworld crawl seam — Task 8 fills this in with `crawlOverworld`
- * (src/crawl/overworld_crawler.ts). Returns `null` for now so `runPlanInProcess`
- * can cleanly SKIP the item (logged to stderr, recorded in `skippedItems`) —
- * never throws, since a thrown "not yet implemented" would fail `crawl:smoke`.
+ * Overworld crawl seam (Task 8) — runs the full deterministic overworld sweep
+ * (edge sweep, boards/quest discovery, quest round trips, coverage) via
+ * `crawlOverworld`. `questRoundTrips` is always on here: a real run (smoke,
+ * deep, or a plain `--overworld` invocation) always wants the full proof, not
+ * just the sweep — the cheaper `questRoundTrips:false` shape is a unit-test-only
+ * knob (`tests/unit/crawl_overworld.test.ts`'s determinism check).
  */
 function runOverworldItem(
-  _item: Extract<CrawlPlanItem, { kind: "overworld" }>,
-  _opts: CrawlRunOptions,
+  item: Extract<CrawlPlanItem, { kind: "overworld" }>,
+  opts: CrawlRunOptions,
 ): { findings: CrawlFinding[]; overworld: OverworldCoverageSummary } | null {
-  return null;
+  const result = crawlOverworld({
+    root: opts.root,
+    seed: item.seed,
+    commit: opts.commit,
+    questRoundTrips: true,
+    solverBudget: OVERWORLD_QUEST_SOLVER_BUDGET,
+    maxLocalActionsPerTown: 40,
+  });
+  return { findings: result.findings, overworld: result.coverage };
 }
 
 /** Run a plan single-process (worker fan-out lands in Task 10). */
@@ -455,15 +463,8 @@ function renderSummaryMarkdown(
   }
   lines.push("");
 
-  if (summary.overworld) {
-    const ow = summary.overworld;
-    lines.push("## Overworld coverage", "");
-    lines.push(`- nodes: ${ow.nodes.visited}/${ow.nodes.total}`);
-    lines.push(`- edges: ${ow.edges.traveled}/${ow.edges.total}`);
-    lines.push(`- boards: ${ow.boards.read}/${ow.boards.total}`);
-    lines.push(`- quests entered: ${ow.quests.entered.length}/${ow.quests.total}`);
-    lines.push("");
-  }
+  const overworldMarkdown = renderCoverageMarkdown(summary);
+  if (overworldMarkdown) lines.push(overworldMarkdown);
 
   if (summary.skippedItems && summary.skippedItems.length > 0) {
     lines.push("## Skipped", "");
