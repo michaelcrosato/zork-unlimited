@@ -1,0 +1,43 @@
+id: bug_0499
+title: "Wolf-Winter backtracking repeated watch events and lied about moved rail gear"
+pack: content/rpg/quests/wolf_winter.yaml
+reported_by: verified blind playtest and post-cycle reactive-state audit
+reports:
+  - ai-runs/2026-07-11T12-31-01-715Z/playtest.md
+severity: S1
+symptom: >
+  Every return to the Byre-Yard emitted another watch_started state-change event even
+  though the watch was already under way. Backtracking after a kill also returned to hub
+  prose that still said the first wolf was through the gap. On the failed-rail route,
+  returning to the Broken Paling after the flank-wolf fell said the bound guard was still
+  carried, while examining the old rail claimed its broken remnants were at the gap even
+  though the guard had travelled north and broken at the byre door.
+root_cause: >
+  The Steading Yard's reactive description depended on a synthetic flag written by the
+  Byre-Yard's unconditional on_enter effects, so harmless re-entry repeated an idempotent
+  state event. The Byre-Yard had only an opening/read variant, with no completed-fight
+  ordering. Broken Paling room and object variants treated the permanent
+  split_rail_guard_made flag as proof the temporary guard item was still in inventory and
+  did not distinguish its later removal on flank_wolf_down. The scenery object's base
+  name also remained "fallen paling-rail" after those lengths had left the gap.
+fix: >
+  Drive the Steading Yard's watch prose from visited: byre_yard and remove the synthetic
+  on_enter flag entirely. Order Byre-Yard variants by leader, flank-wolf, and yearling
+  defeat so each legal backtrack names the wolves actually left alive. Gate carried-guard
+  Broken Paling prose on the real split_rail_guard inventory item, add a more-specific
+  spent-guard state after flank_wolf_down, and give the scenery reactive names and text:
+  braced rail, split rail, or the empty rail-bed whose timber broke at the door.
+deterministic_witnesses:
+  - route: "Steading Yard -> Byre-Yard -> Store-Shed -> Byre-Yard"
+    invariant: "visited history selects the watch prose and no watch_started flag exists"
+  - route: "kill yearling -> backtrack to Byre-Yard"
+    invariant: "hub names the dead yearling and the live flank-wolf instead of the opening"
+  - route: "failed wedge -> bind guard -> kill flank-wolf -> backtrack to Broken Paling"
+    invariant: "the guard is absent, the rail-bed is empty, and its remnants are at the door"
+tests:
+  - tests/regression/wolf_winter_state_consistency.test.ts
+  - tests/regression/wolf_winter_combat_tactics.test.ts
+verification:
+  - npm run validate -- wolf_winter
+  - npx vitest run tests/regression/wolf_winter_state_consistency.test.ts tests/regression/wolf_winter_combat_tactics.test.ts
+  - npm run crawl:smoke

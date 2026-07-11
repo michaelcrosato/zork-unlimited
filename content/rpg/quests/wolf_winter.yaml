@@ -92,13 +92,13 @@ rooms:
       Somewhere up the high wood a pack is singing, close and getting closer,
       and down here the cattle have begun to low and shove in their pen. The byre and
       its yard lie through the gate to the north.
-    # The yard re-describes itself once the watch is taken up (`watch_started`). Reactive
-    # prose only — no exit, win or ending turns on the flag. (A later byre_held variant was
-    # cut: after the leader falls the player wins at cattle_stand without re-viewing the yard,
-    # so that stage is never a viewing context here — the bug_0147 liveness proof requires
-    # every declared variant to be the first match in some reachable state.)
+    # The yard re-describes itself once visit history proves the player reached the byre.
+    # This is reactive prose only — no synthetic watch flag or repeated on-enter event is
+    # needed. A separate byre_held variant is unnecessary: the locomotion win still waits at
+    # cattle_stand, so even a legal last backtrack has one task left at the byre — returning
+    # north to the whole cattle.
     variants:
-      - when: [{ has_flag: watch_started }]
+      - when: [{ visited: byre_yard }]
         text: >
           The steading yard, the Albany route tag tucked cold under your coat and the
           relief spear in your fist. The watch is taken up now, and whatever remains
@@ -118,13 +118,27 @@ rooms:
       past the broken paling, the byre runs back to where the cattle are penned — and the
       first of the wolves is already through the gap. The yard gate is back to the south.
     objects: [day_book]
-    # Reaching the byre is where the night's work begins. An idempotent flag, rather
-    # than a quest-stage write, records that first milestone: re-entering this hub after
-    # a wolf falls must not regress the_watch from breach_held/threshold_held/byre_held.
-    # Pure progress-tracking; no exit, enemy, win or ending turns on it.
-    on_enter:
-      - set_flag: watch_started
+    # Progress variants are ordered from the deepest completed fight back to the opening
+    # clue state. Re-entering this hub must describe the wolves actually left alive; visit
+    # history alone handles the steading-yard watch prose without emitting repeat state.
     variants:
+      - when: [{ has_flag: leader_down }]
+        text: >
+          The trampled yard before the cattle-byre. Old Cade waits beside the day-book
+          and open store-shed. North, all three wolves lie dead from broken paling to
+          back wall; beyond the grey leader, the cattle stand whole. The yard gate is south.
+      - when: [{ has_flag: flank_wolf_down }]
+        text: >
+          The trampled yard before the cattle-byre. Old Cade waits beside the day-book;
+          the store-shed is west. North, the yearling lies dead at the broken paling and
+          the flank-wolf across the byre threshold. The grey leader still waits deeper in.
+          The yard gate is south.
+      - when: [{ has_flag: yearling_down }]
+        text: >
+          The trampled yard before the cattle-byre. Old Cade waits beside the day-book;
+          the store-shed is west. North, the yearling lies dead in the broken paling, but
+          the flank-wolf holds the byre door and the grey leader waits deeper in. The yard
+          gate is south.
       - when: [{ has_flag: read_tally }]
         text: >
           The trampled yard before the cattle-byre. Old Cade stands propped in the byre
@@ -173,10 +187,11 @@ rooms:
       of the broken paling has fallen clear into the snow at your feet, heavy and sound.
       The byre-yard is back to the south.
     objects: [paling_rail]
-    # Reactive prose keeps the yearling follow-through and all three rail outcomes
-    # legible: braced success, split-but-bindable failure, and the carried recovered
-    # guard. The north exit is UNCHANGED — it still rides yearling_down alone. These
-    # choices affect later combat lines, never locomotion or an ending.
+    # Reactive prose keeps the yearling follow-through and every rail state legible:
+    # braced success, split-but-bindable failure, the carried recovered guard, and the
+    # empty rail-bed after that guard breaks at the door. The north exit is UNCHANGED —
+    # it still rides yearling_down alone. These choices affect later combat lines, never
+    # locomotion or an ending.
     variants:
       - when: [{ has_flag: yearling_down }, { has_flag: breach_braced }]
         text: >
@@ -187,10 +202,18 @@ rooms:
       - when:
           - { has_flag: yearling_down }
           - { has_flag: split_rail_guard_made }
+          - { has_flag: flank_wolf_down }
+        text: >
+          The broken paling: the young wolf lies dead and the rail-bed is empty. You
+          carried the split lengths north as a bound guard, but they broke with the
+          flank-wolf at the byre door; no guard remains. The byre runs north; the yard is south.
+      - when:
+          - { has_flag: yearling_down }
+          - { has_item: split_rail_guard }
         text: >
           The gap in the broken paling, the young wolf dead in its snow and the split
-          rail gone from the breach into the rough guard you carry. It cannot funnel the
-          next wolf, but it can meet the first turn at the byre door. The byre runs north.
+          rail gone from the breach into the rough guard in your hands. It cannot funnel
+          the next wolf, but it can meet the first turn at the byre door. The byre runs north.
       - when:
           - { has_flag: yearling_down }
           - { has_flag: rail_split }
@@ -218,7 +241,7 @@ rooms:
           committed along the shaft.
       - when:
           - { has_flag: yearling_spear_set }
-          - { has_flag: split_rail_guard_made }
+          - { has_item: split_rail_guard }
         text: >
           The yearling recoils alive from the Albany spear you set against its rush.
           The failed rail is bound across your spear now; drive the set point through
@@ -242,11 +265,11 @@ rooms:
           breach half-shut. The young wolf still holds what is left of the gap, hackled and
           snarling, but it can only come at you singly and slow through the narrowed throat,
           the way old Cade swore the byre would funnel them. The byre-yard is back to the south.
-      - when: [{ has_flag: split_rail_guard_made }]
+      - when: [{ has_item: split_rail_guard }]
         text: >
           The young wolf still holds the broken paling. The rail did not brace the gap,
-          but its joined lengths are lashed across your spear as a rough guard for the
-          byre door. The yearling's low rush still wants the spear set against it.
+          but its joined lengths ride in your hands, lashed across the spear as a rough
+          guard for the byre door. The yearling's low rush still wants the spear set against it.
       - when: [{ has_flag: rail_split }, { not_flag: split_rail_guard_made }]
         text: >
           The young wolf still holds the broken paling, and the rail you tried to set
@@ -574,20 +597,25 @@ objects:
     name: "fallen paling-rail"
     aliases: [rail, paling-rail, post, stake, timber, bar]
     description: "A stout length of the broken paling, splintered off at one end but seasoned and sound — the kind of heavy timber a man could wedge across a gap to half-shut it, so what comes through must come singly."
-    # Reactive examine twins keep success, recoverable failure, carried salvage, and the
-    # guard's spent aftermath physically legible.
+    # Reactive examine variants keep success, recoverable failure, carried salvage, and
+    # the guard's spent aftermath physically legible.
     variants:
       - when: [{ has_flag: breach_braced }]
+        name: "braced paling-rail"
         text: "The fallen paling-rail, wedged hard across the breach now and stamped home — the gap half-shut, so what comes through the paling must come singly and slow."
       - when: [{ has_flag: split_rail_guard_made }, { has_flag: flank_wolf_down }]
+        name: "empty rail-bed"
         text: >
-          Only torn binding and fresh splinters remain at the gap. The joined lengths
-          served as a guard at the byre door and broke there with the flank-wolf.
-      - when: [{ has_flag: split_rail_guard_made }]
+          The hollow where the fallen rail lay is empty. Its split lengths went north in
+          your hands as a bound guard and broke at the byre door with the flank-wolf; the
+          splinters and torn binding are there, not here.
+      - when: [{ has_item: split_rail_guard }]
+        name: "empty rail-bed"
         text: >
-          The split paling lengths are gone from the snow. You have lashed them into a
-          short cross-guard that rides against the Albany spear for the byre door.
+          The hollow where the fallen rail lay is empty. Its split lengths are lashed into
+          the short cross-guard that rides against the Albany spear in your hands.
       - when: [{ has_flag: rail_split }, { not_flag: split_rail_guard_made }]
+        name: "split paling-rail"
         text: >
           The paling-rail lies split at its splintered end where the frozen ground
           refused it. It cannot brace the gap, but the two joined lengths are still sound

@@ -251,7 +251,7 @@ describe("Wolf-Winter authored combat tactics", () => {
     const recovery = options(state).find((option) => option.id === "use_paling_rail");
     expect(recovery).toMatchObject({
       id: "use_paling_rail",
-      command: "bind fallen paling-rail",
+      command: "bind split paling-rail",
       action: { type: "USE", target: "paling_rail" },
     });
     expect(recovery?.skill_check).toBeUndefined();
@@ -262,6 +262,16 @@ describe("Wolf-Winter authored combat tactics", () => {
     expect(state.inventory).toContain("split_rail_guard");
     expect(optionIds(state)).not.toContain("use_paling_rail");
     expect(optionIds(state)).not.toContain("drop_split_rail_guard");
+    const carriedAtGap = buildRpgObservation(index, state);
+    expect(carriedAtGap.description).toContain("ride in your hands");
+    expect(carriedAtGap.description).toContain("rough guard for the byre door");
+    expect(carriedAtGap.visible_objects).toContainEqual({
+      id: "paling_rail",
+      name: "empty rail-bed",
+    });
+    expect(options(state).find((option) => option.id === "examine_paling_rail")?.command).toBe(
+      "look at empty rail-bed",
+    );
 
     state = act(state, "maneuver_yearling_wolf_set_spear", "best").state;
     state = act(state, "go_north").state;
@@ -301,6 +311,21 @@ describe("Wolf-Winter authored combat tactics", () => {
       "split_rail_guard",
     ]);
     expect(buildRpgObservation(index, state).description).toContain("splinters");
+
+    state = act(state, "go_south").state;
+    const spentAtGap = buildRpgObservation(index, state);
+    expect(spentAtGap.description).toContain("broke with the flank-wolf at the byre door");
+    expect(spentAtGap.description).toContain("no guard remains");
+    expect(spentAtGap.description).not.toContain("guard you carry");
+    expect(spentAtGap.visible_objects).toContainEqual({
+      id: "paling_rail",
+      name: "empty rail-bed",
+    });
+    const examined = act(state, "examine_paling_rail");
+    const examinedText = examined.events.flatMap((event) =>
+      event.type === "narration" ? [event.text] : [],
+    );
+    expect(examinedText.join(" ")).toContain("there, not here");
 
     // Leaving the split rail unbound preserves Cade's off-side option instead.
     let unbound = act(fullyPrepared(), "go_north").state;

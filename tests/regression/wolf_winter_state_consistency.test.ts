@@ -55,17 +55,31 @@ function attackUntil(state: GameState, enemy: string, defeatFlag: string): GameS
 }
 
 describe("Wolf-Winter state and shared-prose consistency", () => {
-  it("never regresses the_watch milestones when the player backtracks through the yard", () => {
+  it("uses visit history for the watch and keeps every backtracked milestone truthful", () => {
+    const byreYard = pack.rooms.find((room) => room.id === "byre_yard");
+    const steadingYard = pack.rooms.find((room) => room.id === "steading_yard");
+    expect(byreYard?.on_enter).toEqual([]);
+    expect(steadingYard?.variants?.[0]?.when).toContainEqual({ visited: "byre_yard" });
+
     let state = initStateForRpgPack(index, 497);
+    expect(buildRpgObservation(index, state).description).toContain("killing winter night");
     state = act(state, "go_north");
-    expect(state.flags.watch_started).toBe(true);
+    expect(state.visited.byre_yard).toBe(true);
+    expect(state.flags.watch_started).toBeUndefined();
     expect(state.questStage.the_watch).toBeUndefined();
+    state = act(state, "go_west");
+    state = act(state, "go_east");
+    expect(state.flags.watch_started).toBeUndefined();
 
     state = act(state, "go_north");
     state = act(state, "maneuver_yearling_wolf_set_spear");
     expect(state.questStage.the_watch).toBe("breach_held");
     state = act(state, "go_south");
     expect(state.questStage.the_watch).toBe("breach_held");
+    let hub = buildRpgObservation(index, state).description;
+    expect(hub).toContain("yearling lies dead");
+    expect(hub).toContain("flank-wolf holds the byre door");
+    expect(hub).not.toContain("first of the wolves is already through");
 
     state = act(state, "go_north");
     state = act(state, "go_north");
@@ -74,6 +88,10 @@ describe("Wolf-Winter state and shared-prose consistency", () => {
     state = act(state, "go_south");
     state = act(state, "go_south");
     expect(state.questStage.the_watch).toBe("threshold_held");
+    hub = buildRpgObservation(index, state).description;
+    expect(hub).toContain("flank-wolf across the byre threshold");
+    expect(hub).toContain("grey leader still waits deeper in");
+    expect(hub).not.toContain("first of the wolves is already through");
 
     state = act(state, "go_north");
     state = act(state, "go_north");
@@ -84,6 +102,10 @@ describe("Wolf-Winter state and shared-prose consistency", () => {
     state = act(state, "go_south");
     state = act(state, "go_south");
     expect(state.questStage.the_watch).toBe("byre_held");
+    hub = buildRpgObservation(index, state).description;
+    expect(hub).toContain("all three wolves lie dead");
+    expect(hub).toContain("cattle stand whole");
+    expect(hub).not.toContain("first of the wolves is already through");
 
     state = act(state, "go_south");
     const yard = buildRpgObservation(index, state).description;

@@ -1,58 +1,58 @@
 # Current Plan
 
-This is the AFK loop's token-small handoff document. It is OVERWRITTEN each ultraplan with the synthesis and one chosen
-next move; a fresh implementation subagent reads ONLY this doc and the files it names. Keep it current, terse, dated,
-and under ~60 lines - completed work belongs in git history and `docs/DECISION_LOG.md`, not here.
+This is the AFK loop's token-small handoff document. It is OVERWRITTEN each
+ultraplan with the synthesis and one chosen next move; keep it dated, terse, and
+under ~60 lines. Completed detail belongs in Git history.
 
-## Cycle: 2026-07-11 - Wolf-Winter Tactical Follow-Through
+## Cycle: 2026-07-11 - Wolf-Winter Compact Tutorial Integrity
 
 ## Synthesis
 
-The first tactical-combat pass made Wolf-Winter's clue -> preparation -> fight chain its unanimous strength. A balanced
-post-commit fleet ran 200 fresh `gpt-5.5` contexts: 100 overworld and 100 direct Wolf-Winter, 20 of each persona per target,
-all verified, with zero crawl findings, zero stuck players, and all 200 reaching The Byre Held. Direct Wolf scored
-96x60/60 and averaged 4.34 clarity / 3.84 enjoyment; all 100 named Cade/day-book/jerkin/rail/tactics as the best moment.
+The post-`5ff320a6` cohort closed at 200/200 verified `gpt-5.5` reports: 100
+direct Wolf-Winter and 100 overworld, balanced 20/persona/target, with zero
+rejections, zero crawl findings, zero stuck players, and 100/100 Byre Held.
+Direct Wolf averaged 4.32 clarity / 3.76 enjoyment; preparation was best in
+99/100, but rail 20, linearity 30, and replay 16 failed frozen acceptance.
 
-That success is saturated rather than deep: all 100 direct runs reached one ending, 96 took the same perfect-score shape,
-and all answered no to replay (directionally useful, but the exit template prefilled false and must be made neutral before
-replay is benchmarked). Conservative direct-report coding found rail unfairness 28/100, linear/checklist play 18/100, and
-plain-attack or 1-HP cleanup after a special 7/100. Preparation is taught well, but still yields one prescribed solution.
+The first repair closed the 72-report reactive-state family: visit history now
+drives the watch, legal hub backtracks name the wolves actually alive, and the
+split rail/guard/empty rail-bed lifecycle is truthful. Fresh blind seed 930004
+reproduced the old yard event before the fix and still reached 60/60 at clarity
+5 / enjoyment 4; `bug_0499`, two regressions, crawl, and health are green.
+
+The next blocker is the default MCP reading surface. Strict coding found compact
+truncation in 59 reports (38 overworld, 21 direct). A source scan identifies 28
+over-budget Wolf fields across opening/hub/rooms, day-book, Cade, rail recovery,
+journals, and tactical endings; crucial advice clips where players need it.
 
 ## Chosen Move
 
-Deepen the Broken Paling -> flank-wolf sequence into a tactical branch with
-follow-through, without weakening the clue/preparation payoff.
+Compress Wolf-Winter's authored compact tutorial and payoff without raising any
+global limit or changing mechanics.
 
-- Replace the hidden-roll permanent rail loss with a visible decision or a
-  recoverable adverse consequence; following a clear clue must create play, not
-  silently delete the promised tactic.
-- Provide at least two materially viable approaches plus one recoverable adverse
-  rail outcome. Propagate distinct HP/time/resource/state and reactive-text
-  consequences into the flank-wolf beat and aftermath.
-- Make a successful special resolve its beat or unlock a meaningful second
-  response. Do not fall back to an unexplained 1-HP/basic-ATTACK cleanup.
-- Keep Cade's counsel, the jerkin/spear preparation, 60-point economy, both
-  endings, and the fully prepared worst-roll survival guarantee honest.
-- Before the validation fleet, replace its prefilled replay value with a neutral true-or-false placeholder while retaining
-  strict schema verification.
+- Fit changed room/object narration within 280 characters, Cade dialogue within
+  its wrapped budget, journals within their reprojected budget, and endings
+  within 360 including the score suffix.
+- Preserve the Albany spear/packet, donned jerkin, yearling set/drive, flank
+  funnel vs off-side vs salvaged guard, leader wait vs close, and all six ending
+  payoffs in Wolf-Winter's voice.
+- Add one compact-surface MCP regression and extend the six-route gauntlet; do
+  not alter combat math, route state, score, schema, or global compact limits.
 
 ## Acceptance
 
-1. Deterministic traces prove two distinct successful tactical routes and one
-   recoverable adverse rail route, with observable downstream costs/text/state.
-2. A fresh 100-run direct fleet reduces rail complaints <=5 (baseline 28),
-   linear/checklist mentions <=9 (18), and cleanup mentions <=2 (7).
-3. With the neutral replay prompt, replay yes reaches >=20/100 across >=3
-   personas; got-stuck remains 0, clarity >=4.3, completion >=95%, and tactical
-   preparation remains the best moment in >=90/100 reports.
-4. Pre/post `crawl:smoke` and `npm run health` pass with no weakened verifier.
+1. Opening, day-book, all Cade lessons, Broken Paling failure/recovery, and six
+   tactical endings emit no compact truncation marker and retain required clues.
+2. Static projection checks pin every edited field inside its actual surface
+   budget; the `*** You have won. ***` marker survives every ending.
+3. Existing 60/60, worst-roll survival, route exclusivity, and state-truth
+   regressions remain byte-for-byte mechanically green.
+4. Fresh blind report, pre/post crawl, pack validation, and `npm run health`
+   pass before one focused commit.
 
 ## Deferred Levers
 
-- Byre watch/revisit state is noisy or stale in 52/200 reports; temporary-defense
-  observability appears in 31/200 and Cade/dialogue friction in 35/200.
-- Overworld wrapper prose/signposting remains the larger opening risk: 68/100 call
-  it generic/procedural and 51/100 cite hidden-count/route-anchor friction.
-- Compact truncation appears in 48/200 reports.
-- Feedback semantic clustering fragments 1,080 issues into 942 clusters; the
-  compiler should merge paraphrases before its rank counts are treated literally.
+- Cade modal affordances (48 reports) and temporary-defense visibility (19).
+- Tactical agency: linear/prescribed 30/100 and replay 16/100.
+- Albany continuity/authorship: 71/100 generic/hidden-count and 9/100 stale
+  Station-relief lifecycle reports; use journal-backed outcome reactivity.
