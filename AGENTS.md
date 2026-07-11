@@ -19,9 +19,12 @@ testing pyramid behind it is `docs/testing_pyramid.md`. Each cycle:
 2. **Crawl gate (pre)** — `npm run crawl:smoke` must be green before touching anything.
 3. **One change** — make a single focused improvement (engine, content, or tooling).
 4. **Crawl gate (post)** — `npm run crawl:smoke` again; a new finding is YOUR regression.
-5. **Blind playtest** — one fresh blind agent per normal cycle (protocol: docs/blind_playtest_protocol.md). Milestone
-   or feedback-harvest cycles (every ~10 cycles, or when the ledger's open questions outgrow single reports) run
-   `npm run fleet -- --count N` instead.
+5. **Blind playtest** — one fresh blind reasoning agent per normal cycle starts a
+   brand-new overworld game (protocol: docs/blind_playtest_protocol.md). Every live
+   blind run follows that fresh-game path; direct quest drop-ins are reserved for
+   non-LLM smoke/mock/crawler structural checks. Milestone or feedback-harvest
+   cycles (every ~10 cycles, or when the ledger's open questions outgrow single
+   reports) run `npm run fleet -- --count 100 --target overworld` instead.
 6. **Compile feedback** — when ≥3 new verified reports exist since the last compile: `npm run feedback:compile`;
    triage from `hotspots.md`.
 7. **Verify** — `npm run health` must pass; no playtest report ⇒ no commit.

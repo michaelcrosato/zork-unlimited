@@ -330,7 +330,7 @@ const OVERWORLD_ACTION_CONTEXT = {
 
 tool(
   "start_overworld",
-  "Start a stateful overworld run at the start town; returns session_id, snapshot_hash, and a compact context with its legend.",
+  "Start a fresh stateful overworld game at the start town; returns a one-time tutorial, session_id, snapshot_hash, and compact context legend.",
   {
     ...COMPACT_OVERWORLD_CONTEXT,
   },
@@ -375,7 +375,7 @@ tool(
 );
 tool(
   "restore_overworld_session",
-  "Restore an exported overworld snapshot as a new session; the response repeats the compact-context legend.",
+  "Continue an exported overworld snapshot as a new session without replaying the fresh-game tutorial; repeats the compact-context legend.",
   {
     snapshot: z.record(z.unknown()).describe("Snapshot from export_overworld_session."),
     ...COMPACT_OVERWORLD_CONTEXT,

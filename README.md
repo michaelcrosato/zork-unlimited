@@ -143,10 +143,11 @@ Full reference: [`docs/testing_pyramid.md`](./docs/testing_pyramid.md).
   [`docs/blind_playtest_protocol.md`](./docs/blind_playtest_protocol.md)) — the
   only judge of player-facing quality a static check can't see. The **default
   blind run plays the core game**: the open world from a fresh start, quests
-  discovered through the overworld. Targeted single-quest runs (`--quest <id>`)
-  are the legacy drop-in kept for testing one piece of content. `npm run
-  fleet` runs N of these in parallel (personas, model mix, resume) for
-  milestone/harvest cycles; `npm run fleet:mock` is a zero-token stand-in for CI.
+  discovered through the overworld. Every live reasoning-agent run starts this
+  way; targeted single-quest drop-ins are structural smoke/mock/crawler checks
+  only. `npm run fleet` runs 100 fresh-overworld agents in parallel (personas,
+  model mix, resume) for milestone/harvest cycles; `npm run fleet:mock` is a
+  zero-token stand-in for CI.
 - **Tier 3 — feedback compiler** (`src/feedback/`): clusters and ranks Tier-1
   findings and verified Tier-2 reports into `hotspots.{json,md}`
   (`npm run feedback:compile`), tracks trend (improved/regressed/new/flat)
@@ -162,8 +163,9 @@ can't be ranked is feedback that gets lost.
 ```bash
 npm run crawl:smoke                               # Tier 1: mechanical gate, all quests + overworld
 npm run blind                                     # Tier 2 DEFAULT: the core game — overworld, fresh start
-npm run blind -- --quest sunken_barrow --seed 7   # targeted: one shipped quest (legacy drop-in)
 npm run blind:smoke                               # harness check, no LLM, no tokens
+bash blind-tester/run.sh --smoke --quest sunken_barrow --seed 7 # structural quest check, no LLM
+npm run fleet -- --count 100 --target overworld   # milestone: 100 fresh-world agents
 npm run fleet:mock -- --count 2                   # Tier 2 fleet, zero tokens (CI-safe)
 npm run feedback:compile                          # Tier 3: compile into ranked hot spots
 ```

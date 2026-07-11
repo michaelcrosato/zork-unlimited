@@ -17,11 +17,12 @@ does, when it runs, and its exact shapes.
   cycle (pre- and post-work gate); `crawl:deep` is a longer soak, nightly or
   manual.
 - **Tier 2 — blind LLM playtests** (`blind-tester/`): a fresh, no-repo-access
-  agent plays through the `mcp__adventureforge__*` tools only and files a
-  structured report ending in a JSON exit interview. One per normal cycle;
-  `fleet` runs N of them (persona/model/seed/target diversity) for milestone
-  or feedback-harvest cycles; `fleet:mock` is a zero-token deterministic
-  stand-in for CI.
+  agent starts a brand-new overworld game, plays through the
+  `mcp__adventureforge__*` tools only, and files a structured report ending in a
+  JSON exit interview. One per normal cycle; the milestone/feedback-harvest
+  `fleet` runs 100 of them (persona/model/seed diversity). Direct quest drop-ins
+  belong only to non-LLM smoke/mock/crawler structural checks; `fleet:mock` is a
+  zero-token deterministic stand-in for CI.
 - **Tier 3 — feedback compiler** (`src/feedback/`): reads verified Tier-2
   reports plus Tier-1 findings, clusters them, ranks by severity and source
   agreement, and emits `hotspots.{json,md}` — the assessor's primary ranking
@@ -46,14 +47,14 @@ does, when it runs, and its exact shapes.
 
 ## 2. When each runs + budgets
 
-| Lane                 | Trigger                                             | Budget                                                        | Cost                     |
-| --------------------- | ---------------------------------------------------- | -------------------------------------------------------------- | ------------------------ |
-| `crawl:smoke`        | every loop cycle (pre- and post-work gate)          | ~10s deterministic (single-worker smoke config, ~3660 steps/s) | free                     |
-| `crawl:deep`         | nightly / manual                                    | ≥2min soak (multi-worker; measured 352k steps @ ~1935 steps/s incl. 20k-state solver; findings are byte-identical across `--workers` only absent `--seconds` truncation — per-worker deadlines mean WHICH items truncate can vary with worker count once the soak budget bites, always loud via `truncated`/`skippedItems`) | free                     |
-| `blind` (single)     | every normal cycle                                  | one playthrough, minutes                                       | $ (one LLM playtest)     |
-| `fleet -- --count N` | milestone / feedback-harvest cycles (~every 10, or when the ledger's open questions outgrow single reports) | N runs at `--concurrency C`                                     | $ × N (real LLM tokens)  |
-| `fleet:mock`         | every CI run (rides `npm test`)                     | small acceptance e2e (4+2 runs); standalone 20-run lane verified 20/20 in ~18s | zero tokens              |
-| `feedback:compile`   | whenever ≥3 new verified reports exist since the last compile | seconds (deterministic clustering)                              | free                     |
+| Lane                   | Trigger                                                                                                     | Budget                                                                                                                                                                                                                                                                                                                      | Cost                      |
+| ---------------------- | ----------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------- |
+| `crawl:smoke`          | every loop cycle (pre- and post-work gate)                                                                  | ~10s deterministic (single-worker smoke config, ~3660 steps/s)                                                                                                                                                                                                                                                              | free                      |
+| `crawl:deep`           | nightly / manual                                                                                            | ≥2min soak (multi-worker; measured 352k steps @ ~1935 steps/s incl. 20k-state solver; findings are byte-identical across `--workers` only absent `--seconds` truncation — per-worker deadlines mean WHICH items truncate can vary with worker count once the soak budget bites, always loud via `truncated`/`skippedItems`) | free                      |
+| `blind` (single)       | every normal cycle                                                                                          | one playthrough, minutes                                                                                                                                                                                                                                                                                                    | $ (one LLM playtest)      |
+| `fleet -- --count 100` | milestone / feedback-harvest cycles (~every 10, or when the ledger's open questions outgrow single reports) | 100 fresh-overworld runs at `--concurrency C`                                                                                                                                                                                                                                                                               | $ × 100 (real LLM tokens) |
+| `fleet:mock`           | every CI run (rides `npm test`)                                                                             | small acceptance e2e (4+2 runs); standalone 20-run lane verified 20/20 in ~18s                                                                                                                                                                                                                                              | zero tokens               |
+| `feedback:compile`     | whenever ≥3 new verified reports exist since the last compile                                               | seconds (deterministic clustering)                                                                                                                                                                                                                                                                                          | free                      |
 
 ## 3. Exact commands
 
@@ -65,9 +66,9 @@ npm run crawl -- --workers 4 --seed 7              # custom invocation (flags in
 
 # Tier 2 — blind playtests
 npm run blind                                      # single blind playtest, core-game overworld
-npm run blind -- --quest sunken_barrow --seed 7    # targeted quest mode
 npm run blind:smoke                                # MCP-plumbing check, no LLM, no tokens
-npm run fleet -- --count 20 --concurrency 4 --model mix --personas mixed --target overworld --seed-base 1000
+bash blind-tester/run.sh --smoke --quest sunken_barrow --seed 7 # targeted structural check, no LLM
+npm run fleet -- --count 100 --concurrency 4 --model mix --personas mixed --target overworld --seed-base 1000
 npm run fleet:mock -- --count 2                    # zero-token, CI-safe fleet (mock agent)
 
 # Tier 3 — feedback compiler
@@ -81,8 +82,10 @@ npm run ai:loop                                    # one cycle: assess + emit pr
 
 `crawl:deep` and a live (non-mock) `fleet` run spend real time/tokens — run
 them nightly or manually, never inside an automated smoke check. Live `fleet`
-runs must be launched from a plain shell, not from inside a Claude Code
-session (nested CLI auth returns 401).
+runs always use `--target overworld`, and every member starts a fresh game.
+Launch them from a plain shell, not from inside a Claude Code session (nested
+CLI auth returns 401). Targeted quest starts remain available only to the
+non-LLM smoke/mock lanes and the mechanical crawler.
 
 ## 4. Schemas
 
@@ -120,4 +123,4 @@ validator | test`.
   outranking an unplayable-quest fix — and the loop makes ONE fix per cycle.
 - **Proving movement**: the next `feedback:compile` diffs against the
   previous run (`--prev`) and tags each hotspot `improved | regressed | new |
-  flat` — the trend line is the evidence a fix actually worked.
+flat` — the trend line is the evidence a fix actually worked.

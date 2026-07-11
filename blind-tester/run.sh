@@ -9,8 +9,8 @@
 #
 # Usage:
 #   blind-tester/run.sh [--seed <n>] [--model <alias>] [--out <prefix>]   # CORE GAME (overworld, the default)
-#   blind-tester/run.sh --quest <id> [--seed <n>] ...                     # targeted: drop into ONE shipped quest
-#   blind-tester/run.sh --smoke [--quest <id>] [--seed <n>]               # no LLM, no tokens
+#   blind-tester/run.sh --quest <id> --mock [--seed <n>] ...              # structural targeted test, no LLM
+#   blind-tester/run.sh --smoke [--quest <id>] [--seed <n>]               # structural MCP smoke, no LLM
 #   ... [--persona <name>]  # play-style overlay; see blind-tester/personas/*.md (default: "default", a no-op)
 #
 # Provider-agnostic: set BLIND_AGENT_CMD to use a different MCP-capable agent CLI.
@@ -33,6 +33,7 @@ SEED=7
 MODEL="${BLIND_MODEL:-sonnet}"   # sonnet = strong + best subscription value; override per run
 OUT=""
 SMOKE=0
+MOCK=0
 TIMEOUT="${BLIND_TIMEOUT:-900}"
 SPECTATE="${BLIND_SPECTATE:-0}"                   # 1 = server writes a human-watchable feed
 SPECTATE_DELAY_MS="${BLIND_SPECTATE_DELAY_MS:-}"  # optional pacing delay per tool response
@@ -88,6 +89,7 @@ while [[ $# -gt 0 ]]; do
     --model)            MODEL="$2"; shift 2 ;;
     --out)              OUT="$2"; shift 2 ;;
     --smoke)            SMOKE=1; shift ;;
+    --mock)             MOCK=1; shift ;;
     --spectate)         SPECTATE=1; shift ;;
     --delay-ms)         SPECTATE_DELAY_MS="$2"; SPECTATE=1; shift 2 ;;
     --overworld)        OVERWORLD=1; shift ;;
@@ -121,11 +123,10 @@ if [[ ${#POSITIONAL[@]} -gt 3 ]]; then
 fi
 
 # Mode resolution — the CORE GAME (overworld, fresh start) is the DEFAULT blind
-# test: it is how a real new player actually meets the game. Naming a quest
-# (--quest <id>, a positional id, or BLIND_QUEST_ID) selects the targeted
-# single-quest mode instead — a legacy drop-in kept for testing ONE shipped
-# quest (what the AFK loop runs on the quest it just changed). Asking for both
-# at once is ambiguous.
+# test: it is how a real new player actually meets the game. A quest source
+# (--quest <id>, a positional id, or BLIND_QUEST_ID) is retained only for the
+# structural --smoke and explicit --mock harnesses. Asking for overworld and a
+# quest at once is ambiguous.
 if [[ "$OVERWORLD" == "1" && -n "$QUEST_ID" ]]; then
   echo "Ambiguous: --overworld and a quest id were both given; drop one (the overworld IS the default)." >&2
   exit 2
@@ -134,15 +135,25 @@ if [[ -z "$QUEST_ID" ]]; then
   OVERWORLD=1
 fi
 
-# Two blind modes: the default CORE-GAME test (start the open world from a
-# fresh start and experience it as a new player) and the targeted single-QUEST
-# test (drop into one shipped quest and play it to an ending). They use
-# different prompts and start instructions; the report format + verifier are
-# identical.
+# A real blind LLM must meet the game exactly as a new player does: through a
+# fresh open-world start. Targeted quest drop-ins remain useful structural test
+# seams, but only --smoke and the bundled --mock agent may use them. In
+# particular, an arbitrary BLIND_AGENT_CMD is still a live-agent run and cannot
+# opt out of this guard by naming itself a mock.
+if [[ -n "$QUEST_ID" && "$SMOKE" != "1" && "$MOCK" != "1" ]]; then
+  echo "Live blind LLM runs must start a fresh overworld game; quest targets are reserved for --smoke or explicit --mock structural tests." >&2
+  echo "Remove the quest source and use --overworld (or no target)." >&2
+  exit 2
+fi
+
+# The live mode is always the default CORE-GAME test (start the open world from
+# a fresh start and experience it as a new player). Structural smoke/mock tests
+# may use the targeted single-QUEST seam. The two surfaces use different prompts
+# and start instructions; the report format + verifier are identical.
 if [[ "$OVERWORLD" == "1" ]]; then
   SOURCE_LABEL="overworld"
   SOURCE_SLUG="overworld"
-  START_INSTRUCTION="Start: \`mcp__adventureforge__start_overworld\` with compact_context = true. Capture the \`legend\` from the response — it decodes the compact positional fields and is sent only ONCE, at the start."
+  START_INSTRUCTION="Start: \`mcp__adventureforge__start_overworld\` with compact_context = true. Read the one-time \`tutorial\`, then capture the \`legend\` — it decodes the compact positional fields and is also sent only ONCE, at the start."
   PROMPT_FILE="$SCRIPT_DIR/prompt-overworld.md"
 else
   SOURCE_LABEL="quest=$QUEST_ID"
@@ -169,6 +180,14 @@ fi
 if [[ "$SMOKE" == "1" ]]; then
   SMOKE_SCRIPT="$(node_path_arg "$SCRIPT_DIR/smoke.mjs")"
   exec "$NODE_CMD" "$SMOKE_SCRIPT" --quest "${QUEST_ID:-breaking_weir}" --seed "$SEED"
+fi
+
+# --mock is an explicit, zero-token structural mode. It owns the bundled mock
+# command rather than trusting/inheriting BLIND_AGENT_CMD, so that environment
+# variable can never become a general-purpose escape hatch for targeted runs.
+if [[ "$MOCK" == "1" ]]; then
+  MOCK_AGENT_SCRIPT="$(node_path_arg "$SCRIPT_DIR/mock-agent.mjs")"
+  printf -v BLIND_AGENT_CMD '%q %q' "$NODE_CMD" "$MOCK_AGENT_SCRIPT"
 fi
 
 # Fail fast on a bad quest id BEFORE spending agent tokens (quest mode only — the

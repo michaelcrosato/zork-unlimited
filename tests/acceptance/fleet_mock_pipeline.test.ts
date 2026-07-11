@@ -115,6 +115,50 @@ describe("fleet:mock end to end (zero tokens)", () => {
     }
   }, 180_000);
 
+  it("allows an explicit mock quest target and ignores an ambient agent override", () => {
+    const out = mkdtempSync(join(tmpdir(), "fleet-mock-quest-"));
+    const label = `mock-quest-policy-${process.pid}-${Date.now()}`;
+    execFileSync(
+      "node",
+      [
+        "blind-tester/fleet.mjs",
+        "--mock",
+        "--target",
+        "quest:breaking_weir",
+        "--count",
+        "1",
+        "--concurrency",
+        "1",
+        "--max-retries",
+        "0",
+        "--seed-base",
+        "777",
+        "--out",
+        out,
+        "--label",
+        label,
+      ],
+      {
+        stdio: "pipe",
+        timeout: 120_000,
+        env: { ...process.env, BLIND_AGENT_CMD: "exit 97" },
+      },
+    );
+
+    const reports = readdirSync(out).filter((f) => f.endsWith(".md"));
+    expect(reports).toHaveLength(1);
+    const report = reports[0]!;
+    expect(report).toContain("breaking_weir_seed777");
+    expect(verifyBlindReportText(readFileSync(join(out, report), "utf8")).ok).toBe(true);
+
+    const manifest = readFileSync(
+      join(process.cwd(), "ai-runs", "fleet", label, "manifest.jsonl"),
+      "utf8",
+    );
+    const row = JSON.parse(manifest.trim());
+    expect(row).toMatchObject({ target: "quest:breaking_weir", status: "verified" });
+  }, 180_000);
+
   it("compiles mock reports + crawl findings into ranked hotspots with the planted overlap on top", () => {
     // reuse the tmp report dir from the previous test via a module-level variable, or regenerate --count 6
     const out2 = mkdtempSync(join(tmpdir(), "hotspots-"));

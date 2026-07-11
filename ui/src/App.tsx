@@ -18,6 +18,8 @@ import {
 } from "./overworld.js";
 import { PACKS } from "./packs.js";
 import { OVERWORLD } from "./worldData.js";
+import { NewJourneyTutorial } from "./NewJourneyTutorial.js";
+import { FRESH_GAME_TUTORIAL } from "../../src/world/fresh_game_tutorial.js";
 import type { OverworldQuest } from "../../src/world/overworld.js";
 import type { OverworldQuestView } from "../../src/world/session_local_discovery.js";
 
@@ -33,7 +35,7 @@ const OVERWORLD_SAVE_KEY = "adventureforge:new-york-overworld:v1";
 
 type InitialWorldSession = {
   session: OverworldSession;
-  restored: boolean;
+  origin: "new" | "resume";
   notice: string | null;
 };
 
@@ -50,17 +52,21 @@ function loadInitialWorldSession(): InitialWorldSession {
   const storage = browserStorage();
   const raw = storage?.getItem(OVERWORLD_SAVE_KEY);
   if (!raw) {
-    return { session: new OverworldSession(OVERWORLD), restored: false, notice: null };
+    return { session: new OverworldSession(OVERWORLD), origin: "new", notice: null };
   }
 
   try {
     const snapshot = JSON.parse(raw) as OverworldSessionSnapshot;
-    return { session: OverworldSession.restore(OVERWORLD, snapshot), restored: true, notice: null };
+    return {
+      session: OverworldSession.restore(OVERWORLD, snapshot),
+      origin: "resume",
+      notice: null,
+    };
   } catch (e) {
     storage?.removeItem(OVERWORLD_SAVE_KEY);
     return {
       session: new OverworldSession(OVERWORLD),
-      restored: false,
+      origin: "new",
       notice: `Discarded saved journey: ${(e as Error).message}`,
     };
   }
@@ -89,8 +95,9 @@ export default function App(): JSX.Element {
   const [questSession, setQuestSession] = useState<GameSession | null>(null);
   const [questView, setQuestView] = useState<View | null>(null);
   const [activeQuest, setActiveQuest] = useState<OverworldQuestView | null>(null);
+  const [tutorialOpen, setTutorialOpen] = useState(() => worldState.origin === "new");
   const [log, setLog] = useState<string[]>(() => {
-    const opener = worldState.restored
+    const opener = worldState.origin === "resume"
       ? `Resumed in ${worldView.current.name}.`
       : `You begin in ${worldView.current.name}. Roads leave town, but the work is local until you find it.`;
     return worldState.notice ? [worldState.notice, opener] : [opener];
@@ -273,7 +280,7 @@ export default function App(): JSX.Element {
   function startNewJourney(): void {
     const session = new OverworldSession(OVERWORLD);
     clearWorldSessionSave();
-    setWorldState({ session, restored: false, notice: null });
+    setWorldState({ session, origin: "new", notice: null });
     setWorldView(session.view());
     setQuestSession(null);
     setQuestView(null);
@@ -282,6 +289,16 @@ export default function App(): JSX.Element {
       `Started a new journey in ${session.view().current.name}. Roads leave town, but the work is local until you find it.`,
     ]);
     setError(null);
+    setTutorialOpen(true);
+  }
+
+  if (tutorialOpen) {
+    return (
+      <NewJourneyTutorial
+        tutorial={FRESH_GAME_TUTORIAL}
+        onStart={() => setTutorialOpen(false)}
+      />
+    );
   }
 
   return (

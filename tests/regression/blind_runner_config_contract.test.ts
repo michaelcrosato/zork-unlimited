@@ -1,3 +1,4 @@
+import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -30,7 +31,7 @@ describe("blind runner MCP config contract", () => {
     expect(pkg).toContain('"blind": "node blind-tester/blind-launch.mjs"');
   });
 
-  it("DEFAULTS to the CORE GAME overworld; quest mode is a targeted opt-in", () => {
+  it("DEFAULTS live play to the CORE GAME overworld and reserves quest mode for structural tests", () => {
     const runner = readFileSync(join(process.cwd(), "blind-tester", "run.sh"), "utf8");
     const owPrompt = readFileSync(
       join(process.cwd(), "blind-tester", "prompt-overworld.md"),
@@ -39,11 +40,13 @@ describe("blind runner MCP config contract", () => {
     const launcher = readFileSync(join(process.cwd(), "blind-tester", "blind-launch.mjs"), "utf8");
 
     // The overworld core game is the DEFAULT blind test: with no quest id from
-    // any source, run.sh resolves to overworld mode. Naming a quest selects the
-    // targeted single-quest mode; naming both is rejected as ambiguous. The
-    // original single-quest drop-in must never silently become the default again.
+    // any source, run.sh resolves to overworld mode. Targeted single-quest mode
+    // remains only for --smoke/--mock structural coverage; a real agent cannot
+    // opt into it through CLI args, env, or an arbitrary BLIND_AGENT_CMD.
     expect(runner).toContain('if [[ -z "$QUEST_ID" ]]; then\n  OVERWORLD=1\nfi');
     expect(runner).toContain('if [[ "$OVERWORLD" == "1" && -n "$QUEST_ID" ]]; then');
+    expect(runner).toContain('if [[ -n "$QUEST_ID" && "$SMOKE" != "1" && "$MOCK" != "1" ]]; then');
+    expect(runner).toContain("Live blind LLM runs must start a fresh overworld game");
     expect(runner).toContain("Ambiguous: --overworld and a quest id were both given");
     expect(runner).not.toContain('QUEST_ID="breaking_weir"');
     expect(runner).toContain("--overworld");
@@ -52,13 +55,61 @@ describe("blind runner MCP config contract", () => {
     // The overworld prompt starts the world, warns about the road-encounter wedge,
     // uses the quest bridge, and keeps the mandatory exit-interview report format.
     expect(owPrompt).toContain("mcp__adventureforge__start_overworld");
+    expect(owPrompt).toContain("Your FIRST game action");
+    expect(owPrompt).toContain("one-time `tutorial`");
+    expect(owPrompt).not.toContain("mcp__adventureforge__start_world_quest");
     expect(owPrompt).toContain("resolve_overworld_session_road_encounter");
     expect(owPrompt).toContain("start_overworld_session_quest");
     expect(owPrompt).toContain("json exit-interview");
     expect(owPrompt).not.toContain("pack_path");
-    // The flag survives PowerShell's `--` stripping via the launcher recovery list.
+    // Structural flags survive PowerShell's `--` stripping via launcher recovery.
     expect(launcher).toContain('"--overworld"');
+    expect(launcher).toContain('"--mock"');
+    // Explicit --mock owns the bundled command; ambient agent overrides cannot
+    // impersonate structural mode to bypass the live quest guard.
+    expect(runner).toContain("printf -v BLIND_AGENT_CMD");
+    expect(runner).toContain("$SCRIPT_DIR/mock-agent.mjs");
   });
+
+  it("rejects every live quest source before launching an override agent", () => {
+    const baseEnv: NodeJS.ProcessEnv = {
+      ...process.env,
+      BLIND_AGENT_CMD: "exit 93",
+      BLIND_OVERWORLD: "0",
+      BLIND_QUEST_ID: "",
+    };
+    delete baseEnv.npm_config_quest;
+    delete baseEnv.npm_config_quest_id;
+
+    const cases = [
+      { label: "--quest", args: ["--quest", "breaking_weir"], env: baseEnv },
+      { label: "positional", args: ["breaking_weir"], env: baseEnv },
+      {
+        label: "BLIND_QUEST_ID",
+        args: [],
+        env: { ...baseEnv, BLIND_QUEST_ID: "breaking_weir" },
+      },
+    ];
+
+    for (const source of cases) {
+      const result = spawnSync(
+        process.execPath,
+        ["blind-tester/blind-launch.mjs", ...source.args],
+        {
+          cwd: process.cwd(),
+          encoding: "utf8",
+          env: source.env,
+          timeout: 30_000,
+        },
+      );
+      const output = `${result.stdout ?? ""}\n${result.stderr ?? ""}\n${result.error?.message ?? ""}`;
+      expect(result.status, `${source.label}: ${output}`).toBe(2);
+      expect(output, source.label).toContain(
+        "Live blind LLM runs must start a fresh overworld game",
+      );
+      expect(output, source.label).not.toContain("Using BLIND_AGENT_CMD override");
+    }
+  }, 30_000);
 
   it("smokes BOTH start surfaces — the default overworld and the quest drop-in", () => {
     const smoke = readFileSync(join(process.cwd(), "blind-tester", "smoke.mjs"), "utf8");
@@ -68,7 +119,7 @@ describe("blind runner MCP config contract", () => {
     expect(smoke).toContain("if_snapshot_hash");
   });
 
-  it("starts targeted quest runs by world quest id instead of raw pack starts", () => {
+  it("keeps structural targeted quest runs on world quest ids instead of raw pack starts", () => {
     const runner = readFileSync(join(process.cwd(), "blind-tester", "run.sh"), "utf8");
     const prompt = readFileSync(join(process.cwd(), "blind-tester", "prompt.md"), "utf8");
     const smoke = readFileSync(join(process.cwd(), "blind-tester", "smoke.mjs"), "utf8");

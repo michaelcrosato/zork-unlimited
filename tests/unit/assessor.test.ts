@@ -162,7 +162,7 @@ describe("assess()", () => {
     }
   });
 
-  it("keeps RPG packs on the radar as low-priority blind-playtest reviews", () => {
+  it("keeps RPG quests on the radar as low-priority fresh-world evidence reviews", () => {
     const reviews = a.candidates.filter((c) => c.id.startsWith("playtest-"));
     expect(reviews.length).toBeGreaterThan(0);
     for (const r of reviews) {
@@ -254,7 +254,7 @@ describe("assess()", () => {
     expect(out).toContain("Quest health");
     expect(out).not.toContain("Pack health");
     expect(out).not.toMatch(/\[[?a-z]+\]/);
-    expect(out).toMatch(/Blind-playtest quest "[a-z0-9_]+"/);
+    expect(out).toMatch(/Review quest "[a-z0-9_]+" using fresh-overworld blind evidence/);
     expect(out).not.toMatch(/Blind-playtest "[a-z0-9_]+_v\d+"/);
   });
 
@@ -263,7 +263,7 @@ describe("assess()", () => {
     const full = formatAssessment(a, { full: true });
 
     expect(compact.length).toBeLessThan(full.length);
-    expect(compact).toContain("routine blind-playtest rotation candidate(s) omitted");
+    expect(compact).toContain("routine fresh-world review candidate(s) omitted");
     expect(compact).toContain("full list is in assessment.json");
     expect(full).toContain("why: The validator and exhaustive solver prove");
   });
@@ -284,8 +284,8 @@ describe("assess()", () => {
       id: "playtest-wolf_winter",
       category: "content_fix",
       target: "wolf_winter",
-      title: 'Blind-playtest quest "wolf_winter" — structurally clean',
-      rationale: "Only a fresh blind player can judge experience quality.",
+      title: 'Review quest "wolf_winter" using fresh-overworld blind evidence — structurally clean',
+      rationale: "Only a fresh-overworld blind player can judge experience quality.",
       evidence: ["rotation due"],
       impact: 1,
       effort: "M",
@@ -298,7 +298,9 @@ describe("assess()", () => {
     };
 
     const out = formatAssessment(fixture, { maxCandidates: 3 });
-    expect(out).toContain('Next blind rotation: Blind-playtest quest "wolf_winter"');
+    expect(out).toContain(
+      'Next quest review: Review quest "wolf_winter" using fresh-overworld blind evidence',
+    );
   });
 });
 
@@ -382,9 +384,9 @@ describe("blind-pass rotation (bug_0128)", () => {
     expect(offsets.has("sunken_barrow")).toBe(true);
   });
 
-  it("parseAttendanceOffsets recognizes current quest-labeled recommendation lines", () => {
+  it("parseAttendanceOffsets recognizes current fresh-world quest-review recommendation lines", () => {
     const text =
-      '- Next best improvement (recommended): [content_fix] Blind-playtest quest "bellfounders_alarm" — structurally clean.';
+      '- Next best improvement (recommended): [content_fix] Review quest "bellfounders_alarm" using fresh-overworld blind evidence — structurally clean.';
     const offsets = parseAttendanceOffsets(text);
     expect(offsets.has("bellfounders_alarm")).toBe(true);
     expect(offsets.has("quest")).toBe(false);

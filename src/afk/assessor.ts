@@ -277,13 +277,13 @@ export function packStem(ref: string): string {
 export function parseAttendanceOffsets(loopStateText: string): Map<string, number> {
   const map = new Map<string, number>();
   // bug_0293: ALSO match the model-INDEPENDENT code-written recommendation line
-  // `Blind-playtest "<id>"` (legacy), `Blind-playtest quest "<id>"` (current title
-  // form), compact `Rec: playtest-<id>` loop-driver entries, and the looser
+  // `Blind-playtest "<id>"` / `Blind-playtest quest "<id>"` (legacy), current
+  // `Review quest "<id>"` titles, compact `Rec: playtest-<id>` loop-driver entries, and the looser
   // Sonnet-era agent phrasing "blind pass on `<quest>`". The wrapper class gains
   // `"` so the quoted id is skipped; `i` tolerates sentence-start caps; the `_v\d+`
   // on a captured pack id is normalized by packStem.
   const re =
-    /(?:(?:Mandatory LLM playtest target this cycle:|Mandated blind pass ran on|blind pass on|Blind-playtest(?:\s+quest)?)\s+["`*]*|Rec:\s+playtest-)([A-Za-z0-9_./-]+)/gi;
+    /(?:(?:Mandatory LLM playtest target this cycle:|Mandated blind pass ran on|blind pass on|Blind-playtest(?:\s+quest)?|Review\s+quest)\s+["`*]*|Rec:\s+playtest-)([A-Za-z0-9_./-]+)/gi;
   for (const m of loopStateText.matchAll(re)) {
     const captured = m[1];
     if (captured === undefined) continue;
@@ -558,9 +558,10 @@ export function assess(root: string): Assessment {
 
     // content_fix is driven by VALIDATOR findings — the deterministic, code-checkable
     // signal (the "specific dev tests"). Player-facing QUALITY (signposting, clarity,
-    // pacing) is judged only by the mandatory blind LLM playtest each cycle, so a
-    // structurally-clean quest carries a low-priority blind-playtest rotation stub rather
-    // than any heuristic-bot coverage score. (Two testing modes only: dev tests + blindtest.)
+    // pacing) is judged only by the mandatory fresh-overworld blind LLM playtest each
+    // cycle, so a structurally-clean quest carries a low-priority review rotation stub
+    // rather than any heuristic-bot coverage score. The quest is the EDIT/REVIEW target,
+    // never a direct live-playtest launch. (Two testing modes only: dev tests + blindtest.)
     if (warnings > 0) {
       const impact = Math.min(5, 1 + Math.ceil(warnings / 3));
       candidates.push({
@@ -577,17 +578,18 @@ export function assess(root: string): Assessment {
       });
     } else {
       // Structurally clean (the validator + exhaustive solver prove it winnable and
-      // sound): keep it on the radar as a LOW-priority blind-playtest review, rotated by
-      // recency. The blind LLM playtest is the only judge of its signposting/clarity/pacing.
+      // sound): keep it on the radar as a LOW-priority quest review, rotated by recency.
+      // The fresh-overworld blind LLM playtest is the only live judge of its
+      // signposting/clarity/pacing; the player is never dropped directly into this quest.
       candidates.push({
         id: `playtest-${s.world_quest_id}`,
         category: "content_fix",
         target: s.world_quest_id,
-        title: `Blind-playtest quest "${s.world_quest_id}" — structurally clean; only a fresh blind LLM player can judge its quality`,
+        title: `Review quest "${s.world_quest_id}" using fresh-overworld blind evidence — structurally clean`,
         rationale:
-          "The validator and exhaustive solver prove this quest is winnable and sound; only a fresh blind LLM playtest reveals signposting/clarity/pacing issues a static check can't see.",
+          "The validator and exhaustive solver prove this quest is winnable and sound; only a fresh-overworld blind LLM run reveals signposting/clarity/pacing issues a static check can't see. Keep the quest as the review target without dropping the player directly into it.",
         evidence: [
-          "validator clean; due for a fresh blind LLM playtest (the rotation's quality judge)",
+          "validator clean; due as the rotating quest review target after a fresh-overworld blind pass",
         ],
         impact: 1,
         effort: "M",
@@ -859,6 +861,10 @@ function isRoutinePlaytestCandidate(c: ImprovementCandidate): boolean {
   );
 }
 
+function isRoutineQuestReviewCandidate(c: ImprovementCandidate): boolean {
+  return isRoutinePlaytestCandidate(c) && c.target !== OVERWORLD_PLAYTEST_TARGET;
+}
+
 export function formatAssessment(a: Assessment, opts: AssessmentFormatOptions = {}): string {
   const full = opts.full === true;
   const maxCandidates = opts.maxCandidates ?? 8;
@@ -892,7 +898,7 @@ export function formatAssessment(a: Assessment, opts: AssessmentFormatOptions = 
   lines.push("");
   lines.push("## Ranked candidates");
   let shown = 0;
-  let shownQuestPlaytest = false;
+  let shownQuestReview = false;
   let omittedRoutine = 0;
   let omittedOther = 0;
   a.candidates.forEach((c, i) => {
@@ -906,7 +912,7 @@ export function formatAssessment(a: Assessment, opts: AssessmentFormatOptions = 
       return;
     }
     lines.push(`${i + 1}. [${c.score}] (${c.category}/${c.effort}) ${c.title}`);
-    if (c.title.startsWith('Blind-playtest quest "')) shownQuestPlaytest = true;
+    if (isRoutineQuestReviewCandidate(c)) shownQuestReview = true;
     if (full || !isRoutinePlaytestCandidate(c)) {
       lines.push(`     why: ${c.rationale}`);
       for (const e of c.evidence) lines.push(`     · ${e}`);
@@ -915,18 +921,14 @@ export function formatAssessment(a: Assessment, opts: AssessmentFormatOptions = 
   });
   if (!full && omittedRoutine > 0) {
     lines.push(
-      `... ${omittedRoutine} routine blind-playtest rotation candidate(s) omitted; full list is in assessment.json.`,
+      `... ${omittedRoutine} routine fresh-world review candidate(s) omitted; full list is in assessment.json.`,
     );
     // A hotspot-heavy backlog can occupy every detailed compact row. Keep the
-    // mandatory quest rotation target visible even then, so an operator can run
-    // the required fresh blind pass without opening the JSON artifact.
-    if (!shownQuestPlaytest) {
-      const nextQuestRotation = a.candidates.find(
-        (candidate) =>
-          isRoutinePlaytestCandidate(candidate) &&
-          candidate.title.startsWith('Blind-playtest quest "'),
-      );
-      if (nextQuestRotation) lines.push(`- Next blind rotation: ${nextQuestRotation.title}`);
+    // rotating quest REVIEW target visible even then. Its live evidence still comes
+    // only from the separate required fresh-overworld pass.
+    if (!shownQuestReview) {
+      const nextQuestRotation = a.candidates.find(isRoutineQuestReviewCandidate);
+      if (nextQuestRotation) lines.push(`- Next quest review: ${nextQuestRotation.title}`);
     }
   }
   if (!full && omittedOther > 0) {

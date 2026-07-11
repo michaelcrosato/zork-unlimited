@@ -35,6 +35,13 @@ describe("fill-prompt", () => {
 });
 
 describe("fleet planning", () => {
+  it("defaults milestone fleets to exactly 100 fresh-overworld runs", () => {
+    const opts = parseFleetArgs([]);
+    expect(opts.count).toBe(100);
+    expect(opts.target).toBe("overworld");
+    expect(planFleetRuns(opts)).toHaveLength(100);
+  });
+
   it("rotates personas deterministically and honors seed base", () => {
     const runs = planFleetRuns(
       parseFleetArgs(["--count", "7", "--personas", "mixed", "--seed-base", "100"]),
@@ -44,10 +51,43 @@ describe("fleet planning", () => {
     expect(runs[5].persona).toBe("explorer"); // 5 % 5 wraps
     expect(new Set(runs.map((r: { persona: string }) => r.persona)).size).toBe(5);
   });
-  it("quest targets parse and reach the plan", () => {
-    const runs = planFleetRuns(parseFleetArgs(["--count", "2", "--target", "quest:sunken_barrow"]));
+  it("explicit mock quest targets parse and reach the structural plan", () => {
+    const runs = planFleetRuns(
+      parseFleetArgs(["--mock", "--count", "2", "--target", "quest:sunken_barrow"]),
+    );
     expect(runs.every((r: { target: string }) => r.target === "quest:sunken_barrow")).toBe(true);
   });
+
+  it("rejects quest targets for live fleets regardless of flag order", () => {
+    expect(() => parseFleetArgs(["--target", "quest:sunken_barrow"])).toThrow(
+      /live blind LLM runs must target overworld/i,
+    );
+    expect(() => parseFleetArgs(["--target", "quest:sunken_barrow", "--count", "2"])).toThrow(
+      /quest targets require explicit --mock/i,
+    );
+    expect(parseFleetArgs(["--target", "quest:sunken_barrow", "--mock"]).target).toBe(
+      "quest:sunken_barrow",
+    );
+
+    const bypassedParser = parseFleetArgs([]);
+    bypassedParser.target = "quest:sunken_barrow";
+    expect(() => planFleetRuns(bypassedParser)).toThrow(
+      /live blind LLM runs must target overworld/i,
+    );
+  });
+
+  it("rejects malformed targets even for structural mock fleets", () => {
+    expect(() => parseFleetArgs(["--mock", "--target", "sunken_barrow"])).toThrow(
+      /overworld or quest:<id>/i,
+    );
+    expect(() => parseFleetArgs(["--mock", "--target", "quest:"])).toThrow(
+      /overworld or quest:<id>/i,
+    );
+    expect(() => parseFleetArgs(["--mock", "--target", "quest:two words"])).toThrow(
+      /overworld or quest:<id>/i,
+    );
+  });
+
   it("report filenames match the ledger regex", () => {
     const p = reportPathFor("blind-tester/reports", "20260709T010203Z", "overworld", 12);
     expect(p.replace(/\\/g, "/").split("/").pop()).toMatch(/^\d{8}T\d{6}Z_.+_seed-?\d+\.md$/);

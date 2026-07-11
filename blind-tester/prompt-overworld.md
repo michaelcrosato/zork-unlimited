@@ -34,6 +34,9 @@ STRICT RULES:
 READING THE WORLD (it is COMPACT):
 
 - {{START_INSTRUCTION}}
+- The one-time `tutorial` is the same orientation a new human player receives.
+  Follow it as your opening field guide, and judge whether it is enough to begin
+  without outside knowledge.
 - Most `context` fields are POSITIONAL TUPLES, and the `legend` (sent ONCE, in the
   start_overworld response) tells you what each position means. KEEP that legend —
   later responses return only raw tuples with no legend. Key fields:

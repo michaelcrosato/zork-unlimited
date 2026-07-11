@@ -9,10 +9,9 @@
  * invocation inside run.sh (see run.sh's default path). persona × model ×
  * seed × target IS the diversity mechanism here; do not invent sampling flags.
  *
- * `--mock` sets BLIND_AGENT_CMD to `blind-tester/mock-agent.mjs` (Task 13,
- * zero tokens) in the child env; this module does not care whether that file
- * exists yet — a missing mock agent just makes every run.sh spawn fail, which
- * this orchestrator already treats as an ordinary retryable/failed run.
+ * `--mock` asks run.sh to use its bundled mock agent (zero tokens). Only this
+ * explicit structural mode may plan a targeted quest; every live fleet starts
+ * each agent from a fresh overworld game.
  */
 import { spawn, execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, appendFileSync, writeFileSync, readdirSync } from "node:fs";
@@ -22,7 +21,6 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 const HERE = dirname(fileURLToPath(import.meta.url));
 const GAME_DIR = resolve(HERE, "..");
 const RUN_SH = join(HERE, "run.sh");
-const MOCK_AGENT = join(HERE, "mock-agent.mjs");
 
 // Rotation order for `--personas mixed`; must match the shipped persona files
 // in blind-tester/personas/ (see fill-prompt.mjs / run.sh's --persona flag).
@@ -107,7 +105,19 @@ export function parseFleetArgs(argv) {
   assertFleetInt(opts.concurrency, "concurrency", 1);
   assertFleetInt(opts.seedBase, "seed-base", undefined);
   assertFleetInt(opts.maxRetries, "max-retries", 0);
+  assertFleetTargetPolicy(opts);
   return opts;
+}
+
+function assertFleetTargetPolicy(opts) {
+  if (opts.target !== "overworld" && !/^quest:\S+$/.test(String(opts.target ?? ""))) {
+    throw new Error(`fleet: --target must be overworld or quest:<id> (got ${opts.target})`);
+  }
+  if (!opts.mock && opts.target !== "overworld") {
+    throw new Error(
+      "fleet: live blind LLM runs must target overworld; quest targets require explicit --mock",
+    );
+  }
 }
 
 /** Deterministic (never random) model pick for `--model mix`, by run index. */
@@ -120,6 +130,9 @@ function modelForMixIndex(modelMix, i) {
 
 /** Expand parsed fleet options into the concrete list of runs (pure; exported for tests). */
 export function planFleetRuns(opts) {
+  // Programmatic callers do not necessarily pass through parseFleetArgs; keep
+  // the fresh-world live contract at the planning boundary as well.
+  assertFleetTargetPolicy(opts);
   const runs = [];
   for (let i = 0; i < opts.count; i++) {
     const seed = opts.seedBase + i;
@@ -343,16 +356,12 @@ async function executeRun(run, { reportsDir, stamp, opts, bashPath, fleetDir }) 
       outPrefix,
     ];
     args.push(...(questId ? ["--quest", questId] : ["--overworld"]));
+    if (opts.mock) args.push("--mock");
 
-    const env = { ...process.env };
-    if (opts.mock) {
-      // Forward-slashed to be a safe bash -c command-line fragment on Windows
-      // (run.sh does `bash -c "$BLIND_AGENT_CMD"`, so this value is parsed as
-      // shell syntax, not pre-split argv).
-      env.BLIND_AGENT_CMD = `node "${MOCK_AGENT.replace(/\\/g, "/")}"`;
-    }
-
-    const bashResult = await spawnAsync(bashPath, [RUN_SH, ...args], { cwd: GAME_DIR, env });
+    const bashResult = await spawnAsync(bashPath, [RUN_SH, ...args], {
+      cwd: GAME_DIR,
+      env: { ...process.env },
+    });
     lastExit = bashResult.status ?? 1;
     let verifyResult = null;
 

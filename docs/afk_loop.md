@@ -19,8 +19,8 @@ loop.sh  (outer driver — orchestration + the bar)
 │     Compiled feedback hot spots (docs/testing_pyramid.md), when present, are
 │     a primary input to the ranking.
 │     Emits: ai-runs/<id>/{assessment.md, prompt.md} plus latest-cycle.json at
-│     the ai-runs/ root (which records the quest/source to playtest and where
-│     the playtest report must go).
+│     the ai-runs/ root (which records the improvement source, fresh-overworld
+│     playtest contract, and where the playtest report must go).
 │
 ├─ 2. CRAWL GATE (pre)   npm run crawl:smoke — Tier 1 of the testing pyramid.
 │     Must be green before the agent touches anything; red here means the
@@ -28,17 +28,20 @@ loop.sh  (outer driver — orchestration + the bar)
 │
 ├─ 3. WORK          the operating agent (claude -p / codex exec / Agent tool)
 │     Reads the cycle prompt and:
-│       a. MANDATORY LLM PLAYTEST — spawns a fresh, no-context subagent that plays
-│          the cycle's target — the CORE GAME (overworld fresh start; the baseline
-│          for engine/repo cycles and the default `npm run blind`) or one targeted
-│          quest — purely through the mcp__adventureforge__* tools
+│       a. MANDATORY LLM PLAYTEST — spawns a fresh, no-context subagent that starts
+│          a brand-new CORE GAME overworld session and discovers content in-world —
+│          purely through the mcp__adventureforge__* tools. This fresh-overworld
+│          rule applies to every live reasoning-agent blind run, including a cycle
+│          that changed one quest; direct quest drop-ins are non-LLM smoke/mock/
+│          crawler structural checks only
 │          (docs/blind_playtest_protocol.md) and writes a structured report
 │          (route, mechanics, clarity 1-5, enjoyment 1-5, findings, verdict, and
 │          the mandatory fenced json exit-interview block — reports without a
 │          schema-valid block are rejected by src/blind/report_verifier.ts) to
 │          the path in latest-cycle.json. This is the per-cycle quality signal.
-│          Milestone/harvest cycles run `npm run fleet -- --count N` instead of a
-│          single blind pass (docs/testing_pyramid.md).
+│          Milestone/harvest cycles run
+│          `npm run fleet -- --count 100 --target overworld` instead of a single
+│          blind pass (docs/testing_pyramid.md).
 │       b. ONE improvement — content edit / apply_content_patch, or an engine/repo
 │          change (full authority; new mechanics need no §14 ceremony, but stay
 │          verified). Bugs get a traces/bugs/ artifact + a tests/regression/ test.
@@ -160,7 +163,7 @@ npm run loop:status     # project-scoped status (breaker/velocity telemetry need
 npm run loop:stop       #   a wrapper log: ./loop.sh 2>&1 | tee ai-runs/wrapper.log)
 
 npm run crawl:smoke               # the crawl gate itself, run standalone (docs/testing_pyramid.md)
-npm run fleet -- --count 20       # milestone/harvest-cycle blind fleet (real tokens)
+npm run fleet -- --count 100 --target overworld # milestone/harvest blind fleet (real tokens)
 npm run fleet:mock -- --count 2   # zero-token fleet dry run
 npm run feedback:compile          # compile verified reports + crawl findings into hotspots.{json,md}
 ```

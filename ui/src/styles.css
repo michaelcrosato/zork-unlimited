@@ -60,6 +60,134 @@ button:hover {
   padding: 2rem 1.25rem 4rem;
 }
 
+.tutorial-page {
+  align-items: center;
+  display: grid;
+  min-height: 100svh;
+  padding: clamp(0.65rem, 2.5vw, 1.75rem);
+}
+
+.tutorial-card {
+  background:
+    linear-gradient(135deg, rgba(32, 29, 24, 0.98), rgba(17, 32, 29, 0.96)),
+    var(--panel);
+  border: 1px solid color-mix(in srgb, var(--road) 48%, var(--line));
+  border-radius: 12px;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.48);
+  display: grid;
+  gap: clamp(0.7rem, 2vh, 1.2rem);
+  margin: 0 auto;
+  max-width: 1020px;
+  padding: clamp(0.8rem, 3vw, 2rem);
+  width: 100%;
+}
+
+.tutorial-heading {
+  border-bottom: 1px solid var(--line);
+  display: grid;
+  gap: 0.35rem;
+  padding-bottom: clamp(0.55rem, 1.5vh, 1rem);
+}
+
+.tutorial-heading .kicker,
+.tutorial-heading h1,
+.tutorial-heading p,
+.tutorial-step h2,
+.tutorial-step p,
+.tutorial-footer p {
+  margin: 0;
+}
+
+.tutorial-heading h1 {
+  font-size: clamp(1.8rem, 5vw, 3.25rem);
+}
+
+.tutorial-heading > p:last-child {
+  color: #d8d8cc;
+  font-size: clamp(0.88rem, 1.8vw, 1.05rem);
+  max-width: 68ch;
+}
+
+.tutorial-steps {
+  counter-reset: tutorial-step;
+  display: grid;
+  gap: clamp(0.45rem, 1.5vw, 0.9rem);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.tutorial-step {
+  background: color-mix(in srgb, var(--panel-3) 88%, black);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--water);
+  border-radius: 8px;
+  display: grid;
+  gap: 0.65rem;
+  grid-template-columns: auto 1fr;
+  padding: clamp(0.6rem, 1.7vw, 1rem);
+}
+
+.tutorial-step:nth-child(2),
+.tutorial-step:nth-child(3) {
+  border-left-color: var(--road);
+}
+
+.tutorial-step:nth-child(4) {
+  border-left-color: var(--forest);
+}
+
+.tutorial-number {
+  color: var(--road);
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.tutorial-step h2 {
+  color: var(--ink);
+  font-size: clamp(0.9rem, 2vw, 1.05rem);
+  text-transform: uppercase;
+}
+
+.tutorial-step p {
+  color: #c7c8bb;
+  font-size: clamp(0.76rem, 1.55vw, 0.92rem);
+  line-height: 1.45;
+  margin-top: 0.35rem;
+}
+
+.tutorial-footer {
+  align-items: center;
+  border-top: 1px solid var(--line);
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  padding-top: clamp(0.55rem, 1.5vh, 1rem);
+}
+
+.tutorial-footer p {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.tutorial-footer button {
+  background: var(--road);
+  border-color: var(--road);
+  color: #17140e;
+  font-family: "Outfit", sans-serif;
+  font-weight: 700;
+  min-width: 10rem;
+}
+
+.tutorial-footer button:hover,
+.tutorial-footer button:focus-visible {
+  background: #ecc66f;
+  border-color: #f7d98f;
+}
+
 .world-header {
   border-bottom: 1px solid var(--line);
   margin-bottom: 1.25rem;
@@ -703,5 +831,95 @@ dd {
   .location-topline {
     align-items: stretch;
     flex-direction: column;
+  }
+}
+
+@media (max-width: 520px) {
+  .tutorial-card {
+    gap: 0.55rem;
+    padding: 0.7rem;
+  }
+
+  .tutorial-heading {
+    padding-bottom: 0.5rem;
+  }
+
+  .tutorial-heading h1 {
+    font-size: clamp(1.55rem, 9vw, 2.25rem);
+  }
+
+  .tutorial-heading > p:last-child {
+    font-size: 0.78rem;
+    line-height: 1.35;
+  }
+
+  .tutorial-steps {
+    gap: 0.4rem;
+  }
+
+  .tutorial-step {
+    display: block;
+    padding: 0.5rem;
+  }
+
+  .tutorial-number {
+    display: block;
+    font-size: 0.66rem;
+    margin-bottom: 0.15rem;
+  }
+
+  .tutorial-step h2 {
+    font-size: 0.76rem;
+  }
+
+  .tutorial-step p {
+    font-size: 0.68rem;
+    line-height: 1.3;
+    margin-top: 0.2rem;
+  }
+
+  .tutorial-footer {
+    gap: 0.5rem;
+    padding-top: 0.5rem;
+  }
+
+  .tutorial-footer p {
+    font-size: 0.68rem;
+    line-height: 1.3;
+  }
+
+  .tutorial-footer button {
+    min-height: 2.35rem;
+    min-width: 8.75rem;
+    padding: 0.5rem 0.7rem;
+  }
+}
+
+@media (max-height: 560px) and (min-width: 521px) {
+  .tutorial-card {
+    gap: 0.5rem;
+    padding-block: 0.65rem;
+  }
+
+  .tutorial-heading {
+    padding-bottom: 0.45rem;
+  }
+
+  .tutorial-heading h1 {
+    font-size: 1.75rem;
+  }
+
+  .tutorial-heading > p:last-child,
+  .tutorial-step p {
+    font-size: 0.72rem;
+    line-height: 1.3;
+  }
+
+  .tutorial-step {
+    padding: 0.55rem;
+  }
+
+  .tutorial-footer {
+    padding-top: 0.45rem;
   }
 }

@@ -64,6 +64,7 @@ describe("compact legends", () => {
 
     const restored = a.restore_overworld_session({ snapshot: exported.snapshot });
     expect(restored.legend).toBe(OVERWORLD_COMPACT_LEGEND);
+    expect("tutorial" in restored).toBe(false);
     expectLegendCovers(restored.legend!, restored.context as Record<string, unknown>);
 
     const reread = a.get_overworld_session_context({ session_id: started.session_id });

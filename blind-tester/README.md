@@ -19,19 +19,21 @@ This harness is the right-hand column: the model is an external player that reac
 the game **only** through the `mcp__adventureforge__*` MCP tools. That uses your
 subscription allowance, which is the best value — exactly per the project goal.
 
-## Two blind modes
+## Live blind and structural modes
 
-- **Overworld mode (the DEFAULT):** the genuine _new-player_ test. The agent
-  starts the **core game** — the New York open world — from a fresh start in the
-  starting town, orients, discovers local work by scouting/talking/exploring,
-  travels a road (resolving encounters), and discovers+plays a quest through the
+- **Live overworld mode (the only reasoning-agent mode):** the genuine
+  _new-player_ test. Every live blind agent starts the **core game** from a
+  brand-new New York overworld session in the starting town, reads the same
+  one-time tutorial a human player sees, orients, discovers local work by
+  scouting/talking/exploring, travels a road (resolving
+  encounters), and discovers+plays a quest through the
   overworld→quest bridge, then reports on the _opening experience_. This is "how
   does a first-time player actually experience the game," not a quest snippet.
-- **Quest mode (`--quest <id>`, targeted/legacy):** drop the agent straight into
-  one shipped quest and have it play that quest to an ending. Kept for testing a
-  specific piece of content (this is what the AFK loop runs each cycle on the
-  quest it just changed) — it is NOT how a new player meets the game, so it is
-  never the default.
+- **Targeted quest mode (`--quest <id>`, structural only):** a direct drop-in for
+  non-LLM smoke/mock checks of one shipped quest. The mechanical crawler also
+  sweeps quests directly. Never combine this target with a live reasoning agent;
+  even when one quest changed, live validation starts fresh and discovers it
+  through the overworld.
 
 ## Quickstart
 
@@ -46,12 +48,10 @@ npm run blind
 # 2) Same, watched live:
 npm run blind --spectate                  # then `npm run spectate` in another terminal
 
-# 3) Targeted quest mode — blind-test ONE shipped quest (what the AFK loop uses):
-npm run blind --quest=sunken_barrow --seed=11
+# 3) Targeted quest plumbing — structural smoke only, NO LLM/tokens:
+bash blind-tester/run.sh --smoke --quest sunken_barrow --seed 11
 
 # Custom source/model without npm argument-forwarding warnings:
-bash blind-tester/run.sh --smoke --quest sunken_barrow --seed 11
-bash blind-tester/run.sh --quest sunken_barrow --seed 11 --model opus
 bash blind-tester/run.sh --model opus     # overworld (default), opus player
 ```
 
@@ -80,17 +80,18 @@ MCP session, start the server with `npm run mcp -- --spectate [path]
 `AF_SPECTATE_DELAY_MS=<n>`). The delay paces every tool response; leave it off
 for a full-speed feed. Spectate is fully inert when not enabled.
 
-## Fleet mode — N blind playtests at once
+## Fleet mode — 100 fresh-game blind playtests
 
 `blind-tester/fleet.mjs` (Tier 2 of the testing pyramid, docs/testing_pyramid.md)
-runs N independent blind playtests with bounded concurrency, resume, and a
-manifest — each one an ordinary `run.sh` spawn under the hood:
+runs the 100 independent fresh-overworld playtests required at a milestone or
+feedback-harvest cycle, with bounded concurrency, resume, and a manifest — each
+one an ordinary `run.sh` spawn under the hood:
 
 ```bash
-npm run fleet -- --count 20 --concurrency 4 --model mix --personas mixed \
+npm run fleet -- --count 100 --concurrency 4 --model mix --personas mixed \
   --target overworld --seed-base 1000
-npm run fleet -- --count 5 --target quest:sunken_barrow --seed-base 2000
 npm run fleet:mock -- --count 2     # zero-token dry run (see Mock mode below)
+npm run fleet:mock -- --count 2 --target quest:sunken_barrow # structural drop-in
 ```
 
 - **Personas**: `personas/{default,explorer,speedrunner,breaker,casual,
@@ -99,22 +100,26 @@ lore-reader}.md`. `--personas mixed` rotates through explorer → speedrunner
   `--personas <name>` pins one persona for every run.
 - **Model**: `--model <alias>` (`haiku`, `sonnet`, `opus`) or `--model mix`
   (deterministic 9 haiku : 1 sonnet weighting by index). No temperature/top_p
-  flag exists — persona × model × seed × target is the diversity axis.
+  flag exists — persona × model × seed is the live diversity axis; every live
+  member keeps the fresh-overworld target.
 - **Resume**: re-running the same fleet command skips any seed/target that
   already has a verified report; failed attempts back off exponentially up to
   `--max-retries` (default 2).
 - **Output**: reports in `reports/` (or `--out <dir>`); a manifest at
   `ai-runs/fleet/<label>/manifest.jsonl` and a `summary.json` alongside it.
 - Live (non-mock) fleets spend real tokens — run them from a plain shell, not
-  from inside a Claude Code session (nested CLI auth returns 401 there).
+  from inside a Claude Code session (nested CLI auth returns 401 there). A live
+  fleet always uses `--target overworld`; `quest:<id>` is accepted only by mock
+  structural runs.
 
 ## Mock mode — zero-token CI fleet
 
 `--mock` sets `BLIND_AGENT_CMD` to `mock-agent.mjs`, a deterministic
 MCP-speaking scripted agent: it plays for real over the MCP tools with no LLM
-and no tokens. `npm run fleet:mock` is what CI runs (small acceptance e2e). The standalone `npm run fleet:mock -- --count 20` lane verified 20/20 in ~18s.
+and no tokens. `npm run fleet:mock` is what CI runs (small acceptance e2e),
 exercising the full fleet → verified reports → `feedback:compile` pipeline on
-every push with no API key required.
+every push with no API key required. As historical capacity evidence, the
+standalone `npm run fleet:mock -- --count 20` lane verified 20/20 in ~18s.
 
 ## Platforms
 
@@ -125,10 +130,11 @@ never hijack the run).
 **Passing flags from PowerShell:** PowerShell strips a bare `--` (it's PS's own
 end-of-options token), after which npm eats `--flags` as npm configs. The
 launcher recovers them automatically, but the reliable shapes are the equals
-form without `--` — `npm run blind --quest=breaking_weir --spectate
---delay-ms=1500` — or `BLIND_*` env vars. In Git Bash / Linux / macOS,
-`npm run blind -- --quest breaking_weir` also works as usual. A bad quest id is
-rejected before any tokens are spent. One Windows-specific rule the harness already handles:
+form without `--` — `npm run blind --smoke --quest=breaking_weir --seed=11` —
+or `BLIND_*` env vars. In Git Bash / Linux / macOS,
+`npm run blind -- --smoke --quest breaking_weir` also works as usual. These are
+structural smoke invocations; omitting `--smoke` from a quest target is rejected
+before tokens are spent. One Windows-specific rule the harness already handles:
 the MCP server launch never relies on the client honoring a `cwd` field
 (`npm --prefix` self-cds instead), because the Claude CLI on Windows silently
 ignores stdio-server `cwd`. Note a checkout `npm install`-ed on Windows cannot
@@ -164,8 +170,9 @@ no claude envelope to measure.
    level 2 is the tightening, tracked as future work.
 
 This mirrors the canonical procedure in [`docs/blind_playtest_protocol.md`](../docs/blind_playtest_protocol.md);
-the prompt in [`prompt.md`](./prompt.md) reuses its report format (clarity/enjoyment
-1-5, severity-tagged findings) so reports are comparable to the AFK loop's.
+the live [`prompt-overworld.md`](./prompt-overworld.md) carries its full
+new-player contract. The structural-only [`prompt.md`](./prompt.md) reuses the
+same report format (clarity/enjoyment 1-5, severity-tagged findings).
 
 ## Files
 
@@ -173,17 +180,18 @@ the prompt in [`prompt.md`](./prompt.md) reuses its report format (clarity/enjoy
   prompt, runs `claude -p` from an isolated dir, saves the report. `--smoke` skips
   the LLM.
 - `smoke.mjs` — token-free MCP smoke test via the MCP SDK client: spawn server,
-  `tools/list`, `start_world_quest`, step a few actions, assert. Run
+  `tools/list`, exercise overworld and direct quest starts, step a few actions,
+  assert. Run
   this anytime to verify the plumbing without spending budget.
-- `prompt.md` — the locked-down blind player prompt (start instruction / seed filled
-  by the runner).
+- `prompt-overworld.md` — the locked-down live new-player prompt.
+- `prompt.md` — the direct-quest prompt retained for non-LLM structural fixtures.
 - `reports/` — run outputs (gitignored).
 
 ## Options
 
 ```
---quest <id>     targeted quest mode: blind-test ONE shipped quest by id (a dev/QA drop-in)
-                 (without it, the run plays the CORE GAME open world — the default)
+--quest <id>     target ONE shipped quest for a structural dev/QA drop-in;
+                 requires --smoke (or --mock through fleet), never a live agent
 --seed <n>       deterministic seed (default: 7)
 --model <alias>  claude model alias: sonnet (default, best value) | opus
 --out <prefix>   report path prefix (default: reports/<stamp>_<source>_seed<n>)
@@ -193,7 +201,8 @@ the prompt in [`prompt.md`](./prompt.md) reuses its report format (clarity/enjoy
 --delay-ms <n>   pace every tool response by n ms (implies --spectate)
 ```
 
-Environment: `BLIND_QUEST_ID`, `BLIND_MODEL`, `BLIND_TIMEOUT` (seconds, default 900),
+Environment: `BLIND_QUEST_ID` (structural runs only), `BLIND_MODEL`,
+`BLIND_TIMEOUT` (seconds, default 900),
 `BLIND_SPECTATE=1`, `BLIND_SPECTATE_DELAY_MS`, `BLIND_BASH` (Windows: path to Git
 Bash if auto-detection fails).
 
@@ -204,8 +213,11 @@ The default agent is `claude -p`. To use a different MCP-capable agent CLI, set
 `BLIND_MCP_CONFIG` (path to the generated MCP config), `BLIND_QUEST_ID`,
 `BLIND_SEED`.
 
+Provider overrides do not change the policy: any live reasoning agent starts a
+fresh overworld game. `BLIND_QUEST_ID` is populated only by structural fixtures.
+
 ```bash
-BLIND_AGENT_CMD='codex exec --ignore-user-config --ephemeral --skip-git-repo-check --sandbox read-only -' npm run blind --quest=tide_mill --seed=137
+BLIND_AGENT_CMD='codex exec --ignore-user-config --ephemeral --skip-git-repo-check --sandbox read-only -' npm run blind --seed=137
 BLIND_AGENT_CMD='gemini -p' npm run blind
 ```
 

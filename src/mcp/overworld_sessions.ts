@@ -4,6 +4,7 @@ import {
   type OverworldCompactView,
 } from "../world/compact_view.js";
 import type { OverworldManifest } from "../world/overworld.js";
+import { freshGameTutorial, type FreshGameTutorial } from "../world/fresh_game_tutorial.js";
 import { OverworldSession, type OverworldSessionSnapshot } from "../world/session.js";
 import type { OverworldView } from "../world/session_view.js";
 
@@ -53,6 +54,8 @@ export type OverworldMcpViewField<Args extends OverworldMcpResponseOptions> = Ar
 export type OverworldMcpStartResponse<Args extends OverworldMcpResponseOptions> = {
   session_id: string;
   snapshot_hash: string;
+  /** One-time orientation for this genuinely fresh game. */
+  tutorial: FreshGameTutorial;
   /** Field guide for the compact context; sent only on session-creating responses. */
   legend?: OverworldCompactLegend;
 } & OverworldMcpViewField<Args>;
@@ -387,6 +390,7 @@ export class OverworldMcpSessionStore {
     return {
       session_id: created.session_id,
       snapshot_hash: this.snapshotHash(created.session),
+      tutorial: freshGameTutorial(),
       // The legend rides only on session-creating responses (here and in
       // restoreResponse), keeping every subsequent per-action payload lean.
       ...(args.compact_context === true ? { legend: OVERWORLD_COMPACT_LEGEND } : {}),

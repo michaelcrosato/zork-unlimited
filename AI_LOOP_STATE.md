@@ -141,3 +141,11 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Blind playtest: 25-run `overworld` Codex batch seeds 491-515 all exited 0; clarity 25x4/5, enjoyment 25x4/5, replay 25x true; feedback ledger now has 335 accepted reports.
 - Self-critique: first-action signposting improved but did not erase hidden-count scope confusion; completed quest/job/event listings and dialogue id/quote noise are now louder than opening-action uncertainty.
 - Guard: focused affected tests, `npm run health`, `npm run blind:feedback`, and reports `20260708T190115Z`-`20260708T190730Z` seeds 491-515 passed.
+## AFK Cycle 2026-07-11T18-29-31-038Z
+- Assess: rpg=12; world=12; candidates=16; the explicit tutorial/fresh-world/100-agent contract superseded stale hotspot-4a89fb42.
+- Change: one canonical four-step tutorial now opens every genuinely fresh UI/MCP game; resume, export, reads, and actions do not replay it.
+- Harness: live runner/fleet/AFK prompts reject quest drop-ins and always start overworld; targeted smoke/mock remains; milestone default is 100.
+- Blind playtest: fresh-overworld seed 930020 verified; it used the tutorial to discover and finish Wolf-Winter 60/60, clarity 4/5, enjoyment 4/5, replay yes.
+- Findings: no tutorial regression; second-town template repetition and road-only fatigue remain the next evidence questions.
+- Guard: post-crawl `20260711T184939Z`, browser 1280x720/390x844/320x568, and health (287 files, 2028 tests, all 12 packs) passed.
+- Next: commit this green contract, then run 100 fresh-overworld blind agents and compile their feedback.
