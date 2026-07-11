@@ -34,6 +34,7 @@ describe("recoverNpmEatenFlags", () => {
       npm_config_delay_ms: "1500",
       npm_config_mock: "true",
       npm_config_spectate: "true",
+      npm_config_persona: "breaker",
     });
     expect(args).toEqual(
       expect.arrayContaining([
@@ -43,6 +44,8 @@ describe("recoverNpmEatenFlags", () => {
         "1500",
         "--mock",
         "--spectate",
+        "--persona",
+        "breaker",
       ]),
     );
   });

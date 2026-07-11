@@ -166,9 +166,14 @@ describe("buildPrompt blind-playtest contract", () => {
   function expectFreshOverworldContract(prompt: string): void {
     expect(prompt).toContain("the CORE GAME — the open-world overworld from a FRESH start");
     expect(prompt).toContain("`npm run blind`");
-    expect(prompt).toContain("must start a new overworld game");
-    expect(prompt).toContain("Do not pass `--quest`, a quest id, or a saved session");
-    expect(prompt).toContain("discover quests through normal world play");
+    expect(prompt).toContain("`play_mode: pure`");
+    expect(prompt).toContain("`start_surface: fresh_overworld`");
+    expect(prompt).toContain(
+      "Do not pass `--quest`, a quest id, a persona overlay, or a saved session",
+    );
+    expect(prompt).toContain("Do not add");
+    expect(prompt).toContain("call-count stopping rule");
+    expect(prompt).toContain("interview only after exit");
     expect(prompt).not.toContain("world_quest_id=");
     expect(prompt).not.toContain("QUEST_ID");
     expect(prompt).not.toContain("playtest by world_quest_id");
@@ -247,7 +252,9 @@ describe("buildUltraplanPrompt blind-playtest contract", () => {
 
     expect(prompt).toContain("overworld from a FRESH start");
     expect(prompt).toContain("default `npm run blind`");
-    expect(prompt).toContain("Do not pass `--quest`, a quest id, or a saved session");
+    expect(prompt).toContain(
+      "Do not pass `--quest`, a quest id, a persona overlay, or a saved session",
+    );
     expect(prompt).toContain("only through normal overworld play");
     expect(prompt).not.toContain("world_quest_id=");
     expect(prompt).toContain(playtestRecord);

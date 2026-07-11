@@ -1,4 +1,5 @@
 import { sortedNumberMap, sortedStringMap, sortedStringSet } from "./session_collections.js";
+import { cloneJourneyContractSnapshot, type JourneyContractSnapshot } from "./journey_contract.js";
 import {
   OVERWORLD_SESSION_SAVE_VERSION,
   cloneJournalEntries,
@@ -35,6 +36,7 @@ export type OverworldSessionSnapshotBuildState = {
   regionRenown: ReadonlyMap<string, number>;
   completedRegionalArcIds: ReadonlySet<string>;
   pendingRoadEncounter: OverworldPendingRoadEncounter | null;
+  journey: JourneyContractSnapshot;
 };
 
 export function buildOverworldSessionSnapshot(
@@ -69,5 +71,6 @@ export function buildOverworldSessionSnapshot(
     pendingRoadEncounter: state.pendingRoadEncounter
       ? { edgeId: state.pendingRoadEncounter.edgeId }
       : null,
+    journey: cloneJourneyContractSnapshot(state.journey),
   };
 }

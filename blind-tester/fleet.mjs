@@ -6,8 +6,9 @@
  * Each run is a `blind-tester/run.sh` spawn (same script a solo `npm run blind`
  * uses), given a distinct seed/persona/model/target combination. There is NO
  * temperature/top_p knob — those flags do not exist on the `claude` CLI
- * invocation inside run.sh (see run.sh's default path). persona × model ×
- * seed × target IS the diversity mechanism here; do not invent sampling flags.
+ * invocation inside run.sh (see run.sh's default path). Seed × model is the
+ * live diversity mechanism here; pure live retention uses
+ * the neutral default persona so a test-directed role cannot bias continuation.
  *
  * `--mock` asks run.sh to use its bundled mock agent (zero tokens). Only this
  * explicit structural mode may plan a targeted quest; every live fleet starts
@@ -21,9 +22,13 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 const HERE = dirname(fileURLToPath(import.meta.url));
 const GAME_DIR = resolve(HERE, "..");
 const RUN_SH = join(HERE, "run.sh");
+// Standalone JS mirror of src/world/journey_contract.ts; pure reports are
+// independently schema-checked against these values before a row is verified.
+const PURE_SESSION_CONTRACT_VERSION = 1;
+const PURE_BASELINE_DECISIONS = 40;
 
-// Rotation order for `--personas mixed`; must match the shipped persona files
-// in blind-tester/personas/ (see fill-prompt.mjs / run.sh's --persona flag).
+// Rotation order for explicit structural `--mock --personas mixed`; live pure
+// fleets reject mixed/non-default personas.
 const PERSONA_ROTATION = ["explorer", "speedrunner", "breaker", "casual", "lore-reader"];
 
 // `--model mix` weighting: 9 haiku : 1 sonnet by default. There is no
@@ -53,7 +58,7 @@ export function parseFleetArgs(argv) {
     count: 100,
     concurrency: 4,
     model: "haiku",
-    personas: "mixed",
+    personas: "default",
     target: "overworld",
     seedBase: 1000,
     mock: false,
@@ -116,6 +121,11 @@ function assertFleetTargetPolicy(opts) {
   if (!opts.mock && opts.target !== "overworld") {
     throw new Error(
       "fleet: live blind LLM runs must target overworld; quest targets require explicit --mock",
+    );
+  }
+  if (!opts.mock && opts.personas !== "default") {
+    throw new Error(
+      "fleet: pure live runs use the default first-time-player persona; non-default or mixed personas require explicit --mock structural mode",
     );
   }
 }
@@ -254,14 +264,48 @@ function spawnAsync(cmd, args, opts) {
  * last step, but this is a second, independent pass, per the brief. Returns
  * stdout/stderr too (not just ok) so failed-attempt diagnostics can surface
  * *why* the reverify rejected an exit-0 run.sh. */
-async function verifyReport(reportMdPath) {
-  if (!existsSync(reportMdPath)) return { ok: false, stdout: "", stderr: "" };
+export function runSidecarPathFor(reportMdPath) {
+  return reportMdPath.endsWith(".md")
+    ? `${reportMdPath.slice(0, -".md".length)}.run.json`
+    : `${reportMdPath}.run.json`;
+}
+
+export async function verifyReportForResume(reportMdPath, requiredMode) {
+  const runSidecarPath = runSidecarPathFor(reportMdPath);
+  if (!existsSync(reportMdPath) || !existsSync(runSidecarPath)) {
+    return { ok: false, stdout: "", stderr: "", run: null };
+  }
   const result = await spawnAsync(
     "npm",
-    ["--silent", "exec", "tsx", "--", "scripts/verify-blind-report.ts", reportMdPath],
+    [
+      "--silent",
+      "exec",
+      "tsx",
+      "--",
+      "scripts/verify-blind-report.ts",
+      reportMdPath,
+      "--require-mode",
+      requiredMode,
+      "--run-sidecar",
+      runSidecarPath,
+      "--json",
+    ],
     { cwd: GAME_DIR, shell: process.platform === "win32" },
   );
-  return { ok: result.status === 0, stdout: result.stdout, stderr: result.stderr };
+  let run = null;
+  if (result.status === 0) {
+    try {
+      run = JSON.parse(result.stdout.trim()).run ?? null;
+    } catch {
+      return {
+        ok: false,
+        stdout: result.stdout,
+        stderr: "verifier returned invalid JSON",
+        run: null,
+      };
+    }
+  }
+  return { ok: result.status === 0, stdout: result.stdout, stderr: result.stderr, run };
 }
 
 /** Pure matcher (exported for tests): which `readdirSync` entries are resume
@@ -327,14 +371,21 @@ async function runPool(items, size, worker) {
 async function executeRun(run, { reportsDir, stamp, opts, bashPath, fleetDir }) {
   const target = run.target;
   const questId = questIdFor(target);
+  const requiredMode = opts.mock ? "structural" : "pure";
 
   // Check ALL stamp-agnostic candidates, newest-stamp-first, stopping at the
   // first that re-verifies — a stale FAILED report must never shadow a later
   // VERIFIED one produced by a prior fleet invocation.
   for (const candidate of findExistingReport(reportsDir, target, run.seed)) {
-    const verify = await verifyReport(candidate);
+    const verify = await verifyReportForResume(candidate, requiredMode);
     if (verify.ok) {
-      return { report: candidate, status: "skipped-resume", attempts: 0, exit: 0 };
+      return {
+        report: candidate,
+        status: "skipped-resume",
+        attempts: 0,
+        exit: 0,
+        run: verify.run,
+      };
     }
   }
 
@@ -366,9 +417,15 @@ async function executeRun(run, { reportsDir, stamp, opts, bashPath, fleetDir }) 
     let verifyResult = null;
 
     if (lastExit === 0) {
-      verifyResult = await verifyReport(reportMd);
+      verifyResult = await verifyReportForResume(reportMd, requiredMode);
       if (verifyResult.ok) {
-        return { report: reportMd, status: "verified", attempts: attempt + 1, exit: 0 };
+        return {
+          report: reportMd,
+          status: "verified",
+          attempts: attempt + 1,
+          exit: 0,
+          run: verifyResult.run,
+        };
       }
       lastExit = 5; // run.sh exited 0 but the belt-and-braces re-verify rejected it
     }
@@ -412,6 +469,9 @@ async function executeRun(run, { reportsDir, stamp, opts, bashPath, fleetDir }) 
     attempts: maxAttempts,
     exit: lastExit,
     log: lastLogPath,
+    run: null,
+    failure_reason:
+      lastExit === 124 || lastExit === 137 ? "technical_timeout" : "run_or_verification_failed",
   };
 }
 
@@ -452,10 +512,13 @@ async function main() {
   }
 
   const counts = { verified: 0, "skipped-resume": 0, failed: 0 };
+  let technicalTimeouts = 0;
 
   await runPool(runs, Math.max(1, opts.concurrency), async (run) => {
     const result = await executeRun(run, { reportsDir, stamp, opts, bashPath, fleetDir });
     counts[result.status] += 1;
+    if (result.failure_reason === "technical_timeout") technicalTimeouts += 1;
+    const runMeta = result.run;
     const row = {
       seed: run.seed,
       persona: run.persona,
@@ -466,6 +529,21 @@ async function main() {
       attempts: result.attempts,
       exit: result.exit,
       log: result.log ?? null, // per-attempt diagnostic log path; null for verified/skipped-resume
+      report_schema_version: runMeta?.report_schema_version ?? null,
+      play_mode: runMeta?.play_mode ?? (opts.mock ? "structural" : "pure"),
+      start_surface:
+        runMeta?.start_surface ?? (run.target === "overworld" ? "fresh_overworld" : "direct_quest"),
+      retention_eligible: runMeta?.retention_eligible ?? false,
+      evidence_status: runMeta?.evidence_status ?? "unverified",
+      session_contract_version: runMeta?.receipt?.contractVersion ?? null,
+      baseline_decisions: opts.mock ? null : PURE_BASELINE_DECISIONS,
+      accepted_decisions: runMeta?.receipt?.acceptedDecisions ?? null,
+      retention_choices: runMeta?.receipt?.retentionHistory ?? [],
+      checkpoint: runMeta?.receipt?.checkpoint ?? null,
+      exit_reason: runMeta?.receipt?.exitReason ?? null,
+      exit_reasons: runMeta?.receipt?.exitReasons ?? [],
+      receipt_hash: runMeta?.receipt?.receiptHash ?? null,
+      failure_reason: result.failure_reason ?? null,
     };
     appendFileSync(manifestPath, `${JSON.stringify(row)}\n`);
     console.log(
@@ -479,9 +557,19 @@ async function main() {
     count: runs.length,
     concurrency: opts.concurrency,
     reportsDir,
+    report_schema_version: 2,
+    play_mode: opts.mock ? "structural" : "pure",
+    start_surface: opts.target === "overworld" ? "fresh_overworld" : "direct_quest",
+    retention_contract_eligible: !opts.mock,
+    retention_eligible_verified_runs: opts.mock ? 0 : counts.verified + counts["skipped-resume"],
+    retention_ineligible_or_unverified_runs:
+      runs.length - (opts.mock ? 0 : counts.verified + counts["skipped-resume"]),
+    session_contract_version: opts.mock ? null : PURE_SESSION_CONTRACT_VERSION,
+    baseline_decisions: opts.mock ? null : PURE_BASELINE_DECISIONS,
     verified: counts.verified,
     "skipped-resume": counts["skipped-resume"],
     failed: counts.failed,
+    technical_timeouts: technicalTimeouts,
   };
   writeFileSync(summaryPath, `${JSON.stringify(summary, null, 2)}\n`);
 

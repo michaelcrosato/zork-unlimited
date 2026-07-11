@@ -37,7 +37,6 @@ export function NewJourneyTutorial({
         </ol>
 
         <footer className="tutorial-footer">
-          <p>Your browser saves this journey automatically.</p>
           <button type="button" onClick={onStart} autoFocus>
             {tutorial.start_label}
           </button>

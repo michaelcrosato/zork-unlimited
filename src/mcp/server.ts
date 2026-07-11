@@ -27,6 +27,177 @@ import { formatSpectateEntry } from "./spectate.js";
 
 const api = createToolApi({ root: process.cwd() });
 
+export type McpPlayMode = "full" | "structural" | "pure";
+
+function parsePlayMode(): McpPlayMode {
+  const value = argValue("--play-mode") ?? "full";
+  if (value === "full" || value === "structural" || value === "pure") return value;
+  throw new Error(
+    `Invalid --play-mode ${JSON.stringify(value)}; expected "full", "structural", or "pure".`,
+  );
+}
+
+/**
+ * Pure play exposes only choices a human can make through the game UI. Authoring,
+ * validation, raw-state, direct-quest, restore, and generated-game tools stay in
+ * the default full server used by developers and structural tests.
+ */
+export const PURE_PLAYER_TOOLS = new Set<string>([
+  "start_overworld",
+  "get_overworld_session",
+  "get_overworld_session_context",
+  "plan_overworld_session_route",
+  "travel_overworld_session",
+  "resolve_overworld_session_road_encounter",
+  "resupply_overworld_session",
+  "rest_overworld_session",
+  "scout_overworld_session_poi",
+  "talk_overworld_session_contact",
+  "investigate_overworld_session_event",
+  "resolve_overworld_session_event",
+  "explore_overworld_session_site",
+  "explore_overworld_session_area",
+  "move_overworld_session_area",
+  "work_overworld_session_job",
+  "start_overworld_session_quest",
+  "complete_overworld_session_quest",
+  "choose_overworld_session_journey",
+  "get_observation",
+  "list_legal_actions",
+  "step_action",
+]);
+
+export function toolAvailableInPlayMode(name: string, playMode: McpPlayMode): boolean {
+  return playMode !== "pure" || PURE_PLAYER_TOOLS.has(name);
+}
+
+const PLAY_MODE = parsePlayMode();
+
+type PureRunEvidence =
+  | {
+      schema_version: 1;
+      play_mode: "pure";
+      event: "fresh_start";
+      start_surface: "fresh_overworld";
+      session_id: string;
+    }
+  | {
+      schema_version: 1;
+      play_mode: "pure";
+      event: "journey_exit";
+      start_surface: "fresh_overworld";
+      session_id: string;
+      receipt: unknown;
+    };
+
+const RUN_EVIDENCE_PATH = (() => {
+  const requested = process.argv.includes("--run-evidence");
+  const value = argValue("--run-evidence");
+  if (!requested) return null;
+  if (!value || value.startsWith("--")) {
+    throw new Error("--run-evidence requires a JSONL path.");
+  }
+  return resolve(value);
+})();
+
+const pureRunState: { overworldSessionId: string | null; journeyExitRecorded: boolean } = {
+  overworldSessionId: null,
+  journeyExitRecorded: false,
+};
+
+const PURE_RPG_SESSION_TOOLS = new Set(["get_observation", "list_legal_actions", "step_action"]);
+const PURE_OVERWORLD_SESSION_TOOLS = new Set(
+  [...PURE_PLAYER_TOOLS].filter(
+    (name) => name !== "start_overworld" && !PURE_RPG_SESSION_TOOLS.has(name),
+  ),
+);
+
+function appendRunEvidence(event: PureRunEvidence): void {
+  if (!RUN_EVIDENCE_PATH) return;
+  mkdirSync(dirname(RUN_EVIDENCE_PATH), { recursive: true });
+  appendFileSync(RUN_EVIDENCE_PATH, `${JSON.stringify(event)}\n`);
+}
+
+function objectRecord(value: unknown): Record<string, unknown> | null {
+  return value !== null && typeof value === "object" ? (value as Record<string, unknown>) : null;
+}
+
+function pureCallPreflight(name: string, args: unknown): void {
+  if (PLAY_MODE !== "pure") return;
+  if (pureRunState.journeyExitRecorded) {
+    throw new Error("This pure-play journey has ended; the exit receipt is the final run event.");
+  }
+  if (name === "start_overworld") {
+    if (pureRunState.overworldSessionId !== null) {
+      throw new Error("Pure play permits exactly one fresh overworld start per run.");
+    }
+    return;
+  }
+  if (pureRunState.overworldSessionId === null) {
+    throw new Error("Pure play must begin with start_overworld.");
+  }
+  const input = objectRecord(args);
+  const sessionId = input?.session_id;
+  if (PURE_OVERWORLD_SESSION_TOOLS.has(name) && sessionId !== pureRunState.overworldSessionId) {
+    throw new Error("Pure play tools must use the fresh overworld session from this run.");
+  }
+  if (PURE_RPG_SESSION_TOOLS.has(name)) {
+    if (typeof sessionId !== "string") throw new Error("Embedded quest session id is required.");
+    const rpgSession = api.sessions.get(sessionId);
+    if (rpgSession.overworldSessionId !== pureRunState.overworldSessionId) {
+      throw new Error("Pure play RPG tools require a quest entered from this fresh overworld run.");
+    }
+  }
+  if (name === "complete_overworld_session_quest") {
+    const rpgSessionId = input?.rpg_session_id;
+    if (typeof rpgSessionId !== "string") throw new Error("Ended quest session id is required.");
+    const rpgSession = api.sessions.get(rpgSessionId);
+    if (rpgSession.overworldSessionId !== pureRunState.overworldSessionId) {
+      throw new Error("Only a quest entered from this fresh overworld run can be completed.");
+    }
+  }
+}
+
+function pureCallEvidence(name: string, value: unknown): void {
+  if (PLAY_MODE !== "pure") return;
+  const response = objectRecord(value);
+  if (!response) return;
+  if (name === "start_overworld") {
+    const sessionId = response.session_id;
+    if (typeof sessionId !== "string" || sessionId.length === 0) {
+      throw new Error("Fresh overworld start returned no session id.");
+    }
+    pureRunState.overworldSessionId = sessionId;
+    appendRunEvidence({
+      schema_version: 1,
+      play_mode: "pure",
+      event: "fresh_start",
+      start_surface: "fresh_overworld",
+      session_id: sessionId,
+    });
+    return;
+  }
+  if (name !== "choose_overworld_session_journey" || pureRunState.journeyExitRecorded) return;
+  const receipt = response.exitReceipt ?? objectRecord(response.result)?.exitReceipt;
+  const receiptRecord = objectRecord(receipt);
+  if (
+    !receiptRecord ||
+    receiptRecord.exitReason !== "player_ended_at_choice" ||
+    typeof receiptRecord.receiptHash !== "string"
+  ) {
+    return;
+  }
+  appendRunEvidence({
+    schema_version: 1,
+    play_mode: "pure",
+    event: "journey_exit",
+    start_surface: "fresh_overworld",
+    session_id: pureRunState.overworldSessionId!,
+    receipt,
+  });
+  pureRunState.journeyExitRecorded = true;
+}
+
 // ── Spectate mode ─────────────────────────────────────────────────────────────
 // A human-facing live feed of every tool call (plus an optional pacing delay
 // before each response returns) so a person can watch an LLM playthrough in
@@ -97,7 +268,10 @@ function wrap<A>(name: string, handler: (args: A) => unknown) {
   return async (args: A): Promise<CallToolResult> => {
     let result: CallToolResult;
     try {
-      result = ok(await handler(args)); // await is a no-op for the sync handlers
+      pureCallPreflight(name, args);
+      const value = await handler(args); // await is a no-op for the sync handlers
+      pureCallEvidence(name, value);
+      result = ok(value);
     } catch (e) {
       result = {
         content: [{ type: "text", text: `Error: ${(e as Error).message}` }],
@@ -163,6 +337,7 @@ function tool(
   inputSchema: ZodRawShape,
   handler: (args: never) => unknown,
 ): void {
+  if (!toolAvailableInPlayMode(name, PLAY_MODE)) return;
   const readOnly = READ_ONLY_TOOLS.has(name);
   const annotations: ToolAnnotations = {
     // Deterministic, closed engine: no external entities, and nothing is destroyed
@@ -190,6 +365,13 @@ const SESSION = {
 const HIDE_GRAPH = {
   hide_graph: B("Omit the world graph from observations."),
 };
+const PLAYER_HIDE_GRAPH = PLAY_MODE === "pure" ? {} : HIDE_GRAPH;
+const EMBEDDED_QUEST_SEED =
+  PLAY_MODE === "pure"
+    ? {}
+    : {
+        seed: z.number().int().safe().optional().describe("Runtime seed."),
+      };
 const COMPACT_ACTIONS = {
   compact_actions: B("Bare action ids instead of labeled options."),
 };
@@ -224,13 +406,19 @@ tool(
 );
 
 function defaultCompactRpg(args: unknown): never {
-  const input = typeof args === "object" && args !== null ? args : {};
+  const input: Record<string, unknown> =
+    typeof args === "object" && args !== null ? { ...(args as Record<string, unknown>) } : {};
+  if (PLAY_MODE === "pure") {
+    delete input.hide_graph;
+    delete input.seed;
+  }
   return {
     hide_graph: true,
     compact_actions: true,
     compact_events: true,
     compact_observation: true,
     ...input,
+    ...(PLAY_MODE === "pure" ? { hide_graph: true } : {}),
   } as never;
 }
 
@@ -245,7 +433,12 @@ function defaultCompactOverworld(args: unknown): never {
 }
 
 function defaultCompactOverworldAndRpg(args: unknown): never {
-  const input = typeof args === "object" && args !== null ? args : {};
+  const input: Record<string, unknown> =
+    typeof args === "object" && args !== null ? { ...(args as Record<string, unknown>) } : {};
+  if (PLAY_MODE === "pure") {
+    delete input.hide_graph;
+    delete input.seed;
+  }
   return {
     compact_context: true,
     compact_result: true,
@@ -253,6 +446,7 @@ function defaultCompactOverworldAndRpg(args: unknown): never {
     compact_actions: true,
     compact_observation: true,
     ...input,
+    ...(PLAY_MODE === "pure" ? { hide_graph: true } : {}),
   } as never;
 }
 
@@ -330,7 +524,7 @@ const OVERWORLD_ACTION_CONTEXT = {
 
 tool(
   "start_overworld",
-  "Start a fresh stateful overworld game at the start town; returns a one-time tutorial, session_id, snapshot_hash, and compact context legend.",
+  "Start a fresh overworld game; returns its one-time tutorial, current journey goal, session_id, snapshot_hash, and compact legend.",
   {
     ...COMPACT_OVERWORLD_CONTEXT,
   },
@@ -519,8 +713,8 @@ tool(
   {
     ...SESSION,
     quest_id: z.string().describe("Quest id."),
-    seed: z.number().int().safe().optional().describe("Runtime seed."),
-    ...HIDE_GRAPH,
+    ...EMBEDDED_QUEST_SEED,
+    ...PLAYER_HIDE_GRAPH,
     ...COMPACT_ACTIONS,
     ...COMPACT_OBSERVATION,
     ...OVERWORLD_ACTION_CONTEXT,
@@ -537,6 +731,16 @@ tool(
     ...OVERWORLD_ACTION_CONTEXT,
   },
   (a) => api.complete_overworld_session_quest(defaultCompactOverworld(a)),
+);
+tool(
+  "choose_overworld_session_journey",
+  "At a presented journey pause, choose to continue playing or end this journey.",
+  {
+    ...SESSION,
+    choice: z.enum(["continue", "end"]).describe("Choice from journey.pendingChoice.options."),
+    ...OVERWORLD_ACTION_CONTEXT,
+  },
+  (a) => api.choose_overworld_session_journey(defaultCompactOverworld(a)),
 );
 tool(
   "validate_quest",
@@ -587,10 +791,10 @@ tool(
 
 tool(
   "get_observation",
-  "Re-read the current RPG context without acting; if_state_hash skips unchanged payloads.",
+  "Re-read the current RPG context without acting; embedded quests also return the parent journey.",
   {
     ...SESSION,
-    ...HIDE_GRAPH,
+    ...PLAYER_HIDE_GRAPH,
     ...IF_STATE_HASH,
     ...COMPACT_ACTIONS,
     ...COMPACT_OBSERVATION,
@@ -599,7 +803,7 @@ tool(
 );
 tool(
   "list_legal_actions",
-  "List the legal action ids for an RPG session; feed one to step_action.",
+  "List legal RPG action ids; embedded play returns none while its journey choice is due.",
   {
     ...SESSION,
     ...IF_STATE_HASH,
@@ -610,12 +814,12 @@ tool(
 
 tool(
   "step_action",
-  "Apply one action id to the RPG session; returns tagged event tuples and the updated compact context.",
+  "Apply one legal RPG action; embedded play also updates and returns the parent journey.",
   {
     ...SESSION,
     action_id: z.string().describe("Action id from list_legal_actions."),
     ...EXPECTED_STATE_HASH,
-    ...HIDE_GRAPH,
+    ...PLAYER_HIDE_GRAPH,
     ...COMPACT_ACTIONS,
     ...COMPACT_EVENTS,
     ...COMPACT_OBSERVATION,

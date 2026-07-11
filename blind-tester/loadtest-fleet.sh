@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# blind-tester/loadtest-fleet.sh — run a BATCH of blind load-test playthroughs with
+# blind-tester/loadtest-fleet.sh — run a BATCH of explicit structural load exercises with
 # bounded concurrency, so the soak test can be paced under the subscription rate
 # limit. Each playthrough is one blind-tester/loadtest.sh run (fresh MCP server +
 # blind claude, full game, no report). Returns when the whole batch is done; every

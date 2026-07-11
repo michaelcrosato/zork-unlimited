@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { readFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { hashState } from "../../src/core/hash.js";
 // vitest can import .mjs fine:
 // @ts-expect-error — plain .mjs module without type declarations
 import { fillPrompt } from "../../blind-tester/fill-prompt.mjs";
@@ -8,6 +11,8 @@ import {
   planFleetRuns,
   reportPathFor,
   resumeCandidatesFor,
+  runSidecarPathFor,
+  verifyReportForResume,
   // @ts-expect-error — plain .mjs module without type declarations
 } from "../../blind-tester/fleet.mjs";
 
@@ -39,17 +44,24 @@ describe("fleet planning", () => {
     const opts = parseFleetArgs([]);
     expect(opts.count).toBe(100);
     expect(opts.target).toBe("overworld");
+    expect(opts.personas).toBe("default");
     expect(planFleetRuns(opts)).toHaveLength(100);
   });
 
-  it("rotates personas deterministically and honors seed base", () => {
+  it("rotates personas only for explicit structural mocks and honors seed base", () => {
     const runs = planFleetRuns(
-      parseFleetArgs(["--count", "7", "--personas", "mixed", "--seed-base", "100"]),
+      parseFleetArgs(["--mock", "--count", "7", "--personas", "mixed", "--seed-base", "100"]),
     );
     expect(runs.map((r: { seed: number }) => r.seed)).toEqual([100, 101, 102, 103, 104, 105, 106]);
     expect(runs[0].persona).toBe("explorer");
     expect(runs[5].persona).toBe("explorer"); // 5 % 5 wraps
     expect(new Set(runs.map((r: { persona: string }) => r.persona)).size).toBe(5);
+  });
+
+  it("rejects persona-directed live fleets", () => {
+    expect(() => parseFleetArgs(["--personas", "mixed"])).toThrow(/pure live runs/i);
+    expect(() => parseFleetArgs(["--personas", "breaker"])).toThrow(/structural mode/i);
+    expect(parseFleetArgs(["--mock", "--personas", "breaker"]).personas).toBe("breaker");
   });
   it("explicit mock quest targets parse and reach the structural plan", () => {
     const runs = planFleetRuns(
@@ -123,6 +135,126 @@ describe("resumeCandidatesFor", () => {
       "20260101T000000Z_overworld_seed5.json",
     ];
     expect(resumeCandidatesFor(entries, "overworld", 5)).toEqual([]);
+  });
+
+  it("does not let a verifier-valid legacy report resume a pure fleet slot", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "af-pure-resume-"));
+    try {
+      const reportPath = join(dir, "20260101T000000Z_overworld_seed5.md");
+      writeFileSync(
+        reportPath,
+        `
+1. Playthrough log: played a guided opening.
+2. Did it work mechanically? Yes.
+3. Understandable & fun? clarity 4/5 and enjoyment 4/5.
+4. Confusion / friction points: none.
+5. Bugs or design flaws: none.
+6. Verdict: A real player could understand this legacy opening.
+\`\`\`json exit-interview
+${JSON.stringify({
+  clarity: 4,
+  enjoyment: 4,
+  goal_understood: true,
+  got_stuck: false,
+  confusions: [],
+  bugs: [],
+  best_moment: "A visible choice landed clearly.",
+  worst_moment: "One transition was slow.",
+  would_replay: true,
+  verdict: "A real player could understand this legacy opening and keep playing.",
+})}
+\`\`\`
+`,
+      );
+      expect(runSidecarPathFor(reportPath)).toBe(reportPath.replace(/\.md$/, ".run.json"));
+      expect((await verifyReportForResume(reportPath, "pure")).ok).toBe(false);
+      writeFileSync(
+        runSidecarPathFor(reportPath),
+        JSON.stringify({
+          schema_version: 1,
+          report_schema_version: 2,
+          play_mode: "structural",
+          start_surface: "fresh_overworld",
+          retention_eligible: false,
+          evidence_status: "not_applicable",
+          structural_kind: "mock",
+        }),
+      );
+      expect((await verifyReportForResume(reportPath, "pure")).ok).toBe(false);
+
+      const decisionProofHash = "a".repeat(64);
+      const receiptPayload = {
+        contractVersion: 1,
+        exitReason: "player_ended_at_choice",
+        goalVersion: 1,
+        goalId: "albany_local_lead",
+        goalStatus: "active",
+        acceptedDecisions: 40,
+        exitReasons: ["checkpoint"],
+        checkpoint: 40,
+        decisionProofHash,
+        retentionHistory: [
+          {
+            sequence: 1,
+            atDecision: 40,
+            reasons: ["checkpoint"],
+            checkpoint: 40,
+            choice: "end",
+            decisionProofHash,
+          },
+        ],
+      };
+      const receipt = { ...receiptPayload, receiptHash: hashState(receiptPayload) };
+      const pureInterview = {
+        schema_version: 2,
+        play_mode: "pure",
+        start_surface: "fresh_overworld",
+        retention_eligible: true,
+        journey_exit_receipt: receipt,
+        clarity: 4,
+        enjoyment: 4,
+        goal_understood: true,
+        got_stuck: false,
+        confusions: [],
+        bugs: [],
+        best_moment: "A visible choice landed clearly.",
+        worst_moment: "One transition was slow.",
+        would_replay: true,
+        verdict: "A real player could understand this pure opening and keep playing.",
+      };
+      writeFileSync(
+        reportPath,
+        `
+1. Playthrough log: played naturally until the game offered an exit.
+2. Did it work mechanically? Yes.
+3. Understandable & fun? clarity 4/5 and enjoyment 4/5.
+4. Confusion / friction points: none.
+5. Bugs or design flaws: none.
+6. Verdict: A real player could understand this pure opening.
+\`\`\`json exit-interview
+${JSON.stringify(pureInterview)}
+\`\`\`
+`,
+      );
+      writeFileSync(
+        runSidecarPathFor(reportPath),
+        JSON.stringify({
+          schema_version: 1,
+          report_schema_version: 2,
+          play_mode: "pure",
+          start_surface: "fresh_overworld",
+          retention_eligible: true,
+          evidence_status: "verified",
+          session_id: "ow-resume",
+          receipt,
+        }),
+      );
+      const pureResume = await verifyReportForResume(reportPath, "pure");
+      expect(pureResume.ok).toBe(true);
+      expect(pureResume.run).toMatchObject({ play_mode: "pure", retention_eligible: true });
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });
 

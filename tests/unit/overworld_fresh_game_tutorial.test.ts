@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import { TOOL_REGISTRATIONS } from "../../src/mcp/server.js";
 import { createToolApi } from "../../src/mcp/tools.js";
 import { FRESH_GAME_TUTORIAL, freshGameTutorial } from "../../src/world/fresh_game_tutorial.js";
+import { INITIAL_JOURNEY_GOAL } from "../../src/world/journey_contract.js";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 
@@ -18,17 +19,20 @@ describe("fresh-game tutorial", () => {
     expect(Object.isFrozen(FRESH_GAME_TUTORIAL.steps)).toBe(true);
     expect(FRESH_GAME_TUTORIAL.steps).toHaveLength(4);
     expect(FRESH_GAME_TUTORIAL.start_label).toBe("Explore Albany");
+    expect(FRESH_GAME_TUTORIAL.goal).toBe(INITIAL_JOURNEY_GOAL.text);
 
     const copy = [
       FRESH_GAME_TUTORIAL.goal,
       ...FRESH_GAME_TUTORIAL.steps.flatMap((step) => [step.title, step.text]),
     ].join(" ");
     expect(copy.length).toBeLessThanOrEqual(720);
-    expect(copy).toMatch(/Albany.*local lead/is);
+    expect(copy).toMatch(/local lead.*Albany/is);
     expect(copy).toMatch(/supplies.*fatigue/is);
     expect(copy).toMatch(/scout.*talk.*investigate.*explore/is);
     expect(copy).toMatch(/local area.*roads.*rest.*resupply/is);
     expect(copy).toMatch(/journal.*save.*export.*resume/is);
+    expect(copy).toMatch(/40.*80.*every 40/is);
+    expect(copy).toMatch(/completing the goal.*sooner/is);
     expect(copy).not.toMatch(/wolf_winter|world_quest_id|session_id|mcp__/i);
   });
 

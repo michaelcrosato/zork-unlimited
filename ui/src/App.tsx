@@ -19,7 +19,11 @@ import {
 import { PACKS } from "./packs.js";
 import { OVERWORLD } from "./worldData.js";
 import { NewJourneyTutorial } from "./NewJourneyTutorial.js";
+import { JourneyChoiceScreen } from "./JourneyChoiceScreen.js";
+import { JourneyEndedScreen } from "./JourneyEndedScreen.js";
+import { JourneyStatus } from "./JourneyStatus.js";
 import { FRESH_GAME_TUTORIAL } from "../../src/world/fresh_game_tutorial.js";
+import type { JourneyChoice } from "../../src/world/journey_contract.js";
 import type { OverworldQuest } from "../../src/world/overworld.js";
 import type { OverworldQuestView } from "../../src/world/session_local_discovery.js";
 
@@ -103,6 +107,7 @@ export default function App(): JSX.Element {
     return worldState.notice ? [worldState.notice, opener] : [opener];
   });
   const [error, setError] = useState<string | null>(null);
+  const journey = worldSession.journey();
 
   useEffect(() => {
     persistWorldSession(worldSession);
@@ -245,6 +250,10 @@ export default function App(): JSX.Element {
     const view = questSession.view();
     setQuestView(view);
     const lines = [`> ${label}`, ...out.narration, ...(out.rejection ? [`(${out.rejection})`] : [])];
+    if (out.ok) {
+      worldSession.recordAcceptedQuestDecision(id);
+      setWorldView(worldSession.view());
+    }
     // Close a finished quest back into the overworld (MCP-bridge parity,
     // src/mcp/overworld_quest_bridge.ts): a non-death ending completes the lead
     // (journal entry + completedQuestIds); a death ending must not — the engine
@@ -292,6 +301,18 @@ export default function App(): JSX.Element {
     setTutorialOpen(true);
   }
 
+  function chooseJourney(choice: JourneyChoice): void {
+    const option = journey.pendingChoice?.options.find((candidate) => candidate.id === choice);
+    try {
+      worldSession.chooseJourney(choice);
+      setWorldView(worldSession.view());
+      if (option) setLog((previous) => [option.consequence, ...previous]);
+      setError(null);
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  }
+
   if (tutorialOpen) {
     return (
       <NewJourneyTutorial
@@ -301,6 +322,14 @@ export default function App(): JSX.Element {
     );
   }
 
+  if (journey.pendingChoice) {
+    return <JourneyChoiceScreen journey={journey} onChoose={chooseJourney} />;
+  }
+
+  if (journey.status === "ended") {
+    return <JourneyEndedScreen journey={journey} onNewJourney={startNewJourney} />;
+  }
+
   return (
     <main className="af">
       <header className="world-header">
@@ -308,6 +337,8 @@ export default function App(): JSX.Element {
         <h1>{OVERWORLD.name}</h1>
         <p className="sub">{OVERWORLD.premise}</p>
       </header>
+
+      <JourneyStatus journey={journey} />
 
       <section className="overworld">
         <article className="location-panel">

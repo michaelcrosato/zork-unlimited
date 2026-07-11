@@ -45,6 +45,11 @@ import {
 import { snapshotTravelTimelineIndex } from "./session_snapshot_timeline.js";
 import { restoreOverworldPendingRoadEncounter } from "./session_road_encounters.js";
 import { restoreOverworldTravelLogEntries } from "./session_travel_log.js";
+import {
+  assertJourneyGoalCompletionProof,
+  cloneJourneyContractSnapshot,
+  type JourneyContractSnapshot,
+} from "./journey_contract.js";
 
 export type OverworldSessionSnapshotRestorePlan = {
   currentAreaByTown: ReadonlyMap<string, string>;
@@ -83,6 +88,7 @@ export type OverworldAppliedSessionSnapshotRestore = {
   suppliesAfter: number;
   fatigueAfter: number;
   pendingRoadEncounterAfter: OverworldPendingRoadEncounter | null;
+  journeyAfter: JourneyContractSnapshot;
 };
 
 function replaceStringMap(target: Map<string, string>, source: ReadonlyMap<string, string>): void {
@@ -135,6 +141,7 @@ export function applyOverworldSessionSnapshotRestore(
     suppliesAfter: snapshot.supplies,
     fatigueAfter: snapshot.fatigue,
     pendingRoadEncounterAfter: plan.pendingRoadEncounter,
+    journeyAfter: cloneJourneyContractSnapshot(snapshot.journey),
   };
 }
 
@@ -214,6 +221,12 @@ export function planOverworldSessionSnapshotRestore(args: {
     snapshot.completedQuestIds,
     indexes.questIds,
   );
+  assertJourneyGoalCompletionProof({
+    journey: snapshot.journey,
+    completedQuestIds,
+    questsById: indexes.questsById,
+    startTownId,
+  });
   const resolvedEventIds = assertKnownIds(
     "resolved event id",
     snapshot.resolvedEventIds,

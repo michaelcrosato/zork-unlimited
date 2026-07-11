@@ -46,6 +46,13 @@ describe("fleet:mock end to end (zero tokens)", () => {
       const text = readFileSync(join(out, f), "utf8");
       const v = verifyBlindReportText(text);
       expect(v.ok, `${f}: ${(v as { reason?: string }).reason ?? ""}`).toBe(true);
+      const sidecar = JSON.parse(readFileSync(join(out, f.replace(/\.md$/, ".run.json")), "utf8"));
+      expect(sidecar).toMatchObject({
+        report_schema_version: 2,
+        play_mode: "structural",
+        retention_eligible: false,
+        evidence_status: "not_applicable",
+      });
       const i = extractExitInterview(text);
       if (i.ok && i.interview.bugs.some((b) => b.where.includes("Albany Station Quarter")))
         overlap += 1;
@@ -156,7 +163,15 @@ describe("fleet:mock end to end (zero tokens)", () => {
       "utf8",
     );
     const row = JSON.parse(manifest.trim());
-    expect(row).toMatchObject({ target: "quest:breaking_weir", status: "verified" });
+    expect(row).toMatchObject({
+      target: "quest:breaking_weir",
+      status: "verified",
+      report_schema_version: 2,
+      play_mode: "structural",
+      start_surface: "direct_quest",
+      retention_eligible: false,
+      evidence_status: "not_applicable",
+    });
   }, 180_000);
 
   it("compiles mock reports + crawl findings into ranked hotspots with the planted overlap on top", () => {

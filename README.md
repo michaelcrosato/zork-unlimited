@@ -96,14 +96,15 @@ any agent harness (Claude Code, Codex, Gemini CLI, …) plays via native tool
 calls over the structured observation/action loop — never a raw parser. The
 repo ships `.mcp.json`, so an MCP client opened here connects automatically.
 
-**37 tools**, in four groups:
+**38 tools**, in four groups:
 
 - **World catalog** (1): `list_overworld` — the overworld is both the world and
   the quest registry.
-- **Overworld sessions** (20): `start_overworld`, then travel, rest, resupply,
+- **Overworld sessions** (21): `start_overworld`, then travel, rest, resupply,
   route planning, POI scouting, contacts, events, jobs, area exploration,
   export/restore — and `start_overworld_session_quest` /
-  `complete_overworld_session_quest` bridging a discovered lead into quest play.
+  `complete_overworld_session_quest` bridging a discovered lead into quest play,
+  plus `choose_overworld_session_journey` at game-presented retention pauses.
   This is how a player reaches a shipped quest: in-world, through the overworld.
 - **RPG quest sessions** (12): `start_world_quest` (a dev/QA entry point that
   starts a shipped quest by id; `new_game` does the same for generated packs) →
@@ -122,6 +123,15 @@ legend to that contract; the handlers (`src/mcp/tools.ts`) are unit-tested
 without a live client. All paths are confined to the project root; content and
 traces are data only.
 
+Every overworld session also carries one versioned **journey contract**, shared
+unchanged by UI and MCP. Its initial goal is to find one local lead in Albany
+and see it through. Successfully accepted gameplay decisions advance the shared
+counter; reads, legal-action listings, persistence operations, rejections, and
+the retention choice do not. The game offers a real continue/end choice at 40
+decisions, then 80/120/+40, or sooner when the goal completes. Ending returns a
+verifiable receipt with the decision proof, goal state, checkpoint choices, and
+exit reason.
+
 ## Testing: a three-tier pyramid, coupled by an exit interview
 
 Full reference: [`docs/testing_pyramid.md`](./docs/testing_pyramid.md).
@@ -138,36 +148,40 @@ Full reference: [`docs/testing_pyramid.md`](./docs/testing_pyramid.md).
   deduped, zod-validated findings with minimized replayable repros.
   `npm run crawl:smoke` is the loop's gate (every cycle, ~10s, deterministic);
   `npm run crawl:deep` is a longer soak (nightly/manual).
-- **Tier 2 — blind LLM playtest**: a fresh agent with NO repo access plays the game
-  purely through the MCP tools (harness in `blind-tester/`, protocol in
-  [`docs/blind_playtest_protocol.md`](./docs/blind_playtest_protocol.md)) — the
-  only judge of player-facing quality a static check can't see. The **default
-  blind run plays the core game**: the open world from a fresh start, quests
-  discovered through the overworld. Every live reasoning-agent run starts this
-  way; targeted single-quest drop-ins are structural smoke/mock/crawler checks
-  only. `npm run fleet` runs 100 fresh-overworld agents in parallel (personas,
-  model mix, resume) for milestone/harvest cycles; `npm run fleet:mock` is a
-  zero-token stand-in for CI.
+- **Tier 2 — pure blind LLM playtest**: a fresh agent with NO repo access plays
+  through an enforced player-only MCP surface (harness in `blind-tester/`,
+  protocol in
+  [`docs/blind_playtest_protocol.md`](./docs/blind_playtest_protocol.md)).
+  `npm run blind` and every live `npm run fleet` member default to
+  `play_mode: pure` and `start_surface: fresh_overworld`: the game supplies the
+  tutorial, goal, state, legal choices, decision/checkpoint rhythm, and
+  consequences; the harness supplies transport syntax only. It interviews
+  after a game-confirmed exit, never after a test-only call budget. Structural
+  direct-quest/crawler/smoke/mock modes require explicit flags and are not pure
+  retention evidence. Milestone fleets run 100 seed/model variants of the same
+  neutral player contract; `fleet:mock` is a zero-token structural CI stand-in.
 - **Tier 3 — feedback compiler** (`src/feedback/`): clusters and ranks Tier-1
   findings and verified Tier-2 reports into `hotspots.{json,md}`
-  (`npm run feedback:compile`), tracks trend (improved/regressed/new/flat)
-  across compiles, and feeds the assessor's next-best-improvement ranking.
+  (`npm run feedback:compile`), writes a separate `retention.json` that admits
+  only sidecar-verified pure exits and their actual continue/end choices, tracks
+  trend (improved/regressed/new/flat), and feeds the assessor's ranking.
 
-Every playtest MUST end with a **structured exit interview** — a fenced
-`json exit-interview` block (clarity/enjoyment 1–5, bugs with S0–S4 severities,
-confusions, verdict; schema in `src/blind/exit_interview.ts`). The report
-verifier (`src/blind/report_verifier.ts`) rejects a playtest without one,
-exactly as it rejects one that never touched the MCP tools — feedback that
-can't be ranked is feedback that gets lost.
+Every pure playtest MUST end through the game's journey choice and then provide
+a V2 **structured exit interview**. The fenced `json exit-interview` block
+contains clarity/enjoyment, severity-tagged findings, replay intent, and the
+exact game-returned journey receipt (schema in `src/blind/exit_interview.ts`).
+The verifier cross-checks it against server-authored fresh-start/exit evidence;
+legacy, structural, timed-out, or mismatched runs cannot count as pure retention
+evidence or resume a pure fleet member.
 
 ```bash
 npm run crawl:smoke                               # Tier 1: mechanical gate, all quests + overworld
-npm run blind                                     # Tier 2 DEFAULT: the core game — overworld, fresh start
-npm run blind:smoke                               # harness check, no LLM, no tokens
+npm run blind                                     # Tier 2 DEFAULT: canonical pure fresh-world player
+npm run blind:smoke                               # explicit structural harness check, no LLM/tokens
 bash blind-tester/run.sh --smoke --quest sunken_barrow --seed 7 # structural quest check, no LLM
-npm run fleet -- --count 100 --target overworld   # milestone: 100 fresh-world agents
-npm run fleet:mock -- --count 2                   # Tier 2 fleet, zero tokens (CI-safe)
-npm run feedback:compile                          # Tier 3: compile into ranked hot spots
+npm run fleet -- --count 100                      # milestone: 100 pure fresh-world players
+npm run fleet:mock -- --count 2                   # structural zero-token CI lane
+npm run feedback:compile                          # Tier 3: hot spots + pure retention summary
 ```
 
 The blind harness drives the external Claude Code CLI on the operator's

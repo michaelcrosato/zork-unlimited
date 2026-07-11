@@ -1,3 +1,5 @@
+import { INITIAL_JOURNEY_GOAL } from "./journey_contract.js";
+
 export type FreshGameTutorialStep = Readonly<{
   id: "read" | "discover" | "follow" | "remember";
   title: string;
@@ -21,27 +23,27 @@ export const FRESH_GAME_TUTORIAL = Object.freeze({
   version: 1,
   kicker: "Field guide · Day one",
   title: "Begin where you stand",
-  goal: "You begin in Albany. Find one local lead, follow it, and let the wider road open from there.",
+  goal: INITIAL_JOURNEY_GOAL.text,
   steps: Object.freeze([
     Object.freeze({
       id: "read",
       title: "Read the moment",
-      text: "Check your place, supplies, fatigue, and visible opportunities. Choose only an action currently shown.",
+      text: "Check place, supplies, fatigue, and visible opportunities. Choose a shown action.",
     }),
     Object.freeze({
       id: "discover",
       title: "Find a local lead",
-      text: "Scout landmarks, talk to people, investigate events, and explore nearby areas. Discovery opens work and quests.",
+      text: "Scout, talk, investigate, and explore nearby areas to reveal local work and quests.",
     }),
     Object.freeze({
       id: "follow",
       title: "Follow it on foot",
-      text: "Move to a lead's local area before starting it. Roads spend time and supplies and raise fatigue; towns offer rest and resupply.",
+      text: "Walk to a lead's local area before starting it. Roads cost time and supplies; towns offer rest and resupply.",
     }),
     Object.freeze({
       id: "remember",
-      title: "Keep your thread",
-      text: "The journal records what changed. Save or export your journey when your client offers it, then resume it later.",
+      title: "Choose your horizon",
+      text: "The journal supports save/export and resume. At 40 decisions, choose continue or end. Continue, and next pauses are 80, 120, then every 40; completing the goal can ask sooner.",
     }),
   ]),
   start_label: "Explore Albany",

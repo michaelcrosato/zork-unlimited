@@ -164,7 +164,7 @@ button:hover {
   border-top: 1px solid var(--line);
   display: flex;
   gap: 1rem;
-  justify-content: space-between;
+  justify-content: flex-end;
   padding-top: clamp(0.55rem, 1.5vh, 1rem);
 }
 
@@ -192,6 +192,169 @@ button:hover {
   border-bottom: 1px solid var(--line);
   margin-bottom: 1.25rem;
   padding-bottom: 1rem;
+}
+
+.journey-status {
+  align-items: stretch;
+  background: linear-gradient(110deg, rgba(17, 32, 29, 0.96), rgba(32, 29, 24, 0.96));
+  border: 1px solid color-mix(in srgb, var(--water) 45%, var(--line));
+  border-left: 4px solid var(--water);
+  border-radius: 10px;
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(0, 1fr) auto;
+  margin-bottom: 1.25rem;
+  padding: 1rem 1.1rem;
+}
+
+.journey-goal-copy h2,
+.journey-goal-copy p,
+.journey-rhythm,
+.journey-rhythm dd,
+.journey-rhythm dt {
+  margin: 0;
+}
+
+.journey-goal-copy h2 {
+  font-size: clamp(1.05rem, 2.2vw, 1.35rem);
+  margin-top: 0.2rem;
+}
+
+.journey-goal-copy > p:last-child {
+  color: var(--muted);
+  font-size: 0.82rem;
+  margin-top: 0.25rem;
+}
+
+.journey-rhythm {
+  display: grid;
+  gap: 0.55rem;
+  grid-template-columns: repeat(3, minmax(5.5rem, auto));
+}
+
+.journey-rhythm div {
+  background: rgba(0, 0, 0, 0.18);
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  display: grid;
+  padding: 0.55rem 0.7rem;
+}
+
+.journey-rhythm dt {
+  color: var(--muted);
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.66rem;
+  text-transform: uppercase;
+}
+
+.journey-rhythm dd {
+  color: var(--road);
+  font-family: "Outfit", sans-serif;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.journey-decision-page,
+.journey-ended-page {
+  align-items: center;
+  display: grid;
+  min-height: 100svh;
+  padding: clamp(0.75rem, 3vw, 2rem);
+}
+
+.journey-decision-card,
+.journey-ended-card {
+  background:
+    linear-gradient(135deg, rgba(32, 29, 24, 0.98), rgba(17, 32, 29, 0.97)),
+    var(--panel);
+  border: 1px solid color-mix(in srgb, var(--road) 55%, var(--line));
+  border-radius: 12px;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.48);
+  display: grid;
+  gap: 1rem;
+  margin: 0 auto;
+  max-width: 850px;
+  padding: clamp(1rem, 4vw, 2.2rem);
+  width: 100%;
+}
+
+.journey-decision-card h1,
+.journey-decision-card p,
+.journey-ended-card h1,
+.journey-ended-card p,
+.journey-ended-card dl,
+.journey-ended-card dd,
+.journey-ended-card dt {
+  margin: 0;
+}
+
+.journey-choice-message {
+  color: #d8d8cc;
+  font-size: 1.05rem;
+  max-width: 65ch;
+}
+
+.journey-choice-goal {
+  background: color-mix(in srgb, var(--panel-3) 88%, black);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--water);
+  border-radius: 8px;
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.9rem 1rem;
+}
+
+.journey-choice-goal span,
+.journey-choice-goal small {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.journey-choice-actions {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.journey-choice-actions button {
+  align-content: start;
+  display: grid;
+  gap: 0.4rem;
+  min-height: 7rem;
+  text-align: left;
+}
+
+.journey-choice-actions button:first-child {
+  background: var(--road);
+  border-color: var(--road);
+  color: #17140e;
+}
+
+.journey-choice-actions button span {
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
+.journey-ended-card dl {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.journey-ended-card dl div {
+  border-bottom: 1px solid var(--line);
+  display: grid;
+  gap: 0.2rem;
+  padding-bottom: 0.6rem;
+}
+
+.journey-ended-card dt {
+  color: var(--muted);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+}
+
+.journey-ended-card button {
+  justify-self: start;
 }
 
 .kicker,
@@ -827,6 +990,14 @@ dd {
     grid-template-columns: 1fr;
   }
 
+  .journey-status {
+    grid-template-columns: 1fr;
+  }
+
+  .journey-rhythm {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
   .scene-heading,
   .location-topline {
     align-items: stretch;
@@ -835,6 +1006,19 @@ dd {
 }
 
 @media (max-width: 520px) {
+  .journey-rhythm,
+  .journey-choice-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .journey-rhythm div {
+    grid-template-columns: 1fr auto;
+  }
+
+  .journey-choice-actions button {
+    min-height: 5.5rem;
+  }
+
   .tutorial-card {
     gap: 0.55rem;
     padding: 0.7rem;
@@ -892,6 +1076,42 @@ dd {
     min-height: 2.35rem;
     min-width: 8.75rem;
     padding: 0.5rem 0.7rem;
+  }
+}
+
+@media (max-width: 520px) and (max-height: 620px) {
+  .tutorial-page {
+    padding: 0.25rem;
+  }
+
+  .tutorial-card {
+    gap: 0.35rem;
+    padding: 0.45rem;
+  }
+
+  .tutorial-heading {
+    padding-bottom: 0.35rem;
+  }
+
+  .tutorial-heading h1 {
+    font-size: 1.45rem;
+  }
+
+  .tutorial-step {
+    padding: 0.4rem;
+  }
+
+  .tutorial-step p {
+    font-size: 0.66rem;
+    line-height: 1.2;
+  }
+
+  .tutorial-footer {
+    padding-top: 0.3rem;
+  }
+
+  .tutorial-footer button {
+    min-height: 2.1rem;
   }
 }
 

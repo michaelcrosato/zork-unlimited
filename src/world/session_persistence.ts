@@ -1,4 +1,5 @@
 import { buildOverworldSessionSnapshot } from "./session_snapshot_builder.js";
+import type { JourneyContractSnapshot } from "./journey_contract.js";
 import {
   applyOverworldSessionSnapshotRestore,
   planOverworldSessionSnapshotRestore,
@@ -22,6 +23,7 @@ export type OverworldSessionPersistenceState = OverworldSessionSnapshotRestoreSt
   supplies: number;
   fatigue: number;
   pendingRoadEncounter: OverworldPendingRoadEncounter | null;
+  journey: JourneyContractSnapshot;
   discoveredIds: Set<string>;
   visitedIds: Set<string>;
   currentAreaByTown: Map<string, string>;
@@ -59,6 +61,7 @@ export function buildOverworldSessionSnapshotFromState(
     regionRenown: state.regionRenown,
     completedRegionalArcIds: state.completedRegionalArcIds,
     pendingRoadEncounter: state.pendingRoadEncounter,
+    journey: state.journey,
   });
 }
 

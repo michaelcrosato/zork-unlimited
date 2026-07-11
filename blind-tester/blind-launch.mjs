@@ -36,6 +36,7 @@ const NPM_EATEN_FLAGS = [
   ["model", "--model", true],
   ["out", "--out", true],
   ["delay_ms", "--delay-ms", true],
+  ["persona", "--persona", true],
   ["smoke", "--smoke", false],
   ["mock", "--mock", false],
   ["spectate", "--spectate", false],

@@ -673,6 +673,11 @@ function buildReport({ mode, seed, questId, log, plan, actionErrorCount, breakAt
   lines.push(
     JSON.stringify(
       {
+        schema_version: 2,
+        play_mode: "structural",
+        start_surface: mode === "quest" ? "direct_quest" : "fresh_overworld",
+        retention_eligible: false,
+        structural_kind: "mock",
         clarity: plan.clarity,
         enjoyment: plan.enjoyment,
         goal_understood: plan.goal_understood,
@@ -703,6 +708,9 @@ function parseSeed(raw) {
 async function main() {
   const seed = parseSeed(process.env.BLIND_SEED);
   const questId = (process.env.BLIND_QUEST_ID ?? "").trim();
+  if (process.env.BLIND_PLAY_MODE !== "structural") {
+    throw new Error("mock-agent: explicit BLIND_PLAY_MODE=structural is required.");
+  }
   const mcpConfigPath = process.env.BLIND_MCP_CONFIG;
   if (!mcpConfigPath) {
     throw new Error("mock-agent: BLIND_MCP_CONFIG env var is required.");

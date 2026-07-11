@@ -149,3 +149,12 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Findings: no tutorial regression; second-town template repetition and road-only fatigue remain the next evidence questions.
 - Guard: post-crawl `20260711T184939Z`, browser 1280x720/390x844/320x568, and health (287 files, 2028 tests, all 12 packs) passed.
 - Next: commit this green contract, then run 100 fresh-overworld blind agents and compile their feedback.
+
+## AFK Cycle 2026-07-11T21-10-00Z - pure_journey_contract
+- Engine: versioned journey state now shares the exact Albany goal, accepted-decision proof, 40/80/+40 and early-goal choices, immutable exit receipt, and v6 persistence across UI/MCP.
+- Harness: live blind/fleet defaults are enforced pure + fresh-overworld + neutral persona; structural QA is explicit/non-retention; V2 reports require same-session server evidence and safe resume sidecars.
+- Retention: Tier 3 now emits mode-separated `retention.json`; legacy 79-run guided evidence remains useful but contributes zero pure retention.
+- Pure canary: seed 950002 completed the Albany goal at decision 24, chose continue at 24/40/80, ended honestly at 120, clarity 4/5, enjoyment 3/5, replay no; exact receipt independently reverified.
+- Findings: the natural player praised Wolf-Winter/tutorial but confirmed town-template repetition, hidden event prerequisites, and context-poor road encounters as the next depth questions.
+- Guard: crawl `20260711T202940Z` (247/247 towns, 344/344 roads, 12/12 quests), browser 1280x720/390x844/320x568 plus live 40-choice/end, pure graph/seed isolation, and health (292 files / 2,060 tests / all 12 packs) green.
+- Next: commit this scoped correction, then run and compile a new 100-member pure milestone fleet; never resume the frozen legacy-guided cohort.

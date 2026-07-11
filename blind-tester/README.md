@@ -19,40 +19,38 @@ This harness is the right-hand column: the model is an external player that reac
 the game **only** through the `mcp__adventureforge__*` MCP tools. That uses your
 subscription allowance, which is the best value — exactly per the project goal.
 
-## Live blind and structural modes
+## Pure live and structural modes
 
-- **Live overworld mode (the only reasoning-agent mode):** the genuine
-  _new-player_ test. Every live blind agent starts the **core game** from a
-  brand-new New York overworld session in the starting town, reads the same
-  one-time tutorial a human player sees, orients, discovers local work by
-  scouting/talking/exploring, travels a road (resolving
-  encounters), and discovers+plays a quest through the
-  overworld→quest bridge, then reports on the _opening experience_. This is "how
-  does a first-time player actually experience the game," not a quest snippet.
-- **Targeted quest mode (`--quest <id>`, structural only):** a direct drop-in for
-  non-LLM smoke/mock checks of one shipped quest. The mechanical crawler also
-  sweeps quests directly. Never combine this target with a live reasoning agent;
-  even when one quest changed, live validation starts fresh and discovers it
-  through the overworld.
+- **Pure live mode (canonical default):** every reasoning agent starts one fresh
+  overworld session with `play_mode: pure` and
+  `start_surface: fresh_overworld`. It receives only the tutorial, current goal,
+  state, legal choices, accepted-decision/checkpoint status, and consequences a
+  human receives. The game presents continue/end choices at goal completion and
+  fixed decision checkpoints. The harness interviews only after the player ends
+  through that choice; it supplies no route, coverage assignment, solution, or
+  call-count stopping rule.
+- **Structural development/QA (explicit only):** `--smoke`, `--mock`, crawler,
+  and direct `--quest <id>` paths prove plumbing/mechanics. They are labeled
+  non-pure and retention-ineligible, and can never resume or count as pure live
+  evidence.
 
 ## Quickstart
 
 ```bash
-# 0) Prove the MCP path works — NO LLM, NO tokens (the reliability backbone).
-#    The smoke covers BOTH start surfaces: the overworld core game and a quest drop-in.
+# 0) Explicit structural MCP check — NO LLM/tokens, not retention evidence.
 npm run blind:smoke
 
-# 1) The default blind playtest — the CORE GAME open world from a fresh start:
+# 1) Canonical pure player — fresh game, game-native goal/checkpoint exit:
 npm run blind
 
 # 2) Same, watched live:
 npm run blind --spectate                  # then `npm run spectate` in another terminal
 
-# 3) Targeted quest plumbing — structural smoke only, NO LLM/tokens:
+# 3) Targeted quest plumbing — explicit structural smoke, NO LLM/tokens:
 bash blind-tester/run.sh --smoke --quest sunken_barrow --seed 11
 
-# Custom source/model without npm argument-forwarding warnings:
-bash blind-tester/run.sh --model opus     # overworld (default), opus player
+# Custom model preserves the pure contract:
+bash blind-tester/run.sh --model opus
 ```
 
 The report is written to `blind-tester/reports/<stamp>_<source>_seed<n>.md`
@@ -82,44 +80,45 @@ for a full-speed feed. Spectate is fully inert when not enabled.
 
 ## Fleet mode — 100 fresh-game blind playtests
 
-`blind-tester/fleet.mjs` (Tier 2 of the testing pyramid, docs/testing_pyramid.md)
-runs the 100 independent fresh-overworld playtests required at a milestone or
-feedback-harvest cycle, with bounded concurrency, resume, and a manifest — each
-one an ordinary `run.sh` spawn under the hood:
+`blind-tester/fleet.mjs` (Tier 2 of the testing pyramid,
+`docs/testing_pyramid.md`) runs the 100 independent pure fresh-overworld players
+required at a milestone or feedback-harvest cycle, with bounded concurrency,
+mode-aware resume, and a manifest — each one an ordinary `run.sh` spawn:
 
 ```bash
-npm run fleet -- --count 100 --concurrency 4 --model mix --personas mixed \
-  --target overworld --seed-base 1000
-npm run fleet:mock -- --count 2     # zero-token dry run (see Mock mode below)
+npm run fleet -- --count 100 --concurrency 4 --model mix --seed-base 1000
+npm run fleet:mock -- --count 2     # structural zero-token dry run
 npm run fleet:mock -- --count 2 --target quest:sunken_barrow # structural drop-in
 ```
 
-- **Personas**: `personas/{default,explorer,speedrunner,breaker,casual,
-lore-reader}.md`. `--personas mixed` rotates through explorer → speedrunner
-  → breaker → casual → lore-reader by run index (reproducible, not sampled);
-  `--personas <name>` pins one persona for every run.
+- **Persona**: pure live fleets enforce the neutral `default` first-time-player
+  persona. `explorer`, `speedrunner`, `breaker`, `casual`, `lore-reader`, and
+  `mixed` remain explicit structural experiments; their prescribed behavior
+  changes the retention measurement.
 - **Model**: `--model <alias>` (`haiku`, `sonnet`, `opus`) or `--model mix`
   (deterministic 9 haiku : 1 sonnet weighting by index). No temperature/top_p
-  flag exists — persona × model × seed is the live diversity axis; every live
-  member keeps the fresh-overworld target.
-- **Resume**: re-running the same fleet command skips any seed/target that
-  already has a verified report; failed attempts back off exponentially up to
-  `--max-retries` (default 2).
-- **Output**: reports in `reports/` (or `--out <dir>`); a manifest at
-  `ai-runs/fleet/<label>/manifest.jsonl` and a `summary.json` alongside it.
+  flag exists — model × seed is the live diversity axis.
+- **Resume**: only a reverified V2 pure report with matching server-authored run
+  evidence may skip a pure member. Guided, legacy, mock, and structural reports
+  never match. Failed attempts back off exponentially up to `--max-retries`
+  (default 2).
+- **Output**: reports plus verified `.run.json` evidence sidecars in `reports/`
+  (or `--out <dir>`); a manifest at
+  `ai-runs/fleet/<label>/manifest.jsonl` and `summary.json` preserve play mode,
+  start surface, journey contract/checkpoints, exit reason, and eligibility.
 - Live (non-mock) fleets spend real tokens — run them from a plain shell, not
   from inside a Claude Code session (nested CLI auth returns 401 there). A live
-  fleet always uses `--target overworld`; `quest:<id>` is accepted only by mock
-  structural runs.
+  fleet always enforces pure/fresh-overworld/default-persona; `quest:<id>` and
+  non-default personas are accepted only by explicit mock structural runs.
 
 ## Mock mode — zero-token CI fleet
 
 `--mock` sets `BLIND_AGENT_CMD` to `mock-agent.mjs`, a deterministic
-MCP-speaking scripted agent: it plays for real over the MCP tools with no LLM
-and no tokens. `npm run fleet:mock` is what CI runs (small acceptance e2e),
-exercising the full fleet → verified reports → `feedback:compile` pipeline on
-every push with no API key required. As historical capacity evidence, the
-standalone `npm run fleet:mock -- --count 20` lane verified 20/20 in ~18s.
+MCP-speaking scripted QA agent with no LLM or tokens. `npm run fleet:mock` is
+what CI runs (small acceptance e2e), exercising the structural fleet → verified
+reports → `feedback:compile` plumbing on every push. Mock reports are always
+`play_mode: structural` and `retention_eligible: false`, even when the script
+also exercises the journey state machine.
 
 ## Platforms
 
@@ -155,36 +154,40 @@ Recording is best-effort (a telemetry failure never fails the run) and only
 happens on the built-in `claude` path — a `BLIND_AGENT_CMD` override produces
 no claude envelope to measure.
 
-## How blindness is enforced (two levels)
+## How pure blindness is enforced
 
-1. **No source access (interface-level).** The agent runs from an isolated temp
-   directory and is restricted to the `mcp__adventureforge__*` tools; every file,
-   shell, and web tool is explicitly disallowed. It cannot read `content/*.yaml`,
-   `src/`, or even the repo's `CLAUDE.md`/`AGENTS.md` — only the observations the
-   tools return. The MCP server itself is launched with cwd = the game root so packs
-   still resolve.
-2. **No observation leakage (data-level, optional, future).** The raw observation can
-   still expose a little structure (e.g. world route metadata). For _maximal_
-   blindness, mask it — this is exactly the `blind-facade` approach the sibling repo
-   `zork-unlimited-3` built. Level 1 alone is already a legitimate blind playtest;
-   level 2 is the tightening, tracked as future work.
+1. **Isolation.** The agent runs from an isolated temporary directory. File,
+   shell, source, and web access are disallowed; it cannot read the repository,
+   content, instructions, or solutions.
+2. **Player-only server.** The runner launches MCP with `--play-mode pure`.
+   Tool discovery returns only human-equivalent world/quest reads and decisions,
+   one fresh overworld start, and the journey choice. Raw state, save/import,
+   restore, direct quest, validation, replay, generation, and authoring tools are
+   absent. Calls after game-confirmed exit are rejected.
+3. **Server-authored evidence.** A private JSONL records the fresh start and
+   final journey exit. The report verifier matches their session and exact
+   receipt before writing a verified run sidecar. Model prose cannot relabel a
+   structural run as pure.
 
 This mirrors the canonical procedure in [`docs/blind_playtest_protocol.md`](../docs/blind_playtest_protocol.md);
-the live [`prompt-overworld.md`](./prompt-overworld.md) carries its full
-new-player contract. The structural-only [`prompt.md`](./prompt.md) reuses the
-same report format (clarity/enjoyment 1-5, severity-tagged findings).
+the live [`prompt-overworld.md`](./prompt-overworld.md) carries only the MCP
+transport boundary and V2 interview format; the game carries the objective and
+session rhythm. The structural-only [`prompt.md`](./prompt.md) is a QA fixture.
 
 ## Files
 
-- `run.sh` — the runner: builds the MCP config (server at game-root cwd), fills the
-  prompt, runs `claude -p` from an isolated dir, saves the report. `--smoke` skips
-  the LLM.
+- `run.sh` — the runner: builds the pure MCP config and private evidence path,
+  fills the transport-only prompt, runs `claude -p` from an isolated directory,
+  and verifies the report/receipt after game-confirmed exit. `--smoke` selects
+  the structural no-LLM path.
 - `smoke.mjs` — token-free MCP smoke test via the MCP SDK client: spawn server,
   `tools/list`, exercise overworld and direct quest starts, step a few actions,
   assert. Run
   this anytime to verify the plumbing without spending budget.
 - `prompt-overworld.md` — the locked-down live new-player prompt.
 - `prompt.md` — the direct-quest prompt retained for non-LLM structural fixtures.
+- `loadtest.sh` / `prompt-loadtest.md` — explicitly structural server/token QA
+  with a prescribed workload; never a blind report or retention evidence.
 - `reports/` — run outputs (gitignored).
 
 ## Options
@@ -196,13 +199,13 @@ same report format (clarity/enjoyment 1-5, severity-tagged findings).
 --model <alias>  claude model alias: sonnet (default, best value) | opus
 --out <prefix>   report path prefix (default: reports/<stamp>_<source>_seed<n>)
 --smoke          run the no-LLM MCP smoke test instead of a real playtest
---overworld      explicit form of the default core-game mode (rejects a --quest mix)
+--overworld      explicit fresh-overworld target (already fixed for pure live play)
 --spectate       write the human-watchable feed (watch with: npm run spectate)
 --delay-ms <n>   pace every tool response by n ms (implies --spectate)
 ```
 
 Environment: `BLIND_QUEST_ID` (structural runs only), `BLIND_MODEL`,
-`BLIND_TIMEOUT` (seconds, default 900),
+`BLIND_TIMEOUT` (seconds, default 900; technical failure/failsafe, never a play budget),
 `BLIND_SPECTATE=1`, `BLIND_SPECTATE_DELAY_MS`, `BLIND_BASH` (Windows: path to Git
 Bash if auto-detection fails).
 
@@ -213,8 +216,9 @@ The default agent is `claude -p`. To use a different MCP-capable agent CLI, set
 `BLIND_MCP_CONFIG` (path to the generated MCP config), `BLIND_QUEST_ID`,
 `BLIND_SEED`.
 
-Provider overrides do not change the policy: any live reasoning agent starts a
-fresh overworld game. `BLIND_QUEST_ID` is populated only by structural fixtures.
+Provider overrides do not change the policy: every live reasoning agent uses
+the same pure player-only server, neutral persona, and fresh overworld contract.
+`BLIND_QUEST_ID` is populated only by structural fixtures.
 
 ```bash
 BLIND_AGENT_CMD='codex exec --ignore-user-config --ephemeral --skip-git-repo-check --sandbox read-only -' npm run blind --seed=137

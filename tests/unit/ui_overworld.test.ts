@@ -58,6 +58,17 @@ describe("OverworldSession", () => {
   it("starts in Albany with roads, local discoveries, and no global quest list", () => {
     const session = new OverworldSession(world);
     const view = session.view();
+    expect(session.journey()).toMatchObject({
+      status: "active",
+      goal: {
+        text: "Find one local lead in Albany and see it through.",
+        status: "active",
+      },
+      acceptedDecisions: 0,
+      baselineDecisions: 40,
+      nextCheckpoint: 40,
+      pendingChoice: null,
+    });
 
     expect(view.current.id).toBe("albany_city");
     expect(view.exits.length).toBeGreaterThan(3);

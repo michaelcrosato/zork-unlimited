@@ -213,6 +213,13 @@ export function crawlOverworld(opts: OverworldCrawlOptions): OverworldCrawlResul
   const record = (entry: Record<string, unknown>): void => {
     actionJournal.push(entry);
     stepCounter += 1;
+    // The crawler is an explicit structural QA driver, not a retention player.
+    // Keep its exhaustive sweep moving through the same game-native pauses by
+    // deterministically selecting continue after each recorded mutation. Pure
+    // live agents must make this choice themselves through the player surface.
+    if (session.journey().pendingChoice !== null) {
+      session.chooseJourney("continue");
+    }
   };
 
   const addFinding = (input: {

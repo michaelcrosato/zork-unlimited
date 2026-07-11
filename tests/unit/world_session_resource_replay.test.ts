@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { createInitialJourneyContractSnapshot } from "../../src/world/journey_contract.js";
 import type { OverworldEdge, OverworldRoadEvent } from "../../src/world/overworld.js";
 import {
   assertSnapshotResourceReplay,
@@ -102,6 +103,7 @@ function snapshot(
     regionRenown: [],
     completedRegionalArcIds: [],
     pendingRoadEncounter: null,
+    journey: createInitialJourneyContractSnapshot(),
     ...overrides,
   };
 }

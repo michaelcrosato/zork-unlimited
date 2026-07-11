@@ -1,5 +1,6 @@
 import { spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
@@ -52,16 +53,23 @@ describe("blind runner MCP config contract", () => {
     expect(runner).toContain("--overworld");
     expect(runner).toContain("prompt-overworld.md");
     expect(runner).toContain("mcp__adventureforge__start_overworld");
-    // The overworld prompt starts the world, warns about the road-encounter wedge,
-    // uses the quest bridge, and keeps the mandatory exit-interview report format.
+    // The pure prompt carries only transport syntax. Gameplay objectives,
+    // routes, coverage targets, and stopping are owned by the game itself.
     expect(owPrompt).toContain("mcp__adventureforge__start_overworld");
-    expect(owPrompt).toContain("Your FIRST game action");
-    expect(owPrompt).toContain("one-time `tutorial`");
+    expect(owPrompt).toContain("first game action");
+    expect(owPrompt).toContain("one-time tutorial");
     expect(owPrompt).not.toContain("mcp__adventureforge__start_world_quest");
-    expect(owPrompt).toContain("resolve_overworld_session_road_encounter");
-    expect(owPrompt).toContain("start_overworld_session_quest");
+    expect(owPrompt).not.toMatch(/30.?45|tool calls|take at least one road/i);
+    expect(owPrompt).not.toContain("resolve_overworld_session_road_encounter");
+    expect(owPrompt).not.toContain("start_overworld_session_quest");
+    expect(owPrompt).toContain("game presents its actual journey choice");
+    expect(owPrompt).toContain("After the game confirms the end");
     expect(owPrompt).toContain("json exit-interview");
+    expect(owPrompt).toContain('"play_mode": "pure"');
     expect(owPrompt).not.toContain("pack_path");
+    expect(runner).toContain("--play-mode");
+    expect(runner).toContain("--run-evidence");
+    expect(runner).toContain("--require-mode pure");
     // Structural flags survive PowerShell's `--` stripping via launcher recovery.
     expect(launcher).toContain('"--overworld"');
     expect(launcher).toContain('"--mock"');
@@ -111,12 +119,52 @@ describe("blind runner MCP config contract", () => {
     }
   }, 30_000);
 
+  it("rejects non-default live personas before launching an override agent", () => {
+    const result = spawnSync(
+      process.execPath,
+      ["blind-tester/blind-launch.mjs", "--persona", "breaker"],
+      {
+        cwd: process.cwd(),
+        encoding: "utf8",
+        env: { ...process.env, BLIND_AGENT_CMD: "exit 93", BLIND_PERSONA: "default" },
+        timeout: 30_000,
+      },
+    );
+    const output = `${result.stdout ?? ""}\n${result.stderr ?? ""}\n${result.error?.message ?? ""}`;
+    expect(result.status, output).toBe(2);
+    expect(output).toContain("Pure live blind runs require --persona default");
+    expect(output).not.toContain("Using BLIND_AGENT_CMD override");
+  }, 30_000);
+
+  it("treats the 900-second runner timeout knob as technical failure, never an exit", () => {
+    const dir = mkdtempSync(join(tmpdir(), "af-blind-timeout-"));
+    try {
+      const result = spawnSync(
+        process.execPath,
+        ["blind-tester/blind-launch.mjs", "--out", join(dir, "timed-out")],
+        {
+          cwd: process.cwd(),
+          encoding: "utf8",
+          env: { ...process.env, BLIND_AGENT_CMD: "sleep 5", BLIND_TIMEOUT: "1" },
+          timeout: 15_000,
+        },
+      );
+      const output = `${result.stdout ?? ""}\n${result.stderr ?? ""}\n${result.error?.message ?? ""}`;
+      expect(result.status, output).toBe(124);
+      expect(output).toContain("technical timeout");
+      expect(output).toContain("no exit interview or retention result is accepted");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }, 20_000);
+
   it("smokes BOTH start surfaces — the default overworld and the quest drop-in", () => {
     const smoke = readFileSync(join(process.cwd(), "blind-tester", "smoke.mjs"), "utf8");
     expect(smoke).toContain('"start_overworld"');
     expect(smoke).toContain('"get_overworld_session_context"');
     expect(smoke).toContain("compact_context: true");
     expect(smoke).toContain("if_snapshot_hash");
+    expect(smoke).toContain('"--play-mode", "structural"');
   });
 
   it("keeps structural targeted quest runs on world quest ids instead of raw pack starts", () => {

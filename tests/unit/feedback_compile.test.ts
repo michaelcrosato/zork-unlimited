@@ -1,10 +1,12 @@
 import { describe, expect, it, beforeAll } from "vitest";
-import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, utimesSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { collectInputs, compileFeedback } from "../../src/feedback/compile.js";
+import { FeedbackEvidenceSummarySchema } from "../../src/feedback/evidence_summary.js";
 import { HotspotsFileSchema } from "../../src/feedback/schema.js";
 import { CrawlFindingSchema, type CrawlFinding } from "../../src/crawl/findings.js";
+import { hashState } from "../../src/core/hash.js";
 
 // Three hand-written, verifier-passing report skeletons (a real "Playthrough
 // log"/"Verdict"/clarity+enjoyment rating section plus a fenced exit-interview
@@ -137,6 +139,160 @@ None found this run.
 This report is intentionally missing its exit interview block so the compiler must reject it.
 `;
 
+function pureReportAndSidecar(
+  options: { proofCharacter?: string; continued?: boolean; earlyGoal?: boolean } = {},
+): {
+  report: string;
+  sidecar: string;
+} {
+  const proofCharacter = options.proofCharacter ?? "a";
+  const continued = options.continued ?? false;
+  const earlyGoal = options.earlyGoal ?? false;
+  const firstDecisionProofHash = proofCharacter.repeat(64);
+  const finalDecisionProofHash = continued
+    ? String.fromCharCode(proofCharacter.charCodeAt(0) + 1).repeat(64)
+    : firstDecisionProofHash;
+  const acceptedDecisions = earlyGoal ? 12 : continued ? 80 : 40;
+  const retentionHistory = earlyGoal
+    ? [
+        {
+          sequence: 1,
+          atDecision: 12,
+          reasons: ["goal_completed"],
+          checkpoint: null,
+          choice: "end",
+          decisionProofHash: finalDecisionProofHash,
+        },
+      ]
+    : [
+        {
+          sequence: 1,
+          atDecision: 40,
+          reasons: ["checkpoint"],
+          checkpoint: 40,
+          choice: continued ? "continue" : "end",
+          decisionProofHash: firstDecisionProofHash,
+        },
+        ...(continued
+          ? [
+              {
+                sequence: 2,
+                atDecision: 80,
+                reasons: ["checkpoint"],
+                checkpoint: 80,
+                choice: "end",
+                decisionProofHash: finalDecisionProofHash,
+              },
+            ]
+          : []),
+      ];
+  const receiptPayload = {
+    contractVersion: 1,
+    exitReason: "player_ended_at_choice",
+    goalVersion: 1,
+    goalId: "albany_local_lead",
+    goalStatus: earlyGoal ? "completed" : "active",
+    acceptedDecisions,
+    exitReasons: [earlyGoal ? "goal_completed" : "checkpoint"],
+    checkpoint: earlyGoal ? null : acceptedDecisions,
+    decisionProofHash: finalDecisionProofHash,
+    retentionHistory,
+  };
+  const receipt = { ...receiptPayload, receiptHash: hashState(receiptPayload) };
+  const interview = {
+    schema_version: 2,
+    play_mode: "pure",
+    start_surface: "fresh_overworld",
+    retention_eligible: true,
+    journey_exit_receipt: receipt,
+    clarity: 4,
+    enjoyment: 4,
+    goal_understood: true,
+    got_stuck: false,
+    confusions: [],
+    bugs: [],
+    best_moment: "The game let me choose my own local lead.",
+    worst_moment: "One transition felt slower than expected.",
+    would_replay: true,
+    verdict: "The player-facing goal and journey choice were both clear enough to continue.",
+  };
+  const report = `# Pure blind report
+
+## Playthrough log
+
+I played until the game presented its journey choice and chose to end.
+
+## Did it work mechanically?
+
+No mechanical failures.
+
+## Understandable & fun?
+
+Clarity 4/5. Enjoyment 4/5.
+
+## Verdict
+
+The player-facing goal and journey choice were both clear enough to continue.
+
+\`\`\`json exit-interview
+${JSON.stringify(interview, null, 2)}
+\`\`\`
+`;
+  const sidecar = JSON.stringify({
+    schema_version: 1,
+    report_schema_version: 2,
+    play_mode: "pure",
+    start_surface: "fresh_overworld",
+    retention_eligible: true,
+    evidence_status: "verified",
+    session_id: `o-${proofCharacter}`,
+    receipt,
+  });
+  return { report, sidecar };
+}
+
+function structuralReport(): string {
+  const interview = {
+    schema_version: 2,
+    play_mode: "structural",
+    start_surface: "fresh_overworld",
+    retention_eligible: false,
+    structural_kind: "mock",
+    clarity: 3,
+    enjoyment: 3,
+    goal_understood: true,
+    got_stuck: false,
+    confusions: [],
+    bugs: [],
+    best_moment: "The structural path completed deterministically.",
+    worst_moment: "This was QA rather than a live player journey.",
+    would_replay: true,
+    verdict: "Useful structural QA evidence, but deliberately not live-player retention evidence.",
+  };
+  return `# Structural blind report
+
+## Playthrough log
+
+Ran the explicit structural mock path.
+
+## Did it work mechanically?
+
+No mechanical failures.
+
+## Understandable & fun?
+
+Clarity 3/5. Enjoyment 3/5.
+
+## Verdict
+
+Useful structural QA evidence, but deliberately not live-player retention evidence.
+
+\`\`\`json exit-interview
+${JSON.stringify(interview, null, 2)}
+\`\`\`
+`;
+}
+
 function buildCrawlFinding(overrides: Partial<CrawlFinding>): CrawlFinding {
   return CrawlFindingSchema.parse({
     code: "ORPHAN",
@@ -200,6 +356,25 @@ describe("collectInputs", () => {
     expect(result.crawlFindings).toHaveLength(2);
     expect(result.crawlFindingRefs).toHaveLength(2);
   });
+
+  it("requires the matching verified sidecar before accepting a V2 pure report", () => {
+    const dir = mkdtempSync(join(tmpdir(), "feedback-pure-sidecar-"));
+    const base = join(dir, "20260101T000004Z_overworld_seed4");
+    const fixture = pureReportAndSidecar();
+    writeFileSync(`${base}.md`, fixture.report);
+
+    expect(collectInputs(process.cwd(), [dir])).toMatchObject({ verified: 0, rejected: 1 });
+
+    writeFileSync(`${base}.run.json`, pureReportAndSidecar({ proofCharacter: "c" }).sidecar);
+    expect(collectInputs(process.cwd(), [dir])).toMatchObject({ verified: 0, rejected: 1 });
+
+    writeFileSync(`${base}.run.json`, fixture.sidecar);
+    expect(collectInputs(process.cwd(), [dir])).toMatchObject({ verified: 1, rejected: 0 });
+
+    const staleTime = new Date("2000-01-01T00:00:00.000Z");
+    utimesSync(`${base}.run.json`, staleTime, staleTime);
+    expect(collectInputs(process.cwd(), [dir])).toMatchObject({ verified: 0, rejected: 1 });
+  });
 });
 
 describe("compileFeedback", () => {
@@ -232,5 +407,63 @@ describe("compileFeedback", () => {
 
     const md = readFileSync(mdPath, "utf8");
     expect(md).toContain("Recommended next fix");
+  });
+
+  it("separates report modes and summarizes game choices from sidecar-gated pure exits", () => {
+    const dir = mkdtempSync(join(tmpdir(), "feedback-retention-input-"));
+    const continuedBase = join(dir, "20260101T000010Z_overworld_seed10");
+    const endedBase = join(dir, "20260101T000011Z_overworld_seed11");
+    const earlyGoalBase = join(dir, "20260101T000012Z_overworld_seed12");
+    const rejectedBase = join(dir, "20260101T000013Z_overworld_seed13");
+    const continued = pureReportAndSidecar({ proofCharacter: "a", continued: true });
+    const ended = pureReportAndSidecar({ proofCharacter: "c" });
+    const earlyGoal = pureReportAndSidecar({ proofCharacter: "e", earlyGoal: true });
+    const rejected = pureReportAndSidecar({ proofCharacter: "f" });
+    writeFileSync(`${continuedBase}.md`, continued.report);
+    writeFileSync(`${continuedBase}.run.json`, continued.sidecar);
+    writeFileSync(`${endedBase}.md`, ended.report);
+    writeFileSync(`${endedBase}.run.json`, ended.sidecar);
+    writeFileSync(`${earlyGoalBase}.md`, earlyGoal.report);
+    writeFileSync(`${earlyGoalBase}.run.json`, earlyGoal.sidecar);
+    writeFileSync(`${rejectedBase}.md`, rejected.report); // no sidecar: cannot become retention
+    writeFileSync(join(dir, "20260101T000014Z_overworld_seed14.md"), structuralReport());
+    writeFileSync(join(dir, "20260101T000015Z_overworld_seed15.md"), REPORT_B);
+
+    const outDir = mkdtempSync(join(tmpdir(), "feedback-retention-out-"));
+    const { file, evidence, retentionPath, mdPath } = compileFeedback({
+      root: process.cwd(),
+      inputs: [dir],
+      outDir,
+      topK: 5,
+      llmLabels: false,
+      prevDir: null,
+    });
+
+    expect(file.inputs).toMatchObject({ verified_reports: 5, rejected_reports: 1 });
+    expect(evidence.report_modes).toEqual({ pure: 3, structural: 1, legacy_guided: 1 });
+    expect(evidence.pure_retention).toMatchObject({
+      eligible_reports: 3,
+      continued_reports: 1,
+      ended_at_first_choice_reports: 2,
+      accepted_decisions: { minimum: 12, maximum: 80, mean: 44 },
+      choices: { continue: 1, end: 3 },
+      choice_triggers: {
+        checkpoint: { continue: 1, end: 2 },
+        goal_completed: { continue: 0, end: 1 },
+        checkpoint_and_goal_completed: { continue: 0, end: 0 },
+      },
+      checkpoints: [
+        { decision: 40, continue: 1, end: 1 },
+        { decision: 80, continue: 0, end: 1 },
+      ],
+      exit_reasons: [{ reason: "player_ended_at_choice", count: 3 }],
+    });
+
+    const persisted = JSON.parse(readFileSync(retentionPath, "utf8"));
+    expect(FeedbackEvidenceSummarySchema.parse(persisted)).toEqual(evidence);
+    const markdown = readFileSync(mdPath, "utf8");
+    expect(markdown).toContain("Verified report modes: pure 3, structural 1, legacy-guided 1");
+    expect(markdown).toContain("Actual game choices: 1 continue, 3 end");
+    expect(markdown).toContain("`would_replay` is a post-exit attitude metric");
   });
 });

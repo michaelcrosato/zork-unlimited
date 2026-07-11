@@ -146,6 +146,25 @@ if [[ -n "$QUEST_ID" && "$SMOKE" != "1" && "$MOCK" != "1" ]]; then
   exit 2
 fi
 
+# There are exactly two harness contracts. Every reasoning-agent run is the
+# pure, human-equivalent fresh-overworld path. Structural behavior is available
+# only behind the explicit no-LLM --smoke/--mock switches; ambient environment
+# variables and provider overrides cannot downgrade a live run.
+if [[ "$SMOKE" == "1" || "$MOCK" == "1" ]]; then
+  PLAY_MODE="structural"
+else
+  PLAY_MODE="pure"
+fi
+START_SURFACE=$([[ "$OVERWORLD" == "1" ]] && printf 'fresh_overworld' || printf 'direct_quest')
+
+# Persona-directed coverage/breaking changes the thing retention is measuring.
+# Pure live play therefore has one canonical, neutral first-time-player prompt.
+# The richer persona library remains available to explicit structural mocks.
+if [[ "$PLAY_MODE" == "pure" && "$PERSONA" != "default" ]]; then
+  echo "Pure live blind runs require --persona default; non-default personas are structural-only." >&2
+  exit 2
+fi
+
 # The live mode is always the default CORE-GAME test (start the open world from
 # a fresh start and experience it as a new player). Structural smoke/mock tests
 # may use the targeted single-QUEST seam. The two surfaces use different prompts
@@ -217,6 +236,7 @@ esac
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
 MCP_CONFIG="$WORK/mcp.json"
+RUN_EVIDENCE="$WORK/run-evidence.jsonl"
 
 # Spectate pass-through: forwarded as SERVER argv (clients can ignore env/cwd
 # fields, but args always survive). The server writes the human-watchable feed;
@@ -228,11 +248,11 @@ if [[ "$SPECTATE" == "1" ]]; then
     case "$SPECTATE_DELAY_MS" in
       *[!0-9]*) echo "--delay-ms takes a whole number of milliseconds." >&2; exit 2 ;;
     esac
-    SPECTATE_ARGS_JSON=", \"--\", \"--spectate\", \"--spectate-delay-ms\", \"$SPECTATE_DELAY_MS\""
-    SPECTATE_CMD_SUFFIX=" -- --spectate --spectate-delay-ms $SPECTATE_DELAY_MS"
+    SPECTATE_ARGS_JSON=", \"--spectate\", \"--spectate-delay-ms\", \"$SPECTATE_DELAY_MS\""
+    SPECTATE_CMD_SUFFIX=" --spectate --spectate-delay-ms $SPECTATE_DELAY_MS"
   else
-    SPECTATE_ARGS_JSON=", \"--\", \"--spectate\""
-    SPECTATE_CMD_SUFFIX=" -- --spectate"
+    SPECTATE_ARGS_JSON=", \"--spectate\""
+    SPECTATE_CMD_SUFFIX=" --spectate"
   fi
 fi
 
@@ -244,11 +264,13 @@ fi
 # The npm --prefix path in native form: Git Bash's /c/... is meaningless to the
 # native claude.exe-spawned npm, so convert with cygpath on msys/cygwin.
 GAME_DIR_MCP="$GAME_DIR"
+RUN_EVIDENCE_MCP="$RUN_EVIDENCE"
 if [[ "$OSTYPE" == msys* || "$OSTYPE" == cygwin* ]] && command -v cygpath >/dev/null 2>&1; then
   GAME_DIR_MCP="$(cygpath -m "$GAME_DIR")"
+  RUN_EVIDENCE_MCP="$(cygpath -m "$RUN_EVIDENCE")"
 fi
-case "$GAME_DIR_MCP" in
-  *\"*|*\\*) echo "Refusing: game path breaks MCP config JSON quoting." >&2; exit 4 ;;
+case "$GAME_DIR_MCP|$RUN_EVIDENCE_MCP" in
+  *\"*|*\\*) echo "Refusing: game or evidence path breaks MCP config JSON quoting." >&2; exit 4 ;;
 esac
 
 if [[ -n "$GAME_DIR_WIN" ]]; then
@@ -256,27 +278,29 @@ if [[ -n "$GAME_DIR_WIN" ]]; then
     *" "*) echo "Refusing: WSL blind runner path contains a space, which breaks cmd.exe MCP launch quoting." >&2; exit 4 ;;
   esac
   GAME_DIR_WIN_JSON="${GAME_DIR_WIN//\\/\\\\}"
+  RUN_EVIDENCE_WIN="$(wslpath -w "$RUN_EVIDENCE")"
+  RUN_EVIDENCE_WIN_JSON="${RUN_EVIDENCE_WIN//\\/\\\\}"
   CODEX_MCP_CMD="cmd.exe"
-  CODEX_MCP_ARGS_TOML='["/c", "cd /d '"$GAME_DIR_WIN_JSON"' && npm --silent run mcp'"$SPECTATE_CMD_SUFFIX"'"]'
+  CODEX_MCP_ARGS_TOML='["/c", "cd /d '"$GAME_DIR_WIN_JSON"' && npm --silent run mcp -- --play-mode '"$PLAY_MODE"' --run-evidence '"$RUN_EVIDENCE_WIN_JSON$SPECTATE_CMD_SUFFIX"'"]'
   cat > "$MCP_CONFIG" <<JSON
 {
   "mcpServers": {
     "adventureforge": {
       "command": "cmd.exe",
-      "args": ["/c", "cd /d $GAME_DIR_WIN_JSON && npm --silent run mcp$SPECTATE_CMD_SUFFIX"]
+      "args": ["/c", "cd /d $GAME_DIR_WIN_JSON && npm --silent run mcp -- --play-mode $PLAY_MODE --run-evidence $RUN_EVIDENCE_WIN_JSON$SPECTATE_CMD_SUFFIX"]
     }
   }
 }
 JSON
 else
   CODEX_MCP_CMD="npm"
-  CODEX_MCP_ARGS_TOML='["--silent", "--prefix", "'"$GAME_DIR_MCP"'", "run", "mcp"'"$SPECTATE_ARGS_JSON"']'
+  CODEX_MCP_ARGS_TOML='["--silent", "--prefix", "'"$GAME_DIR_MCP"'", "run", "mcp", "--", "--play-mode", "'"$PLAY_MODE"'", "--run-evidence", "'"$RUN_EVIDENCE_MCP"'"'"$SPECTATE_ARGS_JSON"']'
   cat > "$MCP_CONFIG" <<JSON
 {
   "mcpServers": {
     "adventureforge": {
       "command": "npm",
-      "args": ["--silent", "--prefix", "$GAME_DIR_MCP", "run", "mcp"$SPECTATE_ARGS_JSON]
+      "args": ["--silent", "--prefix", "$GAME_DIR_MCP", "run", "mcp", "--", "--play-mode", "$PLAY_MODE", "--run-evidence", "$RUN_EVIDENCE_MCP"$SPECTATE_ARGS_JSON]
     }
   }
 }
@@ -308,8 +332,13 @@ if [[ -z "$OUT" ]]; then
   OUT="$SCRIPT_DIR/reports/${STAMP}_${SOURCE_SLUG}_seed${SEED}"
 fi
 mkdir -p "$(dirname "$OUT")"
+RUN_SIDECAR="$OUT.run.json"
+# An explicit --out prefix may be reused after a failed attempt. Never leave a
+# previously verified receipt beside a newly truncated/timed-out report.
+rm -f "$RUN_SIDECAR"
 
 echo "Blind playtest → $SOURCE_LABEL seed=$SEED model=$MODEL"
+echo "Play contract: $PLAY_MODE / $START_SURFACE"
 echo "Report prefix: $OUT"
 
 # Codex only exposes repo MCP servers when its own config enables them. The blind
@@ -350,14 +379,20 @@ fi
 # Provider override path: hand the prompt to any MCP-capable agent CLI.
 if [[ -n "${BLIND_AGENT_CMD:-}" ]]; then
   echo "Using BLIND_AGENT_CMD override."
+  set +e
   (
     cd "$WORK"
     PATH="${CODEX_SHIM_BIN:+$CODEX_SHIM_BIN:}$PATH" \
     BLIND_MCP_CONFIG="$MCP_CONFIG" BLIND_QUEST_ID="$QUEST_ID" BLIND_SEED="$SEED" \
+      BLIND_PLAY_MODE="$PLAY_MODE" BLIND_START_SURFACE="$START_SURFACE" \
       timeout "$TIMEOUT" bash -c "$BLIND_AGENT_CMD" <<<"$PROMPT"
   ) | tee "$OUT.md"
   AGENT_STATUS="${PIPESTATUS[0]}"
+  set -e
   if [[ "$AGENT_STATUS" -ne 0 ]]; then
+    if [[ "$AGENT_STATUS" -eq 124 || "$AGENT_STATUS" -eq 137 ]]; then
+      echo "✗ blind run hit the ${TIMEOUT}s technical timeout; no exit interview or retention result is accepted." >&2
+    fi
     exit "$AGENT_STATUS"
   fi
   # The override agent's report is NOT exempt from the gate: run the same
@@ -366,7 +401,15 @@ if [[ -n "${BLIND_AGENT_CMD:-}" ]]; then
   if command -v wslpath >/dev/null 2>&1 && [[ "$REPORT_MD" == /mnt/* ]]; then
     REPORT_MD="$(wslpath -w "$REPORT_MD")"
   fi
-  ( cd "$GAME_DIR" && npm --silent exec tsx -- scripts/verify-blind-report.ts "$REPORT_MD" )
+  RUN_SIDECAR_ARG="$(node_path_arg "$RUN_SIDECAR")"
+  if [[ "$PLAY_MODE" == "pure" ]]; then
+    RUN_EVIDENCE_ARG="$(node_path_arg "$RUN_EVIDENCE")"
+    ( cd "$GAME_DIR" && npm --silent exec tsx -- scripts/verify-blind-report.ts "$REPORT_MD" \
+      --require-mode pure --run-evidence "$RUN_EVIDENCE_ARG" --write-run-sidecar "$RUN_SIDECAR_ARG" )
+  else
+    ( cd "$GAME_DIR" && npm --silent exec tsx -- scripts/verify-blind-report.ts "$REPORT_MD" \
+      --require-mode structural --write-run-sidecar "$RUN_SIDECAR_ARG" )
+  fi
   echo "✓ Blind report saved: $OUT.md"
   exit 0
 fi
@@ -407,6 +450,9 @@ STATUS=$?
 set -e
 
 if [[ $STATUS -ne 0 ]]; then
+  if [[ $STATUS -eq 124 || $STATUS -eq 137 ]]; then
+    echo "✗ blind run hit the ${TIMEOUT}s technical timeout; no exit interview or retention result is accepted." >&2
+  fi
   echo "✗ blind run failed (exit $STATUS). See $OUT.log" >&2
   tail -5 "$OUT.log" >&2 || true
   exit $STATUS
@@ -426,7 +472,10 @@ REPORT_MD="$OUT.md"
 if command -v wslpath >/dev/null 2>&1 && [[ "$REPORT_MD" == /mnt/* ]]; then
   REPORT_MD="$(wslpath -w "$REPORT_MD")"
 fi
-( cd "$GAME_DIR" && npm --silent exec tsx -- scripts/verify-blind-report.ts "$REPORT_MD" )
+RUN_SIDECAR_ARG="$(node_path_arg "$RUN_SIDECAR")"
+RUN_EVIDENCE_ARG="$(node_path_arg "$RUN_EVIDENCE")"
+( cd "$GAME_DIR" && npm --silent exec tsx -- scripts/verify-blind-report.ts "$REPORT_MD" \
+  --require-mode pure --run-evidence "$RUN_EVIDENCE_ARG" --write-run-sidecar "$RUN_SIDECAR_ARG" )
 
 # Token/cost telemetry (measure loop efficiency instead of guessing): fold the
 # claude envelope's usage into the gitignored ai-runs/blind-telemetry.jsonl.

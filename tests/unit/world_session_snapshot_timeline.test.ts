@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { createInitialJourneyContractSnapshot } from "../../src/world/journey_contract.js";
 import {
   OVERWORLD_SESSION_SAVE_VERSION,
   type OverworldSessionSnapshot,
@@ -58,6 +59,7 @@ function snapshot(travelLog: TravelLogEntrySnapshot[], minutes = 720): Overworld
     regionRenown: [],
     completedRegionalArcIds: [],
     pendingRoadEncounter: null,
+    journey: createInitialJourneyContractSnapshot(),
   };
 }
 

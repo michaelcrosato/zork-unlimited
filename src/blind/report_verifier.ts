@@ -1,8 +1,30 @@
 import { readFileSync } from "node:fs";
-import { extractExitInterview, type ExitInterview } from "./exit_interview.js";
+import { isDeepStrictEqual } from "node:util";
+import {
+  extractExitInterview,
+  isPureExitInterviewV2,
+  isStructuralExitInterviewV2,
+  type ExitInterview,
+} from "./exit_interview.js";
+import {
+  parseRunEvidenceJsonl,
+  type BlindRunSidecar,
+  type PureBlindRunSidecar,
+  type StructuralBlindRunSidecar,
+} from "./run_evidence.js";
+
+export type RequiredBlindPlayMode = "pure" | "structural";
+
+export interface BlindReportVerificationOptions {
+  requiredPlayMode?: RequiredBlindPlayMode;
+  /** Raw private JSONL emitted by the MCP server for this run. */
+  runEvidenceText?: string;
+  /** Previously verified durable sidecar, used by fleet resume/re-verification. */
+  runSidecar?: BlindRunSidecar;
+}
 
 export type BlindReportVerification =
-  | { ok: true; interview: ExitInterview }
+  | { ok: true; interview: ExitInterview; run: BlindRunSidecar | null }
   | { ok: false; reason: string };
 
 const MCP_FAILURE_PATTERNS: ReadonlyArray<RegExp> = [
@@ -45,7 +67,69 @@ const REQUIRED_REPORT_PATTERNS: ReadonlyArray<[RegExp, string]> = [
   [ratingPattern("enjoyment"), "missing enjoyment rating"],
 ];
 
-export function verifyBlindReportText(text: string): BlindReportVerification {
+function verifyPureRun(
+  interview: ExitInterview,
+  options: BlindReportVerificationOptions,
+): BlindReportVerification {
+  if (!isPureExitInterviewV2(interview)) {
+    return {
+      ok: false,
+      reason: "pure blind runs require a V2 pure/fresh_overworld exit interview",
+    };
+  }
+
+  let sidecar: PureBlindRunSidecar;
+  if (options.runEvidenceText !== undefined) {
+    const evidence = parseRunEvidenceJsonl(options.runEvidenceText);
+    if (!evidence.ok) return { ok: false, reason: evidence.reason };
+    sidecar = evidence.sidecar;
+  } else if (options.runSidecar?.play_mode === "pure") {
+    sidecar = options.runSidecar;
+  } else {
+    return {
+      ok: false,
+      reason: "pure blind runs require verified fresh_start + journey_exit run evidence",
+    };
+  }
+
+  if (!isDeepStrictEqual(interview.journey_exit_receipt, sidecar.receipt)) {
+    return {
+      ok: false,
+      reason: "exit interview journey_exit_receipt does not match server run evidence",
+    };
+  }
+  return { ok: true, interview, run: sidecar };
+}
+
+function verifyStructuralRun(
+  interview: ExitInterview,
+  options: BlindReportVerificationOptions,
+): BlindReportVerification {
+  if (!isStructuralExitInterviewV2(interview)) {
+    return {
+      ok: false,
+      reason: "structural blind runs require a V2 structural exit interview",
+    };
+  }
+  const generated: StructuralBlindRunSidecar = {
+    schema_version: 1,
+    report_schema_version: 2,
+    play_mode: "structural",
+    start_surface: interview.start_surface,
+    retention_eligible: false,
+    evidence_status: "not_applicable",
+    structural_kind: interview.structural_kind,
+  };
+  if (options.runSidecar !== undefined && !isDeepStrictEqual(options.runSidecar, generated)) {
+    return { ok: false, reason: "structural report metadata does not match its run sidecar" };
+  }
+  return { ok: true, interview, run: generated };
+}
+
+export function verifyBlindReportText(
+  text: string,
+  options: BlindReportVerificationOptions = {},
+): BlindReportVerification {
   if (text.trim().length === 0) {
     return { ok: false, reason: "report is empty" };
   }
@@ -67,9 +151,18 @@ export function verifyBlindReportText(text: string): BlindReportVerification {
   if (!interview.ok) {
     return { ok: false, reason: interview.reason };
   }
-  return { ok: true, interview: interview.interview };
+  if (options.requiredPlayMode === "pure") {
+    return verifyPureRun(interview.interview, options);
+  }
+  if (options.requiredPlayMode === "structural") {
+    return verifyStructuralRun(interview.interview, options);
+  }
+  return { ok: true, interview: interview.interview, run: null };
 }
 
-export function verifyBlindReportFile(path: string): BlindReportVerification {
-  return verifyBlindReportText(readFileSync(path, "utf8"));
+export function verifyBlindReportFile(
+  path: string,
+  options: BlindReportVerificationOptions = {},
+): BlindReportVerification {
+  return verifyBlindReportText(readFileSync(path, "utf8"), options);
 }
