@@ -18,10 +18,11 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 ### Cycle result - wolf_winter_enemy_maneuvers
 
 - Engine/content surface: added reusable one-shot enemy maneuvers—seeded combat rounds with conditioned temporary attack/defense tradeoffs—and rebuilt `wolf_winter` around three telegraphed openings, a real Albany relief spear, and a consequential one-attempt breach wedge.
-- Loop effect: engine/MCP/CLI/UI/save validation plus `bug_0497` regressions pin unique action ids, forced-opening combat bounds, monotonic retirement, temporary math, fallback attacks, exhaustive liveness, reactive aftermath, and the exact 28-damage guarantee.
+- Loop effect: engine/MCP/CLI/UI/save validation plus `bug_0497` regressions pin unique action ids, exclusive result ownership, encounter-aware combat bounds, monotonic retirement, temporary math, fallback attacks, exhaustive liveness, reactive aftermath, and the exact 28-damage guarantee; compact assessment now always names the blind-rotation target.
 - Blind-playtest quest "advocates_case": seed 930001, clarity 4/5, enjoyment 4/5, ending `ending_exempted`, 50/50 with no mechanical failure. The explicit user depth mandate and repeated `wolf_winter` S2 combat feedback justified choosing this off-list tranche.
-- Self-critique: PASS_WITH_NOTES; preparation now changes live decisions instead of only stats, but openings remain one-shot and the post-opening exchanges still use standard attacks—the 200-run harvest must test whether that depth lasts.
-- Guard: post-change 6,000-step crawl, 1,957-test `health`, base `3b8afec4` integrity, production UI build/HTTP smoke, and verified report `ai-runs/2026-07-11T05-20-40-859Z/playtest.md` green; embedded browser webview could not retain the local page.
+- Fleet harvest: 200/200 fresh `gpt-5.5` reports verified (100 overworld + 100 direct `wolf_winter`, 20/persona/target), 0 stuck, all Byre Held; direct clarity/enjoyment 4.34/3.84, 96x60/60, and all 100 named tactical preparation as the best moment.
+- Self-critique: PASS_WITH_NOTES; direct reports still found rail unfairness 28/100, prescribed/linear play 18/100, and basic cleanup 7/100. `docs/CURRENT_PLAN.md` chooses a recoverable, multi-route Broken-Paling follow-through; replay 0/100 is only directional because the prompt prefilled false.
+- Guard: final 6,000-step crawl, 1,962-test `health`, base `3b8afec4` integrity, production UI build/HTTP smoke, verified rotation report, both 100/100 fleet summaries, 200-accepted ledger, and 200-report feedback compile green; embedded browser webview could not retain the local page.
 
 ### Cycle result - testing_pyramid_three_tiers
 

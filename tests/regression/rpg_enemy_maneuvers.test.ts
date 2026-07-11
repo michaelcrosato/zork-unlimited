@@ -8,7 +8,7 @@ import { describe, expect, it } from "vitest";
 import type { RpgAction } from "../../src/api/types.js";
 import type { Condition } from "../../src/core/conditions.js";
 import { makeStep } from "../../src/core/engine.js";
-import type { Effect } from "../../src/core/effects.js";
+import { exitFlag, type Effect } from "../../src/core/effects.js";
 import type { Rng } from "../../src/core/rng.js";
 import { publicActions } from "../../src/mcp/rpg_view_projection.js";
 import { load, save } from "../../src/persist/save_load.js";
@@ -172,6 +172,33 @@ function complementaryGuardPack(): RpgPack {
     conditions: [{ not_flag: "opening_known" }],
     result_flag: "high_feint_used",
   });
+  return pack;
+}
+
+function harmfulForcedOpeningPack(): RpgPack {
+  const { loaded } = setup();
+  const pack = structuredClone(loaded.compiled.pack);
+  pack.meta.vars_init = { hp: 2, attack: 10, defense: 0 };
+  const enemy = pack.enemies[0]!;
+  enemy.hp = 10;
+  enemy.attack = 1;
+  enemy.defense = 0;
+  enemy.maneuvers![0]!.attack_bonus = -10;
+  enemy.maneuvers![0]!.defense_bonus = 0;
+  return pack;
+}
+
+function beneficialForcedOpeningPack(): RpgPack {
+  const { loaded } = setup();
+  const pack = structuredClone(loaded.compiled.pack);
+  pack.meta.combat_guaranteed = true;
+  pack.meta.vars_init = { hp: 12, attack: 0, defense: 0 };
+  const enemy = pack.enemies[0]!;
+  enemy.hp = 10;
+  enemy.attack = 1;
+  enemy.defense = 0;
+  enemy.maneuvers![0]!.attack_bonus = 10;
+  enemy.maneuvers![0]!.defense_bonus = 0;
   return pack;
 }
 
@@ -467,6 +494,189 @@ describe("one-shot enemy maneuvers", () => {
         label,
       ).toContain("MANEUVER_RESULT_FLAG_CLEARED");
     }
+  });
+
+  it("rejects foreign and duplicate result-flag owners", () => {
+    const set = (): Effect => ({ set_flag: "feint_used" });
+    const sites: [string, (pack: RpgPack) => void][] = [
+      ["room on_enter", (pack) => pack.rooms[0]!.on_enter.push(set())],
+      ["enemy on_defeat", (pack) => pack.enemies[0]!.on_defeat.push(set())],
+      ["object take_effects", (pack) => pack.objects[0]!.take_effects!.push(set())],
+      ["object unlock_effects", (pack) => pack.objects[0]!.unlock_effects!.push(set())],
+      ["interaction effects", (pack) => pack.objects[0]!.interactions[0]!.effects.push(set())],
+      [
+        "skill success",
+        (pack) => pack.objects[0]!.interactions[0]!.skill_check!.on_success.push(set()),
+      ],
+      [
+        "skill failure",
+        (pack) => pack.objects[0]!.interactions[0]!.skill_check!.on_failure.push(set()),
+      ],
+      ["dialogue node", (pack) => pack.npcs[0]!.dialogue.nodes[0]!.effects.push(set())],
+    ];
+
+    for (const [label, inject] of sites) {
+      const pack = effectSurfacePack();
+      inject(pack);
+      expect(
+        validateRpg(pack).findings.map((finding) => finding.code),
+        label,
+      ).toContain("MANEUVER_RESULT_FLAG_FOREIGN_WRITER");
+    }
+
+    const derivedWriter = effectSurfacePack();
+    derivedWriter.enemies[0]!.maneuvers![0]!.result_flag = exitFlag("yard", "safety");
+    derivedWriter.rooms[0]!.on_enter.push({ unlock_exit: { from: "yard", to: "safety" } });
+    expect(validateRpg(derivedWriter).findings.map((finding) => finding.code)).toContain(
+      "MANEUVER_RESULT_FLAG_FOREIGN_WRITER",
+    );
+
+    const siblingOwner = effectSurfacePack();
+    const sibling = structuredClone(siblingOwner.enemies[0]!.maneuvers![0]!);
+    sibling.id = "high_feint";
+    sibling.command = "feint high, then cut low";
+    siblingOwner.enemies[0]!.maneuvers!.push(sibling);
+    expect(
+      validateRpg(siblingOwner).findings.filter(
+        (finding) => finding.code === "DUPLICATE_MANEUVER_RESULT_FLAG",
+      ),
+    ).toHaveLength(1);
+
+    const crossEnemyOwner = effectSurfacePack();
+    const secondEnemy = structuredClone(crossEnemyOwner.enemies[0]!);
+    secondEnemy.id = "second_guard";
+    secondEnemy.name = "second yard guard";
+    secondEnemy.defeat_flag = "second_guard_down";
+    crossEnemyOwner.enemies.push(secondEnemy);
+    expect(
+      validateRpg(crossEnemyOwner).findings.filter(
+        (finding) => finding.code === "DUPLICATE_MANEUVER_RESULT_FLAG",
+      ),
+    ).toHaveLength(1);
+  });
+
+  it("retains standard ATTACK in combat bounds when result ownership is ambiguous", () => {
+    const lower = harmfulForcedOpeningPack();
+    lower.rooms[0]!.on_enter.push({ set_flag: "feint_used" });
+    const lowerCodes = validateRpg(lower).findings.map((finding) => finding.code);
+    expect(lowerCodes).toContain("MANEUVER_RESULT_FLAG_FOREIGN_WRITER");
+    expect(lowerCodes).not.toContain("COMBAT_UNWINNABLE");
+
+    const upper = beneficialForcedOpeningPack();
+    upper.rooms[0]!.on_enter.push({ set_flag: "feint_used" });
+    const upperCodes = validateRpg(upper).findings.map((finding) => finding.code);
+    expect(upperCodes).toContain("MANEUVER_RESULT_FLAG_FOREIGN_WRITER");
+    expect(upperCodes).toContain("COMBAT_NOT_GUARANTEED");
+
+    const duplicate = harmfulForcedOpeningPack();
+    const duplicateManeuver = structuredClone(duplicate.enemies[0]!.maneuvers![0]!);
+    duplicateManeuver.id = "high_feint";
+    duplicateManeuver.command = "feint high, then cut low";
+    duplicate.enemies[0]!.maneuvers!.push(duplicateManeuver);
+    const duplicateCodes = validateRpg(duplicate).findings.map((finding) => finding.code);
+    expect(duplicateCodes).toContain("DUPLICATE_MANEUVER_RESULT_FLAG");
+    expect(duplicateCodes).not.toContain("COMBAT_UNWINNABLE");
+
+    const initialized = harmfulForcedOpeningPack();
+    initialized.meta.flags_init.push("feint_used");
+    const initializedCodes = validateRpg(initialized).findings.map((finding) => finding.code);
+    expect(initializedCodes).toContain("MANEUVER_RESULT_FLAG_INITIALIZED");
+    expect(initializedCodes).not.toContain("COMBAT_UNWINNABLE");
+  });
+
+  it("excludes encounter-impossible maneuver routes from lower and upper bounds", () => {
+    const impossibleGuards: [string, Condition][] = [
+      ["complement of immutable flag", { not_flag: "opening_known" }],
+      ["nested complement", { none_of: [{ has_flag: "opening_known" }] }],
+      ["wrong current room", { none_of: [{ in_room: "yard" }] }],
+      ["necessarily visited room", { not_visited: "yard" }],
+    ];
+
+    for (const [label, conditions] of impossibleGuards) {
+      const lower = harmfulForcedOpeningPack();
+      const impossibleSafe = structuredClone(lower.enemies[0]!.maneuvers![0]!);
+      impossibleSafe.id = "high_feint";
+      impossibleSafe.command = "feint high, then cut low";
+      impossibleSafe.conditions = [conditions];
+      impossibleSafe.result_flag = "high_feint_used";
+      impossibleSafe.attack_bonus = 10;
+      lower.enemies[0]!.maneuvers!.push(impossibleSafe);
+      const finding = validateRpg(lower).findings.find(
+        (candidate) => candidate.code === "COMBAT_UNWINNABLE",
+      );
+      expect(finding?.message, label).toContain('maneuver "low_feint"');
+    }
+
+    const upper = beneficialForcedOpeningPack();
+    const impossibleHarmful = structuredClone(upper.enemies[0]!.maneuvers![0]!);
+    impossibleHarmful.id = "high_feint";
+    impossibleHarmful.command = "feint high, then cut low";
+    impossibleHarmful.conditions = [{ not_flag: "opening_known" }];
+    impossibleHarmful.result_flag = "high_feint_used";
+    impossibleHarmful.attack_bonus = -10;
+    upper.enemies[0]!.maneuvers!.push(impossibleHarmful);
+    const upperCodes = validateRpg(upper).findings.map((finding) => finding.code);
+    expect(upperCodes).not.toContain("COMBAT_NOT_GUARANTEED");
+    expect(upperCodes).not.toContain("COMBAT_GAUNTLET_NOT_GUARANTEED");
+  });
+
+  it("uses sound encounter facts for collective guard coverage", () => {
+    const lower = harmfulForcedOpeningPack();
+    lower.enemies[0]!.maneuvers![0]!.conditions = [{ not_flag: "guard_down" }];
+    expect(validateRpg(lower).findings.map((finding) => finding.code)).toContain(
+      "COMBAT_UNWINNABLE",
+    );
+
+    const nested = harmfulForcedOpeningPack();
+    nested.enemies[0]!.maneuvers![0]!.conditions = [{ none_of: [{ has_flag: "guard_down" }] }];
+    expect(validateRpg(nested).findings.map((finding) => finding.code)).toContain(
+      "COMBAT_UNWINNABLE",
+    );
+
+    const upper = beneficialForcedOpeningPack();
+    upper.enemies[0]!.maneuvers![0]!.conditions = [{ not_flag: "guard_down" }];
+    const upperCodes = validateRpg(upper).findings.map((finding) => finding.code);
+    expect(upperCodes).not.toContain("COMBAT_NOT_GUARANTEED");
+    expect(upperCodes).not.toContain("COMBAT_GAUNTLET_NOT_GUARANTEED");
+
+    const enemyCondition = harmfulForcedOpeningPack();
+    // Keep the initialized flag mutable so only the enemy's own active-state
+    // condition, rather than the older monotonic proof, can force the opening.
+    enemyCondition.rooms[1]!.on_enter.push({ clear_flag: "opening_known" });
+    enemyCondition.enemies[0]!.conditions = [{ has_flag: "opening_known" }];
+    expect(validateRpg(enemyCondition).findings.map((finding) => finding.code)).toContain(
+      "COMBAT_UNWINNABLE",
+    );
+
+    // A foreign writer means the defeat flag is not a dedicated false-while-
+    // alive fact. Keep standard ATTACK conservatively possible in both bounds.
+    const foreignDefeatLower = harmfulForcedOpeningPack();
+    foreignDefeatLower.enemies[0]!.maneuvers![0]!.conditions = [{ not_flag: "guard_down" }];
+    foreignDefeatLower.rooms[1]!.on_enter.push({ set_flag: "guard_down" });
+    expect(validateRpg(foreignDefeatLower).findings.map((finding) => finding.code)).not.toContain(
+      "COMBAT_UNWINNABLE",
+    );
+
+    const foreignDefeatUpper = beneficialForcedOpeningPack();
+    foreignDefeatUpper.enemies[0]!.maneuvers![0]!.conditions = [{ not_flag: "guard_down" }];
+    foreignDefeatUpper.rooms[1]!.on_enter.push({ set_flag: "guard_down" });
+    expect(validateRpg(foreignDefeatUpper).findings.map((finding) => finding.code)).toContain(
+      "COMBAT_NOT_GUARANTEED",
+    );
+
+    const duplicateDefeat = harmfulForcedOpeningPack();
+    duplicateDefeat.enemies[0]!.maneuvers![0]!.conditions = [{ not_flag: "guard_down" }];
+    const secondEnemy = structuredClone(duplicateDefeat.enemies[0]!);
+    secondEnemy.id = "second_guard";
+    secondEnemy.name = "second yard guard";
+    secondEnemy.hp = 1;
+    secondEnemy.attack = 0;
+    secondEnemy.defense = 0;
+    secondEnemy.maneuvers = undefined;
+    duplicateDefeat.enemies.push(secondEnemy);
+    expect(validateRpg(duplicateDefeat).findings.map((finding) => finding.code)).not.toContain(
+      "COMBAT_UNWINNABLE",
+    );
   });
 
   it("audits forced maneuver openings in the COMBAT_UNWINNABLE lower bound", () => {

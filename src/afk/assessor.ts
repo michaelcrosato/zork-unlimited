@@ -892,6 +892,7 @@ export function formatAssessment(a: Assessment, opts: AssessmentFormatOptions = 
   lines.push("");
   lines.push("## Ranked candidates");
   let shown = 0;
+  let shownQuestPlaytest = false;
   let omittedRoutine = 0;
   let omittedOther = 0;
   a.candidates.forEach((c, i) => {
@@ -905,6 +906,7 @@ export function formatAssessment(a: Assessment, opts: AssessmentFormatOptions = 
       return;
     }
     lines.push(`${i + 1}. [${c.score}] (${c.category}/${c.effort}) ${c.title}`);
+    if (c.title.startsWith('Blind-playtest quest "')) shownQuestPlaytest = true;
     if (full || !isRoutinePlaytestCandidate(c)) {
       lines.push(`     why: ${c.rationale}`);
       for (const e of c.evidence) lines.push(`     · ${e}`);
@@ -915,6 +917,17 @@ export function formatAssessment(a: Assessment, opts: AssessmentFormatOptions = 
     lines.push(
       `... ${omittedRoutine} routine blind-playtest rotation candidate(s) omitted; full list is in assessment.json.`,
     );
+    // A hotspot-heavy backlog can occupy every detailed compact row. Keep the
+    // mandatory quest rotation target visible even then, so an operator can run
+    // the required fresh blind pass without opening the JSON artifact.
+    if (!shownQuestPlaytest) {
+      const nextQuestRotation = a.candidates.find(
+        (candidate) =>
+          isRoutinePlaytestCandidate(candidate) &&
+          candidate.title.startsWith('Blind-playtest quest "'),
+      );
+      if (nextQuestRotation) lines.push(`- Next blind rotation: ${nextQuestRotation.title}`);
+    }
   }
   if (!full && omittedOther > 0) {
     lines.push(

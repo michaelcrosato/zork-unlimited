@@ -267,6 +267,39 @@ describe("assess()", () => {
     expect(compact).toContain("full list is in assessment.json");
     expect(full).toContain("why: The validator and exhaustive solver prove");
   });
+
+  it("keeps the next quest rotation visible when hot spots fill the compact rows", () => {
+    const hotSpots: ImprovementCandidate[] = Array.from({ length: 3 }, (_, index) => ({
+      id: `hotspot-${index}`,
+      category: "content_fix",
+      target: "wolf_winter",
+      title: `Fix hot spot ${index}`,
+      rationale: "Verified feedback needs a focused fix.",
+      evidence: ["verified fleet evidence"],
+      impact: 5,
+      effort: "M",
+      score: 2.5,
+    }));
+    const rotation: ImprovementCandidate = {
+      id: "playtest-wolf_winter",
+      category: "content_fix",
+      target: "wolf_winter",
+      title: 'Blind-playtest quest "wolf_winter" — structurally clean',
+      rationale: "Only a fresh blind player can judge experience quality.",
+      evidence: ["rotation due"],
+      impact: 1,
+      effort: "M",
+      score: SATURATION_FLOOR,
+    };
+    const fixture: Assessment = {
+      ...a,
+      candidates: [...hotSpots, rotation],
+      top: hotSpots[0]!,
+    };
+
+    const out = formatAssessment(fixture, { maxCandidates: 3 });
+    expect(out).toContain('Next blind rotation: Blind-playtest quest "wolf_winter"');
+  });
 });
 
 describe("allGeneratedChecksClean", () => {

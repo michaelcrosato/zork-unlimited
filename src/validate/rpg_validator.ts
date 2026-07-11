@@ -33,7 +33,7 @@
  *    difficulty;
  *  - every enemy on_defeat end_game is declared.
  */
-import type { Effect } from "../core/effects.js";
+import { exitFlag, type Effect } from "../core/effects.js";
 import type { Condition } from "../core/conditions.js";
 import { validateRpgFoundation } from "./rpg_foundation_validator.js";
 import { type Finding, type ValidationReport, makeReport } from "./report.js";
@@ -164,6 +164,26 @@ function authoredStringEffectTargets(
   return out;
 }
 
+/** Every authored effect that can set a runtime flag true. */
+function authoredFlagSetTargets(node: unknown, out = new Set<string>()): Set<string> {
+  if (Array.isArray(node)) {
+    for (const value of node) authoredFlagSetTargets(value, out);
+  } else if (node !== null && typeof node === "object") {
+    for (const [key, value] of Object.entries(node)) {
+      if (key === "set_flag" && typeof value === "string") {
+        out.add(value);
+      } else if (key === "unlock_exit" && value !== null && typeof value === "object") {
+        const edge = value as Record<string, unknown>;
+        if (typeof edge.from === "string" && typeof edge.to === "string") {
+          out.add(exitFlag(edge.from, edge.to));
+        }
+      }
+      authoredFlagSetTargets(value, out);
+    }
+  }
+  return out;
+}
+
 /**
  * Conservative proof that a maneuver guard is always true whenever this enemy
  * can be fought. Only monotonic facts are claimed: immutable initialized flags,
@@ -240,6 +260,8 @@ function booleanConditionAtom(condition: Condition): BooleanConditionAtom {
     return { key: JSON.stringify(["visited", condition.visited]), negated: false };
   if ("not_visited" in condition)
     return { key: JSON.stringify(["visited", condition.not_visited]), negated: true };
+  if ("in_room" in condition)
+    return { key: JSON.stringify(["room", condition.in_room]), negated: false };
   // none_of supplies an exact negation for every remaining atom. Keep distinct
   // predicates independent rather than assuming numeric, room, object-state,
   // or quest-stage relationships the truth table cannot prove soundly.
@@ -270,33 +292,103 @@ function evalBooleanCondition(condition: Condition, values: ReadonlyMap<string, 
   return atom.negated ? !value : value;
 }
 
+type ManeuverEncounterAnalysis = {
+  possibleManeuvers: ReadonlySet<EnemyManeuver>;
+  collectivelyCovers: boolean;
+};
+
+function unknownManeuverEncounterAnalysis(
+  maneuvers: readonly EnemyManeuver[],
+): ManeuverEncounterAnalysis {
+  return {
+    possibleManeuvers: new Set(maneuvers),
+    collectivelyCovers: false,
+  };
+}
+
 /**
- * Prove that at least one maneuver guard holds for every abstract state. The
- * bounded exhaustive table supports arbitrary nested all_of/any_of/none_of and
- * exact normalized complement atoms (`has_flag x`/`not_flag x`, etc.). When the
- * atom cap is exceeded, return false so standard ATTACK remains a candidate.
+ * Bounded abstract interpretation of the enemy's first combat opening. Every
+ * enumerated assignment satisfies proven encounter facts and the enemy's own
+ * active-state conditions. The remaining Boolean atoms deliberately
+ * over-approximate real GameStates, so both conclusions are sound:
+ *
+ * - a maneuver absent from every assignment is impossible at this encounter;
+ * - collective coverage across every assignment means ATTACK cannot open.
+ *
+ * If ownership is ambiguous, the free-atom cap is exceeded, or the abstract
+ * encounter itself has no assignment, return unknown: retain every maneuver
+ * route and standard ATTACK.
  */
-function maneuverGuardsCollectivelyCoverAllStates(maneuvers: readonly EnemyManeuver[]): boolean {
-  if (maneuvers.length === 0) return false;
+function analyzeManeuverEncounter(
+  pack: RpgPack,
+  enemy: Enemy,
+  maneuvers: readonly EnemyManeuver[],
+  clearedFlags: ReadonlySet<string>,
+  removedItems: ReadonlySet<string>,
+  resultOwnershipValid: boolean,
+  dedicatedDefeatFlag: boolean,
+): ManeuverEncounterAnalysis {
+  if (maneuvers.length === 0 || !resultOwnershipValid) {
+    return unknownManeuverEncounterAnalysis(maneuvers);
+  }
+
   const atomSet = new Set<string>();
+  for (const condition of enemy.conditions ?? []) collectBooleanConditionAtoms(condition, atomSet);
   for (const maneuver of maneuvers) {
     for (const condition of maneuver.conditions) collectBooleanConditionAtoms(condition, atomSet);
   }
-  if (atomSet.size > MAX_MANEUVER_COVERAGE_ATOMS) return false;
 
-  const atoms = [...atomSet];
-  const assignmentCount = 2 ** atoms.length;
-  for (let assignment = 0; assignment < assignmentCount; assignment++) {
-    const values = new Map<string, boolean>();
-    for (let index = 0; index < atoms.length; index++) {
-      values.set(atoms[index]!, (assignment & (2 ** index)) !== 0);
+  const knownValues = new Map<string, boolean>();
+  for (const flag of pack.meta.flags_init) {
+    if (!clearedFlags.has(flag)) {
+      knownValues.set(booleanConditionAtom({ has_flag: flag }).key, true);
     }
-    const covered = maneuvers.some((maneuver) =>
+  }
+  for (const object of pack.objects) {
+    if (object.held === true && !removedItems.has(object.id)) {
+      knownValues.set(booleanConditionAtom({ has_item: object.id }).key, true);
+    }
+  }
+  knownValues.set(booleanConditionAtom({ visited: pack.meta.start_room }).key, true);
+  knownValues.set(booleanConditionAtom({ visited: enemy.room }).key, true);
+  for (const room of pack.rooms) {
+    knownValues.set(booleanConditionAtom({ in_room: room.id }).key, room.id === enemy.room);
+  }
+  for (const maneuver of maneuvers) {
+    knownValues.set(booleanConditionAtom({ has_flag: maneuver.result_flag }).key, false);
+  }
+  if (dedicatedDefeatFlag && enemy.defeat_flag !== undefined) {
+    knownValues.set(booleanConditionAtom({ has_flag: enemy.defeat_flag }).key, false);
+  }
+
+  const freeAtoms = [...atomSet].filter((atom) => !knownValues.has(atom));
+  if (freeAtoms.length > MAX_MANEUVER_COVERAGE_ATOMS) {
+    return unknownManeuverEncounterAnalysis(maneuvers);
+  }
+
+  const assignmentCount = 2 ** freeAtoms.length;
+  const possibleManeuvers = new Set<EnemyManeuver>();
+  let collectivelyCovers = true;
+  let encounterAssignments = 0;
+  for (let assignment = 0; assignment < assignmentCount; assignment++) {
+    const values = new Map(knownValues);
+    for (let index = 0; index < freeAtoms.length; index++) {
+      values.set(freeAtoms[index]!, (assignment & (2 ** index)) !== 0);
+    }
+    if (!(enemy.conditions ?? []).every((condition) => evalBooleanCondition(condition, values))) {
+      continue;
+    }
+    encounterAssignments += 1;
+    const available = maneuvers.filter((maneuver) =>
       maneuver.conditions.every((condition) => evalBooleanCondition(condition, values)),
     );
-    if (!covered) return false;
+    for (const maneuver of available) possibleManeuvers.add(maneuver);
+    if (available.length === 0) collectivelyCovers = false;
   }
-  return true;
+  if (encounterAssignments === 0) {
+    return unknownManeuverEncounterAnalysis(maneuvers);
+  }
+  return { possibleManeuvers, collectivelyCovers };
 }
 
 const err = (code: string, message: string, where: string[]): Finding => ({
@@ -450,13 +542,35 @@ export function validateRpg(pack: RpgPack): ValidationReport {
   let cumulativeWorstDamage = 0;
   const clearedFlags = authoredStringEffectTargets(pack, "clear_flag");
   const removedItems = authoredStringEffectTargets(pack, "remove_item");
+  const authoredSetFlags = authoredFlagSetTargets(pack);
   const maneuverActionIdOwners = new Map<string, { enemyId: string; maneuverId: string }>();
+  const maneuverResultFlagOwners = new Map<string, { enemyId: string; maneuverId: string }[]>();
   const defeatFlagOwners = new Map<string, string[]>();
   for (const candidate of pack.enemies) {
     if (candidate.defeat_flag === undefined) continue;
     const owners = defeatFlagOwners.get(candidate.defeat_flag) ?? [];
     owners.push(candidate.id);
     defeatFlagOwners.set(candidate.defeat_flag, owners);
+  }
+  for (const candidate of pack.enemies) {
+    for (const maneuver of candidate.maneuvers ?? []) {
+      const owners = maneuverResultFlagOwners.get(maneuver.result_flag) ?? [];
+      owners.push({ enemyId: candidate.id, maneuverId: maneuver.id });
+      maneuverResultFlagOwners.set(maneuver.result_flag, owners);
+    }
+  }
+  for (const [flag, owners] of maneuverResultFlagOwners) {
+    if (owners.length <= 1) continue;
+    findings.push(
+      err(
+        "DUPLICATE_MANEUVER_RESULT_FLAG",
+        `maneuver result flag "${flag}" has multiple owners (${owners.map((owner) => `enemy "${owner.enemyId}" maneuver "${owner.maneuverId}"`).join(", ")}); a result flag must identify exactly one committed maneuver.`,
+        [
+          `flag:${flag}`,
+          ...owners.map((owner) => `enemy:${owner.enemyId}:maneuver:${owner.maneuverId}`),
+        ],
+      ),
+    );
   }
   for (const enemy of pack.enemies) {
     const maneuverIds = new Set<string>();
@@ -517,6 +631,15 @@ export function validateRpg(pack: RpgPack): ValidationReport {
           ),
         );
       }
+      if (authoredSetFlags.has(maneuver.result_flag)) {
+        findings.push(
+          err(
+            "MANEUVER_RESULT_FLAG_FOREIGN_WRITER",
+            `enemy "${enemy.id}" maneuver "${maneuver.id}" uses result flag "${maneuver.result_flag}", but an authored effect can set it before this maneuver commits and silently restore standard ATTACK. Maneuver result flags must have exactly one implicit writer.`,
+            [`enemy:${enemy.id}`, `maneuver:${maneuver.id}`, `flag:${maneuver.result_flag}`],
+          ),
+        );
+      }
       if (clearedFlags.has(maneuver.result_flag)) {
         findings.push(
           err(
@@ -574,19 +697,48 @@ export function validateRpg(pack: RpgPack): ValidationReport {
     // is a permitted gamble, deliberately NOT flagged (see the file docstring).
     const standardBestRoute = bestStandardCombatRoute(playerAtk, playerDef, enemy);
     const maneuvers = enemy.maneuvers ?? [];
-    const bestRoutes = maneuvers.map((maneuver) =>
+    const resultOwnershipValid = maneuvers.every((maneuver) => {
+      const owners = maneuverResultFlagOwners.get(maneuver.result_flag) ?? [];
+      return (
+        owners.length === 1 &&
+        !authoredSetFlags.has(maneuver.result_flag) &&
+        !pack.meta.flags_init.includes(maneuver.result_flag) &&
+        !clearedFlags.has(maneuver.result_flag) &&
+        !defeatFlagOwners.has(maneuver.result_flag)
+      );
+    });
+    const defeatOwners =
+      enemy.defeat_flag === undefined ? [] : (defeatFlagOwners.get(enemy.defeat_flag) ?? []);
+    const dedicatedDefeatFlag =
+      enemy.defeat_flag !== undefined &&
+      defeatOwners.length === 1 &&
+      defeatOwners[0] === enemy.id &&
+      !authoredSetFlags.has(enemy.defeat_flag) &&
+      !pack.meta.flags_init.includes(enemy.defeat_flag) &&
+      !maneuverResultFlagOwners.has(enemy.defeat_flag);
+    const encounterAnalysis = analyzeManeuverEncounter(
+      pack,
+      enemy,
+      maneuvers,
+      clearedFlags,
+      removedItems,
+      resultOwnershipValid,
+      dedicatedDefeatFlag,
+    );
+    const possibleManeuvers = [...encounterAnalysis.possibleManeuvers];
+    const bestRoutes = possibleManeuvers.map((maneuver) =>
       bestManeuverCombatRoute(playerAtk, playerDef, enemy, maneuver),
     );
     const maneuverOpeningForced =
-      maneuvers.some((maneuver) =>
+      resultOwnershipValid &&
+      (possibleManeuvers.some((maneuver) =>
         maneuverGuaranteedAtEnemy(maneuver, pack, enemy, clearedFlags, removedItems),
-      ) || maneuverGuardsCollectivelyCoverAllStates(maneuvers);
-    // A monotonic guaranteed guard or a proven collectively-exhaustive guard
-    // disjunction means a maneuver always suppresses ATTACK for the opening round.
-    // Otherwise standard ATTACK remains a conservative candidate: there may be a
-    // reachable preparation state in which none of the authored guards holds.
-    // Maneuver routes are also credited optimistically, matching this lower bound's
-    // existing over-approximation of player power and avoiding false positives.
+      ) ||
+        encounterAnalysis.collectivelyCovers);
+    // Exclusive ownership plus an individually guaranteed or collectively
+    // exhaustive guard means a maneuver always suppresses ATTACK for the opening.
+    // Otherwise standard ATTACK remains a conservative candidate. Maneuver routes
+    // proven impossible under encounter facts are excluded from both bounds.
     if (!maneuverOpeningForced) {
       bestRoutes.unshift(standardBestRoute);
     }
@@ -630,7 +782,7 @@ export function validateRpg(pack: RpgPack): ValidationReport {
     // possible sequence, so the guarantee is sound.
     if (pack.meta.combat_guaranteed) {
       const standardRoute = worstStandardCombatRoute(playerAtk, playerDef, enemy);
-      const worstRoutes = maneuvers.map((maneuver) =>
+      const worstRoutes = possibleManeuvers.map((maneuver) =>
         worstManeuverCombatRoute(playerAtk, playerDef, enemy, maneuver),
       );
       // Standard ATTACK is an opening candidate only when every maneuver guard
