@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 534 -->
+<!-- historical_cycle_count: 535 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,15 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - wolf_winter_complementary_clue_roles
+
+- Feedback surface: pre-change lore-reader 930014 (4/4, replay yes) found Cade's close/wait advice contradictory and bare "yearling" calf-like; post-change lore-reader 930015 independently ran guarded and quick routes (both 55/60), found no contradiction, praised the clue→mechanic translation, and would replay (4/4).
+- Content surface: the day-book now supplies pack/preparation history without combat commands or Cade's guarantee; Cade labels quick/open versus guarded/patient roads in root prompts, speech, and compact journals, while every pre-contact surface names a young wolf (`bug_0504`).
+- Regression surface: five focused role/runtime/tradeoff witnesses join the semantic compact inventory; the tightest rewritten fields fit at 276/280 narration, 278/280 wrapped dialogue, and 124/128 journal characters, with 16 Wolf files / 72 tests green.
+- Feedback compile: 446 verified reports (29 rejected), nine Wolf reports at clarity 4.56 / enjoyment 3.67 / replay 2/9; its top compact-hash clusters remain flat historical fleet evidence already disproved by exact compact tests and fresh reports.
+- Self-critique: PASS for complementary clue discovery and the first two consecutive replay-positive Wolf runs, not for consequence depth—the blind comparison saw both roads share score/ending, lucky quick kills can hide their risk, and unspent crafted gear still lacks payoff. Do not reward a preferred tactic with score; make successful routes leave distinct actionable consequences next.
+- Guard: final crawl `20260711T172631Z` covered 6,000 steps, all 8 Wolf rooms/actions and 247 overworld nodes; both blind reports verify, the 446-report ledger is current, and `npm run health` passes all 285 files / 2,016 tests and 12 packs.
 
 ### Cycle result - wolf_winter_loft_resource_routing
 
@@ -131,11 +140,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Blind playtest: 25-run `overworld` Codex batch seeds 466-490 all exited 0; clarity 25x4/5, enjoyment 25x4/5, replay 25x true; feedback ledger now has 310 accepted reports.
 - Self-critique: road-direction and literal "road report" complaints dropped to 0/25, with one vague-road-premise report and one residual "arrived" wording report; fresh-start hidden-count/action signposting is now the broadest starting-area issue.
 - Guard: focused affected tests, `npm run health`, `npm run blind:feedback`, and reports `20260708T183739Z`-`20260708T184424Z` seeds 466-490 passed.
-
-### Cycle result - mid_route_road_interruptions
-
-- Engine surface: pending road encounters now project a route location (`road:<edge_id>`) with no town roads/local affordances, compact overworld context is v13, and road resolution text delivers the destination arrival beat.
-- Loop effect: focused UI/MCP/road tests prove Albany-Colonie pending state reads as on-route, blocks town/road actions, restores through snapshots, and resolves into Colonie before normal town actions resume.
-- Blind playtest: 25-run `overworld` Codex batch seeds 441-465 all exited 0; clarity 25x4/5, enjoyment 25x4/5, replay 25x true; feedback ledger now has 285 accepted reports.
-- Self-critique: no fresh report repeated the after-arrival timing complaint; next road-specific issue is generic/directionally awkward "road report" prose on Albany-Colonie.
-- Guard: focused affected tests, `npm run health`, `npm run blind:feedback`, and reports `20260708T180055Z`-`20260708T181931Z` seeds 441-465 passed.

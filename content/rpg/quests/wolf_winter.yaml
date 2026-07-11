@@ -111,7 +111,7 @@ rooms:
     description: >
       The cattle-byre yard. Old Cade props its door, too stiff for a spear, and turns his
       lantern on the day-book: its last wolf-count is worth reading before you leave the
-      yard. Store-shed west. North, a yearling is through the broken paling; gate south.
+      yard. Store-shed west. North, a young wolf is through the broken paling; gate south.
     objects: [day_book]
     # Progress variants are ordered from the deepest completed fight back to the opening
     # clue state. Re-entering this hub must describe the wolves actually left alive; visit
@@ -137,7 +137,7 @@ rooms:
       - when: [{ has_flag: read_tally }]
         text: >
           The trampled byre-yard. Old Cade waits by the day-book where you checked its
-          last wolf-count; the open store-shed is west. North, the yearling is through
+          last wolf-count; the open store-shed is west. North, the young wolf is through
           the broken paling, with two wolves deeper by the cattle. The gate is south.
     exits:
       - { direction: south, to: steading_yard }
@@ -185,7 +185,7 @@ rooms:
   - id: paling_gap
     name: "The Broken Paling"
     description: >
-      A yearling holds the broken paling, low and hungry—the first of the pack through.
+      A young wolf holds the broken paling, low and hungry—the first of the pack through.
       Its shoulders bunch for a straight rush: set the Albany spear, then drive on the
       shaft. A stout rail has fallen clear into the snow at your feet; wedge it across
       the gap. The byre-yard is south.
@@ -676,9 +676,10 @@ objects:
     aliases: [book, daybook, tally, log, journal, nail, notice]
     description: "The steading's day-book on its nail by the byre door, the last days' entries scrawled in the houndsman's hard hand."
     read_text: >
-      Last tally: 'THREE AT THE PALING; OLD GREY LEADS. You have Albany's spear ALREADY,
-      not the knack or hide. Mind Cade; pull on the byre-jerkin. Do both and no wolf will
-      pull you down. Do less and you gamble the byre on night's luck. Hold till dawn.'
+      Last tally: 'THREE AT THE PALING; OLD GREY LEADS. Albany rider has spear ALREADY.
+      Cade's knack and the byre-JERKIN kept one watchman standing; another trusted spear
+      alone and bled. Heed Cade; don the JERKIN—both. Do less and you gamble the byre on
+      night's luck. Hold till dawn.'
     interactions:
       - verb: READ
         target: day_book
@@ -860,9 +861,8 @@ npcs:
         - id: cade_root
           npc_text: >
             You came up from Albany awake—good. My hands cannot hold this door; yours must.
-            The byre is our winter, and without its cattle we starve. Three wolves are
-            through the paling, old grey leading. Ask how they fight or how to hold the
-            byre; I know both.
+            The byre is our winter; without its cattle we starve. Three wolves are through,
+            old grey leading. Ask for my quick spear-hand or guarded byre plan: two roads.
           variants:
             - when: [{ any_of: [{ has_flag: heard_counsel }, { has_flag: heard_plan }] }]
               text: >
@@ -870,12 +870,12 @@ npcs:
           topics:
             - id: wolves
               aliases: [ask_wolves]
-              prompt: "Ask how to fight the wolves and live."
+              prompt: "Ask for Cade's quick spear-hand lesson."
               conditions: [{ not_flag: heard_counsel }]
               goto: cade_wolves
             - id: byre
               aliases: [ask_byre]
-              prompt: "Ask how the byre is to be held."
+              prompt: "Ask for Cade's guarded byre plan."
               conditions: [{ not_flag: heard_plan }]
               goto: cade_byre
             - id: leave
@@ -888,10 +888,10 @@ npcs:
           # halves of the prep plainly, so the player who heeds it is the player the
           # guarantee covers.
           npc_text: >
-            Set against the yearling's rush; drive. Wheel into the flank's offside cut;
-            turn through its return. Close on the grey's feint; drive before she recovers.
-            Do these and don the byre-jerkin—both—and no wolf can pull you down. Skip
-            either and you gamble.
+            Quick lines: set against the young wolf; drive. Wheel into the flank's offside
+            cut; turn through. Close on grey's feint: fast, but your guard opens; drive
+            before she recovers. Learn this hand and don the byre-jerkin—both—and no wolf
+            can pull you down.
           effects:
             - set_flag: heard_counsel
             - inc_var: { name: attack, by: 2 }
@@ -899,11 +899,11 @@ npcs:
             # day-book presses, so it scores +5. One-shot — gated behind heard_counsel
             # (the topic retires once told), so the +5 cannot be farmed.
             - inc_var: { name: score, by: 5 }
-            - add_journal: "Cade's lines: set/drive the yearling; wheel/turn through the flank; close/drive the leader. You strike truer (+2 attack)."
+            - add_journal: "Cade's quick/open line: set/drive young wolf; wheel/turn through flank; close/drive old grey. You strike truer (+2 attack)."
           topics:
             - id: byre
               aliases: [ask_byre]
-              prompt: "Ask next how the byre is to be held."
+              prompt: "Ask next for Cade's guarded byre plan."
               conditions: [{ not_flag: heard_plan }]
               goto: cade_byre
             - id: wolves_back
@@ -915,17 +915,17 @@ npcs:
               end: true
         - id: cade_byre
           npc_text: >
-            One throat. At the fallen rail, wedge it back across to half-shut the
+            Guarded lines: at the fallen rail, wedge it back across to half-shut the
             breach—a guarded funnel. If it splits, bind the lengths across your spear. At
-            the grey, wait out her lie, then take the true rush. Kill all three; the pack
-            goes.
+            old grey, wait out her lie, then take the true rush: the patient alternative
+            to closing early.
           effects:
             - set_flag: heard_plan
-            - add_journal: "Cade: wedge the fallen rail; if it splits, bind the joined lengths. At the leader, wait out her feint and take the true rush."
+            - add_journal: "Cade's guarded/patient: wedge the fallen rail; if it splits, bind the joined lengths. Wait out grey's feint; take true rush."
           topics:
             - id: wolves
               aliases: [ask_wolves]
-              prompt: "Ask next how to fight the wolves and live."
+              prompt: "Ask next for Cade's quick spear-hand lesson."
               conditions: [{ not_flag: heard_counsel }]
               goto: cade_wolves
             - id: byre_back

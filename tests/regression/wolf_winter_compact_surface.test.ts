@@ -262,15 +262,19 @@ describe("Wolf-Winter compact authored prose", () => {
     }
   });
 
-  it("retains the complete two-part safety tutorial across compact player memory", () => {
+  it("retains complementary prep evidence and tactical roles across compact player memory", () => {
     const dayBook = pack.objects.find((object) => object.id === "day_book")?.read_text;
     expect(dayBook).toBeDefined();
     const compactDayBook = narrationText(dayBook ?? "");
     expect(compactDayBook).toMatch(/spear/i);
     expect(compactDayBook).toMatch(/Cade/i);
     expect(compactDayBook).toMatch(/jerkin/i);
-    expect(compactDayBook).toMatch(/both[^]*no wolf[^]*pull you down/i);
+    expect(compactDayBook).toMatch(/watchman[^]*standing/i);
+    expect(compactDayBook).toMatch(/trusted spear[^]*bled/i);
+    expect(compactDayBook).toMatch(/both/i);
     expect(compactDayBook).toMatch(/less[^]*gambl/i);
+    expect(compactDayBook).not.toMatch(/no wolf[^]*pull you down/i);
+    expect(compactDayBook).not.toMatch(/set[^]*drive|wheel[^]*turn|wait[^]*true rush/i);
 
     const cade = pack.npcs.find((npc) => npc.id === "houndsman");
     const compactNode = (id: string): string => {
@@ -278,15 +282,20 @@ describe("Wolf-Winter compact authored prose", () => {
       return compactText(text.trimEnd(), COMPACT_DIALOGUE_CHAR_LIMIT);
     };
     const counsel = compactNode("cade_wolves");
+    expect(counsel).toMatch(/quick/i);
     expect(counsel).toMatch(/set[^]*drive/i);
     expect(counsel).toMatch(/wheel[^]*turn/i);
     expect(counsel).toMatch(/close[^]*drive/i);
+    expect(counsel).toMatch(/fast[^]*guard opens/i);
     expect(counsel).toMatch(/jerkin/i);
+    expect(counsel).toMatch(/both[^]*no wolf[^]*pull you down/i);
     const plan = compactNode("cade_byre");
+    expect(plan).toMatch(/guarded/i);
     expect(plan).toMatch(/wedge/i);
     expect(plan).toMatch(/rail/i);
     expect(plan).toMatch(/split[^]*bind/i);
     expect(plan).toMatch(/wait[^]*true rush/i);
+    expect(plan).toMatch(/patient alternative[^]*closing early/i);
 
     const journalForNode = (id: string): string => {
       const effects = cade?.dialogue.nodes.find((node) => node.id === id)?.effects ?? [];
@@ -294,10 +303,12 @@ describe("Wolf-Winter compact authored prose", () => {
       return compactMcpTranscriptSummaryValue(text);
     };
     const counselJournal = journalForNode("cade_wolves");
+    expect(counselJournal).toMatch(/quick\/open/i);
     expect(counselJournal).toMatch(/set[^]*drive/i);
     expect(counselJournal).toMatch(/wheel[^]*turn/i);
     expect(counselJournal).toMatch(/close[^]*drive/i);
     const planJournal = journalForNode("cade_byre");
+    expect(planJournal).toMatch(/guarded\/patient/i);
     expect(planJournal).toMatch(/wedge[^]*rail/i);
     expect(planJournal).toMatch(/split[^]*bind/i);
     expect(planJournal).toMatch(/wait[^]*true rush/i);

@@ -4,10 +4,10 @@
  * as a binary promise — do both prep steps or be pulled down. But the mechanic is not
  * binary: skipping prep is a GAMBLE, not certain death. On two seeds the playtester's
  * unprepared rush won comfortably, so the loud "or nothing" over-claimed the stakes and
- * the fiction felt like it had lied. The fix recalibrates the day-book to the honest
- * version ("DO BOTH AND NO WOLF WILL PULL YOU DOWN; DO LESS AND YOU MAY HOLD THE BYRE YET,
- * BUT YOU GAMBLE IT ON THE NIGHT'S LUCK"), keeping Cade's already-honest spoken line and
- * the validator-proven guarantee ("speared right and padded, no wolf will pull you down").
+ * the fiction felt like it had lied. The day-book now makes the honest two-sided risk
+ * diegetic: one watchman used Cade's knack and the jerkin and stood, another trusted his
+ * spear alone and bled, and doing less still gambles the byre on the night's luck. Cade's
+ * spoken line retains the validator-proven prepared guarantee.
  *
  * This test LOCKS the mechanical fact the prose now states — the two-sided gamble — so a
  * future retune can't silently break the calibration in either direction:

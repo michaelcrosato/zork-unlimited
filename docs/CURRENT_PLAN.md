@@ -4,57 +4,55 @@ This is the AFK loop's token-small handoff document. It is OVERWRITTEN each
 ultraplan with the synthesis and one chosen next move; keep it dated, terse, and
 under ~60 lines. Completed detail belongs in Git history.
 
-## Cycle: 2026-07-11 - Wolf-Winter Complementary Clue Discovery
+## Cycle: 2026-07-11 - Wolf-Winter Consequential Roads
 
 ## Synthesis
 
-Compact prose integrity is closed: fresh lore-reader 930010 no longer saw
-clipping. The next two focused cycles added persistent resource effects and a
-real side-space plan. A failed rail can now be spent at the flank, saved by
-Cade's open wheel, or carried through a one-way fodder-loft approach for a
-costed leader opening. Fixed rolls favor each spend timing; the finite graph is
-measured at 332,551 progress / 665,101 READ-inclusive states.
+Complementary clue discovery is closed. Pre-change lore-reader 930014 found
+Cade's close/wait lessons contradictory. Post-change lore-reader 930015 played
+both the guarded and quick roads, called the clue-to-mechanic translation
+"genuinely satisfying," found no contradictions, rated clarity/enjoyment 4/4,
+and would replay. It is the second consecutive replay-positive Wolf report.
 
-Fresh explorer 930012 found the loft and recognized the spend/save choice, but
-a lucky off-side kill let the guard remain unused. Final breaker 930013 proved
-prepared 60/60 and reckless 45/60 routes, ending the latter at 4 HP with no
-mechanical defect. Both declined replay. Casual 930011 and breaker 930013 now
-agree on the louder experiential blocker: the day-book and Cade duplicate an
-explicit answer key, making correct play clear but deduction-free.
+The comparison exposed the next honest limit: both successful roads produced
+55/60 and `ending_held`, while lucky aggressive rolls erased visible jeopardy.
+That is not a reason to award score for a preferred tactic or invent a fake
+mission outcome. Fixed-roll proofs already show the quick line costs more when
+it misses, and route-specific ending prose exists. What is missing is a durable
+post-hunt consequence players can inspect or act on—especially for the saved
+brace-stake or split-rail guard that currently survives unused and unremarked.
 
-The 443-report compiler remains historically stale on compact hashes; semantic
-compact regressions and post-fix reports disprove that recommendation. Treat
-the fresh six-report Wolf cohort (clarity 4.67, enjoyment 3.67, replay 0/6) and
-the frozen linearity/replay gates as the live acceptance evidence.
+The 446-report compiler now measures nine Wolf reports at clarity 4.56,
+enjoyment 3.67, and replay 2/9. Its top hash-fragment clusters remain frozen
+historical fleet evidence; exact compact regressions and fresh reports show
+those surfaces are repaired. Use live route-consequence evidence instead.
 
 ## Chosen Move
 
-Turn Wolf-Winter's duplicated tutorial into complementary, discoverable clues
-without reducing the guarantee or hiding legal actions.
+Give successful Wolf-Winter tactics a consequence-sensitive coda without
+turning one combat line into the score answer.
 
-- Let the day-book report evidence/history (pack count, prior injuries, breach
-  behavior) instead of repeating exact command pairs and score promises.
-- Keep Cade authoritative about survival/preparation, but split his two topics
-  into distinct ground tactics rather than overlapping complete solutions.
-- Let environmental inspection—the rail and gated loft—teach the alternate
-  recovery route at the place where it becomes actionable.
-- Preserve action metadata, 60/60 score, all combat math, fallback fairness,
-  and every established route; this is information design, not difficulty fog.
+- Audit the leader-to-ending seam and overworld quest bridge for the smallest
+  real post-victory choice or carried consequence.
+- Make retained guard/stake resources visible and useful after the wolves fall,
+  not merely inventory the ending ignores.
+- Let quick, patient, and resource-preserving play alter what can be secured or
+  carried forward while keeping "the cattle live" as the shared mission result.
+- Preserve 60/60 preparation/completion scoring and every existing fair route.
 
 ## Acceptance
 
-1. No source repeats the complete three-fight command sequence; each clue adds
-   information unavailable from the others.
-2. A fresh player can still identify the goal, both load-bearing prep acts, and
-   at least one viable line per fight at clarity >=4 without source access.
-3. Blind feedback no longer calls the day-book a duplicate/system tooltip, and
-   exploration supplies a genuine inference or route discovery.
-4. Compact budgets, 400k/800k exhaustive bounds, post-crawl, blind report, and
+1. Two successful tactical roads leave mechanically distinct, inspectable
+   consequences beyond HP and prose, without ranking one as universally right.
+2. A saved stake or rail guard has a deliberate post-hunt use or explicit
+   retained payoff; it cannot silently vanish at the ending.
+3. A blind player identifies the consequence and names a reason to try another
+   road, with clarity >=4 and no new answer-key complaint.
+4. Exhaustive bounds, compact budgets, post-crawl, blind report, and
    `npm run health` remain green.
 
 ## Deferred Levers
 
 - Structured `combat_roll` events separating diegetic prose from exact math.
-- Make an unused saved guard visible in the ending without forcing its spend.
-- Broader second objective / failure pressure if complementary clues alone do
-  not lift replay; do not manufacture punishment for the recoverable rail roll.
+- Re-score tactics; score should continue to reward preparation and completion.
+- Rewrite Albany relief diction only after an overworld setting/voice audit.

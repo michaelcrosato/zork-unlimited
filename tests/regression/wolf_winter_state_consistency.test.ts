@@ -113,10 +113,17 @@ describe("Wolf-Winter state and shared-prose consistency", () => {
     expect(yard).not.toContain("the wolves are in it");
   });
 
-  it("makes the day-book's guarantee the same survival promise Cade actually proves", () => {
+  it("keeps the proven guarantee in Cade's counsel while the day-book gives evidence", () => {
     const book = pack.objects.find((object) => object.id === "day_book");
-    expect(book?.read_text).toMatch(/DO BOTH AND NO WOLF WILL PULL YOU DOWN/i);
-    expect(book?.read_text).not.toMatch(/NO WOLF WILL TOUCH YOU/i);
+    expect(book?.read_text).toMatch(/kept one watchman standing/i);
+    expect(book?.read_text).toMatch(/another trusted spear[^]*bled/i);
+    expect(book?.read_text).not.toMatch(/NO WOLF[^]*PULL YOU DOWN/i);
+
+    const counsel = pack.npcs
+      .find((npc) => npc.id === "houndsman")
+      ?.dialogue.nodes.find((node) => node.id === "cade_wolves");
+    expect(counsel?.npc_text).toMatch(/both[^]*no wolf[^]*pull you down/i);
+    expect(counsel?.npc_text).not.toMatch(/NO WOLF WILL TOUCH YOU/i);
   });
 
   it("keeps the one shared combat-death ending truthful in snow, doorway, or straw", () => {
