@@ -505,7 +505,7 @@ export function validateRpgFoundation(
       unlockableObjects.add(o.id);
   }
 
-  // ── Feasibility of every gate (exits, interactions, topics, win conditions) ──
+  // ── Feasibility of every gate (presence, exits, interactions, topics, wins) ──
   const checkConds = (conds: Condition[], where: string[]): void => {
     for (const f of flagReqs(conds)) {
       if (!settable.has(f))
@@ -564,6 +564,7 @@ export function validateRpgFoundation(
       checkConds(exit.conditions, [`room:${room.id}`, `exit:${exit.direction}`]);
   }
   for (const o of pack.objects) {
+    checkConds(o.visible_when ?? [], [`object:${o.id}`, "visible_when"]);
     if (o.locked && o.key_id !== undefined && objById.has(o.key_id) && !obtainable.has(o.key_id)) {
       findings.push(
         err(
@@ -624,6 +625,7 @@ export function validateRpgFoundation(
     if (!consumedHere) neededWhileHeld.add(id);
   };
   for (const o of pack.objects) {
+    for (const id of itemReqs(o.visible_when ?? [])) noteHeld(id, false);
     for (const it of o.interactions) {
       const consumes = (id: string): boolean =>
         interactionEffects(it).some((e) => "remove_item" in e && e.remove_item === id);
@@ -933,18 +935,34 @@ export function validateRpgFoundation(
   }
   for (const o of pack.objects) {
     checkVariantShadowing(o.variants, `object:${o.id}`, findings);
+    checkUnsatisfiable(
+      o.visible_when,
+      [`object:${o.id}`, "visible_when"],
+      `object "${o.id}" world-presence gate`,
+      findings,
+    );
+    // Inventory is authoritative at runtime and bypasses `visible_when`. Only
+    // objects that can never enter inventory must co-satisfy their world gate
+    // with displayed variants/interactions; otherwise a conflicting pair may be
+    // genuinely live after TAKE/an authored add_item and must not false-warn.
+    const worldOnlyPresence =
+      o.held === true || o.takeable === true || granted.has(o.id) ? [] : (o.visible_when ?? []);
     for (let i = 0; i < (o.variants?.length ?? 0); i++)
       checkUnsatisfiable(
-        o.variants?.[i]?.when,
+        [...worldOnlyPresence, ...(o.variants?.[i]?.when ?? [])],
         [`object:${o.id}`, `variant:${i}`],
-        `object "${o.id}" variant #${i + 1}`,
+        worldOnlyPresence.length > 0
+          ? `object "${o.id}" variant #${i + 1} together with its world-presence gate`
+          : `object "${o.id}" variant #${i + 1}`,
         findings,
       );
     for (const it of o.interactions)
       checkUnsatisfiable(
-        it.conditions,
+        [...worldOnlyPresence, ...it.conditions],
         [`object:${o.id}`, `verb:${it.verb}`],
-        `interaction "${it.verb}" on object "${o.id}"`,
+        worldOnlyPresence.length > 0
+          ? `interaction "${it.verb}" on object "${o.id}" together with its world-presence gate`
+          : `interaction "${it.verb}" on object "${o.id}"`,
         findings,
       );
   }
@@ -1219,37 +1237,55 @@ function computeObtainable(
   const obtainable = new Set<string>(
     pack.objects.filter((object) => object.held).map((object) => object.id),
   );
+
+  // A world object can only be reached through its own presence gate. Direct
+  // container children additionally inherit the container's gate and require a
+  // container the player can open (and, when statically locked, a key they can
+  // obtain). `itemReqs` deliberately considers only conjunctive has_item atoms;
+  // disjunctions remain an over-approximation, preserving the validator's
+  // no-false-positive obtainability stance.
+  const visibilityItemsAvailable = (object: GameObject | undefined): boolean =>
+    itemReqs(object?.visible_when ?? []).every((id) => obtainable.has(id));
+  const worldReachable = (object: GameObject): boolean => {
+    const home = homeRoom.get(object.id);
+    if (home !== undefined) {
+      return reachable.has(home) && visibilityItemsAvailable(object);
+    }
+
+    const containerId = containerOf.get(object.id);
+    if (containerId === undefined) return false;
+    const container = objById.get(containerId);
+    const containerRoom = homeRoom.get(containerId);
+    if (!container || !containerRoom || !reachable.has(containerRoom)) return false;
+    const containerUnlockable =
+      container.locked !== true ||
+      (container.key_id !== undefined && obtainable.has(container.key_id));
+    return (
+      container.openable === true &&
+      containerUnlockable &&
+      visibilityItemsAvailable(container) &&
+      visibilityItemsAvailable(object)
+    );
+  };
+
   let changed = true;
   while (changed) {
     changed = false;
     for (const o of pack.objects) {
       if (!o.takeable || obtainable.has(o.id)) continue;
-      const home = homeRoom.get(o.id);
-      if (home && reachable.has(home)) {
+      if (worldReachable(o)) {
         obtainable.add(o.id);
         changed = true;
-        continue;
-      }
-      const cid = containerOf.get(o.id);
-      if (cid) {
-        const c = objById.get(cid);
-        const cRoom = homeRoom.get(cid);
-        const cReachable = cRoom ? reachable.has(cRoom) : false;
-        const cOpenable = c?.openable === true;
-        const cUnlockable =
-          c?.locked !== true || (c?.key_id !== undefined && obtainable.has(c.key_id));
-        if (c && cReachable && cOpenable && cUnlockable) {
-          obtainable.add(o.id);
-          changed = true;
-        }
       }
     }
     // Items GRANTED by a reachable interaction (e.g. a brewed antidote) become
     // obtainable once the interaction's required item and any has_item conditions
     // are themselves obtainable. (Flag conditions are checked by IMPOSSIBLE_GATE.)
     for (const o of pack.objects) {
-      const room = homeRoom.get(o.id);
-      if (!room || !reachable.has(room)) continue; // the interaction's object must be reachable
+      // Held/inventory objects bypass world-visibility gates at runtime. Otherwise
+      // the interaction host must be reachable through its direct room/container
+      // placement and every conjunctive visibility-item prerequisite.
+      if (!obtainable.has(o.id) && !worldReachable(o)) continue;
       for (const it of o.interactions) {
         const itemOk = it.item === undefined || obtainable.has(it.item);
         const condItemsOk = itemReqs(it.conditions).every((i) => obtainable.has(i));
@@ -1760,6 +1796,7 @@ function collectFlagReads(pack: RpgPack): Set<string> {
     for (const exit of room.exits) walkAll(exit.conditions);
   }
   for (const o of pack.objects) {
+    walkAll(o.visible_when);
     for (const v of o.variants ?? []) walkAll(v.when);
     for (const it of o.interactions) walkAll(it.conditions);
   }
@@ -1803,6 +1840,7 @@ function collectObjectStateReads(pack: RpgPack): { open: Set<string>; unlocked: 
     for (const exit of room.exits) walkAll(exit.conditions);
   }
   for (const o of pack.objects) {
+    walkAll(o.visible_when);
     for (const v of o.variants ?? []) walkAll(v.when);
     for (const it of o.interactions) walkAll(it.conditions);
   }
@@ -1849,6 +1887,7 @@ function collectRoomRefs(pack: RpgPack): Set<string> {
     for (const exit of room.exits) walkAll(exit.conditions);
   }
   for (const o of pack.objects) {
+    walkAll(o.visible_when);
     for (const v of o.variants ?? []) walkAll(v.when);
     for (const it of o.interactions) walkAll(it.conditions);
   }

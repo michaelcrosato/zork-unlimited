@@ -188,6 +188,11 @@ describe("Wolf-Winter authored combat tactics", () => {
     expect(state.flags.breach_braced).toBe(true);
     expect(state.inventory).not.toContain("paling_rail");
     expect(optionIds(state)).not.toContain("use_paling_rail");
+    expect(buildRpgObservation(index, state).visible_objects).toContainEqual({
+      id: "paling_rail",
+      name: "braced paling-rail",
+    });
+    expect(optionIds(state)).toContain("examine_paling_rail");
 
     state = act(state, "maneuver_yearling_wolf_set_spear", "best").state;
     state = act(state, "go_north").state;
@@ -265,13 +270,14 @@ describe("Wolf-Winter authored combat tactics", () => {
     const carriedAtGap = buildRpgObservation(index, state);
     expect(carriedAtGap.description).toContain("ride in your hands");
     expect(carriedAtGap.description).toContain("rough guard for the byre door");
-    expect(carriedAtGap.visible_objects).toContainEqual({
-      id: "paling_rail",
-      name: "empty rail-bed",
+    expect(carriedAtGap.visible_objects.map((object) => object.id)).not.toContain("paling_rail");
+    expect(optionIds(state)).not.toContain("examine_paling_rail");
+    const staleCarriedLook = makeStep(buildRpgRules(index, () => outcomeRng("best")))(state, {
+      type: "LOOK",
+      target: "paling_rail",
     });
-    expect(options(state).find((option) => option.id === "examine_paling_rail")?.command).toBe(
-      "look at empty rail-bed",
-    );
+    expect(staleCarriedLook.ok).toBe(false);
+    expect(staleCarriedLook.state).toEqual(state);
 
     state = act(state, "maneuver_yearling_wolf_set_spear", "best").state;
     state = act(state, "go_north").state;
@@ -317,15 +323,14 @@ describe("Wolf-Winter authored combat tactics", () => {
     expect(spentAtGap.description).toContain("broke with the flank-wolf at the byre door");
     expect(spentAtGap.description).toContain("no guard remains");
     expect(spentAtGap.description).not.toContain("guard you carry");
-    expect(spentAtGap.visible_objects).toContainEqual({
-      id: "paling_rail",
-      name: "empty rail-bed",
+    expect(spentAtGap.visible_objects.map((object) => object.id)).not.toContain("paling_rail");
+    expect(optionIds(state)).not.toContain("examine_paling_rail");
+    const staleSpentLook = makeStep(buildRpgRules(index, () => outcomeRng("best")))(state, {
+      type: "LOOK",
+      target: "paling_rail",
     });
-    const examined = act(state, "examine_paling_rail");
-    const examinedText = examined.events.flatMap((event) =>
-      event.type === "narration" ? [event.text] : [],
-    );
-    expect(examinedText.join(" ")).toContain("there, not here");
+    expect(staleSpentLook.ok).toBe(false);
+    expect(staleSpentLook.state).toEqual(state);
 
     // Leaving the split rail unbound preserves Cade's off-side option instead.
     let unbound = act(fullyPrepared(), "go_north").state;

@@ -189,6 +189,7 @@ export const ObjectSchema = z
     name: z.string().min(1),
     aliases: z.array(z.string().min(1)).default([]),
     description: z.string().min(1),
+    visible_when: z.array(ConditionSchema).min(1).optional(),
     variants: z.array(ObjectVariantSchema).optional(),
     takeable: z.boolean().default(false),
     droppable: z.boolean().optional(),

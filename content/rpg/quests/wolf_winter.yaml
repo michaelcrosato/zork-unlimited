@@ -597,23 +597,15 @@ objects:
     name: "fallen paling-rail"
     aliases: [rail, paling-rail, post, stake, timber, bar]
     description: "A stout length of the broken paling, splintered off at one end but seasoned and sound — the kind of heavy timber a man could wedge across a gap to half-shut it, so what comes through must come singly."
-    # Reactive examine variants keep success, recoverable failure, carried salvage, and
-    # the guard's spent aftermath physically legible.
+    # The rail is real scenery while loose, split, or wedged into the breach. Once the
+    # split lengths become carried gear, the sticky made flag retires this world object;
+    # the room text narrates the empty bed and later spent guard without leaving a stale
+    # examine affordance behind.
+    visible_when: [{ not_flag: split_rail_guard_made }]
     variants:
       - when: [{ has_flag: breach_braced }]
         name: "braced paling-rail"
         text: "The fallen paling-rail, wedged hard across the breach now and stamped home — the gap half-shut, so what comes through the paling must come singly and slow."
-      - when: [{ has_flag: split_rail_guard_made }, { has_flag: flank_wolf_down }]
-        name: "empty rail-bed"
-        text: >
-          The hollow where the fallen rail lay is empty. Its split lengths went north in
-          your hands as a bound guard and broke at the byre door with the flank-wolf; the
-          splinters and torn binding are there, not here.
-      - when: [{ has_item: split_rail_guard }]
-        name: "empty rail-bed"
-        text: >
-          The hollow where the fallen rail lay is empty. Its split lengths are lashed into
-          the short cross-guard that rides against the Albany spear in your hands.
       - when: [{ has_flag: rail_split }, { not_flag: split_rail_guard_made }]
         name: "split paling-rail"
         text: >

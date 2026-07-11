@@ -1,0 +1,40 @@
+id: bug_0500
+title: "Wolf-Winter kept an examinable rail entity after its timber became carried gear"
+pack: content/rpg/quests/wolf_winter.yaml
+reported_by: verified blind playtest
+reports:
+  - ai-runs/2026-07-11T12-54-27-678Z/playtest.md
+severity: S1
+symptom: >
+  After a failed wedge was bound into split_rail_guard, the Broken Paling still
+  listed paling_rail as a visible object and kept examine_paling_rail legal. The
+  bug_0499 text-only mitigation renamed it "empty rail-bed", but a fresh blind
+  player still read the surviving object affordance as stale state cleanup.
+root_cause: >
+  RPG objects had location but no state-aware world-presence gate. Reactive object
+  variants could rename or redescribe the statically homed rail, and interaction
+  conditions could retire USE, but neither could remove the object's visible entry,
+  generic LOOK action, compact object id, or UI affordance. remove_item affects only
+  inventory, so it cannot retire a static room object.
+fix: >
+  Add optional, condition-validated object visible_when predicates at the RPG model
+  visibility seam. They gate world placement consistently across full and compact
+  observations, legal actions, forced action resolution, contained objects, and UI
+  projection while leaving inventory membership authoritative. Gate paling_rail on
+  not_flag split_rail_guard_made and remove the now-dead empty-bed object variants;
+  carried and spent states remain narrated by the Broken Paling room variants.
+deterministic_witnesses:
+  - route: "failed wedge -> before binding"
+    invariant: "split paling_rail is visible, examinable, and bindable"
+  - route: "failed wedge -> bind split_rail_guard"
+    invariant: "guard is carried while paling_rail and every rail-target action are absent"
+  - route: "bind guard -> defeat flank-wolf -> backtrack"
+    invariant: "spent guard does not resurrect the static rail or a stale LOOK action"
+tests:
+  - tests/regression/rpg_object_visibility_conditions.test.ts
+  - tests/regression/rpg_object_visibility_validator.test.ts
+  - tests/regression/wolf_winter_combat_tactics.test.ts
+verification:
+  - npm run validate -- wolf_winter
+  - npx vitest run tests/regression/rpg_object_visibility_conditions.test.ts tests/regression/rpg_object_visibility_validator.test.ts tests/regression/wolf_winter_combat_tactics.test.ts
+  - npm run crawl:smoke

@@ -191,6 +191,9 @@ function relabelObject(
     name: o.name,
     aliases: o.aliases,
     description: o.description,
+    ...(o.visible_when !== undefined
+      ? { visible_when: o.visible_when.map((c) => relabelCondition(c, r, rv)) }
+      : {}),
     ...(o.variants ? { variants: o.variants.map((v) => relabelObjectVariant(v, r, rv)) } : {}),
     takeable: o.takeable,
     ...(o.droppable !== undefined ? { droppable: o.droppable } : {}),

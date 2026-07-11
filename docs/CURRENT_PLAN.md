@@ -14,11 +14,12 @@ rejections, zero crawl findings, zero stuck players, and 100/100 Byre Held.
 Direct Wolf averaged 4.32 clarity / 3.76 enjoyment; preparation was best in
 99/100, but rail 20, linearity 30, and replay 16 failed frozen acceptance.
 
-The first repair closed the 72-report reactive-state family: visit history now
-drives the watch, legal hub backtracks name the wolves actually alive, and the
-split rail/guard/empty rail-bed lifecycle is truthful. Fresh blind seed 930004
-reproduced the old yard event before the fix and still reached 60/60 at clarity
-5 / enjoyment 4; `bug_0499`, two regressions, crawl, and health are green.
+The first repair removed duplicate watch events and stale hub/rail prose. Fresh
+blind seed 930005 then proved the renamed empty rail-bed was still a stale object
+affordance. A generic, hash-preserving `visible_when` world gate now retires the
+rail after binding across full/compact/actions/UI; inventory remains authoritative,
+containers cannot leak children, and validator/liveness proofs cover the feature.
+`bug_0500`, 15 new tests, crawl, and health are green.
 
 The next blocker is the default MCP reading surface. Strict coding found compact
 truncation in 59 reports (38 overworld, 21 direct). A source scan identifies 28

@@ -20,6 +20,7 @@ import {
   dlgVar,
   isLocked,
   isOpen,
+  locateObject,
   nodeOrdinal,
   nodeText,
   objectDescription,
@@ -203,8 +204,28 @@ export function resolveRpgAction(
       if (!builtin && opens.length === 0) return null;
       const effects: Effect[] = [];
       if (builtin) {
-        const reveal = o.contents.length
-          ? ` Inside: ${o.contents.map((c) => objName(index, state, c)).join(", ")}.`
+        // OPEN narration describes the view produced by the built-in open itself,
+        // not the pre-open state. This matters for contents whose world visibility
+        // is gated by `is_open` on their container. Runtime placement also wins over
+        // authored `contents`, so an item moved elsewhere is not announced as inside.
+        const openedState: GameState = {
+          ...state,
+          objectState: {
+            ...state.objectState,
+            [action.target]: {
+              ...state.objectState[action.target],
+              open: true,
+            },
+          },
+        };
+        const visibleAfterOpen = new Set(visibleObjectIds(index, openedState, here));
+        const revealedContents = o.contents.filter((id) => {
+          if (!visibleAfterOpen.has(id)) return false;
+          const location = locateObject(index, openedState, id);
+          return location.kind === "container" && location.container === action.target;
+        });
+        const reveal = revealedContents.length
+          ? ` Inside: ${revealedContents.map((c) => objName(index, openedState, c)).join(", ")}.`
           : "";
         effects.push(
           { open_object: action.target },

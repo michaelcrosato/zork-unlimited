@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 530 -->
+<!-- historical_cycle_count: 531 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,14 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - rpg_conditional_world_object_visibility
+
+- Blind playtest: fresh MCP-only Wolf-Winter seed 930005 reached `ending_held` at 29 HP and 60/60, clarity 5/5, enjoyment 4/5, replay true; it proved the renamed empty rail-bed still exposed stale `paling_rail`/LOOK affordances and again saw Cade clipping.
+- Engine surface: optional hash-preserving object `visible_when` gates world placement across full/compact observations, every object verb, forced actions, UI projection, and nested containers; inventory stays authoritative and OPEN narrates the actual post-open contents.
+- Validation/content surface: feasibility, combined dead guards, cyclic obtainability, relabeling, and exhaustive presence liveness are pinned; Wolf-Winter retires the rail entity when its timber becomes carried gear, with `bug_0500` witnesses.
+- Self-critique: PASS as a reusable correctness-class closure; chose it off-list because the compiled hotspot predates `da9f22b6` and the fresh S1 outranked planned S0 compression. Compact tutorial integrity remains next.
+- Guard: verified cycle report, pre/post 6,000-step crawls (latest `20260711T134116Z`, 247/247 nodes), all 12 packs clean, and `npm run health` (281 files / 1,986 tests) green.
 
 ### Cycle result - wolf_winter_reactive_backtracking_truth
 
@@ -128,11 +136,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Blind playtest: 25-run `overworld` Codex batch seeds 366-390 all exited 0; reports reached `wolf_winter`, clarity 25x4/5, enjoyment 25x4/5, replay 25x true.
 - Self-critique: best-case reports now notice the town-to-quest lead network, but repeats remain around road encounters after arrival, zero overworld quest time, stale completed lists, compact artifacts, and nearby-town template feel.
 - Guard: focused overworld tests, `npm run validate -- wolf_winter`, `npm run health`, `npm run blind:feedback`, and reports `20260708T150956Z`-`20260708T153614Z` seeds 366-390 passed.
-
-### Cycle result - fresh_game_feedback_ledger_baseline
-
-- Content surface: added deterministic blind-feedback accumulation via `docs/BLIND_FEEDBACK_LEDGER.md` and `npm run blind:feedback`, keeping 100 latest entries explicit and older entries as trait counts.
-- Loop effect: the fresh-start quality oracle now has durable recency/commonality memory instead of ad hoc summaries; 185 accepted reports parse, with 85 older entries collapsed.
-- Blind playtest: 25-run `overworld` Codex batch seeds 341-365 all exited 0; reports reached `wolf_winter`, clarity 25x4/5, enjoyment 25x4/5, replay 25x true.
-- Self-critique: players keep going because `wolf_winter` is strong, but Albany/Station Quarter reads procedural, the quest bridge feels tonally abrupt, and completed/road/time state is noisy.
-- Guard: focused ledger/blind-runner regressions, `npm run blind:feedback`, `npm run health`, and reports `20260708T142738Z`-`20260708T145226Z` seeds 341-365 passed.

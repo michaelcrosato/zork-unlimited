@@ -20,6 +20,7 @@ import {
   visibleObjectIds as coreVisibleObjectIds,
   type ObjectLocation,
 } from "../core/object_locations.js";
+import { evalConditions } from "../core/conditions.js";
 import { reactiveName, reactiveText } from "../core/reactive_text.js";
 import type { GameState } from "../core/state.js";
 import type { DialogueNode, Ending, GameObject, Npc, Room, RpgPack } from "./schema.js";
@@ -91,7 +92,23 @@ export function isLocked(index: RpgModelIndex, state: GameState, id: string): bo
 }
 
 export function visibleObjectIds(index: RpgModelIndex, state: GameState, room: string): string[] {
-  return coreVisibleObjectIds(index, state, room);
+  const worldVisible = (id: string, ancestors: ReadonlySet<string> = new Set()): boolean => {
+    if (ancestors.has(id)) return false;
+    const object = index.objects.get(id);
+    if (!object || !evalConditions(object.visible_when ?? [], state)) return false;
+
+    // Runtime placement wins over static containment. A moved object is no longer
+    // inside its authored container, while a currently-contained object inherits
+    // every containing object's world-visibility gate. Inventory is handled by
+    // callers before this world-only helper and deliberately bypasses these gates.
+    const location = locateObject(index, state, id);
+    if (location.kind !== "container") return true;
+    const nextAncestors = new Set(ancestors);
+    nextAncestors.add(id);
+    return worldVisible(location.container, nextAncestors);
+  };
+
+  return coreVisibleObjectIds(index, state, room).filter((id) => worldVisible(id));
 }
 
 export { dlgVar, nodeByOrdinal, nodeOrdinal };
