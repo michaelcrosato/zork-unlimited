@@ -224,6 +224,12 @@ export function assertRpgStateReferences(index: RpgIndex, state: GameState): voi
   }
   for (const enemy of index.pack.enemies) {
     if (enemy.defeat_flag !== undefined) addBooleanRuntimeTarget(flags, enemy.defeat_flag, true);
+    for (const maneuver of enemy.maneuvers ?? []) {
+      // MANEUVER writes its one-shot result flag implicitly in the runner, so
+      // pack-aware save validation must recognize the same true value even
+      // though there is no authored set_flag effect to discover recursively.
+      addBooleanRuntimeTarget(flags, maneuver.result_flag, true);
+    }
     const key = enemyHpVar(enemy.id);
     vars.add(key);
     enemyHpVars.set(key, enemy.hp);

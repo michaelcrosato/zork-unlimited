@@ -325,6 +325,8 @@ function compactTraceActionLabel(action: RpgAction): string {
       return compactMcpTranscriptSummaryValue(`INSPECT:${action.target}`);
     case "INVENTORY":
       return "INVENTORY";
+    case "MANEUVER":
+      return compactMcpTranscriptSummaryValue(`MANEUVER:${action.enemy}:${action.maneuver}`);
     case "ATTACK":
       return compactMcpTranscriptSummaryValue(`ATTACK:${action.enemy}`);
   }

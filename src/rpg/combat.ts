@@ -18,6 +18,11 @@ import type { GameState } from "../core/state.js";
 import type { Resolution } from "../core/engine.js";
 import { HP_VAR, ATTACK_VAR, DEFENSE_VAR, enemyHpVar, type Enemy } from "./schema.js";
 
+export type CombatRoundModifiers = {
+  attackBonus?: number;
+  defenseBonus?: number;
+};
+
 /**
  * One damage roll and a LEGIBLE breakdown of how it was computed. The numeric
  * `dealt` is `max(1, roll + atk - def)` — byte-identical to the old `dmg()` — so
@@ -65,12 +70,24 @@ export function resolveAttack(
   state: GameState,
   enemy: Enemy,
   rng: Rng = rngForStep(state.seed, state.step),
+  modifiers?: CombatRoundModifiers,
 ): Resolution {
   const hpVar = enemyHpVar(enemy.id);
   const curEnemyHp = enemyHp(state, enemy);
   const playerHp = state.vars[HP_VAR] ?? 0;
-  const playerAtk = state.vars[ATTACK_VAR] ?? 0;
-  const playerDef = state.vars[DEFENSE_VAR] ?? 0;
+  const persistentAttack = state.vars[ATTACK_VAR] ?? 0;
+  const persistentDefense = state.vars[DEFENSE_VAR] ?? 0;
+  // Preserve the exact legacy ATTACK arithmetic when no temporary modifiers
+  // are supplied. Maneuvers alone use clamped effective stats for this round;
+  // neither path writes a persistent stat back to GameState.
+  const playerAtk =
+    modifiers === undefined
+      ? persistentAttack
+      : Math.max(0, persistentAttack + (modifiers.attackBonus ?? 0));
+  const playerDef =
+    modifiers === undefined
+      ? persistentDefense
+      : Math.max(0, persistentDefense + (modifiers.defenseBonus ?? 0));
 
   const strike = rollDamage(rng.int(1, 6), playerAtk, enemy.defense);
   const newEnemyHp = curEnemyHp - strike.dealt;

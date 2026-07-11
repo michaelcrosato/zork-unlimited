@@ -303,6 +303,36 @@ export const EndingSchema = z
   })
   .strict();
 
+/**
+ * A named, one-shot combat opening against one enemy. The bonuses alter only
+ * the combat round produced by the MANEUVER action; they never mutate the
+ * player's persistent attack/defense vars. `result_flag` is set after the
+ * maneuver is committed and is also the automatic retirement gate.
+ *
+ * This field is optional on EnemySchema (with no default) so compiling every
+ * pre-maneuver pack produces the exact same object shape and content hash.
+ */
+export const EnemyManeuverSchema = z
+  .object({
+    id: z.string().min(1),
+    command: z.string().min(1),
+    conditions: z.array(ConditionSchema),
+    result_flag: z.string().min(1),
+    attack_bonus: z.number().int(),
+    defense_bonus: z.number().int(),
+    narration: z.string().min(1),
+  })
+  .strict()
+  .superRefine((maneuver, ctx) => {
+    if (maneuver.attack_bonus === 0 && maneuver.defense_bonus === 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["attack_bonus"],
+        message: "a maneuver must change attack_bonus or defense_bonus (both cannot be zero)",
+      });
+    }
+  });
+
 export const EnemySchema = z
   .object({
     id: z.string().min(1),
@@ -316,6 +346,7 @@ export const EnemySchema = z
     defeat_flag: z.string().min(1).optional(),
     death_ending: z.string().min(1),
     on_defeat: z.array(EffectSchema).default([]),
+    maneuvers: z.array(EnemyManeuverSchema).min(1).optional(),
   })
   .strict();
 
@@ -358,6 +389,7 @@ export type Npc = z.infer<typeof NpcSchema>;
 export type WinCondition = z.infer<typeof WinConditionSchema>;
 export type EndingVariant = z.infer<typeof EndingVariantSchema>;
 export type Ending = z.infer<typeof EndingSchema>;
+export type EnemyManeuver = z.infer<typeof EnemyManeuverSchema>;
 export type Enemy = z.infer<typeof EnemySchema>;
 export type RpgPack = z.infer<typeof RpgPackSchema>;
 

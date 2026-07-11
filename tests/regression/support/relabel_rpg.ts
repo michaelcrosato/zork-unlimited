@@ -6,6 +6,7 @@ import type {
   DialogueTopic,
   Ending,
   Enemy,
+  EnemyManeuver,
   Exit,
   GameObject,
   Interaction,
@@ -311,6 +312,27 @@ function relabelEnemy(e: Enemy, r: (id: string) => string, rv: (n: string) => st
     ...(e.defeat_flag !== undefined ? { defeat_flag: r(e.defeat_flag) } : {}),
     death_ending: r(e.death_ending),
     on_defeat: e.on_defeat.map((eff) => relabelEffect(eff, r, rv)),
+    ...(e.maneuvers
+      ? {
+          maneuvers: e.maneuvers.map((maneuver) => relabelEnemyManeuver(maneuver, r, rv)),
+        }
+      : {}),
+  };
+}
+
+function relabelEnemyManeuver(
+  maneuver: EnemyManeuver,
+  r: (id: string) => string,
+  rv: (n: string) => string,
+): EnemyManeuver {
+  return {
+    id: r(maneuver.id),
+    command: maneuver.command,
+    conditions: maneuver.conditions.map((condition) => relabelCondition(condition, r, rv)),
+    result_flag: r(maneuver.result_flag),
+    attack_bonus: maneuver.attack_bonus,
+    defense_bonus: maneuver.defense_bonus,
+    narration: maneuver.narration,
   };
 }
 

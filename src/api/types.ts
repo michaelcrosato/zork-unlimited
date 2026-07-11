@@ -22,6 +22,7 @@ export type RpgAction =
   | { type: "READ"; target: string }
   | { type: "INSPECT"; target: string }
   | { type: "INVENTORY" }
+  | { type: "MANEUVER"; enemy: string; maneuver: string }
   | { type: "ATTACK"; enemy: string };
 
 export type Action = RpgAction;

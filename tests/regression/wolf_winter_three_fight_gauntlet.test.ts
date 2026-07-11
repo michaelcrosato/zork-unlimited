@@ -15,33 +15,39 @@
  *   (1) the pack validates with ZERO errors AND genuinely opts in
  *       (combat_guaranteed === true) over THREE enemies, with BOTH guarantee codes
  *       ABSENT — the fair three-fight gauntlet GREEN on disk;
- *   (2) BOTH prep buffs are load-bearing on the CUMULATIVE bound SPECIFICALLY — the
- *       distinctive property a three-fight pack lets us pin. Best reachable stats are
+ *   (2) BOTH prep buffs are load-bearing on the validator's maneuver-aware CUMULATIVE
+ *       bound. Best reachable stats are
  *       atk7 (base 5 + Cade's +2 counsel) / def5 (base 3 + the byre-jerkin's +2) /
- *       hp30, and the wolves are def2, atk 4/5/6, hp 11/12/13:
- *         - with both buffs: per-fight worst-case 5 / 6 / 14 (each < 30) and cumulative
- *           5 + 6 + 14 = 25 < 30 — every code clear;
- *         - zero the byre-jerkin's +2 defense (def5→3): worst incoming rises to 7/8/9,
- *           per-fight 7 / 8 / 18 (each STILL < 30) but cumulative 7 + 8 + 18 = 33 ≥ 30 —
- *           ONLY the cumulative bound breaks;
- *         - zero Cade's +2 attack (atk7→5): worst player damage falls to 4, rounds rise
- *           to 3/3/4, per-fight 10 / 12 / 21 (each STILL < 30) but cumulative
- *           10 + 12 + 21 = 43 ≥ 30 — again ONLY the cumulative bound breaks.
- *       So across three fights neither buff is decorative AND neither is needed by any
- *       single fight: each is required by the SEQUENCE. Strip either and every fight
- *       still passes in isolation while the gauntlet promise breaks — exactly the
- *       multi-fight failure mode COMBAT_GAUNTLET_NOT_GUARANTEED exists to catch, here
- *       stressed harder than the Dawn Beacon's two fights ever could.
+ *       hp30, and the wolves are def2, atk 4/5/6, hp 11/12/13. For each enemy the
+ *       verifier takes the greater of its standard exchange and every authored
+ *       one-shot-then-standard line: max(5,5) + max(6,9) + max(14,11) = 28 < 30.
+ *       Zeroing defense raises those maxima to 7 + 13 + 18 = 38; zeroing attack raises
+ *       them to 10 + 15 + 21 = 46. Each fight still fits within 30 HP alone, so only
+ *       the cumulative guarantee breaks.
+ *   (3) The concrete runtime guarantee is stronger and separate: with both persistent
+ *       buffs, all four reachable flank/leader opening combinations survive the entire
+ *       gauntlet on worst rolls. Differential runtime witnesses show why each prep buff
+ *       still matters to the universal promise: the best no-attack line costs 42 HP and
+ *       the best no-defense line costs exactly 30.
  *
  * Out-of-band teeth: the differential mutations below were confirmed to flip the
  * report RED on the cumulative code while leaving the per-fight code absent, and the
  * unmutated pack is clean — a genuine guarantee witness, not a vacuous green.
  */
 import { describe, it, expect } from "vitest";
+import { makeStep } from "../../src/core/engine.js";
 import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import { validateRpg } from "../../src/validate/rpg_validator.js";
 import type { RpgPack } from "../../src/rpg/schema.js";
 import type { Effect } from "../../src/core/effects.js";
+import type { Rng } from "../../src/core/rng.js";
+import type { GameState } from "../../src/core/state.js";
+import {
+  buildRpgRules,
+  enumerateRpgActions,
+  indexRpgPack,
+  initStateForRpgPack,
+} from "../../src/rpg/runner.js";
 
 const PACK_PATH = "content/rpg/quests/wolf_winter.yaml";
 
@@ -81,6 +87,98 @@ function zeroBuff(pack: RpgPack, varName: string): RpgPack {
   return clone;
 }
 
+function withInitialHp(pack: RpgPack, hp: number): RpgPack {
+  const clone = structuredClone(pack);
+  clone.meta.vars_init.hp = hp;
+  return clone;
+}
+
+type FlankOpening = "funnel_thrust" | "offside_cut";
+type LeaderOpening = "wait_out_feint" | "close_on_feint";
+
+function fixedOutcomeRng(outcome: "best" | "worst"): Rng {
+  let roll = 0;
+  return {
+    next: () => (outcome === "best" ? 0.999999 : 0),
+    int: (min: number, max: number) => {
+      const first = roll++ === 0;
+      if (outcome === "best") return first ? max : min;
+      return first ? min : max;
+    },
+  };
+}
+
+/**
+ * Drive one fully-prepared tactical line. Preparation and the rail check use a
+ * best outcome so both authored choices are genuinely available; every combat
+ * round uses the player's worst d6 followed by the wolf's best d6.
+ */
+function playPreparedWorst(
+  sourcePack: RpgPack,
+  flankOpening: FlankOpening,
+  leaderOpening: LeaderOpening,
+): GameState {
+  const index = indexRpgPack(sourcePack);
+  let state = initStateForRpgPack(index, 189);
+  const stepFor = (outcome: "best" | "worst") =>
+    makeStep(buildRpgRules(index, () => fixedOutcomeRng(outcome)));
+
+  const act = (id: string, outcome: "best" | "worst" = "best"): void => {
+    const available = enumerateRpgActions(index, state);
+    const option = available.find((candidate) => candidate.id === id);
+    expect(
+      option,
+      `expected ${id} in ${state.current}; available: ${available.map((candidate) => candidate.id).join(", ")}`,
+    ).toBeDefined();
+    if (!option) throw new Error(`missing ${id}`);
+    const result = stepFor(outcome)(state, option.action);
+    expect(result.ok, result.rejectionReason).toBe(true);
+    state = result.state;
+  };
+  const finish = (enemy: string, defeatFlag: string): void => {
+    for (let guard = 0; guard < 10 && !state.ended && !state.flags[defeatFlag]; guard += 1) {
+      act(`attack_${enemy}`, "worst");
+    }
+  };
+
+  act("go_north");
+  act("talk_houndsman");
+  act("ask_wolves"); // +2 attack
+  act("ask_byre"); // both leader openings + the rail plan
+  act("ask_leave");
+  act("go_west");
+  act("take_byre_jerkin");
+  act("use_byre_jerkin"); // +2 defense
+  act("go_east");
+  act("go_north");
+  act("use_paling_rail", "best"); // make both flank openings reachable
+
+  act("maneuver_yearling_wolf_set_spear", "worst");
+  finish("yearling_wolf", "yearling_down");
+  if (state.ended) return state;
+  act("go_north");
+  act(`maneuver_flank_wolf_${flankOpening}`, "worst");
+  finish("flank_wolf", "flank_wolf_down");
+  if (state.ended) return state;
+  act("go_north");
+  act(`maneuver_grey_leader_${leaderOpening}`, "worst");
+  finish("grey_leader", "leader_down");
+  if (state.ended) return state;
+  act("go_north");
+  return state;
+}
+
+const OPENING_COMBINATIONS: ReadonlyArray<{
+  flank: FlankOpening;
+  leader: LeaderOpening;
+  expectedHp: number;
+}> = [
+  { flank: "funnel_thrust", leader: "wait_out_feint", expectedHp: 5 },
+  { flank: "funnel_thrust", leader: "close_on_feint", expectedHp: 6 },
+  { flank: "offside_cut", leader: "wait_out_feint", expectedHp: 5 },
+  { flank: "offside_cut", leader: "close_on_feint", expectedHp: 6 },
+];
+
 describe("bug_0189 — The Wolf-Winter: a fair THREE-fight combat_guaranteed gauntlet", () => {
   it("validates clean and genuinely opts in over THREE fights, both guarantee codes absent", () => {
     const pack = loadPack();
@@ -94,19 +192,90 @@ describe("bug_0189 — The Wolf-Winter: a fair THREE-fight combat_guaranteed gau
     expect(c).not.toContain("COMBAT_UNWINNABLE");
   });
 
-  it("the byre-jerkin's +2 defense is load-bearing on the CUMULATIVE bound alone", () => {
-    // def5→3: per-fight worst-case 7/8/18 (each < 30 reachable HP, so each fight still
-    // clears alone) but jointly 7 + 8 + 18 = 33 ≥ 30 — only the three-fight bound breaks.
+  it("pins the maneuver-aware cumulative upper bound at exactly 28 HP", () => {
+    const atBoundary = codes(withInitialHp(loadPack(), 28));
+    expect(atBoundary).toContain("COMBAT_GAUNTLET_NOT_GUARANTEED");
+    expect(atBoundary).not.toContain("COMBAT_NOT_GUARANTEED");
+
+    const oneAbove = codes(withInitialHp(loadPack(), 29));
+    expect(oneAbove).not.toContain("COMBAT_GAUNTLET_NOT_GUARANTEED");
+    expect(oneAbove).not.toContain("COMBAT_NOT_GUARANTEED");
+  });
+
+  it("concretely survives worst rolls under every fully-prepared tactical opening pair", () => {
+    const sourcePack = loadPack();
+    for (const combination of OPENING_COMBINATIONS) {
+      const state = playPreparedWorst(sourcePack, combination.flank, combination.leader);
+      expect(
+        state.endingId,
+        `${combination.flank} + ${combination.leader} must hold the byre`,
+      ).toBe("ending_held");
+      expect(state.vars.hp).toBe(combination.expectedHp);
+      expect(state.flags.heard_counsel).toBe(true);
+      expect(state.flags.heard_plan).toBe(true);
+      expect(state.flags.jerkin_donned).toBe(true);
+      expect(state.vars).toMatchObject({ attack: 7, defense: 5 });
+    }
+  });
+
+  it("keeps both persistent buffs load-bearing in concrete worst-roll tactical play", () => {
+    const noAttackBuff = zeroBuff(loadPack(), "attack");
+    for (const combination of OPENING_COMBINATIONS) {
+      const state = playPreparedWorst(noAttackBuff, combination.flank, combination.leader);
+      const ending = noAttackBuff.endings.find((candidate) => candidate.id === state.endingId);
+      expect(
+        ending?.death,
+        `without Cade's +2 attack, ${combination.flank} + ${combination.leader} should be lethal on worst rolls`,
+      ).toBe(true);
+    }
+
+    // The least damaging no-attack pair costs exactly 42: at 43 HP either flank
+    // opening followed by the violent close survives on 1, while either guarded
+    // wait consumes all 43. At the 42-HP boundary the close is lethal too.
+    const noAttackAt43 = withInitialHp(noAttackBuff, 43);
+    for (const flank of ["funnel_thrust", "offside_cut"] as const) {
+      const close = playPreparedWorst(noAttackAt43, flank, "close_on_feint");
+      expect(close.endingId).toBe("ending_held");
+      expect(close.vars.hp).toBe(1);
+      const wait = playPreparedWorst(noAttackAt43, flank, "wait_out_feint");
+      expect(noAttackAt43.endings.find((candidate) => candidate.id === wait.endingId)?.death).toBe(
+        true,
+      );
+      expect(wait.vars.hp).toBe(0);
+    }
+    const noAttackAt42 = withInitialHp(noAttackBuff, 42);
+    const attackBoundary = playPreparedWorst(noAttackAt42, "offside_cut", "close_on_feint");
+    expect(
+      noAttackAt42.endings.find((candidate) => candidate.id === attackBoundary.endingId)?.death,
+    ).toBe(true);
+    expect(attackBoundary.vars.hp).toBe(0);
+
+    // Without the jerkin's +2 defense, even the least damaging prepared opening
+    // pair consumes all 30 HP. The tactics cannot smuggle safety past Cade's
+    // explicit "both" promise.
+    const noDefenseBuff = zeroBuff(loadPack(), "defense");
+    for (const combination of OPENING_COMBINATIONS) {
+      const state = playPreparedWorst(noDefenseBuff, combination.flank, combination.leader);
+      const ending = noDefenseBuff.endings.find((candidate) => candidate.id === state.endingId);
+      expect(
+        ending?.death,
+        `without the jerkin, ${combination.flank} + ${combination.leader} should be lethal on worst rolls`,
+      ).toBe(true);
+    }
+    const boundary = playPreparedWorst(noDefenseBuff, "offside_cut", "close_on_feint");
+    expect(boundary.vars.hp).toBe(0);
+  });
+
+  it("the maneuver-aware bound needs the byre-jerkin on the CUMULATIVE bound alone", () => {
+    // def5→3: the per-enemy maxima 7/13/18 each fit 30 HP, but jointly total 38.
     const c = codes(zeroBuff(loadPack(), "defense"));
     expect(c).toContain("COMBAT_GAUNTLET_NOT_GUARANTEED");
     expect(c).not.toContain("COMBAT_NOT_GUARANTEED"); // every single fight still clears
     expect(c).not.toContain("COMBAT_UNWINNABLE"); // and stays best-case winnable
   });
 
-  it("Cade's +2 attack is load-bearing on the CUMULATIVE bound alone too", () => {
-    // atk7→5: worst player damage 4, rounds 3/3/4, per-fight 10/12/21 (each < 30) but
-    // jointly 10 + 12 + 21 = 43 ≥ 30 — again only the three-fight bound breaks. So across
-    // three fights BOTH buffs are needed by the SEQUENCE, neither by any single fight.
+  it("the maneuver-aware bound needs Cade's attack buff cumulatively too", () => {
+    // atk7→5: the per-enemy maxima 10/15/21 each fit 30 HP, but jointly total 46.
     const c = codes(zeroBuff(loadPack(), "attack"));
     expect(c).toContain("COMBAT_GAUNTLET_NOT_GUARANTEED");
     expect(c).not.toContain("COMBAT_NOT_GUARANTEED"); // every single fight still clears

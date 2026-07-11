@@ -88,11 +88,10 @@ const packFiles = readdirSync(PACK_DIR)
   .filter((f) => f.endsWith(".yaml"))
   .sort();
 
-// Same safety bound as the every-ending-reachable / variant-liveness / score-economy RPG
-// proofs. The shipped packs settle well under this with the liveness action policy; the
-// ceiling exists only so a future combinatorial blowup fails LOUDLY (cap hit) rather than
-// truncating an unexplored region into a silent pass.
-const MAX_STATES = 200_000;
+// The maneuver-rich Wolf-Winter graph exhausts at 255,319 states under this liveness
+// policy (measured 2026-07-10). Keep finite headroom above that verified witness while
+// retaining a loud cap-out backstop for a future combinatorial regression.
+const MAX_STATES = 300_000;
 
 // The bug_0146 liveness action policy: step every legal action EXCEPT the ones that cannot
 // usefully widen the reachable region (DROP — the inventory×location blowup — plus the

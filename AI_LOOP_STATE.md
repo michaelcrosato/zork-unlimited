@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 527 -->
+<!-- historical_cycle_count: 528 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,14 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - wolf_winter_enemy_maneuvers
+
+- Engine/content surface: added reusable one-shot enemy maneuvers—seeded combat rounds with conditioned temporary attack/defense tradeoffs—and rebuilt `wolf_winter` around three telegraphed openings, a real Albany relief spear, and a consequential one-attempt breach wedge.
+- Loop effect: engine/MCP/CLI/UI/save validation plus `bug_0497` regressions pin unique action ids, forced-opening combat bounds, monotonic retirement, temporary math, fallback attacks, exhaustive liveness, reactive aftermath, and the exact 28-damage guarantee.
+- Blind-playtest quest "advocates_case": seed 930001, clarity 4/5, enjoyment 4/5, ending `ending_exempted`, 50/50 with no mechanical failure. The explicit user depth mandate and repeated `wolf_winter` S2 combat feedback justified choosing this off-list tranche.
+- Self-critique: PASS_WITH_NOTES; preparation now changes live decisions instead of only stats, but openings remain one-shot and the post-opening exchanges still use standard attacks—the 200-run harvest must test whether that depth lasts.
+- Guard: post-change 6,000-step crawl, 1,957-test `health`, base `3b8afec4` integrity, production UI build/HTTP smoke, and verified report `ai-runs/2026-07-11T05-20-40-859Z/playtest.md` green; embedded browser webview could not retain the local page.
 
 ### Cycle result - testing_pyramid_three_tiers
 
@@ -126,11 +134,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Blind playtest: 20-run `tide_mill` Codex batch seeds 301-320 all exited 0 and scored 55/55; clarity 20x5/5, enjoyment 20x4/5, replay 20x false.
 - Self-critique: billhook specificity landed, but seeds 311/318 reused the old `use_choked_sluice` id after obtaining the billhook and hit rejection; next S1 is preserving that id as a legal alias.
 - Guard: focused route/second-fault regressions, `npm run validate -- tide_mill`, `npm run health`, and reports `20260708T132919Z`-`20260708T134325Z` seeds 301-320 passed.
-
-### Cycle result - tide_mill_head_race_inspection_affordance
-
-- Content surface: changed pre-billhook `tide_mill` Head-Race interaction from `clear choked head-race` to `check choked head-race`, keeping the stable `use_choked_sluice` id and billhook/tool-shed nudge.
-- Loop effect: regression proves the check command gives no score/progress before the billhook, while the post-billhook repair still becomes `clear choked head-race`; no new state flag was kept because it pushed exhaustive proofs over cap.
-- Blind playtest: 20-run `tide_mill` Codex batch seeds 281-300 all exited 0 and scored 55/55; clarity 20x5/5, enjoyment 20x4/5, replay 20x false.
-- Self-critique: "clear before billhook" friction softened, but compact agents still complain about generic `use_choked_sluice`; next S1 is making the decisive repair action billhook-specific.
-- Guard: focused head-race/regression graph checks, `npm run validate -- tide_mill`, `npm run health`, and reports `20260708T125954Z`-`20260708T131451Z` seeds 281-300 passed.

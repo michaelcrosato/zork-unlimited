@@ -7,9 +7,10 @@
  *   npm run play -- <world_quest_id> [--seed N]
  *   npm run play -- <world_quest_id> --commands "down; take iron bar; ..."
  *
- * Uses the controlled command grammar and adds an `attack <enemy>` verb.
+ * Uses the controlled command grammar, an `attack <enemy>` verb, and exact
+ * authored commands for currently-legal one-shot combat maneuvers.
  * The quest's bound pack must pass the RPG validator before it is playable (§0, §10). The
- * legal-action set (base RPG actions + ATTACK) is ground truth; combat and skill
+ * legal-action set (base RPG actions + combat actions) is ground truth; combat and skill
  * checks are seeded, so a recorded run replays exactly (§8.5).
  */
 import { writeFileSync } from "node:fs";
@@ -19,7 +20,13 @@ import { pathToFileURL } from "node:url";
 import { makeStep, actionEquals } from "../src/core/engine.js";
 import { evalConditions } from "../src/core/conditions.js";
 import type { RpgAction } from "../src/api/types.js";
-import { indexRpgPack, buildRpgRules, initStateForRpgPack } from "../src/rpg/runner.js";
+import {
+  indexRpgPack,
+  buildRpgRules,
+  initStateForRpgPack,
+  enumerateRpgActions,
+} from "../src/rpg/runner.js";
+import type { RpgActionOption } from "../src/rpg/legal_actions.js";
 import { buildRpgObservation, type RpgObservation } from "../src/rpg/observation.js";
 import { parseCommand } from "../src/rpg/command_map.js";
 import { recordTrace } from "../src/trace/record.js";
@@ -75,6 +82,13 @@ export function resolve(
   raw: string,
 ): { ok: true; action: RpgAction } | { ok: false; reason: string } {
   const text = raw.trim().toLowerCase();
+  // Authored maneuver commands are controlled vocabulary too. Match the exact
+  // currently-legal label before the generic attack grammar, so scripted and
+  // interactive terminal play can select the same named option as MCP/UI.
+  const maneuver = enumerateRpgActions(index, state).find(
+    (option) => option.action.type === "MANEUVER" && option.command.trim().toLowerCase() === text,
+  );
+  if (maneuver) return { ok: true, action: maneuver.action };
   const m = text.match(/^(attack|fight|kill|hit)\s+(.*)$/);
   if (m) {
     const phrase = m[2]!.replace(/^the\s+/, "");
@@ -85,6 +99,16 @@ export function resolve(
       : { ok: false, reason: `There's no "${phrase}" to attack here.` };
   }
   return parseCommand(index, state, raw);
+}
+
+function signed(value: number): string {
+  return value >= 0 ? `+${value}` : String(value);
+}
+
+/** Player-facing terminal label for one legal action, including tactical math. */
+export function renderActionOption(option: RpgActionOption): string {
+  if (!option.combat) return option.command;
+  return `${option.command} [one-shot; ATK ${signed(option.combat.attack_bonus)}, DEF ${signed(option.combat.defense_bonus)} this round]`;
 }
 
 async function main(): Promise<void> {
@@ -122,7 +146,12 @@ async function main(): Promise<void> {
         const low = raw.trim().toLowerCase();
         if (["quit", "q", "exit"].includes(low)) break;
         if (["actions", "help", "?"].includes(low)) {
-          console.log("You can:\n" + obs.available_actions.map((a) => `  ${a.command}`).join("\n"));
+          console.log(
+            "You can:\n" +
+              enumerateRpgActions(index, state)
+                .map((option) => `  ${renderActionOption(option)}`)
+                .join("\n"),
+          );
           continue;
         }
       } else {

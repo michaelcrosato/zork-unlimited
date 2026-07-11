@@ -58,6 +58,10 @@ const hasDeclaredVar = (vars: Record<string, number>, name: string): boolean =>
  */
 export type ValidateRpgFoundationOptions = {
   extraSettableFlags?: string[];
+  /** Flags a higher-layer mechanic reads implicitly (for example a maneuver's
+   * automatic one-shot result-flag gate). Keeps INERT_FLAG aware of runtime
+   * readers that have no authored Condition node. */
+  extraReadFlags?: string[];
   extraObtainable?: string[];
   /**
    * Extra `score` points a higher layer (§13 Stage 4) can award through branches
@@ -581,6 +585,11 @@ export function validateRpgFoundation(
       }
     }
   }
+  for (const enemy of pack.enemies) {
+    for (const maneuver of enemy.maneuvers ?? []) {
+      checkConds(maneuver.conditions, [`enemy:${enemy.id}`, `maneuver:${maneuver.id}`]);
+    }
+  }
   for (const wc of pack.win_conditions) checkConds(wc.conditions, [`win:${wc.id}`]);
   for (const npc of pack.npcs) {
     checkConds(npc.conditions ?? [], [`npc:${npc.id}`]);
@@ -625,6 +634,9 @@ export function validateRpgFoundation(
     for (const exit of room.exits) for (const id of itemReqs(exit.conditions)) noteHeld(id, false);
   for (const wc of pack.win_conditions)
     for (const id of itemReqs(wc.conditions)) noteHeld(id, false);
+  for (const enemy of pack.enemies)
+    for (const maneuver of enemy.maneuvers ?? [])
+      for (const id of itemReqs(maneuver.conditions)) noteHeld(id, false);
   for (const npc of pack.npcs) {
     for (const id of itemReqs(npc.conditions ?? [])) noteHeld(id, false);
     for (const node of npc.dialogue.nodes)
@@ -654,6 +666,19 @@ export function validateRpgFoundation(
           `quest_critical "${o.id}" is takeable but the map has a one-way region — it could be dropped where it cannot be retrieved.`,
           [`object:${o.id}`],
         ),
+      );
+    }
+  }
+  for (const enemy of pack.enemies) {
+    const retirementConditions: Condition[] = (enemy.maneuvers ?? []).map((maneuver) => ({
+      not_flag: maneuver.result_flag,
+    }));
+    for (const maneuver of enemy.maneuvers ?? []) {
+      checkUnsatisfiable(
+        [...maneuver.conditions, ...retirementConditions],
+        [`enemy:${enemy.id}`, `maneuver:${maneuver.id}`],
+        `maneuver "${maneuver.id}" on enemy "${enemy.id}"`,
+        findings,
       );
     }
   }
@@ -964,6 +989,7 @@ export function validateRpgFoundation(
   // disjunction still counts as read and is never flagged. Warning, not error — an
   // inert flag is a no-op, never a soft-lock, exactly like its CYOA sibling.
   const flagReads = collectFlagReads(pack);
+  for (const flag of opts.extraReadFlags ?? []) flagReads.add(flag);
   const writtenFlags = new Set<string>([
     ...pack.meta.flags_init,
     ...(opts.extraSettableFlags ?? []),
@@ -1189,7 +1215,11 @@ function computeObtainable(
   const containerOf = new Map<string, string>();
   for (const o of pack.objects) for (const cid of o.contents) containerOf.set(cid, o.id);
 
-  const obtainable = new Set<string>();
+  // `held: true` objects start in inventory (state_init.ts); they satisfy
+  // has_item gates immediately even though they are neither takeable nor placed.
+  const obtainable = new Set<string>(
+    pack.objects.filter((object) => object.held).map((object) => object.id),
+  );
   let changed = true;
   while (changed) {
     changed = false;
@@ -1734,6 +1764,8 @@ function collectFlagReads(pack: RpgPack): Set<string> {
     for (const v of o.variants ?? []) walkAll(v.when);
     for (const it of o.interactions) walkAll(it.conditions);
   }
+  for (const enemy of pack.enemies)
+    for (const maneuver of enemy.maneuvers ?? []) walkAll(maneuver.conditions);
   for (const wc of pack.win_conditions) walkAll(wc.conditions);
   for (const e of pack.endings) for (const v of e.variants ?? []) walkAll(v.when); // reactive epilogue guards
   for (const npc of pack.npcs) {
@@ -1775,6 +1807,8 @@ function collectObjectStateReads(pack: RpgPack): { open: Set<string>; unlocked: 
     for (const v of o.variants ?? []) walkAll(v.when);
     for (const it of o.interactions) walkAll(it.conditions);
   }
+  for (const enemy of pack.enemies)
+    for (const maneuver of enemy.maneuvers ?? []) walkAll(maneuver.conditions);
   for (const wc of pack.win_conditions) walkAll(wc.conditions);
   for (const e of pack.endings) for (const v of e.variants ?? []) walkAll(v.when);
   for (const npc of pack.npcs) {
@@ -1819,6 +1853,8 @@ function collectRoomRefs(pack: RpgPack): Set<string> {
     for (const v of o.variants ?? []) walkAll(v.when);
     for (const it of o.interactions) walkAll(it.conditions);
   }
+  for (const enemy of pack.enemies)
+    for (const maneuver of enemy.maneuvers ?? []) walkAll(maneuver.conditions);
   for (const wc of pack.win_conditions) walkAll(wc.conditions);
   for (const e of pack.endings) for (const v of e.variants ?? []) walkAll(v.when);
   for (const npc of pack.npcs) {

@@ -41,6 +41,7 @@ export type RpgActionOption = {
   command: string;
   action: RpgAction;
   skill_check?: { skill: string; difficulty: number; die: string };
+  combat?: { attack_bonus: number; defense_bonus: number; one_shot: true };
 };
 
 function dialogueTopicMatches(topic: DialogueTopic, id: string): boolean {

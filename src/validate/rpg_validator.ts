@@ -9,7 +9,9 @@
  *  - every enemy stands in a real room and names a declared DEATH ending;
  *  - every fight is WINNABLE — on the player's BEST reachable HP/attack/defense and
  *    the LUCKIEST rolls (player max damage, enemy min damage), the player must still
- *    be standing when the enemy falls. This is a deliberately CONSERVATIVE lower
+ *    be standing when the enemy falls. Authored maneuvers contribute their lucky
+ *    opening routes, and a maneuver whose guard is provably inevitable suppresses the
+ *    otherwise-illegal standard opening. This is a deliberately CONSERVATIVE lower
  *    bound: an ERROR fires only on a fight that is impossible even then. It is NOT a
  *    worst-case-roll survival guarantee — a deliberately luck-dependent fight that a
  *    fully-prepared player can still LOSE on bad rolls (cold_forge/sunken_barrow's
@@ -20,8 +22,11 @@
  *    PROMISE its fights are not a gamble. Then each fight must also clear the UPPER
  *    bound — best reachable stats but the player's WORST rolls (player min damage,
  *    enemy max damage): if even a fully-prepared player can be felled on the unluckiest
- *    rolls, the promise is broken (`COMBAT_NOT_GUARANTEED`). The gamble packs above do
- *    NOT set the flag and stay unflagged; this is the sound next-shape bug_0113 named,
+ *    rolls, the promise is broken (`COMBAT_NOT_GUARANTEED`). For an enemy with authored
+ *    maneuvers this upper bound checks ordinary ATTACK and every forced maneuver opening
+ *    (temporary modifiers for the first exchange, ordinary rounds thereafter), taking
+ *    the most damaging legal route. The gamble packs above do NOT set the flag and stay
+ *    unflagged; this is the sound next-shape bug_0113 named,
  *    closing the player-experience gap every RPG playtest raises by making "this fight
  *    is fair" a DECLARED, AUDITED property instead of an unverifiable hope.
  *  - every skill check is PASSABLE — d20 + the best reachable skill can meet the
@@ -29,16 +34,270 @@
  *  - every enemy on_defeat end_game is declared.
  */
 import type { Effect } from "../core/effects.js";
+import type { Condition } from "../core/conditions.js";
 import { validateRpgFoundation } from "./rpg_foundation_validator.js";
 import { type Finding, type ValidationReport, makeReport } from "./report.js";
 import {
   type RpgPack,
+  type Enemy,
+  type EnemyManeuver,
   HP_VAR,
   ATTACK_VAR,
   DEFENSE_VAR,
   SCORE_VAR,
   enemyHpVar,
 } from "../rpg/schema.js";
+import { maneuverActionId } from "../rpg/action_ids.js";
+
+type CombatRoute = {
+  damageTaken: number;
+  roundsToKill: number;
+  maneuverId: string | null;
+};
+
+/** Worst-d6 upper bound for ordinary ATTACK rounds with best persistent stats. */
+function worstStandardCombatRoute(
+  playerAttack: number,
+  playerDefense: number,
+  enemy: Enemy,
+): CombatRoute {
+  const playerDamage = Math.max(1, 1 + playerAttack - enemy.defense);
+  const roundsToKill = Math.ceil(enemy.hp / playerDamage);
+  const enemyDamage = Math.max(1, 6 + enemy.attack - playerDefense);
+  return {
+    damageTaken: enemyDamage * (roundsToKill - 1),
+    roundsToKill,
+    maneuverId: null,
+  };
+}
+
+/**
+ * Worst-d6 upper bound for the forced MANEUVER opening, followed by ordinary
+ * ATTACK rounds. Temporary modifiers are clamped exactly as combat.ts clamps
+ * them and affect only the first strike/counterattack.
+ */
+function worstManeuverCombatRoute(
+  playerAttack: number,
+  playerDefense: number,
+  enemy: Enemy,
+  maneuver: EnemyManeuver,
+): CombatRoute {
+  const openingAttack = Math.max(0, playerAttack + maneuver.attack_bonus);
+  const openingDefense = Math.max(0, playerDefense + maneuver.defense_bonus);
+  const openingDamage = Math.max(1, 1 + openingAttack - enemy.defense);
+  const remainingHp = enemy.hp - openingDamage;
+  if (remainingHp <= 0) {
+    return { damageTaken: 0, roundsToKill: 1, maneuverId: maneuver.id };
+  }
+
+  const openingReply = Math.max(1, 6 + enemy.attack - openingDefense);
+  const ordinaryDamage = Math.max(1, 1 + playerAttack - enemy.defense);
+  const ordinaryRounds = Math.ceil(remainingHp / ordinaryDamage);
+  const ordinaryReply = Math.max(1, 6 + enemy.attack - playerDefense);
+  return {
+    damageTaken: openingReply + ordinaryReply * Math.max(0, ordinaryRounds - 1),
+    roundsToKill: 1 + ordinaryRounds,
+    maneuverId: maneuver.id,
+  };
+}
+
+/** Best-d6 lower bound for ordinary ATTACK rounds with best persistent stats. */
+function bestStandardCombatRoute(
+  playerAttack: number,
+  playerDefense: number,
+  enemy: Enemy,
+): CombatRoute {
+  const playerDamage = Math.max(1, 6 + playerAttack - enemy.defense);
+  const roundsToKill = Math.ceil(enemy.hp / playerDamage);
+  const enemyDamage = Math.max(1, 1 + enemy.attack - playerDefense);
+  return {
+    damageTaken: enemyDamage * (roundsToKill - 1),
+    roundsToKill,
+    maneuverId: null,
+  };
+}
+
+/**
+ * Best-d6 lower bound for a MANEUVER opening followed by legacy ordinary
+ * ATTACK rounds. Only the opening's temporary effective stats are clamped,
+ * exactly matching combat.ts.
+ */
+function bestManeuverCombatRoute(
+  playerAttack: number,
+  playerDefense: number,
+  enemy: Enemy,
+  maneuver: EnemyManeuver,
+): CombatRoute {
+  const openingAttack = Math.max(0, playerAttack + maneuver.attack_bonus);
+  const openingDefense = Math.max(0, playerDefense + maneuver.defense_bonus);
+  const openingDamage = Math.max(1, 6 + openingAttack - enemy.defense);
+  const remainingHp = enemy.hp - openingDamage;
+  if (remainingHp <= 0) {
+    return { damageTaken: 0, roundsToKill: 1, maneuverId: maneuver.id };
+  }
+
+  const openingReply = Math.max(1, 1 + enemy.attack - openingDefense);
+  const ordinaryDamage = Math.max(1, 6 + playerAttack - enemy.defense);
+  const ordinaryRounds = Math.ceil(remainingHp / ordinaryDamage);
+  const ordinaryReply = Math.max(1, 1 + enemy.attack - playerDefense);
+  return {
+    damageTaken: openingReply + ordinaryReply * Math.max(0, ordinaryRounds - 1),
+    roundsToKill: 1 + ordinaryRounds,
+    maneuverId: maneuver.id,
+  };
+}
+
+/** String-valued effect targets, recursively covering every authored effect site. */
+function authoredStringEffectTargets(
+  node: unknown,
+  effectKey: "clear_flag" | "remove_item",
+  out = new Set<string>(),
+): Set<string> {
+  if (Array.isArray(node)) {
+    for (const value of node) authoredStringEffectTargets(value, effectKey, out);
+  } else if (node !== null && typeof node === "object") {
+    for (const [key, value] of Object.entries(node)) {
+      if (key === effectKey && typeof value === "string") out.add(value);
+      authoredStringEffectTargets(value, effectKey, out);
+    }
+  }
+  return out;
+}
+
+/**
+ * Conservative proof that a maneuver guard is always true whenever this enemy
+ * can be fought. Only monotonic facts are claimed: immutable initialized flags,
+ * non-removable held items, and rooms necessarily visited/current at encounter.
+ * Unknown or mutable atoms return false, keeping standard ATTACK as a possible
+ * fallback rather than creating a false COMBAT_UNWINNABLE error.
+ */
+function conditionGuaranteedAtEnemy(
+  condition: Condition,
+  pack: RpgPack,
+  enemy: Enemy,
+  clearedFlags: ReadonlySet<string>,
+  removedItems: ReadonlySet<string>,
+): boolean {
+  if ("has_flag" in condition) {
+    return (
+      pack.meta.flags_init.includes(condition.has_flag) && !clearedFlags.has(condition.has_flag)
+    );
+  }
+  if ("has_item" in condition) {
+    return (
+      pack.objects.some((object) => object.id === condition.has_item && object.held === true) &&
+      !removedItems.has(condition.has_item)
+    );
+  }
+  if ("visited" in condition) {
+    return condition.visited === pack.meta.start_room || condition.visited === enemy.room;
+  }
+  if ("in_room" in condition) return condition.in_room === enemy.room;
+  if ("all_of" in condition) {
+    return condition.all_of.every((child) =>
+      conditionGuaranteedAtEnemy(child, pack, enemy, clearedFlags, removedItems),
+    );
+  }
+  if ("any_of" in condition) {
+    return condition.any_of.some((child) =>
+      conditionGuaranteedAtEnemy(child, pack, enemy, clearedFlags, removedItems),
+    );
+  }
+  return false;
+}
+
+function maneuverGuaranteedAtEnemy(
+  maneuver: EnemyManeuver,
+  pack: RpgPack,
+  enemy: Enemy,
+  clearedFlags: ReadonlySet<string>,
+  removedItems: ReadonlySet<string>,
+): boolean {
+  return maneuver.conditions.every((condition) =>
+    conditionGuaranteedAtEnemy(condition, pack, enemy, clearedFlags, removedItems),
+  );
+}
+
+const MAX_MANEUVER_COVERAGE_ATOMS = 12;
+
+type BooleanConditionAtom = { key: string; negated: boolean };
+
+/**
+ * Normalize the DSL's exact complement pairs onto one Boolean atom. All other
+ * atomic predicates remain independent. That enlarges the truth-table state
+ * space, so a tautology proven over it is conservative for real GameStates.
+ */
+function booleanConditionAtom(condition: Condition): BooleanConditionAtom {
+  if ("has_flag" in condition)
+    return { key: JSON.stringify(["flag", condition.has_flag]), negated: false };
+  if ("not_flag" in condition)
+    return { key: JSON.stringify(["flag", condition.not_flag]), negated: true };
+  if ("has_item" in condition)
+    return { key: JSON.stringify(["item", condition.has_item]), negated: false };
+  if ("not_item" in condition)
+    return { key: JSON.stringify(["item", condition.not_item]), negated: true };
+  if ("visited" in condition)
+    return { key: JSON.stringify(["visited", condition.visited]), negated: false };
+  if ("not_visited" in condition)
+    return { key: JSON.stringify(["visited", condition.not_visited]), negated: true };
+  // none_of supplies an exact negation for every remaining atom. Keep distinct
+  // predicates independent rather than assuming numeric, room, object-state,
+  // or quest-stage relationships the truth table cannot prove soundly.
+  return { key: JSON.stringify(["predicate", condition]), negated: false };
+}
+
+function collectBooleanConditionAtoms(condition: Condition, atoms: Set<string>): void {
+  if ("all_of" in condition) {
+    for (const child of condition.all_of) collectBooleanConditionAtoms(child, atoms);
+  } else if ("any_of" in condition) {
+    for (const child of condition.any_of) collectBooleanConditionAtoms(child, atoms);
+  } else if ("none_of" in condition) {
+    for (const child of condition.none_of) collectBooleanConditionAtoms(child, atoms);
+  } else {
+    atoms.add(booleanConditionAtom(condition).key);
+  }
+}
+
+function evalBooleanCondition(condition: Condition, values: ReadonlyMap<string, boolean>): boolean {
+  if ("all_of" in condition)
+    return condition.all_of.every((child) => evalBooleanCondition(child, values));
+  if ("any_of" in condition)
+    return condition.any_of.some((child) => evalBooleanCondition(child, values));
+  if ("none_of" in condition)
+    return !condition.none_of.some((child) => evalBooleanCondition(child, values));
+  const atom = booleanConditionAtom(condition);
+  const value = values.get(atom.key) ?? false;
+  return atom.negated ? !value : value;
+}
+
+/**
+ * Prove that at least one maneuver guard holds for every abstract state. The
+ * bounded exhaustive table supports arbitrary nested all_of/any_of/none_of and
+ * exact normalized complement atoms (`has_flag x`/`not_flag x`, etc.). When the
+ * atom cap is exceeded, return false so standard ATTACK remains a candidate.
+ */
+function maneuverGuardsCollectivelyCoverAllStates(maneuvers: readonly EnemyManeuver[]): boolean {
+  if (maneuvers.length === 0) return false;
+  const atomSet = new Set<string>();
+  for (const maneuver of maneuvers) {
+    for (const condition of maneuver.conditions) collectBooleanConditionAtoms(condition, atomSet);
+  }
+  if (atomSet.size > MAX_MANEUVER_COVERAGE_ATOMS) return false;
+
+  const atoms = [...atomSet];
+  const assignmentCount = 2 ** atoms.length;
+  for (let assignment = 0; assignment < assignmentCount; assignment++) {
+    const values = new Map<string, boolean>();
+    for (let index = 0; index < atoms.length; index++) {
+      values.set(atoms[index]!, (assignment & (2 ** index)) !== 0);
+    }
+    const covered = maneuvers.some((maneuver) =>
+      maneuver.conditions.every((condition) => evalBooleanCondition(condition, values)),
+    );
+    if (!covered) return false;
+  }
+  return true;
+}
 
 const err = (code: string, message: string, where: string[]): Finding => ({
   severity: "error",
@@ -53,6 +312,13 @@ function enemyRuntimeEffects(pack: RpgPack): Effect[] {
   return out;
 }
 
+/** Effects the runner emits implicitly when a maneuver is committed. */
+function maneuverRuntimeEffects(pack: RpgPack): Effect[] {
+  return pack.enemies.flatMap((enemy) =>
+    (enemy.maneuvers ?? []).map((maneuver): Effect => ({ set_flag: maneuver.result_flag })),
+  );
+}
+
 function skillCheckEffects(pack: RpgPack): Effect[] {
   const out: Effect[] = [];
   for (const o of pack.objects)
@@ -62,7 +328,11 @@ function skillCheckEffects(pack: RpgPack): Effect[] {
 }
 
 function rpgRuntimeEffects(pack: RpgPack): Effect[] {
-  return [...enemyRuntimeEffects(pack), ...skillCheckEffects(pack)];
+  return [
+    ...enemyRuntimeEffects(pack),
+    ...maneuverRuntimeEffects(pack),
+    ...skillCheckEffects(pack),
+  ];
 }
 
 export function validateRpg(pack: RpgPack): ValidationReport {
@@ -70,10 +340,14 @@ export function validateRpg(pack: RpgPack): ValidationReport {
   // skill-check branch effects are scanned by the RPG foundation validator, so do
   // not inject them here again (score/list extras would double-count them).
   const enemyEffects = enemyRuntimeEffects(pack);
+  const maneuverEffects = maneuverRuntimeEffects(pack);
   const extraSettableFlags: string[] = [];
   const extraObtainable: string[] = [];
   for (const enemy of pack.enemies) {
     if (enemy.defeat_flag) extraSettableFlags.push(enemy.defeat_flag);
+    for (const maneuver of enemy.maneuvers ?? []) {
+      extraSettableFlags.push(maneuver.result_flag);
+    }
   }
   // Quest stages set through RPG-only combat branches. Keyed with the SAME NUL
   // separator the foundation validator's questStageKey uses, so the keys match.
@@ -98,6 +372,7 @@ export function validateRpg(pack: RpgPack): ValidationReport {
   // sets a win-trigger flag is seen as such.
   const extraEffectLists: Effect[][] = [];
   for (const enemy of pack.enemies) extraEffectLists.push(enemy.on_defeat);
+  for (const effect of maneuverEffects) extraEffectLists.push([effect]);
 
   // The WIN_FIRES_AT_START stability proof must also see RPG-only falsifiers:
   // combat branches can falsify a start-true win (extraFalsifierEffects), and
@@ -111,9 +386,12 @@ export function validateRpg(pack: RpgPack): ValidationReport {
   ];
   const base = validateRpgFoundation(pack, {
     extraSettableFlags,
+    extraReadFlags: pack.enemies.flatMap((enemy) =>
+      (enemy.maneuvers ?? []).map((maneuver) => maneuver.result_flag),
+    ),
     extraObtainable,
     extraScoreAwards,
-    extraFalsifierEffects: enemyEffects,
+    extraFalsifierEffects: [...enemyEffects, ...maneuverEffects],
     extraVolatileVars,
     extraEffectLists,
     extraSettableQuestStages,
@@ -167,10 +445,98 @@ export function validateRpg(pack: RpgPack): ValidationReport {
   // ── Enemies ──────────────────────────────────────────────────────────────────
   // Cumulative worst-case damage across the whole opt-in `combat_guaranteed`
   // gauntlet (bug_0172). Only meaningful when the pack PROMISES fair fights: it
-  // sums each enemy's per-fight worst-case `maxDamageTaken` so a multi-fight
+  // sums each enemy's worst route across plain ATTACK and every maneuver opening so a multi-fight
   // guarantee can be audited JOINTLY, not just per-fight. See the post-loop check.
   let cumulativeWorstDamage = 0;
+  const clearedFlags = authoredStringEffectTargets(pack, "clear_flag");
+  const removedItems = authoredStringEffectTargets(pack, "remove_item");
+  const maneuverActionIdOwners = new Map<string, { enemyId: string; maneuverId: string }>();
+  const defeatFlagOwners = new Map<string, string[]>();
+  for (const candidate of pack.enemies) {
+    if (candidate.defeat_flag === undefined) continue;
+    const owners = defeatFlagOwners.get(candidate.defeat_flag) ?? [];
+    owners.push(candidate.id);
+    defeatFlagOwners.set(candidate.defeat_flag, owners);
+  }
   for (const enemy of pack.enemies) {
+    const maneuverIds = new Set<string>();
+    const maneuverCommands = new Set<string>();
+    for (const maneuver of enemy.maneuvers ?? []) {
+      if (maneuverIds.has(maneuver.id)) {
+        findings.push(
+          err(
+            "DUPLICATE_MANEUVER_ID",
+            `enemy "${enemy.id}" declares maneuver id "${maneuver.id}" more than once.`,
+            [`enemy:${enemy.id}`, `maneuver:${maneuver.id}`],
+          ),
+        );
+      }
+      maneuverIds.add(maneuver.id);
+      const actionId = maneuverActionId(enemy.id, maneuver.id);
+      const actionIdOwner = maneuverActionIdOwners.get(actionId);
+      if (
+        actionIdOwner !== undefined &&
+        (actionIdOwner.enemyId !== enemy.id || actionIdOwner.maneuverId !== maneuver.id)
+      ) {
+        findings.push(
+          err(
+            "MANEUVER_ACTION_ID_COLLISION",
+            `enemy "${enemy.id}" maneuver "${maneuver.id}" generates action id "${actionId}", which is already generated by enemy "${actionIdOwner.enemyId}" maneuver "${actionIdOwner.maneuverId}". Rename one id so every public action remains selectable.`,
+            [`enemy:${enemy.id}`, `maneuver:${maneuver.id}`, `action:${actionId}`],
+          ),
+        );
+      } else if (actionIdOwner === undefined) {
+        maneuverActionIdOwners.set(actionId, { enemyId: enemy.id, maneuverId: maneuver.id });
+      }
+      const command = maneuver.command.trim().toLowerCase();
+      if (maneuverCommands.has(command)) {
+        findings.push(
+          err(
+            "DUPLICATE_MANEUVER_COMMAND",
+            `enemy "${enemy.id}" declares maneuver command "${maneuver.command}" more than once.`,
+            [`enemy:${enemy.id}`, `maneuver:${maneuver.id}`],
+          ),
+        );
+      }
+      maneuverCommands.add(command);
+      if (maneuver.attack_bonus === 0 && maneuver.defense_bonus === 0) {
+        findings.push(
+          err(
+            "MANEUVER_NO_MODIFIER",
+            `enemy "${enemy.id}" maneuver "${maneuver.id}" changes neither attack nor defense, so it is only a cosmetic alias for ATTACK.`,
+            [`enemy:${enemy.id}`, `maneuver:${maneuver.id}`],
+          ),
+        );
+      }
+      if (pack.meta.flags_init.includes(maneuver.result_flag)) {
+        findings.push(
+          err(
+            "MANEUVER_RESULT_FLAG_INITIALIZED",
+            `enemy "${enemy.id}" maneuver "${maneuver.id}" uses initialized flag "${maneuver.result_flag}" as its one-shot result, so the maneuver can never be offered.`,
+            [`enemy:${enemy.id}`, `maneuver:${maneuver.id}`],
+          ),
+        );
+      }
+      if (clearedFlags.has(maneuver.result_flag)) {
+        findings.push(
+          err(
+            "MANEUVER_RESULT_FLAG_CLEARED",
+            `enemy "${enemy.id}" maneuver "${maneuver.id}" uses result flag "${maneuver.result_flag}", but an authored clear_flag can reset it and re-enable an action declared one-shot. Maneuver result flags must be monotonic.`,
+            [`enemy:${enemy.id}`, `maneuver:${maneuver.id}`, `flag:${maneuver.result_flag}`],
+          ),
+        );
+      }
+      const collidingEnemies = defeatFlagOwners.get(maneuver.result_flag);
+      if (collidingEnemies !== undefined) {
+        findings.push(
+          err(
+            "MANEUVER_DEFEAT_FLAG_COLLISION",
+            `enemy "${enemy.id}" maneuver "${maneuver.id}" reuses defeat_flag "${maneuver.result_flag}" declared by ${collidingEnemies.map((id) => `enemy "${id}"`).join(", ")}, which would publish defeat progress while a foe still has HP.`,
+            [`enemy:${enemy.id}`, `maneuver:${maneuver.id}`],
+          ),
+        );
+      }
+    }
     if (!roomIds.has(enemy.room))
       findings.push(
         err(
@@ -206,18 +572,49 @@ export function validateRpg(pack: RpgPack): ValidationReport {
     // best-case total would drop the player, NO sequence of rolls can win → the fight
     // is truly impossible (an ERROR). A fight winnable here but lethal on WORSE rolls
     // is a permitted gamble, deliberately NOT flagged (see the file docstring).
-    const bestPlayerDmg = Math.max(1, 6 + playerAtk - enemy.defense);
-    const roundsToKill = Math.ceil(enemy.hp / bestPlayerDmg);
-    const minEnemyDmg = Math.max(1, 1 + enemy.attack - playerDef);
-    const minDamageTaken = minEnemyDmg * (roundsToKill - 1);
-    if (minDamageTaken >= playerHp) {
-      findings.push(
-        err(
-          "COMBAT_UNWINNABLE",
-          `enemy "${enemy.id}" cannot be beaten even with best-case rolls and the player's best reachable stats (needs ${roundsToKill} rounds; would take ≥${minDamageTaken} damage vs ${playerHp} reachable HP).`,
-          [`enemy:${enemy.id}`],
-        ),
-      );
+    const standardBestRoute = bestStandardCombatRoute(playerAtk, playerDef, enemy);
+    const maneuvers = enemy.maneuvers ?? [];
+    const bestRoutes = maneuvers.map((maneuver) =>
+      bestManeuverCombatRoute(playerAtk, playerDef, enemy, maneuver),
+    );
+    const maneuverOpeningForced =
+      maneuvers.some((maneuver) =>
+        maneuverGuaranteedAtEnemy(maneuver, pack, enemy, clearedFlags, removedItems),
+      ) || maneuverGuardsCollectivelyCoverAllStates(maneuvers);
+    // A monotonic guaranteed guard or a proven collectively-exhaustive guard
+    // disjunction means a maneuver always suppresses ATTACK for the opening round.
+    // Otherwise standard ATTACK remains a conservative candidate: there may be a
+    // reachable preparation state in which none of the authored guards holds.
+    // Maneuver routes are also credited optimistically, matching this lower bound's
+    // existing over-approximation of player power and avoiding false positives.
+    if (!maneuverOpeningForced) {
+      bestRoutes.unshift(standardBestRoute);
+    }
+    const bestRoute =
+      bestRoutes.reduce<CombatRoute | undefined>(
+        (best, route) =>
+          best === undefined || route.damageTaken < best.damageTaken ? route : best,
+        undefined,
+      ) ?? standardBestRoute;
+    if (bestRoute.damageTaken >= playerHp) {
+      if (maneuvers.length === 0 || bestRoute.maneuverId === null) {
+        // Preserve the established no-maneuver/standard-route diagnostic byte-for-byte.
+        findings.push(
+          err(
+            "COMBAT_UNWINNABLE",
+            `enemy "${enemy.id}" cannot be beaten even with best-case rolls and the player's best reachable stats (needs ${bestRoute.roundsToKill} rounds; would take ≥${bestRoute.damageTaken} damage vs ${playerHp} reachable HP).`,
+            [`enemy:${enemy.id}`],
+          ),
+        );
+      } else {
+        findings.push(
+          err(
+            "COMBAT_UNWINNABLE",
+            `enemy "${enemy.id}" cannot be beaten even with best-case rolls and the player's best reachable stats after its least damaging available opening, maneuver "${bestRoute.maneuverId}" (needs ${bestRoute.roundsToKill} rounds; would take ≥${bestRoute.damageTaken} damage vs ${playerHp} reachable HP).`,
+            [`enemy:${enemy.id}`, `maneuver:${bestRoute.maneuverId}`],
+          ),
+        );
+      }
     }
 
     // Opt-in fairness guarantee (bug_0114). The check above is a LOWER bound that
@@ -232,19 +629,40 @@ export function validateRpg(pack: RpgPack): ValidationReport {
     // the promise is false (ERROR). When it does NOT, the player survives on EVERY
     // possible sequence, so the guarantee is sound.
     if (pack.meta.combat_guaranteed) {
-      const worstPlayerDmg = Math.max(1, 1 + playerAtk - enemy.defense);
-      const worstRoundsToKill = Math.ceil(enemy.hp / worstPlayerDmg);
-      const maxEnemyDmg = Math.max(1, 6 + enemy.attack - playerDef);
-      const maxDamageTaken = maxEnemyDmg * (worstRoundsToKill - 1);
-      cumulativeWorstDamage += maxDamageTaken;
-      if (maxDamageTaken >= playerHp) {
-        findings.push(
-          err(
-            "COMBAT_NOT_GUARANTEED",
-            `meta.combat_guaranteed is set, but enemy "${enemy.id}" can still fell a best-prepared player on worst-case rolls (needs ${worstRoundsToKill} rounds; would take up to ${maxDamageTaken} damage vs ${playerHp} reachable HP). Make the fight winnable on every roll, or drop the guarantee and let it stand as a declared gamble.`,
-            [`enemy:${enemy.id}`],
-          ),
-        );
+      const standardRoute = worstStandardCombatRoute(playerAtk, playerDef, enemy);
+      const worstRoutes = maneuvers.map((maneuver) =>
+        worstManeuverCombatRoute(playerAtk, playerDef, enemy, maneuver),
+      );
+      // Standard ATTACK is an opening candidate only when every maneuver guard
+      // can simultaneously be false. Once individual or collective coverage is
+      // proven, runtime always forces one of the authored opening choices.
+      if (!maneuverOpeningForced) worstRoutes.unshift(standardRoute);
+      const worstRoute =
+        worstRoutes.reduce<CombatRoute | undefined>(
+          (worst, route) =>
+            worst === undefined || route.damageTaken > worst.damageTaken ? route : worst,
+          undefined,
+        ) ?? standardRoute;
+      cumulativeWorstDamage += worstRoute.damageTaken;
+      if (worstRoute.damageTaken >= playerHp) {
+        if (worstRoute.maneuverId === null) {
+          // Preserve the established no-maneuver diagnostic byte-for-byte.
+          findings.push(
+            err(
+              "COMBAT_NOT_GUARANTEED",
+              `meta.combat_guaranteed is set, but enemy "${enemy.id}" can still fell a best-prepared player on worst-case rolls (needs ${standardRoute.roundsToKill} rounds; would take up to ${standardRoute.damageTaken} damage vs ${playerHp} reachable HP). Make the fight winnable on every roll, or drop the guarantee and let it stand as a declared gamble.`,
+              [`enemy:${enemy.id}`],
+            ),
+          );
+        } else {
+          findings.push(
+            err(
+              "COMBAT_NOT_GUARANTEED",
+              `meta.combat_guaranteed is set, but enemy "${enemy.id}" can still fell a best-prepared player after opening with maneuver "${worstRoute.maneuverId}" on worst-case rolls (needs ${worstRoute.roundsToKill} rounds; would take up to ${worstRoute.damageTaken} damage vs ${playerHp} reachable HP). Make every forced maneuver opening safe on every roll, or drop the guarantee and let it stand as a declared gamble.`,
+              [`enemy:${enemy.id}`, `maneuver:${worstRoute.maneuverId}`],
+            ),
+          );
+        }
       }
     }
   }

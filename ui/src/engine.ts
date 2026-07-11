@@ -127,6 +127,8 @@ export class GameSession {
         id: a.id,
         label: a.skill_check
           ? `${a.command}  ⟨${a.skill_check.skill} check, DC ${a.skill_check.difficulty}⟩`
+          : a.combat
+            ? `${a.command}  ⟨one-shot, ATK ${signed(a.combat.attack_bonus)}, DEF ${signed(a.combat.defense_bonus)} this round⟩`
           : a.command,
       })),
       inventory: o.inventory,
@@ -170,6 +172,10 @@ export class GameSession {
   reset(): void {
     this.state = this.fresh();
   }
+}
+
+function signed(value: number): string {
+  return value >= 0 ? `+${value}` : String(value);
 }
 
 function narrationsOf(events: GameEvent[]): string[] {

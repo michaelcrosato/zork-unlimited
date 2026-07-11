@@ -71,7 +71,7 @@ function bestRng(): Rng {
  * take and don the jerkin, then hold the corridor — fighting each wolf until the way north
  * opens. Each step asserts its RpgAction is actually in the legal set first (so a content-id
  * drift fails LOUDLY here rather than silently skipping a scoring prep act), while the fights
- * loop on the legal set so they stay robust to round count.
+ * take an authored opening when offered and then loop on ATTACK, remaining robust to round count.
  */
 function playPrepared(): GameState {
   const loaded = loadRpgSourceFile(PACK_PATH);
@@ -104,10 +104,14 @@ function playPrepared(): GameState {
       if (state.ended) return;
       const north = legal().find((a) => a.type === "MOVE" && a.direction === "north");
       if (north) return; // the wolf is down; the way north has opened
-      const attack = legal().find((a) => a.type === "ATTACK");
-      expect(attack, `no ATTACK and no way north — stuck: ${JSON.stringify(legal())}`).toBeTruthy();
-      const res = step(state, attack as RpgAction);
-      expect(res.ok, `engine rejected ATTACK: ${res.rejectionReason}`).toBe(true);
+      const combat =
+        legal().find((a) => a.type === "MANEUVER") ?? legal().find((a) => a.type === "ATTACK");
+      expect(
+        combat,
+        `no combat action and no way north — stuck: ${JSON.stringify(legal())}`,
+      ).toBeTruthy();
+      const res = step(state, combat as RpgAction);
+      expect(res.ok, `engine rejected combat action: ${res.rejectionReason}`).toBe(true);
       state = res.state;
     }
     throw new Error("a fight did not resolve within 50 rounds under best rolls");

@@ -95,12 +95,10 @@ const packFiles = readdirSync(PACK_DIR)
   .filter((f) => f.endsWith(".yaml"))
   .sort();
 
-// Same backstop as the CYOA/parser liveness proofs and the every-ending RPG proof. The
-// liveness policy widens the progress-only policy by READ only (and the combat lattice is
-// already present in the every-ending RPG search, which settles well under this); the cap
-// exists only so a future blowup fails LOUD (cap hit) rather than truncating a region into
-// a silent pass.
-const MAX_STATES = 200_000;
+// The maneuver-rich Wolf-Winter graph exhausts at 255,319 states under this policy
+// (measured 2026-07-10). A 300k ceiling gives that concrete graph bounded headroom while
+// still failing LOUD on a future combinatorial blowup instead of silently truncating it.
+const MAX_STATES = 300_000;
 
 /**
  * The liveness action policy (identical to the parser proof): step every legal action

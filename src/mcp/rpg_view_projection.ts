@@ -57,6 +57,7 @@ export function publicActions(
     id: option.id,
     ...(opts.compactActions ? {} : { command: compactMcpActionLabel(option.command) }),
     ...(option.skill_check ? { skill_check: { ...option.skill_check } } : {}),
+    ...(option.combat ? { combat: { ...option.combat } } : {}),
   }));
 }
 
@@ -115,6 +116,7 @@ export function cloneMcpObservation(obs: McpObservation): McpObservation {
     available_actions: obs.available_actions.map((action) => ({
       ...action,
       ...(action.skill_check ? { skill_check: { ...action.skill_check } } : {}),
+      ...(action.combat ? { combat: { ...action.combat } } : {}),
     })),
     ending: obs.ending ? { ...obs.ending } : null,
   };
@@ -129,6 +131,7 @@ function cloneLegalActionRows(
       : {
           ...row,
           ...(row.skill_check ? { skill_check: { ...row.skill_check } } : {}),
+          ...(row.combat ? { combat: { ...row.combat } } : {}),
         },
   );
 }

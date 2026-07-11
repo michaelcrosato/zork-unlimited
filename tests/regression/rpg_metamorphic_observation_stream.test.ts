@@ -139,9 +139,10 @@ const LIVENESS_SKIP: ReadonlySet<RpgAction["type"]> = new Set([
   "INSPECT",
 ]);
 const explore = (a: RpgAction): boolean => !LIVENESS_SKIP.has(a.type);
-// Matches the RPG census/reachability oracles' bound. We walk the bracketed graph twice
-// in lock-step per pack; a cap-out surfaces as a loud failure rather than a hang.
-const MAX_STATES = 200_000;
+// The maneuver-rich Wolf-Winter graph exhausts at 255,319 states under this policy
+// (measured 2026-07-10). The 300k ceiling leaves bounded headroom for that verified
+// graph while preserving a loud cap-out rather than truncating a future blowup.
+const MAX_STATES = 300_000;
 // Generous per-test budget. tide_mill's bracketed graph is the heaviest in the suite (~42s
 // isolated on a fast dev box; wolf_winter ~23s), and under a loaded/shared CI runner (sibling
 // test files competing for a few vCPUs) that stretches ~3x — tide_mill's leg blew past the
@@ -196,6 +197,8 @@ function rpgOptionId(a: RpgAction): string {
   switch (a.type) {
     case "ATTACK":
       return `attack_${a.enemy}`;
+    case "MANEUVER":
+      return `maneuver_${a.enemy}_${a.maneuver}`;
     case "LOOK":
       return a.target === undefined ? "look_around" : `examine_${a.target}`;
     case "READ":
@@ -238,6 +241,8 @@ function relabelAction(a: RpgAction, mapId: (id: string) => string): RpgAction {
   switch (a.type) {
     case "ATTACK":
       return { type: "ATTACK", enemy: mapId(a.enemy) };
+    case "MANEUVER":
+      return { type: "MANEUVER", enemy: mapId(a.enemy), maneuver: mapId(a.maneuver) };
     case "LOOK":
       return a.target === undefined ? { type: "LOOK" } : { type: "LOOK", target: mapId(a.target) };
     case "READ":
@@ -315,6 +320,7 @@ function relabelObservation(o: RpgObservation, mapId: (id: string) => string): R
               },
             }
           : {}),
+        ...(a.combat ? { combat: { ...a.combat } } : {}),
       };
     }),
     score: o.score,

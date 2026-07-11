@@ -77,8 +77,9 @@
  * dropped-item location, and stepping DROP blows the state cap). That policy steps READ,
  * ATTACK, and the skill-check USE, so every score-award state is visited. The search FAILS
  * on cappedOut, so it can never pass by truncating an unexplored region. Both shipped packs
- * settle well under the 200k cap (the same bracket+policy as bug_0147: cold_forge ~19k,
- * sunken_barrow ~1.9k states).
+ * settle under the 300k cap. Wolf Winter's authored one-shot combat openings expand the
+ * complete bracket to 255,319 states; the ceiling remains a loud runaway guard with
+ * roughly 17% headroom rather than an implicit truncation.
  *
  * Packs are auto-discovered from content/rpg/quests, so a new RPG pack is covered the moment
  * it ships (the health-covers-all-packs bar, bug_0096).
@@ -107,10 +108,11 @@ const packFiles = readdirSync(PACK_DIR)
 // this same var, so there is no second scoring var to consider.
 const SCORE_VAR = "score";
 
-// Same safety bound as the every-ending / variant-liveness proofs. The bracket+liveness
-// policy settles well under this on both shipped packs; the ceiling exists only so a future
-// combinatorial blowup fails LOUDLY (cap hit) rather than truncating into a silent pass.
-const MAX_STATES = 200_000;
+// Same evidence-backed safety bound as the action-id / variant-liveness / metamorphic
+// proofs. Wolf Winter's maneuver graph currently settles at 255,319 states; the ceiling
+// exists only so a future combinatorial blowup fails LOUDLY rather than truncating into a
+// silent pass.
+const MAX_STATES = 300_000;
 
 // Vitest runs the full corpus concurrently in CI, where the largest shipped-pack search
 // can take more than the generic 60-second default under runner contention. MAX_STATES

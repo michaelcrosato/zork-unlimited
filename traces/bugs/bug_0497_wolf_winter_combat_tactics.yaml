@@ -1,0 +1,37 @@
+id: bug_0497
+title: "Wolf-Winter preparation collapsed into repeated generic attacks"
+pack: content/rpg/quests/wolf_winter.yaml
+reported_by: blind-playtest fleet
+reports:
+  - blind-tester/reports/20260708T200029Z_overworld_seed562.md
+  - blind-tester/reports/20260708T200030Z_overworld_seed565.md
+  - blind-tester/reports/20260708T213027Z_overworld_seed613.md
+  - blind-tester/reports/20260708T213426Z_overworld_seed614.md
+severity: S2
+symptom: >
+  Wolf-Winter spends its strongest beats teaching the yearling's rush, the flank-wolf's
+  off-side attack, the grey leader's patience, Cade's spear technique, the padded jerkin,
+  and the braced breach. Once a fight began, however, every authored distinction collapsed
+  into the same repeated ATTACK action. The grey leader explicitly waited for carelessness
+  while the player had no tactical decision that could answer that behavior.
+root_cause: >
+  RPG enemies exposed only one combat action. Preparation could change persistent attack
+  and defense values, but the schema and runner had no authored, seeded combat-round
+  primitive for a temporary risk/reward tradeoff. Content-only object interactions could
+  fake a one-shot buff, but they were free actions rather than real rounds and could not
+  honestly model the enemy counterattack.
+fix: >
+  Add reusable one-shot enemy maneuvers: authored commands with state conditions, a result
+  flag, and temporary attack/defense modifiers. A maneuver resolves through the normal
+  seeded strike-and-counterattack round, surfaces its exact tradeoff, and retires after
+  use. Wolf-Winter makes the relief spear a real equipped object and gives each wolf
+  distinct preparation-dependent choices; the breach wedge also becomes a consequential
+  one-attempt decision instead of a repeat-until-success roll. Standard ATTACK remains a
+  legal fallback and the existing score and combat-guarantee routes remain intact.
+tests:
+  - tests/regression/rpg_enemy_maneuvers.test.ts
+  - tests/regression/wolf_winter_combat_tactics.test.ts
+  - tests/regression/wolf_winter_braced_breach_legible.test.ts
+verification:
+  - npm run crawl:smoke
+  - npm run health
