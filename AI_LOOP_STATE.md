@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 528 -->
+<!-- historical_cycle_count: 529 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,14 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - wolf_winter_tactical_follow_through
+
+- Engine surface: added validated one-layer `after` maneuver sequences with opening/follow-through metadata, exclusive cohorts, stable result flags, and CLI/UI exposure; raised exhaustive caps to the measured 233,618-state progress and 467,235-state liveness spaces.
+- Content surface: all three Wolf-Winter fights now use named two-beat lines; the failed wedge binds a real, spent split-rail guard; six route-specific endings preserve 60/60. Static conservative damage remains 28 while the concrete prepared maximum is 24.
+- Blind playtest: fresh MCP-only seed 930002 reached `ending_held` in 22 steps at 21 HP and 60/60; clarity 5/5, enjoyment 4/5, replay true. Its false absent-guard DROP finding was fixed with paired reducer/route regressions.
+- Self-critique: the tactical state is legible and reactive, but compact tutorial truncation and single-option follow-through beats still make the sequence feel more guided than systemic.
+- Guard: verified blind report, post-fix crawl `20260711T101454Z` (6,000 steps; 247/247 overworld nodes), `npm run health` (279 files / 1,971 tests), and integrity comparison against the parent commit.
 
 ### Cycle result - wolf_winter_enemy_maneuvers
 
@@ -127,11 +135,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Blind playtest: 20-run `tide_mill` Codex batch seeds 321-340 all exited 0 and scored 55/55; clarity 20x5/5, enjoyment 20x4/5, replay 20x false.
 - Self-critique: old-id rejection did not recur; strongest repeated next signals are tactical saboteur texture/continuity, underdeveloped coin-bag branch, and the new broader starting-area/open-world direction.
 - Guard: focused route/alias/graph regressions, `npm run validate -- tide_mill`, `npm run health`, and reports `20260708T135657Z`-`20260708T141239Z` seeds 321-340 passed.
-
-### Cycle result - tide_mill_billhook_specific_race_action
-
-- Content surface: converted post-billhook `tide_mill` Head-Race repair interactions to item-on-target billhook uses, yielding `use_billhook_on_choked_sluice` and `cut choked head-race with billhook`.
-- Loop effect: focused route regressions now prove pre-billhook `use_choked_sluice` remains a no-progress check, while held-billhook repair is billhook-specific and score-bearing.
-- Blind playtest: 20-run `tide_mill` Codex batch seeds 301-320 all exited 0 and scored 55/55; clarity 20x5/5, enjoyment 20x4/5, replay 20x false.
-- Self-critique: billhook specificity landed, but seeds 311/318 reused the old `use_choked_sluice` id after obtaining the billhook and hit rejection; next S1 is preserving that id as a legal alias.
-- Guard: focused route/second-fault regressions, `npm run validate -- tide_mill`, `npm run health`, and reports `20260708T132919Z`-`20260708T134325Z` seeds 301-320 passed.

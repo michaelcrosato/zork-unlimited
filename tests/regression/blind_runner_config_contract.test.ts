@@ -120,4 +120,20 @@ describe("blind runner MCP config contract", () => {
     expect(mcpHarness).not.toContain('"new_game"');
     expect(mcpHarness).not.toContain("pack_path");
   });
+
+  it("asks for replay intent without prefilling a boolean answer", () => {
+    const promptPaths = [
+      join(process.cwd(), "blind-tester", "prompt.md"),
+      join(process.cwd(), "blind-tester", "prompt-overworld.md"),
+    ];
+
+    for (const promptPath of promptPaths) {
+      const prompt = readFileSync(promptPath, "utf8");
+      expect(prompt).toContain(
+        "Before writing the block, answer independently: “Would you personally choose to",
+      );
+      expect(prompt).toContain('"would_replay": <JSON boolean chosen after play>');
+      expect(prompt).not.toMatch(/"would_replay"\s*:\s*(?:true|false)\b/);
+    }
+  });
 });

@@ -60,8 +60,10 @@ import { exhaustiveEndingsMulti } from "./support/exhaustive_endings.js";
 import type { Rules } from "../../src/core/engine.js";
 import type { Action } from "../../src/api/types.js";
 
-// Same backstop the reachability suites use; every shipped pack settles well under it.
-const MAX_STATES = 200_000;
+// The follow-through-rich Wolf-Winter progress graph exhausts at 233,618 states
+// (measured 2026-07-11). Keep bounded headroom above that concrete witness; a
+// future blowup still fails loudly instead of truncating an unproven search.
+const MAX_STATES = 300_000;
 
 // Best/worst-roll rule sets for RPG, identical to rpg_all_endings_reachable.test.ts. The
 // BEST regime (own strike max, damage taken min) is what carries a WIN — the path we need a

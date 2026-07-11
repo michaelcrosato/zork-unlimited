@@ -1,0 +1,55 @@
+id: bug_0498
+title: "Wolf-Winter tactics stopped after one opening and correct rail preparation could be erased"
+pack: content/rpg/quests/wolf_winter.yaml
+reported_by: blind-playtest fleet
+reports:
+  - ai-runs/playtests/20260711T070049Z-post-8c3533f7/reports/20260711T070606Z_wolf_winter_seed920000.md
+  - ai-runs/playtests/20260711T070049Z-post-8c3533f7/reports/20260711T070606Z_wolf_winter_seed920011.md
+  - ai-runs/playtests/20260711T070049Z-post-8c3533f7/reports/20260711T070606Z_wolf_winter_seed920032.md
+  - ai-runs/playtests/20260711T070049Z-post-8c3533f7/reports/20260711T070606Z_wolf_winter_seed920099.md
+severity: S2
+symptom: >
+  Wolf-Winter's clue-to-preparation loop was the unanimous best part of the direct fleet,
+  but each correct maneuver was only a one-round opener. A surviving wolf immediately
+  reduced the next beat to generic ATTACK, sometimes at one remaining HP, so the taught
+  set, funnel, off-side turn, and feint answers did not carry through to a complete
+  tactical line. Separately, the strongly signposted paling wedge could fail permanently
+  on one failed roll and delete the promised guarded route with no recovery.
+root_cause: >
+  Enemy maneuvers were an enemy-wide one-shot cohort: any root result flag retired every
+  maneuver and restored ordinary ATTACK. The pack could author distinct openings but not
+  a required shallow continuation. The paling rail also treated failure as terminal
+  scenery state; it had no mutually exclusive same-target recovery interaction or real
+  inventory representation for a weaker salvaged tactic.
+fix: >
+  Give every Wolf-Winter opening one named shallow follow-through. A surviving yearling
+  must be driven through the set spear; the flank-wolf must be pinned at the braced rail,
+  turned through its off-side return, or hooked over a recovered splinter guard; the grey
+  leader's true rush must be taken after waiting, or she must be driven before recovering
+  from the aggressive close. Ordinary ATTACK is unavailable between each root and child.
+  A failed wedge now sets rail_split and clearly offers the same stable use_paling_rail
+  action id again to bind the joined lengths into non-droppable split_rail_guard gear.
+  That commitment enables a distinct recovered flank route and the guard is consumed
+  when the flank-wolf falls. Reactive rooms, objects, spear text, journals, blocked-exit
+  prose, and six ending variants preserve each choice downstream.
+deterministic_witnesses:
+  - route: "braced funnel -> pin at rail -> wait out feint -> take true rush"
+    worst_roll_damage: 12
+    ending_hp: 18
+  - route: "off-side cut -> turn through return -> close on feint -> drive before recovery"
+    worst_roll_damage: 24
+    ending_hp: 6
+  - route: "failed wedge -> bind split guard -> hook over guard -> wait -> true rush"
+    worst_roll_damage: 13
+    ending_hp: 17
+  - invariant: "all six prepared flank/leader combinations reach ending_held on worst rolls"
+  - invariant: "without the jerkin the riskiest route costs 30; without Cade's attack it costs 39"
+tests:
+  - tests/regression/wolf_winter_combat_tactics.test.ts
+  - tests/regression/wolf_winter_three_fight_gauntlet.test.ts
+  - tests/regression/wolf_winter_wedge_signposted.test.ts
+verification:
+  - npm run validate -- wolf_winter
+  - npx vitest run tests/regression/wolf_winter_combat_tactics.test.ts tests/regression/wolf_winter_three_fight_gauntlet.test.ts tests/regression/wolf_winter_wedge_signposted.test.ts
+  - npm run crawl:smoke
+  - npm run health

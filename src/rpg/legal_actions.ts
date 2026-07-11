@@ -13,6 +13,7 @@ import type { RpgAction } from "../api/types.js";
 import type { Resolution } from "../core/engine.js";
 import type { GameState } from "../core/state.js";
 import type { DialogueTopic, Interaction } from "./schema.js";
+import type { ManeuverPhase } from "./maneuver_sequence.js";
 import {
   type RpgModelIndex,
   activeDialogue,
@@ -41,7 +42,12 @@ export type RpgActionOption = {
   command: string;
   action: RpgAction;
   skill_check?: { skill: string; difficulty: number; die: string };
-  combat?: { attack_bonus: number; defense_bonus: number; one_shot: true };
+  combat?: {
+    attack_bonus: number;
+    defense_bonus: number;
+    one_shot: true;
+    phase?: ManeuverPhase;
+  };
 };
 
 function dialogueTopicMatches(topic: DialogueTopic, id: string): boolean {

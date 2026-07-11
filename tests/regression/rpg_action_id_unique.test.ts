@@ -88,10 +88,10 @@ const packFiles = readdirSync(PACK_DIR)
   .filter((f) => f.endsWith(".yaml"))
   .sort();
 
-// The maneuver-rich Wolf-Winter graph exhausts at 255,319 states under this liveness
-// policy (measured 2026-07-10). Keep finite headroom above that verified witness while
-// retaining a loud cap-out backstop for a future combinatorial regression.
-const MAX_STATES = 300_000;
+// The follow-through-rich Wolf-Winter graph exhausts at 467,235 states under this
+// liveness policy (measured 2026-07-11). Keep the same finite headroom ratio above that
+// verified witness while retaining a loud cap-out for a future combinatorial regression.
+const MAX_STATES = 550_000;
 
 // The bug_0146 liveness action policy: step every legal action EXCEPT the ones that cannot
 // usefully widen the reachable region (DROP — the inventory×location blowup — plus the

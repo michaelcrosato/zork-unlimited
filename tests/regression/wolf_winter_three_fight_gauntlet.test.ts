@@ -19,16 +19,16 @@
  *       bound. Best reachable stats are
  *       atk7 (base 5 + Cade's +2 counsel) / def5 (base 3 + the byre-jerkin's +2) /
  *       hp30, and the wolves are def2, atk 4/5/6, hp 11/12/13. For each enemy the
- *       verifier takes the greater of its standard exchange and every authored
- *       one-shot-then-standard line: max(5,5) + max(6,9) + max(14,11) = 28 < 30.
- *       Zeroing defense raises those maxima to 7 + 13 + 18 = 38; zeroing attack raises
- *       them to 10 + 15 + 21 = 46. Each fight still fits within 30 HP alone, so only
+ *       verifier conservatively retains the abstract standard leader line:
+ *       max(5,5) + max(6,9) + max(14,10) = 28 < 30. Zeroing defense raises those
+ *       maxima to 7 + 11 + 18 = 36; zeroing attack raises them to 9 + 14 + 21 = 44.
+ *       Each fight still fits within 30 HP alone, so only
  *       the cumulative guarantee breaks.
  *   (3) The concrete runtime guarantee is stronger and separate: with both persistent
- *       buffs, all four reachable flank/leader opening combinations survive the entire
+ *       buffs, all six reachable flank/leader route combinations survive the entire
  *       gauntlet on worst rolls. Differential runtime witnesses show why each prep buff
- *       still matters to the universal promise: the best no-attack line costs 42 HP and
- *       the best no-defense line costs exactly 30.
+ *       still matters to the universal promise: the riskiest no-attack line costs 39 HP
+ *       and the riskiest no-defense line costs exactly 30.
  *
  * Out-of-band teeth: the differential mutations below were confirmed to flip the
  * report RED on the cumulative code while leaving the per-fight code absent, and the
@@ -42,6 +42,7 @@ import type { RpgPack } from "../../src/rpg/schema.js";
 import type { Effect } from "../../src/core/effects.js";
 import type { Rng } from "../../src/core/rng.js";
 import type { GameState } from "../../src/core/state.js";
+import { buildRpgObservation } from "../../src/rpg/observation.js";
 import {
   buildRpgRules,
   enumerateRpgActions,
@@ -93,8 +94,30 @@ function withInitialHp(pack: RpgPack, hp: number): RpgPack {
   return clone;
 }
 
-type FlankOpening = "funnel_thrust" | "offside_cut";
+type FlankOpening = "funnel_thrust" | "offside_cut" | "splinter_guard";
 type LeaderOpening = "wait_out_feint" | "close_on_feint";
+
+const FLANK_CHILD: Record<FlankOpening, string> = {
+  funnel_thrust: "pin_at_rail",
+  offside_cut: "turn_through_return",
+  splinter_guard: "hook_over_guard",
+};
+
+const FLANK_CHILD_FLAG: Record<FlankOpening, string> = {
+  funnel_thrust: "flank_pinned_at_rail",
+  offside_cut: "flank_turned_through_return",
+  splinter_guard: "flank_hooked_over_guard",
+};
+
+const LEADER_CHILD: Record<LeaderOpening, string> = {
+  wait_out_feint: "take_true_rush",
+  close_on_feint: "drive_before_recovery",
+};
+
+const LEADER_CHILD_FLAG: Record<LeaderOpening, string> = {
+  wait_out_feint: "leader_true_rush_taken",
+  close_on_feint: "leader_driven_before_recovery",
+};
 
 function fixedOutcomeRng(outcome: "best" | "worst"): Rng {
   let roll = 0;
@@ -109,9 +132,9 @@ function fixedOutcomeRng(outcome: "best" | "worst"): Rng {
 }
 
 /**
- * Drive one fully-prepared tactical line. Preparation and the rail check use a
- * best outcome so both authored choices are genuinely available; every combat
- * round uses the player's worst d6 followed by the wolf's best d6.
+ * Drive one fully-prepared tactical line. The rail roll succeeds for the braced
+ * routes or fails and is explicitly salvaged for the recovered route; every combat
+ * beat uses the player's worst d6 followed by the wolf's best d6.
  */
 function playPreparedWorst(
   sourcePack: RpgPack,
@@ -151,17 +174,25 @@ function playPreparedWorst(
   act("use_byre_jerkin"); // +2 defense
   act("go_east");
   act("go_north");
-  act("use_paling_rail", "best"); // make both flank openings reachable
+  act("use_paling_rail", flankOpening === "splinter_guard" ? "worst" : "best");
+  if (flankOpening === "splinter_guard") act("use_paling_rail"); // bind the failed rail
 
   act("maneuver_yearling_wolf_set_spear", "worst");
+  if (state.ended) return state;
+  if (!state.flags.yearling_down) act("maneuver_yearling_wolf_drive_set_spear", "worst");
   finish("yearling_wolf", "yearling_down");
   if (state.ended) return state;
   act("go_north");
   act(`maneuver_flank_wolf_${flankOpening}`, "worst");
+  if (state.ended) return state;
+  if (!state.flags.flank_wolf_down)
+    act(`maneuver_flank_wolf_${FLANK_CHILD[flankOpening]}`, "worst");
   finish("flank_wolf", "flank_wolf_down");
   if (state.ended) return state;
   act("go_north");
   act(`maneuver_grey_leader_${leaderOpening}`, "worst");
+  if (state.ended) return state;
+  if (!state.flags.leader_down) act(`maneuver_grey_leader_${LEADER_CHILD[leaderOpening]}`, "worst");
   finish("grey_leader", "leader_down");
   if (state.ended) return state;
   act("go_north");
@@ -172,11 +203,44 @@ const OPENING_COMBINATIONS: ReadonlyArray<{
   flank: FlankOpening;
   leader: LeaderOpening;
   expectedHp: number;
+  endingFragments: readonly string[];
 }> = [
-  { flank: "funnel_thrust", leader: "wait_out_feint", expectedHp: 5 },
-  { flank: "funnel_thrust", leader: "close_on_feint", expectedHp: 6 },
-  { flank: "offside_cut", leader: "wait_out_feint", expectedHp: 5 },
-  { flank: "offside_cut", leader: "close_on_feint", expectedHp: 6 },
+  {
+    flank: "funnel_thrust",
+    leader: "wait_out_feint",
+    expectedHp: 18,
+    endingFragments: ["braced rail", "true rush"],
+  },
+  {
+    flank: "funnel_thrust",
+    leader: "close_on_feint",
+    expectedHp: 12,
+    endingFragments: ["braced rail", "recover"],
+  },
+  {
+    flank: "offside_cut",
+    leader: "wait_out_feint",
+    expectedHp: 12,
+    endingFragments: ["off-side return", "true rush"],
+  },
+  {
+    flank: "offside_cut",
+    leader: "close_on_feint",
+    expectedHp: 6,
+    endingFragments: ["flank-wolf's return", "recover"],
+  },
+  {
+    flank: "splinter_guard",
+    leader: "wait_out_feint",
+    expectedHp: 17,
+    endingFragments: ["failed rail", "true rush"],
+  },
+  {
+    flank: "splinter_guard",
+    leader: "close_on_feint",
+    expectedHp: 11,
+    endingFragments: ["failed rail", "recover"],
+  },
 ];
 
 describe("bug_0189 — The Wolf-Winter: a fair THREE-fight combat_guaranteed gauntlet", () => {
@@ -202,8 +266,9 @@ describe("bug_0189 — The Wolf-Winter: a fair THREE-fight combat_guaranteed gau
     expect(oneAbove).not.toContain("COMBAT_NOT_GUARANTEED");
   });
 
-  it("concretely survives worst rolls under every fully-prepared tactical opening pair", () => {
+  it("concretely survives worst rolls under all six fully-prepared tactical route pairs", () => {
     const sourcePack = loadPack();
+    const sourceIndex = indexRpgPack(sourcePack);
     for (const combination of OPENING_COMBINATIONS) {
       const state = playPreparedWorst(sourcePack, combination.flank, combination.leader);
       expect(
@@ -214,60 +279,54 @@ describe("bug_0189 — The Wolf-Winter: a fair THREE-fight combat_guaranteed gau
       expect(state.flags.heard_counsel).toBe(true);
       expect(state.flags.heard_plan).toBe(true);
       expect(state.flags.jerkin_donned).toBe(true);
+      expect(state.flags.yearling_spear_driven).toBe(true);
+      expect(state.flags[FLANK_CHILD_FLAG[combination.flank]]).toBe(true);
+      expect(state.flags[LEADER_CHILD_FLAG[combination.leader]]).toBe(true);
+      expect(state.inventory).not.toContain("split_rail_guard");
       expect(state.vars).toMatchObject({ attack: 7, defense: 5 });
+      const endingText = buildRpgObservation(sourceIndex, state).ending?.text.toLowerCase() ?? "";
+      for (const fragment of combination.endingFragments) {
+        expect(endingText).toContain(fragment);
+      }
     }
   });
 
   it("keeps both persistent buffs load-bearing in concrete worst-roll tactical play", () => {
     const noAttackBuff = zeroBuff(loadPack(), "attack");
-    for (const combination of OPENING_COMBINATIONS) {
-      const state = playPreparedWorst(noAttackBuff, combination.flank, combination.leader);
-      const ending = noAttackBuff.endings.find((candidate) => candidate.id === state.endingId);
-      expect(
-        ending?.death,
-        `without Cade's +2 attack, ${combination.flank} + ${combination.leader} should be lethal on worst rolls`,
-      ).toBe(true);
-    }
+    // Without Cade's +2 attack, the safest guarded pair costs 29 and barely survives
+    // the base 30 HP, but the exposed off-side + close pair costs exactly 39. The
+    // universal promise is therefore broken even though one cautious line remains.
+    const noAttackSafe = playPreparedWorst(noAttackBuff, "funnel_thrust", "wait_out_feint");
+    expect(noAttackSafe.endingId).toBe("ending_held");
+    expect(noAttackSafe.vars.hp).toBe(1);
 
-    // The least damaging no-attack pair costs exactly 42: at 43 HP either flank
-    // opening followed by the violent close survives on 1, while either guarded
-    // wait consumes all 43. At the 42-HP boundary the close is lethal too.
-    const noAttackAt43 = withInitialHp(noAttackBuff, 43);
-    for (const flank of ["funnel_thrust", "offside_cut"] as const) {
-      const close = playPreparedWorst(noAttackAt43, flank, "close_on_feint");
-      expect(close.endingId).toBe("ending_held");
-      expect(close.vars.hp).toBe(1);
-      const wait = playPreparedWorst(noAttackAt43, flank, "wait_out_feint");
-      expect(noAttackAt43.endings.find((candidate) => candidate.id === wait.endingId)?.death).toBe(
-        true,
-      );
-      expect(wait.vars.hp).toBe(0);
-    }
-    const noAttackAt42 = withInitialHp(noAttackBuff, 42);
-    const attackBoundary = playPreparedWorst(noAttackAt42, "offside_cut", "close_on_feint");
+    const noAttackAt40 = withInitialHp(noAttackBuff, 40);
+    const attackAbove = playPreparedWorst(noAttackAt40, "offside_cut", "close_on_feint");
+    expect(attackAbove.endingId).toBe("ending_held");
+    expect(attackAbove.vars.hp).toBe(1);
+    const noAttackAt39 = withInitialHp(noAttackBuff, 39);
+    const attackBoundary = playPreparedWorst(noAttackAt39, "offside_cut", "close_on_feint");
     expect(
-      noAttackAt42.endings.find((candidate) => candidate.id === attackBoundary.endingId)?.death,
+      noAttackAt39.endings.find((candidate) => candidate.id === attackBoundary.endingId)?.death,
     ).toBe(true);
     expect(attackBoundary.vars.hp).toBe(0);
 
-    // Without the jerkin's +2 defense, even the least damaging prepared opening
-    // pair consumes all 30 HP. The tactics cannot smuggle safety past Cade's
-    // explicit "both" promise.
+    // Without the jerkin's +2 defense, the riskiest prepared pair costs exactly
+    // 30 HP. The tactics cannot smuggle universal safety past Cade's "both" promise.
     const noDefenseBuff = zeroBuff(loadPack(), "defense");
-    for (const combination of OPENING_COMBINATIONS) {
-      const state = playPreparedWorst(noDefenseBuff, combination.flank, combination.leader);
-      const ending = noDefenseBuff.endings.find((candidate) => candidate.id === state.endingId);
-      expect(
-        ending?.death,
-        `without the jerkin, ${combination.flank} + ${combination.leader} should be lethal on worst rolls`,
-      ).toBe(true);
-    }
+    const noDefenseAt31 = withInitialHp(noDefenseBuff, 31);
+    const defenseAbove = playPreparedWorst(noDefenseAt31, "offside_cut", "close_on_feint");
+    expect(defenseAbove.endingId).toBe("ending_held");
+    expect(defenseAbove.vars.hp).toBe(1);
     const boundary = playPreparedWorst(noDefenseBuff, "offside_cut", "close_on_feint");
+    expect(
+      noDefenseBuff.endings.find((candidate) => candidate.id === boundary.endingId)?.death,
+    ).toBe(true);
     expect(boundary.vars.hp).toBe(0);
   });
 
   it("the maneuver-aware bound needs the byre-jerkin on the CUMULATIVE bound alone", () => {
-    // def5→3: the per-enemy maxima 7/13/18 each fit 30 HP, but jointly total 38.
+    // def5→3: the conservative per-enemy maxima 7/11/18 each fit 30 HP, total 36.
     const c = codes(zeroBuff(loadPack(), "defense"));
     expect(c).toContain("COMBAT_GAUNTLET_NOT_GUARANTEED");
     expect(c).not.toContain("COMBAT_NOT_GUARANTEED"); // every single fight still clears
@@ -275,7 +334,7 @@ describe("bug_0189 — The Wolf-Winter: a fair THREE-fight combat_guaranteed gau
   });
 
   it("the maneuver-aware bound needs Cade's attack buff cumulatively too", () => {
-    // atk7→5: the per-enemy maxima 10/15/21 each fit 30 HP, but jointly total 46.
+    // atk7→5: the conservative per-enemy maxima 9/14/21 each fit 30 HP, total 44.
     const c = codes(zeroBuff(loadPack(), "attack"));
     expect(c).toContain("COMBAT_GAUNTLET_NOT_GUARANTEED");
     expect(c).not.toContain("COMBAT_NOT_GUARANTEED"); // every single fight still clears

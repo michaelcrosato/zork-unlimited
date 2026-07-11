@@ -48,6 +48,7 @@ import {
   enemyHpVar,
 } from "../rpg/schema.js";
 import { maneuverActionId } from "../rpg/action_ids.js";
+import { maneuverChildren, rootManeuvers } from "../rpg/maneuver_sequence.js";
 
 type CombatRoute = {
   damageTaken: number;
@@ -144,6 +145,48 @@ function bestManeuverCombatRoute(
     damageTaken: openingReply + ordinaryReply * Math.max(0, ordinaryRounds - 1),
     roundsToKill: 1 + ordinaryRounds,
     maneuverId: maneuver.id,
+  };
+}
+
+/**
+ * A shallow opening/follow-through path at one fixed roll extreme, followed by
+ * ordinary ATTACK only if the authored beats leave the enemy standing.
+ */
+function boundedManeuverSequenceRoute(
+  playerAttack: number,
+  playerDefense: number,
+  enemy: Enemy,
+  maneuvers: readonly EnemyManeuver[],
+  playerRoll: 1 | 6,
+  enemyRoll: 1 | 6,
+): CombatRoute & { maneuverPath: string[] } {
+  let remainingHp = enemy.hp;
+  let damageTaken = 0;
+  let roundsToKill = 0;
+  for (const maneuver of maneuvers) {
+    roundsToKill += 1;
+    const effectiveAttack = Math.max(0, playerAttack + maneuver.attack_bonus);
+    const effectiveDefense = Math.max(0, playerDefense + maneuver.defense_bonus);
+    remainingHp -= Math.max(1, playerRoll + effectiveAttack - enemy.defense);
+    if (remainingHp <= 0) {
+      return {
+        damageTaken,
+        roundsToKill,
+        maneuverId: maneuvers[0]?.id ?? null,
+        maneuverPath: maneuvers.map((candidate) => candidate.id),
+      };
+    }
+    damageTaken += Math.max(1, enemyRoll + enemy.attack - effectiveDefense);
+  }
+
+  const ordinaryDamage = Math.max(1, playerRoll + playerAttack - enemy.defense);
+  const ordinaryRounds = Math.ceil(remainingHp / ordinaryDamage);
+  const ordinaryReply = Math.max(1, enemyRoll + enemy.attack - playerDefense);
+  return {
+    damageTaken: damageTaken + ordinaryReply * Math.max(0, ordinaryRounds - 1),
+    roundsToKill: roundsToKill + ordinaryRounds,
+    maneuverId: maneuvers[0]?.id ?? null,
+    maneuverPath: maneuvers.map((candidate) => candidate.id),
   };
 }
 
@@ -292,6 +335,80 @@ function evalBooleanCondition(condition: Condition, values: ReadonlyMap<string, 
   return atom.negated ? !value : value;
 }
 
+function conditionSome(condition: Condition, predicate: (leaf: Condition) => boolean): boolean {
+  if ("all_of" in condition)
+    return condition.all_of.some((child) => conditionSome(child, predicate));
+  if ("any_of" in condition)
+    return condition.any_of.some((child) => conditionSome(child, predicate));
+  if ("none_of" in condition)
+    return condition.none_of.some((child) => conditionSome(child, predicate));
+  return predicate(condition);
+}
+
+function conditionReadsCombatHp(condition: Condition): boolean {
+  return conditionSome(condition, (leaf) => {
+    const name =
+      "var_gte" in leaf
+        ? leaf.var_gte.name
+        : "var_lte" in leaf
+          ? leaf.var_lte.name
+          : "var_eq" in leaf
+            ? leaf.var_eq.name
+            : null;
+    return name === HP_VAR || name?.startsWith("__enemy_hp_") === true;
+  });
+}
+
+function conditionReadsAnyFlag(condition: Condition, flags: ReadonlySet<string>): boolean {
+  return conditionSome(condition, (leaf) => {
+    const flag =
+      "has_flag" in leaf ? leaf.has_flag : "not_flag" in leaf ? leaf.not_flag : undefined;
+    return flag !== undefined && flags.has(flag);
+  });
+}
+
+function maneuverEncounterAtoms(enemy: Enemy, maneuvers: readonly EnemyManeuver[]): Set<string> {
+  const atoms = new Set<string>();
+  for (const condition of enemy.conditions ?? []) collectBooleanConditionAtoms(condition, atoms);
+  for (const maneuver of maneuvers) {
+    for (const condition of maneuver.conditions) collectBooleanConditionAtoms(condition, atoms);
+  }
+  return atoms;
+}
+
+function maneuverEncounterKnownValues(
+  pack: RpgPack,
+  enemy: Enemy,
+  maneuvers: readonly EnemyManeuver[],
+  clearedFlags: ReadonlySet<string>,
+  removedItems: ReadonlySet<string>,
+  dedicatedDefeatFlag: boolean,
+): Map<string, boolean> {
+  const values = new Map<string, boolean>();
+  for (const flag of pack.meta.flags_init) {
+    if (!clearedFlags.has(flag)) {
+      values.set(booleanConditionAtom({ has_flag: flag }).key, true);
+    }
+  }
+  for (const object of pack.objects) {
+    if (object.held === true && !removedItems.has(object.id)) {
+      values.set(booleanConditionAtom({ has_item: object.id }).key, true);
+    }
+  }
+  values.set(booleanConditionAtom({ visited: pack.meta.start_room }).key, true);
+  values.set(booleanConditionAtom({ visited: enemy.room }).key, true);
+  for (const room of pack.rooms) {
+    values.set(booleanConditionAtom({ in_room: room.id }).key, room.id === enemy.room);
+  }
+  for (const maneuver of maneuvers) {
+    values.set(booleanConditionAtom({ has_flag: maneuver.result_flag }).key, false);
+  }
+  if (dedicatedDefeatFlag && enemy.defeat_flag !== undefined) {
+    values.set(booleanConditionAtom({ has_flag: enemy.defeat_flag }).key, false);
+  }
+  return values;
+}
+
 type ManeuverEncounterAnalysis = {
   possibleManeuvers: ReadonlySet<EnemyManeuver>;
   collectivelyCovers: boolean;
@@ -332,34 +449,15 @@ function analyzeManeuverEncounter(
     return unknownManeuverEncounterAnalysis(maneuvers);
   }
 
-  const atomSet = new Set<string>();
-  for (const condition of enemy.conditions ?? []) collectBooleanConditionAtoms(condition, atomSet);
-  for (const maneuver of maneuvers) {
-    for (const condition of maneuver.conditions) collectBooleanConditionAtoms(condition, atomSet);
-  }
-
-  const knownValues = new Map<string, boolean>();
-  for (const flag of pack.meta.flags_init) {
-    if (!clearedFlags.has(flag)) {
-      knownValues.set(booleanConditionAtom({ has_flag: flag }).key, true);
-    }
-  }
-  for (const object of pack.objects) {
-    if (object.held === true && !removedItems.has(object.id)) {
-      knownValues.set(booleanConditionAtom({ has_item: object.id }).key, true);
-    }
-  }
-  knownValues.set(booleanConditionAtom({ visited: pack.meta.start_room }).key, true);
-  knownValues.set(booleanConditionAtom({ visited: enemy.room }).key, true);
-  for (const room of pack.rooms) {
-    knownValues.set(booleanConditionAtom({ in_room: room.id }).key, room.id === enemy.room);
-  }
-  for (const maneuver of maneuvers) {
-    knownValues.set(booleanConditionAtom({ has_flag: maneuver.result_flag }).key, false);
-  }
-  if (dedicatedDefeatFlag && enemy.defeat_flag !== undefined) {
-    knownValues.set(booleanConditionAtom({ has_flag: enemy.defeat_flag }).key, false);
-  }
+  const atomSet = maneuverEncounterAtoms(enemy, maneuvers);
+  const knownValues = maneuverEncounterKnownValues(
+    pack,
+    enemy,
+    maneuvers,
+    clearedFlags,
+    removedItems,
+    dedicatedDefeatFlag,
+  );
 
   const freeAtoms = [...atomSet].filter((atom) => !knownValues.has(atom));
   if (freeAtoms.length > MAX_MANEUVER_COVERAGE_ATOMS) {
@@ -389,6 +487,131 @@ function analyzeManeuverEncounter(
     return unknownManeuverEncounterAnalysis(maneuvers);
   }
   return { possibleManeuvers, collectivelyCovers };
+}
+
+const MAX_MANEUVER_SEQUENCE_ROUTES = 64;
+
+type SequencedCombatRoute = CombatRoute & { maneuverPath?: string[] };
+
+type ManeuverSequenceAnalysis =
+  | { analyzed: true; bestRoute: SequencedCombatRoute; worstRoute: SequencedCombatRoute }
+  | { analyzed: false; reason: "ownership" | "limit" | "no_encounter" };
+
+function maneuverOpeningRemainingHp(
+  playerAttack: number,
+  enemy: Enemy,
+  maneuver: EnemyManeuver,
+  playerRoll: 1 | 6,
+): number {
+  const effectiveAttack = Math.max(0, playerAttack + maneuver.attack_bonus);
+  return enemy.hp - Math.max(1, playerRoll + effectiveAttack - enemy.defense);
+}
+
+/**
+ * Exact two-beat route analysis over the same bounded encounter assignments as
+ * the legacy opening proof. The sequence topology is shallow by validation, so
+ * every legal path is opening, optional follow-through, then ordinary ATTACK.
+ */
+function analyzeManeuverSequences(
+  pack: RpgPack,
+  enemy: Enemy,
+  maneuvers: readonly EnemyManeuver[],
+  playerAttack: number,
+  playerDefense: number,
+  clearedFlags: ReadonlySet<string>,
+  removedItems: ReadonlySet<string>,
+  resultOwnershipValid: boolean,
+  dedicatedDefeatFlag: boolean,
+): ManeuverSequenceAnalysis {
+  if (!resultOwnershipValid) return { analyzed: false, reason: "ownership" };
+  const roots = rootManeuvers(enemy);
+  const declaredRouteCount = roots.reduce(
+    (count, root) => count + Math.max(1, maneuverChildren(enemy, root.id).length),
+    0,
+  );
+  if (declaredRouteCount > MAX_MANEUVER_SEQUENCE_ROUTES) {
+    return { analyzed: false, reason: "limit" };
+  }
+
+  const atomSet = maneuverEncounterAtoms(enemy, maneuvers);
+  const knownValues = maneuverEncounterKnownValues(
+    pack,
+    enemy,
+    maneuvers,
+    clearedFlags,
+    removedItems,
+    dedicatedDefeatFlag,
+  );
+  const freeAtoms = [...atomSet].filter((atom) => !knownValues.has(atom));
+  if (freeAtoms.length > MAX_MANEUVER_COVERAGE_ATOMS) {
+    return { analyzed: false, reason: "limit" };
+  }
+
+  let encounterAssignments = 0;
+  let bestRoute: SequencedCombatRoute | undefined;
+  let worstRoute: SequencedCombatRoute | undefined;
+  const noteBest = (route: SequencedCombatRoute): void => {
+    if (bestRoute === undefined || route.damageTaken < bestRoute.damageTaken) bestRoute = route;
+  };
+  const noteWorst = (route: SequencedCombatRoute): void => {
+    if (worstRoute === undefined || route.damageTaken > worstRoute.damageTaken) worstRoute = route;
+  };
+  const assignmentCount = 2 ** freeAtoms.length;
+  for (let assignment = 0; assignment < assignmentCount; assignment++) {
+    const values = new Map(knownValues);
+    for (let index = 0; index < freeAtoms.length; index++) {
+      values.set(freeAtoms[index]!, (assignment & (2 ** index)) !== 0);
+    }
+    if (!(enemy.conditions ?? []).every((condition) => evalBooleanCondition(condition, values))) {
+      continue;
+    }
+    encounterAssignments += 1;
+    const availableRoots = roots.filter((maneuver) =>
+      maneuver.conditions.every((condition) => evalBooleanCondition(condition, values)),
+    );
+    if (availableRoots.length === 0) {
+      noteBest(bestStandardCombatRoute(playerAttack, playerDefense, enemy));
+      noteWorst(worstStandardCombatRoute(playerAttack, playerDefense, enemy));
+      continue;
+    }
+
+    for (const root of availableRoots) {
+      const childValues = new Map(values);
+      childValues.set(booleanConditionAtom({ has_flag: root.result_flag }).key, true);
+      const availableChildren = maneuverChildren(enemy, root.id).filter((maneuver) =>
+        maneuver.conditions.every((condition) => evalBooleanCondition(condition, childValues)),
+      );
+
+      if (maneuverOpeningRemainingHp(playerAttack, enemy, root, 6) <= 0) {
+        noteBest(boundedManeuverSequenceRoute(playerAttack, playerDefense, enemy, [root], 6, 1));
+      } else if (availableChildren.length === 0) {
+        noteBest(boundedManeuverSequenceRoute(playerAttack, playerDefense, enemy, [root], 6, 1));
+      } else {
+        for (const child of availableChildren) {
+          noteBest(
+            boundedManeuverSequenceRoute(playerAttack, playerDefense, enemy, [root, child], 6, 1),
+          );
+        }
+      }
+
+      if (maneuverOpeningRemainingHp(playerAttack, enemy, root, 1) <= 0) {
+        noteWorst(boundedManeuverSequenceRoute(playerAttack, playerDefense, enemy, [root], 1, 6));
+      } else if (availableChildren.length === 0) {
+        noteWorst(boundedManeuverSequenceRoute(playerAttack, playerDefense, enemy, [root], 1, 6));
+      } else {
+        for (const child of availableChildren) {
+          noteWorst(
+            boundedManeuverSequenceRoute(playerAttack, playerDefense, enemy, [root, child], 1, 6),
+          );
+        }
+      }
+    }
+  }
+
+  if (encounterAssignments === 0 || bestRoute === undefined || worstRoute === undefined) {
+    return { analyzed: false, reason: "no_encounter" };
+  }
+  return { analyzed: true, bestRoute, worstRoute };
 }
 
 const err = (code: string, message: string, where: string[]): Finding => ({
@@ -573,6 +796,112 @@ export function validateRpg(pack: RpgPack): ValidationReport {
     );
   }
   for (const enemy of pack.enemies) {
+    const maneuvers = enemy.maneuvers ?? [];
+    const maneuverById = new Map<string, EnemyManeuver>();
+    for (const maneuver of maneuvers) {
+      if (!maneuverById.has(maneuver.id)) maneuverById.set(maneuver.id, maneuver);
+    }
+    const hasSequence = maneuvers.some((maneuver) => maneuver.after !== undefined);
+    let sequenceCycle: string[] | null = null;
+    for (const start of maneuvers) {
+      if (sequenceCycle !== null) break;
+      const positions = new Map<string, number>();
+      const path: string[] = [];
+      let current: EnemyManeuver | undefined = start;
+      while (current !== undefined && current.after !== undefined) {
+        const prior = positions.get(current.id);
+        if (prior !== undefined) {
+          const cycle = path.slice(prior);
+          if (cycle.length > 1) sequenceCycle = cycle;
+          break;
+        }
+        positions.set(current.id, path.length);
+        path.push(current.id);
+        current = maneuverById.get(current.after);
+      }
+    }
+    if (sequenceCycle !== null) {
+      findings.push(
+        err(
+          "MANEUVER_AFTER_CYCLE",
+          `enemy "${enemy.id}" declares a maneuver follow-through cycle (${sequenceCycle.map((id) => `"${id}"`).join(" -> ")}).`,
+          [`enemy:${enemy.id}`, ...sequenceCycle.map((id) => `maneuver:${id}`)],
+        ),
+      );
+    }
+    if (hasSequence && rootManeuvers(enemy).length === 0) {
+      findings.push(
+        err(
+          "MANEUVER_SEQUENCE_NO_ROOT",
+          `enemy "${enemy.id}" declares follow-through maneuvers but no root opening maneuver.`,
+          [`enemy:${enemy.id}`],
+        ),
+      );
+    }
+    for (const maneuver of maneuvers) {
+      if (maneuver.after === undefined) continue;
+      if (maneuver.after === maneuver.id) {
+        findings.push(
+          err(
+            "MANEUVER_AFTER_SELF",
+            `enemy "${enemy.id}" maneuver "${maneuver.id}" cannot follow itself.`,
+            [`enemy:${enemy.id}`, `maneuver:${maneuver.id}`],
+          ),
+        );
+        continue;
+      }
+      const parent = maneuverById.get(maneuver.after);
+      if (parent === undefined) {
+        findings.push(
+          err(
+            "MANEUVER_AFTER_MISSING",
+            `enemy "${enemy.id}" maneuver "${maneuver.id}" follows missing same-enemy maneuver "${maneuver.after}".`,
+            [`enemy:${enemy.id}`, `maneuver:${maneuver.id}`],
+          ),
+        );
+      } else if (parent.after !== undefined) {
+        findings.push(
+          err(
+            "MANEUVER_AFTER_NOT_ROOT",
+            `enemy "${enemy.id}" maneuver "${maneuver.id}" follows "${parent.id}", but follow-through depth is limited to one layer and the parent is not a root opening.`,
+            [`enemy:${enemy.id}`, `maneuver:${maneuver.id}`, `parent:${parent.id}`],
+          ),
+        );
+      }
+    }
+    if (hasSequence) {
+      const resultFlags = new Set(maneuvers.map((maneuver) => maneuver.result_flag));
+      if (
+        (enemy.conditions ?? []).some((condition) => conditionReadsAnyFlag(condition, resultFlags))
+      ) {
+        findings.push(
+          err(
+            "MANEUVER_SEQUENCE_ENEMY_GATE_VOLATILE",
+            `enemy "${enemy.id}" has an active-state condition that reads one of its maneuver result flags, so committing an opening could make the live foe disappear between sequence beats.`,
+            [`enemy:${enemy.id}`],
+          ),
+        );
+      }
+      if ((enemy.conditions ?? []).some(conditionReadsCombatHp)) {
+        findings.push(
+          err(
+            "MANEUVER_SEQUENCE_HP_CONDITION",
+            `enemy "${enemy.id}" has a combat-HP condition that can change between maneuver sequence beats and cannot be soundly treated as an encounter constant.`,
+            [`enemy:${enemy.id}`],
+          ),
+        );
+      }
+      for (const maneuver of maneuvers) {
+        if (!maneuver.conditions.some(conditionReadsCombatHp)) continue;
+        findings.push(
+          err(
+            "MANEUVER_SEQUENCE_HP_CONDITION",
+            `enemy "${enemy.id}" maneuver "${maneuver.id}" has a combat-HP condition that can change between sequence beats and cannot be soundly treated as an encounter constant.`,
+            [`enemy:${enemy.id}`, `maneuver:${maneuver.id}`],
+          ),
+        );
+      }
+    }
     const maneuverIds = new Set<string>();
     const maneuverCommands = new Set<string>();
     for (const maneuver of enemy.maneuvers ?? []) {
@@ -696,7 +1025,6 @@ export function validateRpg(pack: RpgPack): ValidationReport {
     // is truly impossible (an ERROR). A fight winnable here but lethal on WORSE rolls
     // is a permitted gamble, deliberately NOT flagged (see the file docstring).
     const standardBestRoute = bestStandardCombatRoute(playerAtk, playerDef, enemy);
-    const maneuvers = enemy.maneuvers ?? [];
     const resultOwnershipValid = maneuvers.every((maneuver) => {
       const owners = maneuverResultFlagOwners.get(maneuver.result_flag) ?? [];
       return (
@@ -716,38 +1044,74 @@ export function validateRpg(pack: RpgPack): ValidationReport {
       !authoredSetFlags.has(enemy.defeat_flag) &&
       !pack.meta.flags_init.includes(enemy.defeat_flag) &&
       !maneuverResultFlagOwners.has(enemy.defeat_flag);
-    const encounterAnalysis = analyzeManeuverEncounter(
-      pack,
-      enemy,
-      maneuvers,
-      clearedFlags,
-      removedItems,
-      resultOwnershipValid,
-      dedicatedDefeatFlag,
-    );
-    const possibleManeuvers = [...encounterAnalysis.possibleManeuvers];
-    const bestRoutes = possibleManeuvers.map((maneuver) =>
-      bestManeuverCombatRoute(playerAtk, playerDef, enemy, maneuver),
-    );
+    const encounterAnalysis = hasSequence
+      ? null
+      : analyzeManeuverEncounter(
+          pack,
+          enemy,
+          maneuvers,
+          clearedFlags,
+          removedItems,
+          resultOwnershipValid,
+          dedicatedDefeatFlag,
+        );
+    const possibleManeuvers = [
+      ...(encounterAnalysis?.possibleManeuvers ?? new Set<EnemyManeuver>()),
+    ];
     const maneuverOpeningForced =
+      encounterAnalysis !== null &&
       resultOwnershipValid &&
       (possibleManeuvers.some((maneuver) =>
         maneuverGuaranteedAtEnemy(maneuver, pack, enemy, clearedFlags, removedItems),
       ) ||
         encounterAnalysis.collectivelyCovers);
-    // Exclusive ownership plus an individually guaranteed or collectively
-    // exhaustive guard means a maneuver always suppresses ATTACK for the opening.
-    // Otherwise standard ATTACK remains a conservative candidate. Maneuver routes
-    // proven impossible under encounter facts are excluded from both bounds.
-    if (!maneuverOpeningForced) {
-      bestRoutes.unshift(standardBestRoute);
+    const sequenceAnalysis = hasSequence
+      ? analyzeManeuverSequences(
+          pack,
+          enemy,
+          maneuvers,
+          playerAtk,
+          playerDef,
+          clearedFlags,
+          removedItems,
+          resultOwnershipValid,
+          dedicatedDefeatFlag,
+        )
+      : null;
+    if (sequenceAnalysis?.analyzed === false && sequenceAnalysis.reason === "limit") {
+      findings.push(
+        err(
+          "MANEUVER_SEQUENCE_ANALYSIS_LIMIT",
+          `enemy "${enemy.id}" exceeds the bounded maneuver-sequence proof (${MAX_MANEUVER_COVERAGE_ATOMS} free condition atoms or ${MAX_MANEUVER_SEQUENCE_ROUTES} declared routes); combat safety cannot be certified.`,
+          [`enemy:${enemy.id}`],
+        ),
+      );
     }
-    const bestRoute =
-      bestRoutes.reduce<CombatRoute | undefined>(
-        (best, route) =>
-          best === undefined || route.damageTaken < best.damageTaken ? route : best,
-        undefined,
-      ) ?? standardBestRoute;
+    if (sequenceAnalysis?.analyzed === false && sequenceAnalysis.reason === "no_encounter") {
+      findings.push(
+        err(
+          "MANEUVER_SEQUENCE_ENCOUNTER_UNPROVEN",
+          `enemy "${enemy.id}" has no assignment satisfying the bounded encounter facts and its active-state conditions, so its maneuver sequence cannot be certified.`,
+          [`enemy:${enemy.id}`],
+        ),
+      );
+    }
+
+    let bestRoute: SequencedCombatRoute;
+    if (sequenceAnalysis?.analyzed === true) {
+      bestRoute = sequenceAnalysis.bestRoute;
+    } else {
+      const bestRoutes: SequencedCombatRoute[] = (hasSequence ? maneuvers : possibleManeuvers).map(
+        (maneuver) => bestManeuverCombatRoute(playerAtk, playerDef, enemy, maneuver),
+      );
+      if (hasSequence || !maneuverOpeningForced) bestRoutes.unshift(standardBestRoute);
+      bestRoute =
+        bestRoutes.reduce<SequencedCombatRoute | undefined>(
+          (best, route) =>
+            best === undefined || route.damageTaken < best.damageTaken ? route : best,
+          undefined,
+        ) ?? standardBestRoute;
+    }
     if (bestRoute.damageTaken >= playerHp) {
       if (maneuvers.length === 0 || bestRoute.maneuverId === null) {
         // Preserve the established no-maneuver/standard-route diagnostic byte-for-byte.
@@ -756,6 +1120,15 @@ export function validateRpg(pack: RpgPack): ValidationReport {
             "COMBAT_UNWINNABLE",
             `enemy "${enemy.id}" cannot be beaten even with best-case rolls and the player's best reachable stats (needs ${bestRoute.roundsToKill} rounds; would take ≥${bestRoute.damageTaken} damage vs ${playerHp} reachable HP).`,
             [`enemy:${enemy.id}`],
+          ),
+        );
+      } else if ((bestRoute.maneuverPath?.length ?? 0) > 1) {
+        const path = bestRoute.maneuverPath!;
+        findings.push(
+          err(
+            "COMBAT_UNWINNABLE",
+            `enemy "${enemy.id}" cannot be beaten even with best-case rolls and the player's best reachable stats after its least damaging available maneuver sequence, ${path.map((id) => `"${id}"`).join(" -> ")} (needs ${bestRoute.roundsToKill} rounds; would take ≥${bestRoute.damageTaken} damage vs ${playerHp} reachable HP).`,
+            [`enemy:${enemy.id}`, ...path.map((id) => `maneuver:${id}`)],
           ),
         );
       } else {
@@ -782,19 +1155,21 @@ export function validateRpg(pack: RpgPack): ValidationReport {
     // possible sequence, so the guarantee is sound.
     if (pack.meta.combat_guaranteed) {
       const standardRoute = worstStandardCombatRoute(playerAtk, playerDef, enemy);
-      const worstRoutes = possibleManeuvers.map((maneuver) =>
-        worstManeuverCombatRoute(playerAtk, playerDef, enemy, maneuver),
-      );
-      // Standard ATTACK is an opening candidate only when every maneuver guard
-      // can simultaneously be false. Once individual or collective coverage is
-      // proven, runtime always forces one of the authored opening choices.
-      if (!maneuverOpeningForced) worstRoutes.unshift(standardRoute);
-      const worstRoute =
-        worstRoutes.reduce<CombatRoute | undefined>(
-          (worst, route) =>
-            worst === undefined || route.damageTaken > worst.damageTaken ? route : worst,
-          undefined,
-        ) ?? standardRoute;
+      let worstRoute: SequencedCombatRoute;
+      if (sequenceAnalysis?.analyzed === true) {
+        worstRoute = sequenceAnalysis.worstRoute;
+      } else {
+        const worstRoutes: SequencedCombatRoute[] = (
+          hasSequence ? maneuvers : possibleManeuvers
+        ).map((maneuver) => worstManeuverCombatRoute(playerAtk, playerDef, enemy, maneuver));
+        if (hasSequence || !maneuverOpeningForced) worstRoutes.unshift(standardRoute);
+        worstRoute =
+          worstRoutes.reduce<SequencedCombatRoute | undefined>(
+            (worst, route) =>
+              worst === undefined || route.damageTaken > worst.damageTaken ? route : worst,
+            undefined,
+          ) ?? standardRoute;
+      }
       cumulativeWorstDamage += worstRoute.damageTaken;
       if (worstRoute.damageTaken >= playerHp) {
         if (worstRoute.maneuverId === null) {
@@ -804,6 +1179,15 @@ export function validateRpg(pack: RpgPack): ValidationReport {
               "COMBAT_NOT_GUARANTEED",
               `meta.combat_guaranteed is set, but enemy "${enemy.id}" can still fell a best-prepared player on worst-case rolls (needs ${standardRoute.roundsToKill} rounds; would take up to ${standardRoute.damageTaken} damage vs ${playerHp} reachable HP). Make the fight winnable on every roll, or drop the guarantee and let it stand as a declared gamble.`,
               [`enemy:${enemy.id}`],
+            ),
+          );
+        } else if ((worstRoute.maneuverPath?.length ?? 0) > 1) {
+          const path = worstRoute.maneuverPath!;
+          findings.push(
+            err(
+              "COMBAT_NOT_GUARANTEED",
+              `meta.combat_guaranteed is set, but enemy "${enemy.id}" can still fell a best-prepared player after maneuver sequence ${path.map((id) => `"${id}"`).join(" -> ")} on worst-case rolls (needs ${worstRoute.roundsToKill} rounds; would take up to ${worstRoute.damageTaken} damage vs ${playerHp} reachable HP). Make every forced maneuver sequence safe on every roll, or drop the guarantee and let it stand as a declared gamble.`,
+              [`enemy:${enemy.id}`, ...path.map((id) => `maneuver:${id}`)],
             ),
           );
         } else {

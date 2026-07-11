@@ -26,6 +26,7 @@ import { exitFlag, type Effect } from "../core/effects.js";
 import { evalConditions, type Condition } from "../core/conditions.js";
 import { indexRpgModel, initStateForRpgModel } from "../rpg/model.js";
 import { type RpgPack, type GameObject, type Interaction, SCORE_VAR } from "../rpg/schema.js";
+import { maneuverSequenceConditions } from "../rpg/maneuver_sequence.js";
 import { type Finding, type ValidationReport, makeReport } from "./report.js";
 
 const err = (code: string, message: string, where: string[]): Finding => ({
@@ -670,12 +671,10 @@ export function validateRpgFoundation(
     }
   }
   for (const enemy of pack.enemies) {
-    const retirementConditions: Condition[] = (enemy.maneuvers ?? []).map((maneuver) => ({
-      not_flag: maneuver.result_flag,
-    }));
     for (const maneuver of enemy.maneuvers ?? []) {
+      const sequenceConditions = maneuverSequenceConditions(enemy, maneuver);
       checkUnsatisfiable(
-        [...maneuver.conditions, ...retirementConditions],
+        [...maneuver.conditions, ...(sequenceConditions ?? [])],
         [`enemy:${enemy.id}`, `maneuver:${maneuver.id}`],
         `maneuver "${maneuver.id}" on enemy "${enemy.id}"`,
         findings,

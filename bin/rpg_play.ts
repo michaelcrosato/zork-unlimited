@@ -108,7 +108,13 @@ function signed(value: number): string {
 /** Player-facing terminal label for one legal action, including tactical math. */
 export function renderActionOption(option: RpgActionOption): string {
   if (!option.combat) return option.command;
-  return `${option.command} [one-shot; ATK ${signed(option.combat.attack_bonus)}, DEF ${signed(option.combat.defense_bonus)} this round]`;
+  const phase =
+    option.combat.phase === "opening"
+      ? "opening"
+      : option.combat.phase === "follow_through"
+        ? "follow-through"
+        : "one-shot";
+  return `${option.command} [${phase}; ATK ${signed(option.combat.attack_bonus)}, DEF ${signed(option.combat.defense_bonus)} this round]`;
 }
 
 async function main(): Promise<void> {

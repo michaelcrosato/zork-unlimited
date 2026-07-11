@@ -109,10 +109,10 @@ const packFiles = readdirSync(PACK_DIR)
 const SCORE_VAR = "score";
 
 // Same evidence-backed safety bound as the action-id / variant-liveness / metamorphic
-// proofs. Wolf Winter's maneuver graph currently settles at 255,319 states; the ceiling
-// exists only so a future combinatorial blowup fails LOUDLY rather than truncating into a
-// silent pass.
-const MAX_STATES = 300_000;
+// proofs. Follow-through-rich Wolf Winter settles at 467,235 states under this policy
+// (measured 2026-07-11); bounded headroom still makes a future combinatorial blowup fail
+// LOUDLY rather than truncating into a silent pass.
+const MAX_STATES = 550_000;
 
 // Vitest runs the full corpus concurrently in CI, where the largest shipped-pack search
 // can take more than the generic 60-second default under runner contention. MAX_STATES

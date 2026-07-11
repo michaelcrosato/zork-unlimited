@@ -26,6 +26,7 @@ import type { RpgPack } from "../../src/rpg/schema.js";
 import { validateRpg } from "../../src/validate/rpg_validator.js";
 import { resolve as resolveCli, renderActionOption } from "../../bin/rpg_play.js";
 import { GameSession } from "../../ui/src/engine.js";
+import { relabelRpgPack } from "./support/relabel_rpg.js";
 
 const SOURCE = `
 meta:
@@ -200,6 +201,60 @@ function beneficialForcedOpeningPack(): RpgPack {
   enemy.maneuvers![0]!.attack_bonus = 10;
   enemy.maneuvers![0]!.defense_bonus = 0;
   return pack;
+}
+
+function sequencedPack(): RpgPack {
+  const { loaded } = setup();
+  const pack = structuredClone(loaded.compiled.pack);
+  const enemy = pack.enemies[0]!;
+  const low = enemy.maneuvers![0]!;
+  const high = structuredClone(low);
+  high.id = "high_feint";
+  high.command = "feint high, then cut low";
+  high.result_flag = "high_feint_used";
+  high.attack_bonus = -1;
+  high.defense_bonus = 2;
+
+  const lowDrive = structuredClone(low);
+  lowDrive.id = "low_drive";
+  lowDrive.command = "drive through the low opening";
+  lowDrive.after = low.id;
+  lowDrive.conditions = [];
+  lowDrive.result_flag = "low_drive_used";
+  lowDrive.attack_bonus = 1;
+  lowDrive.defense_bonus = 0;
+
+  const lowGuard = structuredClone(lowDrive);
+  lowGuard.id = "low_guard";
+  lowGuard.command = "cover the low opening";
+  lowGuard.result_flag = "low_guard_used";
+  lowGuard.attack_bonus = -1;
+  lowGuard.defense_bonus = 2;
+
+  const highDrive = structuredClone(lowDrive);
+  highDrive.id = "high_drive";
+  highDrive.command = "drive through the high opening";
+  highDrive.after = high.id;
+  highDrive.result_flag = "high_drive_used";
+
+  enemy.maneuvers = [low, high, lowDrive, lowGuard, highDrive];
+  return pack;
+}
+
+function sequencedSource(): string {
+  return SOURCE.replace(
+    "\nwin_conditions:",
+    `
+      - id: low_drive
+        command: drive through the low opening
+        after: low_feint
+        conditions: []
+        result_flag: low_drive_used
+        attack_bonus: 1
+        defense_bonus: 0
+        narration: You keep the initiative and drive through the opening.
+win_conditions:`,
+  );
 }
 
 describe("one-shot enemy maneuvers", () => {
@@ -377,6 +432,187 @@ describe("one-shot enemy maneuvers", () => {
     );
   });
 
+  it("runs one shallow opening/follow-through sequence with exclusive cohorts", () => {
+    const pack = sequencedPack();
+    expect(validateRpg(pack).findings).toEqual([]);
+    const index = indexRpgPack(pack);
+    const step = makeStep(buildRpgRules(index, () => fixedRound()));
+    let state = initStateForRpgPack(index, 17);
+
+    const openings = enumerateRpgActions(index, state);
+    expect(openings.map((option) => option.id)).toEqual(
+      expect.arrayContaining(["maneuver_guard_low_feint", "maneuver_guard_high_feint"]),
+    );
+    expect(openings.map((option) => option.id)).not.toContain("attack_guard");
+    expect(
+      openings.find((option) => option.id === "maneuver_guard_low_feint")?.combat,
+    ).toMatchObject({ phase: "opening" });
+    expect(openings.some((option) => option.id === "maneuver_guard_low_drive")).toBe(false);
+
+    const opened = step(state, maneuverAction());
+    expect(opened.ok).toBe(true);
+    state = opened.state;
+    expect(state.flags.feint_used).toBe(true);
+    expect(state.vars.__enemy_hp_guard).toBe(11);
+
+    const followThroughs = enumerateRpgActions(index, state);
+    expect(followThroughs.map((option) => option.id)).toEqual(
+      expect.arrayContaining(["maneuver_guard_low_drive", "maneuver_guard_low_guard"]),
+    );
+    for (const unavailable of [
+      "maneuver_guard_low_feint",
+      "maneuver_guard_high_feint",
+      "maneuver_guard_high_drive",
+      "attack_guard",
+    ]) {
+      expect(followThroughs.map((option) => option.id)).not.toContain(unavailable);
+    }
+    expect(
+      followThroughs.find((option) => option.id === "maneuver_guard_low_drive")?.combat,
+    ).toMatchObject({ phase: "follow_through" });
+    expect(resolveCli(index, state, "DRIVE THROUGH THE LOW OPENING")).toEqual({
+      ok: true,
+      action: { type: "MANEUVER", enemy: "guard", maneuver: "low_drive" },
+    });
+    expect(
+      renderActionOption(
+        followThroughs.find((option) => option.id === "maneuver_guard_low_drive")!,
+      ),
+    ).toContain("[follow-through;");
+    expect(
+      publicActions(followThroughs).find((option) => option.id === "maneuver_guard_low_drive")
+        ?.combat,
+    ).toMatchObject({ phase: "follow_through" });
+    expect(
+      buildRpgObservation(index, state).available_actions.find(
+        (option) => option.id === "maneuver_guard_low_drive",
+      )?.combat,
+    ).toMatchObject({ phase: "follow_through" });
+
+    const bytes = save(state, "sequence_hash", "rpg", { worldQuestId: "maneuver_test" });
+    const restored = load(bytes, "sequence_hash", "rpg").state;
+    expect(() => assertRpgStateReferences(index, restored)).not.toThrow();
+    expect(enumerateRpgActions(index, restored).map((option) => option.id)).toContain(
+      "maneuver_guard_low_drive",
+    );
+
+    expect(step(state, { type: "MANEUVER", enemy: "guard", maneuver: "high_feint" }).ok).toBe(
+      false,
+    );
+    const followed = step(state, { type: "MANEUVER", enemy: "guard", maneuver: "low_drive" });
+    expect(followed.ok).toBe(true);
+    state = followed.state;
+    expect(state.flags.low_drive_used).toBe(true);
+    expect(state.vars.__enemy_hp_guard).toBe(3);
+    expect(enumerateRpgActions(index, state).map((option) => option.id)).toContain("attack_guard");
+    expect(step(state, { type: "MANEUVER", enemy: "guard", maneuver: "low_guard" }).ok).toBe(false);
+
+    const ui = GameSession.start(sequencedSource(), 17);
+    expect(
+      ui.view().choices.find((choice) => choice.id === "maneuver_guard_low_feint")?.label,
+    ).toContain("opening, ATK +2, DEF -5 this round");
+    expect(ui.choose("maneuver_guard_low_feint").ok).toBe(true);
+    expect(
+      ui.view().choices.find((choice) => choice.id === "maneuver_guard_low_drive")?.label,
+    ).toContain("follow-through, ATK +1, DEF +0 this round");
+  });
+
+  it("falls back to ATTACK on a child guard gap and never offers a child after a root kill", () => {
+    const gap = sequencedPack();
+    for (const maneuver of gap.enemies[0]!.maneuvers!) {
+      if (maneuver.after === "low_feint") maneuver.conditions = [{ has_flag: "child_gate" }];
+    }
+    const gapIndex = indexRpgPack(gap);
+    const gapStep = makeStep(buildRpgRules(gapIndex, () => fixedRound()));
+    const gapOpened = gapStep(initStateForRpgPack(gapIndex, 17), maneuverAction());
+    expect(gapOpened.ok).toBe(true);
+    const gapIds = enumerateRpgActions(gapIndex, gapOpened.state).map((option) => option.id);
+    expect(gapIds).toContain("attack_guard");
+    expect(gapIds.some((id) => id.includes("low_drive") || id.includes("low_guard"))).toBe(false);
+
+    const killed = sequencedPack();
+    killed.enemies[0]!.hp = 1;
+    const killedIndex = indexRpgPack(killed);
+    const killedStep = makeStep(buildRpgRules(killedIndex, () => fixedRound()));
+    const result = killedStep(initStateForRpgPack(killedIndex, 17), maneuverAction());
+    expect(result.ok).toBe(true);
+    expect(result.state.flags.guard_down).toBe(true);
+    expect(
+      enumerateRpgActions(killedIndex, result.state).some(
+        (option) => option.action.type === "MANEUVER" || option.id === "attack_guard",
+      ),
+    ).toBe(false);
+  });
+
+  it("rejects malformed shallow sequence topology and relabels parent ids", () => {
+    const valid = sequencedPack();
+    const { pack: relabeled, relabeler } = relabelRpgPack(valid);
+    const relabeledChild = relabeled.enemies[0]!.maneuvers!.find(
+      (maneuver) => maneuver.id === relabeler.map.get("low_drive"),
+    );
+    expect(relabeledChild?.after).toBe(relabeler.map.get("low_feint"));
+    expect(validateRpg(relabeled).findings).toEqual([]);
+
+    const missing = sequencedPack();
+    missing.enemies[0]!.maneuvers!.find((maneuver) => maneuver.id === "low_drive")!.after =
+      "missing_opening";
+    expect(validateRpg(missing).findings.map((finding) => finding.code)).toContain(
+      "MANEUVER_AFTER_MISSING",
+    );
+
+    const self = sequencedPack();
+    self.enemies[0]!.maneuvers!.find((maneuver) => maneuver.id === "low_drive")!.after =
+      "low_drive";
+    expect(validateRpg(self).findings.map((finding) => finding.code)).toContain(
+      "MANEUVER_AFTER_SELF",
+    );
+
+    const deep = sequencedPack();
+    deep.enemies[0]!.maneuvers!.find((maneuver) => maneuver.id === "high_drive")!.after =
+      "low_drive";
+    expect(validateRpg(deep).findings.map((finding) => finding.code)).toContain(
+      "MANEUVER_AFTER_NOT_ROOT",
+    );
+
+    const cycle = sequencedPack();
+    const low = cycle.enemies[0]!.maneuvers!.find((maneuver) => maneuver.id === "low_feint")!;
+    const high = cycle.enemies[0]!.maneuvers!.find((maneuver) => maneuver.id === "high_feint")!;
+    low.after = high.id;
+    high.after = low.id;
+    const cycleCodes = validateRpg(cycle).findings.map((finding) => finding.code);
+    expect(cycleCodes).toContain("MANEUVER_AFTER_CYCLE");
+    expect(cycleCodes).toContain("MANEUVER_SEQUENCE_NO_ROOT");
+  });
+
+  it("rejects forged orphan and multiply committed sequence save states", () => {
+    const pack = sequencedPack();
+    const index = indexRpgPack(pack);
+    const state = initStateForRpgPack(index, 17);
+    expect(() =>
+      assertRpgStateReferences(index, {
+        ...state,
+        flags: { ...state.flags, low_drive_used: true },
+      }),
+    ).toThrow(/without its opening/);
+    expect(() =>
+      assertRpgStateReferences(index, {
+        ...state,
+        flags: { ...state.flags, feint_used: true, high_feint_used: true },
+      }),
+    ).toThrow(/multiple opening maneuvers/);
+    expect(() =>
+      assertRpgStateReferences(index, {
+        ...state,
+        flags: {
+          ...state.flags,
+          feint_used: true,
+          low_drive_used: true,
+          low_guard_used: true,
+        },
+      }),
+    ).toThrow(/multiple follow-through maneuvers/);
+  });
+
   it("validates result-flag lifecycle and rejects ambiguous or pre-retired declarations", () => {
     const { loaded } = setup();
     expect(validateRpg(loaded.compiled.pack).findings).toEqual([]);
@@ -463,6 +699,30 @@ describe("one-shot enemy maneuvers", () => {
         (finding) =>
           finding.code === "UNSATISFIABLE_CONDITION" &&
           finding.where.includes("maneuver:low_feint"),
+      ),
+    ).toBe(true);
+
+    const parentContradiction = sequencedPack();
+    parentContradiction.enemies[0]!.maneuvers!.find(
+      (maneuver) => maneuver.id === "low_drive",
+    )!.conditions = [{ not_flag: "feint_used" }];
+    expect(
+      validateRpg(parentContradiction).findings.some(
+        (finding) =>
+          finding.code === "UNSATISFIABLE_CONDITION" &&
+          finding.where.includes("maneuver:low_drive"),
+      ),
+    ).toBe(true);
+
+    const childSiblingContradiction = sequencedPack();
+    childSiblingContradiction.enemies[0]!.maneuvers!.find(
+      (maneuver) => maneuver.id === "low_drive",
+    )!.conditions = [{ has_flag: "low_guard_used" }];
+    expect(
+      validateRpg(childSiblingContradiction).findings.some(
+        (finding) =>
+          finding.code === "UNSATISFIABLE_CONDITION" &&
+          finding.where.includes("maneuver:low_drive"),
       ),
     ).toBe(true);
   });
@@ -838,5 +1098,85 @@ describe("one-shot enemy maneuvers", () => {
     const safeCodes = validateRpg(safe).findings.map((finding) => finding.code);
     expect(safeCodes).not.toContain("COMBAT_NOT_GUARANTEED");
     expect(safeCodes).not.toContain("COMBAT_GAUNTLET_NOT_GUARANTEED");
+  });
+
+  it("includes forced follow-through arithmetic in lower and upper combat bounds", () => {
+    const { loaded } = setup();
+    const lower = structuredClone(loaded.compiled.pack);
+    lower.meta.vars_init = { hp: 5, attack: 10, defense: 10 };
+    const lowerEnemy = lower.enemies[0]!;
+    lowerEnemy.hp = 30;
+    lowerEnemy.attack = 10;
+    lowerEnemy.defense = 0;
+    const lowerRoot = lowerEnemy.maneuvers![0]!;
+    lowerRoot.attack_bonus = 0;
+    lowerRoot.defense_bonus = 10;
+    lowerEnemy.maneuvers!.push({
+      ...structuredClone(lowerRoot),
+      id: "finish_low",
+      command: "finish through the low line",
+      after: lowerRoot.id,
+      conditions: [],
+      result_flag: "finish_low_used",
+      attack_bonus: -10,
+      defense_bonus: -10,
+    });
+    const lowerFinding = validateRpg(lower).findings.find(
+      (finding) => finding.code === "COMBAT_UNWINNABLE",
+    );
+    expect(lowerFinding?.message).toContain('"low_feint" -> "finish_low"');
+
+    const upper = structuredClone(lower);
+    upper.meta.combat_guaranteed = true;
+    upper.meta.vars_init.hp = 12;
+    upper.enemies[0]!.hp = 20;
+    const upperFinding = validateRpg(upper).findings.find(
+      (finding) => finding.code === "COMBAT_NOT_GUARANTEED",
+    );
+    expect(upperFinding?.message).toContain('"low_feint" -> "finish_low"');
+
+    const impossibleChild = structuredClone(upper);
+    impossibleChild.enemies[0]!.maneuvers![1]!.conditions = [{ not_flag: "opening_known" }];
+    const impossibleCodes = validateRpg(impossibleChild).findings.map((finding) => finding.code);
+    expect(impossibleCodes).not.toContain("COMBAT_NOT_GUARANTEED");
+    expect(impossibleCodes).not.toContain("COMBAT_GAUNTLET_NOT_GUARANTEED");
+  });
+
+  it("fails closed when a shallow sequence exceeds its route-analysis cap", () => {
+    const { loaded } = setup();
+    const capped = structuredClone(loaded.compiled.pack);
+    const root = capped.enemies[0]!.maneuvers![0]!;
+    for (let index = 0; index < 65; index++) {
+      capped.enemies[0]!.maneuvers!.push({
+        ...structuredClone(root),
+        id: `finish_${index}`,
+        command: `finish through line ${index}`,
+        after: root.id,
+        conditions: [],
+        result_flag: `finish_${index}_used`,
+        attack_bonus: 1,
+        defense_bonus: 0,
+      });
+    }
+    expect(validateRpg(capped).findings.map((finding) => finding.code)).toContain(
+      "MANEUVER_SEQUENCE_ANALYSIS_LIMIT",
+    );
+
+    const atomCapped = sequencedPack();
+    atomCapped.enemies[0]!.maneuvers![0]!.conditions = Array.from(
+      { length: 13 },
+      (_, index): Condition => ({
+        any_of: [{ has_flag: `sequence_noise_${index}` }, { not_flag: `sequence_noise_${index}` }],
+      }),
+    );
+    expect(validateRpg(atomCapped).findings.map((finding) => finding.code)).toContain(
+      "MANEUVER_SEQUENCE_ANALYSIS_LIMIT",
+    );
+
+    const noEncounter = sequencedPack();
+    noEncounter.enemies[0]!.conditions = [{ not_visited: "yard" }];
+    expect(validateRpg(noEncounter).findings.map((finding) => finding.code)).toContain(
+      "MANEUVER_SEQUENCE_ENCOUNTER_UNPROVEN",
+    );
   });
 });

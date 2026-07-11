@@ -95,10 +95,14 @@ const packFiles = readdirSync(PACK_DIR)
   .filter((f) => f.endsWith(".yaml"))
   .sort();
 
-// The maneuver-rich Wolf-Winter graph exhausts at 255,319 states under this policy
-// (measured 2026-07-10). A 300k ceiling gives that concrete graph bounded headroom while
+// The follow-through-rich Wolf-Winter graph exhausts at 467,235 states under this policy
+// (measured 2026-07-11). A 550k ceiling gives that concrete graph bounded headroom while
 // still failing LOUD on a future combinatorial blowup instead of silently truncating it.
-const MAX_STATES = 300_000;
+const MAX_STATES = 550_000;
+
+// Wolf-Winter completes this state-capped proof in ~88s isolated. Full-suite workers
+// contend for CPU, so give the proof wall-clock headroom without changing its state cap.
+const SOLVER_TEST_TIMEOUT_MS = 180_000;
 
 /**
  * The liveness action policy (identical to the parser proof): step every legal action
@@ -253,29 +257,33 @@ describe("bug_0147 — every reactive variant of every RPG pack is reachable as 
   });
 
   for (const file of packFiles) {
-    it(`${file}: every declared variant is the first match in some viewing state`, () => {
-      const loaded = loadRpgSourceFile(join(PACK_DIR, file));
-      expect(loaded.ok).toBe(true);
-      if (!loaded.ok) return;
-      const pack = loaded.compiled.pack;
+    it(
+      `${file}: every declared variant is the first match in some viewing state`,
+      () => {
+        const loaded = loadRpgSourceFile(join(PACK_DIR, file));
+        expect(loaded.ok).toBe(true);
+        if (!loaded.ok) return;
+        const pack = loaded.compiled.pack;
 
-      // The caveat guard: the best/worst-roll bracket credits variant display soundly only
-      // when no variant (no condition at all) gates on a raw HP value the extremes skip.
-      expect(
-        readsHpInCondition(pack),
-        `pack gates a condition on an HP var — the best/worst-roll bracket assumes no ` +
-          `HP-gated variant guard; branch the HP in the solver before trusting liveness here`,
-      ).toBe(false);
+        // The caveat guard: the best/worst-roll bracket credits variant display soundly only
+        // when no variant (no condition at all) gates on a raw HP value the extremes skip.
+        expect(
+          readsHpInCondition(pack),
+          `pack gates a condition on an HP var — the best/worst-roll bracket assumes no ` +
+            `HP-gated variant guard; branch the HP in the solver before trusting liveness here`,
+        ).toBe(false);
 
-      const { displayed, declared, cappedOut } = analyze(indexRpgPack(pack));
-      // The search must have exhausted the reachable region, else "not displayed" is
-      // unproven (it could lie in the truncated tail).
-      expect(cappedOut).toBe(false);
-      // The shipped RPG packs are reactive by design — guard against a vacuous pass.
-      expect(declared.length).toBeGreaterThan(0);
-      const dead = declared.filter((d) => !displayed.has(d.key)).map((d) => d.where);
-      expect(dead).toEqual([]);
-    });
+        const { displayed, declared, cappedOut } = analyze(indexRpgPack(pack));
+        // The search must have exhausted the reachable region, else "not displayed" is
+        // unproven (it could lie in the truncated tail).
+        expect(cappedOut).toBe(false);
+        // The shipped RPG packs are reactive by design — guard against a vacuous pass.
+        expect(declared.length).toBeGreaterThan(0);
+        const dead = declared.filter((d) => !displayed.has(d.key)).map((d) => d.where);
+        expect(dead).toEqual([]);
+      },
+      SOLVER_TEST_TIMEOUT_MS,
+    );
   }
 
   it("FAILS on a planted dead variant (guards against the check silently passing)", () => {

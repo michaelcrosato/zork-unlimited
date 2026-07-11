@@ -1,19 +1,19 @@
 /**
- * Regression for the Wolf-Winter tactical pass. The three wolves now have
- * authored, one-shot opening rounds whose temporary arithmetic and aftermath
- * match Cade's advice. The paling rail is a consequential, one-attempt setup:
- * success earns the flank-wolf's guarded opening; failure destroys that line.
+ * Regression for Wolf-Winter's tactical follow-through. Each taught opening now
+ * has one authored child beat when the target survives. The paling wedge remains
+ * a consequential one-attempt setup, but failure is recoverable as a weaker real
+ * split-rail guard and a third flank-wolf route.
  *
- * Opening maneuvers replace ATTACK while one is available. A prepared player
- * therefore makes one real tactical commitment, rather than collecting a free
- * buff beside the ordinary round. If the target survives, ATTACK returns as the
- * honest fallback. A route that earned no opening always retains ATTACK.
+ * ATTACK is suppressed while either an opening or its required child is available.
+ * It returns only after the full line if an underpowered target still survives.
+ * Roots and children are one-shot and reject when replayed stale.
  */
 import { describe, expect, it } from "vitest";
 import type { RpgAction, StepResult } from "../../src/api/types.js";
 import { makeStep } from "../../src/core/engine.js";
 import type { Rng } from "../../src/core/rng.js";
 import type { GameState } from "../../src/core/state.js";
+import { rpgStepEvents } from "../../src/mcp/transcript_projection.js";
 import { buildRpgObservation } from "../../src/rpg/observation.js";
 import {
   buildRpgRules,
@@ -79,27 +79,29 @@ function start(): GameState {
   return initStateForRpgPack(index, 497);
 }
 
-function hearCounsel(state: GameState): GameState {
-  return play(state, ["go_north", "talk_houndsman", "ask_wolves", "ask_leave"]);
-}
-
 function hearBoth(state: GameState): GameState {
   return play(state, ["go_north", "talk_houndsman", "ask_wolves", "ask_byre", "ask_leave"]);
 }
 
-/** Reach the leader with both of Cade's lessons and both prior wolves down. */
+function fullyPrepared(): GameState {
+  return play(hearBoth(start()), ["go_west", "take_byre_jerkin", "use_byre_jerkin", "go_east"]);
+}
+
+/** Reach the leader with both lessons, armor, and both prior two-beat lines complete. */
 function reachLeader(): GameState {
-  let state = hearBoth(start());
+  let state = fullyPrepared();
   state = act(state, "go_north").state;
   state = act(state, "use_paling_rail", "best").state;
-  state = act(state, "maneuver_yearling_wolf_set_spear", "best").state;
+  state = act(state, "maneuver_yearling_wolf_set_spear", "worst").state;
+  state = act(state, "maneuver_yearling_wolf_drive_set_spear", "worst").state;
   state = act(state, "go_north").state;
-  state = act(state, "maneuver_flank_wolf_offside_cut", "best").state;
+  state = act(state, "maneuver_flank_wolf_offside_cut", "worst").state;
+  state = act(state, "maneuver_flank_wolf_turn_through_return", "worst").state;
   return act(state, "go_north").state;
 }
 
-function finishLeader(state: GameState): GameState {
-  state = act(state, "attack_grey_leader", "best").state;
+function finishLeader(state: GameState, childId: string): GameState {
+  state = act(state, childId, "worst").state;
   return act(state, "go_north").state;
 }
 
@@ -118,8 +120,8 @@ describe("Wolf-Winter authored combat tactics", () => {
     expect(optionIds(state)).not.toContain("drop_relief_spear");
   });
 
-  it("teaches a mandatory one-shot yearling opening, then restores ATTACK", () => {
-    let state = play(start(), ["go_north", "go_north"]);
+  it("requires the yearling's drive after its set-spear opening, with no cleanup attack", () => {
+    let state = act(fullyPrepared(), "go_north").state;
     const opening = options(state).find(
       (option) => option.id === "maneuver_yearling_wolf_set_spear",
     );
@@ -130,28 +132,44 @@ describe("Wolf-Winter authored combat tactics", () => {
         enemy: "yearling_wolf",
         maneuver: "set_spear",
       } satisfies RpgAction,
-      combat: { attack_bonus: 2, defense_bonus: 0, one_shot: true },
+      combat: { attack_bonus: 2, defense_bonus: 0, one_shot: true, phase: "opening" },
     });
     expect(optionIds(state)).not.toContain("attack_yearling_wolf");
 
     const round = act(state, "maneuver_yearling_wolf_set_spear", "worst");
     state = round.state;
-    // d6 1 + (5 + 2) - 2 = 6; reply d6 6 + 4 - 3 = 7.
-    expect(state.vars[enemyHpVar("yearling_wolf")]).toBe(5);
-    expect(state.vars.hp).toBe(23);
-    expect(state.vars.attack).toBe(5);
-    expect(state.vars.defense).toBe(3);
+    // d6 1 + (7 + 2) - 2 = 8; reply d6 6 + 4 - 5 = 5.
+    expect(state.vars[enemyHpVar("yearling_wolf")]).toBe(3);
+    expect(state.vars.hp).toBe(25);
+    expect(state.vars.attack).toBe(7);
+    expect(state.vars.defense).toBe(5);
     expect(state.flags.yearling_spear_set).toBe(true);
     expect(optionIds(state)).not.toContain("maneuver_yearling_wolf_set_spear");
-    expect(optionIds(state)).toContain("attack_yearling_wolf");
+    expect(optionIds(state)).not.toContain("attack_yearling_wolf");
+    const childId = "maneuver_yearling_wolf_drive_set_spear";
+    expect(options(state).find((option) => option.id === childId)).toMatchObject({
+      combat: { attack_bonus: 0, defense_bonus: 1, one_shot: true, phase: "follow_through" },
+    });
     expect(buildRpgObservation(index, state).description).toContain("recoils alive");
 
-    const replay = makeStep(buildRpgRules(index, () => outcomeRng("best")))(state, {
+    const staleRoot = makeStep(buildRpgRules(index, () => outcomeRng("best")))(state, {
       type: "MANEUVER",
       enemy: "yearling_wolf",
       maneuver: "set_spear",
     });
-    expect(replay.ok).toBe(false);
+    expect(staleRoot.ok).toBe(false);
+
+    state = act(state, childId, "worst").state;
+    expect(state.flags.yearling_spear_driven).toBe(true);
+    expect(state.flags.yearling_down).toBe(true);
+    expect(state.vars.hp).toBe(25);
+    expect(optionIds(state)).not.toContain("attack_yearling_wolf");
+    const staleChild = makeStep(buildRpgRules(index, () => outcomeRng("best")))(state, {
+      type: "MANEUVER",
+      enemy: "yearling_wolf",
+      maneuver: "drive_set_spear",
+    });
+    expect(staleChild.ok).toBe(false);
   });
 
   it("makes a successful target-only wedge earn two competing flank openings", () => {
@@ -183,12 +201,12 @@ describe("Wolf-Winter authored combat tactics", () => {
     expect(
       options(state).find((option) => option.id === "maneuver_flank_wolf_funnel_thrust"),
     ).toMatchObject({
-      combat: { attack_bonus: -1, defense_bonus: 3, one_shot: true },
+      combat: { attack_bonus: -1, defense_bonus: 3, one_shot: true, phase: "opening" },
     });
     expect(
       options(state).find((option) => option.id === "maneuver_flank_wolf_offside_cut"),
     ).toMatchObject({
-      combat: { attack_bonus: 3, defense_bonus: -3, one_shot: true },
+      combat: { attack_bonus: 3, defense_bonus: -3, one_shot: true, phase: "opening" },
     });
 
     state = act(state, "maneuver_flank_wolf_funnel_thrust", "worst").state;
@@ -200,60 +218,118 @@ describe("Wolf-Winter authored combat tactics", () => {
     expect(state.vars.defense).toBe(3);
     expect(optionIds(state)).not.toContain("maneuver_flank_wolf_funnel_thrust");
     expect(optionIds(state)).not.toContain("maneuver_flank_wolf_offside_cut");
-    expect(optionIds(state)).toContain("attack_flank_wolf");
+    expect(optionIds(state)).not.toContain("attack_flank_wolf");
+    const childId = "maneuver_flank_wolf_pin_at_rail";
+    expect(options(state).find((option) => option.id === childId)).toMatchObject({
+      combat: { attack_bonus: 1, defense_bonus: 0, one_shot: true, phase: "follow_through" },
+    });
     expect(buildRpgObservation(index, state).description).toContain("guarded line");
 
-    state = act(state, "attack_flank_wolf", "best").state;
+    const flankFinish = act(state, childId, "worst");
+    state = flankFinish.state;
     expect(state.flags.flank_wolf_down).toBe(true);
+    expect(state.flags.flank_pinned_at_rail).toBe(true);
+    expect(state.vars.hp).toBe(25);
+    expect(rpgStepEvents(flankFinish.events, { compact_events: true })).not.toContainEqual([
+      "d",
+      "split_rail_guard",
+    ]);
+    expect(buildRpgObservation(index, state).description).toContain("finishing thrust");
     expect(state.journal).toContain(
       "You put the flank-wolf down across the byre threshold; the dark of the byre runs on north.",
     );
     expect(state.journal.join(" ")).not.toContain("as it cuts for your off side");
   });
 
-  it("makes a failed wedge final: the funnel is lost, but counsel or ATTACK still works", () => {
-    let counselRoute = hearCounsel(start());
-    counselRoute = act(counselRoute, "go_north").state;
-    counselRoute = act(counselRoute, "use_paling_rail", "worst").state;
-    expect(counselRoute.flags.rail_attempted).toBe(true);
-    expect(counselRoute.flags.breach_braced).not.toBe(true);
-    expect(counselRoute.inventory).not.toContain("paling_rail");
-    expect(optionIds(counselRoute)).not.toContain("use_paling_rail");
-    expect(optionIds(counselRoute)).not.toContain("take_paling_rail");
-    expect(buildRpgObservation(index, counselRoute).description).toContain("split in the snow");
+  it("turns a failed wedge into a same-id recovered guard and consumes it coherently", () => {
+    let state = act(fullyPrepared(), "go_north").state;
+    state = act(state, "use_paling_rail", "worst").state;
+    expect(state.flags.rail_attempted).toBe(true);
+    expect(state.flags.rail_split).toBe(true);
+    expect(state.flags.breach_braced).not.toBe(true);
+    expect(state.inventory).not.toContain("split_rail_guard");
+    const recovery = options(state).find((option) => option.id === "use_paling_rail");
+    expect(recovery).toMatchObject({
+      id: "use_paling_rail",
+      command: "bind fallen paling-rail",
+      action: { type: "USE", target: "paling_rail" },
+    });
+    expect(recovery?.skill_check).toBeUndefined();
+    expect(buildRpgObservation(index, state).description).toContain("use the rail again");
 
-    counselRoute = act(counselRoute, "maneuver_yearling_wolf_set_spear", "best").state;
-    counselRoute = act(counselRoute, "go_north").state;
-    expect(optionIds(counselRoute)).toContain("maneuver_flank_wolf_offside_cut");
-    expect(optionIds(counselRoute)).not.toContain("maneuver_flank_wolf_funnel_thrust");
-    expect(optionIds(counselRoute)).not.toContain("attack_flank_wolf");
+    state = act(state, "use_paling_rail").state;
+    expect(state.flags.split_rail_guard_made).toBe(true);
+    expect(state.inventory).toContain("split_rail_guard");
+    expect(optionIds(state)).not.toContain("use_paling_rail");
+    expect(optionIds(state)).not.toContain("drop_split_rail_guard");
 
-    // Without either preparation, the same failed rail leaves the honest fallback.
-    let fallbackRoute = play(start(), ["go_north", "go_north"]);
-    fallbackRoute = act(fallbackRoute, "use_paling_rail", "worst").state;
-    fallbackRoute = act(fallbackRoute, "maneuver_yearling_wolf_set_spear", "best").state;
-    fallbackRoute = act(fallbackRoute, "go_north").state;
-    expect(optionIds(fallbackRoute)).toContain("attack_flank_wolf");
-    expect(optionIds(fallbackRoute).some((id) => id.startsWith("maneuver_flank_wolf_"))).toBe(
-      false,
-    );
+    state = act(state, "maneuver_yearling_wolf_set_spear", "best").state;
+    state = act(state, "go_north").state;
+    const rootId = "maneuver_flank_wolf_splinter_guard";
+    expect(optionIds(state)).toContain(rootId);
+    expect(optionIds(state)).not.toContain("maneuver_flank_wolf_funnel_thrust");
+    expect(optionIds(state)).not.toContain("maneuver_flank_wolf_offside_cut");
+    expect(options(state).find((option) => option.id === rootId)?.combat).toEqual({
+      attack_bonus: 0,
+      defense_bonus: 2,
+      one_shot: true,
+      phase: "opening",
+    });
+
+    state = act(state, rootId, "worst").state;
+    expect(state.flags.flank_splinter_guarded).toBe(true);
+    expect(state.vars[enemyHpVar("flank_wolf")]).toBe(6);
+    expect(state.vars.hp).toBe(26);
+    const childId = "maneuver_flank_wolf_hook_over_guard";
+    expect(optionIds(state)).toContain(childId);
+    expect(optionIds(state)).not.toContain("attack_flank_wolf");
+    expect(options(state).find((option) => option.id === childId)?.combat).toEqual({
+      attack_bonus: 0,
+      defense_bonus: 1,
+      one_shot: true,
+      phase: "follow_through",
+    });
+
+    const guardFinish = act(state, childId, "worst");
+    state = guardFinish.state;
+    expect(state.flags.flank_hooked_over_guard).toBe(true);
+    expect(state.flags.flank_wolf_down).toBe(true);
+    expect(state.vars.hp).toBe(26);
+    expect(state.inventory).not.toContain("split_rail_guard");
+    expect(rpgStepEvents(guardFinish.events, { compact_events: true })).toContainEqual([
+      "d",
+      "split_rail_guard",
+    ]);
+    expect(buildRpgObservation(index, state).description).toContain("splinters");
+
+    // Leaving the split rail unbound preserves Cade's off-side option instead.
+    let unbound = act(fullyPrepared(), "go_north").state;
+    unbound = act(unbound, "use_paling_rail", "worst").state;
+    unbound = act(unbound, "maneuver_yearling_wolf_set_spear", "best").state;
+    unbound = act(unbound, "go_north").state;
+    expect(optionIds(unbound)).toContain("maneuver_flank_wolf_offside_cut");
+    expect(optionIds(unbound)).not.toContain(rootId);
   });
 
   it("makes the leader's guarded wait and violent close distinct, exclusive endings", () => {
     const before = reachLeader();
     const waitId = "maneuver_grey_leader_wait_out_feint";
     const closeId = "maneuver_grey_leader_close_on_feint";
+    const waitChildId = "maneuver_grey_leader_take_true_rush";
+    const closeChildId = "maneuver_grey_leader_drive_before_recovery";
     expect(optionIds(before)).toEqual(expect.arrayContaining([waitId, closeId]));
     expect(optionIds(before)).not.toContain("attack_grey_leader");
     expect(options(before).find((option) => option.id === waitId)?.combat).toEqual({
       attack_bonus: 0,
       defense_bonus: 3,
       one_shot: true,
+      phase: "opening",
     });
     expect(options(before).find((option) => option.id === closeId)?.combat).toEqual({
       attack_bonus: 4,
       defense_bonus: -3,
       one_shot: true,
+      phase: "opening",
     });
 
     const waited = act(before, waitId, "worst").state;
@@ -266,18 +342,43 @@ describe("Wolf-Winter authored combat tactics", () => {
       waited.vars[enemyHpVar("grey_leader")]!,
     );
     expect(closed.vars.hp).toBeLessThan(waited.vars.hp!);
-    expect(waited.vars).toMatchObject({ attack: 7, defense: 3 });
-    expect(closed.vars).toMatchObject({ attack: 7, defense: 3 });
+    expect(waited.vars).toMatchObject({ attack: 7, defense: 5 });
+    expect(closed.vars).toMatchObject({ attack: 7, defense: 5 });
+    expect(optionIds(waited)).toContain(waitChildId);
+    expect(optionIds(waited)).not.toContain(closeChildId);
+    expect(optionIds(closed)).toContain(closeChildId);
+    expect(optionIds(closed)).not.toContain(waitChildId);
     for (const committed of [waited, closed]) {
-      expect(optionIds(committed)).toContain("attack_grey_leader");
+      expect(optionIds(committed)).not.toContain("attack_grey_leader");
       expect(optionIds(committed)).not.toContain(waitId);
       expect(optionIds(committed)).not.toContain(closeId);
     }
-    expect(buildRpgObservation(index, waited).description).toContain("square guard");
-    expect(buildRpgObservation(index, closed).description).toContain("violent close");
+    expect(options(waited).find((option) => option.id === waitChildId)?.combat).toEqual({
+      attack_bonus: 1,
+      defense_bonus: 0,
+      one_shot: true,
+      phase: "follow_through",
+    });
+    expect(options(closed).find((option) => option.id === closeChildId)?.combat).toEqual({
+      attack_bonus: 0,
+      defense_bonus: 1,
+      one_shot: true,
+      phase: "follow_through",
+    });
+    expect(buildRpgObservation(index, waited).description).toContain("true rush");
+    expect(buildRpgObservation(index, closed).description).toContain("Drive again");
 
-    const guardedState = finishLeader(waited);
-    const violentState = finishLeader(closed);
+    const wrongChild = makeStep(buildRpgRules(index, () => outcomeRng("best")))(waited, {
+      type: "MANEUVER",
+      enemy: "grey_leader",
+      maneuver: "drive_before_recovery",
+    });
+    expect(wrongChild.ok).toBe(false);
+
+    const guardedState = finishLeader(waited, waitChildId);
+    const violentState = finishLeader(closed, closeChildId);
+    expect(guardedState.flags.leader_true_rush_taken).toBe(true);
+    expect(violentState.flags.leader_driven_before_recovery).toBe(true);
     const leaderJournal =
       "The grey leader falls among the straw; beyond her the cattle stand unhurt.";
     expect(guardedState.journal).toContain(leaderJournal);
@@ -289,10 +390,12 @@ describe("Wolf-Winter authored combat tactics", () => {
     const violentEnding = buildRpgObservation(index, violentState);
     expect(guardedEnding.ending_id).toBe("ending_held");
     expect(violentEnding.ending_id).toBe("ending_held");
-    expect(guardedEnding.ending?.text).toContain("patience broke");
-    expect(violentEnding.ending?.text).toContain("violence of your close");
+    expect(guardedEnding.ending?.text).toContain("off-side return");
+    expect(guardedEnding.ending?.text).toContain("true rush");
+    expect(violentEnding.ending?.text).toContain("flank-wolf's return");
+    expect(violentEnding.ending?.text).toContain("before the old leader could recover");
     expect(guardedEnding.score).toBe(violentEnding.score);
-    expect(guardedEnding.score).toBe(50);
+    expect(guardedEnding.score).toBe(55);
     expect(guardedEnding.max_score).toBe(60);
   });
 });

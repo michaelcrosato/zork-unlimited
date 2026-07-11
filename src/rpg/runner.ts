@@ -22,7 +22,7 @@ import {
   useInteraction,
   type RpgActionOption,
 } from "./legal_actions.js";
-import { evalConditions, type Condition } from "../core/conditions.js";
+import { evalConditions } from "../core/conditions.js";
 import type { GameEvent } from "../core/events.js";
 import { type RpgPack, type Enemy, type EnemyManeuver } from "./schema.js";
 import { resolveAttack, enemyAlive } from "./combat.js";
@@ -31,6 +31,7 @@ import { rngForRuntimeState, type RuntimeRngFor } from "./runtime_rng.js";
 import { decorateRpgScoreEvents } from "./score_events.js";
 import { endGameEffects } from "./terminal_effects.js";
 import { maneuverActionId } from "./action_ids.js";
+import { maneuverPhase, maneuverSequenceConditions } from "./maneuver_sequence.js";
 
 export type RpgIndex = RpgModelIndex & {
   enemies: Map<string, Enemy>;
@@ -59,16 +60,12 @@ function enemiesHere(index: RpgIndex, state: GameState): Enemy[] {
   return (index.enemyByRoom.get(state.current) ?? []).filter((e) => enemyActive(state, e));
 }
 
-function maneuverCommitted(state: GameState, enemy: Enemy): boolean {
-  return (enemy.maneuvers ?? []).some((maneuver) => state.flags[maneuver.result_flag] === true);
-}
-
 function maneuverAvailable(state: GameState, enemy: Enemy, maneuver: EnemyManeuver): boolean {
-  return !maneuverCommitted(state, enemy) && evalConditions(maneuver.conditions, state);
-}
-
-function maneuverRetirementConditions(enemy: Enemy): Condition[] {
-  return (enemy.maneuvers ?? []).map((maneuver) => ({ not_flag: maneuver.result_flag }));
+  const sequenceConditions = maneuverSequenceConditions(enemy, maneuver);
+  return (
+    sequenceConditions !== null &&
+    evalConditions([...maneuver.conditions, ...sequenceConditions], state)
+  );
 }
 
 function enemyManeuver(enemy: Enemy, maneuverId: string): EnemyManeuver | undefined {
@@ -95,6 +92,7 @@ export function enumerateRpgActions(index: RpgIndex, state: GameState): RpgActio
       maneuverAvailable(state, enemy, maneuver),
     );
     for (const maneuver of maneuvers) {
+      const phase = maneuverPhase(enemy, maneuver);
       out.push({
         id: maneuverActionId(enemy.id, maneuver.id),
         command: maneuver.command,
@@ -103,14 +101,15 @@ export function enumerateRpgActions(index: RpgIndex, state: GameState): RpgActio
           attack_bonus: maneuver.attack_bonus,
           defense_bonus: maneuver.defense_bonus,
           one_shot: true,
+          ...(phase !== undefined ? { phase } : {}),
         },
       });
     }
     // Maneuvers are opening CHOICES, not free supplementary buffs: while at
     // least one is currently available, the ordinary strike is suppressed.
-    // Committing any maneuver sets its result flag, retires every opening for
-    // that enemy, and restores ATTACK on the following round. If no maneuver's
-    // authored conditions hold, combat remains possible through ATTACK.
+    // Committing a maneuver retires its cohort. A surviving enemy may expose a
+    // child cohort on the next beat; otherwise ATTACK returns. If no maneuver's
+    // authored and implicit conditions hold, combat remains possible through it.
     if (maneuvers.length > 0) continue;
     out.push({
       id: `attack_${enemy.id}`,
@@ -156,11 +155,12 @@ export function buildRpgRules(
           attackBonus: maneuver.attack_bonus,
           defenseBonus: maneuver.defense_bonus,
         });
+        const sequenceConditions = maneuverSequenceConditions(enemy, maneuver);
+        if (sequenceConditions === null) return null;
         return {
-          // Mirror maneuverAvailable's enemy-wide retirement gate in the
-          // declarative resolution too: committing any sibling retires all
-          // openings for this enemy.
-          conditions: [...maneuver.conditions, ...maneuverRetirementConditions(enemy)],
+          // Mirror maneuverAvailable's parent/cohort gate in the declarative
+          // resolution so stale or forced actions reject at the reducer seam.
+          conditions: [...maneuver.conditions, ...sequenceConditions],
           effects: [
             { set_flag: maneuver.result_flag },
             { narrate: maneuver.narration },

@@ -307,7 +307,9 @@ export const EndingSchema = z
  * A named, one-shot combat opening against one enemy. The bonuses alter only
  * the combat round produced by the MANEUVER action; they never mutate the
  * player's persistent attack/defense vars. `result_flag` is set after the
- * maneuver is committed and is also the automatic retirement gate.
+ * maneuver is committed and is also the automatic retirement gate for its
+ * opening or follow-through cohort. `after`, when present, names a root opening
+ * whose surviving target exposes this maneuver on the next combat beat.
  *
  * This field is optional on EnemySchema (with no default) so compiling every
  * pre-maneuver pack produces the exact same object shape and content hash.
@@ -316,6 +318,10 @@ export const EnemyManeuverSchema = z
   .object({
     id: z.string().min(1),
     command: z.string().min(1),
+    // Optional same-enemy root maneuver id. Omitted maneuvers remain the
+    // mutually-exclusive opening cohort; one shallow child layer supplies a
+    // named follow-through without adding mutable combat-phase state.
+    after: z.string().min(1).optional(),
     conditions: z.array(ConditionSchema),
     result_flag: z.string().min(1),
     attack_bonus: z.number().int(),

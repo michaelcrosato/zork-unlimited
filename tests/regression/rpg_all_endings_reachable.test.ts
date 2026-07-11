@@ -71,9 +71,10 @@ const packFiles = readdirSync(PACK_DIR)
 
 // Same backstop as the CYOA/parser suites. The RPG search adds a bounded combat lattice
 // (reachable (playerHP, enemyHP) pairs over the two roll regimes) on top of the parser
-// state space; both shipped packs settle well under this. The cap exists only so a future
-// blowup fails loudly (cap hit) rather than hanging or silently truncating.
-const MAX_STATES = 200_000;
+// state space. The follow-through-rich Wolf-Winter graph exhausts at 233,618 states
+// (measured 2026-07-11); this ceiling leaves bounded headroom while a future blowup still
+// fails loudly (cap hit) rather than hanging or silently truncating.
+const MAX_STATES = 300_000;
 
 /**
  * A fixed-sequence PRNG: each draw consumes the next fraction in `fracs` (the last value

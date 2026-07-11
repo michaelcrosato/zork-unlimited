@@ -128,7 +128,7 @@ export class GameSession {
         label: a.skill_check
           ? `${a.command}  ⟨${a.skill_check.skill} check, DC ${a.skill_check.difficulty}⟩`
           : a.combat
-            ? `${a.command}  ⟨one-shot, ATK ${signed(a.combat.attack_bonus)}, DEF ${signed(a.combat.defense_bonus)} this round⟩`
+            ? `${a.command}  ⟨${a.combat.phase === "opening" ? "opening" : a.combat.phase === "follow_through" ? "follow-through" : "one-shot"}, ATK ${signed(a.combat.attack_bonus)}, DEF ${signed(a.combat.defense_bonus)} this round⟩`
           : a.command,
       })),
       inventory: o.inventory,

@@ -139,10 +139,10 @@ const LIVENESS_SKIP: ReadonlySet<RpgAction["type"]> = new Set([
   "INSPECT",
 ]);
 const explore = (a: RpgAction): boolean => !LIVENESS_SKIP.has(a.type);
-// The maneuver-rich Wolf-Winter graph exhausts at 255,319 states under this policy
-// (measured 2026-07-10). The 300k ceiling leaves bounded headroom for that verified
-// graph while preserving a loud cap-out rather than truncating a future blowup.
-const MAX_STATES = 300_000;
+// The follow-through-rich Wolf-Winter graph exhausts at 467,235 states under this policy
+// (measured 2026-07-11). The 550k ceiling leaves bounded headroom for that verified graph
+// while preserving a loud cap-out rather than truncating a future blowup.
+const MAX_STATES = 550_000;
 // Generous per-test budget. tide_mill's bracketed graph is the heaviest in the suite (~42s
 // isolated on a fast dev box; wolf_winter ~23s), and under a loaded/shared CI runner (sibling
 // test files competing for a few vCPUs) that stretches ~3x — tide_mill's leg blew past the

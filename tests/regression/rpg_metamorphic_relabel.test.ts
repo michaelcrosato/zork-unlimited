@@ -69,10 +69,10 @@ const packFiles = readdirSync(PACK_DIR)
   .filter((f) => f.endsWith(".yaml"))
   .sort();
 
-// Matches the RPG reachability oracle's bound. We run the bracketed BFS twice per pack
-// (original + twin), so keep the generous ceiling; a cap-out surfaces as a loud failure
-// rather than a hang.
-const MAX_STATES = 200_000;
+// Matches the RPG reachability oracle's evidence-backed bound. Wolf-Winter's progress
+// graph exhausts at 233,618 states (measured 2026-07-11); original and relabeled twin
+// each get bounded headroom, and a cap-out remains a loud failure rather than a hang.
+const MAX_STATES = 300_000;
 // 300s matches rpg_metamorphic_observation_stream's budget: tide_mill's census legs
 // stretch ~3x under contended CI runners (its sibling blew a 120s budget on PR #80's
 // first CI run). MAX_STATES, not the clock, bounds the work — a hang still fails loudly.

@@ -1,7 +1,8 @@
 /**
  * Regression for preparation-object state in wolf_winter. The jerkin remains a
- * takeable object whose room prose follows it; the rail is target-only scenery
- * whose one-shot wedge outcome is represented in place, never in inventory.
+ * takeable object whose room prose follows it; the rail starts as target-only scenery.
+ * A failed wedge may bind its joined lengths into separate non-droppable guard gear,
+ * which the flank-wolf consumes rather than leaving stale inventory behind.
  */
 import { describe, it, expect } from "vitest";
 import { loadRpgSourceFile } from "../../src/rpg/source.js";

@@ -328,6 +328,7 @@ function relabelEnemyManeuver(
   return {
     id: r(maneuver.id),
     command: maneuver.command,
+    ...(maneuver.after !== undefined ? { after: r(maneuver.after) } : {}),
     conditions: maneuver.conditions.map((condition) => relabelCondition(condition, r, rv)),
     result_flag: r(maneuver.result_flag),
     attack_bonus: maneuver.attack_bonus,

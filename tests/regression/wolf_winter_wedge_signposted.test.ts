@@ -10,8 +10,9 @@
  *
  * The fix is a content-only SIGNPOST in old Cade's "how the byre is held" counsel
  * (cade_byre), the natural in-fiction info path the player walks BEFORE the paling. The
- * rail is target-only scenery now, so "wedge rail" is offered immediately at the gap;
- * either skill-check outcome retires it and cannot create a carried-rail contradiction.
+ * rail is target-only scenery now, so "wedge rail" is offered immediately at the gap.
+ * Success retires it; failure clearly offers one same-id target USE that binds the
+ * joined split lengths into real, non-droppable recovered guard gear.
  *
  * This pins:
  *   (1) SIGNPOST — Cade's byre counsel names the rail + the wedge + the half-shut-breach
@@ -90,6 +91,8 @@ describe("bug_0258 — The Wolf-Winter: the optional wedge is signposted and dis
     expect(text).toContain("wedge");
     expect(text).toContain("breach");
     expect(text).toContain("guarded funnel");
+    expect(text).toContain("splits");
+    expect(text).toContain("bind");
   });
 
   it("PROSE-ONLY: cade_byre's effects are still exactly {set_flag heard_plan, add_journal}", () => {
@@ -118,7 +121,8 @@ describe("bug_0258 — The Wolf-Winter: the optional wedge is signposted and dis
     expect(spoken).toContain("wedge it back across");
     expect(spoken).toContain("half-shut the breach");
     const journal = d.state().journal.join(" ").toLowerCase();
-    expect(journal).toContain("wedge the fallen rail across the breach");
+    expect(journal).toContain("wedge the fallen rail");
+    expect(journal).toContain("if it splits, bind the joined lengths");
   });
 
   it("the signposted wedge is immediately legal as target-only USE, never TAKE", () => {
@@ -165,10 +169,26 @@ describe("bug_0258 — The Wolf-Winter: the optional wedge is signposted and dis
     });
     expect(JSON.stringify(funnel?.conditions ?? [])).toContain("breach_braced");
 
-    // The interaction still retires after either one-shot outcome.
+    // The wedge itself retires after either outcome, but failure exposes one mutually
+    // exclusive same-target bind that creates the real recovered guard.
     const rail = pack.objects.find((o) => o.id === "paling_rail")!;
     const wedge = rail.interactions.find((it) => it.skill_check?.skill === "defense")!;
     expect(JSON.stringify(wedge.conditions ?? [])).toContain("rail_attempted");
     expect(JSON.stringify(wedge.conditions ?? [])).toContain("breach_braced");
+    expect(JSON.stringify(wedge.skill_check?.on_failure ?? [])).toContain("rail_split");
+
+    const bind = rail.interactions.find(
+      (interaction) =>
+        interaction.verb === "USE" &&
+        interaction.target === "paling_rail" &&
+        interaction.skill_check === undefined,
+    );
+    expect(bind).toBeDefined();
+    expect(JSON.stringify(bind?.conditions ?? [])).toContain("rail_split");
+    expect(JSON.stringify(bind?.conditions ?? [])).toContain("split_rail_guard_made");
+    expect(JSON.stringify(bind?.effects ?? [])).toContain('"add_item":"split_rail_guard"');
+    expect(JSON.stringify(bind?.effects ?? [])).toContain('"set_flag":"split_rail_guard_made"');
+    const guard = pack.objects.find((object) => object.id === "split_rail_guard");
+    expect(guard).toMatchObject({ droppable: false });
   });
 });
