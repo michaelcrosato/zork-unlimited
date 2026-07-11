@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 532 -->
+<!-- historical_cycle_count: 533 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,15 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - wolf_winter_compact_prose_integrity
+
+- Feedback surface: pre-change lore-reader seed 930009 won Wolf-Winter 60/60 (clarity 5, enjoyment 4) but found room/item prose permanently clipped; the standardized 440-report compile kept compact Wolf journals first (19 S2 mentions) and measured fresh Wolf replay at 0/3.
+- Content surface: rewrote the audited 28 authored fields to their strictest real transport budgets—room/read/narration ≤280, journal ≤128, wrapped Cade dialogue ≤253, score-bearing ending ≤336—while preserving Albany, guarantee/gamble, every maneuver/recovery verb, and reactive route identity (`bug_0502`).
+- Regression surface: a semantic compact inventory covers every reachable authored string and actual wrapper; seven all-worst tactical routes must preserve complete events, explicit victory, 60/60, and distinct endings with no omission marker or hash suffix.
+- Blind playtest: post-change lore-reader seed 930010 won 60/60 (clarity 5, enjoyment 4) and no longer mentioned clipping; it praised the period voice and instead exposed raw inline dice arithmetic as the new S1 tone break.
+- Self-critique: PASS for compact tutorial/payoff integrity, not depth acceptance—replay stayed false, the optimal tutorial path remains obvious, and transparent combat math now interrupts the fiction. Diegetic combat feedback is the next causal engine/content seam.
+- Guard: post-change crawl `20260711T151519Z` covered 6,000 steps and all 247 nodes; 14 Wolf files / 62 tests, all 12 packs, `npm run health` (283 files / 2,006 tests), and the 441-report feedback ledger are green.
 
 ### Cycle result - wolf_winter_cross_encounter_resource_agency
 
@@ -129,11 +138,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Blind playtest: 25-run `overworld` Codex batch seeds 416-440 all exited 0; clarity 25x4/5, enjoyment 25x4/5, replay 25x true; feedback ledger now has 260 accepted reports.
 - Self-critique: same-road-repeat complaints did not recur, but players still read pending road trouble as after-arrival because location already shows the destination; next lever is a true mid-route pending state.
 - Guard: Codex-aware blind runner prompt fallback, focused affected tests, `npm run health`, `npm run blind:feedback`, and reports `20260708T165436Z`-`20260708T174127Z` seeds 416-440 passed.
-
-### Cycle result - overworld_quest_time_accounting
-
-- Engine surface: completed world quests now advance deterministic overworld time from local quest-area travel plus marquee quest renown; `wolf_winter` spends 139 minutes and says so in the quest-done journal.
-- Loop effect: focused lifecycle, UI, MCP, local-journal, and resource-replay tests prove completion advances snapshots/journal time, while repeat completion remains zero-change.
-- Blind playtest: 25-run `overworld` Codex batch seeds 391-415 all exited 0; clarity 24x4/5 + 1x3/5, enjoyment 23x4/5 + 2x3/5, replay 23x true / 2x false.
-- Self-critique: no fresh report repeated the zero-overworld-time complaint; road encounters appearing after arrival/repeating on the same short road are now the dominant starting-area state issue.
-- Guard: focused affected tests, `npm run health`, `npm run blind:feedback`, and reports `20260708T160257Z`-`20260708T162233Z` seeds 391-415 passed.

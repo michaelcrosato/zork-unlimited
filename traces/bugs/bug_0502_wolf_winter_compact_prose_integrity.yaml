@@ -1,0 +1,42 @@
+id: bug_0502
+title: "Wolf-Winter compact play permanently clipped tutorial and payoff prose"
+pack: content/rpg/quests/wolf_winter.yaml
+reported_by: feedback fleet and verified lore-reader playtest
+reports:
+  - blind-tester/reports/20260711T145700Z_wolf_winter_seed930009.md
+  - ai-runs/feedback/20260711T145802Z
+  - ai-runs/playtests/20260711T1027Z-post-5ff320a6
+severity: S1
+symptom: >
+  Compact MCP play repeatedly emitted omission markers in Wolf-Winter room looks,
+  the one-shot day-book clue, Cade's combat lessons, recent journal memory, and some
+  route-specific endings. Completion remained possible, but text beyond the marker
+  could not be recovered through another compact LOOK. Fleet reports described the
+  hashed journal suffix as debug output, and the fresh lore-reader named permanent
+  truncation as the run's concrete friction.
+root_cause: >
+  Authored prose was reviewed against no single real transport budget. Compact room
+  context permits 360 characters but explicit LOOK/narration events permit 280;
+  dialogue wrapping leaves 253 authored characters; recent journal values permit 128;
+  and terminal score text leaves 336 for an ending. Twenty-eight distinct fields
+  exceeded at least one surface before the brace-stake route added more reactive copy.
+fix: >
+  Rewrite every Wolf-Winter string to the strictest compact surface it reaches while
+  preserving its mechanical clue, state truth, route identity, atmosphere, and explicit
+  win marker. Add a table-driven budget oracle over every room variant, narration,
+  journal, Cade node, and ending plus runtime compact witnesses for all tactical endings.
+  Any future omission marker in a required clue or terminal payoff must fail the suite.
+deterministic_witnesses:
+  - invariant: "every room description and variant fits the 280-character LOOK event surface"
+  - invariant: "the day-book still names Cade, the jerkin, both prep acts, the guarantee, and the gamble without an omission marker"
+  - invariant: "Cade still teaches every opening/follow-through and rail recovery inside dialogue/event budgets"
+  - invariant: "every journal fits the 128-character recent-memory surface without a hash suffix"
+  - invariant: "all seven prepared tactical outcomes retain route identity, score, and explicit victory in compact terminal output"
+tests:
+  - tests/regression/wolf_winter_compact_surface.test.ts
+  - tests/regression/wolf_winter_three_fight_gauntlet.test.ts
+verification:
+  - npm run validate -- wolf_winter
+  - npx vitest run tests/regression/wolf_winter_compact_surface.test.ts tests/regression/wolf_winter_three_fight_gauntlet.test.ts
+  - npm run crawl:smoke
+  - npm run health
