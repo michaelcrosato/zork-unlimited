@@ -1,8 +1,9 @@
 /**
- * Regression for Wolf-Winter's tactical follow-through. Each taught opening now
- * has one authored child beat when the target survives. The paling wedge remains
- * a consequential one-attempt setup, but failure is recoverable as a weaker real
- * split-rail guard and a third flank-wolf route.
+ * Regression for Wolf-Winter's tactical follow-through. Every taught opening has
+ * an authored child beat when the target survives; the braced funnel additionally
+ * exposes a persistent resource trade pinned in bug_0501's dedicated suite. The
+ * paling wedge remains a consequential one-attempt setup, but failure is recoverable
+ * as a weaker real split-rail guard and a distinct flank-wolf route.
  *
  * ATTACK is suppressed while either an opening or its required child is available.
  * It returns only after the full line if an underpowered target still survives.

@@ -53,6 +53,7 @@ export type RpgObservation = {
     action: RpgAction;
     skill_check?: { skill: string; difficulty: number; die: string };
     combat?: NonNullable<RpgActionOption["combat"]>;
+    resources?: NonNullable<RpgActionOption["resources"]>;
   }[];
   score: number;
   max_score: number;
@@ -132,6 +133,14 @@ export function buildRpgObservation(
         action: option.action,
         ...(option.skill_check ? { skill_check: option.skill_check } : {}),
         ...(option.combat ? { combat: option.combat } : {}),
+        ...(option.resources
+          ? {
+              resources: {
+                gains: [...option.resources.gains],
+                costs: [...option.resources.costs],
+              },
+            }
+          : {}),
       });
     }
   }

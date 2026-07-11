@@ -19,6 +19,7 @@ export type McpActionOption = {
   command?: string;
   skill_check?: RpgObservation["available_actions"][number]["skill_check"];
   combat?: RpgObservation["available_actions"][number]["combat"];
+  resources?: RpgObservation["available_actions"][number]["resources"];
 };
 
 /**

@@ -305,6 +305,17 @@ export const EndingSchema = z
   .strict();
 
 /**
+ * The deliberately narrow persistent-state surface a combat maneuver may use.
+ * Inventory deltas can carry a tactical decision into a later encounter without
+ * letting authored combat mutate HP, score, routing, quest stages, or endings and
+ * thereby escape the bounded combat proofs.
+ */
+export const ManeuverResourceEffectSchema = z.union([
+  z.object({ add_item: z.string().min(1) }).strict(),
+  z.object({ remove_item: z.string().min(1) }).strict(),
+]);
+
+/**
  * A named, one-shot combat opening against one enemy. The bonuses alter only
  * the combat round produced by the MANEUVER action; they never mutate the
  * player's persistent attack/defense vars. `result_flag` is set after the
@@ -327,6 +338,8 @@ export const EnemyManeuverSchema = z
     result_flag: z.string().min(1),
     attack_bonus: z.number().int(),
     defense_bonus: z.number().int(),
+    // Optional with no default: legacy pack shapes and hashes remain byte-stable.
+    resource_effects: z.array(ManeuverResourceEffectSchema).min(1).optional(),
     narration: z.string().min(1),
   })
   .strict()
@@ -397,6 +410,7 @@ export type WinCondition = z.infer<typeof WinConditionSchema>;
 export type EndingVariant = z.infer<typeof EndingVariantSchema>;
 export type Ending = z.infer<typeof EndingSchema>;
 export type EnemyManeuver = z.infer<typeof EnemyManeuverSchema>;
+export type ManeuverResourceEffect = z.infer<typeof ManeuverResourceEffectSchema>;
 export type Enemy = z.infer<typeof EnemySchema>;
 export type RpgPack = z.infer<typeof RpgPackSchema>;
 

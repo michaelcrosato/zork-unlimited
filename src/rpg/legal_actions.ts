@@ -49,6 +49,7 @@ export type RpgActionOption = {
     one_shot: true;
     phase?: ManeuverPhase;
   };
+  resources?: { gains: string[]; costs: string[] };
 };
 
 function dialogueTopicMatches(topic: DialogueTopic, id: string): boolean {

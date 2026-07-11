@@ -321,6 +321,14 @@ function relabelObservation(o: RpgObservation, mapId: (id: string) => string): R
             }
           : {}),
         ...(a.combat ? { combat: { ...a.combat } } : {}),
+        ...(a.resources
+          ? {
+              resources: {
+                gains: a.resources.gains.map(mapId),
+                costs: a.resources.costs.map(mapId),
+              },
+            }
+          : {}),
       };
     }),
     score: o.score,

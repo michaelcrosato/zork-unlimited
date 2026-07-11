@@ -336,6 +336,15 @@ function relabelEnemyManeuver(
     result_flag: r(maneuver.result_flag),
     attack_bonus: maneuver.attack_bonus,
     defense_bonus: maneuver.defense_bonus,
+    ...(maneuver.resource_effects
+      ? {
+          resource_effects: maneuver.resource_effects.map((effect) =>
+            "add_item" in effect
+              ? { add_item: r(effect.add_item) }
+              : { remove_item: r(effect.remove_item) },
+          ),
+        }
+      : {}),
     narration: maneuver.narration,
   };
 }

@@ -58,6 +58,9 @@ export function publicActions(
     ...(opts.compactActions ? {} : { command: compactMcpActionLabel(option.command) }),
     ...(option.skill_check ? { skill_check: { ...option.skill_check } } : {}),
     ...(option.combat ? { combat: { ...option.combat } } : {}),
+    ...(option.resources
+      ? { resources: { gains: [...option.resources.gains], costs: [...option.resources.costs] } }
+      : {}),
   }));
 }
 
@@ -117,6 +120,9 @@ export function cloneMcpObservation(obs: McpObservation): McpObservation {
       ...action,
       ...(action.skill_check ? { skill_check: { ...action.skill_check } } : {}),
       ...(action.combat ? { combat: { ...action.combat } } : {}),
+      ...(action.resources
+        ? { resources: { gains: [...action.resources.gains], costs: [...action.resources.costs] } }
+        : {}),
     })),
     ending: obs.ending ? { ...obs.ending } : null,
   };
@@ -132,6 +138,9 @@ function cloneLegalActionRows(
           ...row,
           ...(row.skill_check ? { skill_check: { ...row.skill_check } } : {}),
           ...(row.combat ? { combat: { ...row.combat } } : {}),
+          ...(row.resources
+            ? { resources: { gains: [...row.resources.gains], costs: [...row.resources.costs] } }
+            : {}),
         },
   );
 }

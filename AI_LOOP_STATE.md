@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 531 -->
+<!-- historical_cycle_count: 532 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,15 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - wolf_winter_cross_encounter_resource_agency
+
+- Feedback surface: the frozen direct gate still had 30/100 linear/prescribed reports and replay 16/100; the verified three-report compile `20260711T140033Z` again ranked obvious safest-line combat first, ahead of completion-safe compact clipping.
+- Engine surface: optional hash-preserving maneuver `resource_effects` can only gain/spend declared items; ownership guards, duplicate/conflict/reference/obtainability proofs, save integrity, relabeling, full MCP/UI metadata, and one-shot execution are pinned by `bug_0501`.
+- Content surface: the braced flank line now chooses reliable pin or a possibly exposed brace-stake salvage; the carried stake earns and is consumed by a stronger leader crossbrace, with truthful backtracking and a route-specific ending. Fixed rolls make each branch finish 2 HP ahead in one outcome and 2 behind in another; all-worst stake play ends at 16 HP.
+- Blind playtests: isolated seeds 930007/930008 both won 60/60 with no mechanical defect (clarity 5/4, enjoyment 4/3); the breaker discovered the stake organically, named it the best moment, and verified stale hashes/repeats/post-ending rejection, while the explorer chose the untouched off-side route.
+- Self-critique: PASS as the first persistent cross-encounter trade, not an acceptance-gate pass—both fresh players still declined replay and the breaker found the risk too mild. With agency semantics stable, the verified 28-field compact tutorial/payoff budget repair is next before broader pressure tuning.
+- Guard: post-change crawl `20260711T143604Z` covered 6,000 steps and all 247 nodes; exhaustive Wolf relabeling, 67 focused tests, all 12 packs, and `npm run health` (282 files / 1,993 tests) are green.
 
 ### Cycle result - rpg_conditional_world_object_visibility
 
@@ -128,11 +137,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Blind playtest: 25-run `overworld` Codex batch seeds 391-415 all exited 0; clarity 24x4/5 + 1x3/5, enjoyment 23x4/5 + 2x3/5, replay 23x true / 2x false.
 - Self-critique: no fresh report repeated the zero-overworld-time complaint; road encounters appearing after arrival/repeating on the same short road are now the dominant starting-area state issue.
 - Guard: focused affected tests, `npm run health`, `npm run blind:feedback`, and reports `20260708T160257Z`-`20260708T162233Z` seeds 391-415 passed.
-
-### Cycle result - albany_station_quarter_bridge
-
-- Content surface: hand-authored Albany Civic Center / Station Quarter relief-board, Hayden, relief-packet, signal-yard, job, and `wolf_winter` discovery prose so the first quest lead has local New York footing.
-- Loop effect: focused overworld regression pins the Old Cade/byre/winter-relief bridge and bans the prior generic Albany lead boilerplate.
-- Blind playtest: 25-run `overworld` Codex batch seeds 366-390 all exited 0; reports reached `wolf_winter`, clarity 25x4/5, enjoyment 25x4/5, replay 25x true.
-- Self-critique: best-case reports now notice the town-to-quest lead network, but repeats remain around road encounters after arrival, zero overworld quest time, stale completed lists, compact artifacts, and nearby-town template feel.
-- Guard: focused overworld tests, `npm run validate -- wolf_winter`, `npm run health`, `npm run blind:feedback`, and reports `20260708T150956Z`-`20260708T153614Z` seeds 366-390 passed.

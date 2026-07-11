@@ -17,6 +17,7 @@ const actions: RpgActionOption[] = [
     command: "force gate",
     action: { type: "USE", target: "gate" } as RpgAction,
     skill_check: { skill: "might", difficulty: 12, die: "d20" },
+    resources: { gains: ["gate_token"], costs: ["iron_key"] },
   },
 ];
 
@@ -59,12 +60,17 @@ describe("MCP RPG view projection", () => {
         id: "force_gate",
         command: "force gate",
         skill_check: { skill: "might", difficulty: 12, die: "d20" },
+        resources: { gains: ["gate_token"], costs: ["iron_key"] },
       },
     ]);
 
     expect(publicActions(actions, { compactActions: true })).toEqual([
       { id: "look" },
-      { id: "force_gate", skill_check: { skill: "might", difficulty: 12, die: "d20" } },
+      {
+        id: "force_gate",
+        skill_check: { skill: "might", difficulty: 12, die: "d20" },
+        resources: { gains: ["gate_token"], costs: ["iron_key"] },
+      },
     ]);
   });
 
@@ -88,7 +94,11 @@ describe("MCP RPG view projection", () => {
   it("projects observations with the same public action rules", () => {
     expect(publicObservation(observation, { compactActions: true }).available_actions).toEqual([
       { id: "look" },
-      { id: "force_gate", skill_check: { skill: "might", difficulty: 12, die: "d20" } },
+      {
+        id: "force_gate",
+        skill_check: { skill: "might", difficulty: 12, die: "d20" },
+        resources: { gains: ["gate_token"], costs: ["iron_key"] },
+      },
     ]);
   });
 
@@ -104,6 +114,7 @@ describe("MCP RPG view projection", () => {
           id: "force_gate",
           command: "force gate",
           skill_check: { skill: "might", difficulty: 12, die: "d20" },
+          resources: { gains: ["gate_token"], costs: ["iron_key"] },
         },
       ],
     });
@@ -111,13 +122,17 @@ describe("MCP RPG view projection", () => {
     expect(projected.state.flags).not.toBe(observation.state.flags);
     expect(projected.available_actions[1]?.skill_check).not.toBe(actions[1]?.skill_check);
     expect(compactProjected.available_actions[1]?.skill_check).not.toBe(actions[1]?.skill_check);
+    expect(projected.available_actions[1]?.resources).not.toBe(actions[1]?.resources);
+    expect(projected.available_actions[1]?.resources?.gains).not.toBe(actions[1]?.resources?.gains);
 
     projected.visible_objects[0]!.name = "mutated gate";
     projected.state.flags.push("mutated_flag");
     projected.available_actions[1]!.skill_check!.difficulty = 99;
+    projected.available_actions[1]!.resources!.gains.push("mutated_resource");
 
     expect(observation.visible_objects[0]?.name).toBe("iron gate");
     expect(observation.state.flags).toEqual(["gate_seen"]);
     expect(actions[1]?.skill_check?.difficulty).toBe(12);
+    expect(actions[1]?.resources?.gains).toEqual(["gate_token"]);
   });
 });

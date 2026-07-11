@@ -93,6 +93,12 @@ export function enumerateRpgActions(index: RpgIndex, state: GameState): RpgActio
     );
     for (const maneuver of maneuvers) {
       const phase = maneuverPhase(enemy, maneuver);
+      const gains = (maneuver.resource_effects ?? []).flatMap((effect) =>
+        "add_item" in effect ? [effect.add_item] : [],
+      );
+      const costs = (maneuver.resource_effects ?? []).flatMap((effect) =>
+        "remove_item" in effect ? [effect.remove_item] : [],
+      );
       out.push({
         id: maneuverActionId(enemy.id, maneuver.id),
         command: maneuver.command,
@@ -103,6 +109,7 @@ export function enumerateRpgActions(index: RpgIndex, state: GameState): RpgActio
           one_shot: true,
           ...(phase !== undefined ? { phase } : {}),
         },
+        ...(maneuver.resource_effects ? { resources: { gains, costs } } : {}),
       });
     }
     // Maneuvers are opening CHOICES, not free supplementary buffs: while at
@@ -163,6 +170,7 @@ export function buildRpgRules(
           conditions: [...maneuver.conditions, ...sequenceConditions],
           effects: [
             { set_flag: maneuver.result_flag },
+            ...(maneuver.resource_effects ?? []),
             { narrate: maneuver.narration },
             ...round.effects,
           ],

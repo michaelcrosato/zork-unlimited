@@ -207,6 +207,26 @@ function authoredStringEffectTargets(
   return out;
 }
 
+/**
+ * Item facts guaranteed by an authored maneuver guard. Only top-level atoms
+ * and `all_of` descendants are conjunctive requirements; a fact inside
+ * `any_of`/`none_of` is not guaranteed on every legal commitment.
+ */
+function guaranteedManeuverItems(conditions: readonly Condition[]): {
+  held: Set<string>;
+  absent: Set<string>;
+} {
+  const held = new Set<string>();
+  const absent = new Set<string>();
+  const walk = (condition: Condition): void => {
+    if ("has_item" in condition) held.add(condition.has_item);
+    else if ("not_item" in condition) absent.add(condition.not_item);
+    else if ("all_of" in condition) condition.all_of.forEach(walk);
+  };
+  conditions.forEach(walk);
+  return { held, absent };
+}
+
 /** Every authored effect that can set a runtime flag true. */
 function authoredFlagSetTargets(node: unknown, out = new Set<string>()): Set<string> {
   if (Array.isArray(node)) {
@@ -627,10 +647,14 @@ function enemyRuntimeEffects(pack: RpgPack): Effect[] {
   return out;
 }
 
-/** Effects the runner emits implicitly when a maneuver is committed. */
+/** Effects the runner emits when a maneuver is committed, in runtime order. */
+function maneuverRuntimeEffectList(maneuver: EnemyManeuver): Effect[] {
+  return [{ set_flag: maneuver.result_flag }, ...(maneuver.resource_effects ?? [])];
+}
+
 function maneuverRuntimeEffects(pack: RpgPack): Effect[] {
   return pack.enemies.flatMap((enemy) =>
-    (enemy.maneuvers ?? []).map((maneuver): Effect => ({ set_flag: maneuver.result_flag })),
+    (enemy.maneuvers ?? []).flatMap((maneuver) => maneuverRuntimeEffectList(maneuver)),
   );
 }
 
@@ -668,7 +692,7 @@ export function validateRpg(pack: RpgPack): ValidationReport {
   // separator the foundation validator's questStageKey uses, so the keys match.
   // Mirrors extraSettableFlags.
   const extraSettableQuestStages: string[] = [];
-  for (const e of enemyEffects) {
+  for (const e of [...enemyEffects, ...maneuverEffects]) {
     if ("set_flag" in e) extraSettableFlags.push(e.set_flag);
     if ("add_item" in e) extraObtainable.push(e.add_item);
     if ("set_quest_stage" in e)
@@ -687,7 +711,9 @@ export function validateRpg(pack: RpgPack): ValidationReport {
   // sets a win-trigger flag is seen as such.
   const extraEffectLists: Effect[][] = [];
   for (const enemy of pack.enemies) extraEffectLists.push(enemy.on_defeat);
-  for (const effect of maneuverEffects) extraEffectLists.push([effect]);
+  for (const enemy of pack.enemies)
+    for (const maneuver of enemy.maneuvers ?? [])
+      extraEffectLists.push(maneuverRuntimeEffectList(maneuver));
 
   // The WIN_FIRES_AT_START stability proof must also see RPG-only falsifiers:
   // combat branches can falsify a start-true win (extraFalsifierEffects), and
@@ -705,8 +731,9 @@ export function validateRpg(pack: RpgPack): ValidationReport {
       (enemy.maneuvers ?? []).map((maneuver) => maneuver.result_flag),
     ),
     extraObtainable,
+    extraEffects: maneuverEffects,
     extraScoreAwards,
-    extraFalsifierEffects: [...enemyEffects, ...maneuverEffects],
+    extraFalsifierEffects: enemyEffects,
     extraVolatileVars,
     extraEffectLists,
     extraSettableQuestStages,
@@ -714,6 +741,7 @@ export function validateRpg(pack: RpgPack): ValidationReport {
   const findings: Finding[] = [...base.findings];
 
   const roomIds = new Set(pack.rooms.map((r) => r.id));
+  const itemIds = new Set(pack.objects.map((object) => object.id));
   const endings = new Map(pack.endings.map((e) => [e.id, e]));
 
   // ── Player stats ─────────────────────────────────────────────────────────────
@@ -948,6 +976,50 @@ export function validateRpg(pack: RpgPack): ValidationReport {
             "MANEUVER_NO_MODIFIER",
             `enemy "${enemy.id}" maneuver "${maneuver.id}" changes neither attack nor defense, so it is only a cosmetic alias for ATTACK.`,
             [`enemy:${enemy.id}`, `maneuver:${maneuver.id}`],
+          ),
+        );
+      }
+      const guaranteedItems = guaranteedManeuverItems(maneuver.conditions);
+      const addedItems = new Set<string>();
+      const spentItems = new Set<string>();
+      for (const effect of maneuver.resource_effects ?? []) {
+        const kind = "add_item" in effect ? "add" : "remove";
+        const item = "add_item" in effect ? effect.add_item : effect.remove_item;
+        const seen = kind === "add" ? addedItems : spentItems;
+        if (seen.has(item)) {
+          findings.push(
+            err(
+              "MANEUVER_RESOURCE_EFFECT_DUPLICATE",
+              `enemy "${enemy.id}" maneuver "${maneuver.id}" ${kind === "add" ? "adds" : "removes"} item "${item}" more than once on one commitment.`,
+              [`enemy:${enemy.id}`, `maneuver:${maneuver.id}`, `item:${item}`],
+            ),
+          );
+        }
+        seen.add(item);
+        if (!itemIds.has(item)) {
+          // The foundation pass emits ITEM_REF_MISSING for the dangling target;
+          // keep the maneuver-specific checks focused on ownership dataflow.
+          continue;
+        }
+        const guarded =
+          kind === "add" ? guaranteedItems.absent.has(item) : guaranteedItems.held.has(item);
+        if (!guarded) {
+          findings.push(
+            err(
+              "MANEUVER_RESOURCE_EFFECT_UNGUARDED",
+              `enemy "${enemy.id}" maneuver "${maneuver.id}" ${kind === "add" ? "adds" : "removes"} item "${item}" without a guaranteed ${kind === "add" ? "not_item" : "has_item"} guard in its conditions.`,
+              [`enemy:${enemy.id}`, `maneuver:${maneuver.id}`, `item:${item}`],
+            ),
+          );
+        }
+      }
+      for (const item of addedItems) {
+        if (!spentItems.has(item)) continue;
+        findings.push(
+          err(
+            "MANEUVER_RESOURCE_EFFECT_CONFLICT",
+            `enemy "${enemy.id}" maneuver "${maneuver.id}" both adds and removes item "${item}" on one commitment; a resource delta must have one direction.`,
+            [`enemy:${enemy.id}`, `maneuver:${maneuver.id}`, `item:${item}`],
           ),
         );
       }

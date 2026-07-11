@@ -241,6 +241,40 @@ function sequencedPack(): RpgPack {
   return pack;
 }
 
+function maneuverResourceObject(
+  id: string,
+  options: { held?: true } = {},
+): RpgPack["objects"][number] {
+  return {
+    id,
+    name: id.replaceAll("_", " "),
+    aliases: [],
+    description: `A ${id.replaceAll("_", " ")} used by the maneuver fixture.`,
+    takeable: false,
+    ...(options.held ? { held: true } : {}),
+    quest_critical: false,
+    container: false,
+    openable: false,
+    locked: false,
+    unlock_effects: [],
+    take_effects: [],
+    contents: [],
+    interactions: [],
+  };
+}
+
+function resourceSequencePack(): RpgPack {
+  const pack = sequencedPack();
+  pack.objects.push(
+    maneuverResourceObject("field_ration", { held: true }),
+    maneuverResourceObject("saved_token"),
+  );
+  const maneuver = pack.enemies[0]!.maneuvers!.find((candidate) => candidate.id === "low_drive")!;
+  maneuver.conditions = [{ has_item: "field_ration" }, { not_item: "saved_token" }];
+  maneuver.resource_effects = [{ remove_item: "field_ration" }, { add_item: "saved_token" }];
+  return pack;
+}
+
 function sequencedSource(): string {
   return SOURCE.replace(
     "\nwin_conditions:",
@@ -265,6 +299,11 @@ describe("one-shot enemy maneuvers", () => {
     expect(legacy.ok).toBe(true);
     if (!legacy.ok) return;
     expect(legacy.compiled.pack.enemies[0]).not.toHaveProperty("maneuvers");
+  });
+
+  it("does not materialize resource effects on legacy maneuver shapes", () => {
+    const { loaded } = setup();
+    expect(loaded.compiled.pack.enemies[0]!.maneuvers![0]).not.toHaveProperty("resource_effects");
   });
 
   it("rejects a zero/zero maneuver that would be only a cosmetic ATTACK alias", () => {
@@ -366,6 +405,130 @@ describe("one-shot enemy maneuvers", () => {
     );
     expect(enumerateRpgActions(index, restored).map((option) => option.id)).toContain(
       "attack_guard",
+    );
+  });
+
+  it("commits guarded resource deltas once, before combat, and exposes them in full menus", () => {
+    const pack = resourceSequencePack();
+    expect(validateRpg(pack).findings).toEqual([]);
+    const index = indexRpgPack(pack);
+    const step = makeStep(buildRpgRules(index, () => fixedRound()));
+    const opened = step(initStateForRpgPack(index, 17), maneuverAction());
+    expect(opened.ok).toBe(true);
+
+    const followThroughs = enumerateRpgActions(index, opened.state);
+    const option = followThroughs.find((candidate) => candidate.id === "maneuver_guard_low_drive");
+    expect(option?.resources).toEqual({ gains: ["saved_token"], costs: ["field_ration"] });
+    expect(
+      buildRpgObservation(index, opened.state).available_actions.find(
+        (candidate) => candidate.id === "maneuver_guard_low_drive",
+      )?.resources,
+    ).toEqual({ gains: ["saved_token"], costs: ["field_ration"] });
+    expect(
+      publicActions(followThroughs).find((candidate) => candidate.id === "maneuver_guard_low_drive")
+        ?.resources,
+    ).toEqual({ gains: ["saved_token"], costs: ["field_ration"] });
+
+    const result = step(opened.state, {
+      type: "MANEUVER",
+      enemy: "guard",
+      maneuver: "low_drive",
+    });
+    expect(result.ok).toBe(true);
+    expect(result.state.inventory).toContain("saved_token");
+    expect(result.state.inventory).not.toContain("field_ration");
+    expect(result.state.flags.low_drive_used).toBe(true);
+
+    const resourceEventIndexes = result.events.flatMap((event, index) =>
+      (event.type === "take" && event.item === "saved_token") ||
+      (event.type === "drop" && event.item === "field_ration")
+        ? [index]
+        : [],
+    );
+    const combatNarrationIndex = result.events.findIndex(
+      (event) => event.type === "narration" && event.text.includes("atk"),
+    );
+    expect(resourceEventIndexes).toHaveLength(2);
+    expect(resourceEventIndexes.every((index) => index < combatNarrationIndex)).toBe(true);
+
+    expect(step(result.state, { type: "MANEUVER", enemy: "guard", maneuver: "low_drive" }).ok).toBe(
+      false,
+    );
+    expect(step(result.state, { type: "MANEUVER", enemy: "guard", maneuver: "low_guard" }).ok).toBe(
+      false,
+    );
+    expect(result.state.inventory.filter((item) => item === "saved_token")).toHaveLength(1);
+  });
+
+  it("admits only non-empty, item-only maneuver resource effect lists", () => {
+    const inject = (resourceEffects: string): string =>
+      SOURCE.replace(
+        "        narration: You sell the low feint and turn the guard's answer aside.",
+        `        resource_effects: ${resourceEffects}\n        narration: You sell the low feint and turn the guard's answer aside.`,
+      );
+
+    expect(compileRpgSource(inject("[]")).ok).toBe(false);
+    expect(compileRpgSource(inject("[{ set_flag: resource_farmed }]")).ok).toBe(false);
+    expect(compileRpgSource(inject("[{ add_item: token, remove_item: ration }]")).ok).toBe(false);
+  });
+
+  it("validates maneuver resource ownership, uniqueness, references, and acquisition", () => {
+    const healthy = resourceSequencePack();
+    expect(validateRpg(healthy).findings.map((finding) => finding.code)).not.toContain(
+      "ITEM_UNPLACED",
+    );
+
+    const unguardedAdd = resourceSequencePack();
+    unguardedAdd.enemies[0]!.maneuvers!.find(
+      (maneuver) => maneuver.id === "low_drive",
+    )!.conditions = [{ has_item: "field_ration" }];
+    expect(validateRpg(unguardedAdd).findings.map((finding) => finding.code)).toContain(
+      "MANEUVER_RESOURCE_EFFECT_UNGUARDED",
+    );
+
+    const disjunctiveAdd = resourceSequencePack();
+    disjunctiveAdd.enemies[0]!.maneuvers!.find(
+      (maneuver) => maneuver.id === "low_drive",
+    )!.conditions = [
+      { has_item: "field_ration" },
+      { any_of: [{ not_item: "saved_token" }, { has_flag: "opening_known" }] },
+    ];
+    expect(validateRpg(disjunctiveAdd).findings.map((finding) => finding.code)).toContain(
+      "MANEUVER_RESOURCE_EFFECT_UNGUARDED",
+    );
+
+    const unguardedRemoval = resourceSequencePack();
+    unguardedRemoval.enemies[0]!.maneuvers!.find(
+      (maneuver) => maneuver.id === "low_drive",
+    )!.conditions = [{ not_item: "saved_token" }];
+    expect(validateRpg(unguardedRemoval).findings.map((finding) => finding.code)).toContain(
+      "MANEUVER_RESOURCE_EFFECT_UNGUARDED",
+    );
+
+    const duplicate = resourceSequencePack();
+    duplicate.enemies[0]!.maneuvers!.find(
+      (maneuver) => maneuver.id === "low_drive",
+    )!.resource_effects!.push({ add_item: "saved_token" });
+    expect(validateRpg(duplicate).findings.map((finding) => finding.code)).toContain(
+      "MANEUVER_RESOURCE_EFFECT_DUPLICATE",
+    );
+
+    const conflict = resourceSequencePack();
+    conflict.enemies[0]!.maneuvers!.find(
+      (maneuver) => maneuver.id === "low_drive",
+    )!.resource_effects!.push({ remove_item: "saved_token" });
+    expect(validateRpg(conflict).findings.map((finding) => finding.code)).toContain(
+      "MANEUVER_RESOURCE_EFFECT_CONFLICT",
+    );
+
+    const missing = resourceSequencePack();
+    const missingManeuver = missing.enemies[0]!.maneuvers!.find(
+      (maneuver) => maneuver.id === "low_drive",
+    )!;
+    missingManeuver.conditions.push({ not_item: "phantom_token" });
+    missingManeuver.resource_effects!.push({ add_item: "phantom_token" });
+    expect(validateRpg(missing).findings.map((finding) => finding.code)).toContain(
+      "ITEM_REF_MISSING",
     );
   });
 

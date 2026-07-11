@@ -25,8 +25,8 @@
  *       Each fight still fits within 30 HP alone, so only
  *       the cumulative guarantee breaks.
  *   (3) The concrete runtime guarantee is stronger and separate: with both persistent
- *       buffs, all six reachable flank/leader route combinations survive the entire
- *       gauntlet on worst rolls. Differential runtime witnesses show why each prep buff
+ *       buffs, all six original flank/leader pairs plus the linked brace-stake route
+ *       survive the entire gauntlet on worst rolls. Differential runtime witnesses show why each prep buff
  *       still matters to the universal promise: the riskiest no-attack line costs 39 HP
  *       and the riskiest no-defense line costs exactly 30.
  *
@@ -266,7 +266,7 @@ describe("bug_0189 — The Wolf-Winter: a fair THREE-fight combat_guaranteed gau
     expect(oneAbove).not.toContain("COMBAT_NOT_GUARANTEED");
   });
 
-  it("concretely survives worst rolls under all six fully-prepared tactical route pairs", () => {
+  it("concretely survives worst rolls under all six original tactical route pairs", () => {
     const sourcePack = loadPack();
     const sourceIndex = indexRpgPack(sourcePack);
     for (const combination of OPENING_COMBINATIONS) {
