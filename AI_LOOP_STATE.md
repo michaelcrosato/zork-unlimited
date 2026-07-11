@@ -141,7 +141,9 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Blind playtest: 25-run `overworld` Codex batch seeds 491-515 all exited 0; clarity 25x4/5, enjoyment 25x4/5, replay 25x true; feedback ledger now has 335 accepted reports.
 - Self-critique: first-action signposting improved but did not erase hidden-count scope confusion; completed quest/job/event listings and dialogue id/quote noise are now louder than opening-action uncertainty.
 - Guard: focused affected tests, `npm run health`, `npm run blind:feedback`, and reports `20260708T190115Z`-`20260708T190730Z` seeds 491-515 passed.
+
 ## AFK Cycle 2026-07-11T18-29-31-038Z
+
 - Assess: rpg=12; world=12; candidates=16; the explicit tutorial/fresh-world/100-agent contract superseded stale hotspot-4a89fb42.
 - Change: one canonical four-step tutorial now opens every genuinely fresh UI/MCP game; resume, export, reads, and actions do not replay it.
 - Harness: live runner/fleet/AFK prompts reject quest drop-ins and always start overworld; targeted smoke/mock remains; milestone default is 100.
@@ -151,10 +153,14 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Next: commit this green contract, then run 100 fresh-overworld blind agents and compile their feedback.
 
 ## AFK Cycle 2026-07-11T21-10-00Z - pure_journey_contract
+
 - Engine: versioned journey state now shares the exact Albany goal, accepted-decision proof, 40/80/+40 and early-goal choices, immutable exit receipt, and v6 persistence across UI/MCP.
 - Harness: live blind/fleet defaults are enforced pure + fresh-overworld + neutral persona; structural QA is explicit/non-retention; V2 reports require same-session server evidence and safe resume sidecars.
 - Retention: Tier 3 now emits mode-separated `retention.json`; legacy 79-run guided evidence remains useful but contributes zero pure retention.
 - Pure canary: seed 950002 completed the Albany goal at decision 24, chose continue at 24/40/80, ended honestly at 120, clarity 4/5, enjoyment 3/5, replay no; exact receipt independently reverified.
 - Findings: the natural player praised Wolf-Winter/tutorial but confirmed town-template repetition, hidden event prerequisites, and context-poor road encounters as the next depth questions.
 - Guard: crawl `20260711T202940Z` (247/247 towns, 344/344 roads, 12/12 quests), browser 1280x720/390x844/320x568 plus live 40-choice/end, pure graph/seed isolation, and health (292 files / 2,060 tests / all 12 packs) green.
-- Next: commit this scoped correction, then run and compile a new 100-member pure milestone fleet; never resume the frozen legacy-guided cohort.
+- Fleet: seeds 960001-960100 produced 100/100 new pure/fresh verified exits, zero resume/failure/retry/timeout; compiled at `ai-runs/feedback/20260711T221007Z-pure100`.
+- Retention: 46 continued at early goal completion, 54 ended; all 46 continuers ended at checkpoint 40; `would_replay` was separately 76/100.
+- Review: 44/46 exposed continuers called post-Wolf-Winter Albany generic or under-narrated, but 34 reports also showed v1 over-counting context-only quest commands/unchanged rest.
+- Next: contract v2 engine-owned consequential-decision classification first; then an ending-sensitive authored Albany aftermath bridge.
