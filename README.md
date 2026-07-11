@@ -60,6 +60,12 @@ each change blind-playtested and gated green.
 
 ## Quickstart
 
+**Just want to play?** Double-click **`PLAY.bat`** (Windows). It checks and
+refreshes dependencies, rebuilds the game from the current code, and opens it
+in your default browser — no terminal needed. The build it opens
+(`ui/dist/index.html`) is a single self-contained file, so it also works
+copied anywhere and opened directly.
+
 **Prerequisite:** Node 22+ — `.nvmrc` pins the toolchain (matching
 `package.json`'s `engines` and CI).
 

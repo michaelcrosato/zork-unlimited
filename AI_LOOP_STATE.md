@@ -164,3 +164,12 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Retention: 46 continued at early goal completion, 54 ended; all 46 continuers ended at checkpoint 40; `would_replay` was separately 76/100.
 - Review: 44/46 exposed continuers called post-Wolf-Winter Albany generic or under-narrated, but 34 reports also showed v1 over-counting context-only quest commands/unchanged rest.
 - Next: contract v2 engine-owned consequential-decision classification first; then an ending-sensitive authored Albany aftermath bridge.
+
+## AFK Cycle 2026-07-11T23-08-56Z - one_click_launcher
+
+- Assess: reviewed every remaining dirty file; kept one coherent Windows launcher/single-file UI feature and discarded only generated Aider/Playwright scratch.
+- Change: `PLAY.bat` now enforces Node 22+, validates exact lockfile dependencies, builds fail-closed, and exposes a no-browser smoke mode; checkout preserves CRLF.
+- Package: the UI build inlines one JS/CSS pair, rejects remote CSS/generated asset references, removes redundant assets, and leaves only offline `dist/index.html`; the UI lock now matches its root file dependency.
+- Browser: the packaged production page rendered the one-screen tutorial, entered Albany, and logged no warnings/errors; direct `file://` navigation was unavailable to the automation surface, so static zero-reference checks cover that boundary.
+- Guard: launcher build-only smoke, clean UI `npm ci`, packaged UI build/typecheck, regression contract, crawl `20260711T230133Z`, and health (293 files / 2,062 tests / all 12 packs) passed.
+- Next: land through the protected-main PR path, delete merged feature branches, then resume the contract-v2 consequential-decision plan.

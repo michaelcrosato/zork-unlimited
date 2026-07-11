@@ -73,6 +73,19 @@ export default tseslint.config(
     },
   },
   {
+    // ui/scripts/ is Node ESM build tooling (the post-build single-file inliner
+    // behind PLAY.bat). Plain JS by design — it runs under bare `node` in the ui
+    // build script with no transform. Needs the Node `URL` and `console` globals;
+    // mirrors the src/**/*.mjs and blind-tester/**/*.mjs blocks.
+    files: ["ui/scripts/**/*.mjs"],
+    languageOptions: {
+      globals: {
+        URL: "readonly",
+        console: "readonly",
+      },
+    },
+  },
+  {
     // blind-tester/ is Node ESM loop tooling. Root-wide cleaner runs `eslint .`, so
     // keep the smoke harness in the lint gate with Node globals instead of carrying
     // false no-undef noise for process/console/setTimeout (fleet.mjs's pacing delays).
