@@ -59,10 +59,10 @@ import { loadRpgSourceFile, compileRpgSource } from "../../src/rpg/source.js";
 import { indexRpgPack, buildRpgRules, initStateForRpgPack } from "../../src/rpg/runner.js";
 import { HP_VAR } from "../../src/rpg/schema.js";
 
-// Same backstop as the ending suites. The follow-through-rich Wolf-Winter progress graph
-// exhausts at 233,618 states (measured 2026-07-11). The cap keeps bounded headroom while a
+// Same backstop as the ending suites. The route-rich Wolf-Winter progress graph
+// exhausts at 332,551 states (measured 2026-07-11). The cap keeps bounded headroom while a
 // future blowup still fails loudly instead of truncating a possibly dead region.
-const MAX_STATES = 300_000;
+const MAX_STATES = 400_000;
 
 // The edge-collecting BFS over the largest pack (watchtower_road, ~83k states) runs in a few
 // seconds but exceeds vitest's 5s default under full-suite parallel load. A generous per-pack

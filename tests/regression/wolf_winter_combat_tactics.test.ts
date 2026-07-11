@@ -285,7 +285,7 @@ describe("Wolf-Winter authored combat tactics", () => {
     const rootId = "maneuver_flank_wolf_splinter_guard";
     expect(optionIds(state)).toContain(rootId);
     expect(optionIds(state)).not.toContain("maneuver_flank_wolf_funnel_thrust");
-    expect(optionIds(state)).not.toContain("maneuver_flank_wolf_offside_cut");
+    expect(optionIds(state)).toContain("maneuver_flank_wolf_offside_cut");
     expect(options(state).find((option) => option.id === rootId)?.combat).toEqual({
       attack_bonus: 0,
       defense_bonus: 2,
@@ -340,6 +340,27 @@ describe("Wolf-Winter authored combat tactics", () => {
     unbound = act(unbound, "go_north").state;
     expect(optionIds(unbound)).toContain("maneuver_flank_wolf_offside_cut");
     expect(optionIds(unbound)).not.toContain(rootId);
+  });
+
+  it("describes plain combat honestly when no taught or environmental line is available", () => {
+    let state = play(start(), ["go_north", "go_north"]);
+    state = act(state, "maneuver_yearling_wolf_set_spear", "best").state;
+    state = act(state, "go_north").state;
+
+    expect(optionIds(state)).toContain("attack_flank_wolf");
+    expect(optionIds(state).filter((id) => id.startsWith("maneuver_flank_wolf_"))).toEqual([]);
+    let observation = buildRpgObservation(index, state);
+    expect(observation.description).toContain("only a plain spear exchange remains");
+    expect(observation.description).not.toContain("west above");
+
+    state = act(state, "attack_flank_wolf", "best").state;
+    state = act(state, "attack_flank_wolf", "best").state;
+    state = act(state, "go_north").state;
+
+    expect(optionIds(state)).toContain("attack_grey_leader");
+    expect(optionIds(state).filter((id) => id.startsWith("maneuver_grey_leader_"))).toEqual([]);
+    observation = buildRpgObservation(index, state);
+    expect(observation.description).toContain("only plain spear work remains");
   });
 
   it("makes the leader's guarded wait and violent close distinct, exclusive endings", () => {

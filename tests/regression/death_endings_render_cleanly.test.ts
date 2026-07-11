@@ -48,10 +48,12 @@ import { exhaustiveEndingsMulti } from "./support/exhaustive_endings.js";
 import type { Rules } from "../../src/core/engine.js";
 import type { Action } from "../../src/api/types.js";
 
-// The follow-through-rich Wolf-Winter progress graph exhausts at 233,618 states
+// The route-rich Wolf-Winter progress graph exhausts at 332,551 states
 // (measured 2026-07-11). Keep bounded headroom above that concrete witness; a
 // future blowup still fails loudly instead of truncating an unproven search.
-const MAX_STATES = 300_000;
+const MAX_STATES = 400_000;
+// The measured Wolf-Winter graph takes ~84s under the exhaustive-suite contention run.
+const SOLVER_TEST_TIMEOUT_MS = 120_000;
 
 // Best/worst-roll rule sets for RPG, identical to rpg_all_endings_reachable.test.ts: a
 // fixed-sequence PRNG whose draws bracket the player's outcomes. resolveAttack draws the
@@ -153,27 +155,31 @@ describe("every death ending of every RPG pack renders cleanly to the dying play
   });
 
   for (const file of rpgFiles) {
-    it(`${file} (rpg): each declared death ending renders cleanly when reached`, () => {
-      const loaded = loadRpgSourceFile(join(RPG_DIR, file));
-      expect(loaded.ok).toBe(true);
-      if (!loaded.ok) return;
-      const pack = loaded.compiled.pack;
-      const deaths = deathEndingsOf(pack.endings);
-      if (deaths.length === 0) return; // nothing to render-check
-      const index = indexRpgPack(pack);
-      const start = initStateForRpgPack(index, 7);
-      const { witness, cappedOut } = deathWitnesses(
-        [buildRpgRules(index, bestRng), buildRpgRules(index, worstRng)],
-        start,
-        new Set(deaths.map((d) => d.id)),
-      );
-      expect(cappedOut, "state-space search hit the cap (witnesses unproven)").toBe(false);
-      for (const def of deaths) {
-        const s = witness.get(def.id);
-        expect(s, `death ending ${def.id} never reached by concrete play`).toBeDefined();
-        if (!s) continue;
-        assertCleanDeathRender(buildRpgObservation(index, s), def, pack.meta.max_score ?? 0);
-      }
-    });
+    it(
+      `${file} (rpg): each declared death ending renders cleanly when reached`,
+      () => {
+        const loaded = loadRpgSourceFile(join(RPG_DIR, file));
+        expect(loaded.ok).toBe(true);
+        if (!loaded.ok) return;
+        const pack = loaded.compiled.pack;
+        const deaths = deathEndingsOf(pack.endings);
+        if (deaths.length === 0) return; // nothing to render-check
+        const index = indexRpgPack(pack);
+        const start = initStateForRpgPack(index, 7);
+        const { witness, cappedOut } = deathWitnesses(
+          [buildRpgRules(index, bestRng), buildRpgRules(index, worstRng)],
+          start,
+          new Set(deaths.map((d) => d.id)),
+        );
+        expect(cappedOut, "state-space search hit the cap (witnesses unproven)").toBe(false);
+        for (const def of deaths) {
+          const s = witness.get(def.id);
+          expect(s, `death ending ${def.id} never reached by concrete play`).toBeDefined();
+          if (!s) continue;
+          assertCleanDeathRender(buildRpgObservation(index, s), def, pack.meta.max_score ?? 0);
+        }
+      },
+      SOLVER_TEST_TIMEOUT_MS,
+    );
   }
 });

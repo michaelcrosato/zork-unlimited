@@ -4,56 +4,57 @@ This is the AFK loop's token-small handoff document. It is OVERWRITTEN each
 ultraplan with the synthesis and one chosen next move; keep it dated, terse, and
 under ~60 lines. Completed detail belongs in Git history.
 
-## Cycle: 2026-07-11 - Wolf-Winter Compact Tutorial Integrity
+## Cycle: 2026-07-11 - Wolf-Winter Complementary Clue Discovery
 
 ## Synthesis
 
-The post-`5ff320a6` cohort closed at 200/200 verified `gpt-5.5` reports: 100
-direct Wolf-Winter and 100 overworld, balanced 20/persona/target, with zero
-rejections, zero crawl findings, zero stuck players, and 100/100 Byre Held.
-Direct Wolf averaged 4.32 clarity / 3.76 enjoyment; preparation was best in
-99/100, but rail 20, linearity 30, and replay 16 failed frozen acceptance.
+Compact prose integrity is closed: fresh lore-reader 930010 no longer saw
+clipping. The next two focused cycles added persistent resource effects and a
+real side-space plan. A failed rail can now be spent at the flank, saved by
+Cade's open wheel, or carried through a one-way fodder-loft approach for a
+costed leader opening. Fixed rolls favor each spend timing; the finite graph is
+measured at 332,551 progress / 665,101 READ-inclusive states.
 
-The first repair removed duplicate watch events and stale hub/rail prose. Fresh
-blind seed 930005 then proved the renamed empty rail-bed was still a stale object
-affordance. A generic, hash-preserving `visible_when` world gate now retires the
-rail after binding across full/compact/actions/UI; inventory remains authoritative,
-containers cannot leak children, and validator/liveness proofs cover the feature.
-`bug_0500`, 15 new tests, crawl, and health are green.
+Fresh explorer 930012 found the loft and recognized the spend/save choice, but
+a lucky off-side kill let the guard remain unused. Final breaker 930013 proved
+prepared 60/60 and reckless 45/60 routes, ending the latter at 4 HP with no
+mechanical defect. Both declined replay. Casual 930011 and breaker 930013 now
+agree on the louder experiential blocker: the day-book and Cade duplicate an
+explicit answer key, making correct play clear but deduction-free.
 
-The next blocker is the default MCP reading surface. Strict coding found compact
-truncation in 59 reports (38 overworld, 21 direct). A source scan identifies 28
-over-budget Wolf fields across opening/hub/rooms, day-book, Cade, rail recovery,
-journals, and tactical endings; crucial advice clips where players need it.
+The 443-report compiler remains historically stale on compact hashes; semantic
+compact regressions and post-fix reports disprove that recommendation. Treat
+the fresh six-report Wolf cohort (clarity 4.67, enjoyment 3.67, replay 0/6) and
+the frozen linearity/replay gates as the live acceptance evidence.
 
 ## Chosen Move
 
-Compress Wolf-Winter's authored compact tutorial and payoff without raising any
-global limit or changing mechanics.
+Turn Wolf-Winter's duplicated tutorial into complementary, discoverable clues
+without reducing the guarantee or hiding legal actions.
 
-- Fit changed room/object narration within 280 characters, Cade dialogue within
-  its wrapped budget, journals within their reprojected budget, and endings
-  within 360 including the score suffix.
-- Preserve the Albany spear/packet, donned jerkin, yearling set/drive, flank
-  funnel vs off-side vs salvaged guard, leader wait vs close, and all six ending
-  payoffs in Wolf-Winter's voice.
-- Add one compact-surface MCP regression and extend the six-route gauntlet; do
-  not alter combat math, route state, score, schema, or global compact limits.
+- Let the day-book report evidence/history (pack count, prior injuries, breach
+  behavior) instead of repeating exact command pairs and score promises.
+- Keep Cade authoritative about survival/preparation, but split his two topics
+  into distinct ground tactics rather than overlapping complete solutions.
+- Let environmental inspection—the rail and gated loft—teach the alternate
+  recovery route at the place where it becomes actionable.
+- Preserve action metadata, 60/60 score, all combat math, fallback fairness,
+  and every established route; this is information design, not difficulty fog.
 
 ## Acceptance
 
-1. Opening, day-book, all Cade lessons, Broken Paling failure/recovery, and six
-   tactical endings emit no compact truncation marker and retain required clues.
-2. Static projection checks pin every edited field inside its actual surface
-   budget; the `*** You have won. ***` marker survives every ending.
-3. Existing 60/60, worst-roll survival, route exclusivity, and state-truth
-   regressions remain byte-for-byte mechanically green.
-4. Fresh blind report, pre/post crawl, pack validation, and `npm run health`
-   pass before one focused commit.
+1. No source repeats the complete three-fight command sequence; each clue adds
+   information unavailable from the others.
+2. A fresh player can still identify the goal, both load-bearing prep acts, and
+   at least one viable line per fight at clarity >=4 without source access.
+3. Blind feedback no longer calls the day-book a duplicate/system tooltip, and
+   exploration supplies a genuine inference or route discovery.
+4. Compact budgets, 400k/800k exhaustive bounds, post-crawl, blind report, and
+   `npm run health` remain green.
 
 ## Deferred Levers
 
-- Cade modal affordances (48 reports) and temporary-defense visibility (19).
-- Tactical agency: linear/prescribed 30/100 and replay 16/100.
-- Albany continuity/authorship: 71/100 generic/hidden-count and 9/100 stale
-  Station-relief lifecycle reports; use journal-backed outcome reactivity.
+- Structured `combat_roll` events separating diegetic prose from exact math.
+- Make an unused saved guard visible in the ending without forcing its spend.
+- Broader second objective / failure pressure if complementary clues alone do
+  not lift replay; do not manufacture punishment for the recoverable rail roll.

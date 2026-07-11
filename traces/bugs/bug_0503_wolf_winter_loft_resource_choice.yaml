@@ -1,0 +1,54 @@
+id: bug_0503
+title: "Wolf-Winter's recovered rail and room route still collapsed to one answer"
+pack: content/rpg/quests/wolf_winter.yaml
+reported_by: frozen blind-playtest fleet and fresh verified blind playtest
+reports:
+  - ai-runs/playtests/20260711T1027Z-post-5ff320a6
+  - ai-runs/feedback/20260711T140033Z
+  - ai-runs/2026-07-11T15-27-13-959Z/playtest.md
+severity: S1
+symptom: >
+  Thirty of one hundred frozen direct reports called the quest linear or prescribed,
+  and a fresh casual run independently described every fight as one obvious maneuver
+  followed by one obvious continuation. The failed-wedge route was the clearest witness:
+  binding the recovered guard suppressed Cade's off-side opening, then defeating the
+  flank-wolf deleted that guard whether or not the player had deliberately spent it.
+  The map offered no second approach that could change the encounter's action set.
+root_cause: >
+  Wolf-Winter used preparation to select a combat answer before the fight rather than
+  to create an in-fight resource decision. The split guard's lifetime belonged to the
+  enemy defeat hook instead of the maneuver that committed it, so it could not be
+  carried forward. The store was also a one-room equipment dead end even though its
+  fiction placed it under the byre eaves beside the flank-wolf's door-post.
+fix: >
+  Add a fodder-loft above the store with a gated, one-way hatch drop behind the live
+  flank-wolf. The store signposts it before the yearling, but the route opens only after
+  that tutorial fight and binding the failed rail; entering the loft commits a distinct
+  aggressive opening. Make Cade's off-side line remain available while the split guard
+  is carried,
+  and consume that guard only when its guarded flank follow-through is chosen. A player
+  who beats the flank by the loft or off-side line can instead spend the saved guard on
+  a new grey-leader opening before choosing any needed finishing attack. Full action
+  metadata exposes the one-use cost before commitment, and rooms/endings remember where
+  the failed rail was finally spent.
+deterministic_witnesses:
+  - route: "failed rail -> spend guard at flank -> wait out leader"
+    worst_roll_damage: 13
+    ending_hp: 17
+  - route: "failed rail -> loft drop -> save guard -> spend guard at leader"
+    worst_roll_damage: 16
+    ending_hp: 14
+  - invariant: "the direct ground approach offers spend-guard versus save-guard openings; the one-way loft approach is a separate committed plan"
+  - invariant: "the guarded flank follow-through consumes split_rail_guard; alternate flank lines preserve it across the room transition"
+  - invariant: "low fixed rolls favor spending the guard early, while high opening rolls favor saving it for the leader"
+  - invariant: "the store signposts the loft before it unlocks; after the yearling falls, entering it commits the one-way overhead approach"
+tests:
+  - tests/regression/wolf_winter_loft_resource_choice.test.ts
+  - tests/regression/wolf_winter_combat_tactics.test.ts
+  - tests/regression/wolf_winter_three_fight_gauntlet.test.ts
+  - tests/regression/wolf_winter_compact_surface.test.ts
+verification:
+  - npm run validate -- wolf_winter
+  - npx vitest run tests/regression/wolf_winter_loft_resource_choice.test.ts tests/regression/wolf_winter_combat_tactics.test.ts tests/regression/wolf_winter_three_fight_gauntlet.test.ts tests/regression/wolf_winter_compact_surface.test.ts
+  - npm run crawl:smoke
+  - npm run health

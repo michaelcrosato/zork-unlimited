@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 533 -->
+<!-- historical_cycle_count: 534 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,15 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - wolf_winter_loft_resource_routing
+
+- Feedback surface: pre-change casual seed 930011 won Wolf-Winter 60/60 (clarity 4, enjoyment 3) but saw one prompted maneuver/follow-up per fight; the 443-report compile measured six fresh Wolf runs at clarity 4.67, enjoyment 3.67, replay 0/6.
+- Content surface: failed-rail recovery now chooses a direct spend/save decision or a gated one-way fodder-loft approach; saving the split guard carries it to a costed leader opening, while committing either encounter consumes it exactly once. Reactive rooms/endings remember where it was spent (`bug_0503`).
+- Regression surface: fixed rolls favor early spend at 17 vs 14 HP and late spend at 25 vs 23; the final graph exhausts at measured 332,551 progress / 665,101 READ-inclusive states, with bounded 400k/800k caps and 20% headroom.
+- Blind playtests: explorer 930012 found the loft and resource choice organically (5/4); final breaker 930013 ran prepared 60/60 and reckless 45/60 routes with no mechanical defect (5/3), then exposed overpromised unprepared prose, fixed and pinned before landing.
+- Self-critique: PASS for one real spatial/resource plan, not the replay gate—both fresh players still declined replay, lucky opening kills can make the saved guard feel optional, and Cade/day-book remain an explicit duplicated answer key. Complementary clue discovery is next.
+- Guard: final crawl `20260711T164052Z` covered 6,000 steps, all 8 Wolf rooms and 247 overworld nodes; 15 Wolf files / 67 tests, all 12 packs, `npm run health` (284 files / 2,011 tests), and the 444-report ledger are green.
 
 ### Cycle result - wolf_winter_compact_prose_integrity
 
@@ -130,11 +139,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Blind playtest: 25-run `overworld` Codex batch seeds 441-465 all exited 0; clarity 25x4/5, enjoyment 25x4/5, replay 25x true; feedback ledger now has 285 accepted reports.
 - Self-critique: no fresh report repeated the after-arrival timing complaint; next road-specific issue is generic/directionally awkward "road report" prose on Albany-Colonie.
 - Guard: focused affected tests, `npm run health`, `npm run blind:feedback`, and reports `20260708T180055Z`-`20260708T181931Z` seeds 441-465 passed.
-
-### Cycle result - road_encounter_travel_timing
-
-- Engine surface: road travel snapshots now record `roadEventId`, pending road trouble carries route/timing text plus compact `where`, replay/restore respects no-event travel, and immediate same-edge repeats are suppressed.
-- Loop effect: focused UI/MCP/snapshot/resource-replay regressions prove pending road blockers restore cleanly, explicit no-event travel stays plain, and the Albany-Colonie return trip avoids the just-resolved event.
-- Blind playtest: 25-run `overworld` Codex batch seeds 416-440 all exited 0; clarity 25x4/5, enjoyment 25x4/5, replay 25x true; feedback ledger now has 260 accepted reports.
-- Self-critique: same-road-repeat complaints did not recur, but players still read pending road trouble as after-arrival because location already shows the destination; next lever is a true mid-route pending state.
-- Guard: Codex-aware blind runner prompt fallback, focused affected tests, `npm run health`, `npm run blind:feedback`, and reports `20260708T165436Z`-`20260708T174127Z` seeds 416-440 passed.

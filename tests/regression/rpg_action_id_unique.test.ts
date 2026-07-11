@@ -88,10 +88,10 @@ const packFiles = readdirSync(PACK_DIR)
   .filter((f) => f.endsWith(".yaml"))
   .sort();
 
-// The follow-through-rich Wolf-Winter graph exhausts at 467,235 states under this
+// The route-rich Wolf-Winter graph exhausts at 665,101 states under this
 // liveness policy (measured 2026-07-11). Keep the same finite headroom ratio above that
 // verified witness while retaining a loud cap-out for a future combinatorial regression.
-const MAX_STATES = 550_000;
+const MAX_STATES = 800_000;
 
 // The bug_0146 liveness action policy: step every legal action EXCEPT the ones that cannot
 // usefully widen the reachable region (DROP — the inventory×location blowup — plus the
@@ -241,12 +241,9 @@ describe("bug_0152 — every reachable action menu of every RPG pack has unique 
       expect(statesChecked).toBeGreaterThan(0);
       expect(actionsSeen).toBeGreaterThan(statesChecked); // every state offers ≥1 action
       expect(collisions).toEqual([]);
-      // 120s budget (not 30s): wolf_winter's best/worst-roll bracket BFS walks ~123k
-      // states and runs ~9s in isolation, but balloons past 30s under full-suite
-      // parallel load — the same load-induced flake class as the health metamorphic
-      // oracle (bug f9e43b6: budget raised for exactly this pack). The headroom keeps
-      // `npm test` reliably green under contention without weakening any assertion.
-    }, 120_000);
+      // The exact 665,101-state Wolf-Winter graph took 178s in the exhaustive-suite
+      // contention run. Wall-clock headroom does not change the bounded state proof.
+    }, 240_000);
   }
 
   it("FAILS on a planted duplicate parser-template id (two same-direction exits → go_north)", () => {
