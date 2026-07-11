@@ -1,0 +1,52 @@
+id: bug_0505
+title: "Wolf-Winter ignored deliberately preserved material at the victory boundary"
+pack: content/rpg/quests/wolf_winter.yaml
+reported_by: fresh verified blind playtests and consequence-seam audit
+reports:
+  - ai-runs/2026-07-11T16-59-23-185Z/playtest.md
+  - ai-runs/2026-07-11T16-59-23-185Z/postchange.md
+  - ai-runs/2026-07-11T17-37-16-042Z/playtest.md
+severity: S1
+symptom: >
+  Three fresh players noticed that saving a split-rail guard or brace-stake could end as
+  unused inventory. One comparison played the guarded and quick roads to the same score
+  and ending id; another called the saved guard its best moment, but the quest ended as
+  soon as the cattle room was entered and never let that preservation matter. Route prose
+  differed, yet the material choice had no terminal action or durable outcome identity.
+root_cause: >
+  The cattle room's on-enter capstone immediately satisfied one generic nondeath win
+  condition. Wolf-Winter had rich resource state before that boundary but no legal action
+  between killing old grey and ending. The RPG-to-overworld bridge exports only ending id,
+  title, and death status, so generic ending variants and surviving inventory could not be
+  remembered in the open-world quest journal.
+fix: >
+  After old grey falls, reveal the inner cattle-gate. A player carrying the split guard or
+  saved brace-stake can spend it in the same terminal action to bar the herd now, or walk
+  north and deliberately retain the wood for daylight paling repair. Both choices enter
+  the existing cattle room, keep its +15 capstone, and preserve equal score/renown. Ordered
+  win conditions select distinct nondeath gate-barred versus timber-saved ending ids and
+  titles, with resource- and leader-sensitive prose; those titles cross the existing
+  bridge into durable overworld journal history without inventing overworld inventory.
+deterministic_witnesses:
+  - route: "failed wedge -> bind guard -> off-side flank -> wait leader -> retain for repair"
+    ending: ending_held_timber_saved
+    final_score: 60
+  - route: "failed wedge -> bind guard -> off-side flank -> wait leader -> bar inner gate"
+    ending: ending_held_gate_barred
+    final_score: 60
+  - route: "braced funnel -> wrench stake -> wait leader -> retain or bar"
+    invariant: "both terminal choices are legal, equal-HP/equal-score, and differ in item ownership, flags, journal, ending id, and title"
+  - invariant: "spent-resource and no-resource routes still select ending_held"
+  - invariant: "the bridge exports each consequence title as a nondeath Wolf-Winter outcome"
+  - invariant: "progress graph exhausts at 335,482/400,000 and READ-inclusive liveness at 670,963/800,000"
+tests:
+  - tests/regression/wolf_winter_post_hunt_consequence.test.ts
+  - tests/regression/wolf_winter_compact_surface.test.ts
+  - tests/regression/rpg_all_endings_reachable.test.ts
+  - tests/regression/rpg_variant_liveness.test.ts
+  - tests/regression/no_dead_pocket.test.ts
+verification:
+  - npm run validate -- wolf_winter
+  - npx vitest run tests/regression/wolf_winter_post_hunt_consequence.test.ts tests/regression/wolf_winter_compact_surface.test.ts
+  - npm run crawl:smoke
+  - npm run health

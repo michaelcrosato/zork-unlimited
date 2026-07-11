@@ -170,7 +170,7 @@ rooms:
           - { has_flag: yearling_down }
           - { has_item: split_rail_guard }
           - { not_flag: flank_wolf_down }
-        locked_msg: "The loft is a longer recovery route: hold the breach, bind the failed rail into a cross-piece, then return and bridge the broken boards."
+        locked_msg: "The loft is only a failed-rail recovery: if frost splits the wedge, bind that split rail into its guard, then return to bridge these boards; a sound rail stays at the breach."
 
   - id: fodder_loft
     name: "The Fodder-Loft"
@@ -447,7 +447,22 @@ rooms:
       heart, shaping a practiced feint. Cade may have taught you to hold or close; a
       saved guard offers another catch. Without either, only plain spear work remains.
       The door is south.
+    objects: [inner_cattle_gate]
     variants:
+      - when:
+          - { has_flag: leader_down }
+          - { has_item: split_rail_guard }
+        text: >
+          The grey leader lies dead among the straw. The split-rail guard carried past
+          her is still across your spear. At the cattle one stride north, bar their inner
+          gate with it, or carry it into dawn for the broken paling. The door is south.
+      - when:
+          - { has_flag: leader_down }
+          - { has_item: saved_brace_stake }
+        text: >
+          The grey leader lies dead among the straw. The brace-stake won at the door
+          remains unbroken in your hand. At the cattle one stride north, bar their inner
+          gate with it, or carry it into dawn for the broken paling. The door is south.
       - when:
           - { has_flag: leader_down }
           - { has_flag: leader_split_guard_set }
@@ -670,6 +685,51 @@ objects:
       A low fodder hatch above the byre door. The flank-wolf circles the post below
       without looking up. The hauled store ladder lies behind you across the hay; east
       through this hatch is the committed drop, with no safe climb back during the fight.
+
+  # A terminal post-hunt resource choice. Spending either saved cross-piece moves
+  # straight into cattle_stand, whose existing on_enter awards the capstone and ends the
+  # quest; there is no new backtrackable flag lattice. Walking north instead retains the
+  # wood for daylight repair at the broken paling.
+  - id: inner_cattle_gate
+    name: "inner cattle-gate"
+    aliases: [inner gate, cattle gate, gate, slatted gate, iron loops]
+    description: >
+      The low slatted gate at the cattle pen. Its iron loops will take either cross-piece
+      saved from the fighting; without sound wood in hand, it is only the last gate to pass.
+    visible_when: [{ has_flag: leader_down }]
+    interactions:
+      - verb: USE
+        item: split_rail_guard
+        target: inner_cattle_gate
+        command_verb: bar
+        command_template: "bar {target} with {item}"
+        conditions: [{ has_flag: leader_down }]
+        effects:
+          - remove_item: split_rail_guard
+          - set_flag: cattle_gate_barred_with_split_guard
+          - add_journal: "The split-rail guard now bars the inner cattle-gate; saved wood holds one last line around the herd."
+          - narrate: >
+              You lash the bound split rail across the inner cattle-gate. What could have
+              guarded your spear now bars a second rush; rawhide draws tight between the
+              posts. Behind it the herd settles, and you step among them while broken
+              paling wood holds one last line.
+          - goto: cattle_stand
+      - verb: USE
+        item: saved_brace_stake
+        target: inner_cattle_gate
+        command_verb: bar
+        command_template: "bar {target} with {item}"
+        conditions: [{ has_flag: leader_down }]
+        effects:
+          - remove_item: saved_brace_stake
+          - set_flag: cattle_gate_barred_with_brace_stake
+          - add_journal: "The saved brace-stake now bars the inner cattle-gate; spared wood holds one last line around the herd."
+          - narrate: >
+              You drop the saved brace-stake through the inner cattle-gate's iron loops.
+              The hardwood spared at the door locks the slats against a second rush.
+              Behind it the herd settles, and you step among them with that choice standing
+              against the dark byre.
+          - goto: cattle_stand
 
   - id: day_book
     name: "day-book"
@@ -1251,11 +1311,142 @@ win_conditions:
   # gates) — fires the win via the engine's post-action checkWin. SCORE_PEAKS_BEFORE_WIN
   # does not fire on a navigation win (bug_0116), and the +15 capstone is the accepted
   # denouement-step (sealed_crypt seed 29 / dawn_beacon).
+  # Specific terminal consequences precede the generic mission result. All award the
+  # same score and remain nondeath; their ids/titles let the overworld completion journal
+  # remember whether saved wood barred the herd now or was carried into dawn for repair.
+  - id: hold_the_byre_gate_barred_split_guard
+    conditions: [{ visited: cattle_stand }, { has_flag: cattle_gate_barred_with_split_guard }]
+    ending: ending_held_gate_barred
+  - id: hold_the_byre_gate_barred_brace_stake
+    conditions: [{ visited: cattle_stand }, { has_flag: cattle_gate_barred_with_brace_stake }]
+    ending: ending_held_gate_barred
+  - id: hold_the_byre_timber_saved_split_guard
+    conditions: [{ visited: cattle_stand }, { has_item: split_rail_guard }]
+    ending: ending_held_timber_saved
+  - id: hold_the_byre_timber_saved_brace_stake
+    conditions: [{ visited: cattle_stand }, { has_item: saved_brace_stake }]
+    ending: ending_held_timber_saved
   - id: hold_the_byre
     conditions: [{ visited: cattle_stand }]
     ending: ending_held
 
 endings:
+  - id: ending_held_gate_barred
+    title: "The Byre Held, Inner Gate Barred"
+    text: >
+      Grey dawn finds the cattle whole behind a barred inner gate. Wood carried through
+      the fighting now holds one last line against the dark byre. Cade sees the choice at
+      the slats; the pack is going, and the steading will see spring.
+      *** You have won. ***
+    variants:
+      - when:
+          - { has_flag: cattle_gate_barred_with_split_guard }
+          - { has_flag: flank_dropped_from_loft }
+          - { has_flag: leader_waited_out }
+        text: >
+          Grey dawn finds the cattle whole behind one last line. You crossed the
+          fodder-loft, dropped behind the flank-wolf, then waited out old grey without
+          spending the split guard. Now that failed rail bars the inner gate; Cade sees
+          both roads in the wood. *** You have won. ***
+      - when:
+          - { has_flag: cattle_gate_barred_with_split_guard }
+          - { has_flag: flank_dropped_from_loft }
+          - { has_flag: leader_closed_on }
+        text: >
+          Grey dawn finds the cattle whole behind one last line. You crossed the
+          fodder-loft, dropped behind the flank-wolf, then closed through old grey's feint
+          without spending the split guard. Now that failed rail bars the inner gate;
+          Cade sees both roads in the wood. *** You have won. ***
+      - when:
+          - { has_flag: cattle_gate_barred_with_split_guard }
+          - { has_flag: leader_waited_out }
+        text: >
+          Grey dawn finds the cattle whole behind one last line. You waited out old grey,
+          then spent the split-rail guard across the inner gate instead of on her. Rawhide
+          and broken paling bar the dark byre; Cade sees a failed wedge made useful twice.
+          *** You have won. ***
+      - when:
+          - { has_flag: cattle_gate_barred_with_split_guard }
+          - { has_flag: leader_closed_on }
+        text: >
+          Grey dawn finds the cattle whole behind one last line. You closed through old
+          grey's feint, keeping the split-rail guard clear of her teeth; now rawhide and
+          broken paling bar the inner gate. Cade sees a failed wedge made useful twice.
+          *** You have won. ***
+      - when:
+          - { has_flag: cattle_gate_barred_with_brace_stake }
+          - { has_flag: leader_waited_out }
+        text: >
+          Grey dawn finds the cattle whole behind one last line. You waited out old grey
+          and kept the brace-stake unbroken; now that sound hardwood locks the inner gate
+          against the dark byre. Cade sees the choice standing square at the slats.
+          *** You have won. ***
+      - when:
+          - { has_flag: cattle_gate_barred_with_brace_stake }
+          - { has_flag: leader_closed_on }
+        text: >
+          Grey dawn finds the cattle whole behind one last line. You closed through old
+          grey's feint and kept the brace-stake unbroken; now that sound hardwood locks the
+          inner gate against the dark byre. Cade sees the choice standing square at the
+          slats. *** You have won. ***
+  - id: ending_held_timber_saved
+    title: "The Byre Held, Paling Timber Saved"
+    text: >
+      Grey dawn finds the cattle whole, with sound paling wood still in your hands. You
+      chose another line for old grey and carried this cross-piece through for daylight
+      repair at the breach. Cade sees tomorrow's work already saved.
+      *** You have won. ***
+    variants:
+      - when:
+          - { has_item: split_rail_guard }
+          - { has_flag: flank_dropped_from_loft }
+          - { has_flag: leader_waited_out }
+        text: >
+          Grey dawn finds the cattle whole. You crossed the fodder-loft, dropped behind
+          the flank-wolf, then waited out old grey; the split guard still rides across
+          your spear for daylight paling repair. Cade sees the open hatch and unspent
+          rawhide. *** You have won. ***
+      - when:
+          - { has_item: split_rail_guard }
+          - { has_flag: flank_dropped_from_loft }
+          - { has_flag: leader_closed_on }
+        text: >
+          Grey dawn finds the cattle whole. You crossed the fodder-loft, dropped behind
+          the flank-wolf, then closed through old grey's feint; the split guard still
+          rides across your spear for daylight paling repair. Cade sees the open hatch
+          and unspent rawhide. *** You have won. ***
+      - when:
+          - { has_item: split_rail_guard }
+          - { has_flag: leader_waited_out }
+        text: >
+          Grey dawn finds the cattle whole, and the bound split rail still rides across
+          your spear. You waited out old grey without spending it, preserving a rough guard
+          for daylight repair at the broken paling. Cade sees unspent rawhide and
+          tomorrow's work. *** You have won. ***
+      - when:
+          - { has_item: split_rail_guard }
+          - { has_flag: leader_closed_on }
+        text: >
+          Grey dawn finds the cattle whole, and the bound split rail still rides across
+          your spear. You closed through old grey's feint without spending it, preserving
+          a rough guard for daylight repair at the broken paling. Cade sees unspent rawhide
+          and tomorrow's work. *** You have won. ***
+      - when:
+          - { has_item: saved_brace_stake }
+          - { has_flag: leader_waited_out }
+        text: >
+          Grey dawn finds the cattle whole, and the brace-stake won at the door remains
+          unbroken in your hand. You waited out old grey without spending it, preserving
+          sound hardwood for daylight repair at the broken paling. Cade sees tomorrow's
+          work already saved. *** You have won. ***
+      - when:
+          - { has_item: saved_brace_stake }
+          - { has_flag: leader_closed_on }
+        text: >
+          Grey dawn finds the cattle whole, and the brace-stake won at the door remains
+          unbroken in your hand. You closed through old grey's feint without spending it,
+          preserving sound hardwood for daylight repair at the broken paling. Cade sees
+          tomorrow's work already saved. *** You have won. ***
   - id: ending_held
     title: "The Byre Held"
     text: >
@@ -1328,22 +1519,6 @@ endings:
           splinters caught the flank-wolf for your hook. Deeper in, you closed through the
           old leader's feint and drove before she recovered. Cade sees rawhide and blood.
           The byre is won. *** You have won. ***
-      - when:
-          - { has_flag: flank_dropped_from_loft }
-          - { has_flag: leader_true_rush_taken }
-        text: >
-          Grey dawn finds the cattle whole. You circled through the fodder-loft, dropped
-          behind the flank-wolf, and drove through its turn; deeper in, you waited out
-          the old leader and took her true rush on the held spear. Cade sees the open
-          hatch and knows the road you chose. *** You have won. ***
-      - when:
-          - { has_flag: flank_dropped_from_loft }
-          - { has_flag: leader_driven_before_recovery }
-        text: >
-          Grey dawn finds the cattle whole. You came through the fodder-loft behind the
-          flank-wolf and drove through its turn, then closed through the old leader's
-          feint before she recovered. The high-wood pack is going. Cade sees the open
-          hatch and bloodied spear. *** You have won. ***
       - when: [{ has_flag: leader_waited_out }]
         text: >
           Grey dawn warms the whole cattle. You won by the patient line: the old leader's

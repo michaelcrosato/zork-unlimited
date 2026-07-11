@@ -135,9 +135,14 @@ describe("Wolf-Winter loft route and split-guard resource choice", () => {
     expect(before.current).toBe("store");
     expect(optionIds(before)).not.toContain("go_up");
     expect(buildRpgObservation(index, before).description).toContain("ladder");
-    expect(buildRpgObservation(index, before).blocked_exits).toContainEqual(
-      expect.objectContaining({ direction: "up" }),
+    const blockedLoft = buildRpgObservation(index, before).blocked_exits.find(
+      (exit) => exit.direction === "up",
     );
+    expect(blockedLoft).toBeDefined();
+    expect(blockedLoft?.message).toMatch(
+      /only a failed-rail recovery[^]*frost splits[^]*split rail[^]*guard[^]*sound rail stays/i,
+    );
+    expect(blockedLoft?.message).not.toMatch(/brace-stake|saved stake/i);
 
     let after = reachBoundGuardAtGap();
     for (const id of ["go_south", "go_west"]) after = act(after, id);

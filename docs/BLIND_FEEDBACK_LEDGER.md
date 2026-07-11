@@ -5,19 +5,19 @@ Generated deterministically from verified blind reports. The latest entries stay
 ## Summary
 
 - Reports dir: `blind-tester/reports`
-- Accepted reports: 446
+- Accepted reports: 449
 - Rejected or ignored markdown reports: 29
-- Latest report stamp: 20260711T172504Z
+- Latest report stamp: 20260711T180840Z
 - Recent entry limit: 100
-- Archived accepted entries collapsed into traits: 346
+- Archived accepted entries collapsed into traits: 349
 
 ## Recent Common Traits
 
 | Count | Latest | Category | Trait | Sources |
 | ---: | --- | --- | --- | --- |
-| 7 | 20260711T164600Z | replay | player would not replay | wolf_winter |
+| 8 | 20260711T180340Z | replay | player would not replay | wolf_winter |
 | 4 | 20260708T213027Z | confusion | hidden counts feel gamey | overworld |
-| 4 | 20260708T211319Z | confusion | hidden counts are abstract | overworld |
+| 3 | 20260708T211319Z | confusion | hidden counts are abstract | overworld |
 | 2 | 20260708T213027Z | confusion | compact tuples require legend memory | overworld |
 | 2 | 20260708T212627Z | confusion | compact journal showed hash-like fragments | overworld |
 | 2 | 20260708T211749Z | confusion | spear described but not in inventory | overworld |
@@ -25,26 +25,29 @@ Generated deterministically from verified blind reports. The latest entries stay
 | 2 | 20260708T203156Z | confusion | hidden counts are useful but abstract | overworld |
 | 2 | 20260708T202531Z | confusion | quest tone disconnected from Albany overworld | overworld |
 | 2 | 20260708T192332Z | confusion | journal truncation shows hash-like suffixes | overworld |
-| 1 | 20260711T172504Z | bug S0 | byre_yard: Day-book's 'take old eyes' reads as a literal item clue but isn't one | wolf_winter |
-| 1 | 20260711T172504Z | bug S0 | steading_yard: 'Winter-relief packet'/'road-warden tag' bureaucratic diction tonally clashes with the archaic setting | wolf_winter |
-| 1 | 20260711T172504Z | bug S1 | byre_mouth/cattle_stand: Guarded and quick tactical lines both end in ending_held with identical 55/60 score despite... | wolf_winter |
-| 1 | 20260711T172504Z | confusion | Albany bureaucratic diction clashes with archaic wolf-siege setting | wolf_winter |
-| 1 | 20260711T172504Z | confusion | day-book 'old eyes' phrase implies a missing literal item | wolf_winter |
-| 1 | 20260711T172504Z | confusion | guarded vs quick 'two roads' converge to identical score/ending | wolf_winter |
-| 1 | 20260711T172504Z | worst moment | The 'close on her feint before it finishes' gambit against Grey, framed as a guard-dropping gamble, landed as a clean... | wolf_winter |
-| 1 | 20260711T170403Z | bug S0 | cattle_stand (ending): Crafted split_rail_guard item goes unacknowledged in the winning epilogue text. | wolf_winter |
-| 1 | 20260711T170403Z | bug S2 | byre_yard (Cade dialogue, ask_wolves vs ask_byre): Cade gives opposite tactical advice for the grey leader depending... | wolf_winter |
-| 1 | 20260711T170403Z | confusion | opening 'yearling' reads as escaped calf, not young wolf, until Cade's dialogue clarifies it | wolf_winter |
-| 1 | 20260711T170403Z | worst moment | Asking Cade both dialogue questions and getting flatly contradictory tactics for the grey-leader fight. | wolf_winter |
-| 1 | 20260711T164600Z | bug S1 | byre_door: Text says 'the store-loft hangs west above its door-post' but no west exit, open or blocked, is ever offer... | wolf_winter |
-| 1 | 20260711T164600Z | bug S2 | byre_door / byre_mouth (unprepared branch): Scene narration describes a tactical choice (funnel/wheel, hold/close) wi... | wolf_winter |
-| 1 | 20260711T164600Z | confusion | day-book hint reads like an explicit system tooltip rather than in-world counsel | wolf_winter |
-| 1 | 20260711T164600Z | confusion | store-loft 'west' exit referenced in byre_door text but never actually reachable from there | wolf_winter |
+| 1 | 20260711T180840Z | bug S1 | store (loft): loft path gated behind a rail 'split' outcome that never fired on a clean wedge success, leaving it see... | wolf_winter |
+| 1 | 20260711T180840Z | confusion | Cade's 'two roads' framed as exclusive but mechanically combinable | wolf_winter |
+| 1 | 20260711T180840Z | confusion | cross-piece gate-reinforcement option never explained since stake was already spent | wolf_winter |
+| 1 | 20260711T180840Z | confusion | loft/failed-rail route teased but never reachable | wolf_winter |
+| 1 | 20260711T180840Z | worst moment | the loft/cross-piece side-thread that dead-ends without explanation or payoff | wolf_winter |
+| 1 | 20260711T180340Z | bug S0 | Byre-Yard dialogue/day-book: Score bonuses for optional talk/read content aren't signposted | wolf_winter |
+| 1 | 20260711T180340Z | bug S0 | Store-Shed loft: Loft ladder stays blocked even after collecting the brace-stake/cross-piece it asks for; unclear if... | wolf_winter |
+| 1 | 20260711T180340Z | bug S1 | Deep in the Byre / overall pacing: No reachable failure pressure — every combat is a guaranteed one-shot win once jer... | wolf_winter |
+| 1 | 20260711T180340Z | confusion | loft/cross-piece bridge never payable off despite being teased twice | wolf_winter |
+| 1 | 20260711T180340Z | confusion | unsignposted score bonuses for optional dialogue/day-book | wolf_winter |
+| 1 | 20260711T180340Z | worst moment | Realizing after two full clears that no combat sequence ever put me at real risk of dying, despite the game's tense f... | wolf_winter |
+| 1 | 20260711T174859Z | bug S1 | store/byre_door loft branch: Optional loft path signposted twice but its reward/purpose is never surfaced on the main... | wolf_winter |
+| 1 | 20260711T174859Z | confusion | Loft path payoff never confirmed; competes with grey-leader guard resource | wolf_winter |
+| 1 | 20260711T174859Z | confusion | Rail-wedge skill-check odds not shown before commit | wolf_winter |
+| 1 | 20260711T174859Z | worst moment | Realizing mid-loft-tease that pursuing it would cost the resource I'd been saving for the final fight, with no way to... | wolf_winter |
 
 ## Recent Entries
 
 | Stamp | Source | Seed | C/E | Stuck | Replay | Report | Signal |
 | --- | --- | ---: | --- | --- | --- | --- | --- |
+| 20260711T180840Z | wolf_winter | 930018 | 5/4 | no | yes | `blind-tester/reports/20260711T180840Z_wolf_winter_seed930018.md` | confusions: loft/failed-rail route teased but never reachable; Cade's 'two roads' framed as exclusive but mechanically combinable; cross-piece gate-reinforcement optio... |
+| 20260711T180340Z | wolf_winter | 930017 | 5/3 | no | no | `blind-tester/reports/20260711T180340Z_wolf_winter_seed930017.md` | confusions: unsignposted score bonuses for optional dialogue/day-book; loft/cross-piece bridge never payable off despite being teased twice \| bugs: S1 Deep in the Byre... |
+| 20260711T174859Z | wolf_winter | 930016 | 5/4 | no | yes | `blind-tester/reports/20260711T174859Z_wolf_winter_seed930016.md` | confusions: Loft path payoff never confirmed; competes with grey-leader guard resource; Rail-wedge skill-check odds not shown before commit \| bugs: S1 store/byre_door... |
 | 20260711T172504Z | wolf_winter | 930015 | 4/4 | no | yes | `blind-tester/reports/20260711T172504Z_wolf_winter_seed930015.md` | confusions: day-book 'old eyes' phrase implies a missing literal item; Albany bureaucratic diction clashes with archaic wolf-siege setting; guarded vs quick 'two roads... |
 | 20260711T170403Z | wolf_winter | 930014 | 4/4 | no | yes | `blind-tester/reports/20260711T170403Z_wolf_winter_seed930014.md` | confusions: opening 'yearling' reads as escaped calf, not young wolf, until Cade's dialogue clarifies it \| bugs: S2 byre_yard (Cade dialogue, ask_wolves vs ask_byre):... |
 | 20260711T164600Z | wolf_winter | 930013 | 5/3 | no | no | `blind-tester/reports/20260711T164600Z_wolf_winter_seed930013.md` | confusions: unprepared-branch combat narration implies a tactical choice but only generic 'attack' is offered; store-loft 'west' exit referenced in byre_door text but... |
@@ -142,9 +145,6 @@ Generated deterministically from verified blind reports. The latest entries stay
 | 20260708T192332Z | overworld | 532 | 4/4 | no | yes | `blind-tester/reports/20260708T192332Z_overworld_seed532.md` | confusions: modern Albany lead jumps into mythic winter steading; debug-like compact journal suffixes; doubled dialogue action IDs \| bugs: S1 Wolf-Winter/Houndsman dia... |
 | 20260708T192332Z | overworld | 531 | 4/4 | no | yes | `blind-tester/reports/20260708T192332Z_overworld_seed531.md` | confusions: hidden counts show quantity but not direction; jobs are area-local and can seem to disappear; second town felt template-generated \| bugs: S0 The Wolf-Winte... |
 | 20260708T192331Z | overworld | 530 | 4/4 | no | yes | `blind-tester/reports/20260708T192331Z_overworld_seed530.md` | confusions: compact overworld jobs lack narrative texture; quest tone shifts abruptly from civic Albany to mythic winter steading; dialogue action ids expose awkward n... |
-| 20260708T192330Z | overworld | 529 | 4/4 | no | yes | `blind-tester/reports/20260708T192330Z_overworld_seed529.md` | confusions: hidden counts are abstract; road encounter fiction appears late; quest anchor tuple needs UI translation \| bugs: S1 Albany city / opening overworld: Hidden... |
-| 20260708T192330Z | overworld | 528 | 4/4 | no | yes | `blind-tester/reports/20260708T192330Z_overworld_seed528.md` | confusions: site discovered but no clear core action to use it; road encounter fiction appears after choosing; journal truncation hash looks like debug text \| bugs: S2... |
-| 20260708T192330Z | overworld | 527 | 4/4 | no | yes | `blind-tester/reports/20260708T192330Z_overworld_seed527.md` | confusions: area-scoped jobs can look like discovered jobs vanished; conversation mode temporarily hides movement actions; conditional legal-action read returned uncha... |
 
 ## Archived Trait Categories
 
@@ -157,12 +157,12 @@ Generated deterministically from verified blind reports. The latest entries stay
 | 7 | 20260708T172828Z | confusion | road encounter resolves after arrival | overworld |
 | 6 | 20260708T190118Z | confusion | awkward dialogue action ids | overworld |
 | 5 | 20260708T190728Z | confusion | dialogue action ids are awkward | overworld |
+| 4 | 20260708T192330Z | confusion | hidden counts are abstract | overworld |
 | 4 | 20260708T190728Z | bug S0 | The Wolf-Winter / compact journal: Truncated journal entries show hash-like suffixes. | overworld |
 | 4 | 20260708T183740Z | confusion | quest tone disconnected from Albany lead | overworld |
 | 4 | 20260708T153614Z | confusion | quest takes no overworld time | overworld |
 | 4 | 20260708T140614Z | confusion | saboteur falls but later is driven off | tide_mill |
 | 4 | 20260708T140200Z | bug S0 | Head-Race: choked_sluice remains visible after the race is cleared | tide_mill |
-| 3 | 20260708T192329Z | confusion | hidden counts are abstract | overworld |
 | 3 | 20260708T190730Z | confusion | completed content remains listed | overworld |
 | 3 | 20260708T190122Z | confusion | generated dialogue action ids | overworld |
 | 3 | 20260708T190115Z | confusion | completed content still appears active | overworld |

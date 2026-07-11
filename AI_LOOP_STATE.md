@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 535 -->
+<!-- historical_cycle_count: 536 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,15 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - wolf_winter_post_hunt_consequences
+
+- Feedback surface: baseline explorer 930016 (5/4, replay yes) called saving the split guard its best moment; post-change explorer 930017 (5/3, replay no) and breaker 930018 (5/4, replay yes) spent their stake at old grey, proving the coda stays optional rather than forced.
+- Content surface: saved split guard or brace-stake can now bar the inner cattle-gate in one terminal action or be carried into dawn for paling repair; equal-score choices differ in inventory, flags, journal, ending id/title, and the outcome identity exported to the overworld (`bug_0505`).
+- Regression surface: both resources fork from identical post-leader states into 60/60 gate-barred versus timber-saved outcomes; ordinary spent routes retain `ending_held`. The graph exhausts at 335,482/400k progress and 670,963/800k READ-inclusive states without raising caps.
+- Feedback compile: 449 verified reports (29 rejected), twelve Wolf reports at clarity 4.67 / enjoyment 3.67 / replay 4/12; the top compact-hash clusters remain flat historical fleet evidence contradicted by exact current projections.
+- Self-critique: PASS for a real terminal material consequence and durable outcome title, not for organic discovery—the two fresh post-change players spent their wood earlier. Repeated clean-wedge loft confusion was closed by stating that only frost-split rail opens recovery; a sound rail stays braced.
+- Guard: final crawl `20260711T181003Z` covered 6,000 steps, 8/8 Wolf rooms, 39/33 actions, and 247 overworld nodes; all three reports verify, and `npm run health` passes all 286 files / 2,020 tests and 12 packs.
 
 ### Cycle result - wolf_winter_complementary_clue_roles
 
@@ -132,11 +141,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Blind playtest: 25-run `overworld` Codex batch seeds 491-515 all exited 0; clarity 25x4/5, enjoyment 25x4/5, replay 25x true; feedback ledger now has 335 accepted reports.
 - Self-critique: first-action signposting improved but did not erase hidden-count scope confusion; completed quest/job/event listings and dialogue id/quote noise are now louder than opening-action uncertainty.
 - Guard: focused affected tests, `npm run health`, `npm run blind:feedback`, and reports `20260708T190115Z`-`20260708T190730Z` seeds 491-515 passed.
-
-### Cycle result - directional_road_event_texture
-
-- Content surface: Albany-Colonie's first-road event is now a hand-authored Thruway shoulder incident with direction-neutral prose instead of a generic one-way road report.
-- Loop effect: focused manifest/UI/MCP tests pin the direction-safe event while preserving compact/full v13 mid-route pending-road and arrival resolution behavior.
-- Blind playtest: 25-run `overworld` Codex batch seeds 466-490 all exited 0; clarity 25x4/5, enjoyment 25x4/5, replay 25x true; feedback ledger now has 310 accepted reports.
-- Self-critique: road-direction and literal "road report" complaints dropped to 0/25, with one vague-road-premise report and one residual "arrived" wording report; fresh-start hidden-count/action signposting is now the broadest starting-area issue.
-- Guard: focused affected tests, `npm run health`, `npm run blind:feedback`, and reports `20260708T183739Z`-`20260708T184424Z` seeds 466-490 passed.
