@@ -139,16 +139,15 @@ const LIVENESS_SKIP: ReadonlySet<RpgAction["type"]> = new Set([
   "INSPECT",
 ]);
 const explore = (a: RpgAction): boolean => !LIVENESS_SKIP.has(a.type);
-// The route-rich Wolf-Winter graph exhausts at 665,101 states under this policy
+// The route-rich Wolf-Winter graph exhausts at 670,963 states under this policy
 // (measured 2026-07-11). The 800k ceiling leaves bounded headroom for that verified graph
 // while preserving a loud cap-out rather than truncating a future blowup.
 const MAX_STATES = 800_000;
-// Generous per-test budget. tide_mill's bracketed graph is the heaviest in the suite (~42s
-// isolated on a fast dev box; wolf_winter ~23s), and under a loaded/shared CI runner (sibling
-// test files competing for a few vCPUs) that stretches ~3x — tide_mill's leg blew past the
-// previous 120s budget on its first CI run (PR #80). This headroom absorbs that variance
-// without loosening correctness: MAX_STATES, not the clock, bounds the work, so a genuine hang
-// still fails — just with margin. (Same rationale as vitest.config.ts's testTimeout.)
+// Generous per-test budget. The 670,963-state Wolf-Winter graph takes ~103s isolated after
+// native success-path comparisons; sibling test files competing for shared CI vCPUs can
+// stretch exhaustive work considerably. This headroom absorbs that variance without
+// loosening correctness: MAX_STATES, not the clock, bounds the work, so a genuine graph
+// blowup still fails loudly. (Same rationale as vitest.config.ts's testTimeout.)
 const TEST_TIMEOUT_MS = 300_000;
 
 // Best/worst-roll PRNGs, identical to rpg_all_endings_reachable / rpg_metamorphic_relabel.
@@ -405,10 +404,12 @@ function walkInLockStep(
     // test's formula ever drifts from the runner, it fails HERE rather than masking a real
     // divergence below.
     for (const a of origObs.available_actions) {
-      expect(
-        rpgOptionId(a.action),
-        `rpgOptionId must match the production action id at\n${ko}`,
-      ).toBe(a.id);
+      const expectedId = rpgOptionId(a.action);
+      // Keep Vitest's useful mismatch diagnostic without constructing a matcher for each of
+      // the millions of passing action-id checks in the largest shipped graph.
+      if (expectedId !== a.id) {
+        expect(expectedId, `rpgOptionId must match the production action id at\n${ko}`).toBe(a.id);
+      }
     }
 
     // Compare via a fast native equality that escalates to the authoritative assertion only on
@@ -417,7 +418,7 @@ function walkInLockStep(
     // `toEqual` divergence is necessarily an `isDeepStrictEqual` divergence and is NEVER skipped.
     // On the rare mismatch we re-assert with `toEqual` to recover its forgiving undefined/missing
     // semantics (a mere cosmetic shape delta still passes) AND to surface a readable diff. This
-    // keeps the proof exactly as strong while skipping vitest's heavy deep-compare on the ~10^5
+    // keeps the proof exactly as strong while skipping vitest's heavy deep-compare on the 670k
     // states wolf_winter reaches — the heaviest REDUCIBLE cost in this oracle (the engine stepping
     // that drives the walk is irreducible). This oracle is the suite's long pole, and the slow
     // compare was tipping it past its timeout under CI load.
@@ -441,7 +442,13 @@ function walkInLockStep(
         const ro = origStep(o, a);
         const rt = twinStep(t, ra);
         // ok-parity: a legal/illegal original step must be legal/illegal on the twin too.
-        expect(rt.ok, `twin step ok-parity for action ${JSON.stringify(a)} at\n${ko}`).toBe(ro.ok);
+        // Enter Vitest only on a mismatch; the native boolean comparison is the identical
+        // predicate on the millions of passing transitions.
+        if (rt.ok !== ro.ok) {
+          expect(rt.ok, `twin step ok-parity for action ${JSON.stringify(a)} at\n${ko}`).toBe(
+            ro.ok,
+          );
+        }
         if (ro.ok && rt.ok) stack.push({ o: ro.state, t: rt.state });
       }
     }

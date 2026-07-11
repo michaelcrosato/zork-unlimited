@@ -22,7 +22,8 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Regression surface: both resources fork from identical post-leader states into 60/60 gate-barred versus timber-saved outcomes; ordinary spent routes retain `ending_held`. The graph exhausts at 335,482/400k progress and 670,963/800k READ-inclusive states without raising caps.
 - Feedback compile: 449 verified reports (29 rejected), twelve Wolf reports at clarity 4.67 / enjoyment 3.67 / replay 4/12; the top compact-hash clusters remain flat historical fleet evidence contradicted by exact current projections.
 - Self-critique: PASS for a real terminal material consequence and durable outcome title, not for organic discovery—the two fresh post-change players spent their wood earlier. Repeated clean-wedge loft confusion was closed by stating that only frost-split rail opens recovery; a sound rail stays braced.
-- Guard: final crawl `20260711T181003Z` covered 6,000 steps, 8/8 Wolf rooms, 39/33 actions, and 247 overworld nodes; all three reports verify, and `npm run health` passes all 286 files / 2,020 tests and 12 packs.
+- CI follow-through: replaced quadratic exhaustive-BFS dequeues and 6.5M success-path matcher allocations without changing traversal, state caps, or assertions; exact 665,101-state score and 670,963-state relabel proofs now pass isolated in 58s / 103s.
+- Guard: final crawl `20260711T235321Z` covered 6,000 steps, 8/8 Wolf rooms, 39/33 actions, and 247 overworld nodes; all three reports verify, and `npm run health` passes all 293 files / 2,062 tests and 12 packs.
 
 ### Cycle result - wolf_winter_complementary_clue_roles
 
