@@ -7,7 +7,7 @@
   "description": "AdventureForge web UI: a React view over the headless, deterministic engine.",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build && node scripts/inline-dist.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

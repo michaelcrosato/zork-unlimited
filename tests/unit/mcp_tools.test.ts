@@ -807,7 +807,8 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(repeatedResolved.result.discoveredJobs).toEqual([]);
     expect(repeatedResolved.result.discoveredSites).toEqual([]);
     expect(repeatedResolved.result.discoveredQuests).toEqual([]);
-    expect(repeatedResolved.snapshot_hash).toBe(resolved.snapshot_hash);
+    expect(repeatedResolved.snapshot_hash).not.toBe(resolved.snapshot_hash);
+    expect(repeatedResolved.journey.acceptedDecisions).toBe(resolved.journey.acceptedDecisions + 1);
 
     const road = resolved.observation.exits.find((edge) => edge.destination.id === "colonie_town");
     expect(road).toBeTruthy();
@@ -973,6 +974,9 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(ended.observation.ended).toBe(true);
     expect(ended.observation.ending_id).toBe("ending_victory");
     expect(ended.state_hash).toBe(publicRpgStateHash(fullEndedStateHash));
+    const endedOverworldSnapshotHash = ended.overworld_snapshot_hash;
+    expect(endedOverworldSnapshotHash).toMatch(PUBLIC_OVERWORLD_SNAPSHOT_HASH_RE);
+    if (!endedOverworldSnapshotHash) throw new Error("expected embedded overworld snapshot hash");
 
     const staleCompletion = a.complete_overworld_session_quest({
       ...FULL_OVERWORLD_RESPONSE,
@@ -990,7 +994,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
       ...FULL_OVERWORLD_RESPONSE,
       session_id: started.session_id,
       rpg_session_id: launched.rpg_session_id,
-      expected_snapshot_hash: launched.snapshot_hash,
+      expected_snapshot_hash: endedOverworldSnapshotHash,
       expected_rpg_state_hash: launched.rpg_session.state_hash,
     });
     expect(staleRpgCompletion.ok).toBe(false);
@@ -1008,7 +1012,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
 
     const launchedSnapshot = a.export_overworld_session({
       session_id: started.session_id,
-      expected_snapshot_hash: launched.snapshot_hash,
+      expected_snapshot_hash: endedOverworldSnapshotHash,
     });
     expect(launchedSnapshot.ok).toBe(true);
     if (!launchedSnapshot.ok) throw new Error("expected launched snapshot export");
@@ -1016,7 +1020,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
       ...FULL_OVERWORLD_RESPONSE,
       session_id: started.session_id,
       rpg_session_id: launched.rpg_session_id,
-      expected_snapshot_hash: launched.snapshot_hash,
+      expected_snapshot_hash: endedOverworldSnapshotHash,
       expected_rpg_state_hash: fullEndedStateHash,
     });
     expect(completed.ok).toBe(true);
@@ -1712,6 +1716,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(unchangedExport).toEqual({
       snapshot_hash: exported.snapshot_hash,
       unchanged: true,
+      journey: exported.journey,
     });
     expect("ok" in unchangedExport).toBe(false);
     expect("session_id" in unchangedExport).toBe(false);
@@ -2020,7 +2025,8 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(repeated.result.discoveredJobs).toEqual([]);
     expect(repeated.result.discoveredSites).toEqual([]);
     expect(repeated.result.discoveredQuests).toEqual([]);
-    expect(repeated.snapshot_hash).toBe(explored.snapshot_hash);
+    expect(repeated.snapshot_hash).not.toBe(explored.snapshot_hash);
+    expect(repeated.journey.acceptedDecisions).toBe(explored.journey.acceptedDecisions + 1);
   });
 
   it("completes a regional arc through stateful MCP overworld play", () => {

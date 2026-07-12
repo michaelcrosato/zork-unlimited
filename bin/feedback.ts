@@ -2,7 +2,7 @@
 /**
  * bin/feedback — CLI front end for the feedback compiler (Task 16): compiles
  * verified blind-tester reports + crawler findings into ranked
- * `hotspots.json` / `hotspots.md`.
+ * `hotspots.json` / `hotspots.md` plus the mode-separated `retention.json`.
  *
  * Usage:
  *   npm run feedback:compile -- [--in <path>]... [--out <dir>] [--top K]
@@ -133,18 +133,25 @@ function main(): void {
     prevDir: parsed.prevDir,
   };
 
-  const { file, jsonPath, mdPath } = compileFeedback(opts);
+  const { file, evidence, jsonPath, mdPath, retentionPath } = compileFeedback(opts);
 
   console.log(
     `feedback:compile — ${file.inputs.verified_reports} verified reports ` +
       `(${file.inputs.rejected_reports} rejected), ${file.inputs.crawl_findings} crawl findings, ` +
       `${file.hotspots.length} hot spots.`,
   );
+  console.log(
+    `Retention evidence: ${evidence.pure_retention.eligible_reports} pure exits, ` +
+      `${evidence.pure_retention.continued_reports} continued at least once; ` +
+      `other verified modes: ${evidence.report_modes.structural} structural, ` +
+      `${evidence.report_modes.legacy_guided} legacy-guided.`,
+  );
   if (file.recommended_next_fix) {
     console.log(`Recommended next fix: ${file.recommended_next_fix.hotspot_id}`);
   }
   console.log(`Wrote ${jsonPath}`);
   console.log(`Wrote ${mdPath}`);
+  console.log(`Wrote ${retentionPath}`);
 }
 
 try {

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { createInitialJourneyContractSnapshot } from "../../src/world/journey_contract.js";
 import {
   OVERWORLD_SESSION_SAVE_VERSION,
   OverworldSessionSnapshotSchema,
@@ -60,6 +61,7 @@ function baseSnapshot(): OverworldSessionSnapshot {
     regionRenown: [["Capital / Mohawk", 1]],
     completedRegionalArcIds: [],
     pendingRoadEncounter: { edgeId: "road:albany:colonie" },
+    journey: createInitialJourneyContractSnapshot(),
   };
 }
 
@@ -122,6 +124,7 @@ describe("overworld session snapshots", () => {
     clone.journalEntries[0]!.title = "Changed";
     clone.regionRenown[0]![1] = 9;
     clone.pendingRoadEncounter!.edgeId = "changed_road";
+    clone.journey.goal.status = "completed";
 
     expect(snapshot.discoveredIds).toEqual(["albany_city"]);
     expect(snapshot.currentAreaByTown[0]).toEqual(["albany_city", "albany_capitol_hill"]);
@@ -129,6 +132,7 @@ describe("overworld session snapshots", () => {
     expect(snapshot.journalEntries[0]?.title).toBe("Capitol Hill");
     expect(snapshot.regionRenown[0]).toEqual(["Capital / Mohawk", 1]);
     expect(snapshot.pendingRoadEncounter?.edgeId).toBe("road:albany:colonie");
+    expect(snapshot.journey.goal.status).toBe("active");
   });
 
   it("clones journal entries independently", () => {

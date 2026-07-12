@@ -4,6 +4,7 @@ import { exitFlag } from "../core/effects.js";
 import { SaveIntegrityError } from "../persist/save_load.js";
 import type { RpgIndex } from "./runner.js";
 import { ATTACK_VAR, DEFENSE_VAR, HP_VAR, SCORE_VAR, enemyHpVar } from "./schema.js";
+import { maneuverChildren, maneuverParent, rootManeuvers } from "./maneuver_sequence.js";
 
 /**
  * Collect item ids that can legitimately enter inventory through authored effects.
@@ -224,6 +225,43 @@ export function assertRpgStateReferences(index: RpgIndex, state: GameState): voi
   }
   for (const enemy of index.pack.enemies) {
     if (enemy.defeat_flag !== undefined) addBooleanRuntimeTarget(flags, enemy.defeat_flag, true);
+    for (const maneuver of enemy.maneuvers ?? []) {
+      // MANEUVER writes its one-shot result flag implicitly in the runner, so
+      // pack-aware save validation must recognize the same true value even
+      // though there is no authored set_flag effect to discover recursively.
+      addBooleanRuntimeTarget(flags, maneuver.result_flag, true);
+    }
+    const committedRoots = rootManeuvers(enemy).filter(
+      (maneuver) => state.flags[maneuver.result_flag] === true,
+    );
+    if (committedRoots.length > 1) {
+      throw new SaveIntegrityError(
+        `Save commits multiple opening maneuvers for enemy "${enemy.id}" (${committedRoots
+          .map((maneuver) => `"${maneuver.id}"`)
+          .join(", ")}).`,
+      );
+    }
+    for (const parent of rootManeuvers(enemy)) {
+      const committedChildren = maneuverChildren(enemy, parent.id).filter(
+        (maneuver) => state.flags[maneuver.result_flag] === true,
+      );
+      if (committedChildren.length > 1) {
+        throw new SaveIntegrityError(
+          `Save commits multiple follow-through maneuvers after "${parent.id}" on enemy "${enemy.id}" (${committedChildren
+            .map((maneuver) => `"${maneuver.id}"`)
+            .join(", ")}).`,
+        );
+      }
+    }
+    for (const maneuver of enemy.maneuvers ?? []) {
+      if (maneuver.after === undefined || state.flags[maneuver.result_flag] !== true) continue;
+      const parent = maneuverParent(enemy, maneuver);
+      if (parent === undefined || state.flags[parent.result_flag] !== true) {
+        throw new SaveIntegrityError(
+          `Save commits follow-through maneuver "${maneuver.id}" on enemy "${enemy.id}" without its opening "${maneuver.after}".`,
+        );
+      }
+    }
     const key = enemyHpVar(enemy.id);
     vars.add(key);
     enemyHpVars.set(key, enemy.hp);

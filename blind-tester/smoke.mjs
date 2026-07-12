@@ -92,7 +92,7 @@ async function main() {
   // MCP config uses, so packs resolve relative to the project root.
   const transport = new StdioClientTransport({
     command: "npm",
-    args: ["--silent", "run", "mcp"],
+    args: ["--silent", "run", "mcp", "--", "--play-mode", "structural"],
     cwd: GAME_DIR,
     stderr: "inherit",
   });

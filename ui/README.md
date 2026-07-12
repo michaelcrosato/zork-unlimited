@@ -11,14 +11,23 @@ RPG `View`.
 
 ## Run
 
+No terminal needed: double-click `PLAY.bat` at the repo root — it rebuilds and
+opens the game in the default browser.
+
 ```bash
 cd ui
 npm install
 npm run dev      # http://localhost:5173
-npm run build    # production bundle in ui/dist
+npm run build    # single-file bundle in ui/dist (see below)
 ```
 
 From the repo root you can also use `npm run ui:dev` / `npm run ui:build`.
+
+The production build is a **single self-contained `ui/dist/index.html`**:
+`scripts/inline-dist.mjs` runs after `vite build` and folds the JS and CSS into
+the page, because browsers refuse external module scripts on `file://` and the
+whole point is a double-clickable file. Content is already bundled at build
+time (see below), so nothing else is needed at runtime.
 
 ## How it stays honest
 

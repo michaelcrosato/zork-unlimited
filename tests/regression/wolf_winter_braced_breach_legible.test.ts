@@ -9,7 +9,7 @@
  * the skill check passed, set a flag, and the world never acknowledged it — so the
  * "slow what tries to come through it" affordance over-promised and the invested turn
  * had no visible consequence. The design DELIBERATELY keeps the wedge stat-neutral to
- * protect the cumulative-HP guarantee tuning (atk7/def5/hp30, worst 25 < 30); the cure
+ * protect the cumulative-HP guarantee tuning (atk7/def5/hp30, maneuver-aware worst 28 < 30); the cure
  * was therefore NOT a stat/score change but making `breach_braced` drive §7.3 reactive
  * prose on the paling_gap room AND the paling_rail object, so a player who spends the
  * turn SEES the half-shut breach and the one-throat funnel old Cade promised.

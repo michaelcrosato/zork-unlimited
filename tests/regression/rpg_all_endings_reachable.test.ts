@@ -71,9 +71,12 @@ const packFiles = readdirSync(PACK_DIR)
 
 // Same backstop as the CYOA/parser suites. The RPG search adds a bounded combat lattice
 // (reachable (playerHP, enemyHP) pairs over the two roll regimes) on top of the parser
-// state space; both shipped packs settle well under this. The cap exists only so a future
-// blowup fails loudly (cap hit) rather than hanging or silently truncating.
-const MAX_STATES = 200_000;
+// state space. The route-rich Wolf-Winter graph exhausts at 335,482 states
+// (measured 2026-07-11); this ceiling leaves bounded headroom while a future blowup still
+// fails loudly (cap hit) rather than hanging or silently truncating.
+const MAX_STATES = 400_000;
+// The measured Wolf-Winter graph takes ~84s under the exhaustive-suite contention run.
+const SOLVER_TEST_TIMEOUT_MS = 120_000;
 
 /**
  * A fixed-sequence PRNG: each draw consumes the next fraction in `fracs` (the last value
@@ -144,50 +147,54 @@ describe("every declared ending of every RPG pack is reachable by concrete play"
   });
 
   for (const file of packFiles) {
-    it(`${file}: the exhaustive solver reaches every declared ending`, () => {
-      const path = join(PACK_DIR, file);
-      const loaded = loadRpgSourceFile(path);
-      expect(loaded.ok).toBe(true);
-      if (!loaded.ok) return;
-      const pack = loaded.compiled.pack;
+    it(
+      `${file}: the exhaustive solver reaches every declared ending`,
+      () => {
+        const path = join(PACK_DIR, file);
+        const loaded = loadRpgSourceFile(path);
+        expect(loaded.ok).toBe(true);
+        if (!loaded.ok) return;
+        const pack = loaded.compiled.pack;
 
-      const declared = new Set(pack.endings.map((e) => e.id));
-      // Guard: a pack with no declared endings would also pass vacuously.
-      expect(declared.size).toBeGreaterThan(0);
+        const declared = new Set(pack.endings.map((e) => e.id));
+        // Guard: a pack with no declared endings would also pass vacuously.
+        expect(declared.size).toBeGreaterThan(0);
 
-      // Load-bearing assumption guard: the best/worst-roll bracket is complete only when no
-      // route gates on a raw HP value. If a pack ever does, this fails loudly so the solver
-      // is extended (branch the HP) rather than silently under-reporting reachability.
-      expect(
-        readsHpInCondition(pack),
-        `pack gates a condition on an HP var — the best/worst-roll reachability bracket ` +
-          `assumes no HP-gated routing; extend the RPG solver to branch HP before trusting it`,
-      ).toBe(false);
+        // Load-bearing assumption guard: the best/worst-roll bracket is complete only when no
+        // route gates on a raw HP value. If a pack ever does, this fails loudly so the solver
+        // is extended (branch the HP) rather than silently under-reporting reachability.
+        expect(
+          readsHpInCondition(pack),
+          `pack gates a condition on an HP var — the best/worst-roll reachability bracket ` +
+            `assumes no HP-gated routing; extend the RPG solver to branch HP before trusting it`,
+        ).toBe(false);
 
-      const index = indexRpgPack(pack);
-      const start: GameState = initStateForRpgPack(index, 7);
-      const ruleSets = [buildRpgRules(index, bestRng), buildRpgRules(index, worstRng)];
-      const { reached, states, cappedOut } = exhaustiveEndingsMulti(ruleSets, start, MAX_STATES);
+        const index = indexRpgPack(pack);
+        const start: GameState = initStateForRpgPack(index, 7);
+        const ruleSets = [buildRpgRules(index, bestRng), buildRpgRules(index, worstRng)];
+        const { reached, states, cappedOut } = exhaustiveEndingsMulti(ruleSets, start, MAX_STATES);
 
-      // The search must have actually completed — a cap-out leaves the result unproven over
-      // the unexplored region.
-      expect(cappedOut, `state-space search hit the ${MAX_STATES} cap (explored ${states})`).toBe(
-        false,
-      );
-      // At least one ending fires — the pack is finishable, not a dead walk.
-      expect(reached.size).toBeGreaterThan(0);
-      // Ground truth: every declared ending is dynamically reachable...
-      const missing = [...declared].filter((e) => !reached.has(e));
-      expect(
-        missing,
-        `declared endings never reached by concrete play: ${missing.join(", ")}`,
-      ).toEqual([]);
-      // ...and no ending fires that the pack never declared (dangling end target).
-      const undeclared = [...reached].filter((e) => !declared.has(e));
-      expect(
-        undeclared,
-        `reached endings not declared in pack.endings: ${undeclared.join(", ")}`,
-      ).toEqual([]);
-    });
+        // The search must have actually completed — a cap-out leaves the result unproven over
+        // the unexplored region.
+        expect(cappedOut, `state-space search hit the ${MAX_STATES} cap (explored ${states})`).toBe(
+          false,
+        );
+        // At least one ending fires — the pack is finishable, not a dead walk.
+        expect(reached.size).toBeGreaterThan(0);
+        // Ground truth: every declared ending is dynamically reachable...
+        const missing = [...declared].filter((e) => !reached.has(e));
+        expect(
+          missing,
+          `declared endings never reached by concrete play: ${missing.join(", ")}`,
+        ).toEqual([]);
+        // ...and no ending fires that the pack never declared (dangling end target).
+        const undeclared = [...reached].filter((e) => !declared.has(e));
+        expect(
+          undeclared,
+          `reached endings not declared in pack.endings: ${undeclared.join(", ")}`,
+        ).toEqual([]);
+      },
+      SOLVER_TEST_TIMEOUT_MS,
+    );
   }
 });

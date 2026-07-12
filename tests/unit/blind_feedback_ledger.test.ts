@@ -6,6 +6,7 @@ import {
   buildBlindFeedbackLedger,
   renderBlindFeedbackLedgerMarkdown,
 } from "../../src/blind/feedback_ledger.js";
+import { hashState } from "../../src/core/hash.js";
 
 function report(interviewJson: string): string {
   return `
@@ -108,6 +109,79 @@ describe("blind feedback ledger", () => {
       expect(markdown).toContain("Latest report stamp: none");
       expect(markdown).toContain("No accepted feedback entries yet.");
       expect(markdown).not.toContain(new Date().getFullYear().toString());
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("requires a matching verified sidecar before counting V2 pure retention evidence", () => {
+    const root = mkdtempSync(join(tmpdir(), "af-feedback-ledger-pure-"));
+    try {
+      const reports = join(root, "blind-tester", "reports");
+      mkdirSync(reports, { recursive: true });
+      const payload = {
+        contractVersion: 1,
+        exitReason: "player_ended_at_choice",
+        goalVersion: 1,
+        goalId: "albany_local_lead",
+        goalStatus: "active",
+        acceptedDecisions: 40,
+        exitReasons: ["checkpoint"],
+        checkpoint: 40,
+        decisionProofHash: "a".repeat(64),
+        retentionHistory: [
+          {
+            sequence: 1,
+            atDecision: 40,
+            reasons: ["checkpoint"],
+            checkpoint: 40,
+            choice: "end",
+            decisionProofHash: "a".repeat(64),
+          },
+        ],
+      };
+      const receipt = { ...payload, receiptHash: hashState(payload) };
+      const reportPath = join(reports, "20260708T140000Z_overworld_seed5.md");
+      writeFileSync(
+        reportPath,
+        report(
+          interview({
+            schema_version: 2,
+            play_mode: "pure",
+            start_surface: "fresh_overworld",
+            retention_eligible: true,
+            journey_exit_receipt: receipt,
+          }),
+        ),
+      );
+
+      const withoutSidecar = buildBlindFeedbackLedger(reports, { cwd: root });
+      expect(withoutSidecar.accepted_reports).toBe(0);
+      expect(withoutSidecar.rejected_reports).toBe(1);
+
+      writeFileSync(
+        reportPath.replace(/\.md$/, ".run.json"),
+        JSON.stringify({
+          schema_version: 1,
+          report_schema_version: 2,
+          play_mode: "pure",
+          start_surface: "fresh_overworld",
+          retention_eligible: true,
+          evidence_status: "verified",
+          session_id: "ow-ledger",
+          receipt,
+        }),
+      );
+      const withSidecar = buildBlindFeedbackLedger(reports, { cwd: root });
+      expect(withSidecar.accepted_reports).toBe(1);
+      expect(withSidecar.rejected_reports).toBe(0);
+      expect(withSidecar.recent_entries[0]).toMatchObject({
+        play_mode: "pure",
+        start_surface: "fresh_overworld",
+        retention_eligible: true,
+        accepted_decisions: 40,
+        exit_reason: "player_ended_at_choice",
+      });
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

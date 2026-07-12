@@ -4,8 +4,15 @@ import {
   type OverworldCompactView,
 } from "../world/compact_view.js";
 import type { OverworldManifest } from "../world/overworld.js";
+import { freshGameTutorial, type FreshGameTutorial } from "../world/fresh_game_tutorial.js";
 import { OverworldSession, type OverworldSessionSnapshot } from "../world/session.js";
 import type { OverworldView } from "../world/session_view.js";
+
+export type OverworldMcpJourney = ReturnType<OverworldSession["journey"]>;
+
+export type OverworldMcpJourneyField = {
+  journey: OverworldMcpJourney;
+};
 
 export const OVERWORLD_SNAPSHOT_HASH_MISMATCH_REASON =
   "Snapshot hash mismatch; refresh the current overworld context.";
@@ -53,9 +60,12 @@ export type OverworldMcpViewField<Args extends OverworldMcpResponseOptions> = Ar
 export type OverworldMcpStartResponse<Args extends OverworldMcpResponseOptions> = {
   session_id: string;
   snapshot_hash: string;
+  /** One-time orientation for this genuinely fresh game. */
+  tutorial: FreshGameTutorial;
   /** Field guide for the compact context; sent only on session-creating responses. */
   legend?: OverworldCompactLegend;
-} & OverworldMcpViewField<Args>;
+} & OverworldMcpJourneyField &
+  OverworldMcpViewField<Args>;
 
 export type OverworldMcpRestoreResponse<Args extends OverworldMcpResponseOptions> = {
   ok: true;
@@ -63,13 +73,14 @@ export type OverworldMcpRestoreResponse<Args extends OverworldMcpResponseOptions
   snapshot_hash: string;
   /** Field guide for the compact context; sent only on session-creating responses. */
   legend?: OverworldCompactLegend;
-} & OverworldMcpViewField<Args>;
+} & OverworldMcpJourneyField &
+  OverworldMcpViewField<Args>;
 
 type OverworldMcpSessionPayload<Key extends string, Value> = {
   ok: true;
   session_id: string;
   snapshot_hash: string;
-} & { [P in Key]: Value };
+} & OverworldMcpJourneyField & { [P in Key]: Value };
 
 type OverworldMcpGuardedRejection<Args extends OverworldMcpResponseOptions> = Args extends {
   expected_snapshot_hash: string;
@@ -101,7 +112,7 @@ export type OverworldMcpSessionEntry = {
 export type OverworldMcpReadUnchanged = {
   snapshot_hash: string;
   unchanged: true;
-};
+} & OverworldMcpJourneyField;
 
 export type OverworldMcpReadArgs = {
   session_id: string;
@@ -117,7 +128,7 @@ export type OverworldMcpFullReadPayload = {
   session_id: string;
   snapshot_hash: string;
   observation: OverworldView;
-};
+} & OverworldMcpJourneyField;
 
 type OverworldMcpReadSessionIdField<Args extends Pick<OverworldMcpReadArgs, "include_session_id">> =
   Args extends {
@@ -132,7 +143,8 @@ export type OverworldMcpContextPayload<
   ok: true;
   snapshot_hash: string;
   context: OverworldMcpCompactContext;
-} & OverworldMcpReadSessionIdField<Args>;
+} & OverworldMcpJourneyField &
+  OverworldMcpReadSessionIdField<Args>;
 
 type OverworldMcpReadPayload<Args extends OverworldMcpReadArgs> = Args extends {
   include_observation: true;
@@ -156,7 +168,7 @@ export type OverworldMcpRejectedSessionPayload = {
   ok: false;
   snapshot_hash: string;
   rejection_reason: string;
-};
+} & OverworldMcpJourneyField;
 
 export type OverworldMcpGuardedSession =
   | OverworldMcpSessionEntry
@@ -173,7 +185,7 @@ export type OverworldMcpExportSuccess = {
   session_id: string;
   snapshot_hash: string;
   snapshot: OverworldSessionSnapshot;
-};
+} & OverworldMcpJourneyField;
 
 export const OVERWORLD_MCP_SESSION_STORE_LIMIT = 64;
 
@@ -254,11 +266,13 @@ function overworldCompactReadPayload<Args extends OverworldMcpReadArgs>(
   args: Args,
   snapshotHash: string,
   context: OverworldMcpCompactContext,
+  journey: OverworldMcpJourney,
 ): OverworldMcpContextPayload<Args> {
   return {
     ok: true,
     ...(args.include_session_id === true ? { session_id: args.session_id } : {}),
     snapshot_hash: publicOverworldSnapshotHash(snapshotHash),
+    journey,
     context,
   } as OverworldMcpContextPayload<Args>;
 }
@@ -291,20 +305,26 @@ export function overworldSnapshotHashMatches(expectedSnapshotHash: string, snaps
   );
 }
 
-export function overworldReadUnchanged(snapshotHash: string): OverworldMcpReadUnchanged {
+export function overworldReadUnchanged(
+  snapshotHash: string,
+  journey: OverworldMcpJourney,
+): OverworldMcpReadUnchanged {
   return {
     snapshot_hash: publicOverworldSnapshotHash(snapshotHash),
     unchanged: true,
+    journey,
   };
 }
 
 export function overworldSnapshotHashRejection(
   snapshotHash: string,
+  journey: OverworldMcpJourney,
 ): OverworldMcpRejectedSessionPayload {
   return {
     ok: false,
     snapshot_hash: publicOverworldSnapshotHash(snapshotHash),
     rejection_reason: OVERWORLD_SNAPSHOT_HASH_MISMATCH_REASON,
+    journey,
   };
 }
 
@@ -363,7 +383,7 @@ export class OverworldMcpSessionStore {
       args.expected_snapshot_hash !== undefined &&
       !overworldSnapshotHashMatches(args.expected_snapshot_hash, snapshotHash)
     ) {
-      return overworldSnapshotHashRejection(snapshotHash);
+      return overworldSnapshotHashRejection(snapshotHash, session.journey());
     }
     return { session_id: sessionId, session };
   }
@@ -387,11 +407,13 @@ export class OverworldMcpSessionStore {
     return {
       session_id: created.session_id,
       snapshot_hash: this.snapshotHash(created.session),
+      tutorial: freshGameTutorial(),
+      journey: created.session.journey(),
       // The legend rides only on session-creating responses (here and in
       // restoreResponse), keeping every subsequent per-action payload lean.
       ...(args.compact_context === true ? { legend: OVERWORLD_COMPACT_LEGEND } : {}),
       ...this.viewField(args, created.session),
-    } as OverworldMcpStartResponse<Args>;
+    } as unknown as OverworldMcpStartResponse<Args>;
   }
 
   restoreResponse<Args extends OverworldMcpResponseOptions>(
@@ -403,9 +425,10 @@ export class OverworldMcpSessionStore {
       ok: true,
       session_id: restored.session_id,
       snapshot_hash: this.snapshotHash(restored.session),
+      journey: restored.session.journey(),
       ...(args.compact_context === true ? { legend: OVERWORLD_COMPACT_LEGEND } : {}),
       ...this.viewField(args, restored.session),
-    } as OverworldMcpRestoreResponse<Args>;
+    } as unknown as OverworldMcpRestoreResponse<Args>;
   }
 
   read<Args extends OverworldMcpReadArgs>(args: Args): OverworldMcpReadResponse<Args> {
@@ -415,18 +438,23 @@ export class OverworldMcpSessionStore {
       args.if_snapshot_hash !== undefined &&
       overworldSnapshotHashMatches(args.if_snapshot_hash, snapshotHash)
     ) {
-      return overworldReadUnchanged(snapshotHash) as OverworldMcpReadResponse<Args>;
+      return overworldReadUnchanged(
+        snapshotHash,
+        session.journey(),
+      ) as OverworldMcpReadResponse<Args>;
     }
     if (args.include_observation !== true) {
       return overworldCompactReadPayload(
         args,
         snapshotHash,
         projectOverworldCompactContext(session.compactView(), args),
+        session.journey(),
       ) as OverworldMcpReadResponse<Args>;
     }
     return {
       session_id: args.session_id,
       snapshot_hash: publicOverworldSnapshotHash(snapshotHash),
+      journey: session.journey(),
       observation: session.view(),
     } as OverworldMcpReadResponse<Args>;
   }
@@ -438,12 +466,16 @@ export class OverworldMcpSessionStore {
       args.if_snapshot_hash !== undefined &&
       overworldSnapshotHashMatches(args.if_snapshot_hash, snapshotHash)
     ) {
-      return overworldReadUnchanged(snapshotHash) as OverworldMcpContextResponse<Args>;
+      return overworldReadUnchanged(
+        snapshotHash,
+        session.journey(),
+      ) as OverworldMcpContextResponse<Args>;
     }
     return overworldCompactReadPayload(
       args,
       snapshotHash,
       projectOverworldCompactContext(session.compactView(), args),
+      session.journey(),
     ) as OverworldMcpContextResponse<Args>;
   }
 
@@ -460,12 +492,16 @@ export class OverworldMcpSessionStore {
       args.if_snapshot_hash !== undefined &&
       overworldSnapshotHashMatches(args.if_snapshot_hash, snapshotHash)
     ) {
-      return overworldReadUnchanged(snapshotHash) as OverworldMcpExportResponse<Args>;
+      return overworldReadUnchanged(
+        snapshotHash,
+        session.journey(),
+      ) as OverworldMcpExportResponse<Args>;
     }
     return {
       ok: true,
       session_id: args.session_id,
       snapshot_hash: publicOverworldSnapshotHash(snapshotHash),
+      journey: session.journey(),
       snapshot: session.snapshot(),
     } as OverworldMcpExportResponse<Args>;
   }
@@ -489,6 +525,7 @@ export class OverworldMcpSessionStore {
       ok: true,
       session_id: sessionId,
       snapshot_hash: this.snapshotHash(session),
+      journey: session.journey(),
       [key]: responseValue,
       ...this.viewField(args, session),
     } as unknown as OverworldMcpSessionResponse<Key, Value, Args, CompactValue>;

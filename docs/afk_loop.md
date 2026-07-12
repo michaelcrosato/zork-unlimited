@@ -19,8 +19,8 @@ loop.sh  (outer driver — orchestration + the bar)
 │     Compiled feedback hot spots (docs/testing_pyramid.md), when present, are
 │     a primary input to the ranking.
 │     Emits: ai-runs/<id>/{assessment.md, prompt.md} plus latest-cycle.json at
-│     the ai-runs/ root (which records the quest/source to playtest and where
-│     the playtest report must go).
+│     the ai-runs/ root (which records the improvement source, fresh-overworld
+│     playtest contract, and where the playtest report must go).
 │
 ├─ 2. CRAWL GATE (pre)   npm run crawl:smoke — Tier 1 of the testing pyramid.
 │     Must be green before the agent touches anything; red here means the
@@ -28,17 +28,18 @@ loop.sh  (outer driver — orchestration + the bar)
 │
 ├─ 3. WORK          the operating agent (claude -p / codex exec / Agent tool)
 │     Reads the cycle prompt and:
-│       a. MANDATORY LLM PLAYTEST — spawns a fresh, no-context subagent that plays
-│          the cycle's target — the CORE GAME (overworld fresh start; the baseline
-│          for engine/repo cycles and the default `npm run blind`) or one targeted
-│          quest — purely through the mcp__adventureforge__* tools
-│          (docs/blind_playtest_protocol.md) and writes a structured report
-│          (route, mechanics, clarity 1-5, enjoyment 1-5, findings, verdict, and
-│          the mandatory fenced json exit-interview block — reports without a
-│          schema-valid block are rejected by src/blind/report_verifier.ts) to
-│          the path in latest-cycle.json. This is the per-cycle quality signal.
-│          Milestone/harvest cycles run `npm run fleet -- --count N` instead of a
-│          single blind pass (docs/testing_pyramid.md).
+│       a. MANDATORY PURE LLM PLAYTEST — spawns a fresh, no-context player in a
+│          brand-new CORE GAME overworld session, with only the human tutorial,
+│          goal, state, legal choices, decision/checkpoint status, and consequences
+│          exposed through player MCP tools. The harness supplies transport syntax
+│          but no route, coverage target, solution, or test-only stopping rule.
+│          The game itself offers continue/end at goal completion and fixed
+│          decision checkpoints; the harness interviews only after confirmed end.
+│          Server evidence and the V2 receipt are independently cross-checked
+│          (docs/blind_playtest_protocol.md). Direct quest starts and crawler/
+│          smoke/mock modes are structural QA, never pure retention evidence.
+│          Milestone/harvest cycles run `npm run fleet -- --count 100` instead of
+│          a single pure player (docs/testing_pyramid.md).
 │       b. ONE improvement — content edit / apply_content_patch, or an engine/repo
 │          change (full authority; new mechanics need no §14 ceremony, but stay
 │          verified). Bugs get a traces/bugs/ artifact + a tests/regression/ test.
@@ -59,8 +60,10 @@ loop.sh  (outer driver — orchestration + the bar)
 │       require_playtest_record    (no blind-playtest report ⇒ no commit)
 │
 ├─ 6. COMPILE (as needed)   when ≥3 new verified reports exist since the last
-│     compile: npm run feedback:compile → ai-runs/feedback/<ts>/hotspots.{json,md}
-│     (Tier 3 of the testing pyramid), which the NEXT cycle's ASSESS step reads.
+│     compile: npm run feedback:compile → ai-runs/feedback/<ts>/{hotspots.json,
+│     hotspots.md,retention.json}. Tier 3 keeps structural/legacy experience
+│     evidence separate from sidecar-verified pure continuation choices; the
+│     NEXT cycle's ASSESS step reads the ranked hot spots.
 │
 └─ 7. COMMIT/PUSH   git add -A && commit (scope is free — trust; but only after the
        bar passed — verify). Both are env-gated: AI_LOOP_COMMIT=1 to commit,
@@ -140,8 +143,9 @@ fourth piece of the reviewer subagent contract — _objective · output format �
   see docs/testing_pyramid.md.** Dev tests (validators + exhaustive solver) prove
   _structure_ (every ending reachable, no soft-locks, sound scoring); the mechanical
   crawler (`crawl:smoke`/`crawl:deep`) sweeps every quest and the overworld for
-  mechanical defects with zero LLM cost; a reasoning agent playing blind measures
-  the _experience_ (clarity, fun, confusing branches), and the feedback compiler
+  mechanical defects with zero LLM cost; a reasoning agent playing the same
+  game-native contract as a human measures the _experience_, including its real
+  continue/end retention choice, and the feedback compiler
   turns both crawler findings and blind reports into ranked hot spots. The loop
   makes the blind playtest mandatory every cycle and the crawl gate mandatory
   around every change — together they're the feedback that actually improves the
@@ -160,9 +164,10 @@ npm run loop:status     # project-scoped status (breaker/velocity telemetry need
 npm run loop:stop       #   a wrapper log: ./loop.sh 2>&1 | tee ai-runs/wrapper.log)
 
 npm run crawl:smoke               # the crawl gate itself, run standalone (docs/testing_pyramid.md)
-npm run fleet -- --count 20       # milestone/harvest-cycle blind fleet (real tokens)
-npm run fleet:mock -- --count 2   # zero-token fleet dry run
-npm run feedback:compile          # compile verified reports + crawl findings into hotspots.{json,md}
+npm run blind                     # canonical pure player, fresh overworld
+npm run fleet -- --count 100      # milestone/harvest pure fleet (real tokens)
+npm run fleet:mock -- --count 2   # explicit structural, zero-token dry run
+npm run feedback:compile          # compile hot spots + mode-separated pure retention evidence
 ```
 
 Key env (loop.sh's header comment is the authoritative reference): `AI_LOOP_COMMIT=1`
@@ -177,11 +182,12 @@ deliberate verifier change.
 
 ## Honest limits
 
-- loop.sh's own gate enforces "a non-empty playtest report exists for the cycle"; it
-  can't _prove_ an LLM truly played — but the report verifier
-  (src/blind/report_verifier.ts, run by the blind harness) rejects reports without a
-  schema-valid exit interview or MCP evidence, and combined with the verification
-  gate that keeps the quality step real.
+- loop.sh's own gate enforces only that a playtest record exists. The pure
+  runner's stronger verifier checks a server-authored fresh-start/exit evidence
+  pair and exact journey receipt against the schema-valid V2 interview. It still
+  cannot prove the model's private motivation, but it does prove the recorded
+  session followed the enforced player surface and ended through the game
+  contract.
 - The verifier-integrity guard catches _mechanical_ tampering (skip/delete/empty/
   re-pin), not _semantic_ weakening (a future LLM-judge could).
 - The loop makes one change per cycle by design; broad multi-step work should be

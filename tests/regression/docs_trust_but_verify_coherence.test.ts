@@ -85,14 +85,21 @@ describe("bug_0049 — the current-process docs on the REAL repo (charter-cohere
     expect(protocol).toContain("list_legal_actions");
     expect(protocol).toContain("compact_actions = true");
     expect(protocol).toContain("expected_state_hash = latest state_hash");
-    expect(protocol).toContain("include_actions = true");
-    expect(protocol).toContain("compact_actions = false");
-    expect(protocol).toContain("get_state");
-    expect(protocol).toContain("compact_state = true");
-    expect(protocol).toContain("include_state = true");
-    expect(protocol).toContain("summary_only = true");
-    expect(protocol).toContain("compact_summary = true");
-    expect(protocol).toContain("compact_turns = true");
+    // Pure mode deliberately retired the old diagnostic escalation path. Raw
+    // state/transcript and expanded authoring structure are not human-player
+    // surfaces and must not reappear as live-protocol instructions.
+    for (const forbidden of [
+      "include_actions = true",
+      "compact_actions = false",
+      "get_state",
+      "compact_state = true",
+      "include_state = true",
+      "summary_only = true",
+      "compact_summary = true",
+      "compact_turns = true",
+    ]) {
+      expect(protocol).not.toContain(forbidden);
+    }
   });
 
   it("stays coherent with the AGENTS.md charter (no §14 ceremony, no human gate)", () => {

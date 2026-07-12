@@ -9,8 +9,8 @@
 #
 # Usage:
 #   blind-tester/run.sh [--seed <n>] [--model <alias>] [--out <prefix>]   # CORE GAME (overworld, the default)
-#   blind-tester/run.sh --quest <id> [--seed <n>] ...                     # targeted: drop into ONE shipped quest
-#   blind-tester/run.sh --smoke [--quest <id>] [--seed <n>]               # no LLM, no tokens
+#   blind-tester/run.sh --quest <id> --mock [--seed <n>] ...              # structural targeted test, no LLM
+#   blind-tester/run.sh --smoke [--quest <id>] [--seed <n>]               # structural MCP smoke, no LLM
 #   ... [--persona <name>]  # play-style overlay; see blind-tester/personas/*.md (default: "default", a no-op)
 #
 # Provider-agnostic: set BLIND_AGENT_CMD to use a different MCP-capable agent CLI.
@@ -33,6 +33,7 @@ SEED=7
 MODEL="${BLIND_MODEL:-sonnet}"   # sonnet = strong + best subscription value; override per run
 OUT=""
 SMOKE=0
+MOCK=0
 TIMEOUT="${BLIND_TIMEOUT:-900}"
 SPECTATE="${BLIND_SPECTATE:-0}"                   # 1 = server writes a human-watchable feed
 SPECTATE_DELAY_MS="${BLIND_SPECTATE_DELAY_MS:-}"  # optional pacing delay per tool response
@@ -88,6 +89,7 @@ while [[ $# -gt 0 ]]; do
     --model)            MODEL="$2"; shift 2 ;;
     --out)              OUT="$2"; shift 2 ;;
     --smoke)            SMOKE=1; shift ;;
+    --mock)             MOCK=1; shift ;;
     --spectate)         SPECTATE=1; shift ;;
     --delay-ms)         SPECTATE_DELAY_MS="$2"; SPECTATE=1; shift 2 ;;
     --overworld)        OVERWORLD=1; shift ;;
@@ -121,11 +123,10 @@ if [[ ${#POSITIONAL[@]} -gt 3 ]]; then
 fi
 
 # Mode resolution — the CORE GAME (overworld, fresh start) is the DEFAULT blind
-# test: it is how a real new player actually meets the game. Naming a quest
-# (--quest <id>, a positional id, or BLIND_QUEST_ID) selects the targeted
-# single-quest mode instead — a legacy drop-in kept for testing ONE shipped
-# quest (what the AFK loop runs on the quest it just changed). Asking for both
-# at once is ambiguous.
+# test: it is how a real new player actually meets the game. A quest source
+# (--quest <id>, a positional id, or BLIND_QUEST_ID) is retained only for the
+# structural --smoke and explicit --mock harnesses. Asking for overworld and a
+# quest at once is ambiguous.
 if [[ "$OVERWORLD" == "1" && -n "$QUEST_ID" ]]; then
   echo "Ambiguous: --overworld and a quest id were both given; drop one (the overworld IS the default)." >&2
   exit 2
@@ -134,15 +135,44 @@ if [[ -z "$QUEST_ID" ]]; then
   OVERWORLD=1
 fi
 
-# Two blind modes: the default CORE-GAME test (start the open world from a
-# fresh start and experience it as a new player) and the targeted single-QUEST
-# test (drop into one shipped quest and play it to an ending). They use
-# different prompts and start instructions; the report format + verifier are
-# identical.
+# A real blind LLM must meet the game exactly as a new player does: through a
+# fresh open-world start. Targeted quest drop-ins remain useful structural test
+# seams, but only --smoke and the bundled --mock agent may use them. In
+# particular, an arbitrary BLIND_AGENT_CMD is still a live-agent run and cannot
+# opt out of this guard by naming itself a mock.
+if [[ -n "$QUEST_ID" && "$SMOKE" != "1" && "$MOCK" != "1" ]]; then
+  echo "Live blind LLM runs must start a fresh overworld game; quest targets are reserved for --smoke or explicit --mock structural tests." >&2
+  echo "Remove the quest source and use --overworld (or no target)." >&2
+  exit 2
+fi
+
+# There are exactly two harness contracts. Every reasoning-agent run is the
+# pure, human-equivalent fresh-overworld path. Structural behavior is available
+# only behind the explicit no-LLM --smoke/--mock switches; ambient environment
+# variables and provider overrides cannot downgrade a live run.
+if [[ "$SMOKE" == "1" || "$MOCK" == "1" ]]; then
+  PLAY_MODE="structural"
+else
+  PLAY_MODE="pure"
+fi
+START_SURFACE=$([[ "$OVERWORLD" == "1" ]] && printf 'fresh_overworld' || printf 'direct_quest')
+
+# Persona-directed coverage/breaking changes the thing retention is measuring.
+# Pure live play therefore has one canonical, neutral first-time-player prompt.
+# The richer persona library remains available to explicit structural mocks.
+if [[ "$PLAY_MODE" == "pure" && "$PERSONA" != "default" ]]; then
+  echo "Pure live blind runs require --persona default; non-default personas are structural-only." >&2
+  exit 2
+fi
+
+# The live mode is always the default CORE-GAME test (start the open world from
+# a fresh start and experience it as a new player). Structural smoke/mock tests
+# may use the targeted single-QUEST seam. The two surfaces use different prompts
+# and start instructions; the report format + verifier are identical.
 if [[ "$OVERWORLD" == "1" ]]; then
   SOURCE_LABEL="overworld"
   SOURCE_SLUG="overworld"
-  START_INSTRUCTION="Start: \`mcp__adventureforge__start_overworld\` with compact_context = true. Capture the \`legend\` from the response — it decodes the compact positional fields and is sent only ONCE, at the start."
+  START_INSTRUCTION="Start: \`mcp__adventureforge__start_overworld\` with compact_context = true. Read the one-time \`tutorial\`, then capture the \`legend\` — it decodes the compact positional fields and is also sent only ONCE, at the start."
   PROMPT_FILE="$SCRIPT_DIR/prompt-overworld.md"
 else
   SOURCE_LABEL="quest=$QUEST_ID"
@@ -169,6 +199,14 @@ fi
 if [[ "$SMOKE" == "1" ]]; then
   SMOKE_SCRIPT="$(node_path_arg "$SCRIPT_DIR/smoke.mjs")"
   exec "$NODE_CMD" "$SMOKE_SCRIPT" --quest "${QUEST_ID:-breaking_weir}" --seed "$SEED"
+fi
+
+# --mock is an explicit, zero-token structural mode. It owns the bundled mock
+# command rather than trusting/inheriting BLIND_AGENT_CMD, so that environment
+# variable can never become a general-purpose escape hatch for targeted runs.
+if [[ "$MOCK" == "1" ]]; then
+  MOCK_AGENT_SCRIPT="$(node_path_arg "$SCRIPT_DIR/mock-agent.mjs")"
+  printf -v BLIND_AGENT_CMD '%q %q' "$NODE_CMD" "$MOCK_AGENT_SCRIPT"
 fi
 
 # Fail fast on a bad quest id BEFORE spending agent tokens (quest mode only — the
@@ -198,6 +236,7 @@ esac
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
 MCP_CONFIG="$WORK/mcp.json"
+RUN_EVIDENCE="$WORK/run-evidence.jsonl"
 
 # Spectate pass-through: forwarded as SERVER argv (clients can ignore env/cwd
 # fields, but args always survive). The server writes the human-watchable feed;
@@ -209,11 +248,11 @@ if [[ "$SPECTATE" == "1" ]]; then
     case "$SPECTATE_DELAY_MS" in
       *[!0-9]*) echo "--delay-ms takes a whole number of milliseconds." >&2; exit 2 ;;
     esac
-    SPECTATE_ARGS_JSON=", \"--\", \"--spectate\", \"--spectate-delay-ms\", \"$SPECTATE_DELAY_MS\""
-    SPECTATE_CMD_SUFFIX=" -- --spectate --spectate-delay-ms $SPECTATE_DELAY_MS"
+    SPECTATE_ARGS_JSON=", \"--spectate\", \"--spectate-delay-ms\", \"$SPECTATE_DELAY_MS\""
+    SPECTATE_CMD_SUFFIX=" --spectate --spectate-delay-ms $SPECTATE_DELAY_MS"
   else
-    SPECTATE_ARGS_JSON=", \"--\", \"--spectate\""
-    SPECTATE_CMD_SUFFIX=" -- --spectate"
+    SPECTATE_ARGS_JSON=", \"--spectate\""
+    SPECTATE_CMD_SUFFIX=" --spectate"
   fi
 fi
 
@@ -225,11 +264,13 @@ fi
 # The npm --prefix path in native form: Git Bash's /c/... is meaningless to the
 # native claude.exe-spawned npm, so convert with cygpath on msys/cygwin.
 GAME_DIR_MCP="$GAME_DIR"
+RUN_EVIDENCE_MCP="$RUN_EVIDENCE"
 if [[ "$OSTYPE" == msys* || "$OSTYPE" == cygwin* ]] && command -v cygpath >/dev/null 2>&1; then
   GAME_DIR_MCP="$(cygpath -m "$GAME_DIR")"
+  RUN_EVIDENCE_MCP="$(cygpath -m "$RUN_EVIDENCE")"
 fi
-case "$GAME_DIR_MCP" in
-  *\"*|*\\*) echo "Refusing: game path breaks MCP config JSON quoting." >&2; exit 4 ;;
+case "$GAME_DIR_MCP|$RUN_EVIDENCE_MCP" in
+  *\"*|*\\*) echo "Refusing: game or evidence path breaks MCP config JSON quoting." >&2; exit 4 ;;
 esac
 
 if [[ -n "$GAME_DIR_WIN" ]]; then
@@ -237,27 +278,29 @@ if [[ -n "$GAME_DIR_WIN" ]]; then
     *" "*) echo "Refusing: WSL blind runner path contains a space, which breaks cmd.exe MCP launch quoting." >&2; exit 4 ;;
   esac
   GAME_DIR_WIN_JSON="${GAME_DIR_WIN//\\/\\\\}"
+  RUN_EVIDENCE_WIN="$(wslpath -w "$RUN_EVIDENCE")"
+  RUN_EVIDENCE_WIN_JSON="${RUN_EVIDENCE_WIN//\\/\\\\}"
   CODEX_MCP_CMD="cmd.exe"
-  CODEX_MCP_ARGS_TOML='["/c", "cd /d '"$GAME_DIR_WIN_JSON"' && npm --silent run mcp'"$SPECTATE_CMD_SUFFIX"'"]'
+  CODEX_MCP_ARGS_TOML='["/c", "cd /d '"$GAME_DIR_WIN_JSON"' && npm --silent run mcp -- --play-mode '"$PLAY_MODE"' --run-evidence '"$RUN_EVIDENCE_WIN_JSON$SPECTATE_CMD_SUFFIX"'"]'
   cat > "$MCP_CONFIG" <<JSON
 {
   "mcpServers": {
     "adventureforge": {
       "command": "cmd.exe",
-      "args": ["/c", "cd /d $GAME_DIR_WIN_JSON && npm --silent run mcp$SPECTATE_CMD_SUFFIX"]
+      "args": ["/c", "cd /d $GAME_DIR_WIN_JSON && npm --silent run mcp -- --play-mode $PLAY_MODE --run-evidence $RUN_EVIDENCE_WIN_JSON$SPECTATE_CMD_SUFFIX"]
     }
   }
 }
 JSON
 else
   CODEX_MCP_CMD="npm"
-  CODEX_MCP_ARGS_TOML='["--silent", "--prefix", "'"$GAME_DIR_MCP"'", "run", "mcp"'"$SPECTATE_ARGS_JSON"']'
+  CODEX_MCP_ARGS_TOML='["--silent", "--prefix", "'"$GAME_DIR_MCP"'", "run", "mcp", "--", "--play-mode", "'"$PLAY_MODE"'", "--run-evidence", "'"$RUN_EVIDENCE_MCP"'"'"$SPECTATE_ARGS_JSON"']'
   cat > "$MCP_CONFIG" <<JSON
 {
   "mcpServers": {
     "adventureforge": {
       "command": "npm",
-      "args": ["--silent", "--prefix", "$GAME_DIR_MCP", "run", "mcp"$SPECTATE_ARGS_JSON]
+      "args": ["--silent", "--prefix", "$GAME_DIR_MCP", "run", "mcp", "--", "--play-mode", "$PLAY_MODE", "--run-evidence", "$RUN_EVIDENCE_MCP"$SPECTATE_ARGS_JSON]
     }
   }
 }
@@ -289,8 +332,13 @@ if [[ -z "$OUT" ]]; then
   OUT="$SCRIPT_DIR/reports/${STAMP}_${SOURCE_SLUG}_seed${SEED}"
 fi
 mkdir -p "$(dirname "$OUT")"
+RUN_SIDECAR="$OUT.run.json"
+# An explicit --out prefix may be reused after a failed attempt. Never leave a
+# previously verified receipt beside a newly truncated/timed-out report.
+rm -f "$RUN_SIDECAR"
 
 echo "Blind playtest → $SOURCE_LABEL seed=$SEED model=$MODEL"
+echo "Play contract: $PLAY_MODE / $START_SURFACE"
 echo "Report prefix: $OUT"
 
 # Codex only exposes repo MCP servers when its own config enables them. The blind
@@ -331,14 +379,20 @@ fi
 # Provider override path: hand the prompt to any MCP-capable agent CLI.
 if [[ -n "${BLIND_AGENT_CMD:-}" ]]; then
   echo "Using BLIND_AGENT_CMD override."
+  set +e
   (
     cd "$WORK"
     PATH="${CODEX_SHIM_BIN:+$CODEX_SHIM_BIN:}$PATH" \
     BLIND_MCP_CONFIG="$MCP_CONFIG" BLIND_QUEST_ID="$QUEST_ID" BLIND_SEED="$SEED" \
+      BLIND_PLAY_MODE="$PLAY_MODE" BLIND_START_SURFACE="$START_SURFACE" \
       timeout "$TIMEOUT" bash -c "$BLIND_AGENT_CMD" <<<"$PROMPT"
   ) | tee "$OUT.md"
   AGENT_STATUS="${PIPESTATUS[0]}"
+  set -e
   if [[ "$AGENT_STATUS" -ne 0 ]]; then
+    if [[ "$AGENT_STATUS" -eq 124 || "$AGENT_STATUS" -eq 137 ]]; then
+      echo "✗ blind run hit the ${TIMEOUT}s technical timeout; no exit interview or retention result is accepted." >&2
+    fi
     exit "$AGENT_STATUS"
   fi
   # The override agent's report is NOT exempt from the gate: run the same
@@ -347,7 +401,15 @@ if [[ -n "${BLIND_AGENT_CMD:-}" ]]; then
   if command -v wslpath >/dev/null 2>&1 && [[ "$REPORT_MD" == /mnt/* ]]; then
     REPORT_MD="$(wslpath -w "$REPORT_MD")"
   fi
-  ( cd "$GAME_DIR" && npm --silent exec tsx -- scripts/verify-blind-report.ts "$REPORT_MD" )
+  RUN_SIDECAR_ARG="$(node_path_arg "$RUN_SIDECAR")"
+  if [[ "$PLAY_MODE" == "pure" ]]; then
+    RUN_EVIDENCE_ARG="$(node_path_arg "$RUN_EVIDENCE")"
+    ( cd "$GAME_DIR" && npm --silent exec tsx -- scripts/verify-blind-report.ts "$REPORT_MD" \
+      --require-mode pure --run-evidence "$RUN_EVIDENCE_ARG" --write-run-sidecar "$RUN_SIDECAR_ARG" )
+  else
+    ( cd "$GAME_DIR" && npm --silent exec tsx -- scripts/verify-blind-report.ts "$REPORT_MD" \
+      --require-mode structural --write-run-sidecar "$RUN_SIDECAR_ARG" )
+  fi
   echo "✓ Blind report saved: $OUT.md"
   exit 0
 fi
@@ -388,6 +450,9 @@ STATUS=$?
 set -e
 
 if [[ $STATUS -ne 0 ]]; then
+  if [[ $STATUS -eq 124 || $STATUS -eq 137 ]]; then
+    echo "✗ blind run hit the ${TIMEOUT}s technical timeout; no exit interview or retention result is accepted." >&2
+  fi
   echo "✗ blind run failed (exit $STATUS). See $OUT.log" >&2
   tail -5 "$OUT.log" >&2 || true
   exit $STATUS
@@ -407,7 +472,10 @@ REPORT_MD="$OUT.md"
 if command -v wslpath >/dev/null 2>&1 && [[ "$REPORT_MD" == /mnt/* ]]; then
   REPORT_MD="$(wslpath -w "$REPORT_MD")"
 fi
-( cd "$GAME_DIR" && npm --silent exec tsx -- scripts/verify-blind-report.ts "$REPORT_MD" )
+RUN_SIDECAR_ARG="$(node_path_arg "$RUN_SIDECAR")"
+RUN_EVIDENCE_ARG="$(node_path_arg "$RUN_EVIDENCE")"
+( cd "$GAME_DIR" && npm --silent exec tsx -- scripts/verify-blind-report.ts "$REPORT_MD" \
+  --require-mode pure --run-evidence "$RUN_EVIDENCE_ARG" --write-run-sidecar "$RUN_SIDECAR_ARG" )
 
 # Token/cost telemetry (measure loop efficiency instead of guessing): fold the
 # claude envelope's usage into the gitignored ai-runs/blind-telemetry.jsonl.

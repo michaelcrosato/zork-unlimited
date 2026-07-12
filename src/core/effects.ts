@@ -299,9 +299,16 @@ export function applyEffects(
   let cur = state;
   const events: GameEvent[] = [];
   for (const e of effects) {
+    // `remove_item` is intentionally idempotent. An authored cleanup list may
+    // cover several mutually exclusive routes, so the item is not necessarily
+    // present on every path. Keep that no-op out of the event log: reporting a
+    // DROP for an item the player never held leaks internal bookkeeping and is
+    // materially false. Capture presence before applying the effect so a real
+    // add-then-remove sequence still emits its ordered TAKE and DROP events.
+    const removedHeldItem = "remove_item" in e && cur.inventory.includes(e.remove_item);
     const res = applyEffect(e, cur);
     cur = res.state;
-    events.push(res.event);
+    if (!("remove_item" in e) || removedHeldItem) events.push(res.event);
   }
   return { state: cur, events };
 }

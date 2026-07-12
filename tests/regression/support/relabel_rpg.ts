@@ -6,6 +6,7 @@ import type {
   DialogueTopic,
   Ending,
   Enemy,
+  EnemyManeuver,
   Exit,
   GameObject,
   Interaction,
@@ -190,6 +191,9 @@ function relabelObject(
     name: o.name,
     aliases: o.aliases,
     description: o.description,
+    ...(o.visible_when !== undefined
+      ? { visible_when: o.visible_when.map((c) => relabelCondition(c, r, rv)) }
+      : {}),
     ...(o.variants ? { variants: o.variants.map((v) => relabelObjectVariant(v, r, rv)) } : {}),
     takeable: o.takeable,
     ...(o.droppable !== undefined ? { droppable: o.droppable } : {}),
@@ -311,6 +315,37 @@ function relabelEnemy(e: Enemy, r: (id: string) => string, rv: (n: string) => st
     ...(e.defeat_flag !== undefined ? { defeat_flag: r(e.defeat_flag) } : {}),
     death_ending: r(e.death_ending),
     on_defeat: e.on_defeat.map((eff) => relabelEffect(eff, r, rv)),
+    ...(e.maneuvers
+      ? {
+          maneuvers: e.maneuvers.map((maneuver) => relabelEnemyManeuver(maneuver, r, rv)),
+        }
+      : {}),
+  };
+}
+
+function relabelEnemyManeuver(
+  maneuver: EnemyManeuver,
+  r: (id: string) => string,
+  rv: (n: string) => string,
+): EnemyManeuver {
+  return {
+    id: r(maneuver.id),
+    command: maneuver.command,
+    ...(maneuver.after !== undefined ? { after: r(maneuver.after) } : {}),
+    conditions: maneuver.conditions.map((condition) => relabelCondition(condition, r, rv)),
+    result_flag: r(maneuver.result_flag),
+    attack_bonus: maneuver.attack_bonus,
+    defense_bonus: maneuver.defense_bonus,
+    ...(maneuver.resource_effects
+      ? {
+          resource_effects: maneuver.resource_effects.map((effect) =>
+            "add_item" in effect
+              ? { add_item: r(effect.add_item) }
+              : { remove_item: r(effect.remove_item) },
+          ),
+        }
+      : {}),
+    narration: maneuver.narration,
   };
 }
 

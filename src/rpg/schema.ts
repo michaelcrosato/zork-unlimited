@@ -189,6 +189,7 @@ export const ObjectSchema = z
     name: z.string().min(1),
     aliases: z.array(z.string().min(1)).default([]),
     description: z.string().min(1),
+    visible_when: z.array(ConditionSchema).min(1).optional(),
     variants: z.array(ObjectVariantSchema).optional(),
     takeable: z.boolean().default(false),
     droppable: z.boolean().optional(),
@@ -303,6 +304,55 @@ export const EndingSchema = z
   })
   .strict();
 
+/**
+ * The deliberately narrow persistent-state surface a combat maneuver may use.
+ * Inventory deltas can carry a tactical decision into a later encounter without
+ * letting authored combat mutate HP, score, routing, quest stages, or endings and
+ * thereby escape the bounded combat proofs.
+ */
+export const ManeuverResourceEffectSchema = z.union([
+  z.object({ add_item: z.string().min(1) }).strict(),
+  z.object({ remove_item: z.string().min(1) }).strict(),
+]);
+
+/**
+ * A named, one-shot combat opening against one enemy. The bonuses alter only
+ * the combat round produced by the MANEUVER action; they never mutate the
+ * player's persistent attack/defense vars. `result_flag` is set after the
+ * maneuver is committed and is also the automatic retirement gate for its
+ * opening or follow-through cohort. `after`, when present, names a root opening
+ * whose surviving target exposes this maneuver on the next combat beat.
+ *
+ * This field is optional on EnemySchema (with no default) so compiling every
+ * pre-maneuver pack produces the exact same object shape and content hash.
+ */
+export const EnemyManeuverSchema = z
+  .object({
+    id: z.string().min(1),
+    command: z.string().min(1),
+    // Optional same-enemy root maneuver id. Omitted maneuvers remain the
+    // mutually-exclusive opening cohort; one shallow child layer supplies a
+    // named follow-through without adding mutable combat-phase state.
+    after: z.string().min(1).optional(),
+    conditions: z.array(ConditionSchema),
+    result_flag: z.string().min(1),
+    attack_bonus: z.number().int(),
+    defense_bonus: z.number().int(),
+    // Optional with no default: legacy pack shapes and hashes remain byte-stable.
+    resource_effects: z.array(ManeuverResourceEffectSchema).min(1).optional(),
+    narration: z.string().min(1),
+  })
+  .strict()
+  .superRefine((maneuver, ctx) => {
+    if (maneuver.attack_bonus === 0 && maneuver.defense_bonus === 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["attack_bonus"],
+        message: "a maneuver must change attack_bonus or defense_bonus (both cannot be zero)",
+      });
+    }
+  });
+
 export const EnemySchema = z
   .object({
     id: z.string().min(1),
@@ -316,6 +366,7 @@ export const EnemySchema = z
     defeat_flag: z.string().min(1).optional(),
     death_ending: z.string().min(1),
     on_defeat: z.array(EffectSchema).default([]),
+    maneuvers: z.array(EnemyManeuverSchema).min(1).optional(),
   })
   .strict();
 
@@ -358,6 +409,8 @@ export type Npc = z.infer<typeof NpcSchema>;
 export type WinCondition = z.infer<typeof WinConditionSchema>;
 export type EndingVariant = z.infer<typeof EndingVariantSchema>;
 export type Ending = z.infer<typeof EndingSchema>;
+export type EnemyManeuver = z.infer<typeof EnemyManeuverSchema>;
+export type ManeuverResourceEffect = z.infer<typeof ManeuverResourceEffectSchema>;
 export type Enemy = z.infer<typeof EnemySchema>;
 export type RpgPack = z.infer<typeof RpgPackSchema>;
 

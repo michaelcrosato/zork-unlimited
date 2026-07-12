@@ -26,6 +26,7 @@ import { exitFlag, type Effect } from "../core/effects.js";
 import { evalConditions, type Condition } from "../core/conditions.js";
 import { indexRpgModel, initStateForRpgModel } from "../rpg/model.js";
 import { type RpgPack, type GameObject, type Interaction, SCORE_VAR } from "../rpg/schema.js";
+import { maneuverSequenceConditions } from "../rpg/maneuver_sequence.js";
 import { type Finding, type ValidationReport, makeReport } from "./report.js";
 
 const err = (code: string, message: string, where: string[]): Finding => ({
@@ -58,7 +59,18 @@ const hasDeclaredVar = (vars: Record<string, number>, name: string): boolean =>
  */
 export type ValidateRpgFoundationOptions = {
   extraSettableFlags?: string[];
+  /** Flags a higher-layer mechanic reads implicitly (for example a maneuver's
+   * automatic one-shot result-flag gate). Keeps INERT_FLAG aware of runtime
+   * readers that have no authored Condition node. */
+  extraReadFlags?: string[];
   extraObtainable?: string[];
+  /**
+   * Declared higher-layer effects whose targets and inventory dataflow must be
+   * audited exactly like foundation-owned authored effects. Unlike
+   * `extraFalsifierEffects`, these participate in reference, placement, and
+   * liveness scans as well as the win-stability proof.
+   */
+  extraEffects?: Effect[];
   /**
    * Extra `score` points a higher layer (§13 Stage 4) can award through branches
    * this foundation pass does not own, such as enemy `on_defeat`. Authored
@@ -107,6 +119,7 @@ export function validateRpgFoundation(
   const findings: Finding[] = [];
   const roomIds = new Set(pack.rooms.map((r) => r.id));
   const objById = new Map(pack.objects.map((o) => [o.id, o]));
+  const effects = [...allEffects(pack), ...(opts.extraEffects ?? [])];
 
   // ── Duplicate ids ──────────────────────────────────────────────────────────
   dupCheck(
@@ -237,7 +250,7 @@ export function validateRpgFoundation(
   // Any other object that appears in none of these maps is a true orphan.
   {
     const grantedByEffect = new Set<string>();
-    for (const e of allEffects(pack)) if ("add_item" in e) grantedByEffect.add(e.add_item);
+    for (const e of effects) if ("add_item" in e) grantedByEffect.add(e.add_item);
 
     for (const o of pack.objects) {
       if (o.held) continue; // inventory start — no placement needed
@@ -268,7 +281,7 @@ export function validateRpgFoundation(
   // reference: the gate evaluates false forever (conditions.ts) or the effect targets
   // nowhere — the room-id analogue of EXIT_TARGET_MISSING, and a structural bug, not a
   // deliberate transient. Error severity (bug_0277). ONE code for all four ref kinds.
-  for (const id of collectRoomRefs(pack)) {
+  for (const id of collectRoomRefs(pack, opts.extraEffects ?? [])) {
     if (!roomIds.has(id))
       findings.push(
         err(
@@ -283,7 +296,7 @@ export function validateRpgFoundation(
   // permanent no-op — harder to diagnose than a dead gate because the effect APPEARS
   // to fire. Error severity (bug_0278). Checked in a dedicated block (not via
   // collectRoomRefs) because the two sides need individual messages (bug_0278).
-  for (const e of allEffects(pack)) {
+  for (const e of effects) {
     if (!("unlock_exit" in e)) continue;
     for (const [side, id] of [
       ["from", e.unlock_exit.from],
@@ -306,7 +319,7 @@ export function validateRpgFoundation(
   // no existing check catches; a typo'd `remove_item: "lantren"` silently no-ops, leaving
   // puzzle state wrong. Error severity — the item-id analogue of EXIT_TARGET_MISSING
   // (bug_0281). Checked in a dedicated block (not via collectRoomRefs) against objById.
-  for (const e of allEffects(pack)) {
+  for (const e of effects) {
     const itemId = "add_item" in e ? e.add_item : "remove_item" in e ? e.remove_item : undefined;
     if (itemId !== undefined && !objById.has(itemId))
       findings.push(
@@ -327,7 +340,7 @@ export function validateRpgFoundation(
   // defeating puzzle guards with no error. A typo'd `place_object: { id: "chst", ... }`
   // places a nonexistent object, defeating puzzle-design intent silently.
   // Error severity — the object-id analogue of ITEM_REF_MISSING (bug_0291).
-  for (const e of allEffects(pack)) {
+  for (const e of effects) {
     let objId: string | undefined;
     if ("open_object" in e) objId = e.open_object;
     else if ("close_object" in e) objId = e.close_object;
@@ -453,7 +466,7 @@ export function validateRpgFoundation(
 
   // ── Settable flags (provided by some effect or flags_init) ───────────────────
   const settable = new Set<string>([...pack.meta.flags_init, ...(opts.extraSettableFlags ?? [])]);
-  for (const e of allEffects(pack)) {
+  for (const e of effects) {
     if ("set_flag" in e) settable.add(e.set_flag);
     if ("unlock_exit" in e) settable.add(exitFlag(e.unlock_exit.from, e.unlock_exit.to));
   }
@@ -463,7 +476,7 @@ export function validateRpgFoundation(
   // PURELY set_quest_stage effects — every satisfiable quest_stage gate must have
   // a matching write. Mirrors the settable-flags set above for IMPOSSIBLE_GATE.
   const settableQuestStages = new Set<string>(opts.extraSettableQuestStages ?? []);
-  for (const e of allEffects(pack)) {
+  for (const e of effects) {
     if ("set_quest_stage" in e) settableQuestStages.add(questStageKey(e.set_quest_stage));
   }
 
@@ -489,7 +502,7 @@ export function validateRpgFoundation(
   //     so only an explicit relock-then-unlock effect or a keyed UNLOCK can make it true.
   const openableObjects = new Set<string>();
   const unlockableObjects = new Set<string>();
-  for (const e of allEffects(pack)) {
+  for (const e of effects) {
     if ("open_object" in e) openableObjects.add(e.open_object);
     if ("set_object_locked" in e && e.set_object_locked.locked === false)
       unlockableObjects.add(e.set_object_locked.id);
@@ -500,7 +513,7 @@ export function validateRpgFoundation(
       unlockableObjects.add(o.id);
   }
 
-  // ── Feasibility of every gate (exits, interactions, topics, win conditions) ──
+  // ── Feasibility of every gate (presence, exits, interactions, topics, wins) ──
   const checkConds = (conds: Condition[], where: string[]): void => {
     for (const f of flagReqs(conds)) {
       if (!settable.has(f))
@@ -559,6 +572,7 @@ export function validateRpgFoundation(
       checkConds(exit.conditions, [`room:${room.id}`, `exit:${exit.direction}`]);
   }
   for (const o of pack.objects) {
+    checkConds(o.visible_when ?? [], [`object:${o.id}`, "visible_when"]);
     if (o.locked && o.key_id !== undefined && objById.has(o.key_id) && !obtainable.has(o.key_id)) {
       findings.push(
         err(
@@ -581,6 +595,11 @@ export function validateRpgFoundation(
       }
     }
   }
+  for (const enemy of pack.enemies) {
+    for (const maneuver of enemy.maneuvers ?? []) {
+      checkConds(maneuver.conditions, [`enemy:${enemy.id}`, `maneuver:${maneuver.id}`]);
+    }
+  }
   for (const wc of pack.win_conditions) checkConds(wc.conditions, [`win:${wc.id}`]);
   for (const npc of pack.npcs) {
     checkConds(npc.conditions ?? [], [`npc:${npc.id}`]);
@@ -593,12 +612,21 @@ export function validateRpgFoundation(
 
   // ── quest_critical: never permanently lost ───────────────────────────────────
   const granted = new Set<string>();
-  for (const e of allEffects(pack)) if ("add_item" in e) granted.add(e.add_item);
+  for (const e of effects) if ("add_item" in e) granted.add(e.add_item);
   const removed = new Map<string, string>(); // item → where
   for (const o of pack.objects) {
     for (const it of o.interactions) {
       for (const e of interactionEffects(it))
         if ("remove_item" in e) removed.set(e.remove_item, `object:${o.id}`);
+    }
+  }
+  for (const enemy of pack.enemies) {
+    for (const maneuver of enemy.maneuvers ?? []) {
+      for (const effect of maneuver.resource_effects ?? []) {
+        if ("remove_item" in effect) {
+          removed.set(effect.remove_item, `enemy:${enemy.id}:maneuver:${maneuver.id}`);
+        }
+      }
     }
   }
   // "Needed in hand somewhere it is NOT spent": an item is only LOST (not merely
@@ -614,6 +642,7 @@ export function validateRpgFoundation(
     if (!consumedHere) neededWhileHeld.add(id);
   };
   for (const o of pack.objects) {
+    for (const id of itemReqs(o.visible_when ?? [])) noteHeld(id, false);
     for (const it of o.interactions) {
       const consumes = (id: string): boolean =>
         interactionEffects(it).some((e) => "remove_item" in e && e.remove_item === id);
@@ -625,6 +654,16 @@ export function validateRpgFoundation(
     for (const exit of room.exits) for (const id of itemReqs(exit.conditions)) noteHeld(id, false);
   for (const wc of pack.win_conditions)
     for (const id of itemReqs(wc.conditions)) noteHeld(id, false);
+  for (const enemy of pack.enemies) {
+    for (const maneuver of enemy.maneuvers ?? []) {
+      const consumes = new Set(
+        (maneuver.resource_effects ?? []).flatMap((effect) =>
+          "remove_item" in effect ? [effect.remove_item] : [],
+        ),
+      );
+      for (const id of itemReqs(maneuver.conditions)) noteHeld(id, consumes.has(id));
+    }
+  }
   for (const npc of pack.npcs) {
     for (const id of itemReqs(npc.conditions ?? [])) noteHeld(id, false);
     for (const node of npc.dialogue.nodes)
@@ -654,6 +693,17 @@ export function validateRpgFoundation(
           `quest_critical "${o.id}" is takeable but the map has a one-way region — it could be dropped where it cannot be retrieved.`,
           [`object:${o.id}`],
         ),
+      );
+    }
+  }
+  for (const enemy of pack.enemies) {
+    for (const maneuver of enemy.maneuvers ?? []) {
+      const sequenceConditions = maneuverSequenceConditions(enemy, maneuver);
+      checkUnsatisfiable(
+        [...maneuver.conditions, ...(sequenceConditions ?? [])],
+        [`enemy:${enemy.id}`, `maneuver:${maneuver.id}`],
+        `maneuver "${maneuver.id}" on enemy "${enemy.id}"`,
+        findings,
       );
     }
   }
@@ -739,7 +789,7 @@ export function validateRpgFoundation(
   // ── Stage 3: endings, scoring, and death recoverability (§13 Stage 3) ────────
   const declaredEndings = new Map(pack.endings.map((e) => [e.id, e]));
   // Every end_game target (death endings are reached this way) must be declared.
-  for (const e of allEffects(pack)) {
+  for (const e of effects) {
     if ("end_game" in e && !declaredEndings.has(e.end_game)) {
       findings.push(
         err(
@@ -779,7 +829,7 @@ export function validateRpgFoundation(
   // pack can ever award (conservative upper bound = initial + all inc_var awards).
   if (pack.meta.max_score > 0) {
     let totalAwards = pack.meta.vars_init[SCORE_VAR] ?? 0;
-    for (const e of allEffects(pack))
+    for (const e of effects)
       if ("inc_var" in e && e.inc_var.name === SCORE_VAR) totalAwards += e.inc_var.by;
     totalAwards += opts.extraScoreAwards ?? 0;
     if (totalAwards < pack.meta.max_score) {
@@ -909,18 +959,34 @@ export function validateRpgFoundation(
   }
   for (const o of pack.objects) {
     checkVariantShadowing(o.variants, `object:${o.id}`, findings);
+    checkUnsatisfiable(
+      o.visible_when,
+      [`object:${o.id}`, "visible_when"],
+      `object "${o.id}" world-presence gate`,
+      findings,
+    );
+    // Inventory is authoritative at runtime and bypasses `visible_when`. Only
+    // objects that can never enter inventory must co-satisfy their world gate
+    // with displayed variants/interactions; otherwise a conflicting pair may be
+    // genuinely live after TAKE/an authored add_item and must not false-warn.
+    const worldOnlyPresence =
+      o.held === true || o.takeable === true || granted.has(o.id) ? [] : (o.visible_when ?? []);
     for (let i = 0; i < (o.variants?.length ?? 0); i++)
       checkUnsatisfiable(
-        o.variants?.[i]?.when,
+        [...worldOnlyPresence, ...(o.variants?.[i]?.when ?? [])],
         [`object:${o.id}`, `variant:${i}`],
-        `object "${o.id}" variant #${i + 1}`,
+        worldOnlyPresence.length > 0
+          ? `object "${o.id}" variant #${i + 1} together with its world-presence gate`
+          : `object "${o.id}" variant #${i + 1}`,
         findings,
       );
     for (const it of o.interactions)
       checkUnsatisfiable(
-        it.conditions,
+        [...worldOnlyPresence, ...it.conditions],
         [`object:${o.id}`, `verb:${it.verb}`],
-        `interaction "${it.verb}" on object "${o.id}"`,
+        worldOnlyPresence.length > 0
+          ? `interaction "${it.verb}" on object "${o.id}" together with its world-presence gate`
+          : `interaction "${it.verb}" on object "${o.id}"`,
         findings,
       );
   }
@@ -964,11 +1030,12 @@ export function validateRpgFoundation(
   // disjunction still counts as read and is never flagged. Warning, not error — an
   // inert flag is a no-op, never a soft-lock, exactly like its CYOA sibling.
   const flagReads = collectFlagReads(pack);
+  for (const flag of opts.extraReadFlags ?? []) flagReads.add(flag);
   const writtenFlags = new Set<string>([
     ...pack.meta.flags_init,
     ...(opts.extraSettableFlags ?? []),
   ]);
-  for (const e of allEffects(pack)) if ("set_flag" in e) writtenFlags.add(e.set_flag);
+  for (const e of effects) if ("set_flag" in e) writtenFlags.add(e.set_flag);
   for (const f of writtenFlags) {
     if (!flagReads.has(f)) {
       findings.push(
@@ -1009,7 +1076,7 @@ export function validateRpgFoundation(
   const writtenOpen = new Set<string>();
   const writtenUnlocked = new Set<string>();
   const writtenLocked = new Set<string>();
-  for (const e of allEffects(pack)) {
+  for (const e of effects) {
     if ("open_object" in e) writtenOpen.add(e.open_object);
     // A close_object write raises the same liveness question as open_object —
     // "does any condition read is_open for this id?" — independent of the
@@ -1066,7 +1133,7 @@ export function validateRpgFoundation(
   // ── A win condition already met at game start (§8.4.5 fires-at-start) ─────────
   checkWinFiresAtStart(
     pack,
-    opts.extraFalsifierEffects ?? [],
+    [...(opts.extraEffects ?? []), ...(opts.extraFalsifierEffects ?? [])],
     opts.extraVolatileVars ?? [],
     findings,
   );
@@ -1189,38 +1256,60 @@ function computeObtainable(
   const containerOf = new Map<string, string>();
   for (const o of pack.objects) for (const cid of o.contents) containerOf.set(cid, o.id);
 
-  const obtainable = new Set<string>();
+  // `held: true` objects start in inventory (state_init.ts); they satisfy
+  // has_item gates immediately even though they are neither takeable nor placed.
+  const obtainable = new Set<string>(
+    pack.objects.filter((object) => object.held).map((object) => object.id),
+  );
+
+  // A world object can only be reached through its own presence gate. Direct
+  // container children additionally inherit the container's gate and require a
+  // container the player can open (and, when statically locked, a key they can
+  // obtain). `itemReqs` deliberately considers only conjunctive has_item atoms;
+  // disjunctions remain an over-approximation, preserving the validator's
+  // no-false-positive obtainability stance.
+  const visibilityItemsAvailable = (object: GameObject | undefined): boolean =>
+    itemReqs(object?.visible_when ?? []).every((id) => obtainable.has(id));
+  const worldReachable = (object: GameObject): boolean => {
+    const home = homeRoom.get(object.id);
+    if (home !== undefined) {
+      return reachable.has(home) && visibilityItemsAvailable(object);
+    }
+
+    const containerId = containerOf.get(object.id);
+    if (containerId === undefined) return false;
+    const container = objById.get(containerId);
+    const containerRoom = homeRoom.get(containerId);
+    if (!container || !containerRoom || !reachable.has(containerRoom)) return false;
+    const containerUnlockable =
+      container.locked !== true ||
+      (container.key_id !== undefined && obtainable.has(container.key_id));
+    return (
+      container.openable === true &&
+      containerUnlockable &&
+      visibilityItemsAvailable(container) &&
+      visibilityItemsAvailable(object)
+    );
+  };
+
   let changed = true;
   while (changed) {
     changed = false;
     for (const o of pack.objects) {
       if (!o.takeable || obtainable.has(o.id)) continue;
-      const home = homeRoom.get(o.id);
-      if (home && reachable.has(home)) {
+      if (worldReachable(o)) {
         obtainable.add(o.id);
         changed = true;
-        continue;
-      }
-      const cid = containerOf.get(o.id);
-      if (cid) {
-        const c = objById.get(cid);
-        const cRoom = homeRoom.get(cid);
-        const cReachable = cRoom ? reachable.has(cRoom) : false;
-        const cOpenable = c?.openable === true;
-        const cUnlockable =
-          c?.locked !== true || (c?.key_id !== undefined && obtainable.has(c.key_id));
-        if (c && cReachable && cOpenable && cUnlockable) {
-          obtainable.add(o.id);
-          changed = true;
-        }
       }
     }
     // Items GRANTED by a reachable interaction (e.g. a brewed antidote) become
     // obtainable once the interaction's required item and any has_item conditions
     // are themselves obtainable. (Flag conditions are checked by IMPOSSIBLE_GATE.)
     for (const o of pack.objects) {
-      const room = homeRoom.get(o.id);
-      if (!room || !reachable.has(room)) continue; // the interaction's object must be reachable
+      // Held/inventory objects bypass world-visibility gates at runtime. Otherwise
+      // the interaction host must be reachable through its direct room/container
+      // placement and every conjunctive visibility-item prerequisite.
+      if (!obtainable.has(o.id) && !worldReachable(o)) continue;
       for (const it of o.interactions) {
         const itemOk = it.item === undefined || obtainable.has(it.item);
         const condItemsOk = itemReqs(it.conditions).every((i) => obtainable.has(i));
@@ -1731,9 +1820,12 @@ function collectFlagReads(pack: RpgPack): Set<string> {
     for (const exit of room.exits) walkAll(exit.conditions);
   }
   for (const o of pack.objects) {
+    walkAll(o.visible_when);
     for (const v of o.variants ?? []) walkAll(v.when);
     for (const it of o.interactions) walkAll(it.conditions);
   }
+  for (const enemy of pack.enemies)
+    for (const maneuver of enemy.maneuvers ?? []) walkAll(maneuver.conditions);
   for (const wc of pack.win_conditions) walkAll(wc.conditions);
   for (const e of pack.endings) for (const v of e.variants ?? []) walkAll(v.when); // reactive epilogue guards
   for (const npc of pack.npcs) {
@@ -1772,9 +1864,12 @@ function collectObjectStateReads(pack: RpgPack): { open: Set<string>; unlocked: 
     for (const exit of room.exits) walkAll(exit.conditions);
   }
   for (const o of pack.objects) {
+    walkAll(o.visible_when);
     for (const v of o.variants ?? []) walkAll(v.when);
     for (const it of o.interactions) walkAll(it.conditions);
   }
+  for (const enemy of pack.enemies)
+    for (const maneuver of enemy.maneuvers ?? []) walkAll(maneuver.conditions);
   for (const wc of pack.win_conditions) walkAll(wc.conditions);
   for (const e of pack.endings) for (const v of e.variants ?? []) walkAll(v.when);
   for (const npc of pack.npcs) {
@@ -1800,7 +1895,7 @@ function collectObjectStateReads(pack: RpgPack): { open: Set<string>; unlocked: 
  *  Mirrors collectFlagReads EXACTLY — NOT objectStateReqs, which descends only all_of
  *  for the conservative AND-context feasibility check and would under-count refs inside
  *  a disjunction (bug_0277). */
-function collectRoomRefs(pack: RpgPack): Set<string> {
+function collectRoomRefs(pack: RpgPack, extraEffects: readonly Effect[] = []): Set<string> {
   const refs = new Set<string>();
   const walk = (c: Condition): void => {
     if ("visited" in c) refs.add(c.visited);
@@ -1816,9 +1911,12 @@ function collectRoomRefs(pack: RpgPack): Set<string> {
     for (const exit of room.exits) walkAll(exit.conditions);
   }
   for (const o of pack.objects) {
+    walkAll(o.visible_when);
     for (const v of o.variants ?? []) walkAll(v.when);
     for (const it of o.interactions) walkAll(it.conditions);
   }
+  for (const enemy of pack.enemies)
+    for (const maneuver of enemy.maneuvers ?? []) walkAll(maneuver.conditions);
   for (const wc of pack.win_conditions) walkAll(wc.conditions);
   for (const e of pack.endings) for (const v of e.variants ?? []) walkAll(v.when);
   for (const npc of pack.npcs) {
@@ -1831,7 +1929,7 @@ function collectRoomRefs(pack: RpgPack): Set<string> {
   // Effect-side room refs: goto + place_object.room (the room-id-bearing effects
   // collected here; unlock_exit.from/.to are checked in a dedicated
   // UNLOCK_EXIT_ROOM_MISSING block in the validator body).
-  for (const e of allEffects(pack)) {
+  for (const e of [...allEffects(pack), ...extraEffects]) {
     if ("goto" in e) refs.add(e.goto);
     else if ("place_object" in e) refs.add(e.place_object.room);
   }

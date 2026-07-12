@@ -7,6 +7,7 @@ import { describe, it, expect } from "vitest";
 import {
   buildLatestCycleMetadata,
   buildPrompt,
+  buildUltraplanPrompt,
   formatLoopStateAppend,
   playtestTargetSummary,
   playtestTarget,
@@ -18,11 +19,8 @@ import {
   OVERWORLD_PLAYTEST_TARGET,
   type Assessment,
   type ImprovementCandidate,
-  type QuestHealth,
 } from "../../src/afk/assessor.js";
 
-const mainWorldQuestId = "breaking_weir";
-const mainQuestPath = "content/rpg/quests/breaking_weir.yaml";
 const playtestRecord = "ai-runs/2026-06-25T00-00-00-000Z/playtest.md";
 
 function candidate(
@@ -53,14 +51,6 @@ function assessment(top: ImprovementCandidate | null): Assessment {
   };
 }
 
-function questHealth(worldQuestId: string, warnings = 0): QuestHealth {
-  return {
-    world_quest_id: worldQuestId.replace(/^content\/rpg\/quests\//, "").replace(/\.ya?ml$/, ""),
-    playable: true,
-    warnings,
-  };
-}
-
 describe("shouldRunUltraplan", () => {
   it("fires only when SATURATED and the cooldown has elapsed", () => {
     expect(shouldRunUltraplan(true, 8, 8)).toBe(true); // saturated, exactly at cooldown
@@ -84,17 +74,9 @@ describe("shouldRunUltraplan", () => {
 });
 
 describe("playtestTarget", () => {
-  it("targets the quest being fixed for content_fix work", () => {
-    const top = candidate("content_fix", "cold_forge");
-
-    expect(playtestTarget(top)).toBe("cold_forge");
-  });
-
-  it("uses the CORE GAME (overworld fresh start) as the baseline for non-content-fix work", () => {
-    // Engine/repo changes affect the whole game, so the regression baseline is the
-    // core game itself — the same surface the default `npm run blind` plays — not a
-    // replay of one fixed quest (the legacy story-era baseline).
+  it("always launches a fresh overworld, independently of the recommendation category", () => {
     for (const top of [
+      candidate("content_fix", "cold_forge"),
       candidate("content_new", "world"),
       candidate("engine", "src/core/engine.ts"),
       candidate("repo", "tooling"),
@@ -111,45 +93,12 @@ describe("playtestTarget", () => {
   });
 });
 
-describe("playtestTargetWorldQuestId", () => {
-  it("uses world quest ids for shipped blind playtests", () => {
-    expect(
-      playtestTargetWorldQuestId(
-        candidate("content_fix", "content/rpg/quests/cold_forge.yaml"),
-        "cold_forge",
-      ),
-    ).toBe("cold_forge");
-    expect(
-      playtestTargetWorldQuestId(
-        candidate("content_fix", "content/rpg/quests/unbound.yaml"),
-        "content/rpg/quests/unbound.yaml",
-      ),
-    ).toBeNull();
-  });
+describe("fresh-overworld target normalization", () => {
+  it("never resolves a direct quest id or quest-labeled summary", () => {
+    const top = candidate("content_fix", "cold_forge");
 
-  it("resolves NO quest id for core-game (overworld) and pre-authoring baselines", () => {
-    // Engine/repo/none → the overworld core game; content_new → the quest authored
-    // this cycle. Neither maps to a pre-existing world quest id.
-    expect(playtestTargetWorldQuestId(candidate("engine", "src/core/engine.ts"), null)).toBeNull();
-    expect(playtestTargetWorldQuestId(candidate("repo", "tooling"), null)).toBeNull();
-    expect(playtestTargetWorldQuestId(null, null)).toBeNull();
-    expect(playtestTargetWorldQuestId(candidate("content_new", "world"), null)).toBeNull();
-    expect(
-      playtestTargetWorldQuestId(
-        candidate("content_fix", OVERWORLD_PLAYTEST_TARGET),
-        OVERWORLD_PLAYTEST_TARGET,
-      ),
-    ).toBeNull();
-  });
-});
-
-describe("playtestTargetSummary", () => {
-  it("keeps quest ids primary without echoing edit paths for content fixes", () => {
-    expect(playtestTargetSummary("cold_forge", "cold_forge")).toBe("cold_forge");
-    expect(playtestTargetSummary("content/rpg/quests/cold_forge.yaml", "cold_forge")).toBe(
-      "cold_forge",
-    );
-    expect(playtestTargetSummary(mainWorldQuestId, "breaking_weir")).toBe("breaking_weir");
+    expect(playtestTargetWorldQuestId(top, "cold_forge")).toBeNull();
+    expect(playtestTargetSummary("cold_forge", "cold_forge")).toBe(OVERWORLD_PLAYTEST_TARGET);
   });
 });
 
@@ -173,11 +122,11 @@ describe("compact AFK handoff metadata", () => {
     });
 
     expect(metadata).toMatchObject({
-      target: "breaking_weir",
-      targetWorldQuestId: "breaking_weir",
+      target: OVERWORLD_PLAYTEST_TARGET,
       recommendationId: "engine-runtime-cache",
       recommendationCategory: "engine",
     });
+    expect("targetWorldQuestId" in metadata).toBe(false);
     expect("mode" in metadata).toBe(false);
     expect("runDir" in metadata).toBe(false);
     expect("recommendation" in metadata).toBe(false);
@@ -185,10 +134,9 @@ describe("compact AFK handoff metadata", () => {
     expect(JSON.stringify(metadata)).not.toContain(top.rationale);
   });
 
-  it("keeps playtest target metadata quest-id based", () => {
+  it("normalizes even stale quest-target callers to an overworld launch", () => {
     expect(playtestTargetMetadata("content/rpg/quests/cold_forge.yaml", "cold_forge")).toEqual({
-      target: "cold_forge",
-      targetWorldQuestId: "cold_forge",
+      target: OVERWORLD_PLAYTEST_TARGET,
     });
   });
 
@@ -203,12 +151,11 @@ describe("compact AFK handoff metadata", () => {
       "2026-07-04T00-00-00-000Z",
       assessment(top),
       "breaking_weir",
-      "breaking_weir",
       false,
     );
 
     expect(text).toContain("Rec: engine-runtime-cache (engine/M; score=1).");
-    expect(text).toContain("Playtest: breaking_weir.");
+    expect(text).toContain("Playtest: overworld.");
     expect(text).not.toContain(top.title);
     expect(text).not.toContain(top.rationale);
     expect(text).not.toContain("Process: assessor ranks");
@@ -216,45 +163,56 @@ describe("compact AFK handoff metadata", () => {
 });
 
 describe("buildPrompt blind-playtest contract", () => {
-  it("content_fix cycles require a blind playtest of the target quest id and named report file", () => {
-    const top = candidate("content_fix", "cold_forge");
-    const prompt = buildPrompt({
-      a: assessment(top),
-      top,
-      target: top.target,
-      targetWorldQuestId: "cold_forge",
-      targetHealth: questHealth("content/rpg/quests/cold_forge.yaml", 2),
-      playtestRecord,
-    });
-
-    expect(prompt).toContain("## STEP 1 — MANDATORY LLM playtest");
-    expect(prompt).toContain("Playtest target this cycle: cold_forge (2 validator warning(s))");
-    expect(prompt).not.toContain("content/rpg/quests/cold_forge.yaml");
-    expect(prompt).toContain("with world_quest_id=cold_forge and a seed");
-    expect(prompt).not.toContain("with this pack and a seed");
-    expect(prompt).toContain("2 validator warning(s)");
+  function expectFreshOverworldContract(prompt: string): void {
+    expect(prompt).toContain("the CORE GAME — the open-world overworld from a FRESH start");
+    expect(prompt).toContain("`npm run blind`");
+    expect(prompt).toContain("`play_mode: pure`");
+    expect(prompt).toContain("`start_surface: fresh_overworld`");
+    expect(prompt).toContain(
+      "Do not pass `--quest`, a quest id, a persona overlay, or a saved session",
+    );
+    expect(prompt).toContain("Do not add");
+    expect(prompt).toContain("call-count stopping rule");
+    expect(prompt).toContain("interview only after exit");
+    expect(prompt).not.toContain("world_quest_id=");
+    expect(prompt).not.toContain("QUEST_ID");
+    expect(prompt).not.toContain("playtest by world_quest_id");
     expect(prompt).toContain(`to: ${playtestRecord}`);
     expect(prompt).toContain("This file is REQUIRED");
     expect(prompt).toContain("loop.sh refuses to commit");
-  });
+  }
 
-  it("engine baseline cycles blind-playtest the CORE GAME via the default harness", () => {
-    const top = candidate("engine", "src/core/engine.ts");
+  it.each([
+    ["content_fix", "cold_forge"],
+    ["engine", "src/core/engine.ts"],
+    ["repo", "tooling"],
+  ] as const)("%s cycles launch the same fresh-overworld blind run", (category, target) => {
+    const top = candidate(category, target);
     const prompt = buildPrompt({
       a: assessment(top),
       top,
-      target: OVERWORLD_PLAYTEST_TARGET,
-      targetWorldQuestId: null,
-      targetHealth: null,
       playtestRecord,
     });
 
-    expect(prompt).toContain("## STEP 1 — MANDATORY LLM playtest");
-    expect(prompt).toContain("the CORE GAME — the open-world overworld");
-    expect(prompt).toContain("npm run blind");
-    expect(prompt).not.toContain("world_quest_id=");
-    expect(prompt).toContain(`to: ${playtestRecord}`);
-    expect(prompt).toContain("loop.sh refuses to commit");
+    expect(prompt).toContain("## STEP 1 — MANDATORY fresh-overworld LLM playtest");
+    expectFreshOverworldContract(prompt);
+  });
+
+  it("keeps a quest-specific work recommendation separate from the overworld launch", () => {
+    const top = {
+      ...candidate("content_fix", "cold_forge"),
+      title: 'Fix quest "cold_forge" — two validator warnings',
+      rationale: "The recommended edit is deliberately quest-specific.",
+    };
+    const prompt = buildPrompt({
+      a: assessment(top),
+      top,
+      playtestRecord,
+    });
+
+    expect(prompt).toContain('Recommended: Fix quest "cold_forge"');
+    expect(prompt).not.toContain("Playtest launch this cycle: cold_forge");
+    expectFreshOverworldContract(prompt);
   });
 
   it("the rotation's core-game opening review gets the same overworld playtest step", () => {
@@ -262,51 +220,44 @@ describe("buildPrompt blind-playtest contract", () => {
     const prompt = buildPrompt({
       a: assessment(top),
       top,
-      target: OVERWORLD_PLAYTEST_TARGET,
-      targetWorldQuestId: null,
-      targetHealth: null,
       playtestRecord,
     });
 
-    expect(prompt).toContain("the CORE GAME — the open-world overworld");
-    expect(prompt).toContain("npm run blind");
-    expect(prompt).not.toContain("world_quest_id=");
+    expectFreshOverworldContract(prompt);
   });
 
-  it("refuses shipped blind-playtest prompts without a quest id", () => {
-    const top = candidate("content_fix", "cold_forge");
-
-    expect(() =>
-      buildPrompt({
-        a: assessment(top),
-        top,
-        target: top.target,
-        targetHealth: questHealth(top.target, 2),
-        playtestRecord,
-      }),
-    ).toThrow(/require a world quest id/);
-  });
-
-  it("content_new cycles register a world quest first, then blind-playtest its quest id", () => {
+  it("content_new registers first, then tests natural discovery from a fresh overworld", () => {
     const top = candidate("content_new", "world");
     const prompt = buildPrompt({
       a: assessment(top),
       top,
-      target: OVERWORLD_PLAYTEST_TARGET,
-      targetHealth: null,
       playtestRecord,
     });
 
-    expect(prompt).toContain("## STEP 1 — Add the new world quest, THEN blind-playtest IT");
+    expect(prompt).toContain(
+      "## STEP 1 — Add the new world quest, THEN blind-playtest from a FRESH overworld",
+    );
     expect(prompt).toContain(
       "Author the RPG quest and register it in the overworld quest registry",
     );
-    expect(prompt).toContain("pointed at the QUEST_ID YOU JUST REGISTERED");
+    expect(prompt).toContain("do not tell the blind player which quest was added or where it is");
+    expect(prompt).toContain("test whether the new content is naturally discoverable");
+    expectFreshOverworldContract(prompt);
+  });
+});
+
+describe("buildUltraplanPrompt blind-playtest contract", () => {
+  it("launches only a fresh overworld and carries no targeted quest invocation", () => {
+    const prompt = buildUltraplanPrompt({ playtestRecord });
+
+    expect(prompt).toContain("overworld from a FRESH start");
+    expect(prompt).toContain("default `npm run blind`");
     expect(prompt).toContain(
-      "Let the blind read of YOUR new world quest drive a final polish pass",
+      "Do not pass `--quest`, a quest id, a persona overlay, or a saved session",
     );
-    expect(prompt).toContain("playtest by world_quest_id");
-    expect(prompt).toContain(`to: ${playtestRecord}`);
-    expect(prompt).not.toContain(`Playtest target this cycle: ${mainQuestPath}`);
+    expect(prompt).toContain("only through normal overworld play");
+    expect(prompt).not.toContain("world_quest_id=");
+    expect(prompt).toContain(playtestRecord);
+    expect(prompt).toContain("loop.sh refuses to commit");
   });
 });

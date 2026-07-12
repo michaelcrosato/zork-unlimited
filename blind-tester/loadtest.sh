@@ -1,10 +1,9 @@
 #!/usr/bin/env bash
 #
-# blind-tester/loadtest.sh — ONE blind CORE-GAME playthrough for SERVER LOAD +
-# TOKEN-ECONOMY measurement. Same fresh-MCP-server + blind-claude plumbing as
-# run.sh, but it plays the FULL game WITHOUT the report/exit-interview (the agent
-# just exercises the server and stops), records per-run token usage + timing +
-# server-side tool-call stats to a JSONL line, and does NOT run the report verifier.
+# blind-tester/loadtest.sh — ONE explicit STRUCTURAL server-load exercise for
+# TOKEN-ECONOMY measurement. It intentionally prescribes a QA workload, records
+# token/timing/tool-call stats, and produces no pure report, retention evidence,
+# ledger entry, or report-verifier result.
 #
 # Usage:
 #   blind-tester/loadtest.sh [--seed N] [--model alias] [--timeout secs] [--label L]
@@ -63,7 +62,7 @@ cat > "$MCP_CONFIG" <<JSON
   "mcpServers": {
     "adventureforge": {
       "command": "npm",
-      "args": ["--silent", "--prefix", "$GAME_DIR_MCP", "run", "mcp", "--", "--spectate", "$FEED_MCP"]
+      "args": ["--silent", "--prefix", "$GAME_DIR_MCP", "run", "mcp", "--", "--play-mode", "structural", "--spectate", "$FEED_MCP"]
     }
   }
 }
@@ -115,6 +114,7 @@ LT_FEED="$SAVED_FEED" LT_OUT="$OUT_JSONL" node -e '
   const result = typeof env.result === "string" ? env.result : "";
   const rec = {
     ts: process.env.LT_TS, label: process.env.LT_LABEL, seed: Number(process.env.LT_SEED),
+    play_mode: "structural", start_surface: "fresh_overworld", retention_eligible: false,
     model: process.env.LT_MODEL, status: Number(process.env.LT_STATUS),
     is_error: env.is_error === true, completed: /PLAYTHROUGH COMPLETE/.test(result),
     num_turns: env.num_turns ?? null, duration_ms: env.duration_ms ?? null,

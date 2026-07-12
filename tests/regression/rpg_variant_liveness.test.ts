@@ -95,12 +95,14 @@ const packFiles = readdirSync(PACK_DIR)
   .filter((f) => f.endsWith(".yaml"))
   .sort();
 
-// Same backstop as the CYOA/parser liveness proofs and the every-ending RPG proof. The
-// liveness policy widens the progress-only policy by READ only (and the combat lattice is
-// already present in the every-ending RPG search, which settles well under this); the cap
-// exists only so a future blowup fails LOUD (cap hit) rather than truncating a region into
-// a silent pass.
-const MAX_STATES = 200_000;
+// The route-rich Wolf-Winter graph exhausts at 670,963 states under this policy
+// (measured 2026-07-11). An 800k ceiling gives that concrete graph bounded headroom while
+// still failing LOUD on a future combinatorial blowup instead of silently truncating it.
+const MAX_STATES = 800_000;
+
+// The exact 670,963-state Wolf-Winter graph took 176s in the exhaustive-suite
+// contention run. Wall-clock headroom does not change the bounded state proof.
+const SOLVER_TEST_TIMEOUT_MS = 240_000;
 
 /**
  * The liveness action policy (identical to the parser proof): step every legal action
@@ -193,12 +195,17 @@ type Liveness = {
   displayed: Set<string>;
   /** Every declared variant key that must therefore be displayed somewhere. */
   declared: { key: string; where: string }[];
+  /** Object-level world-presence gates concretely satisfied while the object was in view. */
+  present: Set<string>;
+  /** Every authored world-presence gate that must expose its object in some reachable state. */
+  presenceDeclared: { key: string; where: string }[];
   cappedOut: boolean;
 };
 
 /** Run the best/worst-roll bracket under the liveness policy and mine displayed variants. */
 function analyze(index: RpgIndex, explore: (a: Action) => boolean = livenessExplore): Liveness {
   const displayed = new Set<string>();
+  const present = new Set<string>();
   const record = (kind: "room" | "object" | "ending", id: string, idx: number): void => {
     if (idx >= 0) displayed.add(`${kind}:${id}#${idx}`);
   };
@@ -220,7 +227,15 @@ function analyze(index: RpgIndex, explore: (a: Action) => boolean = livenessExpl
       if (room?.variants?.length) record("room", room.id, firstMatch(room.variants, s));
       // Objects are shown on examine — credit a variant only when the object is actually
       // PRESENT (visible in the room or held), i.e. examinable in this very state.
-      for (const oid of [...visibleObjectIds(index, s, s.current), ...s.inventory]) {
+      const visible = visibleObjectIds(index, s, s.current);
+      for (const oid of visible) {
+        const obj = index.objects.get(oid);
+        if (obj?.visible_when !== undefined) present.add(`object:${oid}@present`);
+        if (obj?.variants?.length) record("object", oid, firstMatch(obj.variants, s));
+      }
+      // Inventory is authoritative and intentionally bypasses `visible_when`, so it
+      // can credit a reactive examine variant but never a WORLD-presence gate.
+      for (const oid of s.inventory) {
         const obj = index.objects.get(oid);
         if (obj?.variants?.length) record("object", oid, firstMatch(obj.variants, s));
       }
@@ -229,12 +244,19 @@ function analyze(index: RpgIndex, explore: (a: Action) => boolean = livenessExpl
   );
 
   const declared: { key: string; where: string }[] = [];
+  const presenceDeclared: { key: string; where: string }[] = [];
   for (const room of index.pack.rooms) {
     (room.variants ?? []).forEach((_, i) =>
       declared.push({ key: `room:${room.id}#${i}`, where: `room "${room.id}" variant #${i}` }),
     );
   }
   for (const obj of index.pack.objects) {
+    if (obj.visible_when !== undefined) {
+      presenceDeclared.push({
+        key: `object:${obj.id}@present`,
+        where: `object "${obj.id}" world-presence gate`,
+      });
+    }
     (obj.variants ?? []).forEach((_, i) =>
       declared.push({ key: `object:${obj.id}#${i}`, where: `object "${obj.id}" variant #${i}` }),
     );
@@ -245,7 +267,7 @@ function analyze(index: RpgIndex, explore: (a: Action) => boolean = livenessExpl
     );
   }
 
-  return { displayed, declared, cappedOut: result.cappedOut };
+  return { displayed, declared, present, presenceDeclared, cappedOut: result.cappedOut };
 }
 
 describe("bug_0147 — every reactive variant of every RPG pack is reachable as displayed text", () => {
@@ -255,29 +277,39 @@ describe("bug_0147 — every reactive variant of every RPG pack is reachable as 
   });
 
   for (const file of packFiles) {
-    it(`${file}: every declared variant is the first match in some viewing state`, () => {
-      const loaded = loadRpgSourceFile(join(PACK_DIR, file));
-      expect(loaded.ok).toBe(true);
-      if (!loaded.ok) return;
-      const pack = loaded.compiled.pack;
+    it(
+      `${file}: every declared variant is the first match in some viewing state`,
+      () => {
+        const loaded = loadRpgSourceFile(join(PACK_DIR, file));
+        expect(loaded.ok).toBe(true);
+        if (!loaded.ok) return;
+        const pack = loaded.compiled.pack;
 
-      // The caveat guard: the best/worst-roll bracket credits variant display soundly only
-      // when no variant (no condition at all) gates on a raw HP value the extremes skip.
-      expect(
-        readsHpInCondition(pack),
-        `pack gates a condition on an HP var — the best/worst-roll bracket assumes no ` +
-          `HP-gated variant guard; branch the HP in the solver before trusting liveness here`,
-      ).toBe(false);
+        // The caveat guard: the best/worst-roll bracket credits variant display soundly only
+        // when no variant (no condition at all) gates on a raw HP value the extremes skip.
+        expect(
+          readsHpInCondition(pack),
+          `pack gates a condition on an HP var — the best/worst-roll bracket assumes no ` +
+            `HP-gated variant guard; branch the HP in the solver before trusting liveness here`,
+        ).toBe(false);
 
-      const { displayed, declared, cappedOut } = analyze(indexRpgPack(pack));
-      // The search must have exhausted the reachable region, else "not displayed" is
-      // unproven (it could lie in the truncated tail).
-      expect(cappedOut).toBe(false);
-      // The shipped RPG packs are reactive by design — guard against a vacuous pass.
-      expect(declared.length).toBeGreaterThan(0);
-      const dead = declared.filter((d) => !displayed.has(d.key)).map((d) => d.where);
-      expect(dead).toEqual([]);
-    });
+        const { displayed, declared, present, presenceDeclared, cappedOut } = analyze(
+          indexRpgPack(pack),
+        );
+        // The search must have exhausted the reachable region, else "not displayed" is
+        // unproven (it could lie in the truncated tail).
+        expect(cappedOut).toBe(false);
+        // The shipped RPG packs are reactive by design — guard against a vacuous pass.
+        expect(declared.length).toBeGreaterThan(0);
+        const dead = declared.filter((d) => !displayed.has(d.key)).map((d) => d.where);
+        expect(dead).toEqual([]);
+        const neverPresent = presenceDeclared
+          .filter((declaration) => !present.has(declaration.key))
+          .map((declaration) => declaration.where);
+        expect(neverPresent).toEqual([]);
+      },
+      SOLVER_TEST_TIMEOUT_MS,
+    );
   }
 
   it("FAILS on a planted dead variant (guards against the check silently passing)", () => {
@@ -305,6 +337,38 @@ endings: [{ id: e, title: E, text: "done" }]
     if (!r.ok) return;
     const { displayed } = analyze(indexRpgPack(r.compiled.pack));
     expect(displayed.has("room:a#0")).toBe(false);
+  });
+
+  it("FAILS on a planted world-presence gate no reachable state satisfies", () => {
+    const src = `
+meta: { id: t, title: T, start_room: a, vars_init: { hp: 10, attack: 3, defense: 1 } }
+rooms:
+  - id: a
+    name: A
+    description: "a bare room"
+    objects: [sealed_panel]
+    exits: [{ direction: north, to: b }]
+  - id: b
+    name: B
+    description: "B"
+    exits: [{ direction: south, to: a }]
+objects:
+  - id: sealed_panel
+    name: sealed panel
+    aliases: [panel]
+    description: "This must never enter the world view."
+    visible_when: [{ has_flag: never_set }]
+win_conditions: [{ id: w, conditions: [{ visited: b }], ending: e }]
+endings: [{ id: e, title: E, text: "done" }]
+`;
+    const result = compileRpgSource(src);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const liveness = analyze(indexRpgPack(result.compiled.pack));
+    expect(liveness.presenceDeclared.map((declaration) => declaration.key)).toEqual([
+      "object:sealed_panel@present",
+    ]);
+    expect(liveness.present.has("object:sealed_panel@present")).toBe(false);
   });
 
   it("CREDITS a variant reachable only by WINNING a fight (the best-roll regime is load-bearing)", () => {

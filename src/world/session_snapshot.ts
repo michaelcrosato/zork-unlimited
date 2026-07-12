@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { JourneyContractSnapshotSchema, cloneJourneyContractSnapshot } from "./journey_contract.js";
 import type { OverworldRoadEvent } from "./overworld.js";
 import {
   OVERWORLD_MAX_FATIGUE as MAX_FATIGUE,
@@ -6,7 +7,7 @@ import {
   type OverworldRoadEncounterOption,
 } from "./travel_mechanics.js";
 
-export const OVERWORLD_SESSION_SAVE_VERSION = 5 as const;
+export const OVERWORLD_SESSION_SAVE_VERSION = 6 as const;
 
 export type TravelLogEntry = {
   edgeId: string;
@@ -152,6 +153,7 @@ export const OverworldSessionSnapshotSchema = z
     regionRenown: z.array(z.tuple([z.string().min(1), z.number().int().nonnegative()])),
     completedRegionalArcIds: z.array(z.string().min(1)),
     pendingRoadEncounter: OverworldPendingRoadEncounterSnapshotSchema.nullable(),
+    journey: JourneyContractSnapshotSchema,
   })
   .strict();
 
@@ -210,6 +212,7 @@ export function cloneOverworldSessionSnapshot(
     pendingRoadEncounter: snapshot.pendingRoadEncounter
       ? { ...snapshot.pendingRoadEncounter }
       : null,
+    journey: cloneJourneyContractSnapshot(snapshot.journey),
   };
 }
 

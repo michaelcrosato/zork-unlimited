@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { createInitialJourneyContractSnapshot } from "../../src/world/journey_contract.js";
 import { timeLabel } from "../../src/world/session_journal_codec.js";
 import {
   assertSnapshotTimeline,
@@ -99,6 +100,7 @@ function snapshot(
     regionRenown: [],
     completedRegionalArcIds: [],
     pendingRoadEncounter: null,
+    journey: createInitialJourneyContractSnapshot(),
   };
 }
 

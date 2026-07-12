@@ -1,0 +1,45 @@
+id: bug_0504
+title: "Wolf-Winter's clue sources duplicated an answer key and made Cade contradict himself"
+pack: content/rpg/quests/wolf_winter.yaml
+reported_by: fresh verified blind playtest
+reports:
+  - ai-runs/2026-07-11T16-59-23-185Z/playtest.md
+  - ai-runs/2026-07-11T16-59-23-185Z/postchange.md
+severity: S2
+symptom: >
+  A lore-focused blind player asked both of Cade's apparently overlapping topics. One
+  ordered a close through the grey leader's feint; the other ordered waiting through that
+  same feint. Because neither named its cost or role, the two legal openings read as a
+  contradiction rather than an aggressive-versus-guarded choice. The day-book also
+  repeated Cade's full preparation guarantee, leaving discovery feeling like a system
+  tooltip, and the opening bare "yearling" briefly read as an escaped calf.
+root_cause: >
+  The day-book and Cade both owned instruction and guarantee prose, while Cade's topic
+  labels described subject matter rather than tactical posture. His journals preserved
+  the same unlabeled command lists. The encounter already implemented a real tradeoff—
+  wait grants three defense, close grants four attack but costs three defense—but its
+  information surfaces never explained that the commands were alternatives.
+fix: >
+  Make the day-book historical evidence: the pack count, an already-carried spear, and
+  contrasting protected versus spear-only watchmen establish why Cade plus the jerkin
+  matter without giving combat commands or repeating the guarantee; say "Heed Cade; don
+  the JERKIN" rather than making his counsel sound like a literal item. Label Cade's root,
+  topics, spoken lessons, and journals as quick/open versus guarded/patient roads. State
+  plainly that closing is fast but opens the guard and waiting is its patient alternative.
+  Name the first threat as a young wolf on every pre-contact room surface.
+deterministic_witnesses:
+  - invariant: "the day-book names both prep acts and their historical evidence but contains no maneuver response pair"
+  - invariant: "Cade's quick line teaches set/drive, wheel/turn, and a fast close with an open guard"
+  - invariant: "Cade's guarded line teaches wedge/bind and wait/true-rush as the patient alternative"
+  - invariant: "the wait opening is +0 attack/+3 defense; the close opening is +4 attack/-3 defense"
+  - invariant: "both lessons remain complete in wrapped compact dialogue and 128-character journal memory"
+tests:
+  - tests/regression/wolf_winter_complementary_clues.test.ts
+  - tests/regression/wolf_winter_compact_surface.test.ts
+  - tests/regression/wolf_winter_state_consistency.test.ts
+  - tests/regression/wolf_winter_wedge_signposted.test.ts
+verification:
+  - npm run validate -- wolf_winter
+  - npx vitest run tests/regression/wolf_winter_complementary_clues.test.ts tests/regression/wolf_winter_compact_surface.test.ts tests/regression/wolf_winter_state_consistency.test.ts tests/regression/wolf_winter_wedge_signposted.test.ts
+  - npm run crawl:smoke
+  - npm run health

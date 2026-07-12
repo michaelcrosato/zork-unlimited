@@ -83,6 +83,32 @@ ${INTERVIEW}`);
     }
   });
 
+  it("accepts either replay boolean and rejects a non-boolean placeholder", () => {
+    const reportWith = (interview: string): string => `
+1. Playthrough log: I started the game, followed the investigation, and reached ending_found.
+2. Did it work mechanically? No rejected actions or loops.
+3. Understandable & fun? clarity 4/5 + enjoyment 4/5.
+4. Confusion / friction points. None.
+5. Bugs or design flaws. None.
+6. Verdict: A real player would finish satisfied.
+${interview}`;
+
+    for (const wouldReplay of [true, false]) {
+      const interview = INTERVIEW.replace('"would_replay": true', `"would_replay": ${wouldReplay}`);
+      const result = verifyBlindReportText(reportWith(interview));
+      expect(result.ok).toBe(true);
+      if (result.ok) expect(result.interview.would_replay).toBe(wouldReplay);
+    }
+
+    const unresolved = INTERVIEW.replace(
+      '"would_replay": true',
+      '"would_replay": "<JSON boolean chosen after play>"',
+    );
+    const result = verifyBlindReportText(reportWith(unresolved));
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.reason).toContain("would_replay");
+  });
+
   it("accepts natural reverse rating prose from a completed blind playtest", () => {
     const result = verifyBlindReportText(`
 1. Playthrough log: I started at the mill, followed the board, and reached ending_saved.

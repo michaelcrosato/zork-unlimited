@@ -32,10 +32,21 @@ describe("recoverNpmEatenFlags", () => {
     const { args } = recoverNpmEatenFlags([], {
       npm_config_quest: "breaking_weir",
       npm_config_delay_ms: "1500",
+      npm_config_mock: "true",
       npm_config_spectate: "true",
+      npm_config_persona: "breaker",
     });
     expect(args).toEqual(
-      expect.arrayContaining(["--quest", "breaking_weir", "--delay-ms", "1500", "--spectate"]),
+      expect.arrayContaining([
+        "--quest",
+        "breaking_weir",
+        "--delay-ms",
+        "1500",
+        "--mock",
+        "--spectate",
+        "--persona",
+        "breaker",
+      ]),
     );
   });
 

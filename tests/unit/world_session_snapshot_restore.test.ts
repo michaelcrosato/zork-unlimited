@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { createInitialJourneyContractSnapshot } from "../../src/world/journey_contract.js";
 import type {
   OverworldJournalEntry,
   OverworldSessionSnapshot,
@@ -48,6 +49,7 @@ function snapshot(overrides: Partial<OverworldSessionSnapshot> = {}): OverworldS
     regionRenown: [["Region", 3]],
     completedRegionalArcIds: ["arc_b"],
     pendingRoadEncounter: null,
+    journey: createInitialJourneyContractSnapshot(),
     ...overrides,
   };
 }
@@ -137,6 +139,7 @@ describe("overworld session snapshot restore application", () => {
       suppliesAfter: 4,
       fatigueAfter: 7,
       pendingRoadEncounterAfter: null,
+      journeyAfter: createInitialJourneyContractSnapshot(),
     });
     expect([...state.discoveredIds]).toEqual(["town_a", "town_b"]);
     expect([...state.visitedIds]).toEqual(["town_b"]);

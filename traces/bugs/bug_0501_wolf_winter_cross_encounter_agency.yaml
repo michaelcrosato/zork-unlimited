@@ -1,0 +1,52 @@
+id: bug_0501
+title: "Wolf-Winter tactical lines had no persistent tradeoff across encounters"
+pack: content/rpg/quests/wolf_winter.yaml
+reported_by: blind-playtest fleet and verified blind playtests
+reports:
+  - ai-runs/playtests/20260711T1027Z-post-5ff320a6
+  - ai-runs/2026-07-11T12-31-01-715Z/playtest.md
+  - ai-runs/2026-07-11T13-49-35-696Z/playtest.md
+  - ai-runs/feedback/20260711T140033Z
+severity: S1
+symptom: >
+  Thirty of the frozen direct reports described Wolf-Winter as linear, prescribed,
+  or an answer-key exercise, and only sixteen of one hundred wanted to replay. Fresh
+  verified players independently repeated that the safest combat line was also the
+  obvious best line: every authored opening had exactly one prompted continuation,
+  and its consequences ended with that wolf. Preparation changed which label to pick
+  but never created a resource decision that could be cashed out in a later encounter.
+root_cause: >
+  Shallow maneuver sequences supported sibling follow-throughs and persistent result
+  flags, but maneuvers could not safely gain or spend inventory resources. Wolf-Winter
+  therefore authored one child per opening and gave the grey leader no way to react to
+  how the player had solved the flank-wolf. Adding unrestricted Effect lists would have
+  made combat safety proofs unsound by allowing HP, score, movement, ending, or flag
+  mutations inside a maneuver.
+fix: >
+  Add optional, narrowly typed maneuver resource_effects that can only add or remove a
+  declared item, must be ownership-guarded, execute once on commitment, and surface
+  their gains/costs in full action metadata. At the braced flank line, offer a reliable
+  pin alongside a weaker stroke that may invite another counterattack but wrenches free
+  a saved brace-stake. Carrying that stake exposes a third leader line; cross-bracing it
+  improves the later guard and the finishing turn consumes it. Reactive rooms and a
+  dedicated ending remember the earlier risk and later payoff.
+deterministic_witnesses:
+  - route: "braced funnel -> pin at rail -> wait -> true rush"
+    worst_roll_damage: 12
+    ending_hp: 18
+  - route: "braced funnel -> wrench brace-stake -> cross-brace leader -> turn over stake"
+    worst_roll_damage: 14
+    ending_hp: 16
+  - invariant: "the two funnel children are offered together, mutually exclusive, and expose their inventory deltas before commitment"
+  - invariant: "saved_brace_stake survives room transitions and save validation, then is consumed exactly once by its leader follow-through"
+  - invariant: "seeded route comparisons contain outcomes favoring each branch, so neither weakly dominates the other"
+tests:
+  - tests/regression/rpg_enemy_maneuvers.test.ts
+  - tests/regression/wolf_winter_combat_tactics.test.ts
+  - tests/regression/wolf_winter_three_fight_gauntlet.test.ts
+  - tests/unit/mcp_rpg_view_projection.test.ts
+verification:
+  - npm run validate -- wolf_winter
+  - npx vitest run tests/regression/rpg_enemy_maneuvers.test.ts tests/regression/wolf_winter_combat_tactics.test.ts tests/regression/wolf_winter_three_fight_gauntlet.test.ts tests/unit/mcp_rpg_view_projection.test.ts
+  - npm run crawl:smoke
+  - npm run health

@@ -99,7 +99,8 @@ export function makeStep<A extends EngineAction = RpgAction>(rules: Rules<A>) {
       return reject(state, "You can't do that yet.");
     }
 
-    // §8.4.3 — apply effects in declared order, one event each.
+    // §8.4.3 — apply effects in declared order. State-changing effects emit one
+    // event each; an idempotent remove of an item not held emits no false DROP.
     const before = state.current;
     const applied = applyEffects(resolution.effects, state);
     let next = applied.state;

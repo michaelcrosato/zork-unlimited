@@ -213,12 +213,20 @@ export function exhaustiveEndingsMulti<A extends EngineAction = Action>(
   const steps = ruleSets.map((r) => makeStep(r));
   const reached = new Set<string>();
   const seen = new Set<string>();
-  const queue: GameState[] = [start];
+  // Keep FIFO traversal without repeatedly shifting a growing array. `Array.shift()` moves
+  // the remaining entries on every dequeue and becomes the dominant cost once a shipped
+  // pack reaches hundreds of thousands of states. A monotonic cursor preserves the exact
+  // BFS order; clearing consumed slots releases their state graphs while the backing array
+  // remains stable for O(1) append/dequeue operations.
+  const queue: (GameState | undefined)[] = [start];
+  let queueHead = 0;
   seen.add(key(start));
 
-  while (queue.length > 0) {
+  while (queueHead < queue.length) {
     if (seen.size > maxStates) return { reached, states: seen.size, cappedOut: true };
-    const s = queue.shift()!;
+    const s = queue[queueHead]!;
+    queue[queueHead] = undefined;
+    queueHead += 1;
     // Observe every DISTINCT reachable state exactly once (each is enqueued once,
     // dequeued once). Lets a caller mine the full reachable region — e.g. which
     // reactive scene/ending variant is the first match in each viewing context —

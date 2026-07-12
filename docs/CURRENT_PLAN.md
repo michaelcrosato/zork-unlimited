@@ -1,64 +1,60 @@
 # Current Plan
 
-This is the AFK loop's token-small handoff document. It is OVERWRITTEN each
-ultraplan with the synthesis plus the one chosen next move; a fresh
-implementation subagent reads ONLY this doc and the files it names. Keep it
-current, terse, dated, and under ~60 lines - completed work belongs in git
-history and `docs/DECISION_LOG.md`, not here.
+Token-small AFK-loop handoff: keep one synthesis and chosen move under 60 lines.
 
-## Cycle: 2026-07-08 - Compact Journal Hash Cleanup
+## Cycle: 2026-07-11 - Consequential Decision Accounting
 
 ## Synthesis
 
-The Albany-to-Wolf-Winter bridge now frames the quest as a local relief chain:
-Rowan's civic-records lead reaches Hayden's Station Quarter route desk, and the
-RPG opening carries that Albany winter-relief packet into the steading before
-the byre crisis takes over. Cade now reads the player as Albany's relief rider,
-not an unexplained steading hunter, while the spear remains already in hand.
+The pure journey contract landed green in `99743619`. Its fresh fleet produced
+100/100 verified pure exits with no resume, rejection, retry, timeout, or legacy
+evidence (`ai-runs/feedback/20260711T221007Z-pure100`).
 
-Fresh-game Codex seeds 591-615 all exited 0; clarity 25x4/5, enjoyment 25x4/5,
-replay 25x true. The ledger now has 436 accepted reports. Bridge/tone complaints
-dropped from 12/25 to 1/25, and all 25 reports noticed the Albany relief-chain
-context positively or neutrally.
+At early Albany-goal completion, 46 players continued and 54 ended; all 46
+continuers ended at checkpoint 40. Post-exit `would_replay` was 76/100 and is a
+separate attitude metric. The strongest depth signal is the post-Wolf-Winter
+quality cliff: 44/46 exposed continuers called later Albany play generic,
+repetitive, or under-narrated.
 
-The loudest current quality issue is compact text hygiene: 25/25 fresh reports
-mention compact truncation, hash-like journal suffixes, or tuple readability.
-This is not a new system; it is the player-facing text surface the blind agents
-actually read. Cleaning it should improve every future slice playtest and make
-the existing New York opening feel less debug-like.
+First fix the measurement. Contract v1 counts every successful embedded-quest
+command and accepted overworld no-op. Thirty-four reports objected to
+narration-only LOOK/EXAMINE, dialogue closure, or unchanged rest counting like
+tactical choices. Preserve v1 as valid immutable evidence with broader semantics.
 
 ## Chosen Move
 
-Remove hash-like compact journal/truncation artifacts from the fresh-game slice
-without increasing compact payloads enough to reintroduce context bloat.
+Build journey contract v2 around one engine-owned `countsTowardJourney`
+classification consumed identically by UI and MCP.
 
-- Focus on compact RPG/overworld journal and prose shortening paths that emit
-  `#...` suffixes or clip actionable Wolf-Winter/Albany lines.
-- Preserve deterministic state hashes, snapshot hashes, and guard semantics; do
-  not hide or weaken hashes used for concurrency/versioning.
-- Keep the compact view bounded: prefer cleaner summaries or non-debug ellipses
-  over simply raising every limit.
-- Add focused regressions using Wolf-Winter/Albany observations that prove compact
-  journal entries and compact descriptions do not expose hash-like fragments.
-- Do not broaden into tuple-label redesign this cycle unless required to remove
-  the hash artifact.
+- Count movement, stateful clue reads, substantive dialogue choices, combat,
+  preparation, and actions that change the player's situation.
+- Exclude context-only LOOK/INVENTORY, repeated narration-only examination,
+  dialogue closure, unchanged rest, pure reads/listings, persistence, rejected
+  calls, and the retention choice.
+- Carry classification and reason in the action result; never infer them from
+  MCP-only action-id heuristics.
+- Keep the exact initial Albany goal and 40/80/+40 cadence; bump the contract
+  version so receipts distinguish v1 from v2 evidence.
 
 ## Acceptance
 
-1. Focused compact-output tests fail on current hash-like journal/truncation text
-   and pass with cleaner player-facing compact prose.
-2. Focused tests prove state/snapshot hashes still exist where tools need them.
-3. `npm run health` passes.
-4. Run a 25-seed fresh-game `npm run blind` batch, regenerate
-   `docs/BLIND_FEEDBACK_LEDGER.md`, and confirm compact hash/truncation complaints
-   drop before committing.
+1. The same accepted sequence produces identical UI and MCP counts.
+2. Stateful reads count once when they reveal/alter knowledge; context repeats do not.
+3. Unchanged rest and dialogue closure cannot trigger a checkpoint.
+4. Movement and consequential quest/world actions continue to count.
+5. Save/restore and receipts preserve v2 proof without rewriting v1 reports.
+6. Parity regressions, crawl, browser, health, and a fresh pure canary pass before
+   comparing a v2 cohort with the frozen v1 baseline.
+
+## Queued Content Move
+
+Then author an ending-sensitive Wolf-Winter → Albany aftermath chain through the
+remaining pre-40 session: scene-specific prose, a consequential choice, and a
+visible next local lead. Target decision-40 continuation above 0/46 and depth
+complaints below 44/46.
 
 ## Deferred Levers
 
-- Albany Civic Center charter backlog and Civic Ledger Run resolutions still feel
-  generic compared with their setup.
-- Related Station Quarter winter-relief event can remain active after Wolf-Winter
-  completion.
-- Road encounter arrival/progress wording still repeats in fresh samples.
-- Hidden counts remain useful but system-facing.
-- Colonie and nearby towns still feel templated after Albany.
+- Clarify why ordinary jobs do not satisfy the exact initial lead goal.
+- Expose event-resolution prerequisites before a rejected attempt.
+- Bind sidecars to run identity/digest and diversify later pure cohorts.

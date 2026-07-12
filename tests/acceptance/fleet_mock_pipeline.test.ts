@@ -46,6 +46,13 @@ describe("fleet:mock end to end (zero tokens)", () => {
       const text = readFileSync(join(out, f), "utf8");
       const v = verifyBlindReportText(text);
       expect(v.ok, `${f}: ${(v as { reason?: string }).reason ?? ""}`).toBe(true);
+      const sidecar = JSON.parse(readFileSync(join(out, f.replace(/\.md$/, ".run.json")), "utf8"));
+      expect(sidecar).toMatchObject({
+        report_schema_version: 2,
+        play_mode: "structural",
+        retention_eligible: false,
+        evidence_status: "not_applicable",
+      });
       const i = extractExitInterview(text);
       if (i.ok && i.interview.bugs.some((b) => b.where.includes("Albany Station Quarter")))
         overlap += 1;
@@ -113,6 +120,58 @@ describe("fleet:mock end to end (zero tokens)", () => {
       expect(v.interview.clarity).toBe(5);
       expect(v.interview.verdict).toBe(overridePlan.verdict);
     }
+  }, 180_000);
+
+  it("allows an explicit mock quest target and ignores an ambient agent override", () => {
+    const out = mkdtempSync(join(tmpdir(), "fleet-mock-quest-"));
+    const label = `mock-quest-policy-${process.pid}-${Date.now()}`;
+    execFileSync(
+      "node",
+      [
+        "blind-tester/fleet.mjs",
+        "--mock",
+        "--target",
+        "quest:breaking_weir",
+        "--count",
+        "1",
+        "--concurrency",
+        "1",
+        "--max-retries",
+        "0",
+        "--seed-base",
+        "777",
+        "--out",
+        out,
+        "--label",
+        label,
+      ],
+      {
+        stdio: "pipe",
+        timeout: 120_000,
+        env: { ...process.env, BLIND_AGENT_CMD: "exit 97" },
+      },
+    );
+
+    const reports = readdirSync(out).filter((f) => f.endsWith(".md"));
+    expect(reports).toHaveLength(1);
+    const report = reports[0]!;
+    expect(report).toContain("breaking_weir_seed777");
+    expect(verifyBlindReportText(readFileSync(join(out, report), "utf8")).ok).toBe(true);
+
+    const manifest = readFileSync(
+      join(process.cwd(), "ai-runs", "fleet", label, "manifest.jsonl"),
+      "utf8",
+    );
+    const row = JSON.parse(manifest.trim());
+    expect(row).toMatchObject({
+      target: "quest:breaking_weir",
+      status: "verified",
+      report_schema_version: 2,
+      play_mode: "structural",
+      start_surface: "direct_quest",
+      retention_eligible: false,
+      evidence_status: "not_applicable",
+    });
   }, 180_000);
 
   it("compiles mock reports + crawl findings into ranked hotspots with the planted overlap on top", () => {

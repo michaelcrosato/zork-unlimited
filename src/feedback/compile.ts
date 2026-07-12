@@ -1,7 +1,8 @@
 /**
  * Feedback compiler orchestration — turns verified blind-tester reports
  * (Tier 3 fleet) and crawler `findings.jsonl` rows (Tier 2) into the ranked
- * `hotspots.json` / `hotspots.md` artifacts. NO LLM anywhere in this
+ * `hotspots.json` / `hotspots.md` artifacts plus the mode-separated
+ * `retention.json` evidence summary. NO LLM anywhere in this
  * pipeline: `collectInputs` gates and parses, `normalize`/`cluster`/`rank`
  * (Tasks 14-15) do the deterministic analysis, this module wires them
  * together and renders the two output files.
@@ -12,16 +13,19 @@
  *   the top K clusters -> build Hotspots -> apply trends vs. a previous
  *   compile -> compute the single recommended-next-fix -> compute metrics +
  *   sycophancy telemetry -> assemble + self-validate the HotspotsFile ->
- *   write hotspots.json (canonical bytes) + hotspots.md (human report).
+ *   write hotspots.json (canonical bytes) + retention.json (mode-separated
+ *   retention evidence) + hotspots.md (human report).
  */
 import { execSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import { basename, join, resolve } from "node:path";
-import type { ExitInterview } from "../blind/exit_interview.js";
+import { isPureExitInterviewV2, type ExitInterview } from "../blind/exit_interview.js";
 import { verifyBlindReportText } from "../blind/report_verifier.js";
+import { parseBlindRunSidecar } from "../blind/run_evidence.js";
 import { CrawlFindingSchema, type CrawlFinding } from "../crawl/findings.js";
 import { canonicalize, shortHash } from "../core/hash.js";
 import { clusterIssues, type IssueCluster, type IssueRecord } from "./cluster.js";
+import { summarizeFeedbackEvidence, type FeedbackEvidenceSummary } from "./evidence_summary.js";
 import {
   sycophancyTelemetry,
   targetMetrics,
@@ -153,12 +157,35 @@ export type CollectInputsResult = {
 type ReportOutcome = CollectedInterview | { rejected: true };
 
 function resolveReport(
+  filePath: string,
   fileName: string,
   text: string,
   manifestIndex: ReadonlyMap<string, ManifestRow>,
 ): ReportOutcome {
-  const verification = verifyBlindReportText(text);
+  let verification = verifyBlindReportText(text);
   if (!verification.ok) return { rejected: true };
+
+  // Pure UX prose is not retention evidence by itself. Apply the same
+  // adjacent-sidecar gate as the durable feedback ledger so a timed-out,
+  // copied, or otherwise unverified V2-shaped report cannot enter Tier 3 as a
+  // live-player run. Legacy reports stay readable as legacy-guided evidence;
+  // structural V2 reports remain explicit QA inputs rather than pure evidence.
+  if (isPureExitInterviewV2(verification.interview)) {
+    const sidecarPath = filePath.replace(/\.md$/, ".run.json");
+    if (!existsSync(sidecarPath)) return { rejected: true };
+    // A reused explicit output prefix must not let an older successful run's
+    // sidecar bless a newer timed-out/partial report. The verifier writes the
+    // sidecar only after the report and server evidence both pass, so a valid
+    // adjacent sidecar cannot predate its report.
+    if (statSync(sidecarPath).mtimeMs < statSync(filePath).mtimeMs) return { rejected: true };
+    const sidecar = parseBlindRunSidecar(readFileSync(sidecarPath, "utf8"));
+    if (!sidecar.ok) return { rejected: true };
+    verification = verifyBlindReportText(text, {
+      requiredPlayMode: "pure",
+      runSidecar: sidecar.sidecar,
+    });
+    if (!verification.ok) return { rejected: true };
+  }
 
   const manifestRow = manifestIndex.get(fileName);
   if (manifestRow) {
@@ -200,7 +227,7 @@ export function collectInputs(root: string, inputs: string[]): CollectInputsResu
 
   const addReport = (filePath: string, fileName: string): void => {
     const text = readFileSync(filePath, "utf8");
-    const outcome = resolveReport(fileName, text, manifestIndex);
+    const outcome = resolveReport(filePath, fileName, text, manifestIndex);
     if ("rejected" in outcome) {
       rejected++;
       return;
@@ -456,7 +483,11 @@ function describeLocation(loc: Hotspot["location"]): string {
 
 type HotspotRenderRow = { hotspot: Hotspot; distinctReports: number };
 
-function renderHotspotsMarkdown(file: HotspotsFile, rows: readonly HotspotRenderRow[]): string {
+function renderHotspotsMarkdown(
+  file: HotspotsFile,
+  rows: readonly HotspotRenderRow[],
+  evidence: FeedbackEvidenceSummary,
+): string {
   const lines: string[] = [];
   lines.push("# Feedback Hotspots");
   lines.push("");
@@ -470,7 +501,52 @@ function renderHotspotsMarkdown(file: HotspotsFile, rows: readonly HotspotRender
   lines.push(`- Verified reports: ${file.inputs.verified_reports}`);
   lines.push(`- Rejected reports: ${file.inputs.rejected_reports}`);
   lines.push(`- Crawl findings: ${file.inputs.crawl_findings}`);
+  lines.push(
+    `- Verified report modes: pure ${evidence.report_modes.pure}, structural ${evidence.report_modes.structural}, legacy-guided ${evidence.report_modes.legacy_guided}`,
+  );
+  lines.push(
+    "- Experience metrics and hot spots include every verified mode; only the pure count below is retention evidence.",
+  );
   lines.push("");
+
+  const retention = evidence.pure_retention;
+  lines.push("## Pure retention");
+  lines.push("");
+  lines.push(`- Evidence-eligible pure exits: ${retention.eligible_reports}`);
+  lines.push(`- Players who continued at least once: ${retention.continued_reports}`);
+  lines.push(
+    `- Players who ended at their first choice: ${retention.ended_at_first_choice_reports}`,
+  );
+  lines.push(
+    `- Actual game choices: ${retention.choices.continue} continue, ${retention.choices.end} end`,
+  );
+  const decisions = retention.accepted_decisions;
+  lines.push(
+    decisions.mean === null
+      ? "- Accepted decisions: no eligible pure exits"
+      : `- Accepted decisions: ${decisions.minimum}–${decisions.maximum} (mean ${decisions.mean.toFixed(2)})`,
+  );
+  lines.push(
+    `- Exit reasons: ${retention.exit_reasons.map((row) => `${row.reason} ${row.count}`).join(", ") || "none"}`,
+  );
+  lines.push(
+    "- `would_replay` is a post-exit attitude metric; it is not counted as a continuation choice.",
+  );
+  lines.push("");
+  lines.push("| choice trigger | continue | end |");
+  lines.push("| --- | ---: | ---: |");
+  for (const [trigger, counts] of Object.entries(retention.choice_triggers)) {
+    lines.push(`| ${trigger} | ${counts.continue} | ${counts.end} |`);
+  }
+  lines.push("");
+  if (retention.checkpoints.length > 0) {
+    lines.push("| checkpoint decision | continue | end |");
+    lines.push("| ---: | ---: | ---: |");
+    for (const checkpoint of retention.checkpoints) {
+      lines.push(`| ${checkpoint.decision} | ${checkpoint.continue} | ${checkpoint.end} |`);
+    }
+    lines.push("");
+  }
 
   lines.push("## Sycophancy");
   lines.push(`- Reports: ${file.sycophancy.reports}`);
@@ -543,11 +619,14 @@ function renderHotspotsMarkdown(file: HotspotsFile, rows: readonly HotspotRender
 
 export function compileFeedback(opts: CompileOptions): {
   file: HotspotsFile;
+  evidence: FeedbackEvidenceSummary;
   jsonPath: string;
   mdPath: string;
+  retentionPath: string;
 } {
   const idx = buildLocationIndex(opts.root);
   const collected = collectInputs(opts.root, opts.inputs);
+  const evidence = summarizeFeedbackEvidence(collected.interviews);
 
   const issues = [
     ...fleetIssueRecords(collected.interviews, idx),
@@ -604,13 +683,15 @@ export function compileFeedback(opts: CompileOptions): {
   mkdirSync(opts.outDir, { recursive: true });
   const jsonPath = join(opts.outDir, "hotspots.json");
   writeFileSync(jsonPath, `${canonicalize(validated)}\n`, "utf8");
+  const retentionPath = join(opts.outDir, "retention.json");
+  writeFileSync(retentionPath, `${canonicalize(evidence)}\n`, "utf8");
 
   const rows: HotspotRenderRow[] = top.map((cluster, i) => ({
     hotspot: hotspots[i]!,
     distinctReports: new Set(cluster.issues.map((issue) => issue.ref)).size,
   }));
   const mdPath = join(opts.outDir, "hotspots.md");
-  writeFileSync(mdPath, renderHotspotsMarkdown(validated, rows), "utf8");
+  writeFileSync(mdPath, renderHotspotsMarkdown(validated, rows, evidence), "utf8");
 
-  return { file: validated, jsonPath, mdPath };
+  return { file: validated, evidence, jsonPath, mdPath, retentionPath };
 }

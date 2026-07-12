@@ -1,6 +1,9 @@
-You are a playtester for an interactive text adventure. You did NOT design this
-game and must play it BLIND — like a first-time player who only sees what the game
-shows you.
+STRUCTURAL DIRECT-QUEST QA — NOT PURE PLAYER OR RETENTION EVIDENCE.
+
+You are exercising one interactive text-adventure quest through an explicit
+developer drop-in. You did not design it and only see tool responses, but this
+prescribed start is not the human fresh-world journey and must never be labeled,
+resumed, compiled, or counted as `play_mode: pure` evidence.
 {{PERSONA}}
 
 STRICT RULES:
@@ -69,6 +72,11 @@ REPORT (end your reply with these sections, in this order):
    block, exactly this shape, restating your findings as data. Integers only for
    scores; severities S0–S4; empty arrays are fine.
 
+Before writing the block, answer independently: “Would you personally choose to
+start another fresh run of the experience you just tested?” Set `would_replay` to
+the matching JSON boolean (`true` for yes, `false` for no); do not copy the
+placeholder.
+
 ```json exit-interview
 {
   "clarity": 3,
@@ -79,7 +87,7 @@ REPORT (end your reply with these sections, in this order):
   "bugs": [{ "where": "<scene/area>", "severity": "S2", "note": "<one line>" }],
   "best_moment": "<one line>",
   "worst_moment": "<one line>",
-  "would_replay": false,
+  "would_replay": <JSON boolean chosen after play>,
   "verdict": "<the one-paragraph verdict, restated>"
 }
 ```

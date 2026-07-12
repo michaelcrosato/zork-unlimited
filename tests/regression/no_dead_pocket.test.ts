@@ -59,16 +59,16 @@ import { loadRpgSourceFile, compileRpgSource } from "../../src/rpg/source.js";
 import { indexRpgPack, buildRpgRules, initStateForRpgPack } from "../../src/rpg/runner.js";
 import { HP_VAR } from "../../src/rpg/schema.js";
 
-// Same backstop as the ending suites; the shipped packs settle well under it (the largest,
-// watchtower_road, is ~83k progress-reachable states). The cap exists only so a future blowup
-// fails loudly (cap hit) rather than silently truncating an unexplored — possibly dead — region.
-const MAX_STATES = 200_000;
+// Same backstop as the ending suites. The route-rich Wolf-Winter progress graph
+// exhausts at 335,482 states (measured 2026-07-11). The cap keeps bounded headroom while a
+// future blowup still fails loudly instead of truncating a possibly dead region.
+const MAX_STATES = 400_000;
 
 // The edge-collecting BFS over the largest pack (watchtower_road, ~83k states) runs in a few
 // seconds but exceeds vitest's 5s default under full-suite parallel load. A generous per-pack
 // ceiling keeps it non-flaky on a slow CI box; a true blowup still trips the MAX_STATES cap
 // (a loud cappedOut), not this wall-clock bound.
-const TEST_TIMEOUT_MS = 60_000;
+const TEST_TIMEOUT_MS = 180_000;
 
 type LivenessResult = {
   states: number;

@@ -76,9 +76,10 @@
  * step every action except the pure-observation verbs and DROP (no award gates on a
  * dropped-item location, and stepping DROP blows the state cap). That policy steps READ,
  * ATTACK, and the skill-check USE, so every score-award state is visited. The search FAILS
- * on cappedOut, so it can never pass by truncating an unexplored region. Both shipped packs
- * settle well under the 200k cap (the same bracket+policy as bug_0147: cold_forge ~19k,
- * sunken_barrow ~1.9k states).
+ * on cappedOut, so it can never pass by truncating an unexplored region. Every shipped pack
+ * settles under the bounded cap. Wolf Winter's authored route/combat choices expand the
+ * complete bracket to 665,101 states; the 800k ceiling remains a loud runaway guard with
+ * roughly 20% headroom rather than an implicit truncation.
  *
  * Packs are auto-discovered from content/rpg/quests, so a new RPG pack is covered the moment
  * it ships (the health-covers-all-packs bar, bug_0096).
@@ -107,10 +108,11 @@ const packFiles = readdirSync(PACK_DIR)
 // this same var, so there is no second scoring var to consider.
 const SCORE_VAR = "score";
 
-// Same safety bound as the every-ending / variant-liveness proofs. The bracket+liveness
-// policy settles well under this on both shipped packs; the ceiling exists only so a future
-// combinatorial blowup fails LOUDLY (cap hit) rather than truncating into a silent pass.
-const MAX_STATES = 200_000;
+// Same evidence-backed safety bound as the action-id / variant-liveness / metamorphic
+// proofs. Route-rich Wolf Winter settles at 665,101 states under this policy
+// (measured 2026-07-11); bounded headroom still makes a future combinatorial blowup fail
+// LOUDLY rather than truncating into a silent pass.
+const MAX_STATES = 800_000;
 
 // Vitest runs the full corpus concurrently in CI, where the largest shipped-pack search
 // can take more than the generic 60-second default under runner contention. MAX_STATES

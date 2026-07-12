@@ -127,6 +127,8 @@ export class GameSession {
         id: a.id,
         label: a.skill_check
           ? `${a.command}  ⟨${a.skill_check.skill} check, DC ${a.skill_check.difficulty}⟩`
+          : a.combat
+            ? `${a.command}  ⟨${a.combat.phase === "opening" ? "opening" : a.combat.phase === "follow_through" ? "follow-through" : "one-shot"}, ATK ${signed(a.combat.attack_bonus)}, DEF ${signed(a.combat.defense_bonus)} this round${resourceHint(a.resources)}⟩`
           : a.command,
       })),
       inventory: o.inventory,
@@ -170,6 +172,20 @@ export class GameSession {
   reset(): void {
     this.state = this.fresh();
   }
+}
+
+function signed(value: number): string {
+  return value >= 0 ? `+${value}` : String(value);
+}
+
+function resourceHint(resources: { gains: string[]; costs: string[] } | undefined): string {
+  if (!resources) return "";
+  const readable = (id: string): string => id.replaceAll("_", " ");
+  const changes = [
+    ...resources.gains.map((id) => `gain ${readable(id)}`),
+    ...resources.costs.map((id) => `spend ${readable(id)}`),
+  ];
+  return changes.length > 0 ? `, ${changes.join(", ")}` : "";
 }
 
 function narrationsOf(events: GameEvent[]): string[] {

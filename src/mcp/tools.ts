@@ -50,11 +50,18 @@ import type { RpgStateHashRejection, RpgStateUnchanged } from "./rpg_state_guard
 import { compactMcpTranscriptSummaryValue } from "./action_labels.js";
 import {
   TRANSCRIPT_TURN_LIMIT_DEFAULT,
+  rpgStepEventVersion,
+  rpgStepEvents,
   type TranscriptArgs,
   type TranscriptResponse,
 } from "./transcript_projection.js";
 import { OverworldMcpSessionStore } from "./overworld_sessions.js";
 import { createOverworldToolHandlers } from "./overworld_tool_handlers.js";
+import {
+  journeyBlocksGameplay,
+  suppressRpgGameplayActions,
+  type EmbeddedJourneyField,
+} from "./journey_projection.js";
 import {
   loadOverworldManifest as loadOverworldManifestFromRoot,
   resolveWorldQuestSourceId,
@@ -152,13 +159,15 @@ type RpgSessionPayload<Args extends RpgViewOptions = RpgViewOptions> = {
   /** Field guide for the compact context/events; sent only on session-creating responses. */
   legend?: RpgCompactLegend;
 } & RpgSourceFields &
-  RpgViewField<Args>;
+  RpgViewField<Args> &
+  Partial<EmbeddedJourneyField>;
 
 type RpgObservationPayload<Args extends RpgViewOptions> = {
   state_hash: string;
-} & RpgViewField<Args>;
+} & RpgViewField<Args> &
+  Partial<EmbeddedJourneyField>;
 
-type RpgObservationUnchanged = RpgStateUnchanged;
+type RpgObservationUnchanged = RpgStateUnchanged & Partial<EmbeddedJourneyField>;
 
 type RpgObservationResponse<Args extends RpgViewOptions> = Args extends {
   if_state_hash: string;
@@ -181,9 +190,9 @@ type RpgLegalActionRows<Args extends RpgLegalActionsArgs> = Args extends {
 type RpgLegalActionsPayload<Args extends RpgLegalActionsArgs> = {
   actions: RpgLegalActionRows<Args>;
   state_hash: string;
-};
+} & Partial<EmbeddedJourneyField>;
 
-type RpgLegalActionsUnchanged = RpgStateUnchanged;
+type RpgLegalActionsUnchanged = RpgStateUnchanged & Partial<EmbeddedJourneyField>;
 
 type RpgLegalActionsResponse<Args extends RpgLegalActionsArgs> = Args extends {
   if_state_hash: string;
@@ -221,7 +230,8 @@ type RpgStepActionArgs = {
 } & RpgViewOptions &
   RpgEventOptions;
 
-type RpgStepActionResponse<Args extends RpgStepActionArgs> = RpgRuntimeStepActionResponse<Args>;
+type RpgStepActionResponse<Args extends RpgStepActionArgs> = RpgRuntimeStepActionResponse<Args> &
+  Partial<EmbeddedJourneyField>;
 
 type RpgLoadGameArgs = {
   world_quest_id?: string;
@@ -325,6 +335,8 @@ function compactTraceActionLabel(action: RpgAction): string {
       return compactMcpTranscriptSummaryValue(`INSPECT:${action.target}`);
     case "INVENTORY":
       return "INVENTORY";
+    case "MANEUVER":
+      return compactMcpTranscriptSummaryValue(`MANEUVER:${action.enemy}:${action.maneuver}`);
     case "ATTACK":
       return compactMcpTranscriptSummaryValue(`ATTACK:${action.enemy}`);
   }
@@ -414,6 +426,31 @@ export function createToolApi(opts: { root: string }) {
   const rpgRuntime = new RpgMcpSessionRuntime(sessions);
   const overworldSessions = new OverworldMcpSessionStore(() => loadOverworldManifestFromRoot(root));
   const apiRef: { current?: RpgStartWorldQuestInvoker } = {};
+
+  function embeddedJourneyField(rpgSessionId: string): EmbeddedJourneyField | null {
+    const rpgSession = sessions.get(rpgSessionId);
+    if (!rpgSession.overworldSessionId) return null;
+    const overworldSession = overworldSessions.get(rpgSession.overworldSessionId);
+    return {
+      journey: overworldSession.journey(),
+      overworld_snapshot_hash: overworldSessions.snapshotHash(overworldSession),
+    };
+  }
+
+  function withEmbeddedJourney<Payload extends object>(
+    rpgSessionId: string,
+    payload: Payload,
+  ): Payload & Partial<EmbeddedJourneyField> {
+    const field = embeddedJourneyField(rpgSessionId);
+    if (!field) return payload;
+    const blocked = journeyBlocksGameplay(field.journey);
+    const projectedPayload = blocked ? suppressRpgGameplayActions(payload) : payload;
+    const visiblePayload =
+      blocked && "actions" in projectedPayload
+        ? { ...projectedPayload, actions: [] }
+        : projectedPayload;
+    return { ...visiblePayload, ...field };
+  }
 
   const api = {
     sessions,
@@ -522,10 +559,10 @@ export function createToolApi(opts: { root: string }) {
         compact_observation: true,
         ...args,
       } as DefaultCompactRpgView<Args>;
-      return runRpgGetObservation(
-        { sessions, rpgRuntime },
-        responseOptions,
-      ) as RpgObservationResponse<DefaultCompactRpgView<Args>>;
+      const response = runRpgGetObservation({ sessions, rpgRuntime }, responseOptions);
+      return withEmbeddedJourney(args.session_id, response) as RpgObservationResponse<
+        DefaultCompactRpgView<Args>
+      >;
     },
 
     list_legal_actions<Args extends RpgLegalActionsArgs>(
@@ -535,10 +572,10 @@ export function createToolApi(opts: { root: string }) {
         compact_actions: true,
         ...args,
       } as DefaultCompactRpgActions<Args>;
-      return runRpgListLegalActions(
-        { sessions, rpgRuntime },
-        responseOptions,
-      ) as RpgLegalActionsResponse<DefaultCompactRpgActions<Args>>;
+      const response = runRpgListLegalActions({ sessions, rpgRuntime }, responseOptions);
+      return withEmbeddedJourney(args.session_id, response) as RpgLegalActionsResponse<
+        DefaultCompactRpgActions<Args>
+      >;
     },
 
     step_action<Args extends RpgStepActionArgs>(
@@ -549,7 +586,31 @@ export function createToolApi(opts: { root: string }) {
         compact_observation: true,
         ...args,
       } as DefaultCompactRpgStep<Args>;
-      return runRpgStepAction({ sessions, rpgRuntime }, responseOptions) as RpgStepActionResponse<
+      const before = embeddedJourneyField(args.session_id);
+      if (before && journeyBlocksGameplay(before.journey)) {
+        const read = runRpgGetObservation({ sessions, rpgRuntime }, responseOptions);
+        const rejectionReason =
+          before.journey.pendingChoice?.message ??
+          "This journey has ended and no longer accepts gameplay decisions.";
+        return {
+          ok: false,
+          rejection_reason: rejectionReason,
+          events: rpgStepEvents([], responseOptions),
+          ...rpgStepEventVersion(responseOptions),
+          ...suppressRpgGameplayActions(read),
+          ...before,
+        } as RpgStepActionResponse<DefaultCompactRpgStep<Args>>;
+      }
+
+      const response = runRpgStepAction({ sessions, rpgRuntime }, responseOptions);
+      if (response.ok === true) {
+        const rpgSession = sessions.get(args.session_id);
+        if (rpgSession.overworldSessionId) {
+          const overworldSession = overworldSessions.get(rpgSession.overworldSessionId);
+          overworldSession.recordAcceptedQuestDecision(args.action_id);
+        }
+      }
+      return withEmbeddedJourney(args.session_id, response) as RpgStepActionResponse<
         DefaultCompactRpgStep<Args>
       >;
     },

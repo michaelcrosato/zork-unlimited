@@ -60,8 +60,12 @@ import { exhaustiveEndingsMulti } from "./support/exhaustive_endings.js";
 import type { Rules } from "../../src/core/engine.js";
 import type { Action } from "../../src/api/types.js";
 
-// Same backstop the reachability suites use; every shipped pack settles well under it.
-const MAX_STATES = 200_000;
+// The route-rich Wolf-Winter progress graph exhausts at 332,551 states
+// (measured 2026-07-11). Keep bounded headroom above that concrete witness; a
+// future blowup still fails loudly instead of truncating an unproven search.
+const MAX_STATES = 400_000;
+// The measured Wolf-Winter graph takes ~84s under the exhaustive-suite contention run.
+const SOLVER_TEST_TIMEOUT_MS = 120_000;
 
 // Best/worst-roll rule sets for RPG, identical to rpg_all_endings_reachable.test.ts. The
 // BEST regime (own strike max, damage taken min) is what carries a WIN — the path we need a
@@ -163,27 +167,36 @@ describe("every non-death ending of every RPG pack renders cleanly when reached"
   });
 
   for (const file of rpgFiles) {
-    it(`${file} (rpg): each declared non-death ending renders cleanly when reached`, () => {
-      const loaded = loadRpgSourceFile(join(RPG_DIR, file));
-      expect(loaded.ok).toBe(true);
-      if (!loaded.ok) return;
-      const pack = loaded.compiled.pack;
-      const ends = nonDeathEndingsOf(pack.endings);
-      if (ends.length === 0) return; // nothing to render-check
-      const index = indexRpgPack(pack);
-      const start = initStateForRpgPack(index, 7);
-      const { witness, cappedOut } = nonDeathWitnesses(
-        [buildRpgRules(index, bestRng), buildRpgRules(index, worstRng)],
-        start,
-        new Set(ends.map((d) => d.id)),
-      );
-      expect(cappedOut, "state-space search hit the cap (witnesses unproven)").toBe(false);
-      for (const def of ends) {
-        const s = witness.get(def.id);
-        expect(s, `non-death ending ${def.id} never reached by concrete play`).toBeDefined();
-        if (!s) continue;
-        assertCleanNonDeathRender(buildRpgObservation(index, s), def, s, pack.meta.max_score ?? 0);
-      }
-    });
+    it(
+      `${file} (rpg): each declared non-death ending renders cleanly when reached`,
+      () => {
+        const loaded = loadRpgSourceFile(join(RPG_DIR, file));
+        expect(loaded.ok).toBe(true);
+        if (!loaded.ok) return;
+        const pack = loaded.compiled.pack;
+        const ends = nonDeathEndingsOf(pack.endings);
+        if (ends.length === 0) return; // nothing to render-check
+        const index = indexRpgPack(pack);
+        const start = initStateForRpgPack(index, 7);
+        const { witness, cappedOut } = nonDeathWitnesses(
+          [buildRpgRules(index, bestRng), buildRpgRules(index, worstRng)],
+          start,
+          new Set(ends.map((d) => d.id)),
+        );
+        expect(cappedOut, "state-space search hit the cap (witnesses unproven)").toBe(false);
+        for (const def of ends) {
+          const s = witness.get(def.id);
+          expect(s, `non-death ending ${def.id} never reached by concrete play`).toBeDefined();
+          if (!s) continue;
+          assertCleanNonDeathRender(
+            buildRpgObservation(index, s),
+            def,
+            s,
+            pack.meta.max_score ?? 0,
+          );
+        }
+      },
+      SOLVER_TEST_TIMEOUT_MS,
+    );
   }
 });

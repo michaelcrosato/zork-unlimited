@@ -27,6 +27,10 @@ AI_LOOP_STATE_ARCHIVE.md
 .agent-cleaner/
 *.tsbuildinfo
 
+# Local interactive-agent/browser scratch (never durable test evidence)
+/.aider.chat.history.md
+/.playwright-mcp/
+
 # Blind-tester run outputs (regenerable; not source)
 blind-tester/reports/*
 !blind-tester/reports/.gitkeep

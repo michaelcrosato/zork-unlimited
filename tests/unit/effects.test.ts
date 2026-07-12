@@ -90,6 +90,22 @@ describe("effect reducer", () => {
     expect(events).toHaveLength(2);
   });
 
+  it("emits removal only when the item was actually held", () => {
+    const absent = applyEffects([{ remove_item: "key" }], base());
+    expect(absent.state.inventory).toEqual([]);
+    expect(absent.events).toEqual([]);
+
+    const present = applyEffects(
+      [{ add_item: "key" }, { remove_item: "key" }, { remove_item: "key" }],
+      base(),
+    );
+    expect(present.state.inventory).toEqual([]);
+    expect(present.events).toEqual([
+      { type: "take", item: "key" },
+      { type: "drop", item: "key" },
+    ]);
+  });
+
   it("schema rejects unknown effect kinds", () => {
     expect(EffectSchema.safeParse({ set_flag: "x" }).success).toBe(true);
     expect(EffectSchema.safeParse({ teleport: "x" }).success).toBe(false);

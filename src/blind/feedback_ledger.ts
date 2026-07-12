@@ -1,7 +1,12 @@
-import { readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { basename, join, relative } from "node:path";
 import { verifyBlindReportText } from "./report_verifier.js";
-import type { ExitInterview } from "./exit_interview.js";
+import {
+  exitInterviewPlayMode,
+  isPureExitInterviewV2,
+  type ExitInterview,
+} from "./exit_interview.js";
+import { parseBlindRunSidecar } from "./run_evidence.js";
 
 export const DEFAULT_FEEDBACK_RECENT_LIMIT = 100;
 
@@ -15,6 +20,11 @@ export interface BlindFeedbackEntry {
   goal_understood: boolean;
   got_stuck: boolean;
   would_replay: boolean;
+  play_mode: "pure" | "structural" | "legacy_guided";
+  start_surface: "fresh_overworld" | "direct_quest";
+  retention_eligible: boolean;
+  accepted_decisions: number | null;
+  exit_reason: string | null;
   confusions: string[];
   bugs: ExitInterview["bugs"];
   best_moment: string;
@@ -170,12 +180,33 @@ export function buildBlindFeedbackLedger(
     }
     const fullPath = join(reportsDir, name);
     const reportText = readFileSync(fullPath, "utf8");
-    const verification = verifyBlindReportText(reportText);
+    let verification = verifyBlindReportText(reportText);
     if (!verification.ok) {
       rejectedReports += 1;
       continue;
     }
+    if (isPureExitInterviewV2(verification.interview)) {
+      const sidecarPath = fullPath.replace(/\.md$/, ".run.json");
+      if (!existsSync(sidecarPath)) {
+        rejectedReports += 1;
+        continue;
+      }
+      const parsedSidecar = parseBlindRunSidecar(readFileSync(sidecarPath, "utf8"));
+      if (!parsedSidecar.ok) {
+        rejectedReports += 1;
+        continue;
+      }
+      verification = verifyBlindReportText(reportText, {
+        requiredPlayMode: "pure",
+        runSidecar: parsedSidecar.sidecar,
+      });
+      if (!verification.ok) {
+        rejectedReports += 1;
+        continue;
+      }
+    }
     const interview = verification.interview;
+    const pure = isPureExitInterviewV2(interview);
     entries.push({
       report: relative(cwd, fullPath).replace(/\\/g, "/"),
       stamp: parsedName.stamp,
@@ -186,6 +217,16 @@ export function buildBlindFeedbackLedger(
       goal_understood: interview.goal_understood,
       got_stuck: interview.got_stuck,
       would_replay: interview.would_replay,
+      play_mode: exitInterviewPlayMode(interview),
+      start_surface:
+        "start_surface" in interview
+          ? interview.start_surface
+          : parsedName.source === "overworld"
+            ? "fresh_overworld"
+            : "direct_quest",
+      retention_eligible: pure,
+      accepted_decisions: pure ? interview.journey_exit_receipt.acceptedDecisions : null,
+      exit_reason: pure ? interview.journey_exit_receipt.exitReason : null,
       confusions: interview.confusions,
       bugs: interview.bugs,
       best_moment: interview.best_moment,
@@ -269,12 +310,12 @@ export function renderBlindFeedbackLedgerMarkdown(ledger: BlindFeedbackLedger): 
     lines.push("No accepted feedback entries yet.", "");
   } else {
     lines.push(
-      "| Stamp | Source | Seed | C/E | Stuck | Replay | Report | Signal |",
-      "| --- | --- | ---: | --- | --- | --- | --- | --- |",
+      "| Stamp | Source | Seed | Mode | Decisions | C/E | Stuck | Replay | Report | Signal |",
+      "| --- | --- | ---: | --- | ---: | --- | --- | --- | --- | --- |",
     );
     for (const entry of ledger.recent_entries) {
       lines.push(
-        `| ${entry.stamp} | ${escapeCell(entry.source)} | ${entry.seed} | ${entry.clarity}/${entry.enjoyment} | ${
+        `| ${entry.stamp} | ${escapeCell(entry.source)} | ${entry.seed} | ${entry.play_mode} | ${entry.accepted_decisions ?? "—"} | ${entry.clarity}/${entry.enjoyment} | ${
           entry.got_stuck ? "yes" : "no"
         } | ${entry.would_replay ? "yes" : "no"} | \`${entry.report}\` | ${escapeCell(
           renderEntrySummary(entry),
