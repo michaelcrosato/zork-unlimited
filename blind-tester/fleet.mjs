@@ -24,7 +24,7 @@ const GAME_DIR = resolve(HERE, "..");
 const RUN_SH = join(HERE, "run.sh");
 // Standalone JS mirror of src/world/journey_contract.ts; pure reports are
 // independently schema-checked against these values before a row is verified.
-export const PURE_SESSION_CONTRACT_VERSION = 2;
+export const PURE_SESSION_CONTRACT_VERSION = 3;
 export const PURE_BASELINE_DECISIONS = 40;
 
 // Rotation order for explicit structural `--mock --personas mixed`; live pure

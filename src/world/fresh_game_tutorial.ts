@@ -38,7 +38,7 @@ export const FRESH_GAME_TUTORIAL = Object.freeze({
     Object.freeze({
       id: "follow",
       title: "Follow it on foot",
-      text: "Walk to a lead's local area before starting it. Roads cost time and supplies; towns offer rest and resupply.",
+      text: "Walk to a lead's local area before starting it. Roads cost time and supplies; towns offer rest and resupply. Later goals name a town; the journey card points to its next road.",
     }),
     Object.freeze({
       id: "remember",

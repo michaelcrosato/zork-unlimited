@@ -5,9 +5,35 @@ import {
   INITIAL_JOURNEY_GOAL,
   JOURNEY_CONTRACT_VERSION,
 } from "../../src/world/journey_contract.js";
+import { loadOverworldManifest } from "../../src/world/source.js";
+import { OverworldSession } from "../../ui/src/overworld.js";
 
 const api = () => createToolApi({ root: process.cwd() });
 const FULL_OVERWORLD = { compact_context: false, compact_result: false } as const;
+const WORLD = loadOverworldManifest(process.cwd());
+
+function uiSessionAtAlbanyStoryChoice(): OverworldSession {
+  const session = new OverworldSession(WORLD);
+  const opening = session.view();
+  session.scoutPoi(opening.pois[0]!.id);
+  const revealed = session.talkToCharacter(opening.characters[0]!.id);
+  const quest = revealed.discoveredQuests?.find((candidate) => candidate.id === "wolf_winter");
+  if (!quest) throw new Error("expected the Albany Wolf-Winter lead");
+  const route = session
+    .view()
+    .areaExits.find((candidate) => candidate.destination.id === quest.area);
+  if (!route) throw new Error("expected a route to the Albany lead");
+  session.moveArea(route.id);
+  session.startQuest(quest.id);
+  session.completeQuest(quest.id, {
+    endingId: "ending_held",
+    endingTitle: "The Byre Held",
+    death: false,
+  });
+  session.chooseJourney("continue");
+  if (!session.journey().storyChoice) throw new Error("expected Albany's dawn dispatch");
+  return session;
+}
 
 describe("MCP journey surface", () => {
   it("keeps the canonical journey at the response root across compact and full play", () => {
@@ -22,6 +48,7 @@ describe("MCP journey surface", () => {
       acceptedDecisions: 0,
       baselineDecisions: 40,
       nextCheckpoint: 40,
+      goalGuidance: null,
       pendingChoice: null,
     });
     expect(full.journey).toEqual(compact.journey);
@@ -220,5 +247,99 @@ describe("MCP journey surface", () => {
     expect(stepped.ok).toBe(true);
     expect(stepped.journey).toMatchObject({ status: "active", acceptedDecisions: 41 });
     expect(stepped.overworld_snapshot_hash).not.toBe(launched.snapshot_hash);
+  });
+
+  it("shares one story-choice presentation with the UI and blocks every embedded RPG action", () => {
+    const uiSession = uiSessionAtAlbanyStoryChoice();
+    const uiJourney = uiSession.journey();
+    const snapshot = uiSession.snapshot();
+    const a = api();
+    const restored = a.restore_overworld_session({
+      snapshot,
+      compact_context: false,
+      compact_result: false,
+    });
+
+    expect(restored.journey).toEqual(uiJourney);
+    expect(
+      a.get_overworld_session_context({
+        session_id: restored.session_id,
+        compact_context: true,
+      }).journey,
+    ).toEqual(uiJourney);
+    expect(Object.keys(restored.journey.storyChoice!).sort()).toEqual(["id", "message", "options"]);
+    for (const option of restored.journey.storyChoice!.options) {
+      expect(Object.keys(option).sort()).toEqual(["consequence", "id", "label"]);
+    }
+    const playerChoicePayload = JSON.stringify({
+      goal: restored.journey.goal,
+      storyChoice: restored.journey.storyChoice,
+    });
+    expect(playerChoicePayload).not.toMatch(
+      /targetQuestId|endingId|ending_held|wolf_winter|content\/rpg|win_conditions|maneuver_/i,
+    );
+
+    const embedded = a.start_world_quest({
+      world_quest_id: "wolf_winter",
+      seed: 1,
+      overworldSessionId: restored.session_id,
+      compact_observation: false,
+    });
+    const legalAction = embedded.observation.available_actions[0];
+    if (!legalAction) throw new Error("expected an opening RPG action before journey projection");
+    const rpgHashBefore = a.sessions.get(embedded.session_id).stateHash;
+
+    const observed = a.get_observation({
+      session_id: embedded.session_id,
+      compact_observation: false,
+    });
+    expect(observed.journey).toEqual(uiJourney);
+    expect(observed.observation.available_actions).toEqual([]);
+    const listed = a.list_legal_actions({
+      session_id: embedded.session_id,
+      compact_actions: false,
+    });
+    expect(listed.journey).toEqual(uiJourney);
+    expect(listed.actions).toEqual([]);
+    expect(() => a.rest_overworld_session({ session_id: restored.session_id })).toThrow(
+      /dawn dispatch/i,
+    );
+
+    const blocked = a.step_action({
+      session_id: embedded.session_id,
+      action_id: legalAction.id,
+      compact_observation: false,
+      compact_events: false,
+    });
+    expect(blocked).toMatchObject({
+      ok: false,
+      rejection_reason: uiJourney.storyChoice!.message,
+      journeyDecision: { countsTowardJourney: false, reason: "rejected" },
+      journey: uiJourney,
+    });
+    expect(blocked.observation.available_actions).toEqual([]);
+    expect(a.sessions.get(embedded.session_id).stateHash).toBe(rpgHashBefore);
+
+    const uiBranch = OverworldSession.restore(WORLD, snapshot);
+    const uiResult = uiBranch.chooseJourneyStory("send_wagon_to_cade");
+    const mcpBranch = a.choose_overworld_session_story({
+      session_id: restored.session_id,
+      choice: "send_wagon_to_cade",
+      compact_context: false,
+      compact_result: false,
+    });
+    expect(mcpBranch.result).toEqual(uiResult);
+    expect(mcpBranch.journey).toEqual(uiBranch.journey());
+    expect(mcpBranch.journey.storyChoice).toBeNull();
+    expect(mcpBranch.journey.goalGuidance).toBe(
+      "Objective route: take the road toward Saratoga Springs city. Queensbury town is 2 roads and about 60 road minutes away.",
+    );
+    expect(JSON.stringify(mcpBranch.journey.goalGuidance)).not.toMatch(
+      /targetQuestId|endingId|wolf_winter|content\/rpg|win_conditions|maneuver_/i,
+    );
+    expect(
+      a.list_legal_actions({ session_id: embedded.session_id, compact_actions: true }).actions
+        .length,
+    ).toBeGreaterThan(0);
   });
 });

@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { hashState } from "../../src/core/hash.js";
 import {
+  INITIAL_JOURNEY_GOAL,
   JOURNEY_BASELINE_DECISIONS,
   JOURNEY_CONTRACT_VERSION,
 } from "../../src/world/journey_contract.js";
@@ -264,7 +265,18 @@ ${JSON.stringify(pureInterview)}
       expect(pureResume.ok).toBe(false);
       expect(pureResume.run).toMatchObject({ play_mode: "pure", retention_eligible: true });
 
-      const currentPayload = { ...receiptPayload, contractVersion: 2 };
+      const currentPayload = {
+        ...receiptPayload,
+        contractVersion: PURE_SESSION_CONTRACT_VERSION,
+        goalText: INITIAL_JOURNEY_GOAL.text,
+        goalCompletedAtDecision: null,
+        completedGoals: [],
+        retentionHistory: receiptPayload.retentionHistory.map((event) => ({
+          ...event,
+          goalVersion: null,
+          goalId: null,
+        })),
+      };
       const currentReceipt = {
         ...currentPayload,
         receiptHash: hashState(currentPayload),

@@ -7,23 +7,36 @@ import {
   JOURNEY_CONTRACT_VERSION,
   JOURNEY_EXIT_REASON,
   JourneyContractSnapshotSchema,
-  assertJourneyGoalCompletionProof,
+  activateJourneyGoal,
   chooseJourney,
   cloneJourneyContractSnapshot,
   createInitialJourneyContractSnapshot,
+  hasContinuedJourneyGoal,
   journeyExitReceipt,
   journeyPresentation,
   recordJourneyAcceptedDecision,
+  recordJourneyDecision,
   recordJourneyGoalCompleted,
   type JourneyContractSnapshot,
+  type JourneyGoalDefinition,
+  type JourneyStoryChoicePrompt,
 } from "../../src/world/journey_contract.js";
-import type { OverworldManifest, OverworldQuest } from "../../src/world/overworld.js";
-import { OverworldSession } from "../../src/world/session.js";
-import { loadOverworldManifest } from "../../src/world/source.js";
 import {
   countedJourneyDecision,
   excludedJourneyDecision,
 } from "../../src/world/journey_decision.js";
+
+const GOAL_TWO = Object.freeze({
+  version: 2,
+  id: "queensbury_gallowmere",
+  text: "Carry Albany's lead to Queensbury and see The Gallowmere through.",
+}) satisfies JourneyGoalDefinition;
+
+const GOAL_THREE = Object.freeze({
+  version: 3,
+  id: "north_country_aftermath",
+  text: "Follow the Queensbury evidence north and settle what remains.",
+}) satisfies JourneyGoalDefinition;
 
 function decide(
   state: JourneyContractSnapshot,
@@ -40,112 +53,22 @@ function decide(
 function decideUntil(state: JourneyContractSnapshot, target: number): JourneyContractSnapshot {
   let next = state;
   while (next.acceptedDecisions < target) {
-    next = decide(next, `action:${next.acceptedDecisions + 1}`);
+    next = decide(next, `action:${String(next.acceptedDecisions + 1)}`);
   }
   return next;
 }
 
-function quest(id: string, home: string): OverworldQuest {
-  return {
-    id,
-    title: `${id} title`,
-    source: `content/rpg/quests/${id}.yaml`,
-    home,
-    area: `${home}:area`,
-    discovery: `${id} discovery`,
-    visibility: "local_notice_board",
-  };
+function completeContinueAndActivate(
+  state: JourneyContractSnapshot,
+  nextGoal: JourneyGoalDefinition,
+): JourneyContractSnapshot {
+  const completed = recordJourneyGoalCompleted(state);
+  const continued = chooseJourney(completed, "continue").state;
+  return activateJourneyGoal(continued, nextGoal);
 }
 
-function oneQuestWorld(): OverworldManifest {
-  return {
-    id: "new_york_overworld",
-    name: "One-Quest New York",
-    start: "albany_city",
-    premise: "A compact journey-contract fixture.",
-    sources: [],
-    scale: {
-      population_floor: 10_000,
-      distance_model: "fixture",
-      travel_time_model: "fixture",
-      road_class_speed_mph: {
-        interstate: 60,
-        parkway: 35,
-        state_route: 40,
-        regional_connector: 25,
-      },
-    },
-    design_rules: [],
-    regions: [
-      {
-        id: "capital",
-        name: "Capital",
-        summary: "Fixture region.",
-        gameplay_role: "Fixture role.",
-      },
-    ],
-    regional_arcs: [],
-    nodes: [
-      {
-        id: "albany_city",
-        name: "Albany",
-        kind: "city",
-        source_geography: "incorporated_place",
-        geoid: "fixture",
-        county_fips: "001",
-        population_2025: 100_000,
-        lat: 42.65,
-        lon: -73.75,
-        region: "Capital",
-        services: [],
-        description: "Fixture Albany.",
-      },
-    ],
-    edges: [],
-    areas: [
-      {
-        id: "albany_area",
-        home: "albany_city",
-        name: "Albany Notice Hall",
-        kind: "civic_core",
-        summary: "A fixture notice hall.",
-        discovery: "The hall is immediately visible.",
-        travel_minutes: 5,
-        services: [],
-      },
-    ],
-    area_edges: [],
-    points_of_interest: [
-      {
-        id: "albany_notice",
-        home: "albany_city",
-        area: "albany_area",
-        kind: "landmark",
-        title: "Albany Notice Board",
-        summary: "One local lead is posted here.",
-      },
-    ],
-    characters: [],
-    local_events: [],
-    local_jobs: [],
-    road_events: [],
-    exploration_sites: [],
-    quests: [
-      {
-        id: "albany_quest",
-        title: "Albany Quest",
-        source: "content/rpg/quests/albany_quest.yaml",
-        home: "albany_city",
-        area: "albany_area",
-        discovery: "See the Albany lead through.",
-        visibility: "local_notice_board",
-      },
-    ],
-  };
-}
-
-describe("journey contract", () => {
-  it("starts with a versioned Albany goal, fixed baseline, and immutable presentation", () => {
+describe("journey contract v3 goals", () => {
+  it("starts with a dynamic version-1 goal and an immutable player presentation", () => {
     const state = createInitialJourneyContractSnapshot();
     const view = journeyPresentation(state);
 
@@ -154,69 +77,101 @@ describe("journey contract", () => {
       contractVersion: JOURNEY_CONTRACT_VERSION,
       status: "active",
       goal: {
-        version: INITIAL_JOURNEY_GOAL.version,
-        id: INITIAL_JOURNEY_GOAL.id,
-        text: "Find one local lead in Albany and see it through.",
+        ...INITIAL_JOURNEY_GOAL,
         status: "active",
         completedAtDecision: null,
       },
+      completedGoals: [],
       acceptedDecisions: 0,
       baselineDecisions: JOURNEY_BASELINE_DECISIONS,
       nextCheckpoint: 40,
+      goalGuidance: null,
       pendingChoice: null,
+      storyChoice: null,
       retentionHistory: [],
     });
     expect(Object.isFrozen(view)).toBe(true);
     expect(Object.isFrozen(view.goal)).toBe(true);
+    expect(Object.isFrozen(view.completedGoals)).toBe(true);
     expect(Object.isFrozen(view.decisionProof)).toBe(true);
     expect(Object.isFrozen(view.retentionHistory)).toBe(true);
-    expect(() => JourneyContractSnapshotSchema.parse({ ...state, nextCheckpoint: 80 })).toThrow(
-      /Next fixed journey checkpoint must be 40/i,
+
+    const customGoal = {
+      version: 1,
+      id: "custom_opening",
+      text: "Follow one local lead and decide what it means.",
+    } satisfies JourneyGoalDefinition;
+    const custom = createInitialJourneyContractSnapshot(customGoal);
+    expect(JourneyContractSnapshotSchema.parse(custom)).toEqual(custom);
+    expect(custom.goal).toMatchObject(customGoal);
+    expect(custom.decisionProof.hash).not.toBe(state.decisionProof.hash);
+    expect(() => createInitialJourneyContractSnapshot({ ...customGoal, version: 2 })).toThrow(
+      /version must be 1/i,
     );
+
+    const zeroDecisionFollowup = activateJourneyGoal(
+      chooseJourney(recordJourneyGoalCompleted(state), "continue").state,
+      GOAL_TWO,
+    );
+    expect(JourneyContractSnapshotSchema.parse(zeroDecisionFollowup)).toEqual(zeroDecisionFollowup);
   });
 
-  it("stops exactly at 40, then 80/120/160 after each continuation", () => {
+  it("offers checkpoint-only choices at 40, 80, 120, and 160 decisions", () => {
     let state = decideUntil(createInitialJourneyContractSnapshot(), 40);
 
     for (const checkpoint of [40, 80, 120, 160]) {
       const view = journeyPresentation(state);
-      expect(view.status).toBe("awaiting_choice");
-      expect(view.acceptedDecisions).toBe(checkpoint);
-      expect(view.pendingChoice).toMatchObject({
-        atDecision: checkpoint,
-        reasons: ["checkpoint"],
-        checkpoint,
-        options: [
-          {
-            id: "continue",
-            label: "Continue for 40 more decisions",
-            consequence: `Play remains open; the next fixed checkpoint is decision ${checkpoint + 40}.`,
-          },
-          {
-            id: "end",
-            consequence: expect.stringMatching(/read-only.*receipt/i),
-          },
-        ],
+      expect(view).toMatchObject({
+        status: "awaiting_choice",
+        acceptedDecisions: checkpoint,
+        pendingChoice: {
+          atDecision: checkpoint,
+          reasons: ["checkpoint"],
+          checkpoint,
+          goalVersion: null,
+          goalId: null,
+          options: [
+            {
+              id: "continue",
+              label: "Continue for 40 more decisions",
+              consequence: `Play remains open; the next fixed checkpoint is decision ${String(checkpoint + 40)}.`,
+            },
+            { id: "end" },
+          ],
+        },
       });
-      expect(() => decide(state, "blocked")).toThrow(/Choose whether to continue or end/i);
+      expect(JourneyContractSnapshotSchema.parse(state)).toEqual(state);
+      expect(() => decide(state, "blocked")).toThrow(/choose whether to continue or end/i);
+
       if (checkpoint === 160) break;
       const continued = chooseJourney(state, "continue");
-      state = continued.state;
-      expect(continued.result.exitReceipt).toBeNull();
-      expect(state.acceptedDecisions).toBe(checkpoint);
-      expect(state.nextCheckpoint).toBe(checkpoint + 40);
-      state = decideUntil(state, checkpoint + 40);
+      expect(continued.result.retentionEvent).toMatchObject({
+        checkpoint,
+        goalVersion: null,
+        goalId: null,
+        choice: "continue",
+      });
+      state = decideUntil(continued.state, checkpoint + JOURNEY_BASELINE_DECISIONS);
     }
   });
 
-  it("offers an honest early goal choice without moving the fixed checkpoint", () => {
-    let state = decide(createInitialJourneyContractSnapshot(), "quest_step:ending", "quest");
-    state = recordJourneyGoalCompleted(state);
+  it("binds an early completion choice to the completed goal before activating the next goal", () => {
+    const played = decide(createInitialJourneyContractSnapshot(), "quest:ending", "quest");
+    const completed = recordJourneyGoalCompleted(played);
 
-    expect(journeyPresentation(state).pendingChoice).toMatchObject({
+    expect(completed.goalHistory).toEqual([
+      {
+        ...INITIAL_JOURNEY_GOAL,
+        status: "completed",
+        completedAtDecision: 1,
+      },
+    ]);
+    expect(journeyPresentation(completed).pendingChoice).toMatchObject({
       atDecision: 1,
       reasons: ["goal_completed"],
       checkpoint: null,
+      goalVersion: 1,
+      goalId: INITIAL_JOURNEY_GOAL.id,
       options: [
         {
           id: "continue",
@@ -226,286 +181,342 @@ describe("journey contract", () => {
         { id: "end" },
       ],
     });
+    expect(() => activateJourneyGoal(completed, GOAL_TWO)).toThrow(/answer.*choice/i);
 
-    const continued = chooseJourney(state, "continue");
-    expect(continued.state.nextCheckpoint).toBe(40);
-    expect(continued.state.acceptedDecisions).toBe(1);
+    const continued = chooseJourney(completed, "continue");
     expect(continued.result.retentionEvent).toMatchObject({
+      sequence: 1,
       atDecision: 1,
       reasons: ["goal_completed"],
+      checkpoint: null,
+      goalVersion: 1,
+      goalId: INITIAL_JOURNEY_GOAL.id,
       choice: "continue",
     });
+    expect(hasContinuedJourneyGoal(continued.state, INITIAL_JOURNEY_GOAL)).toBe(true);
+    expect(() => activateJourneyGoal(continued.state, GOAL_THREE)).toThrow(/version must be 2/i);
+
+    const activated = activateJourneyGoal(continued.state, GOAL_TWO);
+    expect(activated).toMatchObject({
+      status: "active",
+      acceptedDecisions: 1,
+      nextCheckpoint: 40,
+      goal: { ...GOAL_TWO, status: "active", completedAtDecision: null },
+      goalHistory: [{ version: 1, id: INITIAL_JOURNEY_GOAL.id, status: "completed" }],
+    });
+    expect(JourneyContractSnapshotSchema.parse(activated)).toEqual(activated);
   });
 
-  it("merges goal completion with an already-pending fixed checkpoint", () => {
-    let state = decideUntil(createInitialJourneyContractSnapshot(), 40);
+  it("tracks two completed goals and emits goal-bound retention evidence in the end receipt", () => {
+    let state = decide(createInitialJourneyContractSnapshot(), "wolf:ending", "quest");
+    state = completeContinueAndActivate(state, GOAL_TWO);
+    state = decide(state, "gallowmere:ending", "quest");
     state = recordJourneyGoalCompleted(state);
 
-    expect(journeyPresentation(state).pendingChoice).toMatchObject({
-      atDecision: 40,
-      reasons: ["checkpoint", "goal_completed"],
-      checkpoint: 40,
+    expect(state.pendingChoice).toMatchObject({
+      reasons: ["goal_completed"],
+      goalVersion: 2,
+      goalId: GOAL_TWO.id,
     });
-    expect(JourneyContractSnapshotSchema.parse(state)).toEqual(state);
-  });
+    expect(state.goalHistory).toEqual([
+      { ...INITIAL_JOURNEY_GOAL, status: "completed", completedAtDecision: 1 },
+      { ...GOAL_TWO, status: "completed", completedAtDecision: 2 },
+    ]);
 
-  it("ends read-only with proof-covered immutable retention evidence and a stable receipt", () => {
-    const pending = decideUntil(createInitialJourneyContractSnapshot(), 40);
-    const ended = chooseJourney(pending, "end");
+    const ended = chooseJourney(state, "end");
     const receipt = ended.result.exitReceipt;
-
-    expect(receipt).not.toBeNull();
     expect(receipt).toMatchObject({
       contractVersion: JOURNEY_CONTRACT_VERSION,
       exitReason: JOURNEY_EXIT_REASON,
-      goalVersion: 1,
-      goalId: INITIAL_JOURNEY_GOAL.id,
-      goalStatus: "active",
-      acceptedDecisions: 40,
-      exitReasons: ["checkpoint"],
-      checkpoint: 40,
-      decisionProofHash: pending.decisionProof.hash,
+      goalVersion: 2,
+      goalId: GOAL_TWO.id,
+      goalText: GOAL_TWO.text,
+      goalStatus: "completed",
+      goalCompletedAtDecision: 2,
+      acceptedDecisions: 2,
+      completedGoals: [
+        { version: 1, id: INITIAL_JOURNEY_GOAL.id, completedAtDecision: 1 },
+        { version: 2, id: GOAL_TWO.id, completedAtDecision: 2 },
+      ],
+      exitReasons: ["goal_completed"],
+      checkpoint: null,
       retentionHistory: [
         {
           sequence: 1,
-          atDecision: 40,
-          reasons: ["checkpoint"],
-          checkpoint: 40,
-          choice: "end",
-          decisionProofHash: pending.decisionProof.hash,
+          goalVersion: 1,
+          goalId: INITIAL_JOURNEY_GOAL.id,
+          choice: "continue",
         },
+        { sequence: 2, goalVersion: 2, goalId: GOAL_TWO.id, choice: "end" },
       ],
     });
-    expect(receipt!.receiptHash).toMatch(/^[0-9a-f]{64}$/);
+    expect(receipt?.receiptHash).toMatch(/^[0-9a-f]{64}$/);
     expect(Object.isFrozen(receipt)).toBe(true);
-    expect(Object.isFrozen(receipt!.exitReasons)).toBe(true);
-    expect(Object.isFrozen(receipt!.retentionHistory)).toBe(true);
+    expect(Object.isFrozen(receipt?.completedGoals)).toBe(true);
+    expect(Object.isFrozen(receipt?.completedGoals[0])).toBe(true);
+    expect(Object.isFrozen(receipt?.retentionHistory)).toBe(true);
+    expect(Object.isFrozen(receipt?.retentionHistory[0]?.reasons)).toBe(true);
     expect(journeyExitReceipt(ended.state)).toEqual(receipt);
     expect(JourneyContractSnapshotSchema.parse(ended.state)).toEqual(ended.state);
-    const forgedEvidence = cloneJourneyContractSnapshot(ended.state);
-    forgedEvidence.retentionHistory[0]!.decisionProofHash = "f".repeat(64);
-    expect(() => JourneyContractSnapshotSchema.parse(forgedEvidence)).toThrow(
-      /must match the journey decision proof/i,
-    );
-    expect(() => decide(ended.state, "after_end")).toThrow(/journey has ended/i);
 
-    const { receiptHash, ...receiptPayload } = receipt!;
-    expect(hashState(receiptPayload)).toBe(receiptHash);
+    const { receiptHash, ...payload } = receipt!;
+    expect(hashState(payload)).toBe(receiptHash);
+  });
+
+  it("preserves completed goal history when the player ends at a later checkpoint", () => {
+    let state = decide(createInitialJourneyContractSnapshot(), "wolf:ending", "quest");
+    state = completeContinueAndActivate(state, GOAL_TWO);
+    state = decideUntil(state, 40);
+
+    expect(state.pendingChoice).toMatchObject({
+      reasons: ["checkpoint"],
+      checkpoint: 40,
+      goalVersion: null,
+      goalId: null,
+    });
+    const receipt = chooseJourney(state, "end").result.exitReceipt;
+    expect(receipt).toMatchObject({
+      goalVersion: 2,
+      goalId: GOAL_TWO.id,
+      goalStatus: "active",
+      goalCompletedAtDecision: null,
+      completedGoals: [{ version: 1, id: INITIAL_JOURNEY_GOAL.id }],
+      retentionHistory: [
+        { sequence: 1, goalVersion: 1, goalId: INITIAL_JOURNEY_GOAL.id },
+        { sequence: 2, checkpoint: 40, goalVersion: null, goalId: null, choice: "end" },
+      ],
+    });
+  });
+
+  it("merges a second goal completion into an already-pending fixed checkpoint", () => {
+    let state = decide(createInitialJourneyContractSnapshot(), "wolf:ending", "quest");
+    state = completeContinueAndActivate(state, GOAL_TWO);
+    state = decideUntil(state, 40);
+    state = chooseJourney(state, "continue").state;
+    state = decideUntil(state, 80);
+    state = recordJourneyGoalCompleted(state);
+
+    expect(state.pendingChoice).toEqual({
+      atDecision: 80,
+      reasons: ["checkpoint", "goal_completed"],
+      checkpoint: 80,
+      goalVersion: 2,
+      goalId: GOAL_TWO.id,
+    });
+    expect(JourneyContractSnapshotSchema.parse(state)).toEqual(state);
+
+    const continued = chooseJourney(state, "continue").state;
+    expect(continued.nextCheckpoint).toBe(120);
+    expect(hasContinuedJourneyGoal(continued, GOAL_TWO)).toBe(true);
     expect(
-      hashState({
-        ...receiptPayload,
-        acceptedDecisions: receiptPayload.acceptedDecisions + 1,
-      }),
-    ).not.toBe(receiptHash);
-  });
-
-  it("clones persisted journey state without sharing nested proof or retention data", () => {
-    const ended = chooseJourney(
-      decideUntil(createInitialJourneyContractSnapshot(), 40),
-      "end",
-    ).state;
-    const clone = cloneJourneyContractSnapshot(ended);
-
-    clone.goal.status = "completed";
-    clone.decisionProof.last = { ...clone.decisionProof.last!, actionId: "changed" };
-    clone.retentionHistory[0]!.reasons.push("goal_completed");
-
-    expect(ended.goal.status).toBe("active");
-    expect(ended.decisionProof.last!.actionId).not.toBe("changed");
-    expect(ended.retentionHistory[0]!.reasons).toEqual(["checkpoint"]);
-  });
-
-  it("pins goal proof to a completed quest from the starting town only", () => {
-    const albanyQuest = quest("albany_quest", "albany_city");
-    const otherQuest = quest("other_quest", "other_town");
-    const questsById = new Map([
-      [albanyQuest.id, albanyQuest],
-      [otherQuest.id, otherQuest],
-    ]);
-    const active = createInitialJourneyContractSnapshot();
-    const completed = recordJourneyGoalCompleted(decide(active, "quest_step:end", "quest"));
-
-    expect(() =>
-      assertJourneyGoalCompletionProof({
-        journey: completed,
-        completedQuestIds: new Set([otherQuest.id]),
-        questsById,
-        startTownId: "albany_city",
-      }),
-    ).toThrow(/without a completed quest from the starting town/i);
-    expect(() =>
-      assertJourneyGoalCompletionProof({
-        journey: completed,
-        completedQuestIds: new Set([albanyQuest.id]),
-        questsById,
-        startTownId: "albany_city",
-      }),
-    ).not.toThrow();
-    expect(() =>
-      assertJourneyGoalCompletionProof({
-        journey: active,
-        completedQuestIds: new Set([albanyQuest.id]),
-        questsById,
-        startTownId: "albany_city",
-      }),
-    ).toThrow(/active despite a completed quest/i);
+      JourneyContractSnapshotSchema.parse(activateJourneyGoal(continued, GOAL_THREE)),
+    ).toBeTruthy();
   });
 });
 
-describe("OverworldSession journey integration", () => {
-  it("completes the goal only after a successful non-death starting-town quest foldback", () => {
-    const session = new OverworldSession(oneQuestWorld());
-    session.scoutPoi("albany_notice");
-    session.startQuest("albany_quest");
-
-    expect(() =>
-      session.completeQuest("albany_quest", {
-        endingId: "ending_fallen",
-        endingTitle: "Fallen",
-        death: true,
-      }),
-    ).toThrow(/death ending/i);
-    expect(session.journey().goal.status).toBe("active");
-
-    const beforeFoldback = session.journey().acceptedDecisions;
-    const completed = session.completeQuest("albany_quest", {
-      endingId: "ending_victory",
-      endingTitle: "Victory",
-      death: false,
-    });
-    expect(completed.journeyDecision).toEqual({
-      countsTowardJourney: false,
-      reason: "technical_quest_foldback",
-    });
-    expect(session.journey()).toMatchObject({
-      status: "awaiting_choice",
-      acceptedDecisions: beforeFoldback,
-      nextCheckpoint: 40,
-      goal: {
-        version: 1,
-        status: "completed",
-        completedAtDecision: beforeFoldback,
+describe("journey contract presentation context", () => {
+  it("applies only the matching completion hook and deep-freezes a content-owned story choice", () => {
+    const pending = recordJourneyGoalCompleted(
+      decide(createInitialJourneyContractSnapshot(), "wolf:ending", "quest"),
+    );
+    const storyChoice: JourneyStoryChoicePrompt = {
+      id: "wolf_winter_aftermath",
+      message: "One relief wagon waits at dawn. Where should it go?",
+      options: [
+        {
+          id: "repair_cade",
+          label: "Repair Cade's line",
+          consequence: "The wagon returns to Cade while you carry the packet north.",
+        },
+        {
+          id: "send_wardens",
+          label: "Send wardens north",
+          consequence: "The wagon follows the new lead while Cade holds with what remains.",
+        },
+      ],
+    };
+    const baseMessage = journeyPresentation(pending).pendingChoice!.message;
+    const view = journeyPresentation(pending, {
+      goalGuidance: "Objective route: take the north road.",
+      goalCompletion: {
+        goalVersion: 1,
+        goalId: INITIAL_JOURNEY_GOAL.id,
+        messagePrefix: "Cade's cattle survived.",
+        messageSuffix: "Hayden has another live packet.",
+        continueConsequencePrefix: "Continue to allocate the wagon.",
+        continueConsequenceSuffix: "Your choice will shape the next lead.",
       },
-      pendingChoice: {
-        atDecision: beforeFoldback,
-        reasons: ["goal_completed"],
-        checkpoint: null,
-      },
+      storyChoice,
     });
 
-    const ended = session.chooseJourney("end");
-    const restored = OverworldSession.restore(oneQuestWorld(), session.snapshot());
-    expect(restored.journey().goal).toEqual(session.journey().goal);
-    expect(restored.journeyExitReceipt()).toEqual(ended.exitReceipt);
-    expect(restored.journeyExitReceipt()).toMatchObject({
-      exitReason: "player_ended_at_choice",
-      goalVersion: 1,
-      goalStatus: "completed",
-      exitReasons: ["goal_completed"],
+    expect(view.pendingChoice?.message).toBe(
+      `Cade's cattle survived. ${baseMessage} Hayden has another live packet.`,
+    );
+    expect(view.pendingChoice?.options[0].consequence).toBe(
+      "Continue to allocate the wagon. Play remains open; the next fixed checkpoint is decision 40. Your choice will shape the next lead.",
+    );
+    expect(view.storyChoice).toEqual(storyChoice);
+    expect(view.goalGuidance).toBe("Objective route: take the north road.");
+    expect(view.storyChoice).not.toBe(storyChoice);
+    expect(Object.isFrozen(view.storyChoice)).toBe(true);
+    expect(Object.isFrozen(view.storyChoice?.options)).toBe(true);
+    expect(Object.isFrozen(view.storyChoice?.options[0])).toBe(true);
+    expect(() => {
+      (view.storyChoice as unknown as { message: string }).message = "forged";
+    }).toThrow(TypeError);
+
+    const mismatched = journeyPresentation(pending, {
+      goalCompletion: {
+        goalVersion: 2,
+        goalId: GOAL_TWO.id,
+        messagePrefix: "Must not appear.",
+      },
     });
+    expect(mismatched.pendingChoice?.message).toBe(baseMessage);
+    expect(() => journeyPresentation(pending, { goalGuidance: "   " })).toThrow(
+      /goal guidance cannot be empty/i,
+    );
   });
 
-  it("excludes context, unchanged outcomes, and rejections while counting consequential decisions", () => {
-    const session = new OverworldSession(loadOverworldManifest(process.cwd()));
-    const initialHash = session.snapshotHash();
-    const initialView = session.view();
+  it("rejects malformed story choices instead of exposing ambiguous content", () => {
+    const state = createInitialJourneyContractSnapshot();
+    const duplicateIds = {
+      id: "duplicate",
+      message: "Choose.",
+      options: [
+        { id: "same", label: "One", consequence: "First." },
+        { id: "same", label: "Two", consequence: "Second." },
+      ],
+    } satisfies JourneyStoryChoicePrompt;
+    expect(() => journeyPresentation(state, { storyChoice: duplicateIds })).toThrow(
+      /option ids must be unique/i,
+    );
+    expect(() =>
+      journeyPresentation(state, {
+        storyChoice: {
+          ...duplicateIds,
+          options: [duplicateIds.options[0]] as unknown as JourneyStoryChoicePrompt["options"],
+        },
+      }),
+    ).toThrow(/exactly two options/i);
+  });
+});
 
-    session.journey();
-    session.view();
-    session.compactView();
-    session.snapshot();
-    session.planRoute(initialView.exits[0]!.destination.id);
-    expect(session.journey().acceptedDecisions).toBe(0);
-    expect(session.snapshotHash()).toBe(initialHash);
+describe("journey contract persistence and validation", () => {
+  it("deep-clones and restores multi-goal snapshots without shared nested state", () => {
+    let state = decide(createInitialJourneyContractSnapshot(), "wolf:ending", "quest");
+    state = completeContinueAndActivate(state, GOAL_TWO);
+    state = decide(state, "gallowmere:progress", "quest");
+    const source = recordJourneyGoalCompleted(state);
+    const clone = cloneJourneyContractSnapshot(source);
 
-    expect(() => session.travel("not-a-road")).toThrow(/not reachable/i);
-    expect(session.journey().acceptedDecisions).toBe(0);
-    expect(session.snapshotHash()).toBe(initialHash);
+    clone.goal.text = "changed current goal";
+    clone.goalHistory[0]!.text = "changed history";
+    clone.decisionProof.last = { ...clone.decisionProof.last!, actionId: "changed proof" };
+    clone.pendingChoice!.reasons.reverse();
+    clone.retentionHistory[0]!.reasons.push("checkpoint");
 
-    const rested = session.restAtTown();
-    expect(rested.changed).toBe(false);
-    expect(rested.journeyDecision).toEqual({
-      countsTowardJourney: false,
-      reason: "unchanged_service",
+    expect(source.goal.text).toBe(GOAL_TWO.text);
+    expect(source.goalHistory[0]!.text).toBe(INITIAL_JOURNEY_GOAL.text);
+    expect(source.decisionProof.last?.actionId).toBe("gallowmere:progress");
+    expect(source.pendingChoice?.reasons).toEqual(["goal_completed"]);
+    expect(source.retentionHistory[0]!.reasons).toEqual(["goal_completed"]);
+
+    const restored = JourneyContractSnapshotSchema.parse(JSON.parse(JSON.stringify(source)));
+    expect(restored).toEqual(source);
+    expect(restored).not.toBe(source);
+    expect(restored.goalHistory).not.toBe(source.goalHistory);
+    expect(restored.retentionHistory).not.toBe(source.retentionHistory);
+  });
+
+  it("rejects unbound, duplicate, out-of-sequence, and non-continued goal history", () => {
+    const checkpoint = decideUntil(createInitialJourneyContractSnapshot(), 40);
+    const forgedCheckpoint = cloneJourneyContractSnapshot(checkpoint);
+    forgedCheckpoint.pendingChoice!.goalVersion = 1;
+    forgedCheckpoint.pendingChoice!.goalId = INITIAL_JOURNEY_GOAL.id;
+    expect(() => JourneyContractSnapshotSchema.parse(forgedCheckpoint)).toThrow(
+      /checkpoint-only.*null/i,
+    );
+
+    const completion = recordJourneyGoalCompleted(
+      decide(createInitialJourneyContractSnapshot(), "wolf:ending", "quest"),
+    );
+    const unbound = cloneJourneyContractSnapshot(completion);
+    unbound.pendingChoice!.goalId = null;
+    expect(() => JourneyContractSnapshotSchema.parse(unbound)).toThrow(
+      /must bind goalVersion and goalId/i,
+    );
+
+    const continued = chooseJourney(completion, "continue").state;
+    const duplicate = cloneJourneyContractSnapshot(continued);
+    duplicate.retentionHistory.push({
+      ...duplicate.retentionHistory[0]!,
+      sequence: 2,
+      reasons: [...duplicate.retentionHistory[0]!.reasons],
     });
-    expect(session.journey()).toMatchObject({
-      acceptedDecisions: 0,
-      decisionProof: { last: null },
-    });
-    expect(session.snapshotHash()).toBe(initialHash);
+    expect(() => JourneyContractSnapshotSchema.parse(duplicate)).toThrow(/exactly one bound/i);
 
-    session.recordQuestDecision("look:around", excludedJourneyDecision("context_only"));
-    expect(session.journey().acceptedDecisions).toBe(0);
-    expect(session.snapshotHash()).toBe(initialHash);
+    const activated = activateJourneyGoal(continued, GOAL_TWO);
+    const skippedVersion = cloneJourneyContractSnapshot(activated);
+    skippedVersion.goal.version = 3;
+    expect(() => JourneyContractSnapshotSchema.parse(skippedVersion)).toThrow(
+      /active goal must be version 2/i,
+    );
 
-    session.recordQuestDecision("ask_wolves", countedJourneyDecision("substantive_dialogue"));
-    expect(session.journey()).toMatchObject({
+    const notContinued = cloneJourneyContractSnapshot(activated);
+    notContinued.retentionHistory[0]!.choice = "end";
+    expect(() => JourneyContractSnapshotSchema.parse(notContinued)).toThrow(
+      /activating a later goal requires a continued completion event/i,
+    );
+
+    const secondCompletion = recordJourneyGoalCompleted(
+      decide(activated, "gallowmere:ending", "quest"),
+    );
+    const divergentCurrent = cloneJourneyContractSnapshot(secondCompletion);
+    divergentCurrent.goal.text = "forged latest goal";
+    expect(() => JourneyContractSnapshotSchema.parse(divergentCurrent)).toThrow(
+      /exactly equal the latest completed goal history/i,
+    );
+
+    const wrongBinding = cloneJourneyContractSnapshot(secondCompletion);
+    wrongBinding.pendingChoice!.goalId = "some_other_goal";
+    expect(() => JourneyContractSnapshotSchema.parse(wrongBinding)).toThrow(
+      /references no completed goal/i,
+    );
+  });
+
+  it("does not count accepted context refreshes or rejected calls as player decisions", () => {
+    const initial = createInitialJourneyContractSnapshot();
+    const contextOnly = recordJourneyDecision(
+      initial,
+      { surface: "overworld", actionId: "view:refresh" },
+      excludedJourneyDecision("context_only"),
+    );
+    const rejected = recordJourneyDecision(
+      contextOnly,
+      { surface: "overworld", actionId: "travel:not-a-road" },
+      excludedJourneyDecision("rejected"),
+    );
+
+    expect(contextOnly).toBe(initial);
+    expect(rejected).toBe(initial);
+    expect(rejected.decisionProof).toEqual(initial.decisionProof);
+
+    const counted = recordJourneyDecision(
+      rejected,
+      { surface: "quest", actionId: "ask:live-lead" },
+      countedJourneyDecision("substantive_dialogue"),
+    );
+    expect(counted).toMatchObject({
       acceptedDecisions: 1,
       decisionProof: {
         last: {
           number: 1,
           surface: "quest",
-          actionId: "ask_wolves",
+          actionId: "ask:live-lead",
           reason: "substantive_dialogue",
         },
       },
-    });
-  });
-
-  it("persists checkpoint state, goal version, retention proof, and exit reason across restore", () => {
-    const world = loadOverworldManifest(process.cwd());
-    const session = new OverworldSession(world);
-    for (let decision = 1; decision <= 40; decision += 1) {
-      session.recordQuestDecision(
-        `quest_action:${decision}`,
-        countedJourneyDecision("situation_changed"),
-      );
-    }
-    const ended = session.chooseJourney("end");
-    const snapshot = session.snapshot();
-    const restored = OverworldSession.restore(world, snapshot);
-
-    expect(snapshot.version).toBe(7);
-    expect(snapshot.journey.goal.version).toBe(1);
-    expect(restored.snapshotHash()).toBe(session.snapshotHash());
-    expect(restored.journey()).toEqual(session.journey());
-    expect(restored.journey().decisionProof.last?.reason).toBe("situation_changed");
-    expect(restored.journeyExitReceipt()).toEqual(ended.exitReceipt);
-    expect(restored.journeyExitReceipt()).toMatchObject({
-      exitReason: "player_ended_at_choice",
-      goalVersion: 1,
-      decisionProofHash: snapshot.journey.decisionProof.hash,
-    });
-  });
-
-  it("does not let excluded accepted outcomes trigger the decision-40 checkpoint", () => {
-    const session = new OverworldSession(loadOverworldManifest(process.cwd()));
-    for (let decision = 1; decision < 40; decision += 1) {
-      session.recordQuestDecision(
-        `quest_action:${decision}`,
-        countedJourneyDecision("situation_changed"),
-      );
-    }
-    const before = session.snapshotHash();
-    expect(session.journey()).toMatchObject({ status: "active", acceptedDecisions: 39 });
-
-    expect(session.restAtTown().journeyDecision).toEqual({
-      countsTowardJourney: false,
-      reason: "unchanged_service",
-    });
-    session.recordQuestDecision("ask_leave", excludedJourneyDecision("dialogue_closure"));
-    expect(session.snapshotHash()).toBe(before);
-    expect(session.journey()).toMatchObject({
-      status: "active",
-      acceptedDecisions: 39,
-      pendingChoice: null,
-    });
-
-    session.recordQuestDecision("move_next", countedJourneyDecision("movement"));
-    expect(session.journey()).toMatchObject({
-      status: "awaiting_choice",
-      acceptedDecisions: 40,
-      pendingChoice: { checkpoint: 40 },
     });
   });
 });

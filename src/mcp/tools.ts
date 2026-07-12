@@ -596,6 +596,7 @@ export function createToolApi(opts: { root: string }) {
         const read = runRpgGetObservation({ sessions, rpgRuntime }, responseOptions);
         const rejectionReason =
           before.journey.pendingChoice?.message ??
+          before.journey.storyChoice?.message ??
           "This journey has ended and no longer accepts gameplay decisions.";
         return {
           ok: false,

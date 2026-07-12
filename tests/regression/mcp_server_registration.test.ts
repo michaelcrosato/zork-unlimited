@@ -46,6 +46,7 @@ const OVERWORLD_SCHEMA_TOOLS = [
   "start_overworld_session_quest",
   "complete_overworld_session_quest",
   "choose_overworld_session_journey",
+  "choose_overworld_session_story",
 ] as const;
 
 function registeredServerTools(): string[] {
@@ -310,6 +311,7 @@ describe("MCP server registration", () => {
       "work_overworld_session_job",
       "complete_overworld_session_quest",
       "choose_overworld_session_journey",
+      "choose_overworld_session_story",
     ]) {
       const block = registeredToolBlock(toolName);
       expect(block).toContain("defaultCompactOverworld(a)");

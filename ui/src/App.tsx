@@ -20,10 +20,12 @@ import { PACKS } from "./packs.js";
 import { OVERWORLD } from "./worldData.js";
 import { NewJourneyTutorial } from "./NewJourneyTutorial.js";
 import { JourneyChoiceScreen } from "./JourneyChoiceScreen.js";
+import { JourneyStoryChoiceScreen } from "./JourneyStoryChoiceScreen.js";
 import { JourneyEndedScreen } from "./JourneyEndedScreen.js";
 import { JourneyStatus } from "./JourneyStatus.js";
 import { FRESH_GAME_TUTORIAL } from "../../src/world/fresh_game_tutorial.js";
 import type { JourneyChoice } from "../../src/world/journey_contract.js";
+import type { AlbanyDawnDispatchChoiceId } from "../../src/world/journey_campaign.js";
 import type { OverworldQuest } from "../../src/world/overworld.js";
 import type { OverworldQuestView } from "../../src/world/session_local_discovery.js";
 
@@ -314,6 +316,21 @@ export default function App(): JSX.Element {
     }
   }
 
+  function chooseJourneyStory(choiceId: string): void {
+    try {
+      const result = worldSession.chooseJourneyStory(choiceId as AlbanyDawnDispatchChoiceId);
+      setWorldView(worldSession.view());
+      setLog((previous) => [
+        `Albany dawn dispatch: ${result.consequence}`,
+        `New goal: ${result.goal.text}`,
+        ...previous,
+      ]);
+      setError(null);
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  }
+
   if (tutorialOpen) {
     return (
       <NewJourneyTutorial
@@ -325,6 +342,10 @@ export default function App(): JSX.Element {
 
   if (journey.pendingChoice) {
     return <JourneyChoiceScreen journey={journey} onChoose={chooseJourney} />;
+  }
+
+  if (journey.storyChoice) {
+    return <JourneyStoryChoiceScreen journey={journey} onChoose={chooseJourneyStory} />;
   }
 
   if (journey.status === "ended") {

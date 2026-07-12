@@ -49,6 +49,11 @@ WHEN TO CONTINUE OR END
   `mcp__adventureforge__choose_overworld_session_journey` with the overworld
   `session_id`, passing that option's visible `id` value as the tool's `choice`
   argument.
+- The game may present `journey.storyChoice` after you continue. Choose between
+  its visible consequences as you would in the human UI, then call
+  `mcp__adventureforge__choose_overworld_session_story` with the same overworld
+  `session_id` and that option's visible `id`. This is a normal gameplay
+  decision that can set the next current goal; it is not a harness task.
 - Do not impose your own tool-call, turn, route, content, or coverage budget.
   Never stop merely because you think a test has run long enough.
 - After the game confirms the end and returns its journey exit receipt, make no

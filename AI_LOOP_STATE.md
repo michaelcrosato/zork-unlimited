@@ -144,3 +144,10 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Blind playtest: 25-run `overworld` Codex batch seeds 516-540 all exited 0; clarity 25x4/5, enjoyment 25x4/5, replay 25x true; feedback ledger now has 360 accepted reports.
 - Self-critique: completed-active-list complaints fell to 0 targeted repeats, but area-scoped off-area jobs still feel lost and Wolf-Winter dialogue ids/quote backs plus compact journal hashes dominate the new sample.
 - Guard: focused affected tests, `npm run health`, `npm run blind:feedback`, and reports `20260708T192325Z`-`20260708T193009Z` seeds 516-540 passed.
+## AFK Cycle 2026-07-12T02-02-32-866Z
+- Change: journey contract v3 adds ordered authored goals, goal-bound retention, Wolf-ending Albany dispatch consequences, exact save/journal proof, and shared next-road guidance.
+- Pure evidence: seed 1207 `playtest-v3-guided` is verified pure/fresh; continued at goals 23/49/90 and checkpoints 40/80, then ended at goal 4 on decision 117; clarity/enjoyment 4/5, replay true.
+- Comparison: the same seed without route guidance ended at 80 during goal 3 after navigation grind, but its private evidence was lost to an external worktree reset, so it is design signal only—not retention evidence.
+- Effect: four authored quests replaced the post-Wolf template cliff; guided travel was called light rather than tedious. Next honest friction is Tanner's Fever's unhinted peaceful route/free retries.
+- Compatibility: both frozen contract-v2 canaries still independently verify; v1/v2/v3 retention cohorts remain separate.
+- Guard: focused suites, post-change 6000-step crawl, UI browser tutorial/status check, independent v3 report verification, and full health (295 files/2091 tests, UI, 12 packs) passed.

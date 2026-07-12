@@ -45,15 +45,17 @@ import {
 import { snapshotTravelTimelineIndex } from "./session_snapshot_timeline.js";
 import { restoreOverworldPendingRoadEncounter } from "./session_road_encounters.js";
 import { restoreOverworldTravelLogEntries } from "./session_travel_log.js";
+import { cloneJourneyContractSnapshot, type JourneyContractSnapshot } from "./journey_contract.js";
 import {
-  assertJourneyGoalCompletionProof,
-  cloneJourneyContractSnapshot,
-  type JourneyContractSnapshot,
-} from "./journey_contract.js";
+  assertJourneyCampaignGoalCompletionProof,
+  assertJourneyCampaignJournalProof,
+  assertJourneyCampaignQuestOutcome,
+} from "./journey_campaign.js";
 
 export type OverworldSessionSnapshotRestorePlan = {
   currentAreaByTown: ReadonlyMap<string, string>;
   pendingRoadEncounter: OverworldPendingRoadEncounter | null;
+  questOutcomeIds: ReadonlyMap<string, string>;
   regionRenown: ReadonlyMap<string, number>;
   resolvedEventHomeIds: ReadonlySet<string>;
   travelLog: readonly TravelLogEntry[];
@@ -72,6 +74,7 @@ export type OverworldSessionSnapshotRestoreState = {
   exploredSiteIds: Set<string>;
   journalEntries: OverworldJournalEntry[];
   journalEntriesById: Map<string, OverworldJournalEntry>;
+  questOutcomeIds: Map<string, string>;
   regionRenown: Map<string, number>;
   resolvedEventIds: Set<string>;
   resolvedEventHomeIds: Set<string>;
@@ -129,6 +132,7 @@ export function applyOverworldSessionSnapshotRestore(
   replaceStringSet(state.discoveredQuestIds, snapshot.discoveredQuestIds);
   replaceStringSet(state.startedQuestIds, snapshot.startedQuestIds);
   replaceStringSet(state.completedQuestIds, snapshot.completedQuestIds);
+  replaceStringMap(state.questOutcomeIds, plan.questOutcomeIds);
   replaceStringSet(state.exploredSiteIds, snapshot.exploredSiteIds);
   replaceNumberMap(state.regionRenown, plan.regionRenown);
   replaceStringSet(state.completedRegionalArcIds, snapshot.completedRegionalArcIds);
@@ -221,10 +225,26 @@ export function planOverworldSessionSnapshotRestore(args: {
     snapshot.completedQuestIds,
     indexes.questIds,
   );
-  assertJourneyGoalCompletionProof({
+  const questOutcomeIds = assertUniqueTupleMap("quest outcome", snapshot.questOutcomes);
+  for (const [questId, endingId] of questOutcomeIds) {
+    if (!indexes.questIds.has(questId)) {
+      throw new Error(`Overworld session snapshot has outcome for unknown quest "${questId}".`);
+    }
+    if (!completedQuestIds.has(questId)) {
+      throw new Error(
+        `Overworld session snapshot quest outcome "${questId}" has no completed quest id.`,
+      );
+    }
+    assertJourneyCampaignQuestOutcome(questId, endingId);
+  }
+  for (const questId of completedQuestIds) {
+    if (!questOutcomeIds.has(questId)) {
+      throw new Error(`Overworld session snapshot completed quest "${questId}" has no outcome.`);
+    }
+  }
+  assertJourneyCampaignGoalCompletionProof({
     journey: snapshot.journey,
     completedQuestIds,
-    questsById: indexes.questsById,
     startTownId,
   });
   const resolvedEventIds = assertKnownIds(
@@ -253,6 +273,11 @@ export function planOverworldSessionSnapshotRestore(args: {
     ...indexes,
     travelLogArrivals: travelTimeline.arrivals,
     travelLogTownByArrival: travelTimeline.townByArrival,
+  });
+  assertJourneyCampaignJournalProof({
+    journey: snapshot.journey,
+    questOutcomeIds,
+    journalEntries: snapshot.journalEntries,
   });
   const roadJournal = roadJournalResolutionIndex(
     indexes,
@@ -379,6 +404,7 @@ export function planOverworldSessionSnapshotRestore(args: {
   return {
     currentAreaByTown,
     pendingRoadEncounter,
+    questOutcomeIds,
     regionRenown,
     resolvedEventHomeIds,
     travelLog: restoreOverworldTravelLogEntries(snapshot.travelLog, {

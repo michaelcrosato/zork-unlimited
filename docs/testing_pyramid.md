@@ -18,13 +18,15 @@ does, when it runs, and its exact shapes.
   manual.
 - **Tier 2 — pure blind LLM playtests** (`blind-tester/`): a fresh,
   no-repo-access agent starts a brand-new overworld game, receives only the
-  human player surface, and plays until the game presents a goal/checkpoint
-  continue-or-end choice. The harness interviews only after a confirmed exit
-  and cross-checks the V2 report receipt against server evidence. One per normal
-  cycle; the milestone/feedback-harvest `fleet` runs 100 seed/model variants of
-  that same neutral pure contract. Direct quest, persona-coverage, crawler,
-  smoke, and mock paths are explicit structural QA and never pure retention
-  evidence.
+  human player surface, and follows its versioned current goals, authored story
+  choices, and goal/checkpoint continue-or-end choices. Under current contract
+  v3, every goal-completion retention event identifies the goal it closed and a
+  post-continue authored choice may install the next objective. The harness
+  interviews only after a confirmed exit and cross-checks the schema-V2 report
+  receipt against server evidence. One per normal cycle; the
+  milestone/feedback-harvest `fleet` runs 100 seed/model variants of that same
+  neutral pure contract. Direct quest, persona-coverage, crawler, smoke, and
+  mock paths are explicit structural QA and never pure retention evidence.
 - **Tier 3 — feedback compiler** (`src/feedback/`): reads verified Tier-2
   reports plus Tier-1 findings, clusters them, ranks by severity and source
   agreement, and emits `hotspots.{json,md}` plus mode-separated
@@ -86,7 +88,8 @@ npm run ai:loop                                    # one cycle: assess + emit pr
 `crawl:deep` and a live (non-mock) `fleet` run spend real time/tokens — run
 them nightly or manually, never inside an automated smoke check. Live fleets
 enforce `play_mode: pure`, `start_surface: fresh_overworld`, and the neutral
-default persona; a legacy/structural report cannot resume a member. The
+default persona; only a reverified current-contract report can resume a member,
+while historical v1/v2 and legacy/structural reports cannot. The
 15-minute member timeout is a technical failure/failsafe, not the intended
 endpoint. Launch live fleets from a plain shell, not from inside a Claude Code
 session (nested CLI auth returns 401). Targeted quest starts remain available
@@ -106,16 +109,20 @@ repeats, and `repro` holds a ddmin-minimized, replayable trace.
 run JSONL): V2 reports declare `play_mode: pure`,
 `start_surface: fresh_overworld`, `retention_eligible: true`, and carry the exact
 journey receipt returned on exit. The receipt records the versioned game
-contract, meaningful-decision proof/count, goal state, all continue/end choices,
-and the exit reason. An independently verified `.run.json` sidecar and fleet
-manifest preserve that metadata; structural and legacy outputs are explicitly
-retention-ineligible.
+contract, meaningful-decision proof/count, current goal, ordered completed-goal
+history, every goal-bound or checkpoint continue/end choice, and the exit
+reason. Report schema V2 and journey contract v3 are independent version axes.
+Follow-up objective routing is also game-owned: UI and MCP receive the same
+current-location next-road guidance, while the pure harness remains route-blind.
+An independently verified `.run.json` sidecar and fleet manifest preserve that
+metadata; structural and legacy outputs are explicitly retention-ineligible.
 
 **Retention compile** (`src/feedback/evidence_summary.ts`) writes
 `retention.json`: verified report counts split by pure/structural/legacy-guided,
 plus pure-only decision statistics and actual continue/end choices by
 trigger/checkpoint within each journey-contract version. Historical v1 and
-current v2 curves remain independently verifiable but are never pooled.
+v2 curves and current v3 curves remain independently verifiable but are never
+pooled.
 `would_replay` remains a separate post-exit attitude metric.
 
 **Hotspots file** (`src/feedback/schema.ts`, zod `.strict()`),

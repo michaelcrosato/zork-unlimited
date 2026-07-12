@@ -163,6 +163,13 @@ function assertSnapshotJournalSource(
     case "area":
       assertKnownJournalSource(entry, "area:", sources.areaIds, "area", sources.areaTownNames);
       return;
+    case "campaign":
+      if (!/^campaign_goal:\d+:[a-z0-9_]+$/.test(entry.id)) {
+        throw new Error(
+          `Overworld session snapshot journal campaign entry id "${entry.id}" must match "campaign_goal:<version>:<goal_id>".`,
+        );
+      }
+      return;
     case "contact":
       assertKnownJournalSource(
         entry,

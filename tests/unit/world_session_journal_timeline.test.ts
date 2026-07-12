@@ -96,6 +96,7 @@ function snapshot(
     discoveredQuestIds: [],
     startedQuestIds: [],
     completedQuestIds: [],
+    questOutcomes: [],
     exploredSiteIds: [],
     regionRenown: [],
     completedRegionalArcIds: [],

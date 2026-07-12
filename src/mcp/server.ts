@@ -62,6 +62,7 @@ export const PURE_PLAYER_TOOLS = new Set<string>([
   "start_overworld_session_quest",
   "complete_overworld_session_quest",
   "choose_overworld_session_journey",
+  "choose_overworld_session_story",
   "get_observation",
   "list_legal_actions",
   "step_action",
@@ -741,6 +742,16 @@ tool(
     ...OVERWORLD_ACTION_CONTEXT,
   },
   (a) => api.choose_overworld_session_journey(defaultCompactOverworld(a)),
+);
+tool(
+  "choose_overworld_session_story",
+  "Choose a story consequence.",
+  {
+    ...SESSION,
+    choice: z.enum(["send_wagon_to_cade", "send_wardens_north"]).describe("Visible choice id."),
+    ...OVERWORLD_ACTION_CONTEXT,
+  },
+  (a) => api.choose_overworld_session_story(defaultCompactOverworld(a)),
 );
 tool(
   "validate_quest",

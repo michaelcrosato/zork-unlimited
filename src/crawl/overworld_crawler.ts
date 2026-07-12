@@ -217,8 +217,19 @@ export function crawlOverworld(opts: OverworldCrawlOptions): OverworldCrawlResul
     // Keep its exhaustive sweep moving through the same game-native pauses by
     // deterministically selecting continue after each recorded mutation. Pure
     // live agents must make this choice themselves through the player surface.
-    if (session.journey().pendingChoice !== null) {
-      session.chooseJourney("continue");
+    for (;;) {
+      const journey = session.journey();
+      if (journey.pendingChoice !== null) {
+        session.chooseJourney("continue");
+        continue;
+      }
+      if (journey.storyChoice !== null) {
+        session.chooseJourneyStory("send_wagon_to_cade");
+        actionJournal.push({ op: "chooseJourneyStory", choice: "send_wagon_to_cade" });
+        stepCounter += 1;
+        continue;
+      }
+      break;
     }
   };
 

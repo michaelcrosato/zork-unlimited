@@ -12486,8 +12486,8 @@
       "home": "queensbury_town",
       "name": "Queensbury Civic Center",
       "kind": "civic_core",
-      "summary": "Municipal steps, notice boards, and official counters make this the practical center of Queensbury. It is where a large town's rumors become jobs, warrants, and favors.",
-      "discovery": "Exploring it can reveal official notices, regional arc leads, and who has authority in Capital / Mohawk.",
+      "summary": "Road wardens pin fresh snow reports beside the municipal notices. One black-bordered shepherd's petition points from these steps toward Hedrick Cradoc in the market streets.",
+      "discovery": "Exploring it can reveal official notices, the road north, and where Queensbury's shepherds bring trouble that cannot wait for a routine posting.",
       "travel_minutes": 8,
       "services": [
         "notice_board"
@@ -12498,8 +12498,8 @@
       "home": "queensbury_town",
       "name": "Queensbury Market Streets",
       "kind": "market",
-      "summary": "Shopfronts, diners, small depots, and late counters keep Queensbury's trade moving. Travelers can hear what locals need before it becomes posted work.",
-      "discovery": "Exploring it can reveal local quest leads, resupply opportunities, and rumors that have not reached the board yet.",
+      "summary": "Wool carts and winter stalls crowd the market, but Hedrick Cradoc's mud-dark tracking log has opened a hard circle of silence: his father died on the high moor that morning.",
+      "discovery": "Exploring it can reveal Hedrick's Gallowmere lead, resupply opportunities, and what the old grey sow left in the peat above town.",
       "travel_minutes": 12,
       "services": [
         "market",
@@ -25781,11 +25781,11 @@
       "id": "queensbury_town__market__contact",
       "home": "queensbury_town",
       "area": "queensbury_town__market",
-      "name": "Jamie Tanner",
-      "role": "market broker",
-      "faction": "Merchants Exchange",
-      "summary": "Jamie Tanner works as the market broker in Queensbury Market Streets, watching how shortages, disputed deliveries, and late counters affect Queensbury town.",
-      "agenda": "Wants a traveler to handle Queensbury Market Streets's local problems before they spread through the Capital / Mohawk road network."
+      "name": "Hedrick Cradoc",
+      "role": "shepherd's son",
+      "faction": "Queensbury Shepherds",
+      "summary": "Hedrick Cradoc waits beside his father's tracking log, red-eyed and peat-stained after carrying word down from the high moor.",
+      "agenda": "Needs a hunter to read the sign his father left, judge the Gallowmere wind, and take the old grey sow before another shepherd dies."
     },
     {
       "id": "queensbury_town__transport_hub__contact",
@@ -35474,9 +35474,9 @@
     {
       "id": "road_event_albany_city__saratoga_springs_city",
       "edge": "road_albany_city__saratoga_springs_city",
-      "title": "I-87 / New York State Thruway road report",
+      "title": "The northbound relief line",
       "risk": "low",
-      "summary": "The Albany city to Saratoga Springs city leg follows I-87 / New York State Thruway for 32.8 miles; expect truck stops, state police turnouts, and fast-moving freight before arrival."
+      "summary": "Snow ruts carry Albany's relief wagons toward Saratoga Springs. Wardens at each turnout repeat the same fresh warning: a shepherd was killed above Queensbury, and his son is waiting with the spoor record."
     },
     {
       "id": "road_event_alden_town__elma_town",
@@ -37434,9 +37434,9 @@
     {
       "id": "road_event_saratoga_springs_city__queensbury_town",
       "edge": "road_saratoga_springs_city__queensbury_town",
-      "title": "I-87 / New York State Thruway road report",
+      "title": "Moor sign on the Queensbury road",
       "risk": "low",
-      "summary": "The Saratoga Springs city to Queensbury town leg follows I-87 / New York State Thruway for 24.8 miles; expect truck stops, state police turnouts, and fast-moving freight before arrival."
+      "summary": "Beyond Saratoga the freight road climbs into colder country. Shepherds point out churned verges and a broad, deep track turning toward the Gallowmere hills before Queensbury."
     },
     {
       "id": "road_event_saugerties_town__catskill_town",
@@ -46342,7 +46342,7 @@
       "title": "The Gallowmere",
       "source": "content/rpg/quests/gallowmere.yaml",
       "home": "queensbury_town",
-      "discovery": "Ask around Queensbury town for work tied to The Gallowmere. The lead is posted in Queensbury Market Streets.",
+      "discovery": "Hedrick Cradoc waits in Queensbury Market Streets with his dead father's tracking log and a same-morning trail to the old grey Gallowmere sow.",
       "visibility": "local_notice_board",
       "area": "queensbury_town__market"
     },
@@ -59508,7 +59508,7 @@
       "home": "queensbury_town",
       "from_area": "queensbury_town__civic_core",
       "to_area": "queensbury_town__market",
-      "route": "Queensbury Civic Center to Queensbury Market Streets",
+      "route": "Follow the shepherds' petition from the civic steps to Hedrick's market stall",
       "travel_minutes": 4
     },
     {

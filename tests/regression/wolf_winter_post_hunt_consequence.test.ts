@@ -19,6 +19,7 @@ import {
 } from "../../src/rpg/runner.js";
 import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import { assertRpgStateReferences } from "../../src/rpg/state_integrity.js";
+import { JOURNEY_CONTRACT_VERSION } from "../../src/world/journey_contract.js";
 
 const loaded = loadRpgSourceFile("content/rpg/quests/wolf_winter.yaml");
 if (!loaded.ok) throw new Error("wolf_winter must compile");
@@ -131,6 +132,99 @@ const RESOURCE_CASES: readonly ResourceCase[] = [
     reach: retainBraceStake,
   },
 ];
+
+function ordinaryHeldFork(): GameState {
+  let state = act(fullyPrepared(), "go_north");
+  state = act(state, "maneuver_yearling_wolf_set_spear", 6);
+  if (!state.flags.yearling_down) state = act(state, "attack_yearling_wolf", 6);
+  state = act(state, "go_north");
+  state = act(state, "maneuver_flank_wolf_offside_cut", 6);
+  if (!state.flags.flank_wolf_down) {
+    state = act(state, "maneuver_flank_wolf_turn_through_return", 6);
+  }
+  expect(state.inventory).not.toContain("split_rail_guard");
+  expect(state.inventory).not.toContain("saved_brace_stake");
+  return finishLeaderWithoutResource(state);
+}
+
+type ToolApi = ReturnType<typeof createToolApi>;
+
+function launchAlbanyWolf(api: ToolApi): {
+  overworldSessionId: string;
+  rpgSessionId: string;
+} {
+  const full = { compact_context: false, compact_result: false } as const;
+  const started = api.start_overworld({ compact_context: false });
+  const overworldSessionId = started.session_id;
+  let view = started.observation;
+
+  api.scout_overworld_session_poi({
+    ...full,
+    session_id: overworldSessionId,
+    poi_id: view.pois[0]!.id,
+  });
+  view = api.get_overworld_session({
+    session_id: overworldSessionId,
+    include_observation: true,
+  }).observation;
+  const marketRoute = view.areaExits.find(
+    (route) => route.destination.id === "albany_city__market",
+  );
+  if (!marketRoute) throw new Error("expected Albany market route");
+  api.move_overworld_session_area({
+    ...full,
+    session_id: overworldSessionId,
+    area_route_id: marketRoute.id,
+  });
+  view = api.get_overworld_session({
+    session_id: overworldSessionId,
+    include_observation: true,
+  }).observation;
+  const revealed = api.scout_overworld_session_poi({
+    ...full,
+    session_id: overworldSessionId,
+    poi_id: view.pois[0]!.id,
+  });
+  const quest = revealed.result.discoveredQuests?.find(
+    (candidate) => candidate.id === "wolf_winter",
+  );
+  if (!quest) throw new Error("expected Wolf-Winter lead");
+  const questRoute = revealed.observation.areaExits.find(
+    (route) => route.destination.id === quest.area,
+  );
+  if (!questRoute) throw new Error("expected route to Wolf-Winter area");
+  api.move_overworld_session_area({
+    ...full,
+    session_id: overworldSessionId,
+    area_route_id: questRoute.id,
+  });
+  const launched = api.start_overworld_session_quest({
+    ...full,
+    compact_observation: false,
+    session_id: overworldSessionId,
+    quest_id: quest.id,
+    seed: 505,
+  });
+  return { overworldSessionId, rpgSessionId: launched.rpg_session_id };
+}
+
+function foldAlbanyWolf(args: { state: GameState; finalActionId: string }): {
+  api: ToolApi;
+  overworldSessionId: string;
+  final: ReturnType<ToolApi["step_action"]>;
+} {
+  const api = createToolApi({ root: process.cwd() });
+  const launched = launchAlbanyWolf(api);
+  api.sessions.update(launched.rpgSessionId, args.state);
+  const final = api.step_action({
+    session_id: launched.rpgSessionId,
+    action_id: args.finalActionId,
+    compact_observation: false,
+    compact_events: false,
+  });
+  expect(final.ok).toBe(true);
+  return { api, overworldSessionId: launched.overworldSessionId, final };
+}
 
 function barActionId(state: GameState, item: ResourceCase["item"]): string {
   const action = options(state).find(
@@ -368,5 +462,190 @@ describe("bug_0505 — Wolf-Winter saved wood has a post-hunt consequence", () =
       api.get_overworld_session({ session_id: sessionId, include_observation: true }).observation
         .completedQuestIds,
     ).toContain("wolf_winter");
+  });
+
+  it("renders a truthful Albany return and the same authored teaser for every non-death ending", () => {
+    const split = retainSplitGuard();
+    const cases = [
+      {
+        endingId: "ending_held_gate_barred",
+        state: split,
+        finalActionId: barActionId(split, "split_rail_guard"),
+        returnText: "behind the inner gate you barred",
+      },
+      {
+        endingId: "ending_held_timber_saved",
+        state: retainSplitGuard(),
+        finalActionId: "go_north",
+        returnText: "sound timber you carried out",
+      },
+      {
+        endingId: "ending_held",
+        state: ordinaryHeldFork(),
+        finalActionId: "go_north",
+        returnText: "guard wood was spent in the fighting",
+      },
+    ] as const;
+
+    for (const expected of cases) {
+      const { api, overworldSessionId, final } = foldAlbanyWolf(expected);
+      expect(final.questCompletion).toMatchObject({ endingId: expected.endingId });
+      expect(final.journey.pendingChoice?.message).toContain(expected.returnText);
+      expect(final.journey.pendingChoice?.message).toContain("one dawn relief wagon");
+      expect(final.journey.pendingChoice?.message).toContain("Hedrick Cradoc's father");
+      expect(final.journey.storyChoice).toBeNull();
+      expect(
+        api.export_overworld_session({ session_id: overworldSessionId }).snapshot.questOutcomes,
+      ).toContainEqual(["wolf_winter", expected.endingId]);
+    }
+  });
+
+  it("ending at the goal choice records bound retention evidence without activating aftermath", () => {
+    const completed = foldAlbanyWolf({ state: ordinaryHeldFork(), finalActionId: "go_north" });
+    const ended = completed.api.choose_overworld_session_journey({
+      session_id: completed.overworldSessionId,
+      choice: "end",
+      compact_context: false,
+      compact_result: false,
+    });
+
+    expect(ended.journey).toMatchObject({ status: "ended", storyChoice: null });
+    expect(ended.result.exitReceipt).toMatchObject({
+      contractVersion: JOURNEY_CONTRACT_VERSION,
+      goalVersion: 1,
+      goalId: "albany_local_lead",
+      goalStatus: "completed",
+      completedGoals: [
+        {
+          version: 1,
+          id: "albany_local_lead",
+          status: "completed",
+        },
+      ],
+      retentionHistory: [
+        {
+          choice: "end",
+          reasons: ["goal_completed"],
+          goalVersion: 1,
+          goalId: "albany_local_lead",
+        },
+      ],
+    });
+    const snapshot = completed.api.export_overworld_session({
+      session_id: completed.overworldSessionId,
+    }).snapshot;
+    expect(snapshot.journalEntries.some((entry) => entry.kind === "campaign")).toBe(false);
+    expect(snapshot.journey.goal.version).toBe(1);
+  });
+
+  it("continues into one blocking, counted, persistent dispatch choice on both branches", () => {
+    const choices = [
+      {
+        id: "send_wagon_to_cade",
+        goalId: "carry_hedricks_packet_north",
+        goalText: "Carry Hayden's packet",
+        consequence: "replaces the broken outer paling",
+      },
+      {
+        id: "send_wardens_north",
+        goalId: "travel_north_with_albany_wardens",
+        goalText: "Travel with Hayden's wardens",
+        consequence: "outer paling waits",
+      },
+    ] as const;
+
+    for (const expected of choices) {
+      const fork = retainSplitGuard();
+      const completed = foldAlbanyWolf({
+        state: fork,
+        finalActionId: barActionId(fork, "split_rail_guard"),
+      });
+      const beforeDecision = completed.final.journey.acceptedDecisions;
+      const continued = completed.api.choose_overworld_session_journey({
+        session_id: completed.overworldSessionId,
+        choice: "continue",
+        compact_context: false,
+        compact_result: false,
+      });
+      expect(continued.journey.goal).toMatchObject({ version: 1, status: "completed" });
+      expect(continued.journey.storyChoice).toMatchObject({
+        id: "albany_dawn_dispatch",
+        options: [{ id: "send_wagon_to_cade" }, { id: "send_wardens_north" }],
+      });
+      expect(() =>
+        completed.api.rest_overworld_session({ session_id: completed.overworldSessionId }),
+      ).toThrow(/dawn dispatch/i);
+
+      const selected = completed.api.choose_overworld_session_story({
+        session_id: completed.overworldSessionId,
+        choice: expected.id,
+        compact_context: false,
+        compact_result: false,
+      });
+      expect(selected.result).toMatchObject({
+        storyChoiceId: "albany_dawn_dispatch",
+        choiceId: expected.id,
+        consequence: expect.stringContaining(expected.consequence),
+        journeyDecision: { countsTowardJourney: true, reason: "situation_changed" },
+      });
+      expect(selected.journey).toMatchObject({
+        status: "active",
+        acceptedDecisions: beforeDecision + 1,
+        goal: {
+          version: 2,
+          id: expected.goalId,
+          text: expect.stringContaining(expected.goalText),
+          status: "active",
+        },
+        storyChoice: null,
+      });
+
+      const exported = completed.api.export_overworld_session({
+        session_id: completed.overworldSessionId,
+      }).snapshot;
+      expect(exported.journalEntries[0]).toMatchObject({
+        id: `campaign_goal:2:${expected.goalId}`,
+        kind: "campaign",
+        text: expect.stringContaining(expected.consequence),
+      });
+      const restored = completed.api.restore_overworld_session({
+        snapshot: exported,
+        compact_context: false,
+      });
+      expect(restored.journey).toEqual(selected.journey);
+
+      const missingJournal = {
+        ...exported,
+        journalEntries: exported.journalEntries.filter((entry) => entry.kind !== "campaign"),
+      };
+      expect(() => completed.api.restore_overworld_session({ snapshot: missingJournal })).toThrow(
+        /campaign journal entries for 1 activated journey goals/,
+      );
+
+      const forgedJournal = {
+        ...exported,
+        journalEntries: exported.journalEntries.map((entry) =>
+          entry.kind === "campaign" ? { ...entry, text: "A forged consequence." } : entry,
+        ),
+      };
+      expect(() => completed.api.restore_overworld_session({ snapshot: forgedJournal })).toThrow(
+        /campaign journal entry .* is forged/,
+      );
+    }
+  });
+
+  it("rejects a restored Albany aftermath whose persisted Wolf ending cannot support its prose", () => {
+    const completed = foldAlbanyWolf({ state: ordinaryHeldFork(), finalActionId: "go_north" });
+    const snapshot = completed.api.export_overworld_session({
+      session_id: completed.overworldSessionId,
+    }).snapshot;
+    const forged = {
+      ...snapshot,
+      questOutcomes: [["wolf_winter", "ending_pulled_down"]] as [string, string][],
+    };
+
+    expect(() => completed.api.restore_overworld_session({ snapshot: forged })).toThrow(
+      /unsupported completion ending "ending_pulled_down"/,
+    );
   });
 });

@@ -8,7 +8,9 @@ export type EmbeddedJourneyField = {
 };
 
 export function journeyBlocksGameplay(journey: JourneyPresentation): boolean {
-  return journey.pendingChoice !== null || journey.status === "ended";
+  return (
+    journey.pendingChoice !== null || journey.storyChoice !== null || journey.status === "ended"
+  );
 }
 
 /** Hide RPG decisions while the parent journey choice is the only legal move. */

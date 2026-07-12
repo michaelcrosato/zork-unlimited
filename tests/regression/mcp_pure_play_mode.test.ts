@@ -42,6 +42,8 @@ describe("MCP pure play mode", () => {
     expect(toolAvailableInPlayMode("start_world_quest", "full")).toBe(true);
     expect(toolAvailableInPlayMode("start_world_quest", "pure")).toBe(false);
     expect(toolAvailableInPlayMode("plan_overworld_session_route", "pure")).toBe(true);
+    expect(toolAvailableInPlayMode("choose_overworld_session_story", "pure")).toBe(true);
+    expect(PURE_PLAYER_TOOLS.has("choose_overworld_session_story")).toBe(true);
   });
 
   it("advertises only player tools and records exactly one fresh overworld start", async () => {
@@ -58,6 +60,21 @@ describe("MCP pure play mode", () => {
             "restore_overworld_session",
             "start_world_quest",
           ]),
+        );
+
+        const storyChoiceTool = listed.tools.find(
+          (tool) => tool.name === "choose_overworld_session_story",
+        );
+        expect(storyChoiceTool).toBeDefined();
+        const storyChoiceProperties = storyChoiceTool?.inputSchema.properties as
+          | Record<string, { enum?: unknown }>
+          | undefined;
+        expect(storyChoiceProperties?.choice?.enum).toEqual([
+          "send_wagon_to_cade",
+          "send_wardens_north",
+        ]);
+        expect(JSON.stringify(storyChoiceTool)).not.toMatch(
+          /targetQuestId|endingId|ending_held|wolf_winter|content\/rpg|win_conditions|maneuver_/i,
         );
 
         const started = await client.callTool({

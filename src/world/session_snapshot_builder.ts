@@ -32,6 +32,7 @@ export type OverworldSessionSnapshotBuildState = {
   discoveredQuestIds: ReadonlySet<string>;
   startedQuestIds: ReadonlySet<string>;
   completedQuestIds: ReadonlySet<string>;
+  questOutcomes: ReadonlyMap<string, string>;
   exploredSiteIds: ReadonlySet<string>;
   regionRenown: ReadonlyMap<string, number>;
   completedRegionalArcIds: ReadonlySet<string>;
@@ -65,6 +66,7 @@ export function buildOverworldSessionSnapshot(
     discoveredQuestIds: sortedStringSet(state.discoveredQuestIds),
     startedQuestIds: sortedStringSet(state.startedQuestIds),
     completedQuestIds: sortedStringSet(state.completedQuestIds),
+    questOutcomes: sortedStringMap(state.questOutcomes),
     exploredSiteIds: sortedStringSet(state.exploredSiteIds),
     regionRenown: sortedNumberMap(state.regionRenown),
     completedRegionalArcIds: sortedStringSet(state.completedRegionalArcIds),

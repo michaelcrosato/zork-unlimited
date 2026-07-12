@@ -102,15 +102,16 @@ any agent harness (Claude Code, Codex, Gemini CLI, …) plays via native tool
 calls over the structured observation/action loop — never a raw parser. The
 repo ships `.mcp.json`, so an MCP client opened here connects automatically.
 
-**38 tools**, in four groups:
+**39 tools**, in four groups:
 
 - **World catalog** (1): `list_overworld` — the overworld is both the world and
   the quest registry.
-- **Overworld sessions** (21): `start_overworld`, then travel, rest, resupply,
+- **Overworld sessions** (22): `start_overworld`, then travel, rest, resupply,
   route planning, POI scouting, contacts, events, jobs, area exploration,
   export/restore — and `start_overworld_session_quest` /
   `complete_overworld_session_quest` bridging a discovered lead into quest play,
-  plus `choose_overworld_session_journey` at game-presented retention pauses.
+  plus `choose_overworld_session_journey` at game-presented retention pauses
+  and `choose_overworld_session_story` for game-presented authored choices.
   This is how a player reaches a shipped quest: in-world, through the overworld.
 - **RPG quest sessions** (12): `start_world_quest` (a dev/QA entry point that
   starts a shipped quest by id; `new_game` does the same for generated packs) →
@@ -130,16 +131,28 @@ without a live client. All paths are confined to the project root; content and
 traces are data only.
 
 Every overworld session also carries one versioned **journey contract**, shared
-unchanged by UI and MCP. Its initial goal is to find one local lead in Albany
-and see it through. Under contract v2, meaningful accepted decisions—movement,
-new clues, substantive dialogue topics, combat, skill checks, preparation, and
-other situation changes—advance the shared counter. Context-only or repeated
-narration, dialogue opening/navigation/closure, unchanged services,
-legal-action listings, persistence operations, rejections, technical quest
-foldback, and the retention choice do not. The game offers a real continue/end
-choice at 40 decisions, then 80/120/+40, or sooner when the goal completes.
-Ending returns a verifiable receipt with the contract version, decision proof,
-goal state, checkpoint choices, and exit reason.
+unchanged by UI and MCP. Contract v3 keeps v2's meaningful-decision classifier:
+movement, new clues, substantive dialogue topics, combat, skill checks,
+preparation, authored story choices, and other situation changes advance the
+shared counter. Context-only or repeated narration, dialogue
+opening/navigation/closure, unchanged services, legal-action listings,
+persistence operations, rejections, technical quest foldback, and the
+continue/end retention choice do not.
+
+The initial goal is to find one local lead in Albany and see it through. Goals
+are now versioned and ordered: completing one appends it to goal history and
+offers a continue/end choice bound to that exact goal, at once if completion is
+before the next fixed checkpoint. If the player continues after Wolf-Winter,
+the game presents an ending-sensitive Albany story choice and installs the
+chosen authored objective; ending installs nothing. Fixed choices remain at 40,
+80, 120, and every additional 40 meaningful decisions. The exit receipt records
+the current goal, completed goals, goal-bound retention choices, decision proof,
+checkpoint history, and exit reason.
+
+When an active follow-up goal names another town, that same journey object and
+the UI journey card provide a current-location next-road hint plus the remaining
+road count/time. The hint updates after each leg and becomes local-area guidance
+on arrival, so the objective never depends on blind map traversal.
 
 ## Testing: a three-tier pyramid, coupled by an exit interview
 
@@ -163,8 +176,9 @@ Full reference: [`docs/testing_pyramid.md`](./docs/testing_pyramid.md).
   [`docs/blind_playtest_protocol.md`](./docs/blind_playtest_protocol.md)).
   `npm run blind` and every live `npm run fleet` member default to
   `play_mode: pure` and `start_surface: fresh_overworld`: the game supplies the
-  tutorial, goal, state, legal choices, decision/checkpoint rhythm, and
-  consequences; the harness supplies transport syntax only. It interviews
+  tutorial, goals, state, legal and authored story choices,
+  decision/checkpoint rhythm, and consequences; the harness supplies transport
+  syntax only. It interviews
   after a game-confirmed exit, never after a test-only call budget. Structural
   direct-quest/crawler/smoke/mock modes require explicit flags and are not pure
   retention evidence. Milestone fleets run 100 seed/model variants of the same
@@ -173,7 +187,7 @@ Full reference: [`docs/testing_pyramid.md`](./docs/testing_pyramid.md).
   findings and verified Tier-2 reports into `hotspots.{json,md}`
   (`npm run feedback:compile`), writes a separate `retention.json` that admits
   only sidecar-verified pure exits and groups their decision/checkpoint curves
-  by journey-contract version (historical v1 and current v2 are never pooled),
+  by journey-contract version (historical v1/v2 and current v3 are never pooled),
   tracks trend (improved/regressed/new/flat), and feeds the assessor's ranking.
 
 Every pure playtest MUST end through the game's journey choice and then provide

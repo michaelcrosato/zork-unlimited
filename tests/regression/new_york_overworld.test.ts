@@ -292,6 +292,8 @@ describe("New York overworld graph", () => {
 
   it("removes the global quest selector from the app shell", () => {
     const app = readFileSync("ui/src/App.tsx", "utf8");
+    const journeyStatus = readFileSync("ui/src/JourneyStatus.tsx", "utf8");
+    const journeyChoice = readFileSync("ui/src/JourneyChoiceScreen.tsx", "utf8");
     expect(app).not.toContain("<select");
     expect(app).not.toContain("<option");
     expect(app).toContain("Roads From Here");
@@ -327,7 +329,11 @@ describe("New York overworld graph", () => {
     expect(app).toContain("Rest");
     expect(app).toContain("<JourneyStatus journey={journey}");
     expect(app).toContain("<JourneyChoiceScreen journey={journey}");
+    expect(app).toContain("<JourneyStoryChoiceScreen journey={journey}");
     expect(app).toContain("<JourneyEndedScreen journey={journey}");
+    expect(journeyStatus).toContain("journey.goalGuidance");
+    expect(journeyStatus).toContain('aria-label="Objective guidance"');
+    expect(journeyChoice).toContain("journey.goalGuidance");
     expect(app).toContain(
       "worldSession.recordQuestDecision(out.journeyActionId, out.journeyDecision)",
     );

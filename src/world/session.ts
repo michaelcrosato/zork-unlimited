@@ -22,6 +22,7 @@ import {
 } from "./travel_mechanics.js";
 import {
   cloneOverworldRouteOption,
+  indexedOverworldRoute,
   type OverworldRoutePlannerIndex,
   type OverworldSessionRoutePlan,
 } from "./session_routes.js";
@@ -36,8 +37,9 @@ import {
   type OverworldQuestCompletionResult,
 } from "./session_quests.js";
 import {
-  applyOverworldSessionQuestCompletionFromState,
+  applyOverworldSessionQuestCompletion,
   applyOverworldSessionQuestStartFromState,
+  planOverworldSessionQuestCompletion,
   previewOverworldSessionQuestStart,
   type OverworldSessionQuestStartState,
 } from "./session_quest_lifecycle.js";
@@ -115,9 +117,11 @@ import {
   applyOverworldSessionRoadTravelArrival,
 } from "./session_road_travel.js";
 import {
+  activateJourneyGoal,
   assertJourneyAcceptingDecision as assertJourneyContractAcceptingDecision,
   chooseJourney as chooseJourneyContract,
   createInitialJourneyContractSnapshot,
+  INITIAL_JOURNEY_GOAL,
   journeyExitReceipt,
   journeyPresentation,
   recordJourneyDecision,
@@ -127,14 +131,32 @@ import {
   type JourneyContractSnapshot,
   type JourneyDecisionClassification,
   type JourneyExitReceipt,
+  type JourneyGoalDefinition,
+  type JourneyGoalPresentation,
   type JourneyPresentation,
+  type JourneyPresentationContext,
 } from "./journey_contract.js";
+import {
+  ALBANY_DAWN_DISPATCH_ID,
+  albanyDawnDispatchGoal,
+  assertJourneyCampaignQuestOutcome,
+  journeyCampaignGoalIsComplete,
+  journeyCampaignGoalJournalCopy,
+  journeyCampaignGoalDefinition,
+  journeyCampaignPresentationContext,
+  materializeJourneyCampaignGoal,
+  nextJourneyCampaignGoal,
+  type AlbanyDawnDispatchChoiceId,
+  type JourneyCampaignGoalDefinition,
+} from "./journey_campaign.js";
 import {
   classifyOverworldJourneyDecision,
   withJourneyDecision,
   type JourneyDecisionAnnotated,
   type OverworldJourneyActionKind,
 } from "./journey_decision.js";
+import { addOverworldJournalEntry } from "./session_journal_store.js";
+import { timeLabel } from "./session_journal_codec.js";
 
 export type {
   OverworldRoadEncounterOption,
@@ -178,6 +200,15 @@ export type OverworldJourneyRoadEncounterResult =
   JourneyDecisionAnnotated<OverworldRoadEncounterResult>;
 export type OverworldJourneyServiceResult = JourneyDecisionAnnotated<OverworldServiceResult>;
 export type OverworldJourneyTravelResult = JourneyDecisionAnnotated<TravelLogEntry>;
+
+export type OverworldJourneyStoryChoiceResult = Readonly<{
+  storyChoiceId: typeof ALBANY_DAWN_DISPATCH_ID;
+  choiceId: AlbanyDawnDispatchChoiceId;
+  consequence: string;
+  goal: JourneyGoalPresentation;
+  entry: OverworldJournalEntry;
+  journeyDecision: JourneyDecisionClassification;
+}>;
 
 type OverworldClockState = {
   minutesAfter: number;
@@ -252,11 +283,13 @@ export class OverworldSession {
   private readonly discoveredQuestIds = new Set<string>();
   private readonly startedQuestIds = new Set<string>();
   private readonly completedQuestIds = new Set<string>();
+  private readonly questOutcomeIds = new Map<string, string>();
   private readonly exploredSiteIds = new Set<string>();
   private readonly regionRenown = new Map<string, number>();
   private readonly completedRegionalArcIds = new Set<string>();
   private pendingRoadEncounter: OverworldPendingRoadEncounter | null = null;
   private journeyState: JourneyContractSnapshot = createInitialJourneyContractSnapshot();
+  private readonly journeyGoalGuidanceByRoute = new Map<string, string>();
   private readonly caches: OverworldSessionCaches = {};
 
   constructor(private readonly world: OverworldManifest) {
@@ -353,8 +386,81 @@ export class OverworldSession {
     return cloneOverworldSessionSnapshot(this.cachedSnapshot().snapshot);
   }
 
+  private journeyGoalGuidance(): string | null {
+    const goal = this.journeyState.goal;
+    if (goal.version === INITIAL_JOURNEY_GOAL.version || goal.status !== "active") return null;
+    const definition = journeyCampaignGoalDefinition(goal);
+    if (!definition) return null;
+    const destination = this.nodes.get(definition.targetTownId);
+    const area = this.areasById.get(definition.targetAreaId);
+    if (!destination || !area) return null;
+    if (this.currentId === destination.id) {
+      return this.currentAreaId === area.id
+        ? `Objective location reached: ${area.name}. Follow the visible authored lead here.`
+        : `Objective town reached: move toward ${area.name} to find the authored lead.`;
+    }
+
+    const cacheKey = `${this.currentId}->${destination.id}`;
+    const cached = this.journeyGoalGuidanceByRoute.get(cacheKey);
+    if (cached) return cached;
+    const route = indexedOverworldRoute(this.routePlannerIndex, this.currentId, destination.id);
+    const next = route?.steps[0]?.to;
+    if (!route || !next) return null;
+    const roadCount = route.steps.length;
+    const guidance = `Objective route: take the road toward ${next.name}. ${destination.name} is ${String(roadCount)} ${roadCount === 1 ? "road" : "roads"} and about ${String(route.totalMinutes)} road minutes away.`;
+    this.journeyGoalGuidanceByRoute.set(cacheKey, guidance);
+    return guidance;
+  }
+
+  private journeyPresentationContext(): JourneyPresentationContext | undefined {
+    const campaign = journeyCampaignPresentationContext({
+      journey: this.journeyState,
+      questOutcomeIds: this.questOutcomeIds,
+    });
+    const pending = this.journeyState.pendingChoice;
+    const pendingGoalCompletion = pending?.reasons.includes("goal_completed") === true;
+    const goalGuidance = this.journeyGoalGuidance();
+    let goalCompletion: JourneyPresentationContext["goalCompletion"];
+    let storyChoice: JourneyPresentationContext["storyChoice"];
+
+    if (campaign) {
+      if (pendingGoalCompletion && campaign.preRetentionTeaser) {
+        goalCompletion = {
+          goalVersion: pending!.goalVersion!,
+          goalId: pending!.goalId!,
+          messagePrefix: campaign.albanyReturnContext,
+          messageSuffix: campaign.preRetentionTeaser,
+          continueConsequencePrefix:
+            "Continue to decide where Albany's only dawn relief wagon goes.",
+        };
+      }
+      if (campaign.storyChoice) {
+        storyChoice = {
+          ...campaign.storyChoice,
+          message: `${campaign.albanyReturnContext} ${campaign.storyChoice.message}`,
+        };
+      }
+    } else if (pendingGoalCompletion) {
+      const nextGoal = nextJourneyCampaignGoal({ completedQuestIds: this.completedQuestIds });
+      if (nextGoal) {
+        goalCompletion = {
+          goalVersion: pending!.goalVersion!,
+          goalId: pending!.goalId!,
+          messageSuffix: `Another authored lead is ready: ${nextGoal.text}`,
+          continueConsequencePrefix: `Continue with the next objective: ${nextGoal.text}`,
+        };
+      }
+    }
+    if (!goalCompletion && !storyChoice && !goalGuidance) return undefined;
+    return {
+      ...(goalCompletion ? { goalCompletion } : {}),
+      ...(goalGuidance ? { goalGuidance } : {}),
+      ...(storyChoice ? { storyChoice } : {}),
+    };
+  }
+
   journey(): JourneyPresentation {
-    return journeyPresentation(this.journeyState);
+    return journeyPresentation(this.journeyState, this.journeyPresentationContext());
   }
 
   journeyExitReceipt(): JourneyExitReceipt | null {
@@ -363,6 +469,9 @@ export class OverworldSession {
 
   assertJourneyAcceptingDecision(): void {
     assertJourneyContractAcceptingDecision(this.journeyState);
+    if (this.journey().storyChoice) {
+      throw new Error("Choose Albany's dawn dispatch before taking another gameplay action.");
+    }
   }
 
   recordQuestDecision(
@@ -388,8 +497,66 @@ export class OverworldSession {
   chooseJourney(choice: JourneyChoice): JourneyChoiceResult {
     const chosen = chooseJourneyContract(this.journeyState, choice);
     this.journeyState = chosen.state;
+    if (
+      choice === "continue" &&
+      chosen.result.retentionEvent.reasons.includes("goal_completed") &&
+      this.journeyState.goal.id !== INITIAL_JOURNEY_GOAL.id
+    ) {
+      const nextGoal = nextJourneyCampaignGoal({ completedQuestIds: this.completedQuestIds });
+      if (nextGoal) {
+        this.activateCampaignGoal(nextGoal);
+      }
+    }
     this.clearSessionCaches();
-    return chosen.result;
+    return Object.freeze({ ...chosen.result, journey: this.journey() });
+  }
+
+  private activateCampaignGoal(definition: JourneyCampaignGoalDefinition): OverworldJournalEntry {
+    const goal: JourneyGoalDefinition = materializeJourneyCampaignGoal(
+      definition,
+      this.journeyState.goal.version,
+    );
+    this.journeyState = activateJourneyGoal(this.journeyState, goal);
+    const journalCopy = journeyCampaignGoalJournalCopy(definition, this.questOutcomeIds);
+    const entry: OverworldJournalEntry = {
+      id: `campaign_goal:${String(goal.version)}:${goal.id}`,
+      kind: "campaign",
+      town: this.currentNode().name,
+      ...journalCopy,
+      recordedAt: timeLabel(this.minutes),
+    };
+    addOverworldJournalEntry(this.journalEntries, this.journalEntriesById, entry);
+    this.clearSessionCaches();
+    return entry;
+  }
+
+  chooseJourneyStory(choiceId: AlbanyDawnDispatchChoiceId): OverworldJourneyStoryChoiceResult {
+    assertJourneyContractAcceptingDecision(this.journeyState);
+    const storyChoice = this.journey().storyChoice;
+    if (!storyChoice || storyChoice.id !== ALBANY_DAWN_DISPATCH_ID) {
+      throw new Error("There is no Albany dawn-dispatch choice to make right now.");
+    }
+    const option = storyChoice.options.find((candidate) => candidate.id === choiceId);
+    if (!option) throw new Error(`Unknown Albany dawn-dispatch choice "${String(choiceId)}".`);
+
+    const entry = this.activateCampaignGoal(albanyDawnDispatchGoal(choiceId));
+    const journeyDecision = this.recordOverworldDecision(
+      `campaign_dispatch:${choiceId}`,
+      "progress",
+      true,
+    );
+    if (journeyCampaignGoalIsComplete(this.journeyState.goal, this.completedQuestIds)) {
+      this.journeyState = recordJourneyGoalCompleted(this.journeyState);
+    }
+    this.clearSessionCaches();
+    return Object.freeze({
+      storyChoiceId: ALBANY_DAWN_DISPATCH_ID,
+      choiceId,
+      consequence: option.consequence,
+      goal: this.journey().goal,
+      entry: Object.freeze({ ...entry }),
+      journeyDecision,
+    });
   }
 
   private persistenceState(): OverworldSessionPersistenceState {
@@ -417,6 +584,7 @@ export class OverworldSession {
       discoveredQuestIds: this.discoveredQuestIds,
       startedQuestIds: this.startedQuestIds,
       completedQuestIds: this.completedQuestIds,
+      questOutcomeIds: this.questOutcomeIds,
       exploredSiteIds: this.exploredSiteIds,
       regionRenown: this.regionRenown,
       completedRegionalArcIds: this.completedRegionalArcIds,
@@ -702,7 +870,7 @@ export class OverworldSession {
   ): OverworldJourneyQuestCompletionResult {
     if (this.journeyState.status === "ended") throw new Error("This journey has ended.");
     this.assertNoPendingRoadEncounter("completing a quest");
-    const applied = applyOverworldSessionQuestCompletionFromState({
+    const completionState = {
       ...this.actionJournalState(),
       completedQuestIds: this.completedQuestIds,
       regionRenown: this.regionRenown,
@@ -712,10 +880,19 @@ export class OverworldSession {
       areasById: this.areasById,
       nodesById: this.nodes,
       startedQuestIds: this.startedQuestIds,
-    });
+    };
+    const completionPlan = planOverworldSessionQuestCompletion(completionState);
+    assertJourneyCampaignQuestOutcome(questId, outcome.endingId);
+    const applied = applyOverworldSessionQuestCompletion(completionState, completionPlan);
     this.applyClockState(applied);
-    const quest = this.questsById.get(questId);
-    if (applied.stateChanged && !outcome.death && quest?.home === this.world.start) {
+    if (applied.stateChanged && !outcome.death) {
+      this.questOutcomeIds.set(questId, outcome.endingId);
+    }
+    if (
+      applied.stateChanged &&
+      !outcome.death &&
+      journeyCampaignGoalIsComplete(this.journeyState.goal, this.completedQuestIds)
+    ) {
       this.journeyState = recordJourneyGoalCompleted(this.journeyState);
     }
     if (applied.stateChanged) {

@@ -20,6 +20,7 @@ export function JourneyStatus({ journey }: JourneyStatusProps): JSX.Element {
         <p className="kicker">Current goal · v{journey.goal.version}</p>
         <h2 id="journey-goal-title">{journey.goal.text}</h2>
         <p>{goalProgress}</p>
+        {journey.goalGuidance && <p aria-label="Objective guidance">{journey.goalGuidance}</p>}
       </div>
       <dl className="journey-rhythm" aria-label="Journey rhythm">
         <div>

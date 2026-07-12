@@ -57,6 +57,7 @@ export function buildOverworldSessionSnapshotFromState(
     discoveredQuestIds: state.discoveredQuestIds,
     startedQuestIds: state.startedQuestIds,
     completedQuestIds: state.completedQuestIds,
+    questOutcomes: state.questOutcomeIds,
     exploredSiteIds: state.exploredSiteIds,
     regionRenown: state.regionRenown,
     completedRegionalArcIds: state.completedRegionalArcIds,

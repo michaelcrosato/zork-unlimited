@@ -36,14 +36,17 @@ fleet member.
 
 ## The game-native journey contract
 
-The game owns session length. Contract version 2 has this initial goal, rendered
+The game owns session length. Current contract version 3 has this initial goal,
+rendered
 identically in UI and MCP:
 
 > Find one local lead in Albany and see it through.
 
-The baseline is 40 meaningful accepted gameplay decisions. The game offers an actual
-continue/end choice at decision 40, then at 80, 120, 160, and every additional 40. If the current goal is completed earlier, the game offers the same choice
-immediately. Continuing after an early goal choice preserves the next fixed
+The baseline is 40 meaningful accepted gameplay decisions. The game offers an
+actual continue/end choice at decision 40, then at 80, 120, 160, and every
+additional 40. If the current goal is completed earlier, the game offers the
+same choice immediately and binds that retention event to the completed goal's
+version and id. Continuing after an early goal choice preserves the next fixed
 checkpoint.
 
 A decision is one successfully accepted, consequential gameplay choice shared
@@ -60,11 +63,32 @@ The initial goal completes only when the player successfully completes a quest
 whose home is Albany. Discovering or starting a lead, doing a job or event,
 visiting a site, or dying inside a quest does not complete it.
 
+Contract v3 carries one versioned current goal plus an ordered completed-goal
+history. Completing a goal adds it to that history before the game-owned
+continue/end pause. If the player ends, no follow-up state is installed. If the
+player continues, the game may present an authored `storyChoice`; selecting one
+visible option is an accepted `situation_changed` gameplay decision, persists
+its consequence, and activates the next versioned goal. Completing that goal
+can therefore trigger another goal-bound retention choice before a fixed
+checkpoint. The story choice is distinct from the non-counting continue/end
+retention choice.
+
+The opening handoff demonstrates the rule without giving the harness hidden
+content knowledge. Wolf-Winter's recorded non-death ending determines truthful
+Albany return context and a non-mutating teaser on the initial goal-completion
+screen. Only after `continue` does the game offer the player-facing Albany dawn
+dispatch choice and install its chosen objective. UI and MCP receive the same
+message, option ids, labels, consequences, current-goal text, and goal history.
+For every later goal in another town, the shared journey presentation also gives
+the next road and remaining route estimate from the player's current location;
+the harness adds no navigation advice of its own.
+
 While a continue/end choice is due, further gameplay decisions pause. Choosing
 continue records retention evidence and resumes play. Choosing end records the
 final retention choice, ends the journey, and returns a signed-by-state receipt
-containing the contract version, meaningful-decision count and proof, goal status,
-checkpoint history, and exit reason.
+containing the contract version, meaningful-decision count and proof, current
+goal, completed-goal history, goal-bound retention history, checkpoints, and
+exit reason.
 
 ## One pure run
 
@@ -75,7 +99,10 @@ checkpoint history, and exit reason.
    only game-presented goals and choices, including any quest reached naturally
    through the overworld bridge.
 4. At every game-presented journey choice, the player honestly chooses continue
-   or end. It does not stop because of elapsed tool calls or presumed coverage.
+   or end. After continuing, it also answers any game-presented authored story
+   choice by passing a visible option id to
+   `choose_overworld_session_story`, then follows the resulting current goal. It
+   does not stop because of elapsed tool calls or presumed coverage.
 5. After the game confirms end and returns the journey receipt, the MCP run is
    closed. Only then does the harness collect the exit interview.
 6. `scripts/verify-blind-report.ts` verifies the V2 pure interview against the
@@ -90,10 +117,11 @@ run with no retention-eligible interview, not an intended gameplay endpoint.
 
 `blind-tester/prompt-overworld.md` is the locked live prompt. It may tell the
 agent how to call the player MCP tools, retain compact legends, use session ids
-and state hashes, recognize the game-presented continue/end choice, and copy the
-returned receipt. It may not restate hidden content, recommend an opening route,
-require particular mechanics or locations, list defects to hunt, or impose a
-call/turn/time budget. Gameplay behavior must come from the game contract.
+and state hashes, recognize game-presented continue/end and authored story
+choices, and copy the returned receipt. It may not restate hidden content,
+recommend an opening route, require particular mechanics or locations, list
+defects to hunt, or impose a call/turn/time budget. Gameplay behavior must come
+from the game contract.
 
 For an embedded quest, use `list_legal_actions` with `compact_actions = true`,
 then `step_action` with `expected_state_hash = latest state_hash`,
@@ -105,6 +133,7 @@ The runner enforces this boundary independently of the prose prompt:
 
 - live quest targets and non-default personas are rejected before model launch;
 - the MCP server exposes a pure allowlist and permits one fresh start;
+- authored choices are available only when the same player-facing choice is due;
 - authoring, validation, raw state, save/import/restore, direct quest, and other
   structural tools are absent;
 - calls after a confirmed journey exit are rejected; and
@@ -138,22 +167,22 @@ schema V2 and includes:
 The player copies `journey_exit_receipt` verbatim from the confirmed end
 response. The verifier cross-checks it against server-authored evidence and
 writes a verified `.run.json` sidecar. Manifest and summary rows retain play
-mode, start surface, contract version, accepted decisions, checkpoint choices,
-exit reason, and evidence status. The continue/end decisions themselves are the
-primary retention signal; `would_replay` remains the post-exit attitudinal
-question.
+mode, start surface, contract version, meaningful decisions, current and
+completed goals, checkpoint/goal choices, exit reason, and evidence status. The
+continue/end decisions themselves are the primary retention signal;
+`would_replay` remains the post-exit attitudinal question.
 
 `npm run feedback:compile` writes `retention.json` beside the ranked hot spots.
 It separates pure, structural, and legacy-guided report counts and aggregates
 only sidecar-verified pure continue/end choices as retention evidence. Pure
 decision counts, checkpoint choices, and continuation curves are grouped by
-the receipt's journey-contract version; historical v1 evidence remains valid
-but is never pooled with current v2 evidence.
+the receipt's journey-contract version; historical v1 and v2 evidence remains
+valid but is never pooled with current v3 evidence.
 
 Legacy interview-schema V1/guided reports may remain in historical feedback
 compiles, clearly labeled as such; they never count as pure retention evidence.
-Previously verified schema-V2 pure reports carrying a journey-contract-v1
-receipt remain valid historical pure evidence in their own cohort, but cannot
+Previously verified schema-V2 pure reports carrying journey-contract-v1 or v2
+receipts remain valid historical pure evidence in their own cohorts, but cannot
 resume a current-contract fleet slot.
 
 ## Fleet mode

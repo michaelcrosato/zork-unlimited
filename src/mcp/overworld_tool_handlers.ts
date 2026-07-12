@@ -10,6 +10,7 @@ import type { OverworldManifest, OverworldNode } from "../world/overworld.js";
 import {
   type OverworldActionResult,
   type OverworldAreaTravelResult,
+  type OverworldJourneyStoryChoiceResult,
   type OverworldQuestCompletionResult,
   type OverworldQuestView,
   type OverworldRoadEncounterResult,
@@ -65,6 +66,7 @@ import type { RpgViewOptions } from "./rpg_view_projection.js";
 import type { SessionStore } from "./sessions.js";
 import { journeyBlocksGameplay, suppressRpgGameplayActions } from "./journey_projection.js";
 import type { JourneyDecisionClassification } from "../world/journey_contract.js";
+import type { AlbanyDawnDispatchChoiceId } from "../world/journey_campaign.js";
 
 type OverworldResponseOptions = OverworldMcpResponseOptions;
 
@@ -615,6 +617,28 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
         "result",
         (session) => session.chooseJourney(args.choice),
         (result): JourneyChoiceResult => result,
+      );
+    },
+
+    choose_overworld_session_story<
+      Args extends {
+        session_id: string;
+        choice: AlbanyDawnDispatchChoiceId;
+      } & OverworldResponseOptions,
+    >(
+      args: Args,
+    ): OverworldSessionResponse<
+      "result",
+      OverworldJourneyStoryChoiceResult,
+      DefaultCompactOverworldResponse<Args>
+    > {
+      const responseOptions = defaultCompactOverworldResponse(args);
+      return overworldSessions.run(
+        responseOptions,
+        args.session_id,
+        "result",
+        (session) => session.chooseJourneyStory(args.choice),
+        (result): OverworldJourneyStoryChoiceResult => result,
       );
     },
 
