@@ -20,6 +20,8 @@ import {
   publicOverworldSnapshotHash,
   OVERWORLD_PUBLIC_SNAPSHOT_HASH_LENGTH,
 } from "../../src/mcp/overworld_sessions.js";
+import { OVERWORLD_COMPACT_ACTION_TEXT_CHAR_LIMIT } from "../../src/mcp/compact_overworld_result.js";
+import { compactText } from "../../src/core/compact_text.js";
 import {
   hashTranscript,
   publicRpgTranscriptHash,
@@ -1611,7 +1613,9 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(compactExplore.result.areas?.map(([id]) => id)).toEqual(
       fullExplore.result.discoveredAreas?.map((candidate) => candidate.id),
     );
-    expect("text" in compactExplore.result.entry).toBe(false);
+    expect(compactExplore.result.text).toBe(
+      compactText(fullExplore.result.entry.text, OVERWORLD_COMPACT_ACTION_TEXT_CHAR_LIMIT),
+    );
     expect(JSON.stringify(compactExplore.result).length).toBeLessThan(
       JSON.stringify(fullExplore.result).length,
     );

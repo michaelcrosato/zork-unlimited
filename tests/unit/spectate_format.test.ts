@@ -104,10 +104,12 @@ describe("formatSpectateEntry", () => {
       JSON.stringify({
         m: 25,
         entry: ["poi", "Scouted the Notice Hall", "Day 1, 10:06"],
+        text: "The marked board carries a winter-relief lead from the western hills.",
         quests: [["wolf_winter", "The Wolf-Winter"]],
       }),
     );
     expect(scout).toContain("Scouted the Notice Hall");
+    expect(scout).toContain("winter-relief lead from the western hills");
     expect(scout).toContain("found quest lead: The Wolf-Winter");
 
     const travel = at(

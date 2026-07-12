@@ -4,6 +4,7 @@ import {
   compactOverworldActionResult,
   compactOverworldAreaTravelResult,
   compactOverworldQuestCompletionResult,
+  OVERWORLD_COMPACT_ACTION_TEXT_CHAR_LIMIT,
 } from "../../src/mcp/compact_overworld_result.js";
 import {
   OVERWORLD_COMPACT_LABEL_CHAR_LIMIT,
@@ -58,7 +59,34 @@ describe("compactOverworldActionResult", () => {
     expect(compact.sites).toHaveLength(OVERWORLD_COMPACT_LOCAL_REF_LIMIT);
     expect(compact.quests).toHaveLength(OVERWORLD_COMPACT_LOCAL_REF_LIMIT);
     expect(compact.discovered_truncated).toEqual(["areas", "jobs", "sites", "quests"]);
-    expect(JSON.stringify(compact)).not.toContain("Verbose entry text");
+    expect(compact.text).toBe("Verbose entry text");
+  });
+
+  it("preserves immediate action prose under a transparent hard cap", () => {
+    const verboseText = `The contact says ${"specific consequence ".repeat(40)}`;
+    const result: OverworldActionResult = {
+      minutes: 15,
+      alreadyKnown: false,
+      entry: {
+        id: "talk:contact",
+        kind: "contact",
+        town: "Albany city",
+        title: "Talked to Rowan Quill",
+        text: verboseText,
+        recordedAt: "Day 1, 08:15",
+      },
+      discoveredAreas: [],
+      discoveredJobs: [],
+      discoveredSites: [],
+      discoveredQuests: [],
+    };
+
+    const compact = compactOverworldActionResult(result);
+
+    expect(compact.text).not.toBe(verboseText);
+    expect(compact.text).toHaveLength(OVERWORLD_COMPACT_ACTION_TEXT_CHAR_LIMIT);
+    expect(compact.text).toMatch(/\.\.\.\(\+\d+ chars\)$/);
+    expect(compact.text).toContain("The contact says");
   });
 
   it("caps compact quest completion ending titles", () => {

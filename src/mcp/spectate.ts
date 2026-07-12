@@ -137,6 +137,9 @@ export function formatSpectateEntry(
       if (entry && typeof entry[1] === "string") {
         head(`▷ ${name}${mins}`);
         out.push(`   ${entry[1]}`);
+        if (typeof p.text === "string" && p.text.trim() !== "") {
+          out.push(`   ${p.text}`);
+        }
         const discoveries: Array<readonly [string, string]> = [
           ["areas", "area"],
           ["jobs", "job"],

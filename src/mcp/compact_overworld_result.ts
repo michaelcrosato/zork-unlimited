@@ -6,6 +6,7 @@ import type {
   OverworldRoadEncounterStrategy,
   OverworldServiceResult,
 } from "../world/session.js";
+import { compactText } from "../core/compact_text.js";
 import {
   compactOverworldJournalEntries,
   compactOverworldLabel,
@@ -23,10 +24,15 @@ import {
 
 export type OverworldCompactDiscoveryKey = "areas" | "jobs" | "sites" | "quests";
 
+// Immediate local-action prose is the player's consequence, not rolling context.
+// Keep enough room for every shipped contact line while bounding longer area/site copy.
+export const OVERWORLD_COMPACT_ACTION_TEXT_CHAR_LIMIT = 360;
+
 export type OverworldCompactActionResult = {
   m: number;
   known?: true;
   entry: OverworldCompactJournalEntry;
+  text: string;
   areas?: OverworldCompactRef[];
   jobs?: OverworldCompactRef[];
   sites?: OverworldCompactRef[];
@@ -84,6 +90,7 @@ export function compactOverworldActionResult(
   const compact: OverworldCompactActionResult = {
     m: result.minutes,
     entry: compactOverworldJournalEntry(result.entry),
+    text: compactText(result.entry.text, OVERWORLD_COMPACT_ACTION_TEXT_CHAR_LIMIT),
   };
   if (result.alreadyKnown) compact.known = true;
   const areas = result.discoveredAreas ? compactOverworldRefs(result.discoveredAreas) : [];

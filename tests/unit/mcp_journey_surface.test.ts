@@ -36,6 +36,33 @@ function uiSessionAtAlbanyStoryChoice(): OverworldSession {
 }
 
 describe("MCP journey surface", () => {
+  it("keeps the human contact line in the default compact action result", () => {
+    const a = api();
+    const compactStart = a.start_overworld();
+    const fullStart = a.start_overworld({ compact_context: false });
+    const compactContact = compactStart.context.contacts[0];
+    const fullContact = fullStart.observation.characters.find(
+      (candidate) => candidate.id === compactContact?.[0],
+    );
+    if (!compactContact || !fullContact) throw new Error("expected the Albany contact");
+
+    const compact = a.talk_overworld_session_contact({
+      session_id: compactStart.session_id,
+      character_id: compactContact[0],
+    });
+    const full = a.talk_overworld_session_contact({
+      ...FULL_OVERWORLD,
+      session_id: fullStart.session_id,
+      character_id: fullContact.id,
+    });
+
+    expect(compact.result.text).toBe(full.result.entry.text);
+    expect(compact.result.text).toContain("Rowan Quill");
+    expect(compact.result.text).toContain("what matters before the office closes");
+    expect("observation" in compact).toBe(false);
+    expect(JSON.stringify(compact.result)).not.toContain(full.result.entry.id);
+  });
+
   it("keeps the canonical journey at the response root across compact and full play", () => {
     const a = api();
     const compact = a.start_overworld();
