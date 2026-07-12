@@ -36,10 +36,11 @@ persistent world (the 2026-07-06 consolidation — see
 - **The New York overworld** (`content/world/new_york_overworld.json`,
   `src/world/`) — the single seamless world (like Skyrim or Cyberpunk 2077):
   a 247-node, 9-region open world for travel, discovery, road encounters, jobs,
-  local events, and renown, AND the sole registry for the **11 shipped quests**
+  local events, and renown, AND the sole registry for the **12 shipped quests**
   under `content/rpg/quests/` (`advocates_case`, `breaking_weir`, `cold_forge`,
   `dawn_beacon`, `factors_mark`, `falconers_ransom`, `gallowmere`,
-  `printers_night`, `sunken_barrow`, `tanners_fever`, `wolf_winter`). Each quest
+  `printers_night`, `sunken_barrow`, `tanners_fever`, `tide_mill`,
+  `wolf_winter`). Each quest
   is anchored to a town and discovered from its local notice board, then handed
   off into a playable RPG quest session — everything is reached in-world.
 - **Web UI** (`ui/`) — a React + Vite view over the same headless engine; it
@@ -72,7 +73,7 @@ copied anywhere and opened directly.
 ```bash
 npm install
 npm run health                                   # the full verification bar (see below)
-npm run validate                                 # validate all 11 shipped quests
+npm run validate                                 # validate all 12 shipped quests
 npm run validate -- sunken_barrow               # validate one quest by world quest id
 npm run play -- sunken_barrow                    # play a shipped world quest
 npm run overworld                                # play the full game: overworld map -> quests
@@ -102,16 +103,18 @@ any agent harness (Claude Code, Codex, Gemini CLI, …) plays via native tool
 calls over the structured observation/action loop — never a raw parser. The
 repo ships `.mcp.json`, so an MCP client opened here connects automatically.
 
-**39 tools**, in four groups:
+**40 tools**, in four groups:
 
 - **World catalog** (1): `list_overworld` — the overworld is both the world and
   the quest registry.
-- **Overworld sessions** (22): `start_overworld`, then travel, rest, resupply,
+- **Overworld sessions** (23): `start_overworld`, then travel, rest, resupply,
   route planning, POI scouting, contacts, events, jobs, area exploration,
   export/restore — and `start_overworld_session_quest` /
   `complete_overworld_session_quest` bridging a discovered lead into quest play,
-  plus `choose_overworld_session_journey` at game-presented retention pauses
-  and `choose_overworld_session_story` for game-presented authored choices.
+  plus `choose_overworld_session_journey` at game-presented retention pauses,
+  `choose_overworld_session_story` for game-presented authored choices, and
+  `follow_overworld_session_goal` committing to the current objective's road as
+  one interruptible Goal Passage.
   This is how a player reaches a shipped quest: in-world, through the overworld.
 - **RPG quest sessions** (12): `start_world_quest` (a dev/QA entry point that
   starts a shipped quest by id; `new_game` does the same for generated packs) →
