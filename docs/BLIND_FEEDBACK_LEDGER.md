@@ -5,11 +5,11 @@ Generated deterministically from verified blind reports. The latest entries stay
 ## Summary
 
 - Reports dir: `blind-tester/reports`
-- Accepted reports: 463
+- Accepted reports: 464
 - Rejected or ignored markdown reports: 30
-- Latest report stamp: 20260712T144457Z
+- Latest report stamp: 20260712T152230Z
 - Recent entry limit: 100
-- Archived accepted entries collapsed into traits: 363
+- Archived accepted entries collapsed into traits: 364
 
 ## Recent Common Traits
 
@@ -24,6 +24,10 @@ Generated deterministically from verified blind reports. The latest entries stay
 | 2 | 20260708T203905Z | confusion | town counted visited before road encounter resolved | overworld |
 | 2 | 20260708T203156Z | confusion | hidden counts are useful but abstract | overworld |
 | 2 | 20260708T202531Z | confusion | quest tone disconnected from Albany overworld | overworld |
+| 1 | 20260712T152230Z | bug S0 | road encounter flavor text (Rome/Oneida corridor and others): Templated/repeated 'expect truck stops...' phrasing acr... | overworld |
+| 1 | 20260712T152230Z | confusion | opaque compact-context tuples without the legend | overworld |
+| 1 | 20260712T152230Z | confusion | unexplained renown/decision-checkpoint bookkeeping | overworld |
+| 1 | 20260712T152230Z | worst moment | Realizing supplies had dropped to 2/8 right as I arrived in Rome, a near-miss that was avoidable friction rather than... | overworld |
 | 1 | 20260712T144457Z | bug S0 | Overworld vitals display, Syracuse/Oswego rest & resupply: Max supplies value shown inconsistently (6 vs 8) across ot... | overworld |
 | 1 | 20260712T144457Z | bug S1 | The Gallowmere quest, Moor's Edge room: Room text implies the hunting-knife is already held, but inventory is empty a... | overworld |
 | 1 | 20260712T144457Z | confusion | hunting-knife 'already in hands' text vs. actually-empty inventory required backtrack | overworld |
@@ -36,15 +40,12 @@ Generated deterministically from verified blind reports. The latest entries stay
 | 1 | 20260712T142008Z | bug S1 | Overworld travel (travel_overworld_session): Calling travel to a non-adjacent town hard-errors instead of auto-routin... | overworld |
 | 1 | 20260712T142008Z | bug S1 | The Gallowmere / The Moor's Edge (quest start): Flavor text says the hunting-knife is 'at your belt' but it must be m... | overworld |
 | 1 | 20260712T142008Z | confusion | Hunting-knife flavor text implied it was already equipped but required a separate take action | overworld |
-| 1 | 20260712T142008Z | confusion | No direct multi-hop travel to non-adjacent towns; must walk each road leg manually | overworld |
-| 1 | 20260712T142008Z | confusion | Road encounters sometimes require an explicit resolve call and sometimes silently auto-resolve, with no way to antici... | overworld |
-| 1 | 20260712T142008Z | worst moment | Realizing at the wind-stone in The Gallowmere that I'd never actually picked up the hunting knife despite flavor text... | overworld |
-| 1 | 20260712T132432Z | bug S3 | Oneonta Market Streets — The Tanner's Fever quest (Sickroom/Apothecary's Store): After fully solving the overdose mys... | overworld |
 
 ## Recent Entries
 
 | Stamp | Source | Seed | Mode | Decisions | C/E | Stuck | Replay | Report | Signal |
 | --- | --- | ---: | --- | ---: | --- | --- | --- | --- | --- |
+| 20260712T152230Z | overworld | 2319 | pure | 96 | 5/4 | no | yes | `blind-tester/reports/20260712T152230Z_overworld_seed2319.md` | confusions: opaque compact-context tuples without the legend; unexplained renown/decision-checkpoint bookkeeping \| bugs: S0 road encounter flavor text (Rome/Oneida cor... |
 | 20260712T144457Z | overworld | 2218 | pure | 130 | 4/5 | no | yes | `blind-tester/reports/20260712T144457Z_overworld_seed2218.md` | confusions: hunting-knife 'already in hands' text vs. actually-empty inventory required backtrack; supply cap fluctuated between 6 and 8 with no explained cause \| bugs... |
 | 20260712T143606Z | overworld | 2217 | pure | 80 | 4/5 | no | yes | `blind-tester/reports/20260712T143606Z_overworld_seed2217.md` | confusions: multi-leg travel to an undiscovered town errors instead of auto-routing; case-notes object required take before read appeared |
 | 20260712T142008Z | overworld | 2216 | pure | 113 | 4/5 | no | yes | `blind-tester/reports/20260712T142008Z_overworld_seed2216.md` | confusions: Hunting-knife flavor text implied it was already equipped but required a separate take action; No direct multi-hop travel to non-adjacent towns; must walk... |
@@ -144,7 +145,6 @@ Generated deterministically from verified blind reports. The latest entries stay
 | 20260708T195407Z | overworld | 547 | legacy_guided | — | 4/4 | no | yes | `blind-tester/reports/20260708T195407Z_overworld_seed547.md` | confusions: compact prose often truncated; road encounter fiction appears after choice; hidden counters do not say where to search next \| bugs: S1 Albany Civic Center... |
 | 20260708T195407Z | overworld | 546 | legacy_guided | — | 4/4 | no | yes | `blind-tester/reports/20260708T195407Z_overworld_seed546.md` | confusions: legal action recheck returned unchanged without actions; event checklist implied required underrooms but did not require them; town civic events felt templ... |
 | 20260708T195406Z | overworld | 545 | legacy_guided | — | 4/4 | no | yes | `blind-tester/reports/20260708T195406Z_overworld_seed545.md` | confusions: quest tone shift from Albany to hill-steading; discovered jobs not visible outside current area \| bugs: S1 Albany Civic Center/event resolution: Resolved c... |
-| 20260708T195406Z | overworld | 544 | legacy_guided | — | 4/4 | no | yes | `blind-tester/reports/20260708T195406Z_overworld_seed544.md` | confusions: overworld job flavor is too abstract; quest tone jumps sharply from civic errands; compact truncation hides useful details \| bugs: S2 Colonie Civic Center:... |
 
 ## Archived Trait Categories
 

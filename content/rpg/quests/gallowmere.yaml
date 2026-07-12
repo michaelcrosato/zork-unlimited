@@ -84,21 +84,10 @@ rooms:
   - id: moor_edge
     name: "The Moor's Edge"
     description: >
-      A grey afternoon on the high moor, the heather rolling north-west toward the
-      Gallowmere — the boggy hollow where Hedrick says the great sow lairs and where
-      they found his father's body this morning. Your hunting-knife is at your belt;
-      it is your first and best tool out here. A shepherd's bothy squats dark and
-      low to the west; the moor path climbs north toward the Gallowmere.
-    # Reactive: once the hunting_knife is taken the belt-reference reads true.
-    variants:
-      - when: [{ has_item: hunting_knife }]
-        text: >
-          A grey afternoon on the high moor, the heather rolling north-west toward
-          the Gallowmere — the boggy hollow where Hedrick says the great sow lairs
-          and where they found his father's body this morning. A shepherd's bothy
-          squats dark and low to the west; the moor path climbs north toward the
-          Gallowmere.
-    objects: [hunting_knife]
+      Grey afternoon rolls across the high moor toward the Gallowmere, the boggy
+      hollow northwest where Hedrick says the old sow lairs and his father died this
+      morning. Your hunting-knife is secured at your belt. Hedrick waits in the bothy
+      west; the moor path climbs north.
     exits:
       - { direction: west, to: shepherd_bothy }
       - { direction: north, to: moor_trail }
@@ -170,15 +159,6 @@ rooms:
           The Gallowmere Gully, the wind-quarter set and your angle confirmed — the
           hollow is to the north and you are coming in right-handed, nothing for
           the sow to smell ahead of you. The trail runs back south.
-      # Legibility for a player who arrives without the knife (cannot attempt the check).
-      - when: [{ not_item: hunting_knife }]
-        text: >
-          A dip in the moor where the black water stands all winter — the Gallowmere
-          proper. The ground narrows between two tall peat-hags, and a single old
-          standing stone tilts at the western lip: the wind-stone, marking the wind's
-          run through the cut. The sow's lair is north; the trail is south. Your
-          hunting-knife is back at the moor's edge — without it you cannot take the
-          stone's measure.
     objects: [wind_stone]
     exits:
       - { direction: south, to: moor_trail }
@@ -252,10 +232,13 @@ objects:
     name: "hunting-knife"
     aliases: [knife, blade, edge, hunting blade, hunter's knife, huntsman's knife, hunting knife]
     description: >
-      A well-kept hunting-knife, the blade honed to a working edge. You have carried
-      it long enough that the grip has worn to your hand's shape. It will serve for
-      reading stone and reading ground, and for worse business at close quarters.
-    takeable: true
+      A well-kept hunting-knife secured at your belt, its blade honed to a working
+      edge. Long use has worn the grip to your hand's shape. It will serve for reading
+      stone and ground, or for worse business at close quarters.
+    # Real starting gear, not prose-only equipment or a zero-payoff mandatory pickup.
+    # `held` seeds fresh inventory and makes the knife non-droppable, matching the
+    # same contract used by Wolf-Winter's Albany relief spear.
+    held: true
 
   - id: sow_blind_side
     name: "the blind side"

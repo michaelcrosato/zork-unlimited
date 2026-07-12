@@ -1,0 +1,62 @@
+id: bug_0516_gallowmere_starting_knife_truth
+title: "Gallowmere starts with the hunting-knife it promises"
+pack: content/rpg/quests/gallowmere.yaml
+reported_by: pure-blind-playtest
+reports:
+  - blind-tester/reports/20260712T142008Z_overworld_seed2216.md
+  - blind-tester/reports/20260712T142008Z_overworld_seed2216.json
+  - blind-tester/reports/20260712T144457Z_overworld_seed2218.md
+  - blind-tester/reports/20260712T144457Z_overworld_seed2218.json
+postchange_evidence:
+  - seed: 2319
+    provider_session_id: d5607277-ed38-4eeb-8ab1-57f9cfa2056e
+    observation: >
+      A fresh canonical pure player received the exact changed Gallowmere opening:
+      compact inventory contained hunting_knife; current actions contained EXAMINE
+      but no TAKE or DROP; room prose named the secured belt knife, Hedrick west,
+      and the path north without omission chrome. It followed the authored clues
+      directly, made the blind-side strike its best moment, and completed Gallowmere
+      50/50 with no rejection, loop, backtrack, or knife confusion. Across the full
+      journey it continued at decisions 22, 40, 47, 71, and 80, then ended honestly
+      after goal four at decision 96; clarity was 5/5, enjoyment 4/5, got_stuck was
+      false, and would_replay was true.
+severity: S1
+symptom: >
+  Two independent pure players trusted the opening statement that their hunting-
+  knife was already at their belt. Both examined it, left with an empty inventory,
+  and later backtracked through the moor when the promised knife actions were absent.
+  One spent five extra accepted decisions recovering it from the kill-site; the
+  other reached the gully and spent eleven extra decisions repairing the route.
+root_cause: >
+  The authored room and object prose described the hunter's own long-carried knife
+  as equipped, but the object was takeable room loot rather than held starting gear.
+  Fresh runtime state therefore exposed TAKE beside an empty inventory. A reactive
+  room variant made the contradiction worse by removing the belt line only after
+  pickup. USE gating remained correct: neither run attempted an unavailable USE,
+  and seed 2218's first real tracking attempt reported an explicit retryable roll
+  failure rather than silently doing nothing.
+fix: >
+  Model the hunting-knife as held starting equipment, matching the existing Albany
+  relief-spear contract. It now appears in fresh human, full MCP, and compact MCP
+  inventory; remains examinable; cannot be taken, dropped, or accidentally left
+  behind; and is immediately available at both authored tool checks. Remove the
+  unreachable pickup and missing-knife variants. Tighten the opening below compact
+  narration limits while preserving the quarry, stakes, knife, Hedrick west, and
+  moor path north. Routes, checks, stats, score, combat, endings, and consequences
+  are otherwise unchanged.
+deterministic_witnesses:
+  - "fresh core, UI, full MCP, and compact MCP state all carry hunting_knife"
+  - "the opening says the knife is secured at the belt and names bothy west and path north without truncation chrome"
+  - "hunting_knife is absent from room loot; TAKE and DROP are absent while EXAMINE remains"
+  - "direct travel exposes the knife-on-ground and knife-on-stone actions without a recovery detour"
+  - "max score 50, initial combat stats, combat guarantee, tool checks, and perfect ending remain unchanged"
+tests:
+  - tests/regression/gallowmere_starting_knife_truth.test.ts
+  - tests/regression/gallowmere_blind_side_tactic.test.ts
+verification:
+  - npm run validate -- gallowmere
+  - npx vitest run tests/regression/gallowmere_starting_knife_truth.test.ts tests/regression/gallowmere_blind_side_tactic.test.ts tests/regression/gallowmere_peat_sign_kill_site_hint.test.ts
+  - npm run crawl:smoke
+  - npm run blind
+  - npm run health
+content_hash: b8526f2f8235fea2c8574283b10758f47833585163aa70f37c14901759818f20

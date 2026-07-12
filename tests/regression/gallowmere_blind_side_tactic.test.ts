@@ -62,7 +62,6 @@ function hearSowCounsel(s: GameState): GameState {
     "examine_shepherd_log",
     "read_shepherd_log",
     "examine_hunting_knife",
-    "drop_hunting_knife",
     "look_around",
     "inventory",
   ]);
@@ -71,7 +70,7 @@ function hearSowCounsel(s: GameState): GameState {
 
 function fullPrepToHollow(): GameState {
   let s = initStateForRpgPack(index, 7);
-  for (const id of ["take_hunting_knife", "go_west"]) s = actId(s, id);
+  s = actId(s, "go_west");
   s = hearSowCounsel(s);
   for (const id of [
     // Reading the log preserves the exchange; the following eastward move closes it.
@@ -95,7 +94,7 @@ function fullPrepToHollow(): GameState {
 
 function windOnlyToHollow(): GameState {
   let s = initStateForRpgPack(index, 7);
-  for (const id of ["take_hunting_knife", "go_west"]) s = actId(s, id);
+  s = actId(s, "go_west");
   s = hearSowCounsel(s);
   for (const id of [
     // Leaving by the east exit interrupts the conversation without a filler step.

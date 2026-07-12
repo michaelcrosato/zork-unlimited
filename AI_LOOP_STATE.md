@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 548 -->
+<!-- historical_cycle_count: 549 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,15 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - gallowmere_starting_knife_truth
+
+- Root evidence: independent pure seeds 2216/2218 both trusted Gallowmere's claim that their knife was at the belt, examined it, left with empty inventory, and later spent 11/5 extra accepted decisions recovering it; raw transcripts prove no pre-pickup USE or silent no-op (`bug_0516`).
+- Surface: the hunter's mandatory, zero-payoff pickup is now real `held` starting gear, matching Wolf-Winter's spear precedent. Fresh prose, inventory, and action menus agree; TAKE/DROP and unreachable missing-knife variants retire, while EXAMINE, checks, stats, score, combat, and endings remain intact.
+- Parity proof: fresh core, UI, full MCP, and compact MCP all carry `hunting_knife`, expose identical current actions, and preserve complete Hedrick-west/path-north orientation below compact limits; direct travel exposes both authored tool interactions without a recovery detour.
+- Pure evidence: exact-hash seed 2319 started with the knife in compact inventory, completed Gallowmere 50/50 with its blind-side strike as the best moment, continued at decisions 22/40/47/71/80, then ended after goal 4 at 96 (clarity 5/5, enjoyment 4/5, replay true; no rejection, loop, or stuck state).
+- Compile/self-critique: ledger 464/30 rejected is one report beyond the 463-report compile, below the ≥3 threshold. PASS for restored equipment trust, not retention completion—the player still stopped and identified repeated clue/tool/check quest skeletons, abstract pacing bookkeeping, and templated road copy as the next debts.
+- Guard: pre/post crawls `20260712T151119Z`/`20260712T152119Z` covered 6,000 steps, all 7 Gallowmere rooms and 247/247 overworld nodes; hash `b8526f2f8235`, exact pure report copy, focused 10-test proof, and full health (306 files/2,169 tests, UI, 12 packs) passed.
 
 ### Cycle result - tanners_fever_compact_case_integrity
 
@@ -141,12 +150,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Feedback compile: 446 verified reports (29 rejected), nine Wolf reports at clarity 4.56 / enjoyment 3.67 / replay 2/9; its top compact-hash clusters remain flat historical fleet evidence already disproved by exact compact tests and fresh reports.
 - Self-critique: PASS for complementary clue discovery and the first two consecutive replay-positive Wolf runs, not for consequence depth—the blind comparison saw both roads share score/ending, lucky quick kills can hide their risk, and unspent crafted gear still lacks payoff. Do not reward a preferred tactic with score; make successful routes leave distinct actionable consequences next.
 - Guard: final crawl `20260711T172631Z` covered 6,000 steps, all 8 Wolf rooms/actions and 247 overworld nodes; both blind reports verify, the 446-report ledger is current, and `npm run health` passes all 285 files / 2,016 tests and 12 packs.
-
-### Cycle result - wolf_winter_loft_resource_routing
-
-- Feedback surface: pre-change casual seed 930011 won Wolf-Winter 60/60 (clarity 4, enjoyment 3) but saw one prompted maneuver/follow-up per fight; the 443-report compile measured six fresh Wolf runs at clarity 4.67, enjoyment 3.67, replay 0/6.
-- Content surface: failed-rail recovery now chooses a direct spend/save decision or a gated one-way fodder-loft approach; saving the split guard carries it to a costed leader opening, while committing either encounter consumes it exactly once. Reactive rooms/endings remember where it was spent (`bug_0503`).
-- Regression surface: fixed rolls favor early spend at 17 vs 14 HP and late spend at 25 vs 23; the final graph exhausts at measured 332,551 progress / 665,101 READ-inclusive states, with bounded 400k/800k caps and 20% headroom.
-- Blind playtests: explorer 930012 found the loft and resource choice organically (5/4); final breaker 930013 ran prepared 60/60 and reckless 45/60 routes with no mechanical defect (5/3), then exposed overpromised unprepared prose, fixed and pinned before landing.
-- Self-critique: PASS for one real spatial/resource plan, not the replay gate—both fresh players still declined replay, lucky opening kills can make the saved guard feel optional, and Cade/day-book remain an explicit duplicated answer key. Complementary clue discovery is next.
-- Guard: final crawl `20260711T164052Z` covered 6,000 steps, all 8 Wolf rooms and 247 overworld nodes; 15 Wolf files / 67 tests, all 12 packs, `npm run health` (284 files / 2,011 tests), and the 444-report ledger are green.
