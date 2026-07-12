@@ -5,11 +5,11 @@ Generated deterministically from verified blind reports. The latest entries stay
 ## Summary
 
 - Reports dir: `blind-tester/reports`
-- Accepted reports: 454
+- Accepted reports: 455
 - Rejected or ignored markdown reports: 30
-- Latest report stamp: 20260712T075817Z
+- Latest report stamp: 20260712T090032Z
 - Recent entry limit: 100
-- Archived accepted entries collapsed into traits: 354
+- Archived accepted entries collapsed into traits: 355
 
 ## Recent Common Traits
 
@@ -24,6 +24,14 @@ Generated deterministically from verified blind reports. The latest entries stay
 | 2 | 20260708T203905Z | confusion | town counted visited before road encounter resolved | overworld |
 | 2 | 20260708T203156Z | confusion | hidden counts are useful but abstract | overworld |
 | 2 | 20260708T202531Z | confusion | quest tone disconnected from Albany overworld | overworld |
+| 1 | 20260712T090032Z | bug S0 | Quest structure across Wolf-Winter / Gallowmere / Tanner's Fever: All three quests share an identical skeleton that b... | overworld |
+| 1 | 20260712T090032Z | bug S1 | Byre-Yard dialogue with Old Cade (Wolf-Winter): Reading the day-book was rejected mid-conversation despite being unre... | overworld |
+| 1 | 20260712T090032Z | bug S1 | NPC ask-topic dialogues (Cade, Hedrick, Godwin): Each topic is one-shot and forces a generic filler action before the... | overworld |
+| 1 | 20260712T090032Z | bug S1 | Overworld travel toward Oneonta city: plan_overworld_session_route rejects undiscovered destinations, forcing one-hop... | overworld |
+| 1 | 20260712T090032Z | confusion | mid-conversation lock blocks unrelated actions like reading a book or moving, with no proactive warning | overworld |
+| 1 | 20260712T090032Z | confusion | no way to preview a route to an undiscovered town; long trips require guessing one hop at a time from guidance text | overworld |
+| 1 | 20260712T090032Z | confusion | single-use dialogue topics require a throwaway 'ask something else' step before the next real topic unlocks | overworld |
+| 1 | 20260712T090032Z | worst moment | Getting rejected twice trying to read a book or move rooms mid-conversation, then learning each dialogue topic needs... | overworld |
 | 1 | 20260712T075817Z | bug S0 | NPC contacts across towns: Same NPC name (Hayden Hale) reused as a template in two different cities. | overworld |
 | 1 | 20260712T075817Z | bug S1 | Overworld travel, Queensbury to Oneonta: Six near-identical travel legs in a row with little differentiation; pacing... | overworld |
 | 1 | 20260712T075817Z | bug S2 | Oneonta sickroom (The Tanner's Fever quest): Treat-Edric action disappears after failed check; recovery via re-examin... | overworld |
@@ -32,19 +40,12 @@ Generated deterministically from verified blind reports. The latest entries stay
 | 1 | 20260712T075817Z | confusion | treatment action vanished after a failed skill check with no hint how to restore it | overworld |
 | 1 | 20260712T075817Z | stuck | player got stuck | overworld |
 | 1 | 20260712T075817Z | worst moment | The treat-Edric action vanishing after a failed skill check, briefly looking like a soft-lock in the sickroom. | overworld |
-| 1 | 20260712T065854Z | bug S0 | Overworld route from Oneonta objective onward: Routing backtracked through Albany rather than a more direct path to t... | overworld |
-| 1 | 20260712T065854Z | bug S1 | Albany Civic Center vs. Queensbury Civic Center; Oneonta vs. Rome Civic Center: Same contact name ('Rowan Quill') reu... | overworld |
-| 1 | 20260712T065854Z | bug S1 | Albany Station Quarter — talking to Hayden Hale after the Wolf-Winter/Gallowmere thread resolved: NPC still pitches t... | overworld |
-| 1 | 20260712T065854Z | confusion | Long-haul route guidance sometimes backtracked through an already-visited hub town | overworld |
-| 1 | 20260712T065854Z | confusion | Tutorial undersold scope — 'one local lead' turned into a multi-region campaign | overworld |
-| 1 | 20260712T065854Z | worst moment | Talking to Hayden Hale in Albany after resolving that whole plot thread, only to have him repeat the original stale p... | overworld |
-| 1 | 20260712T054426Z | bug S0 | Various inter-town roads (I-88/I-90/I-81 corridors): Near-identical generic 'truck stops, state police turnouts, fast... | overworld |
-| 1 | 20260712T054426Z | bug S1 | Road: Albany city ↔ Saratoga Springs city (I-87): Road event repeats urgent 'shepherd killed above Queensbury' text a... | overworld |
 
 ## Recent Entries
 
 | Stamp | Source | Seed | Mode | Decisions | C/E | Stuck | Replay | Report | Signal |
 | --- | --- | ---: | --- | ---: | --- | --- | --- | --- | --- |
+| 20260712T090032Z | overworld | 1809 | pure | 77 | 4/4 | no | yes | `blind-tester/reports/20260712T090032Z_overworld_seed1809.md` | confusions: single-use dialogue topics require a throwaway 'ask something else' step before the next real topic unlocks; mid-conversation lock blocks unrelated actions... |
 | 20260712T075817Z | overworld | 1709 | pure | 82 | 5/4 | yes | yes | `blind-tester/reports/20260712T075817Z_overworld_seed1709.md` | confusions: treatment action vanished after a failed skill check with no hint how to restore it; corridor path appeared viable but was a narrated dead end; long unifor... |
 | 20260712T065854Z | overworld | 1609 | pure | 105 | 4/4 | no | yes | `blind-tester/reports/20260712T065854Z_overworld_seed1609.md` | confusions: Tutorial undersold scope — 'one local lead' turned into a multi-region campaign; Long-haul route guidance sometimes backtracked through an already-visited... |
 | 20260712T054426Z | overworld | 1507 | pure | 111 | 4/4 | no | yes | `blind-tester/reports/20260712T054426Z_overworld_seed1507.md` | confusions: stale road-event text referencing an already-resolved quest thread; similarly named overworld vs. embedded-quest talk/action tools easy to confuse mid-sess... |
@@ -144,7 +145,6 @@ Generated deterministically from verified blind reports. The latest entries stay
 | 20260708T193008Z | overworld | 538 | legacy_guided | — | 4/4 | no | yes | `blind-tester/reports/20260708T193008Z_overworld_seed538.md` | confusions: quest tone shift from modern civic overworld to mythic winter steading; second town notice hall felt templated; look around at quest start added no new inf... |
 | 20260708T193008Z | overworld | 537 | legacy_guided | — | 4/4 | no | yes | `blind-tester/reports/20260708T193008Z_overworld_seed537.md` | confusions: overworld job and event flavor is thin; quest premise feels abruptly disconnected from Albany anchor; dialogue mode needs explicit leave action \| bugs: S0... |
 | 20260708T193007Z | overworld | 536 | legacy_guided | — | 4/4 | no | yes | `blind-tester/reports/20260708T193007Z_overworld_seed536.md` | confusions: spear described but not in inventory; compact text truncates quest descriptions; dialogue ids use duplicated ask labels \| bugs: S2 Albany / Wolf-Winter / S... |
-| 20260708T192333Z | overworld | 535 | legacy_guided | — | 4/4 | no | yes | `blind-tester/reports/20260708T192333Z_overworld_seed535.md` | confusions: modern Albany to medieval steading transition; generated-looking dialogue action ids; debug-like hashes in compact journal \| bugs: S2 Albany Station Quarte... |
 
 ## Archived Trait Categories
 

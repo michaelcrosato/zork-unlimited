@@ -98,9 +98,11 @@ describe("bug_0458 - Tanner's Fever treatment can recover from a bad roll", () =
     const failedText = narrations(failed.events);
 
     expect(failedText).toContain("physick check: d20 1 + 9 = 10 vs 12");
-    expect(failedText).toContain("will not hear the same improvised appeal twice");
-    expect(failedText).toContain("next presentation must order three things");
-    expect(failedText).not.toMatch(/examine Edric|read the dose ledger|inspect the meadowsweet/i);
+    expect(failedText).toContain("will not hear the same loose case twice");
+    expect(failedText).toMatch(/inspect Edric/i);
+    expect(failedText).toMatch(/read Godwin's case notes/i);
+    expect(failedText).toMatch(/inspect the meadowsweet/i);
+    expect(failedText).toMatch(/treat Edric again at the bedside/i);
     expect(state.flags.confrontation_attempted).toBe(true);
     expect(state.flags.treatment_given).toBeUndefined();
     expect(state.inventory).toContain("meadowsweet");
@@ -143,8 +145,10 @@ describe("bug_0458 - Tanner's Fever treatment can recover from a bad roll", () =
     const failedText = narrations(failed.events);
 
     expect(failedText).not.toContain("three parts wormwood");
-    expect(failedText).toContain("next presentation must order three things");
-    expect(failedText).toContain("Any part not yet established remains here in the house");
+    expect(failedText).toMatch(/inspect Edric/i);
+    expect(failedText).toMatch(/read Godwin's case notes/i);
+    expect(failedText).toMatch(/inspect the meadowsweet/i);
+    expect(failedText).toMatch(/treat Edric again at the bedside/i);
     expect(actionIds(state)).not.toContain("use_meadowsweet_on_sick_edric");
 
     state = play(state, [

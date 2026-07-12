@@ -297,20 +297,14 @@ objects:
                 see. Then he gives a short nod, the kind that costs something. He
                 sets the tonic aside. You administer the meadowsweet; Edric swallows.
           on_failure:
-            - add_journal: >
-                The improvised bedside challenge faltered. Godwin will not hear
-                the same loose appeal twice, but the remedy remains in hand and
-                the question is not closed. The next case must order Edric's
-                symptoms, the written dose, and the identified herb.
-            - narrate: >
-                Your first presentation falters under Godwin's practiced certainty.
-                He closes his case book and will not hear the same improvised appeal
-                twice. But the meadowsweet is still in your hand and Edric is still
-                within reach. Your next presentation must order three things rather
-                than merely repeat them: the boy's symptoms, the written dose against
-                its standard, and the identified herb. Any part not yet established
-                remains here in the house; once the case is complete, make it at the
-                bedside.
+            - add_journal: >-
+                Godwin rejects the appeal. Build the case: inspect Edric, read his
+                notes, inspect the meadowsweet, then treat him again.
+            - narrate: >-
+                Godwin rejects the improvised appeal. He will not hear the same loose
+                case twice. The meadowsweet remains in your hand and Edric within
+                reach. Build the proof in order: inspect Edric, read Godwin's case
+                notes, inspect the meadowsweet, then treat Edric again at the bedside.
       # Deterministic recovery after the one failed roll. The action id remains
       # `use_meadowsweet_on_sick_edric`, but the command now names the ordered case.
       # Requiring all three evidence flags makes an underprepared gamble costly
@@ -320,6 +314,15 @@ objects:
         target: sick_edric
         command_verb: treat
         command_template: "treat {target} with {item} after ordering the evidence"
+        blocked_hint:
+          visible_when:
+            - all_of:
+                - { has_flag: confrontation_attempted }
+                - { not_flag: treatment_given }
+          reason: >-
+            Godwin will hear a corrected treatment only after all three proofs are
+            established: inspect Edric, read his case notes, and inspect the
+            meadowsweet in hand.
         conditions:
           - all_of:
               - { has_flag: confrontation_attempted }

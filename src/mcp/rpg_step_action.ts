@@ -105,6 +105,9 @@ export function runRpgStepAction<Args extends RpgStepActionArgs>(
     } as RpgStepActionResponse<Args>;
   }
   const actionOptions = rpgRuntime.legalActionsFor(s);
+  const blockedActionOption = rpgRuntime
+    .blockedActionsFor(s)
+    .find((action) => action.id === args.action_id);
   const active = activeDialogue(s.index, s.state);
   const actionOption = actionOptionForId(actionOptions, args.action_id, active);
   const beforeState = s.state;
@@ -119,9 +122,11 @@ export function runRpgStepAction<Args extends RpgStepActionArgs>(
     // other unknown-id rejection keeps the terse default (rejections live in
     // transcripts, so idle words cost tokens on every future read).
     const inDialogue = active !== null;
-    const rejectionReason = inDialogue
-      ? "That action is not available right now: you are mid-conversation, and only the listed ask topics are legal until one of them ends the talk."
-      : "That action is not available right now.";
+    const rejectionReason =
+      blockedActionOption?.reason ??
+      (inDialogue
+        ? "That action is not available right now: you are mid-conversation, and only the listed ask topics are legal until one of them ends the talk."
+        : "That action is not available right now.");
     const rejectionEvents = [{ type: "rejected" as const, reason: rejectionReason }];
     const beforeObsOpts = {
       hideGraph: args.hide_graph ?? s.hideGraph ?? false,
@@ -132,7 +137,7 @@ export function runRpgStepAction<Args extends RpgStepActionArgs>(
       scene_id: beforeSceneId,
       title: beforeTitle,
       action_id: compactMcpTranscriptActionId(args.action_id),
-      action_text: null,
+      action_text: blockedActionOption ? compactMcpActionLabel(blockedActionOption.command) : null,
       events: rejectionEvents,
       result_scene_id: beforeSceneId,
       ended: s.state.ended,

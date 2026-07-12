@@ -16,11 +16,13 @@ import {
   activeDialogue,
 } from "./model.js";
 import {
+  enumerateRpgBlockedActions,
   enumerateRpgBaseActions,
   present,
   resolveRpgAction,
   useInteraction,
   type RpgActionOption,
+  type RpgBlockedActionOption,
 } from "./legal_actions.js";
 import { evalConditions } from "../core/conditions.js";
 import type { GameEvent } from "../core/events.js";
@@ -32,6 +34,9 @@ import { decorateRpgScoreEvents } from "./score_events.js";
 import { endGameEffects } from "./terminal_effects.js";
 import { maneuverActionId } from "./action_ids.js";
 import { maneuverPhase, maneuverSequenceConditions } from "./maneuver_sequence.js";
+
+export { enumerateRpgBlockedActions };
+export type { RpgBlockedActionOption };
 
 export type RpgIndex = RpgModelIndex & {
   enemies: Map<string, Enemy>;

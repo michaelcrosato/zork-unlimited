@@ -22,13 +22,21 @@ export type McpActionOption = {
   resources?: RpgObservation["available_actions"][number]["resources"];
 };
 
+/** Public authored explanation for a currently visible but unavailable action. */
+export type McpBlockedActionOption = {
+  id: string;
+  command: string;
+  reason: string;
+};
+
 /**
  * Public MCP observations keep the RPG player view but strip the internal action
  * object. MCP clients step by `action_id`, so returning reducer payloads only
  * spends tokens and leaks engine internals.
  */
-export type McpObservation = Omit<RpgObservation, "available_actions"> & {
+export type McpObservation = Omit<RpgObservation, "available_actions" | "blocked_actions"> & {
   available_actions: McpActionOption[];
+  blocked_actions: McpBlockedActionOption[];
 };
 
 /**

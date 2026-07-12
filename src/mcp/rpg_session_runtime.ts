@@ -12,6 +12,7 @@ import { assertRpgStateReferences } from "../rpg/state_integrity.js";
 import {
   buildRpgRules,
   enumerateRpgActions,
+  enumerateRpgBlockedActions,
   indexRpgPack,
   initStateForRpgPack,
   type RpgIndex,
@@ -138,6 +139,10 @@ export class RpgMcpSessionRuntime {
     return this.sessions.legalActions(session.id, () =>
       enumerateRpgActions(session.index, session.state),
     );
+  }
+
+  blockedActionsFor(session: Session) {
+    return enumerateRpgBlockedActions(session.index, session.state);
   }
 
   private buildObservation(session: Session, opts: ObservationOptions = {}): RpgObservation {

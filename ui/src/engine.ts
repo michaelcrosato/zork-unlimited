@@ -57,6 +57,7 @@ export type View = {
   title: string;
   text: string;
   choices: { id: string; label: string }[];
+  unavailableChoices: { id: string; label: string; reason: string }[];
   inventory: string[];
   facts: string[];
   journal: string[];
@@ -142,6 +143,11 @@ export class GameSession {
             ? `${a.command}  ⟨${a.combat.phase === "opening" ? "opening" : a.combat.phase === "follow_through" ? "follow-through" : "one-shot"}, ATK ${signed(a.combat.attack_bonus)}, DEF ${signed(a.combat.defense_bonus)} this round${resourceHint(a.resources)}⟩`
           : a.command,
       })),
+      unavailableChoices: o.blocked_actions.map((action) => ({
+        id: action.id,
+        label: action.command,
+        reason: action.reason,
+      })),
       inventory: o.inventory,
       facts: [
         `HP ${o.stats.hp}  ATK ${o.stats.attack}  DEF ${o.stats.defense}`,
@@ -159,6 +165,11 @@ export class GameSession {
   /** Apply a chosen action by id. The legal-action set is ground truth (§9). */
   choose(id: string): StepOutcome {
     const option = this.actionFor(id);
+    const blocked = option
+      ? null
+      : buildRpgObservation(this.index, this.state).blocked_actions.find(
+          (action) => action.id === id,
+        );
     if (
       !option ||
       !this.rules.legalActions(this.state).some((action) => actionEquals(action, option.action))
@@ -166,7 +177,7 @@ export class GameSession {
       return {
         ok: false,
         narration: [],
-        rejection: "That action is not available.",
+        rejection: blocked?.reason ?? "That action is not available.",
         journeyDecision: excludedJourneyDecision("rejected"),
         journeyActionId: null,
       };

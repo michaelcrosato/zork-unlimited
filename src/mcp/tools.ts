@@ -24,7 +24,7 @@ import { assertTraceMode, replayTrace } from "../trace/replay.js";
 import type { Trace } from "../trace/record.js";
 import { safeResolve } from "./paths.js";
 import { SessionStore } from "./sessions.js";
-import { type McpActionOption, type McpObservation } from "./types.js";
+import { type McpActionOption, type McpBlockedActionOption, type McpObservation } from "./types.js";
 import type { RpgCompactLegend, RpgCompactObservation } from "./compact_rpg_observation.js";
 import type { RpgCompactState } from "./compact_rpg_state.js";
 import { RpgMcpSessionRuntime } from "./rpg_session_runtime.js";
@@ -190,8 +190,15 @@ type RpgLegalActionRows<Args extends RpgLegalActionsArgs> = Args extends {
   ? string[]
   : McpActionOption[];
 
+type RpgBlockedActionRows<Args extends RpgLegalActionsArgs> = Args extends {
+  compact_actions: true;
+}
+  ? Array<readonly [id: string, reason: string]>
+  : McpBlockedActionOption[];
+
 type RpgLegalActionsPayload<Args extends RpgLegalActionsArgs> = {
   actions: RpgLegalActionRows<Args>;
+  blocked_actions?: RpgBlockedActionRows<Args>;
   state_hash: string;
 } & Partial<EmbeddedJourneyField>;
 
@@ -452,7 +459,11 @@ export function createToolApi(opts: { root: string }) {
     const projectedPayload = blocked ? suppressRpgGameplayActions(payload) : payload;
     const visiblePayload =
       blocked && "actions" in projectedPayload
-        ? { ...projectedPayload, actions: [] }
+        ? {
+            ...projectedPayload,
+            actions: [],
+            ...("blocked_actions" in projectedPayload ? { blocked_actions: [] } : {}),
+          }
         : projectedPayload;
     return { ...visiblePayload, ...field };
   }

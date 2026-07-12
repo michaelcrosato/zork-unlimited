@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 543 -->
+<!-- historical_cycle_count: 544 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,15 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - player_visible_recovery_affordance
+
+- Evidence choice: the assessor's fleet-only Wolf-Winter compact-journal hot spot was already closed by `bug_0502`; current verified pure seed 1709 instead exposed Tanner's Fever treatment disappearing after a failed roll as an S2, got-stuck worst moment.
+- Surface: target-bearing USE interactions may author a bounded, state-gated `blocked_hint`; UI, CLI, full MCP, compact MCP v16, and legal-action reads show the same unavailable id/reason without conditions or effects. Selecting it rejects without state/hash/journey progress, and parent journey choices suppress it.
+- Tanner fix: natural-1 seed 12 now retains the same treatment id with complete 273/280 narration, 120/128 journal guidance, and a persistent 156-character reason; save/restore preserves it, examining the held meadowsweet atomically promotes it to deterministic legal recovery, and fully prepared failure never blocks.
+- Pure evidence: verified pure/fresh seed 1809 completed Wolf-Winter, Gallowmere, and Tanner's Fever; continued at 22/40/49, ended honestly at goal 3 on decision 77, clarity/enjoyment 4/4, got-stuck false, replay true. Treatment succeeded first try, so the repaired failure affordance remains blind-unsampled rather than passed by absence.
+- Compile/self-critique: the ledger is current at 455 verified reports; seeds 1709+1809 are two since the 453-report compile, below threshold. PASS for truthful recoverability, not retention—the player again stopped after three arcs and now named modal dialogue filler/rejections, blind long-route planning, and a visible shared quest skeleton.
+- Guard: focused parity/recovery suites also pin legal-command precedence and erase unavailable-action omission metadata during journey choices; identifier-relabel proofs, local UI smoke with no console errors, final 6,000-step crawl (247/247 nodes, 344/344 edges, 12/12 quests), verified receipt, and full health (UI and 12 packs included) passed.
 
 ### Cycle result - quest_reactive_contact_memory
 
@@ -138,12 +147,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Regression surface: `bug_0499` and focused tests pin event-idempotent re-entry plus truthful hub/rail backtracks; all newly authored reactive room text fits the existing compact event budget.
 - Self-critique: PASS for the 72-report correctness family, not a depth pass; the focused repair deliberately leaves compact truncation/Cade affordances/defense visibility and the failed linearity/replay gates for subsequent cycles.
 - Guard: verified cycle report, pre/post 6,000-step crawls (latest `20260711T124605Z`, 247/247 nodes), Wolf pack 0 warnings, and `npm run health` (279 files / 1,971 tests) green.
-
-### Cycle result - wolf_winter_tactical_follow_through
-
-- Engine surface: added validated one-layer `after` maneuver sequences with opening/follow-through metadata, exclusive cohorts, stable result flags, and CLI/UI exposure; raised exhaustive caps to the measured 233,618-state progress and 467,235-state liveness spaces.
-- Content surface: all three Wolf-Winter fights now use named two-beat lines; the failed wedge binds a real, spent split-rail guard; six route-specific endings preserve 60/60. Static conservative damage remains 28 while the concrete prepared maximum is 24.
-- Blind playtest: fresh MCP-only seed 930002 reached `ending_held` in 22 steps at 21 HP and 60/60; clarity 5/5, enjoyment 4/5, replay true. Its false absent-guard DROP finding was fixed with paired reducer/route regressions.
-- Fleet harvest: 200/200 fresh `gpt-5.5` reports verified (100 direct + 100 overworld), 0 rejected/stuck/crawl findings, all Byre Held; direct clarity/enjoyment 4.32/3.76, 93x60/60, preparation-best 99/100.
-- Self-critique: FAIL; cleanup improved 7 -> 2, but frozen rail 20 (cap 5), linearity 30 (cap 9), and replay 16 (floor 20) missed. Reactive backtracking truth is the next assessor-selected repair.
-- Guard: verified blind report, post-fix crawl `20260711T101454Z` (6,000 steps; 247/247 overworld nodes), `npm run health` (279 files / 1,971 tests), and integrity comparison against the parent commit.

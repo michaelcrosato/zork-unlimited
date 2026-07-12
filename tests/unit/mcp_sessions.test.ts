@@ -89,6 +89,7 @@ function observation(room: string): RpgObservation {
     npcs_present: [],
     exits: [],
     blocked_exits: [],
+    blocked_actions: [],
     inventory: [],
     state: { flags: [], vars: {}, journal: [] },
     dialogue: null,

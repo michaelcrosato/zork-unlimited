@@ -1,6 +1,10 @@
 import type { JourneyPresentation } from "../world/journey_contract.js";
-import type { RpgCompactObservation } from "./compact_rpg_observation.js";
+import type { RpgCompactMore, RpgCompactObservation } from "./compact_rpg_observation.js";
+import { compactTrailingOmissionCounts } from "./compact_truncation.js";
 import type { McpObservation } from "./types.js";
+
+const COMPACT_MORE_ACTIONS_INDEX = 4;
+const COMPACT_MORE_UNAVAILABLE_INDEX = 10;
 
 export type EmbeddedJourneyField = {
   journey: JourneyPresentation;
@@ -13,6 +17,18 @@ export function journeyBlocksGameplay(journey: JourneyPresentation): boolean {
   );
 }
 
+function suppressCompactGameplayOmissions(
+  more: RpgCompactMore | undefined,
+): RpgCompactMore | undefined {
+  if (!more) return undefined;
+  const counts = more.map((count) => count ?? 0);
+  if (counts.length > COMPACT_MORE_ACTIONS_INDEX) counts[COMPACT_MORE_ACTIONS_INDEX] = 0;
+  if (counts.length > COMPACT_MORE_UNAVAILABLE_INDEX) {
+    counts[COMPACT_MORE_UNAVAILABLE_INDEX] = 0;
+  }
+  return compactTrailingOmissionCounts(counts) as RpgCompactMore | undefined;
+}
+
 /** Hide RPG decisions while the parent journey choice is the only legal move. */
 export function suppressRpgGameplayActions<
   Payload extends {
@@ -22,12 +38,21 @@ export function suppressRpgGameplayActions<
 >(payload: Payload): Payload {
   const context = payload.context
     ? (() => {
-        const { actions: _actions, ...withoutActions } = payload.context;
-        return withoutActions as RpgCompactObservation;
+        const {
+          actions: _actions,
+          unavailable: _unavailable,
+          more,
+          ...withoutActions
+        } = payload.context;
+        const visibleMore = suppressCompactGameplayOmissions(more);
+        return {
+          ...withoutActions,
+          ...(visibleMore ? { more: visibleMore } : {}),
+        } as RpgCompactObservation;
       })()
     : undefined;
   const observation = payload.observation
-    ? { ...payload.observation, available_actions: [] }
+    ? { ...payload.observation, available_actions: [], blocked_actions: [] }
     : undefined;
   return {
     ...payload,

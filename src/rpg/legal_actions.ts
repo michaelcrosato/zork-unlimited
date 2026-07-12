@@ -52,6 +52,15 @@ export type RpgActionOption = {
   resources?: { gains: string[]; costs: string[] };
 };
 
+/** A visible but currently unavailable authored USE. Deliberately omits the
+ * executable action, its conditions, and all effects so this projection can
+ * explain friction without exposing puzzle routing. */
+export type RpgBlockedActionOption = {
+  id: string;
+  command: string;
+  reason: string;
+};
+
 function dialogueTopicMatches(topic: DialogueTopic, id: string): boolean {
   return topic.id === id || (topic.aliases ?? []).includes(id);
 }
@@ -370,6 +379,58 @@ function option(
   return { id, command, action };
 }
 
+type UseActionProjection = Pick<RpgActionOption, "id" | "command" | "action">;
+
+/** Build the stable player-facing identity shared by legal and blocked USE
+ * projections. Keeping this in one place prevents a hint from naming a command
+ * differently from the action once its gate opens. */
+function projectUseAction(
+  index: RpgModelIndex,
+  state: GameState,
+  it: Interaction,
+): UseActionProjection | null {
+  if (it.verb !== "USE" || it.target === undefined) return null;
+  const selfUse = it.item !== undefined && it.item === it.target;
+  const id =
+    it.item === undefined
+      ? `use_${it.target}`
+      : selfUse
+        ? `use_${it.item}`
+        : `use_${it.item}_on_${it.target}`;
+  const itemName = it.item === undefined ? "" : objName(index, state, it.item);
+  const targetName = objName(index, state, it.target);
+  const command =
+    it.item === undefined
+      ? `${it.command_verb ?? "use"} ${targetName}`
+      : selfUse
+        ? `${it.command_verb ?? "use"} ${itemName}`
+        : it.command_verb !== undefined
+          ? (it.command_template ?? `${it.command_verb} {item} on {target}`)
+              .replace("{item}", itemName)
+              .replace("{target}", targetName)
+          : `use ${itemName} on ${targetName}`;
+  const action: RpgAction =
+    it.item === undefined
+      ? { type: "USE", target: it.target }
+      : { type: "USE", item: it.item, target: it.target };
+  return { id, command, action };
+}
+
+function structurallyPresentUse(
+  index: RpgModelIndex,
+  state: GameState,
+  interaction: Interaction,
+  projection: UseActionProjection,
+): boolean {
+  if (projection.action.type !== "USE") return false;
+  if (!index.objects.get(projection.action.target)?.interactions.includes(interaction))
+    return false;
+  return (
+    present(index, state, projection.action.target) &&
+    (projection.action.item === undefined || state.inventory.includes(projection.action.item))
+  );
+}
+
 /**
  * Enumerate every legal action for the current state. Dialogue is modal: while
  * the player is mid-conversation, only the current node's topics are offered
@@ -455,15 +516,9 @@ export function enumerateRpgBaseActions(index: RpgModelIndex, state: GameState):
   // `use <obj> on <obj>`.
   for (const o of index.objectsWithUseInteractions) {
     for (const it of o.interactions) {
-      if (it.verb !== "USE" || it.target === undefined) continue;
+      const projection = projectUseAction(index, state, it);
+      if (!projection) continue;
       if (!evalConditions(it.conditions, state)) continue;
-      const selfUse = it.item !== undefined && it.item === it.target;
-      const id =
-        it.item === undefined
-          ? `use_${it.target}`
-          : selfUse
-            ? `use_${it.item}`
-            : `use_${it.item}_on_${it.target}`;
       // A USE may declare a natural verb (command_verb) so the listed command matches
       // the prose that primes it; the id stays verb-agnostic and stable. A self-USE
       // reads "<verb> <obj>" ("drink black phial"). An item-on-target USE reads via
@@ -471,23 +526,7 @@ export function enumerateRpgBaseActions(index: RpgModelIndex, state: GameState):
       // the word order/preposition match too, falling back to "<verb> <item> on
       // <target>" when no template is given, or the generic "use ... on ..." with no
       // command_verb at all.
-      const itemName = it.item === undefined ? "" : objName(index, state, it.item);
-      const targetName = objName(index, state, it.target);
-      const command =
-        it.item === undefined
-          ? `${it.command_verb ?? "use"} ${targetName}`
-          : selfUse
-            ? `${it.command_verb ?? "use"} ${itemName}`
-            : it.command_verb !== undefined
-              ? (it.command_template ?? `${it.command_verb} {item} on {target}`)
-                  .replace("{item}", itemName)
-                  .replace("{target}", targetName)
-              : `use ${itemName} on ${targetName}`;
-      const action: RpgAction =
-        it.item === undefined
-          ? { type: "USE", target: it.target }
-          : { type: "USE", item: it.item, target: it.target };
-      const opt = option(index, state, id, command, action);
+      const opt = option(index, state, projection.id, projection.command, projection.action);
       // Surface the rolled skill + difficulty + die type when this USE is a skill check,
       // so the listed command reads as the intentional d20 roll it is (bug_0274). `die`
       // surfaces the ceiling so the check never looks impossible (bug_0311). Never branch
@@ -514,5 +553,38 @@ export function enumerateRpgBaseActions(index: RpgModelIndex, state: GameState):
   // Always-available informational actions.
   push(option(index, state, "look_around", "look", { type: "LOOK" }));
   push(option(index, state, "inventory", "inventory", { type: "INVENTORY" }));
+  return out;
+}
+
+/**
+ * Enumerate authored USE affordances that are visible and structurally possible,
+ * but whose gameplay conditions do not currently hold. This is a derived display
+ * projection only: blocked rows are never mixed into the executable legal set.
+ */
+export function enumerateRpgBlockedActions(
+  index: RpgModelIndex,
+  state: GameState,
+): RpgBlockedActionOption[] {
+  if (state.ended || activeDialogue(index, state)) return [];
+
+  const legalIds = new Set(enumerateRpgBaseActions(index, state).map((option) => option.id));
+  const emitted = new Set<string>();
+  const out: RpgBlockedActionOption[] = [];
+
+  for (const object of index.objectsWithUseInteractions) {
+    for (const interaction of object.interactions) {
+      const hint = interaction.blocked_hint;
+      if (!hint) continue;
+      const projection = projectUseAction(index, state, interaction);
+      if (!projection || !structurallyPresentUse(index, state, interaction, projection)) continue;
+      if (!evalConditions(hint.visible_when, state)) continue;
+      if (evalConditions(interaction.conditions, state)) continue;
+      if (legalIds.has(projection.id) || emitted.has(projection.id)) continue;
+
+      emitted.add(projection.id);
+      out.push({ id: projection.id, command: projection.command, reason: hint.reason });
+    }
+  }
+
   return out;
 }

@@ -814,7 +814,7 @@ tool(
 );
 tool(
   "list_legal_actions",
-  "List legal RPG action ids; embedded play returns none while its journey choice is due.",
+  "List legal RPG action ids and authored unavailable choices with reasons.",
   {
     ...SESSION,
     ...IF_STATE_HASH,
@@ -825,10 +825,10 @@ tool(
 
 tool(
   "step_action",
-  "Apply one legal RPG action; embedded play also updates and returns the parent journey.",
+  "Apply a legal RPG action or select an unavailable id for its authored reason.",
   {
     ...SESSION,
-    action_id: z.string().describe("Action id from list_legal_actions."),
+    action_id: z.string().describe("Id from legal or unavailable action rows."),
     ...EXPECTED_STATE_HASH,
     ...PLAYER_HIDE_GRAPH,
     ...COMPACT_ACTIONS,

@@ -773,6 +773,14 @@ export default function App(): JSX.Element {
                     <button onClick={() => choose(choice.id, choice.label)}>{choice.label}</button>
                   </li>
                 ))}
+                {questView.unavailableChoices.map((choice) => (
+                  <li key={`unavailable:${choice.id}`}>
+                    <button disabled aria-disabled="true">
+                      <span>{choice.label}</span>
+                      <small className="choice-reason">{choice.reason}</small>
+                    </button>
+                  </li>
+                ))}
               </ul>
             )}
           </div>

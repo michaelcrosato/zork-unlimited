@@ -276,11 +276,37 @@ function relabelAction(a: RpgAction, mapId: (id: string) => string): RpgAction {
   }
 }
 
+/** Re-derive a blocked USE id from its authored interaction. The public blocked
+ * row intentionally carries no reducer action or condition payload, so the
+ * metamorphic oracle consults the trusted source index rather than parsing a
+ * composite id or weakening the comparison to the twin's observed value. */
+function relabelBlockedActionId(
+  id: string,
+  index: RpgIndex,
+  mapId: (id: string) => string,
+): string {
+  for (const object of index.objectsWithUseInteractions) {
+    for (const interaction of object.interactions) {
+      if (!interaction.blocked_hint || interaction.target === undefined) continue;
+      const action: RpgAction =
+        interaction.item === undefined
+          ? { type: "USE", target: interaction.target }
+          : { type: "USE", item: interaction.item, target: interaction.target };
+      if (rpgOptionId(action) === id) return rpgOptionId(relabelAction(action, mapId));
+    }
+  }
+  throw new Error(`blocked action id "${id}" has no authored blocked USE interaction`);
+}
+
 /** Push an original RPG observation through the bijection to its expected twin form. Ids
  *  are mapped; prose and the per-action `command` vocabulary stay byte-identical; numbers
  *  (enemy/player HP, stats, score) stay equal; each action's `id` is RE-DERIVED from its
  *  mapped structured action. Order normalisation is applied separately by `canonical`. */
-function relabelObservation(o: RpgObservation, mapId: (id: string) => string): RpgObservation {
+function relabelObservation(
+  o: RpgObservation,
+  index: RpgIndex,
+  mapId: (id: string) => string,
+): RpgObservation {
   return {
     mode: o.mode,
     room: mapId(o.room),
@@ -294,6 +320,11 @@ function relabelObservation(o: RpgObservation, mapId: (id: string) => string): R
       e.to === undefined ? { direction: e.direction } : { direction: e.direction, to: mapId(e.to) },
     ),
     blocked_exits: o.blocked_exits.map((b) => ({ direction: b.direction, message: b.message })),
+    blocked_actions: o.blocked_actions.map((action) => ({
+      id: relabelBlockedActionId(action.id, index, mapId),
+      command: action.command,
+      reason: action.reason,
+    })),
     inventory: o.inventory.map(mapId),
     state: {
       flags: o.state.flags.map(mapId),
@@ -423,7 +454,7 @@ function walkInLockStep(
     // states wolf_winter reaches — the heaviest REDUCIBLE cost in this oracle (the engine stepping
     // that drives the walk is irreducible). This oracle is the suite's long pole, and the slow
     // compare was tipping it past its timeout under CI load.
-    const expectedTwin = canonical(relabelObservation(origObs, mapId));
+    const expectedTwin = canonical(relabelObservation(origObs, origIndex, mapId));
     const actualTwin = canonical(twinObs);
     if (!isDeepStrictEqual(expectedTwin, actualTwin)) {
       expect(
