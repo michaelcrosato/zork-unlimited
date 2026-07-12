@@ -37,7 +37,7 @@ describe("overworld crawler", () => {
     );
     expect(describeSolveToEndingFailure("exhausted-restricted", "dawn_beacon", 30000)).toBe(
       "no non-death ending reachable under the restricted action set " +
-        '(DROP/CLOSE/LOOK/INVENTORY/READ/INSPECT skipped) for quest "dawn_beacon" — ' +
+        '(DROP/CLOSE/inert LOOK/INVENTORY/READ/INSPECT skipped; authored INSPECT looks retained) for quest "dawn_beacon" — ' +
         "either the quest is unwinnable or its only path needs a skipped action",
     );
   });

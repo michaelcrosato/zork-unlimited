@@ -70,16 +70,15 @@
  * liveness make. Both shipped packs pass it.
  *
  * ── The action policy (shared with the liveness proofs) ─────────────────────────────────
- * The shared BFS's default (reachability) policy SKIPS READ, but a score award can ride a
- * READ interaction's sticky `effects` (it does not in the shipped RPG packs, but the parser
- * sealed_crypt +5 headstone award does), so this uses the bug_0146 LIVENESS action policy:
- * step every action except the pure-observation verbs and DROP (no award gates on a
- * dropped-item location, and stepping DROP blows the state cap). That policy steps READ,
- * ATTACK, and the skill-check USE, so every score-award state is visited. The search FAILS
- * on cappedOut, so it can never pass by truncating an unexplored region. Every shipped pack
- * settles under the bounded cap. Wolf Winter's authored route/combat choices expand the
- * complete bracket to 665,101 states; the 800k ceiling remains a loud runaway guard with
- * roughly 20% headroom rather than an implicit truncation.
+ * The shared BFS's default (reachability) policy SKIPS READ and LOOK, but score awards can
+ * ride READ effects or an authored INSPECT interaction that resolves through natural LOOK.
+ * This therefore uses the bug_0146 LIVENESS action policy plus the runtime's explicit
+ * authored-inspect predicate: step READ, stateful target LOOK, ATTACK, USE, and every other
+ * progress action while skipping inert observations and DROP. The search FAILS on cappedOut,
+ * so it can never pass by truncating an unexplored region. Every shipped pack settles under
+ * the bounded cap. Wolf Winter's authored route/combat choices expand the complete bracket
+ * to 665,101 states; the 800k ceiling remains a loud runaway guard with roughly 20% headroom
+ * rather than an implicit truncation.
  *
  * Packs are auto-discovered from content/rpg/quests, so a new RPG pack is covered the moment
  * it ships (the health-covers-all-packs bar, bug_0096).
@@ -94,8 +93,10 @@ import {
   initStateForRpgPack,
   type RpgIndex,
 } from "../../src/rpg/runner.js";
+import { isAuthoredInspectAction } from "../../src/rpg/legal_actions.js";
 import { HP_VAR } from "../../src/rpg/schema.js";
 import type { Rng } from "../../src/core/rng.js";
+import type { RpgAction } from "../../src/api/types.js";
 import { exhaustiveEndingsMulti } from "./support/exhaustive_endings.js";
 
 const PACK_DIR = "content/rpg/quests";
@@ -120,8 +121,8 @@ const MAX_STATES = 800_000;
 const SOLVER_TEST_TIMEOUT_MS = 180_000;
 
 // The liveness action policy (bug_0146): step every legal action EXCEPT the ones that
-// provably cannot gate a score award — the pure-observation verbs and DROP. Crucially this
-// DOES step READ, ATTACK, and the skill-check USE, so every award state is visited.
+// provably cannot gate a score award — the inert observation verbs and DROP. Authored
+// INSPECT effects ride on LOOK, so their target looks are explicitly restored below.
 const LIVENESS_SKIP: ReadonlySet<string> = new Set([
   "DROP",
   "CLOSE",
@@ -129,7 +130,8 @@ const LIVENESS_SKIP: ReadonlySet<string> = new Set([
   "INVENTORY",
   "INSPECT",
 ]);
-const livenessExplore = (a: { type: string }): boolean => !LIVENESS_SKIP.has(a.type);
+const livenessExplore = (index: RpgIndex, action: RpgAction): boolean =>
+  isAuthoredInspectAction(index, action) || !LIVENESS_SKIP.has(action.type);
 
 // A fixed-sequence PRNG (copied from rpg_all_endings_reachable / rpg_variant_liveness): each
 // draw consumes the next fraction (the last repeats once exhausted). `int(min,max)` maps the
@@ -233,7 +235,7 @@ function maxReachableScore(index: RpgIndex): { max: number; cappedOut: boolean }
       const score = s.vars[SCORE_VAR] ?? 0; // score is undefined until the first inc_var
       if (score > max) max = score;
     },
-    { explore: livenessExplore },
+    { explore: (action) => livenessExplore(index, action) },
   );
   return { max, cappedOut: result.cappedOut };
 }
@@ -446,9 +448,47 @@ endings:
         const score = s.vars[SCORE_VAR] ?? 0;
         if (score > worstMax) worstMax = score;
       },
-      { explore: livenessExplore },
+      { explore: (action) => livenessExplore(index, action) },
     );
     expect(worstMax).toBe(0);
+  });
+
+  it("CREDITS a score award carried by a natural LOOK with authored INSPECT effects", () => {
+    const src = `
+meta: { id: t, title: T, start_room: a, max_score: 20, vars_init: { hp: 10, attack: 3, defense: 1 } }
+rooms:
+  - id: a
+    name: A
+    description: "base"
+    objects: [patient]
+    exits: [{ direction: north, to: b }]
+  - id: b
+    name: B
+    description: "B"
+    on_enter:
+      - inc_var: { name: score, by: 10 }
+    exits: [{ direction: south, to: a }]
+objects:
+  - id: patient
+    name: patient
+    description: "visible symptoms"
+    interactions:
+      - verb: INSPECT
+        target: patient
+        conditions: [{ not_flag: patient_examined }]
+        effects:
+          - set_flag: patient_examined
+          - inc_var: { name: score, by: 10 }
+win_conditions: [{ id: w, conditions: [{ visited: b }], ending: e }]
+endings: [{ id: e, title: E, text: "done" }]
+`;
+    const result = compileRpgSource(src);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    const { max, cappedOut } = maxReachableScore(indexRpgPack(result.compiled.pack));
+    expect(cappedOut).toBe(false);
+    expect(max).toBe(20);
   });
 
   it("the on_failure-award guard BITES (a score award on a roll-losing branch is flagged)", () => {

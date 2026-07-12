@@ -20,19 +20,18 @@
  * legal, deterministic playthrough reaching a non-death ending is expected to
  * exist and be found well within a generous state cap.
  *
- * The search also skips the same reversible/observation action types
- * `exhaustive_endings.ts` skips (DROP/CLOSE/LOOK/INVENTORY/READ/INSPECT) —
- * the MONOTONE restriction argued sound there: no shipped route needs them,
- * and dropping them keeps the reachable region tractable (measured: with the
- * full action set, dawn_beacon blows past 60k states without finding an
- * ending; with the restriction every shipped quest solves in under a second).
- * Any path found remains genuine, fully legal play — a subset of the game's
- * actions is still the game.
+ * The search skips reversible and inert observation actions, but retains a
+ * target LOOK when it carries an authored INSPECT interaction: those natural
+ * looks can set flags or award score and therefore are gameplay decisions, not
+ * pure refreshes. Dropping inert reads keeps the reachable region tractable
+ * (with the full action set, dawn_beacon blows past 60k states without finding
+ * an ending). Any path found remains genuine, fully legal play.
  */
 import type { RpgAction } from "../api/types.js";
 import { makeStep } from "../core/engine.js";
 import type { GameState } from "../core/state.js";
 import { enumerateRpgActions, initStateForRpgPack } from "../rpg/runner.js";
+import { isAuthoredInspectAction } from "../rpg/legal_actions.js";
 import { stateKey } from "../solve/exhaustive_endings.js";
 import type { PreparedQuest } from "./prepare.js";
 
@@ -51,8 +50,8 @@ const SKIPPED_ACTION_TYPES: ReadonlySet<string> = new Set([
  *  diagnoses (see `describeSolveToEndingFailure`): "capped" means the search was
  *  cut off before it could prove anything either way (an honest "unknown", never
  *  a false "unwinnable"); "exhausted-restricted" means the ENTIRE reachable region
- *  under the restricted action set (DROP/CLOSE/LOOK/INVENTORY/READ/INSPECT
- *  skipped) was explored and none of it reached a non-death ending — which does
+ *  under the restricted action set (reversible/inert observations skipped,
+ *  authored INSPECT looks retained) was explored and none reached a non-death ending — which does
  *  NOT prove the quest unwinnable, only that no route using the unrestricted
  *  actions exists; the restriction may be hiding a path that needs one of the
  *  skipped actions. */
@@ -87,7 +86,7 @@ export function describeSolveToEndingFailure(
   }
   return (
     `no non-death ending reachable under the restricted action set ` +
-    `(DROP/CLOSE/LOOK/INVENTORY/READ/INSPECT skipped) for quest "${questId}" — ` +
+    `(DROP/CLOSE/inert LOOK/INVENTORY/READ/INSPECT skipped; authored INSPECT looks retained) for quest "${questId}" — ` +
     `either the quest is unwinnable or its only path needs a skipped action`
   );
 }
@@ -169,7 +168,11 @@ export function solveToEnding(
     }
 
     for (const option of options) {
-      if (SKIPPED_ACTION_TYPES.has(option.action.type)) continue;
+      if (
+        SKIPPED_ACTION_TYPES.has(option.action.type) &&
+        !isAuthoredInspectAction(index, option.action)
+      )
+        continue;
       let result;
       try {
         result = step(state, option.action);

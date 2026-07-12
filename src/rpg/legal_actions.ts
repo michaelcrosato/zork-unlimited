@@ -70,6 +70,24 @@ export function present(index: RpgModelIndex, state: GameState, id: string): boo
   return visibleObjectIds(index, state, state.current).includes(id);
 }
 
+/**
+ * True when a structured LOOK targets an authored INSPECT interaction.
+ *
+ * Exhaustive tooling normally skips LOOK as pure observation. RPG INSPECT
+ * interactions deliberately ride on that same natural player action, however,
+ * and may set flags, award score, or otherwise open later states. Callers that
+ * prune observation actions use this predicate to keep those authored looks in
+ * the search without exploring inert room/object rereads.
+ */
+export function isAuthoredInspectAction(index: RpgModelIndex, action: RpgAction): boolean {
+  if (action.type !== "LOOK" || action.target === undefined) return false;
+  return (
+    index.objects
+      .get(action.target)
+      ?.interactions.some((interaction) => interaction.verb === "INSPECT") ?? false
+  );
+}
+
 /** Find the USE interaction (if any) for using `item` on `target`. Exported so the
  *  RPG runner (Stage 4) can detect a skill-check interaction before resolving. */
 export function useInteraction(

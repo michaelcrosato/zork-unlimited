@@ -69,14 +69,12 @@
  * assert ok-parity on every explored step under every regime (a legal/illegal original step
  * maps to a legal/illegal twin step), so a relabeling that broke legality surfaces at once.
  *
- * EXPLORATION POLICY. We discover states by stepping the LIVENESS action set —
- * `{DROP, CLOSE, LOOK, INVENTORY, INSPECT}` skipped as recursion edges, everything else
- * (incl. READ, USE skill-checks, and ATTACK) stepped — the same policy the parser
- * observation oracle uses (bug_0214), so READ's sticky interaction effects and the combat
- * rounds that drive reactive variants are all explored. The skipped verbs are still
- * observation-CHECKED at every visited state (their options appear in `available_actions`);
- * they are only excluded as recursion edges, which keeps the verb×object graph under the
- * state cap. The policy depends only on action TYPE, which the relabel preserves.
+ * EXPLORATION POLICY. We discover states by stepping the LIVENESS action set: reversible
+ * and inert observations are skipped, while READ, USE skill-checks, ATTACK, and target
+ * LOOKs backed by authored INSPECT interactions are stepped. This explores sticky clue
+ * effects and combat states without recursing through every reread. Skipped verbs are still
+ * observation-CHECKED at every visited state (their options appear in `available_actions`).
+ * The authored-inspect predicate is preserved by the pack relabeling.
  *
  * ORDER NORMALISATION (sound, identical to the parser oracle). The builder emits several
  * arrays in an id-SORTED order (`visible_objects`, `available_actions`, `inventory`,
@@ -120,6 +118,7 @@ import { relabelRpgPack } from "./support/relabel_rpg.js";
 import type { RpgRelabeler } from "./support/relabel_rpg.js";
 import type { RpgAction } from "../../src/api/types.js";
 import type { GameState } from "../../src/core/state.js";
+import { isAuthoredInspectAction } from "../../src/rpg/legal_actions.js";
 
 const PACK_DIR = "content/rpg/quests";
 const packFiles = readdirSync(PACK_DIR)
@@ -128,9 +127,10 @@ const packFiles = readdirSync(PACK_DIR)
 
 const SEED = 7;
 // The liveness exploration policy (parser_metamorphic_observation_stream.test.ts): step
-// every legal action EXCEPT the purely reversible / narrate-only verbs — crucially
-// STEPPING READ, USE (skill-checks) and ATTACK, which carry sticky/combat effects and so
-// open new observation states. Skipped verbs are still observation-CHECKED at every state.
+// every legal action EXCEPT reversible / inert observation verbs. Authored INSPECT
+// interactions ride on LOOK and may carry sticky effects, so those target looks are
+// restored alongside READ, USE (skill-checks), and ATTACK. Skipped verbs are still
+// observation-CHECKED at every state.
 const LIVENESS_SKIP: ReadonlySet<RpgAction["type"]> = new Set([
   "DROP",
   "CLOSE",
@@ -138,7 +138,8 @@ const LIVENESS_SKIP: ReadonlySet<RpgAction["type"]> = new Set([
   "INVENTORY",
   "INSPECT",
 ]);
-const explore = (a: RpgAction): boolean => !LIVENESS_SKIP.has(a.type);
+const explore = (index: RpgIndex, action: RpgAction): boolean =>
+  isAuthoredInspectAction(index, action) || !LIVENESS_SKIP.has(action.type);
 // The route-rich Wolf-Winter graph exhausts at 670,963 states under this policy
 // (measured 2026-07-11). The 800k ceiling leaves bounded headroom for that verified graph
 // while preserving a loud cap-out rather than truncating a future blowup.
@@ -436,7 +437,7 @@ function walkInLockStep(
     // Legality is rng-independent; take the action set from one regime and step it under
     // both. (Mirrors exhaustiveEndingsMulti, which reads legalActions from ruleSets[0].)
     for (const a of origRulesBest.legalActions(o)) {
-      if (!explore(a)) continue; // discovered via the full available_actions check, not stepped
+      if (!explore(origIndex, a)) continue; // inert actions are checked above, not stepped
       const ra = relabelAction(a, mapId);
       for (const [origStep, twinStep] of regimes) {
         const ro = origStep(o, a);

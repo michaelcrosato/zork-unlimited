@@ -151,3 +151,10 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Effect: four authored quests replaced the post-Wolf template cliff; guided travel was called light rather than tedious. Next honest friction is Tanner's Fever's unhinted peaceful route/free retries.
 - Compatibility: both frozen contract-v2 canaries still independently verify; v1/v2/v3 retention cohorts remain separate.
 - Guard: focused suites, post-change 6000-step crawl, UI browser tutorial/status check, independent v3 report verification, and full health (295 files/2091 tests, UI, 12 packs) passed.
+## AFK Cycle 2026-07-12T03-44-12-878Z
+- Change: Tanner's Fever now links symptoms, written dose, corrective herb, and bedside demonstration without a harness hint; natural LOOK performs clinical INSPECT, Holt retires after treatment, and forced passage must deliver a real identified remedy.
+- Consequence: the first physick presentation is the only roll; failure preserves the cure but retires free rerolls, then exposes a same-id deterministic recovery once all three clues are established. Lucky early treatment retires stale clue rewards.
+- Proof seam: exhaustive crawler/score/variant/menu/metamorphic/dead-pocket policies retain authored INSPECT looks while pruning inert rereads; focused regressions cover peaceful, failed-recovery, early-luck, post-treatment, and forced-passage paths.
+- Pure evidence: independently reverified seed 1307 is pure/fresh contract-v3; Tanner completed at decision 81 with no stuck/bug report, clarity 4/5, enjoyment 5/5, replay true; player continued through four goals and ended honestly at decision 110.
+- Effect: prior verified Tanner violence-pressure/free-retry complaint did not recur; the quest was called a satisfying medical deduction with graceful outcomes. Next signals are compact talk omissions, route chaining, and a cosmetic Rowan Quill name collision.
+- Guard: final 6000-step crawl (247/247 nodes, 344/344 edges, 12/12 quests), independent report verification, and full health (296 files/2098 tests, UI, 12 packs) passed.

@@ -30,8 +30,9 @@
  *
  * Soundness & scope:
  *   - SCOPE is the progress-action region — the EXACT region and policy the ending proofs
- *     certify (`isProgressAction`: skip the reversible DROP/CLOSE and the pure-observation
- *     verbs). So this proves: a player using progress moves can never strand themselves out of
+ *     certify (`isProgressAction`: skip reversible edits and inert observations). RPG target
+ *     LOOKs backed by authored INSPECT effects are restored because they mutate real state.
+ *     So this proves: a player using progress moves can never strand themselves out of
  *     reach of every ending. It deliberately does NOT claim DROP/CLOSE cannot self-strand — no
  *     shipped route gates on a drop (the helper's MONOTONE-RESTRICTION note), and a player who
  *     drops a needed key in a sealed room is self-inflicting, out of this invariant's scope.
@@ -57,7 +58,9 @@ import { stateKey, exhaustiveEndingsMulti } from "./support/exhaustive_endings.j
 
 import { loadRpgSourceFile, compileRpgSource } from "../../src/rpg/source.js";
 import { indexRpgPack, buildRpgRules, initStateForRpgPack } from "../../src/rpg/runner.js";
+import { isAuthoredInspectAction } from "../../src/rpg/legal_actions.js";
 import { HP_VAR } from "../../src/rpg/schema.js";
+import type { RpgAction } from "../../src/api/types.js";
 
 // Same backstop as the ending suites. The route-rich Wolf-Winter progress graph
 // exhausts at 335,482 states (measured 2026-07-11). The cap keeps bounded headroom while a
@@ -87,6 +90,7 @@ type LivenessResult = {
 function analyzeLiveness<A extends EngineAction>(
   ruleSets: Rules<A>[],
   start: GameState,
+  explore?: (action: A) => boolean,
 ): LivenessResult {
   // Intern fingerprints to integer ids so the ~80k-state graphs stay light (number[] reverse
   // adjacency instead of arrays of long strings).
@@ -114,6 +118,7 @@ function analyzeLiveness<A extends EngineAction>(
 
   const { states, cappedOut } = exhaustiveEndingsMulti(ruleSets, start, MAX_STATES, onState, {
     onEdge,
+    ...(explore ? { explore } : {}),
   });
 
   // Backward-liveness fixpoint: a state is LIVE iff it can reach a terminal. Seed with every
@@ -183,6 +188,20 @@ function fixedSeqRng(fracs: number[]): Rng {
 const bestRng = (): Rng => fixedSeqRng([HIGH, LOW]);
 const worstRng = (): Rng => fixedSeqRng([LOW, HIGH]);
 
+const RPG_PROGRESS_SKIP: ReadonlySet<RpgAction["type"]> = new Set([
+  "DROP",
+  "CLOSE",
+  "LOOK",
+  "INVENTORY",
+  "READ",
+  "INSPECT",
+]);
+
+/** Default progress policy plus natural LOOKs that carry authored INSPECT effects. */
+function rpgProgressExplore(index: ReturnType<typeof indexRpgPack>, action: RpgAction): boolean {
+  return isAuthoredInspectAction(index, action) || !RPG_PROGRESS_SKIP.has(action.type);
+}
+
 function isHpVar(name: string): boolean {
   return name === HP_VAR || name.startsWith("__enemy_hp_");
 }
@@ -237,6 +256,7 @@ describe("bug_0150 — every progress-reachable state of every shipped pack is L
           analyzeLiveness(
             [buildRpgRules(index, bestRng), buildRpgRules(index, worstRng)],
             initStateForRpgPack(index, 7),
+            (action) => rpgProgressExplore(index, action),
           ),
         );
       },

@@ -16,9 +16,11 @@ root_cause: >
   into his locked post-confrontation dialogue even when the failed outcome was
   just a bad die roll.
 fix: >
-  The treatment now retires only after success. Failure keeps the notes,
-  meadowsweet, and treatment action live, and the failure narration states that
-  the evidence remains in hand and can be put to Godwin again.
+  The treatment preserves the notes and meadowsweet after failure. The first
+  presentation now retires its random roll on either outcome; a failed attempt
+  unlocks a same-id deterministic recovery after the player examines Edric,
+  reads Godwin's dose ledger, and identifies the herb. This keeps the peaceful
+  route live without an infinite cost-free reroll.
 tests:
   - tests/regression/tanners_fever_treatment_retry.test.ts
 verification:

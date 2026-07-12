@@ -77,6 +77,7 @@ import {
   enumerateRpgActions,
   type RpgIndex,
 } from "../../src/rpg/runner.js";
+import { isAuthoredInspectAction } from "../../src/rpg/legal_actions.js";
 import { HP_VAR } from "../../src/rpg/schema.js";
 import type { GameState } from "../../src/core/state.js";
 import type { Rng } from "../../src/core/rng.js";
@@ -95,8 +96,9 @@ const MAX_STATES = 800_000;
 
 // The bug_0146 liveness action policy: step every legal action EXCEPT the ones that cannot
 // usefully widen the reachable region (DROP — the inventory×location blowup — plus the
-// pure-observation verbs / never-legal CLOSE). DOES step READ, ATTACK, and the skill-check
-// USE, so read-flag and post-combat states (and their menus) are inspected too.
+// inert observation verbs / never-legal CLOSE). Authored INSPECT interactions ride on
+// LOOK and may mutate state, so their target looks are restored below. READ, ATTACK, and
+// skill-check USE remain stepped too.
 const LIVENESS_SKIP: ReadonlySet<Action["type"]> = new Set([
   "DROP",
   "CLOSE",
@@ -104,7 +106,8 @@ const LIVENESS_SKIP: ReadonlySet<Action["type"]> = new Set([
   "INVENTORY",
   "INSPECT",
 ]);
-const livenessExplore = (a: Action): boolean => !LIVENESS_SKIP.has(a.type);
+const livenessExplore = (index: RpgIndex, action: Action): boolean =>
+  isAuthoredInspectAction(index, action) || !LIVENESS_SKIP.has(action.type);
 
 /**
  * A fixed-sequence PRNG (copied from rpg_all_endings_reachable / rpg_variant_liveness): each
@@ -177,7 +180,10 @@ type MenuReport = {
 
 /** Walk the full reachable region (best/worst-roll bracket) and inspect every offered RPG
  *  action menu for duplicate ids. */
-function analyze(index: RpgIndex, explore: (a: Action) => boolean = livenessExplore): MenuReport {
+function analyze(
+  index: RpgIndex,
+  explore: (a: Action) => boolean = (action) => livenessExplore(index, action),
+): MenuReport {
   const collisions: string[] = [];
   let statesChecked = 0;
   let actionsSeen = 0;
