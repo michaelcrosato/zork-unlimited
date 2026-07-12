@@ -131,7 +131,7 @@ export function classifyRpgJourneyDecision(args: {
     case "MANEUVER":
       return countedJourneyDecision("combat");
     case "TALK":
-      // TALK opens the modal dialogue surface and delivers its greeting; the
+      // TALK opens the dialogue exchange and delivers its greeting; the
       // substantive player decisions are the ASK topics that follow. Excluding
       // the opener also prevents TALK → leave → TALK from farming the clock.
       return excludedJourneyDecision("dialogue_opening");

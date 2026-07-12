@@ -115,18 +115,8 @@ export function runRpgStepAction<Args extends RpgStepActionArgs>(
   const beforeSceneId = s.state.current;
   const beforeTitle = rpgRoomTitle(s.index, s.state);
   if (actionOption === null) {
-    // Dialogue is modal, but that constraint was invisible at the exact moment it
-    // bites: a player acting from a menu fetched BEFORE starting a conversation
-    // gets a bare "not available" and has to guess why (bug_0494, found by an
-    // overworld blind playtest). Name the modality only in that case — every
-    // other unknown-id rejection keeps the terse default (rejections live in
-    // transcripts, so idle words cost tokens on every future read).
-    const inDialogue = active !== null;
     const rejectionReason =
-      blockedActionOption?.reason ??
-      (inDialogue
-        ? "That action is not available right now: you are mid-conversation, and only the listed ask topics are legal until one of them ends the talk."
-        : "That action is not available right now.");
+      blockedActionOption?.reason ?? "That action is not available right now.";
     const rejectionEvents = [{ type: "rejected" as const, reason: rejectionReason }];
     const beforeObsOpts = {
       hideGraph: args.hide_graph ?? s.hideGraph ?? false,

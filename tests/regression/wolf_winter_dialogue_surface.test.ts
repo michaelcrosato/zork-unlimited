@@ -10,6 +10,7 @@ import type { GameEvent } from "../../src/core/events.js";
 import type { GameState } from "../../src/core/state.js";
 import type { RpgAction } from "../../src/api/types.js";
 import { createToolApi } from "../../src/mcp/tools.js";
+import { buildRpgObservation } from "../../src/rpg/observation.js";
 import {
   buildRpgRules,
   enumerateRpgActions,
@@ -106,18 +107,23 @@ describe("Wolf-Winter dialogue surface", () => {
     const ids = legalActionIds(state);
     expect(ids).toEqual(expect.arrayContaining(["ask_byre", "ask_leave"]));
     expect(ids).not.toContain("ask_ask_byre");
+    expect(ids).not.toContain("ask_wolves_back");
   });
 
-  it("returns to Cade's root menu without nested speaker or quote text", () => {
-    let state = startCadeDialogue();
-    state = act(state, { type: "ASK", npc: "houndsman", topic: "wolves" });
-    const back = step(state, { type: "ASK", npc: "houndsman", topic: "wolves_back" });
+  it("auto-resumes Cade's reactive root without a nested filler reply", () => {
+    const state = startCadeDialogue();
+    const advised = step(state, { type: "ASK", npc: "houndsman", topic: "wolves" });
 
-    expect(back.ok).toBe(true);
-    if (!back.ok) throw new Error("unreachable");
-    const text = narrations(back.events).join(" ");
-    expect(text).toContain('old Cade the houndsman: "Ask what else you need');
-    expect(text).not.toContain("Old Cade shifts");
-    expect(text).not.toMatch(/: "Old Cade\b/);
+    expect(advised.ok).toBe(true);
+    if (!advised.ok) throw new Error("unreachable");
+    expect(narrations(advised.events).join(" ")).toContain("Quick lines");
+    const obs = buildRpgObservation(index, advised.state);
+    expect(obs.dialogue?.npc_text).toContain("Ask what else you need");
+    expect(obs.dialogue?.npc_text).not.toContain("Old Cade shifts");
+    expect(obs.dialogue?.npc_text).not.toMatch(/: "Old Cade\b/);
+    expect(obs.available_actions.map((option) => option.id)).not.toContain("ask_wolves_back");
+    expect(obs.available_actions.map((option) => option.id)).toEqual(
+      expect.arrayContaining(["ask_byre", "ask_leave"]),
+    );
   });
 });

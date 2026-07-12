@@ -97,9 +97,13 @@ describe("bug_0276 — The Sunken Barrow's doom epilogue reframes on whether the
     s = act(s, move("west")); // → reaver_rest
     s = act(s, (a) => a.type === "TALK");
     s = act(s, askTopic("ask_wight")); // +3 defense ward (so the wight is survivable)
-    s = act(s, askTopic("wight_back"));
+    expect(options(s).map((o) => o.id)).toEqual(
+      expect.arrayContaining(["ask_ask_lord", "ask_leave_shade", "go_east"]),
+    );
+    expect(options(s).map((o) => o.id)).not.toContain("ask_wight_back");
     s = act(s, askTopic("ask_lord")); // sets heard_lord_lore — the warning
-    s = act(s, askTopic("lord_back"));
+    expect(options(s).map((o) => o.id)).toContain("ask_leave_shade");
+    expect(options(s).map((o) => o.id)).not.toContain("ask_lord_back");
     s = act(s, askTopic("leave_shade"));
     s = act(s, move("east")); // → entry_hall
     s = doomFromEntryHall(s);
@@ -135,9 +139,10 @@ describe("bug_0276 — The Sunken Barrow's doom epilogue reframes on whether the
     informed = act(informed, move("west"));
     informed = act(informed, (a) => a.type === "TALK");
     informed = act(informed, askTopic("ask_wight"));
-    informed = act(informed, askTopic("wight_back"));
+    expect(options(informed).map((o) => o.id)).not.toContain("ask_wight_back");
     informed = act(informed, askTopic("ask_lord"));
-    informed = act(informed, askTopic("lord_back"));
+    expect(options(informed).map((o) => o.id)).toContain("ask_leave_shade");
+    expect(options(informed).map((o) => o.id)).not.toContain("ask_lord_back");
     informed = act(informed, askTopic("leave_shade"));
     informed = act(informed, move("east"));
     informed = doomFromEntryHall(informed);

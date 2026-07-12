@@ -135,6 +135,14 @@ describe("bug_0511 - failed Tanner treatment keeps a visible recovery affordance
       reason: BLOCKED_REASON,
     });
 
+    const talking = act(failed.state, "talk_godwin").state;
+    expect(enumerateRpgBlockedActions(index, talking)).toEqual(blocked);
+    expect(buildRpgObservation(index, talking).blocked_actions).toEqual(blocked);
+    expect(resolveCli(index, talking, blocked[0]!.command)).toEqual({
+      ok: false,
+      reason: BLOCKED_REASON,
+    });
+
     let ready = act(failed.state, "examine_meadowsweet").state;
     expect(enumerateRpgBlockedActions(index, ready)).toEqual([]);
     const recovery = enumerateRpgActions(index, ready).find((option) => option.id === TREATMENT_ID);
@@ -161,6 +169,10 @@ describe("bug_0511 - failed Tanner treatment keeps a visible recovery affordance
       journeyActionId: null,
     });
     expect(ui.view().stateHash).toBe(uiHash);
+    expect(ui.choose("talk_godwin").ok).toBe(true);
+    expect(ui.view().unavailableChoices).toEqual([
+      expect.objectContaining({ id: TREATMENT_ID, reason: BLOCKED_REASON }),
+    ]);
 
     const api = createToolApi({ root: process.cwd() });
     const started = api.start_world_quest({
@@ -185,6 +197,17 @@ describe("bug_0511 - failed Tanner treatment keeps a visible recovery affordance
     });
     expect(failed.ok).toBe(true);
     expect(failed.observation.blocked_actions).toEqual([
+      expect.objectContaining({ id: TREATMENT_ID, reason: BLOCKED_REASON }),
+    ]);
+    const talked = api.step_action({
+      session_id: started.session_id,
+      action_id: "talk_godwin",
+      compact_observation: false,
+      compact_events: false,
+    });
+    expect(talked.ok).toBe(true);
+    expect(talked.observation.dialogue?.npc).toBe("godwin");
+    expect(talked.observation.blocked_actions).toEqual([
       expect.objectContaining({ id: TREATMENT_ID, reason: BLOCKED_REASON }),
     ]);
 
@@ -214,14 +237,14 @@ describe("bug_0511 - failed Tanner treatment keeps a visible recovery affordance
     const blockedAttempt = api.step_action({
       session_id: started.session_id,
       action_id: TREATMENT_ID,
-      expected_state_hash: failed.state_hash,
+      expected_state_hash: talked.state_hash,
       compact_observation: true,
       compact_events: true,
     });
     expect(blockedAttempt).toMatchObject({
       ok: false,
       rejection_reason: BLOCKED_REASON,
-      state_hash: failed.state_hash,
+      state_hash: talked.state_hash,
       journeyDecision: { countsTowardJourney: false, reason: "rejected" },
       journeyActionId: null,
     });

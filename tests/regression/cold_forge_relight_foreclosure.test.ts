@@ -74,6 +74,11 @@ function act(s: GameState, pred: (a: Action) => boolean): GameState {
 const move = (dir: string) => (a: Action) => a.type === "MOVE" && a.direction === dir;
 const ask = (topic: string) => (a: Action) =>
   a.type === "ASK" && (a as { topic?: string }).topic === topic;
+function expectSpiritRoot(s: GameState): void {
+  const dialogue = buildRpgObservation(index, s).dialogue;
+  expect(dialogue?.npc).toBe("lantern_spirit");
+  expect(dialogue?.npc_text).toMatch(/What else would you know/i);
+}
 
 const FORECLOSE_RE = /relit|relight|rekindle|cannot be|never|will not/i;
 const journalForge = (s: GameState) =>
@@ -110,8 +115,8 @@ describe("bug_0059 — the lantern-spirit forecloses the 'relight the forge' tem
 
   it("it retires after telling — root drops it, a forced re-ASK is rejected, no re-journal", () => {
     let s = talkingSpirit(1);
-    s = act(s, ask("ask_forge")); // now at spirit_forge
-    s = act(s, ask("forge_back")); // back to spirit_root
+    s = act(s, ask("ask_forge")); // answer and safe root resume are atomic
+    expectSpiritRoot(s);
     // The told topic is gone; the other info topics (incl. the bug_0076 founder
     // lore-signpost) + the exit remain.
     expect(askIds(s).sort()).toEqual(["ask_founder", "ask_heart", "ask_sentinel", "leave_spirit"]);
@@ -131,11 +136,14 @@ describe("bug_0059 — the lantern-spirit forecloses the 'relight the forge' tem
     s = act(s, (a) => a.type === "TAKE"); // pry-bar
     s = act(s, (a) => a.type === "TALK"); // lantern-spirit
     s = act(s, ask("ask_sentinel")); // +2 attack blessing
-    s = act(s, ask("sentinel_back"));
+    expect(s.flags["heard_sentinel"]).toBe(true);
+    expectSpiritRoot(s);
     s = act(s, ask("ask_forge")); // the new topic, en route
-    s = act(s, ask("forge_back"));
+    expect(s.flags["heard_forge"]).toBe(true);
+    expectSpiritRoot(s);
     s = act(s, ask("ask_heart"));
-    s = act(s, ask("heart_back"));
+    expect(s.flags["heard_heart"]).toBe(true);
+    expectSpiritRoot(s);
     s = act(s, ask("leave_spirit"));
     s = act(s, move("north")); // → bellows_walk
     let guard = 0;

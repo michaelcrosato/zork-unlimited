@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 544 -->
+<!-- historical_cycle_count: 545 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - interruptible_dialogue_exchange
+
+- Evidence choice: the assessor still ranked already-closed legacy Wolf compact-journal clusters; verified pure seed 1809 instead named modal dialogue and navigation-only replies as its worst moment. Corpus audit found 29 unconditional root-back reply nodes, 24 back-only across 9/12 quests.
+- Surface: a safe reply emits its effects/prose and resumes an effect-free post-effect root in one ASK when every child choice is mirrored there; room actions and authored recovery rows remain visible beside topics. Same-room acts preserve an eligible speaker; leaving, retiring that NPC, or ending closes atomically.
+- Integrity/parity: synthetic child-only/root-effect branches decline folding; UI, CLI, full/compact MCP, aliases, journey classification, saves, and the reducer share one action set. The Barrow trace replaces `wight_back` with a required accepted strike and proves victory; the initial-zero crawler oracle now records once instead of spinning.
+- Blind iteration: pure seed 1909 rated 4/5 clarity, 5/5 enjoyment and continued at 25/40/51/76 before checkpoint 80, but exposed stale `ask_byre` after a same-room read; that regression now has a one-step read→ASK proof. Seeds 1910/1911 hit the technical timeout and are rejected, not retention evidence.
+- Final pure evidence: verified pure/fresh seed 1912 had no dialogue rejection/filler recurrence, continued at 23/40/49/80, ended honestly at goal 3 on decision 83, rated 4/5 clarity and 5/5 enjoyment, got-stuck false, replay true. New S1: Tanner's compact sickroom text can truncate the east herb-store cue; long objective-route preview also recurred.
+- Compile/self-critique: ledger 457 accepted/30 rejected; compile has eight v3 pure exits, all continued (35 continue/8 end; checkpoint 40=8/0, 80=6/1). PASS for conversation flow, not retention—the player still chose a satisfied three-quest ending; Tanner consequence agency and compact route/cue truth remain next.
+- Guard: 176 changed-file parity/migration/recovery tests, typecheck/lint/format, browser smoke with no console errors, final 6,000-step crawl (247/247 nodes, 344/344 edges, 12/12 quests), verified receipt, explicit engine-change re-pin acknowledgment, and full health passed.
 
 ### Cycle result - player_visible_recovery_affordance
 
@@ -139,11 +149,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Validation/content surface: feasibility, combined dead guards, cyclic obtainability, relabeling, and exhaustive presence liveness are pinned; Wolf-Winter retires the rail entity when its timber becomes carried gear, with `bug_0500` witnesses.
 - Self-critique: PASS as a reusable correctness-class closure; chose it off-list because the compiled hotspot predates `da9f22b6` and the fresh S1 outranked planned S0 compression. Compact tutorial integrity remains next.
 - Guard: verified cycle report, pre/post 6,000-step crawls (latest `20260711T134116Z`, 247/247 nodes), all 12 packs clean, and `npm run health` (281 files / 1,986 tests) green.
-
-### Cycle result - wolf_winter_reactive_backtracking_truth
-
-- Blind playtest: fresh MCP-only Wolf-Winter seed 930004 reached `ending_held` at 60/60, clarity 5/5 and enjoyment 4/5; it independently reproduced duplicate `watch_started` on a store return and again found compact clipping/prescribed play.
-- Content surface: Steading watch prose now keys off visit history; Byre-Yard orders post-yearling/flank/leader states; Broken Paling distinguishes split timber, the carried guard, and its spent empty rail-bed without changing mechanics or score.
-- Regression surface: `bug_0499` and focused tests pin event-idempotent re-entry plus truthful hub/rail backtracks; all newly authored reactive room text fits the existing compact event budget.
-- Self-critique: PASS for the 72-report correctness family, not a depth pass; the focused repair deliberately leaves compact truncation/Cade affordances/defense visibility and the failed linearity/replay gates for subsequent cycles.
-- Guard: verified cycle report, pre/post 6,000-step crawls (latest `20260711T124605Z`, 247/247 nodes), Wolf pack 0 warnings, and `npm run health` (279 files / 1,971 tests) green.

@@ -165,7 +165,9 @@ export function parseCommand(index: RpgModelIndex, state: GameState, raw: string
   const verb = words[0]!;
   const rest = words.slice(1).join(" ").trim();
 
-  // While in conversation, the only meaningful inputs are ask/topic choices.
+  // Dialogue-specific shorthand is handled first. Ordinary commands continue
+  // through the normal parser below; same-room actions preserve the exchange,
+  // while leaving the scene closes it atomically before the move.
   const active = activeDialogue(index, state);
   if (active && (verb === "ask" || verb === "say" || verb === "topic")) {
     const arg = rest.replace(/^about\s+/, "").trim();

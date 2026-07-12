@@ -103,10 +103,28 @@ describe("bug_0506 - Tanner's Fever makes its peaceful route player-legible", ()
 
   it("turns Godwin's exhausted loop and Holt's blockade into honest route cues", () => {
     let state = initStateForRpgPack(index, 41);
-    state = play(state, ["talk_godwin", "ask_ask_diagnosis"]);
-    const returned = act(state, "ask_diagnosis_back");
-    state = returned.state;
-    const rootText = narration(returned.events);
+    state = act(state, "talk_godwin").state;
+    const diagnosed = act(state, "ask_ask_diagnosis");
+    state = diagnosed.state;
+    const resumedActions = actionIds(state);
+    expect(resumedActions).not.toContain("ask_diagnosis_back");
+    expect(resumedActions).toEqual([
+      "ask_ask_dose",
+      "ask_ask_recovery",
+      "ask_leave_godwin",
+      "go_east",
+      "go_north",
+      "go_west",
+      "examine_sick_edric",
+      "look_around",
+      "inventory",
+    ]);
+    expect(narration(diagnosed.events)).toMatch(/autumn fever.*clinical judgment/is);
+
+    // A same-room look preserves the exchange and its evidence-grounded root
+    // cue without either a filler navigation turn or a second TALK opener.
+    state = act(state, "look_around").state;
+    const rootText = buildRpgObservation(index, state).dialogue?.npc_text ?? "";
 
     expect(rootText).toMatch(/questions alone will not change a treatment/i);
     expect(rootText).toMatch(/grounded in the boy/i);
@@ -115,7 +133,8 @@ describe("bug_0506 - Tanner's Fever makes its peaceful route player-legible", ()
     expect(rootText).toMatch(/bedside/i);
     expect(rootText).not.toMatch(/meadowsweet|go east|go west/i);
 
-    state = play(state, ["ask_leave_godwin", "go_north"]);
+    // Moving north is itself the intent to stop talking and leave the sickroom.
+    state = act(state, "go_north").state;
     const corridor = buildRpgObservation(index, state);
     const north = corridor.blocked_exits.find((exit) => exit.direction === "north");
     expect(north?.message).toMatch(/nonviolent case is back south/i);
@@ -134,11 +153,26 @@ describe("bug_0506 - Tanner's Fever makes its peaceful route player-legible", ()
 
     expect(state.flags.treatment_given).toBe(true);
     state = act(state, "talk_godwin").state;
-    expect(actionIds(state)).toEqual(["ask_leave_godwin"]);
-    state = act(state, "ask_leave_godwin").state;
+    const postTreatmentActions = actionIds(state);
+    expect(postTreatmentActions).not.toContain("ask_diagnosis_back");
+    expect(postTreatmentActions).toEqual([
+      "ask_leave_godwin",
+      "go_east",
+      "go_north",
+      "go_west",
+      "examine_sick_edric",
+      "examine_godwin_notes",
+      "drop_godwin_notes",
+      "examine_meadowsweet",
+      "drop_meadowsweet",
+      "look_around",
+      "inventory",
+    ]);
 
+    // Leaving north atomically closes Godwin's exhausted exchange.
     state = act(state, "go_north").state;
     const corridor = buildRpgObservation(index, state);
+    expect(actionIds(state)).not.toContain("ask_leave_godwin");
     expect(corridor.exits.map((exit) => exit.direction)).toContain("north");
     expect(corridor.enemies_present).toHaveLength(0);
     expect(actionIds(state)).not.toContain("attack_holt");

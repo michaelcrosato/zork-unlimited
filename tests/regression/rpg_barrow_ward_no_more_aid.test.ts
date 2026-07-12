@@ -116,7 +116,10 @@ describe("bug_0119 — the shade's ward counsel says it's the only aid; press on
     expect(s.flags["heard_warding"]).toBe(true);
     expect(s.vars["defense"]).toBe(5); // +3 ward, unchanged
     expect(s.journal.some((j) => j.includes("+3 defense"))).toBe(true);
-    s = act(s, askTopic("wight_back")); // back to root
+    expect(options(s).map((o) => o.id)).toEqual(
+      expect.arrayContaining(["ask_ask_lord", "ask_leave_shade", "go_east"]),
+    );
+    expect(options(s).map((o) => o.id)).not.toContain("ask_wight_back");
     expect(options(s).some((o) => askTopic("ask_wight")(o.action))).toBe(false); // retired
     expect(s.vars["defense"]).toBe(5); // not re-buffed
   });

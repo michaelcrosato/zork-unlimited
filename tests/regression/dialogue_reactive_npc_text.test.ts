@@ -12,9 +12,9 @@
  * prose layer over the same tree.
  *
  * Locked on BOTH the engine surface and the real pack:
- *   - BEHAVIOURAL (the real Breaking Weir pell): driving the actual TALK/ASK engine path,
- *     first contact speaks the full emergency, and returning to the menu after a topic speaks
- *     the terse variant — and the observation's `dialogue.npc_text` agrees with the narration;
+ *   - BEHAVIOURAL (the real Breaking Weir Pell): driving the actual TALK/ASK engine path,
+ *     first contact speaks the full emergency, and a substantive reply auto-resumes the root
+ *     whose observation immediately exposes the terse variant without a filler decision;
  *   - VALIDATOR: the dead-reactive-content guards rooms/objects get (UNREACHABLE_VARIANT
  *     shadowing, UNSATISFIABLE_CONDITION) now also cover dialogue node variants, so a silently
  *     dead NPC line is flagged the same way.
@@ -25,7 +25,12 @@
  */
 import { describe, it, expect } from "vitest";
 import { loadRpgSourceFile } from "../../src/rpg/source.js";
-import { indexRpgPack, initStateForRpgPack, buildRpgRules } from "../../src/rpg/runner.js";
+import {
+  indexRpgPack,
+  initStateForRpgPack,
+  buildRpgRules,
+  enumerateRpgActions,
+} from "../../src/rpg/runner.js";
 import { buildRpgObservation } from "../../src/rpg/observation.js";
 import { validateRpg } from "../../src/validate/rpg_validator.js";
 import { makeStep } from "../../src/core/engine.js";
@@ -57,7 +62,7 @@ function run(state: GameState, RpgAction: RpgAction): { state: GameState; text: 
 }
 
 describe("bug_0246 — reactive NPC dialogue text on The Breaking Weir's Pell", () => {
-  it("speaks the full emergency on first contact, the terse line on return to the menu", () => {
+  it("speaks the full emergency first, then exposes the terse root immediately after a reply", () => {
     const start = initStateForRpgPack(index, 11);
 
     // First contact: the full "Thank God someone came" opening.
@@ -65,36 +70,44 @@ describe("bug_0246 — reactive NPC dialogue text on The Breaking Weir's Pell", 
     expect(talk.text).toMatch(/Thank God someone came/);
     expect(talk.text).not.toMatch(/what else, lad/i);
 
-    // Ask the plan, then come back to the menu — Pell should NOT re-introduce the
-    // whole emergency now that he has told you something.
+    // Asking the plan auto-resumes Pell's root in the same accepted decision. The
+    // reply narration still belongs to the plan node, while the resulting state
+    // exposes the reactive root without a separate filler action.
     const asked = run(talk.state, { type: "ASK", npc: "pell", topic: "ask_weir" });
     expect(asked.text).toMatch(/Three things hold this weir/); // the plan node fired
-    const back = run(asked.state, { type: "ASK", npc: "pell", topic: "weir_back" });
-    expect(back.text).toMatch(/what else, lad/i); // the reactive return greeting
-    expect(back.text).not.toMatch(/Thank God someone came/); // not the first-contact opening
+    const obs = buildRpgObservation(index, asked.state);
+    expect(obs.dialogue?.npc_text).toMatch(/what else, lad/i); // reactive root
+    expect(obs.dialogue?.npc_text).not.toMatch(/Thank God someone came/);
+    const ids = enumerateRpgActions(index, asked.state).map((option) => option.id);
+    expect(ids).toContain("ask_ask_walk");
+    expect(ids).not.toContain("ask_weir_back");
   });
 
   it("the same terse line shows when the walk topic is what you asked first", () => {
     // Either info topic (heard_walk OR heard_plan) makes the return terse — two variants.
     let s = initStateForRpgPack(index, 11);
     s = run(s, { type: "TALK", npc: "pell" }).state;
-    s = run(s, { type: "ASK", npc: "pell", topic: "ask_walk" }).state; // sets heard_walk
-    const back = run(s, { type: "ASK", npc: "pell", topic: "walk_back" });
-    expect(back.text).toMatch(/what else, lad/i);
-    expect(back.text).not.toMatch(/Thank God someone came/);
+    const asked = run(s, { type: "ASK", npc: "pell", topic: "ask_walk" }); // sets heard_walk
+    expect(asked.state.flags["heard_walk"]).toBe(true);
+    const obs = buildRpgObservation(index, asked.state);
+    expect(obs.dialogue?.npc_text).toMatch(/what else, lad/i);
+    expect(obs.dialogue?.npc_text).not.toMatch(/Thank God someone came/);
+    expect(enumerateRpgActions(index, asked.state).map((option) => option.id)).not.toContain(
+      "ask_walk_back",
+    );
   });
 
-  it("the observation's dialogue.npc_text agrees with the rendered line", () => {
+  it("the observation's dialogue.npc_text reflects the auto-resumed reactive root", () => {
     let s = initStateForRpgPack(index, 11);
     // Mid-conversation at the root BEFORE any topic: observation shows the full opening.
     s = run(s, { type: "TALK", npc: "pell" }).state;
     expect(buildRpgObservation(index, s).dialogue?.npc_text).toMatch(/Thank God someone came/);
-    // After a topic and back to root: observation shows the terse variant, matching narration.
+    // The reply auto-resumes the root: observation immediately shows the terse variant.
     s = run(s, { type: "ASK", npc: "pell", topic: "ask_weir" }).state;
-    s = run(s, { type: "ASK", npc: "pell", topic: "weir_back" }).state;
     const obs = buildRpgObservation(index, s);
     expect(obs.dialogue?.npc_text).toMatch(/what else, lad/i);
     expect(obs.dialogue?.npc_text).not.toMatch(/Thank God someone came/);
+    expect(obs.available_actions.map((option) => option.id)).not.toContain("ask_weir_back");
   });
 });
 

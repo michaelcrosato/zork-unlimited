@@ -123,9 +123,11 @@ describe("bug_0029 — the Cold Forge sentinel reads as a settled cold advantage
     s = act(s, (a) => a.type === "TAKE"); // pry-bar
     s = act(s, (a) => a.type === "TALK"); // lantern-spirit
     s = act(s, (a) => a.type === "ASK" && (a as { topic?: string }).topic === "ask_sentinel"); // +2 attack
-    s = act(s, (a) => a.type === "ASK" && (a as { topic?: string }).topic === "sentinel_back");
+    expect(s.flags["heard_sentinel"]).toBe(true);
+    expect(buildRpgObservation(index, s).dialogue?.npc_text).toMatch(/What else would you know/i);
     s = act(s, (a) => a.type === "ASK" && (a as { topic?: string }).topic === "ask_heart");
-    s = act(s, (a) => a.type === "ASK" && (a as { topic?: string }).topic === "heart_back");
+    expect(s.flags["heard_heart"]).toBe(true);
+    expect(buildRpgObservation(index, s).dialogue?.npc_text).toMatch(/What else would you know/i);
     s = act(s, (a) => a.type === "ASK" && (a as { topic?: string }).topic === "leave_spirit");
     s = act(s, move("north")); // → bellows walk
     let guard = 0;

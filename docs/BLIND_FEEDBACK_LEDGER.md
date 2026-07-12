@@ -5,11 +5,11 @@ Generated deterministically from verified blind reports. The latest entries stay
 ## Summary
 
 - Reports dir: `blind-tester/reports`
-- Accepted reports: 455
+- Accepted reports: 457
 - Rejected or ignored markdown reports: 30
-- Latest report stamp: 20260712T090032Z
+- Latest report stamp: 20260712T105137Z
 - Recent entry limit: 100
-- Archived accepted entries collapsed into traits: 355
+- Archived accepted entries collapsed into traits: 357
 
 ## Recent Common Traits
 
@@ -20,10 +20,17 @@ Generated deterministically from verified blind reports. The latest entries stay
 | 3 | 20260708T211319Z | confusion | hidden counts are abstract | overworld |
 | 2 | 20260708T213027Z | confusion | compact tuples require legend memory | overworld |
 | 2 | 20260708T212627Z | confusion | compact journal showed hash-like fragments | overworld |
-| 2 | 20260708T211749Z | confusion | spear described but not in inventory | overworld |
 | 2 | 20260708T203905Z | confusion | town counted visited before road encounter resolved | overworld |
 | 2 | 20260708T203156Z | confusion | hidden counts are useful but abstract | overworld |
 | 2 | 20260708T202531Z | confusion | quest tone disconnected from Albany overworld | overworld |
+| 1 | 20260712T105137Z | bug S1 | Sickroom, The Tanner's Fever quest: Critical exit/progression clue (herb-store to the east) is truncated out of the d... | overworld |
+| 1 | 20260712T105137Z | confusion | compact context truncated the herb-store exit description, requiring a verbose observation call to find it | overworld |
+| 1 | 20260712T105137Z | confusion | multi-leg travel to an undiscovered town can't be planned in one call; must be walked leg-by-leg | overworld |
+| 1 | 20260712T105137Z | confusion | unclear at first that carrying an item (jerkin) wasn't the same as using/donning it | overworld |
+| 1 | 20260712T105137Z | worst moment | Getting stuck for several steps in the sickroom not realizing the herb-store exit existed, because the compact contex... | overworld |
+| 1 | 20260712T100819Z | bug S1 | The Byre-Yard (Wolf-Winter quest): ask_byre dialogue choice rejected as unavailable right after being offered, follow... | overworld |
+| 1 | 20260712T100819Z | confusion | dialogue option briefly rejected after reading the day-book, required re-talking to NPC | overworld |
+| 1 | 20260712T100819Z | worst moment | The brief ask_byre dialogue-option rejection in the byre-yard, which momentarily looked like a broken choice. | overworld |
 | 1 | 20260712T090032Z | bug S0 | Quest structure across Wolf-Winter / Gallowmere / Tanner's Fever: All three quests share an identical skeleton that b... | overworld |
 | 1 | 20260712T090032Z | bug S1 | Byre-Yard dialogue with Old Cade (Wolf-Winter): Reading the day-book was rejected mid-conversation despite being unre... | overworld |
 | 1 | 20260712T090032Z | bug S1 | NPC ask-topic dialogues (Cade, Hedrick, Godwin): Each topic is one-shot and forces a generic filler action before the... | overworld |
@@ -33,18 +40,13 @@ Generated deterministically from verified blind reports. The latest entries stay
 | 1 | 20260712T090032Z | confusion | single-use dialogue topics require a throwaway 'ask something else' step before the next real topic unlocks | overworld |
 | 1 | 20260712T090032Z | worst moment | Getting rejected twice trying to read a book or move rooms mid-conversation, then learning each dialogue topic needs... | overworld |
 | 1 | 20260712T075817Z | bug S0 | NPC contacts across towns: Same NPC name (Hayden Hale) reused as a template in two different cities. | overworld |
-| 1 | 20260712T075817Z | bug S1 | Overworld travel, Queensbury to Oneonta: Six near-identical travel legs in a row with little differentiation; pacing... | overworld |
-| 1 | 20260712T075817Z | bug S2 | Oneonta sickroom (The Tanner's Fever quest): Treat-Edric action disappears after failed check; recovery via re-examin... | overworld |
-| 1 | 20260712T075817Z | confusion | corridor path appeared viable but was a narrated dead end | overworld |
-| 1 | 20260712T075817Z | confusion | long uniform travel-leg chain between distant quest hubs | overworld |
-| 1 | 20260712T075817Z | confusion | treatment action vanished after a failed skill check with no hint how to restore it | overworld |
-| 1 | 20260712T075817Z | stuck | player got stuck | overworld |
-| 1 | 20260712T075817Z | worst moment | The treat-Edric action vanishing after a failed skill check, briefly looking like a soft-lock in the sickroom. | overworld |
 
 ## Recent Entries
 
 | Stamp | Source | Seed | Mode | Decisions | C/E | Stuck | Replay | Report | Signal |
 | --- | --- | ---: | --- | ---: | --- | --- | --- | --- | --- |
+| 20260712T105137Z | overworld | 1912 | pure | 83 | 4/5 | no | yes | `blind-tester/reports/20260712T105137Z_overworld_seed1912.md` | confusions: compact context truncated the herb-store exit description, requiring a verbose observation call to find it; unclear at first that carrying an item (jerkin)... |
+| 20260712T100819Z | overworld | 1909 | pure | 80 | 4/5 | no | yes | `blind-tester/reports/20260712T100819Z_overworld_seed1909.md` | confusions: dialogue option briefly rejected after reading the day-book, required re-talking to NPC \| bugs: S1 The Byre-Yard (Wolf-Winter quest): ask_byre dialogue cho... |
 | 20260712T090032Z | overworld | 1809 | pure | 77 | 4/4 | no | yes | `blind-tester/reports/20260712T090032Z_overworld_seed1809.md` | confusions: single-use dialogue topics require a throwaway 'ask something else' step before the next real topic unlocks; mid-conversation lock blocks unrelated actions... |
 | 20260712T075817Z | overworld | 1709 | pure | 82 | 5/4 | yes | yes | `blind-tester/reports/20260712T075817Z_overworld_seed1709.md` | confusions: treatment action vanished after a failed skill check with no hint how to restore it; corridor path appeared viable but was a narrated dead end; long unifor... |
 | 20260712T065854Z | overworld | 1609 | pure | 105 | 4/4 | no | yes | `blind-tester/reports/20260712T065854Z_overworld_seed1609.md` | confusions: Tutorial undersold scope — 'one local lead' turned into a multi-region campaign; Long-haul route guidance sometimes backtracked through an already-visited... |
@@ -143,8 +145,6 @@ Generated deterministically from verified blind reports. The latest entries stay
 | 20260708T193009Z | overworld | 540 | legacy_guided | — | 4/4 | no | yes | `blind-tester/reports/20260708T193009Z_overworld_seed540.md` | confusions: quest fiction disconnected from Albany overworld; compact event text made civic work feel abstract; discovered jobs outside current area were easy to lose... |
 | 20260708T193008Z | overworld | 539 | legacy_guided | — | 4/4 | no | yes | `blind-tester/reports/20260708T193008Z_overworld_seed539.md` | confusions: hidden counters do not explain where remaining content is; dialogue back actions did not exit conversation; compact journal hash fragments look like debug... |
 | 20260708T193008Z | overworld | 538 | legacy_guided | — | 4/4 | no | yes | `blind-tester/reports/20260708T193008Z_overworld_seed538.md` | confusions: quest tone shift from modern civic overworld to mythic winter steading; second town notice hall felt templated; look around at quest start added no new inf... |
-| 20260708T193008Z | overworld | 537 | legacy_guided | — | 4/4 | no | yes | `blind-tester/reports/20260708T193008Z_overworld_seed537.md` | confusions: overworld job and event flavor is thin; quest premise feels abruptly disconnected from Albany anchor; dialogue mode needs explicit leave action \| bugs: S0... |
-| 20260708T193007Z | overworld | 536 | legacy_guided | — | 4/4 | no | yes | `blind-tester/reports/20260708T193007Z_overworld_seed536.md` | confusions: spear described but not in inventory; compact text truncates quest descriptions; dialogue ids use duplicated ask labels \| bugs: S2 Albany / Wolf-Winter / S... |
 
 ## Archived Trait Categories
 

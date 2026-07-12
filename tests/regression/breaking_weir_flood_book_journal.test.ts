@@ -27,6 +27,7 @@ import {
   enumerateRpgActions,
 } from "../../src/rpg/runner.js";
 import { buildRpgObservation } from "../../src/rpg/observation.js";
+import { activeDialogue } from "../../src/rpg/model.js";
 import { makeStep } from "../../src/core/engine.js";
 import type { Action } from "../../src/api/types.js";
 import type { GameState } from "../../src/core/state.js";
@@ -121,7 +122,13 @@ describe("bug_0318 — reading the flood-book adds a journal entry (was silent)"
     // Heed Pell on the walk (+5 nerve → nerve 8).
     s = act(s, isTalk);
     s = act(s, isAsk("ask_walk"));
-    s = act(s, isAsk("walk_back"));
+    expect(s.flags["heard_walk"]).toBe(true);
+    expect(s.vars["nerve"]).toBe(8);
+    expect(activeDialogue(index, s)?.node.id).toBe("pell_root");
+    expect(buildRpgObservation(index, s).dialogue?.npc_text).toMatch(/what else, lad/i);
+    const resumedIds = options(s).map((option) => option.id);
+    expect(resumedIds).toEqual(expect.arrayContaining(["ask_ask_weir", "ask_leave_pell"]));
+    expect(resumedIds).not.toContain("ask_walk_back");
     s = act(s, isAsk("leave_pell")); // exit dialogue before interacting with objects
     // Read flood-book (+5 score).
     s = act(s, isRead);

@@ -75,7 +75,9 @@ describe("bug_0226 — The Dawn Beacon wins on the deliberate light act, not on 
     drive({ type: "READ", target: "orders_board" }); // +5
     drive({ type: "TALK", npc: "watchman" });
     drive({ type: "ASK", npc: "watchman", topic: "ask_fight" }); // +2 attack
-    drive({ type: "ASK", npc: "watchman", topic: "fight_back" }); // back to root
+    const resumedIds = enumerateRpgActions(index, s).map((option) => option.id);
+    expect(resumedIds).toContain("ask_leave_watch");
+    expect(resumedIds).not.toContain("ask_fight_back");
     drive({ type: "ASK", npc: "watchman", topic: "leave_watch" }); // end conversation
     drive({ type: "TAKE", item: "winch_bar" });
     drive({ type: "MOVE", direction: "west" }); // armory

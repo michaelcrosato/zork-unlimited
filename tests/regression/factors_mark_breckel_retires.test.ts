@@ -54,13 +54,18 @@ describe("bug_0401 — factors_mark retires Breckel after Harwick folds", () => 
     expect(actionIds(s)).toContain("attack_breckel");
     s = play(s, ["go_south"]);
 
-    s = play(s, [
-      "read_seal_notice",
-      "go_west",
-      "talk_silas",
-      "ask_ask_testimony",
-      "ask_testimony_back",
+    s = play(s, ["read_seal_notice", "go_west", "talk_silas", "ask_ask_testimony"]);
+    const resumedActions = actionIds(s);
+    expect(resumedActions).not.toContain("ask_testimony_back");
+    expect(resumedActions).toEqual([
+      "ask_ask_private",
       "ask_leave_silas",
+      "go_east",
+      "look_around",
+      "inventory",
+    ]);
+    s = play(s, [
+      // The movement action closes Silas's exchange as part of the same decision.
       "go_east",
       "go_east",
       "take_factor_ledger",

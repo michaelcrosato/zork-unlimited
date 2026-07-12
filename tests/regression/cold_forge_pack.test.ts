@@ -80,6 +80,11 @@ const isTalk = (a: Action) => a.type === "TALK";
 const askTopic = (topic: string) => (a: Action) =>
   a.type === "ASK" && (a as { topic?: string }).topic === topic;
 const canAsk = (s: GameState, topic: string) => options(s).some((o) => askTopic(topic)(o.action));
+function expectSpiritRoot(s: GameState): void {
+  const dialogue = buildRpgObservation(index, s).dialogue;
+  expect(dialogue?.npc).toBe("lantern_spirit");
+  expect(dialogue?.npc_text).toMatch(/What else would you know/i);
+}
 
 describe("bug_0021 — The Cold Forge (second RPG pack) is valid, solvable, and well-formed", () => {
   it("compiles and validates green under the full RPG validator", () => {
@@ -104,10 +109,10 @@ describe("bug_0021 — The Cold Forge (second RPG pack) is valid, solvable, and 
     s = act(s, askTopic("ask_sentinel")); // grants +2 attack
     expect(s.flags["heard_sentinel"]).toBe(true);
     expect(s.vars["attack"]).toBe(6); // the blessing is real and mechanical
-    s = act(s, askTopic("sentinel_back")); // back to root
+    expectSpiritRoot(s); // reply + root resume are one accepted decision
     s = act(s, askTopic("ask_heart")); // the second clue
     expect(s.flags["heard_heart"]).toBe(true);
-    s = act(s, askTopic("heart_back"));
+    expectSpiritRoot(s);
     s = act(s, askTopic("leave_spirit")); // ungated escape → dialogue ends
     expect(score(s)).toBe(0); // no score from talking
 
@@ -141,7 +146,7 @@ describe("bug_0021 — The Cold Forge (second RPG pack) is valid, solvable, and 
     s = act(s, isTalk);
     s = act(s, askTopic("ask_sentinel")); // → lands on the sentinel node, +2 attack
     expect(s.vars["attack"]).toBe(6);
-    s = act(s, askTopic("sentinel_back")); // back to root
+    expectSpiritRoot(s);
     // The topic is now gated (not_flag heard_sentinel) ⇒ gone from the legal set.
     expect(canAsk(s, "ask_sentinel")).toBe(false);
     expect(canAsk(s, "ask_heart")).toBe(true); // the other topic still offered

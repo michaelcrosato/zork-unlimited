@@ -227,21 +227,18 @@ describe("quest crawler", () => {
 
   it("SOFTLOCK: the immediate S4 does not also fire the solver form for the same dead end (Fix 2)", () => {
     const pack = generateRpgPack(8);
-    // A genuine, pack-native zero-legal-actions dead end, no dangling reference or
-    // rules wrapper needed: while the "spirit" NPC's dialogue is active,
-    // `enumerateRpgBaseActions` (src/rpg/legal_actions.ts) returns ONLY that node's
-    // topics and — unlike the non-dialogue branch — returns immediately rather than
-    // falling through to the always-available LOOK/INVENTORY. Emptying the root
-    // node's topics therefore yields a REAL zero-options state the instant the
-    // player talks to the spirit, which the Task-4 S4 oracle catches immediately.
+    // Interruptible dialogue deliberately retains ordinary room actions, so a
+    // pack-native empty topic list can no longer manufacture a zero-action state.
+    // Fault-inject the prepared index by removing its start room instead: the
+    // enumerator safely returns no actions for that corrupted runtime state, which
+    // exercises the immediate oracle without weakening production dialogue.
     // Task 5 review fix: the end-of-episode solver oracle must not ALSO fire for the
     // same post-episode state — both are true findings for the one dead end, but
     // firing both is a redundant double-report; S4 (cheaper, no solver budget spent)
     // is the one kept.
-    const spirit = pack.npcs.find((n) => n.id === "spirit")!;
-    const root = spirit.dialogue.nodes.find((n) => n.id === spirit.dialogue.root)!;
-    root.topics = [];
-    const r = crawlQuest(preparePack(pack), {
+    const prepared = preparePack(pack);
+    prepared.index.rooms.delete(pack.meta.start_room);
+    const r = crawlQuest(prepared, {
       seed: 5,
       maxSteps: 1500,
       policy: "mixed",

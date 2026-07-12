@@ -49,11 +49,6 @@
     {
       "type": "ASK",
       "npc": "reaver_shade",
-      "topic": "wight_back"
-    },
-    {
-      "type": "ASK",
-      "npc": "reaver_shade",
       "topic": "leave_shade"
     },
     {
@@ -67,6 +62,10 @@
     {
       "type": "MOVE",
       "direction": "north"
+    },
+    {
+      "type": "ATTACK",
+      "enemy": "barrow_wight"
     },
     {
       "type": "ATTACK",
@@ -103,5 +102,5 @@
       "item": "circlet"
     }
   ],
-  "expected_final_hash": "aa5f8649e2f7d677dc462badce4fb7ae04aff686298bca08bcf188ef2e02abd2"
+  "expected_final_hash": "881bbe1d3a594ad78482d5b6f8bf44f3c6e781fcd6e29bae2a7c5d10a67fbdc1"
 }

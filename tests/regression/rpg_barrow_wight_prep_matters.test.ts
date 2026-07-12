@@ -123,7 +123,10 @@ describe("bug_0102 — The Sunken Barrow wight has real teeth, so the shade's wa
     s = act(s, isTalk); // the reaver's shade
     s = act(s, askTopic("ask_wight")); // the ONLY difference from case (3): the shade's defense ward
     expect(s.vars["defense"]).toBe(5); // bug_0113: ward raised +2→+3 (def 2→5)
-    s = act(s, askTopic("wight_back"));
+    expect(options(s).map((o) => o.id)).toEqual(
+      expect.arrayContaining(["ask_ask_lord", "ask_leave_shade", "go_east"]),
+    );
+    expect(options(s).map((o) => o.id)).not.toContain("ask_wight_back");
     s = act(s, askTopic("leave_shade"));
     s = act(s, move("east")); // → entry_hall
     s = act(s, isTake); // iron bar

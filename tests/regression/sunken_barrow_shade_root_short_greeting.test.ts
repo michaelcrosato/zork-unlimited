@@ -9,8 +9,9 @@
  * Fix: added a `variants` block to shade_root using existing topic flags
  * (heard_warding / heard_lord_lore). When any flag is set the short form
  * "What else would you ask of me?" fires instead of the full greeting.
- * First visit is unchanged (no flags yet). No new flag, no score / route /
- * stat / ending change; prose only.
+ * First visit is unchanged (no flags yet). Substantive replies now auto-resume
+ * this reactive root in the same accepted action, without a filler back topic.
+ * No new flag, no score / route / stat / ending change; prose only.
  */
 import { describe, it, expect } from "vitest";
 import { loadRpgSourceFile } from "../../src/rpg/source.js";
@@ -20,6 +21,7 @@ import {
   initStateForRpgPack,
   enumerateRpgActions,
 } from "../../src/rpg/runner.js";
+import { buildRpgObservation } from "../../src/rpg/observation.js";
 import { validateRpg } from "../../src/validate/rpg_validator.js";
 import { makeStep } from "../../src/core/engine.js";
 import type { Action } from "../../src/api/types.js";
@@ -64,7 +66,7 @@ function spokenLines(events: GameEvent[]): string[] {
     .filter((t) => t.startsWith("reaver's shade:"));
 }
 
-describe("bug_0325 — sunken_barrow shade_root shows short greeting on return", () => {
+describe("bug_0325 — sunken_barrow shade_root reacts immediately after counsel", () => {
   it("(a) first visit to shade_root shows full greeting", () => {
     let s = initStateForRpgPack(index, 7);
     s = act(s, move("down")); // barrow_mouth → entry_hall
@@ -76,30 +78,40 @@ describe("bug_0325 — sunken_barrow shade_root shows short greeting on return",
     expect(lines[0]).not.toContain("What else would you ask");
   });
 
-  it("(b) return after wight topic shows short acknowledgment, not full greeting", () => {
+  it("(b) wight counsel immediately resumes the short root without a filler topic", () => {
     let s = initStateForRpgPack(index, 7);
     s = act(s, move("down"));
     s = act(s, move("west"));
     s = act(s, (a) => a.type === "TALK");
-    s = act(s, ask("ask_wight")); // sets heard_warding
-    const back = run(s, ask("wight_back")); // → shade_root
-    const lines = spokenLines(back.events);
-    expect(lines.length).toBe(1);
-    expect(lines[0]).toContain("What else would you ask of me");
-    expect(lines[0]).not.toContain("Another one, come down");
+    const answer = run(s, ask("ask_wight")); // sets heard_warding and resumes shade_root
+    s = answer.state;
+    expect(spokenLines(answer.events)).toHaveLength(1); // counsel is delivered once
+    const obs = buildRpgObservation(index, s);
+    expect(obs.dialogue?.npc).toBe("reaver_shade");
+    expect(obs.dialogue?.npc_text).toContain("What else would you ask of me");
+    expect(obs.dialogue?.npc_text).not.toContain("Another one, come down");
+    expect(options(s).map((o) => o.id)).toEqual(
+      expect.arrayContaining(["ask_ask_lord", "ask_leave_shade", "go_east"]),
+    );
+    expect(options(s).map((o) => o.id)).not.toContain("ask_wight_back");
   });
 
-  it("(c) return after lord topic also shows short acknowledgment", () => {
+  it("(c) lord lore also immediately resumes the short root", () => {
     let s = initStateForRpgPack(index, 7);
     s = act(s, move("down"));
     s = act(s, move("west"));
     s = act(s, (a) => a.type === "TALK");
-    s = act(s, ask("ask_lord")); // sets heard_lord_lore
-    const back = run(s, ask("lord_back")); // → shade_root
-    const lines = spokenLines(back.events);
-    expect(lines.length).toBe(1);
-    expect(lines[0]).toContain("What else would you ask of me");
-    expect(lines[0]).not.toContain("Another one, come down");
+    const answer = run(s, ask("ask_lord")); // sets heard_lord_lore and resumes shade_root
+    s = answer.state;
+    expect(spokenLines(answer.events)).toHaveLength(1); // lore is delivered once
+    const obs = buildRpgObservation(index, s);
+    expect(obs.dialogue?.npc).toBe("reaver_shade");
+    expect(obs.dialogue?.npc_text).toContain("What else would you ask of me");
+    expect(obs.dialogue?.npc_text).not.toContain("Another one, come down");
+    expect(options(s).map((o) => o.id)).toEqual(
+      expect.arrayContaining(["ask_ask_wight", "ask_leave_shade", "go_east"]),
+    );
+    expect(options(s).map((o) => o.id)).not.toContain("ask_lord_back");
   });
 
   it("(d) pack validates green and ending_victory 50/50 route is unaffected", () => {
@@ -111,9 +123,11 @@ describe("bug_0325 — sunken_barrow shade_root shows short greeting on return",
     s = act(s, move("west")); // → reaver_rest
     s = act(s, (a) => a.type === "TALK");
     s = act(s, ask("ask_wight")); // +3 defense
-    s = act(s, ask("wight_back"));
+    expect(options(s).map((o) => o.id)).not.toContain("ask_wight_back");
+    expect(options(s).map((o) => o.id)).toContain("ask_ask_lord");
     s = act(s, ask("ask_lord")); // heard_lord_lore
-    s = act(s, ask("lord_back"));
+    expect(options(s).map((o) => o.id)).not.toContain("ask_lord_back");
+    expect(options(s).map((o) => o.id)).toContain("ask_leave_shade");
     s = act(s, ask("leave_shade"));
     s = act(s, move("east")); // → entry_hall
     s = act(s, move("north")); // → guard_crypt

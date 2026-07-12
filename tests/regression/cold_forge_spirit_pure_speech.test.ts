@@ -118,17 +118,16 @@ describe("bug_0071 — the lantern-spirit's npc_text is pure speech (clean wrapp
     expect(greetLines[0]).toContain("watched this forge die by inches");
     s = greet.state;
 
-    // Each one-shot info topic, returning to root between them.
-    for (const [topic, back] of [
-      ["ask_sentinel", "sentinel_back"],
-      ["ask_heart", "heart_back"],
-      ["ask_forge", "forge_back"],
-    ] as const) {
+    // Each one-shot info topic returns to root in that same accepted decision.
+    for (const topic of ["ask_sentinel", "ask_heart", "ask_forge"] as const) {
       const told = run(s, ask(topic));
       const lines = spokenLines(told.events);
       expect(lines.length, `${topic} should speak exactly one line`).toBe(1);
       lines.forEach(expectWellFormed);
-      s = act(told.state, ask(back));
+      s = told.state;
+      const root = buildRpgObservation(index, s).dialogue;
+      expect(root?.npc).toBe("lantern_spirit");
+      expect(root?.npc_text).toMatch(/What else would you know/i);
     }
   });
 
@@ -151,9 +150,11 @@ describe("bug_0071 — the lantern-spirit's npc_text is pure speech (clean wrapp
     s = act(s, (a) => a.type === "TAKE"); // pry-bar
     s = act(s, (a) => a.type === "TALK"); // lantern-spirit
     s = act(s, ask("ask_sentinel")); // +2 attack blessing
-    s = act(s, ask("sentinel_back"));
+    expect(s.flags["heard_sentinel"]).toBe(true);
+    expect(buildRpgObservation(index, s).dialogue?.npc_text).toMatch(/What else would you know/i);
     s = act(s, ask("ask_heart"));
-    s = act(s, ask("heart_back"));
+    expect(s.flags["heard_heart"]).toBe(true);
+    expect(buildRpgObservation(index, s).dialogue?.npc_text).toMatch(/What else would you know/i);
     s = act(s, ask("leave_spirit"));
     s = act(s, move("north")); // → bellows_walk
     let guard = 0;

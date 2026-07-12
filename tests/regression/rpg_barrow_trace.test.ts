@@ -7,6 +7,7 @@ import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import { indexRpgPack, buildRpgRules } from "../../src/rpg/runner.js";
+import { runActions } from "../../src/trace/record.js";
 import { replayTrace } from "../../src/trace/replay.js";
 import type { Trace } from "../../src/trace/record.js";
 import type { RpgAction } from "../../src/api/types.js";
@@ -22,6 +23,13 @@ describe("rpg barrow victory trace", () => {
     // The trace must match the pack it was recorded against (content-hash, §8.8).
     expect(trace.content_hash).toBe(loaded.compiled.contentHash);
     const rules = buildRpgRules(indexRpgPack(loaded.compiled.pack));
+    const run = runActions(rules, trace.initial_state, trace.actions);
+    // A matching hash is not enough for a named victory trace: rejected actions
+    // leave state unchanged and can otherwise be laundered into a newly pinned hash.
+    expect(run.steps.map((step) => step.ok)).toEqual(trace.actions.map(() => true));
+    expect(run.finalState.ended).toBe(true);
+    expect(run.finalState.endingId).toBe("ending_victory");
+    expect(run.finalState.vars["hp"]).toBeGreaterThan(0);
     const result = replayTrace(trace, rules);
     expect(result.ok).toBe(true);
     expect(result.finalHash).toBe(trace.expected_final_hash);

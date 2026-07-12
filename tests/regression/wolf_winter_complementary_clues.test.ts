@@ -7,6 +7,7 @@
 import { describe, expect, it } from "vitest";
 import { makeStep } from "../../src/core/engine.js";
 import type { GameState } from "../../src/core/state.js";
+import { activeDialogue } from "../../src/rpg/model.js";
 import { buildRpgObservation } from "../../src/rpg/observation.js";
 import {
   buildRpgRules,
@@ -24,7 +25,7 @@ const step = makeStep(buildRpgRules(index));
 const cade = pack.npcs.find((npc) => npc.id === "houndsman");
 const node = (id: string) => cade?.dialogue.nodes.find((entry) => entry.id === id);
 
-function act(state: GameState, id: string): GameState {
+function takeAction(state: GameState, id: string) {
   const actions = enumerateRpgActions(index, state);
   const chosen = actions.find((action) => action.id === id);
   expect(
@@ -34,7 +35,16 @@ function act(state: GameState, id: string): GameState {
   if (!chosen) throw new Error(`missing ${id}`);
   const result = step(state, chosen.action);
   expect(result.ok, result.rejectionReason).toBe(true);
-  return result.state;
+  if (!result.ok) throw new Error(`rejected ${id}`);
+  return result;
+}
+
+function act(state: GameState, id: string): GameState {
+  return takeAction(state, id).state;
+}
+
+function narration(events: ReturnType<typeof takeAction>["events"]): string {
+  return events.flatMap((event) => (event.type === "narration" ? [event.text] : [])).join(" ");
 }
 
 describe("bug_0504 — Wolf-Winter clues are complementary rather than contradictory", () => {
@@ -78,13 +88,29 @@ describe("bug_0504 — Wolf-Winter clues are complementary rather than contradic
     let state = initStateForRpgPack(index, 930014);
     state = act(state, "go_north");
     state = act(state, "talk_houndsman");
-    state = act(state, "ask_wolves");
-    expect(buildRpgObservation(index, state).dialogue?.npc_text).toMatch(/Quick lines/i);
+    const quick = takeAction(state, "ask_wolves");
+    state = quick.state;
+    expect(narration(quick.events)).toMatch(/Quick lines/i);
+    expect(activeDialogue(index, state)?.node.id).toBe("cade_root");
+    const quickObservation = buildRpgObservation(index, state);
+    expect(quickObservation.dialogue?.npc_text).toMatch(/Ask what else you need/i);
+    expect(quickObservation.available_actions.map((action) => action.id)).toEqual(
+      expect.arrayContaining(["ask_byre", "ask_leave"]),
+    );
+    expect(quickObservation.available_actions.map((action) => action.id)).not.toContain(
+      "ask_wolves_back",
+    );
     expect(state.journal.some((entry) => /quick\/open line/i.test(entry))).toBe(true);
 
-    state = act(state, "ask_byre");
-    expect(buildRpgObservation(index, state).dialogue?.npc_text).toMatch(
-      /Guarded lines[^]*patient alternative/i,
+    const guarded = takeAction(state, "ask_byre");
+    state = guarded.state;
+    expect(narration(guarded.events)).toMatch(/Guarded lines[^]*patient alternative/i);
+    expect(activeDialogue(index, state)?.node.id).toBe("cade_root");
+    const guardedObservation = buildRpgObservation(index, state);
+    expect(guardedObservation.dialogue?.npc_text).toMatch(/Ask what else you need/i);
+    expect(guardedObservation.available_actions.map((action) => action.id)).toContain("ask_leave");
+    expect(guardedObservation.available_actions.map((action) => action.id)).not.toContain(
+      "ask_byre_back",
     );
     expect(state.journal.some((entry) => /guarded\/patient/i.test(entry))).toBe(true);
     expect(state.flags).toMatchObject({ heard_counsel: true, heard_plan: true });

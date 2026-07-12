@@ -69,6 +69,12 @@ const isTalk = (a: Action) => a.type === "TALK";
 const askTopic = (topic: string) => (a: Action) =>
   a.type === "ASK" && (a as { topic?: string }).topic === topic;
 
+function expectSpiritRoot(s: GameState): void {
+  const dialogue = buildRpgObservation(index, s).dialogue;
+  expect(dialogue?.npc).toBe("lantern_spirit");
+  expect(dialogue?.npc_text).toMatch(/What else would you know/i);
+}
+
 /** From a freshly-opened sentinel fight, finish it, lever the grate, and descend to win. */
 function finishToWin(s: GameState): GameState {
   let guard = 0;
@@ -92,10 +98,12 @@ function finishToWin(s: GameState): GameState {
 function takeSpiritCounsel(s: GameState, alsoAskFounder: boolean): GameState {
   s = act(s, isTalk);
   s = act(s, askTopic("ask_sentinel")); // +2 attack
-  s = act(s, askTopic("sentinel_back")); // → root
+  expect(s.flags["heard_sentinel"]).toBe(true);
+  expectSpiritRoot(s);
   if (alsoAskFounder) {
     s = act(s, askTopic("ask_founder")); // sets heard_founder, no stat change
-    s = act(s, askTopic("founder_back")); // → root
+    expect(s.flags["heard_founder"]).toBe(true);
+    expectSpiritRoot(s);
   }
   s = act(s, askTopic("leave_spirit")); // ungated escape → dialogue ends
   return s;

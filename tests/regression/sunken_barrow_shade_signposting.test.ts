@@ -74,7 +74,10 @@ function learnWarding(s: GameState): GameState {
   s = act(s, move("west"));
   s = act(s, (a) => a.type === "TALK");
   s = act(s, ask("ask_wight"));
-  s = act(s, ask("wight_back"));
+  expect(options(s).map((o) => o.id)).toEqual(
+    expect.arrayContaining(["ask_ask_lord", "ask_leave_shade", "go_east"]),
+  );
+  expect(options(s).map((o) => o.id)).not.toContain("ask_wight_back");
   s = act(s, ask("leave_shade"));
   return act(s, move("east"));
 }

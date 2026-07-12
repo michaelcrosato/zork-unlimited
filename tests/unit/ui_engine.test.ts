@@ -117,10 +117,19 @@ describe("GameSession — RPG-only structured play", () => {
       countsTowardJourney: true,
       reason: "substantive_dialogue",
     });
-    expect(s.choose("ask_bill_back").journeyDecision).toEqual({
-      countsTowardJourney: false,
-      reason: "dialogue_navigation",
-    });
+    const resumedChoices = s.view().choices.map((choice) => choice.id);
+    expect(resumedChoices).not.toContain("ask_bill_back");
+    expect(resumedChoices).toEqual([
+      "ask_ask_jesses",
+      "ask_ask_mews",
+      "ask_leave_aldric",
+      "go_east",
+      "go_north",
+      "go_west",
+      "examine_falcon_jesses",
+      "look_around",
+      "inventory",
+    ]);
     expect(s.choose("ask_leave_aldric").journeyDecision).toEqual({
       countsTowardJourney: false,
       reason: "dialogue_closure",
@@ -149,7 +158,8 @@ describe("GameSession — RPG-only structured play", () => {
       "examine_falcon_jesses",
       "talk_aldric",
       "ask_ask_bill",
-      "ask_bill_back",
+      // A repeated room inspection preserves the auto-resumed exchange.
+      "examine_falcon_jesses",
       "ask_leave_aldric",
       "talk_aldric",
     ]) {
@@ -164,6 +174,16 @@ describe("GameSession — RPG-only structured play", () => {
       expect(mcpOutcome.ok, actionId).toBe(true);
       expect(mcpOutcome.journeyDecision, actionId).toEqual(uiOutcome.journeyDecision);
       expect(mcpOutcome.journeyActionId, actionId).toBe(uiOutcome.journeyActionId);
+      if (actionId === "ask_ask_bill") {
+        const uiChoices = ui.view().choices.map((choice) => choice.id);
+        const mcpChoices = mcpOutcome.observation.available_actions.map((action) => action.id);
+        expect(uiChoices).not.toContain("ask_bill_back");
+        expect(mcpChoices).not.toContain("ask_bill_back");
+        expect(uiChoices).toEqual(
+          expect.arrayContaining(["ask_ask_jesses", "ask_ask_mews", "examine_falcon_jesses"]),
+        );
+        expect(mcpChoices).toEqual(uiChoices);
+      }
       uiJourney = recordJourneyDecision(
         uiJourney,
         { surface: "quest", actionId: uiOutcome.journeyActionId! },

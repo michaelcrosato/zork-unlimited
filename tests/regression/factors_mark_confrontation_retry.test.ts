@@ -69,19 +69,30 @@ function narrations(events: GameEvent[]): string {
 }
 
 function fullyPreparedYard(): GameState {
-  return play(initStateForRpgPack(index, 7), [
+  let state = play(initStateForRpgPack(index, 7), [
     "read_seal_notice",
     "go_west",
     "talk_silas",
     "ask_ask_testimony",
-    "ask_testimony_back",
+  ]);
+  const resumedActions = actionIds(state);
+  expect(resumedActions).not.toContain("ask_testimony_back");
+  expect(resumedActions).toEqual([
+    "ask_ask_private",
     "ask_leave_silas",
+    "go_east",
+    "look_around",
+    "inventory",
+  ]);
+  state = play(state, [
+    // Moving east interrupts Silas without a separate navigation/leave turn.
     "go_east",
     "go_east",
     "take_factor_ledger",
     "read_factor_ledger",
     "go_west",
   ]);
+  return state;
 }
 
 describe("bug_0455 - Factor's Mark confrontation can recover from a bad roll", () => {

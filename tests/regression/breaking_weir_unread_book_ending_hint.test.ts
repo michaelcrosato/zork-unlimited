@@ -48,8 +48,22 @@ function winBreakingWeir({ readBook }: { readBook: boolean }): GameState {
   let state = initStateForRpgPack(index, 7);
   state = playAction(state, "talk_pell");
   state = playAction(state, "ask_ask_walk");
-  state = playAction(state, "ask_walk_back");
-  state = playAction(state, "ask_leave_pell");
+  const resumedActions = enumerateRpgActions(index, state).map((action) => action.id);
+  expect(resumedActions).not.toContain("ask_walk_back");
+  expect(resumedActions).toEqual([
+    "ask_ask_weir",
+    "ask_leave_pell",
+    "go_north",
+    "examine_flood_book",
+    "read_flood_book",
+    "examine_life_line",
+    "take_life_line",
+    "examine_weir_iron",
+    "take_weir_iron",
+    "look_around",
+    "inventory",
+  ]);
+  // Same-room actions preserve Pell's auto-resumed exchange; leaving north closes it.
   if (readBook) state = playAction(state, "read_flood_book");
   state = playAction(state, "take_weir_iron");
   state = playAction(state, "take_life_line");

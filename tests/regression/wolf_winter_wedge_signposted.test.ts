@@ -16,8 +16,8 @@
  *
  * This pins:
  *   (1) SIGNPOST — Cade's byre counsel names the rail + the wedge + the half-shut-breach
- *       payoff (in both the spoken npc_text surfaced by the runner AND the persisted
- *       journal note), so the affordance is discoverable on the natural path;
+ *       payoff (in both the spoken reply event AND the persisted journal note), then
+ *       returns to Cade's post-effect root, so the affordance is discoverable naturally;
  *   (2) DISCOVERABILITY — at the paling, target-only USE "wedge" is immediately legal and
  *       TAKE is not; the affordance cannot hide behind inventory ceremony;
  *   (3) OPTIONAL TACTICAL PAYOFF — no exit/win/ending turns on breach_braced, but success
@@ -28,7 +28,9 @@
  */
 import { describe, it, expect } from "vitest";
 import { makeStep } from "../../src/core/engine.js";
+import type { GameEvent } from "../../src/core/events.js";
 import { buildRpgObservation } from "../../src/rpg/observation.js";
+import { activeDialogue } from "../../src/rpg/model.js";
 import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import { indexRpgPack, buildRpgRules, initStateForRpgPack } from "../../src/rpg/runner.js";
 import type { RpgAction } from "../../src/api/types.js";
@@ -55,6 +57,7 @@ function setup() {
 /** Step the one legal RpgAction matching `want` (type + given fields); assert it exists. */
 function driver(rules: ReturnType<typeof setup>["rules"], step: ReturnType<typeof setup>["step"]) {
   let state: GameState = null as unknown as GameState;
+  let latestEvents: GameEvent[] = [];
   return {
     start(index: ReturnType<typeof setup>["index"]) {
       state = initStateForRpgPack(index, 11);
@@ -62,6 +65,7 @@ function driver(rules: ReturnType<typeof setup>["rules"], step: ReturnType<typeo
     },
     legal: (): RpgAction[] => rules.legalActions(state) as RpgAction[],
     state: () => state,
+    events: () => latestEvents,
     act(want: Partial<RpgAction> & { type: RpgAction["type"] }) {
       const legal = rules.legalActions(state) as RpgAction[];
       const match = legal.find((a) =>
@@ -73,7 +77,9 @@ function driver(rules: ReturnType<typeof setup>["rules"], step: ReturnType<typeo
       ).toBeTruthy();
       const res = step(state, match as RpgAction);
       expect(res.ok, `engine rejected ${JSON.stringify(want)}: ${res.rejectionReason}`).toBe(true);
+      if (!res.ok) throw new Error(`engine rejected ${JSON.stringify(want)}`);
       state = res.state;
+      latestEvents = res.events;
       return this;
     },
   };
@@ -110,16 +116,27 @@ describe("bug_0258 — The Wolf-Winter: the optional wedge is signposted and dis
     expect(journal.add_journal!.toLowerCase()).toContain("wedge");
   });
 
-  it("asking Cade about the byre surfaces the signpost in the spoken text and the journal", () => {
+  it("asking Cade about the byre surfaces the spoken signpost, journal, and resumed root", () => {
     const { index, rules, step } = setup();
     const d = driver(rules, step).start(index);
     d.act({ type: "MOVE", direction: "north" }); // steading_yard -> byre_yard
     d.act({ type: "TALK", npc: "houndsman" });
     d.act({ type: "ASK", npc: "houndsman", topic: "byre" });
-    const obs = buildRpgObservation(index, d.state());
-    const spoken = (obs.dialogue?.npc_text ?? "").toLowerCase();
+    const spoken = d
+      .events()
+      .flatMap((event) => (event.type === "narration" ? [event.text] : []))
+      .join(" ")
+      .toLowerCase();
     expect(spoken).toContain("wedge it back across");
     expect(spoken).toContain("half-shut the breach");
+
+    const obs = buildRpgObservation(index, d.state());
+    expect(activeDialogue(index, d.state())?.node.id).toBe("cade_root");
+    expect(obs.dialogue?.npc_text).toMatch(/Ask what else you need/i);
+    const resumedIds = obs.available_actions.map((action) => action.id);
+    expect(resumedIds).toEqual(expect.arrayContaining(["ask_wolves", "ask_leave"]));
+    expect(resumedIds).not.toContain("ask_byre_back");
+    expect(d.state().flags["heard_plan"]).toBe(true);
     const journal = d.state().journal.join(" ").toLowerCase();
     expect(journal).toContain("wedge the fallen rail");
     expect(journal).toContain("if it splits, bind the joined lengths");

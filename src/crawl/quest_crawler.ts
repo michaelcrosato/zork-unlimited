@@ -290,6 +290,10 @@ export function crawlQuest(prepared: PreparedQuest, opts: QuestCrawlOptions): Qu
     // would otherwise be true but redundant findings for the same dead end (Task 5
     // review fix); the S4 one is kept since it fired first and needs no solver budget.
     let episodeSoftlockFired = false;
+    // A zero-action INITIAL state cannot consume a step, so blindly starting fresh
+    // episodes would repeat forever without advancing `totalSteps`. One witness is
+    // complete evidence for that seed-independent initial corruption.
+    let initialSoftlockFired = false;
 
     for (
       let s = 0;
@@ -321,6 +325,7 @@ export function crawlQuest(prepared: PreparedQuest, opts: QuestCrawlOptions): Qu
           record,
         );
         episodeSoftlockFired = true;
+        initialSoftlockFired = record.actions.length === 0;
         break;
       }
 
@@ -526,6 +531,7 @@ export function crawlQuest(prepared: PreparedQuest, opts: QuestCrawlOptions): Qu
         if (f) collector.findings[idx] = minimizeFinding(prepared, f, record);
       }
     }
+    if (initialSoftlockFired) break;
   }
 
   return {
