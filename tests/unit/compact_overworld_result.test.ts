@@ -4,7 +4,9 @@ import {
   compactOverworldActionResult,
   compactOverworldAreaTravelResult,
   compactOverworldQuestCompletionResult,
+  compactOverworldRoadEncounterResult,
   OVERWORLD_COMPACT_ACTION_TEXT_CHAR_LIMIT,
+  OVERWORLD_COMPACT_ROAD_ENCOUNTER_TEXT_CHAR_LIMIT,
 } from "../../src/mcp/compact_overworld_result.js";
 import {
   OVERWORLD_COMPACT_LABEL_CHAR_LIMIT,
@@ -15,6 +17,7 @@ import type {
   OverworldActionResult,
   OverworldAreaTravelResult,
   OverworldQuestCompletionResult,
+  OverworldRoadEncounterResult,
 } from "../../src/world/session.js";
 
 function refs(count: number): { id: string; name: string; title: string }[] {
@@ -143,5 +146,76 @@ describe("compactOverworldActionResult", () => {
     expect(compact.route).not.toBe(longRoute);
     expect(compact.route).toHaveLength(OVERWORLD_COMPACT_LABEL_CHAR_LIMIT);
     expect(JSON.stringify(compact)).not.toContain(longRoute);
+  });
+});
+
+describe("compactOverworldRoadEncounterResult", () => {
+  it("keeps the player-facing road scene, labels, and bounded chosen consequence", () => {
+    const verboseText = `The chosen road consequence ${"keeps unfolding ".repeat(60)}`;
+    const optionOutcome = "You spend stores and pull the stranded travelers clear.";
+    const result: OverworldRoadEncounterResult = {
+      strategy: "assist_travelers",
+      minutes: 40,
+      suppliesUsed: 1,
+      fatigueGained: 1,
+      renownGained: 2,
+      encounter: {
+        id: "road:albany-colonie:600",
+        edgeId: "road_albany_colonie",
+        from: "Albany city",
+        to: "Colonie town",
+        route: "I-90 / New York State Thruway",
+        arrivedAt: "Day 1, 10:00",
+        timing: "On the road from Albany city to Colonie town.",
+        event: {
+          id: "road_event_albany_colonie",
+          edge: "road_albany_colonie",
+          title: "Thruway shoulder flare-up",
+          risk: "low",
+          summary: "A jackknifed box truck narrows the shoulder behind state-police flares.",
+        },
+        options: [
+          {
+            strategy: "assist_travelers",
+            label: "Help clear the shoulder",
+            minutes: 40,
+            suppliesCost: 1,
+            fatigueGained: 1,
+            renownGained: 2,
+            outcome: optionOutcome,
+          },
+        ],
+      },
+      entry: {
+        id: "road:albany-colonie:600:assist_travelers",
+        kind: "road",
+        town: "Colonie town",
+        title: "Help clear the shoulder: Thruway shoulder flare-up",
+        text: verboseText,
+        recordedAt: "Day 1, 10:40",
+      },
+    };
+
+    const compact = compactOverworldRoadEncounterResult(result);
+
+    expect(compact.encounter.route).toBe(result.encounter.route);
+    expect(compact.encounter.event).toEqual([
+      result.encounter.event.id,
+      result.encounter.event.risk,
+      result.encounter.event.title,
+      result.encounter.event.summary,
+    ]);
+    expect(compact.encounter.options[0]).toEqual([
+      "assist_travelers",
+      "Help clear the shoulder",
+      40,
+      1,
+      1,
+      2,
+    ]);
+    expect(JSON.stringify(compact.encounter)).not.toContain(optionOutcome);
+    expect(compact.text).not.toBe(verboseText);
+    expect(compact.text).toHaveLength(OVERWORLD_COMPACT_ROAD_ENCOUNTER_TEXT_CHAR_LIMIT);
+    expect(compact.text).toMatch(/\.\.\.\(\+\d+ chars\)$/);
   });
 });

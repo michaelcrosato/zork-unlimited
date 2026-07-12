@@ -27,6 +27,9 @@ export type OverworldCompactDiscoveryKey = "areas" | "jobs" | "sites" | "quests"
 // Immediate local-action prose is the player's consequence, not rolling context.
 // Keep enough room for every shipped contact line while bounding longer area/site copy.
 export const OVERWORLD_COMPACT_ACTION_TEXT_CHAR_LIMIT = 360;
+// Road outcomes include the scene, chosen response, and arrival consequence.
+// Every shipped composition fits; future growth remains transparently bounded.
+export const OVERWORLD_COMPACT_ROAD_ENCOUNTER_TEXT_CHAR_LIMIT = 600;
 
 export type OverworldCompactActionResult = {
   m: number;
@@ -66,6 +69,7 @@ export type OverworldCompactRoadEncounterResult = {
   renown: number;
   encounter: OverworldCompactRoadEncounter;
   entry: OverworldCompactJournalEntry;
+  text: string;
 };
 
 export type OverworldCompactAreaTravelResult = {
@@ -136,6 +140,7 @@ export function compactOverworldRoadEncounterResult(
     renown: result.renownGained,
     encounter,
     entry: compactOverworldJournalEntry(result.entry),
+    text: compactText(result.entry.text, OVERWORLD_COMPACT_ROAD_ENCOUNTER_TEXT_CHAR_LIMIT),
   };
 }
 

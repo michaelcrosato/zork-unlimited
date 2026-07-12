@@ -223,7 +223,7 @@ export default function App(): JSX.Element {
       const result = action();
       setWorldView(worldSession.view());
       setLog((prev) => [
-        `Handled road encounter: ${result.entry.title}. Time +${result.minutes} min, supplies -${result.suppliesUsed}, fatigue +${result.fatigueGained}${result.renownGained > 0 ? `, renown +${result.renownGained}` : ""}.`,
+        `Handled road encounter: ${result.entry.title}. ${result.entry.text} Time +${result.minutes} min, supplies -${result.suppliesUsed}, fatigue +${result.fatigueGained}${result.renownGained > 0 ? `, renown +${result.renownGained}` : ""}.`,
         ...prev,
       ]);
       setError(null);

@@ -50,6 +50,24 @@ describe("overworld_play render (pure, same session the UI/MCP drive)", () => {
     const text = renderEncounter(pending!);
     expect(text).toContain("Road encounter");
     for (const option of pending!.options) expect(text).toContain(option.label);
+    const compact = session.compactView().pending_road;
+    expect(compact).toMatchObject({
+      edge: pending!.edgeId,
+      route: pending!.route,
+      where: [pending!.from, pending!.to, pending!.arrivedAt],
+      event: [pending!.event.id, pending!.event.risk, pending!.event.title, pending!.event.summary],
+    });
+    expect(compact?.options).toEqual(
+      pending!.options.map((option) => [
+        option.strategy,
+        option.label,
+        option.minutes,
+        option.suppliesCost,
+        option.fatigueGained,
+        option.renownGained,
+      ]),
+    );
+    expect(JSON.stringify(compact)).not.toContain(pending!.options[0]!.outcome);
     // The three strategy command words the CLI accepts while wedged.
     expect(text).toMatch(/assist|scout|press/);
   });

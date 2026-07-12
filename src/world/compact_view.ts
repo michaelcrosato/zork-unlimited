@@ -16,7 +16,8 @@ export const OVERWORLD_COMPACT_COMPLETED_ARC_LIMIT = 16;
 export const OVERWORLD_COMPACT_LABEL_CHAR_LIMIT = 96;
 export const OVERWORLD_COMPACT_TITLE_CHAR_LIMIT = 140;
 export const OVERWORLD_COMPACT_RISK_CHAR_LIMIT = 160;
-export const OVERWORLD_COMPACT_VIEW_VERSION = 13 as const;
+export const OVERWORLD_COMPACT_ROAD_EVENT_SUMMARY_CHAR_LIMIT = 240;
+export const OVERWORLD_COMPACT_VIEW_VERSION = 14 as const;
 
 export type OverworldCompactRef = readonly [id: string, name: string];
 export type OverworldCompactJobLeadRef = readonly [id: string, title: string, areaId: string];
@@ -61,6 +62,7 @@ export type OverworldCompactRouteOption = readonly [
 ];
 export type OverworldCompactRoadEncounterOption = readonly [
   strategy: OverworldRoadEncounterOption["strategy"],
+  label: string,
   minutes: number,
   suppliesCost: number,
   fatigueGained: number,
@@ -69,8 +71,9 @@ export type OverworldCompactRoadEncounterOption = readonly [
 export type OverworldCompactRoadEncounter = {
   id: string;
   edge: string;
+  route: string;
   where: readonly [from: string, to: string, at: string];
-  event: readonly [id: string, risk: string];
+  event: readonly [id: string, risk: string, title: string, summary: string];
   options: readonly OverworldCompactRoadEncounterOption[];
 };
 export type OverworldCompactJournalEntry = readonly [
@@ -240,7 +243,7 @@ export const OVERWORLD_COMPACT_LEGEND = {
   quests:
     "[[quest_id, title, anchor_area_id], ...] discovered quest leads; you must be IN anchor_area_id (compare to here[3]; walk there via area_routes) before start_overworld_session_quest",
   pending_road:
-    "{id, edge: road_id, where: [from_town, to_town, at_time], event: [road_event_id, risk_text], options: [[strategy, minutes, supplies_cost, fatigue_gained, renown_gained], ...]} unresolved on-route encounter; resolve it before town actions or more travel",
+    "{id, edge: road_id, route: route_name, where: [from_town, to_town, at_time], event: [road_event_id, risk_text, title, summary], options: [[strategy, label, minutes, supplies_cost, fatigue_gained, renown_gained], ...]} unresolved on-route scene; choose from the same labeled costs a human sees, then resolve it before town actions or more travel",
   journal: "[[kind, title, 'Day N, HH:MM'], ...] recent journal entries",
   travel_log:
     "[[road_id, from_town_id, to_town_id, minutes, supplies_used, fatigue_gained, road_event_id|null], ...] recent trips",
@@ -484,6 +487,7 @@ export function compactPendingRoad(
   for (const option of encounter.options) {
     options.push([
       option.strategy,
+      compactOverworldTitle(option.label),
       option.minutes,
       option.suppliesCost,
       option.fatigueGained,
@@ -493,12 +497,18 @@ export function compactPendingRoad(
   return {
     id: encounter.id,
     edge: encounter.edgeId,
+    route: compactOverworldLabel(encounter.route),
     where: [
       compactOverworldLabel(encounter.from),
       compactOverworldLabel(encounter.to),
       encounter.arrivedAt,
     ],
-    event: [encounter.event.id, compactOverworldRisk(encounter.event.risk)],
+    event: [
+      encounter.event.id,
+      compactOverworldRisk(encounter.event.risk),
+      compactOverworldTitle(encounter.event.title),
+      compactText(encounter.event.summary, OVERWORLD_COMPACT_ROAD_EVENT_SUMMARY_CHAR_LIMIT),
+    ],
     options,
   };
 }
@@ -674,7 +684,12 @@ export function cloneOverworldCompactView(view: OverworldCompactView): Overworld
     clone.pending_road = {
       ...view.pending_road,
       where: [...view.pending_road.where] as readonly [from: string, to: string, at: string],
-      event: [...view.pending_road.event] as readonly [id: string, risk: string],
+      event: [...view.pending_road.event] as readonly [
+        id: string,
+        risk: string,
+        title: string,
+        summary: string,
+      ],
       options: cloneTupleList(view.pending_road.options),
     };
   }

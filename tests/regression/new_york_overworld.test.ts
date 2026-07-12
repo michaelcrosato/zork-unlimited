@@ -299,6 +299,7 @@ describe("New York overworld graph", () => {
     expect(app).toContain("Roads From Here");
     expect(app).toContain("pendingRoadEncounter");
     expect(app).toContain("Handled road encounter");
+    expect(app).toMatch(/Handled road encounter:[\s\S]{0,300}result\.entry\.text/);
     expect(app).toContain("Local Areas");
     expect(app).toContain("Current local area");
     expect(app).toContain("Local Routes");

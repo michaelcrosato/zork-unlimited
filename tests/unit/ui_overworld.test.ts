@@ -7,6 +7,7 @@ import {
   OVERWORLD_COMPACT_MOVEMENT_LIMIT,
   OVERWORLD_COMPACT_RENOWN_LIMIT,
   OVERWORLD_COMPACT_RISK_CHAR_LIMIT,
+  OVERWORLD_COMPACT_ROAD_EVENT_SUMMARY_CHAR_LIMIT,
   OVERWORLD_COMPACT_ROUTE_STEP_LIMIT,
   OVERWORLD_COMPACT_TITLE_CHAR_LIMIT,
   cloneOverworldCompactView,
@@ -646,7 +647,7 @@ describe("OverworldSession", () => {
     expect(view.discovered.length).toBeGreaterThan(24);
     const compact = compactOverworldView(view);
     expect(session.compactView()).toEqual(compact);
-    expect(compact.v).toBe(13);
+    expect(compact.v).toBe(14);
     expect(compact.hidden).toEqual([
       view.hiddenAreaCount,
       view.hiddenJobCount,
@@ -1058,7 +1059,7 @@ describe("OverworldSession", () => {
     ]);
   });
 
-  it("caps compact context labels, titles, and risk text", () => {
+  it("caps compact context labels, titles, road scenes, and risk text", () => {
     const session = new OverworldSession(world);
     const localView = session.view();
     const road = localView.exits.find((exit) => exit.destination.id === "colonie_town");
@@ -1075,6 +1076,7 @@ describe("OverworldSession", () => {
     const longLabel = "label ".repeat(40);
     const longTitle = "title ".repeat(60);
     const longRisk = "risk ".repeat(70);
+    const longSummary = "summary ".repeat(80);
 
     const pendingRoadEncounter = view.pendingRoadEncounter!;
     const compact = compactOverworldView({
@@ -1107,10 +1109,17 @@ describe("OverworldSession", () => {
         ...pendingRoadEncounter,
         from: longLabel,
         to: longLabel,
+        route: longLabel,
         event: {
           ...pendingRoadEncounter.event,
+          title: longTitle,
+          summary: longSummary,
           risk: longRisk as typeof pendingRoadEncounter.event.risk,
         },
+        options: pendingRoadEncounter.options.map((option) => ({
+          ...option,
+          label: longTitle,
+        })),
       },
       regionRenown: { [longLabel]: 7 },
     });
@@ -1124,7 +1133,13 @@ describe("OverworldSession", () => {
     expect(compact.poi[0]?.[1]).toHaveLength(OVERWORLD_COMPACT_TITLE_CHAR_LIMIT);
     expect(compact.events[0]?.[1]).toHaveLength(OVERWORLD_COMPACT_TITLE_CHAR_LIMIT);
     expect(compact.journal?.[0]?.[1]).toHaveLength(OVERWORLD_COMPACT_TITLE_CHAR_LIMIT);
+    expect(compact.pending_road?.route).toHaveLength(OVERWORLD_COMPACT_LABEL_CHAR_LIMIT);
     expect(compact.pending_road?.event[1]).toHaveLength(OVERWORLD_COMPACT_RISK_CHAR_LIMIT);
+    expect(compact.pending_road?.event[2]).toHaveLength(OVERWORLD_COMPACT_TITLE_CHAR_LIMIT);
+    expect(compact.pending_road?.event[3]).toHaveLength(
+      OVERWORLD_COMPACT_ROAD_EVENT_SUMMARY_CHAR_LIMIT,
+    );
+    expect(compact.pending_road?.options[0]?.[1]).toHaveLength(OVERWORLD_COMPACT_TITLE_CHAR_LIMIT);
     expect(compact.pending_road?.where[0]).toHaveLength(OVERWORLD_COMPACT_LABEL_CHAR_LIMIT);
     expect(compact.pending_road?.where[1]).toHaveLength(OVERWORLD_COMPACT_LABEL_CHAR_LIMIT);
     expect(compact.renown?.[0]?.[0]).toHaveLength(OVERWORLD_COMPACT_LABEL_CHAR_LIMIT);

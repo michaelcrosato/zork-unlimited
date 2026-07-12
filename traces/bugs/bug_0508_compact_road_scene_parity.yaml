@@ -1,0 +1,48 @@
+id: bug_0508_compact_road_scene_parity
+title: "Pure road choices preserve the human scene and chosen consequence"
+pack: src/world/compact_view.ts
+reported_by: pure-blind-playtest
+reports:
+  - blind-tester/reports/20260712T054426Z_overworld_seed1507.md
+  - blind-tester/reports/20260712T045851Z_overworld_seed1407.md
+  - ai-runs/pure-canary/seed950002.md
+  - blind-tester/reports/20260708T212627Z_overworld_seed609.md
+  - blind-tester/reports/20260708T195407Z_overworld_seed547.md
+severity: S2
+symptom: >
+  Canonical pure MCP play reduced every pending road scene to an internal event id,
+  a risk word, three repeated strategy ids, and costs. It omitted the route, authored
+  title and summary, and the option labels shown to a human. After the choice it also
+  discarded the canonical consequence prose. Repeated crossings therefore read as
+  abstract toll booths even when an authored corridor scene existed underneath.
+root_cause: >
+  Compact context treated the current road premise and legal-choice labels as rolling
+  history rather than decision-critical player information. The compact result then
+  reused a journal tuple that kept only title and time. The terminal player already
+  printed the consequence, but the web player stopped at title and resource numbers.
+fix: >
+  Compact overworld schema v14 exposes the same bounded route, event title, summary,
+  option labels, and visible costs that human players receive before choosing. It does
+  not reveal option outcomes early. Once chosen, compact MCP and the web UI both render
+  the session's canonical entry text, transparently bounded at 600 characters for the
+  one-off MCP result; rolling journal tuples remain lean and stable strategy ids keep
+  snapshots and replay compatible.
+deterministic_witnesses:
+  - "full and compact pending-road projections agree on route, scene, labels, and costs"
+  - "pre-choice compact context never leaks an option outcome hidden from the human UI"
+  - "compact resolution text equals the full human consequence for shipped road scenes"
+  - "terminal, web, spectator, and compact MCP surfaces all render the chosen consequence"
+tests:
+  - tests/unit/compact_overworld_result.test.ts
+  - tests/unit/mcp_tools.test.ts
+  - tests/unit/ui_overworld.test.ts
+  - tests/unit/spectate_format.test.ts
+  - tests/regression/overworld_cli.test.ts
+  - tests/regression/new_york_overworld.test.ts
+verification:
+  - npm test -- --run tests/unit/compact_overworld_result.test.ts tests/unit/mcp_tools.test.ts tests/unit/ui_overworld.test.ts tests/unit/spectate_format.test.ts tests/regression/overworld_cli.test.ts tests/regression/new_york_overworld.test.ts
+  - npm run typecheck
+  - npm run ui:typecheck
+  - npm run crawl:smoke
+  - npm run blind --seed=1507
+  - npm run health

@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 540 -->
+<!-- historical_cycle_count: 541 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,14 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - compact_road_scene_parity
+
+- Surface: compact overworld v14 now gives pure MCP the same bounded route, event title/summary, option labels, and visible costs as human road choices; hidden outcomes stay hidden until selection, then canonical consequence prose renders in MCP, web UI, terminal, and spectate while rolling journals stay lean.
+- Root/effect: compact projection had reduced every road premise to internal id/risk and bare strategy ids, then discarded the result text. Exact default MCP now exposes Albany–Colonie's jackknifed-truck scene and chosen aftermath; stable strategy ids preserve snapshot/replay compatibility (`bug_0508`).
+- Pure evidence: independently verified seed 1507 completed Wolf-Winter, Gallowmere, Tanner's Fever, and Breaking Weir; continued at goals/checkpoints 23/40/51/80/83, ended honestly at goal 4 on decision 111, clarity/enjoyment 4/4, replay true. Missing-premise friction did not recur; visible prose exposed genuine stale/generic road-content debt.
+- Self-critique: PASS for human/MCP choice-and-consequence parity, not for retention—the player still ended after four quests and called Oneonta→Rome filler. Next is state-aware authored encounter families; truthful goal routing and Cade's learn-both/choose-later copy remain behind it. Seeds 1407+1507 are two new verified reports, below the three-report compile threshold.
+- Guard: 115 focused tests plus root/UI typechecks, final 6000-step crawl (247/247 nodes, 344/344 edges, 12/12 quests), independent receipt verification, and full health (296 files/2101 tests, UI, 12 packs) passed.
 
 ### Cycle result - compact_overworld_action_prose
 
@@ -138,11 +146,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Blind playtest: `fleet:mock` 20/20 verified overworld reports (all five personas rotated); live fleet blocked by nested-CLI auth inside agent sessions — mock lane is the CI oracle, live runs stay plain-shell.
 - Found+fixed: real engine bug — any post-quest-completion overworld snapshot failed restore (region-renown replay gap); `traces/bugs/bug_0496_overworld_renown_restore.yaml` + regression test. Deep soak 352k steps across 8 workers: zero findings.
 - Guard: `npm run health` green end-to-end; crawler byte-identical across worker counts; no verification weakened (coherence pins grew 18→22).
-
-### Cycle result - albany_wolf_winter_relief_bridge
-
-- Content surface: Albany Station Quarter now frames Wolf-Winter as a Rowan-to-Hayden relief dispatch, and Wolf-Winter opens with the Albany relief packet becoming a hill-road steading crisis.
-- Loop effect: regressions pin the source-neutral civic-records/route-desk quest lead, ban the station-board-only contradiction, and prove the RPG opening/Cade handoff names Albany's relief rider while keeping the spear already in hand.
-- Blind playtest: 25-run `overworld` Codex batch seeds 591-615 all exited 0; clarity 25x4/5, enjoyment 25x4/5, replay 25x true; feedback ledger now has 436 accepted reports.
-- Self-critique: bridge/tone complaints dropped from 12/25 to 1/25 and positive relief-chain mentions hit 25/25; compact journal hash/truncation, generic civic resolutions, and road arrival/progress wording remain loud.
-- Guard: focused affected tests, `npm run health`, `npm run blind:feedback`, and reports `20260708T210747Z`-`20260708T213426Z` seeds 591-615 passed.

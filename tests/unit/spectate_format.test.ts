@@ -124,6 +124,18 @@ describe("formatSpectateEntry", () => {
     expect(travel).toContain("Took I-90 to Albany");
     expect(travel).toContain("⚠ road encounter");
 
+    const resolvedRoad = at(
+      "resolve_overworld_session_road_encounter",
+      { strategy: "assist_travelers" },
+      JSON.stringify({
+        m: 40,
+        entry: ["road", "Help resolve it: Thruway shoulder flare-up", "Day 1, 10:52"],
+        text: "State-police flares mark a jackknifed truck; you spend stores and help clear the shoulder.",
+      }),
+    );
+    expect(resolvedRoad).toContain("Help resolve it: Thruway shoulder flare-up");
+    expect(resolvedRoad).toContain("jackknifed truck");
+
     const enter = at(
       "start_overworld_session_quest",
       { quest_id: "wolf_winter" },

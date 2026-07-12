@@ -20,7 +20,10 @@ import {
   publicOverworldSnapshotHash,
   OVERWORLD_PUBLIC_SNAPSHOT_HASH_LENGTH,
 } from "../../src/mcp/overworld_sessions.js";
-import { OVERWORLD_COMPACT_ACTION_TEXT_CHAR_LIMIT } from "../../src/mcp/compact_overworld_result.js";
+import {
+  OVERWORLD_COMPACT_ACTION_TEXT_CHAR_LIMIT,
+  OVERWORLD_COMPACT_ROAD_ENCOUNTER_TEXT_CHAR_LIMIT,
+} from "../../src/mcp/compact_overworld_result.js";
 import { compactText } from "../../src/core/compact_text.js";
 import {
   hashTranscript,
@@ -1163,7 +1166,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(compact.snapshot_hash).toBe(started.snapshot_hash);
     expect(compactStarted.snapshot_hash).toMatch(PUBLIC_OVERWORLD_SNAPSHOT_HASH_RE);
     expect(defaultStarted.snapshot_hash).toMatch(PUBLIC_OVERWORLD_SNAPSHOT_HASH_RE);
-    expect(defaultStarted.context.v).toBe(13);
+    expect(defaultStarted.context.v).toBe(14);
     expect("observation" in defaultStarted).toBe(false);
     expect("world" in defaultStarted.context).toBe(false);
     expect("route_options" in defaultStarted.context).toBe(false);
@@ -1346,7 +1349,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
       session_id: started.session_id,
       include_ids: true,
     });
-    expect(compact.context.v).toBe(13);
+    expect(compact.context.v).toBe(14);
     expect(compact.context.here).toEqual([
       full.current.id,
       full.current.name,
@@ -1510,6 +1513,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect("pending_road" in traveledCompact).toBe(true);
     expect(traveledCompact.pending_road).toMatchObject({
       edge: road!.id,
+      route: traveledFull.pendingRoadEncounter!.route,
       where: [
         traveledFull.pendingRoadEncounter!.from,
         traveledFull.pendingRoadEncounter!.to,
@@ -1518,14 +1522,23 @@ describe("MCP tools — validate / load (§9.4)", () => {
       event: [
         traveledFull.pendingRoadEncounter!.event.id,
         traveledFull.pendingRoadEncounter!.event.risk,
+        traveledFull.pendingRoadEncounter!.event.title,
+        traveledFull.pendingRoadEncounter!.event.summary,
       ],
     });
-    expect(traveledCompact.pending_road?.options.map(([strategy]) => strategy)).toEqual([
-      "cautious_scout",
-      "assist_travelers",
-      "press_on",
-    ]);
-    expect(traveledCompact.pending_road?.options[0]?.[1]).toEqual(expect.any(Number));
+    expect(traveledCompact.pending_road?.options).toEqual(
+      traveledFull.pendingRoadEncounter!.options.map((option) => [
+        option.strategy,
+        option.label,
+        option.minutes,
+        option.suppliesCost,
+        option.fatigueGained,
+        option.renownGained,
+      ]),
+    );
+    expect(JSON.stringify(traveledCompact.pending_road)).not.toContain(
+      traveledFull.pendingRoadEncounter!.options[0]!.outcome,
+    );
     expect(traveledCompact.travel_log).toEqual(compactTravel.context.travel_log);
     expect(JSON.stringify(traveledCompact).length).toBeLessThan(
       JSON.stringify(traveledFull).length,
@@ -1677,6 +1690,10 @@ describe("MCP tools — validate / load (§9.4)", () => {
       fullResolved.result.entry.title,
       fullResolved.result.entry.recordedAt,
     ]);
+    expect(compactResolved.result.text).toBe(
+      compactText(fullResolved.result.entry.text, OVERWORLD_COMPACT_ROAD_ENCOUNTER_TEXT_CHAR_LIMIT),
+    );
+    expect(compactResolved.result.text).toBe(fullResolved.result.entry.text);
     expect(JSON.stringify(compactResolved.result).length).toBeLessThan(
       JSON.stringify(fullResolved.result).length,
     );
