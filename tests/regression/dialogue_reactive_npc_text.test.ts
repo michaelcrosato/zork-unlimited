@@ -74,7 +74,8 @@ describe("bug_0246 — reactive NPC dialogue text on The Breaking Weir's Pell", 
     // reply narration still belongs to the plan node, while the resulting state
     // exposes the reactive root without a separate filler action.
     const asked = run(talk.state, { type: "ASK", npc: "pell", topic: "ask_weir" });
-    expect(asked.text).toMatch(/Three things hold this weir/); // the plan node fired
+    expect(asked.text).toMatch(/opening the relief-race will not finish it/);
+    expect(asked.text).toMatch(/Before that, three things hold this weir/); // the plan node fired
     const obs = buildRpgObservation(index, asked.state);
     expect(obs.dialogue?.npc_text).toMatch(/what else, lad/i); // reactive root
     expect(obs.dialogue?.npc_text).not.toMatch(/Thank God someone came/);

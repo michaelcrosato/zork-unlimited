@@ -5,6 +5,7 @@ import {
   ALBANY_DAWN_DISPATCH_GOALS,
   ALBANY_DAWN_DISPATCH_ID,
   ALBANY_DAWN_DISPATCH_TEASER,
+  BREAKING_WEIR_CAMPAIGN_OUTCOMES,
   INITIAL_JOURNEY_CAMPAIGN_GOAL,
   JOURNEY_CAMPAIGN_INITIAL_QUEST_ID,
   JOURNEY_CAMPAIGN_QUEST_ORDER,
@@ -25,6 +26,7 @@ import {
   assertJourneyCampaignGoalCompletionProof,
   assertJourneyCampaignJournalProof,
   assertJourneyCampaignQuestOutcome,
+  breakingWeirCampaignOutcome,
   journeyCampaignGoalDefinition,
   journeyCampaignGoalIsComplete,
   journeyCampaignGoalJournalCopy,
@@ -36,6 +38,8 @@ import {
   tannersFeverAccountabilityStoryChoice,
   wolfWinterCampaignOutcome,
   type AlbanyDawnDispatchChoiceId,
+  type BreakingWeirCampaignEndingId,
+  type BreakingWeirCampaignOutcome,
   type JourneyCampaignStoryChoiceId,
   type JourneyCampaignStoryChoiceOptionId,
   type WolfWinterCampaignOutcome,
@@ -73,6 +77,10 @@ const EXPECTED_CONSEQUENCES: Readonly<
 
 function outcomeIds(endingId: string): ReadonlyMap<string, string> {
   return new Map([["wolf_winter", endingId]]);
+}
+
+function breakingWeirOutcomeIds(endingId: string): ReadonlyMap<string, string> {
+  return new Map([["breaking_weir", endingId]]);
 }
 
 function awaitingInitialGoalChoice(): JourneyContractSnapshot {
@@ -169,6 +177,53 @@ describe("journey campaign", () => {
       /unsupported completion ending/,
     );
     expect(() => assertJourneyCampaignQuestOutcome("gallowmere", "ending_victory")).not.toThrow();
+  });
+
+  it("maps only the two current and one legacy Breaking-Weir victories to truthful Rome contexts", () => {
+    const expected: readonly {
+      endingId: BreakingWeirCampaignEndingId;
+      id: BreakingWeirCampaignOutcome;
+      phrase: string;
+    }[] = [
+      {
+        endingId: "ending_fields_held_race_spent",
+        id: "fields_held_race_spent",
+        phrase: "winter grain intact",
+      },
+      {
+        endingId: "ending_race_held_fields_given",
+        id: "race_held_fields_given",
+        phrase: "winter grain lies under silt",
+      },
+      {
+        endingId: "ending_held",
+        id: "held",
+        phrase: "relief-race carries the flood crest",
+      },
+    ];
+
+    const contexts = new Set<string>();
+    for (const row of expected) {
+      const outcome = breakingWeirCampaignOutcome(breakingWeirOutcomeIds(row.endingId));
+      expect(outcome).toEqual(BREAKING_WEIR_CAMPAIGN_OUTCOMES[row.endingId]);
+      expect(outcome).toMatchObject({ id: row.id, endingId: row.endingId });
+      expect(outcome?.romeDispatchContext).toContain(row.phrase);
+      expect(() => assertJourneyCampaignQuestOutcome("breaking_weir", row.endingId)).not.toThrow();
+      contexts.add(outcome!.romeDispatchContext);
+    }
+
+    expect(contexts.size).toBe(3);
+    expect(BREAKING_WEIR_CAMPAIGN_OUTCOMES.ending_held.romeDispatchContext).toBe(
+      ROME_POST_WEIR_DISPATCH_CONTEXT,
+    );
+    expect(breakingWeirCampaignOutcome(new Map())).toBeNull();
+    expect(breakingWeirCampaignOutcome(breakingWeirOutcomeIds("ending_swept"))).toBeNull();
+    expect(() => assertJourneyCampaignQuestOutcome("breaking_weir", "ending_swept")).toThrow(
+      /unsupported completion ending "ending_swept"/,
+    );
+    expect(() => assertJourneyCampaignQuestOutcome("breaking_weir", "ending_invented")).toThrow(
+      /unsupported completion ending "ending_invented"/,
+    );
   });
 
   it("shows the truthful return and common teaser before retention without creating the story choice", () => {
@@ -411,52 +466,59 @@ describe("journey campaign", () => {
   });
 
   it("previews both post-Weir premises before retention and asks which packet only after continue", () => {
-    const questOutcomeIds = outcomeIds("ending_held_gate_barred");
     const active = activeBreakingWeirGoal();
     const awaiting = awaitingBreakingWeirGoalChoice();
     const ended = chooseJourney(awaiting, "end").state;
     const continued = chooseJourney(awaiting, "continue").state;
 
-    expect(journeyCampaignPresentationContext({ journey: active, questOutcomeIds })).toBeNull();
-    expect(
-      journeyCampaignPresentationContext({ journey: awaiting, questOutcomeIds }),
-    ).toMatchObject({
-      completionContext: ROME_POST_WEIR_DISPATCH_CONTEXT,
-      preRetentionTeaser: ROME_POST_WEIR_DISPATCH_TEASER,
-      continueConsequencePrefix: "Continue to choose which live packet you carry first.",
-      storyChoice: null,
-    });
     expect(ROME_POST_WEIR_DISPATCH_TEASER).toMatch(/Oswego.*Marta Holm/i);
     expect(ROME_POST_WEIR_DISPATCH_TEASER).toMatch(/Greece.*forge/i);
-    expect(journeyCampaignPresentationContext({ journey: ended, questOutcomeIds })).toBeNull();
 
-    const afterContinue = journeyCampaignPresentationContext({
-      journey: continued,
-      questOutcomeIds,
-    });
-    expect(afterContinue).toMatchObject({
-      completionContext: ROME_POST_WEIR_DISPATCH_CONTEXT,
-      preRetentionTeaser: null,
-      continueConsequencePrefix: null,
-      storyChoice: {
-        id: ROME_POST_WEIR_DISPATCH_ID,
-        message: expect.stringContaining("Which live packet"),
-      },
-    });
-    expect(afterContinue?.storyChoice?.options.map((option) => option.id)).toEqual(
-      ROME_POST_WEIR_DISPATCH_CHOICE_IDS,
-    );
+    for (const outcome of Object.values(BREAKING_WEIR_CAMPAIGN_OUTCOMES)) {
+      const questOutcomeIds = breakingWeirOutcomeIds(outcome.endingId);
+      expect(journeyCampaignPresentationContext({ journey: active, questOutcomeIds })).toBeNull();
+      expect(
+        journeyCampaignPresentationContext({ journey: awaiting, questOutcomeIds }),
+      ).toMatchObject({
+        completionContext: outcome.romeDispatchContext,
+        preRetentionTeaser: ROME_POST_WEIR_DISPATCH_TEASER,
+        continueConsequencePrefix: "Continue to choose which live packet you carry first.",
+        storyChoice: null,
+      });
+      expect(journeyCampaignPresentationContext({ journey: ended, questOutcomeIds })).toBeNull();
 
-    const branchActive = activateJourneyGoal(
-      continued,
-      materializeJourneyCampaignGoal(
-        ROME_POST_WEIR_DISPATCH_GOALS.take_oswego_charter_packet,
-        continued.goal.version,
-      ),
-    );
+      const afterContinue = journeyCampaignPresentationContext({
+        journey: continued,
+        questOutcomeIds,
+      });
+      expect(afterContinue).toMatchObject({
+        completionContext: outcome.romeDispatchContext,
+        preRetentionTeaser: null,
+        continueConsequencePrefix: null,
+        storyChoice: {
+          id: ROME_POST_WEIR_DISPATCH_ID,
+          message: expect.stringContaining("Which live packet"),
+        },
+      });
+      expect(afterContinue?.storyChoice?.options.map((option) => option.id)).toEqual(
+        ROME_POST_WEIR_DISPATCH_CHOICE_IDS,
+      );
+
+      const branchActive = activateJourneyGoal(
+        continued,
+        materializeJourneyCampaignGoal(
+          ROME_POST_WEIR_DISPATCH_GOALS.take_oswego_charter_packet,
+          continued.goal.version,
+        ),
+      );
+      expect(
+        journeyCampaignPresentationContext({ journey: branchActive, questOutcomeIds }),
+      ).toBeNull();
+    }
+
     expect(
-      journeyCampaignPresentationContext({ journey: branchActive, questOutcomeIds }),
-    ).toBeNull();
+      journeyCampaignPresentationContext({ journey: awaiting, questOutcomeIds: new Map() }),
+    ).toMatchObject({ completionContext: ROME_POST_WEIR_DISPATCH_CONTEXT });
   });
 
   it("routes both post-Weir choices to distinct first goals while preserving legacy journal proof", () => {
@@ -662,16 +724,17 @@ describe("journey campaign", () => {
     expect(
       journeyCampaignPresentationContext({
         journey: legacyAwaiting,
-        questOutcomeIds: outcomeIds("ending_held_gate_barred"),
+        questOutcomeIds: breakingWeirOutcomeIds("ending_held"),
       }),
     ).toMatchObject({
+      completionContext: ROME_POST_WEIR_DISPATCH_CONTEXT,
       preRetentionTeaser: ROME_POST_WEIR_DISPATCH_TEASER,
       storyChoice: null,
     });
     expect(
       journeyCampaignPresentationContext({
         journey: chooseJourney(legacyAwaiting, "continue").state,
-        questOutcomeIds: outcomeIds("ending_held_gate_barred"),
+        questOutcomeIds: breakingWeirOutcomeIds("ending_held"),
       })?.storyChoice,
     ).toMatchObject({ id: ROME_POST_WEIR_DISPATCH_ID });
     expect(

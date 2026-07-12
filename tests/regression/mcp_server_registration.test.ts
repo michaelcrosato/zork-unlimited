@@ -310,7 +310,6 @@ describe("MCP server registration", () => {
       "move_overworld_session_area",
       "work_overworld_session_job",
       "complete_overworld_session_quest",
-      "choose_overworld_session_journey",
       "choose_overworld_session_story",
     ]) {
       const block = registeredToolBlock(toolName);
@@ -330,8 +329,11 @@ describe("MCP server registration", () => {
       overworldDefaults.indexOf("...input"),
     );
 
-    expect(registeredToolBlock("start_overworld_session_quest")).toContain(
-      "defaultCompactOverworldAndRpg(a)",
+    for (const toolName of ["start_overworld_session_quest", "choose_overworld_session_journey"]) {
+      expect(registeredToolBlock(toolName)).toContain("defaultCompactOverworldAndRpg(a)");
+    }
+    expect(registeredToolBlock("choose_overworld_session_journey")).toContain(
+      "COMPACT_OBSERVATION",
     );
     const overworldAndRpgDefaults = serverSourceBlock(
       "function defaultCompactOverworldAndRpg",

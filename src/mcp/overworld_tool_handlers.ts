@@ -61,10 +61,19 @@ import type {
   RpgStartWorldQuestToolArgs,
   RpgWorldQuestStartPayload,
 } from "./rpg_session_lifecycle.js";
-import type { RpgSessionPayload } from "./rpg_session_runtime.js";
+import {
+  rpgSourceFields,
+  type RpgMcpSessionRuntime,
+  type RpgSessionPayload,
+} from "./rpg_session_runtime.js";
+import { runRpgGetObservation } from "./rpg_session_tools.js";
 import type { RpgViewOptions } from "./rpg_view_projection.js";
 import type { SessionStore } from "./sessions.js";
-import { journeyBlocksGameplay, suppressRpgGameplayActions } from "./journey_projection.js";
+import {
+  journeyBlocksGameplay,
+  suppressRpgGameplayActions,
+  type EmbeddedJourneyField,
+} from "./journey_projection.js";
 import type { JourneyDecisionClassification } from "../world/journey_contract.js";
 import type { JourneyCampaignStoryChoiceOptionId } from "../world/journey_campaign.js";
 
@@ -117,6 +126,18 @@ function defaultCompactOverworldQuestStart<Args extends OverworldResponseOptions
     compact_context: true,
     compact_result: true,
     compact_observation: true,
+    ...args,
+  } as DefaultCompactOverworldQuestStart<Args>;
+}
+
+function defaultCompactJourneyChoice<Args extends OverworldResponseOptions & RpgViewOptions>(
+  args: Args,
+): DefaultCompactOverworldQuestStart<Args> {
+  return {
+    compact_context: true,
+    compact_result: true,
+    compact_observation: true,
+    include_actions: true,
     ...args,
   } as DefaultCompactOverworldQuestStart<Args>;
 }
@@ -196,11 +217,21 @@ type OverworldSessionResponse<
   CompactValue = Value,
 > = OverworldMcpSessionResponse<Key, Value, Args, CompactValue>;
 
+type ResumedEmbeddedRpgField<Args extends RpgViewOptions> = {
+  rpg_session_id: string;
+  rpg_session: RpgSessionPayload<Args> & EmbeddedJourneyField;
+};
+
+type OverworldJourneyChoiceResponse<Args extends OverworldResponseOptions & RpgViewOptions> =
+  OverworldSessionResponse<"result", JourneyChoiceResult, Args> &
+    Partial<ResumedEmbeddedRpgField<Args>>;
+
 type JourneyChoice = Parameters<OverworldSession["chooseJourney"]>[0];
 type JourneyChoiceResult = ReturnType<OverworldSession["chooseJourney"]>;
 
 export type OverworldToolHandlerDeps = {
   sessions: SessionStore;
+  rpgRuntime: RpgMcpSessionRuntime;
   overworldSessions: OverworldMcpSessionStore;
   loadOverworldManifest: () => OverworldManifest;
   startWorldQuest: <Args extends RpgStartWorldQuestToolArgs>(
@@ -580,6 +611,9 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
           ? compactOverworldQuestRef(started.quest)
           : started.quest;
       const journey = session.journey();
+      if (journey.pendingChoice !== null) {
+        sessions.markEmbeddedJourneyPause(started.rpgSession.session_id);
+      }
       const rpgSession = journeyBlocksGameplay(journey)
         ? suppressRpgGameplayActions(started.rpgSession)
         : started.rpgSession;
@@ -602,22 +636,51 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
       Args extends {
         session_id: string;
         choice: JourneyChoice;
-      } & OverworldResponseOptions,
-    >(
-      args: Args,
-    ): OverworldSessionResponse<
-      "result",
-      JourneyChoiceResult,
-      DefaultCompactOverworldResponse<Args>
-    > {
-      const responseOptions = defaultCompactOverworldResponse(args);
-      return overworldSessions.run(
+      } & OverworldResponseOptions &
+        RpgViewOptions,
+    >(args: Args): OverworldJourneyChoiceResponse<DefaultCompactOverworldQuestStart<Args>> {
+      const responseOptions = defaultCompactJourneyChoice(args);
+      const response = overworldSessions.run(
         responseOptions,
         args.session_id,
         "result",
         (session) => session.chooseJourney(args.choice),
         (result): JourneyChoiceResult => result,
       );
+      if (response.ok !== true) {
+        return response as OverworldJourneyChoiceResponse<DefaultCompactOverworldQuestStart<Args>>;
+      }
+
+      const pausedRpgSession = sessions.embeddedJourneyPause(args.session_id);
+      const canResume =
+        args.choice === "continue" &&
+        pausedRpgSession !== null &&
+        !pausedRpgSession.state.ended &&
+        !journeyBlocksGameplay(response.journey);
+      if (!canResume || !pausedRpgSession) {
+        sessions.clearEmbeddedJourneyPause(args.session_id);
+        return response as OverworldJourneyChoiceResponse<DefaultCompactOverworldQuestStart<Args>>;
+      }
+
+      const rpgView = runRpgGetObservation(
+        { sessions, rpgRuntime: deps.rpgRuntime },
+        { ...responseOptions, session_id: pausedRpgSession.id },
+      );
+      const embeddedJourney: EmbeddedJourneyField = {
+        journey: response.journey,
+        overworld_snapshot_hash: response.snapshot_hash,
+      };
+      sessions.clearEmbeddedJourneyPause(args.session_id);
+      return {
+        ...response,
+        rpg_session_id: pausedRpgSession.id,
+        rpg_session: {
+          session_id: pausedRpgSession.id,
+          ...rpgView,
+          ...rpgSourceFields(pausedRpgSession),
+          ...embeddedJourney,
+        },
+      } as OverworldJourneyChoiceResponse<DefaultCompactOverworldQuestStart<Args>>;
     },
 
     choose_overworld_session_story<

@@ -133,6 +133,47 @@ export const ROME_POST_WEIR_DISPATCH_GOALS = Object.freeze({
   ),
 } as const satisfies Record<RomePostWeirDispatchChoiceId, JourneyCampaignGoalDefinition>);
 
+export type BreakingWeirCampaignEndingId =
+  | "ending_fields_held_race_spent"
+  | "ending_race_held_fields_given"
+  | "ending_held";
+
+export type BreakingWeirCampaignOutcome =
+  | "fields_held_race_spent"
+  | "race_held_fields_given"
+  | "held";
+
+export type BreakingWeirCampaignOutcomeContext = Readonly<{
+  id: BreakingWeirCampaignOutcome;
+  endingId: BreakingWeirCampaignEndingId;
+  romeDispatchContext: string;
+}>;
+
+export const BREAKING_WEIR_CAMPAIGN_OUTCOMES = Object.freeze({
+  ending_fields_held_race_spent: Object.freeze({
+    id: "fields_held_race_spent",
+    endingId: "ending_fields_held_race_spent",
+    romeDispatchContext:
+      "The valley wakes dry with its winter grain intact, but the full crest has spent Pell's old gate and race-house; the farms have food now and no working relief-race for the next flood.",
+  }),
+  ending_race_held_fields_given: Object.freeze({
+    id: "race_held_fields_given",
+    endingId: "ending_race_held_fields_given",
+    romeDispatchContext:
+      "The valley wakes dry and Pell's weir remains fit for another flood, but the lower farms' winter grain lies under silt; the old defense stands and the coming stores will be lean.",
+  }),
+  ending_held: Object.freeze({
+    id: "held",
+    endingId: "ending_held",
+    romeDispatchContext: ROME_POST_WEIR_DISPATCH_CONTEXT,
+  }),
+} as const satisfies Record<BreakingWeirCampaignEndingId, BreakingWeirCampaignOutcomeContext>);
+
+const BREAKING_WEIR_OUTCOME_BY_ID: ReadonlyMap<string, BreakingWeirCampaignOutcomeContext> =
+  new Map(
+    Object.values(BREAKING_WEIR_CAMPAIGN_OUTCOMES).map((outcome) => [outcome.endingId, outcome]),
+  );
+
 export type WolfWinterCampaignOutcome = "gate_barred" | "timber_saved" | "held";
 
 export type WolfWinterCampaignOutcomeContext = Readonly<{
@@ -280,14 +321,25 @@ export function wolfWinterCampaignOutcome(
   return endingId === undefined ? null : (WOLF_OUTCOME_BY_ID.get(endingId) ?? null);
 }
 
-/** Keep the authored Albany aftermath bound to one of Wolf-Winter's victory endings. */
+export function breakingWeirCampaignOutcome(
+  questOutcomeIds: ReadonlyMap<string, string>,
+): BreakingWeirCampaignOutcomeContext | null {
+  const endingId = questOutcomeIds.get("breaking_weir");
+  return endingId === undefined ? null : (BREAKING_WEIR_OUTCOME_BY_ID.get(endingId) ?? null);
+}
+
+/** Keep authored campaign aftermaths bound only to supported victory endings. */
 export function assertJourneyCampaignQuestOutcome(questId: string, endingId: string): void {
-  if (questId !== JOURNEY_CAMPAIGN_INITIAL_QUEST_ID) return;
-  if (!WOLF_OUTCOME_BY_ID.has(endingId)) {
+  if (questId === JOURNEY_CAMPAIGN_INITIAL_QUEST_ID) {
+    if (WOLF_OUTCOME_BY_ID.has(endingId)) return;
     throw new Error(
       `Journey campaign quest "${questId}" has unsupported completion ending "${endingId}".`,
     );
   }
+  if (questId !== "breaking_weir" || BREAKING_WEIR_OUTCOME_BY_ID.has(endingId)) return;
+  throw new Error(
+    `Journey campaign quest "${questId}" has unsupported completion ending "${endingId}".`,
+  );
 }
 
 export function albanyDawnDispatchGoal(
@@ -847,8 +899,9 @@ export function journeyCampaignPresentationContext(args: {
   const beforeBreakingWeirRetention = awaitsBreakingWeirGoalChoice(args.journey);
   const afterBreakingWeirContinue = awaitsRomePostWeirDispatch(args.journey);
   if (!beforeBreakingWeirRetention && !afterBreakingWeirContinue) return null;
+  const breakingWeirOutcome = breakingWeirCampaignOutcome(args.questOutcomeIds);
   return Object.freeze({
-    completionContext: ROME_POST_WEIR_DISPATCH_CONTEXT,
+    completionContext: breakingWeirOutcome?.romeDispatchContext ?? ROME_POST_WEIR_DISPATCH_CONTEXT,
     preRetentionTeaser: beforeBreakingWeirRetention ? ROME_POST_WEIR_DISPATCH_TEASER : null,
     continueConsequencePrefix: beforeBreakingWeirRetention
       ? "Continue to choose which live packet you carry first."

@@ -143,7 +143,12 @@ describe("MCP pure play mode", () => {
     try {
       await withPureServer(evidence, async (client) => {
         const listed = await client.listTools();
-        for (const name of ["start_overworld_session_quest", "get_observation", "step_action"]) {
+        for (const name of [
+          "start_overworld_session_quest",
+          "choose_overworld_session_journey",
+          "get_observation",
+          "step_action",
+        ]) {
           const registered = listed.tools.find((candidate) => candidate.name === name);
           expect(registered).toBeDefined();
           const properties = registered?.inputSchema.properties ?? {};
@@ -361,6 +366,86 @@ describe("MCP pure play mode", () => {
             (action) => typeof action.command === "string" && action.command.length > 0,
           ),
         ).toBe(true);
+
+        // Bounce over the safe yard gate until a real quest move lands on the
+        // fixed checkpoint. Pure mode must suppress that step's menu, then put
+        // the exact current quest menu back on the Continue response itself.
+        let questTurn = textPayload(
+          await client.callTool({
+            name: "get_observation",
+            arguments: {
+              session_id: rpgSessionId,
+              compact_observation: true,
+              include_actions: false,
+            },
+          }),
+        );
+        let questJourney = questTurn.journey as {
+          status: string;
+          acceptedDecisions: number;
+          nextCheckpoint: number | null;
+          pendingChoice: unknown;
+        };
+        while (questJourney.acceptedDecisions < 40) {
+          const actions = (questTurn.context as RpgCompactContext).actions ?? [];
+          const actionId = actions.includes("ask_leave")
+            ? "ask_leave"
+            : actions.includes("go_south")
+              ? "go_south"
+              : actions.includes("go_north")
+                ? "go_north"
+                : null;
+          if (!actionId) throw new Error("expected a safe reversible quest route");
+          questTurn = textPayload(
+            await client.callTool({
+              name: "step_action",
+              arguments: {
+                session_id: rpgSessionId,
+                action_id: actionId,
+                expected_state_hash: String(questTurn.state_hash),
+                include_actions: false,
+              },
+            }),
+          );
+          questJourney = questTurn.journey as typeof questJourney;
+        }
+        expect(questJourney).toMatchObject({
+          status: "awaiting_choice",
+          acceptedDecisions: 40,
+          nextCheckpoint: 40,
+        });
+        expect((questTurn.context as RpgCompactContext).actions).toBeUndefined();
+        const checkpointStateHash = String(questTurn.state_hash);
+
+        const continued = textPayload(
+          await client.callTool({
+            name: "choose_overworld_session_journey",
+            arguments: {
+              session_id: sessionId,
+              choice: "continue",
+              compact_observation: true,
+              include_actions: false,
+            },
+          }),
+        );
+        expect(continued.journey).toMatchObject({
+          status: "active",
+          acceptedDecisions: 40,
+          nextCheckpoint: 80,
+          pendingChoice: null,
+        });
+        expect(continued.rpg_session_id).toBe(rpgSessionId);
+        const resumed = continued.rpg_session as {
+          session_id: string;
+          state_hash: string;
+          context: RpgCompactContext;
+        };
+        expect(resumed).toMatchObject({
+          session_id: rpgSessionId,
+          state_hash: checkpointStateHash,
+        });
+        expect(resumed.context.actions?.length).toBeGreaterThan(0);
+        expect(continued).not.toHaveProperty("observation");
       });
     } finally {
       rmSync(dir, { recursive: true, force: true });

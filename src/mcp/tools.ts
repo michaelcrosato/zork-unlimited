@@ -473,6 +473,7 @@ export function createToolApi(opts: { root: string }) {
 
     ...createOverworldToolHandlers({
       sessions,
+      rpgRuntime,
       overworldSessions,
       loadOverworldManifest: () => loadOverworldManifestFromRoot(root),
       startWorldQuest: <Args extends RpgStartWorldQuestArgs>(
@@ -630,7 +631,13 @@ export function createToolApi(opts: { root: string }) {
           if (response.journeyActionId === null) {
             throw new Error("Accepted RPG journey decision is missing its canonical action id.");
           }
-          overworldSession.recordQuestDecision(response.journeyActionId, response.journeyDecision);
+          const journey = overworldSession.recordQuestDecision(
+            response.journeyActionId,
+            response.journeyDecision,
+          );
+          if (journey.pendingChoice !== null && !rpgSession.state.ended) {
+            sessions.markEmbeddedJourneyPause(rpgSession.id);
+          }
           if (rpgSession.state.ended) {
             const completion = overworldQuestCompletionFromRpgSession(
               rpgSession,

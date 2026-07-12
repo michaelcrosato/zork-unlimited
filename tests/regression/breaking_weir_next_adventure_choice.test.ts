@@ -7,8 +7,8 @@ import { describe, expect, it } from "vitest";
 
 import { createToolApi } from "../../src/mcp/tools.js";
 import {
+  BREAKING_WEIR_CAMPAIGN_OUTCOMES,
   ROME_POST_WEIR_DISPATCH_CHOICE_IDS,
-  ROME_POST_WEIR_DISPATCH_CONTEXT,
   ROME_POST_WEIR_DISPATCH_GOALS,
   ROME_POST_WEIR_DISPATCH_ID,
   ROME_POST_WEIR_DISPATCH_TEASER,
@@ -130,8 +130,8 @@ function reachBreakingWeirGoalCompletion(): OverworldSession {
   moveToArea(session, "rome_city__market");
   session.startQuest("breaking_weir");
   session.completeQuest("breaking_weir", {
-    endingId: "ending_held",
-    endingTitle: "The Weir Holds",
+    endingId: "ending_fields_held_race_spent",
+    endingTitle: "The Fields Held, the Old Race Spent",
     death: false,
   });
 
@@ -179,7 +179,9 @@ describe("Breaking Weir next-adventure dispatch", () => {
   it("offers a genuine Continue/End choice and records an honest exit without selecting a packet", () => {
     const session = reachBreakingWeirGoalCompletion();
     const pending = session.journey().pendingChoice;
-    expect(pending?.message).toContain(ROME_POST_WEIR_DISPATCH_CONTEXT);
+    expect(pending?.message).toContain(
+      BREAKING_WEIR_CAMPAIGN_OUTCOMES.ending_fields_held_race_spent.romeDispatchContext,
+    );
     expect(pending?.message).toContain(ROME_POST_WEIR_DISPATCH_TEASER);
     expect(pending?.options.map((option) => option.id)).toEqual(["continue", "end"]);
     expect(pending?.options.find((option) => option.id === "continue")?.consequence).toContain(

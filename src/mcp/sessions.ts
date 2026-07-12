@@ -359,6 +359,7 @@ type ObservationCacheOptions = Pick<
 export class SessionStore {
   private counter = 0n;
   private readonly sessions = new Map<string, Session>();
+  private readonly embeddedJourneyPauses = new Map<string, string>();
 
   constructor(
     private readonly maxSessions = MCP_SESSION_STORE_LIMIT,
@@ -390,6 +391,32 @@ export class SessionStore {
     const session = refreshSessionEntry(this.sessions, id);
     if (!session) throw new Error(`Unknown session "${id}".`);
     return session;
+  }
+
+  /** Remember the exact embedded quest whose accepted decision opened a parent journey pause. */
+  markEmbeddedJourneyPause(id: string): Session {
+    const session = this.get(id);
+    if (!session.overworldSessionId) {
+      throw new Error("Only an RPG session launched from the overworld can pause its journey.");
+    }
+    this.embeddedJourneyPauses.set(session.overworldSessionId, session.id);
+    return session;
+  }
+
+  /** Return the exact embedded quest interrupted by this overworld journey pause, if retained. */
+  embeddedJourneyPause(overworldSessionId: string): Session | null {
+    const id = this.embeddedJourneyPauses.get(overworldSessionId);
+    if (!id) return null;
+    const session = refreshSessionEntry(this.sessions, id);
+    if (!session || session.overworldSessionId !== overworldSessionId) {
+      this.embeddedJourneyPauses.delete(overworldSessionId);
+      return null;
+    }
+    return session;
+  }
+
+  clearEmbeddedJourneyPause(overworldSessionId: string): void {
+    this.embeddedJourneyPauses.delete(overworldSessionId);
   }
 
   update(id: string, state: GameState): Session {

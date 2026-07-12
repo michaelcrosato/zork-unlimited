@@ -25,6 +25,10 @@
 # (craft) and heaving the seized relief-race winch (might) — are not killers but honest
 # work: they yield to the knack and a stubborn back, retryable until they give (the
 # sunken_barrow slab pattern), so a player can never be hard-locked out of the valley.
+# Opening the race exposes the keeper's final course-frame: concentrate the crest in the
+# old stone race and preserve the winter grain at the cost of Pell's works, or spread it
+# over the lower fields and preserve the old defense at the cost of the grain. Both routes
+# save every sleeping household, award the same score, and leave a distinct consequence.
 #
 #   keeper_lodge ─N─ weir_head ─N*─ weir_walk ─N**─ race_house ─N***─ valley_held (WIN, +15)
 #   (start; Pell,    (head-rack:     (storm-walk:     (relief-race
@@ -33,7 +37,7 @@
 #    life-line)       craft, retry)   life-line)       might, retry)
 #   (*   N gated on rack_freed   — the freed head-rack)
 #   (**  N gated on walk_crossed — the safely-crossed storm-walk)
-#   (*** N gated on race_open    — the heaved relief-race)
+#   (*** N gated on race_open plus one committed flood course)
 #
 # Score (max 50, the milestone economy the curated RPG packs share — the exact 5+10+10+10+15
 # shape as wolf_winter): read Pell's flood-book (+5, the §17 clue that names the three
@@ -93,15 +97,26 @@ rooms:
     # on `race_open`). race_open ⟺ race_running on every state reachable AT the lodge, so play is
     # byte-identical, but the calmed-water prose can now never revert to the contradictory base.
     variants:
+      - when: [{ has_flag: flood_down_stone_race }]
+        text: >
+          The weir-keeper's lodge, the river's voice outside changed to a falling note. The
+          full crest is running down Pell's stone race so the winter grain stays dry, and the
+          old gate timbers answer with a breaking groan: the works have paid for the valley's
+          food. Pell lies quiet on his cot, listening. His flood-book is open on the table;
+          the weir is north.
+      - when: [{ has_flag: flood_over_lower_fields }]
+        text: >
+          The weir-keeper's lodge, the river's voice outside changed to a broad, falling note.
+          The crest is spread over the lower fields, easing the old race-house while the
+          winter grain goes under. Pell lies quiet on his cot, listening to the works hold.
+          His flood-book is open on the table; the weir is north.
       - when: [{ has_flag: race_open }]
         text: >
-          The weir-keeper's lodge, the stone hut still loud with the flood — but the river's
-          voice outside has changed, the rising roar gone over to a steadier, falling note now
-          that the relief-race is carrying the worst of it off around the valley. Old Pell lies
-          quiet on his cot by the cold hearth, his eyes shut and his head cocked to the water,
-          listening to the night turn; he hears the difference, and he does not need to be told.
-          His flood-book lies open on the table. The weir is still out through the door to the
-          north, the last of the work up there in the dark.
+          The weir-keeper's lodge, the river's voice outside has changed but not settled: the
+          relief-race has taken the crest off the lip, and a hard uneven hammering comes from
+          its course-frame. Old Pell lies quiet on his cot, listening. The water is no longer
+          climbing, but the valley has not paid its price yet. His flood-book is open on the
+          table; the last choice waits north.
       # bug_0314 (reactive-description-blindness): base description names both the weir-iron
       # and the life-line even after they are in the player's hands, making the lodge look
       # untouched on any return visit between taking the tools and opening the relief-race.
@@ -220,33 +235,43 @@ rooms:
   - id: race_house
     name: "The Relief-Race House"
     description: >
-      A low stone house over the relief-race — the second channel that carries the flood off
-      safe around the valley, shut now behind a great winch-gate that has seized in its frame
-      with rust and the swelling of the wet. Get the winch turning and the race opens and the
-      weir is saved; the weir-iron will give you the purchase, but it will want a stubborn
-      back. The walk is back to the south.
+      A stone house over the relief-race, shut behind a winch-gate seized with rust and swollen
+      timber. Beyond it stands Pell's course-frame: the stone-race pin keeps winter grain dry
+      but spends the old works; the field-wash pin preserves the works but puts the lower grain
+      under. First get the winch turning with the weir-iron. The walk is south.
     variants:
+      - when: [{ has_flag: flood_down_stone_race }]
+        text: >
+          The full crest runs down the old stone race. The lower grain stays dry, but gate
+          timbers wrench loose and cracks sound through the low race-house: Pell's works are
+          spending themselves on this flood. The valley-rim is north; the walk is south.
+      - when: [{ has_flag: flood_over_lower_fields }]
+        text: >
+          The crest spreads through the field wash, brown across the lower winter grain. The
+          pressure has fallen from the gate and Pell's old race-house stands fit for another
+          flood. The valley-rim is north; the walk is south.
       - when: [{ has_flag: race_open }]
         text: >
-          The race-house, the great winch-gate hauled up in its frame and the relief-race
-          running full and white beneath the floor, carrying the flood off safe. The way on
-          lies north to the valley-rim; the walk is back to the south.
-    objects: [race_winch]
+          The open race hammers Pell's course-frame. Set the stone-race pin to keep the winter
+          grain and spend the old works, or the field-wash pin to keep the works and lose the
+          grain. Every house lives; one public good must take the crest. The walk is south.
+    objects: [race_winch, stone_race_pin, field_wash_pin]
     exits:
       - { direction: south, to: weir_walk }
       - direction: north
         to: valley_held
-        conditions: [{ has_flag: race_open }]
-        locked_msg: "The relief-race is still shut behind its seized winch-gate; until it runs you have done nothing, and the water still climbs the weir."
+        conditions:
+          - { has_flag: race_open }
+          - { any_of: [{ has_flag: flood_down_stone_race }, { has_flag: flood_over_lower_fields }] }
+        locked_msg: "The valley is not held until the race is open and its course-frame set: keep winter grain and spend the old works, or keep the works and give the lower fields to the crest."
 
   - id: valley_held
     name: "The Valley-Rim, at Dawn"
     description: >
-      The rim above the valley, and the first grey of dawn coming up cold over it. Below you
-      the weir holds — the head-rack combing the drift, the relief-race running full and white
-      around the valley's edge — and the water that meant to drown the sleeping farms is going
-      off harmless down the second channel instead. The river has crested and is falling. The
-      race-house is back to the south.
+      The valley-rim in the first grey of dawn. Below, the head-rack combs the drift and the
+      relief-race runs full around the valley's edge. Every house is dry; the course you chose
+      has carried the crest, and its cost is visible in the grey light. The river has crested
+      and is falling. The race-house is south.
     # The locomotion win (visited: valley_held), like wolf_winter's cattle and the Beacon's
     # crown: the +15 capstone rides reaching the rim with the weir held (the chained exit
     # gates make that reachable only with all three obstacles cleared), so the full 50
@@ -258,7 +283,7 @@ rooms:
       # +15 capstone — it gates nothing (the win still rides `visited: valley_held` below) and
       # leaves the score economy untouched; it simply records that the night was won.
       - set_quest_stage: { quest: the_weir, stage: weir_held }
-      - add_journal: "The river has crested and is falling, and the weir holds; the valley below sleeps on, dry and safe in the first grey light."
+      - add_journal: "The river has crested and is falling. Every house is dry; the valley wakes with the material cost you chose at Pell's course-frame."
       - inc_var: { name: score, by: 15 }
     exits:
       - { direction: south, to: race_house }
@@ -274,7 +299,9 @@ objects:
       AWASH, THE RELIEF-RACE SEIZED SHUT. TAKE THE WEIR-IRON FOR THE RACK AND THE WINCH, AND
       THE LIFE-LINE FOR THE WALK, AND DO NOT SET FOOT ON THAT WALK TILL PELL HAS TOLD YOU HOW
       A MAN CROSSES IT — IT IS THE ONE PLACE OUT THERE THAT KILLS. CLEAR THE RACK, CROSS THE
-      WALK, OPEN THE RACE, AND HOLD THE WEIR TILL DAWN. — the weir is the valley.'
+      WALK, OPEN THE RACE, THEN SET ONE COURSE. THE STONE RACE KEEPS THE WINTER GRAIN DRY BUT
+      SPENDS THE OLD GATE AND RACE-HOUSE; THE FIELD WASH SAVES THE WORKS BUT GIVES THE LOWER
+      GRAIN TO SILT. EVERY HOUSE LIVES; BOTH GOODS CANNOT. — the weir is the valley.'
     interactions:
       - verb: READ
         target: flood_book
@@ -287,7 +314,7 @@ objects:
           # previously awarded score with no accompanying journal record (all other milestone
           # actions — rack_freed, walk_crossed, race_open, valley_held, pell_walk, pell_weir —
           # each add a journal entry). bug_0317_class: silent score with no journal.
-          - add_journal: "Pell's flood-marks in plain hard letters: three obstacles — head-rack choked, storm-walk awash, relief-race seized — two tools — weir-iron for rack and winch, life-line for the walk — and a warning not to set foot on the walk until Pell has told you how a man crosses it and lives. The shape of the night is clear."
+          - add_journal: "Pell's marks: iron for rack/race, line for the killing walk; then save winter grain or old works—the other takes the crest."
 
   - id: weir_iron
     name: "weir-iron"
@@ -437,10 +464,46 @@ objects:
             # is the stage the keeper's-lodge variant reads to change the river's voice below.
             - set_quest_stage: { quest: the_weir, stage: race_running }
             - inc_var: { name: score, by: 10 }
-            - add_journal: "With the weir-iron through the spokes for a lever you break the seized winch free and haul the gate up; the relief-race opens with a roar and the flood begins to run off safe around the valley."
-            - narrate: "You run the weir-iron through the winch-spokes and set your whole weight to it. For a long moment nothing — then, with a crack of breaking rust, the wheel turns, and turns again, and the gate grinds up in its frame. The relief-race opens with a white roar beneath the floor and takes the climbing flood off down its channel."
+            - add_journal: "The seized winch gives and the relief-race opens. Its crest now hammers Pell's course-frame: preserve the winter grain or the old works; both cannot be kept."
+            - narrate: "You run the weir-iron through the spokes and set your whole weight to it. Rust cracks, the wheel turns, and the gate grinds up. The relief-race opens with a white roar, taking the crest off the weir's lip—then the whole force strikes Pell's course-frame. One last choice decides what the valley gives the water."
           on_failure:
             - narrate: "The wheel grinds a hand's turn and the rust catches it again. It IS shifting — no stronger man or other tool is wanting, only to keep the lever working. Reset the iron in the spokes and heave again; the seize is breaking."
+
+  - id: stone_race_pin
+    name: "stone-race course pin"
+    aliases: [stonepin, stonecourse, masonrycourse, graincourse]
+    description: "The stone-race pin commits the full crest to Pell's masonry channel. The lower winter grain stays dry, but the old gate timbers and low race-house will spend themselves under the concentrated head. A dog-clutch admits only one course."
+    visible_when: [{ has_flag: race_open }]
+    takeable: false
+    interactions:
+      - verb: USE
+        target: stone_race_pin
+        command_verb: set
+        conditions:
+          - { has_flag: race_open }
+          - { none_of: [{ has_flag: flood_down_stone_race }, { has_flag: flood_over_lower_fields }] }
+        effects:
+          - set_flag: flood_down_stone_race
+          - add_journal: "You keep the lower winter grain dry by committing the full crest to the stone race. Pell's gate and race-house will not survive this flood intact."
+          - narrate: "You drive the stone-race pin home. The dog-clutch locks the field wash, and the full crest strikes Pell's masonry. The grain stays dry; gate timbers wrench loose and a crack runs through the low race-house. The valley keeps its food and spends its old defense."
+
+  - id: field_wash_pin
+    name: "field-wash course pin"
+    aliases: [fieldpin, fieldcourse, floodfields, grainwash]
+    description: "The field-wash pin spreads the crest over the lower flood fields. Pressure falls from Pell's gate and race-house, preserving the old defense, but the winter grain goes under brown water and silt. A dog-clutch admits only one course."
+    visible_when: [{ has_flag: race_open }]
+    takeable: false
+    interactions:
+      - verb: USE
+        target: field_wash_pin
+        command_verb: set
+        conditions:
+          - { has_flag: race_open }
+          - { none_of: [{ has_flag: flood_down_stone_race }, { has_flag: flood_over_lower_fields }] }
+        effects:
+          - set_flag: flood_over_lower_fields
+          - add_journal: "You preserve Pell's gate and race-house by spreading the crest over the lower fields. Every house is safe, but the winter grain is gone under silt."
+          - narrate: "You drive the field-wash pin home. The dog-clutch locks the stone race, and the crest spreads over the lower fields. Pressure leaves the gate; the race-house steadies while grain vanishes under brown water. The valley keeps its defense and gives the flood its coming stores."
 
 # No NPC combat counsel here — Pell is a weir-keeper, not a war-captain. His one
 # load-bearing counsel (ask_walk, +5 nerve) is what makes the lethal storm-walk safe; his
@@ -525,11 +588,15 @@ npcs:
           # that preserves the accurate back-reference; the base npc_text now reads "ask me about
           # that next" for the un-counselled player, directing them to the one topic that matters.
           npc_text: >
-            Three things hold this weir and all three are against you tonight. The head-rack at the
-            top is choked with drift — clear it with the iron or the water's nowhere to go but over.
+            One thing first: opening the relief-race will not finish it. Its course-frame can save
+            the winter grain by spending my old gate and race-house, or save the works by putting
+            the lower grain under silt. Every house lives either way; you choose what the valley
+            gives the water. Before that, three things hold this weir and all three are against you.
+            The head-rack at the top is choked with drift — clear it with the iron or the water's
+            nowhere to go but over.
             Then the storm-walk — ask me about that before you set foot on it, for it is the one
             place out there that kills. Then the relief-race, shut behind its winch down in the
-            race-house — get that open and the flood runs off safe around the valley and you've won.
+            race-house — get that open, then set the course-frame and hold to the cost you choose.
             Take my weir-iron for the rack and the winch, and the life-line for the walk, and work
             it in order: rack, walk, race. The rack and the winch are only seized — stubborn, not
             deadly; keep at them and they'll come. It's the walk that wants your care. I had it all
@@ -538,19 +605,18 @@ npcs:
           variants:
             - when: [{ has_flag: heard_walk }]
               text: >
-                Three things hold this weir and all three are against you tonight. The head-rack at
-                the top is choked with drift — clear it with the iron or the water's nowhere to go
-                but over. Then the storm-walk, which I've told you of. Then the relief-race, shut
-                behind its winch down in the race-house — get that open and the flood runs off safe
-                around the valley and you've won. Take my weir-iron for the rack and the winch, and
-                the life-line for the walk, and work it in order: rack, walk, race. The rack and
-                the winch are only seized — stubborn, not deadly; keep at them and they'll come.
-                It's the walk that wants your care. I had it all written in the flood-book on the
-                table there — the last entries, the same steps in my own hand — if you want it to
-                go by.
+                One thing first: opening the relief-race will not finish it. Its course-frame can
+                save the winter grain by spending my old gate and race-house, or save the works by
+                putting the lower grain under silt. Every house lives either way; you choose what
+                the valley gives the water. Before that, three things hold this weir. Clear the
+                choked head-rack with the iron. Then the storm-walk, which I've told you of. Then
+                open the seized relief-race, set its course-frame, and hold to the cost you choose.
+                Take my iron for rack and winch, and the life-line for the walk: rack, walk, race.
+                The rack and winch are stubborn, not deadly; keep at them. The walk wants your care.
+                It is all in the flood-book on the table if you want it to go by.
           effects:
             - set_flag: heard_plan
-            - add_journal: "Pell lays out the night: clear the choked head-rack, cross the storm-walk, open the seized relief-race — rack, walk, race, in that order — the iron for the rack and winch, the line for the walk."
+            - add_journal: "Pell's order: iron clears rack/race; line and counsel clear the killing walk. Then save grain or works—the other takes the crest."
           topics:
             - id: weir_back
               prompt: "Thank him, and ask something else."
@@ -569,31 +635,42 @@ win_conditions:
   # cleared (the chained exit gates) — fires the win via the engine's post-action checkWin.
   # SCORE_PEAKS_BEFORE_WIN does not fire on a navigation win (bug_0116), and the +15 capstone
   # is the accepted denouement-step.
-  - id: hold_the_weir
-    conditions: [{ visited: valley_held }]
-    ending: ending_held
+  - id: hold_the_fields
+    conditions: [{ visited: valley_held }, { has_flag: flood_down_stone_race }]
+    ending: ending_fields_held_race_spent
+  - id: hold_the_race
+    conditions: [{ visited: valley_held }, { has_flag: flood_over_lower_fields }]
+    ending: ending_race_held_fields_given
 
 endings:
-  - id: ending_held
-    title: "The Weir Holds"
+  - id: ending_fields_held_race_spent
+    title: "The Fields Held, the Old Race Spent"
     variants:
       - when: [{ not_flag: read_marks }]
         text: >
-          The dawn comes up grey and cold over a valley still asleep, and below you the weir holds:
-          the head-rack combing the drift, the relief-race running full and white around the
-          valley's rim, the killing water going off harmless down the second channel. The farms
-          will wake to a high brown river and never know how near a thing it was in the dark. Down
-          in the lodge old Pell is listening to the change in the water's voice, and he does not
-          need to be told. Only the flood-book still lies open on his table, its last marks unread:
-          the one piece of keeper's order you saved the valley without taking into your own hand.
-          *** You have won. ***
+          Dawn finds every house dry and the winter grain above water. The full crest has wrenched
+          out gate timbers and cracked the low race-house; Pell's old defense cannot answer another
+          flood until rebuilt. The valley keeps its coming food and spends its weir. The
+          flood-book still lies open in the lodge, its last marks unread. *** You have won. ***
     text: >
-      The dawn comes up grey and cold over a valley still asleep, and below you the weir holds:
-      the head-rack combing the drift, the relief-race running full and white around the valley's
-      rim, the killing water going off harmless down the second channel. The farms will wake to a
-      high brown river and never know how near a thing it was in the dark. Down in the lodge old
-      Pell is listening to the change in the water's voice, and he does not need to be told.
-      *** You have won. ***
+      Dawn finds every house dry and the winter grain above water. The full crest has wrenched out
+      gate timbers and cracked the low race-house; Pell's old defense cannot answer another flood
+      until rebuilt. The valley keeps its coming food and spends its weir. In the lodge Pell hears
+      what his works bought. *** You have won. ***
+  - id: ending_race_held_fields_given
+    title: "The Old Race Held, the Lower Fields Given"
+    variants:
+      - when: [{ not_flag: read_marks }]
+        text: >
+          Dawn finds every house dry and Pell's relief works fit for another flood. The lower fields
+          are a brown inland sheet; winter grain lies under silt and the valley faces a lean season.
+          The valley keeps its old defense and gives the water its coming stores. The flood-book
+          still lies open in the lodge, its last marks unread. *** You have won. ***
+    text: >
+      Dawn finds every house dry and Pell's relief works fit for another flood. The lower fields
+      are a brown inland sheet; winter grain lies under silt and the valley faces a lean season.
+      The valley keeps its old defense and gives the water its coming stores. In the lodge Pell
+      hears what the fields bought. *** You have won. ***
   - id: ending_swept
     title: "The Race Takes You"
     text: >

@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 550 -->
+<!-- historical_cycle_count: 551 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,15 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - breaking_weir_flood_course_consequence
+
+- Root evidence: nine verified pure players had completed The Breaking Weir and eight ended there; its rack→walk→winch chain always delivered a perfect rescue without asking what the valley would sacrifice. This made an owned flood-course consequence the strongest scoped correction (`bug_0518`).
+- Surface: opening the race now exposes one equal-score, mutually exclusive choice—save winter grain by spending Pell's old race-house, or preserve the old flood works by washing the lower fields. Distinct flags, journals, ending identities/copy, and exact post-Weir campaign context carry the chosen cost; no hidden route or solution data crosses UI/MCP.
+- Contract repair: rejected timeout seed 2522 chose the grain organically and called the fork “real moral weight,” but its audit caught checkpoint Continue dropping the current embedded menu. MCP now binds the exact quest that caused a pause and returns its unchanged, post-action compact/full context on Continue, matching UI; End, story blocks, stale guards, and ended quests expose none.
+- Pure evidence: verified pure/fresh seed 2524 completed Wolf-Winter, Gallowmere, and Tanner's Fever, continued at decisions 22/40/47, then ended honestly at goal 3 on 74; clarity 5/5, enjoyment 4/5, replay true, no rejects/stuck/timeout. Its exact report copy is hash `852669aa7725`.
+- Compile/self-critique: ledger 466/30 rejected; 17 v3 pure exits all continued at least once (75 continue/17 end, mean 94.71 decisions). PASS for a real Weir sacrifice and checkpoint parity, not retention uplift—the valid player stopped before Weir, seed 2522 remains rejected evidence, and long-haul travel/resource thresholds remain the fresh friction.
+- Guard: pre/final crawls `20260712T164013Z`/`20260712T174925Z` covered 6,000 steps and 247/247 nodes; focused 94-test plus pure-server/variant/structural proofs, exact report copy, and full health passed.
 
 ### Cycle result - breaking_weir_next_adventure_choice
 
@@ -140,13 +149,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Compiler surface: `retention.json` schema v2 stratifies journey-contract cohorts, so accepted-decision/checkpoint curves can never pool v1 and v2 semantics; one new report does not meet the ≥3-report compile threshold.
 - Self-critique: PASS for truthful measurement and the first real 80-decision continuation, not for retention—the player still chose exit and would not replay. An ending-sensitive Albany aftermath, consequential follow-up choice, and visible next local objective are next.
 - Guard: pre/post 6,000-step crawls are green (latest `20260712T013559Z`, all 12 quests / 247 nodes); browser parity, targeted regressions, independently reverified receipt, and `npm run health` pass.
-
-### Cycle result - wolf_winter_post_hunt_consequences
-
-- Feedback surface: baseline explorer 930016 (5/4, replay yes) called saving the split guard its best moment; post-change explorer 930017 (5/3, replay no) and breaker 930018 (5/4, replay yes) spent their stake at old grey, proving the coda stays optional rather than forced.
-- Content surface: saved split guard or brace-stake can now bar the inner cattle-gate in one terminal action or be carried into dawn for paling repair; equal-score choices differ in inventory, flags, journal, ending id/title, and the outcome identity exported to the overworld (`bug_0505`).
-- Regression surface: both resources fork from identical post-leader states into 60/60 gate-barred versus timber-saved outcomes; ordinary spent routes retain `ending_held`. The graph exhausts at 335,482/400k progress and 670,963/800k READ-inclusive states without raising caps.
-- Feedback compile: 449 verified reports (29 rejected), twelve Wolf reports at clarity 4.67 / enjoyment 3.67 / replay 4/12; the top compact-hash clusters remain flat historical fleet evidence contradicted by exact current projections.
-- Self-critique: PASS for a real terminal material consequence and durable outcome title, not for organic discovery—the two fresh post-change players spent their wood earlier. Repeated clean-wedge loft confusion was closed by stating that only frost-split rail opens recovery; a sound rail stays braced.
-- CI follow-through: replaced quadratic exhaustive-BFS dequeues and 6.5M success-path matcher allocations without changing traversal, state caps, or assertions; exact 665,101-state score and 670,963-state relabel proofs now pass isolated in 58s / 103s.
-- Guard: final crawl `20260711T235321Z` covered 6,000 steps, 8/8 Wolf rooms, 39/33 actions, and 247 overworld nodes; all three reports verify, and `npm run health` passes all 293 files / 2,062 tests and 12 packs.

@@ -132,6 +132,161 @@ function uiSessionAtTannersAccountabilityChoice(): OverworldSession {
   return session;
 }
 
+function mcpWolfWinterCheckpointInsideQuest() {
+  const a = api();
+  const started = a.start_overworld({ compact_context: false });
+  const overworldSessionId = started.session_id;
+
+  let view = started.observation;
+  a.scout_overworld_session_poi({
+    ...FULL_OVERWORLD,
+    session_id: overworldSessionId,
+    poi_id: view.pois[0]!.id,
+  });
+  view = a.get_overworld_session({
+    session_id: overworldSessionId,
+    include_observation: true,
+  }).observation;
+
+  const marketRoute = view.areaExits.find(
+    (route) => route.destination.id === "albany_city__market",
+  );
+  if (!marketRoute) throw new Error("expected Albany market route");
+  a.move_overworld_session_area({
+    ...FULL_OVERWORLD,
+    session_id: overworldSessionId,
+    area_route_id: marketRoute.id,
+  });
+  view = a.get_overworld_session({
+    session_id: overworldSessionId,
+    include_observation: true,
+  }).observation;
+
+  const revealed = a.scout_overworld_session_poi({
+    ...FULL_OVERWORLD,
+    session_id: overworldSessionId,
+    poi_id: view.pois[0]!.id,
+  });
+  const quest = revealed.result.discoveredQuests?.[0];
+  if (!quest) throw new Error("expected Albany quest lead");
+  const questRoute = revealed.observation.areaExits.find(
+    (route) => route.destination.id === quest.area,
+  );
+  if (!questRoute) throw new Error("expected route to quest area");
+  a.move_overworld_session_area({
+    ...FULL_OVERWORLD,
+    session_id: overworldSessionId,
+    area_route_id: questRoute.id,
+  });
+  view = a.get_overworld_session({
+    session_id: overworldSessionId,
+    include_observation: true,
+  }).observation;
+
+  const contact = view.characters[0];
+  if (!contact) throw new Error("expected quest-area contact");
+  let journey = a.talk_overworld_session_contact({
+    ...FULL_OVERWORLD,
+    session_id: overworldSessionId,
+    character_id: contact.id,
+  }).journey;
+  expect(journey.acceptedDecisions).toBe(5);
+
+  // Reach decision 37 through real reversible local movement, so quest start and
+  // two accepted quest moves put the checkpoint inside the RPG at decision 40.
+  while (journey.acceptedDecisions < 37) {
+    const current = a.get_overworld_session({
+      session_id: overworldSessionId,
+      include_observation: true,
+    }).observation;
+    const route =
+      current.currentArea?.id === quest.area
+        ? current.areaExits[0]
+        : current.areaExits.find((candidate) => candidate.destination.id === quest.area);
+    if (!route) throw new Error("expected a reversible Albany area route");
+    journey = a.move_overworld_session_area({
+      ...FULL_OVERWORLD,
+      session_id: overworldSessionId,
+      area_route_id: route.id,
+    }).journey;
+  }
+  expect(
+    a.get_overworld_session({ session_id: overworldSessionId, include_observation: true })
+      .observation.currentArea?.id,
+  ).toBe(quest.area);
+
+  const launched = a.start_overworld_session_quest({
+    ...FULL_OVERWORLD,
+    compact_observation: false,
+    session_id: overworldSessionId,
+    quest_id: quest.id,
+  });
+  expect(launched.journey).toMatchObject({
+    status: "active",
+    acceptedDecisions: 38,
+    nextCheckpoint: 40,
+    pendingChoice: null,
+  });
+
+  const enteredYard = a.step_action({
+    session_id: launched.rpg_session_id,
+    action_id: "go_north",
+    expected_state_hash: launched.rpg_session.state_hash,
+    compact_observation: false,
+    compact_events: false,
+  });
+  if (enteredYard.ok !== true) throw new Error("expected the first quest move to succeed");
+  expect(enteredYard).toMatchObject({
+    ok: true,
+    journey: { status: "active", acceptedDecisions: 39 },
+    observation: { room: "byre_yard" },
+  });
+  const staleActionIds = enteredYard.observation.available_actions.map((action) => action.id);
+  expect(staleActionIds).toEqual(
+    expect.arrayContaining(["go_north", "go_west", "read_day_book", "talk_houndsman"]),
+  );
+
+  const checkpoint = a.step_action({
+    session_id: launched.rpg_session_id,
+    action_id: "go_north",
+    expected_state_hash: enteredYard.state_hash,
+    compact_observation: false,
+    compact_events: false,
+  });
+  if (checkpoint.ok !== true) throw new Error("expected the checkpoint quest move to succeed");
+  const checkpointJourney = checkpoint.journey;
+  if (!checkpointJourney) throw new Error("expected the embedded parent journey");
+  expect(checkpoint).toMatchObject({
+    ok: true,
+    journey: {
+      status: "awaiting_choice",
+      acceptedDecisions: 40,
+      nextCheckpoint: 40,
+      decisionProof: {
+        last: { number: 40, surface: "quest", actionId: "go_north", reason: "movement" },
+      },
+    },
+    observation: { room: "paling_gap", available_actions: [] },
+  });
+  expect(checkpointJourney.pendingChoice?.options.map((option) => option.id)).toEqual([
+    "continue",
+    "end",
+  ]);
+  expect(checkpoint.overworld_snapshot_hash).not.toBe(launched.snapshot_hash);
+  expect(a.sessions.get(launched.rpg_session_id).state.current).toBe("paling_gap");
+  const fullRpgStateHash = a.sessions.get(launched.rpg_session_id).stateHash;
+
+  return {
+    a,
+    overworldSessionId,
+    rpgSessionId: launched.rpg_session_id,
+    checkpoint,
+    checkpointJourney,
+    fullRpgStateHash,
+    staleActionIds,
+  };
+}
+
 describe("MCP journey surface", () => {
   it("keeps the human contact line in the default compact action result", () => {
     const a = api();
@@ -283,119 +438,24 @@ describe("MCP journey surface", () => {
   });
 
   it("makes a pending parent choice the only legal move inside an embedded quest", () => {
-    const a = api();
-    const started = a.start_overworld({ compact_context: false });
-    const sessionId = started.session_id;
-
-    let view = started.observation;
-    a.scout_overworld_session_poi({
-      ...FULL_OVERWORLD,
-      session_id: sessionId,
-      poi_id: view.pois[0]!.id,
-    });
-    view = a.get_overworld_session({
-      session_id: sessionId,
-      include_observation: true,
-    }).observation;
-
-    const marketRoute = view.areaExits.find(
-      (route) => route.destination.id === "albany_city__market",
-    );
-    if (!marketRoute) throw new Error("expected Albany market route");
-    a.move_overworld_session_area({
-      ...FULL_OVERWORLD,
-      session_id: sessionId,
-      area_route_id: marketRoute.id,
-    });
-    view = a.get_overworld_session({
-      session_id: sessionId,
-      include_observation: true,
-    }).observation;
-
-    const revealed = a.scout_overworld_session_poi({
-      ...FULL_OVERWORLD,
-      session_id: sessionId,
-      poi_id: view.pois[0]!.id,
-    });
-    const quest = revealed.result.discoveredQuests?.[0];
-    if (!quest) throw new Error("expected Albany quest lead");
-    const questRoute = revealed.observation.areaExits.find(
-      (route) => route.destination.id === quest.area,
-    );
-    if (!questRoute) throw new Error("expected route to quest area");
-    a.move_overworld_session_area({
-      ...FULL_OVERWORLD,
-      session_id: sessionId,
-      area_route_id: questRoute.id,
-    });
-    view = a.get_overworld_session({
-      session_id: sessionId,
-      include_observation: true,
-    }).observation;
-
-    const contact = view.characters[0];
-    if (!contact) throw new Error("expected quest-area contact");
-    let journey = a.talk_overworld_session_contact({
-      ...FULL_OVERWORLD,
-      session_id: sessionId,
-      character_id: contact.id,
-    }).journey;
-    expect(journey.acceptedDecisions).toBe(5);
-
-    // Navigation remains a meaningful decision on every traversal. Bounce over
-    // one real area edge so the quest start itself lands exactly on checkpoint 40.
-    while (journey.acceptedDecisions < 39) {
-      const current = a.get_overworld_session({
-        session_id: sessionId,
-        include_observation: true,
-      }).observation;
-      const route =
-        current.currentArea?.id === quest.area
-          ? current.areaExits[0]
-          : current.areaExits.find((candidate) => candidate.destination.id === quest.area);
-      if (!route) throw new Error("expected a reversible Albany area route");
-      journey = a.move_overworld_session_area({
-        ...FULL_OVERWORLD,
-        session_id: sessionId,
-        area_route_id: route.id,
-      }).journey;
-    }
-    expect(
-      a.get_overworld_session({ session_id: sessionId, include_observation: true }).observation
-        .currentArea?.id,
-    ).toBe(quest.area);
-
-    const launched = a.start_overworld_session_quest({
-      ...FULL_OVERWORLD,
-      compact_observation: false,
-      session_id: sessionId,
-      quest_id: quest.id,
-    });
-    expect(launched.journey).toMatchObject({
-      status: "awaiting_choice",
-      acceptedDecisions: 40,
-      nextCheckpoint: 40,
-    });
-    expect(launched.journey.pendingChoice?.options.map((option) => option.id)).toEqual([
-      "continue",
-      "end",
-    ]);
-    expect(launched.rpg_session.observation.available_actions).toEqual([]);
-    expect(launched.overworld_snapshot_hash).toBe(launched.snapshot_hash);
+    const { a, overworldSessionId, rpgSessionId, checkpoint, checkpointJourney, fullRpgStateHash } =
+      mcpWolfWinterCheckpointInsideQuest();
+    const checkpointProof = checkpointJourney.decisionProof;
+    const checkpointRpgHash = checkpoint.state_hash;
 
     const observed = a.get_observation({
-      session_id: launched.rpg_session_id,
+      session_id: rpgSessionId,
       compact_observation: false,
     });
-    expect(observed.journey).toEqual(launched.journey);
-    expect(observed.overworld_snapshot_hash).toBe(launched.snapshot_hash);
+    expect(observed.journey).toEqual(checkpointJourney);
+    expect(observed.overworld_snapshot_hash).toBe(checkpoint.overworld_snapshot_hash);
     expect(observed.observation.available_actions).toEqual([]);
     expect(
-      a.list_legal_actions({ session_id: launched.rpg_session_id, compact_actions: true }).actions,
+      a.list_legal_actions({ session_id: rpgSessionId, compact_actions: true }).actions,
     ).toEqual([]);
 
     const blocked = a.step_action({
-      session_id: launched.rpg_session_id,
+      session_id: rpgSessionId,
       action_id: "not_a_legal_action",
       compact_observation: false,
       compact_events: false,
@@ -403,13 +463,14 @@ describe("MCP journey surface", () => {
     expect(blocked).toMatchObject({
       ok: false,
       journey: { status: "awaiting_choice", acceptedDecisions: 40 },
-      overworld_snapshot_hash: launched.snapshot_hash,
+      overworld_snapshot_hash: checkpoint.overworld_snapshot_hash,
     });
     expect(blocked.observation.available_actions).toEqual([]);
 
     const continued = a.choose_overworld_session_journey({
       ...FULL_OVERWORLD,
-      session_id: sessionId,
+      compact_observation: false,
+      session_id: overworldSessionId,
       choice: "continue",
     });
     expect(continued.result.exitReceipt).toBeNull();
@@ -419,22 +480,107 @@ describe("MCP journey surface", () => {
       nextCheckpoint: 80,
       pendingChoice: null,
     });
-
-    const actions = a.list_legal_actions({
-      session_id: launched.rpg_session_id,
-      compact_actions: true,
+    expect(continued.journey.decisionProof).toEqual(checkpointProof);
+    expect(continued.result.retentionEvent).toMatchObject({
+      atDecision: 40,
+      checkpoint: 40,
+      choice: "continue",
+      decisionProofHash: checkpointProof.hash,
     });
-    expect(actions.journey).toEqual(continued.journey);
-    expect(actions.actions.length).toBeGreaterThan(0);
+    expect(continued.snapshot_hash).not.toBe(checkpoint.overworld_snapshot_hash);
+    expect(continued.rpg_session_id).toBe(rpgSessionId);
+    const resumed = continued.rpg_session;
+    if (!resumed) throw new Error("expected Continue to resume the embedded quest");
+    expect(resumed).toMatchObject({
+      session_id: rpgSessionId,
+      state_hash: checkpointRpgHash,
+      world_quest_id: "wolf_winter",
+      journey: continued.journey,
+      overworld_snapshot_hash: continued.snapshot_hash,
+    });
+
+    const resumedIds = resumed.observation.available_actions.map((action) => action.id);
+    const listed = a.list_legal_actions({ session_id: rpgSessionId, compact_actions: true });
+    expect(resumedIds).toEqual(listed.actions);
+    expect(resumedIds).toEqual([
+      "go_south",
+      "examine_paling_rail",
+      "examine_relief_spear",
+      "use_paling_rail",
+      "look_around",
+      "inventory",
+      "maneuver_yearling_wolf_set_spear",
+    ]);
+    for (const staleId of [
+      "go_north",
+      "go_west",
+      "examine_day_book",
+      "read_day_book",
+      "talk_houndsman",
+    ]) {
+      expect(resumedIds).not.toContain(staleId);
+    }
+
+    const reread = a.get_observation({
+      session_id: rpgSessionId,
+      compact_observation: false,
+    });
+    expect(resumed.observation).toEqual(reread.observation);
+    expect(resumed.state_hash).toBe(reread.state_hash);
+    expect(a.sessions.get(rpgSessionId).stateHash).toBe(fullRpgStateHash);
+
+    // The action returned directly by Continue is executable without guessing or
+    // fetching a replacement menu.
     const stepped = a.step_action({
-      session_id: launched.rpg_session_id,
-      action_id: actions.actions[0]!,
+      session_id: rpgSessionId,
+      action_id: resumedIds[0]!,
+      expected_state_hash: resumed.state_hash,
       compact_observation: true,
       compact_events: true,
     });
     expect(stepped.ok).toBe(true);
     expect(stepped.journey).toMatchObject({ status: "active", acceptedDecisions: 41 });
-    expect(stepped.overworld_snapshot_hash).not.toBe(launched.snapshot_hash);
+    expect(stepped.overworld_snapshot_hash).not.toBe(continued.snapshot_hash);
+  });
+
+  it("resumes compact quest context after Continue and never exposes it after End", () => {
+    const continuedRun = mcpWolfWinterCheckpointInsideQuest();
+    const continued = continuedRun.a.choose_overworld_session_journey({
+      session_id: continuedRun.overworldSessionId,
+      choice: "continue",
+    });
+    expect(continued.rpg_session_id).toBe(continuedRun.rpgSessionId);
+    const resumed = continued.rpg_session;
+    if (!resumed) throw new Error("expected compact Continue to resume the embedded quest");
+    expect(resumed.state_hash).toBe(continuedRun.checkpoint.state_hash);
+    expect(resumed.context.actions).toEqual([
+      "go_south",
+      "examine_paling_rail",
+      "examine_relief_spear",
+      "use_paling_rail",
+      "look_around",
+      "inventory",
+      "maneuver_yearling_wolf_set_spear",
+    ]);
+    const compactReread = continuedRun.a.get_observation({
+      session_id: continuedRun.rpgSessionId,
+      compact_observation: true,
+      include_actions: true,
+    });
+    expect(resumed.context).toEqual(compactReread.context);
+    expect(resumed.journey).toEqual(continued.journey);
+    expect(resumed.overworld_snapshot_hash).toBe(continued.snapshot_hash);
+
+    const endedRun = mcpWolfWinterCheckpointInsideQuest();
+    const ended = endedRun.a.choose_overworld_session_journey({
+      session_id: endedRun.overworldSessionId,
+      choice: "end",
+    });
+    expect(ended.journey.status).toBe("ended");
+    expect(ended.result.exitReceipt).not.toBeNull();
+    expect(ended).not.toHaveProperty("rpg_session_id");
+    expect(ended).not.toHaveProperty("rpg_session");
+    expect(endedRun.a.sessions.embeddedJourneyPause(endedRun.overworldSessionId)).toBeNull();
   });
 
   it("shares one story-choice presentation with the UI and blocks every embedded RPG action", () => {

@@ -749,13 +749,15 @@ tool(
 );
 tool(
   "choose_overworld_session_journey",
-  "At a presented journey pause, choose to continue playing or end this journey.",
+  "Choose continue or end at a shown journey pause.",
   {
     ...SESSION,
     choice: z.enum(["continue", "end"]).describe("Choice from journey.pendingChoice.options."),
+    ...COMPACT_ACTIONS,
+    ...COMPACT_OBSERVATION,
     ...OVERWORLD_ACTION_CONTEXT,
   },
-  (a) => api.choose_overworld_session_journey(defaultCompactOverworld(a)),
+  (a) => api.choose_overworld_session_journey(defaultCompactOverworldAndRpg(a)),
 );
 tool(
   "choose_overworld_session_story",
