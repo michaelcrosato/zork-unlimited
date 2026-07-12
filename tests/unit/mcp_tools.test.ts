@@ -1543,9 +1543,10 @@ describe("MCP tools — validate / load (§9.4)", () => {
         option.renownGained,
       ]),
     );
-    expect(JSON.stringify(traveledCompact.pending_road)).not.toContain(
-      traveledFull.pendingRoadEncounter!.options[0]!.outcome,
-    );
+    for (const option of traveledFull.pendingRoadEncounter!.options) {
+      expect(option.outcome).toBeUndefined();
+    }
+    expect(traveledFull.pendingRoadEncounter!.event.responses).toBeUndefined();
     expect(traveledCompact.travel_log).toEqual(compactTravel.context.travel_log);
     expect(JSON.stringify(traveledCompact).length).toBeLessThan(
       JSON.stringify(traveledFull).length,

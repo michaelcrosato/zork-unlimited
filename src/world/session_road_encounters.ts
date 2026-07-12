@@ -175,6 +175,9 @@ export function resolveOverworldRoadEncounter(
 ): OverworldRoadEncounterResolution {
   const option = encounter.options.find((candidate) => candidate.strategy === strategy);
   if (!option) throw new Error(`Unknown road encounter strategy "${strategy}".`);
+  if (option.outcome === undefined) {
+    throw new Error("Road encounter resolution requires the live encounter's outcome prose.");
+  }
 
   const suppliesUsed = Math.min(state.supplies, option.suppliesCost);
   const supplyDeficit = option.suppliesCost - suppliesUsed;

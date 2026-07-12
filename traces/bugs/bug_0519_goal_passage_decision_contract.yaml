@@ -1,6 +1,6 @@
 id: bug_0519_goal_passage_decision_contract
 title: "Current-goal travel is one interruptible passage decision"
-pack: content/overworld.json
+pack: content/world/new_york_overworld.json
 reported_by: pure-blind-playtest
 reports:
   - blind-tester/reports/20260712T045851Z_overworld_seed1407.md

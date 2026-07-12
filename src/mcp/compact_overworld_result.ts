@@ -231,8 +231,10 @@ export function compactOverworldTravelResult(result: TravelLogEntry): OverworldC
 export function compactOverworldGoalPassageResult(
   result: OverworldJourneyGoalPassageResult,
 ): OverworldCompactGoalPassageResult {
+  // Keep the newest legs: the passage's end — the arrival, or the road scene the player
+  // must now resolve — is the player-relevant part; only older traversed history drops.
   const legs = result.legs
-    .slice(0, OVERWORLD_COMPACT_ROUTE_STEP_LIMIT)
+    .slice(-OVERWORLD_COMPACT_ROUTE_STEP_LIMIT)
     .map(compactOverworldTravelResult);
   return {
     goal_id: result.goalId,

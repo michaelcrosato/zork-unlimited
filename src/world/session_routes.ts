@@ -8,7 +8,7 @@ import type {
 import {
   cloneOverworldEdge,
   cloneOverworldNode,
-  cloneOverworldRoadEvent,
+  redactOverworldRoadEventForPresentation,
 } from "./overworld_clone.js";
 import {
   resolveOverworldTravelLeg,
@@ -209,7 +209,7 @@ export function cloneOverworldRouteOption(
       from: cloneOverworldNode(step.from),
       to: cloneOverworldNode(step.to),
       edge: cloneOverworldEdge(step.edge),
-      roadEvent: step.roadEvent ? cloneOverworldRoadEvent(step.roadEvent) : null,
+      roadEvent: step.roadEvent ? redactOverworldRoadEventForPresentation(step.roadEvent) : null,
     })),
     estimate: { ...plan.estimate },
   };

@@ -318,12 +318,12 @@ describe("compactOverworldGoalPassageResult", () => {
         fatigueGained: 1,
         fatigueAfter: index + 1,
         roadEvent:
-          index === 0
+          index === OVERWORLD_COMPACT_ROUTE_STEP_LIMIT + 1
             ? {
-                id: "event_traversed",
-                edge: "road_0",
+                id: "event_stopping_leg",
+                edge: `road_${index}`,
                 risk: "low" as const,
-                title: "A traversed road scene",
+                title: "The scene that stopped the passage",
                 summary: "This scene happened on the accepted passage.",
               }
             : null,
@@ -363,17 +363,22 @@ describe("compactOverworldGoalPassageResult", () => {
     expect(compact.destination).toHaveLength(OVERWORLD_COMPACT_LABEL_CHAR_LIMIT);
     expect(compact.stopped_at).toHaveLength(OVERWORLD_COMPACT_LABEL_CHAR_LIMIT);
     expect(compact.legs).toHaveLength(OVERWORLD_COMPACT_ROUTE_STEP_LIMIT);
-    expect(compact.legs[0]?.slice(0, 9)).toEqual([
-      "road_0",
-      "town_0",
-      "town_1",
+    // The newest legs survive truncation: the stopping leg's scene tuple is present and
+    // only the oldest traversed history (road_0, road_1) drops.
+    const stoppingIndex = OVERWORLD_COMPACT_ROUTE_STEP_LIMIT + 1;
+    expect(compact.legs[0]?.slice(0, 3)).toEqual(["road_2", "town_2", "town_3"]);
+    expect(compact.legs.at(-1)?.slice(0, 9)).toEqual([
+      `road_${stoppingIndex}`,
+      `town_${stoppingIndex}`,
+      `town_${stoppingIndex + 1}`,
       30,
       1,
       1,
-      "event_traversed",
+      "event_stopping_leg",
       "low",
-      "A traversed road scene",
+      "The scene that stopped the passage",
     ]);
+    expect(JSON.stringify(compact)).not.toMatch(/road_0\b|road_1\b/);
     expect(JSON.stringify(compact)).not.toMatch(/future_secret_road|Future secret scene/);
   });
 });

@@ -837,6 +837,52 @@ function currentGoalTargetsBreakingWeir(journey: JourneyContractSnapshot): boole
   return journeyCampaignGoalDefinition(journey.goal)?.targetQuestId === "breaking_weir";
 }
 
+export type JourneyCampaignPendingStoryStep =
+  | "albany_dawn_dispatch"
+  | "tanners_fever_accountability"
+  | "rome_post_weir_dispatch";
+
+/**
+ * The story choice the campaign needs before its next goal can activate, derived from
+ * completed quests exactly as nextJourneyCampaignGoal derives its null-returning
+ * branches. Quests are not gated by the active goal, so a player can complete a later
+ * campaign quest while an earlier goal is still active; presentation keyed only on the
+ * current goal's identity then dead-ends the campaign at that goal's continue.
+ */
+export function journeyCampaignPendingStoryStep(
+  completedQuestIds: ReadonlySet<string>,
+): JourneyCampaignPendingStoryStep | null {
+  if (!completedQuestIds.has(JOURNEY_CAMPAIGN_INITIAL_QUEST_ID)) return null;
+  if (!completedQuestIds.has("gallowmere")) return "albany_dawn_dispatch";
+  if (!completedQuestIds.has(TANNERS_FEVER_CAMPAIGN_GOAL.targetQuestId)) return null;
+  if (!completedQuestIds.has("breaking_weir")) return "tanners_fever_accountability";
+  if (
+    !completedQuestIds.has(LEGACY_OSWEGO_ADVOCATES_CASE_GOAL.targetQuestId) &&
+    !completedQuestIds.has(LEGACY_GREECE_COLD_FORGE_GOAL.targetQuestId)
+  ) {
+    return "rome_post_weir_dispatch";
+  }
+  return null;
+}
+
+function awaitsAnyGoalCompletionChoice(journey: JourneyContractSnapshot): boolean {
+  return (
+    journey.status === "awaiting_choice" &&
+    journey.goal.status === "completed" &&
+    journey.pendingChoice?.reasons.includes("goal_completed") === true &&
+    journey.pendingChoice.goalVersion === journey.goal.version &&
+    journey.pendingChoice.goalId === journey.goal.id
+  );
+}
+
+function awaitsAnyStoryContinuation(journey: JourneyContractSnapshot): boolean {
+  return (
+    journey.status === "active" &&
+    journey.goal.status === "completed" &&
+    hasContinuedJourneyGoal(journey, journey.goal)
+  );
+}
+
 function awaitsBreakingWeirGoalChoice(journey: JourneyContractSnapshot): boolean {
   return (
     journey.status === "awaiting_choice" &&
@@ -867,6 +913,7 @@ export type JourneyCampaignPresentationContext = Readonly<{
 export function journeyCampaignPresentationContext(args: {
   journey: JourneyContractSnapshot;
   questOutcomeIds: ReadonlyMap<string, string>;
+  completedQuestIds?: ReadonlySet<string>;
 }): JourneyCampaignPresentationContext | null {
   const beforeAlbanyRetention = awaitsInitialGoalChoice(args.journey);
   const afterAlbanyContinue = awaitsAlbanyDawnDispatch(args.journey);
@@ -898,14 +945,58 @@ export function journeyCampaignPresentationContext(args: {
 
   const beforeBreakingWeirRetention = awaitsBreakingWeirGoalChoice(args.journey);
   const afterBreakingWeirContinue = awaitsRomePostWeirDispatch(args.journey);
-  if (!beforeBreakingWeirRetention && !afterBreakingWeirContinue) return null;
-  const breakingWeirOutcome = breakingWeirCampaignOutcome(args.questOutcomeIds);
+  if (beforeBreakingWeirRetention || afterBreakingWeirContinue) {
+    const breakingWeirOutcome = breakingWeirCampaignOutcome(args.questOutcomeIds);
+    return Object.freeze({
+      completionContext:
+        breakingWeirOutcome?.romeDispatchContext ?? ROME_POST_WEIR_DISPATCH_CONTEXT,
+      preRetentionTeaser: beforeBreakingWeirRetention ? ROME_POST_WEIR_DISPATCH_TEASER : null,
+      continueConsequencePrefix: beforeBreakingWeirRetention
+        ? "Continue to choose which live packet you carry first."
+        : null,
+      storyChoice: afterBreakingWeirContinue ? romePostWeirDispatchStoryChoice() : null,
+    });
+  }
+
+  // Out-of-order fallback: a later campaign quest completed while an earlier goal was
+  // active leaves the required story step unmatched by every goal-identity branch above.
+  // Derive the step from completed quests so the choice presents at whichever completed,
+  // continued goal the player is actually at.
+  if (!args.completedQuestIds) return null;
+  const step = journeyCampaignPendingStoryStep(args.completedQuestIds);
+  if (!step) return null;
+  const beforeRetention = awaitsAnyGoalCompletionChoice(args.journey);
+  const afterContinue = awaitsAnyStoryContinuation(args.journey);
+  if (!beforeRetention && !afterContinue) return null;
+  if (step === "albany_dawn_dispatch") {
+    const outcome = wolfWinterCampaignOutcome(args.questOutcomeIds);
+    if (!outcome) return null;
+    return Object.freeze({
+      completionContext: outcome.albanyReturnContext,
+      preRetentionTeaser: beforeRetention ? ALBANY_DAWN_DISPATCH_TEASER : null,
+      continueConsequencePrefix: beforeRetention
+        ? "Continue to decide where Albany's only dawn relief wagon goes."
+        : null,
+      storyChoice: afterContinue ? albanyDawnDispatchStoryChoice(outcome) : null,
+    });
+  }
+  if (step === "tanners_fever_accountability") {
+    return Object.freeze({
+      completionContext: TANNERS_FEVER_ACCOUNTABILITY_CONTEXT,
+      preRetentionTeaser: beforeRetention ? TANNERS_FEVER_ACCOUNTABILITY_TEASER : null,
+      continueConsequencePrefix: beforeRetention
+        ? "Continue to decide how Oneonta records the corrected dose."
+        : null,
+      storyChoice: afterContinue ? tannersFeverAccountabilityStoryChoice() : null,
+    });
+  }
+  const fallbackWeirOutcome = breakingWeirCampaignOutcome(args.questOutcomeIds);
   return Object.freeze({
-    completionContext: breakingWeirOutcome?.romeDispatchContext ?? ROME_POST_WEIR_DISPATCH_CONTEXT,
-    preRetentionTeaser: beforeBreakingWeirRetention ? ROME_POST_WEIR_DISPATCH_TEASER : null,
-    continueConsequencePrefix: beforeBreakingWeirRetention
+    completionContext: fallbackWeirOutcome?.romeDispatchContext ?? ROME_POST_WEIR_DISPATCH_CONTEXT,
+    preRetentionTeaser: beforeRetention ? ROME_POST_WEIR_DISPATCH_TEASER : null,
+    continueConsequencePrefix: beforeRetention
       ? "Continue to choose which live packet you carry first."
       : null,
-    storyChoice: afterBreakingWeirContinue ? romePostWeirDispatchStoryChoice() : null,
+    storyChoice: afterContinue ? romePostWeirDispatchStoryChoice() : null,
   });
 }

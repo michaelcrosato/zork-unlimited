@@ -20,7 +20,11 @@ export type OverworldRoadEncounterOption = {
   suppliesCost: number;
   fatigueGained: number;
   renownGained: number;
-  outcome: string;
+  /**
+   * Consequence prose applied on resolution. Present on the session's live encounter;
+   * withheld from every outward projection until the strategy is chosen.
+   */
+  outcome?: string;
 };
 
 export type OverworldTravelResourceState = {

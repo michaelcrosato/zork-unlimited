@@ -479,6 +479,7 @@ export class OverworldSession {
     const campaign = journeyCampaignPresentationContext({
       journey: this.journeyState,
       questOutcomeIds: this.questOutcomeIds,
+      completedQuestIds: this.completedQuestIds,
     });
     const pending = this.journeyState.pendingChoice;
     const pendingGoalCompletion = pending?.reasons.includes("goal_completed") === true;

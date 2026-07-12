@@ -8,7 +8,8 @@ import {
   cloneOverworldLocalJob,
   cloneOverworldNode,
   cloneOverworldPoi,
-  cloneOverworldRoadEvent,
+  redactOverworldRoadEncounterOptionForPresentation,
+  redactOverworldRoadEventForPresentation,
 } from "./overworld_clone.js";
 import { cloneOverworldRouteOption } from "./session_routes.js";
 import { cloneOverworldRegionalArcProgress } from "./session_regional_arcs.js";
@@ -48,13 +49,15 @@ export function cloneOverworldView(view: OverworldView): OverworldView {
     pendingRoadEncounter: view.pendingRoadEncounter
       ? {
           ...view.pendingRoadEncounter,
-          event: cloneOverworldRoadEvent(view.pendingRoadEncounter.event),
-          options: view.pendingRoadEncounter.options.map((option) => ({ ...option })),
+          event: redactOverworldRoadEventForPresentation(view.pendingRoadEncounter.event),
+          options: view.pendingRoadEncounter.options.map((option) =>
+            redactOverworldRoadEncounterOptionForPresentation(option),
+          ),
         }
       : null,
     log: view.log.map((entry) => ({
       ...entry,
-      roadEvent: entry.roadEvent ? cloneOverworldRoadEvent(entry.roadEvent) : null,
+      roadEvent: entry.roadEvent ? redactOverworldRoadEventForPresentation(entry.roadEvent) : null,
     })),
   };
 }

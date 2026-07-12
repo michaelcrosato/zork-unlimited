@@ -236,9 +236,10 @@ rooms:
     name: "The Relief-Race House"
     description: >
       A stone house over the relief-race, shut behind a winch-gate seized with rust and swollen
-      timber. Beyond it stands Pell's course-frame: the stone-race pin keeps winter grain dry
-      but spends the old works; the field-wash pin preserves the works but puts the lower grain
-      under. First get the winch turning with the weir-iron. The walk is south.
+      timber. Beyond the gate stands Pell's course-frame, its twin courses still holding: one
+      keeps winter grain dry but spends the old works; the other preserves the works but puts
+      the lower grain under. Nothing beyond the gate can be worked until the winch turns —
+      first get it turning with the weir-iron. The walk is south.
     variants:
       - when: [{ has_flag: flood_down_stone_race }]
         text: >

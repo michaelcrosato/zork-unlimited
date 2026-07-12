@@ -73,7 +73,8 @@ describe("overworld_play render (pure, same session the UI/MCP drive)", () => {
         option.renownGained,
       ]),
     );
-    expect(JSON.stringify(compact)).not.toContain(pending!.options[0]!.outcome);
+    for (const option of pending!.options) expect(option.outcome).toBeUndefined();
+    expect(pending!.event.responses).toBeUndefined();
     // The three strategy command words the CLI accepts while wedged.
     expect(text).toMatch(/assist|scout|press/);
   });

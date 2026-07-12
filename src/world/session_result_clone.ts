@@ -2,7 +2,8 @@ import {
   cloneOverworldArea,
   cloneOverworldExplorationSite,
   cloneOverworldLocalJob,
-  cloneOverworldRoadEvent,
+  redactOverworldRoadEncounterOptionForPresentation,
+  redactOverworldRoadEventForPresentation,
 } from "./overworld_clone.js";
 import type { OverworldActionResult } from "./session_action_application.js";
 import type { OverworldQuestView } from "./session_local_discovery.js";
@@ -30,15 +31,17 @@ export function cloneOverworldPendingRoadEncounter(
 ): OverworldPendingRoadEncounter {
   return {
     ...encounter,
-    event: cloneOverworldRoadEvent(encounter.event),
-    options: encounter.options.map((option) => ({ ...option })),
+    event: redactOverworldRoadEventForPresentation(encounter.event),
+    options: encounter.options.map((option) =>
+      redactOverworldRoadEncounterOptionForPresentation(option),
+    ),
   };
 }
 
 export function cloneOverworldTravelLogEntry(entry: TravelLogEntry): TravelLogEntry {
   return {
     ...entry,
-    roadEvent: entry.roadEvent ? cloneOverworldRoadEvent(entry.roadEvent) : null,
+    roadEvent: entry.roadEvent ? redactOverworldRoadEventForPresentation(entry.roadEvent) : null,
   };
 }
 

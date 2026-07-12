@@ -12,6 +12,7 @@ import type {
   OverworldPoi,
   OverworldRoadEvent,
 } from "./overworld.js";
+import type { OverworldRoadEncounterOption } from "./travel_mechanics.js";
 
 export function cloneOverworldNode(node: OverworldNode): OverworldNode {
   return {
@@ -97,4 +98,26 @@ export function cloneOverworldRoadEvent(event: OverworldRoadEvent): OverworldRoa
         }
       : {}),
   };
+}
+
+/**
+ * Outward projection of a road event. Authored response outcomes stay hidden until a
+ * strategy is chosen — matching the UI and compact surfaces — so no pre-choice player
+ * projection may carry `responses`; the resolution result alone narrates the outcome.
+ */
+export function redactOverworldRoadEventForPresentation(
+  event: OverworldRoadEvent,
+): OverworldRoadEvent {
+  const clone = cloneOverworldRoadEvent(event);
+  if (clone.responses) delete clone.responses;
+  return clone;
+}
+
+/** Outward projection of an encounter option: label and visible costs, no outcome. */
+export function redactOverworldRoadEncounterOptionForPresentation(
+  option: OverworldRoadEncounterOption,
+): OverworldRoadEncounterOption {
+  const clone = { ...option };
+  if (clone.outcome !== undefined) delete clone.outcome;
+  return clone;
 }
