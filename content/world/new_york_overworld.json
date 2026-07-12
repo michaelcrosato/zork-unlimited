@@ -37444,7 +37444,9 @@
       "summary": "Between Rome and Oneida, rain-fed water noses over the ditch stones while mill hands hammer fresh height marks into a bridge pier. Reports moving both ways agree: the upper weir is groaning and every downstream channel is rising.",
       "requires_choice": true,
       "active_goal_ids": [
-        "rome_breaking_weir"
+        "rome_breaking_weir",
+        "rome_breaking_weir_household_correction",
+        "rome_breaking_weir_public_warning"
       ],
       "retire_after_quest": "breaking_weir",
       "responses": {

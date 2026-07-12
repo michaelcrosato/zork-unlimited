@@ -25,7 +25,6 @@ import { JourneyEndedScreen } from "./JourneyEndedScreen.js";
 import { JourneyStatus } from "./JourneyStatus.js";
 import { FRESH_GAME_TUTORIAL } from "../../src/world/fresh_game_tutorial.js";
 import type { JourneyChoice } from "../../src/world/journey_contract.js";
-import type { AlbanyDawnDispatchChoiceId } from "../../src/world/journey_campaign.js";
 import type { OverworldQuest } from "../../src/world/overworld.js";
 import type { OverworldQuestView } from "../../src/world/session_local_discovery.js";
 
@@ -318,10 +317,10 @@ export default function App(): JSX.Element {
 
   function chooseJourneyStory(choiceId: string): void {
     try {
-      const result = worldSession.chooseJourneyStory(choiceId as AlbanyDawnDispatchChoiceId);
+      const result = worldSession.chooseJourneyStory(choiceId);
       setWorldView(worldSession.view());
       setLog((previous) => [
-        `Albany dawn dispatch: ${result.consequence}`,
+        `Story consequence: ${result.consequence}`,
         `New goal: ${result.goal.text}`,
         ...previous,
       ]);

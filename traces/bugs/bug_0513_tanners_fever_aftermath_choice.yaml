@@ -1,0 +1,54 @@
+id: bug_0513_tanners_fever_aftermath_choice
+title: "Tanner's Fever earns a consequential Oneonta aftermath choice"
+pack: content/rpg/quests/tanners_fever.yaml
+reported_by: pure-blind-playtest
+reports:
+  - blind-tester/reports/20260712T090032Z_overworld_seed1809.md
+  - blind-tester/reports/20260712T105137Z_overworld_seed1912.md
+severity: S1
+symptom: >
+  Independent pure players praised Wolf-Winter's post-goal relief-wagon choice,
+  but found the later campaign cadence repetitive. One exited when Tanner's
+  Fever completed; another continued at decision 80, completed it three
+  decisions later, then ended because the next packet felt unrelated. The game
+  advanced from Edric's recovery directly to Rome without letting the player
+  decide what Oneonta did about the apothecary's three-to-one dosage error.
+root_cause: >
+  The game-native goal contract correctly offered continue or end after every
+  early completion, but only Wolf-Winter attached an authored consequence to
+  continue. Tanner's Fever used the generic campaign sequencer, so its retained
+  player received a destination change rather than agency over the story they
+  had just resolved. The story-choice runtime and UI were also Albany-specific.
+fix: >
+  Tanner's completion now truthfully previews a route-neutral accountability
+  decision at the same continue/end boundary. Ending records the retention
+  choice and exits without inventing a consequence. Continuing reveals an
+  equal-cost choice: keep the correction in Edric's household record, preserving
+  care continuity and privacy but withholding a public warning; or publish the
+  dosage error, warning future patients while exposing Godwin and Edric's account
+  to scrutiny. Each choice counts once, writes distinct campaign journal proof,
+  activates a distinct but mechanically equal Rome goal, survives save/restore,
+  and enables the same authored road event. Story-choice plumbing is generic in
+  core, UI, crawler, and MCP; pure surfaces receive only the visible prompt,
+  choices, consequences, goal, and guidance available to a human.
+deterministic_witnesses:
+  - "goal 3 completion below decision 40 presents continue/end with the Oneonta teaser and no accountability options before consent"
+  - "end records player_ended_at_choice retention evidence and never writes a branch journal entry"
+  - "continue records retention evidence without incrementing the accepted-decision clock, then exposes exactly two human-visible options"
+  - "either accountability selection increments accepted decisions exactly once with no time, supplies, fatigue, or renown difference"
+  - "the two option ids activate distinct Rome goal ids with the same Breaking Weir target and branch-specific journal consequence"
+  - "full MCP, compact MCP, and UI consume the identical prompt and visible option contract without target ids, endings, content paths, or solutions"
+  - "version 8 saves with the former rome_breaking_weir goal remain restorable through a lookup-only compatibility definition"
+  - "Rome's rising-river road event is active for both new goals and legacy v8 saves, then retires after Breaking Weir"
+tests:
+  - tests/regression/tanners_fever_aftermath_choice.test.ts
+  - tests/unit/world_journey_campaign.test.ts
+  - tests/unit/mcp_journey_surface.test.ts
+  - tests/regression/mcp_pure_play_mode.test.ts
+  - tests/regression/new_york_overworld.test.ts
+  - tests/unit/ui_overworld.test.ts
+verification:
+  - npx vitest run tests/regression/tanners_fever_aftermath_choice.test.ts tests/unit/world_journey_campaign.test.ts tests/unit/mcp_journey_surface.test.ts tests/regression/mcp_pure_play_mode.test.ts tests/regression/new_york_overworld.test.ts tests/unit/ui_overworld.test.ts tests/regression/wolf_winter_post_hunt_consequence.test.ts
+  - npm run crawl:smoke
+  - npm run blind
+  - npm run health

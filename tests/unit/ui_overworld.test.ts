@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { loadOverworldManifest } from "../../src/world/source.js";
 import {
@@ -191,7 +192,7 @@ describe("OverworldSession", () => {
       /targetQuestId|endingId|ending_held|wolf_winter|content\/rpg|win_conditions|maneuver_/i,
     );
 
-    expect(() => session.restAtTown()).toThrow(/dawn dispatch/i);
+    expect(() => session.restAtTown()).toThrow(/presented story consequence/i);
     expect(session.snapshotHash()).toBe(snapshotHash);
 
     const beforeDecision = journey.acceptedDecisions;
@@ -218,6 +219,27 @@ describe("OverworldSession", () => {
     expect(JSON.stringify(session.journey().goalGuidance)).not.toMatch(
       /targetQuestId|endingId|wolf_winter|content\/rpg|win_conditions|maneuver_/i,
     );
+  });
+
+  it("routes visible story-choice ids through generic app plumbing", () => {
+    const app = readFileSync("ui/src/App.tsx", "utf8");
+    const screen = readFileSync("ui/src/JourneyStoryChoiceScreen.tsx", "utf8");
+    const handlerStart = app.indexOf("function chooseJourneyStory(choiceId: string)");
+    const handlerEnd = app.indexOf("if (tutorialOpen)", handlerStart);
+    expect(handlerStart).toBeGreaterThanOrEqual(0);
+    expect(handlerEnd).toBeGreaterThan(handlerStart);
+    const handler = app.slice(handlerStart, handlerEnd);
+
+    expect(handler).toContain("worldSession.chooseJourneyStory(choiceId)");
+    expect(handler).toContain("Story consequence: ${result.consequence}");
+    expect(handler).toContain("New goal: ${result.goal.text}");
+    expect(handler).not.toMatch(/AlbanyDawnDispatchChoiceId|Albany dawn dispatch/i);
+    expect(handler).not.toMatch(
+      /targetQuestId|targetTownId|targetAreaId|questOutcomeIds|endingId|content\/rpg/i,
+    );
+    expect(screen).toContain("Journey consequence");
+    expect(screen).toContain("Choose what follows");
+    expect(screen).not.toMatch(/Albany Station Quarter|dawn dispatch|relief wagon/i);
   });
 
   it("keeps Albany's first scout, talk, and explore choices on the same reveal loop", () => {

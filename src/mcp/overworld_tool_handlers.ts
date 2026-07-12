@@ -66,7 +66,7 @@ import type { RpgViewOptions } from "./rpg_view_projection.js";
 import type { SessionStore } from "./sessions.js";
 import { journeyBlocksGameplay, suppressRpgGameplayActions } from "./journey_projection.js";
 import type { JourneyDecisionClassification } from "../world/journey_contract.js";
-import type { AlbanyDawnDispatchChoiceId } from "../world/journey_campaign.js";
+import type { JourneyCampaignStoryChoiceOptionId } from "../world/journey_campaign.js";
 
 type OverworldResponseOptions = OverworldMcpResponseOptions;
 
@@ -623,7 +623,7 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
     choose_overworld_session_story<
       Args extends {
         session_id: string;
-        choice: AlbanyDawnDispatchChoiceId;
+        choice: JourneyCampaignStoryChoiceOptionId;
       } & OverworldResponseOptions,
     >(
       args: Args,

@@ -5,11 +5,11 @@ Generated deterministically from verified blind reports. The latest entries stay
 ## Summary
 
 - Reports dir: `blind-tester/reports`
-- Accepted reports: 457
+- Accepted reports: 458
 - Rejected or ignored markdown reports: 30
-- Latest report stamp: 20260712T105137Z
+- Latest report stamp: 20260712T122008Z
 - Recent entry limit: 100
-- Archived accepted entries collapsed into traits: 357
+- Archived accepted entries collapsed into traits: 358
 
 ## Recent Common Traits
 
@@ -23,6 +23,11 @@ Generated deterministically from verified blind reports. The latest entries stay
 | 2 | 20260708T203905Z | confusion | town counted visited before road encounter resolved | overworld |
 | 2 | 20260708T203156Z | confusion | hidden counts are useful but abstract | overworld |
 | 2 | 20260708T202531Z | confusion | quest tone disconnected from Albany overworld | overworld |
+| 1 | 20260712T122008Z | bug S0 | The Sickroom (The Tanner's Fever quest, Oneonta): The physick skill check to confront Godwin (DC 12) is unbeatable wi... | overworld |
+| 1 | 20260712T122008Z | bug S1 | The Byre-Yard (The Wolf-Winter quest, Albany): Houndsman's dialogue advertises a tactical choice ('quick spear-hand o... | overworld |
+| 1 | 20260712T122008Z | confusion | Cade's advertised 'two roads' dialogue choice never became an actual selectable action | overworld |
+| 1 | 20260712T122008Z | confusion | Multi-leg travel to undiscovered towns requires manual leg-by-leg routing | overworld |
+| 1 | 20260712T122008Z | worst moment | Old Cade's 'two roads' dialogue promising a tactical choice that never materialized as an action, then quietly costin... | overworld |
 | 1 | 20260712T105137Z | bug S1 | Sickroom, The Tanner's Fever quest: Critical exit/progression clue (herb-store to the east) is truncated out of the d... | overworld |
 | 1 | 20260712T105137Z | confusion | compact context truncated the herb-store exit description, requiring a verbose observation call to find it | overworld |
 | 1 | 20260712T105137Z | confusion | multi-leg travel to an undiscovered town can't be planned in one call; must be walked leg-by-leg | overworld |
@@ -35,16 +40,12 @@ Generated deterministically from verified blind reports. The latest entries stay
 | 1 | 20260712T090032Z | bug S1 | Byre-Yard dialogue with Old Cade (Wolf-Winter): Reading the day-book was rejected mid-conversation despite being unre... | overworld |
 | 1 | 20260712T090032Z | bug S1 | NPC ask-topic dialogues (Cade, Hedrick, Godwin): Each topic is one-shot and forces a generic filler action before the... | overworld |
 | 1 | 20260712T090032Z | bug S1 | Overworld travel toward Oneonta city: plan_overworld_session_route rejects undiscovered destinations, forcing one-hop... | overworld |
-| 1 | 20260712T090032Z | confusion | mid-conversation lock blocks unrelated actions like reading a book or moving, with no proactive warning | overworld |
-| 1 | 20260712T090032Z | confusion | no way to preview a route to an undiscovered town; long trips require guessing one hop at a time from guidance text | overworld |
-| 1 | 20260712T090032Z | confusion | single-use dialogue topics require a throwaway 'ask something else' step before the next real topic unlocks | overworld |
-| 1 | 20260712T090032Z | worst moment | Getting rejected twice trying to read a book or move rooms mid-conversation, then learning each dialogue topic needs... | overworld |
-| 1 | 20260712T075817Z | bug S0 | NPC contacts across towns: Same NPC name (Hayden Hale) reused as a template in two different cities. | overworld |
 
 ## Recent Entries
 
 | Stamp | Source | Seed | Mode | Decisions | C/E | Stuck | Replay | Report | Signal |
 | --- | --- | ---: | --- | ---: | --- | --- | --- | --- | --- |
+| 20260712T122008Z | overworld | 2013 | pure | 77 | 4/5 | no | yes | `blind-tester/reports/20260712T122008Z_overworld_seed2013.md` | confusions: Cade's advertised 'two roads' dialogue choice never became an actual selectable action; Multi-leg travel to undiscovered towns requires manual leg-by-leg r... |
 | 20260712T105137Z | overworld | 1912 | pure | 83 | 4/5 | no | yes | `blind-tester/reports/20260712T105137Z_overworld_seed1912.md` | confusions: compact context truncated the herb-store exit description, requiring a verbose observation call to find it; unclear at first that carrying an item (jerkin)... |
 | 20260712T100819Z | overworld | 1909 | pure | 80 | 4/5 | no | yes | `blind-tester/reports/20260712T100819Z_overworld_seed1909.md` | confusions: dialogue option briefly rejected after reading the day-book, required re-talking to NPC \| bugs: S1 The Byre-Yard (Wolf-Winter quest): ask_byre dialogue cho... |
 | 20260712T090032Z | overworld | 1809 | pure | 77 | 4/4 | no | yes | `blind-tester/reports/20260712T090032Z_overworld_seed1809.md` | confusions: single-use dialogue topics require a throwaway 'ask something else' step before the next real topic unlocks; mid-conversation lock blocks unrelated actions... |
@@ -144,7 +145,6 @@ Generated deterministically from verified blind reports. The latest entries stay
 | 20260708T195405Z | overworld | 541 | legacy_guided | — | 4/4 | no | yes | `blind-tester/reports/20260708T195405Z_overworld_seed541.md` | confusions: revealed jobs did not stay visible globally; hidden counts felt artificial; overworld errands felt generic compared with quest \| bugs: S1 Albany Civic Cent... |
 | 20260708T193009Z | overworld | 540 | legacy_guided | — | 4/4 | no | yes | `blind-tester/reports/20260708T193009Z_overworld_seed540.md` | confusions: quest fiction disconnected from Albany overworld; compact event text made civic work feel abstract; discovered jobs outside current area were easy to lose... |
 | 20260708T193008Z | overworld | 539 | legacy_guided | — | 4/4 | no | yes | `blind-tester/reports/20260708T193008Z_overworld_seed539.md` | confusions: hidden counters do not explain where remaining content is; dialogue back actions did not exit conversation; compact journal hash fragments look like debug... |
-| 20260708T193008Z | overworld | 538 | legacy_guided | — | 4/4 | no | yes | `blind-tester/reports/20260708T193008Z_overworld_seed538.md` | confusions: quest tone shift from modern civic overworld to mythic winter steading; second town notice hall felt templated; look around at quest start added no new inf... |
 
 ## Archived Trait Categories
 

@@ -223,8 +223,10 @@ export function crawlOverworld(opts: OverworldCrawlOptions): OverworldCrawlResul
         continue;
       }
       if (journey.storyChoice !== null) {
-        session.chooseJourneyStory("send_wagon_to_cade");
-        actionJournal.push({ op: "chooseJourneyStory", choice: "send_wagon_to_cade" });
+        const option = journey.storyChoice.options[0];
+        if (!option) throw new Error("Journey story choice has no visible option.");
+        session.chooseJourneyStory(option.id);
+        actionJournal.push({ op: "chooseJourneyStory", choice: option.id });
         stepCounter += 1;
         continue;
       }

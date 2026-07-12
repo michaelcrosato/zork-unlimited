@@ -6,6 +6,10 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { PURE_PLAYER_TOOLS, toolAvailableInPlayMode } from "../../src/mcp/server.js";
+import {
+  ALBANY_DAWN_DISPATCH_CHOICE_IDS,
+  TANNERS_FEVER_ACCOUNTABILITY_CHOICE_IDS,
+} from "../../src/world/journey_campaign.js";
 
 const ROOT = process.cwd();
 const TSX = join(ROOT, "node_modules", "tsx", "dist", "cli.mjs");
@@ -70,11 +74,15 @@ describe("MCP pure play mode", () => {
           | Record<string, { enum?: unknown }>
           | undefined;
         expect(storyChoiceProperties?.choice?.enum).toEqual([
-          "send_wagon_to_cade",
-          "send_wardens_north",
+          ...ALBANY_DAWN_DISPATCH_CHOICE_IDS,
+          ...TANNERS_FEVER_ACCOUNTABILITY_CHOICE_IDS,
         ]);
+        expect(new Set(storyChoiceProperties?.choice?.enum as string[]).size).toBe(4);
         expect(JSON.stringify(storyChoiceTool)).not.toMatch(
           /targetQuestId|endingId|ending_held|wolf_winter|content\/rpg|win_conditions|maneuver_/i,
+        );
+        expect(JSON.stringify(storyChoiceTool)).not.toMatch(
+          /Edric|Godwin|wormwood|public scrutiny|family's trust/i,
         );
 
         const started = await client.callTool({

@@ -30,9 +30,9 @@ export function JourneyStoryChoiceScreen({
         aria-labelledby="journey-story-choice-title"
         aria-describedby="journey-story-choice-message"
       >
-        <p className="kicker">Albany Station Quarter · dawn dispatch</p>
+        <p className="kicker">Journey consequence</p>
         <h1 id="journey-story-choice-title" ref={headingRef} tabIndex={-1}>
-          Where should the relief wagon go?
+          Choose what follows
         </h1>
         <p id="journey-story-choice-message" className="journey-choice-message">
           {storyChoice.message}

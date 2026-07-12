@@ -67,6 +67,37 @@ export const ALBANY_DAWN_DISPATCH_GOALS = Object.freeze({
   ),
 } as const satisfies Record<AlbanyDawnDispatchChoiceId, JourneyCampaignGoalDefinition>);
 
+export const TANNERS_FEVER_ACCOUNTABILITY_ID = "tanners_fever_accountability" as const;
+export const TANNERS_FEVER_ACCOUNTABILITY_CHOICE_IDS = Object.freeze([
+  "keep_household_correction",
+  "publish_dosage_warning",
+] as const);
+export type TannersFeverAccountabilityChoiceId =
+  (typeof TANNERS_FEVER_ACCOUNTABILITY_CHOICE_IDS)[number];
+
+export const TANNERS_FEVER_ACCOUNTABILITY_CONTEXT =
+  "Edric will recover, and Godwin's triple-strength wormwood dose has been stopped; Oneonta still has to decide how the correction enters the record." as const;
+
+export const TANNERS_FEVER_ACCOUNTABILITY_TEASER =
+  "Continue, and you will decide whether the corrected dose stays in the household record or becomes a public warning before carrying the next live packet to Rome." as const;
+
+export const TANNERS_FEVER_ACCOUNTABILITY_GOALS = Object.freeze({
+  keep_household_correction: campaignGoal(
+    "rome_breaking_weir_household_correction",
+    "With Edric's correction kept in the household record, travel to Rome Market Streets, find the lead for The Breaking Weir, and see it through.",
+    "breaking_weir",
+    "rome_city",
+    "rome_city__market",
+  ),
+  publish_dosage_warning: campaignGoal(
+    "rome_breaking_weir_public_warning",
+    "With Oneonta's dosage warning made public, travel to Rome Market Streets, find the lead for The Breaking Weir, and see it through.",
+    "breaking_weir",
+    "rome_city",
+    "rome_city__market",
+  ),
+} as const satisfies Record<TannersFeverAccountabilityChoiceId, JourneyCampaignGoalDefinition>);
+
 export type WolfWinterCampaignOutcome = "gate_barred" | "timber_saved" | "held";
 
 export type WolfWinterCampaignOutcomeContext = Readonly<{
@@ -121,17 +152,66 @@ const ALBANY_DAWN_DISPATCH_CONSEQUENCES = Object.freeze({
   }),
 } as const satisfies Record<WolfWinterCampaignOutcome, Record<AlbanyDawnDispatchChoiceId, string>>);
 
-export type JourneyCampaignStoryChoiceOption = Readonly<{
-  id: AlbanyDawnDispatchChoiceId;
+const TANNERS_FEVER_ACCOUNTABILITY_CONSEQUENCES = Object.freeze({
+  keep_household_correction:
+    "Godwin records the corrected dose in Edric's household case book, preserving the family's trust in its longtime apothecary; other Oneonta patients receive no public warning about the three-to-one error.",
+  publish_dosage_warning:
+    "The three-to-one error enters Oneonta's public apothecary ledger, warning future patients; Godwin faces public scrutiny, and the household loses control of Edric's private account.",
+} as const satisfies Record<TannersFeverAccountabilityChoiceId, string>);
+
+export type JourneyCampaignStoryChoiceId =
+  | typeof ALBANY_DAWN_DISPATCH_ID
+  | typeof TANNERS_FEVER_ACCOUNTABILITY_ID;
+
+export type JourneyCampaignStoryChoiceOptionId =
+  | AlbanyDawnDispatchChoiceId
+  | TannersFeverAccountabilityChoiceId;
+
+export type JourneyCampaignStoryChoiceOption<
+  ChoiceId extends JourneyCampaignStoryChoiceOptionId = JourneyCampaignStoryChoiceOptionId,
+> = Readonly<{
+  id: ChoiceId;
   label: string;
   consequence: string;
 }>;
 
-export type JourneyCampaignStoryChoice = Readonly<{
-  id: typeof ALBANY_DAWN_DISPATCH_ID;
+type JourneyCampaignStoryChoiceDefinition<
+  StoryChoiceId extends JourneyCampaignStoryChoiceId,
+  ChoiceId extends JourneyCampaignStoryChoiceOptionId,
+> = Readonly<{
+  id: StoryChoiceId;
   message: string;
-  options: readonly [JourneyCampaignStoryChoiceOption, JourneyCampaignStoryChoiceOption];
+  options: readonly [
+    JourneyCampaignStoryChoiceOption<ChoiceId>,
+    JourneyCampaignStoryChoiceOption<ChoiceId>,
+  ];
 }>;
+
+export type AlbanyDawnDispatchStoryChoice = JourneyCampaignStoryChoiceDefinition<
+  typeof ALBANY_DAWN_DISPATCH_ID,
+  AlbanyDawnDispatchChoiceId
+>;
+
+export type TannersFeverAccountabilityStoryChoice = JourneyCampaignStoryChoiceDefinition<
+  typeof TANNERS_FEVER_ACCOUNTABILITY_ID,
+  TannersFeverAccountabilityChoiceId
+>;
+
+export type JourneyCampaignStoryChoice =
+  | AlbanyDawnDispatchStoryChoice
+  | TannersFeverAccountabilityStoryChoice;
+
+export type JourneyCampaignStoryChoiceSelection =
+  | Readonly<{
+      storyChoiceId: typeof ALBANY_DAWN_DISPATCH_ID;
+      choiceId: AlbanyDawnDispatchChoiceId;
+      goal: JourneyCampaignGoalDefinition;
+    }>
+  | Readonly<{
+      storyChoiceId: typeof TANNERS_FEVER_ACCOUNTABILITY_ID;
+      choiceId: TannersFeverAccountabilityChoiceId;
+      goal: JourneyCampaignGoalDefinition;
+    }>;
 
 export type JourneyCampaignJournalCopy = Readonly<{
   title: string;
@@ -163,7 +243,7 @@ export function albanyDawnDispatchGoal(
 
 export function albanyDawnDispatchStoryChoice(
   outcome: WolfWinterCampaignOutcomeContext,
-): JourneyCampaignStoryChoice {
+): AlbanyDawnDispatchStoryChoice {
   const consequences = ALBANY_DAWN_DISPATCH_CONSEQUENCES[outcome.id];
   return Object.freeze({
     id: ALBANY_DAWN_DISPATCH_ID,
@@ -184,12 +264,85 @@ export function albanyDawnDispatchStoryChoice(
   });
 }
 
+export function tannersFeverAccountabilityGoal(
+  choiceId: TannersFeverAccountabilityChoiceId,
+): JourneyCampaignGoalDefinition {
+  return TANNERS_FEVER_ACCOUNTABILITY_GOALS[choiceId];
+}
+
+export function tannersFeverAccountabilityStoryChoice(): TannersFeverAccountabilityStoryChoice {
+  return Object.freeze({
+    id: TANNERS_FEVER_ACCOUNTABILITY_ID,
+    message:
+      "Edric will recover, but the corrected dose still has to be recorded. Should the correction stay with the household or become a public warning?",
+    options: Object.freeze([
+      Object.freeze({
+        id: "keep_household_correction" as const,
+        label: "Keep the correction in the household record",
+        consequence: TANNERS_FEVER_ACCOUNTABILITY_CONSEQUENCES.keep_household_correction,
+      }),
+      Object.freeze({
+        id: "publish_dosage_warning" as const,
+        label: "Publish the dosage warning",
+        consequence: TANNERS_FEVER_ACCOUNTABILITY_CONSEQUENCES.publish_dosage_warning,
+      }),
+    ] as const),
+  });
+}
+
+function isAlbanyDawnDispatchChoiceId(value: string): value is AlbanyDawnDispatchChoiceId {
+  return ALBANY_DAWN_DISPATCH_CHOICE_IDS.some((choiceId) => choiceId === value);
+}
+
+function isTannersFeverAccountabilityChoiceId(
+  value: string,
+): value is TannersFeverAccountabilityChoiceId {
+  return TANNERS_FEVER_ACCOUNTABILITY_CHOICE_IDS.some((choiceId) => choiceId === value);
+}
+
+export function journeyCampaignStoryChoiceSelection(
+  storyChoiceId: string,
+  choiceId: string,
+): JourneyCampaignStoryChoiceSelection {
+  if (storyChoiceId === ALBANY_DAWN_DISPATCH_ID) {
+    if (!isAlbanyDawnDispatchChoiceId(choiceId)) {
+      throw new Error(`Story choice "${storyChoiceId}" does not accept option "${choiceId}".`);
+    }
+    return Object.freeze({
+      storyChoiceId,
+      choiceId,
+      goal: albanyDawnDispatchGoal(choiceId),
+    });
+  }
+  if (storyChoiceId === TANNERS_FEVER_ACCOUNTABILITY_ID) {
+    if (!isTannersFeverAccountabilityChoiceId(choiceId)) {
+      throw new Error(`Story choice "${storyChoiceId}" does not accept option "${choiceId}".`);
+    }
+    return Object.freeze({
+      storyChoiceId,
+      choiceId,
+      goal: tannersFeverAccountabilityGoal(choiceId),
+    });
+  }
+  throw new Error(`Unknown journey campaign story choice "${storyChoiceId}".`);
+}
+
 function albanyDispatchChoiceForGoal(
   definition: JourneyCampaignGoalDefinition,
 ): AlbanyDawnDispatchChoiceId | null {
   return (
     ALBANY_DAWN_DISPATCH_CHOICE_IDS.find(
       (choiceId) => ALBANY_DAWN_DISPATCH_GOALS[choiceId].id === definition.id,
+    ) ?? null
+  );
+}
+
+function tannersFeverAccountabilityChoiceForGoal(
+  definition: JourneyCampaignGoalDefinition,
+): TannersFeverAccountabilityChoiceId | null {
+  return (
+    TANNERS_FEVER_ACCOUNTABILITY_CHOICE_IDS.find(
+      (choiceId) => TANNERS_FEVER_ACCOUNTABILITY_GOALS[choiceId].id === definition.id,
     ) ?? null
   );
 }
@@ -208,6 +361,18 @@ export function journeyCampaignGoalJournalCopy(
     if (!option) throw new Error(`Albany dawn dispatch option "${dispatchChoice}" is unavailable.`);
     return Object.freeze({ title: option.label, text: option.consequence });
   }
+  const accountabilityChoice = tannersFeverAccountabilityChoiceForGoal(definition);
+  if (accountabilityChoice) {
+    const option = tannersFeverAccountabilityStoryChoice().options.find(
+      (candidate) => candidate.id === accountabilityChoice,
+    );
+    if (!option) {
+      throw new Error(
+        `Tanner's Fever accountability option "${accountabilityChoice}" is unavailable.`,
+      );
+    }
+    return Object.freeze({ title: option.label, text: option.consequence });
+  }
   if (definition.id === INITIAL_JOURNEY_CAMPAIGN_GOAL.id) {
     throw new Error("The initial journey goal does not have an activation journal entry.");
   }
@@ -217,21 +382,24 @@ export function journeyCampaignGoalJournalCopy(
   });
 }
 
-const ORDERED_FOLLOWUP_GOALS = Object.freeze([
-  campaignGoal(
-    "oneonta_tanners_fever",
-    "Travel to Oneonta Market Streets, find the lead for The Tanner's Fever, and see it through.",
-    "tanners_fever",
-    "oneonta_city",
-    "oneonta_city__market",
-  ),
-  campaignGoal(
-    "rome_breaking_weir",
-    "Travel to Rome Market Streets, find the lead for The Breaking Weir, and see it through.",
-    "breaking_weir",
-    "rome_city",
-    "rome_city__market",
-  ),
+export const TANNERS_FEVER_CAMPAIGN_GOAL = campaignGoal(
+  "oneonta_tanners_fever",
+  "Travel to Oneonta Market Streets, find the lead for The Tanner's Fever, and see it through.",
+  "tanners_fever",
+  "oneonta_city",
+  "oneonta_city__market",
+);
+
+/** Lookup-only compatibility for version 8 saves created before the accountability branch. */
+const LEGACY_ROME_BREAKING_WEIR_GOAL = campaignGoal(
+  "rome_breaking_weir",
+  "Travel to Rome Market Streets, find the lead for The Breaking Weir, and see it through.",
+  "breaking_weir",
+  "rome_city",
+  "rome_city__market",
+);
+
+const ORDERED_POST_BREAKING_WEIR_GOALS = Object.freeze([
   campaignGoal(
     "oswego_advocates_case",
     "Travel to Oswego Market Streets, find the lead for The Advocate's Case, and see it through.",
@@ -293,13 +461,18 @@ const ORDERED_FOLLOWUP_GOALS = Object.freeze([
 export const JOURNEY_CAMPAIGN_QUEST_ORDER = Object.freeze([
   JOURNEY_CAMPAIGN_INITIAL_QUEST_ID,
   "gallowmere",
-  ...ORDERED_FOLLOWUP_GOALS.map((goal) => goal.targetQuestId),
+  TANNERS_FEVER_CAMPAIGN_GOAL.targetQuestId,
+  TANNERS_FEVER_ACCOUNTABILITY_GOALS.keep_household_correction.targetQuestId,
+  ...ORDERED_POST_BREAKING_WEIR_GOALS.map((goal) => goal.targetQuestId),
 ] as const);
 
 const GOALS_BY_ID: ReadonlyMap<string, JourneyCampaignGoalDefinition> = new Map([
   [INITIAL_JOURNEY_CAMPAIGN_GOAL.id, INITIAL_JOURNEY_CAMPAIGN_GOAL],
   ...Object.values(ALBANY_DAWN_DISPATCH_GOALS).map((goal) => [goal.id, goal] as const),
-  ...ORDERED_FOLLOWUP_GOALS.map((goal) => [goal.id, goal] as const),
+  [TANNERS_FEVER_CAMPAIGN_GOAL.id, TANNERS_FEVER_CAMPAIGN_GOAL],
+  ...Object.values(TANNERS_FEVER_ACCOUNTABILITY_GOALS).map((goal) => [goal.id, goal] as const),
+  [LEGACY_ROME_BREAKING_WEIR_GOAL.id, LEGACY_ROME_BREAKING_WEIR_GOAL],
+  ...ORDERED_POST_BREAKING_WEIR_GOALS.map((goal) => [goal.id, goal] as const),
 ]);
 
 export function journeyCampaignGoalDefinition(
@@ -328,6 +501,7 @@ export function materializeJourneyCampaignGoal(
 export function nextJourneyCampaignGoal(args: {
   completedQuestIds: ReadonlySet<string>;
   albanyDawnDispatchChoiceId?: AlbanyDawnDispatchChoiceId | null;
+  tannersFeverAccountabilityChoiceId?: TannersFeverAccountabilityChoiceId | null;
 }): JourneyCampaignGoalDefinition | null {
   if (!args.completedQuestIds.has(JOURNEY_CAMPAIGN_INITIAL_QUEST_ID)) return null;
   if (!args.completedQuestIds.has("gallowmere")) {
@@ -335,8 +509,18 @@ export function nextJourneyCampaignGoal(args: {
       ? albanyDawnDispatchGoal(args.albanyDawnDispatchChoiceId)
       : null;
   }
+  if (!args.completedQuestIds.has(TANNERS_FEVER_CAMPAIGN_GOAL.targetQuestId)) {
+    return TANNERS_FEVER_CAMPAIGN_GOAL;
+  }
+  if (!args.completedQuestIds.has("breaking_weir")) {
+    return args.tannersFeverAccountabilityChoiceId
+      ? tannersFeverAccountabilityGoal(args.tannersFeverAccountabilityChoiceId)
+      : null;
+  }
   return (
-    ORDERED_FOLLOWUP_GOALS.find((goal) => !args.completedQuestIds.has(goal.targetQuestId)) ?? null
+    ORDERED_POST_BREAKING_WEIR_GOALS.find(
+      (goal) => !args.completedQuestIds.has(goal.targetQuestId),
+    ) ?? null
   );
 }
 
@@ -451,9 +635,30 @@ function awaitsAlbanyDawnDispatch(journey: JourneyContractSnapshot): boolean {
   );
 }
 
+function awaitsTannersFeverGoalChoice(journey: JourneyContractSnapshot): boolean {
+  return (
+    journey.status === "awaiting_choice" &&
+    journey.goal.id === TANNERS_FEVER_CAMPAIGN_GOAL.id &&
+    journey.goal.status === "completed" &&
+    journey.pendingChoice?.reasons.includes("goal_completed") === true &&
+    journey.pendingChoice.goalVersion === journey.goal.version &&
+    journey.pendingChoice.goalId === journey.goal.id
+  );
+}
+
+function awaitsTannersFeverAccountability(journey: JourneyContractSnapshot): boolean {
+  return (
+    journey.status === "active" &&
+    journey.goal.id === TANNERS_FEVER_CAMPAIGN_GOAL.id &&
+    journey.goal.status === "completed" &&
+    hasContinuedJourneyGoal(journey, journey.goal)
+  );
+}
+
 export type JourneyCampaignPresentationContext = Readonly<{
-  albanyReturnContext: string;
+  completionContext: string;
   preRetentionTeaser: string | null;
+  continueConsequencePrefix: string | null;
   storyChoice: JourneyCampaignStoryChoice | null;
 }>;
 
@@ -461,14 +666,30 @@ export function journeyCampaignPresentationContext(args: {
   journey: JourneyContractSnapshot;
   questOutcomeIds: ReadonlyMap<string, string>;
 }): JourneyCampaignPresentationContext | null {
-  const outcome = wolfWinterCampaignOutcome(args.questOutcomeIds);
-  if (!outcome) return null;
-  const beforeRetention = awaitsInitialGoalChoice(args.journey);
-  const afterContinue = awaitsAlbanyDawnDispatch(args.journey);
-  if (!beforeRetention && !afterContinue) return null;
+  const beforeAlbanyRetention = awaitsInitialGoalChoice(args.journey);
+  const afterAlbanyContinue = awaitsAlbanyDawnDispatch(args.journey);
+  if (beforeAlbanyRetention || afterAlbanyContinue) {
+    const outcome = wolfWinterCampaignOutcome(args.questOutcomeIds);
+    if (!outcome) return null;
+    return Object.freeze({
+      completionContext: outcome.albanyReturnContext,
+      preRetentionTeaser: beforeAlbanyRetention ? ALBANY_DAWN_DISPATCH_TEASER : null,
+      continueConsequencePrefix: beforeAlbanyRetention
+        ? "Continue to decide where Albany's only dawn relief wagon goes."
+        : null,
+      storyChoice: afterAlbanyContinue ? albanyDawnDispatchStoryChoice(outcome) : null,
+    });
+  }
+
+  const beforeTannersRetention = awaitsTannersFeverGoalChoice(args.journey);
+  const afterTannersContinue = awaitsTannersFeverAccountability(args.journey);
+  if (!beforeTannersRetention && !afterTannersContinue) return null;
   return Object.freeze({
-    albanyReturnContext: outcome.albanyReturnContext,
-    preRetentionTeaser: beforeRetention ? ALBANY_DAWN_DISPATCH_TEASER : null,
-    storyChoice: afterContinue ? albanyDawnDispatchStoryChoice(outcome) : null,
+    completionContext: TANNERS_FEVER_ACCOUNTABILITY_CONTEXT,
+    preRetentionTeaser: beforeTannersRetention ? TANNERS_FEVER_ACCOUNTABILITY_TEASER : null,
+    continueConsequencePrefix: beforeTannersRetention
+      ? "Continue to decide how Oneonta records the corrected dose."
+      : null,
+    storyChoice: afterTannersContinue ? tannersFeverAccountabilityStoryChoice() : null,
   });
 }

@@ -24,8 +24,21 @@ import { createToolApi } from "./tools.js";
 import { TRANSCRIPT_TURN_LIMIT_DEFAULT } from "./transcript_projection.js";
 import { isGeneratedRpgSeed as genSeed } from "../gen/seed.js";
 import { formatSpectateEntry } from "./spectate.js";
+import {
+  ALBANY_DAWN_DISPATCH_CHOICE_IDS,
+  TANNERS_FEVER_ACCOUNTABILITY_CHOICE_IDS,
+  type JourneyCampaignStoryChoiceOptionId,
+} from "../world/journey_campaign.js";
 
 const api = createToolApi({ root: process.cwd() });
+
+const JOURNEY_CAMPAIGN_STORY_CHOICE_OPTION_IDS = [
+  ...ALBANY_DAWN_DISPATCH_CHOICE_IDS,
+  ...TANNERS_FEVER_ACCOUNTABILITY_CHOICE_IDS,
+] as const satisfies readonly [
+  JourneyCampaignStoryChoiceOptionId,
+  ...JourneyCampaignStoryChoiceOptionId[],
+];
 
 export type McpPlayMode = "full" | "structural" | "pure";
 
@@ -748,7 +761,7 @@ tool(
   "Choose a story consequence.",
   {
     ...SESSION,
-    choice: z.enum(["send_wagon_to_cade", "send_wardens_north"]).describe("Visible choice id."),
+    choice: z.enum(JOURNEY_CAMPAIGN_STORY_CHOICE_OPTION_IDS).describe("Visible choice id."),
     ...OVERWORLD_ACTION_CONTEXT,
   },
   (a) => api.choose_overworld_session_story(defaultCompactOverworld(a)),

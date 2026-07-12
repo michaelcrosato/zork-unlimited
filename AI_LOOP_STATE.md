@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 545 -->
+<!-- historical_cycle_count: 546 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,15 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - tanners_fever_accountability_aftermath
+
+- Evidence choice: the assessor again ranked a stale fleet-only Wolf compact-journal cluster; verified pure seeds 1809 and 1912 instead both ended at Tanner's goal-3 boundary and contrasted that repeated clue→check handoff with Wolf-Winter's memorable relief-wagon consequence.
+- Surface: Tanner's recovery now truthfully previews an Oneonta accountability decision at its normal continue/end boundary. End exits without inventing a branch; continue reveals an equal-cost choice between private household correction and a public dosage warning before either distinct goal carries the same live Breaking Weir packet to Rome (`bug_0513`).
+- Integrity/parity: selection counts exactly once, persists branch-specific journal/goal proof, enables the same rising-river road scene, and leaks no target/solution data; generic core, crawler, web, full/compact MCP, pure schema, and v8 legacy-goal restore are pinned.
+- Pure evidence: verified pure/fresh seed 2013 continued at goal 1 (23), checkpoint 40, and goal 2 (47), then honestly ended at Tanner's completion on decision 77 before seeing the gated branch; clarity 4/5, enjoyment 5/5, got-stuck false, replay true. This directly samples the intended no-branch exit path, while deterministic UI/MCP tests carry the continue-path proof.
+- Self-critique: PASS for accountable game-native continuation, not retention—the fresh player still chose a satisfying three-quest ending. Ledger 458 is one report beyond the prior compile, below threshold; Cade's advertised-but-invisible tactical fork is the new S1, with undiscovered long-route planning and compact Tanner cue loss recurring behind it.
+- Guard: pre/post crawls `20260712T115442Z`/`20260712T121942Z` each covered 6,000 steps and 247/247 nodes; the canonical report and receipt verify, and full health passes 304 files / 2,160 tests, UI, and all 12 packs.
 
 ### Cycle result - interruptible_dialogue_exchange
 
@@ -141,11 +150,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Blind playtests: isolated seeds 930007/930008 both won 60/60 with no mechanical defect (clarity 5/4, enjoyment 4/3); the breaker discovered the stake organically, named it the best moment, and verified stale hashes/repeats/post-ending rejection, while the explorer chose the untouched off-side route.
 - Self-critique: PASS as the first persistent cross-encounter trade, not an acceptance-gate pass—both fresh players still declined replay and the breaker found the risk too mild. With agency semantics stable, the verified 28-field compact tutorial/payoff budget repair is next before broader pressure tuning.
 - Guard: post-change crawl `20260711T143604Z` covered 6,000 steps and all 247 nodes; exhaustive Wolf relabeling, 67 focused tests, all 12 packs, and `npm run health` (282 files / 1,993 tests) are green.
-
-### Cycle result - rpg_conditional_world_object_visibility
-
-- Blind playtest: fresh MCP-only Wolf-Winter seed 930005 reached `ending_held` at 29 HP and 60/60, clarity 5/5, enjoyment 4/5, replay true; it proved the renamed empty rail-bed still exposed stale `paling_rail`/LOOK affordances and again saw Cade clipping.
-- Engine surface: optional hash-preserving object `visible_when` gates world placement across full/compact observations, every object verb, forced actions, UI projection, and nested containers; inventory stays authoritative and OPEN narrates the actual post-open contents.
-- Validation/content surface: feasibility, combined dead guards, cyclic obtainability, relabeling, and exhaustive presence liveness are pinned; Wolf-Winter retires the rail entity when its timber becomes carried gear, with `bug_0500` witnesses.
-- Self-critique: PASS as a reusable correctness-class closure; chose it off-list because the compiled hotspot predates `da9f22b6` and the fresh S1 outranked planned S0 compression. Compact tutorial integrity remains next.
-- Guard: verified cycle report, pre/post 6,000-step crawls (latest `20260711T134116Z`, 247/247 nodes), all 12 packs clean, and `npm run health` (281 files / 1,986 tests) green.

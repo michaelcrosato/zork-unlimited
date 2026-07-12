@@ -135,7 +135,11 @@ describe("New York overworld graph", () => {
     const risingRiver = byId.get("road_event_rome_city__oneida_city");
     expect(risingRiver).toMatchObject({
       title: "The river at the mile stones",
-      active_goal_ids: ["rome_breaking_weir"],
+      active_goal_ids: [
+        "rome_breaking_weir",
+        "rome_breaking_weir_household_correction",
+        "rome_breaking_weir_public_warning",
+      ],
       retire_after_quest: "breaking_weir",
     });
     expect(risingRiver?.summary).toContain("upper weir is groaning");

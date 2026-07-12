@@ -574,7 +574,7 @@ describe("bug_0505 — Wolf-Winter saved wood has a post-hunt consequence", () =
       });
       expect(() =>
         completed.api.rest_overworld_session({ session_id: completed.overworldSessionId }),
-      ).toThrow(/dawn dispatch/i);
+      ).toThrow(/presented story consequence/i);
 
       const selected = completed.api.choose_overworld_session_story({
         session_id: completed.overworldSessionId,

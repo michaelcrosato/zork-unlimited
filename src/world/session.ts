@@ -137,17 +137,17 @@ import {
   type JourneyPresentationContext,
 } from "./journey_contract.js";
 import {
-  ALBANY_DAWN_DISPATCH_ID,
-  albanyDawnDispatchGoal,
   assertJourneyCampaignQuestOutcome,
   journeyCampaignGoalIsComplete,
   journeyCampaignGoalJournalCopy,
   journeyCampaignGoalDefinition,
   journeyCampaignPresentationContext,
+  journeyCampaignStoryChoiceSelection,
   materializeJourneyCampaignGoal,
   nextJourneyCampaignGoal,
-  type AlbanyDawnDispatchChoiceId,
   type JourneyCampaignGoalDefinition,
+  type JourneyCampaignStoryChoiceId,
+  type JourneyCampaignStoryChoiceOptionId,
 } from "./journey_campaign.js";
 import {
   classifyOverworldJourneyDecision,
@@ -202,8 +202,8 @@ export type OverworldJourneyServiceResult = JourneyDecisionAnnotated<OverworldSe
 export type OverworldJourneyTravelResult = JourneyDecisionAnnotated<TravelLogEntry>;
 
 export type OverworldJourneyStoryChoiceResult = Readonly<{
-  storyChoiceId: typeof ALBANY_DAWN_DISPATCH_ID;
-  choiceId: AlbanyDawnDispatchChoiceId;
+  storyChoiceId: JourneyCampaignStoryChoiceId;
+  choiceId: JourneyCampaignStoryChoiceOptionId;
   consequence: string;
   goal: JourneyGoalPresentation;
   entry: OverworldJournalEntry;
@@ -428,16 +428,17 @@ export class OverworldSession {
         goalCompletion = {
           goalVersion: pending!.goalVersion!,
           goalId: pending!.goalId!,
-          messagePrefix: campaign.albanyReturnContext,
+          messagePrefix: campaign.completionContext,
           messageSuffix: campaign.preRetentionTeaser,
-          continueConsequencePrefix:
-            "Continue to decide where Albany's only dawn relief wagon goes.",
+          ...(campaign.continueConsequencePrefix
+            ? { continueConsequencePrefix: campaign.continueConsequencePrefix }
+            : {}),
         };
       }
       if (campaign.storyChoice) {
         storyChoice = {
           ...campaign.storyChoice,
-          message: `${campaign.albanyReturnContext} ${campaign.storyChoice.message}`,
+          message: `${campaign.completionContext} ${campaign.storyChoice.message}`,
         };
       }
     } else if (pendingGoalCompletion) {
@@ -470,7 +471,7 @@ export class OverworldSession {
   assertJourneyAcceptingDecision(): void {
     assertJourneyContractAcceptingDecision(this.journeyState);
     if (this.journey().storyChoice) {
-      throw new Error("Choose Albany's dawn dispatch before taking another gameplay action.");
+      throw new Error("Choose the presented story consequence before taking another action.");
     }
   }
 
@@ -530,18 +531,17 @@ export class OverworldSession {
     return entry;
   }
 
-  chooseJourneyStory(choiceId: AlbanyDawnDispatchChoiceId): OverworldJourneyStoryChoiceResult {
+  chooseJourneyStory(choiceId: string): OverworldJourneyStoryChoiceResult {
     assertJourneyContractAcceptingDecision(this.journeyState);
     const storyChoice = this.journey().storyChoice;
-    if (!storyChoice || storyChoice.id !== ALBANY_DAWN_DISPATCH_ID) {
-      throw new Error("There is no Albany dawn-dispatch choice to make right now.");
-    }
+    if (!storyChoice) throw new Error("There is no story consequence to choose right now.");
     const option = storyChoice.options.find((candidate) => candidate.id === choiceId);
-    if (!option) throw new Error(`Unknown Albany dawn-dispatch choice "${String(choiceId)}".`);
+    if (!option) throw new Error(`Unknown story choice "${String(choiceId)}".`);
+    const selection = journeyCampaignStoryChoiceSelection(storyChoice.id, choiceId);
 
-    const entry = this.activateCampaignGoal(albanyDawnDispatchGoal(choiceId));
+    const entry = this.activateCampaignGoal(selection.goal);
     const journeyDecision = this.recordOverworldDecision(
-      `campaign_dispatch:${choiceId}`,
+      `campaign_story:${selection.storyChoiceId}:${selection.choiceId}`,
       "progress",
       true,
     );
@@ -550,8 +550,8 @@ export class OverworldSession {
     }
     this.clearSessionCaches();
     return Object.freeze({
-      storyChoiceId: ALBANY_DAWN_DISPATCH_ID,
-      choiceId,
+      storyChoiceId: selection.storyChoiceId,
+      choiceId: selection.choiceId,
       consequence: option.consequence,
       goal: this.journey().goal,
       entry: Object.freeze({ ...entry }),

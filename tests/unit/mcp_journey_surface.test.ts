@@ -5,6 +5,11 @@ import {
   INITIAL_JOURNEY_GOAL,
   JOURNEY_CONTRACT_VERSION,
 } from "../../src/world/journey_contract.js";
+import {
+  TANNERS_FEVER_ACCOUNTABILITY_CHOICE_IDS,
+  TANNERS_FEVER_ACCOUNTABILITY_ID,
+} from "../../src/world/journey_campaign.js";
+import { planOverworldRoute } from "../../src/world/overworld.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
 import { OverworldSession } from "../../ui/src/overworld.js";
 
@@ -83,6 +88,47 @@ function uiSessionAtAlbanyStoryChoice(): OverworldSession {
   });
   session.chooseJourney("continue");
   if (!session.journey().storyChoice) throw new Error("expected Albany's dawn dispatch");
+  return session;
+}
+
+function continueFixedCheckpoint(session: OverworldSession): void {
+  const pending = session.journey().pendingChoice;
+  if (!pending) return;
+  expect(pending.reasons).toContain("checkpoint");
+  expect(pending.reasons).not.toContain("goal_completed");
+  session.chooseJourney("continue");
+}
+
+function travelUiSessionToTown(session: OverworldSession, destinationTownId: string): void {
+  const route = planOverworldRoute(WORLD, session.view().current.id, destinationTownId);
+  if (!route) throw new Error(`expected a route to ${destinationTownId}`);
+  for (const step of route.steps) {
+    session.travel(step.edge.id);
+    continueFixedCheckpoint(session);
+    if (session.view().pendingRoadEncounter) {
+      session.resolveRoadEncounter("press_on");
+      continueFixedCheckpoint(session);
+    }
+  }
+}
+
+function uiSessionAtTannersAccountabilityChoice(): OverworldSession {
+  const session = uiSessionAtPostGallowmereHayden();
+  travelUiSessionToTown(session, "oneonta_city");
+  session.exploreArea("oneonta_city__civic_core");
+  continueFixedCheckpoint(session);
+  moveUiSessionToArea(session, "oneonta_city__market");
+  continueFixedCheckpoint(session);
+  session.startQuest("tanners_fever");
+  continueFixedCheckpoint(session);
+  session.completeQuest("tanners_fever", {
+    endingId: "ending_recovered",
+    endingTitle: "The Meadowsweet",
+    death: false,
+  });
+  expect(session.journey().pendingChoice?.reasons).toContain("goal_completed");
+  session.chooseJourney("continue");
+  expect(session.journey().storyChoice?.id).toBe(TANNERS_FEVER_ACCOUNTABILITY_ID);
   return session;
 }
 
@@ -444,7 +490,7 @@ describe("MCP journey surface", () => {
     expect(listed.journey).toEqual(uiJourney);
     expect(listed.actions).toEqual([]);
     expect(() => a.rest_overworld_session({ session_id: restored.session_id })).toThrow(
-      /dawn dispatch/i,
+      /presented story consequence/i,
     );
 
     const blocked = a.step_action({
@@ -484,4 +530,45 @@ describe("MCP journey surface", () => {
         .length,
     ).toBeGreaterThan(0);
   });
+
+  it.each(TANNERS_FEVER_ACCOUNTABILITY_CHOICE_IDS)(
+    "routes the visible Tanner accountability option %s through the generic handler",
+    (choiceId) => {
+      const uiSession = uiSessionAtTannersAccountabilityChoice();
+      const uiJourney = uiSession.journey();
+      const snapshot = uiSession.snapshot();
+      expect(uiJourney.storyChoice?.options.map((option) => option.id)).toEqual(
+        TANNERS_FEVER_ACCOUNTABILITY_CHOICE_IDS,
+      );
+
+      const a = api();
+      const restored = a.restore_overworld_session({
+        snapshot,
+        compact_context: false,
+        compact_result: false,
+      });
+      expect(restored.journey).toEqual(uiJourney);
+
+      const uiBranch = OverworldSession.restore(WORLD, snapshot);
+      const uiResult = uiBranch.chooseJourneyStory(choiceId);
+      const mcpBranch = a.choose_overworld_session_story({
+        session_id: restored.session_id,
+        choice: choiceId,
+        compact_context: false,
+        compact_result: false,
+      });
+
+      expect(mcpBranch.result).toEqual(uiResult);
+      expect(mcpBranch.result).toMatchObject({
+        storyChoiceId: TANNERS_FEVER_ACCOUNTABILITY_ID,
+        choiceId,
+        journeyDecision: { countsTowardJourney: true, reason: "situation_changed" },
+      });
+      expect(mcpBranch.journey).toEqual(uiBranch.journey());
+      expect(mcpBranch.journey.storyChoice).toBeNull();
+      expect(JSON.stringify({ result: mcpBranch.result, journey: mcpBranch.journey })).not.toMatch(
+        /targetQuestId|targetTownId|targetAreaId|questOutcomeIds|endingId|content\/rpg/i,
+      );
+    },
+  );
 });
