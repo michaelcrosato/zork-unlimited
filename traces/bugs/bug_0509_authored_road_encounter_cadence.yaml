@@ -1,0 +1,52 @@
+id: bug_0509_authored_road_encounter_cadence
+title: "Ambient road reports no longer become repetitive mandatory choices"
+pack: src/world/session_road_travel.ts
+reported_by: pure-blind-playtest
+reports:
+  - blind-tester/reports/20260712T045851Z_overworld_seed1407.md
+  - blind-tester/reports/20260712T054426Z_overworld_seed1507.md
+severity: S1
+symptom: >
+  Every first crossing of every road stopped play for the same scout, assist, or
+  press-on decision. A five-leg Oneonta-to-Rome route therefore required ten
+  accepted decisions before the next authored quest, generic reports read like
+  toll booths, and a Queensbury warning could remain urgent after Gallowmere was
+  complete.
+root_cause: >
+  The manifest's universal road-report substrate also served as the blocking-
+  encounter flag. Runtime created a pending encounter for any non-null report,
+  replay demanded a resolution journal for every report, and all events inherited
+  the same global response copy. Selection knew only the immediately previous edge,
+  not the active campaign goal, completed quests, or prior authored choices.
+fix: >
+  Generic reports remain visible travel texture and retain their deterministic risk
+  cost, but never block another action. Explicit choice scenes carry complete authored
+  responses, appear at most once, may be scoped to the current game goal, and retire
+  after their linked quest. The Gallowmere route now has one blocking relief-line
+  choice plus one ambient spoor cue; the former Oneida-Rome filler is an authored
+  flood choice for The Breaking Weir. Immediate MCP, CLI, web, and spectator surfaces
+  all receive the same road scene while rolling history stays compact.
+deterministic_witnesses:
+  - "ambient road travel records its report and risk but creates no pending encounter"
+  - "an authored scene blocks once, then remains suppressed across later travel and restore"
+  - "goal-scoped scenes are absent before activation and after their retirement quest"
+  - "ambient travel counts one movement decision; only a real response adds another"
+  - "snapshot replay requires journals only for choice scenes and rejects forged ambient resolutions"
+  - "route estimates and immediate compact travel use the same state-aware scene selection"
+tests:
+  - tests/unit/world_session_road_travel.test.ts
+  - tests/unit/world_session_travel_log.test.ts
+  - tests/unit/world_session_road_encounters.test.ts
+  - tests/unit/world_session_resource_replay.test.ts
+  - tests/unit/world_session_routes.test.ts
+  - tests/unit/compact_overworld_result.test.ts
+  - tests/unit/mcp_tools.test.ts
+  - tests/unit/spectate_format.test.ts
+  - tests/regression/new_york_overworld.test.ts
+  - tests/regression/overworld_road_encounter_cadence.test.ts
+  - tests/regression/overworld_cli.test.ts
+verification:
+  - npm run typecheck
+  - npm run crawl:smoke
+  - npm run blind -- --seed 1607
+  - npm run health

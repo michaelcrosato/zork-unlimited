@@ -54,6 +54,8 @@ export type OverworldAppliedRoadEncounter = OverworldRoadEncounterResolution & {
 };
 
 export type OverworldPendingRoadEncounterRestoreIndex = {
+  activeGoalId: string;
+  completedQuestIds: ReadonlySet<string>;
   currentId: string;
   edgeIds: ReadonlySet<string>;
   edgesById: ReadonlyMap<string, OverworldEdge>;
@@ -71,6 +73,9 @@ export function buildOverworldPendingRoadEncounter(
   roadEvent: OverworldRoadEvent,
   arrivedAtMinutes: number,
 ): OverworldPendingRoadEncounter {
+  if (roadEvent.requires_choice !== true) {
+    throw new Error(`Road event "${roadEvent.id}" is ambient and cannot become an encounter.`);
+  }
   const arrivedAt = timeLabel(arrivedAtMinutes);
   return {
     id: `road:${edge.id}:${arrivedAtMinutes}`,
@@ -105,6 +110,27 @@ export function restoreOverworldPendingRoadEncounter(
   if (!manifestEvent) {
     throw new Error(
       `Overworld session snapshot has no road event for "${pendingRoadEncounter.edgeId}".`,
+    );
+  }
+  if (manifestEvent.requires_choice !== true) {
+    throw new Error(
+      `Overworld session snapshot pending road "${pendingRoadEncounter.edgeId}" is an ambient report, not a choice.`,
+    );
+  }
+  if (
+    manifestEvent.active_goal_ids !== undefined &&
+    !manifestEvent.active_goal_ids.includes(indexes.activeGoalId)
+  ) {
+    throw new Error(
+      `Overworld session snapshot pending road "${pendingRoadEncounter.edgeId}" is not active for the current goal.`,
+    );
+  }
+  if (
+    manifestEvent.retire_after_quest !== undefined &&
+    indexes.completedQuestIds.has(manifestEvent.retire_after_quest)
+  ) {
+    throw new Error(
+      `Overworld session snapshot pending road "${pendingRoadEncounter.edgeId}" is retired by a completed quest.`,
     );
   }
   if (indexes.latestTravel?.roadEventId === null) {

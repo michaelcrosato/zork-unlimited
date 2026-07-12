@@ -88,9 +88,10 @@ export function applyOverworldTravelLeg(
     minutesAfter,
     suppliesAfter: travelResult.suppliesAfter,
     fatigueAfter: travelResult.fatigueAfter,
-    pendingRoadEncounter: roadEvent
-      ? buildOverworldPendingRoadEncounter(from, to, edge, roadEvent, minutesAfter)
-      : null,
+    pendingRoadEncounter:
+      roadEvent?.requires_choice === true
+        ? buildOverworldPendingRoadEncounter(from, to, edge, roadEvent, minutesAfter)
+        : null,
   };
 }
 

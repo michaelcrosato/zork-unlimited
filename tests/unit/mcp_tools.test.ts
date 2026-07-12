@@ -1197,7 +1197,14 @@ describe("MCP tools — validate / load (§9.4)", () => {
     });
     expect(defaultTravel.ok).toBe(true);
     if (!defaultTravel.ok) throw new Error("default compact travel should pass snapshot guard");
-    expect(defaultTravel.travel).toHaveLength(7);
+    expect(defaultTravel.travel).toHaveLength(10);
+    expect(defaultTravel.travel.slice(6)).toEqual([
+      expect.any(String),
+      expect.stringMatching(/^(low|medium|high)$/),
+      expect.any(String),
+      expect.any(String),
+    ]);
+    expect(defaultTravel.context.travel_log?.[0]).toHaveLength(7);
     expect("baseMinutes" in defaultTravel.travel).toBe(false);
     expect(defaultTravel.context.here[0]).toBe(`road:${defaultTravelFullRoad!.id}`);
     expect(defaultTravel.context.here[3]).toBeNull();
@@ -1660,6 +1667,9 @@ describe("MCP tools — validate / load (§9.4)", () => {
       fullTravel.travel.suppliesUsed,
       fullTravel.travel.fatigueGained,
       fullTravel.travel.roadEvent?.id ?? null,
+      fullTravel.travel.roadEvent?.risk ?? null,
+      fullTravel.travel.roadEvent?.title ?? null,
+      fullTravel.travel.roadEvent?.summary ?? null,
     ]);
     expect(JSON.stringify(compactTravel.travel).length).toBeLessThan(
       JSON.stringify(fullTravel.travel).length,

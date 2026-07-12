@@ -790,7 +790,7 @@ describe("overworld snapshot restore integrity", () => {
     );
   });
 
-  it("rejects pending road encounters that do not match the latest travel", () => {
+  it("rejects ambient road reports forged into pending encounters", () => {
     const { a, snapshot } = exportedSnapshotWithPendingRoad();
     const latestTravel = snapshot.travelLog[0]!;
     const alternateRoad = overworldEdgesFrom(overworld, snapshot.currentId).find(
@@ -803,7 +803,7 @@ describe("overworld snapshot restore integrity", () => {
     };
 
     expect(() => a.restore_overworld_session({ snapshot: forgedPendingRoad })).toThrow(
-      /pending road encounter.*does not match latest travel road event/,
+      /ambient report, not a choice/,
     );
   });
 
@@ -1800,7 +1800,8 @@ describe("overworld snapshot restore integrity", () => {
   });
 
   it("rejects journal history that is not newest-first", () => {
-    const { a, snapshot } = exportedSnapshotAfterTwoRoads();
+    const { a, snapshot } = exportedSnapshotWithResolvedInitialEvent();
+    expect(snapshot.journalEntries.length).toBeGreaterThan(1);
     const reversedJournal = {
       ...snapshot,
       journalEntries: [...snapshot.journalEntries].reverse(),

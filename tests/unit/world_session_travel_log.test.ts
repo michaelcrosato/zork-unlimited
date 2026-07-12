@@ -49,6 +49,35 @@ function roadEvent(overrides: Partial<OverworldRoadEvent> = {}): OverworldRoadEv
     title: "Washed bridge",
     risk: "high",
     summary: "Floodwater has damaged the bridge approach.",
+    requires_choice: true,
+    responses: {
+      cautious_scout: {
+        label: "Scout the road problem",
+        outcome:
+          "You slow down, read the situation, and leave a useful warning for the next traveler.",
+      },
+      assist_travelers: {
+        label: "Help resolve it",
+        outcome:
+          "You spend supplies and effort stabilizing the road trouble instead of merely passing it.",
+      },
+      press_on: {
+        label: "Press on",
+        outcome:
+          "You keep moving and accept the extra strain rather than spending daylight on the encounter.",
+      },
+    },
+    ...overrides,
+  };
+}
+
+function ambientRoadEvent(overrides: Partial<OverworldRoadEvent> = {}): OverworldRoadEvent {
+  return {
+    id: "ambient:a-b",
+    edge: "road:a-b",
+    title: "Wet road report",
+    risk: "high",
+    summary: "Standing water slows the shoulder traffic.",
     ...overrides,
   };
 }
@@ -165,6 +194,34 @@ describe("overworld session travel log restoration", () => {
         fatigueGained: 2,
         fatigueAfter: 2,
         roadEvent: null,
+      },
+    });
+  });
+
+  it("keeps ambient road flavor and risk without creating a pending choice", () => {
+    const event = ambientRoadEvent();
+    const applied = applyOverworldTravelLeg(
+      node("town_a", "Albany"),
+      node("town_b", "Colonie"),
+      edge(),
+      event,
+      {
+        minutes: 480,
+        supplies: 6,
+        fatigue: 0,
+      },
+    );
+
+    expect(applied).toMatchObject({
+      currentIdAfter: "town_b",
+      minutesAfter: 540,
+      suppliesAfter: 5,
+      fatigueAfter: 5,
+      pendingRoadEncounter: null,
+      entry: {
+        roadEvent: event,
+        fatigueGained: 5,
+        fatigueAfter: 5,
       },
     });
   });

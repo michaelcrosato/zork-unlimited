@@ -194,12 +194,22 @@ export function roadJournalResolutionIndex(
       ? travelResourceKey(travelTimeline.latest)
       : null;
   const requiredRoadResolutionKeys = new Set<string>();
+  const seenChoiceEventIds = new Set<string>();
   for (let index = 0; index < travelTimeline.oldestFirst.length; index += 1) {
     const current = travelTimeline.oldestFirst[index]!;
     const key = travelResourceKey(current);
     const next = travelTimeline.oldestFirst[index + 1];
     if (next) nextTravelArrivalByKey.set(key, next.arrivedAt);
-    if (roadEventForTravelLogSnapshot(current, sources) && key !== pendingRoadKey) {
+    const roadEvent = roadEventForTravelLogSnapshot(current, sources);
+    if (roadEvent?.requires_choice === true) {
+      if (seenChoiceEventIds.has(roadEvent.id)) {
+        throw new Error(
+          `Overworld session snapshot repeats one-shot road encounter "${roadEvent.id}".`,
+        );
+      }
+      seenChoiceEventIds.add(roadEvent.id);
+    }
+    if (roadEvent?.requires_choice === true && key !== pendingRoadKey) {
       requiredRoadResolutionKeys.add(key);
     }
   }
@@ -208,6 +218,13 @@ export function roadJournalResolutionIndex(
     if (!sources.roadEventsByEdgeId.has(resolution.parsed.edgeId)) {
       throw new Error(
         `Overworld session snapshot road journal "${resolution.entry.id}" has no matching road event.`,
+      );
+    }
+    const travel = travelTimeline.byArrival.get(resolution.key);
+    const travelRoadEvent = travel ? roadEventForTravelLogSnapshot(travel, sources) : null;
+    if (travelRoadEvent?.requires_choice !== true) {
+      throw new Error(
+        `Overworld session snapshot road journal "${resolution.entry.id}" is not bound to a choice encounter.`,
       );
     }
     if (byKey.has(resolution.key)) {

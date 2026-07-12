@@ -27,6 +27,7 @@ import {
   cachedOverworldSessionRegionalArcProgress,
 } from "./session_route_progress.js";
 import type { OverworldRoutePlannerIndex, OverworldSessionRoutePlan } from "./session_routes.js";
+import type { OverworldRouteRoadEventState } from "./session_routes.js";
 import type {
   OverworldJournalEntry,
   OverworldPendingRoadEncounter,
@@ -82,6 +83,7 @@ export type OverworldSessionViewModelSourceState = {
   localState: OverworldSessionViewLocalContentState;
   localView: OverworldSessionLocalView;
   routePlannerIndex: OverworldRoutePlannerIndex;
+  roadEventState?: OverworldRouteRoadEventState;
   journalEntries: readonly OverworldJournalEntry[];
   travelLog: readonly TravelLogEntry[];
   visitedCount: number;
@@ -179,6 +181,7 @@ export function buildOverworldSessionViewModelState(
       fatigue: source.fatigue,
       supplies: source.supplies,
     },
+    ...(source.roadEventState ? { roadEventState: source.roadEventState } : {}),
   });
 
   return {

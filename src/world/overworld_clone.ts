@@ -67,5 +67,17 @@ export function cloneOverworldExplorationSite(
 }
 
 export function cloneOverworldRoadEvent(event: OverworldRoadEvent): OverworldRoadEvent {
-  return { ...event };
+  return {
+    ...event,
+    ...(event.active_goal_ids ? { active_goal_ids: [...event.active_goal_ids] } : {}),
+    ...(event.responses
+      ? {
+          responses: {
+            cautious_scout: { ...event.responses.cautious_scout },
+            assist_travelers: { ...event.responses.assist_travelers },
+            press_on: { ...event.responses.press_on },
+          },
+        }
+      : {}),
+  };
 }

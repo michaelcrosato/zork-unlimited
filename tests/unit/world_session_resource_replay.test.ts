@@ -37,6 +37,35 @@ function roadEvent(overrides: Partial<OverworldRoadEvent> = {}): OverworldRoadEv
     title: "Blocked road",
     risk: "medium",
     summary: "A test road event.",
+    requires_choice: true,
+    responses: {
+      cautious_scout: {
+        label: "Scout the road problem",
+        outcome:
+          "You slow down, read the situation, and leave a useful warning for the next traveler.",
+      },
+      assist_travelers: {
+        label: "Help resolve it",
+        outcome:
+          "You spend supplies and effort stabilizing the road trouble instead of merely passing it.",
+      },
+      press_on: {
+        label: "Press on",
+        outcome:
+          "You keep moving and accept the extra strain rather than spending daylight on the encounter.",
+      },
+    },
+    ...overrides,
+  };
+}
+
+function ambientRoadEvent(overrides: Partial<OverworldRoadEvent> = {}): OverworldRoadEvent {
+  return {
+    id: "ambient:a-b",
+    edge: "road:a-b",
+    title: "Routine road report",
+    risk: "medium",
+    summary: "Rain makes the road slow but passable.",
     ...overrides,
   };
 }
@@ -174,7 +203,7 @@ describe("overworld snapshot resource replay", () => {
     ).toThrow(/supplies after.*resource replay/);
   });
 
-  it("requires road-event travel to have a road journal resolution unless still pending", () => {
+  it("requires choice-event travel to have a road journal resolution unless still pending", () => {
     const snapshotValue = snapshot([travelEntry({ fatigueGained: 3, fatigueAfter: 3 })], {
       fatigue: 3,
     });
@@ -204,6 +233,93 @@ describe("overworld snapshot resource replay", () => {
       ),
     ).toThrow(/missing a journal resolution/);
     expect([...pendingResolution.requiredKeys]).toEqual([]);
+  });
+
+  it("replays ambient road risk without requiring a road-choice journal", () => {
+    const ambient = ambientRoadEvent();
+    const snapshotValue = snapshot([travelEntry({ fatigueGained: 3, fatigueAfter: 3 })], {
+      fatigue: 3,
+    });
+    const travelTimeline = timeline(snapshotValue);
+    const roadJournal = roadJournalResolutionIndex(
+      sources([ambient]),
+      { roadJournalEntries: [] },
+      travelTimeline,
+      null,
+    );
+
+    expect([...roadJournal.requiredKeys]).toEqual([]);
+    expect(() =>
+      assertSnapshotResourceReplay(
+        snapshotValue,
+        sources([ambient]),
+        travelTimeline,
+        roadJournal,
+        { entries: [] },
+        { entries: [] },
+      ),
+    ).not.toThrow();
+  });
+
+  it("rejects road journals bound to ambient or explicitly suppressed travel", () => {
+    const resolution: OverworldRoadJournalResolutionEntry = {
+      entry: journalEntry("road", "road:road:a-b:540:press_on"),
+      key: "road:a-b@540",
+      parsed: {
+        edgeId: "road:a-b",
+        arrivedAt: 540,
+        strategy: "press_on",
+      },
+      recordedAt: 540,
+    };
+
+    for (const [event, entry] of [
+      [ambientRoadEvent(), travelEntry({ fatigueGained: 3, fatigueAfter: 3 })],
+      [roadEvent(), travelEntry({ roadEventId: null })],
+    ] as const) {
+      const snapshotValue = snapshot([entry], {
+        fatigue: entry.fatigueAfter,
+      });
+      expect(() =>
+        roadJournalResolutionIndex(
+          sources([event]),
+          { roadJournalEntries: [resolution] },
+          timeline(snapshotValue),
+          null,
+        ),
+      ).toThrow(/not bound to a choice encounter/);
+    }
+  });
+
+  it("rejects a one-shot choice event repeated anywhere in travel history", () => {
+    const snapshotValue = snapshot(
+      [
+        travelEntry({
+          fromId: "town_b",
+          toId: "town_a",
+          arrivedAt: 600,
+          suppliesAfter: 4,
+          fatigueGained: 3,
+          fatigueAfter: 6,
+        }),
+        travelEntry({ fatigueGained: 3, fatigueAfter: 3 }),
+      ],
+      {
+        currentId: "town_a",
+        minutes: 600,
+        supplies: 4,
+        fatigue: 6,
+      },
+    );
+
+    expect(() =>
+      roadJournalResolutionIndex(
+        sources([roadEvent()]),
+        { roadJournalEntries: [] },
+        timeline(snapshotValue),
+        null,
+      ),
+    ).toThrow(/repeats one-shot road encounter/);
   });
 
   it("treats explicit null road event ids as suppressed plain travel", () => {

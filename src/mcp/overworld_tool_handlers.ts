@@ -1,10 +1,8 @@
 import {
   compactOverworldQuestRef,
   compactRouteOption,
-  compactTravelLogEntry,
   type OverworldCompactQuestRef,
   type OverworldCompactRouteOption,
-  type OverworldCompactTravelLogEntry,
 } from "../world/compact_view.js";
 import type { OverworldManifest, OverworldNode } from "../world/overworld.js";
 import {
@@ -26,11 +24,13 @@ import {
   compactOverworldQuestCompletionResult,
   compactOverworldRoadEncounterResult,
   compactOverworldServiceResult,
+  compactOverworldTravelResult,
   type OverworldCompactActionResult,
   type OverworldCompactAreaTravelResult,
   type OverworldCompactQuestCompletionResult,
   type OverworldCompactRoadEncounterResult,
   type OverworldCompactServiceResult,
+  type OverworldCompactTravelResult,
 } from "./compact_overworld_result.js";
 import {
   isOverworldMcpRejectedSessionPayload,
@@ -316,7 +316,7 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
       "travel",
       TravelLogEntry,
       DefaultCompactOverworldResponse<Args>,
-      OverworldCompactTravelLogEntry
+      OverworldCompactTravelResult
     > {
       const responseOptions = defaultCompactOverworldResponse(args);
       const travelByRoadId = args.road_id !== undefined;
@@ -333,7 +333,7 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
           args.session_id,
           "travel",
           (session) => session.travel(roadId),
-          compactTravelLogEntry,
+          compactOverworldTravelResult,
         );
       }
       const destinationTownId = args.destination_town_id;
@@ -347,7 +347,7 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
         args.session_id,
         "travel",
         (session) => session.travelTo(destinationTownId),
-        compactTravelLogEntry,
+        compactOverworldTravelResult,
       );
     },
 

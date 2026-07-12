@@ -10,6 +10,7 @@ import {
   overworldJobsAt,
   planOverworldRoute,
 } from "../../src/world/overworld.js";
+import { cloneOverworldRoadEvent } from "../../src/world/overworld_clone.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
 
 const world = loadOverworldManifest(process.cwd());
@@ -27,6 +28,7 @@ describe("New York overworld graph", () => {
     expect(world.design_rules.join(" ")).toContain("first-class local areas");
     expect(world.design_rules.join(" ")).toContain("discoverable local job");
     expect(world.design_rules.join(" ")).toContain("actionable travel beats");
+    expect(world.design_rules.join(" ")).toContain("ambient reports never block");
     expect(world.design_rules.join(" ")).toContain("looped local-area route graph");
     expect(world.regions.length).toBe(9);
     expect(world.regional_arcs.length).toBe(world.regions.length);
@@ -90,6 +92,97 @@ describe("New York overworld graph", () => {
     expect(event?.summary).toContain("Between Albany city and Colonie town");
     expect(event?.summary).toContain("jackknifed box truck");
     expect(event?.summary).not.toMatch(/Albany city to Colonie town|Colonie town to Albany city/);
+    expect(event?.requires_choice).toBe(true);
+    expect(event?.active_goal_ids).toBeUndefined();
+    expect(event?.retire_after_quest).toBeUndefined();
+    expect(event?.responses).toMatchObject({
+      cautious_scout: { label: "Walk the flare line" },
+      assist_travelers: { label: "Help right the box truck" },
+      press_on: { label: "Thread the narrow shoulder" },
+    });
+  });
+
+  it("separates ambient reports from goal-scoped, authored road choices", () => {
+    const byId = new Map(world.road_events.map((event) => [event.id, event]));
+    const choiceEvents = world.road_events.filter((event) => event.requires_choice === true);
+
+    expect(choiceEvents.map((event) => event.id).sort()).toEqual([
+      "road_event_albany_city__saratoga_springs_city",
+      "road_event_colonie_town__albany_city",
+      "road_event_rome_city__oneida_city",
+    ]);
+    for (const event of choiceEvents) {
+      expect(event.responses, event.id).toBeDefined();
+      const responses = Object.values(event.responses!);
+      expect(new Set(responses.map((response) => response.label.toLowerCase())).size).toBe(3);
+      expect(new Set(responses.map((response) => response.outcome.toLowerCase())).size).toBe(3);
+    }
+
+    const relief = byId.get("road_event_albany_city__saratoga_springs_city");
+    expect(relief).toMatchObject({
+      active_goal_ids: ["carry_hedricks_packet_north", "travel_north_with_albany_wardens"],
+      retire_after_quest: "gallowmere",
+    });
+
+    const moorSign = byId.get("road_event_saratoga_springs_city__queensbury_town");
+    expect(moorSign).toMatchObject({
+      active_goal_ids: ["carry_hedricks_packet_north", "travel_north_with_albany_wardens"],
+      retire_after_quest: "gallowmere",
+    });
+    expect(moorSign?.requires_choice).toBeUndefined();
+    expect(moorSign?.responses).toBeUndefined();
+
+    const risingRiver = byId.get("road_event_rome_city__oneida_city");
+    expect(risingRiver).toMatchObject({
+      title: "The river at the mile stones",
+      active_goal_ids: ["rome_breaking_weir"],
+      retire_after_quest: "breaking_weir",
+    });
+    expect(risingRiver?.summary).toContain("upper weir is groaning");
+    expect(risingRiver?.summary).not.toMatch(/Rome city to Oneida city|Oneida city to Rome city/);
+
+    const generic = world.road_events.find((event) => event.title.endsWith("road report"));
+    expect(generic).toBeDefined();
+    expect(generic?.requires_choice).toBeUndefined();
+    expect(generic?.active_goal_ids).toBeUndefined();
+    expect(generic?.retire_after_quest).toBeUndefined();
+    expect(generic?.responses).toBeUndefined();
+  });
+
+  it("enforces authored road-response integrity and clones its nested fields", () => {
+    const event = world.road_events.find(
+      (candidate) => candidate.id === "road_event_albany_city__saratoga_springs_city",
+    )!;
+    const clone = cloneOverworldRoadEvent(event);
+    expect(clone).not.toBe(event);
+    expect(clone.active_goal_ids).not.toBe(event.active_goal_ids);
+    expect(clone.responses).not.toBe(event.responses);
+    expect(clone.responses?.cautious_scout).not.toBe(event.responses?.cautious_scout);
+
+    const missingResponses = structuredClone(world);
+    const choiceWithoutResponses = missingResponses.road_events.find(
+      (candidate) => candidate.id === event.id,
+    )!;
+    delete choiceWithoutResponses.responses;
+    expect(() => assertOverworldIntegrity(missingResponses)).toThrow(
+      /must define requires_choice and responses together/,
+    );
+
+    const duplicateOutcomes = structuredClone(world);
+    const duplicated = duplicateOutcomes.road_events.find(
+      (candidate) => candidate.id === event.id,
+    )!;
+    duplicated.responses!.press_on.outcome = duplicated.responses!.cautious_scout.outcome;
+    expect(() => assertOverworldIntegrity(duplicateOutcomes)).toThrow(
+      /response outcomes must be unique/,
+    );
+
+    const questIds = new Set(world.quests.map((quest) => quest.id));
+    for (const roadEvent of world.road_events) {
+      if (roadEvent.retire_after_quest) {
+        expect(questIds.has(roadEvent.retire_after_quest), roadEvent.id).toBe(true);
+      }
+    }
   });
 
   it("places old quest sources locally instead of exposing all of them at start", () => {

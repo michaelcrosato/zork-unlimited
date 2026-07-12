@@ -71,8 +71,8 @@ function startGallowmereAfterWolf(
   );
   session.resolveRoadEncounter("press_on");
   session.travel(SARATOGA_TO_QUEENSBURY);
-  session.resolveRoadEncounter("press_on");
-  expect(session.journey().acceptedDecisions).toBe(27);
+  expect(session.view().pendingRoadEncounter).toBeNull();
+  expect(session.journey().acceptedDecisions).toBe(26);
 
   session.exploreArea("queensbury_town__civic_core");
   expect(session.journey().goalGuidance).toBe(
@@ -83,8 +83,8 @@ function startGallowmereAfterWolf(
   const started = session.startQuest("gallowmere");
 
   expect(started.id).toBe("gallowmere");
-  expect(session.journey().acceptedDecisions).toBe(30);
-  expect(session.journey().acceptedDecisions - 22).toBe(8);
+  expect(session.journey().acceptedDecisions).toBe(29);
+  expect(session.journey().acceptedDecisions - 22).toBe(7);
   expect(session.view()).toMatchObject({
     current: { id: "queensbury_town" },
     currentArea: { id: "queensbury_town__market" },
@@ -115,7 +115,7 @@ describe("Wolf-Winter to Gallowmere authored handoff", () => {
     expect(route?.steps[0]?.roadEvent).toMatchObject({
       title: "The northbound relief line",
       summary:
-        "Snow ruts carry Albany's relief wagons toward Saratoga Springs. Wardens at each turnout repeat the same fresh warning: a shepherd was killed above Queensbury, and his son is waiting with the spoor record.",
+        "Snow ruts and Albany relief-wagon tracks braid the road between the capital and Saratoga Springs. Wardens at each turnout repeat the same fresh warning: a shepherd was killed above Queensbury, and his son is waiting with the spoor record.",
     });
     expect(route?.steps[1]?.roadEvent).toMatchObject({
       title: "Moor sign on the Queensbury road",
@@ -162,7 +162,7 @@ describe("Wolf-Winter to Gallowmere authored handoff", () => {
   });
 
   it.each(["send_wagon_to_cade", "send_wardens_north"] as const)(
-    "starts Gallowmere at decision 30 through %s without a generic job dependency",
+    "starts Gallowmere at decision 29 through %s without a generic job dependency",
     (choice) => {
       const session = startGallowmereAfterWolf(choice);
       expect(session.view().log.map((entry) => entry.edgeId)).toEqual([
@@ -190,9 +190,9 @@ describe("Wolf-Winter to Gallowmere authored handoff", () => {
   it("folds an already-completed Gallowmere goal honestly and advances to the next live lead", () => {
     const session = new OverworldSession(world);
     session.travel(ALBANY_TO_SARATOGA);
-    session.resolveRoadEncounter("press_on");
+    if (session.view().pendingRoadEncounter) session.resolveRoadEncounter("press_on");
     session.travel(SARATOGA_TO_QUEENSBURY);
-    session.resolveRoadEncounter("press_on");
+    if (session.view().pendingRoadEncounter) session.resolveRoadEncounter("press_on");
     session.exploreArea("queensbury_town__civic_core");
     session.moveArea(QUEENSBURY_MARKET_ROUTE);
     session.startQuest("gallowmere");

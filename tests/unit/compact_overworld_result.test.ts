@@ -5,12 +5,14 @@ import {
   compactOverworldAreaTravelResult,
   compactOverworldQuestCompletionResult,
   compactOverworldRoadEncounterResult,
+  compactOverworldTravelResult,
   OVERWORLD_COMPACT_ACTION_TEXT_CHAR_LIMIT,
   OVERWORLD_COMPACT_ROAD_ENCOUNTER_TEXT_CHAR_LIMIT,
 } from "../../src/mcp/compact_overworld_result.js";
 import {
   OVERWORLD_COMPACT_LABEL_CHAR_LIMIT,
   OVERWORLD_COMPACT_LOCAL_REF_LIMIT,
+  OVERWORLD_COMPACT_ROAD_EVENT_SUMMARY_CHAR_LIMIT,
   OVERWORLD_COMPACT_TITLE_CHAR_LIMIT,
 } from "../../src/world/compact_view.js";
 import type {
@@ -18,6 +20,7 @@ import type {
   OverworldAreaTravelResult,
   OverworldQuestCompletionResult,
   OverworldRoadEncounterResult,
+  TravelLogEntry,
 } from "../../src/world/session.js";
 
 function refs(count: number): { id: string; name: string; title: string }[] {
@@ -217,5 +220,76 @@ describe("compactOverworldRoadEncounterResult", () => {
     expect(compact.text).not.toBe(verboseText);
     expect(compact.text).toHaveLength(OVERWORLD_COMPACT_ROAD_ENCOUNTER_TEXT_CHAR_LIMIT);
     expect(compact.text).toMatch(/\.\.\.\(\+\d+ chars\)$/);
+  });
+});
+
+describe("compactOverworldTravelResult", () => {
+  it("adds bounded immediate road-scene prose without changing the log-compatible prefix", () => {
+    const longTitle = `A road scene ${"title ".repeat(40)}`;
+    const longSummary = `A specific roadside consequence ${"keeps unfolding ".repeat(40)}`;
+    const result: TravelLogEntry = {
+      edgeId: "road_albany_colonie",
+      fromId: "albany_city",
+      toId: "colonie_town",
+      from: "Albany city",
+      to: "Colonie town",
+      route: "I-90 / New York State Thruway",
+      distanceMi: 7.1,
+      baseMinutes: 9,
+      delayMinutes: 4,
+      minutes: 13,
+      arrivedAt: 613,
+      suppliesUsed: 1,
+      suppliesAfter: 7,
+      fatigueGained: 2,
+      fatigueAfter: 2,
+      roadEvent: {
+        id: "road_event_albany_colonie",
+        edge: "road_albany_colonie",
+        risk: "medium",
+        title: longTitle,
+        summary: longSummary,
+      },
+    };
+
+    const compact = compactOverworldTravelResult(result);
+
+    expect(compact.slice(0, 7)).toEqual([
+      result.edgeId,
+      result.fromId,
+      result.toId,
+      result.minutes,
+      result.suppliesUsed,
+      result.fatigueGained,
+      result.roadEvent?.id,
+    ]);
+    expect(compact[7]).toBe("medium");
+    expect(compact[8]).not.toBe(longTitle);
+    expect(compact[8]).toHaveLength(OVERWORLD_COMPACT_TITLE_CHAR_LIMIT);
+    expect(compact[9]).not.toBe(longSummary);
+    expect(compact[9]).toHaveLength(OVERWORLD_COMPACT_ROAD_EVENT_SUMMARY_CHAR_LIMIT);
+  });
+
+  it("uses explicit null scene fields for travel without a road event", () => {
+    const result = {
+      edgeId: "road_a_b",
+      fromId: "a",
+      toId: "b",
+      from: "A",
+      to: "B",
+      route: "Plain road",
+      distanceMi: 1,
+      baseMinutes: 5,
+      delayMinutes: 0,
+      minutes: 5,
+      arrivedAt: 605,
+      suppliesUsed: 0,
+      suppliesAfter: 8,
+      fatigueGained: 0,
+      fatigueAfter: 0,
+      roadEvent: null,
+    } satisfies TravelLogEntry;
+
+    expect(compactOverworldTravelResult(result).slice(6)).toEqual([null, null, null, null]);
   });
 });

@@ -27,6 +27,8 @@ export type OverworldSessionRoadEncounterState = {
 };
 
 export type OverworldSessionRoadTravelState = {
+  activeGoalId: string;
+  completedQuestIds: ReadonlySet<string>;
   pendingRoadEncounter: OverworldPendingRoadEncounter | null;
   current: OverworldNode;
   currentId: string;
@@ -51,6 +53,43 @@ function suppressImmediateRepeatRoadEvent(
   travelLog: readonly OverworldRecordedTravelLeg["entry"][],
 ): boolean {
   return travelLog[0]?.edgeId === edgeId;
+}
+
+/**
+ * Select the road scene that is true for this journey now. Generic reports are
+ * ambient and may recur after the player has travelled elsewhere. Authored
+ * choices are one-shot, while goal-bound scenes exist only during that goal and
+ * disappear once their linked quest is complete.
+ */
+export function roadEventForOverworldSessionTravel(
+  manifestRoadEvent: OverworldRoadEvent | null,
+  state: {
+    activeGoalId: string;
+    completedQuestIds: ReadonlySet<string>;
+    travelLog: readonly OverworldRecordedTravelLeg["entry"][];
+  },
+): OverworldRoadEvent | null {
+  if (!manifestRoadEvent) return null;
+  if (
+    manifestRoadEvent.retire_after_quest !== undefined &&
+    state.completedQuestIds.has(manifestRoadEvent.retire_after_quest)
+  ) {
+    return null;
+  }
+  if (
+    manifestRoadEvent.active_goal_ids !== undefined &&
+    !manifestRoadEvent.active_goal_ids.includes(state.activeGoalId)
+  ) {
+    return null;
+  }
+  if (
+    manifestRoadEvent.requires_choice === true &&
+    state.travelLog.some((entry) => entry.roadEvent?.id === manifestRoadEvent.id)
+  ) {
+    return null;
+  }
+  if (suppressImmediateRepeatRoadEvent(manifestRoadEvent.edge, state.travelLog)) return null;
+  return manifestRoadEvent;
 }
 
 export function applyOverworldSessionRoadEncounter(
@@ -80,10 +119,7 @@ export function applyOverworldSessionRoadTravel(
   const edge = state.roadExitsByTownAndId.get(state.currentId)?.get(edgeId);
   if (!edge) throw new Error("That road is not reachable from here.");
   const manifestRoadEvent = state.roadEventsByEdgeId.get(edge.id) ?? null;
-  const roadEvent =
-    manifestRoadEvent && !suppressImmediateRepeatRoadEvent(edge.id, state.travelLog)
-      ? manifestRoadEvent
-      : null;
+  const roadEvent = roadEventForOverworldSessionTravel(manifestRoadEvent, state);
   const applied = applyOverworldTravelLeg(state.current, edge.destination, edge, roadEvent, {
     minutes: state.minutes,
     fatigue: state.fatigue,

@@ -246,7 +246,7 @@ export const OVERWORLD_COMPACT_LEGEND = {
     "{id, edge: road_id, route: route_name, where: [from_town, to_town, at_time], event: [road_event_id, risk_text, title, summary], options: [[strategy, label, minutes, supplies_cost, fatigue_gained, renown_gained], ...]} unresolved on-route scene; choose from the same labeled costs a human sees, then resolve it before town actions or more travel",
   journal: "[[kind, title, 'Day N, HH:MM'], ...] recent journal entries",
   travel_log:
-    "[[road_id, from_town_id, to_town_id, minutes, supplies_used, fatigue_gained, road_event_id|null], ...] recent trips",
+    "[[road_id, from_town_id, to_town_id, minutes, supplies_used, fatigue_gained, road_event_id|null], ...] recent trips; the immediate travel result extends that tuple with [road_event_risk|null, road_event_title|null, road_event_summary|null]",
   travel_log_truncated: "true when older trips were omitted",
   progress: "[towns_visited, towns_total]",
   renown: "[[region_name, renown_points], ...] reputation per region",

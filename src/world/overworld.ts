@@ -168,6 +168,21 @@ export const OverworldLocalJobSchema = z
   })
   .strict();
 
+const OverworldRoadEventResponseSchema = z
+  .object({
+    label: z.string().min(1),
+    outcome: z.string().min(1),
+  })
+  .strict();
+
+const OverworldRoadEventResponsesSchema = z
+  .object({
+    cautious_scout: OverworldRoadEventResponseSchema,
+    assist_travelers: OverworldRoadEventResponseSchema,
+    press_on: OverworldRoadEventResponseSchema,
+  })
+  .strict();
+
 export const OverworldRoadEventSchema = z
   .object({
     id: z.string().min(1),
@@ -175,6 +190,10 @@ export const OverworldRoadEventSchema = z
     title: z.string().min(1),
     risk: z.enum(["low", "medium", "high"]),
     summary: z.string().min(1),
+    requires_choice: z.literal(true).optional(),
+    active_goal_ids: z.array(z.string().min(1)).min(1).optional(),
+    retire_after_quest: z.string().min(1).optional(),
+    responses: OverworldRoadEventResponsesSchema.optional(),
   })
   .strict();
 
@@ -846,6 +865,41 @@ function assertEntitiesIntegrity(
     if (roadEventEdges.has(event.edge))
       throw new Error(`Multiple overworld road events reference edge "${event.edge}".`);
     roadEventEdges.add(event.edge);
+
+    const requiresChoice = event.requires_choice === true;
+    if (requiresChoice !== (event.responses !== undefined)) {
+      throw new Error(
+        `Overworld road event "${event.id}" must define requires_choice and responses together.`,
+      );
+    }
+    if (event.active_goal_ids) {
+      const distinctGoalIds = new Set(event.active_goal_ids);
+      if (distinctGoalIds.size !== event.active_goal_ids.length) {
+        throw new Error(`Overworld road event "${event.id}" repeats an active goal id.`);
+      }
+    }
+    if (event.responses) {
+      const responses = Object.values(event.responses);
+      const normalize = (text: string): string => text.trim().replace(/\s+/g, " ").toLowerCase();
+      const labels = responses.map((response) => normalize(response.label));
+      const outcomes = responses.map((response) => normalize(response.outcome));
+      if (labels.some((label) => label.split(" ").length < 2)) {
+        throw new Error(
+          `Overworld road event "${event.id}" response labels must be meaningful phrases.`,
+        );
+      }
+      if (outcomes.some((outcome) => outcome.split(" ").length < 6)) {
+        throw new Error(
+          `Overworld road event "${event.id}" response outcomes must be meaningful prose.`,
+        );
+      }
+      if (new Set(labels).size !== labels.length) {
+        throw new Error(`Overworld road event "${event.id}" response labels must be unique.`);
+      }
+      if (new Set(outcomes).size !== outcomes.length) {
+        throw new Error(`Overworld road event "${event.id}" response outcomes must be unique.`);
+      }
+    }
   }
   for (const edge of world.edges) {
     if (!roadEventEdges.has(edge.id))

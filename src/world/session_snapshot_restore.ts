@@ -383,6 +383,8 @@ export function planOverworldSessionSnapshotRestore(args: {
     }
   }
   const pendingRoadEncounter = restoreOverworldPendingRoadEncounter(snapshot.pendingRoadEncounter, {
+    activeGoalId: snapshot.journey.goal.id,
+    completedQuestIds,
     currentId: snapshot.currentId,
     edgeIds: indexes.edgeIds,
     edgesById: indexes.edgesById,

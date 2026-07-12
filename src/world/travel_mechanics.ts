@@ -55,35 +55,39 @@ export function roadEncounterOptionsFor(
   roadEvent: OverworldRoadEvent,
 ): OverworldRoadEncounterOption[] {
   const risk = roadEncounterRisk(roadEvent);
+  const authored = roadEvent.responses;
   return [
     {
       strategy: "cautious_scout",
-      label: "Scout the road problem",
+      label: authored?.cautious_scout.label ?? "Scout the road problem",
       minutes: 15 + risk * 10,
       suppliesCost: 0,
       fatigueGained: 0,
       renownGained: 1,
       outcome:
+        authored?.cautious_scout.outcome ??
         "You slow down, read the situation, and leave a useful warning for the next traveler.",
     },
     {
       strategy: "assist_travelers",
-      label: "Help resolve it",
+      label: authored?.assist_travelers.label ?? "Help resolve it",
       minutes: 25 + risk * 15,
       suppliesCost: risk >= 3 ? 2 : 1,
       fatigueGained: risk,
       renownGained: risk + 1,
       outcome:
+        authored?.assist_travelers.outcome ??
         "You spend supplies and effort stabilizing the road trouble instead of merely passing it.",
     },
     {
       strategy: "press_on",
-      label: "Press on",
+      label: authored?.press_on.label ?? "Press on",
       minutes: 0,
       suppliesCost: 0,
       fatigueGained: risk,
       renownGained: 0,
       outcome:
+        authored?.press_on.outcome ??
         "You keep moving and accept the extra strain rather than spending daylight on the encounter.",
     },
   ];

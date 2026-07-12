@@ -11,6 +11,7 @@ import {
   withOverworldRouteEstimate,
   type OverworldRoutePlannerIndex,
   type OverworldRouteResourceState,
+  type OverworldRouteRoadEventState,
   type OverworldSessionRoutePlan,
 } from "./session_routes.js";
 import type { OverworldJournalEntry } from "./session_snapshot.js";
@@ -22,6 +23,7 @@ export type OverworldSessionRouteOptionCacheState = {
   currentId: string;
   discoveredIds: ReadonlySet<string>;
   resources: OverworldRouteResourceState;
+  roadEventState?: OverworldRouteRoadEventState;
 };
 
 export type OverworldSessionRegionalArcProgressCacheState = {
@@ -59,6 +61,7 @@ export function cachedOverworldSessionDiscoveredRouteOptions(
     currentId: state.currentId,
     discoveredIds: state.discoveredIds,
     resources: state.resources,
+    ...(state.roadEventState ? { roadEventState: state.roadEventState } : {}),
   });
   return state.caches.routeOptions;
 }

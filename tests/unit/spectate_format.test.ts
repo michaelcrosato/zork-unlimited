@@ -116,12 +116,24 @@ describe("formatSpectateEntry", () => {
       "travel_overworld_session",
       { destination_town_id: "albany_city" },
       JSON.stringify({
-        m: 6,
-        entry: ["road", "Took I-90 to Albany", "Day 1, 10:12"],
+        travel: [
+          "road_albany_colonie",
+          "colonie_town",
+          "albany_city",
+          6,
+          0,
+          1,
+          "road_event_albany_colonie",
+          "low",
+          "Thruway shoulder flare-up",
+          "State-police flares mark a jackknifed truck narrowing the shoulder.",
+        ],
         context: { pending_road: { id: "enc1" } },
       }),
     );
-    expect(travel).toContain("Took I-90 to Albany");
+    expect(travel).toContain("travel  [+6m]");
+    expect(travel).toContain("Thruway shoulder flare-up (risk low)");
+    expect(travel).toContain("jackknifed truck narrowing the shoulder");
     expect(travel).toContain("⚠ road encounter");
 
     const resolvedRoad = at(

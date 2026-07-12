@@ -24,6 +24,32 @@ function sceneTitleOf(ctx: Json): string | undefined {
   return Array.isArray(here) && typeof here[1] === "string" ? here[1] : undefined;
 }
 
+type TravelRoadScene = {
+  id: string;
+  risk: string;
+  title: string;
+  summary: string;
+};
+
+/** Decode either the default compact travel tuple or the unchanged full result. */
+function travelRoadSceneOf(value: unknown): TravelRoadScene | undefined {
+  if (Array.isArray(value)) {
+    return typeof value[6] === "string" &&
+      typeof value[7] === "string" &&
+      typeof value[8] === "string" &&
+      typeof value[9] === "string"
+      ? { id: value[6], risk: value[7], title: value[8], summary: value[9] }
+      : undefined;
+  }
+  const event = asRecord(asRecord(value).roadEvent);
+  return typeof event.id === "string" &&
+    typeof event.risk === "string" &&
+    typeof event.title === "string" &&
+    typeof event.summary === "string"
+    ? { id: event.id, risk: event.risk, title: event.title, summary: event.summary }
+    : undefined;
+}
+
 /** Render narration/rejection/ending events; report whether the scene moved. */
 function renderEvents(events: unknown[], out: string[]): boolean {
   let moved = false;
@@ -125,6 +151,21 @@ export function formatSpectateEntry(
       const rtitle = sceneTitleOf(rctx);
       if (rtitle) out.push(`   ┌ ${rtitle}`);
       if (typeof rctx.text === "string") out.push(`   ${rctx.text}`);
+      break;
+    }
+    case "travel_overworld_session": {
+      const travel = p.travel;
+      const travelRecord = asRecord(travel);
+      const minutes = Array.isArray(travel) ? travel[3] : travelRecord.minutes;
+      const mins = typeof minutes === "number" && minutes > 0 ? `  [+${minutes}m]` : "";
+      head(`▷ travel${mins}`);
+      const scene = travelRoadSceneOf(travel);
+      if (scene) {
+        out.push(`   ${scene.title} (risk ${scene.risk})`);
+        out.push(`   ${scene.summary}`);
+      }
+      if (asRecord(ctx.pending_road).id !== undefined || asRecord(p.pending_road).id !== undefined)
+        out.push(`   ⚠ road encounter — resolve before travelling on`);
       break;
     }
     default: {

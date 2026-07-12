@@ -15,6 +15,8 @@ import {
   travelCondition,
   type OverworldTravelResourceState,
 } from "./travel_mechanics.js";
+import { roadEventForOverworldSessionTravel } from "./session_road_travel.js";
+import type { TravelLogEntry } from "./session_snapshot.js";
 
 export type OverworldRouteEstimate = {
   baseMinutes: number;
@@ -41,13 +43,33 @@ export type OverworldRoutePlannerIndex = {
 
 export type OverworldRouteResourceState = OverworldTravelResourceState;
 
+export type OverworldRouteRoadEventState = {
+  activeGoalId: string;
+  completedQuestIds: ReadonlySet<string>;
+  travelLog: readonly TravelLogEntry[];
+};
+
 export type OverworldDiscoveredRouteOptionsState = {
   routePlannerIndex: OverworldRoutePlannerIndex;
   current: OverworldNode;
   currentId: string;
   discoveredIds: ReadonlySet<string>;
   resources: OverworldRouteResourceState;
+  roadEventState?: OverworldRouteRoadEventState;
 };
+
+export function withOverworldSessionRoadEvents(
+  plan: OverworldRoutePlan,
+  state: OverworldRouteRoadEventState,
+): OverworldRoutePlan {
+  return {
+    ...plan,
+    steps: plan.steps.map((step) => ({
+      ...step,
+      roadEvent: roadEventForOverworldSessionTravel(step.roadEvent, state),
+    })),
+  };
+}
 
 export function estimateOverworldRoute(
   plan: OverworldRoutePlan,
@@ -206,7 +228,10 @@ export function buildOverworldDiscoveredRouteOptions(
       state.discoveredIds,
     );
     if (!plan || plan.steps.length === 0) continue;
-    options.push(withOverworldRouteEstimate(plan, state.resources));
+    const contextualPlan = state.roadEventState
+      ? withOverworldSessionRoadEvents(plan, state.roadEventState)
+      : plan;
+    options.push(withOverworldRouteEstimate(contextualPlan, state.resources));
   }
   options.sort((left, right) => compareOverworldRouteOptions(left, right, state.current.region));
   return options;

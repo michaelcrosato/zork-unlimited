@@ -5,6 +5,7 @@ import type {
   OverworldRoadEncounterResult,
   OverworldRoadEncounterStrategy,
   OverworldServiceResult,
+  TravelLogEntry,
 } from "../world/session.js";
 import { compactText } from "../core/compact_text.js";
 import {
@@ -13,9 +14,11 @@ import {
   compactOverworldQuestRef,
   compactOverworldQuestRefs,
   compactOverworldRefs,
+  compactOverworldRisk,
   compactOverworldTitle,
   compactOverworldTitleRefs,
   compactPendingRoad,
+  OVERWORLD_COMPACT_ROAD_EVENT_SUMMARY_CHAR_LIMIT,
   type OverworldCompactJournalEntry,
   type OverworldCompactQuestRef,
   type OverworldCompactRef,
@@ -79,6 +82,25 @@ export type OverworldCompactAreaTravelResult = {
   m: number;
   at: string;
 };
+
+/**
+ * The accepted travel decision plus its immediate road scene. The first seven
+ * positions intentionally match the rolling travel-log tuple; only this
+ * immediate result carries the bounded risk/title/summary needed to experience
+ * ambient and blocking scenes without another context read.
+ */
+export type OverworldCompactTravelResult = readonly [
+  edgeId: string,
+  fromId: string,
+  toId: string,
+  minutes: number,
+  suppliesUsed: number,
+  fatigueGained: number,
+  roadEventId: string | null,
+  roadEventRisk: string | null,
+  roadEventTitle: string | null,
+  roadEventSummary: string | null,
+];
 
 function compactOverworldJournalEntry(entry: {
   kind: string;
@@ -167,4 +189,20 @@ export function compactOverworldAreaTravelResult(
     m: result.minutes,
     at: result.arrivedAt,
   };
+}
+
+export function compactOverworldTravelResult(result: TravelLogEntry): OverworldCompactTravelResult {
+  const event = result.roadEvent;
+  return [
+    result.edgeId,
+    result.fromId,
+    result.toId,
+    result.minutes,
+    result.suppliesUsed,
+    result.fatigueGained,
+    event?.id ?? null,
+    event ? compactOverworldRisk(event.risk) : null,
+    event ? compactOverworldTitle(event.title) : null,
+    event ? compactText(event.summary, OVERWORLD_COMPACT_ROAD_EVENT_SUMMARY_CHAR_LIMIT) : null,
+  ];
 }

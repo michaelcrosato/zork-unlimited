@@ -784,6 +784,11 @@ export class OverworldSession {
       localState,
       localView: buildOverworldSessionCurrentLocalView(localState, currentAreaId),
       routePlannerIndex: this.routePlannerIndex,
+      roadEventState: {
+        activeGoalId: this.journeyState.goal.id,
+        completedQuestIds: this.completedQuestIds,
+        travelLog: this.travelLog,
+      },
       journalEntries: this.journalEntries,
       travelLog: this.travelLog,
       visitedCount: this.visitedIds.size,
@@ -1126,6 +1131,11 @@ export class OverworldSession {
         routePlannerIndex: this.routePlannerIndex,
         currentId: this.currentId,
         discoveredIds: this.discoveredIds,
+        roadEventState: {
+          activeGoalId: this.journeyState.goal.id,
+          completedQuestIds: this.completedQuestIds,
+          travelLog: this.travelLog,
+        },
         resources: {
           fatigue: this.fatigue,
           supplies: this.supplies,
@@ -1166,6 +1176,8 @@ export class OverworldSession {
     this.assertJourneyAcceptingDecision();
     const recorded = applyOverworldSessionRoadTravelArrival(
       {
+        activeGoalId: this.journeyState.goal.id,
+        completedQuestIds: this.completedQuestIds,
         pendingRoadEncounter: this.pendingRoadEncounter,
         current: this.currentNode(),
         currentId: this.currentId,

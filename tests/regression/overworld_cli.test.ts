@@ -1,8 +1,8 @@
 /**
  * bin/overworld_play — the terminal overworld player stays at parity with the
  * web UI and MCP server: it drives the same OverworldSession (no reimplemented
- * rules), surfaces the mandatory road-encounter resolution (every travel leg
- * raises one — an interface that hides it wedges the game), speaks world quest
+ * rules), surfaces an authored road choice when a travel leg raises one while
+ * leaving ambient route reports nonblocking, speaks world quest
  * ids only (never pack paths), and defines scripted success as "every command
  * accepted" (the overworld has no terminal ending, so rpg_play's reached-an-ending
  * predicate does not apply).
@@ -40,13 +40,19 @@ describe("overworld_play render (pure, same session the UI/MCP drive)", () => {
     expect(text).not.toMatch(/\.ya?ml/i); // public surface: no pack paths
   });
 
-  it("renders the pending road encounter every travel leg raises, with strategy commands", () => {
+  it("renders an authored pending road encounter with its strategy commands", () => {
     const manifest = loadOverworldManifest(ROOT);
     const session = new OverworldSession(manifest);
-    const firstRoad = session.view().exits[0]!;
-    session.travel(firstRoad.id);
+    const choiceEdges = new Set(
+      manifest.road_events
+        .filter((event) => event.requires_choice === true && event.active_goal_ids === undefined)
+        .map((event) => event.edge),
+    );
+    const firstRoad = session.view().exits.find((exit) => choiceEdges.has(exit.id));
+    expect(firstRoad).toBeDefined();
+    session.travel(firstRoad!.id);
     const pending = session.view().pendingRoadEncounter;
-    expect(pending).not.toBeNull(); // every manifest edge carries a road event
+    expect(pending).not.toBeNull();
     const text = renderEncounter(pending!);
     expect(text).toContain("Road encounter");
     for (const option of pending!.options) expect(text).toContain(option.label);
@@ -92,6 +98,19 @@ describe("overworld_play CLI (scripted mode)", () => {
     expect(run.output).toMatch(/Took .* — \d+ min/);
     expect(run.output).toMatch(/^[0-9a-f]{64}$/m); // snapshot hash line
     expect(run.output).not.toMatch(/content[\\/]rpg|\.ya?ml/i);
+  });
+
+  it("prints the immediate road scene after an accepted travel decision", () => {
+    const manifest = loadOverworldManifest(ROOT);
+    const expectedSession = new OverworldSession(manifest);
+    const expectedTravel = expectedSession.travel(expectedSession.view().exits[0]!.id);
+    expect(expectedTravel.roadEvent).not.toBeNull();
+
+    const run = runCli(["--commands", "go 1"]);
+
+    expect(run.status, run.output).toBe(0);
+    expect(run.output).toContain(expectedTravel.roadEvent!.title);
+    expect(run.output).toContain(expectedTravel.roadEvent!.summary);
   });
 
   it("exits 1 when a scripted command is rejected", () => {

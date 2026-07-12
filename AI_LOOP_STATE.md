@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 541 -->
+<!-- historical_cycle_count: 542 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,15 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - authored_road_encounter_cadence
+
+- Surface: 340 generic road reports are now visible ambient travel, never mandatory choices; three authored scenes use situation-specific labels/outcomes, fire once, respect active goals, and retire with their quest. Gallowmere gets one relief-line choice plus one ambient spoor cue; Breaking Weir gains a Rome-bound flood choice (`bug_0509`).
+- Integrity/parity: save replay requires journals only for actual choices and rejects ambient/duplicate forgeries; state-aware route estimates, web, CLI, default pure MCP, and spectate receive the same immediate scene while rolling history stays lean. Generic travel counts one movement decision; only a chosen authored response adds another.
+- Pure evidence: verified pure/fresh seed 1609 completed Wolf-Winter, Gallowmere, Tanner's Fever, and Breaking Weir; continued at 23/40/54/80/81, ended honestly at goal 4 on decision 105, clarity/enjoyment 4/4, replay true. Seed 1607's malformed report and seed 1608's technical timeout were correctly rejected, not counted.
+- Effect: the prior every-leg “toll booth,” repetitive encounter, Oneonta→Rome padding, and post-Gallowmere Queensbury warning complaints did not recur. Travel is now functional/formulaic rather than worst-moment friction; remaining connective debt is route backtracking.
+- Compile/self-critique: 453 verified reports include four pure contract-v3 exits: all continued at decisions 40 and 80, 20 continue vs 4 end, 105–114 decisions, replay 4/4. PASS for authored cadence, not retention completion—the player still ended after four quests; fresh S1s are stale Hayden dialogue and repeated NPC/town templates.
+- Guard: 133 focused tests plus typecheck, final 6000-step crawl (247/247 nodes, 344/344 edges, 12/12 quests), independent receipt verification, three-report feedback compile, and full health passed.
 
 ### Cycle result - compact_road_scene_parity
 
@@ -138,11 +147,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Fleet harvest: 200/200 fresh `gpt-5.5` reports verified (100 overworld + 100 direct `wolf_winter`, 20/persona/target), 0 stuck, all Byre Held; direct clarity/enjoyment 4.34/3.84, 96x60/60, and all 100 named tactical preparation as the best moment.
 - Self-critique: PASS_WITH_NOTES; direct reports still found rail unfairness 28/100, prescribed/linear play 18/100, and basic cleanup 7/100. `docs/CURRENT_PLAN.md` chooses a recoverable, multi-route Broken-Paling follow-through; replay 0/100 is only directional because the prompt prefilled false.
 - Guard: final 6,000-step crawl, 1,962-test `health`, base `3b8afec4` integrity, production UI build/HTTP smoke, verified rotation report, both 100/100 fleet summaries, 200-accepted ledger, and 200-report feedback compile green; embedded browser webview could not retain the local page.
-
-### Cycle result - testing_pyramid_three_tiers
-
-- Tooling surface: three-tier testing pyramid landed — mechanical crawler (`crawl:smoke` ~10s gate / `crawl:deep` soak, 9 oracles, ddmin-minimized repros), blind fleet (`npm run fleet`, personas + calibration anchors, zero-token `fleet:mock`), feedback compiler (`feedback:compile` → ranked hotspots + sycophancy telemetry + trends); assessor consumes `hotspots.json`.
-- Loop effect: AGENTS.md cycle gains crawl gates + fleet/compile steps; CI gains a crawl-smoke job; fault-injection suite proves planted CRASH/SOFTLOCK/RENDER/corruption defects are caught; `docs/testing_pyramid.md` is canonical.
-- Blind playtest: `fleet:mock` 20/20 verified overworld reports (all five personas rotated); live fleet blocked by nested-CLI auth inside agent sessions — mock lane is the CI oracle, live runs stay plain-shell.
-- Found+fixed: real engine bug — any post-quest-completion overworld snapshot failed restore (region-renown replay gap); `traces/bugs/bug_0496_overworld_renown_restore.yaml` + regression test. Deep soak 352k steps across 8 workers: zero findings.
-- Guard: `npm run health` green end-to-end; crawler byte-identical across worker counts; no verification weakened (coherence pins grew 18→22).

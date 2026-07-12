@@ -12,8 +12,10 @@ import {
   estimateOverworldRoute,
   indexedOverworldRoute,
   withOverworldRouteEstimate,
+  withOverworldSessionRoadEvents,
   type OverworldRoutePlannerIndex,
 } from "../../src/world/session_routes.js";
+import type { TravelLogEntry } from "../../src/world/session_snapshot.js";
 
 function node(id: string, overrides: Partial<OverworldNode> = {}): OverworldNode {
   return {
@@ -89,6 +91,27 @@ function routeIndex(
   };
 }
 
+function traveled(event: OverworldRoadEvent): TravelLogEntry {
+  return {
+    edgeId: event.edge,
+    fromId: "a",
+    toId: "b",
+    from: "A",
+    to: "B",
+    route: "Test road",
+    distanceMi: 1,
+    baseMinutes: 10,
+    delayMinutes: 0,
+    minutes: 10,
+    arrivedAt: 490,
+    suppliesUsed: 1,
+    suppliesAfter: 5,
+    fatigueGained: 1,
+    fatigueAfter: 1,
+    roadEvent: event,
+  };
+}
+
 describe("overworld session route helpers", () => {
   it("finds the fastest route and attaches road events to reconstructed steps", () => {
     const towns = [node("a"), node("b"), node("c"), node("d")];
@@ -147,6 +170,56 @@ describe("overworld session route helpers", () => {
       fatigueAfter: 43,
       travelConditionAfter: "out of supplies",
     });
+  });
+
+  it("forecasts only road scenes active for the current journey state", () => {
+    const towns = [node("a"), node("b")];
+    const event = roadEvent("road:a-b", {
+      requires_choice: true,
+      active_goal_ids: ["goal:north"],
+      retire_after_quest: "quest:north",
+      responses: {
+        cautious_scout: {
+          label: "Read flood marks",
+          outcome: "You read every fresh flood mark before moving onward.",
+        },
+        assist_travelers: {
+          label: "Brace warning stakes",
+          outcome: "You brace the warning stakes before moving onward.",
+        },
+        press_on: {
+          label: "Race rising water",
+          outcome: "You race the rising water and accept the strain.",
+        },
+      },
+    });
+    const plan = indexedOverworldRoute(
+      routeIndex(towns, [edge("road:a-b", "a", "b", 45)], [event]),
+      "a",
+      "b",
+    );
+    if (!plan) throw new Error("Expected test route to exist.");
+
+    const state = {
+      activeGoalId: "goal:north",
+      completedQuestIds: new Set<string>(),
+      travelLog: [] as TravelLogEntry[],
+    };
+    expect(withOverworldSessionRoadEvents(plan, state).steps[0]?.roadEvent).toBe(event);
+    expect(
+      withOverworldSessionRoadEvents(plan, { ...state, activeGoalId: "goal:other" }).steps[0]
+        ?.roadEvent,
+    ).toBeNull();
+    expect(
+      withOverworldSessionRoadEvents(plan, {
+        ...state,
+        completedQuestIds: new Set(["quest:north"]),
+      }).steps[0]?.roadEvent,
+    ).toBeNull();
+    expect(
+      withOverworldSessionRoadEvents(plan, { ...state, travelLog: [traveled(event)] }).steps[0]
+        ?.roadEvent,
+    ).toBeNull();
   });
 
   it("clones route options without sharing mutable step arrays or estimates", () => {
