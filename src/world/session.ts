@@ -120,14 +120,21 @@ import {
   createInitialJourneyContractSnapshot,
   journeyExitReceipt,
   journeyPresentation,
-  recordJourneyAcceptedDecision,
+  recordJourneyDecision,
   recordJourneyGoalCompleted,
   type JourneyChoice,
   type JourneyChoiceResult,
   type JourneyContractSnapshot,
+  type JourneyDecisionClassification,
   type JourneyExitReceipt,
   type JourneyPresentation,
 } from "./journey_contract.js";
+import {
+  classifyOverworldJourneyDecision,
+  withJourneyDecision,
+  type JourneyDecisionAnnotated,
+  type OverworldJourneyActionKind,
+} from "./journey_decision.js";
 
 export type {
   OverworldRoadEncounterOption,
@@ -161,6 +168,16 @@ export type {
   JourneyPresentation,
   JourneyRetentionEvent,
 } from "./journey_contract.js";
+
+export type OverworldJourneyActionResult = JourneyDecisionAnnotated<OverworldActionResult>;
+export type OverworldJourneyAreaTravelResult = JourneyDecisionAnnotated<OverworldAreaTravelResult>;
+export type OverworldJourneyQuestCompletionResult =
+  JourneyDecisionAnnotated<OverworldQuestCompletionResult>;
+export type OverworldJourneyQuestStartResult = JourneyDecisionAnnotated<OverworldQuestView>;
+export type OverworldJourneyRoadEncounterResult =
+  JourneyDecisionAnnotated<OverworldRoadEncounterResult>;
+export type OverworldJourneyServiceResult = JourneyDecisionAnnotated<OverworldServiceResult>;
+export type OverworldJourneyTravelResult = JourneyDecisionAnnotated<TravelLogEntry>;
 
 type OverworldClockState = {
   minutesAfter: number;
@@ -348,13 +365,23 @@ export class OverworldSession {
     assertJourneyContractAcceptingDecision(this.journeyState);
   }
 
-  recordAcceptedQuestDecision(actionId: string): JourneyPresentation {
+  recordQuestDecision(
+    actionId: string,
+    classification: JourneyDecisionClassification,
+  ): JourneyPresentation {
     this.assertJourneyAcceptingDecision();
-    this.journeyState = recordJourneyAcceptedDecision(this.journeyState, {
-      surface: "quest",
-      actionId,
-    });
-    this.clearSessionCaches();
+    const next = recordJourneyDecision(
+      this.journeyState,
+      {
+        surface: "quest",
+        actionId,
+      },
+      classification,
+    );
+    if (next !== this.journeyState) {
+      this.journeyState = next;
+      this.clearSessionCaches();
+    }
     return this.journey();
   }
 
@@ -475,33 +502,45 @@ export class OverworldSession {
     };
   }
 
-  private recordAcceptedOverworldDecision(actionId: string): void {
-    this.journeyState = recordJourneyAcceptedDecision(this.journeyState, {
-      surface: "overworld",
-      actionId,
-    });
+  private recordOverworldDecision(
+    actionId: string,
+    kind: OverworldJourneyActionKind,
+    stateChanged: boolean,
+  ): JourneyDecisionClassification {
+    const classification = classifyOverworldJourneyDecision(kind, stateChanged);
+    this.journeyState = recordJourneyDecision(
+      this.journeyState,
+      { surface: "overworld", actionId },
+      classification,
+    );
+    return classification;
   }
 
   private applyActionApplication(
     applied: OverworldSessionActionApplication,
     actionId: string,
-  ): OverworldActionResult {
+    kind: OverworldJourneyActionKind,
+  ): OverworldJourneyActionResult {
     this.applyClockState(applied);
-    this.recordAcceptedOverworldDecision(actionId);
-    this.clearSessionCaches();
-    return applied.result;
+    const journeyDecision = this.recordOverworldDecision(actionId, kind, applied.stateChanged);
+    if (applied.stateChanged || journeyDecision.countsTowardJourney) this.clearSessionCaches();
+    return withJourneyDecision(applied.result, journeyDecision);
   }
 
   private applyServiceApplication(
     applied: OverworldSessionServiceApplication,
     actionId: string,
-  ): OverworldServiceResult {
+  ): OverworldJourneyServiceResult {
     if (applied.stateChanged) {
       this.applyResourceClockState(applied);
     }
-    this.recordAcceptedOverworldDecision(actionId);
-    this.clearSessionCaches();
-    return cloneOverworldServiceResult(applied.result);
+    const journeyDecision = this.recordOverworldDecision(
+      actionId,
+      "preparation",
+      applied.stateChanged,
+    );
+    if (applied.stateChanged || journeyDecision.countsTowardJourney) this.clearSessionCaches();
+    return withJourneyDecision(cloneOverworldServiceResult(applied.result), journeyDecision);
   }
 
   private setCurrentAreaForTown(nodeId: string): void {
@@ -540,10 +579,11 @@ export class OverworldSession {
     current: OverworldNode,
     applied: OverworldSessionActionApplication,
     actionId: string,
-  ): OverworldActionResult {
+    kind: OverworldJourneyActionKind,
+  ): OverworldJourneyActionResult {
     return cloneOverworldActionResult(
-      this.withLocalDiscovery(this.applyActionApplication(applied, actionId), current.id),
-    );
+      this.withLocalDiscovery(this.applyActionApplication(applied, actionId, kind), current.id),
+    ) as OverworldJourneyActionResult;
   }
 
   private cachedCompactView(): OverworldCompactView {
@@ -643,19 +683,23 @@ export class OverworldSession {
     );
   }
 
-  startQuest(questId: string): OverworldQuestView {
+  startQuest(questId: string): OverworldJourneyQuestStartResult {
     this.assertJourneyAcceptingDecision();
     const applied = applyOverworldSessionQuestStartFromState(this.questStartState(questId));
     this.applyClockState(applied);
-    this.recordAcceptedOverworldDecision(`quest_start:${questId}`);
+    const journeyDecision = this.recordOverworldDecision(
+      `quest_start:${questId}`,
+      "progress",
+      applied.stateChanged,
+    );
     this.clearSessionCaches();
-    return cloneOverworldQuestView(applied.quest);
+    return withJourneyDecision(cloneOverworldQuestView(applied.quest), journeyDecision);
   }
 
   completeQuest(
     questId: string,
     outcome: OverworldQuestCompletionOutcome,
-  ): OverworldQuestCompletionResult {
+  ): OverworldJourneyQuestCompletionResult {
     if (this.journeyState.status === "ended") throw new Error("This journey has ended.");
     this.assertNoPendingRoadEncounter("completing a quest");
     const applied = applyOverworldSessionQuestCompletionFromState({
@@ -677,10 +721,13 @@ export class OverworldSession {
     if (applied.stateChanged) {
       this.clearSessionCaches();
     }
-    return cloneOverworldQuestCompletionResult(applied.result);
+    return withJourneyDecision(
+      cloneOverworldQuestCompletionResult(applied.result),
+      classifyOverworldJourneyDecision("technical_quest_foldback", applied.stateChanged),
+    );
   }
 
-  scoutPoi(poiId: string): OverworldActionResult {
+  scoutPoi(poiId: string): OverworldJourneyActionResult {
     this.assertJourneyAcceptingDecision();
     this.assertNoPendingRoadEncounter("scouting a point of interest");
     const current = this.currentNode();
@@ -694,10 +741,11 @@ export class OverworldSession {
         currentAreaId: () => this.currentAreaIdOrThrow(),
       }),
       `scout:${poiId}`,
+      "clue",
     );
   }
 
-  exploreArea(areaId: string): OverworldActionResult {
+  exploreArea(areaId: string): OverworldJourneyActionResult {
     this.assertJourneyAcceptingDecision();
     this.assertNoPendingRoadEncounter("exploring a local area");
     const current = this.currentNode();
@@ -715,10 +763,11 @@ export class OverworldSession {
         currentTownName: current.name,
       }),
       `explore_area:${areaId}`,
+      "clue",
     );
   }
 
-  moveArea(areaRouteId: string): OverworldAreaTravelResult {
+  moveArea(areaRouteId: string): OverworldJourneyAreaTravelResult {
     this.assertJourneyAcceptingDecision();
     this.assertNoPendingRoadEncounter("moving between local areas");
     const applied = applyOverworldSessionAreaTravelFromState({
@@ -731,18 +780,25 @@ export class OverworldSession {
       discoveredAreaIds: this.discoveredAreaIds,
     });
     this.applyCurrentAreaTravelState(applied);
-    this.recordAcceptedOverworldDecision(`move_area:${areaRouteId}`);
+    const journeyDecision = this.recordOverworldDecision(
+      `move_area:${areaRouteId}`,
+      "movement",
+      true,
+    );
     this.clearSessionCaches();
-    return cloneOverworldAreaTravelResult({
-      from: applied.from,
-      to: applied.to,
-      route: applied.route,
-      minutes: applied.minutes,
-      arrivedAt: applied.arrivedAt,
-    });
+    return withJourneyDecision(
+      cloneOverworldAreaTravelResult({
+        from: applied.from,
+        to: applied.to,
+        route: applied.route,
+        minutes: applied.minutes,
+        arrivedAt: applied.arrivedAt,
+      }),
+      journeyDecision,
+    );
   }
 
-  workLocalJob(jobId: string): OverworldActionResult {
+  workLocalJob(jobId: string): OverworldJourneyActionResult {
     this.assertJourneyAcceptingDecision();
     this.assertNoPendingRoadEncounter("working a local job");
     const current = this.currentNode();
@@ -763,10 +819,11 @@ export class OverworldSession {
         currentTownName: current.name,
       }),
       `work_job:${jobId}`,
+      "progress",
     );
   }
 
-  talkToCharacter(characterId: string): OverworldActionResult {
+  talkToCharacter(characterId: string): OverworldJourneyActionResult {
     this.assertJourneyAcceptingDecision();
     this.assertNoPendingRoadEncounter("talking to a contact");
     const current = this.currentNode();
@@ -781,10 +838,11 @@ export class OverworldSession {
         currentTownName: current.name,
       }),
       `talk:${characterId}`,
+      "dialogue",
     );
   }
 
-  investigateEvent(eventId: string): OverworldActionResult {
+  investigateEvent(eventId: string): OverworldJourneyActionResult {
     this.assertJourneyAcceptingDecision();
     this.assertNoPendingRoadEncounter("investigating a local event");
     const current = this.currentNode();
@@ -799,10 +857,11 @@ export class OverworldSession {
         currentTownName: current.name,
       }),
       `investigate_event:${eventId}`,
+      "clue",
     );
   }
 
-  resolveEvent(eventId: string): OverworldActionResult {
+  resolveEvent(eventId: string): OverworldJourneyActionResult {
     this.assertJourneyAcceptingDecision();
     this.assertNoPendingRoadEncounter("resolving a local event");
     const current = this.currentNode();
@@ -825,10 +884,11 @@ export class OverworldSession {
         charactersByArea: this.charactersByArea,
       }),
       `resolve_event:${eventId}`,
+      "progress",
     );
   }
 
-  exploreSite(siteId: string): OverworldActionResult {
+  exploreSite(siteId: string): OverworldJourneyActionResult {
     this.assertJourneyAcceptingDecision();
     this.assertNoPendingRoadEncounter("exploring a site");
     const current = this.currentNode();
@@ -847,10 +907,11 @@ export class OverworldSession {
         currentTownName: current.name,
       }),
       `explore_site:${siteId}`,
+      "progress",
     );
   }
 
-  restAtTown(): OverworldServiceResult {
+  restAtTown(): OverworldJourneyServiceResult {
     this.assertJourneyAcceptingDecision();
     this.assertNoPendingRoadEncounter("resting at town");
     const current = this.currentNode();
@@ -865,7 +926,7 @@ export class OverworldSession {
     );
   }
 
-  resupplyAtTown(): OverworldServiceResult {
+  resupplyAtTown(): OverworldJourneyServiceResult {
     this.assertJourneyAcceptingDecision();
     this.assertNoPendingRoadEncounter("resupplying at town");
     const current = this.currentNode();
@@ -896,7 +957,9 @@ export class OverworldSession {
     );
   }
 
-  resolveRoadEncounter(strategy: OverworldRoadEncounterStrategy): OverworldRoadEncounterResult {
+  resolveRoadEncounter(
+    strategy: OverworldRoadEncounterStrategy,
+  ): OverworldJourneyRoadEncounterResult {
     this.assertJourneyAcceptingDecision();
     const applied = applyOverworldSessionRoadEncounter(
       {
@@ -913,12 +976,16 @@ export class OverworldSession {
     );
     this.applyResourceClockState(applied);
     this.applyPendingRoadEncounterState(applied);
-    this.recordAcceptedOverworldDecision(`road_encounter:${strategy}`);
+    const journeyDecision = this.recordOverworldDecision(
+      `road_encounter:${strategy}`,
+      "progress",
+      true,
+    );
     this.clearSessionCaches();
-    return cloneOverworldRoadEncounterResult(applied.result);
+    return withJourneyDecision(cloneOverworldRoadEncounterResult(applied.result), journeyDecision);
   }
 
-  travel(edgeId: string): TravelLogEntry {
+  travel(edgeId: string): OverworldJourneyTravelResult {
     this.assertJourneyAcceptingDecision();
     const recorded = applyOverworldSessionRoadTravelArrival(
       {
@@ -945,12 +1012,12 @@ export class OverworldSession {
     this.applyCurrentTownState(recorded);
     this.applyCurrentAreaState(recorded);
     this.applyPendingRoadEncounterState(recorded);
-    this.recordAcceptedOverworldDecision(`travel:${edgeId}`);
+    const journeyDecision = this.recordOverworldDecision(`travel:${edgeId}`, "movement", true);
     this.clearSessionCaches();
-    return cloneOverworldTravelLogEntry(recorded.entry);
+    return withJourneyDecision(cloneOverworldTravelLogEntry(recorded.entry), journeyDecision);
   }
 
-  travelTo(destinationTownId: string): TravelLogEntry {
+  travelTo(destinationTownId: string): OverworldJourneyTravelResult {
     const matchingRoads = this.roadsFrom(this.currentId).filter(
       (road) => road.destination.id === destinationTownId,
     );

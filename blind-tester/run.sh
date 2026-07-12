@@ -13,10 +13,9 @@
 #   blind-tester/run.sh --smoke [--quest <id>] [--seed <n>]               # structural MCP smoke, no LLM
 #   ... [--persona <name>]  # play-style overlay; see blind-tester/personas/*.md (default: "default", a no-op)
 #
-# Provider-agnostic: set BLIND_AGENT_CMD to use a different MCP-capable agent CLI.
-# Codex commands are auto-wrapped with the adventureforge MCP server config; other
-# agents receive the prompt on stdin and these env vars: BLIND_MCP_CONFIG,
-# BLIND_QUEST_ID, BLIND_SEED.
+# Pure evidence uses the built-in hardened Claude launcher. BLIND_AGENT_CMD is an
+# internal structural mock/QA seam only; arbitrary provider commands cannot be
+# labeled pure because this runner cannot prove that they lack file/shell/web access.
 #
 set -euo pipefail
 
@@ -146,10 +145,9 @@ if [[ -n "$QUEST_ID" && "$SMOKE" != "1" && "$MOCK" != "1" ]]; then
   exit 2
 fi
 
-# There are exactly two harness contracts. Every reasoning-agent run is the
-# pure, human-equivalent fresh-overworld path. Structural behavior is available
-# only behind the explicit no-LLM --smoke/--mock switches; ambient environment
-# variables and provider overrides cannot downgrade a live run.
+# There are exactly two harness contracts. The built-in live reasoning-agent run
+# is the pure, human-equivalent fresh-overworld path. Structural behavior is
+# available only behind explicit --smoke/--mock switches.
 if [[ "$SMOKE" == "1" || "$MOCK" == "1" ]]; then
   PLAY_MODE="structural"
 else
@@ -162,6 +160,16 @@ START_SURFACE=$([[ "$OVERWORLD" == "1" ]] && printf 'fresh_overworld' || printf 
 # The richer persona library remains available to explicit structural mocks.
 if [[ "$PLAY_MODE" == "pure" && "$PERSONA" != "default" ]]; then
   echo "Pure live blind runs require --persona default; non-default personas are structural-only." >&2
+  exit 2
+fi
+
+# An arbitrary command can obey the player-only MCP allowlist while still using
+# shell/file tools to inspect the checkout. Receipt verification cannot detect
+# that contamination, so untrusted provider overrides are categorically barred
+# from pure evidence rather than relying on operator discipline.
+if [[ "$PLAY_MODE" == "pure" && -n "${BLIND_AGENT_CMD:-}" ]]; then
+  echo "BLIND_AGENT_CMD cannot produce pure retention evidence: its file/shell/web isolation is not enforceable by this runner." >&2
+  echo "Use the built-in Claude player, or an explicit --mock structural QA run." >&2
   exit 2
 fi
 
@@ -204,9 +212,15 @@ fi
 # --mock is an explicit, zero-token structural mode. It owns the bundled mock
 # command rather than trusting/inheriting BLIND_AGENT_CMD, so that environment
 # variable can never become a general-purpose escape hatch for targeted runs.
+# BLIND_MOCK_AGENT_CMD is a structural-only test seam (used to exercise timeout
+# failures); it can never reach the pure branch above.
 if [[ "$MOCK" == "1" ]]; then
-  MOCK_AGENT_SCRIPT="$(node_path_arg "$SCRIPT_DIR/mock-agent.mjs")"
-  printf -v BLIND_AGENT_CMD '%q %q' "$NODE_CMD" "$MOCK_AGENT_SCRIPT"
+  if [[ -n "${BLIND_MOCK_AGENT_CMD:-}" ]]; then
+    BLIND_AGENT_CMD="$BLIND_MOCK_AGENT_CMD"
+  else
+    MOCK_AGENT_SCRIPT="$(node_path_arg "$SCRIPT_DIR/mock-agent.mjs")"
+    printf -v BLIND_AGENT_CMD '%q %q' "$NODE_CMD" "$MOCK_AGENT_SCRIPT"
+  fi
 fi
 
 # Fail fast on a bad quest id BEFORE spending agent tokens (quest mode only — the
@@ -341,9 +355,9 @@ echo "Blind playtest → $SOURCE_LABEL seed=$SEED model=$MODEL"
 echo "Play contract: $PLAY_MODE / $START_SURFACE"
 echo "Report prefix: $OUT"
 
-# Codex only exposes repo MCP servers when its own config enables them. The blind
-# override commonly runs with --ignore-user-config from an untrusted temp cwd, so
-# inject both the server and the current deferred-MCP feature flag through `-c`.
+# Structural QA commands that invoke Codex need the generated MCP config injected.
+# This shim is unreachable from pure mode because arbitrary overrides were rejected
+# before the work directory and MCP launch configuration were created.
 CODEX_SHIM_BIN=""
 if [[ "${BLIND_AGENT_CMD:-}" == *codex* && "${BLIND_CODEX_NO_INJECT:-0}" != "1" ]]; then
   REAL_CODEX="$(command -v codex || true)"
@@ -376,9 +390,14 @@ SHIM
   fi
 fi
 
-# Provider override path: hand the prompt to any MCP-capable agent CLI.
+# Structural mock/QA override path. Pure mode has already rejected arbitrary
+# commands, so output from this branch is always retention-ineligible.
 if [[ -n "${BLIND_AGENT_CMD:-}" ]]; then
-  echo "Using BLIND_AGENT_CMD override."
+  if [[ "$PLAY_MODE" != "structural" ]]; then
+    echo "Internal error: an untrusted agent command reached pure mode." >&2
+    exit 4
+  fi
+  echo "Using structural BLIND_AGENT_CMD override."
   set +e
   (
     cd "$WORK"
@@ -402,29 +421,16 @@ if [[ -n "${BLIND_AGENT_CMD:-}" ]]; then
     REPORT_MD="$(wslpath -w "$REPORT_MD")"
   fi
   RUN_SIDECAR_ARG="$(node_path_arg "$RUN_SIDECAR")"
-  if [[ "$PLAY_MODE" == "pure" ]]; then
-    RUN_EVIDENCE_ARG="$(node_path_arg "$RUN_EVIDENCE")"
-    ( cd "$GAME_DIR" && npm --silent exec tsx -- scripts/verify-blind-report.ts "$REPORT_MD" \
-      --require-mode pure --run-evidence "$RUN_EVIDENCE_ARG" --write-run-sidecar "$RUN_SIDECAR_ARG" )
-  else
-    ( cd "$GAME_DIR" && npm --silent exec tsx -- scripts/verify-blind-report.ts "$REPORT_MD" \
-      --require-mode structural --write-run-sidecar "$RUN_SIDECAR_ARG" )
-  fi
+  ( cd "$GAME_DIR" && npm --silent exec tsx -- scripts/verify-blind-report.ts "$REPORT_MD" \
+    --require-mode structural --write-run-sidecar "$RUN_SIDECAR_ARG" )
   echo "✓ Blind report saved: $OUT.md"
   exit 0
 fi
 
-# Default blind player: Claude Code on your subscription. NOTE the blind player is
-# INDEPENDENT of the loop's driver — a Codex-primary loop can (and, for a diverse
-# playtester, may prefer to) run any MCP-capable agent here via BLIND_AGENT_CMD.
-# A Codex override is auto-wrapped with the engine MCP server, even with
-# --ignore-user-config / --ephemeral / --skip-git-repo-check, e.g.:
-#   BLIND_AGENT_CMD='codex exec --ignore-user-config --ephemeral --skip-git-repo-check --sandbox read-only -'
-# (On the BLIND_AGENT_CMD override path, enforcing blindness — no repo reads — is
-# the operator's responsibility; the built-in Claude path isolates cwd + denies
-# file/shell/web tools for you.)
+# Default pure blind player: Claude Code on your subscription, launched through
+# the runner-owned isolation and tool-denial contract below.
 if ! command -v claude >/dev/null 2>&1; then
-  echo "claude CLI not found. Set BLIND_AGENT_CMD to an MCP-capable agent (e.g. a 'codex exec' invocation) or install Claude Code." >&2
+  echo "claude CLI not found. Install Claude Code to produce canonical pure blind evidence." >&2
   exit 3
 fi
 

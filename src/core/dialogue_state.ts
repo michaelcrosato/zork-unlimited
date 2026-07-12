@@ -20,8 +20,10 @@ export type DialogueIndex<Npc extends DialogueNpcLike> = {
   npcs: { values(): Iterable<Npc> };
 };
 
+export const DIALOGUE_VAR_PREFIX = "__dlg_";
+
 export function dlgVar(npcId: string): string {
-  return `__dlg_${npcId}`;
+  return `${DIALOGUE_VAR_PREFIX}${npcId}`;
 }
 
 export function nodeOrdinal<Npc extends DialogueNpcLike>(npc: Npc, nodeId: string): number {

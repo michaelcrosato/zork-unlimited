@@ -13,7 +13,6 @@ import {
   JOURNEY_BASELINE_DECISIONS,
   JOURNEY_CONTRACT_VERSION,
   JOURNEY_EXIT_REASON,
-  type JourneyExitReceipt,
 } from "../world/journey_contract.js";
 
 const ExitInterviewFields = {
@@ -96,9 +95,12 @@ export const JourneyRetentionEventSchema = z
  * copy this object verbatim from the game; run-evidence verification below then
  * compares it with the server-side receipt rather than trusting prose.
  */
-export const JourneyExitReceiptSchema: z.ZodType<JourneyExitReceipt> = z
+export const JourneyExitReceiptSchema = z
   .object({
-    contractVersion: z.literal(JOURNEY_CONTRACT_VERSION),
+    // Contract-v1 pure reports are immutable historical retention evidence.
+    // New sessions emit the current v2 receipt, while re-verification and
+    // feedback compilation must continue to accept frozen v1 sidecars.
+    contractVersion: z.union([z.literal(1), z.literal(JOURNEY_CONTRACT_VERSION)]),
     exitReason: z.literal(JOURNEY_EXIT_REASON),
     goalVersion: z.literal(INITIAL_JOURNEY_GOAL.version),
     goalId: z.literal(INITIAL_JOURNEY_GOAL.id),

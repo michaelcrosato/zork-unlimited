@@ -513,39 +513,50 @@ function renderHotspotsMarkdown(
   lines.push("## Pure retention");
   lines.push("");
   lines.push(`- Evidence-eligible pure exits: ${retention.eligible_reports}`);
-  lines.push(`- Players who continued at least once: ${retention.continued_reports}`);
   lines.push(
-    `- Players who ended at their first choice: ${retention.ended_at_first_choice_reports}`,
-  );
-  lines.push(
-    `- Actual game choices: ${retention.choices.continue} continue, ${retention.choices.end} end`,
-  );
-  const decisions = retention.accepted_decisions;
-  lines.push(
-    decisions.mean === null
-      ? "- Accepted decisions: no eligible pure exits"
-      : `- Accepted decisions: ${decisions.minimum}–${decisions.maximum} (mean ${decisions.mean.toFixed(2)})`,
-  );
-  lines.push(
-    `- Exit reasons: ${retention.exit_reasons.map((row) => `${row.reason} ${row.count}`).join(", ") || "none"}`,
+    "- Decision counts, checkpoints, and continuation choices are reported within their journey-contract version; incompatible contracts are never pooled into one retention curve.",
   );
   lines.push(
     "- `would_replay` is a post-exit attitude metric; it is not counted as a continuation choice.",
   );
   lines.push("");
-  lines.push("| choice trigger | continue | end |");
-  lines.push("| --- | ---: | ---: |");
-  for (const [trigger, counts] of Object.entries(retention.choice_triggers)) {
-    lines.push(`| ${trigger} | ${counts.continue} | ${counts.end} |`);
+  if (retention.contract_versions.length === 0) {
+    lines.push("No eligible pure exits were available for a contract-specific curve.");
+    lines.push("");
   }
-  lines.push("");
-  if (retention.checkpoints.length > 0) {
-    lines.push("| checkpoint decision | continue | end |");
-    lines.push("| ---: | ---: | ---: |");
-    for (const checkpoint of retention.checkpoints) {
-      lines.push(`| ${checkpoint.decision} | ${checkpoint.continue} | ${checkpoint.end} |`);
+
+  for (const cohort of retention.contract_versions) {
+    lines.push(`### Journey contract v${cohort.contract_version}`);
+    lines.push("");
+    lines.push(`- Eligible pure exits: ${cohort.eligible_reports}`);
+    lines.push(`- Players who continued at least once: ${cohort.continued_reports}`);
+    lines.push(
+      `- Players who ended at their first choice: ${cohort.ended_at_first_choice_reports}`,
+    );
+    lines.push(
+      `- Actual game choices: ${cohort.choices.continue} continue, ${cohort.choices.end} end`,
+    );
+    lines.push(
+      `- Journey decisions under this contract: ${cohort.accepted_decisions.minimum}–${cohort.accepted_decisions.maximum} (mean ${cohort.accepted_decisions.mean.toFixed(2)})`,
+    );
+    lines.push(
+      `- Exit reasons: ${cohort.exit_reasons.map((row) => `${row.reason} ${row.count}`).join(", ")}`,
+    );
+    lines.push("");
+    lines.push("| choice trigger | continue | end |");
+    lines.push("| --- | ---: | ---: |");
+    for (const [trigger, counts] of Object.entries(cohort.choice_triggers)) {
+      lines.push(`| ${trigger} | ${counts.continue} | ${counts.end} |`);
     }
     lines.push("");
+    if (cohort.checkpoints.length > 0) {
+      lines.push("| checkpoint decision | continue | end |");
+      lines.push("| ---: | ---: | ---: |");
+      for (const checkpoint of cohort.checkpoints) {
+        lines.push(`| ${checkpoint.decision} | ${checkpoint.continue} | ${checkpoint.end} |`);
+      }
+      lines.push("");
+    }
   }
 
   lines.push("## Sycophancy");

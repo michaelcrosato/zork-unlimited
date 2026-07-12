@@ -239,4 +239,134 @@ describe("bug_0505 — Wolf-Winter saved wood has a post-hunt consequence", () =
       });
     }
   });
+
+  it("folds a winning decision at checkpoint 40 into one combined goal/checkpoint choice", () => {
+    const api = createToolApi({ root: process.cwd() });
+    const full = { compact_context: false, compact_result: false } as const;
+    const started = api.start_overworld({ compact_context: false });
+    const sessionId = started.session_id;
+
+    let view = started.observation;
+    api.scout_overworld_session_poi({
+      ...full,
+      session_id: sessionId,
+      poi_id: view.pois[0]!.id,
+    });
+    view = api.get_overworld_session({
+      session_id: sessionId,
+      include_observation: true,
+    }).observation;
+    const marketRoute = view.areaExits.find(
+      (route) => route.destination.id === "albany_city__market",
+    );
+    if (!marketRoute) throw new Error("expected Albany market route");
+    api.move_overworld_session_area({
+      ...full,
+      session_id: sessionId,
+      area_route_id: marketRoute.id,
+    });
+    view = api.get_overworld_session({
+      session_id: sessionId,
+      include_observation: true,
+    }).observation;
+    const revealed = api.scout_overworld_session_poi({
+      ...full,
+      session_id: sessionId,
+      poi_id: view.pois[0]!.id,
+    });
+    const quest = revealed.result.discoveredQuests?.find(
+      (candidate) => candidate.id === "wolf_winter",
+    );
+    if (!quest) throw new Error("expected Wolf-Winter lead");
+    const questRoute = revealed.observation.areaExits.find(
+      (route) => route.destination.id === quest.area,
+    );
+    if (!questRoute) throw new Error("expected route to Wolf-Winter area");
+    api.move_overworld_session_area({
+      ...full,
+      session_id: sessionId,
+      area_route_id: questRoute.id,
+    });
+
+    let journey = api.get_overworld_session_context({ session_id: sessionId }).journey;
+    if ((38 - journey.acceptedDecisions) % 2 !== 0) {
+      const contact = api.get_overworld_session({
+        session_id: sessionId,
+        include_observation: true,
+      }).observation.characters[0];
+      if (!contact) throw new Error("expected a quest-area contact");
+      journey = api.talk_overworld_session_contact({
+        ...full,
+        session_id: sessionId,
+        character_id: contact.id,
+      }).journey;
+    }
+    while (journey.acceptedDecisions < 38) {
+      const atQuest = api.get_overworld_session({
+        session_id: sessionId,
+        include_observation: true,
+      }).observation;
+      const away = atQuest.areaExits[0];
+      if (!away) throw new Error("expected a reversible quest-area route");
+      api.move_overworld_session_area({
+        ...full,
+        session_id: sessionId,
+        area_route_id: away.id,
+      });
+      const neighbor = api.get_overworld_session({
+        session_id: sessionId,
+        include_observation: true,
+      }).observation;
+      const back = neighbor.areaExits.find((route) => route.destination.id === quest.area);
+      if (!back) throw new Error("expected a route back to the quest area");
+      journey = api.move_overworld_session_area({
+        ...full,
+        session_id: sessionId,
+        area_route_id: back.id,
+      }).journey;
+    }
+    expect(journey.acceptedDecisions).toBe(38);
+
+    const launched = api.start_overworld_session_quest({
+      ...full,
+      compact_observation: false,
+      session_id: sessionId,
+      quest_id: quest.id,
+      seed: 505,
+    });
+    expect(launched.journey.acceptedDecisions).toBe(39);
+    api.sessions.update(launched.rpg_session_id, retainSplitGuard());
+
+    const final = api.step_action({
+      session_id: launched.rpg_session_id,
+      action_id: "go_north",
+      compact_observation: false,
+      compact_events: false,
+    });
+    expect(final.ok).toBe(true);
+    expect(final.observation.ended).toBe(true);
+    expect(final.questCompletion).toMatchObject({
+      alreadyKnown: false,
+      quest: { id: "wolf_winter" },
+      endingId: "ending_held_timber_saved",
+      journeyDecision: {
+        countsTowardJourney: false,
+        reason: "technical_quest_foldback",
+      },
+    });
+    expect(final.journey).toMatchObject({
+      status: "awaiting_choice",
+      acceptedDecisions: 40,
+      goal: { status: "completed", completedAtDecision: 40 },
+      pendingChoice: {
+        atDecision: 40,
+        reasons: ["checkpoint", "goal_completed"],
+        checkpoint: 40,
+      },
+    });
+    expect(
+      api.get_overworld_session({ session_id: sessionId, include_observation: true }).observation
+        .completedQuestIds,
+    ).toContain("wolf_winter");
+  });
 });

@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 
 import { createToolApi } from "../../src/mcp/tools.js";
-import { INITIAL_JOURNEY_GOAL } from "../../src/world/journey_contract.js";
+import {
+  INITIAL_JOURNEY_GOAL,
+  JOURNEY_CONTRACT_VERSION,
+} from "../../src/world/journey_contract.js";
 
 const api = () => createToolApi({ root: process.cwd() });
 const FULL_OVERWORLD = { compact_context: false, compact_result: false } as const;
@@ -13,7 +16,7 @@ describe("MCP journey surface", () => {
     const full = a.start_overworld({ compact_context: false });
 
     expect(compact.journey).toMatchObject({
-      contractVersion: 1,
+      contractVersion: JOURNEY_CONTRACT_VERSION,
       status: "active",
       goal: { ...INITIAL_JOURNEY_GOAL, status: "active", completedAtDecision: null },
       acceptedDecisions: 0,
@@ -37,6 +40,23 @@ describe("MCP journey surface", () => {
       session_id: full.session_id,
       poi_id: poi.id,
     });
+    expect(acted.journeyDecision).toEqual({
+      countsTowardJourney: true,
+      reason: "stateful_clue",
+    });
+    const compactObservation = a.get_overworld_session({
+      session_id: compact.session_id,
+      include_observation: true,
+    }).observation;
+    const compactActed = a.scout_overworld_session_poi({
+      session_id: compact.session_id,
+      poi_id: compactObservation.pois[0]!.id,
+      compact_context: true,
+      compact_result: true,
+    });
+    expect(compactActed.journeyDecision).toEqual(acted.journeyDecision);
+    expect(compactActed.journey.acceptedDecisions).toBe(1);
+    expect(compactActed.journey.decisionProof).toEqual(acted.journey.decisionProof);
     expect(acted.journey.acceptedDecisions).toBe(1);
     expect(acted.snapshot_hash).not.toBe(full.snapshot_hash);
     expect(acted.journey).toEqual(
@@ -100,14 +120,35 @@ describe("MCP journey surface", () => {
 
     const contact = view.characters[0];
     if (!contact) throw new Error("expected quest-area contact");
-    let journey = a.get_overworld_session_context({ session_id: sessionId }).journey;
+    let journey = a.talk_overworld_session_contact({
+      ...FULL_OVERWORLD,
+      session_id: sessionId,
+      character_id: contact.id,
+    }).journey;
+    expect(journey.acceptedDecisions).toBe(5);
+
+    // Navigation remains a meaningful decision on every traversal. Bounce over
+    // one real area edge so the quest start itself lands exactly on checkpoint 40.
     while (journey.acceptedDecisions < 39) {
-      journey = a.talk_overworld_session_contact({
+      const current = a.get_overworld_session({
+        session_id: sessionId,
+        include_observation: true,
+      }).observation;
+      const route =
+        current.currentArea?.id === quest.area
+          ? current.areaExits[0]
+          : current.areaExits.find((candidate) => candidate.destination.id === quest.area);
+      if (!route) throw new Error("expected a reversible Albany area route");
+      journey = a.move_overworld_session_area({
         ...FULL_OVERWORLD,
         session_id: sessionId,
-        character_id: contact.id,
+        area_route_id: route.id,
       }).journey;
     }
+    expect(
+      a.get_overworld_session({ session_id: sessionId, include_observation: true }).observation
+        .currentArea?.id,
+    ).toBe(quest.area);
 
     const launched = a.start_overworld_session_quest({
       ...FULL_OVERWORLD,

@@ -23,7 +23,7 @@ export function JourneyStatus({ journey }: JourneyStatusProps): JSX.Element {
       </div>
       <dl className="journey-rhythm" aria-label="Journey rhythm">
         <div>
-          <dt>Decisions</dt>
+          <dt>Meaningful decisions</dt>
           <dd aria-live="polite">{journey.acceptedDecisions}</dd>
         </div>
         <div>

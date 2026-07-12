@@ -2,59 +2,52 @@
 
 Token-small AFK-loop handoff: keep one synthesis and chosen move under 60 lines.
 
-## Cycle: 2026-07-11 - Consequential Decision Accounting
+## Cycle: 2026-07-12 - Ending-Sensitive Albany Aftermath
 
 ## Synthesis
 
-The pure journey contract landed green in `99743619`. Its fresh fleet produced
-100/100 verified pure exits with no resume, rejection, retry, timeout, or legacy
-evidence (`ai-runs/feedback/20260711T221007Z-pure100`).
+Journey contract v2 now measures meaningful decisions identically in UI and
+MCP. It counts movement, stateful clues, substantive dialogue topics, combat,
+skill checks, preparation, and situation changes; it excludes context/repeats,
+dialogue navigation, unchanged services, persistence, rejections, and technical
+foldback. Historical contract-v1 evidence remains valid in a separate cohort.
 
-At early Albany-goal completion, 46 players continued and 54 ended; all 46
-continuers ended at checkpoint 40. Post-exit `would_replay` was 76/100 and is a
-separate attitude metric. The strongest depth signal is the post-Wolf-Winter
-quality cliff: 44/46 exposed continuers called later Albany play generic,
-repetitive, or under-narrated.
+The first canonical v2 canary is verified pure (`ai-runs/2026-07-12T00-39-13-567Z/playtest`):
+the player continued at Albany goal completion (decision 22), continued again
+at 40, and voluntarily ended at 80. This is the first standardized player to
+cross decision 40, but one canary is not a cohort.
 
-First fix the measurement. Contract v1 counts every successful embedded-quest
-command and accepted overworld no-op. Thirty-four reports objected to
-narration-only LOOK/EXAMINE, dialogue closure, or unchanged rest counting like
-tactical choices. Preserve v1 as valid immutable evidence with broader semantics.
+Wolf-Winter remained the only 5/5 experience. The same player declined replay
+after Albany → Colonie → Schenectady exposed cloned district/job/event/site
+templates and a completed goal with no replacement objective. That corroborates
+the frozen v1 cliff (44/46 continuers called post-Wolf play generic) while giving
+the next change a sharper causal target.
 
 ## Chosen Move
 
-Build journey contract v2 around one engine-owned `countsTowardJourney`
-classification consumed identically by UI and MCP.
+Build an ending-sensitive Wolf-Winter → Albany aftermath that activates only
+after the player continues from the goal-completion choice.
 
-- Count movement, stateful clue reads, substantive dialogue choices, combat,
-  preparation, and actions that change the player's situation.
-- Exclude context-only LOOK/INVENTORY, repeated narration-only examination,
-  dialogue closure, unchanged rest, pure reads/listings, persistence, rejected
-  calls, and the retention choice.
-- Carry classification and reason in the action result; never infer them from
-  MCP-only action-id heuristics.
-- Keep the exact initial Albany goal and 40/80/+40 cadence; bump the contract
-  version so receipts distinguish v1 from v2 evidence.
+- Recognize the actual Wolf-Winter ending (gate barred, timber saved, or ordinary
+  hold) in the return prose and journal instead of collapsing to generic quest completion.
+- Present one consequential Albany follow-up choice whose alternatives persist
+  in state, journal, later prose, and the next available lead.
+- Replace the completed tutorial goal with a concise, actionable current objective,
+  rendered identically in UI and MCP without hiding solution/content knowledge.
+- Make the next lead scene-specific rather than another generated district checklist;
+  ordinary jobs remain optional and do not masquerade as the story objective.
 
 ## Acceptance
 
-1. The same accepted sequence produces identical UI and MCP counts.
-2. Stateful reads count once when they reveal/alter knowledge; context repeats do not.
-3. Unchanged rest and dialogue closure cannot trigger a checkpoint.
-4. Movement and consequential quest/world actions continue to count.
-5. Save/restore and receipts preserve v2 proof without rewriting v1 reports.
-6. Parity regressions, crawl, browser, health, and a fresh pure canary pass before
-   comparing a v2 cohort with the frozen v1 baseline.
-
-## Queued Content Move
-
-Then author an ending-sensitive Wolf-Winter → Albany aftermath chain through the
-remaining pre-40 session: scene-specific prose, a consequential choice, and a
-visible next local lead. Target decision-40 continuation above 0/46 and depth
-complaints below 44/46.
+1. Goal-completion retention choice remains atomic and game-owned; aftermath starts only on continue.
+2. Every non-death Wolf ending maps to truthful return text and at least one distinct consequence.
+3. The aftermath choice changes future state and exposes an actionable local lead.
+4. UI and MCP show byte-identical current-objective text, status, choices, and consequences.
+5. Save/restore, compact/full projections, crawl, browser, health, and a pure canary pass.
+6. A later v2 cohort must sustain continuation beyond 40 and reduce generic-depth complaints.
 
 ## Deferred Levers
 
-- Clarify why ordinary jobs do not satisfy the exact initial lead goal.
-- Expose event-resolution prerequisites before a rejected attempt.
-- Bind sidecars to run identity/digest and diversify later pure cohorts.
+- Bind sidecars to seed/model/report digest before the next large fleet.
+- Expose event-resolution prerequisites before rejected attempts.
+- Audit generated NPC-name collisions and town-template diversity after the authored bridge.

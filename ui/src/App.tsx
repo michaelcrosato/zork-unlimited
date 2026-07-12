@@ -251,7 +251,8 @@ export default function App(): JSX.Element {
     setQuestView(view);
     const lines = [`> ${label}`, ...out.narration, ...(out.rejection ? [`(${out.rejection})`] : [])];
     if (out.ok) {
-      worldSession.recordAcceptedQuestDecision(id);
+      if (out.journeyActionId === null) throw new Error("Accepted quest action has no id.");
+      worldSession.recordQuestDecision(out.journeyActionId, out.journeyDecision);
       setWorldView(worldSession.view());
     }
     // Close a finished quest back into the overworld (MCP-bridge parity,

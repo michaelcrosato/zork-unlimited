@@ -56,7 +56,7 @@ does, when it runs, and its exact shapes.
 | `crawl:deep`           | nightly / manual                                                                                            | ≥2min soak (multi-worker; measured 352k steps @ ~1935 steps/s incl. 20k-state solver; findings are byte-identical across `--workers` only absent `--seconds` truncation — per-worker deadlines mean WHICH items truncate can vary with worker count once the soak budget bites, always loud via `truncated`/`skippedItems`) | free                      |
 | `blind` (single)       | every normal cycle                                                                                          | one pure journey; game-native goal/checkpoints govern exit                                                                                                                                                                                                                                                                  | $ (one LLM playtest)      |
 | `fleet -- --count 100` | milestone / feedback-harvest cycles (~every 10, or when the ledger's open questions outgrow single reports) | 100 pure fresh-overworld runs at `--concurrency C`                                                                                                                                                                                                                                                                          | $ × 100 (real LLM tokens) |
-| `fleet:mock`           | every CI run (rides `npm test`)                                                                             | explicit structural acceptance e2e; never retention evidence                                                                                                                                                                                                                                                               | zero tokens               |
+| `fleet:mock`           | every CI run (rides `npm test`)                                                                             | explicit structural acceptance e2e; never retention evidence                                                                                                                                                                                                                                                                | zero tokens               |
 | `feedback:compile`     | whenever ≥3 new verified reports exist since the last compile                                               | seconds (deterministic clustering)                                                                                                                                                                                                                                                                                          | free                      |
 
 ## 3. Exact commands
@@ -106,15 +106,17 @@ repeats, and `repro` holds a ddmin-minimized, replayable trace.
 run JSONL): V2 reports declare `play_mode: pure`,
 `start_surface: fresh_overworld`, `retention_eligible: true`, and carry the exact
 journey receipt returned on exit. The receipt records the versioned game
-contract, accepted-decision proof/count, goal state, all continue/end choices,
+contract, meaningful-decision proof/count, goal state, all continue/end choices,
 and the exit reason. An independently verified `.run.json` sidecar and fleet
 manifest preserve that metadata; structural and legacy outputs are explicitly
 retention-ineligible.
 
 **Retention compile** (`src/feedback/evidence_summary.ts`) writes
 `retention.json`: verified report counts split by pure/structural/legacy-guided,
-plus pure-only accepted-decision statistics and actual continue/end choices by
-trigger/checkpoint. `would_replay` remains a separate post-exit attitude metric.
+plus pure-only decision statistics and actual continue/end choices by
+trigger/checkpoint within each journey-contract version. Historical v1 and
+current v2 curves remain independently verifiable but are never pooled.
+`would_replay` remains a separate post-exit attitude metric.
 
 **Hotspots file** (`src/feedback/schema.ts`, zod `.strict()`),
 `hotspots.json` top level: `{ version, generated_at, commit, inputs, metrics,

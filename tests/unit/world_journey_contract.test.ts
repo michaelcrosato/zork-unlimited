@@ -20,13 +20,21 @@ import {
 import type { OverworldManifest, OverworldQuest } from "../../src/world/overworld.js";
 import { OverworldSession } from "../../src/world/session.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
+import {
+  countedJourneyDecision,
+  excludedJourneyDecision,
+} from "../../src/world/journey_decision.js";
 
 function decide(
   state: JourneyContractSnapshot,
   actionId: string,
   surface: "overworld" | "quest" = "overworld",
 ): JourneyContractSnapshot {
-  return recordJourneyAcceptedDecision(state, { surface, actionId });
+  return recordJourneyAcceptedDecision(state, {
+    surface,
+    actionId,
+    reason: "situation_changed",
+  });
 }
 
 function decideUntil(state: JourneyContractSnapshot, target: number): JourneyContractSnapshot {
@@ -248,7 +256,7 @@ describe("journey contract", () => {
 
     expect(receipt).not.toBeNull();
     expect(receipt).toMatchObject({
-      contractVersion: 1,
+      contractVersion: JOURNEY_CONTRACT_VERSION,
       exitReason: JOURNEY_EXIT_REASON,
       goalVersion: 1,
       goalId: INITIAL_JOURNEY_GOAL.id,
@@ -360,10 +368,14 @@ describe("OverworldSession journey integration", () => {
     expect(session.journey().goal.status).toBe("active");
 
     const beforeFoldback = session.journey().acceptedDecisions;
-    session.completeQuest("albany_quest", {
+    const completed = session.completeQuest("albany_quest", {
       endingId: "ending_victory",
       endingTitle: "Victory",
       death: false,
+    });
+    expect(completed.journeyDecision).toEqual({
+      countsTowardJourney: false,
+      reason: "technical_quest_foldback",
     });
     expect(session.journey()).toMatchObject({
       status: "awaiting_choice",
@@ -393,7 +405,7 @@ describe("OverworldSession journey integration", () => {
     });
   });
 
-  it("counts accepted no-ops and quest decisions but excludes reads, plans, exports, and rejections", () => {
+  it("excludes context, unchanged outcomes, and rejections while counting consequential decisions", () => {
     const session = new OverworldSession(loadOverworldManifest(process.cwd()));
     const initialHash = session.snapshotHash();
     const initialView = session.view();
@@ -412,19 +424,30 @@ describe("OverworldSession journey integration", () => {
 
     const rested = session.restAtTown();
     expect(rested.changed).toBe(false);
+    expect(rested.journeyDecision).toEqual({
+      countsTowardJourney: false,
+      reason: "unchanged_service",
+    });
+    expect(session.journey()).toMatchObject({
+      acceptedDecisions: 0,
+      decisionProof: { last: null },
+    });
+    expect(session.snapshotHash()).toBe(initialHash);
+
+    session.recordQuestDecision("look:around", excludedJourneyDecision("context_only"));
+    expect(session.journey().acceptedDecisions).toBe(0);
+    expect(session.snapshotHash()).toBe(initialHash);
+
+    session.recordQuestDecision("ask_wolves", countedJourneyDecision("substantive_dialogue"));
     expect(session.journey()).toMatchObject({
       acceptedDecisions: 1,
       decisionProof: {
-        last: { number: 1, surface: "overworld", actionId: "rest" },
-      },
-    });
-    expect(session.snapshotHash()).not.toBe(initialHash);
-
-    session.recordAcceptedQuestDecision("ask_wolves");
-    expect(session.journey()).toMatchObject({
-      acceptedDecisions: 2,
-      decisionProof: {
-        last: { number: 2, surface: "quest", actionId: "ask_wolves" },
+        last: {
+          number: 1,
+          surface: "quest",
+          actionId: "ask_wolves",
+          reason: "substantive_dialogue",
+        },
       },
     });
   });
@@ -433,21 +456,56 @@ describe("OverworldSession journey integration", () => {
     const world = loadOverworldManifest(process.cwd());
     const session = new OverworldSession(world);
     for (let decision = 1; decision <= 40; decision += 1) {
-      session.recordAcceptedQuestDecision(`quest_action:${decision}`);
+      session.recordQuestDecision(
+        `quest_action:${decision}`,
+        countedJourneyDecision("situation_changed"),
+      );
     }
     const ended = session.chooseJourney("end");
     const snapshot = session.snapshot();
     const restored = OverworldSession.restore(world, snapshot);
 
-    expect(snapshot.version).toBe(6);
+    expect(snapshot.version).toBe(7);
     expect(snapshot.journey.goal.version).toBe(1);
     expect(restored.snapshotHash()).toBe(session.snapshotHash());
     expect(restored.journey()).toEqual(session.journey());
+    expect(restored.journey().decisionProof.last?.reason).toBe("situation_changed");
     expect(restored.journeyExitReceipt()).toEqual(ended.exitReceipt);
     expect(restored.journeyExitReceipt()).toMatchObject({
       exitReason: "player_ended_at_choice",
       goalVersion: 1,
       decisionProofHash: snapshot.journey.decisionProof.hash,
+    });
+  });
+
+  it("does not let excluded accepted outcomes trigger the decision-40 checkpoint", () => {
+    const session = new OverworldSession(loadOverworldManifest(process.cwd()));
+    for (let decision = 1; decision < 40; decision += 1) {
+      session.recordQuestDecision(
+        `quest_action:${decision}`,
+        countedJourneyDecision("situation_changed"),
+      );
+    }
+    const before = session.snapshotHash();
+    expect(session.journey()).toMatchObject({ status: "active", acceptedDecisions: 39 });
+
+    expect(session.restAtTown().journeyDecision).toEqual({
+      countsTowardJourney: false,
+      reason: "unchanged_service",
+    });
+    session.recordQuestDecision("ask_leave", excludedJourneyDecision("dialogue_closure"));
+    expect(session.snapshotHash()).toBe(before);
+    expect(session.journey()).toMatchObject({
+      status: "active",
+      acceptedDecisions: 39,
+      pendingChoice: null,
+    });
+
+    session.recordQuestDecision("move_next", countedJourneyDecision("movement"));
+    expect(session.journey()).toMatchObject({
+      status: "awaiting_choice",
+      acceptedDecisions: 40,
+      pendingChoice: { checkpoint: 40 },
     });
   });
 });

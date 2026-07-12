@@ -7,7 +7,7 @@ import {
   type OverworldRoadEncounterOption,
 } from "./travel_mechanics.js";
 
-export const OVERWORLD_SESSION_SAVE_VERSION = 6 as const;
+export const OVERWORLD_SESSION_SAVE_VERSION = 7 as const;
 
 export type TravelLogEntry = {
   edgeId: string;

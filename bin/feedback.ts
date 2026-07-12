@@ -142,7 +142,16 @@ function main(): void {
   );
   console.log(
     `Retention evidence: ${evidence.pure_retention.eligible_reports} pure exits, ` +
-      `${evidence.pure_retention.continued_reports} continued at least once; ` +
+      `${
+        evidence.pure_retention.contract_versions.length === 0
+          ? "no contract-specific curves"
+          : evidence.pure_retention.contract_versions
+              .map(
+                (cohort) =>
+                  `v${cohort.contract_version}: ${cohort.eligible_reports} exits, ${cohort.continued_reports} continued`,
+              )
+              .join("; ")
+      }; ` +
       `other verified modes: ${evidence.report_modes.structural} structural, ` +
       `${evidence.report_modes.legacy_guided} legacy-guided.`,
   );

@@ -26,6 +26,8 @@ import {
   compactMcpTranscriptActionId,
   MCP_TRANSCRIPT_ACTION_ID_CHAR_LIMIT,
 } from "./action_labels.js";
+import { classifyRpgJourneyDecision, excludedJourneyDecision } from "../world/journey_decision.js";
+import type { JourneyDecisionClassification } from "../world/journey_contract.js";
 
 export const REJECTED_ACTION_ID_TRANSCRIPT_LIMIT = MCP_TRANSCRIPT_ACTION_ID_CHAR_LIMIT;
 
@@ -37,18 +39,26 @@ export type RpgStepActionArgs = {
 } & RpgViewOptions &
   RpgEventOptions;
 
+type RpgJourneyDecisionFields = {
+  journeyDecision: JourneyDecisionClassification;
+  journeyActionId: string | null;
+};
+
 type RpgStepActionBase<Args extends RpgViewOptions & RpgEventOptions> = {
   events: RpgStepEvents<Args>;
   state_hash: string;
 } & RpgStepEventVersion<Args> &
-  RpgViewField<Args>;
+  RpgViewField<Args> &
+  RpgJourneyDecisionFields;
 
 type RpgStepResponseOptions = RpgViewOptions & RpgEventOptions & { expected_state_hash?: string };
 
 export type RpgStepActionResponse<Args extends RpgStepResponseOptions> =
   | ({ ok: true } & RpgStepActionBase<Args>)
   | ({ ok: false; rejection_reason: string } & RpgStepActionBase<Args>)
-  | (Args extends { expected_state_hash: string } ? RpgStateHashRejection : never);
+  | (Args extends { expected_state_hash: string }
+      ? RpgStateHashRejection & RpgJourneyDecisionFields
+      : never);
 
 function actionOptionForId(
   actions: readonly RpgActionOption[],
@@ -88,11 +98,16 @@ export function runRpgStepAction<Args extends RpgStepActionArgs>(
     args.expected_state_hash !== undefined &&
     !rpgStateHashMatches(args.expected_state_hash, currentStateHash)
   ) {
-    return rpgStateHashRejection(currentStateHash) as RpgStepActionResponse<Args>;
+    return {
+      ...rpgStateHashRejection(currentStateHash),
+      journeyDecision: excludedJourneyDecision("rejected"),
+      journeyActionId: null,
+    } as RpgStepActionResponse<Args>;
   }
   const actionOptions = rpgRuntime.legalActionsFor(s);
   const active = activeDialogue(s.index, s.state);
   const actionOption = actionOptionForId(actionOptions, args.action_id, active);
+  const beforeState = s.state;
   const beforeStep = s.state.step;
   const beforeSceneId = s.state.current;
   const beforeTitle = rpgRoomTitle(s.index, s.state);
@@ -136,6 +151,8 @@ export function runRpgStepAction<Args extends RpgStepActionArgs>(
         beforeObsOpts,
       ),
       state_hash: publicRpgStateHash(currentStateHash),
+      journeyDecision: excludedJourneyDecision("rejected"),
+      journeyActionId: null,
     } as RpgStepActionResponse<Args>;
   }
   const result = s.step(s.state, actionOption.action);
@@ -164,6 +181,15 @@ export function runRpgStepAction<Args extends RpgStepActionArgs>(
       ...rpgStepEventVersion(args),
       ...rpgViewField(sessions, s, after, args, afterObsOpts),
       state_hash: publicRpgStateHash(s.stateHash),
+      journeyDecision: classifyRpgJourneyDecision({
+        action: actionOption.action,
+        before: beforeState,
+        after: result.state,
+        events: result.events,
+        accepted: false,
+        isSkillCheck: actionOption.skill_check !== undefined,
+      }),
+      journeyActionId: actionOption.id,
     } as RpgStepActionResponse<Args>;
   }
   return {
@@ -172,5 +198,14 @@ export function runRpgStepAction<Args extends RpgStepActionArgs>(
     ...rpgStepEventVersion(args),
     ...rpgViewField(sessions, s, after, args, afterObsOpts),
     state_hash: publicRpgStateHash(s.stateHash),
+    journeyDecision: classifyRpgJourneyDecision({
+      action: actionOption.action,
+      before: beforeState,
+      after: result.state,
+      events: result.events,
+      accepted: true,
+      isSkillCheck: actionOption.skill_check !== undefined,
+    }),
+    journeyActionId: actionOption.id,
   } as RpgStepActionResponse<Args>;
 }

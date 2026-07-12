@@ -60,6 +60,10 @@ describe("blind runner MCP config contract", () => {
     expect(owPrompt).toContain("one-time tutorial");
     expect(owPrompt).not.toContain("mcp__adventureforge__start_world_quest");
     expect(owPrompt).not.toMatch(/30.?45|tool calls|take at least one road/i);
+    expect(owPrompt).not.toMatch(
+      /(?:stop|end|exit|finish|quit).{0,80}(?:after|at|around|within|once).{0,50}(?:\d+|ten|twenty|thirty|forty|fifty).{0,30}(?:mcp|tool)?\s*(?:calls?|invocations?|requests?|turns?)/is,
+    );
+    expect(owPrompt).not.toMatch(/(?:call|turn|request|invocation)\s*(?:budget|limit|quota)/i);
     expect(owPrompt).not.toContain("resolve_overworld_session_road_encounter");
     expect(owPrompt).not.toContain("start_overworld_session_quest");
     expect(owPrompt).toContain("game presents its actual journey choice");
@@ -77,7 +81,22 @@ describe("blind runner MCP config contract", () => {
     // impersonate structural mode to bypass the live quest guard.
     expect(runner).toContain("printf -v BLIND_AGENT_CMD");
     expect(runner).toContain("$SCRIPT_DIR/mock-agent.mjs");
+    expect(runner).toContain("BLIND_AGENT_CMD cannot produce pure retention evidence");
   });
+
+  it("rejects an arbitrary agent override instead of labeling it pure", () => {
+    const result = spawnSync(process.execPath, ["blind-tester/blind-launch.mjs"], {
+      cwd: process.cwd(),
+      encoding: "utf8",
+      env: { ...process.env, BLIND_AGENT_CMD: "exit 93" },
+      timeout: 30_000,
+    });
+    const output = `${result.stdout ?? ""}\n${result.stderr ?? ""}\n${result.error?.message ?? ""}`;
+    expect(result.status, output).toBe(2);
+    expect(output).toContain("cannot produce pure retention evidence");
+    expect(output).toContain("file/shell/web isolation is not enforceable");
+    expect(output).not.toContain("Using structural BLIND_AGENT_CMD override");
+  }, 30_000);
 
   it("rejects every live quest source before launching an override agent", () => {
     const baseEnv: NodeJS.ProcessEnv = {
@@ -141,11 +160,16 @@ describe("blind runner MCP config contract", () => {
     try {
       const result = spawnSync(
         process.execPath,
-        ["blind-tester/blind-launch.mjs", "--out", join(dir, "timed-out")],
+        ["blind-tester/blind-launch.mjs", "--mock", "--out", join(dir, "timed-out")],
         {
           cwd: process.cwd(),
           encoding: "utf8",
-          env: { ...process.env, BLIND_AGENT_CMD: "sleep 5", BLIND_TIMEOUT: "1" },
+          env: {
+            ...process.env,
+            BLIND_AGENT_CMD: "exit 93",
+            BLIND_MOCK_AGENT_CMD: "sleep 5",
+            BLIND_TIMEOUT: "1",
+          },
           timeout: 15_000,
         },
       );

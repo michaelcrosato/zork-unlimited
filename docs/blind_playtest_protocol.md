@@ -21,7 +21,7 @@ harvest uses 100 independent players (`npm run fleet -- --count 100`).
 
 The pure MCP server exposes only actions available through the human game. The
 agent receives the same one-screen tutorial, current goal, world/quest state,
-legal choices, accepted-decision count, checkpoint choice, and consequences a
+legal choices, meaningful-decision count, checkpoint choice, and consequences a
 human receives. The harness may explain MCP transport and hash-guard syntax. It
 must not prescribe routes, coverage tasks, content targets, solutions, deliberate
 invalid calls, or a test-only stopping rule.
@@ -36,21 +36,25 @@ fleet member.
 
 ## The game-native journey contract
 
-The game owns session length. Contract version 1 has this initial goal, rendered
+The game owns session length. Contract version 2 has this initial goal, rendered
 identically in UI and MCP:
 
 > Find one local lead in Albany and see it through.
 
-The baseline is 40 accepted gameplay decisions. The game offers an actual
+The baseline is 40 meaningful accepted gameplay decisions. The game offers an actual
 continue/end choice at decision 40, then at 80, 120, 160, and every additional 40. If the current goal is completed earlier, the game offers the same choice
 immediately. Continuing after an early goal choice preserves the next fixed
 checkpoint.
 
-A decision is one successfully accepted gameplay mutation shared by the human
-and MCP surfaces. Accepted no-op gameplay outcomes still count because the
-player chose them and the game accepted them. Context reads, legal-action
-listings, save/export/restore, rejected or stale calls, technical quest foldback,
-and the continue/end choice itself do not count.
+A decision is one successfully accepted, consequential gameplay choice shared
+by the human and MCP surfaces. Movement, a stateful clue, substantive dialogue,
+combat, skill-check attempts, preparation, and other situation changes count.
+Context-only LOOK or INVENTORY, repeated narration or examination, dialogue
+opening/navigation/closure, unchanged rest or resupply, legal-action listings,
+save/export/restore, rejected or stale calls, technical quest foldback, and the
+continue/end choice itself do not.
+The engine emits the same `countsTowardJourney` classification and reason on
+both player surfaces; the harness never infers it from transport calls.
 
 The initial goal completes only when the player successfully completes a quest
 whose home is Albany. Discovering or starting a lead, doing a job or event,
@@ -59,7 +63,7 @@ visiting a site, or dying inside a quest does not complete it.
 While a continue/end choice is due, further gameplay decisions pause. Choosing
 continue records retention evidence and resumes play. Choosing end records the
 final retention choice, ends the journey, and returns a signed-by-state receipt
-containing the contract version, accepted-decision count and proof, goal status,
+containing the contract version, meaningful-decision count and proof, goal status,
 checkpoint history, and exit reason.
 
 ## One pure run
@@ -141,11 +145,16 @@ question.
 
 `npm run feedback:compile` writes `retention.json` beside the ranked hot spots.
 It separates pure, structural, and legacy-guided report counts and aggregates
-only sidecar-verified pure continue/end choices as retention evidence.
+only sidecar-verified pure continue/end choices as retention evidence. Pure
+decision counts, checkpoint choices, and continuation curves are grouped by
+the receipt's journey-contract version; historical v1 evidence remains valid
+but is never pooled with current v2 evidence.
 
-Legacy V1/guided reports may remain in historical feedback compiles, clearly
-labeled as such. They are never eligible to resume a pure run and never count as
-pure retention evidence.
+Legacy interview-schema V1/guided reports may remain in historical feedback
+compiles, clearly labeled as such; they never count as pure retention evidence.
+Previously verified schema-V2 pure reports carrying a journey-contract-v1
+receipt remain valid historical pure evidence in their own cohort, but cannot
+resume a current-contract fleet slot.
 
 ## Fleet mode
 
@@ -157,8 +166,9 @@ Every live member is the same canonical pure contract with a different seed
 (and, optionally, model). Pure fleets use the neutral default persona; persona
 mixtures are structural experiments only. Bounded concurrency, retry/backoff,
 manifest output, and resume remain deterministic. Resume accepts only an
-independently reverified V2 pure report whose evidence sidecar matches the same
-seed/run contract.
+independently reverified schema-V2 pure report whose evidence sidecar matches
+the same seed/run contract and whose receipt carries the current
+journey-contract version.
 
 `npm run fleet:mock -- --count 2` is the zero-token CI pipeline. It is explicitly
 structural even when it exercises the same journey mechanics. Direct quest

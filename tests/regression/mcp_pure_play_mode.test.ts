@@ -259,26 +259,51 @@ describe("MCP pure play mode", () => {
         const started = textPayload(
           await client.callTool({
             name: "start_overworld",
-            arguments: { compact_context: true },
+            arguments: { compact_context: false },
           }),
         );
         sessionId = String(started.session_id);
-        const context = started.context as { contacts: [string, string][] };
-        const contactId = context.contacts[0]?.[0];
-        if (!contactId) throw new Error("expected opening contact");
+        type AreaObservation = {
+          areaExits: { id: string; destination: { id: string } }[];
+          pois: { id: string }[];
+        };
+        let observation = started.observation as AreaObservation;
 
         let journey = started.journey as {
           acceptedDecisions: number;
           pendingChoice: unknown;
         };
+        const openingPoi = observation.pois[0];
+        if (!openingPoi) throw new Error("expected an opening local lead");
+        const scouted = textPayload(
+          await client.callTool({
+            name: "scout_overworld_session_poi",
+            arguments: {
+              session_id: sessionId,
+              poi_id: openingPoi.id,
+              compact_context: false,
+              compact_result: false,
+            },
+          }),
+        );
+        journey = scouted.journey as typeof journey;
+        observation = scouted.observation as AreaObservation;
         while (journey.acceptedDecisions < 40) {
-          const talked = textPayload(
+          const route = observation.areaExits[0];
+          if (!route) throw new Error("expected a legal local movement");
+          const moved = textPayload(
             await client.callTool({
-              name: "talk_overworld_session_contact",
-              arguments: { session_id: sessionId, character_id: contactId },
+              name: "move_overworld_session_area",
+              arguments: {
+                session_id: sessionId,
+                area_route_id: route.id,
+                compact_context: false,
+                compact_result: false,
+              },
             }),
           );
-          journey = talked.journey as typeof journey;
+          journey = moved.journey as typeof journey;
+          observation = moved.observation as AreaObservation;
         }
         expect(journey.pendingChoice).not.toBeNull();
 

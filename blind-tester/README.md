@@ -24,7 +24,7 @@ subscription allowance, which is the best value — exactly per the project goal
 - **Pure live mode (canonical default):** every reasoning agent starts one fresh
   overworld session with `play_mode: pure` and
   `start_surface: fresh_overworld`. It receives only the tutorial, current goal,
-  state, legal choices, accepted-decision/checkpoint status, and consequences a
+  state, legal choices, meaningful-decision/checkpoint status, and consequences a
   human receives. The game presents continue/end choices at goal completion and
   fixed decision checkpoints. The harness interviews only after the player ends
   through that choice; it supplies no route, coverage assignment, solution, or
@@ -98,10 +98,11 @@ npm run fleet:mock -- --count 2 --target quest:sunken_barrow # structural drop-i
 - **Model**: `--model <alias>` (`haiku`, `sonnet`, `opus`) or `--model mix`
   (deterministic 9 haiku : 1 sonnet weighting by index). No temperature/top_p
   flag exists — model × seed is the live diversity axis.
-- **Resume**: only a reverified V2 pure report with matching server-authored run
-  evidence may skip a pure member. Guided, legacy, mock, and structural reports
-  never match. Failed attempts back off exponentially up to `--max-retries`
-  (default 2).
+- **Resume**: only a reverified schema-V2 pure report with matching
+  server-authored run evidence and the current journey-contract version may
+  skip a pure member. Historical contract-v1, guided, legacy, mock, and
+  structural reports never match. Failed attempts back off exponentially up to
+  `--max-retries` (default 2).
 - **Output**: reports plus verified `.run.json` evidence sidecars in `reports/`
   (or `--out <dir>`); a manifest at
   `ai-runs/fleet/<label>/manifest.jsonl` and `summary.json` preserve play mode,
@@ -150,9 +151,9 @@ not a bill) to the gitignored `ai-runs/blind-telemetry.jsonl`:
 npm run blind:telemetry     # per-source summary: runs, mean turns/minutes, tokens, nominal $
 ```
 
-Recording is best-effort (a telemetry failure never fails the run) and only
-happens on the built-in `claude` path — a `BLIND_AGENT_CMD` override produces
-no claude envelope to measure.
+Recording is best-effort (a telemetry failure never fails the run) and happens
+only on the built-in `claude` pure path. Structural mock runs do not produce a
+Claude envelope to measure.
 
 ## How pure blindness is enforced
 
@@ -209,28 +210,14 @@ Environment: `BLIND_QUEST_ID` (structural runs only), `BLIND_MODEL`,
 `BLIND_SPECTATE=1`, `BLIND_SPECTATE_DELAY_MS`, `BLIND_BASH` (Windows: path to Git
 Bash if auto-detection fails).
 
-## Provider-agnostic — bring another agent (e.g. Codex or a local LLM)
+## Why arbitrary provider overrides are not pure evidence
 
-The default agent is `claude -p`. To use a different MCP-capable agent CLI, set
-`BLIND_AGENT_CMD`: it receives the prompt on **stdin** and these env vars:
-`BLIND_MCP_CONFIG` (path to the generated MCP config), `BLIND_QUEST_ID`,
-`BLIND_SEED`.
-
-Provider overrides do not change the policy: every live reasoning agent uses
-the same pure player-only server, neutral persona, and fresh overworld contract.
-`BLIND_QUEST_ID` is populated only by structural fixtures.
-
-```bash
-BLIND_AGENT_CMD='codex exec --ignore-user-config --ephemeral --skip-git-repo-check --sandbox read-only -' npm run blind --seed=137
-BLIND_AGENT_CMD='gemini -p' npm run blind
-```
-
-When `BLIND_AGENT_CMD` invokes `codex`, the runner temporarily shadows `codex` on
-`PATH` and injects the AdventureForge MCP server with Codex `-c` overrides. No
-user-level `codex mcp add` or project trust is required for blind runs.
-
-**Future — local LLM.** This game is small and its action space is structured, so a
-local model (served via an MCP-capable runner) may be able to play and critique it
-for $0 and fully offline. The smoke test + `BLIND_AGENT_CMD` seam are the integration
-points; if a local model proves too weak, the subscription path here remains the
-reliable default with no loss of effectiveness.
+The canonical live player is the runner-owned `claude --print` launch. It runs
+from an isolated temporary directory with file, shell, and web tools denied.
+An arbitrary external command may connect only to the player MCP server yet
+still retain filesystem or shell access outside MCP; a valid exit receipt cannot
+prove that it stayed blind. Therefore `BLIND_AGENT_CMD` is rejected on live pure
+runs instead of relying on operator discipline. Alternative providers may be
+added only through a provider-specific hardened adapter that enforces the same
+tool denial in code and has an acceptance regression. Explicit `--smoke` and
+`--mock` remain the non-pure development/QA instruments.

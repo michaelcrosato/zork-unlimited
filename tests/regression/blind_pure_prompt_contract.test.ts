@@ -22,6 +22,10 @@ describe("pure blind prompt + runner contract", () => {
     expect(prompt).not.toMatch(/"journey_exit_receipt"\s*:\s*"/);
 
     expect(prompt).not.toMatch(/30\s*[–-]\s*45|30\s+to\s+45/i);
+    expect(prompt).not.toMatch(
+      /(?:stop|end|exit|finish|quit).{0,80}(?:after|at|around|within|once).{0,50}(?:\d+|ten|twenty|thirty|forty|fifty).{0,30}(?:mcp|tool)?\s*(?:calls?|invocations?|requests?|turns?)/is,
+    );
+    expect(prompt).not.toMatch(/(?:call|turn|request|invocation)\s*(?:budget|limit|quota)/i);
     expect(prompt).not.toMatch(/aim for roughly|take at least|if budget allows|watch for/i);
     expect(prompt).not.toMatch(/Albany|Colonie|Wolf-Winter|breaking_weir|cautious_scout/i);
     expect(prompt).not.toContain("mcp__adventureforge__start_world_quest");

@@ -3,7 +3,7 @@ import { z } from "zod";
 import { hashState } from "../core/hash.js";
 import type { OverworldQuest } from "./overworld.js";
 
-export const JOURNEY_CONTRACT_VERSION = 1 as const;
+export const JOURNEY_CONTRACT_VERSION = 2 as const;
 export const JOURNEY_BASELINE_DECISIONS = 40 as const;
 export const JOURNEY_EXIT_REASON = "player_ended_at_choice" as const;
 
@@ -19,15 +19,41 @@ export type JourneyStatus = "active" | "awaiting_choice" | "ended";
 export type JourneyGoalStatus = "active" | "completed";
 export type JourneyDecisionSurface = "overworld" | "quest";
 
+export type JourneyCountedDecisionReason =
+  | "movement"
+  | "stateful_clue"
+  | "substantive_dialogue"
+  | "combat"
+  | "skill_check"
+  | "preparation"
+  | "situation_changed";
+
+export type JourneyExcludedDecisionReason =
+  | "context_only"
+  | "repeated_context"
+  | "dialogue_opening"
+  | "dialogue_navigation"
+  | "dialogue_closure"
+  | "unchanged_service"
+  | "technical_quest_foldback"
+  | "rejected";
+
+export type JourneyDecisionClassification = Readonly<
+  | { countsTowardJourney: true; reason: JourneyCountedDecisionReason }
+  | { countsTowardJourney: false; reason: JourneyExcludedDecisionReason }
+>;
+
 export type JourneyAcceptedDecision = Readonly<{
   surface: JourneyDecisionSurface;
   actionId: string;
+  reason: JourneyCountedDecisionReason;
 }>;
 
 export type JourneyDecisionProofLast = Readonly<{
   number: number;
   surface: JourneyDecisionSurface;
   actionId: string;
+  reason: JourneyCountedDecisionReason;
 }>;
 
 export type JourneyDecisionProof = Readonly<{
@@ -148,11 +174,21 @@ const SAFE_NONNEGATIVE_INT = z.number().int().nonnegative().max(Number.MAX_SAFE_
 const POSITIVE_SAFE_INT = z.number().int().positive().max(Number.MAX_SAFE_INTEGER);
 const JourneyChoiceSchema = z.enum(["continue", "end"]);
 const JourneyChoiceReasonSchema = z.enum(["checkpoint", "goal_completed"]);
+const JourneyCountedDecisionReasonSchema = z.enum([
+  "movement",
+  "stateful_clue",
+  "substantive_dialogue",
+  "combat",
+  "skill_check",
+  "preparation",
+  "situation_changed",
+]);
 const JourneyDecisionProofLastSchema = z
   .object({
     number: POSITIVE_SAFE_INT,
     surface: z.enum(["overworld", "quest"]),
     actionId: z.string().min(1),
+    reason: JourneyCountedDecisionReasonSchema,
   })
   .strict();
 const JourneyRetentionEventSchema = z
@@ -476,7 +512,7 @@ function pendingChoiceMessage(state: JourneyContractSnapshot): string {
   if (checkpoint) {
     return `You have reached the ${String(pending.checkpoint)}-decision checkpoint. Continue for ${JOURNEY_BASELINE_DECISIONS} more decisions, or end this journey?`;
   }
-  return `You completed your current goal after ${pending.atDecision} accepted decisions. Continue to the fixed checkpoint at ${String(state.nextCheckpoint)}, or end this journey?`;
+  return `You completed your current goal after ${pending.atDecision} meaningful decisions. Continue to the fixed checkpoint at ${String(state.nextCheckpoint)}, or end this journey?`;
 }
 
 function pendingChoicePresentation(state: JourneyContractSnapshot): JourneyChoicePrompt | null {
@@ -559,6 +595,7 @@ export function recordJourneyAcceptedDecision(
     number: acceptedDecisions,
     surface: decision.surface,
     actionId: decision.actionId,
+    reason: decision.reason,
   };
   const decisionProof = {
     hash: hashState({ previous: state.decisionProof.hash, ...last }),
@@ -578,6 +615,25 @@ export function recordJourneyAcceptedDecision(
         }
       : null,
   };
+}
+
+/**
+ * Apply one accepted gameplay outcome to the versioned journey contract. The
+ * classifier is authoritative: excluded context/no-op outcomes leave the
+ * counter and proof byte-identical, while counted outcomes extend the proof
+ * with the engine-owned reason that made the decision consequential.
+ */
+export function recordJourneyDecision(
+  state: JourneyContractSnapshot,
+  decision: Omit<JourneyAcceptedDecision, "reason">,
+  classification: JourneyDecisionClassification,
+): JourneyContractSnapshot {
+  assertJourneyAcceptingDecision(state);
+  if (!classification.countsTowardJourney) return state;
+  return recordJourneyAcceptedDecision(state, {
+    ...decision,
+    reason: classification.reason,
+  });
 }
 
 function canonicalReasons(reasons: readonly JourneyChoiceReason[]): JourneyChoiceReason[] {

@@ -64,6 +64,7 @@ import type { RpgSessionPayload } from "./rpg_session_runtime.js";
 import type { RpgViewOptions } from "./rpg_view_projection.js";
 import type { SessionStore } from "./sessions.js";
 import { journeyBlocksGameplay, suppressRpgGameplayActions } from "./journey_projection.js";
+import type { JourneyDecisionClassification } from "../world/journey_contract.js";
 
 type OverworldResponseOptions = OverworldMcpResponseOptions;
 
@@ -181,6 +182,7 @@ type OverworldQuestStartResponse<Args extends OverworldResponseOptions & RpgView
       quest: OverworldResultValue<Args, OverworldQuestView, OverworldCompactQuestRef>;
       rpg_session_id: string;
       rpg_session: RpgSessionPayload<Args>;
+      journeyDecision: JourneyDecisionClassification;
     } & OverworldMcpJourneyField &
       OverworldViewField<Args>)
   | OverworldGuardedRejection<Args>;
@@ -586,6 +588,7 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
         snapshot_hash: overworldSnapshotHash,
         overworld_snapshot_hash: overworldSnapshotHash,
         journey,
+        journeyDecision: started.quest.journeyDecision,
         quest: questResult,
         rpg_session_id: rpgSession.session_id,
         rpg_session: rpgSession,
@@ -668,6 +671,7 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
         session_id: args.session_id,
         snapshot_hash: overworldSessions.snapshotHash(session),
         journey: session.journey(),
+        journeyDecision: result.journeyDecision,
         result: responseValue,
         ...overworldSessions.viewField(responseOptions, session),
       } as OverworldSessionResponse<

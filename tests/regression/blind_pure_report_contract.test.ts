@@ -2,10 +2,11 @@ import { describe, expect, it } from "vitest";
 import { verifyBlindReportText } from "../../src/blind/report_verifier.js";
 import { parseRunEvidenceJsonl } from "../../src/blind/run_evidence.js";
 import { hashState } from "../../src/core/hash.js";
+import { JOURNEY_CONTRACT_VERSION } from "../../src/world/journey_contract.js";
 
 const HASH_A = "a".repeat(64);
 
-function receipt(atDecision = 40) {
+function receipt(atDecision = 40, contractVersion: 1 | 2 = JOURNEY_CONTRACT_VERSION) {
   const retentionHistory = [];
   for (let checkpoint = 40, sequence = 1; checkpoint <= atDecision; checkpoint += 40, sequence++) {
     retentionHistory.push({
@@ -18,7 +19,7 @@ function receipt(atDecision = 40) {
     });
   }
   const payload = {
-    contractVersion: 1,
+    contractVersion,
     exitReason: "player_ended_at_choice",
     goalVersion: 1,
     goalId: "albany_local_lead",
@@ -34,7 +35,7 @@ function receipt(atDecision = 40) {
 
 function earlyGoalReceipt() {
   const payload = {
-    contractVersion: 1,
+    contractVersion: JOURNEY_CONTRACT_VERSION,
     exitReason: "player_ended_at_choice",
     goalVersion: 1,
     goalId: "albany_local_lead",
@@ -147,6 +148,18 @@ describe("blind V2 pure/structural report contract", () => {
       if (result.run?.play_mode === "pure") {
         expect(result.run.receipt.acceptedDecisions).toBe(40);
       }
+    }
+  });
+
+  it("keeps a frozen contract-v1 pure receipt verifiable as historical evidence", () => {
+    const historical = receipt(40, 1);
+    const result = verifyBlindReportText(
+      report(pureInterview({ journey_exit_receipt: historical })),
+      { requiredPlayMode: "pure", runEvidenceText: evidence(historical) },
+    );
+    expect(result.ok).toBe(true);
+    if (result.ok && result.run?.play_mode === "pure") {
+      expect(result.run.receipt.contractVersion).toBe(1);
     }
   });
 

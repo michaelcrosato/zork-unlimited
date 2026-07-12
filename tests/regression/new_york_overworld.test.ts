@@ -328,6 +328,8 @@ describe("New York overworld graph", () => {
     expect(app).toContain("<JourneyStatus journey={journey}");
     expect(app).toContain("<JourneyChoiceScreen journey={journey}");
     expect(app).toContain("<JourneyEndedScreen journey={journey}");
-    expect(app).toContain("worldSession.recordAcceptedQuestDecision(id)");
+    expect(app).toContain(
+      "worldSession.recordQuestDecision(out.journeyActionId, out.journeyDecision)",
+    );
   });
 });

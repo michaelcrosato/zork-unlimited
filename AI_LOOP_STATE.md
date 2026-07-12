@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 536 -->
+<!-- historical_cycle_count: 537 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - consequential_journey_decision_accounting
+
+- Contract surface: journey v2 gives UI/MCP one engine-owned meaningful-decision classifier; movement, stateful clues, substantive dialogue, combat, skill checks, preparation, and situation changes count, while context/repeats, dialogue navigation, unchanged services, persistence, rejections, retention choice, and technical foldback do not.
+- Integrity surface: compact/full proof parity, v7 save/restore, atomic non-death quest foldback at a simultaneous checkpoint, rejected-call metadata, current-contract fleet resume, and hardened pure-runner tool isolation are pinned; frozen v1 receipts still verify but compile only in their own cohort.
+- Blind playtest: canonical pure Wolf-Winter/overworld seed 7 ran 111 turns / 7.8 minutes, continued at goal completion (decision 22) and checkpoint 40, then voluntarily ended at 80—the first standardized run beyond 40; clarity 4, enjoyment 3, replay no.
+- Feedback surface: Wolf-Winter remained the 5/5 high point, but the player found no replacement goal and called Albany → Colonie → Schenectady district/job/event/site shells near-identical; this independently corroborates 44/46 frozen-v1 post-Wolf depth complaints.
+- Compiler surface: `retention.json` schema v2 stratifies journey-contract cohorts, so accepted-decision/checkpoint curves can never pool v1 and v2 semantics; one new report does not meet the ≥3-report compile threshold.
+- Self-critique: PASS for truthful measurement and the first real 80-decision continuation, not for retention—the player still chose exit and would not replay. An ending-sensitive Albany aftermath, consequential follow-up choice, and visible next local objective are next.
+- Guard: pre/post 6,000-step crawls are green (latest `20260712T013559Z`, all 12 quests / 247 nodes); browser parity, targeted regressions, independently reverified receipt, and `npm run health` pass.
 
 ### Cycle result - wolf_winter_post_hunt_consequences
 
@@ -134,43 +144,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Blind playtest: 25-run `overworld` Codex batch seeds 516-540 all exited 0; clarity 25x4/5, enjoyment 25x4/5, replay 25x true; feedback ledger now has 360 accepted reports.
 - Self-critique: completed-active-list complaints fell to 0 targeted repeats, but area-scoped off-area jobs still feel lost and Wolf-Winter dialogue ids/quote backs plus compact journal hashes dominate the new sample.
 - Guard: focused affected tests, `npm run health`, `npm run blind:feedback`, and reports `20260708T192325Z`-`20260708T193009Z` seeds 516-540 passed.
-
-### Cycle result - albany_first_action_signposts
-
-- Content surface: rewrote Albany Civic Center's opening area, Notice Hall, Rowan Quill, charter backlog, Civic Underrooms, and Civic Ledger Run prose around concrete first moves instead of generated lead-point text.
-- Loop effect: focused UI regressions prove the first screen names the Notice Hall board, Rowan's desk, and charter-backlog stair, while scout/talk/explore still reveal Market Streets, Civic Ledger Run, and Civic Underrooms deterministically.
-- Blind playtest: 25-run `overworld` Codex batch seeds 491-515 all exited 0; clarity 25x4/5, enjoyment 25x4/5, replay 25x true; feedback ledger now has 335 accepted reports.
-- Self-critique: first-action signposting improved but did not erase hidden-count scope confusion; completed quest/job/event listings and dialogue id/quote noise are now louder than opening-action uncertainty.
-- Guard: focused affected tests, `npm run health`, `npm run blind:feedback`, and reports `20260708T190115Z`-`20260708T190730Z` seeds 491-515 passed.
-
-## AFK Cycle 2026-07-11T18-29-31-038Z
-
-- Assess: rpg=12; world=12; candidates=16; the explicit tutorial/fresh-world/100-agent contract superseded stale hotspot-4a89fb42.
-- Change: one canonical four-step tutorial now opens every genuinely fresh UI/MCP game; resume, export, reads, and actions do not replay it.
-- Harness: live runner/fleet/AFK prompts reject quest drop-ins and always start overworld; targeted smoke/mock remains; milestone default is 100.
-- Blind playtest: fresh-overworld seed 930020 verified; it used the tutorial to discover and finish Wolf-Winter 60/60, clarity 4/5, enjoyment 4/5, replay yes.
-- Findings: no tutorial regression; second-town template repetition and road-only fatigue remain the next evidence questions.
-- Guard: post-crawl `20260711T184939Z`, browser 1280x720/390x844/320x568, and health (287 files, 2028 tests, all 12 packs) passed.
-- Next: commit this green contract, then run 100 fresh-overworld blind agents and compile their feedback.
-
-## AFK Cycle 2026-07-11T21-10-00Z - pure_journey_contract
-
-- Engine: versioned journey state now shares the exact Albany goal, accepted-decision proof, 40/80/+40 and early-goal choices, immutable exit receipt, and v6 persistence across UI/MCP.
-- Harness: live blind/fleet defaults are enforced pure + fresh-overworld + neutral persona; structural QA is explicit/non-retention; V2 reports require same-session server evidence and safe resume sidecars.
-- Retention: Tier 3 now emits mode-separated `retention.json`; legacy 79-run guided evidence remains useful but contributes zero pure retention.
-- Pure canary: seed 950002 completed the Albany goal at decision 24, chose continue at 24/40/80, ended honestly at 120, clarity 4/5, enjoyment 3/5, replay no; exact receipt independently reverified.
-- Findings: the natural player praised Wolf-Winter/tutorial but confirmed town-template repetition, hidden event prerequisites, and context-poor road encounters as the next depth questions.
-- Guard: crawl `20260711T202940Z` (247/247 towns, 344/344 roads, 12/12 quests), browser 1280x720/390x844/320x568 plus live 40-choice/end, pure graph/seed isolation, and health (292 files / 2,060 tests / all 12 packs) green.
-- Fleet: seeds 960001-960100 produced 100/100 new pure/fresh verified exits, zero resume/failure/retry/timeout; compiled at `ai-runs/feedback/20260711T221007Z-pure100`.
-- Retention: 46 continued at early goal completion, 54 ended; all 46 continuers ended at checkpoint 40; `would_replay` was separately 76/100.
-- Review: 44/46 exposed continuers called post-Wolf-Winter Albany generic or under-narrated, but 34 reports also showed v1 over-counting context-only quest commands/unchanged rest.
-- Next: contract v2 engine-owned consequential-decision classification first; then an ending-sensitive authored Albany aftermath bridge.
-
-## AFK Cycle 2026-07-11T23-08-56Z - one_click_launcher
-
-- Assess: reviewed every remaining dirty file; kept one coherent Windows launcher/single-file UI feature and discarded only generated Aider/Playwright scratch.
-- Change: `PLAY.bat` now enforces Node 22+, validates exact lockfile dependencies, builds fail-closed, and exposes a no-browser smoke mode; checkout preserves CRLF.
-- Package: the UI build inlines one JS/CSS pair, rejects remote CSS/generated asset references, removes redundant assets, and leaves only offline `dist/index.html`; the UI lock now matches its root file dependency.
-- Browser: the packaged production page rendered the one-screen tutorial, entered Albany, and logged no warnings/errors; direct `file://` navigation was unavailable to the automation surface, so static zero-reference checks cover that boundary.
-- Guard: launcher build-only smoke, clean UI `npm ci`, packaged UI build/typecheck, regression contract, crawl `20260711T230133Z`, and health (293 files / 2,062 tests / all 12 packs) passed.
-- Next: land through the protected-main PR path, delete merged feature branches, then resume the contract-v2 consequential-decision plan.

@@ -7,7 +7,12 @@ import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { parse as parseYaml } from "yaml";
 import { GameSession, isRpgSource } from "../../ui/src/engine.js";
+import { createToolApi } from "../../src/mcp/tools.js";
 import { RpgPackSchema } from "../../src/rpg/schema.js";
+import {
+  createInitialJourneyContractSnapshot,
+  recordJourneyDecision,
+} from "../../src/world/journey_contract.js";
 
 const read = (p: string): string => readFileSync(p, "utf8");
 const NON_RPG_SOURCE = `
@@ -36,10 +41,184 @@ describe("GameSession — RPG-only structured play", () => {
     const before = s.view().stateHash;
     const out = s.choose("not_an_action");
     expect(out.ok).toBe(false);
+    expect(out.journeyDecision).toEqual({ countsTowardJourney: false, reason: "rejected" });
+    expect(out.journeyActionId).toBeNull();
     expect(s.view().stateHash).toBe(before);
     // No ending record while play continues — the overworld completion bridge
     // must have nothing to act on.
     expect(s.ending()).toBeNull();
+  });
+
+  it("classifies the same accepted quest decision identically in UI and MCP", () => {
+    const source = read("content/rpg/quests/sunken_barrow.yaml");
+    const ui = GameSession.start(source, 1);
+    const uiAction = ui.view().choices.find((choice) => choice.id === "go_down");
+    if (!uiAction) throw new Error("expected UI opening movement");
+
+    const api = createToolApi({ root: process.cwd() });
+    const mcp = api.start_world_quest({
+      world_quest_id: "sunken_barrow",
+      seed: 1,
+      compact_observation: false,
+    });
+    expect(mcp.observation.available_actions.some((action) => action.id === uiAction.id)).toBe(
+      true,
+    );
+
+    const uiOutcome = ui.choose(uiAction.id);
+    const mcpOutcome = api.step_action({
+      session_id: mcp.session_id,
+      action_id: uiAction.id,
+      compact_observation: false,
+      compact_events: false,
+    });
+    expect(uiOutcome.ok).toBe(true);
+    expect(mcpOutcome.ok).toBe(true);
+    expect(mcpOutcome.journeyDecision).toEqual(uiOutcome.journeyDecision);
+    expect(mcpOutcome.journeyActionId).toBe(uiOutcome.journeyActionId);
+
+    const apply = (actionId: string, classification: typeof uiOutcome.journeyDecision) =>
+      recordJourneyDecision(
+        createInitialJourneyContractSnapshot(),
+        { surface: "quest", actionId },
+        classification,
+      );
+    const uiJourney = apply(uiOutcome.journeyActionId!, uiOutcome.journeyDecision);
+    const mcpJourney = apply(mcpOutcome.journeyActionId!, mcpOutcome.journeyDecision);
+    expect(mcpJourney.acceptedDecisions).toBe(1);
+    expect(mcpJourney.decisionProof).toEqual(uiJourney.decisionProof);
+  });
+
+  it("counts a stateful read once and excludes context repeats and dialogue closure", () => {
+    const s = GameSession.start(read("content/rpg/quests/falconers_ransom.yaml"), 1);
+
+    expect(s.choose("look_around").journeyDecision).toEqual({
+      countsTowardJourney: false,
+      reason: "context_only",
+    });
+    expect(s.choose("inventory").journeyDecision).toEqual({
+      countsTowardJourney: false,
+      reason: "context_only",
+    });
+    expect(s.choose("read_falcon_jesses").journeyDecision).toEqual({
+      countsTowardJourney: true,
+      reason: "stateful_clue",
+    });
+    expect(s.choose("examine_falcon_jesses").journeyDecision).toEqual({
+      countsTowardJourney: false,
+      reason: "repeated_context",
+    });
+
+    expect(s.choose("talk_aldric").journeyDecision).toEqual({
+      countsTowardJourney: false,
+      reason: "dialogue_opening",
+    });
+    expect(s.choose("ask_ask_bill").journeyDecision).toEqual({
+      countsTowardJourney: true,
+      reason: "substantive_dialogue",
+    });
+    expect(s.choose("ask_bill_back").journeyDecision).toEqual({
+      countsTowardJourney: false,
+      reason: "dialogue_navigation",
+    });
+    expect(s.choose("ask_leave_aldric").journeyDecision).toEqual({
+      countsTowardJourney: false,
+      reason: "dialogue_closure",
+    });
+    expect(s.choose("talk_aldric").journeyDecision).toEqual({
+      countsTowardJourney: false,
+      reason: "dialogue_opening",
+    });
+  });
+
+  it("keeps a mixed clue/dialogue sequence count-and-proof identical in UI and MCP", () => {
+    const source = read("content/rpg/quests/falconers_ransom.yaml");
+    const ui = GameSession.start(source, 1);
+    const api = createToolApi({ root: process.cwd() });
+    const mcp = api.start_world_quest({
+      world_quest_id: "falconers_ransom",
+      seed: 1,
+      compact_observation: false,
+    });
+    let uiJourney = createInitialJourneyContractSnapshot();
+    let mcpJourney = createInitialJourneyContractSnapshot();
+
+    for (const actionId of [
+      "look_around",
+      "read_falcon_jesses",
+      "examine_falcon_jesses",
+      "talk_aldric",
+      "ask_ask_bill",
+      "ask_bill_back",
+      "ask_leave_aldric",
+      "talk_aldric",
+    ]) {
+      const uiOutcome = ui.choose(actionId);
+      const mcpOutcome = api.step_action({
+        session_id: mcp.session_id,
+        action_id: actionId,
+        compact_observation: false,
+        compact_events: false,
+      });
+      expect(uiOutcome.ok, actionId).toBe(true);
+      expect(mcpOutcome.ok, actionId).toBe(true);
+      expect(mcpOutcome.journeyDecision, actionId).toEqual(uiOutcome.journeyDecision);
+      expect(mcpOutcome.journeyActionId, actionId).toBe(uiOutcome.journeyActionId);
+      uiJourney = recordJourneyDecision(
+        uiJourney,
+        { surface: "quest", actionId: uiOutcome.journeyActionId! },
+        uiOutcome.journeyDecision,
+      );
+      mcpJourney = recordJourneyDecision(
+        mcpJourney,
+        { surface: "quest", actionId: mcpOutcome.journeyActionId! },
+        mcpOutcome.journeyDecision,
+      );
+      expect(mcpJourney.acceptedDecisions, actionId).toBe(uiJourney.acceptedDecisions);
+      expect(mcpJourney.decisionProof, actionId).toEqual(uiJourney.decisionProof);
+    }
+    expect(uiJourney.acceptedDecisions).toBe(2);
+    expect(uiJourney.decisionProof.last).toMatchObject({
+      actionId: "ask_ask_bill",
+      reason: "substantive_dialogue",
+    });
+  });
+
+  it("counts an accepted failed skill check identically in UI and MCP", () => {
+    const source = read("content/rpg/quests/sunken_barrow.yaml");
+    const ui = GameSession.start(source, 3);
+    const api = createToolApi({ root: process.cwd() });
+    const mcp = api.start_world_quest({
+      world_quest_id: "sunken_barrow",
+      seed: 3,
+      compact_observation: false,
+    });
+    const stepBoth = (actionId: string) => {
+      const uiOutcome = ui.choose(actionId);
+      const mcpOutcome = api.step_action({
+        session_id: mcp.session_id,
+        action_id: actionId,
+        compact_observation: false,
+        compact_events: false,
+      });
+      expect(uiOutcome.ok, actionId).toBe(true);
+      expect(mcpOutcome.ok, actionId).toBe(true);
+      expect(mcpOutcome.journeyDecision, actionId).toEqual(uiOutcome.journeyDecision);
+      return uiOutcome;
+    };
+
+    for (const actionId of ["go_down", "take_iron_bar", "go_north"]) stepBoth(actionId);
+    for (let attack = 0; attack < 40; attack += 1) {
+      if (!ui.view().choices.some((choice) => choice.id === "attack_barrow_wight")) break;
+      stepBoth("attack_barrow_wight");
+    }
+    stepBoth("go_east");
+    const failedAttempt = stepBoth("use_iron_bar_on_stone_slab");
+    expect(failedAttempt.narration.join(" ")).toMatch(/failure/i);
+    expect(failedAttempt.journeyDecision).toEqual({
+      countsTowardJourney: true,
+      reason: "skill_check",
+    });
   });
 
   it("reset restores the deterministic initial RPG state", () => {
@@ -48,6 +227,10 @@ describe("GameSession — RPG-only structured play", () => {
     const down = s.view().choices.find((c) => c.label === "go down");
     expect(down).toBeTruthy();
     expect(s.choose(down!.id).ok).toBe(true);
+    expect(s.choose("take_iron_bar").journeyDecision).toEqual({
+      countsTowardJourney: true,
+      reason: "preparation",
+    });
     expect(s.view().stateHash).not.toBe(initial);
     s.reset();
     expect(s.view().stateHash).toBe(initial);

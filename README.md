@@ -131,12 +131,15 @@ traces are data only.
 
 Every overworld session also carries one versioned **journey contract**, shared
 unchanged by UI and MCP. Its initial goal is to find one local lead in Albany
-and see it through. Successfully accepted gameplay decisions advance the shared
-counter; reads, legal-action listings, persistence operations, rejections, and
-the retention choice do not. The game offers a real continue/end choice at 40
-decisions, then 80/120/+40, or sooner when the goal completes. Ending returns a
-verifiable receipt with the decision proof, goal state, checkpoint choices, and
-exit reason.
+and see it through. Under contract v2, meaningful accepted decisions—movement,
+new clues, substantive dialogue topics, combat, skill checks, preparation, and
+other situation changes—advance the shared counter. Context-only or repeated
+narration, dialogue opening/navigation/closure, unchanged services,
+legal-action listings, persistence operations, rejections, technical quest
+foldback, and the retention choice do not. The game offers a real continue/end
+choice at 40 decisions, then 80/120/+40, or sooner when the goal completes.
+Ending returns a verifiable receipt with the contract version, decision proof,
+goal state, checkpoint choices, and exit reason.
 
 ## Testing: a three-tier pyramid, coupled by an exit interview
 
@@ -169,8 +172,9 @@ Full reference: [`docs/testing_pyramid.md`](./docs/testing_pyramid.md).
 - **Tier 3 — feedback compiler** (`src/feedback/`): clusters and ranks Tier-1
   findings and verified Tier-2 reports into `hotspots.{json,md}`
   (`npm run feedback:compile`), writes a separate `retention.json` that admits
-  only sidecar-verified pure exits and their actual continue/end choices, tracks
-  trend (improved/regressed/new/flat), and feeds the assessor's ranking.
+  only sidecar-verified pure exits and groups their decision/checkpoint curves
+  by journey-contract version (historical v1 and current v2 are never pooled),
+  tracks trend (improved/regressed/new/flat), and feeds the assessor's ranking.
 
 Every pure playtest MUST end through the game's journey choice and then provide
 a V2 **structured exit interview**. The fenced `json exit-interview` block
@@ -191,8 +195,10 @@ npm run feedback:compile                          # Tier 3: hot spots + pure ret
 ```
 
 The blind harness drives the external Claude Code CLI on the operator's
-subscription (default model `sonnet`; `BLIND_AGENT_CMD` overrides) and is NOT
-part of CI or the health bar (a mock fleet run is — see
+subscription (default model `sonnet`) through a runner-enforced no-file,
+no-shell, no-web tool boundary. Arbitrary `BLIND_AGENT_CMD` overrides are
+rejected for pure runs because their blindness cannot be verified. Live play is
+NOT part of CI or the health bar (a structural mock fleet run is — see
 [`docs/testing_pyramid.md`](./docs/testing_pyramid.md)). Separately, the
 authoring/repair agents (`bin/author.ts`, the debugger/fixer) run against a
 deterministic, keyless `MockAuthorProvider` behind the small `Provider`
