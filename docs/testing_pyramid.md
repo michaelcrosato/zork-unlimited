@@ -113,7 +113,10 @@ contract, meaningful-decision proof/count, current goal, ordered completed-goal
 history, every goal-bound or checkpoint continue/end choice, and the exit
 reason. Report schema V2 and journey contract v3 are independent version axes.
 Follow-up objective routing is also game-owned: UI and MCP receive the same
-current-location next-road guidance, while the pure harness remains route-blind.
+Goal Passage choice and aggregate consequence forecast. Passage applies each
+real road leg but yields at authored choices, objective arrival, and resource
+boundaries; intermediate route and future-event knowledge remain hidden before
+travel, while the pure harness remains route-blind and non-prescriptive.
 An independently verified `.run.json` sidecar and fleet manifest preserve that
 metadata; structural and legacy outputs are explicitly retention-ineligible.
 

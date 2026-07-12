@@ -417,16 +417,16 @@ function walkInLockStep(
     [makeStep(origRulesBest), makeStep(twinRulesBest)],
     [makeStep(origRulesWorst), makeStep(twinRulesWorst)],
   ];
-  const seen = new Set<string>();
-  const stack: { o: GameState; t: GameState }[] = [{ o: origStart, t: twinStart }];
+  const startKey = stateKey(origStart);
+  const scheduled = new Set<string>([startKey]);
+  const stack: { o: GameState; t: GameState; ko: string }[] = [
+    { o: origStart, t: twinStart, ko: startKey },
+  ];
   let compared = 0;
 
   while (stack.length > 0) {
-    if (seen.size > MAX_STATES) return { compared, cappedOut: true };
-    const { o, t } = stack.pop()!;
-    const ko = stateKey(o);
-    if (seen.has(ko)) continue;
-    seen.add(ko);
+    if (scheduled.size > MAX_STATES) return { compared, cappedOut: true };
+    const { o, t, ko } = stack.pop()!;
 
     const origObs = buildRpgObservation(origIndex, o);
     const twinObs = buildRpgObservation(twinIndex, t);
@@ -465,9 +465,11 @@ function walkInLockStep(
     compared++;
 
     if (o.ended) continue;
-    // Legality is rng-independent; take the action set from one regime and step it under
-    // both. (Mirrors exhaustiveEndingsMulti, which reads legalActions from ruleSets[0].)
-    for (const a of origRulesBest.legalActions(o)) {
+    // Legality is rng-independent. The production observation above already enumerated the
+    // original legal set and its stable ids, so step those exact actions under both regimes
+    // instead of enumerating the same set a second time. The twin observation remains an
+    // independent enumeration and is still compared in full above.
+    for (const { action: a } of origObs.available_actions) {
       if (!explore(origIndex, a)) continue; // inert actions are checked above, not stepped
       const ra = relabelAction(a, mapId);
       for (const [origStep, twinStep] of regimes) {
@@ -481,7 +483,17 @@ function walkInLockStep(
             ro.ok,
           );
         }
-        if (ro.ok && rt.ok) stack.push({ o: ro.state, t: rt.state });
+        if (ro.ok && rt.ok) {
+          const nextKey = stateKey(ro.state);
+          // Schedule each original state once instead of retaining duplicate full state
+          // pairs until they reach the top of the stack. The original fingerprint is the
+          // proof's existing path-independence key; moving the same dedupe from pop to push
+          // preserves the reachable set and every per-state assertion while bounding memory
+          // and avoiding duplicate state-graph retention under large join-heavy packs.
+          if (scheduled.has(nextKey)) continue;
+          scheduled.add(nextKey);
+          stack.push({ o: ro.state, t: rt.state, ko: nextKey });
+        }
       }
     }
   }

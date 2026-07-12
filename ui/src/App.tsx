@@ -23,6 +23,7 @@ import { JourneyChoiceScreen } from "./JourneyChoiceScreen.js";
 import { JourneyStoryChoiceScreen } from "./JourneyStoryChoiceScreen.js";
 import { JourneyEndedScreen } from "./JourneyEndedScreen.js";
 import { JourneyStatus } from "./JourneyStatus.js";
+import { formatGoalPassageLog } from "./goalPassage.js";
 import { FRESH_GAME_TUTORIAL } from "../../src/world/fresh_game_tutorial.js";
 import type { JourneyChoice } from "../../src/world/journey_contract.js";
 import type { OverworldQuest } from "../../src/world/overworld.js";
@@ -142,6 +143,20 @@ export default function App(): JSX.Element {
         `Traveled ${entry.distanceMi.toFixed(1)} mi on ${entry.route} to ${entry.to} (${entry.baseMinutes} min road${entry.delayMinutes > 0 ? `, +${entry.delayMinutes} min delay` : ""}). Supplies -${entry.suppliesUsed}, fatigue +${entry.fatigueGained}.${roadEvent}`,
         ...prev,
       ]);
+      setError(null);
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  }
+
+  function followGoalPassage(): void {
+    try {
+      const result = worldSession.followGoalPassage();
+      setWorldView(worldSession.view());
+      setQuestSession(null);
+      setQuestView(null);
+      setActiveQuest(null);
+      setLog((previous) => [formatGoalPassageLog(result), ...previous]);
       setError(null);
     } catch (e) {
       setError((e as Error).message);
@@ -359,7 +374,7 @@ export default function App(): JSX.Element {
         <p className="sub">{OVERWORLD.premise}</p>
       </header>
 
-      <JourneyStatus journey={journey} />
+      <JourneyStatus journey={journey} onFollowGoalPassage={followGoalPassage} />
 
       <section className="overworld">
         <article className="location-panel">
@@ -521,13 +536,6 @@ export default function App(): JSX.Element {
                   <small>
                     {exit.route} - {exit.distance_mi.toFixed(1)} mi - {exit.travel_minutes} min
                   </small>
-                  {OVERWORLD.road_events
-                    .filter((event) => event.edge === exit.id)
-                    .map((event) => (
-                      <em key={event.id}>
-                        {event.title} - {event.risk} risk
-                      </em>
-                    ))}
                 </button>
               </li>
             ))}

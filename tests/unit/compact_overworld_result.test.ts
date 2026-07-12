@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   compactOverworldActionResult,
   compactOverworldAreaTravelResult,
+  compactOverworldGoalPassageResult,
   compactOverworldQuestCompletionResult,
   compactOverworldRoadEncounterResult,
   compactOverworldTravelResult,
@@ -13,11 +14,13 @@ import {
   OVERWORLD_COMPACT_LABEL_CHAR_LIMIT,
   OVERWORLD_COMPACT_LOCAL_REF_LIMIT,
   OVERWORLD_COMPACT_ROAD_EVENT_SUMMARY_CHAR_LIMIT,
+  OVERWORLD_COMPACT_ROUTE_STEP_LIMIT,
   OVERWORLD_COMPACT_TITLE_CHAR_LIMIT,
 } from "../../src/world/compact_view.js";
 import type {
   OverworldActionResult,
   OverworldAreaTravelResult,
+  OverworldJourneyGoalPassageResult,
   OverworldQuestCompletionResult,
   OverworldRoadEncounterResult,
   TravelLogEntry,
@@ -291,5 +294,86 @@ describe("compactOverworldTravelResult", () => {
     } satisfies TravelLogEntry;
 
     expect(compactOverworldTravelResult(result).slice(6)).toEqual([null, null, null, null]);
+  });
+});
+
+describe("compactOverworldGoalPassageResult", () => {
+  it("bounds labels and emits only compact tuples for legs that were actually traversed", () => {
+    const traversed = Array.from(
+      { length: OVERWORLD_COMPACT_ROUTE_STEP_LIMIT + 2 },
+      (_, index) => ({
+        edgeId: `road_${index}`,
+        fromId: `town_${index}`,
+        toId: `town_${index + 1}`,
+        from: `Town ${index}`,
+        to: `Town ${index + 1}`,
+        route: `Route ${index}`,
+        distanceMi: 10,
+        baseMinutes: 30,
+        delayMinutes: 0,
+        minutes: 30,
+        arrivedAt: 600 + index * 30,
+        suppliesUsed: 1,
+        suppliesAfter: Math.max(0, 7 - index),
+        fatigueGained: 1,
+        fatigueAfter: index + 1,
+        roadEvent:
+          index === 0
+            ? {
+                id: "event_traversed",
+                edge: "road_0",
+                risk: "low" as const,
+                title: "A traversed road scene",
+                summary: "This scene happened on the accepted passage.",
+              }
+            : null,
+      }),
+    );
+    const result = {
+      goalId: "goal_visible_to_player",
+      destination: `Destination ${"x".repeat(400)}`,
+      stoppedAt: `Stopped ${"y".repeat(400)}`,
+      stopReason: "resource_boundary",
+      legs: traversed,
+      baseMinutes: 420,
+      delayMinutes: 30,
+      minutes: 450,
+      suppliesUsed: 8,
+      suppliesAfter: 0,
+      fatigueGained: 18,
+      fatigueAfter: 61,
+      travelConditionAfter: "worn down and out of supplies",
+      journeyDecision: { countsTowardJourney: true, reason: "movement" },
+      plannedLegs: [{ edgeId: "future_secret_road", eventTitle: "Future secret scene" }],
+    } as OverworldJourneyGoalPassageResult & {
+      plannedLegs: { edgeId: string; eventTitle: string }[];
+    };
+
+    const compact = compactOverworldGoalPassageResult(result);
+
+    expect(compact).toMatchObject({
+      goal_id: result.goalId,
+      stop_reason: "resource_boundary",
+      minutes: [420, 30, 450],
+      supplies: [8, 0],
+      fatigue: [18, 61],
+      travel_condition: "worn down and out of supplies",
+      legs_truncated: true,
+    });
+    expect(compact.destination).toHaveLength(OVERWORLD_COMPACT_LABEL_CHAR_LIMIT);
+    expect(compact.stopped_at).toHaveLength(OVERWORLD_COMPACT_LABEL_CHAR_LIMIT);
+    expect(compact.legs).toHaveLength(OVERWORLD_COMPACT_ROUTE_STEP_LIMIT);
+    expect(compact.legs[0]?.slice(0, 9)).toEqual([
+      "road_0",
+      "town_0",
+      "town_1",
+      30,
+      1,
+      1,
+      "event_traversed",
+      "low",
+      "A traversed road scene",
+    ]);
+    expect(JSON.stringify(compact)).not.toMatch(/future_secret_road|Future secret scene/);
   });
 });

@@ -13,16 +13,22 @@ import {
   type OverworldQuest,
   type OverworldRegionalArc,
   type OverworldRoadEvent,
+  type OverworldRoutePlan,
 } from "./overworld.js";
 import { cloneOverworldCompactView, type OverworldCompactView } from "./compact_view.js";
 import {
   OVERWORLD_STARTING_MINUTES as STARTING_MINUTES,
   OVERWORLD_STARTING_SUPPLIES as STARTING_SUPPLIES,
+  resolveOverworldTravelLeg,
+  travelCondition,
   type OverworldRoadEncounterStrategy,
+  type OverworldTravelLegResult,
 } from "./travel_mechanics.js";
 import {
   cloneOverworldRouteOption,
   indexedOverworldRoute,
+  withOverworldRouteEstimate,
+  withOverworldSessionRoadEvents,
   type OverworldRoutePlannerIndex,
   type OverworldSessionRoutePlan,
 } from "./session_routes.js";
@@ -80,6 +86,7 @@ import { buildOverworldSessionIndexes } from "./session_indices.js";
 import {
   cloneOverworldActionResult,
   cloneOverworldAreaTravelResult,
+  cloneOverworldGoalPassageResult,
   cloneOverworldQuestCompletionResult,
   cloneOverworldQuestView,
   cloneOverworldRoadEncounterResult,
@@ -115,7 +122,16 @@ import {
 import {
   applyOverworldSessionRoadEncounter,
   applyOverworldSessionRoadTravelArrival,
+  roadEventForOverworldSessionTravel,
 } from "./session_road_travel.js";
+import {
+  buildJourneyGoalPassagePresentation,
+  goalPassageHitsResourceBoundary,
+  goalPassageJourneyActionId,
+  overworldTravelDelayTier,
+  type OverworldGoalPassageResult,
+  type OverworldGoalPassageStopReason,
+} from "./session_goal_passage.js";
 import {
   activateJourneyGoal,
   assertJourneyAcceptingDecision as assertJourneyContractAcceptingDecision,
@@ -182,11 +198,16 @@ export type {
   TravelLogEntrySnapshot,
 } from "./session_snapshot.js";
 export type { OverworldActionResult } from "./session_action_application.js";
+export type {
+  OverworldGoalPassageResult,
+  OverworldGoalPassageStopReason,
+} from "./session_goal_passage.js";
 export type { OverworldView } from "./session_view.js";
 export type {
   JourneyChoice,
   JourneyChoiceResult,
   JourneyExitReceipt,
+  JourneyGoalPassagePresentation,
   JourneyPresentation,
   JourneyRetentionEvent,
 } from "./journey_contract.js";
@@ -200,6 +221,8 @@ export type OverworldJourneyRoadEncounterResult =
   JourneyDecisionAnnotated<OverworldRoadEncounterResult>;
 export type OverworldJourneyServiceResult = JourneyDecisionAnnotated<OverworldServiceResult>;
 export type OverworldJourneyTravelResult = JourneyDecisionAnnotated<TravelLogEntry>;
+export type OverworldJourneyGoalPassageResult =
+  JourneyDecisionAnnotated<OverworldGoalPassageResult>;
 
 export type OverworldJourneyStoryChoiceResult = Readonly<{
   storyChoiceId: JourneyCampaignStoryChoiceId;
@@ -289,6 +312,7 @@ export class OverworldSession {
   private readonly completedRegionalArcIds = new Set<string>();
   private pendingRoadEncounter: OverworldPendingRoadEncounter | null = null;
   private journeyState: JourneyContractSnapshot = createInitialJourneyContractSnapshot();
+  private readonly journeyGoalBaseRouteByEndpoints = new Map<string, OverworldRoutePlan>();
   private readonly journeyGoalGuidanceByRoute = new Map<string, string>();
   private readonly caches: OverworldSessionCaches = {};
 
@@ -386,14 +410,38 @@ export class OverworldSession {
     return cloneOverworldSessionSnapshot(this.cachedSnapshot().snapshot);
   }
 
-  private journeyGoalGuidance(): string | null {
+  private currentGoalRoute(): OverworldSessionRoutePlan | null {
     const goal = this.journeyState.goal;
     if (goal.version === INITIAL_JOURNEY_GOAL.version || goal.status !== "active") return null;
     const definition = journeyCampaignGoalDefinition(goal);
     if (!definition) return null;
     const destination = this.nodes.get(definition.targetTownId);
+    if (!destination) return null;
+    const cacheKey = `${this.currentId}->${destination.id}`;
+    let route = this.journeyGoalBaseRouteByEndpoints.get(cacheKey);
+    if (!route) {
+      route =
+        indexedOverworldRoute(this.routePlannerIndex, this.currentId, destination.id) ?? undefined;
+      if (!route) return null;
+      this.journeyGoalBaseRouteByEndpoints.set(cacheKey, route);
+    }
+    return withOverworldRouteEstimate(
+      withOverworldSessionRoadEvents(route, {
+        activeGoalId: this.journeyState.goal.id,
+        completedQuestIds: this.completedQuestIds,
+        travelLog: this.travelLog,
+      }),
+      { fatigue: this.fatigue, supplies: this.supplies },
+    );
+  }
+
+  private journeyGoalGuidance(route: OverworldSessionRoutePlan | null): string | null {
+    const goal = this.journeyState.goal;
+    const definition = journeyCampaignGoalDefinition(goal);
+    if (!definition || !route) return null;
+    const destination = route.destination;
     const area = this.areasById.get(definition.targetAreaId);
-    if (!destination || !area) return null;
+    if (!area) return null;
     if (this.currentId === destination.id) {
       return this.currentAreaId === area.id
         ? `Objective location reached: ${area.name}. Follow the visible authored lead here.`
@@ -403,13 +451,28 @@ export class OverworldSession {
     const cacheKey = `${this.currentId}->${destination.id}`;
     const cached = this.journeyGoalGuidanceByRoute.get(cacheKey);
     if (cached) return cached;
-    const route = indexedOverworldRoute(this.routePlannerIndex, this.currentId, destination.id);
     const next = route?.steps[0]?.to;
-    if (!route || !next) return null;
+    if (!next) return null;
     const roadCount = route.steps.length;
     const guidance = `Objective route: take the road toward ${next.name}. ${destination.name} is ${String(roadCount)} ${roadCount === 1 ? "road" : "roads"} and about ${String(route.totalMinutes)} road minutes away.`;
     this.journeyGoalGuidanceByRoute.set(cacheKey, guidance);
     return guidance;
+  }
+
+  private journeyGoalPassage(
+    route: OverworldSessionRoutePlan | null,
+    storyChoice: JourneyPresentationContext["storyChoice"],
+  ): JourneyPresentationContext["goalPassage"] {
+    if (
+      !route ||
+      route.steps.length === 0 ||
+      this.journeyState.status !== "active" ||
+      this.pendingRoadEncounter !== null ||
+      storyChoice
+    ) {
+      return null;
+    }
+    return buildJourneyGoalPassagePresentation(route);
   }
 
   private journeyPresentationContext(): JourneyPresentationContext | undefined {
@@ -419,7 +482,8 @@ export class OverworldSession {
     });
     const pending = this.journeyState.pendingChoice;
     const pendingGoalCompletion = pending?.reasons.includes("goal_completed") === true;
-    const goalGuidance = this.journeyGoalGuidance();
+    const goalRoute = this.currentGoalRoute();
+    const goalGuidance = this.journeyGoalGuidance(goalRoute);
     let goalCompletion: JourneyPresentationContext["goalCompletion"];
     let storyChoice: JourneyPresentationContext["storyChoice"];
 
@@ -452,10 +516,12 @@ export class OverworldSession {
         };
       }
     }
-    if (!goalCompletion && !storyChoice && !goalGuidance) return undefined;
+    const goalPassage = this.journeyGoalPassage(goalRoute, storyChoice);
+    if (!goalCompletion && !storyChoice && !goalGuidance && !goalPassage) return undefined;
     return {
       ...(goalCompletion ? { goalCompletion } : {}),
       ...(goalGuidance ? { goalGuidance } : {}),
+      ...(goalPassage ? { goalPassage } : {}),
       ...(storyChoice ? { storyChoice } : {}),
     };
   }
@@ -1174,8 +1240,25 @@ export class OverworldSession {
     return withJourneyDecision(cloneOverworldRoadEncounterResult(applied.result), journeyDecision);
   }
 
-  travel(edgeId: string): OverworldJourneyTravelResult {
-    this.assertJourneyAcceptingDecision();
+  private previewRoadTravelLeg(edgeId: string): OverworldTravelLegResult {
+    const edge = this.roadExitsByTownAndId.get(this.currentId)?.get(edgeId);
+    if (!edge) throw new Error("That road is not reachable from here.");
+    const roadEvent = roadEventForOverworldSessionTravel(
+      this.roadEventsByEdgeId.get(edge.id) ?? null,
+      {
+        activeGoalId: this.journeyState.goal.id,
+        completedQuestIds: this.completedQuestIds,
+        travelLog: this.travelLog,
+      },
+    );
+    return resolveOverworldTravelLeg(edge.travel_minutes, roadEvent, {
+      fatigue: this.fatigue,
+      supplies: this.supplies,
+    });
+  }
+
+  /** Apply one real road leg without assigning a journey-decision boundary. */
+  private applyRoadTravelLeg(edgeId: string): TravelLogEntry {
     const recorded = applyOverworldSessionRoadTravelArrival(
       {
         activeGoalId: this.journeyState.goal.id,
@@ -1203,9 +1286,86 @@ export class OverworldSession {
     this.applyCurrentTownState(recorded);
     this.applyCurrentAreaState(recorded);
     this.applyPendingRoadEncounterState(recorded);
+    this.clearSessionCaches();
+    return recorded.entry;
+  }
+
+  travel(edgeId: string): OverworldJourneyTravelResult {
+    this.assertJourneyAcceptingDecision();
+    const entry = this.applyRoadTravelLeg(edgeId);
     const journeyDecision = this.recordOverworldDecision(`travel:${edgeId}`, "movement", true);
     this.clearSessionCaches();
-    return withJourneyDecision(cloneOverworldTravelLogEntry(recorded.entry), journeyDecision);
+    return withJourneyDecision(cloneOverworldTravelLogEntry(entry), journeyDecision);
+  }
+
+  followGoalPassage(): OverworldJourneyGoalPassageResult {
+    this.assertJourneyAcceptingDecision();
+    this.assertNoPendingRoadEncounter("following the current goal passage");
+    const route = this.currentGoalRoute();
+    if (!route || route.steps.length === 0) {
+      throw new Error("There is no current goal passage to follow from here.");
+    }
+
+    const goalId = this.journeyState.goal.id;
+    const destinationId = route.destination.id;
+    const destination = route.destination.name;
+    const selectionDelayTier = overworldTravelDelayTier(this.fatigue);
+    const selectionSupplies = this.supplies;
+    const legs: TravelLogEntry[] = [];
+    let stopReason: OverworldGoalPassageStopReason | null = null;
+
+    for (const step of route.steps) {
+      const preview = this.previewRoadTravelLeg(step.edge.id);
+      if (
+        goalPassageHitsResourceBoundary({
+          traversedRoadCount: legs.length,
+          selectionDelayTier,
+          selectionSupplies,
+          currentFatigue: this.fatigue,
+          preview,
+        })
+      ) {
+        stopReason = "resource_boundary";
+        break;
+      }
+
+      legs.push(this.applyRoadTravelLeg(step.edge.id));
+      if (this.pendingRoadEncounter) {
+        stopReason = "road_encounter";
+        break;
+      }
+      if (this.currentId === destinationId) {
+        stopReason = "objective";
+        break;
+      }
+    }
+
+    if (legs.length === 0 || stopReason === null) {
+      throw new Error("The current goal passage could not advance along its visible route.");
+    }
+
+    const journeyDecision = this.recordOverworldDecision(
+      goalPassageJourneyActionId(goalId),
+      "movement",
+      true,
+    );
+    this.clearSessionCaches();
+    const result: OverworldGoalPassageResult = {
+      goalId,
+      destination,
+      stoppedAt: this.currentNode().name,
+      stopReason,
+      legs,
+      baseMinutes: legs.reduce((sum, leg) => sum + leg.baseMinutes, 0),
+      delayMinutes: legs.reduce((sum, leg) => sum + leg.delayMinutes, 0),
+      minutes: legs.reduce((sum, leg) => sum + leg.minutes, 0),
+      suppliesUsed: legs.reduce((sum, leg) => sum + leg.suppliesUsed, 0),
+      suppliesAfter: this.supplies,
+      fatigueGained: legs.reduce((sum, leg) => sum + leg.fatigueGained, 0),
+      fatigueAfter: this.fatigue,
+      travelConditionAfter: travelCondition(this.fatigue, this.supplies),
+    };
+    return withJourneyDecision(cloneOverworldGoalPassageResult(result), journeyDecision);
   }
 
   travelTo(destinationTownId: string): OverworldJourneyTravelResult {

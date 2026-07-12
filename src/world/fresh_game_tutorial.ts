@@ -28,7 +28,7 @@ export const FRESH_GAME_TUTORIAL = Object.freeze({
     Object.freeze({
       id: "read",
       title: "Read the moment",
-      text: "Check place, supplies, fatigue, and visible opportunities. Choose a shown action.",
+      text: "Check place, supplies, and fatigue. Choose a shown action.",
     }),
     Object.freeze({
       id: "discover",
@@ -38,12 +38,12 @@ export const FRESH_GAME_TUTORIAL = Object.freeze({
     Object.freeze({
       id: "follow",
       title: "Follow it on foot",
-      text: "Walk to a lead's local area before starting it. Roads cost time and supplies; towns offer rest and resupply. Later goals name a town; the journey card points to its next road.",
+      text: "Walk to a lead's local area before starting it. Roads cost time and supplies; towns offer rest and resupply. For distant goals, Goal Passage applies each road's cost and pauses at choices or resource strain.",
     }),
     Object.freeze({
       id: "remember",
       title: "Choose your horizon",
-      text: "The journal supports save/export and resume. Meaningful moves, new clues, dialogue choices, and conflicts count; context checks and unchanged repeats do not. At 40 decisions, 80, then every 40, choose another 40 or end; completing the goal can ask sooner.",
+      text: "The journal saves, exports, and resumes play. Meaningful moves, new clues, dialogue choices, and conflicts count; reads and unchanged repeats do not. At 40 decisions, 80, then every 40, choose another 40 or end; completing the goal can ask sooner.",
     }),
   ]),
   start_label: "Explore Albany",

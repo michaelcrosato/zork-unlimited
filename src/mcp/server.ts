@@ -48,6 +48,7 @@ export const PURE_PLAYER_TOOLS = new Set<string>([
   "get_overworld_session_context",
   "plan_overworld_session_route",
   "travel_overworld_session",
+  "follow_overworld_session_goal",
   "resolve_overworld_session_road_encounter",
   "resupply_overworld_session",
   "rest_overworld_session",
@@ -593,14 +594,23 @@ tool(
 );
 tool(
   "travel_overworld_session",
-  "Travel to another town, spending minutes and supplies and gaining fatigue; may trigger a road encounter.",
+  "Travel one road to an adjacent town, spending minutes and supplies and gaining fatigue; may trigger a road encounter.",
   {
     ...SESSION,
-    destination_town_id: z.string().optional().describe("Destination town; routes multi-leg."),
-    road_id: z.string().optional().describe("Single road to walk instead."),
+    destination_town_id: z.string().optional().describe("Adjacent destination town."),
+    road_id: z.string().optional().describe("Adjacent road to walk instead."),
     ...OVERWORLD_ACTION_CONTEXT,
   },
   (a) => api.travel_overworld_session(defaultCompactOverworld(a)),
+);
+tool(
+  "follow_overworld_session_goal",
+  "Follow the current goal passage until the game stops at its objective, a road choice, or a resource boundary.",
+  {
+    ...SESSION,
+    ...OVERWORLD_ACTION_CONTEXT,
+  },
+  (a) => api.follow_overworld_session_goal(defaultCompactOverworld(a)),
 );
 tool(
   "resolve_overworld_session_road_encounter",

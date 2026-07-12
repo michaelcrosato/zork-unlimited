@@ -8,6 +8,7 @@ import type { OverworldManifest, OverworldNode } from "../world/overworld.js";
 import {
   type OverworldActionResult,
   type OverworldAreaTravelResult,
+  type OverworldJourneyGoalPassageResult,
   type OverworldJourneyStoryChoiceResult,
   type OverworldQuestCompletionResult,
   type OverworldQuestView,
@@ -21,12 +22,14 @@ import {
 import {
   compactOverworldActionResult,
   compactOverworldAreaTravelResult,
+  compactOverworldGoalPassageResult,
   compactOverworldQuestCompletionResult,
   compactOverworldRoadEncounterResult,
   compactOverworldServiceResult,
   compactOverworldTravelResult,
   type OverworldCompactActionResult,
   type OverworldCompactAreaTravelResult,
+  type OverworldCompactGoalPassageResult,
   type OverworldCompactQuestCompletionResult,
   type OverworldCompactRoadEncounterResult,
   type OverworldCompactServiceResult,
@@ -379,6 +382,24 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
         "travel",
         (session) => session.travelTo(destinationTownId),
         compactOverworldTravelResult,
+      );
+    },
+
+    follow_overworld_session_goal<Args extends { session_id: string } & OverworldResponseOptions>(
+      args: Args,
+    ): OverworldSessionResponse<
+      "passage",
+      OverworldJourneyGoalPassageResult,
+      DefaultCompactOverworldResponse<Args>,
+      OverworldCompactGoalPassageResult
+    > {
+      const responseOptions = defaultCompactOverworldResponse(args);
+      return overworldSessions.run(
+        responseOptions,
+        args.session_id,
+        "passage",
+        (session) => session.followGoalPassage(),
+        compactOverworldGoalPassageResult,
       );
     },
 

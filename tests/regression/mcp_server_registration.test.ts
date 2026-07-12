@@ -31,6 +31,7 @@ const OVERWORLD_SCHEMA_TOOLS = [
   "export_overworld_session",
   "restore_overworld_session",
   "travel_overworld_session",
+  "follow_overworld_session_goal",
   "resolve_overworld_session_road_encounter",
   "resupply_overworld_session",
   "rest_overworld_session",
@@ -270,7 +271,9 @@ describe("MCP server registration", () => {
       registeredToolBlock(toolName),
     ).join("\n");
 
-    expect(overworldSchemaSource.length).toBeLessThanOrEqual(7250);
+    // One zero-argument game-native passage action adds a bounded schema block;
+    // retain a tight ceiling so transport prose cannot silently regrow.
+    expect(overworldSchemaSource.length).toBeLessThanOrEqual(7600);
     expect(overworldSchemaSource).not.toContain("Session id returned by start_overworld");
     expect(overworldSchemaSource).not.toContain("returns compact context by default");
     expect(overworldSchemaSource).not.toContain("from the session observation");
@@ -297,6 +300,7 @@ describe("MCP server registration", () => {
       "start_overworld",
       "restore_overworld_session",
       "travel_overworld_session",
+      "follow_overworld_session_goal",
       "resolve_overworld_session_road_encounter",
       "resupply_overworld_session",
       "rest_overworld_session",
@@ -318,6 +322,11 @@ describe("MCP server registration", () => {
     expect(registeredToolBlock("complete_overworld_session_quest")).toContain(
       "expected_rpg_state_hash",
     );
+    expect(registeredToolBlock("follow_overworld_session_goal")).not.toMatch(
+      /destination_town_id|road_id|choice:/,
+    );
+    expect(registeredToolBlock("travel_overworld_session")).toContain("Adjacent destination town.");
+    expect(registeredToolBlock("travel_overworld_session")).not.toContain("routes multi-leg");
 
     const overworldDefaults = serverSourceBlock(
       "function defaultCompactOverworld",
@@ -500,6 +509,7 @@ describe("MCP server registration", () => {
         "start_overworld",
         "get_overworld_session_context",
         "travel_overworld_session",
+        "follow_overworld_session_goal",
         "scout_overworld_session_poi",
         "talk_overworld_session_contact",
         "investigate_overworld_session_event",

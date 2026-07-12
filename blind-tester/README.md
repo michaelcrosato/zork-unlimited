@@ -31,8 +31,9 @@ subscription allowance, which is the best value — exactly per the project goal
   a game-authored story choice may install the next objective. The harness
   interviews only after the player ends through a retention choice; it supplies
   no route, coverage assignment, solution, or call-count stopping rule.
-  Follow-up navigation comes only from the game's shared next-road goal hint,
-  never from the harness.
+  Follow-up navigation comes only from the game's shared Goal Passage choice,
+  which yields at real road choices and resource boundaries, never from the
+  harness.
 - **Structural development/QA (explicit only):** `--smoke`, `--mock`, crawler,
   and direct `--quest <id>` paths prove plumbing/mechanics. They are labeled
   non-pure and retention-ineligible, and can never resume or count as pure live

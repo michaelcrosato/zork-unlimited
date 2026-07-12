@@ -42,7 +42,9 @@ describe("MCP pure play mode", () => {
     expect(toolAvailableInPlayMode("start_world_quest", "full")).toBe(true);
     expect(toolAvailableInPlayMode("start_world_quest", "pure")).toBe(false);
     expect(toolAvailableInPlayMode("plan_overworld_session_route", "pure")).toBe(true);
+    expect(toolAvailableInPlayMode("follow_overworld_session_goal", "pure")).toBe(true);
     expect(toolAvailableInPlayMode("choose_overworld_session_story", "pure")).toBe(true);
+    expect(PURE_PLAYER_TOOLS.has("follow_overworld_session_goal")).toBe(true);
     expect(PURE_PLAYER_TOOLS.has("choose_overworld_session_story")).toBe(true);
   });
 
@@ -79,6 +81,23 @@ describe("MCP pure play mode", () => {
         );
         expect(JSON.stringify(storyChoiceTool)).not.toMatch(
           /send_wagon_to_cade|send_wardens_north|keep_household_correction|publish_dosage_warning|advocate|cold_forge|Edric|Godwin|wormwood|public scrutiny|family's trust/i,
+        );
+
+        const goalPassageTool = listed.tools.find(
+          (tool) => tool.name === "follow_overworld_session_goal",
+        );
+        expect(goalPassageTool).toBeDefined();
+        const goalPassageProperties = goalPassageTool?.inputSchema.properties as
+          | Record<string, unknown>
+          | undefined;
+        expect(goalPassageTool?.inputSchema.required).toEqual(["session_id"]);
+        expect(goalPassageProperties).toHaveProperty("session_id");
+        expect(goalPassageProperties).toHaveProperty("expected_snapshot_hash");
+        expect(goalPassageProperties).not.toHaveProperty("destination_town_id");
+        expect(goalPassageProperties).not.toHaveProperty("road_id");
+        expect(goalPassageProperties).not.toHaveProperty("choice");
+        expect(JSON.stringify(goalPassageTool)).not.toMatch(
+          /targetQuestId|targetTownId|targetAreaId|endingId|wolf_winter|gallowmere|content\/rpg|win_conditions|maneuver_/i,
         );
 
         const started = await client.callTool({

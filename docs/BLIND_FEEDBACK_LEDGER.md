@@ -5,11 +5,11 @@ Generated deterministically from verified blind reports. The latest entries stay
 ## Summary
 
 - Reports dir: `blind-tester/reports`
-- Accepted reports: 466
+- Accepted reports: 467
 - Rejected or ignored markdown reports: 30
-- Latest report stamp: 20260712T174958Z
+- Latest report stamp: 20260712T185748Z
 - Recent entry limit: 100
-- Archived accepted entries collapsed into traits: 366
+- Archived accepted entries collapsed into traits: 367
 
 ## Recent Common Traits
 
@@ -24,6 +24,10 @@ Generated deterministically from verified blind reports. The latest entries stay
 | 2 | 20260708T203905Z | confusion | town counted visited before road encounter resolved | overworld |
 | 2 | 20260708T203156Z | confusion | hidden counts are useful but abstract | overworld |
 | 2 | 20260708T202531Z | confusion | quest tone disconnected from Albany overworld | overworld |
+| 1 | 20260712T185748Z | bug S1 | Albany Station Quarter, move_overworld_session_area call: Rejected an area_id-only call, silently requiring area_rout... | overworld |
+| 1 | 20260712T185748Z | confusion | area_route_id vs area_id parameter mismatch on move action | overworld |
+| 1 | 20260712T185748Z | confusion | compact numeric tuples require legend cross-referencing at first | overworld |
+| 1 | 20260712T185748Z | worst moment | The one rejected move_overworld_session_area call from guessing the wrong parameter name | overworld |
 | 1 | 20260712T174958Z | bug S0 | overworld road encounters (I-90/I-88 corridors): The three road-encounter strategy options repeated the same template... | overworld |
 | 1 | 20260712T174958Z | confusion | multi-leg travel to an undiscovered distant town requires hopping town-by-town rather than routing directly | overworld |
 | 1 | 20260712T174958Z | confusion | no clear signal for when supplies/fatigue become critically low vs. merely inconvenient | overworld |
@@ -36,15 +40,12 @@ Generated deterministically from verified blind reports. The latest entries stay
 | 1 | 20260712T161727Z | confusion | unexplained 'Holt' guard reference in Oneonta sickroom | overworld |
 | 1 | 20260712T161727Z | worst moment | The unexplained 'Holt' guard reference in the Tanner's Fever corridor scene, which read as a dangling thread from una... | overworld |
 | 1 | 20260712T152230Z | bug S0 | road encounter flavor text (Rome/Oneida corridor and others): Templated/repeated 'expect truck stops...' phrasing acr... | overworld |
-| 1 | 20260712T152230Z | confusion | opaque compact-context tuples without the legend | overworld |
-| 1 | 20260712T152230Z | confusion | unexplained renown/decision-checkpoint bookkeeping | overworld |
-| 1 | 20260712T152230Z | worst moment | Realizing supplies had dropped to 2/8 right as I arrived in Rome, a near-miss that was avoidable friction rather than... | overworld |
-| 1 | 20260712T144457Z | bug S0 | Overworld vitals display, Syracuse/Oswego rest & resupply: Max supplies value shown inconsistently (6 vs 8) across ot... | overworld |
 
 ## Recent Entries
 
 | Stamp | Source | Seed | Mode | Decisions | C/E | Stuck | Replay | Report | Signal |
 | --- | --- | ---: | --- | ---: | --- | --- | --- | --- | --- |
+| 20260712T185748Z | overworld | 7 | pure | 90 | 4/5 | no | yes | `blind-tester/reports/20260712T185748Z_overworld_seed7.md` | confusions: area_route_id vs area_id parameter mismatch on move action; compact numeric tuples require legend cross-referencing at first \| bugs: S1 Albany Station Quar... |
 | 20260712T174958Z | overworld | 2524 | pure | 74 | 5/4 | no | yes | `blind-tester/reports/20260712T174958Z_overworld_seed2524.md` | confusions: multi-leg travel to an undiscovered distant town requires hopping town-by-town rather than routing directly; no clear signal for when supplies/fatigue beco... |
 | 20260712T161727Z | overworld | 2421 | pure | 96 | 4/5 | no | yes | `blind-tester/reports/20260712T161727Z_overworld_seed2421.md` | confusions: unclear which of talk/scout/investigate would surface the quest lead; unexplained 'Holt' guard reference in Oneonta sickroom; backtracking route Albany->Sa... |
 | 20260712T152230Z | overworld | 2319 | pure | 96 | 5/4 | no | yes | `blind-tester/reports/20260712T152230Z_overworld_seed2319.md` | confusions: opaque compact-context tuples without the legend; unexplained renown/decision-checkpoint bookkeeping \| bugs: S0 road encounter flavor text (Rome/Oneida cor... |
@@ -144,7 +145,6 @@ Generated deterministically from verified blind reports. The latest entries stay
 | 20260708T195409Z | overworld | 550 | legacy_guided | — | 4/4 | no | yes | `blind-tester/reports/20260708T195409Z_overworld_seed550.md` | confusions: modern Albany quest jumps to mythic winter steading; jobs discovered in other areas are not visible until moving; look around often repeats room text \| bug... |
 | 20260708T195408Z | overworld | 549 | legacy_guided | — | 4/4 | no | yes | `blind-tester/reports/20260708T195408Z_overworld_seed549.md` | confusions: modern Albany to mythic winter steading transition; compact journal truncation with hash-like suffixes; local jobs feel abstract \| bugs: S2 Albany Station... |
 | 20260708T195408Z | overworld | 548 | legacy_guided | — | 4/4 | no | yes | `blind-tester/reports/20260708T195408Z_overworld_seed548.md` | confusions: previously discovered jobs disappear from current area context; compact quest text truncates important prose \| bugs: S1 Albany Station Quarter/event resolu... |
-| 20260708T195407Z | overworld | 547 | legacy_guided | — | 4/4 | no | yes | `blind-tester/reports/20260708T195407Z_overworld_seed547.md` | confusions: compact prose often truncated; road encounter fiction appears after choice; hidden counters do not say where to search next \| bugs: S1 Albany Civic Center... |
 
 ## Archived Trait Categories
 

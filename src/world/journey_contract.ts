@@ -173,9 +173,31 @@ export type JourneyGoalCompletionPresentationContext = Readonly<{
   continueConsequenceSuffix?: string;
 }>;
 
+/**
+ * A player-facing, game-owned passage toward the current authored objective.
+ * It deliberately carries no town ids, road ids, intermediate path, or event
+ * details: those become visible only as the player actually travels them.
+ */
+export type JourneyGoalPassagePresentation = Readonly<{
+  id: "follow_current_goal";
+  label: string;
+  destination: string;
+  roadCount: number;
+  baseMinutes: number;
+  estimatedMinutes: number;
+  suppliesNeeded: number;
+  supplyDeficit: number;
+  suppliesAfter: number;
+  fatigueAfter: number;
+  travelConditionAfter: string;
+  consequence: string;
+  stopRule: string;
+}>;
+
 export type JourneyPresentationContext = Readonly<{
   goalCompletion?: JourneyGoalCompletionPresentationContext;
   goalGuidance?: string | null;
+  goalPassage?: JourneyGoalPassagePresentation | null;
   storyChoice?: JourneyStoryChoicePrompt | null;
 }>;
 
@@ -189,6 +211,7 @@ export type JourneyPresentation = Readonly<{
   nextCheckpoint: number | null;
   decisionProof: JourneyDecisionProof;
   goalGuidance: string | null;
+  goalPassage: JourneyGoalPassagePresentation | null;
   pendingChoice: JourneyChoicePrompt | null;
   storyChoice: JourneyStoryChoicePrompt | null;
   retentionHistory: readonly JourneyRetentionEvent[];
@@ -827,6 +850,55 @@ function freezeStoryChoice(
   });
 }
 
+function freezeGoalPassage(
+  goalPassage: JourneyGoalPassagePresentation | null | undefined,
+): JourneyGoalPassagePresentation | null {
+  if (!goalPassage) return null;
+  if (goalPassage.id !== "follow_current_goal") {
+    throw new Error("Journey goal passage has an unknown action id.");
+  }
+  if (
+    goalPassage.label.trim().length === 0 ||
+    goalPassage.destination.trim().length === 0 ||
+    goalPassage.consequence.trim().length === 0 ||
+    goalPassage.stopRule.trim().length === 0 ||
+    goalPassage.travelConditionAfter.trim().length === 0
+  ) {
+    throw new Error("Journey goal passage text fields cannot be empty.");
+  }
+  for (const value of [
+    goalPassage.roadCount,
+    goalPassage.baseMinutes,
+    goalPassage.estimatedMinutes,
+    goalPassage.suppliesNeeded,
+    goalPassage.supplyDeficit,
+    goalPassage.suppliesAfter,
+    goalPassage.fatigueAfter,
+  ]) {
+    if (!Number.isSafeInteger(value) || value < 0) {
+      throw new Error("Journey goal passage estimates must be non-negative safe integers.");
+    }
+  }
+  if (goalPassage.roadCount === 0) {
+    throw new Error("Journey goal passage requires at least one road.");
+  }
+  return Object.freeze({
+    id: goalPassage.id,
+    label: goalPassage.label,
+    destination: goalPassage.destination,
+    roadCount: goalPassage.roadCount,
+    baseMinutes: goalPassage.baseMinutes,
+    estimatedMinutes: goalPassage.estimatedMinutes,
+    suppliesNeeded: goalPassage.suppliesNeeded,
+    supplyDeficit: goalPassage.supplyDeficit,
+    suppliesAfter: goalPassage.suppliesAfter,
+    fatigueAfter: goalPassage.fatigueAfter,
+    travelConditionAfter: goalPassage.travelConditionAfter,
+    consequence: goalPassage.consequence,
+    stopRule: goalPassage.stopRule,
+  });
+}
+
 export function journeyPresentation(
   state: JourneyContractSnapshot,
   context?: JourneyPresentationContext,
@@ -848,6 +920,7 @@ export function journeyPresentation(
       last: state.decisionProof.last ? Object.freeze({ ...state.decisionProof.last }) : null,
     }),
     goalGuidance,
+    goalPassage: freezeGoalPassage(context?.goalPassage),
     pendingChoice: pendingChoicePresentation(state, context),
     storyChoice: freezeStoryChoice(context?.storyChoice),
     retentionHistory: Object.freeze(state.retentionHistory.map(freezeRetentionEvent)),

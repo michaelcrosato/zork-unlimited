@@ -255,6 +255,102 @@ button:hover {
   font-weight: 700;
 }
 
+.journey-passage {
+  background:
+    linear-gradient(120deg, rgba(44, 35, 20, 0.96), rgba(23, 31, 25, 0.97)),
+    var(--panel-2);
+  border: 1px solid color-mix(in srgb, var(--road) 62%, var(--line));
+  border-left: 4px solid var(--road);
+  border-radius: 9px;
+  display: grid;
+  gap: 0.85rem 1rem;
+  grid-column: 1 / -1;
+  grid-template-columns: minmax(0, 1fr) minmax(11rem, auto);
+  padding: 0.9rem 1rem;
+}
+
+.journey-passage-copy,
+.journey-passage-copy h3,
+.journey-passage-copy p,
+.journey-passage-facts,
+.journey-passage-facts dd,
+.journey-passage-facts dt {
+  margin: 0;
+}
+
+.journey-passage-copy {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.journey-passage-copy h3 {
+  color: var(--ink);
+  font-size: clamp(1rem, 2vw, 1.25rem);
+}
+
+.journey-passage-consequence {
+  color: #d8d8cc;
+  max-width: 78ch;
+}
+
+.journey-passage-stop {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.journey-passage-stop strong {
+  color: #c9cabd;
+}
+
+.journey-passage-facts {
+  display: grid;
+  gap: 0.55rem;
+  grid-column: 1;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.journey-passage-facts div {
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid color-mix(in srgb, var(--road) 22%, var(--line));
+  border-radius: 7px;
+  display: grid;
+  gap: 0.15rem;
+  padding: 0.5rem 0.65rem;
+}
+
+.journey-passage-facts dt {
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  text-transform: uppercase;
+}
+
+.journey-passage-facts dd {
+  color: var(--road);
+  font-family: var(--font-display);
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.journey-passage-action {
+  align-self: stretch;
+  background: var(--road);
+  border-color: var(--road);
+  color: #17140e;
+  font-family: var(--font-display);
+  font-weight: 750;
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  min-height: 5.5rem;
+  min-width: 11rem;
+}
+
+.journey-passage-action:hover,
+.journey-passage-action:focus-visible {
+  background: #ecc66f;
+  border-color: #f7d98f;
+}
+
 .journey-decision-page,
 .journey-ended-page {
   align-items: center;
@@ -655,13 +751,6 @@ dd {
   overflow-wrap: anywhere;
 }
 
-.road-list em {
-  color: #c8d9bf;
-  font-size: 0.78rem;
-  font-style: normal;
-  overflow-wrap: anywhere;
-}
-
 .road-list button:disabled,
 .quest-list button:disabled {
   cursor: not-allowed;
@@ -1014,6 +1103,16 @@ dd {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
+  .journey-passage {
+    grid-template-columns: 1fr;
+  }
+
+  .journey-passage-action {
+    grid-column: 1;
+    grid-row: auto;
+    min-height: 3.5rem;
+  }
+
   .scene-heading,
   .location-topline {
     align-items: stretch;
@@ -1025,6 +1124,10 @@ dd {
   .journey-rhythm,
   .journey-choice-actions {
     grid-template-columns: 1fr;
+  }
+
+  .journey-passage-facts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .journey-rhythm div {

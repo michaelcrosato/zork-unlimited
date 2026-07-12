@@ -136,6 +136,41 @@ describe("formatSpectateEntry", () => {
     expect(travel).toContain("jackknifed truck narrowing the shoulder");
     expect(travel).toContain("⚠ road encounter");
 
+    const passage = at(
+      "follow_overworld_session_goal",
+      {},
+      JSON.stringify({
+        passage: {
+          destination: "Queensbury town",
+          stopped_at: "Saratoga Springs city",
+          stop_reason: "road_encounter",
+          minutes: [32, 0, 32],
+          supplies: [1, 5],
+          fatigue: [1, 1],
+          travel_condition: "ready",
+          legs: [
+            [
+              "road_albany_saratoga",
+              "albany_city",
+              "saratoga_springs_city",
+              32,
+              1,
+              1,
+              "relief_line",
+              "low",
+              "The northbound relief line",
+              "Wardens and relief wagons mark the road north.",
+            ],
+          ],
+        },
+      }),
+    );
+    expect(passage).toContain("goal passage → Queensbury town  [+32m]");
+    expect(passage).toContain("stopped at Saratoga Springs city (road_encounter)");
+    expect(passage).toContain("The northbound relief line (risk low)");
+    expect(passage).toContain("Wardens and relief wagons mark the road north.");
+    expect(passage).toContain("⚠ road encounter");
+
     const resolvedRoad = at(
       "resolve_overworld_session_road_encounter",
       { strategy: "assist_travelers" },

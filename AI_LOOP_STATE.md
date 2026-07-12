@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 551 -->
+<!-- historical_cycle_count: 552 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,14 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - goal_passage_decision_contract
+
+- Change: the authored current goal now presents one identical, game-native Goal Passage in UI and MCP; selecting it applies every real road cost and discovery, stops at objective/event/resource boundaries, and counts as one accepted player decision while manual adjacent travel remains available.
+- Evidence choice: 14/17 verified journey-v3 players reported routing or connective-travel friction, so this current cohort overrode the compiler's older Wolf compact-journal recommendation. `bug_0519` pins resource/log parity, interruption, checkpoint coexistence, save/restore, and pre-choice secrecy.
+- Pure evidence: independently verified pure/fresh seed 7 completed Wolf-Winter, Gallowmere, Tanner's Fever, and Breaking Weir by decision 90, continued at goals/checkpoints 24/40/48/70/80, then ended honestly at goal 4; clarity 4/5, enjoyment 5/5, replay true. Prior route-padding friction did not recur, though one low-severity `area_route_id` versus `area_id` mismatch remains.
+- Self-critique: PASS for shared decision semantics and a clean fresh canary, not causal retention proof—the report does not identify its exact travel tool calls, and the player still exited after four quests. The ledger has 467 accepted reports, only one newer than compile 466, so feedback compilation remains below its three-report threshold.
+- Guard: pre/post 6000-step crawls are green (`20260712T181935Z`, `20260712T185724Z`; 247/247 towns, 344/344 roads, 12/12 quests); browser play verified tutorial/card/encounter interruption; report copy SHA-256 is `b847618a3419d3cda4a52cbc40839dcd7b6104aae9e9ba3cdcfd665da9d0fb4b`; full health passed (311 files/2194 tests, UI, 12 packs). Immutable route memoization and duplicate-free verifier scheduling removed repeated work without changing proof limits.
 
 ### Cycle result - breaking_weir_flood_course_consequence
 
@@ -139,13 +147,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Effect: four authored quests replaced the post-Wolf template cliff; guided travel was called light rather than tedious. Next honest friction is Tanner's Fever's unhinted peaceful route/free retries.
 - Compatibility: both frozen contract-v2 canaries still independently verify; v1/v2/v3 retention cohorts remain separate.
 - Guard: focused suites, post-change 6000-step crawl, UI browser tutorial/status check, independent v3 report verification, and full health (295 files/2091 tests, UI, 12 packs) passed.
-
-### Cycle result - consequential_journey_decision_accounting
-
-- Contract surface: journey v2 gives UI/MCP one engine-owned meaningful-decision classifier; movement, stateful clues, substantive dialogue, combat, skill checks, preparation, and situation changes count, while context/repeats, dialogue navigation, unchanged services, persistence, rejections, retention choice, and technical foldback do not.
-- Integrity surface: compact/full proof parity, v7 save/restore, atomic non-death quest foldback at a simultaneous checkpoint, rejected-call metadata, current-contract fleet resume, and hardened pure-runner tool isolation are pinned; frozen v1 receipts still verify but compile only in their own cohort.
-- Blind playtest: canonical pure Wolf-Winter/overworld seed 7 ran 111 turns / 7.8 minutes, continued at goal completion (decision 22) and checkpoint 40, then voluntarily ended at 80—the first standardized run beyond 40; clarity 4, enjoyment 3, replay no.
-- Feedback surface: Wolf-Winter remained the 5/5 high point, but the player found no replacement goal and called Albany → Colonie → Schenectady district/job/event/site shells near-identical; this independently corroborates 44/46 frozen-v1 post-Wolf depth complaints.
-- Compiler surface: `retention.json` schema v2 stratifies journey-contract cohorts, so accepted-decision/checkpoint curves can never pool v1 and v2 semantics; one new report does not meet the ≥3-report compile threshold.
-- Self-critique: PASS for truthful measurement and the first real 80-decision continuation, not for retention—the player still chose exit and would not replay. An ending-sensitive Albany aftermath, consequential follow-up choice, and visible next local objective are next.
-- Guard: pre/post 6,000-step crawls are green (latest `20260712T013559Z`, all 12 quests / 247 nodes); browser parity, targeted regressions, independently reverified receipt, and `npm run health` pass.

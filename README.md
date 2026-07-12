@@ -150,9 +150,11 @@ the current goal, completed goals, goal-bound retention choices, decision proof,
 checkpoint history, and exit reason.
 
 When an active follow-up goal names another town, that same journey object and
-the UI journey card provide a current-location next-road hint plus the remaining
-road count/time. The hint updates after each leg and becomes local-area guidance
-on arrival, so the objective never depends on blind map traversal.
+the UI journey card present one Goal Passage choice with the destination,
+road/time forecast, and honest supply/fatigue consequences. Selecting it applies
+every real road cost but stops at authored road choices, objective arrival, or a
+new resource boundary. The player may still take roads manually; the pure
+harness supplies neither route nor recommendation.
 
 ## Testing: a three-tier pyramid, coupled by an exit interview
 

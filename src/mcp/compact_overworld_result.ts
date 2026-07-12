@@ -1,6 +1,7 @@
 import type {
   OverworldActionResult,
   OverworldAreaTravelResult,
+  OverworldJourneyGoalPassageResult,
   OverworldQuestCompletionResult,
   OverworldRoadEncounterResult,
   OverworldRoadEncounterStrategy,
@@ -18,6 +19,7 @@ import {
   compactOverworldTitle,
   compactOverworldTitleRefs,
   compactPendingRoad,
+  OVERWORLD_COMPACT_ROUTE_STEP_LIMIT,
   OVERWORLD_COMPACT_ROAD_EVENT_SUMMARY_CHAR_LIMIT,
   type OverworldCompactJournalEntry,
   type OverworldCompactQuestRef,
@@ -101,6 +103,25 @@ export type OverworldCompactTravelResult = readonly [
   roadEventTitle: string | null,
   roadEventSummary: string | null,
 ];
+
+/**
+ * One game-native commitment to the current goal passage. The aggregates stay
+ * self-describing, while each traversed leg reuses the bounded immediate-travel
+ * tuple. A capped response can omit only already-traversed history; it never
+ * substitutes planned roads or future road scenes.
+ */
+export type OverworldCompactGoalPassageResult = {
+  goal_id: string;
+  destination: string;
+  stopped_at: string;
+  stop_reason: OverworldJourneyGoalPassageResult["stopReason"];
+  minutes: readonly [base: number, delay: number, total: number];
+  supplies: readonly [used: number, after: number];
+  fatigue: readonly [gained: number, after: number];
+  travel_condition: string;
+  legs: OverworldCompactTravelResult[];
+  legs_truncated?: true;
+};
 
 function compactOverworldJournalEntry(entry: {
   kind: string;
@@ -205,4 +226,24 @@ export function compactOverworldTravelResult(result: TravelLogEntry): OverworldC
     event ? compactOverworldTitle(event.title) : null,
     event ? compactText(event.summary, OVERWORLD_COMPACT_ROAD_EVENT_SUMMARY_CHAR_LIMIT) : null,
   ];
+}
+
+export function compactOverworldGoalPassageResult(
+  result: OverworldJourneyGoalPassageResult,
+): OverworldCompactGoalPassageResult {
+  const legs = result.legs
+    .slice(0, OVERWORLD_COMPACT_ROUTE_STEP_LIMIT)
+    .map(compactOverworldTravelResult);
+  return {
+    goal_id: result.goalId,
+    destination: compactOverworldLabel(result.destination),
+    stopped_at: compactOverworldLabel(result.stoppedAt),
+    stop_reason: result.stopReason,
+    minutes: [result.baseMinutes, result.delayMinutes, result.minutes],
+    supplies: [result.suppliesUsed, result.suppliesAfter],
+    fatigue: [result.fatigueGained, result.fatigueAfter],
+    travel_condition: result.travelConditionAfter,
+    legs,
+    ...(result.legs.length > legs.length ? { legs_truncated: true as const } : {}),
+  };
 }

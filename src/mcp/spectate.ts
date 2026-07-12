@@ -168,6 +168,37 @@ export function formatSpectateEntry(
         out.push(`   ⚠ road encounter — resolve before travelling on`);
       break;
     }
+    case "follow_overworld_session_goal": {
+      const passage = asRecord(p.passage);
+      const aggregateMinutes = passage.minutes;
+      const minutes = Array.isArray(aggregateMinutes) ? aggregateMinutes[2] : aggregateMinutes;
+      const mins = typeof minutes === "number" && minutes > 0 ? `  [+${minutes}m]` : "";
+      const destination =
+        typeof passage.destination === "string" ? passage.destination : "the current objective";
+      const stoppedAt = passage.stopped_at ?? passage.stoppedAt;
+      const stopReason = passage.stop_reason ?? passage.stopReason;
+      head(`▷ goal passage → ${destination}${mins}`);
+      if (typeof stoppedAt === "string") {
+        out.push(
+          `   stopped at ${stoppedAt}${typeof stopReason === "string" ? ` (${stopReason})` : ""}`,
+        );
+      }
+      const legs = Array.isArray(passage.legs) ? passage.legs : [];
+      for (const leg of legs) {
+        const scene = travelRoadSceneOf(leg);
+        if (!scene) continue;
+        out.push(`   ${scene.title} (risk ${scene.risk})`);
+        out.push(`   ${scene.summary}`);
+      }
+      if (
+        stopReason === "road_encounter" ||
+        asRecord(ctx.pending_road).id !== undefined ||
+        asRecord(p.pending_road).id !== undefined
+      ) {
+        out.push(`   ⚠ road encounter — resolve before travelling on`);
+      }
+      break;
+    }
     default: {
       // Overworld action results carry a journal `entry` = [kind, title, when]
       // plus optional discovery lists — render that as a readable beat. This

@@ -2,55 +2,50 @@
 
 Token-small AFK-loop handoff: keep one synthesis and chosen move under 60 lines.
 
-## Cycle: 2026-07-12 - Journey v3 Authored Goal Chain
+## Cycle: 2026-07-12 - Current-Goal Passage
 
 ## Synthesis
 
-Historical contract v1 counted every accepted gameplay outcome. Contract v2
-introduced the shared meaningful-decision classifier and produced verified
-decision-22/23 → 40 → 80 canaries, but retained one hardcoded goal. Preserve
-both cohorts as immutable retention evidence separate from current v3.
+Journey contract v3 now has 17 sidecar-verified pure/fresh exits at 74–130
+meaningful decisions. Every player continued at least once and all 17 said they
+would replay, so current evidence does not prove travel causes churn.
 
-Contract v3 keeps v2 counting and adds a versioned current goal, completed-goal
-history, and goal identity on every goal-completion retention event. Wolf-Winter
-now returns truthful ending context before the initial choice; `end` installs
-nothing, while `continue` exposes one ending-sensitive Albany dispatch choice.
-Both consequences lead honestly to Hedrick Cradoc and The Gallowmere, then the
-remaining authored quests replace the old objective-free town checklist.
-
-The first genuine v3 run continued at goal 23, checkpoint 40, and goal 53, then
-ended at 80 after undirected travel toward Oneonta. An external worktree reset
-deleted its private evidence before verification, so it is design evidence, not
-a retention cohort row. The game now puts a dynamic next-road/remaining-route
-hint in the same journey object and UI card for every follow-up objective.
+It does prove a repeated pacing defect: 14/17 mentioned long-haul or routing
+friction, nine hit manual/non-adjacent routing, and nine called connective
+logistics repetitive or padding. The game privately knows the unrestricted
+route to its authored goal, but the public planner rejects an undiscovered goal
+town, destination travel accepts only adjacent towns despite promising
+multi-leg routing, and every predetermined road click advances the retention
+clock as if it were a new player decision.
 
 ## Chosen Move
 
-Finish integration verification and collect the first verified pure v3 exit.
+Make the current objective's road commitment a shared, interruptible Goal
+Passage choice while retaining manual travel.
 
-- Keep the pre-retention teaser derived and non-counting.
-- Keep continue/end atomic, game-owned, and bound to the completed goal.
-- Count the dawn-dispatch choice once as `situation_changed`.
-- Persist ending, branch, goal history, and exact campaign-journal consequence.
-- Render identical goal, route hint, story choice, and retention data in UI/MCP.
+- Derive one identical presentation in the Journey object used by UI and MCP.
+- Show the named destination and aggregate time/supply/fatigue consequences.
+- Apply every real leg, cost, discovery, ambient report, and travel-log entry.
+- Stop for authored road choices, objective arrival, or a new resource tier.
+- Count one successful passage selection once; count later choices separately.
+- Reveal no intermediate route, future event, hidden target, or solution first.
 
 ## Acceptance
 
-1. All three Wolf victories produce truthful return text and the audited 3×2
-   wagon-consequence matrix.
-2. Story choice exists only after continue; both visible options activate a
-   version-2 Gallowmere goal without exposing hidden quest solutions.
-3. Gallowmere completion records goal 2 and offers another goal-bound choice
-   without disturbing fixed 40/80/120/+40 cadence.
-4. Every active follow-up goal gives a shared, current-location next-road hint;
-   arriving changes it to the visible local-area objective.
-5. Save/restore, journal proof, compact/full parity, crawl, browser, health, and
-   verify-integrity pass before commit.
-6. A fresh pure v3 canary exits through the game contract; later v3 fleet data
-   stays separate from historical v1/v2 curves.
+1. UI, full MCP, and compact MCP expose the same Goal Passage choice.
+2. One passage has exact resource/log parity with the same manual road legs.
+3. Required road events remain unresolved and interrupt passage immediately.
+4. Resource boundaries yield before an unaccepted later penalty tier.
+5. Checkpoints, save/restore, and decision proofs remain exact after passage.
+6. Manual roads and discovered-route planning retain their prior behavior.
+7. The pure harness remains neutral; the game alone presents this action.
+8. Pre/post crawl, a fresh pure exit, health, and integrity are green.
 
 ## Deferred Levers
 
-- Bind sidecars to seed/model/report digest before the next large fleet.
-- Deepen road-encounter prose and reduce long-route rest repetition.
+- Measure whether passage improves pacing/retention in later pure cohorts;
+  recurrence supports this correction, but retention causality is unproven.
+- Clarify `area_route_id` versus `area_id` only if the fresh seed-7 mismatch
+  recurs; it was a one-time, low-severity transport-schema learning cost.
+- Deepen road-event prose only if post-passage players still report sameness.
 - Audit NPC-name collisions and town-template diversity after fresh evidence.
