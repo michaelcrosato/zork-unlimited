@@ -2,7 +2,8 @@
  * Regression for bug_0504: Wolf-Winter's day-book and Cade once repeated a complete
  * answer key, while Cade's two topics presented the leader's close and wait openings as
  * contradictory instructions. The sources now have distinct jobs: the book records
- * evidence, and Cade labels a quick/open line versus a guarded/patient alternative.
+ * evidence, and Cade teaches compatible quick/open and guarded/patient lessons whose
+ * tactical commitment happens later at the wolves.
  */
 import { describe, expect, it } from "vitest";
 import { makeStep } from "../../src/core/engine.js";
@@ -47,6 +48,18 @@ function narration(events: ReturnType<typeof takeAction>["events"]): string {
   return events.flatMap((event) => (event.type === "narration" ? [event.text] : [])).join(" ");
 }
 
+function startCadeDialogue(seed: number): GameState {
+  let state = initStateForRpgPack(index, seed);
+  state = act(state, "go_north");
+  return act(state, "talk_houndsman");
+}
+
+function dialogueActionIds(state: GameState): string[] {
+  return enumerateRpgActions(index, state)
+    .map((action) => action.id)
+    .filter((id) => id.startsWith("ask_"));
+}
+
 describe("bug_0504 — Wolf-Winter clues are complementary rather than contradictory", () => {
   it("uses the day-book for reconnaissance and prep evidence, not combat commands", () => {
     const book = pack.objects.find((object) => object.id === "day_book")?.read_text ?? "";
@@ -62,12 +75,15 @@ describe("bug_0504 — Wolf-Winter clues are complementary rather than contradic
     expect(book).not.toMatch(/\b(?:close|wait)\b[^]*\b(?:feint|rush)\b/i);
   });
 
-  it("labels Cade's two topics as quick/open and guarded/patient alternatives", () => {
+  it("offers Cade's quick/open and guarded/patient lessons without claiming they are exclusive", () => {
     const root = node("cade_root");
     const quick = node("cade_wolves")?.npc_text ?? "";
     const guarded = node("cade_byre")?.npc_text ?? "";
 
-    expect(root?.npc_text).toMatch(/quick spear-hand[^]*guarded byre plan[^]*two roads/i);
+    expect(root?.npc_text).toMatch(
+      /either lesson[^]*or both before you go[^]*quick spear-hand[^]*guarded byre plan/i,
+    );
+    expect(root?.npc_text).not.toMatch(/two roads/i);
     expect(root?.topics.find((topic) => topic.id === "wolves")?.prompt).toMatch(
       /quick spear-hand/i,
     );
@@ -84,36 +100,57 @@ describe("bug_0504 — Wolf-Winter clues are complementary rather than contradic
     expect(guarded).not.toMatch(/\bset\b[^]*\bdrive\b|\bwheel\b[^]*\bturn\b/i);
   });
 
-  it("preserves both roles in the actual dialogue surface and compact journal memory", () => {
-    let state = initStateForRpgPack(index, 930014);
-    state = act(state, "go_north");
-    state = act(state, "talk_houndsman");
+  it("keeps root copy and legal lesson actions aligned when quick is heard first", () => {
+    let state = startCadeDialogue(930014);
+    let observation = buildRpgObservation(index, state);
+    expect(observation.dialogue?.npc_text).toMatch(/either lesson[^]*both before you go/i);
+    expect(dialogueActionIds(state)).toEqual(["ask_wolves", "ask_byre", "ask_leave"]);
+
     const quick = takeAction(state, "ask_wolves");
     state = quick.state;
     expect(narration(quick.events)).toMatch(/Quick lines/i);
     expect(activeDialogue(index, state)?.node.id).toBe("cade_root");
-    const quickObservation = buildRpgObservation(index, state);
-    expect(quickObservation.dialogue?.npc_text).toMatch(/Ask what else you need/i);
-    expect(quickObservation.available_actions.map((action) => action.id)).toEqual(
-      expect.arrayContaining(["ask_byre", "ask_leave"]),
+    observation = buildRpgObservation(index, state);
+    expect(observation.dialogue?.npc_text).toMatch(
+      /quick spear-hand[^]*guarded byre plan is still yours to learn[^]*Ask for it/i,
     );
-    expect(quickObservation.available_actions.map((action) => action.id)).not.toContain(
-      "ask_wolves_back",
-    );
+    expect(dialogueActionIds(state)).toEqual(["ask_byre", "ask_leave"]);
     expect(state.journal.some((entry) => /quick\/open line/i.test(entry))).toBe(true);
 
     const guarded = takeAction(state, "ask_byre");
     state = guarded.state;
     expect(narration(guarded.events)).toMatch(/Guarded lines[^]*patient alternative/i);
     expect(activeDialogue(index, state)?.node.id).toBe("cade_root");
-    const guardedObservation = buildRpgObservation(index, state);
-    expect(guardedObservation.dialogue?.npc_text).toMatch(/Ask what else you need/i);
-    expect(guardedObservation.available_actions.map((action) => action.id)).toContain("ask_leave");
-    expect(guardedObservation.available_actions.map((action) => action.id)).not.toContain(
-      "ask_byre_back",
+    observation = buildRpgObservation(index, state);
+    expect(observation.dialogue?.npc_text).toMatch(
+      /Both lessons are yours[^]*do not choose a road here[^]*commit[^]*later[^]*at the wolves/i,
     );
+    expect(dialogueActionIds(state)).toEqual(["ask_leave"]);
     expect(state.journal.some((entry) => /guarded\/patient/i.test(entry))).toBe(true);
     expect(state.flags).toMatchObject({ heard_counsel: true, heard_plan: true });
+    expect(state.vars).toMatchObject({ attack: 7, defense: 3, hp: 30, score: 5 });
+  });
+
+  it("names the still-available quick lesson when the guarded plan is heard first", () => {
+    let state = startCadeDialogue(930015);
+    const guarded = takeAction(state, "ask_byre");
+    state = guarded.state;
+
+    let observation = buildRpgObservation(index, state);
+    expect(observation.dialogue?.npc_text).toMatch(
+      /guarded byre plan[^]*quick spear-hand is still yours to learn[^]*Ask for it/i,
+    );
+    expect(dialogueActionIds(state)).toEqual(["ask_wolves", "ask_leave"]);
+
+    const quick = takeAction(state, "ask_wolves");
+    state = quick.state;
+    observation = buildRpgObservation(index, state);
+    expect(observation.dialogue?.npc_text).toMatch(
+      /Both lessons are yours[^]*commit[^]*later[^]*at the wolves/i,
+    );
+    expect(dialogueActionIds(state)).toEqual(["ask_leave"]);
+    expect(state.flags).toMatchObject({ heard_counsel: true, heard_plan: true });
+    expect(state.vars).toMatchObject({ attack: 7, defense: 3, hp: 30, score: 5 });
   });
 
   it("matches the labels to the leader's real attack-versus-guard tradeoff", () => {

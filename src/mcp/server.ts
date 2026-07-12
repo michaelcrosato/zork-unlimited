@@ -395,7 +395,7 @@ const COMPACT_EVENTS = {
 };
 const COMPACT_OBSERVATION = {
   compact_observation: B("False swaps the compact context for the verbose observation."),
-  include_actions: B("Bundle legal action ids into the compact context."),
+  include_actions: B("Legal action ids in context; enforced for active pure compact responses."),
   include_context_version: B("Echo the context schema version."),
 };
 const IF_STATE_HASH = {
@@ -426,19 +426,26 @@ function defaultCompactRpg(args: unknown): never {
     delete input.hide_graph;
     delete input.seed;
   }
-  return {
+  const response = {
     hide_graph: true,
     compact_actions: true,
     compact_events: true,
     compact_observation: true,
     ...input,
-    ...(PLAY_MODE === "pure" ? { hide_graph: true } : {}),
+  };
+  if (PLAY_MODE !== "pure") return response as never;
+  return {
+    ...response,
+    hide_graph: true,
+    ...(input.compact_observation === false
+      ? { compact_actions: input.compact_actions ?? false }
+      : { include_actions: true }),
   } as never;
 }
 
 function defaultCompactActions(args: unknown): never {
   const input = typeof args === "object" && args !== null ? args : {};
-  return { compact_actions: true, ...input } as never;
+  return { compact_actions: PLAY_MODE === "pure" ? false : true, ...input } as never;
 }
 
 function defaultCompactOverworld(args: unknown): never {
@@ -453,14 +460,21 @@ function defaultCompactOverworldAndRpg(args: unknown): never {
     delete input.hide_graph;
     delete input.seed;
   }
-  return {
+  const response = {
     compact_context: true,
     compact_result: true,
     hide_graph: true,
     compact_actions: true,
     compact_observation: true,
     ...input,
-    ...(PLAY_MODE === "pure" ? { hide_graph: true } : {}),
+  };
+  if (PLAY_MODE !== "pure") return response as never;
+  return {
+    ...response,
+    hide_graph: true,
+    ...(input.compact_observation === false
+      ? { compact_actions: input.compact_actions ?? false }
+      : { include_actions: true }),
   } as never;
 }
 
@@ -827,11 +841,18 @@ tool(
 );
 tool(
   "list_legal_actions",
-  "List legal RPG action ids and authored unavailable choices with reasons.",
+  "List legal RPG actions and authored unavailable choices with reasons.",
   {
     ...SESSION,
     ...IF_STATE_HASH,
-    compact_actions: z.boolean().optional().describe("False returns labeled options."),
+    compact_actions: z
+      .boolean()
+      .optional()
+      .describe(
+        PLAY_MODE === "pure"
+          ? "True returns bare action ids; defaults to labeled options."
+          : "False returns labeled options.",
+      ),
   },
   (a) => api.list_legal_actions(defaultCompactActions(a)),
 );

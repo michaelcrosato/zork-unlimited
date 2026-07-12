@@ -132,7 +132,9 @@ describe("bug_0258 — The Wolf-Winter: the optional wedge is signposted and dis
 
     const obs = buildRpgObservation(index, d.state());
     expect(activeDialogue(index, d.state())?.node.id).toBe("cade_root");
-    expect(obs.dialogue?.npc_text).toMatch(/Ask what else you need/i);
+    expect(obs.dialogue?.npc_text).toMatch(
+      /guarded byre plan[^]*quick spear-hand is still yours to learn[^]*Ask for it/i,
+    );
     const resumedIds = obs.available_actions.map((action) => action.id);
     expect(resumedIds).toEqual(expect.arrayContaining(["ask_wolves", "ask_leave"]));
     expect(resumedIds).not.toContain("ask_byre_back");

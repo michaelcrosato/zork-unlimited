@@ -349,6 +349,13 @@ describe("MCP server registration", () => {
     expect(overworldAndRpgDefaults.indexOf("compact_actions: true")).toBeLessThan(
       overworldAndRpgDefaults.indexOf("...input"),
     );
+    expect(overworldAndRpgDefaults).toContain('PLAY_MODE !== "pure"');
+    expect(overworldAndRpgDefaults).toContain("input.compact_observation === false");
+    expect(overworldAndRpgDefaults).toContain("compact_actions: input.compact_actions ?? false");
+    expect(overworldAndRpgDefaults).toContain("include_actions: true");
+    expect(overworldAndRpgDefaults.lastIndexOf("include_actions: true")).toBeGreaterThan(
+      overworldAndRpgDefaults.indexOf("...input"),
+    );
     expect(
       serverSourceBlock("const COMPACT_OVERWORLD_CONTEXT", 'tool(\n  "start_overworld"'),
     ).toContain("compact_result");
@@ -381,6 +388,13 @@ describe("MCP server registration", () => {
     expect(rpgDefaults.indexOf("compact_actions: true")).toBeLessThan(
       rpgDefaults.indexOf("...input"),
     );
+    expect(rpgDefaults).toContain('PLAY_MODE !== "pure"');
+    expect(rpgDefaults).toContain("input.compact_observation === false");
+    expect(rpgDefaults).toContain("compact_actions: input.compact_actions ?? false");
+    expect(rpgDefaults).toContain("include_actions: true");
+    expect(rpgDefaults.lastIndexOf("include_actions: true")).toBeGreaterThan(
+      rpgDefaults.indexOf("...input"),
+    );
     const rpgViewOptions = toolApiSourceBlock("type RpgViewOptions", "type RpgEventOptions");
     const rpgEventOptions = toolApiSourceBlock("type RpgEventOptions", "type RpgViewField");
     const viewOnlyRpgArgs = [
@@ -403,6 +417,10 @@ describe("MCP server registration", () => {
     );
     expect(legalActions).toContain("defaultCompactActions(a)");
     expect(actionDefaults).not.toContain("hide_graph");
+    expect(actionDefaults).toContain('PLAY_MODE === "pure" ? false : true');
+    expect(actionDefaults.indexOf('PLAY_MODE === "pure" ? false : true')).toBeLessThan(
+      actionDefaults.indexOf("...input"),
+    );
     const legalActionArgs = toolApiSourceBlock(
       "type RpgLegalActionsArgs",
       "type RpgLegalActionRows",

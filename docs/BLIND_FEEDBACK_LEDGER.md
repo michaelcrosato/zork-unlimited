@@ -5,11 +5,11 @@ Generated deterministically from verified blind reports. The latest entries stay
 ## Summary
 
 - Reports dir: `blind-tester/reports`
-- Accepted reports: 458
+- Accepted reports: 460
 - Rejected or ignored markdown reports: 30
-- Latest report stamp: 20260712T122008Z
+- Latest report stamp: 20260712T132432Z
 - Recent entry limit: 100
-- Archived accepted entries collapsed into traits: 358
+- Archived accepted entries collapsed into traits: 360
 
 ## Recent Common Traits
 
@@ -18,11 +18,19 @@ Generated deterministically from verified blind reports. The latest entries stay
 | 8 | 20260711T180340Z | replay | player would not replay | wolf_winter |
 | 4 | 20260708T213027Z | confusion | hidden counts feel gamey | overworld |
 | 3 | 20260708T211319Z | confusion | hidden counts are abstract | overworld |
+| 2 | 20260712T132432Z | stuck | player got stuck | overworld |
 | 2 | 20260708T213027Z | confusion | compact tuples require legend memory | overworld |
 | 2 | 20260708T212627Z | confusion | compact journal showed hash-like fragments | overworld |
 | 2 | 20260708T203905Z | confusion | town counted visited before road encounter resolved | overworld |
 | 2 | 20260708T203156Z | confusion | hidden counts are useful but abstract | overworld |
 | 2 | 20260708T202531Z | confusion | quest tone disconnected from Albany overworld | overworld |
+| 1 | 20260712T132432Z | bug S3 | Oneonta Market Streets — The Tanner's Fever quest (Sickroom/Apothecary's Store): After fully solving the overdose mys... | overworld |
+| 1 | 20260712T132432Z | confusion | No action to present gathered medical evidence to Godwin despite meeting every stated prerequisite | overworld |
+| 1 | 20260712T132432Z | confusion | Overlapping terminology for leads/jobs/sites/quests at first | overworld |
+| 1 | 20260712T132432Z | worst moment | Fully solving the Tanner's Fever mystery and then finding no action existed to act on it. | overworld |
+| 1 | 20260712T131301Z | bug S0 | travel_overworld_session tool description vs. behavior: Says it 'routes multi-leg' but errors on non-adjacent destina... | overworld |
+| 1 | 20260712T131301Z | confusion | travel tool's 'routes multi-leg' description implies auto-routing to any town, but direct calls to non-adjacent towns... | overworld |
+| 1 | 20260712T131301Z | worst moment | The long unbroken travel grind across five-plus road hops to reach Oneonta and Rome, with little decision content bey... | overworld |
 | 1 | 20260712T122008Z | bug S0 | The Sickroom (The Tanner's Fever quest, Oneonta): The physick skill check to confront Godwin (DC 12) is unbeatable wi... | overworld |
 | 1 | 20260712T122008Z | bug S1 | The Byre-Yard (The Wolf-Winter quest, Albany): Houndsman's dialogue advertises a tactical choice ('quick spear-hand o... | overworld |
 | 1 | 20260712T122008Z | confusion | Cade's advertised 'two roads' dialogue choice never became an actual selectable action | overworld |
@@ -32,19 +40,13 @@ Generated deterministically from verified blind reports. The latest entries stay
 | 1 | 20260712T105137Z | confusion | compact context truncated the herb-store exit description, requiring a verbose observation call to find it | overworld |
 | 1 | 20260712T105137Z | confusion | multi-leg travel to an undiscovered town can't be planned in one call; must be walked leg-by-leg | overworld |
 | 1 | 20260712T105137Z | confusion | unclear at first that carrying an item (jerkin) wasn't the same as using/donning it | overworld |
-| 1 | 20260712T105137Z | worst moment | Getting stuck for several steps in the sickroom not realizing the herb-store exit existed, because the compact contex... | overworld |
-| 1 | 20260712T100819Z | bug S1 | The Byre-Yard (Wolf-Winter quest): ask_byre dialogue choice rejected as unavailable right after being offered, follow... | overworld |
-| 1 | 20260712T100819Z | confusion | dialogue option briefly rejected after reading the day-book, required re-talking to NPC | overworld |
-| 1 | 20260712T100819Z | worst moment | The brief ask_byre dialogue-option rejection in the byre-yard, which momentarily looked like a broken choice. | overworld |
-| 1 | 20260712T090032Z | bug S0 | Quest structure across Wolf-Winter / Gallowmere / Tanner's Fever: All three quests share an identical skeleton that b... | overworld |
-| 1 | 20260712T090032Z | bug S1 | Byre-Yard dialogue with Old Cade (Wolf-Winter): Reading the day-book was rejected mid-conversation despite being unre... | overworld |
-| 1 | 20260712T090032Z | bug S1 | NPC ask-topic dialogues (Cade, Hedrick, Godwin): Each topic is one-shot and forces a generic filler action before the... | overworld |
-| 1 | 20260712T090032Z | bug S1 | Overworld travel toward Oneonta city: plan_overworld_session_route rejects undiscovered destinations, forcing one-hop... | overworld |
 
 ## Recent Entries
 
 | Stamp | Source | Seed | Mode | Decisions | C/E | Stuck | Replay | Report | Signal |
 | --- | --- | ---: | --- | ---: | --- | --- | --- | --- | --- |
+| 20260712T132432Z | overworld | 2115 | pure | 80 | 4/4 | yes | yes | `blind-tester/reports/20260712T132432Z_overworld_seed2115.md` | confusions: No action to present gathered medical evidence to Godwin despite meeting every stated prerequisite; Overlapping terminology for leads/jobs/sites/quests at... |
+| 20260712T131301Z | overworld | 2114 | pure | 102 | 5/5 | no | yes | `blind-tester/reports/20260712T131301Z_overworld_seed2114.md` | confusions: travel tool's 'routes multi-leg' description implies auto-routing to any town, but direct calls to non-adjacent towns hard-error instead \| bugs: S0 travel_... |
 | 20260712T122008Z | overworld | 2013 | pure | 77 | 4/5 | no | yes | `blind-tester/reports/20260712T122008Z_overworld_seed2013.md` | confusions: Cade's advertised 'two roads' dialogue choice never became an actual selectable action; Multi-leg travel to undiscovered towns requires manual leg-by-leg r... |
 | 20260712T105137Z | overworld | 1912 | pure | 83 | 4/5 | no | yes | `blind-tester/reports/20260712T105137Z_overworld_seed1912.md` | confusions: compact context truncated the herb-store exit description, requiring a verbose observation call to find it; unclear at first that carrying an item (jerkin)... |
 | 20260712T100819Z | overworld | 1909 | pure | 80 | 4/5 | no | yes | `blind-tester/reports/20260712T100819Z_overworld_seed1909.md` | confusions: dialogue option briefly rejected after reading the day-book, required re-talking to NPC \| bugs: S1 The Byre-Yard (Wolf-Winter quest): ask_byre dialogue cho... |
@@ -143,8 +145,6 @@ Generated deterministically from verified blind reports. The latest entries stay
 | 20260708T195405Z | overworld | 543 | legacy_guided | — | 4/4 | no | yes | `blind-tester/reports/20260708T195405Z_overworld_seed543.md` | confusions: hidden counts are abstract; look_around repeated text; pending road state looks empty without explanation \| bugs: S1 Albany Civic Center opening: Core jobs... |
 | 20260708T195405Z | overworld | 542 | legacy_guided | — | 4/4 | no | yes | `blind-tester/reports/20260708T195405Z_overworld_seed542.md` | confusions: compact tuple data is not player-natural; road encounter timing reads like arrival before obstacle; generic event resolution payoff \| bugs: S1 Albany Civic... |
 | 20260708T195405Z | overworld | 541 | legacy_guided | — | 4/4 | no | yes | `blind-tester/reports/20260708T195405Z_overworld_seed541.md` | confusions: revealed jobs did not stay visible globally; hidden counts felt artificial; overworld errands felt generic compared with quest \| bugs: S1 Albany Civic Cent... |
-| 20260708T193009Z | overworld | 540 | legacy_guided | — | 4/4 | no | yes | `blind-tester/reports/20260708T193009Z_overworld_seed540.md` | confusions: quest fiction disconnected from Albany overworld; compact event text made civic work feel abstract; discovered jobs outside current area were easy to lose... |
-| 20260708T193008Z | overworld | 539 | legacy_guided | — | 4/4 | no | yes | `blind-tester/reports/20260708T193008Z_overworld_seed539.md` | confusions: hidden counters do not explain where remaining content is; dialogue back actions did not exit conversation; compact journal hash fragments look like debug... |
 
 ## Archived Trait Categories
 
@@ -163,6 +163,7 @@ Generated deterministically from verified blind reports. The latest entries stay
 | 4 | 20260708T153614Z | confusion | quest takes no overworld time | overworld |
 | 4 | 20260708T140614Z | confusion | saboteur falls but later is driven off | tide_mill |
 | 4 | 20260708T140200Z | bug S0 | Head-Race: choked_sluice remains visible after the race is cleared | tide_mill |
+| 3 | 20260708T193008Z | confusion | compact journal hash fragments look like debug text | overworld |
 | 3 | 20260708T192332Z | bug S0 | The Wolf-Winter / compact journal: Truncated journal entries expose hash-like suffixes. | overworld |
 | 3 | 20260708T192332Z | confusion | journal truncation shows hash-like suffixes | overworld |
 | 3 | 20260708T192331Z | confusion | dialogue action ids expose awkward naming | overworld |
@@ -174,4 +175,3 @@ Generated deterministically from verified blind reports. The latest entries stay
 | 3 | 20260708T181051Z | confusion | compact quest text truncates useful prose | overworld |
 | 3 | 20260708T180630Z | confusion | compact journal hash suffixes | overworld |
 | 3 | 20260708T171150Z | confusion | resolved event still listed | overworld |
-| 3 | 20260708T153614Z | confusion | quest took no overworld time | overworld |

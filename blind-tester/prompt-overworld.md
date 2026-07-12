@@ -27,6 +27,16 @@ READING THE PLAYER SURFACE
   objectives or outside solution knowledge.
 - Compact fields can be positional tuples. Keep the `legend` returned by the
   fresh start; later compact responses may omit it.
+- Each state-bearing compact embedded-quest start, read, or step response carries
+  the bounded current legal ids in `context.actions` while quest play is active.
+  Treat that menu as authoritative for the response that returned it and replace
+  any older menu; do not assume a previously visible action is still legal. An
+  unchanged hash reply has no context, and a journey-choice pause suppresses
+  quest actions until the shown journey choice is answered.
+- `mcp__adventureforge__list_legal_actions` defaults to labeled `{ id, command }`
+  options in this pure run. Passing `compact_actions: true` remains available
+  when an id-only list is useful. A verbose embedded-quest observation likewise
+  defaults to labeled `available_actions`.
 - Use only ids and choices visible in the current player response. Every
   overworld session tool after the fresh start takes its `session_id`. Guard mutations with the
   latest `snapshot_hash` when the tool offers that guard. An embedded quest has

@@ -131,8 +131,9 @@ describe("MCP pure play mode", () => {
     };
     type RpgObservation = {
       exits: { direction: string; to?: string }[];
-      available_actions: { id: string }[];
+      available_actions: { id: string; command?: string }[];
     };
+    type RpgCompactContext = { actions?: string[] };
     try {
       await withPureServer(evidence, async (client) => {
         const listed = await client.listTools();
@@ -141,11 +142,18 @@ describe("MCP pure play mode", () => {
           expect(registered).toBeDefined();
           const properties = registered?.inputSchema.properties ?? {};
           expect(properties).not.toHaveProperty("hide_graph");
+          expect(properties).toHaveProperty("include_actions");
         }
         const questStartSchema = listed.tools.find(
           (candidate) => candidate.name === "start_overworld_session_quest",
         )?.inputSchema.properties;
         expect(questStartSchema).not.toHaveProperty("seed");
+        const legalActionSchema = listed.tools.find(
+          (candidate) => candidate.name === "list_legal_actions",
+        )?.inputSchema.properties as Record<string, { description?: string }> | undefined;
+        expect(legalActionSchema?.compact_actions?.description).toMatch(
+          /true returns bare action ids.*defaults to labeled options/i,
+        );
 
         const started = textPayload(
           await client.callTool({
@@ -225,17 +233,108 @@ describe("MCP pure play mode", () => {
               quest_id: quest.id,
               seed: 8675309,
               hide_graph: false,
-              compact_observation: false,
+              include_actions: false,
               compact_context: false,
               compact_result: false,
             },
           }),
         );
         const rpgSessionId = String(launched.rpg_session_id);
-        const launchObservation = (launched.rpg_session as { observation: RpgObservation })
-          .observation;
-        expect(launchObservation.exits.length).toBeGreaterThan(0);
-        expect(launchObservation.exits.every((exit) => exit.to === undefined)).toBe(true);
+        const rpgSession = launched.rpg_session as {
+          context: RpgCompactContext;
+          state_hash: string;
+        };
+        expect(rpgSession.context.actions).toContain("go_north");
+        expect(rpgSession.context.actions?.length).toBeLessThanOrEqual(24);
+
+        const enteredByre = textPayload(
+          await client.callTool({
+            name: "step_action",
+            arguments: {
+              session_id: rpgSessionId,
+              action_id: "go_north",
+              expected_state_hash: rpgSession.state_hash,
+              include_actions: false,
+            },
+          }),
+        );
+        expect(enteredByre.ok).toBe(true);
+        expect((enteredByre.context as RpgCompactContext).actions).toContain("talk_houndsman");
+
+        const talked = textPayload(
+          await client.callTool({
+            name: "step_action",
+            arguments: {
+              session_id: rpgSessionId,
+              action_id: "talk_houndsman",
+              expected_state_hash: String(enteredByre.state_hash),
+            },
+          }),
+        );
+        expect(talked.ok).toBe(true);
+        const talkActions = (talked.context as RpgCompactContext).actions;
+        expect(talkActions).toEqual(
+          expect.arrayContaining(["ask_wolves", "ask_byre", "ask_leave"]),
+        );
+        expect(talkActions?.length).toBeLessThanOrEqual(24);
+
+        const currentRead = textPayload(
+          await client.callTool({
+            name: "get_observation",
+            arguments: { session_id: rpgSessionId, include_actions: false },
+          }),
+        );
+        expect((currentRead.context as RpgCompactContext).actions).toEqual(talkActions);
+
+        const labeledMenu = textPayload(
+          await client.callTool({
+            name: "list_legal_actions",
+            arguments: { session_id: rpgSessionId },
+          }),
+        );
+        const labeledActions = labeledMenu.actions as { id: string; command?: string }[];
+        expect(
+          Object.fromEntries(labeledActions.map((action) => [action.id, action.command])),
+        ).toMatchObject({
+          ask_wolves: "ask: Ask for Cade's quick spear-hand lesson.",
+          ask_byre: "ask: Ask for Cade's guarded byre plan.",
+          ask_leave: "ask: Leave old Cade and hold the byre.",
+        });
+
+        const compactMenu = textPayload(
+          await client.callTool({
+            name: "list_legal_actions",
+            arguments: { session_id: rpgSessionId, compact_actions: true },
+          }),
+        );
+        expect(compactMenu.actions).toEqual(
+          expect.arrayContaining(["ask_wolves", "ask_byre", "ask_leave"]),
+        );
+
+        // The action menu carried by TALK is immediately executable; a player does
+        // not need a second read or a guessed/stale menu before choosing a topic.
+        const asked = textPayload(
+          await client.callTool({
+            name: "step_action",
+            arguments: {
+              session_id: rpgSessionId,
+              action_id: "ask_byre",
+              expected_state_hash: String(talked.state_hash),
+              hide_graph: false,
+              compact_observation: false,
+            },
+          }),
+        );
+        expect(asked.ok).toBe(true);
+        const askedObservation = asked.observation as RpgObservation;
+        expect(askedObservation.exits.length).toBeGreaterThan(0);
+        expect(askedObservation.exits.every((exit) => exit.to === undefined)).toBe(true);
+        expect(askedObservation.available_actions.length).toBeGreaterThan(0);
+        expect(
+          askedObservation.available_actions.every(
+            (action) => typeof action.command === "string" && action.command.length > 0,
+          ),
+        ).toBe(true);
 
         const reread = textPayload(
           await client.callTool({
@@ -250,24 +349,12 @@ describe("MCP pure play mode", () => {
         const rereadObservation = reread.observation as RpgObservation;
         expect(rereadObservation.exits.length).toBeGreaterThan(0);
         expect(rereadObservation.exits.every((exit) => exit.to === undefined)).toBe(true);
-
-        const moveAction = rereadObservation.available_actions.find((action) =>
-          action.id.startsWith("go_"),
-        );
-        if (!moveAction) throw new Error("expected an opening quest move");
-        const stepped = textPayload(
-          await client.callTool({
-            name: "step_action",
-            arguments: {
-              session_id: rpgSessionId,
-              action_id: moveAction.id,
-              hide_graph: false,
-              compact_observation: false,
-            },
-          }),
-        );
-        const steppedObservation = stepped.observation as RpgObservation;
-        expect(steppedObservation.exits.every((exit) => exit.to === undefined)).toBe(true);
+        expect(rereadObservation.available_actions.length).toBeGreaterThan(0);
+        expect(
+          rereadObservation.available_actions.every(
+            (action) => typeof action.command === "string" && action.command.length > 0,
+          ),
+        ).toBe(true);
       });
     } finally {
       rmSync(dir, { recursive: true, force: true });

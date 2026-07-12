@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 546 -->
+<!-- historical_cycle_count: 547 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,15 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - pure_current_menu_continuity
+
+- Root evidence: raw verified pure seed 2013 received Cade's new dialogue state without its current menu, reused stale room actions twice, and missed both lessons; the actions existed and no legal-action read occurred while dialogue was open.
+- Surface: pure compact quest start/read/step now always returns the bounded current action ids, while pure verbose observations and default legal-action reads use human labels; explicit id-only, full, and structural behavior stays intact. Cade truthfully offers either compatible lesson or both and names the remaining lesson after one (`bug_0514`).
+- Pure evidence: independent fresh seeds 2114/2115 both used TALK→quick lesson→guarded lesson directly from successive returned menus, then finished Wolf-Winter 60/60 with no recurrence. Seed 2114 continued through decisions 22/40/48/77/80 and ended after goal 4 at 102 (5/5, replay); seed 2115 continued through goal 2 and ended at checkpoint 80 with Tanner active (4/4, replay).
+- Compile: ledger 460/30 rejected; 11 contract-v3 pure exits all continued at least once (46 continue/11 end), checkpoint 40 is 11/0 and checkpoint 80 is 7/2. This is stronger continuation evidence, not proof players cannot stop.
+- Self-critique: PASS for human/MCP current-choice parity, not retention. Seed 2115 repeatedly saw `go east` but never found Tanner's east herb store, confirming the already-known compact destination-cue debt; seed 2114 also repeated route-tool overpromise and long-distance travel padding.
+- Guard: pre/post crawls `20260712T124938Z`/`20260712T130913Z` each covered 6,000 steps and 247/247 nodes; focused runtime/content/parity tests, exact playtest copy, and full health (304 files/2,162 tests, UI, 12 packs) passed.
 
 ### Cycle result - tanners_fever_accountability_aftermath
 
@@ -141,12 +150,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Blind playtest: post-change lore-reader seed 930010 won 60/60 (clarity 5, enjoyment 4) and no longer mentioned clipping; it praised the period voice and instead exposed raw inline dice arithmetic as the new S1 tone break.
 - Self-critique: PASS for compact tutorial/payoff integrity, not depth acceptance—replay stayed false, the optimal tutorial path remains obvious, and transparent combat math now interrupts the fiction. Diegetic combat feedback is the next causal engine/content seam.
 - Guard: post-change crawl `20260711T151519Z` covered 6,000 steps and all 247 nodes; 14 Wolf files / 62 tests, all 12 packs, `npm run health` (283 files / 2,006 tests), and the 441-report feedback ledger are green.
-
-### Cycle result - wolf_winter_cross_encounter_resource_agency
-
-- Feedback surface: the frozen direct gate still had 30/100 linear/prescribed reports and replay 16/100; the verified three-report compile `20260711T140033Z` again ranked obvious safest-line combat first, ahead of completion-safe compact clipping.
-- Engine surface: optional hash-preserving maneuver `resource_effects` can only gain/spend declared items; ownership guards, duplicate/conflict/reference/obtainability proofs, save integrity, relabeling, full MCP/UI metadata, and one-shot execution are pinned by `bug_0501`.
-- Content surface: the braced flank line now chooses reliable pin or a possibly exposed brace-stake salvage; the carried stake earns and is consumed by a stronger leader crossbrace, with truthful backtracking and a route-specific ending. Fixed rolls make each branch finish 2 HP ahead in one outcome and 2 behind in another; all-worst stake play ends at 16 HP.
-- Blind playtests: isolated seeds 930007/930008 both won 60/60 with no mechanical defect (clarity 5/4, enjoyment 4/3); the breaker discovered the stake organically, named it the best moment, and verified stale hashes/repeats/post-ending rejection, while the explorer chose the untouched off-side route.
-- Self-critique: PASS as the first persistent cross-encounter trade, not an acceptance-gate pass—both fresh players still declined replay and the breaker found the risk too mild. With agency semantics stable, the verified 28-field compact tutorial/payoff budget repair is next before broader pressure tuning.
-- Guard: post-change crawl `20260711T143604Z` covered 6,000 steps and all 247 nodes; exhaustive Wolf relabeling, 67 focused tests, all 12 packs, and `npm run health` (282 files / 1,993 tests) are green.

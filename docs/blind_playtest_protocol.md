@@ -123,11 +123,19 @@ recommend an opening route, require particular mechanics or locations, list
 defects to hunt, or impose a call/turn/time budget. Gameplay behavior must come
 from the game contract.
 
-For an embedded quest, use `list_legal_actions` with `compact_actions = true`,
-then `step_action` with `expected_state_hash = latest state_hash`,
-`compact_observation = true`, and `hide_graph = true`. Those flags reduce
-transport payload and conceal authoring structure; they do not tell the player
-which legal action to choose.
+For an embedded quest, pure mode enforces `hide_graph = true`. State-bearing
+compact quest start, read, and `step_action` responses default to
+`compact_observation = true` and enforce `include_actions = true`, so the same
+response carries a bounded `context.actions` menu of current legal ids while
+quest play is active. An unchanged hash reply has no context, and a journey-choice
+pause suppresses quest actions until that choice is answered. The player replaces
+any older menu with the current one and guards `step_action` with
+`expected_state_hash = latest state_hash`. `list_legal_actions` defaults to
+labeled `{ id, command }` options in pure mode; `compact_actions = true` remains
+an explicit id-only transport option. Verbose pure observations likewise
+default to labeled `available_actions`. These projections expose only the same
+current commands a human sees; they neither select an action nor reveal
+authoring structure.
 
 The runner enforces this boundary independently of the prose prompt:
 
