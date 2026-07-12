@@ -76,6 +76,7 @@ function arc(
 function resolutionSources(events: readonly OverworldLocalEvent[]): OverworldResolutionProofIndex {
   return {
     charactersById: new Map(),
+    contactPresentationsByJournalId: new Map(),
     eventsById: new Map(events.map((entry) => [entry.id, entry])),
     poisById: new Map(),
   };

@@ -2,7 +2,7 @@ import type { OverworldCompactView } from "./compact_view.js";
 import type {
   OverworldArea,
   OverworldAreaExit,
-  OverworldCharacter,
+  OverworldCharacterView,
   OverworldExit,
   OverworldLocalEvent,
   OverworldNode,
@@ -10,6 +10,7 @@ import type {
   OverworldRegionalArc,
 } from "./overworld.js";
 import type { OverworldSessionCaches } from "./session_cache.js";
+import { presentOverworldContact } from "./session_contact_presentation.js";
 import {
   buildOverworldSessionCompactView,
   type OverworldSessionCompactViewState,
@@ -53,7 +54,7 @@ export type OverworldSessionViewModelState = {
   routeOptions: readonly OverworldSessionRoutePlan[];
   localView: OverworldSessionLocalView;
   poi: readonly OverworldPoi[];
-  contacts: readonly OverworldCharacter[];
+  contacts: readonly OverworldCharacterView[];
   events: readonly OverworldLocalEvent[];
   journalEntries: readonly OverworldJournalEntry[];
   travelLog: readonly TravelLogEntry[];
@@ -84,6 +85,7 @@ export type OverworldSessionViewModelSourceState = {
   localView: OverworldSessionLocalView;
   routePlannerIndex: OverworldRoutePlannerIndex;
   roadEventState?: OverworldRouteRoadEventState;
+  completedQuestIds: ReadonlySet<string>;
   journalEntries: readonly OverworldJournalEntry[];
   travelLog: readonly TravelLogEntry[];
   visitedCount: number;
@@ -171,6 +173,12 @@ export function buildOverworldSessionViewModelState(
     ? currentOverworldSessionAreaContent(source.localState, source.currentArea.id)
     : EMPTY_AREA_CONTENT;
   const events = activeOverworldEvents(currentAreaContent.events, source.ids.resolvedEventIds);
+  const contacts = currentAreaContent.characters.map(
+    (character) =>
+      presentOverworldContact(character, {
+        completedQuestIds: source.completedQuestIds,
+      }).contact,
+  );
   const routeOptions = cachedOverworldSessionDiscoveredRouteOptions({
     caches: source.caches,
     routePlannerIndex: source.routePlannerIndex,
@@ -197,7 +205,7 @@ export function buildOverworldSessionViewModelState(
     routeOptions,
     localView: source.localView,
     poi: currentAreaContent.poi,
-    contacts: currentAreaContent.characters,
+    contacts,
     events,
     journalEntries: source.journalEntries,
     travelLog: source.travelLog,

@@ -1,11 +1,12 @@
-import type {
-  OverworldArea,
-  OverworldCharacter,
-  OverworldExplorationSite,
-  OverworldLocalEvent,
-  OverworldLocalJob,
-  OverworldNode,
-  OverworldPoi,
+import {
+  overworldContactTalkJournalId,
+  type OverworldArea,
+  type OverworldCharacterView,
+  type OverworldExplorationSite,
+  type OverworldLocalEvent,
+  type OverworldLocalJob,
+  type OverworldNode,
+  type OverworldPoi,
 } from "./overworld.js";
 
 export type OverworldLocalActionKind = "area" | "job" | "poi" | "contact" | "event" | "site";
@@ -75,10 +76,11 @@ export function describeOverworldPoiAction(
 }
 
 export function describeOverworldContactAction(
-  character: OverworldCharacter,
+  character: OverworldCharacterView,
+  presentationId: string | null = null,
 ): OverworldLocalActionDescriptor<"contact"> {
   return {
-    id: `talk:${character.id}`,
+    id: overworldContactTalkJournalId(character.id, presentationId),
     kind: "contact",
     title: `Talked to ${character.name}`,
     text: `${character.summary} ${character.agenda}`,

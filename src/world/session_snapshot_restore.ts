@@ -12,6 +12,7 @@ import {
   assertSnapshotRegionalArcCompletionProofs,
 } from "./session_event_resolution.js";
 import {
+  assertSnapshotContactPresentationProofs,
   assertSnapshotDiscoveredAreaCountReplay,
   assertSnapshotDiscoveredLocalSourceCountReplay,
   assertSnapshotDiscoveryLocality,
@@ -368,6 +369,7 @@ export function planOverworldSessionSnapshotRestore(args: {
   });
   assertSnapshotLocalActionJournalReachability(localActionJournal, localActionJournalSources);
   assertSnapshotLocalActionDiscoveryChronology(localActionJournal, localActionJournalSources);
+  assertSnapshotContactPresentationProofs(localActionJournalSources, journalTimeline);
   const eventResolutionJournal = journalTimeline.eventResolutionProofs;
   assertSnapshotEventResolutionProofs(resolvedEventIds, indexes, eventResolutionJournal);
   assertSnapshotRegionalArcCompletionProofs(

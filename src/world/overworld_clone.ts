@@ -2,6 +2,7 @@ import type {
   OverworldArea,
   OverworldAreaExit,
   OverworldCharacter,
+  OverworldCharacterView,
   OverworldEdge,
   OverworldExit,
   OverworldExplorationSite,
@@ -49,6 +50,22 @@ export function cloneOverworldPoi(poi: OverworldPoi): OverworldPoi {
 }
 
 export function cloneOverworldCharacter(character: OverworldCharacter): OverworldCharacter {
+  return {
+    ...character,
+    ...(character.variants
+      ? {
+          variants: character.variants.map((variant) => ({
+            ...variant,
+            after_quests: [...variant.after_quests],
+          })),
+        }
+      : {}),
+  };
+}
+
+export function cloneOverworldCharacterView(
+  character: OverworldCharacterView,
+): OverworldCharacterView {
   return { ...character };
 }
 

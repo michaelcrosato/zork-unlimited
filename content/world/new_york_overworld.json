@@ -23235,7 +23235,26 @@
       "role": "route dispatcher",
       "faction": "Road Wardens",
       "summary": "Hayden Hale dispatches road wardens from Albany Station Quarter, matching late coaches, snow reports, and relief freight to travelers who can move faster than official crews.",
-      "agenda": "Needs someone to carry the packet Rowan flagged from the Station Quarter route desk to Old Cade's hill steading before the cattle are lost; he can point you to the active lead."
+      "agenda": "Needs someone to carry the packet Rowan flagged from the Station Quarter route desk to Old Cade's hill steading before the cattle are lost; he can point you to the active lead.",
+      "variants": [
+        {
+          "id": "wolf_winter_and_gallowmere_closed",
+          "after_quests": [
+            "wolf_winter",
+            "gallowmere"
+          ],
+          "summary": "Hayden Hale has crossed both Cade's hill-steading relief packet and Hedrick Cradoc's moor report off the Station Quarter board; the wardens have filed the returns and moved those crews on.",
+          "agenda": "He has no old winter dispatch left to press on you. He points instead to the current journey goal already visible on your docket."
+        },
+        {
+          "id": "wolf_winter_closed",
+          "after_quests": [
+            "wolf_winter"
+          ],
+          "summary": "Hayden Hale has Cade's surviving cattle and the broken paling entered on the Station Quarter return board.",
+          "agenda": "The Cade packet is closed. The other live report in that chain is already reflected in the current journey goal on your docket."
+        }
+      ]
     },
     {
       "id": "albany_city__industrial__contact",

@@ -1,7 +1,7 @@
 import {
   type OverworldArea,
   type OverworldAreaExit,
-  type OverworldCharacter,
+  type OverworldCharacterView,
   type OverworldExit,
   type OverworldExplorationSite,
   type OverworldLocalEvent,
@@ -34,7 +34,7 @@ export type OverworldView = {
   areas: OverworldArea[];
   hiddenAreaCount: number;
   pois: OverworldPoi[];
-  characters: OverworldCharacter[];
+  characters: OverworldCharacterView[];
   events: OverworldLocalEvent[];
   jobs: OverworldLocalJob[];
   rememberedJobs: OverworldLocalJob[];
@@ -82,7 +82,7 @@ export type OverworldSessionViewState = {
   areas: readonly OverworldArea[];
   hiddenAreaCount: number;
   poi: readonly OverworldPoi[];
-  contacts: readonly OverworldCharacter[];
+  contacts: readonly OverworldCharacterView[];
   events: readonly OverworldLocalEvent[];
   jobs: readonly OverworldLocalJob[];
   rememberedJobs: readonly OverworldLocalJob[];

@@ -9,6 +9,17 @@ const world = loadOverworldManifest(process.cwd());
 const ALBANY_TO_SARATOGA = "road_albany_city__saratoga_springs_city";
 const SARATOGA_TO_QUEENSBURY = "road_saratoga_springs_city__queensbury_town";
 const QUEENSBURY_MARKET_ROUTE = "queensbury_town__area_route__civic_core__market__1";
+const HAYDEN_ID = "albany_city__transport_hub__contact";
+
+function haydenCard(session: OverworldSession) {
+  const hayden = session.view().characters.find((character) => character.id === HAYDEN_ID);
+  if (!hayden) throw new Error("Expected Hayden Hale in Albany Station Quarter.");
+  return hayden;
+}
+
+function contactCopy(contact: { summary: string; agenda: string }): string {
+  return `${contact.summary} ${contact.agenda}`;
+}
 
 function moveToArea(session: OverworldSession, destinationAreaId: string): void {
   const route = session
@@ -25,6 +36,74 @@ function startAlbanyWolf(session: OverworldSession): void {
   moveToArea(session, "albany_city__transport_hub");
   expect(session.view().quests.map((quest) => quest.id)).toContain("wolf_winter");
   session.startQuest("wolf_winter");
+}
+
+function revealAlbanyWolfAtStation(session: OverworldSession): void {
+  session.scoutPoi("albany_city__civic_core__poi");
+  moveToArea(session, "albany_city__market");
+  session.scoutPoi("albany_city__market__poi");
+  moveToArea(session, "albany_city__transport_hub");
+  expect(session.view().quests.map((quest) => quest.id)).toContain("wolf_winter");
+}
+
+function completeWolfWithBaseHaydenAtDecision22(session: OverworldSession): string {
+  revealAlbanyWolfAtStation(session);
+  const baseCard = haydenCard(session);
+  const baseCopy = contactCopy(baseCard);
+  expect(baseCard).not.toHaveProperty("variants");
+  expect(baseCopy).toContain("packet Rowan flagged");
+  expect(baseCopy).toContain("before the cattle are lost");
+  expect(baseCopy).not.toMatch(/current journey goal|return board|crossed both/i);
+
+  const beforeTalk = session.journey().acceptedDecisions;
+  const talked = session.talkToCharacter(HAYDEN_ID);
+  expect(talked).toMatchObject({
+    minutes: 15,
+    alreadyKnown: false,
+    journeyDecision: { countsTowardJourney: true, reason: "substantive_dialogue" },
+  });
+  expect(talked.entry.text).toBe(baseCopy);
+  expect(session.journey().acceptedDecisions).toBe(beforeTalk + 1);
+
+  session.startQuest("wolf_winter");
+  while (session.journey().acceptedDecisions < 22) {
+    const next = session.journey().acceptedDecisions + 1;
+    session.recordQuestDecision(`wolf_winter:hayden_lifecycle:${String(next)}`, {
+      countsTowardJourney: true,
+      reason: "preparation",
+    });
+  }
+  session.completeQuest("wolf_winter", {
+    endingId: "ending_held_timber_saved",
+    endingTitle: "The Byre Held, Paling Timber Saved",
+    death: false,
+  });
+  expect(session.journey()).toMatchObject({
+    acceptedDecisions: 22,
+    goal: { status: "completed", completedAtDecision: 22 },
+    pendingChoice: { reasons: ["goal_completed"] },
+  });
+  return baseCopy;
+}
+
+function travelToQueensburyMarket(session: OverworldSession): void {
+  session.travel(ALBANY_TO_SARATOGA);
+  if (session.view().pendingRoadEncounter) session.resolveRoadEncounter("press_on");
+  session.travel(SARATOGA_TO_QUEENSBURY);
+  if (session.view().pendingRoadEncounter) session.resolveRoadEncounter("press_on");
+  session.exploreArea("queensbury_town__civic_core");
+  moveToArea(session, "queensbury_town__market");
+}
+
+function returnToAlbanyStation(session: OverworldSession): void {
+  session.travel(SARATOGA_TO_QUEENSBURY);
+  if (session.view().pendingRoadEncounter) session.resolveRoadEncounter("press_on");
+  session.travel(ALBANY_TO_SARATOGA);
+  if (session.view().pendingRoadEncounter) session.resolveRoadEncounter("press_on");
+  expect(session.view()).toMatchObject({
+    current: { id: "albany_city" },
+    currentArea: { id: "albany_city__transport_hub" },
+  });
 }
 
 function completeWolfAtDecision22(session: OverworldSession): void {
@@ -186,6 +265,103 @@ describe("Wolf-Winter to Gallowmere authored handoff", () => {
       });
     },
   );
+
+  it("evolves Hayden's contact card and one-time talk across both dispatch branches and restore", () => {
+    const baseCopies: string[] = [];
+    const wolfClosedCopies: string[] = [];
+    const bothClosedCopies: string[] = [];
+
+    for (const choice of ["send_wagon_to_cade", "send_wardens_north"] as const) {
+      const session = new OverworldSession(world);
+      baseCopies.push(completeWolfWithBaseHaydenAtDecision22(session));
+
+      session.chooseJourney("continue");
+      session.chooseJourneyStory(choice);
+      const wolfClosedCard = haydenCard(session);
+      const wolfClosedCopy = contactCopy(wolfClosedCard);
+      wolfClosedCopies.push(wolfClosedCopy);
+      expect(wolfClosedCard).not.toHaveProperty("variants");
+      expect(wolfClosedCopy).toMatch(/Cade/i);
+      expect(wolfClosedCopy).toMatch(/surviving|closed|return board/i);
+      expect(wolfClosedCopy).toMatch(/current journey goal|journey ledger/i);
+      expect(wolfClosedCopy).not.toMatch(/packet Rowan flagged|before the cattle are lost/i);
+
+      const beforeWolfClosedTalk = session.journey().acceptedDecisions;
+      const wolfClosedTalk = session.talkToCharacter(HAYDEN_ID);
+      expect(wolfClosedTalk).toMatchObject({
+        minutes: 15,
+        alreadyKnown: false,
+        entry: { id: `talk:${HAYDEN_ID}@wolf_winter_closed`, text: wolfClosedCopy },
+        journeyDecision: { countsTowardJourney: true, reason: "substantive_dialogue" },
+      });
+      expect(session.journey().acceptedDecisions).toBe(beforeWolfClosedTalk + 1);
+
+      travelToQueensburyMarket(session);
+      session.startQuest("gallowmere");
+      session.completeQuest("gallowmere", {
+        endingId: "ending_victory",
+        endingTitle: "The Gallowmere Broken",
+        death: false,
+      });
+      session.chooseJourney("continue");
+      returnToAlbanyStation(session);
+      expect(
+        session
+          .view()
+          .log.slice(0, 2)
+          .map((entry) => entry.edgeId),
+      ).toEqual([ALBANY_TO_SARATOGA, SARATOGA_TO_QUEENSBURY]);
+
+      const snapshotBeforeTalk = session.snapshot();
+      const hashBeforeTalk = session.snapshotHash();
+      const restoredBeforeTalk = OverworldSession.restore(world, snapshotBeforeTalk);
+      expect(restoredBeforeTalk.snapshotHash()).toBe(hashBeforeTalk);
+      const bothClosedCard = haydenCard(restoredBeforeTalk);
+      const bothClosedCopy = contactCopy(bothClosedCard);
+      bothClosedCopies.push(bothClosedCopy);
+      expect(bothClosedCard).not.toHaveProperty("variants");
+      expect(bothClosedCopy).toMatch(/Cade/i);
+      expect(bothClosedCopy).toMatch(/Hedrick|Gallowmere/i);
+      expect(bothClosedCopy).toMatch(/crossed|closed|settled|filed/i);
+      expect(bothClosedCopy).toMatch(/current journey goal|journey ledger/i);
+      expect(bothClosedCopy).not.toBe(wolfClosedCopy);
+      expect(bothClosedCopy).not.toMatch(/packet Rowan flagged|before the cattle are lost/i);
+
+      const decisionsBeforeTalk = restoredBeforeTalk.journey().acceptedDecisions;
+      const firstTalk = restoredBeforeTalk.talkToCharacter(HAYDEN_ID);
+      expect(firstTalk).toMatchObject({
+        minutes: 15,
+        alreadyKnown: false,
+        entry: {
+          id: `talk:${HAYDEN_ID}@wolf_winter_and_gallowmere_closed`,
+          text: bothClosedCopy,
+        },
+        journeyDecision: { countsTowardJourney: true, reason: "substantive_dialogue" },
+      });
+      expect(restoredBeforeTalk.journey().acceptedDecisions).toBe(decisionsBeforeTalk + 1);
+      expect(restoredBeforeTalk.snapshotHash()).not.toBe(hashBeforeTalk);
+
+      const snapshotAfterTalk = restoredBeforeTalk.snapshot();
+      const hashAfterTalk = restoredBeforeTalk.snapshotHash();
+      const restoredAfterTalk = OverworldSession.restore(world, snapshotAfterTalk);
+      expect(restoredAfterTalk.snapshotHash()).toBe(hashAfterTalk);
+      const projectionBeforeRepeat = restoredAfterTalk.view();
+      const repeat = restoredAfterTalk.talkToCharacter(HAYDEN_ID);
+      expect(repeat).toMatchObject({
+        minutes: 0,
+        alreadyKnown: true,
+        entry: { text: bothClosedCopy },
+        journeyDecision: { countsTowardJourney: false, reason: "repeated_context" },
+      });
+      expect(restoredAfterTalk.journey().acceptedDecisions).toBe(decisionsBeforeTalk + 1);
+      expect(restoredAfterTalk.snapshotHash()).toBe(hashAfterTalk);
+      expect(restoredAfterTalk.view()).toEqual(projectionBeforeRepeat);
+    }
+
+    expect([...new Set(baseCopies)]).toHaveLength(1);
+    expect([...new Set(wolfClosedCopies)]).toHaveLength(1);
+    expect([...new Set(bothClosedCopies)]).toHaveLength(1);
+  });
 
   it("folds an already-completed Gallowmere goal honestly and advances to the next live lead", () => {
     const session = new OverworldSession(world);

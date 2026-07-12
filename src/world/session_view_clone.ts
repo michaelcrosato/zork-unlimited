@@ -1,7 +1,7 @@
 import {
   cloneOverworldArea,
   cloneOverworldAreaExit,
-  cloneOverworldCharacter,
+  cloneOverworldCharacterView,
   cloneOverworldExit,
   cloneOverworldExplorationSite,
   cloneOverworldLocalEvent,
@@ -23,7 +23,7 @@ export function cloneOverworldView(view: OverworldView): OverworldView {
     exits: view.exits.map(cloneOverworldExit),
     areas: view.areas.map(cloneOverworldArea),
     pois: view.pois.map(cloneOverworldPoi),
-    characters: view.characters.map(cloneOverworldCharacter),
+    characters: view.characters.map(cloneOverworldCharacterView),
     events: view.events.map(cloneOverworldLocalEvent),
     jobs: view.jobs.map(cloneOverworldLocalJob),
     rememberedJobs: view.rememberedJobs.map(cloneOverworldLocalJob),

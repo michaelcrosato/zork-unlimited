@@ -262,6 +262,75 @@ describe("New York overworld graph", () => {
     expect(authoredBridge).not.toContain("from the station board");
   });
 
+  it("authors Hayden's quest-reactive contact phases most-specific first", () => {
+    const hayden = world.characters.find(
+      (character) => character.id === "albany_city__transport_hub__contact",
+    );
+    expect(hayden?.variants).toEqual([
+      {
+        id: "wolf_winter_and_gallowmere_closed",
+        after_quests: ["wolf_winter", "gallowmere"],
+        summary: expect.stringContaining("crossed both"),
+        agenda: expect.stringContaining("current journey goal"),
+      },
+      {
+        id: "wolf_winter_closed",
+        after_quests: ["wolf_winter"],
+        summary: expect.stringContaining("return board"),
+        agenda: expect.stringContaining("current journey goal"),
+      },
+    ]);
+
+    const reactiveCopy = (hayden?.variants ?? [])
+      .flatMap((variant) => [variant.summary, variant.agenda])
+      .filter((copy): copy is string => copy !== undefined)
+      .join(" ");
+    expect(reactiveCopy).not.toMatch(/needs someone|before the cattle are lost/i);
+    expect(reactiveCopy).not.toMatch(/Queensbury|Oneonta|Rome|wind-stone|blind-side/i);
+  });
+
+  it("enforces contact variant references, precedence, overrides, and journal identities", () => {
+    const haydenId = "albany_city__transport_hub__contact";
+
+    const missingQuest = structuredClone(world);
+    missingQuest.characters.find(
+      (character) => character.id === haydenId,
+    )!.variants![0]!.after_quests[0] = "missing_quest";
+    expect(() => assertOverworldIntegrity(missingQuest)).toThrow(/references missing quest/);
+
+    const broaderFirst = structuredClone(world);
+    const reordered = broaderFirst.characters.find(
+      (character) => character.id === haydenId,
+    )!.variants!;
+    reordered.reverse();
+    expect(() => assertOverworldIntegrity(broaderFirst)).toThrow(
+      /orders broader variant .* before more-specific variant/,
+    );
+
+    const noOverride = structuredClone(world);
+    const emptyVariant = noOverride.characters.find((character) => character.id === haydenId)!
+      .variants![0]!;
+    delete emptyVariant.summary;
+    delete emptyVariant.agenda;
+    expect(() => assertOverworldIntegrity(noOverride)).toThrow(/must override summary or agenda/);
+
+    const noCondition = structuredClone(world);
+    noCondition.characters.find(
+      (character) => character.id === haydenId,
+    )!.variants![0]!.after_quests = [];
+    expect(() => assertOverworldIntegrity(noCondition)).toThrow(/has no after_quests condition/);
+
+    const journalCollision = structuredClone(world);
+    const haydenVariantId = journalCollision.characters.find(
+      (character) => character.id === haydenId,
+    )!.variants![0]!.id;
+    journalCollision.characters.find((character) => character.id !== haydenId)!.id =
+      `${haydenId}@${haydenVariantId}`;
+    expect(() => assertOverworldIntegrity(journalCollision)).toThrow(
+      /duplicate overworld contact talk journal id/i,
+    );
+  });
+
   it("populates every town and road with exploration substrate", () => {
     expect(world.points_of_interest.length).toBeGreaterThanOrEqual(world.nodes.length);
     expect(world.areas.length).toBeGreaterThan(world.nodes.length * 2);

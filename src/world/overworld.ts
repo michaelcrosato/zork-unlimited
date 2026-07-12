@@ -127,6 +127,18 @@ export const OverworldRegionalArcSchema = z
   })
   .strict();
 
+export const OverworldCharacterVariantSchema = z
+  .object({
+    id: z.string().min(1),
+    after_quests: z.array(z.string().min(1)).min(1),
+    summary: z.string().min(1).optional(),
+    agenda: z.string().min(1).optional(),
+  })
+  .strict()
+  .refine((variant) => variant.summary !== undefined || variant.agenda !== undefined, {
+    message: "An overworld character variant must override summary or agenda.",
+  });
+
 export const OverworldCharacterSchema = z
   .object({
     id: z.string().min(1),
@@ -137,6 +149,7 @@ export const OverworldCharacterSchema = z
     faction: z.string().min(1),
     summary: z.string().min(1),
     agenda: z.string().min(1),
+    variants: z.array(OverworldCharacterVariantSchema).min(1).optional(),
   })
   .strict();
 
@@ -271,7 +284,9 @@ export type OverworldAreaEdge = z.infer<typeof OverworldAreaEdgeSchema>;
 export type OverworldPoi = z.infer<typeof OverworldPoiSchema>;
 export type OverworldRegionProfile = z.infer<typeof OverworldRegionProfileSchema>;
 export type OverworldRegionalArc = z.infer<typeof OverworldRegionalArcSchema>;
+export type OverworldCharacterVariant = z.infer<typeof OverworldCharacterVariantSchema>;
 export type OverworldCharacter = z.infer<typeof OverworldCharacterSchema>;
+export type OverworldCharacterView = Omit<OverworldCharacter, "variants">;
 export type OverworldLocalEvent = z.infer<typeof OverworldLocalEventSchema>;
 export type OverworldLocalJobKind = z.infer<typeof OverworldLocalJobKindSchema>;
 export type OverworldLocalJob = z.infer<typeof OverworldLocalJobSchema>;
@@ -302,6 +317,14 @@ export type OverworldRoutePlan = {
 export type OverworldAreaExit = OverworldAreaEdge & {
   destination: OverworldArea;
 };
+
+/** Stable journal identity for a contact's base or quest-reactive presentation. */
+export function overworldContactTalkJournalId(
+  characterId: string,
+  presentationId: string | null,
+): string {
+  return presentationId === null ? `talk:${characterId}` : `talk:${characterId}@${presentationId}`;
+}
 
 export function parseOverworldManifest(input: unknown): OverworldManifest {
   return OverworldManifestSchema.parse(input);
@@ -748,6 +771,7 @@ function assertEntitiesIntegrity(
   areaHomes: Map<string, string>,
   edgeIds: Set<string>,
 ): void {
+  const questIds = new Set(world.quests.map((quest) => quest.id));
   const seenPoi = new Set<string>();
   const poiAreas = new Set<string>();
   for (const poi of world.points_of_interest) {
@@ -771,6 +795,7 @@ function assertEntitiesIntegrity(
 
   const seenCharacter = new Set<string>();
   const characterAreas = new Set<string>();
+  const contactTalkJournalIds = new Set<string>();
   for (const character of world.characters) {
     if (seenCharacter.has(character.id))
       throw new Error(`Duplicate overworld character id "${character.id}".`);
@@ -781,6 +806,76 @@ function assertEntitiesIntegrity(
       throw new Error(`Overworld character "${character.id}" has missing area.`);
     if (areaHomes.get(character.area) !== character.home) {
       throw new Error(`Overworld character "${character.id}" is anchored outside its home town.`);
+    }
+    if (character.variants !== undefined && character.variants.length === 0) {
+      throw new Error(`Overworld character "${character.id}" has an empty variants list.`);
+    }
+
+    const presentationJournalIds = [
+      overworldContactTalkJournalId(character.id, null),
+      ...(character.variants ?? []).map((variant) =>
+        overworldContactTalkJournalId(character.id, variant.id),
+      ),
+    ];
+    for (const journalId of presentationJournalIds) {
+      if (contactTalkJournalIds.has(journalId)) {
+        throw new Error(`Duplicate overworld contact talk journal id "${journalId}".`);
+      }
+      contactTalkJournalIds.add(journalId);
+    }
+
+    const seenVariantIds = new Set<string>();
+    const variantQuestSets: Set<string>[] = [];
+    for (const variant of character.variants ?? []) {
+      if (seenVariantIds.has(variant.id)) {
+        throw new Error(
+          `Overworld character "${character.id}" repeats variant id "${variant.id}".`,
+        );
+      }
+      seenVariantIds.add(variant.id);
+      if (variant.summary === undefined && variant.agenda === undefined) {
+        throw new Error(
+          `Overworld character "${character.id}" variant "${variant.id}" must override summary or agenda.`,
+        );
+      }
+      if (variant.after_quests.length === 0) {
+        throw new Error(
+          `Overworld character "${character.id}" variant "${variant.id}" has no after_quests condition.`,
+        );
+      }
+
+      const afterQuestIds = new Set(variant.after_quests);
+      if (afterQuestIds.size !== variant.after_quests.length) {
+        throw new Error(
+          `Overworld character "${character.id}" variant "${variant.id}" repeats an after_quests id.`,
+        );
+      }
+      for (const questId of afterQuestIds) {
+        if (!questIds.has(questId)) {
+          throw new Error(
+            `Overworld character "${character.id}" variant "${variant.id}" references missing quest "${questId}".`,
+          );
+        }
+      }
+      variantQuestSets.push(afterQuestIds);
+    }
+
+    for (let earlierIndex = 0; earlierIndex < variantQuestSets.length; earlierIndex += 1) {
+      const earlier = variantQuestSets[earlierIndex]!;
+      for (
+        let laterIndex = earlierIndex + 1;
+        laterIndex < variantQuestSets.length;
+        laterIndex += 1
+      ) {
+        const later = variantQuestSets[laterIndex]!;
+        if ([...earlier].every((questId) => later.has(questId))) {
+          const earlierVariant = character.variants![earlierIndex]!;
+          const laterVariant = character.variants![laterIndex]!;
+          throw new Error(
+            `Overworld character "${character.id}" orders broader variant "${earlierVariant.id}" before more-specific variant "${laterVariant.id}".`,
+          );
+        }
+      }
     }
     characterAreas.add(character.area);
   }

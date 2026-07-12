@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 542 -->
+<!-- historical_cycle_count: 543 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,15 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - quest_reactive_contact_memory
+
+- Surface: overworld contacts may now author ordered, monotonic quest-completion phases; the shared projector gives web/full MCP only the active summary/agenda and physically strips future phases. Hayden advances from the live Cade packet to Wolf-Winter closed and then Cade+Hedrick both closed instead of reopening settled emergencies (`bug_0510`).
+- Integrity/parity: phase-specific journal ids make each genuinely new conversation cost/count once while same-phase repeats remain context-only; snapshot replay reconstructs completed quests at the talk timestamp and rejects unknown, future, or rewritten phases. UI, full MCP, compact MCP, save/restore, and both Albany dispatch branches return the same active copy.
+- Pure evidence: verified pure/fresh seed 1709 completed Wolf-Winter, Gallowmere, and Tanner's Fever; continued honestly at 23/40/50/80, ended at goal 3 on decision 82, clarity/enjoyment 5/4, replay true. Its retained report provides no evidence of a Hayden retalk, so blind sampling remains unconfirmed; deterministic round-trip regressions carry the fix proof.
+- Effect: seed 1609's worst-moment continuity contradiction is closed at its causal seam. Fresh seed 1709 instead found a failed Tanner treatment branch temporarily soft-lock-like and again noticed cross-town name reuse; uniform six-leg quest travel also remains pacing debt.
+- Compile/self-critique: the ledger is current at 454 verified reports; seed 1709 is the sole report since the 453-report compile, below the three-report threshold. PASS for stateful world memory, not retention completion—the player still chose a natural stop after three arcs; Tanner failure recovery and the audited 700-contact/17-name template corpus are next evidence.
+- Guard: 114 focused lifecycle/parity/forgery tests, final 6000-step crawl (247/247 nodes, 344/344 edges, 12/12 quests), verified receipt, and full health (299 files/2126 tests, UI, 12 packs) passed.
 
 ### Cycle result - authored_road_encounter_cadence
 
@@ -138,12 +147,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Fleet harvest: 200/200 fresh `gpt-5.5` reports verified (100 direct + 100 overworld), 0 rejected/stuck/crawl findings, all Byre Held; direct clarity/enjoyment 4.32/3.76, 93x60/60, preparation-best 99/100.
 - Self-critique: FAIL; cleanup improved 7 -> 2, but frozen rail 20 (cap 5), linearity 30 (cap 9), and replay 16 (floor 20) missed. Reactive backtracking truth is the next assessor-selected repair.
 - Guard: verified blind report, post-fix crawl `20260711T101454Z` (6,000 steps; 247/247 overworld nodes), `npm run health` (279 files / 1,971 tests), and integrity comparison against the parent commit.
-
-### Cycle result - wolf_winter_enemy_maneuvers
-
-- Engine/content surface: added reusable one-shot enemy maneuvers—seeded combat rounds with conditioned temporary attack/defense tradeoffs—and rebuilt `wolf_winter` around three telegraphed openings, a real Albany relief spear, and a consequential one-attempt breach wedge.
-- Loop effect: engine/MCP/CLI/UI/save validation plus `bug_0497` regressions pin unique action ids, exclusive result ownership, encounter-aware combat bounds, monotonic retirement, temporary math, fallback attacks, exhaustive liveness, reactive aftermath, and the exact 28-damage guarantee; compact assessment now always names the blind-rotation target.
-- Blind-playtest quest "advocates_case": seed 930001, clarity 4/5, enjoyment 4/5, ending `ending_exempted`, 50/50 with no mechanical failure. The explicit user depth mandate and repeated `wolf_winter` S2 combat feedback justified choosing this off-list tranche.
-- Fleet harvest: 200/200 fresh `gpt-5.5` reports verified (100 overworld + 100 direct `wolf_winter`, 20/persona/target), 0 stuck, all Byre Held; direct clarity/enjoyment 4.34/3.84, 96x60/60, and all 100 named tactical preparation as the best moment.
-- Self-critique: PASS_WITH_NOTES; direct reports still found rail unfairness 28/100, prescribed/linear play 18/100, and basic cleanup 7/100. `docs/CURRENT_PLAN.md` chooses a recoverable, multi-route Broken-Paling follow-through; replay 0/100 is only directional because the prompt prefilled false.
-- Guard: final 6,000-step crawl, 1,962-test `health`, base `3b8afec4` integrity, production UI build/HTTP smoke, verified rotation report, both 100/100 fleet summaries, 200-accepted ledger, and 200-report feedback compile green; embedded browser webview could not retain the local page.

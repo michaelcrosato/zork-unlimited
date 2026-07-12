@@ -183,6 +183,56 @@ function exportedSnapshotWithResolvedInitialEvent() {
   return { a, snapshot, poi, contact, event };
 }
 
+function exportedSnapshotWithBaseHaydenConversation() {
+  const a = api();
+  const started = a.start_overworld({ compact_context: false });
+  const sessionId = started.session_id;
+  a.scout_overworld_session_poi({
+    ...FULL_OVERWORLD_RESPONSE,
+    session_id: sessionId,
+    poi_id: "albany_city__civic_core__poi",
+  });
+  let view = a.get_overworld_session({
+    include_observation: true,
+    session_id: sessionId,
+  }).observation;
+  const marketRoute = view.areaExits.find(
+    (route) => route.destination.id === "albany_city__market",
+  );
+  if (!marketRoute) throw new Error("expected the Albany market route");
+  a.move_overworld_session_area({
+    ...FULL_OVERWORLD_RESPONSE,
+    session_id: sessionId,
+    area_route_id: marketRoute.id,
+  });
+  a.scout_overworld_session_poi({
+    ...FULL_OVERWORLD_RESPONSE,
+    session_id: sessionId,
+    poi_id: "albany_city__market__poi",
+  });
+  view = a.get_overworld_session({ include_observation: true, session_id: sessionId }).observation;
+  const stationRoute = view.areaExits.find(
+    (route) => route.destination.id === "albany_city__transport_hub",
+  );
+  if (!stationRoute) throw new Error("expected the Albany Station Quarter route");
+  a.move_overworld_session_area({
+    ...FULL_OVERWORLD_RESPONSE,
+    session_id: sessionId,
+    area_route_id: stationRoute.id,
+  });
+  a.talk_overworld_session_contact({
+    ...FULL_OVERWORLD_RESPONSE,
+    session_id: sessionId,
+    character_id: "albany_city__transport_hub__contact",
+  });
+  const snapshot = a.export_overworld_session({ session_id: sessionId }).snapshot;
+  const entry = snapshot.journalEntries.find(
+    (candidate) => candidate.id === "talk:albany_city__transport_hub__contact",
+  );
+  if (!entry) throw new Error("expected Hayden's base contact journal entry");
+  return { a, snapshot, entry };
+}
+
 function exportedSnapshotAfterRoadStrategy(strategy: "assist_travelers" | "cautious_scout") {
   const a = api();
   const started = a.start_overworld({ compact_context: false });
@@ -415,6 +465,37 @@ describe("overworld snapshot restore integrity", () => {
     expect(() => a.restore_overworld_session({ snapshot: detachedJournalSource })).toThrow(
       /unknown road/,
     );
+  });
+
+  it("rejects unknown, future, and rewritten contact presentations", () => {
+    const { a, snapshot, entry } = exportedSnapshotWithBaseHaydenConversation();
+    const replaceEntry = (replacement: JournalEntry): Snapshot => ({
+      ...snapshot,
+      journalEntries: snapshot.journalEntries.map((candidate) =>
+        candidate === entry ? replacement : candidate,
+      ),
+    });
+
+    expect(() =>
+      a.restore_overworld_session({
+        snapshot: replaceEntry({ ...entry, id: `${entry.id}@missing_phase` }),
+      }),
+    ).toThrow(/unknown contact presentation/);
+
+    expect(() =>
+      a.restore_overworld_session({
+        snapshot: replaceEntry({
+          ...entry,
+          id: `${entry.id}@wolf_winter_and_gallowmere_closed`,
+        }),
+      }),
+    ).toThrow(/contact presentation .* was not active/);
+
+    expect(() =>
+      a.restore_overworld_session({
+        snapshot: replaceEntry({ ...entry, text: "Hayden repeats a forged future dispatch." }),
+      }),
+    ).toThrow(/does not match its authored copy/);
   });
 
   it.each([

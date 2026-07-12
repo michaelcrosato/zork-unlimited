@@ -11,6 +11,57 @@ import { OverworldSession } from "../../ui/src/overworld.js";
 const api = () => createToolApi({ root: process.cwd() });
 const FULL_OVERWORLD = { compact_context: false, compact_result: false } as const;
 const WORLD = loadOverworldManifest(process.cwd());
+const HAYDEN_ID = "albany_city__transport_hub__contact";
+const ALBANY_TO_SARATOGA = "road_albany_city__saratoga_springs_city";
+const SARATOGA_TO_QUEENSBURY = "road_saratoga_springs_city__queensbury_town";
+
+function moveUiSessionToArea(session: OverworldSession, destinationAreaId: string): void {
+  const route = session
+    .view()
+    .areaExits.find((candidate) => candidate.destination.id === destinationAreaId);
+  if (!route) throw new Error(`expected a route to ${destinationAreaId}`);
+  session.moveArea(route.id);
+}
+
+function uiSessionAtPostGallowmereHayden(): OverworldSession {
+  const session = new OverworldSession(WORLD);
+  session.scoutPoi("albany_city__civic_core__poi");
+  moveUiSessionToArea(session, "albany_city__market");
+  session.scoutPoi("albany_city__market__poi");
+  moveUiSessionToArea(session, "albany_city__transport_hub");
+  session.startQuest("wolf_winter");
+  session.completeQuest("wolf_winter", {
+    endingId: "ending_held_timber_saved",
+    endingTitle: "The Byre Held, Paling Timber Saved",
+    death: false,
+  });
+  session.chooseJourney("continue");
+  session.chooseJourneyStory("send_wagon_to_cade");
+
+  session.travel(ALBANY_TO_SARATOGA);
+  if (session.view().pendingRoadEncounter) session.resolveRoadEncounter("press_on");
+  session.travel(SARATOGA_TO_QUEENSBURY);
+  if (session.view().pendingRoadEncounter) session.resolveRoadEncounter("press_on");
+  session.exploreArea("queensbury_town__civic_core");
+  moveUiSessionToArea(session, "queensbury_town__market");
+  session.startQuest("gallowmere");
+  session.completeQuest("gallowmere", {
+    endingId: "ending_victory",
+    endingTitle: "The Gallowmere Broken",
+    death: false,
+  });
+  session.chooseJourney("continue");
+
+  session.travel(SARATOGA_TO_QUEENSBURY);
+  if (session.view().pendingRoadEncounter) session.resolveRoadEncounter("press_on");
+  session.travel(ALBANY_TO_SARATOGA);
+  if (session.view().pendingRoadEncounter) session.resolveRoadEncounter("press_on");
+  expect(session.view()).toMatchObject({
+    current: { id: "albany_city" },
+    currentArea: { id: "albany_city__transport_hub" },
+  });
+  return session;
+}
 
 function uiSessionAtAlbanyStoryChoice(): OverworldSession {
   const session = new OverworldSession(WORLD);
@@ -61,6 +112,70 @@ describe("MCP journey surface", () => {
     expect(compact.result.text).toContain("what matters before the office closes");
     expect("observation" in compact).toBe(false);
     expect(JSON.stringify(compact.result)).not.toContain(full.result.entry.id);
+  });
+
+  it("shares only Hayden's active post-Gallowmere copy across UI, full MCP, and compact MCP", () => {
+    const source = uiSessionAtPostGallowmereHayden();
+    const snapshot = source.snapshot();
+    const sourceHash = source.snapshotHash();
+    const ui = OverworldSession.restore(WORLD, snapshot);
+    const uiCard = ui.view().characters.find((character) => character.id === HAYDEN_ID);
+    if (!uiCard) throw new Error("expected Hayden's UI contact card");
+
+    const a = api();
+    const full = a.restore_overworld_session({
+      ...FULL_OVERWORLD,
+      snapshot,
+    });
+    const compact = a.restore_overworld_session({
+      snapshot,
+      compact_context: true,
+      compact_result: true,
+    });
+    expect(compact.snapshot_hash).toBe(full.snapshot_hash);
+    expect(sourceHash.startsWith(full.snapshot_hash)).toBe(true);
+
+    const fullCard = full.observation.characters.find((character) => character.id === HAYDEN_ID);
+    const compactCard = compact.context.contacts.find(([characterId]) => characterId === HAYDEN_ID);
+    expect(fullCard).toEqual(uiCard);
+    expect(compactCard).toEqual([HAYDEN_ID, "Hayden Hale"]);
+    expect(uiCard).not.toHaveProperty("variants");
+
+    const observationPayload = JSON.stringify({
+      ui: ui.view(),
+      full: full.observation,
+      compact: compact.context,
+    });
+    expect(observationPayload).not.toMatch(
+      /"variants"|"after_quests"|wolf_winter_closed|wolf_winter_and_gallowmere_closed/i,
+    );
+    expect(observationPayload).not.toMatch(
+      /packet Rowan flagged|before the cattle are lost|return board|other live report in that chain/i,
+    );
+
+    const uiTalk = ui.talkToCharacter(HAYDEN_ID);
+    const fullTalk = a.talk_overworld_session_contact({
+      ...FULL_OVERWORLD,
+      session_id: full.session_id,
+      character_id: HAYDEN_ID,
+    });
+    const compactTalk = a.talk_overworld_session_contact({
+      session_id: compact.session_id,
+      character_id: HAYDEN_ID,
+      compact_context: true,
+      compact_result: true,
+    });
+    expect(fullTalk.result.entry.text).toBe(uiTalk.entry.text);
+    expect(compactTalk.result.text).toBe(uiTalk.entry.text);
+    expect(uiTalk.entry.text).toBe(`${uiCard.summary} ${uiCard.agenda}`);
+    expect(uiTalk.entry.text).toMatch(/Cade/i);
+    expect(uiTalk.entry.text).toMatch(/Hedrick|Gallowmere/i);
+    expect(uiTalk.entry.text).toMatch(/current journey goal|journey ledger/i);
+    expect(uiTalk.entry.text).not.toMatch(/packet Rowan flagged|before the cattle are lost/i);
+    expect(fullTalk.journey).toEqual(ui.journey());
+    expect(compactTalk.journey).toEqual(ui.journey());
+    expect(compactTalk.snapshot_hash).toBe(fullTalk.snapshot_hash);
+    expect(ui.snapshotHash().startsWith(fullTalk.snapshot_hash)).toBe(true);
   });
 
   it("keeps the canonical journey at the response root across compact and full play", () => {
