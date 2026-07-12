@@ -53,7 +53,7 @@ describe("tanners_fever stores react to taken medical evidence", () => {
     expect(s.inventory).toContain("godwin_notes");
     expect(s.flags["godwin_notes_taken"]).toBe(true);
     expect(desc(s)).toContain("bench is bare where his open case notes lay");
-    expect(desc(s)).not.toContain("A ledger lies open at the current month");
+    expect(desc(s)).not.toContain("His open monthly ledger holds case notes");
     expect(lookNarration(s)).toBe(desc(s));
   });
 
@@ -67,7 +67,7 @@ describe("tanners_fever stores react to taken medical evidence", () => {
     expect(s.inventory).not.toContain("godwin_notes");
     expect(s.flags["godwin_notes_taken"]).toBe(true);
     expect(desc(s)).toContain("bench is bare where his open case notes lay");
-    expect(desc(s)).not.toContain("A ledger lies open at the current month");
+    expect(desc(s)).not.toContain("His open monthly ledger holds case notes");
     expect(lookNarration(s)).toBe(desc(s));
   });
 
@@ -83,8 +83,33 @@ describe("tanners_fever stores react to taken medical evidence", () => {
     expect(s.flags["godwin_notes_taken"]).toBe(true);
     expect(s.flags["notes_read"]).toBe(true);
     expect(desc(s)).toContain("Godwin's overdose formula is fixed in your head");
-    expect(desc(s)).not.toContain("case notes are already in your hands");
+    expect(desc(s)).not.toContain("case notes are in your hand");
     expect(lookNarration(s)).toBe(desc(s));
+  });
+
+  it("keeps sickroom guidance truthful when case notes are dropped before or after reading", () => {
+    const unread = play(initStateForRpgPack(index, 79), [
+      "go_west",
+      "take_godwin_notes",
+      "drop_godwin_notes",
+      "go_east",
+    ]);
+    expect(unread.inventory).not.toContain("godwin_notes");
+    expect(desc(unread)).toContain("case notes have left the workbench and remain unread");
+    expect(desc(unread)).not.toMatch(/in your hand|you carry/i);
+    expect(lookNarration(unread)).toBe(desc(unread));
+
+    const read = play(initStateForRpgPack(index, 79), [
+      "go_west",
+      "take_godwin_notes",
+      "read_godwin_notes",
+      "drop_godwin_notes",
+      "go_east",
+    ]);
+    expect(read.inventory).not.toContain("godwin_notes");
+    expect(desc(read)).toMatch(/You know the written[^]*three-to-one[^]*one-to-one/i);
+    expect(desc(read)).not.toMatch(/in your hand|you carry/i);
+    expect(lookNarration(read)).toBe(desc(read));
   });
 
   it("removes the green-bundle prose after meadowsweet is taken", () => {
@@ -93,7 +118,7 @@ describe("tanners_fever stores react to taken medical evidence", () => {
     expect(s.inventory).toContain("meadowsweet");
     expect(s.flags["meadowsweet_taken"]).toBe(true);
     expect(desc(s)).toContain("green hook is empty where the meadowsweet bundle hung");
-    expect(desc(s)).not.toContain("a bundle of meadowsweet: the white-flowering plant");
+    expect(desc(s)).not.toContain("Among them is green meadowsweet");
     expect(lookNarration(s)).toBe(desc(s));
   });
 
@@ -107,7 +132,7 @@ describe("tanners_fever stores react to taken medical evidence", () => {
     expect(s.inventory).not.toContain("meadowsweet");
     expect(s.flags["meadowsweet_taken"]).toBe(true);
     expect(desc(s)).toContain("green hook is empty where the meadowsweet bundle hung");
-    expect(desc(s)).not.toContain("a bundle of meadowsweet: the white-flowering plant");
+    expect(desc(s)).not.toContain("Among them is green meadowsweet");
     expect(lookNarration(s)).toBe(desc(s));
   });
 });

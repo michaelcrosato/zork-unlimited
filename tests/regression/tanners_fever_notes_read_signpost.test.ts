@@ -55,7 +55,7 @@ describe("bug_0404 — tanners_fever signposts reading Godwin's notes", () => {
     const examined = play(s, "examine_godwin_notes");
     const examineText = narration(examined.events);
     expect(examineText).toMatch(/close read|read/i);
-    expect(examineText).not.toMatch(/three parts wormwood extract to one part water/i);
+    expect(examineText).not.toMatch(/three parts extract to one part water/i);
     expect(examineText).not.toMatch(/three to one/i);
     expect(examined.state.flags.notes_read).toBeUndefined();
     expect(examined.state.vars.physick).toBe(3);
@@ -67,7 +67,7 @@ describe("bug_0404 — tanners_fever signposts reading Godwin's notes", () => {
     const examinedInHand = play(taken.state, "examine_godwin_notes");
     const inHandText = narration(examinedInHand.events);
     expect(inHandText).toMatch(/reading them carefully/i);
-    expect(inHandText).not.toMatch(/three parts wormwood extract to one part water/i);
+    expect(inHandText).not.toMatch(/three parts extract to one part water/i);
     expect(inHandText).not.toMatch(/three to one/i);
   });
 

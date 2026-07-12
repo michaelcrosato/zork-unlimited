@@ -132,7 +132,7 @@ describe("bug_0458 - Tanner's Fever treatment can recover from a bad roll", () =
     expect(obs.ending_id).toBe("ending_recovered");
     expect(obs.state.vars.score).toBe(pack.meta.max_score);
     expect(obs.ending?.text).toContain("Godwin has the revised formula");
-    expect(obs.ending?.text).not.toContain("not win this the right way");
+    expect(obs.ending?.text).not.toContain("forced passage instead of winning the bedside case");
     expect(validateRpg(pack).findings).toHaveLength(0);
   });
 
@@ -144,7 +144,9 @@ describe("bug_0458 - Tanner's Fever treatment can recover from a bad roll", () =
     state = failed.state;
     const failedText = narrations(failed.events);
 
-    expect(failedText).not.toContain("three parts wormwood");
+    expect(failedText).not.toMatch(
+      /three(?:-| )to(?:-| )one|three parts extract to one part water/i,
+    );
     expect(failedText).toMatch(/inspect Edric/i);
     expect(failedText).toMatch(/read Godwin's case notes/i);
     expect(failedText).toMatch(/inspect the meadowsweet/i);

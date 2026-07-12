@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 547 -->
+<!-- historical_cycle_count: 548 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,15 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - tanners_fever_compact_case_integrity
+
+- Root evidence: independent pure seeds 1912/2115 both saw legal `go_east`, but 697-character sickroom prose hid herb-store orientation, 744-character notes prose hid the remedy handoff, and the 397-character corridor block hid its third proof. Seed 1912 recovered through verbose mode; seed 2115 looped west/north and exited at checkpoint 80 (`bug_0515`).
+- Surface: all 55 reachable Tanner's Fever prose bodies now fit their strictest transport exactly—room/LOOK/object/read/narration ≤280, rolling journal ≤128, blocked reason ≤180, wrapped dialogue ≤280, and score-bearing ending ≤360. Read/unread/dropped notes receive state-truthful sickroom guidance; mechanics, choices, routes, score, and endings are unchanged.
+- Parity proof: the literal seed-2115 sequence runs UI and compact MCP in lockstep through Edric, Godwin, notes, blocked corridor, east herb store, treatment, and 50/50 ending with identical menus/context/narration/memory and no omission chrome; every reachable prose projection is byte-exact.
+- Pure evidence: fresh seeds 2216/2217/2218 all independently completed Tanner without its prior stall and continued afterward. Exact-final-hash seed 2218 continued through checkpoints 80/120, completed five distinct quests, then ended at goal 5 on decision 130 (clarity 4/5, enjoyment 5/5, replay true); its new S1 was Gallowmere's falsely pre-held knife.
+- Compile/self-critique: ledger 463/30 rejected; all 14 contract-v3 pure exits continued at least once (62 continue/14 end), checkpoint 40=14/0, 80=9/3, 120=1/0, mean 96 decisions. PASS for Tanner parity, not retention completion—players still stop; Gallowmere inventory truth and repetitive long-route travel are next.
+- Guard: pre/final crawls `20260712T135922Z`/`20260712T144433Z` each covered 6,000 steps and 247/247 nodes; focused parity/route/recovery suites, exact final playtest copy, hash `3074f38c0ae6`, and full health (305 files/2,165 tests, UI, 12 packs) passed.
 
 ### Cycle result - pure_current_menu_continuity
 
@@ -141,12 +150,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Blind playtests: explorer 930012 found the loft and resource choice organically (5/4); final breaker 930013 ran prepared 60/60 and reckless 45/60 routes with no mechanical defect (5/3), then exposed overpromised unprepared prose, fixed and pinned before landing.
 - Self-critique: PASS for one real spatial/resource plan, not the replay gate—both fresh players still declined replay, lucky opening kills can make the saved guard feel optional, and Cade/day-book remain an explicit duplicated answer key. Complementary clue discovery is next.
 - Guard: final crawl `20260711T164052Z` covered 6,000 steps, all 8 Wolf rooms and 247 overworld nodes; 15 Wolf files / 67 tests, all 12 packs, `npm run health` (284 files / 2,011 tests), and the 444-report ledger are green.
-
-### Cycle result - wolf_winter_compact_prose_integrity
-
-- Feedback surface: pre-change lore-reader seed 930009 won Wolf-Winter 60/60 (clarity 5, enjoyment 4) but found room/item prose permanently clipped; the standardized 440-report compile kept compact Wolf journals first (19 S2 mentions) and measured fresh Wolf replay at 0/3.
-- Content surface: rewrote the audited 28 authored fields to their strictest real transport budgets—room/read/narration ≤280, journal ≤128, wrapped Cade dialogue ≤253, score-bearing ending ≤336—while preserving Albany, guarantee/gamble, every maneuver/recovery verb, and reactive route identity (`bug_0502`).
-- Regression surface: a semantic compact inventory covers every reachable authored string and actual wrapper; seven all-worst tactical routes must preserve complete events, explicit victory, 60/60, and distinct endings with no omission marker or hash suffix.
-- Blind playtest: post-change lore-reader seed 930010 won 60/60 (clarity 5, enjoyment 4) and no longer mentioned clipping; it praised the period voice and instead exposed raw inline dice arithmetic as the new S1 tone break.
-- Self-critique: PASS for compact tutorial/payoff integrity, not depth acceptance—replay stayed false, the optimal tutorial path remains obvious, and transparent combat math now interrupts the fiction. Diegetic combat feedback is the next causal engine/content seam.
-- Guard: post-change crawl `20260711T151519Z` covered 6,000 steps and all 247 nodes; 14 Wolf files / 62 tests, all 12 packs, `npm run health` (283 files / 2,006 tests), and the 441-report feedback ledger are green.
