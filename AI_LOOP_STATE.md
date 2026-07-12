@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 549 -->
+<!-- historical_cycle_count: 550 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,15 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - breaking_weir_next_adventure_choice
+
+- Root evidence: eight verified pure players completed The Breaking Weir and seven ended there; the sole continuer received the fixed Advocate's Case after four similarly sequenced quest arcs. This made a macro-agency experiment the strongest scoped retention correction, with explicitly moderate causal confidence because exits described a satisfying session close (`bug_0517`).
+- Surface: Breaking Weir's honest Continue/End choice remains first and now previews two distinct live premises. Continue reveals an Oswego legal/social versus Greece lethal/exploration choice; either selected-first goal records one meaningful decision and consequence journal, while the unchosen lead stays live and follows only after the selected quest completes.
+- Compatibility/privacy: new selected-first ids preserve legacy Oswego/Greece v8 goal and journal proof exactly. MCP tool discovery now accepts a generic currently visible choice string instead of leaking all future semantic option ids; runtime, UI, full MCP, compact MCP, save/restore, and blocked-action behavior agree.
+- Pure evidence: verified pure/fresh seed 2421 completed Wolf-Winter, Gallowmere, Tanner's Fever, and Breaking Weir in 96 accepted decisions (128 agent turns), understood the two-lead teaser, then honestly ended before consent at goal 4; clarity 4/5, enjoyment 5/5, replay true, no rejects/stuck/timeout.
+- Compile/self-critique: ledger 465/30 rejected is two reports beyond the 463-report compile, below the ≥3 threshold. PASS for real next-adventure ownership and secrecy, not retention uplift: post-change continuation is 0/1 and aggregate Breaking-Weir continuation is 1/9; an owned in-quest flood consequence and Tanner's first-observation Holt prose are next evidence-backed debts.
+- Guard: pre/post crawls `20260712T154852Z`/`20260712T161358Z` covered 6,000 steps and 247/247 nodes; exact seed-2421 report copy, focused 157-test suite, and full health (307 files/2,174 tests, UI, 12 packs) passed.
 
 ### Cycle result - gallowmere_starting_knife_truth
 
@@ -141,12 +150,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Self-critique: PASS for a real terminal material consequence and durable outcome title, not for organic discovery—the two fresh post-change players spent their wood earlier. Repeated clean-wedge loft confusion was closed by stating that only frost-split rail opens recovery; a sound rail stays braced.
 - CI follow-through: replaced quadratic exhaustive-BFS dequeues and 6.5M success-path matcher allocations without changing traversal, state caps, or assertions; exact 665,101-state score and 670,963-state relabel proofs now pass isolated in 58s / 103s.
 - Guard: final crawl `20260711T235321Z` covered 6,000 steps, 8/8 Wolf rooms, 39/33 actions, and 247 overworld nodes; all three reports verify, and `npm run health` passes all 293 files / 2,062 tests and 12 packs.
-
-### Cycle result - wolf_winter_complementary_clue_roles
-
-- Feedback surface: pre-change lore-reader 930014 (4/4, replay yes) found Cade's close/wait advice contradictory and bare "yearling" calf-like; post-change lore-reader 930015 independently ran guarded and quick routes (both 55/60), found no contradiction, praised the clue→mechanic translation, and would replay (4/4).
-- Content surface: the day-book now supplies pack/preparation history without combat commands or Cade's guarantee; Cade labels quick/open versus guarded/patient roads in root prompts, speech, and compact journals, while every pre-contact surface names a young wolf (`bug_0504`).
-- Regression surface: five focused role/runtime/tradeoff witnesses join the semantic compact inventory; the tightest rewritten fields fit at 276/280 narration, 278/280 wrapped dialogue, and 124/128 journal characters, with 16 Wolf files / 72 tests green.
-- Feedback compile: 446 verified reports (29 rejected), nine Wolf reports at clarity 4.56 / enjoyment 3.67 / replay 2/9; its top compact-hash clusters remain flat historical fleet evidence already disproved by exact compact tests and fresh reports.
-- Self-critique: PASS for complementary clue discovery and the first two consecutive replay-positive Wolf runs, not for consequence depth—the blind comparison saw both roads share score/ending, lucky quick kills can hide their risk, and unspent crafted gear still lacks payoff. Do not reward a preferred tactic with score; make successful routes leave distinct actionable consequences next.
-- Guard: final crawl `20260711T172631Z` covered 6,000 steps, all 8 Wolf rooms/actions and 247 overworld nodes; both blind reports verify, the 446-report ledger is current, and `npm run health` passes all 285 files / 2,016 tests and 12 packs.

@@ -5,11 +5,11 @@ Generated deterministically from verified blind reports. The latest entries stay
 ## Summary
 
 - Reports dir: `blind-tester/reports`
-- Accepted reports: 464
+- Accepted reports: 465
 - Rejected or ignored markdown reports: 30
-- Latest report stamp: 20260712T152230Z
+- Latest report stamp: 20260712T161727Z
 - Recent entry limit: 100
-- Archived accepted entries collapsed into traits: 364
+- Archived accepted entries collapsed into traits: 365
 
 ## Recent Common Traits
 
@@ -24,6 +24,12 @@ Generated deterministically from verified blind reports. The latest entries stay
 | 2 | 20260708T203905Z | confusion | town counted visited before road encounter resolved | overworld |
 | 2 | 20260708T203156Z | confusion | hidden counts are useful but abstract | overworld |
 | 2 | 20260708T202531Z | confusion | quest tone disconnected from Albany overworld | overworld |
+| 1 | 20260712T161727Z | bug S0 | Overworld travel planner, Albany city to Oneonta city route: Route doubled back through Albany immediately after leav... | overworld |
+| 1 | 20260712T161727Z | bug S1 | Oneonta Market Streets, sickroom corridor (The Tanner's Fever): References a guard NPC 'Holt' stepping back from a do... | overworld |
+| 1 | 20260712T161727Z | confusion | backtracking route Albany->Saratoga->Albany->Colonie felt odd | overworld |
+| 1 | 20260712T161727Z | confusion | unclear which of talk/scout/investigate would surface the quest lead | overworld |
+| 1 | 20260712T161727Z | confusion | unexplained 'Holt' guard reference in Oneonta sickroom | overworld |
+| 1 | 20260712T161727Z | worst moment | The unexplained 'Holt' guard reference in the Tanner's Fever corridor scene, which read as a dangling thread from una... | overworld |
 | 1 | 20260712T152230Z | bug S0 | road encounter flavor text (Rome/Oneida corridor and others): Templated/repeated 'expect truck stops...' phrasing acr... | overworld |
 | 1 | 20260712T152230Z | confusion | opaque compact-context tuples without the legend | overworld |
 | 1 | 20260712T152230Z | confusion | unexplained renown/decision-checkpoint bookkeeping | overworld |
@@ -34,17 +40,12 @@ Generated deterministically from verified blind reports. The latest entries stay
 | 1 | 20260712T144457Z | confusion | supply cap fluctuated between 6 and 8 with no explained cause | overworld |
 | 1 | 20260712T144457Z | worst moment | Backtracking two rooms in The Gallowmere after discovering I'd never actually picked up the hunting-knife despite the... | overworld |
 | 1 | 20260712T143606Z | confusion | case-notes object required take before read appeared | overworld |
-| 1 | 20260712T143606Z | confusion | multi-leg travel to an undiscovered town errors instead of auto-routing | overworld |
-| 1 | 20260712T143606Z | worst moment | Having to manually hop town-by-town toward Oneonta/Rome because direct multi-leg travel to an undiscovered destinatio... | overworld |
-| 1 | 20260712T142008Z | bug S0 | Road encounters during overworld travel: No visible signal distinguishes a flavor-only auto-resolved road event from... | overworld |
-| 1 | 20260712T142008Z | bug S1 | Overworld travel (travel_overworld_session): Calling travel to a non-adjacent town hard-errors instead of auto-routin... | overworld |
-| 1 | 20260712T142008Z | bug S1 | The Gallowmere / The Moor's Edge (quest start): Flavor text says the hunting-knife is 'at your belt' but it must be m... | overworld |
-| 1 | 20260712T142008Z | confusion | Hunting-knife flavor text implied it was already equipped but required a separate take action | overworld |
 
 ## Recent Entries
 
 | Stamp | Source | Seed | Mode | Decisions | C/E | Stuck | Replay | Report | Signal |
 | --- | --- | ---: | --- | ---: | --- | --- | --- | --- | --- |
+| 20260712T161727Z | overworld | 2421 | pure | 96 | 4/5 | no | yes | `blind-tester/reports/20260712T161727Z_overworld_seed2421.md` | confusions: unclear which of talk/scout/investigate would surface the quest lead; unexplained 'Holt' guard reference in Oneonta sickroom; backtracking route Albany->Sa... |
 | 20260712T152230Z | overworld | 2319 | pure | 96 | 5/4 | no | yes | `blind-tester/reports/20260712T152230Z_overworld_seed2319.md` | confusions: opaque compact-context tuples without the legend; unexplained renown/decision-checkpoint bookkeeping \| bugs: S0 road encounter flavor text (Rome/Oneida cor... |
 | 20260712T144457Z | overworld | 2218 | pure | 130 | 4/5 | no | yes | `blind-tester/reports/20260712T144457Z_overworld_seed2218.md` | confusions: hunting-knife 'already in hands' text vs. actually-empty inventory required backtrack; supply cap fluctuated between 6 and 8 with no explained cause \| bugs... |
 | 20260712T143606Z | overworld | 2217 | pure | 80 | 4/5 | no | yes | `blind-tester/reports/20260712T143606Z_overworld_seed2217.md` | confusions: multi-leg travel to an undiscovered town errors instead of auto-routing; case-notes object required take before read appeared |
@@ -144,7 +145,6 @@ Generated deterministically from verified blind reports. The latest entries stay
 | 20260708T195408Z | overworld | 548 | legacy_guided | — | 4/4 | no | yes | `blind-tester/reports/20260708T195408Z_overworld_seed548.md` | confusions: previously discovered jobs disappear from current area context; compact quest text truncates important prose \| bugs: S1 Albany Station Quarter/event resolu... |
 | 20260708T195407Z | overworld | 547 | legacy_guided | — | 4/4 | no | yes | `blind-tester/reports/20260708T195407Z_overworld_seed547.md` | confusions: compact prose often truncated; road encounter fiction appears after choice; hidden counters do not say where to search next \| bugs: S1 Albany Civic Center... |
 | 20260708T195407Z | overworld | 546 | legacy_guided | — | 4/4 | no | yes | `blind-tester/reports/20260708T195407Z_overworld_seed546.md` | confusions: legal action recheck returned unchanged without actions; event checklist implied required underrooms but did not require them; town civic events felt templ... |
-| 20260708T195406Z | overworld | 545 | legacy_guided | — | 4/4 | no | yes | `blind-tester/reports/20260708T195406Z_overworld_seed545.md` | confusions: quest tone shift from Albany to hill-steading; discovered jobs not visible outside current area \| bugs: S1 Albany Civic Center/event resolution: Resolved c... |
 
 ## Archived Trait Categories
 

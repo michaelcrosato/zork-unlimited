@@ -6,10 +6,6 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { PURE_PLAYER_TOOLS, toolAvailableInPlayMode } from "../../src/mcp/server.js";
-import {
-  ALBANY_DAWN_DISPATCH_CHOICE_IDS,
-  TANNERS_FEVER_ACCOUNTABILITY_CHOICE_IDS,
-} from "../../src/world/journey_campaign.js";
 
 const ROOT = process.cwd();
 const TSX = join(ROOT, "node_modules", "tsx", "dist", "cli.mjs");
@@ -71,18 +67,18 @@ describe("MCP pure play mode", () => {
         );
         expect(storyChoiceTool).toBeDefined();
         const storyChoiceProperties = storyChoiceTool?.inputSchema.properties as
-          | Record<string, { enum?: unknown }>
+          | Record<string, { description?: unknown; enum?: unknown; type?: unknown }>
           | undefined;
-        expect(storyChoiceProperties?.choice?.enum).toEqual([
-          ...ALBANY_DAWN_DISPATCH_CHOICE_IDS,
-          ...TANNERS_FEVER_ACCOUNTABILITY_CHOICE_IDS,
-        ]);
-        expect(new Set(storyChoiceProperties?.choice?.enum as string[]).size).toBe(4);
+        expect(storyChoiceProperties?.choice).toMatchObject({
+          type: "string",
+          description: "Choice id from journey.storyChoice.options.",
+        });
+        expect(storyChoiceProperties?.choice).not.toHaveProperty("enum");
         expect(JSON.stringify(storyChoiceTool)).not.toMatch(
           /targetQuestId|endingId|ending_held|wolf_winter|content\/rpg|win_conditions|maneuver_/i,
         );
         expect(JSON.stringify(storyChoiceTool)).not.toMatch(
-          /Edric|Godwin|wormwood|public scrutiny|family's trust/i,
+          /send_wagon_to_cade|send_wardens_north|keep_household_correction|publish_dosage_warning|advocate|cold_forge|Edric|Godwin|wormwood|public scrutiny|family's trust/i,
         );
 
         const started = await client.callTool({
@@ -92,6 +88,16 @@ describe("MCP pure play mode", () => {
         const payload = textPayload(started);
         sessionId = String(payload.session_id);
         expect(sessionId).toMatch(/^o\d+$/);
+
+        const invalidStoryChoice = await client.callTool({
+          name: "choose_overworld_session_story",
+          arguments: { session_id: sessionId, choice: "not-a-visible-choice" },
+        });
+        expect(invalidStoryChoice.isError).toBe(true);
+        expect((invalidStoryChoice.content as unknown[])[0]).toMatchObject({
+          type: "text",
+          text: expect.stringMatching(/no story consequence to choose/i),
+        });
 
         const second = await client.callTool({
           name: "start_overworld",

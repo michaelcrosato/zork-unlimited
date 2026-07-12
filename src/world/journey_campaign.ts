@@ -98,6 +98,41 @@ export const TANNERS_FEVER_ACCOUNTABILITY_GOALS = Object.freeze({
   ),
 } as const satisfies Record<TannersFeverAccountabilityChoiceId, JourneyCampaignGoalDefinition>);
 
+export const ROME_POST_WEIR_DISPATCH_ID = "rome_post_weir_dispatch" as const;
+export const ROME_POST_WEIR_DISPATCH_CHOICE_IDS = Object.freeze([
+  "take_oswego_charter_packet",
+  "take_greece_forge_packet",
+] as const);
+export type RomePostWeirDispatchChoiceId = (typeof ROME_POST_WEIR_DISPATCH_CHOICE_IDS)[number];
+
+export const ROME_POST_WEIR_DISPATCH_CONTEXT =
+  "The relief-race carries the flood crest around the valley, and Pell's downstream households wake alive." as const;
+
+export const ROME_POST_WEIR_DISPATCH_TEASER =
+  "Two live packets wait beyond Rome: in Oswego, Marta Holm's best cloth is being seized despite her late husband's charter; in Greece, an old forge has gone cold around the Ember-Heart. Continue, and choose which lead to carry first." as const;
+
+/**
+ * These selected-first goals deliberately use new ids. The pre-choice
+ * `oswego_advocates_case` and `greece_cold_forge` ids remain canonical for old
+ * version-8 saves and for whichever packet is deferred to second place.
+ */
+export const ROME_POST_WEIR_DISPATCH_GOALS = Object.freeze({
+  take_oswego_charter_packet: campaignGoal(
+    "oswego_advocates_case_first",
+    "Carry Rome's charter packet to Oswego Market Streets, find the lead for The Advocate's Case, and see it through.",
+    "advocates_case",
+    "oswego_city",
+    "oswego_city__market",
+  ),
+  take_greece_forge_packet: campaignGoal(
+    "greece_cold_forge_first",
+    "Carry Rome's forge packet to Greece Market Streets, find the lead for The Cold Forge, and see it through.",
+    "cold_forge",
+    "greece_town",
+    "greece_town__market",
+  ),
+} as const satisfies Record<RomePostWeirDispatchChoiceId, JourneyCampaignGoalDefinition>);
+
 export type WolfWinterCampaignOutcome = "gate_barred" | "timber_saved" | "held";
 
 export type WolfWinterCampaignOutcomeContext = Readonly<{
@@ -159,13 +194,22 @@ const TANNERS_FEVER_ACCOUNTABILITY_CONSEQUENCES = Object.freeze({
     "The three-to-one error enters Oneonta's public apothecary ledger, warning future patients; Godwin faces public scrutiny, and the household loses control of Edric's private account.",
 } as const satisfies Record<TannersFeverAccountabilityChoiceId, string>);
 
+const ROME_POST_WEIR_DISPATCH_CONSEQUENCES = Object.freeze({
+  take_oswego_charter_packet:
+    "Marta Holm's best cloth remains under seizure while her inherited charter waits to be heard. You carry the charter packet toward Oswego first; the Greece forge packet remains live.",
+  take_greece_forge_packet:
+    "The last living coal of the old forge waits beneath Greece. You carry the forge packet toward Greece first; Marta Holm's Oswego case remains live.",
+} as const satisfies Record<RomePostWeirDispatchChoiceId, string>);
+
 export type JourneyCampaignStoryChoiceId =
   | typeof ALBANY_DAWN_DISPATCH_ID
-  | typeof TANNERS_FEVER_ACCOUNTABILITY_ID;
+  | typeof TANNERS_FEVER_ACCOUNTABILITY_ID
+  | typeof ROME_POST_WEIR_DISPATCH_ID;
 
 export type JourneyCampaignStoryChoiceOptionId =
   | AlbanyDawnDispatchChoiceId
-  | TannersFeverAccountabilityChoiceId;
+  | TannersFeverAccountabilityChoiceId
+  | RomePostWeirDispatchChoiceId;
 
 export type JourneyCampaignStoryChoiceOption<
   ChoiceId extends JourneyCampaignStoryChoiceOptionId = JourneyCampaignStoryChoiceOptionId,
@@ -197,9 +241,15 @@ export type TannersFeverAccountabilityStoryChoice = JourneyCampaignStoryChoiceDe
   TannersFeverAccountabilityChoiceId
 >;
 
+export type RomePostWeirDispatchStoryChoice = JourneyCampaignStoryChoiceDefinition<
+  typeof ROME_POST_WEIR_DISPATCH_ID,
+  RomePostWeirDispatchChoiceId
+>;
+
 export type JourneyCampaignStoryChoice =
   | AlbanyDawnDispatchStoryChoice
-  | TannersFeverAccountabilityStoryChoice;
+  | TannersFeverAccountabilityStoryChoice
+  | RomePostWeirDispatchStoryChoice;
 
 export type JourneyCampaignStoryChoiceSelection =
   | Readonly<{
@@ -210,6 +260,11 @@ export type JourneyCampaignStoryChoiceSelection =
   | Readonly<{
       storyChoiceId: typeof TANNERS_FEVER_ACCOUNTABILITY_ID;
       choiceId: TannersFeverAccountabilityChoiceId;
+      goal: JourneyCampaignGoalDefinition;
+    }>
+  | Readonly<{
+      storyChoiceId: typeof ROME_POST_WEIR_DISPATCH_ID;
+      choiceId: RomePostWeirDispatchChoiceId;
       goal: JourneyCampaignGoalDefinition;
     }>;
 
@@ -290,6 +345,31 @@ export function tannersFeverAccountabilityStoryChoice(): TannersFeverAccountabil
   });
 }
 
+export function romePostWeirDispatchGoal(
+  choiceId: RomePostWeirDispatchChoiceId,
+): JourneyCampaignGoalDefinition {
+  return ROME_POST_WEIR_DISPATCH_GOALS[choiceId];
+}
+
+export function romePostWeirDispatchStoryChoice(): RomePostWeirDispatchStoryChoice {
+  return Object.freeze({
+    id: ROME_POST_WEIR_DISPATCH_ID,
+    message: "Which live packet should leave Rome in your hands first?",
+    options: Object.freeze([
+      Object.freeze({
+        id: "take_oswego_charter_packet" as const,
+        label: "Carry the Oswego charter packet first",
+        consequence: ROME_POST_WEIR_DISPATCH_CONSEQUENCES.take_oswego_charter_packet,
+      }),
+      Object.freeze({
+        id: "take_greece_forge_packet" as const,
+        label: "Carry the Greece forge packet first",
+        consequence: ROME_POST_WEIR_DISPATCH_CONSEQUENCES.take_greece_forge_packet,
+      }),
+    ] as const),
+  });
+}
+
 function isAlbanyDawnDispatchChoiceId(value: string): value is AlbanyDawnDispatchChoiceId {
   return ALBANY_DAWN_DISPATCH_CHOICE_IDS.some((choiceId) => choiceId === value);
 }
@@ -298,6 +378,10 @@ function isTannersFeverAccountabilityChoiceId(
   value: string,
 ): value is TannersFeverAccountabilityChoiceId {
   return TANNERS_FEVER_ACCOUNTABILITY_CHOICE_IDS.some((choiceId) => choiceId === value);
+}
+
+function isRomePostWeirDispatchChoiceId(value: string): value is RomePostWeirDispatchChoiceId {
+  return ROME_POST_WEIR_DISPATCH_CHOICE_IDS.some((choiceId) => choiceId === value);
 }
 
 export function journeyCampaignStoryChoiceSelection(
@@ -324,6 +408,16 @@ export function journeyCampaignStoryChoiceSelection(
       goal: tannersFeverAccountabilityGoal(choiceId),
     });
   }
+  if (storyChoiceId === ROME_POST_WEIR_DISPATCH_ID) {
+    if (!isRomePostWeirDispatchChoiceId(choiceId)) {
+      throw new Error(`Story choice "${storyChoiceId}" does not accept option "${choiceId}".`);
+    }
+    return Object.freeze({
+      storyChoiceId,
+      choiceId,
+      goal: romePostWeirDispatchGoal(choiceId),
+    });
+  }
   throw new Error(`Unknown journey campaign story choice "${storyChoiceId}".`);
 }
 
@@ -343,6 +437,16 @@ function tannersFeverAccountabilityChoiceForGoal(
   return (
     TANNERS_FEVER_ACCOUNTABILITY_CHOICE_IDS.find(
       (choiceId) => TANNERS_FEVER_ACCOUNTABILITY_GOALS[choiceId].id === definition.id,
+    ) ?? null
+  );
+}
+
+function romePostWeirDispatchChoiceForGoal(
+  definition: JourneyCampaignGoalDefinition,
+): RomePostWeirDispatchChoiceId | null {
+  return (
+    ROME_POST_WEIR_DISPATCH_CHOICE_IDS.find(
+      (choiceId) => ROME_POST_WEIR_DISPATCH_GOALS[choiceId].id === definition.id,
     ) ?? null
   );
 }
@@ -373,6 +477,16 @@ export function journeyCampaignGoalJournalCopy(
     }
     return Object.freeze({ title: option.label, text: option.consequence });
   }
+  const postWeirDispatchChoice = romePostWeirDispatchChoiceForGoal(definition);
+  if (postWeirDispatchChoice) {
+    const option = romePostWeirDispatchStoryChoice().options.find(
+      (candidate) => candidate.id === postWeirDispatchChoice,
+    );
+    if (!option) {
+      throw new Error(`Rome post-Weir dispatch option "${postWeirDispatchChoice}" is unavailable.`);
+    }
+    return Object.freeze({ title: option.label, text: option.consequence });
+  }
   if (definition.id === INITIAL_JOURNEY_CAMPAIGN_GOAL.id) {
     throw new Error("The initial journey goal does not have an activation journal entry.");
   }
@@ -399,21 +513,26 @@ const LEGACY_ROME_BREAKING_WEIR_GOAL = campaignGoal(
   "rome_city__market",
 );
 
+/** Preserve these ids and their generic journal copy for existing version-8 saves. */
+const LEGACY_OSWEGO_ADVOCATES_CASE_GOAL = campaignGoal(
+  "oswego_advocates_case",
+  "Travel to Oswego Market Streets, find the lead for The Advocate's Case, and see it through.",
+  "advocates_case",
+  "oswego_city",
+  "oswego_city__market",
+);
+
+const LEGACY_GREECE_COLD_FORGE_GOAL = campaignGoal(
+  "greece_cold_forge",
+  "Travel to Greece Market Streets, find the lead for The Cold Forge, and see it through.",
+  "cold_forge",
+  "greece_town",
+  "greece_town__market",
+);
+
 const ORDERED_POST_BREAKING_WEIR_GOALS = Object.freeze([
-  campaignGoal(
-    "oswego_advocates_case",
-    "Travel to Oswego Market Streets, find the lead for The Advocate's Case, and see it through.",
-    "advocates_case",
-    "oswego_city",
-    "oswego_city__market",
-  ),
-  campaignGoal(
-    "greece_cold_forge",
-    "Travel to Greece Market Streets, find the lead for The Cold Forge, and see it through.",
-    "cold_forge",
-    "greece_town",
-    "greece_town__market",
-  ),
+  LEGACY_OSWEGO_ADVOCATES_CASE_GOAL,
+  LEGACY_GREECE_COLD_FORGE_GOAL,
   campaignGoal(
     "amherst_dawn_beacon",
     "Travel to Amherst Market Streets, find the lead for The Dawn Beacon, and see it through.",
@@ -472,6 +591,7 @@ const GOALS_BY_ID: ReadonlyMap<string, JourneyCampaignGoalDefinition> = new Map(
   [TANNERS_FEVER_CAMPAIGN_GOAL.id, TANNERS_FEVER_CAMPAIGN_GOAL],
   ...Object.values(TANNERS_FEVER_ACCOUNTABILITY_GOALS).map((goal) => [goal.id, goal] as const),
   [LEGACY_ROME_BREAKING_WEIR_GOAL.id, LEGACY_ROME_BREAKING_WEIR_GOAL],
+  ...Object.values(ROME_POST_WEIR_DISPATCH_GOALS).map((goal) => [goal.id, goal] as const),
   ...ORDERED_POST_BREAKING_WEIR_GOALS.map((goal) => [goal.id, goal] as const),
 ]);
 
@@ -516,6 +636,12 @@ export function nextJourneyCampaignGoal(args: {
     return args.tannersFeverAccountabilityChoiceId
       ? tannersFeverAccountabilityGoal(args.tannersFeverAccountabilityChoiceId)
       : null;
+  }
+  if (
+    !args.completedQuestIds.has(LEGACY_OSWEGO_ADVOCATES_CASE_GOAL.targetQuestId) &&
+    !args.completedQuestIds.has(LEGACY_GREECE_COLD_FORGE_GOAL.targetQuestId)
+  ) {
+    return null;
   }
   return (
     ORDERED_POST_BREAKING_WEIR_GOALS.find(
@@ -655,6 +781,30 @@ function awaitsTannersFeverAccountability(journey: JourneyContractSnapshot): boo
   );
 }
 
+function currentGoalTargetsBreakingWeir(journey: JourneyContractSnapshot): boolean {
+  return journeyCampaignGoalDefinition(journey.goal)?.targetQuestId === "breaking_weir";
+}
+
+function awaitsBreakingWeirGoalChoice(journey: JourneyContractSnapshot): boolean {
+  return (
+    journey.status === "awaiting_choice" &&
+    currentGoalTargetsBreakingWeir(journey) &&
+    journey.goal.status === "completed" &&
+    journey.pendingChoice?.reasons.includes("goal_completed") === true &&
+    journey.pendingChoice.goalVersion === journey.goal.version &&
+    journey.pendingChoice.goalId === journey.goal.id
+  );
+}
+
+function awaitsRomePostWeirDispatch(journey: JourneyContractSnapshot): boolean {
+  return (
+    journey.status === "active" &&
+    currentGoalTargetsBreakingWeir(journey) &&
+    journey.goal.status === "completed" &&
+    hasContinuedJourneyGoal(journey, journey.goal)
+  );
+}
+
 export type JourneyCampaignPresentationContext = Readonly<{
   completionContext: string;
   preRetentionTeaser: string | null;
@@ -683,13 +833,26 @@ export function journeyCampaignPresentationContext(args: {
 
   const beforeTannersRetention = awaitsTannersFeverGoalChoice(args.journey);
   const afterTannersContinue = awaitsTannersFeverAccountability(args.journey);
-  if (!beforeTannersRetention && !afterTannersContinue) return null;
+  if (beforeTannersRetention || afterTannersContinue) {
+    return Object.freeze({
+      completionContext: TANNERS_FEVER_ACCOUNTABILITY_CONTEXT,
+      preRetentionTeaser: beforeTannersRetention ? TANNERS_FEVER_ACCOUNTABILITY_TEASER : null,
+      continueConsequencePrefix: beforeTannersRetention
+        ? "Continue to decide how Oneonta records the corrected dose."
+        : null,
+      storyChoice: afterTannersContinue ? tannersFeverAccountabilityStoryChoice() : null,
+    });
+  }
+
+  const beforeBreakingWeirRetention = awaitsBreakingWeirGoalChoice(args.journey);
+  const afterBreakingWeirContinue = awaitsRomePostWeirDispatch(args.journey);
+  if (!beforeBreakingWeirRetention && !afterBreakingWeirContinue) return null;
   return Object.freeze({
-    completionContext: TANNERS_FEVER_ACCOUNTABILITY_CONTEXT,
-    preRetentionTeaser: beforeTannersRetention ? TANNERS_FEVER_ACCOUNTABILITY_TEASER : null,
-    continueConsequencePrefix: beforeTannersRetention
-      ? "Continue to decide how Oneonta records the corrected dose."
+    completionContext: ROME_POST_WEIR_DISPATCH_CONTEXT,
+    preRetentionTeaser: beforeBreakingWeirRetention ? ROME_POST_WEIR_DISPATCH_TEASER : null,
+    continueConsequencePrefix: beforeBreakingWeirRetention
+      ? "Continue to choose which live packet you carry first."
       : null,
-    storyChoice: afterTannersContinue ? tannersFeverAccountabilityStoryChoice() : null,
+    storyChoice: afterBreakingWeirContinue ? romePostWeirDispatchStoryChoice() : null,
   });
 }

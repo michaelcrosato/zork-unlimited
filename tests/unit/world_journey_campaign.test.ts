@@ -9,6 +9,11 @@ import {
   JOURNEY_CAMPAIGN_INITIAL_QUEST_ID,
   JOURNEY_CAMPAIGN_QUEST_ORDER,
   JOURNEY_CAMPAIGN_START_TOWN_ID,
+  ROME_POST_WEIR_DISPATCH_CHOICE_IDS,
+  ROME_POST_WEIR_DISPATCH_CONTEXT,
+  ROME_POST_WEIR_DISPATCH_GOALS,
+  ROME_POST_WEIR_DISPATCH_ID,
+  ROME_POST_WEIR_DISPATCH_TEASER,
   TANNERS_FEVER_ACCOUNTABILITY_CHOICE_IDS,
   TANNERS_FEVER_ACCOUNTABILITY_CONTEXT,
   TANNERS_FEVER_ACCOUNTABILITY_GOALS,
@@ -18,6 +23,7 @@ import {
   WOLF_WINTER_CAMPAIGN_OUTCOMES,
   albanyDawnDispatchStoryChoice,
   assertJourneyCampaignGoalCompletionProof,
+  assertJourneyCampaignJournalProof,
   assertJourneyCampaignQuestOutcome,
   journeyCampaignGoalDefinition,
   journeyCampaignGoalIsComplete,
@@ -26,6 +32,7 @@ import {
   journeyCampaignStoryChoiceSelection,
   materializeJourneyCampaignGoal,
   nextJourneyCampaignGoal,
+  romePostWeirDispatchStoryChoice,
   tannersFeverAccountabilityStoryChoice,
   wolfWinterCampaignOutcome,
   type AlbanyDawnDispatchChoiceId,
@@ -102,6 +109,28 @@ function awaitingTannersFeverGoalChoice(): JourneyContractSnapshot {
 function continuedTannersFeverGoal(): JourneyContractSnapshot {
   return chooseJourney(awaitingTannersFeverGoalChoice(), "continue").state;
 }
+
+function activeBreakingWeirGoal(): JourneyContractSnapshot {
+  const tannersContinued = continuedTannersFeverGoal();
+  return activateJourneyGoal(
+    tannersContinued,
+    materializeJourneyCampaignGoal(
+      TANNERS_FEVER_ACCOUNTABILITY_GOALS.keep_household_correction,
+      tannersContinued.goal.version,
+    ),
+  );
+}
+
+function awaitingBreakingWeirGoalChoice(): JourneyContractSnapshot {
+  return recordJourneyGoalCompleted(activeBreakingWeirGoal());
+}
+
+const COMPLETED_THROUGH_BREAKING_WEIR = new Set([
+  "wolf_winter",
+  "gallowmere",
+  "tanners_fever",
+  "breaking_weir",
+]);
 
 describe("journey campaign", () => {
   it("maps the three stable Wolf-Winter victories to truthful, distinct Albany returns", () => {
@@ -232,21 +261,29 @@ describe("journey campaign", () => {
     expect(goals[1]?.text).toContain("Travel with Hayden's wardens");
   });
 
-  it("defines a generic, runtime-validated story-choice contract for both aftermaths", () => {
+  it("defines a generic, runtime-validated story-choice contract for all authored aftermaths", () => {
     const storyChoiceIds: readonly JourneyCampaignStoryChoiceId[] = [
       "albany_dawn_dispatch",
       "tanners_fever_accountability",
+      "rome_post_weir_dispatch",
     ];
     const optionIds: readonly JourneyCampaignStoryChoiceOptionId[] = [
       ...ALBANY_DAWN_DISPATCH_CHOICE_IDS,
       ...TANNERS_FEVER_ACCOUNTABILITY_CHOICE_IDS,
+      ...ROME_POST_WEIR_DISPATCH_CHOICE_IDS,
     ];
-    expect(storyChoiceIds).toEqual([ALBANY_DAWN_DISPATCH_ID, TANNERS_FEVER_ACCOUNTABILITY_ID]);
+    expect(storyChoiceIds).toEqual([
+      ALBANY_DAWN_DISPATCH_ID,
+      TANNERS_FEVER_ACCOUNTABILITY_ID,
+      ROME_POST_WEIR_DISPATCH_ID,
+    ]);
     expect(optionIds).toEqual([
       "send_wagon_to_cade",
       "send_wardens_north",
       "keep_household_correction",
       "publish_dosage_warning",
+      "take_oswego_charter_packet",
+      "take_greece_forge_packet",
     ]);
 
     expect(
@@ -263,12 +300,22 @@ describe("journey campaign", () => {
       choiceId: "publish_dosage_warning",
       goal: TANNERS_FEVER_ACCOUNTABILITY_GOALS.publish_dosage_warning,
     });
+    expect(
+      journeyCampaignStoryChoiceSelection("rome_post_weir_dispatch", "take_greece_forge_packet"),
+    ).toEqual({
+      storyChoiceId: "rome_post_weir_dispatch",
+      choiceId: "take_greece_forge_packet",
+      goal: ROME_POST_WEIR_DISPATCH_GOALS.take_greece_forge_packet,
+    });
     expect(() =>
       journeyCampaignStoryChoiceSelection("albany_dawn_dispatch", "publish_dosage_warning"),
     ).toThrow(/does not accept option "publish_dosage_warning"/);
     expect(() =>
       journeyCampaignStoryChoiceSelection("tanners_fever_accountability", "send_wagon_to_cade"),
     ).toThrow(/does not accept option "send_wagon_to_cade"/);
+    expect(() =>
+      journeyCampaignStoryChoiceSelection("rome_post_weir_dispatch", "publish_dosage_warning"),
+    ).toThrow(/does not accept option "publish_dosage_warning"/);
     expect(() =>
       journeyCampaignStoryChoiceSelection("invented_aftermath", "invented_choice"),
     ).toThrow(/Unknown journey campaign story choice "invented_aftermath"/);
@@ -363,6 +410,111 @@ describe("journey campaign", () => {
     );
   });
 
+  it("previews both post-Weir premises before retention and asks which packet only after continue", () => {
+    const questOutcomeIds = outcomeIds("ending_held_gate_barred");
+    const active = activeBreakingWeirGoal();
+    const awaiting = awaitingBreakingWeirGoalChoice();
+    const ended = chooseJourney(awaiting, "end").state;
+    const continued = chooseJourney(awaiting, "continue").state;
+
+    expect(journeyCampaignPresentationContext({ journey: active, questOutcomeIds })).toBeNull();
+    expect(
+      journeyCampaignPresentationContext({ journey: awaiting, questOutcomeIds }),
+    ).toMatchObject({
+      completionContext: ROME_POST_WEIR_DISPATCH_CONTEXT,
+      preRetentionTeaser: ROME_POST_WEIR_DISPATCH_TEASER,
+      continueConsequencePrefix: "Continue to choose which live packet you carry first.",
+      storyChoice: null,
+    });
+    expect(ROME_POST_WEIR_DISPATCH_TEASER).toMatch(/Oswego.*Marta Holm/i);
+    expect(ROME_POST_WEIR_DISPATCH_TEASER).toMatch(/Greece.*forge/i);
+    expect(journeyCampaignPresentationContext({ journey: ended, questOutcomeIds })).toBeNull();
+
+    const afterContinue = journeyCampaignPresentationContext({
+      journey: continued,
+      questOutcomeIds,
+    });
+    expect(afterContinue).toMatchObject({
+      completionContext: ROME_POST_WEIR_DISPATCH_CONTEXT,
+      preRetentionTeaser: null,
+      continueConsequencePrefix: null,
+      storyChoice: {
+        id: ROME_POST_WEIR_DISPATCH_ID,
+        message: expect.stringContaining("Which live packet"),
+      },
+    });
+    expect(afterContinue?.storyChoice?.options.map((option) => option.id)).toEqual(
+      ROME_POST_WEIR_DISPATCH_CHOICE_IDS,
+    );
+
+    const branchActive = activateJourneyGoal(
+      continued,
+      materializeJourneyCampaignGoal(
+        ROME_POST_WEIR_DISPATCH_GOALS.take_oswego_charter_packet,
+        continued.goal.version,
+      ),
+    );
+    expect(
+      journeyCampaignPresentationContext({ journey: branchActive, questOutcomeIds }),
+    ).toBeNull();
+  });
+
+  it("routes both post-Weir choices to distinct first goals while preserving legacy journal proof", () => {
+    const choice = romePostWeirDispatchStoryChoice();
+    const goals = Object.values(ROME_POST_WEIR_DISPATCH_GOALS);
+    expect(choice.id).toBe(ROME_POST_WEIR_DISPATCH_ID);
+    expect(choice.options.map((option) => option.id)).toEqual(ROME_POST_WEIR_DISPATCH_CHOICE_IDS);
+    expect(new Set(choice.options.map((option) => option.consequence)).size).toBe(2);
+    expect(new Set(goals.map((goal) => goal.id)).size).toBe(2);
+    expect(goals.map((goal) => goal.targetQuestId)).toEqual(["advocates_case", "cold_forge"]);
+    expect(goals.map((goal) => goal.targetTownId)).toEqual(["oswego_city", "greece_town"]);
+
+    for (const choiceId of ROME_POST_WEIR_DISPATCH_CHOICE_IDS) {
+      const goal = ROME_POST_WEIR_DISPATCH_GOALS[choiceId];
+      const option = choice.options.find((candidate) => candidate.id === choiceId);
+      expect(option).toBeDefined();
+      expect(goal.text).not.toMatch(/evidence order|rhetoric|physick|combat|lever|solution/i);
+      expect(journeyCampaignGoalJournalCopy(goal, new Map())).toEqual({
+        title: option!.label,
+        text: option!.consequence,
+      });
+    }
+
+    const legacyGoals = [
+      journeyCampaignGoalDefinition({ id: "oswego_advocates_case" }),
+      journeyCampaignGoalDefinition({ id: "greece_cold_forge" }),
+    ];
+    for (const legacyGoal of legacyGoals) {
+      expect(legacyGoal).not.toBeNull();
+      expect(journeyCampaignGoalJournalCopy(legacyGoal!, new Map())).toEqual({
+        title: "A new relief lead",
+        text: `The dispatch chain turns to the next live packet. ${legacyGoal!.text}`,
+      });
+    }
+
+    const legacyGoal = legacyGoals[0]!;
+    const legacyBase = continuedInitialGoal();
+    const legacyJourney = activateJourneyGoal(
+      legacyBase,
+      materializeJourneyCampaignGoal(legacyGoal!, legacyBase.goal.version),
+    );
+    const legacyCopy = journeyCampaignGoalJournalCopy(legacyGoal!, new Map());
+    expect(() =>
+      assertJourneyCampaignJournalProof({
+        journey: legacyJourney,
+        questOutcomeIds: new Map(),
+        journalEntries: [
+          {
+            id: `campaign_goal:${String(legacyJourney.goal.version)}:${legacyJourney.goal.id}`,
+            kind: "campaign",
+            title: legacyCopy.title,
+            text: legacyCopy.text,
+          },
+        ],
+      }),
+    ).not.toThrow();
+  });
+
   it("orders every remaining shipped quest and skips completed targets", () => {
     expect(JOURNEY_CAMPAIGN_QUEST_ORDER).toEqual([
       "wolf_winter",
@@ -414,7 +566,26 @@ describe("journey campaign", () => {
       nextJourneyCampaignGoal({
         completedQuestIds: new Set(["wolf_winter", "gallowmere", "tanners_fever", "breaking_weir"]),
       }),
-    ).toMatchObject({ targetQuestId: "advocates_case" });
+    ).toBeNull();
+    expect(
+      nextJourneyCampaignGoal({
+        completedQuestIds: new Set([...COMPLETED_THROUGH_BREAKING_WEIR, "advocates_case"]),
+      }),
+    ).toBe(journeyCampaignGoalDefinition({ id: "greece_cold_forge" }));
+    expect(
+      nextJourneyCampaignGoal({
+        completedQuestIds: new Set([...COMPLETED_THROUGH_BREAKING_WEIR, "cold_forge"]),
+      }),
+    ).toBe(journeyCampaignGoalDefinition({ id: "oswego_advocates_case" }));
+    expect(
+      nextJourneyCampaignGoal({
+        completedQuestIds: new Set([
+          ...COMPLETED_THROUGH_BREAKING_WEIR,
+          "advocates_case",
+          "cold_forge",
+        ]),
+      }),
+    ).toMatchObject({ id: "amherst_dawn_beacon", targetQuestId: "dawn_beacon" });
     expect(
       nextJourneyCampaignGoal({
         completedQuestIds: new Set(JOURNEY_CAMPAIGN_QUEST_ORDER),
@@ -487,6 +658,22 @@ describe("journey campaign", () => {
         startTownId: JOURNEY_CAMPAIGN_START_TOWN_ID,
       }),
     ).not.toThrow();
+    const legacyAwaiting = recordJourneyGoalCompleted(legacyActive);
+    expect(
+      journeyCampaignPresentationContext({
+        journey: legacyAwaiting,
+        questOutcomeIds: outcomeIds("ending_held_gate_barred"),
+      }),
+    ).toMatchObject({
+      preRetentionTeaser: ROME_POST_WEIR_DISPATCH_TEASER,
+      storyChoice: null,
+    });
+    expect(
+      journeyCampaignPresentationContext({
+        journey: chooseJourney(legacyAwaiting, "continue").state,
+        questOutcomeIds: outcomeIds("ending_held_gate_barred"),
+      })?.storyChoice,
+    ).toMatchObject({ id: ROME_POST_WEIR_DISPATCH_ID });
     expect(
       nextJourneyCampaignGoal({
         completedQuestIds: new Set(["wolf_winter", "gallowmere", "tanners_fever"]),
