@@ -248,8 +248,10 @@ describe("bug_0152 — every reachable action menu of every RPG pack has unique 
       expect(actionsSeen).toBeGreaterThan(statesChecked); // every state offers ≥1 action
       expect(collisions).toEqual([]);
       // The exact 665,101-state Wolf-Winter graph took 178s in the exhaustive-suite
-      // contention run. Wall-clock headroom does not change the bounded state proof.
-    }, 240_000);
+      // contention run before interruptible dialogue (f23c8a09) multiplied edges per
+      // dialogue state (~2x wall time locally; shared CI runners need ~3x local).
+      // Wall-clock headroom does not change the bounded state proof.
+    }, 720_000);
   }
 
   it("FAILS on a planted duplicate parser-template id (two same-direction exits → go_north)", () => {

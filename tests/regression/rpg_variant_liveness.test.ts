@@ -101,8 +101,10 @@ const packFiles = readdirSync(PACK_DIR)
 const MAX_STATES = 800_000;
 
 // The exact 670,963-state Wolf-Winter graph took 176s in the exhaustive-suite
-// contention run. Wall-clock headroom does not change the bounded state proof.
-const SOLVER_TEST_TIMEOUT_MS = 240_000;
+// contention run before interruptible dialogue (f23c8a09) multiplied edges per
+// dialogue state (~2x wall time locally; shared CI runners need ~3x local).
+// Wall-clock headroom does not change the bounded state proof.
+const SOLVER_TEST_TIMEOUT_MS = 720_000;
 
 /**
  * The liveness action policy (identical to the parser proof): step every legal action

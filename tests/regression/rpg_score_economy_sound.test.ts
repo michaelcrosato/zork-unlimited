@@ -116,9 +116,11 @@ const SCORE_VAR = "score";
 const MAX_STATES = 800_000;
 
 // Vitest runs the full corpus concurrently in CI, where the largest shipped-pack search
-// can take more than the generic 60-second default under runner contention. MAX_STATES
-// still bounds the actual search work, so this adds headroom without masking a runaway.
-const SOLVER_TEST_TIMEOUT_MS = 180_000;
+// can take more than the generic 60-second default under runner contention. Interruptible
+// dialogue (f23c8a09) made room actions legal beside topics, multiplying edges per
+// dialogue state and roughly doubling Wolf-Winter's wall time. MAX_STATES still bounds
+// the actual search work, so this adds headroom without masking a runaway.
+const SOLVER_TEST_TIMEOUT_MS = 540_000;
 
 // The liveness action policy (bug_0146): step every legal action EXCEPT the ones that
 // provably cannot gate a score award — the inert observation verbs and DROP. Authored
