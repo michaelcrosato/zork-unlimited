@@ -6,8 +6,9 @@ import { crawlQuest } from "../../src/crawl/quest_crawler.js";
 const OPTS = { seed: 11, maxSteps: 400, policy: "mixed" as const, commit: "test" };
 
 // The solver budget bounds this work deterministically; the longer wall-clock limit only
-// accounts for full-suite CPU contention on shared CI runners.
-const SOLVER_TEST_TIMEOUT_MS = 180_000;
+// accounts for full-suite CPU contention on shared CI runners, plus interruptible
+// dialogue (f23c8a09) multiplying edges per dialogue state (~2x wall time).
+const SOLVER_TEST_TIMEOUT_MS = 540_000;
 
 describe("quest crawler", () => {
   it("crawls a generated pack cleanly and deterministically", () => {
