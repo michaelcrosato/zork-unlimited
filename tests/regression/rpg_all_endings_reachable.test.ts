@@ -75,8 +75,12 @@ const packFiles = readdirSync(PACK_DIR)
 // (measured 2026-07-11); this ceiling leaves bounded headroom while a future blowup still
 // fails loudly (cap hit) rather than hanging or silently truncating.
 const MAX_STATES = 400_000;
-// The measured Wolf-Winter graph takes ~84s under the exhaustive-suite contention run.
-const SOLVER_TEST_TIMEOUT_MS = 120_000;
+// The measured Wolf-Winter graph took ~84s under the exhaustive-suite contention run
+// before interruptible dialogue (f23c8a09) made room actions legal beside topics —
+// that multiplies edges per dialogue state (~2x wall time locally; shared CI runners
+// need ~3x local — this exact suite passed PR #84's verify then timed out at 120s on
+// the identical main push). MAX_STATES, not the clock, bounds the work.
+const SOLVER_TEST_TIMEOUT_MS = 360_000;
 
 /**
  * A fixed-sequence PRNG: each draw consumes the next fraction in `fracs` (the last value

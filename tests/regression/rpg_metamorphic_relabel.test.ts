@@ -73,10 +73,11 @@ const packFiles = readdirSync(PACK_DIR)
 // graph exhausts at 332,551 states (measured 2026-07-11); original and relabeled twin
 // each get bounded headroom, and a cap-out remains a loud failure rather than a hang.
 const MAX_STATES = 400_000;
-// 300s matches rpg_metamorphic_observation_stream's budget: tide_mill's census legs
-// stretch ~3x under contended CI runners (its sibling blew a 120s budget on PR #80's
-// first CI run). MAX_STATES, not the clock, bounds the work — a hang still fails loudly.
-const TEST_TIMEOUT_MS = 300_000;
+// Matches rpg_metamorphic_observation_stream's budget: tide_mill's census legs stretch
+// ~3x under contended CI runners (its sibling blew a 120s budget on PR #80's first CI
+// run), and interruptible dialogue (f23c8a09) multiplies edges per dialogue state
+// (~2x wall time). MAX_STATES, not the clock, bounds the work — a hang still fails loudly.
+const TEST_TIMEOUT_MS = 900_000;
 
 // Best/worst-roll PRNGs, identical to rpg_all_endings_reachable.test.ts. resolveAttack
 // draws player strike first, enemy reply second; resolveSkillCheck draws once.
