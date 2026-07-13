@@ -131,6 +131,50 @@ describe("journey campaign out-of-order recovery", () => {
     expect(session.journey().storyChoice).toBeNull();
   });
 
+  it("self-recovers when gallowmere is completed before wolf_winter (dispatch goal re-completes)", () => {
+    const session = new OverworldSession(WORLD);
+    // Discover the Albany leads first, then finish gallowmere before ever starting
+    // wolf_winter — nothing gates quest access by the active journey goal.
+    session.scoutPoi("albany_city__civic_core__poi");
+    moveToArea(session, "albany_city__market");
+    session.scoutPoi("albany_city__market__poi");
+    completeQuestAt(
+      session,
+      "queensbury_town",
+      "gallowmere",
+      "ending_hunt_won",
+      "The Gallowmere Hunt Won",
+    );
+    expect(session.journey().goal.status).toBe("active");
+
+    travelToTown(session, "albany_city");
+    moveToArea(session, "albany_city__transport_hub");
+    session.startQuest("wolf_winter");
+    session.completeQuest("wolf_winter", {
+      endingId: "ending_held_timber_saved",
+      endingTitle: "The Byre Held, Paling Timber Saved",
+      death: false,
+    });
+    expect(session.journey().pendingChoice?.reasons).toContain("goal_completed");
+
+    // The dispatch story must still present: its decision is a campaign beat even
+    // though its goal's target quest is already complete.
+    session.chooseJourney("continue");
+    const storyChoice = session.journey().storyChoice;
+    expect(storyChoice).not.toBeNull();
+
+    // Choosing it activates an already-complete goal, which immediately re-completes
+    // and re-prompts; continuing then auto-activates the Tanner's Fever goal.
+    session.chooseJourneyStory("send_wagon_to_cade");
+    expect(session.journey().pendingChoice?.reasons).toContain("goal_completed");
+    session.chooseJourney("continue");
+    expect(session.journey().goal).toMatchObject({
+      id: "oneonta_tanners_fever",
+      status: "active",
+    });
+    expect(session.journey().storyChoice).toBeNull();
+  });
+
   it("presents the Rome dispatch choice when breaking_weir also completed before the gallowmere goal", () => {
     const session = startCampaignThroughDispatch();
 
