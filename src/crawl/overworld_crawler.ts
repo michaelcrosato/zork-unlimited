@@ -53,7 +53,6 @@ import type {
 } from "../world/overworld.js";
 import { loadOverworldManifest } from "../world/source.js";
 import { OverworldSession } from "../world/session.js";
-import { roadEncounterOptionsFor } from "../world/travel_mechanics.js";
 import { buildOverworldCoverageSummary, type OverworldCoverageSummary } from "./coverage.js";
 import { CrawlLocationSchema, FindingCollector, type CrawlFinding } from "./findings.js";
 import { prepareShippedQuest } from "./prepare.js";
@@ -217,8 +216,21 @@ export function crawlOverworld(opts: OverworldCrawlOptions): OverworldCrawlResul
     // Keep its exhaustive sweep moving through the same game-native pauses by
     // deterministically selecting continue after each recorded mutation. Pure
     // live agents must make this choice themselves through the player surface.
-    if (session.journey().pendingChoice !== null) {
-      session.chooseJourney("continue");
+    for (;;) {
+      const journey = session.journey();
+      if (journey.pendingChoice !== null) {
+        session.chooseJourney("continue");
+        continue;
+      }
+      if (journey.storyChoice !== null) {
+        const option = journey.storyChoice.options[0];
+        if (!option) throw new Error("Journey story choice has no visible option.");
+        session.chooseJourneyStory(option.id);
+        actionJournal.push({ op: "chooseJourneyStory", choice: option.id });
+        stepCounter += 1;
+        continue;
+      }
+      break;
     }
   };
 
@@ -261,13 +273,12 @@ export function crawlOverworld(opts: OverworldCrawlOptions): OverworldCrawlResul
     const entry = session.travel(edgeId);
     record({ op: "travel", edgeId });
     markArrival(entry.toId);
-    if (entry.roadEvent) {
-      // Every edge carries exactly one road event, so a travel that surfaced
-      // one arrives with a pending encounter blocking all other actions until
-      // resolved. Its options are a pure function of the event
-      // (`roadEncounterOptionsFor`) — the same list the session's own
-      // `pendingRoadEncounter.options` carries.
-      const options = roadEncounterOptionsFor(entry.roadEvent);
+    if (entry.roadEvent?.requires_choice === true) {
+      // Ambient route reports travel with the leg and never wedge the sweep.
+      // Only an explicitly authored choice event creates a pending encounter;
+      // its options are the same labeled costs exposed to real players.
+      const options = session.view().pendingRoadEncounter?.options;
+      if (!options) throw new Error(`Choice road event "${entry.roadEvent.id}" is not pending.`);
       const strategy = options[rng.int(0, options.length - 1)]!.strategy;
       session.resolveRoadEncounter(strategy);
       record({ op: "resolveRoadEncounter", edgeId, strategy });

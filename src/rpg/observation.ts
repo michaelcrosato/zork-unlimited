@@ -23,7 +23,12 @@ import { enemyHp } from "./combat.js";
 import { publicFlags, publicInventory, publicJournal, publicVars } from "./observation_state.js";
 import { ATTACK_VAR, DEFENSE_VAR, HP_VAR, SCORE_VAR } from "./schema.js";
 import type { RpgActionOption } from "./legal_actions.js";
-import { enemyActive, enumerateRpgActions, type RpgIndex } from "./runner.js";
+import {
+  enemyActive,
+  enumerateRpgActions,
+  enumerateRpgBlockedActions,
+  type RpgIndex,
+} from "./runner.js";
 
 export type ObservationOptions = {
   hideGraph?: boolean;
@@ -42,6 +47,7 @@ export type RpgObservation = {
   npcs_present: { id: string; name: string }[];
   exits: { direction: string; to?: string }[];
   blocked_exits: { direction: string; message: string }[];
+  blocked_actions: { id: string; command: string; reason: string }[];
   inventory: string[];
   state: { flags: string[]; vars: Record<string, number>; journal: string[] };
   dialogue: { npc: string; npc_text: string } | null;
@@ -145,6 +151,11 @@ export function buildRpgObservation(
     }
   }
 
+  const blockedActions: RpgObservation["blocked_actions"] = [];
+  for (const option of enumerateRpgBlockedActions(index, state)) {
+    blockedActions.push({ id: option.id, command: option.command, reason: option.reason });
+  }
+
   return {
     mode: "rpg",
     room: state.current,
@@ -157,6 +168,7 @@ export function buildRpgObservation(
     npcs_present: npcs,
     exits,
     blocked_exits: blockedExits,
+    blocked_actions: blockedActions,
     inventory: publicInventory(state, { sort: true }),
     state: {
       flags: publicFlags(state),

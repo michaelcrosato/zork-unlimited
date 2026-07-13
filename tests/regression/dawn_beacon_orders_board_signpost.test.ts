@@ -4,7 +4,12 @@
  */
 import { describe, it, expect } from "vitest";
 import { loadRpgSourceFile } from "../../src/rpg/source.js";
-import { indexRpgPack, buildRpgRules, initStateForRpgPack } from "../../src/rpg/runner.js";
+import {
+  indexRpgPack,
+  buildRpgRules,
+  initStateForRpgPack,
+  enumerateRpgActions,
+} from "../../src/rpg/runner.js";
 import { buildRpgObservation } from "../../src/rpg/observation.js";
 import { makeStep, actionEquals } from "../../src/core/engine.js";
 import type { RpgAction } from "../../src/api/types.js";
@@ -31,7 +36,10 @@ function askBeaconFirst(): GameState {
   state = act(state, { type: "MOVE", direction: "north" });
   state = act(state, { type: "TALK", npc: "watchman" });
   state = act(state, { type: "ASK", npc: "watchman", topic: "ask_beacon" });
-  return act(state, { type: "ASK", npc: "watchman", topic: "beacon_back" });
+  const ids = enumerateRpgActions(index, state).map((option) => option.id);
+  expect(ids).toContain("ask_ask_fight");
+  expect(ids).not.toContain("ask_beacon_back");
+  return state;
 }
 
 describe("bug_0392 — Dawn Beacon watchman points unread players to Hale's board", () => {

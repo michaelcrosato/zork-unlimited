@@ -2,7 +2,8 @@ import {
   cloneOverworldArea,
   cloneOverworldExplorationSite,
   cloneOverworldLocalJob,
-  cloneOverworldRoadEvent,
+  redactOverworldRoadEncounterOptionForPresentation,
+  redactOverworldRoadEventForPresentation,
 } from "./overworld_clone.js";
 import type { OverworldActionResult } from "./session_action_application.js";
 import type { OverworldQuestView } from "./session_local_discovery.js";
@@ -10,6 +11,7 @@ import type { OverworldAreaTravelResult } from "./session_local_actions.js";
 import type { OverworldQuestCompletionResult } from "./session_quests.js";
 import type { OverworldRoadEncounterResult } from "./session_road_encounters.js";
 import type { OverworldServiceResult } from "./session_services.js";
+import type { OverworldGoalPassageResult } from "./session_goal_passage.js";
 import type {
   OverworldJournalEntry,
   OverworldPendingRoadEncounter,
@@ -29,15 +31,26 @@ export function cloneOverworldPendingRoadEncounter(
 ): OverworldPendingRoadEncounter {
   return {
     ...encounter,
-    event: cloneOverworldRoadEvent(encounter.event),
-    options: encounter.options.map((option) => ({ ...option })),
+    event: redactOverworldRoadEventForPresentation(encounter.event),
+    options: encounter.options.map((option) =>
+      redactOverworldRoadEncounterOptionForPresentation(option),
+    ),
   };
 }
 
 export function cloneOverworldTravelLogEntry(entry: TravelLogEntry): TravelLogEntry {
   return {
     ...entry,
-    roadEvent: entry.roadEvent ? cloneOverworldRoadEvent(entry.roadEvent) : null,
+    roadEvent: entry.roadEvent ? redactOverworldRoadEventForPresentation(entry.roadEvent) : null,
+  };
+}
+
+export function cloneOverworldGoalPassageResult(
+  result: OverworldGoalPassageResult,
+): OverworldGoalPassageResult {
+  return {
+    ...result,
+    legs: result.legs.map(cloneOverworldTravelLogEntry),
   };
 }
 

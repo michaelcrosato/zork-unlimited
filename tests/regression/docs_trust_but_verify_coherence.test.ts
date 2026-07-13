@@ -83,13 +83,18 @@ describe("bug_0049 — the current-process docs on the REAL repo (charter-cohere
     expect(protocol).toContain("compact_observation = true");
     expect(protocol).toContain("hide_graph = true");
     expect(protocol).toContain("list_legal_actions");
+    expect(protocol).toContain("include_actions = true");
+    expect(protocol).toContain("`context.actions`");
+    expect(protocol).toMatch(/defaults to\s+labeled `\{ id, command \}`/);
+    expect(protocol).toContain("default to labeled `available_actions`");
+    expect(protocol).toContain("unchanged hash reply has no context");
+    expect(protocol).toContain("journey-choice");
     expect(protocol).toContain("compact_actions = true");
     expect(protocol).toContain("expected_state_hash = latest state_hash");
     // Pure mode deliberately retired the old diagnostic escalation path. Raw
     // state/transcript and expanded authoring structure are not human-player
     // surfaces and must not reappear as live-protocol instructions.
     for (const forbidden of [
-      "include_actions = true",
       "compact_actions = false",
       "get_state",
       "compact_state = true",

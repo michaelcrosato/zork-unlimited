@@ -1,0 +1,44 @@
+id: bug_0511_tanners_fever_recovery_affordance
+title: "Tanner's Fever keeps a failed treatment visibly recoverable"
+pack: content/rpg/quests/tanners_fever.yaml
+reported_by: pure-blind-playtest
+reports:
+  - blind-tester/reports/20260712T075817Z_overworld_seed1709.md
+severity: S2
+symptom: >
+  A pure player failed the first bedside treatment after establishing Edric's
+  symptoms and Godwin's dose, but before closely examining the meadowsweet already
+  in hand. The treatment vanished from the legal menu. Compact narration stopped
+  immediately before naming the three recovery steps, and the rolling journal
+  reduced the clue to a hash-like fragment. The player explored Holt's blocked
+  corridor and briefly believed the peaceful route was softlocked.
+root_cause: >
+  Interactions could be either legal and visible or condition-failed and absent.
+  Tanner's deterministic same-id recovery correctly remained solvable, but there
+  was no player-facing representation for a known action awaiting evidence. Its
+  only authored cue was one-shot prose longer than both compact transports.
+fix: >
+  USE interactions may author a state-gated blocked hint. Once revealed, a failed
+  interaction appears separately from legal actions with the same stable id,
+  command, and bounded narrative reason on UI, CLI, full MCP, compact MCP, and the
+  legal-action listing. It cannot execute or count as a decision; an attempted id
+  returns the authored reason without changing state. When its real conditions
+  become true, the blocked row atomically becomes the legal action. Tanner's
+  immediate failure narration and journal now also fit their real transports and
+  explicitly name the recovery steps.
+deterministic_witnesses:
+  - "seed 12 reproduces the natural-1 failure with only herbs_examined missing"
+  - "the treatment leaves legal actions but remains visible once as unavailable"
+  - "UI, CLI, full MCP, compact MCP, and list_legal_actions carry the same authored reason"
+  - "the blocked affordance exposes no raw flag name or condition tree"
+  - "attempting the blocked id rejects without state, hash, or journey-decision change"
+  - "save and restore derive the same unavailable treatment from authored state"
+  - "examining the held meadowsweet removes the blocked row and restores the same id as a deterministic legal treatment"
+  - "a fully prepared failed treatment remains immediately legal and never appears blocked"
+tests:
+  - tests/regression/tanners_fever_failed_treatment_affordance.test.ts
+  - tests/regression/tanners_fever_treatment_retry.test.ts
+verification:
+  - npm test -- --run tests/regression/tanners_fever_failed_treatment_affordance.test.ts tests/regression/tanners_fever_treatment_retry.test.ts
+  - npm run crawl:smoke
+  - npm run health

@@ -920,13 +920,26 @@ npcs:
       nodes:
         - id: cade_root
           npc_text: >
-            You came up from Albany awake—good. My hands cannot hold this door; yours must.
+            You came from Albany awake—good. My hands cannot hold it; yours must.
             The byre is our winter; without its cattle we starve. Three wolves are through,
-            old grey leading. Ask for my quick spear-hand or guarded byre plan: two roads.
+            old grey leading. Ask for either lesson—or both before you go: quick spear-hand
+            or guarded byre plan.
           variants:
-            - when: [{ any_of: [{ has_flag: heard_counsel }, { has_flag: heard_plan }] }]
+            - when: [{ has_flag: heard_counsel }, { has_flag: heard_plan }]
               text: >
-                Ask what else you need, lad. The wolves will not wait on either of us.
+                Both lessons are yours. You do not choose a road here: commit to the quick
+                or guarded line later, at the wolves, when each opening makes the choice
+                real. Leave now and hold the byre.
+            - when: [{ has_flag: heard_counsel }, { not_flag: heard_plan }]
+              text: >
+                You have the quick spear-hand. The guarded byre plan is still yours to
+                learn: rail, breach, and patient line. Ask for it—or leave, and commit later
+                at the wolves.
+            - when: [{ has_flag: heard_plan }, { not_flag: heard_counsel }]
+              text: >
+                You have the guarded byre plan. The quick spear-hand is still yours to
+                learn: set, wheel, and violent close. Ask for it—or leave, and commit later
+                at the wolves.
           topics:
             - id: wolves
               aliases: [ask_wolves]

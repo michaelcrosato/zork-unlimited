@@ -201,6 +201,10 @@ function printTravelEntry(entry: TravelLogEntry): void {
   console.log(
     `Took ${entry.route} to ${entry.to} — ${entry.minutes} min${delay}. Supplies ${entry.suppliesAfter}, fatigue ${entry.fatigueAfter}.`,
   );
+  if (entry.roadEvent) {
+    console.log(`${entry.roadEvent.title} (risk ${entry.roadEvent.risk})`);
+    console.log(entry.roadEvent.summary);
+  }
 }
 
 type Reader = { read(prompt: string): Promise<string | null>; scripted: boolean };

@@ -77,6 +77,11 @@ const isTake = (a: Action) => a.type === "TAKE";
 const isTalk = (a: Action) => a.type === "TALK";
 const askTopic = (topic: string) => (a: Action) =>
   a.type === "ASK" && (a as { topic?: string }).topic === topic;
+function expectSpiritRoot(s: GameState): void {
+  const dialogue = buildRpgObservation(index, s).dialogue;
+  expect(dialogue?.npc).toBe("lantern_spirit");
+  expect(dialogue?.npc_text).toMatch(/What else would you know/i);
+}
 
 /** Fight the sentinel to the death (one side falls). Returns the ended/standing state. */
 function fightOut(s: GameState): GameState {
@@ -122,9 +127,11 @@ describe("bug_0101 — The Cold Forge sentinel has real teeth, so preparation de
     s = act(s, isTalk); // lantern-spirit
     s = act(s, askTopic("ask_sentinel")); // the ONLY difference from case (3): +2 attack
     expect(s.vars["attack"]).toBe(6);
-    s = act(s, askTopic("sentinel_back"));
+    expect(s.flags["heard_sentinel"]).toBe(true);
+    expectSpiritRoot(s);
     s = act(s, askTopic("ask_heart")); // the clue that points at the grate/bar
-    s = act(s, askTopic("heart_back"));
+    expect(s.flags["heard_heart"]).toBe(true);
+    expectSpiritRoot(s);
     s = act(s, askTopic("leave_spirit"));
     expect(s.vars["defense"]).toBe(2); // never visited the cell → no plate, +2 attack alone
 

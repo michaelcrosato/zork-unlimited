@@ -2,6 +2,7 @@ import type {
   OverworldArea,
   OverworldAreaExit,
   OverworldCharacter,
+  OverworldCharacterView,
   OverworldEdge,
   OverworldExit,
   OverworldExplorationSite,
@@ -11,6 +12,7 @@ import type {
   OverworldPoi,
   OverworldRoadEvent,
 } from "./overworld.js";
+import type { OverworldRoadEncounterOption } from "./travel_mechanics.js";
 
 export function cloneOverworldNode(node: OverworldNode): OverworldNode {
   return {
@@ -49,6 +51,22 @@ export function cloneOverworldPoi(poi: OverworldPoi): OverworldPoi {
 }
 
 export function cloneOverworldCharacter(character: OverworldCharacter): OverworldCharacter {
+  return {
+    ...character,
+    ...(character.variants
+      ? {
+          variants: character.variants.map((variant) => ({
+            ...variant,
+            after_quests: [...variant.after_quests],
+          })),
+        }
+      : {}),
+  };
+}
+
+export function cloneOverworldCharacterView(
+  character: OverworldCharacterView,
+): OverworldCharacterView {
   return { ...character };
 }
 
@@ -67,5 +85,39 @@ export function cloneOverworldExplorationSite(
 }
 
 export function cloneOverworldRoadEvent(event: OverworldRoadEvent): OverworldRoadEvent {
-  return { ...event };
+  return {
+    ...event,
+    ...(event.active_goal_ids ? { active_goal_ids: [...event.active_goal_ids] } : {}),
+    ...(event.responses
+      ? {
+          responses: {
+            cautious_scout: { ...event.responses.cautious_scout },
+            assist_travelers: { ...event.responses.assist_travelers },
+            press_on: { ...event.responses.press_on },
+          },
+        }
+      : {}),
+  };
+}
+
+/**
+ * Outward projection of a road event. Authored response outcomes stay hidden until a
+ * strategy is chosen — matching the UI and compact surfaces — so no pre-choice player
+ * projection may carry `responses`; the resolution result alone narrates the outcome.
+ */
+export function redactOverworldRoadEventForPresentation(
+  event: OverworldRoadEvent,
+): OverworldRoadEvent {
+  const clone = cloneOverworldRoadEvent(event);
+  if (clone.responses) delete clone.responses;
+  return clone;
+}
+
+/** Outward projection of an encounter option: label and visible costs, no outcome. */
+export function redactOverworldRoadEncounterOptionForPresentation(
+  option: OverworldRoadEncounterOption,
+): OverworldRoadEncounterOption {
+  const clone = { ...option };
+  if (clone.outcome !== undefined) delete clone.outcome;
+  return clone;
 }

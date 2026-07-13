@@ -15,7 +15,7 @@ export function JourneyEndedScreen({
         <p className="kicker">Journey record</p>
         <h1 id="journey-ended-title">This journey has ended</h1>
         <p>
-          You chose to end after {journey.acceptedDecisions} accepted gameplay decisions. The
+          You chose to end after {journey.acceptedDecisions} meaningful gameplay decisions. The
           record stays here for review.
         </p>
         <dl>

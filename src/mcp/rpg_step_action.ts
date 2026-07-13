@@ -26,6 +26,8 @@ import {
   compactMcpTranscriptActionId,
   MCP_TRANSCRIPT_ACTION_ID_CHAR_LIMIT,
 } from "./action_labels.js";
+import { classifyRpgJourneyDecision, excludedJourneyDecision } from "../world/journey_decision.js";
+import type { JourneyDecisionClassification } from "../world/journey_contract.js";
 
 export const REJECTED_ACTION_ID_TRANSCRIPT_LIMIT = MCP_TRANSCRIPT_ACTION_ID_CHAR_LIMIT;
 
@@ -37,18 +39,26 @@ export type RpgStepActionArgs = {
 } & RpgViewOptions &
   RpgEventOptions;
 
+type RpgJourneyDecisionFields = {
+  journeyDecision: JourneyDecisionClassification;
+  journeyActionId: string | null;
+};
+
 type RpgStepActionBase<Args extends RpgViewOptions & RpgEventOptions> = {
   events: RpgStepEvents<Args>;
   state_hash: string;
 } & RpgStepEventVersion<Args> &
-  RpgViewField<Args>;
+  RpgViewField<Args> &
+  RpgJourneyDecisionFields;
 
 type RpgStepResponseOptions = RpgViewOptions & RpgEventOptions & { expected_state_hash?: string };
 
 export type RpgStepActionResponse<Args extends RpgStepResponseOptions> =
   | ({ ok: true } & RpgStepActionBase<Args>)
   | ({ ok: false; rejection_reason: string } & RpgStepActionBase<Args>)
-  | (Args extends { expected_state_hash: string } ? RpgStateHashRejection : never);
+  | (Args extends { expected_state_hash: string }
+      ? RpgStateHashRejection & RpgJourneyDecisionFields
+      : never);
 
 function actionOptionForId(
   actions: readonly RpgActionOption[],
@@ -88,25 +98,25 @@ export function runRpgStepAction<Args extends RpgStepActionArgs>(
     args.expected_state_hash !== undefined &&
     !rpgStateHashMatches(args.expected_state_hash, currentStateHash)
   ) {
-    return rpgStateHashRejection(currentStateHash) as RpgStepActionResponse<Args>;
+    return {
+      ...rpgStateHashRejection(currentStateHash),
+      journeyDecision: excludedJourneyDecision("rejected"),
+      journeyActionId: null,
+    } as RpgStepActionResponse<Args>;
   }
   const actionOptions = rpgRuntime.legalActionsFor(s);
+  const blockedActionOption = rpgRuntime
+    .blockedActionsFor(s)
+    .find((action) => action.id === args.action_id);
   const active = activeDialogue(s.index, s.state);
   const actionOption = actionOptionForId(actionOptions, args.action_id, active);
+  const beforeState = s.state;
   const beforeStep = s.state.step;
   const beforeSceneId = s.state.current;
   const beforeTitle = rpgRoomTitle(s.index, s.state);
   if (actionOption === null) {
-    // Dialogue is modal, but that constraint was invisible at the exact moment it
-    // bites: a player acting from a menu fetched BEFORE starting a conversation
-    // gets a bare "not available" and has to guess why (bug_0494, found by an
-    // overworld blind playtest). Name the modality only in that case — every
-    // other unknown-id rejection keeps the terse default (rejections live in
-    // transcripts, so idle words cost tokens on every future read).
-    const inDialogue = active !== null;
-    const rejectionReason = inDialogue
-      ? "That action is not available right now: you are mid-conversation, and only the listed ask topics are legal until one of them ends the talk."
-      : "That action is not available right now.";
+    const rejectionReason =
+      blockedActionOption?.reason ?? "That action is not available right now.";
     const rejectionEvents = [{ type: "rejected" as const, reason: rejectionReason }];
     const beforeObsOpts = {
       hideGraph: args.hide_graph ?? s.hideGraph ?? false,
@@ -117,7 +127,7 @@ export function runRpgStepAction<Args extends RpgStepActionArgs>(
       scene_id: beforeSceneId,
       title: beforeTitle,
       action_id: compactMcpTranscriptActionId(args.action_id),
-      action_text: null,
+      action_text: blockedActionOption ? compactMcpActionLabel(blockedActionOption.command) : null,
       events: rejectionEvents,
       result_scene_id: beforeSceneId,
       ended: s.state.ended,
@@ -136,6 +146,8 @@ export function runRpgStepAction<Args extends RpgStepActionArgs>(
         beforeObsOpts,
       ),
       state_hash: publicRpgStateHash(currentStateHash),
+      journeyDecision: excludedJourneyDecision("rejected"),
+      journeyActionId: null,
     } as RpgStepActionResponse<Args>;
   }
   const result = s.step(s.state, actionOption.action);
@@ -164,6 +176,15 @@ export function runRpgStepAction<Args extends RpgStepActionArgs>(
       ...rpgStepEventVersion(args),
       ...rpgViewField(sessions, s, after, args, afterObsOpts),
       state_hash: publicRpgStateHash(s.stateHash),
+      journeyDecision: classifyRpgJourneyDecision({
+        action: actionOption.action,
+        before: beforeState,
+        after: result.state,
+        events: result.events,
+        accepted: false,
+        isSkillCheck: actionOption.skill_check !== undefined,
+      }),
+      journeyActionId: actionOption.id,
     } as RpgStepActionResponse<Args>;
   }
   return {
@@ -172,5 +193,14 @@ export function runRpgStepAction<Args extends RpgStepActionArgs>(
     ...rpgStepEventVersion(args),
     ...rpgViewField(sessions, s, after, args, afterObsOpts),
     state_hash: publicRpgStateHash(s.stateHash),
+    journeyDecision: classifyRpgJourneyDecision({
+      action: actionOption.action,
+      before: beforeState,
+      after: result.state,
+      events: result.events,
+      accepted: true,
+      isSkillCheck: actionOption.skill_check !== undefined,
+    }),
+    journeyActionId: actionOption.id,
   } as RpgStepActionResponse<Args>;
 }

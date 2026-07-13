@@ -37,8 +37,10 @@
  *      monotone: any ending still reached is reached by a real, legal playthrough using a
  *      SUBSET of the game's actions, so it is genuinely reachable in the full game. The
  *      only thing a restriction can do is HIDE an ending that truly requires a dropped/
- *      closed item — and that surfaces as a declared ending going unreached, i.e. a LOUD
- *      test failure, never a silent pass. (Shipped packs gate every transition on
+ *      closed item or an authored observation interaction — and that surfaces as a declared
+ *      ending going unreached, i.e. a LOUD test failure, never a silent pass. Mode-specific
+ *      callers that prove score/menu/variant completeness widen `explore` to retain such
+ *      stateful actions. (Shipped packs gate every transition on
  *      has_item / visited / flags / is_unlocked; `not_item`/drop appear only in reactive
  *      prose `when:` variants, never on a route — so no ending needs a drop.)
  */
@@ -47,11 +49,12 @@ import type { GameState } from "../core/state.js";
 import type { Action } from "../api/types.js";
 
 /**
- * Action types the search never needs to step: purely REVERSIBLE world edits (DROP undoes
- * TAKE, CLOSE undoes OPEN) and pure OBSERVATIONS (LOOK/INVENTORY/READ/INSPECT change no
- * game state — they only emit narration, so stepping them yields an identical fingerprint
- * anyway). Excluding them keeps the parser verb×object search tractable without affecting
- * which endings are reachable (see the MONOTONE ACTION RESTRICTION note above). Every
+ * Action types the default ending search does not step: reversible world edits and
+ * observation-shaped actions. Some modes attach sticky effects to READ or to authored
+ * INSPECT interactions carried by LOOK; completeness callers for those properties supply
+ * a wider `explore` predicate. The default restriction keeps parser verb×object searches
+ * tractable and can only hide an ending, which produces a loud reachability failure (see the
+ * MONOTONE ACTION RESTRICTION note above). Every
  * other action type — MOVE, TAKE, OPEN, UNLOCK, USE, TALK, ASK, GIVE, ATTACK — is
  * a potential route step and is always explored.
  */
@@ -143,7 +146,8 @@ export type ExhaustiveResult = {
  *     it. (READ in particular carries interaction `effects` — e.g. a `read_recipe` flag —
  *     so it is NOT pure narration and a liveness search must step it; the reachability
  *     search skips it soundly only because no ROUTE gates on a read flag, just reactive
- *     prose. This is the exact caveat the bug_0145 next-focus named.)
+ *     prose. RPG authored INSPECT effects similarly ride on LOOK, so RPG score/variant/menu
+ *     callers restore only target looks backed by an INSPECT interaction.)
  *   - `key` — the dedupe fingerprint. Defaults to `stateKey`.
  *   - `onEdge` — observe every TRANSITION the search produces, as a `(fromKey, toKey)`
  *     pair of state fingerprints, INCLUDING edges into already-seen states (which the BFS

@@ -50,15 +50,30 @@ function actId(s: GameState, id: string): GameState {
   return r.state;
 }
 
+function hearSowCounsel(s: GameState): GameState {
+  s = actId(s, "talk_hedrick");
+  s = actId(s, "ask_ask_sow");
+  const ids = enumerateRpgActions(index, s).map((option) => option.id);
+  expect(ids).not.toContain("ask_hedrick_sow_back");
+  expect(ids).toEqual([
+    "ask_ask_father",
+    "ask_leave_hedrick",
+    "go_east",
+    "examine_shepherd_log",
+    "read_shepherd_log",
+    "examine_hunting_knife",
+    "look_around",
+    "inventory",
+  ]);
+  return s;
+}
+
 function fullPrepToHollow(): GameState {
   let s = initStateForRpgPack(index, 7);
+  s = actId(s, "go_west");
+  s = hearSowCounsel(s);
   for (const id of [
-    "take_hunting_knife",
-    "go_west",
-    "talk_hedrick",
-    "ask_ask_sow",
-    "ask_hedrick_sow_back",
-    "ask_leave_hedrick",
+    // Reading the log preserves the exchange; the following eastward move closes it.
     "read_shepherd_log",
     "go_east",
     "go_north",
@@ -79,13 +94,10 @@ function fullPrepToHollow(): GameState {
 
 function windOnlyToHollow(): GameState {
   let s = initStateForRpgPack(index, 7);
+  s = actId(s, "go_west");
+  s = hearSowCounsel(s);
   for (const id of [
-    "take_hunting_knife",
-    "go_west",
-    "talk_hedrick",
-    "ask_ask_sow",
-    "ask_hedrick_sow_back",
-    "ask_leave_hedrick",
+    // Leaving by the east exit interrupts the conversation without a filler step.
     "go_east",
     "go_north",
     "go_north",

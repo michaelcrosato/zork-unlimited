@@ -11,6 +11,7 @@ import {
   type OverworldLocalActionJournalReplayIndex,
 } from "../../src/world/session_local_action_journal.js";
 import { timeLabel } from "../../src/world/session_journal_codec.js";
+import { allOverworldContactPresentations } from "../../src/world/session_contact_presentation.js";
 import type { OverworldJournalTimelineIndex } from "../../src/world/session_journal_timeline.js";
 import type { OverworldJournalEntry } from "../../src/world/session_snapshot.js";
 import type {
@@ -118,6 +119,7 @@ function quest(id: string): OverworldQuest {
 const areaA = area("area_a", 10);
 const areaB = area("area_b", 20);
 const characterA = character("char_a");
+const characterAPresentations = allOverworldContactPresentations(characterA);
 const eventA = event("event_a");
 const jobA = job("job_a");
 const jobB = job("job_b");
@@ -175,6 +177,9 @@ function reachability(
     ]),
     areasByTown: new Map([["town_b", [areaA, areaB]]]),
     charactersById: new Map([[characterA.id, characterA]]),
+    contactPresentationsByJournalId: new Map(
+      characterAPresentations.map((presentation) => [presentation.journalId, presentation]),
+    ),
     discoveredAreaIds: new Set([areaA.id]),
     discoveredJobIds: new Set(),
     discoveredQuestIds: new Set(),
@@ -191,6 +196,7 @@ function reachability(
     sitesByArea: new Map([[areaA.id, [siteA]]]),
     sitesById: new Map([[siteA.id, siteA]]),
     townVisitMinutes: new Map([["town_b", 500]]),
+    townNameForSource: () => "Town B",
     visitedTownIds: new Set(["town_b"]),
     ...overrides,
   };

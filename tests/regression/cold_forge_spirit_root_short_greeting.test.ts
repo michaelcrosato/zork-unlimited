@@ -21,6 +21,7 @@ import {
   enumerateRpgActions,
 } from "../../src/rpg/runner.js";
 import { validateRpg } from "../../src/validate/rpg_validator.js";
+import { buildRpgObservation } from "../../src/rpg/observation.js";
 import { makeStep } from "../../src/core/engine.js";
 import type { Action } from "../../src/api/types.js";
 import type { GameState } from "../../src/core/state.js";
@@ -79,24 +80,26 @@ describe("bug_0322 — cold_forge spirit_root shows short greeting on return", (
     let s = initStateForRpgPack(index, 7);
     s = act(s, move("down"));
     s = act(s, (a) => a.type === "TALK");
-    s = act(s, ask("ask_sentinel")); // sets heard_sentinel
-    const back = run(s, ask("sentinel_back")); // → spirit_root
-    const lines = spokenLines(back.events);
-    expect(lines.length).toBe(1);
-    expect(lines[0]).toContain("What else would you know");
-    expect(lines[0]).not.toContain("watched this forge die by inches");
+    const answer = run(s, ask("ask_sentinel")); // answer + root resume are atomic
+    expect(answer.state.flags["heard_sentinel"]).toBe(true);
+    expect(spokenLines(answer.events)).toHaveLength(1); // only the substantive answer speaks
+    const rootLine = buildRpgObservation(index, answer.state).dialogue?.npc_text ?? "";
+    expect(rootLine).toContain("What else would you know");
+    expect(rootLine).not.toContain("watched this forge die by inches");
+    expect(options(answer.state).map((option) => option.id)).not.toContain("ask_sentinel_back");
   });
 
   it("(c) return after heart topic also shows short acknowledgment", () => {
     let s = initStateForRpgPack(index, 7);
     s = act(s, move("down"));
     s = act(s, (a) => a.type === "TALK");
-    s = act(s, ask("ask_heart")); // sets heard_heart
-    const back = run(s, ask("heart_back")); // → spirit_root
-    const lines = spokenLines(back.events);
-    expect(lines.length).toBe(1);
-    expect(lines[0]).toContain("What else would you know");
-    expect(lines[0]).not.toContain("watched this forge die by inches");
+    const answer = run(s, ask("ask_heart")); // answer + root resume are atomic
+    expect(answer.state.flags["heard_heart"]).toBe(true);
+    expect(spokenLines(answer.events)).toHaveLength(1);
+    const rootLine = buildRpgObservation(index, answer.state).dialogue?.npc_text ?? "";
+    expect(rootLine).toContain("What else would you know");
+    expect(rootLine).not.toContain("watched this forge die by inches");
+    expect(options(answer.state).map((option) => option.id)).not.toContain("ask_heart_back");
   });
 
   it("(d) pack validates green and ending_victory 50/50 route is unaffected", () => {
@@ -107,7 +110,8 @@ describe("bug_0322 — cold_forge spirit_root shows short greeting on return", (
     s = act(s, (a) => a.type === "TAKE"); // pry-bar
     s = act(s, (a) => a.type === "TALK");
     s = act(s, ask("ask_sentinel")); // +2 attack
-    s = act(s, ask("sentinel_back"));
+    expect(s.flags["heard_sentinel"]).toBe(true);
+    expect(buildRpgObservation(index, s).dialogue?.npc_text).toMatch(/What else would you know/i);
     s = act(s, ask("leave_spirit"));
     s = act(s, move("north"));
     let guard = 0;

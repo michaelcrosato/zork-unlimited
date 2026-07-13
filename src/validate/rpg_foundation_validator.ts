@@ -513,7 +513,7 @@ export function validateRpgFoundation(
       unlockableObjects.add(o.id);
   }
 
-  // ── Feasibility of every gate (presence, exits, interactions, topics, wins) ──
+  // ── Feasibility of every gate (presence, exits, interactions/hints, topics, wins) ──
   const checkConds = (conds: Condition[], where: string[]): void => {
     for (const f of flagReqs(conds)) {
       if (!settable.has(f))
@@ -584,6 +584,12 @@ export function validateRpgFoundation(
     }
     for (const it of o.interactions) {
       checkConds(it.conditions, [`object:${o.id}`, `verb:${it.verb}`]);
+      if (it.blocked_hint)
+        checkConds(it.blocked_hint.visible_when, [
+          `object:${o.id}`,
+          `verb:${it.verb}`,
+          "blocked_hint:visible_when",
+        ]);
       if (it.item !== undefined && !obtainable.has(it.item)) {
         findings.push(
           err(
@@ -938,7 +944,8 @@ export function validateRpgFoundation(
   // all (dead text / a gate never offered). Both are silently-dead content a blind
   // playtest can't see — it simply never appears. This ports the two CYOA checks to
   // RPG room/object variants, plus the unsatisfiable-guard check to exit and
-  // interaction conditions (the RPG analogue of CYOA choice conditions). Sound &
+  // interaction conditions and blocked-hint visibility (the RPG analogues of CYOA
+  // choice conditions). Sound &
   // conservative: see the helper notes — opaque disjunctions never drive a finding.
   for (const room of pack.rooms) {
     checkVariantShadowing(room.variants, `room:${room.id}`, findings);
@@ -980,7 +987,7 @@ export function validateRpgFoundation(
           : `object "${o.id}" variant #${i + 1}`,
         findings,
       );
-    for (const it of o.interactions)
+    for (const it of o.interactions) {
       checkUnsatisfiable(
         [...worldOnlyPresence, ...it.conditions],
         [`object:${o.id}`, `verb:${it.verb}`],
@@ -989,6 +996,16 @@ export function validateRpgFoundation(
           : `interaction "${it.verb}" on object "${o.id}"`,
         findings,
       );
+      if (it.blocked_hint)
+        checkUnsatisfiable(
+          [...worldOnlyPresence, ...it.blocked_hint.visible_when],
+          [`object:${o.id}`, `verb:${it.verb}`, "blocked_hint:visible_when"],
+          worldOnlyPresence.length > 0
+            ? `blocked hint for interaction "${it.verb}" on object "${o.id}" together with its world-presence gate`
+            : `blocked hint for interaction "${it.verb}" on object "${o.id}"`,
+          findings,
+        );
+    }
   }
   // Endings carry reactive `variants` too (EndingVariantSchema, first-match-wins
   // via model.ts endingText) — the terminal-state sibling of room/object variants. Apply
@@ -1800,7 +1817,7 @@ function objectStateReqs(conds: Condition[]): { kind: "open" | "unlocked"; id: s
 }
 
 /** Every flag name an RPG pack READS — has_flag/not_flag in any exit,
- *  interaction, or win condition, any room/object variant `when`, NPC presence
+ *  interaction condition/blocked hint, or win condition, any room/object variant `when`, NPC presence
  *  gate, or dialogue-topic gate, descending all_of/any_of/none_of. The set of
  *  consumers for the INERT_FLAG check: a written flag (set_flag / flags_init / a
  *  combat-or-skill mechanic) absent here is inert. Mirrors the CYOA validator's
@@ -1822,7 +1839,10 @@ function collectFlagReads(pack: RpgPack): Set<string> {
   for (const o of pack.objects) {
     walkAll(o.visible_when);
     for (const v of o.variants ?? []) walkAll(v.when);
-    for (const it of o.interactions) walkAll(it.conditions);
+    for (const it of o.interactions) {
+      walkAll(it.conditions);
+      walkAll(it.blocked_hint?.visible_when);
+    }
   }
   for (const enemy of pack.enemies)
     for (const maneuver of enemy.maneuvers ?? []) walkAll(maneuver.conditions);
@@ -1839,7 +1859,7 @@ function collectFlagReads(pack: RpgPack): Set<string> {
 }
 
 /** Every object id whose `is_open` / `is_unlocked` state an RPG pack READS —
- *  in any exit, interaction, or win condition, any room/object variant `when`, or any
+ *  in any exit, interaction condition/blocked hint, or win condition, any room/object variant `when`, or any
  *  dialogue-topic gate, DESCENDING all_of/any_of/none_of (a read inside ANY connective,
  *  even a disjunction, counts as consumed). The consumer set for the INERT_OBJECT_STATE
  *  liveness check (the dual of bug_0253's IMPOSSIBLE_OBJECT_STATE feasibility check):
@@ -1866,7 +1886,10 @@ function collectObjectStateReads(pack: RpgPack): { open: Set<string>; unlocked: 
   for (const o of pack.objects) {
     walkAll(o.visible_when);
     for (const v of o.variants ?? []) walkAll(v.when);
-    for (const it of o.interactions) walkAll(it.conditions);
+    for (const it of o.interactions) {
+      walkAll(it.conditions);
+      walkAll(it.blocked_hint?.visible_when);
+    }
   }
   for (const enemy of pack.enemies)
     for (const maneuver of enemy.maneuvers ?? []) walkAll(maneuver.conditions);
@@ -1883,7 +1906,7 @@ function collectObjectStateReads(pack: RpgPack): { open: Set<string>; unlocked: 
 }
 
 /** Every room id an RPG pack REFERENCES — by a `visited` / `not_visited` /
- *  `in_room` condition in any exit, interaction, or win condition, any room/object
+ *  `in_room` condition in any exit, interaction condition/blocked hint, or win condition, any room/object
  *  variant `when`, any ending variant `when`, NPC presence gate, or any dialogue-
  *  node-variant/topic gate (DESCENDING all_of/any_of/none_of, so a disjunction-
  *  guarded room ref still counts), PLUS by a `goto` / `place_object.room` effect target
@@ -1913,7 +1936,10 @@ function collectRoomRefs(pack: RpgPack, extraEffects: readonly Effect[] = []): S
   for (const o of pack.objects) {
     walkAll(o.visible_when);
     for (const v of o.variants ?? []) walkAll(v.when);
-    for (const it of o.interactions) walkAll(it.conditions);
+    for (const it of o.interactions) {
+      walkAll(it.conditions);
+      walkAll(it.blocked_hint?.visible_when);
+    }
   }
   for (const enemy of pack.enemies)
     for (const maneuver of enemy.maneuvers ?? []) walkAll(maneuver.conditions);

@@ -38,9 +38,19 @@ const TEMP_PACK_SOURCE = "not: rpg\n";
 // integrity-passing overworld manifest but swaps its quest list for one temp quest,
 // so the shipped-source bijection (assertOverworldQuestSourceCoverage) holds with
 // exactly the temp pack on disk. The temp quest is anchored to a real Albany area.
+type FixtureOverworld = Record<string, unknown> & {
+  characters: Array<{ variants?: unknown }>;
+};
+
 const REAL_OVERWORLD = JSON.parse(
   readFileSync(join(ROOT, "content", "world", "new_york_overworld.json"), "utf8"),
-) as Record<string, unknown>;
+) as FixtureOverworld;
+
+function fixtureOverworldWithoutContactVariants(): FixtureOverworld {
+  const world = structuredClone(REAL_OVERWORLD);
+  for (const character of world.characters) delete character.variants;
+  return world;
+}
 
 function withTempRoot(run: (root: string) => void): void {
   const root = mkdtempSync(join(tmpdir(), "rpg-source-cache-"));
@@ -63,7 +73,7 @@ function writeTempWorldQuest(root: string, packSource = TEMP_PACK_SOURCE): strin
   mkdirSync(join(root, "content", "rpg", "quests"), { recursive: true });
   const sourcePath = join(root, "content", "rpg", "quests", `${TEMP_WORLD_QUEST_ID}.yaml`);
   const overworld = {
-    ...REAL_OVERWORLD,
+    ...fixtureOverworldWithoutContactVariants(),
     quests: [
       {
         id: TEMP_WORLD_QUEST_ID,

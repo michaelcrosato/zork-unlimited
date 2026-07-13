@@ -4,6 +4,7 @@ import type {
   OverworldPoi,
   OverworldRegionalArc,
 } from "./overworld.js";
+import { allOverworldContactPresentations } from "./session_contact_presentation.js";
 import {
   type OverworldEventResolutionJournalIndex,
   type OverworldResolutionProofIndex,
@@ -41,7 +42,7 @@ export type OverworldJournalEntryPresence = {
 export type OverworldEventResolutionReadinessIndex = {
   event: Pick<OverworldLocalEvent, "area" | "id">;
   poisByArea: ReadonlyMap<string, readonly Pick<OverworldPoi, "id">[]>;
-  charactersByArea: ReadonlyMap<string, readonly Pick<OverworldCharacter, "id">[]>;
+  charactersByArea: ReadonlyMap<string, readonly OverworldCharacter[]>;
   journalEntryIds: OverworldJournalEntryPresence;
 };
 
@@ -66,7 +67,7 @@ export type OverworldEventResolutionPlanState = {
   resolvedEventIds: ReadonlySet<string>;
   journalEntries: OverworldJournalEntryReadIndex;
   poisByArea: ReadonlyMap<string, readonly Pick<OverworldPoi, "id">[]>;
-  charactersByArea: ReadonlyMap<string, readonly Pick<OverworldCharacter, "id">[]>;
+  charactersByArea: ReadonlyMap<string, readonly OverworldCharacter[]>;
 };
 
 export type OverworldEventResolutionActionPlan = {
@@ -119,7 +120,9 @@ export function overworldEventResolutionReadiness(
     sources.journalEntryIds.has(`scout:${poi.id}`),
   );
   const talkedContact = (sources.charactersByArea.get(sources.event.area) ?? []).some((character) =>
-    sources.journalEntryIds.has(`talk:${character.id}`),
+    allOverworldContactPresentations(character).some((presentation) =>
+      sources.journalEntryIds.has(presentation.journalId),
+    ),
   );
   const investigatedEvent = sources.journalEntryIds.has(`investigate:${sources.event.id}`);
   const missing: OverworldEventResolutionPrerequisite[] = [];

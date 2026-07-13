@@ -27,7 +27,7 @@ export type OverworldSessionEventResolutionPlanState = {
   resolvedEventIds: ReadonlySet<string>;
   journalEntries: ReadonlyMap<string, OverworldJournalEntry>;
   poisByArea: ReadonlyMap<string, readonly Pick<OverworldPoi, "id">[]>;
-  charactersByArea: ReadonlyMap<string, readonly Pick<OverworldCharacter, "id">[]>;
+  charactersByArea: ReadonlyMap<string, readonly OverworldCharacter[]>;
 };
 
 export type MutableOverworldSessionEventResolutionState = OverworldActionJournalState & {

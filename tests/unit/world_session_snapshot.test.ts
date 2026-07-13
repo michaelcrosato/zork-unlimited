@@ -57,6 +57,7 @@ function baseSnapshot(): OverworldSessionSnapshot {
     discoveredQuestIds: [],
     startedQuestIds: [],
     completedQuestIds: [],
+    questOutcomes: [],
     exploredSiteIds: [],
     regionRenown: [["Capital / Mohawk", 1]],
     completedRegionalArcIds: [],
@@ -122,6 +123,7 @@ describe("overworld session snapshots", () => {
     clone.currentAreaByTown[0]![1] = "changed_area";
     clone.travelLog[0]!.arrivedAt = 999;
     clone.journalEntries[0]!.title = "Changed";
+    clone.questOutcomes.push(["wolf_winter", "ending_held"]);
     clone.regionRenown[0]![1] = 9;
     clone.pendingRoadEncounter!.edgeId = "changed_road";
     clone.journey.goal.status = "completed";
@@ -130,6 +132,7 @@ describe("overworld session snapshots", () => {
     expect(snapshot.currentAreaByTown[0]).toEqual(["albany_city", "albany_capitol_hill"]);
     expect(snapshot.travelLog[0]?.arrivedAt).toBe(500);
     expect(snapshot.journalEntries[0]?.title).toBe("Capitol Hill");
+    expect(snapshot.questOutcomes).toEqual([]);
     expect(snapshot.regionRenown[0]).toEqual(["Capital / Mohawk", 1]);
     expect(snapshot.pendingRoadEncounter?.edgeId).toBe("road:albany:colonie");
     expect(snapshot.journey.goal.status).toBe("active");

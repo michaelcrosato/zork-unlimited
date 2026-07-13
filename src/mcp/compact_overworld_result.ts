@@ -1,20 +1,26 @@
 import type {
   OverworldActionResult,
   OverworldAreaTravelResult,
+  OverworldJourneyGoalPassageResult,
   OverworldQuestCompletionResult,
   OverworldRoadEncounterResult,
   OverworldRoadEncounterStrategy,
   OverworldServiceResult,
+  TravelLogEntry,
 } from "../world/session.js";
+import { compactText } from "../core/compact_text.js";
 import {
   compactOverworldJournalEntries,
   compactOverworldLabel,
   compactOverworldQuestRef,
   compactOverworldQuestRefs,
   compactOverworldRefs,
+  compactOverworldRisk,
   compactOverworldTitle,
   compactOverworldTitleRefs,
   compactPendingRoad,
+  OVERWORLD_COMPACT_ROUTE_STEP_LIMIT,
+  OVERWORLD_COMPACT_ROAD_EVENT_SUMMARY_CHAR_LIMIT,
   type OverworldCompactJournalEntry,
   type OverworldCompactQuestRef,
   type OverworldCompactRef,
@@ -23,10 +29,18 @@ import {
 
 export type OverworldCompactDiscoveryKey = "areas" | "jobs" | "sites" | "quests";
 
+// Immediate local-action prose is the player's consequence, not rolling context.
+// Keep enough room for every shipped contact line while bounding longer area/site copy.
+export const OVERWORLD_COMPACT_ACTION_TEXT_CHAR_LIMIT = 360;
+// Road outcomes include the scene, chosen response, and arrival consequence.
+// Every shipped composition fits; future growth remains transparently bounded.
+export const OVERWORLD_COMPACT_ROAD_ENCOUNTER_TEXT_CHAR_LIMIT = 600;
+
 export type OverworldCompactActionResult = {
   m: number;
   known?: true;
   entry: OverworldCompactJournalEntry;
+  text: string;
   areas?: OverworldCompactRef[];
   jobs?: OverworldCompactRef[];
   sites?: OverworldCompactRef[];
@@ -60,6 +74,7 @@ export type OverworldCompactRoadEncounterResult = {
   renown: number;
   encounter: OverworldCompactRoadEncounter;
   entry: OverworldCompactJournalEntry;
+  text: string;
 };
 
 export type OverworldCompactAreaTravelResult = {
@@ -68,6 +83,44 @@ export type OverworldCompactAreaTravelResult = {
   route: string;
   m: number;
   at: string;
+};
+
+/**
+ * The accepted travel decision plus its immediate road scene. The first seven
+ * positions intentionally match the rolling travel-log tuple; only this
+ * immediate result carries the bounded risk/title/summary needed to experience
+ * ambient and blocking scenes without another context read.
+ */
+export type OverworldCompactTravelResult = readonly [
+  edgeId: string,
+  fromId: string,
+  toId: string,
+  minutes: number,
+  suppliesUsed: number,
+  fatigueGained: number,
+  roadEventId: string | null,
+  roadEventRisk: string | null,
+  roadEventTitle: string | null,
+  roadEventSummary: string | null,
+];
+
+/**
+ * One game-native commitment to the current goal passage. The aggregates stay
+ * self-describing, while each traversed leg reuses the bounded immediate-travel
+ * tuple. A capped response can omit only already-traversed history; it never
+ * substitutes planned roads or future road scenes.
+ */
+export type OverworldCompactGoalPassageResult = {
+  goal_id: string;
+  destination: string;
+  stopped_at: string;
+  stop_reason: OverworldJourneyGoalPassageResult["stopReason"];
+  minutes: readonly [base: number, delay: number, total: number];
+  supplies: readonly [used: number, after: number];
+  fatigue: readonly [gained: number, after: number];
+  travel_condition: string;
+  legs: OverworldCompactTravelResult[];
+  legs_truncated?: true;
 };
 
 function compactOverworldJournalEntry(entry: {
@@ -84,6 +137,7 @@ export function compactOverworldActionResult(
   const compact: OverworldCompactActionResult = {
     m: result.minutes,
     entry: compactOverworldJournalEntry(result.entry),
+    text: compactText(result.entry.text, OVERWORLD_COMPACT_ACTION_TEXT_CHAR_LIMIT),
   };
   if (result.alreadyKnown) compact.known = true;
   const areas = result.discoveredAreas ? compactOverworldRefs(result.discoveredAreas) : [];
@@ -129,6 +183,7 @@ export function compactOverworldRoadEncounterResult(
     renown: result.renownGained,
     encounter,
     entry: compactOverworldJournalEntry(result.entry),
+    text: compactText(result.entry.text, OVERWORLD_COMPACT_ROAD_ENCOUNTER_TEXT_CHAR_LIMIT),
   };
 }
 
@@ -154,5 +209,43 @@ export function compactOverworldAreaTravelResult(
     route: compactOverworldLabel(result.route),
     m: result.minutes,
     at: result.arrivedAt,
+  };
+}
+
+export function compactOverworldTravelResult(result: TravelLogEntry): OverworldCompactTravelResult {
+  const event = result.roadEvent;
+  return [
+    result.edgeId,
+    result.fromId,
+    result.toId,
+    result.minutes,
+    result.suppliesUsed,
+    result.fatigueGained,
+    event?.id ?? null,
+    event ? compactOverworldRisk(event.risk) : null,
+    event ? compactOverworldTitle(event.title) : null,
+    event ? compactText(event.summary, OVERWORLD_COMPACT_ROAD_EVENT_SUMMARY_CHAR_LIMIT) : null,
+  ];
+}
+
+export function compactOverworldGoalPassageResult(
+  result: OverworldJourneyGoalPassageResult,
+): OverworldCompactGoalPassageResult {
+  // Keep the newest legs: the passage's end — the arrival, or the road scene the player
+  // must now resolve — is the player-relevant part; only older traversed history drops.
+  const legs = result.legs
+    .slice(-OVERWORLD_COMPACT_ROUTE_STEP_LIMIT)
+    .map(compactOverworldTravelResult);
+  return {
+    goal_id: result.goalId,
+    destination: compactOverworldLabel(result.destination),
+    stopped_at: compactOverworldLabel(result.stoppedAt),
+    stop_reason: result.stopReason,
+    minutes: [result.baseMinutes, result.delayMinutes, result.minutes],
+    supplies: [result.suppliesUsed, result.suppliesAfter],
+    fatigue: [result.fatigueGained, result.fatigueAfter],
+    travel_condition: result.travelConditionAfter,
+    legs,
+    ...(result.legs.length > legs.length ? { legs_truncated: true as const } : {}),
   };
 }

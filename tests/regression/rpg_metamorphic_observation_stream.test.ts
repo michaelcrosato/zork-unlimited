@@ -69,14 +69,12 @@
  * assert ok-parity on every explored step under every regime (a legal/illegal original step
  * maps to a legal/illegal twin step), so a relabeling that broke legality surfaces at once.
  *
- * EXPLORATION POLICY. We discover states by stepping the LIVENESS action set —
- * `{DROP, CLOSE, LOOK, INVENTORY, INSPECT}` skipped as recursion edges, everything else
- * (incl. READ, USE skill-checks, and ATTACK) stepped — the same policy the parser
- * observation oracle uses (bug_0214), so READ's sticky interaction effects and the combat
- * rounds that drive reactive variants are all explored. The skipped verbs are still
- * observation-CHECKED at every visited state (their options appear in `available_actions`);
- * they are only excluded as recursion edges, which keeps the verb×object graph under the
- * state cap. The policy depends only on action TYPE, which the relabel preserves.
+ * EXPLORATION POLICY. We discover states by stepping the LIVENESS action set: reversible
+ * and inert observations are skipped, while READ, USE skill-checks, ATTACK, and target
+ * LOOKs backed by authored INSPECT interactions are stepped. This explores sticky clue
+ * effects and combat states without recursing through every reread. Skipped verbs are still
+ * observation-CHECKED at every visited state (their options appear in `available_actions`).
+ * The authored-inspect predicate is preserved by the pack relabeling.
  *
  * ORDER NORMALISATION (sound, identical to the parser oracle). The builder emits several
  * arrays in an id-SORTED order (`visible_objects`, `available_actions`, `inventory`,
@@ -120,6 +118,7 @@ import { relabelRpgPack } from "./support/relabel_rpg.js";
 import type { RpgRelabeler } from "./support/relabel_rpg.js";
 import type { RpgAction } from "../../src/api/types.js";
 import type { GameState } from "../../src/core/state.js";
+import { isAuthoredInspectAction } from "../../src/rpg/legal_actions.js";
 
 const PACK_DIR = "content/rpg/quests";
 const packFiles = readdirSync(PACK_DIR)
@@ -128,9 +127,10 @@ const packFiles = readdirSync(PACK_DIR)
 
 const SEED = 7;
 // The liveness exploration policy (parser_metamorphic_observation_stream.test.ts): step
-// every legal action EXCEPT the purely reversible / narrate-only verbs — crucially
-// STEPPING READ, USE (skill-checks) and ATTACK, which carry sticky/combat effects and so
-// open new observation states. Skipped verbs are still observation-CHECKED at every state.
+// every legal action EXCEPT reversible / inert observation verbs. Authored INSPECT
+// interactions ride on LOOK and may carry sticky effects, so those target looks are
+// restored alongside READ, USE (skill-checks), and ATTACK. Skipped verbs are still
+// observation-CHECKED at every state.
 const LIVENESS_SKIP: ReadonlySet<RpgAction["type"]> = new Set([
   "DROP",
   "CLOSE",
@@ -138,17 +138,20 @@ const LIVENESS_SKIP: ReadonlySet<RpgAction["type"]> = new Set([
   "INVENTORY",
   "INSPECT",
 ]);
-const explore = (a: RpgAction): boolean => !LIVENESS_SKIP.has(a.type);
+const explore = (index: RpgIndex, action: RpgAction): boolean =>
+  isAuthoredInspectAction(index, action) || !LIVENESS_SKIP.has(action.type);
 // The route-rich Wolf-Winter graph exhausts at 670,963 states under this policy
 // (measured 2026-07-11). The 800k ceiling leaves bounded headroom for that verified graph
 // while preserving a loud cap-out rather than truncating a future blowup.
 const MAX_STATES = 800_000;
-// Generous per-test budget. The 670,963-state Wolf-Winter graph takes ~103s isolated after
-// native success-path comparisons; sibling test files competing for shared CI vCPUs can
-// stretch exhaustive work considerably. This headroom absorbs that variance without
-// loosening correctness: MAX_STATES, not the clock, bounds the work, so a genuine graph
-// blowup still fails loudly. (Same rationale as vitest.config.ts's testTimeout.)
-const TEST_TIMEOUT_MS = 300_000;
+// Generous per-test budget. The 670,963-state Wolf-Winter graph took ~103s isolated after
+// native success-path comparisons; interruptible dialogue (f23c8a09) then made room
+// actions legal beside topics, multiplying edges per dialogue state (~2x wall time
+// locally), and sibling test files competing for shared CI vCPUs stretch exhaustive work
+// ~3x further. This headroom absorbs that variance without loosening correctness:
+// MAX_STATES, not the clock, bounds the work, so a genuine graph blowup still fails
+// loudly. (Same rationale as vitest.config.ts's testTimeout.)
+const TEST_TIMEOUT_MS = 900_000;
 
 // Best/worst-roll PRNGs, identical to rpg_all_endings_reachable / rpg_metamorphic_relabel.
 // resolveAttack draws player strike first, enemy reply second; resolveSkillCheck draws once.
@@ -275,11 +278,37 @@ function relabelAction(a: RpgAction, mapId: (id: string) => string): RpgAction {
   }
 }
 
+/** Re-derive a blocked USE id from its authored interaction. The public blocked
+ * row intentionally carries no reducer action or condition payload, so the
+ * metamorphic oracle consults the trusted source index rather than parsing a
+ * composite id or weakening the comparison to the twin's observed value. */
+function relabelBlockedActionId(
+  id: string,
+  index: RpgIndex,
+  mapId: (id: string) => string,
+): string {
+  for (const object of index.objectsWithUseInteractions) {
+    for (const interaction of object.interactions) {
+      if (!interaction.blocked_hint || interaction.target === undefined) continue;
+      const action: RpgAction =
+        interaction.item === undefined
+          ? { type: "USE", target: interaction.target }
+          : { type: "USE", item: interaction.item, target: interaction.target };
+      if (rpgOptionId(action) === id) return rpgOptionId(relabelAction(action, mapId));
+    }
+  }
+  throw new Error(`blocked action id "${id}" has no authored blocked USE interaction`);
+}
+
 /** Push an original RPG observation through the bijection to its expected twin form. Ids
  *  are mapped; prose and the per-action `command` vocabulary stay byte-identical; numbers
  *  (enemy/player HP, stats, score) stay equal; each action's `id` is RE-DERIVED from its
  *  mapped structured action. Order normalisation is applied separately by `canonical`. */
-function relabelObservation(o: RpgObservation, mapId: (id: string) => string): RpgObservation {
+function relabelObservation(
+  o: RpgObservation,
+  index: RpgIndex,
+  mapId: (id: string) => string,
+): RpgObservation {
   return {
     mode: o.mode,
     room: mapId(o.room),
@@ -293,6 +322,11 @@ function relabelObservation(o: RpgObservation, mapId: (id: string) => string): R
       e.to === undefined ? { direction: e.direction } : { direction: e.direction, to: mapId(e.to) },
     ),
     blocked_exits: o.blocked_exits.map((b) => ({ direction: b.direction, message: b.message })),
+    blocked_actions: o.blocked_actions.map((action) => ({
+      id: relabelBlockedActionId(action.id, index, mapId),
+      command: action.command,
+      reason: action.reason,
+    })),
     inventory: o.inventory.map(mapId),
     state: {
       flags: o.state.flags.map(mapId),
@@ -385,16 +419,16 @@ function walkInLockStep(
     [makeStep(origRulesBest), makeStep(twinRulesBest)],
     [makeStep(origRulesWorst), makeStep(twinRulesWorst)],
   ];
-  const seen = new Set<string>();
-  const stack: { o: GameState; t: GameState }[] = [{ o: origStart, t: twinStart }];
+  const startKey = stateKey(origStart);
+  const scheduled = new Set<string>([startKey]);
+  const stack: { o: GameState; t: GameState; ko: string }[] = [
+    { o: origStart, t: twinStart, ko: startKey },
+  ];
   let compared = 0;
 
   while (stack.length > 0) {
-    if (seen.size > MAX_STATES) return { compared, cappedOut: true };
-    const { o, t } = stack.pop()!;
-    const ko = stateKey(o);
-    if (seen.has(ko)) continue;
-    seen.add(ko);
+    if (scheduled.size > MAX_STATES) return { compared, cappedOut: true };
+    const { o, t, ko } = stack.pop()!;
 
     const origObs = buildRpgObservation(origIndex, o);
     const twinObs = buildRpgObservation(twinIndex, t);
@@ -422,7 +456,7 @@ function walkInLockStep(
     // states wolf_winter reaches — the heaviest REDUCIBLE cost in this oracle (the engine stepping
     // that drives the walk is irreducible). This oracle is the suite's long pole, and the slow
     // compare was tipping it past its timeout under CI load.
-    const expectedTwin = canonical(relabelObservation(origObs, mapId));
+    const expectedTwin = canonical(relabelObservation(origObs, origIndex, mapId));
     const actualTwin = canonical(twinObs);
     if (!isDeepStrictEqual(expectedTwin, actualTwin)) {
       expect(
@@ -433,10 +467,12 @@ function walkInLockStep(
     compared++;
 
     if (o.ended) continue;
-    // Legality is rng-independent; take the action set from one regime and step it under
-    // both. (Mirrors exhaustiveEndingsMulti, which reads legalActions from ruleSets[0].)
-    for (const a of origRulesBest.legalActions(o)) {
-      if (!explore(a)) continue; // discovered via the full available_actions check, not stepped
+    // Legality is rng-independent. The production observation above already enumerated the
+    // original legal set and its stable ids, so step those exact actions under both regimes
+    // instead of enumerating the same set a second time. The twin observation remains an
+    // independent enumeration and is still compared in full above.
+    for (const { action: a } of origObs.available_actions) {
+      if (!explore(origIndex, a)) continue; // inert actions are checked above, not stepped
       const ra = relabelAction(a, mapId);
       for (const [origStep, twinStep] of regimes) {
         const ro = origStep(o, a);
@@ -449,7 +485,17 @@ function walkInLockStep(
             ro.ok,
           );
         }
-        if (ro.ok && rt.ok) stack.push({ o: ro.state, t: rt.state });
+        if (ro.ok && rt.ok) {
+          const nextKey = stateKey(ro.state);
+          // Schedule each original state once instead of retaining duplicate full state
+          // pairs until they reach the top of the stack. The original fingerprint is the
+          // proof's existing path-independence key; moving the same dedupe from pop to push
+          // preserves the reachable set and every per-state assertion while bounding memory
+          // and avoiding duplicate state-graph retention under large join-heavy packs.
+          if (scheduled.has(nextKey)) continue;
+          scheduled.add(nextKey);
+          stack.push({ o: ro.state, t: rt.state, ko: nextKey });
+        }
       }
     }
   }

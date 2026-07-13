@@ -1,11 +1,17 @@
 import { describe, expect, it } from "vitest";
+import { CurrentJourneyExitReceiptSchema } from "../../src/blind/exit_interview.js";
 import { verifyBlindReportText } from "../../src/blind/report_verifier.js";
 import { parseRunEvidenceJsonl } from "../../src/blind/run_evidence.js";
 import { hashState } from "../../src/core/hash.js";
+import {
+  INITIAL_JOURNEY_GOAL,
+  JOURNEY_CONTRACT_VERSION,
+} from "../../src/world/journey_contract.js";
+import { ALBANY_DAWN_DISPATCH_GOALS } from "../../src/world/journey_campaign.js";
 
 const HASH_A = "a".repeat(64);
 
-function receipt(atDecision = 40) {
+function receipt(atDecision = 40, contractVersion: 1 | 2 | 3 = JOURNEY_CONTRACT_VERSION) {
   const retentionHistory = [];
   for (let checkpoint = 40, sequence = 1; checkpoint <= atDecision; checkpoint += 40, sequence++) {
     retentionHistory.push({
@@ -13,12 +19,13 @@ function receipt(atDecision = 40) {
       atDecision: checkpoint,
       reasons: ["checkpoint"],
       checkpoint,
+      ...(contractVersion === JOURNEY_CONTRACT_VERSION ? { goalVersion: null, goalId: null } : {}),
       choice: checkpoint === atDecision ? "end" : "continue",
       decisionProofHash: HASH_A,
     });
   }
-  const payload = {
-    contractVersion: 1,
+  const commonPayload = {
+    contractVersion,
     exitReason: "player_ended_at_choice",
     goalVersion: 1,
     goalId: "albany_local_lead",
@@ -29,16 +36,36 @@ function receipt(atDecision = 40) {
     decisionProofHash: HASH_A,
     retentionHistory,
   };
+  const payload =
+    contractVersion === JOURNEY_CONTRACT_VERSION
+      ? {
+          ...commonPayload,
+          goalText: INITIAL_JOURNEY_GOAL.text,
+          goalCompletedAtDecision: null,
+          completedGoals: [],
+        }
+      : commonPayload;
   return { ...payload, receiptHash: hashState(payload) };
 }
 
 function earlyGoalReceipt() {
   const payload = {
-    contractVersion: 1,
+    contractVersion: JOURNEY_CONTRACT_VERSION,
     exitReason: "player_ended_at_choice",
     goalVersion: 1,
     goalId: "albany_local_lead",
+    goalText: INITIAL_JOURNEY_GOAL.text,
     goalStatus: "completed",
+    goalCompletedAtDecision: 17,
+    completedGoals: [
+      {
+        version: 1,
+        id: INITIAL_JOURNEY_GOAL.id,
+        text: INITIAL_JOURNEY_GOAL.text,
+        status: "completed",
+        completedAtDecision: 17,
+      },
+    ],
     acceptedDecisions: 17,
     exitReasons: ["goal_completed"],
     checkpoint: null,
@@ -49,6 +76,68 @@ function earlyGoalReceipt() {
         atDecision: 17,
         reasons: ["goal_completed"],
         checkpoint: null,
+        goalVersion: 1,
+        goalId: INITIAL_JOURNEY_GOAL.id,
+        choice: "end",
+        decisionProofHash: HASH_A,
+      },
+    ],
+  };
+  return { ...payload, receiptHash: hashState(payload) };
+}
+
+function multiGoalReceipt(completedAt: readonly [number, number] = [17, 25]) {
+  const completedGoals = [
+    {
+      version: 1,
+      id: INITIAL_JOURNEY_GOAL.id,
+      text: INITIAL_JOURNEY_GOAL.text,
+      status: "completed" as const,
+      completedAtDecision: completedAt[0],
+    },
+    {
+      version: 2,
+      id: ALBANY_DAWN_DISPATCH_GOALS.send_wagon_to_cade.id,
+      text: ALBANY_DAWN_DISPATCH_GOALS.send_wagon_to_cade.text,
+      status: "completed" as const,
+      completedAtDecision: completedAt[1],
+    },
+  ];
+  const goalEvents = [...completedGoals]
+    .sort((left, right) => left.completedAtDecision - right.completedAtDecision)
+    .map((goal, index) => ({
+      sequence: index + 1,
+      atDecision: goal.completedAtDecision,
+      reasons: ["goal_completed"],
+      checkpoint: null,
+      goalVersion: goal.version,
+      goalId: goal.id,
+      choice: "continue",
+      decisionProofHash: HASH_A,
+    }));
+  const payload = {
+    contractVersion: JOURNEY_CONTRACT_VERSION,
+    exitReason: "player_ended_at_choice",
+    goalVersion: 3,
+    goalId: "oneonta_tanners_fever",
+    goalText:
+      "Travel to Oneonta Market Streets, find the lead for The Tanner's Fever, and see it through.",
+    goalStatus: "active",
+    goalCompletedAtDecision: null,
+    completedGoals,
+    acceptedDecisions: 40,
+    exitReasons: ["checkpoint"],
+    checkpoint: 40,
+    decisionProofHash: HASH_A,
+    retentionHistory: [
+      ...goalEvents,
+      {
+        sequence: goalEvents.length + 1,
+        atDecision: 40,
+        reasons: ["checkpoint"],
+        checkpoint: 40,
+        goalVersion: null,
+        goalId: null,
         choice: "end",
         decisionProofHash: HASH_A,
       },
@@ -150,6 +239,18 @@ describe("blind V2 pure/structural report contract", () => {
     }
   });
 
+  it("keeps a frozen contract-v1 pure receipt verifiable as historical evidence", () => {
+    const historical = receipt(40, 1);
+    const result = verifyBlindReportText(
+      report(pureInterview({ journey_exit_receipt: historical })),
+      { requiredPlayMode: "pure", runEvidenceText: evidence(historical) },
+    );
+    expect(result.ok).toBe(true);
+    if (result.ok && result.run?.play_mode === "pure") {
+      expect(result.run.receipt.contractVersion).toBe(1);
+    }
+  });
+
   it("rejects pure reports without evidence or with a mismatched receipt", () => {
     const noEvidence = verifyBlindReportText(report(pureInterview()), {
       requiredPlayMode: "pure",
@@ -191,6 +292,21 @@ describe("blind V2 pure/structural report contract", () => {
         "end",
       ]);
       expect(result.run.receipt.acceptedDecisions).toBe(80);
+    }
+  });
+
+  it("accepts ordered multi-goal evidence and rejects a reversed completion timeline", () => {
+    const ordered = multiGoalReceipt();
+    const result = verifyBlindReportText(report(pureInterview({ journey_exit_receipt: ordered })), {
+      requiredPlayMode: "pure",
+      runEvidenceText: evidence(ordered),
+    });
+    expect(result.ok).toBe(true);
+
+    const reversed = CurrentJourneyExitReceiptSchema.safeParse(multiGoalReceipt([25, 17]));
+    expect(reversed.success).toBe(false);
+    if (!reversed.success) {
+      expect(reversed.error.issues.some((issue) => /nondecreasing/.test(issue.message))).toBe(true);
     }
   });
 

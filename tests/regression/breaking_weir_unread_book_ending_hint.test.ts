@@ -48,8 +48,22 @@ function winBreakingWeir({ readBook }: { readBook: boolean }): GameState {
   let state = initStateForRpgPack(index, 7);
   state = playAction(state, "talk_pell");
   state = playAction(state, "ask_ask_walk");
-  state = playAction(state, "ask_walk_back");
-  state = playAction(state, "ask_leave_pell");
+  const resumedActions = enumerateRpgActions(index, state).map((action) => action.id);
+  expect(resumedActions).not.toContain("ask_walk_back");
+  expect(resumedActions).toEqual([
+    "ask_ask_weir",
+    "ask_leave_pell",
+    "go_north",
+    "examine_flood_book",
+    "read_flood_book",
+    "examine_life_line",
+    "take_life_line",
+    "examine_weir_iron",
+    "take_weir_iron",
+    "look_around",
+    "inventory",
+  ]);
+  // Same-room actions preserve Pell's auto-resumed exchange; leaving north closes it.
   if (readBook) state = playAction(state, "read_flood_book");
   state = playAction(state, "take_weir_iron");
   state = playAction(state, "take_life_line");
@@ -59,13 +73,14 @@ function winBreakingWeir({ readBook }: { readBook: boolean }): GameState {
   state = playAction(state, "use_life_line_on_walk_span");
   state = playAction(state, "go_north");
   state = playUntil(state, "use_weir_iron_on_race_winch", "race_open");
+  state = playAction(state, "use_stone_race_pin");
   return playAction(state, "go_north");
 }
 
 function endingDescription(state: GameState): string {
   expect(state.ended).toBe(true);
   const observation = buildRpgObservation(index, state);
-  expect(observation.title).toBe("The Weir Holds");
+  expect(observation.title).toBe("The Fields Held, the Old Race Spent");
   return observation.description;
 }
 
@@ -75,7 +90,7 @@ describe("bug_0443 - Breaking Weir ending names the unread flood-book", () => {
   it("explains the 45/50 victory when the player skipped the flood-book", () => {
     const state = winBreakingWeir({ readBook: false });
 
-    expect(state.endingId).toBe("ending_held");
+    expect(state.endingId).toBe("ending_fields_held_race_spent");
     expect(state.flags["read_marks"]).toBeUndefined();
     expect(score(state)).toBe(45);
     expect(endingDescription(state)).toMatch(/flood-book.*last marks unread/is);
@@ -85,7 +100,7 @@ describe("bug_0443 - Breaking Weir ending names the unread flood-book", () => {
   it("keeps the full-score ending clean once the flood-book was read", () => {
     const state = winBreakingWeir({ readBook: true });
 
-    expect(state.endingId).toBe("ending_held");
+    expect(state.endingId).toBe("ending_fields_held_race_spent");
     expect(state.flags["read_marks"]).toBe(true);
     expect(score(state)).toBe(50);
     expect(endingDescription(state)).not.toMatch(/last marks unread/i);

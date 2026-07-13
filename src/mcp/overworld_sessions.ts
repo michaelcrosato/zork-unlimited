@@ -7,6 +7,8 @@ import type { OverworldManifest } from "../world/overworld.js";
 import { freshGameTutorial, type FreshGameTutorial } from "../world/fresh_game_tutorial.js";
 import { OverworldSession, type OverworldSessionSnapshot } from "../world/session.js";
 import type { OverworldView } from "../world/session_view.js";
+import type { JourneyDecisionClassification } from "../world/journey_contract.js";
+import { excludedJourneyDecision } from "../world/journey_decision.js";
 
 export type OverworldMcpJourney = ReturnType<OverworldSession["journey"]>;
 
@@ -80,6 +82,7 @@ type OverworldMcpSessionPayload<Key extends string, Value> = {
   ok: true;
   session_id: string;
   snapshot_hash: string;
+  journeyDecision?: JourneyDecisionClassification;
 } & OverworldMcpJourneyField & { [P in Key]: Value };
 
 type OverworldMcpGuardedRejection<Args extends OverworldMcpResponseOptions> = Args extends {
@@ -168,6 +171,7 @@ export type OverworldMcpRejectedSessionPayload = {
   ok: false;
   snapshot_hash: string;
   rejection_reason: string;
+  journeyDecision: JourneyDecisionClassification;
 } & OverworldMcpJourneyField;
 
 export type OverworldMcpGuardedSession =
@@ -188,6 +192,13 @@ export type OverworldMcpExportSuccess = {
 } & OverworldMcpJourneyField;
 
 export const OVERWORLD_MCP_SESSION_STORE_LIMIT = 64;
+
+function journeyDecisionFrom(value: unknown): JourneyDecisionClassification | undefined {
+  if (value === null || typeof value !== "object" || !("journeyDecision" in value)) {
+    return undefined;
+  }
+  return (value as { journeyDecision: JourneyDecisionClassification }).journeyDecision;
+}
 
 function assertOverworldSessionStoreLimit(maxSessions: number): number {
   if (!Number.isInteger(maxSessions) || maxSessions < 1) {
@@ -324,6 +335,7 @@ export function overworldSnapshotHashRejection(
     ok: false,
     snapshot_hash: publicOverworldSnapshotHash(snapshotHash),
     rejection_reason: OVERWORLD_SNAPSHOT_HASH_MISMATCH_REASON,
+    journeyDecision: excludedJourneyDecision("rejected"),
     journey,
   };
 }
@@ -519,6 +531,7 @@ export class OverworldMcpSessionStore {
     }
     const { session } = guarded;
     const value = action(session);
+    const journeyDecision = journeyDecisionFrom(value);
     const responseValue =
       args.compact_result === true && compactValue ? compactValue(value) : value;
     return {
@@ -526,6 +539,7 @@ export class OverworldMcpSessionStore {
       session_id: sessionId,
       snapshot_hash: this.snapshotHash(session),
       journey: session.journey(),
+      ...(journeyDecision ? { journeyDecision } : {}),
       [key]: responseValue,
       ...this.viewField(args, session),
     } as unknown as OverworldMcpSessionResponse<Key, Value, Args, CompactValue>;

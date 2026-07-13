@@ -1,0 +1,105 @@
+id: bug_0515_tanners_fever_compact_case
+title: "Tanner's full medical case survives pure compact play"
+pack: content/rpg/quests/tanners_fever.yaml
+reported_by: pure-blind-playtest
+reports:
+  - blind-tester/reports/20260712T105137Z_overworld_seed1912.md
+  - blind-tester/reports/20260712T105137Z_overworld_seed1912.json
+  - blind-tester/reports/20260712T132432Z_overworld_seed2115.md
+  - blind-tester/reports/20260712T132432Z_overworld_seed2115.json
+  - blind-tester/reports/20260712T142008Z_overworld_seed2216.md
+  - blind-tester/reports/20260712T142008Z_overworld_seed2216.json
+  - blind-tester/reports/20260712T143606Z_overworld_seed2217.md
+  - blind-tester/reports/20260712T143606Z_overworld_seed2217.json
+  - blind-tester/reports/20260712T144457Z_overworld_seed2218.md
+  - blind-tester/reports/20260712T144457Z_overworld_seed2218.json
+raw_transcript_evidence:
+  provider_session_id: bf5f756e-a343-4250-9b14-fdacad4230a0
+  observation: >
+    Seed 2115 examined Edric, exhausted Godwin's topics, took and read the case
+    notes, returned to the sickroom repeatedly, requested the labeled legal menu,
+    and explored west and north. Every sickroom response legally exposed go_east,
+    but compact graph hiding made exits direction-only. The 697-character room
+    text ended before "herb store east"; the 744-character notes consequence ended
+    before its gut-remedy handoff; and the 397-character north-block reason ended
+    before its third proof. The player never entered the east herb store and ended
+    honestly at checkpoint 80. This was perceptually blocking S2 parity debt, not
+    the mechanical S3 softlock claimed in the exit interview.
+independent_recurrence: >
+  Seed 1912 encountered the same missing east-herb-store cue before the current
+  menu-continuity work. It used a verbose observation to recover the full human
+  prose, immediately found the herb store, and completed the quest. The two runs
+  isolate permanent compact information loss as the cause rather than action
+  generation, stale menus, or one unlucky route.
+postchange_evidence:
+  - seed: 2216
+    observation: >
+      A fresh pure player independently found the east herb store, completed
+      Tanner's Fever 50/50 without a compact complaint, continued through its
+      accountability choice, and ended after a fourth completed goal at decision
+      113. Clarity was 4/5, enjoyment 5/5, got_stuck false, and replay true.
+  - seed: 2217
+    observation: >
+      A second fresh pure player completed Tanner's Fever 40/50 with no rejected
+      action, loop, softlock, or missing compact cue; it continued at Tanner's
+      goal-completion choice, then ended at checkpoint 80 with the next goal active.
+      Clarity was 4/5, enjoyment 5/5, got_stuck false, and replay true.
+  - seed: 2218
+    provider_session_id: b4724300-b847-4571-beb2-9dd13aa0ab58
+    observation: >
+      The exact final content hash was sampled by a third independent pure player.
+      It completed Tanner's Fever without a compact complaint, continued at its
+      decision-76 goal choice, continued again at checkpoints 80 and 120, and
+      completed five distinct quests before ending honestly at decision 130.
+      Clarity was 4/5, enjoyment 5/5, got_stuck false, and replay true. Its fresh
+      S1 was Gallowmere claiming a takeable knife was already in hand, not Tanner.
+severity: S2
+symptom: >
+  Pure players could see legal compass directions but not what lay beyond them.
+  Critical room orientation, the transition from written overdose proof to a
+  corrective remedy, the three-part bedside case, and parts of the eventual
+  consequence were clipped behind omission markers or rolling-journal hashes.
+  A human UI retained the full authored strings, so canonical pure play did not
+  receive the same usable case even though the underlying route remained legal.
+root_cause: >
+  Tanner's Fever predated the compact authoring budget discipline already applied
+  to Wolf-Winter. Player-facing strings were written for an unbounded view: rooms
+  and LOOK events exceeded 280 characters, narration exceeded 280, rolling journal
+  entries exceeded 128, the blocked exit exceeded 180, wrapped dialogue exceeded
+  280, and score-bearing endings exceeded 360. Compact projection correctly hid
+  graph destinations and bounded transport, but all route/evidence clauses were
+  authored at the tails, so bounding erased the only semantic bridge a human saw.
+fix: >
+  Rewrite Tanner's complete reachable player-facing case to its strictest real
+  transport: room/LOOK/object/read/narration at 280 characters, wrapped dialogue
+  at 280, rolling journals at 128, blocked reasons at 180, and terminal endings at
+  360 including score. Preserve the same diagnosis, three proofs, peaceful and
+  forced routes, social cost, consequences, and ending identities in tighter prose.
+  The sickroom now maps ledger west, drying remedies east, corridor north, and the
+  bedside synthesis in one complete read. Notes, herb assessment, blockade, cure,
+  and payoff likewise arrive without omission chrome on both UI and MCP.
+deterministic_witnesses:
+  - "every reachable Tanner prose body, journal, blocked reason, and ending is byte-exact after its strictest compact projection and exposes no omission marker or hash suffix"
+  - "fresh UI and compact MCP start on identical sickroom prose naming ledger west, herb store east, corridor north, and the bedside"
+  - "the seed-2115 Edric-dialogue-notes sequence preserves identical current actions, narration, context, and journal memory across both surfaces"
+  - "after reading the three-to-one dose, returning east names the carried proof and herb-store direction without falsely placing the ledger west or requiring a verbose fallback"
+  - "Holt's blocked north message is identical in UI and compact MCP and retains condition, dose, remedy, bedside, and forced-route truth"
+  - "following east reveals meadowsweet, its complete medical role, and the same bedside treatment action on both surfaces"
+  - "treatment success or deterministic recovery and the 50/50 ending retain their full consequence above compact score chrome"
+  - "all ids, aliases, gameplay-action conditions, effects, stats, score, stages, items, routes, action menus, and ending selection remain unchanged; two state-truthful room-presentation variants were added"
+tests:
+  - tests/regression/tanners_fever_compact_surface.test.ts
+  - tests/regression/tanners_fever_peaceful_route.test.ts
+  - tests/regression/tanners_fever_treatment_retry.test.ts
+  - tests/regression/tanners_fever_failed_treatment_affordance.test.ts
+verification:
+  - npm run validate -- tanners_fever
+  - npx vitest run tests/regression/tanners_fever_compact_surface.test.ts tests/regression/tanners_fever_peaceful_route.test.ts tests/regression/tanners_fever_treatment_retry.test.ts tests/regression/tanners_fever_failed_treatment_affordance.test.ts
+  - npm run crawl:smoke
+  - npm run blind -- --seed 2216
+  - npm run blind -- --seed 2217
+  - npm run blind -- --seed 2218
+  - npm run blind:feedback
+  - npm run feedback:compile
+  - npm run health
+content_hash: 3074f38c0ae62292963343e355f2b84e25a99565a17c82ab47cb1129fb595dbf

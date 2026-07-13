@@ -91,6 +91,7 @@ describe("overworld session snapshot builder", () => {
       discoveredQuestIds: new Set(["quest:b", "quest:a"]),
       startedQuestIds: new Set(["quest:b"]),
       completedQuestIds: new Set(["quest:a"]),
+      questOutcomes: new Map([["quest:a", "ending:a"]]),
       exploredSiteIds: new Set(["site:b"]),
       regionRenown: new Map([
         ["hudson", 2],
@@ -113,6 +114,7 @@ describe("overworld session snapshot builder", () => {
       ["capital", 5],
       ["hudson", 2],
     ]);
+    expect(snapshot.questOutcomes).toEqual([["quest:a", "ending:a"]]);
     expect(snapshot.travelLog[0]).toEqual({
       edgeId: "road:albany:troy",
       fromId: "albany",

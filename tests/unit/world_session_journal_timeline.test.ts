@@ -6,6 +6,7 @@ import {
   journalSourceId,
   type OverworldJournalTimelineSourceIndex,
 } from "../../src/world/session_journal_timeline.js";
+import { allOverworldContactPresentations } from "../../src/world/session_contact_presentation.js";
 import {
   OVERWORLD_SESSION_SAVE_VERSION,
   type OverworldJournalEntry,
@@ -96,6 +97,7 @@ function snapshot(
     discoveredQuestIds: [],
     startedQuestIds: [],
     completedQuestIds: [],
+    questOutcomes: [],
     exploredSiteIds: [],
     regionRenown: [],
     completedRegionalArcIds: [],
@@ -107,6 +109,8 @@ function snapshot(
 function sources(
   overrides: Partial<OverworldJournalTimelineSourceIndex> = {},
 ): OverworldJournalTimelineSourceIndex {
+  const contact = character("char_1", "town_b", "area_b");
+  const contactPresentations = allOverworldContactPresentations(contact);
   return {
     arcIds: new Set(["arc_north"]),
     arcRegionNames: new Map([["arc_north", "North"]]),
@@ -114,7 +118,10 @@ function sources(
     areaTownNames: new Map([["area_b", "Town B"]]),
     characterIds: new Set(["char_1"]),
     characterTownNames: new Map([["char_1", "Town B"]]),
-    charactersById: new Map([["char_1", character("char_1", "town_b", "area_b")]]),
+    charactersById: new Map([["char_1", contact]]),
+    contactPresentationsByJournalId: new Map(
+      contactPresentations.map((presentation) => [presentation.journalId, presentation]),
+    ),
     edgeIds: new Set(["road_a_b"]),
     eventIds: new Set(["event_1"]),
     eventTownNames: new Map([["event_1", "Town B"]]),

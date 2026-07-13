@@ -1,8 +1,8 @@
 /**
- * Regression for bug_0458: a natural-1 physick roll in Tanner's Fever consumed
- * the only medical treatment route after the player had identified the overdose
- * formula and remedy. The failure text also blamed sequencing even when the
- * notes had already been read.
+ * Regression for bug_0458/bug_0506: a natural-1 physick roll in Tanner's Fever
+ * once consumed the only medical route. The first fix made the same random check
+ * infinitely retryable. The durable contract is one rolled presentation followed
+ * by a same-id, deterministic recovery after the player orders all three clues.
  */
 import { describe, expect, it } from "vitest";
 import { makeStep } from "../../src/core/engine.js";
@@ -34,8 +34,12 @@ const loaded = loadRpgSourceFile("content/rpg/quests/tanners_fever.yaml");
 if (!loaded.ok) throw new Error("tanners_fever must compile");
 const pack = loaded.compiled.pack;
 const index = indexRpgPack(pack);
-const rng = queuedRng([1, 20]);
-const step = makeStep(buildRpgRules(index, () => rng));
+let step = makeStep(buildRpgRules(index, () => queuedRng([20])));
+
+function useRolls(rolls: number[]): void {
+  const rng = queuedRng([...rolls]);
+  step = makeStep(buildRpgRules(index, () => rng));
+}
 
 function actionIds(state: GameState): string[] {
   return enumerateRpgActions(index, state).map((option) => option.id);
@@ -69,20 +73,21 @@ function narrations(events: GameEvent[]): string {
 
 function fullyPreparedSickroom(): GameState {
   return play(initStateForRpgPack(index, 7), [
-    "read_sick_edric",
+    "examine_sick_edric",
     "go_west",
     "take_godwin_notes",
     "read_godwin_notes",
     "go_east",
     "go_east",
     "take_meadowsweet",
-    "read_meadowsweet",
+    "examine_meadowsweet",
     "go_west",
   ]);
 }
 
 describe("bug_0458 - Tanner's Fever treatment can recover from a bad roll", () => {
-  it("keeps the medical route available after a failed prepared physick check", () => {
+  it("turns a failed prepared check into a finite same-id recovery", () => {
+    useRolls([1]);
     let state = fullyPreparedSickroom();
     expect(state.vars.physick).toBe(9);
     expect(state.inventory).toEqual(["godwin_notes", "meadowsweet"]);
@@ -93,28 +98,78 @@ describe("bug_0458 - Tanner's Fever treatment can recover from a bad roll", () =
     const failedText = narrations(failed.events);
 
     expect(failedText).toContain("physick check: d20 1 + 9 = 10 vs 12");
-    expect(failedText).toContain("The meadowsweet is still in your hand");
-    expect(failedText).toContain("put the evidence to Godwin again");
-    expect(failedText).not.toContain("the sequence wrong");
-    expect(failedText).not.toContain("formula not yet named");
-    expect(state.flags.confrontation_attempted).toBeUndefined();
+    expect(failedText).toContain("will not hear the same loose case twice");
+    expect(failedText).toMatch(/inspect Edric/i);
+    expect(failedText).toMatch(/read Godwin's case notes/i);
+    expect(failedText).toMatch(/inspect the meadowsweet/i);
+    expect(failedText).toMatch(/treat Edric again at the bedside/i);
+    expect(state.flags.confrontation_attempted).toBe(true);
     expect(state.flags.treatment_given).toBeUndefined();
     expect(state.inventory).toContain("meadowsweet");
     expect(actionIds(state)).toContain("use_meadowsweet_on_sick_edric");
+    const recovery = enumerateRpgActions(index, state).find(
+      (option) => option.id === "use_meadowsweet_on_sick_edric",
+    );
+    expect(recovery?.command).toContain("after ordering the evidence");
+    expect(recovery?.skill_check).toBeUndefined();
 
-    state = actById(state, "use_meadowsweet_on_sick_edric").state;
+    const recovered = actById(state, "use_meadowsweet_on_sick_edric");
+    state = recovered.state;
+    expect(narrations(recovered.events)).not.toContain("physick check:");
     expect(state.flags.confrontation_attempted).toBe(true);
     expect(state.flags.treatment_given).toBe(true);
     expect(actionIds(state)).not.toContain("use_meadowsweet_on_sick_edric");
 
-    state = play(state, ["go_north", "go_north"]);
+    state = actById(state, "go_north").state;
+    const corridor = buildRpgObservation(index, state);
+    expect(corridor.enemies_present).toHaveLength(0);
+    expect(actionIds(state)).not.toContain("attack_holt");
+
+    state = actById(state, "go_north").state;
     const obs = buildRpgObservation(index, state);
 
     expect(obs.ended).toBe(true);
     expect(obs.ending_id).toBe("ending_recovered");
     expect(obs.state.vars.score).toBe(pack.meta.max_score);
     expect(obs.ending?.text).toContain("Godwin has the revised formula");
-    expect(obs.ending?.text).not.toContain("not win this the right way");
+    expect(obs.ending?.text).not.toContain("forced passage instead of winning the bedside case");
     expect(validateRpg(pack).findings).toHaveLength(0);
+  });
+
+  it("makes an underprepared failure gather evidence instead of rerolling", () => {
+    useRolls([1]);
+    let state = play(initStateForRpgPack(index, 17), ["go_east", "take_meadowsweet", "go_west"]);
+
+    const failed = actById(state, "use_meadowsweet_on_sick_edric");
+    state = failed.state;
+    const failedText = narrations(failed.events);
+
+    expect(failedText).not.toMatch(
+      /three(?:-| )to(?:-| )one|three parts extract to one part water/i,
+    );
+    expect(failedText).toMatch(/inspect Edric/i);
+    expect(failedText).toMatch(/read Godwin's case notes/i);
+    expect(failedText).toMatch(/inspect the meadowsweet/i);
+    expect(failedText).toMatch(/treat Edric again at the bedside/i);
+    expect(actionIds(state)).not.toContain("use_meadowsweet_on_sick_edric");
+
+    state = play(state, [
+      "examine_sick_edric",
+      "go_west",
+      "take_godwin_notes",
+      "read_godwin_notes",
+      "go_east",
+      "examine_meadowsweet",
+    ]);
+
+    const recovery = enumerateRpgActions(index, state).find(
+      (option) => option.id === "use_meadowsweet_on_sick_edric",
+    );
+    expect(recovery?.skill_check).toBeUndefined();
+    expect(recovery?.command).toContain("ordering the evidence");
+
+    state = actById(state, "use_meadowsweet_on_sick_edric").state;
+    expect(state.flags.treatment_given).toBe(true);
+    expect(state.inventory).toContain("meadowsweet");
   });
 });

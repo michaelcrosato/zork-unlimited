@@ -7,6 +7,10 @@ import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import type { RpgAction } from "../../src/api/types.js";
+import { buildRpgRules, indexRpgPack } from "../../src/rpg/runner.js";
+import { loadRpgSourceFile } from "../../src/rpg/source.js";
+import { runActions, type Trace } from "../../src/trace/record.js";
 
 const ROOT = process.cwd();
 const TSX = join(ROOT, "node_modules", "tsx", "dist", "cli.mjs");
@@ -16,11 +20,11 @@ const VICTORY_COMMANDS = [
   "west",
   "talk to reaver's shade",
   "ask about wight",
-  "ask about wight_back",
   "ask about leave_shade",
   "east",
   "take iron bar",
   "north",
+  "attack barrow-wight",
   "attack barrow-wight",
   "attack barrow-wight",
   "attack barrow-wight",
@@ -65,13 +69,12 @@ describe("RPG play CLI world quest source", () => {
 
     expect(result.status, output).toBe(0);
     expect(output).toContain("*** ending_victory ***");
+    expect(output).not.toContain("No such topic");
+    expect(output).not.toContain("You can't do that right now.");
 
-    const trace = JSON.parse(readFileSync(RECORDED_TRACE, "utf8")) as {
-      mode?: string;
-      source_ref?: unknown;
+    const trace = JSON.parse(readFileSync(RECORDED_TRACE, "utf8")) as Trace<RpgAction> & {
       worldQuestId?: unknown;
       generatedRpgSeed?: unknown;
-      trace_id?: string;
     };
     expect(trace.mode).toBe("rpg");
     expect(trace.trace_id).toBe("tr_rpg_play");
@@ -79,6 +82,27 @@ describe("RPG play CLI world quest source", () => {
     expect(trace.worldQuestId).toBeUndefined();
     expect(trace.generatedRpgSeed).toBeUndefined();
     expect("pack_id" in trace).toBe(false);
+    expect(
+      trace.actions.filter((action) => action.type === "ATTACK" && action.enemy === "barrow_wight"),
+    ).toHaveLength(4);
+    expect(
+      trace.actions.some(
+        (action) => action.type === "ASK" && /(?:wight|lord)_back$/.test(action.topic),
+      ),
+    ).toBe(false);
+
+    const loaded = loadRpgSourceFile("content/rpg/quests/sunken_barrow.yaml");
+    expect(loaded.ok).toBe(true);
+    if (!loaded.ok) return;
+    const run = runActions(
+      buildRpgRules(indexRpgPack(loaded.compiled.pack)),
+      trace.initial_state,
+      trace.actions,
+    );
+    expect(run.steps.map((step) => step.ok)).toEqual(trace.actions.map(() => true));
+    expect(run.finalState.ended).toBe(true);
+    expect(run.finalState.endingId).toBe("ending_victory");
+    expect(run.finalState.vars["hp"]).toBeGreaterThan(0);
 
     const replay = runBin("bin/replay.ts", [RECORDED_TRACE]);
     const replayOutput = outputOf(replay);

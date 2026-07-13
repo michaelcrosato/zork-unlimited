@@ -5,7 +5,7 @@
  * each a seeded d20 + skill vs a difficulty gating a flag — with no ATTACK and no fight.
  *
  * The auto-discovered RPG suites already prove the generic structure for every pack the
- * moment it ships: all-endings reachability (both ending_held and ending_swept), no
+ * moment it ships: all-endings reachability (both consequence victories and ending_swept), no
  * soft-lock pocket, score economy (max == 50), action-id uniqueness, variant liveness.
  * This pins the pack-SPECIFIC claims those generic suites do not:
  *
@@ -83,6 +83,11 @@ describe("bug_0196 — The Breaking Weir: a combatless skill-check chain", () =>
     expect(pack.enemies).toEqual([]); // the defining property: no combat
     expect(pack.meta.combat_guaranteed).toBeUndefined(); // no fight to guarantee
     expect(pack.meta.max_score).toBe(50); // 5 + 10·3 + 15, the curated RPG economy
+    expect(pack.endings.map((ending) => ending.id)).toEqual([
+      "ending_fields_held_race_spent",
+      "ending_race_held_fields_given",
+      "ending_swept",
+    ]);
     const errors = validateRpg(pack).findings.filter((f) => f.severity === "error");
     expect(errors).toEqual([]);
   });

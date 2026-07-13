@@ -1,0 +1,64 @@
+id: bug_0519_goal_passage_decision_contract
+title: "Current-goal travel is one interruptible passage decision"
+pack: content/world/new_york_overworld.json
+reported_by: pure-blind-playtest
+reports:
+  - blind-tester/reports/20260712T045851Z_overworld_seed1407.md
+  - blind-tester/reports/20260712T054426Z_overworld_seed1507.md
+  - blind-tester/reports/20260712T065854Z_overworld_seed1609.md
+  - blind-tester/reports/20260712T131301Z_overworld_seed2114.md
+  - blind-tester/reports/20260712T143606Z_overworld_seed2217.md
+  - blind-tester/reports/20260712T144457Z_overworld_seed2218.md
+  - blind-tester/reports/20260712T174958Z_overworld_seed2524.md
+severity: S2
+symptom: >
+  Verified pure players repeatedly chose a distant authored objective, then had
+  to spend five to eight accepted decisions selecting its predetermined roads.
+  Several tried the MCP destination form because its schema said it routed
+  multiple legs; the call instead rejected every non-adjacent town. Players
+  described the remaining town-by-town sequence as repetitive, padding, or the
+  session's worst moment. This establishes recurring friction, not exit
+  causation: every eligible player continued at least once and would replay.
+root_cause: >
+  The journey layer privately computed an unrestricted path to the active goal,
+  but exposed only a prose next-road hint. The public planner remained limited
+  to discovered towns, destination travel accepted only adjacent towns, and the
+  UI's multi-leg route card also executed only its first step. Every quiet leg
+  therefore became a separately counted movement even when the player had made
+  only one strategic choice: carry the current lead toward its named town.
+fix: >
+  Derive one Goal Passage choice from the current authored goal and expose that
+  exact presentation in the shared JourneyPresentation used by human UI and
+  pure MCP. One selection traverses the real route one leg at a time with the
+  existing reducer, preserving every minute, supply, fatigue, discovery,
+  ambient report, and travel-log entry. It stops at the objective, the first
+  unresolved authored road choice, or before a later leg would newly worsen the
+  resource tier. The entire successful passage records one movement decision;
+  road responses, rest, resupply, and later passage selections remain separate
+  decisions. Manual adjacent roads and discovered-route planning remain
+  available. Before selection, neither surface receives intermediate town or
+  road ids, future event titles, target quest ids, endings, or solution data.
+deterministic_witnesses:
+  - "JourneyPresentation.goalPassage is byte-equivalent across the human session and MCP response and contains only the named destination plus aggregate time/resource consequences"
+  - "the pre-action passage object contains no intermediate town id, road id, future event title, target quest id, ending id, or solution knowledge"
+  - "one passage selection applies the existing travel reducer independently to every traversed road and appends every contiguous TravelLogEntry"
+  - "a requires_choice road event halts passage after its arrival leg and remains unresolved for the player"
+  - "a later resource-tier boundary halts before the unaccepted leg; selecting passage again explicitly accepts travel under the newly visible condition"
+  - "objective arrival, encounter interruption, and resource interruption each record exactly one accepted movement decision for the passage selection"
+  - "a decision-40 checkpoint can coexist with the unchanged pending road encounter, and Continue returns to that exact encounter"
+  - "export/restore preserves current location, resources, contiguous travel log, pending encounter, decision proof, and the next derived Goal Passage"
+  - "manual adjacent travel still applies one road and counts one decision; arbitrary undiscovered destinations remain inaccessible"
+  - "travel_overworld_session accurately describes destination_town_id as adjacent-only, while follow_overworld_session_goal is a distinct pure player tool"
+tests:
+  - tests/unit/world_session_goal_passage.test.ts
+  - tests/regression/mcp_goal_passage.test.ts
+  - tests/unit/ui_goal_passage.test.ts
+  - tests/regression/mcp_pure_play_mode.test.ts
+  - tests/regression/mcp_server_registration.test.ts
+  - tests/unit/compact_overworld_result.test.ts
+  - tests/unit/spectate_format.test.ts
+verification:
+  - npx vitest run tests/unit/world_session_goal_passage.test.ts tests/regression/mcp_goal_passage.test.ts tests/unit/ui_goal_passage.test.ts tests/regression/mcp_pure_play_mode.test.ts tests/regression/mcp_server_registration.test.ts tests/unit/compact_overworld_result.test.ts tests/unit/spectate_format.test.ts
+  - npm run crawl:smoke
+  - npm run blind
+  - npm run health

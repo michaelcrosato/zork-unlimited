@@ -14,6 +14,10 @@ import type {
   OverworldPoi,
   OverworldQuest,
 } from "./overworld.js";
+import {
+  presentOverworldContact,
+  type OverworldContactPresentation,
+} from "./session_contact_presentation.js";
 import { journalSourceId, type OverworldJournalTimelineIndex } from "./session_journal_timeline.js";
 import type { OverworldJournalEntry } from "./session_snapshot.js";
 import { indexedList } from "./session_collections.js";
@@ -39,6 +43,7 @@ export type OverworldLocalActionJournalReachabilityIndex = {
   areasById: ReadonlyMap<string, OverworldArea>;
   areasByTown: ReadonlyMap<string, readonly OverworldArea[]>;
   charactersById: ReadonlyMap<string, OverworldCharacter>;
+  contactPresentationsByJournalId: ReadonlyMap<string, OverworldContactPresentation>;
   discoveredAreaIds: ReadonlySet<string>;
   discoveredJobIds: ReadonlySet<string>;
   discoveredQuestIds: ReadonlySet<string>;
@@ -52,6 +57,7 @@ export type OverworldLocalActionJournalReachabilityIndex = {
   sitesByArea: ReadonlyMap<string, readonly OverworldExplorationSite[]>;
   sitesById: ReadonlyMap<string, OverworldExplorationSite>;
   townVisitMinutes: ReadonlyMap<string, number>;
+  townNameForSource: (nodeId: string) => string;
   visitedTownIds: ReadonlySet<string>;
 };
 
@@ -86,9 +92,10 @@ function localJournalActionDuration(
       return area?.travel_minutes ?? null;
     }
     case "contact": {
-      const sourceId = journalSourceId(entry, "talk:");
-      const character = sourceId ? sources.charactersById.get(sourceId) : undefined;
-      return character ? describeOverworldContactAction(character).minutes : null;
+      const presentation = sources.contactPresentationsByJournalId.get(entry.id);
+      return presentation
+        ? describeOverworldContactAction(presentation.contact, presentation.presentationId).minutes
+        : null;
     }
     case "event": {
       const sourceId = journalSourceId(entry, "investigate:");
@@ -258,15 +265,13 @@ function localJournalSource(
       };
     }
     case "contact": {
-      const sourceId = journalSourceId(entry, "talk:");
-      if (!sourceId) return null;
-      const character = sources.charactersById.get(sourceId);
-      if (!character) return null;
+      const presentation = sources.contactPresentationsByJournalId.get(entry.id);
+      if (!presentation) return null;
       return {
         sourceLabel: "journal contact",
-        sourceId,
-        home: character.home,
-        area: character.area,
+        sourceId: presentation.character.id,
+        home: presentation.character.home,
+        area: presentation.character.area,
       };
     }
     case "event": {
@@ -343,6 +348,51 @@ function localJournalSource(
     }
     default:
       return null;
+  }
+}
+
+/**
+ * Prove that every stored contact line was the one authored for the quest state
+ * that existed at its timestamp. This keeps future dialogue and shadowed phases
+ * out of forged saves while preserving an earlier base conversation honestly.
+ */
+export function assertSnapshotContactPresentationProofs(
+  sources: OverworldLocalActionJournalReachabilityIndex,
+  journalTimeline: OverworldJournalTimelineIndex,
+): void {
+  for (const { entry, recordedAt } of journalTimeline.localActionEntries) {
+    if (entry.kind !== "contact") continue;
+    const stored = sources.contactPresentationsByJournalId.get(entry.id);
+    if (!stored) continue; // The timeline source gate reports the precise unknown-id error.
+
+    const completedQuestIds = new Set<string>();
+    for (const questId of sources.questsById.keys()) {
+      const completedAt = journalTimeline.eventResolutionProofs.recordedAtById.get(
+        `quest_done:${questId}`,
+      );
+      if (completedAt !== undefined && completedAt <= recordedAt) {
+        completedQuestIds.add(questId);
+      }
+    }
+    const expected = presentOverworldContact(stored.character, { completedQuestIds });
+    if (expected.journalId !== entry.id) {
+      throw new Error(
+        `Overworld session snapshot contact presentation "${entry.id}" was not active at ${entry.recordedAt}.`,
+      );
+    }
+
+    const action = describeOverworldContactAction(expected.contact, expected.presentationId);
+    if (entry.title !== action.title || entry.text !== action.text) {
+      throw new Error(
+        `Overworld session snapshot contact presentation "${entry.id}" does not match its authored copy.`,
+      );
+    }
+    const expectedTown = sources.townNameForSource(expected.character.home);
+    if (entry.town !== expectedTown) {
+      throw new Error(
+        `Overworld session snapshot contact presentation "${entry.id}" is bound to town "${entry.town}", expected "${expectedTown}".`,
+      );
+    }
   }
 }
 

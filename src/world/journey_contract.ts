@@ -1,14 +1,13 @@
 import { z } from "zod";
 
 import { hashState } from "../core/hash.js";
-import type { OverworldQuest } from "./overworld.js";
 
-export const JOURNEY_CONTRACT_VERSION = 1 as const;
+export const JOURNEY_CONTRACT_VERSION = 3 as const;
 export const JOURNEY_BASELINE_DECISIONS = 40 as const;
 export const JOURNEY_EXIT_REASON = "player_ended_at_choice" as const;
 
 export const INITIAL_JOURNEY_GOAL = Object.freeze({
-  version: 1 as const,
+  version: 1,
   id: "albany_local_lead",
   text: "Find one local lead in Albany and see it through.",
 } as const);
@@ -19,15 +18,41 @@ export type JourneyStatus = "active" | "awaiting_choice" | "ended";
 export type JourneyGoalStatus = "active" | "completed";
 export type JourneyDecisionSurface = "overworld" | "quest";
 
+export type JourneyCountedDecisionReason =
+  | "movement"
+  | "stateful_clue"
+  | "substantive_dialogue"
+  | "combat"
+  | "skill_check"
+  | "preparation"
+  | "situation_changed";
+
+export type JourneyExcludedDecisionReason =
+  | "context_only"
+  | "repeated_context"
+  | "dialogue_opening"
+  | "dialogue_navigation"
+  | "dialogue_closure"
+  | "unchanged_service"
+  | "technical_quest_foldback"
+  | "rejected";
+
+export type JourneyDecisionClassification = Readonly<
+  | { countsTowardJourney: true; reason: JourneyCountedDecisionReason }
+  | { countsTowardJourney: false; reason: JourneyExcludedDecisionReason }
+>;
+
 export type JourneyAcceptedDecision = Readonly<{
   surface: JourneyDecisionSurface;
   actionId: string;
+  reason: JourneyCountedDecisionReason;
 }>;
 
 export type JourneyDecisionProofLast = Readonly<{
   number: number;
   surface: JourneyDecisionSurface;
   actionId: string;
+  reason: JourneyCountedDecisionReason;
 }>;
 
 export type JourneyDecisionProof = Readonly<{
@@ -35,17 +60,39 @@ export type JourneyDecisionProof = Readonly<{
   last: JourneyDecisionProofLast | null;
 }>;
 
+export type JourneyGoalIdentity = Readonly<{
+  version: number;
+  id: string;
+}>;
+
+export type JourneyGoalDefinition = Readonly<{
+  version: number;
+  id: string;
+  text: string;
+}>;
+
 export type JourneyGoalSnapshot = {
-  version: typeof INITIAL_JOURNEY_GOAL.version;
-  id: typeof INITIAL_JOURNEY_GOAL.id;
+  version: number;
+  id: string;
+  text: string;
   status: JourneyGoalStatus;
   completedAtDecision: number | null;
+};
+
+export type JourneyCompletedGoalSnapshot = {
+  version: number;
+  id: string;
+  text: string;
+  status: "completed";
+  completedAtDecision: number;
 };
 
 export type JourneyPendingChoiceSnapshot = {
   atDecision: number;
   reasons: JourneyChoiceReason[];
   checkpoint: number | null;
+  goalVersion: number | null;
+  goalId: string | null;
 };
 
 export type JourneyRetentionEvent = Readonly<{
@@ -53,6 +100,8 @@ export type JourneyRetentionEvent = Readonly<{
   atDecision: number;
   reasons: readonly JourneyChoiceReason[];
   checkpoint: number | null;
+  goalVersion: number | null;
+  goalId: string | null;
   choice: JourneyChoice;
   decisionProofHash: string;
 }>;
@@ -62,6 +111,8 @@ type JourneyRetentionEventSnapshot = {
   atDecision: number;
   reasons: JourneyChoiceReason[];
   checkpoint: number | null;
+  goalVersion: number | null;
+  goalId: string | null;
   choice: JourneyChoice;
   decisionProofHash: string;
 };
@@ -70,6 +121,7 @@ export type JourneyContractSnapshot = {
   version: typeof JOURNEY_CONTRACT_VERSION;
   status: JourneyStatus;
   goal: JourneyGoalSnapshot;
+  goalHistory: JourneyCompletedGoalSnapshot[];
   acceptedDecisions: number;
   nextCheckpoint: number | null;
   decisionProof: {
@@ -80,13 +132,8 @@ export type JourneyContractSnapshot = {
   retentionHistory: JourneyRetentionEventSnapshot[];
 };
 
-export type JourneyGoalPresentation = Readonly<{
-  version: typeof INITIAL_JOURNEY_GOAL.version;
-  id: typeof INITIAL_JOURNEY_GOAL.id;
-  text: typeof INITIAL_JOURNEY_GOAL.text;
-  status: JourneyGoalStatus;
-  completedAtDecision: number | null;
-}>;
+export type JourneyGoalPresentation = Readonly<JourneyGoalSnapshot>;
+export type JourneyCompletedGoalPresentation = Readonly<JourneyCompletedGoalSnapshot>;
 
 export type JourneyChoiceOption = Readonly<{
   id: JourneyChoice;
@@ -99,28 +146,86 @@ export type JourneyChoicePrompt = Readonly<{
   atDecision: number;
   reasons: readonly JourneyChoiceReason[];
   checkpoint: number | null;
+  goalVersion: number | null;
+  goalId: string | null;
   message: string;
   options: readonly [JourneyChoiceOption, JourneyChoiceOption];
+}>;
+
+export type JourneyStoryChoiceOption = Readonly<{
+  id: string;
+  label: string;
+  consequence: string;
+}>;
+
+export type JourneyStoryChoicePrompt = Readonly<{
+  id: string;
+  message: string;
+  options: readonly [JourneyStoryChoiceOption, JourneyStoryChoiceOption];
+}>;
+
+export type JourneyGoalCompletionPresentationContext = Readonly<{
+  goalVersion: number;
+  goalId: string;
+  messagePrefix?: string;
+  messageSuffix?: string;
+  continueConsequencePrefix?: string;
+  continueConsequenceSuffix?: string;
+}>;
+
+/**
+ * A player-facing, game-owned passage toward the current authored objective.
+ * It deliberately carries no town ids, road ids, intermediate path, or event
+ * details: those become visible only as the player actually travels them.
+ */
+export type JourneyGoalPassagePresentation = Readonly<{
+  id: "follow_current_goal";
+  label: string;
+  destination: string;
+  roadCount: number;
+  baseMinutes: number;
+  estimatedMinutes: number;
+  suppliesNeeded: number;
+  supplyDeficit: number;
+  suppliesAfter: number;
+  fatigueAfter: number;
+  travelConditionAfter: string;
+  consequence: string;
+  stopRule: string;
+}>;
+
+export type JourneyPresentationContext = Readonly<{
+  goalCompletion?: JourneyGoalCompletionPresentationContext;
+  goalGuidance?: string | null;
+  goalPassage?: JourneyGoalPassagePresentation | null;
+  storyChoice?: JourneyStoryChoicePrompt | null;
 }>;
 
 export type JourneyPresentation = Readonly<{
   contractVersion: typeof JOURNEY_CONTRACT_VERSION;
   status: JourneyStatus;
   goal: JourneyGoalPresentation;
+  completedGoals: readonly JourneyCompletedGoalPresentation[];
   acceptedDecisions: number;
   baselineDecisions: typeof JOURNEY_BASELINE_DECISIONS;
   nextCheckpoint: number | null;
   decisionProof: JourneyDecisionProof;
+  goalGuidance: string | null;
+  goalPassage: JourneyGoalPassagePresentation | null;
   pendingChoice: JourneyChoicePrompt | null;
+  storyChoice: JourneyStoryChoicePrompt | null;
   retentionHistory: readonly JourneyRetentionEvent[];
 }>;
 
 export type JourneyExitReceipt = Readonly<{
   contractVersion: typeof JOURNEY_CONTRACT_VERSION;
   exitReason: typeof JOURNEY_EXIT_REASON;
-  goalVersion: typeof INITIAL_JOURNEY_GOAL.version;
-  goalId: typeof INITIAL_JOURNEY_GOAL.id;
+  goalVersion: number;
+  goalId: string;
+  goalText: string;
   goalStatus: JourneyGoalStatus;
+  goalCompletedAtDecision: number | null;
+  completedGoals: readonly JourneyCompletedGoalPresentation[];
   acceptedDecisions: number;
   exitReasons: readonly JourneyChoiceReason[];
   checkpoint: number | null;
@@ -135,32 +240,83 @@ export type JourneyChoiceResult = Readonly<{
   exitReceipt: JourneyExitReceipt | null;
 }>;
 
-export const JOURNEY_INITIAL_DECISION_PROOF_HASH = hashState({
-  contractVersion: JOURNEY_CONTRACT_VERSION,
-  goalVersion: INITIAL_JOURNEY_GOAL.version,
-  goalId: INITIAL_JOURNEY_GOAL.id,
-  baselineDecisions: JOURNEY_BASELINE_DECISIONS,
-  acceptedDecisions: 0,
-});
+function initialDecisionProofHash(goal: JourneyGoalDefinition): string {
+  return hashState({
+    contractVersion: JOURNEY_CONTRACT_VERSION,
+    goalVersion: goal.version,
+    goalId: goal.id,
+    goalText: goal.text,
+    baselineDecisions: JOURNEY_BASELINE_DECISIONS,
+    acceptedDecisions: 0,
+  });
+}
+
+export const JOURNEY_INITIAL_DECISION_PROOF_HASH = initialDecisionProofHash(INITIAL_JOURNEY_GOAL);
 
 const HASH_PATTERN = /^[0-9a-f]{64}$/;
 const SAFE_NONNEGATIVE_INT = z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER);
 const POSITIVE_SAFE_INT = z.number().int().positive().max(Number.MAX_SAFE_INTEGER);
 const JourneyChoiceSchema = z.enum(["continue", "end"]);
 const JourneyChoiceReasonSchema = z.enum(["checkpoint", "goal_completed"]);
+const JourneyGoalStatusSchema = z.enum(["active", "completed"]);
+const JourneyCountedDecisionReasonSchema = z.enum([
+  "movement",
+  "stateful_clue",
+  "substantive_dialogue",
+  "combat",
+  "skill_check",
+  "preparation",
+  "situation_changed",
+]);
+
+export const JourneyGoalDefinitionSchema = z
+  .object({
+    version: POSITIVE_SAFE_INT,
+    id: z.string().min(1),
+    text: z.string().min(1),
+  })
+  .strict();
+
+const JourneyGoalSnapshotSchema = JourneyGoalDefinitionSchema.extend({
+  status: JourneyGoalStatusSchema,
+  completedAtDecision: SAFE_NONNEGATIVE_INT.nullable(),
+}).strict();
+
+const JourneyCompletedGoalSnapshotSchema = JourneyGoalDefinitionSchema.extend({
+  status: z.literal("completed"),
+  completedAtDecision: SAFE_NONNEGATIVE_INT,
+}).strict();
+
 const JourneyDecisionProofLastSchema = z
   .object({
     number: POSITIVE_SAFE_INT,
     surface: z.enum(["overworld", "quest"]),
     actionId: z.string().min(1),
+    reason: JourneyCountedDecisionReasonSchema,
   })
   .strict();
+
+const JourneyGoalBindingSchema = {
+  goalVersion: POSITIVE_SAFE_INT.nullable(),
+  goalId: z.string().min(1).nullable(),
+} as const;
+
+const JourneyPendingChoiceSchema = z
+  .object({
+    atDecision: SAFE_NONNEGATIVE_INT,
+    reasons: z.array(JourneyChoiceReasonSchema).min(1).max(2),
+    checkpoint: POSITIVE_SAFE_INT.nullable(),
+    ...JourneyGoalBindingSchema,
+  })
+  .strict();
+
 const JourneyRetentionEventSchema = z
   .object({
     sequence: POSITIVE_SAFE_INT,
     atDecision: SAFE_NONNEGATIVE_INT,
     reasons: z.array(JourneyChoiceReasonSchema).min(1).max(2),
     checkpoint: POSITIVE_SAFE_INT.nullable(),
+    ...JourneyGoalBindingSchema,
     choice: JourneyChoiceSchema,
     decisionProofHash: z.string().regex(HASH_PATTERN),
   })
@@ -178,22 +334,34 @@ function hasReason(
   return value.reasons.includes(reason);
 }
 
+function sameCompletedGoal(
+  left: JourneyGoalSnapshot,
+  right: JourneyCompletedGoalSnapshot,
+): boolean {
+  return (
+    left.version === right.version &&
+    left.id === right.id &&
+    left.text === right.text &&
+    left.status === right.status &&
+    left.completedAtDecision === right.completedAtDecision
+  );
+}
+
 function addIssue(ctx: z.RefinementCtx, path: (string | number)[], message: string): void {
   ctx.addIssue({ code: z.ZodIssueCode.custom, path, message });
 }
+
+type CompletionBinding = {
+  choice: JourneyChoice | null;
+  path: (string | number)[];
+};
 
 export const JourneyContractSnapshotSchema = z
   .object({
     version: z.literal(JOURNEY_CONTRACT_VERSION),
     status: z.enum(["active", "awaiting_choice", "ended"]),
-    goal: z
-      .object({
-        version: z.literal(INITIAL_JOURNEY_GOAL.version),
-        id: z.literal(INITIAL_JOURNEY_GOAL.id),
-        status: z.enum(["active", "completed"]),
-        completedAtDecision: SAFE_NONNEGATIVE_INT.nullable(),
-      })
-      .strict(),
+    goal: JourneyGoalSnapshotSchema,
+    goalHistory: z.array(JourneyCompletedGoalSnapshotSchema),
     acceptedDecisions: SAFE_NONNEGATIVE_INT,
     nextCheckpoint: POSITIVE_SAFE_INT.nullable(),
     decisionProof: z
@@ -202,25 +370,20 @@ export const JourneyContractSnapshotSchema = z
         last: JourneyDecisionProofLastSchema.nullable(),
       })
       .strict(),
-    pendingChoice: z
-      .object({
-        atDecision: SAFE_NONNEGATIVE_INT,
-        reasons: z.array(JourneyChoiceReasonSchema).min(1).max(2),
-        checkpoint: POSITIVE_SAFE_INT.nullable(),
-      })
-      .strict()
-      .nullable(),
+    pendingChoice: JourneyPendingChoiceSchema.nullable(),
     retentionHistory: z.array(JourneyRetentionEventSchema),
   })
   .strict()
   .superRefine((state, ctx) => {
-    const { acceptedDecisions, decisionProof, goal, pendingChoice, retentionHistory } = state;
+    const { acceptedDecisions, decisionProof, goal, goalHistory, pendingChoice, retentionHistory } =
+      state;
 
     if (acceptedDecisions === 0) {
       if (decisionProof.last !== null) {
         addIssue(ctx, ["decisionProof", "last"], "Zero decisions cannot have a last decision.");
       }
-      if (decisionProof.hash !== JOURNEY_INITIAL_DECISION_PROOF_HASH) {
+      const initialGoal = goalHistory[0] ?? goal;
+      if (decisionProof.hash !== initialDecisionProofHash(initialGoal)) {
         addIssue(
           ctx,
           ["decisionProof", "hash"],
@@ -235,52 +398,136 @@ export const JourneyContractSnapshotSchema = z
       );
     }
 
-    if (goal.status === "active" && goal.completedAtDecision !== null) {
-      addIssue(ctx, ["goal", "completedAtDecision"], "An active goal cannot be completed.");
-    }
-    if (
-      goal.status === "completed" &&
-      (goal.completedAtDecision === null || goal.completedAtDecision > acceptedDecisions)
-    ) {
-      addIssue(
-        ctx,
-        ["goal", "completedAtDecision"],
-        "Completed goal decision must exist and cannot exceed acceptedDecisions.",
-      );
+    let previousGoalCompletion = -1;
+    goalHistory.forEach((completed, index) => {
+      const expectedVersion = index + 1;
+      if (completed.version !== expectedVersion) {
+        addIssue(
+          ctx,
+          ["goalHistory", index, "version"],
+          `Completed goal versions must form the sequence 1..N; expected ${expectedVersion}.`,
+        );
+      }
+      if (completed.completedAtDecision > acceptedDecisions) {
+        addIssue(
+          ctx,
+          ["goalHistory", index, "completedAtDecision"],
+          "A completed goal cannot follow the accepted decision count.",
+        );
+      }
+      if (completed.completedAtDecision < previousGoalCompletion) {
+        addIssue(
+          ctx,
+          ["goalHistory", index, "completedAtDecision"],
+          "Completed goal decisions must be nondecreasing.",
+        );
+      }
+      previousGoalCompletion = completed.completedAtDecision;
+    });
+
+    if (goal.status === "active") {
+      if (goal.completedAtDecision !== null) {
+        addIssue(ctx, ["goal", "completedAtDecision"], "An active goal cannot be completed.");
+      }
+      const expectedVersion = goalHistory.length + 1;
+      if (goal.version !== expectedVersion) {
+        addIssue(
+          ctx,
+          ["goal", "version"],
+          `The active goal must be version ${expectedVersion}, immediately after completed history.`,
+        );
+      }
+    } else {
+      const latest = goalHistory.at(-1);
+      if (!latest || !sameCompletedGoal(goal, latest)) {
+        addIssue(
+          ctx,
+          ["goal"],
+          "The completed current goal must exactly equal the latest completed goal history entry.",
+        );
+      }
+      if (goal.completedAtDecision === null || goal.completedAtDecision > acceptedDecisions) {
+        addIssue(
+          ctx,
+          ["goal", "completedAtDecision"],
+          "Completed goal decision must exist and cannot exceed acceptedDecisions.",
+        );
+      }
     }
 
+    const completionBindings = new Map<number, CompletionBinding[]>();
+    const validateGoalBinding = (
+      value: {
+        atDecision: number;
+        reasons: readonly JourneyChoiceReason[];
+        goalVersion: number | null;
+        goalId: string | null;
+      },
+      path: (string | number)[],
+      choice: JourneyChoice | null,
+    ): void => {
+      const completesGoal = hasReason(value, "goal_completed");
+      if (!completesGoal) {
+        if (value.goalVersion !== null || value.goalId !== null) {
+          addIssue(
+            ctx,
+            path,
+            "Checkpoint-only retention evidence must use null goalVersion and goalId.",
+          );
+        }
+        return;
+      }
+      if (value.goalVersion === null || value.goalId === null) {
+        addIssue(ctx, path, "Goal-completion retention evidence must bind goalVersion and goalId.");
+        return;
+      }
+      const completed = goalHistory[value.goalVersion - 1];
+      if (!completed || completed.version !== value.goalVersion || completed.id !== value.goalId) {
+        addIssue(ctx, path, "Goal-completion retention evidence references no completed goal.");
+        return;
+      }
+      if (value.atDecision !== completed.completedAtDecision) {
+        addIssue(
+          ctx,
+          [...path, "atDecision"],
+          "Goal-completion retention evidence must match its goal completion decision.",
+        );
+      }
+      const bindings = completionBindings.get(completed.version) ?? [];
+      bindings.push({ choice, path });
+      completionBindings.set(completed.version, bindings);
+    };
+
     let expectedCheckpoint = JOURNEY_BASELINE_DECISIONS;
-    let sawGoalReason = false;
     let sawEnd = false;
+    let previousRetentionDecision = -1;
     retentionHistory.forEach((event, index) => {
+      const path: (string | number)[] = ["retentionHistory", index];
       if (event.sequence !== index + 1) {
+        addIssue(ctx, [...path, "sequence"], "Retention sequence is not contiguous.");
+      }
+      if (event.atDecision < previousRetentionDecision || event.atDecision > acceptedDecisions) {
         addIssue(
           ctx,
-          ["retentionHistory", index, "sequence"],
-          "Retention sequence is not contiguous.",
+          [...path, "atDecision"],
+          "Retention event decisions must be ordered and cannot exceed acceptedDecisions.",
         );
       }
-      if (event.atDecision > acceptedDecisions) {
-        addIssue(
-          ctx,
-          ["retentionHistory", index, "atDecision"],
-          "Retention event cannot follow the accepted decision count.",
-        );
-      }
+      previousRetentionDecision = event.atDecision;
       if (
         event.atDecision === acceptedDecisions &&
         event.decisionProofHash !== decisionProof.hash
       ) {
         addIssue(
           ctx,
-          ["retentionHistory", index, "decisionProofHash"],
+          [...path, "decisionProofHash"],
           "Retention evidence at the current decision must match the journey decision proof.",
         );
       }
       if (!reasonsAreCanonical(event.reasons)) {
         addIssue(
           ctx,
-          ["retentionHistory", index, "reasons"],
+          [...path, "reasons"],
           "Retention reasons must be unique and in canonical order.",
         );
       }
@@ -289,7 +536,7 @@ export const JourneyContractSnapshotSchema = z
         if (event.checkpoint !== expectedCheckpoint || event.atDecision !== expectedCheckpoint) {
           addIssue(
             ctx,
-            ["retentionHistory", index, "checkpoint"],
+            [...path, "checkpoint"],
             `Expected fixed journey checkpoint ${expectedCheckpoint}.`,
           );
         }
@@ -297,31 +544,23 @@ export const JourneyContractSnapshotSchema = z
       } else if (event.checkpoint !== null) {
         addIssue(
           ctx,
-          ["retentionHistory", index, "checkpoint"],
+          [...path, "checkpoint"],
           "Only checkpoint prompts may carry a checkpoint number.",
         );
       }
-      if (hasReason(event, "goal_completed")) {
-        sawGoalReason = true;
-        if (event.atDecision !== goal.completedAtDecision) {
-          addIssue(
-            ctx,
-            ["retentionHistory", index, "atDecision"],
-            "Goal retention event must match the goal completion decision.",
-          );
-        }
-      }
+      validateGoalBinding(event, path, event.choice);
       if (event.choice === "end") {
         sawEnd = true;
         if (index !== retentionHistory.length - 1) {
-          addIssue(ctx, ["retentionHistory", index], "Ending must be the final retention event.");
+          addIssue(ctx, path, "Ending must be the final retention event.");
         }
       } else if (sawEnd) {
-        addIssue(ctx, ["retentionHistory", index], "Retention cannot continue after ending.");
+        addIssue(ctx, path, "Retention cannot continue after ending.");
       }
     });
 
     if (pendingChoice) {
+      const path: (string | number)[] = ["pendingChoice"];
       if (state.status !== "awaiting_choice") {
         addIssue(ctx, ["status"], "A pending choice requires awaiting_choice status.");
       }
@@ -358,19 +597,41 @@ export const JourneyContractSnapshotSchema = z
           "Only a checkpoint prompt may carry a checkpoint number.",
         );
       }
+      validateGoalBinding(pendingChoice, path, null);
       if (hasReason(pendingChoice, "goal_completed")) {
-        sawGoalReason = true;
-        if (pendingChoice.atDecision !== goal.completedAtDecision) {
+        if (
+          goal.status !== "completed" ||
+          pendingChoice.goalVersion !== goal.version ||
+          pendingChoice.goalId !== goal.id
+        ) {
           addIssue(
             ctx,
-            ["pendingChoice", "atDecision"],
-            "Goal prompt must match the goal completion decision.",
+            ["pendingChoice"],
+            "A pending goal-completion choice must bind the completed current goal.",
           );
         }
       }
     } else if (state.status === "awaiting_choice") {
       addIssue(ctx, ["pendingChoice"], "awaiting_choice status requires a pending choice.");
     }
+
+    goalHistory.forEach((completed, index) => {
+      const bindings = completionBindings.get(completed.version) ?? [];
+      if (bindings.length !== 1) {
+        addIssue(
+          ctx,
+          ["goalHistory", index],
+          "Every completed goal must have exactly one bound retention prompt or event.",
+        );
+      }
+      if (completed.version < goal.version && bindings[0]?.choice !== "continue") {
+        addIssue(
+          ctx,
+          ["goalHistory", index],
+          "Activating a later goal requires a continued completion event for this goal.",
+        );
+      }
+    });
 
     if (state.status === "ended") {
       if (pendingChoice !== null || state.nextCheckpoint !== null || !sawEnd) {
@@ -381,8 +642,9 @@ export const JourneyContractSnapshotSchema = z
         );
       }
     } else {
-      if (sawEnd)
+      if (sawEnd) {
         addIssue(ctx, ["retentionHistory"], "Only an ended journey may retain an end choice.");
+      }
       if (state.nextCheckpoint !== expectedCheckpoint) {
         addIssue(
           ctx,
@@ -403,17 +665,14 @@ export const JourneyContractSnapshotSchema = z
         );
       }
     }
-
-    if (goal.status === "completed" && !sawGoalReason) {
-      addIssue(ctx, ["goal"], "A completed goal requires a goal-completion retention prompt.");
-    }
-    if (goal.status === "active" && sawGoalReason) {
-      addIssue(ctx, ["goal"], "An active goal cannot have goal-completion retention evidence.");
-    }
   });
 
 function cloneReasons(reasons: readonly JourneyChoiceReason[]): JourneyChoiceReason[] {
   return [...reasons];
+}
+
+function cloneCompletedGoal(goal: JourneyCompletedGoalSnapshot): JourneyCompletedGoalSnapshot {
+  return { ...goal };
 }
 
 function cloneRetentionEvent(event: JourneyRetentionEvent): JourneyRetentionEventSnapshot {
@@ -429,6 +688,7 @@ export function cloneJourneyContractSnapshot(
   return {
     ...state,
     goal: { ...state.goal },
+    goalHistory: state.goalHistory.map(cloneCompletedGoal),
     decisionProof: {
       ...state.decisionProof,
       last: state.decisionProof.last ? { ...state.decisionProof.last } : null,
@@ -440,25 +700,43 @@ export function cloneJourneyContractSnapshot(
   };
 }
 
-export function createInitialJourneyContractSnapshot(): JourneyContractSnapshot {
+function assertGoalDefinition(goal: JourneyGoalDefinition, expectedVersion?: number): void {
+  const parsed = JourneyGoalDefinitionSchema.parse(goal);
+  if (expectedVersion !== undefined && parsed.version !== expectedVersion) {
+    throw new Error(`Journey goal version must be ${expectedVersion}, got ${parsed.version}.`);
+  }
+}
+
+export function createInitialJourneyContractSnapshot(
+  initialGoal: JourneyGoalDefinition = INITIAL_JOURNEY_GOAL,
+): JourneyContractSnapshot {
+  assertGoalDefinition(initialGoal, 1);
   return {
     version: JOURNEY_CONTRACT_VERSION,
     status: "active",
     goal: {
-      version: INITIAL_JOURNEY_GOAL.version,
-      id: INITIAL_JOURNEY_GOAL.id,
+      ...initialGoal,
       status: "active",
       completedAtDecision: null,
     },
+    goalHistory: [],
     acceptedDecisions: 0,
     nextCheckpoint: JOURNEY_BASELINE_DECISIONS,
     decisionProof: {
-      hash: JOURNEY_INITIAL_DECISION_PROOF_HASH,
+      hash: initialDecisionProofHash(initialGoal),
       last: null,
     },
     pendingChoice: null,
     retentionHistory: [],
   };
+}
+
+function freezeGoal(goal: JourneyGoalSnapshot): JourneyGoalPresentation {
+  return Object.freeze({ ...goal });
+}
+
+function freezeCompletedGoal(goal: JourneyCompletedGoalSnapshot): JourneyCompletedGoalPresentation {
+  return Object.freeze({ ...goal });
 }
 
 function freezeRetentionEvent(event: JourneyRetentionEvent): JourneyRetentionEvent {
@@ -476,13 +754,37 @@ function pendingChoiceMessage(state: JourneyContractSnapshot): string {
   if (checkpoint) {
     return `You have reached the ${String(pending.checkpoint)}-decision checkpoint. Continue for ${JOURNEY_BASELINE_DECISIONS} more decisions, or end this journey?`;
   }
-  return `You completed your current goal after ${pending.atDecision} accepted decisions. Continue to the fixed checkpoint at ${String(state.nextCheckpoint)}, or end this journey?`;
+  return `You completed your current goal after ${pending.atDecision} meaningful decisions. Continue to the fixed checkpoint at ${String(state.nextCheckpoint)}, or end this journey?`;
 }
 
-function pendingChoicePresentation(state: JourneyContractSnapshot): JourneyChoicePrompt | null {
+function affix(base: string, prefix: string | undefined, suffix: string | undefined): string {
+  return [prefix, base, suffix].filter((value): value is string => Boolean(value)).join(" ");
+}
+
+function matchingGoalCompletionContext(
+  pending: JourneyPendingChoiceSnapshot,
+  context: JourneyPresentationContext | undefined,
+): JourneyGoalCompletionPresentationContext | undefined {
+  const goalContext = context?.goalCompletion;
+  if (
+    !goalContext ||
+    !hasReason(pending, "goal_completed") ||
+    goalContext.goalVersion !== pending.goalVersion ||
+    goalContext.goalId !== pending.goalId
+  ) {
+    return undefined;
+  }
+  return goalContext;
+}
+
+function pendingChoicePresentation(
+  state: JourneyContractSnapshot,
+  context?: JourneyPresentationContext,
+): JourneyChoicePrompt | null {
   const pending = state.pendingChoice;
   if (!pending) return null;
   const checkpoint = hasReason(pending, "checkpoint");
+  const goalContext = matchingGoalCompletionContext(pending, context);
   const continueTo = checkpoint
     ? (state.nextCheckpoint ?? 0) + JOURNEY_BASELINE_DECISIONS
     : state.nextCheckpoint;
@@ -490,16 +792,26 @@ function pendingChoicePresentation(state: JourneyContractSnapshot): JourneyChoic
     ? `Continue for ${JOURNEY_BASELINE_DECISIONS} more decisions`
     : `Continue to decision ${String(state.nextCheckpoint)}`;
   return Object.freeze({
-    id: `journey:${pending.atDecision}:${pending.reasons.join("+")}`,
+    id: `journey:${pending.atDecision}:${pending.reasons.join("+")}:${String(pending.goalVersion ?? "none")}:${pending.goalId ?? "none"}`,
     atDecision: pending.atDecision,
     reasons: Object.freeze(cloneReasons(pending.reasons)),
     checkpoint: pending.checkpoint,
-    message: pendingChoiceMessage(state),
+    goalVersion: pending.goalVersion,
+    goalId: pending.goalId,
+    message: affix(
+      pendingChoiceMessage(state),
+      goalContext?.messagePrefix,
+      goalContext?.messageSuffix,
+    ),
     options: Object.freeze([
       Object.freeze({
         id: "continue" as const,
         label: continueLabel,
-        consequence: `Play remains open; the next fixed checkpoint is decision ${String(continueTo)}.`,
+        consequence: affix(
+          `Play remains open; the next fixed checkpoint is decision ${String(continueTo)}.`,
+          goalContext?.continueConsequencePrefix,
+          goalContext?.continueConsequenceSuffix,
+        ),
       }),
       Object.freeze({
         id: "end" as const,
@@ -510,17 +822,96 @@ function pendingChoicePresentation(state: JourneyContractSnapshot): JourneyChoic
   });
 }
 
-export function journeyPresentation(state: JourneyContractSnapshot): JourneyPresentation {
+function freezeStoryChoice(
+  storyChoice: JourneyStoryChoicePrompt | null | undefined,
+): JourneyStoryChoicePrompt | null {
+  if (!storyChoice) return null;
+  if (storyChoice.id.length === 0 || storyChoice.message.length === 0) {
+    throw new Error("Journey story choice id and message cannot be empty.");
+  }
+  if (storyChoice.options.length !== 2) {
+    throw new Error("Journey story choice requires exactly two options.");
+  }
+  const options = storyChoice.options.map((option) => {
+    if (option.id.length === 0 || option.label.length === 0 || option.consequence.length === 0) {
+      throw new Error("Journey story choice option fields cannot be empty.");
+    }
+    return Object.freeze({ ...option });
+  }) as [JourneyStoryChoiceOption, JourneyStoryChoiceOption];
+  if (options[0].id === options[1].id) {
+    throw new Error("Journey story choice option ids must be unique.");
+  }
+  return Object.freeze({
+    ...storyChoice,
+    options: Object.freeze(options) as readonly [
+      JourneyStoryChoiceOption,
+      JourneyStoryChoiceOption,
+    ],
+  });
+}
+
+function freezeGoalPassage(
+  goalPassage: JourneyGoalPassagePresentation | null | undefined,
+): JourneyGoalPassagePresentation | null {
+  if (!goalPassage) return null;
+  if (goalPassage.id !== "follow_current_goal") {
+    throw new Error("Journey goal passage has an unknown action id.");
+  }
+  if (
+    goalPassage.label.trim().length === 0 ||
+    goalPassage.destination.trim().length === 0 ||
+    goalPassage.consequence.trim().length === 0 ||
+    goalPassage.stopRule.trim().length === 0 ||
+    goalPassage.travelConditionAfter.trim().length === 0
+  ) {
+    throw new Error("Journey goal passage text fields cannot be empty.");
+  }
+  for (const value of [
+    goalPassage.roadCount,
+    goalPassage.baseMinutes,
+    goalPassage.estimatedMinutes,
+    goalPassage.suppliesNeeded,
+    goalPassage.supplyDeficit,
+    goalPassage.suppliesAfter,
+    goalPassage.fatigueAfter,
+  ]) {
+    if (!Number.isSafeInteger(value) || value < 0) {
+      throw new Error("Journey goal passage estimates must be non-negative safe integers.");
+    }
+  }
+  if (goalPassage.roadCount === 0) {
+    throw new Error("Journey goal passage requires at least one road.");
+  }
+  return Object.freeze({
+    id: goalPassage.id,
+    label: goalPassage.label,
+    destination: goalPassage.destination,
+    roadCount: goalPassage.roadCount,
+    baseMinutes: goalPassage.baseMinutes,
+    estimatedMinutes: goalPassage.estimatedMinutes,
+    suppliesNeeded: goalPassage.suppliesNeeded,
+    supplyDeficit: goalPassage.supplyDeficit,
+    suppliesAfter: goalPassage.suppliesAfter,
+    fatigueAfter: goalPassage.fatigueAfter,
+    travelConditionAfter: goalPassage.travelConditionAfter,
+    consequence: goalPassage.consequence,
+    stopRule: goalPassage.stopRule,
+  });
+}
+
+export function journeyPresentation(
+  state: JourneyContractSnapshot,
+  context?: JourneyPresentationContext,
+): JourneyPresentation {
+  const goalGuidance = context?.goalGuidance ?? null;
+  if (goalGuidance !== null && goalGuidance.trim().length === 0) {
+    throw new Error("Journey goal guidance cannot be empty.");
+  }
   return Object.freeze({
     contractVersion: JOURNEY_CONTRACT_VERSION,
     status: state.status,
-    goal: Object.freeze({
-      version: INITIAL_JOURNEY_GOAL.version,
-      id: INITIAL_JOURNEY_GOAL.id,
-      text: INITIAL_JOURNEY_GOAL.text,
-      status: state.goal.status,
-      completedAtDecision: state.goal.completedAtDecision,
-    }),
+    goal: freezeGoal(state.goal),
+    completedGoals: Object.freeze(state.goalHistory.map(freezeCompletedGoal)),
     acceptedDecisions: state.acceptedDecisions,
     baselineDecisions: JOURNEY_BASELINE_DECISIONS,
     nextCheckpoint: state.nextCheckpoint,
@@ -528,7 +919,10 @@ export function journeyPresentation(state: JourneyContractSnapshot): JourneyPres
       hash: state.decisionProof.hash,
       last: state.decisionProof.last ? Object.freeze({ ...state.decisionProof.last }) : null,
     }),
-    pendingChoice: pendingChoicePresentation(state),
+    goalGuidance,
+    goalPassage: freezeGoalPassage(context?.goalPassage),
+    pendingChoice: pendingChoicePresentation(state, context),
+    storyChoice: freezeStoryChoice(context?.storyChoice),
     retentionHistory: Object.freeze(state.retentionHistory.map(freezeRetentionEvent)),
   });
 }
@@ -552,13 +946,15 @@ export function recordJourneyAcceptedDecision(
   decision: JourneyAcceptedDecision,
 ): JourneyContractSnapshot {
   assertJourneyAcceptingDecision(state);
-  if (decision.actionId.length === 0)
+  if (decision.actionId.length === 0) {
     throw new Error("Accepted journey action id cannot be empty.");
+  }
   const acceptedDecisions = state.acceptedDecisions + 1;
   const last: JourneyDecisionProofLast = {
     number: acceptedDecisions,
     surface: decision.surface,
     actionId: decision.actionId,
+    reason: decision.reason,
   };
   const decisionProof = {
     hash: hashState({ previous: state.decisionProof.hash, ...last }),
@@ -575,9 +971,25 @@ export function recordJourneyAcceptedDecision(
           atDecision: acceptedDecisions,
           reasons: ["checkpoint"],
           checkpoint: state.nextCheckpoint,
+          goalVersion: null,
+          goalId: null,
         }
       : null,
   };
+}
+
+/** Apply one accepted gameplay outcome to the versioned journey contract. */
+export function recordJourneyDecision(
+  state: JourneyContractSnapshot,
+  decision: Omit<JourneyAcceptedDecision, "reason">,
+  classification: JourneyDecisionClassification,
+): JourneyContractSnapshot {
+  assertJourneyAcceptingDecision(state);
+  if (!classification.countsTowardJourney) return state;
+  return recordJourneyAcceptedDecision(state, {
+    ...decision,
+    reason: classification.reason,
+  });
 }
 
 function canonicalReasons(reasons: readonly JourneyChoiceReason[]): JourneyChoiceReason[] {
@@ -591,18 +1003,22 @@ export function recordJourneyGoalCompleted(
 ): JourneyContractSnapshot {
   if (state.status === "ended") throw new Error("This journey has ended.");
   if (state.goal.status === "completed") return state;
-  const goal: JourneyGoalSnapshot = {
+  const goal: JourneyCompletedGoalSnapshot = {
     ...state.goal,
     status: "completed",
     completedAtDecision: state.acceptedDecisions,
   };
+  const goalHistory = [...state.goalHistory, goal];
   if (state.pendingChoice) {
     return {
       ...state,
       goal,
+      goalHistory,
       pendingChoice: {
         ...state.pendingChoice,
         reasons: canonicalReasons([...state.pendingChoice.reasons, "goal_completed"]),
+        goalVersion: goal.version,
+        goalId: goal.id,
       },
     };
   }
@@ -610,10 +1026,54 @@ export function recordJourneyGoalCompleted(
     ...state,
     status: "awaiting_choice",
     goal,
+    goalHistory,
     pendingChoice: {
       atDecision: state.acceptedDecisions,
       reasons: ["goal_completed"],
       checkpoint: null,
+      goalVersion: goal.version,
+      goalId: goal.id,
+    },
+  };
+}
+
+export function hasContinuedJourneyGoal(
+  state: JourneyContractSnapshot,
+  goal: JourneyGoalIdentity,
+): boolean {
+  return state.retentionHistory.some(
+    (event) =>
+      event.choice === "continue" &&
+      hasReason(event, "goal_completed") &&
+      event.goalVersion === goal.version &&
+      event.goalId === goal.id,
+  );
+}
+
+export function activateJourneyGoal(
+  state: JourneyContractSnapshot,
+  definition: JourneyGoalDefinition,
+): JourneyContractSnapshot {
+  if (state.status === "ended") throw new Error("This journey has ended.");
+  if (state.status !== "active" || state.pendingChoice !== null) {
+    throw new Error("Answer the current journey choice before activating another goal.");
+  }
+  if (state.goal.status !== "completed") {
+    throw new Error("The current journey goal must be completed before activating another goal.");
+  }
+  if (!hasContinuedJourneyGoal(state, state.goal)) {
+    throw new Error(
+      "Activating another journey goal requires continuing from the completed goal's choice.",
+    );
+  }
+  const expectedVersion = state.goal.version + 1;
+  assertGoalDefinition(definition, expectedVersion);
+  return {
+    ...state,
+    goal: {
+      ...definition,
+      status: "active",
+      completedAtDecision: null,
     },
   };
 }
@@ -624,26 +1084,31 @@ function buildJourneyExitReceipt(state: JourneyContractSnapshot): JourneyExitRec
   if (!last || last.choice !== "end") {
     throw new Error("Ended journey is missing its final retention event.");
   }
-  const retentionHistory = state.retentionHistory.map(freezeRetentionEvent);
+  const completedGoalsPayload = state.goalHistory.map(cloneCompletedGoal);
+  const retentionHistoryPayload = state.retentionHistory.map((event) => ({
+    ...event,
+    reasons: cloneReasons(event.reasons),
+  }));
   const payload = {
     contractVersion: JOURNEY_CONTRACT_VERSION,
     exitReason: JOURNEY_EXIT_REASON,
-    goalVersion: INITIAL_JOURNEY_GOAL.version,
-    goalId: INITIAL_JOURNEY_GOAL.id,
+    goalVersion: state.goal.version,
+    goalId: state.goal.id,
+    goalText: state.goal.text,
     goalStatus: state.goal.status,
+    goalCompletedAtDecision: state.goal.completedAtDecision,
+    completedGoals: completedGoalsPayload,
     acceptedDecisions: state.acceptedDecisions,
     exitReasons: cloneReasons(last.reasons),
     checkpoint: last.checkpoint,
     decisionProofHash: state.decisionProof.hash,
-    retentionHistory: retentionHistory.map((event) => ({
-      ...event,
-      reasons: [...event.reasons],
-    })),
+    retentionHistory: retentionHistoryPayload,
   };
   return Object.freeze({
     ...payload,
+    completedGoals: Object.freeze(state.goalHistory.map(freezeCompletedGoal)),
     exitReasons: Object.freeze(payload.exitReasons),
-    retentionHistory: Object.freeze(retentionHistory),
+    retentionHistory: Object.freeze(state.retentionHistory.map(freezeRetentionEvent)),
     receiptHash: hashState(payload),
   });
 }
@@ -668,6 +1133,8 @@ export function chooseJourney(
     atDecision: state.acceptedDecisions,
     reasons: cloneReasons(pending.reasons),
     checkpoint: pending.checkpoint,
+    goalVersion: pending.goalVersion,
+    goalId: pending.goalId,
     choice,
     decisionProofHash: state.decisionProof.hash,
   };
@@ -675,15 +1142,19 @@ export function chooseJourney(
   if (answeredCheckpoint && state.nextCheckpoint === null) {
     throw new Error("Journey checkpoint choice is missing its next checkpoint.");
   }
+  const nextCheckpoint =
+    choice === "end"
+      ? null
+      : answeredCheckpoint
+        ? state.nextCheckpoint! + JOURNEY_BASELINE_DECISIONS
+        : state.nextCheckpoint;
+  if (nextCheckpoint !== null && nextCheckpoint > Number.MAX_SAFE_INTEGER) {
+    throw new Error("The next journey checkpoint exceeds JavaScript's safe integer range.");
+  }
   const nextState: JourneyContractSnapshot = {
     ...state,
     status: choice === "end" ? "ended" : "active",
-    nextCheckpoint:
-      choice === "end"
-        ? null
-        : answeredCheckpoint
-          ? state.nextCheckpoint! + JOURNEY_BASELINE_DECISIONS
-          : state.nextCheckpoint,
+    nextCheckpoint,
     pendingChoice: null,
     retentionHistory: [...state.retentionHistory, retentionEvent],
   };
@@ -696,23 +1167,4 @@ export function chooseJourney(
       exitReceipt: buildJourneyExitReceipt(nextState),
     }),
   };
-}
-
-export function assertJourneyGoalCompletionProof(args: {
-  journey: JourneyContractSnapshot;
-  completedQuestIds: ReadonlySet<string>;
-  questsById: ReadonlyMap<string, OverworldQuest>;
-  startTownId: string;
-}): void {
-  const hasCompletedStartQuest = [...args.completedQuestIds].some(
-    (questId) => args.questsById.get(questId)?.home === args.startTownId,
-  );
-  if (args.journey.goal.status === "completed" && !hasCompletedStartQuest) {
-    throw new Error(
-      "Journey goal is marked complete without a completed quest from the starting town.",
-    );
-  }
-  if (args.journey.goal.status === "active" && hasCompletedStartQuest) {
-    throw new Error("Journey goal is active despite a completed quest from the starting town.");
-  }
 }

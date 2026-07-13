@@ -16,6 +16,7 @@ export const SCORE_VAR = "score";
 export const HP_VAR = "hp";
 export const ATTACK_VAR = "attack";
 export const DEFENSE_VAR = "defense";
+export const RPG_BLOCKED_ACTION_REASON_CHAR_LIMIT = 180;
 
 export const ExitSchema = z
   .object({
@@ -114,9 +115,24 @@ export const InteractionSchema = z
       .regex(/^[a-z]+$/, "command_verb must be a single lowercase word")
       .optional(),
     command_template: z.string().min(1).optional(),
+    blocked_hint: z
+      .object({
+        visible_when: z.array(ConditionSchema).min(1),
+        reason: z.string().min(1).max(RPG_BLOCKED_ACTION_REASON_CHAR_LIMIT),
+      })
+      .strict()
+      .optional(),
   })
   .strict()
   .superRefine((it, ctx) => {
+    if (it.blocked_hint !== undefined && (it.verb !== "USE" || it.target === undefined)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["blocked_hint"],
+        message: "blocked_hint is only valid on a USE interaction with a target",
+      });
+    }
+
     if (it.command_verb !== undefined) {
       if (it.verb !== "USE" || it.target === undefined) {
         ctx.addIssue({

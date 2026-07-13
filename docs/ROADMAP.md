@@ -53,22 +53,20 @@ graph.
 
 ## Near-Term Work Queue
 
-(Refreshed 2026-07-07. Landed since the last refresh: the single New York
-overworld consolidation — the Charter Marches world/mode/graph and 5
-overworld-orphaned quests removed, overworld is the sole world + quest registry
-(see `docs/DECISION_LOG.md`, 2026-07-07); a 50-playthrough blind soak of the MCP
-server — 100% completion, 0 defects, 0 rate-limit issues, all via the new
-`blind-tester/loadtest*.sh` harness; MCP tool annotations added per the
-mcp-builder review; and the quest-lead **anchor-area signposting** — the compact
-`quests` tuple is now `[id, title, anchor_area_id]` so a blind agent can walk to
-the quest's area before starting, directly targeting the soak's 49/50 "Move to X
-before starting Y" friction.)
+(Refreshed 2026-07-12. Landed since the 2026-07-07 refresh: the three-tier
+**testing pyramid** — mechanical crawler, blind fleet + mock, feedback compiler
+(`docs/testing_pyramid.md`, PR #79); the `tide_mill` quest, bringing the shipped
+registry to 12 (PR #80); the versioned **journey contract** (v1 → v3) with
+pure-blind retention cohorts feeding `docs/BLIND_FEEDBACK_LEDGER.md`; and the
+**Goal Passage** — the current objective's road as one interruptible,
+game-native travel decision shared by UI and MCP. The earlier one-off 50-run
+soak measurements are superseded by the continuous pure-blind fleet and the
+compiled feedback ledger.)
 
-- **Measure the signposting fix**: re-run the 50-blind soak and compare the
-  quest area-gate error rate to the 49/50 baseline (should drop sharply).
-- **Diversify blind-run coverage**: all soak runs start at Albany and gravitate
-  to `wolf_winter`. Vary the start town / seed so the other 10 quests are
-  exercised before drawing content-quality conclusions.
+- **Keep the pure-blind cohorts flowing**: fresh fleet seeds per cycle, with
+  the feedback compiler's three-report threshold deciding when a new hotspot
+  is actionable; vary start town / seed so the other 11 quests beyond
+  `wolf_winter` stay exercised before drawing content-quality conclusions.
 - Port retired stories back as RPG world quests one at a time (36 retired packs
   are tagged `stories-52-pre-rpg-consolidation`; each port reuses playtested
   prose and is a well-scoped cycle: adapt → validate → blind-playtest → gate).

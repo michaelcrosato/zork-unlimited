@@ -21,6 +21,11 @@ import {
   OVERWORLD_PUBLIC_SNAPSHOT_HASH_LENGTH,
 } from "../../src/mcp/overworld_sessions.js";
 import {
+  OVERWORLD_COMPACT_ACTION_TEXT_CHAR_LIMIT,
+  OVERWORLD_COMPACT_ROAD_ENCOUNTER_TEXT_CHAR_LIMIT,
+} from "../../src/mcp/compact_overworld_result.js";
+import { compactText } from "../../src/core/compact_text.js";
+import {
   hashTranscript,
   publicRpgTranscriptHash,
   RPG_PUBLIC_TRANSCRIPT_HASH_LENGTH,
@@ -807,8 +812,12 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(repeatedResolved.result.discoveredJobs).toEqual([]);
     expect(repeatedResolved.result.discoveredSites).toEqual([]);
     expect(repeatedResolved.result.discoveredQuests).toEqual([]);
-    expect(repeatedResolved.snapshot_hash).not.toBe(resolved.snapshot_hash);
-    expect(repeatedResolved.journey.acceptedDecisions).toBe(resolved.journey.acceptedDecisions + 1);
+    expect(repeatedResolved.snapshot_hash).toBe(resolved.snapshot_hash);
+    expect(repeatedResolved.journey.acceptedDecisions).toBe(resolved.journey.acceptedDecisions);
+    expect(repeatedResolved.journeyDecision).toEqual({
+      countsTowardJourney: false,
+      reason: "repeated_context",
+    });
 
     const road = resolved.observation.exits.find((edge) => edge.destination.id === "colonie_town");
     expect(road).toBeTruthy();
@@ -967,12 +976,24 @@ describe("MCP tools — validate / load (§9.4)", () => {
       }),
     ).toThrow(/not started from this overworld session/i);
 
+    const launchedSnapshot = a.export_overworld_session({
+      session_id: started.session_id,
+      expected_snapshot_hash: launched.snapshot_hash,
+    });
+    expect(launchedSnapshot.ok).toBe(true);
+    if (!launchedSnapshot.ok) throw new Error("expected launched snapshot export");
+
     const ended = playSunkenBarrowToVictory(a, launched.rpg_session_id);
     const fullEndedStateHash = hashState(
       a.get_state({ session_id: launched.rpg_session_id, include_state: true }).state,
     );
     expect(ended.observation.ended).toBe(true);
     expect(ended.observation.ending_id).toBe("ending_victory");
+    expect(ended.questCompletion).toMatchObject({
+      alreadyKnown: false,
+      endingId: "ending_victory",
+      quest: { id: "sunken_barrow" },
+    });
     expect(ended.state_hash).toBe(publicRpgStateHash(fullEndedStateHash));
     const endedOverworldSnapshotHash = ended.overworld_snapshot_hash;
     expect(endedOverworldSnapshotHash).toMatch(PUBLIC_OVERWORLD_SNAPSHOT_HASH_RE);
@@ -1010,21 +1031,15 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect("context" in staleRpgCompletion).toBe(false);
     expect("observation" in staleRpgCompletion).toBe(false);
 
-    const launchedSnapshot = a.export_overworld_session({
-      session_id: started.session_id,
-      expected_snapshot_hash: endedOverworldSnapshotHash,
-    });
-    expect(launchedSnapshot.ok).toBe(true);
-    if (!launchedSnapshot.ok) throw new Error("expected launched snapshot export");
-    const completed = a.complete_overworld_session_quest({
-      ...FULL_OVERWORLD_RESPONSE,
-      session_id: started.session_id,
-      rpg_session_id: launched.rpg_session_id,
-      expected_snapshot_hash: endedOverworldSnapshotHash,
-      expected_rpg_state_hash: fullEndedStateHash,
-    });
-    expect(completed.ok).toBe(true);
-    if (!completed.ok) throw new Error("expected quest completion");
+    if (!ended.questCompletion) throw new Error("expected atomic quest completion");
+    const completed = {
+      result: ended.questCompletion,
+      observation: a.get_overworld_session({
+        session_id: started.session_id,
+        include_observation: true,
+      }).observation,
+      snapshot_hash: endedOverworldSnapshotHash,
+    };
     const completedQuestSource = overworld.quests.find((quest) => quest.id === "sunken_barrow");
     if (!completedQuestSource) throw new Error("expected sunken_barrow source");
     const expectedQuestMinutes = questCompletionMinutes(
@@ -1151,7 +1166,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(compact.snapshot_hash).toBe(started.snapshot_hash);
     expect(compactStarted.snapshot_hash).toMatch(PUBLIC_OVERWORLD_SNAPSHOT_HASH_RE);
     expect(defaultStarted.snapshot_hash).toMatch(PUBLIC_OVERWORLD_SNAPSHOT_HASH_RE);
-    expect(defaultStarted.context.v).toBe(13);
+    expect(defaultStarted.context.v).toBe(14);
     expect("observation" in defaultStarted).toBe(false);
     expect("world" in defaultStarted.context).toBe(false);
     expect("route_options" in defaultStarted.context).toBe(false);
@@ -1182,7 +1197,14 @@ describe("MCP tools — validate / load (§9.4)", () => {
     });
     expect(defaultTravel.ok).toBe(true);
     if (!defaultTravel.ok) throw new Error("default compact travel should pass snapshot guard");
-    expect(defaultTravel.travel).toHaveLength(7);
+    expect(defaultTravel.travel).toHaveLength(10);
+    expect(defaultTravel.travel.slice(6)).toEqual([
+      expect.any(String),
+      expect.stringMatching(/^(low|medium|high)$/),
+      expect.any(String),
+      expect.any(String),
+    ]);
+    expect(defaultTravel.context.travel_log?.[0]).toHaveLength(7);
     expect("baseMinutes" in defaultTravel.travel).toBe(false);
     expect(defaultTravel.context.here[0]).toBe(`road:${defaultTravelFullRoad!.id}`);
     expect(defaultTravel.context.here[3]).toBeNull();
@@ -1334,7 +1356,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
       session_id: started.session_id,
       include_ids: true,
     });
-    expect(compact.context.v).toBe(13);
+    expect(compact.context.v).toBe(14);
     expect(compact.context.here).toEqual([
       full.current.id,
       full.current.name,
@@ -1465,6 +1487,11 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect("session_id" in staleTravel).toBe(false);
     expect("events" in staleTravel).toBe(false);
     expect(staleTravel.rejection_reason).toMatch(/snapshot hash/i);
+    expect(staleTravel.journeyDecision).toEqual({
+      countsTowardJourney: false,
+      reason: "rejected",
+    });
+    expect(staleTravel.journey.decisionProof).toEqual(compactTravel.journey.decisionProof);
     expect(staleTravel.snapshot_hash).toBe(compactTravel.snapshot_hash);
     expect("context" in staleTravel).toBe(false);
     expect("observation" in staleTravel).toBe(false);
@@ -1493,6 +1520,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect("pending_road" in traveledCompact).toBe(true);
     expect(traveledCompact.pending_road).toMatchObject({
       edge: road!.id,
+      route: traveledFull.pendingRoadEncounter!.route,
       where: [
         traveledFull.pendingRoadEncounter!.from,
         traveledFull.pendingRoadEncounter!.to,
@@ -1501,14 +1529,24 @@ describe("MCP tools — validate / load (§9.4)", () => {
       event: [
         traveledFull.pendingRoadEncounter!.event.id,
         traveledFull.pendingRoadEncounter!.event.risk,
+        traveledFull.pendingRoadEncounter!.event.title,
+        traveledFull.pendingRoadEncounter!.event.summary,
       ],
     });
-    expect(traveledCompact.pending_road?.options.map(([strategy]) => strategy)).toEqual([
-      "cautious_scout",
-      "assist_travelers",
-      "press_on",
-    ]);
-    expect(traveledCompact.pending_road?.options[0]?.[1]).toEqual(expect.any(Number));
+    expect(traveledCompact.pending_road?.options).toEqual(
+      traveledFull.pendingRoadEncounter!.options.map((option) => [
+        option.strategy,
+        option.label,
+        option.minutes,
+        option.suppliesCost,
+        option.fatigueGained,
+        option.renownGained,
+      ]),
+    );
+    for (const option of traveledFull.pendingRoadEncounter!.options) {
+      expect(option.outcome).toBeUndefined();
+    }
+    expect(traveledFull.pendingRoadEncounter!.event.responses).toBeUndefined();
     expect(traveledCompact.travel_log).toEqual(compactTravel.context.travel_log);
     expect(JSON.stringify(traveledCompact).length).toBeLessThan(
       JSON.stringify(traveledFull).length,
@@ -1596,7 +1634,9 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(compactExplore.result.areas?.map(([id]) => id)).toEqual(
       fullExplore.result.discoveredAreas?.map((candidate) => candidate.id),
     );
-    expect("text" in compactExplore.result.entry).toBe(false);
+    expect(compactExplore.result.text).toBe(
+      compactText(fullExplore.result.entry.text, OVERWORLD_COMPACT_ACTION_TEXT_CHAR_LIMIT),
+    );
     expect(JSON.stringify(compactExplore.result).length).toBeLessThan(
       JSON.stringify(fullExplore.result).length,
     );
@@ -1628,6 +1668,9 @@ describe("MCP tools — validate / load (§9.4)", () => {
       fullTravel.travel.suppliesUsed,
       fullTravel.travel.fatigueGained,
       fullTravel.travel.roadEvent?.id ?? null,
+      fullTravel.travel.roadEvent?.risk ?? null,
+      fullTravel.travel.roadEvent?.title ?? null,
+      fullTravel.travel.roadEvent?.summary ?? null,
     ]);
     expect(JSON.stringify(compactTravel.travel).length).toBeLessThan(
       JSON.stringify(fullTravel.travel).length,
@@ -1658,6 +1701,10 @@ describe("MCP tools — validate / load (§9.4)", () => {
       fullResolved.result.entry.title,
       fullResolved.result.entry.recordedAt,
     ]);
+    expect(compactResolved.result.text).toBe(
+      compactText(fullResolved.result.entry.text, OVERWORLD_COMPACT_ROAD_ENCOUNTER_TEXT_CHAR_LIMIT),
+    );
+    expect(compactResolved.result.text).toBe(fullResolved.result.entry.text);
     expect(JSON.stringify(compactResolved.result).length).toBeLessThan(
       JSON.stringify(fullResolved.result).length,
     );
@@ -2025,8 +2072,12 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(repeated.result.discoveredJobs).toEqual([]);
     expect(repeated.result.discoveredSites).toEqual([]);
     expect(repeated.result.discoveredQuests).toEqual([]);
-    expect(repeated.snapshot_hash).not.toBe(explored.snapshot_hash);
-    expect(repeated.journey.acceptedDecisions).toBe(explored.journey.acceptedDecisions + 1);
+    expect(repeated.snapshot_hash).toBe(explored.snapshot_hash);
+    expect(repeated.journey.acceptedDecisions).toBe(explored.journey.acceptedDecisions);
+    expect(repeated.journeyDecision).toEqual({
+      countsTowardJourney: false,
+      reason: "repeated_context",
+    });
   });
 
   it("completes a regional arc through stateful MCP overworld play", () => {
@@ -3329,6 +3380,8 @@ describe("MCP tools — the play loop (§9.1)", () => {
       compact_observation: true,
     });
     expect(stale.ok).toBe(false);
+    expect(stale.journeyDecision).toEqual({ countsTowardJourney: false, reason: "rejected" });
+    expect(stale.journeyActionId).toBeNull();
     expect("rejection_reason" in stale).toBe(true);
     if (stale.ok) throw new Error("expected stale action rejection");
     expect(stale.rejection_reason).toMatch(/state hash/i);

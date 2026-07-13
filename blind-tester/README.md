@@ -24,15 +24,25 @@ subscription allowance, which is the best value — exactly per the project goal
 - **Pure live mode (canonical default):** every reasoning agent starts one fresh
   overworld session with `play_mode: pure` and
   `start_surface: fresh_overworld`. It receives only the tutorial, current goal,
-  state, legal choices, accepted-decision/checkpoint status, and consequences a
-  human receives. The game presents continue/end choices at goal completion and
-  fixed decision checkpoints. The harness interviews only after the player ends
-  through that choice; it supplies no route, coverage assignment, solution, or
-  call-count stopping rule.
+  completed-goal history, state, legal and authored story choices,
+  meaningful-decision/checkpoint status, and consequences a human receives.
+  Current journey contract v3 presents continue/end choices bound to the goal
+  just completed and at fixed decision checkpoints. After a goal continuation,
+  a game-authored story choice may install the next objective. The harness
+  interviews only after the player ends through a retention choice; it supplies
+  no route, coverage assignment, solution, or call-count stopping rule.
+  Follow-up navigation comes only from the game's shared Goal Passage choice,
+  which yields at real road choices and resource boundaries, never from the
+  harness.
 - **Structural development/QA (explicit only):** `--smoke`, `--mock`, crawler,
   and direct `--quest <id>` paths prove plumbing/mechanics. They are labeled
   non-pure and retention-ineligible, and can never resume or count as pure live
   evidence.
+
+The goal/checkpoint continue-or-end choice is retention evidence and does not
+advance the decision counter. A post-continue `journey.storyChoice` is ordinary
+gameplay: choosing one of its visible options records the authored consequence,
+counts once as `situation_changed`, and activates the next current goal.
 
 ## Quickstart
 
@@ -98,14 +108,16 @@ npm run fleet:mock -- --count 2 --target quest:sunken_barrow # structural drop-i
 - **Model**: `--model <alias>` (`haiku`, `sonnet`, `opus`) or `--model mix`
   (deterministic 9 haiku : 1 sonnet weighting by index). No temperature/top_p
   flag exists — model × seed is the live diversity axis.
-- **Resume**: only a reverified V2 pure report with matching server-authored run
-  evidence may skip a pure member. Guided, legacy, mock, and structural reports
-  never match. Failed attempts back off exponentially up to `--max-retries`
-  (default 2).
+- **Resume**: only a reverified schema-V2 pure report with matching
+  server-authored run evidence and the current journey-contract version may
+  skip a pure member. Historical contract-v1/v2, guided, legacy, mock, and
+  structural reports never match. Failed attempts back off exponentially up to
+  `--max-retries` (default 2).
 - **Output**: reports plus verified `.run.json` evidence sidecars in `reports/`
   (or `--out <dir>`); a manifest at
   `ai-runs/fleet/<label>/manifest.jsonl` and `summary.json` preserve play mode,
-  start surface, journey contract/checkpoints, exit reason, and eligibility.
+  start surface, journey contract, current/completed goals, goal/checkpoint
+  choices, exit reason, and eligibility.
 - Live (non-mock) fleets spend real tokens — run them from a plain shell, not
   from inside a Claude Code session (nested CLI auth returns 401 there). A live
   fleet always enforces pure/fresh-overworld/default-persona; `quest:<id>` and
@@ -150,9 +162,9 @@ not a bill) to the gitignored `ai-runs/blind-telemetry.jsonl`:
 npm run blind:telemetry     # per-source summary: runs, mean turns/minutes, tokens, nominal $
 ```
 
-Recording is best-effort (a telemetry failure never fails the run) and only
-happens on the built-in `claude` path — a `BLIND_AGENT_CMD` override produces
-no claude envelope to measure.
+Recording is best-effort (a telemetry failure never fails the run) and happens
+only on the built-in `claude` pure path. Structural mock runs do not produce a
+Claude envelope to measure.
 
 ## How pure blindness is enforced
 
@@ -161,9 +173,10 @@ no claude envelope to measure.
    content, instructions, or solutions.
 2. **Player-only server.** The runner launches MCP with `--play-mode pure`.
    Tool discovery returns only human-equivalent world/quest reads and decisions,
-   one fresh overworld start, and the journey choice. Raw state, save/import,
-   restore, direct quest, validation, replay, generation, and authoring tools are
-   absent. Calls after game-confirmed exit are rejected.
+   one fresh overworld start, the journey choice, and an authored story-choice
+   tool that works only when the same UI choice is due. Raw state, save/import,
+   restore, direct quest, validation, replay, generation, and authoring tools
+   are absent. Calls after game-confirmed exit are rejected.
 3. **Server-authored evidence.** A private JSONL records the fresh start and
    final journey exit. The report verifier matches their session and exact
    receipt before writing a verified run sidecar. Model prose cannot relabel a
@@ -171,8 +184,9 @@ no claude envelope to measure.
 
 This mirrors the canonical procedure in [`docs/blind_playtest_protocol.md`](../docs/blind_playtest_protocol.md);
 the live [`prompt-overworld.md`](./prompt-overworld.md) carries only the MCP
-transport boundary and V2 interview format; the game carries the objective and
-session rhythm. The structural-only [`prompt.md`](./prompt.md) is a QA fixture.
+transport boundary and schema-V2 interview format; current journey contract v3
+and the game carry every objective, authored handoff, consequence, and session
+rhythm. The structural-only [`prompt.md`](./prompt.md) is a QA fixture.
 
 ## Files
 
@@ -209,28 +223,14 @@ Environment: `BLIND_QUEST_ID` (structural runs only), `BLIND_MODEL`,
 `BLIND_SPECTATE=1`, `BLIND_SPECTATE_DELAY_MS`, `BLIND_BASH` (Windows: path to Git
 Bash if auto-detection fails).
 
-## Provider-agnostic — bring another agent (e.g. Codex or a local LLM)
+## Why arbitrary provider overrides are not pure evidence
 
-The default agent is `claude -p`. To use a different MCP-capable agent CLI, set
-`BLIND_AGENT_CMD`: it receives the prompt on **stdin** and these env vars:
-`BLIND_MCP_CONFIG` (path to the generated MCP config), `BLIND_QUEST_ID`,
-`BLIND_SEED`.
-
-Provider overrides do not change the policy: every live reasoning agent uses
-the same pure player-only server, neutral persona, and fresh overworld contract.
-`BLIND_QUEST_ID` is populated only by structural fixtures.
-
-```bash
-BLIND_AGENT_CMD='codex exec --ignore-user-config --ephemeral --skip-git-repo-check --sandbox read-only -' npm run blind --seed=137
-BLIND_AGENT_CMD='gemini -p' npm run blind
-```
-
-When `BLIND_AGENT_CMD` invokes `codex`, the runner temporarily shadows `codex` on
-`PATH` and injects the AdventureForge MCP server with Codex `-c` overrides. No
-user-level `codex mcp add` or project trust is required for blind runs.
-
-**Future — local LLM.** This game is small and its action space is structured, so a
-local model (served via an MCP-capable runner) may be able to play and critique it
-for $0 and fully offline. The smoke test + `BLIND_AGENT_CMD` seam are the integration
-points; if a local model proves too weak, the subscription path here remains the
-reliable default with no loss of effectiveness.
+The canonical live player is the runner-owned `claude --print` launch. It runs
+from an isolated temporary directory with file, shell, and web tools denied.
+An arbitrary external command may connect only to the player MCP server yet
+still retain filesystem or shell access outside MCP; a valid exit receipt cannot
+prove that it stayed blind. Therefore `BLIND_AGENT_CMD` is rejected on live pure
+runs instead of relying on operator discipline. Alternative providers may be
+added only through a provider-specific hardened adapter that enforces the same
+tool denial in code and has an acceptance regression. Explicit `--smoke` and
+`--mock` remain the non-pure development/QA instruments.

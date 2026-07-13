@@ -115,7 +115,11 @@ describe("bug_0075 — the reaver's shade: an optional, mechanical second beat i
     expect(s.flags["heard_warding"]).toBe(true);
     expect(s.vars["defense"]).toBe(5); // the ward is real and mechanical (2 → 5)
     expect(s.journal.some((j) => j.includes("+3 defense"))).toBe(true);
-    s = act(s, askTopic("wight_back")); // back to root
+    // The substantive reply auto-resumes the root without a filler back action.
+    expect(options(s).map((o) => o.id)).toEqual(
+      expect.arrayContaining(["ask_ask_lord", "ask_leave_shade", "go_east"]),
+    );
+    expect(options(s).map((o) => o.id)).not.toContain("ask_wight_back");
     // One-shot: the warding topic retired; it cannot be re-asked or farmed.
     expect(canAsk(s, "ask_wight")).toBe(false);
     expect(s.vars["defense"]).toBe(5); // still 5, not re-buffed
@@ -125,7 +129,8 @@ describe("bug_0075 — the reaver's shade: an optional, mechanical second beat i
     s = act(s, askTopic("ask_lord"));
     expect(s.flags["heard_lord_lore"]).toBe(true);
     expect(s.journal.some((j) => j.includes("Barrow-Lord"))).toBe(true);
-    s = act(s, askTopic("lord_back"));
+    expect(options(s).map((o) => o.id)).not.toContain("ask_lord_back");
+    expect(canAsk(s, "leave_shade")).toBe(true);
     expect(canAsk(s, "ask_lord")).toBe(false);
 
     // Talking awards no score — the milestone scoring (50) is untouched.

@@ -30,9 +30,19 @@ const a = assess(process.cwd());
 // integrity-passing overworld but swaps its quest list for the one stale-audit
 // fixture quest, anchored to a real Albany area, so the shipped-source bijection
 // holds with exactly the fixture pack on disk.
+type FixtureOverworld = Record<string, unknown> & {
+  characters: Array<{ variants?: unknown }>;
+};
+
 const REAL_OVERWORLD = JSON.parse(
   readFileSync(join(process.cwd(), "content", "world", "new_york_overworld.json"), "utf8"),
-) as Record<string, unknown>;
+) as FixtureOverworld;
+
+function fixtureOverworldWithoutContactVariants(): FixtureOverworld {
+  const world = structuredClone(REAL_OVERWORLD);
+  for (const character of world.characters) delete character.variants;
+  return world;
+}
 
 function realRepoAttendanceOffsets(): Map<string, number> {
   const loopState = join(process.cwd(), "AI_LOOP_STATE.md");
@@ -50,7 +60,7 @@ function withStaleAuditFixtureRoot(run: (root: string) => void): void {
     writeFileSync(
       join(root, "content", "world", "new_york_overworld.json"),
       JSON.stringify({
-        ...REAL_OVERWORLD,
+        ...fixtureOverworldWithoutContactVariants(),
         quests: [
           {
             id: "stale_fixture",

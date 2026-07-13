@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import {
   COMPACT_ACTION_LIMIT,
+  COMPACT_BLOCKED_ACTION_LIMIT,
+  COMPACT_BLOCKED_ACTION_REASON_CHAR_LIMIT,
   COMPACT_BLOCKED_EXIT_LIMIT,
   COMPACT_BLOCKED_EXIT_CHAR_LIMIT,
   COMPACT_DESCRIPTION_CHAR_LIMIT,
@@ -35,6 +37,7 @@ function observationWithLargeState(): RpgObservation {
     npcs_present: [],
     exits: [],
     blocked_exits: [],
+    blocked_actions: [],
     inventory: ids("item", 20),
     state: {
       flags: ids("flag", 20),
@@ -160,6 +163,11 @@ describe("compactRpgObservation", () => {
         direction: `blocked_${index}`,
         message: `Blocked ${index}`,
       })),
+      blocked_actions: Array.from({ length: COMPACT_BLOCKED_ACTION_LIMIT + 2 }, (_, index) => ({
+        id: `unavailable_${index}`,
+        command: `try unavailable ${index}`,
+        reason: `Unavailable ${index}`,
+      })),
       enemies_present: Array.from({ length: enemyCount }, (_, index) => ({
         id: `enemy_${index}`,
         name: `Enemy ${index}`,
@@ -175,16 +183,42 @@ describe("compactRpgObservation", () => {
     expect(compact.objects).toHaveLength(COMPACT_VISIBLE_REF_LIMIT);
     expect(compact.npcs).toHaveLength(COMPACT_VISIBLE_REF_LIMIT);
     expect(compact.blocked).toHaveLength(COMPACT_BLOCKED_EXIT_LIMIT);
+    expect(compact.unavailable).toHaveLength(COMPACT_BLOCKED_ACTION_LIMIT);
     expect(compact.enemies).toHaveLength(COMPACT_ENEMY_LIMIT);
     expect(compact.objects?.[0]).toBe("obj_0");
     expect(compact.npcs?.[0]).toBe("npc_0");
     expect(compact.enemies?.[0]).toEqual(["enemy_0", 1]);
-    expect(compact.more).toEqual([0, 0, 0, 0, 3, 4, 5, 5, 2, 6]);
+    expect(compact.more).toEqual([0, 0, 0, 0, 3, 4, 5, 5, 2, 6, 2]);
     expect(obs.exits).toHaveLength(exitCount);
     expect(obs.visible_objects).toHaveLength(refCount);
     expect(obs.npcs_present).toHaveLength(refCount);
     expect(obs.blocked_exits).toHaveLength(blockedCount);
+    expect(obs.blocked_actions).toHaveLength(COMPACT_BLOCKED_ACTION_LIMIT + 2);
     expect(obs.enemies_present).toHaveLength(enemyCount);
+  });
+
+  it("always exposes authored unavailable actions without opting legal actions into context", () => {
+    const exactReason = "Godwin needs the symptoms, written dose, and herb identified first.";
+    const overBudgetReason = "proof ".repeat(80);
+    const obs: RpgObservation = {
+      ...observationWithLargeState(),
+      blocked_actions: [
+        {
+          id: "use_meadowsweet_on_sick_edric",
+          command: "treat sick Edric with meadowsweet",
+          reason: exactReason,
+        },
+        { id: "blocked_long", command: "attempt the long case", reason: overBudgetReason },
+      ],
+    };
+
+    const compact = compactRpgObservation(obs, ["look_around"]);
+
+    expect(compact.actions).toBeUndefined();
+    expect(compact.unavailable?.[0]).toEqual(["use_meadowsweet_on_sick_edric", exactReason]);
+    expect(compact.unavailable?.[1]?.[1]).toHaveLength(COMPACT_BLOCKED_ACTION_REASON_CHAR_LIMIT);
+    expect(compact.unavailable?.[1]?.[1]).toMatch(/\.\.\.\(\+\d+ chars\)$/);
+    expect(JSON.stringify(compact)).not.toContain("treat sick Edric with meadowsweet");
   });
 
   it("omits truncation metadata when compact lists are complete", () => {

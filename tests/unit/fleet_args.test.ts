@@ -3,18 +3,30 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { hashState } from "../../src/core/hash.js";
+import {
+  INITIAL_JOURNEY_GOAL,
+  JOURNEY_BASELINE_DECISIONS,
+  JOURNEY_CONTRACT_VERSION,
+} from "../../src/world/journey_contract.js";
 // vitest can import .mjs fine:
 // @ts-expect-error — plain .mjs module without type declarations
 import { fillPrompt } from "../../blind-tester/fill-prompt.mjs";
 import {
   parseFleetArgs,
   planFleetRuns,
+  PURE_BASELINE_DECISIONS,
+  PURE_SESSION_CONTRACT_VERSION,
   reportPathFor,
   resumeCandidatesFor,
   runSidecarPathFor,
   verifyReportForResume,
   // @ts-expect-error — plain .mjs module without type declarations
 } from "../../blind-tester/fleet.mjs";
+
+it("keeps the fleet resume contract pinned to the engine journey contract", () => {
+  expect(PURE_SESSION_CONTRACT_VERSION).toBe(JOURNEY_CONTRACT_VERSION);
+  expect(PURE_BASELINE_DECISIONS).toBe(JOURNEY_BASELINE_DECISIONS);
+});
 
 describe("fill-prompt", () => {
   const template = "Intro.\n{{PERSONA}}\nRules __SEED__.\nGo: {{START_INSTRUCTION}}\n";
@@ -250,8 +262,53 @@ ${JSON.stringify(pureInterview)}
         }),
       );
       const pureResume = await verifyReportForResume(reportPath, "pure");
-      expect(pureResume.ok).toBe(true);
+      expect(pureResume.ok).toBe(false);
       expect(pureResume.run).toMatchObject({ play_mode: "pure", retention_eligible: true });
+
+      const currentPayload = {
+        ...receiptPayload,
+        contractVersion: PURE_SESSION_CONTRACT_VERSION,
+        goalText: INITIAL_JOURNEY_GOAL.text,
+        goalCompletedAtDecision: null,
+        completedGoals: [],
+        retentionHistory: receiptPayload.retentionHistory.map((event) => ({
+          ...event,
+          goalVersion: null,
+          goalId: null,
+        })),
+      };
+      const currentReceipt = {
+        ...currentPayload,
+        receiptHash: hashState(currentPayload),
+      };
+      writeFileSync(
+        reportPath,
+        `
+1. Playthrough log: played naturally until the game offered an exit.
+2. Did it work mechanically? Yes.
+3. Understandable & fun? clarity 4/5 and enjoyment 4/5.
+4. Confusion / friction points: none.
+5. Bugs or design flaws: none.
+6. Verdict: A real player could understand this pure opening.
+\`\`\`json exit-interview
+${JSON.stringify({ ...pureInterview, journey_exit_receipt: currentReceipt })}
+\`\`\`
+`,
+      );
+      writeFileSync(
+        runSidecarPathFor(reportPath),
+        JSON.stringify({
+          schema_version: 1,
+          report_schema_version: 2,
+          play_mode: "pure",
+          start_surface: "fresh_overworld",
+          retention_eligible: true,
+          evidence_status: "verified",
+          session_id: "ow-resume",
+          receipt: currentReceipt,
+        }),
+      );
+      expect((await verifyReportForResume(reportPath, "pure")).ok).toBe(true);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

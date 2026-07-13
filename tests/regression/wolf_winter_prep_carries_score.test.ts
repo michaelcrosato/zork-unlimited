@@ -120,8 +120,9 @@ function playPrepared(): GameState {
   act({ type: "MOVE", direction: "north" }); // steading_yard -> byre_yard
   act({ type: "READ", target: "day_book" }); // +5
   act({ type: "TALK", npc: "houndsman" }); // open the conversation
-  act({ type: "ASK", npc: "houndsman", topic: "wolves" }); // +5, +2 attack -> cade_wolves
-  act({ type: "ASK", npc: "houndsman", topic: "wolves_back" }); // back to the root node
+  act({ type: "ASK", npc: "houndsman", topic: "wolves" }); // +5, +2 attack; auto-resume root
+  expect(legal().some((a) => a.type === "ASK" && a.topic === "leave")).toBe(true);
+  expect(legal().some((a) => a.type === "ASK" && a.topic === "wolves_back")).toBe(false);
   act({ type: "ASK", npc: "houndsman", topic: "leave" }); // end the conversation
   act({ type: "MOVE", direction: "west" }); // byre_yard -> store
   act({ type: "TAKE", item: "byre_jerkin" });

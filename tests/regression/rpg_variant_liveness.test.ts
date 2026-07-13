@@ -59,13 +59,12 @@
  * moves) that is sound for the every-ending PROOF but NOT for liveness — skipping a state
  * that displays a variant would FALSELY call it dead. So, exactly as bug_0146 does, this
  * widens the policy to step every action EXCEPT those that provably cannot gate a variant:
- * LOOK/INVENTORY/INSPECT (narrate-only / never legal → mutate no field any `Condition`
- * reads), CLOSE (no resolver case → never legal), and DROP (the documented boundary — its
- * only variant-observable effect is `not_item: X`, and no shipped variant gates on a
- * put-it-back state; a future one would FAIL LOUD here, never silently pass dead prose).
- * READ and every progress action — including ATTACK and the skill-check USE — ARE stepped,
- * so read-flag, post-combat, and skill-outcome display states are all visited. The search
- * FAILS on `cappedOut`, so it can never pass by truncating an unexplored region.
+ * inert LOOK/INVENTORY observations, CLOSE, and DROP. An authored INSPECT interaction
+ * resolves through the natural LOOK action and may mutate flags, so target looks backed by
+ * INSPECT are explicitly stepped. READ and every progress action — including ATTACK and the
+ * skill-check USE — are stepped too, so inspected-, read-, post-combat, and skill-outcome
+ * states are all visited. The search FAILS on `cappedOut`, so it can never pass by
+ * truncating an unexplored region.
  *
  * Packs are auto-discovered from content/rpg/quests, so a new RPG pack is covered the moment
  * it ships (the health-covers-all-packs bar, bug_0096). The negative controls below prove
@@ -83,6 +82,7 @@ import {
 } from "../../src/rpg/runner.js";
 import { HP_VAR } from "../../src/rpg/schema.js";
 import { visibleObjectIds } from "../../src/rpg/model.js";
+import { isAuthoredInspectAction } from "../../src/rpg/legal_actions.js";
 import { evalConditions } from "../../src/core/conditions.js";
 import type { GameState } from "../../src/core/state.js";
 import type { Rng } from "../../src/core/rng.js";
@@ -101,14 +101,15 @@ const packFiles = readdirSync(PACK_DIR)
 const MAX_STATES = 800_000;
 
 // The exact 670,963-state Wolf-Winter graph took 176s in the exhaustive-suite
-// contention run. Wall-clock headroom does not change the bounded state proof.
-const SOLVER_TEST_TIMEOUT_MS = 240_000;
+// contention run before interruptible dialogue (f23c8a09) multiplied edges per
+// dialogue state (~2x wall time locally; shared CI runners need ~3x local).
+// Wall-clock headroom does not change the bounded state proof.
+const SOLVER_TEST_TIMEOUT_MS = 720_000;
 
 /**
  * The liveness action policy (identical to the parser proof): step every legal action
- * EXCEPT the ones that provably cannot gate a variant — the pure-observation verbs
- * (narrate-only / never legal) and DROP (see the file header). Crucially this DOES step
- * READ (sticky interaction effects), ATTACK, and the skill-check USE.
+ * EXCEPT the ones that provably cannot gate a variant — inert observations and DROP.
+ * Authored INSPECT effects ride on LOOK, so their target looks are restored below.
  */
 const LIVENESS_SKIP: ReadonlySet<Action["type"]> = new Set([
   "DROP",
@@ -117,7 +118,8 @@ const LIVENESS_SKIP: ReadonlySet<Action["type"]> = new Set([
   "INVENTORY",
   "INSPECT",
 ]);
-const livenessExplore = (a: Action): boolean => !LIVENESS_SKIP.has(a.type);
+const livenessExplore = (index: RpgIndex, action: Action): boolean =>
+  isAuthoredInspectAction(index, action) || !LIVENESS_SKIP.has(action.type);
 
 /**
  * A fixed-sequence PRNG (copied from rpg_all_endings_reachable): each draw consumes the
@@ -203,7 +205,10 @@ type Liveness = {
 };
 
 /** Run the best/worst-roll bracket under the liveness policy and mine displayed variants. */
-function analyze(index: RpgIndex, explore: (a: Action) => boolean = livenessExplore): Liveness {
+function analyze(
+  index: RpgIndex,
+  explore: (a: Action) => boolean = (action) => livenessExplore(index, action),
+): Liveness {
   const displayed = new Set<string>();
   const present = new Set<string>();
   const record = (kind: "room" | "object" | "ending", id: string, idx: number): void => {
@@ -433,7 +438,7 @@ endings:
           if (idx >= 0) displayedWorst.add(`room:${room.id}#${idx}`);
         }
       },
-      { explore: livenessExplore },
+      { explore: (action) => livenessExplore(index, action) },
     );
     expect(displayedWorst.has("room:a#0")).toBe(false);
   });

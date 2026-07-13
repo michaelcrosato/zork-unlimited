@@ -1,0 +1,100 @@
+id: bug_0514_cade_menu_continuity
+title: "Pure quest steps preserve Cade's current, truthful lesson choices"
+pack: content/rpg/quests/wolf_winter.yaml
+reported_by: pure-blind-playtest
+reports:
+  - blind-tester/reports/20260712T122008Z_overworld_seed2013.md
+  - blind-tester/reports/20260712T122008Z_overworld_seed2013.json
+  - blind-tester/reports/20260712T131301Z_overworld_seed2114.md
+  - blind-tester/reports/20260712T131301Z_overworld_seed2114.json
+  - blind-tester/reports/20260712T132432Z_overworld_seed2115.md
+  - blind-tester/reports/20260712T132432Z_overworld_seed2115.json
+raw_transcript_evidence:
+  provider_session_id: 35446054-62dc-42f2-8ca3-373586021679
+  observation: >
+    The verified seed-2013 transcript records talk_houndsman, then read_day_book,
+    travel to the store, and a second talk_houndsman followed directly by go_north.
+    No list_legal_actions call occurred while Cade's dialogue was open. Immediately
+    before leaving, the player wrote that the repeated root looked like flavor and
+    that no sub-choice appeared. The literal report claim that the topics never
+    appeared in the legal list was therefore an honest inference, not an observed
+    menu result.
+postchange_transcript_evidence:
+  - provider_session_id: 4f8f9903-b5ad-4b38-8c75-dc2db9cf7d1c
+    seed: 2114
+    observation: >
+      The verified pure/fresh player used talk_houndsman, then immediately chose
+      ask_wolves and ask_byre from the returned current menus without an intervening
+      legal-action read. Both lessons registered and Wolf-Winter ended 60/60. The
+      player continued at decisions 22, 40, 48, 77, and 80, then ended honestly
+      after a fourth completed goal at decision 102; clarity and enjoyment were 5/5,
+      got_stuck was false, and would_replay was true.
+  - provider_session_id: bf5f756e-a343-4250-9b14-fdacad4230a0
+    seed: 2115
+    observation: >
+      The independent verified pure/fresh player likewise used talk_houndsman,
+      ask_wolves, then ask_byre directly from successive returned menus and completed
+      Wolf-Winter 60/60. It continued at goal one, checkpoint 40, and goal two,
+      then ended at checkpoint 80 while Tanner's Fever remained active. Its later
+      Tanner report is separate compact exit-destination clarity debt: the raw
+      sickroom responses and explicit legal-action read repeatedly exposed go_east,
+      but the player never entered the east herb store.
+severity: S1
+symptom: >
+  Cade said his quick spear-hand and guarded byre plan were "two roads." A pure
+  player read that as an exclusive or deferred tactical choice, left without
+  asking either legal topic, missed the counsel score and attack benefit, and
+  later interpreted the resulting narrower wolf openings as a penalty for a
+  choice the game had never offered.
+root_cause: >
+  The RPG legal-action generator already exposed ask_wolves, ask_byre, and leave
+  together, but the canonical pure server omitted current actions from compact
+  start, read, and step responses unless the caller opted into include_actions.
+  Human UI reprojects labeled available_actions after every mutation. Seed 2013
+  therefore received Cade's new dialogue state without its new menu, reused legal
+  but stale room actions, and left twice without ever observing either lesson.
+  Full list_legal_actions would have shown both topics, but was not called while
+  dialogue was active. Separately, Cade's "two roads" prose did not explain that
+  the topics were compatible lessons learnable now; his generic post-lesson root
+  also failed to name the still-legal lesson. The bug was current-menu continuity
+  plus authored choice truth, not a missing action or reason to prescribe a route.
+fix: >
+  Pure mode now enforces bounded current action ids on every state-bearing active
+  compact quest start, read, and step response, even if include_actions is false.
+  Pure legal-action reads and verbose observations default to the same authored
+  labels humans see; explicit compact id-only lists remain available, while full
+  and structural defaults are unchanged. The live prompt documents only this
+  transport contract, including unchanged-hash and journey-pause exceptions.
+  Cade now offers either lesson or both before departure. Hearing exactly one
+  names the other as still available; hearing both says commitment occurs later
+  at the wolves. Topic ids, aliases, effects, stats, score, combat, guarantee,
+  journals, and endings are unchanged, and every new line fits compact budgets.
+deterministic_witnesses:
+  - "pure compact launch, get, and step responses carry at most 24 current action ids despite an include_actions false request"
+  - "the same TALK response that opens Cade exposes ask_wolves, ask_byre, and ask_leave, and one of those ids executes under its returned state hash"
+  - "pure list_legal_actions defaults to exact authored command labels; explicit compact true still returns ids; verbose pure actions stay labeled and hide destinations"
+  - "the initial root says 'either lesson—or both before you go' while human and MCP menus both expose ask_wolves, ask_byre, and ask_leave"
+  - "quick-first copy names the guarded plan as still learnable and its menu exposes only ask_byre plus leave among dialogue actions"
+  - "guarded-first copy names the quick spear-hand as still learnable and its menu exposes only ask_wolves plus leave among dialogue actions"
+  - "after both flags, copy says commitment happens later at the wolves and leave is the only remaining dialogue action"
+  - "either lesson order ends at attack 7, defense 3, hp 30, score 5 with heard_counsel and heard_plan set"
+  - "ask_ask_wolves, ask_ask_byre, and ask_leave_cade remain accepted hidden aliases while canonical ids alone are listed"
+  - "all Cade base and reactive lines remain exact on 280-character dialogue and wrapped narration surfaces"
+tests:
+  - tests/regression/mcp_pure_play_mode.test.ts
+  - tests/regression/mcp_server_registration.test.ts
+  - tests/regression/blind_pure_prompt_contract.test.ts
+  - tests/regression/docs_trust_but_verify_coherence.test.ts
+  - tests/regression/wolf_winter_complementary_clues.test.ts
+  - tests/regression/wolf_winter_dialogue_surface.test.ts
+  - tests/regression/wolf_winter_compact_surface.test.ts
+verification:
+  - npm run validate -- wolf_winter
+  - npx vitest run tests/regression/mcp_pure_play_mode.test.ts tests/regression/mcp_server_registration.test.ts tests/regression/blind_pure_prompt_contract.test.ts tests/regression/docs_trust_but_verify_coherence.test.ts tests/regression/wolf_winter_complementary_clues.test.ts tests/regression/wolf_winter_dialogue_surface.test.ts tests/regression/wolf_winter_compact_surface.test.ts
+  - npm run crawl:smoke
+  - npm run blind -- --seed 2114
+  - npm run blind -- --seed 2115
+  - npm run blind:feedback
+  - npm run feedback:compile
+  - npm run health
+content_hash: 558635f119be2e5634edf8100d8b3c49531da446d5b4dfd43d2e5c3073c57ee5

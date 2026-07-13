@@ -1,4 +1,4 @@
-import type { OverworldQuestView, OverworldSession } from "../world/session.js";
+import type { OverworldJourneyQuestStartResult, OverworldSession } from "../world/session.js";
 import type { OverworldQuestCompletionOutcome } from "../world/session_quests.js";
 import type { Session } from "./sessions.js";
 
@@ -20,7 +20,7 @@ export type OverworldStartedRpgSession = {
 };
 
 export type OverworldQuestStartSync<Payload extends OverworldStartedRpgSession> = {
-  quest: OverworldQuestView;
+  quest: OverworldJourneyQuestStartResult;
   rpgSession: Payload;
 };
 

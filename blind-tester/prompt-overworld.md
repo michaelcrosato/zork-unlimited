@@ -27,6 +27,16 @@ READING THE PLAYER SURFACE
   objectives or outside solution knowledge.
 - Compact fields can be positional tuples. Keep the `legend` returned by the
   fresh start; later compact responses may omit it.
+- Each state-bearing compact embedded-quest start, read, or step response carries
+  the bounded current legal ids in `context.actions` while quest play is active.
+  Treat that menu as authoritative for the response that returned it and replace
+  any older menu; do not assume a previously visible action is still legal. An
+  unchanged hash reply has no context, and a journey-choice pause suppresses
+  quest actions until the shown journey choice is answered.
+- `mcp__adventureforge__list_legal_actions` defaults to labeled `{ id, command }`
+  options in this pure run. Passing `compact_actions: true` remains available
+  when an id-only list is useful. A verbose embedded-quest observation likewise
+  defaults to labeled `available_actions`.
 - Use only ids and choices visible in the current player response. Every
   overworld session tool after the fresh start takes its `session_id`. Guard mutations with the
   latest `snapshot_hash` when the tool offers that guard. An embedded quest has
@@ -49,6 +59,11 @@ WHEN TO CONTINUE OR END
   `mcp__adventureforge__choose_overworld_session_journey` with the overworld
   `session_id`, passing that option's visible `id` value as the tool's `choice`
   argument.
+- The game may present `journey.storyChoice` after you continue. Choose between
+  its visible consequences as you would in the human UI, then call
+  `mcp__adventureforge__choose_overworld_session_story` with the same overworld
+  `session_id` and that option's visible `id`. This is a normal gameplay
+  decision that can set the next current goal; it is not a harness task.
 - Do not impose your own tool-call, turn, route, content, or coverage budget.
   Never stop merely because you think a test has run long enough.
 - After the game confirms the end and returns its journey exit receipt, make no

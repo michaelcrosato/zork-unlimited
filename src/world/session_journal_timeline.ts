@@ -1,4 +1,5 @@
 import type { OverworldCharacter, OverworldLocalEvent, OverworldPoi } from "./overworld.js";
+import type { OverworldContactPresentation } from "./session_contact_presentation.js";
 import {
   parseRoadJournalId,
   parseServiceJournalId,
@@ -25,6 +26,7 @@ export type OverworldJournalSourceIndex = {
   areaTownNames: ReadonlyMap<string, string>;
   characterIds: ReadonlySet<string>;
   characterTownNames: ReadonlyMap<string, string>;
+  contactPresentationsByJournalId: ReadonlyMap<string, OverworldContactPresentation>;
   edgeIds: ReadonlySet<string>;
   eventIds: ReadonlySet<string>;
   eventTownNames: ReadonlyMap<string, string>;
@@ -44,6 +46,7 @@ export type OverworldJournalSourceIndex = {
 
 export type OverworldResolutionProofIndex = {
   charactersById: ReadonlyMap<string, OverworldCharacter>;
+  contactPresentationsByJournalId: ReadonlyMap<string, OverworldContactPresentation>;
   eventsById: ReadonlyMap<string, OverworldLocalEvent>;
   poisById: ReadonlyMap<string, OverworldPoi>;
 };
@@ -110,6 +113,24 @@ function assertKnownJournalSource(
   }
 }
 
+function assertKnownContactPresentation(
+  entry: OverworldJournalEntry,
+  sources: OverworldJournalSourceIndex,
+): void {
+  const presentation = sources.contactPresentationsByJournalId.get(entry.id);
+  if (!presentation) {
+    throw new Error(
+      `Overworld session snapshot journal contact entry references unknown contact presentation "${entry.id}".`,
+    );
+  }
+  const expectedTown = sources.characterTownNames.get(presentation.character.id);
+  if (expectedTown && entry.town !== expectedTown) {
+    throw new Error(
+      `Overworld session snapshot journal contact entry "${entry.id}" is bound to town "${entry.town}", expected "${expectedTown}".`,
+    );
+  }
+}
+
 function assertRoadJournalSource(
   entry: OverworldJournalEntry,
   recordedAt: number,
@@ -163,14 +184,15 @@ function assertSnapshotJournalSource(
     case "area":
       assertKnownJournalSource(entry, "area:", sources.areaIds, "area", sources.areaTownNames);
       return;
+    case "campaign":
+      if (!/^campaign_goal:\d+:[a-z0-9_]+$/.test(entry.id)) {
+        throw new Error(
+          `Overworld session snapshot journal campaign entry id "${entry.id}" must match "campaign_goal:<version>:<goal_id>".`,
+        );
+      }
+      return;
     case "contact":
-      assertKnownJournalSource(
-        entry,
-        "talk:",
-        sources.characterIds,
-        "contact",
-        sources.characterTownNames,
-      );
+      assertKnownContactPresentation(entry, sources);
       return;
     case "event":
       assertKnownJournalSource(
@@ -265,9 +287,10 @@ function recordEventResolutionJournalProof(
       return;
     }
     case "contact": {
-      const sourceId = journalSourceId(entry, "talk:");
-      const character = sourceId ? sources.charactersById.get(sourceId) : undefined;
-      if (character) recordEarliestTime(proofs.contactTimeByArea, character.area, recordedAt);
+      const presentation = sources.contactPresentationsByJournalId.get(entry.id);
+      if (presentation) {
+        recordEarliestTime(proofs.contactTimeByArea, presentation.character.area, recordedAt);
+      }
       return;
     }
     default:

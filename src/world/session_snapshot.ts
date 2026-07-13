@@ -7,7 +7,7 @@ import {
   type OverworldRoadEncounterOption,
 } from "./travel_mechanics.js";
 
-export const OVERWORLD_SESSION_SAVE_VERSION = 6 as const;
+export const OVERWORLD_SESSION_SAVE_VERSION = 8 as const;
 
 export type TravelLogEntry = {
   edgeId: string;
@@ -84,6 +84,7 @@ export type OverworldJournalEntry = {
   id: string;
   kind:
     | "area"
+    | "campaign"
     | "contact"
     | "event"
     | "job"
@@ -106,6 +107,7 @@ const OverworldJournalEntrySchema = z
     id: z.string().min(1),
     kind: z.enum([
       "area",
+      "campaign",
       "contact",
       "event",
       "job",
@@ -149,6 +151,7 @@ export const OverworldSessionSnapshotSchema = z
     discoveredQuestIds: z.array(z.string().min(1)),
     startedQuestIds: z.array(z.string().min(1)),
     completedQuestIds: z.array(z.string().min(1)),
+    questOutcomes: z.array(z.tuple([z.string().min(1), z.string().min(1)])),
     exploredSiteIds: z.array(z.string().min(1)),
     regionRenown: z.array(z.tuple([z.string().min(1), z.number().int().nonnegative()])),
     completedRegionalArcIds: z.array(z.string().min(1)),
@@ -206,6 +209,7 @@ export function cloneOverworldSessionSnapshot(
     discoveredQuestIds: [...snapshot.discoveredQuestIds],
     startedQuestIds: [...snapshot.startedQuestIds],
     completedQuestIds: [...snapshot.completedQuestIds],
+    questOutcomes: cloneStringTuples(snapshot.questOutcomes),
     exploredSiteIds: [...snapshot.exploredSiteIds],
     regionRenown: cloneNumberTuples(snapshot.regionRenown),
     completedRegionalArcIds: [...snapshot.completedRegionalArcIds],

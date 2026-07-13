@@ -140,7 +140,12 @@ This report is intentionally missing its exit interview block so the compiler mu
 `;
 
 function pureReportAndSidecar(
-  options: { proofCharacter?: string; continued?: boolean; earlyGoal?: boolean } = {},
+  options: {
+    proofCharacter?: string;
+    continued?: boolean;
+    earlyGoal?: boolean;
+    contractVersion?: 1 | 2;
+  } = {},
 ): {
   report: string;
   sidecar: string;
@@ -148,6 +153,7 @@ function pureReportAndSidecar(
   const proofCharacter = options.proofCharacter ?? "a";
   const continued = options.continued ?? false;
   const earlyGoal = options.earlyGoal ?? false;
+  const contractVersion = options.contractVersion ?? 1;
   const firstDecisionProofHash = proofCharacter.repeat(64);
   const finalDecisionProofHash = continued
     ? String.fromCharCode(proofCharacter.charCodeAt(0) + 1).repeat(64)
@@ -187,7 +193,7 @@ function pureReportAndSidecar(
           : []),
       ];
   const receiptPayload = {
-    contractVersion: 1,
+    contractVersion,
     exitReason: "player_ended_at_choice",
     goalVersion: 1,
     goalId: "albany_local_lead",
@@ -443,27 +449,111 @@ describe("compileFeedback", () => {
     expect(evidence.report_modes).toEqual({ pure: 3, structural: 1, legacy_guided: 1 });
     expect(evidence.pure_retention).toMatchObject({
       eligible_reports: 3,
-      continued_reports: 1,
-      ended_at_first_choice_reports: 2,
-      accepted_decisions: { minimum: 12, maximum: 80, mean: 44 },
-      choices: { continue: 1, end: 3 },
-      choice_triggers: {
-        checkpoint: { continue: 1, end: 2 },
-        goal_completed: { continue: 0, end: 1 },
-        checkpoint_and_goal_completed: { continue: 0, end: 0 },
-      },
-      checkpoints: [
-        { decision: 40, continue: 1, end: 1 },
-        { decision: 80, continue: 0, end: 1 },
+      contract_versions: [
+        {
+          contract_version: 1,
+          eligible_reports: 3,
+          continued_reports: 1,
+          ended_at_first_choice_reports: 2,
+          accepted_decisions: { minimum: 12, maximum: 80, mean: 44 },
+          choices: { continue: 1, end: 3 },
+          choice_triggers: {
+            checkpoint: { continue: 1, end: 2 },
+            goal_completed: { continue: 0, end: 1 },
+            checkpoint_and_goal_completed: { continue: 0, end: 0 },
+          },
+          checkpoints: [
+            { decision: 40, continue: 1, end: 1 },
+            { decision: 80, continue: 0, end: 1 },
+          ],
+          exit_reasons: [{ reason: "player_ended_at_choice", count: 3 }],
+        },
       ],
-      exit_reasons: [{ reason: "player_ended_at_choice", count: 3 }],
     });
 
     const persisted = JSON.parse(readFileSync(retentionPath, "utf8"));
     expect(FeedbackEvidenceSummarySchema.parse(persisted)).toEqual(evidence);
     const markdown = readFileSync(mdPath, "utf8");
     expect(markdown).toContain("Verified report modes: pure 3, structural 1, legacy-guided 1");
+    expect(markdown).toContain("### Journey contract v1");
     expect(markdown).toContain("Actual game choices: 1 continue, 3 end");
     expect(markdown).toContain("`would_replay` is a post-exit attitude metric");
+  });
+
+  it("keeps historical v1 and current v2 retention curves separate", () => {
+    const dir = mkdtempSync(join(tmpdir(), "feedback-contract-cohorts-input-"));
+    const historicalBase = join(dir, "20260101T000020Z_overworld_seed20");
+    const currentBase = join(dir, "20260101T000021Z_overworld_seed21");
+    const historical = pureReportAndSidecar({
+      proofCharacter: "1",
+      continued: true,
+      contractVersion: 1,
+    });
+    const current = pureReportAndSidecar({
+      proofCharacter: "3",
+      contractVersion: 2,
+    });
+    writeFileSync(`${historicalBase}.md`, historical.report);
+    writeFileSync(`${historicalBase}.run.json`, historical.sidecar);
+    writeFileSync(`${currentBase}.md`, current.report);
+    writeFileSync(`${currentBase}.run.json`, current.sidecar);
+
+    const outDir = mkdtempSync(join(tmpdir(), "feedback-contract-cohorts-out-"));
+    const { evidence, retentionPath, mdPath } = compileFeedback({
+      root: process.cwd(),
+      inputs: [dir],
+      outDir,
+      topK: 5,
+      llmLabels: false,
+      prevDir: null,
+    });
+
+    expect(evidence.pure_retention).toEqual({
+      eligible_reports: 2,
+      contract_versions: [
+        {
+          contract_version: 1,
+          eligible_reports: 1,
+          continued_reports: 1,
+          ended_at_first_choice_reports: 0,
+          accepted_decisions: { minimum: 80, maximum: 80, mean: 80 },
+          choices: { continue: 1, end: 1 },
+          choice_triggers: {
+            checkpoint: { continue: 1, end: 1 },
+            goal_completed: { continue: 0, end: 0 },
+            checkpoint_and_goal_completed: { continue: 0, end: 0 },
+          },
+          checkpoints: [
+            { decision: 40, continue: 1, end: 0 },
+            { decision: 80, continue: 0, end: 1 },
+          ],
+          exit_reasons: [{ reason: "player_ended_at_choice", count: 1 }],
+        },
+        {
+          contract_version: 2,
+          eligible_reports: 1,
+          continued_reports: 0,
+          ended_at_first_choice_reports: 1,
+          accepted_decisions: { minimum: 40, maximum: 40, mean: 40 },
+          choices: { continue: 0, end: 1 },
+          choice_triggers: {
+            checkpoint: { continue: 0, end: 1 },
+            goal_completed: { continue: 0, end: 0 },
+            checkpoint_and_goal_completed: { continue: 0, end: 0 },
+          },
+          checkpoints: [{ decision: 40, continue: 0, end: 1 }],
+          exit_reasons: [{ reason: "player_ended_at_choice", count: 1 }],
+        },
+      ],
+    });
+    expect(evidence.pure_retention).not.toHaveProperty("accepted_decisions");
+    expect(evidence.pure_retention).not.toHaveProperty("checkpoints");
+
+    const persisted = JSON.parse(readFileSync(retentionPath, "utf8"));
+    expect(FeedbackEvidenceSummarySchema.parse(persisted)).toEqual(evidence);
+    const markdown = readFileSync(mdPath, "utf8");
+    expect(markdown).toContain("### Journey contract v1");
+    expect(markdown).toContain("### Journey contract v2");
+    expect(markdown).toContain("incompatible contracts are never pooled");
   });
 });

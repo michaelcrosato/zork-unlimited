@@ -1,10 +1,11 @@
 import type { ObservationOptions, RpgObservation } from "../rpg/observation.js";
-import type { RpgActionOption } from "../rpg/legal_actions.js";
+import type { RpgActionOption, RpgBlockedActionOption } from "../rpg/legal_actions.js";
 import { SessionStore, type Session } from "./sessions.js";
-import type { McpActionOption, McpObservation } from "./types.js";
+import type { McpActionOption, McpBlockedActionOption, McpObservation } from "./types.js";
 import { compactMcpActionLabel } from "./action_labels.js";
 import {
   compactRpgObservation,
+  compactRpgBlockedActionReason,
   RPG_COMPACT_OBSERVATION_VERSION,
   type RpgCompactObservation,
 } from "./compact_rpg_observation.js";
@@ -32,6 +33,12 @@ export type RpgLegalActionRows<Args extends RpgLegalActionsArgs> = Args extends 
   ? string[]
   : McpActionOption[];
 
+export type RpgBlockedActionRows<Args extends RpgLegalActionsArgs> = Args extends {
+  compact_actions: true;
+}
+  ? Array<readonly [id: string, reason: string]>
+  : McpBlockedActionOption[];
+
 export type PublicObservationOptions = { compactActions?: boolean };
 
 export type RpgObservationViewOptions = Pick<
@@ -42,6 +49,7 @@ export type RpgObservationViewOptions = Pick<
 const OBSERVATION_PROJECTION_COMPACT = `compact-observation:v${RPG_COMPACT_OBSERVATION_VERSION}`;
 const OBSERVATION_PROJECTION_PUBLIC = "public-observation:v1";
 const LEGAL_ACTION_ROWS_PROJECTION = "legal-action-rows:v1";
+const BLOCKED_ACTION_ROWS_PROJECTION = "blocked-action-rows:v1";
 
 export function publicObservationOptions(args: {
   compact_actions?: boolean;
@@ -75,6 +83,27 @@ export function publicActionRows<Args extends RpgLegalActionsArgs>(
   ) as RpgLegalActionRows<Args>;
 }
 
+export function publicBlockedActions(
+  actions: readonly RpgBlockedActionOption[],
+): McpBlockedActionOption[] {
+  return actions.map((option) => ({
+    id: option.id,
+    command: compactMcpActionLabel(option.command),
+    reason: option.reason,
+  }));
+}
+
+export function publicBlockedActionRows<Args extends RpgLegalActionsArgs>(
+  actions: readonly RpgBlockedActionOption[],
+  args: Args,
+): RpgBlockedActionRows<Args> {
+  return (
+    args.compact_actions === true
+      ? actions.map((option) => [option.id, compactRpgBlockedActionReason(option.reason)] as const)
+      : publicBlockedActions(actions)
+  ) as RpgBlockedActionRows<Args>;
+}
+
 export function legalActionRowsFor<Args extends RpgLegalActionsArgs>(
   sessions: SessionStore,
   session: Session,
@@ -89,6 +118,20 @@ export function legalActionRowsFor<Args extends RpgLegalActionsArgs>(
   return cloneLegalActionRows(rows) as RpgLegalActionRows<Args>;
 }
 
+export function blockedActionRowsFor<Args extends RpgLegalActionsArgs>(
+  sessions: SessionStore,
+  session: Session,
+  actions: readonly RpgBlockedActionOption[],
+  args: Args,
+): RpgBlockedActionRows<Args> {
+  const rows = sessions.legalActionProjection(
+    session.id,
+    `${BLOCKED_ACTION_ROWS_PROJECTION}:compact:${args.compact_actions === true ? 1 : 0}`,
+    () => publicBlockedActionRows(actions, args),
+  );
+  return cloneBlockedActionRows(rows) as RpgBlockedActionRows<Args>;
+}
+
 export function publicObservation(
   obs: RpgObservation,
   opts: PublicObservationOptions = {},
@@ -96,6 +139,7 @@ export function publicObservation(
   return cloneMcpObservation({
     ...obs,
     available_actions: publicActions(obs.available_actions, opts),
+    blocked_actions: publicBlockedActions(obs.blocked_actions),
   });
 }
 
@@ -107,6 +151,7 @@ export function cloneMcpObservation(obs: McpObservation): McpObservation {
     npcs_present: obs.npcs_present.map((npc) => ({ ...npc })),
     exits: obs.exits.map((exit) => ({ ...exit })),
     blocked_exits: obs.blocked_exits.map((exit) => ({ ...exit })),
+    blocked_actions: obs.blocked_actions.map((action) => ({ ...action })),
     inventory: [...obs.inventory],
     state: {
       flags: [...obs.state.flags],
@@ -145,6 +190,12 @@ function cloneLegalActionRows(
   );
 }
 
+function cloneBlockedActionRows(
+  rows: readonly (readonly [string, string] | McpBlockedActionOption)[],
+): Array<readonly [string, string] | McpBlockedActionOption> {
+  return rows.map((row) => (Array.isArray(row) ? ([...row] as [string, string]) : { ...row }));
+}
+
 function cloneCompactTupleList<Tuple extends readonly unknown[]>(
   values: readonly Tuple[],
 ): Tuple[] {
@@ -167,6 +218,7 @@ export function cloneCompactRpgObservation(context: RpgCompactObservation): RpgC
     ...(context.objects ? { objects: [...context.objects] } : {}),
     ...(context.npcs ? { npcs: [...context.npcs] } : {}),
     ...(context.blocked ? { blocked: cloneCompactTupleList(context.blocked) } : {}),
+    ...(context.unavailable ? { unavailable: cloneCompactTupleList(context.unavailable) } : {}),
     ...(context.inv ? { inv: [...context.inv] } : {}),
     ...(context.flags ? { flags: [...context.flags] } : {}),
     ...(context.vars ? { vars: { ...context.vars } } : {}),

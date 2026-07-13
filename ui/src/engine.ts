@@ -25,6 +25,11 @@ import {
   type RpgIndex,
 } from "../../src/rpg/runner.js";
 import { buildRpgObservation } from "../../src/rpg/observation.js";
+import {
+  classifyRpgJourneyDecision,
+  excludedJourneyDecision,
+} from "../../src/world/journey_decision.js";
+import type { JourneyDecisionClassification } from "../../src/world/journey_contract.js";
 
 import { parse as parseYaml } from "yaml";
 
@@ -52,6 +57,7 @@ export type View = {
   title: string;
   text: string;
   choices: { id: string; label: string }[];
+  unavailableChoices: { id: string; label: string; reason: string }[];
   inventory: string[];
   facts: string[];
   journal: string[];
@@ -60,7 +66,13 @@ export type View = {
   stateHash: string;
 };
 
-export type StepOutcome = { ok: boolean; narration: string[]; rejection: string | null };
+export type StepOutcome = {
+  ok: boolean;
+  narration: string[];
+  rejection: string | null;
+  journeyDecision: JourneyDecisionClassification;
+  journeyActionId: string | null;
+};
 
 /** Fast shape predicate for catalog filtering and tests. */
 export function isRpgSource(source: string): boolean {
@@ -111,8 +123,8 @@ export class GameSession {
   }
 
   /** Map a choice id from the current view to its structured Action. */
-  private actionFor(id: string): RpgAction | null {
-    return enumerateRpgActions(this.index, this.state).find((o) => o.id === id)?.action ?? null;
+  private actionFor(id: string): ReturnType<typeof enumerateRpgActions>[number] | null {
+    return enumerateRpgActions(this.index, this.state).find((option) => option.id === id) ?? null;
   }
 
   /** The current UI view (the only thing a player sees). */
@@ -131,6 +143,11 @@ export class GameSession {
             ? `${a.command}  ⟨${a.combat.phase === "opening" ? "opening" : a.combat.phase === "follow_through" ? "follow-through" : "one-shot"}, ATK ${signed(a.combat.attack_bonus)}, DEF ${signed(a.combat.defense_bonus)} this round${resourceHint(a.resources)}⟩`
           : a.command,
       })),
+      unavailableChoices: o.blocked_actions.map((action) => ({
+        id: action.id,
+        label: action.command,
+        reason: action.reason,
+      })),
       inventory: o.inventory,
       facts: [
         `HP ${o.stats.hp}  ATK ${o.stats.attack}  DEF ${o.stats.defense}`,
@@ -147,13 +164,41 @@ export class GameSession {
 
   /** Apply a chosen action by id. The legal-action set is ground truth (§9). */
   choose(id: string): StepOutcome {
-    const action = this.actionFor(id);
-    if (!action || !this.rules.legalActions(this.state).some((a) => actionEquals(a, action))) {
-      return { ok: false, narration: [], rejection: "That action is not available." };
+    const option = this.actionFor(id);
+    const blocked = option
+      ? null
+      : buildRpgObservation(this.index, this.state).blocked_actions.find(
+          (action) => action.id === id,
+        );
+    if (
+      !option ||
+      !this.rules.legalActions(this.state).some((action) => actionEquals(action, option.action))
+    ) {
+      return {
+        ok: false,
+        narration: [],
+        rejection: blocked?.reason ?? "That action is not available.",
+        journeyDecision: excludedJourneyDecision("rejected"),
+        journeyActionId: null,
+      };
     }
-    const r = makeStep(this.rules)(this.state, action);
+    const before = this.state;
+    const r = makeStep(this.rules)(this.state, option.action);
     if (r.ok) this.state = r.state;
-    return { ok: r.ok, narration: narrationsOf(r.events), rejection: r.rejectionReason ?? null };
+    return {
+      ok: r.ok,
+      narration: narrationsOf(r.events),
+      rejection: r.rejectionReason ?? null,
+      journeyDecision: classifyRpgJourneyDecision({
+        action: option.action,
+        before,
+        after: r.state,
+        events: r.events,
+        accepted: r.ok,
+        isSkillCheck: option.skill_check !== undefined,
+      }),
+      journeyActionId: option.id,
+    };
   }
 
   /**

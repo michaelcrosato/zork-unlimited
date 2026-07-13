@@ -25,6 +25,7 @@ import {
   buildRpgRules,
   initStateForRpgPack,
   enumerateRpgActions,
+  enumerateRpgBlockedActions,
 } from "../src/rpg/runner.js";
 import type { RpgActionOption } from "../src/rpg/legal_actions.js";
 import { buildRpgObservation, type RpgObservation } from "../src/rpg/observation.js";
@@ -47,6 +48,9 @@ export function render(obs: RpgObservation): string {
   // Blocked-exit hints keep the human RPG surface aligned with structured observations:
   // "a barred way exists here, because X" without revealing the hidden unlock action.
   for (const b of obs.blocked_exits) lines.push(`Blocked (${b.direction}): ${b.message}`);
+  for (const action of obs.blocked_actions) {
+    lines.push(`Unavailable: ${action.command} — ${action.reason}`);
+  }
   if (obs.inventory.length) lines.push(`[carrying: ${obs.inventory.join(", ")}]`);
   if (obs.ended) lines.push(`\n*** ${obs.ending_id} *** — THE END`);
   return lines.join("\n");
@@ -82,13 +86,18 @@ export function resolve(
   raw: string,
 ): { ok: true; action: RpgAction } | { ok: false; reason: string } {
   const text = raw.trim().toLowerCase();
-  // Authored maneuver commands are controlled vocabulary too. Match the exact
-  // currently-legal label before the generic attack grammar, so scripted and
-  // interactive terminal play can select the same named option as MCP/UI.
-  const maneuver = enumerateRpgActions(index, state).find(
-    (option) => option.action.type === "MANEUVER" && option.command.trim().toLowerCase() === text,
+  // Authored commands are controlled vocabulary too. Match every exact legal
+  // label before unavailable affordances or the generic command grammar. In
+  // particular, a blocked USE may deliberately share ordinary vocabulary such
+  // as "read" with a different legal action; the legal menu remains ground truth.
+  const exactLegal = enumerateRpgActions(index, state).find(
+    (option) => option.command.trim().toLowerCase() === text,
   );
-  if (maneuver) return { ok: true, action: maneuver.action };
+  if (exactLegal) return { ok: true, action: exactLegal.action };
+  const blocked = enumerateRpgBlockedActions(index, state).find(
+    (option) => option.command.trim().toLowerCase() === text,
+  );
+  if (blocked) return { ok: false, reason: blocked.reason };
   const m = text.match(/^(attack|fight|kill|hit)\s+(.*)$/);
   if (m) {
     const phrase = m[2]!.replace(/^the\s+/, "");
@@ -115,6 +124,20 @@ export function renderActionOption(option: RpgActionOption): string {
         ? "follow-through"
         : "one-shot";
   return `${option.command} [${phase}; ATK ${signed(option.combat.attack_bonus)}, DEF ${signed(option.combat.defense_bonus)} this round]`;
+}
+
+/** Render the complete human action menu, including authored unavailable choices. */
+export function renderActionHelp(
+  index: ReturnType<typeof indexRpgPack>,
+  state: import("../src/core/state.js").GameState,
+): string {
+  const available = enumerateRpgActions(index, state).map(
+    (option) => `  ${renderActionOption(option)}`,
+  );
+  const unavailable = enumerateRpgBlockedActions(index, state).map(
+    (option) => `  Unavailable: ${option.command} — ${option.reason}`,
+  );
+  return ["You can:", ...available, ...unavailable].join("\n");
 }
 
 async function main(): Promise<void> {
@@ -152,12 +175,7 @@ async function main(): Promise<void> {
         const low = raw.trim().toLowerCase();
         if (["quit", "q", "exit"].includes(low)) break;
         if (["actions", "help", "?"].includes(low)) {
-          console.log(
-            "You can:\n" +
-              enumerateRpgActions(index, state)
-                .map((option) => `  ${renderActionOption(option)}`)
-                .join("\n"),
-          );
+          console.log(renderActionHelp(index, state));
           continue;
         }
       } else {

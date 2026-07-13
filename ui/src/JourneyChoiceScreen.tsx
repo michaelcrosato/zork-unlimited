@@ -45,6 +45,7 @@ export function JourneyChoiceScreen({
           <span>Current goal</span>
           <strong>{journey.goal.text}</strong>
           <small>{journey.goal.status === "completed" ? "Completed" : "In progress"}</small>
+          {journey.goalGuidance && <small>{journey.goalGuidance}</small>}
         </div>
 
         <div className="journey-choice-actions">

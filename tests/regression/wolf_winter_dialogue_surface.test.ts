@@ -10,6 +10,7 @@ import type { GameEvent } from "../../src/core/events.js";
 import type { GameState } from "../../src/core/state.js";
 import type { RpgAction } from "../../src/api/types.js";
 import { createToolApi } from "../../src/mcp/tools.js";
+import { buildRpgObservation } from "../../src/rpg/observation.js";
 import {
   buildRpgRules,
   enumerateRpgActions,
@@ -27,6 +28,7 @@ const rules = buildRpgRules(index);
 const step = makeStep(rules);
 
 type StepResult = { ok: boolean };
+type LegalActionsResult = { actions: { id: string }[] };
 
 function narrations(events: readonly GameEvent[]): string[] {
   return events
@@ -64,6 +66,10 @@ function legalActionIds(state: GameState): string[] {
   return enumerateRpgActions(index, state).map((option) => option.id);
 }
 
+function dialogueActionIds(ids: readonly string[]): string[] {
+  return ids.filter((id) => id.startsWith("ask_"));
+}
+
 describe("Wolf-Winter dialogue surface", () => {
   it("the pack still validates green", () => {
     const report = validateRpg(pack);
@@ -97,6 +103,43 @@ describe("Wolf-Winter dialogue surface", () => {
 
     const result = stepAction("ask_ask_wolves");
     expect(result.ok).toBe(true);
+    const afterQuick = api.list_legal_actions({ session_id: sessionId, compact_actions: false })
+      .actions as { id: string }[];
+    expect(afterQuick.map((action) => action.id)).toContain("ask_byre");
+    expect(afterQuick.map((action) => action.id)).not.toContain("ask_ask_byre");
+    expect(stepAction("ask_ask_byre").ok).toBe(true);
+    expect(stepAction("ask_leave_cade").ok).toBe(true);
+  });
+
+  it("keeps the human observation and MCP menu on the same lesson actions", () => {
+    let state = startCadeDialogue();
+    const api = createToolApi({ root: process.cwd() });
+    const started = api.start_world_quest({ world_quest_id: "wolf_winter", seed: 541 });
+    const sessionId = started.session_id;
+    const stepAction = (actionId: string): StepResult =>
+      api.step_action({ session_id: sessionId, action_id: actionId }) as unknown as StepResult;
+    const mcpDialogueIds = (): string[] => {
+      const listed = api.list_legal_actions({
+        session_id: sessionId,
+        compact_actions: false,
+      }) as unknown as LegalActionsResult;
+      return dialogueActionIds(listed.actions.map((action) => action.id));
+    };
+
+    expect(stepAction("go_north").ok).toBe(true);
+    expect(stepAction("talk_houndsman").ok).toBe(true);
+    expect(mcpDialogueIds()).toEqual(dialogueActionIds(legalActionIds(state)));
+    expect(mcpDialogueIds()).toEqual(["ask_wolves", "ask_byre", "ask_leave"]);
+
+    state = act(state, { type: "ASK", npc: "houndsman", topic: "wolves" });
+    expect(stepAction("ask_wolves").ok).toBe(true);
+    expect(mcpDialogueIds()).toEqual(dialogueActionIds(legalActionIds(state)));
+    expect(mcpDialogueIds()).toEqual(["ask_byre", "ask_leave"]);
+
+    state = act(state, { type: "ASK", npc: "houndsman", topic: "byre" });
+    expect(stepAction("ask_byre").ok).toBe(true);
+    expect(mcpDialogueIds()).toEqual(dialogueActionIds(legalActionIds(state)));
+    expect(mcpDialogueIds()).toEqual(["ask_leave"]);
   });
 
   it("offers direct follow-ups and a leave option after Cade gives advice", () => {
@@ -106,18 +149,25 @@ describe("Wolf-Winter dialogue surface", () => {
     const ids = legalActionIds(state);
     expect(ids).toEqual(expect.arrayContaining(["ask_byre", "ask_leave"]));
     expect(ids).not.toContain("ask_ask_byre");
+    expect(ids).not.toContain("ask_wolves_back");
   });
 
-  it("returns to Cade's root menu without nested speaker or quote text", () => {
-    let state = startCadeDialogue();
-    state = act(state, { type: "ASK", npc: "houndsman", topic: "wolves" });
-    const back = step(state, { type: "ASK", npc: "houndsman", topic: "wolves_back" });
+  it("auto-resumes Cade's reactive root without a nested filler reply", () => {
+    const state = startCadeDialogue();
+    const advised = step(state, { type: "ASK", npc: "houndsman", topic: "wolves" });
 
-    expect(back.ok).toBe(true);
-    if (!back.ok) throw new Error("unreachable");
-    const text = narrations(back.events).join(" ");
-    expect(text).toContain('old Cade the houndsman: "Ask what else you need');
-    expect(text).not.toContain("Old Cade shifts");
-    expect(text).not.toMatch(/: "Old Cade\b/);
+    expect(advised.ok).toBe(true);
+    if (!advised.ok) throw new Error("unreachable");
+    expect(narrations(advised.events).join(" ")).toContain("Quick lines");
+    const obs = buildRpgObservation(index, advised.state);
+    expect(obs.dialogue?.npc_text).toMatch(
+      /guarded byre plan is still yours to learn[^]*Ask for it/i,
+    );
+    expect(obs.dialogue?.npc_text).not.toContain("Old Cade shifts");
+    expect(obs.dialogue?.npc_text).not.toMatch(/: "Old Cade\b/);
+    expect(obs.available_actions.map((option) => option.id)).not.toContain("ask_wolves_back");
+    expect(obs.available_actions.map((option) => option.id)).toEqual(
+      expect.arrayContaining(["ask_byre", "ask_leave"]),
+    );
   });
 });

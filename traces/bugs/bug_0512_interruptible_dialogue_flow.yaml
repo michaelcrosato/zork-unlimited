@@ -1,0 +1,49 @@
+id: bug_0512_interruptible_dialogue_flow
+title: "RPG conversations resume naturally and yield to room actions"
+pack: content/rpg/quests/gallowmere.yaml
+reported_by: pure-blind-playtest
+reports:
+  - blind-tester/reports/20260712T090032Z_overworld_seed1809.md
+severity: S1
+symptom: >
+  A pure player found that one-shot NPC answers often exposed only a generic
+  "ask something else" choice before the next real topic. Reading an already
+  visible book or leaving the room during the exchange was rejected instead of
+  naturally ending the conversation. The navigation-only calls did not count
+  toward the journey clock, but became the run's worst moment.
+root_cause: >
+  RPG dialogue was hard-modal. The legal-action generator returned immediately
+  after listing the active node's ASK topics, and every authored reply node was
+  persisted even when its only purpose was an unconditional edge back to the
+  same NPC root. Blocked recovery affordances were also explicitly suppressed
+  during dialogue. The earlier bug_0494 diagnostic explained a stale action
+  after rejection but preserved those interaction taxes.
+fix: >
+  Conversation is now an interruptible exchange shared by human and MCP
+  surfaces. A reply with an unconditional root-back edge auto-resumes that root
+  after its effects and spoken line in the same accepted step, provided every
+  other child choice is mirrored at an effect-free root. Ordinary noncombat room
+  actions and authored blocked recovery rows remain visible during dialogue.
+  Same-room actions preserve an eligible speaker; leaving, retiring that NPC,
+  or ending play clears dialogue atomically. TALK-to-another-NPC and combat stay
+  suppressed. Skill-check USE actions follow the same state-aware rule.
+deterministic_witnesses:
+  - "Hedrick's sow answer emits once, sets its preparation effects, and immediately exposes father/leave/read/move without hedrick_sow_back"
+  - "Cade and Ives retain their direct substantive follow-ups because those choices are mirrored at their roots"
+  - "synthetic child-only and root-effect branches decline auto-resume and remain visible"
+  - "read, inventory, and same-room rolled USE preserve an eligible root menu; movement or NPC retirement closes it in the same engine step"
+  - "a same-room post-action win clears dialogue before the terminal observation, while Tanner's authored recovery row remains visible and rejects with its full reason during Godwin's exchange"
+  - "the crawler's immediate-zero oracle uses an explicit corrupted-index witness and terminates after one initial zero-step finding; empty dialogue itself retains room actions"
+  - "automatic closure is excluded from consequence hashing, so only the chosen gameplay action can advance the 40-decision clock"
+  - "browser, compact MCP, full MCP legal listings, CLI grammar, save replay, and deterministic core all consume the shared action set"
+  - "the canonical Barrow trace removes wight_back, adds the required accepted strike after its step-keyed roll shift, and re-pins a proved victory hash without changing quest content"
+tests:
+  - tests/regression/rpg_interruptible_dialogue_flow.test.ts
+  - tests/regression/rpg_step_rejection_dialogue_diagnostic.test.ts
+  - tests/regression/tanners_fever_failed_treatment_affordance.test.ts
+  - tests/regression/rpg_barrow_trace.test.ts
+  - tests/unit/crawl_quest_crawler.test.ts
+verification:
+  - npm test -- --run tests/regression/rpg_interruptible_dialogue_flow.test.ts tests/regression/rpg_step_rejection_dialogue_diagnostic.test.ts tests/regression/tanners_fever_failed_treatment_affordance.test.ts tests/regression/rpg_barrow_trace.test.ts tests/unit/crawl_quest_crawler.test.ts
+  - npm run crawl:smoke
+  - npm run health

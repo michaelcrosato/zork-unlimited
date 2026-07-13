@@ -41,7 +41,7 @@
 import { describe, it, expect } from "vitest";
 import { z } from "zod";
 import { ObjectSchema } from "../../src/rpg/schema.js";
-import { objectDescription } from "../../src/rpg/model.js";
+import { activeDialogue, objectDescription } from "../../src/rpg/model.js";
 import { resolveRpgAction } from "../../src/rpg/legal_actions.js";
 import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import {
@@ -131,8 +131,18 @@ describe("bug_0023 — live on The Cold Forge: the slag grate stops reading 'wel
     s = act(s, move("down")); // Outer Forge
     s = act(s, (a) => a.type === "TAKE"); // pry-bar
     s = act(s, (a) => a.type === "TALK");
+    const attackBeforeCounsel = s.vars["attack"];
+    expect(attackBeforeCounsel).toBeDefined();
+    if (attackBeforeCounsel === undefined) throw new Error("attack stat missing");
     s = act(s, (a) => a.type === "ASK" && (a as { topic?: string }).topic === "ask_sentinel"); // +2 attack
-    s = act(s, (a) => a.type === "ASK" && (a as { topic?: string }).topic === "sentinel_back");
+    expect(s.flags["heard_sentinel"]).toBe(true);
+    expect(s.vars["attack"]).toBe(attackBeforeCounsel + 2);
+    expect(activeDialogue(index, s)?.node.id).toBe("spirit_root");
+    const resumed = buildRpgObservation(index, s);
+    expect(resumed.dialogue?.npc_text).toBe("What else would you know?");
+    const resumedIds = resumed.available_actions.map((option) => option.id);
+    expect(resumedIds).toEqual(expect.arrayContaining(["ask_ask_heart", "ask_leave_spirit"]));
+    expect(resumedIds).not.toContain("ask_sentinel_back");
     s = act(s, (a) => a.type === "ASK" && (a as { topic?: string }).topic === "leave_spirit");
     s = act(s, move("north")); // Bellows Walk
     let guard = 0;

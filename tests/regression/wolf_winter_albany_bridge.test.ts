@@ -35,7 +35,7 @@ describe("Wolf-Winter Albany bridge", () => {
 
     expect(houndsman!.description).toContain("Albany's relief rider");
     expect(houndsman!.description).not.toContain("steading's hunter");
-    expect(root!.npc_text).toContain("You came up from Albany awake");
+    expect(root!.npc_text).toContain("You came from Albany awake");
     expect(root!.npc_text).not.toContain("You came down awake");
   });
 

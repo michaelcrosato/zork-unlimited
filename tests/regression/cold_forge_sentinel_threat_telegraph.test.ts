@@ -129,9 +129,11 @@ describe("bug_0070 — the Cold Forge bellows_walk honestly telegraphs a hard fi
     expect(options(s).some((o) => (o.action as { topic?: string }).topic === "ask_sentinel")).toBe(
       false,
     );
-    s = act(s, (a) => a.type === "ASK" && (a as { topic?: string }).topic === "sentinel_back");
+    expect(s.flags["heard_sentinel"]).toBe(true);
+    expect(buildRpgObservation(index, s).dialogue?.npc_text).toMatch(/What else would you know/i);
     s = act(s, (a) => a.type === "ASK" && (a as { topic?: string }).topic === "ask_heart");
-    s = act(s, (a) => a.type === "ASK" && (a as { topic?: string }).topic === "heart_back");
+    expect(s.flags["heard_heart"]).toBe(true);
+    expect(buildRpgObservation(index, s).dialogue?.npc_text).toMatch(/What else would you know/i);
     s = act(s, (a) => a.type === "ASK" && (a as { topic?: string }).topic === "leave_spirit");
     s = act(s, move("north")); // → bellows walk
     let guard = 0;

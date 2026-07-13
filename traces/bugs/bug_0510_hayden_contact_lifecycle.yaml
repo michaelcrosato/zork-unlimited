@@ -1,0 +1,44 @@
+id: bug_0510_hayden_contact_lifecycle
+title: "Hayden's dispatch dialogue now follows completed winter leads"
+pack: src/world/session_contact_presentation.ts
+reported_by: pure-blind-playtest
+reports:
+  - blind-tester/reports/20260712T065854Z_overworld_seed1609.md
+severity: S1
+symptom: >
+  After Wolf-Winter and Gallowmere were complete, revisiting Hayden Hale in
+  Albany Station Quarter repeated the original urgent request to carry Rowan's
+  packet to Cade before the cattle were lost. The verified player called the
+  contradiction the run's worst moment even though both leads were already
+  closed in the journey ledger.
+root_cause: >
+  Overworld contacts exposed one immutable summary and agenda for the whole
+  session. Contact journal identity was likewise bound only to the character,
+  so truthful later dialogue could neither replace the visible card nor count
+  once as a newly relevant conversation without invalidating earlier saves.
+fix: >
+  Contacts may author ordered, monotonic presentations selected from completed
+  quest proof. Hayden now has a base dispatch, a Wolf-Winter-closed return, and
+  a most-specific Wolf-Winter-plus-Gallowmere closure. Public UI and MCP views
+  materialize only the active copy; phase-specific journal identities let each
+  new conversation cost and count once while immediate repeats remain free.
+  Snapshot replay proves that every stored line was active at its timestamp.
+deterministic_witnesses:
+  - "Hayden's base talk carries the live Cade packet before Wolf-Winter"
+  - "both Albany dawn-dispatch branches receive the same truthful Wolf-Winter closure"
+  - "real travel back from Queensbury exposes the two-quest closure on Hayden's Station Quarter card"
+  - "the post-Gallowmere talk costs fifteen minutes and one substantive-dialogue decision exactly once"
+  - "an immediate same-phase repeat costs zero, is repeated_context, and preserves projection and hash"
+  - "save/restore before and after the closure talk preserves the active phase and journal proof"
+  - "restore rejects unknown phases, future phases, and rewritten authored contact copy"
+  - "direct UI, full MCP, and compact MCP return identical active talk text without hidden variants"
+tests:
+  - tests/unit/world_session_contact_presentation.test.ts
+  - tests/unit/mcp_journey_surface.test.ts
+  - tests/regression/new_york_overworld.test.ts
+  - tests/regression/overworld_snapshot_integrity.test.ts
+  - tests/regression/wolf_winter_gallowmere_handoff.test.ts
+verification:
+  - npm test -- --run tests/unit/world_session_contact_presentation.test.ts tests/unit/mcp_journey_surface.test.ts tests/regression/new_york_overworld.test.ts tests/regression/wolf_winter_gallowmere_handoff.test.ts
+  - npm run crawl:smoke
+  - npm run health

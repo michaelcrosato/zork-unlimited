@@ -48,6 +48,7 @@ export const PURE_PLAYER_TOOLS = new Set<string>([
   "get_overworld_session_context",
   "plan_overworld_session_route",
   "travel_overworld_session",
+  "follow_overworld_session_goal",
   "resolve_overworld_session_road_encounter",
   "resupply_overworld_session",
   "rest_overworld_session",
@@ -62,6 +63,7 @@ export const PURE_PLAYER_TOOLS = new Set<string>([
   "start_overworld_session_quest",
   "complete_overworld_session_quest",
   "choose_overworld_session_journey",
+  "choose_overworld_session_story",
   "get_observation",
   "list_legal_actions",
   "step_action",
@@ -381,7 +383,7 @@ const COMPACT_EVENTS = {
 };
 const COMPACT_OBSERVATION = {
   compact_observation: B("False swaps the compact context for the verbose observation."),
-  include_actions: B("Bundle legal action ids into the compact context."),
+  include_actions: B("Legal action ids in context; enforced for active pure compact responses."),
   include_context_version: B("Echo the context schema version."),
 };
 const IF_STATE_HASH = {
@@ -412,19 +414,26 @@ function defaultCompactRpg(args: unknown): never {
     delete input.hide_graph;
     delete input.seed;
   }
-  return {
+  const response = {
     hide_graph: true,
     compact_actions: true,
     compact_events: true,
     compact_observation: true,
     ...input,
-    ...(PLAY_MODE === "pure" ? { hide_graph: true } : {}),
+  };
+  if (PLAY_MODE !== "pure") return response as never;
+  return {
+    ...response,
+    hide_graph: true,
+    ...(input.compact_observation === false
+      ? { compact_actions: input.compact_actions ?? false }
+      : { include_actions: true }),
   } as never;
 }
 
 function defaultCompactActions(args: unknown): never {
   const input = typeof args === "object" && args !== null ? args : {};
-  return { compact_actions: true, ...input } as never;
+  return { compact_actions: PLAY_MODE === "pure" ? false : true, ...input } as never;
 }
 
 function defaultCompactOverworld(args: unknown): never {
@@ -439,14 +448,21 @@ function defaultCompactOverworldAndRpg(args: unknown): never {
     delete input.hide_graph;
     delete input.seed;
   }
-  return {
+  const response = {
     compact_context: true,
     compact_result: true,
     hide_graph: true,
     compact_actions: true,
     compact_observation: true,
     ...input,
-    ...(PLAY_MODE === "pure" ? { hide_graph: true } : {}),
+  };
+  if (PLAY_MODE !== "pure") return response as never;
+  return {
+    ...response,
+    hide_graph: true,
+    ...(input.compact_observation === false
+      ? { compact_actions: input.compact_actions ?? false }
+      : { include_actions: true }),
   } as never;
 }
 
@@ -578,14 +594,23 @@ tool(
 );
 tool(
   "travel_overworld_session",
-  "Travel to another town, spending minutes and supplies and gaining fatigue; may trigger a road encounter.",
+  "Travel one road to an adjacent town, spending minutes and supplies and gaining fatigue; may trigger a road encounter.",
   {
     ...SESSION,
-    destination_town_id: z.string().optional().describe("Destination town; routes multi-leg."),
-    road_id: z.string().optional().describe("Single road to walk instead."),
+    destination_town_id: z.string().optional().describe("Adjacent destination town."),
+    road_id: z.string().optional().describe("Adjacent road to walk instead."),
     ...OVERWORLD_ACTION_CONTEXT,
   },
   (a) => api.travel_overworld_session(defaultCompactOverworld(a)),
+);
+tool(
+  "follow_overworld_session_goal",
+  "Follow the current goal passage until the game stops at its objective, a road choice, or a resource boundary.",
+  {
+    ...SESSION,
+    ...OVERWORLD_ACTION_CONTEXT,
+  },
+  (a) => api.follow_overworld_session_goal(defaultCompactOverworld(a)),
 );
 tool(
   "resolve_overworld_session_road_encounter",
@@ -734,13 +759,25 @@ tool(
 );
 tool(
   "choose_overworld_session_journey",
-  "At a presented journey pause, choose to continue playing or end this journey.",
+  "Choose continue or end at a shown journey pause.",
   {
     ...SESSION,
     choice: z.enum(["continue", "end"]).describe("Choice from journey.pendingChoice.options."),
+    ...COMPACT_ACTIONS,
+    ...COMPACT_OBSERVATION,
     ...OVERWORLD_ACTION_CONTEXT,
   },
-  (a) => api.choose_overworld_session_journey(defaultCompactOverworld(a)),
+  (a) => api.choose_overworld_session_journey(defaultCompactOverworldAndRpg(a)),
+);
+tool(
+  "choose_overworld_session_story",
+  "Choose a story consequence.",
+  {
+    ...SESSION,
+    choice: z.string().describe("Choice id from journey.storyChoice.options."),
+    ...OVERWORLD_ACTION_CONTEXT,
+  },
+  (a) => api.choose_overworld_session_story(defaultCompactOverworld(a)),
 );
 tool(
   "validate_quest",
@@ -803,21 +840,28 @@ tool(
 );
 tool(
   "list_legal_actions",
-  "List legal RPG action ids; embedded play returns none while its journey choice is due.",
+  "List legal RPG actions and authored unavailable choices with reasons.",
   {
     ...SESSION,
     ...IF_STATE_HASH,
-    compact_actions: z.boolean().optional().describe("False returns labeled options."),
+    compact_actions: z
+      .boolean()
+      .optional()
+      .describe(
+        PLAY_MODE === "pure"
+          ? "True returns bare action ids; defaults to labeled options."
+          : "False returns labeled options.",
+      ),
   },
   (a) => api.list_legal_actions(defaultCompactActions(a)),
 );
 
 tool(
   "step_action",
-  "Apply one legal RPG action; embedded play also updates and returns the parent journey.",
+  "Apply a legal RPG action or select an unavailable id for its authored reason.",
   {
     ...SESSION,
-    action_id: z.string().describe("Action id from list_legal_actions."),
+    action_id: z.string().describe("Id from legal or unavailable action rows."),
     ...EXPECTED_STATE_HASH,
     ...PLAYER_HIDE_GRAPH,
     ...COMPACT_ACTIONS,

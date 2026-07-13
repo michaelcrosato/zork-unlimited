@@ -108,7 +108,10 @@ describe("bug_0222 — the shade's wight-counsel does not over-promise an attack
     s = act(s, move("west")); // → Reaver's Rest
     s = act(s, isTalk);
     s = act(s, askTopic("ask_wight")); // +3 defense ward
-    s = act(s, askTopic("wight_back"));
+    expect(options(s).map((o) => o.id)).toEqual(
+      expect.arrayContaining(["ask_ask_lord", "ask_leave_shade", "go_east"]),
+    );
+    expect(options(s).map((o) => o.id)).not.toContain("ask_wight_back");
     s = act(s, askTopic("leave_shade"));
     s = act(s, move("east")); // → Entry Hall
     s = act(s, move("north")); // → Guard Crypt

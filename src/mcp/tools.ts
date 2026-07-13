@@ -24,7 +24,7 @@ import { assertTraceMode, replayTrace } from "../trace/replay.js";
 import type { Trace } from "../trace/record.js";
 import { safeResolve } from "./paths.js";
 import { SessionStore } from "./sessions.js";
-import { type McpActionOption, type McpObservation } from "./types.js";
+import { type McpActionOption, type McpBlockedActionOption, type McpObservation } from "./types.js";
 import type { RpgCompactLegend, RpgCompactObservation } from "./compact_rpg_observation.js";
 import type { RpgCompactState } from "./compact_rpg_state.js";
 import { RpgMcpSessionRuntime } from "./rpg_session_runtime.js";
@@ -57,11 +57,14 @@ import {
 } from "./transcript_projection.js";
 import { OverworldMcpSessionStore } from "./overworld_sessions.js";
 import { createOverworldToolHandlers } from "./overworld_tool_handlers.js";
+import { overworldQuestCompletionFromRpgSession } from "./overworld_quest_bridge.js";
 import {
   journeyBlocksGameplay,
   suppressRpgGameplayActions,
   type EmbeddedJourneyField,
 } from "./journey_projection.js";
+import { excludedJourneyDecision } from "../world/journey_decision.js";
+import type { OverworldJourneyQuestCompletionResult } from "../world/session.js";
 import {
   loadOverworldManifest as loadOverworldManifestFromRoot,
   resolveWorldQuestSourceId,
@@ -187,8 +190,15 @@ type RpgLegalActionRows<Args extends RpgLegalActionsArgs> = Args extends {
   ? string[]
   : McpActionOption[];
 
+type RpgBlockedActionRows<Args extends RpgLegalActionsArgs> = Args extends {
+  compact_actions: true;
+}
+  ? Array<readonly [id: string, reason: string]>
+  : McpBlockedActionOption[];
+
 type RpgLegalActionsPayload<Args extends RpgLegalActionsArgs> = {
   actions: RpgLegalActionRows<Args>;
+  blocked_actions?: RpgBlockedActionRows<Args>;
   state_hash: string;
 } & Partial<EmbeddedJourneyField>;
 
@@ -231,7 +241,9 @@ type RpgStepActionArgs = {
   RpgEventOptions;
 
 type RpgStepActionResponse<Args extends RpgStepActionArgs> = RpgRuntimeStepActionResponse<Args> &
-  Partial<EmbeddedJourneyField>;
+  Partial<EmbeddedJourneyField> & {
+    questCompletion?: OverworldJourneyQuestCompletionResult;
+  };
 
 type RpgLoadGameArgs = {
   world_quest_id?: string;
@@ -447,7 +459,11 @@ export function createToolApi(opts: { root: string }) {
     const projectedPayload = blocked ? suppressRpgGameplayActions(payload) : payload;
     const visiblePayload =
       blocked && "actions" in projectedPayload
-        ? { ...projectedPayload, actions: [] }
+        ? {
+            ...projectedPayload,
+            actions: [],
+            ...("blocked_actions" in projectedPayload ? { blocked_actions: [] } : {}),
+          }
         : projectedPayload;
     return { ...visiblePayload, ...field };
   }
@@ -457,6 +473,7 @@ export function createToolApi(opts: { root: string }) {
 
     ...createOverworldToolHandlers({
       sessions,
+      rpgRuntime,
       overworldSessions,
       loadOverworldManifest: () => loadOverworldManifestFromRoot(root),
       startWorldQuest: <Args extends RpgStartWorldQuestArgs>(
@@ -591,6 +608,7 @@ export function createToolApi(opts: { root: string }) {
         const read = runRpgGetObservation({ sessions, rpgRuntime }, responseOptions);
         const rejectionReason =
           before.journey.pendingChoice?.message ??
+          before.journey.storyChoice?.message ??
           "This journey has ended and no longer accepts gameplay decisions.";
         return {
           ok: false,
@@ -599,18 +617,43 @@ export function createToolApi(opts: { root: string }) {
           ...rpgStepEventVersion(responseOptions),
           ...suppressRpgGameplayActions(read),
           ...before,
+          journeyDecision: excludedJourneyDecision("rejected"),
+          journeyActionId: null,
         } as RpgStepActionResponse<DefaultCompactRpgStep<Args>>;
       }
 
       const response = runRpgStepAction({ sessions, rpgRuntime }, responseOptions);
+      let questCompletion: OverworldJourneyQuestCompletionResult | undefined;
       if (response.ok === true) {
         const rpgSession = sessions.get(args.session_id);
         if (rpgSession.overworldSessionId) {
           const overworldSession = overworldSessions.get(rpgSession.overworldSessionId);
-          overworldSession.recordAcceptedQuestDecision(args.action_id);
+          if (response.journeyActionId === null) {
+            throw new Error("Accepted RPG journey decision is missing its canonical action id.");
+          }
+          const journey = overworldSession.recordQuestDecision(
+            response.journeyActionId,
+            response.journeyDecision,
+          );
+          if (journey.pendingChoice !== null && !rpgSession.state.ended) {
+            sessions.markEmbeddedJourneyPause(rpgSession.id);
+          }
+          if (rpgSession.state.ended) {
+            const completion = overworldQuestCompletionFromRpgSession(
+              rpgSession,
+              rpgSession.overworldSessionId,
+            );
+            if (!completion.outcome.death) {
+              questCompletion = overworldSession.completeQuest(
+                completion.questId,
+                completion.outcome,
+              );
+            }
+          }
         }
       }
-      return withEmbeddedJourney(args.session_id, response) as RpgStepActionResponse<
+      const completedResponse = questCompletion ? { ...response, questCompletion } : response;
+      return withEmbeddedJourney(args.session_id, completedResponse) as RpgStepActionResponse<
         DefaultCompactRpgStep<Args>
       >;
     },

@@ -15,8 +15,8 @@
  *   (2) the +5 score effect is still present (non-regression);
  *   (3) the journal entry is absent before reading and present after;
  *   (4) a second read is blocked by the not_flag:read_marks gate (no stacking);
- *   (5) win route (talk Pell → read book → clear rack → cross walk → open race → valley)
- *       still reaches ending_held at 50/50.
+ *   (5) win route (talk Pell → read book → clear rack → cross walk → open race → commit
+ *       one flood course → valley) reaches its consequence ending at 50/50.
  */
 import { describe, it, expect } from "vitest";
 import { loadRpgSourceFile } from "../../src/rpg/source.js";
@@ -27,6 +27,7 @@ import {
   enumerateRpgActions,
 } from "../../src/rpg/runner.js";
 import { buildRpgObservation } from "../../src/rpg/observation.js";
+import { activeDialogue } from "../../src/rpg/model.js";
 import { makeStep } from "../../src/core/engine.js";
 import type { Action } from "../../src/api/types.js";
 import type { GameState } from "../../src/core/state.js";
@@ -65,7 +66,7 @@ const isAsk = (topic: string) => (a: Action) =>
   a.type === "ASK" && (a as { topic?: string }).topic === topic;
 const isUse = (a: Action) => a.type === "USE";
 
-const JOURNAL_RE = /flood.marks|three obstacles/i;
+const JOURNAL_RE = /Pell's marks|flood.marks/i;
 const bookEntries = (s: GameState) => s.journal.filter((j) => JOURNAL_RE.test(j));
 
 describe("bug_0318 — reading the flood-book adds a journal entry (was silent)", () => {
@@ -77,11 +78,10 @@ describe("bug_0318 — reading the flood-book adds a journal entry (was silent)"
       (e): e is { add_journal: string } => "add_journal" in e,
     );
     expect(journalEffect, "READ interaction must have an add_journal effect").toBeDefined();
-    // Journal entry references the three obstacles and the walk warning.
-    expect(journalEffect!.add_journal).toMatch(/head-rack/i);
-    expect(journalEffect!.add_journal).toMatch(/storm-walk/i);
-    expect(journalEffect!.add_journal).toMatch(/relief-race/i);
-    expect(journalEffect!.add_journal).toMatch(/warning|kills|lives/i);
+    // Compact memory keeps the tool/obstacle warning and the final public-good tradeoff.
+    expect(journalEffect!.add_journal).toMatch(/rack.*race/i);
+    expect(journalEffect!.add_journal).toMatch(/killing walk/i);
+    expect(journalEffect!.add_journal).toMatch(/winter grain.*old works/i);
   });
 
   it("(2) the +5 score effect is still present (non-regression from bug_0315 check)", () => {
@@ -116,12 +116,18 @@ describe("bug_0318 — reading the flood-book adds a journal entry (was silent)"
     expect(bookEntries(s).length).toBe(1);
   });
 
-  it("(5) win route: talk Pell → read book → clear rack → cross walk → open race → valley = ending_held 50/50", () => {
+  it("(5) win route: preparation → obstacles → chosen flood course → valley = 50/50", () => {
     let s = initStateForRpgPack(index, 7); // seed 7: canonical blind-playtest seed
     // Heed Pell on the walk (+5 nerve → nerve 8).
     s = act(s, isTalk);
     s = act(s, isAsk("ask_walk"));
-    s = act(s, isAsk("walk_back"));
+    expect(s.flags["heard_walk"]).toBe(true);
+    expect(s.vars["nerve"]).toBe(8);
+    expect(activeDialogue(index, s)?.node.id).toBe("pell_root");
+    expect(buildRpgObservation(index, s).dialogue?.npc_text).toMatch(/what else, lad/i);
+    const resumedIds = options(s).map((option) => option.id);
+    expect(resumedIds).toEqual(expect.arrayContaining(["ask_ask_weir", "ask_leave_pell"]));
+    expect(resumedIds).not.toContain("ask_walk_back");
     s = act(s, isAsk("leave_pell")); // exit dialogue before interacting with objects
     // Read flood-book (+5 score).
     s = act(s, isRead);
@@ -151,10 +157,16 @@ describe("bug_0318 — reading the flood-book adds a journal entry (was silent)"
       if (++guard > 40) throw new Error("race never opened");
     }
     expect(score(s)).toBe(35);
+    expect(options(s).map((option) => option.id)).toEqual(
+      expect.arrayContaining(["use_stone_race_pin", "use_field_wash_pin"]),
+    );
+    s = act(s, (a) => a.type === "USE" && a.target === "stone_race_pin");
+    expect(s.flags["flood_down_stone_race"]).toBe(true);
+    expect(score(s)).toBe(35);
     // Reach valley — win.
     s = act(s, move("north"));
     expect(s.ended).toBe(true);
-    expect(s.endingId).toBe("ending_held");
+    expect(s.endingId).toBe("ending_fields_held_race_spent");
     expect(score(s)).toBe(50);
   });
 });

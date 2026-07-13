@@ -2,59 +2,50 @@
 
 Token-small AFK-loop handoff: keep one synthesis and chosen move under 60 lines.
 
-## Cycle: 2026-07-11 - Consequential Decision Accounting
+## Cycle: 2026-07-12 - Current-Goal Passage
 
 ## Synthesis
 
-The pure journey contract landed green in `99743619`. Its fresh fleet produced
-100/100 verified pure exits with no resume, rejection, retry, timeout, or legacy
-evidence (`ai-runs/feedback/20260711T221007Z-pure100`).
+Journey contract v3 now has 17 sidecar-verified pure/fresh exits at 74–130
+meaningful decisions. Every player continued at least once and all 17 said they
+would replay, so current evidence does not prove travel causes churn.
 
-At early Albany-goal completion, 46 players continued and 54 ended; all 46
-continuers ended at checkpoint 40. Post-exit `would_replay` was 76/100 and is a
-separate attitude metric. The strongest depth signal is the post-Wolf-Winter
-quality cliff: 44/46 exposed continuers called later Albany play generic,
-repetitive, or under-narrated.
-
-First fix the measurement. Contract v1 counts every successful embedded-quest
-command and accepted overworld no-op. Thirty-four reports objected to
-narration-only LOOK/EXAMINE, dialogue closure, or unchanged rest counting like
-tactical choices. Preserve v1 as valid immutable evidence with broader semantics.
+It does prove a repeated pacing defect: 14/17 mentioned long-haul or routing
+friction, nine hit manual/non-adjacent routing, and nine called connective
+logistics repetitive or padding. The game privately knows the unrestricted
+route to its authored goal, but the public planner rejects an undiscovered goal
+town, destination travel accepts only adjacent towns despite promising
+multi-leg routing, and every predetermined road click advances the retention
+clock as if it were a new player decision.
 
 ## Chosen Move
 
-Build journey contract v2 around one engine-owned `countsTowardJourney`
-classification consumed identically by UI and MCP.
+Make the current objective's road commitment a shared, interruptible Goal
+Passage choice while retaining manual travel.
 
-- Count movement, stateful clue reads, substantive dialogue choices, combat,
-  preparation, and actions that change the player's situation.
-- Exclude context-only LOOK/INVENTORY, repeated narration-only examination,
-  dialogue closure, unchanged rest, pure reads/listings, persistence, rejected
-  calls, and the retention choice.
-- Carry classification and reason in the action result; never infer them from
-  MCP-only action-id heuristics.
-- Keep the exact initial Albany goal and 40/80/+40 cadence; bump the contract
-  version so receipts distinguish v1 from v2 evidence.
+- Derive one identical presentation in the Journey object used by UI and MCP.
+- Show the named destination and aggregate time/supply/fatigue consequences.
+- Apply every real leg, cost, discovery, ambient report, and travel-log entry.
+- Stop for authored road choices, objective arrival, or a new resource tier.
+- Count one successful passage selection once; count later choices separately.
+- Reveal no intermediate route, future event, hidden target, or solution first.
 
 ## Acceptance
 
-1. The same accepted sequence produces identical UI and MCP counts.
-2. Stateful reads count once when they reveal/alter knowledge; context repeats do not.
-3. Unchanged rest and dialogue closure cannot trigger a checkpoint.
-4. Movement and consequential quest/world actions continue to count.
-5. Save/restore and receipts preserve v2 proof without rewriting v1 reports.
-6. Parity regressions, crawl, browser, health, and a fresh pure canary pass before
-   comparing a v2 cohort with the frozen v1 baseline.
-
-## Queued Content Move
-
-Then author an ending-sensitive Wolf-Winter → Albany aftermath chain through the
-remaining pre-40 session: scene-specific prose, a consequential choice, and a
-visible next local lead. Target decision-40 continuation above 0/46 and depth
-complaints below 44/46.
+1. UI, full MCP, and compact MCP expose the same Goal Passage choice.
+2. One passage has exact resource/log parity with the same manual road legs.
+3. Required road events remain unresolved and interrupt passage immediately.
+4. Resource boundaries yield before an unaccepted later penalty tier.
+5. Checkpoints, save/restore, and decision proofs remain exact after passage.
+6. Manual roads and discovered-route planning retain their prior behavior.
+7. The pure harness remains neutral; the game alone presents this action.
+8. Pre/post crawl, a fresh pure exit, health, and integrity are green.
 
 ## Deferred Levers
 
-- Clarify why ordinary jobs do not satisfy the exact initial lead goal.
-- Expose event-resolution prerequisites before a rejected attempt.
-- Bind sidecars to run identity/digest and diversify later pure cohorts.
+- Measure whether passage improves pacing/retention in later pure cohorts;
+  recurrence supports this correction, but retention causality is unproven.
+- Clarify `area_route_id` versus `area_id` only if the fresh seed-7 mismatch
+  recurs; it was a one-time, low-severity transport-schema learning cost.
+- Deepen road-event prose only if post-passage players still report sameness.
+- Audit NPC-name collisions and town-template diversity after fresh evidence.

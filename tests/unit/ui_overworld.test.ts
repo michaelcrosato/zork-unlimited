@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { loadOverworldManifest } from "../../src/world/source.js";
 import {
@@ -7,6 +8,7 @@ import {
   OVERWORLD_COMPACT_MOVEMENT_LIMIT,
   OVERWORLD_COMPACT_RENOWN_LIMIT,
   OVERWORLD_COMPACT_RISK_CHAR_LIMIT,
+  OVERWORLD_COMPACT_ROAD_EVENT_SUMMARY_CHAR_LIMIT,
   OVERWORLD_COMPACT_ROUTE_STEP_LIMIT,
   OVERWORLD_COMPACT_TITLE_CHAR_LIMIT,
   cloneOverworldCompactView,
@@ -54,6 +56,26 @@ function resolveCurrentTownEvent(session: OverworldSession): void {
   session.resolveEvent(event.id);
 }
 
+function reachAlbanyStoryChoice(session: OverworldSession): void {
+  const opening = session.view();
+  session.scoutPoi(opening.pois[0]!.id);
+  const revealed = session.talkToCharacter(opening.characters[0]!.id);
+  const quest = revealed.discoveredQuests?.find((candidate) => candidate.id === "wolf_winter");
+  if (!quest) throw new Error("Expected the Albany Wolf-Winter lead.");
+  const route = session
+    .view()
+    .areaExits.find((candidate) => candidate.destination.id === quest.area);
+  if (!route) throw new Error("Expected a route to the Albany lead.");
+  session.moveArea(route.id);
+  session.startQuest(quest.id);
+  session.completeQuest(quest.id, {
+    endingId: "ending_held",
+    endingTitle: "The Byre Held",
+    death: false,
+  });
+  session.chooseJourney("continue");
+}
+
 describe("OverworldSession", () => {
   it("starts in Albany with roads, local discoveries, and no global quest list", () => {
     const session = new OverworldSession(world);
@@ -67,6 +89,7 @@ describe("OverworldSession", () => {
       acceptedDecisions: 0,
       baselineDecisions: 40,
       nextCheckpoint: 40,
+      goalGuidance: null,
       pendingChoice: null,
     });
 
@@ -133,6 +156,90 @@ describe("OverworldSession", () => {
     expect(openingText).not.toMatch(
       /concrete local lead point|local problems|hidden count|tutorial|command/i,
     );
+  });
+
+  it("presents the authored aftermath as the UI's only legal choice without hidden solution data", () => {
+    const session = new OverworldSession(world);
+    reachAlbanyStoryChoice(session);
+    const journey = session.journey();
+    const snapshotHash = session.snapshotHash();
+
+    expect(journey).toMatchObject({
+      status: "active",
+      goal: {
+        version: 1,
+        id: "albany_local_lead",
+        status: "completed",
+      },
+      pendingChoice: null,
+      storyChoice: {
+        id: "albany_dawn_dispatch",
+        options: [{ id: "send_wagon_to_cade" }, { id: "send_wardens_north" }],
+      },
+    });
+    expect(Object.keys(journey.goal).sort()).toEqual([
+      "completedAtDecision",
+      "id",
+      "status",
+      "text",
+      "version",
+    ]);
+    expect(Object.keys(journey.storyChoice!).sort()).toEqual(["id", "message", "options"]);
+    for (const option of journey.storyChoice!.options) {
+      expect(Object.keys(option).sort()).toEqual(["consequence", "id", "label"]);
+    }
+    expect(JSON.stringify({ goal: journey.goal, storyChoice: journey.storyChoice })).not.toMatch(
+      /targetQuestId|endingId|ending_held|wolf_winter|content\/rpg|win_conditions|maneuver_/i,
+    );
+
+    expect(() => session.restAtTown()).toThrow(/presented story consequence/i);
+    expect(session.snapshotHash()).toBe(snapshotHash);
+
+    const beforeDecision = journey.acceptedDecisions;
+    const selected = session.chooseJourneyStory("send_wardens_north");
+    expect(selected).toMatchObject({
+      storyChoiceId: "albany_dawn_dispatch",
+      choiceId: "send_wardens_north",
+      journeyDecision: { countsTowardJourney: true, reason: "situation_changed" },
+      goal: {
+        version: 2,
+        id: "travel_north_with_albany_wardens",
+        text: expect.stringContaining("Queensbury Market Streets"),
+        status: "active",
+      },
+    });
+    expect(session.journey()).toMatchObject({
+      status: "active",
+      acceptedDecisions: beforeDecision + 1,
+      storyChoice: null,
+      goal: { version: 2, id: "travel_north_with_albany_wardens" },
+      goalGuidance:
+        "Objective route: take the road toward Saratoga Springs city. Queensbury town is 2 roads and about 60 road minutes away.",
+    });
+    expect(JSON.stringify(session.journey().goalGuidance)).not.toMatch(
+      /targetQuestId|endingId|wolf_winter|content\/rpg|win_conditions|maneuver_/i,
+    );
+  });
+
+  it("routes visible story-choice ids through generic app plumbing", () => {
+    const app = readFileSync("ui/src/App.tsx", "utf8");
+    const screen = readFileSync("ui/src/JourneyStoryChoiceScreen.tsx", "utf8");
+    const handlerStart = app.indexOf("function chooseJourneyStory(choiceId: string)");
+    const handlerEnd = app.indexOf("if (tutorialOpen)", handlerStart);
+    expect(handlerStart).toBeGreaterThanOrEqual(0);
+    expect(handlerEnd).toBeGreaterThan(handlerStart);
+    const handler = app.slice(handlerStart, handlerEnd);
+
+    expect(handler).toContain("worldSession.chooseJourneyStory(choiceId)");
+    expect(handler).toContain("Story consequence: ${result.consequence}");
+    expect(handler).toContain("New goal: ${result.goal.text}");
+    expect(handler).not.toMatch(/AlbanyDawnDispatchChoiceId|Albany dawn dispatch/i);
+    expect(handler).not.toMatch(
+      /targetQuestId|targetTownId|targetAreaId|questOutcomeIds|endingId|content\/rpg/i,
+    );
+    expect(screen).toContain("Journey consequence");
+    expect(screen).toContain("Choose what follows");
+    expect(screen).not.toMatch(/Albany Station Quarter|dawn dispatch|relief wagon/i);
   });
 
   it("keeps Albany's first scout, talk, and explore choices on the same reveal loop", () => {
@@ -562,7 +669,7 @@ describe("OverworldSession", () => {
     expect(view.discovered.length).toBeGreaterThan(24);
     const compact = compactOverworldView(view);
     expect(session.compactView()).toEqual(compact);
-    expect(compact.v).toBe(13);
+    expect(compact.v).toBe(14);
     expect(compact.hidden).toEqual([
       view.hiddenAreaCount,
       view.hiddenJobCount,
@@ -974,7 +1081,7 @@ describe("OverworldSession", () => {
     ]);
   });
 
-  it("caps compact context labels, titles, and risk text", () => {
+  it("caps compact context labels, titles, road scenes, and risk text", () => {
     const session = new OverworldSession(world);
     const localView = session.view();
     const road = localView.exits.find((exit) => exit.destination.id === "colonie_town");
@@ -991,6 +1098,7 @@ describe("OverworldSession", () => {
     const longLabel = "label ".repeat(40);
     const longTitle = "title ".repeat(60);
     const longRisk = "risk ".repeat(70);
+    const longSummary = "summary ".repeat(80);
 
     const pendingRoadEncounter = view.pendingRoadEncounter!;
     const compact = compactOverworldView({
@@ -1023,10 +1131,17 @@ describe("OverworldSession", () => {
         ...pendingRoadEncounter,
         from: longLabel,
         to: longLabel,
+        route: longLabel,
         event: {
           ...pendingRoadEncounter.event,
+          title: longTitle,
+          summary: longSummary,
           risk: longRisk as typeof pendingRoadEncounter.event.risk,
         },
+        options: pendingRoadEncounter.options.map((option) => ({
+          ...option,
+          label: longTitle,
+        })),
       },
       regionRenown: { [longLabel]: 7 },
     });
@@ -1040,7 +1155,13 @@ describe("OverworldSession", () => {
     expect(compact.poi[0]?.[1]).toHaveLength(OVERWORLD_COMPACT_TITLE_CHAR_LIMIT);
     expect(compact.events[0]?.[1]).toHaveLength(OVERWORLD_COMPACT_TITLE_CHAR_LIMIT);
     expect(compact.journal?.[0]?.[1]).toHaveLength(OVERWORLD_COMPACT_TITLE_CHAR_LIMIT);
+    expect(compact.pending_road?.route).toHaveLength(OVERWORLD_COMPACT_LABEL_CHAR_LIMIT);
     expect(compact.pending_road?.event[1]).toHaveLength(OVERWORLD_COMPACT_RISK_CHAR_LIMIT);
+    expect(compact.pending_road?.event[2]).toHaveLength(OVERWORLD_COMPACT_TITLE_CHAR_LIMIT);
+    expect(compact.pending_road?.event[3]).toHaveLength(
+      OVERWORLD_COMPACT_ROAD_EVENT_SUMMARY_CHAR_LIMIT,
+    );
+    expect(compact.pending_road?.options[0]?.[1]).toHaveLength(OVERWORLD_COMPACT_TITLE_CHAR_LIMIT);
     expect(compact.pending_road?.where[0]).toHaveLength(OVERWORLD_COMPACT_LABEL_CHAR_LIMIT);
     expect(compact.pending_road?.where[1]).toHaveLength(OVERWORLD_COMPACT_LABEL_CHAR_LIMIT);
     expect(compact.renown?.[0]?.[0]).toHaveLength(OVERWORLD_COMPACT_LABEL_CHAR_LIMIT);
@@ -1251,8 +1372,8 @@ describe("OverworldSession", () => {
 
     const beforeCompletionMinutes = session.snapshot().minutes;
     const completedQuest = session.completeQuest(discoveredQuest.id, {
-      endingId: "ending_victory",
-      endingTitle: "Victory",
+      endingId: "ending_held",
+      endingTitle: "Held",
       death: false,
     });
     const questSource = world.quests.find((quest) => quest.id === discoveredQuest.id);
@@ -1264,7 +1385,7 @@ describe("OverworldSession", () => {
     expect(completedQuest).toMatchObject({
       alreadyKnown: false,
       minutes: expectedMinutes,
-      endingId: "ending_victory",
+      endingId: "ending_held",
       quest: { id: discoveredQuest.id },
     });
     expect(completedQuest.entry.recordedAt).toBe(session.view().timeLabel);
@@ -1286,8 +1407,8 @@ describe("OverworldSession", () => {
     expect(compactAfter.journal?.[0]?.[0]).toBe("quest_done");
 
     const repeatedCompletion = session.completeQuest(discoveredQuest.id, {
-      endingId: "ending_victory",
-      endingTitle: "Victory",
+      endingId: "ending_held",
+      endingTitle: "Held",
       death: false,
     });
     expect(repeatedCompletion.alreadyKnown).toBe(true);

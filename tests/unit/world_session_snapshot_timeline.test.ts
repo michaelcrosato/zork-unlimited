@@ -55,6 +55,7 @@ function snapshot(travelLog: TravelLogEntrySnapshot[], minutes = 720): Overworld
     discoveredQuestIds: [],
     startedQuestIds: [],
     completedQuestIds: [],
+    questOutcomes: [],
     exploredSiteIds: [],
     regionRenown: [],
     completedRegionalArcIds: [],

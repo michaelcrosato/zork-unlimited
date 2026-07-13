@@ -1,15 +1,15 @@
 import {
   compactOverworldQuestRef,
   compactRouteOption,
-  compactTravelLogEntry,
   type OverworldCompactQuestRef,
   type OverworldCompactRouteOption,
-  type OverworldCompactTravelLogEntry,
 } from "../world/compact_view.js";
 import type { OverworldManifest, OverworldNode } from "../world/overworld.js";
 import {
   type OverworldActionResult,
   type OverworldAreaTravelResult,
+  type OverworldJourneyGoalPassageResult,
+  type OverworldJourneyStoryChoiceResult,
   type OverworldQuestCompletionResult,
   type OverworldQuestView,
   type OverworldRoadEncounterResult,
@@ -22,14 +22,18 @@ import {
 import {
   compactOverworldActionResult,
   compactOverworldAreaTravelResult,
+  compactOverworldGoalPassageResult,
   compactOverworldQuestCompletionResult,
   compactOverworldRoadEncounterResult,
   compactOverworldServiceResult,
+  compactOverworldTravelResult,
   type OverworldCompactActionResult,
   type OverworldCompactAreaTravelResult,
+  type OverworldCompactGoalPassageResult,
   type OverworldCompactQuestCompletionResult,
   type OverworldCompactRoadEncounterResult,
   type OverworldCompactServiceResult,
+  type OverworldCompactTravelResult,
 } from "./compact_overworld_result.js";
 import {
   isOverworldMcpRejectedSessionPayload,
@@ -60,10 +64,21 @@ import type {
   RpgStartWorldQuestToolArgs,
   RpgWorldQuestStartPayload,
 } from "./rpg_session_lifecycle.js";
-import type { RpgSessionPayload } from "./rpg_session_runtime.js";
+import {
+  rpgSourceFields,
+  type RpgMcpSessionRuntime,
+  type RpgSessionPayload,
+} from "./rpg_session_runtime.js";
+import { runRpgGetObservation } from "./rpg_session_tools.js";
 import type { RpgViewOptions } from "./rpg_view_projection.js";
 import type { SessionStore } from "./sessions.js";
-import { journeyBlocksGameplay, suppressRpgGameplayActions } from "./journey_projection.js";
+import {
+  journeyBlocksGameplay,
+  suppressRpgGameplayActions,
+  type EmbeddedJourneyField,
+} from "./journey_projection.js";
+import type { JourneyDecisionClassification } from "../world/journey_contract.js";
+import type { JourneyCampaignStoryChoiceOptionId } from "../world/journey_campaign.js";
 
 type OverworldResponseOptions = OverworldMcpResponseOptions;
 
@@ -114,6 +129,18 @@ function defaultCompactOverworldQuestStart<Args extends OverworldResponseOptions
     compact_context: true,
     compact_result: true,
     compact_observation: true,
+    ...args,
+  } as DefaultCompactOverworldQuestStart<Args>;
+}
+
+function defaultCompactJourneyChoice<Args extends OverworldResponseOptions & RpgViewOptions>(
+  args: Args,
+): DefaultCompactOverworldQuestStart<Args> {
+  return {
+    compact_context: true,
+    compact_result: true,
+    compact_observation: true,
+    include_actions: true,
     ...args,
   } as DefaultCompactOverworldQuestStart<Args>;
 }
@@ -181,6 +208,7 @@ type OverworldQuestStartResponse<Args extends OverworldResponseOptions & RpgView
       quest: OverworldResultValue<Args, OverworldQuestView, OverworldCompactQuestRef>;
       rpg_session_id: string;
       rpg_session: RpgSessionPayload<Args>;
+      journeyDecision: JourneyDecisionClassification;
     } & OverworldMcpJourneyField &
       OverworldViewField<Args>)
   | OverworldGuardedRejection<Args>;
@@ -192,11 +220,21 @@ type OverworldSessionResponse<
   CompactValue = Value,
 > = OverworldMcpSessionResponse<Key, Value, Args, CompactValue>;
 
+type ResumedEmbeddedRpgField<Args extends RpgViewOptions> = {
+  rpg_session_id: string;
+  rpg_session: RpgSessionPayload<Args> & EmbeddedJourneyField;
+};
+
+type OverworldJourneyChoiceResponse<Args extends OverworldResponseOptions & RpgViewOptions> =
+  OverworldSessionResponse<"result", JourneyChoiceResult, Args> &
+    Partial<ResumedEmbeddedRpgField<Args>>;
+
 type JourneyChoice = Parameters<OverworldSession["chooseJourney"]>[0];
 type JourneyChoiceResult = ReturnType<OverworldSession["chooseJourney"]>;
 
 export type OverworldToolHandlerDeps = {
   sessions: SessionStore;
+  rpgRuntime: RpgMcpSessionRuntime;
   overworldSessions: OverworldMcpSessionStore;
   loadOverworldManifest: () => OverworldManifest;
   startWorldQuest: <Args extends RpgStartWorldQuestToolArgs>(
@@ -312,7 +350,7 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
       "travel",
       TravelLogEntry,
       DefaultCompactOverworldResponse<Args>,
-      OverworldCompactTravelLogEntry
+      OverworldCompactTravelResult
     > {
       const responseOptions = defaultCompactOverworldResponse(args);
       const travelByRoadId = args.road_id !== undefined;
@@ -329,7 +367,7 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
           args.session_id,
           "travel",
           (session) => session.travel(roadId),
-          compactTravelLogEntry,
+          compactOverworldTravelResult,
         );
       }
       const destinationTownId = args.destination_town_id;
@@ -343,7 +381,25 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
         args.session_id,
         "travel",
         (session) => session.travelTo(destinationTownId),
-        compactTravelLogEntry,
+        compactOverworldTravelResult,
+      );
+    },
+
+    follow_overworld_session_goal<Args extends { session_id: string } & OverworldResponseOptions>(
+      args: Args,
+    ): OverworldSessionResponse<
+      "passage",
+      OverworldJourneyGoalPassageResult,
+      DefaultCompactOverworldResponse<Args>,
+      OverworldCompactGoalPassageResult
+    > {
+      const responseOptions = defaultCompactOverworldResponse(args);
+      return overworldSessions.run(
+        responseOptions,
+        args.session_id,
+        "passage",
+        (session) => session.followGoalPassage(),
+        compactOverworldGoalPassageResult,
       );
     },
 
@@ -576,6 +632,9 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
           ? compactOverworldQuestRef(started.quest)
           : started.quest;
       const journey = session.journey();
+      if (journey.pendingChoice !== null) {
+        sessions.markEmbeddedJourneyPause(started.rpgSession.session_id);
+      }
       const rpgSession = journeyBlocksGameplay(journey)
         ? suppressRpgGameplayActions(started.rpgSession)
         : started.rpgSession;
@@ -586,6 +645,7 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
         snapshot_hash: overworldSnapshotHash,
         overworld_snapshot_hash: overworldSnapshotHash,
         journey,
+        journeyDecision: started.quest.journeyDecision,
         quest: questResult,
         rpg_session_id: rpgSession.session_id,
         rpg_session: rpgSession,
@@ -597,12 +657,63 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
       Args extends {
         session_id: string;
         choice: JourneyChoice;
+      } & OverworldResponseOptions &
+        RpgViewOptions,
+    >(args: Args): OverworldJourneyChoiceResponse<DefaultCompactOverworldQuestStart<Args>> {
+      const responseOptions = defaultCompactJourneyChoice(args);
+      const response = overworldSessions.run(
+        responseOptions,
+        args.session_id,
+        "result",
+        (session) => session.chooseJourney(args.choice),
+        (result): JourneyChoiceResult => result,
+      );
+      if (response.ok !== true) {
+        return response as OverworldJourneyChoiceResponse<DefaultCompactOverworldQuestStart<Args>>;
+      }
+
+      const pausedRpgSession = sessions.embeddedJourneyPause(args.session_id);
+      const canResume =
+        args.choice === "continue" &&
+        pausedRpgSession !== null &&
+        !pausedRpgSession.state.ended &&
+        !journeyBlocksGameplay(response.journey);
+      if (!canResume || !pausedRpgSession) {
+        sessions.clearEmbeddedJourneyPause(args.session_id);
+        return response as OverworldJourneyChoiceResponse<DefaultCompactOverworldQuestStart<Args>>;
+      }
+
+      const rpgView = runRpgGetObservation(
+        { sessions, rpgRuntime: deps.rpgRuntime },
+        { ...responseOptions, session_id: pausedRpgSession.id },
+      );
+      const embeddedJourney: EmbeddedJourneyField = {
+        journey: response.journey,
+        overworld_snapshot_hash: response.snapshot_hash,
+      };
+      sessions.clearEmbeddedJourneyPause(args.session_id);
+      return {
+        ...response,
+        rpg_session_id: pausedRpgSession.id,
+        rpg_session: {
+          session_id: pausedRpgSession.id,
+          ...rpgView,
+          ...rpgSourceFields(pausedRpgSession),
+          ...embeddedJourney,
+        },
+      } as OverworldJourneyChoiceResponse<DefaultCompactOverworldQuestStart<Args>>;
+    },
+
+    choose_overworld_session_story<
+      Args extends {
+        session_id: string;
+        choice: JourneyCampaignStoryChoiceOptionId;
       } & OverworldResponseOptions,
     >(
       args: Args,
     ): OverworldSessionResponse<
       "result",
-      JourneyChoiceResult,
+      OverworldJourneyStoryChoiceResult,
       DefaultCompactOverworldResponse<Args>
     > {
       const responseOptions = defaultCompactOverworldResponse(args);
@@ -610,8 +721,8 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
         responseOptions,
         args.session_id,
         "result",
-        (session) => session.chooseJourney(args.choice),
-        (result): JourneyChoiceResult => result,
+        (session) => session.chooseJourneyStory(args.choice),
+        (result): OverworldJourneyStoryChoiceResult => result,
       );
     },
 
@@ -668,6 +779,7 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
         session_id: args.session_id,
         snapshot_hash: overworldSessions.snapshotHash(session),
         journey: session.journey(),
+        journeyDecision: result.journeyDecision,
         result: responseValue,
         ...overworldSessions.viewField(responseOptions, session),
       } as OverworldSessionResponse<

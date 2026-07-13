@@ -79,7 +79,9 @@ function atForgeHeart(seed: number): GameState {
   s = act(s, (a) => a.type === "TAKE"); // pry-bar
   s = act(s, (a) => a.type === "TALK"); // lantern-spirit
   s = act(s, (a) => a.type === "ASK" && (a as { topic?: string }).topic === "ask_sentinel"); // +2 attack
-  s = act(s, (a) => a.type === "ASK" && (a as { topic?: string }).topic === "sentinel_back");
+  expect(s.flags["heard_sentinel"]).toBe(true);
+  expect(buildRpgObservation(index, s).dialogue?.npc_text).toMatch(/What else would you know/i);
+  expect(options(s).map((option) => option.id)).not.toContain("ask_sentinel_back");
   s = act(s, (a) => a.type === "ASK" && (a as { topic?: string }).topic === "leave_spirit");
   s = act(s, move("north")); // → bellows_walk
   let guard = 0;

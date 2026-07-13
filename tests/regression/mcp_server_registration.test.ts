@@ -31,6 +31,7 @@ const OVERWORLD_SCHEMA_TOOLS = [
   "export_overworld_session",
   "restore_overworld_session",
   "travel_overworld_session",
+  "follow_overworld_session_goal",
   "resolve_overworld_session_road_encounter",
   "resupply_overworld_session",
   "rest_overworld_session",
@@ -46,6 +47,7 @@ const OVERWORLD_SCHEMA_TOOLS = [
   "start_overworld_session_quest",
   "complete_overworld_session_quest",
   "choose_overworld_session_journey",
+  "choose_overworld_session_story",
 ] as const;
 
 function registeredServerTools(): string[] {
@@ -269,7 +271,9 @@ describe("MCP server registration", () => {
       registeredToolBlock(toolName),
     ).join("\n");
 
-    expect(overworldSchemaSource.length).toBeLessThanOrEqual(7250);
+    // One zero-argument game-native passage action adds a bounded schema block;
+    // retain a tight ceiling so transport prose cannot silently regrow.
+    expect(overworldSchemaSource.length).toBeLessThanOrEqual(7600);
     expect(overworldSchemaSource).not.toContain("Session id returned by start_overworld");
     expect(overworldSchemaSource).not.toContain("returns compact context by default");
     expect(overworldSchemaSource).not.toContain("from the session observation");
@@ -296,6 +300,7 @@ describe("MCP server registration", () => {
       "start_overworld",
       "restore_overworld_session",
       "travel_overworld_session",
+      "follow_overworld_session_goal",
       "resolve_overworld_session_road_encounter",
       "resupply_overworld_session",
       "rest_overworld_session",
@@ -309,7 +314,7 @@ describe("MCP server registration", () => {
       "move_overworld_session_area",
       "work_overworld_session_job",
       "complete_overworld_session_quest",
-      "choose_overworld_session_journey",
+      "choose_overworld_session_story",
     ]) {
       const block = registeredToolBlock(toolName);
       expect(block).toContain("defaultCompactOverworld(a)");
@@ -317,6 +322,11 @@ describe("MCP server registration", () => {
     expect(registeredToolBlock("complete_overworld_session_quest")).toContain(
       "expected_rpg_state_hash",
     );
+    expect(registeredToolBlock("follow_overworld_session_goal")).not.toMatch(
+      /destination_town_id|road_id|choice:/,
+    );
+    expect(registeredToolBlock("travel_overworld_session")).toContain("Adjacent destination town.");
+    expect(registeredToolBlock("travel_overworld_session")).not.toContain("routes multi-leg");
 
     const overworldDefaults = serverSourceBlock(
       "function defaultCompactOverworld",
@@ -328,8 +338,11 @@ describe("MCP server registration", () => {
       overworldDefaults.indexOf("...input"),
     );
 
-    expect(registeredToolBlock("start_overworld_session_quest")).toContain(
-      "defaultCompactOverworldAndRpg(a)",
+    for (const toolName of ["start_overworld_session_quest", "choose_overworld_session_journey"]) {
+      expect(registeredToolBlock(toolName)).toContain("defaultCompactOverworldAndRpg(a)");
+    }
+    expect(registeredToolBlock("choose_overworld_session_journey")).toContain(
+      "COMPACT_OBSERVATION",
     );
     const overworldAndRpgDefaults = serverSourceBlock(
       "function defaultCompactOverworldAndRpg",
@@ -345,6 +358,13 @@ describe("MCP server registration", () => {
     );
     expect(overworldAndRpgDefaults).toContain("compact_actions: true");
     expect(overworldAndRpgDefaults.indexOf("compact_actions: true")).toBeLessThan(
+      overworldAndRpgDefaults.indexOf("...input"),
+    );
+    expect(overworldAndRpgDefaults).toContain('PLAY_MODE !== "pure"');
+    expect(overworldAndRpgDefaults).toContain("input.compact_observation === false");
+    expect(overworldAndRpgDefaults).toContain("compact_actions: input.compact_actions ?? false");
+    expect(overworldAndRpgDefaults).toContain("include_actions: true");
+    expect(overworldAndRpgDefaults.lastIndexOf("include_actions: true")).toBeGreaterThan(
       overworldAndRpgDefaults.indexOf("...input"),
     );
     expect(
@@ -379,6 +399,13 @@ describe("MCP server registration", () => {
     expect(rpgDefaults.indexOf("compact_actions: true")).toBeLessThan(
       rpgDefaults.indexOf("...input"),
     );
+    expect(rpgDefaults).toContain('PLAY_MODE !== "pure"');
+    expect(rpgDefaults).toContain("input.compact_observation === false");
+    expect(rpgDefaults).toContain("compact_actions: input.compact_actions ?? false");
+    expect(rpgDefaults).toContain("include_actions: true");
+    expect(rpgDefaults.lastIndexOf("include_actions: true")).toBeGreaterThan(
+      rpgDefaults.indexOf("...input"),
+    );
     const rpgViewOptions = toolApiSourceBlock("type RpgViewOptions", "type RpgEventOptions");
     const rpgEventOptions = toolApiSourceBlock("type RpgEventOptions", "type RpgViewField");
     const viewOnlyRpgArgs = [
@@ -401,6 +428,10 @@ describe("MCP server registration", () => {
     );
     expect(legalActions).toContain("defaultCompactActions(a)");
     expect(actionDefaults).not.toContain("hide_graph");
+    expect(actionDefaults).toContain('PLAY_MODE === "pure" ? false : true');
+    expect(actionDefaults.indexOf('PLAY_MODE === "pure" ? false : true')).toBeLessThan(
+      actionDefaults.indexOf("...input"),
+    );
     const legalActionArgs = toolApiSourceBlock(
       "type RpgLegalActionsArgs",
       "type RpgLegalActionRows",
@@ -478,6 +509,7 @@ describe("MCP server registration", () => {
         "start_overworld",
         "get_overworld_session_context",
         "travel_overworld_session",
+        "follow_overworld_session_goal",
         "scout_overworld_session_poi",
         "talk_overworld_session_contact",
         "investigate_overworld_session_event",

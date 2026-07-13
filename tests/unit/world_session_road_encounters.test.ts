@@ -52,6 +52,35 @@ function roadEvent(overrides: Partial<OverworldRoadEvent> = {}): OverworldRoadEv
     title: "Washed bridge",
     risk: "high",
     summary: "Floodwater has damaged the bridge approach.",
+    requires_choice: true,
+    responses: {
+      cautious_scout: {
+        label: "Scout the road problem",
+        outcome:
+          "You slow down, read the situation, and leave a useful warning for the next traveler.",
+      },
+      assist_travelers: {
+        label: "Help resolve it",
+        outcome:
+          "You spend supplies and effort stabilizing the road trouble instead of merely passing it.",
+      },
+      press_on: {
+        label: "Press on",
+        outcome:
+          "You keep moving and accept the extra strain rather than spending daylight on the encounter.",
+      },
+    },
+    ...overrides,
+  };
+}
+
+function ambientRoadEvent(overrides: Partial<OverworldRoadEvent> = {}): OverworldRoadEvent {
+  return {
+    id: "ambient:a-b",
+    edge: "road:a-b",
+    title: "Wet road report",
+    risk: "medium",
+    summary: "Standing water slows the shoulder traffic.",
     ...overrides,
   };
 }
@@ -132,6 +161,8 @@ describe("overworld session road encounters", () => {
     const restored = restoreOverworldPendingRoadEncounter(
       { edgeId: "road:a-b" },
       restoreIndexes({
+        activeGoalId: "goal:test",
+        completedQuestIds: new Set(),
         currentId: "town_b",
         edgeIds: new Set(["road:a-b"]),
         edgesById: new Map([["road:a-b", edge()]]),
@@ -166,6 +197,8 @@ describe("overworld session road encounters", () => {
 
   it("rejects invalid pending road encounter snapshot bindings", () => {
     const indexes = restoreIndexes({
+      activeGoalId: "goal:test",
+      completedQuestIds: new Set(),
       currentId: "town_b",
       edgeIds: new Set(["road:a-b", "road:b-c"]),
       edgesById: new Map([
@@ -198,6 +231,38 @@ describe("overworld session road encounters", () => {
         { ...indexes, roadEventsByEdgeId: new Map() },
       ),
     ).toThrow(/no road event/);
+    expect(() =>
+      restoreOverworldPendingRoadEncounter(
+        { edgeId: "road:a-b" },
+        {
+          ...indexes,
+          roadEventsByEdgeId: new Map([["road:a-b", ambientRoadEvent()]]),
+        },
+      ),
+    ).toThrow(/ambient report, not a choice/);
+    expect(() =>
+      restoreOverworldPendingRoadEncounter(
+        { edgeId: "road:a-b" },
+        {
+          ...indexes,
+          roadEventsByEdgeId: new Map([
+            ["road:a-b", roadEvent({ active_goal_ids: ["goal:other"] })],
+          ]),
+        },
+      ),
+    ).toThrow(/not active for the current goal/);
+    expect(() =>
+      restoreOverworldPendingRoadEncounter(
+        { edgeId: "road:a-b" },
+        {
+          ...indexes,
+          completedQuestIds: new Set(["quest:retired"]),
+          roadEventsByEdgeId: new Map([
+            ["road:a-b", roadEvent({ retire_after_quest: "quest:retired" })],
+          ]),
+        },
+      ),
+    ).toThrow(/retired by a completed quest/);
     expect(() =>
       restoreOverworldPendingRoadEncounter(
         { edgeId: "road:a-b" },
@@ -237,6 +302,18 @@ describe("overworld session road encounters", () => {
         { ...indexes, nodesById: new Map([["town_b", node("town_b")]]) },
       ),
     ).toThrow(/references an unknown town/);
+  });
+
+  it("never builds a blocking encounter from an ambient road report", () => {
+    expect(() =>
+      buildOverworldPendingRoadEncounter(
+        node("town_a"),
+        node("town_b"),
+        edge(),
+        ambientRoadEvent(),
+        540,
+      ),
+    ).toThrow(/ambient and cannot become an encounter/);
   });
 
   it("resolves supply deficits, fatigue caps, and road journal entries", () => {

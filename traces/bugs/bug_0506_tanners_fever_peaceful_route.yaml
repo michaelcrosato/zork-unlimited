@@ -1,0 +1,32 @@
+id: bug_0506_tanners_fever_peaceful_route
+title: "Tanner's Fever makes the peaceful bedside case legible"
+pack: content/rpg/quests/tanners_fever.yaml
+reported_by: pure-blind-playtest
+report: ai-runs/2026-07-12T02-02-32-866Z/playtest-v3-guided.md
+severity: S2
+symptom: >
+  A verified pure player exhausted Godwin's dialogue, reached Holt's blocked
+  corridor with attack as the only apparent forward verb, and discovered the
+  real meadowsweet treatment only by exhaustive exploration. The same player
+  then failed the treatment check twice and retried without a visible limit or
+  consequence. Runtime audit also found Holt remained attackable after treatment
+  and the combat ending invented meadowsweet even when it was never found.
+root_cause: >
+  Spatial exits existed, but Edric's evidence, Godwin's exhausted dialogue, and
+  the blocked corridor never formed a semantic chain back to a corrective herb
+  and bedside treatment. Clinical clues used unnatural READ actions on a patient
+  and a plant. Treatment failure mutated no state, Holt lacked a peaceful-retire
+  condition, and forced passage required no real remedy.
+fix: >
+  Natural LOOK actions now perform one-shot clinical inspection. Evidence,
+  exhausted dialogue, and corridor copy all point to the same bedside case.
+  The treatment has one rolled attempt followed by an evidence-gated deterministic
+  recovery, Holt retires when treatment succeeds, and forced passage must deliver
+  an identified meadowsweet bundle that actually leaves inventory at the ending.
+tests:
+  - tests/regression/tanners_fever_peaceful_route.test.ts
+  - tests/regression/tanners_fever_treatment_retry.test.ts
+verification:
+  - npm test -- --run tests/regression/tanners_fever_peaceful_route.test.ts tests/regression/tanners_fever_treatment_retry.test.ts
+  - npm run crawl:smoke
+  - npm run health

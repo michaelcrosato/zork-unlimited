@@ -30,6 +30,7 @@ describe("fresh-game tutorial", () => {
     expect(copy).toMatch(/supplies.*fatigue/is);
     expect(copy).toMatch(/scout.*talk.*investigate.*explore/is);
     expect(copy).toMatch(/local area.*roads.*rest.*resupply/is);
+    expect(copy).toMatch(/Goal Passage.*each road.*pauses/is);
     expect(copy).toMatch(/journal.*save.*export.*resume/is);
     expect(copy).toMatch(/40.*80.*every 40/is);
     expect(copy).toMatch(/completing the goal.*sooner/is);

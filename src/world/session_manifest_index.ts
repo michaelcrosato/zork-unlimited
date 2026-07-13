@@ -13,6 +13,10 @@ import type {
   OverworldRegionalArc,
   OverworldRoadEvent,
 } from "./overworld.js";
+import {
+  allOverworldContactPresentations,
+  type OverworldContactPresentation,
+} from "./session_contact_presentation.js";
 
 export type OverworldSnapshotManifestIndex = {
   arcIds: ReadonlySet<string>;
@@ -25,6 +29,7 @@ export type OverworldSnapshotManifestIndex = {
   characterIds: ReadonlySet<string>;
   charactersById: ReadonlyMap<string, OverworldCharacter>;
   characterTownNames: ReadonlyMap<string, string>;
+  contactPresentationsByJournalId: ReadonlyMap<string, OverworldContactPresentation>;
   edgeIds: ReadonlySet<string>;
   edgesById: ReadonlyMap<string, OverworldEdge>;
   eventIds: ReadonlySet<string>;
@@ -111,9 +116,16 @@ export function buildOverworldSnapshotManifestIndex(
 
   const characterIds = new Set<string>();
   const characterTownNames = new Map<string, string>();
+  const contactPresentationsByJournalId = new Map<string, OverworldContactPresentation>();
   for (const [characterId, character] of sources.charactersById) {
     characterIds.add(characterId);
     characterTownNames.set(characterId, townNameForSource(character.home));
+    for (const presentation of allOverworldContactPresentations(character)) {
+      if (contactPresentationsByJournalId.has(presentation.journalId)) {
+        throw new Error(`Duplicate overworld contact journal id "${presentation.journalId}".`);
+      }
+      contactPresentationsByJournalId.set(presentation.journalId, presentation);
+    }
   }
 
   const eventIds = new Set<string>();
@@ -165,6 +177,7 @@ export function buildOverworldSnapshotManifestIndex(
     characterIds,
     charactersById: sources.charactersById,
     characterTownNames,
+    contactPresentationsByJournalId,
     edgeIds,
     edgesById,
     eventIds,

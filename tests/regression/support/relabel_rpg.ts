@@ -178,6 +178,16 @@ function relabelInteraction(
     ...(it.skill_check ? { skill_check: relabelSkillCheck(it.skill_check, r, rv) } : {}),
     ...(it.command_verb !== undefined ? { command_verb: it.command_verb } : {}),
     ...(it.command_template !== undefined ? { command_template: it.command_template } : {}),
+    ...(it.blocked_hint
+      ? {
+          blocked_hint: {
+            visible_when: it.blocked_hint.visible_when.map((condition) =>
+              relabelCondition(condition, r, rv),
+            ),
+            reason: it.blocked_hint.reason,
+          },
+        }
+      : {}),
   };
 }
 

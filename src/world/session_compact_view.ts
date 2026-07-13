@@ -21,7 +21,7 @@ import {
 import type {
   OverworldArea,
   OverworldAreaExit,
-  OverworldCharacter,
+  OverworldCharacterView,
   OverworldExit,
   OverworldExplorationSite,
   OverworldLocalEvent,
@@ -57,7 +57,7 @@ export type OverworldSessionCompactViewState = {
   routeOptions: readonly OverworldSessionRoutePlan[];
   areas: readonly OverworldArea[];
   poi: readonly OverworldPoi[];
-  contacts: readonly OverworldCharacter[];
+  contacts: readonly OverworldCharacterView[];
   events: readonly OverworldLocalEvent[];
   jobs: readonly OverworldLocalJob[];
   rememberedJobs: readonly OverworldLocalJob[];

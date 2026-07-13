@@ -51,13 +51,13 @@
     "Area interactions are verbs, not decoration: scouting a point of interest, talking to a contact, and investigating an event consume time and write journal leads from the current local area.",
     "Longer road travel consumes supplies and adds fatigue; fatigue and missing supplies add deterministic travel delay on top of the distance-based road time, while town services such as inns, markets, healers, and stables let the traveler recover without bypassing distance.",
     "Local events resolve only after area prep: scout a point of interest in that area, talk to that area's contact, and investigate the event on site, then spend time to earn regional renown.",
-    "Every road has a road event tied to its weighted edge; travel is still governed by distance and road class, but each leg has a readable encounter hook.",
+    "Every road has a road event tied to its weighted edge; generic road reports are ambient travel texture, while explicitly authored scenes can become one-shot choices without changing distance or road class.",
     "Each region has a regional arc anchored on its largest towns; resolving enough local events across those towns completes the thread and turns scattered town work into regional progression.",
     "Regional exploration sites are area-anchored, not a global checklist: scouting the current area reveals nearby wild, civic, industrial, ruin, or waterway sites, and exploring them consumes time before adding journal knowledge and renown.",
     "Known-route planning reports distance-based road time separately from condition-based delay, supply use, and fatigue gain so travel preparation is visible before committing.",
     "Every town has first-class local areas, and the number of areas scales by population tier so bigger cities expose more internal exploration before their leads are exhausted.",
     "Every local area has at least one discoverable local job, so even towns without a full authored quest source still provide timed work, renown, and local texture through exploration.",
-    "Road events are actionable travel beats: after a road leg, the traveler must scout, assist, or press on before choosing the next road, making travel more than a distance button.",
+    "Only explicitly authored road events are actionable travel beats: an unconditional scene or one activated by the current campaign goal can stop a leg once for scene-specific scouting, assistance, or pressing on; goal-linked scenes retire after their quest resolves, and ambient reports never block the next road.",
     "Every town has a connected, looped local-area route graph; larger cities gain shortcuts and cross-district links so city exploration is not a single linear corridor.",
     "Pack-backed quest leads are anchored to specific local areas; discovering a notice is not enough to start it until the traveler reaches the area where the lead is posted.",
     "Stateful play exposes only the current local area's POIs, contacts, events, and discovered jobs; moving through local-area routes changes the available actions.",
@@ -12486,8 +12486,8 @@
       "home": "queensbury_town",
       "name": "Queensbury Civic Center",
       "kind": "civic_core",
-      "summary": "Municipal steps, notice boards, and official counters make this the practical center of Queensbury. It is where a large town's rumors become jobs, warrants, and favors.",
-      "discovery": "Exploring it can reveal official notices, regional arc leads, and who has authority in Capital / Mohawk.",
+      "summary": "Road wardens pin fresh snow reports beside the municipal notices. One black-bordered shepherd's petition points from these steps toward Hedrick Cradoc in the market streets.",
+      "discovery": "Exploring it can reveal official notices, the road north, and where Queensbury's shepherds bring trouble that cannot wait for a routine posting.",
       "travel_minutes": 8,
       "services": [
         "notice_board"
@@ -12498,8 +12498,8 @@
       "home": "queensbury_town",
       "name": "Queensbury Market Streets",
       "kind": "market",
-      "summary": "Shopfronts, diners, small depots, and late counters keep Queensbury's trade moving. Travelers can hear what locals need before it becomes posted work.",
-      "discovery": "Exploring it can reveal local quest leads, resupply opportunities, and rumors that have not reached the board yet.",
+      "summary": "Wool carts and winter stalls crowd the market, but Hedrick Cradoc's mud-dark tracking log has opened a hard circle of silence: his father died on the high moor that morning.",
+      "discovery": "Exploring it can reveal Hedrick's Gallowmere lead, resupply opportunities, and what the old grey sow left in the peat above town.",
       "travel_minutes": 12,
       "services": [
         "market",
@@ -23235,7 +23235,26 @@
       "role": "route dispatcher",
       "faction": "Road Wardens",
       "summary": "Hayden Hale dispatches road wardens from Albany Station Quarter, matching late coaches, snow reports, and relief freight to travelers who can move faster than official crews.",
-      "agenda": "Needs someone to carry the packet Rowan flagged from the Station Quarter route desk to Old Cade's hill steading before the cattle are lost; he can point you to the active lead."
+      "agenda": "Needs someone to carry the packet Rowan flagged from the Station Quarter route desk to Old Cade's hill steading before the cattle are lost; he can point you to the active lead.",
+      "variants": [
+        {
+          "id": "wolf_winter_and_gallowmere_closed",
+          "after_quests": [
+            "wolf_winter",
+            "gallowmere"
+          ],
+          "summary": "Hayden Hale has crossed both Cade's hill-steading relief packet and Hedrick Cradoc's moor report off the Station Quarter board; the wardens have filed the returns and moved those crews on.",
+          "agenda": "He has no old winter dispatch left to press on you. He points instead to the current journey goal already visible on your docket."
+        },
+        {
+          "id": "wolf_winter_closed",
+          "after_quests": [
+            "wolf_winter"
+          ],
+          "summary": "Hayden Hale has Cade's surviving cattle and the broken paling entered on the Station Quarter return board.",
+          "agenda": "The Cade packet is closed. The other live report in that chain is already reflected in the current journey goal on your docket."
+        }
+      ]
     },
     {
       "id": "albany_city__industrial__contact",
@@ -25781,11 +25800,11 @@
       "id": "queensbury_town__market__contact",
       "home": "queensbury_town",
       "area": "queensbury_town__market",
-      "name": "Jamie Tanner",
-      "role": "market broker",
-      "faction": "Merchants Exchange",
-      "summary": "Jamie Tanner works as the market broker in Queensbury Market Streets, watching how shortages, disputed deliveries, and late counters affect Queensbury town.",
-      "agenda": "Wants a traveler to handle Queensbury Market Streets's local problems before they spread through the Capital / Mohawk road network."
+      "name": "Hedrick Cradoc",
+      "role": "shepherd's son",
+      "faction": "Queensbury Shepherds",
+      "summary": "Hedrick Cradoc waits beside his father's tracking log, red-eyed and peat-stained after carrying word down from the high moor.",
+      "agenda": "Needs a hunter to read the sign his father left, judge the Gallowmere wind, and take the old grey sow before another shepherd dies."
     },
     {
       "id": "queensbury_town__transport_hub__contact",
@@ -35474,9 +35493,29 @@
     {
       "id": "road_event_albany_city__saratoga_springs_city",
       "edge": "road_albany_city__saratoga_springs_city",
-      "title": "I-87 / New York State Thruway road report",
+      "title": "The northbound relief line",
       "risk": "low",
-      "summary": "The Albany city to Saratoga Springs city leg follows I-87 / New York State Thruway for 32.8 miles; expect truck stops, state police turnouts, and fast-moving freight before arrival."
+      "summary": "Snow ruts and Albany relief-wagon tracks braid the road between the capital and Saratoga Springs. Wardens at each turnout repeat the same fresh warning: a shepherd was killed above Queensbury, and his son is waiting with the spoor record.",
+      "requires_choice": true,
+      "active_goal_ids": [
+        "carry_hedricks_packet_north",
+        "travel_north_with_albany_wardens"
+      ],
+      "retire_after_quest": "gallowmere",
+      "responses": {
+        "cautious_scout": {
+          "label": "Read the warden signs",
+          "outcome": "You compare wagon ruts, warden marks, and the shepherd's broad-spoor warning before choosing the clearest line onward."
+        },
+        "assist_travelers": {
+          "label": "Free a relief wagon",
+          "outcome": "You spend time and stores levering a relief wagon out of the snow ruts, keeping both the supplies and the fresh warning moving."
+        },
+        "press_on": {
+          "label": "Carry the warning onward",
+          "outcome": "You leave the bogged wagons to the wardens and carry their fresh Queensbury warning down the open road at pace."
+        }
+      }
     },
     {
       "id": "road_event_alden_town__elma_town",
@@ -35910,7 +35949,22 @@
       "edge": "road_colonie_town__albany_city",
       "title": "Thruway shoulder flare-up",
       "risk": "low",
-      "summary": "Between Albany city and Colonie town, I-90 squeezes past warehouse ramps where a jackknifed box truck and state-police flares narrow the shoulder; scouting, hands-on help, or a hard push all have visible costs."
+      "summary": "Between Albany city and Colonie town, I-90 squeezes past warehouse ramps where a jackknifed box truck and state-police flares narrow the shoulder; scouting, hands-on help, or a hard push all have visible costs.",
+      "requires_choice": true,
+      "responses": {
+        "cautious_scout": {
+          "label": "Walk the flare line",
+          "outcome": "You read the skid marks and oncoming traffic, then mark the clearest line past the wreck before moving through."
+        },
+        "assist_travelers": {
+          "label": "Help right the box truck",
+          "outcome": "You spend time and stores helping the stranded crew shift the box truck far enough to reopen the shoulder."
+        },
+        "press_on": {
+          "label": "Thread the narrow shoulder",
+          "outcome": "You take the flare-lit gap at pace, accepting the strain before the next wave of traffic closes it."
+        }
+      }
     },
     {
       "id": "road_event_colonie_town__watervliet_city",
@@ -37385,9 +37439,30 @@
     {
       "id": "road_event_rome_city__oneida_city",
       "edge": "road_rome_city__oneida_city",
-      "title": "NY/US regional connector road report",
+      "title": "The river at the mile stones",
       "risk": "high",
-      "summary": "The Rome city to Oneida city leg follows NY/US regional connector for 17.6 miles; expect local cutoffs, ridge roads, and town-maintained bridges before arrival."
+      "summary": "Between Rome and Oneida, rain-fed water noses over the ditch stones while mill hands hammer fresh height marks into a bridge pier. Reports moving both ways agree: the upper weir is groaning and every downstream channel is rising.",
+      "requires_choice": true,
+      "active_goal_ids": [
+        "rome_breaking_weir",
+        "rome_breaking_weir_household_correction",
+        "rome_breaking_weir_public_warning"
+      ],
+      "retire_after_quest": "breaking_weir",
+      "responses": {
+        "cautious_scout": {
+          "label": "Read the flood marks",
+          "outcome": "You compare the fresh pier marks with the drowned ditch stones, learning how quickly the river has climbed before moving on."
+        },
+        "assist_travelers": {
+          "label": "Shore the washout stakes",
+          "outcome": "You spend time and stores helping the mill hands brace warning stakes along the soaked verge before the next rise."
+        },
+        "press_on": {
+          "label": "Race the rising water",
+          "outcome": "You take the exposed stretch at pace before another wash crosses it, accepting the hard strain of the gamble."
+        }
+      }
     },
     {
       "id": "road_event_rome_city__whitestown_town",
@@ -37434,9 +37509,14 @@
     {
       "id": "road_event_saratoga_springs_city__queensbury_town",
       "edge": "road_saratoga_springs_city__queensbury_town",
-      "title": "I-87 / New York State Thruway road report",
+      "title": "Moor sign on the Queensbury road",
       "risk": "low",
-      "summary": "The Saratoga Springs city to Queensbury town leg follows I-87 / New York State Thruway for 24.8 miles; expect truck stops, state police turnouts, and fast-moving freight before arrival."
+      "summary": "Beyond Saratoga the freight road climbs into colder country. Shepherds point out churned verges and a broad, deep track turning toward the Gallowmere hills before Queensbury.",
+      "active_goal_ids": [
+        "carry_hedricks_packet_north",
+        "travel_north_with_albany_wardens"
+      ],
+      "retire_after_quest": "gallowmere"
     },
     {
       "id": "road_event_saugerties_town__catskill_town",
@@ -46342,7 +46422,7 @@
       "title": "The Gallowmere",
       "source": "content/rpg/quests/gallowmere.yaml",
       "home": "queensbury_town",
-      "discovery": "Ask around Queensbury town for work tied to The Gallowmere. The lead is posted in Queensbury Market Streets.",
+      "discovery": "Hedrick Cradoc waits in Queensbury Market Streets with his dead father's tracking log and a same-morning trail to the old grey Gallowmere sow.",
       "visibility": "local_notice_board",
       "area": "queensbury_town__market"
     },
@@ -59508,7 +59588,7 @@
       "home": "queensbury_town",
       "from_area": "queensbury_town__civic_core",
       "to_area": "queensbury_town__market",
-      "route": "Queensbury Civic Center to Queensbury Market Streets",
+      "route": "Follow the shepherds' petition from the civic steps to Hedrick's market stall",
       "travel_minutes": 4
     },
     {

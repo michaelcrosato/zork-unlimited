@@ -16,17 +16,31 @@ describe("pure blind prompt + runner contract", () => {
     expect(prompt).toContain("mcp__adventureforge__choose_overworld_session_journey");
     expect(prompt).toContain("visible `id` value as the tool's `choice`");
     expect(prompt).toContain("`overworld_snapshot_hash`");
+    expect(prompt).toContain("state-bearing compact embedded-quest");
+    expect(prompt).toContain("current legal ids in `context.actions`");
+    expect(prompt).toMatch(/replace\s+any older menu/);
+    expect(prompt).toContain("unchanged hash reply has no context");
+    expect(prompt).toContain("journey-choice pause suppresses");
+    expect(prompt).toContain("mcp__adventureforge__list_legal_actions");
+    expect(prompt).toContain("defaults to labeled `{ id, command }`");
+    expect(prompt).toContain("`compact_actions: true`");
+    expect(prompt).toContain("defaults to labeled `available_actions`");
     expect(prompt).toContain("Only then conduct the exit interview");
     expect(prompt).toContain("`exitReceipt`");
     expect(prompt).toContain('"journey_exit_receipt": {}');
     expect(prompt).not.toMatch(/"journey_exit_receipt"\s*:\s*"/);
 
     expect(prompt).not.toMatch(/30\s*[–-]\s*45|30\s+to\s+45/i);
+    expect(prompt).not.toMatch(
+      /(?:stop|end|exit|finish|quit).{0,80}(?:after|at|around|within|once).{0,50}(?:\d+|ten|twenty|thirty|forty|fifty).{0,30}(?:mcp|tool)?\s*(?:calls?|invocations?|requests?|turns?)/is,
+    );
+    expect(prompt).not.toMatch(/(?:call|turn|request|invocation)\s*(?:budget|limit|quota)/i);
     expect(prompt).not.toMatch(/aim for roughly|take at least|if budget allows|watch for/i);
     expect(prompt).not.toMatch(/Albany|Colonie|Wolf-Winter|breaking_weir|cautious_scout/i);
     expect(prompt).not.toContain("mcp__adventureforge__start_world_quest");
     expect(prompt).not.toContain("resolve_overworld_session_road_encounter");
     expect(prompt).not.toContain("start_overworld_session_quest");
+    expect(prompt).not.toContain("include_actions: false");
   });
 
   it("pins live mode to pure/default and treats 900 seconds as failure only", () => {

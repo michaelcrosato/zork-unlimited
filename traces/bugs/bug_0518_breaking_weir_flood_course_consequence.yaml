@@ -1,0 +1,67 @@
+id: bug_0518_breaking_weir_flood_course_consequence
+title: "Breaking Weir ends with a consequential flood-course choice"
+pack: content/rpg/quests/breaking_weir.yaml
+reported_by: pure-blind-playtest
+reports:
+  - blind-tester/reports/20260712T041909Z_overworld_seed1307.md
+  - blind-tester/reports/20260712T045851Z_overworld_seed1407.md
+  - blind-tester/reports/20260712T054426Z_overworld_seed1507.md
+  - blind-tester/reports/20260712T065854Z_overworld_seed1609.md
+  - blind-tester/reports/20260712T131301Z_overworld_seed2114.md
+  - blind-tester/reports/20260712T142008Z_overworld_seed2216.md
+  - blind-tester/reports/20260712T144457Z_overworld_seed2218.md
+  - blind-tester/reports/20260712T152230Z_overworld_seed2319.md
+  - blind-tester/reports/20260712T161727Z_overworld_seed2421.md
+severity: S1
+symptom: >
+  Nine verified pure players completed The Breaking Weir; eight ended at its
+  goal-completion choice. This retention result does not by itself establish
+  causation because players also described a satisfying four-quest session
+  close. Seed 2421 made clearing the rack, crossing the killing walk, and freeing
+  the winch its best moment, then ended at decision 96 on the old perfect-rescue
+  boundary. The finale saved every house and public good automatically, so the
+  player's strongest hands-on sequence closed without a final decision about
+  what the diverted crest would cost.
+root_cause: >
+  Opening the seized relief-race was the last meaningful act in a linear
+  obstacle chain. Once race_open was set, the quest automatically carried the
+  flood harmlessly around the valley and selected the generic ending_held
+  outcome. The authored rack, walk, and winch decisions therefore all converged
+  on one consequence: households, winter grain, and Pell's old relief works
+  survived together. No legal action made the player own an unavoidable civic
+  tradeoff before the navigation win.
+fix: >
+  After race_open, require one human-visible, equal-score course-frame choice
+  before the valley-rim opens. The stone-race course keeps the lower winter
+  grain dry and spends Pell's old gate and race-house; the field-wash course
+  preserves those relief works and floods the lower grain under silt. Both save
+  every household. Exclusive flood_down_stone_race and flood_over_lower_fields
+  flags, distinct journals, reactive prose, and endings
+  ending_fields_held_race_spent and ending_race_held_fields_given preserve the
+  consequence through quest export and the journey campaign. The campaign maps
+  those endings to exact branch-specific Rome contexts while retaining
+  ending_held and its generic context as a legacy-save fallback. Human UI, full
+  MCP, and compact MCP derive the same choice and visible consequences from the
+  game. Canonical pure play receives no harness recommendation, route, target,
+  ending id, source path, hidden outcome, or solution knowledge.
+deterministic_witnesses:
+  - "the two course pins remain unavailable until race_open, then both legal choices state their complete material costs before selection"
+  - "the valley-rim exit remains blocked until exactly one of flood_down_stone_race or flood_over_lower_fields is set, and the dog-clutch prevents setting both"
+  - "the stone-race choice writes: You keep the lower winter grain dry by committing the full crest to the stone race. Pell's gate and race-house will not survive this flood intact."
+  - "the field-wash choice writes: You preserve Pell's gate and race-house by spreading the crest over the lower fields. Every house is safe, but the winter grain is gone under silt."
+  - "both courses award the same score, save every house, and terminate through distinct ending_fields_held_race_spent and ending_race_held_fields_given identities"
+  - "ending_fields_held_race_spent exports exactly: The valley wakes dry with its winter grain intact, but the full crest has spent Pell's old gate and race-house; the farms have food now and no working relief-race for the next flood."
+  - "ending_race_held_fields_given exports exactly: The valley wakes dry and Pell's weir remains fit for another flood, but the lower farms' winter grain lies under silt; the old defense stands and the coming stores will be lean."
+  - "legacy ending_held remains a generic journey fallback with: The relief-race carries the flood crest around the valley, and Pell's downstream households wake alive."
+  - "fresh UI, full MCP, and compact MCP expose identical player-facing course labels and consequences without a recommended route or hidden content knowledge"
+tests:
+  - tests/regression/breaking_weir_flood_course_choice.test.ts
+  - tests/regression/breaking_weir_flood_book_journal.test.ts
+  - tests/regression/breaking_weir_unread_book_ending_hint.test.ts
+  - tests/unit/world_journey_campaign.test.ts
+verification:
+  - npm run validate -- breaking_weir
+  - npx vitest run tests/regression/breaking_weir_flood_course_choice.test.ts tests/regression/breaking_weir_flood_book_journal.test.ts tests/regression/breaking_weir_unread_book_ending_hint.test.ts tests/unit/world_journey_campaign.test.ts
+  - npm run crawl:smoke
+  - npm run blind
+  - npm run health

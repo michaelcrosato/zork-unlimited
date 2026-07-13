@@ -78,7 +78,10 @@ function getWard(s: GameState): GameState {
   s = act(s, move("west")); // → reaver_rest
   s = act(s, isTalk);
   s = act(s, askTopic("ask_wight"));
-  s = act(s, askTopic("wight_back"));
+  expect(options(s).map((o) => o.id)).toEqual(
+    expect.arrayContaining(["ask_ask_lord", "ask_leave_shade", "go_east"]),
+  );
+  expect(options(s).map((o) => o.id)).not.toContain("ask_wight_back");
   s = act(s, askTopic("leave_shade"));
   s = act(s, move("east")); // → entry_hall
   return s;
@@ -97,7 +100,7 @@ function fightOut(s: GameState): GameState {
 /**
  * Play the warded route through the wight at seed. `defOverride` (if given) replaces
  * the warded defense right before the fight to model the OLD +2 ward (def4) without
- * changing the RNG step stream (the dialogue is the same number of steps either way).
+ * changing the RNG step stream (both variants use the same auto-resumed dialogue route).
  */
 function wardedFight(seed: number, defOverride?: number): GameState {
   let s = initStateForRpgPack(index, seed);

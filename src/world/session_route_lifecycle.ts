@@ -1,6 +1,10 @@
-import type { OverworldRouteResourceState } from "./session_routes.js";
+import type {
+  OverworldRouteResourceState,
+  OverworldRouteRoadEventState,
+} from "./session_routes.js";
 import {
   indexedOverworldRoute,
+  withOverworldSessionRoadEvents,
   type OverworldRoutePlannerIndex,
   type OverworldSessionRoutePlan,
 } from "./session_routes.js";
@@ -14,6 +18,7 @@ export type OverworldSessionRoadRoutePlanState = {
   currentId: string;
   discoveredIds: ReadonlySet<string>;
   resources: OverworldRouteResourceState;
+  roadEventState?: OverworldRouteRoadEventState;
 };
 
 export function planOverworldSessionRoadRoute(
@@ -30,5 +35,8 @@ export function planOverworldSessionRoadRoute(
     state.discoveredIds,
   );
   if (!plan) throw new Error("No discovered route reaches that destination yet.");
-  return withOverworldSessionRouteEstimate(plan, state.resources);
+  return withOverworldSessionRouteEstimate(
+    state.roadEventState ? withOverworldSessionRoadEvents(plan, state.roadEventState) : plan,
+    state.resources,
+  );
 }

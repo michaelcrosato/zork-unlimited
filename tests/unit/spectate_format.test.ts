@@ -104,23 +104,84 @@ describe("formatSpectateEntry", () => {
       JSON.stringify({
         m: 25,
         entry: ["poi", "Scouted the Notice Hall", "Day 1, 10:06"],
+        text: "The marked board carries a winter-relief lead from the western hills.",
         quests: [["wolf_winter", "The Wolf-Winter"]],
       }),
     );
     expect(scout).toContain("Scouted the Notice Hall");
+    expect(scout).toContain("winter-relief lead from the western hills");
     expect(scout).toContain("found quest lead: The Wolf-Winter");
 
     const travel = at(
       "travel_overworld_session",
       { destination_town_id: "albany_city" },
       JSON.stringify({
-        m: 6,
-        entry: ["road", "Took I-90 to Albany", "Day 1, 10:12"],
+        travel: [
+          "road_albany_colonie",
+          "colonie_town",
+          "albany_city",
+          6,
+          0,
+          1,
+          "road_event_albany_colonie",
+          "low",
+          "Thruway shoulder flare-up",
+          "State-police flares mark a jackknifed truck narrowing the shoulder.",
+        ],
         context: { pending_road: { id: "enc1" } },
       }),
     );
-    expect(travel).toContain("Took I-90 to Albany");
+    expect(travel).toContain("travel  [+6m]");
+    expect(travel).toContain("Thruway shoulder flare-up (risk low)");
+    expect(travel).toContain("jackknifed truck narrowing the shoulder");
     expect(travel).toContain("⚠ road encounter");
+
+    const passage = at(
+      "follow_overworld_session_goal",
+      {},
+      JSON.stringify({
+        passage: {
+          destination: "Queensbury town",
+          stopped_at: "Saratoga Springs city",
+          stop_reason: "road_encounter",
+          minutes: [32, 0, 32],
+          supplies: [1, 5],
+          fatigue: [1, 1],
+          travel_condition: "ready",
+          legs: [
+            [
+              "road_albany_saratoga",
+              "albany_city",
+              "saratoga_springs_city",
+              32,
+              1,
+              1,
+              "relief_line",
+              "low",
+              "The northbound relief line",
+              "Wardens and relief wagons mark the road north.",
+            ],
+          ],
+        },
+      }),
+    );
+    expect(passage).toContain("goal passage → Queensbury town  [+32m]");
+    expect(passage).toContain("stopped at Saratoga Springs city (road_encounter)");
+    expect(passage).toContain("The northbound relief line (risk low)");
+    expect(passage).toContain("Wardens and relief wagons mark the road north.");
+    expect(passage).toContain("⚠ road encounter");
+
+    const resolvedRoad = at(
+      "resolve_overworld_session_road_encounter",
+      { strategy: "assist_travelers" },
+      JSON.stringify({
+        m: 40,
+        entry: ["road", "Help resolve it: Thruway shoulder flare-up", "Day 1, 10:52"],
+        text: "State-police flares mark a jackknifed truck; you spend stores and help clear the shoulder.",
+      }),
+    );
+    expect(resolvedRoad).toContain("Help resolve it: Thruway shoulder flare-up");
+    expect(resolvedRoad).toContain("jackknifed truck");
 
     const enter = at(
       "start_overworld_session_quest",

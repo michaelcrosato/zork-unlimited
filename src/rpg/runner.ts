@@ -14,13 +14,17 @@ import {
   indexRpgModel,
   initStateForRpgModel,
   activeDialogue,
+  dlgVar,
 } from "./model.js";
 import {
+  enumerateRpgBlockedActions,
   enumerateRpgBaseActions,
   present,
   resolveRpgAction,
   useInteraction,
+  withRpgDialogueInterruption,
   type RpgActionOption,
+  type RpgBlockedActionOption,
 } from "./legal_actions.js";
 import { evalConditions } from "../core/conditions.js";
 import type { GameEvent } from "../core/events.js";
@@ -32,6 +36,9 @@ import { decorateRpgScoreEvents } from "./score_events.js";
 import { endGameEffects } from "./terminal_effects.js";
 import { maneuverActionId } from "./action_ids.js";
 import { maneuverPhase, maneuverSequenceConditions } from "./maneuver_sequence.js";
+
+export { enumerateRpgBlockedActions };
+export type { RpgBlockedActionOption };
 
 export type RpgIndex = RpgModelIndex & {
   enemies: Map<string, Enemy>;
@@ -77,6 +84,17 @@ export function winningRpgEnding(index: RpgIndex, state: GameState): string | nu
     if (evalConditions(wc.conditions, state)) return wc.ending;
   }
   return null;
+}
+
+/** Terminal observations and saves must never retain a live conversation. */
+function terminalRpgEffects(index: RpgIndex, state: GameState, ending: string): Effect[] {
+  const active = activeDialogue(index, state);
+  return [
+    ...(active
+      ? ([{ set_var: { name: dlgVar(active.npc.id), value: 0 } }] satisfies Effect[])
+      : []),
+    ...endGameEffects(ending),
+  ];
 }
 
 /**
@@ -200,7 +218,10 @@ export function buildRpgRules(
           // effects validate green yet be unwinnable at runtime (regression:
           // rpg_skill_check_base_effects.test.ts).
           const roll = resolveSkillCheck(state, it.skill_check, rngFor(state));
-          return { conditions: roll.conditions, effects: [...it.effects, ...roll.effects] };
+          return withRpgDialogueInterruption(index, state, {
+            conditions: roll.conditions,
+            effects: [...it.effects, ...roll.effects],
+          });
         }
       }
       return resolveRpgAction(index, state, action);
@@ -210,7 +231,7 @@ export function buildRpgRules(
       const room = index.rooms.get(locationId);
       const effects: Effect[] = room ? [...room.on_enter] : [];
       const ending = winningRpgEnding(index, state);
-      if (ending) effects.push(...endGameEffects(ending));
+      if (ending) effects.push(...terminalRpgEffects(index, state, ending));
       return effects;
     },
 
@@ -219,7 +240,7 @@ export function buildRpgRules(
     // entry. Skipped once the game has ended.
     checkWin(state: GameState): Effect[] {
       const ending = winningRpgEnding(index, state);
-      return ending ? endGameEffects(ending) : [];
+      return ending ? terminalRpgEffects(index, state, ending) : [];
     },
 
     // Zork-style score feedback derived from the RPG `score` var.

@@ -8,10 +8,12 @@ import {
   type RpgCompactState,
 } from "./compact_rpg_state.js";
 import {
+  blockedActionRowsFor,
   legalActionRowsFor,
   rpgObservationNeedsActions,
   rpgViewField,
   type RpgLegalActionRows,
+  type RpgBlockedActionRows,
   type RpgLegalActionsArgs as RpgViewLegalActionsArgs,
   type RpgViewField,
   type RpgViewOptions,
@@ -64,6 +66,7 @@ export type RpgLegalActionsToolArgs = {
 
 type RpgLegalActionsToolPayload<Args extends RpgLegalActionsToolArgs> = {
   actions: RpgLegalActionRows<Args>;
+  blocked_actions?: RpgBlockedActionRows<Args>;
   state_hash: string;
 };
 
@@ -222,8 +225,12 @@ export function runRpgListLegalActions<Args extends RpgLegalActionsToolArgs>(
     return rpgStateUnchanged(stateHash) as RpgLegalActionsToolResponse<Args>;
   }
   const actions = rpgRuntime.legalActionsFor(s);
+  const blockedActions = rpgRuntime.blockedActionsFor(s);
   return {
     actions: legalActionRowsFor(sessions, s, actions, args),
+    ...(blockedActions.length > 0
+      ? { blocked_actions: blockedActionRowsFor(sessions, s, blockedActions, args) }
+      : {}),
     state_hash: publicRpgStateHash(stateHash),
   } as RpgLegalActionsToolResponse<Args>;
 }

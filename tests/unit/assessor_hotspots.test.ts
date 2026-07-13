@@ -10,9 +10,19 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { assess } from "../../src/afk/assessor.js";
 
+type FixtureOverworld = Record<string, unknown> & {
+  characters: Array<{ variants?: unknown }>;
+};
+
 const REAL_OVERWORLD = JSON.parse(
   readFileSync(join(process.cwd(), "content", "world", "new_york_overworld.json"), "utf8"),
-) as Record<string, unknown>;
+) as FixtureOverworld;
+
+function fixtureOverworldWithoutContactVariants(): FixtureOverworld {
+  const world = structuredClone(REAL_OVERWORLD);
+  for (const character of world.characters) delete character.variants;
+  return world;
+}
 
 /** Same minimal quest fixture assessor.test.ts uses to get a working overworld
  *  + one bound, validating world quest without depending on real shipped
@@ -23,7 +33,7 @@ function writeFixtureQuestRoot(root: string): void {
   writeFileSync(
     join(root, "content", "world", "new_york_overworld.json"),
     JSON.stringify({
-      ...REAL_OVERWORLD,
+      ...fixtureOverworldWithoutContactVariants(),
       quests: [
         {
           id: "hotspot_fixture",

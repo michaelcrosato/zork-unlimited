@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 536 -->
+<!-- historical_cycle_count: 552 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -15,162 +15,135 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
 
-### Cycle result - wolf_winter_post_hunt_consequences
+### Cycle result - goal_passage_decision_contract
 
-- Feedback surface: baseline explorer 930016 (5/4, replay yes) called saving the split guard its best moment; post-change explorer 930017 (5/3, replay no) and breaker 930018 (5/4, replay yes) spent their stake at old grey, proving the coda stays optional rather than forced.
-- Content surface: saved split guard or brace-stake can now bar the inner cattle-gate in one terminal action or be carried into dawn for paling repair; equal-score choices differ in inventory, flags, journal, ending id/title, and the outcome identity exported to the overworld (`bug_0505`).
-- Regression surface: both resources fork from identical post-leader states into 60/60 gate-barred versus timber-saved outcomes; ordinary spent routes retain `ending_held`. The graph exhausts at 335,482/400k progress and 670,963/800k READ-inclusive states without raising caps.
-- Feedback compile: 449 verified reports (29 rejected), twelve Wolf reports at clarity 4.67 / enjoyment 3.67 / replay 4/12; the top compact-hash clusters remain flat historical fleet evidence contradicted by exact current projections.
-- Self-critique: PASS for a real terminal material consequence and durable outcome title, not for organic discovery—the two fresh post-change players spent their wood earlier. Repeated clean-wedge loft confusion was closed by stating that only frost-split rail opens recovery; a sound rail stays braced.
-- CI follow-through: replaced quadratic exhaustive-BFS dequeues and 6.5M success-path matcher allocations without changing traversal, state caps, or assertions; exact 665,101-state score and 670,963-state relabel proofs now pass isolated in 58s / 103s.
-- Guard: final crawl `20260711T235321Z` covered 6,000 steps, 8/8 Wolf rooms, 39/33 actions, and 247 overworld nodes; all three reports verify, and `npm run health` passes all 293 files / 2,062 tests and 12 packs.
+- Change: the authored current goal now presents one identical, game-native Goal Passage in UI and MCP; selecting it applies every real road cost and discovery, stops at objective/event/resource boundaries, and counts as one accepted player decision while manual adjacent travel remains available.
+- Evidence choice: 14/17 verified journey-v3 players reported routing or connective-travel friction, so this current cohort overrode the compiler's older Wolf compact-journal recommendation. `bug_0519` pins resource/log parity, interruption, checkpoint coexistence, save/restore, and pre-choice secrecy.
+- Pure evidence: independently verified pure/fresh seed 7 completed Wolf-Winter, Gallowmere, Tanner's Fever, and Breaking Weir by decision 90, continued at goals/checkpoints 24/40/48/70/80, then ended honestly at goal 4; clarity 4/5, enjoyment 5/5, replay true. Prior route-padding friction did not recur, though one low-severity `area_route_id` versus `area_id` mismatch remains.
+- Self-critique: PASS for shared decision semantics and a clean fresh canary, not causal retention proof—the report does not identify its exact travel tool calls, and the player still exited after four quests. The ledger has 467 accepted reports, only one newer than compile 466, so feedback compilation remains below its three-report threshold.
+- Guard: pre/post 6000-step crawls are green (`20260712T181935Z`, `20260712T185724Z`; 247/247 towns, 344/344 roads, 12/12 quests); browser play verified tutorial/card/encounter interruption; report copy SHA-256 is `b847618a3419d3cda4a52cbc40839dcd7b6104aae9e9ba3cdcfd665da9d0fb4b`; full health passed (311 files/2194 tests, UI, 12 packs). Immutable route memoization and duplicate-free verifier scheduling removed repeated work without changing proof limits.
 
-### Cycle result - wolf_winter_complementary_clue_roles
+### Cycle result - breaking_weir_flood_course_consequence
 
-- Feedback surface: pre-change lore-reader 930014 (4/4, replay yes) found Cade's close/wait advice contradictory and bare "yearling" calf-like; post-change lore-reader 930015 independently ran guarded and quick routes (both 55/60), found no contradiction, praised the clue→mechanic translation, and would replay (4/4).
-- Content surface: the day-book now supplies pack/preparation history without combat commands or Cade's guarantee; Cade labels quick/open versus guarded/patient roads in root prompts, speech, and compact journals, while every pre-contact surface names a young wolf (`bug_0504`).
-- Regression surface: five focused role/runtime/tradeoff witnesses join the semantic compact inventory; the tightest rewritten fields fit at 276/280 narration, 278/280 wrapped dialogue, and 124/128 journal characters, with 16 Wolf files / 72 tests green.
-- Feedback compile: 446 verified reports (29 rejected), nine Wolf reports at clarity 4.56 / enjoyment 3.67 / replay 2/9; its top compact-hash clusters remain flat historical fleet evidence already disproved by exact compact tests and fresh reports.
-- Self-critique: PASS for complementary clue discovery and the first two consecutive replay-positive Wolf runs, not for consequence depth—the blind comparison saw both roads share score/ending, lucky quick kills can hide their risk, and unspent crafted gear still lacks payoff. Do not reward a preferred tactic with score; make successful routes leave distinct actionable consequences next.
-- Guard: final crawl `20260711T172631Z` covered 6,000 steps, all 8 Wolf rooms/actions and 247 overworld nodes; both blind reports verify, the 446-report ledger is current, and `npm run health` passes all 285 files / 2,016 tests and 12 packs.
+- Root evidence: nine verified pure players had completed The Breaking Weir and eight ended there; its rack→walk→winch chain always delivered a perfect rescue without asking what the valley would sacrifice. This made an owned flood-course consequence the strongest scoped correction (`bug_0518`).
+- Surface: opening the race now exposes one equal-score, mutually exclusive choice—save winter grain by spending Pell's old race-house, or preserve the old flood works by washing the lower fields. Distinct flags, journals, ending identities/copy, and exact post-Weir campaign context carry the chosen cost; no hidden route or solution data crosses UI/MCP.
+- Contract repair: rejected timeout seed 2522 chose the grain organically and called the fork “real moral weight,” but its audit caught checkpoint Continue dropping the current embedded menu. MCP now binds the exact quest that caused a pause and returns its unchanged, post-action compact/full context on Continue, matching UI; End, story blocks, stale guards, and ended quests expose none.
+- Pure evidence: verified pure/fresh seed 2524 completed Wolf-Winter, Gallowmere, and Tanner's Fever, continued at decisions 22/40/47, then ended honestly at goal 3 on 74; clarity 5/5, enjoyment 4/5, replay true, no rejects/stuck/timeout. Its exact report copy is hash `852669aa7725`.
+- Compile/self-critique: ledger 466/30 rejected; 17 v3 pure exits all continued at least once (75 continue/17 end, mean 94.71 decisions). PASS for a real Weir sacrifice and checkpoint parity, not retention uplift—the valid player stopped before Weir, seed 2522 remains rejected evidence, and long-haul travel/resource thresholds remain the fresh friction.
+- Guard: pre/final crawls `20260712T164013Z`/`20260712T174925Z` covered 6,000 steps and 247/247 nodes; focused 94-test plus pure-server/variant/structural proofs, exact report copy, and full health passed.
 
-### Cycle result - wolf_winter_loft_resource_routing
+### Cycle result - breaking_weir_next_adventure_choice
 
-- Feedback surface: pre-change casual seed 930011 won Wolf-Winter 60/60 (clarity 4, enjoyment 3) but saw one prompted maneuver/follow-up per fight; the 443-report compile measured six fresh Wolf runs at clarity 4.67, enjoyment 3.67, replay 0/6.
-- Content surface: failed-rail recovery now chooses a direct spend/save decision or a gated one-way fodder-loft approach; saving the split guard carries it to a costed leader opening, while committing either encounter consumes it exactly once. Reactive rooms/endings remember where it was spent (`bug_0503`).
-- Regression surface: fixed rolls favor early spend at 17 vs 14 HP and late spend at 25 vs 23; the final graph exhausts at measured 332,551 progress / 665,101 READ-inclusive states, with bounded 400k/800k caps and 20% headroom.
-- Blind playtests: explorer 930012 found the loft and resource choice organically (5/4); final breaker 930013 ran prepared 60/60 and reckless 45/60 routes with no mechanical defect (5/3), then exposed overpromised unprepared prose, fixed and pinned before landing.
-- Self-critique: PASS for one real spatial/resource plan, not the replay gate—both fresh players still declined replay, lucky opening kills can make the saved guard feel optional, and Cade/day-book remain an explicit duplicated answer key. Complementary clue discovery is next.
-- Guard: final crawl `20260711T164052Z` covered 6,000 steps, all 8 Wolf rooms and 247 overworld nodes; 15 Wolf files / 67 tests, all 12 packs, `npm run health` (284 files / 2,011 tests), and the 444-report ledger are green.
+- Root evidence: eight verified pure players completed The Breaking Weir and seven ended there; the sole continuer received the fixed Advocate's Case after four similarly sequenced quest arcs. This made a macro-agency experiment the strongest scoped retention correction, with explicitly moderate causal confidence because exits described a satisfying session close (`bug_0517`).
+- Surface: Breaking Weir's honest Continue/End choice remains first and now previews two distinct live premises. Continue reveals an Oswego legal/social versus Greece lethal/exploration choice; either selected-first goal records one meaningful decision and consequence journal, while the unchosen lead stays live and follows only after the selected quest completes.
+- Compatibility/privacy: new selected-first ids preserve legacy Oswego/Greece v8 goal and journal proof exactly. MCP tool discovery now accepts a generic currently visible choice string instead of leaking all future semantic option ids; runtime, UI, full MCP, compact MCP, save/restore, and blocked-action behavior agree.
+- Pure evidence: verified pure/fresh seed 2421 completed Wolf-Winter, Gallowmere, Tanner's Fever, and Breaking Weir in 96 accepted decisions (128 agent turns), understood the two-lead teaser, then honestly ended before consent at goal 4; clarity 4/5, enjoyment 5/5, replay true, no rejects/stuck/timeout.
+- Compile/self-critique: ledger 465/30 rejected is two reports beyond the 463-report compile, below the ≥3 threshold. PASS for real next-adventure ownership and secrecy, not retention uplift: post-change continuation is 0/1 and aggregate Breaking-Weir continuation is 1/9; an owned in-quest flood consequence and Tanner's first-observation Holt prose are next evidence-backed debts.
+- Guard: pre/post crawls `20260712T154852Z`/`20260712T161358Z` covered 6,000 steps and 247/247 nodes; exact seed-2421 report copy, focused 157-test suite, and full health (307 files/2,174 tests, UI, 12 packs) passed.
 
-### Cycle result - wolf_winter_compact_prose_integrity
+### Cycle result - gallowmere_starting_knife_truth
 
-- Feedback surface: pre-change lore-reader seed 930009 won Wolf-Winter 60/60 (clarity 5, enjoyment 4) but found room/item prose permanently clipped; the standardized 440-report compile kept compact Wolf journals first (19 S2 mentions) and measured fresh Wolf replay at 0/3.
-- Content surface: rewrote the audited 28 authored fields to their strictest real transport budgets—room/read/narration ≤280, journal ≤128, wrapped Cade dialogue ≤253, score-bearing ending ≤336—while preserving Albany, guarantee/gamble, every maneuver/recovery verb, and reactive route identity (`bug_0502`).
-- Regression surface: a semantic compact inventory covers every reachable authored string and actual wrapper; seven all-worst tactical routes must preserve complete events, explicit victory, 60/60, and distinct endings with no omission marker or hash suffix.
-- Blind playtest: post-change lore-reader seed 930010 won 60/60 (clarity 5, enjoyment 4) and no longer mentioned clipping; it praised the period voice and instead exposed raw inline dice arithmetic as the new S1 tone break.
-- Self-critique: PASS for compact tutorial/payoff integrity, not depth acceptance—replay stayed false, the optimal tutorial path remains obvious, and transparent combat math now interrupts the fiction. Diegetic combat feedback is the next causal engine/content seam.
-- Guard: post-change crawl `20260711T151519Z` covered 6,000 steps and all 247 nodes; 14 Wolf files / 62 tests, all 12 packs, `npm run health` (283 files / 2,006 tests), and the 441-report feedback ledger are green.
+- Root evidence: independent pure seeds 2216/2218 both trusted Gallowmere's claim that their knife was at the belt, examined it, left with empty inventory, and later spent 11/5 extra accepted decisions recovering it; raw transcripts prove no pre-pickup USE or silent no-op (`bug_0516`).
+- Surface: the hunter's mandatory, zero-payoff pickup is now real `held` starting gear, matching Wolf-Winter's spear precedent. Fresh prose, inventory, and action menus agree; TAKE/DROP and unreachable missing-knife variants retire, while EXAMINE, checks, stats, score, combat, and endings remain intact.
+- Parity proof: fresh core, UI, full MCP, and compact MCP all carry `hunting_knife`, expose identical current actions, and preserve complete Hedrick-west/path-north orientation below compact limits; direct travel exposes both authored tool interactions without a recovery detour.
+- Pure evidence: exact-hash seed 2319 started with the knife in compact inventory, completed Gallowmere 50/50 with its blind-side strike as the best moment, continued at decisions 22/40/47/71/80, then ended after goal 4 at 96 (clarity 5/5, enjoyment 4/5, replay true; no rejection, loop, or stuck state).
+- Compile/self-critique: ledger 464/30 rejected is one report beyond the 463-report compile, below the ≥3 threshold. PASS for restored equipment trust, not retention completion—the player still stopped and identified repeated clue/tool/check quest skeletons, abstract pacing bookkeeping, and templated road copy as the next debts.
+- Guard: pre/post crawls `20260712T151119Z`/`20260712T152119Z` covered 6,000 steps, all 7 Gallowmere rooms and 247/247 overworld nodes; hash `b8526f2f8235`, exact pure report copy, focused 10-test proof, and full health (306 files/2,169 tests, UI, 12 packs) passed.
 
-### Cycle result - wolf_winter_cross_encounter_resource_agency
+### Cycle result - tanners_fever_compact_case_integrity
 
-- Feedback surface: the frozen direct gate still had 30/100 linear/prescribed reports and replay 16/100; the verified three-report compile `20260711T140033Z` again ranked obvious safest-line combat first, ahead of completion-safe compact clipping.
-- Engine surface: optional hash-preserving maneuver `resource_effects` can only gain/spend declared items; ownership guards, duplicate/conflict/reference/obtainability proofs, save integrity, relabeling, full MCP/UI metadata, and one-shot execution are pinned by `bug_0501`.
-- Content surface: the braced flank line now chooses reliable pin or a possibly exposed brace-stake salvage; the carried stake earns and is consumed by a stronger leader crossbrace, with truthful backtracking and a route-specific ending. Fixed rolls make each branch finish 2 HP ahead in one outcome and 2 behind in another; all-worst stake play ends at 16 HP.
-- Blind playtests: isolated seeds 930007/930008 both won 60/60 with no mechanical defect (clarity 5/4, enjoyment 4/3); the breaker discovered the stake organically, named it the best moment, and verified stale hashes/repeats/post-ending rejection, while the explorer chose the untouched off-side route.
-- Self-critique: PASS as the first persistent cross-encounter trade, not an acceptance-gate pass—both fresh players still declined replay and the breaker found the risk too mild. With agency semantics stable, the verified 28-field compact tutorial/payoff budget repair is next before broader pressure tuning.
-- Guard: post-change crawl `20260711T143604Z` covered 6,000 steps and all 247 nodes; exhaustive Wolf relabeling, 67 focused tests, all 12 packs, and `npm run health` (282 files / 1,993 tests) are green.
+- Root evidence: independent pure seeds 1912/2115 both saw legal `go_east`, but 697-character sickroom prose hid herb-store orientation, 744-character notes prose hid the remedy handoff, and the 397-character corridor block hid its third proof. Seed 1912 recovered through verbose mode; seed 2115 looped west/north and exited at checkpoint 80 (`bug_0515`).
+- Surface: all 55 reachable Tanner's Fever prose bodies now fit their strictest transport exactly—room/LOOK/object/read/narration ≤280, rolling journal ≤128, blocked reason ≤180, wrapped dialogue ≤280, and score-bearing ending ≤360. Read/unread/dropped notes receive state-truthful sickroom guidance; mechanics, choices, routes, score, and endings are unchanged.
+- Parity proof: the literal seed-2115 sequence runs UI and compact MCP in lockstep through Edric, Godwin, notes, blocked corridor, east herb store, treatment, and 50/50 ending with identical menus/context/narration/memory and no omission chrome; every reachable prose projection is byte-exact.
+- Pure evidence: fresh seeds 2216/2217/2218 all independently completed Tanner without its prior stall and continued afterward. Exact-final-hash seed 2218 continued through checkpoints 80/120, completed five distinct quests, then ended at goal 5 on decision 130 (clarity 4/5, enjoyment 5/5, replay true); its new S1 was Gallowmere's falsely pre-held knife.
+- Compile/self-critique: ledger 463/30 rejected; all 14 contract-v3 pure exits continued at least once (62 continue/14 end), checkpoint 40=14/0, 80=9/3, 120=1/0, mean 96 decisions. PASS for Tanner parity, not retention completion—players still stop; Gallowmere inventory truth and repetitive long-route travel are next.
+- Guard: pre/final crawls `20260712T135922Z`/`20260712T144433Z` each covered 6,000 steps and 247/247 nodes; focused parity/route/recovery suites, exact final playtest copy, hash `3074f38c0ae6`, and full health (305 files/2,165 tests, UI, 12 packs) passed.
 
-### Cycle result - rpg_conditional_world_object_visibility
+### Cycle result - pure_current_menu_continuity
 
-- Blind playtest: fresh MCP-only Wolf-Winter seed 930005 reached `ending_held` at 29 HP and 60/60, clarity 5/5, enjoyment 4/5, replay true; it proved the renamed empty rail-bed still exposed stale `paling_rail`/LOOK affordances and again saw Cade clipping.
-- Engine surface: optional hash-preserving object `visible_when` gates world placement across full/compact observations, every object verb, forced actions, UI projection, and nested containers; inventory stays authoritative and OPEN narrates the actual post-open contents.
-- Validation/content surface: feasibility, combined dead guards, cyclic obtainability, relabeling, and exhaustive presence liveness are pinned; Wolf-Winter retires the rail entity when its timber becomes carried gear, with `bug_0500` witnesses.
-- Self-critique: PASS as a reusable correctness-class closure; chose it off-list because the compiled hotspot predates `da9f22b6` and the fresh S1 outranked planned S0 compression. Compact tutorial integrity remains next.
-- Guard: verified cycle report, pre/post 6,000-step crawls (latest `20260711T134116Z`, 247/247 nodes), all 12 packs clean, and `npm run health` (281 files / 1,986 tests) green.
+- Root evidence: raw verified pure seed 2013 received Cade's new dialogue state without its current menu, reused stale room actions twice, and missed both lessons; the actions existed and no legal-action read occurred while dialogue was open.
+- Surface: pure compact quest start/read/step now always returns the bounded current action ids, while pure verbose observations and default legal-action reads use human labels; explicit id-only, full, and structural behavior stays intact. Cade truthfully offers either compatible lesson or both and names the remaining lesson after one (`bug_0514`).
+- Pure evidence: independent fresh seeds 2114/2115 both used TALK→quick lesson→guarded lesson directly from successive returned menus, then finished Wolf-Winter 60/60 with no recurrence. Seed 2114 continued through decisions 22/40/48/77/80 and ended after goal 4 at 102 (5/5, replay); seed 2115 continued through goal 2 and ended at checkpoint 80 with Tanner active (4/4, replay).
+- Compile: ledger 460/30 rejected; 11 contract-v3 pure exits all continued at least once (46 continue/11 end), checkpoint 40 is 11/0 and checkpoint 80 is 7/2. This is stronger continuation evidence, not proof players cannot stop.
+- Self-critique: PASS for human/MCP current-choice parity, not retention. Seed 2115 repeatedly saw `go east` but never found Tanner's east herb store, confirming the already-known compact destination-cue debt; seed 2114 also repeated route-tool overpromise and long-distance travel padding.
+- Guard: pre/post crawls `20260712T124938Z`/`20260712T130913Z` each covered 6,000 steps and 247/247 nodes; focused runtime/content/parity tests, exact playtest copy, and full health (304 files/2,162 tests, UI, 12 packs) passed.
 
-### Cycle result - wolf_winter_reactive_backtracking_truth
+### Cycle result - tanners_fever_accountability_aftermath
 
-- Blind playtest: fresh MCP-only Wolf-Winter seed 930004 reached `ending_held` at 60/60, clarity 5/5 and enjoyment 4/5; it independently reproduced duplicate `watch_started` on a store return and again found compact clipping/prescribed play.
-- Content surface: Steading watch prose now keys off visit history; Byre-Yard orders post-yearling/flank/leader states; Broken Paling distinguishes split timber, the carried guard, and its spent empty rail-bed without changing mechanics or score.
-- Regression surface: `bug_0499` and focused tests pin event-idempotent re-entry plus truthful hub/rail backtracks; all newly authored reactive room text fits the existing compact event budget.
-- Self-critique: PASS for the 72-report correctness family, not a depth pass; the focused repair deliberately leaves compact truncation/Cade affordances/defense visibility and the failed linearity/replay gates for subsequent cycles.
-- Guard: verified cycle report, pre/post 6,000-step crawls (latest `20260711T124605Z`, 247/247 nodes), Wolf pack 0 warnings, and `npm run health` (279 files / 1,971 tests) green.
+- Evidence choice: the assessor again ranked a stale fleet-only Wolf compact-journal cluster; verified pure seeds 1809 and 1912 instead both ended at Tanner's goal-3 boundary and contrasted that repeated clue→check handoff with Wolf-Winter's memorable relief-wagon consequence.
+- Surface: Tanner's recovery now truthfully previews an Oneonta accountability decision at its normal continue/end boundary. End exits without inventing a branch; continue reveals an equal-cost choice between private household correction and a public dosage warning before either distinct goal carries the same live Breaking Weir packet to Rome (`bug_0513`).
+- Integrity/parity: selection counts exactly once, persists branch-specific journal/goal proof, enables the same rising-river road scene, and leaks no target/solution data; generic core, crawler, web, full/compact MCP, pure schema, and v8 legacy-goal restore are pinned.
+- Pure evidence: verified pure/fresh seed 2013 continued at goal 1 (23), checkpoint 40, and goal 2 (47), then honestly ended at Tanner's completion on decision 77 before seeing the gated branch; clarity 4/5, enjoyment 5/5, got-stuck false, replay true. This directly samples the intended no-branch exit path, while deterministic UI/MCP tests carry the continue-path proof.
+- Self-critique: PASS for accountable game-native continuation, not retention—the fresh player still chose a satisfying three-quest ending. Ledger 458 is one report beyond the prior compile, below threshold; Cade's advertised-but-invisible tactical fork is the new S1, with undiscovered long-route planning and compact Tanner cue loss recurring behind it.
+- Guard: pre/post crawls `20260712T115442Z`/`20260712T121942Z` each covered 6,000 steps and 247/247 nodes; the canonical report and receipt verify, and full health passes 304 files / 2,160 tests, UI, and all 12 packs.
 
-### Cycle result - wolf_winter_tactical_follow_through
+### Cycle result - interruptible_dialogue_exchange
 
-- Engine surface: added validated one-layer `after` maneuver sequences with opening/follow-through metadata, exclusive cohorts, stable result flags, and CLI/UI exposure; raised exhaustive caps to the measured 233,618-state progress and 467,235-state liveness spaces.
-- Content surface: all three Wolf-Winter fights now use named two-beat lines; the failed wedge binds a real, spent split-rail guard; six route-specific endings preserve 60/60. Static conservative damage remains 28 while the concrete prepared maximum is 24.
-- Blind playtest: fresh MCP-only seed 930002 reached `ending_held` in 22 steps at 21 HP and 60/60; clarity 5/5, enjoyment 4/5, replay true. Its false absent-guard DROP finding was fixed with paired reducer/route regressions.
-- Fleet harvest: 200/200 fresh `gpt-5.5` reports verified (100 direct + 100 overworld), 0 rejected/stuck/crawl findings, all Byre Held; direct clarity/enjoyment 4.32/3.76, 93x60/60, preparation-best 99/100.
-- Self-critique: FAIL; cleanup improved 7 -> 2, but frozen rail 20 (cap 5), linearity 30 (cap 9), and replay 16 (floor 20) missed. Reactive backtracking truth is the next assessor-selected repair.
-- Guard: verified blind report, post-fix crawl `20260711T101454Z` (6,000 steps; 247/247 overworld nodes), `npm run health` (279 files / 1,971 tests), and integrity comparison against the parent commit.
+- Evidence choice: the assessor still ranked already-closed legacy Wolf compact-journal clusters; verified pure seed 1809 instead named modal dialogue and navigation-only replies as its worst moment. Corpus audit found 29 unconditional root-back reply nodes, 24 back-only across 9/12 quests.
+- Surface: a safe reply emits its effects/prose and resumes an effect-free post-effect root in one ASK when every child choice is mirrored there; room actions and authored recovery rows remain visible beside topics. Same-room acts preserve an eligible speaker; leaving, retiring that NPC, or ending closes atomically.
+- Integrity/parity: synthetic child-only/root-effect branches decline folding; UI, CLI, full/compact MCP, aliases, journey classification, saves, and the reducer share one action set. The Barrow trace replaces `wight_back` with a required accepted strike and proves victory; the initial-zero crawler oracle now records once instead of spinning.
+- Blind iteration: pure seed 1909 rated 4/5 clarity, 5/5 enjoyment and continued at 25/40/51/76 before checkpoint 80, but exposed stale `ask_byre` after a same-room read; that regression now has a one-step read→ASK proof. Seeds 1910/1911 hit the technical timeout and are rejected, not retention evidence.
+- Final pure evidence: verified pure/fresh seed 1912 had no dialogue rejection/filler recurrence, continued at 23/40/49/80, ended honestly at goal 3 on decision 83, rated 4/5 clarity and 5/5 enjoyment, got-stuck false, replay true. New S1: Tanner's compact sickroom text can truncate the east herb-store cue; long objective-route preview also recurred.
+- Compile/self-critique: ledger 457 accepted/30 rejected; compile has eight v3 pure exits, all continued (35 continue/8 end; checkpoint 40=8/0, 80=6/1). PASS for conversation flow, not retention—the player still chose a satisfied three-quest ending; Tanner consequence agency and compact route/cue truth remain next.
+- Guard: 176 changed-file parity/migration/recovery tests, typecheck/lint/format, browser smoke with no console errors, final 6,000-step crawl (247/247 nodes, 344/344 edges, 12/12 quests), verified receipt, explicit engine-change re-pin acknowledgment, and full health passed.
 
-### Cycle result - wolf_winter_enemy_maneuvers
+### Cycle result - player_visible_recovery_affordance
 
-- Engine/content surface: added reusable one-shot enemy maneuvers—seeded combat rounds with conditioned temporary attack/defense tradeoffs—and rebuilt `wolf_winter` around three telegraphed openings, a real Albany relief spear, and a consequential one-attempt breach wedge.
-- Loop effect: engine/MCP/CLI/UI/save validation plus `bug_0497` regressions pin unique action ids, exclusive result ownership, encounter-aware combat bounds, monotonic retirement, temporary math, fallback attacks, exhaustive liveness, reactive aftermath, and the exact 28-damage guarantee; compact assessment now always names the blind-rotation target.
-- Blind-playtest quest "advocates_case": seed 930001, clarity 4/5, enjoyment 4/5, ending `ending_exempted`, 50/50 with no mechanical failure. The explicit user depth mandate and repeated `wolf_winter` S2 combat feedback justified choosing this off-list tranche.
-- Fleet harvest: 200/200 fresh `gpt-5.5` reports verified (100 overworld + 100 direct `wolf_winter`, 20/persona/target), 0 stuck, all Byre Held; direct clarity/enjoyment 4.34/3.84, 96x60/60, and all 100 named tactical preparation as the best moment.
-- Self-critique: PASS_WITH_NOTES; direct reports still found rail unfairness 28/100, prescribed/linear play 18/100, and basic cleanup 7/100. `docs/CURRENT_PLAN.md` chooses a recoverable, multi-route Broken-Paling follow-through; replay 0/100 is only directional because the prompt prefilled false.
-- Guard: final 6,000-step crawl, 1,962-test `health`, base `3b8afec4` integrity, production UI build/HTTP smoke, verified rotation report, both 100/100 fleet summaries, 200-accepted ledger, and 200-report feedback compile green; embedded browser webview could not retain the local page.
+- Evidence choice: the assessor's fleet-only Wolf-Winter compact-journal hot spot was already closed by `bug_0502`; current verified pure seed 1709 instead exposed Tanner's Fever treatment disappearing after a failed roll as an S2, got-stuck worst moment.
+- Surface: target-bearing USE interactions may author a bounded, state-gated `blocked_hint`; UI, CLI, full MCP, compact MCP v16, and legal-action reads show the same unavailable id/reason without conditions or effects. Selecting it rejects without state/hash/journey progress, and parent journey choices suppress it.
+- Tanner fix: natural-1 seed 12 now retains the same treatment id with complete 273/280 narration, 120/128 journal guidance, and a persistent 156-character reason; save/restore preserves it, examining the held meadowsweet atomically promotes it to deterministic legal recovery, and fully prepared failure never blocks.
+- Pure evidence: verified pure/fresh seed 1809 completed Wolf-Winter, Gallowmere, and Tanner's Fever; continued at 22/40/49, ended honestly at goal 3 on decision 77, clarity/enjoyment 4/4, got-stuck false, replay true. Treatment succeeded first try, so the repaired failure affordance remains blind-unsampled rather than passed by absence.
+- Compile/self-critique: the ledger is current at 455 verified reports; seeds 1709+1809 are two since the 453-report compile, below threshold. PASS for truthful recoverability, not retention—the player again stopped after three arcs and now named modal dialogue filler/rejections, blind long-route planning, and a visible shared quest skeleton.
+- Guard: focused parity/recovery suites also pin legal-command precedence and erase unavailable-action omission metadata during journey choices; identifier-relabel proofs, local UI smoke with no console errors, final 6,000-step crawl (247/247 nodes, 344/344 edges, 12/12 quests), verified receipt, and full health (UI and 12 packs included) passed.
 
-### Cycle result - testing_pyramid_three_tiers
+### Cycle result - quest_reactive_contact_memory
 
-- Tooling surface: three-tier testing pyramid landed — mechanical crawler (`crawl:smoke` ~10s gate / `crawl:deep` soak, 9 oracles, ddmin-minimized repros), blind fleet (`npm run fleet`, personas + calibration anchors, zero-token `fleet:mock`), feedback compiler (`feedback:compile` → ranked hotspots + sycophancy telemetry + trends); assessor consumes `hotspots.json`.
-- Loop effect: AGENTS.md cycle gains crawl gates + fleet/compile steps; CI gains a crawl-smoke job; fault-injection suite proves planted CRASH/SOFTLOCK/RENDER/corruption defects are caught; `docs/testing_pyramid.md` is canonical.
-- Blind playtest: `fleet:mock` 20/20 verified overworld reports (all five personas rotated); live fleet blocked by nested-CLI auth inside agent sessions — mock lane is the CI oracle, live runs stay plain-shell.
-- Found+fixed: real engine bug — any post-quest-completion overworld snapshot failed restore (region-renown replay gap); `traces/bugs/bug_0496_overworld_renown_restore.yaml` + regression test. Deep soak 352k steps across 8 workers: zero findings.
-- Guard: `npm run health` green end-to-end; crawler byte-identical across worker counts; no verification weakened (coherence pins grew 18→22).
+- Surface: overworld contacts may now author ordered, monotonic quest-completion phases; the shared projector gives web/full MCP only the active summary/agenda and physically strips future phases. Hayden advances from the live Cade packet to Wolf-Winter closed and then Cade+Hedrick both closed instead of reopening settled emergencies (`bug_0510`).
+- Integrity/parity: phase-specific journal ids make each genuinely new conversation cost/count once while same-phase repeats remain context-only; snapshot replay reconstructs completed quests at the talk timestamp and rejects unknown, future, or rewritten phases. UI, full MCP, compact MCP, save/restore, and both Albany dispatch branches return the same active copy.
+- Pure evidence: verified pure/fresh seed 1709 completed Wolf-Winter, Gallowmere, and Tanner's Fever; continued honestly at 23/40/50/80, ended at goal 3 on decision 82, clarity/enjoyment 5/4, replay true. Its retained report provides no evidence of a Hayden retalk, so blind sampling remains unconfirmed; deterministic round-trip regressions carry the fix proof.
+- Effect: seed 1609's worst-moment continuity contradiction is closed at its causal seam. Fresh seed 1709 instead found a failed Tanner treatment branch temporarily soft-lock-like and again noticed cross-town name reuse; uniform six-leg quest travel also remains pacing debt.
+- Compile/self-critique: the ledger is current at 454 verified reports; seed 1709 is the sole report since the 453-report compile, below the three-report threshold. PASS for stateful world memory, not retention completion—the player still chose a natural stop after three arcs; Tanner failure recovery and the audited 700-contact/17-name template corpus are next evidence.
+- Guard: 114 focused lifecycle/parity/forgery tests, final 6000-step crawl (247/247 nodes, 344/344 edges, 12/12 quests), verified receipt, and full health (299 files/2126 tests, UI, 12 packs) passed.
 
-### Cycle result - albany_wolf_winter_relief_bridge
+### Cycle result - authored_road_encounter_cadence
 
-- Content surface: Albany Station Quarter now frames Wolf-Winter as a Rowan-to-Hayden relief dispatch, and Wolf-Winter opens with the Albany relief packet becoming a hill-road steading crisis.
-- Loop effect: regressions pin the source-neutral civic-records/route-desk quest lead, ban the station-board-only contradiction, and prove the RPG opening/Cade handoff names Albany's relief rider while keeping the spear already in hand.
-- Blind playtest: 25-run `overworld` Codex batch seeds 591-615 all exited 0; clarity 25x4/5, enjoyment 25x4/5, replay 25x true; feedback ledger now has 436 accepted reports.
-- Self-critique: bridge/tone complaints dropped from 12/25 to 1/25 and positive relief-chain mentions hit 25/25; compact journal hash/truncation, generic civic resolutions, and road arrival/progress wording remain loud.
-- Guard: focused affected tests, `npm run health`, `npm run blind:feedback`, and reports `20260708T210747Z`-`20260708T213426Z` seeds 591-615 passed.
+- Surface: 340 generic road reports are now visible ambient travel, never mandatory choices; three authored scenes use situation-specific labels/outcomes, fire once, respect active goals, and retire with their quest. Gallowmere gets one relief-line choice plus one ambient spoor cue; Breaking Weir gains a Rome-bound flood choice (`bug_0509`).
+- Integrity/parity: save replay requires journals only for actual choices and rejects ambient/duplicate forgeries; state-aware route estimates, web, CLI, default pure MCP, and spectate receive the same immediate scene while rolling history stays lean. Generic travel counts one movement decision; only a chosen authored response adds another.
+- Pure evidence: verified pure/fresh seed 1609 completed Wolf-Winter, Gallowmere, Tanner's Fever, and Breaking Weir; continued at 23/40/54/80/81, ended honestly at goal 4 on decision 105, clarity/enjoyment 4/4, replay true. Seed 1607's malformed report and seed 1608's technical timeout were correctly rejected, not counted.
+- Effect: the prior every-leg “toll booth,” repetitive encounter, Oneonta→Rome padding, and post-Gallowmere Queensbury warning complaints did not recur. Travel is now functional/formulaic rather than worst-moment friction; remaining connective debt is route backtracking.
+- Compile/self-critique: 453 verified reports include four pure contract-v3 exits: all continued at decisions 40 and 80, 20 continue vs 4 end, 105–114 decisions, replay 4/4. PASS for authored cadence, not retention completion—the player still ended after four quests; fresh S1s are stale Hayden dialogue and repeated NPC/town templates.
+- Guard: 133 focused tests plus typecheck, final 6000-step crawl (247/247 nodes, 344/344 edges, 12/12 quests), independent receipt verification, three-report feedback compile, and full health passed.
 
-### Cycle result - off_area_job_memory
+### Cycle result - compact_road_scene_parity
 
-- Engine surface: full and compact overworld views now expose `rememberedJobs` / `remembered_jobs` for discovered unfinished jobs in other known local areas while active `jobs` stays current-area only.
-- Loop effect: focused UI regressions pin off-area discovered jobs as remembered leads, reject remote execution until the player moves to that area, and filter completed jobs from active/memory surfaces.
-- Blind playtest: 25-run `overworld` Codex batch seeds 566-590 all exited 0; clarity 25x4/5, enjoyment 25x4/5, replay 25x true; feedback ledger now has 411 accepted reports.
-- Self-critique: direct vanished-job complaints did not recur, but 5/25 still mention area-route/memory friction; the louder blockers are Albany-to-Wolf-Winter tone bridge, compact hash/truncation, and thin civic opening stakes.
-- Guard: focused affected tests, `npm run health`, `npm run blind:feedback`, and reports `20260708T201937Z`-`20260708T204724Z` seeds 566-590 passed.
+- Surface: compact overworld v14 now gives pure MCP the same bounded route, event title/summary, option labels, and visible costs as human road choices; hidden outcomes stay hidden until selection, then canonical consequence prose renders in MCP, web UI, terminal, and spectate while rolling journals stay lean.
+- Root/effect: compact projection had reduced every road premise to internal id/risk and bare strategy ids, then discarded the result text. Exact default MCP now exposes Albany–Colonie's jackknifed-truck scene and chosen aftermath; stable strategy ids preserve snapshot/replay compatibility (`bug_0508`).
+- Pure evidence: independently verified seed 1507 completed Wolf-Winter, Gallowmere, Tanner's Fever, and Breaking Weir; continued at goals/checkpoints 23/40/51/80/83, ended honestly at goal 4 on decision 111, clarity/enjoyment 4/4, replay true. Missing-premise friction did not recur; visible prose exposed genuine stale/generic road-content debt.
+- Self-critique: PASS for human/MCP choice-and-consequence parity, not for retention—the player still ended after four quests and called Oneonta→Rome filler. Next is state-aware authored encounter families; truthful goal routing and Cade's learn-both/choose-later copy remain behind it. Seeds 1407+1507 are two new verified reports, below the three-report compile threshold.
+- Guard: 115 focused tests plus root/UI typechecks, final 6000-step crawl (247/247 nodes, 344/344 edges, 12/12 quests), independent receipt verification, and full health (296 files/2101 tests, UI, 12 packs) passed.
 
-### Cycle result - wolf_winter_dialogue_surface
+### Cycle result - compact_overworld_action_prose
 
-- Content/engine surface: Wolf-Winter Cade topics now expose authored ids (`ask_wolves`, `ask_byre`, `ask_leave`), old doubled ids remain hidden MCP aliases, and Cade's return line is pure spoken text with direct follow-ups/leave.
-- Loop effect: regressions pin no visible `ask_ask_wolves`/`ask_ask_byre`, stale `ask_ask_wolves` still steps through MCP, and root return narration no longer nests speaker/quote prose.
-- Blind playtest: 25-run `overworld` Codex batch seeds 541-565 all exited 0; clarity 25x4/5, enjoyment 25x4/5, replay 25x true; feedback ledger now has 385 accepted reports.
-- Self-critique: dialogue-id/quote complaints fell to 0/25 targeted repeats; off-area discovered jobs feeling lost, hidden-count direction, compact hash truncation, and Albany-to-Wolf-Winter tone remain loud.
-- Guard: focused affected tests, `npm run health`, `npm run blind:feedback`, and reports `20260708T195405Z`-`20260708T200030Z` seeds 541-565 passed.
+- Surface: default compact local overworld actions now carry the same immediate human-facing consequence in a bounded top-level `text`; the 360-character cap is explicit, rolling journal tuples stay lean, and spectate renders the line.
+- Root/effect: the generic journal compactor had erased authored talk/scout/investigate/explore/work prose from canonical pure MCP play; twin compact/full sessions now pin parity, closing texture/payoff complaints from seeds 388, 430, and 1307.
+- Pure evidence: independently verified pure/fresh seed 1407 played Wolf-Winter, Gallowmere, Tanner's Fever, and Breaking Weir; it continued five times, ended honestly at goal 4 on decision 114, rated clarity 4/5 and enjoyment 5/5, and would replay. Compact omission did not recur; prose was called high and consistent.
+- Self-critique: PASS for human/MCP consequence parity, not for solved retention. Next signals are raw undiscovered-goal travel errors, repetitive road choices, logistics counted as meaningful decisions, and Cade's non-exclusive “two roads”; one new report is below the three-report compile threshold.
+- Guard: focused 77-test parity suite and typecheck, final 6000-step crawl (247/247 nodes, 344/344 edges, 12/12 quests), independent receipt verification, and full health (296 files/2100 tests, UI, 12 packs) passed.
 
-### Cycle result - completed_state_active_lists
+### Cycle result - tanners_fever_peaceful_route
 
-- Engine surface: completed local jobs and quests, plus resolved local events, now leave active full/compact overworld lists while completed/resolved ids and journal history remain visible.
-- Loop effect: focused UI regressions pin completed Albany jobs, resolved events, and completed Wolf-Winter as history-only state in full and compact views.
-- Blind playtest: 25-run `overworld` Codex batch seeds 516-540 all exited 0; clarity 25x4/5, enjoyment 25x4/5, replay 25x true; feedback ledger now has 360 accepted reports.
-- Self-critique: completed-active-list complaints fell to 0 targeted repeats, but area-scoped off-area jobs still feel lost and Wolf-Winter dialogue ids/quote backs plus compact journal hashes dominate the new sample.
-- Guard: focused affected tests, `npm run health`, `npm run blind:feedback`, and reports `20260708T192325Z`-`20260708T193009Z` seeds 516-540 passed.
+- Change: Tanner's Fever now links symptoms, written dose, corrective herb, and bedside demonstration without a harness hint; natural LOOK performs clinical INSPECT, Holt retires after treatment, and forced passage must deliver a real identified remedy.
+- Consequence: the first physick presentation is the only roll; failure preserves the cure but retires free rerolls, then exposes a same-id deterministic recovery once all three clues are established. Lucky early treatment retires stale clue rewards.
+- Proof seam: exhaustive crawler/score/variant/menu/metamorphic/dead-pocket policies retain authored INSPECT looks while pruning inert rereads; focused regressions cover peaceful, failed-recovery, early-luck, post-treatment, and forced-passage paths.
+- Pure evidence: independently reverified seed 1307 is pure/fresh contract-v3; Tanner completed at decision 81 with no stuck/bug report, clarity 4/5, enjoyment 5/5, replay true; player continued through four goals and ended honestly at decision 110.
+- Effect: prior verified Tanner violence-pressure/free-retry complaint did not recur; the quest was called a satisfying medical deduction with graceful outcomes. Next signals are compact talk omissions, route chaining, and a cosmetic Rowan Quill name collision.
+- Guard: final 6000-step crawl (247/247 nodes, 344/344 edges, 12/12 quests), independent report verification, and full health (296 files/2098 tests, UI, 12 packs) passed.
 
-### Cycle result - albany_first_action_signposts
+### Cycle result - journey_v3_authored_goals
 
-- Content surface: rewrote Albany Civic Center's opening area, Notice Hall, Rowan Quill, charter backlog, Civic Underrooms, and Civic Ledger Run prose around concrete first moves instead of generated lead-point text.
-- Loop effect: focused UI regressions prove the first screen names the Notice Hall board, Rowan's desk, and charter-backlog stair, while scout/talk/explore still reveal Market Streets, Civic Ledger Run, and Civic Underrooms deterministically.
-- Blind playtest: 25-run `overworld` Codex batch seeds 491-515 all exited 0; clarity 25x4/5, enjoyment 25x4/5, replay 25x true; feedback ledger now has 335 accepted reports.
-- Self-critique: first-action signposting improved but did not erase hidden-count scope confusion; completed quest/job/event listings and dialogue id/quote noise are now louder than opening-action uncertainty.
-- Guard: focused affected tests, `npm run health`, `npm run blind:feedback`, and reports `20260708T190115Z`-`20260708T190730Z` seeds 491-515 passed.
-
-## AFK Cycle 2026-07-11T18-29-31-038Z
-
-- Assess: rpg=12; world=12; candidates=16; the explicit tutorial/fresh-world/100-agent contract superseded stale hotspot-4a89fb42.
-- Change: one canonical four-step tutorial now opens every genuinely fresh UI/MCP game; resume, export, reads, and actions do not replay it.
-- Harness: live runner/fleet/AFK prompts reject quest drop-ins and always start overworld; targeted smoke/mock remains; milestone default is 100.
-- Blind playtest: fresh-overworld seed 930020 verified; it used the tutorial to discover and finish Wolf-Winter 60/60, clarity 4/5, enjoyment 4/5, replay yes.
-- Findings: no tutorial regression; second-town template repetition and road-only fatigue remain the next evidence questions.
-- Guard: post-crawl `20260711T184939Z`, browser 1280x720/390x844/320x568, and health (287 files, 2028 tests, all 12 packs) passed.
-- Next: commit this green contract, then run 100 fresh-overworld blind agents and compile their feedback.
-
-## AFK Cycle 2026-07-11T21-10-00Z - pure_journey_contract
-
-- Engine: versioned journey state now shares the exact Albany goal, accepted-decision proof, 40/80/+40 and early-goal choices, immutable exit receipt, and v6 persistence across UI/MCP.
-- Harness: live blind/fleet defaults are enforced pure + fresh-overworld + neutral persona; structural QA is explicit/non-retention; V2 reports require same-session server evidence and safe resume sidecars.
-- Retention: Tier 3 now emits mode-separated `retention.json`; legacy 79-run guided evidence remains useful but contributes zero pure retention.
-- Pure canary: seed 950002 completed the Albany goal at decision 24, chose continue at 24/40/80, ended honestly at 120, clarity 4/5, enjoyment 3/5, replay no; exact receipt independently reverified.
-- Findings: the natural player praised Wolf-Winter/tutorial but confirmed town-template repetition, hidden event prerequisites, and context-poor road encounters as the next depth questions.
-- Guard: crawl `20260711T202940Z` (247/247 towns, 344/344 roads, 12/12 quests), browser 1280x720/390x844/320x568 plus live 40-choice/end, pure graph/seed isolation, and health (292 files / 2,060 tests / all 12 packs) green.
-- Fleet: seeds 960001-960100 produced 100/100 new pure/fresh verified exits, zero resume/failure/retry/timeout; compiled at `ai-runs/feedback/20260711T221007Z-pure100`.
-- Retention: 46 continued at early goal completion, 54 ended; all 46 continuers ended at checkpoint 40; `would_replay` was separately 76/100.
-- Review: 44/46 exposed continuers called post-Wolf-Winter Albany generic or under-narrated, but 34 reports also showed v1 over-counting context-only quest commands/unchanged rest.
-- Next: contract v2 engine-owned consequential-decision classification first; then an ending-sensitive authored Albany aftermath bridge.
-
-## AFK Cycle 2026-07-11T23-08-56Z - one_click_launcher
-
-- Assess: reviewed every remaining dirty file; kept one coherent Windows launcher/single-file UI feature and discarded only generated Aider/Playwright scratch.
-- Change: `PLAY.bat` now enforces Node 22+, validates exact lockfile dependencies, builds fail-closed, and exposes a no-browser smoke mode; checkout preserves CRLF.
-- Package: the UI build inlines one JS/CSS pair, rejects remote CSS/generated asset references, removes redundant assets, and leaves only offline `dist/index.html`; the UI lock now matches its root file dependency.
-- Browser: the packaged production page rendered the one-screen tutorial, entered Albany, and logged no warnings/errors; direct `file://` navigation was unavailable to the automation surface, so static zero-reference checks cover that boundary.
-- Guard: launcher build-only smoke, clean UI `npm ci`, packaged UI build/typecheck, regression contract, crawl `20260711T230133Z`, and health (293 files / 2,062 tests / all 12 packs) passed.
-- Next: land through the protected-main PR path, delete merged feature branches, then resume the contract-v2 consequential-decision plan.
+- Change: journey contract v3 adds ordered authored goals, goal-bound retention, Wolf-ending Albany dispatch consequences, exact save/journal proof, and shared next-road guidance.
+- Pure evidence: seed 1207 `playtest-v3-guided` is verified pure/fresh; continued at goals 23/49/90 and checkpoints 40/80, then ended at goal 4 on decision 117; clarity/enjoyment 4/5, replay true.
+- Comparison: the same seed without route guidance ended at 80 during goal 3 after navigation grind, but its private evidence was lost to an external worktree reset, so it is design signal only—not retention evidence.
+- Effect: four authored quests replaced the post-Wolf template cliff; guided travel was called light rather than tedious. Next honest friction is Tanner's Fever's unhinted peaceful route/free retries.
+- Compatibility: both frozen contract-v2 canaries still independently verify; v1/v2/v3 retention cohorts remain separate.
+- Guard: focused suites, post-change 6000-step crawl, UI browser tutorial/status check, independent v3 report verification, and full health (295 files/2091 tests, UI, 12 packs) passed.

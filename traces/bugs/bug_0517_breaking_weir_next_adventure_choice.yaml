@@ -1,0 +1,64 @@
+id: bug_0517_breaking_weir_next_adventure_choice
+title: "Breaking Weir lets the player choose the next adventure"
+pack: src/world/journey_campaign.ts
+reported_by: pure-blind-playtest
+reports:
+  - blind-tester/reports/20260712T041909Z_overworld_seed1307.md
+  - blind-tester/reports/20260712T045851Z_overworld_seed1407.md
+  - blind-tester/reports/20260712T054426Z_overworld_seed1507.md
+  - blind-tester/reports/20260712T065854Z_overworld_seed1609.md
+  - blind-tester/reports/20260712T131301Z_overworld_seed2114.md
+  - blind-tester/reports/20260712T142008Z_overworld_seed2216.md
+  - blind-tester/reports/20260712T144457Z_overworld_seed2218.md
+  - blind-tester/reports/20260712T152230Z_overworld_seed2319.md
+severity: S1
+symptom: >
+  Eight verified contract-v3 pure players completed The Breaking Weir between
+  decisions 96 and 114. Seven ended at that goal-completion boundary; only seed
+  2218 continued to the fixed Advocate's Case lead. This 7/8 end rate is a
+  repeated retention boundary, but causal confidence is deliberately moderate:
+  the seven players described four completed quests as a natural, satisfying
+  session close rather than blaming the Oswego offer. Even so, the game gave a
+  player who did continue no choice of next adventure after repeatedly using a
+  Tanner-like gather-evidence-or-tools then resolve-a-finale cadence.
+root_cause: >
+  The post-Breaking-Weir campaign remained a fixed ordered list. The generic goal
+  sequencer previewed The Advocate's Case in Oswego at the Continue/End boundary
+  and activated it automatically on Continue. Unlike the authored Albany and
+  Tanner aftermaths, Rome had no post-consent story choice, so the shipped Cold
+  Forge alternative in Greece could not be chosen and the first unchosen lead
+  could not be deliberately deferred.
+fix: >
+  Preserve the game-native Continue/End choice at Breaking Weir completion.
+  Ending still records retention evidence and closes the journey without
+  inventing a branch. Continuing records the same retention decision first, then
+  reveals a human-visible choice between pursuing The Advocate's Case in Oswego
+  or The Cold Forge in Greece. Selecting either adventure counts exactly once,
+  writes distinct campaign journal proof, and activates its matching goal; the
+  unchosen lead waits in second place instead of activating alongside the
+  player's selection or being discarded.
+  Save/restore, UI, full MCP, and compact MCP share the same state and visible
+  consequences. Canonical pure play receives only the prompt, choices, current
+  goal, guidance, and consequences available to a human, never target ids,
+  content paths, endings, hidden outcomes, or solutions.
+deterministic_witnesses:
+  - "Breaking Weir completion still presents Continue and End, with a truthful next-adventure teaser but no Oswego-or-Greece options before consent"
+  - "End records player_ended_at_choice retention evidence and never creates a story-choice journal entry or follow-up goal"
+  - "Continue records retention evidence without incrementing accepted decisions, then exposes exactly two human-visible next-adventure options"
+  - "the Oswego and Greece selections each increment accepted decisions exactly once with no unequal time, supplies, fatigue, or renown cost"
+  - "the two selections activate distinct goal ids and quest targets with matching campaign journal consequences"
+  - "the unchosen packet stays deferred while the selected adventure is active, then becomes the next authored lead only after that quest completes and the player chooses Continue"
+  - "save/restore preserves the selected goal, its campaign proof, and deferred-lead behavior without invalidating legacy Rome goal history"
+  - "full MCP, compact MCP, and UI expose identical prompt, labels, consequences, goal, and guidance without target quest ids, source paths, endings, hidden outcomes, or solution knowledge"
+tests:
+  - tests/regression/breaking_weir_next_adventure_choice.test.ts
+  - tests/unit/world_journey_campaign.test.ts
+  - tests/unit/mcp_journey_surface.test.ts
+  - tests/regression/mcp_pure_play_mode.test.ts
+  - tests/regression/overworld_snapshot_integrity.test.ts
+  - tests/unit/ui_overworld.test.ts
+verification:
+  - npx vitest run tests/regression/breaking_weir_next_adventure_choice.test.ts tests/unit/world_journey_campaign.test.ts tests/unit/mcp_journey_surface.test.ts tests/regression/mcp_pure_play_mode.test.ts tests/regression/overworld_snapshot_integrity.test.ts tests/unit/ui_overworld.test.ts
+  - npm run crawl:smoke
+  - npm run blind
+  - npm run health

@@ -38,7 +38,7 @@
  *   (1) the pack still validates green under the full RPG validator;
  *   (2) FAITHFUL LINKAGE: donning the founder's plate raises defense 2→4 (sets
  *       plate_donned + inc_var defense) by real play;
- *   (3) THE PLATE FLIPS A LETHAL FIGHT: at seed 4, from the identical +2-attack
+ *   (3) THE PLATE FLIPS A LETHAL FIGHT: at seed 5, from the identical +2-attack
  *       pre-fight state, the UNPLATED (def 2) player is killed (ending_fallen) while
  *       the PLATED copy (def 4) — same step, same rolls, ONLY the +2 defense differs —
  *       survives the sentinel (sentinel_stilled, still standing);
@@ -56,6 +56,7 @@ import {
 } from "../../src/rpg/runner.js";
 import { validateRpg } from "../../src/validate/rpg_validator.js";
 import { makeStep } from "../../src/core/engine.js";
+import { activeDialogue } from "../../src/rpg/model.js";
 import type { GameState } from "../../src/core/state.js";
 import type { Action } from "../../src/api/types.js";
 
@@ -103,9 +104,11 @@ function attackOnlyPreFight(seed: number): GameState {
   s = act(s, isTake); // pry-bar
   s = act(s, isTalk); // lantern-spirit
   s = act(s, askTopic("ask_sentinel")); // +2 attack → atk6
-  s = act(s, askTopic("sentinel_back"));
+  expect(s.flags["heard_sentinel"]).toBe(true);
+  expect(activeDialogue(index, s)?.node.id).toBe("spirit_root");
   s = act(s, askTopic("ask_heart"));
-  s = act(s, askTopic("heart_back"));
+  expect(s.flags["heard_heart"]).toBe(true);
+  expect(activeDialogue(index, s)?.node.id).toBe("spirit_root");
   s = act(s, askTopic("leave_spirit"));
   s = act(s, move("north")); // → bellows_walk
   expect(s.current).toBe("bellows_walk");
@@ -154,8 +157,8 @@ describe("bug_0179 — The Cold Forge founder's plate (+2 defense) is mechanical
     expect(s.vars["defense"]).toBe(4); // the +2 the fight will feel
   });
 
-  it("(3) the plate flips a lethal fight: seed 4, only +2 defense differs, death→survival", () => {
-    const s0 = attackOnlyPreFight(4);
+  it("(3) the plate flips a lethal fight: seed 5, only +2 defense differs, death→survival", () => {
+    const s0 = attackOnlyPreFight(5);
 
     // UNPLATED (def 2): the +2-attack player is killed at this seed.
     const unplated = fightOut(s0);

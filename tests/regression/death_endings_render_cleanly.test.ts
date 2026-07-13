@@ -52,8 +52,11 @@ import type { Action } from "../../src/api/types.js";
 // (measured 2026-07-11). Keep bounded headroom above that concrete witness; a
 // future blowup still fails loudly instead of truncating an unproven search.
 const MAX_STATES = 400_000;
-// The measured Wolf-Winter graph takes ~84s under the exhaustive-suite contention run.
-const SOLVER_TEST_TIMEOUT_MS = 120_000;
+// The measured Wolf-Winter graph took ~84s under the exhaustive-suite contention run
+// before interruptible dialogue (f23c8a09) made room actions legal beside topics —
+// that multiplies edges per dialogue state, roughly doubling wall time locally, and
+// shared 2-vCPU CI runners need ~3x local. MAX_STATES, not the clock, bounds the work.
+const SOLVER_TEST_TIMEOUT_MS = 360_000;
 
 // Best/worst-roll rule sets for RPG, identical to rpg_all_endings_reachable.test.ts: a
 // fixed-sequence PRNG whose draws bracket the player's outcomes. resolveAttack draws the

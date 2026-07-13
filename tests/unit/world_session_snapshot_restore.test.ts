@@ -45,6 +45,7 @@ function snapshot(overrides: Partial<OverworldSessionSnapshot> = {}): OverworldS
     discoveredQuestIds: ["quest_b"],
     startedQuestIds: ["quest_b"],
     completedQuestIds: ["quest_b"],
+    questOutcomes: [["quest_b", "ending_b"]],
     exploredSiteIds: ["site_b"],
     regionRenown: [["Region", 3]],
     completedRegionalArcIds: ["arc_b"],
@@ -82,6 +83,7 @@ function restorePlan(
   return {
     currentAreaByTown: new Map([["town_b", "area_b"]]),
     pendingRoadEncounter: null,
+    questOutcomeIds: new Map([["quest_b", "ending_b"]]),
     regionRenown: new Map([["Region", 3]]),
     resolvedEventHomeIds: new Set(["town_b"]),
     travelLog: [travelEntry()],
@@ -113,6 +115,7 @@ function restoreState(
     exploredSiteIds: new Set(["old_site"]),
     journalEntries: [staleJournalEntry],
     journalEntriesById: new Map([[staleJournalEntry.id, staleJournalEntry]]),
+    questOutcomeIds: new Map([["old_quest", "old_ending"]]),
     regionRenown: new Map([["Old Region", 99]]),
     resolvedEventIds: new Set(["old_event"]),
     resolvedEventHomeIds: new Set(["old_town"]),
@@ -154,6 +157,7 @@ describe("overworld session snapshot restore application", () => {
     expect([...state.discoveredQuestIds]).toEqual(["quest_b"]);
     expect([...state.startedQuestIds]).toEqual(["quest_b"]);
     expect([...state.completedQuestIds]).toEqual(["quest_b"]);
+    expect([...state.questOutcomeIds]).toEqual([["quest_b", "ending_b"]]);
     expect([...state.exploredSiteIds]).toEqual(["site_b"]);
     expect([...state.regionRenown]).toEqual([["Region", 3]]);
     expect([...state.completedRegionalArcIds]).toEqual(["arc_b"]);

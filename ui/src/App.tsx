@@ -20,8 +20,10 @@ import { PACKS } from "./packs.js";
 import { OVERWORLD } from "./worldData.js";
 import { NewJourneyTutorial } from "./NewJourneyTutorial.js";
 import { JourneyChoiceScreen } from "./JourneyChoiceScreen.js";
+import { JourneyStoryChoiceScreen } from "./JourneyStoryChoiceScreen.js";
 import { JourneyEndedScreen } from "./JourneyEndedScreen.js";
 import { JourneyStatus } from "./JourneyStatus.js";
+import { formatGoalPassageLog } from "./goalPassage.js";
 import { FRESH_GAME_TUTORIAL } from "../../src/world/fresh_game_tutorial.js";
 import type { JourneyChoice } from "../../src/world/journey_contract.js";
 import type { OverworldQuest } from "../../src/world/overworld.js";
@@ -147,6 +149,20 @@ export default function App(): JSX.Element {
     }
   }
 
+  function followGoalPassage(): void {
+    try {
+      const result = worldSession.followGoalPassage();
+      setWorldView(worldSession.view());
+      setQuestSession(null);
+      setQuestView(null);
+      setActiveQuest(null);
+      setLog((previous) => [formatGoalPassageLog(result), ...previous]);
+      setError(null);
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  }
+
   function startQuest(quest: OverworldQuestView): void {
     const manifestQuest = questsById.get(quest.id);
     const source = manifestQuest ? normalizePackPath(manifestQuest.source) : undefined;
@@ -221,7 +237,7 @@ export default function App(): JSX.Element {
       const result = action();
       setWorldView(worldSession.view());
       setLog((prev) => [
-        `Handled road encounter: ${result.entry.title}. Time +${result.minutes} min, supplies -${result.suppliesUsed}, fatigue +${result.fatigueGained}${result.renownGained > 0 ? `, renown +${result.renownGained}` : ""}.`,
+        `Handled road encounter: ${result.entry.title}. ${result.entry.text} Time +${result.minutes} min, supplies -${result.suppliesUsed}, fatigue +${result.fatigueGained}${result.renownGained > 0 ? `, renown +${result.renownGained}` : ""}.`,
         ...prev,
       ]);
       setError(null);
@@ -251,7 +267,8 @@ export default function App(): JSX.Element {
     setQuestView(view);
     const lines = [`> ${label}`, ...out.narration, ...(out.rejection ? [`(${out.rejection})`] : [])];
     if (out.ok) {
-      worldSession.recordAcceptedQuestDecision(id);
+      if (out.journeyActionId === null) throw new Error("Accepted quest action has no id.");
+      worldSession.recordQuestDecision(out.journeyActionId, out.journeyDecision);
       setWorldView(worldSession.view());
     }
     // Close a finished quest back into the overworld (MCP-bridge parity,
@@ -313,6 +330,21 @@ export default function App(): JSX.Element {
     }
   }
 
+  function chooseJourneyStory(choiceId: string): void {
+    try {
+      const result = worldSession.chooseJourneyStory(choiceId);
+      setWorldView(worldSession.view());
+      setLog((previous) => [
+        `Story consequence: ${result.consequence}`,
+        `New goal: ${result.goal.text}`,
+        ...previous,
+      ]);
+      setError(null);
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  }
+
   if (tutorialOpen) {
     return (
       <NewJourneyTutorial
@@ -324,6 +356,10 @@ export default function App(): JSX.Element {
 
   if (journey.pendingChoice) {
     return <JourneyChoiceScreen journey={journey} onChoose={chooseJourney} />;
+  }
+
+  if (journey.storyChoice) {
+    return <JourneyStoryChoiceScreen journey={journey} onChoose={chooseJourneyStory} />;
   }
 
   if (journey.status === "ended") {
@@ -338,7 +374,7 @@ export default function App(): JSX.Element {
         <p className="sub">{OVERWORLD.premise}</p>
       </header>
 
-      <JourneyStatus journey={journey} />
+      <JourneyStatus journey={journey} onFollowGoalPassage={followGoalPassage} />
 
       <section className="overworld">
         <article className="location-panel">
@@ -500,13 +536,6 @@ export default function App(): JSX.Element {
                   <small>
                     {exit.route} - {exit.distance_mi.toFixed(1)} mi - {exit.travel_minutes} min
                   </small>
-                  {OVERWORLD.road_events
-                    .filter((event) => event.edge === exit.id)
-                    .map((event) => (
-                      <em key={event.id}>
-                        {event.title} - {event.risk} risk
-                      </em>
-                    ))}
                 </button>
               </li>
             ))}
@@ -749,6 +778,14 @@ export default function App(): JSX.Element {
                 {questView.choices.map((choice) => (
                   <li key={choice.id}>
                     <button onClick={() => choose(choice.id, choice.label)}>{choice.label}</button>
+                  </li>
+                ))}
+                {questView.unavailableChoices.map((choice) => (
+                  <li key={`unavailable:${choice.id}`}>
+                    <button disabled aria-disabled="true">
+                      <span>{choice.label}</span>
+                      <small className="choice-reason">{choice.reason}</small>
+                    </button>
                   </li>
                 ))}
               </ul>

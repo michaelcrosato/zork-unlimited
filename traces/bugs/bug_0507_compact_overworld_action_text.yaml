@@ -1,0 +1,39 @@
+id: bug_0507_compact_overworld_action_text
+title: "Compact overworld actions preserve the human-facing consequence prose"
+pack: src/mcp/compact_overworld_result.ts
+reported_by: pure-blind-playtest
+reports:
+  - blind-tester/reports/20260712T045851Z_overworld_seed1407.md
+  - blind-tester/reports/20260712T041909Z_overworld_seed1307.md
+  - blind-tester/reports/20260708T153614Z_overworld_seed388.md
+  - blind-tester/reports/20260708T172828Z_overworld_seed430.md
+severity: S2
+symptom: >
+  Canonical pure MCP play returned the mechanical result of local overworld actions
+  but omitted the authored line that the human UI presents immediately. Talking to
+  Rowan Quill, for example, yielded only a compact journal tuple and discoveries;
+  the actual lead and character response existed only in the opt-in verbose result.
+  Earlier blind players likewise described compact action results as mechanically
+  complete but stripped of texture and narrative payoff.
+root_cause: >
+  The generic compact action serializer reused the rolling-journal representation,
+  reducing every full entry to kind, title, and time. That context-saving rule was
+  appropriate for remembered history but incorrectly deleted the current action's
+  consequence from the default player response.
+fix: >
+  Every compact local-action result now includes the same immediate entry text shown
+  on the human surface, bounded transparently at 360 characters. The spectator renders
+  that line as well, while rolling journal tuples remain unchanged so repeated context
+  does not grow. Journey tests compare default compact talk directly with an equivalent
+  verbose human-facing result and unit tests enforce the explicit cap.
+tests:
+  - tests/unit/compact_overworld_result.test.ts
+  - tests/unit/mcp_journey_surface.test.ts
+  - tests/unit/mcp_tools.test.ts
+  - tests/unit/spectate_format.test.ts
+verification:
+  - npm test -- --run tests/unit/compact_overworld_result.test.ts tests/unit/mcp_journey_surface.test.ts tests/unit/spectate_format.test.ts tests/unit/mcp_tools.test.ts
+  - npm run typecheck
+  - npm run crawl:smoke
+  - npm run blind --seed=1407
+  - npm run health

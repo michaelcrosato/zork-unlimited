@@ -80,6 +80,11 @@ const isUse = (a: Action) => a.type === "USE";
 const askTopic = (topic: string) => (a: Action) =>
   a.type === "ASK" && (a as { topic?: string }).topic === topic;
 const canAsk = (s: GameState, topic: string) => options(s).some((o) => askTopic(topic)(o.action));
+function expectSpiritRoot(s: GameState): void {
+  const dialogue = buildRpgObservation(index, s).dialogue;
+  expect(dialogue?.npc).toBe("lantern_spirit");
+  expect(dialogue?.npc_text).toMatch(/What else would you know/i);
+}
 const lookAt = (target: string) => (a: Action) =>
   a.type === "LOOK" && (a as { target?: string }).target === target;
 
@@ -156,7 +161,7 @@ describe("bug_0076 — The Cold Forge's Founder's Cell + cold-iron plate (option
     expect(s.vars["defense"]).toBe(beforeDef); // asking grants NO buff (earned by donning)
     expect(s.journal.length).toBe(beforeJournal + 1);
     expect(s.journal.at(-1)?.toLowerCase()).toContain("west"); // it points at the cell
-    s = act(s, askTopic("founder_back")); // back to root
+    expectSpiritRoot(s); // the answer resumes root in the same accepted decision
     expect(canAsk(s, "ask_founder")).toBe(false); // retired — cannot be re-told
     expect(canAsk(s, "ask_sentinel")).toBe(true); // the buff topic still offered
   });
@@ -180,9 +185,11 @@ describe("bug_0076 — The Cold Forge's Founder's Cell + cold-iron plate (option
     s = act(s, (a) => a.type === "TAKE"); // pry-bar
     s = act(s, isTalk);
     s = act(s, askTopic("ask_sentinel")); // +2 attack
-    s = act(s, askTopic("sentinel_back"));
+    expect(s.flags["heard_sentinel"]).toBe(true);
+    expectSpiritRoot(s);
     s = act(s, askTopic("ask_heart"));
-    s = act(s, askTopic("heart_back"));
+    expect(s.flags["heard_heart"]).toBe(true);
+    expectSpiritRoot(s);
     s = act(s, askTopic("leave_spirit"));
     expect(s.vars["defense"]).toBe(2); // never visited the cell → no ward
 

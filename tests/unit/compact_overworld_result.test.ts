@@ -3,17 +3,27 @@ import { describe, expect, it } from "vitest";
 import {
   compactOverworldActionResult,
   compactOverworldAreaTravelResult,
+  compactOverworldGoalPassageResult,
   compactOverworldQuestCompletionResult,
+  compactOverworldRoadEncounterResult,
+  compactOverworldTravelResult,
+  OVERWORLD_COMPACT_ACTION_TEXT_CHAR_LIMIT,
+  OVERWORLD_COMPACT_ROAD_ENCOUNTER_TEXT_CHAR_LIMIT,
 } from "../../src/mcp/compact_overworld_result.js";
 import {
   OVERWORLD_COMPACT_LABEL_CHAR_LIMIT,
   OVERWORLD_COMPACT_LOCAL_REF_LIMIT,
+  OVERWORLD_COMPACT_ROAD_EVENT_SUMMARY_CHAR_LIMIT,
+  OVERWORLD_COMPACT_ROUTE_STEP_LIMIT,
   OVERWORLD_COMPACT_TITLE_CHAR_LIMIT,
 } from "../../src/world/compact_view.js";
 import type {
   OverworldActionResult,
   OverworldAreaTravelResult,
+  OverworldJourneyGoalPassageResult,
   OverworldQuestCompletionResult,
+  OverworldRoadEncounterResult,
+  TravelLogEntry,
 } from "../../src/world/session.js";
 
 function refs(count: number): { id: string; name: string; title: string }[] {
@@ -58,7 +68,34 @@ describe("compactOverworldActionResult", () => {
     expect(compact.sites).toHaveLength(OVERWORLD_COMPACT_LOCAL_REF_LIMIT);
     expect(compact.quests).toHaveLength(OVERWORLD_COMPACT_LOCAL_REF_LIMIT);
     expect(compact.discovered_truncated).toEqual(["areas", "jobs", "sites", "quests"]);
-    expect(JSON.stringify(compact)).not.toContain("Verbose entry text");
+    expect(compact.text).toBe("Verbose entry text");
+  });
+
+  it("preserves immediate action prose under a transparent hard cap", () => {
+    const verboseText = `The contact says ${"specific consequence ".repeat(40)}`;
+    const result: OverworldActionResult = {
+      minutes: 15,
+      alreadyKnown: false,
+      entry: {
+        id: "talk:contact",
+        kind: "contact",
+        town: "Albany city",
+        title: "Talked to Rowan Quill",
+        text: verboseText,
+        recordedAt: "Day 1, 08:15",
+      },
+      discoveredAreas: [],
+      discoveredJobs: [],
+      discoveredSites: [],
+      discoveredQuests: [],
+    };
+
+    const compact = compactOverworldActionResult(result);
+
+    expect(compact.text).not.toBe(verboseText);
+    expect(compact.text).toHaveLength(OVERWORLD_COMPACT_ACTION_TEXT_CHAR_LIMIT);
+    expect(compact.text).toMatch(/\.\.\.\(\+\d+ chars\)$/);
+    expect(compact.text).toContain("The contact says");
   });
 
   it("caps compact quest completion ending titles", () => {
@@ -115,5 +152,233 @@ describe("compactOverworldActionResult", () => {
     expect(compact.route).not.toBe(longRoute);
     expect(compact.route).toHaveLength(OVERWORLD_COMPACT_LABEL_CHAR_LIMIT);
     expect(JSON.stringify(compact)).not.toContain(longRoute);
+  });
+});
+
+describe("compactOverworldRoadEncounterResult", () => {
+  it("keeps the player-facing road scene, labels, and bounded chosen consequence", () => {
+    const verboseText = `The chosen road consequence ${"keeps unfolding ".repeat(60)}`;
+    const optionOutcome = "You spend stores and pull the stranded travelers clear.";
+    const result: OverworldRoadEncounterResult = {
+      strategy: "assist_travelers",
+      minutes: 40,
+      suppliesUsed: 1,
+      fatigueGained: 1,
+      renownGained: 2,
+      encounter: {
+        id: "road:albany-colonie:600",
+        edgeId: "road_albany_colonie",
+        from: "Albany city",
+        to: "Colonie town",
+        route: "I-90 / New York State Thruway",
+        arrivedAt: "Day 1, 10:00",
+        timing: "On the road from Albany city to Colonie town.",
+        event: {
+          id: "road_event_albany_colonie",
+          edge: "road_albany_colonie",
+          title: "Thruway shoulder flare-up",
+          risk: "low",
+          summary: "A jackknifed box truck narrows the shoulder behind state-police flares.",
+        },
+        options: [
+          {
+            strategy: "assist_travelers",
+            label: "Help clear the shoulder",
+            minutes: 40,
+            suppliesCost: 1,
+            fatigueGained: 1,
+            renownGained: 2,
+            outcome: optionOutcome,
+          },
+        ],
+      },
+      entry: {
+        id: "road:albany-colonie:600:assist_travelers",
+        kind: "road",
+        town: "Colonie town",
+        title: "Help clear the shoulder: Thruway shoulder flare-up",
+        text: verboseText,
+        recordedAt: "Day 1, 10:40",
+      },
+    };
+
+    const compact = compactOverworldRoadEncounterResult(result);
+
+    expect(compact.encounter.route).toBe(result.encounter.route);
+    expect(compact.encounter.event).toEqual([
+      result.encounter.event.id,
+      result.encounter.event.risk,
+      result.encounter.event.title,
+      result.encounter.event.summary,
+    ]);
+    expect(compact.encounter.options[0]).toEqual([
+      "assist_travelers",
+      "Help clear the shoulder",
+      40,
+      1,
+      1,
+      2,
+    ]);
+    expect(JSON.stringify(compact.encounter)).not.toContain(optionOutcome);
+    expect(compact.text).not.toBe(verboseText);
+    expect(compact.text).toHaveLength(OVERWORLD_COMPACT_ROAD_ENCOUNTER_TEXT_CHAR_LIMIT);
+    expect(compact.text).toMatch(/\.\.\.\(\+\d+ chars\)$/);
+  });
+});
+
+describe("compactOverworldTravelResult", () => {
+  it("adds bounded immediate road-scene prose without changing the log-compatible prefix", () => {
+    const longTitle = `A road scene ${"title ".repeat(40)}`;
+    const longSummary = `A specific roadside consequence ${"keeps unfolding ".repeat(40)}`;
+    const result: TravelLogEntry = {
+      edgeId: "road_albany_colonie",
+      fromId: "albany_city",
+      toId: "colonie_town",
+      from: "Albany city",
+      to: "Colonie town",
+      route: "I-90 / New York State Thruway",
+      distanceMi: 7.1,
+      baseMinutes: 9,
+      delayMinutes: 4,
+      minutes: 13,
+      arrivedAt: 613,
+      suppliesUsed: 1,
+      suppliesAfter: 7,
+      fatigueGained: 2,
+      fatigueAfter: 2,
+      roadEvent: {
+        id: "road_event_albany_colonie",
+        edge: "road_albany_colonie",
+        risk: "medium",
+        title: longTitle,
+        summary: longSummary,
+      },
+    };
+
+    const compact = compactOverworldTravelResult(result);
+
+    expect(compact.slice(0, 7)).toEqual([
+      result.edgeId,
+      result.fromId,
+      result.toId,
+      result.minutes,
+      result.suppliesUsed,
+      result.fatigueGained,
+      result.roadEvent?.id,
+    ]);
+    expect(compact[7]).toBe("medium");
+    expect(compact[8]).not.toBe(longTitle);
+    expect(compact[8]).toHaveLength(OVERWORLD_COMPACT_TITLE_CHAR_LIMIT);
+    expect(compact[9]).not.toBe(longSummary);
+    expect(compact[9]).toHaveLength(OVERWORLD_COMPACT_ROAD_EVENT_SUMMARY_CHAR_LIMIT);
+  });
+
+  it("uses explicit null scene fields for travel without a road event", () => {
+    const result = {
+      edgeId: "road_a_b",
+      fromId: "a",
+      toId: "b",
+      from: "A",
+      to: "B",
+      route: "Plain road",
+      distanceMi: 1,
+      baseMinutes: 5,
+      delayMinutes: 0,
+      minutes: 5,
+      arrivedAt: 605,
+      suppliesUsed: 0,
+      suppliesAfter: 8,
+      fatigueGained: 0,
+      fatigueAfter: 0,
+      roadEvent: null,
+    } satisfies TravelLogEntry;
+
+    expect(compactOverworldTravelResult(result).slice(6)).toEqual([null, null, null, null]);
+  });
+});
+
+describe("compactOverworldGoalPassageResult", () => {
+  it("bounds labels and emits only compact tuples for legs that were actually traversed", () => {
+    const traversed = Array.from(
+      { length: OVERWORLD_COMPACT_ROUTE_STEP_LIMIT + 2 },
+      (_, index) => ({
+        edgeId: `road_${index}`,
+        fromId: `town_${index}`,
+        toId: `town_${index + 1}`,
+        from: `Town ${index}`,
+        to: `Town ${index + 1}`,
+        route: `Route ${index}`,
+        distanceMi: 10,
+        baseMinutes: 30,
+        delayMinutes: 0,
+        minutes: 30,
+        arrivedAt: 600 + index * 30,
+        suppliesUsed: 1,
+        suppliesAfter: Math.max(0, 7 - index),
+        fatigueGained: 1,
+        fatigueAfter: index + 1,
+        roadEvent:
+          index === OVERWORLD_COMPACT_ROUTE_STEP_LIMIT + 1
+            ? {
+                id: "event_stopping_leg",
+                edge: `road_${index}`,
+                risk: "low" as const,
+                title: "The scene that stopped the passage",
+                summary: "This scene happened on the accepted passage.",
+              }
+            : null,
+      }),
+    );
+    const result = {
+      goalId: "goal_visible_to_player",
+      destination: `Destination ${"x".repeat(400)}`,
+      stoppedAt: `Stopped ${"y".repeat(400)}`,
+      stopReason: "resource_boundary",
+      legs: traversed,
+      baseMinutes: 420,
+      delayMinutes: 30,
+      minutes: 450,
+      suppliesUsed: 8,
+      suppliesAfter: 0,
+      fatigueGained: 18,
+      fatigueAfter: 61,
+      travelConditionAfter: "worn down and out of supplies",
+      journeyDecision: { countsTowardJourney: true, reason: "movement" },
+      plannedLegs: [{ edgeId: "future_secret_road", eventTitle: "Future secret scene" }],
+    } as OverworldJourneyGoalPassageResult & {
+      plannedLegs: { edgeId: string; eventTitle: string }[];
+    };
+
+    const compact = compactOverworldGoalPassageResult(result);
+
+    expect(compact).toMatchObject({
+      goal_id: result.goalId,
+      stop_reason: "resource_boundary",
+      minutes: [420, 30, 450],
+      supplies: [8, 0],
+      fatigue: [18, 61],
+      travel_condition: "worn down and out of supplies",
+      legs_truncated: true,
+    });
+    expect(compact.destination).toHaveLength(OVERWORLD_COMPACT_LABEL_CHAR_LIMIT);
+    expect(compact.stopped_at).toHaveLength(OVERWORLD_COMPACT_LABEL_CHAR_LIMIT);
+    expect(compact.legs).toHaveLength(OVERWORLD_COMPACT_ROUTE_STEP_LIMIT);
+    // The newest legs survive truncation: the stopping leg's scene tuple is present and
+    // only the oldest traversed history (road_0, road_1) drops.
+    const stoppingIndex = OVERWORLD_COMPACT_ROUTE_STEP_LIMIT + 1;
+    expect(compact.legs[0]?.slice(0, 3)).toEqual(["road_2", "town_2", "town_3"]);
+    expect(compact.legs.at(-1)?.slice(0, 9)).toEqual([
+      `road_${stoppingIndex}`,
+      `town_${stoppingIndex}`,
+      `town_${stoppingIndex + 1}`,
+      30,
+      1,
+      1,
+      "event_stopping_leg",
+      "low",
+      "The scene that stopped the passage",
+    ]);
+    expect(JSON.stringify(compact)).not.toMatch(/road_0\b|road_1\b/);
+    expect(JSON.stringify(compact)).not.toMatch(/future_secret_road|Future secret scene/);
   });
 });

@@ -24,15 +24,20 @@
  *
  * Locked here on the REAL pack, driving the actual TALK/ASK engine path:
  *   (1) first contact speaks the full "You came up the yard" opening, not the terse line;
- *   (2) ask the fight counsel, return to the menu → the terse "what else" greeting, and
- *       NOT the full opening (the heard_counsel variant);
- *   (3) the same terse greeting when the BEACON topic is asked first (the heard_beacon
- *       variant — both OR-entries are live);
- *   (4) the observation's dialogue.npc_text agrees with the rendered narration.
+ *   (2) ask the fight counsel → the same accepted decision auto-resumes the root, whose
+ *       observation exposes the terse "what else" greeting and no filler action;
+ *   (3) the same immediate reactive root when the BEACON topic is asked first (the
+ *       heard_beacon variant — both OR-entries are live);
+ *   (4) the observation's dialogue.npc_text reflects the auto-resumed root state.
  */
 import { describe, it, expect } from "vitest";
 import { loadRpgSourceFile } from "../../src/rpg/source.js";
-import { indexRpgPack, initStateForRpgPack, buildRpgRules } from "../../src/rpg/runner.js";
+import {
+  indexRpgPack,
+  initStateForRpgPack,
+  buildRpgRules,
+  enumerateRpgActions,
+} from "../../src/rpg/runner.js";
 import { buildRpgObservation } from "../../src/rpg/observation.js";
 import { validateRpg } from "../../src/validate/rpg_validator.js";
 import { makeStep } from "../../src/core/engine.js";
@@ -73,7 +78,7 @@ function atWatchman(seed: number): GameState {
 }
 
 describe("bug_0264 — reactive NPC hub line on The Dawn Beacon's watchman", () => {
-  it("speaks the full opening on first contact, the terse line on return after the fight counsel", () => {
+  it("speaks the full opening first, then exposes the terse root after the fight counsel", () => {
     const ward = atWatchman(7);
 
     // First contact: the whole "You came up the yard — good lad" emergency.
@@ -81,36 +86,42 @@ describe("bug_0264 — reactive NPC hub line on The Dawn Beacon's watchman", () 
     expect(talk.text).toMatch(FULL_OPENING);
     expect(talk.text).not.toMatch(TERSE_RETURN);
 
-    // Ask the fight counsel (sets heard_counsel, +2 attack), then return to the menu —
-    // the watchman should NOT re-introduce the whole emergency now.
+    // The reply auto-resumes the reactive root in this same decision.
     const asked = run(talk.state, { type: "ASK", npc: "watchman", topic: "ask_fight" });
     expect(asked.text).toMatch(/drillmaster's word/); // the counsel node fired
     expect(asked.state.flags["heard_counsel"]).toBeTruthy();
-    const back = run(asked.state, { type: "ASK", npc: "watchman", topic: "fight_back" });
-    expect(back.text).toMatch(TERSE_RETURN);
-    expect(back.text).not.toMatch(FULL_OPENING);
+    const obs = buildRpgObservation(index, asked.state);
+    expect(obs.dialogue?.npc_text).toMatch(TERSE_RETURN);
+    expect(obs.dialogue?.npc_text).not.toMatch(FULL_OPENING);
+    const ids = enumerateRpgActions(index, asked.state).map((option) => option.id);
+    expect(ids).toContain("ask_ask_beacon");
+    expect(ids).not.toContain("ask_fight_back");
   });
 
-  it("the same terse line shows when the BEACON topic is asked first (the other OR-variant)", () => {
+  it("the same terse root shows when the BEACON topic is asked first (the other OR-variant)", () => {
     let s = atWatchman(7);
     s = run(s, { type: "TALK", npc: "watchman" }).state;
-    s = run(s, { type: "ASK", npc: "watchman", topic: "ask_beacon" }).state; // sets heard_beacon
-    const back = run(s, { type: "ASK", npc: "watchman", topic: "beacon_back" });
-    expect(back.text).toMatch(TERSE_RETURN);
-    expect(back.text).not.toMatch(FULL_OPENING);
+    const asked = run(s, { type: "ASK", npc: "watchman", topic: "ask_beacon" });
+    expect(asked.state.flags["heard_beacon"]).toBe(true);
+    const obs = buildRpgObservation(index, asked.state);
+    expect(obs.dialogue?.npc_text).toMatch(TERSE_RETURN);
+    expect(obs.dialogue?.npc_text).not.toMatch(FULL_OPENING);
+    expect(enumerateRpgActions(index, asked.state).map((option) => option.id)).not.toContain(
+      "ask_beacon_back",
+    );
   });
 
-  it("the observation's dialogue.npc_text agrees with the rendered line", () => {
+  it("the observation's dialogue.npc_text reflects the auto-resumed reactive root", () => {
     let s = atWatchman(7);
     // Mid-conversation at the root BEFORE any topic: observation shows the full opening.
     s = run(s, { type: "TALK", npc: "watchman" }).state;
     expect(buildRpgObservation(index, s).dialogue?.npc_text).toMatch(FULL_OPENING);
-    // After a topic and back to root: observation shows the terse variant, matching narration.
+    // The reply auto-resumes the root: observation immediately shows the terse variant.
     s = run(s, { type: "ASK", npc: "watchman", topic: "ask_fight" }).state;
-    s = run(s, { type: "ASK", npc: "watchman", topic: "fight_back" }).state;
     const obs = buildRpgObservation(index, s);
     expect(obs.dialogue?.npc_text).toMatch(TERSE_RETURN);
     expect(obs.dialogue?.npc_text).not.toMatch(FULL_OPENING);
+    expect(obs.available_actions.map((option) => option.id)).not.toContain("ask_fight_back");
   });
 
   it("the shipped pack validates error-free (the two reactive greetings are both live)", () => {
