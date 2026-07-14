@@ -32,6 +32,7 @@ export type OverworldLocalDiscoveryState = {
   discoveredJobIds: ReadonlySet<string>;
   discoveredSiteIds: ReadonlySet<string>;
   discoveredQuestIds: ReadonlySet<string>;
+  excludedQuestIds?: ReadonlySet<string>;
 };
 
 export type MutableOverworldLocalDiscoveryIds = {
@@ -89,7 +90,9 @@ export function planOverworldLocalDiscovery(
 
   const quest = (state.questsByTown.get(state.townId) ?? []).find(
     (candidate) =>
-      discoveredAreaIds.has(candidate.area) && !state.discoveredQuestIds.has(candidate.id),
+      discoveredAreaIds.has(candidate.area) &&
+      !state.discoveredQuestIds.has(candidate.id) &&
+      !state.excludedQuestIds?.has(candidate.id),
   );
   if (quest) discovery.discoveredQuests.push(questView(quest));
 

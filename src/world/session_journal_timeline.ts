@@ -1,6 +1,11 @@
 import type { OverworldCharacter, OverworldLocalEvent, OverworldPoi } from "./overworld.js";
 import type { OverworldContactPresentation } from "./session_contact_presentation.js";
 import {
+  openingLeadSourceLegacyJournalDraft,
+  openingLeadSourceLegacySourceWorldHash,
+  type OpeningLeadSourceJournalDraft,
+} from "./opening_lead_source_journal.js";
+import {
   openingRegistrationLegacyJournalDraft,
   openingRegistrationLegacySourceWorldHash,
   type OpeningRegistrationJournalDraft,
@@ -37,6 +42,9 @@ export type OverworldJournalSourceIndex = {
   eventTownNames: ReadonlyMap<string, string>;
   jobIds: ReadonlySet<string>;
   jobTownNames: ReadonlyMap<string, string>;
+  openingLeadSourceJournalIds?: ReadonlySet<string>;
+  openingLeadSourceOfferDraft?: OpeningLeadSourceJournalDraft | null;
+  openingLeadSourceTownName?: string | null;
   openingRegistrationJournalDraftsById: ReadonlyMap<string, OpeningRegistrationJournalDraft>;
   openingRegistrationTownName: string | null;
   poiIds: ReadonlySet<string>;
@@ -214,6 +222,52 @@ function assertOpeningRegistrationLegacyJournalSource(entry: OverworldJournalEnt
   }
 }
 
+function assertOpeningLeadSourceJournalSource(
+  entry: OverworldJournalEntry,
+  sources: OverworldJournalSourceIndex,
+): void {
+  if (entry.kind === "lead_source_offer") {
+    const draft = sources.openingLeadSourceOfferDraft;
+    if (
+      !draft ||
+      entry.id !== draft.id ||
+      entry.title !== draft.title ||
+      entry.text !== draft.text
+    ) {
+      throw new Error(
+        `Overworld session snapshot journal lead_source_offer entry "${entry.id}" does not match its authored copy.`,
+      );
+    }
+  } else if (!sources.openingLeadSourceJournalIds?.has(entry.id)) {
+    throw new Error(
+      `Overworld session snapshot journal lead_source entry references unknown evidence "${entry.id}".`,
+    );
+  }
+  if (
+    sources.openingLeadSourceTownName != null &&
+    entry.town !== sources.openingLeadSourceTownName
+  ) {
+    throw new Error(
+      `Overworld session snapshot journal ${entry.kind} entry "${entry.id}" is bound to town "${entry.town}", expected "${sources.openingLeadSourceTownName}".`,
+    );
+  }
+}
+
+function assertOpeningLeadSourceLegacyJournalSource(entry: OverworldJournalEntry): void {
+  const sourceWorldHash = openingLeadSourceLegacySourceWorldHash(entry.id);
+  if (!sourceWorldHash) {
+    throw new Error(
+      `Overworld session snapshot journal lead_source_legacy entry id "${entry.id}" must contain a source world hash.`,
+    );
+  }
+  const draft = openingLeadSourceLegacyJournalDraft(sourceWorldHash);
+  if (entry.title !== draft.title || entry.text !== draft.text) {
+    throw new Error(
+      `Overworld session snapshot journal lead_source_legacy entry "${entry.id}" does not match its canonical copy.`,
+    );
+  }
+}
+
 function assertSnapshotJournalSource(
   entry: OverworldJournalEntry,
   recordedAt: number,
@@ -233,6 +287,20 @@ function assertSnapshotJournalSource(
   if (isRegistrationEvidence !== (entry.registrationBoundary !== undefined)) {
     throw new Error(
       `Overworld session snapshot journal ${entry.kind} entry has an invalid registration boundary.`,
+    );
+  }
+  const isLeadSourceEvidence =
+    entry.kind === "lead_source" ||
+    entry.kind === "lead_source_legacy" ||
+    entry.kind === "lead_source_offer";
+  if (isLeadSourceEvidence !== (entry.storyChoiceBoundary !== undefined)) {
+    throw new Error(
+      `Overworld session snapshot journal ${entry.kind} entry has an invalid story-choice boundary.`,
+    );
+  }
+  if (entry.registrationBoundary !== undefined && entry.storyChoiceBoundary !== undefined) {
+    throw new Error(
+      `Overworld session snapshot journal ${entry.kind} entry cannot carry two decision boundaries.`,
     );
   }
 
@@ -261,6 +329,13 @@ function assertSnapshotJournalSource(
       return;
     case "job":
       assertKnownJournalSource(entry, "job:", sources.jobIds, "job", sources.jobTownNames);
+      return;
+    case "lead_source":
+    case "lead_source_offer":
+      assertOpeningLeadSourceJournalSource(entry, sources);
+      return;
+    case "lead_source_legacy":
+      assertOpeningLeadSourceLegacyJournalSource(entry);
       return;
     case "poi":
       assertKnownJournalSource(

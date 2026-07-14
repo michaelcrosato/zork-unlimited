@@ -6,6 +6,7 @@ import {
   campaignConsequenceEffectKey,
 } from "./campaign_consequences.js";
 import { CampaignCharacterIdSchema } from "./campaign_character_state.js";
+import { OpeningLeadSourceSchema, applyOpeningLeadSourceOption } from "./opening_lead_source.js";
 import { OpeningRegistrationSchema } from "./opening_registration.js";
 
 export const OverworldNodeKindSchema = z.enum([
@@ -301,6 +302,7 @@ export const OverworldManifestSchema = z
     start: z.string().min(1),
     premise: z.string().min(1),
     opening_registration: OpeningRegistrationSchema.optional(),
+    opening_lead_source: OpeningLeadSourceSchema.optional(),
     sources: z.array(
       z
         .object({
@@ -1208,6 +1210,104 @@ function assertOpeningRegistrationIntegrity(
   }
 }
 
+function assertOpeningLeadSourceIntegrity(world: OverworldManifest): void {
+  const scene = world.opening_lead_source;
+  if (!scene) return;
+  const registration = world.opening_registration;
+  if (!registration || scene.after_registration !== registration.id) {
+    throw new Error("Overworld opening lead source must follow this world's opening registration.");
+  }
+  if (scene.home !== registration.home || scene.area !== registration.area) {
+    throw new Error(
+      "Overworld opening lead source must share the opening registration's home and area.",
+    );
+  }
+  const quest = world.quests.find((candidate) => candidate.id === scene.target_quest);
+  if (!quest || quest.home !== scene.home) {
+    throw new Error(
+      "Overworld opening lead source must target an authored quest in its home town.",
+    );
+  }
+  const charactersByCampaignNpcId = new Map(
+    world.characters.flatMap((character) =>
+      character.campaign_npc_id === undefined
+        ? []
+        : ([[character.campaign_npc_id, character]] as const),
+    ),
+  );
+  const learnedKnowledge = new Set<string>();
+  let sponsoredOptionCount = 0;
+  for (const option of scene.options) {
+    const source = charactersByCampaignNpcId.get(option.source_npc_id);
+    if (!source || source.home !== scene.home) {
+      throw new Error(
+        `Opening lead-source option "${option.id}" references an unbound Albany source npc.`,
+      );
+    }
+    for (const effect of option.effects) {
+      if (effect.type === "learn_knowledge") {
+        if (learnedKnowledge.has(effect.knowledge_id)) {
+          throw new Error(
+            `Opening lead-source knowledge "${effect.knowledge_id}" is repeated across options.`,
+          );
+        }
+        learnedKnowledge.add(effect.knowledge_id);
+        const consumed = quest.campaign_imports?.rules.some(
+          (rule) => rule.type === "knowledge_to_flag" && rule.knowledge_id === effect.knowledge_id,
+        );
+        if (!consumed) {
+          throw new Error(
+            `Opening lead-source knowledge "${effect.knowledge_id}" has no target-quest import consumer.`,
+          );
+        }
+      }
+      if (effect.type === "remember_relationship") {
+        if (effect.npc_id !== option.source_npc_id) {
+          throw new Error(
+            `Opening lead-source option "${option.id}" remembers a different npc than its named source.`,
+          );
+        }
+        if (
+          !(source.variants ?? []).some((variant) =>
+            variant.after_relationship_memories?.includes(effect.memory_id),
+          )
+        ) {
+          throw new Error(
+            `Opening lead-source memory "${effect.memory_id}" has no consuming contact variant.`,
+          );
+        }
+      }
+    }
+    if (option.sponsor) {
+      sponsoredOptionCount += 1;
+      const sponsorMemoryExists = registration.profiles.some((profile) =>
+        profile.character.relationships.some(
+          (relationship) =>
+            relationship.npcId === option.source_npc_id &&
+            relationship.memories.includes(option.sponsor!.memory_id),
+        ),
+      );
+      if (!sponsorMemoryExists) {
+        throw new Error(
+          `Opening lead-source option "${option.id}" has sponsor terms without a registration memory.`,
+        );
+      }
+    }
+    for (const profile of registration.profiles) {
+      applyOpeningLeadSourceOption({
+        scene,
+        character: profile.character,
+        optionId: option.id,
+      });
+    }
+  }
+  if (sponsoredOptionCount === 0) {
+    throw new Error(
+      "Overworld opening lead source must make at least one sponsor term mechanical.",
+    );
+  }
+}
+
 function assertExplorationSitesIntegrity(
   world: OverworldManifest,
   nodes: Map<string, OverworldNode>,
@@ -1338,6 +1438,8 @@ export function assertOverworldIntegrity(world: OverworldManifest): void {
   assertEntitiesIntegrity(world, nodes, areaIds, areaHomes, edgeIds);
 
   assertOpeningRegistrationIntegrity(world, nodes, areaIds, areaHomes);
+
+  assertOpeningLeadSourceIntegrity(world);
 
   assertExplorationSitesIntegrity(world, nodes, regionNames, areaIds, areaHomes);
 

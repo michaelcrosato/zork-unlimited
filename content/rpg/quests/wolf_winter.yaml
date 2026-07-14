@@ -156,6 +156,15 @@ rooms:
           The peg by the door is bare where the steading's padded byre-jerkin hung. Its
           hide is in your hands, not yet on your back: carried hide will not turn teeth.
           Don it. Loft ladder up; yard east.
+      - when:
+          - { has_flag: jamie_market_testimony_certified }
+          - { not_item: split_rail_guard }
+          - { not_flag: flank_wolf_down }
+        text: >
+          Jamie's certified testimony marks the feed-hauler's crawlboard above this
+          ladder: eaves-beam to low hatch. It needs no bound rail, but the yearling must
+          fall before you leave the yard exposed. Taking it commits east behind the
+          flank-wolf. Yard east.
       - when: [{ has_flag: byre_jerkin_taken }]
         text: >
           A low store-shed off the byre-yard, hung with harness and winter gear. The peg
@@ -168,9 +177,11 @@ rooms:
         to: fodder_loft
         conditions:
           - { has_flag: yearling_down }
-          - { has_item: split_rail_guard }
+          - any_of:
+              - { has_item: split_rail_guard }
+              - { has_flag: jamie_market_testimony_certified }
           - { not_flag: flank_wolf_down }
-        locked_msg: "The loft is only a failed-rail recovery: if frost splits the wedge, bind that split rail into its guard, then return to bridge these boards; a sound rail stays at the breach."
+        locked_msg: "Before the flank-wolf falls, settle the yearling. Then follow a crawlboard in your packet, or bind a frost-split rail over the broken boards and leave the sound rail wedged."
 
   - id: fodder_loft
     name: "The Fodder-Loft"
@@ -178,6 +189,14 @@ rooms:
       Your bound rail bridges broken boards under the byre eaves. Beyond it, a low hatch
       overlooks the flank-wolf circling the door-post. You reclaim the one-use guard and
       haul the ladder after you; this recovery route now commits east through the hatch.
+    variants:
+      - when:
+          - { has_flag: jamie_market_testimony_certified }
+          - { not_item: split_rail_guard }
+        text: >
+          Jamie's testimony was exact: the narrow feed-hauler's crawlboard reaches this
+          low fodder hatch. You haul the ladder after crossing. With no bound guard, the
+          route commits east to a fast drop behind the flank-wolf below.
     objects: [loft_hatch]
     exits:
       - { direction: east, to: byre_door }
@@ -238,6 +257,16 @@ rooms:
           take another opening and save it for the heavier wolf. The byre runs north.
       - when:
           - { has_flag: yearling_down }
+          - { has_flag: hayden_frost_report_certified }
+          - { has_flag: rail_split }
+          - { not_flag: split_rail_guard_made }
+          - { not_item: split_rail_guard }
+        text: >
+          The yearling lies dead beside the failed rail. Hayden's report names a matching
+          frost-jammed brace at the byre door. Leave the lengths unbound and the bare spear
+          can trip it; binding a guard commits away from that line. Byre north—choose first.
+      - when:
+          - { has_flag: yearling_down }
           - { has_flag: rail_split }
           - { not_flag: split_rail_guard_made }
         text: >
@@ -270,6 +299,16 @@ rooms:
           this wolf, then carry that splinter guard to the byre door.
       - when:
           - { has_flag: yearling_spear_set }
+          - { has_flag: hayden_frost_report_certified }
+          - { has_flag: rail_split }
+          - { not_flag: split_rail_guard_made }
+          - { not_item: split_rail_guard }
+        text: >
+          The yearling recoils alive. Hayden's report marks the same frost-load at the
+          byre jamb: leave the rail here to keep the spear bare, or bind a guard and commit
+          away. Finish the yearling, then choose what travels north.
+      - when:
+          - { has_flag: yearling_spear_set }
           - { has_flag: rail_split }
           - { not_flag: split_rail_guard_made }
         text: >
@@ -291,6 +330,15 @@ rooms:
           The young wolf still holds the broken paling. The rail did not brace the gap,
           but its joined lengths ride in your hands, lashed across the spear as a rough
           guard for the byre door. The yearling's low rush still wants the spear set against it.
+      - when:
+          - { has_flag: hayden_frost_report_certified }
+          - { has_flag: rail_split }
+          - { not_flag: split_rail_guard_made }
+          - { not_item: split_rail_guard }
+        text: >
+          The young wolf holds the paling beside the split rail. Hayden's report marks a
+          frost-jammed brace north: leave the rail unbound for the bare-spear trip, or bind
+          a carried guard and commit away. First set the spear against this rush.
       - when: [{ has_flag: rail_split }, { not_flag: split_rail_guard_made }]
         text: >
           The young wolf still holds the broken paling, and the rail you tried to set
@@ -308,7 +356,7 @@ rooms:
     description: >
       A flank-wolf circles at the byre door. A prepared rail can guard or funnel; Cade's
       lesson offers a riskier wheel. Without either, only a plain spear exchange remains.
-      The failed-rail loft drops from overhead if chosen. Cattle north; paling south.
+      The committed loft route drops from overhead if chosen. Cattle north; paling south.
     variants:
       - when:
           - { has_flag: flank_wolf_down }
@@ -331,7 +379,34 @@ rooms:
           The flank-wolf lies across the threshold. You gave up the decisive pin to
           wrench the paling's brace-stake free, and the hardwood length rides against
           your spear now. The dark byre is north; the canted paling is south.
-      - when: [{ has_flag: flank_wolf_down }, { has_flag: flank_dropped_from_loft }]
+      - when:
+          - { has_flag: flank_wolf_down }
+          - { has_flag: flank_fallen_brace_driven }
+        text: >
+          The flank-wolf lies beneath the frost-jammed door-brace. Hayden's report let
+          you trip that dead weight across its turn, then drive the fallen timber home
+          with the bare spear. The split paling remains unbound to the south; the byre
+          runs north.
+      - when:
+          - { has_flag: flank_wolf_down }
+          - { has_flag: flank_frost_brace_tripped }
+        text: >
+          The flank-wolf lies beneath the door-brace Hayden's frost report taught you to
+          trip. The bare spear and falling timber ended its turn in one violent opening;
+          the split paling remains unbound to the south, and the byre runs north.
+      - when:
+          - { has_flag: flank_wolf_down }
+          - { has_flag: flank_dropped_from_loft }
+          - { has_flag: jamie_market_testimony_certified }
+          - { not_item: split_rail_guard }
+        text: >
+          The flank-wolf lies below the open loft-hatch, beaten by the drop Jamie's
+          certified feed-hauler's crawlboard put behind its circle. You brought no split-rail
+          guard over the eaves. The byre runs north; the paling is south.
+      - when:
+          - { has_flag: flank_wolf_down }
+          - { has_flag: flank_dropped_from_loft }
+          - { has_item: split_rail_guard }
         text: >
           The flank-wolf lies below the open loft-hatch, beaten by the drop behind its
           circle and the finishing spear-thrust. The saved split-rail guard remains in
@@ -395,6 +470,11 @@ rooms:
           The flank-wolf is alive at the byre door with its first turn caught on the
           carried splinter guard. Hook the Albany spear over that cross-piece and drive
           through before the rawhide gives way.
+      - when: [{ has_flag: flank_frost_brace_tripped }]
+        text: >
+          The flank-wolf is alive but checked beneath the frost-jammed door-brace you
+          tripped across its turn. Hayden's opening is spent but the fallen timber still
+          pins its line: drive that brace through with the bare spear before it twists free.
       - when: [{ has_flag: flank_dropped_from_loft }]
         text: >
           The flank-wolf is alive but wrong-footed below the hatch where you dropped
@@ -402,11 +482,30 @@ rooms:
           before it can wheel and make you pay for the height you spent.
       - when:
           - { visited: fodder_loft }
+          - { has_flag: jamie_market_testimony_certified }
+          - { not_item: split_rail_guard }
+        text: >
+          Jamie's certified feed-hauler's crawlboard put you at the low hatch behind the
+          flank-wolf with no bound guard in hand. Drive from that fast, open drop now;
+          taking the eaves committed you away from every ground opening.
+      - when:
+          - { visited: fodder_loft }
           - { has_item: split_rail_guard }
         text: >
           You committed to the loft road and dropped behind the flank-wolf. Drive from
           that fast, open angle now; the ground openings are behind you, but the bound
           rail stays unspent for the grey leader if this risk carries through.
+      - when:
+          - { has_flag: hayden_frost_report_certified }
+          - { has_flag: rail_split }
+          - { not_flag: split_rail_guard_made }
+          - { not_item: split_rail_guard }
+          - { none_of: [{ visited: fodder_loft }] }
+        text: >
+          The flank-wolf circles beneath the frost-jammed brace Hayden marked. Leaving the
+          rail unbound kept the spear bare: trip the brace across its turn, then drive
+          through the fallen timber if it lives. Other earned ground openings remain;
+          cattle wait north.
       - when: [{ has_flag: breach_braced }, { has_flag: heard_counsel }]
         text: >
           The flank-wolf circles at the byre door. The braced breach can hold it in a
@@ -799,7 +898,8 @@ objects:
   # set before the d20 branch; failure sets `rail_split` and exposes a second, deterministic
   # target-only USE with the SAME stable `use_paling_rail` id. Binding the joined lengths
   # makes real, non-droppable `split_rail_guard` gear and a distinct recovered flank line;
-  # it does not reroll or counterfeit the stronger braced-funnel success.
+  # leaving them unbound preserves Hayden's imported frost-jamb line. Neither choice
+  # rerolls or counterfeits the stronger braced-funnel success.
   #   - skill: defense (the only fitting reachable stat — vars_init.defense 3, +2 from the
   #     byre-jerkin = ceiling 5; shoring a defensive line is defence work, not the spear-arm).
   #   - difficulty 11: passable on a MID roll at BASE defence (d20 + 3 ≥ 11 needs a roll of
@@ -809,8 +909,8 @@ objects:
   #     The flag drives reactive prose and the flank-wolf's `funnel_thrust` maneuver, but no
   #     exit/win/ending. Temporary maneuver defense never changes the pack's stored stats.
   #   - on_failure: the rail splits. The guarded funnel is lost, but the explicitly
-  #     signposted bind action salvages a weaker carried guard, turning a bad roll into a
-  #     recoverable tactical branch rather than deleting the player's preparation.
+  #     signposted choice either salvages a weaker carried guard or, with Hayden's report,
+  #     keeps the spear bare for a high-variance door-brace line.
   - id: paling_rail
     name: "fallen paling-rail"
     aliases: [rail, paling-rail, post, stake, timber, bar]
@@ -830,6 +930,17 @@ objects:
       - when: [{ has_flag: breach_braced }]
         name: "braced paling-rail"
         text: "The fallen paling-rail, wedged hard across the breach now and stamped home — the gap half-shut, so what comes through the paling must come singly and slow."
+      - when:
+          - { has_flag: hayden_frost_report_certified }
+          - { has_flag: rail_split }
+          - { not_flag: split_rail_guard_made }
+          - { not_item: split_rail_guard }
+        name: "split paling-rail"
+        text: >
+          The failed rail lies split but joined. Bind it across the spear for a carried
+          guard, or leave it here: Hayden's certified report says the same frost-load has
+          jammed a brace at the byre door, and only a bare spear can trip that line.
+          Binding the guard commits away from it.
       - when: [{ has_flag: rail_split }, { not_flag: split_rail_guard_made }]
         name: "split paling-rail"
         text: >
@@ -860,8 +971,8 @@ objects:
             - narrate: "You heft the rail and drive its splintered end down hard into the trampled snow, then lever the length of it up across the breach and set your shoulder to it till it bites. The gap is half-shut now — no wolf will come through it but singly, and none of them fast."
           on_failure:
             - set_flag: rail_split
-            - add_journal: "Frozen ground splits the rail. The funnel is lost, but you can bind its joined lengths into a guard before the door."
-            - narrate: "Frozen ground kicks the splintered end aside with a crack. The rail splits but holds together. The guarded funnel is lost; the joined lengths can still make a rough spear-guard. Use the rail again to bind it before going north."
+            - add_journal: "Frozen ground splits the rail. The funnel is lost; its joined lengths remain unbound until you choose whether to make a guard."
+            - narrate: "Frozen ground kicks the splintered end aside with a crack. The rail splits but holds together. The guarded funnel is lost; the joined lengths can still make a rough spear-guard, but binding them commits the spear to that recovery. Decide at the rail before going north."
       # Recoverable failure: target-only again, therefore the stable action id remains
       # `use_paling_rail`. Mutually exclusive with the initial wedge and with itself.
       - verb: USE
@@ -874,8 +985,8 @@ objects:
         effects:
           - add_item: split_rail_guard
           - set_flag: split_rail_guard_made
-          - add_journal: "You bind the split rail across the Albany spear. It cannot funnel the flank-wolf, but can catch its turn at the door."
-          - narrate: "You tear a rawhide thong from the broken fence, overlap the split rail, and cinch both lengths across the Albany spear. The makeshift guard is shorter than the braced breach and must travel in your hands, but it gives the next wolf something wooden to bite before it reaches you."
+          - add_journal: "You bind split rail across the spear, committing away from any bare-spear line. It can catch the flank-wolf at the door."
+          - narrate: "You overlap the split rail and cinch both lengths across the Albany spear. This shorter guard must travel in your hands, but gives the next wolf wood to bite before you. The spear is no longer bare for another opening."
 
   - id: split_rail_guard
     name: "bound split-rail guard"
@@ -1092,11 +1203,12 @@ enemies:
     defense: 2
     defeat_flag: flank_wolf_down
     death_ending: ending_pulled_down
-    # The second fight cashes in environmental preparation, recovered failure, or
-    # Cade's attack lesson or the approach physically earned through the fodder-loft.
-    # Each root retires the other roots; the funnel offers reliable pin or riskier
-    # stake salvage. The split guard can be spent here, or a loft/off-side line can
-    # carry it past this fight for the grey leader.
+    # The second fight cashes in environmental preparation, recovered failure, Cade's
+    # attack lesson, Hayden's certified frost report, or an approach physically earned
+    # through the fodder-loft. Each root retires the other roots; the funnel offers
+    # reliable pin or riskier stake salvage. The split guard can be spent here, or a
+    # loft/off-side line can carry it past this fight for the grey leader. Hayden's
+    # high-variance brace line instead requires deliberately leaving that guard unbound.
     maneuvers:
       - id: funnel_thrust
         command: "hold the flank-wolf in the braced breach's funnel"
@@ -1163,6 +1275,40 @@ enemies:
           You do not stop at the first wheel. As the flank-wolf snaps back toward the
           offered side, you carry the spear through its return, recover the guard, and
           turn the rangy body across the threshold.
+      - id: frost_brace_trip
+        command: "trip Hayden's frost-jammed brace across the flank-wolf's turn"
+        conditions:
+          - { has_item: relief_spear }
+          - { has_flag: hayden_frost_report_certified }
+          - { has_flag: rail_split }
+          - { not_flag: split_rail_guard_made }
+          - { not_item: split_rail_guard }
+          - { none_of: [{ visited: fodder_loft }] }
+        result_flag: flank_frost_brace_tripped
+        attack_bonus: 4
+        defense_bonus: -2
+        narration: >
+          Hayden's report was right: frost lifts the sill, jamming the hanging brace on
+          one iron dog. With the split rail left behind, your bare spear knocks it free.
+          Timber falls across the wolf's turn and your point follows hard, but the violent
+          opening leaves both hands exposed.
+      - id: fallen_brace_drive
+        command: "drive Hayden's fallen brace through the checked flank-wolf"
+        after: frost_brace_trip
+        conditions:
+          - { has_item: relief_spear }
+          - { has_flag: hayden_frost_report_certified }
+          - { has_flag: rail_split }
+          - { not_flag: split_rail_guard_made }
+          - { not_item: split_rail_guard }
+          - { none_of: [{ visited: fodder_loft }] }
+        result_flag: flank_fallen_brace_driven
+        attack_bonus: -1
+        defense_bonus: 2
+        narration: >
+          The frost-jammed brace lies across the wolf's line. You shorten the bare spear,
+          set its shaft behind the timber, and drive both forward. The cross-weight costs
+          force but closes the turn while the point finishes Hayden's opening.
       - id: drop_from_loft
         command: "drive from the fodder-loft drop behind the flank-wolf"
         conditions:

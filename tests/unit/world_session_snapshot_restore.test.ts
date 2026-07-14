@@ -85,7 +85,9 @@ function restorePlan(
   return {
     characterAfter: createInitialCampaignCharacterState(),
     currentAreaByTown: new Map([["town_b", "area_b"]]),
+    discoveredQuestIdsAfter: ["quest_b"],
     journalEntriesAfter: [],
+    openingLeadSourceDecisionTrailAfter: null,
     pendingRoadEncounter: null,
     questOutcomeIds: new Map([["quest_b", "ending_b"]]),
     regionRenown: new Map([["Region", 3]]),
@@ -146,6 +148,7 @@ describe("overworld session snapshot restore application", () => {
       minutesAfter: 620,
       suppliesAfter: 4,
       fatigueAfter: 7,
+      openingLeadSourceDecisionTrailAfter: null,
       pendingRoadEncounterAfter: null,
       journeyAfter: createInitialJourneyContractSnapshot(),
     });

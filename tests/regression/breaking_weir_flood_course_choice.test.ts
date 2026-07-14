@@ -107,6 +107,11 @@ function launchBreakingWeir(api: ToolApi): { overworldSessionId: string; rpgSess
     session_id: overworldSessionId,
     choice: "albany:ledger_advocate",
   });
+  api.choose_overworld_session_story({
+    ...full,
+    session_id: overworldSessionId,
+    choice: "albany:source_rowan_civic_docket",
+  });
 
   for (const roadId of pathBetween(started.observation.current.id, quest.home, world.edges)) {
     api.travel_overworld_session({ session_id: overworldSessionId, road_id: roadId });

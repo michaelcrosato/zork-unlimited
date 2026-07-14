@@ -34,20 +34,34 @@ export const SetWorldFactConsequenceSchema = z
   })
   .strict();
 
+export const LearnKnowledgeConsequenceSchema = z
+  .object({
+    type: z.literal("learn_knowledge"),
+    knowledge_id: CampaignCharacterIdSchema,
+  })
+  .strict();
+
 export const CampaignConsequenceEffectSchema = z.discriminatedUnion("type", [
+  LearnKnowledgeConsequenceSchema,
   RememberRelationshipConsequenceSchema,
   SetWorldFactConsequenceSchema,
 ]);
 
+export type LearnKnowledgeConsequence = z.infer<typeof LearnKnowledgeConsequenceSchema>;
 export type RememberRelationshipConsequence = z.infer<typeof RememberRelationshipConsequenceSchema>;
 export type SetWorldFactConsequence = z.infer<typeof SetWorldFactConsequenceSchema>;
 export type CampaignConsequenceEffect = z.infer<typeof CampaignConsequenceEffectSchema>;
 
 /** Stable semantic identity used by authoring validators to reject repeated effects. */
 export function campaignConsequenceEffectKey(effect: CampaignConsequenceEffect): string {
-  return effect.type === "remember_relationship"
-    ? JSON.stringify([effect.type, effect.npc_id, effect.memory_id])
-    : JSON.stringify([effect.type, effect.fact_id]);
+  switch (effect.type) {
+    case "learn_knowledge":
+      return JSON.stringify([effect.type, effect.knowledge_id]);
+    case "remember_relationship":
+      return JSON.stringify([effect.type, effect.npc_id, effect.memory_id]);
+    case "set_world_fact":
+      return JSON.stringify([effect.type, effect.fact_id]);
+  }
 }
 
 export const CampaignConsequenceEffectsSchema = z
@@ -140,8 +154,17 @@ export function applyCampaignConsequences(args: {
   const effects = CampaignConsequenceEffectsSchema.parse(args.effects);
   const characterAfter = evolveCampaignCharacterState(args.character, (draft) => {
     for (const effect of effects) {
-      if (effect.type === "remember_relationship") {
-        applyRelationshipMemory(draft, effect);
+      switch (effect.type) {
+        case "learn_knowledge":
+          if (!draft.knowledge.includes(effect.knowledge_id)) {
+            draft.knowledge.push(effect.knowledge_id);
+          }
+          break;
+        case "remember_relationship":
+          applyRelationshipMemory(draft, effect);
+          break;
+        case "set_world_fact":
+          break;
       }
     }
   });

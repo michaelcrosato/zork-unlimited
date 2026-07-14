@@ -74,6 +74,7 @@ function startCampaignThroughDispatch(): OverworldSession {
   session.scoutPoi("albany_city__civic_core__poi");
   session.talkToCharacter("albany_city__civic_core__contact");
   session.chooseJourneyStory("albany:ledger_advocate");
+  session.chooseJourneyStory("albany:source_rowan_civic_docket");
   moveToArea(session, "albany_city__market");
   session.scoutPoi("albany_city__market__poi");
   moveToArea(session, "albany_city__transport_hub");
@@ -140,6 +141,7 @@ describe("journey campaign out-of-order recovery", () => {
     session.scoutPoi("albany_city__civic_core__poi");
     session.talkToCharacter("albany_city__civic_core__contact");
     session.chooseJourneyStory("albany:ledger_advocate");
+    session.chooseJourneyStory("albany:source_rowan_civic_docket");
     moveToArea(session, "albany_city__market");
     session.scoutPoi("albany_city__market__poi");
     completeQuestAt(

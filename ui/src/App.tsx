@@ -342,6 +342,7 @@ export default function App(): JSX.Element {
 
   function chooseJourneyStory(choiceId: string): void {
     const isRegistration = journey.storyChoice?.kind === "registration";
+    const isLeadSource = journey.storyChoice?.kind === "lead_source";
     try {
       const result = worldSession.chooseJourneyStory(choiceId);
       setWorldView(worldSession.view());
@@ -352,6 +353,12 @@ export default function App(): JSX.Element {
               `Current goal: ${result.goal.text}`,
               ...previous,
             ]
+          : isLeadSource
+            ? [
+                `Lead source certified: ${result.consequence}`,
+                `Current goal: ${result.goal.text}`,
+                ...previous,
+              ]
           : [
               `Story consequence: ${result.consequence}`,
               `New goal: ${result.goal.text}`,

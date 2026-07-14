@@ -32,6 +32,7 @@ export type OverworldDiscoveryLocalityIndex = {
   discoveredSiteIds: ReadonlySet<string>;
   eventsById: ReadonlyMap<string, OverworldLocalEvent>;
   jobsById: ReadonlyMap<string, OverworldLocalJob>;
+  questIdsAllowedOutsideDiscoveredArea?: ReadonlySet<string>;
   questsById: ReadonlyMap<string, OverworldQuest>;
   resolvedEventIds: ReadonlySet<string>;
   sitesById: ReadonlyMap<string, OverworldExplorationSite>;
@@ -52,6 +53,7 @@ export type OverworldLocalActionJournalReachabilityIndex = {
   eventsById: ReadonlyMap<string, OverworldLocalEvent>;
   jobsById: ReadonlyMap<string, OverworldLocalJob>;
   jobsByTown: ReadonlyMap<string, readonly OverworldLocalJob[]>;
+  nonFifoQuestIds?: ReadonlySet<string>;
   poisById: ReadonlyMap<string, OverworldPoi>;
   questsById: ReadonlyMap<string, OverworldQuest>;
   questsByTown: ReadonlyMap<string, readonly OverworldQuest[]>;
@@ -200,6 +202,7 @@ export function assertSnapshotDiscoveryLocality(sources: OverworldDiscoveryLocal
     const quest = sources.questsById.get(questId);
     if (!quest) continue;
     assertVisitedTownForDiscovery("discovered quest", questId, quest.home, sources.visitedTownIds);
+    if (sources.questIdsAllowedOutsideDiscoveredArea?.has(questId)) continue;
     assertDiscoveredAreaForDiscovery(
       "discovered quest",
       questId,
@@ -652,6 +655,7 @@ export function assertSnapshotDiscoveredLocalSourceCountReplay(
     if (site) incrementCount(discoveredSiteCountByArea, site.area);
   }
   for (const questId of sources.discoveredQuestIds) {
+    if (sources.nonFifoQuestIds?.has(questId)) continue;
     const quest = sources.questsById.get(questId);
     if (quest) incrementCount(discoveredQuestCountByTown, quest.home);
   }
@@ -668,8 +672,10 @@ export function assertSnapshotDiscoveredLocalSourceCountReplay(
       discoveredJobCountByTown.get(townId) ?? 0,
       Math.min(localActionCount, availableJobCount),
     );
-    const availableQuestCount = countValues(indexedList(sources.questsByTown, townId), (quest) =>
-      sources.discoveredAreaIds.has(quest.area),
+    const availableQuestCount = countValues(
+      indexedList(sources.questsByTown, townId),
+      (quest) =>
+        sources.discoveredAreaIds.has(quest.area) && !sources.nonFifoQuestIds?.has(quest.id),
     );
     assertDiscoveredSourceCountReplay(
       "quest",

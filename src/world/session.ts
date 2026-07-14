@@ -71,10 +71,12 @@ import {
   applyOverworldSessionTownVisit,
 } from "./session_local_lifecycle.js";
 import {
+  cloneOpeningLeadSourceDecisionTrail,
   cloneOverworldSessionSnapshot,
   parseOverworldSessionSnapshot,
   redactOverworldJournalEntryForPresentation,
   type OverworldJournalEntry,
+  type OverworldOpeningLeadSourceDecisionTrail,
   type OverworldPendingRoadEncounter,
   type OverworldSessionSnapshot,
   type TravelLogEntry,
@@ -86,6 +88,15 @@ import {
   type CampaignCharacterState,
 } from "./campaign_character_state.js";
 import { applyOpeningRegistrationProfile } from "./opening_registration.js";
+import { applyOpeningLeadSourceOption } from "./opening_lead_source.js";
+import {
+  OPENING_LEAD_SOURCE_JOURNAL_PREFIX,
+  openingLeadSourceJournalEntry,
+  openingLeadSourceJournalId,
+  openingLeadSourceOfferJournalEntry,
+  openingLeadSourceOfferJournalId,
+} from "./opening_lead_source_journal.js";
+import { presentOpeningLeadSource } from "./opening_lead_source_presentation.js";
 import {
   openingRegistrationJournalEntry,
   openingRegistrationJournalId,
@@ -333,6 +344,7 @@ export class OverworldSession {
   private pendingRoadEncounter: OverworldPendingRoadEncounter | null = null;
   private characterState: CampaignCharacterState = createInitialCampaignCharacterState();
   private journeyState: JourneyContractSnapshot = createInitialJourneyContractSnapshot();
+  private openingLeadSourceDecisionTrail: OverworldOpeningLeadSourceDecisionTrail | null = null;
   private readonly journeyGoalBaseRouteByEndpoints = new Map<string, OverworldRoutePlan>();
   private readonly journeyGoalGuidanceByRoute = new Map<string, string>();
   private readonly caches: OverworldSessionCaches = {};
@@ -533,6 +545,7 @@ export class OverworldSession {
   private openingRegistrationAvailable(): NonNullable<
     OverworldManifest["opening_registration"]
   > | null {
+    if (this.journeyState.status !== "active") return null;
     const registration = this.openingRegistrationEligible();
     if (!registration) return null;
     const latestEntry = this.journalEntries[0];
@@ -543,6 +556,73 @@ export class OverworldSession {
       return null;
     }
     return registration;
+  }
+
+  private openingLeadSourceResolved(): boolean {
+    return this.journalEntries.some((entry) =>
+      entry.id.startsWith(OPENING_LEAD_SOURCE_JOURNAL_PREFIX),
+    );
+  }
+
+  private openingLeadSourceAvailable(): NonNullable<
+    OverworldManifest["opening_lead_source"]
+  > | null {
+    const scene = this.world.opening_lead_source;
+    if (!scene || this.journeyState.status !== "active" || this.openingLeadSourceResolved()) {
+      return null;
+    }
+    const latestEntry = this.journalEntries[0];
+    if (
+      latestEntry?.kind !== "lead_source_offer" ||
+      latestEntry.id !== openingLeadSourceOfferJournalId(scene.id)
+    ) {
+      return null;
+    }
+    return scene;
+  }
+
+  private offerOpeningLeadSourceAfterRegistration(): void {
+    const scene = this.world.opening_lead_source;
+    const registration = this.world.opening_registration;
+    if (
+      !scene ||
+      !registration ||
+      scene.after_registration !== registration.id ||
+      this.openingLeadSourceResolved() ||
+      this.currentId !== scene.home ||
+      this.currentAreaId !== scene.area
+    ) {
+      return;
+    }
+    const entryId = openingLeadSourceOfferJournalId(scene.id);
+    if (this.journalEntriesById.has(entryId)) return;
+    const offer = openingLeadSourceOfferJournalEntry({
+      scene,
+      town: this.currentNode().name,
+      recordedAt: timeLabel(this.minutes),
+      storyChoiceBoundary: {
+        acceptedDecisions: this.journeyState.acceptedDecisions,
+        decisionProofHash: this.journeyState.decisionProof.hash,
+        townId: this.currentId,
+        areaId: this.currentAreaIdOrThrow(),
+        minutes: this.minutes,
+      },
+    });
+    addOverworldJournalEntry(this.journalEntries, this.journalEntriesById, offer);
+    this.openingLeadSourceDecisionTrail = {
+      anchorId: offer.id,
+      baseAcceptedDecisions: this.journeyState.acceptedDecisions,
+      baseDecisionProofHash: this.journeyState.decisionProof.hash,
+      decisions: [],
+    };
+    this.clearSessionCaches();
+  }
+
+  private openingLeadSourceBlockedQuestIds(): ReadonlySet<string> {
+    const scene = this.world.opening_lead_source;
+    return scene && !this.openingLeadSourceResolved()
+      ? new Set([scene.target_quest])
+      : new Set<string>();
   }
 
   private offerOpeningRegistrationAfterContact(characterId: string): void {
@@ -579,9 +659,12 @@ export class OverworldSession {
     const goalGuidance = this.journeyGoalGuidance(goalRoute);
     let goalCompletion: JourneyPresentationContext["goalCompletion"];
     const registration = this.openingRegistrationAvailable();
+    const leadSource = this.openingLeadSourceAvailable();
     let storyChoice: JourneyPresentationContext["storyChoice"] = registration
       ? presentOpeningRegistration(registration)
-      : undefined;
+      : leadSource
+        ? presentOpeningLeadSource(leadSource, this.characterState)
+        : undefined;
 
     if (campaign) {
       if (pendingGoalCompletion && campaign.preRetentionTeaser) {
@@ -634,7 +717,7 @@ export class OverworldSession {
     assertJourneyContractAcceptingDecision(this.journeyState);
     if (this.journey().storyChoice) {
       throw new Error(
-        "Choose the presented story consequence or character-registration choice before taking another action.",
+        "Choose the presented story consequence, character registration, or Albany lead source before taking another action.",
       );
     }
   }
@@ -644,14 +727,16 @@ export class OverworldSession {
     classification: JourneyDecisionClassification,
   ): JourneyPresentation {
     this.assertJourneyAcceptingDecision();
+    const before = this.journeyState;
     const next = recordJourneyDecision(
-      this.journeyState,
+      before,
       {
         surface: "quest",
         actionId,
       },
       classification,
     );
+    this.appendOpeningLeadSourceDecisionTrail(before, next);
     if (next !== this.journeyState) {
       this.journeyState = next;
       this.clearSessionCaches();
@@ -735,6 +820,55 @@ export class OverworldSession {
       });
       this.characterState = characterAfter;
       addOverworldJournalEntry(this.journalEntries, this.journalEntriesById, entry);
+      this.offerOpeningLeadSourceAfterRegistration();
+      this.clearSessionCaches();
+      return Object.freeze({
+        storyChoiceId: storyChoice.id,
+        choiceId,
+        consequence: option.consequence,
+        goal: this.journey().goal,
+        entry: Object.freeze(redactOverworldJournalEntryForPresentation(entry)),
+        journeyDecision,
+      });
+    }
+    if (storyChoice.kind === "lead_source") {
+      const scene = this.openingLeadSourceAvailable();
+      if (!scene || storyChoice.id !== scene.id) {
+        throw new Error("The presented opening lead source is no longer available.");
+      }
+      const application = applyOpeningLeadSourceOption({
+        scene,
+        character: this.characterState,
+        optionId: choiceId,
+      });
+      const entryId = openingLeadSourceJournalId(scene.id, choiceId);
+      if (this.journalEntriesById.has(entryId)) {
+        throw new Error(`Opening lead-source journal entry "${entryId}" already exists.`);
+      }
+      const characterBefore = this.characterState;
+      const journeyDecision = this.recordOverworldDecision(
+        `campaign_story:${storyChoice.id}:${choiceId}`,
+        "progress",
+        true,
+      );
+      this.minutes += application.terms.minutes;
+      const entry = openingLeadSourceJournalEntry({
+        scene,
+        character: characterBefore,
+        optionId: choiceId,
+        town: this.currentNode().name,
+        recordedAt: timeLabel(this.minutes),
+        storyChoiceBoundary: {
+          acceptedDecisions: this.journeyState.acceptedDecisions,
+          decisionProofHash: this.journeyState.decisionProof.hash,
+          townId: this.currentId,
+          areaId: this.currentAreaIdOrThrow(),
+          minutes: this.minutes,
+        },
+      });
+      this.characterState = application.characterAfter;
+      this.discoveredQuestIds.add(scene.target_quest);
+      addOverworldJournalEntry(this.journalEntries, this.journalEntriesById, entry);
       this.clearSessionCaches();
       return Object.freeze({
         storyChoiceId: storyChoice.id,
@@ -798,6 +932,7 @@ export class OverworldSession {
       regionRenown: this.regionRenown,
       completedRegionalArcIds: this.completedRegionalArcIds,
       pendingRoadEncounter: this.pendingRoadEncounter,
+      openingLeadSourceDecisionTrail: this.openingLeadSourceDecisionTrail,
       journey: this.journeyState,
     };
   }
@@ -821,6 +956,9 @@ export class OverworldSession {
     this.applyPendingRoadEncounterState(applied);
     this.characterState = applied.characterAfter;
     this.journeyState = applied.journeyAfter;
+    this.openingLeadSourceDecisionTrail = applied.openingLeadSourceDecisionTrailAfter
+      ? cloneOpeningLeadSourceDecisionTrail(applied.openingLeadSourceDecisionTrailAfter)
+      : null;
     this.clearSessionCaches();
   }
 
@@ -886,12 +1024,27 @@ export class OverworldSession {
     stateChanged: boolean,
   ): JourneyDecisionClassification {
     const classification = classifyOverworldJourneyDecision(kind, stateChanged);
-    this.journeyState = recordJourneyDecision(
-      this.journeyState,
-      { surface: "overworld", actionId },
-      classification,
-    );
+    const before = this.journeyState;
+    const after = recordJourneyDecision(before, { surface: "overworld", actionId }, classification);
+    this.appendOpeningLeadSourceDecisionTrail(before, after);
+    this.journeyState = after;
     return classification;
+  }
+
+  private appendOpeningLeadSourceDecisionTrail(
+    before: JourneyContractSnapshot,
+    after: JourneyContractSnapshot,
+  ): void {
+    const trail = this.openingLeadSourceDecisionTrail;
+    if (!trail || after.acceptedDecisions !== before.acceptedDecisions + 1) return;
+    const decision = after.decisionProof.last;
+    if (!decision) {
+      throw new Error("An accepted opening lead-source decision is missing its journey proof.");
+    }
+    this.openingLeadSourceDecisionTrail = {
+      ...trail,
+      decisions: [...trail.decisions, { ...decision }],
+    };
   }
 
   private applyActionApplication(
@@ -941,7 +1094,11 @@ export class OverworldSession {
   }
 
   private discoverLocalProgressForTown(nodeId: string): OverworldLocalDiscoveryResult {
-    const applied = applyOverworldSessionLocalDiscoveryForTown(this.localState(), nodeId);
+    const applied = applyOverworldSessionLocalDiscoveryForTown(
+      this.localState(),
+      nodeId,
+      this.openingLeadSourceBlockedQuestIds(),
+    );
     if (applied.stateChanged) this.clearSessionCaches();
     return applied.discovery;
   }
@@ -1060,6 +1217,12 @@ export class OverworldSession {
       const area = this.areasById.get(registration.area);
       throw new Error(
         `Complete ${registration.title} with ${contact?.name ?? "the registration contact"} in ${area?.name ?? "the opening registration area"} before starting this journey's first quest.`,
+      );
+    }
+    const leadSource = this.world.opening_lead_source;
+    if (leadSource?.target_quest === questId && !this.openingLeadSourceResolved()) {
+      throw new Error(
+        `Certify ${leadSource.title} before starting this journey's first relief dispatch.`,
       );
     }
     return {

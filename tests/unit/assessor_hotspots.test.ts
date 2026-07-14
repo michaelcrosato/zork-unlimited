@@ -57,6 +57,7 @@ function writeFixtureQuestRoot(root: string): void {
     join(root, "content", "world", "new_york_overworld.json"),
     JSON.stringify({
       ...fixtureOverworldWithOpeningContactVariants(),
+      opening_lead_source: undefined,
       quests: [
         {
           id: "hotspot_fixture",

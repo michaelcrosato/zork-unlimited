@@ -7,10 +7,8 @@ import { createToolApi } from "../../src/mcp/tools.js";
 import { buildRpgRules, enumerateRpgActions, indexRpgPack } from "../../src/rpg/runner.js";
 import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import { createInitialCampaignCharacterState } from "../../src/world/campaign_character_state.js";
-import {
-  OPENING_REGISTRATION_LEGACY_JOURNAL_PREFIX,
-  openingRegistrationLegacyJournalEntry,
-} from "../../src/world/opening_registration_journal.js";
+import { openingRegistrationLegacyJournalEntry } from "../../src/world/opening_registration_journal.js";
+import { planOverworldRoute } from "../../src/world/overworld.js";
 import { OverworldSession } from "../../src/world/session.js";
 import { parseTimeLabel, timeLabel } from "../../src/world/session_journal_codec.js";
 import {
@@ -24,6 +22,10 @@ const WORLD = loadOverworldManifest(process.cwd());
 const openingRegistration = WORLD.opening_registration;
 if (!openingRegistration) throw new Error("The starting slice requires opening registration.");
 const REGISTRATION = openingRegistration;
+const openingLeadSource = WORLD.opening_lead_source;
+if (!openingLeadSource) throw new Error("The starting slice requires an opening lead source.");
+const LEAD_SOURCE = openingLeadSource;
+const DEFAULT_SOURCE_ID = "albany:source_rowan_civic_docket";
 
 const loadedWolf = loadRpgSourceFile("content/rpg/quests/wolf_winter.yaml");
 if (!loadedWolf.ok) throw new Error("Wolf-Winter must compile.");
@@ -40,13 +42,21 @@ function registerSession(profileId: string): OverworldSession {
   const opening = session.view();
   session.scoutPoi(opening.pois[0]!.id);
   const talked = session.talkToCharacter(ROWAN_ID);
-  expect(talked.discoveredQuests?.map((quest) => quest.id)).toContain("wolf_winter");
+  expect(talked.discoveredQuests?.map((quest) => quest.id)).not.toContain("wolf_winter");
   expect(session.journey().storyChoice).toMatchObject({
     id: REGISTRATION.id,
     kind: "registration",
     options: REGISTRATION.profiles.map((profile) => ({ id: profile.id })),
   });
   session.chooseJourneyStory(profileId);
+  expect(session.view().quests.map((quest) => quest.id)).not.toContain("wolf_winter");
+  expect(session.journey().storyChoice).toMatchObject({
+    id: LEAD_SOURCE.id,
+    kind: "lead_source",
+    options: LEAD_SOURCE.options.map((option) => ({ id: option.id })),
+  });
+  session.chooseJourneyStory(DEFAULT_SOURCE_ID);
+  expect(session.view().quests.map((quest) => quest.id)).toContain("wolf_winter");
   return session;
 }
 
@@ -66,10 +76,32 @@ function prooflessStartedWolfSnapshot(): {
   const registered = startedWolfSession().snapshot();
   const proofless = structuredClone(registered);
   proofless.journalEntries = proofless.journalEntries.filter(
-    (entry) => entry.kind !== "registration" && entry.kind !== "registration_offer",
+    (entry) =>
+      entry.kind !== "registration" &&
+      entry.kind !== "registration_offer" &&
+      entry.kind !== "lead_source" &&
+      entry.kind !== "lead_source_offer",
   );
+  delete proofless.openingLeadSourceDecisionTrail;
   proofless.character = createInitialCampaignCharacterState();
   return { proofless, registered };
+}
+
+function preRegistrationUnrelatedQuestSnapshot(): ReturnType<OverworldSession["snapshot"]> {
+  const predecessorWorld = structuredClone(WORLD);
+  delete predecessorWorld.opening_registration;
+  delete predecessorWorld.opening_lead_source;
+  const session = new OverworldSession(predecessorWorld);
+  const route = planOverworldRoute(predecessorWorld, session.view().current.id, "queensbury_town");
+  if (!route) throw new Error("expected a route to Queensbury");
+  for (const step of route.steps) {
+    session.travel(step.edge.id);
+    if (session.view().pendingRoadEncounter) session.resolveRoadEncounter("press_on");
+  }
+  session.exploreArea("queensbury_town__civic_core");
+  moveSessionToArea(session, "queensbury_town__market");
+  session.startQuest("gallowmere");
+  return session.snapshot();
 }
 
 function moveSessionToArea(session: OverworldSession, targetAreaId: string): void {
@@ -133,10 +165,19 @@ function launchRegisteredWolf(profileId: string): {
       compact_context: true,
     }).journey,
   ).toEqual(talked.journey);
-  api.choose_overworld_session_story({
+  const registered = api.choose_overworld_session_story({
     ...FULL_OVERWORLD,
     session_id: sessionId,
     choice: profileId,
+  });
+  expect(registered.journey.storyChoice).toMatchObject({
+    id: LEAD_SOURCE.id,
+    kind: "lead_source",
+  });
+  api.choose_overworld_session_story({
+    ...FULL_OVERWORLD,
+    session_id: sessionId,
+    choice: DEFAULT_SOURCE_ID,
   });
 
   const registeredSnapshot = api.export_overworld_session({ session_id: sessionId }).snapshot;
@@ -279,10 +320,11 @@ describe("SS-F01 — Albany character background counterfactual", () => {
     if (!marketPoi) throw new Error("expected an Albany market point of interest");
     session.scoutPoi(marketPoi.id);
     moveSessionToArea(session, "albany_city__transport_hub");
-    const wolf = session.view().quests.find((quest) => quest.id === "wolf_winter");
-    if (!wolf) throw new Error("the bypass route must still discover Wolf-Winter");
+    const wolf = WORLD.quests.find((quest) => quest.id === "wolf_winter");
+    if (!wolf) throw new Error("expected Wolf-Winter in the starting world");
 
     expect(session.campaignCharacterState().background).toBeNull();
+    expect(session.view().quests.map((quest) => quest.id)).not.toContain(wolf.id);
     expect(() => session.previewQuestStart(wolf.id)).toThrow(
       /complete Enter Albany's Relief Compact.*Rowan Quill.*Albany Civic Center/i,
     );
@@ -294,6 +336,12 @@ describe("SS-F01 — Albany character background counterfactual", () => {
     moveSessionToArea(session, REGISTRATION.area);
     session.talkToCharacter(ROWAN_ID);
     session.chooseJourneyStory("albany:unaffiliated_courier");
+    expect(session.journey().storyChoice).toMatchObject({ kind: "lead_source" });
+    expect(session.view().quests.map((quest) => quest.id)).not.toContain(wolf.id);
+    expect(() => session.previewQuestStart(wolf.id)).toThrow(
+      /certify .*Wolf-Winter Source Packet/i,
+    );
+    session.chooseJourneyStory(DEFAULT_SOURCE_ID);
     moveSessionToArea(session, wolf.area);
     expect(session.previewQuestStart(wolf.id).id).toBe(wolf.id);
     expect(session.startQuest(wolf.id).id).toBe(wolf.id);
@@ -340,7 +388,7 @@ describe("SS-F01 — Albany character background counterfactual", () => {
     );
   });
 
-  it("grandfathers only progressed trusted saves and rejects the deletion bypass", () => {
+  it("rejects opaque pre-registration progress rather than minting incomplete provenance", () => {
     const { proofless } = prooflessStartedWolfSnapshot();
     expect(() => OverworldSession.restore(WORLD, proofless)).toThrow(
       /quest progress without selected opening registration or trusted legacy provenance/i,
@@ -351,14 +399,30 @@ describe("SS-F01 — Albany character background counterfactual", () => {
       OVERWORLD_CAMPAIGN_EXPORTS_WORLD_HASH,
       OVERWORLD_CAMPAIGN_IMPORTS_WORLD_HASH,
     ]) {
-      const predecessor = structuredClone(proofless);
+      const opaqueWolfPredecessor = structuredClone(proofless);
+      opaqueWolfPredecessor.worldHash = sourceWorldHash;
+      expect(() => OverworldSession.restore(WORLD, opaqueWolfPredecessor)).toThrow(
+        /opaque pre-registration quest progress without a replayable registration and lead-source path/i,
+      );
+
+      const predecessor = preRegistrationUnrelatedQuestSnapshot();
       predecessor.worldHash = sourceWorldHash;
-      const migrated = OverworldSession.restore(WORLD, predecessor);
-      const resaved = migrated.snapshot();
-      const marker = resaved.journalEntries.find((entry) => entry.kind === "registration_legacy");
-      expect(marker).toMatchObject({
-        id: `${OPENING_REGISTRATION_LEGACY_JOURNAL_PREFIX}${sourceWorldHash}`,
-        kind: "registration_legacy",
+      expect(() => OverworldSession.restore(WORLD, predecessor)).toThrow(
+        /opaque pre-registration quest progress without a replayable registration and lead-source path/i,
+      );
+    }
+  });
+
+  it("rejects legacy registration progress that has no replayable lead-source path", () => {
+    const predecessor = preRegistrationUnrelatedQuestSnapshot();
+    predecessor.worldHash = new OverworldSession(WORLD).snapshot().worldHash;
+    if (predecessor.currentAreaId === null) throw new Error("expected a current area");
+    const predecessorTown = WORLD.nodes.find((node) => node.id === predecessor.currentId)?.name;
+    if (!predecessorTown) throw new Error("expected the predecessor town name");
+    predecessor.journalEntries.unshift(
+      openingRegistrationLegacyJournalEntry({
+        sourceWorldHash: OVERWORLD_CAMPAIGN_IMPORTS_WORLD_HASH,
+        town: predecessorTown,
         recordedAt: timeLabel(predecessor.minutes),
         registrationBoundary: {
           acceptedDecisions: predecessor.journey.acceptedDecisions,
@@ -367,79 +431,10 @@ describe("SS-F01 — Albany character background counterfactual", () => {
           areaId: predecessor.currentAreaId,
           minutes: predecessor.minutes,
         },
-      });
-      expect(
-        migrated.view().journal.find((entry) => entry.kind === "registration_legacy"),
-      ).not.toHaveProperty("registrationBoundary");
-      expect(OverworldSession.restore(WORLD, resaved).snapshot()).toEqual(resaved);
-    }
-  });
-
-  it("binds legacy registration provenance to trusted source, chronology, and exclusivity", () => {
-    const { proofless, registered } = prooflessStartedWolfSnapshot();
-    const predecessor = structuredClone(proofless);
-    predecessor.worldHash = OVERWORLD_CAMPAIGN_IMPORTS_WORLD_HASH;
-    const migrated = OverworldSession.restore(WORLD, predecessor).snapshot();
-    const marker = migrated.journalEntries.find((entry) => entry.kind === "registration_legacy");
-    if (!marker) throw new Error("expected a migrated registration marker");
-
-    const missingMarker = structuredClone(migrated);
-    missingMarker.journalEntries = missingMarker.journalEntries.filter(
-      (entry) => entry.kind !== "registration_legacy",
+      }),
     );
-    expect(() => OverworldSession.restore(WORLD, missingMarker)).toThrow(
-      /quest progress without selected opening registration or trusted legacy provenance/i,
-    );
-
-    const predecessorWithLaterMarker = structuredClone(migrated);
-    predecessorWithLaterMarker.worldHash = OVERWORLD_CAMPAIGN_IMPORTS_WORLD_HASH;
-    expect(() => OverworldSession.restore(WORLD, predecessorWithLaterMarker)).toThrow(
-      /opening registration evidence from a later manifest/i,
-    );
-
-    const untrustedSource = structuredClone(migrated);
-    untrustedSource.journalEntries.find((entry) => entry.kind === "registration_legacy")!.id =
-      `${OPENING_REGISTRATION_LEGACY_JOURNAL_PREFIX}${"0".repeat(64)}`;
-    expect(() => OverworldSession.restore(WORLD, untrustedSource)).toThrow(
-      /untrusted source world hash/i,
-    );
-
-    const alteredCopy = structuredClone(migrated);
-    alteredCopy.journalEntries.find((entry) => entry.kind === "registration_legacy")!.text +=
-      " Forged exemption.";
-    expect(() => OverworldSession.restore(WORLD, alteredCopy)).toThrow(/canonical copy/i);
-
-    const futureBoundary = structuredClone(migrated);
-    futureBoundary.journalEntries.find(
-      (entry) => entry.kind === "registration_legacy",
-    )!.registrationBoundary!.acceptedDecisions += 1;
-    expect(() => OverworldSession.restore(WORLD, futureBoundary)).toThrow(
-      /ahead of its journey decision count/i,
-    );
-
-    const wrongOrder = structuredClone(migrated);
-    const wrongOrderMarker = wrongOrder.journalEntries.shift();
-    if (!wrongOrderMarker || wrongOrderMarker.kind !== "registration_legacy") {
-      throw new Error("expected the migration marker to begin the resaved journal");
-    }
-    wrongOrder.journalEntries.push(wrongOrderMarker);
-    expect(() => OverworldSession.restore(WORLD, wrongOrder)).toThrow(
-      /newest-first|earlier quest journal evidence/i,
-    );
-
-    const duplicateMarker = structuredClone(migrated);
-    duplicateMarker.journalEntries.splice(1, 0, {
-      ...structuredClone(marker),
-      id: `${OPENING_REGISTRATION_LEGACY_JOURNAL_PREFIX}${OVERWORLD_PRE_CAMPAIGN_EXPORTS_WORLD_HASH}`,
-    });
-    expect(() => OverworldSession.restore(WORLD, duplicateMarker)).toThrow(
-      /at most one legacy opening registration marker/i,
-    );
-
-    const combinedProofs = structuredClone(registered);
-    combinedProofs.journalEntries.unshift(structuredClone(marker));
-    expect(() => OverworldSession.restore(WORLD, combinedProofs)).toThrow(
-      /cannot combine selected or pending registration with a legacy registration marker/i,
+    expect(() => OverworldSession.restore(WORLD, predecessor)).toThrow(
+      /opaque legacy registration progress without a replayable lead-source path/i,
     );
 
     const freshSession = new OverworldSession(WORLD);
@@ -482,12 +477,26 @@ describe("SS-F01 — Albany character background counterfactual", () => {
     expect(session.journey()).toMatchObject({
       acceptedDecisions: 40,
       status: "awaiting_choice",
+      storyChoice: null,
+    });
+    const awaiting = session.snapshot();
+    expect(awaiting.journalEntries.some((entry) => entry.kind === "registration_offer")).toBe(true);
+
+    const continued = OverworldSession.restore(WORLD, awaiting);
+    continued.chooseJourney("continue");
+    expect(continued.journey()).toMatchObject({
+      status: "active",
       storyChoice: { kind: "registration" },
     });
 
-    session.chooseJourney("end");
-    expect(session.journey()).toMatchObject({ status: "ended", storyChoice: null });
-    expect(() => session.chooseJourneyStory("albany:road_warden")).toThrow(/journey has ended/i);
+    const ended = OverworldSession.restore(WORLD, awaiting);
+    ended.chooseJourney("end");
+    expect(ended.journey()).toMatchObject({ status: "ended", storyChoice: null });
+    const restoredEnded = OverworldSession.restore(WORLD, ended.snapshot());
+    expect(restoredEnded.journey()).toMatchObject({ status: "ended", storyChoice: null });
+    expect(() => restoredEnded.chooseJourneyStory("albany:road_warden")).toThrow(
+      /journey has ended/i,
+    );
   });
 
   it("redacts and detaches registration proof metadata from player-facing results", () => {
@@ -641,10 +650,18 @@ describe("SS-F01 — Albany character background counterfactual", () => {
     );
 
     const movedAfterSelection = pending;
+    movedAfterSelection.chooseJourneyStory(DEFAULT_SOURCE_ID);
     moveSessionToArea(movedAfterSelection, "albany_city__market");
     const wrongLocation = structuredClone(movedAfterSelection.snapshot());
     wrongLocation.journalEntries = wrongLocation.journalEntries.filter(
-      (entry) => entry.kind !== "registration" && entry.kind !== "area",
+      (entry) =>
+        entry.kind !== "registration" &&
+        entry.kind !== "lead_source" &&
+        entry.kind !== "lead_source_offer" &&
+        entry.kind !== "area",
+    );
+    wrongLocation.discoveredQuestIds = wrongLocation.discoveredQuestIds.filter(
+      (questId) => questId !== LEAD_SOURCE.target_quest,
     );
     wrongLocation.character = createInitialCampaignCharacterState();
     wrongLocation.journey = structuredClone(pendingSnapshot.journey);
@@ -655,7 +672,14 @@ describe("SS-F01 — Albany character background counterfactual", () => {
     moveSessionToArea(movedAfterSelection, REGISTRATION.area);
     const wrongClock = structuredClone(movedAfterSelection.snapshot());
     wrongClock.journalEntries = wrongClock.journalEntries.filter(
-      (entry) => entry.kind !== "registration" && entry.kind !== "area",
+      (entry) =>
+        entry.kind !== "registration" &&
+        entry.kind !== "lead_source" &&
+        entry.kind !== "lead_source_offer" &&
+        entry.kind !== "area",
+    );
+    wrongClock.discoveredQuestIds = wrongClock.discoveredQuestIds.filter(
+      (questId) => questId !== LEAD_SOURCE.target_quest,
     );
     wrongClock.character = createInitialCampaignCharacterState();
     wrongClock.journey = structuredClone(pendingSnapshot.journey);

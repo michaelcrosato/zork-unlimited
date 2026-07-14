@@ -35,6 +35,9 @@ function startAlbanyWolf(session: OverworldSession): void {
     session.talkToCharacter("albany_city__civic_core__contact");
     session.chooseJourneyStory("albany:ledger_advocate");
   }
+  if (session.journey().storyChoice?.kind === "lead_source") {
+    session.chooseJourneyStory("albany:source_rowan_civic_docket");
+  }
   moveToArea(session, "albany_city__market");
   session.scoutPoi("albany_city__market__poi");
   moveToArea(session, "albany_city__transport_hub");
@@ -48,6 +51,9 @@ function revealAlbanyWolfAtStation(session: OverworldSession): void {
     session.talkToCharacter("albany_city__civic_core__contact");
     session.chooseJourneyStory("albany:ledger_advocate");
   }
+  if (session.journey().storyChoice?.kind === "lead_source") {
+    session.chooseJourneyStory("albany:source_rowan_civic_docket");
+  }
   moveToArea(session, "albany_city__market");
   session.scoutPoi("albany_city__market__poi");
   moveToArea(session, "albany_city__transport_hub");
@@ -59,8 +65,8 @@ function completeWolfWithBaseHaydenAtDecision22(session: OverworldSession): stri
   const baseCard = haydenCard(session);
   const baseCopy = contactCopy(baseCard);
   expect(baseCard).not.toHaveProperty("variants");
-  expect(baseCopy).toContain("packet Rowan flagged");
-  expect(baseCopy).toContain("before the cattle are lost");
+  expect(baseCopy).toContain("controlling source certification");
+  expect(baseCopy).toContain("Old Cade's steading");
   expect(baseCopy).not.toMatch(/current journey goal|return board|crossed both/i);
 
   const beforeTalk = session.journey().acceptedDecisions;
@@ -292,7 +298,7 @@ describe("Wolf-Winter to Gallowmere authored handoff", () => {
       expect(wolfClosedCopy).toMatch(/Cade/i);
       expect(wolfClosedCopy).toMatch(/surviving|closed|return board/i);
       expect(wolfClosedCopy).toMatch(/current journey goal|journey ledger/i);
-      expect(wolfClosedCopy).not.toMatch(/packet Rowan flagged|before the cattle are lost/i);
+      expect(wolfClosedCopy).not.toMatch(/controlling source certification|settled packets/i);
 
       const beforeWolfClosedTalk = session.journey().acceptedDecisions;
       const wolfClosedTalk = session.talkToCharacter(HAYDEN_ID);
@@ -333,7 +339,7 @@ describe("Wolf-Winter to Gallowmere authored handoff", () => {
       expect(bothClosedCopy).toMatch(/crossed|closed|settled|filed/i);
       expect(bothClosedCopy).toMatch(/current journey goal|journey ledger/i);
       expect(bothClosedCopy).not.toBe(wolfClosedCopy);
-      expect(bothClosedCopy).not.toMatch(/packet Rowan flagged|before the cattle are lost/i);
+      expect(bothClosedCopy).not.toMatch(/controlling source certification|settled packets/i);
 
       const decisionsBeforeTalk = restoredBeforeTalk.journey().acceptedDecisions;
       const firstTalk = restoredBeforeTalk.talkToCharacter(HAYDEN_ID);
@@ -376,6 +382,7 @@ describe("Wolf-Winter to Gallowmere authored handoff", () => {
     session.scoutPoi("albany_city__civic_core__poi");
     session.talkToCharacter("albany_city__civic_core__contact");
     session.chooseJourneyStory("albany:ledger_advocate");
+    session.chooseJourneyStory("albany:source_rowan_civic_docket");
     session.travel(ALBANY_TO_SARATOGA);
     if (session.view().pendingRoadEncounter) session.resolveRoadEncounter("press_on");
     session.travel(SARATOGA_TO_QUEENSBURY);

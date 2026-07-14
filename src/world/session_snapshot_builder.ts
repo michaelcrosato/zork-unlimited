@@ -6,7 +6,9 @@ import {
 import { cloneJourneyContractSnapshot, type JourneyContractSnapshot } from "./journey_contract.js";
 import {
   OVERWORLD_SESSION_SAVE_VERSION,
+  cloneOpeningLeadSourceDecisionTrail,
   cloneJournalEntries,
+  type OverworldOpeningLeadSourceDecisionTrail,
   snapshotTravelLogEntries,
   type OverworldJournalEntry,
   type OverworldPendingRoadEncounter,
@@ -42,6 +44,7 @@ export type OverworldSessionSnapshotBuildState = {
   regionRenown: ReadonlyMap<string, number>;
   completedRegionalArcIds: ReadonlySet<string>;
   pendingRoadEncounter: OverworldPendingRoadEncounter | null;
+  openingLeadSourceDecisionTrail: OverworldOpeningLeadSourceDecisionTrail | null;
   journey: JourneyContractSnapshot;
 };
 
@@ -79,6 +82,13 @@ export function buildOverworldSessionSnapshot(
     pendingRoadEncounter: state.pendingRoadEncounter
       ? { edgeId: state.pendingRoadEncounter.edgeId }
       : null,
+    ...(state.openingLeadSourceDecisionTrail
+      ? {
+          openingLeadSourceDecisionTrail: cloneOpeningLeadSourceDecisionTrail(
+            state.openingLeadSourceDecisionTrail,
+          ),
+        }
+      : {}),
     journey: cloneJourneyContractSnapshot(state.journey),
   };
 }

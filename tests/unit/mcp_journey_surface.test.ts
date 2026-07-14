@@ -33,6 +33,7 @@ function uiSessionAtPostGallowmereHayden(): OverworldSession {
   session.scoutPoi("albany_city__civic_core__poi");
   session.talkToCharacter("albany_city__civic_core__contact");
   session.chooseJourneyStory("albany:ledger_advocate");
+  session.chooseJourneyStory("albany:source_rowan_civic_docket");
   moveUiSessionToArea(session, "albany_city__market");
   session.scoutPoi("albany_city__market__poi");
   moveUiSessionToArea(session, "albany_city__transport_hub");
@@ -74,11 +75,14 @@ function uiSessionAtAlbanyStoryChoice(): OverworldSession {
   const session = new OverworldSession(WORLD);
   const opening = session.view();
   session.scoutPoi(opening.pois[0]!.id);
-  const revealed = session.talkToCharacter(opening.characters[0]!.id);
+  const talked = session.talkToCharacter(opening.characters[0]!.id);
+  expect(talked.discoveredQuests?.map((candidate) => candidate.id)).not.toContain("wolf_winter");
   if (session.journey().storyChoice?.kind === "registration") {
     session.chooseJourneyStory("albany:ledger_advocate");
   }
-  const quest = revealed.discoveredQuests?.find((candidate) => candidate.id === "wolf_winter");
+  expect(session.journey().storyChoice?.kind).toBe("lead_source");
+  session.chooseJourneyStory("albany:source_rowan_civic_docket");
+  const quest = session.view().quests.find((candidate) => candidate.id === "wolf_winter");
   if (!quest) throw new Error("expected the Albany Wolf-Winter lead");
   const route = session
     .view()
@@ -159,15 +163,23 @@ function mcpWolfWinterCheckpointInsideQuest() {
     session_id: overworldSessionId,
     character_id: rowan.id,
   });
-  a.choose_overworld_session_story({
+  expect(registrationTalk.journey.storyChoice?.kind).toBe("registration");
+  expect(registrationTalk.result.discoveredQuests).toEqual([]);
+  const registered = a.choose_overworld_session_story({
     ...FULL_OVERWORLD,
     session_id: overworldSessionId,
     choice: "albany:ledger_advocate",
   });
-  view = a.get_overworld_session({
+  expect(registered.journey.storyChoice?.kind).toBe("lead_source");
+  expect(registered.observation.quests.map((candidate) => candidate.id)).not.toContain(
+    "wolf_winter",
+  );
+  const sourced = a.choose_overworld_session_story({
+    ...FULL_OVERWORLD,
     session_id: overworldSessionId,
-    include_observation: true,
-  }).observation;
+    choice: "albany:source_rowan_civic_docket",
+  });
+  view = sourced.observation;
 
   const marketRoute = view.areaExits.find(
     (route) => route.destination.id === "albany_city__market",
@@ -188,9 +200,7 @@ function mcpWolfWinterCheckpointInsideQuest() {
     session_id: overworldSessionId,
     poi_id: view.pois[0]!.id,
   });
-  const quest = registrationTalk.result.discoveredQuests?.find(
-    (candidate) => candidate.id === "wolf_winter",
-  );
+  const quest = sourced.observation.quests.find((candidate) => candidate.id === "wolf_winter");
   if (!quest) throw new Error("expected Albany quest lead");
   const questRoute = revealed.observation.areaExits.find(
     (route) => route.destination.id === quest.area,
@@ -208,12 +218,19 @@ function mcpWolfWinterCheckpointInsideQuest() {
 
   const contact = view.characters[0];
   if (!contact) throw new Error("expected quest-area contact");
+  const questAreaPoi = view.pois[0];
+  if (!questAreaPoi) throw new Error("expected quest-area point of interest");
+  a.scout_overworld_session_poi({
+    ...FULL_OVERWORLD,
+    session_id: overworldSessionId,
+    poi_id: questAreaPoi.id,
+  });
   let journey = a.talk_overworld_session_contact({
     ...FULL_OVERWORLD,
     session_id: overworldSessionId,
     character_id: contact.id,
   }).journey;
-  expect(journey.acceptedDecisions).toBe(7);
+  expect(journey.acceptedDecisions).toBe(9);
 
   // Reach decision 37 through real reversible local movement, so quest start and
   // two accepted quest moves put the checkpoint inside the RPG at decision 40.
@@ -374,7 +391,7 @@ describe("MCP journey surface", () => {
       /"variants"|"after_quests"|wolf_winter_closed|wolf_winter_and_gallowmere_closed/i,
     );
     expect(observationPayload).not.toMatch(
-      /packet Rowan flagged|before the cattle are lost|return board|other live report in that chain/i,
+      /controlling source certification|settled packets|return board|other live report in that chain/i,
     );
 
     const uiTalk = ui.talkToCharacter(HAYDEN_ID);
@@ -395,7 +412,7 @@ describe("MCP journey surface", () => {
     expect(uiTalk.entry.text).toMatch(/Cade/i);
     expect(uiTalk.entry.text).toMatch(/Hedrick|Gallowmere/i);
     expect(uiTalk.entry.text).toMatch(/current journey goal|journey ledger/i);
-    expect(uiTalk.entry.text).not.toMatch(/packet Rowan flagged|before the cattle are lost/i);
+    expect(uiTalk.entry.text).not.toMatch(/controlling source certification|settled packets/i);
     expect(fullTalk.journey).toEqual(ui.journey());
     expect(compactTalk.journey).toEqual(ui.journey());
     expect(compactTalk.snapshot_hash).toBe(fullTalk.snapshot_hash);

@@ -330,6 +330,93 @@
       }
     ]
   },
+  "opening_lead_source": {
+    "version": 1,
+    "id": "albany:wolf_source_priority",
+    "after_registration": "albany:relief_registration",
+    "target_quest": "wolf_winter",
+    "home": "albany_city",
+    "area": "albany_city__civic_core",
+    "title": "Certify the Wolf-Winter Source Packet",
+    "message": "Rowan can attach one account before the hill dispatch closes. The civic docket leaves immediately with only the public facts. Jamie Tanner's market testimony costs time and money to verify but maps a feed-hauler's crawlboard into Cade's loft. Hayden Hale's frost report costs time but identifies a failed paling line that can be exploited only while the split rail remains unbound. Albany will pack this run against the one source you certify now; the other packets cannot be added after departure.",
+    "options": [
+      {
+        "id": "albany:source_rowan_civic_docket",
+        "title": "Leave on Rowan's Civic Docket",
+        "source_npc_id": "albany:rowan_quill",
+        "summary": "Take the signed public docket without delaying the hill dispatch.",
+        "preview": "You keep the public routes already recorded in Cade's packet, including the split-rail recovery, but carry no private market or frost evidence.",
+        "consequence": "Rowan certifies the unaugmented civic docket. It leaves at once without a fee; the relief party will have to work from public routes and whatever it learns at the steading.",
+        "terms": {
+          "minutes": 0,
+          "money": 0
+        },
+        "effects": []
+      },
+      {
+        "id": "albany:source_jamie_market_testimony",
+        "title": "Verify Jamie's Market Testimony",
+        "source_npc_id": "albany:jamie_tanner",
+        "summary": "Cross-check missing cattle feed against Jamie Tanner's named delivery witnesses.",
+        "preview": "The certified testimony identifies the feed-hauler's crawlboard into Cade's fodder loft. After the yearling is dealt with, that knowledge opens the loft approach to the flank-wolf without requiring a bound split rail; taking the drop commits you away from the ground approaches.",
+        "consequence": "Rowan seals Jamie's witness list into the relief packet. Jamie remembers that you put the market account on the public record; after the yearling falls, the certified crawlboard becomes a committed loft approach at Cade's steading.",
+        "terms": {
+          "minutes": 35,
+          "money": 6
+        },
+        "sponsor": {
+          "memory_id": "albany:memory_jamie_sponsored_ledger_advocate",
+          "minutes": 15,
+          "money": 0,
+          "note": "Jamie's Ledger Advocate sponsorship pre-clears the witness counter, waiving $6 and reducing review time from 35 minutes to 15."
+        },
+        "effects": [
+          {
+            "type": "learn_knowledge",
+            "knowledge_id": "albany:knowledge_wolf_market_testimony"
+          },
+          {
+            "type": "remember_relationship",
+            "npc_id": "albany:jamie_tanner",
+            "memory_id": "albany:memory_jamie_market_testimony_certified",
+            "trust_at_least": 3,
+            "regard_at_least": 3
+          }
+        ]
+      },
+      {
+        "id": "albany:source_hayden_frost_report",
+        "title": "Take Hayden's Frost-Heave Report",
+        "source_npc_id": "albany:hayden_hale",
+        "summary": "Review Hayden Hale's boundary sketch and overnight frost-heave readings.",
+        "preview": "If the paling rail splits in Wolf-Winter and you leave it unbound, the report unlocks a fast, exposed frost-jamb line against the flank-wolf. Binding the familiar splinter guard commits away from that line.",
+        "consequence": "Rowan stamps Hayden's route report as the controlling field account. Hayden remembers that his boundary reading carried the dispatch; at Cade's byre, an unbound failed rail can become the exposed frost-jamb maneuver.",
+        "terms": {
+          "minutes": 20,
+          "money": 0
+        },
+        "sponsor": {
+          "memory_id": "albany:memory_hayden_sponsored_road_warden",
+          "minutes": 5,
+          "money": 0,
+          "note": "Hayden's Road-Warden sponsorship reduces the route-desk review from 20 minutes to 5."
+        },
+        "effects": [
+          {
+            "type": "learn_knowledge",
+            "knowledge_id": "albany:knowledge_wolf_frost_report"
+          },
+          {
+            "type": "remember_relationship",
+            "npc_id": "albany:hayden_hale",
+            "memory_id": "albany:memory_hayden_frost_report_certified",
+            "trust_at_least": 3,
+            "regard_at_least": 3
+          }
+        ]
+      }
+    ]
+  },
   "sources": [
     {
       "label": "U.S. Census Bureau Vintage 2025 subcounty population estimates",
@@ -23591,6 +23678,14 @@
       "campaign_npc_id": "albany:jamie_tanner",
       "variants": [
         {
+          "id": "market_testimony_certified",
+          "after_relationship_memories": [
+            "albany:memory_jamie_market_testimony_certified"
+          ],
+          "summary": "Jamie sees Rowan's certification number beside the missing-feed witnesses and remembers that you made the market account answerable in public.",
+          "agenda": "The testimony bought a real feed-hauler route into Cade's loft, not a guaranteed outcome. Jamie keeps the named witnesses and certification number fixed in the public record."
+        },
+        {
           "id": "sponsored_ledger_advocate",
           "after_relationship_memories": [
             "albany:memory_jamie_sponsored_ledger_advocate"
@@ -23608,7 +23703,7 @@
       "role": "route dispatcher",
       "faction": "Road Wardens",
       "summary": "Hayden Hale dispatches road wardens from Albany Station Quarter, matching late coaches, snow reports, and relief freight to travelers who can move faster than official crews.",
-      "agenda": "Needs someone to carry the packet Rowan flagged from the Station Quarter route desk to Old Cade's hill steading before the cattle are lost; he can point you to the active lead.",
+      "agenda": "Hayden matches every hill dispatch to Rowan's controlling source certification; settled packets carry route timing to Old Cade's steading and the other winter stops.",
       "campaign_npc_id": "albany:hayden_hale",
       "variants": [
         {
@@ -23638,6 +23733,14 @@
           ],
           "summary": "Hayden Hale has Cade's surviving cattle and the broken paling entered on the Station Quarter return board.",
           "agenda": "The Cade packet is closed. The other live report in that chain is already reflected in the current journey goal on your docket."
+        },
+        {
+          "id": "frost_report_certified",
+          "after_relationship_memories": [
+            "albany:memory_hayden_frost_report_certified"
+          ],
+          "summary": "Hayden recognizes his frost-heave sketch under Rowan's certification stamp and remembers that you made his boundary reading the controlling field account.",
+          "agenda": "The report exposes one dangerous line only if the paling fails and remains unbound. Hayden keeps that condition exact rather than treating the report as a general field advantage."
         },
         {
           "id": "sponsored_road_warden",
@@ -46893,6 +46996,18 @@
             "type": "skill_rank_to_var",
             "skill_id": "skill:fieldcraft",
             "target_var": "defense"
+          },
+          {
+            "id": "import:wolf_winter_market_testimony",
+            "type": "knowledge_to_flag",
+            "knowledge_id": "albany:knowledge_wolf_market_testimony",
+            "target_flag": "jamie_market_testimony_certified"
+          },
+          {
+            "id": "import:wolf_winter_frost_report",
+            "type": "knowledge_to_flag",
+            "knowledge_id": "albany:knowledge_wolf_frost_report",
+            "target_flag": "hayden_frost_report_certified"
           }
         ]
       },

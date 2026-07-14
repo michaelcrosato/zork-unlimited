@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 557 -->
+<!-- historical_cycle_count: 558 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,15 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - albany_lead_source_counterfactual
+
+- Change: Wolf-Winter is no longer a FIFO reveal. After registration, Albany blocks play on one permanent certification: Rowan's public docket is free, Jamie's testimony costs 35 minutes/$6 (Ledger: 15/$0), and Hayden's frost report costs 20 minutes (Road-Warden: 5); each changes source memory and imports only its own knowledge.
+- Measured effect: Jamie alone opens a rail-free crawlboard after the yearling; Hayden alone turns an unbound failed rail into a high-variance frost-brace sequence; Rowan preserves the import-independent routes. Paired same-state counterfactuals prove `SS-F03-lead-source`, bringing the honest slice total to 2/12 forks.
+- Integrity/parity: the selected source must be the first decision after its durable offer and a full suffix trail binds later play. Restore rejects deletion, splicing, forged decisions/markers, every progressed registration-era suffix, and opaque pre-registration progress; only the exact untouched registration boundary migrates to the real source prompt. UI/full/compact MCP and decision-40 Continue/End behavior agree.
+- Pure evidence: verified pure/fresh seed 2705 chose Road-Warden + Hayden, completed Wolf-Winter at decision 27, continued through three later goals and checkpoints 40/80, then ended voluntarily at 96; clarity/enjoyment 4/4, replay true, no rejects, stuck state, or mechanical bug.
+- Compile/self-critique: 776 verified reports/33 rejected and 27 v3 pure exits all continued at least once; compile `20260714T184840Z` has zero crawl findings. PASS for a delayed Albany→Wolf counterfactual, not the greater-than-BG3 slice claim: repeated quest structure and cross-town contact-name reuse remain fresh S0/S1 debt.
+- Guard: three independent adversarial audits found no remaining P0/P1; pre/final 6,000-step crawls (`20260714T154421Z`, `20260714T183455Z`) reached 247/247 nodes, 344/344 edges, and 12/12 quests; full health passed (328 files/2,391 tests, UI, 12 packs).
 
 ### Cycle result - albany_character_registration
 
@@ -136,12 +145,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Pure evidence: verified pure/fresh seed 1809 completed Wolf-Winter, Gallowmere, and Tanner's Fever; continued at 22/40/49, ended honestly at goal 3 on decision 77, clarity/enjoyment 4/4, got-stuck false, replay true. Treatment succeeded first try, so the repaired failure affordance remains blind-unsampled rather than passed by absence.
 - Compile/self-critique: the ledger is current at 455 verified reports; seeds 1709+1809 are two since the 453-report compile, below threshold. PASS for truthful recoverability, not retention—the player again stopped after three arcs and now named modal dialogue filler/rejections, blind long-route planning, and a visible shared quest skeleton.
 - Guard: focused parity/recovery suites also pin legal-command precedence and erase unavailable-action omission metadata during journey choices; identifier-relabel proofs, local UI smoke with no console errors, final 6,000-step crawl (247/247 nodes, 344/344 edges, 12/12 quests), verified receipt, and full health (UI and 12 packs included) passed.
-
-### Cycle result - quest_reactive_contact_memory
-
-- Surface: overworld contacts may now author ordered, monotonic quest-completion phases; the shared projector gives web/full MCP only the active summary/agenda and physically strips future phases. Hayden advances from the live Cade packet to Wolf-Winter closed and then Cade+Hedrick both closed instead of reopening settled emergencies (`bug_0510`).
-- Integrity/parity: phase-specific journal ids make each genuinely new conversation cost/count once while same-phase repeats remain context-only; snapshot replay reconstructs completed quests at the talk timestamp and rejects unknown, future, or rewritten phases. UI, full MCP, compact MCP, save/restore, and both Albany dispatch branches return the same active copy.
-- Pure evidence: verified pure/fresh seed 1709 completed Wolf-Winter, Gallowmere, and Tanner's Fever; continued honestly at 23/40/50/80, ended at goal 3 on decision 82, clarity/enjoyment 5/4, replay true. Its retained report provides no evidence of a Hayden retalk, so blind sampling remains unconfirmed; deterministic round-trip regressions carry the fix proof.
-- Effect: seed 1609's worst-moment continuity contradiction is closed at its causal seam. Fresh seed 1709 instead found a failed Tanner treatment branch temporarily soft-lock-like and again noticed cross-town name reuse; uniform six-leg quest travel also remains pacing debt.
-- Compile/self-critique: the ledger is current at 454 verified reports; seed 1709 is the sole report since the 453-report compile, below the three-report threshold. PASS for stateful world memory, not retention completion—the player still chose a natural stop after three arcs; Tanner failure recovery and the audited 700-contact/17-name template corpus are next evidence.
-- Guard: 114 focused lifecycle/parity/forgery tests, final 6000-step crawl (247/247 nodes, 344/344 edges, 12/12 quests), verified receipt, and full health (299 files/2126 tests, UI, 12 packs) passed.

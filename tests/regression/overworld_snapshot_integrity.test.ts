@@ -157,24 +157,37 @@ function exportedSnapshotAfterTwoRoads() {
 function exportedSnapshotWithResolvedInitialEvent() {
   const a = api();
   const started = a.start_overworld({ compact_context: false });
-  const poi = started.observation.pois[0];
-  const contact = started.observation.characters[0];
-  const event = started.observation.events[0];
+  const road =
+    started.observation.exits.find((edge) => edge.destination.id === "colonie_town") ??
+    started.observation.exits[0];
+  if (!road) throw new Error("expected a road out of Albany");
+  a.travel_overworld_session({ session_id: started.session_id, road_id: road.id });
+  let observation = a.get_overworld_session({
+    include_observation: true,
+    session_id: started.session_id,
+  }).observation;
+  if (observation.pendingRoadEncounter) {
+    a.resolve_overworld_session_road_encounter({
+      ...FULL_OVERWORLD_RESPONSE,
+      session_id: started.session_id,
+      strategy: "press_on",
+    });
+    observation = a.get_overworld_session({
+      include_observation: true,
+      session_id: started.session_id,
+    }).observation;
+  }
+  const poi = observation.pois[0];
+  const contact = observation.characters[0];
+  const event = observation.events[0];
   if (!poi || !contact || !event) throw new Error("expected initial local event prerequisites");
 
   a.scout_overworld_session_poi({ session_id: started.session_id, poi_id: poi.id });
-  const talked = a.talk_overworld_session_contact({
+  a.talk_overworld_session_contact({
     ...FULL_OVERWORLD_RESPONSE,
     session_id: started.session_id,
     character_id: contact.id,
   });
-  if (talked.journey.storyChoice?.kind === "registration") {
-    a.choose_overworld_session_story({
-      ...FULL_OVERWORLD_RESPONSE,
-      session_id: started.session_id,
-      choice: "albany:ledger_advocate",
-    });
-  }
   a.investigate_overworld_session_event({
     ...FULL_OVERWORLD_RESPONSE,
     session_id: started.session_id,
@@ -322,6 +335,10 @@ function resolveCurrentOverworldSessionEvent(a: ReturnType<typeof api>, sessionI
     a.choose_overworld_session_story({
       session_id: sessionId,
       choice: "albany:ledger_advocate",
+    });
+    a.choose_overworld_session_story({
+      session_id: sessionId,
+      choice: "albany:source_rowan_civic_docket",
     });
   }
   a.investigate_overworld_session_event({ session_id: sessionId, event_id: event.id });
@@ -1230,6 +1247,11 @@ describe("overworld snapshot restore integrity", () => {
         session_id: started.session_id,
         choice: "albany:ledger_advocate",
       });
+      a.choose_overworld_session_story({
+        ...FULL_OVERWORLD_RESPONSE,
+        session_id: started.session_id,
+        choice: "albany:source_rowan_civic_docket",
+      });
     }
     const secondJob = talked.result.discoveredJobs?.[0];
     if (!scouted.result.discoveredJobs?.[0] || !secondJob) {
@@ -1398,75 +1420,80 @@ describe("overworld snapshot restore integrity", () => {
     );
   });
 
-  it("rejects discovered quests without enough local action proof", () => {
+  it("rejects the opening quest without certified source proof", () => {
     const a = api();
     const started = a.start_overworld({ compact_context: false });
+    const firstArea = started.observation.currentArea;
+    if (!firstArea) throw new Error("expected Albany's opening area");
+    const firstExploration = a.explore_overworld_session_area({
+      ...FULL_OVERWORLD_RESPONSE,
+      session_id: started.session_id,
+      area_id: firstArea.id,
+    });
+    const marketRoute = firstExploration.observation.areaExits.find(
+      (route) => route.destination.id === "albany_city__market",
+    );
+    if (!marketRoute) throw new Error("expected Albany's market route");
+    a.move_overworld_session_area({
+      ...FULL_OVERWORLD_RESPONSE,
+      session_id: started.session_id,
+      area_route_id: marketRoute.id,
+    });
+    a.explore_overworld_session_area({
+      ...FULL_OVERWORLD_RESPONSE,
+      session_id: started.session_id,
+      area_id: marketRoute.destination.id,
+    });
     const snapshot = a.export_overworld_session({ session_id: started.session_id }).snapshot;
     const quest = overworldQuestsAt(overworld, snapshot.currentId)[0];
     if (!quest) throw new Error("expected a local quest lead");
-    const areas = overworldAreasAt(overworld, snapshot.currentId);
-    const questAreaIndex = areas.findIndex((area) => area.id === quest.area);
-    if (questAreaIndex < 0) throw new Error("expected quest area in current town");
+    expect(snapshot.discoveredAreaIds).toContain(quest.area);
     const forgedQuestDiscovery = {
       ...snapshot,
-      discoveredAreaIds: appendUniques(
-        snapshot.discoveredAreaIds,
-        areas.slice(0, questAreaIndex + 1).map((area) => area.id),
-      ),
       discoveredQuestIds: appendUnique(snapshot.discoveredQuestIds, quest.id),
     };
 
     expect(() => a.restore_overworld_session({ snapshot: forgedQuestDiscovery })).toThrow(
-      /discovered quest count.*local action proof/,
+      /discovered the opening lead-source target quest without a certified lead source/i,
     );
   });
 
-  it("rejects missing discovered quests earned by local action replay", () => {
+  it("rejects a missing quest earned by opening source certification", () => {
     const a = api();
     const started = a.start_overworld({ compact_context: false });
-    const localActions = [
-      () => {
-        const poi = started.observation.pois[0];
-        if (!poi) throw new Error("expected an initial-area point of interest");
-        return a.scout_overworld_session_poi({
-          ...FULL_OVERWORLD_RESPONSE,
-          session_id: started.session_id,
-          poi_id: poi.id,
-        }).result;
-      },
-      () => {
-        const contact = started.observation.characters[0];
-        if (!contact) throw new Error("expected an initial-area contact");
-        return a.talk_overworld_session_contact({
-          ...FULL_OVERWORLD_RESPONSE,
-          session_id: started.session_id,
-          character_id: contact.id,
-        }).result;
-      },
-      () => {
-        const event = started.observation.events[0];
-        if (!event) throw new Error("expected an initial-area event");
-        return a.investigate_overworld_session_event({
-          ...FULL_OVERWORLD_RESPONSE,
-          session_id: started.session_id,
-          event_id: event.id,
-        }).result;
-      },
-    ];
-    let quest: { id: string } | undefined;
-    for (const action of localActions) {
-      quest = action().discoveredQuests?.[0];
-      if (quest) break;
-    }
-    if (!quest) throw new Error("expected initial local actions to discover a quest");
+    const poi = started.observation.pois[0];
+    const contact = started.observation.characters[0];
+    if (!poi || !contact) throw new Error("expected Albany's opening sources");
+    a.scout_overworld_session_poi({
+      ...FULL_OVERWORLD_RESPONSE,
+      session_id: started.session_id,
+      poi_id: poi.id,
+    });
+    a.talk_overworld_session_contact({
+      ...FULL_OVERWORLD_RESPONSE,
+      session_id: started.session_id,
+      character_id: contact.id,
+    });
+    a.choose_overworld_session_story({
+      ...FULL_OVERWORLD_RESPONSE,
+      session_id: started.session_id,
+      choice: "albany:ledger_advocate",
+    });
+    a.choose_overworld_session_story({
+      ...FULL_OVERWORLD_RESPONSE,
+      session_id: started.session_id,
+      choice: "albany:source_rowan_civic_docket",
+    });
+    const quest = overworld.opening_lead_source?.target_quest;
+    if (!quest) throw new Error("expected Albany's source-bound quest");
     const snapshot = a.export_overworld_session({ session_id: started.session_id }).snapshot;
     const forgedMissingQuest = {
       ...snapshot,
-      discoveredQuestIds: snapshot.discoveredQuestIds.filter((id) => id !== quest.id),
+      discoveredQuestIds: snapshot.discoveredQuestIds.filter((id) => id !== quest),
     };
 
     expect(() => a.restore_overworld_session({ snapshot: forgedMissingQuest })).toThrow(
-      /discovered quest count.*local action proof/,
+      /selected lead source did not reveal its target quest/i,
     );
   });
 
@@ -1507,11 +1534,13 @@ describe("overworld snapshot restore integrity", () => {
   });
 
   it("rejects discovered quests in undiscovered areas", () => {
-    const { a, snapshot } = exportedSnapshotAfterTwoRoads();
+    const a = api();
+    const started = a.start_overworld({ compact_context: false });
+    travelOverworldSessionTo(a, started.session_id, "new_york_city");
+    const snapshot = a.export_overworld_session({ session_id: started.session_id }).snapshot;
     const quest = overworld.quests.find(
       (candidate) =>
-        snapshot.visitedIds.includes(candidate.home) &&
-        !snapshot.discoveredAreaIds.includes(candidate.area),
+        candidate.home === "new_york_city" && !snapshot.discoveredAreaIds.includes(candidate.area),
     );
     if (!quest) throw new Error("expected a quest in an undiscovered visited-town area");
     const forgedQuestDiscovery = {

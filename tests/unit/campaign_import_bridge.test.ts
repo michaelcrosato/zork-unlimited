@@ -33,11 +33,14 @@ type ToolApi = ReturnType<typeof createToolApi>;
 function revealAlbanyWolf(session: OverworldSession) {
   const opening = session.view();
   session.scoutPoi(opening.pois[0]!.id);
-  const revealed = session.talkToCharacter(opening.characters[0]!.id);
+  const talked = session.talkToCharacter(opening.characters[0]!.id);
+  expect(talked.discoveredQuests?.map((candidate) => candidate.id)).not.toContain("wolf_winter");
   if (session.journey().storyChoice?.kind === "registration") {
     session.chooseJourneyStory("albany:ledger_advocate");
   }
-  const quest = revealed.discoveredQuests?.find((candidate) => candidate.id === "wolf_winter");
+  expect(session.journey().storyChoice?.kind).toBe("lead_source");
+  session.chooseJourneyStory("albany:source_rowan_civic_docket");
+  const quest = session.view().quests.find((candidate) => candidate.id === "wolf_winter");
   if (!quest) throw new Error("Expected the Albany Wolf-Winter lead.");
   const route = session
     .view()
@@ -72,15 +75,21 @@ function launchAlbanyWolf(
     session_id: overworldSessionId,
     character_id: rowan.id,
   });
-  api.choose_overworld_session_story({
+  const registered = api.choose_overworld_session_story({
     ...full,
     session_id: overworldSessionId,
     choice: "albany:ledger_advocate",
   });
-  observation = api.get_overworld_session({
+  expect(registered.journey.storyChoice?.kind).toBe("lead_source");
+  expect(registered.observation.quests.map((candidate) => candidate.id)).not.toContain(
+    "wolf_winter",
+  );
+  const sourced = api.choose_overworld_session_story({
+    ...full,
     session_id: overworldSessionId,
-    include_observation: true,
-  }).observation;
+    choice: "albany:source_rowan_civic_docket",
+  });
+  observation = sourced.observation;
   const quest = observation.quests.find((candidate) => candidate.id === "wolf_winter");
   if (!quest) throw new Error("Expected the Wolf-Winter lead after registration.");
   const marketRoute = observation.areaExits.find(

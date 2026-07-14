@@ -27,11 +27,14 @@ function sessionAtQueensburyGoalPassage(): OverworldSession {
   const session = new OverworldSession(WORLD);
   const opening = session.view();
   session.scoutPoi(opening.pois[0]!.id);
-  const revealed = session.talkToCharacter(opening.characters[0]!.id);
+  const talked = session.talkToCharacter(opening.characters[0]!.id);
+  expect(talked.discoveredQuests?.map((candidate) => candidate.id)).not.toContain("wolf_winter");
   if (session.journey().storyChoice?.kind === "registration") {
     session.chooseJourneyStory("albany:ledger_advocate");
   }
-  const quest = revealed.discoveredQuests?.find((candidate) => candidate.id === "wolf_winter");
+  expect(session.journey().storyChoice?.kind).toBe("lead_source");
+  session.chooseJourneyStory("albany:source_rowan_civic_docket");
+  const quest = session.view().quests.find((candidate) => candidate.id === "wolf_winter");
   if (!quest) throw new Error("expected the Albany Wolf-Winter lead");
   moveToArea(session, quest.area);
   session.startQuest(quest.id);

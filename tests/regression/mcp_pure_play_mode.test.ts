@@ -235,10 +235,10 @@ describe("MCP pure play mode", () => {
           (option) => option.id === "albany:ledger_advocate",
         );
         if (!ledgerAdvocate) throw new Error("expected visible Ledger Advocate profile");
-        const wolfWinter = (
+        const wolfBeforeSource = (
           registration.result as { discoveredQuests?: { id: string; area: string }[] }
         ).discoveredQuests?.find((quest) => quest.id === "wolf_winter");
-        if (!wolfWinter) throw new Error("expected Rowan to reveal Wolf-Winter");
+        expect(wolfBeforeSource).toBeUndefined();
         const selected = textPayload(
           await client.callTool({
             name: "choose_overworld_session_story",
@@ -250,7 +250,35 @@ describe("MCP pure play mode", () => {
             },
           }),
         );
-        view = selected.observation as AreaView;
+        const sourceChoice = (
+          selected.journey as {
+            storyChoice?: {
+              kind?: string;
+              options?: { id: string }[];
+            };
+          }
+        ).storyChoice;
+        expect(sourceChoice?.kind).toBe("lead_source");
+        const rowanDocket = sourceChoice?.options?.find(
+          (option) => option.id === "albany:source_rowan_civic_docket",
+        );
+        if (!rowanDocket) throw new Error("expected visible Rowan civic-docket source");
+        const sourced = textPayload(
+          await client.callTool({
+            name: "choose_overworld_session_story",
+            arguments: {
+              session_id: sessionId,
+              choice: rowanDocket.id,
+              compact_context: false,
+              compact_result: false,
+            },
+          }),
+        );
+        const wolfWinter = (
+          sourced.observation as AreaView & { quests?: { id: string; area: string }[] }
+        ).quests?.find((quest) => quest.id === "wolf_winter");
+        if (!wolfWinter) throw new Error("expected selected source to reveal Wolf-Winter");
+        view = sourced.observation as AreaView;
         const marketRoute = view.areaExits.find(
           (route) => route.destination.id === "albany_city__market",
         );

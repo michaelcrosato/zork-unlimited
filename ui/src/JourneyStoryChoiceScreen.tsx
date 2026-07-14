@@ -21,6 +21,8 @@ export function JourneyStoryChoiceScreen({
     throw new Error("JourneyStoryChoiceScreen requires a pending story choice.");
   }
   const isRegistration = storyChoice.kind === "registration";
+  const isLeadSource = storyChoice.kind === "lead_source";
+  const keepsCurrentObjective = isRegistration || isLeadSource;
 
   return (
     <main className="journey-decision-page">
@@ -32,28 +34,38 @@ export function JourneyStoryChoiceScreen({
         aria-describedby="journey-story-choice-message"
       >
         <p className="kicker">
-          {isRegistration ? "Character registration" : "Journey consequence"}
+          {isRegistration
+            ? "Character registration"
+            : isLeadSource
+              ? "Albany evidence source"
+              : "Journey consequence"}
         </p>
         <h1 id="journey-story-choice-title" ref={headingRef} tabIndex={-1}>
-          {isRegistration ? "Choose your lived background" : "Choose what follows"}
+          {isRegistration
+            ? "Choose your lived background"
+            : isLeadSource
+              ? "Choose your Albany lead source"
+              : "Choose what follows"}
         </h1>
         <p id="journey-story-choice-message" className="journey-choice-message">
           {storyChoice.message}
         </p>
 
         <div className="journey-choice-goal">
-          <span>{isRegistration ? "Current objective" : "Goal just completed"}</span>
+          <span>{keepsCurrentObjective ? "Current objective" : "Goal just completed"}</span>
           <strong>{journey.goal.text}</strong>
           <small>
             {isRegistration
               ? "Your registered history persists into the journey; choose the experience and obligations you will carry."
-              : "Choose the consequence that sets your next objective."}
+              : isLeadSource
+                ? "Your source changes the evidence and approaches you can carry forward; it does not replace this objective."
+                : "Choose the consequence that sets your next objective."}
           </small>
         </div>
 
         <div
           className={`journey-choice-actions${
-            isRegistration ? " journey-choice-actions-registration" : ""
+            keepsCurrentObjective ? " journey-choice-actions-registration" : ""
           }`}
         >
           {storyChoice.options.map((option) => (

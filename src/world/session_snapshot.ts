@@ -4,7 +4,12 @@ import {
   cloneCampaignCharacterState,
   createInitialCampaignCharacterState,
 } from "./campaign_character_state.js";
-import { JourneyContractSnapshotSchema, cloneJourneyContractSnapshot } from "./journey_contract.js";
+import {
+  JourneyContractSnapshotSchema,
+  JourneyDecisionProofLastSchema,
+  cloneJourneyContractSnapshot,
+  type JourneyDecisionProofLast,
+} from "./journey_contract.js";
 import type { OverworldRoadEvent } from "./overworld.js";
 import {
   OVERWORLD_MAX_FATIGUE as MAX_FATIGUE,
@@ -86,6 +91,35 @@ const OverworldPendingRoadEncounterSnapshotSchema = z
   })
   .strict();
 
+export type OverworldJournalDecisionBoundary = {
+  acceptedDecisions: number;
+  decisionProofHash: string;
+  townId: string;
+  areaId: string;
+  minutes: number;
+};
+
+/**
+ * Replayable suffix from the source offer (or a trusted migration marker) to
+ * the current journey proof. This makes the chosen source part of every later
+ * save's causal history instead of trusting a detached journal entry.
+ */
+export type OverworldOpeningLeadSourceDecisionTrail = {
+  anchorId: string;
+  baseAcceptedDecisions: number;
+  baseDecisionProofHash: string;
+  decisions: JourneyDecisionProofLast[];
+};
+
+export function cloneOpeningLeadSourceDecisionTrail(
+  trail: OverworldOpeningLeadSourceDecisionTrail,
+): OverworldOpeningLeadSourceDecisionTrail {
+  return {
+    ...trail,
+    decisions: trail.decisions.map((decision) => ({ ...decision })),
+  };
+}
+
 export type OverworldJournalEntry = {
   id: string;
   kind:
@@ -94,6 +128,9 @@ export type OverworldJournalEntry = {
     | "contact"
     | "event"
     | "job"
+    | "lead_source"
+    | "lead_source_legacy"
+    | "lead_source_offer"
     | "poi"
     | "quest"
     | "quest_done"
@@ -109,15 +146,8 @@ export type OverworldJournalEntry = {
   title: string;
   text: string;
   recordedAt: string;
-  registrationBoundary?:
-    | {
-        acceptedDecisions: number;
-        decisionProofHash: string;
-        townId: string;
-        areaId: string;
-        minutes: number;
-      }
-    | undefined;
+  registrationBoundary?: OverworldJournalDecisionBoundary | undefined;
+  storyChoiceBoundary?: OverworldJournalDecisionBoundary | undefined;
 };
 
 const OverworldJournalRegistrationBoundarySchema = z
@@ -130,6 +160,15 @@ const OverworldJournalRegistrationBoundarySchema = z
   })
   .strict();
 
+const OverworldOpeningLeadSourceDecisionTrailSchema = z
+  .object({
+    anchorId: z.string().min(1),
+    baseAcceptedDecisions: z.number().int().nonnegative().safe(),
+    baseDecisionProofHash: z.string().regex(/^[0-9a-f]{64}$/),
+    decisions: z.array(JourneyDecisionProofLastSchema),
+  })
+  .strict();
+
 const OverworldJournalEntrySchema = z
   .object({
     id: z.string().min(1),
@@ -139,6 +178,9 @@ const OverworldJournalEntrySchema = z
       "contact",
       "event",
       "job",
+      "lead_source",
+      "lead_source_legacy",
+      "lead_source_offer",
       "poi",
       "quest",
       "quest_done",
@@ -156,6 +198,7 @@ const OverworldJournalEntrySchema = z
     text: z.string().min(1),
     recordedAt: z.string().min(1),
     registrationBoundary: OverworldJournalRegistrationBoundarySchema.optional(),
+    storyChoiceBoundary: OverworldJournalRegistrationBoundarySchema.optional(),
   })
   .strict();
 
@@ -195,6 +238,7 @@ export const OverworldSessionSnapshotV8Schema = z
 export const OverworldSessionSnapshotSchema = OverworldSessionSnapshotV8Schema.extend({
   version: z.literal(OVERWORLD_SESSION_SAVE_VERSION),
   character: CampaignCharacterStateSchema,
+  openingLeadSourceDecisionTrail: OverworldOpeningLeadSourceDecisionTrailSchema.optional(),
 }).strict();
 
 export type OverworldSessionSnapshotV8 = z.infer<typeof OverworldSessionSnapshotV8Schema>;
@@ -235,13 +279,18 @@ export function cloneOverworldJournalEntry(entry: OverworldJournalEntry): Overwo
     ...(entry.registrationBoundary
       ? { registrationBoundary: { ...entry.registrationBoundary } }
       : {}),
+    ...(entry.storyChoiceBoundary ? { storyChoiceBoundary: { ...entry.storyChoiceBoundary } } : {}),
   };
 }
 
 export function redactOverworldJournalEntryForPresentation(
   entry: OverworldJournalEntry,
 ): OverworldJournalEntry {
-  const { registrationBoundary: _registrationBoundary, ...presented } = entry;
+  const {
+    registrationBoundary: _registrationBoundary,
+    storyChoiceBoundary: _storyChoiceBoundary,
+    ...presented
+  } = entry;
   return presented;
 }
 
@@ -292,6 +341,13 @@ export function cloneOverworldSessionSnapshot(
     pendingRoadEncounter: snapshot.pendingRoadEncounter
       ? { ...snapshot.pendingRoadEncounter }
       : null,
+    ...(snapshot.openingLeadSourceDecisionTrail
+      ? {
+          openingLeadSourceDecisionTrail: cloneOpeningLeadSourceDecisionTrail(
+            snapshot.openingLeadSourceDecisionTrail,
+          ),
+        }
+      : {}),
     journey: cloneJourneyContractSnapshot(snapshot.journey),
   };
 }

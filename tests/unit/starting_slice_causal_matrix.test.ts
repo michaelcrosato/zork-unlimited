@@ -6,7 +6,7 @@ import {
 } from "../../src/starting_slice/causal_matrix.js";
 
 describe("starting-slice causal matrix", () => {
-  it("is machine-readable, uniquely keyed, and counts only the proven registration fork", () => {
+  it("is machine-readable, uniquely keyed, and counts only proven opening forks", () => {
     const matrix = loadStartingSliceCausalMatrix();
 
     expect(matrix.status).toBe("active_unproven");
@@ -14,7 +14,7 @@ describe("starting-slice causal matrix", () => {
     expect(new Set(matrix.forks.map((fork) => fork.id)).size).toBe(12);
     expect(
       matrix.forks.filter((fork) => fork.counts_toward_contract).map((fork) => fork.id),
-    ).toEqual(["SS-F01-character-background"]);
+    ).toEqual(["SS-F01-character-background", "SS-F03-lead-source"]);
     expect(() => assertCountedStartingSliceProofsExist(matrix)).not.toThrow();
   });
 

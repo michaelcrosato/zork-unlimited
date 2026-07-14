@@ -18,6 +18,12 @@ import {
   type OverworldContactPresentation,
 } from "./session_contact_presentation.js";
 import type { OpeningRegistration } from "./opening_registration.js";
+import type { OpeningLeadSource } from "./opening_lead_source.js";
+import {
+  openingLeadSourceJournalId,
+  openingLeadSourceOfferJournalDraft,
+  type OpeningLeadSourceJournalDraft,
+} from "./opening_lead_source_journal.js";
 import {
   allOpeningRegistrationJournalDrafts,
   openingRegistrationOfferJournalDraft,
@@ -47,6 +53,10 @@ export type OverworldSnapshotManifestIndex = {
   jobTownNames: ReadonlyMap<string, string>;
   nodeIds: ReadonlySet<string>;
   nodesById: ReadonlyMap<string, OverworldNode>;
+  openingLeadSource: OpeningLeadSource | null;
+  openingLeadSourceJournalIds: ReadonlySet<string>;
+  openingLeadSourceOfferDraft: OpeningLeadSourceJournalDraft | null;
+  openingLeadSourceTownName: string | null;
   openingRegistration: OpeningRegistration | null;
   openingRegistrationJournalDraftsById: ReadonlyMap<string, OpeningRegistrationJournalDraft>;
   openingRegistrationTownName: string | null;
@@ -101,6 +111,16 @@ export function buildOverworldSnapshotManifestIndex(
   const townNameForSource = (nodeId: string): string => townNameById.get(nodeId) ?? nodeId;
 
   const openingRegistration = sources.world.opening_registration ?? null;
+  const openingLeadSource = sources.world.opening_lead_source ?? null;
+  const openingLeadSourceJournalIds = new Set<string>();
+  const openingLeadSourceOfferDraft = openingLeadSource
+    ? openingLeadSourceOfferJournalDraft(openingLeadSource)
+    : null;
+  if (openingLeadSource) {
+    for (const option of openingLeadSource.options) {
+      openingLeadSourceJournalIds.add(openingLeadSourceJournalId(openingLeadSource.id, option.id));
+    }
+  }
   const openingRegistrationJournalDraftsById = new Map<string, OpeningRegistrationJournalDraft>();
   if (openingRegistration) {
     for (const draft of [
@@ -209,6 +229,10 @@ export function buildOverworldSnapshotManifestIndex(
     jobTownNames,
     nodeIds,
     nodesById: sources.nodesById,
+    openingLeadSource,
+    openingLeadSourceJournalIds,
+    openingLeadSourceOfferDraft,
+    openingLeadSourceTownName: openingLeadSource ? townNameForSource(openingLeadSource.home) : null,
     openingRegistration,
     openingRegistrationJournalDraftsById,
     openingRegistrationTownName: openingRegistration

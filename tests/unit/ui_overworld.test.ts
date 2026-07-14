@@ -105,6 +105,9 @@ function settleOpeningRegistration(session: OverworldSession): void {
   if (session.journey().storyChoice?.kind === "registration") {
     session.chooseJourneyStory("albany:ledger_advocate");
   }
+  if (session.journey().storyChoice?.kind === "lead_source") {
+    session.chooseJourneyStory("albany:source_rowan_civic_docket");
+  }
 }
 
 function resolveCurrentTownEvent(session: OverworldSession): void {
@@ -121,9 +124,9 @@ function resolveCurrentTownEvent(session: OverworldSession): void {
 function reachAlbanyStoryChoice(session: OverworldSession): void {
   const opening = session.view();
   session.scoutPoi(opening.pois[0]!.id);
-  const revealed = session.talkToCharacter(opening.characters[0]!.id);
+  session.talkToCharacter(opening.characters[0]!.id);
   settleOpeningRegistration(session);
-  const quest = revealed.discoveredQuests?.find((candidate) => candidate.id === "wolf_winter");
+  const quest = session.view().quests.find((candidate) => candidate.id === "wolf_winter");
   if (!quest) throw new Error("Expected the Albany Wolf-Winter lead.");
   const route = session
     .view()
@@ -321,8 +324,10 @@ describe("OverworldSession", () => {
 
     expect(handler).toContain("worldSession.chooseJourneyStory(choiceId)");
     expect(handler).toContain('journey.storyChoice?.kind === "registration"');
+    expect(handler).toContain('journey.storyChoice?.kind === "lead_source"');
     expect(handler).toContain("Character registered: ${result.consequence}");
     expect(handler).toContain("Current goal: ${result.goal.text}");
+    expect(handler).toContain("Lead source certified: ${result.consequence}");
     expect(handler).toContain("Story consequence: ${result.consequence}");
     expect(handler).toContain("New goal: ${result.goal.text}");
     expect(handler).not.toMatch(/AlbanyDawnDispatchChoiceId|Albany dawn dispatch/i);
@@ -333,6 +338,8 @@ describe("OverworldSession", () => {
     expect(screen).toContain("Choose what follows");
     expect(screen).toContain("Character registration");
     expect(screen).toContain("Choose your lived background");
+    expect(screen).toContain("Albany evidence source");
+    expect(screen).toContain("Choose your Albany lead source");
     expect(screen).toContain('" journey-choice-actions-registration"');
     expect(styles).toContain(
       ".journey-choice-actions:not(.journey-choice-actions-registration) button:first-child",
@@ -387,6 +394,60 @@ describe("OverworldSession", () => {
       expect(markup).toContain("Current objective");
       expect(markup).toContain("registered history persists");
       expect(markup.match(/<button/g)).toHaveLength(4);
+      expect(markup).not.toContain("Goal just completed");
+      expect(markup).not.toContain("sets your next objective");
+    } finally {
+      await server.close();
+    }
+  });
+
+  it("renders Albany lead-source choices without claiming a completed or replaced goal", async () => {
+    const uiRoot = resolve(process.cwd(), "ui");
+    const server = await createServer({
+      root: uiRoot,
+      configFile: resolve(uiRoot, "vite.config.ts"),
+      appType: "custom",
+      logLevel: "silent",
+      optimizeDeps: { noDiscovery: true },
+      server: { middlewareMode: true },
+    });
+    try {
+      const module = (await server.ssrLoadModule("/src/JourneyStoryChoiceScreen.tsx")) as {
+        JourneyStoryChoiceScreen: unknown;
+      };
+      const requireFromUi = createRequire(resolve(uiRoot, "package.json"));
+      const react = requireFromUi("react") as {
+        createElement: (type: unknown, props: Record<string, unknown>) => unknown;
+      };
+      const reactDomServer = requireFromUi("react-dom/server") as {
+        renderToStaticMarkup: (element: unknown) => string;
+      };
+      const journey = new OverworldSession(world).journey();
+      const leadSourceJourney = {
+        ...journey,
+        storyChoice: {
+          id: "albany_wolf_winter_source",
+          kind: "lead_source",
+          message: "Which Albany source certifies the relief packet?",
+          options: ["reese_manifest", "emery_survey", "decline_source"].map((id) => ({
+            id,
+            label: id,
+            consequence: `Carry ${id} evidence into the journey.`,
+          })),
+        },
+      };
+      const markup = reactDomServer.renderToStaticMarkup(
+        react.createElement(module.JourneyStoryChoiceScreen, {
+          journey: leadSourceJourney,
+          onChoose: () => undefined,
+        }),
+      );
+
+      expect(markup).toContain("Albany evidence source");
+      expect(markup).toContain("Choose your Albany lead source");
+      expect(markup).toContain("Current objective");
+      expect(markup).toContain("does not replace this objective");
+      expect(markup.match(/<button/g)).toHaveLength(3);
       expect(markup).not.toContain("Goal just completed");
       expect(markup).not.toContain("sets your next objective");
     } finally {
@@ -1512,9 +1573,7 @@ describe("OverworldSession", () => {
     settleOpeningRegistration(session);
     expect(talked.minutes).toBe(15);
     expect(talked.entry.text).toContain(contact.agenda);
-    expect(talked.discoveredQuests?.map((quest) => quest.id)).toEqual(
-      localQuests.slice(0, 1).map((quest) => quest.id),
-    );
+    expect(talked.discoveredQuests).toEqual([]);
     expect(talked.discoveredQuests?.every((quest) => !("pack" in quest))).toBe(true);
     expect(session.view().quests.map((quest) => quest.id)).toEqual(
       localQuests.slice(0, 1).map((quest) => quest.id),
@@ -1528,7 +1587,7 @@ describe("OverworldSession", () => {
 
     const after = session.view();
     expect(after.timeLabel).not.toBe(before.timeLabel);
-    expect(after.journal).toHaveLength(5);
+    expect(after.journal).toHaveLength(7);
   });
 
   it("requires reaching a quest's local area before starting it", () => {
@@ -1543,9 +1602,9 @@ describe("OverworldSession", () => {
 
     const scouted = session.scoutPoi(initial.pois[0]!.id);
     expect(scouted.discoveredQuests).toEqual([]);
-    const talked = session.talkToCharacter(initial.characters[0]!.id);
+    session.talkToCharacter(initial.characters[0]!.id);
     settleOpeningRegistration(session);
-    const discoveredQuests = talked.discoveredQuests ?? [];
+    const discoveredQuests = session.view().quests;
     expect(discoveredQuests).toHaveLength(1);
     const discoveredQuest = discoveredQuests[0]!;
     expect(discoveredQuest.id).toBe(firstLocalQuest.id);
@@ -1727,7 +1786,7 @@ describe("OverworldSession", () => {
     expect(after.resolvedEventIds).toContain(event.id);
     expect(after.events.map((candidate) => candidate.id)).not.toContain(event.id);
     expect(after.regionRenown[start.current.region]).toBe(event.intensity);
-    expect(after.journal).toHaveLength(6);
+    expect(after.journal).toHaveLength(8);
 
     const compactAfter = session.compactView();
     expect(compactAfter.events.map(([id]) => id)).not.toContain(event.id);

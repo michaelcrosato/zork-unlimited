@@ -104,19 +104,22 @@ Relevant guards include
 and
 [`wolf_winter_post_hunt_consequence.test.ts`](../tests/regression/wolf_winter_post_hunt_consequence.test.ts).
 
-The current slice does **not** yet meet this contract:
+The current slice does **not** yet meet the full contract:
 
-- Albany discovery is deterministic FIFO reveal, and most jobs/sites/events are
-  one-click time/renown transactions;
-- Albany now authors four permanent registration profiles, but only the
-  Road-Warden's fieldcraft currently changes Wolf-Winter mechanics; the Ledger
-  Advocate, Ironhands Repairer, and Unaffiliated Courier still need distinct
-  preparation consumers before concept balance is proven;
+- Wolf-Winter is now withheld from Albany's FIFO discovery and requires one of
+  three certified source packets, but the other visible Albany jobs/sites/events
+  remain mostly one-click time/renown transactions;
+- Albany authors four permanent registration profiles. Road-Warden and Ledger
+  sponsorship now change the actual terms of their matching source packet, and
+  the Road-Warden also retains its fieldcraft import; Ironhands Repairer and
+  Unaffiliated Courier still need distinct preparation consumers before concept
+  balance is proven;
 - Wolf-Winter now exports explicit Old Cade memories and world facts, but those
   consequences do not yet change an Albany service, opportunity, or NPC action;
-- fieldcraft is the only real inbound Wolf mapping; health is deferred to protect
-  the combat guarantee, and Albany equipment still needs an origin-honest
-  quest-local representation before it can alter play;
+- fieldcraft and two certified knowledge reports now cross the trusted inbound
+  boundary; health is deferred to protect the combat guarantee, and Albany
+  equipment still needs an origin-honest quest-local representation before it
+  can alter play;
 - Wolf-Winter's successful routes still require defeating the same three wolves;
 - most return reactivity is authored presentation routed through quest-specific
   campaign code rather than reusable state and consequences.
@@ -168,27 +171,49 @@ pack-default; and UI/MCP reset determinism is proven. Imported-only flags and
 items participate in source validation, every catalog retains an
 import-independent structural victory, and health imports are prohibited on a
 `combat_guaranteed` pack until an authored minimum/recovery contract exists.
-Wolf-Winter therefore maps only `skill:fieldcraft` to its defence floor today.
-The tempting Albany-kit → steading-brace alias was rejected because it would lie
-about where saved timber came from.
+Wolf-Winter therefore maps `skill:fieldcraft` to its defence floor and the two
+exclusive Albany reports to authored quest-local flags. The tempting Albany-kit
+→ steading-brace alias remains rejected because it would lie about where saved
+timber came from.
 
 The first authored Albany increment is now landed. Speaking with Rowan after
 the first civic lead writes a durable registration offer rather than relying on
 an initial modal. The player chooses one of four complete canonical packages;
 the choice survives save/restore, changes Rowan and the selected sponsor's
 memory-conditioned responses, and crosses the private quest bridge. The
-Road-Warden's Fieldcraft 4 raises Wolf-Winter's visible starting DEF from 3 to
-4. With the same d20 roll of 7 at the broken paling, that profile braces the
+Road-Warden's Fieldcraft 4 raises Wolf-Winter's visible starting DEF from 3 to 4. With the same d20 roll of 7 at the broken paling, that profile braces the
 rail while a Ledger Advocate at default DEF 3 splits it and receives the
 authored bind-the-rail recovery action. Direct quest starts remain exact pack
 defaults. Paired proof lives in
 [`character_background_counterfactual.test.ts`](../tests/starting_slice/character_background_counterfactual.test.ts).
 
-This proves only `SS-F01-character-background`, the first of twelve material
-forks. It does not yet prove that all four concepts are mechanically balanced,
-that Albany preparation is systemic, or that any early choice changes a return
-service. Those remain the next work, not implied credit for the registration
-infrastructure.
+The second authored Albany increment replaces Wolf-Winter's FIFO reveal with a
+blocking, irreversible source certification. Rowan's public docket costs no
+time or money and preserves the established routes. Jamie Tanner's testimony
+costs 35 minutes and $6, reduced to 15 minutes and $0 by Ledger sponsorship; it
+alone opens a rail-free feed-hauler crawlboard into the established committed
+loft drop after the yearling falls. Hayden Hale's report costs 20 minutes, reduced to 5 by
+Road-Warden sponsorship; after a failed rail check it alone rewards leaving the
+split rail unbound with an exposed high-variance frost-brace sequence. The
+selection persists through save/restore. Each private report also changes its
+source NPC's memory, crosses the trusted quest boundary, and is named at its
+consumer; Rowan preserves the import-independent routes. Paired proof lives in
+[`lead_source_counterfactual.test.ts`](../tests/starting_slice/lead_source_counterfactual.test.ts).
+
+Legacy migration is deliberately fail-closed at this causal boundary. An
+untouched registration-era save receives the real source prompt. Every progressed
+post-registration suffix is rejected rather than being falsely certified as
+source-free: mutable saves cannot prove that a zero-effect source decision was
+not deleted before an otherwise plausible later action. Legacy source markers
+are rejected for the same reason. Opaque pre-registration quest progress is also
+rejected because it has no replayable registration-and-source path and would
+otherwise load into an unwinnable starting-slice goal.
+
+This proves `SS-F01-character-background` and `SS-F03-lead-source`: two of the
+twelve required material forks. It does not prove that all four concepts are
+mechanically balanced, that Albany preparation is broadly systemic, that combat
+can be avoided, or that an early choice changes a return service. Those remain
+the next work, not implied credit for source-specific combat routes.
 
 ## Required resolution families
 
@@ -262,7 +287,8 @@ Required proof:
 - schema validation, a negative fixture, and a synthetic or second-quest proof
   for every new reusable consequence primitive;
 - save/restore, seed determinism, compact/full MCP parity, UI parity, action
-  legality, journey proofs, and promised legacy snapshot compatibility;
+  legality, journey proofs, and the documented fail-closed legacy snapshot
+  compatibility boundary;
 - `npm run crawl:smoke` before and after every increment;
 - one canonical pure fresh-overworld blind playtest and `npm run health` before
   each green commit;

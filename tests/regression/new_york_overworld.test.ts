@@ -369,6 +369,18 @@ describe("New York overworld graph", () => {
           skill_id: "skill:fieldcraft",
           target_var: "defense",
         },
+        {
+          id: "import:wolf_winter_market_testimony",
+          type: "knowledge_to_flag",
+          knowledge_id: "albany:knowledge_wolf_market_testimony",
+          target_flag: "jamie_market_testimony_certified",
+        },
+        {
+          id: "import:wolf_winter_frost_report",
+          type: "knowledge_to_flag",
+          knowledge_id: "albany:knowledge_wolf_frost_report",
+          target_flag: "hayden_frost_report_certified",
+        },
       ],
     });
   });
@@ -473,8 +485,8 @@ describe("New York overworld graph", () => {
     expect(station?.discovery).toContain("wolf-winter packet linking Albany's relief desk");
     expect(stationPoi?.summary).toContain("Hayden's route pin");
     expect(stationPoi?.summary).toContain("Old Cade waiting");
-    expect(hayden?.agenda).toContain("packet Rowan flagged");
-    expect(hayden?.agenda).toContain("Old Cade's hill steading");
+    expect(hayden?.agenda).toContain("controlling source certification");
+    expect(hayden?.agenda).toContain("Old Cade's steading");
     expect(stationEvent?.summary).toContain("Hayden's route pin");
     expect(stationEvent?.summary).toContain("Old Cade's cattle");
     expect(stationJob?.summary).toMatch(/wolf-winter/i);
@@ -507,7 +519,26 @@ describe("New York overworld graph", () => {
     expect(authoredBridge).not.toContain("from the station board");
   });
 
-  it("authors Hayden's quest-reactive contact phases most-specific first", () => {
+  it("authors Jamie and Hayden's source-reactive contact phases most-specific first", () => {
+    const jamie = world.characters.find(
+      (character) => character.id === "albany_city__market__contact",
+    );
+    expect(jamie?.campaign_npc_id).toBe("albany:jamie_tanner");
+    expect(jamie?.variants).toEqual([
+      {
+        id: "market_testimony_certified",
+        after_relationship_memories: ["albany:memory_jamie_market_testimony_certified"],
+        summary: expect.stringContaining("certification number"),
+        agenda: expect.stringContaining("feed-hauler route"),
+      },
+      {
+        id: "sponsored_ledger_advocate",
+        after_relationship_memories: ["albany:memory_jamie_sponsored_ledger_advocate"],
+        summary: expect.stringContaining("Ledger Advocate"),
+        agenda: expect.stringContaining("named witnesses"),
+      },
+    ]);
+
     const hayden = world.characters.find(
       (character) => character.id === "albany_city__transport_hub__contact",
     );
@@ -531,6 +562,12 @@ describe("New York overworld graph", () => {
         after_quests: ["wolf_winter"],
         summary: expect.stringContaining("return board"),
         agenda: expect.stringContaining("current journey goal"),
+      },
+      {
+        id: "frost_report_certified",
+        after_relationship_memories: ["albany:memory_hayden_frost_report_certified"],
+        summary: expect.stringContaining("frost-heave sketch"),
+        agenda: expect.stringContaining("dangerous line"),
       },
       {
         id: "sponsored_road_warden",

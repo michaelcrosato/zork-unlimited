@@ -22,7 +22,6 @@ import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import { assertRpgStateReferences } from "../../src/rpg/state_integrity.js";
 import { createInitialCampaignCharacterState } from "../../src/world/campaign_character_state.js";
 import { JOURNEY_CONTRACT_VERSION } from "../../src/world/journey_contract.js";
-import { OPENING_REGISTRATION_LEGACY_JOURNAL_PREFIX } from "../../src/world/opening_registration_journal.js";
 import { OverworldSession } from "../../src/world/session.js";
 import { OVERWORLD_SESSION_LEGACY_SAVE_VERSION } from "../../src/world/session_snapshot.js";
 import {
@@ -187,6 +186,11 @@ function launchAlbanyWolf(api: ToolApi): {
     ...full,
     session_id: overworldSessionId,
     choice: "albany:ledger_advocate",
+  });
+  api.choose_overworld_session_story({
+    ...full,
+    session_id: overworldSessionId,
+    choice: "albany:source_rowan_civic_docket",
   });
   view = api.get_overworld_session({
     session_id: overworldSessionId,
@@ -374,6 +378,11 @@ describe("bug_0505 — Wolf-Winter saved wood has a post-hunt consequence", () =
       ...full,
       session_id: sessionId,
       choice: "albany:ledger_advocate",
+    });
+    api.choose_overworld_session_story({
+      ...full,
+      session_id: sessionId,
+      choice: "albany:source_rowan_civic_docket",
     });
     view = api.get_overworld_session({
       session_id: sessionId,
@@ -642,78 +651,52 @@ describe("bug_0505 — Wolf-Winter saved wood has a post-hunt consequence", () =
 
     const prooflessCurrent = structuredClone(current);
     prooflessCurrent.journalEntries = prooflessCurrent.journalEntries.filter(
-      (entry) => entry.kind !== "registration_offer" && entry.kind !== "registration",
+      (entry) =>
+        entry.kind !== "registration_offer" &&
+        entry.kind !== "registration" &&
+        entry.kind !== "lead_source_offer" &&
+        entry.kind !== "lead_source",
     );
+    delete prooflessCurrent.openingLeadSourceDecisionTrail;
+    const legacyConsequenceCharacter = createInitialCampaignCharacterState();
+    legacyConsequenceCharacter.relationships.push({
+      npcId: "npc:old_cade",
+      trust: 10,
+      regard: 10,
+      owesPlayer: 1,
+      playerOwes: 0,
+      memories: ["memory:wolf_winter_guard_wood_spent"],
+    });
 
+    for (const predecessorHash of [
+      OVERWORLD_PRE_CAMPAIGN_EXPORTS_WORLD_HASH,
+      OVERWORLD_CAMPAIGN_EXPORTS_WORLD_HASH,
+      OVERWORLD_CAMPAIGN_IMPORTS_WORLD_HASH,
+    ]) {
+      const opaqueProgress = structuredClone(prooflessCurrent);
+      opaqueProgress.worldHash = predecessorHash;
+      opaqueProgress.character =
+        predecessorHash === OVERWORLD_PRE_CAMPAIGN_EXPORTS_WORLD_HASH
+          ? createInitialCampaignCharacterState()
+          : structuredClone(legacyConsequenceCharacter);
+      expect(() => OverworldSession.restore(WORLD, opaqueProgress)).toThrow(
+        /opaque pre-registration quest progress without a replayable registration and lead-source path/i,
+      );
+
+      const { character: _character, ...legacyWithoutCharacter } = opaqueProgress;
+      const legacyV8 = {
+        ...legacyWithoutCharacter,
+        version: OVERWORLD_SESSION_LEGACY_SAVE_VERSION,
+      };
+      expect(() => OverworldSession.restore(WORLD, legacyV8)).toThrow(
+        predecessorHash === OVERWORLD_PRE_CAMPAIGN_EXPORTS_WORLD_HASH
+          ? /opaque pre-registration quest progress without a replayable registration and lead-source path/i
+          : /campaign character does not match replayed quest consequences/i,
+      );
+    }
     const legacyV9 = structuredClone(prooflessCurrent);
     legacyV9.worldHash = OVERWORLD_PRE_CAMPAIGN_EXPORTS_WORLD_HASH;
     legacyV9.character = createInitialCampaignCharacterState();
-    const migratedV9 = OverworldSession.restore(WORLD, legacyV9);
-    const migratedV9Snapshot = migratedV9.snapshot();
-    const migratedLegacyCharacter = migratedV9Snapshot.character;
-    expect(migratedV9Snapshot.worldHash).toBe(
-      OVERWORLD_CAMPAIGN_IMPORTS_MIGRATION_TARGET_WORLD_HASH,
-    );
-    expect(
-      migratedV9Snapshot.journalEntries.find((entry) => entry.kind === "registration_legacy")?.id,
-    ).toBe(
-      `${OPENING_REGISTRATION_LEGACY_JOURNAL_PREFIX}${OVERWORLD_PRE_CAMPAIGN_EXPORTS_WORLD_HASH}`,
-    );
-    expect(migratedLegacyCharacter.background).toBeNull();
-    expect(migratedLegacyCharacter.relationships).toEqual([
-      {
-        npcId: "npc:old_cade",
-        trust: 10,
-        regard: 10,
-        owesPlayer: 1,
-        playerOwes: 0,
-        memories: ["memory:wolf_winter_guard_wood_spent"],
-      },
-    ]);
-    expect(migratedV9.campaignWorldFactIds()).toEqual([
-      "fact:wolf_winter_byre_held",
-      "fact:wolf_winter_outer_paling_broken",
-      "fact:wolf_winter_repair_timber_spent",
-    ]);
-
-    const { character: _character, ...legacyWithoutCharacter } = legacyV9;
-    const legacyV8 = {
-      ...legacyWithoutCharacter,
-      version: OVERWORLD_SESSION_LEGACY_SAVE_VERSION,
-    };
-    expect(OverworldSession.restore(WORLD, legacyV8).snapshot().character).toEqual(
-      migratedLegacyCharacter,
-    );
-
-    const exportsEraV9 = structuredClone(prooflessCurrent);
-    exportsEraV9.worldHash = OVERWORLD_CAMPAIGN_EXPORTS_WORLD_HASH;
-    exportsEraV9.character = structuredClone(migratedLegacyCharacter);
-    const migratedExportsEra = OverworldSession.restore(WORLD, exportsEraV9).snapshot();
-    expect(migratedExportsEra.character).toEqual(migratedLegacyCharacter);
-    expect(
-      migratedExportsEra.journalEntries.find((entry) => entry.kind === "registration_legacy")?.id,
-    ).toBe(`${OPENING_REGISTRATION_LEGACY_JOURNAL_PREFIX}${OVERWORLD_CAMPAIGN_EXPORTS_WORLD_HASH}`);
-    const forgedExportsEraCharacter = structuredClone(exportsEraV9);
-    forgedExportsEraCharacter.character.money = 1;
-    expect(() => OverworldSession.restore(WORLD, forgedExportsEraCharacter)).toThrow(
-      /campaign character does not match replayed quest consequences/i,
-    );
-
-    const importsEraV9 = structuredClone(prooflessCurrent);
-    importsEraV9.worldHash = OVERWORLD_CAMPAIGN_IMPORTS_WORLD_HASH;
-    importsEraV9.character = structuredClone(migratedLegacyCharacter);
-    const migratedImportsEra = OverworldSession.restore(WORLD, importsEraV9);
-    expect(migratedImportsEra.snapshot().character).toEqual(migratedLegacyCharacter);
-    const resavedImportsEra = migratedImportsEra.snapshot();
-    expect(
-      resavedImportsEra.journalEntries.find((entry) => entry.kind === "registration_legacy")?.id,
-    ).toBe(`${OPENING_REGISTRATION_LEGACY_JOURNAL_PREFIX}${OVERWORLD_CAMPAIGN_IMPORTS_WORLD_HASH}`);
-    expect(resavedImportsEra.worldHash).toBe(
-      OVERWORLD_OPENING_REGISTRATION_MIGRATION_TARGET_WORLD_HASH,
-    );
-    expect(OverworldSession.restore(WORLD, resavedImportsEra).snapshot()).toEqual(
-      resavedImportsEra,
-    );
 
     const oldAtRowan = new OverworldSession(WORLD);
     const oldAtRowanOpening = oldAtRowan.view();
@@ -769,7 +752,7 @@ describe("bug_0505 — Wolf-Winter saved wood has a post-hunt consequence", () =
       );
     }
 
-    const arbitraryOldHash = structuredClone(legacyV9);
+    const arbitraryOldHash = structuredClone(prooflessCurrent);
     arbitraryOldHash.worldHash = "0".repeat(64);
     expect(() => OverworldSession.restore(WORLD, arbitraryOldHash)).toThrow(
       /different world manifest/,

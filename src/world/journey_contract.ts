@@ -158,7 +158,7 @@ export type JourneyStoryChoiceOption = Readonly<{
   consequence: string;
 }>;
 
-export type JourneyStoryChoicePresentationKind = "registration";
+export type JourneyStoryChoicePresentationKind = "lead_source" | "registration";
 
 export type JourneyStoryChoiceOptions = readonly [
   JourneyStoryChoiceOption,
@@ -167,6 +167,13 @@ export type JourneyStoryChoiceOptions = readonly [
 
 export type JourneyRegistrationStoryChoiceOptions = readonly [
   JourneyStoryChoiceOption,
+  JourneyStoryChoiceOption,
+  JourneyStoryChoiceOption,
+  JourneyStoryChoiceOption,
+  ...JourneyStoryChoiceOption[],
+];
+
+export type JourneyLeadSourceStoryChoiceOptions = readonly [
   JourneyStoryChoiceOption,
   JourneyStoryChoiceOption,
   JourneyStoryChoiceOption,
@@ -186,8 +193,12 @@ export type JourneyStoryChoicePrompt = JourneyStoryChoicePromptBase &
         options: JourneyStoryChoiceOptions;
       }
     | {
-        kind: JourneyStoryChoicePresentationKind;
+        kind: "registration";
         options: JourneyRegistrationStoryChoiceOptions;
+      }
+    | {
+        kind: "lead_source";
+        options: JourneyLeadSourceStoryChoiceOptions;
       }
   >;
 
@@ -314,7 +325,7 @@ const JourneyCompletedGoalSnapshotSchema = JourneyGoalDefinitionSchema.extend({
   completedAtDecision: SAFE_NONNEGATIVE_INT,
 }).strict();
 
-const JourneyDecisionProofLastSchema = z
+export const JourneyDecisionProofLastSchema = z
   .object({
     number: POSITIVE_SAFE_INT,
     surface: z.enum(["overworld", "quest"]),
@@ -857,7 +868,11 @@ function freezeStoryChoice(
     throw new Error("Journey story choice id and message cannot be empty.");
   }
   const presentationKind = (storyChoice as { kind?: unknown }).kind;
-  if (presentationKind !== undefined && presentationKind !== "registration") {
+  if (
+    presentationKind !== undefined &&
+    presentationKind !== "registration" &&
+    presentationKind !== "lead_source"
+  ) {
     throw new Error(
       `Journey story choice has unknown presentation kind "${String(presentationKind)}".`,
     );
@@ -865,6 +880,10 @@ function freezeStoryChoice(
   if (presentationKind === "registration") {
     if (storyChoice.options.length < 4 || storyChoice.options.length > 8) {
       throw new Error("Journey registration choice requires between four and eight options.");
+    }
+  } else if (presentationKind === "lead_source") {
+    if (storyChoice.options.length < 3 || storyChoice.options.length > 5) {
+      throw new Error("Journey lead-source choice requires between three and five options.");
     }
   } else if (storyChoice.options.length !== 2) {
     throw new Error("Journey aftermath story choice requires exactly two options.");

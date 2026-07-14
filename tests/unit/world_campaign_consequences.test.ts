@@ -11,6 +11,7 @@ import {
 import {
   CampaignConsequenceEffectSchema,
   CampaignConsequenceEffectsSchema,
+  LearnKnowledgeConsequenceSchema,
   RememberRelationshipConsequenceSchema,
   SetWorldFactConsequenceSchema,
   applyCampaignConsequences,
@@ -40,6 +41,10 @@ function baseCharacter(): CampaignCharacterState {
 function syntheticEffects(): CampaignConsequenceEffects {
   return CampaignConsequenceEffectsSchema.parse([
     {
+      type: "learn_knowledge",
+      knowledge_id: "knowledge:archive_route",
+    },
+    {
       type: "remember_relationship",
       npc_id: "npc:synthetic_guide",
       memory_id: "memory:rescued_archive",
@@ -61,6 +66,12 @@ function syntheticEffects(): CampaignConsequenceEffects {
 
 describe("generic campaign consequences", () => {
   it("parses the complete strict monotonic vocabulary", () => {
+    expect(
+      LearnKnowledgeConsequenceSchema.parse({
+        type: "learn_knowledge",
+        knowledge_id: "knowledge:archive_route",
+      }),
+    ).toEqual({ type: "learn_knowledge", knowledge_id: "knowledge:archive_route" });
     expect(
       RememberRelationshipConsequenceSchema.parse({
         type: "remember_relationship",
@@ -90,6 +101,13 @@ describe("generic campaign consequences", () => {
   });
 
   it("rejects unknown effects and unknown fields on either variant", () => {
+    expect(() =>
+      CampaignConsequenceEffectSchema.parse({
+        type: "learn_knowledge",
+        knowledge_id: "knowledge:archive_route",
+        confidence: 1,
+      }),
+    ).toThrow();
     expect(() =>
       CampaignConsequenceEffectSchema.parse({
         type: "rewrite_character",
@@ -131,6 +149,7 @@ describe("generic campaign consequences", () => {
       },
     ],
     ["unscoped fact id", { type: "set_world_fact", fact_id: "archive_preserved" }],
+    ["unscoped knowledge id", { type: "learn_knowledge", knowledge_id: "archive_route" }],
     [
       "trust floor below score range",
       {
@@ -184,6 +203,13 @@ describe("generic campaign consequences", () => {
   );
 
   it("rejects duplicate semantic effects without conflating distinct memories", () => {
+    expect(() =>
+      CampaignConsequenceEffectsSchema.parse([
+        { type: "learn_knowledge", knowledge_id: "knowledge:archive_route" },
+        { type: "learn_knowledge", knowledge_id: "knowledge:archive_route" },
+      ]),
+    ).toThrow(/duplicate campaign consequence effect/i);
+
     expect(() =>
       CampaignConsequenceEffectsSchema.parse([
         { type: "set_world_fact", fact_id: "fact:archive_preserved" },
@@ -249,7 +275,10 @@ describe("generic campaign consequences", () => {
     expect(source).toEqual(sourceBefore);
     expect(effects).toEqual(effectsBefore);
     expect(result.worldFactIds).toEqual(["fact:archive_preserved"]);
-    expect(result.characterAfter.knowledge).toEqual(["knowledge:private_map"]);
+    expect(result.characterAfter.knowledge).toEqual([
+      "knowledge:archive_route",
+      "knowledge:private_map",
+    ]);
     expect(result.characterAfter.relationships).toEqual([
       {
         npcId: "npc:synthetic_archivist",

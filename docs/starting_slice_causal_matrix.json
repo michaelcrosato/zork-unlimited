@@ -94,30 +94,46 @@
       "id": "SS-F03-lead-source",
       "title": "Investigate Wolf-Winter through a chosen Albany source",
       "phase": "albany_opening",
-      "implementation_status": "planned",
-      "proof_status": "unproven",
-      "counts_toward_contract": false,
-      "visible_choice": "Pursue the civic relief ledger, market testimony, warden spoor report, or a background contact instead of a FIFO reveal.",
+      "implementation_status": "implemented",
+      "proof_status": "proven",
+      "counts_toward_contract": true,
+      "visible_choice": "After permanent character registration, certify exactly one controlling Wolf-Winter account: Rowan's immediate civic docket, Jamie Tanner's paid market testimony, or Hayden Hale's timed frost-heave report. Wolf-Winter remains hidden until this irreversible choice is made.",
       "immediate_state_delta": [
         "character.knowledge",
         "character.relationships",
+        "character.money",
         "world.minutes",
-        "albany.public_trust"
+        "world.discovered_quests"
       ],
       "delayed_consumers": [
-        "Preparation offers",
-        "Route forecasts",
-        "Noncombat wolf hypotheses",
-        "Source credibility on return"
+        "Rowan's docket preserves the complete import-independent Wolf-Winter route without either private-source action.",
+        "Jamie's certified testimony alone opens the feed-hauler crawlboard after the yearling falls, allowing a committed loft drop behind the flank-wolf without binding the split rail.",
+        "Hayden's certified frost report alone turns a failed, deliberately unbound paling rail into a high-variance +4 ATK/-2 DEF frost-brace trip followed by a -1 ATK/+2 DEF drive; binding the familiar guard commits away from that line.",
+        "Jamie and Hayden remember which account was certified, while their matching registration sponsorship changes the actual time and money paid before departure."
       ],
       "visible_feedback": [
-        "Each source gives different truthful evidence and costs time or standing.",
-        "Later actions cite the evidence actually learned."
+        "The blocking three-card choice states each packet's exact source, actual sponsored or public cost, commitment, and later Wolf-Winter consumer before confirmation.",
+        "The persistent journal records the certified source and paid terms; the character panel exposes money, knowledge, and source memory after confirmation.",
+        "Wolf-Winter's room descriptions, legal exits, visible maneuver commands and bonuses, and mutually exclusive follow-up actions cite only the account actually certified."
       ],
-      "systems": ["investigation", "time", "relationships", "preparation"],
-      "persistence_boundaries": ["overworld_to_quest"],
+      "systems": [
+        "investigation",
+        "time",
+        "money",
+        "knowledge",
+        "relationships",
+        "quest_imports",
+        "route_commitment",
+        "risk",
+        "failure_recovery"
+      ],
+      "persistence_boundaries": ["save_restore", "overworld_to_quest"],
       "contract_tags": ["delayed", "cross_system", "cross_phase"],
-      "baseline_evidence": ["src/world/session_local_discovery.ts"],
+      "baseline_evidence": [
+        "tests/unit/world_opening_lead_source.test.ts",
+        "tests/regression/opening_lead_source_snapshot_integrity.test.ts",
+        "tests/regression/rpg_variant_liveness.test.ts"
+      ],
       "counterfactual_test": "tests/starting_slice/lead_source_counterfactual.test.ts"
     },
     {

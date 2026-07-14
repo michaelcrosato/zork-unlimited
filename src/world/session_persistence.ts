@@ -9,6 +9,7 @@ import {
 } from "./session_snapshot_restore.js";
 import type { OverworldSnapshotManifestIndex } from "./session_manifest_index.js";
 import type {
+  OverworldOpeningLeadSourceDecisionTrail,
   OverworldJournalEntry,
   OverworldPendingRoadEncounter,
   OverworldSessionSnapshot,
@@ -25,6 +26,7 @@ export type OverworldSessionPersistenceState = OverworldSessionSnapshotRestoreSt
   supplies: number;
   fatigue: number;
   pendingRoadEncounter: OverworldPendingRoadEncounter | null;
+  openingLeadSourceDecisionTrail: OverworldOpeningLeadSourceDecisionTrail | null;
   journey: JourneyContractSnapshot;
   discoveredIds: Set<string>;
   visitedIds: Set<string>;
@@ -65,6 +67,7 @@ export function buildOverworldSessionSnapshotFromState(
     regionRenown: state.regionRenown,
     completedRegionalArcIds: state.completedRegionalArcIds,
     pendingRoadEncounter: state.pendingRoadEncounter,
+    openingLeadSourceDecisionTrail: state.openingLeadSourceDecisionTrail,
     journey: state.journey,
   });
 }

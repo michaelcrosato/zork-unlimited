@@ -88,6 +88,7 @@ import type { GameState } from "../../src/core/state.js";
 import type { Rng } from "../../src/core/rng.js";
 import type { RoomVariant, ObjectVariant, EndingVariant } from "../../src/rpg/schema.js";
 import type { Action } from "../../src/api/types.js";
+import { loadOverworldManifest } from "../../src/world/source.js";
 import { exhaustiveEndingsMulti } from "./support/exhaustive_endings.js";
 
 const PACK_DIR = "content/rpg/quests";
@@ -99,6 +100,8 @@ const packFiles = readdirSync(PACK_DIR)
 // (measured 2026-07-11). An 800k ceiling gives that concrete graph bounded headroom while
 // still failing LOUD on a future combinatorial blowup instead of silently truncating it.
 const MAX_STATES = 800_000;
+const IMPORT_WITNESS_MAX_STATES = 200_000;
+const WORLD = loadOverworldManifest(process.cwd());
 
 // The exact 670,963-state Wolf-Winter graph took 176s in the exhaustive-suite
 // contention run before interruptible dialogue (f23c8a09) multiplied edges per
@@ -208,6 +211,8 @@ type Liveness = {
 function analyze(
   index: RpgIndex,
   explore: (a: Action) => boolean = (action) => livenessExplore(index, action),
+  initialState: GameState = initStateForRpgPack(index, 7),
+  maxStates = MAX_STATES,
 ): Liveness {
   const displayed = new Set<string>();
   const present = new Set<string>();
@@ -218,8 +223,8 @@ function analyze(
   const ruleSets = [buildRpgRules(index, bestRng), buildRpgRules(index, worstRng)];
   const result = exhaustiveEndingsMulti(
     ruleSets,
-    initStateForRpgPack(index, 7),
-    MAX_STATES,
+    initialState,
+    maxStates,
     (s) => {
       // At a terminal the player sees the ending's epilogue — credit the reactive ending
       // variant that fired (first-match-wins, exactly what model.ts endingText displays).
@@ -306,6 +311,25 @@ describe("bug_0147 — every reactive variant of every RPG pack is reachable as 
         expect(cappedOut).toBe(false);
         // The shipped RPG packs are reactive by design — guard against a vacuous pass.
         expect(declared.length).toBeGreaterThan(0);
+        const questId = file.replace(/\.yaml$/, "");
+        const quest = WORLD.quests.find((candidate) => candidate.id === questId);
+        const importedFlags = new Set(
+          (quest?.campaign_imports?.rules ?? []).flatMap((rule) =>
+            "target_flag" in rule ? [rule.target_flag] : [],
+          ),
+        );
+        for (const importedFlag of importedFlags) {
+          const importedState = initStateForRpgPack(indexRpgPack(pack), 7);
+          importedState.flags[importedFlag] = true;
+          const witness = analyze(
+            indexRpgPack(pack),
+            undefined,
+            importedState,
+            IMPORT_WITNESS_MAX_STATES,
+          );
+          for (const key of witness.displayed) displayed.add(key);
+          for (const key of witness.present) present.add(key);
+        }
         const dead = declared.filter((d) => !displayed.has(d.key)).map((d) => d.where);
         expect(dead).toEqual([]);
         const neverPresent = presenceDeclared

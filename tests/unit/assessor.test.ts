@@ -84,6 +84,7 @@ function withStaleAuditFixtureRoot(run: (root: string) => void): void {
       join(root, "content", "world", "new_york_overworld.json"),
       JSON.stringify({
         ...fixtureOverworldWithOpeningContactVariants(),
+        opening_lead_source: undefined,
         quests: [
           {
             id: "stale_fixture",
