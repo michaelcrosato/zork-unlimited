@@ -96,7 +96,8 @@ Wolf-Winter is the strongest existing gameplay proof:
 - a failed rail check creates a salvage route;
 - a risky saved-brace choice can beat or lose to the safe pin under different
   fixed rolls;
-- saved wood creates an equal-score post-hunt tradeoff;
+- saved wood creates an equal-score post-hunt tradeoff whose world fact now
+  changes a one-time Albany service;
 - three stable victory identities reach Albany's campaign presentation.
 
 Relevant guards include
@@ -114,8 +115,9 @@ The current slice does **not** yet meet the full contract:
   the Road-Warden also retains its fieldcraft import; Ironhands Repairer and
   Unaffiliated Courier still need distinct preparation consumers before concept
   balance is proven;
-- Wolf-Winter now exports explicit Old Cade memories and world facts, but those
-  consequences do not yet change an Albany service, opportunity, or NPC action;
+- Wolf-Winter's saved-wood facts now change one Albany Station Quarter service,
+  but its other Old Cade memories and world facts do not yet change an
+  opportunity or NPC action;
 - fieldcraft and two certified knowledge reports now cross the trusted inbound
   boundary; health is deferred to protect the combat guarantee, and Albany
   equipment still needs an origin-honest quest-local representation before it
@@ -140,9 +142,10 @@ The first implementation sequence is:
    inject allowlisted state into an embedded quest and fold back only validated,
    explicit changes without resetting the protagonist or leaking quest-local
    objects.
-3. **Data-driven consequences** _(outbound boundary landed)_ — quest content
-   declares reusable, validated character/world effects; campaign code consumes
-   generic state rather than adding Wolf-specific ending conditionals.
+3. **Data-driven consequences** _(outbound boundary and first service consumer
+   landed)_ — quest content declares reusable, validated character/world
+   effects; campaign code consumes generic state rather than adding
+   Wolf-specific ending conditionals.
 4. **Authored Albany** — replace the visible slice's generic local transactions
    with scenes whose evidence, time, relationships, resources, and promises
    alter Wolf-Winter.
@@ -161,7 +164,9 @@ memories/floors and derives historical world facts from canonical outcome ids.
 Wolf-Winter's three successful endings create distinct Old Cade memories and
 byre/gate/timber facts; restore replays the character result, rejects forged
 outcome/journal/state combinations, and fences prior manifests to one exact
-migration target.
+migration target. Generic campaign service rules can now consume those trusted
+facts at an authored town and area, expose bounded one-time terms, and bind
+consumption to replayed journal evidence across save/restore.
 
 The trusted inbound boundary is also landed. Quest manifests declare strict,
 pack-validated import rules; only the private overworld bridge supplies detached
@@ -209,11 +214,24 @@ are rejected for the same reason. Opaque pre-registration quest progress is also
 rejected because it has no replayable registration-and-source path and would
 otherwise load into an unwinnable starting-slice goal.
 
-This proves `SS-F01-character-background` and `SS-F03-lead-source`: two of the
-twelve required material forks. It does not prove that all four concepts are
-mechanically balanced, that Albany preparation is broadly systemic, that combat
-can be avoided, or that an early choice changes a return service. Those remain
-the next work, not implied credit for source-specific combat routes.
+The third authored increment makes Wolf-Winter's equal-score timber decision
+matter after the return. Carrying sound guard wood into dawn returns Hayden's
+unused repair-wagon stores for a one-time 15-minute Station Quarter resupply;
+committing that wood to the cattle gate releases a one-time 15-minute Road
+Warden rest cot instead. The alternative remains the ordinary 45-minute
+resupply or 180-minute minimum rest. Full, compact, and UI views state the cause
+and terms before use; a rule-and-area journal proof consumes the offer through
+save/restore. Paired reachable states prove that neither branch dominates:
+retained timber wins when supplies are low, while the barred gate wins after
+identical road strain creates fatigue. Proof lives in
+[`saved_wood_world_state_counterfactual.test.ts`](../tests/starting_slice/saved_wood_world_state_counterfactual.test.ts).
+
+This proves `SS-F01-character-background`, `SS-F03-lead-source`, and
+`SS-F11-saved-wood`: three of the twelve required material forks. It does not
+prove that all four concepts are mechanically balanced, that Albany preparation
+is broadly systemic, that combat can be avoided, or that other return facts
+change NPC availability and opportunities. Those remain the next work, not
+implied credit for the three proven counterfactuals.
 
 ## Required resolution families
 

@@ -65,6 +65,7 @@ const REAL_OVERWORLD = JSON.parse(
 function fixtureOverworldWithoutQuestConditionedFeatures(): FixtureOverworld {
   const world = structuredClone(REAL_OVERWORLD);
   for (const character of world.characters) delete character.variants;
+  delete world.campaign_service_rules;
   delete world.opening_lead_source;
   delete world.opening_registration;
   return world;

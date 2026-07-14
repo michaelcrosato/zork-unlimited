@@ -25,6 +25,7 @@ import {
 } from "./session_snapshot.js";
 import { OVERWORLD_MAX_SUPPLIES as MAX_SUPPLIES, travelCondition } from "./travel_mechanics.js";
 import type { CampaignCharacterView } from "./campaign_character_view.js";
+import type { CampaignServiceOffer } from "./campaign_service_rules.js";
 
 export type OverworldView = {
   character: CampaignCharacterView;
@@ -54,6 +55,7 @@ export type OverworldView = {
   maxSupplies: number;
   fatigue: number;
   travelCondition: string;
+  serviceOffers: CampaignServiceOffer[];
   journal: OverworldJournalEntry[];
   discoveredSiteIds: string[];
   discoveredAreaIds: string[];
@@ -81,6 +83,7 @@ export type OverworldSessionViewState = {
   minutes: number;
   supplies: number;
   fatigue: number;
+  serviceOffers: readonly CampaignServiceOffer[];
   roads: readonly OverworldExit[];
   areaExits: readonly OverworldAreaExit[];
   areas: readonly OverworldArea[];
@@ -175,6 +178,13 @@ export function buildOverworldSessionView(state: OverworldSessionViewState): Ove
     maxSupplies: MAX_SUPPLIES,
     fatigue: state.fatigue,
     travelCondition: travelCondition(state.fatigue, state.supplies),
+    serviceOffers: state.serviceOffers.map((offer) => ({
+      id: offer.id,
+      action: offer.action,
+      title: offer.title,
+      summary: offer.summary,
+      minutes: offer.minutes,
+    })),
     journal: state.journalEntries.map(redactOverworldJournalEntryForPresentation),
     discoveredAreaIds: [...state.discoveredAreaIds].sort(),
     discoveredJobIds: [...state.discoveredJobIds].sort(),

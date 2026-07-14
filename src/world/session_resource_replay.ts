@@ -1,4 +1,9 @@
-import type { OverworldEdge, OverworldRoadEvent } from "./overworld.js";
+import type {
+  OverworldCampaignServiceRule,
+  OverworldEdge,
+  OverworldRoadEvent,
+} from "./overworld.js";
+import type { JourneyDecisionProofLast } from "./journey_contract.js";
 import {
   parseRoadJournalId,
   parseServiceJournalId,
@@ -27,11 +32,27 @@ import {
   travelFatigueGain,
   travelSupplyCost,
 } from "./travel_mechanics.js";
+import { campaignServiceJournalCopy, campaignServiceJourneyActionId } from "./session_services.js";
 
 export type OverworldResourceReplaySourceIndex = {
+  areaHomes: ReadonlyMap<string, string>;
+  campaignServiceRulesById: ReadonlyMap<string, OverworldCampaignServiceRule>;
   edgesById: ReadonlyMap<string, OverworldEdge>;
   roadEventsByEdgeId: ReadonlyMap<string, OverworldRoadEvent>;
+  townNameForSource: (nodeId: string) => string;
 };
+
+export type OverworldCampaignBoundaryReplayProof = Readonly<{
+  decision: JourneyDecisionProofLast | null;
+  decisionProofHash: string;
+  townId: string | null;
+  areaId: string | null;
+}>;
+
+export type OverworldCampaignBoundaryReplayIndex = Readonly<{
+  byAcceptedDecisions: ReadonlyMap<number, OverworldCampaignBoundaryReplayProof>;
+  worldFactProofOrdinalById: ReadonlyMap<string, number | null>;
+}>;
 
 export type OverworldRoadJournalResolutionEntry = {
   entry: OverworldJournalEntry;
@@ -264,6 +285,120 @@ function replayEventOrder(kind: OverworldResourceReplayEvent["kind"]): number {
   return kind === "travel" ? 0 : kind === "road" ? 1 : 2;
 }
 
+function campaignServiceRuleForReplay(
+  service: OverworldServiceJournalReplayEntry,
+  sources: OverworldResourceReplaySourceIndex,
+  campaignBoundaries: OverworldCampaignBoundaryReplayIndex,
+  consumedRuleIds: Set<string>,
+  state: OverworldReplayState,
+): OverworldCampaignServiceRule | null {
+  const { serviceRuleId, serviceAreaId } = service.entry;
+  if (serviceRuleId === undefined && serviceAreaId === undefined) return null;
+  if (serviceRuleId === undefined || serviceAreaId === undefined) {
+    throw new Error(
+      `Overworld session snapshot service journal "${service.entry.id}" has incomplete campaign service proof.`,
+    );
+  }
+  const boundary = service.entry.serviceBoundary;
+  if (!boundary) {
+    throw new Error(
+      `Overworld session snapshot service journal "${service.entry.id}" has no campaign service decision boundary.`,
+    );
+  }
+
+  const rule = sources.campaignServiceRulesById.get(serviceRuleId);
+  if (!rule) {
+    throw new Error(
+      `Overworld session snapshot service journal "${service.entry.id}" references unknown campaign service rule "${serviceRuleId}".`,
+    );
+  }
+  if (consumedRuleIds.has(rule.id)) {
+    throw new Error(
+      `Overworld session snapshot campaign service rule "${rule.id}" was used more than once.`,
+    );
+  }
+  if (service.parsed.action !== rule.action) {
+    throw new Error(
+      `Overworld session snapshot service journal "${service.entry.id}" action does not match campaign service rule "${rule.id}".`,
+    );
+  }
+  const boundaryProof = campaignBoundaries.byAcceptedDecisions.get(boundary.acceptedDecisions);
+  const expectedActionId = campaignServiceJourneyActionId(rule.id, rule.action);
+  if (
+    !boundaryProof ||
+    boundaryProof.decision === null ||
+    boundaryProof.decisionProofHash !== boundary.decisionProofHash ||
+    boundaryProof.decision.surface !== "overworld" ||
+    boundaryProof.decision.reason !== "preparation" ||
+    boundaryProof.decision.actionId !== expectedActionId
+  ) {
+    throw new Error(
+      `Overworld session snapshot service journal "${service.entry.id}" does not match its accepted campaign service decision proof.`,
+    );
+  }
+  if (boundary.minutes !== service.recordedAt) {
+    throw new Error(
+      `Overworld session snapshot service journal "${service.entry.id}" boundary time does not match its timestamp.`,
+    );
+  }
+  if (serviceAreaId !== rule.area) {
+    throw new Error(
+      `Overworld session snapshot service journal "${service.entry.id}" area does not match campaign service rule "${rule.id}".`,
+    );
+  }
+  if (
+    boundaryProof.townId === null ||
+    boundaryProof.areaId === null ||
+    boundary.townId !== boundaryProof.townId ||
+    boundary.areaId !== boundaryProof.areaId ||
+    boundary.townId !== rule.home ||
+    boundary.areaId !== rule.area ||
+    serviceAreaId !== boundary.areaId
+  ) {
+    throw new Error(
+      `Overworld session snapshot service journal "${service.entry.id}" boundary does not match its replayed campaign service location.`,
+    );
+  }
+  if (sources.areaHomes.get(rule.area) !== rule.home) {
+    throw new Error(
+      `Overworld session snapshot campaign service rule "${rule.id}" is not bound to its authored town and area.`,
+    );
+  }
+  const expectedTown = sources.townNameForSource(rule.home);
+  if (service.entry.town !== expectedTown) {
+    throw new Error(
+      `Overworld session snapshot service journal "${service.entry.id}" is bound to town "${service.entry.town}", expected "${expectedTown}".`,
+    );
+  }
+  const expectedCopy = campaignServiceJournalCopy(rule, state);
+  if (service.entry.title !== expectedCopy.title || service.entry.text !== expectedCopy.text) {
+    throw new Error(
+      `Overworld session snapshot service journal "${service.entry.id}" does not match its canonical authored copy.`,
+    );
+  }
+  for (const factId of rule.requires_all_world_facts) {
+    const provenAt = campaignBoundaries.worldFactProofOrdinalById.get(factId);
+    if (provenAt === undefined || provenAt === null || boundary.acceptedDecisions <= provenAt) {
+      throw new Error(
+        `Overworld session snapshot campaign service rule "${rule.id}" lacks required world fact "${factId}" before its service decision.`,
+      );
+    }
+  }
+  for (const factId of rule.forbids_any_world_facts ?? []) {
+    const provenAt = campaignBoundaries.worldFactProofOrdinalById.get(factId);
+    // Equality means the counted service happened first and a non-counted
+    // quest foldback established the fact afterward at the same ordinal.
+    if (provenAt === null || (provenAt !== undefined && boundary.acceptedDecisions > provenAt)) {
+      throw new Error(
+        `Overworld session snapshot campaign service rule "${rule.id}" does not precede forbidden world fact "${factId}".`,
+      );
+    }
+  }
+
+  consumedRuleIds.add(rule.id);
+  return rule;
+}
+
 export function assertSnapshotResourceReplay(
   snapshot: OverworldSessionSnapshot,
   sources: OverworldResourceReplaySourceIndex,
@@ -271,6 +406,10 @@ export function assertSnapshotResourceReplay(
   roadJournal: OverworldRoadJournalResolutionIndex,
   serviceJournal: OverworldServiceJournalReplayIndex,
   localActionJournal: OverworldResourceReplayLocalActionIndex,
+  campaignBoundaries: OverworldCampaignBoundaryReplayIndex = {
+    byAcceptedDecisions: new Map(),
+    worldFactProofOrdinalById: new Map(),
+  },
 ): void {
   assertSnapshotRoadResolutionCoverage(roadJournal);
   const replayEvents: OverworldResourceReplayEvent[] = [];
@@ -304,6 +443,7 @@ export function assertSnapshotResourceReplay(
     supplies: STARTING_SUPPLIES,
     fatigue: 0,
   };
+  const consumedCampaignServiceRuleIds = new Set<string>();
   for (const event of replayEvents) {
     if (event.kind === "travel") {
       const edge = sources.edgesById.get(event.entry.edgeId);
@@ -353,6 +493,13 @@ export function assertSnapshotResourceReplay(
       continue;
     }
 
+    const campaignRule = campaignServiceRuleForReplay(
+      event.service,
+      sources,
+      campaignBoundaries,
+      consumedCampaignServiceRuleIds,
+      state,
+    );
     if (event.service.parsed.action === "rest") {
       if (state.fatigue === 0) {
         throw new Error(
@@ -362,7 +509,7 @@ export function assertSnapshotResourceReplay(
       assertReplayClock(
         `service journal "${event.service.entry.id}"`,
         event.recordedAt,
-        Math.max(180, Math.ceil(state.fatigue / 20) * 60),
+        campaignRule?.minutes ?? Math.max(180, Math.ceil(state.fatigue / 20) * 60),
         state,
       );
       state.fatigue = 0;
@@ -372,7 +519,12 @@ export function assertSnapshotResourceReplay(
           `Overworld session snapshot service journal "${event.service.entry.id}" resupplies with full supplies.`,
         );
       }
-      assertReplayClock(`service journal "${event.service.entry.id}"`, event.recordedAt, 45, state);
+      assertReplayClock(
+        `service journal "${event.service.entry.id}"`,
+        event.recordedAt,
+        campaignRule?.minutes ?? 45,
+        state,
+      );
       state.supplies = MAX_SUPPLIES;
     }
   }

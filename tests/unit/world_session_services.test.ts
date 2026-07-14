@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import type { CampaignServiceRule } from "../../src/world/campaign_service_rules.js";
 import type { OverworldActionJournalState } from "../../src/world/session_action_recording.js";
 import {
   applyOverworldServicePlan,
@@ -14,6 +15,26 @@ function actionJournalState(minutes = 480): OverworldActionJournalState {
     minutes,
     journalEntries: [],
     journalEntriesById: new Map(),
+  };
+}
+
+function campaignServiceRule(
+  action: CampaignServiceRule["action"],
+  overrides: Partial<CampaignServiceRule> = {},
+): CampaignServiceRule {
+  return {
+    id: `service:test_${action}`,
+    home: "albany_city",
+    area: "albany_city__transport_hub",
+    action,
+    title: action === "rest" ? "Relief-room rest" : "Relief-store resupply",
+    summary:
+      action === "rest"
+        ? "An unused relief room is ready beside the dispatch desk."
+        : "The dispatch stores have enough road gear for one traveler.",
+    minutes: action === "rest" ? 30 : 15,
+    requires_all_world_facts: ["fact:wolf_winter_repair_timber_available"],
+    ...overrides,
   };
 }
 
@@ -138,6 +159,71 @@ describe("overworld town service planning", () => {
         text: `You spend 45 minutes buying food, lamp oil, and road gear. Supplies rise from 2 to ${OVERWORLD_MAX_SUPPLIES}.`,
       },
     });
+  });
+
+  it("prefers an active one-time rule and can enable a service without normal tags", () => {
+    const rest = planOverworldTownRest({
+      townName: "Albany city",
+      services: [],
+      activeCampaignServiceRules: [campaignServiceRule("rest")],
+      supplies: 2,
+      fatigue: 40,
+    });
+    expect(rest).toEqual({
+      action: "rest",
+      minutes: 30,
+      changed: true,
+      suppliesBefore: 2,
+      suppliesAfter: 2,
+      fatigueBefore: 40,
+      fatigueAfter: 0,
+      message:
+        "An unused relief room is ready beside the dispatch desk. The service takes 30 minutes; fatigue falls from 40 to 0.",
+      entryDraft: {
+        id: "service:rest",
+        kind: "service",
+        town: "Albany city",
+        title: "Relief-room rest",
+        text: "An unused relief room is ready beside the dispatch desk. The service takes 30 minutes; fatigue falls from 40 to 0.",
+        serviceRuleId: "service:test_rest",
+        serviceAreaId: "albany_city__transport_hub",
+      },
+    });
+
+    const resupply = planOverworldTownResupply({
+      townName: "Albany city",
+      services: ["market"],
+      activeCampaignServiceRules: [campaignServiceRule("resupply")],
+      supplies: 1,
+      fatigue: 7,
+    });
+    expect(resupply).toMatchObject({
+      action: "resupply",
+      minutes: 15,
+      changed: true,
+      suppliesAfter: OVERWORLD_MAX_SUPPLIES,
+      entryDraft: {
+        title: "Relief-store resupply",
+        serviceRuleId: "service:test_resupply",
+        serviceAreaId: "albany_city__transport_hub",
+      },
+    });
+    expect(resupply.message).toContain("The service takes 15 minutes");
+  });
+
+  it("rejects overlapping internal rules instead of choosing by manifest order", () => {
+    expect(() =>
+      planOverworldTownRest({
+        townName: "Albany city",
+        services: ["inn"],
+        activeCampaignServiceRules: [
+          campaignServiceRule("rest", { id: "service:first_rest" }),
+          campaignServiceRule("rest", { id: "service:second_rest" }),
+        ],
+        supplies: 2,
+        fatigue: 20,
+      }),
+    ).toThrow(/multiple active.*rest/i);
   });
 
   it("applies unchanged service plans without recording journal entries", () => {

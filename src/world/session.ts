@@ -46,6 +46,10 @@ import {
 } from "./session_quests.js";
 import { deriveCampaignWorldFactIds } from "./campaign_consequences.js";
 import {
+  resolveCampaignServiceRules,
+  type CampaignServiceOffer,
+} from "./campaign_service_rules.js";
+import {
   applyOverworldSessionQuestCompletion,
   applyOverworldSessionQuestStartFromState,
   planOverworldSessionQuestCompletion,
@@ -59,6 +63,7 @@ import {
   type OverworldServiceResult,
   type OverworldSessionServiceApplication,
 } from "./session_service_lifecycle.js";
+import { campaignServiceJourneyActionId } from "./session_services.js";
 import { type OverworldAreaTravelResult } from "./session_local_actions.js";
 import {
   applyOverworldSessionAreaFromState,
@@ -457,6 +462,24 @@ export class OverworldSession {
     return deriveCampaignWorldFactIds(
       questCampaignEffectGroupsForOutcomes(this.questsById, this.questOutcomeIds),
     );
+  }
+
+  private consumedCampaignServiceRuleIds(): Set<string> {
+    return new Set(
+      this.journalEntries.flatMap((entry) =>
+        entry.kind === "service" && entry.serviceRuleId ? [entry.serviceRuleId] : [],
+      ),
+    );
+  }
+
+  private campaignServiceOffers(currentAreaId: string): CampaignServiceOffer[] {
+    return resolveCampaignServiceRules({
+      rules: this.world.campaign_service_rules ?? [],
+      currentTownId: this.currentId,
+      currentAreaId,
+      worldFactIds: this.campaignWorldFactIds(),
+      consumedRuleIds: this.consumedCampaignServiceRuleIds(),
+    });
   }
 
   private currentGoalRoute(): OverworldSessionRoutePlan | null {
@@ -1065,11 +1088,33 @@ export class OverworldSession {
     if (applied.stateChanged) {
       this.applyResourceClockState(applied);
     }
+    const serviceEntry = applied.result.entry;
+    const serviceRuleId = serviceEntry?.serviceRuleId;
+    const journeyActionId = serviceRuleId
+      ? campaignServiceJourneyActionId(serviceRuleId, applied.result.action)
+      : actionId;
     const journeyDecision = this.recordOverworldDecision(
-      actionId,
+      journeyActionId,
       "preparation",
       applied.stateChanged,
     );
+    if (serviceRuleId) {
+      const currentAreaId = this.currentAreaIdOrThrow();
+      if (
+        !serviceEntry ||
+        serviceEntry.serviceAreaId !== currentAreaId ||
+        !journeyDecision.countsTowardJourney
+      ) {
+        throw new Error("A campaign service is missing its accepted location decision proof.");
+      }
+      serviceEntry.serviceBoundary = {
+        acceptedDecisions: this.journeyState.acceptedDecisions,
+        decisionProofHash: this.journeyState.decisionProof.hash,
+        townId: this.currentId,
+        areaId: currentAreaId,
+        minutes: this.minutes,
+      };
+    }
     if (applied.stateChanged || journeyDecision.countsTowardJourney) this.clearSessionCaches();
     return withJourneyDecision(cloneOverworldServiceResult(applied.result), journeyDecision);
   }
@@ -1147,6 +1192,7 @@ export class OverworldSession {
       minutes: this.minutes,
       supplies: this.supplies,
       fatigue: this.fatigue,
+      serviceOffers: this.campaignServiceOffers(currentAreaId),
       roads: this.roadsFrom(this.currentId),
       areaExits: visibleOverworldSessionAreaExits(localState, currentArea),
       localState,
@@ -1282,6 +1328,15 @@ export class OverworldSession {
     }
     const applied = applyOverworldSessionQuestCompletion(completionState, completionPlan);
     this.applyClockState(applied);
+    if (applied.stateChanged) {
+      applied.result.entry.questCompletionBoundary = {
+        acceptedDecisions: this.journeyState.acceptedDecisions,
+        decisionProofHash: this.journeyState.decisionProof.hash,
+        townId: this.currentId,
+        areaId: this.currentAreaIdOrThrow(),
+        minutes: this.minutes,
+      };
+    }
     if (applied.stateChanged && !outcome.death) {
       this.characterState = applied.characterAfter;
       this.questOutcomeIds.set(questId, outcome.endingId);
@@ -1498,6 +1553,10 @@ export class OverworldSession {
       applyOverworldSessionTownRestFromState({
         ...this.actionJournalState(),
         currentTown: current,
+        currentAreaId: this.currentAreaIdOrThrow(),
+        campaignServiceRules: this.world.campaign_service_rules ?? [],
+        campaignWorldFactIds: this.campaignWorldFactIds(),
+        consumedCampaignServiceRuleIds: this.consumedCampaignServiceRuleIds(),
         fatigue: this.fatigue,
         supplies: this.supplies,
       }),
@@ -1513,6 +1572,10 @@ export class OverworldSession {
       applyOverworldSessionTownResupplyFromState({
         ...this.actionJournalState(),
         currentTown: current,
+        currentAreaId: this.currentAreaIdOrThrow(),
+        campaignServiceRules: this.world.campaign_service_rules ?? [],
+        campaignWorldFactIds: this.campaignWorldFactIds(),
+        consumedCampaignServiceRuleIds: this.consumedCampaignServiceRuleIds(),
         fatigue: this.fatigue,
         supplies: this.supplies,
       }),
@@ -1674,7 +1737,10 @@ export class OverworldSession {
     }
 
     const journeyDecision = this.recordOverworldDecision(
-      goalPassageJourneyActionId(goalId),
+      goalPassageJourneyActionId(
+        goalId,
+        legs.map((leg) => leg.edgeId),
+      ),
       "movement",
       true,
     );

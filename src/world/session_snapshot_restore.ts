@@ -4,6 +4,7 @@ import type {
   OverworldPendingRoadEncounter,
   OverworldSessionSnapshot,
   TravelLogEntry,
+  TravelLogEntrySnapshot,
 } from "./session_snapshot.js";
 import { cloneOpeningLeadSourceDecisionTrail } from "./session_snapshot.js";
 import { hashState } from "../core/hash.js";
@@ -39,6 +40,8 @@ import { assertSnapshotRegionRenown } from "./session_region_renown.js";
 import {
   assertSnapshotResourceReplay,
   roadJournalResolutionIndex,
+  type OverworldCampaignBoundaryReplayIndex,
+  type OverworldCampaignBoundaryReplayProof,
 } from "./session_resource_replay.js";
 import {
   assertSnapshotCurrentAreaReachability,
@@ -55,11 +58,16 @@ import {
 import { snapshotTravelTimelineIndex } from "./session_snapshot_timeline.js";
 import { restoreOverworldPendingRoadEncounter } from "./session_road_encounters.js";
 import { restoreOverworldTravelLogEntries } from "./session_travel_log.js";
-import { cloneJourneyContractSnapshot, type JourneyContractSnapshot } from "./journey_contract.js";
+import {
+  cloneJourneyContractSnapshot,
+  type JourneyContractSnapshot,
+  type JourneyDecisionProofLast,
+} from "./journey_contract.js";
 import {
   assertJourneyCampaignGoalCompletionProof,
   assertJourneyCampaignJournalProof,
   assertJourneyCampaignQuestOutcome,
+  journeyCampaignGoalDefinition,
 } from "./journey_campaign.js";
 import {
   questCampaignExportForEnding,
@@ -80,6 +88,7 @@ import {
   type OpeningRegistrationJournalProof,
 } from "./opening_registration_journal.js";
 import { parseTimeLabel, timeLabel } from "./session_journal_codec.js";
+import { parseGoalPassageJourneyActionId } from "./session_goal_passage.js";
 
 export const OVERWORLD_PRE_CAMPAIGN_EXPORTS_WORLD_HASH =
   "39d32c027d2e826f476dd299bb95cc3911994ec92b4fbf297be8d1216e5b6151";
@@ -89,13 +98,18 @@ export const OVERWORLD_CAMPAIGN_IMPORTS_WORLD_HASH =
   "cad75dafc291709f1d5c756dd70dd1002260bb06ca87d8e1e90aaf905f5f05c7";
 export const OVERWORLD_OPENING_REGISTRATION_WORLD_HASH =
   "1d12330f65743a8a2c124f9dae3cf145e6fdcbca9ec59a4c699ecd8757e8e47b";
+export const OVERWORLD_OPENING_LEAD_SOURCE_WORLD_HASH =
+  "07c2864bcad6eaadbd32e8ecff4460ddb7b63e6ed36b0316f4264aa866c1aa44";
 /** @deprecated Historical name retained for callers that identify the exports-era manifest. */
 export const OVERWORLD_CAMPAIGN_EXPORTS_MIGRATION_TARGET_WORLD_HASH =
   OVERWORLD_CAMPAIGN_EXPORTS_WORLD_HASH;
 // Updated whenever the trusted manifest changes. Prior hashes are accepted only
 // when they migrate directly into this exact manifest revision.
+export const OVERWORLD_CAMPAIGN_SERVICE_MIGRATION_TARGET_WORLD_HASH =
+  "5fa4cea45691beef3a93952a7f890d740f428cc127ff37202d46020dca2534c6";
+/** @deprecated Lead-source target name retained as the current-target alias. */
 export const OVERWORLD_OPENING_LEAD_SOURCE_MIGRATION_TARGET_WORLD_HASH =
-  "07c2864bcad6eaadbd32e8ecff4460ddb7b63e6ed36b0316f4264aa866c1aa44";
+  OVERWORLD_CAMPAIGN_SERVICE_MIGRATION_TARGET_WORLD_HASH;
 /** @deprecated Registration-era target name retained as the current-target alias. */
 export const OVERWORLD_OPENING_REGISTRATION_MIGRATION_TARGET_WORLD_HASH =
   OVERWORLD_OPENING_LEAD_SOURCE_MIGRATION_TARGET_WORLD_HASH;
@@ -110,7 +124,11 @@ const OVERWORLD_OPENING_REGISTRATION_TRUSTED_PREDECESSOR_WORLD_HASHES: ReadonlyS
     OVERWORLD_CAMPAIGN_IMPORTS_WORLD_HASH,
   ]);
 
-type TrustedMigrationEra = "opening_registration" | "pre_registration" | null;
+type TrustedMigrationEra =
+  | "opening_lead_source"
+  | "opening_registration"
+  | "pre_registration"
+  | null;
 
 type OpeningRegistrationLegacyJournalProof = Readonly<{
   entry: OverworldJournalEntry;
@@ -329,6 +347,191 @@ function proveOpeningLeadSourceDecisionTrail(args: {
   return cloneOpeningLeadSourceDecisionTrail(trail);
 }
 
+type MutableCampaignTrailLocation = {
+  townId: string | null;
+  areaId: string | null;
+  areaByTown: Map<string, string>;
+  travelEntries: readonly TravelLogEntrySnapshot[];
+  travelIndex: number;
+  travelProofOpaque: boolean;
+};
+
+function invalidateCampaignTrailLocation(location: MutableCampaignTrailLocation): void {
+  location.townId = null;
+  location.areaId = null;
+}
+
+function replayCampaignTrailRoad(
+  edgeId: string,
+  location: MutableCampaignTrailLocation,
+  indexes: OverworldSnapshotManifestIndex,
+  actionId: string,
+): void {
+  const edge = indexes.edgesById.get(edgeId);
+  if (!edge) {
+    throw new Error(
+      `Overworld session snapshot lead-source decision trail references unknown road "${edgeId}" in "${actionId}".`,
+    );
+  }
+  if (location.townId === null) return;
+  const destinationId =
+    location.townId === edge.from ? edge.to : location.townId === edge.to ? edge.from : null;
+  if (destinationId === null) {
+    throw new Error(
+      `Overworld session snapshot lead-source decision trail road "${edgeId}" is not reachable from "${location.townId}".`,
+    );
+  }
+  if (!location.travelProofOpaque) {
+    const travel = location.travelEntries[location.travelIndex];
+    if (
+      !travel ||
+      travel.edgeId !== edge.id ||
+      travel.fromId !== location.townId ||
+      travel.toId !== destinationId
+    ) {
+      throw new Error(
+        `Overworld session snapshot lead-source decision trail road "${edgeId}" does not match its travel log position.`,
+      );
+    }
+    location.travelIndex += 1;
+  }
+  location.townId = destinationId;
+  location.areaId =
+    location.areaByTown.get(destinationId) ??
+    indexes.areasByTown.get(destinationId)?.[0]?.id ??
+    null;
+  if (location.areaId !== null) location.areaByTown.set(destinationId, location.areaId);
+}
+
+function replayCampaignTrailLocationDecision(
+  decision: JourneyDecisionProofLast,
+  location: MutableCampaignTrailLocation,
+  indexes: OverworldSnapshotManifestIndex,
+): void {
+  if (decision.surface !== "overworld") return;
+  const actionId = decision.actionId;
+  const areaPrefix = "move_area:";
+  if (actionId.startsWith(areaPrefix)) {
+    if (decision.reason !== "movement") {
+      throw new Error(
+        `Overworld session snapshot lead-source decision trail area movement "${actionId}" has the wrong decision reason.`,
+      );
+    }
+    const areaEdgeId = actionId.slice(areaPrefix.length);
+    const edge = indexes.areaEdgesById.get(areaEdgeId);
+    if (!edge) {
+      throw new Error(
+        `Overworld session snapshot lead-source decision trail references unknown area route "${areaEdgeId}".`,
+      );
+    }
+    if (location.townId === null || location.areaId === null) return;
+    if (edge.home !== location.townId) {
+      throw new Error(
+        `Overworld session snapshot lead-source decision trail area route "${areaEdgeId}" is not in town "${location.townId}".`,
+      );
+    }
+    const destinationAreaId =
+      location.areaId === edge.from_area
+        ? edge.to_area
+        : location.areaId === edge.to_area
+          ? edge.from_area
+          : null;
+    if (destinationAreaId === null) {
+      throw new Error(
+        `Overworld session snapshot lead-source decision trail area route "${areaEdgeId}" is not reachable from "${location.areaId}".`,
+      );
+    }
+    location.areaId = destinationAreaId;
+    location.areaByTown.set(location.townId, destinationAreaId);
+    return;
+  }
+
+  const travelPrefix = "travel:";
+  if (actionId.startsWith(travelPrefix)) {
+    if (decision.reason !== "movement") {
+      throw new Error(
+        `Overworld session snapshot lead-source decision trail road movement "${actionId}" has the wrong decision reason.`,
+      );
+    }
+    replayCampaignTrailRoad(actionId.slice(travelPrefix.length), location, indexes, actionId);
+    return;
+  }
+
+  const goalPassagePrefix = "follow_current_goal:";
+  if (!actionId.startsWith(goalPassagePrefix)) return;
+  if (decision.reason !== "movement") {
+    throw new Error(
+      `Overworld session snapshot lead-source decision trail goal passage "${actionId}" has the wrong decision reason.`,
+    );
+  }
+  if (!actionId.includes(":via:")) {
+    // F03 goal-passage decisions did not encode their traversed roads. They
+    // remain loadable, but cannot establish a later campaign-service location.
+    invalidateCampaignTrailLocation(location);
+    location.travelProofOpaque = true;
+    return;
+  }
+  const passage = parseGoalPassageJourneyActionId(actionId);
+  if (!passage) {
+    throw new Error(
+      `Overworld session snapshot lead-source decision trail has malformed goal passage "${actionId}".`,
+    );
+  }
+  for (const edgeId of passage.edgeIds) {
+    replayCampaignTrailRoad(edgeId, location, indexes, actionId);
+  }
+}
+
+function campaignBoundaryReplayIndex(args: {
+  indexes: OverworldSnapshotManifestIndex;
+  leadSourceProof: OpeningLeadSourceJournalProof;
+  trail: OverworldOpeningLeadSourceDecisionTrail | null;
+  travelEntries: readonly TravelLogEntrySnapshot[];
+}): OverworldCampaignBoundaryReplayIndex {
+  const byAcceptedDecisions = new Map<number, OverworldCampaignBoundaryReplayProof>();
+  const boundary = args.leadSourceProof.offerBoundary;
+  if (!args.trail || !boundary) {
+    return { byAcceptedDecisions, worldFactProofOrdinalById: new Map() };
+  }
+  if (args.indexes.areaHomes.get(boundary.areaId) !== boundary.townId) {
+    throw new Error(
+      "Overworld session snapshot lead-source decision trail starts outside its boundary town and area.",
+    );
+  }
+
+  const location: MutableCampaignTrailLocation = {
+    townId: boundary.townId,
+    areaId: boundary.areaId,
+    areaByTown: new Map([[boundary.townId, boundary.areaId]]),
+    travelEntries: args.travelEntries.filter((entry) => entry.arrivedAt > boundary.minutes),
+    travelIndex: 0,
+    travelProofOpaque: false,
+  };
+  let proofHash = args.trail.baseDecisionProofHash;
+  byAcceptedDecisions.set(args.trail.baseAcceptedDecisions, {
+    decision: null,
+    decisionProofHash: proofHash,
+    townId: location.townId,
+    areaId: location.areaId,
+  });
+  for (const decision of args.trail.decisions) {
+    replayCampaignTrailLocationDecision(decision, location, args.indexes);
+    proofHash = hashState({ previous: proofHash, ...decision });
+    byAcceptedDecisions.set(decision.number, {
+      decision,
+      decisionProofHash: proofHash,
+      townId: location.townId,
+      areaId: location.areaId,
+    });
+  }
+  if (!location.travelProofOpaque && location.travelIndex !== location.travelEntries.length) {
+    throw new Error(
+      "Overworld session snapshot travel log is not fully represented by its lead-source decision trail.",
+    );
+  }
+  return { byAcceptedDecisions, worldFactProofOrdinalById: new Map() };
+}
+
 export type OverworldSessionSnapshotRestorePlan = {
   characterAfter: CampaignCharacterState;
   currentAreaByTown: ReadonlyMap<string, string>;
@@ -450,15 +653,17 @@ export function planOverworldSessionSnapshotRestore(args: {
     );
   }
   const migrationTargetsCurrentManifest =
-    worldHash === OVERWORLD_OPENING_LEAD_SOURCE_MIGRATION_TARGET_WORLD_HASH;
+    worldHash === OVERWORLD_CAMPAIGN_SERVICE_MIGRATION_TARGET_WORLD_HASH;
   const migrationEra: TrustedMigrationEra =
     !migrationTargetsCurrentManifest || snapshot.worldHash === worldHash
       ? null
-      : OVERWORLD_OPENING_REGISTRATION_TRUSTED_PREDECESSOR_WORLD_HASHES.has(snapshot.worldHash)
-        ? "pre_registration"
-        : snapshot.worldHash === OVERWORLD_OPENING_REGISTRATION_WORLD_HASH
-          ? "opening_registration"
-          : null;
+      : snapshot.worldHash === OVERWORLD_OPENING_LEAD_SOURCE_WORLD_HASH
+        ? "opening_lead_source"
+        : OVERWORLD_OPENING_REGISTRATION_TRUSTED_PREDECESSOR_WORLD_HASHES.has(snapshot.worldHash)
+          ? "pre_registration"
+          : snapshot.worldHash === OVERWORLD_OPENING_REGISTRATION_WORLD_HASH
+            ? "opening_registration"
+            : null;
   const migratesPreCampaignExportsWorldHash =
     migrationEra === "pre_registration" &&
     snapshot.worldHash === OVERWORLD_PRE_CAMPAIGN_EXPORTS_WORLD_HASH;
@@ -578,6 +783,26 @@ export function planOverworldSessionSnapshotRestore(args: {
     travelLogArrivals: travelTimeline.arrivals,
     travelLogTownByArrival: travelTimeline.townByArrival,
   });
+  if (
+    migrationEra !== null &&
+    snapshot.journalEntries.some(
+      (entry) => entry.serviceRuleId !== undefined || entry.serviceAreaId !== undefined,
+    )
+  ) {
+    throw new Error(
+      "Legacy overworld session snapshot has campaign service-rule evidence from a later manifest.",
+    );
+  }
+  if (
+    migrationEra !== null &&
+    snapshot.journalEntries.some(
+      (entry) => entry.serviceBoundary !== undefined || entry.questCompletionBoundary !== undefined,
+    )
+  ) {
+    throw new Error(
+      "Legacy overworld session snapshot has campaign replay-boundary evidence from a later manifest.",
+    );
+  }
   const registrationProof = proveOpeningRegistrationJournal({
     registration: indexes.openingRegistration,
     journalEntries: snapshot.journalEntries,
@@ -665,6 +890,7 @@ export function planOverworldSessionSnapshotRestore(args: {
       true;
   if (
     migrationEra !== null &&
+    migrationEra !== "opening_lead_source" &&
     (hasOpeningLeadSourceEvidence ||
       hasOpeningLeadSourceDecisionEvidence ||
       snapshot.openingLeadSourceDecisionTrail !== undefined)
@@ -690,8 +916,10 @@ export function planOverworldSessionSnapshotRestore(args: {
   const targetLeadQuestProgressed =
     targetLeadQuestId !== null &&
     (startedQuestIds.has(targetLeadQuestId) || completedQuestIds.has(targetLeadQuestId));
+  const hasLeadSourceManifestEvidence =
+    migrationEra === null || migrationEra === "opening_lead_source";
   if (
-    migrationEra === null &&
+    hasLeadSourceManifestEvidence &&
     legacyRegistrationProof !== null &&
     (startedQuestIds.size > 0 || completedQuestIds.size > 0) &&
     !leadSourceProof.offered
@@ -700,17 +928,29 @@ export function planOverworldSessionSnapshotRestore(args: {
       "Overworld session snapshot has opaque legacy registration progress without a replayable lead-source path.",
     );
   }
-  if (migrationEra === null && registrationProof.profile !== null && !leadSourceProof.offered) {
+  if (
+    hasLeadSourceManifestEvidence &&
+    registrationProof.profile !== null &&
+    !leadSourceProof.offered
+  ) {
     throw new Error(
       "Overworld session snapshot selected registration has no required opening lead-source offer or trusted legacy provenance.",
     );
   }
-  if (migrationEra === null && targetLeadQuestDiscovered && leadSourceProof.option === null) {
+  if (
+    hasLeadSourceManifestEvidence &&
+    targetLeadQuestDiscovered &&
+    leadSourceProof.option === null
+  ) {
     throw new Error(
       "Overworld session snapshot discovered the opening lead-source target quest without a certified lead source or trusted legacy provenance.",
     );
   }
-  if (migrationEra === null && targetLeadQuestProgressed && leadSourceProof.option === null) {
+  if (
+    hasLeadSourceManifestEvidence &&
+    targetLeadQuestProgressed &&
+    leadSourceProof.option === null
+  ) {
     throw new Error(
       "Overworld session snapshot has opening-quest progress without a certified lead source or trusted legacy provenance.",
     );
@@ -766,11 +1006,40 @@ export function planOverworldSessionSnapshotRestore(args: {
     snapshot,
     sourceSceneId: indexes.openingLeadSource?.id ?? null,
   });
+  if (
+    migrationEra === "opening_lead_source" &&
+    openingLeadSourceDecisionTrail?.decisions.some(
+      (decision) =>
+        decision.actionId.startsWith("follow_current_goal:") &&
+        !decision.actionId.includes(":via:"),
+    )
+  ) {
+    throw new Error(
+      "Legacy overworld session snapshot has a goal passage whose road suffix cannot anchor later campaign services.",
+    );
+  }
+  const campaignBoundaryReplay = campaignBoundaryReplayIndex({
+    indexes,
+    leadSourceProof,
+    trail: openingLeadSourceDecisionTrail,
+    travelEntries: travelTimeline.oldestFirst,
+  });
   assertSnapshotQuestCompletionOutcomeJournalProof({
     indexes,
     journalEntries: snapshot.journalEntries,
     questOutcomeIds,
   });
+  const campaignBoundaries: OverworldCampaignBoundaryReplayIndex = {
+    byAcceptedDecisions: campaignBoundaryReplay.byAcceptedDecisions,
+    worldFactProofOrdinalById: deriveCampaignWorldFactProofOrdinals({
+      decisionProofsByOrdinal: campaignBoundaryReplay.byAcceptedDecisions,
+      indexes,
+      journalEntries: snapshot.journalEntries,
+      journey: snapshot.journey,
+      questOutcomeIds,
+      requireBoundServiceFacts: migrationEra === null,
+    }),
+  };
   const neutralCharacter = createInitialCampaignCharacterState();
   const initialCharacter = registrationProof.characterAtRegistration;
   const characterAfterSource = leadSourceProof.option
@@ -966,9 +1235,18 @@ export function planOverworldSessionSnapshotRestore(args: {
     roadJournal,
     serviceJournal,
     localActionJournal,
+    campaignBoundaries,
   );
 
-  const migratedJournalEntries: OverworldJournalEntry[] = [...snapshot.journalEntries];
+  const migratedJournalEntries: OverworldJournalEntry[] =
+    migrationEra === "opening_lead_source"
+      ? migrateOpeningLeadSourceQuestCompletionBoundaries({
+          boundaryProofsByOrdinal: campaignBoundaryReplay.byAcceptedDecisions,
+          indexes,
+          journalEntries: snapshot.journalEntries,
+          journey: snapshot.journey,
+        })
+      : [...snapshot.journalEntries];
   let openingLeadSourceDecisionTrailAfter = openingLeadSourceDecisionTrail;
   const hasQuestProgress = startedQuestIds.size > 0 || completedQuestIds.size > 0;
   if (migratesFromPreRegistrationManifest && hasQuestProgress) {
@@ -1014,7 +1292,7 @@ export function planOverworldSessionSnapshotRestore(args: {
   }
   const discoveredQuestIdsAfter = Object.freeze(
     snapshot.discoveredQuestIds.filter(
-      (questId) => questId !== targetLeadQuestId || migrationEra === null,
+      (questId) => questId !== targetLeadQuestId || hasLeadSourceManifestEvidence,
     ),
   );
   const journalEntriesAfter = Object.freeze(migratedJournalEntries);
@@ -1068,6 +1346,176 @@ function assertSnapshotQuestCompletionOutcomeJournalProof(args: {
       );
     }
   }
+}
+
+function questCompletionBoundaryOrdinal(
+  entry: OverworldJournalEntry,
+  decisionProofsByOrdinal: ReadonlyMap<number, OverworldCampaignBoundaryReplayProof>,
+  args: {
+    expectedCompletedAtDecision: number | null;
+    questId: string;
+    requireBound: boolean;
+  },
+): number | null {
+  const boundary = entry.questCompletionBoundary;
+  if (!boundary) {
+    if (args.requireBound) {
+      throw new Error(
+        `Overworld session snapshot quest completion "${args.questId}" lacks the decision boundary required by a campaign service fact.`,
+      );
+    }
+    return null;
+  }
+  if (args.expectedCompletedAtDecision === null) {
+    if (args.requireBound) {
+      throw new Error(
+        `Overworld session snapshot quest completion "${args.questId}" has no completed journey goal to anchor its campaign service fact.`,
+      );
+    }
+  } else if (boundary.acceptedDecisions !== args.expectedCompletedAtDecision) {
+    throw new Error(
+      `Overworld session snapshot quest completion journal "${entry.id}" does not match its completed journey goal decision.`,
+    );
+  }
+  const proof = decisionProofsByOrdinal.get(boundary.acceptedDecisions);
+  if (!proof || proof.decision === null || proof.decisionProofHash !== boundary.decisionProofHash) {
+    throw new Error(
+      `Overworld session snapshot quest completion journal "${entry.id}" does not match its accepted decision proof.`,
+    );
+  }
+  if (boundary.minutes !== parseTimeLabel(entry.recordedAt)) {
+    throw new Error(
+      `Overworld session snapshot quest completion journal "${entry.id}" boundary time does not match its timestamp.`,
+    );
+  }
+  if (
+    proof.townId === null ||
+    proof.areaId === null ||
+    boundary.townId !== proof.townId ||
+    boundary.areaId !== proof.areaId
+  ) {
+    throw new Error(
+      `Overworld session snapshot quest completion journal "${entry.id}" boundary does not match its replayed location.`,
+    );
+  }
+  return boundary.acceptedDecisions;
+}
+
+/**
+ * The immediately preceding manifest already persisted the source-anchored
+ * decision trail, but predates explicit quest-foldback boundaries. A completed
+ * campaign goal gives us a narrow migration proof: its completion ordinal must
+ * be the exact counted quest-start decision, whose prefix hash and location are
+ * replayable from that trail. Materializing the boundary here prevents a
+ * migrated save from becoming unloadable after it consumes a new fact-gated
+ * campaign service.
+ */
+function migrateOpeningLeadSourceQuestCompletionBoundaries(args: {
+  boundaryProofsByOrdinal: ReadonlyMap<number, OverworldCampaignBoundaryReplayProof>;
+  indexes: OverworldSnapshotManifestIndex;
+  journalEntries: readonly OverworldJournalEntry[];
+  journey: JourneyContractSnapshot;
+}): OverworldJournalEntry[] {
+  const campaignGoals = [...args.journey.goalHistory, args.journey.goal];
+
+  return args.journalEntries.map((entry) => {
+    if (entry.kind !== "quest_done" || entry.questCompletionBoundary !== undefined) {
+      return entry;
+    }
+    const questId = entry.id.slice("quest_done:".length);
+    const goal = campaignGoals.find(
+      (candidate) =>
+        candidate.status === "completed" &&
+        journeyCampaignGoalDefinition(candidate)?.targetQuestId === questId,
+    );
+    if (!goal || goal.completedAtDecision === null) return entry;
+
+    const proof = args.boundaryProofsByOrdinal.get(goal.completedAtDecision);
+    if (
+      !proof ||
+      proof.decision === null ||
+      proof.decisionProofHash.length === 0 ||
+      proof.decision.number !== goal.completedAtDecision ||
+      proof.townId === null ||
+      proof.areaId === null ||
+      args.indexes.areaHomes.get(proof.areaId) !== proof.townId ||
+      entry.town !== args.indexes.townNameForSource(proof.townId)
+    ) {
+      throw new Error(
+        `Legacy overworld session snapshot quest completion "${questId}" has no replayable campaign boundary.`,
+      );
+    }
+
+    return {
+      ...entry,
+      questCompletionBoundary: {
+        acceptedDecisions: goal.completedAtDecision,
+        decisionProofHash: proof.decisionProofHash,
+        townId: proof.townId,
+        areaId: proof.areaId,
+        minutes: parseTimeLabel(entry.recordedAt),
+      },
+    };
+  });
+}
+
+function deriveCampaignWorldFactProofOrdinals(args: {
+  decisionProofsByOrdinal: ReadonlyMap<number, OverworldCampaignBoundaryReplayProof>;
+  indexes: OverworldSnapshotManifestIndex;
+  journalEntries: readonly OverworldJournalEntry[];
+  journey: JourneyContractSnapshot;
+  questOutcomeIds: ReadonlyMap<string, string>;
+  requireBoundServiceFacts: boolean;
+}): ReadonlyMap<string, number | null> {
+  const proofOrdinals = new Map<string, number | null>();
+  const entriesById = new Map(args.journalEntries.map((entry) => [entry.id, entry]));
+  const serviceFactIds = new Set(
+    [...args.indexes.campaignServiceRulesById.values()].flatMap((rule) => [
+      ...rule.requires_all_world_facts,
+      ...(rule.forbids_any_world_facts ?? []),
+    ]),
+  );
+  const completionOrdinalByQuestId = new Map<string, number>();
+  for (const goal of [...args.journey.goalHistory, args.journey.goal]) {
+    if (goal.status !== "completed" || goal.completedAtDecision === null) continue;
+    const definition = journeyCampaignGoalDefinition(goal);
+    if (definition)
+      completionOrdinalByQuestId.set(definition.targetQuestId, goal.completedAtDecision);
+  }
+  for (const [questId, endingId] of args.questOutcomeIds) {
+    const quest = args.indexes.questsById.get(questId);
+    if (!quest) continue;
+    const campaignExport = questCampaignExportForEnding(quest, endingId);
+    if (!campaignExport) continue;
+    const completionEntry = entriesById.get(`quest_done:${questId}`);
+    if (!completionEntry) continue;
+    const exportsServiceFact = campaignExport.effects.some(
+      (effect) => effect.type === "set_world_fact" && serviceFactIds.has(effect.fact_id),
+    );
+    const proofOrdinal = questCompletionBoundaryOrdinal(
+      completionEntry,
+      args.decisionProofsByOrdinal,
+      {
+        expectedCompletedAtDecision: completionOrdinalByQuestId.get(questId) ?? null,
+        questId,
+        requireBound: args.requireBoundServiceFacts && exportsServiceFact,
+      },
+    );
+    for (const effect of campaignExport.effects) {
+      if (effect.type !== "set_world_fact") continue;
+      if (!proofOrdinals.has(effect.fact_id)) {
+        proofOrdinals.set(effect.fact_id, proofOrdinal);
+        continue;
+      }
+      const previous = proofOrdinals.get(effect.fact_id) ?? null;
+      if (previous === null || proofOrdinal === null) {
+        proofOrdinals.set(effect.fact_id, null);
+      } else if (proofOrdinal < previous) {
+        proofOrdinals.set(effect.fact_id, proofOrdinal);
+      }
+    }
+  }
+  return proofOrdinals;
 }
 
 function resolvedOverworldEventHomeIds(

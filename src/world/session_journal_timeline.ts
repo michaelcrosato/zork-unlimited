@@ -298,9 +298,40 @@ function assertSnapshotJournalSource(
       `Overworld session snapshot journal ${entry.kind} entry has an invalid story-choice boundary.`,
     );
   }
-  if (entry.registrationBoundary !== undefined && entry.storyChoiceBoundary !== undefined) {
+  const decisionBoundaryCount = [
+    entry.questCompletionBoundary,
+    entry.registrationBoundary,
+    entry.serviceBoundary,
+    entry.storyChoiceBoundary,
+  ].filter((boundary) => boundary !== undefined).length;
+  if (decisionBoundaryCount > 1) {
     throw new Error(
-      `Overworld session snapshot journal ${entry.kind} entry cannot carry two decision boundaries.`,
+      `Overworld session snapshot journal ${entry.kind} entry cannot carry multiple decision boundaries.`,
+    );
+  }
+  const hasServiceRuleId = entry.serviceRuleId !== undefined;
+  const hasServiceAreaId = entry.serviceAreaId !== undefined;
+  if (hasServiceRuleId !== hasServiceAreaId) {
+    throw new Error(
+      `Overworld session snapshot journal ${entry.kind} entry has incomplete campaign service proof.`,
+    );
+  }
+  if ((hasServiceRuleId || hasServiceAreaId) && entry.kind !== "service") {
+    throw new Error(
+      `Overworld session snapshot journal ${entry.kind} entry cannot carry campaign service proof.`,
+    );
+  }
+  if (
+    (hasServiceRuleId || hasServiceAreaId) !== (entry.serviceBoundary !== undefined) ||
+    (entry.serviceBoundary !== undefined && entry.kind !== "service")
+  ) {
+    throw new Error(
+      `Overworld session snapshot journal ${entry.kind} entry has an invalid campaign service boundary.`,
+    );
+  }
+  if (entry.questCompletionBoundary !== undefined && entry.kind !== "quest_done") {
+    throw new Error(
+      `Overworld session snapshot journal ${entry.kind} entry has an invalid quest completion boundary.`,
     );
   }
 
@@ -462,6 +493,7 @@ export function assertSnapshotTimeline(
   sources: OverworldJournalTimelineSourceIndex,
 ): OverworldJournalTimelineIndex {
   let previousRecordedAt = Number.POSITIVE_INFINITY;
+  let previousBoundaryDecision = Number.POSITIVE_INFINITY;
   const progressSources = emptyProgressJournalSourceIndex();
   const localActionEntries: OverworldLocalActionJournalTimelineEntry[] = [];
   const recordedAtById = new Map<string, number>();
@@ -479,6 +511,24 @@ export function assertSnapshotTimeline(
     }
     const recordedAt = parseTimeLabel(entry.recordedAt);
     assertSnapshotJournalSource(entry, recordedAt, sources);
+    const decisionBoundary =
+      entry.questCompletionBoundary ??
+      entry.registrationBoundary ??
+      entry.serviceBoundary ??
+      entry.storyChoiceBoundary;
+    if (decisionBoundary) {
+      if (decisionBoundary.minutes !== recordedAt) {
+        throw new Error(
+          `Overworld session snapshot journal ${entry.kind} entry boundary time does not match its timestamp.`,
+        );
+      }
+      if (decisionBoundary.acceptedDecisions > previousBoundaryDecision) {
+        throw new Error(
+          "Overworld session snapshot journal decision boundaries must be newest-first.",
+        );
+      }
+      previousBoundaryDecision = decisionBoundary.acceptedDecisions;
+    }
     if (recordedAt > snapshot.minutes) {
       throw new Error("Overworld session snapshot journal contains a future entry.");
     }

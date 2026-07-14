@@ -417,6 +417,38 @@
       }
     ]
   },
+  "campaign_service_rules": [
+    {
+      "id": "albany:wolf_saved_timber_quick_resupply",
+      "home": "albany_city",
+      "area": "albany_city__transport_hub",
+      "action": "resupply",
+      "title": "Reclaim the Unused Repair-Wagon Stores",
+      "summary": "Because Cade already has sound timber for the broken paling, Hayden returns the repair wagon's food, lamp oil, and road gear to the Station Quarter relief tag.",
+      "minutes": 15,
+      "requires_all_world_facts": [
+        "fact:wolf_winter_repair_timber_available"
+      ],
+      "forbids_any_world_facts": [
+        "fact:wolf_winter_guard_wood_committed"
+      ]
+    },
+    {
+      "id": "albany:wolf_barred_gate_quick_rest",
+      "home": "albany_city",
+      "area": "albany_city__transport_hub",
+      "action": "rest",
+      "title": "Take the Released Night-Watch Cot",
+      "summary": "Because the inner cattle gate held behind the committed guard wood, Hayden closes the overnight watch request and releases a warmed Road Warden cot at the Station Quarter.",
+      "minutes": 15,
+      "requires_all_world_facts": [
+        "fact:wolf_winter_guard_wood_committed"
+      ],
+      "forbids_any_world_facts": [
+        "fact:wolf_winter_repair_timber_available"
+      ]
+    }
+  ],
   "sources": [
     {
       "label": "U.S. Census Bureau Vintage 2025 subcounty population estimates",

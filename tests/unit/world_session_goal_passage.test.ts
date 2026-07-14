@@ -161,7 +161,8 @@ describe("current-goal passage", () => {
         last: {
           number: before.acceptedDecisions + 1,
           surface: "overworld",
-          actionId: "follow_current_goal:carry_hedricks_packet_north",
+          actionId:
+            "follow_current_goal:carry_hedricks_packet_north:via:road_albany_city__saratoga_springs_city",
           reason: "movement",
         },
       },

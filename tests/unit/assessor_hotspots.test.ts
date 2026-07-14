@@ -30,6 +30,7 @@ const REAL_OVERWORLD = JSON.parse(
 
 function fixtureOverworldWithOpeningContactVariants(): FixtureOverworld {
   const world = structuredClone(REAL_OVERWORLD);
+  delete world.campaign_service_rules;
   const openingMemories = new Set(
     world.opening_registration?.profiles.flatMap((profile) =>
       profile.character.relationships.flatMap((relationship) => relationship.memories),

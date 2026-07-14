@@ -33,6 +33,13 @@ export function cloneOverworldView(view: OverworldView): OverworldView {
     rememberedJobs: view.rememberedJobs.map(cloneOverworldLocalJob),
     sites: view.sites.map(cloneOverworldExplorationSite),
     quests: view.quests.map((quest) => ({ ...quest })),
+    serviceOffers: view.serviceOffers.map((offer) => ({
+      id: offer.id,
+      action: offer.action,
+      title: offer.title,
+      summary: offer.summary,
+      minutes: offer.minutes,
+    })),
     routeOptions: view.routeOptions.map((plan) => cloneOverworldRouteOption(plan)),
     discovered: view.discovered.map(cloneOverworldNode),
     journal: view.journal.map(redactOverworldJournalEntryForPresentation),

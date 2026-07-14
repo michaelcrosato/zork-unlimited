@@ -146,7 +146,11 @@ export type OverworldJournalEntry = {
   title: string;
   text: string;
   recordedAt: string;
+  questCompletionBoundary?: OverworldJournalDecisionBoundary | undefined;
   registrationBoundary?: OverworldJournalDecisionBoundary | undefined;
+  serviceBoundary?: OverworldJournalDecisionBoundary | undefined;
+  serviceRuleId?: string | undefined;
+  serviceAreaId?: string | undefined;
   storyChoiceBoundary?: OverworldJournalDecisionBoundary | undefined;
 };
 
@@ -197,10 +201,43 @@ const OverworldJournalEntrySchema = z
     title: z.string().min(1),
     text: z.string().min(1),
     recordedAt: z.string().min(1),
+    questCompletionBoundary: OverworldJournalRegistrationBoundarySchema.optional(),
     registrationBoundary: OverworldJournalRegistrationBoundarySchema.optional(),
+    serviceBoundary: OverworldJournalRegistrationBoundarySchema.optional(),
+    serviceRuleId: z.string().min(1).optional(),
+    serviceAreaId: z.string().min(1).optional(),
     storyChoiceBoundary: OverworldJournalRegistrationBoundarySchema.optional(),
   })
-  .strict();
+  .strict()
+  .superRefine((entry, ctx) => {
+    const hasRuleId = entry.serviceRuleId !== undefined;
+    const hasAreaId = entry.serviceAreaId !== undefined;
+    if (hasRuleId !== hasAreaId) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Service journal proof must include both serviceRuleId and serviceAreaId.",
+      });
+    }
+    const hasServiceProof = hasRuleId || hasAreaId;
+    if (hasServiceProof && entry.kind !== "service") {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Service journal proof is only valid on service entries.",
+      });
+    }
+    if (hasServiceProof !== (entry.serviceBoundary !== undefined)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Campaign service journal proof must include its serviceBoundary.",
+      });
+    }
+    if (entry.questCompletionBoundary !== undefined && entry.kind !== "quest_done") {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Quest completion boundaries are only valid on quest_done entries.",
+      });
+    }
+  });
 
 export const OverworldSessionSnapshotV8Schema = z
   .object({
@@ -276,9 +313,13 @@ export function cloneJournalEntries(
 export function cloneOverworldJournalEntry(entry: OverworldJournalEntry): OverworldJournalEntry {
   return {
     ...entry,
+    ...(entry.questCompletionBoundary
+      ? { questCompletionBoundary: { ...entry.questCompletionBoundary } }
+      : {}),
     ...(entry.registrationBoundary
       ? { registrationBoundary: { ...entry.registrationBoundary } }
       : {}),
+    ...(entry.serviceBoundary ? { serviceBoundary: { ...entry.serviceBoundary } } : {}),
     ...(entry.storyChoiceBoundary ? { storyChoiceBoundary: { ...entry.storyChoiceBoundary } } : {}),
   };
 }
@@ -287,7 +328,11 @@ export function redactOverworldJournalEntryForPresentation(
   entry: OverworldJournalEntry,
 ): OverworldJournalEntry {
   const {
+    questCompletionBoundary: _questCompletionBoundary,
     registrationBoundary: _registrationBoundary,
+    serviceBoundary: _serviceBoundary,
+    serviceRuleId: _serviceRuleId,
+    serviceAreaId: _serviceAreaId,
     storyChoiceBoundary: _storyChoiceBoundary,
     ...presented
   } = entry;

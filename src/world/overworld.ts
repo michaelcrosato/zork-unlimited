@@ -6,6 +6,7 @@ import {
   campaignConsequenceEffectKey,
 } from "./campaign_consequences.js";
 import { CampaignCharacterIdSchema } from "./campaign_character_state.js";
+import { CampaignServiceRulesSchema, type CampaignServiceRule } from "./campaign_service_rules.js";
 import { OpeningLeadSourceSchema, applyOpeningLeadSourceOption } from "./opening_lead_source.js";
 import { OpeningRegistrationSchema } from "./opening_registration.js";
 
@@ -303,6 +304,7 @@ export const OverworldManifestSchema = z
     premise: z.string().min(1),
     opening_registration: OpeningRegistrationSchema.optional(),
     opening_lead_source: OpeningLeadSourceSchema.optional(),
+    campaign_service_rules: CampaignServiceRulesSchema.optional(),
     sources: z.array(
       z
         .object({
@@ -354,6 +356,7 @@ export type OverworldRoadEvent = z.infer<typeof OverworldRoadEventSchema>;
 export type OverworldExplorationSite = z.infer<typeof OverworldExplorationSiteSchema>;
 export type OverworldQuestCampaignExport = z.infer<typeof OverworldQuestCampaignExportSchema>;
 export type OverworldQuest = z.infer<typeof OverworldQuestSchema>;
+export type OverworldCampaignServiceRule = CampaignServiceRule;
 export type OverworldManifest = z.infer<typeof OverworldManifestSchema>;
 
 export type OverworldExit = OverworldEdge & {
@@ -1401,6 +1404,46 @@ function assertQuestsIntegrity(
   }
 }
 
+function assertCampaignServiceRulesIntegrity(
+  world: OverworldManifest,
+  nodes: Map<string, OverworldNode>,
+  areaIds: Set<string>,
+  areaHomes: Map<string, string>,
+): void {
+  const rules = CampaignServiceRulesSchema.parse(world.campaign_service_rules ?? []);
+  const authoredWorldFactIds = new Set(
+    world.quests.flatMap((quest) =>
+      (quest.campaign_exports ?? []).flatMap((campaignExport) =>
+        campaignExport.effects.flatMap((effect) =>
+          effect.type === "set_world_fact" ? [effect.fact_id] : [],
+        ),
+      ),
+    ),
+  );
+
+  for (const rule of rules) {
+    if (!nodes.has(rule.home)) {
+      throw new Error(`Campaign service rule "${rule.id}" has missing home node "${rule.home}".`);
+    }
+    if (!areaIds.has(rule.area)) {
+      throw new Error(`Campaign service rule "${rule.id}" has missing area "${rule.area}".`);
+    }
+    if (areaHomes.get(rule.area) !== rule.home) {
+      throw new Error(`Campaign service rule "${rule.id}" is anchored outside its home town.`);
+    }
+    for (const factId of [
+      ...rule.requires_all_world_facts,
+      ...(rule.forbids_any_world_facts ?? []),
+    ]) {
+      if (!authoredWorldFactIds.has(factId)) {
+        throw new Error(
+          `Campaign service rule "${rule.id}" references unauthored world fact "${factId}".`,
+        );
+      }
+    }
+  }
+}
+
 function assertGraphConnectivity(world: OverworldManifest): void {
   const reached = new Set<string>([world.start]);
   const queue = [world.start];
@@ -1444,6 +1487,8 @@ export function assertOverworldIntegrity(world: OverworldManifest): void {
   assertExplorationSitesIntegrity(world, nodes, regionNames, areaIds, areaHomes);
 
   assertQuestsIntegrity(world, nodes, areaIds, areaHomes);
+
+  assertCampaignServiceRulesIntegrity(world, nodes, areaIds, areaHomes);
 
   assertGraphConnectivity(world);
 }

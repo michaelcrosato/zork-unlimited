@@ -384,7 +384,7 @@ describe("SS-F01 — Albany character background counterfactual", () => {
       ),
     ];
     expect(() => OverworldSession.restore(WORLD, forgedStartedBeforeRegistration)).toThrow(
-      /registration offer cannot follow a started or completed quest/i,
+      /journal decision boundaries must be newest-first/i,
     );
   });
 

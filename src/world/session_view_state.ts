@@ -40,6 +40,7 @@ import {
   buildCampaignCharacterView,
   type CampaignCharacterView,
 } from "./campaign_character_view.js";
+import type { CampaignServiceOffer } from "./campaign_service_rules.js";
 
 type OverworldSessionViewLocalContentState = Pick<
   MutableOverworldSessionLocalState,
@@ -55,6 +56,7 @@ export type OverworldSessionViewModelState = {
   minutes: number;
   supplies: number;
   fatigue: number;
+  serviceOffers: readonly CampaignServiceOffer[];
   roads: readonly OverworldExit[];
   areaExits: readonly OverworldAreaExit[];
   routeOptions: readonly OverworldSessionRoutePlan[];
@@ -86,6 +88,7 @@ export type OverworldSessionViewModelSourceState = {
   minutes: number;
   supplies: number;
   fatigue: number;
+  serviceOffers: readonly CampaignServiceOffer[];
   roads: readonly OverworldExit[];
   areaExits: readonly OverworldAreaExit[];
   localState: OverworldSessionViewLocalContentState;
@@ -160,6 +163,7 @@ export function buildOverworldSessionViewModelState(
       minutes: source.minutes,
       supplies: source.supplies,
       fatigue: source.fatigue,
+      serviceOffers: [],
       roads: [],
       areaExits: [],
       routeOptions: [],
@@ -210,6 +214,13 @@ export function buildOverworldSessionViewModelState(
     minutes: source.minutes,
     supplies: source.supplies,
     fatigue: source.fatigue,
+    serviceOffers: source.serviceOffers.map((offer) => ({
+      id: offer.id,
+      action: offer.action,
+      title: offer.title,
+      summary: offer.summary,
+      minutes: offer.minutes,
+    })),
     roads: source.roads,
     areaExits: source.areaExits,
     routeOptions,
@@ -254,6 +265,7 @@ function compactViewState(state: OverworldSessionViewModelState): OverworldSessi
     minutes: state.minutes,
     supplies: state.supplies,
     fatigue: state.fatigue,
+    serviceOffers: state.serviceOffers,
     roads: state.roads,
     areaExits: state.areaExits,
     routeOptions: state.routeOptions,
@@ -303,6 +315,7 @@ export function buildOverworldSessionViewFromState(
     minutes: state.minutes,
     supplies: state.supplies,
     fatigue: state.fatigue,
+    serviceOffers: state.serviceOffers,
     roads: state.roads,
     areaExits: state.areaExits,
     areas: state.localView.areas,

@@ -15,13 +15,16 @@ import {
   OVERWORLD_COMPACT_RISK_CHAR_LIMIT,
   OVERWORLD_COMPACT_ROAD_EVENT_SUMMARY_CHAR_LIMIT,
   OVERWORLD_COMPACT_ROUTE_STEP_LIMIT,
+  OVERWORLD_COMPACT_SERVICE_SUMMARY_CHAR_LIMIT,
   OVERWORLD_COMPACT_TITLE_CHAR_LIMIT,
+  OVERWORLD_COMPACT_VIEW_VERSION,
   cloneOverworldCompactView,
   compactRouteOption,
   compactOverworldView,
 } from "../../src/world/compact_view.js";
 import { buildOverworldSessionCompactView } from "../../src/world/session_compact_view.js";
 import { questCompletionMinutes } from "../../src/world/session_quests.js";
+import { cloneOverworldView } from "../../src/world/session_view_clone.js";
 import { OverworldSession } from "../../ui/src/overworld.js";
 
 const world = loadOverworldManifest(process.cwd());
@@ -345,6 +348,67 @@ describe("OverworldSession", () => {
       ".journey-choice-actions:not(.journey-choice-actions-registration) button:first-child",
     );
     expect(screen).not.toMatch(/Albany Station Quarter|dawn dispatch|relief wagon/i);
+  });
+
+  it("keeps standard service actions and accessibly associates their one-time terms", async () => {
+    const app = readFileSync("ui/src/App.tsx", "utf8");
+    const actionsStart = app.indexOf('<div className="service-actions">');
+    const actionsEnd = app.indexOf('<aside className="atlas-panel">', actionsStart);
+    expect(actionsStart).toBeGreaterThanOrEqual(0);
+    expect(actionsEnd).toBeGreaterThan(actionsStart);
+    const actions = app.slice(actionsStart, actionsEnd);
+
+    expect(actions).toContain("worldSession.resupplyAtTown()");
+    expect(actions).toContain("worldSession.restAtTown()");
+    expect(actions).toContain('action="resupply"');
+    expect(actions).toContain('action="rest"');
+    expect(app).toContain("aria-describedby={termsId}");
+    expect(app).toContain("{offer.title}");
+    expect(app).toContain("{offer.summary}");
+    expect(app).toContain("{offer.minutes} min, one time");
+
+    const uiRoot = resolve(process.cwd(), "ui");
+    const server = await createServer({
+      root: uiRoot,
+      configFile: resolve(uiRoot, "vite.config.ts"),
+      appType: "custom",
+      logLevel: "silent",
+      optimizeDeps: { noDiscovery: true },
+      server: { middlewareMode: true },
+    });
+    try {
+      const module = (await server.ssrLoadModule("/src/App.tsx")) as {
+        ServiceAction: unknown;
+      };
+      const requireFromUi = createRequire(resolve(uiRoot, "package.json"));
+      const react = requireFromUi("react") as {
+        createElement: (type: unknown, props: Record<string, unknown>) => unknown;
+      };
+      const reactDomServer = requireFromUi("react-dom/server") as {
+        renderToStaticMarkup: (element: unknown) => string;
+      };
+      const offer = {
+        id: "albany:test_accessible_service",
+        action: "resupply",
+        title: "Draw the one-time relief issue",
+        summary: "Fill the field pack from Albany's reserved relief stock.",
+        minutes: 15,
+      } as const;
+      const markup = reactDomServer.renderToStaticMarkup(
+        react.createElement(module.ServiceAction, {
+          action: "resupply",
+          offer,
+          onActivate: () => undefined,
+        }),
+      );
+
+      expect(markup).toContain('aria-describedby="service-offer-resupply-terms"');
+      expect(markup).toContain('id="service-offer-resupply-terms"');
+      expect(markup).toContain("Draw the one-time relief issue");
+      expect(markup).toContain("15 min, one time");
+    } finally {
+      await server.close();
+    }
   });
 
   it("renders registration choices without claiming a goal was completed or replaced", async () => {
@@ -941,7 +1005,7 @@ describe("OverworldSession", () => {
     expect(view.discovered.length).toBeGreaterThan(24);
     const compact = compactOverworldView(view);
     expect(session.compactView()).toEqual(compact);
-    expect(compact.v).toBe(15);
+    expect(compact.v).toBe(OVERWORLD_COMPACT_VIEW_VERSION);
     expect(compact.hidden).toEqual([
       view.hiddenAreaCount,
       view.hiddenJobCount,
@@ -960,6 +1024,62 @@ describe("OverworldSession", () => {
     if (view.resolvedEventIds.length === 0) {
       expect("resolved_events" in compact.ids).toBe(false);
     }
+  });
+
+  it("projects and detaches one-time service terms in compact context", () => {
+    const view = new OverworldSession(world).view();
+    const longSummary = "dispatch terms ".repeat(40);
+    const sourceOffers = [
+      {
+        id: "albany:service:rest",
+        action: "rest" as const,
+        title: "Rest under Rowan's relief seal",
+        summary: longSummary,
+        minutes: 180,
+      },
+      {
+        id: "albany:service:resupply",
+        action: "resupply" as const,
+        title: "Draw the one-time relief issue",
+        summary: "Fill the field pack from Albany's reserved relief stock.",
+        minutes: 15,
+      },
+    ];
+    const fullClone = cloneOverworldView({ ...view, serviceOffers: sourceOffers });
+    const compact = compactOverworldView({ ...view, serviceOffers: sourceOffers });
+
+    expect(compact.service_offers).toEqual([
+      [
+        sourceOffers[0]!.id,
+        "rest",
+        sourceOffers[0]!.title,
+        expect.stringMatching(/\.\.\.\(\+\d+ chars\)$/),
+        180,
+      ],
+      [sourceOffers[1]!.id, "resupply", sourceOffers[1]!.title, sourceOffers[1]!.summary, 15],
+    ]);
+    expect(compact.service_offers?.[0]?.[3]).toHaveLength(
+      OVERWORLD_COMPACT_SERVICE_SUMMARY_CHAR_LIMIT,
+    );
+
+    sourceOffers[0]!.title = "mutated source";
+    expect(Object.keys(fullClone.serviceOffers[0]!).sort()).toEqual([
+      "action",
+      "id",
+      "minutes",
+      "summary",
+      "title",
+    ]);
+    expect(fullClone.serviceOffers[0]?.title).toBe("Rest under Rowan's relief seal");
+    expect(compact.service_offers?.[0]?.[2]).toBe("Rest under Rowan's relief seal");
+
+    fullClone.serviceOffers[0]!.summary = "mutated full clone";
+    expect(sourceOffers[0]!.summary).toBe(longSummary);
+
+    const cloned = cloneOverworldCompactView(compact);
+    if (!cloned.service_offers) throw new Error("expected cloned service offers");
+    (cloned.service_offers[0] as unknown as string[])[2] = "mutated clone";
+    expect(compact.service_offers?.[0]?.[2]).toBe("Rest under Rowan's relief seal");
   });
 
   it("caps compact context progress lists while marking truncated renown and completed arcs", () => {
@@ -1004,6 +1124,7 @@ describe("OverworldSession", () => {
       minutes: 0,
       supplies: view.supplies,
       fatigue: view.fatigue,
+      serviceOffers: view.serviceOffers,
       roads: view.exits,
       areaExits: view.areaExits,
       routeOptions: view.routeOptions,
@@ -1104,6 +1225,7 @@ describe("OverworldSession", () => {
       minutes: 0,
       supplies: view.supplies,
       fatigue: view.fatigue,
+      serviceOffers: view.serviceOffers,
       roads: denseRoads,
       areaExits: denseAreaRoutes,
       routeOptions: view.routeOptions,
@@ -1191,6 +1313,7 @@ describe("OverworldSession", () => {
       minutes: 0,
       supplies: view.supplies,
       fatigue: view.fatigue,
+      serviceOffers: view.serviceOffers,
       roads: view.exits,
       areaExits: view.areaExits,
       routeOptions: [densePlan],
@@ -1298,6 +1421,7 @@ describe("OverworldSession", () => {
       minutes: 0,
       supplies: view.supplies,
       fatigue: view.fatigue,
+      serviceOffers: view.serviceOffers,
       roads: view.exits,
       areaExits: view.areaExits,
       routeOptions: view.routeOptions,

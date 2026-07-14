@@ -360,9 +360,9 @@
       "id": "SS-F11-saved-wood",
       "title": "Use sound wood now or carry it into the aftermath",
       "phase": "wolf_winter",
-      "implementation_status": "partial",
-      "proof_status": "partial",
-      "counts_toward_contract": false,
+      "implementation_status": "implemented",
+      "proof_status": "proven",
+      "counts_toward_contract": true,
       "visible_choice": "Bar the cattle gate with surviving wood or retain it for repairing the outer paling after the immediate crisis.",
       "immediate_state_delta": [
         "character.equipment",
@@ -370,19 +370,24 @@
         "wolf.repair_material"
       ],
       "delayed_consumers": [
-        "Existing ending identity and Albany return presentation",
-        "Planned cattle pressure, repair service, and relief-capacity state"
+        "The exported Wolf-Winter world fact selects one mutually exclusive, one-time Albany Station Quarter service: retained timber returns repair-wagon stores for a 15-minute resupply, while committed guard wood releases a Road Warden cot for a 15-minute rest.",
+        "After the offer is consumed, its journal-bound rule id removes it across save/restore and the ordinary 45-minute resupply or 180-minute minimum rest applies again.",
+        "Paired reachable resource states reverse the advantage: retained timber saves 30 minutes when supplies are low, while committed guard wood saves 165 minutes after identical road strain creates fatigue."
       ],
       "visible_feedback": [
-        "The current gate interaction states the immediate and deferred use.",
-        "Albany currently names the outcome; future proof must change mechanics and services."
+        "The gate interaction states that the guard can bar the herd's inner gate now or be carried into dawn for the broken outer paling.",
+        "On the Albany return, full view, compact MCP context, and the web UI name the unlocked one-time service, its cause, its effect, and its 15-minute term beside the affected action.",
+        "The service result repeats the authored cause and exact resource change; consumption removes the offer while the persistent service journal binds the rule and Station Quarter area."
       ],
       "systems": ["equipment", "environment", "resources", "services"],
-      "persistence_boundaries": ["quest_to_overworld"],
+      "persistence_boundaries": ["quest_to_overworld", "save_restore"],
       "contract_tags": ["delayed", "cross_system", "cross_phase", "irreversible_tradeoff"],
       "baseline_evidence": [
         "tests/regression/wolf_winter_post_hunt_consequence.test.ts",
-        "tests/unit/world_journey_campaign.test.ts"
+        "tests/unit/world_journey_campaign.test.ts",
+        "tests/unit/world_campaign_service_rules.test.ts",
+        "tests/unit/world_session_services.test.ts",
+        "tests/unit/world_session_resource_replay.test.ts"
       ],
       "counterfactual_test": "tests/starting_slice/saved_wood_world_state_counterfactual.test.ts"
     },

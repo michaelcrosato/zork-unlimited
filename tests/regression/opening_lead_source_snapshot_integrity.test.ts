@@ -12,9 +12,12 @@ import type {
   OverworldSessionSnapshot,
 } from "../../src/world/session_snapshot.js";
 import {
+  OVERWORLD_CAMPAIGN_EXPORTS_WORLD_HASH,
   OVERWORLD_CAMPAIGN_IMPORTS_WORLD_HASH,
   OVERWORLD_OPENING_LEAD_SOURCE_MIGRATION_TARGET_WORLD_HASH,
+  OVERWORLD_OPENING_LEAD_SOURCE_WORLD_HASH,
   OVERWORLD_OPENING_REGISTRATION_WORLD_HASH,
+  OVERWORLD_PRE_CAMPAIGN_EXPORTS_WORLD_HASH,
 } from "../../src/world/session_snapshot_restore.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
 
@@ -397,6 +400,61 @@ describe("opening lead-source snapshot integrity", () => {
     expect(restoredAgain.snapshotHash()).toBe(migratedSession.snapshotHash());
     restoredAgain.chooseJourneyStory(ROWAN_SOURCE);
     expect(restoredAgain.view().quests.map((quest) => quest.id)).toContain(TARGET_QUEST);
+  });
+
+  it("migrates the exact F03 predecessor without rejecting its durable lead-source evidence", () => {
+    const predecessor = selectSource(LEDGER_PROFILE, ROWAN_SOURCE).snapshot();
+    predecessor.worldHash = OVERWORLD_OPENING_LEAD_SOURCE_WORLD_HASH;
+    expect(predecessor.journalEntries.some((candidate) => candidate.kind === "lead_source")).toBe(
+      true,
+    );
+    expect(predecessor.openingLeadSourceDecisionTrail).toBeDefined();
+
+    const migrated = OverworldSession.restore(WORLD, predecessor).snapshot();
+    expect(migrated.worldHash).toBe(OVERWORLD_OPENING_LEAD_SOURCE_MIGRATION_TARGET_WORLD_HASH);
+    expect(migrated.journalEntries).toEqual(predecessor.journalEntries);
+    expect(migrated.openingLeadSourceDecisionTrail).toEqual(
+      predecessor.openingLeadSourceDecisionTrail,
+    );
+    expect(migrated.discoveredQuestIds).toContain(TARGET_QUEST);
+  });
+
+  it("rejects campaign service-rule proof relabeled as every trusted predecessor", () => {
+    const current = selectSource().snapshot();
+    const rule = WORLD.campaign_service_rules?.[0];
+    const town = WORLD.nodes.find((node) => node.id === rule?.home);
+    if (!rule || !town) throw new Error("expected an authored campaign service rule");
+    current.journalEntries.unshift({
+      id: `service:${rule.action}:${current.minutes}`,
+      kind: "service",
+      town: town.name,
+      title: rule.title,
+      text: rule.summary,
+      recordedAt: timeLabel(current.minutes),
+      serviceRuleId: rule.id,
+      serviceAreaId: rule.area,
+      serviceBoundary: {
+        acceptedDecisions: current.journey.acceptedDecisions,
+        decisionProofHash: current.journey.decisionProof.hash,
+        townId: current.currentId,
+        areaId: current.currentAreaId ?? rule.area,
+        minutes: current.minutes,
+      },
+    });
+
+    for (const predecessorHash of [
+      OVERWORLD_OPENING_LEAD_SOURCE_WORLD_HASH,
+      OVERWORLD_OPENING_REGISTRATION_WORLD_HASH,
+      OVERWORLD_CAMPAIGN_IMPORTS_WORLD_HASH,
+      OVERWORLD_CAMPAIGN_EXPORTS_WORLD_HASH,
+      OVERWORLD_PRE_CAMPAIGN_EXPORTS_WORLD_HASH,
+    ]) {
+      const relabeled = structuredClone(current);
+      relabeled.worldHash = predecessorHash;
+      expect(() => OverworldSession.restore(WORLD, relabeled)).toThrow(
+        /campaign service-rule evidence from a later manifest/i,
+      );
+    }
   });
 
   it("rejects a truncated Rowan selection even when its remaining move replays", () => {

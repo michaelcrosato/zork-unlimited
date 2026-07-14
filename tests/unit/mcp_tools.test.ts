@@ -25,6 +25,7 @@ import {
   OVERWORLD_COMPACT_ROAD_ENCOUNTER_TEXT_CHAR_LIMIT,
 } from "../../src/mcp/compact_overworld_result.js";
 import { compactText } from "../../src/core/compact_text.js";
+import { OVERWORLD_COMPACT_VIEW_VERSION } from "../../src/world/compact_view.js";
 import {
   hashTranscript,
   publicRpgTranscriptHash,
@@ -1231,7 +1232,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(compact.snapshot_hash).toBe(started.snapshot_hash);
     expect(compactStarted.snapshot_hash).toMatch(PUBLIC_OVERWORLD_SNAPSHOT_HASH_RE);
     expect(defaultStarted.snapshot_hash).toMatch(PUBLIC_OVERWORLD_SNAPSHOT_HASH_RE);
-    expect(defaultStarted.context.v).toBe(15);
+    expect(defaultStarted.context.v).toBe(OVERWORLD_COMPACT_VIEW_VERSION);
     expect("observation" in defaultStarted).toBe(false);
     expect("world" in defaultStarted.context).toBe(false);
     expect("route_options" in defaultStarted.context).toBe(false);
@@ -1429,7 +1430,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
       session_id: started.session_id,
       include_ids: true,
     });
-    expect(compact.context.v).toBe(15);
+    expect(compact.context.v).toBe(OVERWORLD_COMPACT_VIEW_VERSION);
     expect(compact.context.here).toEqual([
       full.current.id,
       full.current.name,

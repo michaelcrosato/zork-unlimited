@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 558 -->
+<!-- historical_cycle_count: 559 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,15 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - albany_saved_wood_service_counterfactual
+
+- Evidence choice: the assessor ranked a fleet-only Station Quarter board-wording cluster; the starting-slice matrix instead showed `SS-F11-saved-wood` already had a reachable equal-score irreversible fork but no delayed mechanical consumer, making it the highest-leverage contract increment.
+- Surface: generic fact-gated campaign-service rules now turn retained Wolf-Winter timber into one 15-minute Albany Station resupply and committed gate wood into one 15-minute rest; the alternatives remain the ordinary 45-minute resupply and 180-minute minimum rest. Full, compact, and web views state cause/terms before use, and the default compact result keeps the authored cause afterward.
+- Integrity/counterfactual: service use is bound to exact decision hash/action, replayed town/area, canonical copy, quest-completion ordinal, and one-time journal consumption; predecessor saves synthesize only provable completion boundaries and reject opaque legacy passages. Paired reachable resource states reverse which branch is advantageous, advancing the contract from 2/12 to 3/12 counted forks.
+- Pure evidence: verified pure/fresh seed 2706 completed Wolf-Winter, Gallowmere, Tanner's Fever, and Breaking Weir; continued at decisions 26/40/51/73/80, ended honestly at goal 4 on decision 94, clarity 4/5, enjoyment 5/5, got-stuck false, replay true, and no bugs. It validates the surrounding journey but did not independently isolate the new service counterfactual; deterministic paired tests carry that proof.
+- Compile/self-critique: compile `20260714T202925Z` has 777 verified reports and 28 eligible contract-v3 pure exits, all with at least one continue. PASS for F11's delayed Albany service consequence, not the whole depth contract; 9 counted forks, broader return NPC/opportunity reactivity, and the recurring front-loaded Albany jargon/Station-board clarity debt remain.
+- Guard: pre/post 6,000-step crawls `20260714T185834Z`/`20260714T201921Z` reached 247/247 nodes, 344/344 edges, and 12/12 quests; 180 focused tests and rendered UI smoke (no console errors or horizontal overflow) passed; full health is green at 332 files/2,420 tests, UI typecheck, and all 12 packs.
 
 ### Cycle result - albany_lead_source_counterfactual
 
@@ -136,12 +145,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Final pure evidence: verified pure/fresh seed 1912 had no dialogue rejection/filler recurrence, continued at 23/40/49/80, ended honestly at goal 3 on decision 83, rated 4/5 clarity and 5/5 enjoyment, got-stuck false, replay true. New S1: Tanner's compact sickroom text can truncate the east herb-store cue; long objective-route preview also recurred.
 - Compile/self-critique: ledger 457 accepted/30 rejected; compile has eight v3 pure exits, all continued (35 continue/8 end; checkpoint 40=8/0, 80=6/1). PASS for conversation flow, not retention—the player still chose a satisfied three-quest ending; Tanner consequence agency and compact route/cue truth remain next.
 - Guard: 176 changed-file parity/migration/recovery tests, typecheck/lint/format, browser smoke with no console errors, final 6,000-step crawl (247/247 nodes, 344/344 edges, 12/12 quests), verified receipt, explicit engine-change re-pin acknowledgment, and full health passed.
-
-### Cycle result - player_visible_recovery_affordance
-
-- Evidence choice: the assessor's fleet-only Wolf-Winter compact-journal hot spot was already closed by `bug_0502`; current verified pure seed 1709 instead exposed Tanner's Fever treatment disappearing after a failed roll as an S2, got-stuck worst moment.
-- Surface: target-bearing USE interactions may author a bounded, state-gated `blocked_hint`; UI, CLI, full MCP, compact MCP v16, and legal-action reads show the same unavailable id/reason without conditions or effects. Selecting it rejects without state/hash/journey progress, and parent journey choices suppress it.
-- Tanner fix: natural-1 seed 12 now retains the same treatment id with complete 273/280 narration, 120/128 journal guidance, and a persistent 156-character reason; save/restore preserves it, examining the held meadowsweet atomically promotes it to deterministic legal recovery, and fully prepared failure never blocks.
-- Pure evidence: verified pure/fresh seed 1809 completed Wolf-Winter, Gallowmere, and Tanner's Fever; continued at 22/40/49, ended honestly at goal 3 on decision 77, clarity/enjoyment 4/4, got-stuck false, replay true. Treatment succeeded first try, so the repaired failure affordance remains blind-unsampled rather than passed by absence.
-- Compile/self-critique: the ledger is current at 455 verified reports; seeds 1709+1809 are two since the 453-report compile, below threshold. PASS for truthful recoverability, not retention—the player again stopped after three arcs and now named modal dialogue filler/rejections, blind long-route planning, and a visible shared quest skeleton.
-- Guard: focused parity/recovery suites also pin legal-command precedence and erase unavailable-action omission metadata during journey choices; identifier-relabel proofs, local UI smoke with no console errors, final 6,000-step crawl (247/247 nodes, 344/344 edges, 12/12 quests), verified receipt, and full health (UI and 12 packs included) passed.

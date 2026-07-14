@@ -756,6 +756,22 @@ h3 {
   padding: 0.55rem 0.9rem;
 }
 
+.service-actions > div {
+  display: grid;
+  flex: 1 1 18rem;
+  gap: 0.35rem;
+}
+
+.service-actions > div > button {
+  justify-self: start;
+}
+
+.service-offer-terms {
+  color: var(--muted);
+  line-height: 1.45;
+  max-width: 36rem;
+}
+
 dt {
   color: var(--muted);
   font-size: 0.75rem;

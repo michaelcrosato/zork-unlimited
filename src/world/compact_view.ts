@@ -4,6 +4,7 @@ import type { OverworldView } from "./session_view.js";
 import type { OverworldRoadEncounterOption } from "./travel_mechanics.js";
 import { compactText } from "../core/compact_text.js";
 import type { CampaignCharacterView } from "./campaign_character_view.js";
+import type { CampaignServiceOffer } from "./campaign_service_rules.js";
 
 export const OVERWORLD_COMPACT_JOURNAL_LIMIT = 5;
 export const OVERWORLD_COMPACT_ROUTE_LIMIT = 8;
@@ -20,11 +21,19 @@ export const OVERWORLD_COMPACT_LABEL_CHAR_LIMIT = 96;
 export const OVERWORLD_COMPACT_TITLE_CHAR_LIMIT = 140;
 export const OVERWORLD_COMPACT_RISK_CHAR_LIMIT = 160;
 export const OVERWORLD_COMPACT_ROAD_EVENT_SUMMARY_CHAR_LIMIT = 240;
-export const OVERWORLD_COMPACT_VIEW_VERSION = 15 as const;
+export const OVERWORLD_COMPACT_SERVICE_SUMMARY_CHAR_LIMIT = 240;
+export const OVERWORLD_COMPACT_VIEW_VERSION = 16 as const;
 
 export type OverworldCompactRef = readonly [id: string, name: string];
 export type OverworldCompactJobLeadRef = readonly [id: string, title: string, areaId: string];
 export type OverworldCompactQuestRef = readonly [id: string, title: string, areaId: string];
+export type OverworldCompactServiceOffer = readonly [
+  id: string,
+  action: CampaignServiceOffer["action"],
+  title: string,
+  summary: string,
+  minutes: number,
+];
 export type OverworldCompactHere = readonly [
   id: string,
   name: string,
@@ -241,6 +250,7 @@ export type OverworldCompactView = {
   time: string;
   here: OverworldCompactHere;
   vitals: OverworldCompactVitals;
+  service_offers?: OverworldCompactServiceOffer[];
   hidden: OverworldCompactHiddenCounts;
   roads: OverworldCompactRoad[];
   roads_truncated?: true;
@@ -287,6 +297,8 @@ export const OVERWORLD_COMPACT_LEGEND = {
   time: "in-game clock 'Day N, HH:MM'",
   here: "[town_id, town_name, region_name, area_id|null, area_name|null] current location; when pending_road exists this is the on-route id/name instead of a town",
   vitals: "[supplies, max_supplies, fatigue_0to100, condition_label] travel readiness",
+  service_offers:
+    "[[offer_id, action, title, terms_summary, minutes], ...] current one-time service terms; use the normal rest or resupply action named by action to accept that offer",
   hidden:
     "[areas, jobs, sites, quests] counts still undiscovered at this town; scout/talk/explore to reveal them",
   roads:
@@ -413,6 +425,24 @@ export function compactOverworldQuestRefs(
     refs.push(compactOverworldQuestRef(values[index]!));
   }
   return refs;
+}
+
+export function compactCampaignServiceOffer(
+  value: CampaignServiceOffer,
+): OverworldCompactServiceOffer {
+  return [
+    value.id,
+    value.action,
+    compactOverworldTitle(value.title),
+    compactText(value.summary, OVERWORLD_COMPACT_SERVICE_SUMMARY_CHAR_LIMIT),
+    value.minutes,
+  ];
+}
+
+export function compactCampaignServiceOffers(
+  values: readonly CampaignServiceOffer[],
+): OverworldCompactServiceOffer[] {
+  return values.map(compactCampaignServiceOffer);
 }
 
 export function compactLocalRefTruncation(
@@ -870,6 +900,7 @@ export function cloneOverworldCompactView(view: OverworldCompactView): Overworld
   };
 
   if (view.area_routes) clone.area_routes = cloneTupleList(view.area_routes);
+  if (view.service_offers) clone.service_offers = cloneTupleList(view.service_offers);
   if (view.roads_truncated) clone.roads_truncated = true;
   if (view.area_routes_truncated) clone.area_routes_truncated = true;
   if (view.route_options_truncated) clone.route_options_truncated = true;
@@ -915,6 +946,7 @@ export function compactOverworldView(view: OverworldView): OverworldCompactView 
   const rememberedJobs = compactOverworldJobLeadRefs(view.rememberedJobs);
   const sites = compactOverworldTitleRefs(view.sites);
   const quests = compactOverworldQuestRefs(view.quests);
+  const serviceOffers = compactCampaignServiceOffers(view.serviceOffers);
   const localRefsTruncated = compactLocalRefTruncation({
     areas: view.areas.length,
     poi: view.pois.length,
@@ -959,6 +991,7 @@ export function compactOverworldView(view: OverworldView): OverworldCompactView 
       view.currentArea ? compactOverworldLabel(view.currentArea.name) : null,
     ],
     vitals: [view.supplies, view.maxSupplies, view.fatigue, view.travelCondition],
+    ...(serviceOffers.length > 0 ? { service_offers: serviceOffers } : {}),
     hidden: [
       view.hiddenAreaCount,
       view.hiddenJobCount,

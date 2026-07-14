@@ -657,6 +657,12 @@ describe("bug_0505 — Wolf-Winter saved wood has a post-hunt consequence", () =
         entry.kind !== "lead_source_offer" &&
         entry.kind !== "lead_source",
     );
+    for (const entry of prooflessCurrent.journalEntries) {
+      delete entry.questCompletionBoundary;
+      delete entry.serviceBoundary;
+      delete entry.serviceRuleId;
+      delete entry.serviceAreaId;
+    }
     delete prooflessCurrent.openingLeadSourceDecisionTrail;
     const legacyConsequenceCharacter = createInitialCampaignCharacterState();
     legacyConsequenceCharacter.relationships.push({

@@ -1,5 +1,7 @@
 import type {
   OverworldArea,
+  OverworldAreaEdge,
+  OverworldCampaignServiceRule,
   OverworldCharacter,
   OverworldEdge,
   OverworldExit,
@@ -34,6 +36,7 @@ export type OverworldSnapshotManifestIndex = {
   arcIds: ReadonlySet<string>;
   arcRegionNames: ReadonlyMap<string, string>;
   areaHomes: ReadonlyMap<string, string>;
+  areaEdgesById: ReadonlyMap<string, OverworldAreaEdge>;
   areaIds: ReadonlySet<string>;
   areasById: ReadonlyMap<string, OverworldArea>;
   areasByTown: ReadonlyMap<string, readonly OverworldArea[]>;
@@ -41,6 +44,7 @@ export type OverworldSnapshotManifestIndex = {
   characterIds: ReadonlySet<string>;
   charactersById: ReadonlyMap<string, OverworldCharacter>;
   characterTownNames: ReadonlyMap<string, string>;
+  campaignServiceRulesById: ReadonlyMap<string, OverworldCampaignServiceRule>;
   contactPresentationsByJournalId: ReadonlyMap<string, OverworldContactPresentation>;
   edgeIds: ReadonlySet<string>;
   edgesById: ReadonlyMap<string, OverworldEdge>;
@@ -109,6 +113,22 @@ export function buildOverworldSnapshotManifestIndex(
     townNames.add(node.name);
   }
   const townNameForSource = (nodeId: string): string => townNameById.get(nodeId) ?? nodeId;
+
+  const campaignServiceRulesById = new Map<string, OverworldCampaignServiceRule>();
+  for (const rule of sources.world.campaign_service_rules ?? []) {
+    if (campaignServiceRulesById.has(rule.id)) {
+      throw new Error(`Duplicate campaign service rule id "${rule.id}".`);
+    }
+    campaignServiceRulesById.set(rule.id, rule);
+  }
+
+  const areaEdgesById = new Map<string, OverworldAreaEdge>();
+  for (const edge of sources.world.area_edges) {
+    if (areaEdgesById.has(edge.id)) {
+      throw new Error(`Duplicate overworld area edge id "${edge.id}".`);
+    }
+    areaEdgesById.set(edge.id, edge);
+  }
 
   const openingRegistration = sources.world.opening_registration ?? null;
   const openingLeadSource = sources.world.opening_lead_source ?? null;
@@ -210,6 +230,7 @@ export function buildOverworldSnapshotManifestIndex(
     arcIds,
     arcRegionNames,
     areaHomes,
+    areaEdgesById,
     areaIds,
     areasById: sources.areasById,
     areasByTown: sources.areasByTown,
@@ -217,6 +238,7 @@ export function buildOverworldSnapshotManifestIndex(
     characterIds,
     charactersById: sources.charactersById,
     characterTownNames,
+    campaignServiceRulesById,
     contactPresentationsByJournalId,
     edgeIds,
     edgesById,

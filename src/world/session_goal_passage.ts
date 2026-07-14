@@ -21,9 +21,38 @@ export type OverworldGoalPassageResult = {
   travelConditionAfter: string;
 };
 
-export function goalPassageJourneyActionId(goalId: string): string {
+export type GoalPassageJourneyAction = Readonly<{
+  goalId: string;
+  edgeIds: readonly string[];
+}>;
+
+const GOAL_PASSAGE_VIA_MARKER = ":via:";
+
+export function goalPassageJourneyActionId(goalId: string, edgeIds: readonly string[]): string {
   if (goalId.length === 0) throw new Error("Goal passage requires a current goal id.");
-  return `follow_current_goal:${goalId}`;
+  if (
+    edgeIds.length === 0 ||
+    edgeIds.some((edgeId) => edgeId.length === 0 || edgeId.includes(","))
+  ) {
+    throw new Error("Goal passage journey proof requires every traversed road id.");
+  }
+  return `follow_current_goal:${goalId}${GOAL_PASSAGE_VIA_MARKER}${edgeIds.join(",")}`;
+}
+
+export function parseGoalPassageJourneyActionId(actionId: string): GoalPassageJourneyAction | null {
+  const prefix = "follow_current_goal:";
+  if (!actionId.startsWith(prefix)) return null;
+  const payload = actionId.slice(prefix.length);
+  const markerIndex = payload.indexOf(GOAL_PASSAGE_VIA_MARKER);
+  if (markerIndex <= 0) {
+    throw new Error(`Unreplayable legacy goal-passage journey action "${actionId}".`);
+  }
+  const goalId = payload.slice(0, markerIndex);
+  const edgeIds = payload.slice(markerIndex + GOAL_PASSAGE_VIA_MARKER.length).split(",");
+  if (edgeIds.length === 0 || edgeIds.some((edgeId) => edgeId.length === 0)) {
+    throw new Error(`Malformed goal-passage journey action "${actionId}".`);
+  }
+  return { goalId, edgeIds };
 }
 
 export function buildJourneyGoalPassagePresentation(

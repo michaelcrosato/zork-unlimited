@@ -90,6 +90,44 @@ describe("overworld session snapshots", () => {
     ).toThrow();
   });
 
+  it("requires campaign service proof ids as a pair and only on service entries", () => {
+    const serviceProof = {
+      id: "service:rest:600",
+      kind: "service" as const,
+      town: "Albany city",
+      title: "A private recovery room",
+      text: "A trusted contact clears a private room for you.",
+      recordedAt: "Day 1, 10:00",
+      serviceRuleId: "service_rule:trusted_rest",
+      serviceAreaId: "albany_city__market",
+      serviceBoundary: {
+        acceptedDecisions: 3,
+        decisionProofHash: "b".repeat(64),
+        townId: "albany_city",
+        areaId: "albany_city__market",
+        minutes: 600,
+      },
+    };
+    expect(() =>
+      OverworldSessionSnapshotSchema.parse({
+        ...baseSnapshot(),
+        journalEntries: [serviceProof],
+      }),
+    ).not.toThrow();
+    expect(() =>
+      OverworldSessionSnapshotSchema.parse({
+        ...baseSnapshot(),
+        journalEntries: [{ ...serviceProof, serviceAreaId: undefined }],
+      }),
+    ).toThrow(/must include both serviceRuleId and serviceAreaId/i);
+    expect(() =>
+      OverworldSessionSnapshotSchema.parse({
+        ...baseSnapshot(),
+        journalEntries: [{ ...serviceProof, kind: "area" }],
+      }),
+    ).toThrow(/only valid on service entries/i);
+  });
+
   it("migrates strict version-8 snapshots to the canonical version-9 default", () => {
     const migrated = parseOverworldSessionSnapshot(legacySnapshot());
     const second = parseOverworldSessionSnapshot(legacySnapshot());
@@ -197,5 +235,30 @@ describe("overworld session snapshots", () => {
     clones[0]!.title = "Changed";
 
     expect(entries[0]?.title).toBe("Rest");
+  });
+
+  it("deep-clones replay boundaries", () => {
+    const entries: OverworldJournalEntry[] = [
+      {
+        id: "quest_done:wolf_winter",
+        kind: "quest_done",
+        town: "Albany",
+        title: "Quest complete",
+        text: "The timber survives.",
+        recordedAt: "Day 1, 10:00",
+        questCompletionBoundary: {
+          acceptedDecisions: 3,
+          decisionProofHash: "b".repeat(64),
+          townId: "albany_city",
+          areaId: "albany_city__transport_hub",
+          minutes: 600,
+        },
+      },
+    ];
+
+    const clones = cloneJournalEntries(entries);
+    clones[0]!.questCompletionBoundary!.areaId = "changed";
+
+    expect(entries[0]?.questCompletionBoundary?.areaId).toBe("albany_city__transport_hub");
   });
 });
