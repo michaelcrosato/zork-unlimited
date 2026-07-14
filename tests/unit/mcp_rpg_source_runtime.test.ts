@@ -33,6 +33,17 @@ const WORLD_QUEST_IDS = [
 ] as const;
 const TEMP_WORLD_QUEST_ID = "same_size";
 const TEMP_PACK_SOURCE = "not: rpg\n";
+const VALID_PACK_SOURCE = readFileSync(
+  join(ROOT, "content", "rpg", "quests", "sunken_barrow.yaml"),
+  "utf8",
+);
+const MULTI_VICTORY_PACK_SOURCE = readFileSync(
+  join(ROOT, "content", "rpg", "quests", "wolf_winter.yaml"),
+  "utf8",
+);
+const TEST_CAMPAIGN_EFFECTS = [
+  { type: "set_world_fact", fact_id: "fact:test_campaign_export" },
+] as const;
 
 // The overworld is the single quest registry. A temp root reuses the real,
 // integrity-passing overworld manifest but swaps its quest list for one temp quest,
@@ -68,23 +79,27 @@ function waitForTimestampTick(): void {
   }
 }
 
-function writeTempWorldQuest(root: string, packSource = TEMP_PACK_SOURCE): string {
+function writeTempWorldQuest(
+  root: string,
+  packSource = TEMP_PACK_SOURCE,
+  campaignExports?: unknown,
+): string {
   mkdirSync(join(root, "content", "world"), { recursive: true });
   mkdirSync(join(root, "content", "rpg", "quests"), { recursive: true });
   const sourcePath = join(root, "content", "rpg", "quests", `${TEMP_WORLD_QUEST_ID}.yaml`);
+  const quest: Record<string, unknown> = {
+    id: TEMP_WORLD_QUEST_ID,
+    title: "Same Size",
+    source: `content/rpg/quests/${TEMP_WORLD_QUEST_ID}.yaml`,
+    home: "albany_city",
+    area: "albany_city__transport_hub",
+    discovery: "Ask around Albany city for the Same Size lead.",
+    visibility: "local_notice_board",
+  };
+  if (campaignExports !== undefined) quest.campaign_exports = campaignExports;
   const overworld = {
     ...fixtureOverworldWithoutContactVariants(),
-    quests: [
-      {
-        id: TEMP_WORLD_QUEST_ID,
-        title: "Same Size",
-        source: `content/rpg/quests/${TEMP_WORLD_QUEST_ID}.yaml`,
-        home: "albany_city",
-        area: "albany_city__transport_hub",
-        discovery: "Ask around Albany city for the Same Size lead.",
-        visibility: "local_notice_board",
-      },
-    ],
+    quests: [quest],
   };
   writeFileSync(
     join(root, "content", "world", "new_york_overworld.json"),
@@ -109,7 +124,7 @@ describe("RpgSourceRuntime caches", () => {
     expect(runtimeSource).toContain("overworldQuestById(overworld, worldQuestId)");
     expect(runtimeSource).toContain("loadWorldQuestReport(worldQuestId: string)");
     expect(runtimeSource).toContain("private loadSourceBackedReport(sourcePath: string)");
-    expect(runtimeSource).toContain("private requireSourceBackedPlayable(sourcePath: string)");
+    expect(runtimeSource).toContain("private requireWorldQuestSourcePlayable(");
     expect(runtimeSource).not.toContain("worldQuestNodeForPack");
     expect(runtimeSource).not.toContain("worldQuestPackPaths");
     expect(runtimeSource).not.toContain("loadWorldManifest");
@@ -144,6 +159,105 @@ describe("RpgSourceRuntime caches", () => {
     expect(source.result.ok).toBe(true);
     expect(source.result.report.ok).toBe(true);
     expect("packPath" in source).toBe(false);
+  });
+
+  it("validates Wolf-Winter's declared campaign exports against compiled non-death endings", () => {
+    const runtime = new RpgSourceRuntime(ROOT);
+    const source = runtime.loadWorldQuestReport("wolf_winter");
+
+    expect(source.result.ok).toBe(true);
+    expect(source.result.report.ok).toBe(true);
+    expect(
+      source.result.report.findings.filter((finding) =>
+        finding.code.startsWith("CAMPAIGN_EXPORT_"),
+      ),
+    ).toEqual([]);
+    expect(() => runtime.requireWorldQuestPlayable("wolf_winter")).not.toThrow();
+  });
+
+  it.each([
+    {
+      label: "missing ending",
+      ending_id: "ending_missing",
+      ending_title: "Missing Ending",
+      code: "CAMPAIGN_EXPORT_ENDING_MISSING",
+      message: /does not exist in the compiled RPG/i,
+    },
+    {
+      label: "title mismatch",
+      ending_id: "ending_victory",
+      ending_title: "Not Lord of the Barrow",
+      code: "CAMPAIGN_EXPORT_TITLE_MISMATCH",
+      message: /does not exactly match compiled ending title/i,
+    },
+    {
+      label: "death ending",
+      ending_id: "ending_fallen",
+      ending_title: "Another Niche Filled",
+      code: "CAMPAIGN_EXPORT_DEATH_ENDING",
+      message: /death ending and cannot grant persistent consequences/i,
+    },
+  ])("rejects a campaign export with a $label", ({ ending_id, ending_title, code, message }) => {
+    withTempRoot((root) => {
+      writeTempWorldQuest(root, VALID_PACK_SOURCE, [
+        { ending_id, ending_title, effects: TEST_CAMPAIGN_EFFECTS },
+      ]);
+      const runtime = new RpgSourceRuntime(root);
+      const source = runtime.loadWorldQuestReport(TEMP_WORLD_QUEST_ID);
+
+      expect(source.result.ok).toBe(true);
+      expect(source.result.report.ok).toBe(false);
+      expect(source.result.report.findings).toContainEqual(
+        expect.objectContaining({
+          severity: "error",
+          code,
+          message: expect.stringMatching(message),
+        }),
+      );
+      expect(() => runtime.requireWorldQuestPlayable(TEMP_WORLD_QUEST_ID)).toThrow(message);
+    });
+  });
+
+  it("keeps campaign exports opt-in for legacy quest catalogs", () => {
+    withTempRoot((root) => {
+      writeTempWorldQuest(root, VALID_PACK_SOURCE);
+      const source = new RpgSourceRuntime(root).loadWorldQuestReport(TEMP_WORLD_QUEST_ID);
+
+      expect(source.result.ok).toBe(true);
+      expect(source.result.report.ok).toBe(true);
+      expect(
+        source.result.report.findings.some((finding) =>
+          finding.code.startsWith("CAMPAIGN_EXPORT_"),
+        ),
+      ).toBe(false);
+    });
+  });
+
+  it("rejects an opted-in catalog that omits a compiled non-death ending", () => {
+    withTempRoot((root) => {
+      writeTempWorldQuest(root, MULTI_VICTORY_PACK_SOURCE, [
+        {
+          ending_id: "ending_held",
+          ending_title: "The Byre Held",
+          effects: TEST_CAMPAIGN_EFFECTS,
+        },
+      ]);
+      const runtime = new RpgSourceRuntime(root);
+      const source = runtime.loadWorldQuestReport(TEMP_WORLD_QUEST_ID);
+
+      expect(source.result.ok).toBe(true);
+      expect(source.result.report.ok).toBe(false);
+      expect(source.result.report.findings).toContainEqual(
+        expect.objectContaining({
+          severity: "error",
+          code: "CAMPAIGN_EXPORT_ENDING_UNDECLARED",
+          message: expect.stringMatching(/non-death ending .* has no campaign export/i),
+        }),
+      );
+      expect(() => runtime.requireWorldQuestPlayable(TEMP_WORLD_QUEST_ID)).toThrow(
+        /non-death ending .* has no campaign export/i,
+      );
+    });
   });
 
   it("reports a source that vanishes AFTER the overworld coverage check as not-ok — no raw fs error, no absolute path (bug_0493)", () => {

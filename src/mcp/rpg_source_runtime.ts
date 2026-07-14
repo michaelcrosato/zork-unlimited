@@ -14,7 +14,11 @@ import {
 } from "../validate/report.js";
 import type { Trace } from "../trace/record.js";
 import type { WorldBinding } from "../world/schema.js";
-import { normalizeSourcePath, overworldQuestById } from "../world/overworld.js";
+import {
+  normalizeSourcePath,
+  overworldQuestById,
+  type OverworldQuestCampaignExport,
+} from "../world/overworld.js";
 import { loadOverworldManifest, resolveTraceGameSource, type GameSource } from "../world/source.js";
 import { safeResolve } from "./paths.js";
 import { isRpgPackShape } from "./types.js";
@@ -72,6 +76,7 @@ type RpgWorldQuestSource = {
   questId: string;
   title: string;
   sourcePath: string;
+  campaignExports: readonly OverworldQuestCampaignExport[] | undefined;
 };
 
 export const RPG_SOURCE_RUNTIME_CACHE_LIMIT = 8;
@@ -125,6 +130,75 @@ function freezeLoadResult(result: RpgLoadResult): RpgLoadResult {
 
 function freezeGeneratedEntry(entry: GeneratedRpgCacheEntry): GeneratedRpgCacheEntry {
   return deepFreezeSourceResult(entry);
+}
+
+function campaignExportParityFindings(
+  source: RpgWorldQuestSource,
+  compiled: CompiledRpgSource,
+): Finding[] {
+  if (source.campaignExports === undefined) return [];
+  const endingsById = new Map(compiled.pack.endings.map((ending) => [ending.id, ending]));
+  const exportedEndingIds = new Set(
+    source.campaignExports.map((campaignExport) => campaignExport.ending_id),
+  );
+  const findings: Finding[] = [];
+
+  source.campaignExports.forEach((campaignExport, index) => {
+    const where = [source.questId, `campaign_exports.${index}`];
+    const ending = endingsById.get(campaignExport.ending_id);
+    if (!ending) {
+      findings.push({
+        severity: "error",
+        code: "CAMPAIGN_EXPORT_ENDING_MISSING",
+        message: `Campaign export ending "${campaignExport.ending_id}" does not exist in the compiled RPG.`,
+        where,
+      });
+      return;
+    }
+    if (ending.title !== campaignExport.ending_title) {
+      findings.push({
+        severity: "error",
+        code: "CAMPAIGN_EXPORT_TITLE_MISMATCH",
+        message: `Campaign export title ${JSON.stringify(campaignExport.ending_title)} does not exactly match compiled ending title ${JSON.stringify(ending.title)}.`,
+        where,
+      });
+    }
+    if (ending.death) {
+      findings.push({
+        severity: "error",
+        code: "CAMPAIGN_EXPORT_DEATH_ENDING",
+        message: `Campaign export ending "${campaignExport.ending_id}" is a death ending and cannot grant persistent consequences.`,
+        where,
+      });
+    }
+  });
+
+  for (const ending of compiled.pack.endings) {
+    if (!ending.death && !exportedEndingIds.has(ending.id)) {
+      findings.push({
+        severity: "error",
+        code: "CAMPAIGN_EXPORT_ENDING_UNDECLARED",
+        message: `Compiled non-death ending "${ending.id}" has no campaign export.`,
+        where: [source.questId, "campaign_exports"],
+      });
+    }
+  }
+
+  return findings;
+}
+
+function withCampaignExportParity(
+  source: RpgWorldQuestSource,
+  result: RpgLoadResult,
+): RpgLoadResult {
+  if (!result.ok) return result;
+  const parityFindings = campaignExportParityFindings(source, result.compiled);
+  if (parityFindings.length === 0) return result;
+  return freezeLoadResult({
+    ok: true,
+    compiled: result.compiled,
+    report: makeReport(source.sourcePath, [...result.report.findings, ...parityFindings]),
+  });
 }
 
 export class RpgSourceRuntime {
@@ -224,9 +298,13 @@ export class RpgSourceRuntime {
     return result;
   }
 
-  /** Compile + validate, refusing to play an invalid source. */
-  private requireSourceBackedPlayable(sourcePath: string): CompiledRpgSource {
-    const lr = this.loadSourceBackedReport(sourcePath);
+  private loadWorldQuestSourceReport(source: RpgWorldQuestSource): RpgLoadResult {
+    return withCampaignExportParity(source, this.loadSourceBackedReport(source.sourcePath));
+  }
+
+  /** Compile + validate the RPG and its trusted campaign-export catalog before play. */
+  private requireWorldQuestSourcePlayable(source: RpgWorldQuestSource): CompiledRpgSource {
+    const lr = this.loadWorldQuestSourceReport(source);
     if (!lr.ok || !lr.report.ok) {
       throw new Error(`RPG source is not playable:\n${formatReport(lr.report)}`);
     }
@@ -297,6 +375,7 @@ export class RpgSourceRuntime {
       questId: quest.id,
       title: quest.title,
       sourcePath: normalizeSourcePath(quest.source),
+      campaignExports: quest.campaign_exports,
     };
   }
 
@@ -305,7 +384,7 @@ export class RpgSourceRuntime {
     return {
       questId: source.questId,
       title: source.title,
-      compiled: this.requireSourceBackedPlayable(source.sourcePath),
+      compiled: this.requireWorldQuestSourcePlayable(source),
     };
   }
 
@@ -314,7 +393,7 @@ export class RpgSourceRuntime {
     return {
       questId: source.questId,
       title: source.title,
-      result: this.loadSourceBackedReport(source.sourcePath),
+      result: this.loadWorldQuestSourceReport(source),
     };
   }
 

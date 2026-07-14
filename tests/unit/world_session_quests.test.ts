@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { createInitialCampaignCharacterState } from "../../src/world/campaign_character_state.js";
 import type { OverworldArea, OverworldNode, OverworldQuest } from "../../src/world/overworld.js";
 import {
   applyOverworldQuestCompletion,
@@ -47,6 +48,29 @@ function quest(id = "lost_letter", areaId = "market", home = "town_a"): Overworl
     area: areaId,
     discovery: `${id} discovery`,
     visibility: "local_notice_board",
+  };
+}
+
+function catalogedQuest(): OverworldQuest {
+  return {
+    ...quest("wolf_winter"),
+    campaign_exports: [
+      {
+        ending_id: "ending_gate_barred",
+        ending_title: "The Gate Barred",
+        effects: [
+          {
+            type: "remember_relationship",
+            npc_id: "npc:old_cade",
+            memory_id: "memory:wolf_winter_gate_barred",
+            trust_at_least: 10,
+            regard_at_least: 9,
+            owes_player_at_least: 1,
+          },
+          { type: "set_world_fact", fact_id: "fact:wolf_winter_gate_barred" },
+        ],
+      },
+    ],
   };
 }
 
@@ -151,9 +175,11 @@ describe("overworld quest lifecycle planning", () => {
           endingTitle: "Victory",
           death: false,
         },
+        character: createInitialCampaignCharacterState(),
         questsById: new Map([[lead.id, lead]]),
         areasById,
         nodesById: new Map([[lead.home, node(lead.home, "Alden")]]),
+        questOutcomeIds: new Map(),
         startedQuestIds,
       }),
     ).toEqual({
@@ -168,6 +194,8 @@ describe("overworld quest lifecycle planning", () => {
       },
       endingId: "ending_victory",
       endingTitle: "Victory",
+      characterAfter: createInitialCampaignCharacterState(),
+      worldFactIds: [],
       renownRegion: "Test Region",
       renown: 8,
       entryDraft: {
@@ -192,9 +220,11 @@ describe("overworld quest lifecycle planning", () => {
         endingTitle: "Victory",
         death: false,
       },
+      character: createInitialCampaignCharacterState(),
       questsById: new Map([[lead.id, lead]]),
       areasById,
       nodesById: new Map([[lead.home, node(lead.home, "Alden")]]),
+      questOutcomeIds: new Map(),
       startedQuestIds: new Set([lead.id]),
     });
     const completedQuestIds = new Set<string>();
@@ -221,9 +251,11 @@ describe("overworld quest lifecycle planning", () => {
         endingTitle: "Victory",
         death: false,
       },
+      character: createInitialCampaignCharacterState(),
       questsById: new Map([[lead.id, lead]]),
       areasById: new Map([[lead.area, area(lead.area, "Old Market")]]),
       nodesById: new Map([[lead.home, node(lead.home, "Alden")]]),
+      questOutcomeIds: new Map<string, string>(),
       startedQuestIds: new Set([lead.id]),
     };
 
@@ -239,5 +271,90 @@ describe("overworld quest lifecycle planning", () => {
         outcome: { endingId: "ending_fallen", endingTitle: "Fallen", death: true },
       }),
     ).toThrow(/death ending/);
+  });
+
+  it("plans a declared campaign export transactionally from its canonical ending", () => {
+    const lead = catalogedQuest();
+    const character = createInitialCampaignCharacterState();
+    const state = {
+      questId: lead.id,
+      outcome: {
+        endingId: "ending_gate_barred",
+        endingTitle: "The Gate Barred",
+        death: false,
+      },
+      character,
+      questsById: new Map([[lead.id, lead]]),
+      areasById: new Map([[lead.area, area(lead.area)]]),
+      nodesById: new Map([[lead.home, node(lead.home)]]),
+      questOutcomeIds: new Map<string, string>(),
+      startedQuestIds: new Set([lead.id]),
+    };
+
+    const plan = planOverworldQuestCompletion(state);
+
+    expect(plan.endingTitle).toBe("The Gate Barred");
+    expect(plan.characterAfter.relationships).toEqual([
+      {
+        npcId: "npc:old_cade",
+        trust: 10,
+        regard: 9,
+        owesPlayer: 1,
+        playerOwes: 0,
+        memories: ["memory:wolf_winter_gate_barred"],
+      },
+    ]);
+    expect(plan.worldFactIds).toEqual(["fact:wolf_winter_gate_barred"]);
+    expect(character).toEqual(createInitialCampaignCharacterState());
+  });
+
+  it("rejects undeclared, mislabeled, death, and replacement outcomes for cataloged quests", () => {
+    const lead = catalogedQuest();
+    const state = {
+      questId: lead.id,
+      outcome: {
+        endingId: "ending_gate_barred",
+        endingTitle: "The Gate Barred",
+        death: false,
+      },
+      character: createInitialCampaignCharacterState(),
+      questsById: new Map([[lead.id, lead]]),
+      areasById: new Map([[lead.area, area(lead.area)]]),
+      nodesById: new Map([[lead.home, node(lead.home)]]),
+      questOutcomeIds: new Map<string, string>(),
+      startedQuestIds: new Set([lead.id]),
+    };
+
+    expect(() =>
+      planOverworldQuestCompletion({
+        ...state,
+        outcome: { ...state.outcome, endingId: "ending_unknown" },
+      }),
+    ).toThrow(/no declared campaign export/);
+    expect(() =>
+      planOverworldQuestCompletion({
+        ...state,
+        outcome: { ...state.outcome, endingTitle: "A Forged Title" },
+      }),
+    ).toThrow(/expected canonical title/);
+    expect(() =>
+      planOverworldQuestCompletion({
+        ...state,
+        outcome: { ...state.outcome, death: true },
+      }),
+    ).toThrow(/death ending/);
+    expect(() =>
+      planOverworldQuestCompletion({
+        ...state,
+        questOutcomeIds: new Map([[lead.id, "ending_other"]]),
+      }),
+    ).toThrow(/cannot replace it/);
+
+    expect(() =>
+      planOverworldQuestCompletion({
+        ...state,
+        questOutcomeIds: new Map([[lead.id, state.outcome.endingId]]),
+      }),
+    ).not.toThrow();
   });
 });

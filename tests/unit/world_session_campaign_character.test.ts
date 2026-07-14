@@ -81,7 +81,7 @@ describe("overworld campaign character integration", () => {
     });
 
     expect(() => OverworldSession.restore(WORLD, tampered)).toThrow(
-      /campaign character state without replayable consequence proof/i,
+      /campaign character does not match replayed quest consequences/i,
     );
   });
 

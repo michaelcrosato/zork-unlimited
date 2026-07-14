@@ -46469,7 +46469,91 @@
       "home": "albany_city",
       "discovery": "A winter-relief tag moves from Albany's civic records to the Albany Station Quarter route desk: Old Cade's hill steading, a cattle byre, and a wolf pack coming down with the weather. The Wolf-Winter lead is the live dispatch attached to that hill road.",
       "visibility": "local_notice_board",
-      "area": "albany_city__transport_hub"
+      "area": "albany_city__transport_hub",
+      "campaign_exports": [
+        {
+          "ending_id": "ending_held_gate_barred",
+          "ending_title": "The Byre Held, Inner Gate Barred",
+          "effects": [
+            {
+              "type": "remember_relationship",
+              "npc_id": "npc:old_cade",
+              "memory_id": "memory:wolf_winter_inner_gate_barred",
+              "trust_at_least": 10,
+              "regard_at_least": 10,
+              "owes_player_at_least": 1
+            },
+            {
+              "type": "set_world_fact",
+              "fact_id": "fact:wolf_winter_byre_held"
+            },
+            {
+              "type": "set_world_fact",
+              "fact_id": "fact:wolf_winter_outer_paling_broken"
+            },
+            {
+              "type": "set_world_fact",
+              "fact_id": "fact:wolf_winter_inner_gate_barred_at_dawn"
+            },
+            {
+              "type": "set_world_fact",
+              "fact_id": "fact:wolf_winter_guard_wood_committed"
+            }
+          ]
+        },
+        {
+          "ending_id": "ending_held_timber_saved",
+          "ending_title": "The Byre Held, Paling Timber Saved",
+          "effects": [
+            {
+              "type": "remember_relationship",
+              "npc_id": "npc:old_cade",
+              "memory_id": "memory:wolf_winter_repair_timber_saved",
+              "trust_at_least": 10,
+              "regard_at_least": 10,
+              "owes_player_at_least": 1
+            },
+            {
+              "type": "set_world_fact",
+              "fact_id": "fact:wolf_winter_byre_held"
+            },
+            {
+              "type": "set_world_fact",
+              "fact_id": "fact:wolf_winter_outer_paling_broken"
+            },
+            {
+              "type": "set_world_fact",
+              "fact_id": "fact:wolf_winter_repair_timber_available"
+            }
+          ]
+        },
+        {
+          "ending_id": "ending_held",
+          "ending_title": "The Byre Held",
+          "effects": [
+            {
+              "type": "remember_relationship",
+              "npc_id": "npc:old_cade",
+              "memory_id": "memory:wolf_winter_guard_wood_spent",
+              "trust_at_least": 10,
+              "regard_at_least": 10,
+              "owes_player_at_least": 1
+            },
+            {
+              "type": "set_world_fact",
+              "fact_id": "fact:wolf_winter_byre_held"
+            },
+            {
+              "type": "set_world_fact",
+              "fact_id": "fact:wolf_winter_outer_paling_broken"
+            },
+            {
+              "type": "set_world_fact",
+              "fact_id": "fact:wolf_winter_repair_timber_spent"
+            }
+          ]
+        }
+      ]
     }
   ],
   "local_jobs": [

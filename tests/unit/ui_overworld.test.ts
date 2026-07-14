@@ -1515,7 +1515,7 @@ describe("OverworldSession", () => {
     const beforeCompletionMinutes = session.snapshot().minutes;
     const completedQuest = session.completeQuest(discoveredQuest.id, {
       endingId: "ending_held",
-      endingTitle: "Held",
+      endingTitle: "The Byre Held",
       death: false,
     });
     const questSource = world.quests.find((quest) => quest.id === discoveredQuest.id);
@@ -1550,7 +1550,7 @@ describe("OverworldSession", () => {
 
     const repeatedCompletion = session.completeQuest(discoveredQuest.id, {
       endingId: "ending_held",
-      endingTitle: "Held",
+      endingTitle: "The Byre Held",
       death: false,
     });
     expect(repeatedCompletion.alreadyKnown).toBe(true);

@@ -8,6 +8,8 @@ import {
   overworldEventsAt,
   overworldExplorationSitesNear,
   overworldJobsAt,
+  overworldQuestCampaignExportForEnding,
+  parseOverworldManifest,
   planOverworldRoute,
 } from "../../src/world/overworld.js";
 import { cloneOverworldRoadEvent } from "../../src/world/overworld_clone.js";
@@ -203,6 +205,112 @@ describe("New York overworld graph", () => {
       expect(area?.home, quest.id).toBe(quest.home);
       expect(quest.discovery, quest.id).toContain(area?.name);
     }
+  });
+
+  it("authors only Wolf-Winter's non-death campaign exports as distinct monotonic history", () => {
+    const wolfWinter = world.quests.find((quest) => quest.id === "wolf_winter")!;
+    const legacyQuests = world.quests.filter((quest) => quest.id !== wolfWinter.id);
+
+    expect(legacyQuests.every((quest) => !("campaign_exports" in quest))).toBe(true);
+    expect(wolfWinter.campaign_exports?.map((entry) => entry.ending_id)).toEqual([
+      "ending_held_gate_barred",
+      "ending_held_timber_saved",
+      "ending_held",
+    ]);
+    expect(wolfWinter.campaign_exports?.map((entry) => entry.ending_title)).toEqual([
+      "The Byre Held, Inner Gate Barred",
+      "The Byre Held, Paling Timber Saved",
+      "The Byre Held",
+    ]);
+    expect(overworldQuestCampaignExportForEnding(wolfWinter, "ending_pulled_down")).toBeNull();
+
+    const expectedOutcomeFacts = {
+      ending_held_gate_barred: [
+        "fact:wolf_winter_byre_held",
+        "fact:wolf_winter_outer_paling_broken",
+        "fact:wolf_winter_inner_gate_barred_at_dawn",
+        "fact:wolf_winter_guard_wood_committed",
+      ],
+      ending_held_timber_saved: [
+        "fact:wolf_winter_byre_held",
+        "fact:wolf_winter_outer_paling_broken",
+        "fact:wolf_winter_repair_timber_available",
+      ],
+      ending_held: [
+        "fact:wolf_winter_byre_held",
+        "fact:wolf_winter_outer_paling_broken",
+        "fact:wolf_winter_repair_timber_spent",
+      ],
+    } as const;
+    const expectedMemories = {
+      ending_held_gate_barred: "memory:wolf_winter_inner_gate_barred",
+      ending_held_timber_saved: "memory:wolf_winter_repair_timber_saved",
+      ending_held: "memory:wolf_winter_guard_wood_spent",
+    } as const;
+
+    for (const [endingId, facts] of Object.entries(expectedOutcomeFacts)) {
+      const campaignExport = overworldQuestCampaignExportForEnding(wolfWinter, endingId);
+      expect(campaignExport).not.toBeNull();
+      expect(campaignExport?.effects.filter((effect) => effect.type === "set_world_fact")).toEqual(
+        facts.map((fact_id) => ({ type: "set_world_fact", fact_id })),
+      );
+      expect(
+        campaignExport?.effects.find((effect) => effect.type === "remember_relationship"),
+      ).toEqual({
+        type: "remember_relationship",
+        npc_id: "npc:old_cade",
+        memory_id: expectedMemories[endingId as keyof typeof expectedMemories],
+        trust_at_least: 10,
+        regard_at_least: 10,
+        owes_player_at_least: 1,
+      });
+    }
+  });
+
+  it("rejects duplicate campaign export identities and effects without defaulting legacy quests", () => {
+    const duplicateEndingId = structuredClone(world);
+    const duplicateIdExports = duplicateEndingId.quests.find(
+      (quest) => quest.id === "wolf_winter",
+    )!.campaign_exports!;
+    duplicateIdExports.push({
+      ...structuredClone(duplicateIdExports[0]!),
+      ending_title: "A Distinct Test Title",
+    });
+    expect(() => assertOverworldIntegrity(duplicateEndingId)).toThrow(
+      /repeats campaign export ending id/i,
+    );
+    expect(() => parseOverworldManifest(duplicateEndingId)).toThrow(
+      /duplicate campaign export ending id/i,
+    );
+
+    const duplicateEndingTitle = structuredClone(world);
+    const duplicateTitleExports = duplicateEndingTitle.quests.find(
+      (quest) => quest.id === "wolf_winter",
+    )!.campaign_exports!;
+    duplicateTitleExports.push({
+      ...structuredClone(duplicateTitleExports[0]!),
+      ending_id: "ending_distinct_test_id",
+    });
+    expect(() => assertOverworldIntegrity(duplicateEndingTitle)).toThrow(
+      /repeats campaign export ending title/i,
+    );
+    expect(() => parseOverworldManifest(duplicateEndingTitle)).toThrow(
+      /duplicate campaign export ending title/i,
+    );
+
+    const duplicateEffect = structuredClone(world);
+    const duplicatedEffects = duplicateEffect.quests.find((quest) => quest.id === "wolf_winter")!
+      .campaign_exports![0]!.effects;
+    duplicatedEffects.push(structuredClone(duplicatedEffects[0]!));
+    expect(() => assertOverworldIntegrity(duplicateEffect)).toThrow(/repeats effect/i);
+    expect(() => parseOverworldManifest(duplicateEffect)).toThrow(
+      /duplicate campaign consequence effect/i,
+    );
+
+    const legacyRaw = structuredClone(world);
+    delete legacyRaw.quests.find((quest) => quest.id === "wolf_winter")!.campaign_exports;
+    const legacyParsed = parseOverworldManifest(legacyRaw);
+    expect(legacyParsed.quests.every((quest) => !("campaign_exports" in quest))).toBe(true);
   });
 
   it("hand-authors Albany's opening bridge into The Wolf-Winter", () => {

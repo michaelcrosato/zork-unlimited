@@ -126,16 +126,16 @@ both present.
 
 The first implementation sequence is:
 
-1. **Campaign character state** _(foundation landed)_ — one versioned, validated state shared by the
-   overworld and embedded quests: background, skills, values, health/wounds,
-   equipment, money, abilities, knowledge, promises, crimes, NPC relationships,
-   and faction standing.
+1. **Campaign character state** _(foundation landed)_ — one versioned, validated
+   campaign record: background, skills, values, health/wounds, equipment, money,
+   abilities, knowledge, promises, crimes, NPC relationships, and faction
+   standing.
 2. **Quest boundary contract** — inject that state into an embedded quest and
    fold back only validated, explicit changes without resetting the protagonist
    or leaking quest-local objects.
-3. **Data-driven consequences** — quest content declares reusable, validated
-   character/world deltas; campaign code consumes generic state rather than
-   adding Wolf-specific ending conditionals.
+3. **Data-driven consequences** _(outbound boundary landed)_ — quest content
+   declares reusable, validated character/world effects; campaign code consumes
+   generic state rather than adding Wolf-specific ending conditionals.
 4. **Authored Albany** — replace the visible slice's generic local transactions
    with scenes whose evidence, time, relationships, resources, and promises
    alter Wolf-Winter.
@@ -149,11 +149,15 @@ That explanation must be playable context, not a lore dump.
 Foundation status: campaign-character v1 now has strict canonical schemas,
 deterministic cloning/serialization, overworld snapshot v9 persistence, explicit
 v8 migration, full/UI read-only projection, bounded compact projection, and
-tamper guards.
-Because no gameplay consequence can legitimately change this state yet, live
-restore accepts only the replay-proven default; non-default state is rejected
-until the next increment can reconstruct it from trusted quest outcomes. This
-foundation proves no causal-matrix fork by itself.
+tamper guards. A generic, monotonic quest-export catalog now applies relationship
+memories/floors and derives historical world facts from canonical outcome ids.
+Wolf-Winter's three successful endings create distinct Old Cade memories and
+byre/gate/timber facts; restore replays the character result, rejects forged
+outcome/journal/state combinations, and fences the prior manifest hash to one
+exact migration target. No fact is independently persisted, and the embedded
+quest still receives no campaign-character input. Because Albany does not yet
+consume these effects to change a later action, service, risk, resource, or NPC
+behaviour, this foundation still proves no causal-matrix fork by itself.
 
 ## Required resolution families
 

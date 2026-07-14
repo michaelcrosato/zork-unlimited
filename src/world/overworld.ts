@@ -1,5 +1,10 @@
 import { z } from "zod";
 
+import {
+  CampaignConsequenceEffectsSchema,
+  campaignConsequenceEffectKey,
+} from "./campaign_consequences.js";
+
 export const OverworldNodeKindSchema = z.enum([
   "metropolis",
   "great_city",
@@ -225,6 +230,40 @@ export const OverworldExplorationSiteSchema = z
   })
   .strict();
 
+export const OverworldQuestCampaignExportSchema = z
+  .object({
+    ending_id: z.string().min(1),
+    ending_title: z.string().min(1),
+    effects: CampaignConsequenceEffectsSchema,
+  })
+  .strict();
+
+export const OverworldQuestCampaignExportsSchema = z
+  .array(OverworldQuestCampaignExportSchema)
+  .min(1)
+  .superRefine((exports, ctx) => {
+    const endingIds = new Set<string>();
+    const endingTitles = new Set<string>();
+    exports.forEach((campaignExport, index) => {
+      if (endingIds.has(campaignExport.ending_id)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: [index, "ending_id"],
+          message: `Duplicate campaign export ending id "${campaignExport.ending_id}".`,
+        });
+      }
+      if (endingTitles.has(campaignExport.ending_title)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: [index, "ending_title"],
+          message: `Duplicate campaign export ending title "${campaignExport.ending_title}".`,
+        });
+      }
+      endingIds.add(campaignExport.ending_id);
+      endingTitles.add(campaignExport.ending_title);
+    });
+  });
+
 export const OverworldQuestSchema = z
   .object({
     id: z.string().min(1),
@@ -234,6 +273,7 @@ export const OverworldQuestSchema = z
     area: z.string().min(1),
     discovery: z.string().min(1),
     visibility: z.literal("local_notice_board"),
+    campaign_exports: OverworldQuestCampaignExportsSchema.optional(),
   })
   .strict();
 
@@ -292,6 +332,7 @@ export type OverworldLocalJobKind = z.infer<typeof OverworldLocalJobKindSchema>;
 export type OverworldLocalJob = z.infer<typeof OverworldLocalJobSchema>;
 export type OverworldRoadEvent = z.infer<typeof OverworldRoadEventSchema>;
 export type OverworldExplorationSite = z.infer<typeof OverworldExplorationSiteSchema>;
+export type OverworldQuestCampaignExport = z.infer<typeof OverworldQuestCampaignExportSchema>;
 export type OverworldQuest = z.infer<typeof OverworldQuestSchema>;
 export type OverworldManifest = z.infer<typeof OverworldManifestSchema>;
 
@@ -352,6 +393,14 @@ export function overworldQuestById(
   questId: string,
 ): OverworldQuest | null {
   return overworldQuestsById(world).get(questId) ?? null;
+}
+
+/** Resolve one trusted campaign export without inventing legacy/default effects. */
+export function overworldQuestCampaignExportForEnding(
+  quest: OverworldQuest,
+  endingId: string,
+): OverworldQuestCampaignExport | null {
+  return quest.campaign_exports?.find((entry) => entry.ending_id === endingId) ?? null;
 }
 
 export function overworldNodesById(world: OverworldManifest): Map<string, OverworldNode> {
@@ -1059,6 +1108,34 @@ function assertQuestsIntegrity(
       throw new Error(`Overworld quest "${quest.id}" has missing area.`);
     if (areaHomes.get(quest.area) !== quest.home) {
       throw new Error(`Overworld quest "${quest.id}" is anchored outside its home town.`);
+    }
+
+    const campaignEndingIds = new Set<string>();
+    const campaignEndingTitles = new Set<string>();
+    for (const campaignExport of quest.campaign_exports ?? []) {
+      if (campaignEndingIds.has(campaignExport.ending_id)) {
+        throw new Error(
+          `Overworld quest "${quest.id}" repeats campaign export ending id "${campaignExport.ending_id}".`,
+        );
+      }
+      if (campaignEndingTitles.has(campaignExport.ending_title)) {
+        throw new Error(
+          `Overworld quest "${quest.id}" repeats campaign export ending title "${campaignExport.ending_title}".`,
+        );
+      }
+      campaignEndingIds.add(campaignExport.ending_id);
+      campaignEndingTitles.add(campaignExport.ending_title);
+
+      const effectKeys = new Set<string>();
+      for (const effect of campaignExport.effects) {
+        const key = campaignConsequenceEffectKey(effect);
+        if (effectKeys.has(key)) {
+          throw new Error(
+            `Overworld quest "${quest.id}" campaign export "${campaignExport.ending_id}" repeats effect ${key}.`,
+          );
+        }
+        effectKeys.add(key);
+      }
     }
   }
 }

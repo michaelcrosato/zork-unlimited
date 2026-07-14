@@ -58,8 +58,20 @@ import {
   assertJourneyCampaignJournalProof,
   assertJourneyCampaignQuestOutcome,
 } from "./journey_campaign.js";
+import {
+  questCampaignExportForEnding,
+  questCompletionJournalEntryDraft,
+  questCompletionMinutes,
+  replayQuestCampaignConsequences,
+} from "./session_quests.js";
+
+export const OVERWORLD_PRE_CAMPAIGN_EXPORTS_WORLD_HASH =
+  "39d32c027d2e826f476dd299bb95cc3911994ec92b4fbf297be8d1216e5b6151";
+export const OVERWORLD_CAMPAIGN_EXPORTS_MIGRATION_TARGET_WORLD_HASH =
+  "b9416e3c43d9d54085ed9465b4d875811daebaf9834793d3f4a1ffca93b486c4";
 
 export type OverworldSessionSnapshotRestorePlan = {
+  characterAfter: CampaignCharacterState;
   currentAreaByTown: ReadonlyMap<string, string>;
   pendingRoadEncounter: OverworldPendingRoadEncounter | null;
   questOutcomeIds: ReadonlyMap<string, string>;
@@ -147,7 +159,7 @@ export function applyOverworldSessionSnapshotRestore(
   replaceStringSet(state.resolvedEventHomeIds, [...plan.resolvedEventHomeIds]);
 
   return {
-    characterAfter: cloneCampaignCharacterState(snapshot.character),
+    characterAfter: cloneCampaignCharacterState(plan.characterAfter),
     currentIdAfter: snapshot.currentId,
     currentAreaIdAfter: snapshot.currentAreaId,
     minutesAfter: snapshot.minutes,
@@ -171,16 +183,11 @@ export function planOverworldSessionSnapshotRestore(args: {
       `Overworld session snapshot is for world "${snapshot.worldId}", not "${worldId}".`,
     );
   }
-  if (snapshot.worldHash !== worldHash) {
+  const migratesPreCampaignExportsWorldHash =
+    snapshot.worldHash === OVERWORLD_PRE_CAMPAIGN_EXPORTS_WORLD_HASH &&
+    worldHash === OVERWORLD_CAMPAIGN_EXPORTS_MIGRATION_TARGET_WORLD_HASH;
+  if (snapshot.worldHash !== worldHash && !migratesPreCampaignExportsWorldHash) {
     throw new Error("Overworld session snapshot was made against a different world manifest.");
-  }
-  if (
-    serializeCampaignCharacterState(snapshot.character) !==
-    serializeCampaignCharacterState(createInitialCampaignCharacterState())
-  ) {
-    throw new Error(
-      "Overworld session snapshot has campaign character state without replayable consequence proof.",
-    );
   }
 
   const travelTimeline = snapshotTravelTimelineIndex(
@@ -244,7 +251,8 @@ export function planOverworldSessionSnapshotRestore(args: {
   );
   const questOutcomeIds = assertUniqueTupleMap("quest outcome", snapshot.questOutcomes);
   for (const [questId, endingId] of questOutcomeIds) {
-    if (!indexes.questIds.has(questId)) {
+    const quest = indexes.questsById.get(questId);
+    if (!quest) {
       throw new Error(`Overworld session snapshot has outcome for unknown quest "${questId}".`);
     }
     if (!completedQuestIds.has(questId)) {
@@ -252,7 +260,9 @@ export function planOverworldSessionSnapshotRestore(args: {
         `Overworld session snapshot quest outcome "${questId}" has no completed quest id.`,
       );
     }
-    assertJourneyCampaignQuestOutcome(questId, endingId);
+    if (questCampaignExportForEnding(quest, endingId) === null) {
+      assertJourneyCampaignQuestOutcome(questId, endingId);
+    }
   }
   for (const questId of completedQuestIds) {
     if (!questOutcomeIds.has(questId)) {
@@ -291,6 +301,30 @@ export function planOverworldSessionSnapshotRestore(args: {
     travelLogArrivals: travelTimeline.arrivals,
     travelLogTownByArrival: travelTimeline.townByArrival,
   });
+  assertSnapshotQuestCompletionOutcomeJournalProof({
+    indexes,
+    journalEntries: snapshot.journalEntries,
+    questOutcomeIds,
+  });
+  const initialCharacter = createInitialCampaignCharacterState();
+  const consequenceReplay = replayQuestCampaignConsequences({
+    character: initialCharacter,
+    questsById: indexes.questsById,
+    questOutcomeIds,
+  });
+  const storedCharacter = serializeCampaignCharacterState(snapshot.character);
+  const expectedCharacter = serializeCampaignCharacterState(consequenceReplay.characterAfter);
+  if (migratesPreCampaignExportsWorldHash) {
+    if (storedCharacter !== serializeCampaignCharacterState(initialCharacter)) {
+      throw new Error(
+        "Legacy overworld session snapshot has campaign character state without replayable consequence proof.",
+      );
+    }
+  } else if (storedCharacter !== expectedCharacter) {
+    throw new Error(
+      "Overworld session snapshot campaign character does not match replayed quest consequences.",
+    );
+  }
   assertJourneyCampaignJournalProof({
     journey: snapshot.journey,
     questOutcomeIds,
@@ -422,6 +456,7 @@ export function planOverworldSessionSnapshotRestore(args: {
   );
 
   return {
+    characterAfter: consequenceReplay.characterAfter,
     currentAreaByTown,
     pendingRoadEncounter,
     questOutcomeIds,
@@ -433,6 +468,39 @@ export function planOverworldSessionSnapshotRestore(args: {
       roadEventsByEdgeId: indexes.roadEventsByEdgeId,
     }),
   };
+}
+
+function assertSnapshotQuestCompletionOutcomeJournalProof(args: {
+  indexes: OverworldSnapshotManifestIndex;
+  journalEntries: readonly OverworldJournalEntry[];
+  questOutcomeIds: ReadonlyMap<string, string>;
+}): void {
+  const journalEntriesById = new Map(args.journalEntries.map((entry) => [entry.id, entry]));
+  for (const [questId, endingId] of args.questOutcomeIds) {
+    const quest = args.indexes.questsById.get(questId);
+    if (!quest) continue;
+    const campaignExport = questCampaignExportForEnding(quest, endingId);
+    if (!campaignExport) continue;
+    const minutes = questCompletionMinutes(quest, args.indexes.areasById);
+    const expected = questCompletionJournalEntryDraft({
+      quest,
+      endingTitle: campaignExport.ending_title,
+      minutes,
+      townName: args.indexes.questTownNames.get(questId) ?? quest.home,
+    });
+    const stored = journalEntriesById.get(expected.id);
+    if (
+      !stored ||
+      stored.kind !== expected.kind ||
+      stored.town !== expected.town ||
+      stored.title !== expected.title ||
+      stored.text !== expected.text
+    ) {
+      throw new Error(
+        `Overworld session snapshot quest outcome "${questId}" is not bound to its canonical completion journal.`,
+      );
+    }
+  }
 }
 
 function resolvedOverworldEventHomeIds(

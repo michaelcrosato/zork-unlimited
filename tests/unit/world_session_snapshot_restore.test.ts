@@ -83,6 +83,7 @@ function restorePlan(
   overrides: Partial<OverworldSessionSnapshotRestorePlan> = {},
 ): OverworldSessionSnapshotRestorePlan {
   return {
+    characterAfter: createInitialCampaignCharacterState(),
     currentAreaByTown: new Map([["town_b", "area_b"]]),
     pendingRoadEncounter: null,
     questOutcomeIds: new Map([["quest_b", "ending_b"]]),

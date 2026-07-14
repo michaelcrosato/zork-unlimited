@@ -39,9 +39,11 @@ import {
   type OverworldQuestView,
 } from "./session_local_discovery.js";
 import {
+  questCampaignEffectGroupsForOutcomes,
   type OverworldQuestCompletionOutcome,
   type OverworldQuestCompletionResult,
 } from "./session_quests.js";
+import { deriveCampaignWorldFactIds } from "./campaign_consequences.js";
 import {
   applyOverworldSessionQuestCompletion,
   applyOverworldSessionQuestStartFromState,
@@ -413,6 +415,13 @@ export class OverworldSession {
 
   snapshot(): OverworldSessionSnapshot {
     return cloneOverworldSessionSnapshot(this.cachedSnapshot().snapshot);
+  }
+
+  /** Derived historical world truth; detached so callers cannot mutate session state. */
+  campaignWorldFactIds(): string[] {
+    return deriveCampaignWorldFactIds(
+      questCampaignEffectGroupsForOutcomes(this.questsById, this.questOutcomeIds),
+    );
   }
 
   private currentGoalRoute(): OverworldSessionRoutePlan | null {
@@ -953,7 +962,9 @@ export class OverworldSession {
     this.assertNoPendingRoadEncounter("completing a quest");
     const completionState = {
       ...this.actionJournalState(),
+      character: this.characterState,
       completedQuestIds: this.completedQuestIds,
+      questOutcomeIds: this.questOutcomeIds,
       regionRenown: this.regionRenown,
       questId,
       outcome,
@@ -963,10 +974,13 @@ export class OverworldSession {
       startedQuestIds: this.startedQuestIds,
     };
     const completionPlan = planOverworldSessionQuestCompletion(completionState);
-    assertJourneyCampaignQuestOutcome(questId, outcome.endingId);
+    if (this.questsById.get(questId)?.campaign_exports === undefined) {
+      assertJourneyCampaignQuestOutcome(questId, outcome.endingId);
+    }
     const applied = applyOverworldSessionQuestCompletion(completionState, completionPlan);
     this.applyClockState(applied);
     if (applied.stateChanged && !outcome.death) {
+      this.characterState = applied.characterAfter;
       this.questOutcomeIds.set(questId, outcome.endingId);
     }
     if (

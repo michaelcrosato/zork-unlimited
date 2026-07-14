@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 554 -->
+<!-- historical_cycle_count: 555 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,14 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - trusted_quest_campaign_exports
+
+- Change: a strict, reusable quest-export catalog now applies monotonic relationship memories/floors and derives historical world facts; Wolf-Winter's three non-death endings author distinct Old Cade and byre/gate/timber aftermaths while the death ending exports nothing.
+- Integrity: opted-in catalogs equal the compiled non-death ending set; effects are transactional and detached, repeats are exact no-ops, conflicts reject before mutation, canonical journals bind outcomes, and v8/v9 migration is fenced to the exact pre/post manifest hashes with no persisted fact field.
+- Pure evidence: verified pure/fresh seed 10 completed Wolf-Winter at decision 21, continued through checkpoint 40 and Gallowmere at 45, then ended honestly after Tanner's Fever at 67; clarity/enjoyment 4/4, replay true, no stuck state. Seed 9's malformed report was correctly rejected.
+- Compile/self-critique: 771 verified reports/31 rejected compile to 22 journey-v3 pure exits, all continued at least once. PASS for a trusted outbound boundary, not a depth claim: no matrix fork has a downstream consumer, and the fresh player surfaced an existing S1 jerkin equip step plus S0 quest-shell repetition.
+- Guard: adversarial review closed a one-way catalog-parity defect; 275 focused tests and pre/final 6,000-step crawls (`20260714T034655Z`, `20260714T044001Z`) reached 247/247 nodes, 344/344 edges, and 12/12 quests; full health passed (319 files/2,274 tests, UI, 12 packs).
 
 ### Cycle result - campaign_character_foundation
 
@@ -137,11 +145,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Pure evidence: independently verified seed 1507 completed Wolf-Winter, Gallowmere, Tanner's Fever, and Breaking Weir; continued at goals/checkpoints 23/40/51/80/83, ended honestly at goal 4 on decision 111, clarity/enjoyment 4/4, replay true. Missing-premise friction did not recur; visible prose exposed genuine stale/generic road-content debt.
 - Self-critique: PASS for human/MCP choice-and-consequence parity, not for retention—the player still ended after four quests and called Oneonta→Rome filler. Next is state-aware authored encounter families; truthful goal routing and Cade's learn-both/choose-later copy remain behind it. Seeds 1407+1507 are two new verified reports, below the three-report compile threshold.
 - Guard: 115 focused tests plus root/UI typechecks, final 6000-step crawl (247/247 nodes, 344/344 edges, 12/12 quests), independent receipt verification, and full health (296 files/2101 tests, UI, 12 packs) passed.
-
-### Cycle result - compact_overworld_action_prose
-
-- Surface: default compact local overworld actions now carry the same immediate human-facing consequence in a bounded top-level `text`; the 360-character cap is explicit, rolling journal tuples stay lean, and spectate renders the line.
-- Root/effect: the generic journal compactor had erased authored talk/scout/investigate/explore/work prose from canonical pure MCP play; twin compact/full sessions now pin parity, closing texture/payoff complaints from seeds 388, 430, and 1307.
-- Pure evidence: independently verified pure/fresh seed 1407 played Wolf-Winter, Gallowmere, Tanner's Fever, and Breaking Weir; it continued five times, ended honestly at goal 4 on decision 114, rated clarity 4/5 and enjoyment 5/5, and would replay. Compact omission did not recur; prose was called high and consistent.
-- Self-critique: PASS for human/MCP consequence parity, not for solved retention. Next signals are raw undiscovered-goal travel errors, repetitive road choices, logistics counted as meaningful decisions, and Cade's non-exclusive “two roads”; one new report is below the three-report compile threshold.
-- Guard: focused 77-test parity suite and typecheck, final 6000-step crawl (247/247 nodes, 344/344 edges, 12/12 quests), independent receipt verification, and full health (296 files/2100 tests, UI, 12 packs) passed.
