@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 553 -->
+<!-- historical_cycle_count: 554 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,14 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - campaign_character_foundation
+
+- Change: campaign-character v1 now canonically models background, skills, values, health/wounds, instance equipment, money, abilities, knowledge, promises, crimes, NPC relationships, and faction standing; overworld snapshot v9 persists it with strict v8 migration and full/compact/UI read-only projection.
+- Integrity: non-default v9 state rejects until trusted consequences can replay it, blocking invented money/abilities/memories; compact v15 caps every family at 8 and visible memories at 4 while exposing truthful totals/truncation, with a maximum-width payload below 15 KB.
+- Pure evidence: verified pure/fresh seed 8 completed Wolf-Winter at decision 24, continued through five completed goals and checkpoints 40/80, then ended honestly at 120; clarity 4/5, enjoyment 5/5, replay true, no stuck state or S2+ defect. One prior exact-candidate attempt timed out with no transcript and is rejected evidence.
+- Self-critique: PASS for reusable persistence, tamper resistance, and surface parity—not a depth claim. All causal-matrix forks remain uncounted; the player again found thorough preparation highly rewarding and only flagged repeated out-of-scope hub boilerplate (S1).
+- Guard: pre/final 6,000-step crawls reached 247/247 towns, 344/344 roads, and 12/12 quests (`20260714T023528Z`, `20260714T030833Z`); 165 focused tests, responsive rendered UI checks, adversarial review, and full health passed.
 
 ### Cycle result - starting_slice_contract
 
@@ -137,12 +145,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Pure evidence: independently verified pure/fresh seed 1407 played Wolf-Winter, Gallowmere, Tanner's Fever, and Breaking Weir; it continued five times, ended honestly at goal 4 on decision 114, rated clarity 4/5 and enjoyment 5/5, and would replay. Compact omission did not recur; prose was called high and consistent.
 - Self-critique: PASS for human/MCP consequence parity, not for solved retention. Next signals are raw undiscovered-goal travel errors, repetitive road choices, logistics counted as meaningful decisions, and Cade's non-exclusive “two roads”; one new report is below the three-report compile threshold.
 - Guard: focused 77-test parity suite and typecheck, final 6000-step crawl (247/247 nodes, 344/344 edges, 12/12 quests), independent receipt verification, and full health (296 files/2100 tests, UI, 12 packs) passed.
-
-### Cycle result - tanners_fever_peaceful_route
-
-- Change: Tanner's Fever now links symptoms, written dose, corrective herb, and bedside demonstration without a harness hint; natural LOOK performs clinical INSPECT, Holt retires after treatment, and forced passage must deliver a real identified remedy.
-- Consequence: the first physick presentation is the only roll; failure preserves the cure but retires free rerolls, then exposes a same-id deterministic recovery once all three clues are established. Lucky early treatment retires stale clue rewards.
-- Proof seam: exhaustive crawler/score/variant/menu/metamorphic/dead-pocket policies retain authored INSPECT looks while pruning inert rereads; focused regressions cover peaceful, failed-recovery, early-luck, post-treatment, and forced-passage paths.
-- Pure evidence: independently reverified seed 1307 is pure/fresh contract-v3; Tanner completed at decision 81 with no stuck/bug report, clarity 4/5, enjoyment 5/5, replay true; player continued through four goals and ended honestly at decision 110.
-- Effect: prior verified Tanner violence-pressure/free-retry complaint did not recur; the quest was called a satisfying medical deduction with graceful outcomes. Next signals are compact talk omissions, route chaining, and a cosmetic Rowan Quill name collision.
-- Guard: final 6000-step crawl (247/247 nodes, 344/344 edges, 12/12 quests), independent report verification, and full health (296 files/2098 tests, UI, 12 packs) passed.

@@ -1,5 +1,6 @@
 import {
   OVERWORLD_COMPACT_VIEW_VERSION,
+  compactCampaignCharacterView,
   compactLocalRefTruncation,
   compactOverworldAreaRoutes,
   compactOverworldCompletedArcs,
@@ -18,6 +19,7 @@ import {
   compactPendingRoad,
   type OverworldCompactView,
 } from "./compact_view.js";
+import type { CampaignCharacterView } from "./campaign_character_view.js";
 import type {
   OverworldArea,
   OverworldAreaExit,
@@ -45,6 +47,7 @@ import { timeLabel } from "./session_journal_codec.js";
 import { OVERWORLD_MAX_SUPPLIES as MAX_SUPPLIES, travelCondition } from "./travel_mechanics.js";
 
 export type OverworldSessionCompactViewState = {
+  character: CampaignCharacterView;
   worldName: string;
   worldTownCount: number;
   current: OverworldNode;
@@ -114,6 +117,7 @@ export function buildOverworldSessionCompactView(
 
   return {
     v: OVERWORLD_COMPACT_VIEW_VERSION,
+    character: compactCampaignCharacterView(state.character),
     world: compactOverworldLabel(state.worldName),
     time: timeLabel(state.minutes),
     here: [

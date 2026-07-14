@@ -1,5 +1,10 @@
 import { readFileSync } from "node:fs";
+import { createRequire } from "node:module";
+import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
+import { createServer } from "vite";
+import { buildCampaignCharacterState } from "../../src/world/campaign_character_state.js";
+import { buildCampaignCharacterView } from "../../src/world/campaign_character_view.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
 import {
   OVERWORLD_COMPACT_COMPLETED_ARC_LIMIT,
@@ -20,6 +25,56 @@ import { questCompletionMinutes } from "../../src/world/session_quests.js";
 import { OverworldSession } from "../../ui/src/overworld.js";
 
 const world = loadOverworldManifest(process.cwd());
+
+function populatedUiCharacter() {
+  return buildCampaignCharacterView(
+    buildCampaignCharacterState({
+      background: "background:road_warden",
+      skills: [{ skillId: "skill:fieldcraft", rank: 3 }],
+      values: [{ valueId: "value:keep_promises", strength: 4 }],
+      health: { current: 23, max: 30 },
+      wounds: [{ woundId: "wound:wolf_bite", severity: 2, treatment: "stabilized" }],
+      equipment: [
+        {
+          equipmentId: "equipment:warden_spear_1",
+          itemId: "item:warden_spear",
+          quantity: 1,
+          condition: 76,
+          equipped: true,
+        },
+      ],
+      money: 18,
+      abilities: ["ability:brace"],
+      knowledge: ["knowledge:wolf_spoor"],
+      promises: [
+        {
+          promiseId: "promise:return_wagon",
+          recipientId: "npc:hayden_hale",
+          status: "active",
+        },
+      ],
+      crimes: [
+        {
+          crimeId: "crime:steading_trespass",
+          jurisdictionId: "jurisdiction:albany_hinterland",
+          severity: 1,
+          status: "suspected",
+        },
+      ],
+      relationships: [
+        {
+          npcId: "npc:old_cade",
+          trust: 25,
+          regard: -25,
+          owesPlayer: 2,
+          playerOwes: 1,
+          memories: ["memory:kept_watch"],
+        },
+      ],
+      factionStanding: [{ factionId: "faction:road_wardens", standing: 60 }],
+    }),
+  );
+}
 
 function roadPath(from: string, to: string): string[] {
   const queue: { town: string; roadIds: string[] }[] = [{ town: from, roadIds: [] }];
@@ -127,6 +182,31 @@ describe("OverworldSession", () => {
     expect(view.fatigue).toBe(0);
     expect(view.travelCondition).toBe("ready");
     expect(view.pendingRoadEncounter).toBeNull();
+    expect(view.character).toMatchObject({
+      background: null,
+      health: { current: 30, max: 30 },
+      money: 0,
+      skills: [],
+      equipment: [],
+      relationships: [],
+      factionStanding: [],
+    });
+    expect(session.compactView().character).toEqual([
+      null,
+      [30, 30],
+      0,
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    ]);
     const colonieOption = view.routeOptions.find(
       (route) => route.destination.id === "colonie_town",
     );
@@ -240,6 +320,64 @@ describe("OverworldSession", () => {
     expect(screen).toContain("Journey consequence");
     expect(screen).toContain("Choose what follows");
     expect(screen).not.toMatch(/Albany Station Quarter|dawn dispatch|relief wagon/i);
+  });
+
+  it("renders the fully populated canonical character as a semantic read-only record", async () => {
+    const app = readFileSync("ui/src/App.tsx", "utf8");
+    expect(app).toContain("<CampaignCharacterPanel character={worldView.character} />");
+
+    const uiRoot = resolve(process.cwd(), "ui");
+    const server = await createServer({
+      root: uiRoot,
+      configFile: resolve(uiRoot, "vite.config.ts"),
+      appType: "custom",
+      logLevel: "silent",
+      optimizeDeps: { noDiscovery: true },
+      server: { middlewareMode: true },
+    });
+    try {
+      const module = (await server.ssrLoadModule("/src/CampaignCharacterPanel.tsx")) as {
+        CampaignCharacterPanel: unknown;
+      };
+      const requireFromUi = createRequire(resolve(uiRoot, "package.json"));
+      const react = requireFromUi("react") as {
+        createElement: (type: unknown, props: Record<string, unknown>) => unknown;
+      };
+      const reactDomServer = requireFromUi("react-dom/server") as {
+        renderToStaticMarkup: (element: unknown) => string;
+      };
+      const markup = reactDomServer.renderToStaticMarkup(
+        react.createElement(module.CampaignCharacterPanel, {
+          character: populatedUiCharacter(),
+        }),
+      );
+
+      expect(markup).toMatch(
+        /^<details class="character-panel"><summary class="character-heading"><h2 class="character-heading-layout">[\s\S]*<\/h2><\/summary>/,
+      );
+      expect(markup.match(/<h3>/g)).toHaveLength(10);
+      for (const visibleText of [
+        "Your Record",
+        "Road Warden",
+        "Fieldcraft",
+        "Keep Promises",
+        "Warden Spear",
+        "Wolf Bite",
+        "Brace",
+        "Wolf Spoor",
+        "Hayden Hale",
+        "Albany Hinterland",
+        "Old Cade",
+        "Kept Watch",
+        "Road Wardens",
+        "Read only",
+      ]) {
+        expect(markup).toContain(visibleText);
+      }
+      expect(markup).not.toMatch(/<(?:button|input|select|textarea)\b/);
+    } finally {
+      await server.close();
+    }
   });
 
   it("keeps Albany's first scout, talk, and explore choices on the same reveal loop", () => {
@@ -669,7 +807,7 @@ describe("OverworldSession", () => {
     expect(view.discovered.length).toBeGreaterThan(24);
     const compact = compactOverworldView(view);
     expect(session.compactView()).toEqual(compact);
-    expect(compact.v).toBe(14);
+    expect(compact.v).toBe(15);
     expect(compact.hidden).toEqual([
       view.hiddenAreaCount,
       view.hiddenJobCount,
@@ -724,6 +862,7 @@ describe("OverworldSession", () => {
     );
 
     const built = buildOverworldSessionCompactView({
+      character: view.character,
       worldName: view.world,
       worldTownCount: view.totalTowns,
       current: view.current,
@@ -823,6 +962,7 @@ describe("OverworldSession", () => {
     expect(compact.area_routes_truncated).toBe(true);
 
     const built = buildOverworldSessionCompactView({
+      character: view.character,
       worldName: view.world,
       worldTownCount: view.totalTowns,
       current: view.current,
@@ -909,6 +1049,7 @@ describe("OverworldSession", () => {
     expect(compact.route_paths_truncated).toBe(true);
 
     const built = buildOverworldSessionCompactView({
+      character: view.character,
       worldName: view.world,
       worldTownCount: view.totalTowns,
       current: view.current,
@@ -1015,6 +1156,7 @@ describe("OverworldSession", () => {
     ]);
 
     const built = buildOverworldSessionCompactView({
+      character: view.character,
       worldName: view.world,
       worldTownCount: view.totalTowns,
       current: view.current,

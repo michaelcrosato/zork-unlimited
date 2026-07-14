@@ -68,13 +68,17 @@ import {
   applyOverworldSessionTownVisit,
 } from "./session_local_lifecycle.js";
 import {
-  OverworldSessionSnapshotSchema,
   cloneOverworldSessionSnapshot,
+  parseOverworldSessionSnapshot,
   type OverworldJournalEntry,
   type OverworldPendingRoadEncounter,
   type OverworldSessionSnapshot,
   type TravelLogEntry,
 } from "./session_snapshot.js";
+import {
+  createInitialCampaignCharacterState,
+  type CampaignCharacterState,
+} from "./campaign_character_state.js";
 import {
   clearOverworldSessionCaches,
   type OverworldSessionCaches,
@@ -311,6 +315,7 @@ export class OverworldSession {
   private readonly regionRenown = new Map<string, number>();
   private readonly completedRegionalArcIds = new Set<string>();
   private pendingRoadEncounter: OverworldPendingRoadEncounter | null = null;
+  private characterState: CampaignCharacterState = createInitialCampaignCharacterState();
   private journeyState: JourneyContractSnapshot = createInitialJourneyContractSnapshot();
   private readonly journeyGoalBaseRouteByEndpoints = new Map<string, OverworldRoutePlan>();
   private readonly journeyGoalGuidanceByRoute = new Map<string, string>();
@@ -351,7 +356,7 @@ export class OverworldSession {
   }
 
   static restore(world: OverworldManifest, rawSnapshot: unknown): OverworldSession {
-    const snapshot = OverworldSessionSnapshotSchema.parse(rawSnapshot);
+    const snapshot = parseOverworldSessionSnapshot(rawSnapshot);
     const session = new OverworldSession(world);
     session.applySnapshot(snapshot);
     return session;
@@ -630,6 +635,7 @@ export class OverworldSession {
     return {
       worldId: this.world.id,
       worldHash: this.worldHash,
+      character: this.characterState,
       currentId: this.currentId,
       currentAreaId: this.currentAreaId,
       minutes: this.minutes,
@@ -677,6 +683,7 @@ export class OverworldSession {
     this.applyCurrentAreaState(applied);
     this.applyResourceClockState(applied);
     this.applyPendingRoadEncounterState(applied);
+    this.characterState = applied.characterAfter;
     this.journeyState = applied.journeyAfter;
     this.clearSessionCaches();
   }
@@ -838,6 +845,7 @@ export class OverworldSession {
     const currentAreaId = requireOverworldSessionCurrentAreaId(currentArea);
     return {
       caches: this.caches,
+      character: this.characterState,
       worldName: this.world.name,
       worldTownCount: this.world.nodes.length,
       current,

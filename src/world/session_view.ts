@@ -23,8 +23,10 @@ import type {
   TravelLogEntry,
 } from "./session_snapshot.js";
 import { OVERWORLD_MAX_SUPPLIES as MAX_SUPPLIES, travelCondition } from "./travel_mechanics.js";
+import type { CampaignCharacterView } from "./campaign_character_view.js";
 
 export type OverworldView = {
+  character: CampaignCharacterView;
   world: string;
   timeLabel: string;
   current: OverworldNode;
@@ -70,6 +72,7 @@ export type OverworldView = {
 };
 
 export type OverworldSessionViewState = {
+  character: CampaignCharacterView;
   worldName: string;
   worldTownCount: number;
   current: OverworldNode;
@@ -144,6 +147,7 @@ function regionalArcProgressForView(
 
 export function buildOverworldSessionView(state: OverworldSessionViewState): OverworldView {
   return {
+    character: state.character,
     world: state.worldName,
     timeLabel: timeLabel(state.minutes),
     current: state.current,

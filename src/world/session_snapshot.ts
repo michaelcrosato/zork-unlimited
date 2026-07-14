@@ -1,4 +1,9 @@
 import { z } from "zod";
+import {
+  CampaignCharacterStateSchema,
+  cloneCampaignCharacterState,
+  createInitialCampaignCharacterState,
+} from "./campaign_character_state.js";
 import { JourneyContractSnapshotSchema, cloneJourneyContractSnapshot } from "./journey_contract.js";
 import type { OverworldRoadEvent } from "./overworld.js";
 import {
@@ -7,7 +12,8 @@ import {
   type OverworldRoadEncounterOption,
 } from "./travel_mechanics.js";
 
-export const OVERWORLD_SESSION_SAVE_VERSION = 8 as const;
+export const OVERWORLD_SESSION_LEGACY_SAVE_VERSION = 8 as const;
+export const OVERWORLD_SESSION_SAVE_VERSION = 9 as const;
 
 export type TravelLogEntry = {
   edgeId: string;
@@ -127,9 +133,9 @@ const OverworldJournalEntrySchema = z
   })
   .strict();
 
-export const OverworldSessionSnapshotSchema = z
+export const OverworldSessionSnapshotV8Schema = z
   .object({
-    version: z.literal(OVERWORLD_SESSION_SAVE_VERSION),
+    version: z.literal(OVERWORLD_SESSION_LEGACY_SAVE_VERSION),
     worldId: z.string().min(1),
     worldHash: z.string().regex(/^[0-9a-f]{64}$/),
     currentId: z.string().min(1),
@@ -160,7 +166,34 @@ export const OverworldSessionSnapshotSchema = z
   })
   .strict();
 
+export const OverworldSessionSnapshotSchema = OverworldSessionSnapshotV8Schema.extend({
+  version: z.literal(OVERWORLD_SESSION_SAVE_VERSION),
+  character: CampaignCharacterStateSchema,
+}).strict();
+
+export type OverworldSessionSnapshotV8 = z.infer<typeof OverworldSessionSnapshotV8Schema>;
 export type OverworldSessionSnapshot = z.infer<typeof OverworldSessionSnapshotSchema>;
+
+const OverworldSessionSnapshotVersionSchema = z.object({ version: z.number().int() }).passthrough();
+
+/** Parse current saves and migrate the one explicitly supported legacy shape. */
+export function parseOverworldSessionSnapshot(raw: unknown): OverworldSessionSnapshot {
+  const { version } = OverworldSessionSnapshotVersionSchema.parse(raw);
+  if (version === OVERWORLD_SESSION_LEGACY_SAVE_VERSION) {
+    const legacy = OverworldSessionSnapshotV8Schema.parse(raw);
+    return OverworldSessionSnapshotSchema.parse({
+      ...legacy,
+      version: OVERWORLD_SESSION_SAVE_VERSION,
+      character: createInitialCampaignCharacterState(),
+    });
+  }
+  if (version === OVERWORLD_SESSION_SAVE_VERSION) {
+    return OverworldSessionSnapshotSchema.parse(raw);
+  }
+  throw new Error(
+    `Unsupported overworld session snapshot version ${String(version)}; expected ${String(OVERWORLD_SESSION_LEGACY_SAVE_VERSION)} or ${String(OVERWORLD_SESSION_SAVE_VERSION)}.`,
+  );
+}
 
 export function cloneJournalEntries(
   entries: readonly OverworldJournalEntry[],
@@ -195,6 +228,7 @@ export function cloneOverworldSessionSnapshot(
 ): OverworldSessionSnapshot {
   return {
     ...snapshot,
+    character: cloneCampaignCharacterState(snapshot.character),
     discoveredIds: [...snapshot.discoveredIds],
     visitedIds: [...snapshot.visitedIds],
     currentAreaByTown: cloneStringTuples(snapshot.currentAreaByTown),

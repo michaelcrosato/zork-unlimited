@@ -4,6 +4,12 @@ import type {
   OverworldSessionSnapshot,
   TravelLogEntry,
 } from "./session_snapshot.js";
+import {
+  cloneCampaignCharacterState,
+  createInitialCampaignCharacterState,
+  serializeCampaignCharacterState,
+  type CampaignCharacterState,
+} from "./campaign_character_state.js";
 import { assertKnownIds, assertUniqueTupleMap, replaceStringSet } from "./session_collections.js";
 import { assertSnapshotTimeline } from "./session_journal_timeline.js";
 import { replaceOverworldJournalEntries } from "./session_journal_store.js";
@@ -86,6 +92,7 @@ export type OverworldSessionSnapshotRestoreState = {
 };
 
 export type OverworldAppliedSessionSnapshotRestore = {
+  characterAfter: CampaignCharacterState;
   currentIdAfter: string;
   currentAreaIdAfter: string | null;
   minutesAfter: number;
@@ -140,6 +147,7 @@ export function applyOverworldSessionSnapshotRestore(
   replaceStringSet(state.resolvedEventHomeIds, [...plan.resolvedEventHomeIds]);
 
   return {
+    characterAfter: cloneCampaignCharacterState(snapshot.character),
     currentIdAfter: snapshot.currentId,
     currentAreaIdAfter: snapshot.currentAreaId,
     minutesAfter: snapshot.minutes,
@@ -165,6 +173,14 @@ export function planOverworldSessionSnapshotRestore(args: {
   }
   if (snapshot.worldHash !== worldHash) {
     throw new Error("Overworld session snapshot was made against a different world manifest.");
+  }
+  if (
+    serializeCampaignCharacterState(snapshot.character) !==
+    serializeCampaignCharacterState(createInitialCampaignCharacterState())
+  ) {
+    throw new Error(
+      "Overworld session snapshot has campaign character state without replayable consequence proof.",
+    );
   }
 
   const travelTimeline = snapshotTravelTimelineIndex(

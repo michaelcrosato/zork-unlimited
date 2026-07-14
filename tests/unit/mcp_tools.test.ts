@@ -1143,6 +1143,28 @@ describe("MCP tools — validate / load (§9.4)", () => {
     const compactStarted = a.start_overworld({ compact_context: true });
     const defaultStarted = a.start_overworld();
 
+    expect(full.character).toMatchObject({
+      background: null,
+      health: { current: 30, max: 30 },
+      money: 0,
+    });
+    expect(compact.context.character).toEqual([
+      null,
+      [30, 30],
+      0,
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    ]);
+
     expect(defaultRead).toMatchObject({ ok: true });
     expect(defaultRead.context).toEqual(compact.context);
     expect("session_id" in defaultRead).toBe(false);
@@ -1166,7 +1188,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(compact.snapshot_hash).toBe(started.snapshot_hash);
     expect(compactStarted.snapshot_hash).toMatch(PUBLIC_OVERWORLD_SNAPSHOT_HASH_RE);
     expect(defaultStarted.snapshot_hash).toMatch(PUBLIC_OVERWORLD_SNAPSHOT_HASH_RE);
-    expect(defaultStarted.context.v).toBe(14);
+    expect(defaultStarted.context.v).toBe(15);
     expect("observation" in defaultStarted).toBe(false);
     expect("world" in defaultStarted.context).toBe(false);
     expect("route_options" in defaultStarted.context).toBe(false);
@@ -1230,12 +1252,16 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect("session_id" in repeatedCompactRead).toBe(false);
     expect(repeatedCompactRead.context).not.toBe(compact.context);
     expect(repeatedCompactRead.context.roads).not.toBe(compact.context.roads);
+    expect(repeatedCompactRead.context.character).not.toBe(compact.context.character);
+    expect(repeatedCompactRead.context.character[1]).not.toBe(compact.context.character[1]);
     expect("world" in repeatedCompactRead.context).toBe(false);
     (repeatedCompactRead.context.here as unknown as string[])[0] = "mutated_by_test";
+    (repeatedCompactRead.context.character[1] as unknown as number[])[0] = -1;
     const afterCompactMutationRead = a.get_overworld_session_context({
       session_id: started.session_id,
     });
     expect(afterCompactMutationRead.context.here[0]).toBe(full.current.id);
+    expect(afterCompactMutationRead.context.character[1][0]).toBe(30);
     expect("world" in afterCompactMutationRead.context).toBe(false);
     expect("ids" in afterCompactMutationRead.context).toBe(false);
     worldNamedRead.context.world = "mutated_by_test";
@@ -1288,9 +1314,12 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(repeatedFullRead.observation.routeOptions).toEqual(full.routeOptions);
     expect(repeatedFullRead.observation.routeOptions).not.toBe(full.routeOptions);
     expect(repeatedFullRead.observation.routeOptions[0]).not.toBe(full.routeOptions[0]);
+    expect(repeatedFullRead.observation.character).not.toBe(full.character);
+    expect(repeatedFullRead.observation.character.health).not.toBe(full.character.health);
     repeatedFullRead.observation.exits[0]!.travel_minutes = -1;
     repeatedFullRead.observation.discoveredAreaIds.push("mutated_by_test");
     repeatedFullRead.observation.routeOptions[0]!.estimate.elapsedMinutes = -1;
+    repeatedFullRead.observation.character.health.current = -1;
     const afterRouteMutationRead = a.get_overworld_session({
       include_observation: true,
       session_id: started.session_id,
@@ -1302,6 +1331,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(afterRouteMutationRead.observation.routeOptions[0]?.estimate.elapsedMinutes).toBe(
       full.routeOptions[0]?.estimate.elapsedMinutes,
     );
+    expect(afterRouteMutationRead.observation.character.health.current).toBe(30);
     expect(full.regionalArcs.length).toBeGreaterThan(0);
     expect(repeatedFullRead.observation.regionalArcs).toEqual(full.regionalArcs);
     expect(repeatedFullRead.observation.regionalArcs).not.toBe(full.regionalArcs);
@@ -1356,7 +1386,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
       session_id: started.session_id,
       include_ids: true,
     });
-    expect(compact.context.v).toBe(14);
+    expect(compact.context.v).toBe(15);
     expect(compact.context.here).toEqual([
       full.current.id,
       full.current.name,

@@ -126,7 +126,7 @@ both present.
 
 The first implementation sequence is:
 
-1. **Campaign character state** — one versioned, validated state shared by the
+1. **Campaign character state** _(foundation landed)_ — one versioned, validated state shared by the
    overworld and embedded quests: background, skills, values, health/wounds,
    equipment, money, abilities, knowledge, promises, crimes, NPC relationships,
    and faction standing.
@@ -145,6 +145,15 @@ The first implementation sequence is:
 The setting introduction must also explain the player's role and the coexistence
 of contemporary New York infrastructure with the steading-scale TTRPG crisis.
 That explanation must be playable context, not a lore dump.
+
+Foundation status: campaign-character v1 now has strict canonical schemas,
+deterministic cloning/serialization, overworld snapshot v9 persistence, explicit
+v8 migration, full/UI read-only projection, bounded compact projection, and
+tamper guards.
+Because no gameplay consequence can legitimately change this state yet, live
+restore accepts only the replay-proven default; non-default state is rejected
+until the next increment can reconstruct it from trusted quest outcomes. This
+foundation proves no causal-matrix fork by itself.
 
 ## Required resolution families
 

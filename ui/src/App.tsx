@@ -23,6 +23,7 @@ import { JourneyChoiceScreen } from "./JourneyChoiceScreen.js";
 import { JourneyStoryChoiceScreen } from "./JourneyStoryChoiceScreen.js";
 import { JourneyEndedScreen } from "./JourneyEndedScreen.js";
 import { JourneyStatus } from "./JourneyStatus.js";
+import { CampaignCharacterPanel } from "./CampaignCharacterPanel.js";
 import { formatGoalPassageLog } from "./goalPassage.js";
 import { FRESH_GAME_TUTORIAL } from "../../src/world/fresh_game_tutorial.js";
 import type { JourneyChoice } from "../../src/world/journey_contract.js";
@@ -375,6 +376,8 @@ export default function App(): JSX.Element {
       </header>
 
       <JourneyStatus journey={journey} onFollowGoalPassage={followGoalPassage} />
+
+      <CampaignCharacterPanel character={worldView.character} />
 
       <section className="overworld">
         <article className="location-panel">

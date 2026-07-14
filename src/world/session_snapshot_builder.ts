@@ -1,4 +1,8 @@
 import { sortedNumberMap, sortedStringMap, sortedStringSet } from "./session_collections.js";
+import {
+  cloneCampaignCharacterState,
+  type CampaignCharacterState,
+} from "./campaign_character_state.js";
 import { cloneJourneyContractSnapshot, type JourneyContractSnapshot } from "./journey_contract.js";
 import {
   OVERWORLD_SESSION_SAVE_VERSION,
@@ -13,6 +17,7 @@ import {
 export type OverworldSessionSnapshotBuildState = {
   worldId: string;
   worldHash: string;
+  character: CampaignCharacterState;
   currentId: string;
   currentAreaId: string | null;
   minutes: number;
@@ -47,6 +52,7 @@ export function buildOverworldSessionSnapshot(
     version: OVERWORLD_SESSION_SAVE_VERSION,
     worldId: state.worldId,
     worldHash: state.worldHash,
+    character: cloneCampaignCharacterState(state.character),
     currentId: state.currentId,
     currentAreaId: state.currentAreaId,
     minutes: state.minutes,

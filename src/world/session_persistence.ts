@@ -1,4 +1,5 @@
 import { buildOverworldSessionSnapshot } from "./session_snapshot_builder.js";
+import type { CampaignCharacterState } from "./campaign_character_state.js";
 import type { JourneyContractSnapshot } from "./journey_contract.js";
 import {
   applyOverworldSessionSnapshotRestore,
@@ -17,6 +18,7 @@ import type {
 export type OverworldSessionPersistenceState = OverworldSessionSnapshotRestoreState & {
   worldId: string;
   worldHash: string;
+  character: CampaignCharacterState;
   currentId: string;
   currentAreaId: string | null;
   minutes: number;
@@ -38,6 +40,7 @@ export function buildOverworldSessionSnapshotFromState(
   return buildOverworldSessionSnapshot({
     worldId: state.worldId,
     worldHash: state.worldHash,
+    character: state.character,
     currentId: state.currentId,
     currentAreaId: state.currentAreaId,
     minutes: state.minutes,

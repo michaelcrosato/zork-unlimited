@@ -14,10 +14,12 @@ import {
 import { cloneOverworldRouteOption } from "./session_routes.js";
 import { cloneOverworldRegionalArcProgress } from "./session_regional_arcs.js";
 import type { OverworldView } from "./session_view.js";
+import { cloneCampaignCharacterView } from "./campaign_character_view.js";
 
 export function cloneOverworldView(view: OverworldView): OverworldView {
   return {
     ...view,
+    character: cloneCampaignCharacterView(view.character),
     current: cloneOverworldNode(view.current),
     currentArea: view.currentArea ? cloneOverworldArea(view.currentArea) : null,
     areaExits: view.areaExits.map(cloneOverworldAreaExit),

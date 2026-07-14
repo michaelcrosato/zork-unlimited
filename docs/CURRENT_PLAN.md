@@ -4,49 +4,57 @@ Token-small AFK-loop handoff. The durable milestone and evidence rules now live
 in [`STARTING_SLICE.md`](STARTING_SLICE.md); do not replace that contract during
 an ultraplan.
 
-## Cycle: 2026-07-13 — Starting-Slice Foundation
+## Cycle: 2026-07-13 — Generic Quest Consequence Boundary
 
 ## Synthesis
 
-Goal Passage has landed and its gates are green. The next product milestone is
-the fixed Albany → Wolf-Winter → Albany-return vertical slice. Current evidence
-proves useful tactical tradeoffs inside Wolf-Winter, but not a persistent
-character, systemic noncombat agency, or mechanically changed Albany return.
+Campaign-character v1 now persists a strict default in overworld snapshot v9,
+migrates v8 explicitly, projects through full/compact/UI surfaces, bounds its
+recurring compact payload, and rejects non-default save injection without
+replayable provenance. No counted fork changed: the embedded quest still exports
+only ending identity, and the return remains mostly quest-specific prose.
 
-The largest reusable blocker is the quest boundary: an embedded quest receives
-a fresh quest-local character and exports only ending id/title/death. Equipment,
-wounds, skills, knowledge, promises, relationships, and faction state cannot
-yet cross that boundary.
+The highest-leverage blocker is now a trusted, data-driven consequence boundary.
+Wolf-Winter outcomes must resolve against authored world-manifest exports, apply
+generic monotonic character/world effects once, and replay those effects during
+restore. The RPG bridge must never be trusted to supply arbitrary effects.
 
 ## Chosen Move
 
-Establish the starting-slice contract and causal ledger, then introduce one
-versioned campaign-character state owned by the overworld. This increment stops
-at validated persistence and presentation; quest projection/foldback is the
-next increment, not an excuse to make this one broad.
+Introduce a minimal generic consequence catalog and applier, then migrate the
+three successful Wolf-Winter outcomes onto it. Start with monotonic relationship
+memory/floors and historical world facts; defer order-sensitive money, health,
+equipment, and resource deltas until a durable receipt chronology exists.
 
 - Keep all work inside Albany, Wolf-Winter, nearby travel, and the return.
 - Preserve old saves/content and deterministic/UI/MCP behaviour.
-- Persist a deterministic default through current saves and an explicit legacy
-  migration.
-- Expose one canonical read-only projection to full MCP, compact MCP, and UI.
-- Keep pack-local RPG state and inventory separate; do not leak Wolf objects.
-- Prepare, but do not yet implement, explicit quest projection/foldback.
+- Resolve ending ids only against trusted quest manifest content; the bridge
+  never exports executable effects.
+- Apply consequences atomically on first completion and reject a conflicting
+  second ending instead of silently returning the old journal entry.
+- Derive world facts and character memory by replaying canonical quest outcomes
+  during restore; do not add independently forgeable save fields.
+- Keep pack-local RPG objects separate; never export the rail guard or brace
+  stake as campaign equipment.
 - Do not count planned matrix rows as depth until paired counterfactual tests
   prove their delayed mechanical consumers.
 
 ## Acceptance for the next implementation increment
 
-1. One strict, versioned campaign-character schema covers every required state
-   family without quest-specific fields or mutable aliasing.
-2. Fresh sessions receive a deterministic default and reject malformed,
-   non-finite, duplicate, or out-of-range state.
-3. A new overworld snapshot version round-trips the character exactly; promised
-   legacy snapshots migrate to the canonical default or reject explicitly.
-4. Full MCP, compact MCP, and UI receive the same player-facing character
-   projection without exposing hidden state.
-5. Existing quest start/completion and content behaviour remain unchanged;
-   canonical v9 hashes are stable, with a documented deterministic migration
-   from v8 rather than impossible byte equality with the old format.
-6. Pre/post crawl, focused schema/restore/parity tests, a fresh pure exit, and
+1. A strict generic schema validates quest outcome exports and rejects unknown
+   effects, duplicate outcomes/effects, invalid ids, and malformed floors.
+2. A pure applier proves transactional rollback, caller isolation, idempotency,
+   and reuse through a synthetic non-Wolf quest.
+3. Wolf-Winter's three non-death endings export distinct Cade memories and
+   historical world facts; its death ending exports nothing.
+4. Completion applies the trusted export once, same-ending repeats are no-ops,
+   and conflicting repeats reject before mutation.
+5. Save restore replays character consequences and derives facts from canonical
+   quest outcomes while rejecting a forged outcome/journal combination; the
+   exact pre-catalog world hash receives an explicit one-time migration and all
+   other manifest mismatches still reject.
+6. Existing Wolf return presentation, UI/MCP parity, deterministic replay, and
+   all legacy behaviour remain green; no fork counts until an Albany consumer
+   changes a later legal action, service, risk, resource, or NPC behaviour.
+7. Pre/post crawl, focused schema/foldback/restore tests, a fresh pure exit, and
    health pass.
