@@ -25,6 +25,7 @@ import { reactiveName, reactiveText } from "../core/reactive_text.js";
 import type { GameState } from "../core/state.js";
 import type { DialogueNode, Ending, GameObject, Npc, Room, RpgPack } from "./schema.js";
 import { initRuntimeState } from "./state_init.js";
+import type { CampaignCharacterImportInput } from "./campaign_character_import.js";
 
 export type RpgModelIndex = {
   pack: RpgPack;
@@ -120,7 +121,11 @@ export function activeDialogue(
   return coreActiveDialogue(index, state);
 }
 
-export function initStateForRpgModel(index: RpgModelIndex, seed: number): GameState {
+export function initStateForRpgModel(
+  index: RpgModelIndex,
+  seed: number,
+  campaignImport?: CampaignCharacterImportInput,
+): GameState {
   const meta = index.pack.meta;
   const startRoom = index.rooms.get(meta.start_room);
   return initRuntimeState({
@@ -130,5 +135,8 @@ export function initStateForRpgModel(index: RpgModelIndex, seed: number): GameSt
     flagsInit: meta.flags_init,
     heldItems: index.pack.objects.filter((o) => o.held).map((o) => o.id),
     onEnter: startRoom?.on_enter,
+    ...(campaignImport !== undefined
+      ? { campaignImport: { pack: index.pack, ...campaignImport } }
+      : {}),
   });
 }

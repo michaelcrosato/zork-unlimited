@@ -19,6 +19,7 @@ import { traceSourceLabel, type Trace } from "../src/trace/record.js";
 import { formatReport } from "../src/validate/report.js";
 import type { RpgAction } from "../src/api/types.js";
 import { assertWellFormedState } from "../src/persist/save_load.js";
+import { assertCampaignImportReceiptCatalogCompatibility } from "../src/persist/campaign_import_integrity.js";
 import { assertRpgStateReferences } from "../src/rpg/state_integrity.js";
 import { RpgSourceRuntime, type RpgLoadResult } from "../src/mcp/rpg_source_runtime.js";
 import type { TraceSourceArgs } from "../src/world/source.js";
@@ -70,7 +71,8 @@ function inspectTrace(tracePath: string, sourceArgs: TraceSourceArgs): void {
   assertTraceMode(trace);
   const root = process.cwd();
   const rpgSources = new RpgSourceRuntime(root);
-  const { compiled } = rpgSources.resolveTraceSource(sourceArgs, trace, "inspect");
+  const source = rpgSources.resolveTraceSource(sourceArgs, trace, "inspect");
+  const { compiled } = source;
   console.log(
     `Trace: ${trace.trace_id}  source: ${traceSourceLabel(trace)}  seed: ${trace.seed}  steps: ${trace.actions.length}`,
   );
@@ -81,6 +83,10 @@ function inspectTrace(tracePath: string, sourceArgs: TraceSourceArgs): void {
     process.exit(1);
   }
   assertWellFormedState(trace.initial_state);
+  assertCampaignImportReceiptCatalogCompatibility(
+    trace.initial_state,
+    source.kind === "worldQuest" ? source.campaignImports : undefined,
+  );
   const index = indexRpgPack(compiled.pack);
   assertRpgStateReferences(index, trace.initial_state);
   const rules = buildRpgRules(index);

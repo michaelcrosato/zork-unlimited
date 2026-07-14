@@ -78,6 +78,7 @@ import {
   type TravelLogEntry,
 } from "./session_snapshot.js";
 import {
+  cloneCampaignCharacterState,
   createInitialCampaignCharacterState,
   type CampaignCharacterState,
 } from "./campaign_character_state.js";
@@ -415,6 +416,15 @@ export class OverworldSession {
 
   snapshot(): OverworldSessionSnapshot {
     return cloneOverworldSessionSnapshot(this.cachedSnapshot().snapshot);
+  }
+
+  /**
+   * Trusted quest-launch input. The clone keeps the persistent character owned
+   * by this session; an embedded RPG can project it without gaining a mutable
+   * reference back into the overworld.
+   */
+  campaignCharacterState(): CampaignCharacterState {
+    return cloneCampaignCharacterState(this.characterState);
   }
 
   /** Derived historical world truth; detached so callers cannot mutate session state. */

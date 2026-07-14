@@ -54,16 +54,14 @@ import {
 import {
   overworldQuestCompletionFromRpgSession,
   startOverworldQuestThroughRpg,
+  type EmbeddedOverworldQuestStartContext,
+  type OverworldQuestRpgStartArgs,
 } from "./overworld_quest_bridge.js";
 import {
   rpgStateHashMatches,
   rpgStateHashRejection,
   type RpgStateHashRejection,
 } from "./rpg_state_guards.js";
-import type {
-  RpgStartWorldQuestToolArgs,
-  RpgWorldQuestStartPayload,
-} from "./rpg_session_lifecycle.js";
 import {
   rpgSourceFields,
   type RpgMcpSessionRuntime,
@@ -237,9 +235,10 @@ export type OverworldToolHandlerDeps = {
   rpgRuntime: RpgMcpSessionRuntime;
   overworldSessions: OverworldMcpSessionStore;
   loadOverworldManifest: () => OverworldManifest;
-  startWorldQuest: <Args extends RpgStartWorldQuestToolArgs>(
+  startEmbeddedWorldQuest: <Args extends OverworldQuestRpgStartArgs>(
     args: Args,
-  ) => RpgWorldQuestStartPayload<Args>;
+    context: EmbeddedOverworldQuestStartContext,
+  ) => RpgSessionPayload<Args>;
 };
 
 export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
@@ -625,7 +624,7 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
         overworldSessionId: args.session_id,
         questId: args.quest_id,
         startOptions: responseOptions,
-        startWorldQuest: deps.startWorldQuest,
+        startEmbeddedWorldQuest: deps.startEmbeddedWorldQuest,
       });
       const questResult =
         responseOptions.compact_result === true

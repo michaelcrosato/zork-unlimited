@@ -1,5 +1,10 @@
 import { applyEffects, type Effect } from "../core/effects.js";
 import { initState, type GameState } from "../core/state.js";
+import {
+  projectCampaignCharacterImports,
+  type CampaignCharacterImportInput,
+} from "./campaign_character_import.js";
+import type { RpgPack } from "./schema.js";
 
 export type InitRuntimeStateOptions = {
   seed: number;
@@ -8,6 +13,7 @@ export type InitRuntimeStateOptions = {
   flagsInit?: string[] | undefined;
   heldItems?: string[] | undefined;
   onEnter?: Effect[] | undefined;
+  campaignImport?: (CampaignCharacterImportInput & { pack: RpgPack }) | undefined;
 };
 
 export function initRuntimeState(opts: InitRuntimeStateOptions): GameState {
@@ -21,5 +27,15 @@ export function initRuntimeState(opts: InitRuntimeStateOptions): GameState {
     opts.heldItems && opts.heldItems.length > 0
       ? { ...seeded, inventory: [...seeded.inventory, ...opts.heldItems] }
       : seeded;
-  return opts.onEnter && opts.onEnter.length > 0 ? applyEffects(opts.onEnter, base).state : base;
+  const imported = opts.campaignImport
+    ? projectCampaignCharacterImports(
+        opts.campaignImport.pack,
+        base,
+        opts.campaignImport.character,
+        opts.campaignImport.imports,
+      ).state
+    : base;
+  return opts.onEnter && opts.onEnter.length > 0
+    ? applyEffects(opts.onEnter, imported).state
+    : imported;
 }

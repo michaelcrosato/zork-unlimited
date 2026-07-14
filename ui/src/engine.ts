@@ -18,12 +18,20 @@ import type { GameEvent } from "../../src/core/events.js";
 
 import { RpgPackSchema } from "../../src/rpg/schema.js";
 import {
+  CampaignCharacterImportsSchema,
+  type CampaignCharacterImports,
+} from "../../src/rpg/campaign_character_import.js";
+import {
   indexRpgPack,
   buildRpgRules,
   initStateForRpgPack,
   enumerateRpgActions,
   type RpgIndex,
 } from "../../src/rpg/runner.js";
+import {
+  parseCampaignCharacterState,
+  type CampaignCharacterState,
+} from "../../src/world/campaign_character_state.js";
 import { buildRpgObservation } from "../../src/rpg/observation.js";
 import {
   classifyRpgJourneyDecision,
@@ -119,6 +127,38 @@ export class GameSession {
       rules: buildRpgRules(index),
       index,
       fresh: () => initStateForRpgPack(index, seed),
+    });
+  }
+
+  /**
+   * Start a quest from a live overworld character using only the import catalog
+   * authored on that trusted quest. Standalone `start` deliberately has no such
+   * input surface.
+   */
+  static startEmbedded(
+    source: string,
+    character: CampaignCharacterState,
+    imports: CampaignCharacterImports | undefined,
+    seed = 1,
+  ): GameSession {
+    const c = compileRpgSource(source);
+    const index = indexRpgPack(c.pack);
+    const characterSnapshot = parseCampaignCharacterState(character);
+    const importsSnapshot =
+      imports === undefined ? undefined : CampaignCharacterImportsSchema.parse(imports);
+    return new GameSession({
+      packId: c.pack.meta.id,
+      title: c.pack.meta.title,
+      contentHash: c.contentHash,
+      rules: buildRpgRules(index),
+      index,
+      fresh: () =>
+        importsSnapshot === undefined
+          ? initStateForRpgPack(index, seed)
+          : initStateForRpgPack(index, seed, {
+              character: characterSnapshot,
+              imports: importsSnapshot,
+            }),
     });
   }
 

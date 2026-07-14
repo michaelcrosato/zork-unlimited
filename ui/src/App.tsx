@@ -168,13 +168,22 @@ export default function App(): JSX.Element {
     const manifestQuest = questsById.get(quest.id);
     const source = manifestQuest ? normalizePackPath(manifestQuest.source) : undefined;
     const pack = source ? packsByPath.get(source) : undefined;
-    if (!pack) {
+    if (!manifestQuest || !pack) {
       setError(`Quest pack is missing: ${source ?? quest.id}`);
       return;
     }
     try {
-      const localQuest = worldSession.startQuest(quest.id);
-      const session = GameSession.start(pack.source, 1);
+      // Keep launch failure-atomic: all quest eligibility, pack compilation,
+      // target validation, and imported-state construction happen before the
+      // overworld records that the quest has started.
+      const preview = worldSession.previewQuestStart(quest.id);
+      const session = GameSession.startEmbedded(
+        pack.source,
+        worldSession.campaignCharacterState(),
+        manifestQuest.campaign_imports,
+        1,
+      );
+      const localQuest = worldSession.startQuest(preview.id);
       setQuestSession(session);
       setQuestView(session.view());
       setActiveQuest(localQuest);

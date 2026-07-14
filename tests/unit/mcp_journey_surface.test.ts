@@ -583,7 +583,7 @@ describe("MCP journey surface", () => {
     expect(endedRun.a.sessions.embeddedJourneyPause(endedRun.overworldSessionId)).toBeNull();
   });
 
-  it("shares one story-choice presentation with the UI and blocks every embedded RPG action", () => {
+  it("shares one story-choice presentation with the UI and rejects forged embedded authority", () => {
     const uiSession = uiSessionAtAlbanyStoryChoice();
     const uiJourney = uiSession.journey();
     const snapshot = uiSession.snapshot();
@@ -613,46 +613,16 @@ describe("MCP journey surface", () => {
       /targetQuestId|endingId|ending_held|wolf_winter|content\/rpg|win_conditions|maneuver_/i,
     );
 
-    const embedded = a.start_world_quest({
-      world_quest_id: "wolf_winter",
-      seed: 1,
-      overworldSessionId: restored.session_id,
-      compact_observation: false,
-    });
-    const legalAction = embedded.observation.available_actions[0];
-    if (!legalAction) throw new Error("expected an opening RPG action before journey projection");
-    const rpgHashBefore = a.sessions.get(embedded.session_id).stateHash;
-
-    const observed = a.get_observation({
-      session_id: embedded.session_id,
-      compact_observation: false,
-    });
-    expect(observed.journey).toEqual(uiJourney);
-    expect(observed.observation.available_actions).toEqual([]);
-    const listed = a.list_legal_actions({
-      session_id: embedded.session_id,
-      compact_actions: false,
-    });
-    expect(listed.journey).toEqual(uiJourney);
-    expect(listed.actions).toEqual([]);
+    expect(() =>
+      (a.start_world_quest as (args: Record<string, unknown>) => unknown)({
+        world_quest_id: "wolf_winter",
+        seed: 1,
+        overworldSessionId: restored.session_id,
+      }),
+    ).toThrow(/does not accept embedded field "overworldSessionId"/);
     expect(() => a.rest_overworld_session({ session_id: restored.session_id })).toThrow(
       /presented story consequence/i,
     );
-
-    const blocked = a.step_action({
-      session_id: embedded.session_id,
-      action_id: legalAction.id,
-      compact_observation: false,
-      compact_events: false,
-    });
-    expect(blocked).toMatchObject({
-      ok: false,
-      rejection_reason: uiJourney.storyChoice!.message,
-      journeyDecision: { countsTowardJourney: false, reason: "rejected" },
-      journey: uiJourney,
-    });
-    expect(blocked.observation.available_actions).toEqual([]);
-    expect(a.sessions.get(embedded.session_id).stateHash).toBe(rpgHashBefore);
 
     const uiBranch = OverworldSession.restore(WORLD, snapshot);
     const uiResult = uiBranch.chooseJourneyStory("send_wagon_to_cade");
@@ -671,10 +641,6 @@ describe("MCP journey surface", () => {
     expect(JSON.stringify(mcpBranch.journey.goalGuidance)).not.toMatch(
       /targetQuestId|endingId|wolf_winter|content\/rpg|win_conditions|maneuver_/i,
     );
-    expect(
-      a.list_legal_actions({ session_id: embedded.session_id, compact_actions: true }).actions
-        .length,
-    ).toBeGreaterThan(0);
   });
 
   it.each(TANNERS_FEVER_ACCOUNTABILITY_CHOICE_IDS)(

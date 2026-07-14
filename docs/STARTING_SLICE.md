@@ -108,12 +108,14 @@ The current slice does **not** yet meet this contract:
 
 - Albany discovery is deterministic FIFO reveal, and most jobs/sites/events are
   one-click time/renown transactions;
-- every Wolf-Winter player receives the same quest-local relief rider, fixed
-  stats, and fixed starting gear;
-- quest completion exports only ending id/title/death before the overworld adds
-  completion and renown;
-- health, wounds, equipment, abilities, knowledge, promises, relationships, and
-  faction state do not cross quest boundaries;
+- fresh Albany still authors only the default character, so every current player
+  reaches Wolf-Winter with the same effective profile despite the landed import
+  boundary;
+- Wolf-Winter now exports explicit Old Cade memories and world facts, but those
+  consequences do not yet change an Albany service, opportunity, or NPC action;
+- fieldcraft is the only real inbound Wolf mapping; health is deferred to protect
+  the combat guarantee, and Albany equipment still needs an origin-honest
+  quest-local representation before it can alter play;
 - Wolf-Winter's successful routes still require defeating the same three wolves;
 - most return reactivity is authored presentation routed through quest-specific
   campaign code rather than reusable state and consequences.
@@ -130,9 +132,10 @@ The first implementation sequence is:
    campaign record: background, skills, values, health/wounds, equipment, money,
    abilities, knowledge, promises, crimes, NPC relationships, and faction
    standing.
-2. **Quest boundary contract** — inject that state into an embedded quest and
-   fold back only validated, explicit changes without resetting the protagonist
-   or leaking quest-local objects.
+2. **Quest boundary contract** _(inbound and outbound foundation landed)_ —
+   inject allowlisted state into an embedded quest and fold back only validated,
+   explicit changes without resetting the protagonist or leaking quest-local
+   objects.
 3. **Data-driven consequences** _(outbound boundary landed)_ — quest content
    declares reusable, validated character/world effects; campaign code consumes
    generic state rather than adding Wolf-specific ending conditionals.
@@ -149,15 +152,29 @@ That explanation must be playable context, not a lore dump.
 Foundation status: campaign-character v1 now has strict canonical schemas,
 deterministic cloning/serialization, overworld snapshot v9 persistence, explicit
 v8 migration, full/UI read-only projection, bounded compact projection, and
-tamper guards. A generic, monotonic quest-export catalog now applies relationship
+tamper guards. A generic, monotonic quest-export catalog applies relationship
 memories/floors and derives historical world facts from canonical outcome ids.
 Wolf-Winter's three successful endings create distinct Old Cade memories and
 byre/gate/timber facts; restore replays the character result, rejects forged
-outcome/journal/state combinations, and fences the prior manifest hash to one
-exact migration target. No fact is independently persisted, and the embedded
-quest still receives no campaign-character input. Because Albany does not yet
-consume these effects to change a later action, service, risk, resource, or NPC
-behaviour, this foundation still proves no causal-matrix fork by itself.
+outcome/journal/state combinations, and fences prior manifests to one exact
+migration target.
+
+The trusted inbound boundary is also landed. Quest manifests declare strict,
+pack-validated import rules; only the private overworld bridge supplies detached
+campaign state; material imports occur before the opening observation and carry
+a canonical receipt through save/hash/trace replay; public/direct starts remain
+pack-default; and UI/MCP reset determinism is proven. Imported-only flags and
+items participate in source validation, every catalog retains an
+import-independent structural victory, and health imports are prohibited on a
+`combat_guaranteed` pack until an authored minimum/recovery contract exists.
+Wolf-Winter therefore maps only `skill:fieldcraft` to its defence floor today.
+The tempting Albany-kit → steading-brace alias was rejected because it would lie
+about where saved timber came from.
+
+Because fresh Albany does not yet create fieldcraft or any alternative profile,
+and its returned facts/memories do not yet change a later action, service, risk,
+resource, or NPC behaviour, this foundation still proves no causal-matrix fork
+by itself.
 
 ## Required resolution families
 

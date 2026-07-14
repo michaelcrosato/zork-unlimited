@@ -67,8 +67,15 @@ import {
 
 export const OVERWORLD_PRE_CAMPAIGN_EXPORTS_WORLD_HASH =
   "39d32c027d2e826f476dd299bb95cc3911994ec92b4fbf297be8d1216e5b6151";
-export const OVERWORLD_CAMPAIGN_EXPORTS_MIGRATION_TARGET_WORLD_HASH =
+export const OVERWORLD_CAMPAIGN_EXPORTS_WORLD_HASH =
   "b9416e3c43d9d54085ed9465b4d875811daebaf9834793d3f4a1ffca93b486c4";
+/** @deprecated Historical name retained for callers that identify the exports-era manifest. */
+export const OVERWORLD_CAMPAIGN_EXPORTS_MIGRATION_TARGET_WORLD_HASH =
+  OVERWORLD_CAMPAIGN_EXPORTS_WORLD_HASH;
+// Updated whenever the trusted manifest changes. Prior hashes are accepted only
+// when they migrate directly into this exact manifest revision.
+export const OVERWORLD_CAMPAIGN_IMPORTS_MIGRATION_TARGET_WORLD_HASH =
+  "cad75dafc291709f1d5c756dd70dd1002260bb06ca87d8e1e90aaf905f5f05c7";
 
 export type OverworldSessionSnapshotRestorePlan = {
   characterAfter: CampaignCharacterState;
@@ -185,8 +192,15 @@ export function planOverworldSessionSnapshotRestore(args: {
   }
   const migratesPreCampaignExportsWorldHash =
     snapshot.worldHash === OVERWORLD_PRE_CAMPAIGN_EXPORTS_WORLD_HASH &&
-    worldHash === OVERWORLD_CAMPAIGN_EXPORTS_MIGRATION_TARGET_WORLD_HASH;
-  if (snapshot.worldHash !== worldHash && !migratesPreCampaignExportsWorldHash) {
+    worldHash === OVERWORLD_CAMPAIGN_IMPORTS_MIGRATION_TARGET_WORLD_HASH;
+  const migratesCampaignExportsWorldHash =
+    snapshot.worldHash === OVERWORLD_CAMPAIGN_EXPORTS_WORLD_HASH &&
+    worldHash === OVERWORLD_CAMPAIGN_IMPORTS_MIGRATION_TARGET_WORLD_HASH;
+  if (
+    snapshot.worldHash !== worldHash &&
+    !migratesPreCampaignExportsWorldHash &&
+    !migratesCampaignExportsWorldHash
+  ) {
     throw new Error("Overworld session snapshot was made against a different world manifest.");
   }
 

@@ -25,7 +25,8 @@ import { JOURNEY_CONTRACT_VERSION } from "../../src/world/journey_contract.js";
 import { OverworldSession } from "../../src/world/session.js";
 import { OVERWORLD_SESSION_LEGACY_SAVE_VERSION } from "../../src/world/session_snapshot.js";
 import {
-  OVERWORLD_CAMPAIGN_EXPORTS_MIGRATION_TARGET_WORLD_HASH,
+  OVERWORLD_CAMPAIGN_EXPORTS_WORLD_HASH,
+  OVERWORLD_CAMPAIGN_IMPORTS_MIGRATION_TARGET_WORLD_HASH,
   OVERWORLD_PRE_CAMPAIGN_EXPORTS_WORLD_HASH,
 } from "../../src/world/session_snapshot_restore.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
@@ -328,15 +329,11 @@ describe("bug_0505 — Wolf-Winter saved wood has a post-hunt consequence", () =
 
     for (const expected of outcomes) {
       const api = createToolApi({ root: process.cwd() });
-      const started = api.start_world_quest({
-        world_quest_id: "wolf_winter",
-        seed: 505,
-        overworldSessionId: "ow-consequence-proof",
-      });
-      api.sessions.update(started.session_id, expected.state);
+      const started = launchAlbanyWolf(api);
+      api.sessions.update(started.rpgSessionId, expected.state);
       const completion = overworldQuestCompletionFromRpgSession(
-        api.sessions.get(started.session_id),
-        "ow-consequence-proof",
+        api.sessions.get(started.rpgSessionId),
+        started.overworldSessionId,
       );
       expect(completion).toEqual({
         questId: "wolf_winter",
@@ -606,14 +603,14 @@ describe("bug_0505 — Wolf-Winter saved wood has a post-hunt consequence", () =
     );
   });
 
-  it("fences the one-time pre-export save migration to one exact hash pair", () => {
-    expect(hashState(WORLD)).toBe(OVERWORLD_CAMPAIGN_EXPORTS_MIGRATION_TARGET_WORLD_HASH);
+  it("fences both trusted pre-import save eras to the exact campaign-import target", () => {
+    expect(hashState(WORLD)).toBe(OVERWORLD_CAMPAIGN_IMPORTS_MIGRATION_TARGET_WORLD_HASH);
 
     const completed = foldAlbanyWolf({ state: ordinaryHeldFork(), finalActionId: "go_north" });
     const current = completed.api.export_overworld_session({
       session_id: completed.overworldSessionId,
     }).snapshot;
-    expect(current.worldHash).toBe(OVERWORLD_CAMPAIGN_EXPORTS_MIGRATION_TARGET_WORLD_HASH);
+    expect(current.worldHash).toBe(OVERWORLD_CAMPAIGN_IMPORTS_MIGRATION_TARGET_WORLD_HASH);
     expect("campaignWorldFactIds" in current).toBe(false);
     expect(() =>
       OverworldSession.restore(WORLD, {
@@ -627,7 +624,7 @@ describe("bug_0505 — Wolf-Winter saved wood has a post-hunt consequence", () =
     legacyV9.character = createInitialCampaignCharacterState();
     const migratedV9 = OverworldSession.restore(WORLD, legacyV9);
     expect(migratedV9.snapshot().worldHash).toBe(
-      OVERWORLD_CAMPAIGN_EXPORTS_MIGRATION_TARGET_WORLD_HASH,
+      OVERWORLD_CAMPAIGN_IMPORTS_MIGRATION_TARGET_WORLD_HASH,
     );
     expect(migratedV9.snapshot().character).toEqual(current.character);
     expect(migratedV9.campaignWorldFactIds()).toEqual([
@@ -645,6 +642,17 @@ describe("bug_0505 — Wolf-Winter saved wood has a post-hunt consequence", () =
       current.character,
     );
 
+    const exportsEraV9 = structuredClone(current);
+    exportsEraV9.worldHash = OVERWORLD_CAMPAIGN_EXPORTS_WORLD_HASH;
+    expect(OverworldSession.restore(WORLD, exportsEraV9).snapshot().character).toEqual(
+      current.character,
+    );
+    const forgedExportsEraCharacter = structuredClone(exportsEraV9);
+    forgedExportsEraCharacter.character.money = 1;
+    expect(() => OverworldSession.restore(WORLD, forgedExportsEraCharacter)).toThrow(
+      /campaign character does not match replayed quest consequences/i,
+    );
+
     const arbitraryOldHash = structuredClone(legacyV9);
     arbitraryOldHash.worldHash = "0".repeat(64);
     expect(() => OverworldSession.restore(WORLD, arbitraryOldHash)).toThrow(
@@ -653,8 +661,15 @@ describe("bug_0505 — Wolf-Winter saved wood has a post-hunt consequence", () =
 
     const futureWorld = structuredClone(WORLD);
     futureWorld.design_rules.push("A future manifest revision outside the one-time migration.");
-    expect(hashState(futureWorld)).not.toBe(OVERWORLD_CAMPAIGN_EXPORTS_MIGRATION_TARGET_WORLD_HASH);
+    expect(hashState(futureWorld)).not.toBe(OVERWORLD_CAMPAIGN_IMPORTS_MIGRATION_TARGET_WORLD_HASH);
     expect(() => OverworldSession.restore(futureWorld, legacyV9)).toThrow(
+      /different world manifest/,
+    );
+
+    const exportsWorld = structuredClone(WORLD);
+    delete exportsWorld.quests.find((quest) => quest.id === "wolf_winter")!.campaign_imports;
+    expect(hashState(exportsWorld)).toBe(OVERWORLD_CAMPAIGN_EXPORTS_WORLD_HASH);
+    expect(() => OverworldSession.restore(exportsWorld, legacyV9)).toThrow(
       /different world manifest/,
     );
 

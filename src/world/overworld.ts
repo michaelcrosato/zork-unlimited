@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { CampaignCharacterImportsSchema } from "../rpg/campaign_character_import.js";
 import {
   CampaignConsequenceEffectsSchema,
   campaignConsequenceEffectKey,
@@ -273,6 +274,7 @@ export const OverworldQuestSchema = z
     area: z.string().min(1),
     discovery: z.string().min(1),
     visibility: z.literal("local_notice_board"),
+    campaign_imports: CampaignCharacterImportsSchema.optional(),
     campaign_exports: OverworldQuestCampaignExportsSchema.optional(),
   })
   .strict();
@@ -1108,6 +1110,10 @@ function assertQuestsIntegrity(
       throw new Error(`Overworld quest "${quest.id}" has missing area.`);
     if (areaHomes.get(quest.area) !== quest.home) {
       throw new Error(`Overworld quest "${quest.id}" is anchored outside its home town.`);
+    }
+
+    if (quest.campaign_imports !== undefined) {
+      CampaignCharacterImportsSchema.parse(quest.campaign_imports);
     }
 
     const campaignEndingIds = new Set<string>();

@@ -267,6 +267,51 @@ describe("New York overworld graph", () => {
     }
   });
 
+  it("authors Wolf-Winter's trusted campaign imports without opting legacy quests in", () => {
+    const wolfWinter = world.quests.find((quest) => quest.id === "wolf_winter")!;
+    const legacyQuests = world.quests.filter((quest) => quest.id !== wolfWinter.id);
+
+    expect(legacyQuests.every((quest) => !("campaign_imports" in quest))).toBe(true);
+    expect(wolfWinter.campaign_imports).toEqual({
+      version: 1,
+      rules: [
+        {
+          id: "import:wolf_winter_fieldcraft",
+          type: "skill_rank_to_var",
+          skill_id: "skill:fieldcraft",
+          target_var: "defense",
+        },
+      ],
+    });
+  });
+
+  it("keeps campaign imports strict, unique, and opt-in", () => {
+    const duplicateRule = structuredClone(world);
+    const imports = duplicateRule.quests.find(
+      (quest) => quest.id === "wolf_winter",
+    )!.campaign_imports!;
+    imports.rules.push(structuredClone(imports.rules[0]!));
+    expect(() => assertOverworldIntegrity(duplicateRule)).toThrow(/duplicate.*rule id/i);
+    expect(() => parseOverworldManifest(duplicateRule)).toThrow(/duplicate.*rule id/i);
+
+    const duplicateWriter = structuredClone(world);
+    const writerImports = duplicateWriter.quests.find(
+      (quest) => quest.id === "wolf_winter",
+    )!.campaign_imports!;
+    writerImports.rules.push({
+      id: "import:wolf_winter_other_health",
+      type: "skill_rank_to_var",
+      skill_id: "skill:other",
+      target_var: "defense",
+    });
+    expect(() => parseOverworldManifest(duplicateWriter)).toThrow(/both write/i);
+
+    const legacyRaw = structuredClone(world);
+    delete legacyRaw.quests.find((quest) => quest.id === "wolf_winter")!.campaign_imports;
+    const legacyParsed = parseOverworldManifest(legacyRaw);
+    expect(legacyParsed.quests.every((quest) => !("campaign_imports" in quest))).toBe(true);
+  });
+
   it("rejects duplicate campaign export identities and effects without defaulting legacy quests", () => {
     const duplicateEndingId = structuredClone(world);
     const duplicateIdExports = duplicateEndingId.quests.find(

@@ -674,14 +674,21 @@ function rpgRuntimeEffects(pack: RpgPack): Effect[] {
   ];
 }
 
-export function validateRpg(pack: RpgPack): ValidationReport {
+export type ValidateRpgOptions = {
+  /** Flags a trusted higher-level boundary can set before the first RPG turn. */
+  extraSettableFlags?: readonly string[];
+  /** Pack-local objects a trusted higher-level boundary can place in starting inventory. */
+  extraObtainable?: readonly string[];
+};
+
+export function validateRpg(pack: RpgPack, opts: ValidateRpgOptions = {}): ValidationReport {
   // Flags/items that combat provides to the foundation validator. Authored
   // skill-check branch effects are scanned by the RPG foundation validator, so do
   // not inject them here again (score/list extras would double-count them).
   const enemyEffects = enemyRuntimeEffects(pack);
   const maneuverEffects = maneuverRuntimeEffects(pack);
-  const extraSettableFlags: string[] = [];
-  const extraObtainable: string[] = [];
+  const extraSettableFlags: string[] = [...(opts.extraSettableFlags ?? [])];
+  const extraObtainable: string[] = [...(opts.extraObtainable ?? [])];
   for (const enemy of pack.enemies) {
     if (enemy.defeat_flag) extraSettableFlags.push(enemy.defeat_flag);
     for (const maneuver of enemy.maneuvers ?? []) {

@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 555 -->
+<!-- historical_cycle_count: 556 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,14 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - trusted_campaign_quest_imports
+
+- Change: a strict per-quest import catalog now projects selected campaign-character facts only through closure-private embedded starts; direct/public quest starts remain pack-default. Wolf-Winter currently imports only `fieldcraft` as a defense floor, with health and equipment deliberately unmapped until authored consequences can tell the truth about them.
+- Integrity: canonical receipts bind the exact catalog hash, rule ids, effect types, and targets through saves and MCP/CLI replay/inspect; stale or absent catalogs reject before session/world mutation. This is deterministic compatibility for intentionally editable local saves, not cryptographic authentication.
+- Pure evidence: verified pure/fresh seed 12 completed Wolf-Winter plus five later goals, continued through every earlier goal/checkpoint, and ended voluntarily at decision 133; clarity 4/5, enjoyment 5/5, replay true, no stuck state. Seed 11's report was correctly rejected for omitting its mandatory playthrough log.
+- Compile/self-critique: the ledger is 772 accepted/33 rejected, one report beyond the 771-report compile and below threshold. PASS for a trusted inbound boundary, not a depth claim: no causal-matrix fork is counted, and the player again identified the shared board→contact→items→checks chassis as S1 repetition.
+- Guard: three adversarial reviews closed validation, authority, solvability, combat-guarantee, provenance, and mutable-input defects; pre/post 6,000-step crawls (`20260714T044643Z`, `20260714T054135Z`) reached 247/247 nodes, 344/344 edges, and 12/12 quests.
 
 ### Cycle result - trusted_quest_campaign_exports
 
@@ -137,11 +145,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Effect: the prior every-leg “toll booth,” repetitive encounter, Oneonta→Rome padding, and post-Gallowmere Queensbury warning complaints did not recur. Travel is now functional/formulaic rather than worst-moment friction; remaining connective debt is route backtracking.
 - Compile/self-critique: 453 verified reports include four pure contract-v3 exits: all continued at decisions 40 and 80, 20 continue vs 4 end, 105–114 decisions, replay 4/4. PASS for authored cadence, not retention completion—the player still ended after four quests; fresh S1s are stale Hayden dialogue and repeated NPC/town templates.
 - Guard: 133 focused tests plus typecheck, final 6000-step crawl (247/247 nodes, 344/344 edges, 12/12 quests), independent receipt verification, three-report feedback compile, and full health passed.
-
-### Cycle result - compact_road_scene_parity
-
-- Surface: compact overworld v14 now gives pure MCP the same bounded route, event title/summary, option labels, and visible costs as human road choices; hidden outcomes stay hidden until selection, then canonical consequence prose renders in MCP, web UI, terminal, and spectate while rolling journals stay lean.
-- Root/effect: compact projection had reduced every road premise to internal id/risk and bare strategy ids, then discarded the result text. Exact default MCP now exposes Albany–Colonie's jackknifed-truck scene and chosen aftermath; stable strategy ids preserve snapshot/replay compatibility (`bug_0508`).
-- Pure evidence: independently verified seed 1507 completed Wolf-Winter, Gallowmere, Tanner's Fever, and Breaking Weir; continued at goals/checkpoints 23/40/51/80/83, ended honestly at goal 4 on decision 111, clarity/enjoyment 4/4, replay true. Missing-premise friction did not recur; visible prose exposed genuine stale/generic road-content debt.
-- Self-critique: PASS for human/MCP choice-and-consequence parity, not for retention—the player still ended after four quests and called Oneonta→Rome filler. Next is state-aware authored encounter families; truthful goal routing and Cade's learn-both/choose-later copy remain behind it. Seeds 1407+1507 are two new verified reports, below the three-report compile threshold.
-- Guard: 115 focused tests plus root/UI typechecks, final 6000-step crawl (247/247 nodes, 344/344 edges, 12/12 quests), independent receipt verification, and full health (296 files/2101 tests, UI, 12 packs) passed.

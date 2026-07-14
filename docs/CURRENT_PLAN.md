@@ -4,68 +4,71 @@ Token-small AFK-loop handoff. The durable milestone and evidence rules now live
 in [`STARTING_SLICE.md`](STARTING_SLICE.md); do not replace that contract during
 an ultraplan.
 
-## Cycle: 2026-07-13 — Campaign Character Quest-Input Boundary
+## Cycle: 2026-07-14 — Authored Albany Registration and Preparation
 
 ## Synthesis
 
-Campaign-character v1 now persists across the overworld, and a trusted generic
-quest-export catalog folds Wolf-Winter's three successful endings back into
-distinct Old Cade memories and derived byre/gate/timber facts. Cataloged ending
-sets are validated both ways against compiled non-death endings; completion is
-atomic and idempotent; restore replays exact character state and canonical
-journal bindings; the pre-catalog hash migrates only to its exact successor.
+Both halves of the trusted quest boundary now exist. Campaign-character v1
+persists across the overworld; a generic export catalog folds Wolf-Winter's
+successful endings into Old Cade memories and derived world facts; and a strict
+import catalog can project allowlisted background, skill, ability, knowledge,
+health, or equipment facts into an embedded RPG before its first observation.
 
-No causal-matrix fork changed. The embedded RPG still initializes its own fixed
-protagonist and receives none of the campaign character's background, skills,
-health, equipment, knowledge, promises, or relationships. Albany therefore
-cannot yet prepare a character whose state changes a Wolf-Winter action or risk.
+Only the closure-private overworld bridge supplies detached character state.
+Public/direct starts remain pack-default and unbound. Import targets are checked
+against the compiled pack, imported-only flags/items participate in validation,
+default starts retain an import-independent victory, and canonical receipts bind
+material imports to state/save/trace hashes plus the current catalog. Save-file
+checks are structural and catalog-compatible, not cryptographic authentication.
 
-The current feedback compile includes 771 verified reports and 22 journey-v3
-pure exits; every pure player continued at least once. Its top issue is a
-historical structural-fleet complaint about Albany board wording. The exact
-candidate's fresh player completed Wolf-Winter at decision 21 without that
-confusion, so the complaint remains a reproduction target rather than grounds to
-displace the missing quest-input foundation.
+Wolf-Winter currently maps only `skill:fieldcraft` to a defence floor. Health is
+deliberately not mapped while `combat_guaranteed` relies on the pack's 30-HP
+proof, and Albany equipment is not aliased to the steading's earned brace-stake;
+both combinations now fail validation rather than creating false promises or
+false timber provenance. UI/MCP initialization and reset are detached and
+deterministic. Default characters still produce the exact legacy state/hash.
+
+No causal-matrix fork changed. Fresh Albany still creates only the default
+character, so the new boundary is reachable infrastructure but not yet a player
+choice with a delayed mechanical consumer.
+
+The last fresh pure player completed Wolf-Winter clearly and continued. The
+historical structural-fleet complaint about Albany board wording remains a
+reproduction target, but the highest-leverage missing work is now player-visible
+Albany authorship rather than another foundation layer.
 
 ## Chosen Move
 
-Build the trusted inbound half of the quest boundary: a versioned, data-driven,
-read-only projection from campaign character state into embedded RPG
-initialization. This is the last foundation-only boundary before authored Albany
-registration and preparation begin creating counted forks.
+Author the first playable Albany registration and preparation chain. It must
+establish who the player is, why contemporary Albany is dispatching them to a
+steading-scale winter crisis, and create the first persistent profile that
+Wolf-Winter mechanically consumes through the landed fieldcraft boundary.
 
 - Keep all work inside Albany, Wolf-Winter, nearby travel, and the return.
-- Preserve fresh/direct quest behaviour, old saves, deterministic replay, and
-  UI/MCP parity when no import mapping applies.
-- Quest content, not an MCP caller, declares the allowlisted mapping from stable
-  campaign ids to valid RPG start-state effects.
-- Validate every declared target against the compiled pack before play; reject
-  unknown flags, variables, stats, objects, abilities, and malformed rules.
-- Apply imports atomically before the first observation and bind their canonical
-  receipt to session replay/state hashing.
-- Pass detached state across the bridge. The quest must not mutate the campaign
-  record, and pack-local object identities must never become campaign equipment.
-- Keep order-sensitive foldback deltas deferred until a durable receipt
-  chronology exists.
+- Replace generic one-click opening transactions with authored scenes and
+  explicit costs, refusals, evidence, promises, or relationships.
+- Let the player choose a lived background/approach; at least one reachable
+  choice must create `skill:fieldcraft` state and visibly explain its value.
+- Make that choice change a later Wolf-Winter action, risk, or resource—not just
+  opening prose or the final ending label.
+- Preserve at least one viable counter-profile and a default/direct victory.
+- Introduce the setting and emergency-relief role through play, not a lore dump.
+- Keep HP import deferred until wounded-character recovery preserves the combat
+  guarantee. Give any future Albany gear its own quest-local identity and honest
+  aftermath instead of reusing the steading brace-stake.
 - Do not count planned matrix rows as depth until paired counterfactual tests
   prove their delayed mechanical consumers.
 
 ## Acceptance for the next implementation increment
 
-1. A strict generic import schema rejects unknown primitives, duplicate rules,
-   invalid campaign ids, and nonexistent or type-incompatible RPG targets.
-2. A pure projector/applier proves rollback, caller isolation, deterministic
-   ordering, and reuse with a synthetic non-Wolf quest.
-3. Only the internal overworld bridge can supply campaign character state;
-   player-facing MCP inputs cannot invent or override imports, while structural
-   direct starts use an explicit initial character.
-4. Imported state is applied before the first quest observation and participates
-   in state hashing/replay without mutating the campaign record.
-5. Explicit equipment mappings preserve authored kind/condition semantics but
-   neither copy arbitrary inventory nor leak quest-local instances back out.
-6. Wolf-Winter declares the minimal real import surface needed by the upcoming
-   Albany profiles, while an empty/default character remains byte-for-behaviour
-   compatible across UI, full MCP, compact MCP, and direct quest QA.
-7. Negative pack fixtures, bridge authorization tests, save/determinism proofs,
-   pre/post crawl, a fresh pure exit, and health pass are green. No matrix row is
-   counted until an authored Albany choice reaches a delayed mechanical consumer.
+1. Registration presents at least two materially different character concepts
+   with truthful immediate feedback and persistent canonical state.
+2. One early Albany decision changes a reachable Wolf-Winter action/risk/resource
+   through the generic import boundary; a paired counterfactual proves causality.
+3. At least two named Albany NPCs remember conduct, and one memory changes a
+   service, preparation option, or later response.
+4. The opening explains the relief compact, the player's authority, and the
+   modern-infrastructure/steading crisis coherently within playable scenes.
+5. Failure or refusal creates a complication/recovery, never an unchanged retry.
+6. Default/direct quest QA, save/restore, UI/MCP parity, crawl gates, a fresh pure
+   exit, and health remain green. Update the causal matrix only for proven forks.

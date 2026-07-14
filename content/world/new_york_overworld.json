@@ -46470,6 +46470,17 @@
       "discovery": "A winter-relief tag moves from Albany's civic records to the Albany Station Quarter route desk: Old Cade's hill steading, a cattle byre, and a wolf pack coming down with the weather. The Wolf-Winter lead is the live dispatch attached to that hill road.",
       "visibility": "local_notice_board",
       "area": "albany_city__transport_hub",
+      "campaign_imports": {
+        "version": 1,
+        "rules": [
+          {
+            "id": "import:wolf_winter_fieldcraft",
+            "type": "skill_rank_to_var",
+            "skill_id": "skill:fieldcraft",
+            "target_var": "defense"
+          }
+        ]
+      },
       "campaign_exports": [
         {
           "ending_id": "ending_held_gate_barred",

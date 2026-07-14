@@ -249,7 +249,9 @@ export function validateRpgFoundation(
   // crafted/created during gameplay — they also need no initial room placement.
   // Any other object that appears in none of these maps is a true orphan.
   {
-    const grantedByEffect = new Set<string>();
+    // Higher-level runtime boundaries (for example a campaign equipment import)
+    // are also legitimate spawn paths and deliberately need no room placement.
+    const grantedByEffect = new Set<string>(opts.extraObtainable ?? []);
     for (const e of effects) if ("add_item" in e) grantedByEffect.add(e.add_item);
 
     for (const o of pack.objects) {
