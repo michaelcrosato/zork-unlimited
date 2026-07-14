@@ -53,6 +53,8 @@ function reachTannersGoalCompletion(): OverworldSession {
   const session = new OverworldSession(WORLD);
 
   session.scoutPoi("albany_city__civic_core__poi");
+  session.talkToCharacter("albany_city__civic_core__contact");
+  session.chooseJourneyStory("albany:ledger_advocate");
   moveToArea(session, "albany_city__market");
   session.scoutPoi("albany_city__market__poi");
   moveToArea(session, "albany_city__transport_hub");

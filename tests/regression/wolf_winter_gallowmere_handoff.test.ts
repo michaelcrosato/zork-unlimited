@@ -31,6 +31,10 @@ function moveToArea(session: OverworldSession, destinationAreaId: string): void 
 
 function startAlbanyWolf(session: OverworldSession): void {
   session.scoutPoi("albany_city__civic_core__poi");
+  if (session.campaignCharacterState().background === null) {
+    session.talkToCharacter("albany_city__civic_core__contact");
+    session.chooseJourneyStory("albany:ledger_advocate");
+  }
   moveToArea(session, "albany_city__market");
   session.scoutPoi("albany_city__market__poi");
   moveToArea(session, "albany_city__transport_hub");
@@ -40,6 +44,10 @@ function startAlbanyWolf(session: OverworldSession): void {
 
 function revealAlbanyWolfAtStation(session: OverworldSession): void {
   session.scoutPoi("albany_city__civic_core__poi");
+  if (session.campaignCharacterState().background === null) {
+    session.talkToCharacter("albany_city__civic_core__contact");
+    session.chooseJourneyStory("albany:ledger_advocate");
+  }
   moveToArea(session, "albany_city__market");
   session.scoutPoi("albany_city__market__poi");
   moveToArea(session, "albany_city__transport_hub");
@@ -365,6 +373,9 @@ describe("Wolf-Winter to Gallowmere authored handoff", () => {
 
   it("folds an already-completed Gallowmere goal honestly and advances to the next live lead", () => {
     const session = new OverworldSession(world);
+    session.scoutPoi("albany_city__civic_core__poi");
+    session.talkToCharacter("albany_city__civic_core__contact");
+    session.chooseJourneyStory("albany:ledger_advocate");
     session.travel(ALBANY_TO_SARATOGA);
     if (session.view().pendingRoadEncounter) session.resolveRoadEncounter("press_on");
     session.travel(SARATOGA_TO_QUEENSBURY);

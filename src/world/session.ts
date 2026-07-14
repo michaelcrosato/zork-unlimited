@@ -1,5 +1,6 @@
 import { hashState } from "../core/hash.js";
 import {
+  overworldContactTalkJournalId,
   type OverworldArea,
   type OverworldAreaExit,
   type OverworldCharacter,
@@ -72,6 +73,7 @@ import {
 import {
   cloneOverworldSessionSnapshot,
   parseOverworldSessionSnapshot,
+  redactOverworldJournalEntryForPresentation,
   type OverworldJournalEntry,
   type OverworldPendingRoadEncounter,
   type OverworldSessionSnapshot,
@@ -80,8 +82,17 @@ import {
 import {
   cloneCampaignCharacterState,
   createInitialCampaignCharacterState,
+  serializeCampaignCharacterState,
   type CampaignCharacterState,
 } from "./campaign_character_state.js";
+import { applyOpeningRegistrationProfile } from "./opening_registration.js";
+import {
+  openingRegistrationJournalEntry,
+  openingRegistrationJournalId,
+  openingRegistrationOfferJournalEntry,
+  openingRegistrationOfferJournalId,
+} from "./opening_registration_journal.js";
+import { presentOpeningRegistration } from "./opening_registration_presentation.js";
 import {
   clearOverworldSessionCaches,
   type OverworldSessionCaches,
@@ -169,8 +180,6 @@ import {
   materializeJourneyCampaignGoal,
   nextJourneyCampaignGoal,
   type JourneyCampaignGoalDefinition,
-  type JourneyCampaignStoryChoiceId,
-  type JourneyCampaignStoryChoiceOptionId,
 } from "./journey_campaign.js";
 import {
   classifyOverworldJourneyDecision,
@@ -232,13 +241,17 @@ export type OverworldJourneyGoalPassageResult =
   JourneyDecisionAnnotated<OverworldGoalPassageResult>;
 
 export type OverworldJourneyStoryChoiceResult = Readonly<{
-  storyChoiceId: JourneyCampaignStoryChoiceId;
-  choiceId: JourneyCampaignStoryChoiceOptionId;
+  storyChoiceId: string;
+  choiceId: string;
   consequence: string;
   goal: JourneyGoalPresentation;
   entry: OverworldJournalEntry;
   journeyDecision: JourneyDecisionClassification;
 }>;
+
+const DEFAULT_CAMPAIGN_CHARACTER_SERIALIZED = serializeCampaignCharacterState(
+  createInitialCampaignCharacterState(),
+);
 
 type OverworldClockState = {
   minutesAfter: number;
@@ -499,6 +512,61 @@ export class OverworldSession {
     return buildJourneyGoalPassagePresentation(route);
   }
 
+  private openingRegistrationEligible(): NonNullable<
+    OverworldManifest["opening_registration"]
+  > | null {
+    const registration = this.world.opening_registration;
+    if (
+      !registration ||
+      this.journeyState.status === "ended" ||
+      this.currentId !== registration.home ||
+      this.currentAreaId !== registration.area ||
+      this.startedQuestIds.size > 0 ||
+      this.completedQuestIds.size > 0 ||
+      serializeCampaignCharacterState(this.characterState) !== DEFAULT_CAMPAIGN_CHARACTER_SERIALIZED
+    ) {
+      return null;
+    }
+    return registration;
+  }
+
+  private openingRegistrationAvailable(): NonNullable<
+    OverworldManifest["opening_registration"]
+  > | null {
+    const registration = this.openingRegistrationEligible();
+    if (!registration) return null;
+    const latestEntry = this.journalEntries[0];
+    if (
+      latestEntry?.kind !== "registration_offer" ||
+      latestEntry.id !== openingRegistrationOfferJournalId(registration.id)
+    ) {
+      return null;
+    }
+    return registration;
+  }
+
+  private offerOpeningRegistrationAfterContact(characterId: string): void {
+    const registration = this.openingRegistrationEligible();
+    if (!registration || characterId !== registration.contact) return;
+    const baseContactId = overworldContactTalkJournalId(registration.contact, null);
+    if (!this.journalEntriesById.has(baseContactId)) return;
+    const offer = openingRegistrationOfferJournalEntry({
+      registration,
+      town: this.currentNode().name,
+      recordedAt: timeLabel(this.minutes),
+      registrationBoundary: {
+        acceptedDecisions: this.journeyState.acceptedDecisions,
+        decisionProofHash: this.journeyState.decisionProof.hash,
+        townId: this.currentId,
+        areaId: this.currentAreaIdOrThrow(),
+        minutes: this.minutes,
+      },
+    });
+    if (this.journalEntriesById.has(offer.id)) return;
+    addOverworldJournalEntry(this.journalEntries, this.journalEntriesById, offer);
+    this.clearSessionCaches();
+  }
+
   private journeyPresentationContext(): JourneyPresentationContext | undefined {
     const campaign = journeyCampaignPresentationContext({
       journey: this.journeyState,
@@ -510,7 +578,10 @@ export class OverworldSession {
     const goalRoute = this.currentGoalRoute();
     const goalGuidance = this.journeyGoalGuidance(goalRoute);
     let goalCompletion: JourneyPresentationContext["goalCompletion"];
-    let storyChoice: JourneyPresentationContext["storyChoice"];
+    const registration = this.openingRegistrationAvailable();
+    let storyChoice: JourneyPresentationContext["storyChoice"] = registration
+      ? presentOpeningRegistration(registration)
+      : undefined;
 
     if (campaign) {
       if (pendingGoalCompletion && campaign.preRetentionTeaser) {
@@ -524,7 +595,7 @@ export class OverworldSession {
             : {}),
         };
       }
-      if (campaign.storyChoice) {
+      if (campaign.storyChoice && !storyChoice) {
         storyChoice = {
           ...campaign.storyChoice,
           message: `${campaign.completionContext} ${campaign.storyChoice.message}`,
@@ -562,7 +633,9 @@ export class OverworldSession {
   assertJourneyAcceptingDecision(): void {
     assertJourneyContractAcceptingDecision(this.journeyState);
     if (this.journey().storyChoice) {
-      throw new Error("Choose the presented story consequence before taking another action.");
+      throw new Error(
+        "Choose the presented story consequence or character-registration choice before taking another action.",
+      );
     }
   }
 
@@ -628,6 +701,50 @@ export class OverworldSession {
     if (!storyChoice) throw new Error("There is no story consequence to choose right now.");
     const option = storyChoice.options.find((candidate) => candidate.id === choiceId);
     if (!option) throw new Error(`Unknown story choice "${String(choiceId)}".`);
+    if (storyChoice.kind === "registration") {
+      const registration = this.openingRegistrationAvailable();
+      if (!registration || storyChoice.id !== registration.id) {
+        throw new Error("The presented opening registration is no longer available.");
+      }
+      const characterAfter = applyOpeningRegistrationProfile({
+        registration,
+        character: this.characterState,
+        profileId: choiceId,
+      });
+      const entryId = openingRegistrationJournalId(registration.id, choiceId);
+      if (this.journalEntriesById.has(entryId)) {
+        throw new Error(`Opening registration journal entry "${entryId}" already exists.`);
+      }
+      const journeyDecision = this.recordOverworldDecision(
+        `campaign_story:${storyChoice.id}:${choiceId}`,
+        "progress",
+        true,
+      );
+      const entry = openingRegistrationJournalEntry({
+        registration,
+        profileId: choiceId,
+        town: this.currentNode().name,
+        recordedAt: timeLabel(this.minutes),
+        registrationBoundary: {
+          acceptedDecisions: this.journeyState.acceptedDecisions,
+          decisionProofHash: this.journeyState.decisionProof.hash,
+          townId: this.currentId,
+          areaId: this.currentAreaIdOrThrow(),
+          minutes: this.minutes,
+        },
+      });
+      this.characterState = characterAfter;
+      addOverworldJournalEntry(this.journalEntries, this.journalEntriesById, entry);
+      this.clearSessionCaches();
+      return Object.freeze({
+        storyChoiceId: storyChoice.id,
+        choiceId,
+        consequence: option.consequence,
+        goal: this.journey().goal,
+        entry: Object.freeze(redactOverworldJournalEntryForPresentation(entry)),
+        journeyDecision,
+      });
+    }
     const selection = journeyCampaignStoryChoiceSelection(storyChoice.id, choiceId);
 
     const entry = this.activateCampaignGoal(selection.goal);
@@ -932,6 +1049,19 @@ export class OverworldSession {
 
   private questStartState(questId: string): OverworldSessionQuestStartState {
     this.assertNoPendingRoadEncounter("starting a quest");
+    const registration = this.world.opening_registration;
+    if (
+      registration &&
+      this.startedQuestIds.size === 0 &&
+      this.completedQuestIds.size === 0 &&
+      serializeCampaignCharacterState(this.characterState) === DEFAULT_CAMPAIGN_CHARACTER_SERIALIZED
+    ) {
+      const contact = this.charactersById.get(registration.contact);
+      const area = this.areasById.get(registration.area);
+      throw new Error(
+        `Complete ${registration.title} with ${contact?.name ?? "the registration contact"} in ${area?.name ?? "the opening registration area"} before starting this journey's first quest.`,
+      );
+    }
     return {
       ...this.actionJournalState(),
       questId,
@@ -1109,10 +1239,11 @@ export class OverworldSession {
     this.assertJourneyAcceptingDecision();
     this.assertNoPendingRoadEncounter("talking to a contact");
     const current = this.currentNode();
-    return this.applyLocalActionWithDiscovery(
+    const result = this.applyLocalActionWithDiscovery(
       current,
       applyOverworldSessionContactTalkFromState({
         ...this.actionJournalState(),
+        character: this.characterState,
         characterId,
         charactersById: this.charactersById,
         completedQuestIds: this.completedQuestIds,
@@ -1123,6 +1254,8 @@ export class OverworldSession {
       `talk:${characterId}`,
       "dialogue",
     );
+    this.offerOpeningRegistrationAfterContact(characterId);
+    return result;
   }
 
   investigateEvent(eventId: string): OverworldJourneyActionResult {

@@ -10,17 +10,40 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { assess } from "../../src/afk/assessor.js";
 
+type FixtureContactVariant = {
+  after_quests?: string[];
+  after_relationship_memories?: string[];
+};
+
 type FixtureOverworld = Record<string, unknown> & {
-  characters: Array<{ variants?: unknown }>;
+  opening_registration?: {
+    profiles: Array<{
+      character: { relationships: Array<{ memories: string[] }> };
+    }>;
+  };
+  characters: Array<{ variants?: FixtureContactVariant[] }>;
 };
 
 const REAL_OVERWORLD = JSON.parse(
   readFileSync(join(process.cwd(), "content", "world", "new_york_overworld.json"), "utf8"),
 ) as FixtureOverworld;
 
-function fixtureOverworldWithoutContactVariants(): FixtureOverworld {
+function fixtureOverworldWithOpeningContactVariants(): FixtureOverworld {
   const world = structuredClone(REAL_OVERWORLD);
-  for (const character of world.characters) delete character.variants;
+  const openingMemories = new Set(
+    world.opening_registration?.profiles.flatMap((profile) =>
+      profile.character.relationships.flatMap((relationship) => relationship.memories),
+    ) ?? [],
+  );
+  for (const character of world.characters) {
+    const openingVariants = character.variants?.filter(
+      (variant) =>
+        (variant.after_quests?.length ?? 0) === 0 &&
+        variant.after_relationship_memories?.some((memory) => openingMemories.has(memory)),
+    );
+    if (openingVariants?.length) character.variants = openingVariants;
+    else delete character.variants;
+  }
   return world;
 }
 
@@ -33,7 +56,7 @@ function writeFixtureQuestRoot(root: string): void {
   writeFileSync(
     join(root, "content", "world", "new_york_overworld.json"),
     JSON.stringify({
-      ...fixtureOverworldWithoutContactVariants(),
+      ...fixtureOverworldWithOpeningContactVariants(),
       quests: [
         {
           id: "hotspot_fixture",

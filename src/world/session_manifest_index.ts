@@ -17,6 +17,12 @@ import {
   allOverworldContactPresentations,
   type OverworldContactPresentation,
 } from "./session_contact_presentation.js";
+import type { OpeningRegistration } from "./opening_registration.js";
+import {
+  allOpeningRegistrationJournalDrafts,
+  openingRegistrationOfferJournalDraft,
+  type OpeningRegistrationJournalDraft,
+} from "./opening_registration_journal.js";
 
 export type OverworldSnapshotManifestIndex = {
   arcIds: ReadonlySet<string>;
@@ -41,6 +47,9 @@ export type OverworldSnapshotManifestIndex = {
   jobTownNames: ReadonlyMap<string, string>;
   nodeIds: ReadonlySet<string>;
   nodesById: ReadonlyMap<string, OverworldNode>;
+  openingRegistration: OpeningRegistration | null;
+  openingRegistrationJournalDraftsById: ReadonlyMap<string, OpeningRegistrationJournalDraft>;
+  openingRegistrationTownName: string | null;
   poiIds: ReadonlySet<string>;
   poisById: ReadonlyMap<string, OverworldPoi>;
   poiTownNames: ReadonlyMap<string, string>;
@@ -90,6 +99,17 @@ export function buildOverworldSnapshotManifestIndex(
     townNames.add(node.name);
   }
   const townNameForSource = (nodeId: string): string => townNameById.get(nodeId) ?? nodeId;
+
+  const openingRegistration = sources.world.opening_registration ?? null;
+  const openingRegistrationJournalDraftsById = new Map<string, OpeningRegistrationJournalDraft>();
+  if (openingRegistration) {
+    for (const draft of [
+      openingRegistrationOfferJournalDraft(openingRegistration),
+      ...allOpeningRegistrationJournalDrafts(openingRegistration),
+    ]) {
+      openingRegistrationJournalDraftsById.set(draft.id, draft);
+    }
+  }
 
   const edgesById = new Map<string, OverworldEdge>();
   const edgeIds = new Set<string>();
@@ -189,6 +209,11 @@ export function buildOverworldSnapshotManifestIndex(
     jobTownNames,
     nodeIds,
     nodesById: sources.nodesById,
+    openingRegistration,
+    openingRegistrationJournalDraftsById,
+    openingRegistrationTownName: openingRegistration
+      ? townNameForSource(openingRegistration.home)
+      : null,
     poiIds,
     poisById: sources.poisById,
     poiTownNames,

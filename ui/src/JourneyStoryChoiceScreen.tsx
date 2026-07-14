@@ -20,6 +20,7 @@ export function JourneyStoryChoiceScreen({
   if (!storyChoice) {
     throw new Error("JourneyStoryChoiceScreen requires a pending story choice.");
   }
+  const isRegistration = storyChoice.kind === "registration";
 
   return (
     <main className="journey-decision-page">
@@ -30,21 +31,31 @@ export function JourneyStoryChoiceScreen({
         aria-labelledby="journey-story-choice-title"
         aria-describedby="journey-story-choice-message"
       >
-        <p className="kicker">Journey consequence</p>
+        <p className="kicker">
+          {isRegistration ? "Character registration" : "Journey consequence"}
+        </p>
         <h1 id="journey-story-choice-title" ref={headingRef} tabIndex={-1}>
-          Choose what follows
+          {isRegistration ? "Choose your lived background" : "Choose what follows"}
         </h1>
         <p id="journey-story-choice-message" className="journey-choice-message">
           {storyChoice.message}
         </p>
 
         <div className="journey-choice-goal">
-          <span>Goal just completed</span>
+          <span>{isRegistration ? "Current objective" : "Goal just completed"}</span>
           <strong>{journey.goal.text}</strong>
-          <small>Choose the consequence that sets your next objective.</small>
+          <small>
+            {isRegistration
+              ? "Your registered history persists into the journey; choose the experience and obligations you will carry."
+              : "Choose the consequence that sets your next objective."}
+          </small>
         </div>
 
-        <div className="journey-choice-actions">
+        <div
+          className={`journey-choice-actions${
+            isRegistration ? " journey-choice-actions-registration" : ""
+          }`}
+        >
           {storyChoice.options.map((option) => (
             <button key={option.id} type="button" onClick={() => onChoose(option.id)}>
               <strong>{option.label}</strong>

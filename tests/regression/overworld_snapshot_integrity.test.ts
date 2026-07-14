@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createToolApi } from "../../src/mcp/tools.js";
+import { createInitialCampaignCharacterState } from "../../src/world/campaign_character_state.js";
 import {
   overworldAreasAt,
   overworldEdgesFrom,
@@ -162,11 +163,18 @@ function exportedSnapshotWithResolvedInitialEvent() {
   if (!poi || !contact || !event) throw new Error("expected initial local event prerequisites");
 
   a.scout_overworld_session_poi({ session_id: started.session_id, poi_id: poi.id });
-  a.talk_overworld_session_contact({
+  const talked = a.talk_overworld_session_contact({
     ...FULL_OVERWORLD_RESPONSE,
     session_id: started.session_id,
     character_id: contact.id,
   });
+  if (talked.journey.storyChoice?.kind === "registration") {
+    a.choose_overworld_session_story({
+      ...FULL_OVERWORLD_RESPONSE,
+      session_id: started.session_id,
+      choice: "albany:ledger_advocate",
+    });
+  }
   a.investigate_overworld_session_event({
     ...FULL_OVERWORLD_RESPONSE,
     session_id: started.session_id,
@@ -306,7 +314,16 @@ function resolveCurrentOverworldSessionEvent(a: ReturnType<typeof api>, sessionI
   const contact = view.characters[0];
   if (!poi || !contact) throw new Error("expected local event prerequisites");
   a.scout_overworld_session_poi({ session_id: sessionId, poi_id: poi.id });
-  a.talk_overworld_session_contact({ session_id: sessionId, character_id: contact.id });
+  const talked = a.talk_overworld_session_contact({
+    session_id: sessionId,
+    character_id: contact.id,
+  });
+  if (talked.journey.storyChoice?.kind === "registration") {
+    a.choose_overworld_session_story({
+      session_id: sessionId,
+      choice: "albany:ledger_advocate",
+    });
+  }
   a.investigate_overworld_session_event({ session_id: sessionId, event_id: event.id });
   a.resolve_overworld_session_event({ session_id: sessionId, event_id: event.id });
 }
@@ -1207,6 +1224,13 @@ describe("overworld snapshot restore integrity", () => {
       session_id: started.session_id,
       character_id: contact.id,
     });
+    if (talked.journey.storyChoice?.kind === "registration") {
+      a.choose_overworld_session_story({
+        ...FULL_OVERWORLD_RESPONSE,
+        session_id: started.session_id,
+        choice: "albany:ledger_advocate",
+      });
+    }
     const secondJob = talked.result.discoveredJobs?.[0];
     if (!scouted.result.discoveredJobs?.[0] || !secondJob) {
       throw new Error("expected two discovered jobs after two local actions");
@@ -1582,10 +1606,18 @@ describe("overworld snapshot restore integrity", () => {
     },
   ])("rejects resolved events missing $label proof", ({ removedEntryId, pattern }) => {
     const resolved = exportedSnapshotWithResolvedInitialEvent();
+    const targetEntryId = removedEntryId(resolved);
+    const removingContact = targetEntryId.startsWith("talk:");
     const missingPrerequisite = {
       ...resolved.snapshot,
+      ...(removingContact ? { character: createInitialCampaignCharacterState() } : {}),
       journalEntries: resolved.snapshot.journalEntries.filter(
-        (entry) => entry.id !== removedEntryId(resolved),
+        (entry) =>
+          entry.id !== targetEntryId &&
+          !(
+            removingContact &&
+            (entry.kind === "registration_offer" || entry.kind === "registration")
+          ),
       ),
     };
 

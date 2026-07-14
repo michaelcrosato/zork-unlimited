@@ -421,7 +421,7 @@ button:hover {
   text-align: left;
 }
 
-.journey-choice-actions button:first-child {
+.journey-choice-actions:not(.journey-choice-actions-registration) button:first-child {
   background: var(--road);
   border-color: var(--road);
   color: #17140e;

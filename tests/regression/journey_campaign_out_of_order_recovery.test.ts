@@ -72,6 +72,8 @@ function completeQuestAt(
 function startCampaignThroughDispatch(): OverworldSession {
   const session = new OverworldSession(WORLD);
   session.scoutPoi("albany_city__civic_core__poi");
+  session.talkToCharacter("albany_city__civic_core__contact");
+  session.chooseJourneyStory("albany:ledger_advocate");
   moveToArea(session, "albany_city__market");
   session.scoutPoi("albany_city__market__poi");
   moveToArea(session, "albany_city__transport_hub");
@@ -136,6 +138,8 @@ describe("journey campaign out-of-order recovery", () => {
     // Discover the Albany leads first, then finish gallowmere before ever starting
     // wolf_winter — nothing gates quest access by the active journey goal.
     session.scoutPoi("albany_city__civic_core__poi");
+    session.talkToCharacter("albany_city__civic_core__contact");
+    session.chooseJourneyStory("albany:ledger_advocate");
     moveToArea(session, "albany_city__market");
     session.scoutPoi("albany_city__market__poi");
     completeQuestAt(

@@ -21,6 +21,7 @@ import {
 import { journalSourceId, type OverworldJournalTimelineIndex } from "./session_journal_timeline.js";
 import type { OverworldJournalEntry } from "./session_snapshot.js";
 import { indexedList } from "./session_collections.js";
+import type { CampaignCharacterState } from "./campaign_character_state.js";
 
 export type OverworldDiscoveryLocalityIndex = {
   areaHomes: ReadonlyMap<string, string>;
@@ -359,6 +360,7 @@ function localJournalSource(
 export function assertSnapshotContactPresentationProofs(
   sources: OverworldLocalActionJournalReachabilityIndex,
   journalTimeline: OverworldJournalTimelineIndex,
+  characterAt: (entry: OverworldJournalEntry, recordedAt: number) => CampaignCharacterState,
 ): void {
   for (const { entry, recordedAt } of journalTimeline.localActionEntries) {
     if (entry.kind !== "contact") continue;
@@ -374,7 +376,10 @@ export function assertSnapshotContactPresentationProofs(
         completedQuestIds.add(questId);
       }
     }
-    const expected = presentOverworldContact(stored.character, { completedQuestIds });
+    const expected = presentOverworldContact(stored.character, {
+      character: characterAt(entry, recordedAt),
+      completedQuestIds,
+    });
     if (expected.journalId !== entry.id) {
       throw new Error(
         `Overworld session snapshot contact presentation "${entry.id}" was not active at ${entry.recordedAt}.`,

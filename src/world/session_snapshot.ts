@@ -97,6 +97,9 @@ export type OverworldJournalEntry = {
     | "poi"
     | "quest"
     | "quest_done"
+    | "registration"
+    | "registration_legacy"
+    | "registration_offer"
     | "regional_arc"
     | "resolution"
     | "road"
@@ -106,7 +109,26 @@ export type OverworldJournalEntry = {
   title: string;
   text: string;
   recordedAt: string;
+  registrationBoundary?:
+    | {
+        acceptedDecisions: number;
+        decisionProofHash: string;
+        townId: string;
+        areaId: string;
+        minutes: number;
+      }
+    | undefined;
 };
+
+const OverworldJournalRegistrationBoundarySchema = z
+  .object({
+    acceptedDecisions: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER),
+    decisionProofHash: z.string().regex(/^[0-9a-f]{64}$/),
+    townId: z.string().min(1),
+    areaId: z.string().min(1),
+    minutes: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER),
+  })
+  .strict();
 
 const OverworldJournalEntrySchema = z
   .object({
@@ -120,6 +142,9 @@ const OverworldJournalEntrySchema = z
       "poi",
       "quest",
       "quest_done",
+      "registration",
+      "registration_legacy",
+      "registration_offer",
       "regional_arc",
       "resolution",
       "road",
@@ -130,6 +155,7 @@ const OverworldJournalEntrySchema = z
     title: z.string().min(1),
     text: z.string().min(1),
     recordedAt: z.string().min(1),
+    registrationBoundary: OverworldJournalRegistrationBoundarySchema.optional(),
   })
   .strict();
 
@@ -199,8 +225,24 @@ export function cloneJournalEntries(
   entries: readonly OverworldJournalEntry[],
 ): OverworldJournalEntry[] {
   const clones: OverworldJournalEntry[] = [];
-  for (const entry of entries) clones.push({ ...entry });
+  for (const entry of entries) clones.push(cloneOverworldJournalEntry(entry));
   return clones;
+}
+
+export function cloneOverworldJournalEntry(entry: OverworldJournalEntry): OverworldJournalEntry {
+  return {
+    ...entry,
+    ...(entry.registrationBoundary
+      ? { registrationBoundary: { ...entry.registrationBoundary } }
+      : {}),
+  };
+}
+
+export function redactOverworldJournalEntryForPresentation(
+  entry: OverworldJournalEntry,
+): OverworldJournalEntry {
+  const { registrationBoundary: _registrationBoundary, ...presented } = entry;
+  return presented;
 }
 
 function cloneTravelLogSnapshots(

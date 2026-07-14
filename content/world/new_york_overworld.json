@@ -3,6 +3,333 @@
   "name": "New York State Overworld",
   "start": "albany_city",
   "premise": "A text-first open world over New York State: towns are real population centers, roads are weighted travel edges, and quests are discovered locally instead of selected globally.",
+  "opening_registration": {
+    "version": 1,
+    "id": "albany:relief_registration",
+    "home": "albany_city",
+    "area": "albany_city__civic_core",
+    "contact": "albany_city__civic_core__contact",
+    "title": "Enter Albany's Relief Compact",
+    "message": "Rowan lays four registration cards across the municipal counter. Albany's electric grid, buses, clinics, and radio repeaters protect the dense corridor, but plowed service ends before many chartered steadings and old-boundary farms. The Relief Compact lets an independent troubleshooter carry a public emergency tag across both systems, provided the traveler names the experience, sponsor, kit, and obligation they will answer for. Your registration is permanent; the field package and relationships travel with you.",
+    "profiles": [
+      {
+        "id": "albany:road_warden",
+        "title": "Road-Warden Relief Hand",
+        "summary": "You have worked the unplowed miles between Albany's staffed route desks and isolated charter steadings.",
+        "preview": "Contact: Hayden Hale. Skill edge: Fieldcraft 4. Value: Stewardship 4. Kit: weatherproof field kit. Funds: 12. Standing: Road Wardens +5. Knowledge: Relief Compact and winter routes. Obligation: return Hayden's winter packet with an honest account.",
+        "consequence": "Rowan stamps you as a Road-Warden Relief Hand. Your Fieldcraft 4 raises Wolf-Winter's imported starting DEF floor from 3 to 4 when that quest is launched from this journey. Hayden remembers sponsoring you, you carry a weatherproof field kit, and his return-packet promise remains active.",
+        "character": {
+          "version": 1,
+          "background": "albany:road_warden",
+          "skills": [
+            {
+              "skillId": "skill:fieldcraft",
+              "rank": 4
+            }
+          ],
+          "values": [
+            {
+              "valueId": "value:stewardship",
+              "strength": 4
+            }
+          ],
+          "health": {
+            "current": 30,
+            "max": 30
+          },
+          "wounds": [],
+          "equipment": [
+            {
+              "equipmentId": "albany:road_warden_field_kit",
+              "itemId": "albany:item_weatherproof_field_kit",
+              "quantity": 1,
+              "condition": 100,
+              "equipped": true
+            }
+          ],
+          "money": 12,
+          "abilities": [],
+          "knowledge": [
+            "albany:knowledge_relief_compact",
+            "albany:knowledge_winter_routes"
+          ],
+          "promises": [
+            {
+              "promiseId": "albany:promise_return_hayden_packet",
+              "recipientId": "albany:hayden_hale",
+              "status": "active"
+            }
+          ],
+          "crimes": [],
+          "relationships": [
+            {
+              "npcId": "albany:hayden_hale",
+              "trust": 2,
+              "regard": 2,
+              "owesPlayer": 0,
+              "playerOwes": 1,
+              "memories": [
+                "albany:memory_hayden_sponsored_road_warden"
+              ]
+            },
+            {
+              "npcId": "albany:rowan_quill",
+              "trust": 1,
+              "regard": 1,
+              "owesPlayer": 0,
+              "playerOwes": 0,
+              "memories": [
+                "albany:memory_rowan_registered_road_warden"
+              ]
+            }
+          ],
+          "factionStanding": [
+            {
+              "factionId": "faction:road_wardens",
+              "standing": 5
+            }
+          ]
+        }
+      },
+      {
+        "id": "albany:ledger_advocate",
+        "title": "Ledger Advocate",
+        "summary": "You know how emergency authority, testimony, and scarce municipal aid move through Albany's public counters.",
+        "preview": "Contact: Jamie Tanner. Skill edge: Mediation 4. Value: Accountability 4. Kit: sealed evidence folio. Funds: 25. Standing: Municipal Ledger +5. Knowledge: emergency ledger and Relief Compact. Obligation: return a truthful relief account to Rowan.",
+        "consequence": "Rowan registers you as a Ledger Advocate and Jamie remembers vouching for your judgment. You carry a sealed evidence folio and owe Rowan a truthful relief account. Wolf-Winter remains fully winnable through its default routes, but this profile does not receive the Road-Warden's current Fieldcraft DEF import.",
+        "character": {
+          "version": 1,
+          "background": "albany:ledger_advocate",
+          "skills": [
+            {
+              "skillId": "skill:mediation",
+              "rank": 4
+            }
+          ],
+          "values": [
+            {
+              "valueId": "value:accountability",
+              "strength": 4
+            }
+          ],
+          "health": {
+            "current": 30,
+            "max": 30
+          },
+          "wounds": [],
+          "equipment": [
+            {
+              "equipmentId": "albany:ledger_advocate_folio",
+              "itemId": "albany:item_sealed_evidence_folio",
+              "quantity": 1,
+              "condition": 100,
+              "equipped": true
+            }
+          ],
+          "money": 25,
+          "abilities": [],
+          "knowledge": [
+            "albany:knowledge_emergency_ledger",
+            "albany:knowledge_relief_compact"
+          ],
+          "promises": [
+            {
+              "promiseId": "albany:promise_truthful_relief_account",
+              "recipientId": "albany:rowan_quill",
+              "status": "active"
+            }
+          ],
+          "crimes": [],
+          "relationships": [
+            {
+              "npcId": "albany:jamie_tanner",
+              "trust": 2,
+              "regard": 2,
+              "owesPlayer": 0,
+              "playerOwes": 1,
+              "memories": [
+                "albany:memory_jamie_sponsored_ledger_advocate"
+              ]
+            },
+            {
+              "npcId": "albany:rowan_quill",
+              "trust": 2,
+              "regard": 1,
+              "owesPlayer": 0,
+              "playerOwes": 0,
+              "memories": [
+                "albany:memory_rowan_registered_ledger_advocate"
+              ]
+            }
+          ],
+          "factionStanding": [
+            {
+              "factionId": "faction:municipal_ledger",
+              "standing": 5
+            }
+          ]
+        }
+      },
+      {
+        "id": "albany:ironhands_repairer",
+        "title": "Ironhands Repairer",
+        "summary": "You have kept pumps, heaters, gates, and improvised ward-housings alive after staffed crews clocked out.",
+        "preview": "Contact: Reese Pryce. Skill edge: Repair 4. Value: Ingenuity 4. Kit: insulated repair roll. Funds: 10. Standing: Ironhands Local +5. Knowledge: field infrastructure and Relief Compact. Obligation: return Reese's borrowed diagnostic tools intact.",
+        "consequence": "Rowan registers you as an Ironhands Repairer and Reese remembers staking borrowed tools on your field judgment. You carry an insulated repair roll and owe Reese its safe return. Wolf-Winter remains fully winnable through its default routes, but this profile does not receive the Road-Warden's current Fieldcraft DEF import.",
+        "character": {
+          "version": 1,
+          "background": "albany:ironhands_repairer",
+          "skills": [
+            {
+              "skillId": "skill:repair",
+              "rank": 4
+            }
+          ],
+          "values": [
+            {
+              "valueId": "value:ingenuity",
+              "strength": 4
+            }
+          ],
+          "health": {
+            "current": 30,
+            "max": 30
+          },
+          "wounds": [],
+          "equipment": [
+            {
+              "equipmentId": "albany:ironhands_repair_roll",
+              "itemId": "albany:item_insulated_repair_roll",
+              "quantity": 1,
+              "condition": 100,
+              "equipped": true
+            }
+          ],
+          "money": 10,
+          "abilities": [],
+          "knowledge": [
+            "albany:knowledge_field_infrastructure",
+            "albany:knowledge_relief_compact"
+          ],
+          "promises": [
+            {
+              "promiseId": "albany:promise_return_reese_tools",
+              "recipientId": "albany:reese_pryce",
+              "status": "active"
+            }
+          ],
+          "crimes": [],
+          "relationships": [
+            {
+              "npcId": "albany:reese_pryce",
+              "trust": 2,
+              "regard": 2,
+              "owesPlayer": 0,
+              "playerOwes": 1,
+              "memories": [
+                "albany:memory_reese_sponsored_ironhands_repairer"
+              ]
+            },
+            {
+              "npcId": "albany:rowan_quill",
+              "trust": 1,
+              "regard": 2,
+              "owesPlayer": 0,
+              "playerOwes": 0,
+              "memories": [
+                "albany:memory_rowan_registered_ironhands_repairer"
+              ]
+            }
+          ],
+          "factionStanding": [
+            {
+              "factionId": "faction:ironhands_local",
+              "standing": 5
+            }
+          ]
+        }
+      },
+      {
+        "id": "albany:unaffiliated_courier",
+        "title": "Unaffiliated Courier",
+        "summary": "You refuse a faction oath, but accept one emergency tag on your own name and the consequences of carrying it alone.",
+        "preview": "Contact: Emery Sloane. Skill edge: Streetwise 4. Value: Independence 4. Kit: unmarked courier satchel. Funds: 18. Standing: Independent Carriers +2. Knowledge: Relief Compact and service corridors. Obligation: return or publicly void the emergency tag; no unchanged refusal retry.",
+        "consequence": "You decline institutional sponsorship. Rowan records the refusal instead of reopening the same question, then issues one limited emergency tag on your personal bond. Emery remembers witnessing the arrangement. You carry an unmarked courier satchel and must return or publicly void the tag. Wolf-Winter remains fully winnable through its default routes, but this profile does not receive the Road-Warden's current Fieldcraft DEF import.",
+        "character": {
+          "version": 1,
+          "background": "albany:unaffiliated_courier",
+          "skills": [
+            {
+              "skillId": "skill:streetwise",
+              "rank": 4
+            }
+          ],
+          "values": [
+            {
+              "valueId": "value:independence",
+              "strength": 4
+            }
+          ],
+          "health": {
+            "current": 30,
+            "max": 30
+          },
+          "wounds": [],
+          "equipment": [
+            {
+              "equipmentId": "albany:unaffiliated_courier_satchel",
+              "itemId": "albany:item_unmarked_courier_satchel",
+              "quantity": 1,
+              "condition": 100,
+              "equipped": true
+            }
+          ],
+          "money": 18,
+          "abilities": [],
+          "knowledge": [
+            "albany:knowledge_relief_compact",
+            "albany:knowledge_service_corridors"
+          ],
+          "promises": [
+            {
+              "promiseId": "albany:promise_close_emergency_tag",
+              "recipientId": "albany:rowan_quill",
+              "status": "active"
+            }
+          ],
+          "crimes": [],
+          "relationships": [
+            {
+              "npcId": "albany:emery_sloane",
+              "trust": 1,
+              "regard": 3,
+              "owesPlayer": 0,
+              "playerOwes": 0,
+              "memories": [
+                "albany:memory_emery_witnessed_independent_bond"
+              ]
+            },
+            {
+              "npcId": "albany:rowan_quill",
+              "trust": 0,
+              "regard": 2,
+              "owesPlayer": 0,
+              "playerOwes": 1,
+              "memories": [
+                "albany:memory_rowan_recorded_oath_refusal"
+              ]
+            }
+          ],
+          "factionStanding": [
+            {
+              "factionId": "faction:independent_carriers",
+              "standing": 2
+            }
+          ]
+        }
+      }
+    ]
+  },
   "sources": [
     {
       "label": "U.S. Census Bureau Vintage 2025 subcounty population estimates",
@@ -23215,7 +23542,42 @@
       "role": "records clerk",
       "faction": "Municipal Ledger",
       "summary": "Rowan Quill has ink on both cuffs and a clerk's memory for which petitions are real trouble.",
-      "agenda": "Ask Rowan what matters before the office closes: they can separate ledger work, basement writs, and station-yard relief tags from ordinary counter noise."
+      "agenda": "Ask Rowan what matters before the office closes: they can separate ledger work, basement writs, and station-yard relief tags from ordinary counter noise.",
+      "campaign_npc_id": "albany:rowan_quill",
+      "variants": [
+        {
+          "id": "registered_road_warden",
+          "after_relationship_memories": [
+            "albany:memory_rowan_registered_road_warden"
+          ],
+          "summary": "Rowan checks the Road-Warden stamp drying on your card and remembers the fieldcraft record you put under your own name.",
+          "agenda": "The registration is closed, not a form to repeat. Rowan directs you to Hayden Hale's Station Quarter desk, where the first winter relief packet is waiting."
+        },
+        {
+          "id": "registered_ledger_advocate",
+          "after_relationship_memories": [
+            "albany:memory_rowan_registered_ledger_advocate"
+          ],
+          "summary": "Rowan recognizes the sealed folio and the Ledger Advocate entry they countersigned for your truthful return account.",
+          "agenda": "The registration is closed, not a form to repeat. Rowan directs you to Hayden Hale's Station Quarter desk and reminds you that a relief return must distinguish evidence from rumor."
+        },
+        {
+          "id": "registered_ironhands_repairer",
+          "after_relationship_memories": [
+            "albany:memory_rowan_registered_ironhands_repairer"
+          ],
+          "summary": "Rowan remembers Reese Pryce's tool bond beside your Ironhands registration and checks that the repair roll is still sealed.",
+          "agenda": "The registration is closed, not a form to repeat. Rowan directs you to Hayden Hale's Station Quarter desk, where a failing steading boundary has become a relief matter."
+        },
+        {
+          "id": "recorded_oath_refusal",
+          "after_relationship_memories": [
+            "albany:memory_rowan_recorded_oath_refusal"
+          ],
+          "summary": "Rowan remembers that you refused every faction oath and accepted a single emergency tag on your personal bond instead.",
+          "agenda": "The refusal stands and cannot be retried into a cleaner bargain. Rowan directs you to Hayden Hale's Station Quarter desk and keeps the public-voiding form ready for your eventual return."
+        }
+      ]
     },
     {
       "id": "albany_city__market__contact",
@@ -23225,7 +23587,18 @@
       "role": "market broker",
       "faction": "Merchants Exchange",
       "summary": "Jamie Tanner works as the market broker in Albany Market Streets, watching how shortages, disputed deliveries, and late counters affect Albany city.",
-      "agenda": "Wants a traveler to handle Albany Market Streets's local problems before they spread through the Capital / Mohawk road network."
+      "agenda": "Wants a traveler to handle Albany Market Streets's local problems before they spread through the Capital / Mohawk road network.",
+      "campaign_npc_id": "albany:jamie_tanner",
+      "variants": [
+        {
+          "id": "sponsored_ledger_advocate",
+          "after_relationship_memories": [
+            "albany:memory_jamie_sponsored_ledger_advocate"
+          ],
+          "summary": "Jamie remembers vouching for your Ledger Advocate judgment and keeps a clear witness counter beside the ordinary market books.",
+          "agenda": "Jamie will compare any disputed relief account against named witnesses; the sponsorship buys scrutiny, not automatic agreement."
+        }
+      ]
     },
     {
       "id": "albany_city__transport_hub__contact",
@@ -23236,7 +23609,19 @@
       "faction": "Road Wardens",
       "summary": "Hayden Hale dispatches road wardens from Albany Station Quarter, matching late coaches, snow reports, and relief freight to travelers who can move faster than official crews.",
       "agenda": "Needs someone to carry the packet Rowan flagged from the Station Quarter route desk to Old Cade's hill steading before the cattle are lost; he can point you to the active lead.",
+      "campaign_npc_id": "albany:hayden_hale",
       "variants": [
+        {
+          "id": "wolf_winter_returned_road_warden",
+          "after_quests": [
+            "wolf_winter"
+          ],
+          "after_relationship_memories": [
+            "albany:memory_hayden_sponsored_road_warden"
+          ],
+          "summary": "Hayden remembers putting his own name behind your Road-Warden registration and has Cade's surviving cattle and broken paling entered beneath that sponsorship on the return board.",
+          "agenda": "The winter packet is closed, but Hayden expects the honest field account you promised and treats its facts as a live test of his future dispatches."
+        },
         {
           "id": "wolf_winter_and_gallowmere_closed",
           "after_quests": [
@@ -23253,6 +23638,14 @@
           ],
           "summary": "Hayden Hale has Cade's surviving cattle and the broken paling entered on the Station Quarter return board.",
           "agenda": "The Cade packet is closed. The other live report in that chain is already reflected in the current journey goal on your docket."
+        },
+        {
+          "id": "sponsored_road_warden",
+          "after_relationship_memories": [
+            "albany:memory_hayden_sponsored_road_warden"
+          ],
+          "summary": "Hayden recognizes the Road-Warden field kit and remembers staking his dispatch reputation on your winter registration.",
+          "agenda": "He has a specific hill-steading packet ready. Your fieldcraft record may steady the dangerous work, but the signed return account remains your debt."
         }
       ]
     },
@@ -23264,7 +23657,18 @@
       "role": "works foreman",
       "faction": "Ironhands Local",
       "summary": "Reese Pryce works as the works foreman in Albany Works District, watching how locked yards, bad machinery, and crews staying past dusk affect Albany city.",
-      "agenda": "Wants a traveler to handle Albany Works District's local problems before they spread through the Capital / Mohawk road network."
+      "agenda": "Wants a traveler to handle Albany Works District's local problems before they spread through the Capital / Mohawk road network.",
+      "campaign_npc_id": "albany:reese_pryce",
+      "variants": [
+        {
+          "id": "sponsored_ironhands_repairer",
+          "after_relationship_memories": [
+            "albany:memory_reese_sponsored_ironhands_repairer"
+          ],
+          "summary": "Reese remembers serialing the insulated repair roll to your registration and checks its seals before discussing any new yard work.",
+          "agenda": "The borrowed tools make you accountable for what returns, what breaks, and what evidence of field failure you bring back."
+        }
+      ]
     },
     {
       "id": "albany_city__greenway__contact",
@@ -23274,7 +23678,18 @@
       "role": "park warden",
       "faction": "Greenway Stewards",
       "summary": "Emery Sloane works as the park warden in Albany Greenway, watching how tracks, utility cuts, and witnesses who avoid main streets affect Albany city.",
-      "agenda": "Wants a traveler to handle Albany Greenway's local problems before they spread through the Capital / Mohawk road network."
+      "agenda": "Wants a traveler to handle Albany Greenway's local problems before they spread through the Capital / Mohawk road network.",
+      "campaign_npc_id": "albany:emery_sloane",
+      "variants": [
+        {
+          "id": "witnessed_independent_bond",
+          "after_relationship_memories": [
+            "albany:memory_emery_witnessed_independent_bond"
+          ],
+          "summary": "Emery remembers witnessing your refusal of a faction oath and the limited emergency tag Rowan issued on your personal bond.",
+          "agenda": "Emery will witness an honest return or public voiding of the tag, but will not let independence erase the consequences carried under it."
+        }
+      ]
     },
     {
       "id": "albany_city__campus__contact",

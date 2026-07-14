@@ -17,10 +17,11 @@ import {
   type OverworldRegionalArcProgress,
 } from "./session_regional_arcs.js";
 import { cloneOverworldRouteOption, type OverworldSessionRoutePlan } from "./session_routes.js";
-import type {
-  OverworldJournalEntry,
-  OverworldPendingRoadEncounter,
-  TravelLogEntry,
+import {
+  redactOverworldJournalEntryForPresentation,
+  type OverworldJournalEntry,
+  type OverworldPendingRoadEncounter,
+  type TravelLogEntry,
 } from "./session_snapshot.js";
 import { OVERWORLD_MAX_SUPPLIES as MAX_SUPPLIES, travelCondition } from "./travel_mechanics.js";
 import type { CampaignCharacterView } from "./campaign_character_view.js";
@@ -174,7 +175,7 @@ export function buildOverworldSessionView(state: OverworldSessionViewState): Ove
     maxSupplies: MAX_SUPPLIES,
     fatigue: state.fatigue,
     travelCondition: travelCondition(state.fatigue, state.supplies),
-    journal: [...state.journalEntries],
+    journal: state.journalEntries.map(redactOverworldJournalEntryForPresentation),
     discoveredAreaIds: [...state.discoveredAreaIds].sort(),
     discoveredJobIds: [...state.discoveredJobIds].sort(),
     visitedAreaIds: [...state.visitedAreaIds].sort(),

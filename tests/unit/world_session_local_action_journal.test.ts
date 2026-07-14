@@ -3,6 +3,7 @@ import {
   assertSnapshotDiscoveredAreaCountReplay,
   assertSnapshotDiscoveredLocalSourceCountReplay,
   assertSnapshotDiscoveryLocality,
+  assertSnapshotContactPresentationProofs,
   assertSnapshotLocalActionDiscoveryChronology,
   assertSnapshotLocalActionJournalReachability,
   localActionJournalReplayIndex,
@@ -12,6 +13,11 @@ import {
 } from "../../src/world/session_local_action_journal.js";
 import { timeLabel } from "../../src/world/session_journal_codec.js";
 import { allOverworldContactPresentations } from "../../src/world/session_contact_presentation.js";
+import { describeOverworldContactAction } from "../../src/world/local_actions.js";
+import {
+  buildCampaignCharacterState,
+  createInitialCampaignCharacterState,
+} from "../../src/world/campaign_character_state.js";
 import type { OverworldJournalTimelineIndex } from "../../src/world/session_journal_timeline.js";
 import type { OverworldJournalEntry } from "../../src/world/session_snapshot.js";
 import type {
@@ -353,5 +359,76 @@ describe("overworld local action journal replay", () => {
         replayIndex({ localActionCountByTown: new Map([["town_b", 1]]) }),
       ),
     ).toThrow(/discovered job count/);
+  });
+
+  it("proves contact copy against the campaign character valid at its timestamp", () => {
+    const memoryContact: OverworldCharacter = {
+      ...characterA,
+      campaign_npc_id: "npc:char_a",
+      variants: [
+        {
+          id: "remembers_dispatch",
+          after_relationship_memories: ["memory:dispatch_received"],
+          agenda: "The guide remembers handing you the dispatch.",
+        },
+      ],
+    };
+    const presentations = allOverworldContactPresentations(memoryContact);
+    const base = presentations.find((presentation) => presentation.presentationId === null)!;
+    const remembered = presentations.find(
+      (presentation) => presentation.presentationId === "remembers_dispatch",
+    )!;
+    const contactEntry = (
+      presentation: (typeof presentations)[number],
+      recordedAt: number,
+    ): OverworldJournalEntry => {
+      const action = describeOverworldContactAction(
+        presentation.contact,
+        presentation.presentationId,
+      );
+      return {
+        id: action.id,
+        kind: action.kind,
+        town: "Town B",
+        title: action.title,
+        text: action.text,
+        recordedAt: timeLabel(recordedAt),
+      };
+    };
+    const contactTimeline = timeline([
+      { entry: contactEntry(base, 600), recordedAt: 600 },
+      { entry: contactEntry(remembered, 700), recordedAt: 700 },
+    ]);
+    const sources = reachability({
+      charactersById: new Map([[memoryContact.id, memoryContact]]),
+      contactPresentationsByJournalId: new Map(
+        presentations.map((presentation) => [presentation.journalId, presentation]),
+      ),
+    });
+    const before = createInitialCampaignCharacterState();
+    const after = buildCampaignCharacterState({
+      relationships: [
+        {
+          npcId: "npc:char_a",
+          trust: 0,
+          regard: 0,
+          owesPlayer: 0,
+          playerOwes: 0,
+          memories: ["memory:dispatch_received"],
+        },
+      ],
+    });
+
+    expect(() =>
+      assertSnapshotContactPresentationProofs(sources, contactTimeline, (_entry, recordedAt) =>
+        recordedAt < 650 ? before : after,
+      ),
+    ).not.toThrow();
+    expect(() =>
+      assertSnapshotContactPresentationProofs(sources, contactTimeline, () => after),
+    ).toThrow(/presentation .* was not active at Day 1, 10:00/);
+    expect(() =>
+      assertSnapshotContactPresentationProofs(sources, contactTimeline, () => before),
+    ).toThrow(/presentation .* was not active at Day 1, 11:40/);
   });
 });

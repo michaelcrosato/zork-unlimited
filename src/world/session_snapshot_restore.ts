@@ -64,22 +64,152 @@ import {
   questCompletionMinutes,
   replayQuestCampaignConsequences,
 } from "./session_quests.js";
+import {
+  openingRegistrationLegacyJournalDraft,
+  openingRegistrationLegacyJournalEntry,
+  openingRegistrationLegacySourceWorldHash,
+  proveOpeningRegistrationJournal,
+  type OpeningRegistrationJournalProof,
+} from "./opening_registration_journal.js";
+import { parseTimeLabel, timeLabel } from "./session_journal_codec.js";
 
 export const OVERWORLD_PRE_CAMPAIGN_EXPORTS_WORLD_HASH =
   "39d32c027d2e826f476dd299bb95cc3911994ec92b4fbf297be8d1216e5b6151";
 export const OVERWORLD_CAMPAIGN_EXPORTS_WORLD_HASH =
   "b9416e3c43d9d54085ed9465b4d875811daebaf9834793d3f4a1ffca93b486c4";
+export const OVERWORLD_CAMPAIGN_IMPORTS_WORLD_HASH =
+  "cad75dafc291709f1d5c756dd70dd1002260bb06ca87d8e1e90aaf905f5f05c7";
 /** @deprecated Historical name retained for callers that identify the exports-era manifest. */
 export const OVERWORLD_CAMPAIGN_EXPORTS_MIGRATION_TARGET_WORLD_HASH =
   OVERWORLD_CAMPAIGN_EXPORTS_WORLD_HASH;
 // Updated whenever the trusted manifest changes. Prior hashes are accepted only
 // when they migrate directly into this exact manifest revision.
+export const OVERWORLD_OPENING_REGISTRATION_MIGRATION_TARGET_WORLD_HASH =
+  "1d12330f65743a8a2c124f9dae3cf145e6fdcbca9ec59a4c699ecd8757e8e47b";
+/** @deprecated Current target alias retained for existing callers. */
 export const OVERWORLD_CAMPAIGN_IMPORTS_MIGRATION_TARGET_WORLD_HASH =
-  "cad75dafc291709f1d5c756dd70dd1002260bb06ca87d8e1e90aaf905f5f05c7";
+  OVERWORLD_OPENING_REGISTRATION_MIGRATION_TARGET_WORLD_HASH;
+
+const OVERWORLD_OPENING_REGISTRATION_TRUSTED_PREDECESSOR_WORLD_HASHES: ReadonlySet<string> =
+  new Set([
+    OVERWORLD_PRE_CAMPAIGN_EXPORTS_WORLD_HASH,
+    OVERWORLD_CAMPAIGN_EXPORTS_WORLD_HASH,
+    OVERWORLD_CAMPAIGN_IMPORTS_WORLD_HASH,
+  ]);
+
+type OpeningRegistrationLegacyJournalProof = Readonly<{
+  entry: OverworldJournalEntry;
+  journalIndex: number;
+  sourceWorldHash: string;
+}>;
+
+function proveOpeningRegistrationLegacyJournal(args: {
+  completedQuestIds: ReadonlySet<string>;
+  discoveredAreaIds: ReadonlySet<string>;
+  indexes: OverworldSnapshotManifestIndex;
+  journalEntries: readonly OverworldJournalEntry[];
+  migratesTrustedWorldHash: boolean;
+  registrationProof: OpeningRegistrationJournalProof;
+  snapshot: OverworldSessionSnapshot;
+  startedQuestIds: ReadonlySet<string>;
+  visitedTownIds: ReadonlySet<string>;
+}): OpeningRegistrationLegacyJournalProof | null {
+  const markers = args.journalEntries
+    .map((entry, journalIndex) => ({ entry, journalIndex }))
+    .filter(({ entry }) => entry.kind === "registration_legacy");
+  if (markers.length > 1) {
+    throw new Error(
+      "Overworld session snapshot must contain at most one legacy opening registration marker.",
+    );
+  }
+  const marker = markers[0];
+  if (!marker) return null;
+  if (args.migratesTrustedWorldHash) {
+    throw new Error(
+      "Legacy overworld session snapshot has opening registration evidence from a later manifest.",
+    );
+  }
+  if (args.registrationProof.offered) {
+    throw new Error(
+      "Overworld session snapshot cannot combine selected or pending registration with a legacy registration marker.",
+    );
+  }
+  if (args.startedQuestIds.size === 0 && args.completedQuestIds.size === 0) {
+    throw new Error(
+      "Overworld session snapshot legacy registration marker has no earlier quest progress to grandfather.",
+    );
+  }
+
+  const sourceWorldHash = openingRegistrationLegacySourceWorldHash(marker.entry.id);
+  if (
+    !sourceWorldHash ||
+    !OVERWORLD_OPENING_REGISTRATION_TRUSTED_PREDECESSOR_WORLD_HASHES.has(sourceWorldHash)
+  ) {
+    throw new Error(
+      `Overworld session snapshot legacy registration marker "${marker.entry.id}" has an untrusted source world hash.`,
+    );
+  }
+  const expected = openingRegistrationLegacyJournalDraft(sourceWorldHash);
+  if (marker.entry.title !== expected.title || marker.entry.text !== expected.text) {
+    throw new Error(
+      `Overworld session snapshot legacy registration marker "${marker.entry.id}" does not match its canonical copy.`,
+    );
+  }
+  const boundary = marker.entry.registrationBoundary;
+  if (!boundary) {
+    throw new Error(
+      "Overworld session snapshot legacy registration marker has no durable migration boundary.",
+    );
+  }
+  if (
+    !args.visitedTownIds.has(boundary.townId) ||
+    marker.entry.town !== args.indexes.townNameForSource(boundary.townId) ||
+    !args.discoveredAreaIds.has(boundary.areaId) ||
+    args.indexes.areaHomes.get(boundary.areaId) !== boundary.townId ||
+    boundary.minutes !== parseTimeLabel(marker.entry.recordedAt)
+  ) {
+    throw new Error(
+      "Overworld session snapshot legacy registration marker does not match its migration location and time.",
+    );
+  }
+  if (boundary.acceptedDecisions > args.snapshot.journey.acceptedDecisions) {
+    throw new Error(
+      "Overworld session snapshot legacy registration marker is ahead of its journey decision count.",
+    );
+  }
+  if (
+    boundary.acceptedDecisions === args.snapshot.journey.acceptedDecisions &&
+    boundary.decisionProofHash !== args.snapshot.journey.decisionProof.hash
+  ) {
+    throw new Error(
+      "Overworld session snapshot legacy registration marker does not match the current journey proof.",
+    );
+  }
+  const hasOlderQuestEvidence = args.journalEntries.slice(marker.journalIndex + 1).some((entry) => {
+    if (entry.kind === "quest") {
+      return args.startedQuestIds.has(entry.id.slice("quest:".length));
+    }
+    if (entry.kind === "quest_done") {
+      return args.completedQuestIds.has(entry.id.slice("quest_done:".length));
+    }
+    return false;
+  });
+  if (!hasOlderQuestEvidence) {
+    throw new Error(
+      "Overworld session snapshot legacy registration marker has no earlier quest journal evidence.",
+    );
+  }
+  return Object.freeze({
+    entry: marker.entry,
+    journalIndex: marker.journalIndex,
+    sourceWorldHash,
+  });
+}
 
 export type OverworldSessionSnapshotRestorePlan = {
   characterAfter: CampaignCharacterState;
   currentAreaByTown: ReadonlyMap<string, string>;
+  journalEntriesAfter: readonly OverworldJournalEntry[];
   pendingRoadEncounter: OverworldPendingRoadEncounter | null;
   questOutcomeIds: ReadonlyMap<string, string>;
   regionRenown: ReadonlyMap<string, number>;
@@ -148,7 +278,7 @@ export function applyOverworldSessionSnapshotRestore(
   replaceOverworldJournalEntries(
     state.journalEntries,
     state.journalEntriesById,
-    snapshot.journalEntries,
+    plan.journalEntriesAfter,
   );
   replaceStringSet(state.resolvedEventIds, snapshot.resolvedEventIds);
   replaceStringSet(state.discoveredAreaIds, snapshot.discoveredAreaIds);
@@ -192,15 +322,18 @@ export function planOverworldSessionSnapshotRestore(args: {
   }
   const migratesPreCampaignExportsWorldHash =
     snapshot.worldHash === OVERWORLD_PRE_CAMPAIGN_EXPORTS_WORLD_HASH &&
-    worldHash === OVERWORLD_CAMPAIGN_IMPORTS_MIGRATION_TARGET_WORLD_HASH;
+    worldHash === OVERWORLD_OPENING_REGISTRATION_MIGRATION_TARGET_WORLD_HASH;
   const migratesCampaignExportsWorldHash =
     snapshot.worldHash === OVERWORLD_CAMPAIGN_EXPORTS_WORLD_HASH &&
-    worldHash === OVERWORLD_CAMPAIGN_IMPORTS_MIGRATION_TARGET_WORLD_HASH;
-  if (
-    snapshot.worldHash !== worldHash &&
-    !migratesPreCampaignExportsWorldHash &&
-    !migratesCampaignExportsWorldHash
-  ) {
+    worldHash === OVERWORLD_OPENING_REGISTRATION_MIGRATION_TARGET_WORLD_HASH;
+  const migratesCampaignImportsWorldHash =
+    snapshot.worldHash === OVERWORLD_CAMPAIGN_IMPORTS_WORLD_HASH &&
+    worldHash === OVERWORLD_OPENING_REGISTRATION_MIGRATION_TARGET_WORLD_HASH;
+  const migratesTrustedWorldHash =
+    migratesPreCampaignExportsWorldHash ||
+    migratesCampaignExportsWorldHash ||
+    migratesCampaignImportsWorldHash;
+  if (snapshot.worldHash !== worldHash && !migratesTrustedWorldHash) {
     throw new Error("Overworld session snapshot was made against a different world manifest.");
   }
 
@@ -315,21 +448,127 @@ export function planOverworldSessionSnapshotRestore(args: {
     travelLogArrivals: travelTimeline.arrivals,
     travelLogTownByArrival: travelTimeline.townByArrival,
   });
+  const registrationProof = proveOpeningRegistrationJournal({
+    registration: indexes.openingRegistration,
+    journalEntries: snapshot.journalEntries,
+    expectedTown: indexes.openingRegistrationTownName,
+  });
+  if (migratesTrustedWorldHash && registrationProof.offered) {
+    throw new Error(
+      "Legacy overworld session snapshot has opening registration evidence from a later manifest.",
+    );
+  }
+  const legacyRegistrationProof = proveOpeningRegistrationLegacyJournal({
+    completedQuestIds,
+    discoveredAreaIds,
+    indexes,
+    journalEntries: snapshot.journalEntries,
+    migratesTrustedWorldHash,
+    registrationProof,
+    snapshot,
+    startedQuestIds,
+    visitedTownIds,
+  });
+  if (
+    (startedQuestIds.size > 0 || completedQuestIds.size > 0) &&
+    registrationProof.profile === null &&
+    legacyRegistrationProof === null &&
+    !migratesTrustedWorldHash
+  ) {
+    throw new Error(
+      "Overworld session snapshot has quest progress without selected opening registration or trusted legacy provenance.",
+    );
+  }
+  if (registrationProof.offered) {
+    const offerBoundary = registrationProof.offerBoundary!;
+    const selectionBoundary = registrationProof.selectionBoundary;
+    if (selectionBoundary === null) {
+      if (
+        snapshot.currentId !== offerBoundary.townId ||
+        snapshot.currentAreaId !== offerBoundary.areaId ||
+        snapshot.minutes !== offerBoundary.minutes ||
+        snapshot.startedQuestIds.length > 0 ||
+        snapshot.completedQuestIds.length > 0 ||
+        snapshot.journey.acceptedDecisions !== offerBoundary.acceptedDecisions ||
+        snapshot.journey.decisionProof.hash !== offerBoundary.decisionProofHash
+      ) {
+        throw new Error(
+          "Overworld session snapshot pending registration no longer matches its offered world and journey boundary.",
+        );
+      }
+    } else {
+      if (snapshot.journey.acceptedDecisions < selectionBoundary.acceptedDecisions) {
+        throw new Error(
+          "Overworld session snapshot registration selection is ahead of its journey decision count.",
+        );
+      }
+      if (snapshot.journey.acceptedDecisions === selectionBoundary.acceptedDecisions) {
+        const expectedLast = {
+          number: selectionBoundary.acceptedDecisions,
+          surface: "overworld" as const,
+          actionId: `campaign_story:${indexes.openingRegistration!.id}:${registrationProof.profile!.id}`,
+          reason: "situation_changed" as const,
+        };
+        if (
+          snapshot.journey.decisionProof.hash !== selectionBoundary.decisionProofHash ||
+          JSON.stringify(snapshot.journey.decisionProof.last) !== JSON.stringify(expectedLast)
+        ) {
+          throw new Error(
+            "Overworld session snapshot registration selection does not match the current journey proof.",
+          );
+        }
+      }
+    }
+  }
   assertSnapshotQuestCompletionOutcomeJournalProof({
     indexes,
     journalEntries: snapshot.journalEntries,
     questOutcomeIds,
   });
-  const initialCharacter = createInitialCampaignCharacterState();
+  const neutralCharacter = createInitialCampaignCharacterState();
+  const initialCharacter = registrationProof.characterAtRegistration;
   const consequenceReplay = replayQuestCampaignConsequences({
     character: initialCharacter,
     questsById: indexes.questsById,
     questOutcomeIds,
   });
+  const journalIndexById = new Map(
+    snapshot.journalEntries.map((entry, index) => [entry.id, index] as const),
+  );
+  const characterAtCache = new Map<string, CampaignCharacterState>();
+  const characterAt = (
+    entry: OverworldJournalEntry,
+    _recordedAt: number,
+  ): CampaignCharacterState => {
+    const cached = characterAtCache.get(entry.id);
+    if (cached) return cached;
+    const contactIndex = journalIndexById.get(entry.id);
+    if (contactIndex === undefined) {
+      throw new Error(
+        `Overworld session snapshot cannot replay character state for unknown journal entry "${entry.id}".`,
+      );
+    }
+    const registrationActive =
+      registrationProof.journalIndex !== null && registrationProof.journalIndex > contactIndex;
+    const questOutcomeIdsAt = new Map<string, string>();
+    for (const [questId, endingId] of questOutcomeIds) {
+      const completedIndex = journalIndexById.get(`quest_done:${questId}`);
+      if (completedIndex !== undefined && completedIndex > contactIndex) {
+        questOutcomeIdsAt.set(questId, endingId);
+      }
+    }
+    const replayed = replayQuestCampaignConsequences({
+      character: registrationActive ? initialCharacter : neutralCharacter,
+      questsById: indexes.questsById,
+      questOutcomeIds: questOutcomeIdsAt,
+    }).characterAfter;
+    characterAtCache.set(entry.id, replayed);
+    return replayed;
+  };
   const storedCharacter = serializeCampaignCharacterState(snapshot.character);
   const expectedCharacter = serializeCampaignCharacterState(consequenceReplay.characterAfter);
   if (migratesPreCampaignExportsWorldHash) {
-    if (storedCharacter !== serializeCampaignCharacterState(initialCharacter)) {
+    if (storedCharacter !== serializeCampaignCharacterState(neutralCharacter)) {
       throw new Error(
         "Legacy overworld session snapshot has campaign character state without replayable consequence proof.",
       );
@@ -433,7 +672,7 @@ export function planOverworldSessionSnapshotRestore(args: {
   });
   assertSnapshotLocalActionJournalReachability(localActionJournal, localActionJournalSources);
   assertSnapshotLocalActionDiscoveryChronology(localActionJournal, localActionJournalSources);
-  assertSnapshotContactPresentationProofs(localActionJournalSources, journalTimeline);
+  assertSnapshotContactPresentationProofs(localActionJournalSources, journalTimeline, characterAt);
   const eventResolutionJournal = journalTimeline.eventResolutionProofs;
   assertSnapshotEventResolutionProofs(resolvedEventIds, indexes, eventResolutionJournal);
   assertSnapshotRegionalArcCompletionProofs(
@@ -469,9 +708,32 @@ export function planOverworldSessionSnapshotRestore(args: {
     localActionJournal,
   );
 
+  let journalEntriesAfter: readonly OverworldJournalEntry[] = snapshot.journalEntries;
+  if (migratesTrustedWorldHash && (startedQuestIds.size > 0 || completedQuestIds.size > 0)) {
+    if (snapshot.currentAreaId === null) {
+      throw new Error(
+        "Legacy overworld session snapshot with quest progress has no current area for its registration migration boundary.",
+      );
+    }
+    const marker = openingRegistrationLegacyJournalEntry({
+      sourceWorldHash: snapshot.worldHash,
+      town: indexes.townNameForSource(snapshot.currentId),
+      recordedAt: timeLabel(snapshot.minutes),
+      registrationBoundary: {
+        acceptedDecisions: snapshot.journey.acceptedDecisions,
+        decisionProofHash: snapshot.journey.decisionProof.hash,
+        townId: snapshot.currentId,
+        areaId: snapshot.currentAreaId,
+        minutes: snapshot.minutes,
+      },
+    });
+    journalEntriesAfter = Object.freeze([marker, ...snapshot.journalEntries]);
+  }
+
   return {
     characterAfter: consequenceReplay.characterAfter,
     currentAreaByTown,
+    journalEntriesAfter,
     pendingRoadEncounter,
     questOutcomeIds,
     regionRenown,

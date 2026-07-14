@@ -261,6 +261,29 @@ function revealOverworldQuest(a: ReturnType<typeof api>, sessionId: string, ques
   }
 }
 
+function registerLedgerAdvocate(a: ReturnType<typeof api>, sessionId: string): void {
+  const view = a.get_overworld_session({
+    include_observation: true,
+    session_id: sessionId,
+  }).observation;
+  const registrationContactId = overworld.opening_registration?.contact;
+  const contact = view.characters.find((candidate) => candidate.id === registrationContactId);
+  if (!contact) throw new Error("Rowan Quill is not available for opening registration.");
+  const talked = a.talk_overworld_session_contact({
+    ...FULL_OVERWORLD_RESPONSE,
+    session_id: sessionId,
+    character_id: contact.id,
+  });
+  if (talked.journey.storyChoice?.kind !== "registration") {
+    throw new Error("Expected Rowan Quill to present opening registration.");
+  }
+  a.choose_overworld_session_story({
+    ...FULL_OVERWORLD_RESPONSE,
+    session_id: sessionId,
+    choice: "albany:ledger_advocate",
+  });
+}
+
 function resolveCurrentOverworldSessionEvent(
   a: ReturnType<typeof api>,
   sessionId: string,
@@ -272,11 +295,18 @@ function resolveCurrentOverworldSessionEvent(
   const event = view.events.find((candidate) => !view.resolvedEventIds.includes(candidate.id));
   if (!event) throw new Error(`No unresolved event in ${view.current.id}.`);
   a.scout_overworld_session_poi({ session_id: sessionId, poi_id: view.pois[0]!.id });
-  a.talk_overworld_session_contact({
+  const talked = a.talk_overworld_session_contact({
     ...FULL_OVERWORLD_RESPONSE,
     session_id: sessionId,
     character_id: view.characters[0]!.id,
   });
+  if (talked.journey.storyChoice?.kind === "registration") {
+    a.choose_overworld_session_story({
+      ...FULL_OVERWORLD_RESPONSE,
+      session_id: sessionId,
+      choice: "albany:ledger_advocate",
+    });
+  }
   a.investigate_overworld_session_event({ session_id: sessionId, event_id: event.id });
   return a.resolve_overworld_session_event({ session_id: sessionId, event_id: event.id });
 }
@@ -601,6 +631,23 @@ describe("MCP tools — validate / load (§9.4)", () => {
     const discoveredQuest = discoveredQuests[0]!;
     expect(discoveredQuest.area).toBeDefined();
     expect(scoutedQuestLead.observation.currentArea?.id).not.toBe(discoveredQuest.area);
+
+    const routeBackToRegistration = scoutedQuestLead.observation.areaExits.find(
+      (exit) => exit.destination.id === started.observation.currentArea?.id,
+    );
+    expect(routeBackToRegistration).toBeDefined();
+    a.move_overworld_session_area({
+      ...FULL_OVERWORLD_RESPONSE,
+      session_id: started.session_id,
+      area_route_id: routeBackToRegistration!.id,
+    });
+    registerLedgerAdvocate(a, started.session_id);
+    areaObservation = a.move_overworld_session_area({
+      ...FULL_OVERWORLD_RESPONSE,
+      session_id: started.session_id,
+      area_route_id: stagingRoute.id,
+    }).observation;
+    expect(areaObservation.currentArea?.id).toBe(scoutedQuestLead.observation.currentArea?.id);
     expect(() =>
       a.start_overworld_session_quest({
         ...FULL_OVERWORLD_QUEST_START,
@@ -739,7 +786,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(repeated.result.discoveredSites).toEqual([]);
     expect(repeated.result.discoveredJobs).toEqual([]);
     expect(repeated.result.discoveredQuests).toEqual([]);
-    expect(repeated.observation.journal).toHaveLength(3);
+    expect(repeated.observation.journal).toHaveLength(6);
 
     const talked = a.talk_overworld_session_contact({
       ...FULL_OVERWORLD_RESPONSE,
@@ -750,7 +797,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(talked.observation.quests.map((quest) => quest.id)).toEqual(
       localQuests.slice(0, 1).map((quest) => quest.id),
     );
-    expect(talked.observation.journal).toHaveLength(4);
+    expect(talked.observation.journal).toHaveLength(7);
 
     const investigated = a.investigate_overworld_session_event({
       ...FULL_OVERWORLD_RESPONSE,
@@ -758,7 +805,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
       event_id: event.id,
     });
     expect(investigated.result.discoveredQuests).toEqual([]);
-    expect(investigated.observation.journal).toHaveLength(5);
+    expect(investigated.observation.journal).toHaveLength(8);
     expect(investigated.observation.timeLabel).not.toBe(started.observation.timeLabel);
 
     const resolved = a.resolve_overworld_session_event({
@@ -768,7 +815,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
     });
     expect(resolved.result.minutes).toBe(30 + event.intensity * 10);
     expect(resolved.result.entry.kind).toBe("resolution");
-    expect(resolved.observation.journal).toHaveLength(6);
+    expect(resolved.observation.journal).toHaveLength(9);
     expect(resolved.observation.resolvedEventIds).toContain(event.id);
     expect(resolved.observation.regionRenown[started.observation.current.region]).toBe(
       event.intensity,
@@ -836,7 +883,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
       traveled.observation.pendingRoadEncounter?.options.map((option) => option.strategy),
     ).toEqual(["cautious_scout", "assist_travelers", "press_on"]);
     expect(traveled.observation.log[0]?.to).toBe("Colonie town");
-    expect(traveled.observation.journal).toHaveLength(6);
+    expect(traveled.observation.journal).toHaveLength(9);
 
     expect(() =>
       a.travel_overworld_session({
@@ -928,6 +975,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
   it("syncs ended RPG quest sessions back into overworld progress", () => {
     const a = api();
     const started = a.start_overworld({ compact_context: false });
+    registerLedgerAdvocate(a, started.session_id);
     revealOverworldQuest(a, started.session_id, "sunken_barrow");
 
     const launched = a.start_overworld_session_quest({

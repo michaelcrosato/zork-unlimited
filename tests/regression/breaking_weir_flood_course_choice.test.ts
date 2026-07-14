@@ -93,6 +93,20 @@ function launchBreakingWeir(api: ToolApi): { overworldSessionId: string; rpgSess
   const full = { compact_context: false, compact_result: false } as const;
   const started = api.start_overworld({ compact_context: false });
   const overworldSessionId = started.session_id;
+  const registrationContact = started.observation.characters.find(
+    (character) => character.id === world.opening_registration?.contact,
+  );
+  if (!registrationContact) throw new Error("Expected Albany's registration contact.");
+  api.talk_overworld_session_contact({
+    ...full,
+    session_id: overworldSessionId,
+    character_id: registrationContact.id,
+  });
+  api.choose_overworld_session_story({
+    ...full,
+    session_id: overworldSessionId,
+    choice: "albany:ledger_advocate",
+  });
 
   for (const roadId of pathBetween(started.observation.current.id, quest.home, world.edges)) {
     api.travel_overworld_session({ session_id: overworldSessionId, road_id: roadId });

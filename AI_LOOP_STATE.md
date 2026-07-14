@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 556 -->
+<!-- historical_cycle_count: 557 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,15 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - albany_character_registration
+
+- Change: Rowan now presents four permanent Albany backgrounds with visible contact, rank-4 skill/value, kit, funds, standing, knowledge, and active obligation; the selected canonical package survives save/restore, reaches embedded quests, and changes Rowan plus its named sponsor's later response. Refusal is an authored Unaffiliated Courier record, not an unchanged retry.
+- Integrity/parity: offer and selection journals bind exact Albany area/time and journey decision proof; restore rejects splices, deletion/newer-action bypasses, post-quest registration, mutable package claims, and predecessor hashes carrying later evidence, while progressed trusted saves receive bound legacy provenance. Private proof metadata is deep-cloned and redacted from UI/full/compact MCP; fresh journeys cannot start any first quest before choosing a visible card.
+- Measured effect: `SS-F01-character-background` is the sole counted fork. With the same broken-paling roll of 7, Road-Warden Fieldcraft imports DEF 4 and braces the rail; Ledger Advocate remains DEF 3, splits it, and receives the bind-the-rail recovery. Direct/public starts remain pack-default.
+- Pure evidence: verified pure/fresh seed 13 chose Road-Warden, completed Wolf-Winter, Gallowmere, Tanner's Fever, and Breaking Weir, continued at 25/40/49/71/80, then ended voluntarily at 92; clarity/enjoyment 4/4, replay true, no rejects, stuck state, or blocker.
+- Compile/self-critique: the ledger is 773 accepted/33 rejected, two reports beyond the 771-report compile and below threshold. PASS for one delayed cross-system background fork, not overall slice depth: three profiles still lack mechanical Wolf consumers, and the player again identified the repeated town/quest chassis as S0 debt.
+- Guard: adversarial reviews closed registration bypass, save-boundary, migration, memory-consumer, projection, UI-bias, and structural-QA defects; live Vite verification exercised all four cards with no errors; final 6,000-step crawl `20260714T153351Z` reached 247/247 nodes, 344/344 edges, and 12/12 quests; full health passed (325 files/2,359 tests, UI, 12 packs).
 
 ### Cycle result - trusted_campaign_quest_imports
 
@@ -136,12 +145,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Effect: seed 1609's worst-moment continuity contradiction is closed at its causal seam. Fresh seed 1709 instead found a failed Tanner treatment branch temporarily soft-lock-like and again noticed cross-town name reuse; uniform six-leg quest travel also remains pacing debt.
 - Compile/self-critique: the ledger is current at 454 verified reports; seed 1709 is the sole report since the 453-report compile, below the three-report threshold. PASS for stateful world memory, not retention completion—the player still chose a natural stop after three arcs; Tanner failure recovery and the audited 700-contact/17-name template corpus are next evidence.
 - Guard: 114 focused lifecycle/parity/forgery tests, final 6000-step crawl (247/247 nodes, 344/344 edges, 12/12 quests), verified receipt, and full health (299 files/2126 tests, UI, 12 packs) passed.
-
-### Cycle result - authored_road_encounter_cadence
-
-- Surface: 340 generic road reports are now visible ambient travel, never mandatory choices; three authored scenes use situation-specific labels/outcomes, fire once, respect active goals, and retire with their quest. Gallowmere gets one relief-line choice plus one ambient spoor cue; Breaking Weir gains a Rome-bound flood choice (`bug_0509`).
-- Integrity/parity: save replay requires journals only for actual choices and rejects ambient/duplicate forgeries; state-aware route estimates, web, CLI, default pure MCP, and spectate receive the same immediate scene while rolling history stays lean. Generic travel counts one movement decision; only a chosen authored response adds another.
-- Pure evidence: verified pure/fresh seed 1609 completed Wolf-Winter, Gallowmere, Tanner's Fever, and Breaking Weir; continued at 23/40/54/80/81, ended honestly at goal 4 on decision 105, clarity/enjoyment 4/4, replay true. Seed 1607's malformed report and seed 1608's technical timeout were correctly rejected, not counted.
-- Effect: the prior every-leg “toll booth,” repetitive encounter, Oneonta→Rome padding, and post-Gallowmere Queensbury warning complaints did not recur. Travel is now functional/formulaic rather than worst-moment friction; remaining connective debt is route backtracking.
-- Compile/self-critique: 453 verified reports include four pure contract-v3 exits: all continued at decisions 40 and 80, 20 continue vs 4 end, 105–114 decisions, replay 4/4. PASS for authored cadence, not retention completion—the player still ended after four quests; fresh S1s are stale Hayden dialogue and repeated NPC/town templates.
-- Guard: 133 focused tests plus typecheck, final 6000-step crawl (247/247 nodes, 344/344 edges, 12/12 quests), independent receipt verification, three-report feedback compile, and full health passed.

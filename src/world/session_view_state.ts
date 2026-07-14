@@ -184,6 +184,7 @@ export function buildOverworldSessionViewModelState(
   const contacts = currentAreaContent.characters.map(
     (character) =>
       presentOverworldContact(character, {
+        character: source.character,
         completedQuestIds: source.completedQuestIds,
       }).contact,
   );

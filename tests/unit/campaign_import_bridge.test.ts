@@ -34,6 +34,9 @@ function revealAlbanyWolf(session: OverworldSession) {
   const opening = session.view();
   session.scoutPoi(opening.pois[0]!.id);
   const revealed = session.talkToCharacter(opening.characters[0]!.id);
+  if (session.journey().storyChoice?.kind === "registration") {
+    session.chooseJourneyStory("albany:ledger_advocate");
+  }
   const quest = revealed.discoveredQuests?.find((candidate) => candidate.id === "wolf_winter");
   if (!quest) throw new Error("Expected the Albany Wolf-Winter lead.");
   const route = session
@@ -62,6 +65,24 @@ function launchAlbanyWolf(
     session_id: overworldSessionId,
     include_observation: true,
   }).observation;
+  const rowan = observation.characters[0];
+  if (!rowan) throw new Error("Expected the Albany registration contact.");
+  api.talk_overworld_session_contact({
+    ...full,
+    session_id: overworldSessionId,
+    character_id: rowan.id,
+  });
+  api.choose_overworld_session_story({
+    ...full,
+    session_id: overworldSessionId,
+    choice: "albany:ledger_advocate",
+  });
+  observation = api.get_overworld_session({
+    session_id: overworldSessionId,
+    include_observation: true,
+  }).observation;
+  const quest = observation.quests.find((candidate) => candidate.id === "wolf_winter");
+  if (!quest) throw new Error("Expected the Wolf-Winter lead after registration.");
   const marketRoute = observation.areaExits.find(
     (route) => route.destination.id === "albany_city__market",
   );
@@ -80,10 +101,6 @@ function launchAlbanyWolf(
     session_id: overworldSessionId,
     poi_id: observation.pois[0]!.id,
   });
-  const quest = revealed.result.discoveredQuests?.find(
-    (candidate) => candidate.id === "wolf_winter",
-  );
-  if (!quest) throw new Error("Expected the Wolf-Winter lead.");
   const questRoute = revealed.observation.areaExits.find(
     (route) => route.destination.id === quest.area,
   );
@@ -112,6 +129,7 @@ describe("trusted campaign-character quest launch bridge", () => {
     const runtime = new RpgMcpSessionRuntime(sessions);
     const before = session.snapshot();
     const beforeHash = session.snapshotHash();
+    const expectedCharacter = session.campaignCharacterState();
     const invalidImports = {
       version: 1,
       rules: [
@@ -132,7 +150,7 @@ describe("trusted campaign-character quest launch bridge", () => {
         startOptions: { seed: 505 },
         startEmbeddedWorldQuest: (_args, context) => {
           expect(context.overworldSessionId).toBe("ow-test");
-          expect(context.character).toEqual(createInitialCampaignCharacterState());
+          expect(context.character).toEqual(expectedCharacter);
           const initialState = initStateForRpgPack(wolfIndex, 505, {
             character: context.character,
             imports: invalidImports,

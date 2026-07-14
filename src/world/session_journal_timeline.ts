@@ -1,6 +1,11 @@
 import type { OverworldCharacter, OverworldLocalEvent, OverworldPoi } from "./overworld.js";
 import type { OverworldContactPresentation } from "./session_contact_presentation.js";
 import {
+  openingRegistrationLegacyJournalDraft,
+  openingRegistrationLegacySourceWorldHash,
+  type OpeningRegistrationJournalDraft,
+} from "./opening_registration_journal.js";
+import {
   parseRoadJournalId,
   parseServiceJournalId,
   parseTimeLabel,
@@ -32,6 +37,8 @@ export type OverworldJournalSourceIndex = {
   eventTownNames: ReadonlyMap<string, string>;
   jobIds: ReadonlySet<string>;
   jobTownNames: ReadonlyMap<string, string>;
+  openingRegistrationJournalDraftsById: ReadonlyMap<string, OpeningRegistrationJournalDraft>;
+  openingRegistrationTownName: string | null;
   poiIds: ReadonlySet<string>;
   poiTownNames: ReadonlyMap<string, string>;
   questIds: ReadonlySet<string>;
@@ -167,6 +174,46 @@ function assertServiceJournalSource(entry: OverworldJournalEntry, recordedAt: nu
   }
 }
 
+function assertOpeningRegistrationJournalSource(
+  entry: OverworldJournalEntry,
+  sources: OverworldJournalSourceIndex,
+): void {
+  const draft = sources.openingRegistrationJournalDraftsById.get(entry.id);
+  if (!draft || draft.kind !== entry.kind) {
+    throw new Error(
+      `Overworld session snapshot journal ${entry.kind} entry references unknown opening registration evidence "${entry.id}".`,
+    );
+  }
+  if (entry.title !== draft.title || entry.text !== draft.text) {
+    throw new Error(
+      `Overworld session snapshot journal ${entry.kind} entry "${entry.id}" does not match its authored copy.`,
+    );
+  }
+  if (
+    sources.openingRegistrationTownName !== null &&
+    entry.town !== sources.openingRegistrationTownName
+  ) {
+    throw new Error(
+      `Overworld session snapshot journal ${entry.kind} entry "${entry.id}" is bound to town "${entry.town}", expected "${sources.openingRegistrationTownName}".`,
+    );
+  }
+}
+
+function assertOpeningRegistrationLegacyJournalSource(entry: OverworldJournalEntry): void {
+  const sourceWorldHash = openingRegistrationLegacySourceWorldHash(entry.id);
+  if (!sourceWorldHash) {
+    throw new Error(
+      `Overworld session snapshot journal registration_legacy entry id "${entry.id}" must contain a source world hash.`,
+    );
+  }
+  const draft = openingRegistrationLegacyJournalDraft(sourceWorldHash);
+  if (entry.title !== draft.title || entry.text !== draft.text) {
+    throw new Error(
+      `Overworld session snapshot journal registration_legacy entry "${entry.id}" does not match its canonical copy.`,
+    );
+  }
+}
+
 function assertSnapshotJournalSource(
   entry: OverworldJournalEntry,
   recordedAt: number,
@@ -177,6 +224,15 @@ function assertSnapshotJournalSource(
   if (!placeNames.has(entry.town)) {
     throw new Error(
       `Overworld session snapshot journal ${entry.kind} references unknown ${placeLabel} "${entry.town}".`,
+    );
+  }
+  const isRegistrationEvidence =
+    entry.kind === "registration" ||
+    entry.kind === "registration_legacy" ||
+    entry.kind === "registration_offer";
+  if (isRegistrationEvidence !== (entry.registrationBoundary !== undefined)) {
+    throw new Error(
+      `Overworld session snapshot journal ${entry.kind} entry has an invalid registration boundary.`,
     );
   }
 
@@ -226,6 +282,13 @@ function assertSnapshotJournalSource(
         "quest",
         sources.questTownNames,
       );
+      return;
+    case "registration":
+    case "registration_offer":
+      assertOpeningRegistrationJournalSource(entry, sources);
+      return;
+    case "registration_legacy":
+      assertOpeningRegistrationLegacyJournalSource(entry);
       return;
     case "regional_arc":
       assertKnownJournalSource(

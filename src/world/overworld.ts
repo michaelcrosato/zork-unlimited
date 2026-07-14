@@ -5,6 +5,8 @@ import {
   CampaignConsequenceEffectsSchema,
   campaignConsequenceEffectKey,
 } from "./campaign_consequences.js";
+import { CampaignCharacterIdSchema } from "./campaign_character_state.js";
+import { OpeningRegistrationSchema } from "./opening_registration.js";
 
 export const OverworldNodeKindSchema = z.enum([
   "metropolis",
@@ -136,13 +138,25 @@ export const OverworldRegionalArcSchema = z
 export const OverworldCharacterVariantSchema = z
   .object({
     id: z.string().min(1),
-    after_quests: z.array(z.string().min(1)).min(1),
+    after_quests: z.array(z.string().min(1)).min(1).optional(),
+    after_relationship_memories: z.array(CampaignCharacterIdSchema).min(1).optional(),
     summary: z.string().min(1).optional(),
     agenda: z.string().min(1).optional(),
   })
   .strict()
-  .refine((variant) => variant.summary !== undefined || variant.agenda !== undefined, {
-    message: "An overworld character variant must override summary or agenda.",
+  .superRefine((variant, ctx) => {
+    if (variant.after_quests === undefined && variant.after_relationship_memories === undefined) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "An overworld character variant must require a quest or relationship memory.",
+      });
+    }
+    if (variant.summary === undefined && variant.agenda === undefined) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "An overworld character variant must override summary or agenda.",
+      });
+    }
   });
 
 export const OverworldCharacterSchema = z
@@ -155,6 +169,7 @@ export const OverworldCharacterSchema = z
     faction: z.string().min(1),
     summary: z.string().min(1),
     agenda: z.string().min(1),
+    campaign_npc_id: CampaignCharacterIdSchema.optional(),
     variants: z.array(OverworldCharacterVariantSchema).min(1).optional(),
   })
   .strict();
@@ -285,6 +300,7 @@ export const OverworldManifestSchema = z
     name: z.string().min(1),
     start: z.string().min(1),
     premise: z.string().min(1),
+    opening_registration: OpeningRegistrationSchema.optional(),
     sources: z.array(
       z
         .object({
@@ -328,7 +344,7 @@ export type OverworldRegionProfile = z.infer<typeof OverworldRegionProfileSchema
 export type OverworldRegionalArc = z.infer<typeof OverworldRegionalArcSchema>;
 export type OverworldCharacterVariant = z.infer<typeof OverworldCharacterVariantSchema>;
 export type OverworldCharacter = z.infer<typeof OverworldCharacterSchema>;
-export type OverworldCharacterView = Omit<OverworldCharacter, "variants">;
+export type OverworldCharacterView = Omit<OverworldCharacter, "campaign_npc_id" | "variants">;
 export type OverworldLocalEvent = z.infer<typeof OverworldLocalEventSchema>;
 export type OverworldLocalJobKind = z.infer<typeof OverworldLocalJobKindSchema>;
 export type OverworldLocalJob = z.infer<typeof OverworldLocalJobSchema>;
@@ -845,6 +861,7 @@ function assertEntitiesIntegrity(
   }
 
   const seenCharacter = new Set<string>();
+  const seenCampaignNpcId = new Set<string>();
   const characterAreas = new Set<string>();
   const contactTalkJournalIds = new Set<string>();
   for (const character of world.characters) {
@@ -875,8 +892,26 @@ function assertEntitiesIntegrity(
       contactTalkJournalIds.add(journalId);
     }
 
+    if (
+      character.campaign_npc_id !== undefined &&
+      !CampaignCharacterIdSchema.safeParse(character.campaign_npc_id).success
+    ) {
+      throw new Error(
+        `Overworld character "${character.id}" has invalid campaign npc id "${character.campaign_npc_id}".`,
+      );
+    }
+    if (
+      character.campaign_npc_id !== undefined &&
+      seenCampaignNpcId.has(character.campaign_npc_id)
+    ) {
+      throw new Error(`Duplicate overworld campaign npc id "${character.campaign_npc_id}".`);
+    }
+    if (character.campaign_npc_id !== undefined) {
+      seenCampaignNpcId.add(character.campaign_npc_id);
+    }
+
     const seenVariantIds = new Set<string>();
-    const variantQuestSets: Set<string>[] = [];
+    const variantConditionSets: Set<string>[] = [];
     for (const variant of character.variants ?? []) {
       if (seenVariantIds.has(variant.id)) {
         throw new Error(
@@ -889,14 +924,14 @@ function assertEntitiesIntegrity(
           `Overworld character "${character.id}" variant "${variant.id}" must override summary or agenda.`,
         );
       }
-      if (variant.after_quests.length === 0) {
+      const afterQuestIds = new Set(variant.after_quests ?? []);
+      const afterRelationshipMemoryIds = new Set(variant.after_relationship_memories ?? []);
+      if (afterQuestIds.size === 0 && afterRelationshipMemoryIds.size === 0) {
         throw new Error(
-          `Overworld character "${character.id}" variant "${variant.id}" has no after_quests condition.`,
+          `Overworld character "${character.id}" variant "${variant.id}" has no quest or relationship-memory condition.`,
         );
       }
-
-      const afterQuestIds = new Set(variant.after_quests);
-      if (afterQuestIds.size !== variant.after_quests.length) {
+      if (afterQuestIds.size !== (variant.after_quests?.length ?? 0)) {
         throw new Error(
           `Overworld character "${character.id}" variant "${variant.id}" repeats an after_quests id.`,
         );
@@ -908,18 +943,40 @@ function assertEntitiesIntegrity(
           );
         }
       }
-      variantQuestSets.push(afterQuestIds);
+      if (afterRelationshipMemoryIds.size !== (variant.after_relationship_memories?.length ?? 0)) {
+        throw new Error(
+          `Overworld character "${character.id}" variant "${variant.id}" repeats an after_relationship_memories id.`,
+        );
+      }
+      if (afterRelationshipMemoryIds.size > 0 && character.campaign_npc_id === undefined) {
+        throw new Error(
+          `Overworld character "${character.id}" variant "${variant.id}" requires relationship memories without a campaign_npc_id.`,
+        );
+      }
+      for (const memoryId of afterRelationshipMemoryIds) {
+        if (!CampaignCharacterIdSchema.safeParse(memoryId).success) {
+          throw new Error(
+            `Overworld character "${character.id}" variant "${variant.id}" has invalid relationship memory id "${memoryId}".`,
+          );
+        }
+      }
+      variantConditionSets.push(
+        new Set([
+          ...[...afterQuestIds].map((questId) => `quest:${questId}`),
+          ...[...afterRelationshipMemoryIds].map((memoryId) => `memory:${memoryId}`),
+        ]),
+      );
     }
 
-    for (let earlierIndex = 0; earlierIndex < variantQuestSets.length; earlierIndex += 1) {
-      const earlier = variantQuestSets[earlierIndex]!;
+    for (let earlierIndex = 0; earlierIndex < variantConditionSets.length; earlierIndex += 1) {
+      const earlier = variantConditionSets[earlierIndex]!;
       for (
         let laterIndex = earlierIndex + 1;
-        laterIndex < variantQuestSets.length;
+        laterIndex < variantConditionSets.length;
         laterIndex += 1
       ) {
-        const later = variantQuestSets[laterIndex]!;
-        if ([...earlier].every((questId) => later.has(questId))) {
+        const later = variantConditionSets[laterIndex]!;
+        if ([...earlier].every((conditionId) => later.has(conditionId))) {
           const earlierVariant = character.variants![earlierIndex]!;
           const laterVariant = character.variants![laterIndex]!;
           throw new Error(
@@ -1053,6 +1110,104 @@ function assertEntitiesIntegrity(
   }
 }
 
+function assertOpeningRegistrationIntegrity(
+  world: OverworldManifest,
+  nodes: ReadonlyMap<string, OverworldNode>,
+  areaIds: ReadonlySet<string>,
+  areaHomes: ReadonlyMap<string, string>,
+): void {
+  const registration = world.opening_registration;
+  if (!registration) return;
+  if (registration.home !== world.start) {
+    throw new Error("Overworld opening registration must be anchored in the starting town.");
+  }
+  if (!nodes.has(registration.home)) {
+    throw new Error("Overworld opening registration references a missing home node.");
+  }
+  if (!areaIds.has(registration.area) || areaHomes.get(registration.area) !== registration.home) {
+    throw new Error("Overworld opening registration is anchored outside its home town.");
+  }
+  const contact = world.characters.find((character) => character.id === registration.contact);
+  if (!contact || contact.home !== registration.home || contact.area !== registration.area) {
+    throw new Error(
+      "Overworld opening registration contact must exist in its authored home and area.",
+    );
+  }
+  if (contact.campaign_npc_id === undefined) {
+    throw new Error("Overworld opening registration contact requires a campaign_npc_id.");
+  }
+
+  const charactersByCampaignNpcId = new Map(
+    world.characters.flatMap((character) =>
+      character.campaign_npc_id === undefined
+        ? []
+        : ([[character.campaign_npc_id, character]] as const),
+    ),
+  );
+  for (const profile of registration.profiles) {
+    if (
+      profile.character.skills.length === 0 ||
+      profile.character.values.length === 0 ||
+      profile.character.equipment.length === 0 ||
+      !profile.character.promises.some((promise) => promise.status === "active") ||
+      profile.character.relationships.length < 2
+    ) {
+      throw new Error(
+        `Opening registration profile "${profile.id}" must provide a skill, value, equipment package, obligation, registration-contact memory, and sponsor contact.`,
+      );
+    }
+    if (
+      !profile.character.relationships.some(
+        (relationship) => relationship.npcId === contact.campaign_npc_id,
+      )
+    ) {
+      throw new Error(
+        `Opening registration profile "${profile.id}" does not bind the registration contact's relationship memory.`,
+      );
+    }
+    for (const relationship of profile.character.relationships) {
+      const boundCharacter = charactersByCampaignNpcId.get(relationship.npcId);
+      if (!boundCharacter) {
+        throw new Error(
+          `Opening registration profile "${profile.id}" references unbound campaign npc "${relationship.npcId}".`,
+        );
+      }
+      if (relationship.memories.length === 0) {
+        throw new Error(
+          `Opening registration profile "${profile.id}" has no authored memory for campaign npc "${relationship.npcId}".`,
+        );
+      }
+      for (const memoryId of relationship.memories) {
+        if (
+          !(boundCharacter.variants ?? []).some((variant) =>
+            variant.after_relationship_memories?.includes(memoryId),
+          )
+        ) {
+          throw new Error(
+            `Opening registration profile "${profile.id}" memory "${memoryId}" has no consuming contact variant.`,
+          );
+        }
+      }
+    }
+    if (
+      !profile.character.relationships.some(
+        (relationship) => relationship.npcId !== contact.campaign_npc_id,
+      )
+    ) {
+      throw new Error(
+        `Opening registration profile "${profile.id}" requires a sponsor relationship distinct from the registration contact.`,
+      );
+    }
+    for (const promise of profile.character.promises) {
+      if (!charactersByCampaignNpcId.has(promise.recipientId)) {
+        throw new Error(
+          `Opening registration profile "${profile.id}" promises an unbound campaign npc "${promise.recipientId}".`,
+        );
+      }
+    }
+  }
+}
+
 function assertExplorationSitesIntegrity(
   world: OverworldManifest,
   nodes: Map<string, OverworldNode>,
@@ -1181,6 +1336,8 @@ export function assertOverworldIntegrity(world: OverworldManifest): void {
   assertAreasIntegrity(world, nodes, areaIds, areaHomes);
 
   assertEntitiesIntegrity(world, nodes, areaIds, areaHomes, edgeIds);
+
+  assertOpeningRegistrationIntegrity(world, nodes, areaIds, areaHomes);
 
   assertExplorationSitesIntegrity(world, nodes, regionNames, areaIds, areaHomes);
 

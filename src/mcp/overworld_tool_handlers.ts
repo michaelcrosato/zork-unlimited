@@ -76,7 +76,6 @@ import {
   type EmbeddedJourneyField,
 } from "./journey_projection.js";
 import type { JourneyDecisionClassification } from "../world/journey_contract.js";
-import type { JourneyCampaignStoryChoiceOptionId } from "../world/journey_campaign.js";
 
 type OverworldResponseOptions = OverworldMcpResponseOptions;
 
@@ -706,7 +705,7 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
     choose_overworld_session_story<
       Args extends {
         session_id: string;
-        choice: JourneyCampaignStoryChoiceOptionId;
+        choice: string;
       } & OverworldResponseOptions,
     >(
       args: Args,

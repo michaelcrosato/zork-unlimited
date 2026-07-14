@@ -5,11 +5,11 @@ Generated deterministically from verified blind reports. The latest entries stay
 ## Summary
 
 - Reports dir: `blind-tester/reports`
-- Accepted reports: 772
+- Accepted reports: 773
 - Rejected or ignored markdown reports: 33
-- Latest report stamp: 20260714T055100Z
+- Latest report stamp: 20260714T145549Z
 - Recent entry limit: 100
-- Archived accepted entries collapsed into traits: 672
+- Archived accepted entries collapsed into traits: 673
 
 ## Recent Common Traits
 
@@ -20,10 +20,15 @@ Generated deterministically from verified blind reports. The latest entries stay
 | 40 | 20260713T055537Z | confusion | the notice board near Albany Station Quarter doesn't say where the quest actually starts | overworld |
 | 40 | 20260713T055537Z | worst moment | Running into the Albany Station Quarter issue. | overworld |
 | 27 | 20260713T055537Z | bug S2 | road to Colonie: road encounter text repeats itself on back-to-back trips | overworld |
-| 19 | 20260713T055537Z | stuck | player got stuck | overworld |
-| 19 | 20260713T055537Z | understanding | goal was not understood | overworld |
+| 18 | 20260713T055537Z | stuck | player got stuck | overworld |
+| 18 | 20260713T055537Z | understanding | goal was not understood | overworld |
 | 14 | 20260713T055537Z | worst moment | Nothing stood out as bad — tried hard to break it and it held up. | overworld |
 | 14 | 20260713T055537Z | worst moment | Running into the road to Colonie issue. | overworld |
+| 1 | 20260714T145549Z | bug S0 | Overworld town loop (Albany/Queensbury/Oneonta/Rome civic centers): Notice-hall/broker-contact/charter-backlog struct... | overworld |
+| 1 | 20260714T145549Z | confusion | compact context schema (tuples/legend) needed careful parsing at first | overworld |
+| 1 | 20260714T145549Z | confusion | no explicit warning before a supply deficit on a multi-leg goal passage | overworld |
+| 1 | 20260714T145549Z | confusion | unclear that areas must be scouted before quests/jobs become visible | overworld |
+| 1 | 20260714T145549Z | worst moment | Realizing partway through travel prep that I'd need to parse dense compact tuples by hand to know when a road passage... | overworld |
 | 1 | 20260714T055100Z | bug S0 | Marta's Stall, Oswego Market Streets: go_east from the stall looped back to the same room instead of progressing towa... | overworld |
 | 1 | 20260714T055100Z | bug S1 | across all six quests (Wolf-Winter through Cold Forge): identical structural chassis (notice-hall scout -> anchor NPC... | overworld |
 | 1 | 20260714T055100Z | bug S1 | mid-session, after a scout_overworld_session_poi call: spurious 'previous response failed to produce a valid tool cal... | overworld |
@@ -35,16 +40,12 @@ Generated deterministically from verified blind reports. The latest entries stay
 | 1 | 20260714T042417Z | confusion | byre-jerkin required a separate wear step after pickup | overworld |
 | 1 | 20260714T042417Z | confusion | dense compact-context tuple format has a learning curve | overworld |
 | 1 | 20260714T042417Z | worst moment | Nearly walking into the wolf fight with an unequipped jerkin because taking it didn't automatically wear it. | overworld |
-| 1 | 20260714T032448Z | bug S1 | market-broker NPCs and civic-center notice halls, every town visited: flavor text is nearly identical across all six... | overworld |
-| 1 | 20260714T032448Z | confusion | templated market-broker and notice-hall flavor text repeated near-verbatim across towns | overworld |
-| 1 | 20260714T032448Z | worst moment | Realizing every Market Streets contact gives the same canned broker pitch, town after town. | overworld |
-| 1 | 20260714T025247Z | bug S0 | Oneonta Market Streets, ending 'The Meadowsweet': ending title doubles as the room name at the same beat, mildly conf... | overworld |
-| 1 | 20260714T025247Z | confusion | fatigue/supply thresholds and their real consequences were never made explicit | overworld |
 
 ## Recent Entries
 
 | Stamp | Source | Seed | Mode | Decisions | C/E | Stuck | Replay | Report | Signal |
 | --- | --- | ---: | --- | ---: | --- | --- | --- | --- | --- |
+| 20260714T145549Z | overworld | 13 | pure | 92 | 4/4 | no | yes | `blind-tester/reports/20260714T145549Z_overworld_seed13.md` | confusions: compact context schema (tuples/legend) needed careful parsing at first; unclear that areas must be scouted before quests/jobs become visible; no explicit w... |
 | 20260714T055100Z | overworld | 12 | pure | 133 | 4/5 | no | yes | `blind-tester/reports/20260714T055100Z_overworld_seed12.md` | confusions: distinguishing goal-completion pause vs. fixed-decision checkpoint vs. story choice at first exposure; one go_east loop back to the same room instead of ro... |
 | 20260714T042417Z | overworld | 10 | pure | 67 | 4/4 | no | yes | `blind-tester/reports/20260714T042417Z_overworld_seed10.md` | confusions: byre-jerkin required a separate wear step after pickup; dense compact-context tuple format has a learning curve \| bugs: S1 Store-Shed, The Wolf-Winter ques... |
 | 20260714T032448Z | overworld | 8 | pure | 120 | 4/5 | no | yes | `blind-tester/reports/20260714T032448Z_overworld_seed8.md` | confusions: templated market-broker and notice-hall flavor text repeated near-verbatim across towns \| bugs: S1 market-broker NPCs and civic-center notice halls, every... |
@@ -144,7 +145,6 @@ Generated deterministically from verified blind reports. The latest entries stay
 | 20260713T055537Z | overworld | 6008 | structural | — | 4/3 | no | no | `blind-tester/reports/20260713T055537Z_overworld_seed6008.md` | confusions: the notice board near Albany Station Quarter doesn't say where the quest actually starts \| bugs: S3 Albany Station Quarter: notice board wording is confusi... |
 | 20260713T055537Z | overworld | 6007 | structural | — | 3/2 | no | yes | `blind-tester/reports/20260713T055537Z_overworld_seed6007.md` | bugs: S1 seed-6007 corner: minor wording nit unique to seed 6007 |
 | 20260713T055537Z | overworld | 6006 | structural | — | 2/2 | no | no | `blind-tester/reports/20260713T055537Z_overworld_seed6006.md` | would not replay |
-| 20260713T055537Z | overworld | 6005 | structural | — | 4/4 | yes | yes | `blind-tester/reports/20260713T055537Z_overworld_seed6005.md` | bugs: S1 seed-6005 corner: minor wording nit unique to seed 6005 \| got stuck \| goal unclear |
 
 ## Archived Trait Categories
 
@@ -155,8 +155,8 @@ Generated deterministically from verified blind reports. The latest entries stay
 | 89 | 20260713T055537Z | confusion | the notice board near Albany Station Quarter doesn't say where the quest actually starts | overworld |
 | 89 | 20260713T055537Z | worst moment | Running into the Albany Station Quarter issue. | overworld |
 | 59 | 20260713T055537Z | bug S2 | road to Colonie: road encounter text repeats itself on back-to-back trips | overworld |
-| 44 | 20260713T055537Z | stuck | player got stuck | overworld |
-| 41 | 20260713T055537Z | understanding | goal was not understood | overworld |
+| 45 | 20260713T055537Z | stuck | player got stuck | overworld |
+| 42 | 20260713T055537Z | understanding | goal was not understood | overworld |
 | 30 | 20260713T055537Z | worst moment | Running into the road to Colonie issue. | overworld |
 | 29 | 20260712T230645Z | worst moment | Nothing stood out as bad — tried hard to break it and it held up. | overworld |
 | 17 | 20260708T190729Z | confusion | completed quest still listed | overworld |

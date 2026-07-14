@@ -85,6 +85,7 @@ function restorePlan(
   return {
     characterAfter: createInitialCampaignCharacterState(),
     currentAreaByTown: new Map([["town_b", "area_b"]]),
+    journalEntriesAfter: [],
     pendingRoadEncounter: null,
     questOutcomeIds: new Map([["quest_b", "ending_b"]]),
     regionRenown: new Map([["Region", 3]]),
@@ -133,7 +134,7 @@ function restoreState(
 describe("overworld session snapshot restore application", () => {
   it("replaces mutable runtime state from a validated restore plan", () => {
     const sourceSnapshot = snapshot();
-    const plan = restorePlan();
+    const plan = restorePlan({ journalEntriesAfter: sourceSnapshot.journalEntries });
     const state = restoreState();
 
     const applied = applyOverworldSessionSnapshotRestore(state, sourceSnapshot, plan);

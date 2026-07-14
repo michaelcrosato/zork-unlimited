@@ -2,7 +2,7 @@
   "schema_version": 1,
   "slice_id": "albany_winter_relief_v1",
   "status": "active_unproven",
-  "updated_local_date": "2026-07-13",
+  "updated_local_date": "2026-07-14",
   "contract": {
     "minimum_material_forks": 12,
     "minimum_delayed": 8,
@@ -17,32 +17,48 @@
       "id": "SS-F01-character-background",
       "title": "Choose a lived-in Albany character background",
       "phase": "albany_opening",
-      "implementation_status": "planned",
-      "proof_status": "unproven",
-      "counts_toward_contract": false,
-      "visible_choice": "Choose one of at least four backgrounds with a contact, skill edge, value, equipment package, and obligation.",
+      "implementation_status": "implemented",
+      "proof_status": "proven",
+      "counts_toward_contract": true,
+      "visible_choice": "Choose one of four permanent Albany backgrounds. Every option previews its contact, rank-4 skill edge, rank-4 value, equipment package, funds, faction standing, knowledge, and active obligation; the Road-Warden option explicitly previews Wolf-Winter DEF 3→4, while the other three explicitly state that they do not receive that import.",
       "immediate_state_delta": [
         "character.background",
         "character.skills",
         "character.values",
         "character.equipment",
+        "character.money",
+        "character.knowledge",
         "character.relationships",
-        "character.promises"
+        "character.promises",
+        "character.factionStanding"
       ],
       "delayed_consumers": [
-        "Albany lead sources and prices",
-        "Cade dialogue and trust",
-        "Wolf-Winter preparation and solution actions",
-        "Albany return recognition"
+        "Rowan and the selected sponsor resolve memory-conditioned contact responses from the persistent relationship state.",
+        "Wolf-Winter's generic campaign import catalog raises the Road-Warden's starting defense floor from 3 to 4 while a Ledger Advocate remains at the pack default of 3.",
+        "At the broken paling, an identical d20 roll of 7 braces the rail for DEF 4 but splits it for DEF 3, exposing different next legal actions and the authored bind-the-split-rail recovery."
       ],
       "visible_feedback": [
-        "The opening names the contact, edge, gear, and obligation before confirmation.",
-        "Later actions identify the remembered background reason without revealing hidden checks."
+        "The registration screen names each contact, skill rank, value rank, kit, obligation, persistence consequence, and the current Wolf import limitation before confirmation.",
+        "The persistent-character panel shows the exact canonical package after confirmation; the registration journal records the authored concept, previewed resources, and permanent consequence.",
+        "Rowan and Hayden identify the remembered registration in authored later contact copy; Wolf-Winter's visible starting DEF and rail-check outcome expose the mechanical consumer."
       ],
-      "systems": ["identity", "skills", "equipment", "relationships", "dialogue"],
-      "persistence_boundaries": ["overworld_to_quest", "quest_to_overworld"],
+      "systems": [
+        "identity",
+        "skills",
+        "equipment",
+        "relationships",
+        "dialogue",
+        "quest_imports",
+        "risk",
+        "failure_recovery"
+      ],
+      "persistence_boundaries": ["save_restore", "overworld_to_quest"],
       "contract_tags": ["delayed", "cross_system", "cross_phase", "character_concept"],
-      "baseline_evidence": [],
+      "baseline_evidence": [
+        "tests/unit/world_opening_registration.test.ts",
+        "tests/unit/world_opening_registration_helpers.test.ts",
+        "tests/unit/world_session_contact_presentation.test.ts"
+      ],
       "counterfactual_test": "tests/starting_slice/character_background_counterfactual.test.ts"
     },
     {

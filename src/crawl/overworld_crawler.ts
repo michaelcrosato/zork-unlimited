@@ -77,6 +77,13 @@ export type OverworldCrawlResult = {
   questRoundTrips: { questId: string; endingId: string | null }[];
 };
 
+/**
+ * Stable authored package for structural quest QA. Ledger Advocate intentionally
+ * preserves the quests' default mechanical baseline while satisfying Albany's
+ * mandatory player-facing registration boundary.
+ */
+const STRUCTURAL_QA_REGISTRATION_PROFILE_ID = "albany:ledger_advocate";
+
 type CrawlLocation = z.infer<typeof CrawlLocationSchema>;
 
 /** Per-area drain cursor: how far the crawler has gotten through that area's
@@ -223,8 +230,19 @@ export function crawlOverworld(opts: OverworldCrawlOptions): OverworldCrawlResul
         continue;
       }
       if (journey.storyChoice !== null) {
-        const option = journey.storyChoice.options[0];
-        if (!option) throw new Error("Journey story choice has no visible option.");
+        const option =
+          journey.storyChoice.kind === "registration"
+            ? journey.storyChoice.options.find(
+                (candidate) => candidate.id === STRUCTURAL_QA_REGISTRATION_PROFILE_ID,
+              )
+            : journey.storyChoice.options[0];
+        if (!option) {
+          throw new Error(
+            journey.storyChoice.kind === "registration"
+              ? `Opening registration is missing structural-QA profile "${STRUCTURAL_QA_REGISTRATION_PROFILE_ID}".`
+              : "Journey story choice has no visible option.",
+          );
+        }
         session.chooseJourneyStory(option.id);
         actionJournal.push({ op: "chooseJourneyStory", choice: option.id });
         stepCounter += 1;
@@ -257,6 +275,29 @@ export function crawlOverworld(opts: OverworldCrawlOptions): OverworldCrawlResul
     questId,
     sceneId: null,
   });
+
+  // Quest round trips are an explicit structural-QA path, but they still use
+  // the player runtime and therefore must satisfy its authored first-quest
+  // boundary. Complete the opening registration once, before the exhaustive
+  // road sweep can carry the session away from its starting-area contact.
+  if (opts.questRoundTrips && world.opening_registration) {
+    const registration = world.opening_registration;
+    try {
+      session.talkToCharacter(registration.contact);
+      record({ op: "talkToCharacter", characterId: registration.contact });
+      if (session.campaignCharacterState().background !== STRUCTURAL_QA_REGISTRATION_PROFILE_ID) {
+        throw new Error(
+          `opening registration did not apply structural-QA profile "${STRUCTURAL_QA_REGISTRATION_PROFILE_ID}"`,
+        );
+      }
+    } catch (err) {
+      addFinding({
+        code: "WORLD",
+        location: locationAt(registration.home, null),
+        message: `opening registration setup for quest round trips threw: ${describeError(err)}`,
+      });
+    }
+  }
 
   // ---- travel primitives (shared by the edge sweep and quest-anchor travel) ----
 

@@ -76,6 +76,94 @@ describe("New York overworld graph", () => {
     );
   });
 
+  it("binds opening registration packages to Albany contacts and complete character state", () => {
+    const registration = world.opening_registration;
+    expect(registration).toMatchObject({
+      id: "albany:relief_registration",
+      home: "albany_city",
+      area: "albany_city__civic_core",
+      contact: "albany_city__civic_core__contact",
+    });
+    expect(registration?.profiles.map((profile) => profile.id)).toEqual([
+      "albany:road_warden",
+      "albany:ledger_advocate",
+      "albany:ironhands_repairer",
+      "albany:unaffiliated_courier",
+    ]);
+    const campaignNpcIds = new Set(
+      world.characters.flatMap((character) =>
+        character.campaign_npc_id === undefined ? [] : [character.campaign_npc_id],
+      ),
+    );
+    const contactByCampaignNpcId = new Map(
+      world.characters.flatMap((character) =>
+        character.campaign_npc_id === undefined
+          ? []
+          : ([[character.campaign_npc_id, character]] as const),
+      ),
+    );
+    for (const profile of registration?.profiles ?? []) {
+      expect(profile.character.relationships).toHaveLength(2);
+      expect(
+        profile.character.relationships.every((relationship) =>
+          campaignNpcIds.has(relationship.npcId),
+        ),
+      ).toBe(true);
+      for (const relationship of profile.character.relationships) {
+        expect(relationship.memories.length).toBeGreaterThan(0);
+        const contact = contactByCampaignNpcId.get(relationship.npcId);
+        expect(
+          relationship.memories.every((memoryId) =>
+            contact?.variants?.some((variant) =>
+              variant.after_relationship_memories?.includes(memoryId),
+            ),
+          ),
+        ).toBe(true);
+      }
+      expect(
+        profile.character.promises.every((promise) => campaignNpcIds.has(promise.recipientId)),
+      ).toBe(true);
+    }
+
+    const missingContact = structuredClone(world);
+    missingContact.opening_registration!.contact = "missing_contact";
+    expect(() => assertOverworldIntegrity(missingContact)).toThrow(
+      /registration contact must exist/i,
+    );
+
+    const emptyPackage = structuredClone(world);
+    emptyPackage.opening_registration!.profiles[0]!.character.skills = [];
+    expect(() => assertOverworldIntegrity(emptyPackage)).toThrow(
+      /must provide a skill, value, equipment package, obligation/i,
+    );
+
+    const inactiveObligation = structuredClone(world);
+    inactiveObligation.opening_registration!.profiles[0]!.character.promises[0]!.status =
+      "released";
+    expect(() => assertOverworldIntegrity(inactiveObligation)).toThrow(
+      /must provide a skill, value, equipment package, obligation/i,
+    );
+
+    const unboundRelationship = structuredClone(world);
+    unboundRelationship.opening_registration!.profiles[0]!.character.relationships[0]!.npcId =
+      "albany:unbound_person";
+    expect(() => assertOverworldIntegrity(unboundRelationship)).toThrow(
+      /references unbound campaign npc/i,
+    );
+
+    const emptyMemory = structuredClone(world);
+    emptyMemory.opening_registration!.profiles[0]!.character.relationships[0]!.memories = [];
+    expect(() => assertOverworldIntegrity(emptyMemory)).toThrow(/has no authored memory/i);
+
+    const unconsumedMemory = structuredClone(world);
+    unconsumedMemory.opening_registration!.profiles[0]!.character.relationships[0]!.memories = [
+      "albany:memory_no_contact_consumes_this",
+    ];
+    expect(() => assertOverworldIntegrity(unconsumedMemory)).toThrow(
+      /has no consuming contact variant/i,
+    );
+  });
+
   it("hand-authors the Albany-Colonie road event as direction-safe starting-area texture", () => {
     const albanyExit = overworldEdgesFrom(world, "albany_city").find(
       (edge) => edge.destination.id === "colonie_town",
@@ -423,7 +511,15 @@ describe("New York overworld graph", () => {
     const hayden = world.characters.find(
       (character) => character.id === "albany_city__transport_hub__contact",
     );
+    expect(hayden?.campaign_npc_id).toBe("albany:hayden_hale");
     expect(hayden?.variants).toEqual([
+      {
+        id: "wolf_winter_returned_road_warden",
+        after_quests: ["wolf_winter"],
+        after_relationship_memories: ["albany:memory_hayden_sponsored_road_warden"],
+        summary: expect.stringContaining("sponsorship"),
+        agenda: expect.stringContaining("honest field account"),
+      },
       {
         id: "wolf_winter_and_gallowmere_closed",
         after_quests: ["wolf_winter", "gallowmere"],
@@ -435,6 +531,12 @@ describe("New York overworld graph", () => {
         after_quests: ["wolf_winter"],
         summary: expect.stringContaining("return board"),
         agenda: expect.stringContaining("current journey goal"),
+      },
+      {
+        id: "sponsored_road_warden",
+        after_relationship_memories: ["albany:memory_hayden_sponsored_road_warden"],
+        summary: expect.stringContaining("Road-Warden field kit"),
+        agenda: expect.stringContaining("fieldcraft record"),
       },
     ]);
 
@@ -452,7 +554,7 @@ describe("New York overworld graph", () => {
     const missingQuest = structuredClone(world);
     missingQuest.characters.find(
       (character) => character.id === haydenId,
-    )!.variants![0]!.after_quests[0] = "missing_quest";
+    )!.variants![0]!.after_quests![0] = "missing_quest";
     expect(() => assertOverworldIntegrity(missingQuest)).toThrow(/references missing quest/);
 
     const broaderFirst = structuredClone(world);
@@ -472,10 +574,44 @@ describe("New York overworld graph", () => {
     expect(() => assertOverworldIntegrity(noOverride)).toThrow(/must override summary or agenda/);
 
     const noCondition = structuredClone(world);
-    noCondition.characters.find(
+    noCondition.characters
+      .find((character) => character.id === haydenId)!
+      .variants!.find((variant) => variant.id === "wolf_winter_closed")!.after_quests = [];
+    expect(() => assertOverworldIntegrity(noCondition)).toThrow(
+      /has no quest or relationship-memory condition/,
+    );
+
+    const unboundMemory = structuredClone(world);
+    const unboundHayden = unboundMemory.characters.find((character) => character.id === haydenId)!;
+    delete unboundHayden.campaign_npc_id;
+    const unboundVariant = unboundHayden.variants![0]!;
+    delete unboundVariant.after_quests;
+    unboundVariant.after_relationship_memories = ["memory:albany_relief_packet"];
+    expect(() => assertOverworldIntegrity(unboundMemory)).toThrow(
+      /requires relationship memories without a campaign_npc_id/,
+    );
+
+    const broaderMemoryFirst = structuredClone(world);
+    const memoryHayden = broaderMemoryFirst.characters.find(
       (character) => character.id === haydenId,
-    )!.variants![0]!.after_quests = [];
-    expect(() => assertOverworldIntegrity(noCondition)).toThrow(/has no after_quests condition/);
+    )!;
+    memoryHayden.campaign_npc_id = "npc:hayden_hale";
+    memoryHayden.variants = [
+      {
+        id: "packet_known",
+        after_relationship_memories: ["memory:albany_relief_packet"],
+        agenda: "The packet is familiar.",
+      },
+      {
+        id: "packet_and_wolf_closed",
+        after_quests: ["wolf_winter"],
+        after_relationship_memories: ["memory:albany_relief_packet"],
+        agenda: "The packet and closed winter road are familiar.",
+      },
+    ];
+    expect(() => assertOverworldIntegrity(broaderMemoryFirst)).toThrow(
+      /orders broader variant .* before more-specific variant/,
+    );
 
     const journalCollision = structuredClone(world);
     const haydenVariantId = journalCollision.characters.find(

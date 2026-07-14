@@ -158,11 +158,38 @@ export type JourneyStoryChoiceOption = Readonly<{
   consequence: string;
 }>;
 
-export type JourneyStoryChoicePrompt = Readonly<{
+export type JourneyStoryChoicePresentationKind = "registration";
+
+export type JourneyStoryChoiceOptions = readonly [
+  JourneyStoryChoiceOption,
+  JourneyStoryChoiceOption,
+];
+
+export type JourneyRegistrationStoryChoiceOptions = readonly [
+  JourneyStoryChoiceOption,
+  JourneyStoryChoiceOption,
+  JourneyStoryChoiceOption,
+  JourneyStoryChoiceOption,
+  ...JourneyStoryChoiceOption[],
+];
+
+type JourneyStoryChoicePromptBase = Readonly<{
   id: string;
   message: string;
-  options: readonly [JourneyStoryChoiceOption, JourneyStoryChoiceOption];
 }>;
+
+export type JourneyStoryChoicePrompt = JourneyStoryChoicePromptBase &
+  Readonly<
+    | {
+        /** Omitted for the existing two-option post-goal aftermath presentation. */
+        kind?: undefined;
+        options: JourneyStoryChoiceOptions;
+      }
+    | {
+        kind: JourneyStoryChoicePresentationKind;
+        options: JourneyRegistrationStoryChoiceOptions;
+      }
+  >;
 
 export type JourneyGoalCompletionPresentationContext = Readonly<{
   goalVersion: number;
@@ -829,25 +856,35 @@ function freezeStoryChoice(
   if (storyChoice.id.length === 0 || storyChoice.message.length === 0) {
     throw new Error("Journey story choice id and message cannot be empty.");
   }
-  if (storyChoice.options.length !== 2) {
-    throw new Error("Journey story choice requires exactly two options.");
+  const presentationKind = (storyChoice as { kind?: unknown }).kind;
+  if (presentationKind !== undefined && presentationKind !== "registration") {
+    throw new Error(
+      `Journey story choice has unknown presentation kind "${String(presentationKind)}".`,
+    );
   }
+  if (presentationKind === "registration") {
+    if (storyChoice.options.length < 4 || storyChoice.options.length > 8) {
+      throw new Error("Journey registration choice requires between four and eight options.");
+    }
+  } else if (storyChoice.options.length !== 2) {
+    throw new Error("Journey aftermath story choice requires exactly two options.");
+  }
+  const optionIds = new Set<string>();
   const options = storyChoice.options.map((option) => {
     if (option.id.length === 0 || option.label.length === 0 || option.consequence.length === 0) {
       throw new Error("Journey story choice option fields cannot be empty.");
     }
+    if (optionIds.has(option.id)) {
+      throw new Error("Journey story choice option ids must be unique.");
+    }
+    optionIds.add(option.id);
     return Object.freeze({ ...option });
-  }) as [JourneyStoryChoiceOption, JourneyStoryChoiceOption];
-  if (options[0].id === options[1].id) {
-    throw new Error("Journey story choice option ids must be unique.");
-  }
+  });
+  const frozenOptions = Object.freeze(options);
   return Object.freeze({
     ...storyChoice,
-    options: Object.freeze(options) as readonly [
-      JourneyStoryChoiceOption,
-      JourneyStoryChoiceOption,
-    ],
-  });
+    options: frozenOptions,
+  }) as JourneyStoryChoicePrompt;
 }
 
 function freezeGoalPassage(

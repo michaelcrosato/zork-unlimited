@@ -54,15 +54,17 @@ const TEST_CAMPAIGN_EFFECTS = [
 // exactly the temp pack on disk. The temp quest is anchored to a real Albany area.
 type FixtureOverworld = Record<string, unknown> & {
   characters: Array<{ variants?: unknown }>;
+  opening_registration?: unknown;
 };
 
 const REAL_OVERWORLD = JSON.parse(
   readFileSync(join(ROOT, "content", "world", "new_york_overworld.json"), "utf8"),
 ) as FixtureOverworld;
 
-function fixtureOverworldWithoutContactVariants(): FixtureOverworld {
+function fixtureOverworldWithoutQuestConditionedFeatures(): FixtureOverworld {
   const world = structuredClone(REAL_OVERWORLD);
   for (const character of world.characters) delete character.variants;
+  delete world.opening_registration;
   return world;
 }
 
@@ -103,7 +105,7 @@ function writeTempWorldQuest(
   if (campaignExports !== undefined) quest.campaign_exports = campaignExports;
   if (campaignImports !== undefined) quest.campaign_imports = campaignImports;
   const overworld = {
-    ...fixtureOverworldWithoutContactVariants(),
+    ...fixtureOverworldWithoutQuestConditionedFeatures(),
     quests: [quest],
   };
   writeFileSync(

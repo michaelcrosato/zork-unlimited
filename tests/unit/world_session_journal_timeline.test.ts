@@ -124,6 +124,8 @@ function sources(
     contactPresentationsByJournalId: new Map(
       contactPresentations.map((presentation) => [presentation.journalId, presentation]),
     ),
+    openingRegistrationJournalDraftsById: new Map(),
+    openingRegistrationTownName: null,
     edgeIds: new Set(["road_a_b"]),
     eventIds: new Set(["event_1"]),
     eventTownNames: new Map([["event_1", "Town B"]]),

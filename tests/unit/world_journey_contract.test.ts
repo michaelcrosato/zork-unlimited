@@ -19,6 +19,7 @@ import {
   recordJourneyGoalCompleted,
   type JourneyContractSnapshot,
   type JourneyGoalDefinition,
+  type JourneyRegistrationStoryChoiceOptions,
   type JourneyStoryChoicePrompt,
 } from "../../src/world/journey_contract.js";
 import {
@@ -356,6 +357,7 @@ describe("journey contract presentation context", () => {
       "Continue to allocate the wagon. Play remains open; the next fixed checkpoint is decision 40. Your choice will shape the next lead.",
     );
     expect(view.storyChoice).toEqual(storyChoice);
+    expect(Object.keys(view.storyChoice!).sort()).toEqual(["id", "message", "options"]);
     expect(view.goalGuidance).toBe("Objective route: take the north road.");
     expect(view.storyChoice).not.toBe(storyChoice);
     expect(Object.isFrozen(view.storyChoice)).toBe(true);
@@ -395,10 +397,60 @@ describe("journey contract presentation context", () => {
       journeyPresentation(state, {
         storyChoice: {
           ...duplicateIds,
-          options: [duplicateIds.options[0]] as unknown as JourneyStoryChoicePrompt["options"],
-        },
+          options: [duplicateIds.options[0]],
+        } as unknown as JourneyStoryChoicePrompt,
       }),
     ).toThrow(/exactly two options/i);
+
+    const nineOptions = Array.from({ length: 9 }, (_, index) => ({
+      id: `choice_${String(index)}`,
+      label: `Choice ${String(index)}`,
+      consequence: `Consequence ${String(index)}.`,
+    }));
+    expect(() =>
+      journeyPresentation(state, {
+        storyChoice: {
+          id: "too_many",
+          message: "Choose.",
+          options: nineOptions,
+        } as unknown as JourneyStoryChoicePrompt,
+      }),
+    ).toThrow(/exactly two options/i);
+
+    expect(() =>
+      journeyPresentation(state, {
+        storyChoice: {
+          id: "unknown_kind",
+          message: "Choose.",
+          kind: "aftermath",
+          options: duplicateIds.options,
+        } as unknown as JourneyStoryChoicePrompt,
+      }),
+    ).toThrow(/unknown presentation kind/i);
+  });
+
+  it("deep-freezes a typed registration presentation with up to eight unique options", () => {
+    const state = createInitialJourneyContractSnapshot();
+    const registration = {
+      id: "albany_registration",
+      kind: "registration",
+      message: "Which lived history do you put on Rowan's relief docket?",
+      options: Array.from({ length: 8 }, (_, index) => ({
+        id: `background_${String(index)}`,
+        label: `Background ${String(index)}`,
+        consequence: `Carry background ${String(index)} into the journey.`,
+      })) as unknown as JourneyRegistrationStoryChoiceOptions,
+    } satisfies JourneyStoryChoicePrompt;
+
+    const view = journeyPresentation(state, { storyChoice: registration });
+
+    expect(view.storyChoice).toEqual(registration);
+    expect(Object.keys(view.storyChoice!).sort()).toEqual(["id", "kind", "message", "options"]);
+    expect(view.storyChoice?.options).toHaveLength(8);
+    expect(new Set(view.storyChoice?.options.map((option) => option.id)).size).toBe(8);
+    expect(Object.isFrozen(view.storyChoice)).toBe(true);
+    expect(Object.isFrozen(view.storyChoice?.options)).toBe(true);
+    expect(view.storyChoice?.options.every((option) => Object.isFrozen(option))).toBe(true);
   });
 });
 

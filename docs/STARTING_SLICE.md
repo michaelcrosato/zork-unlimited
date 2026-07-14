@@ -82,7 +82,7 @@ At least five of these people must remain mechanically relevant after
 Wolf-Winter. June is the initial ally grammar; implementation may rename her
 only if the replacement preserves the same authored role and agency contract.
 
-## Honest baseline — 2026-07-13
+## Honest baseline — 2026-07-14
 
 The engine foundation is unusually strong. A 6,000-step pre-change crawl reached
 247/247 overworld nodes, 344/344 edges, all 12 boards, and entered all 12 quests.
@@ -108,9 +108,10 @@ The current slice does **not** yet meet this contract:
 
 - Albany discovery is deterministic FIFO reveal, and most jobs/sites/events are
   one-click time/renown transactions;
-- fresh Albany still authors only the default character, so every current player
-  reaches Wolf-Winter with the same effective profile despite the landed import
-  boundary;
+- Albany now authors four permanent registration profiles, but only the
+  Road-Warden's fieldcraft currently changes Wolf-Winter mechanics; the Ledger
+  Advocate, Ironhands Repairer, and Unaffiliated Courier still need distinct
+  preparation consumers before concept balance is proven;
 - Wolf-Winter now exports explicit Old Cade memories and world facts, but those
   consequences do not yet change an Albany service, opportunity, or NPC action;
 - fieldcraft is the only real inbound Wolf mapping; health is deferred to protect
@@ -171,10 +172,23 @@ Wolf-Winter therefore maps only `skill:fieldcraft` to its defence floor today.
 The tempting Albany-kit → steading-brace alias was rejected because it would lie
 about where saved timber came from.
 
-Because fresh Albany does not yet create fieldcraft or any alternative profile,
-and its returned facts/memories do not yet change a later action, service, risk,
-resource, or NPC behaviour, this foundation still proves no causal-matrix fork
-by itself.
+The first authored Albany increment is now landed. Speaking with Rowan after
+the first civic lead writes a durable registration offer rather than relying on
+an initial modal. The player chooses one of four complete canonical packages;
+the choice survives save/restore, changes Rowan and the selected sponsor's
+memory-conditioned responses, and crosses the private quest bridge. The
+Road-Warden's Fieldcraft 4 raises Wolf-Winter's visible starting DEF from 3 to
+4. With the same d20 roll of 7 at the broken paling, that profile braces the
+rail while a Ledger Advocate at default DEF 3 splits it and receives the
+authored bind-the-rail recovery action. Direct quest starts remain exact pack
+defaults. Paired proof lives in
+[`character_background_counterfactual.test.ts`](../tests/starting_slice/character_background_counterfactual.test.ts).
+
+This proves only `SS-F01-character-background`, the first of twelve material
+forks. It does not yet prove that all four concepts are mechanically balanced,
+that Albany preparation is systemic, or that any early choice changes a return
+service. Those remain the next work, not implied credit for the registration
+infrastructure.
 
 ## Required resolution families
 
