@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 552 -->
+<!-- historical_cycle_count: 553 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,14 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - starting_slice_contract
+
+- Change: `docs/STARTING_SLICE.md` now fixes Albany → The Wolf-Winter → truthful Albany return as the defining vertical slice; its machine-readable 12-fork ledger and validator reject any row counted before implementation and paired counterfactual proof.
+- Evidence choice: the current bridge exports only ending identity and Albany remains mostly generic transactions, so the durable contract freezes unrelated expansion and orders campaign-character persistence before additional Wolf-specific branches.
+- Pure evidence: independently verified pure/fresh seed 7 completed Wolf-Winter plus three later quests in 89 decisions, continued at the first three goals and checkpoints 40/80, then ended honestly at goal 4; clarity 4/5, enjoyment 5/5, replay true, no stuck state or S1+ defect.
+- Self-critique: PASS for an executable, honesty-preserving product contract—not a depth claim. All 12 target forks remain explicitly unproven and this increment changes no gameplay.
+- Guard: pre/post 6,000-step crawls reached 247/247 towns, 344/344 roads, and 12/12 quests (`20260714T020100Z`, `20260714T021135Z`); focused matrix tests, typecheck, and full health passed (315 files/2,204 tests, UI, 12 packs).
 
 ### Cycle result - goal_passage_decision_contract
 
@@ -138,12 +146,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Pure evidence: independently reverified seed 1307 is pure/fresh contract-v3; Tanner completed at decision 81 with no stuck/bug report, clarity 4/5, enjoyment 5/5, replay true; player continued through four goals and ended honestly at decision 110.
 - Effect: prior verified Tanner violence-pressure/free-retry complaint did not recur; the quest was called a satisfying medical deduction with graceful outcomes. Next signals are compact talk omissions, route chaining, and a cosmetic Rowan Quill name collision.
 - Guard: final 6000-step crawl (247/247 nodes, 344/344 edges, 12/12 quests), independent report verification, and full health (296 files/2098 tests, UI, 12 packs) passed.
-
-### Cycle result - journey_v3_authored_goals
-
-- Change: journey contract v3 adds ordered authored goals, goal-bound retention, Wolf-ending Albany dispatch consequences, exact save/journal proof, and shared next-road guidance.
-- Pure evidence: seed 1207 `playtest-v3-guided` is verified pure/fresh; continued at goals 23/49/90 and checkpoints 40/80, then ended at goal 4 on decision 117; clarity/enjoyment 4/5, replay true.
-- Comparison: the same seed without route guidance ended at 80 during goal 3 after navigation grind, but its private evidence was lost to an external worktree reset, so it is design signal only—not retention evidence.
-- Effect: four authored quests replaced the post-Wolf template cliff; guided travel was called light rather than tedious. Next honest friction is Tanner's Fever's unhinted peaceful route/free retries.
-- Compatibility: both frozen contract-v2 canaries still independently verify; v1/v2/v3 retention cohorts remain separate.
-- Guard: focused suites, post-change 6000-step crawl, UI browser tutorial/status check, independent v3 report verification, and full health (295 files/2091 tests, UI, 12 packs) passed.

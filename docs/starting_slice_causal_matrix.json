@@ -1,0 +1,391 @@
+{
+  "schema_version": 1,
+  "slice_id": "albany_winter_relief_v1",
+  "status": "active_unproven",
+  "updated_local_date": "2026-07-13",
+  "contract": {
+    "minimum_material_forks": 12,
+    "minimum_delayed": 8,
+    "minimum_cross_system": 5,
+    "minimum_cross_phase": 3,
+    "maximum_typical_first_goal_decisions": 45,
+    "count_rule": "Only rows with counts_toward_contract=true and proof_status=proven count."
+  },
+  "phases": ["albany_opening", "albany_preparation", "wolf_winter", "albany_return"],
+  "forks": [
+    {
+      "id": "SS-F01-character-background",
+      "title": "Choose a lived-in Albany character background",
+      "phase": "albany_opening",
+      "implementation_status": "planned",
+      "proof_status": "unproven",
+      "counts_toward_contract": false,
+      "visible_choice": "Choose one of at least four backgrounds with a contact, skill edge, value, equipment package, and obligation.",
+      "immediate_state_delta": [
+        "character.background",
+        "character.skills",
+        "character.values",
+        "character.equipment",
+        "character.relationships",
+        "character.promises"
+      ],
+      "delayed_consumers": [
+        "Albany lead sources and prices",
+        "Cade dialogue and trust",
+        "Wolf-Winter preparation and solution actions",
+        "Albany return recognition"
+      ],
+      "visible_feedback": [
+        "The opening names the contact, edge, gear, and obligation before confirmation.",
+        "Later actions identify the remembered background reason without revealing hidden checks."
+      ],
+      "systems": ["identity", "skills", "equipment", "relationships", "dialogue"],
+      "persistence_boundaries": ["overworld_to_quest", "quest_to_overworld"],
+      "contract_tags": ["delayed", "cross_system", "cross_phase", "character_concept"],
+      "baseline_evidence": [],
+      "counterfactual_test": "tests/starting_slice/character_background_counterfactual.test.ts"
+    },
+    {
+      "id": "SS-F02-relief-oath",
+      "title": "Define what the relief rider owes Albany",
+      "phase": "albany_opening",
+      "implementation_status": "planned",
+      "proof_status": "unproven",
+      "counts_toward_contract": false,
+      "visible_choice": "Accept an official relief oath, negotiate limited duty, or remain an unaffiliated helper.",
+      "immediate_state_delta": [
+        "character.values",
+        "character.promises",
+        "character.faction_standing",
+        "albany.public_trust"
+      ],
+      "delayed_consumers": [
+        "Access to Albany stores and records",
+        "Cade's willingness to accept authority",
+        "Consequences for keeping or breaking the promise on return"
+      ],
+      "visible_feedback": [
+        "The oath states its concrete access and obligation.",
+        "Return scenes name whether the promise was kept, bent, or broken and change services."
+      ],
+      "systems": ["values", "promises", "factions", "services"],
+      "persistence_boundaries": ["overworld_to_quest", "quest_to_overworld"],
+      "contract_tags": ["delayed", "cross_system", "cross_phase", "irreversible_tradeoff"],
+      "baseline_evidence": [],
+      "counterfactual_test": "tests/starting_slice/relief_oath_counterfactual.test.ts"
+    },
+    {
+      "id": "SS-F03-lead-source",
+      "title": "Investigate Wolf-Winter through a chosen Albany source",
+      "phase": "albany_opening",
+      "implementation_status": "planned",
+      "proof_status": "unproven",
+      "counts_toward_contract": false,
+      "visible_choice": "Pursue the civic relief ledger, market testimony, warden spoor report, or a background contact instead of a FIFO reveal.",
+      "immediate_state_delta": [
+        "character.knowledge",
+        "character.relationships",
+        "world.minutes",
+        "albany.public_trust"
+      ],
+      "delayed_consumers": [
+        "Preparation offers",
+        "Route forecasts",
+        "Noncombat wolf hypotheses",
+        "Source credibility on return"
+      ],
+      "visible_feedback": [
+        "Each source gives different truthful evidence and costs time or standing.",
+        "Later actions cite the evidence actually learned."
+      ],
+      "systems": ["investigation", "time", "relationships", "preparation"],
+      "persistence_boundaries": ["overworld_to_quest"],
+      "contract_tags": ["delayed", "cross_system", "cross_phase"],
+      "baseline_evidence": ["src/world/session_local_discovery.ts"],
+      "counterfactual_test": "tests/starting_slice/lead_source_counterfactual.test.ts"
+    },
+    {
+      "id": "SS-F04-ally-commitment",
+      "title": "Earn, reject, or lose an Albany ally",
+      "phase": "albany_preparation",
+      "implementation_status": "planned",
+      "proof_status": "unproven",
+      "counts_toward_contract": false,
+      "visible_choice": "Ask a named ally to accompany the relief run, accept their condition, negotiate it, or travel alone.",
+      "immediate_state_delta": [
+        "character.relationships",
+        "character.promises",
+        "character.party",
+        "albany.relief_capacity"
+      ],
+      "delayed_consumers": [
+        "Ally interjections and independent actions",
+        "Refusal or departure after violated conduct",
+        "Return testimony and availability"
+      ],
+      "visible_feedback": [
+        "The ally states the condition and capability before joining.",
+        "Any refusal, departure, or independent solution names the remembered conduct."
+      ],
+      "systems": ["relationships", "promises", "party", "encounters"],
+      "persistence_boundaries": ["overworld_to_quest", "quest_to_overworld"],
+      "contract_tags": ["delayed", "cross_system", "cross_phase", "ally_agency"],
+      "baseline_evidence": [],
+      "counterfactual_test": "tests/starting_slice/ally_commitment_counterfactual.test.ts"
+    },
+    {
+      "id": "SS-F05-preparation-profile",
+      "title": "Commit limited time and money to a preparation profile",
+      "phase": "albany_preparation",
+      "implementation_status": "partial",
+      "proof_status": "unproven",
+      "counts_toward_contract": false,
+      "visible_choice": "Prioritize protective gear, fieldcraft and bait, or medicine and civic leverage; mixed profiles remain possible at a cost.",
+      "immediate_state_delta": [
+        "character.equipment",
+        "character.money",
+        "character.knowledge",
+        "world.minutes",
+        "albany.relief_capacity"
+      ],
+      "delayed_consumers": [
+        "Weather exposure",
+        "Social and noncombat plans",
+        "Combat maneuvers and recovery",
+        "Supplies available on return"
+      ],
+      "visible_feedback": [
+        "Offers show price, time, and known use without revealing hidden outcomes.",
+        "Later actions expose which preparation enables or changes them."
+      ],
+      "systems": ["economy", "equipment", "time", "social", "combat"],
+      "persistence_boundaries": ["overworld_to_quest", "quest_to_overworld"],
+      "contract_tags": ["delayed", "cross_system", "cross_phase", "build_profile"],
+      "baseline_evidence": [
+        "tests/regression/wolf_winter_prep_is_a_gamble_not_certain_death.test.ts",
+        "tests/regression/wolf_winter_complementary_clues.test.ts"
+      ],
+      "counterfactual_test": "tests/starting_slice/preparation_profiles_counterfactual.test.ts"
+    },
+    {
+      "id": "SS-F06-relief-allocation",
+      "title": "Spend Albany's limited relief capacity before departure",
+      "phase": "albany_preparation",
+      "implementation_status": "planned",
+      "proof_status": "unproven",
+      "counts_toward_contract": false,
+      "visible_choice": "Allocate scarce relief capacity among Cade's steading, Albany's vulnerable residents, and mobile reserve.",
+      "immediate_state_delta": [
+        "albany.relief_capacity",
+        "albany.public_trust",
+        "character.faction_standing",
+        "wolf.cattle_safety"
+      ],
+      "delayed_consumers": [
+        "Starting conditions at the steading",
+        "Failure recovery resources",
+        "Albany service availability and prices on return"
+      ],
+      "visible_feedback": [
+        "The dispatch board shows what each allocation can cover and what remains exposed.",
+        "Both the steading and Albany visibly consume the selected allocation."
+      ],
+      "systems": ["resources", "factions", "pressure", "services"],
+      "persistence_boundaries": ["overworld_to_quest", "quest_to_overworld"],
+      "contract_tags": ["delayed", "cross_system", "cross_phase", "irreversible_tradeoff"],
+      "baseline_evidence": ["src/world/journey_campaign.ts"],
+      "counterfactual_test": "tests/starting_slice/relief_allocation_counterfactual.test.ts"
+    },
+    {
+      "id": "SS-F07-hill-route",
+      "title": "Choose how and when to reach the steading",
+      "phase": "albany_preparation",
+      "implementation_status": "planned",
+      "proof_status": "unproven",
+      "counts_toward_contract": false,
+      "visible_choice": "Take the fast exposed road, a slower sheltered route, or travel with a local caravan when available.",
+      "immediate_state_delta": [
+        "world.minutes",
+        "world.fatigue",
+        "wolf.weather_pressure",
+        "character.knowledge",
+        "character.relationships"
+      ],
+      "delayed_consumers": [
+        "Arrival weather and cattle pressure",
+        "Encounter position and available opening plans",
+        "Caravan or warden testimony on return"
+      ],
+      "visible_feedback": [
+        "The route choice forecasts known time, fatigue, and exposure bands.",
+        "Arrival describes the exact threshold crossed and exposes resulting actions."
+      ],
+      "systems": ["travel", "time", "weather", "relationships", "encounters"],
+      "persistence_boundaries": ["overworld_to_quest"],
+      "contract_tags": ["delayed", "cross_system", "cross_phase", "pressure"],
+      "baseline_evidence": [],
+      "counterfactual_test": "tests/starting_slice/hill_route_counterfactual.test.ts"
+    },
+    {
+      "id": "SS-F08-cade-trust",
+      "title": "Establish trust, leverage, or conflict with Cade",
+      "phase": "wolf_winter",
+      "implementation_status": "partial",
+      "proof_status": "unproven",
+      "counts_toward_contract": false,
+      "visible_choice": "Share evidence and make a promise, invoke Albany authority, deceive Cade about support, or work without his consent.",
+      "immediate_state_delta": [
+        "character.relationships.cade",
+        "character.promises",
+        "character.crimes",
+        "wolf.plan_access"
+      ],
+      "delayed_consumers": [
+        "Cade's aid, refusal, or independent action",
+        "Access to steading resources and noncombat plans",
+        "Cade's return testimony and future availability"
+      ],
+      "visible_feedback": [
+        "Cade states what he believes, grants, or refuses.",
+        "Later aid or refusal names the relevant promise, lie, trespass, or evidence."
+      ],
+      "systems": ["dialogue", "relationships", "promises", "crime", "planning"],
+      "persistence_boundaries": ["quest_to_overworld"],
+      "contract_tags": ["delayed", "cross_system", "cross_phase", "npc_memory"],
+      "baseline_evidence": ["tests/regression/wolf_winter_dialogue_surface.test.ts"],
+      "counterfactual_test": "tests/starting_slice/cade_trust_counterfactual.test.ts"
+    },
+    {
+      "id": "SS-F09-wolf-strategy",
+      "title": "Commit to a materially different wolf resolution strategy",
+      "phase": "wolf_winter",
+      "implementation_status": "partial",
+      "proof_status": "unproven",
+      "counts_toward_contract": false,
+      "visible_choice": "Confront the pack, trap and redirect it, resolve its pressure without killing, or combine limited combat with another plan.",
+      "immediate_state_delta": [
+        "wolf.strategy",
+        "wolf.pack_morale",
+        "wolf.cattle_safety",
+        "character.equipment",
+        "character.relationships"
+      ],
+      "delayed_consumers": [
+        "Different encounter structures and legal actions",
+        "Distinct costs, injuries, cattle loss, and survivor states",
+        "Albany and faction response"
+      ],
+      "visible_feedback": [
+        "The committed plan states known risks and required resources.",
+        "Encounter and return scenes expose the plan's actual mechanical consequences."
+      ],
+      "systems": ["investigation", "social", "environment", "combat", "pressure"],
+      "persistence_boundaries": ["quest_to_overworld"],
+      "contract_tags": ["delayed", "cross_system", "cross_phase", "resolution_strategy"],
+      "baseline_evidence": [
+        "tests/regression/wolf_winter_three_fight_gauntlet.test.ts",
+        "tests/regression/wolf_winter_cross_encounter_agency.test.ts"
+      ],
+      "counterfactual_test": "tests/starting_slice/wolf_strategy_counterfactual.test.ts"
+    },
+    {
+      "id": "SS-F10-crisis-priority",
+      "title": "Choose what to protect when the plan breaks",
+      "phase": "wolf_winter",
+      "implementation_status": "planned",
+      "proof_status": "unproven",
+      "counts_toward_contract": false,
+      "visible_choice": "At a visible pressure threshold, prioritize a person, cattle, the ally, or scarce relief resources; not every loss can be prevented.",
+      "immediate_state_delta": [
+        "character.wounds",
+        "character.relationships",
+        "wolf.cattle_safety",
+        "albany.relief_capacity",
+        "wolf.pack_morale"
+      ],
+      "delayed_consumers": [
+        "Remaining resolution actions",
+        "NPC survival, aid, or refusal",
+        "Return resources, services, and testimony"
+      ],
+      "visible_feedback": [
+        "The crisis presents the threatened states and irreversible cost.",
+        "Later scenes show both what was saved and what the choice exposed."
+      ],
+      "systems": ["pressure", "relationships", "injury", "resources", "encounters"],
+      "persistence_boundaries": ["quest_to_overworld"],
+      "contract_tags": [
+        "delayed",
+        "cross_system",
+        "cross_phase",
+        "irreversible_tradeoff",
+        "failure_forward"
+      ],
+      "baseline_evidence": [],
+      "counterfactual_test": "tests/starting_slice/crisis_priority_counterfactual.test.ts"
+    },
+    {
+      "id": "SS-F11-saved-wood",
+      "title": "Use sound wood now or carry it into the aftermath",
+      "phase": "wolf_winter",
+      "implementation_status": "partial",
+      "proof_status": "partial",
+      "counts_toward_contract": false,
+      "visible_choice": "Bar the cattle gate with surviving wood or retain it for repairing the outer paling after the immediate crisis.",
+      "immediate_state_delta": [
+        "character.equipment",
+        "wolf.inner_gate_state",
+        "wolf.repair_material"
+      ],
+      "delayed_consumers": [
+        "Existing ending identity and Albany return presentation",
+        "Planned cattle pressure, repair service, and relief-capacity state"
+      ],
+      "visible_feedback": [
+        "The current gate interaction states the immediate and deferred use.",
+        "Albany currently names the outcome; future proof must change mechanics and services."
+      ],
+      "systems": ["equipment", "environment", "resources", "services"],
+      "persistence_boundaries": ["quest_to_overworld"],
+      "contract_tags": ["delayed", "cross_system", "cross_phase", "irreversible_tradeoff"],
+      "baseline_evidence": [
+        "tests/regression/wolf_winter_post_hunt_consequence.test.ts",
+        "tests/unit/world_journey_campaign.test.ts"
+      ],
+      "counterfactual_test": "tests/starting_slice/saved_wood_world_state_counterfactual.test.ts"
+    },
+    {
+      "id": "SS-F12-albany-return",
+      "title": "Allocate the truthful Albany response",
+      "phase": "albany_return",
+      "implementation_status": "partial",
+      "proof_status": "unproven",
+      "counts_toward_contract": false,
+      "visible_choice": "Use the actual Wolf-Winter state to decide where Albany sends people, supplies, and authority next.",
+      "immediate_state_delta": [
+        "albany.relief_capacity",
+        "character.faction_standing",
+        "character.relationships",
+        "albany.services",
+        "journey.next_opportunity"
+      ],
+      "delayed_consumers": [
+        "Named NPC availability",
+        "Albany prices and services",
+        "Follow-up opportunities and later campaign hooks"
+      ],
+      "visible_feedback": [
+        "The dispatch choice shows the known consequence of each allocation.",
+        "Albany locations, NPCs, and services visibly enact the selected response."
+      ],
+      "systems": ["resources", "factions", "relationships", "services", "campaign"],
+      "persistence_boundaries": ["quest_to_overworld", "overworld_save_restore"],
+      "contract_tags": ["delayed", "cross_system", "cross_phase"],
+      "baseline_evidence": [
+        "tests/regression/wolf_winter_post_hunt_consequence.test.ts",
+        "tests/unit/world_journey_campaign.test.ts"
+      ],
+      "counterfactual_test": "tests/starting_slice/albany_return_counterfactual.test.ts"
+    }
+  ]
+}
