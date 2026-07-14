@@ -57,7 +57,7 @@ function returnedSavedTimberSession(): OverworldSession {
   const session = albanyStationSession();
   completeSavedTimberQuest(session);
   session.chooseJourney("continue");
-  session.chooseJourneyStory("send_wagon_to_cade");
+  session.chooseJourneyStory("send_wardens_north");
 
   const outbound = session
     .view()

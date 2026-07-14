@@ -4,6 +4,10 @@ import {
   type JourneyContractSnapshot,
   type JourneyGoalDefinition,
 } from "./journey_contract.js";
+import {
+  campaignStoryChoiceRefKey,
+  type CampaignStoryChoiceRef,
+} from "./campaign_story_choices.js";
 
 export const JOURNEY_CAMPAIGN_START_TOWN_ID = "albany_city" as const;
 /**
@@ -228,6 +232,13 @@ const ALBANY_DAWN_DISPATCH_CONSEQUENCES = Object.freeze({
   }),
 } as const satisfies Record<WolfWinterCampaignOutcome, Record<AlbanyDawnDispatchChoiceId, string>>);
 
+const ALBANY_DAWN_DISPATCH_SERVICE_TERMS = Object.freeze({
+  send_wagon_to_cade:
+    "Jamie Tanner enters a one-time Market road-store credit for carrying Hedrick's packet alone: a 15-minute resupply whenever you claim it.",
+  send_wardens_north:
+    "Emery Sloane sets aside a one-time Greenway watch-shelter claim for joining the wardens' northbound dispatch: a 15-minute rest whenever you claim it.",
+} as const satisfies Record<AlbanyDawnDispatchChoiceId, string>);
+
 const TANNERS_FEVER_ACCOUNTABILITY_CONSEQUENCES = Object.freeze({
   keep_household_correction:
     "Godwin records the corrected dose in Edric's household case book, preserving the family's trust in its longtime apothecary; other Oneonta patients receive no public warning about the three-to-one error.",
@@ -360,12 +371,12 @@ export function albanyDawnDispatchStoryChoice(
       Object.freeze({
         id: "send_wagon_to_cade" as const,
         label: "Send the wagon to rebuild Cade's outer line",
-        consequence: consequences.send_wagon_to_cade,
+        consequence: `${consequences.send_wagon_to_cade} ${ALBANY_DAWN_DISPATCH_SERVICE_TERMS.send_wagon_to_cade}`,
       }),
       Object.freeze({
         id: "send_wardens_north" as const,
         label: "Send the wagon and wardens north",
-        consequence: consequences.send_wardens_north,
+        consequence: `${consequences.send_wardens_north} ${ALBANY_DAWN_DISPATCH_SERVICE_TERMS.send_wardens_north}`,
       }),
     ] as const),
   });
@@ -483,6 +494,63 @@ function albanyDispatchChoiceForGoal(
   );
 }
 
+/**
+ * Recover the canonical authored story selection from the goal it activated.
+ * This inverse keeps campaign consequences derived from trusted goal history
+ * instead of introducing a second mutable choice field into saves.
+ */
+export function journeyCampaignStoryChoiceRefForGoal(
+  definition: JourneyCampaignGoalDefinition,
+): CampaignStoryChoiceRef | null {
+  const dispatchChoice = albanyDispatchChoiceForGoal(definition);
+  if (dispatchChoice) {
+    return Object.freeze({
+      story_choice_id: ALBANY_DAWN_DISPATCH_ID,
+      choice_id: dispatchChoice,
+    });
+  }
+  const accountabilityChoice = tannersFeverAccountabilityChoiceForGoal(definition);
+  if (accountabilityChoice) {
+    return Object.freeze({
+      story_choice_id: TANNERS_FEVER_ACCOUNTABILITY_ID,
+      choice_id: accountabilityChoice,
+    });
+  }
+  const postWeirDispatchChoice = romePostWeirDispatchChoiceForGoal(definition);
+  if (postWeirDispatchChoice) {
+    return Object.freeze({
+      story_choice_id: ROME_POST_WEIR_DISPATCH_ID,
+      choice_id: postWeirDispatchChoice,
+    });
+  }
+  return null;
+}
+
+/** Ordered, deduplicated selections proven by current plus historical goals. */
+export function journeyCampaignSelectedStoryChoiceRefs(
+  journey: Pick<JourneyContractSnapshot, "goal" | "goalHistory">,
+): CampaignStoryChoiceRef[] {
+  const refs = new Map<string, CampaignStoryChoiceRef>();
+  const choiceByStoryId = new Map<string, string>();
+  for (const goal of [...journey.goalHistory, journey.goal]) {
+    const definition = journeyCampaignGoalDefinition(goal);
+    if (!definition) continue;
+    const ref = journeyCampaignStoryChoiceRefForGoal(definition);
+    if (!ref) continue;
+    const selectedChoice = choiceByStoryId.get(ref.story_choice_id);
+    if (selectedChoice !== undefined && selectedChoice !== ref.choice_id) {
+      throw new Error(
+        `Journey campaign story choice "${ref.story_choice_id}" selects both "${selectedChoice}" and "${ref.choice_id}".`,
+      );
+    }
+    choiceByStoryId.set(ref.story_choice_id, ref.choice_id);
+    refs.set(campaignStoryChoiceRefKey(ref), ref);
+  }
+  return [...refs.entries()]
+    .sort(([left], [right]) => (left < right ? -1 : left > right ? 1 : 0))
+    .map(([, ref]) => ({ ...ref }));
+}
+
 function tannersFeverAccountabilityChoiceForGoal(
   definition: JourneyCampaignGoalDefinition,
 ): TannersFeverAccountabilityChoiceId | null {
@@ -515,7 +583,14 @@ export function journeyCampaignGoalJournalCopy(
       (candidate) => candidate.id === dispatchChoice,
     );
     if (!option) throw new Error(`Albany dawn dispatch option "${dispatchChoice}" is unavailable.`);
-    return Object.freeze({ title: option.label, text: option.consequence });
+    // The durable campaign journal records the irreversible wagon disposition.
+    // Its exact copy predates one-time service offers and therefore remains
+    // stable across the direct campaign-service migration. The live choice and
+    // named service offer disclose the additional terms before and after choice.
+    return Object.freeze({
+      title: option.label,
+      text: ALBANY_DAWN_DISPATCH_CONSEQUENCES[outcome.id][dispatchChoice],
+    });
   }
   const accountabilityChoice = tannersFeverAccountabilityChoiceForGoal(definition);
   if (accountabilityChoice) {

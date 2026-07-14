@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createInitialCampaignCharacterState } from "../../src/world/campaign_character_state.js";
+import { campaignStoryChoiceRefKey } from "../../src/world/campaign_story_choices.js";
 import { createInitialJourneyContractSnapshot } from "../../src/world/journey_contract.js";
 import type {
   OverworldCampaignServiceRule,
@@ -202,6 +203,7 @@ function campaignBoundaryIndex(
   rule: OverworldCampaignServiceRule,
   worldFactProofOrdinalById: ReadonlyMap<string, number | null>,
   includeSecondUse = false,
+  storyChoiceProofOrdinalByKey: ReadonlyMap<string, number> = new Map(),
 ): OverworldCampaignBoundaryReplayIndex {
   const byAcceptedDecisions = new Map([
     [
@@ -232,7 +234,11 @@ function campaignBoundaryIndex(
       areaId: rule.area,
     });
   }
-  return { byAcceptedDecisions, worldFactProofOrdinalById };
+  return {
+    byAcceptedDecisions,
+    worldFactProofOrdinalById,
+    storyChoiceProofOrdinalByKey,
+  };
 }
 
 function sources(
@@ -673,6 +679,74 @@ describe("overworld snapshot resource replay", () => {
         ]),
       ),
     ).not.toThrow();
+  });
+
+  it("checks required and forbidden story choices before the service decision", () => {
+    const requiredRef = {
+      story_choice_id: "albany_dawn_dispatch",
+      choice_id: "send_wagon_to_cade",
+    } as const;
+    const forbiddenRef = {
+      story_choice_id: "albany_dawn_dispatch",
+      choice_id: "send_wardens_north",
+    } as const;
+    const rule = campaignServiceRule({
+      requires_all_world_facts: undefined,
+      requires_all_story_choices: [requiredRef],
+      forbids_any_story_choices: [forbiddenRef],
+    });
+    const snapshotValue = snapshot([travelEntry()], { minutes: 660, fatigue: 0 });
+    const replaySources = sources([], [rule]);
+    const travelTimeline = timeline(snapshotValue);
+    const roadJournal = roadJournalResolutionIndex(
+      replaySources,
+      { roadJournalEntries: [] },
+      travelTimeline,
+      null,
+    );
+    const serviceJournal = {
+      entries: [
+        {
+          entry: proofBoundServiceEntry(rule, 660),
+          parsed: { action: "rest" as const, recordedAt: 660 },
+          recordedAt: 660,
+        },
+      ],
+    };
+    const replay = (proofs: ReadonlyMap<string, number>) =>
+      assertSnapshotResourceReplay(
+        snapshotValue,
+        replaySources,
+        travelTimeline,
+        roadJournal,
+        serviceJournal,
+        { entries: [] },
+        campaignBoundaryIndex(rule, new Map(), false, proofs),
+      );
+    const requiredKey = campaignStoryChoiceRefKey(requiredRef);
+    const forbiddenKey = campaignStoryChoiceRefKey(forbiddenRef);
+
+    expect(() => replay(new Map())).toThrow(/lacks required story choice/i);
+    expect(() => replay(new Map([[requiredKey, SERVICE_DECISION_ORDINAL]]))).toThrow(
+      /lacks required story choice/i,
+    );
+    expect(() =>
+      replay(
+        new Map([
+          [requiredKey, SERVICE_DECISION_ORDINAL - 1],
+          [forbiddenKey, SERVICE_DECISION_ORDINAL - 1],
+        ]),
+      ),
+    ).toThrow(/does not precede forbidden story choice/i);
+    expect(() =>
+      replay(
+        new Map([
+          [requiredKey, SERVICE_DECISION_ORDINAL - 1],
+          [forbiddenKey, SERVICE_DECISION_ORDINAL],
+        ]),
+      ),
+    ).not.toThrow();
+    expect(() => replay(new Map([[requiredKey, SERVICE_DECISION_ORDINAL - 1]]))).not.toThrow();
   });
 
   it("rejects quest completion journals recorded before enough time elapsed", () => {

@@ -220,6 +220,9 @@ export function buildOverworldSessionViewModelState(
       title: offer.title,
       summary: offer.summary,
       minutes: offer.minutes,
+      ...(offer.providerId && offer.providerName
+        ? { providerId: offer.providerId, providerName: offer.providerName }
+        : {}),
     })),
     roads: source.roads,
     areaExits: source.areaExits,

@@ -395,32 +395,38 @@
       "id": "SS-F12-albany-return",
       "title": "Allocate the truthful Albany response",
       "phase": "albany_return",
-      "implementation_status": "partial",
-      "proof_status": "unproven",
-      "counts_toward_contract": false,
-      "visible_choice": "Use the actual Wolf-Winter state to decide where Albany sends people, supplies, and authority next.",
+      "implementation_status": "implemented",
+      "proof_status": "proven",
+      "counts_toward_contract": true,
+      "visible_choice": "After the actual Wolf-Winter ending is reported, send Albany's only dawn wagon back to Cade and carry Hedrick's packet alone, or send the wagon and wardens north and travel with them. Each option discloses its mutually exclusive named-NPC service credit before commitment.",
       "immediate_state_delta": [
-        "albany.relief_capacity",
-        "character.faction_standing",
-        "character.relationships",
-        "albany.services",
-        "journey.next_opportunity"
+        "journey.goal",
+        "campaign.story_choice",
+        "albany.market.resupply_credit",
+        "albany.greenway.rest_claim"
       ],
       "delayed_consumers": [
-        "Named NPC availability",
-        "Albany prices and services",
-        "Follow-up opportunities and later campaign hooks"
+        "The selected branch is recovered generically from the trusted current or historical journey goal, so its consequence survives later goal activation without a duplicate mutable save field.",
+        "Sending the wagon to Cade makes Jamie Tanner's one-time Market road-store credit available: resupply takes 15 minutes instead of the ordinary 45.",
+        "Sending the wagon and wardens north makes Emery Sloane's one-time Greenway watch-shelter claim available: rest takes 15 minutes instead of the ordinary 180.",
+        "The mutually exclusive rule-and-area journal proof consumes the selected credit across save/restore; the other provider never offers the unchosen benefit."
       ],
       "visible_feedback": [
-        "The dispatch choice shows the known consequence of each allocation.",
-        "Albany locations, NPCs, and services visibly enact the selected response."
+        "Before commitment, both dispatch consequences name Jamie or Emery, the Market or Greenway district, the affected action, the one-time nature, and the 15-minute term.",
+        "Full overworld and UI views identify the named provider and repeat the authored branch cause; compact MCP context preserves the provider name, cause, action, and minutes in its bounded offer tuple.",
+        "The service result repeats the cause and exact resource transition; consumption removes the offer, and its persistent journal binds the selected story proof, rule, provider district, and decision boundary."
       ],
-      "systems": ["resources", "factions", "relationships", "services", "campaign"],
+      "systems": ["campaign", "npc_availability", "resources", "services"],
       "persistence_boundaries": ["quest_to_overworld", "overworld_save_restore"],
-      "contract_tags": ["delayed", "cross_system", "cross_phase"],
+      "contract_tags": ["delayed", "cross_system", "cross_phase", "irreversible_tradeoff"],
       "baseline_evidence": [
         "tests/regression/wolf_winter_post_hunt_consequence.test.ts",
-        "tests/unit/world_journey_campaign.test.ts"
+        "tests/regression/campaign_service_migration_integrity.test.ts",
+        "tests/regression/campaign_service_snapshot_integrity.test.ts",
+        "tests/unit/world_journey_campaign.test.ts",
+        "tests/unit/world_campaign_service_rules.test.ts",
+        "tests/unit/world_session_resource_replay.test.ts",
+        "tests/unit/ui_overworld.test.ts"
       ],
       "counterfactual_test": "tests/starting_slice/albany_return_counterfactual.test.ts"
     }

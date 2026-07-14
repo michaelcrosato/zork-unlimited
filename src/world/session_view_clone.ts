@@ -39,6 +39,9 @@ export function cloneOverworldView(view: OverworldView): OverworldView {
       title: offer.title,
       summary: offer.summary,
       minutes: offer.minutes,
+      ...(offer.providerId && offer.providerName
+        ? { providerId: offer.providerId, providerName: offer.providerName }
+        : {}),
     })),
     routeOptions: view.routeOptions.map((plan) => cloneOverworldRouteOption(plan)),
     discovered: view.discovered.map(cloneOverworldNode),

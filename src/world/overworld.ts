@@ -7,6 +7,7 @@ import {
 } from "./campaign_consequences.js";
 import { CampaignCharacterIdSchema } from "./campaign_character_state.js";
 import { CampaignServiceRulesSchema, type CampaignServiceRule } from "./campaign_service_rules.js";
+import { journeyCampaignStoryChoiceSelection } from "./journey_campaign.js";
 import { OpeningLeadSourceSchema, applyOpeningLeadSourceOption } from "./opening_lead_source.js";
 import { OpeningRegistrationSchema } from "./opening_registration.js";
 
@@ -1432,12 +1433,39 @@ function assertCampaignServiceRulesIntegrity(
       throw new Error(`Campaign service rule "${rule.id}" is anchored outside its home town.`);
     }
     for (const factId of [
-      ...rule.requires_all_world_facts,
+      ...(rule.requires_all_world_facts ?? []),
       ...(rule.forbids_any_world_facts ?? []),
     ]) {
       if (!authoredWorldFactIds.has(factId)) {
         throw new Error(
           `Campaign service rule "${rule.id}" references unauthored world fact "${factId}".`,
+        );
+      }
+    }
+    for (const ref of [
+      ...(rule.requires_all_story_choices ?? []),
+      ...(rule.forbids_any_story_choices ?? []),
+    ]) {
+      try {
+        journeyCampaignStoryChoiceSelection(ref.story_choice_id, ref.choice_id);
+      } catch {
+        throw new Error(
+          `Campaign service rule "${rule.id}" references unauthored story choice "${ref.story_choice_id}:${ref.choice_id}".`,
+        );
+      }
+    }
+    if (rule.provider_character_id) {
+      const provider = world.characters.find(
+        (character) => character.id === rule.provider_character_id,
+      );
+      if (!provider) {
+        throw new Error(
+          `Campaign service rule "${rule.id}" references missing provider "${rule.provider_character_id}".`,
+        );
+      }
+      if (provider.home !== rule.home || provider.area !== rule.area) {
+        throw new Error(
+          `Campaign service rule "${rule.id}" provider "${provider.id}" is outside its home town or area.`,
         );
       }
     }

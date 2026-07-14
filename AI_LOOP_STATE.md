@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 559 -->
+<!-- historical_cycle_count: 560 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,15 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - albany_dawn_dispatch_service_counterfactual
+
+- Evidence choice: the starting-slice goal overrode a compiled Station-board wording hot spot because `SS-F12-albany-return` already offered an irreversible dawn dispatch but had no delayed mechanical consumer.
+- Surface: the Cade-wagon branch now creates Jamie Tanner's durable one-time Market credit (15-minute resupply versus 45), while the northbound-wardens branch creates Emery Sloane's mutually exclusive Greenway claim (15-minute rest versus 180); both exact terms are visible before commitment and provider/cause survive full, compact, and UI projection.
+- Integrity/counterfactual: generic story-choice predicates derive only from canonical current/history goals, reject contradictory branches, and bind required/forbidden choice ordinals plus named-provider location to one-time service replay. The exact predecessor accepts only its two historical service ids; paired fresh runs visit all six Albany districts, hold the Wolf-Winter strategy/ending constant, and reverse the resource advantage. The causal ledger advances from 3/12 to 4/12.
+- Pure evidence: seed 2708 verified pure/fresh, completed Wolf-Winter, Gallowmere, Tanner's Fever, and Breaking Weir, continued at 24/40/48/68/80, and ended honestly at goal 4 on decision 89; clarity 4/5, enjoyment 5/5, stuck false, replay true. Seed 2707 timed out with a zero-byte log and is rejected technical evidence.
+- Compile/self-critique: fewer than three verified reports exist since compile `20260714T202925Z`, so no compile is due. PASS for one truthful return fork, not the greater-than-BG3 slice claim: eight forks, noncombat/hybrid Wolf resolutions, broader NPC agendas, and the recurring cross-town contact-name reuse remain.
+- Guard: adversarial review closed stable-journal migration, later-service hash relabeling, dual-choice, unreachable-rule, temporal-copy, and ordinary-service-fixture defects; pre/post 6,000-step crawls `20260714T205359Z`/`20260714T213657Z` reached 247/247 nodes, 344/344 edges, and 12/12 quests; 86 focused checks and full health passed at 333 files/2,429 tests, UI, and all 12 packs.
 
 ### Cycle result - albany_saved_wood_service_counterfactual
 
@@ -135,13 +144,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Pure evidence: verified pure/fresh seed 2013 continued at goal 1 (23), checkpoint 40, and goal 2 (47), then honestly ended at Tanner's completion on decision 77 before seeing the gated branch; clarity 4/5, enjoyment 5/5, got-stuck false, replay true. This directly samples the intended no-branch exit path, while deterministic UI/MCP tests carry the continue-path proof.
 - Self-critique: PASS for accountable game-native continuation, not retention—the fresh player still chose a satisfying three-quest ending. Ledger 458 is one report beyond the prior compile, below threshold; Cade's advertised-but-invisible tactical fork is the new S1, with undiscovered long-route planning and compact Tanner cue loss recurring behind it.
 - Guard: pre/post crawls `20260712T115442Z`/`20260712T121942Z` each covered 6,000 steps and 247/247 nodes; the canonical report and receipt verify, and full health passes 304 files / 2,160 tests, UI, and all 12 packs.
-
-### Cycle result - interruptible_dialogue_exchange
-
-- Evidence choice: the assessor still ranked already-closed legacy Wolf compact-journal clusters; verified pure seed 1809 instead named modal dialogue and navigation-only replies as its worst moment. Corpus audit found 29 unconditional root-back reply nodes, 24 back-only across 9/12 quests.
-- Surface: a safe reply emits its effects/prose and resumes an effect-free post-effect root in one ASK when every child choice is mirrored there; room actions and authored recovery rows remain visible beside topics. Same-room acts preserve an eligible speaker; leaving, retiring that NPC, or ending closes atomically.
-- Integrity/parity: synthetic child-only/root-effect branches decline folding; UI, CLI, full/compact MCP, aliases, journey classification, saves, and the reducer share one action set. The Barrow trace replaces `wight_back` with a required accepted strike and proves victory; the initial-zero crawler oracle now records once instead of spinning.
-- Blind iteration: pure seed 1909 rated 4/5 clarity, 5/5 enjoyment and continued at 25/40/51/76 before checkpoint 80, but exposed stale `ask_byre` after a same-room read; that regression now has a one-step read→ASK proof. Seeds 1910/1911 hit the technical timeout and are rejected, not retention evidence.
-- Final pure evidence: verified pure/fresh seed 1912 had no dialogue rejection/filler recurrence, continued at 23/40/49/80, ended honestly at goal 3 on decision 83, rated 4/5 clarity and 5/5 enjoyment, got-stuck false, replay true. New S1: Tanner's compact sickroom text can truncate the east herb-store cue; long objective-route preview also recurred.
-- Compile/self-critique: ledger 457 accepted/30 rejected; compile has eight v3 pure exits, all continued (35 continue/8 end; checkpoint 40=8/0, 80=6/1). PASS for conversation flow, not retention—the player still chose a satisfied three-quest ending; Tanner consequence agency and compact route/cue truth remain next.
-- Guard: 176 changed-file parity/migration/recovery tests, typecheck/lint/format, browser smoke with no console errors, final 6,000-step crawl (247/247 nodes, 344/344 edges, 12/12 quests), verified receipt, explicit engine-change re-pin acknowledgment, and full health passed.

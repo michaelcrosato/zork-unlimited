@@ -31,6 +31,8 @@ import {
   journeyCampaignGoalIsComplete,
   journeyCampaignGoalJournalCopy,
   journeyCampaignPresentationContext,
+  journeyCampaignSelectedStoryChoiceRefs,
+  journeyCampaignStoryChoiceRefForGoal,
   journeyCampaignStoryChoiceSelection,
   materializeJourneyCampaignGoal,
   nextJourneyCampaignGoal,
@@ -57,21 +59,21 @@ const EXPECTED_CONSEQUENCES: Readonly<
 > = {
   gate_barred: {
     send_wagon_to_cade:
-      "The wagon replaces the broken outer paling; the timber at the inner gate stays as Cade's last bar. You take Hedrick's packet north alone.",
+      "The wagon replaces the broken outer paling; the timber at the inner gate stays as Cade's last bar. You take Hedrick's packet north alone. Jamie Tanner enters a one-time Market road-store credit for carrying Hedrick's packet alone: a 15-minute resupply whenever you claim it.",
     send_wardens_north:
-      "The wagon follows Hedrick's report; Cade keeps the cattle behind the barred inner gate while the outer paling waits.",
+      "The wagon follows Hedrick's report; Cade keeps the cattle behind the barred inner gate while the outer paling waits. Emery Sloane sets aside a one-time Greenway watch-shelter claim for joining the wardens' northbound dispatch: a 15-minute rest whenever you claim it.",
   },
   timber_saved: {
     send_wagon_to_cade:
-      "The wagon and the saved timber close Cade's breach before the next night. You take Hedrick's packet north alone.",
+      "The wagon and the saved timber close Cade's breach before the next night. You take Hedrick's packet north alone. Jamie Tanner enters a one-time Market road-store credit for carrying Hedrick's packet alone: a 15-minute resupply whenever you claim it.",
     send_wardens_north:
-      "The wagon follows Hedrick's report; Cade uses the saved timber to begin the repair without it.",
+      "The wagon follows Hedrick's report; Cade uses the saved timber to begin the repair without it. Emery Sloane sets aside a one-time Greenway watch-shelter claim for joining the wardens' northbound dispatch: a 15-minute rest whenever you claim it.",
   },
   held: {
     send_wagon_to_cade:
-      "The wagon brings the sound wood the fight consumed and rebuilds Cade's exposed line. You take Hedrick's packet north alone.",
+      "The wagon brings the sound wood the fight consumed and rebuilds Cade's exposed line. You take Hedrick's packet north alone. Jamie Tanner enters a one-time Market road-store credit for carrying Hedrick's packet alone: a 15-minute resupply whenever you claim it.",
     send_wardens_north:
-      "The wagon follows Hedrick's report; Cade faces the broken outer line without sound timber until another relief run.",
+      "The wagon follows Hedrick's report; Cade faces the broken outer line without sound timber until another relief run. Emery Sloane sets aside a one-time Greenway watch-shelter claim for joining the wardens' northbound dispatch: a 15-minute rest whenever you claim it.",
   },
 };
 
@@ -374,6 +376,71 @@ describe("journey campaign", () => {
     expect(() =>
       journeyCampaignStoryChoiceSelection("invented_aftermath", "invented_choice"),
     ).toThrow(/Unknown journey campaign story choice "invented_aftermath"/);
+  });
+
+  it("recovers trusted story selections from current and historical campaign goals", () => {
+    const authored = [
+      ...Object.entries(ALBANY_DAWN_DISPATCH_GOALS).map(([choiceId, goal]) => ({
+        story_choice_id: ALBANY_DAWN_DISPATCH_ID,
+        choice_id: choiceId,
+        goal,
+      })),
+      ...Object.entries(TANNERS_FEVER_ACCOUNTABILITY_GOALS).map(([choiceId, goal]) => ({
+        story_choice_id: TANNERS_FEVER_ACCOUNTABILITY_ID,
+        choice_id: choiceId,
+        goal,
+      })),
+      ...Object.entries(ROME_POST_WEIR_DISPATCH_GOALS).map(([choiceId, goal]) => ({
+        story_choice_id: ROME_POST_WEIR_DISPATCH_ID,
+        choice_id: choiceId,
+        goal,
+      })),
+    ];
+    for (const { story_choice_id, choice_id, goal } of authored) {
+      expect(journeyCampaignStoryChoiceRefForGoal(goal)).toEqual({
+        story_choice_id,
+        choice_id,
+      });
+    }
+    expect(journeyCampaignStoryChoiceRefForGoal(INITIAL_JOURNEY_CAMPAIGN_GOAL)).toBeNull();
+
+    const continued = continuedInitialGoal();
+    const dispatchActive = activateJourneyGoal(
+      continued,
+      materializeJourneyCampaignGoal(
+        ALBANY_DAWN_DISPATCH_GOALS.send_wagon_to_cade,
+        continued.goal.version,
+      ),
+    );
+    expect(journeyCampaignSelectedStoryChoiceRefs(dispatchActive)).toEqual([
+      {
+        story_choice_id: ALBANY_DAWN_DISPATCH_ID,
+        choice_id: "send_wagon_to_cade",
+      },
+    ]);
+    expect(journeyCampaignSelectedStoryChoiceRefs(activeTannersFeverGoal())).toEqual([
+      {
+        story_choice_id: ALBANY_DAWN_DISPATCH_ID,
+        choice_id: "send_wagon_to_cade",
+      },
+    ]);
+
+    const conflicting = {
+      ...dispatchActive,
+      goalHistory: [
+        ...dispatchActive.goalHistory,
+        {
+          ...dispatchActive.goal,
+          id: ALBANY_DAWN_DISPATCH_GOALS.send_wardens_north.id,
+          text: ALBANY_DAWN_DISPATCH_GOALS.send_wardens_north.text,
+          status: "completed" as const,
+          completedAtDecision: dispatchActive.acceptedDecisions,
+        },
+      ],
+    };
+    expect(() => journeyCampaignSelectedStoryChoiceRefs(conflicting)).toThrow(
+      /selects both "send_wardens_north" and "send_wagon_to_cade"|selects both "send_wagon_to_cade" and "send_wardens_north"/i,
+    );
   });
 
   it("shows Tanner's accountability teaser at completion and the choice only after continue", () => {

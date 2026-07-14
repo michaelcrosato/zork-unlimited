@@ -14,7 +14,12 @@ describe("starting-slice causal matrix", () => {
     expect(new Set(matrix.forks.map((fork) => fork.id)).size).toBe(12);
     expect(
       matrix.forks.filter((fork) => fork.counts_toward_contract).map((fork) => fork.id),
-    ).toEqual(["SS-F01-character-background", "SS-F03-lead-source", "SS-F11-saved-wood"]);
+    ).toEqual([
+      "SS-F01-character-background",
+      "SS-F03-lead-source",
+      "SS-F11-saved-wood",
+      "SS-F12-albany-return",
+    ]);
     expect(() => assertCountedStartingSliceProofsExist(matrix)).not.toThrow();
   });
 

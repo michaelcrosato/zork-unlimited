@@ -192,6 +192,7 @@ import {
   journeyCampaignGoalJournalCopy,
   journeyCampaignGoalDefinition,
   journeyCampaignPresentationContext,
+  journeyCampaignSelectedStoryChoiceRefs,
   journeyCampaignStoryChoiceSelection,
   materializeJourneyCampaignGoal,
   nextJourneyCampaignGoal,
@@ -478,7 +479,9 @@ export class OverworldSession {
       currentTownId: this.currentId,
       currentAreaId,
       worldFactIds: this.campaignWorldFactIds(),
+      selectedStoryChoices: journeyCampaignSelectedStoryChoiceRefs(this.journeyState),
       consumedRuleIds: this.consumedCampaignServiceRuleIds(),
+      providersById: this.charactersById,
     });
   }
 
@@ -1556,6 +1559,7 @@ export class OverworldSession {
         currentAreaId: this.currentAreaIdOrThrow(),
         campaignServiceRules: this.world.campaign_service_rules ?? [],
         campaignWorldFactIds: this.campaignWorldFactIds(),
+        campaignStoryChoiceRefs: journeyCampaignSelectedStoryChoiceRefs(this.journeyState),
         consumedCampaignServiceRuleIds: this.consumedCampaignServiceRuleIds(),
         fatigue: this.fatigue,
         supplies: this.supplies,
@@ -1575,6 +1579,7 @@ export class OverworldSession {
         currentAreaId: this.currentAreaIdOrThrow(),
         campaignServiceRules: this.world.campaign_service_rules ?? [],
         campaignWorldFactIds: this.campaignWorldFactIds(),
+        campaignStoryChoiceRefs: journeyCampaignSelectedStoryChoiceRefs(this.journeyState),
         consumedCampaignServiceRuleIds: this.consumedCampaignServiceRuleIds(),
         fatigue: this.fatigue,
         supplies: this.supplies,

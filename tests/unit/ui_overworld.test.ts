@@ -393,6 +393,8 @@ describe("OverworldSession", () => {
         title: "Draw the one-time relief issue",
         summary: "Fill the field pack from Albany's reserved relief stock.",
         minutes: 15,
+        providerId: "albany_city__market__contact",
+        providerName: "Jamie Tanner",
       } as const;
       const markup = reactDomServer.renderToStaticMarkup(
         react.createElement(module.ServiceAction, {
@@ -405,6 +407,7 @@ describe("OverworldSession", () => {
       expect(markup).toContain('aria-describedby="service-offer-resupply-terms"');
       expect(markup).toContain('id="service-offer-resupply-terms"');
       expect(markup).toContain("Draw the one-time relief issue");
+      expect(markup).toContain("Available from Jamie Tanner.");
       expect(markup).toContain("15 min, one time");
     } finally {
       await server.close();
@@ -1034,8 +1037,10 @@ describe("OverworldSession", () => {
         id: "albany:service:rest",
         action: "rest" as const,
         title: "Rest under Rowan's relief seal",
-        summary: longSummary,
+        summary: `Emery Sloane opens the shelter. ${longSummary}`,
         minutes: 180,
+        providerId: "albany_city__greenway__contact",
+        providerName: "Emery Sloane",
       },
       {
         id: "albany:service:resupply",
@@ -1067,14 +1072,18 @@ describe("OverworldSession", () => {
       "action",
       "id",
       "minutes",
+      "providerId",
+      "providerName",
       "summary",
       "title",
     ]);
     expect(fullClone.serviceOffers[0]?.title).toBe("Rest under Rowan's relief seal");
+    expect(fullClone.serviceOffers[0]?.providerName).toBe("Emery Sloane");
     expect(compact.service_offers?.[0]?.[2]).toBe("Rest under Rowan's relief seal");
+    expect(compact.service_offers?.[0]?.[3]).toContain("Emery Sloane");
 
     fullClone.serviceOffers[0]!.summary = "mutated full clone";
-    expect(sourceOffers[0]!.summary).toBe(longSummary);
+    expect(sourceOffers[0]!.summary).toBe(`Emery Sloane opens the shelter. ${longSummary}`);
 
     const cloned = cloneOverworldCompactView(compact);
     if (!cloned.service_offers) throw new Error("expected cloned service offers");

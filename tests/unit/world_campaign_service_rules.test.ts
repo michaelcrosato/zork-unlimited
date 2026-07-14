@@ -17,6 +17,14 @@ import { planOverworldSessionTownResupply } from "../../src/world/session_servic
 
 const WORLD = loadOverworldManifest(process.cwd());
 const KNOWN_WORLD_FACT = "fact:wolf_winter_repair_timber_available";
+const WAGON_STORY_CHOICE = {
+  story_choice_id: "albany_dawn_dispatch",
+  choice_id: "send_wagon_to_cade",
+} as const;
+const WARDENS_STORY_CHOICE = {
+  story_choice_id: "albany_dawn_dispatch",
+  choice_id: "send_wardens_north",
+} as const;
 
 function serviceRule(overrides: Partial<CampaignServiceRule> = {}): CampaignServiceRule {
   return {
@@ -70,6 +78,43 @@ describe("campaign service-rule authoring", () => {
     expect(() => CampaignServiceRulesSchema.parse([serviceRule(), serviceRule()])).toThrow(
       /duplicate.*rule id/i,
     );
+
+    expect(() =>
+      CampaignServiceRuleSchema.parse(
+        serviceRule({
+          requires_all_world_facts: undefined,
+          requires_all_story_choices: [WAGON_STORY_CHOICE],
+        }),
+      ),
+    ).not.toThrow();
+    expect(() =>
+      CampaignServiceRuleSchema.parse(serviceRule({ requires_all_world_facts: undefined })),
+    ).toThrow(/at least one positive campaign condition/i);
+    expect(() =>
+      CampaignServiceRuleSchema.parse(
+        serviceRule({
+          requires_all_world_facts: undefined,
+          requires_all_story_choices: [WAGON_STORY_CHOICE, WAGON_STORY_CHOICE],
+        }),
+      ),
+    ).toThrow(/duplicate.*story choice/i);
+    expect(() =>
+      CampaignServiceRuleSchema.parse(
+        serviceRule({
+          requires_all_world_facts: undefined,
+          requires_all_story_choices: [WAGON_STORY_CHOICE, WARDENS_STORY_CHOICE],
+        }),
+      ),
+    ).toThrow(/mutually exclusive choices/i);
+    expect(() =>
+      CampaignServiceRuleSchema.parse(
+        serviceRule({
+          requires_all_world_facts: undefined,
+          requires_all_story_choices: [WAGON_STORY_CHOICE],
+          forbids_any_story_choices: [WAGON_STORY_CHOICE],
+        }),
+      ),
+    ).toThrow(/both require and forbid/i);
   });
 
   it("binds manifest rules to an authored town, area, and trusted quest-export fact", () => {
@@ -98,6 +143,41 @@ describe("campaign service-rule authoring", () => {
         ),
       ),
     ).toThrow(/unauthored world fact/i);
+  });
+
+  it("binds story predicates and named providers to canonical campaign authoring", () => {
+    const valid = serviceRule({
+      home: "albany_city",
+      area: "albany_city__market",
+      provider_character_id: "albany_city__market__contact",
+      requires_all_world_facts: undefined,
+      requires_all_story_choices: [WAGON_STORY_CHOICE],
+    });
+    expect(() => assertOverworldIntegrity(worldWithRule(valid))).not.toThrow();
+
+    expect(() =>
+      assertOverworldIntegrity(
+        worldWithRule({
+          ...valid,
+          requires_all_story_choices: [
+            { story_choice_id: "albany_dawn_dispatch", choice_id: "invented_dispatch" },
+          ],
+        }),
+      ),
+    ).toThrow(/unauthored story choice/i);
+    expect(() =>
+      assertOverworldIntegrity(
+        worldWithRule({ ...valid, provider_character_id: "albany_city__missing_provider" }),
+      ),
+    ).toThrow(/missing provider/i);
+    expect(() =>
+      assertOverworldIntegrity(
+        worldWithRule({
+          ...valid,
+          provider_character_id: "albany_city__greenway__contact",
+        }),
+      ),
+    ).toThrow(/provider.*outside/i);
   });
 });
 
@@ -170,6 +250,61 @@ describe("campaign service-rule resolution", () => {
     ).toThrow(/no market, inn, or stable/i);
   });
 
+  it("resolves mutually exclusive story choices and projects a detached named provider", () => {
+    const rule = serviceRule({
+      id: "service:jamie_packet_stores",
+      home: "albany_city",
+      area: "albany_city__market",
+      action: "resupply",
+      provider_character_id: "albany_city__market__contact",
+      requires_all_world_facts: undefined,
+      requires_all_story_choices: [WAGON_STORY_CHOICE],
+      forbids_any_story_choices: [WARDENS_STORY_CHOICE],
+    });
+    const providers = new Map([["albany_city__market__contact", { name: "Jamie Tanner" }]]);
+    const state = {
+      rules: [rule],
+      currentTownId: "albany_city",
+      currentAreaId: "albany_city__market",
+      worldFactIds: [] as string[],
+      consumedRuleIds: [] as string[],
+      providersById: providers,
+    };
+
+    expect(
+      resolveCampaignServiceRules({
+        ...state,
+        selectedStoryChoices: [WAGON_STORY_CHOICE],
+      }),
+    ).toEqual([
+      expect.objectContaining({
+        id: "service:jamie_packet_stores",
+        providerId: "albany_city__market__contact",
+        providerName: "Jamie Tanner",
+      }),
+    ]);
+    expect(
+      resolveCampaignServiceRules({
+        ...state,
+        selectedStoryChoices: [WARDENS_STORY_CHOICE],
+      }),
+    ).toEqual([]);
+    const { providersById: _providersById, ...stateWithoutProviders } = state;
+    expect(() =>
+      resolveCampaignServiceRules({
+        ...stateWithoutProviders,
+        selectedStoryChoices: [WAGON_STORY_CHOICE],
+      }),
+    ).toThrow(/unknown provider/i);
+
+    const offers = resolveCampaignServiceRules({
+      ...state,
+      selectedStoryChoices: [WAGON_STORY_CHOICE],
+    });
+    providers.get("albany_city__market__contact")!.name = "Caller mutation";
+    expect(offers[0]?.providerName).toBe("Jamie Tanner");
+  });
+
   it("returns sorted detached offers", () => {
     const rules = [
       serviceRule({
@@ -204,7 +339,7 @@ describe("campaign service-rule resolution", () => {
       worldFactIds: [KNOWN_WORLD_FACT],
       consumedRuleIds: [],
     });
-    internal[0]!.requires_all_world_facts.push("fact:caller_mutation");
+    internal[0]!.requires_all_world_facts!.push("fact:caller_mutation");
     expect(rules[1]!.requires_all_world_facts).toEqual([KNOWN_WORLD_FACT]);
   });
 

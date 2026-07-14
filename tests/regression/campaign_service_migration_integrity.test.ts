@@ -1,12 +1,17 @@
 import { describe, expect, it } from "vitest";
 
 import { hashState } from "../../src/core/hash.js";
+import { ALBANY_DAWN_DISPATCH_GOALS } from "../../src/world/journey_campaign.js";
 import { OverworldSession } from "../../src/world/session.js";
-import { OVERWORLD_OPENING_LEAD_SOURCE_WORLD_HASH } from "../../src/world/session_snapshot_restore.js";
+import {
+  OVERWORLD_CAMPAIGN_SERVICE_WORLD_HASH,
+  OVERWORLD_OPENING_LEAD_SOURCE_WORLD_HASH,
+} from "../../src/world/session_snapshot_restore.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
 
 const WORLD = loadOverworldManifest(process.cwd());
 const TIMBER_SERVICE_RULE_ID = "albany:wolf_saved_timber_quick_resupply";
+const WAGON_SERVICE_RULE_ID = "albany:dawn_wagon_solo_packet_resupply";
 
 function moveToArea(session: OverworldSession, areaId: string): void {
   const route = session.view().areaExits.find((candidate) => candidate.destination.id === areaId);
@@ -62,6 +67,59 @@ function savedTimberReturnBeforeService(withQuestDecision = false): OverworldSes
 }
 
 describe("campaign service predecessor migration integrity", () => {
+  it("migrates the immediate predecessor with replay-bound service evidence and branch proof", () => {
+    const previous = savedTimberReturnBeforeService();
+    previous.resupplyAtTown();
+    const predecessor = previous.snapshot();
+    predecessor.worldHash = OVERWORLD_CAMPAIGN_SERVICE_WORLD_HASH;
+    expect(
+      predecessor.journalEntries.find((entry) => entry.kind === "campaign")?.text,
+    ).not.toContain("one-time 15-minute resupply");
+
+    const migrated = OverworldSession.restore(WORLD, predecessor);
+    expect(
+      migrated
+        .snapshot()
+        .journalEntries.find((entry) => entry.serviceRuleId === TIMBER_SERVICE_RULE_ID),
+    ).toBeDefined();
+    moveToArea(migrated, "albany_city__market");
+    expect(migrated.view().serviceOffers).toContainEqual(
+      expect.objectContaining({
+        id: WAGON_SERVICE_RULE_ID,
+        providerId: "albany_city__market__contact",
+        providerName: "Jamie Tanner",
+        minutes: 15,
+      }),
+    );
+  });
+
+  it("rejects new dawn-service consumption relabeled as predecessor evidence", () => {
+    const forged = savedTimberReturnBeforeService();
+    moveToArea(forged, "albany_city__market");
+    expect(forged.view().serviceOffers.map((offer) => offer.id)).toContain(WAGON_SERVICE_RULE_ID);
+    forged.resupplyAtTown();
+    const predecessor = forged.snapshot();
+    predecessor.worldHash = OVERWORLD_CAMPAIGN_SERVICE_WORLD_HASH;
+
+    expect(() => OverworldSession.restore(WORLD, predecessor)).toThrow(
+      /service evidence introduced by a later manifest/i,
+    );
+  });
+
+  it("rejects relabeling an immediate-predecessor dawn branch without its exact decision proof", () => {
+    const predecessor = savedTimberReturnBeforeService().snapshot();
+    predecessor.worldHash = OVERWORLD_CAMPAIGN_SERVICE_WORLD_HASH;
+    predecessor.journey.goal = {
+      ...predecessor.journey.goal,
+      id: ALBANY_DAWN_DISPATCH_GOALS.send_wardens_north.id,
+      text: ALBANY_DAWN_DISPATCH_GOALS.send_wardens_north.text,
+    };
+
+    expect(() => OverworldSession.restore(WORLD, predecessor)).toThrow(
+      /story choice.*does not have exactly one canonical journey decision proof/i,
+    );
+  });
+
   it("materializes a replayable quest boundary before a migrated save consumes a new service", () => {
     const predecessor = savedTimberReturnBeforeService(true).snapshot();
     predecessor.worldHash = OVERWORLD_OPENING_LEAD_SOURCE_WORLD_HASH;

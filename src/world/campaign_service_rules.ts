@@ -1,6 +1,11 @@
 import { z } from "zod";
 
 import { CampaignCharacterIdSchema } from "./campaign_character_state.js";
+import {
+  CampaignStoryChoiceRefSchema,
+  campaignStoryChoiceRefKey,
+  type CampaignStoryChoiceRef,
+} from "./campaign_story_choices.js";
 
 const AUTHORED_TEXT = z
   .string()
@@ -28,6 +33,24 @@ const CampaignServiceWorldFactIdsSchema = z
     });
   });
 
+const CampaignServiceStoryChoiceRefsSchema = z
+  .array(CampaignStoryChoiceRefSchema)
+  .min(1)
+  .superRefine((refs, ctx) => {
+    const seen = new Set<string>();
+    refs.forEach((ref, index) => {
+      const key = campaignStoryChoiceRefKey(ref);
+      if (seen.has(key)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: [index],
+          message: `Duplicate campaign service story choice ${key}.`,
+        });
+      }
+      seen.add(key);
+    });
+  });
+
 export const CampaignServiceRuleSchema = z
   .object({
     id: CampaignCharacterIdSchema,
@@ -36,23 +59,60 @@ export const CampaignServiceRuleSchema = z
     action: CampaignServiceActionSchema,
     title: AUTHORED_TEXT,
     summary: AUTHORED_TEXT,
+    provider_character_id: z.string().min(1).optional(),
     minutes: z
       .number()
       .int()
       .positive()
       .max(24 * 60),
-    requires_all_world_facts: CampaignServiceWorldFactIdsSchema,
+    requires_all_world_facts: CampaignServiceWorldFactIdsSchema.optional(),
     forbids_any_world_facts: CampaignServiceWorldFactIdsSchema.optional(),
+    requires_all_story_choices: CampaignServiceStoryChoiceRefsSchema.optional(),
+    forbids_any_story_choices: CampaignServiceStoryChoiceRefsSchema.optional(),
   })
   .strict()
   .superRefine((rule, ctx) => {
-    const required = new Set(rule.requires_all_world_facts);
+    if (
+      (rule.requires_all_world_facts?.length ?? 0) === 0 &&
+      (rule.requires_all_story_choices?.length ?? 0) === 0
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `Campaign service rule "${rule.id}" requires at least one positive campaign condition.`,
+      });
+    }
+    const required = new Set(rule.requires_all_world_facts ?? []);
     rule.forbids_any_world_facts?.forEach((factId, index) => {
       if (required.has(factId)) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ["forbids_any_world_facts", index],
           message: `Campaign service rule "${rule.id}" cannot both require and forbid world fact "${factId}".`,
+        });
+      }
+    });
+    const requiredChoices = new Set(
+      (rule.requires_all_story_choices ?? []).map(campaignStoryChoiceRefKey),
+    );
+    const requiredChoiceByStoryId = new Map<string, string>();
+    rule.requires_all_story_choices?.forEach((ref, index) => {
+      const selectedChoice = requiredChoiceByStoryId.get(ref.story_choice_id);
+      if (selectedChoice !== undefined && selectedChoice !== ref.choice_id) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["requires_all_story_choices", index],
+          message: `Campaign service rule "${rule.id}" cannot require mutually exclusive choices "${selectedChoice}" and "${ref.choice_id}" from story "${ref.story_choice_id}".`,
+        });
+      }
+      requiredChoiceByStoryId.set(ref.story_choice_id, ref.choice_id);
+    });
+    rule.forbids_any_story_choices?.forEach((ref, index) => {
+      const key = campaignStoryChoiceRefKey(ref);
+      if (requiredChoices.has(key)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["forbids_any_story_choices", index],
+          message: `Campaign service rule "${rule.id}" cannot both require and forbid story choice ${key}.`,
         });
       }
     });
@@ -82,6 +142,8 @@ export type CampaignServiceOffer = {
   title: string;
   summary: string;
   minutes: number;
+  providerId?: string;
+  providerName?: string;
 };
 
 type IdCollection = readonly string[] | ReadonlySet<string>;
@@ -91,8 +153,16 @@ export type CampaignServiceRuleResolutionState = Readonly<{
   currentTownId: string;
   currentAreaId: string;
   worldFactIds: IdCollection;
+  selectedStoryChoices?: readonly CampaignStoryChoiceRef[];
   consumedRuleIds: IdCollection;
 }>;
+
+export type CampaignServiceOfferProvider = Readonly<{ name: string }>;
+
+export type CampaignServiceOfferResolutionState = CampaignServiceRuleResolutionState &
+  Readonly<{
+    providersById?: ReadonlyMap<string, CampaignServiceOfferProvider>;
+  }>;
 
 function stringSet(values: IdCollection): ReadonlySet<string> {
   return values instanceof Set ? values : new Set(values);
@@ -106,12 +176,19 @@ function compareRules(left: CampaignServiceRule, right: CampaignServiceRule): nu
 function ruleIsActive(
   rule: CampaignServiceRule,
   worldFactIds: ReadonlySet<string>,
+  selectedStoryChoiceKeys: ReadonlySet<string>,
   consumedRuleIds: ReadonlySet<string>,
 ): boolean {
   return (
     !consumedRuleIds.has(rule.id) &&
-    rule.requires_all_world_facts.every((factId) => worldFactIds.has(factId)) &&
-    !(rule.forbids_any_world_facts ?? []).some((factId) => worldFactIds.has(factId))
+    (rule.requires_all_world_facts ?? []).every((factId) => worldFactIds.has(factId)) &&
+    !(rule.forbids_any_world_facts ?? []).some((factId) => worldFactIds.has(factId)) &&
+    (rule.requires_all_story_choices ?? []).every((ref) =>
+      selectedStoryChoiceKeys.has(campaignStoryChoiceRefKey(ref)),
+    ) &&
+    !(rule.forbids_any_story_choices ?? []).some((ref) =>
+      selectedStoryChoiceKeys.has(campaignStoryChoiceRefKey(ref)),
+    )
   );
 }
 
@@ -124,13 +201,16 @@ export function resolveActiveCampaignServiceRules(
 ): CampaignServiceRule[] {
   const rules = CampaignServiceRulesSchema.parse(state.rules);
   const worldFactIds = stringSet(state.worldFactIds);
+  const selectedStoryChoiceKeys = new Set(
+    (state.selectedStoryChoices ?? []).map(campaignStoryChoiceRefKey),
+  );
   const consumedRuleIds = stringSet(state.consumedRuleIds);
   const offers = rules
     .filter(
       (rule) =>
         rule.home === state.currentTownId &&
         rule.area === state.currentAreaId &&
-        ruleIsActive(rule, worldFactIds, consumedRuleIds),
+        ruleIsActive(rule, worldFactIds, selectedStoryChoiceKeys, consumedRuleIds),
     )
     .sort(compareRules);
 
@@ -149,20 +229,36 @@ export function resolveActiveCampaignServiceRules(
 }
 
 /** Strip internal location and predicate state from one detached player offer. */
-export function campaignServiceOffer(rule: CampaignServiceRule): CampaignServiceOffer {
+export function campaignServiceOffer(
+  rule: CampaignServiceRule,
+  providersById?: ReadonlyMap<string, CampaignServiceOfferProvider>,
+): CampaignServiceOffer {
   const parsed = CampaignServiceRuleSchema.parse(rule);
+  const provider = parsed.provider_character_id
+    ? providersById?.get(parsed.provider_character_id)
+    : undefined;
+  if (parsed.provider_character_id && !provider) {
+    throw new Error(
+      `Campaign service rule "${parsed.id}" has unknown provider "${parsed.provider_character_id}".`,
+    );
+  }
   return {
     id: parsed.id,
     action: parsed.action,
     title: parsed.title,
     summary: parsed.summary,
     minutes: parsed.minutes,
+    ...(parsed.provider_character_id && provider
+      ? { providerId: parsed.provider_character_id, providerName: provider.name }
+      : {}),
   };
 }
 
 /** Resolve the bounded player-facing service offer projection. */
 export function resolveCampaignServiceRules(
-  state: CampaignServiceRuleResolutionState,
+  state: CampaignServiceOfferResolutionState,
 ): CampaignServiceOffer[] {
-  return resolveActiveCampaignServiceRules(state).map(campaignServiceOffer);
+  return resolveActiveCampaignServiceRules(state).map((rule) =>
+    campaignServiceOffer(rule, state.providersById),
+  );
 }

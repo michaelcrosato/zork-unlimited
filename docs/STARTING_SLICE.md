@@ -98,6 +98,8 @@ Wolf-Winter is the strongest existing gameplay proof:
   fixed rolls;
 - saved wood creates an equal-score post-hunt tradeoff whose world fact now
   changes a one-time Albany service;
+- Albany's dawn dispatch creates a mutually exclusive return fork between
+  Jamie's Market resupply credit and Emery's Greenway rest claim;
 - three stable victory identities reach Albany's campaign presentation.
 
 Relevant guards include
@@ -123,8 +125,9 @@ The current slice does **not** yet meet the full contract:
   equipment still needs an origin-honest quest-local representation before it
   can alter play;
 - Wolf-Winter's successful routes still require defeating the same three wolves;
-- most return reactivity is authored presentation routed through quest-specific
-  campaign code rather than reusable state and consequences.
+- two return decisions now drive replay-bound services through reusable world-fact
+  and story-choice predicates, but the other return facts still lack mechanical
+  NPC and opportunity consumers.
 
 The causal ledger marks existing partial proofs honestly. No fork counts toward
 the target until its later mechanical consumer and paired counterfactual test are
@@ -165,7 +168,8 @@ Wolf-Winter's three successful endings create distinct Old Cade memories and
 byre/gate/timber facts; restore replays the character result, rejects forged
 outcome/journal/state combinations, and fences prior manifests to one exact
 migration target. Generic campaign service rules can now consume those trusted
-facts at an authored town and area, expose bounded one-time terms, and bind
+facts or canonical story choices at an authored town and area, project an
+optional same-district named provider, expose bounded one-time terms, and bind
 consumption to replayed journal evidence across save/restore.
 
 The trusted inbound boundary is also landed. Quest manifests declare strict,
@@ -226,12 +230,26 @@ retained timber wins when supplies are low, while the barred gate wins after
 identical road strain creates fatigue. Proof lives in
 [`saved_wood_world_state_counterfactual.test.ts`](../tests/starting_slice/saved_wood_world_state_counterfactual.test.ts).
 
-This proves `SS-F01-character-background`, `SS-F03-lead-source`, and
-`SS-F11-saved-wood`: three of the twelve required material forks. It does not
+The fourth authored increment makes Albany's post-Wolf allocation mechanically
+real. Sending the only dawn wagon back to Cade leaves the player carrying
+Hedrick's packet alone and causes Jamie Tanner to hold a one-time Market
+road-store credit: a 15-minute resupply instead of 45. Sending the wagon and
+wardens north causes Emery Sloane to hold a mutually exclusive Greenway
+watch-shelter claim: a 15-minute rest instead of 180. Both terms are visible
+before commitment; the selected goal remains their trusted source even after it
+moves into goal history. Full, compact, UI, save/restore, migration, and causal
+replay proofs reject contradictory branches or retroactive service use. The
+paired runs visit all six Albany districts, use the same Wolf-Winter strategy
+and ending, and differ only at the dispatch. Proof lives in
+[`albany_return_counterfactual.test.ts`](../tests/starting_slice/albany_return_counterfactual.test.ts).
+
+This proves `SS-F01-character-background`, `SS-F03-lead-source`,
+`SS-F11-saved-wood`, and `SS-F12-albany-return`: four of the twelve required
+material forks. It does not
 prove that all four concepts are mechanically balanced, that Albany preparation
 is broadly systemic, that combat can be avoided, or that other return facts
 change NPC availability and opportunities. Those remain the next work, not
-implied credit for the three proven counterfactuals.
+implied credit for the four proven counterfactuals.
 
 ## Required resolution families
 

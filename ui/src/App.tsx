@@ -105,7 +105,9 @@ export function ServiceOfferTerms({
   if (!offer) return null;
   return (
     <small className="service-offer-terms" id={id}>
-      <strong>{offer.title}</strong> — {offer.summary} ({offer.minutes} min, one time)
+      <strong>{offer.title}</strong>
+      {offer.providerName ? ` — Available from ${offer.providerName}.` : " —"} {offer.summary} (
+      {offer.minutes} min, one time)
     </small>
   );
 }

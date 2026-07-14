@@ -33,6 +33,7 @@ import {
   travelSupplyCost,
 } from "./travel_mechanics.js";
 import { campaignServiceJournalCopy, campaignServiceJourneyActionId } from "./session_services.js";
+import { campaignStoryChoiceRefKey } from "./campaign_story_choices.js";
 
 export type OverworldResourceReplaySourceIndex = {
   areaHomes: ReadonlyMap<string, string>;
@@ -52,6 +53,7 @@ export type OverworldCampaignBoundaryReplayProof = Readonly<{
 export type OverworldCampaignBoundaryReplayIndex = Readonly<{
   byAcceptedDecisions: ReadonlyMap<number, OverworldCampaignBoundaryReplayProof>;
   worldFactProofOrdinalById: ReadonlyMap<string, number | null>;
+  storyChoiceProofOrdinalByKey: ReadonlyMap<string, number>;
 }>;
 
 export type OverworldRoadJournalResolutionEntry = {
@@ -376,7 +378,7 @@ function campaignServiceRuleForReplay(
       `Overworld session snapshot service journal "${service.entry.id}" does not match its canonical authored copy.`,
     );
   }
-  for (const factId of rule.requires_all_world_facts) {
+  for (const factId of rule.requires_all_world_facts ?? []) {
     const provenAt = campaignBoundaries.worldFactProofOrdinalById.get(factId);
     if (provenAt === undefined || provenAt === null || boundary.acceptedDecisions <= provenAt) {
       throw new Error(
@@ -391,6 +393,24 @@ function campaignServiceRuleForReplay(
     if (provenAt === null || (provenAt !== undefined && boundary.acceptedDecisions > provenAt)) {
       throw new Error(
         `Overworld session snapshot campaign service rule "${rule.id}" does not precede forbidden world fact "${factId}".`,
+      );
+    }
+  }
+  for (const ref of rule.requires_all_story_choices ?? []) {
+    const key = campaignStoryChoiceRefKey(ref);
+    const provenAt = campaignBoundaries.storyChoiceProofOrdinalByKey.get(key);
+    if (provenAt === undefined || boundary.acceptedDecisions <= provenAt) {
+      throw new Error(
+        `Overworld session snapshot campaign service rule "${rule.id}" lacks required story choice ${key} before its service decision.`,
+      );
+    }
+  }
+  for (const ref of rule.forbids_any_story_choices ?? []) {
+    const key = campaignStoryChoiceRefKey(ref);
+    const provenAt = campaignBoundaries.storyChoiceProofOrdinalByKey.get(key);
+    if (provenAt !== undefined && boundary.acceptedDecisions > provenAt) {
+      throw new Error(
+        `Overworld session snapshot campaign service rule "${rule.id}" does not precede forbidden story choice ${key}.`,
       );
     }
   }
@@ -409,6 +429,7 @@ export function assertSnapshotResourceReplay(
   campaignBoundaries: OverworldCampaignBoundaryReplayIndex = {
     byAcceptedDecisions: new Map(),
     worldFactProofOrdinalById: new Map(),
+    storyChoiceProofOrdinalByKey: new Map(),
   },
 ): void {
   assertSnapshotRoadResolutionCoverage(roadJournal);

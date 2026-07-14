@@ -447,6 +447,50 @@
       "forbids_any_world_facts": [
         "fact:wolf_winter_repair_timber_available"
       ]
+    },
+    {
+      "id": "albany:dawn_wagon_solo_packet_resupply",
+      "home": "albany_city",
+      "area": "albany_city__market",
+      "action": "resupply",
+      "title": "Claim Jamie's Solo-Packet Road Stores",
+      "summary": "Because you assigned the dawn wagon to rebuild Cade's outer line, Jamie Tanner holds a one-time Market road-store credit for carrying Hedrick's packet alone.",
+      "provider_character_id": "albany_city__market__contact",
+      "minutes": 15,
+      "requires_all_story_choices": [
+        {
+          "story_choice_id": "albany_dawn_dispatch",
+          "choice_id": "send_wagon_to_cade"
+        }
+      ],
+      "forbids_any_story_choices": [
+        {
+          "story_choice_id": "albany_dawn_dispatch",
+          "choice_id": "send_wardens_north"
+        }
+      ]
+    },
+    {
+      "id": "albany:dawn_wardens_greenway_rest",
+      "home": "albany_city",
+      "area": "albany_city__greenway",
+      "action": "rest",
+      "title": "Claim Emery's Greenway Watch Shelter",
+      "summary": "Because you assigned the dawn wagon and wardens north, Emery Sloane holds a one-time Greenway watch-shelter claim for your part in their dispatch.",
+      "provider_character_id": "albany_city__greenway__contact",
+      "minutes": 15,
+      "requires_all_story_choices": [
+        {
+          "story_choice_id": "albany_dawn_dispatch",
+          "choice_id": "send_wardens_north"
+        }
+      ],
+      "forbids_any_story_choices": [
+        {
+          "story_choice_id": "albany_dawn_dispatch",
+          "choice_id": "send_wagon_to_cade"
+        }
+      ]
     }
   ],
   "sources": [

@@ -68,7 +68,9 @@ import {
   assertJourneyCampaignJournalProof,
   assertJourneyCampaignQuestOutcome,
   journeyCampaignGoalDefinition,
+  journeyCampaignSelectedStoryChoiceRefs,
 } from "./journey_campaign.js";
+import { campaignStoryChoiceRefKey } from "./campaign_story_choices.js";
 import {
   questCampaignExportForEnding,
   questCompletionJournalEntryDraft,
@@ -105,8 +107,14 @@ export const OVERWORLD_CAMPAIGN_EXPORTS_MIGRATION_TARGET_WORLD_HASH =
   OVERWORLD_CAMPAIGN_EXPORTS_WORLD_HASH;
 // Updated whenever the trusted manifest changes. Prior hashes are accepted only
 // when they migrate directly into this exact manifest revision.
-export const OVERWORLD_CAMPAIGN_SERVICE_MIGRATION_TARGET_WORLD_HASH =
+export const OVERWORLD_CAMPAIGN_SERVICE_WORLD_HASH =
   "5fa4cea45691beef3a93952a7f890d740f428cc127ff37202d46020dca2534c6";
+const OVERWORLD_CAMPAIGN_SERVICE_WORLD_RULE_IDS: ReadonlySet<string> = new Set([
+  "albany:wolf_saved_timber_quick_resupply",
+  "albany:wolf_barred_gate_quick_rest",
+]);
+export const OVERWORLD_CAMPAIGN_SERVICE_MIGRATION_TARGET_WORLD_HASH =
+  "2dbc97e2de8063be7b3a49fe3cb9108e8f80270d7d118efd781381659dba97c4";
 /** @deprecated Lead-source target name retained as the current-target alias. */
 export const OVERWORLD_OPENING_LEAD_SOURCE_MIGRATION_TARGET_WORLD_HASH =
   OVERWORLD_CAMPAIGN_SERVICE_MIGRATION_TARGET_WORLD_HASH;
@@ -125,6 +133,7 @@ const OVERWORLD_OPENING_REGISTRATION_TRUSTED_PREDECESSOR_WORLD_HASHES: ReadonlyS
   ]);
 
 type TrustedMigrationEra =
+  | "campaign_service"
   | "opening_lead_source"
   | "opening_registration"
   | "pre_registration"
@@ -491,7 +500,11 @@ function campaignBoundaryReplayIndex(args: {
   const byAcceptedDecisions = new Map<number, OverworldCampaignBoundaryReplayProof>();
   const boundary = args.leadSourceProof.offerBoundary;
   if (!args.trail || !boundary) {
-    return { byAcceptedDecisions, worldFactProofOrdinalById: new Map() };
+    return {
+      byAcceptedDecisions,
+      worldFactProofOrdinalById: new Map(),
+      storyChoiceProofOrdinalByKey: new Map(),
+    };
   }
   if (args.indexes.areaHomes.get(boundary.areaId) !== boundary.townId) {
     throw new Error(
@@ -529,7 +542,35 @@ function campaignBoundaryReplayIndex(args: {
       "Overworld session snapshot travel log is not fully represented by its lead-source decision trail.",
     );
   }
-  return { byAcceptedDecisions, worldFactProofOrdinalById: new Map() };
+  return {
+    byAcceptedDecisions,
+    worldFactProofOrdinalById: new Map(),
+    storyChoiceProofOrdinalByKey: new Map(),
+  };
+}
+
+function deriveCampaignStoryChoiceProofOrdinals(args: {
+  decisionProofsByOrdinal: ReadonlyMap<number, OverworldCampaignBoundaryReplayProof>;
+  journey: JourneyContractSnapshot;
+}): ReadonlyMap<string, number> {
+  const proofOrdinalByKey = new Map<string, number>();
+  for (const ref of journeyCampaignSelectedStoryChoiceRefs(args.journey)) {
+    const key = campaignStoryChoiceRefKey(ref);
+    const expectedActionId = `campaign_story:${ref.story_choice_id}:${ref.choice_id}`;
+    const matches = [...args.decisionProofsByOrdinal.entries()].filter(
+      ([, proof]) =>
+        proof.decision?.surface === "overworld" &&
+        proof.decision.reason === "situation_changed" &&
+        proof.decision.actionId === expectedActionId,
+    );
+    if (matches.length !== 1) {
+      throw new Error(
+        `Overworld session snapshot story choice ${key} does not have exactly one canonical journey decision proof.`,
+      );
+    }
+    proofOrdinalByKey.set(key, matches[0]![0]);
+  }
+  return proofOrdinalByKey;
 }
 
 export type OverworldSessionSnapshotRestorePlan = {
@@ -657,13 +698,15 @@ export function planOverworldSessionSnapshotRestore(args: {
   const migrationEra: TrustedMigrationEra =
     !migrationTargetsCurrentManifest || snapshot.worldHash === worldHash
       ? null
-      : snapshot.worldHash === OVERWORLD_OPENING_LEAD_SOURCE_WORLD_HASH
-        ? "opening_lead_source"
-        : OVERWORLD_OPENING_REGISTRATION_TRUSTED_PREDECESSOR_WORLD_HASHES.has(snapshot.worldHash)
-          ? "pre_registration"
-          : snapshot.worldHash === OVERWORLD_OPENING_REGISTRATION_WORLD_HASH
-            ? "opening_registration"
-            : null;
+      : snapshot.worldHash === OVERWORLD_CAMPAIGN_SERVICE_WORLD_HASH
+        ? "campaign_service"
+        : snapshot.worldHash === OVERWORLD_OPENING_LEAD_SOURCE_WORLD_HASH
+          ? "opening_lead_source"
+          : OVERWORLD_OPENING_REGISTRATION_TRUSTED_PREDECESSOR_WORLD_HASHES.has(snapshot.worldHash)
+            ? "pre_registration"
+            : snapshot.worldHash === OVERWORLD_OPENING_REGISTRATION_WORLD_HASH
+              ? "opening_registration"
+              : null;
   const migratesPreCampaignExportsWorldHash =
     migrationEra === "pre_registration" &&
     snapshot.worldHash === OVERWORLD_PRE_CAMPAIGN_EXPORTS_WORLD_HASH;
@@ -784,7 +827,20 @@ export function planOverworldSessionSnapshotRestore(args: {
     travelLogTownByArrival: travelTimeline.townByArrival,
   });
   if (
+    migrationEra === "campaign_service" &&
+    snapshot.journalEntries.some(
+      (entry) =>
+        entry.serviceRuleId !== undefined &&
+        !OVERWORLD_CAMPAIGN_SERVICE_WORLD_RULE_IDS.has(entry.serviceRuleId),
+    )
+  ) {
+    throw new Error(
+      "Campaign-service predecessor snapshot has service evidence introduced by a later manifest.",
+    );
+  }
+  if (
     migrationEra !== null &&
+    migrationEra !== "campaign_service" &&
     snapshot.journalEntries.some(
       (entry) => entry.serviceRuleId !== undefined || entry.serviceAreaId !== undefined,
     )
@@ -795,6 +851,7 @@ export function planOverworldSessionSnapshotRestore(args: {
   }
   if (
     migrationEra !== null &&
+    migrationEra !== "campaign_service" &&
     snapshot.journalEntries.some(
       (entry) => entry.serviceBoundary !== undefined || entry.questCompletionBoundary !== undefined,
     )
@@ -891,6 +948,7 @@ export function planOverworldSessionSnapshotRestore(args: {
   if (
     migrationEra !== null &&
     migrationEra !== "opening_lead_source" &&
+    migrationEra !== "campaign_service" &&
     (hasOpeningLeadSourceEvidence ||
       hasOpeningLeadSourceDecisionEvidence ||
       snapshot.openingLeadSourceDecisionTrail !== undefined)
@@ -917,7 +975,9 @@ export function planOverworldSessionSnapshotRestore(args: {
     targetLeadQuestId !== null &&
     (startedQuestIds.has(targetLeadQuestId) || completedQuestIds.has(targetLeadQuestId));
   const hasLeadSourceManifestEvidence =
-    migrationEra === null || migrationEra === "opening_lead_source";
+    migrationEra === null ||
+    migrationEra === "campaign_service" ||
+    migrationEra === "opening_lead_source";
   if (
     hasLeadSourceManifestEvidence &&
     legacyRegistrationProof !== null &&
@@ -1037,7 +1097,11 @@ export function planOverworldSessionSnapshotRestore(args: {
       journalEntries: snapshot.journalEntries,
       journey: snapshot.journey,
       questOutcomeIds,
-      requireBoundServiceFacts: migrationEra === null,
+      requireBoundServiceFacts: migrationEra === null || migrationEra === "campaign_service",
+    }),
+    storyChoiceProofOrdinalByKey: deriveCampaignStoryChoiceProofOrdinals({
+      decisionProofsByOrdinal: campaignBoundaryReplay.byAcceptedDecisions,
+      journey: snapshot.journey,
     }),
   };
   const neutralCharacter = createInitialCampaignCharacterState();
@@ -1471,7 +1535,7 @@ function deriveCampaignWorldFactProofOrdinals(args: {
   const entriesById = new Map(args.journalEntries.map((entry) => [entry.id, entry]));
   const serviceFactIds = new Set(
     [...args.indexes.campaignServiceRulesById.values()].flatMap((rule) => [
-      ...rule.requires_all_world_facts,
+      ...(rule.requires_all_world_facts ?? []),
       ...(rule.forbids_any_world_facts ?? []),
     ]),
   );
