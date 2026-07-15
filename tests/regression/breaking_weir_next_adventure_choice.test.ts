@@ -95,6 +95,7 @@ function reachBreakingWeirGoalCompletion(): OverworldSession {
   moveToArea(session, "albany_city__market");
   session.scoutPoi("albany_city__market__poi");
   moveToArea(session, "albany_city__transport_hub");
+  session.chooseJourneyStory("albany:relief_resident_shelter");
   session.startQuest("wolf_winter", "albany:wolf_approach_sheltered_stockway");
   session.completeQuest("wolf_winter", {
     endingId: "ending_held_timber_saved",

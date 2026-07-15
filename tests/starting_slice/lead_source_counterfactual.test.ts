@@ -35,6 +35,7 @@ const JAMIE_SOURCE = "albany:source_jamie_market_testimony";
 const HAYDEN_SOURCE = "albany:source_hayden_frost_report";
 const DEFAULT_PREPARATION = "albany:prep_works_fortification";
 const COUNTERFACTUAL_PREPARATION = "albany:prep_relief_protocol";
+const RESIDENT_SHELTER_ALLOCATION = "albany:relief_resident_shelter";
 
 type ToolApi = ReturnType<typeof createToolApi>;
 
@@ -109,6 +110,11 @@ function launchMcpWolf(sourceId: string): {
     ...FULL_OVERWORLD,
     session_id: pending.sessionId,
     area_route_id: route.id,
+  });
+  api.choose_overworld_session_story({
+    ...FULL_OVERWORLD,
+    session_id: pending.sessionId,
+    choice: RESIDENT_SHELTER_ALLOCATION,
   });
   const launched = api.start_overworld_session_quest({
     ...FULL_OVERWORLD,
@@ -354,6 +360,7 @@ describe("SS-F03 — Albany lead-source counterfactual", () => {
       .areaExits.find((candidate) => candidate.destination.id === hayden.area);
     if (!route) throw new Error("Expected a local route from Rowan's desk to Hayden.");
     restored.moveArea(route.id);
+    restored.chooseJourneyStory(RESIDENT_SHELTER_ALLOCATION);
 
     const contact = restored.view().characters.find((character) => character.id === HAYDEN_ID);
     expect(contact).toMatchObject({
@@ -431,18 +438,21 @@ describe("SS-F03 — Albany lead-source counterfactual", () => {
       "import:wolf_winter_approach_sheltered_stockway",
       "import:wolf_winter_drover_streetwise",
       "import:wolf_winter_relief_protocol",
+      "import:wolf_winter_relief_resident_shelter",
     ]);
     expect(jamie.campaignImportReceipt?.applied_rules).toEqual([
       "import:wolf_winter_approach_sheltered_stockway",
       "import:wolf_winter_drover_streetwise",
       "import:wolf_winter_market_testimony",
       "import:wolf_winter_relief_protocol",
+      "import:wolf_winter_relief_resident_shelter",
     ]);
     expect(hayden.campaignImportReceipt?.applied_rules).toEqual([
       "import:wolf_winter_approach_sheltered_stockway",
       "import:wolf_winter_drover_streetwise",
       "import:wolf_winter_frost_report",
       "import:wolf_winter_relief_protocol",
+      "import:wolf_winter_relief_resident_shelter",
     ]);
     expect([rowan, jamie, hayden].map((state) => state.vars)).toEqual([
       rowan.vars,

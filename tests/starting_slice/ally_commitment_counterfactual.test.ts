@@ -18,6 +18,7 @@ const WORLD = loadOverworldManifest(process.cwd());
 const REGISTRATION = WORLD.opening_registration!;
 const LEAD = WORLD.opening_lead_source!;
 const PREPARATION = WORLD.opening_preparation!;
+const RELIEF_ALLOCATION = WORLD.opening_relief_allocation!;
 const ALLY = WORLD.opening_ally!;
 const WOLF = WORLD.quests.find((quest) => quest.id === "wolf_winter")!;
 
@@ -27,8 +28,12 @@ const SOLO = "albany:ally_travel_solo";
 const JUNE = "albany:june_pike";
 const PROMISE = "albany:promise_june_cattle_first";
 const SHELTERED = "albany:wolf_approach_sheltered_stockway";
+const RESIDENT_SHELTER = "albany:relief_resident_shelter";
 const WOLF_SOURCE = readFileSync("content/rpg/quests/wolf_winter.yaml", "utf8");
 const FULL = { compact_context: false, compact_result: false } as const;
+
+const PRE_RELIEF_WORLD = structuredClone(WORLD);
+delete PRE_RELIEF_WORLD.opening_relief_allocation;
 
 function moveToArea(session: OverworldSession, targetAreaId: string): void {
   const currentAreaId = session.view().currentArea?.id;
@@ -77,6 +82,11 @@ function reachAlly(
   session.chooseJourneyStory(args.sourceId ?? LEAD.options[0]!.id);
   session.chooseJourneyStory(args.preparationId ?? PREPARATION.profiles[0]!.id);
   moveToArea(session, ALLY.area);
+  expect(session.journey().storyChoice).toMatchObject({
+    id: RELIEF_ALLOCATION.id,
+    kind: "relief_allocation",
+  });
+  session.chooseJourneyStory(RESIDENT_SHELTER);
   session.talkToCharacter(ALLY.contact);
   return session;
 }
@@ -88,7 +98,7 @@ function selectAlly(optionId: string): OverworldSession {
 }
 
 function selectPreparationWithoutAlly(profileId: string): OverworldSession {
-  const session = new OverworldSession(WORLD);
+  const session = new OverworldSession(PRE_RELIEF_WORLD);
   const opening = session.view();
   session.scoutPoi(opening.pois[0]!.id);
   session.talkToCharacter(REGISTRATION.contact);
@@ -183,6 +193,7 @@ describe("SS-F04 — Albany ally commitment counterfactual", () => {
     noContact.chooseJourneyStory(LEAD.options[0]!.id);
     noContact.chooseJourneyStory(PREPARATION.profiles[0]!.id);
     moveToArea(noContact, WOLF.area);
+    noContact.chooseJourneyStory(RESIDENT_SHELTER);
     expect(noContact.previewQuestStart(WOLF.id).id).toBe(WOLF.id);
     noContact.startQuest(WOLF.id, SHELTERED);
     expect(noContact.snapshot().character.relationships).not.toEqual(
@@ -214,6 +225,7 @@ describe("SS-F04 — Albany ally commitment counterfactual", () => {
     session.chooseJourneyStory(PREPARATION.profiles[0]!.id);
 
     moveToArea(session, ALLY.area);
+    session.chooseJourneyStory(RESIDENT_SHELTER);
     const decisionsBeforeContact = session.journey().acceptedDecisions;
     const repeated = session.talkToCharacter(ALLY.contact);
     expect(repeated.alreadyKnown).toBe(true);
@@ -238,17 +250,13 @@ describe("SS-F04 — Albany ally commitment counterfactual", () => {
     expect(OverworldSession.restore(WORLD, snapshot).snapshot()).toEqual(snapshot);
 
     const questBeforeAlly = structuredClone(snapshot);
-    const preparationIndex = questBeforeAlly.journalEntries.findIndex(
-      (entry) => entry.kind === "preparation",
-    );
-    if (preparationIndex < 0) throw new Error("Expected the opening preparation boundary");
-    questBeforeAlly.journalEntries.splice(preparationIndex, 0, {
+    questBeforeAlly.journalEntries.splice(offerIndex + 2, 0, {
       id: `quest:${WOLF.id}`,
       kind: "quest",
       town: WORLD.nodes.find((node) => node.id === WOLF.home)!.name,
       title: `Started ${WOLF.title}`,
       text: WOLF.discovery,
-      recordedAt: questBeforeAlly.journalEntries[preparationIndex]!.recordedAt,
+      recordedAt: questBeforeAlly.journalEntries[offerIndex]!.recordedAt,
     });
     questBeforeAlly.startedQuestIds = [WOLF.id];
     expect(() => OverworldSession.restore(WORLD, questBeforeAlly)).toThrow(
@@ -453,7 +461,7 @@ describe("SS-F04 — Albany ally commitment counterfactual", () => {
       /ally (offer|selection) boundary.*replayed campaign decision proof/i,
     );
 
-    const predecessorSession = new OverworldSession(WORLD);
+    const predecessorSession = new OverworldSession(PRE_RELIEF_WORLD);
     const opening = predecessorSession.view();
     predecessorSession.scoutPoi(opening.pois[0]!.id);
     predecessorSession.talkToCharacter(REGISTRATION.contact);

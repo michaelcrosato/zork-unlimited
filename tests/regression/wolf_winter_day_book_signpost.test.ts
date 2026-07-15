@@ -95,6 +95,9 @@ describe("bug_0399 — wolf_winter signposts the score-bearing day-book", () => 
           "june_pike_present",
           "approach_exposed_ridge",
           "approach_sheltered_stockway",
+          "relief_cade_fodder_allocated",
+          "relief_resident_shelter_allocated",
+          "relief_mobile_reserve_allocated",
         ],
       }).findings,
     ).toHaveLength(0);

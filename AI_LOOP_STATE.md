@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 566 -->
+<!-- historical_cycle_count: 567 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,15 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - albany_wolf_relief_allocation
+
+- Evidence choice: `SS-F06-relief-allocation` was the next defining-slice gap because Albany's claimed winter scarcity had no exclusive public-capacity decision with both a field and truthful-return consumer.
+- Surface: after preparation, one blocking five-minute Station dispatch assigns a single wagon to Cade pre-feed, resident shelter, or a mobile failure crew; every card names one protected and two exposed needs, and selection persists exact knowledge, provider memory, and journey proof without a reserve meter.
+- Counterfactual: Cade flips seed-26 clean ridge alarm 4/scattered to 3/whole while a failed cast stays full-cost; mobile acts only after stance-owned failed-seat recovery, lowers pressure by 1 without erasing failure, and resident/mobile reverse 15-minute Market-rest versus Campus-resupply advantages. The ledger advances 10/12→11/12.
+- Pure evidence: seed 2717 verified pure/fresh, completed Wolf-Winter at decision 25, continued seven times through five goals, and ended voluntarily at 122; clarity/enjoyment 4/5 and 5/5, stuck false, replay true, with only later-quest S1/S0 findings.
+- Compile/self-critique: compile `20260715T221223Z` has 785 verified reports and 36/36 current-contract pure players continuing at least once. PASS for F06, not the greater-than-BG3 claim: F02, numeric/fleet certification, and publication remain.
+- Guard: independent audit closed exact F12 ally-before-allocation replay and compact-surface gaps; concrete import liveness is 17/17, and final crawl `20260715T215635Z` reached 247/247 nodes, 344/344 edges, and 12/12 quests with zero findings.
 
 ### Cycle result - wolf_winter_hill_approach
 
@@ -136,11 +145,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Pure evidence: independently verified pure/fresh seed 7 completed Wolf-Winter plus three later quests in 89 decisions, continued at the first three goals and checkpoints 40/80, then ended honestly at goal 4; clarity 4/5, enjoyment 5/5, replay true, no stuck state or S1+ defect.
 - Self-critique: PASS for an executable, honesty-preserving product contract—not a depth claim. All 12 target forks remain explicitly unproven and this increment changes no gameplay.
 - Guard: pre/post 6,000-step crawls reached 247/247 towns, 344/344 roads, and 12/12 quests (`20260714T020100Z`, `20260714T021135Z`); focused matrix tests, typecheck, and full health passed (315 files/2,204 tests, UI, 12 packs).
-
-### Cycle result - goal_passage_decision_contract
-
-- Change: the authored current goal now presents one identical, game-native Goal Passage in UI and MCP; selecting it applies every real road cost and discovery, stops at objective/event/resource boundaries, and counts as one accepted player decision while manual adjacent travel remains available.
-- Evidence choice: 14/17 verified journey-v3 players reported routing or connective-travel friction, so this current cohort overrode the compiler's older Wolf compact-journal recommendation. `bug_0519` pins resource/log parity, interruption, checkpoint coexistence, save/restore, and pre-choice secrecy.
-- Pure evidence: independently verified pure/fresh seed 7 completed Wolf-Winter, Gallowmere, Tanner's Fever, and Breaking Weir by decision 90, continued at goals/checkpoints 24/40/48/70/80, then ended honestly at goal 4; clarity 4/5, enjoyment 5/5, replay true. Prior route-padding friction did not recur, though one low-severity `area_route_id` versus `area_id` mismatch remains.
-- Self-critique: PASS for shared decision semantics and a clean fresh canary, not causal retention proof—the report does not identify its exact travel tool calls, and the player still exited after four quests. The ledger has 467 accepted reports, only one newer than compile 466, so feedback compilation remains below its three-report threshold.
-- Guard: pre/post 6000-step crawls are green (`20260712T181935Z`, `20260712T185724Z`; 247/247 towns, 344/344 roads, 12/12 quests); browser play verified tutorial/card/encounter interruption; report copy SHA-256 is `b847618a3419d3cda4a52cbc40839dcd7b6104aae9e9ba3cdcfd665da9d0fb4b`; full health passed (311 files/2194 tests, UI, 12 packs). Immutable route memoization and duplicate-free verifier scheduling removed repeated work without changing proof limits.

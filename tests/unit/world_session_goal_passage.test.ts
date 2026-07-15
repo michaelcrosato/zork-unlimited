@@ -38,6 +38,7 @@ function sessionAtGallowmereGoal(): OverworldSession {
   const quest = session.view().quests.find((candidate) => candidate.id === "wolf_winter");
   if (!quest) throw new Error("Expected Wolf-Winter to be discovered in Albany.");
   moveToArea(session, quest.area);
+  session.chooseJourneyStory("albany:relief_resident_shelter");
   session.startQuest(quest.id, "albany:wolf_approach_sheltered_stockway");
   session.completeQuest(quest.id, {
     endingId: "ending_held",

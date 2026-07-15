@@ -38,6 +38,12 @@ import {
   openingPreparationOfferJournalDraft,
   type OpeningPreparationJournalDraft,
 } from "./opening_preparation_journal.js";
+import type { OpeningReliefAllocation } from "./opening_relief_allocation.js";
+import {
+  openingReliefAllocationJournalId,
+  openingReliefAllocationOfferJournalDraft,
+  type OpeningReliefAllocationJournalDraft,
+} from "./opening_relief_allocation_journal.js";
 import {
   allOpeningRegistrationJournalDrafts,
   openingRegistrationOfferJournalDraft,
@@ -81,6 +87,10 @@ export type OverworldSnapshotManifestIndex = {
   openingPreparationJournalIds: ReadonlySet<string>;
   openingPreparationOfferDraft: OpeningPreparationJournalDraft | null;
   openingPreparationTownName: string | null;
+  openingReliefAllocation: OpeningReliefAllocation | null;
+  openingReliefAllocationJournalIds: ReadonlySet<string>;
+  openingReliefAllocationOfferDraft: OpeningReliefAllocationJournalDraft | null;
+  openingReliefAllocationTownName: string | null;
   openingRegistration: OpeningRegistration | null;
   openingRegistrationJournalDraftsById: ReadonlyMap<string, OpeningRegistrationJournalDraft>;
   openingRegistrationTownName: string | null;
@@ -178,6 +188,18 @@ export function buildOverworldSnapshotManifestIndex(
     for (const profile of openingPreparation.profiles) {
       openingPreparationJournalIds.add(
         openingPreparationJournalId(openingPreparation.id, profile.id),
+      );
+    }
+  }
+  const openingReliefAllocation = sources.world.opening_relief_allocation ?? null;
+  const openingReliefAllocationJournalIds = new Set<string>();
+  const openingReliefAllocationOfferDraft = openingReliefAllocation
+    ? openingReliefAllocationOfferJournalDraft(openingReliefAllocation)
+    : null;
+  if (openingReliefAllocation) {
+    for (const option of openingReliefAllocation.options) {
+      openingReliefAllocationJournalIds.add(
+        openingReliefAllocationJournalId(openingReliefAllocation.id, option.id),
       );
     }
   }
@@ -304,6 +326,12 @@ export function buildOverworldSnapshotManifestIndex(
     openingPreparationOfferDraft,
     openingPreparationTownName: openingPreparation
       ? townNameForSource(openingPreparation.home)
+      : null,
+    openingReliefAllocation,
+    openingReliefAllocationJournalIds,
+    openingReliefAllocationOfferDraft,
+    openingReliefAllocationTownName: openingReliefAllocation
+      ? townNameForSource(openingReliefAllocation.home)
       : null,
     openingRegistration,
     openingRegistrationJournalDraftsById,

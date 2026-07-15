@@ -104,6 +104,13 @@ import {
   type OpeningPreparationJournalProof,
 } from "./opening_preparation_journal.js";
 import {
+  openingReliefAllocationLegacyJournalEntry,
+  openingReliefAllocationLegacySourceWorldHash,
+  proveOpeningReliefAllocationJournal,
+  type OpeningReliefAllocationJournalProof,
+} from "./opening_relief_allocation_journal.js";
+import { applyOpeningReliefAllocationOption } from "./opening_relief_allocation.js";
+import {
   openingRegistrationLegacyJournalDraft,
   openingRegistrationLegacySourceWorldHash,
   proveOpeningRegistrationJournal,
@@ -311,6 +318,22 @@ const OVERWORLD_HILL_APPROACH_PREDECESSOR_WOLF_OUTCOME_IDS: ReadonlySet<string> 
 ]);
 export const OVERWORLD_HILL_APPROACH_WORLD_HASH =
   "634fd4e93143343fd813edd9c59d3a8c098c0d78b94497cf689988492de154e3";
+export const OVERWORLD_RELIEF_ALLOCATION_PREDECESSOR_WORLD_HASH =
+  OVERWORLD_HILL_APPROACH_WORLD_HASH;
+export const OVERWORLD_RELIEF_ALLOCATION_WORLD_HASH =
+  "50350884ebb7d118849fca040256a19c0c63ed4bfe3353d4cd202ee7a6ba8e7f";
+const OVERWORLD_RELIEF_ALLOCATION_PREDECESSOR_WORLD_RULE_IDS =
+  OVERWORLD_HILL_APPROACH_PREDECESSOR_WORLD_RULE_IDS;
+const OVERWORLD_RELIEF_ALLOCATION_PREDECESSOR_WOLF_OUTCOME_IDS =
+  OVERWORLD_HILL_APPROACH_PREDECESSOR_WOLF_OUTCOME_IDS;
+const OVERWORLD_RELIEF_ALLOCATION_CHARACTER_IDS: ReadonlySet<string> = new Set([
+  "albany:knowledge_relief_cade_fodder",
+  "albany:knowledge_relief_resident_shelter",
+  "albany:knowledge_relief_mobile_reserve",
+  "albany:memory_emery_relief_cade_fodder_allocated",
+  "albany:memory_jamie_relief_resident_shelter_allocated",
+  "albany:memory_hayden_relief_mobile_reserve_allocated",
+]);
 const OVERWORLD_ALLY_ERA_WOLF_START = Object.freeze({
   id: "quest:wolf_winter",
   kind: "quest" as const,
@@ -330,9 +353,9 @@ const OVERWORLD_HILL_APPROACH_ROUTE_CHARACTER_IDS: ReadonlySet<string> = new Set
   "albany:memory_hayden_dispatched_sheltered_stockway",
 ]);
 /** @deprecated Preparation-era current-target name retained for callers. */
-export const OVERWORLD_OPENING_PREPARATION_WORLD_HASH = OVERWORLD_HILL_APPROACH_WORLD_HASH;
+export const OVERWORLD_OPENING_PREPARATION_WORLD_HASH = OVERWORLD_RELIEF_ALLOCATION_WORLD_HASH;
 export const OVERWORLD_OPENING_PREPARATION_MIGRATION_TARGET_WORLD_HASH =
-  OVERWORLD_HILL_APPROACH_WORLD_HASH;
+  OVERWORLD_RELIEF_ALLOCATION_WORLD_HASH;
 /** @deprecated Lead-source target name retained as the current-target alias. */
 export const OVERWORLD_OPENING_LEAD_SOURCE_MIGRATION_TARGET_WORLD_HASH =
   OVERWORLD_OPENING_PREPARATION_MIGRATION_TARGET_WORLD_HASH;
@@ -413,6 +436,7 @@ const OVERWORLD_QUEST_START_TRUSTED_LEGACY_WORLD_HASHES: ReadonlySet<string> = n
 );
 
 type TrustedMigrationEra =
+  | "relief_allocation"
   | "hill_approach"
   | "fortify_outlast"
   | "crisis_priority"
@@ -841,6 +865,56 @@ function assertOpeningPreparationDecisionTrail(args: {
   }
 }
 
+function assertOpeningReliefAllocationDecisionTrail(args: {
+  reliefAllocationProof: OpeningReliefAllocationJournalProof;
+  reliefAllocationSceneId: string | null;
+  trail: OverworldOpeningLeadSourceDecisionTrail | null;
+}): void {
+  const prefix =
+    args.reliefAllocationSceneId === null
+      ? null
+      : `campaign_story:${args.reliefAllocationSceneId}:`;
+  const allocationDecisions =
+    prefix === null
+      ? []
+      : (args.trail?.decisions.filter((decision) => decision.actionId.startsWith(prefix)) ?? []);
+  if (args.reliefAllocationProof.legacy || !args.reliefAllocationProof.offered) {
+    if (allocationDecisions.length > 0) {
+      throw new Error(
+        "Overworld session snapshot relief allocation decision trail conflicts with absent or legacy evidence.",
+      );
+    }
+    return;
+  }
+  if (args.reliefAllocationProof.option === null) {
+    if (allocationDecisions.length > 0) {
+      throw new Error(
+        "Overworld session snapshot pending relief allocation has a selection decision in its journey suffix.",
+      );
+    }
+    return;
+  }
+  const boundary = args.reliefAllocationProof.selectionBoundary;
+  const expectedDecision =
+    boundary === null || args.reliefAllocationSceneId === null
+      ? null
+      : {
+          number: boundary.acceptedDecisions,
+          surface: "overworld" as const,
+          actionId: `campaign_story:${args.reliefAllocationSceneId}:${args.reliefAllocationProof.option.id}`,
+          reason: "situation_changed" as const,
+        };
+  if (
+    expectedDecision === null ||
+    allocationDecisions.length !== 1 ||
+    JSON.stringify(allocationDecisions[0]) !== JSON.stringify(expectedDecision)
+  ) {
+    throw new Error(
+      "Overworld session snapshot selected relief allocation does not have exactly one canonical journey decision proof.",
+    );
+  }
+}
+
 function assertOpeningAllyDecisionTrail(args: {
   allyProof: OpeningAllyJournalProof;
   allySceneId: string | null;
@@ -1237,6 +1311,49 @@ function questStartDecisionBoundary(args: {
   return boundary;
 }
 
+function reliefAllocationLegacyBoundaryBeforeQuest(args: {
+  campaignBoundaryReplay: OverworldCampaignBoundaryReplayIndex;
+  entry: OverworldJournalEntry;
+  quest: OverworldQuest;
+}): OverworldJournalDecisionBoundary {
+  const startProof = args.entry.questStartProof;
+  if (!startProof) {
+    throw new Error(
+      "Relief-allocation legacy migration requires a replayed target-quest start proof.",
+    );
+  }
+  const previousAcceptedDecisions = startProof.boundary.acceptedDecisions - 1;
+  const previous = args.campaignBoundaryReplay.byAcceptedDecisions.get(previousAcceptedDecisions);
+  if (!previous || previous.townId === null || previous.areaId === null) {
+    throw new Error(
+      "Relief-allocation legacy migration cannot recover the exact pre-start journey boundary.",
+    );
+  }
+  const approachMinutes =
+    startProof.kind === "approach"
+      ? args.quest.launch?.options.find((option) => option.id === startProof.approachId)?.terms
+          .minutes
+      : 0;
+  if (approachMinutes === undefined) {
+    throw new Error(
+      "Relief-allocation legacy migration references an unknown predecessor approach.",
+    );
+  }
+  const minutes = startProof.boundary.minutes - approachMinutes;
+  if (minutes < 0) {
+    throw new Error(
+      "Relief-allocation legacy migration produced an impossible pre-start timestamp.",
+    );
+  }
+  return Object.freeze({
+    acceptedDecisions: previousAcceptedDecisions,
+    decisionProofHash: previous.decisionProofHash,
+    townId: previous.townId,
+    areaId: previous.areaId,
+    minutes,
+  });
+}
+
 function assertNoFortifyOutlastApproachEvidence(args: {
   campaignBoundaryReplay: OverworldCampaignBoundaryReplayIndex;
   character: CampaignCharacterState;
@@ -1279,7 +1396,35 @@ function replaySnapshotQuestStarts(args: {
   storedCharacter: CampaignCharacterState;
   startedQuestIds: ReadonlySet<string>;
 }): ReplayedQuestStarts {
-  if (args.migrationEra === "hill_approach") {
+  if (args.migrationEra === "relief_allocation") {
+    const hasAllocationJournal = args.journalEntries.some(
+      (entry) =>
+        entry.kind === "relief_allocation" ||
+        entry.kind === "relief_allocation_legacy" ||
+        entry.kind === "relief_allocation_offer",
+    );
+    const hasAllocationDecision = [
+      ...args.campaignBoundaryReplay.byAcceptedDecisions.values(),
+    ].some((proof) =>
+      proof.decision?.actionId.startsWith("campaign_story:albany:wolf_relief_allocation:"),
+    );
+    const hasAllocationKnowledge = args.storedCharacter.knowledge.some((id) =>
+      OVERWORLD_RELIEF_ALLOCATION_CHARACTER_IDS.has(id),
+    );
+    const hasAllocationMemory = args.storedCharacter.relationships.some((relationship) =>
+      relationship.memories.some((id) => OVERWORLD_RELIEF_ALLOCATION_CHARACTER_IDS.has(id)),
+    );
+    if (
+      hasAllocationJournal ||
+      hasAllocationDecision ||
+      hasAllocationKnowledge ||
+      hasAllocationMemory
+    ) {
+      throw new Error(
+        "Hill-approach predecessor snapshot has relief-allocation evidence introduced by the later manifest.",
+      );
+    }
+  } else if (args.migrationEra === "hill_approach") {
     assertNoFortifyOutlastApproachEvidence({
       campaignBoundaryReplay: args.campaignBoundaryReplay,
       character: args.storedCharacter,
@@ -1325,7 +1470,7 @@ function replaySnapshotQuestStarts(args: {
       );
     }
 
-    if (args.migrationEra !== null) {
+    if (args.migrationEra !== null && args.migrationEra !== "relief_allocation") {
       assertCanonicalQuestStartJournalCopy({
         entry,
         expectedTown: args.indexes.questTownNames.get(questId) ?? quest.home,
@@ -1438,6 +1583,8 @@ function deriveCampaignStoryChoiceProofOrdinals(args: {
   journey: JourneyContractSnapshot;
   preparationProof: OpeningPreparationJournalProof;
   preparationSceneId: string | null;
+  reliefAllocationProof: OpeningReliefAllocationJournalProof;
+  reliefAllocationSceneId: string | null;
 }): ReadonlyMap<string, number> {
   const proofOrdinalByKey = new Map<string, number>();
   const selectedRefs = [...journeyCampaignSelectedStoryChoiceRefs(args.journey)];
@@ -1451,6 +1598,12 @@ function deriveCampaignStoryChoiceProofOrdinals(args: {
     selectedRefs.push({
       story_choice_id: args.allySceneId,
       choice_id: args.allyProof.option.id,
+    });
+  }
+  if (args.reliefAllocationProof.option !== null && args.reliefAllocationSceneId !== null) {
+    selectedRefs.push({
+      story_choice_id: args.reliefAllocationSceneId,
+      choice_id: args.reliefAllocationProof.option.id,
     });
   }
   for (const ref of selectedRefs) {
@@ -1592,36 +1745,40 @@ export function planOverworldSessionSnapshotRestore(args: {
       `Overworld session snapshot is for world "${sourceSnapshot.worldId}", not "${worldId}".`,
     );
   }
-  const migrationTargetsCurrentManifest = worldHash === OVERWORLD_HILL_APPROACH_WORLD_HASH;
+  const migrationTargetsCurrentManifest = worldHash === OVERWORLD_RELIEF_ALLOCATION_WORLD_HASH;
   const migrationEra: TrustedMigrationEra =
     !migrationTargetsCurrentManifest || sourceSnapshot.worldHash === worldHash
       ? null
-      : sourceSnapshot.worldHash === OVERWORLD_HILL_APPROACH_PREDECESSOR_WORLD_HASH
-        ? "hill_approach"
-        : sourceSnapshot.worldHash === OVERWORLD_FORTIFY_OUTLAST_PREDECESSOR_WORLD_HASH
-          ? "fortify_outlast"
-          : sourceSnapshot.worldHash === OVERWORLD_CRISIS_PRIORITY_PREDECESSOR_WORLD_HASH
-            ? "crisis_priority"
-            : sourceSnapshot.worldHash === OVERWORLD_OPENING_ALLY_PREDECESSOR_WORLD_HASH
-              ? "opening_ally"
-              : sourceSnapshot.worldHash === OVERWORLD_OPENING_PREPARATION_PREDECESSOR_WORLD_HASH
-                ? "opening_preparation"
-                : sourceSnapshot.worldHash === OVERWORLD_CAMPAIGN_SERVICE_WORLD_HASH
-                  ? "campaign_service"
-                  : sourceSnapshot.worldHash === OVERWORLD_OPENING_LEAD_SOURCE_WORLD_HASH
-                    ? "opening_lead_source"
-                    : OVERWORLD_OPENING_REGISTRATION_TRUSTED_PREDECESSOR_WORLD_HASHES.has(
-                          sourceSnapshot.worldHash,
-                        )
-                      ? "pre_registration"
-                      : sourceSnapshot.worldHash === OVERWORLD_OPENING_REGISTRATION_WORLD_HASH
-                        ? "opening_registration"
-                        : null;
+      : sourceSnapshot.worldHash === OVERWORLD_RELIEF_ALLOCATION_PREDECESSOR_WORLD_HASH
+        ? "relief_allocation"
+        : sourceSnapshot.worldHash === OVERWORLD_HILL_APPROACH_PREDECESSOR_WORLD_HASH
+          ? "hill_approach"
+          : sourceSnapshot.worldHash === OVERWORLD_FORTIFY_OUTLAST_PREDECESSOR_WORLD_HASH
+            ? "fortify_outlast"
+            : sourceSnapshot.worldHash === OVERWORLD_CRISIS_PRIORITY_PREDECESSOR_WORLD_HASH
+              ? "crisis_priority"
+              : sourceSnapshot.worldHash === OVERWORLD_OPENING_ALLY_PREDECESSOR_WORLD_HASH
+                ? "opening_ally"
+                : sourceSnapshot.worldHash === OVERWORLD_OPENING_PREPARATION_PREDECESSOR_WORLD_HASH
+                  ? "opening_preparation"
+                  : sourceSnapshot.worldHash === OVERWORLD_CAMPAIGN_SERVICE_WORLD_HASH
+                    ? "campaign_service"
+                    : sourceSnapshot.worldHash === OVERWORLD_OPENING_LEAD_SOURCE_WORLD_HASH
+                      ? "opening_lead_source"
+                      : OVERWORLD_OPENING_REGISTRATION_TRUSTED_PREDECESSOR_WORLD_HASHES.has(
+                            sourceSnapshot.worldHash,
+                          )
+                        ? "pre_registration"
+                        : sourceSnapshot.worldHash === OVERWORLD_OPENING_REGISTRATION_WORLD_HASH
+                          ? "opening_registration"
+                          : null;
   if (sourceSnapshot.worldHash !== worldHash && migrationEra === null) {
     throw new Error("Overworld session snapshot was made against a different world manifest.");
   }
   const snapshotWithCampaignCopy =
-    migrationEra === null || migrationEra === "hill_approach"
+    migrationEra === null ||
+    migrationEra === "relief_allocation" ||
+    migrationEra === "hill_approach"
       ? sourceSnapshot
       : Object.freeze({
           ...sourceSnapshot,
@@ -1762,15 +1919,17 @@ export function planOverworldSessionSnapshotRestore(args: {
     }
   }
   const trustedPredecessorWolfOutcomeIds =
-    migrationEra === "hill_approach"
-      ? OVERWORLD_HILL_APPROACH_PREDECESSOR_WOLF_OUTCOME_IDS
-      : migrationEra === "fortify_outlast"
-        ? OVERWORLD_FORTIFY_OUTLAST_PREDECESSOR_WOLF_OUTCOME_IDS
-        : migrationEra === "crisis_priority"
-          ? OVERWORLD_CRISIS_PRIORITY_PREDECESSOR_WOLF_OUTCOME_IDS
-          : migrationEra === "opening_ally" || migrationEra === "opening_preparation"
-            ? OVERWORLD_OPENING_PREPARATION_WORLD_WOLF_OUTCOME_IDS
-            : OVERWORLD_CAMPAIGN_SERVICE_WORLD_WOLF_OUTCOME_IDS;
+    migrationEra === "relief_allocation"
+      ? OVERWORLD_RELIEF_ALLOCATION_PREDECESSOR_WOLF_OUTCOME_IDS
+      : migrationEra === "hill_approach"
+        ? OVERWORLD_HILL_APPROACH_PREDECESSOR_WOLF_OUTCOME_IDS
+        : migrationEra === "fortify_outlast"
+          ? OVERWORLD_FORTIFY_OUTLAST_PREDECESSOR_WOLF_OUTCOME_IDS
+          : migrationEra === "crisis_priority"
+            ? OVERWORLD_CRISIS_PRIORITY_PREDECESSOR_WOLF_OUTCOME_IDS
+            : migrationEra === "opening_ally" || migrationEra === "opening_preparation"
+              ? OVERWORLD_OPENING_PREPARATION_WORLD_WOLF_OUTCOME_IDS
+              : OVERWORLD_CAMPAIGN_SERVICE_WORLD_WOLF_OUTCOME_IDS;
   if (
     migrationEra !== null &&
     [...questOutcomeIds].some(
@@ -1815,17 +1974,19 @@ export function planOverworldSessionSnapshotRestore(args: {
     travelLogTownByArrival: travelTimeline.townByArrival,
   });
   const trustedPredecessorServiceRuleIds =
-    migrationEra === "hill_approach"
-      ? OVERWORLD_HILL_APPROACH_PREDECESSOR_WORLD_RULE_IDS
-      : migrationEra === "fortify_outlast"
-        ? OVERWORLD_FORTIFY_OUTLAST_PREDECESSOR_WORLD_RULE_IDS
-        : migrationEra === "crisis_priority"
-          ? OVERWORLD_CRISIS_PRIORITY_PREDECESSOR_WORLD_RULE_IDS
-          : migrationEra === "opening_ally" || migrationEra === "opening_preparation"
-            ? OVERWORLD_OPENING_PREPARATION_WORLD_RULE_IDS
-            : migrationEra === "campaign_service"
-              ? OVERWORLD_CAMPAIGN_SERVICE_WORLD_RULE_IDS
-              : null;
+    migrationEra === "relief_allocation"
+      ? OVERWORLD_RELIEF_ALLOCATION_PREDECESSOR_WORLD_RULE_IDS
+      : migrationEra === "hill_approach"
+        ? OVERWORLD_HILL_APPROACH_PREDECESSOR_WORLD_RULE_IDS
+        : migrationEra === "fortify_outlast"
+          ? OVERWORLD_FORTIFY_OUTLAST_PREDECESSOR_WORLD_RULE_IDS
+          : migrationEra === "crisis_priority"
+            ? OVERWORLD_CRISIS_PRIORITY_PREDECESSOR_WORLD_RULE_IDS
+            : migrationEra === "opening_ally" || migrationEra === "opening_preparation"
+              ? OVERWORLD_OPENING_PREPARATION_WORLD_RULE_IDS
+              : migrationEra === "campaign_service"
+                ? OVERWORLD_CAMPAIGN_SERVICE_WORLD_RULE_IDS
+                : null;
   if (
     trustedPredecessorServiceRuleIds !== null &&
     snapshot.journalEntries.some(
@@ -1840,6 +2001,7 @@ export function planOverworldSessionSnapshotRestore(args: {
   }
   if (
     migrationEra !== null &&
+    migrationEra !== "relief_allocation" &&
     migrationEra !== "hill_approach" &&
     migrationEra !== "fortify_outlast" &&
     migrationEra !== "crisis_priority" &&
@@ -1856,6 +2018,7 @@ export function planOverworldSessionSnapshotRestore(args: {
   }
   if (
     migrationEra !== null &&
+    migrationEra !== "relief_allocation" &&
     migrationEra !== "hill_approach" &&
     migrationEra !== "fortify_outlast" &&
     migrationEra !== "crisis_priority" &&
@@ -1957,6 +2120,7 @@ export function planOverworldSessionSnapshotRestore(args: {
       true;
   if (
     migrationEra !== null &&
+    migrationEra !== "relief_allocation" &&
     migrationEra !== "hill_approach" &&
     migrationEra !== "fortify_outlast" &&
     migrationEra !== "crisis_priority" &&
@@ -1991,6 +2155,7 @@ export function planOverworldSessionSnapshotRestore(args: {
     (startedQuestIds.has(targetLeadQuestId) || completedQuestIds.has(targetLeadQuestId));
   const leadDiscoveryDeferredToPreparation =
     (migrationEra === null ||
+      migrationEra === "relief_allocation" ||
       migrationEra === "hill_approach" ||
       migrationEra === "fortify_outlast" ||
       migrationEra === "crisis_priority") &&
@@ -1999,6 +2164,7 @@ export function planOverworldSessionSnapshotRestore(args: {
     indexes.openingPreparation.target_quest === targetLeadQuestId;
   const hasLeadSourceManifestEvidence =
     migrationEra === null ||
+    migrationEra === "relief_allocation" ||
     migrationEra === "hill_approach" ||
     migrationEra === "fortify_outlast" ||
     migrationEra === "crisis_priority" ||
@@ -2111,6 +2277,7 @@ export function planOverworldSessionSnapshotRestore(args: {
         true);
   if (
     migrationEra !== null &&
+    migrationEra !== "relief_allocation" &&
     migrationEra !== "hill_approach" &&
     migrationEra !== "fortify_outlast" &&
     migrationEra !== "crisis_priority" &&
@@ -2139,6 +2306,7 @@ export function planOverworldSessionSnapshotRestore(args: {
   const preparationRequiredByCurrentManifest =
     indexes.openingPreparation !== null &&
     (migrationEra === null ||
+      migrationEra === "relief_allocation" ||
       migrationEra === "hill_approach" ||
       migrationEra === "fortify_outlast" ||
       migrationEra === "crisis_priority");
@@ -2244,6 +2412,118 @@ export function planOverworldSessionSnapshotRestore(args: {
       }
     }
   }
+  const hasOpeningReliefAllocationEvidence = snapshot.journalEntries.some(
+    (entry) =>
+      entry.kind === "relief_allocation" ||
+      entry.kind === "relief_allocation_legacy" ||
+      entry.kind === "relief_allocation_offer",
+  );
+  const openingReliefAllocationDecisionPrefix = indexes.openingReliefAllocation
+    ? `campaign_story:${indexes.openingReliefAllocation.id}:`
+    : null;
+  const hasOpeningReliefAllocationDecisionEvidence =
+    openingReliefAllocationDecisionPrefix !== null &&
+    (snapshot.openingLeadSourceDecisionTrail?.decisions.some((decision) =>
+      decision.actionId.startsWith(openingReliefAllocationDecisionPrefix),
+    ) === true ||
+      snapshot.journey.decisionProof.last?.actionId.startsWith(
+        openingReliefAllocationDecisionPrefix,
+      ) === true);
+  if (
+    migrationEra !== null &&
+    (hasOpeningReliefAllocationEvidence || hasOpeningReliefAllocationDecisionEvidence)
+  ) {
+    throw new Error(
+      "Trusted predecessor snapshot has relief-allocation evidence introduced by the later manifest.",
+    );
+  }
+  const storedReliefAllocationLegacySourceWorldHash = snapshot.journalEntries
+    .filter((entry) => entry.kind === "relief_allocation_legacy")
+    .map((entry) => openingReliefAllocationLegacySourceWorldHash(entry.id))
+    .find(
+      (sourceWorldHash): sourceWorldHash is string =>
+        sourceWorldHash !== null &&
+        (sourceWorldHash === OVERWORLD_RELIEF_ALLOCATION_PREDECESSOR_WORLD_HASH ||
+          OVERWORLD_QUEST_START_TRUSTED_LEGACY_WORLD_HASHES.has(sourceWorldHash)),
+    );
+  const reliefAllocationProof = proveOpeningReliefAllocationJournal({
+    scene: indexes.openingReliefAllocation,
+    preparationProof,
+    journalEntries: snapshot.journalEntries,
+    expectedTown: indexes.openingReliefAllocationTownName,
+    trustedLegacySourceWorldHash: storedReliefAllocationLegacySourceWorldHash ?? null,
+  });
+  const targetReliefAllocationQuestId = indexes.openingReliefAllocation?.target_quest ?? null;
+  const targetReliefAllocationQuestProgressed =
+    targetReliefAllocationQuestId !== null &&
+    (startedQuestIds.has(targetReliefAllocationQuestId) ||
+      completedQuestIds.has(targetReliefAllocationQuestId));
+  if (
+    migrationEra === null &&
+    targetReliefAllocationQuestProgressed &&
+    reliefAllocationProof.option === null &&
+    !reliefAllocationProof.legacy
+  ) {
+    throw new Error(
+      "Overworld session snapshot has opening-quest progress without a selected relief allocation or trusted legacy marker.",
+    );
+  }
+  if (
+    migrationEra === null &&
+    indexes.openingReliefAllocation !== null &&
+    (preparationProof.profile !== null || preparationProof.legacy) &&
+    !targetReliefAllocationQuestProgressed &&
+    snapshot.currentId === indexes.openingReliefAllocation.home &&
+    snapshot.currentAreaId === indexes.openingReliefAllocation.area &&
+    !reliefAllocationProof.offered &&
+    !reliefAllocationProof.legacy
+  ) {
+    throw new Error(
+      "Overworld session snapshot reached the departure area after preparation without its required relief-allocation offer.",
+    );
+  }
+  if (reliefAllocationProof.offered) {
+    const offerBoundary = reliefAllocationProof.offerBoundary!;
+    const selectionBoundary = reliefAllocationProof.selectionBoundary;
+    if (selectionBoundary === null) {
+      if (
+        snapshot.currentId !== offerBoundary.townId ||
+        snapshot.currentAreaId !== offerBoundary.areaId ||
+        snapshot.minutes !== offerBoundary.minutes ||
+        (targetReliefAllocationQuestId !== null &&
+          (startedQuestIds.has(targetReliefAllocationQuestId) ||
+            completedQuestIds.has(targetReliefAllocationQuestId))) ||
+        snapshot.journey.acceptedDecisions !== offerBoundary.acceptedDecisions ||
+        snapshot.journey.decisionProof.hash !== offerBoundary.decisionProofHash
+      ) {
+        throw new Error(
+          "Overworld session snapshot pending relief allocation no longer matches its offered departure boundary.",
+        );
+      }
+    } else {
+      if (snapshot.journey.acceptedDecisions < selectionBoundary.acceptedDecisions) {
+        throw new Error(
+          "Overworld session snapshot relief allocation is ahead of its journey decision count.",
+        );
+      }
+      if (snapshot.journey.acceptedDecisions === selectionBoundary.acceptedDecisions) {
+        const expectedLast = {
+          number: selectionBoundary.acceptedDecisions,
+          surface: "overworld" as const,
+          actionId: `campaign_story:${indexes.openingReliefAllocation!.id}:${reliefAllocationProof.option!.id}`,
+          reason: "situation_changed" as const,
+        };
+        if (
+          snapshot.journey.decisionProof.hash !== selectionBoundary.decisionProofHash ||
+          JSON.stringify(snapshot.journey.decisionProof.last) !== JSON.stringify(expectedLast)
+        ) {
+          throw new Error(
+            "Overworld session snapshot relief allocation does not match the current journey proof.",
+          );
+        }
+      }
+    }
+  }
   const hasOpeningAllyEvidence = snapshot.journalEntries.some(
     (entry) => entry.kind === "ally" || entry.kind === "ally_legacy" || entry.kind === "ally_offer",
   );
@@ -2259,6 +2539,7 @@ export function planOverworldSessionSnapshotRestore(args: {
   const openingAllyContact = indexes.openingAlly?.contact ?? null;
   if (
     migrationEra !== null &&
+    migrationEra !== "relief_allocation" &&
     migrationEra !== "hill_approach" &&
     migrationEra !== "fortify_outlast" &&
     migrationEra !== "crisis_priority" &&
@@ -2279,6 +2560,7 @@ export function planOverworldSessionSnapshotRestore(args: {
   const allyProof = proveOpeningAllyJournal({
     scene: indexes.openingAlly,
     preparationProof,
+    reliefAllocationProof,
     journalEntries: snapshot.journalEntries,
     expectedTown: indexes.openingAllyTownName,
   });
@@ -2333,6 +2615,11 @@ export function planOverworldSessionSnapshotRestore(args: {
     preparationSceneId: indexes.openingPreparation?.id ?? null,
     trail: openingLeadSourceDecisionTrail,
   });
+  assertOpeningReliefAllocationDecisionTrail({
+    reliefAllocationProof,
+    reliefAllocationSceneId: indexes.openingReliefAllocation?.id ?? null,
+    trail: openingLeadSourceDecisionTrail,
+  });
   assertOpeningAllyDecisionTrail({
     allyProof,
     allySceneId: indexes.openingAlly?.id ?? null,
@@ -2371,6 +2658,7 @@ export function planOverworldSessionSnapshotRestore(args: {
       questOutcomeIds,
       requireBoundServiceFacts:
         migrationEra === null ||
+        migrationEra === "relief_allocation" ||
         migrationEra === "hill_approach" ||
         migrationEra === "fortify_outlast" ||
         migrationEra === "crisis_priority" ||
@@ -2385,6 +2673,8 @@ export function planOverworldSessionSnapshotRestore(args: {
       journey: snapshot.journey,
       preparationProof,
       preparationSceneId: indexes.openingPreparation?.id ?? null,
+      reliefAllocationProof,
+      reliefAllocationSceneId: indexes.openingReliefAllocation?.id ?? null,
     }),
   };
   const neutralCharacter = createInitialCampaignCharacterState();
@@ -2395,12 +2685,28 @@ export function planOverworldSessionSnapshotRestore(args: {
   const characterAfterPreparation = preparationProof.profile
     ? preparationProof.characterAfterPreparation
     : characterAfterSource;
+  const characterAfterReliefAllocation = reliefAllocationProof.option
+    ? reliefAllocationProof.characterAfterAllocation
+    : characterAfterPreparation;
   const characterAfterAlly = allyProof.option
     ? allyProof.characterAfterAlly
-    : characterAfterPreparation;
+    : characterAfterReliefAllocation;
+  const reliefAllocationSelectedAfterAlly =
+    reliefAllocationProof.option !== null &&
+    reliefAllocationProof.journalIndex !== null &&
+    allyProof.option !== null &&
+    allyProof.journalIndex !== null &&
+    reliefAllocationProof.journalIndex < allyProof.journalIndex;
+  const characterAfterOpeningChoices = reliefAllocationSelectedAfterAlly
+    ? applyOpeningReliefAllocationOption({
+        scene: indexes.openingReliefAllocation!,
+        character: allyProof.characterAfterAlly,
+        optionId: reliefAllocationProof.option!.id,
+      }).characterAfter
+    : characterAfterAlly;
   const questStartReplay = replaySnapshotQuestStarts({
     campaignBoundaryReplay,
-    character: characterAfterAlly,
+    character: characterAfterOpeningChoices,
     indexes,
     journalEntries: snapshot.journalEntries,
     migrationEra,
@@ -2408,6 +2714,31 @@ export function planOverworldSessionSnapshotRestore(args: {
     storedCharacter: snapshot.character,
     startedQuestIds,
   });
+  if (reliefAllocationProof.legacy) {
+    const markerIndex = questStartReplay.journalEntries.findIndex(
+      (entry) => entry.kind === "relief_allocation_legacy",
+    );
+    const questEntry = questStartReplay.journalEntries[markerIndex - 1];
+    const quest =
+      questEntry?.kind === "quest"
+        ? indexes.questsById.get(questEntry.id.slice("quest:".length))
+        : undefined;
+    if (!questEntry || !quest || markerIndex < 1) {
+      throw new Error(
+        "Overworld session snapshot legacy relief allocation has no adjacent target-quest start.",
+      );
+    }
+    const expectedBoundary = reliefAllocationLegacyBoundaryBeforeQuest({
+      campaignBoundaryReplay,
+      entry: questEntry,
+      quest,
+    });
+    if (JSON.stringify(reliefAllocationProof.legacyBoundary) !== JSON.stringify(expectedBoundary)) {
+      throw new Error(
+        "Overworld session snapshot legacy relief allocation does not match the exact pre-start decision, route time, or Station boundary.",
+      );
+    }
+  }
   const questStartReturnSummaryByQuestId = new Map(
     questStartReplay.starts.flatMap((start) =>
       start.returnSummary === null ? [] : [[start.questId, start.returnSummary] as const],
@@ -2458,6 +2789,10 @@ export function planOverworldSessionSnapshotRestore(args: {
       preparationProof.profile !== null &&
       preparationProof.journalIndex !== null &&
       preparationProof.journalIndex > contactIndex;
+    const reliefAllocationActive =
+      reliefAllocationProof.option !== null &&
+      reliefAllocationProof.journalIndex !== null &&
+      reliefAllocationProof.journalIndex > contactIndex;
     const allyActive =
       allyProof.option !== null &&
       allyProof.journalIndex !== null &&
@@ -2472,9 +2807,13 @@ export function planOverworldSessionSnapshotRestore(args: {
     let characterBeforeQuestOutcomes = registrationActive
       ? leadSourceActive
         ? preparationActive
-          ? allyActive
-            ? characterAfterAlly
-            : characterAfterPreparation
+          ? allyActive && reliefAllocationActive
+            ? characterAfterOpeningChoices
+            : allyActive
+              ? allyProof.characterAfterAlly
+              : reliefAllocationActive
+                ? characterAfterReliefAllocation
+                : characterAfterPreparation
           : characterAfterSource
         : initialCharacter
       : neutralCharacter;
@@ -2698,6 +3037,7 @@ export function planOverworldSessionSnapshotRestore(args: {
   }
   const canGrandfatherOpeningPreparation =
     migrationEra !== null &&
+    migrationEra !== "relief_allocation" &&
     migrationEra !== "hill_approach" &&
     migrationEra !== "fortify_outlast" &&
     migrationEra !== "crisis_priority" &&
@@ -2710,6 +3050,7 @@ export function planOverworldSessionSnapshotRestore(args: {
     OVERWORLD_OPENING_PREPARATION_TRUSTED_LEGACY_WORLD_HASHES.has(snapshot.worldHash);
   const canOfferMigratedPreparation =
     migrationEra !== null &&
+    migrationEra !== "relief_allocation" &&
     migrationEra !== "hill_approach" &&
     migrationEra !== "fortify_outlast" &&
     migrationEra !== "crisis_priority" &&
@@ -2752,6 +3093,7 @@ export function planOverworldSessionSnapshotRestore(args: {
   }
   if (
     migrationEra !== null &&
+    migrationEra !== "relief_allocation" &&
     migrationEra !== "hill_approach" &&
     migrationEra !== "fortify_outlast" &&
     migrationEra !== "crisis_priority" &&
@@ -2763,6 +3105,50 @@ export function planOverworldSessionSnapshotRestore(args: {
   ) {
     throw new Error(
       "Trusted predecessor snapshot selected a lead source but has neither an exact preparation-offer boundary nor later replayable Wolf-Winter progress.",
+    );
+  }
+  const canGrandfatherOpeningReliefAllocation =
+    migrationEra !== null &&
+    indexes.openingReliefAllocation !== null &&
+    targetReliefAllocationQuestProgressed &&
+    (preparationProof.profile !== null ||
+      preparationProof.legacy ||
+      canGrandfatherOpeningPreparation);
+  if (canGrandfatherOpeningReliefAllocation) {
+    const questJournalId = `quest:${indexes.openingReliefAllocation!.target_quest}`;
+    const questIndex = migratedJournalEntries.findIndex(
+      (entry) => entry.kind === "quest" && entry.id === questJournalId,
+    );
+    const questEntry = migratedJournalEntries[questIndex];
+    const quest = indexes.questsById.get(indexes.openingReliefAllocation!.target_quest);
+    if (questIndex < 0 || !questEntry || !quest) {
+      throw new Error(
+        "Trusted predecessor snapshot cannot locate the quest start for relief-allocation migration.",
+      );
+    }
+    const boundary = reliefAllocationLegacyBoundaryBeforeQuest({
+      campaignBoundaryReplay,
+      entry: questEntry,
+      quest,
+    });
+    const marker = openingReliefAllocationLegacyJournalEntry({
+      sourceWorldHash: snapshot.worldHash,
+      town:
+        indexes.openingReliefAllocationTownName ??
+        indexes.townNameForSource(indexes.openingReliefAllocation!.home),
+      recordedAt: timeLabel(boundary.minutes),
+      storyChoiceBoundary: boundary,
+    });
+    migratedJournalEntries.splice(questIndex + 1, 0, marker);
+  }
+  if (
+    migrationEra !== null &&
+    indexes.openingReliefAllocation !== null &&
+    targetReliefAllocationQuestProgressed &&
+    !canGrandfatherOpeningReliefAllocation
+  ) {
+    throw new Error(
+      "Trusted predecessor snapshot has Wolf-Winter progress without a replayable preparation boundary for relief-allocation migration.",
     );
   }
   const discoveredQuestIdsAfter = Object.freeze(

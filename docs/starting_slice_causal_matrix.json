@@ -263,29 +263,52 @@
       "id": "SS-F06-relief-allocation",
       "title": "Spend Albany's limited relief capacity before departure",
       "phase": "albany_preparation",
-      "implementation_status": "planned",
-      "proof_status": "unproven",
-      "counts_toward_contract": false,
-      "visible_choice": "Allocate scarce relief capacity among Cade's steading, Albany's vulnerable residents, and mobile reserve.",
+      "implementation_status": "implemented",
+      "proof_status": "proven",
+      "counts_toward_contract": true,
+      "visible_choice": "On first reaching the Station Quarter after preparation, spend five minutes assigning Albany's one unallocated winter-relief wagon and crew to exactly one need. Send fodder and drovers ahead to Cade's herd, keep Jamie's Market warm room staffed for vulnerable residents, or hold Hayden's wagon at the hill turn as a mobile failure crew. Every card names what it protects and the two needs left exposed before the blocking, irreversible selection.",
       "immediate_state_delta": [
-        "albany.relief_capacity",
-        "albany.public_trust",
-        "character.faction_standing",
-        "wolf.cattle_safety"
+        "world.minutes",
+        "character.knowledge",
+        "character.relationships",
+        "journey.story_choice_proof"
       ],
       "delayed_consumers": [
-        "Starting conditions at the steading",
-        "Failure recovery resources",
-        "Albany service availability and prices on return"
+        "Exactly one allocation knowledge imports as exactly one Wolf-Winter flag. On a successful first lure cast from the exposed ridge, Cade's pre-feed suppresses the ordinary alarm increase; seed 26 reaches alarm 3 and the whole-herd living-pack ending, while the same route under resident shelter reaches alarm 4 and scatters two cattle. A failed cast and the sheltered route keep their full consequences, and no feed item or retry is created.",
+        "The mobile crew is legal only after the first fortification seat failed and the chosen Cade-help or Albany-authority recovery already joined the seam. It acts once, lowers Winter Siege pressure by 1, preserves the failed-check and stance-cost flags, and selects the truthful failed-then-mobile-stabilized dawn branch under either stance.",
+        "Resident shelter adds no Wolf field action. Its exact story-choice proof plus the trusted byre-held return fact unlocks one 15-minute Market rest instead of the ordinary 240-minute service. Mobile reserve uses the same completion gate to unlock one 15-minute Campus resupply instead of the ordinary 45-minute service. The offers are mutually exclusive and each is consumed through the generic campaign-service journal.",
+        "The offer, equal five-minute cost, selected provider memory, quest import, field result, return fact, and service eligibility survive chronological foldback and save/restore. Exact F12 unstarted saves receive the real current offer with no retroactive effects, including saves that already selected June: a later allocation composes after the preserved ally proof and re-restores with both sets of effects. Exact started saves retain their approach proof and receive one neutral legacy marker bound to the pre-start boundary without allocation knowledge, memory, cost, field aid, or service."
       ],
       "visible_feedback": [
-        "The dispatch board shows what each allocation can cover and what remains exposed.",
-        "Both the steading and Albany visibly consume the selected allocation."
+        "Full, compact, browser, and CLI journey surfaces show the single-wagon premise, equal five-minute cost, named provider, protected need, two exposed needs, consequence, and current blocked reason before commitment; the journal and persistent character state retain the exact allocation afterward.",
+        "Wolf-Winter's imported flag, named pre-feed alarm result or mobile-crew action, visible pressure track, failure-preserving journal, and stabilized-dawn prose expose the selected field consumer without revealing internal effect ids.",
+        "On a truthful byre-held return, Albany names either Jamie's staffed Market warm room or the returned mobile Campus cache, shows its 15-minute term, and records one-time consumption. Cade's field-only allocation truthfully produces neither return offer."
       ],
-      "systems": ["resources", "factions", "pressure", "services"],
-      "persistence_boundaries": ["overworld_to_quest", "quest_to_overworld"],
-      "contract_tags": ["delayed", "cross_system", "cross_phase", "irreversible_tradeoff"],
-      "baseline_evidence": ["src/world/journey_campaign.ts"],
+      "systems": [
+        "time",
+        "resources",
+        "relationships",
+        "quest_imports",
+        "pressure",
+        "failure_recovery",
+        "campaign_outcomes",
+        "services"
+      ],
+      "persistence_boundaries": ["save_restore", "overworld_to_quest", "quest_to_overworld"],
+      "contract_tags": [
+        "delayed",
+        "cross_system",
+        "cross_phase",
+        "failure_forward",
+        "irreversible_tradeoff"
+      ],
+      "baseline_evidence": [
+        "tests/unit/world_opening_relief_allocation.test.ts",
+        "tests/unit/world_opening_relief_allocation_journal.test.ts",
+        "tests/regression/new_york_overworld.test.ts",
+        "tests/regression/relief_allocation_migration_integrity.test.ts",
+        "traces/bugs/bug_0527_wolf_winter_relief_allocation.yaml"
+      ],
       "counterfactual_test": "tests/starting_slice/relief_allocation_counterfactual.test.ts"
     },
     {

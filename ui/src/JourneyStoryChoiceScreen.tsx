@@ -24,7 +24,9 @@ export function JourneyStoryChoiceScreen({
   const isLeadSource = storyChoice.kind === "lead_source";
   const isPreparation = storyChoice.kind === "preparation";
   const isAlly = storyChoice.kind === "ally";
-  const keepsCurrentObjective = isRegistration || isLeadSource || isPreparation || isAlly;
+  const isReliefAllocation = storyChoice.kind === "relief_allocation";
+  const keepsCurrentObjective =
+    isRegistration || isLeadSource || isPreparation || isAlly || isReliefAllocation;
 
   return (
     <main className="journey-decision-page">
@@ -44,6 +46,8 @@ export function JourneyStoryChoiceScreen({
                 ? "Albany preparation budget"
                 : isAlly
                   ? "Field-team commitment"
+                  : isReliefAllocation
+                    ? "Albany relief capacity"
                   : "Journey consequence"}
         </p>
         <h1 id="journey-story-choice-title" ref={headingRef} tabIndex={-1}>
@@ -55,6 +59,8 @@ export function JourneyStoryChoiceScreen({
                 ? "Choose what Albany prepares"
                 : isAlly
                   ? "Choose who leaves Albany"
+                  : isReliefAllocation
+                    ? "Choose what Albany can protect"
                   : "Choose what follows"}
         </h1>
         <p id="journey-story-choice-message" className="journey-choice-message">
@@ -73,6 +79,8 @@ export function JourneyStoryChoiceScreen({
                   ? "Your finite allocation changes later actions and the service Albany can release on your return; it does not replace this objective."
                   : isAlly
                     ? "Compare the field capability, binding condition, and actual cost in these terms; your commitment changes who can act independently without replacing this objective."
+                    : isReliefAllocation
+                      ? "Albany can cover one need. Each choice names what it protects, what remains exposed, and which field or return resource changes."
                     : "Choose the consequence that sets your next objective."}
           </small>
         </div>

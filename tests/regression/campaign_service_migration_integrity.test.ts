@@ -12,6 +12,7 @@ import {
   OVERWORLD_OPENING_PREPARATION_PREDECESSOR_WORLD_HASH,
 } from "../../src/world/session_snapshot_restore.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
+import { exactF12World } from "./fixtures/historical_overworlds.js";
 
 const WORLD = loadOverworldManifest(process.cwd());
 const TIMBER_SERVICE_RULE_ID = "albany:wolf_saved_timber_quick_resupply";
@@ -65,7 +66,9 @@ function snapshotAsPredecessor(
   const predecessor = session.snapshot();
   predecessor.worldHash = worldHash;
   predecessor.journalEntries = predecessor.journalEntries
-    .filter((entry) => entry.kind !== "preparation_legacy")
+    .filter(
+      (entry) => entry.kind !== "preparation_legacy" && !entry.kind.startsWith("relief_allocation"),
+    )
     .map((entry) => {
       if (entry.kind === "quest" && entry.questStartProof?.kind === "legacy") {
         const historicalEntry = { ...entry };
@@ -136,7 +139,9 @@ function savedTimberReturnBeforeService(withQuestDecision = false): OverworldSes
 }
 
 function livePackCompletion(): OverworldSession {
-  const session = new OverworldSession(WORLD);
+  // F12 owns the live-pack result but predates F06 allocation, so it is the
+  // truthful source for snapshots relabeled as still older service eras.
+  const session = new OverworldSession(exactF12World(WORLD));
   const opening = session.view();
   session.scoutPoi(opening.pois[0]!.id);
   session.talkToCharacter(opening.characters[0]!.id);

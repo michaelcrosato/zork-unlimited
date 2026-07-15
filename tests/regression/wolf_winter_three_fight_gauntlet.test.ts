@@ -269,6 +269,9 @@ describe("bug_0189 — The Wolf-Winter: a fair THREE-fight combat_guaranteed gau
         "june_pike_present",
         "approach_exposed_ridge",
         "approach_sheltered_stockway",
+        "relief_cade_fodder_allocated",
+        "relief_resident_shelter_allocated",
+        "relief_mobile_reserve_allocated",
       ],
     });
     expect(report.findings.filter((f) => f.severity === "error")).toEqual([]);

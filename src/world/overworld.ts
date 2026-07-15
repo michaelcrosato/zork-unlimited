@@ -27,6 +27,10 @@ import {
 import { OpeningAllySchema, applyOpeningAllyOption } from "./opening_ally.js";
 import { OpeningLeadSourceSchema, applyOpeningLeadSourceOption } from "./opening_lead_source.js";
 import { OpeningPreparationSchema, applyOpeningPreparationProfile } from "./opening_preparation.js";
+import {
+  OpeningReliefAllocationSchema,
+  applyOpeningReliefAllocationOption,
+} from "./opening_relief_allocation.js";
 import { OpeningRegistrationSchema } from "./opening_registration.js";
 import { OverworldQuestLaunchSchema } from "./quest_launch.js";
 
@@ -486,6 +490,7 @@ export const OverworldManifestSchema = z
     opening_registration: OpeningRegistrationSchema.optional(),
     opening_lead_source: OpeningLeadSourceSchema.optional(),
     opening_preparation: OpeningPreparationSchema.optional(),
+    opening_relief_allocation: OpeningReliefAllocationSchema.optional(),
     opening_ally: OpeningAllySchema.optional(),
     campaign_service_rules: CampaignServiceRulesSchema.optional(),
     sources: z.array(
@@ -1613,6 +1618,99 @@ function assertOpeningPreparationIntegrity(world: OverworldManifest): void {
   }
 }
 
+function assertOpeningReliefAllocationIntegrity(world: OverworldManifest): void {
+  const scene = world.opening_relief_allocation;
+  if (!scene) return;
+  const preparation = world.opening_preparation;
+  const leadSource = world.opening_lead_source;
+  const registration = world.opening_registration;
+  if (!preparation || scene.after_preparation !== preparation.id) {
+    throw new Error(
+      "Overworld opening relief allocation must follow this world's opening preparation.",
+    );
+  }
+  if (!leadSource || !registration) {
+    throw new Error(
+      "Overworld opening relief allocation requires the complete authored opening chain.",
+    );
+  }
+  if (scene.home !== preparation.home || scene.target_quest !== preparation.target_quest) {
+    throw new Error(
+      "Overworld opening relief allocation must share its preparation's home and target quest.",
+    );
+  }
+  const quest = world.quests.find((candidate) => candidate.id === scene.target_quest);
+  if (!quest || quest.home !== scene.home || quest.area !== scene.area) {
+    throw new Error(
+      "Overworld opening relief allocation must occupy the target quest's authored departure area.",
+    );
+  }
+  const charactersByCampaignNpcId = new Map(
+    world.characters.flatMap((character) =>
+      character.campaign_npc_id === undefined
+        ? []
+        : ([[character.campaign_npc_id, character]] as const),
+    ),
+  );
+  for (const option of scene.options) {
+    const provider = charactersByCampaignNpcId.get(option.provider_npc_id);
+    if (!provider || provider.home !== scene.home) {
+      throw new Error(
+        `Opening relief allocation option "${option.id}" references an unbound Albany provider npc.`,
+      );
+    }
+    for (const effect of option.effects) {
+      if (effect.type === "learn_knowledge") {
+        const consumed = quest.campaign_imports?.rules.some(
+          (rule) => rule.type === "knowledge_to_flag" && rule.knowledge_id === effect.knowledge_id,
+        );
+        if (!consumed) {
+          throw new Error(
+            `Opening relief allocation knowledge "${effect.knowledge_id}" has no target-quest import consumer.`,
+          );
+        }
+      }
+      if (effect.type === "remember_relationship") {
+        if (effect.npc_id !== option.provider_npc_id) {
+          throw new Error(
+            `Opening relief allocation option "${option.id}" remembers a different npc than its provider.`,
+          );
+        }
+        if (
+          !(provider.variants ?? []).some((variant) =>
+            variant.after_relationship_memories?.includes(effect.memory_id),
+          )
+        ) {
+          throw new Error(
+            `Opening relief allocation memory "${effect.memory_id}" has no consuming contact variant.`,
+          );
+        }
+      }
+    }
+    for (const registrationProfile of registration.profiles) {
+      for (const leadOption of leadSource.options) {
+        const afterLeadSource = applyOpeningLeadSourceOption({
+          scene: leadSource,
+          character: registrationProfile.character,
+          optionId: leadOption.id,
+        }).characterAfter;
+        for (const preparationProfile of preparation.profiles) {
+          const afterPreparation = applyOpeningPreparationProfile({
+            scene: preparation,
+            character: afterLeadSource,
+            profileId: preparationProfile.id,
+          }).characterAfter;
+          applyOpeningReliefAllocationOption({
+            scene,
+            character: afterPreparation,
+            optionId: option.id,
+          });
+        }
+      }
+    }
+  }
+}
+
 function assertOpeningAllyIntegrity(world: OverworldManifest): void {
   const scene = world.opening_ally;
   if (!scene) return;
@@ -1931,6 +2029,7 @@ function canonicalOpeningAllyCampaignServiceStates(world: OverworldManifest): Re
   allyPromiseIds: ReadonlySet<string>;
 }> | null {
   const ally = world.opening_ally;
+  const reliefAllocation = world.opening_relief_allocation;
   const preparation = world.opening_preparation;
   const leadSource = world.opening_lead_source;
   const registration = world.opening_registration;
@@ -1972,44 +2071,63 @@ function canonicalOpeningAllyCampaignServiceStates(world: OverworldManifest): Re
           character: afterLeadSource,
           profileId: preparationProfile.id,
         }).characterAfter;
-        for (const allyOption of ally.options) {
-          const beforeQuest = applyOpeningAllyOption({
-            scene: ally,
-            character: afterPreparation,
-            optionId: allyOption.id,
-          }).characterAfter;
-          const openingStoryChoices = [
-            { story_choice_id: preparation.id, choice_id: preparationProfile.id },
-            { story_choice_id: ally.id, choice_id: allyOption.id },
-          ];
-          rememberState({
-            character: beforeQuest,
-            worldFactIds: [],
-            selectedStoryChoices: openingStoryChoices,
-          });
-
-          for (const campaignExport of targetQuest.campaign_exports ?? []) {
-            const applied = applyCampaignConsequences({
+        const allocationOptions = reliefAllocation ? reliefAllocation.options : [null];
+        for (const allocationOption of allocationOptions) {
+          const afterAllocation =
+            reliefAllocation && allocationOption
+              ? applyOpeningReliefAllocationOption({
+                  scene: reliefAllocation,
+                  character: afterPreparation,
+                  optionId: allocationOption.id,
+                }).characterAfter
+              : afterPreparation;
+          for (const allyOption of ally.options) {
+            const beforeQuest = applyOpeningAllyOption({
+              scene: ally,
+              character: afterAllocation,
+              optionId: allyOption.id,
+            }).characterAfter;
+            const openingStoryChoices = [
+              { story_choice_id: preparation.id, choice_id: preparationProfile.id },
+              ...(reliefAllocation && allocationOption
+                ? [
+                    {
+                      story_choice_id: reliefAllocation.id,
+                      choice_id: allocationOption.id,
+                    },
+                  ]
+                : []),
+              { story_choice_id: ally.id, choice_id: allyOption.id },
+            ];
+            rememberState({
               character: beforeQuest,
-              effects: overworldQuestCampaignEffectsForCharacter(campaignExport, beforeQuest),
-            });
-            const afterQuest: CanonicalCampaignServiceIntegrityState = {
-              character: applied.characterAfter,
-              worldFactIds: applied.worldFactIds,
+              worldFactIds: [],
               selectedStoryChoices: openingStoryChoices,
-            };
-            rememberState(afterQuest);
-            for (const dawnChoiceId of ALBANY_DAWN_DISPATCH_CHOICE_IDS) {
-              rememberState({
-                ...afterQuest,
-                selectedStoryChoices: [
-                  ...openingStoryChoices,
-                  {
-                    story_choice_id: ALBANY_DAWN_DISPATCH_ID,
-                    choice_id: dawnChoiceId,
-                  },
-                ],
+            });
+
+            for (const campaignExport of targetQuest.campaign_exports ?? []) {
+              const applied = applyCampaignConsequences({
+                character: beforeQuest,
+                effects: overworldQuestCampaignEffectsForCharacter(campaignExport, beforeQuest),
               });
+              const afterQuest: CanonicalCampaignServiceIntegrityState = {
+                character: applied.characterAfter,
+                worldFactIds: applied.worldFactIds,
+                selectedStoryChoices: openingStoryChoices,
+              };
+              rememberState(afterQuest);
+              for (const dawnChoiceId of ALBANY_DAWN_DISPATCH_CHOICE_IDS) {
+                rememberState({
+                  ...afterQuest,
+                  selectedStoryChoices: [
+                    ...openingStoryChoices,
+                    {
+                      story_choice_id: ALBANY_DAWN_DISPATCH_ID,
+                      choice_id: dawnChoiceId,
+                    },
+                  ],
+                });
+              }
             }
           }
         }
@@ -2074,8 +2192,12 @@ function assertCampaignServiceRulesIntegrity(
         world.opening_ally?.id === ref.story_choice_id
           ? world.opening_ally.options.find((option) => option.id === ref.choice_id)
           : undefined;
+      const reliefAllocationOption =
+        world.opening_relief_allocation?.id === ref.story_choice_id
+          ? world.opening_relief_allocation.options.find((option) => option.id === ref.choice_id)
+          : undefined;
       try {
-        if (!preparationProfile && !allyOption) {
+        if (!preparationProfile && !allyOption && !reliefAllocationOption) {
           journeyCampaignStoryChoiceSelection(ref.story_choice_id, ref.choice_id);
         }
       } catch {
@@ -2216,6 +2338,7 @@ export function assertOverworldIntegrity(world: OverworldManifest): void {
 
   assertOpeningPreparationIntegrity(world);
   assertQuestsIntegrity(world, nodes, areaIds, areaHomes);
+  assertOpeningReliefAllocationIntegrity(world);
   assertOpeningAllyIntegrity(world);
 
   assertExplorationSitesIntegrity(world, nodes, regionNames, areaIds, areaHomes);

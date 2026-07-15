@@ -572,6 +572,24 @@ describe("New York overworld graph", () => {
           target_flag: "approach_sheltered_stockway",
         },
         {
+          id: "import:wolf_winter_relief_cade_fodder",
+          type: "knowledge_to_flag",
+          knowledge_id: "albany:knowledge_relief_cade_fodder",
+          target_flag: "relief_cade_fodder_allocated",
+        },
+        {
+          id: "import:wolf_winter_relief_resident_shelter",
+          type: "knowledge_to_flag",
+          knowledge_id: "albany:knowledge_relief_resident_shelter",
+          target_flag: "relief_resident_shelter_allocated",
+        },
+        {
+          id: "import:wolf_winter_relief_mobile_reserve",
+          type: "knowledge_to_flag",
+          knowledge_id: "albany:knowledge_relief_mobile_reserve",
+          target_flag: "relief_mobile_reserve_allocated",
+        },
+        {
           id: "import:wolf_winter_june_companion",
           type: "companion_to_flag",
           companion_id: "albany:june_pike",
@@ -722,6 +740,12 @@ describe("New York overworld graph", () => {
     expect(jamie?.campaign_npc_id).toBe("albany:jamie_tanner");
     expect(jamie?.variants).toEqual([
       {
+        id: "relief_resident_shelter_allocated",
+        after_relationship_memories: ["albany:memory_jamie_relief_resident_shelter_allocated"],
+        summary: expect.stringContaining("Market warm-room list"),
+        agenda: expect.stringContaining("one fast fatigue recovery"),
+      },
+      {
         id: "wolf_relief_protocol_allocated",
         after_relationship_memories: ["albany:memory_jamie_wolf_relief_protocol_allocated"],
         summary: expect.stringContaining("named-call relief order"),
@@ -746,6 +770,12 @@ describe("New York overworld graph", () => {
     );
     expect(hayden?.campaign_npc_id).toBe("albany:hayden_hale");
     expect(hayden?.variants).toEqual([
+      {
+        id: "relief_mobile_reserve_allocated",
+        after_relationship_memories: ["albany:memory_hayden_relief_mobile_reserve_allocated"],
+        summary: expect.stringContaining("last relief wagon"),
+        agenda: expect.stringContaining("already recovered fortification seam"),
+      },
       {
         id: "wolf_fortified_cade_terms",
         after_relationship_memories: ["albany:memory_hayden_wolf_fortified_cade_terms"],

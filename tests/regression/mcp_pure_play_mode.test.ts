@@ -344,11 +344,35 @@ describe("MCP pure play mode", () => {
         view = lead.observation as AreaView;
         const questRoute = view.areaExits.find((route) => route.destination.id === quest.area);
         if (!questRoute) throw new Error("expected route to the discovered lead");
+        const departure = textPayload(
+          await client.callTool({
+            name: "move_overworld_session_area",
+            arguments: {
+              session_id: sessionId,
+              area_route_id: questRoute.id,
+              compact_context: false,
+              compact_result: false,
+            },
+          }),
+        );
+        const allocationChoice = (
+          departure.journey as {
+            storyChoice?: {
+              kind?: string;
+              options?: { id: string }[];
+            };
+          }
+        ).storyChoice;
+        expect(allocationChoice?.kind).toBe("relief_allocation");
+        const residentShelter = allocationChoice?.options?.find(
+          (option) => option.id === "albany:relief_resident_shelter",
+        );
+        if (!residentShelter) throw new Error("expected visible resident-shelter allocation");
         await client.callTool({
-          name: "move_overworld_session_area",
+          name: "choose_overworld_session_story",
           arguments: {
             session_id: sessionId,
-            area_route_id: questRoute.id,
+            choice: residentShelter.id,
             compact_context: false,
             compact_result: false,
           },

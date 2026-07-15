@@ -24,10 +24,11 @@ const REGISTRATION =
 
 const FULL = { compact_context: false, compact_result: false } as const;
 const SEED = 26;
-const PARENT_MINUTES = 572;
+const RESIDENT_SHELTER = "albany:relief_resident_shelter";
+const PARENT_MINUTES = 577;
 const PARENT_SUPPLIES = 6;
 const PARENT_FATIGUE = 0;
-const PARENT_DECISIONS = 8;
+const PARENT_DECISIONS = 9;
 const QUEST_AREA = "albany_city__transport_hub";
 
 const CLEAN_LURE_TAIL = [
@@ -66,8 +67,8 @@ const ROUTES = {
     otherFlag: "approach_sheltered_stockway",
     terms: { minutes: 30, supplies: 1, fatigue: 25 },
     after: {
-      minutes: 602,
-      timeLabel: "Day 1, 10:02",
+      minutes: 607,
+      timeLabel: "Day 1, 10:07",
       supplies: 5,
       fatigue: 25,
       travelCondition: "tired",
@@ -94,8 +95,8 @@ const ROUTES = {
     otherFlag: "approach_exposed_ridge",
     terms: { minutes: 75, supplies: 2, fatigue: 10 },
     after: {
-      minutes: 647,
-      timeLabel: "Day 1, 10:47",
+      minutes: 652,
+      timeLabel: "Day 1, 10:52",
       supplies: 4,
       fatigue: 10,
       travelCondition: "ready",
@@ -189,6 +190,11 @@ function buildAlbanyPreStartBoundary(api: ToolApi) {
   });
   expect(scouted.observation.discoveredAreaIds).toContain(QUEST_AREA);
   moveToVisibleArea(api, sessionId, WOLF.area);
+  api.choose_overworld_session_story({
+    ...FULL,
+    session_id: sessionId,
+    choice: RESIDENT_SHELTER,
+  });
 
   return { sessionId, exported: exportSession(api, sessionId) };
 }
@@ -312,6 +318,7 @@ function assertFullLaunch(
   expect(initial.campaignImportReceipt?.applied_rules).toEqual([
     spec.importRule,
     "import:wolf_winter_relief_mediation",
+    "import:wolf_winter_relief_resident_shelter",
     "import:wolf_winter_works_fortification",
   ]);
   expect(initial.campaignImportReceipt?.applied_rules).not.toContain(spec.otherImportRule);
@@ -492,7 +499,7 @@ describe("SS-F07 — hill approach survives the full Wolf-Winter return", () => 
       completedQuestIds: [],
       journey: { acceptedDecisions: PARENT_DECISIONS },
     });
-    expect(fullView(api, parent.sessionId).timeLabel).toBe("Day 1, 09:32");
+    expect(fullView(api, parent.sessionId).timeLabel).toBe("Day 1, 09:37");
 
     for (const approachId of [undefined, "albany:wolf_approach_unknown"] as const) {
       const before = exportSession(api, parent.sessionId);

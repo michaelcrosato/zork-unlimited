@@ -149,6 +149,9 @@ export type OverworldJournalEntry = {
     | "preparation"
     | "preparation_legacy"
     | "preparation_offer"
+    | "relief_allocation"
+    | "relief_allocation_legacy"
+    | "relief_allocation_offer"
     | "poi"
     | "quest"
     | "quest_done"
@@ -227,6 +230,9 @@ const OverworldJournalEntrySchema = z
       "preparation",
       "preparation_legacy",
       "preparation_offer",
+      "relief_allocation",
+      "relief_allocation_legacy",
+      "relief_allocation_offer",
       "poi",
       "quest",
       "quest_done",

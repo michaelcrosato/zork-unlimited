@@ -1,0 +1,68 @@
+id: bug_0527
+title: "Albany's last relief capacity had no exclusive field-and-return allocation"
+pack: content/rpg/quests/wolf_winter.yaml
+reported_by: starting-slice causal audit and Depth Contract v1
+reports:
+  - docs/STARTING_SLICE.md
+  - docs/starting_slice_causal_matrix.json
+severity: S2
+symptom: >
+  Albany could prepare a rider, choose an ally, and select a hill approach, but
+  its supposedly scarce winter-relief capacity never required a public choice.
+  No exclusive dispatch changed Wolf-Winter's cattle pressure or failure
+  recovery, and no matching return service could prove which need Albany had
+  protected. SS-F06 was therefore a planned label rather than a reachable
+  cross-phase tradeoff.
+root_cause: >
+  The opening journey had replay-bound registration, source, preparation, ally,
+  and quest-launch scenes but no generic finite-allocation scene between
+  preparation and departure. Wolf-Winter's import catalog likewise had no
+  mutually exclusive allocation flags, and campaign service rules had no exact
+  allocation-choice predicates paired with a trusted completion fact. Adding a
+  reserve counter alone would not have supplied a delayed consumer or
+  counterfactual evidence.
+fix: >
+  Auto-offer one blocking Station dispatch after preparation and before the
+  optional June contact. Disclose one unassigned relief wagon and crew, charge
+  the same five minutes for every option, and require exactly one choice whose
+  card names its protected need and two exposed needs. Sending Emery's fodder
+  to Cade suppresses one ordinary alarm step only on a successful first lure
+  cast from the exposed ridge; it creates no feed item, retry, or failed-cast
+  protection. Keeping Jamie's Market warm room staffed adds no field action but
+  pairs the exact choice with the trusted byre-held return fact to unlock one
+  15-minute Market rest. Holding Hayden's mobile crew creates one action only
+  after a failed outer fortification seat has already been recovered under its
+  original Cade or Albany stance; the crew lowers pressure by 1 without erasing
+  the failure or spent recovery, selects truthful stabilized-dawn prose, and
+  pairs the exact choice plus byre-held fact with one 15-minute Campus resupply.
+  Persist the exclusive knowledge, provider memory, decision proof, import,
+  consequence, and service through chronological replay. Migrate exact F12
+  unstarted saves into the real offer and exact started saves into one neutral
+  legacy marker while preserving their existing hill-approach proof and
+  inventing no retroactive allocation effect.
+deterministic_witnesses:
+  - allocation_boundary: "same prepared Station state; only the selected five-minute dispatch differs"
+    result: "exactly one allocation knowledge, one provider memory, and one story-choice proof persist; each card names one protected and two exposed needs"
+  - cade_advantage: "same seed-26 exposed-ridge clean three-cast lure route; only Cade fodder versus resident shelter differs"
+    cade_fodder: "the clean first cast adds no ordinary alarm step; final alarm 3 and the whole herd return"
+    resident_shelter: "the first cast keeps its ordinary step; final alarm 4 and two cattle scatter"
+    failure_guard: "a forced failed first cast under Cade fodder still raises the full ridge-arrival-plus-failure alarm to 3, retires the cast, and creates no retry"
+  - mobile_failure_recovery: "same worst outer-seat failure under Cade terms or Albany authority, followed by that stance's existing deterministic recovery"
+    result: "only then can the mobile crew act once, pressure falls 2 to 1, the original failure and stance-owned recovery remain true, threshold pressure reaches 2, and the failed-then-mobile-stabilized dawn journal is selected"
+  - reciprocal_return_services: "same trusted byre-held outcome under different exact allocation proofs"
+    resident_shelter: "Market rest takes 15 minutes instead of the ordinary 240 minutes; Campus resupply remains the ordinary 45 minutes"
+    mobile_reserve: "Campus resupply takes 15 minutes instead of the ordinary 45 minutes; Market rest remains the ordinary 240 minutes"
+  - migration: "restore exact F12 predecessor snapshots into the F06 manifest"
+    result: "an unstarted save receives the real offer with no retroactive cost or character effect; if June was already selected, the later allocation composes after her proof and a second restore retains both commitments; a started save keeps its exact approach proof and receives one neutral boundary-bound legacy marker with no allocation knowledge, memory, field aid, or service"
+tests:
+  - tests/starting_slice/relief_allocation_counterfactual.test.ts
+  - tests/regression/relief_allocation_migration_integrity.test.ts
+  - tests/unit/world_opening_relief_allocation.test.ts
+  - tests/unit/world_opening_relief_allocation_journal.test.ts
+  - tests/regression/new_york_overworld.test.ts
+verification:
+  - "The final F06/starting-slice target run passed 24 files and 127 tests; the independent migration/snapshot audit passed 11 files and 189 tests; concrete imported-variant liveness passed 17/17."
+  - "Independent regression shards passed A-H 84 files/451 tests, I-P 26 files/256 tests, and S-Z 49 files/266 tests. The audit exposed and closed the exact F12 ally-selected/later-allocation two-restore defect rather than grandfathering it away."
+  - "Post-change crawl 20260715T215635Z completed 6,000 steps, 247/247 nodes, 344/344 edges, 12/12 boards, and 12/12 quests with zero findings."
+  - "Canonical seed 2717 is sidecar-verified pure/fresh contract-v3 evidence: Wolf-Winter completed at decision 25; the player continued seven times, ended voluntarily after five goals at decision 122, rated clarity 4/5 and enjoyment 5/5, was not stuck, and would replay."
+  - "Feedback compile 20260715T221223Z contains 785 verified reports, 36 current-contract pure exits, and 36/36 players continuing at least once; the milestone remains active_unproven at 11/12 pending SS-F02 and numeric/fleet certification."

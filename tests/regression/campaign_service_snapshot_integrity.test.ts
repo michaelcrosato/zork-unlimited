@@ -14,6 +14,8 @@ import { loadOverworldManifest } from "../../src/world/source.js";
 
 const WORLD = loadOverworldManifest(process.cwd());
 const TIMBER_SERVICE_RULE_ID = "albany:wolf_saved_timber_quick_resupply";
+// Exposed-ridge fodder is inert on this suite's sheltered, directly completed quest.
+const NEUTRAL_RELIEF_ALLOCATION = "albany:relief_cade_fodder";
 
 function timeLabel(minutes: number): string {
   const day = Math.floor(minutes / 1440) + 1;
@@ -43,6 +45,8 @@ function albanyStationSession(): OverworldSession {
   session.chooseJourneyStory("albany:prep_works_fortification");
   moveToArea(session, "albany_city__market");
   moveToArea(session, "albany_city__transport_hub");
+  expect(session.journey().storyChoice).toMatchObject({ kind: "relief_allocation" });
+  session.chooseJourneyStory(NEUTRAL_RELIEF_ALLOCATION);
   return session;
 }
 
@@ -275,8 +279,8 @@ describe("campaign service snapshot integrity", () => {
     rebindJournalBoundaryHashes(forged, proofHashes);
 
     // Manufacture timestamp evidence that makes the quest and service appear
-    // simultaneous. The verified trail still fixes the service at decision 7
-    // and the quest-produced fact at decision 8.
+    // simultaneous. The verified trail still fixes the service before the
+    // quest-produced fact regardless of the opening-story decision count.
     const forgedMinutes = quest.questCompletionBoundary.minutes + 15;
     forged.minutes = forgedMinutes;
     quest.recordedAt = timeLabel(forgedMinutes);

@@ -162,6 +162,7 @@ export type JourneyStoryChoicePresentationKind =
   | "ally"
   | "lead_source"
   | "preparation"
+  | "relief_allocation"
   | "registration";
 
 export type JourneyStoryChoiceOptions = readonly [
@@ -198,6 +199,13 @@ export type JourneyAllyStoryChoiceOptions = readonly [
   ...JourneyStoryChoiceOption[],
 ];
 
+export type JourneyReliefAllocationStoryChoiceOptions = readonly [
+  JourneyStoryChoiceOption,
+  JourneyStoryChoiceOption,
+  JourneyStoryChoiceOption,
+  ...JourneyStoryChoiceOption[],
+];
+
 type JourneyStoryChoicePromptBase = Readonly<{
   id: string;
   message: string;
@@ -225,6 +233,10 @@ export type JourneyStoryChoicePrompt = JourneyStoryChoicePromptBase &
     | {
         kind: "ally";
         options: JourneyAllyStoryChoiceOptions;
+      }
+    | {
+        kind: "relief_allocation";
+        options: JourneyReliefAllocationStoryChoiceOptions;
       }
   >;
 
@@ -899,7 +911,8 @@ function freezeStoryChoice(
     presentationKind !== "ally" &&
     presentationKind !== "registration" &&
     presentationKind !== "lead_source" &&
-    presentationKind !== "preparation"
+    presentationKind !== "preparation" &&
+    presentationKind !== "relief_allocation"
   ) {
     throw new Error(
       `Journey story choice has unknown presentation kind "${String(presentationKind)}".`,
@@ -916,6 +929,10 @@ function freezeStoryChoice(
   } else if (presentationKind === "preparation") {
     if (storyChoice.options.length < 3 || storyChoice.options.length > 5) {
       throw new Error("Journey preparation choice requires between three and five options.");
+    }
+  } else if (presentationKind === "relief_allocation") {
+    if (storyChoice.options.length !== 3) {
+      throw new Error("Journey relief-allocation choice requires exactly three options.");
     }
   } else if (presentationKind === "ally") {
     if (storyChoice.options.length < 3 || storyChoice.options.length > 4) {

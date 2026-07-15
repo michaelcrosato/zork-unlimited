@@ -28,6 +28,7 @@ const FULL = { compact_context: false, compact_result: false } as const;
 const SAVED_RULE_ID = "albany:wolf_saved_timber_quick_resupply";
 const BARRED_RULE_ID = "albany:wolf_barred_gate_quick_rest";
 const STATION_AREA_ID = "albany_city__transport_hub";
+const NEUTRAL_RELIEF_ALLOCATION = "albany:relief_resident_shelter";
 
 type ToolApi = ReturnType<typeof createToolApi>;
 
@@ -186,6 +187,11 @@ function launchAlbanyWolf(api: ToolApi): { overworldSessionId: string; rpgSessio
     ...FULL,
     session_id: overworldSessionId,
     area_route_id: stationRoute.id,
+  });
+  api.choose_overworld_session_story({
+    ...FULL,
+    session_id: overworldSessionId,
+    choice: NEUTRAL_RELIEF_ALLOCATION,
   });
 
   const launched = api.start_overworld_session_quest({

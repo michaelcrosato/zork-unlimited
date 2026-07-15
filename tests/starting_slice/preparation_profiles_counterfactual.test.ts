@@ -38,6 +38,9 @@ const WORKS = "albany:prep_works_fortification";
 const DROVER = "albany:prep_drover_route";
 const RELIEF = "albany:prep_relief_protocol";
 const PROFILE_IDS = [WORKS, DROVER, RELIEF] as const;
+// This option affects only the exposed-ridge lure. These comparisons launch the
+// sheltered route and complete it directly, so it adds no competing return service.
+const NEUTRAL_RELIEF_ALLOCATION = "albany:relief_cade_fodder";
 
 const PROFILE_KNOWLEDGE = {
   [WORKS]: "albany:knowledge_wolf_works_fortification",
@@ -203,6 +206,8 @@ function returnedSession(args: {
   const baselineMinutes = prepared.minutes - minutesPaid;
   const baselineMoney = prepared.character.money + moneyPaid;
   moveToArea(session, WOLF.area);
+  expect(session.journey().storyChoice).toMatchObject({ kind: "relief_allocation" });
+  session.chooseJourneyStory(NEUTRAL_RELIEF_ALLOCATION);
   session.startQuest(WOLF.id, "albany:wolf_approach_sheltered_stockway");
   const ending = WOLF.campaign_exports?.find((candidate) => candidate.ending_id === "ending_held");
   if (!ending) throw new Error("expected Wolf-Winter's held ending export");

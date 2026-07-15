@@ -61,6 +61,7 @@ const FULL_OVERWORLD_QUEST_START = {
   compact_observation: false,
 } as const;
 const SHELTERED_APPROACH_ID = "albany:wolf_approach_sheltered_stockway";
+const RESIDENT_SHELTER_ALLOCATION_ID = "albany:relief_resident_shelter";
 const PUBLIC_RPG_STATE_HASH_RE = new RegExp(`^[0-9a-f]{${RPG_PUBLIC_STATE_HASH_LENGTH}}$`);
 const PUBLIC_RPG_TRANSCRIPT_HASH_RE = new RegExp(
   `^[0-9a-f]{${RPG_PUBLIC_TRANSCRIPT_HASH_LENGTH}}$`,
@@ -704,6 +705,12 @@ describe("MCP tools — validate / load (§9.4)", () => {
       area_route_id: routeToQuestArea!.id,
     }).observation;
     expect(areaObservation.currentArea?.id).toBe(discoveredQuest.area);
+    const allocated = a.choose_overworld_session_story({
+      ...FULL_OVERWORLD_RESPONSE,
+      session_id: started.session_id,
+      choice: RESIDENT_SHELTER_ALLOCATION_ID,
+    });
+    expect(allocated.journey.storyChoice?.kind).not.toBe("relief_allocation");
     const beforeQuestStart = a.export_overworld_session({
       session_id: started.session_id,
     });
@@ -827,7 +834,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(repeated.result.discoveredSites).toEqual([]);
     expect(repeated.result.discoveredJobs).toEqual([]);
     expect(repeated.result.discoveredQuests).toEqual([]);
-    expect(repeated.observation.journal).toHaveLength(10);
+    expect(repeated.observation.journal).toHaveLength(12);
 
     const talked = a.talk_overworld_session_contact({
       ...FULL_OVERWORLD_RESPONSE,
@@ -838,7 +845,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(talked.observation.quests.map((quest) => quest.id)).toEqual(
       localQuests.slice(0, 1).map((quest) => quest.id),
     );
-    expect(talked.observation.journal).toHaveLength(11);
+    expect(talked.observation.journal).toHaveLength(13);
 
     const investigated = a.investigate_overworld_session_event({
       ...FULL_OVERWORLD_RESPONSE,
@@ -846,7 +853,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
       event_id: event.id,
     });
     expect(investigated.result.discoveredQuests).toEqual([]);
-    expect(investigated.observation.journal).toHaveLength(12);
+    expect(investigated.observation.journal).toHaveLength(14);
     expect(investigated.observation.timeLabel).not.toBe(started.observation.timeLabel);
 
     const resolved = a.resolve_overworld_session_event({
@@ -856,7 +863,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
     });
     expect(resolved.result.minutes).toBe(30 + event.intensity * 10);
     expect(resolved.result.entry.kind).toBe("resolution");
-    expect(resolved.observation.journal).toHaveLength(13);
+    expect(resolved.observation.journal).toHaveLength(15);
     expect(resolved.observation.resolvedEventIds).toContain(event.id);
     expect(resolved.observation.regionRenown[started.observation.current.region]).toBe(
       event.intensity,
@@ -924,7 +931,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
       traveled.observation.pendingRoadEncounter?.options.map((option) => option.strategy),
     ).toEqual(["cautious_scout", "assist_travelers", "press_on"]);
     expect(traveled.observation.log[0]?.to).toBe("Colonie town");
-    expect(traveled.observation.journal).toHaveLength(13);
+    expect(traveled.observation.journal).toHaveLength(15);
 
     expect(() =>
       a.travel_overworld_session({

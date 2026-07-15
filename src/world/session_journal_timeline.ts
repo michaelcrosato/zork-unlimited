@@ -16,6 +16,11 @@ import {
   type OpeningPreparationJournalDraft,
 } from "./opening_preparation_journal.js";
 import {
+  openingReliefAllocationLegacyJournalDraft,
+  openingReliefAllocationLegacySourceWorldHash,
+  type OpeningReliefAllocationJournalDraft,
+} from "./opening_relief_allocation_journal.js";
+import {
   openingRegistrationLegacyJournalDraft,
   openingRegistrationLegacySourceWorldHash,
   type OpeningRegistrationJournalDraft,
@@ -62,6 +67,9 @@ export type OverworldJournalSourceIndex = {
   openingPreparationJournalIds?: ReadonlySet<string>;
   openingPreparationOfferDraft?: OpeningPreparationJournalDraft | null;
   openingPreparationTownName?: string | null;
+  openingReliefAllocationJournalIds?: ReadonlySet<string>;
+  openingReliefAllocationOfferDraft?: OpeningReliefAllocationJournalDraft | null;
+  openingReliefAllocationTownName?: string | null;
   openingRegistrationJournalDraftsById: ReadonlyMap<string, OpeningRegistrationJournalDraft>;
   openingRegistrationTownName: string | null;
   poiIds: ReadonlySet<string>;
@@ -354,6 +362,52 @@ function assertOpeningPreparationLegacyJournalSource(entry: OverworldJournalEntr
   }
 }
 
+function assertOpeningReliefAllocationJournalSource(
+  entry: OverworldJournalEntry,
+  sources: OverworldJournalSourceIndex,
+): void {
+  if (entry.kind === "relief_allocation_offer") {
+    const draft = sources.openingReliefAllocationOfferDraft;
+    if (
+      !draft ||
+      entry.id !== draft.id ||
+      entry.title !== draft.title ||
+      entry.text !== draft.text
+    ) {
+      throw new Error(
+        `Overworld session snapshot journal relief_allocation_offer entry "${entry.id}" does not match its authored copy.`,
+      );
+    }
+  } else if (!sources.openingReliefAllocationJournalIds?.has(entry.id)) {
+    throw new Error(
+      `Overworld session snapshot journal relief_allocation entry references unknown evidence "${entry.id}".`,
+    );
+  }
+  if (
+    sources.openingReliefAllocationTownName != null &&
+    entry.town !== sources.openingReliefAllocationTownName
+  ) {
+    throw new Error(
+      `Overworld session snapshot journal ${entry.kind} entry "${entry.id}" is bound to town "${entry.town}", expected "${sources.openingReliefAllocationTownName}".`,
+    );
+  }
+}
+
+function assertOpeningReliefAllocationLegacyJournalSource(entry: OverworldJournalEntry): void {
+  const sourceWorldHash = openingReliefAllocationLegacySourceWorldHash(entry.id);
+  if (!sourceWorldHash) {
+    throw new Error(
+      `Overworld session snapshot journal relief_allocation_legacy entry id "${entry.id}" must contain a source world hash.`,
+    );
+  }
+  const draft = openingReliefAllocationLegacyJournalDraft(sourceWorldHash);
+  if (entry.title !== draft.title || entry.text !== draft.text) {
+    throw new Error(
+      `Overworld session snapshot journal relief_allocation_legacy entry "${entry.id}" does not match its canonical copy.`,
+    );
+  }
+}
+
 function assertOpeningAllyJournalSource(
   entry: OverworldJournalEntry,
   sources: OverworldJournalSourceIndex,
@@ -427,7 +481,10 @@ function assertSnapshotJournalSource(
     entry.kind === "lead_source_offer" ||
     entry.kind === "preparation" ||
     entry.kind === "preparation_legacy" ||
-    entry.kind === "preparation_offer";
+    entry.kind === "preparation_offer" ||
+    entry.kind === "relief_allocation" ||
+    entry.kind === "relief_allocation_legacy" ||
+    entry.kind === "relief_allocation_offer";
   if (isStoryChoiceEvidence !== (entry.storyChoiceBoundary !== undefined)) {
     throw new Error(
       `Overworld session snapshot journal ${entry.kind} entry has an invalid story-choice boundary.`,
@@ -526,6 +583,13 @@ function assertSnapshotJournalSource(
       return;
     case "preparation_legacy":
       assertOpeningPreparationLegacyJournalSource(entry);
+      return;
+    case "relief_allocation":
+    case "relief_allocation_offer":
+      assertOpeningReliefAllocationJournalSource(entry, sources);
+      return;
+    case "relief_allocation_legacy":
+      assertOpeningReliefAllocationLegacyJournalSource(entry);
       return;
     case "quest":
       assertKnownJournalSource(entry, "quest:", sources.questIds, "quest", sources.questTownNames);
