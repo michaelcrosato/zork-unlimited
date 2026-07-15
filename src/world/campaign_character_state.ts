@@ -165,6 +165,10 @@ export const CampaignCharacterStateSchema = z
     crimes: z.array(CampaignCharacterCrimeSchema),
     relationships: z.array(CampaignCharacterRelationshipSchema),
     factionStanding: z.array(CampaignCharacterFactionStandingSchema),
+    // Added within v1 as a backwards-compatible party-membership set. Zod's
+    // default upgrades persisted pre-companion characters without inventing a
+    // member; newly built state always emits the canonical empty collection.
+    companions: z.array(CampaignCharacterIdSchema).default([]),
   })
   .strict()
   .superRefine((state, ctx) => {
@@ -180,6 +184,7 @@ export const CampaignCharacterStateSchema = z
     requireCanonicalIds(state.factionStanding, (entry) => entry.factionId, ctx, [
       "factionStanding",
     ]);
+    requireCanonicalIds(state.companions, (entry) => entry, ctx, ["companions"]);
     state.relationships.forEach((relationship, index) => {
       requireCanonicalIds(relationship.memories, (entry) => entry, ctx, [
         "relationships",
@@ -220,6 +225,7 @@ export type CampaignCharacterStateBuildInput = {
   crimes?: readonly CampaignCharacterCrime[];
   relationships?: readonly CampaignCharacterRelationship[];
   factionStanding?: readonly CampaignCharacterFactionStanding[];
+  companions?: readonly string[];
 };
 
 function compareIds(left: string, right: string): number {
@@ -267,6 +273,7 @@ export function buildCampaignCharacterState(
       (entry) => ({ ...entry, memories: canonicalStrings(entry.memories) }),
     ),
     factionStanding: canonicalObjects(input.factionStanding, (entry) => entry.factionId),
+    companions: canonicalStrings(input.companions),
   });
 }
 

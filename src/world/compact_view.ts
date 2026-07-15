@@ -22,7 +22,7 @@ export const OVERWORLD_COMPACT_TITLE_CHAR_LIMIT = 140;
 export const OVERWORLD_COMPACT_RISK_CHAR_LIMIT = 160;
 export const OVERWORLD_COMPACT_ROAD_EVENT_SUMMARY_CHAR_LIMIT = 240;
 export const OVERWORLD_COMPACT_SERVICE_SUMMARY_CHAR_LIMIT = 240;
-export const OVERWORLD_COMPACT_VIEW_VERSION = 16 as const;
+export const OVERWORLD_COMPACT_VIEW_VERSION = 17 as const;
 
 export type OverworldCompactRef = readonly [id: string, name: string];
 export type OverworldCompactJobLeadRef = readonly [id: string, title: string, areaId: string];
@@ -188,6 +188,7 @@ export type OverworldCompactCampaignCharacterCount = readonly [
   abilities: number,
   knowledge: number,
   promises: number,
+  companions: number,
   crimes: number,
   relationships: number,
   factionStanding: number,
@@ -201,6 +202,7 @@ export type OverworldCompactCampaignCharacterTruncation =
   | "abilities"
   | "knowledge"
   | "promises"
+  | "companions"
   | "crimes"
   | "relationships"
   | "relationship_memories"
@@ -223,6 +225,7 @@ export type OverworldCompactCampaignCharacter = readonly [
   abilities: readonly string[],
   knowledge: readonly string[],
   promises: readonly (readonly [promiseId: string, recipientId: string, status: string])[],
+  companions: readonly string[],
   crimes: readonly (readonly [
     crimeId: string,
     jurisdictionId: string,
@@ -292,7 +295,7 @@ export type OverworldCompactView = {
 export const OVERWORLD_COMPACT_LEGEND = {
   v: "compact context schema version",
   character:
-    "[background, [health_current, health_max], money, [[skill_id, rank]], [[value_id, strength]], [[wound_id, severity, treatment]], [[equipment_id, item_id, quantity, condition_0to100, equipped]], [ability_id], [knowledge_id], [[promise_id, recipient_id, status]], [[crime_id, jurisdiction_id, severity, status]], [[npc_id, trust_tier, regard_tier, owes_player, player_owes, known_memory_count, [known_memory]]], [[faction_id, standing_tier]], [skills_count, values_count, wounds_count, equipment_count, abilities_count, knowledge_count, promises_count, crimes_count, relationships_count, faction_standing_count], [truncated_category]?] persistent player character; lists cap at 8 and visible relationship memories at 4, counts are uncapped totals, optional truncation categories identify omitted entries, and tiers hide numeric disposition",
+    "[background, [health_current, health_max], money, [[skill_id, rank]], [[value_id, strength]], [[wound_id, severity, treatment]], [[equipment_id, item_id, quantity, condition_0to100, equipped]], [ability_id], [knowledge_id], [[promise_id, recipient_id, status]], [companion_npc_id], [[crime_id, jurisdiction_id, severity, status]], [[npc_id, trust_tier, regard_tier, owes_player, player_owes, known_memory_count, [known_memory]]], [[faction_id, standing_tier]], [skills_count, values_count, wounds_count, equipment_count, abilities_count, knowledge_count, promises_count, companions_count, crimes_count, relationships_count, faction_standing_count], [truncated_category]?] persistent player character; lists cap at 8 and visible relationship memories at 4, counts are uncapped totals, optional truncation categories identify omitted entries, and tiers hide numeric disposition",
   world: "world name (include_world_name only)",
   time: "in-game clock 'Day N, HH:MM'",
   here: "[town_id, town_name, region_name, area_id|null, area_name|null] current location; when pending_road exists this is the on-route id/name instead of a town",
@@ -762,6 +765,7 @@ export function compactCampaignCharacterView(
     view.abilities.length,
     view.knowledge.length,
     view.promises.length,
+    view.companions.length,
     view.crimes.length,
     view.relationships.length,
     view.factionStanding.length,
@@ -781,6 +785,9 @@ export function compactCampaignCharacterView(
   }
   if (view.promises.length > OVERWORLD_COMPACT_CHARACTER_ENTRY_LIMIT) {
     truncated.push("promises");
+  }
+  if (view.companions.length > OVERWORLD_COMPACT_CHARACTER_ENTRY_LIMIT) {
+    truncated.push("companions");
   }
   if (view.crimes.length > OVERWORLD_COMPACT_CHARACTER_ENTRY_LIMIT) truncated.push("crimes");
   if (view.relationships.length > OVERWORLD_COMPACT_CHARACTER_ENTRY_LIMIT) {
@@ -821,6 +828,7 @@ export function compactCampaignCharacterView(
     view.promises
       .slice(0, OVERWORLD_COMPACT_CHARACTER_ENTRY_LIMIT)
       .map((promise) => [promise.promiseId, promise.recipientId, promise.status] as const),
+    view.companions.slice(0, OVERWORLD_COMPACT_CHARACTER_ENTRY_LIMIT),
     view.crimes
       .slice(0, OVERWORLD_COMPACT_CHARACTER_ENTRY_LIMIT)
       .map((crime) => [crime.crimeId, crime.jurisdictionId, crime.severity, crime.status] as const),
@@ -859,8 +867,9 @@ function cloneCompactCampaignCharacter(
     [...character[7]],
     [...character[8]],
     cloneTupleList(character[9]),
-    cloneTupleList(character[10]),
-    character[11].map(
+    [...character[10]],
+    cloneTupleList(character[11]),
+    character[12].map(
       (relationship) =>
         [
           relationship[0],
@@ -872,11 +881,11 @@ function cloneCompactCampaignCharacter(
           [...relationship[6]],
         ] as const,
     ),
-    cloneTupleList(character[12]),
-    [...character[13]],
+    cloneTupleList(character[13]),
+    [...character[14]],
   ] as const;
 
-  return character[14] ? ([...clone, [...character[14]]] as const) : clone;
+  return character[15] ? ([...clone, [...character[15]]] as const) : clone;
 }
 
 export function cloneOverworldCompactView(view: OverworldCompactView): OverworldCompactView {

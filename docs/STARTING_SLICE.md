@@ -67,16 +67,16 @@ a separate game mode.
 
 The starting cast grows from Albany's existing six district contacts and Cade:
 
-| Character                             | Starting-slice agenda and memory                                                                                              |
-| ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| Rowan Quill — Municipal Ledger        | Wants a defensible public record; remembers certified claims, lies, and unauthorized dispatch.                                |
-| Jamie Tanner — Merchants Exchange     | Protects scarce winter stock; remembers purchases, coercion, credit, and diverted goods.                                      |
-| Hayden Hale — Road Wardens            | Prioritizes corridor relief; remembers wagon promises and abandoned travellers.                                               |
-| Reese Pryce — Ironhands Local         | Protects workers and the only repair shift; remembers which asset received it.                                                |
-| Emery Sloane — Greenway Stewards      | Protects people without destroying the wildlife corridor; remembers evidence custody and needless killing.                    |
-| Blair Drake — Survey College          | Wants accurate hazard evidence published; remembers findings shared or concealed.                                             |
-| Old Cade — hill steading              | Protects household and cattle; remembers truth, demands, promises, trespass, and violence.                                    |
-| June Pike — proposed Road Warden ally | Has independent relief priorities and can refuse, leave, improvise, or remain available according to trust and kept promises. |
+| Character                         | Starting-slice agenda and memory                                                                                                                               |
+| --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Rowan Quill — Municipal Ledger    | Wants a defensible public record; remembers certified claims, lies, and unauthorized dispatch.                                                                 |
+| Jamie Tanner — Merchants Exchange | Protects scarce winter stock; remembers purchases, coercion, credit, and diverted goods.                                                                       |
+| Hayden Hale — Road Wardens        | Prioritizes corridor relief; remembers wagon promises and abandoned travellers.                                                                                |
+| Reese Pryce — Ironhands Local     | Protects workers and the only repair shift; remembers which asset received it.                                                                                 |
+| Emery Sloane — Greenway Stewards  | Protects people without destroying the wildlife corridor; remembers evidence custody and needless killing.                                                     |
+| Blair Drake — Survey College      | Wants accurate hazard evidence published; remembers findings shared or concealed.                                                                              |
+| Old Cade — hill steading          | Protects household and cattle; remembers truth, demands, promises, trespass, and violence.                                                                     |
+| June Pike — Road Warden ally      | Has independent cattle-first authority; she can refuse unequal terms, leave after first blood, solve herd pressure differently, and change return opportunity. |
 
 At least five of these people must remain mechanically relevant after
 Wolf-Winter. June is the initial ally grammar; implementation may rename her
@@ -123,6 +123,11 @@ The current slice does **not** yet meet the full contract:
   Unaffiliated Courier, and Ledger Advocate now also have distinct Repair,
   Streetwise, and Mediation preparation consumers; broader balance across the
   still-missing resolution families remains unproven;
+- June Pike now supplies the first persistent ally grammar: her visible
+  cattle-first contract, subordinate-role refusal, independent Wolf action,
+  first-blood departure, promise state, testimony, and Station opportunity all
+  replay across the Albany/quest boundary. The wider cast still needs more
+  independent agendas and mechanically changed availability;
 - Wolf-Winter's saved-wood and clean living-pack facts now change Albany
   services, but its remaining Cade memories and loss facts still lack later
   opportunity consumers;
@@ -133,9 +138,9 @@ The current slice does **not** yet meet the full contract:
   origin-honest quest-local representation before it can alter play;
 - prepared combat, fully noncombat diversion, and a bounded mixed recovery now
   exist, but fortify/outlast and drive/evacuate families remain unimplemented;
-- two return decisions now drive replay-bound services through reusable world-fact
-  and story-choice predicates, but the other return facts still lack mechanical
-  NPC and opportunity consumers.
+- three early decisions now drive replay-bound services through reusable
+  world-fact, story-choice, companion, and promise predicates, but the other
+  return facts still lack mechanical NPC and opportunity consumers.
 
 The causal ledger marks existing partial proofs honestly. No fork counts toward
 the target until its later mechanical consumer and paired counterfactual test are
@@ -147,8 +152,8 @@ The first implementation sequence is:
 
 1. **Campaign character state** _(foundation landed)_ — one versioned, validated
    campaign record: background, skills, values, health/wounds, equipment, money,
-   abilities, knowledge, promises, crimes, NPC relationships, and faction
-   standing.
+   abilities, knowledge, promises, crimes, NPC relationships, companions, and
+   faction standing.
 2. **Quest boundary contract** _(inbound and outbound foundation landed)_ —
    inject allowlisted state into an embedded quest and fold back only validated,
    explicit changes without resetting the protagonist or leaking quest-local
@@ -170,8 +175,10 @@ That explanation must be playable context, not a lore dump.
 Foundation status: campaign-character v1 now has strict canonical schemas,
 deterministic cloning/serialization, overworld snapshot v9 persistence, explicit
 v8 migration, full/UI read-only projection, bounded compact projection, and
-tamper guards. A generic, monotonic quest-export catalog applies relationship
-memories/floors and derives historical world facts from canonical outcome ids.
+tamper guards. A generic quest-export catalog applies relationship
+memories/floors and derives historical world facts from canonical outcome ids;
+character-conditioned effects additionally resolve promises and add or remove
+companions in canonical completion order.
 Wolf-Winter's six non-death endings create distinct Cade/Emery memories and
 byre/gate/timber/wolf/cattle facts; restore replays the character result,
 rejects forged outcome/journal/state combinations, and fences prior manifests
@@ -290,14 +297,35 @@ return services. Proof lives in
 and
 [`preparation_profiles_return_e2e.test.ts`](../tests/starting_slice/preparation_profiles_return_e2e.test.ts).
 
+The seventh authored increment makes June Pike a persistent ally rather than a
+proposed cast note. After preparation, the Station Quarter presents three exact
+terms: spend 15 minutes and grant June cattle-first authority, spend 5 minutes
+asking for a subordinate relay that she refuses, or leave solo without delay.
+Direct departure without contacting her also stays truthfully solo. The accepted
+contract records June as a companion plus an active promise and imports only
+that state into Wolf-Winter. On the same recovered failed-lure route, her
+presence adds a named legal conversation and blocks the final cast until she
+refuses the old-grey line, independently takes the lower cattle rail, and lowers
+cattle alarm by 1. That changes the identical route from a scattered herd to a
+whole-herd living-pack return. First blood removes the action but preserves
+hybrid/combat completion, then resolves the promise broken and June out of the
+party. Clean cooperation, negotiated refusal, explicit solo, and relationship
+loss produce distinct memories, Station testimony, and one-time service
+availability. Companion/promise state, chronological quest replay, RPG import
+receipts, overworld and RPG save/restore, and full/compact/UI parity are
+tamper-checked. Proof lives in
+[`ally_commitment_counterfactual.test.ts`](../tests/starting_slice/ally_commitment_counterfactual.test.ts)
+and
+[`ally_content_gameplay.test.ts`](../tests/starting_slice/ally_content_gameplay.test.ts).
+
 This proves `SS-F01-character-background`, `SS-F03-lead-source`,
-`SS-F05-preparation-profile`, `SS-F09-wolf-strategy`, `SS-F11-saved-wood`, and
-`SS-F12-albany-return`: six of the twelve required material forks. It proves
-three preparation profiles and distinct consumers for all four concepts, but it
-does not prove balance across the two missing resolution families, the full
-twelve-fork contract, ally agency, or that other return facts change NPC
-availability and opportunities. Those remain the next work, not implied credit
-for the six proven counterfactuals.
+`SS-F04-ally-commitment`, `SS-F05-preparation-profile`, `SS-F09-wolf-strategy`,
+`SS-F11-saved-wood`, and `SS-F12-albany-return`: seven of the twelve required
+material forks. It proves the ally-agency clause, three preparation profiles,
+and distinct consumers for all four concepts, but it does not prove balance
+across the two missing resolution families, the full twelve-fork contract, or
+that other return facts change NPC availability and opportunities. Those remain
+the next work, not implied credit for the seven proven counterfactuals.
 
 ## Required resolution families
 
@@ -319,7 +347,9 @@ authored failure-forward recovery and a distinct persistent Albany aftermath.
 one-fight recovery proves bounded hybrid grammar, but does not yet substitute
 for the full `drive_and_evacuate` family; `fortify_and_outlast` is also still
 planned. The Works plan is fortification groundwork and the drover/relief plans
-deepen lure recovery; none is being counted as either missing full family.
+deepen lure recovery. June's cattle-first action establishes ally-trust grammar
+for a later drive/evacuate family; none is being counted as either missing full
+family.
 
 ## Depth Contract v1
 

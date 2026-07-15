@@ -1211,6 +1211,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
       background: null,
       health: { current: 30, max: 30 },
       money: 0,
+      companions: [],
     });
     expect(compact.context.character).toEqual([
       null,
@@ -1226,7 +1227,8 @@ describe("MCP tools — validate / load (§9.4)", () => {
       [],
       [],
       [],
-      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      [],
+      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     ]);
 
     expect(defaultRead).toMatchObject({ ok: true });

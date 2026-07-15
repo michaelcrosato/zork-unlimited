@@ -226,7 +226,8 @@ export function assertRpgStateReferences(index: RpgIndex, state: GameState): voi
       } else if (
         effect.type === "background_to_flag" ||
         effect.type === "ability_to_flag" ||
-        effect.type === "knowledge_to_flag"
+        effect.type === "knowledge_to_flag" ||
+        effect.type === "companion_to_flag"
       ) {
         addBooleanRuntimeTarget(flags, effect.target_flag, true);
       }

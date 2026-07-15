@@ -60,6 +60,14 @@ const KnowledgeToFlagRuleSchema = z
     target_flag: z.string().min(1),
   })
   .strict();
+const CompanionToFlagRuleSchema = z
+  .object({
+    id: RuleId,
+    type: z.literal("companion_to_flag"),
+    companion_id: CampaignCharacterIdSchema,
+    target_flag: z.string().min(1),
+  })
+  .strict();
 const EquipmentToItemRuleSchema = z
   .object({
     id: RuleId,
@@ -88,6 +96,7 @@ export const CampaignCharacterImportRuleSchema = z.discriminatedUnion("type", [
   BackgroundToFlagRuleSchema,
   AbilityToFlagRuleSchema,
   KnowledgeToFlagRuleSchema,
+  CompanionToFlagRuleSchema,
   EquipmentToItemRuleSchema,
 ]);
 
@@ -410,6 +419,12 @@ function plannedEffect(
   }
   if (rule.type === "knowledge_to_flag") {
     return character.knowledge.includes(rule.knowledge_id) && state.flags[rule.target_flag] !== true
+      ? { rule_id: rule.id, type: rule.type, target_flag: rule.target_flag, value: true }
+      : null;
+  }
+  if (rule.type === "companion_to_flag") {
+    return character.companions.includes(rule.companion_id) &&
+      state.flags[rule.target_flag] !== true
       ? { rule_id: rule.id, type: rule.type, target_flag: rule.target_flag, value: true }
       : null;
   }

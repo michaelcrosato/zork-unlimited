@@ -158,7 +158,11 @@ export type JourneyStoryChoiceOption = Readonly<{
   consequence: string;
 }>;
 
-export type JourneyStoryChoicePresentationKind = "lead_source" | "preparation" | "registration";
+export type JourneyStoryChoicePresentationKind =
+  | "ally"
+  | "lead_source"
+  | "preparation"
+  | "registration";
 
 export type JourneyStoryChoiceOptions = readonly [
   JourneyStoryChoiceOption,
@@ -181,6 +185,13 @@ export type JourneyLeadSourceStoryChoiceOptions = readonly [
 ];
 
 export type JourneyPreparationStoryChoiceOptions = readonly [
+  JourneyStoryChoiceOption,
+  JourneyStoryChoiceOption,
+  JourneyStoryChoiceOption,
+  ...JourneyStoryChoiceOption[],
+];
+
+export type JourneyAllyStoryChoiceOptions = readonly [
   JourneyStoryChoiceOption,
   JourneyStoryChoiceOption,
   JourneyStoryChoiceOption,
@@ -210,6 +221,10 @@ export type JourneyStoryChoicePrompt = JourneyStoryChoicePromptBase &
     | {
         kind: "preparation";
         options: JourneyPreparationStoryChoiceOptions;
+      }
+    | {
+        kind: "ally";
+        options: JourneyAllyStoryChoiceOptions;
       }
   >;
 
@@ -881,6 +896,7 @@ function freezeStoryChoice(
   const presentationKind = (storyChoice as { kind?: unknown }).kind;
   if (
     presentationKind !== undefined &&
+    presentationKind !== "ally" &&
     presentationKind !== "registration" &&
     presentationKind !== "lead_source" &&
     presentationKind !== "preparation"
@@ -900,6 +916,10 @@ function freezeStoryChoice(
   } else if (presentationKind === "preparation") {
     if (storyChoice.options.length < 3 || storyChoice.options.length > 5) {
       throw new Error("Journey preparation choice requires between three and five options.");
+    }
+  } else if (presentationKind === "ally") {
+    if (storyChoice.options.length < 3 || storyChoice.options.length > 4) {
+      throw new Error("Journey ally choice requires between three and four options.");
     }
   } else if (storyChoice.options.length !== 2) {
     throw new Error("Journey aftermath story choice requires exactly two options.");

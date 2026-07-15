@@ -123,6 +123,12 @@ rooms:
           relief spear in your fist. The watch is taken up now, and whatever remains
           of the night must be settled at the byre. Its yard lies through the gate to
           the north.
+      - when: [{ has_flag: june_pike_present }, { not_visited: byre_yard }]
+        text: >
+          The Albany packet brought you and Road Warden June Pike down the hill road.
+          June checks her cattle rope, then takes the lower stock path: cattle-first
+          authority, no place on the wolf line, and no agreement after first blood.
+          The byre-yard lies north; hold the cattle till dawn.
     exits:
       - { direction: north, to: byre_yard }
 
@@ -685,6 +691,19 @@ rooms:
           cast and the two younger wolves into the high wood. The route to the cattle is
           open north. Behind you, the empty threshold runs south to the spent scent line.
       - when:
+          - { has_flag: june_pike_present }
+          - { has_flag: strategy_lure_committed }
+          - { has_flag: lure_trail_fouled }
+          - { has_flag: yearling_redirected }
+          - { has_flag: flank_redirected }
+          - { not_flag: june_blood_condition_broken }
+          - { not_flag: june_cattle_line_taken }
+        text: >
+          The old grey leader waits between you and the bellowing cattle. June Pike
+          reaches the inner rail from the lower stock path. The failed lure left the
+          herd pressing; speak to her before the last cast if her cattle-first authority
+          still matters. The byre door is south.
+      - when:
           - { has_flag: leader_down }
           - { has_item: split_rail_guard }
         text: >
@@ -1178,6 +1197,23 @@ objects:
               - { has_flag: flank_redirected }
           - { not_flag: leader_down }
           - { not_flag: leader_redirected }
+          # If June's disclosed cattle-first condition has actually triggered,
+          # her independent refusal/action must resolve before the player can
+          # silently finish the same pressure line without her.
+          - any_of:
+              - { not_flag: june_pike_present }
+              - { not_flag: lure_trail_fouled }
+              - { has_flag: june_blood_condition_broken }
+              - { has_flag: june_cattle_line_taken }
+        blocked_hint:
+          visible_when:
+            - { has_flag: june_pike_present }
+            - { has_flag: lure_trail_fouled }
+            - { has_flag: yearling_redirected }
+            - { has_flag: flank_redirected }
+            - { not_flag: june_blood_condition_broken }
+            - { not_flag: june_cattle_line_taken }
+          reason: "June has reached the pressing cattle under the authority you granted. Speak to her before committing the last scent cast."
         effects:
           - remove_item: winter_feed_sack
           - set_flag: leader_redirected
@@ -1684,6 +1720,44 @@ npcs:
               prompt: "Leave old Cade and choose at the breach."
               end: true
 
+  # June is an optional campaign companion, never a direct-start assumption or
+  # another combatant. She appears only after the failed lure has been recovered
+  # alive through both younger wolves. Speaking to her triggers the independent
+  # cattle-first decision Albany disclosed: she refuses the grey-wolf line, takes
+  # the herd instead, and retires after changing pressure once.
+  - id: june_pike
+    name: "Road Warden June Pike"
+    description: >
+      June Pike stands at the inner rail with her cattle rope looped short. She came
+      under cattle-first authority, not as another spear, and the recovered lure has
+      kept her blood condition intact this far.
+    room: byre_mouth
+    conditions:
+      - { has_flag: june_pike_present }
+      - { has_flag: strategy_lure_committed }
+      - { has_flag: lure_trail_fouled }
+      - { has_flag: yearling_redirected }
+      - { has_flag: flank_redirected }
+      - { not_flag: june_blood_condition_broken }
+      - { not_flag: june_cattle_line_taken }
+    dialogue:
+      root: june_cattle_first
+      nodes:
+        - id: june_cattle_first
+          npc_text: >
+            No. I will not join the line on old grey. You granted me the cattle call,
+            and that failed scent has them on the slats. I take the lower rail now;
+            you finish the living route you chose.
+          effects:
+            - set_flag: june_cattle_line_taken
+            - dec_var: { name: cattle_alarm, by: 1 }
+            - add_journal: "June refuses the wolf line and takes the lower rail under cattle-first authority. Cattle alarm falls by 1; she leaves the hunt."
+          topics:
+            - id: acknowledge
+              aliases: [leave_june, take_cattle_line]
+              prompt: "Acknowledge June's decision and face old grey."
+              end: true
+
 enemies:
   # The fair three-fight gauntlet (combat_guaranteed). Each available opening
   # MANEUVER replaces ordinary ATTACK; if its target survives, its authored shallow
@@ -1759,6 +1833,7 @@ enemies:
           keep the hide shoulder between its teeth and your hands.
     on_defeat:
       - add_journal: "You take the yearling on its rush as it commits, and it goes down in the snow of the breach. The byre runs on north."
+      - set_flag: june_blood_condition_broken
       - inc_var: { name: score, by: 10 }
       # Milestone: the breach is held (quest the_watch). Progress-tracking only — the way
       # north still gates on the yearling_down FLAG, not on this stage; nothing changes.
@@ -1931,6 +2006,7 @@ enemies:
           brace into one last controlled stroke before the cross-piece gives way.
     on_defeat:
       - add_journal: "You put the flank-wolf down across the byre threshold; the dark of the byre runs on north."
+      - set_flag: june_blood_condition_broken
       - inc_var: { name: score, by: 10 }
       # Milestone: the threshold is held (quest the_watch). Progress-tracking only — the
       # way north still gates on the flank_wolf_down FLAG, not on this stage.
@@ -2047,6 +2123,7 @@ enemies:
           taking back enough guard to survive the committed line.
     on_defeat:
       - add_journal: "The grey leader falls among the straw; beyond her the cattle stand unhurt."
+      - set_flag: june_blood_condition_broken
       - inc_var: { name: score, by: 10 }
       # Milestone: the byre is held (quest the_watch) — the last of the three down. Progress
       # tracking only; the cattle-stand win still gates on the leader_down FLAG, not on this.
@@ -2120,6 +2197,13 @@ endings:
       the herd. The mixed strategy killed one wolf, saved two, and held most of Cade's
       cattle. Albany gets the full count.
       *** You have won, by a mixed line and with loss. ***
+    variants:
+      - when: [{ has_flag: june_pike_present }, { has_flag: june_blood_condition_broken }]
+        text: >
+          Grey dawn finds the yearling dead and the other two wolves alive beyond the
+          scent line. First blood ended June Pike's field agreement before the inner
+          rail; two cattle are missing, and her separate return names both the broken
+          condition and the herd's cost. *** You have won, by a mixed line and with loss. ***
   - id: ending_pack_diverted_cattle_scattered
     title: "The Pack Diverted, Cattle Scattered"
     text: >
@@ -2128,6 +2212,13 @@ endings:
       down the lower pasture. Cade counts the nonlethal victory and its cost. Albany
       receives both truths.
       *** You have won, with loss. ***
+    variants:
+      - when: [{ has_flag: june_cattle_line_taken }]
+        text: >
+          Grey dawn finds every wolf alive. June Pike refused the wolf line and took
+          the lower rail, but the herd had already crossed its breaking point; two
+          cattle remain missing. Her return supports the living victory without hiding
+          its cost. *** You have won, with loss. ***
   - id: ending_pack_diverted
     title: "The Pack Diverted Alive"
     text: >
@@ -2136,6 +2227,13 @@ endings:
       but the herd never crossed its breaking threshold. Cade sees an empty byre, an
       unbloodied spear, and a difficult road Albany can truthfully call held.
       *** You have won. ***
+    variants:
+      - when: [{ has_flag: june_cattle_line_taken }]
+        text: >
+          Grey dawn finds every wolf alive and the herd whole. June Pike refused the
+          old-grey line, took the lower rail under her cattle-first authority, and held
+          the alarm below Breaking while you finished the scent. Albany receives two
+          matching accounts. *** You have won. ***
   - id: ending_held_gate_barred
     title: "The Byre Held, Inner Gate Barred"
     text: >

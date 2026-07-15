@@ -17,6 +17,7 @@ describe("starting-slice causal matrix", () => {
     ).toEqual([
       "SS-F01-character-background",
       "SS-F03-lead-source",
+      "SS-F04-ally-commitment",
       "SS-F05-preparation-profile",
       "SS-F09-wolf-strategy",
       "SS-F11-saved-wood",

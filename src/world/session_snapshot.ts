@@ -124,6 +124,9 @@ export type OverworldJournalEntry = {
   id: string;
   kind:
     | "area"
+    | "ally"
+    | "ally_legacy"
+    | "ally_offer"
     | "campaign"
     | "contact"
     | "event"
@@ -181,6 +184,9 @@ const OverworldJournalEntrySchema = z
     id: z.string().min(1),
     kind: z.enum([
       "area",
+      "ally",
+      "ally_legacy",
+      "ally_offer",
       "campaign",
       "contact",
       "event",

@@ -34,6 +34,8 @@ import {
 } from "./travel_mechanics.js";
 import { campaignServiceJournalCopy, campaignServiceJourneyActionId } from "./session_services.js";
 import { campaignStoryChoiceRefKey } from "./campaign_story_choices.js";
+import type { CampaignCharacterState } from "./campaign_character_state.js";
+import { campaignCharacterMatchesConditions } from "./campaign_consequences.js";
 
 export type OverworldResourceReplaySourceIndex = {
   areaHomes: ReadonlyMap<string, string>;
@@ -293,6 +295,10 @@ function campaignServiceRuleForReplay(
   campaignBoundaries: OverworldCampaignBoundaryReplayIndex,
   consumedRuleIds: Set<string>,
   state: OverworldReplayState,
+  campaignCharacterAt?: (
+    entry: OverworldJournalEntry,
+    recordedAt: number,
+  ) => CampaignCharacterState,
 ): OverworldCampaignServiceRule | null {
   const { serviceRuleId, serviceAreaId } = service.entry;
   if (serviceRuleId === undefined && serviceAreaId === undefined) return null;
@@ -378,6 +384,30 @@ function campaignServiceRuleForReplay(
       `Overworld session snapshot service journal "${service.entry.id}" does not match its canonical authored copy.`,
     );
   }
+  const hasCharacterConditions =
+    rule.requires_all_companions !== undefined || rule.requires_all_promises !== undefined;
+  if (hasCharacterConditions) {
+    if (!campaignCharacterAt) {
+      throw new Error(
+        `Overworld session snapshot campaign service rule "${rule.id}" has no character-state replay boundary.`,
+      );
+    }
+    const character = campaignCharacterAt(service.entry, service.recordedAt);
+    if (
+      !campaignCharacterMatchesConditions(character, {
+        ...(rule.requires_all_companions
+          ? { requires_all_companions: rule.requires_all_companions }
+          : {}),
+        ...(rule.requires_all_promises
+          ? { requires_all_promises: rule.requires_all_promises }
+          : {}),
+      })
+    ) {
+      throw new Error(
+        `Overworld session snapshot campaign service rule "${rule.id}" does not satisfy its companion and promise conditions at the service boundary.`,
+      );
+    }
+  }
   for (const factId of rule.requires_all_world_facts ?? []) {
     const provenAt = campaignBoundaries.worldFactProofOrdinalById.get(factId);
     if (provenAt === undefined || provenAt === null || boundary.acceptedDecisions <= provenAt) {
@@ -431,6 +461,10 @@ export function assertSnapshotResourceReplay(
     worldFactProofOrdinalById: new Map(),
     storyChoiceProofOrdinalByKey: new Map(),
   },
+  campaignCharacterAt?: (
+    entry: OverworldJournalEntry,
+    recordedAt: number,
+  ) => CampaignCharacterState,
 ): void {
   assertSnapshotRoadResolutionCoverage(roadJournal);
   const replayEvents: OverworldResourceReplayEvent[] = [];
@@ -520,6 +554,7 @@ export function assertSnapshotResourceReplay(
       campaignBoundaries,
       consumedCampaignServiceRuleIds,
       state,
+      campaignCharacterAt,
     );
     if (event.service.parsed.action === "rest") {
       if (state.fatigue === 0) {

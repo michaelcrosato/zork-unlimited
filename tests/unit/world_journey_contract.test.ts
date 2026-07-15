@@ -19,6 +19,7 @@ import {
   recordJourneyGoalCompleted,
   type JourneyContractSnapshot,
   type JourneyGoalDefinition,
+  type JourneyAllyStoryChoiceOptions,
   type JourneyRegistrationStoryChoiceOptions,
   type JourneyStoryChoicePrompt,
 } from "../../src/world/journey_contract.js";
@@ -451,6 +452,45 @@ describe("journey contract presentation context", () => {
     expect(Object.isFrozen(view.storyChoice)).toBe(true);
     expect(Object.isFrozen(view.storyChoice?.options)).toBe(true);
     expect(view.storyChoice?.options.every((option) => Object.isFrozen(option))).toBe(true);
+  });
+
+  it("deep-freezes a typed ally commitment with three or four unique options", () => {
+    const state = createInitialJourneyContractSnapshot();
+    const ally = {
+      id: "albany_wolf_ally",
+      kind: "ally",
+      message: "Capability: June can hold the cattle line. Condition: cattle come first.",
+      options: Array.from({ length: 4 }, (_, index) => ({
+        id: `ally_${String(index)}`,
+        label: `Commitment ${String(index)}`,
+        consequence: `Field consequence ${String(index)}. Actual cost: ${String(index)} minutes.`,
+      })) as unknown as JourneyAllyStoryChoiceOptions,
+    } satisfies JourneyStoryChoicePrompt;
+
+    const view = journeyPresentation(state, { storyChoice: ally });
+
+    expect(view.storyChoice).toEqual(ally);
+    expect(view.storyChoice?.options).toHaveLength(4);
+    expect(Object.isFrozen(view.storyChoice)).toBe(true);
+    expect(Object.isFrozen(view.storyChoice?.options)).toBe(true);
+    expect(view.storyChoice?.options.every((option) => Object.isFrozen(option))).toBe(true);
+
+    expect(() =>
+      journeyPresentation(state, {
+        storyChoice: {
+          ...ally,
+          options: ally.options.slice(0, 2),
+        } as unknown as JourneyStoryChoicePrompt,
+      }),
+    ).toThrow(/ally choice requires between three and four options/i);
+    expect(() =>
+      journeyPresentation(state, {
+        storyChoice: {
+          ...ally,
+          options: [...ally.options, { ...ally.options[0], id: "ally_4" }],
+        } as unknown as JourneyStoryChoicePrompt,
+      }),
+    ).toThrow(/ally choice requires between three and four options/i);
   });
 });
 

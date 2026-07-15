@@ -79,6 +79,7 @@ describe("Wolf-Winter dialogue surface", () => {
         "works_fortification_prepared",
         "drover_route_prepared",
         "relief_protocol_prepared",
+        "june_pike_present",
       ],
     });
     expect(report.ok).toBe(true);

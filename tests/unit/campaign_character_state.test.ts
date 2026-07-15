@@ -107,6 +107,7 @@ function richInput(): CampaignCharacterStateBuildInput {
       { factionId: "faction:road_wardens", standing: 25 },
       { factionId: "faction:greenway", standing: -15 },
     ],
+    companions: ["npc:synthetic_scout", "npc:synthetic_guide"],
   };
 }
 
@@ -134,6 +135,7 @@ describe("campaign character state", () => {
       crimes: [],
       relationships: [],
       factionStanding: [],
+      companions: [],
     });
 
     expect(createInitialCampaignCharacterState("background:relief_rider").background).toBe(
@@ -170,6 +172,7 @@ describe("campaign character state", () => {
     ]);
     expect(state.abilities).toEqual(["ability:field_dressing", "ability:guarded_thrust"]);
     expect(state.knowledge).toEqual(["knowledge:cade_warning", "knowledge:wolf_trail"]);
+    expect(state.companions).toEqual(["npc:synthetic_guide", "npc:synthetic_scout"]);
     expect(state.relationships[0]?.memories).toEqual([
       "memory:late_return",
       "memory:wagon_promised",
@@ -235,6 +238,7 @@ describe("campaign character state", () => {
     const duplicateCrime = canonical.crimes[0]!;
     const duplicateRelationship = canonical.relationships[0]!;
     const duplicateFaction = canonical.factionStanding[0]!;
+    const duplicateCompanion = canonical.companions[0]!;
     const invalidStates: unknown[] = [
       { ...canonical, skills: [duplicateSkill, duplicateSkill] },
       { ...canonical, values: [duplicateValue, duplicateValue] },
@@ -246,6 +250,8 @@ describe("campaign character state", () => {
       { ...canonical, crimes: [duplicateCrime, duplicateCrime] },
       { ...canonical, relationships: [duplicateRelationship, duplicateRelationship] },
       { ...canonical, factionStanding: [duplicateFaction, duplicateFaction] },
+      { ...canonical, companions: [duplicateCompanion, duplicateCompanion] },
+      { ...canonical, companions: [...canonical.companions].reverse() },
       {
         ...canonical,
         relationships: canonical.relationships.map((relationship, index) =>
@@ -436,6 +442,16 @@ describe("campaign character state", () => {
     ).toThrow();
   });
 
+  it("upgrades pre-companion v1 state to an empty canonical party", () => {
+    const current = richState();
+    const { companions: _companions, ...legacy } = current;
+
+    const upgraded = parseCampaignCharacterState(legacy);
+
+    expect(upgraded.companions).toEqual([]);
+    expect(upgraded).toEqual({ ...legacy, companions: [] });
+  });
+
   it("deep-clones all nested mutable state", () => {
     const source = richState();
     const before = structuredClone(source);
@@ -449,6 +465,7 @@ describe("campaign character state", () => {
     clone.relationships[0]!.trust = 99;
     clone.relationships[0]!.memories.push("memory:new");
     clone.factionStanding[0]!.standing = -99;
+    clone.companions.push("npc:synthetic_driver");
 
     expect(source).toEqual(before);
     expect(clone).not.toEqual(source);

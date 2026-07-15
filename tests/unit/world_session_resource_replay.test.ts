@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { createInitialCampaignCharacterState } from "../../src/world/campaign_character_state.js";
+import {
+  buildCampaignCharacterState,
+  createInitialCampaignCharacterState,
+} from "../../src/world/campaign_character_state.js";
 import { campaignStoryChoiceRefKey } from "../../src/world/campaign_story_choices.js";
 import { createInitialJourneyContractSnapshot } from "../../src/world/journey_contract.js";
 import type {
@@ -531,6 +534,67 @@ describe("overworld snapshot resource replay", () => {
         campaignBoundaryIndex(rule, new Map([["fact:trusted_contact", 6]])),
       ),
     ).not.toThrow();
+  });
+
+  it("checks companion and promise predicates at the historical service boundary", () => {
+    const rule = campaignServiceRule({
+      requires_all_companions: ["npc:test_ally"],
+      requires_all_promises: [{ promise_id: "promise:test_bond", status: "kept" }],
+    });
+    const beforeRemoval = buildCampaignCharacterState({
+      companions: ["npc:test_ally"],
+      promises: [
+        {
+          promiseId: "promise:test_bond",
+          recipientId: "npc:test_ally",
+          status: "kept",
+        },
+      ],
+    });
+    const afterRemoval = buildCampaignCharacterState({
+      promises: [
+        {
+          promiseId: "promise:test_bond",
+          recipientId: "npc:test_ally",
+          status: "broken",
+        },
+      ],
+    });
+    const replayAt = (recordedAt: number) => {
+      const snapshotValue = snapshot([travelEntry()], {
+        minutes: recordedAt,
+        fatigue: 0,
+      });
+      const replaySources = sources([], [rule]);
+      const travelTimeline = timeline(snapshotValue);
+      return () =>
+        assertSnapshotResourceReplay(
+          snapshotValue,
+          replaySources,
+          travelTimeline,
+          roadJournalResolutionIndex(
+            replaySources,
+            { roadJournalEntries: [] },
+            travelTimeline,
+            null,
+          ),
+          {
+            entries: [
+              {
+                entry: proofBoundServiceEntry(rule, recordedAt),
+                parsed: { action: "rest", recordedAt },
+                recordedAt,
+              },
+            ],
+          },
+          { entries: [] },
+          campaignBoundaryIndex(rule, new Map([["fact:trusted_contact", 6]])),
+          (_entry, serviceTime) => (serviceTime < 700 ? beforeRemoval : afterRemoval),
+        );
+    };
+
+    expect(replayAt(660)).not.toThrow();
+    expect(replayAt(720)).toThrow(/companion and promise conditions.*service boundary/i);
   });
 
   it("rejects forged campaign service identity, action, area, town, duration, and reuse", () => {

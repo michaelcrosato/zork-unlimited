@@ -1,4 +1,9 @@
 import type { OverworldCharacter, OverworldLocalEvent, OverworldPoi } from "./overworld.js";
+import {
+  openingAllyLegacyJournalDraft,
+  openingAllyLegacySourceWorldHash,
+  type OpeningAllyJournalDraft,
+} from "./opening_ally_journal.js";
 import type { OverworldContactPresentation } from "./session_contact_presentation.js";
 import {
   openingLeadSourceLegacyJournalDraft,
@@ -20,6 +25,7 @@ import {
   parseServiceJournalId,
   parseTimeLabel,
 } from "./session_journal_codec.js";
+import { describeOverworldContactAction } from "./local_actions.js";
 import {
   emptyProgressJournalSourceIndex,
   recordProgressJournalSource,
@@ -50,6 +56,9 @@ export type OverworldJournalSourceIndex = {
   openingLeadSourceJournalIds?: ReadonlySet<string>;
   openingLeadSourceOfferDraft?: OpeningLeadSourceJournalDraft | null;
   openingLeadSourceTownName?: string | null;
+  openingAllyJournalIds?: ReadonlySet<string>;
+  openingAllyOfferDraft?: OpeningAllyJournalDraft | null;
+  openingAllyTownName?: string | null;
   openingPreparationJournalIds?: ReadonlySet<string>;
   openingPreparationOfferDraft?: OpeningPreparationJournalDraft | null;
   openingPreparationTownName?: string | null;
@@ -136,14 +145,37 @@ function assertKnownJournalSource(
   }
 }
 
+function contactPresentationForJournalEntry(
+  entry: OverworldJournalEntry,
+  sources: Pick<OverworldJournalSourceIndex, "contactPresentationsByJournalId">,
+): OverworldContactPresentation | null {
+  const exact = sources.contactPresentationsByJournalId.get(entry.id);
+  if (exact) return exact;
+  const repeated = /^(.*):(\d+)$/.exec(entry.id);
+  if (!repeated || Number(repeated[2]) !== parseTimeLabel(entry.recordedAt)) return null;
+  return sources.contactPresentationsByJournalId.get(repeated[1]!) ?? null;
+}
+
 function assertKnownContactPresentation(
   entry: OverworldJournalEntry,
   sources: OverworldJournalSourceIndex,
 ): void {
-  const presentation = sources.contactPresentationsByJournalId.get(entry.id);
+  const presentation = contactPresentationForJournalEntry(entry, sources);
   if (!presentation) {
     throw new Error(
       `Overworld session snapshot journal contact entry references unknown contact presentation "${entry.id}".`,
+    );
+  }
+  const expected = describeOverworldContactAction(
+    presentation.contact,
+    presentation.presentationId,
+  );
+  if (
+    entry.id !== expected.id &&
+    (entry.title !== expected.title || entry.text !== expected.text)
+  ) {
+    throw new Error(
+      `Overworld session snapshot journal contact entry "${entry.id}" does not match its authored copy.`,
     );
   }
   const expectedTown = sources.characterTownNames.get(presentation.character.id);
@@ -322,6 +354,49 @@ function assertOpeningPreparationLegacyJournalSource(entry: OverworldJournalEntr
   }
 }
 
+function assertOpeningAllyJournalSource(
+  entry: OverworldJournalEntry,
+  sources: OverworldJournalSourceIndex,
+): void {
+  if (entry.kind === "ally_offer") {
+    const draft = sources.openingAllyOfferDraft;
+    if (
+      !draft ||
+      entry.id !== draft.id ||
+      entry.title !== draft.title ||
+      entry.text !== draft.text
+    ) {
+      throw new Error(
+        `Overworld session snapshot journal ally_offer entry "${entry.id}" does not match its authored copy.`,
+      );
+    }
+  } else if (!sources.openingAllyJournalIds?.has(entry.id)) {
+    throw new Error(
+      `Overworld session snapshot journal ally entry references unknown evidence "${entry.id}".`,
+    );
+  }
+  if (sources.openingAllyTownName != null && entry.town !== sources.openingAllyTownName) {
+    throw new Error(
+      `Overworld session snapshot journal ${entry.kind} entry "${entry.id}" is bound to town "${entry.town}", expected "${sources.openingAllyTownName}".`,
+    );
+  }
+}
+
+function assertOpeningAllyLegacyJournalSource(entry: OverworldJournalEntry): void {
+  const sourceWorldHash = openingAllyLegacySourceWorldHash(entry.id);
+  if (!sourceWorldHash) {
+    throw new Error(
+      `Overworld session snapshot journal ally_legacy entry id "${entry.id}" must contain a source world hash.`,
+    );
+  }
+  const draft = openingAllyLegacyJournalDraft(sourceWorldHash);
+  if (entry.title !== draft.title || entry.text !== draft.text) {
+    throw new Error(
+      `Overworld session snapshot journal ally_legacy entry "${entry.id}" does not match its canonical copy.`,
+    );
+  }
+}
+
 function assertSnapshotJournalSource(
   entry: OverworldJournalEntry,
   recordedAt: number,
@@ -343,14 +418,17 @@ function assertSnapshotJournalSource(
       `Overworld session snapshot journal ${entry.kind} entry has an invalid registration boundary.`,
     );
   }
-  const isLeadSourceEvidence =
+  const isStoryChoiceEvidence =
+    entry.kind === "ally" ||
+    entry.kind === "ally_legacy" ||
+    entry.kind === "ally_offer" ||
     entry.kind === "lead_source" ||
     entry.kind === "lead_source_legacy" ||
     entry.kind === "lead_source_offer" ||
     entry.kind === "preparation" ||
     entry.kind === "preparation_legacy" ||
     entry.kind === "preparation_offer";
-  if (isLeadSourceEvidence !== (entry.storyChoiceBoundary !== undefined)) {
+  if (isStoryChoiceEvidence !== (entry.storyChoiceBoundary !== undefined)) {
     throw new Error(
       `Overworld session snapshot journal ${entry.kind} entry has an invalid story-choice boundary.`,
     );
@@ -393,6 +471,13 @@ function assertSnapshotJournalSource(
   }
 
   switch (entry.kind) {
+    case "ally":
+    case "ally_offer":
+      assertOpeningAllyJournalSource(entry, sources);
+      return;
+    case "ally_legacy":
+      assertOpeningAllyLegacyJournalSource(entry);
+      return;
     case "area":
       assertKnownJournalSource(entry, "area:", sources.areaIds, "area", sources.areaTownNames);
       return;
@@ -520,7 +605,7 @@ function recordEventResolutionJournalProof(
       return;
     }
     case "contact": {
-      const presentation = sources.contactPresentationsByJournalId.get(entry.id);
+      const presentation = contactPresentationForJournalEntry(entry, sources);
       if (presentation) {
         recordEarliestTime(proofs.contactTimeByArea, presentation.character.area, recordedAt);
       }

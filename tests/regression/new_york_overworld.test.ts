@@ -471,6 +471,12 @@ describe("New York overworld graph", () => {
           knowledge_id: "albany:knowledge_wolf_relief_protocol",
           target_flag: "relief_protocol_prepared",
         },
+        {
+          id: "import:wolf_winter_june_companion",
+          type: "companion_to_flag",
+          companion_id: "albany:june_pike",
+          target_flag: "june_pike_present",
+        },
       ],
     });
   });

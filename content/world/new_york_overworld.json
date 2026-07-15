@@ -513,6 +513,83 @@
       }
     ]
   },
+  "opening_ally": {
+    "version": 1,
+    "id": "albany:wolf_ally_commitment",
+    "after_preparation": "albany:wolf_preparation",
+    "target_quest": "wolf_winter",
+    "home": "albany_city",
+    "area": "albany_city__transport_hub",
+    "contact": "albany_city__transport_hub__june_pike",
+    "ally_npc_id": "albany:june_pike",
+    "solo_option_id": "albany:ally_travel_solo",
+    "title": "Choose the Wolf-Winter Field Team",
+    "message": "June Pike has one Road-Warden field seat beside Hayden's outgoing packet. She can ride with you, but only under a named division of authority; leaving without that agreement sends the relief rider alone and does not delay the dispatch.",
+    "capability": "After a failed living-pack lure is recovered without blood, June can leave the wolf line at the final byre threshold and take the cattle line, lowering cattle alarm by 1.",
+    "condition": "June keeps cattle-first authority. She will not become an extra hunter, and the first wolf killed ends her place on the field team.",
+    "options": [
+      {
+        "id": "albany:ally_june_cattle_first",
+        "title": "Grant June Cattle-First Authority",
+        "summary": "Ask June Pike to ride as an independent Road-Warden ally.",
+        "preview": "The briefing takes 15 minutes. June joins the field team and records your promise that she chooses the cattle line if the recovered lure still leaves the herd pressing. Her help is one pressure intervention, never a combat bonus; any wolf death ends the agreement.",
+        "consequence": "June signs beside your name, takes the second field seat, and remembers that you granted rather than merely borrowed her authority.",
+        "terms": { "minutes": 15 },
+        "effects": [
+          {
+            "type": "remember_relationship",
+            "npc_id": "albany:june_pike",
+            "memory_id": "albany:memory_june_joined_cattle_first",
+            "trust_at_least": 3,
+            "regard_at_least": 3
+          },
+          {
+            "type": "add_companion",
+            "npc_id": "albany:june_pike"
+          },
+          {
+            "type": "record_promise",
+            "promise_id": "albany:promise_june_cattle_first",
+            "recipient_id": "albany:june_pike"
+          }
+        ]
+      },
+      {
+        "id": "albany:ally_june_relay_only",
+        "title": "Negotiate for a Subordinate Relay",
+        "summary": "Ask June to relay your orders without retaining cattle-first authority.",
+        "preview": "The exchange takes 5 minutes. June refuses the reduced role: no unchanged retry, no companion, no field promise, and no Wolf-Winter pressure action. She remains at the Station desk while the solo route stays fully viable.",
+        "consequence": "June records that you asked for a relay rather than an ally and declined the condition under which she would ride.",
+        "terms": { "minutes": 5 },
+        "effects": [
+          {
+            "type": "remember_relationship",
+            "npc_id": "albany:june_pike",
+            "memory_id": "albany:memory_june_refused_subordinate_relay",
+            "trust_at_least": 0,
+            "regard_at_least": 1
+          }
+        ]
+      },
+      {
+        "id": "albany:ally_travel_solo",
+        "title": "Leave with a Solo Field Team",
+        "summary": "Keep the existing one-rider Wolf-Winter dispatch.",
+        "preview": "No time is added. June remains with Albany's Road-Warden reserve; Wolf-Winter keeps every established route and receives no companion flag or ally action.",
+        "consequence": "June records the clean refusal and does not reopen the same field seat after departure.",
+        "terms": { "minutes": 0 },
+        "effects": [
+          {
+            "type": "remember_relationship",
+            "npc_id": "albany:june_pike",
+            "memory_id": "albany:memory_june_solo_dispatch_chosen",
+            "trust_at_least": 1,
+            "regard_at_least": 1
+          }
+        ]
+      }
+    ]
+  },
   "campaign_service_rules": [
     {
       "id": "albany:wolf_works_fortification_return_resupply",
@@ -580,6 +657,47 @@
       ],
       "forbids_any_world_facts": [
         "fact:wolf_winter_cattle_scattered"
+      ]
+    },
+    {
+      "id": "albany:june_kept_line_station_resupply",
+      "home": "albany_city",
+      "area": "albany_city__transport_hub",
+      "action": "resupply",
+      "title": "Claim June's Returned Field Stores",
+      "summary": "June's matching living-pack testimony and kept cattle-first promise return the unused second-seat stores to one bounded Station Quarter road claim.",
+      "provider_character_id": "albany_city__transport_hub__june_pike",
+      "minutes": 15,
+      "requires_all_world_facts": ["fact:wolf_winter_pack_diverted_alive"],
+      "requires_all_story_choices": [
+        {
+          "story_choice_id": "albany:wolf_ally_commitment",
+          "choice_id": "albany:ally_june_cattle_first"
+        }
+      ],
+      "requires_all_companions": ["albany:june_pike"],
+      "requires_all_promises": [
+        {
+          "promise_id": "albany:promise_june_cattle_first",
+          "status": "kept"
+        }
+      ]
+    },
+    {
+      "id": "albany:june_relay_refusal_station_rest",
+      "home": "albany_city",
+      "area": "albany_city__transport_hub",
+      "action": "rest",
+      "title": "Take June's Reserve-Desk Cot",
+      "summary": "June did not ride under subordinate terms, so Albany's reserve desk stayed staffed; after the living-pack return she releases its one warmed relief cot without pretending she joined the field team.",
+      "provider_character_id": "albany_city__transport_hub__june_pike",
+      "minutes": 15,
+      "requires_all_world_facts": ["fact:wolf_winter_pack_diverted_alive"],
+      "requires_all_story_choices": [
+        {
+          "story_choice_id": "albany:wolf_ally_commitment",
+          "choice_id": "albany:ally_june_relay_only"
+        }
       ]
     },
     {
@@ -24001,6 +24119,70 @@
       ]
     },
     {
+      "id": "albany_city__transport_hub__june_pike",
+      "home": "albany_city",
+      "area": "albany_city__transport_hub",
+      "name": "June Pike",
+      "role": "road-warden field lead",
+      "faction": "Road Wardens",
+      "summary": "June Pike checks a cattle rope, hooded lantern, and one empty field seat beside Hayden Hale's Wolf-Winter packet.",
+      "agenda": "June will ride only with cattle-first authority of her own. She offers one herd-pressure intervention after a bloodless recovery, not another spear, and remains in Albany if that condition is refused.",
+      "campaign_npc_id": "albany:june_pike",
+      "variants": [
+        {
+          "id": "returned_after_holding_cattle_line",
+          "after_relationship_memories": [
+            "albany:memory_june_joined_cattle_first",
+            "albany:memory_june_held_cattle_line"
+          ],
+          "summary": "June has returned beside you with an unbloodied rope and a matching account: she held the lower cattle line while the living pack cleared the byre.",
+          "agenda": "The cattle-first promise is kept. She remains on the field roster and opens one Station-quarter resupply claim before the next road."
+        },
+        {
+          "id": "returned_with_cattle_loss",
+          "after_relationship_memories": [
+            "albany:memory_june_joined_cattle_first",
+            "albany:memory_june_returned_with_cattle_loss"
+          ],
+          "summary": "June has returned beside you with the living-pack result and the two missing cattle entered on the same truthful line.",
+          "agenda": "The cattle-first authority remained intact despite the loss. She stays on the roster and will release one bounded Station resupply claim."
+        },
+        {
+          "id": "left_after_blood",
+          "after_relationship_memories": [
+            "albany:memory_june_joined_cattle_first",
+            "albany:memory_june_left_after_blood"
+          ],
+          "summary": "June's field seat is empty. Her separate return says first blood broke the cattle-first line before she could take the lower rail.",
+          "agenda": "The promise is recorded broken, June has left the party, and no ally return claim is available; the completed Wolf-Winter result still stands."
+        },
+        {
+          "id": "joined_wolf_cattle_first",
+          "after_relationship_memories": [
+            "albany:memory_june_joined_cattle_first"
+          ],
+          "summary": "June has signed the Wolf-Winter field line beside your name and remembers that cattle-first authority was granted explicitly.",
+          "agenda": "She will take the cattle line after a failed lure is recovered alive, but the first wolf killed ends her place on the team."
+        },
+        {
+          "id": "refused_subordinate_relay",
+          "after_relationship_memories": [
+            "albany:memory_june_refused_subordinate_relay"
+          ],
+          "summary": "June remembers refusing the request to serve as a subordinate relay without authority over the cattle line.",
+          "agenda": "The refusal stands without an unchanged retry. She remains with Albany's reserve while the solo Wolf-Winter dispatch stays open."
+        },
+        {
+          "id": "solo_dispatch_chosen",
+          "after_relationship_memories": [
+            "albany:memory_june_solo_dispatch_chosen"
+          ],
+          "summary": "June has your clean solo refusal marked beside the still-empty second field seat.",
+          "agenda": "She will not reopen the same departure bargain; Albany keeps its Road-Warden reserve and you carry the established packet alone."
+        }
+      ]
+    },
+    {
       "id": "albany_city__industrial__contact",
       "home": "albany_city",
       "area": "albany_city__industrial",
@@ -47273,7 +47455,7 @@
       "title": "The Wolf-Winter",
       "source": "content/rpg/quests/wolf_winter.yaml",
       "home": "albany_city",
-      "discovery": "A winter-relief tag moves from Albany's civic records to the Albany Station Quarter route desk: Old Cade's hill steading, a cattle byre, and a wolf pack coming down with the weather. The Wolf-Winter lead is the live dispatch attached to that hill road.",
+      "discovery": "A winter-relief tag moves from Albany's civic records to the Albany Station Quarter route desk: Old Cade's hill steading, a cattle byre, and a wolf pack coming down with the weather. The live dispatch has June Pike's optional second field seat, but starting without her cattle-first bond sends the relief rider alone on the established route.",
       "visibility": "local_notice_board",
       "area": "albany_city__transport_hub",
       "campaign_imports": {
@@ -47338,6 +47520,12 @@
             "type": "knowledge_to_flag",
             "knowledge_id": "albany:knowledge_wolf_relief_protocol",
             "target_flag": "relief_protocol_prepared"
+          },
+          {
+            "id": "import:wolf_winter_june_companion",
+            "type": "companion_to_flag",
+            "companion_id": "albany:june_pike",
+            "target_flag": "june_pike_present"
           }
         ]
       },
@@ -47386,6 +47574,36 @@
               "type": "set_world_fact",
               "fact_id": "fact:wolf_winter_cattle_scattered"
             }
+          ],
+          "conditional_effects": [
+            {
+              "id": "albany:june_departed_after_mixed_blood",
+              "when": {
+                "requires_all_companions": ["albany:june_pike"],
+                "requires_all_promises": [
+                  {
+                    "promise_id": "albany:promise_june_cattle_first",
+                    "status": "active"
+                  }
+                ]
+              },
+              "effects": [
+                {
+                  "type": "resolve_promise",
+                  "promise_id": "albany:promise_june_cattle_first",
+                  "status": "broken"
+                },
+                {
+                  "type": "remove_companion",
+                  "npc_id": "albany:june_pike"
+                },
+                {
+                  "type": "remember_relationship",
+                  "npc_id": "albany:june_pike",
+                  "memory_id": "albany:memory_june_left_after_blood"
+                }
+              ]
+            }
           ]
         },
         {
@@ -47427,6 +47645,32 @@
             {
               "type": "set_world_fact",
               "fact_id": "fact:wolf_winter_cattle_scattered"
+            }
+          ],
+          "conditional_effects": [
+            {
+              "id": "albany:june_returned_with_cattle_loss",
+              "when": {
+                "requires_all_companions": ["albany:june_pike"],
+                "requires_all_promises": [
+                  {
+                    "promise_id": "albany:promise_june_cattle_first",
+                    "status": "active"
+                  }
+                ]
+              },
+              "effects": [
+                {
+                  "type": "resolve_promise",
+                  "promise_id": "albany:promise_june_cattle_first",
+                  "status": "kept"
+                },
+                {
+                  "type": "remember_relationship",
+                  "npc_id": "albany:june_pike",
+                  "memory_id": "albany:memory_june_returned_with_cattle_loss"
+                }
+              ]
             }
           ]
         },
@@ -47470,6 +47714,32 @@
               "type": "set_world_fact",
               "fact_id": "fact:wolf_winter_cattle_whole"
             }
+          ],
+          "conditional_effects": [
+            {
+              "id": "albany:june_held_cattle_line",
+              "when": {
+                "requires_all_companions": ["albany:june_pike"],
+                "requires_all_promises": [
+                  {
+                    "promise_id": "albany:promise_june_cattle_first",
+                    "status": "active"
+                  }
+                ]
+              },
+              "effects": [
+                {
+                  "type": "resolve_promise",
+                  "promise_id": "albany:promise_june_cattle_first",
+                  "status": "kept"
+                },
+                {
+                  "type": "remember_relationship",
+                  "npc_id": "albany:june_pike",
+                  "memory_id": "albany:memory_june_held_cattle_line"
+                }
+              ]
+            }
           ]
         },
         {
@@ -47500,6 +47770,36 @@
               "type": "set_world_fact",
               "fact_id": "fact:wolf_winter_guard_wood_committed"
             }
+          ],
+          "conditional_effects": [
+            {
+              "id": "albany:june_departed_after_gate_blood",
+              "when": {
+                "requires_all_companions": ["albany:june_pike"],
+                "requires_all_promises": [
+                  {
+                    "promise_id": "albany:promise_june_cattle_first",
+                    "status": "active"
+                  }
+                ]
+              },
+              "effects": [
+                {
+                  "type": "resolve_promise",
+                  "promise_id": "albany:promise_june_cattle_first",
+                  "status": "broken"
+                },
+                {
+                  "type": "remove_companion",
+                  "npc_id": "albany:june_pike"
+                },
+                {
+                  "type": "remember_relationship",
+                  "npc_id": "albany:june_pike",
+                  "memory_id": "albany:memory_june_left_after_blood"
+                }
+              ]
+            }
           ]
         },
         {
@@ -47526,6 +47826,36 @@
               "type": "set_world_fact",
               "fact_id": "fact:wolf_winter_repair_timber_available"
             }
+          ],
+          "conditional_effects": [
+            {
+              "id": "albany:june_departed_after_timber_blood",
+              "when": {
+                "requires_all_companions": ["albany:june_pike"],
+                "requires_all_promises": [
+                  {
+                    "promise_id": "albany:promise_june_cattle_first",
+                    "status": "active"
+                  }
+                ]
+              },
+              "effects": [
+                {
+                  "type": "resolve_promise",
+                  "promise_id": "albany:promise_june_cattle_first",
+                  "status": "broken"
+                },
+                {
+                  "type": "remove_companion",
+                  "npc_id": "albany:june_pike"
+                },
+                {
+                  "type": "remember_relationship",
+                  "npc_id": "albany:june_pike",
+                  "memory_id": "albany:memory_june_left_after_blood"
+                }
+              ]
+            }
           ]
         },
         {
@@ -47551,6 +47881,36 @@
             {
               "type": "set_world_fact",
               "fact_id": "fact:wolf_winter_repair_timber_spent"
+            }
+          ],
+          "conditional_effects": [
+            {
+              "id": "albany:june_departed_after_watch_blood",
+              "when": {
+                "requires_all_companions": ["albany:june_pike"],
+                "requires_all_promises": [
+                  {
+                    "promise_id": "albany:promise_june_cattle_first",
+                    "status": "active"
+                  }
+                ]
+              },
+              "effects": [
+                {
+                  "type": "resolve_promise",
+                  "promise_id": "albany:promise_june_cattle_first",
+                  "status": "broken"
+                },
+                {
+                  "type": "remove_companion",
+                  "npc_id": "albany:june_pike"
+                },
+                {
+                  "type": "remember_relationship",
+                  "npc_id": "albany:june_pike",
+                  "memory_id": "albany:memory_june_left_after_blood"
+                }
+              ]
             }
           ]
         }

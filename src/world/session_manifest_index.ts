@@ -20,6 +20,12 @@ import {
   type OverworldContactPresentation,
 } from "./session_contact_presentation.js";
 import type { OpeningRegistration } from "./opening_registration.js";
+import type { OpeningAlly } from "./opening_ally.js";
+import {
+  openingAllyJournalId,
+  openingAllyOfferJournalDraft,
+  type OpeningAllyJournalDraft,
+} from "./opening_ally_journal.js";
 import type { OpeningLeadSource } from "./opening_lead_source.js";
 import {
   openingLeadSourceJournalId,
@@ -67,6 +73,10 @@ export type OverworldSnapshotManifestIndex = {
   openingLeadSourceJournalIds: ReadonlySet<string>;
   openingLeadSourceOfferDraft: OpeningLeadSourceJournalDraft | null;
   openingLeadSourceTownName: string | null;
+  openingAlly: OpeningAlly | null;
+  openingAllyJournalIds: ReadonlySet<string>;
+  openingAllyOfferDraft: OpeningAllyJournalDraft | null;
+  openingAllyTownName: string | null;
   openingPreparation: OpeningPreparation | null;
   openingPreparationJournalIds: ReadonlySet<string>;
   openingPreparationOfferDraft: OpeningPreparationJournalDraft | null;
@@ -141,6 +151,14 @@ export function buildOverworldSnapshotManifestIndex(
   }
 
   const openingRegistration = sources.world.opening_registration ?? null;
+  const openingAlly = sources.world.opening_ally ?? null;
+  const openingAllyJournalIds = new Set<string>();
+  const openingAllyOfferDraft = openingAlly ? openingAllyOfferJournalDraft(openingAlly) : null;
+  if (openingAlly) {
+    for (const option of openingAlly.options) {
+      openingAllyJournalIds.add(openingAllyJournalId(openingAlly.id, option.id));
+    }
+  }
   const openingLeadSource = sources.world.opening_lead_source ?? null;
   const openingLeadSourceJournalIds = new Set<string>();
   const openingLeadSourceOfferDraft = openingLeadSource
@@ -277,6 +295,10 @@ export function buildOverworldSnapshotManifestIndex(
     openingLeadSourceJournalIds,
     openingLeadSourceOfferDraft,
     openingLeadSourceTownName: openingLeadSource ? townNameForSource(openingLeadSource.home) : null,
+    openingAlly,
+    openingAllyJournalIds,
+    openingAllyOfferDraft,
+    openingAllyTownName: openingAlly ? townNameForSource(openingAlly.home) : null,
     openingPreparation,
     openingPreparationJournalIds,
     openingPreparationOfferDraft,

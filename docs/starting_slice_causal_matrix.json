@@ -2,7 +2,7 @@
   "schema_version": 1,
   "slice_id": "albany_winter_relief_v1",
   "status": "active_unproven",
-  "updated_local_date": "2026-07-14",
+  "updated_local_date": "2026-07-15",
   "contract": {
     "minimum_material_forks": 12,
     "minimum_delayed": 8,
@@ -140,29 +140,60 @@
       "id": "SS-F04-ally-commitment",
       "title": "Earn, reject, or lose an Albany ally",
       "phase": "albany_preparation",
-      "implementation_status": "planned",
-      "proof_status": "unproven",
-      "counts_toward_contract": false,
-      "visible_choice": "Ask a named ally to accompany the relief run, accept their condition, negotiate it, or travel alone.",
+      "implementation_status": "implemented",
+      "proof_status": "proven",
+      "counts_toward_contract": true,
+      "visible_choice": "After preparation, speaking with Road Warden June Pike presents three irreversible field-team terms with exact capability, condition, and cost: grant her cattle-first authority and spend 15 minutes for a companion and active promise; ask for a subordinate relay and spend 5 minutes to receive her authored refusal; or leave explicitly solo with no added time. Departing without asking June also remains a truthful solo default and invents no relationship evidence.",
       "immediate_state_delta": [
         "character.relationships",
         "character.promises",
-        "character.party",
-        "albany.relief_capacity"
+        "character.companions",
+        "world.minutes"
       ],
       "delayed_consumers": [
-        "Ally interjections and independent actions",
-        "Refusal or departure after violated conduct",
-        "Return testimony and availability"
+        "Wolf-Winter imports only a real companion as `june_pike_present`; direct and solo starts keep exact pack defaults. On the same recovered failed-lure route, June adds a named legal conversation and blocks the final scent cast until she independently refuses the wolf line, takes the cattle line, and lowers cattle alarm by 1.",
+        "With identical prior state, June's action changes cattle alarm 4 and a scattered-herd ending into alarm 3 and a whole-herd ending. Any first wolf death breaks her disclosed condition, removes the action without blocking the hybrid or combat completion, and later resolves the promise broken while removing her from the party.",
+        "Conditional quest exports resolve the cattle-first promise kept or broken in chronological replay, preserve June's ending-specific memory, and drive matching Station testimony. A living-pack return gives the kept companion one one-time 15-minute Station resupply; her negotiated relay refusal instead gives one distinct Station rest; explicit solo and relationship loss receive neither."
       ],
       "visible_feedback": [
-        "The ally states the condition and capability before joining.",
-        "Any refusal, departure, or independent solution names the remembered conduct."
+        "The blocking field-team screen and durable offer journal state June's one pressure intervention, cattle-first authority, no-combat condition, exact time cost, and solo consequence before confirmation; the persistent character panel then shows companion and promise state.",
+        "Wolf room prose, legal and blocked actions, June's spoken refusal, the visible cattle-alarm band, journal narration, and existing ending variants expose when she acts or when first blood cancels the agreement.",
+        "On return, June's memory-conditioned Station account, companion/promise projection, and cause-named one-time service distinguish cooperation, refusal, solo travel, and relationship loss across full, compact, UI, and restored views."
       ],
-      "systems": ["relationships", "promises", "party", "encounters"],
-      "persistence_boundaries": ["overworld_to_quest", "quest_to_overworld"],
-      "contract_tags": ["delayed", "cross_system", "cross_phase", "ally_agency"],
-      "baseline_evidence": [],
+      "systems": [
+        "time",
+        "relationships",
+        "promises",
+        "party",
+        "quest_imports",
+        "legal_actions",
+        "pressure",
+        "dialogue",
+        "failure_recovery",
+        "services"
+      ],
+      "persistence_boundaries": [
+        "overworld_save_restore",
+        "overworld_to_quest",
+        "rpg_save_restore",
+        "quest_to_overworld"
+      ],
+      "contract_tags": [
+        "delayed",
+        "cross_system",
+        "cross_phase",
+        "ally_agency",
+        "failure_forward",
+        "irreversible_tradeoff"
+      ],
+      "baseline_evidence": [
+        "tests/unit/world_opening_ally.test.ts",
+        "tests/unit/world_campaign_consequences.test.ts",
+        "tests/unit/world_session_quests.test.ts",
+        "tests/unit/world_campaign_service_rules.test.ts",
+        "tests/starting_slice/ally_content_gameplay.test.ts",
+        "traces/bugs/bug_0523_wolf_winter_ally_commitment.yaml"
+      ],
       "counterfactual_test": "tests/starting_slice/ally_commitment_counterfactual.test.ts"
     },
     {
@@ -354,7 +385,11 @@
         "relationships",
         "services"
       ],
-      "persistence_boundaries": ["rpg_save_restore", "quest_to_overworld", "overworld_save_restore"],
+      "persistence_boundaries": [
+        "rpg_save_restore",
+        "quest_to_overworld",
+        "overworld_save_restore"
+      ],
       "contract_tags": [
         "delayed",
         "cross_system",

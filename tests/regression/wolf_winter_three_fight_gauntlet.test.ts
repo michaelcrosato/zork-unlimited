@@ -67,6 +67,7 @@ function codes(pack: RpgPack): string[] {
       "works_fortification_prepared",
       "drover_route_prepared",
       "relief_protocol_prepared",
+      "june_pike_present",
     ],
   }).findings.map((f) => f.code);
 }
@@ -263,6 +264,7 @@ describe("bug_0189 — The Wolf-Winter: a fair THREE-fight combat_guaranteed gau
         "works_fortification_prepared",
         "drover_route_prepared",
         "relief_protocol_prepared",
+        "june_pike_present",
       ],
     });
     expect(report.findings.filter((f) => f.severity === "error")).toEqual([]);

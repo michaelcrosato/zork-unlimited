@@ -219,7 +219,8 @@ function importedFlagTargets(source: RpgWorldQuestSource): string[] {
     .flatMap((rule) =>
       rule.type === "background_to_flag" ||
       rule.type === "ability_to_flag" ||
-      rule.type === "knowledge_to_flag"
+      rule.type === "knowledge_to_flag" ||
+      rule.type === "companion_to_flag"
         ? [rule.target_flag]
         : [],
     )

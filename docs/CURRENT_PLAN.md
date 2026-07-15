@@ -4,62 +4,70 @@ Token-small AFK-loop handoff. The durable milestone and evidence rules live in
 [`STARTING_SLICE.md`](STARTING_SLICE.md); do not replace that contract during an
 ultraplan.
 
-## Cycle: 2026-07-14 — Albany Preparation Profiles
+## Cycle: 2026-07-15 — Albany Ally Commitment
 
 ## Synthesis
 
-After certifying one Wolf-Winter source, the player now commits one of three
-finite Albany preparations. Reese's Works sequence changes the paling to a
-Repair check with a noisy deterministic splice after failure. Emery's drover
-route changes one failed lure into a Streetwise recovery whose failure worsens
-cattle pressure. Jamie's relief protocol changes cattle pressure once after the
-ordinary split-rail recovery through Mediation. Every background can choose
-every plan, public cost never exceeds the minimum reachable $4, and the three
-matching registration concepts receive their rank-4 edge without a class lock.
+June Pike is now a persistent Road Warden ally rather than a proposed cast note.
+After preparation, the Station Quarter offers three exact terms: spend 15
+minutes granting her cattle-first authority and record a companion plus active
+promise; spend 5 minutes asking for a subordinate relay that she refuses; or
+leave explicitly solo at no delay. Departing without speaking to June also
+remains truthfully solo and creates no retroactive relationship evidence.
 
-Preparation knowledge, paid terms, provider memory, story-choice proof, and
-quest discovery survive save/restore. The selected plan crosses the trusted RPG
-import boundary, preserves direct-start defaults and all six nondeath endings,
-and returns through one distinct held-byre service: Works resupply, Campus rest,
-or Civic resupply. Paired low-supply and fatigue states include preparation
-cost, Albany relocation, and every alternative's best matching service; each
-profile wins somewhere and none dominates globally. A 742-era save already
-progressing Wolf-Winter receives an exact hash-bound no-preparation marker,
-while a save still at the lead-selection boundary receives the real preparation
-prompt instead of invented retroactive effects.
+The accepted bond crosses a generic companion-to-flag import. On the recovered
+failed-lure route, June's presence changes the legal menu: the last cast waits
+until she refuses the old-grey line and independently takes the lower cattle
+rail, reducing alarm by 1. Under otherwise equal state this reverses the final
+herd threshold. First blood cancels that action without blocking completion,
+then chronological quest foldback resolves the promise broken and removes June
+from the party. Living cooperation, negotiated refusal, explicit solo, and
+relationship loss produce different memories, Station testimony, and one-time
+service availability.
 
-`SS-F05-preparation-profile` is therefore the sixth counted fork, alongside
-F01, F03, F09, F11, and F12. This proves three build profiles and distinct
-consumers for all four concepts. It does not create the missing full
-fortify/outlast or drive/evacuate families, and it does not satisfy ally agency.
+Reusable state now supports canonical companions, companion imports,
+add/remove-party and record/resolve-promise consequences, character-conditioned
+quest exports and services, and completion-order replay. The offer and choice
+are bound to exact location, time, decision proof, and authored copy; current and
+predecessor restores reject invented ally state. Full/compact MCP, browser,
+overworld save/restore, and RPG save/load agree.
+
+`SS-F04-ally-commitment` is therefore the seventh counted fork, alongside F01,
+F03, F05, F09, F11, and F12. This proves the first ally-agency clause. It does
+not create either missing full resolution family or satisfy the twelve-fork and
+fleet-level depth contract.
 
 ## Chosen Move
 
-Build `SS-F04-ally-commitment` as a reusable Albany-to-Wolf ally contract, aimed
-at the still-missing independent-agency requirement and useful groundwork for a
-later drive/evacuate family.
+Build `SS-F10-crisis-priority` as the irreversible pressure decision at the
+center of a real `drive_and_evacuate` family, using the new ally grammar without
+making June mandatory.
 
-- Keep recruitment, refusal, conduct, departure, and return testimony inside
-  Albany, the hill approach, Wolf-Winter, and the truthful Albany return.
-- Give at least one named ally a concrete capability and a visible condition;
-  the ally must be able to refuse, disagree, leave, or solve a beat differently
-  because of remembered conduct.
-- Model ally authority and replay generically. Do not add another Wolf-specific
-  aftermath conditional to `journey_campaign.ts`.
-- Preserve viable solo play, all current endings, direct-start defaults, and
-  failure-forward recovery if the relationship is lost.
-- Let the ally change a later legal action, encounter/pressure state, and Albany
-  testimony or opportunity—not merely add dialogue or a numeric combat bonus.
+- Commit to driving the pack while moving Cade's cattle before the final room;
+  do not relabel the existing one-fight lure recovery as a new family.
+- At a visible pressure threshold, force an informed choice among protecting a
+  person/ally, cattle, or scarce relief resources. Every branch must expose what
+  it saves and what it leaves vulnerable.
+- Let June disagree or take a different task when present, while solo and
+  relationship-loss states retain distinct failure-forward completion.
+- Keep consequences in shared pressure, party/promise, injury/resource, quest
+  export, and Albany opportunity primitives rather than Wolf-specific campaign
+  conditionals.
+- Preserve the two proven hunt/lure families, all direct-start defaults, and the
+  existing nondeath identities unless a genuinely new route earns a distinct
+  ending.
 
 ## Acceptance for the next increment
 
-1. One visible Albany commitment makes the ally's capability, condition, and
-   opportunity cost clear before departure.
-2. At least one later Wolf beat proves independent ally action plus a truthful
-   refusal/departure counterfactual under otherwise equal state.
-3. Solo, cooperative, and relationship-loss routes remain completable and
-   mechanically distinct without adding a fake resolution-family count.
-4. Relationship memory, save/replay, quest import/export, full/compact/UI parity,
-   and Albany return testimony are paired and tamper-checked.
-5. Only proven rows advance in the causal matrix; pre/post crawls, one fresh pure
-   exit, and `npm run health` remain green.
+1. `drive_and_evacuate` diverges through different prior actions, costs, risks,
+   and legal steps before the last input and is not reducible to the current
+   failed-lure hybrid.
+2. One visible crisis choice changes at least two systems immediately and later
+   changes remaining actions plus truthful Albany testimony or opportunity.
+3. Companion, solo, refusal/departure, success, and seeded failure-forward
+   routes remain completable and causally distinct.
+4. Paired deterministic proofs cover pressure thresholds, non-dominance,
+   save/replay, quest import/export, chronological foldback, full/compact/UI
+   parity, and direct starts within the 45-decision first-goal ceiling.
+5. Only proven rows and resolution families advance; pre/post crawls, one fresh
+   canonical pure exit, independent audit, and `npm run health` remain green.

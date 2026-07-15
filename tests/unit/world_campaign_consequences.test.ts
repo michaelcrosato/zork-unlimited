@@ -9,10 +9,14 @@ import {
   type CampaignCharacterState,
 } from "../../src/world/campaign_character_state.js";
 import {
+  AddCompanionConsequenceSchema,
   CampaignConsequenceEffectSchema,
   CampaignConsequenceEffectsSchema,
   LearnKnowledgeConsequenceSchema,
+  RecordPromiseConsequenceSchema,
   RememberRelationshipConsequenceSchema,
+  RemoveCompanionConsequenceSchema,
+  ResolvePromiseConsequenceSchema,
   SetWorldFactConsequenceSchema,
   applyCampaignConsequences,
   campaignConsequenceEffectKey,
@@ -98,6 +102,40 @@ describe("generic campaign consequences", () => {
     expect(CampaignConsequenceEffectSchema.parse(syntheticEffects()[0])).toEqual(
       syntheticEffects()[0],
     );
+    expect(
+      AddCompanionConsequenceSchema.parse({
+        type: "add_companion",
+        npc_id: "npc:synthetic_guide",
+      }),
+    ).toEqual({ type: "add_companion", npc_id: "npc:synthetic_guide" });
+    expect(
+      RemoveCompanionConsequenceSchema.parse({
+        type: "remove_companion",
+        npc_id: "npc:synthetic_guide",
+      }),
+    ).toEqual({ type: "remove_companion", npc_id: "npc:synthetic_guide" });
+    expect(
+      RecordPromiseConsequenceSchema.parse({
+        type: "record_promise",
+        promise_id: "promise:hold_the_lane",
+        recipient_id: "npc:synthetic_guide",
+      }),
+    ).toEqual({
+      type: "record_promise",
+      promise_id: "promise:hold_the_lane",
+      recipient_id: "npc:synthetic_guide",
+    });
+    expect(
+      ResolvePromiseConsequenceSchema.parse({
+        type: "resolve_promise",
+        promise_id: "promise:hold_the_lane",
+        status: "kept",
+      }),
+    ).toEqual({
+      type: "resolve_promise",
+      promise_id: "promise:hold_the_lane",
+      status: "kept",
+    });
   });
 
   it("rejects unknown effects and unknown fields on either variant", () => {
@@ -108,6 +146,13 @@ describe("generic campaign consequences", () => {
         confidence: 1,
       }),
     ).toThrow();
+    expect(() =>
+      ResolvePromiseConsequenceSchema.parse({
+        type: "resolve_promise",
+        promise_id: "promise:hold_the_lane",
+        status: "active",
+      }),
+    ).toThrow(/kept, broken, or released/i);
     expect(() =>
       CampaignConsequenceEffectSchema.parse({
         type: "rewrite_character",
@@ -248,6 +293,21 @@ describe("generic campaign consequences", () => {
         },
       ]),
     ).toHaveLength(2);
+
+    expect(() =>
+      CampaignConsequenceEffectsSchema.parse([
+        {
+          type: "resolve_promise",
+          promise_id: "promise:hold_the_lane",
+          status: "kept",
+        },
+        {
+          type: "resolve_promise",
+          promise_id: "promise:hold_the_lane",
+          status: "broken",
+        },
+      ]),
+    ).toThrow(/duplicate campaign consequence effect/i);
   });
 
   it("uses collision-safe semantic keys for namespaced ids", () => {
@@ -334,6 +394,104 @@ describe("generic campaign consequences", () => {
       playerOwes: 3,
       memories: ["memory:minor_favor"],
     });
+  });
+
+  it("adds and removes companions and records and resolves promises idempotently", () => {
+    const source = baseCharacter();
+    const effects = CampaignConsequenceEffectsSchema.parse([
+      { type: "add_companion", npc_id: "npc:synthetic_guide" },
+      {
+        type: "record_promise",
+        promise_id: "promise:hold_the_lane",
+        recipient_id: "npc:synthetic_guide",
+      },
+      {
+        type: "resolve_promise",
+        promise_id: "promise:hold_the_lane",
+        status: "kept",
+      },
+    ]);
+
+    const joined = applyCampaignConsequences({ character: source, effects });
+    const replayed = applyCampaignConsequences({ character: joined.characterAfter, effects });
+
+    expect(joined.characterAfter.companions).toEqual(["npc:synthetic_guide"]);
+    expect(joined.characterAfter.promises).toEqual([
+      {
+        promiseId: "promise:hold_the_lane",
+        recipientId: "npc:synthetic_guide",
+        status: "kept",
+      },
+    ]);
+    expect(replayed).toEqual(joined);
+
+    const removed = applyCampaignConsequences({
+      character: joined.characterAfter,
+      effects: [{ type: "remove_companion", npc_id: "npc:synthetic_guide" }],
+    });
+    const removedAgain = applyCampaignConsequences({
+      character: removed.characterAfter,
+      effects: [{ type: "remove_companion", npc_id: "npc:synthetic_guide" }],
+    });
+    expect(removed.characterAfter.companions).toEqual([]);
+    expect(removedAgain).toEqual(removed);
+    expect(source.companions).toEqual([]);
+    expect(source.promises).toEqual([]);
+  });
+
+  it("rejects invalid promise transitions without partially applying prior effects", () => {
+    const source = buildCampaignCharacterState({
+      promises: [
+        {
+          promiseId: "promise:hold_the_lane",
+          recipientId: "npc:synthetic_guide",
+          status: "broken",
+        },
+      ],
+    });
+    const before = cloneCampaignCharacterState(source);
+
+    expect(() =>
+      applyCampaignConsequences({
+        character: source,
+        effects: [
+          { type: "add_companion", npc_id: "npc:synthetic_scout" },
+          {
+            type: "resolve_promise",
+            promise_id: "promise:hold_the_lane",
+            status: "kept",
+          },
+        ],
+      }),
+    ).toThrow(/already resolved as "broken"/i);
+    expect(source).toEqual(before);
+    expect(source.companions).toEqual([]);
+
+    expect(() =>
+      applyCampaignConsequences({
+        character: source,
+        effects: [
+          {
+            type: "record_promise",
+            promise_id: "promise:hold_the_lane",
+            recipient_id: "npc:synthetic_scout",
+          },
+        ],
+      }),
+    ).toThrow(/already bound to recipient/i);
+    expect(() =>
+      applyCampaignConsequences({
+        character: source,
+        effects: [
+          {
+            type: "resolve_promise",
+            promise_id: "promise:unknown_bond",
+            status: "released",
+          },
+        ],
+      }),
+    ).toThrow(/unknown promise/i);
+    expect(source).toEqual(before);
   });
 
   it("is idempotent when the identical outcome is replayed", () => {

@@ -26,7 +26,9 @@ const ReceiptEffectSchema = z.discriminatedUnion("type", [
       value: z.number().int().min(1).max(5),
     })
     .strict(),
-  ...(["background_to_flag", "ability_to_flag", "knowledge_to_flag"] as const).map((type) =>
+  ...(
+    ["background_to_flag", "ability_to_flag", "knowledge_to_flag", "companion_to_flag"] as const
+  ).map((type) =>
     z
       .object({
         rule_id: NamespacedIdSchema,

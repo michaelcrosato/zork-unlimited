@@ -32,6 +32,7 @@ export type CampaignCharacterView = {
     recipientId: string;
     status: CampaignPromiseStatus;
   }[];
+  companions: string[];
   crimes: {
     crimeId: string;
     jurisdictionId: string;
@@ -97,6 +98,7 @@ export function buildCampaignCharacterView(state: CampaignCharacterState): Campa
       recipientId: promise.recipientId,
       status: promise.status,
     })),
+    companions: [...state.companions],
     crimes: state.crimes.map((crime) => ({
       crimeId: crime.crimeId,
       jurisdictionId: crime.jurisdictionId,
@@ -130,6 +132,7 @@ export function cloneCampaignCharacterView(view: CampaignCharacterView): Campaig
     abilities: [...view.abilities],
     knowledge: [...view.knowledge],
     promises: view.promises.map((promise) => ({ ...promise })),
+    companions: [...view.companions],
     crimes: view.crimes.map((crime) => ({ ...crime })),
     relationships: view.relationships.map((relationship) => ({
       ...relationship,

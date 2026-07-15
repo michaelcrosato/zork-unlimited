@@ -26,6 +26,7 @@ describe("overworld campaign character integration", () => {
       abilities: [],
       knowledge: [],
       promises: [],
+      companions: [],
       crimes: [],
       relationships: [],
       factionStanding: [],
@@ -47,7 +48,8 @@ describe("overworld campaign character integration", () => {
       [],
       [],
       [],
-      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      [],
+      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     ]);
   });
 

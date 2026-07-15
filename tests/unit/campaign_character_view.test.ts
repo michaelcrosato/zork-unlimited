@@ -20,6 +20,7 @@ import {
   OVERWORLD_COMPACT_CHARACTER_ENTRY_LIMIT,
   OVERWORLD_COMPACT_CHARACTER_MEMORY_LIMIT,
   OVERWORLD_COMPACT_LEGEND,
+  OVERWORLD_COMPACT_VIEW_VERSION,
   cloneOverworldCompactView,
   compactCampaignCharacterView,
   compactOverworldView,
@@ -53,6 +54,7 @@ function populatedCharacter() {
         status: "active",
       },
     ],
+    companions: ["npc:june_pike"],
     crimes: [
       {
         crimeId: "crime:steading_trespass",
@@ -117,6 +119,7 @@ function denseMaximumCharacter(entryCount: number, memoriesPerRelationship: numb
       recipientId: maximumLengthId("recipient", index),
       status: "released" as const,
     })),
+    companions: indexes.map((index) => maximumLengthId("companion", index)),
     crimes: indexes.map((index) => ({
       crimeId: maximumLengthId("crime", index),
       jurisdictionId: maximumLengthId("jurisdiction", index),
@@ -155,6 +158,7 @@ describe("campaign character player view", () => {
       "abilities",
       "knowledge",
       "promises",
+      "companions",
       "crimes",
       "relationships",
       "factionStanding",
@@ -198,18 +202,22 @@ describe("campaign character player view", () => {
     const cloned = cloneCampaignCharacterView(source);
     cloned.health.current = 0;
     cloned.skills[0]!.rank = 1;
+    cloned.companions.push("npc:mutated_by_test");
     cloned.relationships[0]!.memories.push("memory:mutated_by_test");
 
     expect(source.health.current).toBe(23);
     expect(source.skills[0]?.rank).toBe(3);
+    expect(source.companions).toEqual(["npc:june_pike"]);
     expect(source.relationships[0]?.memories).toEqual(["memory:kept_watch"]);
 
     const compact = compactCampaignCharacterView(source);
-    expect(compact).toHaveLength(14);
+    expect(OVERWORLD_COMPACT_VIEW_VERSION).toBe(17);
+    expect(compact).toHaveLength(15);
     expect(compact[0]).toBe("background:road_warden");
     expect(compact[1]).toEqual([23, 30]);
     expect(compact[6][0]).toEqual(["equipment:warden_spear_1", "item:warden_spear", 1, 76, true]);
-    expect(compact[11][0]).toEqual([
+    expect(compact[10]).toEqual(["npc:june_pike"]);
+    expect(compact[12][0]).toEqual([
       "npc:old_cade",
       "very_low",
       "high",
@@ -218,19 +226,21 @@ describe("campaign character player view", () => {
       1,
       ["memory:kept_watch"],
     ]);
-    expect(compact[13]).toEqual([1, 1, 1, 1, 1, 1, 1, 1, 1, 1]);
-    expect(compact[14]).toBeUndefined();
+    expect(compact[14]).toEqual([1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]);
+    expect(compact[15]).toBeUndefined();
 
     const sessionView = new OverworldSession(loadOverworldManifest(process.cwd())).view();
     sessionView.character = source;
     const compactOverworld = compactOverworldView(sessionView);
     const compactClone = cloneOverworldCompactView(compactOverworld);
     (compactClone.character[1] as unknown as number[])[0] = 0;
-    (compactClone.character[11][0]?.[6] as string[]).push("memory:mutated_by_test");
-    (compactClone.character[13] as unknown as number[])[0] = 0;
+    (compactClone.character[10] as unknown as string[]).push("npc:mutated_by_test");
+    (compactClone.character[12][0]?.[6] as string[]).push("memory:mutated_by_test");
+    (compactClone.character[14] as unknown as number[])[0] = 0;
     expect(compactOverworld.character[1][0]).toBe(23);
-    expect(compactOverworld.character[11][0]?.[6]).toEqual(["memory:kept_watch"]);
-    expect(compactOverworld.character[13][0]).toBe(1);
+    expect(compactOverworld.character[10]).toEqual(["npc:june_pike"]);
+    expect(compactOverworld.character[12][0]?.[6]).toEqual(["memory:kept_watch"]);
+    expect(compactOverworld.character[14][0]).toBe(1);
   });
 
   it("bounds a maximum-width recurring projection with truthful truncation metadata", () => {
@@ -241,14 +251,15 @@ describe("campaign character player view", () => {
     );
     const compact = compactCampaignCharacterView(view);
 
-    for (const familyIndex of [3, 4, 5, 6, 7, 8, 9, 10, 11, 12] as const) {
+    for (const familyIndex of [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13] as const) {
       expect(compact[familyIndex]).toHaveLength(OVERWORLD_COMPACT_CHARACTER_ENTRY_LIMIT);
     }
-    for (const relationship of compact[11]) {
+    for (const relationship of compact[12]) {
       expect(relationship[5]).toBe(memoriesPerRelationship);
       expect(relationship[6]).toHaveLength(OVERWORLD_COMPACT_CHARACTER_MEMORY_LIMIT);
     }
-    expect(compact[13]).toEqual([
+    expect(compact[14]).toEqual([
+      entryCount,
       entryCount,
       entryCount,
       entryCount,
@@ -260,7 +271,7 @@ describe("campaign character player view", () => {
       entryCount,
       entryCount,
     ]);
-    expect(compact[14]).toEqual([
+    expect(compact[15]).toEqual([
       "skills",
       "values",
       "wounds",
@@ -268,20 +279,21 @@ describe("campaign character player view", () => {
       "abilities",
       "knowledge",
       "promises",
+      "companions",
       "crimes",
       "relationships",
       "relationship_memories",
       "faction_standing",
     ]);
-    expect(JSON.stringify(compact).length).toBeLessThan(15_000);
+    expect(JSON.stringify(compact).length).toBeLessThan(16_000);
 
     const sessionView = new OverworldSession(loadOverworldManifest(process.cwd())).view();
     sessionView.character = view;
     const original = compactOverworldView(sessionView);
     const cloned = cloneOverworldCompactView(original);
-    expect(cloned.character[14]).not.toBe(original.character[14]);
-    (cloned.character[14] as unknown as string[]).push("mutated_by_test");
-    expect(original.character[14]).toEqual(compact[14]);
+    expect(cloned.character[15]).not.toBe(original.character[15]);
+    (cloned.character[15] as unknown as string[]).push("mutated_by_test");
+    expect(original.character[15]).toEqual(compact[15]);
 
     expect(OVERWORLD_COMPACT_LEGEND.character).toContain("lists cap at 8");
     expect(OVERWORLD_COMPACT_LEGEND.character).toContain("memories at 4");

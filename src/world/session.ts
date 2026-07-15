@@ -34,7 +34,10 @@ import {
   type OverworldSessionRoutePlan,
 } from "./session_routes.js";
 import { type OverworldRoadEncounterResult } from "./session_road_encounters.js";
-import { type OverworldActionJournalState } from "./session_action_recording.js";
+import {
+  recordOverworldRepeatableEntry,
+  type OverworldActionJournalState,
+} from "./session_action_recording.js";
 import {
   type OverworldLocalDiscoveryResult,
   type OverworldQuestView,
@@ -93,6 +96,14 @@ import {
   type CampaignCharacterState,
 } from "./campaign_character_state.js";
 import { applyOpeningRegistrationProfile } from "./opening_registration.js";
+import { applyOpeningAllyOption } from "./opening_ally.js";
+import {
+  openingAllyJournalEntry,
+  openingAllyJournalId,
+  openingAllyOfferJournalEntry,
+  openingAllyOfferJournalId,
+} from "./opening_ally_journal.js";
+import { presentOpeningAlly } from "./opening_ally_presentation.js";
 import { applyOpeningLeadSourceOption } from "./opening_lead_source.js";
 import { applyOpeningPreparationProfile } from "./opening_preparation.js";
 import {
@@ -489,6 +500,7 @@ export class OverworldSession {
       worldFactIds: this.campaignWorldFactIds(),
       selectedStoryChoices: this.selectedCampaignStoryChoiceRefs(),
       consumedRuleIds: this.consumedCampaignServiceRuleIds(),
+      character: this.characterState,
       providersById: this.charactersById,
     });
   }
@@ -604,6 +616,27 @@ export class OverworldSession {
     );
   }
 
+  private openingAllyResolved(): boolean {
+    return this.journalEntries.some(
+      (entry) => entry.kind === "ally" || entry.kind === "ally_legacy",
+    );
+  }
+
+  private openingAllyAvailable(): NonNullable<OverworldManifest["opening_ally"]> | null {
+    const scene = this.world.opening_ally;
+    if (!scene || this.journeyState.status !== "active" || this.openingAllyResolved()) {
+      return null;
+    }
+    const latestEntry = this.journalEntries[0];
+    if (
+      latestEntry?.kind !== "ally_offer" ||
+      latestEntry.id !== openingAllyOfferJournalId(scene.id)
+    ) {
+      return null;
+    }
+    return scene;
+  }
+
   private openingPreparationAvailable(): NonNullable<
     OverworldManifest["opening_preparation"]
   > | null {
@@ -623,13 +656,19 @@ export class OverworldSession {
 
   private selectedCampaignStoryChoiceRefs(): CampaignStoryChoiceRef[] {
     const selected = [...journeyCampaignSelectedStoryChoiceRefs(this.journeyState)];
-    const scene = this.world.opening_preparation;
-    if (!scene) return selected;
-    const profile = scene.profiles.find((candidate) =>
-      this.journalEntriesById.has(openingPreparationJournalId(scene.id, candidate.id)),
+    const preparation = this.world.opening_preparation;
+    const profile = preparation?.profiles.find((candidate) =>
+      this.journalEntriesById.has(openingPreparationJournalId(preparation.id, candidate.id)),
     );
-    if (profile) {
-      selected.push({ story_choice_id: scene.id, choice_id: profile.id });
+    if (preparation && profile) {
+      selected.push({ story_choice_id: preparation.id, choice_id: profile.id });
+    }
+    const ally = this.world.opening_ally;
+    const option = ally?.options.find((candidate) =>
+      this.journalEntriesById.has(openingAllyJournalId(ally.id, candidate.id)),
+    );
+    if (ally && option) {
+      selected.push({ story_choice_id: ally.id, choice_id: option.id });
     }
     return selected;
   }
@@ -720,6 +759,49 @@ export class OverworldSession {
     this.clearSessionCaches();
   }
 
+  private openingAllyOfferAfterContact(
+    characterId: string,
+  ): NonNullable<OverworldManifest["opening_ally"]> | null {
+    const scene = this.world.opening_ally;
+    const preparation = this.world.opening_preparation;
+    if (
+      !scene ||
+      !preparation ||
+      scene.after_preparation !== preparation.id ||
+      characterId !== scene.contact ||
+      !this.openingPreparationResolved() ||
+      this.openingAllyResolved() ||
+      this.startedQuestIds.size > 0 ||
+      this.completedQuestIds.size > 0 ||
+      this.journeyState.status !== "active" ||
+      this.currentId !== scene.home ||
+      this.currentAreaId !== scene.area
+    ) {
+      return null;
+    }
+    const entryId = openingAllyOfferJournalId(scene.id);
+    return this.journalEntriesById.has(entryId) ? null : scene;
+  }
+
+  private offerOpeningAllyAfterContact(characterId: string): void {
+    const scene = this.openingAllyOfferAfterContact(characterId);
+    if (!scene) return;
+    const offer = openingAllyOfferJournalEntry({
+      scene,
+      town: this.currentNode().name,
+      recordedAt: timeLabel(this.minutes),
+      storyChoiceBoundary: {
+        acceptedDecisions: this.journeyState.acceptedDecisions,
+        decisionProofHash: this.journeyState.decisionProof.hash,
+        townId: this.currentId,
+        areaId: this.currentAreaIdOrThrow(),
+        minutes: this.minutes,
+      },
+    });
+    addOverworldJournalEntry(this.journalEntries, this.journalEntriesById, offer);
+    this.clearSessionCaches();
+  }
+
   private openingStoryBlockedQuestIds(): ReadonlySet<string> {
     const preparation = this.world.opening_preparation;
     if (preparation && !this.openingPreparationResolved()) {
@@ -767,13 +849,16 @@ export class OverworldSession {
     const registration = this.openingRegistrationAvailable();
     const leadSource = this.openingLeadSourceAvailable();
     const preparation = this.openingPreparationAvailable();
+    const ally = this.openingAllyAvailable();
     let storyChoice: JourneyPresentationContext["storyChoice"] = registration
       ? presentOpeningRegistration(registration)
       : leadSource
         ? presentOpeningLeadSource(leadSource, this.characterState)
         : preparation
           ? presentOpeningPreparation(preparation, this.characterState)
-          : undefined;
+          : ally
+            ? presentOpeningAlly(ally, this.characterState)
+            : undefined;
 
     if (campaign) {
       if (pendingGoalCompletion && campaign.preRetentionTeaser) {
@@ -826,7 +911,7 @@ export class OverworldSession {
     assertJourneyContractAcceptingDecision(this.journeyState);
     if (this.journey().storyChoice) {
       throw new Error(
-        "Choose the presented story consequence, character registration, Albany lead source, or preparation before taking another action.",
+        "Choose the presented story consequence, character registration, Albany lead source, preparation, or field-team commitment before taking another action.",
       );
     }
   }
@@ -1029,6 +1114,53 @@ export class OverworldSession {
       });
       this.characterState = application.characterAfter;
       this.discoveredQuestIds.add(scene.target_quest);
+      addOverworldJournalEntry(this.journalEntries, this.journalEntriesById, entry);
+      this.clearSessionCaches();
+      return Object.freeze({
+        storyChoiceId: storyChoice.id,
+        choiceId,
+        consequence: option.consequence,
+        goal: this.journey().goal,
+        entry: Object.freeze(redactOverworldJournalEntryForPresentation(entry)),
+        journeyDecision,
+      });
+    }
+    if (storyChoice.kind === "ally") {
+      const scene = this.openingAllyAvailable();
+      if (!scene || storyChoice.id !== scene.id) {
+        throw new Error("The presented opening ally commitment is no longer available.");
+      }
+      const application = applyOpeningAllyOption({
+        scene,
+        character: this.characterState,
+        optionId: choiceId,
+      });
+      const entryId = openingAllyJournalId(scene.id, choiceId);
+      if (this.journalEntriesById.has(entryId)) {
+        throw new Error(`Opening ally journal entry "${entryId}" already exists.`);
+      }
+      const characterBefore = this.characterState;
+      const journeyDecision = this.recordOverworldDecision(
+        `campaign_story:${storyChoice.id}:${choiceId}`,
+        "progress",
+        true,
+      );
+      this.minutes += application.terms.minutes;
+      const entry = openingAllyJournalEntry({
+        scene,
+        character: characterBefore,
+        optionId: choiceId,
+        town: this.currentNode().name,
+        recordedAt: timeLabel(this.minutes),
+        storyChoiceBoundary: {
+          acceptedDecisions: this.journeyState.acceptedDecisions,
+          decisionProofHash: this.journeyState.decisionProof.hash,
+          townId: this.currentId,
+          areaId: this.currentAreaIdOrThrow(),
+          minutes: this.minutes,
+        },
+      });
+      this.characterState = application.characterAfter;
       addOverworldJournalEntry(this.journalEntries, this.journalEntriesById, entry);
       this.clearSessionCaches();
       return Object.freeze({
@@ -1601,22 +1733,33 @@ export class OverworldSession {
     this.assertJourneyAcceptingDecision();
     this.assertNoPendingRoadEncounter("talking to a contact");
     const current = this.currentNode();
+    let applied = applyOverworldSessionContactTalkFromState({
+      ...this.actionJournalState(),
+      character: this.characterState,
+      characterId,
+      charactersById: this.charactersById,
+      completedQuestIds: this.completedQuestIds,
+      currentTownId: this.currentId,
+      currentAreaId: () => this.currentAreaIdOrThrow(),
+      currentTownName: current.name,
+    });
+    if (!applied.stateChanged && this.openingAllyOfferAfterContact(characterId)) {
+      const { recordedAt: _recordedAt, ...contactDraft } = applied.result.entry;
+      const repeated = recordOverworldRepeatableEntry(this.actionJournalState(), contactDraft, 0);
+      applied = {
+        ...applied,
+        result: { ...applied.result, entry: repeated.entry },
+        stateChanged: true,
+      };
+    }
     const result = this.applyLocalActionWithDiscovery(
       current,
-      applyOverworldSessionContactTalkFromState({
-        ...this.actionJournalState(),
-        character: this.characterState,
-        characterId,
-        charactersById: this.charactersById,
-        completedQuestIds: this.completedQuestIds,
-        currentTownId: this.currentId,
-        currentAreaId: () => this.currentAreaIdOrThrow(),
-        currentTownName: current.name,
-      }),
+      applied,
       `talk:${characterId}`,
       "dialogue",
     );
     this.offerOpeningRegistrationAfterContact(characterId);
+    this.offerOpeningAllyAfterContact(characterId);
     return result;
   }
 
@@ -1702,6 +1845,7 @@ export class OverworldSession {
         campaignWorldFactIds: this.campaignWorldFactIds(),
         campaignStoryChoiceRefs: this.selectedCampaignStoryChoiceRefs(),
         consumedCampaignServiceRuleIds: this.consumedCampaignServiceRuleIds(),
+        campaignCharacter: this.characterState,
         fatigue: this.fatigue,
         supplies: this.supplies,
       }),
@@ -1722,6 +1866,7 @@ export class OverworldSession {
         campaignWorldFactIds: this.campaignWorldFactIds(),
         campaignStoryChoiceRefs: this.selectedCampaignStoryChoiceRefs(),
         consumedCampaignServiceRuleIds: this.consumedCampaignServiceRuleIds(),
+        campaignCharacter: this.characterState,
         fatigue: this.fatigue,
         supplies: this.supplies,
       }),

@@ -47,6 +47,7 @@ function importPack(): RpgPack {
               { has_flag: "from_background" },
               { has_flag: "from_ability" },
               { has_flag: "from_knowledge" },
+              { has_flag: "from_companion" },
             ],
           },
         ],
@@ -202,6 +203,71 @@ describe("campaign character RPG imports", () => {
 
     expect(state.inventory).toEqual([]);
     expect(state.campaignImportReceipt).toBeUndefined();
+  });
+
+  it("projects canonical companion membership to a catalog-bound flag receipt", () => {
+    const pack = importPack();
+    const imports = CampaignCharacterImportsSchema.parse({
+      version: 1,
+      rules: [
+        {
+          id: "import:companion",
+          type: "companion_to_flag",
+          companion_id: "npc:synthetic_guide",
+          target_flag: "from_companion",
+        },
+      ],
+    });
+    const character = buildCampaignCharacterState({
+      companions: ["npc:synthetic_guide"],
+    });
+    const state = initStateForRpgPack(indexRpgPack(pack), 7, { character, imports });
+
+    expect(state.flags.from_companion).toBe(true);
+    expect(state.campaignImportReceipt).toMatchObject({
+      catalog_hash: hashState(imports),
+      character_hash: hashState(character),
+      applied_rules: ["import:companion"],
+      effects: [
+        {
+          rule_id: "import:companion",
+          type: "companion_to_flag",
+          target_flag: "from_companion",
+          value: true,
+        },
+      ],
+    });
+    expect(() =>
+      assertCampaignImportReceiptMatchesCatalog(state.campaignImportReceipt, imports),
+    ).not.toThrow();
+  });
+
+  it("keeps companion imports as an exact no-op when that party member is absent", () => {
+    const pack = importPack();
+    const index = indexRpgPack(pack);
+    const base = initStateForRpgPack(index, 7);
+    const imports = CampaignCharacterImportsSchema.parse({
+      version: 1,
+      rules: [
+        {
+          id: "import:companion",
+          type: "companion_to_flag",
+          companion_id: "npc:synthetic_guide",
+          target_flag: "from_companion",
+        },
+      ],
+    });
+
+    const projected = projectCampaignCharacterImports(
+      pack,
+      base,
+      buildCampaignCharacterState(),
+      imports,
+    );
+
+    expect(projected.state).toBe(base);
+    expect(projected.receipt).toBeNull();
+    expect(hashState(projected.state)).toBe(hashState(base));
   });
 
   it("rejects zero-health starts transactionally even without a health import rule", () => {

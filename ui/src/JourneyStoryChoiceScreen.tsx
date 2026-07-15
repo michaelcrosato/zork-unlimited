@@ -23,7 +23,8 @@ export function JourneyStoryChoiceScreen({
   const isRegistration = storyChoice.kind === "registration";
   const isLeadSource = storyChoice.kind === "lead_source";
   const isPreparation = storyChoice.kind === "preparation";
-  const keepsCurrentObjective = isRegistration || isLeadSource || isPreparation;
+  const isAlly = storyChoice.kind === "ally";
+  const keepsCurrentObjective = isRegistration || isLeadSource || isPreparation || isAlly;
 
   return (
     <main className="journey-decision-page">
@@ -41,7 +42,9 @@ export function JourneyStoryChoiceScreen({
               ? "Albany evidence source"
               : isPreparation
                 ? "Albany preparation budget"
-              : "Journey consequence"}
+                : isAlly
+                  ? "Field-team commitment"
+                  : "Journey consequence"}
         </p>
         <h1 id="journey-story-choice-title" ref={headingRef} tabIndex={-1}>
           {isRegistration
@@ -50,7 +53,9 @@ export function JourneyStoryChoiceScreen({
               ? "Choose your Albany lead source"
               : isPreparation
                 ? "Choose what Albany prepares"
-              : "Choose what follows"}
+                : isAlly
+                  ? "Choose who leaves Albany"
+                  : "Choose what follows"}
         </h1>
         <p id="journey-story-choice-message" className="journey-choice-message">
           {storyChoice.message}
@@ -66,7 +71,9 @@ export function JourneyStoryChoiceScreen({
                 ? "Your source changes the evidence and approaches you can carry forward; it does not replace this objective."
                 : isPreparation
                   ? "Your finite allocation changes later actions and the service Albany can release on your return; it does not replace this objective."
-                : "Choose the consequence that sets your next objective."}
+                  : isAlly
+                    ? "Compare the field capability, binding condition, and actual cost in these terms; your commitment changes who can act independently without replacing this objective."
+                    : "Choose the consequence that sets your next objective."}
           </small>
         </div>
 

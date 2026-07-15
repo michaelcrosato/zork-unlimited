@@ -2,12 +2,29 @@ import { z } from "zod";
 
 import { CampaignCharacterImportsSchema } from "../rpg/campaign_character_import.js";
 import {
+  CampaignCharacterConditionsSchema,
   CampaignConsequenceEffectsSchema,
+  campaignCharacterMatchesConditions,
   campaignConsequenceEffectKey,
+  applyCampaignConsequences,
+  type CampaignCharacterConditions,
+  type CampaignConsequenceEffect,
 } from "./campaign_consequences.js";
-import { CampaignCharacterIdSchema } from "./campaign_character_state.js";
-import { CampaignServiceRulesSchema, type CampaignServiceRule } from "./campaign_service_rules.js";
-import { journeyCampaignStoryChoiceSelection } from "./journey_campaign.js";
+import {
+  CampaignCharacterIdSchema,
+  type CampaignCharacterState,
+} from "./campaign_character_state.js";
+import {
+  CampaignServiceRulesSchema,
+  resolveParsedActiveCampaignServiceRules,
+  type CampaignServiceRule,
+} from "./campaign_service_rules.js";
+import {
+  ALBANY_DAWN_DISPATCH_CHOICE_IDS,
+  ALBANY_DAWN_DISPATCH_ID,
+  journeyCampaignStoryChoiceSelection,
+} from "./journey_campaign.js";
+import { OpeningAllySchema, applyOpeningAllyOption } from "./opening_ally.js";
 import { OpeningLeadSourceSchema, applyOpeningLeadSourceOption } from "./opening_lead_source.js";
 import { OpeningPreparationSchema, applyOpeningPreparationProfile } from "./opening_preparation.js";
 import { OpeningRegistrationSchema } from "./opening_registration.js";
@@ -250,13 +267,173 @@ export const OverworldExplorationSiteSchema = z
   })
   .strict();
 
+function campaignCharacterMutationTargetKey(effect: CampaignConsequenceEffect): string {
+  switch (effect.type) {
+    case "add_companion":
+    case "remove_companion":
+      return `companion:${effect.npc_id}`;
+    case "resolve_promise":
+      return `promise_resolution:${effect.promise_id}`;
+    default:
+      return campaignConsequenceEffectKey(effect);
+  }
+}
+
+function campaignConditionsAreMutuallyExclusive(
+  left: CampaignCharacterConditions,
+  right: CampaignCharacterConditions,
+): boolean {
+  const leftRequiredCompanions = new Set(left.requires_all_companions ?? []);
+  const rightRequiredCompanions = new Set(right.requires_all_companions ?? []);
+  if (
+    (left.forbids_any_companions ?? []).some((id) => rightRequiredCompanions.has(id)) ||
+    (right.forbids_any_companions ?? []).some((id) => leftRequiredCompanions.has(id))
+  ) {
+    return true;
+  }
+  const leftPromises = new Map(
+    (left.requires_all_promises ?? []).map((promise) => [promise.promise_id, promise.status]),
+  );
+  return (right.requires_all_promises ?? []).some(
+    (promise) =>
+      leftPromises.has(promise.promise_id) &&
+      leftPromises.get(promise.promise_id) !== promise.status,
+  );
+}
+
+export const OverworldQuestCampaignConditionalEffectsSchema = z
+  .object({
+    id: CampaignCharacterIdSchema,
+    when: CampaignCharacterConditionsSchema,
+    effects: CampaignConsequenceEffectsSchema.refine((effects) => effects.length > 0, {
+      message: "Conditional quest effects must change campaign character state.",
+    }),
+  })
+  .strict()
+  .superRefine((group, ctx) => {
+    const requiredCompanions = new Set(group.when.requires_all_companions ?? []);
+    const requiredPromises = new Map(
+      (group.when.requires_all_promises ?? []).map((promise) => [
+        promise.promise_id,
+        promise.status,
+      ]),
+    );
+    const mutationTargets = new Set<string>();
+    group.effects.forEach((effect, index) => {
+      if (effect.type === "set_world_fact") {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["effects", index],
+          message:
+            "Conditional quest effects may evolve character state; ending-owned world facts remain unconditional and replayable.",
+        });
+      }
+      if (effect.type === "record_promise") {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["effects", index],
+          message:
+            "Quest exports cannot create promises; authored story choices own promise identity and recipient binding.",
+        });
+      }
+      if (effect.type === "remove_companion" && !requiredCompanions.has(effect.npc_id)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["effects", index],
+          message: `Conditional removal of companion "${effect.npc_id}" must require that companion.`,
+        });
+      }
+      if (
+        effect.type === "resolve_promise" &&
+        requiredPromises.get(effect.promise_id) !== "active"
+      ) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["effects", index],
+          message: `Conditional resolution of promise "${effect.promise_id}" must require that promise as active.`,
+        });
+      }
+      const target = campaignCharacterMutationTargetKey(effect);
+      if (mutationTargets.has(target)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["effects", index],
+          message: `Conditional quest effect group "${group.id}" repeats campaign mutation target "${target}".`,
+        });
+      }
+      mutationTargets.add(target);
+    });
+  });
+
 export const OverworldQuestCampaignExportSchema = z
   .object({
     ending_id: z.string().min(1),
     ending_title: z.string().min(1),
     effects: CampaignConsequenceEffectsSchema,
+    conditional_effects: z.array(OverworldQuestCampaignConditionalEffectsSchema).min(1).optional(),
   })
-  .strict();
+  .strict()
+  .superRefine((campaignExport, ctx) => {
+    const ids = new Set<string>();
+    campaignExport.effects.forEach((effect, index) => {
+      if (effect.type === "record_promise") {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["effects", index],
+          message:
+            "Quest exports cannot create promises; authored story choices own promise identity and recipient binding.",
+        });
+      }
+      if (effect.type === "resolve_promise") {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["effects", index],
+          message:
+            "Quest promise resolution must be conditional on that exact promise being active.",
+        });
+      }
+    });
+    const unconditionalTargets = new Set(
+      campaignExport.effects.map(campaignCharacterMutationTargetKey),
+    );
+    const priorGroups: Array<{
+      when: CampaignCharacterConditions;
+      targets: ReadonlySet<string>;
+    }> = [];
+    campaignExport.conditional_effects?.forEach((group, index) => {
+      if (ids.has(group.id)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["conditional_effects", index, "id"],
+          message: `Duplicate conditional quest effect group id "${group.id}".`,
+        });
+      }
+      ids.add(group.id);
+      const targets = new Set(group.effects.map(campaignCharacterMutationTargetKey));
+      for (const target of targets) {
+        if (unconditionalTargets.has(target)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ["conditional_effects", index, "effects"],
+            message: `Conditional quest effect group "${group.id}" overlaps unconditional campaign mutation target "${target}".`,
+          });
+        }
+      }
+      priorGroups.forEach((prior, priorIndex) => {
+        if (campaignConditionsAreMutuallyExclusive(prior.when, group.when)) return;
+        for (const target of targets) {
+          if (prior.targets.has(target)) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              path: ["conditional_effects", index, "effects"],
+              message: `Jointly matchable conditional quest effect groups ${priorIndex + 1} and ${index + 1} overlap campaign mutation target "${target}".`,
+            });
+          }
+        }
+      });
+      priorGroups.push({ when: group.when, targets });
+    });
+  });
 
 export const OverworldQuestCampaignExportsSchema = z
   .array(OverworldQuestCampaignExportSchema)
@@ -307,6 +484,7 @@ export const OverworldManifestSchema = z
     opening_registration: OpeningRegistrationSchema.optional(),
     opening_lead_source: OpeningLeadSourceSchema.optional(),
     opening_preparation: OpeningPreparationSchema.optional(),
+    opening_ally: OpeningAllySchema.optional(),
     campaign_service_rules: CampaignServiceRulesSchema.optional(),
     sources: z.array(
       z
@@ -427,6 +605,19 @@ export function overworldQuestCampaignExportForEnding(
   endingId: string,
 ): OverworldQuestCampaignExport | null {
   return quest.campaign_exports?.find((entry) => entry.ending_id === endingId) ?? null;
+}
+
+/** Select ending effects against the character state that entered the foldback boundary. */
+export function overworldQuestCampaignEffectsForCharacter(
+  campaignExport: OverworldQuestCampaignExport,
+  character: CampaignCharacterState,
+): readonly CampaignConsequenceEffect[] {
+  return [
+    ...campaignExport.effects,
+    ...(campaignExport.conditional_effects ?? [])
+      .filter((group) => campaignCharacterMatchesConditions(character, group.when))
+      .flatMap((group) => group.effects),
+  ];
 }
 
 export function overworldNodesById(world: OverworldManifest): Map<string, OverworldNode> {
@@ -1420,6 +1611,160 @@ function assertOpeningPreparationIntegrity(world: OverworldManifest): void {
   }
 }
 
+function assertOpeningAllyIntegrity(world: OverworldManifest): void {
+  const scene = world.opening_ally;
+  if (!scene) return;
+  const preparation = world.opening_preparation;
+  const leadSource = world.opening_lead_source;
+  const registration = world.opening_registration;
+  if (!preparation || scene.after_preparation !== preparation.id) {
+    throw new Error("Overworld opening ally must follow this world's opening preparation.");
+  }
+  if (!leadSource || !registration) {
+    throw new Error("Overworld opening ally requires the complete authored opening chain.");
+  }
+  if (scene.home !== preparation.home || scene.target_quest !== preparation.target_quest) {
+    throw new Error("Overworld opening ally must share its preparation's home and target quest.");
+  }
+  const quest = world.quests.find((candidate) => candidate.id === scene.target_quest);
+  if (!quest || quest.home !== scene.home || quest.area !== scene.area) {
+    throw new Error(
+      "Overworld opening ally must occupy the target quest's authored departure area.",
+    );
+  }
+  const contact = world.characters.find((character) => character.id === scene.contact);
+  if (
+    !contact ||
+    contact.home !== scene.home ||
+    contact.area !== scene.area ||
+    contact.campaign_npc_id !== scene.ally_npc_id
+  ) {
+    throw new Error(
+      "Overworld opening ally contact must bind the named campaign ally in its departure area.",
+    );
+  }
+  const importsAlly = quest.campaign_imports?.rules.some(
+    (rule) => rule.type === "companion_to_flag" && rule.companion_id === scene.ally_npc_id,
+  );
+  if (!importsAlly) {
+    throw new Error(
+      `Overworld opening ally "${scene.id}" has no target-quest companion import consumer.`,
+    );
+  }
+  if (!quest.campaign_exports?.length) {
+    throw new Error(
+      `Overworld opening ally "${scene.id}" requires target-quest campaign exports for every ending.`,
+    );
+  }
+  const reachableAllyCharacters: Array<{
+    optionId: string;
+    character: CampaignCharacterState;
+  }> = [];
+  const fieldCommitmentsByOption = new Map(
+    scene.options.map((option) => [
+      option.id,
+      {
+        promiseIds: option.effects.flatMap((effect) =>
+          effect.type === "record_promise" ? [effect.promise_id] : [],
+        ),
+        companionIds: option.effects.flatMap((effect) =>
+          effect.type === "add_companion" ? [effect.npc_id] : [],
+        ),
+      },
+    ]),
+  );
+  for (const option of scene.options) {
+    for (const effect of option.effects) {
+      if (
+        effect.type === "remember_relationship" &&
+        !(contact.variants ?? []).some((variant) =>
+          variant.after_relationship_memories?.includes(effect.memory_id),
+        )
+      ) {
+        throw new Error(
+          `Opening ally memory "${effect.memory_id}" has no consuming contact variant.`,
+        );
+      }
+    }
+    for (const registrationProfile of registration.profiles) {
+      for (const leadOption of leadSource.options) {
+        const afterLeadSource = applyOpeningLeadSourceOption({
+          scene: leadSource,
+          character: registrationProfile.character,
+          optionId: leadOption.id,
+        }).characterAfter;
+        for (const preparationProfile of preparation.profiles) {
+          const afterPreparation = applyOpeningPreparationProfile({
+            scene: preparation,
+            character: afterLeadSource,
+            profileId: preparationProfile.id,
+          }).characterAfter;
+          const afterAlly = applyOpeningAllyOption({
+            scene,
+            character: afterPreparation,
+            optionId: option.id,
+          }).characterAfter;
+          reachableAllyCharacters.push({ optionId: option.id, character: afterAlly });
+        }
+      }
+    }
+  }
+  for (const campaignExport of quest.campaign_exports ?? []) {
+    for (const group of campaignExport.conditional_effects ?? []) {
+      if (
+        !reachableAllyCharacters.some(({ character }) =>
+          campaignCharacterMatchesConditions(character, group.when),
+        )
+      ) {
+        throw new Error(
+          `Opening ally target quest conditional effect group "${group.id}" is unreachable from every authored opening state.`,
+        );
+      }
+    }
+    for (const reachable of reachableAllyCharacters) {
+      const applied = applyCampaignConsequences({
+        character: reachable.character,
+        effects: overworldQuestCampaignEffectsForCharacter(campaignExport, reachable.character),
+      });
+      const commitment = fieldCommitmentsByOption.get(reachable.optionId);
+      for (const promiseId of commitment?.promiseIds ?? []) {
+        const before = reachable.character.promises.find(
+          (promise) => promise.promiseId === promiseId,
+        );
+        if (before?.status !== "active") continue;
+        const after = applied.characterAfter.promises.find(
+          (promise) => promise.promiseId === promiseId,
+        );
+        if (!after || after.status === "active") {
+          throw new Error(
+            `Opening ally target quest campaign export "${campaignExport.ending_id}" leaves field promise "${promiseId}" unresolved.`,
+          );
+        }
+        if (
+          after.status === "broken" &&
+          (commitment?.companionIds ?? []).some((companionId) =>
+            applied.characterAfter.companions.includes(companionId),
+          )
+        ) {
+          throw new Error(
+            `Opening ally target quest campaign export "${campaignExport.ending_id}" breaks field promise "${promiseId}" without releasing its companion.`,
+          );
+        }
+        if (
+          after.status === "kept" &&
+          (commitment?.companionIds ?? []).some(
+            (companionId) => !applied.characterAfter.companions.includes(companionId),
+          )
+        ) {
+          throw new Error(
+            `Opening ally target quest campaign export "${campaignExport.ending_id}" keeps field promise "${promiseId}" without retaining its companion.`,
+          );
+        }
+      }
+    }
+  }
+}
+
 function assertExplorationSitesIntegrity(
   world: OverworldManifest,
   nodes: Map<string, OverworldNode>,
@@ -1513,6 +1858,131 @@ function assertQuestsIntegrity(
   }
 }
 
+type CanonicalCampaignServiceIntegrityState = Readonly<{
+  character: CampaignCharacterState;
+  worldFactIds: readonly string[];
+  selectedStoryChoices: readonly Readonly<{
+    story_choice_id: string;
+    choice_id: string;
+  }>[];
+}>;
+
+function canonicalCampaignServiceIntegrityStateKey(
+  state: CanonicalCampaignServiceIntegrityState,
+): string {
+  return JSON.stringify({
+    companions: [...state.character.companions].sort(),
+    promises: state.character.promises
+      .map((promise) => `${promise.promiseId}\u0000${promise.status}`)
+      .sort(),
+    worldFactIds: [...state.worldFactIds].sort(),
+    selectedStoryChoices: state.selectedStoryChoices
+      .map((choice) => `${choice.story_choice_id}\u0000${choice.choice_id}`)
+      .sort(),
+  });
+}
+
+function canonicalOpeningAllyCampaignServiceStates(world: OverworldManifest): Readonly<{
+  states: readonly CanonicalCampaignServiceIntegrityState[];
+  targetQuestWorldFactIds: ReadonlySet<string>;
+  allyNpcId: string;
+  allyPromiseIds: ReadonlySet<string>;
+}> | null {
+  const ally = world.opening_ally;
+  const preparation = world.opening_preparation;
+  const leadSource = world.opening_lead_source;
+  const registration = world.opening_registration;
+  const targetQuest = ally
+    ? world.quests.find((quest) => quest.id === ally.target_quest)
+    : undefined;
+  if (!ally || !preparation || !leadSource || !registration || !targetQuest) return null;
+
+  const targetQuestWorldFactIds = new Set(
+    (targetQuest.campaign_exports ?? []).flatMap((campaignExport) =>
+      [
+        ...campaignExport.effects,
+        ...(campaignExport.conditional_effects ?? []).flatMap((group) => group.effects),
+      ].flatMap((effect) => (effect.type === "set_world_fact" ? [effect.fact_id] : [])),
+    ),
+  );
+  const allyPromiseIds = new Set(
+    ally.options.flatMap((option) =>
+      option.effects.flatMap((effect) =>
+        effect.type === "record_promise" ? [effect.promise_id] : [],
+      ),
+    ),
+  );
+  const statesByKey = new Map<string, CanonicalCampaignServiceIntegrityState>();
+  const rememberState = (state: CanonicalCampaignServiceIntegrityState): void => {
+    statesByKey.set(canonicalCampaignServiceIntegrityStateKey(state), state);
+  };
+
+  for (const registrationProfile of registration.profiles) {
+    for (const leadOption of leadSource.options) {
+      const afterLeadSource = applyOpeningLeadSourceOption({
+        scene: leadSource,
+        character: registrationProfile.character,
+        optionId: leadOption.id,
+      }).characterAfter;
+      for (const preparationProfile of preparation.profiles) {
+        const afterPreparation = applyOpeningPreparationProfile({
+          scene: preparation,
+          character: afterLeadSource,
+          profileId: preparationProfile.id,
+        }).characterAfter;
+        for (const allyOption of ally.options) {
+          const beforeQuest = applyOpeningAllyOption({
+            scene: ally,
+            character: afterPreparation,
+            optionId: allyOption.id,
+          }).characterAfter;
+          const openingStoryChoices = [
+            { story_choice_id: preparation.id, choice_id: preparationProfile.id },
+            { story_choice_id: ally.id, choice_id: allyOption.id },
+          ];
+          rememberState({
+            character: beforeQuest,
+            worldFactIds: [],
+            selectedStoryChoices: openingStoryChoices,
+          });
+
+          for (const campaignExport of targetQuest.campaign_exports ?? []) {
+            const applied = applyCampaignConsequences({
+              character: beforeQuest,
+              effects: overworldQuestCampaignEffectsForCharacter(campaignExport, beforeQuest),
+            });
+            const afterQuest: CanonicalCampaignServiceIntegrityState = {
+              character: applied.characterAfter,
+              worldFactIds: applied.worldFactIds,
+              selectedStoryChoices: openingStoryChoices,
+            };
+            rememberState(afterQuest);
+            for (const dawnChoiceId of ALBANY_DAWN_DISPATCH_CHOICE_IDS) {
+              rememberState({
+                ...afterQuest,
+                selectedStoryChoices: [
+                  ...openingStoryChoices,
+                  {
+                    story_choice_id: ALBANY_DAWN_DISPATCH_ID,
+                    choice_id: dawnChoiceId,
+                  },
+                ],
+              });
+            }
+          }
+        }
+      }
+    }
+  }
+
+  return {
+    states: [...statesByKey.values()],
+    targetQuestWorldFactIds,
+    allyNpcId: ally.ally_npc_id,
+    allyPromiseIds,
+  };
+}
+
 function assertCampaignServiceRulesIntegrity(
   world: OverworldManifest,
   nodes: Map<string, OverworldNode>,
@@ -1558,13 +2028,45 @@ function assertCampaignServiceRulesIntegrity(
         world.opening_preparation?.id === ref.story_choice_id
           ? world.opening_preparation.profiles.find((profile) => profile.id === ref.choice_id)
           : undefined;
+      const allyOption =
+        world.opening_ally?.id === ref.story_choice_id
+          ? world.opening_ally.options.find((option) => option.id === ref.choice_id)
+          : undefined;
       try {
-        if (!preparationProfile) {
+        if (!preparationProfile && !allyOption) {
           journeyCampaignStoryChoiceSelection(ref.story_choice_id, ref.choice_id);
         }
       } catch {
         throw new Error(
           `Campaign service rule "${rule.id}" references unauthored story choice "${ref.story_choice_id}:${ref.choice_id}".`,
+        );
+      }
+    }
+    for (const companionId of rule.requires_all_companions ?? []) {
+      if (
+        world.opening_ally?.ally_npc_id !== companionId ||
+        !world.opening_ally.options.some((option) =>
+          option.effects.some(
+            (effect) => effect.type === "add_companion" && effect.npc_id === companionId,
+          ),
+        )
+      ) {
+        throw new Error(
+          `Campaign service rule "${rule.id}" references unauthored companion "${companionId}".`,
+        );
+      }
+    }
+    for (const promise of rule.requires_all_promises ?? []) {
+      if (
+        !world.opening_ally?.options.some((option) =>
+          option.effects.some(
+            (effect) =>
+              effect.type === "record_promise" && effect.promise_id === promise.promise_id,
+          ),
+        )
+      ) {
+        throw new Error(
+          `Campaign service rule "${rule.id}" references unauthored promise "${promise.promise_id}".`,
         );
       }
     }
@@ -1582,6 +2084,50 @@ function assertCampaignServiceRulesIntegrity(
           `Campaign service rule "${rule.id}" provider "${provider.id}" is outside its home town or area.`,
         );
       }
+    }
+  }
+
+  const bounded = canonicalOpeningAllyCampaignServiceStates(world);
+  if (!bounded) return;
+  const locations = new Map<string, { home: string; area: string; rules: CampaignServiceRule[] }>();
+  for (const rule of rules) {
+    const key = `${rule.home}\u0000${rule.area}`;
+    const location = locations.get(key);
+    if (location) {
+      location.rules.push(rule);
+    } else {
+      locations.set(key, { home: rule.home, area: rule.area, rules: [rule] });
+    }
+  }
+  const canonicallyReachableRuleIds = new Set<string>();
+  for (const state of bounded.states) {
+    for (const location of locations.values()) {
+      const activeRules = resolveParsedActiveCampaignServiceRules({
+        rules: location.rules,
+        currentTownId: location.home,
+        currentAreaId: location.area,
+        worldFactIds: state.worldFactIds,
+        selectedStoryChoices: state.selectedStoryChoices,
+        consumedRuleIds: [],
+        character: state.character,
+      });
+      activeRules.forEach((rule) => canonicallyReachableRuleIds.add(rule.id));
+    }
+  }
+
+  for (const rule of rules) {
+    const hasAllyCondition =
+      (rule.requires_all_companions ?? []).includes(bounded.allyNpcId) ||
+      (rule.requires_all_promises ?? []).some((promise) =>
+        bounded.allyPromiseIds.has(promise.promise_id),
+      );
+    const requiredFactsAreBounded = (rule.requires_all_world_facts ?? []).every((factId) =>
+      bounded.targetQuestWorldFactIds.has(factId),
+    );
+    if (hasAllyCondition && requiredFactsAreBounded && !canonicallyReachableRuleIds.has(rule.id)) {
+      throw new Error(
+        `Campaign service rule "${rule.id}" has ally conditions unreachable in every canonical pre-Wolf and post-Wolf target state.`,
+      );
     }
   }
 }
@@ -1627,10 +2173,10 @@ export function assertOverworldIntegrity(world: OverworldManifest): void {
   assertOpeningLeadSourceIntegrity(world);
 
   assertOpeningPreparationIntegrity(world);
+  assertQuestsIntegrity(world, nodes, areaIds, areaHomes);
+  assertOpeningAllyIntegrity(world);
 
   assertExplorationSitesIntegrity(world, nodes, regionNames, areaIds, areaHomes);
-
-  assertQuestsIntegrity(world, nodes, areaIds, areaHomes);
 
   assertCampaignServiceRulesIntegrity(world, nodes, areaIds, areaHomes);
 

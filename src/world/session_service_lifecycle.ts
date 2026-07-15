@@ -3,6 +3,7 @@ import {
   type CampaignServiceRule,
 } from "./campaign_service_rules.js";
 import type { OverworldNode } from "./overworld.js";
+import type { CampaignCharacterState } from "./campaign_character_state.js";
 import type { CampaignStoryChoiceRef } from "./campaign_story_choices.js";
 import type { OverworldActionJournalState } from "./session_action_recording.js";
 import {
@@ -26,6 +27,7 @@ export type OverworldSessionTownServicePlanState = {
   campaignWorldFactIds?: readonly string[] | ReadonlySet<string>;
   campaignStoryChoiceRefs?: readonly CampaignStoryChoiceRef[];
   consumedCampaignServiceRuleIds?: readonly string[] | ReadonlySet<string>;
+  campaignCharacter?: CampaignCharacterState;
   supplies: number;
   fatigue: number;
 };
@@ -46,6 +48,7 @@ function overworldSessionTownServiceState(
           worldFactIds: state.campaignWorldFactIds ?? [],
           selectedStoryChoices: state.campaignStoryChoiceRefs ?? [],
           consumedRuleIds: state.consumedCampaignServiceRuleIds ?? [],
+          ...(state.campaignCharacter ? { character: state.campaignCharacter } : {}),
         });
   return {
     townName: state.currentTown.name,

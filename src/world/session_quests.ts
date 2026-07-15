@@ -1,4 +1,5 @@
 import {
+  overworldQuestCampaignEffectsForCharacter,
   overworldQuestCampaignExportForEnding,
   type OverworldArea,
   type OverworldNode,
@@ -142,15 +143,31 @@ export function questCampaignEffectGroupsForOutcomes(
     });
 }
 
-/** Replay every trusted, monotonic quest export in canonical quest-id order. */
+/** Replay trusted exports in completion order so party removal and promise resolution stay causal. */
 export function replayQuestCampaignConsequences(args: {
   character: CampaignCharacterState;
   questsById: ReadonlyMap<string, OverworldQuest>;
   questOutcomeIds: ReadonlyMap<string, string>;
+  questOutcomeOrder?: readonly string[];
 }): CampaignConsequenceApplication {
-  const effectGroups = questCampaignEffectGroupsForOutcomes(args.questsById, args.questOutcomeIds);
+  const order = args.questOutcomeOrder ?? [...args.questOutcomeIds.keys()].sort();
+  if (
+    new Set(order).size !== order.length ||
+    order.length !== args.questOutcomeIds.size ||
+    order.some((questId) => !args.questOutcomeIds.has(questId))
+  ) {
+    throw new Error("Quest consequence replay order must name every completed quest exactly once.");
+  }
+  const effectGroups: CampaignConsequenceEffect[][] = [];
   let characterAfter = cloneCampaignCharacterState(args.character);
-  for (const effects of effectGroups) {
+  for (const questId of order) {
+    const quest = args.questsById.get(questId);
+    if (!quest) throw new Error(`Unknown overworld quest "${questId}".`);
+    const endingId = args.questOutcomeIds.get(questId)!;
+    const campaignExport = questCampaignExportForEnding(quest, endingId);
+    if (!campaignExport) continue;
+    const effects = [...overworldQuestCampaignEffectsForCharacter(campaignExport, characterAfter)];
+    effectGroups.push(effects);
     characterAfter = applyCampaignConsequences({
       character: characterAfter,
       effects,
@@ -244,7 +261,9 @@ export function planOverworldQuestCompletion(
   const endingTitle = campaignExport?.ending_title ?? state.outcome.endingTitle;
   const consequence = applyCampaignConsequences({
     character: state.character,
-    effects: campaignExport?.effects ?? [],
+    effects: campaignExport
+      ? overworldQuestCampaignEffectsForCharacter(campaignExport, state.character)
+      : [],
   });
   return {
     minutes,

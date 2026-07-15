@@ -1,6 +1,14 @@
 import { z } from "zod";
 
-import { CampaignCharacterIdSchema } from "./campaign_character_state.js";
+import {
+  CampaignCharacterIdSchema,
+  type CampaignCharacterState,
+} from "./campaign_character_state.js";
+import {
+  CampaignCharacterConditionIdsSchema,
+  CampaignPromiseConditionsSchema,
+  campaignCharacterMatchesConditions,
+} from "./campaign_consequences.js";
 import {
   CampaignStoryChoiceRefSchema,
   campaignStoryChoiceRefKey,
@@ -69,12 +77,16 @@ export const CampaignServiceRuleSchema = z
     forbids_any_world_facts: CampaignServiceWorldFactIdsSchema.optional(),
     requires_all_story_choices: CampaignServiceStoryChoiceRefsSchema.optional(),
     forbids_any_story_choices: CampaignServiceStoryChoiceRefsSchema.optional(),
+    requires_all_companions: CampaignCharacterConditionIdsSchema.optional(),
+    requires_all_promises: CampaignPromiseConditionsSchema.optional(),
   })
   .strict()
   .superRefine((rule, ctx) => {
     if (
       (rule.requires_all_world_facts?.length ?? 0) === 0 &&
-      (rule.requires_all_story_choices?.length ?? 0) === 0
+      (rule.requires_all_story_choices?.length ?? 0) === 0 &&
+      (rule.requires_all_companions?.length ?? 0) === 0 &&
+      (rule.requires_all_promises?.length ?? 0) === 0
     ) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
@@ -118,10 +130,41 @@ export const CampaignServiceRuleSchema = z
     });
   });
 
+function compareStrings(left: string, right: string): number {
+  return left < right ? -1 : left > right ? 1 : 0;
+}
+
+/**
+ * Canonicalize only the fields that decide whether a rule activates. Copy,
+ * duration, provider, and identity cannot make two otherwise identical offers
+ * mutually exclusive at runtime.
+ */
+function campaignServiceRulePredicateKey(rule: CampaignServiceRule): string {
+  return JSON.stringify({
+    home: rule.home,
+    area: rule.area,
+    action: rule.action,
+    requires_all_world_facts: [...(rule.requires_all_world_facts ?? [])].sort(compareStrings),
+    forbids_any_world_facts: [...(rule.forbids_any_world_facts ?? [])].sort(compareStrings),
+    requires_all_story_choices: (rule.requires_all_story_choices ?? [])
+      .map(campaignStoryChoiceRefKey)
+      .sort(compareStrings),
+    forbids_any_story_choices: (rule.forbids_any_story_choices ?? [])
+      .map(campaignStoryChoiceRefKey)
+      .sort(compareStrings),
+    requires_all_companions: [...(rule.requires_all_companions ?? [])].sort(compareStrings),
+    requires_all_promises: [...(rule.requires_all_promises ?? [])].sort((left, right) => {
+      const idOrder = compareStrings(left.promise_id, right.promise_id);
+      return idOrder === 0 ? compareStrings(left.status, right.status) : idOrder;
+    }),
+  });
+}
+
 export const CampaignServiceRulesSchema = z
   .array(CampaignServiceRuleSchema)
   .superRefine((rules, ctx) => {
     const seen = new Set<string>();
+    const predicateOwners = new Map<string, CampaignServiceRule>();
     rules.forEach((rule, index) => {
       if (seen.has(rule.id)) {
         ctx.addIssue({
@@ -131,6 +174,18 @@ export const CampaignServiceRulesSchema = z
         });
       }
       seen.add(rule.id);
+
+      const predicateKey = campaignServiceRulePredicateKey(rule);
+      const predicateOwner = predicateOwners.get(predicateKey);
+      if (predicateOwner !== undefined) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: [index],
+          message: `Campaign service rules "${predicateOwner.id}" and "${rule.id}" repeat the same normalized activation predicate at "${rule.area}" for action "${rule.action}".`,
+        });
+      } else {
+        predicateOwners.set(predicateKey, rule);
+      }
     });
   });
 
@@ -155,6 +210,7 @@ export type CampaignServiceRuleResolutionState = Readonly<{
   worldFactIds: IdCollection;
   selectedStoryChoices?: readonly CampaignStoryChoiceRef[];
   consumedRuleIds: IdCollection;
+  character?: CampaignCharacterState;
 }>;
 
 export type CampaignServiceOfferProvider = Readonly<{ name: string }>;
@@ -178,7 +234,10 @@ function ruleIsActive(
   worldFactIds: ReadonlySet<string>,
   selectedStoryChoiceKeys: ReadonlySet<string>,
   consumedRuleIds: ReadonlySet<string>,
+  character: CampaignCharacterState | undefined,
 ): boolean {
+  const hasCharacterConditions =
+    rule.requires_all_companions !== undefined || rule.requires_all_promises !== undefined;
   return (
     !consumedRuleIds.has(rule.id) &&
     (rule.requires_all_world_facts ?? []).every((factId) => worldFactIds.has(factId)) &&
@@ -188,29 +247,39 @@ function ruleIsActive(
     ) &&
     !(rule.forbids_any_story_choices ?? []).some((ref) =>
       selectedStoryChoiceKeys.has(campaignStoryChoiceRefKey(ref)),
-    )
+    ) &&
+    (!hasCharacterConditions ||
+      (character !== undefined &&
+        campaignCharacterMatchesConditions(character, {
+          ...(rule.requires_all_companions
+            ? { requires_all_companions: rule.requires_all_companions }
+            : {}),
+          ...(rule.requires_all_promises
+            ? { requires_all_promises: rule.requires_all_promises }
+            : {}),
+        })))
   );
 }
 
 /**
- * Resolve canonical active rules for internal planning and proof. Parsed rules
- * are detached before filtering so planners cannot mutate manifest authoring.
+ * Resolve rules that have already crossed `CampaignServiceRulesSchema`.
+ * Integrity proofs use this trusted core repeatedly without reparsing the same
+ * manifest. Other callers should use `resolveActiveCampaignServiceRules`.
  */
-export function resolveActiveCampaignServiceRules(
+export function resolveParsedActiveCampaignServiceRules(
   state: CampaignServiceRuleResolutionState,
 ): CampaignServiceRule[] {
-  const rules = CampaignServiceRulesSchema.parse(state.rules);
   const worldFactIds = stringSet(state.worldFactIds);
   const selectedStoryChoiceKeys = new Set(
     (state.selectedStoryChoices ?? []).map(campaignStoryChoiceRefKey),
   );
   const consumedRuleIds = stringSet(state.consumedRuleIds);
-  const offers = rules
+  const offers = state.rules
     .filter(
       (rule) =>
         rule.home === state.currentTownId &&
         rule.area === state.currentAreaId &&
-        ruleIsActive(rule, worldFactIds, selectedStoryChoiceKeys, consumedRuleIds),
+        ruleIsActive(rule, worldFactIds, selectedStoryChoiceKeys, consumedRuleIds, state.character),
     )
     .sort(compareRules);
 
@@ -226,6 +295,19 @@ export function resolveActiveCampaignServiceRules(
   }
 
   return offers;
+}
+
+/**
+ * Resolve canonical active rules for internal planning and proof. Parsed rules
+ * are detached before filtering so planners cannot mutate manifest authoring.
+ */
+export function resolveActiveCampaignServiceRules(
+  state: CampaignServiceRuleResolutionState,
+): CampaignServiceRule[] {
+  return resolveParsedActiveCampaignServiceRules({
+    ...state,
+    rules: CampaignServiceRulesSchema.parse(state.rules),
+  });
 }
 
 /** Strip internal location and predicate state from one detached player offer. */

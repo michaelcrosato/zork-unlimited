@@ -5,6 +5,7 @@ import {
   CampaignServiceRulesSchema,
   resolveActiveCampaignServiceRules,
   resolveCampaignServiceRules,
+  resolveParsedActiveCampaignServiceRules,
   type CampaignServiceRule,
 } from "../../src/world/campaign_service_rules.js";
 import {
@@ -14,6 +15,7 @@ import {
 } from "../../src/world/overworld.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
 import { planOverworldSessionTownResupply } from "../../src/world/session_service_lifecycle.js";
+import { buildCampaignCharacterState } from "../../src/world/campaign_character_state.js";
 
 const WORLD = loadOverworldManifest(process.cwd());
 const KNOWN_WORLD_FACT = "fact:wolf_winter_repair_timber_available";
@@ -74,10 +76,33 @@ describe("campaign service-rule authoring", () => {
         forbids_any_world_facts: [KNOWN_WORLD_FACT],
       }),
     ).toThrow(/both require and forbid/i);
+    expect(() =>
+      CampaignServiceRuleSchema.parse({
+        ...serviceRule(),
+        requires_all_promises: [
+          { promise_id: "promise:test", status: "active" },
+          { promise_id: "promise:test", status: "kept" },
+        ],
+      }),
+    ).toThrow(/repeat promise/i);
 
     expect(() => CampaignServiceRulesSchema.parse([serviceRule(), serviceRule()])).toThrow(
       /duplicate.*rule id/i,
     );
+    expect(() =>
+      CampaignServiceRulesSchema.parse([
+        serviceRule({
+          id: "service:first_predicate",
+          requires_all_world_facts: [KNOWN_WORLD_FACT, "fact:second_condition"],
+          forbids_any_world_facts: ["fact:first_blocker", "fact:second_blocker"],
+        }),
+        serviceRule({
+          id: "service:second_predicate",
+          requires_all_world_facts: ["fact:second_condition", KNOWN_WORLD_FACT],
+          forbids_any_world_facts: ["fact:second_blocker", "fact:first_blocker"],
+        }),
+      ]),
+    ).toThrow(/same normalized activation predicate/i);
 
     expect(() =>
       CampaignServiceRuleSchema.parse(
@@ -179,6 +204,54 @@ describe("campaign service-rule authoring", () => {
       ),
     ).toThrow(/provider.*outside/i);
   });
+
+  it("rejects ally predicates that no canonical pre- or post-Wolf state can satisfy", () => {
+    const released = structuredClone(WORLD);
+    const releasedRule = released.campaign_service_rules?.find(
+      (rule) => rule.id === "albany:june_kept_line_station_resupply",
+    );
+    const releasedPromise = releasedRule?.requires_all_promises?.[0];
+    if (!releasedPromise) throw new Error("expected June's kept-line service predicate");
+    releasedPromise.status = "released";
+    expect(() => assertOverworldIntegrity(released)).toThrow(
+      /ally conditions unreachable.*canonical pre-Wolf and post-Wolf/i,
+    );
+
+    const brokenWithJune = structuredClone(WORLD);
+    const brokenRule = brokenWithJune.campaign_service_rules?.find(
+      (rule) => rule.id === "albany:june_kept_line_station_resupply",
+    );
+    const brokenPromise = brokenRule?.requires_all_promises?.[0];
+    if (!brokenPromise) throw new Error("expected June's kept-line service predicate");
+    brokenPromise.status = "broken";
+    expect(() => assertOverworldIntegrity(brokenWithJune)).toThrow(
+      /ally conditions unreachable.*canonical pre-Wolf and post-Wolf/i,
+    );
+  });
+
+  it("rejects distinct service predicates that collide in a canonical return state", () => {
+    const world = structuredClone(WORLD);
+    const keptRule = world.campaign_service_rules?.find(
+      (rule) => rule.id === "albany:june_kept_line_station_resupply",
+    );
+    if (!keptRule || !world.campaign_service_rules) {
+      throw new Error("expected June's kept-line service predicate");
+    }
+    world.campaign_service_rules.push({
+      ...structuredClone(keptRule),
+      id: "albany:june_whole_herd_station_resupply_collision",
+      title: "Duplicate returned field stores",
+      summary: "A second claim cannot occupy June's returned-store action.",
+      requires_all_world_facts: [
+        ...(keptRule.requires_all_world_facts ?? []),
+        "fact:wolf_winter_cattle_whole",
+      ],
+    });
+
+    expect(() => assertOverworldIntegrity(world)).toThrow(
+      /both resolve for action "resupply".*transport_hub/i,
+    );
+  });
 });
 
 describe("campaign service-rule resolution", () => {
@@ -197,7 +270,10 @@ describe("campaign service-rule resolution", () => {
         action: "resupply",
         forbids_any_world_facts: ["fact:service_blocked"],
       }),
-      serviceRule({ id: "service:consumed", requires_all_world_facts: [KNOWN_WORLD_FACT] }),
+      serviceRule({
+        id: "service:consumed",
+        requires_all_world_facts: [KNOWN_WORLD_FACT, "fact:consumed_requirement"],
+      }),
       serviceRule({
         id: "service:missing_fact",
         action: "resupply",
@@ -209,7 +285,11 @@ describe("campaign service-rule resolution", () => {
       rules,
       currentTownId: "albany_city",
       currentAreaId: "albany_city__transport_hub",
-      worldFactIds: new Set([KNOWN_WORLD_FACT, "fact:service_blocked"]),
+      worldFactIds: new Set([
+        KNOWN_WORLD_FACT,
+        "fact:service_blocked",
+        "fact:consumed_requirement",
+      ]),
       consumedRuleIds: new Set(["service:consumed"]),
     });
 
@@ -339,14 +419,72 @@ describe("campaign service-rule resolution", () => {
       worldFactIds: [KNOWN_WORLD_FACT],
       consumedRuleIds: [],
     });
+    expect(
+      resolveParsedActiveCampaignServiceRules({
+        rules: CampaignServiceRulesSchema.parse(rules),
+        currentTownId: "albany_city",
+        currentAreaId: "albany_city__transport_hub",
+        worldFactIds: [KNOWN_WORLD_FACT],
+        consumedRuleIds: [],
+      }),
+    ).toEqual(internal);
     internal[0]!.requires_all_world_facts!.push("fact:caller_mutation");
     expect(rules[1]!.requires_all_world_facts).toEqual([KNOWN_WORLD_FACT]);
+  });
+
+  it("requires canonical companion and promise state when a service authors those predicates", () => {
+    const rule = serviceRule({
+      id: "service:june_kept_line",
+      requires_all_companions: ["albany:june_pike"],
+      requires_all_promises: [{ promise_id: "albany:promise_june_cattle_first", status: "kept" }],
+    });
+    const state = {
+      rules: [rule],
+      currentTownId: "albany_city",
+      currentAreaId: "albany_city__transport_hub",
+      worldFactIds: [KNOWN_WORLD_FACT],
+      consumedRuleIds: [] as string[],
+    };
+    expect(resolveCampaignServiceRules(state)).toEqual([]);
+    expect(
+      resolveCampaignServiceRules({
+        ...state,
+        character: buildCampaignCharacterState({
+          companions: ["albany:june_pike"],
+          promises: [
+            {
+              promiseId: "albany:promise_june_cattle_first",
+              recipientId: "albany:june_pike",
+              status: "active",
+            },
+          ],
+        }),
+      }),
+    ).toEqual([]);
+    expect(
+      resolveCampaignServiceRules({
+        ...state,
+        character: buildCampaignCharacterState({
+          companions: ["albany:june_pike"],
+          promises: [
+            {
+              promiseId: "albany:promise_june_cattle_first",
+              recipientId: "albany:june_pike",
+              status: "kept",
+            },
+          ],
+        }),
+      }).map((offer) => offer.id),
+    ).toEqual([rule.id]);
   });
 
   it("rejects overlapping active rules for one action after consumption filtering", () => {
     const rules = [
       serviceRule({ id: "service:first_rest" }),
-      serviceRule({ id: "service:second_rest" }),
+      serviceRule({
+        id: "service:second_rest",
+        forbids_any_world_facts: ["fact:service_blocked"],
+      }),
     ];
     const state = {
       rules,

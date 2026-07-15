@@ -160,6 +160,11 @@ export function CampaignCharacterPanel({
         </section>
 
         <section>
+          <h3>Companions</h3>
+          <IdList values={character.companions} />
+        </section>
+
+        <section>
           <h3>Promises</h3>
           {character.promises.length === 0 ? (
             <Empty />

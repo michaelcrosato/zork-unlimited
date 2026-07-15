@@ -1,12 +1,22 @@
 import { describe, expect, it } from "vitest";
-import { createInitialCampaignCharacterState } from "../../src/world/campaign_character_state.js";
-import type { OverworldArea, OverworldNode, OverworldQuest } from "../../src/world/overworld.js";
+import {
+  buildCampaignCharacterState,
+  createInitialCampaignCharacterState,
+} from "../../src/world/campaign_character_state.js";
+import {
+  OverworldQuestCampaignConditionalEffectsSchema,
+  OverworldQuestCampaignExportSchema,
+  type OverworldArea,
+  type OverworldNode,
+  type OverworldQuest,
+} from "../../src/world/overworld.js";
 import {
   applyOverworldQuestCompletion,
   applyOverworldQuestStart,
   planOverworldQuestCompletion,
   planOverworldQuestStart,
   questCompletionMinutes,
+  replayQuestCampaignConsequences,
 } from "../../src/world/session_quests.js";
 
 function area(id: string, name = `${id} name`): OverworldArea {
@@ -356,5 +366,185 @@ describe("overworld quest lifecycle planning", () => {
         questOutcomeIds: new Map([[lead.id, state.outcome.endingId]]),
       }),
     ).not.toThrow();
+  });
+
+  it("selects reusable companion consequences and replays non-monotone effects chronologically", () => {
+    const departure: OverworldQuest = {
+      ...quest("departure"),
+      campaign_exports: [
+        {
+          ending_id: "ending_departed",
+          ending_title: "The Ally Departed",
+          effects: [],
+          conditional_effects: [
+            {
+              id: "test:ally_departure",
+              when: { requires_all_companions: ["npc:test_ally"] },
+              effects: [{ type: "remove_companion", npc_id: "npc:test_ally" }],
+            },
+          ],
+        },
+      ],
+    };
+    const reunion: OverworldQuest = {
+      ...quest("reunion"),
+      campaign_exports: [
+        {
+          ending_id: "ending_rejoined",
+          ending_title: "The Ally Rejoined",
+          effects: [{ type: "add_companion", npc_id: "npc:test_ally" }],
+        },
+      ],
+    };
+    const initial = buildCampaignCharacterState({ companions: ["npc:test_ally"] });
+    const questsById = new Map([
+      [departure.id, departure],
+      [reunion.id, reunion],
+    ]);
+    const outcomes = new Map([
+      [departure.id, "ending_departed"],
+      [reunion.id, "ending_rejoined"],
+    ]);
+
+    expect(
+      replayQuestCampaignConsequences({
+        character: initial,
+        questsById,
+        questOutcomeIds: outcomes,
+        questOutcomeOrder: [departure.id, reunion.id],
+      }).characterAfter.companions,
+    ).toEqual(["npc:test_ally"]);
+    expect(
+      replayQuestCampaignConsequences({
+        character: initial,
+        questsById,
+        questOutcomeIds: outcomes,
+        questOutcomeOrder: [reunion.id, departure.id],
+      }).characterAfter.companions,
+    ).toEqual([]);
+    expect(() =>
+      replayQuestCampaignConsequences({
+        character: initial,
+        questsById,
+        questOutcomeIds: outcomes,
+        questOutcomeOrder: [departure.id],
+      }),
+    ).toThrow(/every completed quest exactly once/i);
+  });
+
+  it("rejects empty, unconditional, or world-fact-only conditional effect groups", () => {
+    expect(() =>
+      OverworldQuestCampaignConditionalEffectsSchema.parse({
+        id: "test:empty_condition",
+        when: {},
+        effects: [{ type: "remove_companion", npc_id: "npc:test_ally" }],
+      }),
+    ).toThrow(/at least one predicate/i);
+    expect(() =>
+      OverworldQuestCampaignConditionalEffectsSchema.parse({
+        id: "test:empty_effects",
+        when: { requires_all_companions: ["npc:test_ally"] },
+        effects: [],
+      }),
+    ).toThrow(/must change campaign character state/i);
+    expect(() =>
+      OverworldQuestCampaignConditionalEffectsSchema.parse({
+        id: "test:conditional_fact",
+        when: { requires_all_companions: ["npc:test_ally"] },
+        effects: [{ type: "set_world_fact", fact_id: "fact:test_hidden_branch" }],
+      }),
+    ).toThrow(/world facts remain unconditional/i);
+    expect(() =>
+      OverworldQuestCampaignConditionalEffectsSchema.parse({
+        id: "test:unguarded_departure",
+        when: { requires_all_companions: ["npc:other_ally"] },
+        effects: [{ type: "remove_companion", npc_id: "npc:test_ally" }],
+      }),
+    ).toThrow(/must require that companion/i);
+    expect(() =>
+      OverworldQuestCampaignConditionalEffectsSchema.parse({
+        id: "test:unguarded_promise",
+        when: { requires_all_companions: ["npc:test_ally"] },
+        effects: [{ type: "resolve_promise", promise_id: "promise:test_ally", status: "kept" }],
+      }),
+    ).toThrow(/must require that promise as active/i);
+    expect(() =>
+      OverworldQuestCampaignConditionalEffectsSchema.parse({
+        id: "test:quest_created_promise",
+        when: { requires_all_companions: ["npc:test_ally"] },
+        effects: [
+          {
+            type: "record_promise",
+            promise_id: "promise:test_ally",
+            recipient_id: "npc:test_ally",
+          },
+        ],
+      }),
+    ).toThrow(/quest exports cannot create promises/i);
+  });
+
+  it("rejects jointly reachable conditional mutation collisions before completion", () => {
+    const activeAlly = {
+      requires_all_companions: ["npc:test_ally"],
+      requires_all_promises: [{ promise_id: "promise:test_ally", status: "active" as const }],
+    };
+    expect(() =>
+      OverworldQuestCampaignExportSchema.parse({
+        ending_id: "ending_unbound_promise",
+        ending_title: "Unbound Promise",
+        effects: [{ type: "resolve_promise", promise_id: "promise:unknown", status: "kept" }],
+      }),
+    ).toThrow(/promise resolution must be conditional.*exact promise.*active/i);
+
+    expect(() =>
+      OverworldQuestCampaignExportSchema.parse({
+        ending_id: "ending_created_promise",
+        ending_title: "Created Promise",
+        effects: [
+          {
+            type: "record_promise",
+            promise_id: "promise:reused",
+            recipient_id: "npc:wrong_recipient",
+          },
+        ],
+      }),
+    ).toThrow(/quest exports cannot create promises/i);
+
+    expect(() =>
+      OverworldQuestCampaignExportSchema.parse({
+        ending_id: "ending_conflict",
+        ending_title: "Conflicting Promise",
+        effects: [],
+        conditional_effects: [
+          {
+            id: "test:keep_promise",
+            when: activeAlly,
+            effects: [{ type: "resolve_promise", promise_id: "promise:test_ally", status: "kept" }],
+          },
+          {
+            id: "test:break_promise",
+            when: activeAlly,
+            effects: [
+              { type: "resolve_promise", promise_id: "promise:test_ally", status: "broken" },
+            ],
+          },
+        ],
+      }),
+    ).toThrow(/jointly matchable.*overlap/i);
+
+    expect(() =>
+      OverworldQuestCampaignExportSchema.parse({
+        ending_id: "ending_unconditional_conflict",
+        ending_title: "Conflicting Companion",
+        effects: [{ type: "remove_companion", npc_id: "npc:test_ally" }],
+        conditional_effects: [
+          {
+            id: "test:second_departure",
+            when: { requires_all_companions: ["npc:test_ally"] },
+            effects: [{ type: "remove_companion", npc_id: "npc:test_ally" }],
+          },
+        ],
+      }),
+    ).toThrow(/overlaps unconditional/i);
   });
 });

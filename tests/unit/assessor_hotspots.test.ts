@@ -16,6 +16,7 @@ type FixtureContactVariant = {
 };
 
 type FixtureOverworld = Record<string, unknown> & {
+  opening_ally?: unknown;
   opening_preparation?: unknown;
   opening_registration?: {
     profiles: Array<{
@@ -59,6 +60,7 @@ function writeFixtureQuestRoot(root: string): void {
     join(root, "content", "world", "new_york_overworld.json"),
     JSON.stringify({
       ...fixtureOverworldWithOpeningContactVariants(),
+      opening_ally: undefined,
       opening_lead_source: undefined,
       opening_preparation: undefined,
       quests: [

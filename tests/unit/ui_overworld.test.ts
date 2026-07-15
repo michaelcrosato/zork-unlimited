@@ -56,6 +56,7 @@ function populatedUiCharacter() {
           status: "active",
         },
       ],
+      companions: ["albany:june_pike"],
       crimes: [
         {
           crimeId: "crime:steading_trespass",
@@ -205,6 +206,7 @@ describe("OverworldSession", () => {
       money: 0,
       skills: [],
       equipment: [],
+      companions: [],
       relationships: [],
       factionStanding: [],
     });
@@ -222,7 +224,8 @@ describe("OverworldSession", () => {
       [],
       [],
       [],
-      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      [],
+      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     ]);
     const colonieOption = view.routeOptions.find(
       (route) => route.destination.id === "colonie_town",
@@ -332,10 +335,12 @@ describe("OverworldSession", () => {
     expect(handler).toContain('journey.storyChoice?.kind === "registration"');
     expect(handler).toContain('journey.storyChoice?.kind === "lead_source"');
     expect(handler).toContain('journey.storyChoice?.kind === "preparation"');
+    expect(handler).toContain('journey.storyChoice?.kind === "ally"');
     expect(handler).toContain("Character registered: ${result.consequence}");
     expect(handler).toContain("Current goal: ${result.goal.text}");
     expect(handler).toContain("Lead source certified: ${result.consequence}");
     expect(handler).toContain("Preparation committed: ${result.consequence}");
+    expect(handler).toContain("Field team committed: ${result.consequence}");
     expect(handler).toContain("Story consequence: ${result.consequence}");
     expect(handler).toContain("New goal: ${result.goal.text}");
     expect(handler).not.toMatch(/AlbanyDawnDispatchChoiceId|Albany dawn dispatch/i);
@@ -350,6 +355,8 @@ describe("OverworldSession", () => {
     expect(screen).toContain("Choose your Albany lead source");
     expect(screen).toContain("Albany preparation budget");
     expect(screen).toContain("Choose what Albany prepares");
+    expect(screen).toContain("Field-team commitment");
+    expect(screen).toContain("Choose who leaves Albany");
     expect(screen).toContain('" journey-choice-actions-registration"');
     expect(styles).toContain(
       ".journey-choice-actions:not(.journey-choice-actions-registration) button:first-child",
@@ -529,6 +536,63 @@ describe("OverworldSession", () => {
     }
   });
 
+  it("renders ally commitments with an honest current-objective and field-terms frame", async () => {
+    const uiRoot = resolve(process.cwd(), "ui");
+    const server = await createServer({
+      root: uiRoot,
+      configFile: resolve(uiRoot, "vite.config.ts"),
+      appType: "custom",
+      logLevel: "silent",
+      optimizeDeps: { noDiscovery: true },
+      server: { middlewareMode: true },
+    });
+    try {
+      const module = (await server.ssrLoadModule("/src/JourneyStoryChoiceScreen.tsx")) as {
+        JourneyStoryChoiceScreen: unknown;
+      };
+      const requireFromUi = createRequire(resolve(uiRoot, "package.json"));
+      const react = requireFromUi("react") as {
+        createElement: (type: unknown, props: Record<string, unknown>) => unknown;
+      };
+      const reactDomServer = requireFromUi("react-dom/server") as {
+        renderToStaticMarkup: (element: unknown) => string;
+      };
+      const journey = new OverworldSession(world).journey();
+      const allyJourney = {
+        ...journey,
+        storyChoice: {
+          id: "albany_wolf_ally",
+          kind: "ally",
+          message: "Capability: June can hold the cattle line. Condition: cattle come first.",
+          options: ["join", "relay", "solo"].map((id, index) => ({
+            id,
+            label: id,
+            consequence: `Preview ${id}. Actual cost: ${String(index * 5)} minutes.`,
+          })),
+        },
+      };
+      const markup = reactDomServer.renderToStaticMarkup(
+        react.createElement(module.JourneyStoryChoiceScreen, {
+          journey: allyJourney,
+          onChoose: () => undefined,
+        }),
+      );
+
+      expect(markup).toContain("Field-team commitment");
+      expect(markup).toContain("Choose who leaves Albany");
+      expect(markup).toContain("Current objective");
+      expect(markup).toContain("Capability: June can hold the cattle line");
+      expect(markup).toContain("Condition: cattle come first");
+      expect(markup).toContain("actual cost");
+      expect(markup).toContain("Actual cost: 10 minutes");
+      expect(markup.match(/<button/g)).toHaveLength(3);
+      expect(markup).not.toContain("Goal just completed");
+      expect(markup).not.toContain("sets your next objective");
+    } finally {
+      await server.close();
+    }
+  });
+
   it("renders the fully populated canonical character as a semantic read-only record", async () => {
     const app = readFileSync("ui/src/App.tsx", "utf8");
     expect(app).toContain("<CampaignCharacterPanel character={worldView.character} />");
@@ -562,7 +626,7 @@ describe("OverworldSession", () => {
       expect(markup).toMatch(
         /^<details class="character-panel"><summary class="character-heading"><h2 class="character-heading-layout">[\s\S]*<\/h2><\/summary>/,
       );
-      expect(markup.match(/<h3>/g)).toHaveLength(10);
+      expect(markup.match(/<h3>/g)).toHaveLength(11);
       for (const visibleText of [
         "Your Record",
         "Road Warden",
@@ -573,6 +637,7 @@ describe("OverworldSession", () => {
         "Brace",
         "Wolf Spoor",
         "Hayden Hale",
+        "June Pike",
         "Albany Hinterland",
         "Old Cade",
         "Kept Watch",

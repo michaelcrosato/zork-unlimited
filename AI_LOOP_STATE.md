@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 562 -->
+<!-- historical_cycle_count: 563 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,15 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - albany_wolf_ally_commitment
+
+- Evidence choice: `SS-F04-ally-commitment` was the highest-leverage missing slice foundation because Albany → Wolf-Winter still had no persistent ally with disclosed authority, refusal, conduct boundary, independent field action, and return consequence.
+- Surface: June Pike now offers three irreversible departure terms after preparation: 15-minute cattle-first partnership, 5-minute subordinate-relay refusal, or immediate solo travel. Partnership creates a companion and active promise; a recovered bloodless lure gives June one independent cattle-line intervention, while first blood ends the agreement without blocking hybrid/combat completion. Truthful return yields distinct one-time Station resupply/rest consequences for kept authority versus refused relay.
+- Integrity/counterfactual: generic conditional quest exports, companion/promise predicates, journal/replay boundaries, projections, and save migration carry the relationship across overworld, quest, and return. All opening combinations and Wolf endings are simulated; unreachable/colliding service rules and malformed conditional mutations fail authoring. Same-state paired routes reverse cattle alarm 4→3 and scattered→whole herd, while exact first-blood routes prove June leaves and both sides remain viable. The ledger advances from 6/12 to 7/12.
+- Pure evidence: seed 2713 verified pure/fresh, chose Road-Warden + Hayden's report + Emery's route, completed Wolf-Winter at decision 23, continued at 23/40/47/68/80/91, and ended voluntarily after five goals at 114; clarity/enjoyment 5/5, stuck false, replay true, no bugs. It chose combat and skipped June, so paired deterministic and live embedded proofs carry F04's ally counterfactual.
+- Compile/self-critique: only seeds 2712/2713 are verified since compile `20260715T000942Z`, so no compile is due. PASS for the first evidence-grade ally fork, not the greater-than-BG3 slice claim: 7/12 forks and two of four strategy families are complete; `SS-F10-crisis-priority` and full drive/evacuate remain next.
+- Guard: independent acceptance/adversarial audits closed early-contact restore, quest-order, promise/export, service-reachability/collision, fixture, and liveness gaps; live UI showed June + active promise with zero console errors. Pre/final 6,000-step crawls `20260715T015517Z`/`20260715T073849Z` reached 247/247 nodes, 344/344 edges, and 12/12 quests; full health passed at 346 files/2,504 tests, UI, and all 12 packs.
 
 ### Cycle result - albany_wolf_preparation_profiles
 
@@ -135,12 +144,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Pure evidence: exact-hash seed 2319 started with the knife in compact inventory, completed Gallowmere 50/50 with its blind-side strike as the best moment, continued at decisions 22/40/47/71/80, then ended after goal 4 at 96 (clarity 5/5, enjoyment 4/5, replay true; no rejection, loop, or stuck state).
 - Compile/self-critique: ledger 464/30 rejected is one report beyond the 463-report compile, below the ≥3 threshold. PASS for restored equipment trust, not retention completion—the player still stopped and identified repeated clue/tool/check quest skeletons, abstract pacing bookkeeping, and templated road copy as the next debts.
 - Guard: pre/post crawls `20260712T151119Z`/`20260712T152119Z` covered 6,000 steps, all 7 Gallowmere rooms and 247/247 overworld nodes; hash `b8526f2f8235`, exact pure report copy, focused 10-test proof, and full health (306 files/2,169 tests, UI, 12 packs) passed.
-
-### Cycle result - tanners_fever_compact_case_integrity
-
-- Root evidence: independent pure seeds 1912/2115 both saw legal `go_east`, but 697-character sickroom prose hid herb-store orientation, 744-character notes prose hid the remedy handoff, and the 397-character corridor block hid its third proof. Seed 1912 recovered through verbose mode; seed 2115 looped west/north and exited at checkpoint 80 (`bug_0515`).
-- Surface: all 55 reachable Tanner's Fever prose bodies now fit their strictest transport exactly—room/LOOK/object/read/narration ≤280, rolling journal ≤128, blocked reason ≤180, wrapped dialogue ≤280, and score-bearing ending ≤360. Read/unread/dropped notes receive state-truthful sickroom guidance; mechanics, choices, routes, score, and endings are unchanged.
-- Parity proof: the literal seed-2115 sequence runs UI and compact MCP in lockstep through Edric, Godwin, notes, blocked corridor, east herb store, treatment, and 50/50 ending with identical menus/context/narration/memory and no omission chrome; every reachable prose projection is byte-exact.
-- Pure evidence: fresh seeds 2216/2217/2218 all independently completed Tanner without its prior stall and continued afterward. Exact-final-hash seed 2218 continued through checkpoints 80/120, completed five distinct quests, then ended at goal 5 on decision 130 (clarity 4/5, enjoyment 5/5, replay true); its new S1 was Gallowmere's falsely pre-held knife.
-- Compile/self-critique: ledger 463/30 rejected; all 14 contract-v3 pure exits continued at least once (62 continue/14 end), checkpoint 40=14/0, 80=9/3, 120=1/0, mean 96 decisions. PASS for Tanner parity, not retention completion—players still stop; Gallowmere inventory truth and repetitive long-route travel are next.
-- Guard: pre/final crawls `20260712T135922Z`/`20260712T144433Z` each covered 6,000 steps and 247/247 nodes; focused parity/route/recovery suites, exact final playtest copy, hash `3074f38c0ae6`, and full health (305 files/2,165 tests, UI, 12 packs) passed.
