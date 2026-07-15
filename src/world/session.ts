@@ -46,6 +46,7 @@ import {
   questCampaignEffectGroupsForOutcomes,
   type OverworldQuestCompletionOutcome,
   type OverworldQuestCompletionResult,
+  type OverworldQuestStartPreparation,
 } from "./session_quests.js";
 import { deriveCampaignWorldFactIds } from "./campaign_consequences.js";
 import {
@@ -53,8 +54,9 @@ import {
   type CampaignServiceOffer,
 } from "./campaign_service_rules.js";
 import {
+  applyOverworldSessionQuestStart,
   applyOverworldSessionQuestCompletion,
-  applyOverworldSessionQuestStartFromState,
+  planOverworldSessionQuestStart,
   planOverworldSessionQuestCompletion,
   previewOverworldSessionQuestStart,
   type OverworldSessionQuestStartState,
@@ -236,6 +238,7 @@ export type { OverworldRegionalArcProgress } from "./session_regional_arcs.js";
 export type { OverworldServiceResult } from "./session_service_lifecycle.js";
 export type { OverworldQuestView } from "./session_local_discovery.js";
 export type { OverworldQuestCompletionResult } from "./session_quests.js";
+export type { OverworldQuestStartPreparation } from "./session_quests.js";
 export type { OverworldAreaTravelResult } from "./session_local_actions.js";
 export {
   OVERWORLD_SESSION_SAVE_VERSION,
@@ -1520,7 +1523,7 @@ export class OverworldSession {
     });
   }
 
-  private questStartState(questId: string): OverworldSessionQuestStartState {
+  private questStartState(questId: string, approachId?: string): OverworldSessionQuestStartState {
     this.assertNoPendingRoadEncounter("starting a quest");
     const registration = this.world.opening_registration;
     if (
@@ -1550,6 +1553,11 @@ export class OverworldSession {
     return {
       ...this.actionJournalState(),
       questId,
+      ...(approachId !== undefined ? { approachId } : {}),
+      sessionFingerprint: this.snapshotHash(),
+      supplies: this.supplies,
+      fatigue: this.fatigue,
+      character: this.characterState,
       questsById: this.questsById,
       areasById: this.areasById,
       currentTownId: this.currentId,
@@ -1566,17 +1574,54 @@ export class OverworldSession {
     );
   }
 
-  startQuest(questId: string): OverworldJourneyQuestStartResult {
+  prepareQuestStart(questId: string, approachId?: string): OverworldQuestStartPreparation {
+    return planOverworldSessionQuestStart(this.questStartState(questId, approachId));
+  }
+
+  commitQuestStart(plan: OverworldQuestStartPreparation): OverworldJourneyQuestStartResult {
     this.assertJourneyAcceptingDecision();
-    const applied = applyOverworldSessionQuestStartFromState(this.questStartState(questId));
-    this.applyClockState(applied);
+    const canonicalPlan = planOverworldSessionQuestStart(
+      this.questStartState(plan.quest.id, plan.approachId === null ? undefined : plan.approachId),
+    );
+    if (
+      canonicalPlan.preconditionFingerprint !== plan.preconditionFingerprint ||
+      hashState(canonicalPlan) !== hashState(plan)
+    ) {
+      throw new Error("Quest start plan is stale; prepare the quest start again.");
+    }
+    const applied = applyOverworldSessionQuestStart(
+      this.questStartState(
+        canonicalPlan.quest.id,
+        canonicalPlan.approachId === null ? undefined : canonicalPlan.approachId,
+      ),
+      canonicalPlan,
+    );
+    this.applyResourceClockState(applied);
+    this.characterState = cloneCampaignCharacterState(applied.characterAfter);
     const journeyDecision = this.recordOverworldDecision(
-      `quest_start:${questId}`,
+      canonicalPlan.journeyActionId,
       "progress",
       applied.stateChanged,
     );
+    if (canonicalPlan.approachId !== null) {
+      applied.result.entry.questStartProof = {
+        kind: "approach",
+        approachId: canonicalPlan.approachId,
+        boundary: {
+          acceptedDecisions: this.journeyState.acceptedDecisions,
+          decisionProofHash: this.journeyState.decisionProof.hash,
+          townId: this.currentId,
+          areaId: this.currentAreaIdOrThrow(),
+          minutes: this.minutes,
+        },
+      };
+    }
     this.clearSessionCaches();
     return withJourneyDecision(cloneOverworldQuestView(applied.quest), journeyDecision);
+  }
+
+  startQuest(questId: string, approachId?: string): OverworldJourneyQuestStartResult {
+    return this.commitQuestStart(this.prepareQuestStart(questId, approachId));
   }
 
   completeQuest(

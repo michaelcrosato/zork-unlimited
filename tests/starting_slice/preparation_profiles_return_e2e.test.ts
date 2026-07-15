@@ -37,7 +37,7 @@ const PROFILE = "albany:prep_drover_route";
 const SERVICE_ID = "albany:wolf_drover_route_return_rest";
 const CAMPUS_AREA = "albany_city__campus";
 const ROUTE = [
-  "go_north",
+  "use_sheltered_stockway_last_mile",
   "talk_houndsman",
   "ask_lure",
   "ask_commit_lure",
@@ -175,15 +175,16 @@ function launchPreparedWolf(api: ToolApi) {
     include_actions: true,
     session_id: overworldSessionId,
     quest_id: WOLF.id,
+    approach_id: "albany:wolf_approach_sheltered_stockway",
     seed: 5,
   });
-  return { launched, overworldSessionId, preparedSnapshot };
+  return { launched, overworldSessionId };
 }
 
 describe("SS-F05 — preparation survives Wolf-Winter and the Albany return", () => {
   it("carries the drover profile through MCP/UI replay and consumes its truthful return service", () => {
     const api = createToolApi({ root: ROOT });
-    const { launched, overworldSessionId, preparedSnapshot } = launchPreparedWolf(api);
+    const { launched, overworldSessionId } = launchPreparedWolf(api);
     const rpgSessionId = launched.rpg_session_id;
     const initial = api.get_state({ session_id: rpgSessionId, include_state: true });
     expect(initial.state).toMatchObject({
@@ -191,13 +192,17 @@ describe("SS-F05 — preparation survives Wolf-Winter and the Albany return", ()
       flags: { drover_route_prepared: true },
     });
     expect(initial.state.campaignImportReceipt?.applied_rules).toEqual([
+      "import:wolf_winter_approach_sheltered_stockway",
       "import:wolf_winter_drover_route",
       "import:wolf_winter_drover_streetwise",
     ]);
 
-    // The browser starts from the prepared persistent character, never the raw
-    // registration profile. It and MCP therefore share one imported state hash.
-    const ui = GameSession.startEmbedded(WOLF_SOURCE, preparedSnapshot.character, WOLF_IMPORTS, 5);
+    // The browser starts from the post-launch persistent character, including
+    // the committed approach. It and MCP therefore share one imported state hash.
+    const launchedCharacter = api.export_overworld_session({
+      session_id: overworldSessionId,
+    }).snapshot.character;
+    const ui = GameSession.startEmbedded(WOLF_SOURCE, launchedCharacter, WOLF_IMPORTS, 5);
     expect(ui.view().stateHash).toBe(api.sessions.get(rpgSessionId).stateHash);
 
     let detachedSessionId: string | null = null;

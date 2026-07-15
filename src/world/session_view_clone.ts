@@ -16,6 +16,7 @@ import { cloneOverworldRegionalArcProgress } from "./session_regional_arcs.js";
 import type { OverworldView } from "./session_view.js";
 import { cloneCampaignCharacterView } from "./campaign_character_view.js";
 import { redactOverworldJournalEntryForPresentation } from "./session_snapshot.js";
+import { cloneOverworldQuestView } from "./session_result_clone.js";
 
 export function cloneOverworldView(view: OverworldView): OverworldView {
   return {
@@ -32,7 +33,7 @@ export function cloneOverworldView(view: OverworldView): OverworldView {
     jobs: view.jobs.map(cloneOverworldLocalJob),
     rememberedJobs: view.rememberedJobs.map(cloneOverworldLocalJob),
     sites: view.sites.map(cloneOverworldExplorationSite),
-    quests: view.quests.map((quest) => ({ ...quest })),
+    quests: view.quests.map(cloneOverworldQuestView),
     serviceOffers: view.serviceOffers.map((offer) => ({
       id: offer.id,
       action: offer.action,

@@ -25,7 +25,10 @@ import {
   OVERWORLD_COMPACT_ROAD_ENCOUNTER_TEXT_CHAR_LIMIT,
 } from "../../src/mcp/compact_overworld_result.js";
 import { compactText } from "../../src/core/compact_text.js";
-import { OVERWORLD_COMPACT_VIEW_VERSION } from "../../src/world/compact_view.js";
+import {
+  OVERWORLD_COMPACT_VIEW_VERSION,
+  compactOverworldQuestRef,
+} from "../../src/world/compact_view.js";
 import {
   hashTranscript,
   publicRpgTranscriptHash,
@@ -57,6 +60,7 @@ const FULL_OVERWORLD_QUEST_START = {
   ...FULL_OVERWORLD_RESPONSE,
   compact_observation: false,
 } as const;
+const SHELTERED_APPROACH_ID = "albany:wolf_approach_sheltered_stockway";
 const PUBLIC_RPG_STATE_HASH_RE = new RegExp(`^[0-9a-f]{${RPG_PUBLIC_STATE_HASH_LENGTH}}$`);
 const PUBLIC_RPG_TRANSCRIPT_HASH_RE = new RegExp(
   `^[0-9a-f]{${RPG_PUBLIC_TRANSCRIPT_HASH_LENGTH}}$`,
@@ -674,13 +678,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(sourced.currentArea?.id).not.toBe(discoveredQuest.area);
     expect(
       a.get_overworld_session_context({ session_id: started.session_id }).context.quests?.[0],
-    ).toEqual([
-      discoveredQuest.id,
-      discoveredQuest.title,
-      // The compact quest lead now carries its anchor area id so a blind agent can
-      // walk there before start_overworld_session_quest (the 49/50 friction fix).
-      discoveredQuest.area,
-    ]);
+    ).toEqual(compactOverworldQuestRef(discoveredQuest));
     areaObservation = a.move_overworld_session_area({
       ...FULL_OVERWORLD_RESPONSE,
       session_id: started.session_id,
@@ -692,6 +690,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
         ...FULL_OVERWORLD_QUEST_START,
         session_id: started.session_id,
         quest_id: discoveredQuest.id,
+        approach_id: SHELTERED_APPROACH_ID,
       }),
     ).toThrow(/Move to/i);
 
@@ -714,6 +713,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
       ...FULL_OVERWORLD_QUEST_START,
       session_id: started.session_id,
       quest_id: discoveredQuest.id,
+      approach_id: SHELTERED_APPROACH_ID,
     });
     expect(startedQuest.quest).toMatchObject({
       id: discoveredQuest.id,
@@ -738,6 +738,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
         ...FULL_OVERWORLD_QUEST_START,
         session_id: started.session_id,
         quest_id: discoveredQuest.id,
+        approach_id: SHELTERED_APPROACH_ID,
       }),
     ).toThrow(/already been started/i);
     expect(() =>
@@ -759,7 +760,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
         ...FULL_OVERWORLD_RESPONSE,
         snapshot: { ...afterQuestStart.snapshot, startedQuestIds: [] },
       }),
-    ).toThrow(/started quest id/i);
+    ).toThrow(/started (?:quest id|authored launch)/i);
     expect(() =>
       a.restore_overworld_session({
         ...FULL_OVERWORLD_RESPONSE,
@@ -770,7 +771,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
           ),
         },
       }),
-    ).toThrow(/started quest id/i);
+    ).toThrow(/started quest.*(?:id|canonical launch journal)/i);
     expect(
       a.get_observation({
         session_id: startedQuest.rpg_session_id,
@@ -784,6 +785,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
     const compactStartedQuest = a.start_overworld_session_quest({
       session_id: compactSource.session_id,
       quest_id: discoveredQuest.id,
+      approach_id: SHELTERED_APPROACH_ID,
       compact_context: true,
       compact_actions: true,
       compact_observation: true,

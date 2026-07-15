@@ -19,6 +19,7 @@ describe("starting-slice causal matrix", () => {
       "SS-F03-lead-source",
       "SS-F04-ally-commitment",
       "SS-F05-preparation-profile",
+      "SS-F07-hill-route",
       "SS-F08-cade-trust",
       "SS-F09-wolf-strategy",
       "SS-F10-crisis-priority",

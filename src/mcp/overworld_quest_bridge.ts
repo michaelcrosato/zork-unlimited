@@ -59,21 +59,22 @@ export function startOverworldQuestThroughRpg<Payload extends OverworldStartedRp
   session: OverworldSession;
   overworldSessionId: string;
   questId: string;
+  approachId?: string;
   startOptions: OverworldQuestRpgStartOptions;
   startEmbeddedWorldQuest: (
     startArgs: OverworldQuestRpgStartArgs,
     context: EmbeddedOverworldQuestStartContext,
   ) => Payload;
 }): OverworldQuestStartSync<Payload> {
-  const quest = args.session.previewQuestStart(args.questId);
+  const plan = args.session.prepareQuestStart(args.questId, args.approachId);
   const rpgSession = args.startEmbeddedWorldQuest(
-    rpgStartArgsForOverworldQuest(quest.id, args.startOptions),
+    rpgStartArgsForOverworldQuest(plan.quest.id, args.startOptions),
     {
       overworldSessionId: args.overworldSessionId,
-      character: args.session.campaignCharacterState(),
+      character: plan.characterAfter,
     },
   );
-  const startedQuest = args.session.startQuest(quest.id);
+  const startedQuest = args.session.commitQuestStart(plan);
   return { quest: startedQuest, rpgSession };
 }
 

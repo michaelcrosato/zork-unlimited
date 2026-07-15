@@ -68,6 +68,8 @@ function codes(pack: RpgPack): string[] {
       "drover_route_prepared",
       "relief_protocol_prepared",
       "june_pike_present",
+      "approach_exposed_ridge",
+      "approach_sheltered_stockway",
     ],
   }).findings.map((f) => f.code);
 }
@@ -265,6 +267,8 @@ describe("bug_0189 — The Wolf-Winter: a fair THREE-fight combat_guaranteed gau
         "drover_route_prepared",
         "relief_protocol_prepared",
         "june_pike_present",
+        "approach_exposed_ridge",
+        "approach_sheltered_stockway",
       ],
     });
     expect(report.findings.filter((f) => f.severity === "error")).toEqual([]);

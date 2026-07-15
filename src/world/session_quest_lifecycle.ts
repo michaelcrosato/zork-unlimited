@@ -6,19 +6,27 @@ import {
 } from "./session_action_application.js";
 import type { OverworldActionJournalState } from "./session_action_recording.js";
 import type { OverworldQuestView } from "./session_local_discovery.js";
+import type { OverworldJournalEntry } from "./session_snapshot.js";
 import {
   applyOverworldQuestCompletion,
   applyOverworldQuestStart,
   planOverworldQuestCompletion,
-  planOverworldQuestStart,
+  prepareOverworldQuestStart,
+  previewOverworldQuestStart,
   type OverworldQuestCompletionOutcome,
   type OverworldQuestCompletionPlan,
   type OverworldQuestCompletionResult,
-  type OverworldQuestStartPlan,
+  type OverworldQuestStartPreparation,
 } from "./session_quests.js";
 
 export type OverworldSessionQuestStartPlanState = {
   questId: string;
+  approachId?: string;
+  sessionFingerprint?: string;
+  minutes: number;
+  supplies: number;
+  fatigue: number;
+  character: CampaignCharacterState;
   questsById: ReadonlyMap<string, OverworldQuest>;
   areasById: ReadonlyMap<string, OverworldArea>;
   currentTownId: string;
@@ -37,6 +45,7 @@ export type OverworldSessionQuestCompletionPlanState = {
   nodesById: ReadonlyMap<string, OverworldNode>;
   questOutcomeIds: ReadonlyMap<string, string>;
   startedQuestIds: ReadonlySet<string>;
+  journalEntriesById?: ReadonlyMap<string, OverworldJournalEntry>;
 };
 
 export type MutableOverworldSessionQuestStartState = OverworldActionJournalState & {
@@ -56,6 +65,9 @@ export type OverworldSessionQuestCompletionState = OverworldSessionQuestCompleti
 
 export type OverworldAppliedSessionQuestStart = OverworldSessionActionApplication & {
   quest: OverworldQuestView;
+  characterAfter: CampaignCharacterState;
+  suppliesAfter: number;
+  fatigueAfter: number;
 };
 
 export type OverworldAppliedSessionQuestCompletion = {
@@ -68,8 +80,8 @@ export type OverworldAppliedSessionQuestCompletion = {
 
 export function planOverworldSessionQuestStart(
   state: OverworldSessionQuestStartPlanState,
-): OverworldQuestStartPlan {
-  return planOverworldQuestStart(state);
+): OverworldQuestStartPreparation {
+  return prepareOverworldQuestStart(state);
 }
 
 export function planOverworldSessionQuestCompletion(
@@ -81,12 +93,12 @@ export function planOverworldSessionQuestCompletion(
 export function previewOverworldSessionQuestStart(
   state: OverworldSessionQuestStartPlanState,
 ): OverworldQuestView {
-  return planOverworldSessionQuestStart(state).quest;
+  return previewOverworldQuestStart(state);
 }
 
 export function applyOverworldSessionQuestStart(
   state: MutableOverworldSessionQuestStartState,
-  plan: OverworldQuestStartPlan,
+  plan: OverworldQuestStartPreparation,
 ): OverworldAppliedSessionQuestStart {
   const applied = recordOverworldSessionAction(state, plan.entryDraft, plan.minutes);
   if (!applied.result.alreadyKnown) {
@@ -95,6 +107,9 @@ export function applyOverworldSessionQuestStart(
   return {
     ...applied,
     quest: plan.quest,
+    characterAfter: plan.characterAfter,
+    suppliesAfter: plan.suppliesAfter,
+    fatigueAfter: plan.fatigueAfter,
   };
 }
 

@@ -38,7 +38,7 @@ function sessionAtGallowmereGoal(): OverworldSession {
   const quest = session.view().quests.find((candidate) => candidate.id === "wolf_winter");
   if (!quest) throw new Error("Expected Wolf-Winter to be discovered in Albany.");
   moveToArea(session, quest.area);
-  session.startQuest(quest.id);
+  session.startQuest(quest.id, "albany:wolf_approach_sheltered_stockway");
   session.completeQuest(quest.id, {
     endingId: "ending_held",
     endingTitle: "The Byre Held",
@@ -102,8 +102,8 @@ describe("current-goal passage", () => {
       estimatedMinutes: 60,
       suppliesNeeded: 2,
       supplyDeficit: 0,
-      suppliesAfter: 4,
-      fatigueAfter: 2,
+      suppliesAfter: 2,
+      fatigueAfter: 12,
       travelConditionAfter: "ready",
       consequence:
         "Travel toward Queensbury town, preserving every road's normal time, supplies, fatigue, discoveries, and encounters.",
@@ -150,9 +150,9 @@ describe("current-goal passage", () => {
       delayMinutes: 0,
       minutes: 34,
       suppliesUsed: 1,
-      suppliesAfter: 5,
+      suppliesAfter: 3,
       fatigueGained: 1,
-      fatigueAfter: 1,
+      fatigueAfter: 11,
       travelConditionAfter: "ready",
       journeyDecision: { countsTowardJourney: true, reason: "movement" },
     });
@@ -286,12 +286,26 @@ describe("current-goal passage", () => {
 
   it("pauses before a newly introduced shortfall but accepts an already undersupplied start", () => {
     const session = sessionAtResolvedColonieRoad();
+    session.resupplyAtTown();
+    for (const roadId of [
+      ALBANY_TO_COLONIE,
+      ALBANY_TO_SARATOGA,
+      SARATOGA_TO_QUEENSBURY,
+      SARATOGA_TO_QUEENSBURY,
+      ALBANY_TO_SARATOGA,
+      ALBANY_TO_SARATOGA,
+      ALBANY_TO_SARATOGA,
+    ]) {
+      session.travel(roadId);
+      if (session.view().pendingRoadEncounter) session.resolveRoadEncounter("press_on");
+    }
+    expect(session.view().current.id).toBe("albany_city");
     expect(session.view().supplies).toBe(1);
 
     const bounded = session.followGoalPassage();
     expect(bounded).toMatchObject({
       stopReason: "resource_boundary",
-      stoppedAt: "Schenectady city",
+      stoppedAt: "Colonie town",
       suppliesUsed: 1,
       suppliesAfter: 0,
     });
@@ -303,7 +317,7 @@ describe("current-goal passage", () => {
       stoppedAt: "Oneonta city",
       suppliesAfter: 0,
     });
-    expect(acceptedUndersupplied.legs).toHaveLength(2);
+    expect(acceptedUndersupplied.legs).toHaveLength(3);
     expect(acceptedUndersupplied.legs.every((leg) => leg.suppliesUsed === 0)).toBe(true);
   });
 

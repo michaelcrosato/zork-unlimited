@@ -185,7 +185,10 @@ describe("formatSpectateEntry", () => {
 
     const enter = at(
       "start_overworld_session_quest",
-      { quest_id: "wolf_winter" },
+      {
+        quest_id: "wolf_winter",
+        approach_id: "albany:wolf_approach_sheltered_stockway",
+      },
       JSON.stringify({
         ok: true,
         quest: { title: "The Wolf-Winter" },
@@ -199,6 +202,7 @@ describe("formatSpectateEntry", () => {
       }),
     );
     expect(enter).toContain("enter quest: The Wolf-Winter");
+    expect(enter).toContain("via albany:wolf_approach_sheltered_stockway");
     expect(enter).toContain("The Steading Yard");
     expect(enter).toContain("black of winter");
   });

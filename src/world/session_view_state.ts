@@ -41,6 +41,7 @@ import {
   type CampaignCharacterView,
 } from "./campaign_character_view.js";
 import type { CampaignServiceOffer } from "./campaign_service_rules.js";
+import { projectOverworldQuestView } from "./session_local_discovery.js";
 
 type OverworldSessionViewLocalContentState = Pick<
   MutableOverworldSessionLocalState,
@@ -204,6 +205,16 @@ export function buildOverworldSessionViewModelState(
     },
     ...(source.roadEventState ? { roadEventState: source.roadEventState } : {}),
   });
+  const localView: OverworldSessionLocalView = {
+    ...source.localView,
+    quests: source.localView.quests.map((quest) =>
+      projectOverworldQuestView(quest, {
+        minutes: source.minutes,
+        supplies: source.supplies,
+        fatigue: source.fatigue,
+      }),
+    ),
+  };
 
   return {
     character: buildCampaignCharacterView(source.character),
@@ -227,7 +238,7 @@ export function buildOverworldSessionViewModelState(
     roads: source.roads,
     areaExits: source.areaExits,
     routeOptions,
-    localView: source.localView,
+    localView,
     poi: currentAreaContent.poi,
     contacts,
     events,

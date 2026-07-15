@@ -141,6 +141,10 @@ The current slice does **not** yet meet the full contract:
   drive/evacuate, and fortify/outlast now supply four distinct resolution
   families; the full twelve-fork depth contract and fleet-level balance remain
   unproven;
+- Wolf-Winter now starts through one visible, replay-bound hill-route choice
+  whose exact time, supplies, fatigue, Hayden memory, quest import, first-cast
+  risk, cattle pressure, ending, and return record diverge; the remaining two
+  Albany forks are still unproven;
 - three early decisions now drive replay-bound services through reusable
   world-fact, story-choice, companion, and promise predicates, but the other
   return facts still lack mechanical NPC and opportunity consumers.
@@ -379,14 +383,49 @@ consumption are covered by
 and
 [`fortify_outlast_return_e2e.test.ts`](../tests/starting_slice/fortify_outlast_return_e2e.test.ts).
 
+The tenth authored increment turns `SS-F07-hill-route` into the actual
+Wolf-Winter launch instead of adding a detached travel menu. Hayden's Station
+Quarter dispatch presents two exact commitments on the quest card. The exposed
+ridge costs 30 minutes, one supply, and 25 fatigue. Its open crest reveals the
+crosswind, lowering the first feed cast to DC 10, but the visible descent starts
+cattle alarm at 1. The sheltered stockway costs 75 minutes, two supplies, and
+10 fatigue. Its lee keeps the herd calm at arrival but conceals the crosswind,
+leaving the first cast at DC 12. Both cards disclose actual cost, projected
+arrival time, remaining supplies, resulting fatigue/condition, known field
+effect, and any blocked reason before commitment.
+
+Choosing either card is the quest-start decision itself. A generic atomic
+launch contract prepares the route's resource and campaign-character effects,
+boots the embedded RPG from that post-choice state, and only then commits one
+route-qualified journey action. Exactly one route knowledge and Hayden memory
+persist; the generic campaign import catalog produces exactly one quest flag
+and one legal last-mile action. Direct structural starts retain the old neutral
+entry, while contradictory route flags fail closed. The route action replaces
+the old first local movement input, so it adds systemic optionality without
+raising first-goal length.
+
+At seed 9 the ridge's DC 10 cast succeeds while the stockway's DC 12 cast fails
+and enters the authored no-retry split-rail recovery, proving the faster route's
+advantage. At seed 26 both casts succeed, but the ridge's clean three-cast line
+reaches alarm 4 and scatters two cattle while the stockway reaches alarm 3 and
+keeps the whole herd, proving the sheltered route's advantage. Launch costs,
+proof boundary, relationship memory, import receipt, outcome, and exact return
+summary survive RPG/overworld replay, chronological foldback, full/compact MCP,
+browser and CLI parity, and exact F11 migration. Proof lives in
+[`hill_approach_gameplay.test.ts`](../tests/starting_slice/hill_approach_gameplay.test.ts),
+[`hill_approach_return_e2e.test.ts`](../tests/starting_slice/hill_approach_return_e2e.test.ts),
+and
+[`hill_approach_migration_integrity.test.ts`](../tests/regression/hill_approach_migration_integrity.test.ts).
+
 This proves `SS-F01-character-background`, `SS-F03-lead-source`,
-`SS-F04-ally-commitment`, `SS-F05-preparation-profile`, `SS-F08-cade-trust`,
-`SS-F09-wolf-strategy`, `SS-F10-crisis-priority`, `SS-F11-saved-wood`, and
-`SS-F12-albany-return`: nine of the twelve required material forks. It proves
+`SS-F04-ally-commitment`, `SS-F05-preparation-profile`, `SS-F07-hill-route`,
+`SS-F08-cade-trust`, `SS-F09-wolf-strategy`, `SS-F10-crisis-priority`,
+`SS-F11-saved-wood`, and `SS-F12-albany-return`: ten of the twelve required
+material forks. It proves
 the ally-agency clause, three preparation profiles, all four resolution
 families, and distinct consumers for all four concepts, but it does not prove
-the three remaining fork sites, the full twelve-fork contract, or fleet-level
-balance. Those remain the next work, not implied credit for the nine proven
+the two remaining fork sites, the full twelve-fork contract, or fleet-level
+balance. Those remain the next work, not implied credit for the ten proven
 counterfactuals.
 
 ## Required resolution families

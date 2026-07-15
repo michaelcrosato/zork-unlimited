@@ -1,4 +1,5 @@
 import type {
+  OverworldJournalDecisionBoundary,
   OverworldJournalEntry,
   OverworldOpeningLeadSourceDecisionTrail,
   OverworldPendingRoadEncounter,
@@ -6,6 +7,7 @@ import type {
   TravelLogEntry,
   TravelLogEntrySnapshot,
 } from "./session_snapshot.js";
+import type { OverworldQuest } from "./overworld.js";
 import { cloneOpeningLeadSourceDecisionTrail } from "./session_snapshot.js";
 import { hashState } from "../core/hash.js";
 import {
@@ -14,6 +16,10 @@ import {
   serializeCampaignCharacterState,
   type CampaignCharacterState,
 } from "./campaign_character_state.js";
+import {
+  applyCampaignConsequences,
+  type CampaignConsequenceEffect,
+} from "./campaign_consequences.js";
 import { assertKnownIds, assertUniqueTupleMap, replaceStringSet } from "./session_collections.js";
 import { assertSnapshotTimeline } from "./session_journal_timeline.js";
 import { replaceOverworldJournalEntries } from "./session_journal_store.js";
@@ -273,10 +279,60 @@ const OVERWORLD_FORTIFY_OUTLAST_PREDECESSOR_WOLF_OUTCOME_IDS: ReadonlySet<string
 ]);
 export const OVERWORLD_FORTIFY_OUTLAST_WORLD_HASH =
   "abd3b623a502b688a501bceae68994a4eb0e591d450420b5093532b5dae22179";
+export const OVERWORLD_HILL_APPROACH_PREDECESSOR_WORLD_HASH = OVERWORLD_FORTIFY_OUTLAST_WORLD_HASH;
+const OVERWORLD_HILL_APPROACH_PREDECESSOR_WORLD_RULE_IDS: ReadonlySet<string> = new Set([
+  "albany:dawn_wagon_solo_packet_resupply",
+  "albany:dawn_wardens_greenway_rest",
+  "albany:june_kept_line_station_resupply",
+  "albany:june_relay_refusal_station_rest",
+  "albany:wolf_barred_gate_quick_rest",
+  "albany:wolf_drive_reserve_returned_station_rest",
+  "albany:wolf_drive_whole_herd_greenway_resupply",
+  "albany:wolf_drover_route_return_rest",
+  "albany:wolf_fortified_albany_authority_station_rest",
+  "albany:wolf_fortified_cade_terms_station_resupply",
+  "albany:wolf_live_pack_greenway_resupply",
+  "albany:wolf_relief_protocol_return_resupply",
+  "albany:wolf_saved_timber_quick_resupply",
+  "albany:wolf_works_fortification_return_resupply",
+]);
+const OVERWORLD_HILL_APPROACH_PREDECESSOR_WOLF_OUTCOME_IDS: ReadonlySet<string> = new Set([
+  "ending_drive_cattle_wounded",
+  "ending_drive_person_cattle_lost",
+  "ending_drive_reserve_spent",
+  "ending_fortified_albany_authority",
+  "ending_fortified_cade_terms",
+  "ending_held",
+  "ending_held_gate_barred",
+  "ending_held_timber_saved",
+  "ending_pack_diverted",
+  "ending_pack_diverted_after_blood",
+  "ending_pack_diverted_cattle_scattered",
+]);
+export const OVERWORLD_HILL_APPROACH_WORLD_HASH =
+  "634fd4e93143343fd813edd9c59d3a8c098c0d78b94497cf689988492de154e3";
+const OVERWORLD_ALLY_ERA_WOLF_START = Object.freeze({
+  id: "quest:wolf_winter",
+  kind: "quest" as const,
+  title: "Started The Wolf-Winter",
+  text: "You turn the local lead \"A winter-relief tag moves from Albany's civic records to the Albany Station Quarter route desk: Old Cade's hill steading, a cattle byre, and a wolf pack coming down with the weather. The live dispatch has June Pike's optional second field seat, but starting without her cattle-first bond sends the relief rider alone on the established route.\" into an active quest.",
+});
+const OVERWORLD_PRE_ALLY_WOLF_START = Object.freeze({
+  id: "quest:wolf_winter",
+  kind: "quest" as const,
+  title: "Started The Wolf-Winter",
+  text: "You turn the local lead \"A winter-relief tag moves from Albany's civic records to the Albany Station Quarter route desk: Old Cade's hill steading, a cattle byre, and a wolf pack coming down with the weather. The Wolf-Winter lead is the live dispatch attached to that hill road.\" into an active quest.",
+});
+const OVERWORLD_HILL_APPROACH_ROUTE_CHARACTER_IDS: ReadonlySet<string> = new Set([
+  "albany:knowledge_wolf_exposed_ridge",
+  "albany:knowledge_wolf_sheltered_stockway",
+  "albany:memory_hayden_dispatched_exposed_ridge",
+  "albany:memory_hayden_dispatched_sheltered_stockway",
+]);
 /** @deprecated Preparation-era current-target name retained for callers. */
-export const OVERWORLD_OPENING_PREPARATION_WORLD_HASH = OVERWORLD_FORTIFY_OUTLAST_WORLD_HASH;
+export const OVERWORLD_OPENING_PREPARATION_WORLD_HASH = OVERWORLD_HILL_APPROACH_WORLD_HASH;
 export const OVERWORLD_OPENING_PREPARATION_MIGRATION_TARGET_WORLD_HASH =
-  OVERWORLD_FORTIFY_OUTLAST_WORLD_HASH;
+  OVERWORLD_HILL_APPROACH_WORLD_HASH;
 /** @deprecated Lead-source target name retained as the current-target alias. */
 export const OVERWORLD_OPENING_LEAD_SOURCE_MIGRATION_TARGET_WORLD_HASH =
   OVERWORLD_OPENING_PREPARATION_MIGRATION_TARGET_WORLD_HASH;
@@ -300,7 +356,64 @@ const OVERWORLD_OPENING_PREPARATION_TRUSTED_LEGACY_WORLD_HASHES: ReadonlySet<str
   OVERWORLD_OPENING_PREPARATION_PREDECESSOR_WORLD_HASH,
 ]);
 
+const OVERWORLD_LEGACY_WOLF_START_BY_WORLD_HASH: ReadonlyMap<
+  string,
+  Readonly<{
+    era: string;
+    entry: Readonly<{ id: string; kind: "quest"; title: string; text: string }>;
+  }>
+> = new Map([
+  [
+    OVERWORLD_HILL_APPROACH_PREDECESSOR_WORLD_HASH,
+    { era: "F11", entry: OVERWORLD_ALLY_ERA_WOLF_START },
+  ],
+  [
+    OVERWORLD_FORTIFY_OUTLAST_PREDECESSOR_WORLD_HASH,
+    { era: "F10", entry: OVERWORLD_ALLY_ERA_WOLF_START },
+  ],
+  [
+    OVERWORLD_CRISIS_PRIORITY_PREDECESSOR_WORLD_HASH,
+    { era: "F04", entry: OVERWORLD_ALLY_ERA_WOLF_START },
+  ],
+  [
+    OVERWORLD_OPENING_ALLY_PREDECESSOR_WORLD_HASH,
+    { era: "pre-ally", entry: OVERWORLD_PRE_ALLY_WOLF_START },
+  ],
+  [
+    OVERWORLD_OPENING_PREPARATION_PREDECESSOR_WORLD_HASH,
+    { era: "pre-preparation", entry: OVERWORLD_PRE_ALLY_WOLF_START },
+  ],
+  [
+    OVERWORLD_CAMPAIGN_SERVICE_WORLD_HASH,
+    { era: "campaign-service", entry: OVERWORLD_PRE_ALLY_WOLF_START },
+  ],
+  [
+    OVERWORLD_OPENING_LEAD_SOURCE_WORLD_HASH,
+    { era: "pre-lead-source", entry: OVERWORLD_PRE_ALLY_WOLF_START },
+  ],
+  [
+    OVERWORLD_OPENING_REGISTRATION_WORLD_HASH,
+    { era: "registration", entry: OVERWORLD_PRE_ALLY_WOLF_START },
+  ],
+  [
+    OVERWORLD_PRE_CAMPAIGN_EXPORTS_WORLD_HASH,
+    { era: "pre-campaign-exports", entry: OVERWORLD_PRE_ALLY_WOLF_START },
+  ],
+  [
+    OVERWORLD_CAMPAIGN_EXPORTS_WORLD_HASH,
+    { era: "campaign-exports", entry: OVERWORLD_PRE_ALLY_WOLF_START },
+  ],
+  [
+    OVERWORLD_CAMPAIGN_IMPORTS_WORLD_HASH,
+    { era: "campaign-imports", entry: OVERWORLD_PRE_ALLY_WOLF_START },
+  ],
+]);
+const OVERWORLD_QUEST_START_TRUSTED_LEGACY_WORLD_HASHES: ReadonlySet<string> = new Set(
+  OVERWORLD_LEGACY_WOLF_START_BY_WORLD_HASH.keys(),
+);
+
 type TrustedMigrationEra =
+  | "hill_approach"
   | "fortify_outlast"
   | "crisis_priority"
   | "opening_ally"
@@ -1000,6 +1113,324 @@ function campaignBoundaryReplayIndex(args: {
   };
 }
 
+type ReplayedQuestStart = Readonly<{
+  questId: string;
+  journalIndex: number;
+  effects: readonly CampaignConsequenceEffect[];
+  returnSummary: string | null;
+}>;
+
+type ReplayedQuestStarts = Readonly<{
+  characterAfter: CampaignCharacterState;
+  journalEntries: readonly OverworldJournalEntry[];
+  starts: readonly ReplayedQuestStart[];
+}>;
+
+function assertCanonicalQuestStartJournalCopy(args: {
+  entry: OverworldJournalEntry;
+  expectedTown: string;
+  quest: OverworldQuest;
+  approachId: string | null;
+  sourceWorldHash: string | null;
+}): void {
+  const option =
+    args.approachId === null
+      ? null
+      : (args.quest.launch?.options.find((candidate) => candidate.id === args.approachId) ?? null);
+  if (args.approachId !== null && option === null) {
+    throw new Error(
+      `Overworld session snapshot quest launch "${args.entry.id}" references unknown approach "${args.approachId}".`,
+    );
+  }
+  const canonicalIdentityMatches =
+    args.entry.id === `quest:${args.quest.id}` &&
+    args.entry.kind === "quest" &&
+    args.entry.town === args.expectedTown &&
+    args.entry.title === `Started ${args.quest.title}`;
+  if (args.sourceWorldHash !== null) {
+    if (!canonicalIdentityMatches) {
+      throw new Error(
+        `Overworld session snapshot legacy quest launch "${args.quest.id}" is not bound to its canonical identity.`,
+      );
+    }
+    const trustedCopy =
+      args.quest.id === "wolf_winter"
+        ? OVERWORLD_LEGACY_WOLF_START_BY_WORLD_HASH.get(args.sourceWorldHash)
+        : undefined;
+    if (
+      !trustedCopy ||
+      args.entry.id !== trustedCopy.entry.id ||
+      args.entry.kind !== trustedCopy.entry.kind ||
+      args.entry.title !== trustedCopy.entry.title ||
+      args.entry.text !== trustedCopy.entry.text
+    ) {
+      throw new Error(
+        `Overworld session snapshot legacy quest launch "${args.quest.id}" does not match its exact ${trustedCopy?.era ?? "trusted-source"} authored copy.`,
+      );
+    }
+    return;
+  }
+  const expectedText =
+    `You turn the local lead "${args.quest.discovery}" into an active quest.` +
+    (option === null ? "" : ` Approach: ${option.title}. ${option.consequence}`);
+  if (!canonicalIdentityMatches || args.entry.text !== expectedText) {
+    throw new Error(
+      `Overworld session snapshot quest launch "${args.quest.id}" is not bound to its canonical journal copy.`,
+    );
+  }
+}
+
+function questStartDecisionBoundary(args: {
+  boundary: OverworldJournalDecisionBoundary | undefined;
+  campaignBoundaryReplay: OverworldCampaignBoundaryReplayIndex;
+  entry: OverworldJournalEntry;
+  expectedActionId: string;
+  questId: string;
+}): OverworldJournalDecisionBoundary {
+  const actionPrefix = `quest_start:${args.questId}`;
+  const decisions = [...args.campaignBoundaryReplay.byAcceptedDecisions.entries()].filter(
+    ([, proof]) =>
+      proof.decision?.actionId === actionPrefix ||
+      proof.decision?.actionId.startsWith(`${actionPrefix}:`) === true,
+  );
+  if (decisions.length !== 1) {
+    throw new Error(
+      `Overworld session snapshot quest launch "${args.questId}" does not have exactly one canonical journey decision proof.`,
+    );
+  }
+  const [acceptedDecisions, replay] = decisions[0]!;
+  if (
+    replay.decision?.surface !== "overworld" ||
+    replay.decision.reason !== "situation_changed" ||
+    replay.decision.actionId !== args.expectedActionId
+  ) {
+    throw new Error(
+      `Overworld session snapshot quest launch "${args.questId}" does not match its selected approach decision.`,
+    );
+  }
+  if (replay.townId === null || replay.areaId === null) {
+    throw new Error(
+      `Overworld session snapshot quest launch "${args.questId}" has no replayable town and area.`,
+    );
+  }
+  const recordedAt = parseTimeLabel(args.entry.recordedAt);
+  const boundary =
+    args.boundary ??
+    Object.freeze({
+      acceptedDecisions,
+      decisionProofHash: replay.decisionProofHash,
+      townId: replay.townId,
+      areaId: replay.areaId,
+      minutes: recordedAt,
+    });
+  if (
+    boundary.acceptedDecisions !== acceptedDecisions ||
+    boundary.decisionProofHash !== replay.decisionProofHash ||
+    boundary.townId !== replay.townId ||
+    boundary.areaId !== replay.areaId ||
+    boundary.minutes !== recordedAt
+  ) {
+    throw new Error(
+      `Overworld session snapshot quest launch "${args.questId}" boundary does not match its accepted decision, location, and timestamp.`,
+    );
+  }
+  return boundary;
+}
+
+function assertNoFortifyOutlastApproachEvidence(args: {
+  campaignBoundaryReplay: OverworldCampaignBoundaryReplayIndex;
+  character: CampaignCharacterState;
+  journalEntries: readonly OverworldJournalEntry[];
+}): void {
+  if (args.journalEntries.some((entry) => entry.questStartProof !== undefined)) {
+    throw new Error(
+      "Fortify-outlast predecessor snapshot has quest-start proof evidence introduced by the hill-approach manifest.",
+    );
+  }
+  if (
+    [...args.campaignBoundaryReplay.byAcceptedDecisions.values()].some((proof) =>
+      proof.decision?.actionId.startsWith("quest_start:wolf_winter:"),
+    )
+  ) {
+    throw new Error(
+      "Fortify-outlast predecessor snapshot has a route-labelled Wolf-Winter start decision introduced by the hill-approach manifest.",
+    );
+  }
+  const hasRouteKnowledge = args.character.knowledge.some((id) =>
+    OVERWORLD_HILL_APPROACH_ROUTE_CHARACTER_IDS.has(id),
+  );
+  const hasRouteMemory = args.character.relationships.some((relationship) =>
+    relationship.memories.some((id) => OVERWORLD_HILL_APPROACH_ROUTE_CHARACTER_IDS.has(id)),
+  );
+  if (hasRouteKnowledge || hasRouteMemory) {
+    throw new Error(
+      "Fortify-outlast predecessor snapshot has route character evidence introduced by the hill-approach manifest.",
+    );
+  }
+}
+
+function replaySnapshotQuestStarts(args: {
+  campaignBoundaryReplay: OverworldCampaignBoundaryReplayIndex;
+  character: CampaignCharacterState;
+  indexes: OverworldSnapshotManifestIndex;
+  journalEntries: readonly OverworldJournalEntry[];
+  migrationEra: TrustedMigrationEra;
+  snapshotWorldHash: string;
+  storedCharacter: CampaignCharacterState;
+  startedQuestIds: ReadonlySet<string>;
+}): ReplayedQuestStarts {
+  if (args.migrationEra === "hill_approach") {
+    assertNoFortifyOutlastApproachEvidence({
+      campaignBoundaryReplay: args.campaignBoundaryReplay,
+      character: args.storedCharacter,
+      journalEntries: args.journalEntries,
+    });
+  } else if (
+    args.migrationEra !== null &&
+    args.journalEntries.some((entry) => entry.questStartProof !== undefined)
+  ) {
+    throw new Error(
+      "Trusted predecessor snapshot has quest-start proof evidence introduced by a later manifest.",
+    );
+  }
+
+  const journalEntries = [...args.journalEntries];
+  const journalIndexById = new Map(
+    journalEntries.map((entry, index) => [entry.id, index] as const),
+  );
+  for (const entry of journalEntries) {
+    if (entry.questStartProof === undefined) continue;
+    const questId = entry.id.startsWith("quest:") ? entry.id.slice("quest:".length) : "";
+    const quest = args.indexes.questsById.get(questId);
+    if (!quest?.launch || !args.startedQuestIds.has(questId)) {
+      throw new Error(
+        `Overworld session snapshot quest-start proof "${entry.id}" has no started authored launch.`,
+      );
+    }
+  }
+
+  const starts: ReplayedQuestStart[] = [];
+  for (const [questId, quest] of args.indexes.questsById) {
+    if (!quest.launch || !args.startedQuestIds.has(questId)) continue;
+    const journalIndex = journalIndexById.get(`quest:${questId}`);
+    if (journalIndex === undefined) {
+      throw new Error(
+        `Overworld session snapshot started quest "${questId}" has no canonical launch journal.`,
+      );
+    }
+    const entry = journalEntries[journalIndex];
+    if (!entry || entry.kind !== "quest") {
+      throw new Error(
+        `Overworld session snapshot started quest "${questId}" has no canonical launch journal.`,
+      );
+    }
+
+    if (args.migrationEra !== null) {
+      assertCanonicalQuestStartJournalCopy({
+        entry,
+        expectedTown: args.indexes.questTownNames.get(questId) ?? quest.home,
+        quest,
+        approachId: null,
+        sourceWorldHash: args.snapshotWorldHash,
+      });
+      const boundary = questStartDecisionBoundary({
+        boundary: undefined,
+        campaignBoundaryReplay: args.campaignBoundaryReplay,
+        entry,
+        expectedActionId: `quest_start:${questId}`,
+        questId,
+      });
+      journalEntries[journalIndex] = Object.freeze({
+        ...entry,
+        questStartProof: Object.freeze({
+          kind: "legacy" as const,
+          sourceWorldHash: args.snapshotWorldHash,
+          boundary: Object.freeze({ ...boundary }),
+        }),
+      });
+      starts.push({ questId, journalIndex, effects: [], returnSummary: null });
+      continue;
+    }
+
+    const startProof = entry.questStartProof;
+    if (!startProof) {
+      throw new Error(
+        `Overworld session snapshot quest launch "${questId}" lacks a persisted approach or legacy proof.`,
+      );
+    }
+    if (startProof.kind === "legacy") {
+      if (!OVERWORLD_QUEST_START_TRUSTED_LEGACY_WORLD_HASHES.has(startProof.sourceWorldHash)) {
+        throw new Error(
+          `Overworld session snapshot quest launch "${questId}" has an untrusted legacy source manifest.`,
+        );
+      }
+      assertCanonicalQuestStartJournalCopy({
+        entry,
+        expectedTown: args.indexes.questTownNames.get(questId) ?? quest.home,
+        quest,
+        approachId: null,
+        sourceWorldHash: startProof.sourceWorldHash,
+      });
+      questStartDecisionBoundary({
+        boundary: startProof.boundary,
+        campaignBoundaryReplay: args.campaignBoundaryReplay,
+        entry,
+        expectedActionId: `quest_start:${questId}`,
+        questId,
+      });
+      starts.push({ questId, journalIndex, effects: [], returnSummary: null });
+      continue;
+    }
+
+    const option = quest.launch.options.find((candidate) => candidate.id === startProof.approachId);
+    if (!option) {
+      throw new Error(
+        `Overworld session snapshot quest launch "${questId}" references unknown approach "${startProof.approachId}".`,
+      );
+    }
+    assertCanonicalQuestStartJournalCopy({
+      entry,
+      expectedTown: args.indexes.questTownNames.get(questId) ?? quest.home,
+      quest,
+      approachId: option.id,
+      sourceWorldHash: null,
+    });
+    const boundary = questStartDecisionBoundary({
+      boundary: startProof.boundary,
+      campaignBoundaryReplay: args.campaignBoundaryReplay,
+      entry,
+      expectedActionId: `quest_start:${questId}:${option.id}`,
+      questId,
+    });
+    if (boundary.townId !== quest.home || boundary.areaId !== quest.area) {
+      throw new Error(
+        `Overworld session snapshot quest launch "${questId}" is not anchored at its authored home and area.`,
+      );
+    }
+    starts.push({
+      questId,
+      journalIndex,
+      effects: option.effects,
+      returnSummary: option.return_summary,
+    });
+  }
+
+  starts.sort((left, right) => right.journalIndex - left.journalIndex);
+  let characterAfter = cloneCampaignCharacterState(args.character);
+  for (const start of starts) {
+    if (start.effects.length === 0) continue;
+    characterAfter = applyCampaignConsequences({
+      character: characterAfter,
+      effects: start.effects,
+    }).characterAfter;
+  }
+  return Object.freeze({
+    characterAfter,
+    journalEntries: Object.freeze(journalEntries),
+    starts: Object.freeze(starts),
+  });
+}
+
 function deriveCampaignStoryChoiceProofOrdinals(args: {
   allyProof: OpeningAllyJournalProof;
   allySceneId: string | null;
@@ -1161,34 +1592,36 @@ export function planOverworldSessionSnapshotRestore(args: {
       `Overworld session snapshot is for world "${sourceSnapshot.worldId}", not "${worldId}".`,
     );
   }
-  const migrationTargetsCurrentManifest = worldHash === OVERWORLD_FORTIFY_OUTLAST_WORLD_HASH;
+  const migrationTargetsCurrentManifest = worldHash === OVERWORLD_HILL_APPROACH_WORLD_HASH;
   const migrationEra: TrustedMigrationEra =
     !migrationTargetsCurrentManifest || sourceSnapshot.worldHash === worldHash
       ? null
-      : sourceSnapshot.worldHash === OVERWORLD_FORTIFY_OUTLAST_PREDECESSOR_WORLD_HASH
-        ? "fortify_outlast"
-        : sourceSnapshot.worldHash === OVERWORLD_CRISIS_PRIORITY_PREDECESSOR_WORLD_HASH
-          ? "crisis_priority"
-          : sourceSnapshot.worldHash === OVERWORLD_OPENING_ALLY_PREDECESSOR_WORLD_HASH
-            ? "opening_ally"
-            : sourceSnapshot.worldHash === OVERWORLD_OPENING_PREPARATION_PREDECESSOR_WORLD_HASH
-              ? "opening_preparation"
-              : sourceSnapshot.worldHash === OVERWORLD_CAMPAIGN_SERVICE_WORLD_HASH
-                ? "campaign_service"
-                : sourceSnapshot.worldHash === OVERWORLD_OPENING_LEAD_SOURCE_WORLD_HASH
-                  ? "opening_lead_source"
-                  : OVERWORLD_OPENING_REGISTRATION_TRUSTED_PREDECESSOR_WORLD_HASHES.has(
-                        sourceSnapshot.worldHash,
-                      )
-                    ? "pre_registration"
-                    : sourceSnapshot.worldHash === OVERWORLD_OPENING_REGISTRATION_WORLD_HASH
-                      ? "opening_registration"
-                      : null;
+      : sourceSnapshot.worldHash === OVERWORLD_HILL_APPROACH_PREDECESSOR_WORLD_HASH
+        ? "hill_approach"
+        : sourceSnapshot.worldHash === OVERWORLD_FORTIFY_OUTLAST_PREDECESSOR_WORLD_HASH
+          ? "fortify_outlast"
+          : sourceSnapshot.worldHash === OVERWORLD_CRISIS_PRIORITY_PREDECESSOR_WORLD_HASH
+            ? "crisis_priority"
+            : sourceSnapshot.worldHash === OVERWORLD_OPENING_ALLY_PREDECESSOR_WORLD_HASH
+              ? "opening_ally"
+              : sourceSnapshot.worldHash === OVERWORLD_OPENING_PREPARATION_PREDECESSOR_WORLD_HASH
+                ? "opening_preparation"
+                : sourceSnapshot.worldHash === OVERWORLD_CAMPAIGN_SERVICE_WORLD_HASH
+                  ? "campaign_service"
+                  : sourceSnapshot.worldHash === OVERWORLD_OPENING_LEAD_SOURCE_WORLD_HASH
+                    ? "opening_lead_source"
+                    : OVERWORLD_OPENING_REGISTRATION_TRUSTED_PREDECESSOR_WORLD_HASHES.has(
+                          sourceSnapshot.worldHash,
+                        )
+                      ? "pre_registration"
+                      : sourceSnapshot.worldHash === OVERWORLD_OPENING_REGISTRATION_WORLD_HASH
+                        ? "opening_registration"
+                        : null;
   if (sourceSnapshot.worldHash !== worldHash && migrationEra === null) {
     throw new Error("Overworld session snapshot was made against a different world manifest.");
   }
   const snapshotWithCampaignCopy =
-    migrationEra === null
+    migrationEra === null || migrationEra === "hill_approach"
       ? sourceSnapshot
       : Object.freeze({
           ...sourceSnapshot,
@@ -1329,13 +1762,15 @@ export function planOverworldSessionSnapshotRestore(args: {
     }
   }
   const trustedPredecessorWolfOutcomeIds =
-    migrationEra === "fortify_outlast"
-      ? OVERWORLD_FORTIFY_OUTLAST_PREDECESSOR_WOLF_OUTCOME_IDS
-      : migrationEra === "crisis_priority"
-        ? OVERWORLD_CRISIS_PRIORITY_PREDECESSOR_WOLF_OUTCOME_IDS
-        : migrationEra === "opening_ally" || migrationEra === "opening_preparation"
-          ? OVERWORLD_OPENING_PREPARATION_WORLD_WOLF_OUTCOME_IDS
-          : OVERWORLD_CAMPAIGN_SERVICE_WORLD_WOLF_OUTCOME_IDS;
+    migrationEra === "hill_approach"
+      ? OVERWORLD_HILL_APPROACH_PREDECESSOR_WOLF_OUTCOME_IDS
+      : migrationEra === "fortify_outlast"
+        ? OVERWORLD_FORTIFY_OUTLAST_PREDECESSOR_WOLF_OUTCOME_IDS
+        : migrationEra === "crisis_priority"
+          ? OVERWORLD_CRISIS_PRIORITY_PREDECESSOR_WOLF_OUTCOME_IDS
+          : migrationEra === "opening_ally" || migrationEra === "opening_preparation"
+            ? OVERWORLD_OPENING_PREPARATION_WORLD_WOLF_OUTCOME_IDS
+            : OVERWORLD_CAMPAIGN_SERVICE_WORLD_WOLF_OUTCOME_IDS;
   if (
     migrationEra !== null &&
     [...questOutcomeIds].some(
@@ -1380,15 +1815,17 @@ export function planOverworldSessionSnapshotRestore(args: {
     travelLogTownByArrival: travelTimeline.townByArrival,
   });
   const trustedPredecessorServiceRuleIds =
-    migrationEra === "fortify_outlast"
-      ? OVERWORLD_FORTIFY_OUTLAST_PREDECESSOR_WORLD_RULE_IDS
-      : migrationEra === "crisis_priority"
-        ? OVERWORLD_CRISIS_PRIORITY_PREDECESSOR_WORLD_RULE_IDS
-        : migrationEra === "opening_ally" || migrationEra === "opening_preparation"
-          ? OVERWORLD_OPENING_PREPARATION_WORLD_RULE_IDS
-          : migrationEra === "campaign_service"
-            ? OVERWORLD_CAMPAIGN_SERVICE_WORLD_RULE_IDS
-            : null;
+    migrationEra === "hill_approach"
+      ? OVERWORLD_HILL_APPROACH_PREDECESSOR_WORLD_RULE_IDS
+      : migrationEra === "fortify_outlast"
+        ? OVERWORLD_FORTIFY_OUTLAST_PREDECESSOR_WORLD_RULE_IDS
+        : migrationEra === "crisis_priority"
+          ? OVERWORLD_CRISIS_PRIORITY_PREDECESSOR_WORLD_RULE_IDS
+          : migrationEra === "opening_ally" || migrationEra === "opening_preparation"
+            ? OVERWORLD_OPENING_PREPARATION_WORLD_RULE_IDS
+            : migrationEra === "campaign_service"
+              ? OVERWORLD_CAMPAIGN_SERVICE_WORLD_RULE_IDS
+              : null;
   if (
     trustedPredecessorServiceRuleIds !== null &&
     snapshot.journalEntries.some(
@@ -1403,6 +1840,7 @@ export function planOverworldSessionSnapshotRestore(args: {
   }
   if (
     migrationEra !== null &&
+    migrationEra !== "hill_approach" &&
     migrationEra !== "fortify_outlast" &&
     migrationEra !== "crisis_priority" &&
     migrationEra !== "opening_ally" &&
@@ -1418,6 +1856,7 @@ export function planOverworldSessionSnapshotRestore(args: {
   }
   if (
     migrationEra !== null &&
+    migrationEra !== "hill_approach" &&
     migrationEra !== "fortify_outlast" &&
     migrationEra !== "crisis_priority" &&
     migrationEra !== "opening_ally" &&
@@ -1518,6 +1957,7 @@ export function planOverworldSessionSnapshotRestore(args: {
       true;
   if (
     migrationEra !== null &&
+    migrationEra !== "hill_approach" &&
     migrationEra !== "fortify_outlast" &&
     migrationEra !== "crisis_priority" &&
     migrationEra !== "opening_ally" &&
@@ -1551,6 +1991,7 @@ export function planOverworldSessionSnapshotRestore(args: {
     (startedQuestIds.has(targetLeadQuestId) || completedQuestIds.has(targetLeadQuestId));
   const leadDiscoveryDeferredToPreparation =
     (migrationEra === null ||
+      migrationEra === "hill_approach" ||
       migrationEra === "fortify_outlast" ||
       migrationEra === "crisis_priority") &&
     indexes.openingPreparation !== null &&
@@ -1558,6 +1999,7 @@ export function planOverworldSessionSnapshotRestore(args: {
     indexes.openingPreparation.target_quest === targetLeadQuestId;
   const hasLeadSourceManifestEvidence =
     migrationEra === null ||
+    migrationEra === "hill_approach" ||
     migrationEra === "fortify_outlast" ||
     migrationEra === "crisis_priority" ||
     migrationEra === "opening_ally" ||
@@ -1669,6 +2111,7 @@ export function planOverworldSessionSnapshotRestore(args: {
         true);
   if (
     migrationEra !== null &&
+    migrationEra !== "hill_approach" &&
     migrationEra !== "fortify_outlast" &&
     migrationEra !== "crisis_priority" &&
     migrationEra !== "opening_ally" &&
@@ -1696,6 +2139,7 @@ export function planOverworldSessionSnapshotRestore(args: {
   const preparationRequiredByCurrentManifest =
     indexes.openingPreparation !== null &&
     (migrationEra === null ||
+      migrationEra === "hill_approach" ||
       migrationEra === "fortify_outlast" ||
       migrationEra === "crisis_priority");
   const targetPreparationQuestId = indexes.openingPreparation?.target_quest ?? null;
@@ -1815,6 +2259,7 @@ export function planOverworldSessionSnapshotRestore(args: {
   const openingAllyContact = indexes.openingAlly?.contact ?? null;
   if (
     migrationEra !== null &&
+    migrationEra !== "hill_approach" &&
     migrationEra !== "fortify_outlast" &&
     migrationEra !== "crisis_priority" &&
     (hasOpeningAllyEvidence ||
@@ -1916,11 +2361,6 @@ export function planOverworldSessionSnapshotRestore(args: {
     allyContactId: indexes.openingAlly?.contact ?? null,
     campaignBoundaryReplay,
   });
-  assertSnapshotQuestCompletionOutcomeJournalProof({
-    indexes,
-    journalEntries: snapshot.journalEntries,
-    questOutcomeIds,
-  });
   const campaignBoundaries: OverworldCampaignBoundaryReplayIndex = {
     byAcceptedDecisions: campaignBoundaryReplay.byAcceptedDecisions,
     worldFactProofOrdinalById: deriveCampaignWorldFactProofOrdinals({
@@ -1931,6 +2371,7 @@ export function planOverworldSessionSnapshotRestore(args: {
       questOutcomeIds,
       requireBoundServiceFacts:
         migrationEra === null ||
+        migrationEra === "hill_approach" ||
         migrationEra === "fortify_outlast" ||
         migrationEra === "crisis_priority" ||
         migrationEra === "opening_ally" ||
@@ -1957,7 +2398,28 @@ export function planOverworldSessionSnapshotRestore(args: {
   const characterAfterAlly = allyProof.option
     ? allyProof.characterAfterAlly
     : characterAfterPreparation;
-  const journalQuestOutcomeOrder = snapshot.journalEntries
+  const questStartReplay = replaySnapshotQuestStarts({
+    campaignBoundaryReplay,
+    character: characterAfterAlly,
+    indexes,
+    journalEntries: snapshot.journalEntries,
+    migrationEra,
+    snapshotWorldHash: snapshot.worldHash,
+    storedCharacter: snapshot.character,
+    startedQuestIds,
+  });
+  const questStartReturnSummaryByQuestId = new Map(
+    questStartReplay.starts.flatMap((start) =>
+      start.returnSummary === null ? [] : [[start.questId, start.returnSummary] as const],
+    ),
+  );
+  assertSnapshotQuestCompletionOutcomeJournalProof({
+    indexes,
+    journalEntries: questStartReplay.journalEntries,
+    questOutcomeIds,
+    questStartReturnSummaryByQuestId,
+  });
+  const journalQuestOutcomeOrder = questStartReplay.journalEntries
     .filter((entry) => entry.kind === "quest_done")
     .map((entry) => entry.id.slice("quest_done:".length))
     .reverse();
@@ -1967,13 +2429,13 @@ export function planOverworldSessionSnapshotRestore(args: {
     ...[...questOutcomeIds.keys()].filter((questId) => !journalQuestOutcomeIds.has(questId)).sort(),
   ];
   const consequenceReplay = replayQuestCampaignConsequences({
-    character: characterAfterAlly,
+    character: questStartReplay.characterAfter,
     questsById: indexes.questsById,
     questOutcomeIds,
     questOutcomeOrder,
   });
   const journalIndexById = new Map(
-    snapshot.journalEntries.map((entry, index) => [entry.id, index] as const),
+    questStartReplay.journalEntries.map((entry, index) => [entry.id, index] as const),
   );
   const characterAtCache = new Map<string, CampaignCharacterState>();
   const characterAt = (
@@ -2007,16 +2469,24 @@ export function planOverworldSessionSnapshotRestore(args: {
         questOutcomeIdsAt.set(questId, endingId);
       }
     }
+    let characterBeforeQuestOutcomes = registrationActive
+      ? leadSourceActive
+        ? preparationActive
+          ? allyActive
+            ? characterAfterAlly
+            : characterAfterPreparation
+          : characterAfterSource
+        : initialCharacter
+      : neutralCharacter;
+    for (const start of questStartReplay.starts) {
+      if (start.journalIndex <= contactIndex || start.effects.length === 0) continue;
+      characterBeforeQuestOutcomes = applyCampaignConsequences({
+        character: characterBeforeQuestOutcomes,
+        effects: start.effects,
+      }).characterAfter;
+    }
     const replayed = replayQuestCampaignConsequences({
-      character: registrationActive
-        ? leadSourceActive
-          ? preparationActive
-            ? allyActive
-              ? characterAfterAlly
-              : characterAfterPreparation
-            : characterAfterSource
-          : initialCharacter
-        : neutralCharacter,
+      character: characterBeforeQuestOutcomes,
       questsById: indexes.questsById,
       questOutcomeIds: questOutcomeIdsAt,
       questOutcomeOrder: questOutcomeOrder.filter((questId) => questOutcomeIdsAt.has(questId)),
@@ -2040,7 +2510,7 @@ export function planOverworldSessionSnapshotRestore(args: {
   assertJourneyCampaignJournalProof({
     journey: snapshot.journey,
     questOutcomeIds,
-    journalEntries: snapshot.journalEntries,
+    journalEntries: questStartReplay.journalEntries,
   });
   const roadJournal = roadJournalResolutionIndex(
     indexes,
@@ -2164,7 +2634,7 @@ export function planOverworldSessionSnapshotRestore(args: {
     roadJournal,
   });
   assertSnapshotResourceReplay(
-    snapshot,
+    { ...snapshot, journalEntries: [...questStartReplay.journalEntries] },
     indexes,
     travelTimeline,
     roadJournal,
@@ -2179,10 +2649,10 @@ export function planOverworldSessionSnapshotRestore(args: {
       ? migrateOpeningLeadSourceQuestCompletionBoundaries({
           boundaryProofsByOrdinal: campaignBoundaryReplay.byAcceptedDecisions,
           indexes,
-          journalEntries: snapshot.journalEntries,
+          journalEntries: questStartReplay.journalEntries,
           journey: snapshot.journey,
         })
-      : [...snapshot.journalEntries];
+      : [...questStartReplay.journalEntries];
   let openingLeadSourceDecisionTrailAfter = openingLeadSourceDecisionTrail;
   const hasQuestProgress = startedQuestIds.size > 0 || completedQuestIds.size > 0;
   if (migratesFromPreRegistrationManifest && hasQuestProgress) {
@@ -2228,6 +2698,7 @@ export function planOverworldSessionSnapshotRestore(args: {
   }
   const canGrandfatherOpeningPreparation =
     migrationEra !== null &&
+    migrationEra !== "hill_approach" &&
     migrationEra !== "fortify_outlast" &&
     migrationEra !== "crisis_priority" &&
     migrationEra !== "opening_ally" &&
@@ -2239,6 +2710,7 @@ export function planOverworldSessionSnapshotRestore(args: {
     OVERWORLD_OPENING_PREPARATION_TRUSTED_LEGACY_WORLD_HASHES.has(snapshot.worldHash);
   const canOfferMigratedPreparation =
     migrationEra !== null &&
+    migrationEra !== "hill_approach" &&
     migrationEra !== "fortify_outlast" &&
     migrationEra !== "crisis_priority" &&
     migrationEra !== "opening_ally" &&
@@ -2280,6 +2752,7 @@ export function planOverworldSessionSnapshotRestore(args: {
   }
   if (
     migrationEra !== null &&
+    migrationEra !== "hill_approach" &&
     migrationEra !== "fortify_outlast" &&
     migrationEra !== "crisis_priority" &&
     migrationEra !== "opening_ally" &&
@@ -2323,6 +2796,7 @@ function assertSnapshotQuestCompletionOutcomeJournalProof(args: {
   indexes: OverworldSnapshotManifestIndex;
   journalEntries: readonly OverworldJournalEntry[];
   questOutcomeIds: ReadonlyMap<string, string>;
+  questStartReturnSummaryByQuestId: ReadonlyMap<string, string>;
 }): void {
   const journalEntriesById = new Map(args.journalEntries.map((entry) => [entry.id, entry]));
   for (const [questId, endingId] of args.questOutcomeIds) {
@@ -2336,6 +2810,9 @@ function assertSnapshotQuestCompletionOutcomeJournalProof(args: {
       endingTitle: campaignExport.ending_title,
       minutes,
       townName: args.indexes.questTownNames.get(questId) ?? quest.home,
+      ...(args.questStartReturnSummaryByQuestId.has(questId)
+        ? { returnSummary: args.questStartReturnSummaryByQuestId.get(questId)! }
+        : {}),
     });
     const stored = journalEntriesById.get(expected.id);
     if (

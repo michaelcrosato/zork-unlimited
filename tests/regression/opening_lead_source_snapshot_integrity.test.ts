@@ -352,7 +352,7 @@ describe("opening lead-source snapshot integrity", () => {
     const session = selectSourceAndPrepare(LEDGER_PROFILE, ROWAN_SOURCE);
     moveToArea(session, "albany_city__market");
     moveToArea(session, "albany_city__transport_hub");
-    session.startQuest(TARGET_QUEST);
+    session.startQuest(TARGET_QUEST, "albany:wolf_approach_sheltered_stockway");
 
     const forged = session.snapshot();
     forged.journalEntries = forged.journalEntries.filter(
@@ -642,7 +642,7 @@ describe("opening lead-source snapshot integrity", () => {
     const progressed = selectSourceAndPrepare(LEDGER_PROFILE, ROWAN_SOURCE);
     moveToArea(progressed, "albany_city__market");
     moveToArea(progressed, "albany_city__transport_hub");
-    progressed.startQuest(TARGET_QUEST);
+    progressed.startQuest(TARGET_QUEST, "albany:wolf_approach_sheltered_stockway");
     const predecessor = progressed.snapshot();
     delete predecessor.openingLeadSourceDecisionTrail;
     predecessor.worldHash = OVERWORLD_OPENING_REGISTRATION_WORLD_HASH;
@@ -652,7 +652,7 @@ describe("opening lead-source snapshot integrity", () => {
     );
 
     expect(() => OverworldSession.restore(WORLD, predecessor)).toThrow(
-      /opaque post-registration decision suffix.*cannot be certified|campaign character does not match/i,
+      /opaque post-registration decision suffix.*cannot be certified|campaign character does not match|quest-start proof evidence introduced by a later manifest/i,
     );
   });
 
@@ -686,7 +686,7 @@ describe("opening lead-source snapshot integrity", () => {
     const progressed = selectSourceAndPrepare(LEDGER_PROFILE, ROWAN_SOURCE);
     moveToArea(progressed, "albany_city__market");
     moveToArea(progressed, "albany_city__transport_hub");
-    progressed.startQuest(TARGET_QUEST);
+    progressed.startQuest(TARGET_QUEST, "albany:wolf_approach_sheltered_stockway");
 
     const prooflessProgressed = progressed.snapshot();
     prooflessProgressed.worldHash = OVERWORLD_OPENING_REGISTRATION_WORLD_HASH;

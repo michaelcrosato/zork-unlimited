@@ -17,6 +17,7 @@ const api = () => createToolApi({ root: process.cwd() });
 const FULL_OVERWORLD = { compact_context: false, compact_result: false } as const;
 const WORLD = loadOverworldManifest(process.cwd());
 const HAYDEN_ID = "albany_city__transport_hub__contact";
+const SHELTERED_APPROACH_ID = "albany:wolf_approach_sheltered_stockway";
 const ALBANY_TO_SARATOGA = "road_albany_city__saratoga_springs_city";
 const SARATOGA_TO_QUEENSBURY = "road_saratoga_springs_city__queensbury_town";
 
@@ -39,7 +40,7 @@ function uiSessionAtPostGallowmereHayden(): OverworldSession {
   moveUiSessionToArea(session, "albany_city__market");
   session.scoutPoi("albany_city__market__poi");
   moveUiSessionToArea(session, "albany_city__transport_hub");
-  session.startQuest("wolf_winter");
+  session.startQuest("wolf_winter", SHELTERED_APPROACH_ID);
   session.completeQuest("wolf_winter", {
     endingId: "ending_held_timber_saved",
     endingTitle: "The Byre Held, Paling Timber Saved",
@@ -94,7 +95,7 @@ function uiSessionAtAlbanyStoryChoice(): OverworldSession {
     .areaExits.find((candidate) => candidate.destination.id === quest.area);
   if (!route) throw new Error("expected a route to the Albany lead");
   session.moveArea(route.id);
-  session.startQuest(quest.id);
+  session.startQuest(quest.id, SHELTERED_APPROACH_ID);
   session.completeQuest(quest.id, {
     endingId: "ending_held",
     endingTitle: "The Byre Held",
@@ -280,6 +281,7 @@ function mcpWolfWinterCheckpointInsideQuest() {
     compact_observation: false,
     session_id: overworldSessionId,
     quest_id: quest.id,
+    approach_id: SHELTERED_APPROACH_ID,
   });
   expect(launched.journey).toMatchObject({
     status: "active",
@@ -290,7 +292,7 @@ function mcpWolfWinterCheckpointInsideQuest() {
 
   const enteredYard = a.step_action({
     session_id: launched.rpg_session_id,
-    action_id: "go_north",
+    action_id: "use_sheltered_stockway_last_mile",
     expected_state_hash: launched.rpg_session.state_hash,
     compact_observation: false,
     compact_events: false,

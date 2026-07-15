@@ -28,6 +28,7 @@ import { OpeningAllySchema, applyOpeningAllyOption } from "./opening_ally.js";
 import { OpeningLeadSourceSchema, applyOpeningLeadSourceOption } from "./opening_lead_source.js";
 import { OpeningPreparationSchema, applyOpeningPreparationProfile } from "./opening_preparation.js";
 import { OpeningRegistrationSchema } from "./opening_registration.js";
+import { OverworldQuestLaunchSchema } from "./quest_launch.js";
 
 export const OverworldNodeKindSchema = z.enum([
   "metropolis",
@@ -470,6 +471,7 @@ export const OverworldQuestSchema = z
     area: z.string().min(1),
     discovery: z.string().min(1),
     visibility: z.literal("local_notice_board"),
+    launch: OverworldQuestLaunchSchema.optional(),
     campaign_imports: CampaignCharacterImportsSchema.optional(),
     campaign_exports: OverworldQuestCampaignExportsSchema.optional(),
   })
@@ -1813,6 +1815,13 @@ function assertQuestsIntegrity(
   areaHomes: Map<string, string>,
 ): void {
   const seenQuest = new Set<string>();
+  const seenLaunchIds = new Set<string>();
+  const seenLaunchOptionIds = new Set<string>();
+  const campaignNpcIds = new Set(
+    world.characters.flatMap((character) =>
+      character.campaign_npc_id ? [character.campaign_npc_id] : [],
+    ),
+  );
   for (const quest of world.quests) {
     if (seenQuest.has(quest.id)) throw new Error(`Duplicate overworld quest id "${quest.id}".`);
     seenQuest.add(quest.id);
@@ -1826,6 +1835,39 @@ function assertQuestsIntegrity(
 
     if (quest.campaign_imports !== undefined) {
       CampaignCharacterImportsSchema.parse(quest.campaign_imports);
+    }
+
+    if (quest.launch !== undefined) {
+      if (seenLaunchIds.has(quest.launch.id)) {
+        throw new Error(`Duplicate overworld quest launch id "${quest.launch.id}".`);
+      }
+      seenLaunchIds.add(quest.launch.id);
+      const importRules = quest.campaign_imports?.rules ?? [];
+      for (const option of quest.launch.options) {
+        if (seenLaunchOptionIds.has(option.id)) {
+          throw new Error(`Duplicate overworld quest launch option id "${option.id}".`);
+        }
+        seenLaunchOptionIds.add(option.id);
+        const knowledge = option.effects.find((effect) => effect.type === "learn_knowledge");
+        const matchingImports = knowledge
+          ? importRules.filter(
+              (rule) =>
+                rule.type === "knowledge_to_flag" && rule.knowledge_id === knowledge.knowledge_id,
+            )
+          : [];
+        if (matchingImports.length !== 1) {
+          throw new Error(
+            `Overworld quest "${quest.id}" launch option "${option.id}" must map its approach knowledge to exactly one campaign knowledge-to-flag import.`,
+          );
+        }
+        for (const effect of option.effects) {
+          if (effect.type === "remember_relationship" && !campaignNpcIds.has(effect.npc_id)) {
+            throw new Error(
+              `Overworld quest "${quest.id}" launch option "${option.id}" remembers unknown campaign npc "${effect.npc_id}".`,
+            );
+          }
+        }
+      }
     }
 
     const campaignEndingIds = new Set<string>();

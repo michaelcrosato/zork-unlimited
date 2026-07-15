@@ -41,7 +41,7 @@ const LIVE_PACK_SUMMARY =
   "Because you returned a living corridor pack to the high wood while keeping Cade's herd whole, Emery Sloane releases a one-time Greenway cache of food, lamp oil, and wildlife flares for your next road.";
 
 const CLEAN_ROUTE = [
-  "go_north",
+  "use_sheltered_stockway_last_mile",
   "talk_houndsman",
   "ask_lure",
   "ask_commit_lure",
@@ -62,7 +62,7 @@ const CLEAN_ROUTE = [
 ] as const;
 
 const COMBAT_ROUTE = [
-  "go_north",
+  "use_sheltered_stockway_last_mile",
   "talk_houndsman",
   "ask_wolves",
   "ask_byre",
@@ -183,6 +183,7 @@ function launchAlbanyWolf(api: ToolApi) {
     include_actions: true,
     session_id: overworldSessionId,
     quest_id: quest.id,
+    approach_id: "albany:wolf_approach_sheltered_stockway",
     seed: 901,
   });
   return { launched, overworldSessionId };
@@ -203,6 +204,7 @@ function playStrategy(strategy: Strategy) {
     cattle_alarm: 0,
   });
   expect(initial.state.campaignImportReceipt?.applied_rules).toEqual([
+    "import:wolf_winter_approach_sheltered_stockway",
     "import:wolf_winter_fieldcraft",
     "import:wolf_winter_lure_fieldcraft",
     "import:wolf_winter_works_fortification",

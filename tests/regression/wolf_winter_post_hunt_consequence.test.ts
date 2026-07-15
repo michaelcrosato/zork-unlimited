@@ -236,6 +236,7 @@ function launchAlbanyWolf(api: ToolApi): {
     compact_observation: false,
     session_id: overworldSessionId,
     quest_id: quest.id,
+    approach_id: "albany:wolf_approach_sheltered_stockway",
     seed: 505,
   });
   return { overworldSessionId, rpgSessionId: launched.rpg_session_id };
@@ -482,6 +483,7 @@ describe("bug_0505 — Wolf-Winter saved wood has a post-hunt consequence", () =
       compact_observation: false,
       session_id: sessionId,
       quest_id: quest.id,
+      approach_id: "albany:wolf_approach_sheltered_stockway",
       seed: 505,
     });
     expect(launched.journey.acceptedDecisions).toBe(39);
@@ -571,7 +573,13 @@ describe("bug_0505 — Wolf-Winter saved wood has a post-hunt consequence", () =
       expect(final.journey.storyChoice).toBeNull();
       const snapshot = api.export_overworld_session({ session_id: overworldSessionId }).snapshot;
       expect(snapshot.questOutcomes).toContainEqual(["wolf_winter", expected.endingId]);
-      expect(snapshot.character.relationships).toHaveLength(4);
+      expect(snapshot.character.relationships).toHaveLength(5);
+      expect(snapshot.character.relationships).toContainEqual(
+        expect.objectContaining({
+          npcId: "albany:hayden_hale",
+          memories: expect.arrayContaining(["albany:memory_hayden_dispatched_sheltered_stockway"]),
+        }),
+      );
       expect(snapshot.character.relationships).toContainEqual(
         expect.objectContaining({
           npcId: "albany:reese_pryce",
@@ -716,7 +724,7 @@ describe("bug_0505 — Wolf-Winter saved wood has a post-hunt consequence", () =
           ? createInitialCampaignCharacterState()
           : structuredClone(legacyConsequenceCharacter);
       expect(() => OverworldSession.restore(WORLD, opaqueProgress)).toThrow(
-        /opaque pre-registration quest progress without a replayable registration and lead-source path|opening preparation evidence introduced by a later manifest/i,
+        /opaque pre-registration quest progress without a replayable registration and lead-source path|opening preparation evidence introduced by a later manifest|quest-start proof evidence introduced by a later manifest/i,
       );
 
       const { character: _character, ...legacyWithoutCharacter } = opaqueProgress;
@@ -726,8 +734,8 @@ describe("bug_0505 — Wolf-Winter saved wood has a post-hunt consequence", () =
       };
       expect(() => OverworldSession.restore(WORLD, legacyV8)).toThrow(
         predecessorHash === OVERWORLD_PRE_CAMPAIGN_EXPORTS_WORLD_HASH
-          ? /opaque pre-registration quest progress without a replayable registration and lead-source path/i
-          : /campaign character does not match replayed quest consequences/i,
+          ? /opaque pre-registration quest progress without a replayable registration and lead-source path|quest-start proof evidence introduced by a later manifest/i
+          : /campaign character does not match replayed quest consequences|quest-start proof evidence introduced by a later manifest/i,
       );
     }
     const legacyV9 = structuredClone(prooflessCurrent);
@@ -804,7 +812,7 @@ describe("bug_0505 — Wolf-Winter saved wood has a post-hunt consequence", () =
     const forgedLegacyCharacter = structuredClone(legacyV9);
     forgedLegacyCharacter.character.money = 1;
     expect(() => OverworldSession.restore(WORLD, forgedLegacyCharacter)).toThrow(
-      /legacy overworld session snapshot has campaign character state without replayable consequence proof/i,
+      /legacy overworld session snapshot has campaign character state without replayable consequence proof|quest-start proof evidence introduced by a later manifest/i,
     );
   });
 

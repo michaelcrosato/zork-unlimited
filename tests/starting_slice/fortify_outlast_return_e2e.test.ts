@@ -217,6 +217,7 @@ function launchAlbanyWolf(api: ToolApi, seed: number) {
     include_actions: true,
     session_id: overworldSessionId,
     quest_id: WOLF.id,
+    approach_id: "albany:wolf_approach_sheltered_stockway",
     seed,
   });
   return { launched, overworldSessionId };
@@ -225,7 +226,7 @@ function launchAlbanyWolf(api: ToolApi, seed: number) {
 function routeFor(stance: Stance): readonly string[] {
   const contract = CASES[stance];
   return [
-    "go_north",
+    "use_sheltered_stockway_last_mile",
     "talk_houndsman",
     "ask_fortify",
     contract.choice,
@@ -478,7 +479,8 @@ function playFortify(stance: Stance) {
 
   const completion = snapshot.journalEntries.find((entry) => entry.id === "quest_done:wolf_winter");
   const questStart = snapshot.openingLeadSourceDecisionTrail?.decisions.find(
-    (decision) => decision.actionId === "quest_start:wolf_winter",
+    (decision) =>
+      decision.actionId === "quest_start:wolf_winter:albany:wolf_approach_sheltered_stockway",
   );
   if (
     !completion?.questCompletionBoundary ||
@@ -565,7 +567,8 @@ describe("SS-F08 — fortify conduct survives the full Albany return", () => {
     const forged = structuredClone(completed.snapshot);
     const trail = forged.openingLeadSourceDecisionTrail;
     const questStart = trail?.decisions.find(
-      (decision) => decision.actionId === "quest_start:wolf_winter",
+      (decision) =>
+        decision.actionId === "quest_start:wolf_winter:albany:wolf_approach_sheltered_stockway",
     );
     const completion = forged.journalEntries.find((entry) => entry.id === "quest_done:wolf_winter");
     if (!trail || !questStart || !completion?.questCompletionBoundary) {

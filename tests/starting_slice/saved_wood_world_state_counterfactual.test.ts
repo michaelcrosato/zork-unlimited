@@ -193,6 +193,7 @@ function launchAlbanyWolf(api: ToolApi): { overworldSessionId: string; rpgSessio
     compact_observation: false,
     session_id: overworldSessionId,
     quest_id: quest.id,
+    approach_id: "albany:wolf_approach_sheltered_stockway",
     seed: 511,
   });
   return { overworldSessionId, rpgSessionId: launched.rpg_session_id };
@@ -457,7 +458,8 @@ describe("SS-F11 — saved Wolf-Winter wood changes Albany's one-time service", 
     const snapshot = saved.api.export_overworld_session({ session_id: saved.sessionId }).snapshot;
     const trail = snapshot.openingLeadSourceDecisionTrail;
     const questStart = trail?.decisions.find(
-      (decision) => decision.actionId === "quest_start:wolf_winter",
+      (decision) =>
+        decision.actionId === "quest_start:wolf_winter:albany:wolf_approach_sheltered_stockway",
     );
     const completion = snapshot.journalEntries.find(
       (entry) => entry.id === "quest_done:wolf_winter",

@@ -72,6 +72,14 @@ export type SolveToEndingFailure = {
 
 export type SolveToEndingResult = SolveToEndingSuccess | SolveToEndingFailure;
 
+export type SolveToEndingOptions = {
+  /**
+   * Optional trusted initial state for an embedded overworld launch. Direct
+   * quest QA omits this and retains the pack's exact baseline initialization.
+   */
+  initialState?: GameState;
+};
+
 /** Human-readable WORLD-finding wording for a `solveToEnding` failure — kept
  *  next to `SolveToEndingFailureReason` so the two causes' phrasing can't drift
  *  apart from what `reason` actually distinguishes. Exported so the exact
@@ -112,10 +120,11 @@ export function solveToEnding(
   prepared: PreparedQuest,
   seed: number,
   maxStates: number,
+  options: SolveToEndingOptions = {},
 ): SolveToEndingResult {
   const { index, rules } = prepared;
   const step = makeStep(rules);
-  const start = initStateForRpgPack(index, seed);
+  const start = options.initialState ?? initStateForRpgPack(index, seed);
 
   const deathEndingIds = new Set(
     index.pack.endings.filter((ending) => ending.death).map((ending) => ending.id),

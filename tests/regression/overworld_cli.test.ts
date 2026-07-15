@@ -10,8 +10,9 @@
 import { describe, expect, it } from "vitest";
 import { join } from "node:path";
 import { spawnSync } from "node:child_process";
-import { render, renderEncounter } from "../../bin/overworld_play.js";
+import { render, renderEncounter, renderQuestLaunch } from "../../bin/overworld_play.js";
 import { OverworldSession } from "../../src/world/session.js";
+import type { OverworldQuestView } from "../../src/world/session_local_discovery.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
 
 const ROOT = process.cwd();
@@ -88,6 +89,65 @@ describe("overworld_play render (pure, same session the UI/MCP drive)", () => {
       return session.snapshotHash();
     };
     expect(play()).toBe(play());
+  });
+
+  it("renders launch costs, projections, consequences, and blocked reasons without hidden ids", () => {
+    const quest = {
+      id: "test_hill_dispatch",
+      title: "The Hill Dispatch",
+      home: "albany_city",
+      area: "albany_city__transport_hub",
+      discovery: "Two roads leave the Station Quarter.",
+      visibility: "local_notice_board",
+      launch: {
+        id: "test:hill_dispatch",
+        prompt: "Which last-mile road do you commit to?",
+        options: [
+          {
+            id: "test:ridge",
+            title: "Take the ridge",
+            summary: "Fast and exposed.",
+            preview: "The crosswind will be visible.",
+            consequence: "The cattle will see the descent.",
+            terms: { minutes: 30, supplies: 1, fatigue: 25 },
+            projection: {
+              available: true,
+              minutesAfter: 510,
+              suppliesAfter: 5,
+              fatigueAfter: 25,
+              travelConditionAfter: "tired",
+            },
+          },
+          {
+            id: "test:stockway",
+            title: "Take the stockway",
+            summary: "Quiet but provision-heavy.",
+            preview: "The herd will remain calm.",
+            consequence: "The crosswind will be concealed.",
+            terms: { minutes: 75, supplies: 2, fatigue: 10 },
+            projection: {
+              available: false,
+              minutesAfter: 555,
+              suppliesAfter: null,
+              fatigueAfter: null,
+              travelConditionAfter: null,
+              blockedReason: "Requires 2 supplies; you have 1.",
+            },
+          },
+        ],
+      },
+    } satisfies OverworldQuestView;
+
+    const text = renderQuestLaunch(quest);
+    expect(text).toContain("Which last-mile road do you commit to?");
+    expect(text).toContain("Actual cost: 30 min, 1 supply, fatigue +25.");
+    expect(text).toContain(
+      "Projected arrival: Day 1, 08:30; 5 supplies remaining; fatigue 25; condition tired.",
+    );
+    expect(text).toContain("Commitment: The cattle will see the descent.");
+    expect(text).toContain("Requires 2 supplies; you have 1.");
+    expect(text).toContain("Projected time: Day 1, 09:15.");
+    expect(text).not.toMatch(/knowledge_|memory_|return_summary|import:/i);
   });
 });
 

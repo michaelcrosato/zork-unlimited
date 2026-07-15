@@ -434,6 +434,7 @@ function assertSnapshotJournalSource(
     );
   }
   const decisionBoundaryCount = [
+    entry.questStartProof?.boundary,
     entry.questCompletionBoundary,
     entry.registrationBoundary,
     entry.serviceBoundary,
@@ -661,6 +662,7 @@ export function assertSnapshotTimeline(
     const recordedAt = parseTimeLabel(entry.recordedAt);
     assertSnapshotJournalSource(entry, recordedAt, sources);
     const decisionBoundary =
+      entry.questStartProof?.boundary ??
       entry.questCompletionBoundary ??
       entry.registrationBoundary ??
       entry.serviceBoundary ??

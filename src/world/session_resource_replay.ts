@@ -1,12 +1,14 @@
 import type {
   OverworldCampaignServiceRule,
   OverworldEdge,
+  OverworldQuest,
   OverworldRoadEvent,
 } from "./overworld.js";
 import type { JourneyDecisionProofLast } from "./journey_contract.js";
 import {
   parseRoadJournalId,
   parseServiceJournalId,
+  parseTimeLabel,
   roadResolutionKey,
   type RoadJournalIdParts,
   type ServiceJournalIdParts,
@@ -42,6 +44,7 @@ export type OverworldResourceReplaySourceIndex = {
   campaignServiceRulesById: ReadonlyMap<string, OverworldCampaignServiceRule>;
   edgesById: ReadonlyMap<string, OverworldEdge>;
   roadEventsByEdgeId: ReadonlyMap<string, OverworldRoadEvent>;
+  questsById?: ReadonlyMap<string, OverworldQuest>;
   townNameForSource: (nodeId: string) => string;
 };
 
@@ -102,6 +105,7 @@ type OverworldReplayState = {
 type OverworldResourceReplayEvent =
   | { kind: "travel"; recordedAt: number; entry: TravelLogEntrySnapshot }
   | { kind: "road"; recordedAt: number; resolution: OverworldRoadJournalResolutionEntry }
+  | { kind: "quest_launch"; recordedAt: number; entry: OverworldJournalEntry }
   | { kind: "service"; recordedAt: number; service: OverworldServiceJournalReplayEntry }
   | {
       kind: "local";
@@ -286,7 +290,52 @@ function assertSnapshotRoadResolutionCoverage(
 }
 
 function replayEventOrder(kind: OverworldResourceReplayEvent["kind"]): number {
-  return kind === "travel" ? 0 : kind === "road" ? 1 : 2;
+  switch (kind) {
+    case "travel":
+      return 0;
+    case "road":
+      return 1;
+    case "local":
+      return 2;
+    case "quest_launch":
+      return 3;
+    case "service":
+      return 4;
+  }
+}
+
+function replayQuestLaunchResources(
+  entry: OverworldJournalEntry,
+  recordedAt: number,
+  sources: OverworldResourceReplaySourceIndex,
+  state: OverworldReplayState,
+): void {
+  const proof = entry.questStartProof;
+  if (entry.kind !== "quest" || proof?.kind !== "approach") {
+    throw new Error(`Overworld session snapshot journal "${entry.id}" is not an approach launch.`);
+  }
+  const questId = entry.id.startsWith("quest:") ? entry.id.slice("quest:".length) : "";
+  const quest = sources.questsById?.get(questId);
+  const launch = quest?.launch;
+  if (!quest || !launch) {
+    throw new Error(
+      `Overworld session snapshot quest launch "${entry.id}" has no authored launch catalog.`,
+    );
+  }
+  const option = launch.options.find((candidate) => candidate.id === proof.approachId);
+  if (!option) {
+    throw new Error(
+      `Overworld session snapshot quest launch "${entry.id}" references unknown approach "${proof.approachId}".`,
+    );
+  }
+  if (state.supplies < option.terms.supplies) {
+    throw new Error(
+      `Overworld session snapshot quest launch "${entry.id}" spends more supplies than resource replay has available.`,
+    );
+  }
+  assertReplayClock(`quest launch journal "${entry.id}"`, recordedAt, option.terms.minutes, state);
+  state.supplies -= option.terms.supplies;
+  state.fatigue = Math.min(MAX_FATIGUE, state.fatigue + option.terms.fatigue);
 }
 
 function campaignServiceRuleForReplay(
@@ -487,6 +536,15 @@ export function assertSnapshotResourceReplay(
       });
     }
   }
+  for (const entry of snapshot.journalEntries) {
+    if (entry.questStartProof?.kind === "approach") {
+      replayEvents.push({
+        kind: "quest_launch",
+        recordedAt: parseTimeLabel(entry.recordedAt),
+        entry,
+      });
+    }
+  }
   replayEvents.sort(
     (left, right) =>
       left.recordedAt - right.recordedAt ||
@@ -545,6 +603,11 @@ export function assertSnapshotResourceReplay(
         event.duration,
         state,
       );
+      continue;
+    }
+
+    if (event.kind === "quest_launch") {
+      replayQuestLaunchResources(event.entry, event.recordedAt, sources, state);
       continue;
     }
 

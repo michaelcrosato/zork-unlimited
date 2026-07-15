@@ -1,10 +1,89 @@
 import { describe, expect, it } from "vitest";
-import { crawlOverworld } from "../../src/crawl/overworld_crawler.js";
+import { crawlOverworld, selectCrawlQuestApproach } from "../../src/crawl/overworld_crawler.js";
 import { generateRpgPack } from "../../src/gen/rpg_generator.js";
 import { describeSolveToEndingFailure, solveToEnding } from "../../src/crawl/quest_solver.js";
 import { prepareShippedQuest, preparePack, listShippedQuestIds } from "../../src/crawl/prepare.js";
+import type { OverworldQuestView } from "../../src/world/session_local_discovery.js";
 
 describe("overworld crawler", () => {
+  it("selects one stable unblocked quest approach and preserves optionless starts", () => {
+    const base: OverworldQuestView = {
+      id: "crawler_launch_fixture",
+      title: "Crawler launch fixture",
+      home: "town",
+      area: "area",
+      discovery: "A two-road lead.",
+      visibility: "local_notice_board",
+    };
+    expect(selectCrawlQuestApproach(base)).toBeUndefined();
+
+    const launch = {
+      ...base,
+      launch: {
+        id: "test:crawler_launch",
+        prompt: "Choose a road.",
+        options: [
+          {
+            id: "test:z_blocked",
+            title: "Blocked road",
+            summary: "Too expensive.",
+            preview: "The pack is too light.",
+            consequence: "This route cannot be paid.",
+            terms: { minutes: 10, supplies: 2, fatigue: 0 },
+            projection: {
+              available: false,
+              minutesAfter: 490,
+              suppliesAfter: null,
+              fatigueAfter: null,
+              travelConditionAfter: null,
+              blockedReason: "Requires 2 supplies; you have 1.",
+            },
+          },
+          {
+            id: "test:b_open",
+            title: "Open road B",
+            summary: "Legal but later alphabetically.",
+            preview: "The road is open.",
+            consequence: "The crawler can take it.",
+            terms: { minutes: 10, supplies: 1, fatigue: 1 },
+            projection: {
+              available: true,
+              minutesAfter: 490,
+              suppliesAfter: 0,
+              fatigueAfter: 1,
+              travelConditionAfter: "strained",
+            },
+          },
+          {
+            id: "test:a_open",
+            title: "Open road A",
+            summary: "The stable first legal route.",
+            preview: "The road is open.",
+            consequence: "The crawler takes it deterministically.",
+            terms: { minutes: 10, supplies: 1, fatigue: 1 },
+            projection: {
+              available: true,
+              minutesAfter: 490,
+              suppliesAfter: 0,
+              fatigueAfter: 1,
+              travelConditionAfter: "strained",
+            },
+          },
+        ],
+      },
+    } satisfies OverworldQuestView;
+    expect(selectCrawlQuestApproach(launch)).toBe("test:a_open");
+
+    const allBlocked: OverworldQuestView = {
+      ...launch,
+      launch: {
+        ...launch.launch,
+        options: launch.launch.options.filter((option) => !option.projection.available),
+      },
+    };
+    expect(() => selectCrawlQuestApproach(allBlocked)).toThrow(/Requires 2 supplies; you have 1\./);
+  });
+
   it("solveToEnding finds a non-death ending path for every shipped quest", () => {
     for (const id of listShippedQuestIds(process.cwd())) {
       const result = solveToEnding(prepareShippedQuest(process.cwd(), id), 1, 60000);

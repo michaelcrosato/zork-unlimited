@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 565 -->
+<!-- historical_cycle_count: 566 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,15 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - wolf_winter_hill_approach
+
+- Evidence choice: `SS-F07-hill-route` was the next defining-slice gap because Albany preparation still ended in a consequence-free teleport to Cade's yard instead of a material road commitment.
+- Surface: Hayden now offers an exposed ridge (30 minutes, one supply, 25 fatigue, alarm 1, first lure DC 10) or sheltered stockway (75 minutes, two supplies, 10 fatigue, alarm 0, first lure DC 12). The generic atomic launch boundary records one suffixed start decision, exact route proof/import, exclusive knowledge and Hayden memory, and fails closed without adding a mandatory input.
+- Counterfactual: seed 9 makes the identical first cast pass on the ridge and fail into no-retry rail recovery on the stockway; seed 26 makes both pass but reaches alarm 4/scattered cattle versus alarm 3/whole herd. Exact resources, condition, action, outcome, return summary, save replay, compact/full/UI/CLI/crawler parity, and bounded F11 migration are proven.
+- Pure evidence: seed 2716 verified pure/fresh, understood the stockway tradeoff, completed Wolf-Winter at decision 27 with an unharmed herd, continued through three goals, and ended voluntarily at checkpoint 80; clarity/enjoyment 4/5, stuck false, replay true. It reported only recurring S1 duplicate generated names outside the authored slice and S0 prose issues.
+- Compile/self-critique: only this report is new since compile `20260715T120239Z`, so no compile is due. PASS for F07, not the greater-than-BG3 slice claim: the ledger advances 9/12→10/12; F06, F02, numeric/fleet certification, and publication remain.
+- Guard: adversarial audit closed a legacy-copy relabelling gap by pinning exact per-era quest-start copy and found no remaining P0/P1/P2 issue. Final crawl `20260715T175121Z` reached 247/247 nodes, 344/344 edges, 12/12 boards, and 12/12 quests with zero findings; the fresh report sidecar is verified.
 
 ### Cycle result - wolf_winter_fortify_outlast
 
@@ -135,12 +144,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Pure evidence: independently verified pure/fresh seed 7 completed Wolf-Winter, Gallowmere, Tanner's Fever, and Breaking Weir by decision 90, continued at goals/checkpoints 24/40/48/70/80, then ended honestly at goal 4; clarity 4/5, enjoyment 5/5, replay true. Prior route-padding friction did not recur, though one low-severity `area_route_id` versus `area_id` mismatch remains.
 - Self-critique: PASS for shared decision semantics and a clean fresh canary, not causal retention proof—the report does not identify its exact travel tool calls, and the player still exited after four quests. The ledger has 467 accepted reports, only one newer than compile 466, so feedback compilation remains below its three-report threshold.
 - Guard: pre/post 6000-step crawls are green (`20260712T181935Z`, `20260712T185724Z`; 247/247 towns, 344/344 roads, 12/12 quests); browser play verified tutorial/card/encounter interruption; report copy SHA-256 is `b847618a3419d3cda4a52cbc40839dcd7b6104aae9e9ba3cdcfd665da9d0fb4b`; full health passed (311 files/2194 tests, UI, 12 packs). Immutable route memoization and duplicate-free verifier scheduling removed repeated work without changing proof limits.
-
-### Cycle result - breaking_weir_flood_course_consequence
-
-- Root evidence: nine verified pure players had completed The Breaking Weir and eight ended there; its rack→walk→winch chain always delivered a perfect rescue without asking what the valley would sacrifice. This made an owned flood-course consequence the strongest scoped correction (`bug_0518`).
-- Surface: opening the race now exposes one equal-score, mutually exclusive choice—save winter grain by spending Pell's old race-house, or preserve the old flood works by washing the lower fields. Distinct flags, journals, ending identities/copy, and exact post-Weir campaign context carry the chosen cost; no hidden route or solution data crosses UI/MCP.
-- Contract repair: rejected timeout seed 2522 chose the grain organically and called the fork “real moral weight,” but its audit caught checkpoint Continue dropping the current embedded menu. MCP now binds the exact quest that caused a pause and returns its unchanged, post-action compact/full context on Continue, matching UI; End, story blocks, stale guards, and ended quests expose none.
-- Pure evidence: verified pure/fresh seed 2524 completed Wolf-Winter, Gallowmere, and Tanner's Fever, continued at decisions 22/40/47, then ended honestly at goal 3 on 74; clarity 5/5, enjoyment 4/5, replay true, no rejects/stuck/timeout. Its exact report copy is hash `852669aa7725`.
-- Compile/self-critique: ledger 466/30 rejected; 17 v3 pure exits all continued at least once (75 continue/17 end, mean 94.71 decisions). PASS for a real Weir sacrifice and checkpoint parity, not retention uplift—the valid player stopped before Weir, seed 2522 remains rejected evidence, and long-haul travel/resource thresholds remain the fresh friction.
-- Guard: pre/final crawls `20260712T164013Z`/`20260712T174925Z` covered 6,000 steps and 247/247 nodes; focused 94-test plus pure-server/variant/structural proofs, exact report copy, and full health passed.

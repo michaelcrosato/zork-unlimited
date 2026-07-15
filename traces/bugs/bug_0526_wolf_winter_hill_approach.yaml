@@ -1,0 +1,71 @@
+id: bug_0526
+title: "Wolf-Winter began with a consequence-free off-map arrival instead of a material hill-route choice"
+pack: content/rpg/quests/wolf_winter.yaml
+reported_by: starting-slice causal audit and Depth Contract v1
+reports:
+  - docs/STARTING_SLICE.md
+  - docs/starting_slice_causal_matrix.json
+severity: S2
+symptom: >
+  Albany preparation ended at the Station Quarter, but starting Wolf-Winter
+  teleported the player to Cade's yard for zero time, supplies, fatigue, route
+  risk, or remembered dispatch. The first local input was an identical north
+  movement on every run, so the journey to the defining crisis could not alter
+  legal actions, check difficulty, pressure, cattle safety, outcome, or return
+  truth and SS-F07 could not count as a material fork.
+root_cause: >
+  The overworld quest-start boundary supported only a zero-cost journal marker.
+  It had no data-driven launch-option schema, post-choice character handoff,
+  resource projection, route-qualified journey proof, imported quest flag, or
+  replay rule. Wolf-Winter therefore had no trustworthy way to consume an
+  Albany travel commitment without adding bespoke state or an extra mandatory
+  decision.
+fix: >
+  Add a generic, atomic quest-launch contract whose player-facing options carry
+  exact time, supply, fatigue, preview, consequence, return summary, knowledge,
+  and named-NPC memory. Prepare the post-choice character and resources before
+  the embedded RPG boots, then commit one route-qualified quest-start decision;
+  missing, unknown, unaffordable, stale, or failed embedded starts leave the
+  parent unchanged. Author two Wolf-Winter approaches. The exposed ridge costs
+  30 minutes, one supply, and 25 fatigue, reveals the first feed-cast crosswind
+  for DC 10, and raises cattle alarm to 1 on descent. The sheltered stockway
+  costs 75 minutes, two supplies, and 10 fatigue, keeps the herd calm, and leaves
+  the first cast at DC 12. Import exactly one route flag, expose exactly one
+  last-mile action, and fail closed on contradictory flags. Persist the exact
+  cost, Hayden memory, proof boundary, import receipt, outcome, and route return
+  summary through chronological foldback and save replay; migrate exact F11
+  starts as neutral legacy proof without inventing retroactive route effects.
+deterministic_witnesses:
+  - counterfactual: "same real Albany boundary, Ledger background, source, Works preparation, seed 26, and clean three-cast lure plan; only ridge versus stockway differs"
+    exposed_ridge: "Day 1 10:02, 5 supplies, fatigue 25/tired, alarm 1 on arrival, DC 10 first cast, final alarm 4, two cattle scattered"
+    sheltered_stockway: "Day 1 10:47, 4 supplies, fatigue 10/ready, alarm 0 on arrival, DC 12 first cast, final alarm 3, whole herd safe"
+  - route_advantage: "seed 9 at the first feed cast"
+    result: "ridge succeeds at DC 10; stockway fails at DC 12, retires the identical cast, and opens the authored split-rail recovery"
+  - decision_budget: "select either launch card from the shared parent"
+    result: "the selection is exactly one suffixed quest-start decision and its route action replaces the old first north movement; both first goals complete below 45 decisions"
+  - persistence: "complete each seed-26 route, fold back to Albany, export, restore, and re-export"
+    result: "resources, route knowledge, Hayden memory, start proof, quest flag/import receipt, cattle outcome, and exact completion return summary remain canonical and mutually exclusive"
+  - migration: "restore unstarted, started, completed, and service-consuming exact F11 saves"
+    result: "unstarted saves choose a real route later; progressed saves receive one neutral legacy proof and no invented cost or memory; current route evidence relabelled as F11 is rejected"
+tests:
+  - tests/starting_slice/hill_approach_gameplay.test.ts
+  - tests/starting_slice/hill_approach_return_e2e.test.ts
+  - tests/regression/hill_approach_migration_integrity.test.ts
+  - tests/unit/world_quest_launch.test.ts
+  - tests/unit/world_quest_launch_resource_replay.test.ts
+  - tests/unit/campaign_import_bridge.test.ts
+  - tests/unit/ui_overworld.test.ts
+  - tests/unit/crawl_overworld.test.ts
+  - tests/unit/world_session_goal_passage.test.ts
+  - tests/regression/mcp_goal_passage.test.ts
+  - tests/regression/overworld_cli.test.ts
+  - tests/regression/opening_lead_source_snapshot_integrity.test.ts
+  - tests/regression/wolf_winter_compact_surface.test.ts
+  - tests/regression/wolf_winter_state_consistency.test.ts
+  - tests/regression/rpg_variant_liveness.test.ts
+verification:
+  - "paired full-slice F07 proof: 1/1; migration/resource replay proof: 20/20; broad non-migration proof: 294/294; exact migration proof: 60/60"
+  - "final post-change crawl 20260715T175121Z: 6,000 steps, 247/247 nodes, 344/344 edges, 12/12 boards, 12/12 quests, and zero findings"
+  - "pure fresh seed 2716: Wolf-Winter completed at decision 27, sheltered-stockway tradeoff understood, herd unharmed, three goals completed, voluntary checkpoint exit at decision 80, clarity/enjoyment 4/5, replay true"
+  - "independent adversarial audit: exact per-era legacy start-copy hardening closed the only P2 relabelling gap; no remaining P0/P1/P2 finding"
+  - "full repository gate: npm run health"
