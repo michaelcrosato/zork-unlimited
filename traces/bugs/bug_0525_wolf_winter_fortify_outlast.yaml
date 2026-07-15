@@ -1,0 +1,55 @@
+id: bug_0525
+title: "Wolf-Winter lacked a fully noncombat fortify-and-outlast strategy and a material Cade-consent fork"
+pack: content/rpg/quests/wolf_winter.yaml
+reported_by: starting-slice causal audit and Depth Contract v1
+reports:
+  - docs/STARTING_SLICE.md
+  - docs/starting_slice_causal_matrix.json
+severity: S2
+symptom: >
+  Wolf-Winter offered combat, living-pack lure, and drive-and-evacuate resolutions,
+  but no complete fourth strategy that held the byre without fighting or moving the
+  household. Cade's trust row also promised consent and authority consequences that
+  did not exist, so it could not count as a material fork.
+root_cause: >
+  Cade's plan dialogue had no hard fortification commitment, finite sealing resource,
+  visible siege pressure, stance-specific failed-check recovery, or downstream return
+  state. Hearing Cade therefore could not change legal aid, public versus household
+  costs, NPC testimony, or Albany services while the wolves remained alive.
+fix: >
+  Add one bounded fortify-and-outlast family with two disclosed, mutually exclusive
+  stances before the breach. Accepting Cade's terms spends his two household shutters,
+  preserves Albany's public relief seals, exposes outer property, and earns Cade's one
+  failed-seat recovery. Invoking lawful Albany authority preserves the outer property,
+  spends the public seals, records Cade's refusal, and makes an emergency public binding
+  strip the only recovery. Both stances close retreat, preparation, lure, drive, enemies,
+  and combat; proceed through distinct paling, threshold, and dawn-watch beats; expose
+  monotonic Winter siege pressure; keep all three wolves and the whole herd alive; and
+  export exact facts, relationship memories, June's independent cattle-brace account,
+  truthful return copy, and mutually exclusive Station services. Keep recovery detail in
+  flags and journals rather than multiplying the two material campaign endings.
+deterministic_witnesses:
+  - counterfactual: "same Wolf-Winter boundary and outer-seat roll; only Cade terms versus Albany authority differs"
+    cade_terms: "Cade legally helps a failed seat, household shutters are spent, outer property is exposed, public seals return, and Hayden releases preserved-seal resupply"
+    albany_authority: "Cade refuses aid, an emergency public strip recovers the seat, outer property is preserved, public seals are spent, and Hayden releases an authority-watch rest"
+  - failure_forward: "worst outer-seat roll under either stance"
+    result: "the original Repair action retires permanently; only that stance's disclosed recovery remains, pressure carries Strained into dawn, and the same stance ending preserves the failure journal"
+  - ally_agency: "June rides under cattle-first authority"
+    result: "the dawn watch is blocked until June independently takes the lower cattle brace; she neither changes siege pressure nor becomes an extra fortification laborer"
+  - combat_boundary: "inspect every state after fortification commitment"
+    result: "no enemy, attack, maneuver, retreat, preparation, lure, or drive action materializes; declining before commitment leaves ordinary combat legal"
+  - persistence: "complete each stance, fold back to Albany, consume its one-time Station service, save, restore, and replay"
+    result: "facts, memories, promises, service consumption, dawn-dispatch copy, and full/compact/UI hashes remain exact and idempotent"
+tests:
+  - tests/starting_slice/cade_trust_counterfactual.test.ts
+  - tests/starting_slice/fortify_outlast_return_e2e.test.ts
+  - tests/regression/fortify_outlast_migration_integrity.test.ts
+  - tests/unit/world_journey_campaign.test.ts
+  - tests/regression/new_york_overworld.test.ts
+  - tests/regression/rpg_variant_liveness.test.ts
+verification:
+  - "focused F11 and affected proofs: 116/116; health-driven exact-copy/dialogue regressions: 13/13"
+  - "unchanged-cap structural proofs: ending/action 29/29, variant liveness 17/17, score/metamorphic 45/45"
+  - "post-change crawl 20260715T152355Z: 6,000 steps, 247/247 nodes, 344/344 edges, 12/12 quests"
+  - "pure fresh-overworld seed 2715: verified/retention-eligible, first goal at decision 28, four goals and voluntary end at 97, clarity/enjoyment 5/5, stuck false"
+  - "npm run health: verifier integrity, 352/352 files and 2,579/2,579 tests, UI typecheck, and all 12 packs"

@@ -104,7 +104,7 @@ Wolf-Winter is the strongest existing gameplay proof:
   changes a one-time Albany service;
 - Albany's dawn dispatch creates a mutually exclusive return fork between
   Jamie's Market resupply credit and Emery's Greenway rest claim;
-- six truthful non-death victory identities reach Albany's campaign
+- eleven truthful non-death victory identities reach Albany's campaign
   presentation.
 
 Relevant guards include
@@ -121,8 +121,8 @@ The current slice does **not** yet meet the full contract:
   sponsorship now change the actual terms of their matching source packet, and
   the Road-Warden retains its fieldcraft import. Ironhands Repairer,
   Unaffiliated Courier, and Ledger Advocate now also have distinct Repair,
-  Streetwise, and Mediation preparation consumers; broader balance across the
-  still-missing resolution families remains unproven;
+  Streetwise, and Mediation preparation consumers; broader balance across all
+  four completed resolution families remains unproven;
 - June Pike now supplies the first persistent ally grammar: her visible
   cattle-first contract, subordinate-role refusal, independent Wolf action,
   first-blood departure, promise state, testimony, and Station opportunity all
@@ -137,9 +137,10 @@ The current slice does **not** yet meet the full contract:
   the combat import to protect its guarantee, but the gate wound now exports
   back into persistent health and Cade's finite drive rig provides an
   origin-honest quest-local equipment pattern;
-- prepared combat, fully noncombat diversion, bounded mixed recovery, and the
-  complete drive/evacuate family now exist; only fortify/outlast remains
-  unimplemented;
+- prepared combat, fully noncombat diversion, bounded mixed recovery,
+  drive/evacuate, and fortify/outlast now supply four distinct resolution
+  families; the full twelve-fork depth contract and fleet-level balance remain
+  unproven;
 - three early decisions now drive replay-bound services through reusable
   world-fact, story-choice, companion, and promise predicates, but the other
   return facts still lack mechanical NPC and opportunity consumers.
@@ -181,8 +182,8 @@ tamper guards. A generic quest-export catalog applies relationship
 memories/floors and derives historical world facts from canonical outcome ids;
 character-conditioned effects additionally resolve promises and add or remove
 companions in canonical completion order.
-Wolf-Winter's six non-death endings create distinct Cade/Emery memories and
-byre/gate/timber/wolf/cattle facts; restore replays the character result,
+Wolf-Winter's eleven non-death endings create distinct Cade, Emery, and Hayden
+memories plus byre/gate/timber/wolf/cattle/property/relief-stock facts; restore replays the character result,
 rejects forged outcome/journal/state combinations, and fences prior manifests
 to one exact migration target. Generic campaign service rules can now consume
 those trusted facts or canonical story choices at an authored town and area,
@@ -353,15 +354,40 @@ service consumption. Proof lives in
 and
 [`drive_crisis_return_counterfactual.test.ts`](../tests/starting_slice/drive_crisis_return_counterfactual.test.ts).
 
+The ninth authored increment completes `fortify_and_outlast` and rewrites
+`SS-F08-cade-trust` as an honest conduct fork. Cade discloses two mutually
+exclusive stances before commitment: accept his household boundary and take two
+shutters with his failed-seal help, or invoke lawful Albany authority and take
+finite public relief seals while he refuses that recovery. The commitment
+closes lure, drive, preparation, retreat, and combat. A visible Winter Siege
+track then advances through an outer repair and a separate threshold seal. The
+outer Repair check is one-shot: a miss raises pressure and opens only the
+stance-specific deterministic recovery, never an identical retry. June, when
+present, independently holds the lower cattle brace without erasing or changing
+the siege pressure. Both routes outlast all three living wolves and keep the
+whole herd safe.
+
+Cade's route truthfully leaves outer property exposed and returns Albany's
+public seals unused; the authority route protects that property by spending the
+public seals and records Cade's refusal. Two endings export those facts into
+distinct Cade, Hayden, and June memories, every Albany dawn dispatch preserves
+the selected cost, and Hayden offers a mutually exclusive Station resupply or
+rest. Best/worst repair, solo/June, RPG save/replay, chronological foldback,
+full/compact/browser parity, current/predecessor migration, and one-use service
+consumption are covered by
+[`cade_trust_counterfactual.test.ts`](../tests/starting_slice/cade_trust_counterfactual.test.ts)
+and
+[`fortify_outlast_return_e2e.test.ts`](../tests/starting_slice/fortify_outlast_return_e2e.test.ts).
+
 This proves `SS-F01-character-background`, `SS-F03-lead-source`,
-`SS-F04-ally-commitment`, `SS-F05-preparation-profile`, `SS-F09-wolf-strategy`,
-`SS-F10-crisis-priority`, `SS-F11-saved-wood`, and `SS-F12-albany-return`:
-eight of the twelve required material forks. It proves the ally-agency clause,
-three preparation profiles, three resolution families, and distinct consumers
-for all four concepts, but it does not prove the fully noncombat
-`fortify_and_outlast` family, the four remaining fork sites, the full
-twelve-fork contract, or fleet-level balance. Those remain the next work, not
-implied credit for the eight proven counterfactuals.
+`SS-F04-ally-commitment`, `SS-F05-preparation-profile`, `SS-F08-cade-trust`,
+`SS-F09-wolf-strategy`, `SS-F10-crisis-priority`, `SS-F11-saved-wood`, and
+`SS-F12-albany-return`: nine of the twelve required material forks. It proves
+the ally-agency clause, three preparation profiles, all four resolution
+families, and distinct consumers for all four concepts, but it does not prove
+the three remaining fork sites, the full twelve-fork contract, or fleet-level
+balance. Those remain the next work, not implied credit for the nine proven
+counterfactuals.
 
 ## Required resolution families
 
@@ -379,13 +405,13 @@ background into a class lock:
 
 No preparation profile may dominate all four. Each family needs at least one
 authored failure-forward recovery and a distinct persistent Albany aftermath.
-`hunt_and_hold`, `lure_and_divert`, and `drive_and_evacuate` now have
-end-to-end proof. The drive uses two finite spatial execution beats, a visible
+All four families now have end-to-end proof. The drive uses two finite spatial execution beats, a visible
 pressure threshold, a disclosed no-errand spatial commitment, an authored
 failed-check recovery, and a three-way crisis;
-it is distinct from the failed-lure one-fight recovery. `fortify_and_outlast`
-is still planned. The Works preparation and Cade's existing resource dialogue
-are groundwork only and do not earn credit for that missing fourth family.
+it is distinct from the failed-lure one-fight recovery. Fortification uses two
+mutually exclusive conduct/resources, a one-shot Repair check, stance-specific
+failure recovery, a separate threshold seal, and truthful property/public-stock
+aftermath; it is not another lure, drive, or last-action label.
 
 ## Depth Contract v1
 

@@ -79,15 +79,20 @@ describe("bug_0504 — Wolf-Winter clues are complementary rather than contradic
     const root = node("cade_root");
     const quick = node("cade_wolves")?.npc_text ?? "";
     const guarded = node("cade_byre")?.npc_text ?? "";
+    const fortify = node("cade_fortify")?.npc_text ?? "";
 
     expect(root?.npc_text).toMatch(
       /either lesson[^]*or both before you go[^]*quick spear-hand[^]*guarded byre plan/i,
     );
     expect(root?.npc_text).not.toMatch(/two roads/i);
+    expect(root?.npc_text).toMatch(/living lure[^]*signal drive[^]*seal-and-outlast line/i);
     expect(root?.topics.find((topic) => topic.id === "wolves")?.prompt).toMatch(
       /quick spear-hand/i,
     );
     expect(root?.topics.find((topic) => topic.id === "byre")?.prompt).toMatch(/guarded byre plan/i);
+    expect(root?.topics.find((topic) => topic.id === "fortify")?.prompt).toMatch(
+      /seal the byre[^]*outlast the living pack[^]*dawn/i,
+    );
 
     expect(quick).toMatch(/Quick lines[^]*set[^]*drive[^]*wheel[^]*turn/i);
     expect(quick).toMatch(/close[^]*fast[^]*guard opens[^]*drive/i);
@@ -98,6 +103,10 @@ describe("bug_0504 — Wolf-Winter clues are complementary rather than contradic
     expect(guarded).toMatch(/splits[^]*bind/i);
     expect(guarded).toMatch(/wait[^]*true rush[^]*patient alternative[^]*closing early/i);
     expect(guarded).not.toMatch(/\bset\b[^]*\bdrive\b|\bwheel\b[^]*\bturn\b/i);
+
+    expect(fortify).toMatch(
+      /Household terms[^]*expose outer property[^]*save public seals[^]*help[^]*Albany authority[^]*covers my property[^]*spends public stock[^]*no help[^]*dawn/i,
+    );
   });
 
   it("keeps root copy and legal lesson actions aligned when quick is heard first", () => {
@@ -109,6 +118,7 @@ describe("bug_0504 — Wolf-Winter clues are complementary rather than contradic
       "ask_byre",
       "ask_lure",
       "ask_drive",
+      "ask_fortify",
       "ask_leave",
     ]);
 
@@ -120,7 +130,13 @@ describe("bug_0504 — Wolf-Winter clues are complementary rather than contradic
     expect(observation.dialogue?.npc_text).toMatch(
       /quick spear-hand[^]*guarded byre plan is still yours to learn[^]*Ask for it/i,
     );
-    expect(dialogueActionIds(state)).toEqual(["ask_byre", "ask_lure", "ask_drive", "ask_leave"]);
+    expect(dialogueActionIds(state)).toEqual([
+      "ask_byre",
+      "ask_lure",
+      "ask_drive",
+      "ask_fortify",
+      "ask_leave",
+    ]);
     expect(state.journal.some((entry) => /quick\/open line/i.test(entry))).toBe(true);
 
     const guarded = takeAction(state, "ask_byre");
@@ -131,7 +147,7 @@ describe("bug_0504 — Wolf-Winter clues are complementary rather than contradic
     expect(observation.dialogue?.npc_text).toMatch(
       /Both lessons are yours[^]*do not choose a road here[^]*commit[^]*later[^]*at the wolves/i,
     );
-    expect(dialogueActionIds(state)).toEqual(["ask_lure", "ask_drive", "ask_leave"]);
+    expect(dialogueActionIds(state)).toEqual(["ask_lure", "ask_drive", "ask_fortify", "ask_leave"]);
     expect(state.journal.some((entry) => /guarded\/patient/i.test(entry))).toBe(true);
     expect(state.flags).toMatchObject({ heard_counsel: true, heard_plan: true });
     expect(state.vars).toMatchObject({ attack: 7, defense: 3, hp: 30, score: 5 });
@@ -146,7 +162,13 @@ describe("bug_0504 — Wolf-Winter clues are complementary rather than contradic
     expect(observation.dialogue?.npc_text).toMatch(
       /guarded byre plan[^]*quick spear-hand is still yours to learn[^]*Ask for it/i,
     );
-    expect(dialogueActionIds(state)).toEqual(["ask_wolves", "ask_lure", "ask_drive", "ask_leave"]);
+    expect(dialogueActionIds(state)).toEqual([
+      "ask_wolves",
+      "ask_lure",
+      "ask_drive",
+      "ask_fortify",
+      "ask_leave",
+    ]);
 
     const quick = takeAction(state, "ask_wolves");
     state = quick.state;
@@ -154,7 +176,7 @@ describe("bug_0504 — Wolf-Winter clues are complementary rather than contradic
     expect(observation.dialogue?.npc_text).toMatch(
       /Both lessons are yours[^]*commit[^]*later[^]*at the wolves/i,
     );
-    expect(dialogueActionIds(state)).toEqual(["ask_lure", "ask_drive", "ask_leave"]);
+    expect(dialogueActionIds(state)).toEqual(["ask_lure", "ask_drive", "ask_fortify", "ask_leave"]);
     expect(state.flags).toMatchObject({ heard_counsel: true, heard_plan: true });
     expect(state.vars).toMatchObject({ attack: 7, defense: 3, hp: 30, score: 5 });
   });

@@ -93,6 +93,18 @@ const EXPECTED_CONSEQUENCES: Readonly<
     send_wardens_north:
       "The wagon follows Hedrick's report; Cade keeps the whole herd safe on the evacuation road while all three wolves remain alive beyond the abandoned outer line, but the cut-apart signal-and-rope rig did not return. Emery Sloane sets aside a one-time Greenway watch-shelter claim for joining the wardens' northbound dispatch: a 15-minute rest whenever you claim it.",
   },
+  fortified_cade_terms: {
+    send_wagon_to_cade:
+      "The wagon returns to cover Cade's exposed outer property while the household and whole herd remain behind his shutters; Albany's public relief seals came home unused. You take Hedrick's packet north alone. Jamie Tanner enters a one-time Market road-store credit for carrying Hedrick's packet alone: a 15-minute resupply whenever you claim it.",
+    send_wardens_north:
+      "The wagon follows Hedrick's report; Cade's household and whole herd remain secure behind his shutters, but the outer property stays exposed while Albany's unused public relief seals remain in reserve. Emery Sloane sets aside a one-time Greenway watch-shelter claim for joining the wardens' northbound dispatch: a 15-minute rest whenever you claim it.",
+  },
+  fortified_albany_authority: {
+    send_wagon_to_cade:
+      "The wagon checks the outer property you preserved under Albany seal; Cade's household and whole herd remain secure, but the public relief seals were spent and his refusal remains on the return board. You take Hedrick's packet north alone. Jamie Tanner enters a one-time Market road-store credit for carrying Hedrick's packet alone: a 15-minute resupply whenever you claim it.",
+    send_wardens_north:
+      "The wagon follows Hedrick's report; Cade's household, whole herd, and outer property remain secure under Albany's sealed line, but the public relief seals are spent and Cade refused the recovery hand. Emery Sloane sets aside a one-time Greenway watch-shelter claim for joining the wardens' northbound dispatch: a 15-minute rest whenever you claim it.",
+  },
   gate_barred: {
     send_wagon_to_cade:
       "The wagon replaces the broken outer paling; the timber at the inner gate stays as Cade's last bar. You take Hedrick's packet north alone. Jamie Tanner enters a one-time Market road-store credit for carrying Hedrick's packet alone: a 15-minute resupply whenever you claim it.",
@@ -179,7 +191,7 @@ const COMPLETED_THROUGH_BREAKING_WEIR = new Set([
 ]);
 
 describe("journey campaign", () => {
-  it("maps the nine supported Wolf-Winter victories to truthful, distinct Albany returns", () => {
+  it("maps the eleven supported Wolf-Winter victories to truthful, distinct Albany returns", () => {
     const expected = [
       {
         endingId: "ending_pack_diverted",
@@ -212,6 +224,16 @@ describe("journey campaign", () => {
         phrase: "spent signal-and-rope rig was cut apart and did not return",
       },
       {
+        endingId: "ending_fortified_cade_terms",
+        id: "fortified_cade_terms",
+        phrase: "honored his terms and returned Albany's public relief seals unused",
+      },
+      {
+        endingId: "ending_fortified_albany_authority",
+        id: "fortified_albany_authority",
+        phrase: "invoked lawful Albany authority and spent the public relief seals",
+      },
+      {
         endingId: "ending_held_gate_barred",
         id: "gate_barred",
         phrase: "inner gate you barred",
@@ -235,7 +257,7 @@ describe("journey campaign", () => {
       expect(outcome?.albanyReturnContext).toContain(row.phrase);
       returnContexts.add(outcome!.albanyReturnContext);
     }
-    expect(returnContexts.size).toBe(9);
+    expect(returnContexts.size).toBe(11);
     expect(wolfWinterCampaignOutcome(new Map())).toBeNull();
     expect(wolfWinterCampaignOutcome(outcomeIds("ending_pulled_down"))).toBeNull();
     expect(() =>
@@ -341,6 +363,73 @@ describe("journey campaign", () => {
         for (const truth of row.consequenceTruths) {
           expect(option.consequence).toMatch(truth);
         }
+        expect(option.consequence).not.toMatch(row.forbidden);
+      }
+    }
+  });
+
+  it("carries both fortify outcomes through continue without erasing consent or public cost", () => {
+    const expected = [
+      {
+        endingId: "ending_fortified_cade_terms",
+        completionTruths: [
+          /honored his terms/i,
+          /relief seals unused/i,
+          /outer property remained exposed/i,
+        ],
+        consequenceTruths: [
+          /household/i,
+          /whole herd/i,
+          /shutters/i,
+          /outer property/i,
+          /exposed/i,
+          /relief seals/i,
+          /unused|reserve/i,
+        ],
+        forbidden: /authority|seals (?:were|are) spent|Cade refused/i,
+      },
+      {
+        endingId: "ending_fortified_albany_authority",
+        completionTruths: [
+          /invoked lawful Albany authority/i,
+          /spent the public relief seals/i,
+          /Cade refused to help/i,
+        ],
+        consequenceTruths: [
+          /household/i,
+          /whole herd/i,
+          /outer property/i,
+          /seal/i,
+          /relief seals/i,
+          /spent/i,
+          /refus/i,
+        ],
+        forbidden: /honored his terms|seals (?:came home )?unused|property stays exposed/i,
+      },
+    ] as const;
+
+    for (const row of expected) {
+      const questOutcomeIds = outcomeIds(row.endingId);
+      expect(() => assertJourneyCampaignQuestOutcome("wolf_winter", row.endingId)).not.toThrow();
+
+      const awaiting = awaitingInitialGoalChoice();
+      const beforeContinue = journeyCampaignPresentationContext({
+        journey: awaiting,
+        questOutcomeIds,
+      });
+      for (const truth of row.completionTruths) {
+        expect(beforeContinue?.completionContext).toMatch(truth);
+      }
+      expect(beforeContinue?.completionContext).not.toMatch(row.forbidden);
+
+      const continued = chooseJourney(awaiting, "continue").state;
+      const afterContinue = journeyCampaignPresentationContext({
+        journey: continued,
+        questOutcomeIds,
+      });
+      expect(afterContinue?.storyChoice?.options).toHaveLength(2);
+      for (const option of afterContinue?.storyChoice?.options ?? []) {
+        for (const truth of row.consequenceTruths) expect(option.consequence).toMatch(truth);
         expect(option.consequence).not.toMatch(row.forbidden);
       }
     }
