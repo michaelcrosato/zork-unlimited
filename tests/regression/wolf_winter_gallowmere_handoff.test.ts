@@ -45,7 +45,7 @@ function startAlbanyWolf(session: OverworldSession): void {
   session.scoutPoi("albany_city__market__poi");
   moveToArea(session, "albany_city__transport_hub");
   expect(session.view().quests.map((quest) => quest.id)).toContain("wolf_winter");
-  session.startQuest("wolf_winter");
+  session.startQuest("wolf_winter", "albany:wolf_approach_sheltered_stockway");
 }
 
 function revealAlbanyWolfAtStation(session: OverworldSession): void {
@@ -85,7 +85,7 @@ function completeWolfWithBaseHaydenAtDecision22(session: OverworldSession): stri
   expect(talked.entry.text).toBe(baseCopy);
   expect(session.journey().acceptedDecisions).toBe(beforeTalk + 1);
 
-  session.startQuest("wolf_winter");
+  session.startQuest("wolf_winter", "albany:wolf_approach_sheltered_stockway");
   while (session.journey().acceptedDecisions < 22) {
     const next = session.journey().acceptedDecisions + 1;
     session.recordQuestDecision(`wolf_winter:hayden_lifecycle:${String(next)}`, {

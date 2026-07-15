@@ -738,6 +738,10 @@ tool(
   {
     ...SESSION,
     quest_id: z.string().describe("Quest id."),
+    approach_id: z
+      .string()
+      .optional()
+      .describe("Required launch approach id when the quest advertises launch options."),
     ...EMBEDDED_QUEST_SEED,
     ...PLAYER_HIDE_GRAPH,
     ...COMPACT_ACTIONS,

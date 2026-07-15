@@ -19,6 +19,7 @@ import { loadOverworldManifest } from "../../src/world/source.js";
 import { GameSession } from "../../ui/src/engine.js";
 
 const ROOT = process.cwd();
+const SHELTERED_APPROACH_ID = "albany:wolf_approach_sheltered_stockway";
 const WORLD = loadOverworldManifest(ROOT);
 const WOLF_SOURCE = readFileSync("content/rpg/quests/wolf_winter.yaml", "utf8");
 const WOLF_QUEST = WORLD.quests.find((quest) => quest.id === "wolf_winter");
@@ -135,12 +136,42 @@ function launchAlbanyWolf(
     include_actions: true,
     session_id: overworldSessionId,
     quest_id: quest.id,
+    approach_id: SHELTERED_APPROACH_ID,
     seed: 505,
   });
   return { launched, overworldSessionId };
 }
 
 describe("trusted campaign-character quest launch bridge", () => {
+  it("requires a manifest approach before RPG preparation and rejects stale plans", () => {
+    const session = new OverworldSession(WORLD);
+    const quest = revealAlbanyWolf(session);
+    const before = session.snapshot();
+    let preparedRpg = false;
+
+    expect(() =>
+      startOverworldQuestThroughRpg({
+        session,
+        overworldSessionId: "ow-test",
+        questId: quest.id,
+        startOptions: { seed: 505 },
+        startEmbeddedWorldQuest: () => {
+          preparedRpg = true;
+          return { session_id: "must-not-start" };
+        },
+      }),
+    ).toThrow(/Choose an approach/);
+    expect(preparedRpg).toBe(false);
+    expect(session.snapshot()).toEqual(before);
+
+    const plan = session.prepareQuestStart(quest.id, SHELTERED_APPROACH_ID);
+    expect(() =>
+      session.commitQuestStart({ ...plan, preconditionFingerprint: "stale-plan" }),
+    ).toThrow(/stale/);
+    expect(() => session.commitQuestStart({ ...plan, suppliesAfter: 0 })).toThrow(/stale/);
+    expect(session.snapshot()).toEqual(before);
+  });
+
   it("keeps an RPG startup failure atomic at the overworld boundary", () => {
     const session = new OverworldSession(WORLD);
     const quest = revealAlbanyWolf(session);
@@ -166,10 +197,12 @@ describe("trusted campaign-character quest launch bridge", () => {
         session,
         overworldSessionId: "ow-test",
         questId: quest.id,
+        approachId: SHELTERED_APPROACH_ID,
         startOptions: { seed: 505 },
         startEmbeddedWorldQuest: (_args, context) => {
           expect(context.overworldSessionId).toBe("ow-test");
-          expect(context.character).toEqual(expectedCharacter);
+          expect(context.character.knowledge).toContain("albany:knowledge_wolf_sheltered_stockway");
+          expect(session.campaignCharacterState()).toEqual(expectedCharacter);
           const initialState = initStateForRpgPack(wolfIndex, 505, {
             character: context.character,
             imports: invalidImports,
@@ -294,6 +327,7 @@ describe("trusted campaign-character quest launch bridge", () => {
       session: overworld,
       overworldSessionId: "ow-trusted",
       questId: quest.id,
+      approachId: SHELTERED_APPROACH_ID,
       startOptions: { seed: 505 },
       startEmbeddedWorldQuest: (startArgs, context) => {
         const index = runtime.runtimeFor(syntheticCompiled.pack).index;
@@ -336,12 +370,35 @@ describe("trusted campaign-character quest launch bridge", () => {
 
     expect(fullSession.overworldSessionId).toBe(full.overworldSessionId);
     expect(compactSession.overworldSessionId).toBe(compact.overworldSessionId);
+    expect(full.launched.quest).toMatchObject({
+      launch: { selected: { optionId: SHELTERED_APPROACH_ID } },
+    });
+    expect(full.launched.journey.decisionProof.last).toMatchObject({
+      actionId: `quest_start:wolf_winter:${SHELTERED_APPROACH_ID}`,
+      surface: "overworld",
+    });
+    const parent = fullApi.export_overworld_session({ session_id: full.overworldSessionId });
+    expect(parent.ok).toBe(true);
+    if (!parent.ok) throw new Error("expected the launched overworld snapshot");
+    expect(
+      parent.snapshot.journalEntries.find((entry) => entry.id === "quest:wolf_winter"),
+    ).toMatchObject({
+      questStartProof: {
+        kind: "approach",
+        approachId: SHELTERED_APPROACH_ID,
+        boundary: {
+          decisionProofHash: full.launched.journey.decisionProof.hash,
+        },
+      },
+    });
     expect(fullSession.state).toEqual(compactSession.state);
     expect(fullSession.stateHash).toBe(compactSession.stateHash);
     expect(fullSession.state.campaignImportReceipt?.applied_rules).toEqual([
+      "import:wolf_winter_approach_sheltered_stockway",
       "import:wolf_winter_relief_mediation",
       "import:wolf_winter_works_fortification",
     ]);
+    expect(fullSession.state.flags.approach_sheltered_stockway).toBe(true);
 
     const direct = fullApi.start_world_quest({ world_quest_id: "wolf_winter", seed: 505 });
     expect(fullApi.sessions.get(direct.session_id).overworldSessionId).toBeUndefined();

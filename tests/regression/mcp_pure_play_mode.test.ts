@@ -360,6 +360,7 @@ describe("MCP pure play mode", () => {
             arguments: {
               session_id: sessionId,
               quest_id: quest.id,
+              approach_id: "albany:wolf_approach_sheltered_stockway",
               seed: 8675309,
               hide_graph: false,
               include_actions: false,
@@ -373,7 +374,7 @@ describe("MCP pure play mode", () => {
           context: RpgCompactContext;
           state_hash: string;
         };
-        expect(rpgSession.context.actions).toContain("go_north");
+        expect(rpgSession.context.actions).toContain("use_sheltered_stockway_last_mile");
         expect(rpgSession.context.actions?.length).toBeLessThanOrEqual(24);
 
         const enteredByre = textPayload(
@@ -381,7 +382,7 @@ describe("MCP pure play mode", () => {
             name: "step_action",
             arguments: {
               session_id: rpgSessionId,
-              action_id: "go_north",
+              action_id: "use_sheltered_stockway_last_mile",
               expected_state_hash: rpgSession.state_hash,
               include_actions: false,
             },

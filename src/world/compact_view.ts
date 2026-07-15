@@ -5,6 +5,7 @@ import type { OverworldRoadEncounterOption } from "./travel_mechanics.js";
 import { compactText } from "../core/compact_text.js";
 import type { CampaignCharacterView } from "./campaign_character_view.js";
 import type { CampaignServiceOffer } from "./campaign_service_rules.js";
+import type { OverworldQuestLaunchView } from "./quest_launch.js";
 
 export const OVERWORLD_COMPACT_JOURNAL_LIMIT = 5;
 export const OVERWORLD_COMPACT_ROUTE_LIMIT = 8;
@@ -22,11 +23,34 @@ export const OVERWORLD_COMPACT_TITLE_CHAR_LIMIT = 140;
 export const OVERWORLD_COMPACT_RISK_CHAR_LIMIT = 160;
 export const OVERWORLD_COMPACT_ROAD_EVENT_SUMMARY_CHAR_LIMIT = 240;
 export const OVERWORLD_COMPACT_SERVICE_SUMMARY_CHAR_LIMIT = 240;
-export const OVERWORLD_COMPACT_VIEW_VERSION = 17 as const;
+export const OVERWORLD_COMPACT_VIEW_VERSION = 18 as const;
 
 export type OverworldCompactRef = readonly [id: string, name: string];
 export type OverworldCompactJobLeadRef = readonly [id: string, title: string, areaId: string];
-export type OverworldCompactQuestRef = readonly [id: string, title: string, areaId: string];
+export type OverworldCompactQuestLaunchOption = readonly [
+  id: string,
+  title: string,
+  minutes: number,
+  suppliesCost: number,
+  fatigueGained: number,
+  available: boolean | null,
+  minutesAfter: number | null,
+  suppliesAfter: number | null,
+  fatigueAfter: number | null,
+  conditionAfter: string | null,
+  blockedReason: string | null,
+  preview: string,
+  consequence: string,
+];
+export type OverworldCompactQuestLaunch = readonly [
+  id: string,
+  prompt: string,
+  options: readonly OverworldCompactQuestLaunchOption[],
+  selectedOptionId: string | null,
+];
+export type OverworldCompactQuestRef =
+  | readonly [id: string, title: string, areaId: string]
+  | readonly [id: string, title: string, areaId: string, launch: OverworldCompactQuestLaunch];
 export type OverworldCompactServiceOffer = readonly [
   id: string,
   action: CampaignServiceOffer["action"],
@@ -325,7 +349,7 @@ export const OVERWORLD_COMPACT_LEGEND = {
     "[[job_id, title, area_id], ...] discovered unfinished jobs in other known areas; walk to area_id via area_routes before work_overworld_session_job",
   sites: "[[site_id, title], ...] discovered sites (explore_overworld_session_site)",
   quests:
-    "[[quest_id, title, anchor_area_id], ...] discovered quest leads; you must be IN anchor_area_id (compare to here[3]; walk there via area_routes) before start_overworld_session_quest",
+    "[[quest_id, title, anchor_area_id, [launch_id, prompt, [[approach_id, title, minutes, supplies_cost, fatigue_gained, available|null, minutes_after|null, supplies_after|null, fatigue_after|null, condition_after|null, blocked_reason|null, preview, consequence]], selected_approach_id|null]?], ...] discovered quest leads; choose one available approach for launch-enabled quests, then be IN anchor_area_id (compare to here[3]; walk there via area_routes) before start_overworld_session_quest",
   pending_road:
     "{id, edge: road_id, route: route_name, where: [from_town, to_town, at_time], event: [road_event_id, risk_text, title, summary], options: [[strategy, label, minutes, supplies_cost, fatigue_gained, renown_gained], ...]} unresolved on-route scene; choose from the same labeled costs a human sees, then resolve it before town actions or more travel",
   journal: "[[kind, title, 'Day N, HH:MM'], ...] recent journal entries",
@@ -380,8 +404,34 @@ export function compactOverworldQuestRef(value: {
   id: string;
   title: string;
   area: string;
+  launch?: OverworldQuestLaunchView;
 }): OverworldCompactQuestRef {
-  return [value.id, compactOverworldTitle(value.title), value.area];
+  const base = [value.id, compactOverworldTitle(value.title), value.area] as const;
+  if (!value.launch) return base;
+  const launch: OverworldCompactQuestLaunch = [
+    value.launch.id,
+    compactText(value.launch.prompt, OVERWORLD_COMPACT_SERVICE_SUMMARY_CHAR_LIMIT),
+    value.launch.options.map((option) => {
+      const projection = option.projection;
+      return [
+        option.id,
+        compactOverworldTitle(option.title),
+        option.terms.minutes,
+        option.terms.supplies,
+        option.terms.fatigue,
+        projection?.available ?? null,
+        projection?.minutesAfter ?? null,
+        projection?.suppliesAfter ?? null,
+        projection?.fatigueAfter ?? null,
+        projection?.travelConditionAfter ?? null,
+        projection?.blockedReason ?? null,
+        compactText(option.preview, OVERWORLD_COMPACT_SERVICE_SUMMARY_CHAR_LIMIT),
+        compactText(option.consequence, OVERWORLD_COMPACT_SERVICE_SUMMARY_CHAR_LIMIT),
+      ] as const;
+    }),
+    value.launch.selected?.optionId ?? null,
+  ];
+  return [...base, launch];
 }
 
 export function compactOverworldRefs(
@@ -419,7 +469,12 @@ export function compactOverworldJobLeadRefs(
 }
 
 export function compactOverworldQuestRefs(
-  values: readonly { id: string; title: string; area: string }[],
+  values: readonly {
+    id: string;
+    title: string;
+    area: string;
+    launch?: OverworldQuestLaunchView;
+  }[],
   limit = OVERWORLD_COMPACT_LOCAL_REF_LIMIT,
 ): OverworldCompactQuestRef[] {
   const refs: OverworldCompactQuestRef[] = [];
@@ -917,7 +972,17 @@ export function cloneOverworldCompactView(view: OverworldCompactView): Overworld
   if (view.jobs) clone.jobs = cloneTupleList(view.jobs);
   if (view.remembered_jobs) clone.remembered_jobs = cloneTupleList(view.remembered_jobs);
   if (view.sites) clone.sites = cloneTupleList(view.sites);
-  if (view.quests) clone.quests = cloneTupleList(view.quests);
+  if (view.quests) {
+    clone.quests = view.quests.map((quest) => {
+      if (quest.length === 3) return [...quest] as OverworldCompactQuestRef;
+      return [
+        quest[0],
+        quest[1],
+        quest[2],
+        [quest[3][0], quest[3][1], cloneTupleList(quest[3][2]), quest[3][3]],
+      ];
+    });
+  }
   if (view.local_refs_truncated) clone.local_refs_truncated = [...view.local_refs_truncated];
   if (view.pending_road) {
     clone.pending_road = {

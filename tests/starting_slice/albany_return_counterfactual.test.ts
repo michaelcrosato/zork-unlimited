@@ -204,6 +204,7 @@ function launchAlbanyWolf(api: ToolApi): { overworldSessionId: string; rpgSessio
     compact_observation: false,
     session_id: overworldSessionId,
     quest_id: quest.id,
+    approach_id: "albany:wolf_approach_sheltered_stockway",
     seed: 512,
   });
   return { overworldSessionId, rpgSessionId: launched.rpg_session_id };

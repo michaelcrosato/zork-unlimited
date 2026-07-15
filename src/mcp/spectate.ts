@@ -146,7 +146,14 @@ export function formatSpectateEntry(
     }
     case "start_overworld_session_quest": {
       const q = asRecord(p.quest);
-      head(`▶ enter quest: ${String(q.title ?? a.quest_id ?? "a discovered quest")}`);
+      const compactQuest = Array.isArray(p.quest) ? p.quest : [];
+      const questTitle =
+        q.title ??
+        (typeof compactQuest[1] === "string" ? compactQuest[1] : undefined) ??
+        a.quest_id ??
+        "a discovered quest";
+      const approach = typeof a.approach_id === "string" ? ` via ${a.approach_id}` : "";
+      head(`▶ enter quest: ${String(questTitle)}${approach}`);
       const rctx = asRecord(asRecord(p.rpg_session).context);
       const rtitle = sceneTitleOf(rctx);
       if (rtitle) out.push(`   ┌ ${rtitle}`);

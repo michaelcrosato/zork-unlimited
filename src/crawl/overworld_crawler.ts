@@ -53,6 +53,8 @@ import type {
 } from "../world/overworld.js";
 import { loadOverworldManifest } from "../world/source.js";
 import { OverworldSession } from "../world/session.js";
+import type { OverworldQuestView } from "../world/session_local_discovery.js";
+import { initStateForRpgPack } from "../rpg/runner.js";
 import { buildOverworldCoverageSummary, type OverworldCoverageSummary } from "./coverage.js";
 import { CrawlLocationSchema, FindingCollector, type CrawlFinding } from "./findings.js";
 import { prepareShippedQuest } from "./prepare.js";
@@ -85,6 +87,24 @@ export type OverworldCrawlResult = {
 const STRUCTURAL_QA_REGISTRATION_PROFILE_ID = "albany:ledger_advocate";
 
 type CrawlLocation = z.infer<typeof CrawlLocationSchema>;
+
+/**
+ * Pick a stable player-visible approach from the same projected terms shown in
+ * full and compact play. Optionless quests deliberately return `undefined`,
+ * preserving their historical `startQuest(id)` path.
+ */
+export function selectCrawlQuestApproach(quest: OverworldQuestView): string | undefined {
+  if (!quest.launch) return undefined;
+  const available = quest.launch.options
+    .filter((option) => option.projection?.available === true)
+    .sort((left, right) => left.id.localeCompare(right.id));
+  if (available[0]) return available[0].id;
+  const reasons = quest.launch.options.map(
+    (option) =>
+      `${option.title}: ${option.projection?.blockedReason ?? "current resource projection is unavailable"}`,
+  );
+  throw new Error(`No available launch approach for quest "${quest.id}". ${reasons.join(" ")}`);
+}
 
 /** Per-area drain cursor: how far the crawler has gotten through that area's
  *  always-available (no discovery gate) local actions. Tracked by the crawler
@@ -580,11 +600,56 @@ export function crawlOverworld(opts: OverworldCrawlOptions): OverworldCrawlResul
       const hashBefore = session.snapshotHash();
       session.previewQuestStart(quest.id);
       record({ op: "previewQuestStart", questId: quest.id });
-      session.startQuest(quest.id);
-      record({ op: "startQuest", questId: quest.id });
+
+      let preview = session.previewQuestStart(quest.id);
+      let approachId: string | undefined;
+      try {
+        approachId = selectCrawlQuestApproach(preview);
+      } catch (initialError) {
+        // A launch cost can become blocked after the exhaustive road sweep.
+        // Use the ordinary player service once, then recompute the projections;
+        // never bypass or forge the authored resource requirement.
+        const resupply = session.resupplyAtTown();
+        record({ op: "resupplyAtTown", questId: quest.id, changed: resupply.changed });
+        preview = session.previewQuestStart(quest.id);
+        try {
+          approachId = selectCrawlQuestApproach(preview);
+        } catch (afterResupplyError) {
+          throw new Error(
+            `${describeError(initialError)} After resupply: ${describeError(afterResupplyError)}`,
+            { cause: afterResupplyError },
+          );
+        }
+      }
+
+      const plan =
+        approachId === undefined
+          ? session.prepareQuestStart(quest.id)
+          : session.prepareQuestStart(quest.id, approachId);
 
       const prepared = prepareShippedQuest(opts.root, quest.id);
-      const solved = solveToEnding(prepared, opts.seed, opts.solverBudget);
+      const initialState = quest.launch
+        ? (() => {
+            if (!quest.campaign_imports) {
+              throw new Error(`Launch-enabled quest "${quest.id}" has no campaign import catalog.`);
+            }
+            return initStateForRpgPack(prepared.index, opts.seed, {
+              character: plan.characterAfter,
+              imports: quest.campaign_imports,
+            });
+          })()
+        : undefined;
+
+      session.commitQuestStart(plan);
+      record({
+        op: "startQuest",
+        questId: quest.id,
+        ...(approachId !== undefined ? { approachId } : {}),
+      });
+
+      const solved = solveToEnding(prepared, opts.seed, opts.solverBudget, {
+        ...(initialState !== undefined ? { initialState } : {}),
+      });
       if (!solved.ok) {
         addFinding({
           code: "WORLD",

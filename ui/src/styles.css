@@ -930,6 +930,66 @@ dd {
   width: 100%;
 }
 
+.quest-notice-launch {
+  background: #20241b;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0.8rem;
+}
+
+.quest-notice-heading {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.quest-notice-heading p {
+  color: var(--muted);
+  margin: 0;
+}
+
+.quest-launch-fieldset {
+  border: 0;
+  margin: 0.85rem 0 0;
+  padding: 0;
+}
+
+.quest-launch-fieldset legend {
+  color: var(--road);
+  font-family: var(--font-display);
+  font-weight: 700;
+  margin-bottom: 0.65rem;
+}
+
+.quest-launch-options {
+  display: grid;
+  gap: 0.65rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.quest-launch-options button {
+  background: #242b1c;
+}
+
+.quest-launch-options button > span,
+.quest-launch-options button > small {
+  line-height: 1.4;
+}
+
+.quest-launch-cost {
+  color: #e2d2ae !important;
+}
+
+.quest-launch-projection {
+  color: #bad19f !important;
+}
+
+.quest-launch-blocked {
+  color: #efb5a8 !important;
+  font-weight: 700;
+}
+
 .road-list button {
   background: #222717;
 }

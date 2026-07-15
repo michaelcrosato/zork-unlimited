@@ -332,6 +332,9 @@ function wolfJuneCampaignWitnesses(index: RpgIndex): {
     "go_north",
   ];
 
+  run(["june_pike_present", "approach_exposed_ridge"], ["use_exposed_ridge_last_mile"]);
+  run(["june_pike_present", "approach_sheltered_stockway"], ["use_sheltered_stockway_last_mile"]);
+
   const clean = run(["june_pike_present"], [...startFouled, ...livingRecovery, ...reachJune]);
   if (clean.endingId !== "ending_pack_diverted") {
     throw new Error(`June clean witness reached unexpected ending "${clean.endingId ?? "none"}".`);
@@ -463,6 +466,8 @@ function wolfJuneCampaignWitnesses(index: RpgIndex): {
 
   const required = [
     "room:steading_yard#1",
+    "room:steading_yard#3",
+    "room:steading_yard#5",
     "room:byre_mouth#5",
     "ending:ending_pack_diverted#0",
     "ending:ending_pack_diverted_cattle_scattered#0",
@@ -499,6 +504,8 @@ const WOLF_CONCRETE_IMPORT_FLAGS = new Set([
   "drover_route_prepared",
   "relief_protocol_prepared",
   "june_pike_present",
+  "approach_exposed_ridge",
+  "approach_sheltered_stockway",
 ]);
 
 function wolfCampaignImportWitnesses(index: RpgIndex): {
@@ -570,6 +577,8 @@ function wolfCampaignImportWitnesses(index: RpgIndex): {
     "use_split_rail_guard_on_downwind_feed_line",
     "go_south",
   ]);
+  run("approach_exposed_ridge", ["use_exposed_ridge_last_mile"]);
+  run("approach_sheltered_stockway", ["use_sheltered_stockway_last_mile"]);
 
   const june = wolfJuneCampaignWitnesses(index);
   for (const key of june.displayed) displayed.add(key);
@@ -593,6 +602,10 @@ function wolfCampaignImportWitnesses(index: RpgIndex): {
     "object:paling_rail#2",
     "room:byre_yard#1",
     "object:relief_protocol_docket@present",
+    "room:steading_yard#2",
+    "object:exposed_ridge_last_mile@present",
+    "room:steading_yard#4",
+    "object:sheltered_stockway_last_mile@present",
   ];
   const missing = required.filter((key) => !displayed.has(key) && !present.has(key));
   if (missing.length > 0) {

@@ -140,6 +140,7 @@ describe("MCP server registration", () => {
   it("advertises world-bound and generated starts, not the retired Charter-Marches quest menu", () => {
     const newGame = registeredToolBlock("new_game");
     const startWorldQuest = registeredToolBlock("start_world_quest");
+    const startOverworldQuest = registeredToolBlock("start_overworld_session_quest");
     const validateQuest = registeredToolBlock("validate_quest");
     const loadGame = registeredToolBlock("load_game");
     const registered = registeredServerTools();
@@ -151,9 +152,11 @@ describe("MCP server registration", () => {
     expect(loadGame).toContain("generate_rpg_seed");
     expect(loadGame).not.toContain("pack_path");
     expect(startWorldQuest).toContain("world_quest_id");
+    expect(startWorldQuest).not.toContain("approach_id");
     expect(startWorldQuest).not.toMatch(/\n\s+quest_id:/);
     expect(startWorldQuest).not.toContain("quest_path");
     expect(startWorldQuest).not.toContain("include_world_context");
+    expect(startOverworldQuest).toContain("approach_id");
     expect(validateQuest).toContain("WORLD_QUEST_SOURCE");
     expect(validateQuest).not.toContain("QUEST_ID_SOURCE");
     expect(validateQuest).not.toContain("quest_path");
@@ -271,9 +274,9 @@ describe("MCP server registration", () => {
       registeredToolBlock(toolName),
     ).join("\n");
 
-    // One zero-argument game-native passage action adds a bounded schema block;
-    // retain a tight ceiling so transport prose cannot silently regrow.
-    expect(overworldSchemaSource.length).toBeLessThanOrEqual(7600);
+    // The game-native passage action and optional quest-approach id add bounded
+    // schema blocks; retain a tight ceiling so transport prose cannot regrow.
+    expect(overworldSchemaSource.length).toBeLessThanOrEqual(7800);
     expect(overworldSchemaSource).not.toContain("Session id returned by start_overworld");
     expect(overworldSchemaSource).not.toContain("returns compact context by default");
     expect(overworldSchemaSource).not.toContain("from the session observation");

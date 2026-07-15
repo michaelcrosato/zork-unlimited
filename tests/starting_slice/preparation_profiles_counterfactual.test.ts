@@ -203,7 +203,7 @@ function returnedSession(args: {
   const baselineMinutes = prepared.minutes - minutesPaid;
   const baselineMoney = prepared.character.money + moneyPaid;
   moveToArea(session, WOLF.area);
-  session.startQuest(WOLF.id);
+  session.startQuest(WOLF.id, "albany:wolf_approach_sheltered_stockway");
   const ending = WOLF.campaign_exports?.find((candidate) => candidate.ending_id === "ending_held");
   if (!ending) throw new Error("expected Wolf-Winter's held ending export");
   session.completeQuest(WOLF.id, {

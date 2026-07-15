@@ -158,14 +158,61 @@ rooms:
           relief spear in your fist. The watch is taken up now, and whatever remains
           of the night must be settled at the byre. Its yard lies through the gate to
           the north.
+      - when:
+          - { has_flag: approach_exposed_ridge }
+          - { not_flag: approach_sheltered_stockway }
+          - { has_flag: june_pike_present }
+          - { not_visited: byre_yard }
+        text: >
+          The exposed ridge brings you and June Pike quickly to Cade's yard lip. Open
+          snow makes plume, wolf-breath, and crosswind plain, easing the first feed
+          cast. The cattle saw both riders crest and bawl against the slats. June checks
+          her rope; the ridge descent waits.
+      - when:
+          - { has_flag: approach_exposed_ridge }
+          - { not_flag: approach_sheltered_stockway }
+          - { not_flag: june_pike_present }
+          - { not_visited: byre_yard }
+        text: >
+          The exposed ridge brings you quickly to Cade's yard lip. Open snow makes
+          plume, wolf-breath, and crosswind plain, easing the first feed cast. The cattle
+          saw you crest and bawl against the slats; the ridge descent waits.
+      - when:
+          - { has_flag: approach_sheltered_stockway }
+          - { not_flag: approach_exposed_ridge }
+          - { has_flag: june_pike_present }
+          - { not_visited: byre_yard }
+        text: >
+          The sheltered stockway brings you and June Pike unseen under the lee to
+          Cade's yard. Hedges keep the herd calm and June's rope quiet. The shelter
+          conceals the smoke plume and crosswind that would ease the first feed cast.
+          The screened stock gate waits.
+      - when:
+          - { has_flag: approach_sheltered_stockway }
+          - { not_flag: approach_exposed_ridge }
+          - { not_flag: june_pike_present }
+          - { not_visited: byre_yard }
+        text: >
+          The sheltered stockway brings you unseen under the lee to Cade's yard. Hedges
+          keep the herd calm. The shelter conceals the smoke plume and crosswind that
+          would ease the first feed cast. The screened stock gate waits.
       - when: [{ has_flag: june_pike_present }, { not_visited: byre_yard }]
         text: >
           The Albany packet brought you and Road Warden June Pike down the hill road.
           June checks her cattle rope, then takes the lower stock path: cattle-first
-          authority, no place on the wolf line, and no agreement after first blood.
-          The byre-yard lies north; hold the cattle till dawn.
+          authority, no place on the wolf line, and no agreement after first blood. The
+          byre-yard lies north; hold the cattle till dawn.
+    objects: [exposed_ridge_last_mile, sheltered_stockway_last_mile]
     exits:
-      - { direction: north, to: byre_yard }
+      - direction: north
+        to: byre_yard
+        conditions:
+          - any_of:
+              - { visited: byre_yard }
+              - all_of:
+                  - { not_flag: approach_exposed_ridge }
+                  - { not_flag: approach_sheltered_stockway }
+        locked_msg: "Finish the single route named by Hayden's dispatch. Contradictory route papers authorize neither descent."
 
   - id: byre_yard
     name: "The Byre-Yard"
@@ -1165,6 +1212,67 @@ rooms:
       - { direction: south, to: byre_mouth }
 
 objects:
+  # Imported overworld approach knowledge becomes exactly one visible last-mile action.
+  # Visit history retires both objects as soon as either action reaches the byre, and the
+  # ordinary north exit remains the unchanged direct-start path when neither import exists.
+  # Mutually exclusive conditions fail closed if a malformed save carries both route flags.
+  - id: exposed_ridge_last_mile
+    name: "exposed ridge last mile"
+    aliases: [exposed ridge, ridge road, open crest, ridge descent]
+    description: >
+      The last exposed pitch drops straight toward Cade's byre. The open crest makes
+      chimney plume, wolf-breath, and crosswind unusually legible for a first feed cast,
+      but the cattle are already watching the rider above them.
+    visible_when:
+      - { has_flag: approach_exposed_ridge }
+      - { not_flag: approach_sheltered_stockway }
+      - { not_visited: byre_yard }
+    interactions:
+      - verb: USE
+        target: exposed_ridge_last_mile
+        command_verb: descend
+        conditions:
+          - { has_flag: approach_exposed_ridge }
+          - { not_flag: approach_sheltered_stockway }
+          - { not_visited: byre_yard }
+        effects:
+          - inc_var: { name: cattle_alarm, by: 1 }
+          - add_journal: "The exposed ridge reveals plume, breath, and crosswind, but the visible descent starts the byre watch at cattle alarm 1."
+          - narrate: >
+              You descend in full view of the byre. Smoke and breath stream cleanly
+              across the open pitch, exposing the first feed-cast crosswind. Behind
+              Cade's slats the cattle see you coming and surge once before you reach
+              the yard.
+          - goto: byre_yard
+
+  - id: sheltered_stockway_last_mile
+    name: "sheltered stockway last mile"
+    aliases: [sheltered stockway, stockway, stock gate, lee path]
+    description: >
+      A screened stock gate carries the last mile under the lee. Hedges hide the rider
+      from the herd and keep it calm, but they also conceal the crosswind needed for an
+      easier first feed cast.
+    visible_when:
+      - { has_flag: approach_sheltered_stockway }
+      - { not_flag: approach_exposed_ridge }
+      - { not_visited: byre_yard }
+    interactions:
+      - verb: USE
+        target: sheltered_stockway_last_mile
+        command_verb: follow
+        conditions:
+          - { has_flag: approach_sheltered_stockway }
+          - { not_flag: approach_exposed_ridge }
+          - { not_visited: byre_yard }
+        effects:
+          - add_journal: "The sheltered stockway hides the arrival from the herd, leaving cattle alarm at 0 while the crosswind remains concealed."
+          - narrate: >
+              You follow the hedge shadow through the screened stock gate. The cattle
+              never see the approach and hold steady behind Cade's slats. Smoke eddies
+              under the lee, concealing the first feed-cast crosswind as you enter the
+              byre yard.
+          - goto: byre_yard
+
   # The Albany relief spear is real runtime gear, not prose-only equipment. Earlier
   # blind passes repeatedly opened INVENTORY after the yard said it was "already in
   # your fist" and found nothing, a small contradiction that weakened trust in every
@@ -2034,6 +2142,82 @@ objects:
         conditions:
           - { has_item: winter_feed_sack }
           - { has_flag: strategy_lure_committed }
+          - { has_flag: approach_exposed_ridge }
+          - { not_flag: approach_sheltered_stockway }
+          - { not_flag: lure_trail_fouled }
+          - { not_flag: yearling_down }
+          - { not_flag: yearling_redirected }
+        effects:
+          - inc_var: { name: cattle_alarm, by: 1 }
+        skill_check:
+          skill: fieldcraft
+          difficulty: 10
+          on_success:
+            - set_flag: yearling_redirected
+            - inc_var: { name: score, by: 10 }
+            - set_quest_stage: { quest: the_watch, stage: breach_redirected }
+            - add_journal: "Ridge crosswind makes the first cast run clean. The living yearling follows it into the high wood; cattle alarm rises by 1."
+            - narrate: >
+                The plume and breath you read from the exposed ridge mark the crosswind.
+                You cast oats and tallow across the yearling's nose and beyond the gap.
+                Hunger turns the low head. The wolf slips out alive after the scent while
+                the herd shifts once behind the slats.
+          on_failure:
+            - set_flag: lure_trail_fouled
+            - inc_var: { name: cattle_alarm, by: 1 }
+            - add_journal: "Ridge crosswind cannot save the cast: it fouls. No retry; alarm rises by 1. Bind a rail to redirect the yearling or fight."
+            - narrate: >
+                The crosswind is plain, but the cast clips the paling and folds into
+                churned snow. The yearling smells it but stays; cattle hammer the slats.
+                The feed is spent: bind a split rail to force the wolf onto the remaining
+                scent, or fight and carry the lure deeper.
+      - verb: USE
+        item: winter_feed_sack
+        target: downwind_feed_line
+        command_verb: lay
+        command_template: "lay {target} with {item}"
+        conditions:
+          - { has_item: winter_feed_sack }
+          - { has_flag: strategy_lure_committed }
+          - { has_flag: approach_sheltered_stockway }
+          - { not_flag: approach_exposed_ridge }
+          - { not_flag: lure_trail_fouled }
+          - { not_flag: yearling_down }
+          - { not_flag: yearling_redirected }
+        effects:
+          - inc_var: { name: cattle_alarm, by: 1 }
+        skill_check:
+          skill: fieldcraft
+          difficulty: 12
+          on_success:
+            - set_flag: yearling_redirected
+            - inc_var: { name: score, by: 10 }
+            - set_quest_stage: { quest: the_watch, stage: breach_redirected }
+            - add_journal: "Stockway crosswind is found; the first cast runs clean. The living yearling follows it into the high wood; alarm rises by 1."
+            - narrate: >
+                You wait through the sheltered eddies until steam flattens from the
+                yearling's muzzle, then cast oats and tallow across its nose and beyond
+                the gap. Hunger turns the low head. The wolf slips out alive after the
+                scent while the herd shifts once behind the slats.
+          on_failure:
+            - set_flag: lure_trail_fouled
+            - inc_var: { name: cattle_alarm, by: 1 }
+            - add_journal: "Hidden stockway crosswind folds the first cast. No retry; alarm rises by 2. Bind a rail to redirect the yearling or fight."
+            - narrate: >
+                The stockway's hidden crosswind folds the cast into churned snow. The
+                yearling smells it but stays; cattle hammer the slats. The feed is spent:
+                bind a split rail to force the wolf onto the remaining scent, or fight
+                and carry the lure deeper.
+      - verb: USE
+        item: winter_feed_sack
+        target: downwind_feed_line
+        command_verb: lay
+        command_template: "lay {target} with {item}"
+        conditions:
+          - { has_item: winter_feed_sack }
+          - { has_flag: strategy_lure_committed }
+          - { not_flag: approach_exposed_ridge }
+          - { not_flag: approach_sheltered_stockway }
           - { not_flag: lure_trail_fouled }
           - { not_flag: yearling_down }
           - { not_flag: yearling_redirected }

@@ -138,7 +138,7 @@ function wolfBoundary(allyOptionId: typeof ACCEPT | typeof SOLO): OverworldSessi
   moveToArea(session, ALLY.area);
   session.talkToCharacter(ALLY.contact);
   session.chooseJourneyStory(allyOptionId);
-  session.startQuest(WOLF.id);
+  session.startQuest(WOLF.id, "albany:wolf_approach_sheltered_stockway");
   return session.snapshot();
 }
 

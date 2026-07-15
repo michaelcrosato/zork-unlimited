@@ -5,6 +5,7 @@ import { OverworldSession } from "../../src/world/session.js";
 import {
   OVERWORLD_FORTIFY_OUTLAST_PREDECESSOR_WORLD_HASH,
   OVERWORLD_FORTIFY_OUTLAST_WORLD_HASH,
+  OVERWORLD_HILL_APPROACH_WORLD_HASH,
 } from "../../src/world/session_snapshot_restore.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
 
@@ -14,6 +15,16 @@ const LEAD = WORLD.opening_lead_source!;
 const PREPARATION = WORLD.opening_preparation!;
 const ALLY = WORLD.opening_ally!;
 const WOLF = WORLD.quests.find((quest) => quest.id === "wolf_winter")!;
+const PRE_ROUTE_WORLD = (() => {
+  const predecessor = structuredClone(WORLD);
+  const wolf = predecessor.quests.find((quest) => quest.id === WOLF.id);
+  if (!wolf?.campaign_imports) throw new Error("Wolf-Winter must have campaign imports.");
+  delete wolf.launch;
+  wolf.campaign_imports.rules = wolf.campaign_imports.rules.filter(
+    (rule) => !rule.id.startsWith("import:wolf_winter_approach_"),
+  );
+  return predecessor;
+})();
 const STATION = "albany_city__transport_hub";
 const GREENWAY = "albany_city__greenway";
 
@@ -102,7 +113,7 @@ function freshAtWolfFor(
     preparationId?: string;
   } = {},
 ): OverworldSession {
-  const session = new OverworldSession(WORLD);
+  const session = new OverworldSession(PRE_ROUTE_WORLD);
   const opening = session.view();
   session.scoutPoi(opening.pois[0]!.id);
   session.talkToCharacter(REGISTRATION.contact);
@@ -203,6 +214,28 @@ function completedSnapshot(endingId: string): ReturnType<OverworldSession["snaps
   return session.snapshot();
 }
 
+function expectNeutralF10Migration(
+  restored: ReturnType<OverworldSession["snapshot"]>,
+  source: ReturnType<OverworldSession["snapshot"]>,
+): void {
+  expect(restored).toMatchObject({
+    worldHash: OVERWORLD_HILL_APPROACH_WORLD_HASH,
+    minutes: source.minutes,
+    supplies: source.supplies,
+    fatigue: source.fatigue,
+    startedQuestIds: source.startedQuestIds,
+    completedQuestIds: source.completedQuestIds,
+    questOutcomes: source.questOutcomes,
+  });
+  expect(restored.character).toEqual(source.character);
+  expect(
+    restored.journalEntries.find((entry) => entry.id === `quest:${WOLF.id}`)?.questStartProof,
+  ).toMatchObject({
+    kind: "legacy",
+    sourceWorldHash: OVERWORLD_FORTIFY_OUTLAST_PREDECESSOR_WORLD_HASH,
+  });
+}
+
 function consumedService(args: {
   allyOptionId?: string;
   dawnChoice?: "send_wagon_to_cade" | "send_wardens_north";
@@ -231,18 +264,19 @@ function consumedService(args: {
 }
 
 describe("fortify-and-outlast predecessor migration integrity", () => {
-  it("pins F10 as the exact direct predecessor of the parsed F11 manifest", () => {
+  it("pins F10 as the exact direct predecessor of the reconstructed F11 manifest", () => {
     expect(OVERWORLD_FORTIFY_OUTLAST_PREDECESSOR_WORLD_HASH).toBe(
       "1e74d32c28c3d563f6e8103034768506e25f13ff1f8e410b190cbb344589add8",
     );
-    expect(hashState(WORLD)).toBe(OVERWORLD_FORTIFY_OUTLAST_WORLD_HASH);
+    expect(hashState(PRE_ROUTE_WORLD)).toBe(OVERWORLD_FORTIFY_OUTLAST_WORLD_HASH);
+    expect(hashState(WORLD)).toBe(OVERWORLD_HILL_APPROACH_WORLD_HASH);
   });
 
   it.each(F10_ENDINGS)("restores the exact F10 Wolf-Winter outcome %s", (endingId) => {
     const current = completedSnapshot(endingId);
     const restored = OverworldSession.restore(WORLD, relabelWithExactF10Copy(current)).snapshot();
-    expect(restored).toEqual(current);
-    expect(OverworldSession.restore(WORLD, restored).snapshot()).toEqual(current);
+    expectNeutralF10Migration(restored, current);
+    expect(OverworldSession.restore(WORLD, restored).snapshot()).toEqual(restored);
   });
 
   it("normalizes all four exact F10 June surfaces and the pre-F11 wagon title", () => {
@@ -253,7 +287,7 @@ describe("fortify-and-outlast predecessor migration integrity", () => {
     const predecessor = relabelWithExactF10Copy(current);
 
     const restored = OverworldSession.restore(WORLD, predecessor).snapshot();
-    expect(restored).toEqual(current);
+    expectNeutralF10Migration(restored, current);
     expect(restored.journalEntries).toContainEqual(
       expect.objectContaining({
         kind: "campaign",
@@ -403,11 +437,12 @@ describe("fortify-and-outlast predecessor migration integrity", () => {
   ])("restores consumed F10 $label without inventing or repeating it", (migrationCase) => {
     const current = consumedService(migrationCase);
     const restored = OverworldSession.restore(WORLD, relabelWithExactF10Copy(current));
-    expect(restored.snapshot()).toEqual(current);
+    const restoredSnapshot = restored.snapshot();
+    expectNeutralF10Migration(restoredSnapshot, current);
     expect(restored.view().serviceOffers.map((offer) => offer.id)).not.toContain(
       migrationCase.serviceId,
     );
-    expect(OverworldSession.restore(WORLD, restored.snapshot()).snapshot()).toEqual(current);
+    expect(OverworldSession.restore(WORLD, restoredSnapshot).snapshot()).toEqual(restoredSnapshot);
   });
 
   it.each(["ending_fortified_cade_terms", "ending_fortified_albany_authority"])(

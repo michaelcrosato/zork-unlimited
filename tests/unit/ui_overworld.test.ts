@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import { createServer } from "vite";
 import { buildCampaignCharacterState } from "../../src/world/campaign_character_state.js";
 import { buildCampaignCharacterView } from "../../src/world/campaign_character_view.js";
+import type { OverworldManifest } from "../../src/world/overworld.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
 import {
   OVERWORLD_COMPACT_COMPLETED_ARC_LIMIT,
@@ -25,6 +26,7 @@ import {
 import { buildOverworldSessionCompactView } from "../../src/world/session_compact_view.js";
 import { questCompletionMinutes } from "../../src/world/session_quests.js";
 import { cloneOverworldView } from "../../src/world/session_view_clone.js";
+import type { OverworldQuestView } from "../../src/world/session_local_discovery.js";
 import { OverworldSession } from "../../ui/src/overworld.js";
 
 const world = loadOverworldManifest(process.cwd());
@@ -117,6 +119,14 @@ function settleOpeningRegistration(session: OverworldSession): void {
   }
 }
 
+function startVisibleQuest(
+  session: OverworldSession,
+  quest: OverworldQuestView,
+): ReturnType<OverworldSession["startQuest"]> {
+  const approach = quest.launch?.options.find((option) => option.projection?.available === true);
+  return approach ? session.startQuest(quest.id, approach.id) : session.startQuest(quest.id);
+}
+
 function resolveCurrentTownEvent(session: OverworldSession): void {
   const view = session.view();
   const event = view.events.find((candidate) => !view.resolvedEventIds.includes(candidate.id));
@@ -140,7 +150,7 @@ function reachAlbanyStoryChoice(session: OverworldSession): void {
     .areaExits.find((candidate) => candidate.destination.id === quest.area);
   if (!route) throw new Error("Expected a route to the Albany lead.");
   session.moveArea(route.id);
-  session.startQuest(quest.id);
+  startVisibleQuest(session, quest);
   session.completeQuest(quest.id, {
     endingId: "ending_held",
     endingTitle: "The Byre Held",
@@ -426,6 +436,117 @@ describe("OverworldSession", () => {
     } finally {
       await server.close();
     }
+  });
+
+  it("renders launch approaches inline with truthful projections and no extra start button", async () => {
+    const uiRoot = resolve(process.cwd(), "ui");
+    const server = await createServer({
+      root: uiRoot,
+      configFile: resolve(uiRoot, "vite.config.ts"),
+      appType: "custom",
+      logLevel: "silent",
+      optimizeDeps: { noDiscovery: true },
+      server: { middlewareMode: true },
+    });
+    try {
+      const module = (await server.ssrLoadModule("/src/App.tsx")) as {
+        QuestNotice: unknown;
+      };
+      const requireFromUi = createRequire(resolve(uiRoot, "package.json"));
+      const react = requireFromUi("react") as {
+        createElement: (type: unknown, props: Record<string, unknown>) => unknown;
+      };
+      const reactDomServer = requireFromUi("react-dom/server") as {
+        renderToStaticMarkup: (element: unknown) => string;
+      };
+      const quest: OverworldQuestView = {
+        id: "test_launch_quest",
+        title: "The Hill Dispatch",
+        home: "albany_city",
+        area: "albany_city__transport_hub",
+        discovery: "Two winter routes leave the station quarter.",
+        visibility: "local_notice_board",
+        launch: {
+          id: "test:hill_launch",
+          prompt: "Which road do you commit to?",
+          options: [
+            {
+              id: "test:ridge",
+              title: "Take the Exposed Ridge",
+              summary: "Spend less supply but arrive winded.",
+              preview: "The ridge is fast and visible from the valley.",
+              consequence: "You accept the wind and reach the steading first.",
+              terms: { minutes: 30, supplies: 1, fatigue: 25 },
+              projection: {
+                available: true,
+                minutesAfter: 510,
+                suppliesAfter: 5,
+                fatigueAfter: 25,
+                travelConditionAfter: "tired",
+              },
+            },
+            {
+              id: "test:stockway",
+              title: "Take the Sheltered Stockway",
+              summary: "Spend more supply to stay fresh.",
+              preview: "The stockway follows the quiet lee of the hill.",
+              consequence: "You trade provisions and daylight for a quiet arrival.",
+              terms: { minutes: 75, supplies: 2, fatigue: 10 },
+              projection: {
+                available: false,
+                minutesAfter: 555,
+                suppliesAfter: null,
+                fatigueAfter: null,
+                travelConditionAfter: null,
+                blockedReason: "Requires 2 supplies; you have 1.",
+              },
+            },
+          ],
+        },
+      };
+      const markup = reactDomServer.renderToStaticMarkup(
+        react.createElement(module.QuestNotice, {
+          quest,
+          areaName: "Station Quarter",
+          isCurrentArea: true,
+          onStart: () => undefined,
+        }),
+      );
+
+      expect(markup.match(/<button/g)).toHaveLength(2);
+      expect(markup.match(/ disabled=""/g)).toHaveLength(1);
+      expect(markup).toContain("Which road do you commit to?");
+      expect(markup).toContain("Take the Exposed Ridge");
+      expect(markup).toContain("Spend less supply but arrive winded.");
+      expect(markup).toContain("The ridge is fast and visible from the valley.");
+      expect(markup).toContain("You accept the wind and reach the steading first.");
+      expect(markup).toContain("Actual cost: 30 min, 1 supply, fatigue +25.");
+      expect(markup).toContain(
+        "Projected arrival: Day 1, 08:30; 5 supplies remaining; fatigue 25; condition tired.",
+      );
+      expect(markup).toContain("Projected time: Day 1, 09:15.");
+      expect(markup).toContain("Requires 2 supplies; you have 1.");
+      expect(markup).not.toMatch(/knowledge_|memory_|import:/i);
+
+      const optionlessMarkup = reactDomServer.renderToStaticMarkup(
+        react.createElement(module.QuestNotice, {
+          quest: { ...quest, launch: undefined },
+          areaName: "Station Quarter",
+          isCurrentArea: true,
+          onStart: () => undefined,
+        }),
+      );
+      expect(optionlessMarkup.match(/<button/g)).toHaveLength(1);
+      expect(optionlessMarkup).not.toContain("Which road do you commit to?");
+    } finally {
+      await server.close();
+    }
+
+    const app = readFileSync("ui/src/App.tsx", "utf8");
+    expect(app).toContain("worldSession.prepareQuestStart(quest.id, approachId)");
+    expect(app).toContain("plan.characterAfter");
+    expect(app).toContain("worldSession.commitQuestStart(plan)");
+    expect(app).toContain("onStart={(approachId) => startQuest(quest, approachId)}");
   });
 
   it("renders registration choices without claiming a goal was completed or replaced", async () => {
@@ -1831,7 +1952,7 @@ describe("OverworldSession", () => {
 
     const moved = session.moveArea(routeToQuestArea!.id);
     expect(moved.to.id).toBe(discoveredQuest.area);
-    const startedQuest = session.startQuest(discoveredQuest.id);
+    const startedQuest = startVisibleQuest(session, discoveredQuest);
     expect(startedQuest).toMatchObject({
       id: discoveredQuest.id,
       area: discoveredQuest.area,
@@ -1895,6 +2016,64 @@ describe("OverworldSession", () => {
     expect(repeatedCompletion.alreadyKnown).toBe(true);
     expect(repeatedCompletion.minutes).toBe(0);
     expect(session.view().completedQuestIds).toEqual([discoveredQuest.id]);
+  });
+
+  it("treats one approach button as the one quest-start decision and rejects blocked starts", () => {
+    const readyWolf = (manifest: OverworldManifest) => {
+      const session = new OverworldSession(manifest);
+      const opening = session.view();
+      session.scoutPoi(opening.pois[0]!.id);
+      session.talkToCharacter(opening.characters[0]!.id);
+      settleOpeningRegistration(session);
+      const quest = session.view().quests.find((candidate) => candidate.id === "wolf_winter");
+      if (!quest) throw new Error("expected Wolf-Winter launch fixture");
+      const route = session
+        .view()
+        .areaExits.find((candidate) => candidate.destination.id === quest.area);
+      if (!route) throw new Error("expected route to Wolf-Winter launch area");
+      session.moveArea(route.id);
+      return {
+        session,
+        quest: session.view().quests.find((candidate) => candidate.id === quest.id)!,
+      };
+    };
+
+    const missing = readyWolf(world);
+    const beforeMissing = missing.session.snapshot();
+    expect(() => missing.session.prepareQuestStart(missing.quest.id)).toThrow(
+      /Choose an approach before starting/i,
+    );
+    expect(missing.session.snapshot()).toEqual(beforeMissing);
+
+    const playable = readyWolf(world);
+    const approach = playable.quest.launch?.options.find(
+      (option) => option.projection?.available === true,
+    );
+    if (!approach) throw new Error("expected an available Wolf-Winter approach");
+    const decisionsBefore = playable.session.journey().acceptedDecisions;
+    const started = playable.session.startQuest(playable.quest.id, approach.id);
+    expect(playable.session.journey().acceptedDecisions).toBe(decisionsBefore + 1);
+    expect(playable.session.journey().decisionProof.last).toMatchObject({
+      number: decisionsBefore + 1,
+      actionId: `quest_start:${playable.quest.id}:${approach.id}`,
+    });
+    expect(started.launch?.selected?.optionId).toBe(approach.id);
+
+    const blockedManifest = structuredClone(world);
+    const blockedSource = blockedManifest.quests.find((quest) => quest.id === "wolf_winter");
+    if (!blockedSource?.launch) throw new Error("expected authored Wolf-Winter launch");
+    blockedSource.launch.options[0]!.terms.supplies = 8;
+    const blocked = readyWolf(blockedManifest);
+    const blockedApproach = blocked.quest.launch?.options[0];
+    expect(blockedApproach?.projection).toMatchObject({
+      available: false,
+      blockedReason: "Requires 8 supplies; you have 6.",
+    });
+    const beforeBlocked = blocked.session.snapshot();
+    expect(() => blocked.session.startQuest(blocked.quest.id, blockedApproach!.id)).toThrow(
+      "Requires 8 supplies; you have 6.",
+    );
+    expect(blocked.session.snapshot()).toEqual(beforeBlocked);
   });
 
   it("reveals exploration leads from the current local area", () => {

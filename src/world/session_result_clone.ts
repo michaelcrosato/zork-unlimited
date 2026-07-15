@@ -19,7 +19,23 @@ import {
 } from "./session_snapshot.js";
 
 export function cloneOverworldQuestView(quest: OverworldQuestView): OverworldQuestView {
-  return { ...quest };
+  return {
+    ...quest,
+    ...(quest.launch
+      ? {
+          launch: {
+            id: quest.launch.id,
+            prompt: quest.launch.prompt,
+            options: quest.launch.options.map((option) => ({
+              ...option,
+              terms: { ...option.terms },
+              projection: option.projection ? { ...option.projection } : null,
+            })),
+            ...(quest.launch.selected ? { selected: { ...quest.launch.selected } } : {}),
+          },
+        }
+      : {}),
+  };
 }
 
 export function cloneOverworldPendingRoadEncounter(

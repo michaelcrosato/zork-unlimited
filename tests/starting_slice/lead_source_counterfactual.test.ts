@@ -117,6 +117,7 @@ function launchMcpWolf(sourceId: string): {
     include_actions: true,
     session_id: pending.sessionId,
     quest_id: wolf.id,
+    approach_id: "albany:wolf_approach_sheltered_stockway",
     seed: 505,
   });
   return {
@@ -187,7 +188,7 @@ function act(state: GameState, actionId: string, ...rolls: number[]): GameState 
 }
 
 function defeatYearlingWithEqualRolls(state: GameState): GameState {
-  state = act(state, "go_north");
+  state = act(state, "use_sheltered_stockway_last_mile");
   state = act(state, "go_north");
   state = act(state, "maneuver_yearling_wolf_set_spear", 6, 1);
   expect(state.flags.yearling_down).toBe(true);
@@ -195,7 +196,7 @@ function defeatYearlingWithEqualRolls(state: GameState): GameState {
 }
 
 function failRailWithEqualRolls(state: GameState): GameState {
-  state = act(state, "go_north");
+  state = act(state, "use_sheltered_stockway_last_mile");
   state = act(state, "go_north");
   state = act(state, "use_paling_rail", 1);
   expect(state.flags.rail_split).toBe(true);
@@ -427,15 +428,18 @@ describe("SS-F03 — Albany lead-source counterfactual", () => {
     const hayden = launchMcpWolf(HAYDEN_SOURCE).state;
 
     expect(rowan.campaignImportReceipt?.applied_rules).toEqual([
+      "import:wolf_winter_approach_sheltered_stockway",
       "import:wolf_winter_drover_streetwise",
       "import:wolf_winter_relief_protocol",
     ]);
     expect(jamie.campaignImportReceipt?.applied_rules).toEqual([
+      "import:wolf_winter_approach_sheltered_stockway",
       "import:wolf_winter_drover_streetwise",
       "import:wolf_winter_market_testimony",
       "import:wolf_winter_relief_protocol",
     ]);
     expect(hayden.campaignImportReceipt?.applied_rules).toEqual([
+      "import:wolf_winter_approach_sheltered_stockway",
       "import:wolf_winter_drover_streetwise",
       "import:wolf_winter_frost_report",
       "import:wolf_winter_relief_protocol",

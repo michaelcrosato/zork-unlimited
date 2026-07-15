@@ -99,6 +99,18 @@ export type OverworldJournalDecisionBoundary = {
   minutes: number;
 };
 
+export type OverworldQuestStartProof =
+  | {
+      kind: "approach";
+      approachId: string;
+      boundary: OverworldJournalDecisionBoundary;
+    }
+  | {
+      kind: "legacy";
+      sourceWorldHash: string;
+      boundary: OverworldJournalDecisionBoundary;
+    };
+
 /**
  * Replayable suffix from the source offer (or a trusted migration marker) to
  * the current journey proof. This makes the chosen source part of every later
@@ -152,6 +164,7 @@ export type OverworldJournalEntry = {
   title: string;
   text: string;
   recordedAt: string;
+  questStartProof?: OverworldQuestStartProof | undefined;
   questCompletionBoundary?: OverworldJournalDecisionBoundary | undefined;
   registrationBoundary?: OverworldJournalDecisionBoundary | undefined;
   serviceBoundary?: OverworldJournalDecisionBoundary | undefined;
@@ -169,6 +182,23 @@ const OverworldJournalRegistrationBoundarySchema = z
     minutes: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER),
   })
   .strict();
+
+const OverworldQuestStartProofSchema = z.discriminatedUnion("kind", [
+  z
+    .object({
+      kind: z.literal("approach"),
+      approachId: z.string().min(1),
+      boundary: OverworldJournalRegistrationBoundarySchema,
+    })
+    .strict(),
+  z
+    .object({
+      kind: z.literal("legacy"),
+      sourceWorldHash: z.string().regex(/^[0-9a-f]{64}$/),
+      boundary: OverworldJournalRegistrationBoundarySchema,
+    })
+    .strict(),
+]);
 
 const OverworldOpeningLeadSourceDecisionTrailSchema = z
   .object({
@@ -213,6 +243,7 @@ const OverworldJournalEntrySchema = z
     title: z.string().min(1),
     text: z.string().min(1),
     recordedAt: z.string().min(1),
+    questStartProof: OverworldQuestStartProofSchema.optional(),
     questCompletionBoundary: OverworldJournalRegistrationBoundarySchema.optional(),
     registrationBoundary: OverworldJournalRegistrationBoundarySchema.optional(),
     serviceBoundary: OverworldJournalRegistrationBoundarySchema.optional(),
@@ -247,6 +278,12 @@ const OverworldJournalEntrySchema = z
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         message: "Quest completion boundaries are only valid on quest_done entries.",
+      });
+    }
+    if (entry.questStartProof !== undefined && entry.kind !== "quest") {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Quest-start proofs are only valid on quest entries.",
       });
     }
   });
@@ -325,6 +362,22 @@ export function cloneJournalEntries(
 export function cloneOverworldJournalEntry(entry: OverworldJournalEntry): OverworldJournalEntry {
   return {
     ...entry,
+    ...(entry.questStartProof
+      ? {
+          questStartProof:
+            entry.questStartProof.kind === "approach"
+              ? {
+                  kind: "approach" as const,
+                  approachId: entry.questStartProof.approachId,
+                  boundary: { ...entry.questStartProof.boundary },
+                }
+              : {
+                  kind: "legacy" as const,
+                  sourceWorldHash: entry.questStartProof.sourceWorldHash,
+                  boundary: { ...entry.questStartProof.boundary },
+                },
+        }
+      : {}),
     ...(entry.questCompletionBoundary
       ? { questCompletionBoundary: { ...entry.questCompletionBoundary } }
       : {}),
@@ -340,6 +393,7 @@ export function redactOverworldJournalEntryForPresentation(
   entry: OverworldJournalEntry,
 ): OverworldJournalEntry {
   const {
+    questStartProof: _questStartProof,
     questCompletionBoundary: _questCompletionBoundary,
     registrationBoundary: _registrationBoundary,
     serviceBoundary: _serviceBoundary,

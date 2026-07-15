@@ -30,6 +30,7 @@ import { buildRpgObservation } from "../src/rpg/observation.js";
 import { RpgSourceRuntime } from "../src/mcp/rpg_source_runtime.js";
 import { render as renderQuest, illegalReason, resolve as resolveRpgCommand } from "./rpg_play.js";
 import { loadOverworldManifest } from "../src/world/source.js";
+import { timeLabel } from "../src/world/session_journal_codec.js";
 import {
   OverworldSession,
   type OverworldActionResult,
@@ -112,6 +113,31 @@ function questLine(view: OverworldView, quest: OverworldQuestView): string {
         ? ""
         : ` (move to ${areaName} to start)`;
   return `${quest.title} — posted in ${areaName}${status}`;
+}
+
+/** Player-facing quest-launch terms shared by interactive and scripted CLI play. */
+export function renderQuestLaunch(quest: OverworldQuestView): string {
+  if (!quest.launch) return "";
+  const lines = [`\n${quest.launch.prompt}`];
+  quest.launch.options.forEach((option, index) => {
+    const projection = option.projection;
+    const availability =
+      projection?.available === false ? ` [blocked: ${projection.blockedReason}]` : "";
+    lines.push(`  ${String(index + 1)}. ${option.title} — ${option.summary}${availability}`);
+    lines.push(`     What you expect: ${option.preview}`);
+    lines.push(`     Commitment: ${option.consequence}`);
+    lines.push(
+      `     Actual cost: ${String(option.terms.minutes)} min, ${String(option.terms.supplies)} ${option.terms.supplies === 1 ? "supply" : "supplies"}, fatigue +${String(option.terms.fatigue)}.`,
+    );
+    if (projection?.available) {
+      lines.push(
+        `     Projected arrival: ${timeLabel(projection.minutesAfter)}; ${String(projection.suppliesAfter)} ${projection.suppliesAfter === 1 ? "supply" : "supplies"} remaining; fatigue ${String(projection.fatigueAfter)}; condition ${projection.travelConditionAfter}.`,
+      );
+    } else if (projection) {
+      lines.push(`     Projected time: ${timeLabel(projection.minutesAfter)}.`);
+    }
+  });
+  return lines.join("\n");
 }
 
 /** The pending road-encounter prompt (pure; exported for tests). */
@@ -499,8 +525,8 @@ function travelToward(session: OverworldSession, target: string): TravelLogEntry
 
 /**
  * Hand off to an RPG quest session and close the outcome back into the overworld,
- * mirroring the MCP quest bridge: preview → boot the quest by world quest id →
- * startQuest → play to an ending → completeQuest (never on death; abandoning
+ * mirroring the MCP quest bridge: preview → prepare the launch → boot/import the
+ * quest → commit the start → play to an ending → completeQuest (never on death; abandoning
  * leaves the lead started-but-open, as the engine dictates).
  */
 async function runQuestSession(
@@ -511,14 +537,56 @@ async function runQuestSession(
   reader: Reader,
 ): Promise<"done" | "quit"> {
   const quest = session.previewQuestStart(questId);
-  const source = runtime.requireWorldQuestPlayable(quest.id);
-  session.startQuest(quest.id);
-  console.log(`Started local quest: ${quest.title}. (Type \`abandon\` to set it aside.)`);
+  let approachId: string | undefined;
+  if (quest.launch) {
+    console.log(renderQuestLaunch(quest));
+    while (approachId === undefined) {
+      const raw = await reader.read(`\n[approach: ${quest.title}] > `);
+      if (raw === null) return "done";
+      const low = raw.trim().toLowerCase();
+      if (["quit", "q", "exit"].includes(low)) return "quit";
+      if (["abandon", "leave", "cancel"].includes(low)) return "done";
+      const numeric = Number.parseInt(low, 10);
+      const option =
+        Number.isInteger(numeric) && numeric >= 1 && numeric <= quest.launch.options.length
+          ? quest.launch.options[numeric - 1]!
+          : matchEntity(quest.launch.options, raw, (candidate) => candidate.title);
+      if (!option) {
+        console.log("Choose a numbered or named approach, or type `cancel`.");
+        continue;
+      }
+      if (option.projection?.available === false) {
+        console.log(option.projection.blockedReason ?? "That approach is unavailable.");
+        continue;
+      }
+      approachId = option.id;
+    }
+  }
+
+  // Prepare the parent transition first, but compile and initialize the embedded RPG
+  // before committing it. A bad pack or import therefore cannot spend the approach
+  // resources, record its memory, or consume the quest-start decision.
+  const plan = session.prepareQuestStart(quest.id, approachId);
+  const source = runtime.requireWorldQuestPlayable(plan.quest.id);
 
   const index = indexRpgPack(source.compiled.pack);
   const rules = buildRpgRules(index);
   const step = makeStep(rules);
-  let state = initStateForRpgPack(index, seed);
+  let state =
+    source.campaignImports === undefined
+      ? initStateForRpgPack(index, seed)
+      : initStateForRpgPack(index, seed, {
+          character: plan.characterAfter,
+          imports: source.campaignImports,
+        });
+  session.commitQuestStart(plan);
+  console.log(
+    `Started local quest: ${plan.quest.title}${
+      plan.quest.launch?.selected
+        ? ` via ${plan.quest.launch.options.find((option) => option.id === plan.quest.launch?.selected?.optionId)?.title ?? plan.quest.launch.selected.optionId}`
+        : ""
+    }. (Type \`abandon\` to set it aside.)`,
+  );
   let quitting = false;
 
   while (true) {
@@ -526,7 +594,7 @@ async function runQuestSession(
     console.log(renderQuest(obs));
     if (obs.ended || obs.available_actions.length === 0) break;
 
-    const raw = await reader.read(`\n[quest: ${quest.title}] > `);
+    const raw = await reader.read(`\n[quest: ${plan.quest.title}] > `);
     if (raw === null) break;
     const low = raw.trim().toLowerCase();
     if (["quit", "q", "exit"].includes(low)) {
@@ -571,7 +639,7 @@ async function runQuestSession(
       );
     }
   } else if (!quitting) {
-    console.log(`You set ${quest.title} aside and return to the road.`);
+    console.log(`You set ${plan.quest.title} aside and return to the road.`);
   }
   return quitting ? "quit" : "done";
 }

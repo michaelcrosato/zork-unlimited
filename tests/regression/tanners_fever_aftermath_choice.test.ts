@@ -61,7 +61,7 @@ function reachTannersGoalCompletion(): OverworldSession {
   moveToArea(session, "albany_city__market");
   session.scoutPoi("albany_city__market__poi");
   moveToArea(session, "albany_city__transport_hub");
-  session.startQuest("wolf_winter");
+  session.startQuest("wolf_winter", "albany:wolf_approach_sheltered_stockway");
   session.completeQuest("wolf_winter", {
     endingId: "ending_held_timber_saved",
     endingTitle: "The Byre Held, Paling Timber Saved",

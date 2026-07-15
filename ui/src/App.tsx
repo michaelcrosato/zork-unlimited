@@ -26,6 +26,7 @@ import { JourneyStatus } from "./JourneyStatus.js";
 import { CampaignCharacterPanel } from "./CampaignCharacterPanel.js";
 import { formatGoalPassageLog } from "./goalPassage.js";
 import { FRESH_GAME_TUTORIAL } from "../../src/world/fresh_game_tutorial.js";
+import { timeLabel } from "../../src/world/session_journal_codec.js";
 import type { JourneyChoice } from "../../src/world/journey_contract.js";
 import type { OverworldQuest } from "../../src/world/overworld.js";
 import type { OverworldQuestView } from "../../src/world/session_local_discovery.js";
@@ -132,6 +133,101 @@ export function ServiceAction({
   );
 }
 
+function suppliesLabel(value: number): string {
+  return `${String(value)} ${value === 1 ? "supply" : "supplies"}`;
+}
+
+/**
+ * The notice-board launch surface stays deliberately inline: choosing an
+ * approach is the quest-start action itself, not a modal/story decision that
+ * would add another journey beat. The view has already redacted persistent
+ * effect and import ids, so this component renders only player-facing terms.
+ */
+export function QuestNotice({
+  quest,
+  areaName,
+  isCurrentArea,
+  onStart,
+}: {
+  quest: OverworldQuestView;
+  areaName: string;
+  isCurrentArea: boolean;
+  onStart: (approachId?: string) => void;
+}): JSX.Element {
+  if (!quest.launch) {
+    return (
+      <li className="quest-notice">
+        <button disabled={!isCurrentArea} onClick={() => onStart()}>
+          <span>{quest.title}</span>
+          <small>{quest.discovery}</small>
+          <small>
+            Posted in {areaName}
+            {!isCurrentArea ? " - move there to start" : ""}
+          </small>
+        </button>
+      </li>
+    );
+  }
+
+  return (
+    <li className="quest-notice quest-notice-launch">
+      <div className="quest-notice-heading">
+        <strong>{quest.title}</strong>
+        <p>{quest.discovery}</p>
+        <small>
+          Posted in {areaName}
+          {!isCurrentArea ? " - move there to start" : ""}
+        </small>
+      </div>
+      <fieldset className="quest-launch-fieldset">
+        <legend>{quest.launch.prompt}</legend>
+        <ul className="quest-launch-options">
+          {quest.launch.options.map((option) => {
+            const projection = option.projection;
+            const blockedReason = projection?.available === false ? projection.blockedReason : null;
+            const areaReason = !isCurrentArea ? `Move to ${areaName} to start.` : null;
+            const disabled = !isCurrentArea || projection?.available === false;
+            return (
+              <li key={option.id}>
+                <button disabled={disabled} onClick={() => onStart(option.id)}>
+                  <strong>{option.title}</strong>
+                  <span>{option.summary}</span>
+                  <small>
+                    <b>What you expect:</b> {option.preview}
+                  </small>
+                  <small>
+                    <b>Commitment:</b> {option.consequence}
+                  </small>
+                  <small className="quest-launch-cost">
+                    Actual cost: {option.terms.minutes} min, {suppliesLabel(option.terms.supplies)},
+                    fatigue +{option.terms.fatigue}.
+                  </small>
+                  {projection?.available ? (
+                    <small className="quest-launch-projection">
+                      Projected arrival: {timeLabel(projection.minutesAfter)}; {suppliesLabel(
+                        projection.suppliesAfter!,
+                      )} remaining; fatigue {projection.fatigueAfter}; condition {projection.travelConditionAfter}.
+                    </small>
+                  ) : projection ? (
+                    <small className="quest-launch-projection">
+                      Projected time: {timeLabel(projection.minutesAfter)}.
+                    </small>
+                  ) : null}
+                  {(blockedReason || areaReason) && (
+                    <small className="quest-launch-blocked">
+                      {[blockedReason, areaReason].filter(Boolean).join(" ")}
+                    </small>
+                  )}
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      </fieldset>
+    </li>
+  );
+}
+
 export default function App(): JSX.Element {
   const [worldState, setWorldState] = useState(loadInitialWorldSession);
   const worldSession = worldState.session;
@@ -203,7 +299,7 @@ export default function App(): JSX.Element {
     }
   }
 
-  function startQuest(quest: OverworldQuestView): void {
+  function startQuest(quest: OverworldQuestView, approachId?: string): void {
     const manifestQuest = questsById.get(quest.id);
     const source = manifestQuest ? normalizePackPath(manifestQuest.source) : undefined;
     const pack = source ? packsByPath.get(source) : undefined;
@@ -215,20 +311,23 @@ export default function App(): JSX.Element {
       // Keep launch failure-atomic: all quest eligibility, pack compilation,
       // target validation, and imported-state construction happen before the
       // overworld records that the quest has started.
-      const preview = worldSession.previewQuestStart(quest.id);
+      const plan = worldSession.prepareQuestStart(quest.id, approachId);
       const session = GameSession.startEmbedded(
         pack.source,
-        worldSession.campaignCharacterState(),
+        plan.characterAfter,
         manifestQuest.campaign_imports,
         1,
       );
-      const localQuest = worldSession.startQuest(preview.id);
+      const localQuest = worldSession.commitQuestStart(plan);
+      const selectedApproach = localQuest.launch?.options.find(
+        (option) => option.id === localQuest.launch?.selected?.optionId,
+      );
       setQuestSession(session);
       setQuestView(session.view());
       setActiveQuest(localQuest);
       setWorldView(worldSession.view());
       setLog((prev) => [
-        `Started local quest: ${localQuest.title} (${worldView.current.name}, ${questAreaName(localQuest)}).`,
+        `Started local quest: ${localQuest.title}${selectedApproach ? ` via ${selectedApproach.title}` : ""} (${worldView.current.name}, ${questAreaName(localQuest)}).`,
         ...prev,
       ]);
       setError(null);
@@ -821,21 +920,15 @@ export default function App(): JSX.Element {
             </p>
           ) : (
             <ul className="quest-list">
-              {worldView.quests.map((quest) => {
-                const isCurrentArea = worldView.currentArea?.id === quest.area;
-                return (
-                  <li key={quest.id}>
-                    <button disabled={!isCurrentArea} onClick={() => startQuest(quest)}>
-                      <span>{quest.title}</span>
-                      <small>{quest.discovery}</small>
-                      <small>
-                        Posted in {questAreaName(quest)}
-                        {!isCurrentArea ? " - move there to start" : ""}
-                      </small>
-                    </button>
-                  </li>
-                );
-              })}
+              {worldView.quests.map((quest) => (
+                <QuestNotice
+                  key={quest.id}
+                  quest={quest}
+                  areaName={questAreaName(quest)}
+                  isCurrentArea={worldView.currentArea?.id === quest.area}
+                  onStart={(approachId) => startQuest(quest, approachId)}
+                />
+              ))}
             </ul>
           )}
         </article>

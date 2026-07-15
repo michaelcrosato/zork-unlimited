@@ -85,7 +85,7 @@ function startedWolfSession(profileId = "albany:unaffiliated_courier"): Overworl
   const wolf = WORLD.quests.find((quest) => quest.id === "wolf_winter");
   if (!wolf) throw new Error("expected Wolf-Winter in the starting world");
   moveSessionToArea(session, wolf.area);
-  session.startQuest(wolf.id);
+  session.startQuest(wolf.id, "albany:wolf_approach_sheltered_stockway");
   return session;
 }
 
@@ -254,6 +254,7 @@ function launchRegisteredWolf(profileId: string): {
     include_actions: true,
     session_id: restored.session_id,
     quest_id: quest.id,
+    approach_id: "albany:wolf_approach_sheltered_stockway",
     seed: 505,
   });
   return {
@@ -389,7 +390,7 @@ describe("SS-F01 — Albany character background counterfactual", () => {
     session.chooseJourneyStory(DEFAULT_PREPARATION_ID);
     moveSessionToArea(session, wolf.area);
     expect(session.previewQuestStart(wolf.id).id).toBe(wolf.id);
-    expect(session.startQuest(wolf.id).id).toBe(wolf.id);
+    expect(session.startQuest(wolf.id, "albany:wolf_approach_sheltered_stockway").id).toBe(wolf.id);
 
     const forgedStartedBeforeRegistration = structuredClone(session.snapshot());
     const registrationEntry = forgedStartedBeforeRegistration.journalEntries.find(
@@ -447,7 +448,7 @@ describe("SS-F01 — Albany character background counterfactual", () => {
       const opaqueWolfPredecessor = structuredClone(proofless);
       opaqueWolfPredecessor.worldHash = sourceWorldHash;
       expect(() => OverworldSession.restore(WORLD, opaqueWolfPredecessor)).toThrow(
-        /opaque pre-registration quest progress without a replayable registration and lead-source path/i,
+        /opaque pre-registration quest progress without a replayable registration and lead-source path|quest-start proof evidence introduced by a later manifest/i,
       );
 
       const predecessor = preRegistrationUnrelatedQuestSnapshot();
@@ -594,6 +595,7 @@ describe("SS-F01 — Albany character background counterfactual", () => {
 
     expect(warden.state.vars.defense).toBe(4);
     expect(warden.state.campaignImportReceipt?.applied_rules).toEqual([
+      "import:wolf_winter_approach_sheltered_stockway",
       "import:wolf_winter_fieldcraft",
       "import:wolf_winter_lure_fieldcraft",
       "import:wolf_winter_relief_protocol",
@@ -601,12 +603,13 @@ describe("SS-F01 — Albany character background counterfactual", () => {
     expect(warden.state.vars.fieldcraft).toBe(4);
     expect(advocate.state.vars.defense).toBe(3);
     expect(advocate.state.campaignImportReceipt?.applied_rules).toEqual([
+      "import:wolf_winter_approach_sheltered_stockway",
       "import:wolf_winter_relief_mediation",
       "import:wolf_winter_relief_protocol",
     ]);
 
-    let wardenAtRail = act(act(warden.state, "go_north"), "go_north");
-    let advocateAtRail = act(act(advocate.state, "go_north"), "go_north");
+    let wardenAtRail = act(act(warden.state, "use_sheltered_stockway_last_mile"), "go_north");
+    let advocateAtRail = act(act(advocate.state, "use_sheltered_stockway_last_mile"), "go_north");
     const wardenRail = enumerateRpgActions(wolfIndex, wardenAtRail).find(
       (candidate) => candidate.id === "use_paling_rail",
     );

@@ -17,6 +17,7 @@ const WORLD = loadOverworldManifest(process.cwd());
 const TIMBER_SERVICE_RULE_ID = "albany:wolf_saved_timber_quick_resupply";
 const WAGON_SERVICE_RULE_ID = "albany:dawn_wagon_solo_packet_resupply";
 const LIVE_PACK_SERVICE_RULE_ID = "albany:wolf_live_pack_greenway_resupply";
+const SHELTERED_APPROACH_ID = "albany:wolf_approach_sheltered_stockway";
 const TARGET_QUEST = "wolf_winter";
 const CURRENT_DAWN_WAGON_JOURNAL_TITLE = "Send the wagon back to Cade";
 const PRE_F11_DAWN_WAGON_JOURNAL_TITLE = "Send the wagon to rebuild Cade's outer line";
@@ -66,6 +67,11 @@ function snapshotAsPredecessor(
   predecessor.journalEntries = predecessor.journalEntries
     .filter((entry) => entry.kind !== "preparation_legacy")
     .map((entry) => {
+      if (entry.kind === "quest" && entry.questStartProof?.kind === "legacy") {
+        const historicalEntry = { ...entry };
+        delete historicalEntry.questStartProof;
+        return historicalEntry;
+      }
       if (
         entry.kind === "campaign" &&
         /^campaign_goal:\d+:carry_hedricks_packet_north$/.test(entry.id)
@@ -144,7 +150,7 @@ function livePackCompletion(): OverworldSession {
   session.talkToCharacter("albany_city__market__contact");
   session.exploreSite(session.view().sites[0]!.id);
   moveToArea(session, "albany_city__transport_hub");
-  session.startQuest("wolf_winter");
+  session.startQuest("wolf_winter", SHELTERED_APPROACH_ID);
   session.completeQuest("wolf_winter", {
     endingId: "ending_pack_diverted",
     endingTitle: "The Pack Diverted Alive",

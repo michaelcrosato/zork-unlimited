@@ -18,6 +18,10 @@ import {
 } from "./campaign_character_state.js";
 import { questView, type OverworldQuestView } from "./session_local_discovery.js";
 import type { OverworldJournalEntry } from "./session_snapshot.js";
+import {
+  applyOverworldQuestLaunchOption,
+  overworldQuestStartPreconditionFingerprint,
+} from "./quest_launch.js";
 
 export type OverworldQuestCompletionOutcome = {
   endingId: string;
@@ -36,6 +40,15 @@ export type OverworldQuestStartState = {
   startedQuestIds: ReadonlySet<string>;
 };
 
+export type OverworldQuestPrepareState = OverworldQuestStartState & {
+  approachId?: string;
+  sessionFingerprint?: string;
+  minutes: number;
+  supplies: number;
+  fatigue: number;
+  character: CampaignCharacterState;
+};
+
 export type OverworldQuestCompletionState = {
   questId: string;
   outcome: OverworldQuestCompletionOutcome;
@@ -45,12 +58,26 @@ export type OverworldQuestCompletionState = {
   nodesById: ReadonlyMap<string, OverworldNode>;
   questOutcomeIds: ReadonlyMap<string, string>;
   startedQuestIds: ReadonlySet<string>;
+  journalEntriesById?: ReadonlyMap<string, OverworldJournalEntry>;
 };
 
 export type OverworldQuestStartPlan = {
   minutes: number;
   quest: OverworldQuestView;
   entryDraft: Omit<OverworldJournalEntry, "recordedAt">;
+};
+
+export type OverworldQuestStartPreparation = OverworldQuestStartPlan & {
+  approachId: string | null;
+  preconditionFingerprint: string;
+  journeyActionId: string;
+  minutes: number;
+  minutesAfter: number;
+  suppliesBefore: number;
+  suppliesAfter: number;
+  fatigueBefore: number;
+  fatigueAfter: number;
+  characterAfter: CampaignCharacterState;
 };
 
 export type OverworldQuestCompletionPlan = {
@@ -184,14 +211,33 @@ export function questCompletionJournalEntryDraft(args: {
   endingTitle: string;
   minutes: number;
   townName: string;
+  returnSummary?: string;
 }): Omit<OverworldJournalEntry, "recordedAt"> {
+  const baseText =
+    `The quest closed at ${args.endingTitle} after ` +
+    `${String(args.minutes)} minutes of local work.`;
   return {
     id: `quest_done:${args.quest.id}`,
     kind: "quest_done",
     town: args.townName,
     title: `Completed ${args.quest.title}`,
-    text: `The quest closed at ${args.endingTitle} after ${args.minutes} minutes of local work.`,
+    text: args.returnSummary ? `${baseText} ${args.returnSummary}` : baseText,
   };
+}
+
+function questLaunchReturnSummary(
+  state: OverworldQuestCompletionState,
+  quest: OverworldQuest,
+): string | undefined {
+  const proof = state.journalEntriesById?.get(`quest:${quest.id}`)?.questStartProof;
+  if (proof?.kind !== "approach") return undefined;
+  const option = quest.launch?.options.find((candidate) => candidate.id === proof.approachId);
+  if (!option) {
+    throw new Error(
+      `Overworld quest "${quest.id}" start proof names unknown launch approach "${proof.approachId}".`,
+    );
+  }
+  return option.return_summary;
 }
 
 function questAreaName(
@@ -201,7 +247,7 @@ function questAreaName(
   return areasById.get(quest.area)?.name ?? quest.area;
 }
 
-export function planOverworldQuestStart(state: OverworldQuestStartState): OverworldQuestStartPlan {
+function questForOverworldQuestStart(state: OverworldQuestStartState): OverworldQuest {
   const quest = state.questsById.get(state.questId);
   if (!quest || quest.home !== state.currentTownId) {
     throw new Error("That quest lead is not in this town.");
@@ -217,6 +263,43 @@ export function planOverworldQuestStart(state: OverworldQuestStartState): Overwo
       `Move to ${questAreaName(quest, state.areasById)} before starting ${quest.title}.`,
     );
   }
+  return quest;
+}
+
+function questStartPreconditionFingerprint(
+  state: OverworldQuestPrepareState,
+  quest: OverworldQuest,
+  approachId: string | null,
+): string {
+  return overworldQuestStartPreconditionFingerprint({
+    ...(state.sessionFingerprint !== undefined
+      ? { sessionFingerprint: state.sessionFingerprint }
+      : {}),
+    questId: quest.id,
+    approachId,
+    launch: quest.launch ?? null,
+    currentTownId: state.currentTownId,
+    currentAreaId: state.currentAreaId,
+    minutes: state.minutes,
+    supplies: state.supplies,
+    fatigue: state.fatigue,
+    character: state.character,
+    discovered: state.discoveredQuestIds.has(quest.id),
+    started: state.startedQuestIds.has(quest.id),
+  });
+}
+
+export function previewOverworldQuestStart(state: OverworldQuestPrepareState): OverworldQuestView {
+  const quest = questForOverworldQuestStart(state);
+  return questView(quest, {
+    minutes: state.minutes,
+    supplies: state.supplies,
+    fatigue: state.fatigue,
+  });
+}
+
+export function planOverworldQuestStart(state: OverworldQuestStartState): OverworldQuestStartPlan {
+  const quest = questForOverworldQuestStart(state);
   return {
     minutes: 0,
     quest: questView(quest),
@@ -226,6 +309,63 @@ export function planOverworldQuestStart(state: OverworldQuestStartState): Overwo
       town: state.currentTownName,
       title: `Started ${quest.title}`,
       text: `You turn the local lead "${quest.discovery}" into an active quest.`,
+    },
+  };
+}
+
+export function prepareOverworldQuestStart(
+  state: OverworldQuestPrepareState,
+): OverworldQuestStartPreparation {
+  const quest = questForOverworldQuestStart(state);
+  if (!quest.launch && state.approachId !== undefined) {
+    throw new Error(`Quest "${quest.id}" does not offer a launch approach.`);
+  }
+  if (quest.launch && state.approachId === undefined) {
+    throw new Error(`Choose an approach before starting ${quest.title}.`);
+  }
+  const resources = {
+    minutes: state.minutes,
+    supplies: state.supplies,
+    fatigue: state.fatigue,
+  };
+  const launchApplication =
+    quest.launch && state.approachId
+      ? applyOverworldQuestLaunchOption({
+          launch: quest.launch,
+          approachId: state.approachId,
+          character: state.character,
+          resources,
+        })
+      : null;
+  const approachId = launchApplication?.option.id ?? null;
+  const minutes = launchApplication?.option.terms.minutes ?? 0;
+  const suppliesAfter = launchApplication?.projection.suppliesAfter ?? state.supplies;
+  const fatigueAfter = launchApplication?.projection.fatigueAfter ?? state.fatigue;
+  const characterAfter =
+    launchApplication?.characterAfter ?? cloneCampaignCharacterState(state.character);
+  const questPresentation = questView(quest, resources, launchApplication?.option.id);
+  return {
+    approachId,
+    preconditionFingerprint: questStartPreconditionFingerprint(state, quest, approachId),
+    journeyActionId:
+      approachId === null ? `quest_start:${quest.id}` : `quest_start:${quest.id}:${approachId}`,
+    minutes,
+    minutesAfter: state.minutes + minutes,
+    suppliesBefore: state.supplies,
+    suppliesAfter,
+    fatigueBefore: state.fatigue,
+    fatigueAfter,
+    characterAfter,
+    quest: questPresentation,
+    entryDraft: {
+      id: `quest:${quest.id}`,
+      kind: "quest",
+      town: state.currentTownName,
+      title: `Started ${quest.title}`,
+      text: launchApplication
+        ? `You turn the local lead "${quest.discovery}" into an active quest. ` +
+          `Approach: ${launchApplication.option.title}. ${launchApplication.option.consequence}`
+        : `You turn the local lead "${quest.discovery}" into an active quest.`,
     },
   };
 }
@@ -265,6 +405,7 @@ export function planOverworldQuestCompletion(
       ? overworldQuestCampaignEffectsForCharacter(campaignExport, state.character)
       : [],
   });
+  const returnSummary = questLaunchReturnSummary(state, quest);
   return {
     minutes,
     quest: questView(quest),
@@ -279,6 +420,7 @@ export function planOverworldQuestCompletion(
       endingTitle,
       minutes,
       townName: state.nodesById.get(quest.home)?.name ?? quest.home,
+      ...(returnSummary ? { returnSummary } : {}),
     }),
   };
 }

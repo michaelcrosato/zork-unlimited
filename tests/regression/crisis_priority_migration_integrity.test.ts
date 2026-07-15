@@ -6,6 +6,7 @@ import {
   OVERWORLD_CRISIS_PRIORITY_PREDECESSOR_WORLD_HASH,
   OVERWORLD_CRISIS_PRIORITY_WORLD_HASH,
   OVERWORLD_FORTIFY_OUTLAST_WORLD_HASH,
+  OVERWORLD_HILL_APPROACH_WORLD_HASH,
 } from "../../src/world/session_snapshot_restore.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
 
@@ -15,6 +16,16 @@ const LEAD = WORLD.opening_lead_source!;
 const PREPARATION = WORLD.opening_preparation!;
 const ALLY = WORLD.opening_ally!;
 const WOLF = WORLD.quests.find((quest) => quest.id === "wolf_winter")!;
+const PRE_ROUTE_WORLD = (() => {
+  const predecessor = structuredClone(WORLD);
+  const wolf = predecessor.quests.find((quest) => quest.id === WOLF.id);
+  if (!wolf?.campaign_imports) throw new Error("Wolf-Winter must have campaign imports.");
+  delete wolf.launch;
+  wolf.campaign_imports.rules = wolf.campaign_imports.rules.filter(
+    (rule) => !rule.id.startsWith("import:wolf_winter_approach_"),
+  );
+  return predecessor;
+})();
 
 const ACCEPT_JUNE = "albany:ally_june_cattle_first";
 const RELAY_JUNE = "albany:ally_june_relay_only";
@@ -88,7 +99,7 @@ function consumedF04AllyService(args: {
   serviceRuleId: string;
   use: "rest" | "resupply";
 }): ReturnType<OverworldSession["snapshot"]> {
-  const session = new OverworldSession(WORLD);
+  const session = new OverworldSession(PRE_ROUTE_WORLD);
   const opening = session.view();
   session.scoutPoi(opening.pois[0]!.id);
   session.talkToCharacter(REGISTRATION.contact);
@@ -128,7 +139,7 @@ function consumedF04AllyService(args: {
 }
 
 function f04LeftAfterBloodSnapshot(): ReturnType<OverworldSession["snapshot"]> {
-  const session = new OverworldSession(WORLD);
+  const session = new OverworldSession(PRE_ROUTE_WORLD);
   const opening = session.view();
   session.scoutPoi(opening.pois[0]!.id);
   session.talkToCharacter(REGISTRATION.contact);
@@ -203,7 +214,8 @@ describe("crisis-priority predecessor migration integrity", () => {
     expect(OVERWORLD_CRISIS_PRIORITY_WORLD_HASH).toBe(
       "1e74d32c28c3d563f6e8103034768506e25f13ff1f8e410b190cbb344589add8",
     );
-    expect(hashState(WORLD)).toBe(OVERWORLD_FORTIFY_OUTLAST_WORLD_HASH);
+    expect(hashState(PRE_ROUTE_WORLD)).toBe(OVERWORLD_FORTIFY_OUTLAST_WORLD_HASH);
+    expect(hashState(WORLD)).toBe(OVERWORLD_HILL_APPROACH_WORLD_HASH);
   });
 
   it.each([
@@ -224,13 +236,26 @@ describe("crisis-priority predecessor migration integrity", () => {
     const predecessor = relabelAsF04(current);
 
     const restored = OverworldSession.restore(WORLD, predecessor).snapshot();
-    expect(restored).toEqual(current);
+    expect(restored).toMatchObject({
+      minutes: current.minutes,
+      supplies: current.supplies,
+      fatigue: current.fatigue,
+      questOutcomes: current.questOutcomes,
+    });
+    expect(restored.character).toEqual(current.character);
+    expect(
+      restored.journalEntries.find((entry) => entry.id === `quest:${WOLF.id}`)?.questStartProof,
+    ).toMatchObject({
+      kind: "legacy",
+      sourceWorldHash: OVERWORLD_CRISIS_PRIORITY_PREDECESSOR_WORLD_HASH,
+    });
     expect(restored.journalEntries.some((entry) => entry.kind === "preparation_legacy")).toBe(
       false,
     );
     expect(restored.journalEntries).toContainEqual(
       expect.objectContaining({ serviceRuleId: migrationCase.serviceRuleId }),
     );
+    expect(OverworldSession.restore(WORLD, restored).snapshot()).toEqual(restored);
   });
 
   it("rejects current ally copy merely relabeled with the F04 manifest hash", () => {
@@ -249,8 +274,20 @@ describe("crisis-priority predecessor migration integrity", () => {
     const predecessor = relabelAsF04(current);
 
     const restored = OverworldSession.restore(WORLD, predecessor).snapshot();
-    expect(restored).toEqual(current);
-    expect(OverworldSession.restore(WORLD, restored).snapshot()).toEqual(current);
+    expect(restored).toMatchObject({
+      minutes: current.minutes,
+      supplies: current.supplies,
+      fatigue: current.fatigue,
+      questOutcomes: current.questOutcomes,
+    });
+    expect(restored.character).toEqual(current.character);
+    expect(
+      restored.journalEntries.find((entry) => entry.id === `quest:${WOLF.id}`)?.questStartProof,
+    ).toMatchObject({
+      kind: "legacy",
+      sourceWorldHash: OVERWORLD_CRISIS_PRIORITY_PREDECESSOR_WORLD_HASH,
+    });
+    expect(OverworldSession.restore(WORLD, restored).snapshot()).toEqual(restored);
   });
 
   it("rejects an F10 Wolf ending relabeled as an F04 outcome", () => {

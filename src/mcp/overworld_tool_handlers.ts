@@ -604,6 +604,7 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
       Args extends {
         session_id: string;
         quest_id: string;
+        approach_id?: string;
         seed?: number;
         hide_graph?: boolean;
         compact_actions?: boolean;
@@ -622,6 +623,7 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
         session,
         overworldSessionId: args.session_id,
         questId: args.quest_id,
+        ...(args.approach_id !== undefined ? { approachId: args.approach_id } : {}),
         startOptions: responseOptions,
         startEmbeddedWorldQuest: deps.startEmbeddedWorldQuest,
       });

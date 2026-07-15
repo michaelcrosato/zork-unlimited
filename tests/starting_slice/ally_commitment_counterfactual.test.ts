@@ -26,6 +26,7 @@ const RELAY = "albany:ally_june_relay_only";
 const SOLO = "albany:ally_travel_solo";
 const JUNE = "albany:june_pike";
 const PROMISE = "albany:promise_june_cattle_first";
+const SHELTERED = "albany:wolf_approach_sheltered_stockway";
 const WOLF_SOURCE = readFileSync("content/rpg/quests/wolf_winter.yaml", "utf8");
 const FULL = { compact_context: false, compact_result: false } as const;
 
@@ -98,7 +99,7 @@ function selectPreparationWithoutAlly(profileId: string): OverworldSession {
 }
 
 function completeWolf(session: OverworldSession, endingId: string): void {
-  session.startQuest(WOLF.id);
+  session.startQuest(WOLF.id, SHELTERED);
   const campaignExport = WOLF.campaign_exports!.find(
     (candidate) => candidate.ending_id === endingId,
   );
@@ -166,11 +167,11 @@ describe("SS-F04 — Albany ally commitment counterfactual", () => {
     const direct = reachAlly();
     // Rebuild without talking to June: start now is the explicitly disclosed solo default.
     const pending = direct.snapshot();
-    expect(() => direct.startQuest(WOLF.id)).toThrow(/field-team commitment/i);
+    expect(() => direct.startQuest(WOLF.id, SHELTERED)).toThrow(/field-team commitment/i);
 
     const solo = OverworldSession.restore(WORLD, pending);
     solo.chooseJourneyStory(SOLO);
-    solo.startQuest(WOLF.id);
+    solo.startQuest(WOLF.id, SHELTERED);
     expect(solo.snapshot().character.companions).toEqual([]);
     expect(promiseStatus(solo)).toBeUndefined();
 
@@ -183,7 +184,7 @@ describe("SS-F04 — Albany ally commitment counterfactual", () => {
     noContact.chooseJourneyStory(PREPARATION.profiles[0]!.id);
     moveToArea(noContact, WOLF.area);
     expect(noContact.previewQuestStart(WOLF.id).id).toBe(WOLF.id);
-    noContact.startQuest(WOLF.id);
+    noContact.startQuest(WOLF.id, SHELTERED);
     expect(noContact.snapshot().character.relationships).not.toEqual(
       expect.arrayContaining([expect.objectContaining({ npcId: JUNE })]),
     );
@@ -353,6 +354,7 @@ describe("SS-F04 — Albany ally commitment counterfactual", () => {
       include_actions: true,
       session_id: restored.session_id,
       quest_id: WOLF.id,
+      approach_id: SHELTERED,
       seed: 504,
     });
     const fullState = api.get_state({
@@ -393,9 +395,12 @@ describe("SS-F04 — Albany ally commitment counterfactual", () => {
       }),
     );
 
+    const launchedCampaign = api.export_overworld_session({
+      session_id: restored.session_id,
+    }).snapshot.character;
     const browser = GameSession.startEmbedded(
       WOLF_SOURCE,
-      campaign.character,
+      launchedCampaign,
       WOLF.campaign_imports,
       504,
     );
@@ -456,7 +461,8 @@ describe("SS-F04 — Albany ally commitment counterfactual", () => {
     predecessorSession.chooseJourneyStory(LEAD.options[0]!.id);
     predecessorSession.chooseJourneyStory(PREPARATION.profiles[0]!.id);
     moveToArea(predecessorSession, WOLF.area);
-    predecessorSession.startQuest(WOLF.id);
+    // Keep this migration witness pre-launch: a current route commitment cannot
+    // truthfully be relabelled as an F05 quest start.
     const predecessorSource = structuredClone(predecessorSession.snapshot());
     const { companions: _companions, ...predecessorCharacter } = predecessorSource.character;
     const predecessor: Omit<OverworldSessionSnapshot, "character"> & {
@@ -481,7 +487,7 @@ describe("SS-F04 — Albany ally commitment counterfactual", () => {
     );
   });
 
-  it("migrates every consumed F05 preparation service with its bound completion proof", () => {
+  it("rejects consumed F07 preparation services merely relabelled as F05", () => {
     const cases = [
       {
         profileId: "albany:prep_works_fortification",
@@ -503,7 +509,7 @@ describe("SS-F04 — Albany ally commitment counterfactual", () => {
       },
     ];
 
-    let prooflessPredecessor: OverworldSessionSnapshot | null = null;
+    let proofStrippedPredecessor: OverworldSessionSnapshot | null = null;
     for (const migrationCase of cases) {
       const session = selectPreparationWithoutAlly(migrationCase.profileId);
       moveToArea(session, WOLF.area);
@@ -531,23 +537,18 @@ describe("SS-F04 — Albany ally commitment counterfactual", () => {
       const predecessor = structuredClone(current);
       predecessor.worldHash = OVERWORLD_OPENING_ALLY_PREDECESSOR_WORLD_HASH;
       delete (predecessor.character as { companions?: string[] }).companions;
-      const migrated = OverworldSession.restore(WORLD, predecessor);
-      expect(migrated.snapshot().character.companions).toEqual([]);
-      expect(migrated.snapshot().journalEntries).toContainEqual(
-        expect.objectContaining({ serviceRuleId: migrationCase.serviceId }),
+      expect(() => OverworldSession.restore(WORLD, predecessor)).toThrow(
+        /quest-start proof evidence introduced by a later manifest/i,
       );
-      expect(migrated.view().serviceOffers.map((offer) => offer.id)).not.toContain(
-        migrationCase.serviceId,
-      );
-      prooflessPredecessor ??= predecessor;
+      proofStrippedPredecessor ??= predecessor;
     }
 
-    if (!prooflessPredecessor) throw new Error("expected an F05 predecessor witness");
-    for (const entry of prooflessPredecessor.journalEntries) {
-      delete entry.questCompletionBoundary;
+    if (!proofStrippedPredecessor) throw new Error("expected a relabelled F07 witness");
+    for (const entry of proofStrippedPredecessor.journalEntries) {
+      delete entry.questStartProof;
     }
-    expect(() => OverworldSession.restore(WORLD, prooflessPredecessor)).toThrow(
-      /completion.*boundary|campaign boundary|world-fact proof/i,
+    expect(() => OverworldSession.restore(WORLD, proofStrippedPredecessor)).toThrow(
+      /quest launch "wolf_winter" does not match its (?:selected approach decision|exact pre-ally authored copy)/i,
     );
   });
 });

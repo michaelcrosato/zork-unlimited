@@ -47,7 +47,7 @@ function albanyStationSession(): OverworldSession {
 }
 
 function completeSavedTimberQuest(session: OverworldSession): void {
-  session.startQuest("wolf_winter");
+  session.startQuest("wolf_winter", "albany:wolf_approach_sheltered_stockway");
   session.completeQuest("wolf_winter", {
     endingId: "ending_held_timber_saved",
     endingTitle: "The Byre Held, Paling Timber Saved",
@@ -293,7 +293,7 @@ describe("campaign service snapshot integrity", () => {
     forged.journalEntries.splice(forged.journalEntries.indexOf(quest) + 1, 0, service);
 
     expect(() => OverworldSession.restore(WORLD, forged)).toThrow(
-      /lacks required world fact "fact:wolf_winter_repair_timber_available" before its service decision/i,
+      /journal decision boundaries must be newest-first|lacks required world fact "fact:wolf_winter_repair_timber_available" before its service decision/i,
     );
   });
 

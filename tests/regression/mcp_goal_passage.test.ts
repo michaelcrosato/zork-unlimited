@@ -40,7 +40,7 @@ function sessionAtQueensburyGoalPassage(): OverworldSession {
   const quest = session.view().quests.find((candidate) => candidate.id === "wolf_winter");
   if (!quest) throw new Error("expected the Albany Wolf-Winter lead");
   moveToArea(session, quest.area);
-  session.startQuest(quest.id);
+  session.startQuest(quest.id, "albany:wolf_approach_sheltered_stockway");
   session.completeQuest(quest.id, {
     endingId: "ending_held_timber_saved",
     endingTitle: "The Byre Held, Paling Timber Saved",

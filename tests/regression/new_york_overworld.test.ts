@@ -560,6 +560,18 @@ describe("New York overworld graph", () => {
           target_flag: "relief_protocol_prepared",
         },
         {
+          id: "import:wolf_winter_approach_exposed_ridge",
+          type: "knowledge_to_flag",
+          knowledge_id: "albany:knowledge_wolf_exposed_ridge",
+          target_flag: "approach_exposed_ridge",
+        },
+        {
+          id: "import:wolf_winter_approach_sheltered_stockway",
+          type: "knowledge_to_flag",
+          knowledge_id: "albany:knowledge_wolf_sheltered_stockway",
+          target_flag: "approach_sheltered_stockway",
+        },
+        {
           id: "import:wolf_winter_june_companion",
           type: "companion_to_flag",
           companion_id: "albany:june_pike",

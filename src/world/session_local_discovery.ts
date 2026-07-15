@@ -4,6 +4,12 @@ import type {
   OverworldLocalJob,
   OverworldQuest,
 } from "./overworld.js";
+import {
+  presentOverworldQuestLaunch,
+  projectOverworldQuestLaunchOption,
+  type OverworldQuestLaunchResources,
+  type OverworldQuestLaunchView,
+} from "./quest_launch.js";
 
 export type OverworldQuestView = {
   id: string;
@@ -12,6 +18,7 @@ export type OverworldQuestView = {
   area: string;
   discovery: string;
   visibility: OverworldQuest["visibility"];
+  launch?: OverworldQuestLaunchView;
 };
 
 export type OverworldLocalDiscoveryResult = {
@@ -42,7 +49,11 @@ export type MutableOverworldLocalDiscoveryIds = {
   discoveredQuestIds: Set<string>;
 };
 
-export function questView(quest: OverworldQuest): OverworldQuestView {
+export function questView(
+  quest: OverworldQuest,
+  resources?: OverworldQuestLaunchResources,
+  selectedApproachId?: string,
+): OverworldQuestView {
   return {
     id: quest.id,
     title: quest.title,
@@ -50,6 +61,29 @@ export function questView(quest: OverworldQuest): OverworldQuestView {
     area: quest.area,
     discovery: quest.discovery,
     visibility: quest.visibility,
+    ...(quest.launch
+      ? { launch: presentOverworldQuestLaunch(quest.launch, resources, selectedApproachId) }
+      : {}),
+  };
+}
+
+export function projectOverworldQuestView(
+  quest: OverworldQuestView,
+  resources: OverworldQuestLaunchResources,
+): OverworldQuestView {
+  if (!quest.launch) return { ...quest };
+  return {
+    ...quest,
+    launch: {
+      id: quest.launch.id,
+      prompt: quest.launch.prompt,
+      options: quest.launch.options.map((option) => ({
+        ...option,
+        terms: { ...option.terms },
+        projection: projectOverworldQuestLaunchOption(option, resources),
+      })),
+      ...(quest.launch.selected ? { selected: { ...quest.launch.selected } } : {}),
+    },
   };
 }
 

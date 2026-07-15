@@ -80,6 +80,8 @@ describe("Wolf-Winter dialogue surface", () => {
         "drover_route_prepared",
         "relief_protocol_prepared",
         "june_pike_present",
+        "approach_exposed_ridge",
+        "approach_sheltered_stockway",
       ],
     });
     expect(report.ok).toBe(true);

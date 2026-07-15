@@ -292,31 +292,64 @@
       "id": "SS-F07-hill-route",
       "title": "Choose how and when to reach the steading",
       "phase": "albany_preparation",
-      "implementation_status": "planned",
-      "proof_status": "unproven",
-      "counts_toward_contract": false,
-      "visible_choice": "Take the fast exposed road, a slower sheltered route, or travel with a local caravan when available.",
+      "implementation_status": "implemented",
+      "proof_status": "proven",
+      "counts_toward_contract": true,
+      "visible_choice": "On the Station Quarter quest card, take the exposed ridge for 30 minutes, 1 supply, and 25 fatigue or the sheltered stockway for 75 minutes, 2 supplies, and 10 fatigue. The ridge previews a DC 10 first feed cast plus cattle alarm 1; the stockway previews a DC 12 cast plus a calm herd. Selecting either card is the single quest-start decision.",
       "immediate_state_delta": [
         "world.minutes",
+        "world.supplies",
         "world.fatigue",
-        "wolf.weather_pressure",
         "character.knowledge",
-        "character.relationships"
+        "character.relationships",
+        "journey.quest_start_proof"
       ],
       "delayed_consumers": [
-        "Arrival weather and cattle pressure",
-        "Encounter position and available opening plans",
-        "Caravan or warden testimony on return"
+        "The selected knowledge imports as exactly one route flag. It makes exactly one last-mile action legal, and taking the exposed descent starts cattle alarm at 1 while the sheltered gate leaves it at 0; contradictory flags authorize neither route.",
+        "The first committed lure cast reads the route flag: exposed ridge uses DC 10 and sheltered stockway uses DC 12. At seed 9 only the ridge succeeds; the stockway permanently fouls the cast and exposes the authored split-rail recovery instead of an identical retry.",
+        "At seed 26 both first casts succeed. The ridge's clean three-cast line reaches alarm 4 and the two-cattle-scattered living-pack ending, while the stockway reaches alarm 3 and the whole-herd living-pack ending.",
+        "Exact launch cost, Hayden route memory, route-qualified decision proof, quest import receipt, and route return summary survive quest foldback and save/restore. Remaining overworld supplies, fatigue, and clock state continue into Albany travel and services."
       ],
       "visible_feedback": [
-        "The route choice forecasts known time, fatigue, and exposure bands.",
-        "Arrival describes the exact threshold crossed and exposes resulting actions."
+        "Full MCP, compact MCP, browser, and CLI show each actual time/supply/fatigue cost, projected arrival, remaining supplies, resulting condition, field tradeoff, and blocked reason before commitment.",
+        "Arrival prose and the sole route action name the chosen road; the first cast shows its exact DC and no-retry result, and the visible cattle-alarm band exposes the threshold difference.",
+        "The start journal, persistent character panel, RPG import receipt, ending, quest-completion journal, and restored snapshot retain the selected approach without exposing hidden effect ids in player projections."
       ],
-      "systems": ["travel", "time", "weather", "relationships", "encounters"],
-      "persistence_boundaries": ["overworld_to_quest"],
-      "contract_tags": ["delayed", "cross_system", "cross_phase", "pressure"],
-      "baseline_evidence": [],
-      "counterfactual_test": "tests/starting_slice/hill_route_counterfactual.test.ts"
+      "systems": [
+        "travel",
+        "time",
+        "resources",
+        "fatigue",
+        "relationships",
+        "quest_imports",
+        "skills",
+        "pressure",
+        "failure_recovery",
+        "campaign_outcomes"
+      ],
+      "persistence_boundaries": [
+        "overworld_to_quest",
+        "rpg_save_restore",
+        "quest_to_overworld",
+        "overworld_save_restore"
+      ],
+      "contract_tags": [
+        "delayed",
+        "cross_system",
+        "cross_phase",
+        "pressure",
+        "npc_memory",
+        "failure_forward",
+        "irreversible_tradeoff"
+      ],
+      "baseline_evidence": [
+        "tests/starting_slice/hill_approach_gameplay.test.ts",
+        "tests/unit/world_quest_launch.test.ts",
+        "tests/unit/world_quest_launch_resource_replay.test.ts",
+        "tests/regression/hill_approach_migration_integrity.test.ts",
+        "traces/bugs/bug_0526_wolf_winter_hill_approach.yaml"
+      ],
+      "counterfactual_test": "tests/starting_slice/hill_approach_return_e2e.test.ts"
     },
     {
       "id": "SS-F08-cade-trust",
