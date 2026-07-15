@@ -1,0 +1,63 @@
+id: bug_0524
+title: "Wolf-Winter had no complete third strategy or irreversible crisis priority"
+pack: content/rpg/quests/wolf_winter.yaml
+reported_by: starting-slice causal audit and Depth Contract v1
+reports:
+  - docs/STARTING_SLICE.md
+  - docs/starting_slice_causal_matrix.json
+severity: S2
+symptom: >
+  Wolf-Winter proved combat and lure resolutions plus a bounded failed-lure hybrid,
+  but it had no separately committed drive-and-evacuate strategy. The planned crisis
+  choice did not exist, so the player could not knowingly trade persistent injury,
+  cattle safety, or a scarce relief resource and carry that exact loss back to Albany.
+root_cause: >
+  Cade's planning dialogue exposed only the hunt and lure commitments. Quest content
+  lacked a finite drive resource, a visible drive-pressure track, non-retry recovery,
+  mutually exclusive crisis actions, and distinct drive ending identities. Campaign
+  consequences also lacked a reusable validated wound primitive, and the snapshot
+  boundary had no bounded migration for the expanded outcome and service catalogs.
+fix: >
+  Add an explicit drive-and-evacuate commitment, a two-charge signal-and-rope rig,
+  two spatial living-wolf turns, visible Pack Drive pressure, and a one-shot loose-hurdle
+  recovery after a fouled opening. Disclose that commitment starts the moving herd and
+  closes preparation/backtracking with no later switch to lure or combat. Also disclose
+  that every completion forfeits the outer steading defense line. At the byre mouth,
+  require exactly one disclosed
+  priority: keep the herd and rig by taking an untreated wound, clear every person and
+  return the rig while two cattle scatter, or sacrifice the rig so people and herd clear
+  unharmed. Export each result through generic facts, relationship memories, promises,
+  services, and a strict idempotent suffer_wound effect. Bound predecessor restores to
+  the exact prior ending and service catalogs. The hard drive commitment withholds every
+  wolf and combat action at each execution beat. The ordinary three-wolf combat route
+  remains available only when the player declines the drive before the cattle move, so
+  combat cannot be folded back into a bloodless ending.
+deterministic_witnesses:
+  - counterfactual: "same solo Wolf-Winter boundary, successful two-charge drive, only the crisis priority differs"
+    cattle_first: "outer defense forfeited, whole herd, rig returned, health 30→24, untreated severity-2 wound, Station rest plus Greenway resupply"
+    person_first: "outer defense forfeited, every person safe, two cattle scattered, rig returned, Station rest only"
+    reserve_spent: "outer defense forfeited, people and whole herd safe, no wound, rig consumed, Greenway resupply only"
+  - failure_forward: "fouled first shutter signal"
+    result: "the charge is spent, Pack Drive reaches Crisis early, no retry exists, and one loose-hurdle action turns the yearling alive"
+  - conduct: "June accompanies the player under cattle-first authority"
+    result: "she takes the lower gate before the priority menu; her no-blood role remains intact through each committed drive ending"
+  - combat_boundary: "inspect the committed route before the first signal, after a fouled signal, and at the threshold"
+    result: "no enemy, attack, maneuver, or abandonment action materializes; hearing but declining the drive leaves the ordinary yearling combat legal"
+  - persistence: "complete cattle-first, save in full/compact/UI projections, restore, and replay the same quest outcome"
+    result: "health and wound remain exact and replay does not apply the six-point loss twice"
+tests:
+  - tests/starting_slice/crisis_priority_counterfactual.test.ts
+  - tests/starting_slice/drive_crisis_return_counterfactual.test.ts
+  - tests/unit/world_campaign_consequences.test.ts
+  - tests/unit/world_journey_campaign.test.ts
+  - tests/regression/new_york_overworld.test.ts
+  - tests/regression/crisis_priority_migration_integrity.test.ts
+verification:
+  - "wolf_winter validation: 0 errors, 0 warnings"
+  - "focused crisis/strategy counterfactuals: 10/10"
+  - "unchanged-cap exhaustive variant liveness: 17/17"
+  - "unchanged-cap exhaustive score economy: 19/19"
+  - "pre/post 6,000-step crawls: 20260715T092531Z / 20260715T123630Z"
+  - "verified pure fresh-overworld playtest: seed 2714, voluntary exit at decision 96"
+  - "feedback compile: 20260715T120239Z"
+  - "npm run health"

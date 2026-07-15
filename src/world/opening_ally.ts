@@ -41,7 +41,24 @@ export const OpeningAllyOptionSchema = z
     terms: OpeningAllyTermsSchema,
     effects: CampaignConsequenceEffectsSchema,
   })
-  .strict();
+  .strict()
+  .superRefine((option, ctx) => {
+    if (
+      option.effects.some(
+        (effect) =>
+          effect.type !== "add_companion" &&
+          effect.type !== "record_promise" &&
+          effect.type !== "remember_relationship",
+      )
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["effects"],
+        message:
+          "Opening ally options may add the named companion, record its promise, and remember its relationship; they cannot apply wounds or other campaign outcomes.",
+      });
+    }
+  });
 
 export const OpeningAllySchema = z
   .object({

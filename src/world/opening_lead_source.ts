@@ -61,12 +61,16 @@ export const OpeningLeadSourceOptionSchema = z
   })
   .strict()
   .superRefine((option, ctx) => {
-    if (option.effects.some((effect) => effect.type === "set_world_fact")) {
+    if (
+      option.effects.some(
+        (effect) => effect.type !== "learn_knowledge" && effect.type !== "remember_relationship",
+      )
+    ) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["effects"],
         message:
-          "Opening lead sources may change character knowledge and relationships, not world facts.",
+          "Opening lead sources may change character knowledge and relationships, not world facts, wounds, companions, or promises.",
       });
     }
     if (

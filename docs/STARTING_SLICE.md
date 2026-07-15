@@ -133,11 +133,13 @@ The current slice does **not** yet meet the full contract:
   opportunity consumers;
 - fieldcraft now crosses the trusted boundary into both defence and the visible
   lure check, two certified reports alter combat routes, and three preparation
-  skills change distinct checks or recoveries; health remains deferred to
-  protect the combat guarantee, and Albany equipment still needs an
-  origin-honest quest-local representation before it can alter play;
-- prepared combat, fully noncombat diversion, and a bounded mixed recovery now
-  exist, but fortify/outlast and drive/evacuate families remain unimplemented;
+  skills change distinct checks or recoveries; campaign health remains outside
+  the combat import to protect its guarantee, but the gate wound now exports
+  back into persistent health and Cade's finite drive rig provides an
+  origin-honest quest-local equipment pattern;
+- prepared combat, fully noncombat diversion, bounded mixed recovery, and the
+  complete drive/evacuate family now exist; only fortify/outlast remains
+  unimplemented;
 - three early decisions now drive replay-bound services through reusable
   world-fact, story-choice, companion, and promise predicates, but the other
   return facts still lack mechanical NPC and opportunity consumers.
@@ -318,14 +320,48 @@ tamper-checked. Proof lives in
 and
 [`ally_content_gameplay.test.ts`](../tests/starting_slice/ally_content_gameplay.test.ts).
 
+The eighth authored increment adds `drive_and_evacuate` as a complete third
+resolution family rather than renaming the failed-lure hybrid. Cade first
+explains, then takes an explicit mutually exclusive commitment to a finite
+two-charge signal-and-rope plan. Its preview discloses that committing starts
+the moving herd immediately: preparation and the outer yard close behind the
+player, and the route can no longer switch to lure or spear combat. The player
+also knowingly forfeits the steading's outer defense line on every completion
+so the moving herd and pack can separate. The player turns the yearling at the
+broken paling and the flank wolf at the byre door while the visible Pack Drive
+track advances. A missed opening cannot be retried: it reaches Crisis early and
+opens one authored loose-hurdle recovery. At the byre mouth, the player must choose
+one irreversible priority before the only matching evacuation becomes legal:
+keep the whole herd and returned rig by taking an untreated gate wound, save
+every person and return the rig while two cattle scatter, or keep people and
+the whole herd unharmed by sacrificing the rig. All three drive the living pack
+away bloodlessly. June, when present, first exercises her remembered
+cattle-first authority at the lower gate. The hard commitment withholds every
+enemy and combat action before the first signal, through failed-signal recovery,
+and at the threshold. The ordinary spear route remains available only when the
+player declines the drive before the cattle move, so combat cannot be sampled
+and folded back into a bloodless ending.
+
+The three endings export distinct cattle, wound, and reserve facts. The wound
+crosses into persistent campaign health, while returned-rig and whole-herd
+facts independently gate one-time Station rest and Greenway resupply offers.
+June and Emery retain outcome-specific testimony. Same-boundary proofs vary
+only the ending and preserve those differences through chronological journey
+foldback, current/predecessor snapshot integrity, full/compact MCP, UI, and
+service consumption. Proof lives in
+[`crisis_priority_counterfactual.test.ts`](../tests/starting_slice/crisis_priority_counterfactual.test.ts)
+and
+[`drive_crisis_return_counterfactual.test.ts`](../tests/starting_slice/drive_crisis_return_counterfactual.test.ts).
+
 This proves `SS-F01-character-background`, `SS-F03-lead-source`,
 `SS-F04-ally-commitment`, `SS-F05-preparation-profile`, `SS-F09-wolf-strategy`,
-`SS-F11-saved-wood`, and `SS-F12-albany-return`: seven of the twelve required
-material forks. It proves the ally-agency clause, three preparation profiles,
-and distinct consumers for all four concepts, but it does not prove balance
-across the two missing resolution families, the full twelve-fork contract, or
-that other return facts change NPC availability and opportunities. Those remain
-the next work, not implied credit for the seven proven counterfactuals.
+`SS-F10-crisis-priority`, `SS-F11-saved-wood`, and `SS-F12-albany-return`:
+eight of the twelve required material forks. It proves the ally-agency clause,
+three preparation profiles, three resolution families, and distinct consumers
+for all four concepts, but it does not prove the fully noncombat
+`fortify_and_outlast` family, the four remaining fork sites, the full
+twelve-fork contract, or fleet-level balance. Those remain the next work, not
+implied credit for the eight proven counterfactuals.
 
 ## Required resolution families
 
@@ -334,22 +370,22 @@ combat and lure routes diverge at Cade; Albany preparation now changes their
 opening checks, recoveries, pressure, and return services without turning
 background into a class lock:
 
-| Signature             | Method                                                      | Principal costs and risks                                         |
-| --------------------- | ----------------------------------------------------------- | ----------------------------------------------------------------- |
-| `hunt_and_hold`       | Prepared tactical combat against the pack                   | wounds, damaged gear, Greenway standing, and time                 |
-| `lure_and_divert`     | Fully noncombat bait and spoor work that redirects the pack | market stock, route knowledge, and cattle risk if late            |
-| `fortify_and_outlast` | Fully noncombat sealing and pressure management until dawn  | Works capacity, relief supplies, and exposed outer property       |
-| `drive_and_evacuate`  | Hybrid noise/fire drive while moving cattle                 | wagon condition, ally trust, fatigue, and possible limited combat |
+| Signature             | Method                                                      | Principal costs and risks                                   |
+| --------------------- | ----------------------------------------------------------- | ----------------------------------------------------------- |
+| `hunt_and_hold`       | Prepared tactical combat against the pack                   | wounds, damaged gear, Greenway standing, and time           |
+| `lure_and_divert`     | Fully noncombat bait and spoor work that redirects the pack | market stock, route knowledge, and cattle risk if late      |
+| `fortify_and_outlast` | Fully noncombat sealing and pressure management until dawn  | Works capacity, relief supplies, and exposed outer property |
+| `drive_and_evacuate`  | Two-charge signal-and-rope drive while evacuating the herd  | untreated wound, scattered cattle, or sacrificed relief rig |
 
 No preparation profile may dominate all four. Each family needs at least one
 authored failure-forward recovery and a distinct persistent Albany aftermath.
-`hunt_and_hold` and `lure_and_divert` now have end-to-end proof. The failed-lure
-one-fight recovery proves bounded hybrid grammar, but does not yet substitute
-for the full `drive_and_evacuate` family; `fortify_and_outlast` is also still
-planned. The Works plan is fortification groundwork and the drover/relief plans
-deepen lure recovery. June's cattle-first action establishes ally-trust grammar
-for a later drive/evacuate family; none is being counted as either missing full
-family.
+`hunt_and_hold`, `lure_and_divert`, and `drive_and_evacuate` now have
+end-to-end proof. The drive uses two finite spatial execution beats, a visible
+pressure threshold, a disclosed no-errand spatial commitment, an authored
+failed-check recovery, and a three-way crisis;
+it is distinct from the failed-lure one-fight recovery. `fortify_and_outlast`
+is still planned. The Works preparation and Cade's existing resource dialogue
+are groundwork only and do not earn credit for that missing fourth family.
 
 ## Depth Contract v1
 

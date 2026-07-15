@@ -273,7 +273,7 @@ function playStrategy(strategy: Strategy) {
           next: { min: 4, label: "Breaking" },
         });
         expect(ui.view().facts).toContain(
-          "pressure: Cattle alarm — Restless (2; next Breaking at 4) — The herd is pressing the slats; another loud reversal will make it run.",
+          "pressure: Cattle alarm — Restless (2; next Breaking at 4) — The herd is strained but remains below the loss threshold.",
         );
       } else {
         const mirror = api.step_action({

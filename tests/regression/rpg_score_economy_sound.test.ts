@@ -75,10 +75,10 @@
  * This therefore uses the bug_0146 LIVENESS action policy plus the runtime's explicit
  * authored-inspect predicate: step READ, stateful target LOOK, ATTACK, USE, and every other
  * progress action while skipping inert observations and DROP. The search FAILS on cappedOut,
- * so it can never pass by truncating an unexplored region. Every shipped pack settles under
- * the bounded cap. Wolf Winter's authored route/combat choices expand the complete bracket
- * to 630,199 states; the 800k ceiling remains a loud runaway guard with bounded headroom
- * rather than an implicit truncation.
+ * so it can never pass by truncating an unexplored region. Every shipped pack must settle
+ * under the bounded cap. Wolf Winter's pre-crisis authored graph measured 630,199 states;
+ * the unchanged 800k ceiling forces later families to preserve a complete bounded bracket
+ * and remains a loud runaway guard rather than an implicit truncation.
  *
  * Packs are auto-discovered from content/rpg/quests, so a new RPG pack is covered the moment
  * it ships (the health-covers-all-packs bar, bug_0096).
@@ -110,17 +110,20 @@ const packFiles = readdirSync(PACK_DIR)
 const SCORE_VAR = "score";
 
 // Same evidence-backed safety bound as the action-id / variant-liveness / metamorphic
-// proofs. Route-rich Wolf Winter settles at 630,199 states under this policy
-// (measured 2026-07-14); bounded headroom still makes a future combinatorial blowup fail
-// LOUDLY rather than truncating into a silent pass.
+// proofs. Route-rich Wolf Winter's pre-crisis graph measured 630,199 states under this
+// policy on 2026-07-14; every later family must still settle under this unchanged ceiling,
+// so a combinatorial blowup fails LOUDLY instead of truncating into a silent pass.
 const MAX_STATES = 800_000;
 
 // Vitest runs the full corpus concurrently in CI, where the largest shipped-pack search
-// can take more than the generic 60-second default under runner contention. Interruptible
+// can take far longer than an isolated run under two-vCPU contention. Run 29421570804
+// completed every other assertion (2,535 passed) but Wolf-Winter reached this old
+// nine-minute fail-fast before reporting its unchanged bounded result. Interruptible
 // dialogue (f23c8a09) made room actions legal beside topics, multiplying edges per
-// dialogue state and roughly doubling Wolf-Winter's wall time. MAX_STATES still bounds
-// the actual search work, so this adds headroom without masking a runaway.
-const SOLVER_TEST_TIMEOUT_MS = 540_000;
+// dialogue state. MAX_STATES still bounds the actual search work, so this only gives the
+// exhaustive proof the same CI headroom as the observation-stream proof; it cannot turn
+// a capped or incorrect result green.
+const SOLVER_TEST_TIMEOUT_MS = 1_500_000;
 
 // The liveness action policy (bug_0146): step every legal action EXCEPT the ones that
 // provably cannot gate a score award — the inert observation verbs and DROP. Authored

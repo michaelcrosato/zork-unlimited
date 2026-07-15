@@ -20,6 +20,7 @@ describe("starting-slice causal matrix", () => {
       "SS-F04-ally-commitment",
       "SS-F05-preparation-profile",
       "SS-F09-wolf-strategy",
+      "SS-F10-crisis-priority",
       "SS-F11-saved-wood",
       "SS-F12-albany-return",
     ]);

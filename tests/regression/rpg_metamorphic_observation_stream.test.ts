@@ -144,12 +144,11 @@ const explore = (index: RpgIndex, action: RpgAction): boolean =>
 // (measured 2026-07-14). The 800k ceiling leaves bounded headroom for that verified graph
 // while preserving a loud cap-out rather than truncating a future blowup.
 const MAX_STATES = 800_000;
-// Generous per-test budget. The final-hash 630,199-state callback-free census took ~114s;
-// observation comparisons and sibling files competing for shared CI vCPUs add substantial
-// overhead. This headroom absorbs that variance without loosening correctness:
-// MAX_STATES, not the clock, bounds the work, so a genuine graph blowup still fails
-// loudly. (Same rationale as vitest.config.ts's testTimeout.)
-const TEST_TIMEOUT_MS = 900_000;
+// F10's unchanged-cap Wolf-Winter observation walk takes 441-449s isolated, while
+// the same proof hit 900s when the full Ubuntu suite shared runner CPUs. Preserve the
+// established ~3x contention margin with a 25-minute budget. MAX_STATES and the
+// cappedOut assertion still require the complete graph; no state or check is skipped.
+const TEST_TIMEOUT_MS = 1_500_000;
 
 // Best/worst-roll PRNGs, identical to rpg_all_endings_reachable / rpg_metamorphic_relabel.
 // resolveAttack draws player strike first, enemy reply second; resolveSkillCheck draws once.

@@ -319,7 +319,7 @@ describe("SS-F04 — Albany ally commitment counterfactual", () => {
     expect(lost.view().serviceOffers).toEqual([]);
     expect(
       lost.view().characters.find((character) => character.id === ALLY.contact)?.summary,
-    ).toMatch(/field seat is empty|first blood/i);
+    ).toMatch(/field seat is empty[^]*crossed into combat[^]*cattle-first field agreement/i);
     expect(OverworldSession.restore(WORLD, lost.snapshot()).snapshot()).toEqual(lost.snapshot());
   });
 

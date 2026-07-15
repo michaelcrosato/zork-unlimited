@@ -64,5 +64,15 @@ describe("opening ally contract", () => {
     if (!joinEffect || joinEffect.type !== "add_companion") throw new Error("missing join effect");
     joinEffect.npc_id = "npc:someone_else";
     expect(OpeningAllySchema.safeParse(wrongAlly).success).toBe(false);
+
+    const woundedAtOffer = structuredClone(ALLY);
+    woundedAtOffer.options[0]!.effects.push({
+      type: "suffer_wound",
+      wound_id: "wound:opening_ally_shortcut",
+      severity: 2,
+      treatment: "untreated",
+      health_loss: 6,
+    });
+    expect(() => OpeningAllySchema.parse(woundedAtOffer)).toThrow(/cannot apply wounds/i);
   });
 });

@@ -120,7 +120,7 @@ function lureRoute(opening: "clean" | "fouled" | "hybrid"): Route {
   expect(yard.blocked_exits).toContainEqual({
     direction: "north",
     message:
-      "Take Cade's feed before the first breach. Once the yearling is settled, the feed plan continues west through the store and up to the loft—not north from the yard.",
+      "Take the plan's finite resource: Cade's feed for lure, or two-charge rig for drive. After the lure's first beat, continue west through the store and up to the loft.",
   });
   act("go_west");
   act("go_up");
@@ -229,9 +229,21 @@ describe("SS-F09 — pressure-backed Wolf-Winter strategy counterfactual", () =>
         band: {
           min: 2,
           label: "Restless",
-          description: "The herd is pressing the slats; another loud reversal will make it run.",
+          description: "The herd is strained but remains below the loss threshold.",
         },
         next: { min: 4, label: "Breaking" },
+      },
+      {
+        id: "pack_drive",
+        title: "Pack drive",
+        var: "pack_drive",
+        value: 0,
+        band: {
+          min: 0,
+          label: "Unraised",
+          description: "No signal drive is moving the wolves; signal pressure has not been raised.",
+        },
+        next: { min: 1, label: "Moving" },
       },
     ]);
     if (!restless) throw new Error("expected a restless pressure observation");

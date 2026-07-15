@@ -70,12 +70,16 @@ export const OpeningPreparationProfileSchema = z
     const relationshipEffects = profile.effects.filter(
       (effect) => effect.type === "remember_relationship",
     );
-    if (profile.effects.some((effect) => effect.type === "set_world_fact")) {
+    if (
+      profile.effects.some(
+        (effect) => effect.type !== "learn_knowledge" && effect.type !== "remember_relationship",
+      )
+    ) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["effects"],
         message:
-          "Opening preparation may change character knowledge and relationships, not world facts.",
+          "Opening preparation may change character knowledge and relationships, not world facts, wounds, companions, or promises.",
       });
     }
     if (knowledgeEffects.length === 0) {
