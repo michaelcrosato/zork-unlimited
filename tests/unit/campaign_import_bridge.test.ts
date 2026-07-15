@@ -361,6 +361,7 @@ describe("trusted campaign-character quest launch bridge", () => {
     expect(view.inventory).not.toContain("saved_brace_stake");
     expect(expected.campaignImportReceipt?.applied_rules).toEqual([
       "import:wolf_winter_fieldcraft",
+      "import:wolf_winter_lure_fieldcraft",
     ]);
   });
 

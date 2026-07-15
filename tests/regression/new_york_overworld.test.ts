@@ -295,17 +295,23 @@ describe("New York overworld graph", () => {
     }
   });
 
-  it("authors only Wolf-Winter's non-death campaign exports as distinct monotonic history", () => {
+  it("authors every Wolf-Winter non-death campaign export as distinct monotonic history", () => {
     const wolfWinter = world.quests.find((quest) => quest.id === "wolf_winter")!;
     const legacyQuests = world.quests.filter((quest) => quest.id !== wolfWinter.id);
 
     expect(legacyQuests.every((quest) => !("campaign_exports" in quest))).toBe(true);
     expect(wolfWinter.campaign_exports?.map((entry) => entry.ending_id)).toEqual([
+      "ending_pack_diverted_after_blood",
+      "ending_pack_diverted_cattle_scattered",
+      "ending_pack_diverted",
       "ending_held_gate_barred",
       "ending_held_timber_saved",
       "ending_held",
     ]);
     expect(wolfWinter.campaign_exports?.map((entry) => entry.ending_title)).toEqual([
+      "The Pack Broken After Blood",
+      "The Pack Diverted, Cattle Scattered",
+      "The Pack Diverted Alive",
       "The Byre Held, Inner Gate Barred",
       "The Byre Held, Paling Timber Saved",
       "The Byre Held",
@@ -313,6 +319,28 @@ describe("New York overworld graph", () => {
     expect(overworldQuestCampaignExportForEnding(wolfWinter, "ending_pulled_down")).toBeNull();
 
     const expectedOutcomeFacts = {
+      ending_pack_diverted_after_blood: [
+        "fact:wolf_winter_byre_held",
+        "fact:wolf_winter_outer_paling_broken",
+        "fact:wolf_winter_yearling_killed",
+        "fact:wolf_winter_two_wolves_diverted_alive",
+        "fact:wolf_winter_winter_feed_spent",
+        "fact:wolf_winter_cattle_scattered",
+      ],
+      ending_pack_diverted_cattle_scattered: [
+        "fact:wolf_winter_byre_held",
+        "fact:wolf_winter_outer_paling_broken",
+        "fact:wolf_winter_pack_diverted_alive",
+        "fact:wolf_winter_winter_feed_spent",
+        "fact:wolf_winter_cattle_scattered",
+      ],
+      ending_pack_diverted: [
+        "fact:wolf_winter_byre_held",
+        "fact:wolf_winter_outer_paling_broken",
+        "fact:wolf_winter_pack_diverted_alive",
+        "fact:wolf_winter_winter_feed_spent",
+        "fact:wolf_winter_cattle_whole",
+      ],
       ending_held_gate_barred: [
         "fact:wolf_winter_byre_held",
         "fact:wolf_winter_outer_paling_broken",
@@ -331,9 +359,25 @@ describe("New York overworld graph", () => {
       ],
     } as const;
     const expectedMemories = {
-      ending_held_gate_barred: "memory:wolf_winter_inner_gate_barred",
-      ending_held_timber_saved: "memory:wolf_winter_repair_timber_saved",
-      ending_held: "memory:wolf_winter_guard_wood_spent",
+      ending_pack_diverted_after_blood: [
+        ["npc:old_cade", "memory:wolf_winter_mixed_line_after_blood", 7, 7, 0],
+        ["albany:emery_sloane", "albany:memory_emery_wolf_pack_diverted_after_blood", 4, 5, 0],
+      ],
+      ending_pack_diverted_cattle_scattered: [
+        ["npc:old_cade", "memory:wolf_winter_cattle_scattered", 5, 5, 0],
+        ["albany:emery_sloane", "albany:memory_emery_wolf_pack_diverted_with_loss", 2, 3, 0],
+      ],
+      ending_pack_diverted: [
+        ["npc:old_cade", "memory:wolf_winter_pack_diverted_alive", 12, 12, 1],
+        ["albany:emery_sloane", "albany:memory_emery_wolf_pack_diverted_alive", 6, 8, 1],
+      ],
+      ending_held_gate_barred: [
+        ["npc:old_cade", "memory:wolf_winter_inner_gate_barred", 10, 10, 1],
+      ],
+      ending_held_timber_saved: [
+        ["npc:old_cade", "memory:wolf_winter_repair_timber_saved", 10, 10, 1],
+      ],
+      ending_held: [["npc:old_cade", "memory:wolf_winter_guard_wood_spent", 10, 10, 1]],
     } as const;
 
     for (const [endingId, facts] of Object.entries(expectedOutcomeFacts)) {
@@ -343,15 +387,19 @@ describe("New York overworld graph", () => {
         facts.map((fact_id) => ({ type: "set_world_fact", fact_id })),
       );
       expect(
-        campaignExport?.effects.find((effect) => effect.type === "remember_relationship"),
-      ).toEqual({
-        type: "remember_relationship",
-        npc_id: "npc:old_cade",
-        memory_id: expectedMemories[endingId as keyof typeof expectedMemories],
-        trust_at_least: 10,
-        regard_at_least: 10,
-        owes_player_at_least: 1,
-      });
+        campaignExport?.effects.filter((effect) => effect.type === "remember_relationship"),
+      ).toEqual(
+        expectedMemories[endingId as keyof typeof expectedMemories].map(
+          ([npc_id, memory_id, trust_at_least, regard_at_least, owes_player_at_least]) => ({
+            type: "remember_relationship",
+            npc_id,
+            memory_id,
+            trust_at_least,
+            regard_at_least,
+            owes_player_at_least,
+          }),
+        ),
+      );
     }
   });
 
@@ -368,6 +416,12 @@ describe("New York overworld graph", () => {
           type: "skill_rank_to_var",
           skill_id: "skill:fieldcraft",
           target_var: "defense",
+        },
+        {
+          id: "import:wolf_winter_lure_fieldcraft",
+          type: "skill_rank_to_var",
+          skill_id: "skill:fieldcraft",
+          target_var: "fieldcraft",
         },
         {
           id: "import:wolf_winter_market_testimony",

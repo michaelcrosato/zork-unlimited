@@ -20,6 +20,7 @@ export const COMPACT_VISIBLE_REF_LIMIT = 16;
 export const COMPACT_BLOCKED_EXIT_LIMIT = 8;
 export const COMPACT_BLOCKED_ACTION_LIMIT = 8;
 export const COMPACT_ENEMY_LIMIT = 16;
+export const COMPACT_PRESSURE_LIMIT = 8;
 export const COMPACT_VAR_LIMIT = 16;
 const COMPACT_INVENTORY_LIMIT = 16;
 const COMPACT_FLAG_LIMIT = 16;
@@ -29,7 +30,7 @@ export const COMPACT_DIALOGUE_CHAR_LIMIT = 280;
 export const COMPACT_BLOCKED_EXIT_CHAR_LIMIT = 180;
 export const COMPACT_BLOCKED_ACTION_REASON_CHAR_LIMIT = RPG_BLOCKED_ACTION_REASON_CHAR_LIMIT;
 export const COMPACT_ENDING_TEXT_CHAR_LIMIT = 360;
-export const RPG_COMPACT_OBSERVATION_VERSION = 16 as const;
+export const RPG_COMPACT_OBSERVATION_VERSION = 17 as const;
 
 export type RpgCompactRef = string;
 export type RpgCompactExit = string | readonly [direction: string, to: string];
@@ -37,6 +38,15 @@ export type RpgCompactBlockedExit = readonly [direction: string, message: string
 export type RpgCompactUnavailableAction = readonly [actionId: string, reason: string];
 export type RpgCompactDialogue = readonly [npc: string, text: string];
 export type RpgCompactEnemy = readonly [id: string, hp: number];
+export type RpgCompactPressure = readonly [
+  id: string,
+  title: string,
+  value: number,
+  bandMin: number,
+  bandLabel: string,
+  nextMin?: number,
+  nextLabel?: string,
+];
 export type RpgCompactMore = readonly [
   inventory: number,
   flags?: number,
@@ -49,6 +59,7 @@ export type RpgCompactMore = readonly [
   blocked?: number,
   enemies?: number,
   unavailable?: number,
+  pressure?: number,
 ];
 export type RpgCompactVitals = readonly [
   hp: number,
@@ -76,6 +87,7 @@ export type RpgCompactObservation = {
   more?: RpgCompactMore;
   dialogue?: RpgCompactDialogue;
   enemies?: RpgCompactEnemy[];
+  pressure?: RpgCompactPressure[];
   ended?: true;
   ending_id?: string;
   ending?: RpgObservation["ending"];
@@ -104,9 +116,11 @@ export const RPG_COMPACT_LEGEND = {
   flags: "set story flags",
   vars: "story variables (core stats already shown in vitals are omitted)",
   journal: "recent journal entries",
-  more: "[inv, flags, vars, journal, actions, exits, objects, npcs, blocked, enemies, unavailable] counts omitted by truncation, trailing zeros dropped",
+  more: "[inv, flags, vars, journal, actions, exits, objects, npcs, blocked, enemies, unavailable, pressure] counts omitted by truncation, trailing zeros dropped",
   dialogue: "[npc_id, npc_line] active dialogue",
   enemies: "[[enemy_id, hp], ...] enemies present",
+  pressure:
+    "[[track_id, title, value, band_min, band_label, next_min?, next_label?], ...] visible pressure tracks",
   ended: "true when the quest has ended",
   ending_id: "ending id when ended",
   ending: "{id, title, text} ending details when ended",
@@ -185,6 +199,7 @@ export function compactRpgObservation(
   const compactBlockedExits = compactHead(obs.blocked_exits, COMPACT_BLOCKED_EXIT_LIMIT);
   const compactBlockedActions = compactHead(obs.blocked_actions, COMPACT_BLOCKED_ACTION_LIMIT);
   const compactEnemies = compactHead(obs.enemies_present, COMPACT_ENEMY_LIMIT);
+  const compactPressure = compactHead(obs.pressure_tracks ?? [], COMPACT_PRESSURE_LIMIT);
   const omittedActions = includeActions ? omittedCount(actionIds, actions) : 0;
   const omittedInv = omittedCount(obs.inventory, inv);
   const omittedFlags = omittedCount(obs.state.flags, flags);
@@ -195,6 +210,7 @@ export function compactRpgObservation(
   const omittedBlocked = omittedCount(obs.blocked_exits, compactBlockedExits);
   const omittedBlockedActions = omittedCount(obs.blocked_actions, compactBlockedActions);
   const omittedEnemies = omittedCount(obs.enemies_present, compactEnemies);
+  const omittedPressure = omittedCount(obs.pressure_tracks ?? [], compactPressure);
   const exits: RpgCompactExit[] = [];
   for (const exit of compactExits) {
     const direction = compactMcpTranscriptSummaryValue(exit.direction);
@@ -225,6 +241,21 @@ export function compactRpgObservation(
   for (const enemy of compactEnemies) {
     enemies.push([compactMcpTranscriptSummaryValue(enemy.id), enemy.hp]);
   }
+  const pressure: RpgCompactPressure[] = [];
+  for (const track of compactPressure) {
+    const current = [
+      compactMcpTranscriptSummaryValue(track.id),
+      compactMcpTranscriptTitle(track.title),
+      track.value,
+      track.band.min,
+      compactMcpTranscriptTitle(track.band.label),
+    ] as const;
+    pressure.push(
+      track.next === null
+        ? current
+        : [...current, track.next.min, compactMcpTranscriptTitle(track.next.label)],
+    );
+  }
   const more = compactTrailingOmissionCounts([
     omittedInv ?? 0,
     omittedFlags ?? 0,
@@ -237,6 +268,7 @@ export function compactRpgObservation(
     omittedBlocked ?? 0,
     omittedEnemies ?? 0,
     omittedBlockedActions ?? 0,
+    omittedPressure ?? 0,
   ]) as RpgCompactMore | undefined;
   return {
     ...(includeVersion ? { v: RPG_COMPACT_OBSERVATION_VERSION } : {}),
@@ -263,6 +295,7 @@ export function compactRpgObservation(
         }
       : {}),
     ...(enemies.length > 0 ? { enemies } : {}),
+    ...(pressure.length > 0 ? { pressure } : {}),
     ...(obs.ended ? { ended: true as const } : {}),
     ...(obs.ending_id ? { ending_id: compactMcpTranscriptSummaryValue(obs.ending_id) } : {}),
     ...(obs.ending ? { ending: compactEnding(obs.ending) } : {}),

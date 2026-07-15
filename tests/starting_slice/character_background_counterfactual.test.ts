@@ -544,7 +544,9 @@ describe("SS-F01 — Albany character background counterfactual", () => {
     expect(warden.state.vars.defense).toBe(4);
     expect(warden.state.campaignImportReceipt?.applied_rules).toEqual([
       "import:wolf_winter_fieldcraft",
+      "import:wolf_winter_lure_fieldcraft",
     ]);
+    expect(warden.state.vars.fieldcraft).toBe(4);
     expect(advocate.state.vars.defense).toBe(3);
     expect(advocate.state.campaignImportReceipt).toBeUndefined();
 

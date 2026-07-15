@@ -291,34 +291,57 @@
       "id": "SS-F09-wolf-strategy",
       "title": "Commit to a materially different wolf resolution strategy",
       "phase": "wolf_winter",
-      "implementation_status": "partial",
-      "proof_status": "unproven",
-      "counts_toward_contract": false,
-      "visible_choice": "Confront the pack, trap and redirect it, resolve its pressure without killing, or combine limited combat with another plan.",
+      "implementation_status": "implemented",
+      "proof_status": "proven",
+      "counts_toward_contract": true,
+      "visible_choice": "Before entering the breach, ask about Cade's feed plan without cost, then either decline it or explicitly commit his one finite winter-feed sack to three downwind casts. The feed plan forecasts visible cattle alarm, no clean retry after a fouled first cast, split-rail recovery, and a bounded one-fight hybrid fallback.",
       "immediate_state_delta": [
-        "wolf.strategy",
-        "wolf.pack_morale",
-        "wolf.cattle_safety",
-        "character.equipment",
-        "character.relationships"
+        "quest.flags.strategy_lure_committed",
+        "quest.inventory.winter_feed_sack",
+        "quest.vars.cattle_alarm",
+        "quest.wolf_defeat_or_redirect_flags",
+        "campaign.quest_outcome"
       ],
       "delayed_consumers": [
-        "Different encounter structures and legal actions",
-        "Distinct costs, injuries, cattle loss, and survivor states",
-        "Albany and faction response"
+        "A clean feed commitment removes combat from all three encounters and preserves every wolf at full implicit HP; the established prepared combat route instead defeats all three.",
+        "A failed first cast permanently raises cattle alarm to 2 and removes the identical retry. Spending a failed split rail preserves the all-alive route; fighting only the yearling creates a bounded hybrid with its own survivor identity.",
+        "Cattle alarm 3 keeps the herd whole, while alarm 4 leaves two cattle missing. Clean, recovered-noncombat, hybrid, and combat endings remain mechanically and textually distinct.",
+        "Quest exports give Cade and Emery ending-specific memories and world facts. Only the all-alive, whole-herd result unlocks Emery's one-time 15-minute Greenway resupply cache after the truthful Albany return."
       ],
       "visible_feedback": [
-        "The committed plan states known risks and required resources.",
-        "Encounter and return scenes expose the plan's actual mechanical consequences."
+        "Cade's free explanation, separate commitment prompt, finite non-droppable feed, locked pre-breach handoff, room copy, and legal actions expose the plan and its irreversibility before execution.",
+        "Full MCP, compact MCP, and browser views show exact Steady, Restless, and Breaking cattle-alarm bands with the next threshold.",
+        "Ending, Albany dispatch, Emery's reactive Greenway copy, campaign facts and memories, and the conditional service all name the exact wolf/cattle count rather than collapsing mixed and noncombat results."
       ],
-      "systems": ["investigation", "social", "environment", "combat", "pressure"],
-      "persistence_boundaries": ["quest_to_overworld"],
-      "contract_tags": ["delayed", "cross_system", "cross_phase", "resolution_strategy"],
+      "systems": [
+        "dialogue",
+        "inventory",
+        "skills",
+        "environment",
+        "combat",
+        "pressure",
+        "failure_recovery",
+        "campaign_exports",
+        "relationships",
+        "services"
+      ],
+      "persistence_boundaries": ["rpg_save_restore", "quest_to_overworld", "overworld_save_restore"],
+      "contract_tags": [
+        "delayed",
+        "cross_system",
+        "cross_phase",
+        "pressure",
+        "resolution_strategy",
+        "failure_forward"
+      ],
       "baseline_evidence": [
         "tests/regression/wolf_winter_three_fight_gauntlet.test.ts",
-        "tests/regression/wolf_winter_cross_encounter_agency.test.ts"
+        "tests/regression/wolf_winter_cross_encounter_agency.test.ts",
+        "tests/unit/rpg_pressure_tracks.test.ts",
+        "tests/starting_slice/wolf_strategy_counterfactual.test.ts",
+        "traces/bugs/bug_0520_wolf_winter_noncombat_strategy.yaml"
       ],
-      "counterfactual_test": "tests/starting_slice/wolf_strategy_counterfactual.test.ts"
+      "counterfactual_test": "tests/starting_slice/wolf_strategy_return_e2e.test.ts"
     },
     {
       "id": "SS-F10-crisis-priority",

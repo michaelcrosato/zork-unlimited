@@ -60,7 +60,7 @@ import { exhaustiveEndingsMulti } from "./support/exhaustive_endings.js";
 import type { Rules } from "../../src/core/engine.js";
 import type { Action } from "../../src/api/types.js";
 
-// The route-rich Wolf-Winter progress graph exhausts at 332,551 states
+// The route-rich Wolf-Winter progress graph exhausts at 315,100 states
 // (measured 2026-07-11). Keep bounded headroom above that concrete witness; a
 // future blowup still fails loudly instead of truncating an unproven search.
 const MAX_STATES = 400_000;

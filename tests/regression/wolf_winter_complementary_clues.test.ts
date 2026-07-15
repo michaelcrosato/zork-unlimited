@@ -104,7 +104,7 @@ describe("bug_0504 — Wolf-Winter clues are complementary rather than contradic
     let state = startCadeDialogue(930014);
     let observation = buildRpgObservation(index, state);
     expect(observation.dialogue?.npc_text).toMatch(/either lesson[^]*both before you go/i);
-    expect(dialogueActionIds(state)).toEqual(["ask_wolves", "ask_byre", "ask_leave"]);
+    expect(dialogueActionIds(state)).toEqual(["ask_wolves", "ask_byre", "ask_lure", "ask_leave"]);
 
     const quick = takeAction(state, "ask_wolves");
     state = quick.state;
@@ -114,7 +114,7 @@ describe("bug_0504 — Wolf-Winter clues are complementary rather than contradic
     expect(observation.dialogue?.npc_text).toMatch(
       /quick spear-hand[^]*guarded byre plan is still yours to learn[^]*Ask for it/i,
     );
-    expect(dialogueActionIds(state)).toEqual(["ask_byre", "ask_leave"]);
+    expect(dialogueActionIds(state)).toEqual(["ask_byre", "ask_lure", "ask_leave"]);
     expect(state.journal.some((entry) => /quick\/open line/i.test(entry))).toBe(true);
 
     const guarded = takeAction(state, "ask_byre");
@@ -125,7 +125,7 @@ describe("bug_0504 — Wolf-Winter clues are complementary rather than contradic
     expect(observation.dialogue?.npc_text).toMatch(
       /Both lessons are yours[^]*do not choose a road here[^]*commit[^]*later[^]*at the wolves/i,
     );
-    expect(dialogueActionIds(state)).toEqual(["ask_leave"]);
+    expect(dialogueActionIds(state)).toEqual(["ask_lure", "ask_leave"]);
     expect(state.journal.some((entry) => /guarded\/patient/i.test(entry))).toBe(true);
     expect(state.flags).toMatchObject({ heard_counsel: true, heard_plan: true });
     expect(state.vars).toMatchObject({ attack: 7, defense: 3, hp: 30, score: 5 });
@@ -140,7 +140,7 @@ describe("bug_0504 — Wolf-Winter clues are complementary rather than contradic
     expect(observation.dialogue?.npc_text).toMatch(
       /guarded byre plan[^]*quick spear-hand is still yours to learn[^]*Ask for it/i,
     );
-    expect(dialogueActionIds(state)).toEqual(["ask_wolves", "ask_leave"]);
+    expect(dialogueActionIds(state)).toEqual(["ask_wolves", "ask_lure", "ask_leave"]);
 
     const quick = takeAction(state, "ask_wolves");
     state = quick.state;
@@ -148,7 +148,7 @@ describe("bug_0504 — Wolf-Winter clues are complementary rather than contradic
     expect(observation.dialogue?.npc_text).toMatch(
       /Both lessons are yours[^]*commit[^]*later[^]*at the wolves/i,
     );
-    expect(dialogueActionIds(state)).toEqual(["ask_leave"]);
+    expect(dialogueActionIds(state)).toEqual(["ask_lure", "ask_leave"]);
     expect(state.flags).toMatchObject({ heard_counsel: true, heard_plan: true });
     expect(state.vars).toMatchObject({ attack: 7, defense: 3, hp: 30, score: 5 });
   });

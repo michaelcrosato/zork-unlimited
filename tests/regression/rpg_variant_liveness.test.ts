@@ -96,16 +96,15 @@ const packFiles = readdirSync(PACK_DIR)
   .filter((f) => f.endsWith(".yaml"))
   .sort();
 
-// The route-rich Wolf-Winter graph exhausts at 670,963 states under this policy
-// (measured 2026-07-11). An 800k ceiling gives that concrete graph bounded headroom while
+// The route-rich Wolf-Winter graph exhausts at 630,199 states under this policy
+// (measured 2026-07-14). An 800k ceiling gives that concrete graph bounded headroom while
 // still failing LOUD on a future combinatorial blowup instead of silently truncating it.
 const MAX_STATES = 800_000;
 const IMPORT_WITNESS_MAX_STATES = 200_000;
 const WORLD = loadOverworldManifest(process.cwd());
 
-// The exact 670,963-state Wolf-Winter graph took 176s in the exhaustive-suite
-// contention run before interruptible dialogue (f23c8a09) multiplied edges per
-// dialogue state (~2x wall time locally; shared CI runners need ~3x local).
+// The exact 630,199-state Wolf-Winter graph took 153s in the final-hash
+// exhaustive-suite run; shared CI runners can take materially longer.
 // Wall-clock headroom does not change the bounded state proof.
 const SOLVER_TEST_TIMEOUT_MS = 720_000;
 

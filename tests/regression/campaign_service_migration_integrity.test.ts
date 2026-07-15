@@ -12,6 +12,7 @@ import { loadOverworldManifest } from "../../src/world/source.js";
 const WORLD = loadOverworldManifest(process.cwd());
 const TIMBER_SERVICE_RULE_ID = "albany:wolf_saved_timber_quick_resupply";
 const WAGON_SERVICE_RULE_ID = "albany:dawn_wagon_solo_packet_resupply";
+const LIVE_PACK_SERVICE_RULE_ID = "albany:wolf_live_pack_greenway_resupply";
 
 function moveToArea(session: OverworldSession, areaId: string): void {
   const route = session.view().areaExits.find((candidate) => candidate.destination.id === areaId);
@@ -66,6 +67,39 @@ function savedTimberReturnBeforeService(withQuestDecision = false): OverworldSes
   return session;
 }
 
+function livePackCompletion(): OverworldSession {
+  const session = new OverworldSession(WORLD);
+  const opening = session.view();
+  session.scoutPoi(opening.pois[0]!.id);
+  session.talkToCharacter(opening.characters[0]!.id);
+  session.chooseJourneyStory("albany:road_warden");
+  session.chooseJourneyStory("albany:source_rowan_civic_docket");
+
+  moveToArea(session, "albany_city__market");
+  session.scoutPoi(session.view().pois[0]!.id);
+  session.talkToCharacter("albany_city__market__contact");
+  session.exploreSite(session.view().sites[0]!.id);
+  moveToArea(session, "albany_city__transport_hub");
+  session.startQuest("wolf_winter");
+  session.completeQuest("wolf_winter", {
+    endingId: "ending_pack_diverted",
+    endingTitle: "The Pack Diverted Alive",
+    death: false,
+  });
+  return session;
+}
+
+function livePackReturnBeforeService(): OverworldSession {
+  const session = livePackCompletion();
+  session.chooseJourney("continue");
+  session.chooseJourneyStory("send_wagon_to_cade");
+  moveToArea(session, "albany_city__greenway");
+  expect(session.view().serviceOffers).toContainEqual(
+    expect.objectContaining({ id: LIVE_PACK_SERVICE_RULE_ID, minutes: 15 }),
+  );
+  return session;
+}
+
 describe("campaign service predecessor migration integrity", () => {
   it("migrates the immediate predecessor with replay-bound service evidence and branch proof", () => {
     const previous = savedTimberReturnBeforeService();
@@ -93,16 +127,42 @@ describe("campaign service predecessor migration integrity", () => {
     );
   });
 
-  it("rejects new dawn-service consumption relabeled as predecessor evidence", () => {
+  it("rejects new live-pack service consumption relabeled as predecessor evidence", () => {
     const forged = savedTimberReturnBeforeService();
-    moveToArea(forged, "albany_city__market");
-    expect(forged.view().serviceOffers.map((offer) => offer.id)).toContain(WAGON_SERVICE_RULE_ID);
     forged.resupplyAtTown();
     const predecessor = forged.snapshot();
+    const service = predecessor.journalEntries.find(
+      (entry) => entry.serviceRuleId === TIMBER_SERVICE_RULE_ID,
+    );
+    if (!service) throw new Error("expected saved-timber service evidence");
+    service.serviceRuleId = LIVE_PACK_SERVICE_RULE_ID;
     predecessor.worldHash = OVERWORLD_CAMPAIGN_SERVICE_WORLD_HASH;
 
     expect(() => OverworldSession.restore(WORLD, predecessor)).toThrow(
       /service evidence introduced by a later manifest/i,
+    );
+  });
+
+  it("rejects a current-only Wolf outcome relabeled as predecessor evidence", () => {
+    const predecessor = livePackReturnBeforeService().snapshot();
+    predecessor.worldHash = OVERWORLD_CAMPAIGN_SERVICE_WORLD_HASH;
+
+    expect(() => OverworldSession.restore(WORLD, predecessor)).toThrow(
+      /Wolf-Winter quest outcome introduced by a later manifest/i,
+    );
+  });
+
+  it("rejects a current-only Wolf outcome relabeled through an older trusted era", () => {
+    const predecessor = livePackCompletion().snapshot();
+    predecessor.worldHash = OVERWORLD_OPENING_LEAD_SOURCE_WORLD_HASH;
+    const completion = predecessor.journalEntries.find(
+      (entry) => entry.id === "quest_done:wolf_winter",
+    );
+    if (!completion) throw new Error("expected Wolf-Winter completion journal");
+    delete completion.questCompletionBoundary;
+
+    expect(() => OverworldSession.restore(WORLD, predecessor)).toThrow(
+      /Wolf-Winter quest outcome introduced by a later manifest/i,
     );
   });
 

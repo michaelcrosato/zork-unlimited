@@ -768,6 +768,31 @@ export function validateRpg(pack: RpgPack, opts: ValidateRpgOptions = {}): Valid
       err("BAD_HP", `meta.vars_init.${HP_VAR} must start positive.`, ["meta:vars_init"]),
     );
 
+  // ── Visible pressure tracks ─────────────────────────────────────────────────
+  // A track is a read-only semantic projection over one ordinary var. Require
+  // that source to exist and that the fresh value lies inside the authored
+  // threshold domain; runtime effects remain the generic, deterministic var DSL.
+  for (const track of pack.pressure_tracks ?? []) {
+    const initial = vi[track.var];
+    if (initial === undefined) {
+      findings.push(
+        err(
+          "PRESSURE_VAR_UNDECLARED",
+          `pressure track "${track.id}" reads var "${track.var}", which is not declared in meta.vars_init.`,
+          [`pressure:${track.id}`, `var:${track.var}`],
+        ),
+      );
+    } else if (initial < track.bands[0]!.min) {
+      findings.push(
+        err(
+          "PRESSURE_INITIAL_BELOW_MIN",
+          `pressure track "${track.id}" starts at ${initial}, below its first band minimum ${track.bands[0]!.min}.`,
+          [`pressure:${track.id}`, `var:${track.var}`],
+        ),
+      );
+    }
+  }
+
   // Best reachable value of a stat/skill = init + every positive inc_var that
   // targets it, across all reachable effect sources (room on_enter, object
   // interactions, NPC dialogue, combat on_defeat, and skill-check branches). This

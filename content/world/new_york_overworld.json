@@ -419,6 +419,23 @@
   },
   "campaign_service_rules": [
     {
+      "id": "albany:wolf_live_pack_greenway_resupply",
+      "home": "albany_city",
+      "area": "albany_city__greenway",
+      "action": "resupply",
+      "title": "Claim Emery's Nonlethal Response Cache",
+      "summary": "Because you returned a living corridor pack to the high wood while keeping Cade's herd whole, Emery Sloane releases a one-time Greenway cache of food, lamp oil, and wildlife flares for your next road.",
+      "provider_character_id": "albany_city__greenway__contact",
+      "minutes": 15,
+      "requires_all_world_facts": [
+        "fact:wolf_winter_pack_diverted_alive",
+        "fact:wolf_winter_cattle_whole"
+      ],
+      "forbids_any_world_facts": [
+        "fact:wolf_winter_cattle_scattered"
+      ]
+    },
+    {
       "id": "albany:wolf_saved_timber_quick_resupply",
       "home": "albany_city",
       "area": "albany_city__transport_hub",
@@ -23861,6 +23878,30 @@
       "campaign_npc_id": "albany:emery_sloane",
       "variants": [
         {
+          "id": "wolf_pack_diverted_after_blood",
+          "after_relationship_memories": [
+            "albany:memory_emery_wolf_pack_diverted_after_blood"
+          ],
+          "summary": "Emery has Cade's exact mixed-line tally: the yearling died at the breach, two wolves returned alive to the high wood, and two cattle remain missing down the lower pasture.",
+          "agenda": "Emery will not call the result clean or useless; recovering the missing cattle and watching the two surviving wolves now outrank either reward or reprisal."
+        },
+        {
+          "id": "wolf_pack_diverted_alive",
+          "after_relationship_memories": [
+            "albany:memory_emery_wolf_pack_diverted_alive"
+          ],
+          "summary": "Emery has Cade's whole-herd tally beside the unbloodied relief report and remembers that you returned the living pack to the high-wood corridor.",
+          "agenda": "Emery will release one Greenway nonlethal-response cache, then wants the pack's new range watched without turning the successful diversion into an excuse for another hunt."
+        },
+        {
+          "id": "wolf_pack_diverted_with_loss",
+          "after_relationship_memories": [
+            "albany:memory_emery_wolf_pack_diverted_with_loss"
+          ],
+          "summary": "Emery remembers that you spared the pack but returned with Cade's honest count of two cattle scattered after the herd broke.",
+          "agenda": "Emery accepts the nonlethal result without calling it clean; finding the missing cattle and tracking the displaced pack now outrank any reward."
+        },
+        {
           "id": "witnessed_independent_bond",
           "after_relationship_memories": [
             "albany:memory_emery_witnessed_independent_bond"
@@ -47074,6 +47115,12 @@
             "target_var": "defense"
           },
           {
+            "id": "import:wolf_winter_lure_fieldcraft",
+            "type": "skill_rank_to_var",
+            "skill_id": "skill:fieldcraft",
+            "target_var": "fieldcraft"
+          },
+          {
             "id": "import:wolf_winter_market_testimony",
             "type": "knowledge_to_flag",
             "knowledge_id": "albany:knowledge_wolf_market_testimony",
@@ -47088,6 +47135,136 @@
         ]
       },
       "campaign_exports": [
+        {
+          "ending_id": "ending_pack_diverted_after_blood",
+          "ending_title": "The Pack Broken After Blood",
+          "effects": [
+            {
+              "type": "remember_relationship",
+              "npc_id": "npc:old_cade",
+              "memory_id": "memory:wolf_winter_mixed_line_after_blood",
+              "trust_at_least": 7,
+              "regard_at_least": 7,
+              "owes_player_at_least": 0
+            },
+            {
+              "type": "remember_relationship",
+              "npc_id": "albany:emery_sloane",
+              "memory_id": "albany:memory_emery_wolf_pack_diverted_after_blood",
+              "trust_at_least": 4,
+              "regard_at_least": 5,
+              "owes_player_at_least": 0
+            },
+            {
+              "type": "set_world_fact",
+              "fact_id": "fact:wolf_winter_byre_held"
+            },
+            {
+              "type": "set_world_fact",
+              "fact_id": "fact:wolf_winter_outer_paling_broken"
+            },
+            {
+              "type": "set_world_fact",
+              "fact_id": "fact:wolf_winter_yearling_killed"
+            },
+            {
+              "type": "set_world_fact",
+              "fact_id": "fact:wolf_winter_two_wolves_diverted_alive"
+            },
+            {
+              "type": "set_world_fact",
+              "fact_id": "fact:wolf_winter_winter_feed_spent"
+            },
+            {
+              "type": "set_world_fact",
+              "fact_id": "fact:wolf_winter_cattle_scattered"
+            }
+          ]
+        },
+        {
+          "ending_id": "ending_pack_diverted_cattle_scattered",
+          "ending_title": "The Pack Diverted, Cattle Scattered",
+          "effects": [
+            {
+              "type": "remember_relationship",
+              "npc_id": "npc:old_cade",
+              "memory_id": "memory:wolf_winter_cattle_scattered",
+              "trust_at_least": 5,
+              "regard_at_least": 5,
+              "owes_player_at_least": 0
+            },
+            {
+              "type": "remember_relationship",
+              "npc_id": "albany:emery_sloane",
+              "memory_id": "albany:memory_emery_wolf_pack_diverted_with_loss",
+              "trust_at_least": 2,
+              "regard_at_least": 3,
+              "owes_player_at_least": 0
+            },
+            {
+              "type": "set_world_fact",
+              "fact_id": "fact:wolf_winter_byre_held"
+            },
+            {
+              "type": "set_world_fact",
+              "fact_id": "fact:wolf_winter_outer_paling_broken"
+            },
+            {
+              "type": "set_world_fact",
+              "fact_id": "fact:wolf_winter_pack_diverted_alive"
+            },
+            {
+              "type": "set_world_fact",
+              "fact_id": "fact:wolf_winter_winter_feed_spent"
+            },
+            {
+              "type": "set_world_fact",
+              "fact_id": "fact:wolf_winter_cattle_scattered"
+            }
+          ]
+        },
+        {
+          "ending_id": "ending_pack_diverted",
+          "ending_title": "The Pack Diverted Alive",
+          "effects": [
+            {
+              "type": "remember_relationship",
+              "npc_id": "npc:old_cade",
+              "memory_id": "memory:wolf_winter_pack_diverted_alive",
+              "trust_at_least": 12,
+              "regard_at_least": 12,
+              "owes_player_at_least": 1
+            },
+            {
+              "type": "remember_relationship",
+              "npc_id": "albany:emery_sloane",
+              "memory_id": "albany:memory_emery_wolf_pack_diverted_alive",
+              "trust_at_least": 6,
+              "regard_at_least": 8,
+              "owes_player_at_least": 1
+            },
+            {
+              "type": "set_world_fact",
+              "fact_id": "fact:wolf_winter_byre_held"
+            },
+            {
+              "type": "set_world_fact",
+              "fact_id": "fact:wolf_winter_outer_paling_broken"
+            },
+            {
+              "type": "set_world_fact",
+              "fact_id": "fact:wolf_winter_pack_diverted_alive"
+            },
+            {
+              "type": "set_world_fact",
+              "fact_id": "fact:wolf_winter_winter_feed_spent"
+            },
+            {
+              "type": "set_world_fact",
+              "fact_id": "fact:wolf_winter_cattle_whole"
+            }
+          ]
+        },
         {
           "ending_id": "ending_held_gate_barred",
           "ending_title": "The Byre Held, Inner Gate Barred",

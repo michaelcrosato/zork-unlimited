@@ -1,76 +1,62 @@
 # Current Plan
 
-Token-small AFK-loop handoff. The durable milestone and evidence rules now live
-in [`STARTING_SLICE.md`](STARTING_SLICE.md); do not replace that contract during
-an ultraplan.
+Token-small AFK-loop handoff. The durable milestone and evidence rules live in
+[`STARTING_SLICE.md`](STARTING_SLICE.md); do not replace that contract during an
+ultraplan.
 
-## Cycle: 2026-07-14 — Albany Sources and Preparation
+## Cycle: 2026-07-14 — Wolf Strategy and Visible Pressure
 
 ## Synthesis
 
-The first authored Albany fork is real. Rowan now offers four complete,
-permanent registration profiles through a durable journal-backed choice. The
-selected package survives save/restore, changes Rowan and its named sponsor's
-later response, and crosses the private overworld-to-quest boundary. Refusing
-formal affiliation is itself a persistent profile with a public-record
-complication, not an unchanged retry.
+Wolf-Winter no longer requires three kills. Before entering the breach, Cade
+explains his plan for free and offers a separate irreversible commitment of one
+finite feed sack. A clean three-cast route leaves all wolves alive and the herd
+whole; a fouled first cast cannot be retried and instead opens a resource-cost
+noncombat recovery or a bounded one-fight hybrid. The ordinary combat route
+remains viable.
 
-`SS-F01-character-background` is the only counted fork. A paired same-roll proof
-shows why: the Road-Warden enters Wolf-Winter at DEF 4 and braces the broken
-paling on a roll of 7; the Ledger Advocate enters at the default DEF 3, splits
-the rail, and receives a different recovery action. Direct/public starts remain
-exact pack defaults. This is delayed mechanical causality, not just profile
-copy.
+The reusable `pressure_tracks` primitive projects cattle alarm through full and
+compact MCP plus the browser. Its thresholds change cattle survival, ending
+identity, Cade and Emery memories, world facts, and the later Greenway service.
+Same-origin paired runs carry the strategy through RPG save/replay, the quest
+foldback, truthful Albany return, overworld restore, and service consumption.
 
-The other three concepts are still incomplete as builds. Their skills,
-equipment, promises, and relationships persist, but Wolf-Winter does not yet
-consume them mechanically. Memory-conditioned contact variants currently alter
-responses, not prices, availability, preparation, or return services. Albany's
-remaining discovery is still FIFO, and no preparation, oath, ally, route, or
-return row has earned causal-matrix credit.
-
-The trusted import/export foundation is sufficient for the next work. Keep HP
-imports deferred while `combat_guaranteed` depends on the 30-HP proof, and never
-alias Albany equipment to the steading's earned brace-stake. Save integrity is
-structural and replayable, not cryptographic authentication.
+`SS-F09-wolf-strategy` is therefore the fifth counted fork, alongside F01, F03,
+F11, and F12. This proves combat and fully noncombat resolution plus bounded
+hybrid recovery. It does not yet prove the full drive/evacuate or
+fortify/outlast families, broad preparation balance, ally agency, or the whole
+greater-than-BG3 depth contract.
 
 ## Chosen Move
 
-Author the first Albany source-and-preparation chain. It should turn the three
-currently cosmetic counter-profiles into viable approaches without making
-background a class lock or adding another town.
+Build `SS-F05-preparation-profile` as Albany's first reusable preparation
+catalog. Give the three currently under-consumed profiles distinct, optional
+ways to alter Wolf-Winter without turning background into a class lock.
 
-- Keep all work inside Albany, Wolf-Winter, nearby travel, and the return.
-- Replace the FIFO Wolf lead with a bounded choice among named Albany sources;
-  each source must trade time, evidence, relationship, money, or relief capacity.
-- Give at least two of Ledger Advocate, Ironhands Repairer, and Unaffiliated
-  Courier distinct Wolf-Winter consumers. Prefer different solution families or
-  recoveries over another shared numeric defence bonus.
-- Let every background pursue more than one preparation route. Relationships may
-  change terms or access, but must not silently dictate the build.
-- Make one sponsor memory change an actual offer, cost, availability, or
-  preparation outcome; changed dialogue alone earns no new fork.
-- Give imported Albany gear or evidence an origin-honest quest-local identity
-  and visible consumption. Do not relabel Cade's timber or earned tools.
-- Preserve default/direct victory and at least one failure-forward route for an
-  unprepared or mismatched profile.
-- Keep HP import deferred until wounded-character recovery preserves the combat
-  guarantee.
-- Do not count planned matrix rows as depth until paired counterfactual tests
-  prove their delayed mechanical consumers.
+- Keep every choice inside Albany, the hill approach, Wolf-Winter, and its
+  truthful return.
+- Author at least three mutually competing preparation profiles with visible
+  time, money, relief-capacity, or relationship costs.
+- Give Ledger Advocate, Ironhands Repairer, and Unaffiliated Courier distinct
+  consumers in different Wolf encounters, strategies, or recoveries; avoid a
+  shared numeric-stat bonus.
+- Let every background reach more than one profile and preserve an
+  import-independent direct victory.
+- Prefer preparation that advances the missing fortify/outlast or
+  drive/evacuate family over another combat modifier.
+- Make refusal, shortage, or mismatch create a visible complication or recovery,
+  never an identical retry or dead end.
+- Keep HP import deferred while the authored combat guarantee depends on the
+  30-HP floor, and do not relabel Albany equipment as Cade's earned timber.
 
-## Acceptance for the next implementation increment
+## Acceptance for the next increment
 
-1. The player chooses a Wolf lead or preparation source in an authored scene
-   with truthful, visible cost and irreversible state.
-2. At least two currently unconsumed profiles gain distinct delayed mechanical
-   consumers in Wolf-Winter or its approach; paired counterfactuals isolate each
-   cause under otherwise equal state and rolls.
-3. One named sponsor relationship changes service terms, access, or outcome, and
-   save/restore reproduces both sides without exposing hidden variants.
-4. No profile dominates all reachable preparation or Wolf strategies; a
-   cross-profile alternative and default/direct victory remain proven.
-5. Failed, refused, or unaffordable preparation leaves a visible complication or
-   recovery path, never an unchanged retry or dead end.
-6. Only proven rows are promoted in the causal matrix. Crawl gates, a fresh pure
-   exit, full UI/MCP parity, save forgery checks, and `npm run health` stay green.
+1. One visible Albany scene commits a finite preparation budget before departure.
+2. Three materially different profiles alter later legal actions, pressure,
+   encounter structure, or failure recovery under otherwise equal state.
+3. Paired deterministic tests isolate each claimed consumer and prove that no
+   single profile dominates every reachable Wolf strategy.
+4. Full/direct defaults, save integrity, compact/full/UI parity, and the
+   <=45-decision first-goal cap remain intact.
+5. Only proven rows advance in the causal matrix; pre/post crawls, one fresh pure
+   exit, and `npm run health` remain green.

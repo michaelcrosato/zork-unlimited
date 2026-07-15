@@ -178,7 +178,13 @@ const BREAKING_WEIR_OUTCOME_BY_ID: ReadonlyMap<string, BreakingWeirCampaignOutco
     Object.values(BREAKING_WEIR_CAMPAIGN_OUTCOMES).map((outcome) => [outcome.endingId, outcome]),
   );
 
-export type WolfWinterCampaignOutcome = "gate_barred" | "timber_saved" | "held";
+export type WolfWinterCampaignOutcome =
+  | "pack_diverted"
+  | "pack_diverted_cattle_scattered"
+  | "pack_diverted_after_blood"
+  | "gate_barred"
+  | "timber_saved"
+  | "held";
 
 export type WolfWinterCampaignOutcomeContext = Readonly<{
   id: WolfWinterCampaignOutcome;
@@ -187,6 +193,24 @@ export type WolfWinterCampaignOutcomeContext = Readonly<{
 }>;
 
 export const WOLF_WINTER_CAMPAIGN_OUTCOMES = Object.freeze({
+  ending_pack_diverted: Object.freeze({
+    id: "pack_diverted",
+    endingId: "ending_pack_diverted",
+    albanyReturnContext:
+      "Cade's cattle are whole and all three wolves remain alive in the high wood, but his finite winter feed is spent and the broken outer paling still leaves the herd exposed.",
+  }),
+  ending_pack_diverted_cattle_scattered: Object.freeze({
+    id: "pack_diverted_cattle_scattered",
+    endingId: "ending_pack_diverted_cattle_scattered",
+    albanyReturnContext:
+      "Most of Cade's herd is safe and all three wolves remain alive in the high wood, but two cattle are still missing down the lower pasture, his finite winter feed is spent, and the outer paling remains broken.",
+  }),
+  ending_pack_diverted_after_blood: Object.freeze({
+    id: "pack_diverted_after_blood",
+    endingId: "ending_pack_diverted_after_blood",
+    albanyReturnContext:
+      "The yearling is dead, the flank wolf and grey leader remain alive in the high wood, and most of Cade's herd is safe; two cattle are still missing down the lower pasture, his winter feed is spent, and the outer paling remains broken.",
+  }),
   ending_held_gate_barred: Object.freeze({
     id: "gate_barred",
     endingId: "ending_held_gate_barred",
@@ -212,6 +236,24 @@ const WOLF_OUTCOME_BY_ID: ReadonlyMap<string, WolfWinterCampaignOutcomeContext> 
 );
 
 const ALBANY_DAWN_DISPATCH_CONSEQUENCES = Object.freeze({
+  pack_diverted: Object.freeze({
+    send_wagon_to_cade:
+      "The wagon replaces the broken outer paling while Cade keeps the whole herd in; the diverted pack remains alive in the high wood. You take Hedrick's packet north alone.",
+    send_wardens_north:
+      "The wagon follows Hedrick's report; Cade watches the whole herd behind the broken outer line with no winter feed left, while the diverted pack remains alive in the high wood.",
+  }),
+  pack_diverted_cattle_scattered: Object.freeze({
+    send_wagon_to_cade:
+      "The wagon returns to repair Cade's broken outer line and help search the lower pasture; two cattle are still missing when you take Hedrick's packet north alone.",
+    send_wardens_north:
+      "The wagon follows Hedrick's report; Cade remains with a broken outer line and two cattle still missing down the lower pasture, while the diverted pack remains alive in the high wood.",
+  }),
+  pack_diverted_after_blood: Object.freeze({
+    send_wagon_to_cade:
+      "The wagon returns to repair Cade's broken outer line and help search the lower pasture; the yearling remains dead, the other two wolves remain alive, and two cattle are still missing when you take Hedrick's packet north alone.",
+    send_wardens_north:
+      "The wagon follows Hedrick's report; Cade remains with a broken outer line and two cattle still missing down the lower pasture; the yearling is dead and the other two wolves remain alive in the high wood.",
+  }),
   gate_barred: Object.freeze({
     send_wagon_to_cade:
       "The wagon replaces the broken outer paling; the timber at the inner gate stays as Cade's last bar. You take Hedrick's packet north alone.",

@@ -140,15 +140,13 @@ const LIVENESS_SKIP: ReadonlySet<RpgAction["type"]> = new Set([
 ]);
 const explore = (index: RpgIndex, action: RpgAction): boolean =>
   isAuthoredInspectAction(index, action) || !LIVENESS_SKIP.has(action.type);
-// The route-rich Wolf-Winter graph exhausts at 670,963 states under this policy
-// (measured 2026-07-11). The 800k ceiling leaves bounded headroom for that verified graph
+// The route-rich Wolf-Winter graph exhausts at 630,199 states under this policy
+// (measured 2026-07-14). The 800k ceiling leaves bounded headroom for that verified graph
 // while preserving a loud cap-out rather than truncating a future blowup.
 const MAX_STATES = 800_000;
-// Generous per-test budget. The 670,963-state Wolf-Winter graph took ~103s isolated after
-// native success-path comparisons; interruptible dialogue (f23c8a09) then made room
-// actions legal beside topics, multiplying edges per dialogue state (~2x wall time
-// locally), and sibling test files competing for shared CI vCPUs stretch exhaustive work
-// ~3x further. This headroom absorbs that variance without loosening correctness:
+// Generous per-test budget. The final-hash 630,199-state callback-free census took ~114s;
+// observation comparisons and sibling files competing for shared CI vCPUs add substantial
+// overhead. This headroom absorbs that variance without loosening correctness:
 // MAX_STATES, not the clock, bounds the work, so a genuine graph blowup still fails
 // loudly. (Same rationale as vitest.config.ts's testTimeout.)
 const TEST_TIMEOUT_MS = 900_000;
@@ -328,6 +326,18 @@ function relabelObservation(
       reason: action.reason,
     })),
     inventory: o.inventory.map(mapId),
+    ...(o.pressure_tracks
+      ? {
+          pressure_tracks: o.pressure_tracks.map((track) => ({
+            id: mapId(track.id),
+            title: track.title,
+            var: mapId(track.var),
+            value: track.value,
+            band: { ...track.band },
+            next: track.next === null ? null : { ...track.next },
+          })),
+        }
+      : {}),
     state: {
       flags: o.state.flags.map(mapId),
       // Var keys: `score`/`hp`/`attack`/`defense` are relabel fixed points (never in the
@@ -389,6 +399,7 @@ function canonical(o: RpgObservation): RpgObservation {
     visible_objects: [...o.visible_objects].sort(byId),
     npcs_present: [...o.npcs_present].sort(byId),
     enemies_present: [...o.enemies_present].sort(byId),
+    ...(o.pressure_tracks ? { pressure_tracks: [...o.pressure_tracks].sort(byId) } : {}),
     inventory: [...o.inventory].sort(),
     state: { ...o.state, flags: [...o.state.flags].sort() },
     available_actions: [...o.available_actions].sort(byId),

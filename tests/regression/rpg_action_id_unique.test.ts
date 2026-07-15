@@ -89,8 +89,8 @@ const packFiles = readdirSync(PACK_DIR)
   .filter((f) => f.endsWith(".yaml"))
   .sort();
 
-// The route-rich Wolf-Winter graph exhausts at 665,101 states under this
-// liveness policy (measured 2026-07-11). Keep the same finite headroom ratio above that
+// The route-rich Wolf-Winter graph exhausts at 630,199 states under this
+// liveness policy (measured 2026-07-14). Keep the same finite headroom ratio above that
 // verified witness while retaining a loud cap-out for a future combinatorial regression.
 const MAX_STATES = 800_000;
 
@@ -247,9 +247,8 @@ describe("bug_0152 — every reachable action menu of every RPG pack has unique 
       expect(statesChecked).toBeGreaterThan(0);
       expect(actionsSeen).toBeGreaterThan(statesChecked); // every state offers ≥1 action
       expect(collisions).toEqual([]);
-      // The exact 665,101-state Wolf-Winter graph took 178s in the exhaustive-suite
-      // contention run before interruptible dialogue (f23c8a09) multiplied edges per
-      // dialogue state (~2x wall time locally; shared CI runners need ~3x local).
+      // The final-hash 630,199-state callback-free census took 114s; per-state collision
+      // checks and shared CI contention add material wall time.
       // Wall-clock headroom does not change the bounded state proof.
     }, 720_000);
   }

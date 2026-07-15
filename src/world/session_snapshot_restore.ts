@@ -108,13 +108,20 @@ export const OVERWORLD_CAMPAIGN_EXPORTS_MIGRATION_TARGET_WORLD_HASH =
 // Updated whenever the trusted manifest changes. Prior hashes are accepted only
 // when they migrate directly into this exact manifest revision.
 export const OVERWORLD_CAMPAIGN_SERVICE_WORLD_HASH =
-  "5fa4cea45691beef3a93952a7f890d740f428cc127ff37202d46020dca2534c6";
+  "2dbc97e2de8063be7b3a49fe3cb9108e8f80270d7d118efd781381659dba97c4";
 const OVERWORLD_CAMPAIGN_SERVICE_WORLD_RULE_IDS: ReadonlySet<string> = new Set([
   "albany:wolf_saved_timber_quick_resupply",
   "albany:wolf_barred_gate_quick_rest",
+  "albany:dawn_wagon_solo_packet_resupply",
+  "albany:dawn_wardens_greenway_rest",
+]);
+const OVERWORLD_TRUSTED_PREDECESSOR_WOLF_OUTCOME_IDS: ReadonlySet<string> = new Set([
+  "ending_held_gate_barred",
+  "ending_held_timber_saved",
+  "ending_held",
 ]);
 export const OVERWORLD_CAMPAIGN_SERVICE_MIGRATION_TARGET_WORLD_HASH =
-  "2dbc97e2de8063be7b3a49fe3cb9108e8f80270d7d118efd781381659dba97c4";
+  "742aa205a254b6f4382749fb63742caf1606024a1f6c044c2f433fda8dac6090";
 /** @deprecated Lead-source target name retained as the current-target alias. */
 export const OVERWORLD_OPENING_LEAD_SOURCE_MIGRATION_TARGET_WORLD_HASH =
   OVERWORLD_CAMPAIGN_SERVICE_MIGRATION_TARGET_WORLD_HASH;
@@ -793,6 +800,17 @@ export function planOverworldSessionSnapshotRestore(args: {
     if (!questOutcomeIds.has(questId)) {
       throw new Error(`Overworld session snapshot completed quest "${questId}" has no outcome.`);
     }
+  }
+  if (
+    migrationEra !== null &&
+    [...questOutcomeIds].some(
+      ([questId, endingId]) =>
+        questId === "wolf_winter" && !OVERWORLD_TRUSTED_PREDECESSOR_WOLF_OUTCOME_IDS.has(endingId),
+    )
+  ) {
+    throw new Error(
+      "Trusted predecessor snapshot has a Wolf-Winter quest outcome introduced by a later manifest.",
+    );
   }
   assertJourneyCampaignGoalCompletionProof({
     journey: snapshot.journey,

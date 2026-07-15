@@ -94,13 +94,18 @@ Wolf-Winter is the strongest existing gameplay proof:
 
 - preparation affects three linked fights;
 - a failed rail check creates a salvage route;
+- Cade's finite feed now supports a fully noncombat three-encounter route and a
+  bounded one-fight hybrid recovery;
+- cattle alarm is a visible three-band pressure track whose threshold changes
+  cattle survival, ending identity, Albany memory, and a later service;
 - a risky saved-brace choice can beat or lose to the safe pin under different
   fixed rolls;
 - saved wood creates an equal-score post-hunt tradeoff whose world fact now
   changes a one-time Albany service;
 - Albany's dawn dispatch creates a mutually exclusive return fork between
   Jamie's Market resupply credit and Emery's Greenway rest claim;
-- three stable victory identities reach Albany's campaign presentation.
+- six truthful non-death victory identities reach Albany's campaign
+  presentation.
 
 Relevant guards include
 [`wolf_winter_cross_encounter_agency.test.ts`](../tests/regression/wolf_winter_cross_encounter_agency.test.ts)
@@ -117,14 +122,15 @@ The current slice does **not** yet meet the full contract:
   the Road-Warden also retains its fieldcraft import; Ironhands Repairer and
   Unaffiliated Courier still need distinct preparation consumers before concept
   balance is proven;
-- Wolf-Winter's saved-wood facts now change one Albany Station Quarter service,
-  but its other Old Cade memories and world facts do not yet change an
-  opportunity or NPC action;
-- fieldcraft and two certified knowledge reports now cross the trusted inbound
-  boundary; health is deferred to protect the combat guarantee, and Albany
-  equipment still needs an origin-honest quest-local representation before it
-  can alter play;
-- Wolf-Winter's successful routes still require defeating the same three wolves;
+- Wolf-Winter's saved-wood and clean living-pack facts now change Albany
+  services, but its remaining Cade memories and loss facts still lack later
+  opportunity consumers;
+- fieldcraft now crosses the trusted boundary into both defence and the visible
+  lure check, while two certified reports alter combat routes; health remains
+  deferred to protect the combat guarantee, and Albany equipment still needs an
+  origin-honest quest-local representation before it can alter play;
+- prepared combat, fully noncombat diversion, and a bounded mixed recovery now
+  exist, but fortify/outlast and drive/evacuate families remain unimplemented;
 - two return decisions now drive replay-bound services through reusable world-fact
   and story-choice predicates, but the other return facts still lack mechanical
   NPC and opportunity consumers.
@@ -164,13 +170,13 @@ deterministic cloning/serialization, overworld snapshot v9 persistence, explicit
 v8 migration, full/UI read-only projection, bounded compact projection, and
 tamper guards. A generic, monotonic quest-export catalog applies relationship
 memories/floors and derives historical world facts from canonical outcome ids.
-Wolf-Winter's three successful endings create distinct Old Cade memories and
-byre/gate/timber facts; restore replays the character result, rejects forged
-outcome/journal/state combinations, and fences prior manifests to one exact
-migration target. Generic campaign service rules can now consume those trusted
-facts or canonical story choices at an authored town and area, project an
-optional same-district named provider, expose bounded one-time terms, and bind
-consumption to replayed journal evidence across save/restore.
+Wolf-Winter's six non-death endings create distinct Cade/Emery memories and
+byre/gate/timber/wolf/cattle facts; restore replays the character result,
+rejects forged outcome/journal/state combinations, and fences prior manifests
+to one exact migration target. Generic campaign service rules can now consume
+those trusted facts or canonical story choices at an authored town and area,
+project an optional same-district named provider, expose bounded one-time terms,
+and bind consumption to replayed journal evidence across save/restore.
 
 The trusted inbound boundary is also landed. Quest manifests declare strict,
 pack-validated import rules; only the private overworld bridge supplies detached
@@ -180,8 +186,9 @@ pack-default; and UI/MCP reset determinism is proven. Imported-only flags and
 items participate in source validation, every catalog retains an
 import-independent structural victory, and health imports are prohibited on a
 `combat_guaranteed` pack until an authored minimum/recovery contract exists.
-Wolf-Winter therefore maps `skill:fieldcraft` to its defence floor and the two
-exclusive Albany reports to authored quest-local flags. The tempting Albany-kit
+Wolf-Winter therefore maps `skill:fieldcraft` to its defence floor and its
+publicly visible lure check, and maps the two exclusive Albany reports to
+authored quest-local flags. The tempting Albany-kit
 → steading-brace alias remains rejected because it would lie about where saved
 timber came from.
 
@@ -243,18 +250,35 @@ paired runs visit all six Albany districts, use the same Wolf-Winter strategy
 and ending, and differ only at the dispatch. Proof lives in
 [`albany_return_counterfactual.test.ts`](../tests/starting_slice/albany_return_counterfactual.test.ts).
 
+The fifth authored increment removes the mandatory three-kill path. Cade gives
+a free explanation before a separate, explicit commitment of one finite
+winter-feed sack across the paling, loft, and outer scent gate. A reusable
+`pressure_tracks` authoring primitive projects the ordinary `cattle_alarm`
+variable as Steady, Restless, or
+Breaking in full MCP, compact MCP, and the browser. A clean route leaves every
+wolf alive and the herd whole. A failed first cast cannot repeat: spending a
+failed split rail preserves the noncombat route but loses two cattle, while
+fighting only the yearling creates a truthful mixed ending with the other two
+wolves alive and the same cattle loss. Each identity has distinct Cade/Emery
+memory and world facts; only the all-alive, whole-herd return unlocks Emery's
+one-time Greenway nonlethal-response cache. Same-character/source/seed paired
+proof, RPG save/replay, journey foldback, compact/full/UI parity, overworld
+restore, and service consumption live in
+[`wolf_strategy_return_e2e.test.ts`](../tests/starting_slice/wolf_strategy_return_e2e.test.ts).
+
 This proves `SS-F01-character-background`, `SS-F03-lead-source`,
-`SS-F11-saved-wood`, and `SS-F12-albany-return`: four of the twelve required
-material forks. It does not
+`SS-F09-wolf-strategy`, `SS-F11-saved-wood`, and `SS-F12-albany-return`: five of
+the twelve required material forks. It does not
 prove that all four concepts are mechanically balanced, that Albany preparation
-is broadly systemic, that combat can be avoided, or that other return facts
-change NPC availability and opportunities. Those remain the next work, not
-implied credit for the four proven counterfactuals.
+is broadly systemic, that all four target resolution families exist, or that
+other return facts change NPC availability and opportunities. Those remain the
+next work, not implied credit for the five proven counterfactuals.
 
 ## Required resolution families
 
-The four primary signatures diverge during Albany preparation, not at the last
-input:
+The four primary signatures must diverge well before the last input. The current
+combat and lure routes diverge at Cade; later Albany preparation must deepen
+that fork without turning background into a class lock:
 
 | Signature             | Method                                                      | Principal costs and risks                                         |
 | --------------------- | ----------------------------------------------------------- | ----------------------------------------------------------------- |
@@ -265,6 +289,10 @@ input:
 
 No preparation profile may dominate all four. Each family needs at least one
 authored failure-forward recovery and a distinct persistent Albany aftermath.
+`hunt_and_hold` and `lure_and_divert` now have end-to-end proof. The failed-lure
+one-fight recovery proves bounded hybrid grammar, but does not yet substitute
+for the full `drive_and_evacuate` family; `fortify_and_outlast` is also still
+planned.
 
 ## Depth Contract v1
 

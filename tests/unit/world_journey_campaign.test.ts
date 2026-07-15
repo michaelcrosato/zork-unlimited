@@ -57,6 +57,24 @@ import {
 const EXPECTED_CONSEQUENCES: Readonly<
   Record<WolfWinterCampaignOutcome, Record<AlbanyDawnDispatchChoiceId, string>>
 > = {
+  pack_diverted: {
+    send_wagon_to_cade:
+      "The wagon replaces the broken outer paling while Cade keeps the whole herd in; the diverted pack remains alive in the high wood. You take Hedrick's packet north alone. Jamie Tanner enters a one-time Market road-store credit for carrying Hedrick's packet alone: a 15-minute resupply whenever you claim it.",
+    send_wardens_north:
+      "The wagon follows Hedrick's report; Cade watches the whole herd behind the broken outer line with no winter feed left, while the diverted pack remains alive in the high wood. Emery Sloane sets aside a one-time Greenway watch-shelter claim for joining the wardens' northbound dispatch: a 15-minute rest whenever you claim it.",
+  },
+  pack_diverted_cattle_scattered: {
+    send_wagon_to_cade:
+      "The wagon returns to repair Cade's broken outer line and help search the lower pasture; two cattle are still missing when you take Hedrick's packet north alone. Jamie Tanner enters a one-time Market road-store credit for carrying Hedrick's packet alone: a 15-minute resupply whenever you claim it.",
+    send_wardens_north:
+      "The wagon follows Hedrick's report; Cade remains with a broken outer line and two cattle still missing down the lower pasture, while the diverted pack remains alive in the high wood. Emery Sloane sets aside a one-time Greenway watch-shelter claim for joining the wardens' northbound dispatch: a 15-minute rest whenever you claim it.",
+  },
+  pack_diverted_after_blood: {
+    send_wagon_to_cade:
+      "The wagon returns to repair Cade's broken outer line and help search the lower pasture; the yearling remains dead, the other two wolves remain alive, and two cattle are still missing when you take Hedrick's packet north alone. Jamie Tanner enters a one-time Market road-store credit for carrying Hedrick's packet alone: a 15-minute resupply whenever you claim it.",
+    send_wardens_north:
+      "The wagon follows Hedrick's report; Cade remains with a broken outer line and two cattle still missing down the lower pasture; the yearling is dead and the other two wolves remain alive in the high wood. Emery Sloane sets aside a one-time Greenway watch-shelter claim for joining the wardens' northbound dispatch: a 15-minute rest whenever you claim it.",
+  },
   gate_barred: {
     send_wagon_to_cade:
       "The wagon replaces the broken outer paling; the timber at the inner gate stays as Cade's last bar. You take Hedrick's packet north alone. Jamie Tanner enters a one-time Market road-store credit for carrying Hedrick's packet alone: a 15-minute resupply whenever you claim it.",
@@ -143,8 +161,23 @@ const COMPLETED_THROUGH_BREAKING_WEIR = new Set([
 ]);
 
 describe("journey campaign", () => {
-  it("maps the three stable Wolf-Winter victories to truthful, distinct Albany returns", () => {
+  it("maps the six supported Wolf-Winter victories to truthful, distinct Albany returns", () => {
     const expected = [
+      {
+        endingId: "ending_pack_diverted",
+        id: "pack_diverted",
+        phrase: "cattle are whole and all three wolves remain alive",
+      },
+      {
+        endingId: "ending_pack_diverted_cattle_scattered",
+        id: "pack_diverted_cattle_scattered",
+        phrase: "two cattle are still missing",
+      },
+      {
+        endingId: "ending_pack_diverted_after_blood",
+        id: "pack_diverted_after_blood",
+        phrase: "The yearling is dead",
+      },
       {
         endingId: "ending_held_gate_barred",
         id: "gate_barred",
@@ -169,7 +202,7 @@ describe("journey campaign", () => {
       expect(outcome?.albanyReturnContext).toContain(row.phrase);
       returnContexts.add(outcome!.albanyReturnContext);
     }
-    expect(returnContexts.size).toBe(3);
+    expect(returnContexts.size).toBe(6);
     expect(wolfWinterCampaignOutcome(new Map())).toBeNull();
     expect(wolfWinterCampaignOutcome(outcomeIds("ending_pulled_down"))).toBeNull();
     expect(() =>
@@ -179,6 +212,57 @@ describe("journey campaign", () => {
       /unsupported completion ending/,
     );
     expect(() => assertJourneyCampaignQuestOutcome("gallowmere", "ending_victory")).not.toThrow();
+  });
+
+  it("carries every pack-diversion outcome through continue without erasing cattle or wolf loss", () => {
+    const expected = [
+      {
+        endingId: "ending_pack_diverted",
+        completionTruth: "cattle are whole",
+        consequenceTruths: [/whole herd/i],
+        forbidden: /cattle (?:are )?still missing/i,
+      },
+      {
+        endingId: "ending_pack_diverted_cattle_scattered",
+        completionTruth: "two cattle are still missing",
+        consequenceTruths: [/two cattle (?:are )?still missing/i],
+        forbidden: /whole herd/i,
+      },
+      {
+        endingId: "ending_pack_diverted_after_blood",
+        completionTruth: "The yearling is dead",
+        consequenceTruths: [/yearling (?:is|remains) dead/i, /two cattle (?:are )?still missing/i],
+        forbidden: /whole herd|all three wolves remain alive/i,
+      },
+    ] as const;
+
+    for (const row of expected) {
+      const questOutcomeIds = outcomeIds(row.endingId);
+      expect(() => assertJourneyCampaignQuestOutcome("wolf_winter", row.endingId)).not.toThrow();
+
+      const awaiting = awaitingInitialGoalChoice();
+      const beforeContinue = journeyCampaignPresentationContext({
+        journey: awaiting,
+        questOutcomeIds,
+      });
+      expect(beforeContinue?.completionContext).toContain(row.completionTruth);
+      expect(beforeContinue?.completionContext).not.toMatch(row.forbidden);
+      expect(beforeContinue?.storyChoice).toBeNull();
+
+      const continued = chooseJourney(awaiting, "continue").state;
+      const afterContinue = journeyCampaignPresentationContext({
+        journey: continued,
+        questOutcomeIds,
+      });
+      expect(afterContinue?.storyChoice?.id).toBe(ALBANY_DAWN_DISPATCH_ID);
+      expect(afterContinue?.storyChoice?.options).toHaveLength(2);
+      for (const option of afterContinue?.storyChoice?.options ?? []) {
+        for (const truth of row.consequenceTruths) {
+          expect(option.consequence).toMatch(truth);
+        }
+        expect(option.consequence).not.toMatch(row.forbidden);
+      }
+    }
   });
 
   it("maps only the two current and one legacy Breaking-Weir victories to truthful Rome contexts", () => {
@@ -291,7 +375,7 @@ describe("journey campaign", () => {
     expect(journeyCampaignPresentationContext({ journey: activated, questOutcomeIds })).toBeNull();
   });
 
-  it("renders the full ending-sensitive 3x2 consequence matrix", () => {
+  it("renders the full ending-sensitive 6x2 consequence matrix", () => {
     for (const outcome of Object.values(WOLF_WINTER_CAMPAIGN_OUTCOMES)) {
       const choice = albanyDawnDispatchStoryChoice(outcome);
       expect(choice.options).toHaveLength(2);

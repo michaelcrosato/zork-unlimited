@@ -32,7 +32,10 @@ import {
   parseCampaignCharacterState,
   type CampaignCharacterState,
 } from "../../src/world/campaign_character_state.js";
-import { buildRpgObservation } from "../../src/rpg/observation.js";
+import {
+  buildRpgObservation,
+  type RpgObservation,
+} from "../../src/rpg/observation.js";
 import {
   classifyRpgJourneyDecision,
   excludedJourneyDecision,
@@ -67,6 +70,7 @@ export type View = {
   choices: { id: string; label: string }[];
   unavailableChoices: { id: string; label: string; reason: string }[];
   inventory: string[];
+  pressureTracks?: NonNullable<RpgObservation["pressure_tracks"]>;
   facts: string[];
   journal: string[];
   ended: boolean;
@@ -189,8 +193,10 @@ export class GameSession {
         reason: action.reason,
       })),
       inventory: o.inventory,
+      ...(o.pressure_tracks ? { pressureTracks: o.pressure_tracks } : {}),
       facts: [
         `HP ${o.stats.hp}  ATK ${o.stats.attack}  DEF ${o.stats.defense}`,
+        ...(o.pressure_tracks ?? []).map(pressureFact),
         ...o.enemies_present.map((e) => `foe: ${e.name} (HP ${e.hp})`),
         ...o.exits.map((e) => `exit: ${e.direction}`),
         ...o.blocked_exits.map((e) => `blocked: ${e.direction} — ${e.message}`),
@@ -261,6 +267,14 @@ export class GameSession {
 
 function signed(value: number): string {
   return value >= 0 ? `+${value}` : String(value);
+}
+
+function pressureFact(track: NonNullable<RpgObservation["pressure_tracks"]>[number]): string {
+  const next = track.next
+    ? `; next ${track.next.label} at ${track.next.min}`
+    : "; highest band";
+  const description = track.band.description ? ` — ${track.band.description}` : "";
+  return `pressure: ${track.title} — ${track.band.label} (${track.value}${next})${description}`;
 }
 
 function resourceHint(resources: { gains: string[]; costs: string[] } | undefined): string {
