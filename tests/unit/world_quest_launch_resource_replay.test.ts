@@ -36,6 +36,7 @@ function sessionAtWolf(): OverworldSession {
   session.chooseJourneyStory("albany:source_rowan_civic_docket");
   session.chooseJourneyStory("albany:prep_works_fortification");
   moveToArea(session, "albany_city__transport_hub");
+  session.chooseJourneyStory("albany:relief_resident_shelter");
   return session;
 }
 

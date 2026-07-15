@@ -44,6 +44,7 @@ function startAlbanyWolf(session: OverworldSession): void {
   moveToArea(session, "albany_city__market");
   session.scoutPoi("albany_city__market__poi");
   moveToArea(session, "albany_city__transport_hub");
+  session.chooseJourneyStory("albany:relief_resident_shelter");
   expect(session.view().quests.map((quest) => quest.id)).toContain("wolf_winter");
   session.startQuest("wolf_winter", "albany:wolf_approach_sheltered_stockway");
 }
@@ -63,6 +64,7 @@ function revealAlbanyWolfAtStation(session: OverworldSession): void {
   moveToArea(session, "albany_city__market");
   session.scoutPoi("albany_city__market__poi");
   moveToArea(session, "albany_city__transport_hub");
+  session.chooseJourneyStory("albany:relief_resident_shelter");
   expect(session.view().quests.map((quest) => quest.id)).toContain("wolf_winter");
 }
 

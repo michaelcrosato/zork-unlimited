@@ -29,6 +29,7 @@ const LEAD_SOURCE = openingLeadSource;
 const DEFAULT_SOURCE_ID = "albany:source_rowan_civic_docket";
 const DEFAULT_PREPARATION_ID = "albany:prep_works_fortification";
 const COUNTERFACTUAL_PREPARATION_ID = "albany:prep_relief_protocol";
+const RESIDENT_SHELTER_ALLOCATION_ID = "albany:relief_resident_shelter";
 const openingPreparation = WORLD.opening_preparation;
 if (!openingPreparation) throw new Error("The starting slice requires opening preparation.");
 const PREPARATION = openingPreparation;
@@ -85,6 +86,7 @@ function startedWolfSession(profileId = "albany:unaffiliated_courier"): Overworl
   const wolf = WORLD.quests.find((quest) => quest.id === "wolf_winter");
   if (!wolf) throw new Error("expected Wolf-Winter in the starting world");
   moveSessionToArea(session, wolf.area);
+  session.chooseJourneyStory(RESIDENT_SHELTER_ALLOCATION_ID);
   session.startQuest(wolf.id, "albany:wolf_approach_sheltered_stockway");
   return session;
 }
@@ -114,6 +116,7 @@ function preRegistrationUnrelatedQuestSnapshot(): ReturnType<OverworldSession["s
   delete predecessorWorld.opening_registration;
   delete predecessorWorld.opening_lead_source;
   delete predecessorWorld.opening_preparation;
+  delete predecessorWorld.opening_relief_allocation;
   predecessorWorld.campaign_service_rules = predecessorWorld.campaign_service_rules?.filter(
     (rule) =>
       !(rule.requires_all_story_choices ?? []).some(
@@ -238,6 +241,11 @@ function launchRegisteredWolf(profileId: string): {
     session_id: restored.session_id,
     area_route_id: route.id,
   });
+  api.choose_overworld_session_story({
+    ...FULL_OVERWORLD,
+    session_id: restored.session_id,
+    choice: RESIDENT_SHELTER_ALLOCATION_ID,
+  });
   let haydenJournalId: string | null = null;
   if (profileId === "albany:road_warden") {
     const hayden = api.talk_overworld_session_contact({
@@ -334,6 +342,12 @@ describe("SS-F01 — Albany character background counterfactual", () => {
           ),
       );
       if (!sponsorVariant) throw new Error(`${profile.id} sponsor must consume its memory`);
+      moveSessionToArea(restored, WORLD.opening_relief_allocation!.area);
+      restored.chooseJourneyStory(
+        sponsorRelationship.npcId === "albany:jamie_tanner"
+          ? "albany:relief_cade_fodder"
+          : RESIDENT_SHELTER_ALLOCATION_ID,
+      );
       moveSessionToArea(restored, sponsor.area);
       const sponsorTalk = restored.talkToCharacter(sponsor.id);
       expect(sponsorTalk.entry.id).toBe(
@@ -389,6 +403,7 @@ describe("SS-F01 — Albany character background counterfactual", () => {
     expect(() => session.previewQuestStart(wolf.id)).toThrow(/preparation/i);
     session.chooseJourneyStory(DEFAULT_PREPARATION_ID);
     moveSessionToArea(session, wolf.area);
+    session.chooseJourneyStory(RESIDENT_SHELTER_ALLOCATION_ID);
     expect(session.previewQuestStart(wolf.id).id).toBe(wolf.id);
     expect(session.startQuest(wolf.id, "albany:wolf_approach_sheltered_stockway").id).toBe(wolf.id);
 
@@ -447,6 +462,9 @@ describe("SS-F01 — Albany character background counterfactual", () => {
     ]) {
       const opaqueWolfPredecessor = structuredClone(proofless);
       opaqueWolfPredecessor.worldHash = sourceWorldHash;
+      opaqueWolfPredecessor.journalEntries = opaqueWolfPredecessor.journalEntries.filter(
+        (entry) => !entry.kind.startsWith("relief_allocation"),
+      );
       expect(() => OverworldSession.restore(WORLD, opaqueWolfPredecessor)).toThrow(
         /opaque pre-registration quest progress without a replayable registration and lead-source path|quest-start proof evidence introduced by a later manifest/i,
       );
@@ -599,6 +617,7 @@ describe("SS-F01 — Albany character background counterfactual", () => {
       "import:wolf_winter_fieldcraft",
       "import:wolf_winter_lure_fieldcraft",
       "import:wolf_winter_relief_protocol",
+      "import:wolf_winter_relief_resident_shelter",
     ]);
     expect(warden.state.vars.fieldcraft).toBe(4);
     expect(advocate.state.vars.defense).toBe(3);
@@ -606,6 +625,7 @@ describe("SS-F01 — Albany character background counterfactual", () => {
       "import:wolf_winter_approach_sheltered_stockway",
       "import:wolf_winter_relief_mediation",
       "import:wolf_winter_relief_protocol",
+      "import:wolf_winter_relief_resident_shelter",
     ]);
 
     let wardenAtRail = act(act(warden.state, "use_sheltered_stockway_last_mile"), "go_north");

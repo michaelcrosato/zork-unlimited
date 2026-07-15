@@ -21,6 +21,7 @@ const WOLF = WORLD.quests.find((quest) => quest.id === "wolf_winter")!;
 
 const ACCEPT = "albany:ally_june_cattle_first";
 const SOLO = "albany:ally_travel_solo";
+const RESIDENT_SHELTER = "albany:relief_resident_shelter";
 const JUNE = "albany:june_pike";
 const PROMISE = "albany:promise_june_cattle_first";
 const STATION = "albany_city__transport_hub";
@@ -136,6 +137,7 @@ function wolfBoundary(allyOptionId: typeof ACCEPT | typeof SOLO): OverworldSessi
   if (!marketSite) throw new Error("Expected Jamie's Market discovery site.");
   session.exploreSite(marketSite.id);
   moveToArea(session, ALLY.area);
+  session.chooseJourneyStory(RESIDENT_SHELTER);
   session.talkToCharacter(ALLY.contact);
   session.chooseJourneyStory(allyOptionId);
   session.startQuest(WOLF.id, "albany:wolf_approach_sheltered_stockway");

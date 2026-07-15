@@ -20,6 +20,7 @@ import { GameSession } from "../../ui/src/engine.js";
 
 const ROOT = process.cwd();
 const SHELTERED_APPROACH_ID = "albany:wolf_approach_sheltered_stockway";
+const RESIDENT_SHELTER_ALLOCATION_ID = "albany:relief_resident_shelter";
 const WORLD = loadOverworldManifest(ROOT);
 const WOLF_SOURCE = readFileSync("content/rpg/quests/wolf_winter.yaml", "utf8");
 const WOLF_QUEST = WORLD.quests.find((quest) => quest.id === "wolf_winter");
@@ -51,6 +52,8 @@ function revealAlbanyWolf(session: OverworldSession) {
     .areaExits.find((candidate) => candidate.destination.id === quest.area);
   if (!route) throw new Error("Expected a route to the Albany Wolf-Winter lead.");
   session.moveArea(route.id);
+  expect(session.journey().storyChoice?.kind).toBe("relief_allocation");
+  session.chooseJourneyStory(RESIDENT_SHELTER_ALLOCATION_ID);
   return quest;
 }
 
@@ -130,6 +133,12 @@ function launchAlbanyWolf(
     session_id: overworldSessionId,
     area_route_id: questRoute.id,
   });
+  const allocated = api.choose_overworld_session_story({
+    ...full,
+    session_id: overworldSessionId,
+    choice: RESIDENT_SHELTER_ALLOCATION_ID,
+  });
+  expect(allocated.journey.storyChoice?.kind).not.toBe("relief_allocation");
   const launched = api.start_overworld_session_quest({
     ...full,
     ...view,
@@ -396,6 +405,7 @@ describe("trusted campaign-character quest launch bridge", () => {
     expect(fullSession.state.campaignImportReceipt?.applied_rules).toEqual([
       "import:wolf_winter_approach_sheltered_stockway",
       "import:wolf_winter_relief_mediation",
+      "import:wolf_winter_relief_resident_shelter",
       "import:wolf_winter_works_fortification",
     ]);
     expect(fullSession.state.flags.approach_sheltered_stockway).toBe(true);

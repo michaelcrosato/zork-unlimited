@@ -20,6 +20,7 @@ import {
   OVERWORLD_PRE_CAMPAIGN_EXPORTS_WORLD_HASH,
 } from "../../src/world/session_snapshot_restore.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
+import { exactF12World } from "./fixtures/historical_overworlds.js";
 
 const WORLD = loadOverworldManifest(process.cwd());
 const SCENE = WORLD.opening_lead_source;
@@ -31,6 +32,7 @@ const ROWAN_SOURCE = "albany:source_rowan_civic_docket";
 const JAMIE_SOURCE = "albany:source_jamie_market_testimony";
 const HAYDEN_SOURCE = "albany:source_hayden_frost_report";
 const DEFAULT_PREPARATION = "albany:prep_works_fortification";
+const NEUTRAL_RELIEF_ALLOCATION = "albany:relief_cade_fodder";
 const TARGET_QUEST = SCENE.target_quest;
 
 function timeLabel(minutes: number): string {
@@ -41,8 +43,8 @@ function timeLabel(minutes: number): string {
   return `Day ${String(day)}, ${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
 }
 
-function register(profileId = LEDGER_PROFILE): OverworldSession {
-  const session = new OverworldSession(WORLD);
+function register(profileId = LEDGER_PROFILE, world: typeof WORLD = WORLD): OverworldSession {
+  const session = new OverworldSession(world);
   const opening = session.view();
   const poi = opening.pois[0];
   const contact = opening.characters[0];
@@ -54,8 +56,12 @@ function register(profileId = LEDGER_PROFILE): OverworldSession {
   return session;
 }
 
-function selectSource(profileId = LEDGER_PROFILE, sourceId = JAMIE_SOURCE): OverworldSession {
-  const session = register(profileId);
+function selectSource(
+  profileId = LEDGER_PROFILE,
+  sourceId = JAMIE_SOURCE,
+  world: typeof WORLD = WORLD,
+): OverworldSession {
+  const session = register(profileId, world);
   session.chooseJourneyStory(sourceId);
   expect(session.journey().storyChoice?.kind).toBe("preparation");
   return session;
@@ -64,8 +70,9 @@ function selectSource(profileId = LEDGER_PROFILE, sourceId = JAMIE_SOURCE): Over
 function selectSourceAndPrepare(
   profileId = LEDGER_PROFILE,
   sourceId = JAMIE_SOURCE,
+  world: typeof WORLD = WORLD,
 ): OverworldSession {
-  const session = selectSource(profileId, sourceId);
+  const session = selectSource(profileId, sourceId, world);
   session.chooseJourneyStory(DEFAULT_PREPARATION);
   expect(session.journey().storyChoice).toBeNull();
   return session;
@@ -352,6 +359,8 @@ describe("opening lead-source snapshot integrity", () => {
     const session = selectSourceAndPrepare(LEDGER_PROFILE, ROWAN_SOURCE);
     moveToArea(session, "albany_city__market");
     moveToArea(session, "albany_city__transport_hub");
+    expect(session.journey().storyChoice).toMatchObject({ kind: "relief_allocation" });
+    session.chooseJourneyStory(NEUTRAL_RELIEF_ALLOCATION);
     session.startQuest(TARGET_QUEST, "albany:wolf_approach_sheltered_stockway");
 
     const forged = session.snapshot();
@@ -524,7 +533,7 @@ describe("opening lead-source snapshot integrity", () => {
   });
 
   it("rejects opaque pre-registration quest progress instead of loading a source deadlock", () => {
-    const predecessorWorld = structuredClone(WORLD);
+    const predecessorWorld = exactF12World(WORLD);
     delete predecessorWorld.opening_registration;
     delete predecessorWorld.opening_lead_source;
     delete predecessorWorld.opening_preparation;
@@ -639,7 +648,7 @@ describe("opening lead-source snapshot integrity", () => {
   });
 
   it("rejects opaque target-started predecessor progress instead of certifying hidden ancestry", () => {
-    const progressed = selectSourceAndPrepare(LEDGER_PROFILE, ROWAN_SOURCE);
+    const progressed = selectSourceAndPrepare(LEDGER_PROFILE, ROWAN_SOURCE, exactF12World(WORLD));
     moveToArea(progressed, "albany_city__market");
     moveToArea(progressed, "albany_city__transport_hub");
     progressed.startQuest(TARGET_QUEST, "albany:wolf_approach_sheltered_stockway");
@@ -683,7 +692,7 @@ describe("opening lead-source snapshot integrity", () => {
   });
 
   it("rejects proofless progressed saves and later source evidence relabeled as predecessor data", () => {
-    const progressed = selectSourceAndPrepare(LEDGER_PROFILE, ROWAN_SOURCE);
+    const progressed = selectSourceAndPrepare(LEDGER_PROFILE, ROWAN_SOURCE, exactF12World(WORLD));
     moveToArea(progressed, "albany_city__market");
     moveToArea(progressed, "albany_city__transport_hub");
     progressed.startQuest(TARGET_QUEST, "albany:wolf_approach_sheltered_stockway");

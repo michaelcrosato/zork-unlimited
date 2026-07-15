@@ -82,6 +82,9 @@ describe("Wolf-Winter dialogue surface", () => {
         "june_pike_present",
         "approach_exposed_ridge",
         "approach_sheltered_stockway",
+        "relief_cade_fodder_allocated",
+        "relief_resident_shelter_allocated",
+        "relief_mobile_reserve_allocated",
       ],
     });
     expect(report.ok).toBe(true);

@@ -143,8 +143,10 @@ The current slice does **not** yet meet the full contract:
   unproven;
 - Wolf-Winter now starts through one visible, replay-bound hill-route choice
   whose exact time, supplies, fatigue, Hayden memory, quest import, first-cast
-  risk, cattle pressure, ending, and return record diverge; the remaining two
-  Albany forks are still unproven;
+  risk, cattle pressure, ending, and return record diverge. A separate Station
+  dispatch now spends Albany's last relief wagon and crew on exactly one of
+  three named needs, changing the field or the truthful return; the relief oath
+  is the one remaining unproven Albany fork;
 - three early decisions now drive replay-bound services through reusable
   world-fact, story-choice, companion, and promise predicates, but the other
   return facts still lack mechanical NPC and opportunity consumers.
@@ -417,15 +419,59 @@ browser and CLI parity, and exact F11 migration. Proof lives in
 and
 [`hill_approach_migration_integrity.test.ts`](../tests/regression/hill_approach_migration_integrity.test.ts).
 
+The eleventh authored increment turns `SS-F06-relief-allocation` into a finite
+public-capacity decision rather than a decorative reserve meter. After
+preparation, reaching the Station Quarter auto-offers the dispatch before the
+optional June contact, so direct no-contact and explicit solo departures remain
+valid. Albany has one unassigned winter-relief wagon and crew. Every option
+costs five minutes, and every card names both what it protects and the two needs
+left exposed: send Emery's fodder and drovers to Cade's herd, keep Jamie's
+Market warm room staffed for vulnerable residents, or hold Hayden's wagon as a
+mobile failure crew. The selection is blocking, irreversible, and mutually
+exclusive; it records one allocation knowledge, one provider memory, one
+journey decision, and no invented stock meter.
+
+Each allocation has a different delayed consumer. Cade's pre-feed changes only
+a successful first lure cast from the exposed ridge: at seed 26 it suppresses
+one ordinary cattle-alarm step, reaching alarm 3 and the whole-herd ending where
+the identical resident allocation reaches alarm 4 and scatters two cattle. It
+does not create feed, a retry, or protection from a fouled cast or the sheltered
+route. The resident allocation adds no Wolf action; after a return carrying the
+trusted `fact:wolf_winter_byre_held` outcome, its exact story-choice proof opens
+one 15-minute Market fatigue recovery instead of the ordinary 240-minute rest.
+The mobile allocation imports one failure-crew flag. Only after the first
+fortification seat has failed and Cade's help or Albany's emergency strip has
+already recovered that same seam can the crew act once, lower Winter Siege
+pressure by 1, preserve the failed-check and stance-cost record, and reach a
+truthful mobile-stabilized dawn branch. On the same byre-held return, its exact
+choice proof instead opens one 15-minute Campus resupply instead of the ordinary
+45-minute service. Thus resident shelter and mobile reserve are advantageous in
+different return states, while Cade's wagon is advantageous on the clean
+exposed-ridge lure line; none gates hunt, lure, drive, or fortify commitment.
+
+Allocation offer, five-minute cost, provider memory, quest import, field
+consumer, return fact, and service eligibility replay across save/restore and
+the overworld-to-quest-to-overworld boundary. Exact F12 predecessor saves have a
+bounded migration path: an unstarted Wolf-Winter save receives the real current
+offer with no retroactive effect. If that save already selected June, the later
+allocation composes after the preserved ally proof and a second restore retains
+both the ally commitment and allocation effects. A started save instead keeps
+its exact approach proof and receives one neutral legacy marker bound to the
+pre-start boundary, without allocation knowledge, memory, time, field aid, or
+service. Paired proof lives in
+[`relief_allocation_counterfactual.test.ts`](../tests/starting_slice/relief_allocation_counterfactual.test.ts),
+and the predecessor boundary lives in
+[`relief_allocation_migration_integrity.test.ts`](../tests/regression/relief_allocation_migration_integrity.test.ts).
+
 This proves `SS-F01-character-background`, `SS-F03-lead-source`,
-`SS-F04-ally-commitment`, `SS-F05-preparation-profile`, `SS-F07-hill-route`,
-`SS-F08-cade-trust`, `SS-F09-wolf-strategy`, `SS-F10-crisis-priority`,
-`SS-F11-saved-wood`, and `SS-F12-albany-return`: ten of the twelve required
-material forks. It proves
+`SS-F04-ally-commitment`, `SS-F05-preparation-profile`,
+`SS-F06-relief-allocation`, `SS-F07-hill-route`, `SS-F08-cade-trust`,
+`SS-F09-wolf-strategy`, `SS-F10-crisis-priority`, `SS-F11-saved-wood`, and
+`SS-F12-albany-return`: eleven of the twelve required material forks. It proves
 the ally-agency clause, three preparation profiles, all four resolution
 families, and distinct consumers for all four concepts, but it does not prove
-the two remaining fork sites, the full twelve-fork contract, or fleet-level
-balance. Those remain the next work, not implied credit for the ten proven
+the remaining relief-oath fork, the full twelve-fork contract, or fleet-level
+balance. Those remain the next work, not implied credit for the eleven proven
 counterfactuals.
 
 ## Required resolution families

@@ -2,14 +2,17 @@ import { describe, expect, it } from "vitest";
 
 import { hashState } from "../../src/core/hash.js";
 import { serializeCampaignCharacterState } from "../../src/world/campaign_character_state.js";
+import { openingReliefAllocationLegacySourceWorldHash } from "../../src/world/opening_relief_allocation_journal.js";
 import type { OverworldManifest } from "../../src/world/overworld.js";
 import { OverworldSession } from "../../src/world/session.js";
 import {
   OVERWORLD_FORTIFY_OUTLAST_PREDECESSOR_WORLD_HASH,
   OVERWORLD_HILL_APPROACH_PREDECESSOR_WORLD_HASH,
   OVERWORLD_HILL_APPROACH_WORLD_HASH,
+  OVERWORLD_RELIEF_ALLOCATION_WORLD_HASH,
 } from "../../src/world/session_snapshot_restore.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
+import { exactF11World, exactF12World } from "./fixtures/historical_overworlds.js";
 
 const WORLD = loadOverworldManifest(process.cwd());
 const QUEST_ID = "wolf_winter";
@@ -46,17 +49,6 @@ const F11_SERVICES = new Set([
   "albany:wolf_works_fortification_return_resupply",
 ]);
 
-function exactF11World(): OverworldManifest {
-  const predecessor = structuredClone(WORLD);
-  const wolf = predecessor.quests.find((quest) => quest.id === QUEST_ID);
-  if (!wolf?.campaign_imports) throw new Error("Wolf-Winter must have campaign imports");
-  delete wolf.launch;
-  wolf.campaign_imports.rules = wolf.campaign_imports.rules.filter(
-    (rule) => !rule.id.startsWith("import:wolf_winter_approach_"),
-  );
-  return predecessor;
-}
-
 function moveToArea(session: OverworldSession, areaId: string): void {
   const route = session.view().areaExits.find((candidate) => candidate.destination.id === areaId);
   if (!route) throw new Error(`expected a visible route to ${areaId}`);
@@ -82,10 +74,11 @@ function questStartEntry(snapshot: ReturnType<OverworldSession["snapshot"]>) {
 }
 
 describe("hill-approach predecessor migration integrity", () => {
-  it("pins the exact F11 source, current F07 target, 11 outcomes, and 14 services", () => {
-    const predecessor = exactF11World();
+  it("pins exact F11 and F12 history plus the current F06 target", () => {
+    const predecessor = exactF11World(WORLD);
     expect(hashState(predecessor)).toBe(OVERWORLD_HILL_APPROACH_PREDECESSOR_WORLD_HASH);
-    expect(hashState(WORLD)).toBe(OVERWORLD_HILL_APPROACH_WORLD_HASH);
+    expect(hashState(exactF12World(WORLD))).toBe(OVERWORLD_HILL_APPROACH_WORLD_HASH);
+    expect(hashState(WORLD)).toBe(OVERWORLD_RELIEF_ALLOCATION_WORLD_HASH);
     expect(OVERWORLD_HILL_APPROACH_PREDECESSOR_WORLD_HASH).toBe(
       "abd3b623a502b688a501bceae68994a4eb0e591d450420b5093532b5dae22179",
     );
@@ -104,11 +97,11 @@ describe("hill-approach predecessor migration integrity", () => {
     );
   });
 
-  it("leaves an unstarted F11 lead neutral and materializes no route marker", () => {
-    const predecessor = sessionAtWolf(exactF11World()).snapshot();
+  it("keeps an unstarted F11 lead route-neutral and offers the current F06 allocation", () => {
+    const predecessor = sessionAtWolf(exactF11World(WORLD)).snapshot();
     const restored = OverworldSession.restore(WORLD, predecessor).snapshot();
 
-    expect(restored.worldHash).toBe(OVERWORLD_HILL_APPROACH_WORLD_HASH);
+    expect(restored.worldHash).toBe(OVERWORLD_RELIEF_ALLOCATION_WORLD_HASH);
     expect(restored.minutes).toBe(predecessor.minutes);
     expect(restored.supplies).toBe(predecessor.supplies);
     expect(restored.fatigue).toBe(predecessor.fatigue);
@@ -118,10 +111,13 @@ describe("hill-approach predecessor migration integrity", () => {
     expect(restored.journalEntries.some((entry) => entry.questStartProof !== undefined)).toBe(
       false,
     );
+    expect(
+      restored.journalEntries.filter((entry) => entry.kind === "relief_allocation_offer"),
+    ).toHaveLength(1);
   });
 
   it("migrates a started F11 quest to one neutral legacy proof and stays idempotent", () => {
-    const f11 = sessionAtWolf(exactF11World());
+    const f11 = sessionAtWolf(exactF11World(WORLD));
     const before = f11.snapshot();
     f11.startQuest(QUEST_ID);
     const predecessor = f11.snapshot();
@@ -133,6 +129,10 @@ describe("hill-approach predecessor migration integrity", () => {
 
     const restored = OverworldSession.restore(WORLD, predecessor).snapshot();
     const start = questStartEntry(restored);
+    const startIndex = restored.journalEntries.findIndex(
+      (entry) => entry.id === `quest:${QUEST_ID}`,
+    );
+    const allocationMarker = restored.journalEntries[startIndex + 1];
     expect(start.questStartProof).toEqual({
       kind: "legacy",
       sourceWorldHash: OVERWORLD_HILL_APPROACH_PREDECESSOR_WORLD_HASH,
@@ -150,12 +150,26 @@ describe("hill-approach predecessor migration integrity", () => {
     expect(serializeCampaignCharacterState(restored.character)).toBe(
       serializeCampaignCharacterState(predecessor.character),
     );
+    expect(allocationMarker).toMatchObject({ kind: "relief_allocation_legacy" });
+    expect(openingReliefAllocationLegacySourceWorldHash(allocationMarker!.id)).toBe(
+      OVERWORLD_HILL_APPROACH_PREDECESSOR_WORLD_HASH,
+    );
+    expect(allocationMarker?.storyChoiceBoundary).toEqual({
+      acceptedDecisions: before.journey.acceptedDecisions,
+      decisionProofHash: before.journey.decisionProof.hash,
+      townId: before.currentId,
+      areaId: before.currentAreaId,
+      minutes: before.minutes,
+    });
+    expect(
+      restored.journalEntries.filter((entry) => entry.kind === "relief_allocation_legacy"),
+    ).toHaveLength(1);
     expect(OverworldSession.restore(WORLD, restored).snapshot()).toEqual(restored);
   });
 
   it.each([...F11_OUTCOMES])("migrates the exact F11 Wolf-Winter outcome %s", (endingId) => {
-    const f11 = sessionAtWolf(exactF11World());
-    const wolf = exactF11World().quests.find((quest) => quest.id === QUEST_ID)!;
+    const f11 = sessionAtWolf(exactF11World(WORLD));
+    const wolf = exactF11World(WORLD).quests.find((quest) => quest.id === QUEST_ID)!;
     const campaignExport = wolf.campaign_exports?.find(
       (candidate) => candidate.ending_id === endingId,
     );
@@ -181,7 +195,7 @@ describe("hill-approach predecessor migration integrity", () => {
   });
 
   it("preserves a consumed F11-only fortification service without repeating it", () => {
-    const f11 = sessionAtWolf(exactF11World());
+    const f11 = sessionAtWolf(exactF11World(WORLD));
     f11.startQuest(QUEST_ID);
     f11.completeQuest(QUEST_ID, {
       endingId: "ending_fortified_cade_terms",
@@ -211,8 +225,8 @@ describe("hill-approach predecessor migration integrity", () => {
     expect(OverworldSession.restore(WORLD, restored).snapshot()).toEqual(restored);
   });
 
-  it("rejects F07 proof, route label, route character evidence, and altered F11 copy", () => {
-    const current = sessionAtWolf(WORLD);
+  it("rejects F12 proof, route label, route character evidence, and altered F11 copy", () => {
+    const current = sessionAtWolf(exactF12World(WORLD));
     const beforeApproach = current.snapshot();
     current.startQuest(QUEST_ID, RIDGE_APPROACH_ID);
     const relabeled = current.snapshot();
@@ -228,7 +242,7 @@ describe("hill-approach predecessor migration integrity", () => {
       /route-labelled Wolf-Winter start decision/i,
     );
 
-    const f11 = sessionAtWolf(exactF11World());
+    const f11 = sessionAtWolf(exactF11World(WORLD));
     f11.startQuest(QUEST_ID);
     const routeEvidence = f11.snapshot();
     routeEvidence.character.knowledge.push(RIDGE_KNOWLEDGE_ID);

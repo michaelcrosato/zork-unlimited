@@ -6,8 +6,10 @@ import {
   OVERWORLD_FORTIFY_OUTLAST_PREDECESSOR_WORLD_HASH,
   OVERWORLD_FORTIFY_OUTLAST_WORLD_HASH,
   OVERWORLD_HILL_APPROACH_WORLD_HASH,
+  OVERWORLD_RELIEF_ALLOCATION_WORLD_HASH,
 } from "../../src/world/session_snapshot_restore.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
+import { exactF11World, exactF12World } from "./fixtures/historical_overworlds.js";
 
 const WORLD = loadOverworldManifest(process.cwd());
 const REGISTRATION = WORLD.opening_registration!;
@@ -15,16 +17,7 @@ const LEAD = WORLD.opening_lead_source!;
 const PREPARATION = WORLD.opening_preparation!;
 const ALLY = WORLD.opening_ally!;
 const WOLF = WORLD.quests.find((quest) => quest.id === "wolf_winter")!;
-const PRE_ROUTE_WORLD = (() => {
-  const predecessor = structuredClone(WORLD);
-  const wolf = predecessor.quests.find((quest) => quest.id === WOLF.id);
-  if (!wolf?.campaign_imports) throw new Error("Wolf-Winter must have campaign imports.");
-  delete wolf.launch;
-  wolf.campaign_imports.rules = wolf.campaign_imports.rules.filter(
-    (rule) => !rule.id.startsWith("import:wolf_winter_approach_"),
-  );
-  return predecessor;
-})();
+const PRE_ROUTE_WORLD = exactF11World(WORLD);
 const STATION = "albany_city__transport_hub";
 const GREENWAY = "albany_city__greenway";
 
@@ -219,7 +212,7 @@ function expectNeutralF10Migration(
   source: ReturnType<OverworldSession["snapshot"]>,
 ): void {
   expect(restored).toMatchObject({
-    worldHash: OVERWORLD_HILL_APPROACH_WORLD_HASH,
+    worldHash: OVERWORLD_RELIEF_ALLOCATION_WORLD_HASH,
     minutes: source.minutes,
     supplies: source.supplies,
     fatigue: source.fatigue,
@@ -269,7 +262,8 @@ describe("fortify-and-outlast predecessor migration integrity", () => {
       "1e74d32c28c3d563f6e8103034768506e25f13ff1f8e410b190cbb344589add8",
     );
     expect(hashState(PRE_ROUTE_WORLD)).toBe(OVERWORLD_FORTIFY_OUTLAST_WORLD_HASH);
-    expect(hashState(WORLD)).toBe(OVERWORLD_HILL_APPROACH_WORLD_HASH);
+    expect(hashState(exactF12World(WORLD))).toBe(OVERWORLD_HILL_APPROACH_WORLD_HASH);
+    expect(hashState(WORLD)).toBe(OVERWORLD_RELIEF_ALLOCATION_WORLD_HASH);
   });
 
   it.each(F10_ENDINGS)("restores the exact F10 Wolf-Winter outcome %s", (endingId) => {

@@ -34,6 +34,7 @@ import {
 import { loadOverworldManifest } from "../../src/world/source.js";
 
 const WORLD = loadOverworldManifest(process.cwd());
+const RESIDENT_SHELTER_ALLOCATION = "albany:relief_resident_shelter";
 
 const loaded = loadRpgSourceFile("content/rpg/quests/wolf_winter.yaml");
 if (!loaded.ok) throw new Error("wolf_winter must compile");
@@ -230,6 +231,11 @@ function launchAlbanyWolf(api: ToolApi): {
     ...full,
     session_id: overworldSessionId,
     area_route_id: questRoute.id,
+  });
+  api.choose_overworld_session_story({
+    ...full,
+    session_id: overworldSessionId,
+    choice: RESIDENT_SHELTER_ALLOCATION,
   });
   const launched = api.start_overworld_session_quest({
     ...full,
@@ -437,6 +443,11 @@ describe("bug_0505 — Wolf-Winter saved wood has a post-hunt consequence", () =
       ...full,
       session_id: sessionId,
       area_route_id: questRoute.id,
+    });
+    api.choose_overworld_session_story({
+      ...full,
+      session_id: sessionId,
+      choice: RESIDENT_SHELTER_ALLOCATION,
     });
 
     let journey = api.get_overworld_session_context({ session_id: sessionId }).journey;
@@ -693,7 +704,8 @@ describe("bug_0505 — Wolf-Winter saved wood has a post-hunt consequence", () =
         entry.kind !== "lead_source_offer" &&
         entry.kind !== "lead_source" &&
         entry.kind !== "preparation_offer" &&
-        entry.kind !== "preparation",
+        entry.kind !== "preparation" &&
+        !entry.kind.startsWith("relief_allocation"),
     );
     for (const entry of prooflessCurrent.journalEntries) {
       delete entry.questCompletionBoundary;

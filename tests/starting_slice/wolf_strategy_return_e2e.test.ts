@@ -37,6 +37,7 @@ const FULL = { compact_context: false, compact_result: false } as const;
 const GREENWAY_AREA_ID = "albany_city__greenway";
 const GREENWAY_CONTACT_ID = "albany_city__greenway__contact";
 const LIVE_PACK_RULE_ID = "albany:wolf_live_pack_greenway_resupply";
+const NEUTRAL_RELIEF_ALLOCATION = "albany:relief_resident_shelter";
 const LIVE_PACK_SUMMARY =
   "Because you returned a living corridor pack to the high wood while keeping Cade's herd whole, Emery Sloane releases a one-time Greenway cache of food, lamp oil, and wildlife flares for your next road.";
 
@@ -176,6 +177,11 @@ function launchAlbanyWolf(api: ToolApi) {
   expect(explored.observation.discoveredAreaIds).toHaveLength(6);
 
   moveToArea(api, overworldSessionId, quest.area);
+  api.choose_overworld_session_story({
+    ...FULL,
+    session_id: overworldSessionId,
+    choice: NEUTRAL_RELIEF_ALLOCATION,
+  });
   const launched = api.start_overworld_session_quest({
     ...FULL,
     compact_observation: false,
@@ -207,6 +213,7 @@ function playStrategy(strategy: Strategy) {
     "import:wolf_winter_approach_sheltered_stockway",
     "import:wolf_winter_fieldcraft",
     "import:wolf_winter_lure_fieldcraft",
+    "import:wolf_winter_relief_resident_shelter",
     "import:wolf_winter_works_fortification",
   ]);
 

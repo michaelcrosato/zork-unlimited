@@ -48,6 +48,7 @@ const ROAD_WARDEN =
 const FULL = { compact_context: false, compact_result: false } as const;
 const STATION = "albany_city__transport_hub";
 const HAYDEN = "albany_city__transport_hub__contact";
+const RESIDENT_SHELTER = "albany:relief_resident_shelter";
 const JUNE = "albany:june_pike";
 const PROMISE = "albany:promise_june_cattle_first";
 
@@ -199,6 +200,11 @@ function launchAlbanyWolf(api: ToolApi, seed: number) {
   });
 
   moveToArea(api, overworldSessionId, ALLY.area);
+  api.choose_overworld_session_story({
+    ...FULL,
+    session_id: overworldSessionId,
+    choice: RESIDENT_SHELTER,
+  });
   api.talk_overworld_session_contact({
     ...FULL,
     session_id: overworldSessionId,

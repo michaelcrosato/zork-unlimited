@@ -513,6 +513,90 @@
       }
     ]
   },
+  "opening_relief_allocation": {
+    "version": 1,
+    "id": "albany:wolf_relief_allocation",
+    "after_preparation": "albany:wolf_preparation",
+    "target_quest": "wolf_winter",
+    "home": "albany_city",
+    "area": "albany_city__transport_hub",
+    "title": "Place Albany's Last Relief Capacity",
+    "message": "Hayden's departure board has one unassigned winter-relief wagon and crew. It can carry steadying fodder ahead to Cade's frightened herd, keep Albany's Market warm room staffed for vulnerable residents, or wait mobile at the hill turn for a failed field line. The board will fund exactly one. Choose what Albany protects and read what the other two needs must face without it.",
+    "options": [
+      {
+        "id": "albany:relief_cade_fodder",
+        "title": "Send the Wagon to Cade's Herd",
+        "provider_npc_id": "albany:emery_sloane",
+        "summary": "Send dry fodder and two drovers ahead to settle Cade's cattle before the relief rider arrives.",
+        "preview": "A successful first lure cast from the exposed ridge will not add its ordinary cattle-alarm step; a fouled cast and the sheltered route keep their full consequences and every existing recovery. The wagon is spent north, so Albany holds neither the Market recovery cot nor the mobile reserve cache for your return.",
+        "consequence": "Emery seals the fodder tally to Cade's byre tag. The herd is protected against one clean exposed-ridge cast; Albany's residents and the mobile failure line remain exposed.",
+        "protects": "Cade's frightened herd during a clean exposed-ridge first lure cast.",
+        "leaves_exposed": "Albany's Market warm room and the mobile hill-turn failure crew.",
+        "terms": { "minutes": 5 },
+        "effects": [
+          {
+            "type": "learn_knowledge",
+            "knowledge_id": "albany:knowledge_relief_cade_fodder"
+          },
+          {
+            "type": "remember_relationship",
+            "npc_id": "albany:emery_sloane",
+            "memory_id": "albany:memory_emery_relief_cade_fodder_allocated",
+            "trust_at_least": 4,
+            "regard_at_least": 4
+          }
+        ]
+      },
+      {
+        "id": "albany:relief_resident_shelter",
+        "title": "Keep Albany's Warm Room Staffed",
+        "provider_npc_id": "albany:jamie_tanner",
+        "summary": "Keep the wagon crew at the Market warm room for residents who cannot safely wait out the freeze alone.",
+        "preview": "Wolf-Winter receives no extra field action. After a truthful return with Cade's byre held, the staffed warm room offers one 15-minute fatigue-restoring recovery; it does not heal wounds or replace supplies. Cade gets no pre-feed and no mobile crew waits at the hill turn.",
+        "consequence": "Jamie posts the residents' names above the wagon key. Albany's vulnerable households keep their staffed shelter; Cade's herd and any failed field line remain exposed.",
+        "protects": "Albany's vulnerable residents and one fast recovery on a truthful byre-held return.",
+        "leaves_exposed": "Cade's opening cattle pressure and the hill-turn failure line.",
+        "terms": { "minutes": 5 },
+        "effects": [
+          {
+            "type": "learn_knowledge",
+            "knowledge_id": "albany:knowledge_relief_resident_shelter"
+          },
+          {
+            "type": "remember_relationship",
+            "npc_id": "albany:jamie_tanner",
+            "memory_id": "albany:memory_jamie_relief_resident_shelter_allocated",
+            "trust_at_least": 4,
+            "regard_at_least": 4
+          }
+        ]
+      },
+      {
+        "id": "albany:relief_mobile_reserve",
+        "title": "Hold a Mobile Failure Crew",
+        "provider_npc_id": "albany:hayden_hale",
+        "summary": "Hold the last wagon and crew at the hill turn until the relief rider's first field line is known.",
+        "preview": "After a failed first fortification seat has been recovered without a reroll, the crew can stabilize that joined seam once and lower winter pressure by 1 without erasing the failure or changing the selected stance. A truthful byre-held return also releases one 15-minute Campus resupply; no pre-feed or Market recovery cot is held.",
+        "consequence": "Hayden pins the wagon at the hill turn under your dispatch number. One failed fortification can receive measured stabilization and the returning reserve can restock the next road; Cade's pre-feed and Albany's warm-room crew remain exposed.",
+        "protects": "One recovered fortification seam and a returned mobile road cache.",
+        "leaves_exposed": "Cade's opening cattle pressure and Albany's Market warm room.",
+        "terms": { "minutes": 5 },
+        "effects": [
+          {
+            "type": "learn_knowledge",
+            "knowledge_id": "albany:knowledge_relief_mobile_reserve"
+          },
+          {
+            "type": "remember_relationship",
+            "npc_id": "albany:hayden_hale",
+            "memory_id": "albany:memory_hayden_relief_mobile_reserve_allocated",
+            "trust_at_least": 4,
+            "regard_at_least": 4
+          }
+        ]
+      }
+    ]
+  },
   "opening_ally": {
     "version": 1,
     "id": "albany:wolf_ally_commitment",
@@ -591,6 +675,40 @@
     ]
   },
   "campaign_service_rules": [
+    {
+      "id": "albany:resident_shelter_return_rest",
+      "home": "albany_city",
+      "area": "albany_city__market",
+      "action": "rest",
+      "title": "Take the Staffed Market Warm Room",
+      "summary": "Because Albany kept its last relief crew with vulnerable residents and your truthful return says Cade's byre held, Jamie opens the staffed warm room for one fast fatigue recovery. The cot neither treats a wound nor replaces road stores.",
+      "provider_character_id": "albany_city__market__contact",
+      "minutes": 15,
+      "requires_all_world_facts": ["fact:wolf_winter_byre_held"],
+      "requires_all_story_choices": [
+        {
+          "story_choice_id": "albany:wolf_relief_allocation",
+          "choice_id": "albany:relief_resident_shelter"
+        }
+      ]
+    },
+    {
+      "id": "albany:mobile_reserve_return_resupply",
+      "home": "albany_city",
+      "area": "albany_city__campus",
+      "action": "resupply",
+      "title": "Reclaim the Mobile Reserve Cache",
+      "summary": "Because Albany held the last relief wagon mobile and your truthful return says Cade's byre held, Blair remarshals the wagon's returned food, lamp oil, rawhide, and repair stock under Hayden's dispatch number into one road cache.",
+      "provider_character_id": "albany_city__campus__contact",
+      "minutes": 15,
+      "requires_all_world_facts": ["fact:wolf_winter_byre_held"],
+      "requires_all_story_choices": [
+        {
+          "story_choice_id": "albany:wolf_relief_allocation",
+          "choice_id": "albany:relief_mobile_reserve"
+        }
+      ]
+    },
     {
       "id": "albany:wolf_works_fortification_return_resupply",
       "home": "albany_city",
@@ -24111,6 +24229,14 @@
       "campaign_npc_id": "albany:jamie_tanner",
       "variants": [
         {
+          "id": "relief_resident_shelter_allocated",
+          "after_relationship_memories": [
+            "albany:memory_jamie_relief_resident_shelter_allocated"
+          ],
+          "summary": "Jamie remembers that you kept Albany's last winter crew on the Market warm-room list instead of sending it north.",
+          "agenda": "The named residents keep their staffed shelter. If Cade's byre returns truthfully held, Jamie will open the same warm room for one fast fatigue recovery without calling it wound care or resupply."
+        },
+        {
           "id": "wolf_relief_protocol_allocated",
           "after_relationship_memories": [
             "albany:memory_jamie_wolf_relief_protocol_allocated"
@@ -24147,6 +24273,14 @@
       "agenda": "Hayden matches every hill dispatch to Rowan's controlling source certification; settled packets carry route timing to Old Cade's steading and the other winter stops.",
       "campaign_npc_id": "albany:hayden_hale",
       "variants": [
+        {
+          "id": "relief_mobile_reserve_allocated",
+          "after_relationship_memories": [
+            "albany:memory_hayden_relief_mobile_reserve_allocated"
+          ],
+          "summary": "Hayden remembers pinning Albany's last relief wagon at the hill turn under your dispatch number instead of assigning it to Cade or the Market warm room.",
+          "agenda": "The crew may stabilize one honestly failed and already recovered fortification seam. A byre-held return remarshal its road stores at Campus; it never invents a retry or refunds stance-owned costs."
+        },
         {
           "id": "wolf_fortified_cade_terms",
           "after_relationship_memories": [
@@ -24358,6 +24492,14 @@
       "agenda": "Wants a traveler to handle Albany Greenway's local problems before they spread through the Capital / Mohawk road network.",
       "campaign_npc_id": "albany:emery_sloane",
       "variants": [
+        {
+          "id": "relief_cade_fodder_allocated",
+          "after_relationship_memories": [
+            "albany:memory_emery_relief_cade_fodder_allocated"
+          ],
+          "summary": "Emery remembers sending Albany's last wagon north with dry fodder and two drovers for Cade's frightened herd.",
+          "agenda": "The pre-feed can absorb one clean exposed-ridge cast's cattle pressure. A fouled cast keeps its full failure, and the spent wagon leaves no Market cot or mobile cache to reclaim."
+        },
         {
           "id": "wolf_pack_driven_herd_out_rider_wounded",
           "after_relationship_memories": [
@@ -47747,6 +47889,24 @@
             "type": "knowledge_to_flag",
             "knowledge_id": "albany:knowledge_wolf_sheltered_stockway",
             "target_flag": "approach_sheltered_stockway"
+          },
+          {
+            "id": "import:wolf_winter_relief_cade_fodder",
+            "type": "knowledge_to_flag",
+            "knowledge_id": "albany:knowledge_relief_cade_fodder",
+            "target_flag": "relief_cade_fodder_allocated"
+          },
+          {
+            "id": "import:wolf_winter_relief_resident_shelter",
+            "type": "knowledge_to_flag",
+            "knowledge_id": "albany:knowledge_relief_resident_shelter",
+            "target_flag": "relief_resident_shelter_allocated"
+          },
+          {
+            "id": "import:wolf_winter_relief_mobile_reserve",
+            "type": "knowledge_to_flag",
+            "knowledge_id": "albany:knowledge_relief_mobile_reserve",
+            "target_flag": "relief_mobile_reserve_allocated"
           },
           {
             "id": "import:wolf_winter_june_companion",

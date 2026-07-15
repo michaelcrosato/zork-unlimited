@@ -503,6 +503,9 @@ const WOLF_CONCRETE_IMPORT_FLAGS = new Set([
   "works_fortification_prepared",
   "drover_route_prepared",
   "relief_protocol_prepared",
+  "relief_cade_fodder_allocated",
+  "relief_resident_shelter_allocated",
+  "relief_mobile_reserve_allocated",
   "june_pike_present",
   "approach_exposed_ridge",
   "approach_sheltered_stockway",
@@ -514,9 +517,11 @@ function wolfCampaignImportWitnesses(index: RpgIndex): {
 } {
   const displayed = new Set<string>();
   const present = new Set<string>();
-  const run = (flag: string, actions: readonly WitnessAction[]): void => {
+  const run = (flags: string | readonly string[], actions: readonly WitnessAction[]): void => {
     const initial = initStateForRpgPack(index, 7);
-    initial.flags[flag] = true;
+    for (const flag of typeof flags === "string" ? [flags] : flags) {
+      initial.flags[flag] = true;
+    }
     const witness = replayConcreteWitness(index, initial, actions);
     for (const key of witness.displayed) displayed.add(key);
     for (const key of witness.present) present.add(key);
@@ -576,6 +581,40 @@ function wolfCampaignImportWitnesses(index: RpgIndex): {
     "use_paling_rail",
     "use_split_rail_guard_on_downwind_feed_line",
     "go_south",
+  ]);
+  run(
+    ["relief_cade_fodder_allocated", "approach_exposed_ridge"],
+    [
+      "use_exposed_ridge_last_mile",
+      "talk_houndsman",
+      "ask_lure",
+      "ask_commit_lure",
+      "ask_leave",
+      "go_west",
+      "take_winter_feed_sack",
+      "go_east",
+      "go_north",
+      ["use_winter_feed_sack_on_downwind_feed_line", "best"],
+    ],
+  );
+  // Resident shelter intentionally has no field action; observing its imported
+  // state proves it does not make a Wolf-only object or route mandatory.
+  run("relief_resident_shelter_allocated", []);
+  run("relief_mobile_reserve_allocated", [
+    "go_north",
+    "talk_houndsman",
+    "ask_fortify",
+    "ask_accept_terms",
+    "ask_leave",
+    "take_cade_household_shutters",
+    "go_north",
+    ["use_cade_household_shutters_on_fortify_outer_seal", "worst"],
+    "use_cade_failed_seal_help",
+    "use_mobile_relief_failure_crew",
+    "go_north",
+    "use_cade_household_shutters_on_fortify_threshold_seal",
+    "go_north",
+    "use_fortify_dawn_watch",
   ]);
   run("approach_exposed_ridge", ["use_exposed_ridge_last_mile"]);
   run("approach_sheltered_stockway", ["use_sheltered_stockway_last_mile"]);

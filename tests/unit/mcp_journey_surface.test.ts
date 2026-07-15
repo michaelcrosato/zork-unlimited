@@ -18,6 +18,7 @@ const FULL_OVERWORLD = { compact_context: false, compact_result: false } as cons
 const WORLD = loadOverworldManifest(process.cwd());
 const HAYDEN_ID = "albany_city__transport_hub__contact";
 const SHELTERED_APPROACH_ID = "albany:wolf_approach_sheltered_stockway";
+const RESIDENT_SHELTER_ALLOCATION_ID = "albany:relief_resident_shelter";
 const ALBANY_TO_SARATOGA = "road_albany_city__saratoga_springs_city";
 const SARATOGA_TO_QUEENSBURY = "road_saratoga_springs_city__queensbury_town";
 
@@ -40,6 +41,7 @@ function uiSessionAtPostGallowmereHayden(): OverworldSession {
   moveUiSessionToArea(session, "albany_city__market");
   session.scoutPoi("albany_city__market__poi");
   moveUiSessionToArea(session, "albany_city__transport_hub");
+  session.chooseJourneyStory(RESIDENT_SHELTER_ALLOCATION_ID);
   session.startQuest("wolf_winter", SHELTERED_APPROACH_ID);
   session.completeQuest("wolf_winter", {
     endingId: "ending_held_timber_saved",
@@ -95,6 +97,7 @@ function uiSessionAtAlbanyStoryChoice(): OverworldSession {
     .areaExits.find((candidate) => candidate.destination.id === quest.area);
   if (!route) throw new Error("expected a route to the Albany lead");
   session.moveArea(route.id);
+  session.chooseJourneyStory(RESIDENT_SHELTER_ALLOCATION_ID);
   session.startQuest(quest.id, SHELTERED_APPROACH_ID);
   session.completeQuest(quest.id, {
     endingId: "ending_held",
@@ -224,13 +227,17 @@ function mcpWolfWinterCheckpointInsideQuest() {
     session_id: overworldSessionId,
     area_route_id: questRoute.id,
   });
+  const allocated = a.choose_overworld_session_story({
+    ...FULL_OVERWORLD,
+    session_id: overworldSessionId,
+    choice: RESIDENT_SHELTER_ALLOCATION_ID,
+  });
+  expect(allocated.journey.storyChoice?.kind).not.toBe("relief_allocation");
   view = a.get_overworld_session({
     session_id: overworldSessionId,
     include_observation: true,
   }).observation;
 
-  const contact = view.characters[0];
-  if (!contact) throw new Error("expected quest-area contact");
   const questAreaPoi = view.pois[0];
   if (!questAreaPoi) throw new Error("expected quest-area point of interest");
   const questAreaScouted = a.scout_overworld_session_poi({
@@ -238,11 +245,7 @@ function mcpWolfWinterCheckpointInsideQuest() {
     session_id: overworldSessionId,
     poi_id: questAreaPoi.id,
   });
-  let journey = a.talk_overworld_session_contact({
-    ...FULL_OVERWORLD,
-    session_id: overworldSessionId,
-    character_id: contact.id,
-  }).journey;
+  let journey = questAreaScouted.journey;
   expect(journey.acceptedDecisions).toBe(10);
   const questAreaSite = questAreaScouted.observation.sites[0];
   if (!questAreaSite) throw new Error("expected a quest-area exploration site");

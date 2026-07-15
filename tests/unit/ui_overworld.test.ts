@@ -119,10 +119,17 @@ function settleOpeningRegistration(session: OverworldSession): void {
   }
 }
 
+function settleReliefAllocation(session: OverworldSession): void {
+  if (session.journey().storyChoice?.kind === "relief_allocation") {
+    session.chooseJourneyStory("albany:relief_resident_shelter");
+  }
+}
+
 function startVisibleQuest(
   session: OverworldSession,
   quest: OverworldQuestView,
 ): ReturnType<OverworldSession["startQuest"]> {
+  settleReliefAllocation(session);
   const approach = quest.launch?.options.find((option) => option.projection?.available === true);
   return approach ? session.startQuest(quest.id, approach.id) : session.startQuest(quest.id);
 }
@@ -345,11 +352,13 @@ describe("OverworldSession", () => {
     expect(handler).toContain('journey.storyChoice?.kind === "registration"');
     expect(handler).toContain('journey.storyChoice?.kind === "lead_source"');
     expect(handler).toContain('journey.storyChoice?.kind === "preparation"');
+    expect(handler).toContain('journey.storyChoice?.kind === "relief_allocation"');
     expect(handler).toContain('journey.storyChoice?.kind === "ally"');
     expect(handler).toContain("Character registered: ${result.consequence}");
     expect(handler).toContain("Current goal: ${result.goal.text}");
     expect(handler).toContain("Lead source certified: ${result.consequence}");
     expect(handler).toContain("Preparation committed: ${result.consequence}");
+    expect(handler).toContain("Relief capacity committed: ${result.consequence}");
     expect(handler).toContain("Field team committed: ${result.consequence}");
     expect(handler).toContain("Story consequence: ${result.consequence}");
     expect(handler).toContain("New goal: ${result.goal.text}");
@@ -2032,6 +2041,7 @@ describe("OverworldSession", () => {
         .areaExits.find((candidate) => candidate.destination.id === quest.area);
       if (!route) throw new Error("expected route to Wolf-Winter launch area");
       session.moveArea(route.id);
+      settleReliefAllocation(session);
       return {
         session,
         quest: session.view().quests.find((candidate) => candidate.id === quest.id)!,

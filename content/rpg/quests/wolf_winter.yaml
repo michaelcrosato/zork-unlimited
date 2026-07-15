@@ -433,6 +433,7 @@ rooms:
         fortify_outer_seal,
         cade_failed_seal_help,
         authority_emergency_bind,
+        mobile_relief_failure_crew,
       ]
     # Reactive prose keeps the lure recovery plus every combat rail state legible.
     # A committed feed line returns through the yard and loft for its second cast;
@@ -1960,6 +1961,45 @@ objects:
               crosswise. No Repair check repeats and pressure stays at Hammering. Cade keeps
               his hands off the ordered line; extra public stock makes the outer seal hold.
 
+  - id: mobile_relief_failure_crew
+    name: "mobile relief failure crew"
+    aliases: [mobile crew, failure crew, relief wagon crew, hill-turn crew]
+    description: >
+      Hayden's held wagon crew can brace one recovered outer seam. They do not repeat the
+      failed Repair check, replace Cade's help, refund Albany's strip, or change the chosen
+      stance. One deployment removes one pressure step before the threshold closes.
+    visible_when:
+      - { has_flag: relief_mobile_reserve_allocated }
+      - { not_flag: relief_cade_fodder_allocated }
+      - { not_flag: relief_resident_shelter_allocated }
+      - { has_flag: fortify_outer_seal_failed }
+      - { has_flag: fortify_outer_sealed }
+      - { not_flag: fortify_threshold_sealed }
+      - { not_flag: fortify_mobile_crew_stabilized }
+    interactions:
+      - verb: USE
+        target: mobile_relief_failure_crew
+        command_verb: deploy
+        conditions:
+          - { has_flag: relief_mobile_reserve_allocated }
+          - { not_flag: relief_cade_fodder_allocated }
+          - { not_flag: relief_resident_shelter_allocated }
+          - { has_flag: fortify_outer_seal_failed }
+          - { has_flag: fortify_outer_sealed }
+          - any_of:
+              - { has_flag: fortify_cade_recovery_helped }
+              - { has_flag: fortify_authority_emergency_seal_spent }
+          - { not_flag: fortify_threshold_sealed }
+          - { not_flag: fortify_mobile_crew_stabilized }
+        effects:
+          - set_flag: fortify_mobile_crew_stabilized
+          - dec_var: { name: fortification_pressure, by: 1 }
+          - add_journal: "The mobile crew braces the recovered outer seam. Pressure -1; its failed check and stance-owned recovery remain recorded."
+          - narrate: >
+              The wagon reaches the paling only after the failed seat is recovered. Its crew
+              braces the joined seam, reducing pressure by 1. The failed check, Cade's help
+              or refusal, the chosen stance, and every spent material remain recorded.
+
   # Beat two consumes the stance-owned bundle and closes the byre threshold. It is a
   # deterministic commitment, not a second roll or a chance to clean the first result.
   - id: fortify_threshold_seal
@@ -2015,8 +2055,9 @@ objects:
               herd. Cade's property stays covered; Albany's fortification stock is spent.
 
   # Beat three reads the accumulated pressure instead of rolling again. A clean outer seat
-  # reaches Hammering (2); either recovery reaches Strained (3). Both remain fully
-  # noncombat, award the same completion score, and preserve the exact failed state.
+  # reaches Hammering (2); an ordinary recovery reaches Strained (3); a mobile-stabilized
+  # failed seat returns to Hammering without erasing the failed state. Every branch remains
+  # fully noncombat and awards the same completion score.
   - id: fortify_dawn_watch
     name: "sealed-byre dawn watch"
     aliases: [dawn watch, outlast the pack, hold seals, sealed watch]
@@ -2035,6 +2076,40 @@ objects:
         conditions:
           - { has_flag: strategy_fortify_committed }
           - { has_flag: fortify_threshold_sealed }
+          - { has_flag: fortify_outer_seal_failed }
+          - { has_flag: fortify_mobile_crew_stabilized }
+          - { var_lte: { name: fortification_pressure, value: 2 } }
+          - any_of:
+              - { not_flag: june_pike_present }
+              - { has_flag: june_blood_condition_broken }
+              - { has_flag: june_fortify_cattle_line_taken }
+          - { not_flag: fortify_dawn_held }
+        blocked_hint:
+          visible_when:
+            - { has_flag: june_pike_present }
+            - { not_flag: june_blood_condition_broken }
+            - { not_flag: june_fortify_cattle_line_taken }
+          reason: "June has reached the lower cattle brace under her independent authority. Hear her decision before taking the stabilized seals into the dawn watch."
+        effects:
+          - set_flag: fortify_dawn_held
+          - set_flag: fortify_pack_outlasted
+          - set_var: { name: fortification_pressure, value: 6 }
+          - inc_var: { name: score, by: 20 }
+          - set_quest_stage: { quest: the_watch, stage: byre_outlasted }
+          - add_journal: "The mobile-stabilized seals hold through dawn. All three wolves withdraw alive; the failed seat stays recorded and herd whole."
+          - narrate: >
+              The recovered outer seat takes the first blows; the mobile crew's braces keep
+              its joined seam from straining again. You hold the honestly failed line until
+              grey dawn. All three wolves withdraw alive; every person and the whole herd
+              remain safe.
+          - goto: cattle_stand
+      - verb: USE
+        target: fortify_dawn_watch
+        command_verb: hold
+        conditions:
+          - { has_flag: strategy_fortify_committed }
+          - { has_flag: fortify_threshold_sealed }
+          - { not_flag: fortify_outer_seal_failed }
           - { var_lte: { name: fortification_pressure, value: 2 } }
           - any_of:
               - { not_flag: june_pike_present }
@@ -2134,6 +2209,10 @@ objects:
           - { not_flag: yearling_down }
         text: "Oats and tallow smear the churned snow where the first cast fouled. There is no second sack; a bound split rail can pen the yearling onto what remains, or combat can clear the breach."
     interactions:
+      # Emery's northbound fodder is a route-specific cattle buffer, not a retry or
+      # a check bonus. On the exposed ridge only, a clean cast consumes the buffer
+      # instead of adding the cast's ordinary alarm step. A fouled cast keeps the
+      # complete baseline +2 consequence so mixed blood endings remain truthful.
       - verb: USE
         item: winter_feed_sack
         target: downwind_feed_line
@@ -2144,6 +2223,45 @@ objects:
           - { has_flag: strategy_lure_committed }
           - { has_flag: approach_exposed_ridge }
           - { not_flag: approach_sheltered_stockway }
+          - { has_flag: relief_cade_fodder_allocated }
+          - { not_flag: relief_resident_shelter_allocated }
+          - { not_flag: relief_mobile_reserve_allocated }
+          - { not_flag: lure_trail_fouled }
+          - { not_flag: yearling_down }
+          - { not_flag: yearling_redirected }
+        skill_check:
+          skill: fieldcraft
+          difficulty: 10
+          on_success:
+            - set_flag: yearling_redirected
+            - inc_var: { name: score, by: 10 }
+            - set_quest_stage: { quest: the_watch, stage: breach_redirected }
+            - add_journal: "Cade's pre-feed absorbs the ridge pressure. The yearling follows the clean line; cattle alarm does not rise."
+            - narrate: >
+                Emery's drovers have already fed the herd down from its first panic. The
+                exposed ridge makes the crosswind plain; your clean cast turns the
+                yearling into the high wood, and the cattle spend their one steadied beat
+                instead of hammering the slats.
+          on_failure:
+            - set_flag: lure_trail_fouled
+            - inc_var: { name: cattle_alarm, by: 2 }
+            - add_journal: "The ridge cast fouls despite Cade's pre-feed. No retry; alarm +2. Bind a rail to redirect the yearling or fight."
+            - narrate: >
+                The pre-fed cattle hold only until the cast clips the paling and folds
+                into churned snow. The yearling stays, the herd hammers the slats, and the
+                full failed-cast pressure lands. The feed is spent: bind a split rail or
+                fight and carry the lure deeper.
+      - verb: USE
+        item: winter_feed_sack
+        target: downwind_feed_line
+        command_verb: lay
+        command_template: "lay {target} with {item}"
+        conditions:
+          - { has_item: winter_feed_sack }
+          - { has_flag: strategy_lure_committed }
+          - { has_flag: approach_exposed_ridge }
+          - { not_flag: approach_sheltered_stockway }
+          - { not_flag: relief_cade_fodder_allocated }
           - { not_flag: lure_trail_fouled }
           - { not_flag: yearling_down }
           - { not_flag: yearling_redirected }

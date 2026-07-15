@@ -27,6 +27,9 @@ const FULL = { compact_context: false, compact_result: false } as const;
 const STATION_AREA_ID = "albany_city__transport_hub";
 const MARKET_AREA_ID = "albany_city__market";
 const GREENWAY_AREA_ID = "albany_city__greenway";
+// The run uses the sheltered approach, so exposed-ridge fodder cannot alter
+// either the fixed quest result or the Market service being compared here.
+const NEUTRAL_RELIEF_ALLOCATION = "albany:relief_cade_fodder";
 const WAGON_RULE_ID = "albany:dawn_wagon_solo_packet_resupply";
 const WARDENS_RULE_ID = "albany:dawn_wardens_greenway_rest";
 
@@ -197,6 +200,11 @@ function launchAlbanyWolf(api: ToolApi): { overworldSessionId: string; rpgSessio
     ...FULL,
     session_id: overworldSessionId,
     area_route_id: stationRoute.id,
+  });
+  api.choose_overworld_session_story({
+    ...FULL,
+    session_id: overworldSessionId,
+    choice: NEUTRAL_RELIEF_ALLOCATION,
   });
 
   const launched = api.start_overworld_session_quest({

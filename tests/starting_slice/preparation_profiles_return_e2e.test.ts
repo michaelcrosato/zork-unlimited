@@ -34,6 +34,7 @@ const REGISTRATION =
 
 const FULL = { compact_context: false, compact_result: false } as const;
 const PROFILE = "albany:prep_drover_route";
+const NEUTRAL_RELIEF_ALLOCATION = "albany:relief_resident_shelter";
 const SERVICE_ID = "albany:wolf_drover_route_return_rest";
 const CAMPUS_AREA = "albany_city__campus";
 const ROUTE = [
@@ -168,6 +169,11 @@ function launchPreparedWolf(api: ToolApi) {
   );
 
   moveToVisibleArea(api, overworldSessionId, WOLF.area);
+  api.choose_overworld_session_story({
+    ...FULL,
+    session_id: overworldSessionId,
+    choice: NEUTRAL_RELIEF_ALLOCATION,
+  });
   const launched = api.start_overworld_session_quest({
     ...FULL,
     compact_observation: false,
@@ -195,6 +201,7 @@ describe("SS-F05 — preparation survives Wolf-Winter and the Albany return", ()
       "import:wolf_winter_approach_sheltered_stockway",
       "import:wolf_winter_drover_route",
       "import:wolf_winter_drover_streetwise",
+      "import:wolf_winter_relief_resident_shelter",
     ]);
 
     // The browser starts from the post-launch persistent character, including
