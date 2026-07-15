@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   CAMPAIGN_CHARACTER_MAX_OWED,
+  CAMPAIGN_CHARACTER_MAX_HEALTH,
   CAMPAIGN_CHARACTER_MAX_SCORE,
   CAMPAIGN_CHARACTER_MIN_SCORE,
   buildCampaignCharacterState,
@@ -18,6 +19,7 @@ import {
   RemoveCompanionConsequenceSchema,
   ResolvePromiseConsequenceSchema,
   SetWorldFactConsequenceSchema,
+  SufferWoundConsequenceSchema,
   applyCampaignConsequences,
   campaignConsequenceEffectKey,
   deriveCampaignWorldFactIds,
@@ -62,6 +64,13 @@ function syntheticEffects(): CampaignConsequenceEffects {
       memory_id: "memory:shared_evidence",
     },
     {
+      type: "suffer_wound",
+      wound_id: "wound:archive_fall",
+      severity: 2,
+      treatment: "stabilized",
+      health_loss: 6,
+    },
+    {
       type: "set_world_fact",
       fact_id: "fact:archive_preserved",
     },
@@ -92,6 +101,21 @@ describe("generic campaign consequences", () => {
       trust_at_least: CAMPAIGN_CHARACTER_MIN_SCORE,
       regard_at_least: CAMPAIGN_CHARACTER_MAX_SCORE,
       owes_player_at_least: CAMPAIGN_CHARACTER_MAX_OWED,
+    });
+    expect(
+      SufferWoundConsequenceSchema.parse({
+        type: "suffer_wound",
+        wound_id: "wound:archive_fall",
+        severity: 2,
+        treatment: "stabilized",
+        health_loss: 6,
+      }),
+    ).toEqual({
+      type: "suffer_wound",
+      wound_id: "wound:archive_fall",
+      severity: 2,
+      treatment: "stabilized",
+      health_loss: 6,
     });
     expect(
       SetWorldFactConsequenceSchema.parse({
@@ -174,6 +198,16 @@ describe("generic campaign consequences", () => {
         value: false,
       }),
     ).toThrow();
+    expect(() =>
+      CampaignConsequenceEffectSchema.parse({
+        type: "suffer_wound",
+        wound_id: "wound:archive_fall",
+        severity: 2,
+        treatment: "stabilized",
+        health_loss: 6,
+        source: "falling_shelf",
+      }),
+    ).toThrow();
   });
 
   it.each([
@@ -195,6 +229,96 @@ describe("generic campaign consequences", () => {
     ],
     ["unscoped fact id", { type: "set_world_fact", fact_id: "archive_preserved" }],
     ["unscoped knowledge id", { type: "learn_knowledge", knowledge_id: "archive_route" }],
+    [
+      "unscoped wound id",
+      {
+        type: "suffer_wound",
+        wound_id: "archive_fall",
+        severity: 2,
+        treatment: "stabilized",
+        health_loss: 6,
+      },
+    ],
+    [
+      "zero wound severity",
+      {
+        type: "suffer_wound",
+        wound_id: "wound:archive_fall",
+        severity: 0,
+        treatment: "stabilized",
+        health_loss: 6,
+      },
+    ],
+    [
+      "wound severity above five",
+      {
+        type: "suffer_wound",
+        wound_id: "wound:archive_fall",
+        severity: 6,
+        treatment: "stabilized",
+        health_loss: 6,
+      },
+    ],
+    [
+      "fractional wound severity",
+      {
+        type: "suffer_wound",
+        wound_id: "wound:archive_fall",
+        severity: 2.5,
+        treatment: "stabilized",
+        health_loss: 6,
+      },
+    ],
+    [
+      "unknown wound treatment",
+      {
+        type: "suffer_wound",
+        wound_id: "wound:archive_fall",
+        severity: 2,
+        treatment: "healed",
+        health_loss: 6,
+      },
+    ],
+    [
+      "zero wound health loss",
+      {
+        type: "suffer_wound",
+        wound_id: "wound:archive_fall",
+        severity: 2,
+        treatment: "stabilized",
+        health_loss: 0,
+      },
+    ],
+    [
+      "negative wound health loss",
+      {
+        type: "suffer_wound",
+        wound_id: "wound:archive_fall",
+        severity: 2,
+        treatment: "stabilized",
+        health_loss: -1,
+      },
+    ],
+    [
+      "fractional wound health loss",
+      {
+        type: "suffer_wound",
+        wound_id: "wound:archive_fall",
+        severity: 2,
+        treatment: "stabilized",
+        health_loss: 1.5,
+      },
+    ],
+    [
+      "wound health loss above bound",
+      {
+        type: "suffer_wound",
+        wound_id: "wound:archive_fall",
+        severity: 2,
+        treatment: "stabilized",
+        health_loss: CAMPAIGN_CHARACTER_MAX_HEALTH + 1,
+      },
+    ],
     [
       "trust floor below score range",
       {
@@ -252,6 +376,25 @@ describe("generic campaign consequences", () => {
       CampaignConsequenceEffectsSchema.parse([
         { type: "learn_knowledge", knowledge_id: "knowledge:archive_route" },
         { type: "learn_knowledge", knowledge_id: "knowledge:archive_route" },
+      ]),
+    ).toThrow(/duplicate campaign consequence effect/i);
+
+    expect(() =>
+      CampaignConsequenceEffectsSchema.parse([
+        {
+          type: "suffer_wound",
+          wound_id: "wound:archive_fall",
+          severity: 2,
+          treatment: "stabilized",
+          health_loss: 6,
+        },
+        {
+          type: "suffer_wound",
+          wound_id: "wound:archive_fall",
+          severity: 3,
+          treatment: "untreated",
+          health_loss: 9,
+        },
       ]),
     ).toThrow(/duplicate campaign consequence effect/i);
 
@@ -338,6 +481,14 @@ describe("generic campaign consequences", () => {
     expect(result.characterAfter.knowledge).toEqual([
       "knowledge:archive_route",
       "knowledge:private_map",
+    ]);
+    expect(result.characterAfter.health).toEqual({ current: 18, max: 30 });
+    expect(result.characterAfter.wounds).toEqual([
+      {
+        woundId: "wound:archive_fall",
+        severity: 2,
+        treatment: "stabilized",
+      },
     ]);
     expect(result.characterAfter.relationships).toEqual([
       {
@@ -438,6 +589,100 @@ describe("generic campaign consequences", () => {
     expect(source.companions).toEqual([]);
     expect(source.promises).toEqual([]);
   });
+
+  it("applies a synthetic non-Wolf wound once and floors campaign health at one", () => {
+    const effect = {
+      type: "suffer_wound",
+      wound_id: "wound:archive_collapse",
+      severity: 4,
+      treatment: "untreated",
+      health_loss: CAMPAIGN_CHARACTER_MAX_HEALTH,
+    } as const;
+    const source = buildCampaignCharacterState({ health: { current: 3, max: 30 } });
+
+    const first = applyCampaignConsequences({ character: source, effects: [effect] });
+    const replayed = applyCampaignConsequences({
+      character: first.characterAfter,
+      effects: [effect],
+    });
+
+    expect(first.characterAfter.health).toEqual({ current: 1, max: 30 });
+    expect(first.characterAfter.wounds).toEqual([
+      {
+        woundId: "wound:archive_collapse",
+        severity: 4,
+        treatment: "untreated",
+      },
+    ]);
+    expect(replayed).toEqual(first);
+    expect(source.health.current).toBe(3);
+    expect(source.wounds).toEqual([]);
+  });
+
+  it("records a wound without resurrecting a zero-health character", () => {
+    const source = buildCampaignCharacterState({ health: { current: 0, max: 30 } });
+
+    const result = applyCampaignConsequences({
+      character: source,
+      effects: [
+        {
+          type: "suffer_wound",
+          wound_id: "wound:post_defeat_record",
+          severity: 1,
+          treatment: "stabilized",
+          health_loss: 1,
+        },
+      ],
+    });
+
+    expect(result.characterAfter.health).toEqual({ current: 0, max: 30 });
+    expect(result.characterAfter.wounds).toContainEqual({
+      woundId: "wound:post_defeat_record",
+      severity: 1,
+      treatment: "stabilized",
+    });
+    expect(source.health.current).toBe(0);
+    expect(source.wounds).toEqual([]);
+  });
+
+  it.each([
+    [3, "stabilized"],
+    [2, "treated"],
+  ] as const)(
+    "rejects conflicting wound identity (severity %i, treatment %s) atomically",
+    (severity, treatment) => {
+      const source = buildCampaignCharacterState({
+        health: { current: 12, max: 30 },
+        wounds: [
+          {
+            woundId: "wound:archive_fall",
+            severity: 2,
+            treatment: "stabilized",
+          },
+        ],
+      });
+      const before = cloneCampaignCharacterState(source);
+
+      expect(() =>
+        applyCampaignConsequences({
+          character: source,
+          effects: [
+            { type: "learn_knowledge", knowledge_id: "knowledge:would_not_commit" },
+            {
+              type: "suffer_wound",
+              wound_id: "wound:archive_fall",
+              severity,
+              treatment,
+              health_loss: 5,
+            },
+          ],
+        }),
+      ).toThrow(/already exists with severity 2 and treatment "stabilized"/i);
+      expect(source).toEqual(before);
+      expect(source.knowledge).not.toContain("knowledge:would_not_commit");
+      expect(source.health.current).toBe(12);
+    },
+  );
 
   it("rejects invalid promise transitions without partially applying prior effects", () => {
     const source = buildCampaignCharacterState({

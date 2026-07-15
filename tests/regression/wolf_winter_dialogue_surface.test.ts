@@ -90,7 +90,9 @@ describe("Wolf-Winter dialogue surface", () => {
     const state = startCadeDialogue();
     const ids = legalActionIds(state);
 
-    expect(ids).toEqual(expect.arrayContaining(["ask_wolves", "ask_byre", "ask_leave"]));
+    expect(ids).toEqual(
+      expect.arrayContaining(["ask_wolves", "ask_byre", "ask_drive", "ask_leave"]),
+    );
     expect(ids).not.toContain("ask_ask_wolves");
     expect(ids).not.toContain("ask_ask_byre");
     expect(ids).not.toContain("ask_leave_cade");
@@ -138,17 +140,23 @@ describe("Wolf-Winter dialogue surface", () => {
     expect(stepAction("go_north").ok).toBe(true);
     expect(stepAction("talk_houndsman").ok).toBe(true);
     expect(mcpDialogueIds()).toEqual(dialogueActionIds(legalActionIds(state)));
-    expect(mcpDialogueIds()).toEqual(["ask_wolves", "ask_byre", "ask_lure", "ask_leave"]);
+    expect(mcpDialogueIds()).toEqual([
+      "ask_wolves",
+      "ask_byre",
+      "ask_lure",
+      "ask_drive",
+      "ask_leave",
+    ]);
 
     state = act(state, { type: "ASK", npc: "houndsman", topic: "wolves" });
     expect(stepAction("ask_wolves").ok).toBe(true);
     expect(mcpDialogueIds()).toEqual(dialogueActionIds(legalActionIds(state)));
-    expect(mcpDialogueIds()).toEqual(["ask_byre", "ask_lure", "ask_leave"]);
+    expect(mcpDialogueIds()).toEqual(["ask_byre", "ask_lure", "ask_drive", "ask_leave"]);
 
     state = act(state, { type: "ASK", npc: "houndsman", topic: "byre" });
     expect(stepAction("ask_byre").ok).toBe(true);
     expect(mcpDialogueIds()).toEqual(dialogueActionIds(legalActionIds(state)));
-    expect(mcpDialogueIds()).toEqual(["ask_lure", "ask_leave"]);
+    expect(mcpDialogueIds()).toEqual(["ask_lure", "ask_drive", "ask_leave"]);
   });
 
   it("offers direct follow-ups and a leave option after Cade gives advice", () => {
@@ -156,7 +164,7 @@ describe("Wolf-Winter dialogue surface", () => {
     state = act(state, { type: "ASK", npc: "houndsman", topic: "wolves" });
 
     const ids = legalActionIds(state);
-    expect(ids).toEqual(expect.arrayContaining(["ask_byre", "ask_lure", "ask_leave"]));
+    expect(ids).toEqual(expect.arrayContaining(["ask_byre", "ask_lure", "ask_drive", "ask_leave"]));
     expect(ids).not.toContain("ask_ask_byre");
     expect(ids).not.toContain("ask_wolves_back");
   });

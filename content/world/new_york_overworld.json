@@ -525,14 +525,14 @@
     "solo_option_id": "albany:ally_travel_solo",
     "title": "Choose the Wolf-Winter Field Team",
     "message": "June Pike has one Road-Warden field seat beside Hayden's outgoing packet. She can ride with you, but only under a named division of authority; leaving without that agreement sends the relief rider alone and does not delay the dispatch.",
-    "capability": "After a failed living-pack lure is recovered without blood, June can leave the wolf line at the final byre threshold and take the cattle line, lowering cattle alarm by 1.",
+    "capability": "On a bloodless living-pack line, June can leave the wolf line at the final byre threshold and take the cattle line once: she lowers cattle alarm after a recovered lure or opens the lower swing gate during a committed drive.",
     "condition": "June keeps cattle-first authority. She will not become an extra hunter, and the first wolf killed ends her place on the field team.",
     "options": [
       {
         "id": "albany:ally_june_cattle_first",
         "title": "Grant June Cattle-First Authority",
         "summary": "Ask June Pike to ride as an independent Road-Warden ally.",
-        "preview": "The briefing takes 15 minutes. June joins the field team and records your promise that she chooses the cattle line if the recovered lure still leaves the herd pressing. Her help is one pressure intervention, never a combat bonus; any wolf death ends the agreement.",
+        "preview": "The briefing takes 15 minutes. June joins the field team and records your promise that she chooses the cattle line if a recovered lure leaves the herd pressing or a committed drive reaches the final threshold. Her help is one pressure intervention, never a combat bonus; any wolf death ends the agreement.",
         "consequence": "June signs beside your name, takes the second field seat, and remembers that you granted rather than merely borrowed her authority.",
         "terms": { "minutes": 15 },
         "effects": [
@@ -653,6 +653,40 @@
       "minutes": 15,
       "requires_all_world_facts": [
         "fact:wolf_winter_pack_diverted_alive",
+        "fact:wolf_winter_cattle_whole"
+      ],
+      "forbids_any_world_facts": [
+        "fact:wolf_winter_cattle_scattered"
+      ]
+    },
+    {
+      "id": "albany:wolf_drive_reserve_returned_station_rest",
+      "home": "albany_city",
+      "area": "albany_city__transport_hub",
+      "action": "rest",
+      "title": "Take the Returned-Drive Recovery Cot",
+      "summary": "Because Albany's reusable signal housing and cattle rope returned from the bloodless steading evacuation, June Pike opens one reserved Station recovery cot and accounting watch. The 15-minute rest restores fatigue only; it neither creates nor treats a lasting wound.",
+      "provider_character_id": "albany_city__transport_hub__june_pike",
+      "minutes": 15,
+      "requires_all_world_facts": [
+        "fact:wolf_winter_pack_driven_alive",
+        "fact:wolf_winter_drive_reserve_returned"
+      ],
+      "forbids_any_world_facts": [
+        "fact:wolf_winter_drive_reserve_spent"
+      ]
+    },
+    {
+      "id": "albany:wolf_drive_whole_herd_greenway_resupply",
+      "home": "albany_city",
+      "area": "albany_city__greenway",
+      "action": "resupply",
+      "title": "Claim Emery's Driven-Pack Response Cache",
+      "summary": "Because the bloodless drive put all three wolves beyond the abandoned outer line while Cade's whole herd escaped, Emery Sloane releases one reserved Greenway cache of food, lamp oil, and wildlife flares for the next road.",
+      "provider_character_id": "albany_city__greenway__contact",
+      "minutes": 15,
+      "requires_all_world_facts": [
+        "fact:wolf_winter_pack_driven_alive",
         "fact:wolf_winter_cattle_whole"
       ],
       "forbids_any_world_facts": [
@@ -24130,6 +24164,33 @@
       "campaign_npc_id": "albany:june_pike",
       "variants": [
         {
+          "id": "returned_from_drive_herd_out_rider_wounded",
+          "after_relationship_memories": [
+            "albany:memory_june_joined_cattle_first",
+            "albany:memory_june_drive_herd_out_rider_wounded"
+          ],
+          "summary": "June has returned beside the whole herd with her lower-gate account matched to your bound shoulder: the living pack cleared the abandoned line, and the courier returned with an untreated wound.",
+          "agenda": "The cattle-first promise is kept. The returned drive rig opens one Station recovery cot, but June will not let its rest erase the untreated wound from the ledger."
+        },
+        {
+          "id": "returned_from_drive_cattle_line_overrun",
+          "after_relationship_memories": [
+            "albany:memory_june_joined_cattle_first",
+            "albany:memory_june_drive_cattle_line_overrun"
+          ],
+          "summary": "June has returned with every person safe and two cattle still missing. Her lower swing-gate held, but the person-first front line overran the herd beyond it.",
+          "agenda": "The cattle-first promise is kept without disguising the loss. The returned drive rig opens one Station recovery cot while the lower-pasture search stays live."
+        },
+        {
+          "id": "returned_from_drive_signal_spent",
+          "after_relationship_memories": [
+            "albany:memory_june_joined_cattle_first",
+            "albany:memory_june_drive_signal_spent_herd_out"
+          ],
+          "summary": "June has returned with every person and the whole herd, while her matching account records the signal-and-rope rig cut apart at the front line.",
+          "agenda": "The cattle-first promise is kept, but no returned-drive cot is claimed from equipment that did not come home; Albany carries the resource loss forward."
+        },
+        {
           "id": "returned_after_holding_cattle_line",
           "after_relationship_memories": [
             "albany:memory_june_joined_cattle_first",
@@ -24153,7 +24214,7 @@
             "albany:memory_june_joined_cattle_first",
             "albany:memory_june_left_after_blood"
           ],
-          "summary": "June's field seat is empty. Her separate return says first blood broke the cattle-first line before she could take the lower rail.",
+          "summary": "June's field seat is empty. Her separate return says the route crossed into combat before she could take the lower rail, ending the cattle-first field agreement.",
           "agenda": "The promise is recorded broken, June has left the party, and no ally return claim is available; the completed Wolf-Winter result still stands."
         },
         {
@@ -24162,7 +24223,7 @@
             "albany:memory_june_joined_cattle_first"
           ],
           "summary": "June has signed the Wolf-Winter field line beside your name and remembers that cattle-first authority was granted explicitly.",
-          "agenda": "She will take the cattle line after a failed lure is recovered alive, but the first wolf killed ends her place on the team."
+          "agenda": "She will take the cattle line once after a failed lure is recovered alive or when a committed drive reaches its final threshold, but the first wolf killed ends her place on the team."
         },
         {
           "id": "refused_subordinate_relay",
@@ -24222,6 +24283,30 @@
       "agenda": "Wants a traveler to handle Albany Greenway's local problems before they spread through the Capital / Mohawk road network.",
       "campaign_npc_id": "albany:emery_sloane",
       "variants": [
+        {
+          "id": "wolf_pack_driven_herd_out_rider_wounded",
+          "after_relationship_memories": [
+            "albany:memory_emery_drive_herd_first_wound"
+          ],
+          "summary": "Emery has the bloodless drive tally: all three wolves beyond the abandoned outer line, Cade's whole herd clear, and the courier back with an untreated gate wound.",
+          "agenda": "Emery releases one driven-pack response cache for the whole-herd result, but keeps the wound and the pack's displaced range on separate live lines."
+        },
+        {
+          "id": "wolf_pack_driven_people_first_cattle_lost",
+          "after_relationship_memories": [
+            "albany:memory_emery_drive_people_first_cattle_lost"
+          ],
+          "summary": "Emery has the person-first drive tally: every person safe and all three wolves alive beyond the abandoned line, with two cattle still missing down the lower pasture.",
+          "agenda": "Emery will not issue a whole-herd cache for a scattered herd; the missing cattle and the driven pack's new range remain the truthful next work."
+        },
+        {
+          "id": "wolf_pack_driven_reserve_spent",
+          "after_relationship_memories": [
+            "albany:memory_emery_drive_signal_spent"
+          ],
+          "summary": "Emery has the reserve-spent drive tally: every person and the whole herd clear, all three wolves alive, and Albany's signal-and-rope rig left cut apart at the byre mouth.",
+          "agenda": "Emery releases one driven-pack response cache while keeping the destroyed rig as a real relief loss, not an invisible cost of the clean herd count."
+        },
         {
           "id": "wolf_drover_route_allocated",
           "after_relationship_memories": [
@@ -47737,6 +47822,237 @@
                   "type": "remember_relationship",
                   "npc_id": "albany:june_pike",
                   "memory_id": "albany:memory_june_held_cattle_line"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ending_id": "ending_drive_cattle_wounded",
+          "ending_title": "The Herd Out, Rider Hurt",
+          "effects": [
+            {
+              "type": "remember_relationship",
+              "npc_id": "npc:old_cade",
+              "memory_id": "memory:wolf_winter_drive_herd_first_wound",
+              "trust_at_least": 10,
+              "regard_at_least": 12,
+              "owes_player_at_least": 1
+            },
+            {
+              "type": "remember_relationship",
+              "npc_id": "albany:emery_sloane",
+              "memory_id": "albany:memory_emery_drive_herd_first_wound",
+              "trust_at_least": 7,
+              "regard_at_least": 9,
+              "owes_player_at_least": 1
+            },
+            {
+              "type": "set_world_fact",
+              "fact_id": "fact:wolf_winter_outer_line_abandoned"
+            },
+            {
+              "type": "set_world_fact",
+              "fact_id": "fact:wolf_winter_pack_driven_alive"
+            },
+            {
+              "type": "set_world_fact",
+              "fact_id": "fact:wolf_winter_steading_evacuated"
+            },
+            {
+              "type": "set_world_fact",
+              "fact_id": "fact:wolf_winter_people_safe"
+            },
+            {
+              "type": "set_world_fact",
+              "fact_id": "fact:wolf_winter_cattle_whole"
+            },
+            {
+              "type": "set_world_fact",
+              "fact_id": "fact:wolf_winter_drive_reserve_returned"
+            },
+            {
+              "type": "set_world_fact",
+              "fact_id": "fact:wolf_winter_courier_wounded"
+            },
+            {
+              "type": "suffer_wound",
+              "wound_id": "wound:wolf_winter_byre_mouth_gate",
+              "severity": 2,
+              "treatment": "untreated",
+              "health_loss": 6
+            }
+          ],
+          "conditional_effects": [
+            {
+              "id": "albany:june_drive_herd_out_rider_wounded",
+              "when": {
+                "requires_all_companions": ["albany:june_pike"],
+                "requires_all_promises": [
+                  {
+                    "promise_id": "albany:promise_june_cattle_first",
+                    "status": "active"
+                  }
+                ]
+              },
+              "effects": [
+                {
+                  "type": "resolve_promise",
+                  "promise_id": "albany:promise_june_cattle_first",
+                  "status": "kept"
+                },
+                {
+                  "type": "remember_relationship",
+                  "npc_id": "albany:june_pike",
+                  "memory_id": "albany:memory_june_drive_herd_out_rider_wounded"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ending_id": "ending_drive_person_cattle_lost",
+          "ending_title": "The People Out, Cattle Lost",
+          "effects": [
+            {
+              "type": "remember_relationship",
+              "npc_id": "npc:old_cade",
+              "memory_id": "memory:wolf_winter_drive_people_first_cattle_lost",
+              "trust_at_least": 8,
+              "regard_at_least": 10,
+              "owes_player_at_least": 1
+            },
+            {
+              "type": "remember_relationship",
+              "npc_id": "albany:emery_sloane",
+              "memory_id": "albany:memory_emery_drive_people_first_cattle_lost",
+              "trust_at_least": 4,
+              "regard_at_least": 6,
+              "owes_player_at_least": 0
+            },
+            {
+              "type": "set_world_fact",
+              "fact_id": "fact:wolf_winter_outer_line_abandoned"
+            },
+            {
+              "type": "set_world_fact",
+              "fact_id": "fact:wolf_winter_pack_driven_alive"
+            },
+            {
+              "type": "set_world_fact",
+              "fact_id": "fact:wolf_winter_steading_evacuated"
+            },
+            {
+              "type": "set_world_fact",
+              "fact_id": "fact:wolf_winter_people_safe"
+            },
+            {
+              "type": "set_world_fact",
+              "fact_id": "fact:wolf_winter_cattle_scattered"
+            },
+            {
+              "type": "set_world_fact",
+              "fact_id": "fact:wolf_winter_drive_reserve_returned"
+            },
+            {
+              "type": "set_world_fact",
+              "fact_id": "fact:wolf_winter_people_prioritized"
+            }
+          ],
+          "conditional_effects": [
+            {
+              "id": "albany:june_drive_cattle_line_overrun",
+              "when": {
+                "requires_all_companions": ["albany:june_pike"],
+                "requires_all_promises": [
+                  {
+                    "promise_id": "albany:promise_june_cattle_first",
+                    "status": "active"
+                  }
+                ]
+              },
+              "effects": [
+                {
+                  "type": "resolve_promise",
+                  "promise_id": "albany:promise_june_cattle_first",
+                  "status": "kept"
+                },
+                {
+                  "type": "remember_relationship",
+                  "npc_id": "albany:june_pike",
+                  "memory_id": "albany:memory_june_drive_cattle_line_overrun"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ending_id": "ending_drive_reserve_spent",
+          "ending_title": "The Steading Evacuated, Reserve Spent",
+          "effects": [
+            {
+              "type": "remember_relationship",
+              "npc_id": "npc:old_cade",
+              "memory_id": "memory:wolf_winter_drive_signal_spent",
+              "trust_at_least": 12,
+              "regard_at_least": 12,
+              "owes_player_at_least": 1
+            },
+            {
+              "type": "remember_relationship",
+              "npc_id": "albany:emery_sloane",
+              "memory_id": "albany:memory_emery_drive_signal_spent",
+              "trust_at_least": 8,
+              "regard_at_least": 10,
+              "owes_player_at_least": 1
+            },
+            {
+              "type": "set_world_fact",
+              "fact_id": "fact:wolf_winter_outer_line_abandoned"
+            },
+            {
+              "type": "set_world_fact",
+              "fact_id": "fact:wolf_winter_pack_driven_alive"
+            },
+            {
+              "type": "set_world_fact",
+              "fact_id": "fact:wolf_winter_steading_evacuated"
+            },
+            {
+              "type": "set_world_fact",
+              "fact_id": "fact:wolf_winter_people_safe"
+            },
+            {
+              "type": "set_world_fact",
+              "fact_id": "fact:wolf_winter_cattle_whole"
+            },
+            {
+              "type": "set_world_fact",
+              "fact_id": "fact:wolf_winter_drive_reserve_spent"
+            }
+          ],
+          "conditional_effects": [
+            {
+              "id": "albany:june_drive_signal_spent_herd_out",
+              "when": {
+                "requires_all_companions": ["albany:june_pike"],
+                "requires_all_promises": [
+                  {
+                    "promise_id": "albany:promise_june_cattle_first",
+                    "status": "active"
+                  }
+                ]
+              },
+              "effects": [
+                {
+                  "type": "resolve_promise",
+                  "promise_id": "albany:promise_june_cattle_first",
+                  "status": "kept"
+                },
+                {
+                  "type": "remember_relationship",
+                  "npc_id": "albany:june_pike",
+                  "memory_id": "albany:memory_june_drive_signal_spent_herd_out"
                 }
               ]
             }

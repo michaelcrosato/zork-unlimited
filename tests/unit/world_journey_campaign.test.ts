@@ -75,6 +75,24 @@ const EXPECTED_CONSEQUENCES: Readonly<
     send_wardens_north:
       "The wagon follows Hedrick's report; Cade remains with a broken outer line and two cattle still missing down the lower pasture; the yearling is dead and the other two wolves remain alive in the high wood. Emery Sloane sets aside a one-time Greenway watch-shelter claim for joining the wardens' northbound dispatch: a 15-minute rest whenever you claim it.",
   },
+  drive_cattle_wounded: {
+    send_wagon_to_cade:
+      "The wagon takes Cade's whole herd from the evacuation road back to repair the abandoned outer line while all three wolves remain alive beyond it; your gate wound remains untreated and the spent signal-and-rope rig remains in Albany for repair when you take Hedrick's packet north alone. Jamie Tanner enters a one-time Market road-store credit for carrying Hedrick's packet alone: a 15-minute resupply whenever you claim it.",
+    send_wardens_north:
+      "The wagon follows Hedrick's report; Cade keeps the whole herd on the evacuation road while all three wolves remain alive beyond the abandoned outer line, your gate wound remains untreated, and the spent signal-and-rope rig remains in Albany for repair. Emery Sloane sets aside a one-time Greenway watch-shelter claim for joining the wardens' northbound dispatch: a 15-minute rest whenever you claim it.",
+  },
+  drive_person_cattle_lost: {
+    send_wagon_to_cade:
+      "The wagon returns with Cade and every evacuated person to search for the scattered herd and repair the abandoned outer line; all three wolves remain alive beyond it and the spent signal-and-rope rig remains in Albany for repair when you take Hedrick's packet north alone. Jamie Tanner enters a one-time Market road-store credit for carrying Hedrick's packet alone: a 15-minute resupply whenever you claim it.",
+    send_wardens_north:
+      "The wagon follows Hedrick's report; Cade and every other person remain safe on the evacuation road, but the herd remains scattered, all three wolves remain alive beyond the abandoned outer line, and the spent signal-and-rope rig remains in Albany for repair. Emery Sloane sets aside a one-time Greenway watch-shelter claim for joining the wardens' northbound dispatch: a 15-minute rest whenever you claim it.",
+  },
+  drive_reserve_spent: {
+    send_wagon_to_cade:
+      "The wagon takes Cade's whole herd from the evacuation road back to repair the abandoned outer line while all three wolves remain alive beyond it; the cut-apart signal-and-rope rig did not return when you take Hedrick's packet north alone. Jamie Tanner enters a one-time Market road-store credit for carrying Hedrick's packet alone: a 15-minute resupply whenever you claim it.",
+    send_wardens_north:
+      "The wagon follows Hedrick's report; Cade keeps the whole herd safe on the evacuation road while all three wolves remain alive beyond the abandoned outer line, but the cut-apart signal-and-rope rig did not return. Emery Sloane sets aside a one-time Greenway watch-shelter claim for joining the wardens' northbound dispatch: a 15-minute rest whenever you claim it.",
+  },
   gate_barred: {
     send_wagon_to_cade:
       "The wagon replaces the broken outer paling; the timber at the inner gate stays as Cade's last bar. You take Hedrick's packet north alone. Jamie Tanner enters a one-time Market road-store credit for carrying Hedrick's packet alone: a 15-minute resupply whenever you claim it.",
@@ -161,7 +179,7 @@ const COMPLETED_THROUGH_BREAKING_WEIR = new Set([
 ]);
 
 describe("journey campaign", () => {
-  it("maps the six supported Wolf-Winter victories to truthful, distinct Albany returns", () => {
+  it("maps the nine supported Wolf-Winter victories to truthful, distinct Albany returns", () => {
     const expected = [
       {
         endingId: "ending_pack_diverted",
@@ -177,6 +195,21 @@ describe("journey campaign", () => {
         endingId: "ending_pack_diverted_after_blood",
         id: "pack_diverted_after_blood",
         phrase: "The yearling is dead",
+      },
+      {
+        endingId: "ending_drive_cattle_wounded",
+        id: "drive_cattle_wounded",
+        phrase: "you carry an untreated gate wound",
+      },
+      {
+        endingId: "ending_drive_person_cattle_lost",
+        id: "drive_person_cattle_lost",
+        phrase: "the herd scattered during the retreat",
+      },
+      {
+        endingId: "ending_drive_reserve_spent",
+        id: "drive_reserve_spent",
+        phrase: "spent signal-and-rope rig was cut apart and did not return",
       },
       {
         endingId: "ending_held_gate_barred",
@@ -202,7 +235,7 @@ describe("journey campaign", () => {
       expect(outcome?.albanyReturnContext).toContain(row.phrase);
       returnContexts.add(outcome!.albanyReturnContext);
     }
-    expect(returnContexts.size).toBe(6);
+    expect(returnContexts.size).toBe(9);
     expect(wolfWinterCampaignOutcome(new Map())).toBeNull();
     expect(wolfWinterCampaignOutcome(outcomeIds("ending_pulled_down"))).toBeNull();
     expect(() =>
@@ -256,6 +289,54 @@ describe("journey campaign", () => {
       });
       expect(afterContinue?.storyChoice?.id).toBe(ALBANY_DAWN_DISPATCH_ID);
       expect(afterContinue?.storyChoice?.options).toHaveLength(2);
+      for (const option of afterContinue?.storyChoice?.options ?? []) {
+        for (const truth of row.consequenceTruths) {
+          expect(option.consequence).toMatch(truth);
+        }
+        expect(option.consequence).not.toMatch(row.forbidden);
+      }
+    }
+  });
+
+  it("carries every drive evacuation outcome through continue without erasing its crisis cost", () => {
+    const expected = [
+      {
+        endingId: "ending_drive_cattle_wounded",
+        completionTruth: /whole herd.*untreated gate wound/i,
+        consequenceTruths: [/whole herd/i, /gate wound remains untreated/i],
+        forbidden: /herd (?:remains )?scattered|rig did not return/i,
+      },
+      {
+        endingId: "ending_drive_person_cattle_lost",
+        completionTruth: /herd scattered during the retreat/i,
+        consequenceTruths: [/herd (?:remains )?scattered|search for the scattered herd/i],
+        forbidden: /whole herd|gate wound|rig did not return/i,
+      },
+      {
+        endingId: "ending_drive_reserve_spent",
+        completionTruth: /spent signal-and-rope rig was cut apart and did not return/i,
+        consequenceTruths: [/whole herd/i, /cut-apart signal-and-rope rig did not return/i],
+        forbidden: /herd (?:remains )?scattered|gate wound|rig remains in Albany/i,
+      },
+    ] as const;
+
+    for (const row of expected) {
+      const questOutcomeIds = outcomeIds(row.endingId);
+      expect(() => assertJourneyCampaignQuestOutcome("wolf_winter", row.endingId)).not.toThrow();
+
+      const awaiting = awaitingInitialGoalChoice();
+      const beforeContinue = journeyCampaignPresentationContext({
+        journey: awaiting,
+        questOutcomeIds,
+      });
+      expect(beforeContinue?.completionContext).toMatch(row.completionTruth);
+      expect(beforeContinue?.completionContext).not.toMatch(row.forbidden);
+
+      const continued = chooseJourney(awaiting, "continue").state;
+      const afterContinue = journeyCampaignPresentationContext({
+        journey: continued,
+        questOutcomeIds,
+      });
       for (const option of afterContinue?.storyChoice?.options ?? []) {
         for (const truth of row.consequenceTruths) {
           expect(option.consequence).toMatch(truth);
@@ -375,7 +456,7 @@ describe("journey campaign", () => {
     expect(journeyCampaignPresentationContext({ journey: activated, questOutcomeIds })).toBeNull();
   });
 
-  it("renders the full ending-sensitive 6x2 consequence matrix", () => {
+  it("renders the full ending-sensitive 9x2 consequence matrix", () => {
     for (const outcome of Object.values(WOLF_WINTER_CAMPAIGN_OUTCOMES)) {
       const choice = albanyDawnDispatchStoryChoice(outcome);
       expect(choice.options).toHaveLength(2);

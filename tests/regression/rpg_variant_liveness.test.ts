@@ -98,15 +98,16 @@ const packFiles = readdirSync(PACK_DIR)
   .filter((f) => f.endsWith(".yaml"))
   .sort();
 
-// The route-rich Wolf-Winter graph exhausts at 630,199 states under this policy
-// (measured 2026-07-14). An 800k ceiling gives that concrete graph bounded headroom while
-// still failing LOUD on a future combinatorial blowup instead of silently truncating it.
+// Before the crisis-priority family, the route-rich Wolf-Winter graph exhausted at
+// 630,199 states under this policy (measured 2026-07-14). The unchanged 800k ceiling
+// requires every later family to retain a bounded complete graph and still fails LOUD on
+// combinatorial blowup instead of silently truncating it.
 const MAX_STATES = 800_000;
 const IMPORT_WITNESS_MAX_STATES = 200_000;
 const WORLD = loadOverworldManifest(process.cwd());
 
-// The exact 630,199-state Wolf-Winter graph took 153s in the final-hash
-// exhaustive-suite run; shared CI runners can take materially longer.
+// The pre-crisis 630,199-state Wolf-Winter graph took 153s in a final-hash
+// exhaustive-suite run; later bounded families and shared CI runners can take longer.
 // Wall-clock headroom does not change the bounded state proof.
 const SOLVER_TEST_TIMEOUT_MS = 720_000;
 
@@ -368,12 +369,58 @@ function wolfJuneCampaignWitnesses(index: RpgIndex): {
     );
   }
 
+  const reachDriveCrisis: readonly WitnessAction[] = [
+    "go_north",
+    "talk_houndsman",
+    "ask_drive",
+    "ask_commit_drive",
+    "ask_leave",
+    "take_drive_signal_rope_kit",
+    "go_north",
+    ["use_drive_signal_rope_kit_on_drive_breach_signal", "best"],
+    "go_north",
+    "use_drive_signal_rope_kit_on_drive_threshold_line",
+    "go_north",
+    "talk_june_pike_drive",
+    "ask_acknowledge",
+  ];
+  const driveCattle = run(
+    ["june_pike_present"],
+    [...reachDriveCrisis, "use_cattle_crisis_priority", "use_cattle_first_evacuation"],
+  );
+  if (driveCattle.endingId !== "ending_drive_cattle_wounded") {
+    throw new Error(
+      `June cattle-drive witness reached unexpected ending "${driveCattle.endingId ?? "none"}".`,
+    );
+  }
+  const drivePerson = run(
+    ["june_pike_present"],
+    [...reachDriveCrisis, "use_person_crisis_priority", "use_person_first_evacuation"],
+  );
+  if (drivePerson.endingId !== "ending_drive_person_cattle_lost") {
+    throw new Error(
+      `June person-drive witness reached unexpected ending "${drivePerson.endingId ?? "none"}".`,
+    );
+  }
+  const driveReserve = run(
+    ["june_pike_present"],
+    [...reachDriveCrisis, "use_reserve_crisis_priority", "use_reserve_spent_evacuation"],
+  );
+  if (driveReserve.endingId !== "ending_drive_reserve_spent") {
+    throw new Error(
+      `June reserve-drive witness reached unexpected ending "${driveReserve.endingId ?? "none"}".`,
+    );
+  }
+
   const required = [
     "room:steading_yard#1",
-    "room:byre_mouth#1",
+    "room:byre_mouth#5",
     "ending:ending_pack_diverted#0",
     "ending:ending_pack_diverted_cattle_scattered#0",
     "ending:ending_pack_diverted_after_blood#0",
+    "ending:ending_drive_cattle_wounded#0",
+    "ending:ending_drive_person_cattle_lost#0",
+    "ending:ending_drive_reserve_spent#0",
   ];
   const missing = required.filter((key) => !displayed.has(key));
   if (missing.length > 0) {
@@ -480,20 +527,20 @@ function wolfCampaignImportWitnesses(index: RpgIndex): {
   const required = [
     "room:store#3",
     "room:fodder_loft#1",
-    "room:byre_door#6",
-    "room:byre_door#21",
-    "room:paling_gap#3",
-    "object:drover_route_marks@present",
-    "room:paling_gap#11",
-    "room:paling_gap#17",
-    "room:paling_gap#22",
+    "room:byre_door#8",
     "room:byre_door#23",
+    "room:paling_gap#7",
+    "object:drover_route_marks@present",
+    "room:paling_gap#15",
+    "room:paling_gap#21",
+    "room:paling_gap#26",
+    "room:byre_door#25",
     "object:paling_rail#4",
-    "room:byre_door#19",
-    "room:byre_door#5",
-    "room:byre_door#4",
+    "room:byre_door#21",
+    "room:byre_door#7",
+    "room:byre_door#6",
     "object:paling_rail#2",
-    "room:byre_yard#0",
+    "room:byre_yard#1",
     "object:relief_protocol_docket@present",
   ];
   const missing = required.filter((key) => !displayed.has(key) && !present.has(key));
@@ -561,11 +608,18 @@ describe("bug_0147 — every reactive variant of every RPG pack is reachable as 
     expect(loaded.ok).toBe(true);
     if (!loaded.ok) return;
     const witness = wolfCampaignImportWitnesses(indexRpgPack(loaded.compiled.pack));
-    expect([...witness.displayed].filter((key) => key.includes("pack_diverted"))).toEqual(
+    expect(
+      [...witness.displayed].filter(
+        (key) => key.includes("pack_diverted") || key.includes("ending_drive"),
+      ),
+    ).toEqual(
       expect.arrayContaining([
         "ending:ending_pack_diverted#0",
         "ending:ending_pack_diverted_cattle_scattered#0",
         "ending:ending_pack_diverted_after_blood#0",
+        "ending:ending_drive_cattle_wounded#0",
+        "ending:ending_drive_person_cattle_lost#0",
+        "ending:ending_drive_reserve_spent#0",
       ]),
     );
   });

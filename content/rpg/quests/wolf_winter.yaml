@@ -61,7 +61,7 @@ meta:
   id: wolf_winter_v1
   title: "The Wolf-Winter"
   start_room: steading_yard
-  vars_init: { hp: 30, attack: 5, defense: 3, fieldcraft: 0, repair: 0, streetwise: 0, mediation: 0, cattle_alarm: 0 }
+  vars_init: { hp: 30, attack: 5, defense: 3, fieldcraft: 0, repair: 0, streetwise: 0, mediation: 0, cattle_alarm: 0, pack_drive: 0, drive_kit_charges: 0 }
   flags_init: []
   # The opt-in fairness promise (bug_0114). With this set the validator proves the
   # per-fight UPPER bound for every wolf AND the cumulative-HP bound across the whole
@@ -95,13 +95,29 @@ pressure_tracks:
     bands:
       - min: 0
         label: "Steady"
-        description: "The herd is frightened but still bunched behind the inner slats."
+        description: "The herd remains together; no animals are outside the count."
       - min: 2
         label: "Restless"
-        description: "The herd is pressing the slats; another loud reversal will make it run."
+        description: "The herd is strained but remains below the loss threshold."
       - min: 4
         label: "Breaking"
-        description: "The herd has broken formation; saving the byre now cannot keep every animal together."
+        description: "The herd's formation is broken; animals are missing from the count."
+  - id: pack_drive
+    title: "Pack drive"
+    var: pack_drive
+    bands:
+      - min: 0
+        label: "Unraised"
+        description: "No signal drive is moving the wolves; signal pressure has not been raised."
+      - min: 1
+        label: "Moving"
+        description: "The first signal has turned the pack along the outside line; one threshold beat remains before the byre crisis."
+      - min: 2
+        label: "Crisis"
+        description: "Signal pressure is at crisis; the next unresolved drive commitment cannot be delayed, or its chosen evacuation line remains to be finished."
+      - min: 6
+        label: "Cleared"
+        description: "The chosen evacuation line has separated the living pack from people and cattle; its wound, herd loss, or spent reserve is now fixed."
 
 rooms:
   - id: steading_yard
@@ -138,11 +154,18 @@ rooms:
       The cattle-byre yard. Old Cade props its door, too stiff for a spear, and turns his
       lantern on the day-book: its last wolf-count is worth reading before you leave the
       yard. Store-shed west. North, a young wolf is through the broken paling; gate south.
-    objects: [day_book, relief_protocol_docket]
+    objects: [day_book, relief_protocol_docket, drive_signal_rope_kit]
     # Progress variants are ordered from the deepest completed fight back to the opening
     # clue state. Re-entering this hub must describe the wolves actually left alive; visit
     # history alone handles the steading-yard watch prose without emitting repeat state.
     variants:
+      - when:
+          - { has_flag: strategy_drive_committed }
+          - { not_visited: paling_gap }
+        text: >
+          The drive is irreversible. Take Cade's two-charge rig, then go north. Reading,
+          preparation, and donning store gear had to happen before commitment. The moving
+          herd forfeits outer defense and retreat; this strategy cannot switch to lure or combat.
       - when:
           - { has_flag: relief_protocol_prepared }
           - { has_flag: yearling_redirected_with_split_guard }
@@ -186,19 +209,32 @@ rooms:
           last wolf-count; the open store-shed is west. North, the young wolf is through
           the broken paling, with two wolves deeper by the cattle. The gate is south.
     exits:
-      - { direction: south, to: steading_yard }
-      - { direction: west, to: store }
+      - direction: south
+        to: steading_yard
+        conditions: [{ not_flag: strategy_drive_committed }]
+        locked_msg: "The committed living drive starts now: with Cade's finite rig, go north. The outer yard does not reopen, and this line cannot switch to combat."
+      - direction: west
+        to: store
+        conditions: [{ not_flag: strategy_drive_committed }]
+        locked_msg: "Store preparation had to be finished before commitment. The living drive now runs north with Cade's finite rig; the store does not reopen, and the strategy cannot change."
       - direction: north
         to: paling_gap
         conditions:
           - any_of:
-              - { not_flag: strategy_lure_committed }
+              - all_of:
+                  - { not_flag: strategy_lure_committed }
+                  - { not_flag: strategy_drive_committed }
+              - all_of:
+                  - { has_flag: strategy_drive_committed }
+                  - any_of:
+                      - { has_item: drive_signal_rope_kit }
+                      - { has_flag: drive_reserve_spent }
               - all_of:
                   - { has_item: winter_feed_sack }
                   - { not_flag: yearling_down }
                   - { not_flag: yearling_redirected }
               - { has_flag: flank_redirected }
-        locked_msg: "Take Cade's feed before the first breach. Once the yearling is settled, the feed plan continues west through the store and up to the loft—not north from the yard."
+        locked_msg: "Take the plan's finite resource: Cade's feed for lure, or two-charge rig for drive. After the lure's first beat, continue west through the store and up to the loft."
 
   - id: store
     name: "The Store-Shed"
@@ -294,11 +330,51 @@ rooms:
       Its shoulders bunch for a straight rush: set the Albany spear, then drive on the
       shaft. A stout rail has fallen clear into the snow at your feet; wedge it across
       the gap. The byre-yard is south.
-    objects: [paling_rail, downwind_feed_line, drover_route_marks]
+    objects:
+      [
+        paling_rail,
+        downwind_feed_line,
+        drover_route_marks,
+        drive_breach_signal,
+        drive_hurdle_recovery,
+      ]
     # Reactive prose keeps the lure recovery plus every combat rail state legible.
     # A committed feed line returns through the yard and loft for its second cast;
     # ordinary combat states retain the ground road north after the yearling falls.
     variants:
+      - when:
+          - { has_flag: strategy_drive_committed }
+          - { has_flag: drive_yearling_turned }
+          - { has_flag: drive_opening_fouled }
+        text: >
+          The failed shutter call cannot be repeated. You recovered without blood by
+          dropping the loose hurdle behind the yearling; it runs alive along Cade's
+          outside lane. One charge remains in the signal-and-rope kit. Carry that line
+          north to the byre door; the yard is south.
+      - when:
+          - { has_flag: strategy_drive_committed }
+          - { has_flag: drive_yearling_turned }
+        text: >
+          The yearling runs alive ahead of the shutter signal along Cade's outside lane.
+          The first of two kit charges is spent. Carry the remaining rope-and-bell line
+          north to turn the flank-wolf at the byre door; the yard is south.
+      - when:
+          - { has_flag: strategy_drive_committed }
+          - { has_flag: drive_opening_fouled }
+          - { not_flag: drive_yearling_turned }
+          - { not_flag: yearling_down }
+        text: >
+          The one permitted shutter call folded against the wall. It cannot be tried
+          again. The hard commitment has no spear switch: drop the loose hurdle behind the
+          yearling for the noisier living recovery. The second kit charge remains; yard south.
+      - when:
+          - { has_flag: strategy_drive_committed }
+          - { not_flag: drive_opening_fouled }
+          - { not_flag: drive_yearling_turned }
+        text: >
+          Drive committed. Fire the rig's shutter once to turn the yearling outside. A miss
+          is final: drop the loose hurdle for the sole nonlethal recovery. The moving herd
+          leaves no combat switch. The byre door lies north; the yard south is closed.
       - when:
           - { has_flag: strategy_lure_committed }
           - { has_flag: yearling_redirected }
@@ -468,13 +544,17 @@ rooms:
           lies split but joined in the snow. There will be no guarded funnel, but use the
           rail again and you can bind a carried splinter guard for the byre door.
     exits:
-      - { direction: south, to: byre_yard }
+      - direction: south
+        to: byre_yard
+        conditions: [{ not_flag: strategy_drive_committed }]
+        locked_msg: "Complete the paling beat, then take the living yearling north. The hard strategy commitment does not reopen the yard or switch to combat."
       - direction: north
         to: byre_door
         conditions:
           - any_of:
               - { has_flag: yearling_down }
               - { has_flag: yearling_redirected }
+              - { has_flag: drive_yearling_turned }
           - any_of:
               - { not_flag: strategy_lure_committed }
               - { has_flag: flank_redirected }
@@ -486,7 +566,26 @@ rooms:
       A flank-wolf circles at the byre door. A prepared rail can guard or funnel; Cade's
       lesson offers a riskier wheel. Without either, only a plain spear exchange remains.
       The committed loft route drops from overhead if chosen. Cattle north; paling south.
+    objects: [drive_threshold_line]
     variants:
+      - when:
+          - { has_flag: strategy_drive_committed }
+          - { has_flag: drive_flank_turned }
+        text: >
+          The flank-wolf runs alive ahead of the rope-and-bell cast, joining the yearling
+          on the outside lane. Both finite kit charges are gone, though the spent rig is
+          still recoverable. Pack-drive pressure has reached the byre crisis north; the
+          broken paling is south.
+      - when:
+          - { has_flag: strategy_drive_committed }
+          - { has_flag: drive_yearling_turned }
+          - { not_flag: drive_flank_turned }
+          - { not_flag: flank_wolf_down }
+        text: >
+          The flank-wolf circles between the driven yearling and the byre. Cast the kit's
+          last rope-and-bell charge across its turn. That second distinct signal will move
+          both living wolves to the byre mouth and force the evacuation priority there.
+          The paling is south.
       - when: [{ has_flag: flank_redirected }]
         text: >
           The flank-wolf is alive in the high wood, following the feed cast from the
@@ -667,14 +766,25 @@ rooms:
           cut for a fast opening and risk your guard before the fight settles into a
           plain spear exchange. The paling is south; the dark byre is north.
     exits:
-      - { direction: south, to: paling_gap }
+      - direction: south
+        to: paling_gap
+        conditions: [{ not_flag: strategy_drive_committed }]
+        locked_msg: "Cast the last signal, then carry the living pack north. The hard commitment does not reopen the paling or switch to combat."
       - direction: north
         to: byre_mouth
         conditions:
           - any_of:
               - { has_flag: flank_wolf_down }
               - { has_flag: flank_redirected }
-        locked_msg: "The flank-wolf still holds the byre door; finish the fight or cast Cade's loft feed line before pushing north."
+              - { has_flag: drive_flank_turned }
+          - any_of:
+              - all_of:
+                  - { not_flag: strategy_drive_committed }
+              - { not_flag: june_blood_condition_broken }
+              - all_of:
+                  - { has_flag: yearling_down }
+                  - { has_flag: flank_wolf_down }
+        locked_msg: "Finish the threshold: fight or redirect the flank on other routes; on the drive, cast the last rope-bell and carry the living pack north. No mid-line switch."
 
   - id: byre_mouth
     name: "Deep in the Byre"
@@ -683,8 +793,45 @@ rooms:
       heart, shaping a practiced feint. Cade may have taught you to hold or close; a
       saved guard offers another catch. Without either, only plain spear work remains.
       The door is south.
-    objects: [inner_cattle_gate, outer_scent_gate]
+    objects:
+      [
+        inner_cattle_gate,
+        outer_scent_gate,
+        cattle_crisis_priority,
+        person_crisis_priority,
+        reserve_crisis_priority,
+        cattle_first_evacuation,
+        person_first_evacuation,
+        reserve_spent_evacuation,
+      ]
     variants:
+      - when: [{ has_flag: drive_courier_wounded }]
+        text: >
+          You chose cattle first and took the iron gate across your shoulder. The wound is
+          real; the herd remains whole. Only the cattle-first lower-lane evacuation is legal
+          now—finish it before the driven pack folds back.
+      - when: [{ has_flag: drive_cattle_lost }]
+        text: >
+          You chose the person line. Cade and any rider have a clear passage, while two
+          cattle are already lost down the lower pasture. Only the person-first cross-yard
+          evacuation remains legal now.
+      - when: [{ has_flag: drive_reserve_spent }]
+        text: >
+          You chose to spend Albany's remaining rig. Its rope and copper signal housing
+          are cut into a final anchor. Only the reserve-spent smoke-lane evacuation remains
+          legal now.
+      - when:
+          - { has_flag: strategy_drive_committed }
+          - { has_flag: drive_flank_turned }
+          - none_of:
+              - { has_flag: drive_courier_wounded }
+              - { has_flag: drive_cattle_lost }
+              - { has_flag: drive_reserve_spent }
+        text: >
+          Pack drive is at Crisis: choose once. Cattle first saves the whole herd and returns
+          the rig, but gives you an untreated gate wound (-6 HP). People first saves everyone
+          and returns the rig, but loses two cattle. Reserve consumes the rig to save people
+          and herd unwounded.
       - when: [{ has_flag: leader_redirected }]
         text: >
           The grey leader is alive beyond the broken paling, following the last feed
@@ -845,14 +992,17 @@ rooms:
           guard, then demands a second drive before she recovers.
           The door is south.
     exits:
-      - { direction: south, to: byre_door }
+      - direction: south
+        to: byre_door
+        conditions: [{ not_flag: strategy_drive_committed }]
+        locked_msg: "At the byre crisis, choose one irreversible protection priority and finish its sole evacuation. The committed drive cannot retreat or switch strategies."
       - direction: north
         to: cattle_stand
         conditions:
           - any_of:
               - { has_flag: leader_down }
               - { has_flag: leader_redirected }
-        locked_msg: "The grey leader still stands between you and the cattle; defeat her or complete Cade's outer scent line before passing."
+        locked_msg: "The grey leader still stands between you and the cattle; defeat her, complete Cade's outer scent line, or finish the committed drive-and-evacuation line before passing."
 
   - id: cattle_stand
     name: "Among the Cattle"
@@ -930,6 +1080,376 @@ objects:
           The Albany relief spear, its butt packed with paling-snow where you set it
           against the yearling's first rush.
     held: true
+
+  # The drive family owns one origin-honest quest-local resource. Cade issues it only
+  # after a separate explanation and commitment. Its two charges are consumed by two
+  # different spatial actions; there is no store pickup or invisible refill. The spent
+  # rope and signal housing remain recoverable unless the crisis priority sacrifices them.
+  - id: drive_signal_rope_kit
+    name: "Cade's two-charge signal-and-rope rig"
+    aliases: [signal rig, drive kit, signal kit, rope kit, cattle signal rig]
+    description: >
+      Cade's shutter charge, copper bell, and cattle rope. Exactly two uses: signal at the
+      broken paling, then rope-bell at the byre door. No restock tonight. After both uses,
+      the rig still returns unless you sacrifice it at the crisis.
+    variants:
+      - when:
+          - any_of:
+              - { has_flag: drive_courier_wounded }
+              - { has_flag: drive_cattle_lost }
+        text: >
+          Cade's signal-and-rope rig with both finite charges spent. The chosen cattle-
+          or person-first line preserves the housing, rope, and bell for return to Albany;
+          that irreversible priority has closed the option to sacrifice it tonight.
+      - when: [{ var_lte: { name: drive_kit_charges, value: 0 } }]
+        text: >
+          Cade's signal-and-rope rig with both charges spent. Its rope, bell, and copper
+          housing remain sound enough to return to Albany—or to sacrifice as the final
+          byre anchor if that is the crisis priority.
+      - when: [{ var_lte: { name: drive_kit_charges, value: 1 } }]
+        text: >
+          Cade's signal-and-rope rig with one finite charge left: the rope-and-bell cast
+          at the byre door. The shutter signal cannot be fired again.
+    visible_when:
+      - { has_flag: strategy_drive_committed }
+      - { not_visited: paling_gap }
+    takeable: true
+    droppable: false
+    take_effects:
+      - add_journal: "You take Cade's finite signal-and-rope rig. It has exactly two charges and no restock: broken paling, then byre door."
+
+  - id: drive_breach_signal
+    name: "drive shutter signal"
+    aliases: [shutter signal, paling signal, first drive, drive signal]
+    description: >
+      A hinged feed shutter above the broken paling. Cade's first rig charge can snap it
+      once behind the yearling, turning the wolf onto the outside ash lane while the herd
+      begins to move. A folded call cannot be fired again tonight.
+    variants:
+      - when: [{ has_flag: drive_opening_fouled }]
+        text: >
+          The feed shutter hangs folded against the byre wall after its single spent call.
+          That first rig charge is gone and there is no retry tonight. Drop the loose hurdle
+          for the committed living recovery; the moving herd leaves no combat switch.
+    visible_when:
+      - { has_flag: strategy_drive_committed }
+      - { has_flag: drive_combat_withheld }
+      - { not_flag: drive_yearling_turned }
+      - { not_flag: yearling_down }
+    interactions:
+      - verb: USE
+        item: drive_signal_rope_kit
+        target: drive_breach_signal
+        command_verb: fire
+        command_template: "fire {target} with {item}"
+        conditions:
+          - { has_item: drive_signal_rope_kit }
+          - { has_flag: strategy_drive_committed }
+          - { has_flag: drive_combat_withheld }
+          - { var_gte: { name: drive_kit_charges, value: 2 } }
+          - { not_flag: drive_opening_fouled }
+          - { not_flag: june_blood_condition_broken }
+          - { not_flag: yearling_down }
+          - { not_flag: drive_yearling_turned }
+        effects:
+          - dec_var: { name: drive_kit_charges, by: 1 }
+          - inc_var: { name: pack_drive, by: 1 }
+        skill_check:
+          skill: fieldcraft
+          difficulty: 12
+          on_success:
+            - set_flag: drive_yearling_turned
+            - set_quest_stage: { quest: the_watch, stage: breach_redirected }
+            - add_journal: "The one-shot shutter signal turns the yearling alive. Pack drive rises to Moving; one kit charge remains for the byre door."
+            - narrate: >
+                Wind carries the copper click past the wolf. You fire the shutter behind
+                it; wood cracks once. The yearling runs onto Cade's ash-marked outside lane
+                as the first cattle move. One charge remains, for the door; this call
+                cannot repeat.
+          on_failure:
+            - set_flag: drive_opening_fouled
+            - inc_var: { name: pack_drive, by: 1 }
+            - inc_var: { name: cattle_alarm, by: 1 }
+            - add_journal: "First shutter call folds. No retry: pack drive reaches Crisis early, cattle alarm +1; continue by loose hurdle."
+            - narrate: >
+                Wind throws the shutter's crack against the wall. The yearling checks but
+                does not turn; the herd hears it. That charge is gone, with no retry. Drop
+                the hurdle behind the wolf for the sole nonlethal recovery. Cattle are
+                moving; there is no switch to spear combat.
+
+  - id: drive_hurdle_recovery
+    name: "loose drive hurdle"
+    aliases: [loose hurdle, hurdle recovery, side hurdle, recovery gate]
+    description: >
+      A loose livestock hurdle above the yearling's outside shoulder. After a folded
+      shutter call it can be dropped once behind the wolf, closing the inward turn without
+      striking it. The recovery is louder, but spends no second signal charge.
+    visible_when:
+      - { has_flag: strategy_drive_committed }
+      - { has_flag: drive_combat_withheld }
+      - { has_flag: drive_opening_fouled }
+      - { not_flag: drive_yearling_turned }
+      - { not_flag: yearling_down }
+    interactions:
+      - verb: USE
+        target: drive_hurdle_recovery
+        command_verb: release
+        conditions:
+          - { has_flag: strategy_drive_committed }
+          - { has_flag: drive_combat_withheld }
+          - { has_flag: drive_opening_fouled }
+          - { not_flag: drive_yearling_turned }
+          - { not_flag: yearling_down }
+          - { not_flag: june_blood_condition_broken }
+        effects:
+          - set_flag: drive_yearling_turned
+          - set_quest_stage: { quest: the_watch, stage: breach_redirected }
+          - add_journal: "You drop the loose hurdle once instead of rerolling. The yearling leaves alive on the noisier line; one signal charge remains."
+          - narrate: >
+              You pull the pin. The loose hurdle falls behind the yearling, not on it,
+              closing its turn toward the cattle. The wolf takes the open lane alive. This
+              cannot clean the failed call, but advances the drive without spending the
+              last rope-bell charge.
+
+  - id: drive_threshold_line
+    name: "byre rope-and-bell line"
+    aliases: [threshold line, bell line, second drive, flank drive, rope cast]
+    description: >
+      Cade's second signal point crosses the flank-wolf's turn at the byre door. Casting
+      the rig's last charged rope and bell here draws the living wolf after the yearling
+      and moves the pack pressure into the herd's path. There is no third charge.
+    visible_when:
+      - { has_flag: strategy_drive_committed }
+      - { has_flag: drive_combat_withheld }
+      - { has_flag: drive_yearling_turned }
+      - { not_flag: drive_flank_turned }
+      - { not_flag: flank_wolf_down }
+    interactions:
+      - verb: USE
+        item: drive_signal_rope_kit
+        target: drive_threshold_line
+        command_verb: cast
+        command_template: "cast {target} with {item}"
+        conditions:
+          - { has_item: drive_signal_rope_kit }
+          - { has_flag: strategy_drive_committed }
+          - { has_flag: drive_combat_withheld }
+          - { has_flag: drive_yearling_turned }
+          - { var_gte: { name: drive_kit_charges, value: 1 } }
+          - { not_flag: drive_flank_turned }
+          - { not_flag: flank_wolf_down }
+          - { not_flag: june_blood_condition_broken }
+        effects:
+          - dec_var: { name: drive_kit_charges, by: 1 }
+          - inc_var: { name: pack_drive, by: 1 }
+          - set_flag: drive_flank_turned
+          - set_quest_stage: { quest: the_watch, stage: threshold_redirected }
+          - add_journal: "The second and final charge turns the flank alive. Pack drive reaches Crisis; choose a protection priority at the byre mouth."
+          - narrate: >
+              You cast the rope past the flank-wolf and ring its bell beyond the door-post.
+              It turns after the yearling. The herd moves too; old grey begins folding both
+              lines together. Both charges are spent. Crisis waits at the byre mouth.
+
+  # Three simultaneous crisis targets need distinct object ids so the legal action list
+  # exposes three genuine choices, not one overloaded USE id. June, when imported, must
+  # first exercise her cattle authority; solo play reaches the same menu directly.
+  - id: cattle_crisis_priority
+    name: "cattle-first crisis priority"
+    aliases: [protect cattle, cattle first, hold herd, take iron]
+    description: >
+      Keep every animal together by taking the swinging iron gate across your own shoulder.
+      The herd will remain whole, but the wound remains through the evacuation.
+    visible_when:
+      - { has_flag: strategy_drive_committed }
+      - { has_flag: drive_flank_turned }
+      - none_of:
+          - { has_flag: drive_courier_wounded }
+          - { has_flag: drive_cattle_lost }
+          - { has_flag: drive_reserve_spent }
+    interactions:
+      - verb: USE
+        target: cattle_crisis_priority
+        command_verb: choose
+        conditions:
+          - { has_flag: strategy_drive_committed }
+          - { has_flag: drive_flank_turned }
+          - { var_gte: { name: pack_drive, value: 2 } }
+          - none_of:
+              - { has_flag: drive_courier_wounded }
+              - { has_flag: drive_cattle_lost }
+              - { has_flag: drive_reserve_spent }
+          - any_of:
+              - { not_flag: june_pike_present }
+              - { has_flag: june_blood_condition_broken }
+              - { has_flag: june_drive_cattle_line_taken }
+        blocked_hint:
+          visible_when:
+            - { has_flag: june_pike_present }
+            - { not_flag: june_blood_condition_broken }
+            - { not_flag: june_drive_cattle_line_taken }
+          reason: "June has reached the lower swing-gate under cattle-first authority. Hear her independent decision before choosing the front-line priority."
+        effects:
+          - set_flag: drive_courier_wounded
+          - dec_var: { name: hp, by: 6 }
+          - add_journal: "Crisis—cattle: herd whole; courier suffers a persistent gate wound (-6 HP). Only cattle-first evacuation remains."
+          - narrate: >
+              You shoulder the iron swing-gate before it strikes the lead cattle. The bar
+              catches bone, but every cow stays on the marked lane. Your arm does not come
+              back clean. The choice cannot be undone; finish the sole cattle-first
+              evacuation wounded.
+
+  - id: person_crisis_priority
+    name: "person-first crisis priority"
+    aliases: [protect cade, protect person, people first, clear riders]
+    description: >
+      Clear Cade and every rider out of the pack's fold. The human line will be safe, but
+      two cattle will break down the lower pasture before the herd can close.
+    visible_when:
+      - { has_flag: strategy_drive_committed }
+      - { has_flag: drive_flank_turned }
+      - none_of:
+          - { has_flag: drive_courier_wounded }
+          - { has_flag: drive_cattle_lost }
+          - { has_flag: drive_reserve_spent }
+    interactions:
+      - verb: USE
+        target: person_crisis_priority
+        command_verb: choose
+        conditions:
+          - { has_flag: strategy_drive_committed }
+          - { has_flag: drive_flank_turned }
+          - { var_gte: { name: pack_drive, value: 2 } }
+          - none_of:
+              - { has_flag: drive_courier_wounded }
+              - { has_flag: drive_cattle_lost }
+              - { has_flag: drive_reserve_spent }
+          - any_of:
+              - { not_flag: june_pike_present }
+              - { has_flag: june_blood_condition_broken }
+              - { has_flag: june_drive_cattle_line_taken }
+        blocked_hint:
+          visible_when:
+            - { has_flag: june_pike_present }
+            - { not_flag: june_blood_condition_broken }
+            - { not_flag: june_drive_cattle_line_taken }
+          reason: "June has reached the lower swing-gate under cattle-first authority. Hear her independent decision before choosing the front-line priority."
+        effects:
+          - set_flag: drive_cattle_lost
+          - inc_var: { name: cattle_alarm, by: 4 }
+          - add_journal: "Crisis—people: every rider clears; two cattle are lost. Only person-first evacuation remains."
+          - narrate: >
+              You cut across the pack's fold and hold the human passage until Cade and
+              every rider are clear. Hooves split behind you. Two cattle take the lower
+              pasture before the gate can close. The people are safe and that loss is now
+              real. Finish the person-first evacuation you made legal.
+
+  - id: reserve_crisis_priority
+    name: "relief-reserve crisis priority"
+    aliases: [spend reserve, sacrifice rig, relief reserve, use kit]
+    description: >
+      Cut apart Albany's spent signal-and-rope rig and leave it as a final lane anchor.
+      People and cattle can both clear, but the finite quest resource will not return.
+    visible_when:
+      - { has_flag: strategy_drive_committed }
+      - { has_flag: drive_flank_turned }
+      - none_of:
+          - { has_flag: drive_courier_wounded }
+          - { has_flag: drive_cattle_lost }
+          - { has_flag: drive_reserve_spent }
+    interactions:
+      - verb: USE
+        target: reserve_crisis_priority
+        command_verb: choose
+        conditions:
+          - { has_item: drive_signal_rope_kit }
+          - { has_flag: strategy_drive_committed }
+          - { has_flag: drive_flank_turned }
+          - { var_lte: { name: drive_kit_charges, value: 0 } }
+          - { var_gte: { name: pack_drive, value: 2 } }
+          - none_of:
+              - { has_flag: drive_courier_wounded }
+              - { has_flag: drive_cattle_lost }
+              - { has_flag: drive_reserve_spent }
+          - any_of:
+              - { not_flag: june_pike_present }
+              - { has_flag: june_blood_condition_broken }
+              - { has_flag: june_drive_cattle_line_taken }
+        blocked_hint:
+          visible_when:
+            - { has_flag: june_pike_present }
+            - { not_flag: june_blood_condition_broken }
+            - { not_flag: june_drive_cattle_line_taken }
+          reason: "June has reached the lower swing-gate under cattle-first authority. Hear her independent decision before choosing the front-line priority."
+        effects:
+          - remove_item: drive_signal_rope_kit
+          - set_flag: drive_reserve_spent
+          - add_journal: "Crisis—reserve: the rig becomes the final anchor and is lost. Only reserve-spent evacuation remains."
+          - narrate: >
+              You cut Cade's cattle rope into two anchors and hammer the copper signal
+              housing between them. The improvised lane buys space for people and herd
+              together, but Albany's rig is gone. This cannot be recovered. Finish the
+              reserve-spent evacuation its sacrifice opened.
+
+  # Each irreversible priority exposes exactly one distinct final action. The three
+  # actions converge spatially only after recording different wounds, cattle, or resource
+  # state; their ordered win conditions preserve those differences as ending identities.
+  - id: cattle_first_evacuation
+    name: "cattle-first lower-lane evacuation"
+    aliases: [lower lane, cattle evacuation, move whole herd]
+    description: "The only remaining line after taking the gate wound: move the whole herd down the lower lane while the living pack breaks toward the ash wood."
+    visible_when: [{ has_flag: drive_courier_wounded }]
+    interactions:
+      - verb: USE
+        target: cattle_first_evacuation
+        command_verb: finish
+        conditions:
+          - { has_flag: drive_courier_wounded }
+        effects:
+          - set_var: { name: pack_drive, value: 6 }
+          - inc_var: { name: score, by: 20 }
+          - set_quest_stage: { quest: the_watch, stage: byre_redirected }
+          - add_journal: "Cattle line done: all people and three wolves clear; herd whole, wound persists. Outer steading defense is abandoned."
+          - narrate: "You hold the wounded shoulder against the closing gate until Cade, every rider, and the last cow clear. Old grey follows the younger wolves out along the ash lane; no spear draws blood. The steading's outer line is left behind to make that separation possible."
+          - goto: cattle_stand
+
+  - id: person_first_evacuation
+    name: "person-first cross-yard evacuation"
+    aliases: [person evacuation, cross-yard line, clear cade]
+    description: "The only remaining line after clearing the people: close the cross-yard passage behind Cade and accept the two cattle already lost below it."
+    visible_when: [{ has_flag: drive_cattle_lost }]
+    interactions:
+      - verb: USE
+        target: person_first_evacuation
+        command_verb: finish
+        conditions:
+          - { has_flag: drive_cattle_lost }
+        effects:
+          - set_var: { name: pack_drive, value: 6 }
+          - inc_var: { name: score, by: 20 }
+          - set_quest_stage: { quest: the_watch, stage: byre_redirected }
+          - add_journal: "People line done: all people and three wolves clear; two cattle stay lost. Outer steading defense is abandoned."
+          - narrate: "You slam the cross-yard passage behind Cade and let old grey follow the younger wolves out. Every person is clear. Two cattle do not return to the count, and the outer steading line is left behind."
+          - goto: cattle_stand
+
+  - id: reserve_spent_evacuation
+    name: "reserve-spent smoke-lane evacuation"
+    aliases: [smoke lane, reserve evacuation, anchor lane]
+    description: "The only remaining line after sacrificing the rig: use its cut anchors to separate the living pack from the moving herd, then leave the resource behind."
+    visible_when: [{ has_flag: drive_reserve_spent }]
+    interactions:
+      - verb: USE
+        target: reserve_spent_evacuation
+        command_verb: finish
+        conditions:
+          - { has_flag: drive_reserve_spent }
+          - { not_item: drive_signal_rope_kit }
+        effects:
+          - set_var: { name: pack_drive, value: 6 }
+          - inc_var: { name: score, by: 20 }
+          - set_quest_stage: { quest: the_watch, stage: byre_redirected }
+          - add_journal: "Reserve line done: all people, whole herd, and three wolves clear; rig gone. Outer steading defense is abandoned."
+          - narrate: "You pull the cut anchors apart. Cade, every rider, and the whole herd clear opposite old grey and her pack. Copper and rope stay buried, and the outer steading line is left behind."
+          - goto: cattle_stand
 
   # Cade owns one finite noncombat resource. Accepting his plan before entering the
   # breach commits the feed-and-hounds strategy; once the player has seen the first
@@ -1285,7 +1805,9 @@ objects:
     interactions:
       - verb: READ
         target: day_book
-        conditions: [{ not_flag: read_tally }]
+        conditions:
+          - { not_flag: read_tally }
+          - { not_flag: strategy_drive_committed }
         effects:
           - set_flag: read_tally
           - inc_var: { name: score, by: 5 }
@@ -1321,7 +1843,9 @@ objects:
         item: byre_jerkin
         target: byre_jerkin
         command_verb: don
-        conditions: [{ none_of: [{ has_flag: jerkin_donned }] }]
+        conditions:
+          - { none_of: [{ has_flag: jerkin_donned }] }
+          - { not_flag: strategy_drive_committed }
         effects:
           - set_flag: jerkin_donned
           - inc_var: { name: defense, by: 2 }
@@ -1413,6 +1937,9 @@ objects:
           - any_of:
               - { not_flag: strategy_lure_committed }
               - { has_flag: lure_trail_fouled }
+          - any_of:
+              - { not_flag: strategy_drive_committed }
+              - { has_flag: june_blood_condition_broken }
         effects:
           - set_flag: rail_attempted
         skill_check:
@@ -1449,6 +1976,9 @@ objects:
           - any_of:
               - { not_flag: strategy_lure_committed }
               - { has_flag: lure_trail_fouled }
+          - any_of:
+              - { not_flag: strategy_drive_committed }
+              - { has_flag: june_blood_condition_broken }
         effects:
           - set_flag: rail_attempted
         skill_check:
@@ -1539,11 +2069,17 @@ npcs:
       nodes:
         - id: cade_root
           npc_text: >
-            You came from Albany awake—good. Without these cattle we starve. Three wolves
-            are through. Ask for either lesson—or both before you go: quick spear-hand or
-            guarded byre plan. Or commit my one-sack feed-and-hounds line to draw all
-            three alive.
+            You came from Albany awake—good. Three wolves are through; without these cattle
+            we starve. Ask for either lesson—or both before you go: quick spear-hand or
+            guarded byre plan. Or hear the one-sack living lure or two-charge signal drive.
           variants:
+            - when:
+                - { has_flag: strategy_drive_committed }
+                - { not_visited: paling_gap }
+              text: >
+                Your two-charge drive is committed: shutter at the paling, rope-bell at the
+                door, then choose what the pack-and-herd crisis exposes. Take no feed; drive
+                and lure are separate plans.
             - when:
                 - { has_flag: strategy_lure_committed }
                 - { visited: paling_gap }
@@ -1580,6 +2116,7 @@ npcs:
               conditions:
                 - { not_flag: heard_counsel }
                 - { not_flag: strategy_lure_committed }
+                - { not_flag: strategy_drive_committed }
               goto: cade_wolves
             - id: byre
               aliases: [ask_byre]
@@ -1587,14 +2124,24 @@ npcs:
               conditions:
                 - { not_flag: heard_plan }
                 - { not_flag: strategy_lure_committed }
+                - { not_flag: strategy_drive_committed }
               goto: cade_byre
             - id: lure
               aliases: [ask_lure, ask_feed, ask_alive]
               prompt: "Ask how Cade's one-sack plan could draw the pack out alive."
               conditions:
                 - { not_flag: strategy_lure_committed }
+                - { not_flag: strategy_drive_committed }
                 - { not_visited: paling_gap }
               goto: cade_lure
+            - id: drive
+              aliases: [ask_drive, ask_evacuate, ask_signal]
+              prompt: "Ask how Cade's signal drive could move the wolves and cattle together."
+              conditions:
+                - { not_flag: strategy_lure_committed }
+                - { not_flag: strategy_drive_committed }
+                - { not_visited: paling_gap }
+              goto: cade_drive
             - id: leave
               aliases: [leave_cade]
               prompt: "Leave old Cade and hold the byre."
@@ -1624,14 +2171,24 @@ npcs:
               conditions:
                 - { not_flag: heard_plan }
                 - { not_flag: strategy_lure_committed }
+                - { not_flag: strategy_drive_committed }
               goto: cade_byre
             - id: lure
               aliases: [ask_lure, ask_feed, ask_alive]
               prompt: "Ask how Cade could draw the pack out alive instead."
               conditions:
                 - { not_flag: strategy_lure_committed }
+                - { not_flag: strategy_drive_committed }
                 - { not_visited: paling_gap }
               goto: cade_lure
+            - id: drive
+              aliases: [ask_drive, ask_evacuate, ask_signal]
+              prompt: "Ask how the two-charge signal drive works."
+              conditions:
+                - { not_flag: strategy_lure_committed }
+                - { not_flag: strategy_drive_committed }
+                - { not_visited: paling_gap }
+              goto: cade_drive
             - id: wolves_back
               prompt: "Nod, and ask something else."
               goto: cade_root
@@ -1655,14 +2212,24 @@ npcs:
               conditions:
                 - { not_flag: heard_counsel }
                 - { not_flag: strategy_lure_committed }
+                - { not_flag: strategy_drive_committed }
               goto: cade_wolves
             - id: lure
               aliases: [ask_lure, ask_feed, ask_alive]
               prompt: "Ask how Cade could draw the pack out alive instead."
               conditions:
                 - { not_flag: strategy_lure_committed }
+                - { not_flag: strategy_drive_committed }
                 - { not_visited: paling_gap }
               goto: cade_lure
+            - id: drive
+              aliases: [ask_drive, ask_evacuate, ask_signal]
+              prompt: "Ask how the two-charge signal drive works."
+              conditions:
+                - { not_flag: strategy_lure_committed }
+                - { not_flag: strategy_drive_committed }
+                - { not_visited: paling_gap }
+              goto: cade_drive
             - id: byre_back
               prompt: "Thank him, and ask something else."
               goto: cade_root
@@ -1680,6 +2247,8 @@ npcs:
             - id: commit_lure
               aliases: [commit_feed, commit_alive]
               prompt: "Commit to the finite feed-and-hounds line now."
+              conditions:
+                - { not_visited: paling_gap }
               goto: cade_lure_committed
             - id: lure_back
               prompt: "Decline for now, and ask something else."
@@ -1719,6 +2288,44 @@ npcs:
               aliases: [leave_cade]
               prompt: "Leave old Cade and choose at the breach."
               end: true
+        - id: cade_drive
+          npc_text: >
+            Read, prepare, and don gear before you commit. Yes starts the cattle immediately.
+            Every completion forfeits the steading's outer defense line; no later switch to
+            lure or spear combat. Rig: two charges, paling/door. First miss: no retry; drop
+            hurdle.
+          topics:
+            - id: commit_drive
+              aliases: [commit_evacuate, commit_signal]
+              prompt: "Commit to the finite drive-and-evacuate line now; start the herd, close preparation and retreat, and forfeit the outer steading defense line."
+              conditions:
+                - { not_visited: paling_gap }
+              goto: cade_drive_committed
+            - id: drive_back
+              prompt: "Decline for now, and ask something else."
+              goto: cade_root
+            - id: leave
+              aliases: [leave_cade]
+              prompt: "Leave old Cade without committing the drive."
+              end: true
+        - id: cade_drive_committed
+          npc_text: >
+            Committed. Herd moves; outer defense, retreat, and strategy switches close. Take
+            the rig: two charges, shutter then bell. A failed first call has no retry—drop
+            the hurdle once. At Crisis choose wound, two lost cattle, or the rig.
+          effects:
+            - set_flag: strategy_drive_committed
+            - set_flag: drive_combat_withheld
+            - inc_var: { name: drive_kit_charges, by: 2 }
+            - add_journal: "Drive committed: herd starts; preparation/retreat close. Outer defense is forfeit. Take two-charge rig; no lure/combat switch."
+          topics:
+            - id: drive_back
+              prompt: "Repeat the route, then ask something else."
+              goto: cade_root
+            - id: leave
+              aliases: [leave_cade]
+              prompt: "Leave old Cade and begin the committed drive."
+              end: true
 
   # June is an optional campaign companion, never a direct-start assumption or
   # another combatant. She appears only after the failed lure has been recovered
@@ -1756,6 +2363,43 @@ npcs:
             - id: acknowledge
               aliases: [leave_june, take_cattle_line]
               prompt: "Acknowledge June's decision and face old grey."
+              end: true
+
+  # On the drive family June remains cattle-first rather than becoming a second
+  # player-controlled tool. Her separate NPC surface preserves the established lure
+  # conversation unchanged. When present she independently takes the lower swing-gate;
+  # the crisis menu waits for that decision, but every solo route remains complete.
+  - id: june_pike_drive
+    name: "Road Warden June Pike"
+    description: >
+      June Pike reaches the lower swing-gate with her cattle rope already set. She will
+      not take over the player's signal line; her Albany authority is cattle-first.
+    room: byre_mouth
+    conditions:
+      - { has_flag: june_pike_present }
+      - { has_flag: strategy_drive_committed }
+      - { has_flag: drive_flank_turned }
+      - none_of:
+          - { has_flag: drive_courier_wounded }
+          - { has_flag: drive_cattle_lost }
+          - { has_flag: drive_reserve_spent }
+      - { not_flag: june_blood_condition_broken }
+      - { not_flag: june_drive_cattle_line_taken }
+    dialogue:
+      root: june_drive_cattle_first
+      nodes:
+        - id: june_drive_cattle_first
+          npc_text: >
+            I take the lower swing-gate under your cattle-first authority, not command of
+            your signals. I can hold the herd's rear. You still choose the front crisis
+            cost: your shoulder, two cattle, or Albany's rig.
+          effects:
+            - set_flag: june_drive_cattle_line_taken
+            - add_journal: "June takes the lower cattle gate under her authority. Her promise holds; your front crisis priority remains due."
+          topics:
+            - id: acknowledge
+              aliases: [leave_june, take_cattle_line]
+              prompt: "Acknowledge June's cattle line and choose the crisis priority."
               end: true
 
 enemies:
@@ -1799,9 +2443,11 @@ enemies:
     room: paling_gap
     conditions:
       - { not_flag: yearling_redirected }
+      - { not_flag: drive_yearling_turned }
       - any_of:
           - { not_flag: strategy_lure_committed }
           - { has_flag: lure_trail_fouled }
+      - { not_flag: drive_combat_withheld }
     hp: 11
     attack: 4
     defense: 2
@@ -1844,7 +2490,9 @@ enemies:
     room: byre_door
     conditions:
       - { not_flag: flank_redirected }
+      - { not_flag: drive_flank_turned }
       - { not_flag: strategy_lure_committed }
+      - { not_flag: drive_combat_withheld }
     hp: 12
     attack: 5
     defense: 2
@@ -2017,7 +2665,9 @@ enemies:
     room: byre_mouth
     conditions:
       - { not_flag: leader_redirected }
+      - { not_flag: drive_flank_turned }
       - { not_flag: strategy_lure_committed }
+      - { not_flag: drive_combat_withheld }
     hp: 13
     attack: 6
     defense: 2
@@ -2138,6 +2788,30 @@ win_conditions:
   # Specific terminal consequences precede the generic mission result. All award the
   # same score and remain nondeath; their ids/titles let the overworld completion journal
   # remember whether saved wood barred the herd now or was carried into dawn for repair.
+  - id: drive_evacuate_cattle_wounded
+    conditions:
+      - { visited: cattle_stand }
+      - { has_flag: drive_courier_wounded }
+      - { not_flag: yearling_down }
+      - { not_flag: flank_wolf_down }
+      - { not_flag: leader_down }
+    ending: ending_drive_cattle_wounded
+  - id: drive_evacuate_person_cattle_lost
+    conditions:
+      - { visited: cattle_stand }
+      - { has_flag: drive_cattle_lost }
+      - { not_flag: yearling_down }
+      - { not_flag: flank_wolf_down }
+      - { not_flag: leader_down }
+    ending: ending_drive_person_cattle_lost
+  - id: drive_evacuate_reserve_spent
+    conditions:
+      - { visited: cattle_stand }
+      - { has_flag: drive_reserve_spent }
+      - { not_flag: yearling_down }
+      - { not_flag: flank_wolf_down }
+      - { not_flag: leader_down }
+    ending: ending_drive_reserve_spent
   - id: divert_pack_after_blood
     conditions:
       - { visited: cattle_stand }
@@ -2189,6 +2863,50 @@ win_conditions:
     ending: ending_held
 
 endings:
+  - id: ending_drive_cattle_wounded
+    title: "The Herd Out, Rider Hurt"
+    text: >
+      Grey dawn: the whole herd is clear and all three wolves alive. You took the iron gate
+      across your shoulder; Cade and every rider are clear. The bound wound persists. The
+      outer steading defense line was abandoned. Albany receives people safe, whole cattle,
+      an injured courier, and the spent rig for repair. *** You have won, wounded. ***
+    variants:
+      - when: [{ has_flag: june_drive_cattle_line_taken }]
+        text: >
+          Grey dawn: whole herd clear, all three wolves alive. June Pike independently held
+          lower gate under cattle-first authority; you took the front iron across your
+          shoulder. Cade and every rider are clear. Her promise holds; your wound and the
+          abandoned outer steading line remain. Albany gets both accounts.
+          *** You have won, wounded. ***
+  - id: ending_drive_person_cattle_lost
+    title: "The People Out, Cattle Lost"
+    text: >
+      Grey dawn finds Cade and every rider clear, and all three wolves alive. The human
+      passage cost two cattle down the lower pasture. The spent rig returns, but the herd
+      is not whole; the outer steading defense line was abandoned. Albany receives people
+      saved and cattle lost. *** You have won, with loss. ***
+    variants:
+      - when: [{ has_flag: june_drive_cattle_line_taken }]
+        text: >
+          Grey dawn finds Cade, June Pike, every rider clear, and all three wolves alive.
+          June held the lower gate under her authority, but your person-first line still
+          lost two cattle below it. Her promise holds; the outer steading defense line was
+          abandoned. Albany receives both accounts. *** You have won, with loss. ***
+  - id: ending_drive_reserve_spent
+    title: "The Steading Evacuated, Reserve Spent"
+    text: >
+      Grey dawn: people, whole herd, and all three wolves are clear. Cade's signal-and-rope
+      rig does not return; its cut rope and housing became the final anchor. Cade and every
+      rider are clear. The outer steading defense line was abandoned. Albany receives an
+      unwounded courier and exact loss. *** You have won, at the reserve's cost. ***
+    variants:
+      - when: [{ has_flag: june_drive_cattle_line_taken }]
+        text: >
+          Grey dawn: people, whole herd, all three wolves alive. June Pike held the lower
+          gate under cattle-first authority; you spent the rig. Cade and
+          every rider are clear. Her promise holds; Albany's rig is gone and the outer
+          steading defense line was abandoned. Albany gets both accounts.
+          *** You have won, at the reserve's cost. ***
   - id: ending_pack_diverted_after_blood
     title: "The Pack Broken After Blood"
     text: >

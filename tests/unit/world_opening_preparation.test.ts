@@ -232,6 +232,16 @@ describe("opening preparation authoring", () => {
     });
     expect(() => parseOpeningPreparation(worldFact)).toThrow(/not world facts/i);
 
+    const wound = preparationScene();
+    wound.profiles[0]!.effects.push({
+      type: "suffer_wound",
+      wound_id: "wound:opening_preparation_shortcut",
+      severity: 2,
+      treatment: "untreated",
+      health_loss: 6,
+    });
+    expect(() => parseOpeningPreparation(wound)).toThrow(/not .*wounds/i);
+
     const noKnowledge = preparationScene();
     noKnowledge.profiles[0]!.effects = noKnowledge.profiles[0]!.effects.filter(
       (effect) => effect.type !== "learn_knowledge",

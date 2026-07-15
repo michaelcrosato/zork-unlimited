@@ -1,11 +1,14 @@
 import { z } from "zod";
 
 import {
+  CAMPAIGN_CHARACTER_MAX_HEALTH,
   CAMPAIGN_CHARACTER_MAX_OWED,
+  CAMPAIGN_CHARACTER_MAX_RANK,
   CAMPAIGN_CHARACTER_MAX_SCORE,
   CAMPAIGN_CHARACTER_MIN_SCORE,
   CampaignCharacterIdSchema,
   CampaignPromiseStatusSchema,
+  CampaignWoundTreatmentSchema,
   evolveCampaignCharacterState,
   type CampaignCharacterState,
 } from "./campaign_character_state.js";
@@ -74,6 +77,16 @@ export const ResolvePromiseConsequenceSchema = z
   })
   .strict();
 
+export const SufferWoundConsequenceSchema = z
+  .object({
+    type: z.literal("suffer_wound"),
+    wound_id: CampaignCharacterIdSchema,
+    severity: z.number().int().min(1).max(CAMPAIGN_CHARACTER_MAX_RANK),
+    treatment: CampaignWoundTreatmentSchema,
+    health_loss: z.number().int().min(1).max(CAMPAIGN_CHARACTER_MAX_HEALTH),
+  })
+  .strict();
+
 export const CampaignConsequenceEffectSchema = z.discriminatedUnion("type", [
   AddCompanionConsequenceSchema,
   LearnKnowledgeConsequenceSchema,
@@ -82,6 +95,7 @@ export const CampaignConsequenceEffectSchema = z.discriminatedUnion("type", [
   RemoveCompanionConsequenceSchema,
   ResolvePromiseConsequenceSchema,
   SetWorldFactConsequenceSchema,
+  SufferWoundConsequenceSchema,
 ]);
 
 export type AddCompanionConsequence = z.infer<typeof AddCompanionConsequenceSchema>;
@@ -91,6 +105,7 @@ export type RememberRelationshipConsequence = z.infer<typeof RememberRelationshi
 export type RemoveCompanionConsequence = z.infer<typeof RemoveCompanionConsequenceSchema>;
 export type ResolvePromiseConsequence = z.infer<typeof ResolvePromiseConsequenceSchema>;
 export type SetWorldFactConsequence = z.infer<typeof SetWorldFactConsequenceSchema>;
+export type SufferWoundConsequence = z.infer<typeof SufferWoundConsequenceSchema>;
 export type CampaignConsequenceEffect = z.infer<typeof CampaignConsequenceEffectSchema>;
 
 export const CampaignCharacterConditionIdsSchema = z
@@ -200,6 +215,8 @@ export function campaignConsequenceEffectKey(effect: CampaignConsequenceEffect):
       return JSON.stringify([effect.type, effect.npc_id, effect.memory_id]);
     case "set_world_fact":
       return JSON.stringify([effect.type, effect.fact_id]);
+    case "suffer_wound":
+      return JSON.stringify([effect.type, effect.wound_id]);
   }
 }
 
@@ -316,6 +333,28 @@ function resolvePromise(
   }
 }
 
+function sufferWound(character: CampaignCharacterState, effect: SufferWoundConsequence): void {
+  const existing = character.wounds.find((wound) => wound.woundId === effect.wound_id);
+  if (existing !== undefined) {
+    if (existing.severity !== effect.severity || existing.treatment !== effect.treatment) {
+      throw new Error(
+        `Wound "${effect.wound_id}" already exists with severity ${existing.severity} and treatment "${existing.treatment}".`,
+      );
+    }
+    // The persisted wound is the replay marker; its health cost belongs only
+    // to the first application that creates it.
+    return;
+  }
+
+  character.wounds.push({
+    woundId: effect.wound_id,
+    severity: effect.severity,
+    treatment: effect.treatment,
+  });
+  character.health.current =
+    character.health.current === 0 ? 0 : Math.max(1, character.health.current - effect.health_loss);
+}
+
 /**
  * Apply one trusted outcome atomically. Parsing occurs before evolution, and
  * evolution works on a detached draft, so rejection never partially commits.
@@ -355,6 +394,9 @@ export function applyCampaignConsequences(args: {
           resolvePromise(draft, effect);
           break;
         case "set_world_fact":
+          break;
+        case "suffer_wound":
+          sufferWound(draft, effect);
           break;
       }
     }

@@ -304,6 +304,9 @@ describe("New York overworld graph", () => {
       "ending_pack_diverted_after_blood",
       "ending_pack_diverted_cattle_scattered",
       "ending_pack_diverted",
+      "ending_drive_cattle_wounded",
+      "ending_drive_person_cattle_lost",
+      "ending_drive_reserve_spent",
       "ending_held_gate_barred",
       "ending_held_timber_saved",
       "ending_held",
@@ -312,6 +315,9 @@ describe("New York overworld graph", () => {
       "The Pack Broken After Blood",
       "The Pack Diverted, Cattle Scattered",
       "The Pack Diverted Alive",
+      "The Herd Out, Rider Hurt",
+      "The People Out, Cattle Lost",
+      "The Steading Evacuated, Reserve Spent",
       "The Byre Held, Inner Gate Barred",
       "The Byre Held, Paling Timber Saved",
       "The Byre Held",
@@ -340,6 +346,32 @@ describe("New York overworld graph", () => {
         "fact:wolf_winter_pack_diverted_alive",
         "fact:wolf_winter_winter_feed_spent",
         "fact:wolf_winter_cattle_whole",
+      ],
+      ending_drive_cattle_wounded: [
+        "fact:wolf_winter_outer_line_abandoned",
+        "fact:wolf_winter_pack_driven_alive",
+        "fact:wolf_winter_steading_evacuated",
+        "fact:wolf_winter_people_safe",
+        "fact:wolf_winter_cattle_whole",
+        "fact:wolf_winter_drive_reserve_returned",
+        "fact:wolf_winter_courier_wounded",
+      ],
+      ending_drive_person_cattle_lost: [
+        "fact:wolf_winter_outer_line_abandoned",
+        "fact:wolf_winter_pack_driven_alive",
+        "fact:wolf_winter_steading_evacuated",
+        "fact:wolf_winter_people_safe",
+        "fact:wolf_winter_cattle_scattered",
+        "fact:wolf_winter_drive_reserve_returned",
+        "fact:wolf_winter_people_prioritized",
+      ],
+      ending_drive_reserve_spent: [
+        "fact:wolf_winter_outer_line_abandoned",
+        "fact:wolf_winter_pack_driven_alive",
+        "fact:wolf_winter_steading_evacuated",
+        "fact:wolf_winter_people_safe",
+        "fact:wolf_winter_cattle_whole",
+        "fact:wolf_winter_drive_reserve_spent",
       ],
       ending_held_gate_barred: [
         "fact:wolf_winter_byre_held",
@@ -371,6 +403,18 @@ describe("New York overworld graph", () => {
         ["npc:old_cade", "memory:wolf_winter_pack_diverted_alive", 12, 12, 1],
         ["albany:emery_sloane", "albany:memory_emery_wolf_pack_diverted_alive", 6, 8, 1],
       ],
+      ending_drive_cattle_wounded: [
+        ["npc:old_cade", "memory:wolf_winter_drive_herd_first_wound", 10, 12, 1],
+        ["albany:emery_sloane", "albany:memory_emery_drive_herd_first_wound", 7, 9, 1],
+      ],
+      ending_drive_person_cattle_lost: [
+        ["npc:old_cade", "memory:wolf_winter_drive_people_first_cattle_lost", 8, 10, 1],
+        ["albany:emery_sloane", "albany:memory_emery_drive_people_first_cattle_lost", 4, 6, 0],
+      ],
+      ending_drive_reserve_spent: [
+        ["npc:old_cade", "memory:wolf_winter_drive_signal_spent", 12, 12, 1],
+        ["albany:emery_sloane", "albany:memory_emery_drive_signal_spent", 8, 10, 1],
+      ],
       ending_held_gate_barred: [
         ["npc:old_cade", "memory:wolf_winter_inner_gate_barred", 10, 10, 1],
       ],
@@ -399,6 +443,19 @@ describe("New York overworld graph", () => {
             owes_player_at_least,
           }),
         ),
+      );
+      expect(campaignExport?.effects.filter((effect) => effect.type === "suffer_wound")).toEqual(
+        endingId === "ending_drive_cattle_wounded"
+          ? [
+              {
+                type: "suffer_wound",
+                wound_id: "wound:wolf_winter_byre_mouth_gate",
+                severity: 2,
+                treatment: "untreated",
+                health_loss: 6,
+              },
+            ]
+          : [],
       );
     }
   });

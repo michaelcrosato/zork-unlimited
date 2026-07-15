@@ -182,6 +182,9 @@ export type WolfWinterCampaignOutcome =
   | "pack_diverted"
   | "pack_diverted_cattle_scattered"
   | "pack_diverted_after_blood"
+  | "drive_cattle_wounded"
+  | "drive_person_cattle_lost"
+  | "drive_reserve_spent"
   | "gate_barred"
   | "timber_saved"
   | "held";
@@ -210,6 +213,24 @@ export const WOLF_WINTER_CAMPAIGN_OUTCOMES = Object.freeze({
     endingId: "ending_pack_diverted_after_blood",
     albanyReturnContext:
       "The yearling is dead, the flank wolf and grey leader remain alive in the high wood, and most of Cade's herd is safe; two cattle are still missing down the lower pasture, his winter feed is spent, and the outer paling remains broken.",
+  }),
+  ending_drive_cattle_wounded: Object.freeze({
+    id: "drive_cattle_wounded",
+    endingId: "ending_drive_cattle_wounded",
+    albanyReturnContext:
+      "Cade's whole herd and every person escaped the steading, and all three wolves were driven clear alive; the spent signal-and-rope rig returned to Albany for repair, but you carry an untreated gate wound and the outer line stands abandoned.",
+  }),
+  ending_drive_person_cattle_lost: Object.freeze({
+    id: "drive_person_cattle_lost",
+    endingId: "ending_drive_person_cattle_lost",
+    albanyReturnContext:
+      "Cade and every person escaped the steading, and all three wolves were driven clear alive; the spent signal-and-rope rig returned to Albany for repair, but the herd scattered during the retreat and the outer line stands abandoned.",
+  }),
+  ending_drive_reserve_spent: Object.freeze({
+    id: "drive_reserve_spent",
+    endingId: "ending_drive_reserve_spent",
+    albanyReturnContext:
+      "Cade's whole herd and every person escaped the steading, and all three wolves were driven clear alive without a wound at the byre; the spent signal-and-rope rig was cut apart and did not return, and the outer line stands abandoned.",
   }),
   ending_held_gate_barred: Object.freeze({
     id: "gate_barred",
@@ -253,6 +274,24 @@ const ALBANY_DAWN_DISPATCH_CONSEQUENCES = Object.freeze({
       "The wagon returns to repair Cade's broken outer line and help search the lower pasture; the yearling remains dead, the other two wolves remain alive, and two cattle are still missing when you take Hedrick's packet north alone.",
     send_wardens_north:
       "The wagon follows Hedrick's report; Cade remains with a broken outer line and two cattle still missing down the lower pasture; the yearling is dead and the other two wolves remain alive in the high wood.",
+  }),
+  drive_cattle_wounded: Object.freeze({
+    send_wagon_to_cade:
+      "The wagon takes Cade's whole herd from the evacuation road back to repair the abandoned outer line while all three wolves remain alive beyond it; your gate wound remains untreated and the spent signal-and-rope rig remains in Albany for repair when you take Hedrick's packet north alone.",
+    send_wardens_north:
+      "The wagon follows Hedrick's report; Cade keeps the whole herd on the evacuation road while all three wolves remain alive beyond the abandoned outer line, your gate wound remains untreated, and the spent signal-and-rope rig remains in Albany for repair.",
+  }),
+  drive_person_cattle_lost: Object.freeze({
+    send_wagon_to_cade:
+      "The wagon returns with Cade and every evacuated person to search for the scattered herd and repair the abandoned outer line; all three wolves remain alive beyond it and the spent signal-and-rope rig remains in Albany for repair when you take Hedrick's packet north alone.",
+    send_wardens_north:
+      "The wagon follows Hedrick's report; Cade and every other person remain safe on the evacuation road, but the herd remains scattered, all three wolves remain alive beyond the abandoned outer line, and the spent signal-and-rope rig remains in Albany for repair.",
+  }),
+  drive_reserve_spent: Object.freeze({
+    send_wagon_to_cade:
+      "The wagon takes Cade's whole herd from the evacuation road back to repair the abandoned outer line while all three wolves remain alive beyond it; the cut-apart signal-and-rope rig did not return when you take Hedrick's packet north alone.",
+    send_wardens_north:
+      "The wagon follows Hedrick's report; Cade keeps the whole herd safe on the evacuation road while all three wolves remain alive beyond the abandoned outer line, but the cut-apart signal-and-rope rig did not return.",
   }),
   gate_barred: Object.freeze({
     send_wagon_to_cade:

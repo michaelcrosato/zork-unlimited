@@ -409,30 +409,46 @@
     },
     {
       "id": "SS-F10-crisis-priority",
-      "title": "Choose what to protect when the plan breaks",
+      "title": "Choose what to protect at the drive's crisis point",
       "phase": "wolf_winter",
-      "implementation_status": "planned",
-      "proof_status": "unproven",
-      "counts_toward_contract": false,
-      "visible_choice": "At a visible pressure threshold, prioritize a person, cattle, the ally, or scarce relief resources; not every loss can be prevented.",
+      "implementation_status": "implemented",
+      "proof_status": "proven",
+      "counts_toward_contract": true,
+      "visible_choice": "After Cade discloses that committing to his two-charge drive-and-evacuate plan starts the moving herd immediately, closes preparation/backtracking, forfeits the outer steading defense line on every completion, and leaves no switch to lure or combat, turn both younger wolves alive and choose one irreversible protection priority at the visible Pack Drive crisis: keep the entire herd together by taking an untreated gate wound, clear every person while two cattle scatter, or sacrifice Albany's spent signal-and-rope rig so people and the whole herd clear unharmed.",
       "immediate_state_delta": [
-        "character.wounds",
-        "character.relationships",
+        "wolf.drive_crisis_priority",
+        "rpg.hp",
+        "quest.inventory.drive_signal_rope_kit",
         "wolf.cattle_safety",
-        "albany.relief_capacity",
-        "wolf.pack_morale"
+        "wolf.drive_cost_flag"
       ],
       "delayed_consumers": [
-        "Remaining resolution actions",
-        "NPC survival, aid, or refusal",
-        "Return resources, services, and testimony"
+        "The chosen priority makes exactly one distinct final evacuation action legal; all three pay the pre-disclosed outer-defense forfeiture and separate the living pack from the steading without relabeling a combat or failed-lure route.",
+        "Quest export records mutually exclusive persistent wound, cattle-scattered, or reserve-spent state. The cattle-first wound reduces campaign health 30→24 and remains untreated through full, compact, UI, and save/restore projections.",
+        "A returned rig unlocks June Pike's one-time 15-minute Station rest; a whole herd unlocks Emery Sloane's one-time 15-minute Greenway resupply. The cattle-first result earns both offers, people-first only the rest, and reserve-spent only the resupply.",
+        "June and Emery retain distinct memories and return testimony for the wound, cattle loss, or spent rig. If June accompanied the player, she first takes the lower cattle gate under her remembered authority and the cattle-first promise remains kept on every bloodless evacuation.",
+        "The hard drive commitment withholds every wolf and combat action before the first signal, through failed-signal recovery, and at the threshold. The ordinary three-wolf spear route remains available only if the player declines before the cattle move, so combat cannot be sampled and folded back into a bloodless ending."
       ],
       "visible_feedback": [
-        "The crisis presents the threatened states and irreversible cost.",
-        "Later scenes show both what was saved and what the choice exposed."
+        "Pack Drive is a visible pressure track with Moving, Crisis, and Cleared bands; the failed opening reaches crisis pressure early, cannot be retried, and exposes a one-shot loose-hurdle recovery.",
+        "Cade states the universal outer-defense forfeiture before drive commitment; each crisis option then states its additional irreversible wound, cattle, or rig cost, and the journal names the sole evacuation action that remains legal afterward.",
+        "The ending, Albany character copy, persistent-character panel, and named service offers repeat exactly what survived and what was lost."
       ],
-      "systems": ["pressure", "relationships", "injury", "resources", "encounters"],
-      "persistence_boundaries": ["quest_to_overworld"],
+      "systems": [
+        "pressure",
+        "relationships",
+        "injury",
+        "quest_resources",
+        "cattle_safety",
+        "encounters",
+        "campaign_exports",
+        "services"
+      ],
+      "persistence_boundaries": [
+        "rpg_save_restore",
+        "quest_to_overworld",
+        "overworld_save_restore"
+      ],
       "contract_tags": [
         "delayed",
         "cross_system",
@@ -440,7 +456,14 @@
         "irreversible_tradeoff",
         "failure_forward"
       ],
-      "baseline_evidence": [],
+      "baseline_evidence": [
+        "tests/starting_slice/drive_crisis_return_counterfactual.test.ts",
+        "tests/unit/world_campaign_consequences.test.ts",
+        "tests/unit/world_journey_campaign.test.ts",
+        "tests/regression/new_york_overworld.test.ts",
+        "tests/regression/crisis_priority_migration_integrity.test.ts",
+        "traces/bugs/bug_0524_wolf_winter_crisis_priority.yaml"
+      ],
       "counterfactual_test": "tests/starting_slice/crisis_priority_counterfactual.test.ts"
     },
     {

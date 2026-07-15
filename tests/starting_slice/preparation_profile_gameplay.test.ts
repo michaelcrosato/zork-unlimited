@@ -305,8 +305,11 @@ describe("SS-F05 — Albany preparation profile gameplay", () => {
     });
   });
 
-  it("keeps the existing six nondeath outcomes and death identity unchanged", () => {
+  it("adds three drive outcomes while preserving the prior six and death identity", () => {
     expect(pack.endings.map((ending) => ending.id)).toEqual([
+      "ending_drive_cattle_wounded",
+      "ending_drive_person_cattle_lost",
+      "ending_drive_reserve_spent",
       "ending_pack_diverted_after_blood",
       "ending_pack_diverted_cattle_scattered",
       "ending_pack_diverted",

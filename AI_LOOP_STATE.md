@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 563 -->
+<!-- historical_cycle_count: 564 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,15 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - wolf_winter_crisis_priority
+
+- Evidence choice: `SS-F10-crisis-priority` was the next defining-slice gap because Albany → Wolf-Winter had combat and lure resolutions but no complete third strategy with a persistent protection tradeoff.
+- Surface: Cade now discloses a hard `drive_and_evacuate` commitment: a two-charge rig, two spatial living-wolf turns, visible Pack Drive pressure, one non-retry hurdle recovery, and no later switch to lure/combat. At the byre crisis, the player irreversibly chooses a whole herd plus untreated wound, every person plus two scattered cattle, or people/herd unharmed plus a cut-apart rig; every completion knowingly forfeits the outer defense line, and June independently takes the lower gate when present.
+- Integrity/counterfactual: three same-origin traces reverse wound/cattle/resource state and Station/Greenway services; generic atomic `suffer_wound`, exact F04 journal-copy normalization, bounded 10-service/6-ending migration, truthful 9x2 return copy, and full/compact/UI replay carry each cost without double application. The ledger advances from 7/12 to 8/12 and from two to three of four strategy families.
+- Pure evidence: seed 2714 verified pure/fresh, chose Road-Warden + Hayden's report + Reese's Works, completed Wolf-Winter by combat at decision 30, continued at 30/40/55/76/80, and ended voluntarily after four goals at 96; clarity/enjoyment 4/5, stuck false, replay true, no functional bug. Deterministic paired proofs carry the unsampled drive family.
+- Compile/self-critique: compile `20260715T120239Z` contains 782 verified/35 rejected reports and 33 current-contract pure exits, all continuing at least once. PASS for F10 and `drive_and_evacuate`, not the greater-than-BG3 slice claim: 8/12 forks and three of four families are proven; binary `SS-F08-cade-trust` plus `fortify_and_outlast` is next.
+- Guard: independent gameplay and world/migration audits closed state-cap, dead-copy, compact-copy, semantic-witness, prep-leak, disclosure, rig-copy, wound-zero, and historical-save gaps. Unchanged 800,000-state liveness/score searches passed 17/17 and 19/19; pre/post crawls `20260715T092531Z`/`20260715T123630Z` reached 247/247 nodes, 344/344 edges, and 12/12 quests.
 
 ### Cycle result - albany_wolf_ally_commitment
 
@@ -135,12 +144,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Pure evidence: verified pure/fresh seed 2421 completed Wolf-Winter, Gallowmere, Tanner's Fever, and Breaking Weir in 96 accepted decisions (128 agent turns), understood the two-lead teaser, then honestly ended before consent at goal 4; clarity 4/5, enjoyment 5/5, replay true, no rejects/stuck/timeout.
 - Compile/self-critique: ledger 465/30 rejected is two reports beyond the 463-report compile, below the ≥3 threshold. PASS for real next-adventure ownership and secrecy, not retention uplift: post-change continuation is 0/1 and aggregate Breaking-Weir continuation is 1/9; an owned in-quest flood consequence and Tanner's first-observation Holt prose are next evidence-backed debts.
 - Guard: pre/post crawls `20260712T154852Z`/`20260712T161358Z` covered 6,000 steps and 247/247 nodes; exact seed-2421 report copy, focused 157-test suite, and full health (307 files/2,174 tests, UI, 12 packs) passed.
-
-### Cycle result - gallowmere_starting_knife_truth
-
-- Root evidence: independent pure seeds 2216/2218 both trusted Gallowmere's claim that their knife was at the belt, examined it, left with empty inventory, and later spent 11/5 extra accepted decisions recovering it; raw transcripts prove no pre-pickup USE or silent no-op (`bug_0516`).
-- Surface: the hunter's mandatory, zero-payoff pickup is now real `held` starting gear, matching Wolf-Winter's spear precedent. Fresh prose, inventory, and action menus agree; TAKE/DROP and unreachable missing-knife variants retire, while EXAMINE, checks, stats, score, combat, and endings remain intact.
-- Parity proof: fresh core, UI, full MCP, and compact MCP all carry `hunting_knife`, expose identical current actions, and preserve complete Hedrick-west/path-north orientation below compact limits; direct travel exposes both authored tool interactions without a recovery detour.
-- Pure evidence: exact-hash seed 2319 started with the knife in compact inventory, completed Gallowmere 50/50 with its blind-side strike as the best moment, continued at decisions 22/40/47/71/80, then ended after goal 4 at 96 (clarity 5/5, enjoyment 4/5, replay true; no rejection, loop, or stuck state).
-- Compile/self-critique: ledger 464/30 rejected is one report beyond the 463-report compile, below the ≥3 threshold. PASS for restored equipment trust, not retention completion—the player still stopped and identified repeated clue/tool/check quest skeletons, abstract pacing bookkeeping, and templated road copy as the next debts.
-- Guard: pre/post crawls `20260712T151119Z`/`20260712T152119Z` covered 6,000 steps, all 7 Gallowmere rooms and 247/247 overworld nodes; hash `b8526f2f8235`, exact pure report copy, focused 10-test proof, and full health (306 files/2,169 tests, UI, 12 packs) passed.

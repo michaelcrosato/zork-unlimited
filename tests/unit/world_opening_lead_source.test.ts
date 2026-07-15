@@ -242,7 +242,7 @@ describe("Albany opening lead-source authoring", () => {
     expect(underfunded.knowledge).not.toContain("albany:knowledge_wolf_market_testimony");
   });
 
-  it("rejects world-fact effects because lead sources only alter the character", () => {
+  it("rejects world facts and wounds because lead sources only gather reports", () => {
     const withWorldFact = cloneOpeningLeadSource(openingLeadSource);
     optionById(withWorldFact, "albany:source_jamie_market_testimony").effects.push({
       type: "set_world_fact",
@@ -254,6 +254,16 @@ describe("Albany opening lead-source authoring", () => {
     const rawWorld = structuredClone(world);
     rawWorld.opening_lead_source = withWorldFact;
     expect(() => parseOverworldManifest(rawWorld)).toThrow(/not world facts/i);
+
+    const withWound = cloneOpeningLeadSource(openingLeadSource);
+    optionById(withWound, "albany:source_jamie_market_testimony").effects.push({
+      type: "suffer_wound",
+      wound_id: "wound:opening_source_shortcut",
+      severity: 2,
+      treatment: "untreated",
+      health_loss: 6,
+    });
+    expect(() => parseOpeningLeadSource(withWound)).toThrow(/not .*wounds/i);
   });
 
   it("enforces source, quest-import, contact-memory, and sponsor references", () => {
