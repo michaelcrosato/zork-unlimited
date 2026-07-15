@@ -40,6 +40,9 @@ function revealAlbanyWolf(session: OverworldSession) {
   }
   expect(session.journey().storyChoice?.kind).toBe("lead_source");
   session.chooseJourneyStory("albany:source_rowan_civic_docket");
+  expect(session.journey().storyChoice?.kind).toBe("preparation");
+  expect(session.view().quests.map((candidate) => candidate.id)).not.toContain("wolf_winter");
+  session.chooseJourneyStory("albany:prep_works_fortification");
   const quest = session.view().quests.find((candidate) => candidate.id === "wolf_winter");
   if (!quest) throw new Error("Expected the Albany Wolf-Winter lead.");
   const route = session
@@ -89,7 +92,14 @@ function launchAlbanyWolf(
     session_id: overworldSessionId,
     choice: "albany:source_rowan_civic_docket",
   });
-  observation = sourced.observation;
+  expect(sourced.journey.storyChoice?.kind).toBe("preparation");
+  expect(sourced.observation.quests.map((candidate) => candidate.id)).not.toContain("wolf_winter");
+  const prepared = api.choose_overworld_session_story({
+    ...full,
+    session_id: overworldSessionId,
+    choice: "albany:prep_works_fortification",
+  });
+  observation = prepared.observation;
   const quest = observation.quests.find((candidate) => candidate.id === "wolf_winter");
   if (!quest) throw new Error("Expected the Wolf-Winter lead after registration.");
   const marketRoute = observation.areaExits.find(
@@ -328,11 +338,15 @@ describe("trusted campaign-character quest launch bridge", () => {
     expect(compactSession.overworldSessionId).toBe(compact.overworldSessionId);
     expect(fullSession.state).toEqual(compactSession.state);
     expect(fullSession.stateHash).toBe(compactSession.stateHash);
-    expect(fullSession.state.campaignImportReceipt).toBeUndefined();
+    expect(fullSession.state.campaignImportReceipt?.applied_rules).toEqual([
+      "import:wolf_winter_relief_mediation",
+      "import:wolf_winter_works_fortification",
+    ]);
 
     const direct = fullApi.start_world_quest({ world_quest_id: "wolf_winter", seed: 505 });
     expect(fullApi.sessions.get(direct.session_id).overworldSessionId).toBeUndefined();
-    expect(fullSession.state).toEqual(fullApi.sessions.get(direct.session_id).state);
+    expect(fullApi.sessions.get(direct.session_id).state.campaignImportReceipt).toBeUndefined();
+    expect(fullSession.state).not.toEqual(fullApi.sessions.get(direct.session_id).state);
   });
 
   it("projects rich persistent state identically in the browser engine and shared initializer", () => {
@@ -388,12 +402,10 @@ describe("trusted campaign-character quest launch bridge", () => {
       compact_actions: false,
     });
     const mcpState = api.sessions.get(embedded.launched.rpg_session_id).state;
-    const ui = GameSession.startEmbedded(
-      WOLF_SOURCE,
-      createInitialCampaignCharacterState(),
-      WOLF_IMPORTS,
-      505,
-    );
+    const character = api.export_overworld_session({
+      session_id: embedded.overworldSessionId,
+    }).snapshot.character;
+    const ui = GameSession.startEmbedded(WOLF_SOURCE, character, WOLF_IMPORTS, 505);
 
     expect(ui.view().stateHash).toBe(hashState(mcpState));
     expect(ui.view().stateHash).toBe(api.sessions.get(embedded.launched.rpg_session_id).stateHash);

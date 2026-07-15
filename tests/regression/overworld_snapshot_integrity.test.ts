@@ -336,9 +336,14 @@ function resolveCurrentOverworldSessionEvent(a: ReturnType<typeof api>, sessionI
       session_id: sessionId,
       choice: "albany:ledger_advocate",
     });
-    a.choose_overworld_session_story({
+    const sourced = a.choose_overworld_session_story({
       session_id: sessionId,
       choice: "albany:source_rowan_civic_docket",
+    });
+    expect(sourced.journey.storyChoice?.kind).toBe("preparation");
+    a.choose_overworld_session_story({
+      session_id: sessionId,
+      choice: "albany:prep_works_fortification",
     });
   }
   a.investigate_overworld_session_event({ session_id: sessionId, event_id: event.id });
@@ -1247,10 +1252,16 @@ describe("overworld snapshot restore integrity", () => {
         session_id: started.session_id,
         choice: "albany:ledger_advocate",
       });
-      a.choose_overworld_session_story({
+      const sourced = a.choose_overworld_session_story({
         ...FULL_OVERWORLD_RESPONSE,
         session_id: started.session_id,
         choice: "albany:source_rowan_civic_docket",
+      });
+      expect(sourced.journey.storyChoice?.kind).toBe("preparation");
+      a.choose_overworld_session_story({
+        ...FULL_OVERWORLD_RESPONSE,
+        session_id: started.session_id,
+        choice: "albany:prep_works_fortification",
       });
     }
     const secondJob = talked.result.discoveredJobs?.[0];
@@ -1479,10 +1490,16 @@ describe("overworld snapshot restore integrity", () => {
       session_id: started.session_id,
       choice: "albany:ledger_advocate",
     });
-    a.choose_overworld_session_story({
+    const sourced = a.choose_overworld_session_story({
       ...FULL_OVERWORLD_RESPONSE,
       session_id: started.session_id,
       choice: "albany:source_rowan_civic_docket",
+    });
+    expect(sourced.journey.storyChoice?.kind).toBe("preparation");
+    a.choose_overworld_session_story({
+      ...FULL_OVERWORLD_RESPONSE,
+      session_id: started.session_id,
+      choice: "albany:prep_works_fortification",
     });
     const quest = overworld.opening_lead_source?.target_quest;
     if (!quest) throw new Error("expected Albany's source-bound quest");
@@ -1493,7 +1510,7 @@ describe("overworld snapshot restore integrity", () => {
     };
 
     expect(() => a.restore_overworld_session({ snapshot: forgedMissingQuest })).toThrow(
-      /selected lead source did not reveal its target quest/i,
+      /resolved preparation did not reveal its target quest/i,
     );
   });
 

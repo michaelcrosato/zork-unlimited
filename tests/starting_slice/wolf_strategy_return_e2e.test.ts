@@ -141,8 +141,15 @@ function launchAlbanyWolf(api: ToolApi) {
     session_id: overworldSessionId,
     choice: "albany:source_rowan_civic_docket",
   });
-  const quest = sourced.observation.quests.find((candidate) => candidate.id === WOLF_QUEST.id);
-  if (!quest) throw new Error("Rowan's source must reveal Wolf-Winter");
+  expect(sourced.journey.storyChoice?.kind).toBe("preparation");
+  expect(sourced.observation.quests.map((candidate) => candidate.id)).not.toContain(WOLF_QUEST.id);
+  const prepared = api.choose_overworld_session_story({
+    ...FULL,
+    session_id: overworldSessionId,
+    choice: "albany:prep_works_fortification",
+  });
+  const quest = prepared.observation.quests.find((candidate) => candidate.id === WOLF_QUEST.id);
+  if (!quest) throw new Error("Albany preparation must reveal Wolf-Winter");
 
   moveToArea(api, overworldSessionId, "albany_city__market");
   let market = fullView(api, overworldSessionId);
@@ -198,9 +205,13 @@ function playStrategy(strategy: Strategy) {
   expect(initial.state.campaignImportReceipt?.applied_rules).toEqual([
     "import:wolf_winter_fieldcraft",
     "import:wolf_winter_lure_fieldcraft",
+    "import:wolf_winter_works_fortification",
   ]);
 
-  const ui = GameSession.startEmbedded(WOLF_SOURCE, ROAD_WARDEN.character, WOLF_IMPORTS, 901);
+  const character = api.export_overworld_session({
+    session_id: overworldSessionId,
+  }).snapshot.character;
+  const ui = GameSession.startEmbedded(WOLF_SOURCE, character, WOLF_IMPORTS, 901);
   expect(ui.view().stateHash).toBe(api.sessions.get(rpgSessionId).stateHash);
 
   let detachedSessionId: string | null = null;

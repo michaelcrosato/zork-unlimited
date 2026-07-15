@@ -61,7 +61,13 @@ function loadPack(): RpgPack {
 
 function codes(pack: RpgPack): string[] {
   return validateRpg(pack, {
-    extraSettableFlags: ["jamie_market_testimony_certified", "hayden_frost_report_certified"],
+    extraSettableFlags: [
+      "jamie_market_testimony_certified",
+      "hayden_frost_report_certified",
+      "works_fortification_prepared",
+      "drover_route_prepared",
+      "relief_protocol_prepared",
+    ],
   }).findings.map((f) => f.code);
 }
 
@@ -251,7 +257,13 @@ describe("bug_0189 — The Wolf-Winter: a fair THREE-fight combat_guaranteed gau
     expect(pack.meta.combat_guaranteed).toBe(true);
     expect(pack.enemies.length).toBe(3); // a three-fight GAUNTLET, harder cumulative surface
     const report = validateRpg(pack, {
-      extraSettableFlags: ["jamie_market_testimony_certified", "hayden_frost_report_certified"],
+      extraSettableFlags: [
+        "jamie_market_testimony_certified",
+        "hayden_frost_report_certified",
+        "works_fortification_prepared",
+        "drover_route_prepared",
+        "relief_protocol_prepared",
+      ],
     });
     expect(report.findings.filter((f) => f.severity === "error")).toEqual([]);
     const c = report.findings.map((f) => f.code);

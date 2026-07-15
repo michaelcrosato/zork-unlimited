@@ -55,6 +55,7 @@ const TEST_CAMPAIGN_EFFECTS = [
 type FixtureOverworld = Record<string, unknown> & {
   characters: Array<{ variants?: unknown }>;
   opening_lead_source?: unknown;
+  opening_preparation?: unknown;
   opening_registration?: unknown;
 };
 
@@ -67,6 +68,7 @@ function fixtureOverworldWithoutQuestConditionedFeatures(): FixtureOverworld {
   for (const character of world.characters) delete character.variants;
   delete world.campaign_service_rules;
   delete world.opening_lead_source;
+  delete world.opening_preparation;
   delete world.opening_registration;
   return world;
 }

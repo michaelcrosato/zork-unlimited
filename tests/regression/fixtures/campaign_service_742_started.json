@@ -1,0 +1,261 @@
+{
+  "provenance": {
+    "commit": "8460eb091ca3752a863f2a9ccc98cd6ddace51fa",
+    "worldHash": "742aa205a254b6f4382749fb63742caf1606024a1f6c044c2f433fda8dac6090",
+    "state": "wolf_winter_started_without_opening_preparation"
+  },
+  "snapshot": {
+    "version": 9,
+    "worldId": "new_york_overworld",
+    "worldHash": "742aa205a254b6f4382749fb63742caf1606024a1f6c044c2f433fda8dac6090",
+    "character": {
+      "version": 1,
+      "background": "albany:ledger_advocate",
+      "skills": [
+        {
+          "skillId": "skill:mediation",
+          "rank": 4
+        }
+      ],
+      "values": [
+        {
+          "valueId": "value:accountability",
+          "strength": 4
+        }
+      ],
+      "health": {
+        "current": 30,
+        "max": 30
+      },
+      "wounds": [],
+      "equipment": [
+        {
+          "equipmentId": "albany:ledger_advocate_folio",
+          "itemId": "albany:item_sealed_evidence_folio",
+          "quantity": 1,
+          "condition": 100,
+          "equipped": true
+        }
+      ],
+      "money": 25,
+      "abilities": [],
+      "knowledge": [
+        "albany:knowledge_emergency_ledger",
+        "albany:knowledge_relief_compact",
+        "albany:knowledge_wolf_market_testimony"
+      ],
+      "promises": [
+        {
+          "promiseId": "albany:promise_truthful_relief_account",
+          "recipientId": "albany:rowan_quill",
+          "status": "active"
+        }
+      ],
+      "crimes": [],
+      "relationships": [
+        {
+          "npcId": "albany:jamie_tanner",
+          "trust": 3,
+          "regard": 3,
+          "owesPlayer": 0,
+          "playerOwes": 1,
+          "memories": [
+            "albany:memory_jamie_market_testimony_certified",
+            "albany:memory_jamie_sponsored_ledger_advocate"
+          ]
+        },
+        {
+          "npcId": "albany:rowan_quill",
+          "trust": 2,
+          "regard": 1,
+          "owesPlayer": 0,
+          "playerOwes": 0,
+          "memories": ["albany:memory_rowan_registered_ledger_advocate"]
+        }
+      ],
+      "factionStanding": [
+        {
+          "factionId": "faction:municipal_ledger",
+          "standing": 5
+        }
+      ]
+    },
+    "currentId": "albany_city",
+    "currentAreaId": "albany_city__transport_hub",
+    "minutes": 542,
+    "supplies": 6,
+    "fatigue": 0,
+    "discoveredIds": [
+      "albany_city",
+      "bethlehem_town",
+      "colonie_town",
+      "hyde_park_town",
+      "kingston_city",
+      "saratoga_springs_city",
+      "schenectady_city"
+    ],
+    "visitedIds": ["albany_city"],
+    "currentAreaByTown": [["albany_city", "albany_city__transport_hub"]],
+    "travelLog": [],
+    "journalEntries": [
+      {
+        "id": "quest:wolf_winter",
+        "kind": "quest",
+        "town": "Albany city",
+        "title": "Started The Wolf-Winter",
+        "text": "You turn the local lead \"A winter-relief tag moves from Albany's civic records to the Albany Station Quarter route desk: Old Cade's hill steading, a cattle byre, and a wolf pack coming down with the weather. The Wolf-Winter lead is the live dispatch attached to that hill road.\" into an active quest.",
+        "recordedAt": "Day 1, 09:02"
+      },
+      {
+        "id": "lead_source:albany:wolf_source_priority:albany:source_jamie_market_testimony",
+        "kind": "lead_source",
+        "title": "Certified source: Verify Jamie's Market Testimony",
+        "text": "Cross-check missing cattle feed against Jamie Tanner's named delivery witnesses. The certified testimony identifies the feed-hauler's crawlboard into Cade's fodder loft. After the yearling is dealt with, that knowledge opens the loft approach to the flank-wolf without requiring a bound split rail; taking the drop commits you away from the ground approaches. Actual cost: 15 minutes and $0. Jamie's Ledger Advocate sponsorship pre-clears the witness counter, waiving $6 and reducing review time from 35 minutes to 15. Rowan seals Jamie's witness list into the relief packet. Jamie remembers that you put the market account on the public record; after the yearling falls, the certified crawlboard becomes a committed loft approach at Cade's steading.",
+        "town": "Albany city",
+        "recordedAt": "Day 1, 08:50",
+        "storyChoiceBoundary": {
+          "acceptedDecisions": 4,
+          "decisionProofHash": "22614b0142671041aea48343235d04247bc6c0eb1aec0c1ce9eff5c9a17de8a6",
+          "townId": "albany_city",
+          "areaId": "albany_city__civic_core",
+          "minutes": 530
+        }
+      },
+      {
+        "id": "lead_source_offer:albany:wolf_source_priority",
+        "kind": "lead_source_offer",
+        "title": "Certify the Wolf-Winter Source Packet",
+        "text": "Rowan can attach one account before the hill dispatch closes. The civic docket leaves immediately with only the public facts. Jamie Tanner's market testimony costs time and money to verify but maps a feed-hauler's crawlboard into Cade's loft. Hayden Hale's frost report costs time but identifies a failed paling line that can be exploited only while the split rail remains unbound. Albany will pack this run against the one source you certify now; the other packets cannot be added after departure.",
+        "town": "Albany city",
+        "recordedAt": "Day 1, 08:35",
+        "storyChoiceBoundary": {
+          "acceptedDecisions": 3,
+          "decisionProofHash": "29c508a3fc70206b07beb375fd0b67d0aa4b1c7826c756b7c066e0c756d7ee5e",
+          "townId": "albany_city",
+          "areaId": "albany_city__civic_core",
+          "minutes": 515
+        }
+      },
+      {
+        "id": "registration:albany:relief_registration:albany:ledger_advocate",
+        "kind": "registration",
+        "title": "Registered: Ledger Advocate",
+        "text": "You know how emergency authority, testimony, and scarce municipal aid move through Albany's public counters. Contact: Jamie Tanner. Skill edge: Mediation 4. Value: Accountability 4. Kit: sealed evidence folio. Funds: 25. Standing: Municipal Ledger +5. Knowledge: emergency ledger and Relief Compact. Obligation: return a truthful relief account to Rowan. Rowan registers you as a Ledger Advocate and Jamie remembers vouching for your judgment. You carry a sealed evidence folio and owe Rowan a truthful relief account. Wolf-Winter remains fully winnable through its default routes, but this profile does not receive the Road-Warden's current Fieldcraft DEF import.",
+        "town": "Albany city",
+        "recordedAt": "Day 1, 08:35",
+        "registrationBoundary": {
+          "acceptedDecisions": 3,
+          "decisionProofHash": "29c508a3fc70206b07beb375fd0b67d0aa4b1c7826c756b7c066e0c756d7ee5e",
+          "townId": "albany_city",
+          "areaId": "albany_city__civic_core",
+          "minutes": 515
+        }
+      },
+      {
+        "id": "registration_offer:albany:relief_registration",
+        "kind": "registration_offer",
+        "title": "Enter Albany's Relief Compact",
+        "text": "Rowan lays four registration cards across the municipal counter. Albany's electric grid, buses, clinics, and radio repeaters protect the dense corridor, but plowed service ends before many chartered steadings and old-boundary farms. The Relief Compact lets an independent troubleshooter carry a public emergency tag across both systems, provided the traveler names the experience, sponsor, kit, and obligation they will answer for. Your registration is permanent; the field package and relationships travel with you.",
+        "town": "Albany city",
+        "recordedAt": "Day 1, 08:35",
+        "registrationBoundary": {
+          "acceptedDecisions": 2,
+          "decisionProofHash": "92deca2832406f6b03bbda1d285d8c2622624bf38b940a40109cb471abc48c35",
+          "townId": "albany_city",
+          "areaId": "albany_city__civic_core",
+          "minutes": 515
+        }
+      },
+      {
+        "id": "talk:albany_city__civic_core__contact",
+        "kind": "contact",
+        "town": "Albany city",
+        "title": "Talked to Rowan Quill",
+        "text": "Rowan Quill has ink on both cuffs and a clerk's memory for which petitions are real trouble. Ask Rowan what matters before the office closes: they can separate ledger work, basement writs, and station-yard relief tags from ordinary counter noise.",
+        "recordedAt": "Day 1, 08:35"
+      },
+      {
+        "id": "scout:albany_city__civic_core__poi",
+        "kind": "poi",
+        "town": "Albany city",
+        "title": "Scouted Albany Civic Center Notice Hall",
+        "text": "The Notice Hall board is not decorative: a red-threaded civic ledger slip, a sealed-underrooms writ, and a station-stamped winter petition share one sightline. Scouting the board turns those marks into local work instead of guessing at counters. You mark the site as a local lead for Albany city.",
+        "recordedAt": "Day 1, 08:20"
+      }
+    ],
+    "resolvedEventIds": [],
+    "discoveredAreaIds": [
+      "albany_city__civic_core",
+      "albany_city__market",
+      "albany_city__transport_hub"
+    ],
+    "visitedAreaIds": [],
+    "discoveredJobIds": ["albany_city__civic_core__job", "albany_city__market__job"],
+    "completedJobIds": [],
+    "discoveredSiteIds": ["albany_city__civic_core__site"],
+    "discoveredQuestIds": ["wolf_winter"],
+    "startedQuestIds": ["wolf_winter"],
+    "completedQuestIds": [],
+    "questOutcomes": [],
+    "exploredSiteIds": [],
+    "regionRenown": [],
+    "completedRegionalArcIds": [],
+    "pendingRoadEncounter": null,
+    "openingLeadSourceDecisionTrail": {
+      "anchorId": "lead_source_offer:albany:wolf_source_priority",
+      "baseAcceptedDecisions": 3,
+      "baseDecisionProofHash": "29c508a3fc70206b07beb375fd0b67d0aa4b1c7826c756b7c066e0c756d7ee5e",
+      "decisions": [
+        {
+          "number": 4,
+          "surface": "overworld",
+          "actionId": "campaign_story:albany:wolf_source_priority:albany:source_jamie_market_testimony",
+          "reason": "situation_changed"
+        },
+        {
+          "number": 5,
+          "surface": "overworld",
+          "actionId": "move_area:albany_city__area_route__civic_core__market__1",
+          "reason": "movement"
+        },
+        {
+          "number": 6,
+          "surface": "overworld",
+          "actionId": "move_area:albany_city__area_route__market__transport_hub__2",
+          "reason": "movement"
+        },
+        {
+          "number": 7,
+          "surface": "overworld",
+          "actionId": "quest_start:wolf_winter",
+          "reason": "situation_changed"
+        }
+      ]
+    },
+    "journey": {
+      "version": 3,
+      "status": "active",
+      "goal": {
+        "version": 1,
+        "id": "albany_local_lead",
+        "text": "Find one local lead in Albany and see it through.",
+        "status": "active",
+        "completedAtDecision": null
+      },
+      "goalHistory": [],
+      "acceptedDecisions": 7,
+      "nextCheckpoint": 40,
+      "decisionProof": {
+        "hash": "957ec46542303f7acd44006163e7cad09240bca696e2360316ff8930e2f0f5c4",
+        "last": {
+          "number": 7,
+          "surface": "overworld",
+          "actionId": "quest_start:wolf_winter",
+          "reason": "situation_changed"
+        }
+      },
+      "pendingChoice": null,
+      "retentionHistory": []
+    }
+  }
+}

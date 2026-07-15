@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+
 import { describe, expect, it } from "vitest";
 
 import { hashState } from "../../src/core/hash.js";
@@ -6,6 +9,7 @@ import { OverworldSession } from "../../src/world/session.js";
 import {
   OVERWORLD_CAMPAIGN_SERVICE_WORLD_HASH,
   OVERWORLD_OPENING_LEAD_SOURCE_WORLD_HASH,
+  OVERWORLD_OPENING_PREPARATION_PREDECESSOR_WORLD_HASH,
 } from "../../src/world/session_snapshot_restore.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
 
@@ -13,6 +17,16 @@ const WORLD = loadOverworldManifest(process.cwd());
 const TIMBER_SERVICE_RULE_ID = "albany:wolf_saved_timber_quick_resupply";
 const WAGON_SERVICE_RULE_ID = "albany:dawn_wagon_solo_packet_resupply";
 const LIVE_PACK_SERVICE_RULE_ID = "albany:wolf_live_pack_greenway_resupply";
+const TARGET_QUEST = "wolf_winter";
+const STARTED_742_FIXTURE = JSON.parse(
+  readFileSync(
+    join(process.cwd(), "tests", "regression", "fixtures", "campaign_service_742_started.json"),
+    "utf8",
+  ),
+) as {
+  provenance: { commit: string; worldHash: string; state: string };
+  snapshot: unknown;
+};
 
 function moveToArea(session: OverworldSession, areaId: string): void {
   const route = session.view().areaExits.find((candidate) => candidate.destination.id === areaId);
@@ -20,20 +34,37 @@ function moveToArea(session: OverworldSession, areaId: string): void {
   session.moveArea(route.id);
 }
 
-function savedTimberReturnBeforeService(withQuestDecision = false): OverworldSession {
-  const session = new OverworldSession(WORLD);
-  const opening = session.view();
-  const poi = opening.pois[0];
-  const contact = opening.characters[0];
-  if (!poi || !contact) throw new Error("expected Albany opening sources");
+/** Restore a real quest-started save frozen from the exact 742 manifest revision. */
+function startedNoPreparationPredecessor(): OverworldSession {
+  expect(STARTED_742_FIXTURE.provenance).toEqual({
+    commit: "8460eb091ca3752a863f2a9ccc98cd6ddace51fa",
+    worldHash: OVERWORLD_OPENING_PREPARATION_PREDECESSOR_WORLD_HASH,
+    state: "wolf_winter_started_without_opening_preparation",
+  });
+  const migrated = OverworldSession.restore(WORLD, structuredClone(STARTED_742_FIXTURE.snapshot));
+  expect(migrated.journey().storyChoice).toBeNull();
+  expect(migrated.snapshot().startedQuestIds).toContain(TARGET_QUEST);
+  expect(migrated.snapshot().completedQuestIds).not.toContain(TARGET_QUEST);
+  expect(migrated.snapshot().journalEntries).toContainEqual(
+    expect.objectContaining({ kind: "preparation_legacy" }),
+  );
+  return migrated;
+}
 
-  session.scoutPoi(poi.id);
-  session.talkToCharacter(contact.id);
-  session.chooseJourneyStory("albany:ledger_advocate");
-  session.chooseJourneyStory("albany:source_jamie_market_testimony");
-  moveToArea(session, "albany_city__market");
-  moveToArea(session, "albany_city__transport_hub");
-  session.startQuest("wolf_winter");
+function snapshotAsPredecessor(
+  session: OverworldSession,
+  worldHash: string,
+): ReturnType<OverworldSession["snapshot"]> {
+  const predecessor = session.snapshot();
+  predecessor.worldHash = worldHash;
+  predecessor.journalEntries = predecessor.journalEntries.filter(
+    (entry) => entry.kind !== "preparation_legacy",
+  );
+  return predecessor;
+}
+
+function savedTimberReturnBeforeService(withQuestDecision = false): OverworldSession {
+  const session = startedNoPreparationPredecessor();
   if (withQuestDecision) {
     session.recordQuestDecision("wolf_winter:migration_boundary:1", {
       countsTowardJourney: true,
@@ -74,6 +105,8 @@ function livePackCompletion(): OverworldSession {
   session.talkToCharacter(opening.characters[0]!.id);
   session.chooseJourneyStory("albany:road_warden");
   session.chooseJourneyStory("albany:source_rowan_civic_docket");
+  expect(session.journey().storyChoice?.kind).toBe("preparation");
+  session.chooseJourneyStory("albany:prep_works_fortification");
 
   moveToArea(session, "albany_city__market");
   session.scoutPoi(session.view().pois[0]!.id);
@@ -104,8 +137,7 @@ describe("campaign service predecessor migration integrity", () => {
   it("migrates the immediate predecessor with replay-bound service evidence and branch proof", () => {
     const previous = savedTimberReturnBeforeService();
     previous.resupplyAtTown();
-    const predecessor = previous.snapshot();
-    predecessor.worldHash = OVERWORLD_CAMPAIGN_SERVICE_WORLD_HASH;
+    const predecessor = snapshotAsPredecessor(previous, OVERWORLD_CAMPAIGN_SERVICE_WORLD_HASH);
     expect(
       predecessor.journalEntries.find((entry) => entry.kind === "campaign")?.text,
     ).not.toContain("one-time 15-minute resupply");
@@ -130,14 +162,12 @@ describe("campaign service predecessor migration integrity", () => {
   it("rejects new live-pack service consumption relabeled as predecessor evidence", () => {
     const forged = savedTimberReturnBeforeService();
     forged.resupplyAtTown();
-    const predecessor = forged.snapshot();
+    const predecessor = snapshotAsPredecessor(forged, OVERWORLD_CAMPAIGN_SERVICE_WORLD_HASH);
     const service = predecessor.journalEntries.find(
       (entry) => entry.serviceRuleId === TIMBER_SERVICE_RULE_ID,
     );
     if (!service) throw new Error("expected saved-timber service evidence");
     service.serviceRuleId = LIVE_PACK_SERVICE_RULE_ID;
-    predecessor.worldHash = OVERWORLD_CAMPAIGN_SERVICE_WORLD_HASH;
-
     expect(() => OverworldSession.restore(WORLD, predecessor)).toThrow(
       /service evidence introduced by a later manifest/i,
     );
@@ -167,8 +197,10 @@ describe("campaign service predecessor migration integrity", () => {
   });
 
   it("rejects relabeling an immediate-predecessor dawn branch without its exact decision proof", () => {
-    const predecessor = savedTimberReturnBeforeService().snapshot();
-    predecessor.worldHash = OVERWORLD_CAMPAIGN_SERVICE_WORLD_HASH;
+    const predecessor = snapshotAsPredecessor(
+      savedTimberReturnBeforeService(),
+      OVERWORLD_CAMPAIGN_SERVICE_WORLD_HASH,
+    );
     predecessor.journey.goal = {
       ...predecessor.journey.goal,
       id: ALBANY_DAWN_DISPATCH_GOALS.send_wardens_north.id,
@@ -181,8 +213,10 @@ describe("campaign service predecessor migration integrity", () => {
   });
 
   it("materializes a replayable quest boundary before a migrated save consumes a new service", () => {
-    const predecessor = savedTimberReturnBeforeService(true).snapshot();
-    predecessor.worldHash = OVERWORLD_OPENING_LEAD_SOURCE_WORLD_HASH;
+    const predecessor = snapshotAsPredecessor(
+      savedTimberReturnBeforeService(true),
+      OVERWORLD_OPENING_LEAD_SOURCE_WORLD_HASH,
+    );
     const completion = predecessor.journalEntries.find(
       (entry) => entry.id === "quest_done:wolf_winter",
     );
@@ -210,8 +244,7 @@ describe("campaign service predecessor migration integrity", () => {
     const session = savedTimberReturnBeforeService();
     const passage = session.followGoalPassage();
     expect(passage.legs.length).toBeGreaterThan(0);
-    const predecessor = session.snapshot();
-    predecessor.worldHash = OVERWORLD_OPENING_LEAD_SOURCE_WORLD_HASH;
+    const predecessor = snapshotAsPredecessor(session, OVERWORLD_OPENING_LEAD_SOURCE_WORLD_HASH);
     const completion = predecessor.journalEntries.find(
       (entry) => entry.id === "quest_done:wolf_winter",
     );

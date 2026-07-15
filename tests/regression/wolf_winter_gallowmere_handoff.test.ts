@@ -38,6 +38,9 @@ function startAlbanyWolf(session: OverworldSession): void {
   if (session.journey().storyChoice?.kind === "lead_source") {
     session.chooseJourneyStory("albany:source_rowan_civic_docket");
   }
+  if (session.journey().storyChoice?.kind === "preparation") {
+    session.chooseJourneyStory("albany:prep_works_fortification");
+  }
   moveToArea(session, "albany_city__market");
   session.scoutPoi("albany_city__market__poi");
   moveToArea(session, "albany_city__transport_hub");
@@ -53,6 +56,9 @@ function revealAlbanyWolfAtStation(session: OverworldSession): void {
   }
   if (session.journey().storyChoice?.kind === "lead_source") {
     session.chooseJourneyStory("albany:source_rowan_civic_docket");
+  }
+  if (session.journey().storyChoice?.kind === "preparation") {
+    session.chooseJourneyStory("albany:prep_works_fortification");
   }
   moveToArea(session, "albany_city__market");
   session.scoutPoi("albany_city__market__poi");
@@ -383,6 +389,8 @@ describe("Wolf-Winter to Gallowmere authored handoff", () => {
     session.talkToCharacter("albany_city__civic_core__contact");
     session.chooseJourneyStory("albany:ledger_advocate");
     session.chooseJourneyStory("albany:source_rowan_civic_docket");
+    expect(session.journey().storyChoice?.kind).toBe("preparation");
+    session.chooseJourneyStory("albany:prep_works_fortification");
     session.travel(ALBANY_TO_SARATOGA);
     if (session.view().pendingRoadEncounter) session.resolveRoadEncounter("press_on");
     session.travel(SARATOGA_TO_QUEENSBURY);

@@ -424,6 +424,24 @@ describe("New York overworld graph", () => {
           target_var: "fieldcraft",
         },
         {
+          id: "import:wolf_winter_works_repair",
+          type: "skill_rank_to_var",
+          skill_id: "skill:repair",
+          target_var: "repair",
+        },
+        {
+          id: "import:wolf_winter_drover_streetwise",
+          type: "skill_rank_to_var",
+          skill_id: "skill:streetwise",
+          target_var: "streetwise",
+        },
+        {
+          id: "import:wolf_winter_relief_mediation",
+          type: "skill_rank_to_var",
+          skill_id: "skill:mediation",
+          target_var: "mediation",
+        },
+        {
           id: "import:wolf_winter_market_testimony",
           type: "knowledge_to_flag",
           knowledge_id: "albany:knowledge_wolf_market_testimony",
@@ -434,6 +452,24 @@ describe("New York overworld graph", () => {
           type: "knowledge_to_flag",
           knowledge_id: "albany:knowledge_wolf_frost_report",
           target_flag: "hayden_frost_report_certified",
+        },
+        {
+          id: "import:wolf_winter_works_fortification",
+          type: "knowledge_to_flag",
+          knowledge_id: "albany:knowledge_wolf_works_fortification",
+          target_flag: "works_fortification_prepared",
+        },
+        {
+          id: "import:wolf_winter_drover_route",
+          type: "knowledge_to_flag",
+          knowledge_id: "albany:knowledge_wolf_drover_route",
+          target_flag: "drover_route_prepared",
+        },
+        {
+          id: "import:wolf_winter_relief_protocol",
+          type: "knowledge_to_flag",
+          knowledge_id: "albany:knowledge_wolf_relief_protocol",
+          target_flag: "relief_protocol_prepared",
         },
       ],
     });
@@ -579,6 +615,12 @@ describe("New York overworld graph", () => {
     );
     expect(jamie?.campaign_npc_id).toBe("albany:jamie_tanner");
     expect(jamie?.variants).toEqual([
+      {
+        id: "wolf_relief_protocol_allocated",
+        after_relationship_memories: ["albany:memory_jamie_wolf_relief_protocol_allocated"],
+        summary: expect.stringContaining("named-call relief order"),
+        agenda: expect.stringContaining("one accountable attempt"),
+      },
       {
         id: "market_testimony_certified",
         after_relationship_memories: ["albany:memory_jamie_market_testimony_certified"],

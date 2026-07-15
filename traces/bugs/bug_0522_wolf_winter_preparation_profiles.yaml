@@ -1,0 +1,46 @@
+id: bug_0522
+title: "Albany's Wolf-Winter dispatch could not carry a player-selected field preparation"
+pack: content/rpg/quests/wolf_winter.yaml
+reported_by: starting-slice causal audit and adversarial counterexample
+reports:
+  - docs/STARTING_SLICE.md
+  - docs/starting_slice_causal_matrix.json
+severity: S2
+symptom: >
+  After choosing a registration and certifying a lead source, every traveler
+  entered Wolf-Winter with the same remaining field decisions. Repair,
+  Streetwise, and Mediation backgrounds had no quest-local preparation to make
+  their expertise matter, and no selected allocation survived the truthful
+  Albany return as a distinct service entitlement.
+root_cause: >
+  The opening pipeline moved directly from source certification to the quest.
+  Wolf-Winter imported Fieldcraft and two source facts only; it had no bounded
+  consumers for the other starting skills and no story-choice identity that a
+  later campaign service could require.
+fix: >
+  Insert one mutually exclusive Albany preparation after source certification:
+  Reese's Works Fortification, Emery's Drover Route, or Jamie's Relief Protocol.
+  Each teaches one persistent knowledge fact and imports the matching skill at
+  Wolf-Winter. Each consumer is a visible one-shot DC 12 check with an explicit
+  fail-forward consequence, and every background can still advance. Preserve
+  the existing six nondeath endings. A truthful byre-held return unlocks one
+  distinct, one-time Albany service tied to the actual selected preparation.
+deterministic_witnesses:
+  - counterfactual: "Works Fortification, fixed roll 8"
+    specialist: "Ironhands Repair 4 braces the paling immediately at cattle alarm 0"
+    generalist: "Repair 0 splits the rail, then the marked cold-set braces it without a reroll at cattle alarm 1"
+  - counterfactual: "Drover Route after the same fouled first cast, fixed roll 8"
+    specialist: "Courier Streetwise 4 redirects the living yearling and lowers cattle alarm from 2 to 1"
+    generalist: "Streetwise 0 raises alarm from 2 to 3, retires the route, and leaves split-rail or combat recovery legal"
+  - counterfactual: "Relief Protocol after the same ordinary split-rail redirect, fixed roll 8"
+    specialist: "Ledger Mediation 4 lowers cattle alarm from 2 to 1 before the loft cast"
+    generalist: "Mediation 0 raises alarm from 2 to 3, retires the protocol, and leaves the loft route legal"
+  - return: "Works -> Industrial resupply; Drover -> Campus rest; Relief -> Civic resupply, each requiring fact:wolf_winter_byre_held"
+tests:
+  - tests/starting_slice/preparation_profile_gameplay.test.ts
+  - tests/regression/new_york_overworld.test.ts
+verification:
+  - npm run validate -- wolf_winter
+  - npx vitest run tests/starting_slice/preparation_profile_gameplay.test.ts tests/regression/new_york_overworld.test.ts
+  - npm run crawl:smoke
+  - npm run health

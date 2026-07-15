@@ -94,14 +94,21 @@ import {
 } from "./campaign_character_state.js";
 import { applyOpeningRegistrationProfile } from "./opening_registration.js";
 import { applyOpeningLeadSourceOption } from "./opening_lead_source.js";
+import { applyOpeningPreparationProfile } from "./opening_preparation.js";
 import {
-  OPENING_LEAD_SOURCE_JOURNAL_PREFIX,
   openingLeadSourceJournalEntry,
   openingLeadSourceJournalId,
   openingLeadSourceOfferJournalEntry,
   openingLeadSourceOfferJournalId,
 } from "./opening_lead_source_journal.js";
 import { presentOpeningLeadSource } from "./opening_lead_source_presentation.js";
+import {
+  openingPreparationJournalEntry,
+  openingPreparationJournalId,
+  openingPreparationOfferJournalEntry,
+  openingPreparationOfferJournalId,
+} from "./opening_preparation_journal.js";
+import { presentOpeningPreparation } from "./opening_preparation_presentation.js";
 import {
   openingRegistrationJournalEntry,
   openingRegistrationJournalId,
@@ -206,6 +213,7 @@ import {
 } from "./journey_decision.js";
 import { addOverworldJournalEntry } from "./session_journal_store.js";
 import { timeLabel } from "./session_journal_codec.js";
+import type { CampaignStoryChoiceRef } from "./campaign_story_choices.js";
 
 export type {
   OverworldRoadEncounterOption,
@@ -479,7 +487,7 @@ export class OverworldSession {
       currentTownId: this.currentId,
       currentAreaId,
       worldFactIds: this.campaignWorldFactIds(),
-      selectedStoryChoices: journeyCampaignSelectedStoryChoiceRefs(this.journeyState),
+      selectedStoryChoices: this.selectedCampaignStoryChoiceRefs(),
       consumedRuleIds: this.consumedCampaignServiceRuleIds(),
       providersById: this.charactersById,
     });
@@ -585,9 +593,45 @@ export class OverworldSession {
   }
 
   private openingLeadSourceResolved(): boolean {
-    return this.journalEntries.some((entry) =>
-      entry.id.startsWith(OPENING_LEAD_SOURCE_JOURNAL_PREFIX),
+    return this.journalEntries.some(
+      (entry) => entry.kind === "lead_source" || entry.kind === "lead_source_legacy",
     );
+  }
+
+  private openingPreparationResolved(): boolean {
+    return this.journalEntries.some(
+      (entry) => entry.kind === "preparation" || entry.kind === "preparation_legacy",
+    );
+  }
+
+  private openingPreparationAvailable(): NonNullable<
+    OverworldManifest["opening_preparation"]
+  > | null {
+    const scene = this.world.opening_preparation;
+    if (!scene || this.journeyState.status !== "active" || this.openingPreparationResolved()) {
+      return null;
+    }
+    const latestEntry = this.journalEntries[0];
+    if (
+      latestEntry?.kind !== "preparation_offer" ||
+      latestEntry.id !== openingPreparationOfferJournalId(scene.id)
+    ) {
+      return null;
+    }
+    return scene;
+  }
+
+  private selectedCampaignStoryChoiceRefs(): CampaignStoryChoiceRef[] {
+    const selected = [...journeyCampaignSelectedStoryChoiceRefs(this.journeyState)];
+    const scene = this.world.opening_preparation;
+    if (!scene) return selected;
+    const profile = scene.profiles.find((candidate) =>
+      this.journalEntriesById.has(openingPreparationJournalId(scene.id, candidate.id)),
+    );
+    if (profile) {
+      selected.push({ story_choice_id: scene.id, choice_id: profile.id });
+    }
+    return selected;
   }
 
   private openingLeadSourceAvailable(): NonNullable<
@@ -644,7 +688,43 @@ export class OverworldSession {
     this.clearSessionCaches();
   }
 
-  private openingLeadSourceBlockedQuestIds(): ReadonlySet<string> {
+  private offerOpeningPreparationAfterLeadSource(): void {
+    const scene = this.world.opening_preparation;
+    const leadSource = this.world.opening_lead_source;
+    if (
+      !scene ||
+      !leadSource ||
+      scene.after_lead_source !== leadSource.id ||
+      !this.openingLeadSourceResolved() ||
+      this.openingPreparationResolved() ||
+      this.currentId !== scene.home ||
+      this.currentAreaId !== scene.area
+    ) {
+      return;
+    }
+    const entryId = openingPreparationOfferJournalId(scene.id);
+    if (this.journalEntriesById.has(entryId)) return;
+    const offer = openingPreparationOfferJournalEntry({
+      scene,
+      town: this.currentNode().name,
+      recordedAt: timeLabel(this.minutes),
+      storyChoiceBoundary: {
+        acceptedDecisions: this.journeyState.acceptedDecisions,
+        decisionProofHash: this.journeyState.decisionProof.hash,
+        townId: this.currentId,
+        areaId: this.currentAreaIdOrThrow(),
+        minutes: this.minutes,
+      },
+    });
+    addOverworldJournalEntry(this.journalEntries, this.journalEntriesById, offer);
+    this.clearSessionCaches();
+  }
+
+  private openingStoryBlockedQuestIds(): ReadonlySet<string> {
+    const preparation = this.world.opening_preparation;
+    if (preparation && !this.openingPreparationResolved()) {
+      return new Set([preparation.target_quest]);
+    }
     const scene = this.world.opening_lead_source;
     return scene && !this.openingLeadSourceResolved()
       ? new Set([scene.target_quest])
@@ -686,11 +766,14 @@ export class OverworldSession {
     let goalCompletion: JourneyPresentationContext["goalCompletion"];
     const registration = this.openingRegistrationAvailable();
     const leadSource = this.openingLeadSourceAvailable();
+    const preparation = this.openingPreparationAvailable();
     let storyChoice: JourneyPresentationContext["storyChoice"] = registration
       ? presentOpeningRegistration(registration)
       : leadSource
         ? presentOpeningLeadSource(leadSource, this.characterState)
-        : undefined;
+        : preparation
+          ? presentOpeningPreparation(preparation, this.characterState)
+          : undefined;
 
     if (campaign) {
       if (pendingGoalCompletion && campaign.preRetentionTeaser) {
@@ -743,7 +826,7 @@ export class OverworldSession {
     assertJourneyContractAcceptingDecision(this.journeyState);
     if (this.journey().storyChoice) {
       throw new Error(
-        "Choose the presented story consequence, character registration, or Albany lead source before taking another action.",
+        "Choose the presented story consequence, character registration, Albany lead source, or preparation before taking another action.",
       );
     }
   }
@@ -882,6 +965,58 @@ export class OverworldSession {
         scene,
         character: characterBefore,
         optionId: choiceId,
+        town: this.currentNode().name,
+        recordedAt: timeLabel(this.minutes),
+        storyChoiceBoundary: {
+          acceptedDecisions: this.journeyState.acceptedDecisions,
+          decisionProofHash: this.journeyState.decisionProof.hash,
+          townId: this.currentId,
+          areaId: this.currentAreaIdOrThrow(),
+          minutes: this.minutes,
+        },
+      });
+      this.characterState = application.characterAfter;
+      addOverworldJournalEntry(this.journalEntries, this.journalEntriesById, entry);
+      if (this.world.opening_preparation?.after_lead_source === scene.id) {
+        this.offerOpeningPreparationAfterLeadSource();
+      } else {
+        this.discoveredQuestIds.add(scene.target_quest);
+      }
+      this.clearSessionCaches();
+      return Object.freeze({
+        storyChoiceId: storyChoice.id,
+        choiceId,
+        consequence: option.consequence,
+        goal: this.journey().goal,
+        entry: Object.freeze(redactOverworldJournalEntryForPresentation(entry)),
+        journeyDecision,
+      });
+    }
+    if (storyChoice.kind === "preparation") {
+      const scene = this.openingPreparationAvailable();
+      if (!scene || storyChoice.id !== scene.id) {
+        throw new Error("The presented opening preparation is no longer available.");
+      }
+      const application = applyOpeningPreparationProfile({
+        scene,
+        character: this.characterState,
+        profileId: choiceId,
+      });
+      const entryId = openingPreparationJournalId(scene.id, choiceId);
+      if (this.journalEntriesById.has(entryId)) {
+        throw new Error(`Opening preparation journal entry "${entryId}" already exists.`);
+      }
+      const characterBefore = this.characterState;
+      const journeyDecision = this.recordOverworldDecision(
+        `campaign_story:${storyChoice.id}:${choiceId}`,
+        "progress",
+        true,
+      );
+      this.minutes += application.terms.minutes;
+      const entry = openingPreparationJournalEntry({
+        scene,
+        character: characterBefore,
+        profileId: choiceId,
         town: this.currentNode().name,
         recordedAt: timeLabel(this.minutes),
         storyChoiceBoundary: {
@@ -1145,7 +1280,7 @@ export class OverworldSession {
     const applied = applyOverworldSessionLocalDiscoveryForTown(
       this.localState(),
       nodeId,
-      this.openingLeadSourceBlockedQuestIds(),
+      this.openingStoryBlockedQuestIds(),
     );
     if (applied.stateChanged) this.clearSessionCaches();
     return applied.discovery;
@@ -1272,6 +1407,12 @@ export class OverworldSession {
     if (leadSource?.target_quest === questId && !this.openingLeadSourceResolved()) {
       throw new Error(
         `Certify ${leadSource.title} before starting this journey's first relief dispatch.`,
+      );
+    }
+    const preparation = this.world.opening_preparation;
+    if (preparation?.target_quest === questId && !this.openingPreparationResolved()) {
+      throw new Error(
+        `Commit ${preparation.title} before starting this journey's first relief dispatch.`,
       );
     }
     return {
@@ -1559,7 +1700,7 @@ export class OverworldSession {
         currentAreaId: this.currentAreaIdOrThrow(),
         campaignServiceRules: this.world.campaign_service_rules ?? [],
         campaignWorldFactIds: this.campaignWorldFactIds(),
-        campaignStoryChoiceRefs: journeyCampaignSelectedStoryChoiceRefs(this.journeyState),
+        campaignStoryChoiceRefs: this.selectedCampaignStoryChoiceRefs(),
         consumedCampaignServiceRuleIds: this.consumedCampaignServiceRuleIds(),
         fatigue: this.fatigue,
         supplies: this.supplies,
@@ -1579,7 +1720,7 @@ export class OverworldSession {
         currentAreaId: this.currentAreaIdOrThrow(),
         campaignServiceRules: this.world.campaign_service_rules ?? [],
         campaignWorldFactIds: this.campaignWorldFactIds(),
-        campaignStoryChoiceRefs: journeyCampaignSelectedStoryChoiceRefs(this.journeyState),
+        campaignStoryChoiceRefs: this.selectedCampaignStoryChoiceRefs(),
         consumedCampaignServiceRuleIds: this.consumedCampaignServiceRuleIds(),
         fatigue: this.fatigue,
         supplies: this.supplies,

@@ -200,6 +200,7 @@ describe("bug_0258 — The Wolf-Winter: the optional wedge is signposted and dis
       (interaction) =>
         interaction.verb === "USE" &&
         interaction.target === "paling_rail" &&
+        interaction.command_verb === "bind" &&
         interaction.skill_check === undefined,
     );
     expect(bind).toBeDefined();

@@ -9,6 +9,7 @@ import { CampaignCharacterIdSchema } from "./campaign_character_state.js";
 import { CampaignServiceRulesSchema, type CampaignServiceRule } from "./campaign_service_rules.js";
 import { journeyCampaignStoryChoiceSelection } from "./journey_campaign.js";
 import { OpeningLeadSourceSchema, applyOpeningLeadSourceOption } from "./opening_lead_source.js";
+import { OpeningPreparationSchema, applyOpeningPreparationProfile } from "./opening_preparation.js";
 import { OpeningRegistrationSchema } from "./opening_registration.js";
 
 export const OverworldNodeKindSchema = z.enum([
@@ -305,6 +306,7 @@ export const OverworldManifestSchema = z
     premise: z.string().min(1),
     opening_registration: OpeningRegistrationSchema.optional(),
     opening_lead_source: OpeningLeadSourceSchema.optional(),
+    opening_preparation: OpeningPreparationSchema.optional(),
     campaign_service_rules: CampaignServiceRulesSchema.optional(),
     sources: z.array(
       z
@@ -1312,6 +1314,112 @@ function assertOpeningLeadSourceIntegrity(world: OverworldManifest): void {
   }
 }
 
+function assertOpeningPreparationIntegrity(world: OverworldManifest): void {
+  const scene = world.opening_preparation;
+  if (!scene) return;
+  const leadSource = world.opening_lead_source;
+  const registration = world.opening_registration;
+  if (!leadSource || scene.after_lead_source !== leadSource.id) {
+    throw new Error("Overworld opening preparation must follow this world's opening lead source.");
+  }
+  if (!registration) {
+    throw new Error("Overworld opening preparation requires an opening registration.");
+  }
+  if (
+    scene.home !== leadSource.home ||
+    scene.area !== leadSource.area ||
+    scene.target_quest !== leadSource.target_quest
+  ) {
+    throw new Error(
+      "Overworld opening preparation must share its lead source's home, area, and target quest.",
+    );
+  }
+  const quest = world.quests.find((candidate) => candidate.id === scene.target_quest);
+  if (!quest || quest.home !== scene.home) {
+    throw new Error(
+      "Overworld opening preparation must target an authored quest in its home town.",
+    );
+  }
+  const charactersByCampaignNpcId = new Map(
+    world.characters.flatMap((character) =>
+      character.campaign_npc_id === undefined
+        ? []
+        : ([[character.campaign_npc_id, character]] as const),
+    ),
+  );
+  let sponsoredProfileCount = 0;
+  for (const profile of scene.profiles) {
+    const provider = charactersByCampaignNpcId.get(profile.provider_npc_id);
+    if (!provider || provider.home !== scene.home) {
+      throw new Error(
+        `Opening preparation profile "${profile.id}" references an unbound Albany provider npc.`,
+      );
+    }
+    for (const effect of profile.effects) {
+      if (effect.type === "learn_knowledge") {
+        const consumed = quest.campaign_imports?.rules.some(
+          (rule) => rule.type === "knowledge_to_flag" && rule.knowledge_id === effect.knowledge_id,
+        );
+        if (!consumed) {
+          throw new Error(
+            `Opening preparation knowledge "${effect.knowledge_id}" has no target-quest import consumer.`,
+          );
+        }
+      }
+      if (effect.type === "remember_relationship") {
+        if (effect.npc_id !== profile.provider_npc_id) {
+          throw new Error(
+            `Opening preparation profile "${profile.id}" remembers a different npc than its provider.`,
+          );
+        }
+        if (
+          !(provider.variants ?? []).some((variant) =>
+            variant.after_relationship_memories?.includes(effect.memory_id),
+          )
+        ) {
+          throw new Error(
+            `Opening preparation memory "${effect.memory_id}" has no consuming contact variant.`,
+          );
+        }
+      }
+    }
+    if (profile.sponsor) {
+      sponsoredProfileCount += 1;
+      const sponsorMemoryExists = registration.profiles.some((registrationProfile) =>
+        registrationProfile.character.relationships.some(
+          (relationship) =>
+            relationship.npcId === profile.provider_npc_id &&
+            relationship.memories.includes(profile.sponsor!.memory_id),
+        ),
+      );
+      if (!sponsorMemoryExists) {
+        throw new Error(
+          `Opening preparation profile "${profile.id}" has sponsor terms without a registration memory.`,
+        );
+      }
+    }
+    for (const registrationProfile of registration.profiles) {
+      for (const leadOption of leadSource.options) {
+        const afterLeadSource = applyOpeningLeadSourceOption({
+          scene: leadSource,
+          character: registrationProfile.character,
+          optionId: leadOption.id,
+        }).characterAfter;
+        applyOpeningPreparationProfile({
+          scene,
+          character: afterLeadSource,
+          profileId: profile.id,
+        });
+      }
+    }
+  }
+  if (sponsoredProfileCount === 0) {
+    throw new Error(
+      "Overworld opening preparation must make at least one sponsor term mechanical.",
+    );
+  }
+}
+
 function assertExplorationSitesIntegrity(
   world: OverworldManifest,
   nodes: Map<string, OverworldNode>,
@@ -1446,8 +1554,14 @@ function assertCampaignServiceRulesIntegrity(
       ...(rule.requires_all_story_choices ?? []),
       ...(rule.forbids_any_story_choices ?? []),
     ]) {
+      const preparationProfile =
+        world.opening_preparation?.id === ref.story_choice_id
+          ? world.opening_preparation.profiles.find((profile) => profile.id === ref.choice_id)
+          : undefined;
       try {
-        journeyCampaignStoryChoiceSelection(ref.story_choice_id, ref.choice_id);
+        if (!preparationProfile) {
+          journeyCampaignStoryChoiceSelection(ref.story_choice_id, ref.choice_id);
+        }
       } catch {
         throw new Error(
           `Campaign service rule "${rule.id}" references unauthored story choice "${ref.story_choice_id}:${ref.choice_id}".`,
@@ -1511,6 +1625,8 @@ export function assertOverworldIntegrity(world: OverworldManifest): void {
   assertOpeningRegistrationIntegrity(world, nodes, areaIds, areaHomes);
 
   assertOpeningLeadSourceIntegrity(world);
+
+  assertOpeningPreparationIntegrity(world);
 
   assertExplorationSitesIntegrity(world, nodes, regionNames, areaIds, areaHomes);
 

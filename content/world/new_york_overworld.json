@@ -417,7 +417,154 @@
       }
     ]
   },
+  "opening_preparation": {
+    "version": 1,
+    "id": "albany:wolf_preparation",
+    "after_lead_source": "albany:wolf_source_priority",
+    "target_quest": "wolf_winter",
+    "home": "albany_city",
+    "area": "albany_city__civic_core",
+    "title": "Allocate One Wolf-Winter Preparation",
+    "message": "The hill dispatch can carry one specialist allocation before it leaves Rowan's counter. Reese Pryce can mark a cold-set repair sequence onto the failing paling, Emery Sloane can map a drover's cut that peels a fouled yearling away from the herd, or Jamie Tanner can seal a relief protocol for calming the cattle after an improvised recovery. Each plan remains usable by any registered traveler, but the provider who sponsored your registration can waive the public charge and shorten the handoff. Choose one: Albany cannot put three incompatible field plans into the same urgent packet.",
+    "profiles": [
+      {
+        "id": "albany:prep_works_fortification",
+        "title": "Reese's Works Fortification",
+        "provider_npc_id": "albany:reese_pryce",
+        "summary": "Carry Reese Pryce's measured wedge, splice, and cold-set sequence for Cade's failing paling.",
+        "preview": "At the first loose paling rail, this replaces the ordinary wedge with one Repair check (DC 12). Success braces the breach immediately. Failure still splits the frozen rail, but the marked splice can then cold-set it without another roll; the breach is restored while the extra hammering raises cattle alarm by 1. Repair training improves the check, but every background retains the deterministic recovery.",
+        "consequence": "Reese inks three measured cuts and a cold-set order onto Cade's boundary sketch. Only this fortification sequence enters the packet; Reese records who accepted the works allocation and reserves one Albany Works resupply claim if the byre is truthfully returned held.",
+        "terms": { "minutes": 25, "money": 4 },
+        "sponsor": {
+          "memory_id": "albany:memory_reese_sponsored_ironhands_repairer",
+          "minutes": 10,
+          "money": 0,
+          "note": "Reese's Ironhands sponsorship waives the $4 works charge and reduces the measured handoff from 25 minutes to 10."
+        },
+        "effects": [
+          {
+            "type": "learn_knowledge",
+            "knowledge_id": "albany:knowledge_wolf_works_fortification"
+          },
+          {
+            "type": "remember_relationship",
+            "npc_id": "albany:reese_pryce",
+            "memory_id": "albany:memory_reese_wolf_works_fortification_allocated",
+            "trust_at_least": 3,
+            "regard_at_least": 3
+          }
+        ]
+      },
+      {
+        "id": "albany:prep_drover_route",
+        "title": "Emery's Drover Route",
+        "provider_npc_id": "albany:emery_sloane",
+        "summary": "Carry Emery Sloane's one-use drover cut for recovering a fouled first feed cast.",
+        "preview": "Only after the first lure cast fails, the route opens one Streetwise check (DC 12). Success turns the yearling down a service cut and lowers cattle alarm by 1. Failure sends it across the herd's sightline and raises alarm by 1; the route retires, but the existing split-rail bind or fight remains available. Streetwise training improves the attempt without class-locking it.",
+        "consequence": "Emery fixes one snowed service cut between Cade's breach and the high-wood scent line. Only this drover route enters the packet; Emery records who accepted it and arranges one Albany Campus recovery cot if the byre is truthfully returned held.",
+        "terms": { "minutes": 20, "money": 4 },
+        "sponsor": {
+          "memory_id": "albany:memory_emery_witnessed_independent_bond",
+          "minutes": 5,
+          "money": 0,
+          "note": "Emery's witness to the independent bond waives the $4 route charge and reduces the field-map handoff from 20 minutes to 5."
+        },
+        "effects": [
+          {
+            "type": "learn_knowledge",
+            "knowledge_id": "albany:knowledge_wolf_drover_route"
+          },
+          {
+            "type": "remember_relationship",
+            "npc_id": "albany:emery_sloane",
+            "memory_id": "albany:memory_emery_wolf_drover_route_allocated",
+            "trust_at_least": 3,
+            "regard_at_least": 3
+          }
+        ]
+      },
+      {
+        "id": "albany:prep_relief_protocol",
+        "title": "Jamie's Relief Protocol",
+        "provider_npc_id": "albany:jamie_tanner",
+        "summary": "Carry Jamie Tanner's witnessed cadence for settling the herd after a rough rail recovery.",
+        "preview": "After an ordinary split-rail recovery redirects the yearling alive, this opens one Mediation check (DC 12) before the loft cast. Success coordinates Cade's count and lowers cattle alarm by 1. Failure contradicts the yard calls and raises alarm by 1; the protocol retires without blocking the lure route. Mediation training improves the single attempt.",
+        "consequence": "Jamie seals a named-call relief order beside Cade's herd tally. Only this protocol enters the packet; Jamie records who accepted it and reserves one Civic relief-counter resupply claim if the byre is truthfully returned held.",
+        "terms": { "minutes": 30, "money": 4 },
+        "sponsor": {
+          "memory_id": "albany:memory_jamie_sponsored_ledger_advocate",
+          "minutes": 10,
+          "money": 0,
+          "note": "Jamie's Ledger Advocate sponsorship waives the $4 witness fee and reduces the protocol review from 30 minutes to 10."
+        },
+        "effects": [
+          {
+            "type": "learn_knowledge",
+            "knowledge_id": "albany:knowledge_wolf_relief_protocol"
+          },
+          {
+            "type": "remember_relationship",
+            "npc_id": "albany:jamie_tanner",
+            "memory_id": "albany:memory_jamie_wolf_relief_protocol_allocated",
+            "trust_at_least": 3,
+            "regard_at_least": 3
+          }
+        ]
+      }
+    ]
+  },
   "campaign_service_rules": [
+    {
+      "id": "albany:wolf_works_fortification_return_resupply",
+      "home": "albany_city",
+      "area": "albany_city__industrial",
+      "action": "resupply",
+      "title": "Claim Reese's Returned-Works Stores",
+      "summary": "Because Reese allocated the fortification sequence and your truthful return says Cade's byre held, Albany Works releases one reserved cache of road food, lamp oil, rawhide, and repair stock.",
+      "provider_character_id": "albany_city__industrial__contact",
+      "minutes": 15,
+      "requires_all_world_facts": ["fact:wolf_winter_byre_held"],
+      "requires_all_story_choices": [
+        {
+          "story_choice_id": "albany:wolf_preparation",
+          "choice_id": "albany:prep_works_fortification"
+        }
+      ]
+    },
+    {
+      "id": "albany:wolf_drover_route_return_rest",
+      "home": "albany_city",
+      "area": "albany_city__campus",
+      "action": "rest",
+      "title": "Take the Drover Recovery Cot",
+      "summary": "Because Emery allocated the drover route and your truthful return says Cade's byre held, the Campus stockyard clinic opens one reserved warmed cot and recovery watch.",
+      "provider_character_id": "albany_city__campus__contact",
+      "minutes": 15,
+      "requires_all_world_facts": ["fact:wolf_winter_byre_held"],
+      "requires_all_story_choices": [
+        {
+          "story_choice_id": "albany:wolf_preparation",
+          "choice_id": "albany:prep_drover_route"
+        }
+      ]
+    },
+    {
+      "id": "albany:wolf_relief_protocol_return_resupply",
+      "home": "albany_city",
+      "area": "albany_city__civic_core",
+      "action": "resupply",
+      "title": "Claim the Closed-Protocol Relief Cache",
+      "summary": "Because Jamie allocated the relief protocol and your truthful return says Cade's byre held, Rowan releases one sealed Civic cache of road food, lamp oil, tally paper, and relief stores.",
+      "provider_character_id": "albany_city__civic_core__contact",
+      "minutes": 15,
+      "requires_all_world_facts": ["fact:wolf_winter_byre_held"],
+      "requires_all_story_choices": [
+        {
+          "story_choice_id": "albany:wolf_preparation",
+          "choice_id": "albany:prep_relief_protocol"
+        }
+      ]
+    },
     {
       "id": "albany:wolf_live_pack_greenway_resupply",
       "home": "albany_city",
@@ -23771,6 +23918,14 @@
       "campaign_npc_id": "albany:jamie_tanner",
       "variants": [
         {
+          "id": "wolf_relief_protocol_allocated",
+          "after_relationship_memories": [
+            "albany:memory_jamie_wolf_relief_protocol_allocated"
+          ],
+          "summary": "Jamie remembers sealing Cade's named-call relief order into your packet and keeps its witness list beside the herd tally.",
+          "agenda": "The protocol offers one accountable attempt after a rough rail recovery, not blanket calm. Jamie expects the return to record whether the calls settled the herd or worsened its alarm."
+        },
+        {
           "id": "market_testimony_certified",
           "after_relationship_memories": [
             "albany:memory_jamie_market_testimony_certified"
@@ -23857,6 +24012,14 @@
       "campaign_npc_id": "albany:reese_pryce",
       "variants": [
         {
+          "id": "wolf_works_fortification_allocated",
+          "after_relationship_memories": [
+            "albany:memory_reese_wolf_works_fortification_allocated"
+          ],
+          "summary": "Reese remembers measuring the Wolf-Winter wedge and cold-set splice into your relief packet, with each cut serialed against the Albany Works ledger.",
+          "agenda": "The fortification gets one Repair attempt and one noisy deterministic recovery. Reese wants the return to distinguish a clean brace from a split rail cold-set under pressure."
+        },
+        {
           "id": "sponsored_ironhands_repairer",
           "after_relationship_memories": [
             "albany:memory_reese_sponsored_ironhands_repairer"
@@ -23877,6 +24040,14 @@
       "agenda": "Wants a traveler to handle Albany Greenway's local problems before they spread through the Capital / Mohawk road network.",
       "campaign_npc_id": "albany:emery_sloane",
       "variants": [
+        {
+          "id": "wolf_drover_route_allocated",
+          "after_relationship_memories": [
+            "albany:memory_emery_wolf_drover_route_allocated"
+          ],
+          "summary": "Emery remembers fixing the snowed drover cut into your Wolf-Winter packet and marking the single turn where it can peel a fouled yearling away.",
+          "agenda": "The route is one recovery attempt, not another feed cast. Emery expects the return to count both the living wolf's direction and any alarm raised across the herd's sightline."
+        },
         {
           "id": "wolf_pack_diverted_after_blood",
           "after_relationship_memories": [
@@ -47121,6 +47292,24 @@
             "target_var": "fieldcraft"
           },
           {
+            "id": "import:wolf_winter_works_repair",
+            "type": "skill_rank_to_var",
+            "skill_id": "skill:repair",
+            "target_var": "repair"
+          },
+          {
+            "id": "import:wolf_winter_drover_streetwise",
+            "type": "skill_rank_to_var",
+            "skill_id": "skill:streetwise",
+            "target_var": "streetwise"
+          },
+          {
+            "id": "import:wolf_winter_relief_mediation",
+            "type": "skill_rank_to_var",
+            "skill_id": "skill:mediation",
+            "target_var": "mediation"
+          },
+          {
             "id": "import:wolf_winter_market_testimony",
             "type": "knowledge_to_flag",
             "knowledge_id": "albany:knowledge_wolf_market_testimony",
@@ -47131,6 +47320,24 @@
             "type": "knowledge_to_flag",
             "knowledge_id": "albany:knowledge_wolf_frost_report",
             "target_flag": "hayden_frost_report_certified"
+          },
+          {
+            "id": "import:wolf_winter_works_fortification",
+            "type": "knowledge_to_flag",
+            "knowledge_id": "albany:knowledge_wolf_works_fortification",
+            "target_flag": "works_fortification_prepared"
+          },
+          {
+            "id": "import:wolf_winter_drover_route",
+            "type": "knowledge_to_flag",
+            "knowledge_id": "albany:knowledge_wolf_drover_route",
+            "target_flag": "drover_route_prepared"
+          },
+          {
+            "id": "import:wolf_winter_relief_protocol",
+            "type": "knowledge_to_flag",
+            "knowledge_id": "albany:knowledge_wolf_relief_protocol",
+            "target_flag": "relief_protocol_prepared"
           }
         ]
       },

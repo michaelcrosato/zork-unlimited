@@ -169,33 +169,62 @@
       "id": "SS-F05-preparation-profile",
       "title": "Commit limited time and money to a preparation profile",
       "phase": "albany_preparation",
-      "implementation_status": "partial",
-      "proof_status": "unproven",
-      "counts_toward_contract": false,
-      "visible_choice": "Prioritize protective gear, fieldcraft and bait, or medicine and civic leverage; mixed profiles remain possible at a cost.",
+      "implementation_status": "implemented",
+      "proof_status": "proven",
+      "counts_toward_contract": true,
+      "visible_choice": "After certifying one Albany source, commit exactly one urgent specialist packet: Reese's Works fortification sequence, Emery's drover route, or Jamie's relief protocol. Every card names its one-shot Wolf consumer, DC 12 check, failure consequence, provider memory, exact public or sponsored time-and-money cost, and mutually exclusive return service before confirmation.",
       "immediate_state_delta": [
-        "character.equipment",
         "character.money",
         "character.knowledge",
+        "character.relationships",
         "world.minutes",
-        "albany.relief_capacity"
+        "world.discovered_quests"
       ],
       "delayed_consumers": [
-        "Weather exposure",
-        "Social and noncombat plans",
-        "Combat maneuvers and recovery",
-        "Supplies available on return"
+        "Wolf-Winter imports only the selected plan flag plus the character's matching Repair, Streetwise, or Mediation rank. Direct starts retain exact zero-rank, no-plan defaults.",
+        "Works replaces the public paling wedge with one Repair check. A miss preserves the split rail, then Reese's marked cold-set restores the breach without a reroll while raising cattle alarm by 1.",
+        "Drover appears only after the first lure cast fails. Success redirects the living yearling and lowers cattle alarm by 1; failure raises alarm by 1, retires the route, and leaves the established rail-or-fight recovery legal.",
+        "Relief appears only after the ordinary split-rail recovery redirects the yearling. Success lowers cattle alarm by 1 before the loft cast; failure raises it by 1 and retires without blocking completion.",
+        "A truthful held-byre return pairs each selected plan with one different 15-minute service: Works District resupply, Campus rest, or Civic Core resupply. Paired low-supply and fatigued states include paid preparation, shortest Albany relocation, and each alternative profile's best matching service; each profile wins somewhere, so none dominates globally."
       ],
       "visible_feedback": [
-        "Offers show price, time, and known use without revealing hidden outcomes.",
-        "Later actions expose which preparation enables or changes them."
+        "The blocking Albany screen exposes all three affordable plans for all four backgrounds and all three source choices; its journal and persistent-character panel show the exact paid terms, learned plan, and provider memory.",
+        "Wolf room variants, legal commands, narrated skill arithmetic, cattle-alarm bands, one-shot retirement, and deterministic recoveries name the selected plan and its actual consequence.",
+        "A representative Drover route proves full MCP, compact MCP, and browser parity end to end. Paired core-session proofs cover all three matching return services and causes; journal-bound story-choice proof consumes each one-time benefit across restore."
       ],
-      "systems": ["economy", "equipment", "time", "social", "combat"],
-      "persistence_boundaries": ["overworld_to_quest", "quest_to_overworld"],
-      "contract_tags": ["delayed", "cross_system", "cross_phase", "build_profile"],
+      "systems": [
+        "economy",
+        "time",
+        "skills",
+        "knowledge",
+        "relationships",
+        "quest_imports",
+        "environment",
+        "pressure",
+        "failure_recovery",
+        "services"
+      ],
+      "persistence_boundaries": [
+        "overworld_save_restore",
+        "overworld_to_quest",
+        "rpg_save_restore",
+        "quest_to_overworld"
+      ],
+      "contract_tags": [
+        "delayed",
+        "cross_system",
+        "cross_phase",
+        "build_profile",
+        "failure_forward",
+        "irreversible_tradeoff"
+      ],
       "baseline_evidence": [
-        "tests/regression/wolf_winter_prep_is_a_gamble_not_certain_death.test.ts",
-        "tests/regression/wolf_winter_complementary_clues.test.ts"
+        "tests/unit/world_opening_preparation.test.ts",
+        "tests/unit/world_opening_preparation_journal.test.ts",
+        "tests/regression/opening_preparation_snapshot_integrity.test.ts",
+        "tests/starting_slice/preparation_profile_gameplay.test.ts",
+        "tests/starting_slice/preparation_profiles_return_e2e.test.ts",
+        "traces/bugs/bug_0522_wolf_winter_preparation_profiles.yaml"
       ],
       "counterfactual_test": "tests/starting_slice/preparation_profiles_counterfactual.test.ts"
     },

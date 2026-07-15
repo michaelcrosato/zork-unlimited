@@ -26,6 +26,12 @@ import {
   openingLeadSourceOfferJournalDraft,
   type OpeningLeadSourceJournalDraft,
 } from "./opening_lead_source_journal.js";
+import type { OpeningPreparation } from "./opening_preparation.js";
+import {
+  openingPreparationJournalId,
+  openingPreparationOfferJournalDraft,
+  type OpeningPreparationJournalDraft,
+} from "./opening_preparation_journal.js";
 import {
   allOpeningRegistrationJournalDrafts,
   openingRegistrationOfferJournalDraft,
@@ -61,6 +67,10 @@ export type OverworldSnapshotManifestIndex = {
   openingLeadSourceJournalIds: ReadonlySet<string>;
   openingLeadSourceOfferDraft: OpeningLeadSourceJournalDraft | null;
   openingLeadSourceTownName: string | null;
+  openingPreparation: OpeningPreparation | null;
+  openingPreparationJournalIds: ReadonlySet<string>;
+  openingPreparationOfferDraft: OpeningPreparationJournalDraft | null;
+  openingPreparationTownName: string | null;
   openingRegistration: OpeningRegistration | null;
   openingRegistrationJournalDraftsById: ReadonlyMap<string, OpeningRegistrationJournalDraft>;
   openingRegistrationTownName: string | null;
@@ -139,6 +149,18 @@ export function buildOverworldSnapshotManifestIndex(
   if (openingLeadSource) {
     for (const option of openingLeadSource.options) {
       openingLeadSourceJournalIds.add(openingLeadSourceJournalId(openingLeadSource.id, option.id));
+    }
+  }
+  const openingPreparation = sources.world.opening_preparation ?? null;
+  const openingPreparationJournalIds = new Set<string>();
+  const openingPreparationOfferDraft = openingPreparation
+    ? openingPreparationOfferJournalDraft(openingPreparation)
+    : null;
+  if (openingPreparation) {
+    for (const profile of openingPreparation.profiles) {
+      openingPreparationJournalIds.add(
+        openingPreparationJournalId(openingPreparation.id, profile.id),
+      );
     }
   }
   const openingRegistrationJournalDraftsById = new Map<string, OpeningRegistrationJournalDraft>();
@@ -255,6 +277,12 @@ export function buildOverworldSnapshotManifestIndex(
     openingLeadSourceJournalIds,
     openingLeadSourceOfferDraft,
     openingLeadSourceTownName: openingLeadSource ? townNameForSource(openingLeadSource.home) : null,
+    openingPreparation,
+    openingPreparationJournalIds,
+    openingPreparationOfferDraft,
+    openingPreparationTownName: openingPreparation
+      ? townNameForSource(openingPreparation.home)
+      : null,
     openingRegistration,
     openingRegistrationJournalDraftsById,
     openingRegistrationTownName: openingRegistration

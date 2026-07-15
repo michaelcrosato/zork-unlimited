@@ -8,6 +8,7 @@ import { buildRpgRules, enumerateRpgActions, indexRpgPack } from "../../src/rpg/
 import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import { createInitialCampaignCharacterState } from "../../src/world/campaign_character_state.js";
 import { openingRegistrationLegacyJournalEntry } from "../../src/world/opening_registration_journal.js";
+import { applyOpeningPreparationProfile } from "../../src/world/opening_preparation.js";
 import { planOverworldRoute } from "../../src/world/overworld.js";
 import { OverworldSession } from "../../src/world/session.js";
 import { parseTimeLabel, timeLabel } from "../../src/world/session_journal_codec.js";
@@ -26,6 +27,11 @@ const openingLeadSource = WORLD.opening_lead_source;
 if (!openingLeadSource) throw new Error("The starting slice requires an opening lead source.");
 const LEAD_SOURCE = openingLeadSource;
 const DEFAULT_SOURCE_ID = "albany:source_rowan_civic_docket";
+const DEFAULT_PREPARATION_ID = "albany:prep_works_fortification";
+const COUNTERFACTUAL_PREPARATION_ID = "albany:prep_relief_protocol";
+const openingPreparation = WORLD.opening_preparation;
+if (!openingPreparation) throw new Error("The starting slice requires opening preparation.");
+const PREPARATION = openingPreparation;
 
 const loadedWolf = loadRpgSourceFile("content/rpg/quests/wolf_winter.yaml");
 if (!loadedWolf.ok) throw new Error("Wolf-Winter must compile.");
@@ -36,6 +42,17 @@ const ROWAN_ID = "albany_city__civic_core__contact";
 const HAYDEN_ID = "albany_city__transport_hub__contact";
 
 type ToolApi = ReturnType<typeof createToolApi>;
+
+function expectedPreparedCharacter(
+  character: (typeof REGISTRATION.profiles)[number]["character"],
+  profileId = DEFAULT_PREPARATION_ID,
+) {
+  return applyOpeningPreparationProfile({
+    scene: PREPARATION,
+    character,
+    profileId,
+  }).characterAfter;
+}
 
 function registerSession(profileId: string): OverworldSession {
   const session = new OverworldSession(WORLD);
@@ -56,6 +73,9 @@ function registerSession(profileId: string): OverworldSession {
     options: LEAD_SOURCE.options.map((option) => ({ id: option.id })),
   });
   session.chooseJourneyStory(DEFAULT_SOURCE_ID);
+  expect(session.journey().storyChoice?.kind).toBe("preparation");
+  expect(session.view().quests.map((quest) => quest.id)).not.toContain("wolf_winter");
+  session.chooseJourneyStory(DEFAULT_PREPARATION_ID);
   expect(session.view().quests.map((quest) => quest.id)).toContain("wolf_winter");
   return session;
 }
@@ -80,7 +100,9 @@ function prooflessStartedWolfSnapshot(): {
       entry.kind !== "registration" &&
       entry.kind !== "registration_offer" &&
       entry.kind !== "lead_source" &&
-      entry.kind !== "lead_source_offer",
+      entry.kind !== "lead_source_offer" &&
+      entry.kind !== "preparation" &&
+      entry.kind !== "preparation_offer",
   );
   delete proofless.openingLeadSourceDecisionTrail;
   proofless.character = createInitialCampaignCharacterState();
@@ -91,6 +113,13 @@ function preRegistrationUnrelatedQuestSnapshot(): ReturnType<OverworldSession["s
   const predecessorWorld = structuredClone(WORLD);
   delete predecessorWorld.opening_registration;
   delete predecessorWorld.opening_lead_source;
+  delete predecessorWorld.opening_preparation;
+  predecessorWorld.campaign_service_rules = predecessorWorld.campaign_service_rules?.filter(
+    (rule) =>
+      !(rule.requires_all_story_choices ?? []).some(
+        (choice) => choice.story_choice_id === "albany:wolf_preparation",
+      ),
+  );
   const session = new OverworldSession(predecessorWorld);
   const route = planOverworldRoute(predecessorWorld, session.view().current.id, "queensbury_town");
   if (!route) throw new Error("expected a route to Queensbury");
@@ -174,10 +203,17 @@ function launchRegisteredWolf(profileId: string): {
     id: LEAD_SOURCE.id,
     kind: "lead_source",
   });
-  api.choose_overworld_session_story({
+  const sourced = api.choose_overworld_session_story({
     ...FULL_OVERWORLD,
     session_id: sessionId,
     choice: DEFAULT_SOURCE_ID,
+  });
+  expect(sourced.journey.storyChoice?.kind).toBe("preparation");
+  expect(sourced.observation.quests.map((quest) => quest.id)).not.toContain("wolf_winter");
+  api.choose_overworld_session_story({
+    ...FULL_OVERWORLD,
+    session_id: sessionId,
+    choice: COUNTERFACTUAL_PREPARATION_ID,
   });
 
   const registeredSnapshot = api.export_overworld_session({ session_id: sessionId }).snapshot;
@@ -276,7 +312,9 @@ describe("SS-F01 — Albany character background counterfactual", () => {
 
       const selected = registerSession(profile.id);
       const restored = OverworldSession.restore(WORLD, selected.snapshot());
-      expect(restored.campaignCharacterState()).toEqual(profile.character);
+      expect(restored.campaignCharacterState()).toEqual(
+        expectedPreparedCharacter(profile.character),
+      );
       expect(restored.journey().storyChoice).toBeNull();
       expect(restored.talkToCharacter(ROWAN_ID).entry.id).toContain("@");
       const sponsorRelationship = profile.character.relationships.find(
@@ -296,8 +334,11 @@ describe("SS-F01 — Albany character background counterfactual", () => {
       );
       if (!sponsorVariant) throw new Error(`${profile.id} sponsor must consume its memory`);
       moveSessionToArea(restored, sponsor.area);
-      expect(restored.talkToCharacter(sponsor.id).entry.id).toBe(
-        `talk:${sponsor.id}@${sponsorVariant.id}`,
+      const sponsorTalk = restored.talkToCharacter(sponsor.id);
+      expect(sponsorTalk.entry.id).toBe(
+        sponsorRelationship.npcId === "albany:reese_pryce"
+          ? `talk:${sponsor.id}@wolf_works_fortification_allocated`
+          : `talk:${sponsor.id}@${sponsorVariant.id}`,
       );
       expect(() => restored.chooseJourneyStory(profile.id)).toThrow(
         /no story consequence to choose/i,
@@ -342,6 +383,10 @@ describe("SS-F01 — Albany character background counterfactual", () => {
       /certify .*Wolf-Winter Source Packet/i,
     );
     session.chooseJourneyStory(DEFAULT_SOURCE_ID);
+    expect(session.journey().storyChoice?.kind).toBe("preparation");
+    expect(session.view().quests.map((quest) => quest.id)).not.toContain(wolf.id);
+    expect(() => session.previewQuestStart(wolf.id)).toThrow(/preparation/i);
+    session.chooseJourneyStory(DEFAULT_PREPARATION_ID);
     moveSessionToArea(session, wolf.area);
     expect(session.previewQuestStart(wolf.id).id).toBe(wolf.id);
     expect(session.startQuest(wolf.id).id).toBe(wolf.id);
@@ -526,10 +571,16 @@ describe("SS-F01 — Albany character background counterfactual", () => {
     const advocate = launchRegisteredWolf("albany:ledger_advocate");
 
     expect(warden.registeredSnapshot.character).toEqual(
-      REGISTRATION.profiles.find((profile) => profile.id === "albany:road_warden")!.character,
+      expectedPreparedCharacter(
+        REGISTRATION.profiles.find((profile) => profile.id === "albany:road_warden")!.character,
+        COUNTERFACTUAL_PREPARATION_ID,
+      ),
     );
     expect(advocate.registeredSnapshot.character).toEqual(
-      REGISTRATION.profiles.find((profile) => profile.id === "albany:ledger_advocate")!.character,
+      expectedPreparedCharacter(
+        REGISTRATION.profiles.find((profile) => profile.id === "albany:ledger_advocate")!.character,
+        COUNTERFACTUAL_PREPARATION_ID,
+      ),
     );
     expect(warden.rowanJournalId).toBe(
       "talk:albany_city__civic_core__contact@registered_road_warden",
@@ -545,10 +596,14 @@ describe("SS-F01 — Albany character background counterfactual", () => {
     expect(warden.state.campaignImportReceipt?.applied_rules).toEqual([
       "import:wolf_winter_fieldcraft",
       "import:wolf_winter_lure_fieldcraft",
+      "import:wolf_winter_relief_protocol",
     ]);
     expect(warden.state.vars.fieldcraft).toBe(4);
     expect(advocate.state.vars.defense).toBe(3);
-    expect(advocate.state.campaignImportReceipt).toBeUndefined();
+    expect(advocate.state.campaignImportReceipt?.applied_rules).toEqual([
+      "import:wolf_winter_relief_mediation",
+      "import:wolf_winter_relief_protocol",
+    ]);
 
     let wardenAtRail = act(act(warden.state, "go_north"), "go_north");
     let advocateAtRail = act(act(advocate.state, "go_north"), "go_north");
@@ -653,6 +708,8 @@ describe("SS-F01 — Albany character background counterfactual", () => {
 
     const movedAfterSelection = pending;
     movedAfterSelection.chooseJourneyStory(DEFAULT_SOURCE_ID);
+    expect(movedAfterSelection.journey().storyChoice?.kind).toBe("preparation");
+    movedAfterSelection.chooseJourneyStory(DEFAULT_PREPARATION_ID);
     moveSessionToArea(movedAfterSelection, "albany_city__market");
     const wrongLocation = structuredClone(movedAfterSelection.snapshot());
     wrongLocation.journalEntries = wrongLocation.journalEntries.filter(
@@ -660,6 +717,8 @@ describe("SS-F01 — Albany character background counterfactual", () => {
         entry.kind !== "registration" &&
         entry.kind !== "lead_source" &&
         entry.kind !== "lead_source_offer" &&
+        entry.kind !== "preparation" &&
+        entry.kind !== "preparation_offer" &&
         entry.kind !== "area",
     );
     wrongLocation.discoveredQuestIds = wrongLocation.discoveredQuestIds.filter(
@@ -678,6 +737,8 @@ describe("SS-F01 — Albany character background counterfactual", () => {
         entry.kind !== "registration" &&
         entry.kind !== "lead_source" &&
         entry.kind !== "lead_source_offer" &&
+        entry.kind !== "preparation" &&
+        entry.kind !== "preparation_offer" &&
         entry.kind !== "area",
     );
     wrongClock.discoveredQuestIds = wrongClock.discoveredQuestIds.filter(

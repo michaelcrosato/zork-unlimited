@@ -4,59 +4,62 @@ Token-small AFK-loop handoff. The durable milestone and evidence rules live in
 [`STARTING_SLICE.md`](STARTING_SLICE.md); do not replace that contract during an
 ultraplan.
 
-## Cycle: 2026-07-14 — Wolf Strategy and Visible Pressure
+## Cycle: 2026-07-14 — Albany Preparation Profiles
 
 ## Synthesis
 
-Wolf-Winter no longer requires three kills. Before entering the breach, Cade
-explains his plan for free and offers a separate irreversible commitment of one
-finite feed sack. A clean three-cast route leaves all wolves alive and the herd
-whole; a fouled first cast cannot be retried and instead opens a resource-cost
-noncombat recovery or a bounded one-fight hybrid. The ordinary combat route
-remains viable.
+After certifying one Wolf-Winter source, the player now commits one of three
+finite Albany preparations. Reese's Works sequence changes the paling to a
+Repair check with a noisy deterministic splice after failure. Emery's drover
+route changes one failed lure into a Streetwise recovery whose failure worsens
+cattle pressure. Jamie's relief protocol changes cattle pressure once after the
+ordinary split-rail recovery through Mediation. Every background can choose
+every plan, public cost never exceeds the minimum reachable $4, and the three
+matching registration concepts receive their rank-4 edge without a class lock.
 
-The reusable `pressure_tracks` primitive projects cattle alarm through full and
-compact MCP plus the browser. Its thresholds change cattle survival, ending
-identity, Cade and Emery memories, world facts, and the later Greenway service.
-Same-origin paired runs carry the strategy through RPG save/replay, the quest
-foldback, truthful Albany return, overworld restore, and service consumption.
+Preparation knowledge, paid terms, provider memory, story-choice proof, and
+quest discovery survive save/restore. The selected plan crosses the trusted RPG
+import boundary, preserves direct-start defaults and all six nondeath endings,
+and returns through one distinct held-byre service: Works resupply, Campus rest,
+or Civic resupply. Paired low-supply and fatigue states include preparation
+cost, Albany relocation, and every alternative's best matching service; each
+profile wins somewhere and none dominates globally. A 742-era save already
+progressing Wolf-Winter receives an exact hash-bound no-preparation marker,
+while a save still at the lead-selection boundary receives the real preparation
+prompt instead of invented retroactive effects.
 
-`SS-F09-wolf-strategy` is therefore the fifth counted fork, alongside F01, F03,
-F11, and F12. This proves combat and fully noncombat resolution plus bounded
-hybrid recovery. It does not yet prove the full drive/evacuate or
-fortify/outlast families, broad preparation balance, ally agency, or the whole
-greater-than-BG3 depth contract.
+`SS-F05-preparation-profile` is therefore the sixth counted fork, alongside
+F01, F03, F09, F11, and F12. This proves three build profiles and distinct
+consumers for all four concepts. It does not create the missing full
+fortify/outlast or drive/evacuate families, and it does not satisfy ally agency.
 
 ## Chosen Move
 
-Build `SS-F05-preparation-profile` as Albany's first reusable preparation
-catalog. Give the three currently under-consumed profiles distinct, optional
-ways to alter Wolf-Winter without turning background into a class lock.
+Build `SS-F04-ally-commitment` as a reusable Albany-to-Wolf ally contract, aimed
+at the still-missing independent-agency requirement and useful groundwork for a
+later drive/evacuate family.
 
-- Keep every choice inside Albany, the hill approach, Wolf-Winter, and its
-  truthful return.
-- Author at least three mutually competing preparation profiles with visible
-  time, money, relief-capacity, or relationship costs.
-- Give Ledger Advocate, Ironhands Repairer, and Unaffiliated Courier distinct
-  consumers in different Wolf encounters, strategies, or recoveries; avoid a
-  shared numeric-stat bonus.
-- Let every background reach more than one profile and preserve an
-  import-independent direct victory.
-- Prefer preparation that advances the missing fortify/outlast or
-  drive/evacuate family over another combat modifier.
-- Make refusal, shortage, or mismatch create a visible complication or recovery,
-  never an identical retry or dead end.
-- Keep HP import deferred while the authored combat guarantee depends on the
-  30-HP floor, and do not relabel Albany equipment as Cade's earned timber.
+- Keep recruitment, refusal, conduct, departure, and return testimony inside
+  Albany, the hill approach, Wolf-Winter, and the truthful Albany return.
+- Give at least one named ally a concrete capability and a visible condition;
+  the ally must be able to refuse, disagree, leave, or solve a beat differently
+  because of remembered conduct.
+- Model ally authority and replay generically. Do not add another Wolf-specific
+  aftermath conditional to `journey_campaign.ts`.
+- Preserve viable solo play, all current endings, direct-start defaults, and
+  failure-forward recovery if the relationship is lost.
+- Let the ally change a later legal action, encounter/pressure state, and Albany
+  testimony or opportunity—not merely add dialogue or a numeric combat bonus.
 
 ## Acceptance for the next increment
 
-1. One visible Albany scene commits a finite preparation budget before departure.
-2. Three materially different profiles alter later legal actions, pressure,
-   encounter structure, or failure recovery under otherwise equal state.
-3. Paired deterministic tests isolate each claimed consumer and prove that no
-   single profile dominates every reachable Wolf strategy.
-4. Full/direct defaults, save integrity, compact/full/UI parity, and the
-   <=45-decision first-goal cap remain intact.
+1. One visible Albany commitment makes the ally's capability, condition, and
+   opportunity cost clear before departure.
+2. At least one later Wolf beat proves independent ally action plus a truthful
+   refusal/departure counterfactual under otherwise equal state.
+3. Solo, cooperative, and relationship-loss routes remain completable and
+   mechanically distinct without adding a fake resolution-family count.
+4. Relationship memory, save/replay, quest import/export, full/compact/UI parity,
+   and Albany return testimony are paired and tamper-checked.
 5. Only proven rows advance in the causal matrix; pre/post crawls, one fresh pure
    exit, and `npm run health` remain green.

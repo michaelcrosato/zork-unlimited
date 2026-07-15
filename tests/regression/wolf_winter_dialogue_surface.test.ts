@@ -73,7 +73,13 @@ function dialogueActionIds(ids: readonly string[]): string[] {
 describe("Wolf-Winter dialogue surface", () => {
   it("the pack still validates green", () => {
     const report = validateRpg(pack, {
-      extraSettableFlags: ["jamie_market_testimony_certified", "hayden_frost_report_certified"],
+      extraSettableFlags: [
+        "jamie_market_testimony_certified",
+        "hayden_frost_report_certified",
+        "works_fortification_prepared",
+        "drover_route_prepared",
+        "relief_protocol_prepared",
+      ],
     });
     expect(report.ok).toBe(true);
     expect(report.findings.filter((finding) => finding.severity === "error")).toEqual([]);

@@ -61,7 +61,7 @@ meta:
   id: wolf_winter_v1
   title: "The Wolf-Winter"
   start_room: steading_yard
-  vars_init: { hp: 30, attack: 5, defense: 3, fieldcraft: 0, cattle_alarm: 0 }
+  vars_init: { hp: 30, attack: 5, defense: 3, fieldcraft: 0, repair: 0, streetwise: 0, mediation: 0, cattle_alarm: 0 }
   flags_init: []
   # The opt-in fairness promise (bug_0114). With this set the validator proves the
   # per-fight UPPER bound for every wolf AND the cumulative-HP bound across the whole
@@ -132,11 +132,22 @@ rooms:
       The cattle-byre yard. Old Cade props its door, too stiff for a spear, and turns his
       lantern on the day-book: its last wolf-count is worth reading before you leave the
       yard. Store-shed west. North, a young wolf is through the broken paling; gate south.
-    objects: [day_book]
+    objects: [day_book, relief_protocol_docket]
     # Progress variants are ordered from the deepest completed fight back to the opening
     # clue state. Re-entering this hub must describe the wolves actually left alive; visit
     # history alone handles the steading-yard watch prose without emitting repeat state.
     variants:
+      - when:
+          - { has_flag: relief_protocol_prepared }
+          - { has_flag: yearling_redirected_with_split_guard }
+          - { not_flag: relief_protocol_attempted }
+          - { not_flag: yearling_down }
+          - { not_flag: flank_redirected }
+        text: >
+          The rail recovery sent the yearling alive into the high wood, but the cattle
+          still hammer the slats. Cade holds Jamie's sealed docket beside the herd tally.
+          Call its named sequence here before carrying the feed west through the store
+          and up to the loft; it is one-use.
       - when:
           - { has_flag: strategy_lure_committed }
           - any_of:
@@ -277,7 +288,7 @@ rooms:
       Its shoulders bunch for a straight rush: set the Albany spear, then drive on the
       shaft. A stout rail has fallen clear into the snow at your feet; wedge it across
       the gap. The byre-yard is south.
-    objects: [paling_rail, downwind_feed_line]
+    objects: [paling_rail, downwind_feed_line, drover_route_marks]
     # Reactive prose keeps the lure recovery plus every combat rail state legible.
     # A committed feed line returns through the yard and loft for its second cast;
     # ordinary combat states retain the ground road north after the yearling falls.
@@ -303,6 +314,16 @@ rooms:
           The yearling is alive beyond the broken paling, nose down on Cade's
           oat-and-tallow trail into the high wood. Its tracks turn away from the byre.
           The route north is clear; the yard is south, and the fallen rail remains here.
+      - when:
+          - { has_flag: drover_route_prepared }
+          - { has_flag: lure_trail_fouled }
+          - { not_flag: drover_route_attempted }
+          - { not_flag: yearling_down }
+          - { not_flag: yearling_redirected }
+        text: >
+          The first cast fouled, but Emery's packet marks one snowed drover cut above
+          the churned feed. Run that one-use route now to peel the yearling across the
+          high-wood scent—or leave it unused and recover with the rail or spear.
       - when:
           - { has_flag: lure_trail_fouled }
           - { not_flag: yearling_down }
@@ -983,6 +1004,7 @@ objects:
         effects:
           - remove_item: split_rail_guard
           - set_flag: yearling_redirected
+          - set_flag: yearling_redirected_with_split_guard
           - inc_var: { name: score, by: 10 }
           - set_quest_stage: { quest: the_watch, stage: breach_redirected }
           - add_journal: "You spend the split-rail guard to pen the yearling onto the scent. It leaves alive; that wood cannot guard a later fight."
@@ -991,6 +1013,106 @@ objects:
               yearling can turn only toward the remaining tallow and bolts through alive.
               The recovery saves the lure but spends wood that might have guarded a later
               jaw or barred the cattle gate.
+
+  # Emery's preparation is a one-shot recovery, not a second lure roll. It exists only
+  # after the public first cast has failed. Failure adds pressure and retires the route
+  # while the existing split-rail and combat recoveries remain legal.
+  - id: drover_route_marks
+    name: "Emery's drover-route marks"
+    aliases: [drover route, route marks, service cut, drover cut, emery's route]
+    description: >
+      Three charcoal cuts on the relief packet match a snowed livestock service path
+      above the breach. It can turn one fouled yearling toward the high-wood scent, but
+      crossing the herd's sightline badly will make the cattle press harder.
+    visible_when:
+      - { has_flag: drover_route_prepared }
+      - { has_flag: lure_trail_fouled }
+      - { not_flag: drover_route_attempted }
+      - { not_flag: yearling_down }
+      - { not_flag: yearling_redirected }
+    interactions:
+      - verb: USE
+        target: drover_route_marks
+        command_verb: run
+        conditions:
+          - { has_flag: drover_route_prepared }
+          - { has_flag: lure_trail_fouled }
+          - { not_flag: drover_route_attempted }
+          - { not_flag: yearling_down }
+          - { not_flag: yearling_redirected }
+        effects:
+          - set_flag: drover_route_attempted
+        skill_check:
+          skill: streetwise
+          difficulty: 12
+          on_success:
+            - set_flag: yearling_redirected
+            - dec_var: { name: cattle_alarm, by: 1 }
+            - inc_var: { name: score, by: 10 }
+            - set_quest_stage: { quest: the_watch, stage: breach_redirected }
+            - add_journal: "You run Emery's one-use drover cut. The yearling leaves alive and cattle alarm falls by 1."
+            - narrate: >
+                You read the half-buried fence corners as an old service lane, step wide
+                of the herd's sightline, and slap the packet against the far post. The
+                yearling turns onto the high-wood scent. Cade answers with one low call;
+                hooves ease back from the slats as the cattle alarm falls.
+          on_failure:
+            - inc_var: { name: cattle_alarm, by: 1 }
+            - add_journal: "Emery's drover cut crosses the herd's sightline. Alarm rises by 1; the route is spent, but rail or spear recovery remains."
+            - narrate: >
+                You mistake charcoal for a gate. The yearling wheels across the cattle's
+                sightline and stops in the breach; the herd surges harder. Emery's route
+                is spent. Bind a failed rail onto the remaining scent or fight the wolf,
+                then carry the lure deeper.
+
+  # Jamie's protocol waits for the specific public rail recovery: the first cast fouled,
+  # the ordinary wedge split, and its bound guard was spent redirecting the yearling.
+  # Mediation changes visible pressure once and never blocks the committed loft route.
+  - id: relief_protocol_docket
+    name: "Jamie's sealed relief protocol"
+    aliases: [relief protocol, protocol, sealed docket, jamie's protocol, herd calls]
+    description: >
+      A witnessed order of names, head-counts, and low yard calls for Cade to answer in
+      sequence. It applies only after a rough rail recovery has sent the yearling alive
+      away from the breach, while the cattle can still be brought back off the slats.
+    visible_when:
+      - { has_flag: relief_protocol_prepared }
+      - { has_flag: yearling_redirected_with_split_guard }
+      - { not_flag: relief_protocol_attempted }
+      - { not_flag: yearling_down }
+      - { not_flag: flank_redirected }
+    interactions:
+      - verb: USE
+        target: relief_protocol_docket
+        command_verb: call
+        conditions:
+          - { has_flag: relief_protocol_prepared }
+          - { has_flag: yearling_redirected_with_split_guard }
+          - { not_flag: relief_protocol_attempted }
+          - { not_flag: yearling_down }
+          - { not_flag: flank_wolf_down }
+          - { not_flag: flank_redirected }
+        effects:
+          - set_flag: relief_protocol_attempted
+        skill_check:
+          skill: mediation
+          difficulty: 12
+          on_success:
+            - dec_var: { name: cattle_alarm, by: 1 }
+            - add_journal: "You and Cade complete Jamie's witnessed relief calls in order. Cattle alarm falls by 1 before the loft cast."
+            - narrate: >
+                You name each missing delivery, Cade answers with its accustomed yard
+                call, and neither of you talks over the other. The familiar cadence
+                reaches the herd through the slats. Heads turn from the breach and the
+                cattle alarm falls before you carry the feed line upstairs.
+          on_failure:
+            - inc_var: { name: cattle_alarm, by: 1 }
+            - add_journal: "Your relief calls cross Cade's count and cattle alarm rises by 1. The protocol is spent; the loft route remains open."
+            - narrate: >
+                You call the tally before Cade has closed the missing name. Two commands
+                cross in the yard; the herd answers the sharper voice and strikes the
+                slats again. Jamie's protocol is spent, but nothing has changed the
+                committed route west through the store and up to the loft.
 
   # A spatial tactic rather than another inventory buff. The store signposts this hatch
   # immediately, but the loft route opens only after the yearling is down. Entering that
@@ -1212,6 +1334,14 @@ objects:
       - when: [{ has_item: saved_brace_stake }]
         name: "canted paling-rail"
         text: "The paling-rail rests canted after you wrenched out its hardwood brace-stake at the byre door. The saved stake rides against your spear now."
+      - when:
+          - { has_flag: works_fortification_splice_needed }
+          - { has_flag: rail_split }
+        name: "marked split paling-rail"
+        text: >
+          Reese's first measured set split the frozen rail, but ink still joins the
+          marked splice across both lengths. Cold-set it now without another roll. The
+          hammering will restore the half-shut breach and raise cattle alarm by 1.
       - when: [{ has_flag: breach_braced }]
         name: "braced paling-rail"
         text: "The fallen paling-rail, wedged hard across the breach now and stamped home — the gap half-shut, so what comes through the paling must come singly and slow."
@@ -1234,6 +1364,40 @@ objects:
           enough to bind across the spear as a splinter guard. Use the rail again to lash
           that recovery together before you go north.
     interactions:
+      # Reese's allocation replaces the public wedge with one Repair check. A miss keeps
+      # the honest split-rail consequence, then exposes a deterministic cold-set recovery
+      # instead of a retry or the public carried-guard branch.
+      - verb: USE
+        target: paling_rail
+        command_verb: set
+        conditions:
+          - { has_flag: works_fortification_prepared }
+          - { not_flag: rail_attempted }
+          - { not_flag: breach_braced }
+          - any_of:
+              - { not_flag: strategy_lure_committed }
+              - { has_flag: lure_trail_fouled }
+        effects:
+          - set_flag: rail_attempted
+        skill_check:
+          skill: repair
+          difficulty: 12
+          on_success:
+            - set_flag: breach_braced
+            - add_journal: "Reese's measured cold-set seats cleanly. The half-shut breach is braced without raising cattle alarm."
+            - narrate: >
+                You match Reese's three packet marks to grain, frost line, and post,
+                then drive the rail in that order. The timber seats on the first set.
+                The breach stands half-shut before the herd can answer the hammer.
+          on_failure:
+            - set_flag: rail_split
+            - set_flag: works_fortification_splice_needed
+            - add_journal: "The first works set splits the frozen rail. Reese's marked splice remains as a deterministic cold-set recovery."
+            - narrate: >
+                The first measured blow finds hidden frost and splits the rail along its
+                joined grain. Reese marked this failure too: overlap the inked lengths
+                and cold-set the splice. It will hold, but the extra hammering will carry
+                into the byre.
       # Target-only USE: the rail is visible scenery already lying in the breach, so
       # "wedge rail" means lifting and setting it in place without a TAKE/drop cycle.
       # This prevents a wedged or split rail from being immediately re-taken into the
@@ -1243,6 +1407,7 @@ objects:
         target: paling_rail
         command_verb: wedge
         conditions:
+          - { not_flag: works_fortification_prepared }
           - { not_flag: rail_attempted }
           - { not_flag: breach_braced }
           - any_of:
@@ -1261,12 +1426,31 @@ objects:
             - set_flag: rail_split
             - add_journal: "Frozen ground splits the rail. The funnel is lost; its joined lengths remain unbound until you choose whether to make a guard."
             - narrate: "Frozen ground kicks the splintered end aside with a crack. The rail splits but holds together. The guarded funnel is lost; the joined lengths can still make a rough spear-guard, but binding them commits the spear to that recovery. Decide at the rail before going north."
+      - verb: USE
+        target: paling_rail
+        command_verb: splice
+        conditions:
+          - { has_flag: works_fortification_prepared }
+          - { has_flag: works_fortification_splice_needed }
+          - { has_flag: rail_split }
+          - { not_flag: breach_braced }
+        effects:
+          - clear_flag: rail_split
+          - clear_flag: works_fortification_splice_needed
+          - set_flag: breach_braced
+          - inc_var: { name: cattle_alarm, by: 1 }
+          - add_journal: "You overlap Reese's marked splice and cold-set the rail. The breach is braced; extra hammering raises cattle alarm by 1."
+          - narrate: >
+              You overlap the inked lengths, turn the split against the post, and hammer
+              the cold splice until both halves bite. The half-shut breach is restored.
+              Behind it the herd answers every blow, and cattle alarm rises by 1.
       # Recoverable failure: target-only again, therefore the stable action id remains
       # `use_paling_rail`. Mutually exclusive with the initial wedge and with itself.
       - verb: USE
         target: paling_rail
         command_verb: bind
         conditions:
+          - { not_flag: works_fortification_prepared }
           - { has_flag: rail_split }
           - { not_flag: split_rail_guard_made }
           - { not_item: split_rail_guard }

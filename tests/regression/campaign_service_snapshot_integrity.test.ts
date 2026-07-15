@@ -39,6 +39,8 @@ function albanyStationSession(): OverworldSession {
   session.talkToCharacter(contact.id);
   session.chooseJourneyStory("albany:ledger_advocate");
   session.chooseJourneyStory("albany:source_jamie_market_testimony");
+  expect(session.journey().storyChoice?.kind).toBe("preparation");
+  session.chooseJourneyStory("albany:prep_works_fortification");
   moveToArea(session, "albany_city__market");
   moveToArea(session, "albany_city__transport_hub");
   return session;

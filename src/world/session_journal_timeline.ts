@@ -6,6 +6,11 @@ import {
   type OpeningLeadSourceJournalDraft,
 } from "./opening_lead_source_journal.js";
 import {
+  openingPreparationLegacyJournalDraft,
+  openingPreparationLegacySourceWorldHash,
+  type OpeningPreparationJournalDraft,
+} from "./opening_preparation_journal.js";
+import {
   openingRegistrationLegacyJournalDraft,
   openingRegistrationLegacySourceWorldHash,
   type OpeningRegistrationJournalDraft,
@@ -45,6 +50,9 @@ export type OverworldJournalSourceIndex = {
   openingLeadSourceJournalIds?: ReadonlySet<string>;
   openingLeadSourceOfferDraft?: OpeningLeadSourceJournalDraft | null;
   openingLeadSourceTownName?: string | null;
+  openingPreparationJournalIds?: ReadonlySet<string>;
+  openingPreparationOfferDraft?: OpeningPreparationJournalDraft | null;
+  openingPreparationTownName?: string | null;
   openingRegistrationJournalDraftsById: ReadonlyMap<string, OpeningRegistrationJournalDraft>;
   openingRegistrationTownName: string | null;
   poiIds: ReadonlySet<string>;
@@ -268,6 +276,52 @@ function assertOpeningLeadSourceLegacyJournalSource(entry: OverworldJournalEntry
   }
 }
 
+function assertOpeningPreparationJournalSource(
+  entry: OverworldJournalEntry,
+  sources: OverworldJournalSourceIndex,
+): void {
+  if (entry.kind === "preparation_offer") {
+    const draft = sources.openingPreparationOfferDraft;
+    if (
+      !draft ||
+      entry.id !== draft.id ||
+      entry.title !== draft.title ||
+      entry.text !== draft.text
+    ) {
+      throw new Error(
+        `Overworld session snapshot journal preparation_offer entry "${entry.id}" does not match its authored copy.`,
+      );
+    }
+  } else if (!sources.openingPreparationJournalIds?.has(entry.id)) {
+    throw new Error(
+      `Overworld session snapshot journal preparation entry references unknown evidence "${entry.id}".`,
+    );
+  }
+  if (
+    sources.openingPreparationTownName != null &&
+    entry.town !== sources.openingPreparationTownName
+  ) {
+    throw new Error(
+      `Overworld session snapshot journal ${entry.kind} entry "${entry.id}" is bound to town "${entry.town}", expected "${sources.openingPreparationTownName}".`,
+    );
+  }
+}
+
+function assertOpeningPreparationLegacyJournalSource(entry: OverworldJournalEntry): void {
+  const sourceWorldHash = openingPreparationLegacySourceWorldHash(entry.id);
+  if (!sourceWorldHash) {
+    throw new Error(
+      `Overworld session snapshot journal preparation_legacy entry id "${entry.id}" must contain a source world hash.`,
+    );
+  }
+  const draft = openingPreparationLegacyJournalDraft(sourceWorldHash);
+  if (entry.title !== draft.title || entry.text !== draft.text) {
+    throw new Error(
+      `Overworld session snapshot journal preparation_legacy entry "${entry.id}" does not match its canonical copy.`,
+    );
+  }
+}
+
 function assertSnapshotJournalSource(
   entry: OverworldJournalEntry,
   recordedAt: number,
@@ -292,7 +346,10 @@ function assertSnapshotJournalSource(
   const isLeadSourceEvidence =
     entry.kind === "lead_source" ||
     entry.kind === "lead_source_legacy" ||
-    entry.kind === "lead_source_offer";
+    entry.kind === "lead_source_offer" ||
+    entry.kind === "preparation" ||
+    entry.kind === "preparation_legacy" ||
+    entry.kind === "preparation_offer";
   if (isLeadSourceEvidence !== (entry.storyChoiceBoundary !== undefined)) {
     throw new Error(
       `Overworld session snapshot journal ${entry.kind} entry has an invalid story-choice boundary.`,
@@ -376,6 +433,13 @@ function assertSnapshotJournalSource(
         "point of interest",
         sources.poiTownNames,
       );
+      return;
+    case "preparation":
+    case "preparation_offer":
+      assertOpeningPreparationJournalSource(entry, sources);
+      return;
+    case "preparation_legacy":
+      assertOpeningPreparationLegacyJournalSource(entry);
       return;
     case "quest":
       assertKnownJournalSource(entry, "quest:", sources.questIds, "quest", sources.questTownNames);

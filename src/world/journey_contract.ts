@@ -158,7 +158,7 @@ export type JourneyStoryChoiceOption = Readonly<{
   consequence: string;
 }>;
 
-export type JourneyStoryChoicePresentationKind = "lead_source" | "registration";
+export type JourneyStoryChoicePresentationKind = "lead_source" | "preparation" | "registration";
 
 export type JourneyStoryChoiceOptions = readonly [
   JourneyStoryChoiceOption,
@@ -174,6 +174,13 @@ export type JourneyRegistrationStoryChoiceOptions = readonly [
 ];
 
 export type JourneyLeadSourceStoryChoiceOptions = readonly [
+  JourneyStoryChoiceOption,
+  JourneyStoryChoiceOption,
+  JourneyStoryChoiceOption,
+  ...JourneyStoryChoiceOption[],
+];
+
+export type JourneyPreparationStoryChoiceOptions = readonly [
   JourneyStoryChoiceOption,
   JourneyStoryChoiceOption,
   JourneyStoryChoiceOption,
@@ -199,6 +206,10 @@ export type JourneyStoryChoicePrompt = JourneyStoryChoicePromptBase &
     | {
         kind: "lead_source";
         options: JourneyLeadSourceStoryChoiceOptions;
+      }
+    | {
+        kind: "preparation";
+        options: JourneyPreparationStoryChoiceOptions;
       }
   >;
 
@@ -871,7 +882,8 @@ function freezeStoryChoice(
   if (
     presentationKind !== undefined &&
     presentationKind !== "registration" &&
-    presentationKind !== "lead_source"
+    presentationKind !== "lead_source" &&
+    presentationKind !== "preparation"
   ) {
     throw new Error(
       `Journey story choice has unknown presentation kind "${String(presentationKind)}".`,
@@ -884,6 +896,10 @@ function freezeStoryChoice(
   } else if (presentationKind === "lead_source") {
     if (storyChoice.options.length < 3 || storyChoice.options.length > 5) {
       throw new Error("Journey lead-source choice requires between three and five options.");
+    }
+  } else if (presentationKind === "preparation") {
+    if (storyChoice.options.length < 3 || storyChoice.options.length > 5) {
+      throw new Error("Journey preparation choice requires between three and five options.");
     }
   } else if (storyChoice.options.length !== 2) {
     throw new Error("Journey aftermath story choice requires exactly two options.");

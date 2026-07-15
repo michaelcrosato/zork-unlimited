@@ -56,6 +56,8 @@ function reachTannersGoalCompletion(): OverworldSession {
   session.talkToCharacter("albany_city__civic_core__contact");
   session.chooseJourneyStory("albany:ledger_advocate");
   session.chooseJourneyStory("albany:source_rowan_civic_docket");
+  expect(session.journey().storyChoice?.kind).toBe("preparation");
+  session.chooseJourneyStory("albany:prep_works_fortification");
   moveToArea(session, "albany_city__market");
   session.scoutPoi("albany_city__market__poi");
   moveToArea(session, "albany_city__transport_hub");

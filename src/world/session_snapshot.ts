@@ -131,6 +131,9 @@ export type OverworldJournalEntry = {
     | "lead_source"
     | "lead_source_legacy"
     | "lead_source_offer"
+    | "preparation"
+    | "preparation_legacy"
+    | "preparation_offer"
     | "poi"
     | "quest"
     | "quest_done"
@@ -185,6 +188,9 @@ const OverworldJournalEntrySchema = z
       "lead_source",
       "lead_source_legacy",
       "lead_source_offer",
+      "preparation",
+      "preparation_legacy",
+      "preparation_offer",
       "poi",
       "quest",
       "quest_done",

@@ -34,6 +34,8 @@ function uiSessionAtPostGallowmereHayden(): OverworldSession {
   session.talkToCharacter("albany_city__civic_core__contact");
   session.chooseJourneyStory("albany:ledger_advocate");
   session.chooseJourneyStory("albany:source_rowan_civic_docket");
+  expect(session.journey().storyChoice?.kind).toBe("preparation");
+  session.chooseJourneyStory("albany:prep_works_fortification");
   moveUiSessionToArea(session, "albany_city__market");
   session.scoutPoi("albany_city__market__poi");
   moveUiSessionToArea(session, "albany_city__transport_hub");
@@ -82,6 +84,9 @@ function uiSessionAtAlbanyStoryChoice(): OverworldSession {
   }
   expect(session.journey().storyChoice?.kind).toBe("lead_source");
   session.chooseJourneyStory("albany:source_rowan_civic_docket");
+  expect(session.journey().storyChoice?.kind).toBe("preparation");
+  expect(session.view().quests.map((candidate) => candidate.id)).not.toContain("wolf_winter");
+  session.chooseJourneyStory("albany:prep_works_fortification");
   const quest = session.view().quests.find((candidate) => candidate.id === "wolf_winter");
   if (!quest) throw new Error("expected the Albany Wolf-Winter lead");
   const route = session
@@ -179,7 +184,14 @@ function mcpWolfWinterCheckpointInsideQuest() {
     session_id: overworldSessionId,
     choice: "albany:source_rowan_civic_docket",
   });
-  view = sourced.observation;
+  expect(sourced.journey.storyChoice?.kind).toBe("preparation");
+  expect(sourced.observation.quests.map((candidate) => candidate.id)).not.toContain("wolf_winter");
+  const prepared = a.choose_overworld_session_story({
+    ...FULL_OVERWORLD,
+    session_id: overworldSessionId,
+    choice: "albany:prep_works_fortification",
+  });
+  view = prepared.observation;
 
   const marketRoute = view.areaExits.find(
     (route) => route.destination.id === "albany_city__market",
@@ -200,7 +212,7 @@ function mcpWolfWinterCheckpointInsideQuest() {
     session_id: overworldSessionId,
     poi_id: view.pois[0]!.id,
   });
-  const quest = sourced.observation.quests.find((candidate) => candidate.id === "wolf_winter");
+  const quest = prepared.observation.quests.find((candidate) => candidate.id === "wolf_winter");
   if (!quest) throw new Error("expected Albany quest lead");
   const questRoute = revealed.observation.areaExits.find(
     (route) => route.destination.id === quest.area,
@@ -220,7 +232,7 @@ function mcpWolfWinterCheckpointInsideQuest() {
   if (!contact) throw new Error("expected quest-area contact");
   const questAreaPoi = view.pois[0];
   if (!questAreaPoi) throw new Error("expected quest-area point of interest");
-  a.scout_overworld_session_poi({
+  const questAreaScouted = a.scout_overworld_session_poi({
     ...FULL_OVERWORLD,
     session_id: overworldSessionId,
     poi_id: questAreaPoi.id,
@@ -230,7 +242,15 @@ function mcpWolfWinterCheckpointInsideQuest() {
     session_id: overworldSessionId,
     character_id: contact.id,
   }).journey;
-  expect(journey.acceptedDecisions).toBe(9);
+  expect(journey.acceptedDecisions).toBe(10);
+  const questAreaSite = questAreaScouted.observation.sites[0];
+  if (!questAreaSite) throw new Error("expected a quest-area exploration site");
+  journey = a.explore_overworld_session_site({
+    ...FULL_OVERWORLD,
+    session_id: overworldSessionId,
+    site_id: questAreaSite.id,
+  }).journey;
+  expect(journey.acceptedDecisions).toBe(11);
 
   // Reach decision 37 through real reversible local movement, so quest start and
   // two accepted quest moves put the checkpoint inside the RPG at decision 40.

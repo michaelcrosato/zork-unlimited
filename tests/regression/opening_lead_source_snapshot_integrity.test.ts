@@ -30,6 +30,7 @@ const COURIER_PROFILE = "albany:unaffiliated_courier";
 const ROWAN_SOURCE = "albany:source_rowan_civic_docket";
 const JAMIE_SOURCE = "albany:source_jamie_market_testimony";
 const HAYDEN_SOURCE = "albany:source_hayden_frost_report";
+const DEFAULT_PREPARATION = "albany:prep_works_fortification";
 const TARGET_QUEST = SCENE.target_quest;
 
 function timeLabel(minutes: number): string {
@@ -56,6 +57,16 @@ function register(profileId = LEDGER_PROFILE): OverworldSession {
 function selectSource(profileId = LEDGER_PROFILE, sourceId = JAMIE_SOURCE): OverworldSession {
   const session = register(profileId);
   session.chooseJourneyStory(sourceId);
+  expect(session.journey().storyChoice?.kind).toBe("preparation");
+  return session;
+}
+
+function selectSourceAndPrepare(
+  profileId = LEDGER_PROFILE,
+  sourceId = JAMIE_SOURCE,
+): OverworldSession {
+  const session = selectSource(profileId, sourceId);
+  session.chooseJourneyStory(DEFAULT_PREPARATION);
   expect(session.journey().storyChoice).toBeNull();
   return session;
 }
@@ -117,12 +128,14 @@ describe("opening lead-source snapshot integrity", () => {
     const snapshot = session.snapshot();
     const questArea = WORLD.quests.find((quest) => quest.id === TARGET_QUEST)?.area;
     if (!questArea) throw new Error("expected the source-bound quest area");
-    expect(snapshot.discoveredQuestIds).toContain(TARGET_QUEST);
+    expect(snapshot.discoveredQuestIds).not.toContain(TARGET_QUEST);
     expect(snapshot.discoveredAreaIds).not.toContain(questArea);
+    expect(session.journey().storyChoice?.kind).toBe("preparation");
 
     const restored = OverworldSession.restore(WORLD, snapshot);
     expect(restored.snapshot()).toEqual(snapshot);
-    expect(restored.view().quests.map((quest) => quest.id)).toContain(TARGET_QUEST);
+    expect(restored.view().quests.map((quest) => quest.id)).not.toContain(TARGET_QUEST);
+    expect(restored.journey().storyChoice?.kind).toBe("preparation");
   });
 
   it("round-trips a pending offer and a sponsored selection without losing terms or effects", () => {
@@ -152,7 +165,8 @@ describe("opening lead-source snapshot integrity", () => {
         .find((relationship) => relationship.npcId === "albany:jamie_tanner")
         ?.memories.includes("albany:memory_jamie_market_testimony_certified"),
     ).toBe(true);
-    expect(selectedSnapshot.discoveredQuestIds).toContain(TARGET_QUEST);
+    expect(selectedSnapshot.discoveredQuestIds).not.toContain(TARGET_QUEST);
+    expect(restoredPending.journey().storyChoice?.kind).toBe("preparation");
     expect(entry(selectedSnapshot, "lead_source").text).toMatch(
       /Actual cost: 15 minutes and \$0.*sponsorship pre-clears/i,
     );
@@ -160,7 +174,7 @@ describe("opening lead-source snapshot integrity", () => {
     const restoredSelected = OverworldSession.restore(WORLD, selectedSnapshot);
     expect(restoredSelected.snapshot()).toEqual(selectedSnapshot);
     expect(restoredSelected.snapshotHash()).toBe(restoredPending.snapshotHash());
-    expect(restoredSelected.journey().storyChoice).toBeNull();
+    expect(restoredSelected.journey().storyChoice?.kind).toBe("preparation");
   });
 
   it("rejects duplicate offer and selection evidence", () => {
@@ -250,14 +264,16 @@ describe("opening lead-source snapshot integrity", () => {
     forgedBoundary.minutes += 1;
     forgedElapsedCost.minutes += 1;
     forgedSelection.recordedAt = timeLabel(forgedBoundary.minutes);
-    expect(() => OverworldSession.restore(WORLD, forgedElapsedCost)).toThrow(/paid-time boundary/i);
+    expect(() => OverworldSession.restore(WORLD, forgedElapsedCost)).toThrow(
+      /paid-time boundary|journal must be newest-first/i,
+    );
   });
 
   it("rejects a later save whose selected source was swapped out of its journey ancestry", () => {
-    const hayden = selectSource(LEDGER_PROFILE, HAYDEN_SOURCE);
+    const hayden = selectSourceAndPrepare(LEDGER_PROFILE, HAYDEN_SOURCE);
     moveToArea(hayden, "albany_city__market");
 
-    const jamie = selectSource(LEDGER_PROFILE, JAMIE_SOURCE);
+    const jamie = selectSourceAndPrepare(LEDGER_PROFILE, JAMIE_SOURCE);
     moveToArea(jamie, "albany_city__market");
 
     const haydenSnapshot = hayden.snapshot();
@@ -296,9 +312,9 @@ describe("opening lead-source snapshot integrity", () => {
     expect(deletedSelection.character.knowledge).toContain(
       "albany:knowledge_wolf_market_testimony",
     );
-    expect(deletedSelection.discoveredQuestIds).toContain(TARGET_QUEST);
+    expect(deletedSelection.discoveredQuestIds).not.toContain(TARGET_QUEST);
     expect(() => OverworldSession.restore(WORLD, deletedSelection)).toThrow(
-      /pending lead source|certified lead source|campaign character/i,
+      /pending lead-source|pending lead source|certified lead source|campaign character/i,
     );
 
     const withoutOffer = structuredClone(selected);
@@ -317,11 +333,11 @@ describe("opening lead-source snapshot integrity", () => {
   });
 
   it("rejects a pending offer combined with play that occurred after source selection", () => {
-    const session = selectSource(LEDGER_PROFILE, ROWAN_SOURCE);
+    const session = selectSourceAndPrepare(LEDGER_PROFILE, ROWAN_SOURCE);
     moveToArea(session, "albany_city__market");
     const forgedPending = session.snapshot();
     forgedPending.journalEntries = forgedPending.journalEntries.filter(
-      (candidate) => candidate.kind !== "lead_source",
+      (candidate) => candidate.kind !== "lead_source" && !candidate.kind.startsWith("preparation"),
     );
     forgedPending.discoveredQuestIds = forgedPending.discoveredQuestIds.filter(
       (questId) => questId !== TARGET_QUEST,
@@ -333,7 +349,7 @@ describe("opening lead-source snapshot integrity", () => {
   });
 
   it("rejects every legacy source marker because mutable saves cannot prove its ancestry", () => {
-    const session = selectSource(LEDGER_PROFILE, ROWAN_SOURCE);
+    const session = selectSourceAndPrepare(LEDGER_PROFILE, ROWAN_SOURCE);
     moveToArea(session, "albany_city__market");
     moveToArea(session, "albany_city__transport_hub");
     session.startQuest(TARGET_QUEST);
@@ -399,12 +415,17 @@ describe("opening lead-source snapshot integrity", () => {
     expect(restoredAgain.snapshot()).toEqual(migrated);
     expect(restoredAgain.snapshotHash()).toBe(migratedSession.snapshotHash());
     restoredAgain.chooseJourneyStory(ROWAN_SOURCE);
-    expect(restoredAgain.view().quests.map((quest) => quest.id)).toContain(TARGET_QUEST);
+    expect(restoredAgain.journey().storyChoice?.kind).toBe("preparation");
+    expect(restoredAgain.view().quests.map((quest) => quest.id)).not.toContain(TARGET_QUEST);
   });
 
-  it("migrates the exact F03 predecessor without rejecting its durable lead-source evidence", () => {
+  it("migrates the exact no-progress F03 predecessor into preparation", () => {
     const predecessor = selectSource(LEDGER_PROFILE, ROWAN_SOURCE).snapshot();
     predecessor.worldHash = OVERWORLD_OPENING_LEAD_SOURCE_WORLD_HASH;
+    predecessor.journalEntries = predecessor.journalEntries.filter(
+      (candidate) => candidate.kind !== "preparation_offer",
+    );
+    predecessor.discoveredQuestIds.push(TARGET_QUEST);
     expect(predecessor.journalEntries.some((candidate) => candidate.kind === "lead_source")).toBe(
       true,
     );
@@ -412,15 +433,24 @@ describe("opening lead-source snapshot integrity", () => {
 
     const migrated = OverworldSession.restore(WORLD, predecessor).snapshot();
     expect(migrated.worldHash).toBe(OVERWORLD_OPENING_LEAD_SOURCE_MIGRATION_TARGET_WORLD_HASH);
-    expect(migrated.journalEntries).toEqual(predecessor.journalEntries);
+    expect(migrated.journalEntries).toContainEqual(
+      expect.objectContaining({
+        kind: "preparation_offer",
+        id: "preparation_offer:albany:wolf_preparation",
+      }),
+    );
     expect(migrated.openingLeadSourceDecisionTrail).toEqual(
       predecessor.openingLeadSourceDecisionTrail,
     );
-    expect(migrated.discoveredQuestIds).toContain(TARGET_QUEST);
+    expect(migrated.discoveredQuestIds).not.toContain(TARGET_QUEST);
+    const restored = OverworldSession.restore(WORLD, migrated);
+    expect(restored.journey().storyChoice?.kind).toBe("preparation");
+    restored.chooseJourneyStory(DEFAULT_PREPARATION);
+    expect(restored.view().quests.map((quest) => quest.id)).toContain(TARGET_QUEST);
   });
 
   it("rejects campaign service-rule proof relabeled as every trusted predecessor", () => {
-    const current = selectSource().snapshot();
+    const current = selectSourceAndPrepare().snapshot();
     const rule = WORLD.campaign_service_rules?.[0];
     const town = WORLD.nodes.find((node) => node.id === rule?.home);
     if (!rule || !town) throw new Error("expected an authored campaign service rule");
@@ -458,7 +488,7 @@ describe("opening lead-source snapshot integrity", () => {
   });
 
   it("rejects a truncated Rowan selection even when its remaining move replays", () => {
-    const played = selectSource(LEDGER_PROFILE, ROWAN_SOURCE);
+    const played = selectSourceAndPrepare(LEDGER_PROFILE, ROWAN_SOURCE);
     moveToArea(played, "albany_city__market");
     const predecessor = played.snapshot();
     const registrationBoundary = entry(predecessor, "registration").registrationBoundary;
@@ -472,7 +502,8 @@ describe("opening lead-source snapshot integrity", () => {
     };
     predecessor.worldHash = OVERWORLD_OPENING_REGISTRATION_WORLD_HASH;
     predecessor.journalEntries = predecessor.journalEntries.filter(
-      (candidate) => !candidate.kind.startsWith("lead_source"),
+      (candidate) =>
+        !candidate.kind.startsWith("lead_source") && !candidate.kind.startsWith("preparation"),
     );
     delete predecessor.openingLeadSourceDecisionTrail;
     predecessor.journey = {
@@ -488,7 +519,7 @@ describe("opening lead-source snapshot integrity", () => {
     };
 
     expect(() => OverworldSession.restore(WORLD, predecessor)).toThrow(
-      /opaque post-registration decision suffix.*cannot be certified/i,
+      /opaque post-registration decision suffix.*cannot be certified|campaign character does not match/i,
     );
   });
 
@@ -496,6 +527,13 @@ describe("opening lead-source snapshot integrity", () => {
     const predecessorWorld = structuredClone(WORLD);
     delete predecessorWorld.opening_registration;
     delete predecessorWorld.opening_lead_source;
+    delete predecessorWorld.opening_preparation;
+    predecessorWorld.campaign_service_rules = predecessorWorld.campaign_service_rules?.filter(
+      (rule) =>
+        !(rule.requires_all_story_choices ?? []).some(
+          (choice) => choice.story_choice_id === "albany:wolf_preparation",
+        ),
+    );
     const predecessorSession = new OverworldSession(predecessorWorld);
     predecessorSession.scoutPoi(predecessorSession.view().pois[0]!.id);
     for (
@@ -537,7 +575,8 @@ describe("opening lead-source snapshot integrity", () => {
     };
     forged.worldHash = OVERWORLD_OPENING_REGISTRATION_WORLD_HASH;
     forged.journalEntries = forged.journalEntries.filter(
-      (candidate) => !candidate.kind.startsWith("lead_source"),
+      (candidate) =>
+        !candidate.kind.startsWith("lead_source") && !candidate.kind.startsWith("preparation"),
     );
     delete forged.openingLeadSourceDecisionTrail;
     forged.journey = {
@@ -600,7 +639,7 @@ describe("opening lead-source snapshot integrity", () => {
   });
 
   it("rejects opaque target-started predecessor progress instead of certifying hidden ancestry", () => {
-    const progressed = selectSource(LEDGER_PROFILE, ROWAN_SOURCE);
+    const progressed = selectSourceAndPrepare(LEDGER_PROFILE, ROWAN_SOURCE);
     moveToArea(progressed, "albany_city__market");
     moveToArea(progressed, "albany_city__transport_hub");
     progressed.startQuest(TARGET_QUEST);
@@ -608,11 +647,12 @@ describe("opening lead-source snapshot integrity", () => {
     delete predecessor.openingLeadSourceDecisionTrail;
     predecessor.worldHash = OVERWORLD_OPENING_REGISTRATION_WORLD_HASH;
     predecessor.journalEntries = predecessor.journalEntries.filter(
-      (candidate) => !candidate.kind.startsWith("lead_source"),
+      (candidate) =>
+        !candidate.kind.startsWith("lead_source") && !candidate.kind.startsWith("preparation"),
     );
 
     expect(() => OverworldSession.restore(WORLD, predecessor)).toThrow(
-      /opaque post-registration decision suffix.*cannot be certified/i,
+      /opaque post-registration decision suffix.*cannot be certified|campaign character does not match/i,
     );
   });
 
@@ -643,7 +683,7 @@ describe("opening lead-source snapshot integrity", () => {
   });
 
   it("rejects proofless progressed saves and later source evidence relabeled as predecessor data", () => {
-    const progressed = selectSource(LEDGER_PROFILE, ROWAN_SOURCE);
+    const progressed = selectSourceAndPrepare(LEDGER_PROFILE, ROWAN_SOURCE);
     moveToArea(progressed, "albany_city__market");
     moveToArea(progressed, "albany_city__transport_hub");
     progressed.startQuest(TARGET_QUEST);
@@ -653,6 +693,7 @@ describe("opening lead-source snapshot integrity", () => {
     prooflessProgressed.journalEntries = prooflessProgressed.journalEntries.filter(
       (candidate) =>
         !candidate.kind.startsWith("lead_source") &&
+        !candidate.kind.startsWith("preparation") &&
         candidate.kind !== "registration" &&
         candidate.kind !== "registration_offer",
     );
@@ -661,6 +702,9 @@ describe("opening lead-source snapshot integrity", () => {
     );
 
     const relabeledLaterEvidence = selectSource().snapshot();
+    relabeledLaterEvidence.journalEntries = relabeledLaterEvidence.journalEntries.filter(
+      (candidate) => !candidate.kind.startsWith("preparation"),
+    );
     relabeledLaterEvidence.worldHash = OVERWORLD_OPENING_REGISTRATION_WORLD_HASH;
     expect(() => OverworldSession.restore(WORLD, relabeledLaterEvidence)).toThrow(
       /opening lead-source evidence from a later manifest/i,
@@ -669,7 +713,8 @@ describe("opening lead-source snapshot integrity", () => {
     const hiddenInJourneyProof = selectSource(LEDGER_PROFILE, ROWAN_SOURCE).snapshot();
     hiddenInJourneyProof.worldHash = OVERWORLD_OPENING_REGISTRATION_WORLD_HASH;
     hiddenInJourneyProof.journalEntries = hiddenInJourneyProof.journalEntries.filter(
-      (candidate) => !candidate.kind.startsWith("lead_source"),
+      (candidate) =>
+        !candidate.kind.startsWith("lead_source") && !candidate.kind.startsWith("preparation"),
     );
     expect(() => OverworldSession.restore(WORLD, hiddenInJourneyProof)).toThrow(
       /opening lead-source evidence from a later manifest/i,

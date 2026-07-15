@@ -187,10 +187,16 @@ function launchAlbanyWolf(api: ToolApi): {
     session_id: overworldSessionId,
     choice: "albany:ledger_advocate",
   });
-  api.choose_overworld_session_story({
+  const sourced = api.choose_overworld_session_story({
     ...full,
     session_id: overworldSessionId,
     choice: "albany:source_rowan_civic_docket",
+  });
+  expect(sourced.journey.storyChoice?.kind).toBe("preparation");
+  api.choose_overworld_session_story({
+    ...full,
+    session_id: overworldSessionId,
+    choice: "albany:prep_works_fortification",
   });
   view = api.get_overworld_session({
     session_id: overworldSessionId,
@@ -382,10 +388,16 @@ describe("bug_0505 — Wolf-Winter saved wood has a post-hunt consequence", () =
       session_id: sessionId,
       choice: "albany:ledger_advocate",
     });
-    api.choose_overworld_session_story({
+    const sourced = api.choose_overworld_session_story({
       ...full,
       session_id: sessionId,
       choice: "albany:source_rowan_civic_docket",
+    });
+    expect(sourced.journey.storyChoice?.kind).toBe("preparation");
+    api.choose_overworld_session_story({
+      ...full,
+      session_id: sessionId,
+      choice: "albany:prep_works_fortification",
     });
     view = api.get_overworld_session({
       session_id: sessionId,
@@ -554,7 +566,15 @@ describe("bug_0505 — Wolf-Winter saved wood has a post-hunt consequence", () =
       expect(final.journey.storyChoice).toBeNull();
       const snapshot = api.export_overworld_session({ session_id: overworldSessionId }).snapshot;
       expect(snapshot.questOutcomes).toContainEqual(["wolf_winter", expected.endingId]);
-      expect(snapshot.character.relationships).toHaveLength(3);
+      expect(snapshot.character.relationships).toHaveLength(4);
+      expect(snapshot.character.relationships).toContainEqual(
+        expect.objectContaining({
+          npcId: "albany:reese_pryce",
+          memories: expect.arrayContaining([
+            "albany:memory_reese_wolf_works_fortification_allocated",
+          ]),
+        }),
+      );
       expect(snapshot.character.relationships).toContainEqual({
         npcId: "npc:old_cade",
         trust: 10,
@@ -658,7 +678,9 @@ describe("bug_0505 — Wolf-Winter saved wood has a post-hunt consequence", () =
         entry.kind !== "registration_offer" &&
         entry.kind !== "registration" &&
         entry.kind !== "lead_source_offer" &&
-        entry.kind !== "lead_source",
+        entry.kind !== "lead_source" &&
+        entry.kind !== "preparation_offer" &&
+        entry.kind !== "preparation",
     );
     for (const entry of prooflessCurrent.journalEntries) {
       delete entry.questCompletionBoundary;
@@ -689,7 +711,7 @@ describe("bug_0505 — Wolf-Winter saved wood has a post-hunt consequence", () =
           ? createInitialCampaignCharacterState()
           : structuredClone(legacyConsequenceCharacter);
       expect(() => OverworldSession.restore(WORLD, opaqueProgress)).toThrow(
-        /opaque pre-registration quest progress without a replayable registration and lead-source path/i,
+        /opaque pre-registration quest progress without a replayable registration and lead-source path|opening preparation evidence introduced by a later manifest/i,
       );
 
       const { character: _character, ...legacyWithoutCharacter } = opaqueProgress;

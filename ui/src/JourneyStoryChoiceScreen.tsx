@@ -22,7 +22,8 @@ export function JourneyStoryChoiceScreen({
   }
   const isRegistration = storyChoice.kind === "registration";
   const isLeadSource = storyChoice.kind === "lead_source";
-  const keepsCurrentObjective = isRegistration || isLeadSource;
+  const isPreparation = storyChoice.kind === "preparation";
+  const keepsCurrentObjective = isRegistration || isLeadSource || isPreparation;
 
   return (
     <main className="journey-decision-page">
@@ -38,6 +39,8 @@ export function JourneyStoryChoiceScreen({
             ? "Character registration"
             : isLeadSource
               ? "Albany evidence source"
+              : isPreparation
+                ? "Albany preparation budget"
               : "Journey consequence"}
         </p>
         <h1 id="journey-story-choice-title" ref={headingRef} tabIndex={-1}>
@@ -45,6 +48,8 @@ export function JourneyStoryChoiceScreen({
             ? "Choose your lived background"
             : isLeadSource
               ? "Choose your Albany lead source"
+              : isPreparation
+                ? "Choose what Albany prepares"
               : "Choose what follows"}
         </h1>
         <p id="journey-story-choice-message" className="journey-choice-message">
@@ -59,6 +64,8 @@ export function JourneyStoryChoiceScreen({
               ? "Your registered history persists into the journey; choose the experience and obligations you will carry."
               : isLeadSource
                 ? "Your source changes the evidence and approaches you can carry forward; it does not replace this objective."
+                : isPreparation
+                  ? "Your finite allocation changes later actions and the service Albany can release on your return; it does not replace this objective."
                 : "Choose the consequence that sets your next objective."}
           </small>
         </div>

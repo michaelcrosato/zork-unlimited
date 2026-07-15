@@ -1,6 +1,8 @@
 import { z } from "zod";
 
-const CAMPAIGN_STORY_CHOICE_ID_PATTERN = /^[a-z][a-z0-9_]*$/;
+// Campaign-authored scenes may use either the original unnamespaced journey ids
+// or persistent, colon-namespaced ids shared with character/content catalogs.
+const CAMPAIGN_STORY_CHOICE_ID_PATTERN = /^[a-z][a-z0-9_-]*(?::[a-z0-9][a-z0-9_-]*)*$/;
 
 export const CampaignStoryChoiceRefSchema = z
   .object({

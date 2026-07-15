@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 561 -->
+<!-- historical_cycle_count: 562 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,15 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - albany_wolf_preparation_profiles
+
+- Evidence choice: starting-slice `SS-F05-preparation-profile` overrode a stale Station-board wording hot spot because the defining Albany → Wolf → return slice still lacked a paid build commitment with distinct field and aftermath consumers.
+- Surface: after source certification, every background can afford exactly one of Reese's Works sequence, Emery's drover route, or Jamie's relief protocol. The plans change different one-shot checks/recoveries and cattle pressure, persist provider memory, and unlock mutually exclusive 15-minute Works, Campus, or Civic return services after a truthful held-byre return.
+- Integrity/counterfactual: all 36 background/source/profile combinations are legal; reselection fails live and after restore. Same-state comparisons include paid preparation, weighted-shortest Albany relocation, and each rival's best matching service, so every profile wins somewhere without global dominance. A frozen quest-started 742 save alone receives no-prep grandfathering; a forged current marker fails and a no-progress predecessor receives the real prompt. The ledger advances from 5/12 to 6/12.
+- Pure evidence: seed 2712 verified pure/fresh, chose Road-Warden + Hayden's report + Emery's route without guidance, completed Wolf-Winter at decision 24, continued at 24/40/48, and ended voluntarily after three goals at 69; clarity/enjoyment 4/4, stuck false, replay true. It chose combat, so paired deterministic proof carries the three field consumers; its dense three-screen opening and recurring-contact-name notes remain real polish debt.
+- Compile/self-critique: only this one verified report exists since compile `20260715T000942Z`, so no compile is due. PASS for F05 and the third evidence-grade irreversible counterexample, not the greater-than-BG3 slice claim: ally agency, six more material forks, and full fortify/outlast and drive/evacuate families remain.
+- Guard: independent audits closed self-minted legacy authority and shortest-route proof gaps; pre/final 6,000-step crawls `20260715T002437Z`/`20260715T015236Z` reached 247/247 nodes, 344/344 edges, and 12/12 quests; focused migration/profile/parity proofs and full health passed.
 
 ### Cycle result - wolf_winter_noncombat_strategy
 
@@ -135,12 +144,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Pure evidence: fresh seeds 2216/2217/2218 all independently completed Tanner without its prior stall and continued afterward. Exact-final-hash seed 2218 continued through checkpoints 80/120, completed five distinct quests, then ended at goal 5 on decision 130 (clarity 4/5, enjoyment 5/5, replay true); its new S1 was Gallowmere's falsely pre-held knife.
 - Compile/self-critique: ledger 463/30 rejected; all 14 contract-v3 pure exits continued at least once (62 continue/14 end), checkpoint 40=14/0, 80=9/3, 120=1/0, mean 96 decisions. PASS for Tanner parity, not retention completion—players still stop; Gallowmere inventory truth and repetitive long-route travel are next.
 - Guard: pre/final crawls `20260712T135922Z`/`20260712T144433Z` each covered 6,000 steps and 247/247 nodes; focused parity/route/recovery suites, exact final playtest copy, hash `3074f38c0ae6`, and full health (305 files/2,165 tests, UI, 12 packs) passed.
-
-### Cycle result - pure_current_menu_continuity
-
-- Root evidence: raw verified pure seed 2013 received Cade's new dialogue state without its current menu, reused stale room actions twice, and missed both lessons; the actions existed and no legal-action read occurred while dialogue was open.
-- Surface: pure compact quest start/read/step now always returns the bounded current action ids, while pure verbose observations and default legal-action reads use human labels; explicit id-only, full, and structural behavior stays intact. Cade truthfully offers either compatible lesson or both and names the remaining lesson after one (`bug_0514`).
-- Pure evidence: independent fresh seeds 2114/2115 both used TALK→quick lesson→guarded lesson directly from successive returned menus, then finished Wolf-Winter 60/60 with no recurrence. Seed 2114 continued through decisions 22/40/48/77/80 and ended after goal 4 at 102 (5/5, replay); seed 2115 continued through goal 2 and ended at checkpoint 80 with Tanner active (4/4, replay).
-- Compile: ledger 460/30 rejected; 11 contract-v3 pure exits all continued at least once (46 continue/11 end), checkpoint 40 is 11/0 and checkpoint 80 is 7/2. This is stronger continuation evidence, not proof players cannot stop.
-- Self-critique: PASS for human/MCP current-choice parity, not retention. Seed 2115 repeatedly saw `go east` but never found Tanner's east herb store, confirming the already-known compact destination-cue debt; seed 2114 also repeated route-tool overpromise and long-distance travel padding.
-- Guard: pre/post crawls `20260712T124938Z`/`20260712T130913Z` each covered 6,000 steps and 247/247 nodes; focused runtime/content/parity tests, exact playtest copy, and full health (304 files/2,162 tests, UI, 12 packs) passed.

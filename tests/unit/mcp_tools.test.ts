@@ -286,10 +286,18 @@ function registerLedgerAdvocate(a: ReturnType<typeof api>, sessionId: string): v
   if (registered.journey.storyChoice?.kind !== "lead_source") {
     throw new Error("Expected registration to present the Albany lead-source choice.");
   }
-  a.choose_overworld_session_story({
+  const sourced = a.choose_overworld_session_story({
     ...FULL_OVERWORLD_RESPONSE,
     session_id: sessionId,
     choice: "albany:source_rowan_civic_docket",
+  });
+  if (sourced.journey.storyChoice?.kind !== "preparation") {
+    throw new Error("Expected lead selection to present Albany preparation.");
+  }
+  a.choose_overworld_session_story({
+    ...FULL_OVERWORLD_RESPONSE,
+    session_id: sessionId,
+    choice: "albany:prep_works_fortification",
   });
 }
 
@@ -318,10 +326,22 @@ function resolveCurrentOverworldSessionEvent(
   }
   const storyChoice = a.get_overworld_session({ session_id: sessionId }).journey.storyChoice;
   if (storyChoice?.kind === "lead_source") {
-    a.choose_overworld_session_story({
+    const sourced = a.choose_overworld_session_story({
       ...FULL_OVERWORLD_RESPONSE,
       session_id: sessionId,
       choice: "albany:source_rowan_civic_docket",
+    });
+    if (sourced.journey.storyChoice?.kind !== "preparation") {
+      throw new Error("Expected lead selection to present Albany preparation.");
+    }
+  }
+  if (
+    a.get_overworld_session({ session_id: sessionId }).journey.storyChoice?.kind === "preparation"
+  ) {
+    a.choose_overworld_session_story({
+      ...FULL_OVERWORLD_RESPONSE,
+      session_id: sessionId,
+      choice: "albany:prep_works_fortification",
     });
   }
   a.investigate_overworld_session_event({ session_id: sessionId, event_id: event.id });
@@ -805,7 +825,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(repeated.result.discoveredSites).toEqual([]);
     expect(repeated.result.discoveredJobs).toEqual([]);
     expect(repeated.result.discoveredQuests).toEqual([]);
-    expect(repeated.observation.journal).toHaveLength(8);
+    expect(repeated.observation.journal).toHaveLength(10);
 
     const talked = a.talk_overworld_session_contact({
       ...FULL_OVERWORLD_RESPONSE,
@@ -816,7 +836,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(talked.observation.quests.map((quest) => quest.id)).toEqual(
       localQuests.slice(0, 1).map((quest) => quest.id),
     );
-    expect(talked.observation.journal).toHaveLength(9);
+    expect(talked.observation.journal).toHaveLength(11);
 
     const investigated = a.investigate_overworld_session_event({
       ...FULL_OVERWORLD_RESPONSE,
@@ -824,7 +844,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
       event_id: event.id,
     });
     expect(investigated.result.discoveredQuests).toEqual([]);
-    expect(investigated.observation.journal).toHaveLength(10);
+    expect(investigated.observation.journal).toHaveLength(12);
     expect(investigated.observation.timeLabel).not.toBe(started.observation.timeLabel);
 
     const resolved = a.resolve_overworld_session_event({
@@ -834,7 +854,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
     });
     expect(resolved.result.minutes).toBe(30 + event.intensity * 10);
     expect(resolved.result.entry.kind).toBe("resolution");
-    expect(resolved.observation.journal).toHaveLength(11);
+    expect(resolved.observation.journal).toHaveLength(13);
     expect(resolved.observation.resolvedEventIds).toContain(event.id);
     expect(resolved.observation.regionRenown[started.observation.current.region]).toBe(
       event.intensity,
@@ -902,7 +922,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
       traveled.observation.pendingRoadEncounter?.options.map((option) => option.strategy),
     ).toEqual(["cautious_scout", "assist_travelers", "press_on"]);
     expect(traveled.observation.log[0]?.to).toBe("Colonie town");
-    expect(traveled.observation.journal).toHaveLength(11);
+    expect(traveled.observation.journal).toHaveLength(13);
 
     expect(() =>
       a.travel_overworld_session({

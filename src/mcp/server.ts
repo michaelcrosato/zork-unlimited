@@ -771,7 +771,7 @@ tool(
 );
 tool(
   "choose_overworld_session_story",
-  "Choose the presented story or character-registration option.",
+  "Choose the presented story, character-registration, lead-source, or preparation option.",
   {
     ...SESSION,
     choice: z.string().describe("Choice id from journey.storyChoice.options."),

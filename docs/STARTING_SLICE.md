@@ -119,15 +119,17 @@ The current slice does **not** yet meet the full contract:
   remain mostly one-click time/renown transactions;
 - Albany authors four permanent registration profiles. Road-Warden and Ledger
   sponsorship now change the actual terms of their matching source packet, and
-  the Road-Warden also retains its fieldcraft import; Ironhands Repairer and
-  Unaffiliated Courier still need distinct preparation consumers before concept
-  balance is proven;
+  the Road-Warden retains its fieldcraft import. Ironhands Repairer,
+  Unaffiliated Courier, and Ledger Advocate now also have distinct Repair,
+  Streetwise, and Mediation preparation consumers; broader balance across the
+  still-missing resolution families remains unproven;
 - Wolf-Winter's saved-wood and clean living-pack facts now change Albany
   services, but its remaining Cade memories and loss facts still lack later
   opportunity consumers;
 - fieldcraft now crosses the trusted boundary into both defence and the visible
-  lure check, while two certified reports alter combat routes; health remains
-  deferred to protect the combat guarantee, and Albany equipment still needs an
+  lure check, two certified reports alter combat routes, and three preparation
+  skills change distinct checks or recoveries; health remains deferred to
+  protect the combat guarantee, and Albany equipment still needs an
   origin-honest quest-local representation before it can alter play;
 - prepared combat, fully noncombat diversion, and a bounded mixed recovery now
   exist, but fortify/outlast and drive/evacuate families remain unimplemented;
@@ -266,19 +268,43 @@ proof, RPG save/replay, journey foldback, compact/full/UI parity, overworld
 restore, and service consumption live in
 [`wolf_strategy_return_e2e.test.ts`](../tests/starting_slice/wolf_strategy_return_e2e.test.ts).
 
+The sixth authored increment makes Albany preparation a durable, finite choice
+instead of a promise in the matrix. After source certification, every one of the
+four backgrounds can select any of three affordable specialist packets. Reese's
+Works sequence replaces the public paling wedge with a Repair check and turns a
+miss into a noisy deterministic cold-set. Emery's drover route creates a
+one-shot Streetwise recovery after a failed first lure cast. Jamie's relief
+protocol creates a one-shot Mediation pressure adjustment only after the public
+split-rail recovery. The three plans import as knowledge plus their actual
+background skill, remember their providers, retain direct-start defaults, and
+do not add or relabel an ending. On a truthful held-byre return they respectively
+unlock one 15-minute Works resupply, Campus rest, or Civic resupply. Paired
+reachable low-supply and fatigue states include preparation cost, shortest
+Albany relocation, and both alternatives' best matching service; each plan
+beats both others somewhere and none dominates globally. The irreversible
+choice is replay-locked for all profiles. The representative Drover route
+proves overworld restore, RPG save/replay, quest foldback, full/compact MCP,
+and browser-engine parity; paired core proofs cover all three consumers and
+return services. Proof lives in
+[`preparation_profiles_counterfactual.test.ts`](../tests/starting_slice/preparation_profiles_counterfactual.test.ts)
+and
+[`preparation_profiles_return_e2e.test.ts`](../tests/starting_slice/preparation_profiles_return_e2e.test.ts).
+
 This proves `SS-F01-character-background`, `SS-F03-lead-source`,
-`SS-F09-wolf-strategy`, `SS-F11-saved-wood`, and `SS-F12-albany-return`: five of
-the twelve required material forks. It does not
-prove that all four concepts are mechanically balanced, that Albany preparation
-is broadly systemic, that all four target resolution families exist, or that
-other return facts change NPC availability and opportunities. Those remain the
-next work, not implied credit for the five proven counterfactuals.
+`SS-F05-preparation-profile`, `SS-F09-wolf-strategy`, `SS-F11-saved-wood`, and
+`SS-F12-albany-return`: six of the twelve required material forks. It proves
+three preparation profiles and distinct consumers for all four concepts, but it
+does not prove balance across the two missing resolution families, the full
+twelve-fork contract, ally agency, or that other return facts change NPC
+availability and opportunities. Those remain the next work, not implied credit
+for the six proven counterfactuals.
 
 ## Required resolution families
 
 The four primary signatures must diverge well before the last input. The current
-combat and lure routes diverge at Cade; later Albany preparation must deepen
-that fork without turning background into a class lock:
+combat and lure routes diverge at Cade; Albany preparation now changes their
+opening checks, recoveries, pressure, and return services without turning
+background into a class lock:
 
 | Signature             | Method                                                      | Principal costs and risks                                         |
 | --------------------- | ----------------------------------------------------------- | ----------------------------------------------------------------- |
@@ -292,7 +318,8 @@ authored failure-forward recovery and a distinct persistent Albany aftermath.
 `hunt_and_hold` and `lure_and_divert` now have end-to-end proof. The failed-lure
 one-fight recovery proves bounded hybrid grammar, but does not yet substitute
 for the full `drive_and_evacuate` family; `fortify_and_outlast` is also still
-planned.
+planned. The Works plan is fortification groundwork and the drover/relief plans
+deepen lure recovery; none is being counted as either missing full family.
 
 ## Depth Contract v1
 

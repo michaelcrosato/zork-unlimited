@@ -138,10 +138,17 @@ function launchAlbanyWolf(api: ToolApi): { overworldSessionId: string; rpgSessio
     session_id: overworldSessionId,
     choice: "albany:ledger_advocate",
   });
-  api.choose_overworld_session_story({
+  const sourced = api.choose_overworld_session_story({
     ...FULL,
     session_id: overworldSessionId,
     choice: "albany:source_rowan_civic_docket",
+  });
+  expect(sourced.journey.storyChoice?.kind).toBe("preparation");
+  expect(sourced.observation.quests.map((candidate) => candidate.id)).not.toContain("wolf_winter");
+  api.choose_overworld_session_story({
+    ...FULL,
+    session_id: overworldSessionId,
+    choice: "albany:prep_works_fortification",
   });
 
   view = api.get_overworld_session({

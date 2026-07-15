@@ -111,6 +111,9 @@ function settleOpeningRegistration(session: OverworldSession): void {
   if (session.journey().storyChoice?.kind === "lead_source") {
     session.chooseJourneyStory("albany:source_rowan_civic_docket");
   }
+  if (session.journey().storyChoice?.kind === "preparation") {
+    session.chooseJourneyStory("albany:prep_works_fortification");
+  }
 }
 
 function resolveCurrentTownEvent(session: OverworldSession): void {
@@ -328,9 +331,11 @@ describe("OverworldSession", () => {
     expect(handler).toContain("worldSession.chooseJourneyStory(choiceId)");
     expect(handler).toContain('journey.storyChoice?.kind === "registration"');
     expect(handler).toContain('journey.storyChoice?.kind === "lead_source"');
+    expect(handler).toContain('journey.storyChoice?.kind === "preparation"');
     expect(handler).toContain("Character registered: ${result.consequence}");
     expect(handler).toContain("Current goal: ${result.goal.text}");
     expect(handler).toContain("Lead source certified: ${result.consequence}");
+    expect(handler).toContain("Preparation committed: ${result.consequence}");
     expect(handler).toContain("Story consequence: ${result.consequence}");
     expect(handler).toContain("New goal: ${result.goal.text}");
     expect(handler).not.toMatch(/AlbanyDawnDispatchChoiceId|Albany dawn dispatch/i);
@@ -343,6 +348,8 @@ describe("OverworldSession", () => {
     expect(screen).toContain("Choose your lived background");
     expect(screen).toContain("Albany evidence source");
     expect(screen).toContain("Choose your Albany lead source");
+    expect(screen).toContain("Albany preparation budget");
+    expect(screen).toContain("Choose what Albany prepares");
     expect(screen).toContain('" journey-choice-actions-registration"');
     expect(styles).toContain(
       ".journey-choice-actions:not(.journey-choice-actions-registration) button:first-child",
@@ -1720,7 +1727,7 @@ describe("OverworldSession", () => {
 
     const after = session.view();
     expect(after.timeLabel).not.toBe(before.timeLabel);
-    expect(after.journal).toHaveLength(7);
+    expect(after.journal).toHaveLength(9);
   });
 
   it("requires reaching a quest's local area before starting it", () => {
@@ -1919,7 +1926,7 @@ describe("OverworldSession", () => {
     expect(after.resolvedEventIds).toContain(event.id);
     expect(after.events.map((candidate) => candidate.id)).not.toContain(event.id);
     expect(after.regionRenown[start.current.region]).toBe(event.intensity);
-    expect(after.journal).toHaveLength(8);
+    expect(after.journal).toHaveLength(10);
 
     const compactAfter = session.compactView();
     expect(compactAfter.events.map(([id]) => id)).not.toContain(event.id);

@@ -16,6 +16,7 @@ type FixtureContactVariant = {
 };
 
 type FixtureOverworld = Record<string, unknown> & {
+  opening_preparation?: unknown;
   opening_registration?: {
     profiles: Array<{
       character: { relationships: Array<{ memories: string[] }> };
@@ -59,6 +60,7 @@ function writeFixtureQuestRoot(root: string): void {
     JSON.stringify({
       ...fixtureOverworldWithOpeningContactVariants(),
       opening_lead_source: undefined,
+      opening_preparation: undefined,
       quests: [
         {
           id: "hotspot_fixture",

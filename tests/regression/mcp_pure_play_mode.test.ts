@@ -274,11 +274,41 @@ describe("MCP pure play mode", () => {
             },
           }),
         );
+        const preparationChoice = (
+          sourced.journey as {
+            storyChoice?: {
+              kind?: string;
+              options?: { id: string }[];
+            };
+          }
+        ).storyChoice;
+        expect(preparationChoice?.kind).toBe("preparation");
+        expect(
+          (sourced.observation as AreaView & { quests?: { id: string }[] }).quests?.map(
+            (quest) => quest.id,
+          ),
+        ).not.toContain("wolf_winter");
+        const worksFortification = preparationChoice?.options?.find(
+          (option) => option.id === "albany:prep_works_fortification",
+        );
+        if (!worksFortification)
+          throw new Error("expected visible works-fortification preparation");
+        const prepared = textPayload(
+          await client.callTool({
+            name: "choose_overworld_session_story",
+            arguments: {
+              session_id: sessionId,
+              choice: worksFortification.id,
+              compact_context: false,
+              compact_result: false,
+            },
+          }),
+        );
         const wolfWinter = (
-          sourced.observation as AreaView & { quests?: { id: string; area: string }[] }
+          prepared.observation as AreaView & { quests?: { id: string; area: string }[] }
         ).quests?.find((quest) => quest.id === "wolf_winter");
-        if (!wolfWinter) throw new Error("expected selected source to reveal Wolf-Winter");
-        view = sourced.observation as AreaView;
+        if (!wolfWinter) throw new Error("expected selected preparation to reveal Wolf-Winter");
+        view = prepared.observation as AreaView;
         const marketRoute = view.areaExits.find(
           (route) => route.destination.id === "albany_city__market",
         );

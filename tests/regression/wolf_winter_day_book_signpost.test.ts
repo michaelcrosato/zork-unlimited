@@ -86,7 +86,13 @@ describe("bug_0399 — wolf_winter signposts the score-bearing day-book", () => 
     expect(s.vars.hp).toBe(before.vars.hp);
     expect(
       validateRpg(pack, {
-        extraSettableFlags: ["jamie_market_testimony_certified", "hayden_frost_report_certified"],
+        extraSettableFlags: [
+          "jamie_market_testimony_certified",
+          "hayden_frost_report_certified",
+          "works_fortification_prepared",
+          "drover_route_prepared",
+          "relief_protocol_prepared",
+        ],
       }).findings,
     ).toHaveLength(0);
   });
