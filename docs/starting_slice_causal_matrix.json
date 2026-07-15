@@ -320,31 +320,36 @@
     },
     {
       "id": "SS-F08-cade-trust",
-      "title": "Establish trust, leverage, or conflict with Cade",
+      "title": "Accept Cade's household terms or invoke Albany authority",
       "phase": "wolf_winter",
-      "implementation_status": "partial",
-      "proof_status": "unproven",
-      "counts_toward_contract": false,
-      "visible_choice": "Share evidence and make a promise, invoke Albany authority, deceive Cade about support, or work without his consent.",
+      "implementation_status": "implemented",
+      "proof_status": "proven",
+      "counts_toward_contract": true,
+      "visible_choice": "Accept Cade's household fortification terms and retain his failed-seal help, or invoke lawful Albany authority and spend public relief seals while Cade refuses that recovery.",
       "immediate_state_delta": [
-        "character.relationships.cade",
-        "character.promises",
-        "character.crimes",
-        "wolf.plan_access"
+        "wolf.fortify_stance",
+        "wolf.stance_resource",
+        "wolf.failed_seal_recovery",
+        "wolf.outer_property_commitment"
       ],
       "delayed_consumers": [
-        "Cade's aid, refusal, or independent action",
-        "Access to steading resources and noncombat plans",
-        "Cade's return testimony and future availability"
+        "Cade's stance-specific aid or refusal after the first seal fails",
+        "Exposed outer property versus spent public relief stock",
+        "Cade and Hayden's return memories and mutually exclusive Station service"
       ],
       "visible_feedback": [
-        "Cade states what he believes, grants, or refuses.",
-        "Later aid or refusal names the relevant promise, lie, trespass, or evidence."
+        "Cade discloses both stances, their finite resource, and the loss each protects before commitment.",
+        "The no-retry recovery, dawn account, Albany dispatch, Hayden response, and service all name the selected conduct and cost."
       ],
-      "systems": ["dialogue", "relationships", "promises", "crime", "planning"],
+      "systems": ["dialogue", "planning", "skill_checks", "pressure", "relationships", "services"],
       "persistence_boundaries": ["quest_to_overworld"],
-      "contract_tags": ["delayed", "cross_system", "cross_phase", "npc_memory"],
-      "baseline_evidence": ["tests/regression/wolf_winter_dialogue_surface.test.ts"],
+      "contract_tags": ["delayed", "cross_system", "cross_phase", "npc_memory", "failure_forward"],
+      "baseline_evidence": [
+        "tests/regression/wolf_winter_dialogue_surface.test.ts",
+        "tests/starting_slice/fortify_outlast_return_e2e.test.ts",
+        "tests/regression/fortify_outlast_migration_integrity.test.ts",
+        "traces/bugs/bug_0525_wolf_winter_fortify_outlast.yaml"
+      ],
       "counterfactual_test": "tests/starting_slice/cade_trust_counterfactual.test.ts"
     },
     {

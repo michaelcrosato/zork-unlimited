@@ -525,14 +525,14 @@
     "solo_option_id": "albany:ally_travel_solo",
     "title": "Choose the Wolf-Winter Field Team",
     "message": "June Pike has one Road-Warden field seat beside Hayden's outgoing packet. She can ride with you, but only under a named division of authority; leaving without that agreement sends the relief rider alone and does not delay the dispatch.",
-    "capability": "On a bloodless living-pack line, June can leave the wolf line at the final byre threshold and take the cattle line once: she lowers cattle alarm after a recovered lure or opens the lower swing gate during a committed drive.",
+    "capability": "On a bloodless living-pack line, June can leave the wolf line at the final threshold and take the cattle line once: she lowers cattle alarm after a recovered lure, opens the lower swing gate during a committed drive, or takes the lower cattle brace before a fortification dawn watch.",
     "condition": "June keeps cattle-first authority. She will not become an extra hunter, and the first wolf killed ends her place on the field team.",
     "options": [
       {
         "id": "albany:ally_june_cattle_first",
         "title": "Grant June Cattle-First Authority",
         "summary": "Ask June Pike to ride as an independent Road-Warden ally.",
-        "preview": "The briefing takes 15 minutes. June joins the field team and records your promise that she chooses the cattle line if a recovered lure leaves the herd pressing or a committed drive reaches the final threshold. Her help is one pressure intervention, never a combat bonus; any wolf death ends the agreement.",
+        "preview": "The briefing takes 15 minutes. June joins the field team and records your promise that she chooses the cattle line if a recovered lure leaves the herd pressing, a committed drive reaches the final threshold, or a sealed fortification reaches its dawn watch. Her help is one pressure intervention, never a combat bonus; any wolf death ends the agreement.",
         "consequence": "June signs beside your name, takes the second field seat, and remembers that you granted rather than merely borrowed her authority.",
         "terms": { "minutes": 15 },
         "effects": [
@@ -694,6 +694,47 @@
       ]
     },
     {
+      "id": "albany:wolf_fortified_cade_terms_station_resupply",
+      "home": "albany_city",
+      "area": "albany_city__transport_hub",
+      "action": "resupply",
+      "title": "Claim the Preserved-Seal Road Stores",
+      "summary": "Because you honored Cade's household boundary, left his outer property exposed, and returned Albany's public relief seals unused, Hayden releases one preserved Station cache of road food, lamp oil, rawhide, and repair stock.",
+      "provider_character_id": "albany_city__transport_hub__contact",
+      "minutes": 15,
+      "requires_all_world_facts": [
+        "fact:wolf_winter_cade_terms_honored",
+        "fact:wolf_winter_outer_property_exposed",
+        "fact:wolf_winter_public_relief_seals_preserved"
+      ],
+      "forbids_any_world_facts": [
+        "fact:wolf_winter_albany_authority_invoked",
+        "fact:wolf_winter_outer_property_preserved",
+        "fact:wolf_winter_public_relief_seals_spent"
+      ]
+    },
+    {
+      "id": "albany:wolf_fortified_albany_authority_station_rest",
+      "home": "albany_city",
+      "area": "albany_city__transport_hub",
+      "action": "rest",
+      "title": "Take the Authority-Watch Recovery Cot",
+      "summary": "Because you invoked Albany authority, spent the public relief seals to keep Cade's outer property inside the line, and completed the watch without his refused help, Hayden releases one Station recovery cot and accounting watch.",
+      "provider_character_id": "albany_city__transport_hub__contact",
+      "minutes": 15,
+      "requires_all_world_facts": [
+        "fact:wolf_winter_albany_authority_invoked",
+        "fact:wolf_winter_outer_property_preserved",
+        "fact:wolf_winter_public_relief_seals_spent",
+        "fact:wolf_winter_cade_help_refused"
+      ],
+      "forbids_any_world_facts": [
+        "fact:wolf_winter_cade_terms_honored",
+        "fact:wolf_winter_outer_property_exposed",
+        "fact:wolf_winter_public_relief_seals_preserved"
+      ]
+    },
+    {
       "id": "albany:june_kept_line_station_resupply",
       "home": "albany_city",
       "area": "albany_city__transport_hub",
@@ -770,7 +811,7 @@
       "area": "albany_city__market",
       "action": "resupply",
       "title": "Claim Jamie's Solo-Packet Road Stores",
-      "summary": "Because you assigned the dawn wagon to rebuild Cade's outer line, Jamie Tanner holds a one-time Market road-store credit for carrying Hedrick's packet alone.",
+      "summary": "Because you sent the dawn wagon back to Cade and carried Hedrick's packet north alone, Jamie Tanner holds a one-time Market road-store credit.",
       "provider_character_id": "albany_city__market__contact",
       "minutes": 15,
       "requires_all_story_choices": [
@@ -24107,6 +24148,22 @@
       "campaign_npc_id": "albany:hayden_hale",
       "variants": [
         {
+          "id": "wolf_fortified_cade_terms",
+          "after_relationship_memories": [
+            "albany:memory_hayden_wolf_fortified_cade_terms"
+          ],
+          "summary": "Hayden has the bloodless fortification return: Cade's household and whole herd reached dawn behind his shutters, Albany's public relief seals came home unused, and the outer property remained exposed.",
+          "agenda": "Hayden releases one preserved-seal Station road cache while keeping the exposed outer property on Cade's live relief line. Honoring Cade's terms does not let the return board pretend every building was protected."
+        },
+        {
+          "id": "wolf_fortified_albany_authority",
+          "after_relationship_memories": [
+            "albany:memory_hayden_wolf_fortified_albany_authority"
+          ],
+          "summary": "Hayden has the authority-watch return: Cade's household, whole herd, and outer property reached dawn inside the sealed line, but Albany's public relief seals were spent and Cade refused to help under the order.",
+          "agenda": "Hayden releases one Station recovery cot for the unsupported watch while keeping the spent public stock and Cade's refusal on separate, truthful ledger lines."
+        },
+        {
           "id": "wolf_winter_returned_road_warden",
           "after_quests": [
             "wolf_winter"
@@ -24160,9 +24217,27 @@
       "role": "road-warden field lead",
       "faction": "Road Wardens",
       "summary": "June Pike checks a cattle rope, hooded lantern, and one empty field seat beside Hayden Hale's Wolf-Winter packet.",
-      "agenda": "June will ride only with cattle-first authority of her own. She offers one herd-pressure intervention after a bloodless recovery, not another spear, and remains in Albany if that condition is refused.",
+      "agenda": "June will ride only with cattle-first authority of her own. She offers one cattle-line intervention on a bloodless lure, drive, or fortification line, not another spear or another laborer, and remains in Albany if that condition is refused.",
       "campaign_npc_id": "albany:june_pike",
       "variants": [
+        {
+          "id": "returned_from_fortified_cade_terms",
+          "after_relationship_memories": [
+            "albany:memory_june_joined_cattle_first",
+            "albany:memory_june_fortified_cade_terms"
+          ],
+          "summary": "June has returned with her lower-cattle-brace account matched to yours: she honored Cade's household boundary, the whole herd reached dawn, and Albany's public seals returned unused while the outer property stayed exposed.",
+          "agenda": "The cattle-first promise is kept. June records that her independent brace protected the herd without turning her into Cade's fortification labor or hiding the property left outside his terms."
+        },
+        {
+          "id": "returned_from_fortified_albany_authority",
+          "after_relationship_memories": [
+            "albany:memory_june_joined_cattle_first",
+            "albany:memory_june_fortified_albany_authority"
+          ],
+          "summary": "June's matching return recognizes lawful Albany authority over the sealed line: her lower cattle brace held the whole herd while the public relief seals were spent and Cade refused the recovery hand.",
+          "agenda": "The cattle-first promise is kept. June distinguishes her independent herd authority from the order Cade refused and will not erase either the preserved outer property or Albany's spent stock."
+        },
         {
           "id": "returned_from_drive_herd_out_rider_wounded",
           "after_relationship_memories": [
@@ -24223,7 +24298,7 @@
             "albany:memory_june_joined_cattle_first"
           ],
           "summary": "June has signed the Wolf-Winter field line beside your name and remembers that cattle-first authority was granted explicitly.",
-          "agenda": "She will take the cattle line once after a failed lure is recovered alive or when a committed drive reaches its final threshold, but the first wolf killed ends her place on the team."
+          "agenda": "She will take the cattle line once after a failed lure is recovered alive, when a committed drive reaches its final threshold, or before a sealed fortification's dawn watch, but the first wolf killed ends her place on the team."
         },
         {
           "id": "refused_subordinate_relay",
@@ -48053,6 +48128,162 @@
                   "type": "remember_relationship",
                   "npc_id": "albany:june_pike",
                   "memory_id": "albany:memory_june_drive_signal_spent_herd_out"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ending_id": "ending_fortified_cade_terms",
+          "ending_title": "Dawn Behind Cade's Shutters",
+          "effects": [
+            {
+              "type": "remember_relationship",
+              "npc_id": "npc:old_cade",
+              "memory_id": "memory:wolf_winter_fortified_cade_terms",
+              "trust_at_least": 12,
+              "regard_at_least": 12,
+              "owes_player_at_least": 1
+            },
+            {
+              "type": "remember_relationship",
+              "npc_id": "albany:hayden_hale",
+              "memory_id": "albany:memory_hayden_wolf_fortified_cade_terms",
+              "trust_at_least": 8,
+              "regard_at_least": 9,
+              "owes_player_at_least": 1
+            },
+            {
+              "type": "set_world_fact",
+              "fact_id": "fact:wolf_winter_byre_held"
+            },
+            {
+              "type": "set_world_fact",
+              "fact_id": "fact:wolf_winter_pack_outlasted_alive"
+            },
+            {
+              "type": "set_world_fact",
+              "fact_id": "fact:wolf_winter_people_safe"
+            },
+            {
+              "type": "set_world_fact",
+              "fact_id": "fact:wolf_winter_cattle_whole"
+            },
+            {
+              "type": "set_world_fact",
+              "fact_id": "fact:wolf_winter_cade_terms_honored"
+            },
+            {
+              "type": "set_world_fact",
+              "fact_id": "fact:wolf_winter_outer_property_exposed"
+            },
+            {
+              "type": "set_world_fact",
+              "fact_id": "fact:wolf_winter_public_relief_seals_preserved"
+            }
+          ],
+          "conditional_effects": [
+            {
+              "id": "albany:june_fortified_cade_terms",
+              "when": {
+                "requires_all_companions": ["albany:june_pike"],
+                "requires_all_promises": [
+                  {
+                    "promise_id": "albany:promise_june_cattle_first",
+                    "status": "active"
+                  }
+                ]
+              },
+              "effects": [
+                {
+                  "type": "resolve_promise",
+                  "promise_id": "albany:promise_june_cattle_first",
+                  "status": "kept"
+                },
+                {
+                  "type": "remember_relationship",
+                  "npc_id": "albany:june_pike",
+                  "memory_id": "albany:memory_june_fortified_cade_terms"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ending_id": "ending_fortified_albany_authority",
+          "ending_title": "Dawn Under Albany Seal",
+          "effects": [
+            {
+              "type": "remember_relationship",
+              "npc_id": "npc:old_cade",
+              "memory_id": "memory:wolf_winter_fortified_albany_authority",
+              "trust_at_least": 0,
+              "regard_at_least": 7,
+              "owes_player_at_least": 0
+            },
+            {
+              "type": "remember_relationship",
+              "npc_id": "albany:hayden_hale",
+              "memory_id": "albany:memory_hayden_wolf_fortified_albany_authority",
+              "trust_at_least": 10,
+              "regard_at_least": 12,
+              "owes_player_at_least": 1
+            },
+            {
+              "type": "set_world_fact",
+              "fact_id": "fact:wolf_winter_byre_held"
+            },
+            {
+              "type": "set_world_fact",
+              "fact_id": "fact:wolf_winter_pack_outlasted_alive"
+            },
+            {
+              "type": "set_world_fact",
+              "fact_id": "fact:wolf_winter_people_safe"
+            },
+            {
+              "type": "set_world_fact",
+              "fact_id": "fact:wolf_winter_cattle_whole"
+            },
+            {
+              "type": "set_world_fact",
+              "fact_id": "fact:wolf_winter_albany_authority_invoked"
+            },
+            {
+              "type": "set_world_fact",
+              "fact_id": "fact:wolf_winter_outer_property_preserved"
+            },
+            {
+              "type": "set_world_fact",
+              "fact_id": "fact:wolf_winter_public_relief_seals_spent"
+            },
+            {
+              "type": "set_world_fact",
+              "fact_id": "fact:wolf_winter_cade_help_refused"
+            }
+          ],
+          "conditional_effects": [
+            {
+              "id": "albany:june_fortified_albany_authority",
+              "when": {
+                "requires_all_companions": ["albany:june_pike"],
+                "requires_all_promises": [
+                  {
+                    "promise_id": "albany:promise_june_cattle_first",
+                    "status": "active"
+                  }
+                ]
+              },
+              "effects": [
+                {
+                  "type": "resolve_promise",
+                  "promise_id": "albany:promise_june_cattle_first",
+                  "status": "kept"
+                },
+                {
+                  "type": "remember_relationship",
+                  "npc_id": "albany:june_pike",
+                  "memory_id": "albany:memory_june_fortified_albany_authority"
                 }
               ]
             }

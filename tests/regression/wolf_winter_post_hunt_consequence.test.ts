@@ -326,6 +326,8 @@ describe("bug_0505 — Wolf-Winter saved wood has a post-hunt consequence", () =
 
     const special = pack.win_conditions.slice(0, -1).map((condition) => condition.ending);
     expect(special).toEqual([
+      "ending_fortified_cade_terms",
+      "ending_fortified_albany_authority",
       "ending_drive_cattle_wounded",
       "ending_drive_person_cattle_lost",
       "ending_drive_reserve_spent",

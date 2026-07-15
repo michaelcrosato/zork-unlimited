@@ -412,6 +412,55 @@ function wolfJuneCampaignWitnesses(index: RpgIndex): {
     );
   }
 
+  const fortifyCade = run(
+    ["june_pike_present"],
+    [
+      "go_north",
+      "talk_houndsman",
+      "ask_fortify",
+      "ask_accept_terms",
+      "ask_leave",
+      "take_cade_household_shutters",
+      "go_north",
+      ["use_cade_household_shutters_on_fortify_outer_seal", "best"],
+      "go_north",
+      "use_cade_household_shutters_on_fortify_threshold_seal",
+      "go_north",
+      "talk_june_pike_fortify",
+      "ask_acknowledge",
+      "use_fortify_dawn_watch",
+    ],
+  );
+  if (fortifyCade.endingId !== "ending_fortified_cade_terms") {
+    throw new Error(
+      `June Cade-fortify witness reached unexpected ending "${fortifyCade.endingId ?? "none"}".`,
+    );
+  }
+  const fortifyAuthority = run(
+    ["june_pike_present"],
+    [
+      "go_north",
+      "talk_houndsman",
+      "ask_fortify",
+      "ask_invoke_authority",
+      "ask_leave",
+      "take_albany_relief_seals",
+      "go_north",
+      ["use_albany_relief_seals_on_fortify_outer_seal", "best"],
+      "go_north",
+      "use_albany_relief_seals_on_fortify_threshold_seal",
+      "go_north",
+      "talk_june_pike_fortify",
+      "ask_acknowledge",
+      "use_fortify_dawn_watch",
+    ],
+  );
+  if (fortifyAuthority.endingId !== "ending_fortified_albany_authority") {
+    throw new Error(
+      `June authority-fortify witness reached unexpected ending "${fortifyAuthority.endingId ?? "none"}".`,
+    );
+  }
+
   const required = [
     "room:steading_yard#1",
     "room:byre_mouth#5",
@@ -421,6 +470,8 @@ function wolfJuneCampaignWitnesses(index: RpgIndex): {
     "ending:ending_drive_cattle_wounded#0",
     "ending:ending_drive_person_cattle_lost#0",
     "ending:ending_drive_reserve_spent#0",
+    "ending:ending_fortified_cade_terms#0",
+    "ending:ending_fortified_albany_authority#0",
   ];
   const missing = required.filter((key) => !displayed.has(key));
   if (missing.length > 0) {
@@ -610,7 +661,10 @@ describe("bug_0147 — every reactive variant of every RPG pack is reachable as 
     const witness = wolfCampaignImportWitnesses(indexRpgPack(loaded.compiled.pack));
     expect(
       [...witness.displayed].filter(
-        (key) => key.includes("pack_diverted") || key.includes("ending_drive"),
+        (key) =>
+          key.includes("pack_diverted") ||
+          key.includes("ending_drive") ||
+          key.includes("ending_fortified"),
       ),
     ).toEqual(
       expect.arrayContaining([
@@ -620,6 +674,8 @@ describe("bug_0147 — every reactive variant of every RPG pack is reachable as 
         "ending:ending_drive_cattle_wounded#0",
         "ending:ending_drive_person_cattle_lost#0",
         "ending:ending_drive_reserve_spent#0",
+        "ending:ending_fortified_cade_terms#0",
+        "ending:ending_fortified_albany_authority#0",
       ]),
     );
   });

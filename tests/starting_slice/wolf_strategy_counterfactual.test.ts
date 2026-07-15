@@ -109,7 +109,7 @@ function lureRoute(opening: "clean" | "fouled" | "hybrid"): Route {
   expect(breach.blocked_exits).toContainEqual({
     direction: "north",
     message:
-      "Settle the yearling first. On the feed plan, the ground way north then stays shut until the loft cast. Return south to the yard, west into the store, then up.",
+      "Settle the yearling or finish the outer seal. On the feed plan, return south, then west and up for the loft cast before the ground way opens.",
   });
   act("go_south");
   const yard = buildRpgObservation(index, state);
@@ -120,7 +120,7 @@ function lureRoute(opening: "clean" | "fouled" | "hybrid"): Route {
   expect(yard.blocked_exits).toContainEqual({
     direction: "north",
     message:
-      "Take the plan's finite resource: Cade's feed for lure, or two-charge rig for drive. After the lure's first beat, continue west through the store and up to the loft.",
+      "Carry the committed plan's finite feed, drive rig, shutters, or seals. After the lure's first beat, continue west through the store and up to the loft.",
   });
   act("go_west");
   act("go_up");
@@ -244,6 +244,19 @@ describe("SS-F09 — pressure-backed Wolf-Winter strategy counterfactual", () =>
           description: "No signal drive is moving the wolves; signal pressure has not been raised.",
         },
         next: { min: 1, label: "Moving" },
+      },
+      {
+        id: "winter_siege",
+        title: "Winter siege",
+        var: "fortification_pressure",
+        value: 0,
+        band: {
+          min: 0,
+          label: "Unsealed",
+          description:
+            "No fortification line is holding; the pack and weather still have the open byre.",
+        },
+        next: { min: 1, label: "Testing" },
       },
     ]);
     if (!restless) throw new Error("expected a restless pressure observation");

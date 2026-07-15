@@ -158,11 +158,17 @@ const OVERWORLD_OPENING_PREPARATION_WORLD_WOLF_OUTCOME_IDS: ReadonlySet<string> 
 ]);
 export const OVERWORLD_OPENING_ALLY_PREDECESSOR_WORLD_HASH =
   "f5835e15e6ccf5432ea6b39b87edf957ebc3ffb8a2518b48b46098f09aa92572";
-// Exact F04 manifest. Keep this historical value pinned: F10 accepts it only
-// through the bounded crisis-priority direct-predecessor migration below.
+// Exact F04 manifest. Keep this historical value pinned: the current manifest
+// accepts it only through the bounded crisis-priority migration below.
 export const OVERWORLD_OPENING_ALLY_WORLD_HASH =
   "2d10f959279a12166d521a774779acc46481fb6ff40d5982f9c955a30677a7b6";
 export const OVERWORLD_CRISIS_PRIORITY_PREDECESSOR_WORLD_HASH = OVERWORLD_OPENING_ALLY_WORLD_HASH;
+const OVERWORLD_CRISIS_PRIORITY_PREDECESSOR_JUNE_BASE_CONTACT = Object.freeze({
+  id: "talk:albany_city__transport_hub__june_pike",
+  kind: "contact" as const,
+  title: "Talked to June Pike",
+  text: "June Pike checks a cattle rope, hooded lantern, and one empty field seat beside Hayden Hale's Wolf-Winter packet. June will ride only with cattle-first authority of her own. She offers one herd-pressure intervention after a bloodless recovery, not another spear, and remains in Albany if that condition is refused.",
+});
 const OVERWORLD_CRISIS_PRIORITY_PREDECESSOR_ALLY_OFFER = Object.freeze({
   id: "ally_offer:albany:wolf_ally_commitment",
   kind: "ally_offer" as const,
@@ -209,10 +215,68 @@ const OVERWORLD_CRISIS_PRIORITY_PREDECESSOR_WOLF_OUTCOME_IDS: ReadonlySet<string
 ]);
 export const OVERWORLD_CRISIS_PRIORITY_WORLD_HASH =
   "1e74d32c28c3d563f6e8103034768506e25f13ff1f8e410b190cbb344589add8";
-/** @deprecated Preparation-era current-target name retained for callers. */
-export const OVERWORLD_OPENING_PREPARATION_WORLD_HASH = OVERWORLD_CRISIS_PRIORITY_WORLD_HASH;
-export const OVERWORLD_OPENING_PREPARATION_MIGRATION_TARGET_WORLD_HASH =
+export const OVERWORLD_FORTIFY_OUTLAST_PREDECESSOR_WORLD_HASH =
   OVERWORLD_CRISIS_PRIORITY_WORLD_HASH;
+const OVERWORLD_FORTIFY_OUTLAST_PREDECESSOR_JUNE_BASE_CONTACT = Object.freeze({
+  id: "talk:albany_city__transport_hub__june_pike",
+  kind: "contact" as const,
+  title: "Talked to June Pike",
+  text: "June Pike checks a cattle rope, hooded lantern, and one empty field seat beside Hayden Hale's Wolf-Winter packet. June will ride only with cattle-first authority of her own. She offers one herd-pressure intervention after a bloodless recovery, not another spear, and remains in Albany if that condition is refused.",
+});
+const OVERWORLD_FORTIFY_OUTLAST_PREDECESSOR_ALLY_OFFER = Object.freeze({
+  id: "ally_offer:albany:wolf_ally_commitment",
+  kind: "ally_offer" as const,
+  title: "Choose the Wolf-Winter Field Team",
+  text: "June Pike has one Road-Warden field seat beside Hayden's outgoing packet. She can ride with you, but only under a named division of authority; leaving without that agreement sends the relief rider alone and does not delay the dispatch. Capability: On a bloodless living-pack line, June can leave the wolf line at the final byre threshold and take the cattle line once: she lowers cattle alarm after a recovered lure or opens the lower swing gate during a committed drive. Condition: June keeps cattle-first authority. She will not become an extra hunter, and the first wolf killed ends her place on the field team.",
+});
+const OVERWORLD_FORTIFY_OUTLAST_PREDECESSOR_JUNE_SELECTION = Object.freeze({
+  id: "ally:albany:wolf_ally_commitment:albany:ally_june_cattle_first",
+  kind: "ally" as const,
+  title: "Field team: Grant June Cattle-First Authority",
+  text: "Ask June Pike to ride as an independent Road-Warden ally. The briefing takes 15 minutes. June joins the field team and records your promise that she chooses the cattle line if a recovered lure leaves the herd pressing or a committed drive reaches the final threshold. Her help is one pressure intervention, never a combat bonus; any wolf death ends the agreement. Actual cost: 15 minutes. June signs beside your name, takes the second field seat, and remembers that you granted rather than merely borrowed her authority.",
+});
+const OVERWORLD_FORTIFY_OUTLAST_PREDECESSOR_JUNE_JOINED_CONTACT = Object.freeze({
+  id: "talk:albany_city__transport_hub__june_pike@joined_wolf_cattle_first",
+  kind: "contact" as const,
+  title: "Talked to June Pike",
+  text: "June has signed the Wolf-Winter field line beside your name and remembers that cattle-first authority was granted explicitly. She will take the cattle line once after a failed lure is recovered alive or when a committed drive reaches its final threshold, but the first wolf killed ends her place on the team.",
+});
+const OVERWORLD_FORTIFY_OUTLAST_PREDECESSOR_WORLD_RULE_IDS: ReadonlySet<string> = new Set([
+  "albany:wolf_works_fortification_return_resupply",
+  "albany:wolf_drover_route_return_rest",
+  "albany:wolf_relief_protocol_return_resupply",
+  "albany:wolf_live_pack_greenway_resupply",
+  "albany:wolf_drive_reserve_returned_station_rest",
+  "albany:wolf_drive_whole_herd_greenway_resupply",
+  "albany:june_kept_line_station_resupply",
+  "albany:june_relay_refusal_station_rest",
+  "albany:wolf_saved_timber_quick_resupply",
+  "albany:wolf_barred_gate_quick_rest",
+  "albany:dawn_wagon_solo_packet_resupply",
+  "albany:dawn_wardens_greenway_rest",
+]);
+const OVERWORLD_FORTIFY_OUTLAST_PREDECESSOR_DAWN_WAGON_SERVICE = Object.freeze({
+  id: "albany:dawn_wagon_solo_packet_resupply",
+  summary:
+    "Because you assigned the dawn wagon to rebuild Cade's outer line, Jamie Tanner holds a one-time Market road-store credit for carrying Hedrick's packet alone.",
+});
+const OVERWORLD_FORTIFY_OUTLAST_PREDECESSOR_WOLF_OUTCOME_IDS: ReadonlySet<string> = new Set([
+  "ending_pack_diverted_after_blood",
+  "ending_pack_diverted_cattle_scattered",
+  "ending_pack_diverted",
+  "ending_drive_cattle_wounded",
+  "ending_drive_person_cattle_lost",
+  "ending_drive_reserve_spent",
+  "ending_held_gate_barred",
+  "ending_held_timber_saved",
+  "ending_held",
+]);
+export const OVERWORLD_FORTIFY_OUTLAST_WORLD_HASH =
+  "abd3b623a502b688a501bceae68994a4eb0e591d450420b5093532b5dae22179";
+/** @deprecated Preparation-era current-target name retained for callers. */
+export const OVERWORLD_OPENING_PREPARATION_WORLD_HASH = OVERWORLD_FORTIFY_OUTLAST_WORLD_HASH;
+export const OVERWORLD_OPENING_PREPARATION_MIGRATION_TARGET_WORLD_HASH =
+  OVERWORLD_FORTIFY_OUTLAST_WORLD_HASH;
 /** @deprecated Lead-source target name retained as the current-target alias. */
 export const OVERWORLD_OPENING_LEAD_SOURCE_MIGRATION_TARGET_WORLD_HASH =
   OVERWORLD_OPENING_PREPARATION_MIGRATION_TARGET_WORLD_HASH;
@@ -237,6 +301,7 @@ const OVERWORLD_OPENING_PREPARATION_TRUSTED_LEGACY_WORLD_HASHES: ReadonlySet<str
 ]);
 
 type TrustedMigrationEra =
+  | "fortify_outlast"
   | "crisis_priority"
   | "opening_ally"
   | "opening_preparation"
@@ -265,15 +330,17 @@ function normalizeCrisisPriorityPredecessorAllyJournalCopy(args: {
         ? repeatedContact[1]!
         : entry.id;
     const predecessor =
-      canonicalEntryId === OVERWORLD_CRISIS_PRIORITY_PREDECESSOR_ALLY_OFFER.id
-        ? OVERWORLD_CRISIS_PRIORITY_PREDECESSOR_ALLY_OFFER
-        : canonicalEntryId === OVERWORLD_CRISIS_PRIORITY_PREDECESSOR_JUNE_SELECTION.id
-          ? OVERWORLD_CRISIS_PRIORITY_PREDECESSOR_JUNE_SELECTION
-          : canonicalEntryId === OVERWORLD_CRISIS_PRIORITY_PREDECESSOR_JUNE_JOINED_CONTACT.id
-            ? OVERWORLD_CRISIS_PRIORITY_PREDECESSOR_JUNE_JOINED_CONTACT
-            : canonicalEntryId === OVERWORLD_CRISIS_PRIORITY_PREDECESSOR_JUNE_LEFT_CONTACT.id
-              ? OVERWORLD_CRISIS_PRIORITY_PREDECESSOR_JUNE_LEFT_CONTACT
-              : null;
+      canonicalEntryId === OVERWORLD_CRISIS_PRIORITY_PREDECESSOR_JUNE_BASE_CONTACT.id
+        ? OVERWORLD_CRISIS_PRIORITY_PREDECESSOR_JUNE_BASE_CONTACT
+        : canonicalEntryId === OVERWORLD_CRISIS_PRIORITY_PREDECESSOR_ALLY_OFFER.id
+          ? OVERWORLD_CRISIS_PRIORITY_PREDECESSOR_ALLY_OFFER
+          : canonicalEntryId === OVERWORLD_CRISIS_PRIORITY_PREDECESSOR_JUNE_SELECTION.id
+            ? OVERWORLD_CRISIS_PRIORITY_PREDECESSOR_JUNE_SELECTION
+            : canonicalEntryId === OVERWORLD_CRISIS_PRIORITY_PREDECESSOR_JUNE_JOINED_CONTACT.id
+              ? OVERWORLD_CRISIS_PRIORITY_PREDECESSOR_JUNE_JOINED_CONTACT
+              : canonicalEntryId === OVERWORLD_CRISIS_PRIORITY_PREDECESSOR_JUNE_LEFT_CONTACT.id
+                ? OVERWORLD_CRISIS_PRIORITY_PREDECESSOR_JUNE_LEFT_CONTACT
+                : null;
     if (predecessor === null) return entry;
     if (
       entry.title !== predecessor.title ||
@@ -296,6 +363,106 @@ function normalizeCrisisPriorityPredecessorAllyJournalCopy(args: {
       );
     }
     return Object.freeze({ ...entry, title: current.title, text: current.text });
+  });
+}
+
+function normalizeFortifyOutlastPredecessorAllyJournalCopy(args: {
+  currentContacts: ReadonlyMap<string, Readonly<{ id: string; text: string; title: string }>>;
+  currentJuneSelection: Readonly<{ id: string; text: string; title: string }>;
+  currentOffer: Readonly<{ id: string; text: string; title: string }>;
+  journalEntries: readonly OverworldJournalEntry[];
+}): OverworldJournalEntry[] {
+  return args.journalEntries.map((entry) => {
+    const repeatedContact = /^(.*):(\d+)$/.exec(entry.id);
+    const canonicalEntryId =
+      repeatedContact !== null && Number(repeatedContact[2]) === parseTimeLabel(entry.recordedAt)
+        ? repeatedContact[1]!
+        : entry.id;
+    const predecessor =
+      canonicalEntryId === OVERWORLD_FORTIFY_OUTLAST_PREDECESSOR_JUNE_BASE_CONTACT.id
+        ? OVERWORLD_FORTIFY_OUTLAST_PREDECESSOR_JUNE_BASE_CONTACT
+        : canonicalEntryId === OVERWORLD_FORTIFY_OUTLAST_PREDECESSOR_ALLY_OFFER.id
+          ? OVERWORLD_FORTIFY_OUTLAST_PREDECESSOR_ALLY_OFFER
+          : canonicalEntryId === OVERWORLD_FORTIFY_OUTLAST_PREDECESSOR_JUNE_SELECTION.id
+            ? OVERWORLD_FORTIFY_OUTLAST_PREDECESSOR_JUNE_SELECTION
+            : canonicalEntryId === OVERWORLD_FORTIFY_OUTLAST_PREDECESSOR_JUNE_JOINED_CONTACT.id
+              ? OVERWORLD_FORTIFY_OUTLAST_PREDECESSOR_JUNE_JOINED_CONTACT
+              : null;
+    if (predecessor === null) return entry;
+    if (
+      entry.title !== predecessor.title ||
+      entry.text !== predecessor.text ||
+      entry.kind !== predecessor.kind
+    ) {
+      throw new Error(
+        `Fortify-outlast predecessor ally journal entry "${entry.id}" does not match its exact F10 authored copy.`,
+      );
+    }
+    const current =
+      canonicalEntryId === OVERWORLD_FORTIFY_OUTLAST_PREDECESSOR_ALLY_OFFER.id
+        ? args.currentOffer
+        : canonicalEntryId === OVERWORLD_FORTIFY_OUTLAST_PREDECESSOR_JUNE_SELECTION.id
+          ? args.currentJuneSelection
+          : args.currentContacts.get(canonicalEntryId);
+    if (current?.id !== canonicalEntryId) {
+      throw new Error(
+        `Fortify-outlast predecessor ally journal entry "${entry.id}" has no current authored counterpart.`,
+      );
+    }
+    return Object.freeze({ ...entry, title: current.title, text: current.text });
+  });
+}
+
+function normalizePreFortifyAlbanyWagonJournalTitle(
+  journalEntries: readonly OverworldJournalEntry[],
+): OverworldJournalEntry[] {
+  return journalEntries.map((entry) => {
+    if (
+      entry.kind !== "campaign" ||
+      !/^campaign_goal:\d+:carry_hedricks_packet_north$/.test(entry.id)
+    ) {
+      return entry;
+    }
+    if (entry.title === "Send the wagon and wardens north") {
+      return entry;
+    }
+    if (entry.title !== "Send the wagon to rebuild Cade's outer line") {
+      throw new Error(
+        `Fortify-outlast predecessor campaign journal entry "${entry.id}" does not match its exact pre-F11 authored title.`,
+      );
+    }
+    return Object.freeze({ ...entry, title: "Send the wagon back to Cade" });
+  });
+}
+
+function normalizePreFortifyDawnWagonServiceJournalCopy(args: {
+  indexes: OverworldSnapshotManifestIndex;
+  journalEntries: readonly OverworldJournalEntry[];
+}): OverworldJournalEntry[] {
+  const currentRule = args.indexes.campaignServiceRulesById.get(
+    OVERWORLD_FORTIFY_OUTLAST_PREDECESSOR_DAWN_WAGON_SERVICE.id,
+  );
+  if (!currentRule) {
+    throw new Error("Fortify-outlast migration target has no dawn-wagon campaign service.");
+  }
+  const predecessorPrefix = `${OVERWORLD_FORTIFY_OUTLAST_PREDECESSOR_DAWN_WAGON_SERVICE.summary} `;
+  const currentPrefix = `${currentRule.summary.trim()} `;
+  return args.journalEntries.map((entry) => {
+    if (
+      entry.kind !== "service" ||
+      entry.serviceRuleId !== OVERWORLD_FORTIFY_OUTLAST_PREDECESSOR_DAWN_WAGON_SERVICE.id
+    ) {
+      return entry;
+    }
+    if (!entry.text.startsWith(predecessorPrefix)) {
+      throw new Error(
+        `Fortify-outlast predecessor service journal entry "${entry.id}" does not match its exact pre-F11 authored summary.`,
+      );
+    }
+    return Object.freeze({
+      ...entry,
+      text: `${currentPrefix}${entry.text.slice(predecessorPrefix.length)}`,
+    });
   });
 }
 
@@ -994,45 +1161,64 @@ export function planOverworldSessionSnapshotRestore(args: {
       `Overworld session snapshot is for world "${sourceSnapshot.worldId}", not "${worldId}".`,
     );
   }
-  const migrationTargetsCurrentManifest = worldHash === OVERWORLD_CRISIS_PRIORITY_WORLD_HASH;
+  const migrationTargetsCurrentManifest = worldHash === OVERWORLD_FORTIFY_OUTLAST_WORLD_HASH;
   const migrationEra: TrustedMigrationEra =
     !migrationTargetsCurrentManifest || sourceSnapshot.worldHash === worldHash
       ? null
-      : sourceSnapshot.worldHash === OVERWORLD_CRISIS_PRIORITY_PREDECESSOR_WORLD_HASH
-        ? "crisis_priority"
-        : sourceSnapshot.worldHash === OVERWORLD_OPENING_ALLY_PREDECESSOR_WORLD_HASH
-          ? "opening_ally"
-          : sourceSnapshot.worldHash === OVERWORLD_OPENING_PREPARATION_PREDECESSOR_WORLD_HASH
-            ? "opening_preparation"
-            : sourceSnapshot.worldHash === OVERWORLD_CAMPAIGN_SERVICE_WORLD_HASH
-              ? "campaign_service"
-              : sourceSnapshot.worldHash === OVERWORLD_OPENING_LEAD_SOURCE_WORLD_HASH
-                ? "opening_lead_source"
-                : OVERWORLD_OPENING_REGISTRATION_TRUSTED_PREDECESSOR_WORLD_HASHES.has(
-                      sourceSnapshot.worldHash,
-                    )
-                  ? "pre_registration"
-                  : sourceSnapshot.worldHash === OVERWORLD_OPENING_REGISTRATION_WORLD_HASH
-                    ? "opening_registration"
-                    : null;
+      : sourceSnapshot.worldHash === OVERWORLD_FORTIFY_OUTLAST_PREDECESSOR_WORLD_HASH
+        ? "fortify_outlast"
+        : sourceSnapshot.worldHash === OVERWORLD_CRISIS_PRIORITY_PREDECESSOR_WORLD_HASH
+          ? "crisis_priority"
+          : sourceSnapshot.worldHash === OVERWORLD_OPENING_ALLY_PREDECESSOR_WORLD_HASH
+            ? "opening_ally"
+            : sourceSnapshot.worldHash === OVERWORLD_OPENING_PREPARATION_PREDECESSOR_WORLD_HASH
+              ? "opening_preparation"
+              : sourceSnapshot.worldHash === OVERWORLD_CAMPAIGN_SERVICE_WORLD_HASH
+                ? "campaign_service"
+                : sourceSnapshot.worldHash === OVERWORLD_OPENING_LEAD_SOURCE_WORLD_HASH
+                  ? "opening_lead_source"
+                  : OVERWORLD_OPENING_REGISTRATION_TRUSTED_PREDECESSOR_WORLD_HASHES.has(
+                        sourceSnapshot.worldHash,
+                      )
+                    ? "pre_registration"
+                    : sourceSnapshot.worldHash === OVERWORLD_OPENING_REGISTRATION_WORLD_HASH
+                      ? "opening_registration"
+                      : null;
   if (sourceSnapshot.worldHash !== worldHash && migrationEra === null) {
     throw new Error("Overworld session snapshot was made against a different world manifest.");
   }
+  const snapshotWithCampaignCopy =
+    migrationEra === null
+      ? sourceSnapshot
+      : Object.freeze({
+          ...sourceSnapshot,
+          journalEntries: normalizePreFortifyDawnWagonServiceJournalCopy({
+            indexes,
+            journalEntries: normalizePreFortifyAlbanyWagonJournalTitle(
+              sourceSnapshot.journalEntries,
+            ),
+          }),
+        });
   const snapshot =
-    migrationEra === "crisis_priority"
+    migrationEra === "fortify_outlast" || migrationEra === "crisis_priority"
       ? (() => {
           if (indexes.openingAlly === null) {
-            throw new Error("Crisis-priority migration target has no opening ally scene.");
+            throw new Error("Fortify-outlast migration target has no opening ally scene.");
           }
           const currentContacts = new Map(
             [
-              OVERWORLD_CRISIS_PRIORITY_PREDECESSOR_JUNE_JOINED_CONTACT.id,
-              OVERWORLD_CRISIS_PRIORITY_PREDECESSOR_JUNE_LEFT_CONTACT.id,
+              ...new Set([
+                OVERWORLD_CRISIS_PRIORITY_PREDECESSOR_JUNE_BASE_CONTACT.id,
+                OVERWORLD_CRISIS_PRIORITY_PREDECESSOR_JUNE_JOINED_CONTACT.id,
+                OVERWORLD_CRISIS_PRIORITY_PREDECESSOR_JUNE_LEFT_CONTACT.id,
+                OVERWORLD_FORTIFY_OUTLAST_PREDECESSOR_JUNE_BASE_CONTACT.id,
+                OVERWORLD_FORTIFY_OUTLAST_PREDECESSOR_JUNE_JOINED_CONTACT.id,
+              ]),
             ].map((journalId) => {
               const presentation = indexes.contactPresentationsByJournalId.get(journalId);
               if (!presentation) {
                 throw new Error(
-                  `Crisis-priority migration target has no contact presentation "${journalId}".`,
+                  `Fortify-outlast migration target has no contact presentation "${journalId}".`,
                 );
               }
               return [
@@ -1041,7 +1227,7 @@ export function planOverworldSessionSnapshotRestore(args: {
               ] as const;
             }),
           );
-          const journalEntries = normalizeCrisisPriorityPredecessorAllyJournalCopy({
+          const normalizerArgs = {
             currentContacts,
             currentOffer: openingAllyOfferJournalDraft(indexes.openingAlly),
             currentJuneSelection: openingAllyJournalDraft({
@@ -1049,11 +1235,15 @@ export function planOverworldSessionSnapshotRestore(args: {
               character: createInitialCampaignCharacterState(),
               optionId: "albany:ally_june_cattle_first",
             }),
-            journalEntries: sourceSnapshot.journalEntries,
-          });
-          return Object.freeze({ ...sourceSnapshot, journalEntries });
+            journalEntries: snapshotWithCampaignCopy.journalEntries,
+          };
+          const journalEntries =
+            migrationEra === "fortify_outlast"
+              ? normalizeFortifyOutlastPredecessorAllyJournalCopy(normalizerArgs)
+              : normalizeCrisisPriorityPredecessorAllyJournalCopy(normalizerArgs);
+          return Object.freeze({ ...snapshotWithCampaignCopy, journalEntries });
         })()
-      : sourceSnapshot;
+      : snapshotWithCampaignCopy;
   const migratesPreCampaignExportsWorldHash =
     migrationEra === "pre_registration" &&
     snapshot.worldHash === OVERWORLD_PRE_CAMPAIGN_EXPORTS_WORLD_HASH;
@@ -1139,11 +1329,13 @@ export function planOverworldSessionSnapshotRestore(args: {
     }
   }
   const trustedPredecessorWolfOutcomeIds =
-    migrationEra === "crisis_priority"
-      ? OVERWORLD_CRISIS_PRIORITY_PREDECESSOR_WOLF_OUTCOME_IDS
-      : migrationEra === "opening_ally" || migrationEra === "opening_preparation"
-        ? OVERWORLD_OPENING_PREPARATION_WORLD_WOLF_OUTCOME_IDS
-        : OVERWORLD_CAMPAIGN_SERVICE_WORLD_WOLF_OUTCOME_IDS;
+    migrationEra === "fortify_outlast"
+      ? OVERWORLD_FORTIFY_OUTLAST_PREDECESSOR_WOLF_OUTCOME_IDS
+      : migrationEra === "crisis_priority"
+        ? OVERWORLD_CRISIS_PRIORITY_PREDECESSOR_WOLF_OUTCOME_IDS
+        : migrationEra === "opening_ally" || migrationEra === "opening_preparation"
+          ? OVERWORLD_OPENING_PREPARATION_WORLD_WOLF_OUTCOME_IDS
+          : OVERWORLD_CAMPAIGN_SERVICE_WORLD_WOLF_OUTCOME_IDS;
   if (
     migrationEra !== null &&
     [...questOutcomeIds].some(
@@ -1188,13 +1380,15 @@ export function planOverworldSessionSnapshotRestore(args: {
     travelLogTownByArrival: travelTimeline.townByArrival,
   });
   const trustedPredecessorServiceRuleIds =
-    migrationEra === "crisis_priority"
-      ? OVERWORLD_CRISIS_PRIORITY_PREDECESSOR_WORLD_RULE_IDS
-      : migrationEra === "opening_ally" || migrationEra === "opening_preparation"
-        ? OVERWORLD_OPENING_PREPARATION_WORLD_RULE_IDS
-        : migrationEra === "campaign_service"
-          ? OVERWORLD_CAMPAIGN_SERVICE_WORLD_RULE_IDS
-          : null;
+    migrationEra === "fortify_outlast"
+      ? OVERWORLD_FORTIFY_OUTLAST_PREDECESSOR_WORLD_RULE_IDS
+      : migrationEra === "crisis_priority"
+        ? OVERWORLD_CRISIS_PRIORITY_PREDECESSOR_WORLD_RULE_IDS
+        : migrationEra === "opening_ally" || migrationEra === "opening_preparation"
+          ? OVERWORLD_OPENING_PREPARATION_WORLD_RULE_IDS
+          : migrationEra === "campaign_service"
+            ? OVERWORLD_CAMPAIGN_SERVICE_WORLD_RULE_IDS
+            : null;
   if (
     trustedPredecessorServiceRuleIds !== null &&
     snapshot.journalEntries.some(
@@ -1209,6 +1403,7 @@ export function planOverworldSessionSnapshotRestore(args: {
   }
   if (
     migrationEra !== null &&
+    migrationEra !== "fortify_outlast" &&
     migrationEra !== "crisis_priority" &&
     migrationEra !== "opening_ally" &&
     migrationEra !== "opening_preparation" &&
@@ -1223,6 +1418,7 @@ export function planOverworldSessionSnapshotRestore(args: {
   }
   if (
     migrationEra !== null &&
+    migrationEra !== "fortify_outlast" &&
     migrationEra !== "crisis_priority" &&
     migrationEra !== "opening_ally" &&
     migrationEra !== "opening_preparation" &&
@@ -1322,6 +1518,7 @@ export function planOverworldSessionSnapshotRestore(args: {
       true;
   if (
     migrationEra !== null &&
+    migrationEra !== "fortify_outlast" &&
     migrationEra !== "crisis_priority" &&
     migrationEra !== "opening_ally" &&
     migrationEra !== "opening_preparation" &&
@@ -1353,12 +1550,15 @@ export function planOverworldSessionSnapshotRestore(args: {
     targetLeadQuestId !== null &&
     (startedQuestIds.has(targetLeadQuestId) || completedQuestIds.has(targetLeadQuestId));
   const leadDiscoveryDeferredToPreparation =
-    (migrationEra === null || migrationEra === "crisis_priority") &&
+    (migrationEra === null ||
+      migrationEra === "fortify_outlast" ||
+      migrationEra === "crisis_priority") &&
     indexes.openingPreparation !== null &&
     indexes.openingPreparation.after_lead_source === indexes.openingLeadSource?.id &&
     indexes.openingPreparation.target_quest === targetLeadQuestId;
   const hasLeadSourceManifestEvidence =
     migrationEra === null ||
+    migrationEra === "fortify_outlast" ||
     migrationEra === "crisis_priority" ||
     migrationEra === "opening_ally" ||
     migrationEra === "opening_preparation" ||
@@ -1469,6 +1669,7 @@ export function planOverworldSessionSnapshotRestore(args: {
         true);
   if (
     migrationEra !== null &&
+    migrationEra !== "fortify_outlast" &&
     migrationEra !== "crisis_priority" &&
     migrationEra !== "opening_ally" &&
     (hasOpeningPreparationEvidence || hasOpeningPreparationDecisionEvidence)
@@ -1494,7 +1695,9 @@ export function planOverworldSessionSnapshotRestore(args: {
   });
   const preparationRequiredByCurrentManifest =
     indexes.openingPreparation !== null &&
-    (migrationEra === null || migrationEra === "crisis_priority");
+    (migrationEra === null ||
+      migrationEra === "fortify_outlast" ||
+      migrationEra === "crisis_priority");
   const targetPreparationQuestId = indexes.openingPreparation?.target_quest ?? null;
   const targetPreparationQuestProgressed =
     targetPreparationQuestId !== null &&
@@ -1612,6 +1815,7 @@ export function planOverworldSessionSnapshotRestore(args: {
   const openingAllyContact = indexes.openingAlly?.contact ?? null;
   if (
     migrationEra !== null &&
+    migrationEra !== "fortify_outlast" &&
     migrationEra !== "crisis_priority" &&
     (hasOpeningAllyEvidence ||
       hasOpeningAllyDecisionEvidence ||
@@ -1727,6 +1931,7 @@ export function planOverworldSessionSnapshotRestore(args: {
       questOutcomeIds,
       requireBoundServiceFacts:
         migrationEra === null ||
+        migrationEra === "fortify_outlast" ||
         migrationEra === "crisis_priority" ||
         migrationEra === "opening_ally" ||
         migrationEra === "opening_preparation" ||
@@ -2023,6 +2228,7 @@ export function planOverworldSessionSnapshotRestore(args: {
   }
   const canGrandfatherOpeningPreparation =
     migrationEra !== null &&
+    migrationEra !== "fortify_outlast" &&
     migrationEra !== "crisis_priority" &&
     migrationEra !== "opening_ally" &&
     indexes.openingPreparation !== null &&
@@ -2033,6 +2239,7 @@ export function planOverworldSessionSnapshotRestore(args: {
     OVERWORLD_OPENING_PREPARATION_TRUSTED_LEGACY_WORLD_HASHES.has(snapshot.worldHash);
   const canOfferMigratedPreparation =
     migrationEra !== null &&
+    migrationEra !== "fortify_outlast" &&
     migrationEra !== "crisis_priority" &&
     migrationEra !== "opening_ally" &&
     indexes.openingPreparation !== null &&
@@ -2073,6 +2280,7 @@ export function planOverworldSessionSnapshotRestore(args: {
   }
   if (
     migrationEra !== null &&
+    migrationEra !== "fortify_outlast" &&
     migrationEra !== "crisis_priority" &&
     migrationEra !== "opening_ally" &&
     indexes.openingPreparation !== null &&

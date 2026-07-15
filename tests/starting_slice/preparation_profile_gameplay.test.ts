@@ -305,8 +305,10 @@ describe("SS-F05 — Albany preparation profile gameplay", () => {
     });
   });
 
-  it("adds three drive outcomes while preserving the prior six and death identity", () => {
+  it("adds two fortify outcomes while preserving every prior nondeath and death identity", () => {
     expect(pack.endings.map((ending) => ending.id)).toEqual([
+      "ending_fortified_cade_terms",
+      "ending_fortified_albany_authority",
       "ending_drive_cattle_wounded",
       "ending_drive_person_cattle_lost",
       "ending_drive_reserve_spent",

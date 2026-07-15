@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 564 -->
+<!-- historical_cycle_count: 565 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,15 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - wolf_winter_fortify_outlast
+
+- Evidence choice: `SS-F08-cade-trust` plus `fortify_and_outlast` was the next defining-slice gap because Wolf-Winter still lacked its fourth complete strategy family and Cade's promised consent/authority conduct fork had no mechanics.
+- Surface: Cade now discloses a hard household-terms versus Albany-authority commitment with mutually exclusive finite shutters/seals, outer-property/public-stock costs, one-shot Repair, stance-owned no-retry recovery, three spatial beats, visible Winter Siege pressure, zero combat, and June's independent cattle brace. Both lines keep the whole herd and all three wolves alive, then export exclusive facts, Cade/Hayden/June memories, truthful dispatches, and one-use Station services.
+- Integrity/counterfactual: same-boundary paired rolls reverse resource, legal recovery, property, relief stock, memories, and service while clean/failure runs share only two outcome families. Exact F10 migration accepts all 9 outcomes/12 services plus old June/wagon/service copy and rejects both F11 endings/services or current copy relabeled backward; full/compact/UI save, foldback, consumption, and ≤45 first-goal proofs are green. The ledger advances 8/12→9/12 and 3/4→4/4 strategy families.
+- Pure evidence: seed 2715 verified pure/fresh, chose Road-Warden + Hayden + Emery and combat, completed Wolf-Winter at decision 28, continued at 28/40/54/75/80, and ended voluntarily after four goals at 97; clarity/enjoyment 5/5, stuck false, replay true. It noted only S0 recurring cross-town NPC names and strategy-preview clarity; deterministic tests carry unsampled fortification.
+- Compile/self-critique: only this verified report is new since compile `20260715T120239Z`, so no compile is due. PASS for F08 and the fourth family, not the greater-than-BG3 slice claim: 9/12 forks are proven; three forks, numeric/fleet certification, and publication remain.
+- Guard: two adversarial audits closed Hammering-copy, hard-lock, migration symmetry, memory/prose, stale-ledger, and false wagon-service gaps. Unchanged-cap ending/action 29/29, liveness 17/17, and score/metamorphic 45/45 passed; post-crawl `20260715T152355Z` reached 247/247 nodes, 344/344 edges, and 12/12 quests; health passed 352 files/2,579 tests, UI, and all 12 packs.
 
 ### Cycle result - wolf_winter_crisis_priority
 
@@ -135,12 +144,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Pure evidence: verified pure/fresh seed 2524 completed Wolf-Winter, Gallowmere, and Tanner's Fever, continued at decisions 22/40/47, then ended honestly at goal 3 on 74; clarity 5/5, enjoyment 4/5, replay true, no rejects/stuck/timeout. Its exact report copy is hash `852669aa7725`.
 - Compile/self-critique: ledger 466/30 rejected; 17 v3 pure exits all continued at least once (75 continue/17 end, mean 94.71 decisions). PASS for a real Weir sacrifice and checkpoint parity, not retention uplift—the valid player stopped before Weir, seed 2522 remains rejected evidence, and long-haul travel/resource thresholds remain the fresh friction.
 - Guard: pre/final crawls `20260712T164013Z`/`20260712T174925Z` covered 6,000 steps and 247/247 nodes; focused 94-test plus pure-server/variant/structural proofs, exact report copy, and full health passed.
-
-### Cycle result - breaking_weir_next_adventure_choice
-
-- Root evidence: eight verified pure players completed The Breaking Weir and seven ended there; the sole continuer received the fixed Advocate's Case after four similarly sequenced quest arcs. This made a macro-agency experiment the strongest scoped retention correction, with explicitly moderate causal confidence because exits described a satisfying session close (`bug_0517`).
-- Surface: Breaking Weir's honest Continue/End choice remains first and now previews two distinct live premises. Continue reveals an Oswego legal/social versus Greece lethal/exploration choice; either selected-first goal records one meaningful decision and consequence journal, while the unchosen lead stays live and follows only after the selected quest completes.
-- Compatibility/privacy: new selected-first ids preserve legacy Oswego/Greece v8 goal and journal proof exactly. MCP tool discovery now accepts a generic currently visible choice string instead of leaking all future semantic option ids; runtime, UI, full MCP, compact MCP, save/restore, and blocked-action behavior agree.
-- Pure evidence: verified pure/fresh seed 2421 completed Wolf-Winter, Gallowmere, Tanner's Fever, and Breaking Weir in 96 accepted decisions (128 agent turns), understood the two-lead teaser, then honestly ended before consent at goal 4; clarity 4/5, enjoyment 5/5, replay true, no rejects/stuck/timeout.
-- Compile/self-critique: ledger 465/30 rejected is two reports beyond the 463-report compile, below the ≥3 threshold. PASS for real next-adventure ownership and secrecy, not retention uplift: post-change continuation is 0/1 and aggregate Breaking-Weir continuation is 1/9; an owned in-quest flood consequence and Tanner's first-observation Holt prose are next evidence-backed debts.
-- Guard: pre/post crawls `20260712T154852Z`/`20260712T161358Z` covered 6,000 steps and 247/247 nodes; exact seed-2421 report copy, focused 157-test suite, and full health (307 files/2,174 tests, UI, 12 packs) passed.

@@ -18,6 +18,12 @@ const TIMBER_SERVICE_RULE_ID = "albany:wolf_saved_timber_quick_resupply";
 const WAGON_SERVICE_RULE_ID = "albany:dawn_wagon_solo_packet_resupply";
 const LIVE_PACK_SERVICE_RULE_ID = "albany:wolf_live_pack_greenway_resupply";
 const TARGET_QUEST = "wolf_winter";
+const CURRENT_DAWN_WAGON_JOURNAL_TITLE = "Send the wagon back to Cade";
+const PRE_F11_DAWN_WAGON_JOURNAL_TITLE = "Send the wagon to rebuild Cade's outer line";
+const CURRENT_DAWN_WAGON_SERVICE_SUMMARY =
+  "Because you sent the dawn wagon back to Cade and carried Hedrick's packet north alone, Jamie Tanner holds a one-time Market road-store credit.";
+const PRE_F11_DAWN_WAGON_SERVICE_SUMMARY =
+  "Because you assigned the dawn wagon to rebuild Cade's outer line, Jamie Tanner holds a one-time Market road-store credit for carrying Hedrick's packet alone.";
 const STARTED_742_FIXTURE = JSON.parse(
   readFileSync(
     join(process.cwd(), "tests", "regression", "fixtures", "campaign_service_742_started.json"),
@@ -57,9 +63,34 @@ function snapshotAsPredecessor(
 ): ReturnType<OverworldSession["snapshot"]> {
   const predecessor = session.snapshot();
   predecessor.worldHash = worldHash;
-  predecessor.journalEntries = predecessor.journalEntries.filter(
-    (entry) => entry.kind !== "preparation_legacy",
-  );
+  predecessor.journalEntries = predecessor.journalEntries
+    .filter((entry) => entry.kind !== "preparation_legacy")
+    .map((entry) => {
+      if (
+        entry.kind === "campaign" &&
+        /^campaign_goal:\d+:carry_hedricks_packet_north$/.test(entry.id)
+      ) {
+        if (entry.title !== CURRENT_DAWN_WAGON_JOURNAL_TITLE) {
+          throw new Error(
+            `expected the current dawn-wagon journal title, received "${entry.title}"`,
+          );
+        }
+        return { ...entry, title: PRE_F11_DAWN_WAGON_JOURNAL_TITLE };
+      }
+
+      if (entry.kind === "service" && entry.serviceRuleId === WAGON_SERVICE_RULE_ID) {
+        const currentPrefix = `${CURRENT_DAWN_WAGON_SERVICE_SUMMARY} `;
+        if (!entry.text.startsWith(currentPrefix)) {
+          throw new Error(`expected the current dawn-wagon service summary in "${entry.id}"`);
+        }
+        return {
+          ...entry,
+          text: `${PRE_F11_DAWN_WAGON_SERVICE_SUMMARY} ${entry.text.slice(currentPrefix.length)}`,
+        };
+      }
+
+      return entry;
+    });
   return predecessor;
 }
 
@@ -174,8 +205,10 @@ describe("campaign service predecessor migration integrity", () => {
   });
 
   it("rejects a current-only Wolf outcome relabeled as predecessor evidence", () => {
-    const predecessor = livePackReturnBeforeService().snapshot();
-    predecessor.worldHash = OVERWORLD_CAMPAIGN_SERVICE_WORLD_HASH;
+    const predecessor = snapshotAsPredecessor(
+      livePackReturnBeforeService(),
+      OVERWORLD_CAMPAIGN_SERVICE_WORLD_HASH,
+    );
 
     expect(() => OverworldSession.restore(WORLD, predecessor)).toThrow(
       /Wolf-Winter quest outcome introduced by a later manifest/i,

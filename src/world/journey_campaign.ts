@@ -185,6 +185,8 @@ export type WolfWinterCampaignOutcome =
   | "drive_cattle_wounded"
   | "drive_person_cattle_lost"
   | "drive_reserve_spent"
+  | "fortified_cade_terms"
+  | "fortified_albany_authority"
   | "gate_barred"
   | "timber_saved"
   | "held";
@@ -231,6 +233,18 @@ export const WOLF_WINTER_CAMPAIGN_OUTCOMES = Object.freeze({
     endingId: "ending_drive_reserve_spent",
     albanyReturnContext:
       "Cade's whole herd and every person escaped the steading, and all three wolves were driven clear alive without a wound at the byre; the spent signal-and-rope rig was cut apart and did not return, and the outer line stands abandoned.",
+  }),
+  ending_fortified_cade_terms: Object.freeze({
+    id: "fortified_cade_terms",
+    endingId: "ending_fortified_cade_terms",
+    albanyReturnContext:
+      "Cade's household and whole herd reached dawn behind his shutters, and all three wolves remain alive beyond the sealed line. You honored his terms and returned Albany's public relief seals unused, but the outer property remained exposed.",
+  }),
+  ending_fortified_albany_authority: Object.freeze({
+    id: "fortified_albany_authority",
+    endingId: "ending_fortified_albany_authority",
+    albanyReturnContext:
+      "Cade's household, whole herd, and outer property reached dawn behind an Albany-sealed line, and all three wolves remain alive beyond it. You invoked lawful Albany authority and spent the public relief seals; Cade refused to help under that order.",
   }),
   ending_held_gate_barred: Object.freeze({
     id: "gate_barred",
@@ -292,6 +306,18 @@ const ALBANY_DAWN_DISPATCH_CONSEQUENCES = Object.freeze({
       "The wagon takes Cade's whole herd from the evacuation road back to repair the abandoned outer line while all three wolves remain alive beyond it; the cut-apart signal-and-rope rig did not return when you take Hedrick's packet north alone.",
     send_wardens_north:
       "The wagon follows Hedrick's report; Cade keeps the whole herd safe on the evacuation road while all three wolves remain alive beyond the abandoned outer line, but the cut-apart signal-and-rope rig did not return.",
+  }),
+  fortified_cade_terms: Object.freeze({
+    send_wagon_to_cade:
+      "The wagon returns to cover Cade's exposed outer property while the household and whole herd remain behind his shutters; Albany's public relief seals came home unused. You take Hedrick's packet north alone.",
+    send_wardens_north:
+      "The wagon follows Hedrick's report; Cade's household and whole herd remain secure behind his shutters, but the outer property stays exposed while Albany's unused public relief seals remain in reserve.",
+  }),
+  fortified_albany_authority: Object.freeze({
+    send_wagon_to_cade:
+      "The wagon checks the outer property you preserved under Albany seal; Cade's household and whole herd remain secure, but the public relief seals were spent and his refusal remains on the return board. You take Hedrick's packet north alone.",
+    send_wardens_north:
+      "The wagon follows Hedrick's report; Cade's household, whole herd, and outer property remain secure under Albany's sealed line, but the public relief seals are spent and Cade refused the recovery hand.",
   }),
   gate_barred: Object.freeze({
     send_wagon_to_cade:
@@ -451,7 +477,7 @@ export function albanyDawnDispatchStoryChoice(
     options: Object.freeze([
       Object.freeze({
         id: "send_wagon_to_cade" as const,
-        label: "Send the wagon to rebuild Cade's outer line",
+        label: "Send the wagon back to Cade",
         consequence: `${consequences.send_wagon_to_cade} ${ALBANY_DAWN_DISPATCH_SERVICE_TERMS.send_wagon_to_cade}`,
       }),
       Object.freeze({

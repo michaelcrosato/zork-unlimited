@@ -61,7 +61,7 @@ meta:
   id: wolf_winter_v1
   title: "The Wolf-Winter"
   start_room: steading_yard
-  vars_init: { hp: 30, attack: 5, defense: 3, fieldcraft: 0, repair: 0, streetwise: 0, mediation: 0, cattle_alarm: 0, pack_drive: 0, drive_kit_charges: 0 }
+  vars_init: { hp: 30, attack: 5, defense: 3, fieldcraft: 0, repair: 0, streetwise: 0, mediation: 0, cattle_alarm: 0, pack_drive: 0, drive_kit_charges: 0, fortification_pressure: 0 }
   flags_init: []
   # The opt-in fairness promise (bug_0114). With this set the validator proves the
   # per-fight UPPER bound for every wolf AND the cumulative-HP bound across the whole
@@ -118,6 +118,25 @@ pressure_tracks:
       - min: 6
         label: "Cleared"
         description: "The chosen evacuation line has separated the living pack from people and cattle; its wound, herd loss, or spent reserve is now fixed."
+  - id: winter_siege
+    title: "Winter siege"
+    var: fortification_pressure
+    bands:
+      - min: 0
+        label: "Unsealed"
+        description: "No fortification line is holding; the pack and weather still have the open byre."
+      - min: 1
+        label: "Testing"
+        description: "The first seal is taking the pack's weight; one threshold line remains before the dawn watch."
+      - min: 2
+        label: "Hammering"
+        description: "The pack is hammering at two fixed pressure steps. The current seal state makes the disclosed first-seat recovery, threshold seal, or dawn watch the next legal beat."
+      - min: 3
+        label: "Strained"
+        description: "A failed first seat left the completed line under harder pressure; dawn must be held without another repair attempt."
+      - min: 6
+        label: "Outlasted"
+        description: "Dawn has broken the siege; the living pack withdraws from people and the whole herd."
 
 rooms:
   - id: steading_yard
@@ -154,7 +173,14 @@ rooms:
       The cattle-byre yard. Old Cade props its door, too stiff for a spear, and turns his
       lantern on the day-book: its last wolf-count is worth reading before you leave the
       yard. Store-shed west. North, a young wolf is through the broken paling; gate south.
-    objects: [day_book, relief_protocol_docket, drive_signal_rope_kit]
+    objects:
+      [
+        day_book,
+        relief_protocol_docket,
+        drive_signal_rope_kit,
+        cade_household_shutters,
+        albany_relief_seals,
+      ]
     # Progress variants are ordered from the deepest completed fight back to the opening
     # clue state. Re-entering this hub must describe the wolves actually left alive; visit
     # history alone handles the steading-yard watch prose without emitting repeat state.
@@ -203,20 +229,34 @@ rooms:
           the store-shed is west. North, the yearling lies dead in the broken paling, but
           the flank-wolf holds the byre door and the grey leader waits deeper in. The yard
           gate is south.
-      - when: [{ has_flag: read_tally }]
+      - when: [{ has_flag: read_tally }, { not_flag: strategy_fortify_committed }]
         text: >
           The trampled byre-yard. Old Cade waits by the day-book where you checked its
           last wolf-count; the open store-shed is west. North, the young wolf is through
           the broken paling, with two wolves deeper by the cattle. The gate is south.
+      - when: [{ has_flag: fortify_cade_terms_accepted }]
+        text: >
+          Cade's two household shutters are committed north: outer seal, threshold seal,
+          then the dawn watch. His smokehouse and outer property stand exposed; Albany's
+          public seals remain untouched. Retreat, preparation, and every other strategy are closed.
+      - when: [{ has_flag: fortify_albany_authority_invoked }]
+        text: >
+          Albany's finite relief seals are committed north: outer seal, threshold seal,
+          then the dawn watch. Cade's property stays covered, but public stock pays and
+          Cade will not aid a failed seat. Retreat, preparation, and other strategies are closed.
     exits:
       - direction: south
         to: steading_yard
-        conditions: [{ not_flag: strategy_drive_committed }]
-        locked_msg: "The committed living drive starts now: with Cade's finite rig, go north. The outer yard does not reopen, and this line cannot switch to combat."
+        conditions:
+          - { not_flag: strategy_drive_committed }
+          - { not_flag: strategy_fortify_committed }
+        locked_msg: "A hard strategy is underway. Go north with its finite resource; the outer yard does not reopen, and this line cannot switch to combat."
       - direction: west
         to: store
-        conditions: [{ not_flag: strategy_drive_committed }]
-        locked_msg: "Store preparation had to be finished before commitment. The living drive now runs north with Cade's finite rig; the store does not reopen, and the strategy cannot change."
+        conditions:
+          - { not_flag: strategy_drive_committed }
+          - { not_flag: strategy_fortify_committed }
+        locked_msg: "Store preparation had to finish before commitment. Go north with the finite drive or fortification resource; the store and other strategies stay closed."
       - direction: north
         to: paling_gap
         conditions:
@@ -224,17 +264,23 @@ rooms:
               - all_of:
                   - { not_flag: strategy_lure_committed }
                   - { not_flag: strategy_drive_committed }
+                  - { not_flag: strategy_fortify_committed }
               - all_of:
                   - { has_flag: strategy_drive_committed }
                   - any_of:
                       - { has_item: drive_signal_rope_kit }
                       - { has_flag: drive_reserve_spent }
               - all_of:
+                  - { has_flag: strategy_fortify_committed }
+                  - any_of:
+                      - { has_item: cade_household_shutters }
+                      - { has_item: albany_relief_seals }
+              - all_of:
                   - { has_item: winter_feed_sack }
                   - { not_flag: yearling_down }
                   - { not_flag: yearling_redirected }
               - { has_flag: flank_redirected }
-        locked_msg: "Take the plan's finite resource: Cade's feed for lure, or two-charge rig for drive. After the lure's first beat, continue west through the store and up to the loft."
+        locked_msg: "Carry the committed plan's finite feed, drive rig, shutters, or seals. After the lure's first beat, continue west through the store and up to the loft."
 
   - id: store
     name: "The Store-Shed"
@@ -337,6 +383,9 @@ rooms:
         drover_route_marks,
         drive_breach_signal,
         drive_hurdle_recovery,
+        fortify_outer_seal,
+        cade_failed_seal_help,
+        authority_emergency_bind,
       ]
     # Reactive prose keeps the lure recovery plus every combat rail state legible.
     # A committed feed line returns through the yard and loft for its second cast;
@@ -543,11 +592,57 @@ rooms:
           The young wolf still holds the broken paling, and the rail you tried to set
           lies split but joined in the snow. There will be no guarded funnel, but use the
           rail again and you can bind a carried splinter guard for the byre door.
+      - when:
+          - { has_flag: fortify_cade_terms_accepted }
+          - { has_flag: fortify_outer_seal_failed }
+          - { not_flag: fortify_outer_sealed }
+        text: >
+          The first household shutter slipped under the pack's weight. That Repair check
+          cannot repeat. Cade has followed under his accepted terms and offers one bracing
+          hand to seat it; the second shutter remains for the byre threshold north.
+      - when:
+          - { has_flag: fortify_albany_authority_invoked }
+          - { has_flag: fortify_outer_seal_failed }
+          - { not_flag: fortify_outer_sealed }
+        text: >
+          The first public seal slipped under the pack's weight. That Repair check cannot
+          repeat, and Cade refuses aid under the authority you invoked. Spend Albany's
+          emergency binding strip here; the threshold seal remains for the door north.
+      - when:
+          - { has_flag: fortify_cade_terms_accepted }
+          - { has_flag: fortify_outer_sealed }
+        text: >
+          Cade's first household shutter holds across the paling while all three wolves
+          remain outside it. Winter siege is visible and rising. Carry the second shutter
+          north to seal the byre threshold; the committed yard stays closed behind you.
+      - when:
+          - { has_flag: fortify_albany_authority_invoked }
+          - { has_flag: fortify_outer_sealed }
+        text: >
+          Albany's first relief seal holds across the paling while all three wolves remain
+          outside it. Winter siege is visible and rising. Carry the remaining public band
+          north to seal the threshold; the committed yard stays closed behind you.
+      - when:
+          - { has_flag: fortify_cade_terms_accepted }
+          - { not_flag: fortify_outer_seal_attempted }
+        text: >
+          All three wolves test the open paling from outside. Seat Cade's first household
+          shutter here once. Reese's Works marks lower the Repair difficulty; a miss cannot
+          retry, but Cade's accepted terms make his bracing hand the recovery.
+      - when:
+          - { has_flag: fortify_albany_authority_invoked }
+          - { not_flag: fortify_outer_seal_attempted }
+        text: >
+          All three wolves test the open paling from outside. Seat Albany's first relief
+          seal here once. Reese's Works marks lower the Repair difficulty; a miss cannot
+          retry, and Cade's refusal leaves one emergency public binding strip as recovery.
     exits:
       - direction: south
         to: byre_yard
-        conditions: [{ not_flag: strategy_drive_committed }]
-        locked_msg: "Complete the paling beat, then take the living yearling north. The hard strategy commitment does not reopen the yard or switch to combat."
+        conditions:
+          - { not_flag: strategy_drive_committed }
+          - { not_flag: strategy_fortify_committed }
+        locked_msg: "Complete the paling beat, then continue north. The hard strategy commitment does not reopen the yard or switch to combat, whether drive or fortification."
       - direction: north
         to: byre_door
         conditions:
@@ -555,10 +650,11 @@ rooms:
               - { has_flag: yearling_down }
               - { has_flag: yearling_redirected }
               - { has_flag: drive_yearling_turned }
+              - { has_flag: fortify_outer_sealed }
           - any_of:
               - { not_flag: strategy_lure_committed }
               - { has_flag: flank_redirected }
-        locked_msg: "Settle the yearling first. On the feed plan, the ground way north then stays shut until the loft cast. Return south to the yard, west into the store, then up."
+        locked_msg: "Settle the yearling or finish the outer seal. On the feed plan, return south, then west and up for the loft cast before the ground way opens."
 
   - id: byre_door
     name: "The Byre Door"
@@ -566,7 +662,7 @@ rooms:
       A flank-wolf circles at the byre door. A prepared rail can guard or funnel; Cade's
       lesson offers a riskier wheel. Without either, only a plain spear exchange remains.
       The committed loft route drops from overhead if chosen. Cattle north; paling south.
-    objects: [drive_threshold_line]
+    objects: [drive_threshold_line, fortify_threshold_seal]
     variants:
       - when:
           - { has_flag: strategy_drive_committed }
@@ -760,16 +856,46 @@ rooms:
           The flank-wolf circles at the byre door, but the rail behind it has narrowed
           the field. Hold it in that guarded funnel with the Albany spear before the
           fight becomes a plain exchange. The paling is south; the dark byre is north.
-      - when: [{ has_flag: heard_counsel }]
+      - when: [{ has_flag: heard_counsel }, { not_flag: strategy_fortify_committed }]
         text: >
           The flank-wolf circles for the off side Cade named. You can wheel into that
           cut for a fast opening and risk your guard before the fight settles into a
           plain spear exchange. The paling is south; the dark byre is north.
+      - when:
+          - { has_flag: fortify_cade_terms_accepted }
+          - { not_flag: fortify_threshold_sealed }
+        text: >
+          The first household shutter holds behind you; all three wolves hammer it from
+          outside. Set Cade's second shutter across this threshold now. Its removal leaves
+          his outer property exposed, while Albany's public seals remain untouched.
+      - when:
+          - { has_flag: fortify_albany_authority_invoked }
+          - { not_flag: fortify_threshold_sealed }
+        text: >
+          The first public seal holds behind you; all three wolves hammer it from outside.
+          Spend the remaining Albany band across this threshold. Cade's property remains
+          covered, but his refusal stands and the public fortification stock will be spent.
+      - when:
+          - { has_flag: fortify_cade_terms_accepted }
+          - { has_flag: fortify_threshold_sealed }
+        text: >
+          Cade's second household shutter seals the threshold. The living pack remains
+          outside both joined lines, and winter siege now hammers the byre. Go north for
+          the dawn watch; retreat and every spear opening remain closed.
+      - when:
+          - { has_flag: fortify_albany_authority_invoked }
+          - { has_flag: fortify_threshold_sealed }
+        text: >
+          Albany's second relief band seals the threshold. The living pack remains outside
+          both joined lines, and winter siege now hammers the byre. Public stock is spent;
+          go north for the dawn watch, with retreat and spear openings closed.
     exits:
       - direction: south
         to: paling_gap
-        conditions: [{ not_flag: strategy_drive_committed }]
-        locked_msg: "Cast the last signal, then carry the living pack north. The hard commitment does not reopen the paling or switch to combat."
+        conditions:
+          - { not_flag: strategy_drive_committed }
+          - { not_flag: strategy_fortify_committed }
+        locked_msg: "Finish the committed threshold beat, then continue north. The hard drive or fortification line does not reopen the paling or switch to combat."
       - direction: north
         to: byre_mouth
         conditions:
@@ -777,6 +903,7 @@ rooms:
               - { has_flag: flank_wolf_down }
               - { has_flag: flank_redirected }
               - { has_flag: drive_flank_turned }
+              - { has_flag: fortify_threshold_sealed }
           - any_of:
               - all_of:
                   - { not_flag: strategy_drive_committed }
@@ -784,7 +911,7 @@ rooms:
               - all_of:
                   - { has_flag: yearling_down }
                   - { has_flag: flank_wolf_down }
-        locked_msg: "Finish the threshold: fight or redirect the flank on other routes; on the drive, cast the last rope-bell and carry the living pack north. No mid-line switch."
+        locked_msg: "Finish the threshold: fight, redirect, cast the last drive signal, or set the second fortification seal. No hard-committed line can switch midway."
 
   - id: byre_mouth
     name: "Deep in the Byre"
@@ -803,6 +930,7 @@ rooms:
         cattle_first_evacuation,
         person_first_evacuation,
         reserve_spent_evacuation,
+        fortify_dawn_watch,
       ]
     variants:
       - when: [{ has_flag: drive_courier_wounded }]
@@ -974,35 +1102,50 @@ rooms:
           The grey leader waits between you and the cattle. The hardwood stake saved at
           the door fits crosswise against the spear: set that crossbrace against her
           patience, then be ready to turn the committed line over.
-      - when: [{ has_flag: heard_plan }, { has_flag: heard_counsel }]
+      - when:
+          - { has_flag: heard_plan }
+          - { has_flag: heard_counsel }
+          - { not_flag: strategy_fortify_committed }
         text: >
           The grey leader waits between you and the cattle. Hold the spear point and wait
           out her feint, then take the true rush; or close before the lie forms, then drive
           before she recovers. Each opening commits you to its own follow-through. The
           door is south.
-      - when: [{ has_flag: heard_plan }]
+      - when: [{ has_flag: heard_plan }, { not_flag: strategy_fortify_committed }]
         text: >
           The grey leader waits between you and the cattle. Cade's corridor plan says
           to hold the spear point, keep the square guard, and make her patience break;
           then take the true rush on that line. The door is south.
-      - when: [{ has_flag: heard_counsel }]
+      - when: [{ has_flag: heard_counsel }, { not_flag: strategy_fortify_committed }]
         text: >
           The grey leader waits between you and the cattle. Cade's fighting lesson says
           to close before her feint is finished — a brutal opening that gives up the
           guard, then demands a second drive before she recovers.
           The door is south.
+      - when: [{ has_flag: fortify_cade_terms_accepted }]
+        text: >
+          Both household shutters hold between the living pack and the whole herd. Cade's
+          outer property remains exposed, public relief seals untouched. Hold this joined
+          line through visible winter-siege pressure until dawn; no wolf or spear enters it.
+      - when: [{ has_flag: fortify_albany_authority_invoked }]
+        text: >
+          Both public relief seals hold between the living pack and the whole herd. Cade's
+          outer property remains covered, but Albany's stock is spent and his refusal stands.
+          Hold this joined line through visible winter-siege pressure until dawn.
     exits:
       - direction: south
         to: byre_door
-        conditions: [{ not_flag: strategy_drive_committed }]
-        locked_msg: "At the byre crisis, choose one irreversible protection priority and finish its sole evacuation. The committed drive cannot retreat or switch strategies."
+        conditions:
+          - { not_flag: strategy_drive_committed }
+          - { not_flag: strategy_fortify_committed }
+        locked_msg: "Finish the committed drive crisis or fortification dawn watch here. Neither hard line can retreat or switch strategies after reaching the byre."
       - direction: north
         to: cattle_stand
         conditions:
           - any_of:
               - { has_flag: leader_down }
               - { has_flag: leader_redirected }
-        locked_msg: "The grey leader still stands between you and the cattle; defeat her, complete Cade's outer scent line, or finish the committed drive-and-evacuation line before passing."
+        locked_msg: "Before passing, defeat old grey, complete Cade's scent or drive line, or hold the joined fortification seals to dawn."
 
   - id: cattle_stand
     name: "Among the Cattle"
@@ -1011,9 +1154,10 @@ rooms:
       blocks this penned end; the exact count of cattle and wolves belongs to the
       ending Cade will carry back to Albany. The byre's dark heart lies south.
     # The locomotion win (visited: cattle_stand), like the Beacon's crown and cold_forge's
-    # ember chamber: the +15 capstone rides reaching the safe cattle with all three wolves
-    # down (the chained exit gates), so the full 60 coincides with the byre being held,
-    # never before. SCORE_PEAKS_BEFORE_WIN does not fire on a navigation win (bug_0116).
+    # ember chamber: the +15 capstone rides reaching the safe cattle after the pack is
+    # defeated, redirected, driven clear, or outlasted behind joined seals. The full 60
+    # still coincides with a completed route, never before; SCORE_PEAKS_BEFORE_WIN does not
+    # fire on a navigation win (bug_0116).
     on_enter:
       - add_journal: "The pack has broken from the byre. Grey dawn reveals the herd and the cost of the line that held it."
       - inc_var: { name: score, by: 15 }
@@ -1451,6 +1595,393 @@ objects:
           - narrate: "You pull the cut anchors apart. Cade, every rider, and the whole herd clear opposite old grey and her pack. Copper and rope stay buried, and the outer steading line is left behind."
           - goto: cattle_stand
 
+  # The fortification family receives exactly one stance-owned bundle at commitment.
+  # Both bundles remain non-droppable until their second spatial use installs them in the
+  # byre. They are mutually exclusive and never enter the campaign inventory.
+  - id: cade_household_shutters
+    name: "Cade's two household shutters"
+    aliases: [household shutters, Cade's shutters, shutter bundle, two shutters]
+    description: >
+      Two sound shutters Cade released under household terms: one for the broken paling,
+      one for the byre threshold. Taking them exposes his smokehouse and outer property,
+      preserves Albany's public seals, and earns his help if the first seat slips.
+    variants:
+      - when: [{ has_flag: fortify_cade_recovery_helped }]
+        text: >
+          Cade's first household shutter holds at the paling after his promised bracing
+          hand recovered its slipped seat. The failed check and harder pressure remain.
+          The second shutter stays in your hands for the threshold north.
+      - when: [{ has_flag: fortify_outer_sealed }]
+        text: >
+          One household shutter holds at the paling. The second remains in your hands for
+          the byre threshold. Cade's outer property is exposed, Albany's seals untouched;
+          his accepted terms still make his bracing hand legal after a failed first seat.
+    visible_when:
+      - { has_flag: fortify_cade_terms_accepted }
+      - { not_visited: paling_gap }
+    takeable: true
+    droppable: false
+    take_effects:
+      - add_journal: "You take Cade's two household shutters: paling, threshold, dawn. Outer property is exposed; public seals stay untouched."
+
+  - id: albany_relief_seals
+    name: "Albany relief seal roll"
+    aliases: [relief seals, public seals, Albany seals, seal roll, binding strips]
+    description: >
+      Albany's finite public fortification roll: bands for the paling and threshold, plus
+      one emergency binding strip. Authority preserves Cade's covered property, spends
+      public stock, and leaves a failed first seat without his aid.
+    variants:
+      - when: [{ has_flag: fortify_authority_emergency_seal_spent }]
+        text: >
+          The emergency public strip is already bound around the recovered outer seal.
+          One principal Albany band remains for the threshold. Cade's property stays
+          covered, but his refusal stands and the extra public material is gone.
+      - when: [{ has_flag: fortify_outer_sealed }]
+        text: >
+          The first public band holds at the paling. The remaining roll is committed to
+          the byre threshold. Cade's outer property stays covered; Albany's finite stock,
+          not household timber, pays for this line.
+    visible_when:
+      - { has_flag: fortify_albany_authority_invoked }
+      - { not_visited: paling_gap }
+    takeable: true
+    droppable: false
+    take_effects:
+      - add_journal: "You take Albany's relief seal roll: paling, threshold, dawn. Cade's property stays covered; public stock pays."
+
+  # Beat one: one Repair check, with Reese's prepared Works marks lowering DC 14 to 12.
+  # Both roll outcomes retire behind `fortify_outer_seal_attempted`; each failed stance
+  # exposes exactly one deterministic recovery instead of another check.
+  - id: fortify_outer_seal
+    name: "outer fortification frame"
+    aliases: [outer seal, paling seal, seal frame, outer frame]
+    description: >
+      A pegged frame inside the broken paling, clear of the living wolves outside. Seat the
+      first committed shutter or public band here once. A failed Repair check raises visible
+      winter-siege pressure and cannot be retried; only the disclosed stance recovery remains.
+    visible_when:
+      - { has_flag: strategy_fortify_committed }
+      - { has_flag: fortify_combat_withheld }
+      - { has_flag: strategy_combat_withheld }
+      - { not_flag: fortify_outer_sealed }
+    interactions:
+      - verb: USE
+        item: cade_household_shutters
+        target: fortify_outer_seal
+        command_verb: seat
+        conditions:
+          - { has_item: cade_household_shutters }
+          - { has_flag: fortify_cade_terms_accepted }
+          - { has_flag: works_fortification_prepared }
+          - { not_flag: fortify_outer_seal_attempted }
+        effects:
+          - set_flag: fortify_outer_seal_attempted
+          - inc_var: { name: fortification_pressure, by: 1 }
+        skill_check:
+          skill: repair
+          difficulty: 12
+          on_success:
+            - set_flag: fortify_outer_sealed
+            - set_quest_stage: { quest: the_watch, stage: outer_sealed }
+            - add_journal: "Reese's Works marks seat Cade's first shutter cleanly. Winter siege rises to Testing; carry the second north."
+            - narrate: >
+                Reese's grain and peg marks align. You seat Cade's first shutter before
+                the pack can fold around it. The outer seal takes their weight cleanly;
+                one household shutter remains for the threshold north.
+          on_failure:
+            - set_flag: fortify_outer_seal_failed
+            - inc_var: { name: fortification_pressure, by: 1 }
+            - add_journal: "The first household seal slips. No retry: winter siege reaches Hammering; Cade's bracing hand is the recovery."
+            - narrate: >
+                Hidden frost rolls the lower peg and the shutter slips. The one Repair
+                attempt is spent; pressure reaches Hammering. Cade accepted these terms,
+                so his offered shoulder can seat this same shutter without another roll.
+      - verb: USE
+        item: cade_household_shutters
+        target: fortify_outer_seal
+        command_verb: seat
+        conditions:
+          - { has_item: cade_household_shutters }
+          - { has_flag: fortify_cade_terms_accepted }
+          - { not_flag: works_fortification_prepared }
+          - { not_flag: fortify_outer_seal_attempted }
+        effects:
+          - set_flag: fortify_outer_seal_attempted
+          - inc_var: { name: fortification_pressure, by: 1 }
+        skill_check:
+          skill: repair
+          difficulty: 14
+          on_success:
+            - set_flag: fortify_outer_sealed
+            - set_quest_stage: { quest: the_watch, stage: outer_sealed }
+            - add_journal: "You seat Cade's first shutter cleanly. Winter siege rises to Testing; carry the second shutter north."
+            - narrate: >
+                You square Cade's first shutter against the paling frame and drive both
+                pegs before the pack can fold around it. The outer seal takes their weight;
+                one household shutter remains for the threshold north.
+          on_failure:
+            - set_flag: fortify_outer_seal_failed
+            - inc_var: { name: fortification_pressure, by: 1 }
+            - add_journal: "The first household seal slips. No retry: winter siege reaches Hammering; Cade's bracing hand is the recovery."
+            - narrate: >
+                Hidden frost rolls the lower peg and the shutter slips. The one Repair
+                attempt is spent; pressure reaches Hammering. Cade accepted these terms,
+                so his offered shoulder can seat this same shutter without another roll.
+      - verb: USE
+        item: albany_relief_seals
+        target: fortify_outer_seal
+        command_verb: seat
+        conditions:
+          - { has_item: albany_relief_seals }
+          - { has_flag: fortify_albany_authority_invoked }
+          - { has_flag: works_fortification_prepared }
+          - { not_flag: fortify_outer_seal_attempted }
+        effects:
+          - set_flag: fortify_outer_seal_attempted
+          - inc_var: { name: fortification_pressure, by: 1 }
+        skill_check:
+          skill: repair
+          difficulty: 12
+          on_success:
+            - set_flag: fortify_outer_sealed
+            - set_quest_stage: { quest: the_watch, stage: outer_sealed }
+            - add_journal: "Reese's Works marks seat the first public seal cleanly. Winter siege reaches Testing; carry the roll north."
+            - narrate: >
+                Reese's spacing marks align. You cinch Albany's first relief band across
+                the frame before the pack can fold around it. Cade's property stays covered;
+                the remaining public roll goes north to the threshold.
+          on_failure:
+            - set_flag: fortify_outer_seal_failed
+            - inc_var: { name: fortification_pressure, by: 1 }
+            - add_journal: "The first public seal slips. No retry: winter siege reaches Hammering; spend the emergency Albany strip."
+            - narrate: >
+                Hidden frost rolls the lower fastening and the public band slips. The one
+                Repair attempt is spent; pressure reaches Hammering. Cade refuses aid under
+                your authority. Albany's emergency binding strip is the sole recovery.
+      - verb: USE
+        item: albany_relief_seals
+        target: fortify_outer_seal
+        command_verb: seat
+        conditions:
+          - { has_item: albany_relief_seals }
+          - { has_flag: fortify_albany_authority_invoked }
+          - { not_flag: works_fortification_prepared }
+          - { not_flag: fortify_outer_seal_attempted }
+        effects:
+          - set_flag: fortify_outer_seal_attempted
+          - inc_var: { name: fortification_pressure, by: 1 }
+        skill_check:
+          skill: repair
+          difficulty: 14
+          on_success:
+            - set_flag: fortify_outer_sealed
+            - set_quest_stage: { quest: the_watch, stage: outer_sealed }
+            - add_journal: "You seat the first public seal cleanly. Winter siege reaches Testing; carry the remaining Albany roll north."
+            - narrate: >
+                You cinch Albany's first relief band across the paling frame before the
+                pack can fold around it. The seal takes their weight and Cade's property
+                stays covered; the remaining public roll goes north to the threshold.
+          on_failure:
+            - set_flag: fortify_outer_seal_failed
+            - inc_var: { name: fortification_pressure, by: 1 }
+            - add_journal: "The first public seal slips. No retry: winter siege reaches Hammering; spend the emergency Albany strip."
+            - narrate: >
+                Hidden frost rolls the lower fastening and the public band slips. The one
+                Repair attempt is spent; pressure reaches Hammering. Cade refuses aid under
+                your authority. Albany's emergency binding strip is the sole recovery.
+
+  - id: cade_failed_seal_help
+    name: "Cade's offered bracing hand"
+    aliases: [Cade's help, bracing hand, household recovery]
+    description: >
+      Cade followed the household shutters to the paling. Because you accepted his terms,
+      he will put his shoulder under the slipped first seal once. This seats it under the
+      harder pressure without rerolling or erasing the failed Repair attempt.
+    visible_when:
+      - { has_flag: fortify_cade_terms_accepted }
+      - { has_flag: fortify_outer_seal_failed }
+      - { not_flag: fortify_outer_sealed }
+    interactions:
+      - verb: USE
+        target: cade_failed_seal_help
+        command_verb: accept
+        conditions:
+          - { has_flag: fortify_cade_terms_accepted }
+          - { has_flag: fortify_outer_seal_failed }
+          - { not_flag: fortify_outer_sealed }
+        effects:
+          - set_flag: fortify_outer_sealed
+          - set_flag: fortify_cade_recovery_helped
+          - set_quest_stage: { quest: the_watch, stage: outer_sealed }
+          - add_journal: "Cade braces the slipped household shutter under accepted terms. It holds at Hammering; the failed check remains."
+          - narrate: >
+              Cade sets stick and shoulder beneath the slipped shutter. Together you seat
+              its same pegs under the pack's weight. No check repeats and pressure stays at
+              Hammering, but his promised household aid makes the outer seal hold.
+
+  - id: authority_emergency_bind
+    name: "authority emergency binding"
+    aliases: [emergency bind, emergency strip, public recovery]
+    description: >
+      Albany's emergency binding strip can wrap the slipped first public seal once. Cade's
+      refusal leaves no household hand on the frame. Spending this extra public material
+      seats the failed seal without rerolling or cleaning its harder pressure.
+    visible_when:
+      - { has_flag: fortify_albany_authority_invoked }
+      - { has_flag: fortify_outer_seal_failed }
+      - { not_flag: fortify_outer_sealed }
+    interactions:
+      - verb: USE
+        item: albany_relief_seals
+        target: authority_emergency_bind
+        command_verb: bind
+        conditions:
+          - { has_item: albany_relief_seals }
+          - { has_flag: fortify_albany_authority_invoked }
+          - { has_flag: fortify_cade_help_refused }
+          - { has_flag: fortify_outer_seal_failed }
+          - { not_flag: fortify_outer_sealed }
+        effects:
+          - set_flag: fortify_outer_sealed
+          - set_flag: fortify_authority_emergency_seal_spent
+          - set_quest_stage: { quest: the_watch, stage: outer_sealed }
+          - add_journal: "You spend Albany's emergency strip on the slipped public seal. It holds at Hammering; Cade's refusal and failed check remain."
+          - narrate: >
+              You tear the emergency strip from Albany's roll and bind the slipped seal
+              crosswise. No Repair check repeats and pressure stays at Hammering. Cade keeps
+              his hands off the ordered line; extra public stock makes the outer seal hold.
+
+  # Beat two consumes the stance-owned bundle and closes the byre threshold. It is a
+  # deterministic commitment, not a second roll or a chance to clean the first result.
+  - id: fortify_threshold_seal
+    name: "byre threshold seal"
+    aliases: [threshold seal, second seal, byre seal, door seal]
+    description: >
+      The second and final fortification frame crosses the byre threshold. Install the
+      remaining stance-owned resource here. It joins the outer seal, raises visible winter
+      siege once, and leaves only the pressure-bound dawn watch north.
+    visible_when:
+      - { has_flag: strategy_fortify_committed }
+      - { has_flag: fortify_outer_sealed }
+      - { not_flag: fortify_threshold_sealed }
+    interactions:
+      - verb: USE
+        item: cade_household_shutters
+        target: fortify_threshold_seal
+        command_verb: set
+        conditions:
+          - { has_item: cade_household_shutters }
+          - { has_flag: fortify_cade_terms_accepted }
+          - { has_flag: fortify_outer_sealed }
+          - { not_flag: fortify_threshold_sealed }
+        effects:
+          - remove_item: cade_household_shutters
+          - set_flag: fortify_threshold_sealed
+          - inc_var: { name: fortification_pressure, by: 1 }
+          - set_quest_stage: { quest: the_watch, stage: threshold_sealed }
+          - add_journal: "Cade's second shutter seals the threshold. Outer property stays exposed; public seals remain untouched. Hold to dawn."
+          - narrate: >
+              You set Cade's second shutter across the threshold and pin it to the first
+              seal's joined line. Both household shutters now stand between the living pack
+              and whole herd; the exposed outer property and untouched public stock remain.
+      - verb: USE
+        item: albany_relief_seals
+        target: fortify_threshold_seal
+        command_verb: set
+        conditions:
+          - { has_item: albany_relief_seals }
+          - { has_flag: fortify_albany_authority_invoked }
+          - { has_flag: fortify_outer_sealed }
+          - { not_flag: fortify_threshold_sealed }
+        effects:
+          - remove_item: albany_relief_seals
+          - set_flag: fortify_threshold_sealed
+          - set_flag: fortify_public_seals_spent
+          - inc_var: { name: fortification_pressure, by: 1 }
+          - set_quest_stage: { quest: the_watch, stage: threshold_sealed }
+          - add_journal: "Albany's second band seals the threshold. Cade's property stays covered; public fortification stock is spent. Hold to dawn."
+          - narrate: >
+              You draw the remaining public band across the threshold and join it to the
+              outer seal. Both relief lines now stand between the living pack and whole
+              herd. Cade's property stays covered; Albany's fortification stock is spent.
+
+  # Beat three reads the accumulated pressure instead of rolling again. A clean outer seat
+  # reaches Hammering (2); either recovery reaches Strained (3). Both remain fully
+  # noncombat, award the same completion score, and preserve the exact failed state.
+  - id: fortify_dawn_watch
+    name: "sealed-byre dawn watch"
+    aliases: [dawn watch, outlast the pack, hold seals, sealed watch]
+    description: >
+      Hold the joined seals until grey dawn breaks the living pack's siege. This is the
+      third committed spatial beat, not another Repair check. Current winter-siege pressure
+      determines whether the watch is measured or strained; neither line can reopen combat.
+    visible_when:
+      - { has_flag: strategy_fortify_committed }
+      - { has_flag: fortify_threshold_sealed }
+      - { not_flag: fortify_dawn_held }
+    interactions:
+      - verb: USE
+        target: fortify_dawn_watch
+        command_verb: hold
+        conditions:
+          - { has_flag: strategy_fortify_committed }
+          - { has_flag: fortify_threshold_sealed }
+          - { var_lte: { name: fortification_pressure, value: 2 } }
+          - any_of:
+              - { not_flag: june_pike_present }
+              - { has_flag: june_blood_condition_broken }
+              - { has_flag: june_fortify_cattle_line_taken }
+          - { not_flag: fortify_dawn_held }
+        blocked_hint:
+          visible_when:
+            - { has_flag: june_pike_present }
+            - { not_flag: june_blood_condition_broken }
+            - { not_flag: june_fortify_cattle_line_taken }
+          reason: "June has reached the lower cattle brace under her independent authority. Hear her decision before taking the joined seals into the dawn watch."
+        effects:
+          - set_flag: fortify_dawn_held
+          - set_flag: fortify_pack_outlasted
+          - set_var: { name: fortification_pressure, value: 6 }
+          - inc_var: { name: score, by: 20 }
+          - set_quest_stage: { quest: the_watch, stage: byre_outlasted }
+          - add_journal: "The clean joined seals hold through dawn. All three wolves withdraw alive; people and the whole herd remain safe."
+          - narrate: >
+              The pack tests each joined seal, then waits against the wind. You answer every
+              measured blow without reopening the line. Grey dawn reaches the slats first;
+              all three wolves withdraw alive, leaving every person and the whole herd safe.
+          - goto: cattle_stand
+      - verb: USE
+        target: fortify_dawn_watch
+        command_verb: hold
+        conditions:
+          - { has_flag: strategy_fortify_committed }
+          - { has_flag: fortify_threshold_sealed }
+          - { var_gte: { name: fortification_pressure, value: 3 } }
+          - any_of:
+              - { not_flag: june_pike_present }
+              - { has_flag: june_blood_condition_broken }
+              - { has_flag: june_fortify_cattle_line_taken }
+          - { not_flag: fortify_dawn_held }
+        blocked_hint:
+          visible_when:
+            - { has_flag: june_pike_present }
+            - { not_flag: june_blood_condition_broken }
+            - { not_flag: june_fortify_cattle_line_taken }
+          reason: "June has reached the lower cattle brace under her independent authority. Hear her decision before taking the strained seals into the dawn watch."
+        effects:
+          - set_flag: fortify_dawn_held
+          - set_flag: fortify_pack_outlasted
+          - set_var: { name: fortification_pressure, value: 6 }
+          - inc_var: { name: score, by: 20 }
+          - set_quest_stage: { quest: the_watch, stage: byre_outlasted }
+          - add_journal: "The recovered seals strain but hold through dawn. All three wolves withdraw alive; people and the whole herd remain safe."
+          - narrate: >
+              The recovered outer seat shudders under every return. You rotate brace and
+              weight through the strained watch without rerolling or opening a spear line.
+              Grey dawn reaches the slats first; all three wolves withdraw alive, with herd whole.
+          - goto: cattle_stand
+
   # Cade owns one finite noncombat resource. Accepting his plan before entering the
   # breach commits the feed-and-hounds strategy; once the player has seen the first
   # wolf, Cade will not offer the steading's last feed as a retroactive accessory.
@@ -1808,6 +2339,7 @@ objects:
         conditions:
           - { not_flag: read_tally }
           - { not_flag: strategy_drive_committed }
+          - { not_flag: strategy_fortify_committed }
         effects:
           - set_flag: read_tally
           - inc_var: { name: score, by: 5 }
@@ -1846,6 +2378,7 @@ objects:
         conditions:
           - { none_of: [{ has_flag: jerkin_donned }] }
           - { not_flag: strategy_drive_committed }
+          - { not_flag: strategy_fortify_committed }
         effects:
           - set_flag: jerkin_donned
           - inc_var: { name: defense, by: 2 }
@@ -1886,7 +2419,9 @@ objects:
     # split lengths become carried gear, the sticky made flag retires this world object;
     # the room text narrates the empty bed and later spent guard without leaving a stale
     # examine affordance behind.
-    visible_when: [{ not_flag: split_rail_guard_made }]
+    visible_when:
+      - { not_flag: split_rail_guard_made }
+      - { not_flag: strategy_fortify_committed }
     variants:
       - when: [{ has_flag: leader_turned_over_crossbrace }]
         name: "spent paling brace"
@@ -1940,6 +2475,7 @@ objects:
           - any_of:
               - { not_flag: strategy_drive_committed }
               - { has_flag: june_blood_condition_broken }
+          - { not_flag: strategy_fortify_committed }
         effects:
           - set_flag: rail_attempted
         skill_check:
@@ -1979,6 +2515,7 @@ objects:
           - any_of:
               - { not_flag: strategy_drive_committed }
               - { has_flag: june_blood_condition_broken }
+          - { not_flag: strategy_fortify_committed }
         effects:
           - set_flag: rail_attempted
         skill_check:
@@ -2000,6 +2537,7 @@ objects:
           - { has_flag: works_fortification_splice_needed }
           - { has_flag: rail_split }
           - { not_flag: breach_braced }
+          - { not_flag: strategy_fortify_committed }
         effects:
           - clear_flag: rail_split
           - clear_flag: works_fortification_splice_needed
@@ -2020,6 +2558,7 @@ objects:
           - { has_flag: rail_split }
           - { not_flag: split_rail_guard_made }
           - { not_item: split_rail_guard }
+          - { not_flag: strategy_fortify_committed }
         effects:
           - add_item: split_rail_guard
           - set_flag: split_rail_guard_made
@@ -2071,7 +2610,7 @@ npcs:
           npc_text: >
             You came from Albany awake—good. Three wolves are through; without these cattle
             we starve. Ask for either lesson—or both before you go: quick spear-hand or
-            guarded byre plan. Or hear the one-sack living lure or two-charge signal drive.
+            guarded byre plan. Or hear the living lure, signal drive, or seal-and-outlast line.
           variants:
             - when:
                 - { has_flag: strategy_drive_committed }
@@ -2094,6 +2633,16 @@ npcs:
                 You committed the one-sack feed-and-hounds line: three downwind casts,
                 no clean retry. Earlier combat lessons remain fallbacks, but Cade will
                 teach no new primary plan. Take the feed before entering the breach.
+            - when: [{ has_flag: fortify_cade_terms_accepted }]
+              text: >
+                Household terms stand. Take my two shutters north: paling, threshold, then
+                hold to dawn. My outer property stays exposed; Albany's seals stay public.
+                If the first seat slips, my shoulder is yours. No retreat or strategy switch.
+            - when: [{ has_flag: fortify_albany_authority_invoked }]
+              text: >
+                Albany's order stands. Take the public seals north: paling, threshold, then
+                hold to dawn. My property stays covered and relief stock pays. If the first
+                seat slips, I will not aid it; spend the emergency strip. No strategy switch.
             - when: [{ has_flag: heard_counsel }, { has_flag: heard_plan }]
               text: >
                 Both lessons are yours. You do not choose a road here: commit to the quick
@@ -2117,6 +2666,7 @@ npcs:
                 - { not_flag: heard_counsel }
                 - { not_flag: strategy_lure_committed }
                 - { not_flag: strategy_drive_committed }
+                - { not_flag: strategy_fortify_committed }
               goto: cade_wolves
             - id: byre
               aliases: [ask_byre]
@@ -2125,6 +2675,7 @@ npcs:
                 - { not_flag: heard_plan }
                 - { not_flag: strategy_lure_committed }
                 - { not_flag: strategy_drive_committed }
+                - { not_flag: strategy_fortify_committed }
               goto: cade_byre
             - id: lure
               aliases: [ask_lure, ask_feed, ask_alive]
@@ -2132,6 +2683,7 @@ npcs:
               conditions:
                 - { not_flag: strategy_lure_committed }
                 - { not_flag: strategy_drive_committed }
+                - { not_flag: strategy_fortify_committed }
                 - { not_visited: paling_gap }
               goto: cade_lure
             - id: drive
@@ -2140,8 +2692,18 @@ npcs:
               conditions:
                 - { not_flag: strategy_lure_committed }
                 - { not_flag: strategy_drive_committed }
+                - { not_flag: strategy_fortify_committed }
                 - { not_visited: paling_gap }
               goto: cade_drive
+            - id: fortify
+              aliases: [ask_fortify, ask_outlast, ask_seal]
+              prompt: "Ask how to seal the byre and outlast the living pack until dawn."
+              conditions:
+                - { not_flag: strategy_lure_committed }
+                - { not_flag: strategy_drive_committed }
+                - { not_flag: strategy_fortify_committed }
+                - { not_visited: paling_gap }
+              goto: cade_fortify
             - id: leave
               aliases: [leave_cade]
               prompt: "Leave old Cade and hold the byre."
@@ -2172,6 +2734,7 @@ npcs:
                 - { not_flag: heard_plan }
                 - { not_flag: strategy_lure_committed }
                 - { not_flag: strategy_drive_committed }
+                - { not_flag: strategy_fortify_committed }
               goto: cade_byre
             - id: lure
               aliases: [ask_lure, ask_feed, ask_alive]
@@ -2179,6 +2742,7 @@ npcs:
               conditions:
                 - { not_flag: strategy_lure_committed }
                 - { not_flag: strategy_drive_committed }
+                - { not_flag: strategy_fortify_committed }
                 - { not_visited: paling_gap }
               goto: cade_lure
             - id: drive
@@ -2187,8 +2751,18 @@ npcs:
               conditions:
                 - { not_flag: strategy_lure_committed }
                 - { not_flag: strategy_drive_committed }
+                - { not_flag: strategy_fortify_committed }
                 - { not_visited: paling_gap }
               goto: cade_drive
+            - id: fortify
+              aliases: [ask_fortify, ask_outlast, ask_seal]
+              prompt: "Ask how the seal-and-outlast line works."
+              conditions:
+                - { not_flag: strategy_lure_committed }
+                - { not_flag: strategy_drive_committed }
+                - { not_flag: strategy_fortify_committed }
+                - { not_visited: paling_gap }
+              goto: cade_fortify
             - id: wolves_back
               prompt: "Nod, and ask something else."
               goto: cade_root
@@ -2213,6 +2787,7 @@ npcs:
                 - { not_flag: heard_counsel }
                 - { not_flag: strategy_lure_committed }
                 - { not_flag: strategy_drive_committed }
+                - { not_flag: strategy_fortify_committed }
               goto: cade_wolves
             - id: lure
               aliases: [ask_lure, ask_feed, ask_alive]
@@ -2220,6 +2795,7 @@ npcs:
               conditions:
                 - { not_flag: strategy_lure_committed }
                 - { not_flag: strategy_drive_committed }
+                - { not_flag: strategy_fortify_committed }
                 - { not_visited: paling_gap }
               goto: cade_lure
             - id: drive
@@ -2228,8 +2804,18 @@ npcs:
               conditions:
                 - { not_flag: strategy_lure_committed }
                 - { not_flag: strategy_drive_committed }
+                - { not_flag: strategy_fortify_committed }
                 - { not_visited: paling_gap }
               goto: cade_drive
+            - id: fortify
+              aliases: [ask_fortify, ask_outlast, ask_seal]
+              prompt: "Ask how the seal-and-outlast line works."
+              conditions:
+                - { not_flag: strategy_lure_committed }
+                - { not_flag: strategy_drive_committed }
+                - { not_flag: strategy_fortify_committed }
+                - { not_visited: paling_gap }
+              goto: cade_fortify
             - id: byre_back
               prompt: "Thank him, and ask something else."
               goto: cade_root
@@ -2248,6 +2834,9 @@ npcs:
               aliases: [commit_feed, commit_alive]
               prompt: "Commit to the finite feed-and-hounds line now."
               conditions:
+                - { not_flag: strategy_lure_committed }
+                - { not_flag: strategy_drive_committed }
+                - { not_flag: strategy_fortify_committed }
                 - { not_visited: paling_gap }
               goto: cade_lure_committed
             - id: lure_back
@@ -2299,6 +2888,9 @@ npcs:
               aliases: [commit_evacuate, commit_signal]
               prompt: "Commit to the finite drive-and-evacuate line now; start the herd, close preparation and retreat, and forfeit the outer steading defense line."
               conditions:
+                - { not_flag: strategy_lure_committed }
+                - { not_flag: strategy_drive_committed }
+                - { not_flag: strategy_fortify_committed }
                 - { not_visited: paling_gap }
               goto: cade_drive_committed
             - id: drive_back
@@ -2316,6 +2908,7 @@ npcs:
           effects:
             - set_flag: strategy_drive_committed
             - set_flag: drive_combat_withheld
+            - set_flag: strategy_combat_withheld
             - inc_var: { name: drive_kit_charges, by: 2 }
             - add_journal: "Drive committed: herd starts; preparation/retreat close. Outer defense is forfeit. Take two-charge rig; no lure/combat switch."
           topics:
@@ -2325,6 +2918,79 @@ npcs:
             - id: leave
               aliases: [leave_cade]
               prompt: "Leave old Cade and begin the committed drive."
+              end: true
+        - id: cade_fortify
+          npc_text: >
+            Keep wolves outside at paling and threshold. Household terms expose outer
+            property, save public seals, and earn my help after a slip. Albany authority
+            covers my property, spends public stock, gets no help. Outlast them to dawn.
+          topics:
+            - id: accept_terms
+              aliases: [accept_household_terms, take_shutters]
+              prompt: "Accept Cade's household terms: expose outer property, preserve public seals, and receive his aid on one failed first seat. Commit north with no retreat or strategy switch."
+              conditions:
+                - { not_flag: strategy_lure_committed }
+                - { not_flag: strategy_drive_committed }
+                - { not_flag: strategy_fortify_committed }
+                - { not_visited: paling_gap }
+              goto: cade_fortify_cade_terms
+            - id: invoke_authority
+              aliases: [order_public_seals, invoke_albany]
+              prompt: "Invoke Albany authority: preserve Cade's property, spend finite public seals, and accept his refusal after a failed first seat. Commit north with no retreat or strategy switch."
+              conditions:
+                - { not_flag: strategy_lure_committed }
+                - { not_flag: strategy_drive_committed }
+                - { not_flag: strategy_fortify_committed }
+                - { not_visited: paling_gap }
+              goto: cade_fortify_albany_authority
+            - id: fortify_back
+              prompt: "Decline for now, and ask something else."
+              goto: cade_root
+            - id: leave
+              aliases: [leave_cade]
+              prompt: "Leave old Cade without committing the fortification."
+              end: true
+        - id: cade_fortify_cade_terms
+          npc_text: >
+            Terms accepted. Take two shutters north: paling, threshold, then dawn. My
+            smokehouse stays exposed; Albany's seals remain public. If the first seat
+            slips, I brace it once. No retreat, lure, drive, or spear switch.
+          effects:
+            - set_flag: strategy_fortify_committed
+            - set_flag: fortify_combat_withheld
+            - set_flag: strategy_combat_withheld
+            - set_flag: fortify_cade_terms_accepted
+            - set_flag: fortify_outer_property_exposed
+            - set_flag: fortify_public_seals_preserved
+            - add_journal: "Fortify—Cade terms: outer property exposed, public seals kept, his aid covers one failed first seat. Go north; no switch."
+          topics:
+            - id: fortify_back
+              prompt: "Repeat the terms, then ask something else."
+              goto: cade_root
+            - id: leave
+              aliases: [leave_cade]
+              prompt: "Leave Cade and begin the committed household fortification."
+              end: true
+        - id: cade_fortify_albany_authority
+          npc_text: >
+            Authority invoked. Take Albany's seals north: paling, threshold, dawn. My
+            property stays covered; public stock pays. If the first seat slips, I refuse
+            it—spend the emergency strip. No retreat, lure, drive, or spear switch.
+          effects:
+            - set_flag: strategy_fortify_committed
+            - set_flag: fortify_combat_withheld
+            - set_flag: strategy_combat_withheld
+            - set_flag: fortify_albany_authority_invoked
+            - set_flag: fortify_outer_property_preserved
+            - set_flag: fortify_cade_help_refused
+            - add_journal: "Fortify—Albany authority: Cade property covered, public seals committed, his aid refused; emergency strip recovers a miss."
+          topics:
+            - id: fortify_back
+              prompt: "Repeat the order, then ask something else."
+              goto: cade_root
+            - id: leave
+              aliases: [leave_cade]
+              prompt: "Leave Cade and begin the committed public fortification."
               end: true
 
   # June is an optional campaign companion, never a direct-start assumption or
@@ -2402,6 +3068,51 @@ npcs:
               prompt: "Acknowledge June's cattle line and choose the crisis priority."
               end: true
 
+  # Fortification keeps June independent without changing the monotonic siege track. She
+  # takes the lower cattle brace under her existing authority; the dawn watch waits for her
+  # decision when she is present, while solo routes need no synthetic substitute action.
+  - id: june_pike_fortify
+    name: "Road Warden June Pike"
+    description: >
+      June Pike reaches the lower cattle brace while the living pack hammers both sealed
+      lines. Her cattle-first authority still governs her: she will secure that separate
+      brace, not become Cade's labor or alter the pressure already fixed at the byre.
+    room: byre_mouth
+    conditions:
+      - { has_flag: june_pike_present }
+      - { has_flag: strategy_fortify_committed }
+      - { has_flag: fortify_threshold_sealed }
+      - { not_flag: fortify_dawn_held }
+      - { not_flag: june_blood_condition_broken }
+      - { not_flag: june_fortify_cattle_line_taken }
+    dialogue:
+      root: june_fortify_cattle_first
+      nodes:
+        - id: june_fortify_cattle_first
+          npc_text: >
+            Your joined seals are the wolf line. I am taking the lower cattle brace under
+            my own authority. I will keep the herd off your slats while you hold to dawn;
+            I do not change the pressure already on them.
+          variants:
+            - when: [{ has_flag: fortify_cade_terms_accepted }]
+              text: >
+                Cade granted household terms; I honor that boundary. I am taking the lower
+                cattle brace under my own authority, not his shutters. Keep his joined seals
+                to dawn. I keep the herd off them without changing their pressure.
+            - when: [{ has_flag: fortify_albany_authority_invoked }]
+              text: >
+                Albany's order is lawful, and Cade's refusal is his. I am taking the lower
+                cattle brace under my own authority, not joining his labor. Hold the public
+                seals to dawn; I keep the herd off them without changing their pressure.
+          effects:
+            - set_flag: june_fortify_cattle_line_taken
+            - add_journal: "June independently takes the lower cattle brace. Her cattle-first promise holds; winter-siege pressure does not change."
+          topics:
+            - id: acknowledge
+              aliases: [leave_june, take_cattle_line]
+              prompt: "Acknowledge June's cattle line and take the joined seals into the dawn watch."
+              end: true
+
 enemies:
   # The fair three-fight gauntlet (combat_guaranteed). Each available opening
   # MANEUVER replaces ordinary ATTACK; if its target survives, its authored shallow
@@ -2447,7 +3158,7 @@ enemies:
       - any_of:
           - { not_flag: strategy_lure_committed }
           - { has_flag: lure_trail_fouled }
-      - { not_flag: drive_combat_withheld }
+      - { not_flag: strategy_combat_withheld }
     hp: 11
     attack: 4
     defense: 2
@@ -2492,7 +3203,7 @@ enemies:
       - { not_flag: flank_redirected }
       - { not_flag: drive_flank_turned }
       - { not_flag: strategy_lure_committed }
-      - { not_flag: drive_combat_withheld }
+      - { not_flag: strategy_combat_withheld }
     hp: 12
     attack: 5
     defense: 2
@@ -2667,7 +3378,7 @@ enemies:
       - { not_flag: leader_redirected }
       - { not_flag: drive_flank_turned }
       - { not_flag: strategy_lure_committed }
-      - { not_flag: drive_combat_withheld }
+      - { not_flag: strategy_combat_withheld }
     hp: 13
     attack: 6
     defense: 2
@@ -2788,6 +3499,32 @@ win_conditions:
   # Specific terminal consequences precede the generic mission result. All award the
   # same score and remain nondeath; their ids/titles let the overworld completion journal
   # remember whether saved wood barred the herd now or was carried into dawn for repair.
+  - id: fortify_outlast_cade_terms
+    conditions:
+      - { visited: cattle_stand }
+      - { has_flag: fortify_dawn_held }
+      - { has_flag: fortify_pack_outlasted }
+      - { has_flag: fortify_cade_terms_accepted }
+      - { has_flag: fortify_outer_property_exposed }
+      - { has_flag: fortify_public_seals_preserved }
+      - { var_gte: { name: fortification_pressure, value: 6 } }
+      - { not_flag: yearling_down }
+      - { not_flag: flank_wolf_down }
+      - { not_flag: leader_down }
+    ending: ending_fortified_cade_terms
+  - id: fortify_outlast_albany_authority
+    conditions:
+      - { visited: cattle_stand }
+      - { has_flag: fortify_dawn_held }
+      - { has_flag: fortify_pack_outlasted }
+      - { has_flag: fortify_albany_authority_invoked }
+      - { has_flag: fortify_outer_property_preserved }
+      - { has_flag: fortify_public_seals_spent }
+      - { var_gte: { name: fortification_pressure, value: 6 } }
+      - { not_flag: yearling_down }
+      - { not_flag: flank_wolf_down }
+      - { not_flag: leader_down }
+    ending: ending_fortified_albany_authority
   - id: drive_evacuate_cattle_wounded
     conditions:
       - { visited: cattle_stand }
@@ -2863,6 +3600,34 @@ win_conditions:
     ending: ending_held
 
 endings:
+  - id: ending_fortified_cade_terms
+    title: "Dawn Behind Cade's Shutters"
+    text: >
+      Grey dawn finds the whole herd safe and all three wolves alive outside the sealed
+      byre. Cade's two household shutters held; his smokehouse and outer property took the
+      winter, while Albany's public seals remained untouched. Cade names the accepted terms
+      and the aid they made available. *** You have won, with property exposed. ***
+    variants:
+      - when: [{ has_flag: june_fortify_cattle_line_taken }]
+        text: >
+          Grey dawn finds the whole herd safe and all three wolves alive outside Cade's
+          shutters. June Pike independently held the lower cattle brace under her authority.
+          Cade's outer property remains exposed; Albany's public seals remain untouched.
+          Both accounts name the accepted terms. *** You have won, with property exposed. ***
+  - id: ending_fortified_albany_authority
+    title: "Dawn Under Albany Seal"
+    text: >
+      Grey dawn: whole herd safe, all three wolves alive outside the sealed byre. Albany's
+      relief bands kept Cade's property covered, but public stock is spent. Cade names the
+      lawful order and his refusal; an emergency public bind, not his hand, was the available
+      recovery. *** You have won, at Albany's cost. ***
+    variants:
+      - when: [{ has_flag: june_fortify_cattle_line_taken }]
+        text: >
+          Grey dawn finds the whole herd safe and all three wolves alive outside Albany's
+          seals. June Pike independently held the lower cattle brace under her authority.
+          Cade's property stayed covered; public stock is spent, and his refusal stands.
+          Both accounts name the lawful order. *** You have won, at Albany's cost. ***
   - id: ending_drive_cattle_wounded
     title: "The Herd Out, Rider Hurt"
     text: >

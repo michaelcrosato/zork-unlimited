@@ -307,6 +307,8 @@ describe("New York overworld graph", () => {
       "ending_drive_cattle_wounded",
       "ending_drive_person_cattle_lost",
       "ending_drive_reserve_spent",
+      "ending_fortified_cade_terms",
+      "ending_fortified_albany_authority",
       "ending_held_gate_barred",
       "ending_held_timber_saved",
       "ending_held",
@@ -318,6 +320,8 @@ describe("New York overworld graph", () => {
       "The Herd Out, Rider Hurt",
       "The People Out, Cattle Lost",
       "The Steading Evacuated, Reserve Spent",
+      "Dawn Behind Cade's Shutters",
+      "Dawn Under Albany Seal",
       "The Byre Held, Inner Gate Barred",
       "The Byre Held, Paling Timber Saved",
       "The Byre Held",
@@ -373,6 +377,25 @@ describe("New York overworld graph", () => {
         "fact:wolf_winter_cattle_whole",
         "fact:wolf_winter_drive_reserve_spent",
       ],
+      ending_fortified_cade_terms: [
+        "fact:wolf_winter_byre_held",
+        "fact:wolf_winter_pack_outlasted_alive",
+        "fact:wolf_winter_people_safe",
+        "fact:wolf_winter_cattle_whole",
+        "fact:wolf_winter_cade_terms_honored",
+        "fact:wolf_winter_outer_property_exposed",
+        "fact:wolf_winter_public_relief_seals_preserved",
+      ],
+      ending_fortified_albany_authority: [
+        "fact:wolf_winter_byre_held",
+        "fact:wolf_winter_pack_outlasted_alive",
+        "fact:wolf_winter_people_safe",
+        "fact:wolf_winter_cattle_whole",
+        "fact:wolf_winter_albany_authority_invoked",
+        "fact:wolf_winter_outer_property_preserved",
+        "fact:wolf_winter_public_relief_seals_spent",
+        "fact:wolf_winter_cade_help_refused",
+      ],
       ending_held_gate_barred: [
         "fact:wolf_winter_byre_held",
         "fact:wolf_winter_outer_paling_broken",
@@ -414,6 +437,14 @@ describe("New York overworld graph", () => {
       ending_drive_reserve_spent: [
         ["npc:old_cade", "memory:wolf_winter_drive_signal_spent", 12, 12, 1],
         ["albany:emery_sloane", "albany:memory_emery_drive_signal_spent", 8, 10, 1],
+      ],
+      ending_fortified_cade_terms: [
+        ["npc:old_cade", "memory:wolf_winter_fortified_cade_terms", 12, 12, 1],
+        ["albany:hayden_hale", "albany:memory_hayden_wolf_fortified_cade_terms", 8, 9, 1],
+      ],
+      ending_fortified_albany_authority: [
+        ["npc:old_cade", "memory:wolf_winter_fortified_albany_authority", 0, 7, 0],
+        ["albany:hayden_hale", "albany:memory_hayden_wolf_fortified_albany_authority", 10, 12, 1],
       ],
       ending_held_gate_barred: [
         ["npc:old_cade", "memory:wolf_winter_inner_gate_barred", 10, 10, 1],
@@ -704,6 +735,18 @@ describe("New York overworld graph", () => {
     expect(hayden?.campaign_npc_id).toBe("albany:hayden_hale");
     expect(hayden?.variants).toEqual([
       {
+        id: "wolf_fortified_cade_terms",
+        after_relationship_memories: ["albany:memory_hayden_wolf_fortified_cade_terms"],
+        summary: expect.stringContaining("whole herd reached dawn behind his shutters"),
+        agenda: expect.stringContaining("exposed outer property"),
+      },
+      {
+        id: "wolf_fortified_albany_authority",
+        after_relationship_memories: ["albany:memory_hayden_wolf_fortified_albany_authority"],
+        summary: expect.stringContaining("outer property reached dawn inside the sealed line"),
+        agenda: expect.stringContaining("spent public stock"),
+      },
+      {
         id: "wolf_winter_returned_road_warden",
         after_quests: ["wolf_winter"],
         after_relationship_memories: ["albany:memory_hayden_sponsored_road_warden"],
@@ -748,9 +791,11 @@ describe("New York overworld graph", () => {
     const haydenId = "albany_city__transport_hub__contact";
 
     const missingQuest = structuredClone(world);
-    missingQuest.characters.find(
-      (character) => character.id === haydenId,
-    )!.variants![0]!.after_quests![0] = "missing_quest";
+    const missingQuestVariant = missingQuest.characters
+      .find((character) => character.id === haydenId)!
+      .variants!.find((variant) => variant.after_quests?.length);
+    if (!missingQuestVariant?.after_quests) throw new Error("expected a quest-gated variant");
+    missingQuestVariant.after_quests[0] = "missing_quest";
     expect(() => assertOverworldIntegrity(missingQuest)).toThrow(/references missing quest/);
 
     const broaderFirst = structuredClone(world);
@@ -780,7 +825,9 @@ describe("New York overworld graph", () => {
     const unboundMemory = structuredClone(world);
     const unboundHayden = unboundMemory.characters.find((character) => character.id === haydenId)!;
     delete unboundHayden.campaign_npc_id;
-    const unboundVariant = unboundHayden.variants![0]!;
+    const unboundVariant = unboundHayden.variants!.find(
+      (variant) => variant.id === "wolf_fortified_cade_terms",
+    )!;
     delete unboundVariant.after_quests;
     unboundVariant.after_relationship_memories = ["memory:albany_relief_packet"];
     expect(() => assertOverworldIntegrity(unboundMemory)).toThrow(

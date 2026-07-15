@@ -5,6 +5,7 @@ import { OverworldSession } from "../../src/world/session.js";
 import {
   OVERWORLD_CRISIS_PRIORITY_PREDECESSOR_WORLD_HASH,
   OVERWORLD_CRISIS_PRIORITY_WORLD_HASH,
+  OVERWORLD_FORTIFY_OUTLAST_WORLD_HASH,
 } from "../../src/world/session_snapshot_restore.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
 
@@ -23,11 +24,14 @@ const F10_DRIVE_REST = "albany:wolf_drive_reserve_returned_station_rest";
 const F10_DRIVE_ENDING = "ending_drive_cattle_wounded";
 const F04_ENDING = "ending_pack_diverted";
 const F04_ALLY_OFFER_ID = "ally_offer:albany:wolf_ally_commitment";
+const F04_JUNE_BASE_CONTACT_ID = "talk:albany_city__transport_hub__june_pike";
 const F04_JUNE_SELECTION_ID = "ally:albany:wolf_ally_commitment:albany:ally_june_cattle_first";
 const F04_ALLY_OFFER_TEXT =
   "June Pike has one Road-Warden field seat beside Hayden's outgoing packet. She can ride with you, but only under a named division of authority; leaving without that agreement sends the relief rider alone and does not delay the dispatch. Capability: After a failed living-pack lure is recovered without blood, June can leave the wolf line at the final byre threshold and take the cattle line, lowering cattle alarm by 1. Condition: June keeps cattle-first authority. She will not become an extra hunter, and the first wolf killed ends her place on the field team.";
 const F04_JUNE_SELECTION_TEXT =
   "Ask June Pike to ride as an independent Road-Warden ally. The briefing takes 15 minutes. June joins the field team and records your promise that she chooses the cattle line if the recovered lure still leaves the herd pressing. Her help is one pressure intervention, never a combat bonus; any wolf death ends the agreement. Actual cost: 15 minutes. June signs beside your name, takes the second field seat, and remembers that you granted rather than merely borrowed her authority.";
+const F04_JUNE_BASE_CONTACT_TEXT =
+  "June Pike checks a cattle rope, hooded lantern, and one empty field seat beside Hayden Hale's Wolf-Winter packet. June will ride only with cattle-first authority of her own. She offers one herd-pressure intervention after a bloodless recovery, not another spear, and remains in Albany if that condition is refused.";
 const F04_JUNE_JOINED_CONTACT_ID =
   "talk:albany_city__transport_hub__june_pike@joined_wolf_cattle_first";
 const F04_JUNE_JOINED_CONTACT_TEXT =
@@ -162,6 +166,14 @@ function relabelAsF04(
   const offer = predecessor.journalEntries.find((entry) => entry.id === F04_ALLY_OFFER_ID);
   if (!offer) throw new Error("Expected the durable F04 ally offer.");
   offer.text = F04_ALLY_OFFER_TEXT;
+  for (const entry of predecessor.journalEntries) {
+    if (
+      entry.id === F04_JUNE_BASE_CONTACT_ID ||
+      entry.id.startsWith(`${F04_JUNE_BASE_CONTACT_ID}:`)
+    ) {
+      entry.text = F04_JUNE_BASE_CONTACT_TEXT;
+    }
+  }
   const juneSelection = predecessor.journalEntries.find(
     (entry) => entry.id === F04_JUNE_SELECTION_ID,
   );
@@ -184,11 +196,14 @@ function relabelAsF04(
 }
 
 describe("crisis-priority predecessor migration integrity", () => {
-  it("pins F04 as the exact direct predecessor of the parsed F10 manifest", () => {
+  it("pins F04 as the exact bounded predecessor and F10 as historical current", () => {
     expect(OVERWORLD_CRISIS_PRIORITY_PREDECESSOR_WORLD_HASH).toBe(
       "2d10f959279a12166d521a774779acc46481fb6ff40d5982f9c955a30677a7b6",
     );
-    expect(hashState(WORLD)).toBe(OVERWORLD_CRISIS_PRIORITY_WORLD_HASH);
+    expect(OVERWORLD_CRISIS_PRIORITY_WORLD_HASH).toBe(
+      "1e74d32c28c3d563f6e8103034768506e25f13ff1f8e410b190cbb344589add8",
+    );
+    expect(hashState(WORLD)).toBe(OVERWORLD_FORTIFY_OUTLAST_WORLD_HASH);
   });
 
   it.each([

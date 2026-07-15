@@ -332,7 +332,7 @@ describe("SS-F12 — Albany's dawn dispatch changes a named district service", (
         action: "resupply",
         title: "Claim Jamie's Solo-Packet Road Stores",
         summary:
-          "Because you assigned the dawn wagon to rebuild Cade's outer line, Jamie Tanner holds a one-time Market road-store credit for carrying Hedrick's packet alone.",
+          "Because you sent the dawn wagon back to Cade and carried Hedrick's packet north alone, Jamie Tanner holds a one-time Market road-store credit.",
         minutes: 15,
         providerId: "albany_city__market__contact",
         providerName: "Jamie Tanner",

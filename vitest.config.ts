@@ -6,6 +6,12 @@ export default defineConfig({
     environment: "node",
     // Determinism: tests must not depend on wall-clock ordering or shared state.
     isolate: true,
+    // GitHub's two-vCPU runner otherwise starts more exhaustive state-graph files than
+    // it can execute concurrently. Each bounded proof then receives only a fraction of
+    // a core and can hit its per-test fail-fast despite passing isolated. Keep two fully
+    // isolated workers in CI: every file and assertion still runs, with less contention
+    // and a lower peak heap. Developer machines retain Vitest's normal worker selection.
+    ...(process.env.CI === "true" ? { maxWorkers: 2 } : {}),
     // The exhaustive ground-truth regression proofs (e.g. rpg_all_endings_reachable,
     // rpg_score_economy_sound, rpg_variant_liveness, rpg_action_id_unique) BFS the full
     // reachable state space of the largest packs — deterministic but compute-heavy,
