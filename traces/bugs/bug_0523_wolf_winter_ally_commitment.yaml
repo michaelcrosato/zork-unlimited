@@ -1,0 +1,44 @@
+id: bug_0523
+title: "Albany's Wolf-Winter dispatch had no persistent ally with independent authority"
+pack: content/rpg/quests/wolf_winter.yaml
+reported_by: starting-slice causal audit and Depth Contract v1
+reports:
+  - docs/STARTING_SLICE.md
+  - docs/starting_slice_causal_matrix.json
+severity: S2
+symptom: >
+  Albany could register a background, certify evidence, and buy one preparation,
+  but every traveler still entered Wolf-Winter alone. No named ally could join
+  under a visible condition, refuse unequal terms, act on an independent agenda,
+  leave after violated conduct, or change truthful return testimony and opportunity.
+root_cause: >
+  Campaign-character state had relationships and promises but no canonical party
+  membership. Quest imports and exports had no reusable companion primitive,
+  non-monotone party consequences, promise resolution, or chronological replay.
+  The opening chain also ended after preparation without a replay-bound ally scene.
+fix: >
+  Add canonical companions, companion-to-flag imports, generic add/remove companion
+  and record/resolve promise consequences, character-conditioned quest effects and
+  service rules, and chronological quest replay. After preparation, June Pike offers
+  one cattle-first field seat, refuses a subordinate relay, or records explicit solo
+  departure. On the recovered failed-lure route, her authority must be resolved before
+  the final cast: she refuses the wolf line, independently takes the cattle line, and
+  lowers alarm by 1. First blood cancels her action and resolves departure failure-forward.
+deterministic_witnesses:
+  - counterfactual: "same Road-Warden/source/preparation, failed first lure, both younger wolves recovered alive"
+    companion: "June refuses old-grey duty, takes the lower rail, lowers alarm 3→2, and the final cast ends at alarm 3 with the herd whole"
+    solo: "no June action exists; the final cast raises alarm 3→4 and two cattle scatter"
+  - conduct: "same accepted contract, first wolf killed"
+    result: "June's action disappears, the hybrid remains completable, the promise resolves broken, and June leaves the party"
+  - return: "kept companion -> one Station resupply; negotiated relay refusal -> one Station rest; solo or departure -> neither"
+tests:
+  - tests/starting_slice/ally_content_gameplay.test.ts
+  - tests/starting_slice/ally_commitment_counterfactual.test.ts
+  - tests/unit/world_opening_ally.test.ts
+  - tests/unit/world_campaign_consequences.test.ts
+  - tests/unit/world_session_quests.test.ts
+  - tests/unit/world_campaign_service_rules.test.ts
+verification:
+  - npm run validate -- wolf_winter
+  - npm run crawl:smoke
+  - npm run health

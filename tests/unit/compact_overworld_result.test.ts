@@ -6,9 +6,11 @@ import {
   compactOverworldGoalPassageResult,
   compactOverworldQuestCompletionResult,
   compactOverworldRoadEncounterResult,
+  compactOverworldServiceResult,
   compactOverworldTravelResult,
   OVERWORLD_COMPACT_ACTION_TEXT_CHAR_LIMIT,
   OVERWORLD_COMPACT_ROAD_ENCOUNTER_TEXT_CHAR_LIMIT,
+  OVERWORLD_COMPACT_SERVICE_TEXT_CHAR_LIMIT,
 } from "../../src/mcp/compact_overworld_result.js";
 import {
   OVERWORLD_COMPACT_LABEL_CHAR_LIMIT,
@@ -23,6 +25,7 @@ import type {
   OverworldJourneyGoalPassageResult,
   OverworldQuestCompletionResult,
   OverworldRoadEncounterResult,
+  OverworldServiceResult,
   TravelLogEntry,
 } from "../../src/world/session.js";
 
@@ -152,6 +155,43 @@ describe("compactOverworldActionResult", () => {
     expect(compact.route).not.toBe(longRoute);
     expect(compact.route).toHaveLength(OVERWORLD_COMPACT_LABEL_CHAR_LIMIT);
     expect(JSON.stringify(compact)).not.toContain(longRoute);
+  });
+});
+
+describe("compactOverworldServiceResult", () => {
+  it("preserves the one-time service cause under a transparent hard cap", () => {
+    const message = `Because the retained timber released these stores, ${"specific consequence ".repeat(30)}`;
+    const result: OverworldServiceResult = {
+      action: "resupply",
+      minutes: 15,
+      changed: true,
+      suppliesBefore: 2,
+      suppliesAfter: 8,
+      fatigueBefore: 12,
+      fatigueAfter: 12,
+      message,
+      entry: {
+        id: "service:resupply:615",
+        kind: "service",
+        town: "Albany city",
+        title: "Reclaim the Unused Repair-Wagon Stores",
+        text: message,
+        recordedAt: "Day 1, 10:15",
+      },
+    };
+
+    const compact = compactOverworldServiceResult(result);
+
+    expect(compact).toMatchObject({
+      action: "resupply",
+      m: 15,
+      changed: true,
+      supplies: [2, 8],
+      fatigue: [12, 12],
+      entry: ["service", "Reclaim the Unused Repair-Wagon Stores", "Day 1, 10:15"],
+    });
+    expect(compact.text).toContain("Because the retained timber released these stores");
+    expect(compact.text).toHaveLength(OVERWORLD_COMPACT_SERVICE_TEXT_CHAR_LIMIT);
   });
 });
 

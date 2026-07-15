@@ -22,6 +22,7 @@ import {
 import { enemyHp } from "./combat.js";
 import { publicFlags, publicInventory, publicJournal, publicVars } from "./observation_state.js";
 import { ATTACK_VAR, DEFENSE_VAR, HP_VAR, SCORE_VAR } from "./schema.js";
+import { resolveRpgPressureTracks, type RpgPressureTrackView } from "./pressure.js";
 import type { RpgActionOption } from "./legal_actions.js";
 import {
   enemyActive,
@@ -49,6 +50,7 @@ export type RpgObservation = {
   blocked_exits: { direction: string; message: string }[];
   blocked_actions: { id: string; command: string; reason: string }[];
   inventory: string[];
+  pressure_tracks?: RpgPressureTrackView[];
   state: { flags: string[]; vars: Record<string, number>; journal: string[] };
   dialogue: { npc: string; npc_text: string } | null;
   enemies_present: { id: string; name: string; hp: number }[];
@@ -155,6 +157,7 @@ export function buildRpgObservation(
   for (const option of enumerateRpgBlockedActions(index, state)) {
     blockedActions.push({ id: option.id, command: option.command, reason: option.reason });
   }
+  const pressureTracks = resolveRpgPressureTracks(index.pack.pressure_tracks, state);
 
   return {
     mode: "rpg",
@@ -170,6 +173,7 @@ export function buildRpgObservation(
     blocked_exits: blockedExits,
     blocked_actions: blockedActions,
     inventory: publicInventory(state, { sort: true }),
+    ...(pressureTracks.length > 0 ? { pressure_tracks: pressureTracks } : {}),
     state: {
       flags: publicFlags(state),
       vars: publicVars(state),

@@ -41,9 +41,8 @@ function runNpm(command: string, timeout = 120_000) {
 
 describe("single-engine RPG validation bar", () => {
   const packs = discoverRpgPacks();
-  const worldQuestIds = loadOverworldManifest(root)
-    .quests.map((quest) => quest.id)
-    .sort();
+  const world = loadOverworldManifest(root);
+  const worldQuestIds = world.quests.map((quest) => quest.id).sort();
 
   it("discovers the shipped RPG corpus and no legacy content packs", () => {
     expect(packs).toEqual([
@@ -71,9 +70,16 @@ describe("single-engine RPG validation bar", () => {
     expect(loaded.ok, `${path} failed to load as RPG`).toBe(true);
     if (!loaded.ok) return;
 
-    const errors = validateRpg(loaded.compiled.pack).findings.filter(
-      (finding) => finding.severity === "error",
-    );
+    const quest = world.quests.find((candidate) => candidate.source === path);
+    const importRules = quest?.campaign_imports?.rules ?? [];
+    const errors = validateRpg(loaded.compiled.pack, {
+      extraSettableFlags: importRules.flatMap((rule) =>
+        "target_flag" in rule ? [rule.target_flag] : [],
+      ),
+      extraObtainable: importRules.flatMap((rule) =>
+        rule.type === "equipment_to_item" ? [rule.target_object] : [],
+      ),
+    }).findings.filter((finding) => finding.severity === "error");
     expect(errors, `${path} has validation errors: ${JSON.stringify(errors)}`).toEqual([]);
   });
 

@@ -54,16 +54,14 @@ import {
 import {
   overworldQuestCompletionFromRpgSession,
   startOverworldQuestThroughRpg,
+  type EmbeddedOverworldQuestStartContext,
+  type OverworldQuestRpgStartArgs,
 } from "./overworld_quest_bridge.js";
 import {
   rpgStateHashMatches,
   rpgStateHashRejection,
   type RpgStateHashRejection,
 } from "./rpg_state_guards.js";
-import type {
-  RpgStartWorldQuestToolArgs,
-  RpgWorldQuestStartPayload,
-} from "./rpg_session_lifecycle.js";
 import {
   rpgSourceFields,
   type RpgMcpSessionRuntime,
@@ -78,7 +76,6 @@ import {
   type EmbeddedJourneyField,
 } from "./journey_projection.js";
 import type { JourneyDecisionClassification } from "../world/journey_contract.js";
-import type { JourneyCampaignStoryChoiceOptionId } from "../world/journey_campaign.js";
 
 type OverworldResponseOptions = OverworldMcpResponseOptions;
 
@@ -237,9 +234,10 @@ export type OverworldToolHandlerDeps = {
   rpgRuntime: RpgMcpSessionRuntime;
   overworldSessions: OverworldMcpSessionStore;
   loadOverworldManifest: () => OverworldManifest;
-  startWorldQuest: <Args extends RpgStartWorldQuestToolArgs>(
+  startEmbeddedWorldQuest: <Args extends OverworldQuestRpgStartArgs>(
     args: Args,
-  ) => RpgWorldQuestStartPayload<Args>;
+    context: EmbeddedOverworldQuestStartContext,
+  ) => RpgSessionPayload<Args>;
 };
 
 export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
@@ -625,7 +623,7 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
         overworldSessionId: args.session_id,
         questId: args.quest_id,
         startOptions: responseOptions,
-        startWorldQuest: deps.startWorldQuest,
+        startEmbeddedWorldQuest: deps.startEmbeddedWorldQuest,
       });
       const questResult =
         responseOptions.compact_result === true
@@ -707,7 +705,7 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
     choose_overworld_session_story<
       Args extends {
         session_id: string;
-        choice: JourneyCampaignStoryChoiceOptionId;
+        choice: string;
       } & OverworldResponseOptions,
     >(
       args: Args,

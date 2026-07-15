@@ -78,6 +78,7 @@ import {
   indexRpgPack,
   buildRpgRules,
   initStateForRpgPack,
+  enumerateRpgActions,
   type RpgIndex,
 } from "../../src/rpg/runner.js";
 import { HP_VAR } from "../../src/rpg/schema.js";
@@ -88,6 +89,8 @@ import type { GameState } from "../../src/core/state.js";
 import type { Rng } from "../../src/core/rng.js";
 import type { RoomVariant, ObjectVariant, EndingVariant } from "../../src/rpg/schema.js";
 import type { Action } from "../../src/api/types.js";
+import { makeStep } from "../../src/core/engine.js";
+import { loadOverworldManifest } from "../../src/world/source.js";
 import { exhaustiveEndingsMulti } from "./support/exhaustive_endings.js";
 
 const PACK_DIR = "content/rpg/quests";
@@ -95,14 +98,15 @@ const packFiles = readdirSync(PACK_DIR)
   .filter((f) => f.endsWith(".yaml"))
   .sort();
 
-// The route-rich Wolf-Winter graph exhausts at 670,963 states under this policy
-// (measured 2026-07-11). An 800k ceiling gives that concrete graph bounded headroom while
+// The route-rich Wolf-Winter graph exhausts at 630,199 states under this policy
+// (measured 2026-07-14). An 800k ceiling gives that concrete graph bounded headroom while
 // still failing LOUD on a future combinatorial blowup instead of silently truncating it.
 const MAX_STATES = 800_000;
+const IMPORT_WITNESS_MAX_STATES = 200_000;
+const WORLD = loadOverworldManifest(process.cwd());
 
-// The exact 670,963-state Wolf-Winter graph took 176s in the exhaustive-suite
-// contention run before interruptible dialogue (f23c8a09) multiplied edges per
-// dialogue state (~2x wall time locally; shared CI runners need ~3x local).
+// The exact 630,199-state Wolf-Winter graph took 153s in the final-hash
+// exhaustive-suite run; shared CI runners can take materially longer.
 // Wall-clock headroom does not change the bounded state proof.
 const SOLVER_TEST_TIMEOUT_MS = 720_000;
 
@@ -204,46 +208,317 @@ type Liveness = {
   cappedOut: boolean;
 };
 
+/** Credit only text a player can see in this exact, concrete state. */
+function creditViewedState(
+  index: RpgIndex,
+  state: GameState,
+  displayed: Set<string>,
+  present: Set<string>,
+): void {
+  const record = (kind: "room" | "object" | "ending", id: string, idx: number): void => {
+    if (idx >= 0) displayed.add(`${kind}:${id}#${idx}`);
+  };
+  if (state.ended) {
+    const ending = state.endingId
+      ? index.pack.endings.find((candidate) => candidate.id === state.endingId)
+      : undefined;
+    if (ending?.variants?.length) record("ending", ending.id, firstMatch(ending.variants, state));
+    return;
+  }
+  const room = index.rooms.get(state.current);
+  if (room?.variants?.length) record("room", room.id, firstMatch(room.variants, state));
+  const visible = visibleObjectIds(index, state, state.current);
+  for (const objectId of visible) {
+    const object = index.objects.get(objectId);
+    if (object?.visible_when !== undefined) present.add(`object:${objectId}@present`);
+    if (object?.variants?.length) record("object", objectId, firstMatch(object.variants, state));
+  }
+  // Inventory is authoritative and intentionally bypasses `visible_when`, so it
+  // can credit reactive examine text but never a world-presence gate.
+  for (const objectId of state.inventory) {
+    const object = index.objects.get(objectId);
+    if (object?.variants?.length) record("object", objectId, firstMatch(object.variants, state));
+  }
+}
+
+type WitnessAction = string | readonly [id: string, rolls: "best" | "worst"];
+
+/** Replay an authored action-id route through the real engine and credit every view. */
+function replayConcreteWitness(
+  index: RpgIndex,
+  initialState: GameState,
+  actions: readonly WitnessAction[],
+): { displayed: Set<string>; present: Set<string>; final: GameState } {
+  const displayed = new Set<string>();
+  const present = new Set<string>();
+  const bestStep = makeStep(buildRpgRules(index, bestRng));
+  const worstStep = makeStep(buildRpgRules(index, worstRng));
+  let state = initialState;
+  creditViewedState(index, state, displayed, present);
+  for (const witnessAction of actions) {
+    const [actionId, rolls] =
+      typeof witnessAction === "string" ? [witnessAction, "best"] : witnessAction;
+    const option = enumerateRpgActions(index, state).find((candidate) => candidate.id === actionId);
+    if (!option) {
+      throw new Error(
+        `Imported variant witness cannot take "${actionId}" in "${state.current}"; legal: ${enumerateRpgActions(
+          index,
+          state,
+        )
+          .map((candidate) => candidate.id)
+          .join(", ")}`,
+      );
+    }
+    const result = (rolls === "worst" ? worstStep : bestStep)(state, option.action);
+    if (!result.ok) {
+      throw new Error(
+        `Imported variant witness action "${actionId}" rejected: ${result.rejectionReason}`,
+      );
+    }
+    state = result.state;
+    creditViewedState(index, state, displayed, present);
+  }
+  return { displayed, present, final: state };
+}
+
+/**
+ * Wolf-Winter's June prose depends on campaign states the single-import search cannot
+ * represent: the scattered-herd line requires both June's companion import and a failed
+ * Relief Protocol import. These short routes are constructive witnesses, not exemptions:
+ * every transition is a currently legal engine action on a real best/worst die face.
+ */
+function wolfJuneCampaignWitnesses(index: RpgIndex): {
+  displayed: Set<string>;
+  present: Set<string>;
+} {
+  const displayed = new Set<string>();
+  const present = new Set<string>();
+  const run = (flags: readonly string[], actions: readonly WitnessAction[]): GameState => {
+    const initial = initStateForRpgPack(index, 7);
+    for (const flag of flags) initial.flags[flag] = true;
+    const witness = replayConcreteWitness(index, initial, actions);
+    for (const key of witness.displayed) displayed.add(key);
+    for (const key of witness.present) present.add(key);
+    return witness.final;
+  };
+  const startFouled: readonly WitnessAction[] = [
+    "go_north",
+    "talk_houndsman",
+    "ask_lure",
+    "ask_commit_lure",
+    "ask_leave",
+    "go_west",
+    "take_winter_feed_sack",
+    "go_east",
+    "go_north",
+    ["use_winter_feed_sack_on_downwind_feed_line", "worst"],
+  ];
+  const livingRecovery: readonly WitnessAction[] = [
+    ["use_paling_rail", "worst"],
+    "use_paling_rail",
+    "use_split_rail_guard_on_downwind_feed_line",
+    "go_south",
+  ];
+  const reachJune: readonly WitnessAction[] = [
+    "go_west",
+    "go_up",
+    "use_winter_feed_sack_on_loft_hatch",
+    "go_east",
+    "go_north",
+    "talk_june_pike",
+    "ask_acknowledge",
+    "use_winter_feed_sack_on_outer_scent_gate",
+    "go_north",
+  ];
+
+  const clean = run(["june_pike_present"], [...startFouled, ...livingRecovery, ...reachJune]);
+  if (clean.endingId !== "ending_pack_diverted") {
+    throw new Error(`June clean witness reached unexpected ending "${clean.endingId ?? "none"}".`);
+  }
+
+  const scattered = run(
+    ["june_pike_present", "relief_protocol_prepared"],
+    [...startFouled, ...livingRecovery, ["use_relief_protocol_docket", "worst"], ...reachJune],
+  );
+  if (scattered.endingId !== "ending_pack_diverted_cattle_scattered") {
+    throw new Error(
+      `June scattered witness reached unexpected ending "${scattered.endingId ?? "none"}".`,
+    );
+  }
+
+  const afterBlood = run(
+    ["june_pike_present"],
+    [
+      ...startFouled,
+      ["attack_yearling_wolf", "best"],
+      ["attack_yearling_wolf", "best"],
+      "go_south",
+      "go_west",
+      "go_up",
+      "use_winter_feed_sack_on_loft_hatch",
+      "go_east",
+      "go_north",
+      "use_winter_feed_sack_on_outer_scent_gate",
+      "go_north",
+    ],
+  );
+  if (afterBlood.endingId !== "ending_pack_diverted_after_blood") {
+    throw new Error(
+      `June after-blood witness reached unexpected ending "${afterBlood.endingId ?? "none"}".`,
+    );
+  }
+
+  const required = [
+    "room:steading_yard#1",
+    "room:byre_mouth#1",
+    "ending:ending_pack_diverted#0",
+    "ending:ending_pack_diverted_cattle_scattered#0",
+    "ending:ending_pack_diverted_after_blood#0",
+  ];
+  const missing = required.filter((key) => !displayed.has(key));
+  if (missing.length > 0) {
+    throw new Error(`Concrete June campaign routes did not display: ${missing.join(", ")}`);
+  }
+  return { displayed, present };
+}
+
+/**
+ * Wolf-Winter's campaign imports have compact constructive routes. Replaying those
+ * routes is both stronger evidence and dramatically cheaper than crawling another
+ * 200k-state graph for every persistent import flag: each credited view is reached
+ * through the real legality/resolution path on a real best/worst die face.
+ *
+ * `works_fortification_prepared` has no direct display predicate, but its failed repair
+ * sets the derived `works_fortification_splice_needed` flag; the Works route therefore
+ * witnesses that unique object variant while the fully exhausted unimported graph covers
+ * the shared successful `breach_braced` views. If either surface changes, the final
+ * declaration census below still fails until a concrete view is witnessed here.
+ */
+const WOLF_CONCRETE_IMPORT_FLAGS = new Set([
+  "jamie_market_testimony_certified",
+  "hayden_frost_report_certified",
+  "works_fortification_prepared",
+  "drover_route_prepared",
+  "relief_protocol_prepared",
+  "june_pike_present",
+]);
+
+function wolfCampaignImportWitnesses(index: RpgIndex): {
+  displayed: Set<string>;
+  present: Set<string>;
+} {
+  const displayed = new Set<string>();
+  const present = new Set<string>();
+  const run = (flag: string, actions: readonly WitnessAction[]): void => {
+    const initial = initStateForRpgPack(index, 7);
+    initial.flags[flag] = true;
+    const witness = replayConcreteWitness(index, initial, actions);
+    for (const key of witness.displayed) displayed.add(key);
+    for (const key of witness.present) present.add(key);
+  };
+
+  run("jamie_market_testimony_certified", [
+    "go_north",
+    "go_north",
+    ["maneuver_yearling_wolf_set_spear", "best"],
+    "go_south",
+    "go_west",
+    "go_up",
+    "go_east",
+    ["maneuver_flank_wolf_drop_from_loft", "best"],
+    ["attack_flank_wolf", "best"],
+  ]);
+  const reachHaydenBrace: readonly WitnessAction[] = [
+    "go_north",
+    "go_north",
+    ["use_paling_rail", "worst"],
+    ["maneuver_yearling_wolf_set_spear", "worst"],
+    ["maneuver_yearling_wolf_drive_set_spear", "best"],
+    "go_north",
+  ];
+  run("hayden_frost_report_certified", [
+    ...reachHaydenBrace,
+    ["maneuver_flank_wolf_frost_brace_trip", "worst"],
+    ["maneuver_flank_wolf_fallen_brace_drive", "worst"],
+    ["attack_flank_wolf", "best"],
+  ]);
+  run("hayden_frost_report_certified", [
+    "go_north",
+    "go_north",
+    ["use_paling_rail", "worst"],
+    ["maneuver_yearling_wolf_set_spear", "best"],
+    "go_north",
+    ["maneuver_flank_wolf_frost_brace_trip", "best"],
+  ]);
+  run("works_fortification_prepared", ["go_north", "go_north", ["use_paling_rail", "worst"]]);
+
+  const startFouled: readonly WitnessAction[] = [
+    "go_north",
+    "talk_houndsman",
+    "ask_lure",
+    "ask_commit_lure",
+    "ask_leave",
+    "go_west",
+    "take_winter_feed_sack",
+    "go_east",
+    "go_north",
+    ["use_winter_feed_sack_on_downwind_feed_line", "worst"],
+  ];
+  run("drover_route_prepared", startFouled);
+  run("relief_protocol_prepared", [
+    ...startFouled,
+    ["use_paling_rail", "worst"],
+    "use_paling_rail",
+    "use_split_rail_guard_on_downwind_feed_line",
+    "go_south",
+  ]);
+
+  const june = wolfJuneCampaignWitnesses(index);
+  for (const key of june.displayed) displayed.add(key);
+  for (const key of june.present) present.add(key);
+
+  const required = [
+    "room:store#3",
+    "room:fodder_loft#1",
+    "room:byre_door#6",
+    "room:byre_door#21",
+    "room:paling_gap#3",
+    "object:drover_route_marks@present",
+    "room:paling_gap#11",
+    "room:paling_gap#17",
+    "room:paling_gap#22",
+    "room:byre_door#23",
+    "object:paling_rail#4",
+    "room:byre_door#19",
+    "room:byre_door#5",
+    "room:byre_door#4",
+    "object:paling_rail#2",
+    "room:byre_yard#0",
+    "object:relief_protocol_docket@present",
+  ];
+  const missing = required.filter((key) => !displayed.has(key) && !present.has(key));
+  if (missing.length > 0) {
+    throw new Error(`Concrete Wolf-Winter import routes did not display: ${missing.join(", ")}`);
+  }
+  return { displayed, present };
+}
+
 /** Run the best/worst-roll bracket under the liveness policy and mine displayed variants. */
 function analyze(
   index: RpgIndex,
   explore: (a: Action) => boolean = (action) => livenessExplore(index, action),
+  initialState: GameState = initStateForRpgPack(index, 7),
+  maxStates = MAX_STATES,
 ): Liveness {
   const displayed = new Set<string>();
   const present = new Set<string>();
-  const record = (kind: "room" | "object" | "ending", id: string, idx: number): void => {
-    if (idx >= 0) displayed.add(`${kind}:${id}#${idx}`);
-  };
-
   const ruleSets = [buildRpgRules(index, bestRng), buildRpgRules(index, worstRng)];
   const result = exhaustiveEndingsMulti(
     ruleSets,
-    initStateForRpgPack(index, 7),
-    MAX_STATES,
+    initialState,
+    maxStates,
     (s) => {
-      // At a terminal the player sees the ending's epilogue — credit the reactive ending
-      // variant that fired (first-match-wins, exactly what model.ts endingText displays).
-      if (s.ended) {
-        const ending = s.endingId ? index.pack.endings.find((e) => e.id === s.endingId) : undefined;
-        if (ending?.variants?.length) record("ending", ending.id, firstMatch(ending.variants, s));
-        return;
-      }
-      const room = index.rooms.get(s.current);
-      if (room?.variants?.length) record("room", room.id, firstMatch(room.variants, s));
-      // Objects are shown on examine — credit a variant only when the object is actually
-      // PRESENT (visible in the room or held), i.e. examinable in this very state.
-      const visible = visibleObjectIds(index, s, s.current);
-      for (const oid of visible) {
-        const obj = index.objects.get(oid);
-        if (obj?.visible_when !== undefined) present.add(`object:${oid}@present`);
-        if (obj?.variants?.length) record("object", oid, firstMatch(obj.variants, s));
-      }
-      // Inventory is authoritative and intentionally bypasses `visible_when`, so it
-      // can credit a reactive examine variant but never a WORLD-presence gate.
-      for (const oid of s.inventory) {
-        const obj = index.objects.get(oid);
-        if (obj?.variants?.length) record("object", oid, firstMatch(obj.variants, s));
-      }
+      creditViewedState(index, s, displayed, present);
     },
     { explore },
   );
@@ -281,6 +556,20 @@ describe("bug_0147 — every reactive variant of every RPG pack is reachable as 
     expect(packFiles.length).toBeGreaterThanOrEqual(2);
   });
 
+  it("CREDITS Wolf-Winter variants that require combined companion and preparation imports", () => {
+    const loaded = loadRpgSourceFile(join(PACK_DIR, "wolf_winter.yaml"));
+    expect(loaded.ok).toBe(true);
+    if (!loaded.ok) return;
+    const witness = wolfCampaignImportWitnesses(indexRpgPack(loaded.compiled.pack));
+    expect([...witness.displayed].filter((key) => key.includes("pack_diverted"))).toEqual(
+      expect.arrayContaining([
+        "ending:ending_pack_diverted#0",
+        "ending:ending_pack_diverted_cattle_scattered#0",
+        "ending:ending_pack_diverted_after_blood#0",
+      ]),
+    );
+  });
+
   for (const file of packFiles) {
     it(
       `${file}: every declared variant is the first match in some viewing state`,
@@ -306,6 +595,34 @@ describe("bug_0147 — every reactive variant of every RPG pack is reachable as 
         expect(cappedOut).toBe(false);
         // The shipped RPG packs are reactive by design — guard against a vacuous pass.
         expect(declared.length).toBeGreaterThan(0);
+        const questId = file.replace(/\.yaml$/, "");
+        const quest = WORLD.quests.find((candidate) => candidate.id === questId);
+        const importedFlags = new Set(
+          (quest?.campaign_imports?.rules ?? []).flatMap((rule) =>
+            "target_flag" in rule ? [rule.target_flag] : [],
+          ),
+        );
+        for (const importedFlag of importedFlags) {
+          // Wolf-Winter's imported displays have exact legal-action witnesses below;
+          // retain bounded fallback crawls for any future or other pack import.
+          if (questId === "wolf_winter" && WOLF_CONCRETE_IMPORT_FLAGS.has(importedFlag)) continue;
+          const importedState = initStateForRpgPack(indexRpgPack(pack), 7);
+          importedState.flags[importedFlag] = true;
+          const witness = analyze(
+            indexRpgPack(pack),
+            undefined,
+            importedState,
+            IMPORT_WITNESS_MAX_STATES,
+          );
+          for (const key of witness.displayed) displayed.add(key);
+          for (const key of witness.present) present.add(key);
+        }
+        if (questId === "wolf_winter") {
+          expect(importedFlags).toEqual(WOLF_CONCRETE_IMPORT_FLAGS);
+          const witness = wolfCampaignImportWitnesses(indexRpgPack(pack));
+          for (const key of witness.displayed) displayed.add(key);
+          for (const key of witness.present) present.add(key);
+        }
         const dead = declared.filter((d) => !displayed.has(d.key)).map((d) => d.where);
         expect(dead).toEqual([]);
         const neverPresent = presenceDeclared

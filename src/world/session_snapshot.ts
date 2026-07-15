@@ -1,5 +1,15 @@
 import { z } from "zod";
-import { JourneyContractSnapshotSchema, cloneJourneyContractSnapshot } from "./journey_contract.js";
+import {
+  CampaignCharacterStateSchema,
+  cloneCampaignCharacterState,
+  createInitialCampaignCharacterState,
+} from "./campaign_character_state.js";
+import {
+  JourneyContractSnapshotSchema,
+  JourneyDecisionProofLastSchema,
+  cloneJourneyContractSnapshot,
+  type JourneyDecisionProofLast,
+} from "./journey_contract.js";
 import type { OverworldRoadEvent } from "./overworld.js";
 import {
   OVERWORLD_MAX_FATIGUE as MAX_FATIGUE,
@@ -7,7 +17,8 @@ import {
   type OverworldRoadEncounterOption,
 } from "./travel_mechanics.js";
 
-export const OVERWORLD_SESSION_SAVE_VERSION = 8 as const;
+export const OVERWORLD_SESSION_LEGACY_SAVE_VERSION = 8 as const;
+export const OVERWORLD_SESSION_SAVE_VERSION = 9 as const;
 
 export type TravelLogEntry = {
   edgeId: string;
@@ -80,17 +91,58 @@ const OverworldPendingRoadEncounterSnapshotSchema = z
   })
   .strict();
 
+export type OverworldJournalDecisionBoundary = {
+  acceptedDecisions: number;
+  decisionProofHash: string;
+  townId: string;
+  areaId: string;
+  minutes: number;
+};
+
+/**
+ * Replayable suffix from the source offer (or a trusted migration marker) to
+ * the current journey proof. This makes the chosen source part of every later
+ * save's causal history instead of trusting a detached journal entry.
+ */
+export type OverworldOpeningLeadSourceDecisionTrail = {
+  anchorId: string;
+  baseAcceptedDecisions: number;
+  baseDecisionProofHash: string;
+  decisions: JourneyDecisionProofLast[];
+};
+
+export function cloneOpeningLeadSourceDecisionTrail(
+  trail: OverworldOpeningLeadSourceDecisionTrail,
+): OverworldOpeningLeadSourceDecisionTrail {
+  return {
+    ...trail,
+    decisions: trail.decisions.map((decision) => ({ ...decision })),
+  };
+}
+
 export type OverworldJournalEntry = {
   id: string;
   kind:
     | "area"
+    | "ally"
+    | "ally_legacy"
+    | "ally_offer"
     | "campaign"
     | "contact"
     | "event"
     | "job"
+    | "lead_source"
+    | "lead_source_legacy"
+    | "lead_source_offer"
+    | "preparation"
+    | "preparation_legacy"
+    | "preparation_offer"
     | "poi"
     | "quest"
     | "quest_done"
+    | "registration"
+    | "registration_legacy"
+    | "registration_offer"
     | "regional_arc"
     | "resolution"
     | "road"
@@ -100,20 +152,57 @@ export type OverworldJournalEntry = {
   title: string;
   text: string;
   recordedAt: string;
+  questCompletionBoundary?: OverworldJournalDecisionBoundary | undefined;
+  registrationBoundary?: OverworldJournalDecisionBoundary | undefined;
+  serviceBoundary?: OverworldJournalDecisionBoundary | undefined;
+  serviceRuleId?: string | undefined;
+  serviceAreaId?: string | undefined;
+  storyChoiceBoundary?: OverworldJournalDecisionBoundary | undefined;
 };
+
+const OverworldJournalRegistrationBoundarySchema = z
+  .object({
+    acceptedDecisions: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER),
+    decisionProofHash: z.string().regex(/^[0-9a-f]{64}$/),
+    townId: z.string().min(1),
+    areaId: z.string().min(1),
+    minutes: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER),
+  })
+  .strict();
+
+const OverworldOpeningLeadSourceDecisionTrailSchema = z
+  .object({
+    anchorId: z.string().min(1),
+    baseAcceptedDecisions: z.number().int().nonnegative().safe(),
+    baseDecisionProofHash: z.string().regex(/^[0-9a-f]{64}$/),
+    decisions: z.array(JourneyDecisionProofLastSchema),
+  })
+  .strict();
 
 const OverworldJournalEntrySchema = z
   .object({
     id: z.string().min(1),
     kind: z.enum([
       "area",
+      "ally",
+      "ally_legacy",
+      "ally_offer",
       "campaign",
       "contact",
       "event",
       "job",
+      "lead_source",
+      "lead_source_legacy",
+      "lead_source_offer",
+      "preparation",
+      "preparation_legacy",
+      "preparation_offer",
       "poi",
       "quest",
       "quest_done",
+      "registration",
+      "registration_legacy",
+      "registration_offer",
       "regional_arc",
       "resolution",
       "road",
@@ -124,12 +213,47 @@ const OverworldJournalEntrySchema = z
     title: z.string().min(1),
     text: z.string().min(1),
     recordedAt: z.string().min(1),
+    questCompletionBoundary: OverworldJournalRegistrationBoundarySchema.optional(),
+    registrationBoundary: OverworldJournalRegistrationBoundarySchema.optional(),
+    serviceBoundary: OverworldJournalRegistrationBoundarySchema.optional(),
+    serviceRuleId: z.string().min(1).optional(),
+    serviceAreaId: z.string().min(1).optional(),
+    storyChoiceBoundary: OverworldJournalRegistrationBoundarySchema.optional(),
   })
-  .strict();
+  .strict()
+  .superRefine((entry, ctx) => {
+    const hasRuleId = entry.serviceRuleId !== undefined;
+    const hasAreaId = entry.serviceAreaId !== undefined;
+    if (hasRuleId !== hasAreaId) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Service journal proof must include both serviceRuleId and serviceAreaId.",
+      });
+    }
+    const hasServiceProof = hasRuleId || hasAreaId;
+    if (hasServiceProof && entry.kind !== "service") {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Service journal proof is only valid on service entries.",
+      });
+    }
+    if (hasServiceProof !== (entry.serviceBoundary !== undefined)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Campaign service journal proof must include its serviceBoundary.",
+      });
+    }
+    if (entry.questCompletionBoundary !== undefined && entry.kind !== "quest_done") {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Quest completion boundaries are only valid on quest_done entries.",
+      });
+    }
+  });
 
-export const OverworldSessionSnapshotSchema = z
+export const OverworldSessionSnapshotV8Schema = z
   .object({
-    version: z.literal(OVERWORLD_SESSION_SAVE_VERSION),
+    version: z.literal(OVERWORLD_SESSION_LEGACY_SAVE_VERSION),
     worldId: z.string().min(1),
     worldHash: z.string().regex(/^[0-9a-f]{64}$/),
     currentId: z.string().min(1),
@@ -160,14 +284,71 @@ export const OverworldSessionSnapshotSchema = z
   })
   .strict();
 
+export const OverworldSessionSnapshotSchema = OverworldSessionSnapshotV8Schema.extend({
+  version: z.literal(OVERWORLD_SESSION_SAVE_VERSION),
+  character: CampaignCharacterStateSchema,
+  openingLeadSourceDecisionTrail: OverworldOpeningLeadSourceDecisionTrailSchema.optional(),
+}).strict();
+
+export type OverworldSessionSnapshotV8 = z.infer<typeof OverworldSessionSnapshotV8Schema>;
 export type OverworldSessionSnapshot = z.infer<typeof OverworldSessionSnapshotSchema>;
+
+const OverworldSessionSnapshotVersionSchema = z.object({ version: z.number().int() }).passthrough();
+
+/** Parse current saves and migrate the one explicitly supported legacy shape. */
+export function parseOverworldSessionSnapshot(raw: unknown): OverworldSessionSnapshot {
+  const { version } = OverworldSessionSnapshotVersionSchema.parse(raw);
+  if (version === OVERWORLD_SESSION_LEGACY_SAVE_VERSION) {
+    const legacy = OverworldSessionSnapshotV8Schema.parse(raw);
+    return OverworldSessionSnapshotSchema.parse({
+      ...legacy,
+      version: OVERWORLD_SESSION_SAVE_VERSION,
+      character: createInitialCampaignCharacterState(),
+    });
+  }
+  if (version === OVERWORLD_SESSION_SAVE_VERSION) {
+    return OverworldSessionSnapshotSchema.parse(raw);
+  }
+  throw new Error(
+    `Unsupported overworld session snapshot version ${String(version)}; expected ${String(OVERWORLD_SESSION_LEGACY_SAVE_VERSION)} or ${String(OVERWORLD_SESSION_SAVE_VERSION)}.`,
+  );
+}
 
 export function cloneJournalEntries(
   entries: readonly OverworldJournalEntry[],
 ): OverworldJournalEntry[] {
   const clones: OverworldJournalEntry[] = [];
-  for (const entry of entries) clones.push({ ...entry });
+  for (const entry of entries) clones.push(cloneOverworldJournalEntry(entry));
   return clones;
+}
+
+export function cloneOverworldJournalEntry(entry: OverworldJournalEntry): OverworldJournalEntry {
+  return {
+    ...entry,
+    ...(entry.questCompletionBoundary
+      ? { questCompletionBoundary: { ...entry.questCompletionBoundary } }
+      : {}),
+    ...(entry.registrationBoundary
+      ? { registrationBoundary: { ...entry.registrationBoundary } }
+      : {}),
+    ...(entry.serviceBoundary ? { serviceBoundary: { ...entry.serviceBoundary } } : {}),
+    ...(entry.storyChoiceBoundary ? { storyChoiceBoundary: { ...entry.storyChoiceBoundary } } : {}),
+  };
+}
+
+export function redactOverworldJournalEntryForPresentation(
+  entry: OverworldJournalEntry,
+): OverworldJournalEntry {
+  const {
+    questCompletionBoundary: _questCompletionBoundary,
+    registrationBoundary: _registrationBoundary,
+    serviceBoundary: _serviceBoundary,
+    serviceRuleId: _serviceRuleId,
+    serviceAreaId: _serviceAreaId,
+    storyChoiceBoundary: _storyChoiceBoundary,
+    ...presented
+  } = entry;
+  return presented;
 }
 
 function cloneTravelLogSnapshots(
@@ -195,6 +376,7 @@ export function cloneOverworldSessionSnapshot(
 ): OverworldSessionSnapshot {
   return {
     ...snapshot,
+    character: cloneCampaignCharacterState(snapshot.character),
     discoveredIds: [...snapshot.discoveredIds],
     visitedIds: [...snapshot.visitedIds],
     currentAreaByTown: cloneStringTuples(snapshot.currentAreaByTown),
@@ -216,6 +398,13 @@ export function cloneOverworldSessionSnapshot(
     pendingRoadEncounter: snapshot.pendingRoadEncounter
       ? { ...snapshot.pendingRoadEncounter }
       : null,
+    ...(snapshot.openingLeadSourceDecisionTrail
+      ? {
+          openingLeadSourceDecisionTrail: cloneOpeningLeadSourceDecisionTrail(
+            snapshot.openingLeadSourceDecisionTrail,
+          ),
+        }
+      : {}),
     journey: cloneJourneyContractSnapshot(snapshot.journey),
   };
 }

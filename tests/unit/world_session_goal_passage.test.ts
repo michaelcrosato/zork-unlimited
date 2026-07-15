@@ -25,8 +25,17 @@ function sessionAtGallowmereGoal(): OverworldSession {
   const session = new OverworldSession(WORLD);
   const opening = session.view();
   session.scoutPoi(opening.pois[0]!.id);
-  const revealed = session.talkToCharacter(opening.characters[0]!.id);
-  const quest = revealed.discoveredQuests?.find((candidate) => candidate.id === "wolf_winter");
+  const talked = session.talkToCharacter(opening.characters[0]!.id);
+  expect(talked.discoveredQuests?.map((candidate) => candidate.id)).not.toContain("wolf_winter");
+  if (session.journey().storyChoice?.kind === "registration") {
+    session.chooseJourneyStory("albany:ledger_advocate");
+  }
+  expect(session.journey().storyChoice?.kind).toBe("lead_source");
+  session.chooseJourneyStory("albany:source_rowan_civic_docket");
+  expect(session.journey().storyChoice?.kind).toBe("preparation");
+  expect(session.view().quests.map((candidate) => candidate.id)).not.toContain("wolf_winter");
+  session.chooseJourneyStory("albany:prep_works_fortification");
+  const quest = session.view().quests.find((candidate) => candidate.id === "wolf_winter");
   if (!quest) throw new Error("Expected Wolf-Winter to be discovered in Albany.");
   moveToArea(session, quest.area);
   session.startQuest(quest.id);
@@ -155,7 +164,8 @@ describe("current-goal passage", () => {
         last: {
           number: before.acceptedDecisions + 1,
           surface: "overworld",
-          actionId: "follow_current_goal:carry_hedricks_packet_north",
+          actionId:
+            "follow_current_goal:carry_hedricks_packet_north:via:road_albany_city__saratoga_springs_city",
           reason: "movement",
         },
       },
@@ -246,8 +256,16 @@ describe("current-goal passage", () => {
     expect(passage.stoppedAt).toBe("Oneonta city");
     expect(passage.legs).toHaveLength(3);
     expect(passage.legs).toEqual(manualLegs);
-    const { journey: _passageJourney, ...passageWorld } = passageSession.snapshot();
-    const { journey: _manualJourney, ...manualWorld } = manualSession.snapshot();
+    const {
+      journey: _passageJourney,
+      openingLeadSourceDecisionTrail: _passageSourceTrail,
+      ...passageWorld
+    } = passageSession.snapshot();
+    const {
+      journey: _manualJourney,
+      openingLeadSourceDecisionTrail: _manualSourceTrail,
+      ...manualWorld
+    } = manualSession.snapshot();
     expect(passageWorld).toEqual(manualWorld);
     expect(passageSession.journey().acceptedDecisions).toBe(beforeDecisions + 1);
     expect(manualSession.journey().acceptedDecisions).toBe(beforeDecisions + 3);

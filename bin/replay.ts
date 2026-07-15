@@ -13,6 +13,7 @@ import { assertTraceMode, replayTrace } from "../src/trace/replay.js";
 import { buildRpgRules, indexRpgPack } from "../src/rpg/runner.js";
 import type { RpgAction } from "../src/api/types.js";
 import { assertWellFormedState } from "../src/persist/save_load.js";
+import { assertCampaignImportReceiptCatalogCompatibility } from "../src/persist/campaign_import_integrity.js";
 import { assertRpgStateReferences } from "../src/rpg/state_integrity.js";
 import { RpgSourceRuntime } from "../src/mcp/rpg_source_runtime.js";
 import type { TraceSourceArgs } from "../src/world/source.js";
@@ -63,7 +64,8 @@ function main(): void {
   assertTraceMode(trace);
   const root = process.cwd();
   const rpgSources = new RpgSourceRuntime(root);
-  const { compiled } = rpgSources.resolveTraceSource(traceSourceArgs(), trace, "replay");
+  const source = rpgSources.resolveTraceSource(traceSourceArgs(), trace, "replay");
+  const { compiled } = source;
 
   if (trace.content_hash !== compiled.contentHash) {
     console.error(
@@ -72,6 +74,10 @@ function main(): void {
     process.exit(1);
   }
   assertWellFormedState(trace.initial_state);
+  assertCampaignImportReceiptCatalogCompatibility(
+    trace.initial_state,
+    source.kind === "worldQuest" ? source.campaignImports : undefined,
+  );
   const index = indexRpgPack(compiled.pack);
   assertRpgStateReferences(index, trace.initial_state);
   const rules = buildRpgRules(index);

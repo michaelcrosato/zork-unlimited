@@ -2,6 +2,7 @@ import {
   isOverworldRoadEncounterStrategy,
   type OverworldRoadEncounterStrategy,
 } from "./travel_mechanics.js";
+import type { CampaignServiceAction } from "./campaign_service_rules.js";
 
 export type RoadJournalIdParts = {
   edgeId: string;
@@ -10,7 +11,7 @@ export type RoadJournalIdParts = {
 };
 
 export type ServiceJournalIdParts = {
-  action: "rest" | "resupply";
+  action: CampaignServiceAction;
   recordedAt: number;
 };
 
@@ -74,7 +75,7 @@ export function parseServiceJournalId(entryId: string): ServiceJournalIdParts {
     );
   }
   return {
-    action: match[1] as "rest" | "resupply",
+    action: match[1] as CampaignServiceAction,
     recordedAt,
   };
 }

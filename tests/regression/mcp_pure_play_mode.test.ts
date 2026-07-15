@@ -152,6 +152,7 @@ describe("MCP pure play mode", () => {
     const evidence = join(dir, "run.jsonl");
     type AreaView = {
       pois: { id: string }[];
+      characters: { id: string }[];
       areaExits: { id: string; destination: { id: string } }[];
     };
     type RpgObservation = {
@@ -208,6 +209,106 @@ describe("MCP pure play mode", () => {
           }),
         );
         view = openingScout.observation as AreaView;
+        const rowan = view.characters[0];
+        if (!rowan) throw new Error("expected Albany registration contact");
+        const registration = textPayload(
+          await client.callTool({
+            name: "talk_overworld_session_contact",
+            arguments: {
+              session_id: sessionId,
+              character_id: rowan.id,
+              compact_context: false,
+              compact_result: false,
+            },
+          }),
+        );
+        const registrationChoice = (
+          registration.journey as {
+            storyChoice?: {
+              kind?: string;
+              options?: { id: string }[];
+            };
+          }
+        ).storyChoice;
+        expect(registrationChoice?.kind).toBe("registration");
+        const ledgerAdvocate = registrationChoice?.options?.find(
+          (option) => option.id === "albany:ledger_advocate",
+        );
+        if (!ledgerAdvocate) throw new Error("expected visible Ledger Advocate profile");
+        const wolfBeforeSource = (
+          registration.result as { discoveredQuests?: { id: string; area: string }[] }
+        ).discoveredQuests?.find((quest) => quest.id === "wolf_winter");
+        expect(wolfBeforeSource).toBeUndefined();
+        const selected = textPayload(
+          await client.callTool({
+            name: "choose_overworld_session_story",
+            arguments: {
+              session_id: sessionId,
+              choice: ledgerAdvocate.id,
+              compact_context: false,
+              compact_result: false,
+            },
+          }),
+        );
+        const sourceChoice = (
+          selected.journey as {
+            storyChoice?: {
+              kind?: string;
+              options?: { id: string }[];
+            };
+          }
+        ).storyChoice;
+        expect(sourceChoice?.kind).toBe("lead_source");
+        const rowanDocket = sourceChoice?.options?.find(
+          (option) => option.id === "albany:source_rowan_civic_docket",
+        );
+        if (!rowanDocket) throw new Error("expected visible Rowan civic-docket source");
+        const sourced = textPayload(
+          await client.callTool({
+            name: "choose_overworld_session_story",
+            arguments: {
+              session_id: sessionId,
+              choice: rowanDocket.id,
+              compact_context: false,
+              compact_result: false,
+            },
+          }),
+        );
+        const preparationChoice = (
+          sourced.journey as {
+            storyChoice?: {
+              kind?: string;
+              options?: { id: string }[];
+            };
+          }
+        ).storyChoice;
+        expect(preparationChoice?.kind).toBe("preparation");
+        expect(
+          (sourced.observation as AreaView & { quests?: { id: string }[] }).quests?.map(
+            (quest) => quest.id,
+          ),
+        ).not.toContain("wolf_winter");
+        const worksFortification = preparationChoice?.options?.find(
+          (option) => option.id === "albany:prep_works_fortification",
+        );
+        if (!worksFortification)
+          throw new Error("expected visible works-fortification preparation");
+        const prepared = textPayload(
+          await client.callTool({
+            name: "choose_overworld_session_story",
+            arguments: {
+              session_id: sessionId,
+              choice: worksFortification.id,
+              compact_context: false,
+              compact_result: false,
+            },
+          }),
+        );
+        const wolfWinter = (
+          prepared.observation as AreaView & { quests?: { id: string; area: string }[] }
+        ).quests?.find((quest) => quest.id === "wolf_winter");
+        if (!wolfWinter) throw new Error("expected selected preparation to reveal Wolf-Winter");
+        view = prepared.observation as AreaView;
         const marketRoute = view.areaExits.find(
           (route) => route.destination.id === "albany_city__market",
         );
@@ -239,9 +340,7 @@ describe("MCP pure play mode", () => {
             },
           }),
         );
-        const quest = (lead.result as { discoveredQuests?: { id: string; area: string }[] })
-          .discoveredQuests?.[0];
-        if (!quest) throw new Error("expected a local Albany lead");
+        const quest = wolfWinter;
         view = lead.observation as AreaView;
         const questRoute = view.areaExits.find((route) => route.destination.id === quest.area);
         if (!questRoute) throw new Error("expected route to the discovered lead");

@@ -38,6 +38,7 @@ import {
   type OverworldSiteExplorationPlan,
 } from "./session_local_actions.js";
 import type { OverworldJournalEntry } from "./session_snapshot.js";
+import type { CampaignCharacterState } from "./campaign_character_state.js";
 
 export type OverworldSessionAreaPlanState = {
   areaId: string;
@@ -102,6 +103,7 @@ export type OverworldSessionPoiScoutPlanState = {
 };
 
 export type OverworldSessionContactTalkPlanState = {
+  character: CampaignCharacterState;
   characterId: string;
   charactersById: ReadonlyMap<string, OverworldCharacter>;
   completedQuestIds: ReadonlySet<string>;
@@ -238,6 +240,7 @@ export function planOverworldSessionContactTalk(
     throw new Error("Move to that local area before talking to that contact.");
   }
   const presentation = presentOverworldContact(character, {
+    character: state.character,
     completedQuestIds: state.completedQuestIds,
   });
   return {

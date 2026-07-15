@@ -1,13 +1,17 @@
 import { describe, expect, it } from "vitest";
+import { createInitialCampaignCharacterState } from "../../src/world/campaign_character_state.js";
 import { createInitialJourneyContractSnapshot } from "../../src/world/journey_contract.js";
 import {
+  OVERWORLD_SESSION_LEGACY_SAVE_VERSION,
   OVERWORLD_SESSION_SAVE_VERSION,
   OverworldSessionSnapshotSchema,
   cloneJournalEntries,
   cloneOverworldSessionSnapshot,
+  parseOverworldSessionSnapshot,
   snapshotTravelLogEntry,
   type OverworldJournalEntry,
   type OverworldSessionSnapshot,
+  type OverworldSessionSnapshotV8,
   type TravelLogEntry,
 } from "../../src/world/session_snapshot.js";
 
@@ -16,6 +20,7 @@ function baseSnapshot(): OverworldSessionSnapshot {
     version: OVERWORLD_SESSION_SAVE_VERSION,
     worldId: "new_york_overworld",
     worldHash: "a".repeat(64),
+    character: createInitialCampaignCharacterState(),
     currentId: "albany_city",
     currentAreaId: "albany_capitol_hill",
     minutes: 480,
@@ -66,6 +71,11 @@ function baseSnapshot(): OverworldSessionSnapshot {
   };
 }
 
+function legacySnapshot(): OverworldSessionSnapshotV8 {
+  const { character: _character, ...snapshot } = baseSnapshot();
+  return { ...snapshot, version: OVERWORLD_SESSION_LEGACY_SAVE_VERSION };
+}
+
 describe("overworld session snapshots", () => {
   it("validates the saved session shape and resource caps", () => {
     expect(OverworldSessionSnapshotSchema.parse(baseSnapshot()).version).toBe(
@@ -78,6 +88,75 @@ describe("overworld session snapshots", () => {
         supplies: 9,
       }),
     ).toThrow();
+  });
+
+  it("requires campaign service proof ids as a pair and only on service entries", () => {
+    const serviceProof = {
+      id: "service:rest:600",
+      kind: "service" as const,
+      town: "Albany city",
+      title: "A private recovery room",
+      text: "A trusted contact clears a private room for you.",
+      recordedAt: "Day 1, 10:00",
+      serviceRuleId: "service_rule:trusted_rest",
+      serviceAreaId: "albany_city__market",
+      serviceBoundary: {
+        acceptedDecisions: 3,
+        decisionProofHash: "b".repeat(64),
+        townId: "albany_city",
+        areaId: "albany_city__market",
+        minutes: 600,
+      },
+    };
+    expect(() =>
+      OverworldSessionSnapshotSchema.parse({
+        ...baseSnapshot(),
+        journalEntries: [serviceProof],
+      }),
+    ).not.toThrow();
+    expect(() =>
+      OverworldSessionSnapshotSchema.parse({
+        ...baseSnapshot(),
+        journalEntries: [{ ...serviceProof, serviceAreaId: undefined }],
+      }),
+    ).toThrow(/must include both serviceRuleId and serviceAreaId/i);
+    expect(() =>
+      OverworldSessionSnapshotSchema.parse({
+        ...baseSnapshot(),
+        journalEntries: [{ ...serviceProof, kind: "area" }],
+      }),
+    ).toThrow(/only valid on service entries/i);
+  });
+
+  it("migrates strict version-8 snapshots to the canonical version-9 default", () => {
+    const migrated = parseOverworldSessionSnapshot(legacySnapshot());
+    const second = parseOverworldSessionSnapshot(legacySnapshot());
+
+    expect(migrated).toEqual({
+      ...legacySnapshot(),
+      version: OVERWORLD_SESSION_SAVE_VERSION,
+      character: createInitialCampaignCharacterState(),
+    });
+    expect(migrated.character).not.toBe(second.character);
+  });
+
+  it("rejects unsupported, disguised, and malformed snapshot versions", () => {
+    expect(() => parseOverworldSessionSnapshot({ ...legacySnapshot(), version: 7 })).toThrow(
+      /unsupported overworld session snapshot version 7/i,
+    );
+    expect(() => parseOverworldSessionSnapshot({ ...baseSnapshot(), version: 10 })).toThrow(
+      /unsupported overworld session snapshot version 10/i,
+    );
+    expect(() => parseOverworldSessionSnapshot({ ...legacySnapshot(), version: "8" })).toThrow();
+    expect(() =>
+      parseOverworldSessionSnapshot({
+        ...legacySnapshot(),
+        character: createInitialCampaignCharacterState(),
+      }),
+    ).toThrow();
+    expect(() => parseOverworldSessionSnapshot({ ...legacySnapshot(), supplies: 9 })).toThrow();
+    const { character: _character, ...missingCharacter } = baseSnapshot();
+    expect(() => parseOverworldSessionSnapshot(missingCharacter)).toThrow();
   });
 
   it("projects runtime travel log entries into compact save entries", () => {
@@ -127,6 +206,7 @@ describe("overworld session snapshots", () => {
     clone.regionRenown[0]![1] = 9;
     clone.pendingRoadEncounter!.edgeId = "changed_road";
     clone.journey.goal.status = "completed";
+    clone.character.health.current = 1;
 
     expect(snapshot.discoveredIds).toEqual(["albany_city"]);
     expect(snapshot.currentAreaByTown[0]).toEqual(["albany_city", "albany_capitol_hill"]);
@@ -136,6 +216,7 @@ describe("overworld session snapshots", () => {
     expect(snapshot.regionRenown[0]).toEqual(["Capital / Mohawk", 1]);
     expect(snapshot.pendingRoadEncounter?.edgeId).toBe("road:albany:colonie");
     expect(snapshot.journey.goal.status).toBe("active");
+    expect(snapshot.character.health.current).toBe(30);
   });
 
   it("clones journal entries independently", () => {
@@ -154,5 +235,30 @@ describe("overworld session snapshots", () => {
     clones[0]!.title = "Changed";
 
     expect(entries[0]?.title).toBe("Rest");
+  });
+
+  it("deep-clones replay boundaries", () => {
+    const entries: OverworldJournalEntry[] = [
+      {
+        id: "quest_done:wolf_winter",
+        kind: "quest_done",
+        town: "Albany",
+        title: "Quest complete",
+        text: "The timber survives.",
+        recordedAt: "Day 1, 10:00",
+        questCompletionBoundary: {
+          acceptedDecisions: 3,
+          decisionProofHash: "b".repeat(64),
+          townId: "albany_city",
+          areaId: "albany_city__transport_hub",
+          minutes: 600,
+        },
+      },
+    ];
+
+    const clones = cloneJournalEntries(entries);
+    clones[0]!.questCompletionBoundary!.areaId = "changed";
+
+    expect(entries[0]?.questCompletionBoundary?.areaId).toBe("albany_city__transport_hub");
   });
 });

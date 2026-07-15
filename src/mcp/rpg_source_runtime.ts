@@ -3,6 +3,12 @@ import { parse as parseYaml } from "yaml";
 import { hashState } from "../core/hash.js";
 import type { RpgAction } from "../api/types.js";
 import { compileRpgSource, type CompiledRpgSource } from "../rpg/source.js";
+import { indexRpgPack, initStateForRpgPack } from "../rpg/runner.js";
+import {
+  CampaignCharacterImportsSchema,
+  campaignCharacterImportTargetIssues,
+  type CampaignCharacterImports,
+} from "../rpg/campaign_character_import.js";
 import { generateRpgPack } from "../gen/rpg_generator.js";
 import { assertGeneratedRpgSeed } from "../gen/seed.js";
 import { validateRpg } from "../validate/rpg_validator.js";
@@ -14,7 +20,11 @@ import {
 } from "../validate/report.js";
 import type { Trace } from "../trace/record.js";
 import type { WorldBinding } from "../world/schema.js";
-import { normalizeSourcePath, overworldQuestById } from "../world/overworld.js";
+import {
+  normalizeSourcePath,
+  overworldQuestById,
+  type OverworldQuestCampaignExport,
+} from "../world/overworld.js";
 import { loadOverworldManifest, resolveTraceGameSource, type GameSource } from "../world/source.js";
 import { safeResolve } from "./paths.js";
 import { isRpgPackShape } from "./types.js";
@@ -48,6 +58,8 @@ export type RpgTraceSource =
       worldQuestId: string;
       generateRpgSeed: null;
       compiled: CompiledRpgSource;
+      campaignImports?: CampaignCharacterImports;
+      campaignImportsHash?: string;
     }
   | {
       kind: "generated";
@@ -60,6 +72,8 @@ export type RpgWorldQuestPlayableSource = {
   questId: string;
   title: string;
   compiled: CompiledRpgSource;
+  campaignImports?: CampaignCharacterImports;
+  campaignImportsHash?: string;
 };
 
 export type RpgWorldQuestReportSource = {
@@ -72,6 +86,9 @@ type RpgWorldQuestSource = {
   questId: string;
   title: string;
   sourcePath: string;
+  campaignImports?: CampaignCharacterImports;
+  campaignImportsHash?: string;
+  campaignExports: readonly OverworldQuestCampaignExport[] | undefined;
 };
 
 export const RPG_SOURCE_RUNTIME_CACHE_LIMIT = 8;
@@ -125,6 +142,254 @@ function freezeLoadResult(result: RpgLoadResult): RpgLoadResult {
 
 function freezeGeneratedEntry(entry: GeneratedRpgCacheEntry): GeneratedRpgCacheEntry {
   return deepFreezeSourceResult(entry);
+}
+
+function campaignExportParityFindings(
+  source: RpgWorldQuestSource,
+  compiled: CompiledRpgSource,
+): Finding[] {
+  if (source.campaignExports === undefined) return [];
+  const endingsById = new Map(compiled.pack.endings.map((ending) => [ending.id, ending]));
+  const exportedEndingIds = new Set(
+    source.campaignExports.map((campaignExport) => campaignExport.ending_id),
+  );
+  const findings: Finding[] = [];
+
+  source.campaignExports.forEach((campaignExport, index) => {
+    const where = [source.questId, `campaign_exports.${index}`];
+    const ending = endingsById.get(campaignExport.ending_id);
+    if (!ending) {
+      findings.push({
+        severity: "error",
+        code: "CAMPAIGN_EXPORT_ENDING_MISSING",
+        message: `Campaign export ending "${campaignExport.ending_id}" does not exist in the compiled RPG.`,
+        where,
+      });
+      return;
+    }
+    if (ending.title !== campaignExport.ending_title) {
+      findings.push({
+        severity: "error",
+        code: "CAMPAIGN_EXPORT_TITLE_MISMATCH",
+        message: `Campaign export title ${JSON.stringify(campaignExport.ending_title)} does not exactly match compiled ending title ${JSON.stringify(ending.title)}.`,
+        where,
+      });
+    }
+    if (ending.death) {
+      findings.push({
+        severity: "error",
+        code: "CAMPAIGN_EXPORT_DEATH_ENDING",
+        message: `Campaign export ending "${campaignExport.ending_id}" is a death ending and cannot grant persistent consequences.`,
+        where,
+      });
+    }
+  });
+
+  for (const ending of compiled.pack.endings) {
+    if (!ending.death && !exportedEndingIds.has(ending.id)) {
+      findings.push({
+        severity: "error",
+        code: "CAMPAIGN_EXPORT_ENDING_UNDECLARED",
+        message: `Compiled non-death ending "${ending.id}" has no campaign export.`,
+        where: [source.questId, "campaign_exports"],
+      });
+    }
+  }
+
+  return findings;
+}
+
+function campaignImportTargetFindings(
+  source: RpgWorldQuestSource,
+  compiled: CompiledRpgSource,
+): Finding[] {
+  if (source.campaignImports === undefined) return [];
+  return campaignCharacterImportTargetIssues(compiled.pack, source.campaignImports).map(
+    (issue) => ({
+      severity: "error" as const,
+      code: `CAMPAIGN_IMPORT_${issue.code}`,
+      message: issue.message,
+      where: [source.questId, `campaign_imports.${issue.path.join(".")}`],
+    }),
+  );
+}
+
+function importedFlagTargets(source: RpgWorldQuestSource): string[] {
+  return (source.campaignImports?.rules ?? [])
+    .flatMap((rule) =>
+      rule.type === "background_to_flag" ||
+      rule.type === "ability_to_flag" ||
+      rule.type === "knowledge_to_flag" ||
+      rule.type === "companion_to_flag"
+        ? [rule.target_flag]
+        : [],
+    )
+    .sort();
+}
+
+function importedItemTargets(source: RpgWorldQuestSource): string[] {
+  return (source.campaignImports?.rules ?? [])
+    .flatMap((rule) => (rule.type === "equipment_to_item" ? [rule.target_object] : []))
+    .sort();
+}
+
+function sameFinding(left: Finding, right: Finding): boolean {
+  return (
+    left.severity === right.severity &&
+    left.code === right.code &&
+    left.message === right.message &&
+    left.where.length === right.where.length &&
+    left.where.every((value, index) => value === right.where[index])
+  );
+}
+
+function campaignImportDirectStartFindings(
+  source: RpgWorldQuestSource,
+  compiled: CompiledRpgSource,
+): Finding[] {
+  if (source.campaignImports === undefined) return [];
+  const importedFlags = new Set(importedFlagTargets(source));
+  const importedItems = new Set(importedItemTargets(source));
+  const importedVars = new Set(
+    source.campaignImports.rules.flatMap((rule) =>
+      rule.type === "health_current_to_var" || rule.type === "skill_rank_to_var"
+        ? [rule.target_var]
+        : [],
+    ),
+  );
+  const defaultStartState = initStateForRpgPack(indexRpgPack(compiled.pack), 1);
+  const conditionImportRefs = (condition: unknown): Set<string> => {
+    const refs = new Set<string>();
+    if (condition === null || typeof condition !== "object") return refs;
+    const record = condition as Record<string, unknown>;
+    if (typeof record.has_flag === "string" && importedFlags.has(record.has_flag)) {
+      refs.add(`flag:${record.has_flag}`);
+      return refs;
+    }
+    if (typeof record.has_item === "string" && importedItems.has(record.has_item)) {
+      refs.add(`item:${record.has_item}`);
+      return refs;
+    }
+    for (const operator of ["var_gte", "var_lte", "var_eq"] as const) {
+      const comparison = record[operator];
+      if (
+        comparison === null ||
+        typeof comparison !== "object" ||
+        typeof (comparison as { name?: unknown }).name !== "string" ||
+        !importedVars.has((comparison as { name: string }).name)
+      ) {
+        continue;
+      }
+      const { name, value } = comparison as { name: string; value: number };
+      const initial = defaultStartState.vars[name];
+      const holdsByDefault =
+        initial !== undefined &&
+        (operator === "var_gte"
+          ? initial >= value
+          : operator === "var_lte"
+            ? initial <= value
+            : initial === value);
+      if (!holdsByDefault) refs.add(`var:${name}`);
+      return refs;
+    }
+    if (Array.isArray(record.all_of)) {
+      for (const child of record.all_of) {
+        for (const ref of conditionImportRefs(child)) refs.add(ref);
+      }
+      return refs;
+    }
+    if (Array.isArray(record.any_of)) {
+      const branches = record.any_of.map(conditionImportRefs);
+      // A disjunction depends on imports only when every alternative does. A
+      // mixed import/base any_of preserves a direct/default route.
+      if (branches.length > 0 && branches.every((branch) => branch.size > 0)) {
+        for (const branch of branches) for (const ref of branch) refs.add(ref);
+      }
+      return refs;
+    }
+    // none_of/negative predicates do not positively require an imported fact.
+    return refs;
+  };
+  const requiredImportRefs = (conditions: readonly unknown[]): Set<string> => {
+    const refs = new Set<string>();
+    for (const condition of conditions) {
+      for (const ref of conditionImportRefs(condition)) refs.add(ref);
+    }
+    return refs;
+  };
+  const wins = compiled.pack.win_conditions.map((win) => {
+    return { id: win.id, refs: requiredImportRefs(win.conditions) };
+  });
+  if (wins.length === 0 || wins.some((win) => win.refs.size === 0)) return [];
+  return [
+    {
+      severity: "error",
+      code: "CAMPAIGN_IMPORT_DIRECT_START_UNWINNABLE",
+      message: `Every win condition directly requires a campaign import target, but public/direct starts use pack defaults. Keep at least one structurally import-independent victory; blocked wins: ${wins.map((win) => `${win.id} (${[...win.refs].sort().join(", ")})`).join("; ")}.`,
+      where: [source.questId, "campaign_imports", ...wins.map((win) => `win:${win.id}`)],
+    },
+  ];
+}
+
+function campaignImportCombatGuaranteeFindings(
+  source: RpgWorldQuestSource,
+  compiled: CompiledRpgSource,
+): Finding[] {
+  if (
+    compiled.pack.meta.combat_guaranteed !== true ||
+    !source.campaignImports?.rules.some((rule) => rule.type === "health_current_to_var")
+  ) {
+    return [];
+  }
+  return [
+    {
+      severity: "error",
+      code: "CAMPAIGN_IMPORT_COMBAT_GUARANTEE_CONFLICT",
+      message:
+        "health_current_to_var cannot target a combat_guaranteed quest: active campaign health may be as low as 1, outside the pack-default worst-case proof. Author a validated wounded-character recovery/minimum contract before enabling this combination.",
+      where: [source.questId, "meta:combat_guaranteed", "campaign_imports"],
+    },
+  ];
+}
+
+function withCampaignCatalogParity(
+  source: RpgWorldQuestSource,
+  result: RpgLoadResult,
+): RpgLoadResult {
+  if (!result.ok) return result;
+  const importFlags = importedFlagTargets(source);
+  const importItems = importedItemTargets(source);
+  const importAwareReport =
+    importFlags.length === 0 && importItems.length === 0
+      ? result.report
+      : validateRpg(result.compiled.pack, {
+          extraSettableFlags: importFlags,
+          extraObtainable: importItems,
+        });
+  const findings = [...importAwareReport.findings];
+  // An embedded import may make an additional route possible, but public/direct
+  // starts still use pack defaults. Retain any global base-state reachability
+  // failure; the catalog parity check below separately rejects the common case
+  // where every declared win is directly gated on imported state.
+  for (const finding of result.report.findings.filter(
+    (candidate) => candidate.code === "WIN_UNREACHABLE",
+  )) {
+    if (!findings.some((candidate) => sameFinding(candidate, finding))) findings.push(finding);
+  }
+  const parityFindings = [
+    ...campaignExportParityFindings(source, result.compiled),
+    ...campaignImportTargetFindings(source, result.compiled),
+    ...campaignImportDirectStartFindings(source, result.compiled),
+    ...campaignImportCombatGuaranteeFindings(source, result.compiled),
+  ];
+  if (parityFindings.length === 0 && importFlags.length === 0 && importItems.length === 0) {
+    return result;
+  }
+  return freezeLoadResult({
+    ok: true,
+    compiled: result.compiled,
+    report: makeReport(source.sourcePath, [...findings, ...parityFindings]),
+  });
 }
 
 export class RpgSourceRuntime {
@@ -224,9 +489,13 @@ export class RpgSourceRuntime {
     return result;
   }
 
-  /** Compile + validate, refusing to play an invalid source. */
-  private requireSourceBackedPlayable(sourcePath: string): CompiledRpgSource {
-    const lr = this.loadSourceBackedReport(sourcePath);
+  private loadWorldQuestSourceReport(source: RpgWorldQuestSource): RpgLoadResult {
+    return withCampaignCatalogParity(source, this.loadSourceBackedReport(source.sourcePath));
+  }
+
+  /** Compile + validate the RPG and its trusted campaign import/export catalogs before play. */
+  private requireWorldQuestSourcePlayable(source: RpgWorldQuestSource): CompiledRpgSource {
+    const lr = this.loadWorldQuestSourceReport(source);
     if (!lr.ok || !lr.report.ok) {
       throw new Error(`RPG source is not playable:\n${formatReport(lr.report)}`);
     }
@@ -293,19 +562,35 @@ export class RpgSourceRuntime {
     if (!quest) {
       throw new Error(`Unknown overworld quest "${worldQuestId}".`);
     }
+    const campaignImports =
+      quest.campaign_imports === undefined
+        ? undefined
+        : deepFreezeSourceResult(CampaignCharacterImportsSchema.parse(quest.campaign_imports));
     return {
       questId: quest.id,
       title: quest.title,
       sourcePath: normalizeSourcePath(quest.source),
+      ...(campaignImports === undefined
+        ? {}
+        : { campaignImports, campaignImportsHash: hashState(campaignImports) }),
+      campaignExports: quest.campaign_exports,
     };
   }
 
   requireWorldQuestPlayable(worldQuestId: string): RpgWorldQuestPlayableSource {
     const source = this.resolveWorldQuestRpgSource(worldQuestId);
+    const campaignCatalog =
+      source.campaignImports === undefined
+        ? {}
+        : {
+            campaignImports: source.campaignImports,
+            campaignImportsHash: source.campaignImportsHash ?? hashState(source.campaignImports),
+          };
     return {
       questId: source.questId,
       title: source.title,
-      compiled: this.requireSourceBackedPlayable(source.sourcePath),
+      compiled: this.requireWorldQuestSourcePlayable(source),
+      ...campaignCatalog,
     };
   }
 
@@ -314,7 +599,7 @@ export class RpgSourceRuntime {
     return {
       questId: source.questId,
       title: source.title,
-      result: this.loadSourceBackedReport(source.sourcePath),
+      result: this.loadWorldQuestSourceReport(source),
     };
   }
 
@@ -324,19 +609,30 @@ export class RpgSourceRuntime {
     operation: string,
   ): RpgTraceSource {
     const source = resolveTraceGameSource(this.root, args, trace, operation);
-    const compiled = this.requireGameSourcePlayable(source);
-    return source.kind === "generated"
-      ? {
-          kind: "generated",
-          worldQuestId: null,
-          generateRpgSeed: source.generateRpgSeed,
-          compiled,
-        }
-      : {
-          kind: "worldQuest",
-          worldQuestId: source.worldQuestId,
-          generateRpgSeed: null,
-          compiled,
-        };
+    if (source.kind === "generated") {
+      return {
+        kind: "generated",
+        worldQuestId: null,
+        generateRpgSeed: source.generateRpgSeed,
+        compiled: this.requireGeneratedRpgPlayable(source.generateRpgSeed),
+      };
+    }
+
+    const playable = this.requireWorldQuestPlayable(source.worldQuestId);
+    const campaignCatalog =
+      playable.campaignImports === undefined
+        ? {}
+        : {
+            campaignImports: playable.campaignImports,
+            campaignImportsHash:
+              playable.campaignImportsHash ?? hashState(playable.campaignImports),
+          };
+    return {
+      kind: "worldQuest",
+      worldQuestId: source.worldQuestId,
+      generateRpgSeed: null,
+      compiled: playable.compiled,
+      ...campaignCatalog,
+    };
   }
 }

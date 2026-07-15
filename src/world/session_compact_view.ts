@@ -1,5 +1,7 @@
 import {
   OVERWORLD_COMPACT_VIEW_VERSION,
+  compactCampaignServiceOffers,
+  compactCampaignCharacterView,
   compactLocalRefTruncation,
   compactOverworldAreaRoutes,
   compactOverworldCompletedArcs,
@@ -18,6 +20,8 @@ import {
   compactPendingRoad,
   type OverworldCompactView,
 } from "./compact_view.js";
+import type { CampaignCharacterView } from "./campaign_character_view.js";
+import type { CampaignServiceOffer } from "./campaign_service_rules.js";
 import type {
   OverworldArea,
   OverworldAreaExit,
@@ -45,6 +49,7 @@ import { timeLabel } from "./session_journal_codec.js";
 import { OVERWORLD_MAX_SUPPLIES as MAX_SUPPLIES, travelCondition } from "./travel_mechanics.js";
 
 export type OverworldSessionCompactViewState = {
+  character: CampaignCharacterView;
   worldName: string;
   worldTownCount: number;
   current: OverworldNode;
@@ -52,6 +57,7 @@ export type OverworldSessionCompactViewState = {
   minutes: number;
   supplies: number;
   fatigue: number;
+  serviceOffers: readonly CampaignServiceOffer[];
   roads: readonly OverworldExit[];
   areaExits: readonly OverworldAreaExit[];
   routeOptions: readonly OverworldSessionRoutePlan[];
@@ -101,6 +107,7 @@ export function buildOverworldSessionCompactView(
   const poi = compactOverworldTitleRefs(state.poi);
   const contacts = compactOverworldRefs(state.contacts);
   const events = compactOverworldTitleRefs(state.events);
+  const serviceOffers = compactCampaignServiceOffers(state.serviceOffers);
   const localRefsTruncated = compactLocalRefTruncation({
     areas: state.areas.length,
     poi: state.poi.length,
@@ -114,6 +121,7 @@ export function buildOverworldSessionCompactView(
 
   return {
     v: OVERWORLD_COMPACT_VIEW_VERSION,
+    character: compactCampaignCharacterView(state.character),
     world: compactOverworldLabel(state.worldName),
     time: timeLabel(state.minutes),
     here: [
@@ -129,6 +137,7 @@ export function buildOverworldSessionCompactView(
       state.fatigue,
       travelCondition(state.fatigue, state.supplies),
     ],
+    ...(serviceOffers.length > 0 ? { service_offers: serviceOffers } : {}),
     hidden: [
       state.hiddenAreaCount,
       state.hiddenJobCount,

@@ -17,6 +17,7 @@ describe("overworld session view clone", () => {
     const originalPoiTitle = first.pois[0]!.title;
     const originalRoadDestinationName = first.exits[0]!.destination.name;
     const originalAreaDestinationName = first.areaExits[0]?.destination.name;
+    const originalCharacterHealth = first.character.health.current;
 
     first.current.name = "mutated_by_test";
     first.current.services.push("mutated_by_test");
@@ -27,6 +28,8 @@ describe("overworld session view clone", () => {
     first.pois[0]!.title = "mutated_by_test";
     first.exits[0]!.destination.name = "mutated_by_test";
     if (first.areaExits[0]) first.areaExits[0].destination.name = "mutated_by_test";
+    first.character.health.current = -1;
+    first.character.abilities.push("ability:mutated_by_test");
 
     const afterInitialMutation = session.view();
     expect(afterInitialMutation.current.name).toBe(originalCurrentName);
@@ -36,6 +39,8 @@ describe("overworld session view clone", () => {
     expect(afterInitialMutation.pois[0]!.title).toBe(originalPoiTitle);
     expect(afterInitialMutation.exits[0]!.destination.name).toBe(originalRoadDestinationName);
     expect(afterInitialMutation.areaExits[0]?.destination.name).toBe(originalAreaDestinationName);
+    expect(afterInitialMutation.character.health.current).toBe(originalCharacterHealth);
+    expect(afterInitialMutation.character.abilities).not.toContain("ability:mutated_by_test");
 
     session.scoutPoi(first.pois[0]!.id);
 

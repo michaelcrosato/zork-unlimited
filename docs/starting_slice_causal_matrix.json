@@ -1,0 +1,521 @@
+{
+  "schema_version": 1,
+  "slice_id": "albany_winter_relief_v1",
+  "status": "active_unproven",
+  "updated_local_date": "2026-07-15",
+  "contract": {
+    "minimum_material_forks": 12,
+    "minimum_delayed": 8,
+    "minimum_cross_system": 5,
+    "minimum_cross_phase": 3,
+    "maximum_typical_first_goal_decisions": 45,
+    "count_rule": "Only rows with counts_toward_contract=true and proof_status=proven count."
+  },
+  "phases": ["albany_opening", "albany_preparation", "wolf_winter", "albany_return"],
+  "forks": [
+    {
+      "id": "SS-F01-character-background",
+      "title": "Choose a lived-in Albany character background",
+      "phase": "albany_opening",
+      "implementation_status": "implemented",
+      "proof_status": "proven",
+      "counts_toward_contract": true,
+      "visible_choice": "Choose one of four permanent Albany backgrounds. Every option previews its contact, rank-4 skill edge, rank-4 value, equipment package, funds, faction standing, knowledge, and active obligation; the Road-Warden option explicitly previews Wolf-Winter DEF 3→4, while the other three explicitly state that they do not receive that import.",
+      "immediate_state_delta": [
+        "character.background",
+        "character.skills",
+        "character.values",
+        "character.equipment",
+        "character.money",
+        "character.knowledge",
+        "character.relationships",
+        "character.promises",
+        "character.factionStanding"
+      ],
+      "delayed_consumers": [
+        "Rowan and the selected sponsor resolve memory-conditioned contact responses from the persistent relationship state.",
+        "Wolf-Winter's generic campaign import catalog raises the Road-Warden's starting defense floor from 3 to 4 while a Ledger Advocate remains at the pack default of 3.",
+        "At the broken paling, an identical d20 roll of 7 braces the rail for DEF 4 but splits it for DEF 3, exposing different next legal actions and the authored bind-the-split-rail recovery."
+      ],
+      "visible_feedback": [
+        "The registration screen names each contact, skill rank, value rank, kit, obligation, persistence consequence, and the current Wolf import limitation before confirmation.",
+        "The persistent-character panel shows the exact canonical package after confirmation; the registration journal records the authored concept, previewed resources, and permanent consequence.",
+        "Rowan and Hayden identify the remembered registration in authored later contact copy; Wolf-Winter's visible starting DEF and rail-check outcome expose the mechanical consumer."
+      ],
+      "systems": [
+        "identity",
+        "skills",
+        "equipment",
+        "relationships",
+        "dialogue",
+        "quest_imports",
+        "risk",
+        "failure_recovery"
+      ],
+      "persistence_boundaries": ["save_restore", "overworld_to_quest"],
+      "contract_tags": ["delayed", "cross_system", "cross_phase", "character_concept"],
+      "baseline_evidence": [
+        "tests/unit/world_opening_registration.test.ts",
+        "tests/unit/world_opening_registration_helpers.test.ts",
+        "tests/unit/world_session_contact_presentation.test.ts"
+      ],
+      "counterfactual_test": "tests/starting_slice/character_background_counterfactual.test.ts"
+    },
+    {
+      "id": "SS-F02-relief-oath",
+      "title": "Define what the relief rider owes Albany",
+      "phase": "albany_opening",
+      "implementation_status": "planned",
+      "proof_status": "unproven",
+      "counts_toward_contract": false,
+      "visible_choice": "Accept an official relief oath, negotiate limited duty, or remain an unaffiliated helper.",
+      "immediate_state_delta": [
+        "character.values",
+        "character.promises",
+        "character.faction_standing",
+        "albany.public_trust"
+      ],
+      "delayed_consumers": [
+        "Access to Albany stores and records",
+        "Cade's willingness to accept authority",
+        "Consequences for keeping or breaking the promise on return"
+      ],
+      "visible_feedback": [
+        "The oath states its concrete access and obligation.",
+        "Return scenes name whether the promise was kept, bent, or broken and change services."
+      ],
+      "systems": ["values", "promises", "factions", "services"],
+      "persistence_boundaries": ["overworld_to_quest", "quest_to_overworld"],
+      "contract_tags": ["delayed", "cross_system", "cross_phase", "irreversible_tradeoff"],
+      "baseline_evidence": [],
+      "counterfactual_test": "tests/starting_slice/relief_oath_counterfactual.test.ts"
+    },
+    {
+      "id": "SS-F03-lead-source",
+      "title": "Investigate Wolf-Winter through a chosen Albany source",
+      "phase": "albany_opening",
+      "implementation_status": "implemented",
+      "proof_status": "proven",
+      "counts_toward_contract": true,
+      "visible_choice": "After permanent character registration, certify exactly one controlling Wolf-Winter account: Rowan's immediate civic docket, Jamie Tanner's paid market testimony, or Hayden Hale's timed frost-heave report. Wolf-Winter remains hidden until this irreversible choice is made.",
+      "immediate_state_delta": [
+        "character.knowledge",
+        "character.relationships",
+        "character.money",
+        "world.minutes",
+        "world.discovered_quests"
+      ],
+      "delayed_consumers": [
+        "Rowan's docket preserves the complete import-independent Wolf-Winter route without either private-source action.",
+        "Jamie's certified testimony alone opens the feed-hauler crawlboard after the yearling falls, allowing a committed loft drop behind the flank-wolf without binding the split rail.",
+        "Hayden's certified frost report alone turns a failed, deliberately unbound paling rail into a high-variance +4 ATK/-2 DEF frost-brace trip followed by a -1 ATK/+2 DEF drive; binding the familiar guard commits away from that line.",
+        "Jamie and Hayden remember which account was certified, while their matching registration sponsorship changes the actual time and money paid before departure."
+      ],
+      "visible_feedback": [
+        "The blocking three-card choice states each packet's exact source, actual sponsored or public cost, commitment, and later Wolf-Winter consumer before confirmation.",
+        "The persistent journal records the certified source and paid terms; the character panel exposes money, knowledge, and source memory after confirmation.",
+        "Wolf-Winter's room descriptions, legal exits, visible maneuver commands and bonuses, and mutually exclusive follow-up actions cite only the account actually certified."
+      ],
+      "systems": [
+        "investigation",
+        "time",
+        "money",
+        "knowledge",
+        "relationships",
+        "quest_imports",
+        "route_commitment",
+        "risk",
+        "failure_recovery"
+      ],
+      "persistence_boundaries": ["save_restore", "overworld_to_quest"],
+      "contract_tags": ["delayed", "cross_system", "cross_phase"],
+      "baseline_evidence": [
+        "tests/unit/world_opening_lead_source.test.ts",
+        "tests/regression/opening_lead_source_snapshot_integrity.test.ts",
+        "tests/regression/rpg_variant_liveness.test.ts"
+      ],
+      "counterfactual_test": "tests/starting_slice/lead_source_counterfactual.test.ts"
+    },
+    {
+      "id": "SS-F04-ally-commitment",
+      "title": "Earn, reject, or lose an Albany ally",
+      "phase": "albany_preparation",
+      "implementation_status": "implemented",
+      "proof_status": "proven",
+      "counts_toward_contract": true,
+      "visible_choice": "After preparation, speaking with Road Warden June Pike presents three irreversible field-team terms with exact capability, condition, and cost: grant her cattle-first authority and spend 15 minutes for a companion and active promise; ask for a subordinate relay and spend 5 minutes to receive her authored refusal; or leave explicitly solo with no added time. Departing without asking June also remains a truthful solo default and invents no relationship evidence.",
+      "immediate_state_delta": [
+        "character.relationships",
+        "character.promises",
+        "character.companions",
+        "world.minutes"
+      ],
+      "delayed_consumers": [
+        "Wolf-Winter imports only a real companion as `june_pike_present`; direct and solo starts keep exact pack defaults. On the same recovered failed-lure route, June adds a named legal conversation and blocks the final scent cast until she independently refuses the wolf line, takes the cattle line, and lowers cattle alarm by 1.",
+        "With identical prior state, June's action changes cattle alarm 4 and a scattered-herd ending into alarm 3 and a whole-herd ending. Any first wolf death breaks her disclosed condition, removes the action without blocking the hybrid or combat completion, and later resolves the promise broken while removing her from the party.",
+        "Conditional quest exports resolve the cattle-first promise kept or broken in chronological replay, preserve June's ending-specific memory, and drive matching Station testimony. A living-pack return gives the kept companion one one-time 15-minute Station resupply; her negotiated relay refusal instead gives one distinct Station rest; explicit solo and relationship loss receive neither."
+      ],
+      "visible_feedback": [
+        "The blocking field-team screen and durable offer journal state June's one pressure intervention, cattle-first authority, no-combat condition, exact time cost, and solo consequence before confirmation; the persistent character panel then shows companion and promise state.",
+        "Wolf room prose, legal and blocked actions, June's spoken refusal, the visible cattle-alarm band, journal narration, and existing ending variants expose when she acts or when first blood cancels the agreement.",
+        "On return, June's memory-conditioned Station account, companion/promise projection, and cause-named one-time service distinguish cooperation, refusal, solo travel, and relationship loss across full, compact, UI, and restored views."
+      ],
+      "systems": [
+        "time",
+        "relationships",
+        "promises",
+        "party",
+        "quest_imports",
+        "legal_actions",
+        "pressure",
+        "dialogue",
+        "failure_recovery",
+        "services"
+      ],
+      "persistence_boundaries": [
+        "overworld_save_restore",
+        "overworld_to_quest",
+        "rpg_save_restore",
+        "quest_to_overworld"
+      ],
+      "contract_tags": [
+        "delayed",
+        "cross_system",
+        "cross_phase",
+        "ally_agency",
+        "failure_forward",
+        "irreversible_tradeoff"
+      ],
+      "baseline_evidence": [
+        "tests/unit/world_opening_ally.test.ts",
+        "tests/unit/world_campaign_consequences.test.ts",
+        "tests/unit/world_session_quests.test.ts",
+        "tests/unit/world_campaign_service_rules.test.ts",
+        "tests/starting_slice/ally_content_gameplay.test.ts",
+        "traces/bugs/bug_0523_wolf_winter_ally_commitment.yaml"
+      ],
+      "counterfactual_test": "tests/starting_slice/ally_commitment_counterfactual.test.ts"
+    },
+    {
+      "id": "SS-F05-preparation-profile",
+      "title": "Commit limited time and money to a preparation profile",
+      "phase": "albany_preparation",
+      "implementation_status": "implemented",
+      "proof_status": "proven",
+      "counts_toward_contract": true,
+      "visible_choice": "After certifying one Albany source, commit exactly one urgent specialist packet: Reese's Works fortification sequence, Emery's drover route, or Jamie's relief protocol. Every card names its one-shot Wolf consumer, DC 12 check, failure consequence, provider memory, exact public or sponsored time-and-money cost, and mutually exclusive return service before confirmation.",
+      "immediate_state_delta": [
+        "character.money",
+        "character.knowledge",
+        "character.relationships",
+        "world.minutes",
+        "world.discovered_quests"
+      ],
+      "delayed_consumers": [
+        "Wolf-Winter imports only the selected plan flag plus the character's matching Repair, Streetwise, or Mediation rank. Direct starts retain exact zero-rank, no-plan defaults.",
+        "Works replaces the public paling wedge with one Repair check. A miss preserves the split rail, then Reese's marked cold-set restores the breach without a reroll while raising cattle alarm by 1.",
+        "Drover appears only after the first lure cast fails. Success redirects the living yearling and lowers cattle alarm by 1; failure raises alarm by 1, retires the route, and leaves the established rail-or-fight recovery legal.",
+        "Relief appears only after the ordinary split-rail recovery redirects the yearling. Success lowers cattle alarm by 1 before the loft cast; failure raises it by 1 and retires without blocking completion.",
+        "A truthful held-byre return pairs each selected plan with one different 15-minute service: Works District resupply, Campus rest, or Civic Core resupply. Paired low-supply and fatigued states include paid preparation, shortest Albany relocation, and each alternative profile's best matching service; each profile wins somewhere, so none dominates globally."
+      ],
+      "visible_feedback": [
+        "The blocking Albany screen exposes all three affordable plans for all four backgrounds and all three source choices; its journal and persistent-character panel show the exact paid terms, learned plan, and provider memory.",
+        "Wolf room variants, legal commands, narrated skill arithmetic, cattle-alarm bands, one-shot retirement, and deterministic recoveries name the selected plan and its actual consequence.",
+        "A representative Drover route proves full MCP, compact MCP, and browser parity end to end. Paired core-session proofs cover all three matching return services and causes; journal-bound story-choice proof consumes each one-time benefit across restore."
+      ],
+      "systems": [
+        "economy",
+        "time",
+        "skills",
+        "knowledge",
+        "relationships",
+        "quest_imports",
+        "environment",
+        "pressure",
+        "failure_recovery",
+        "services"
+      ],
+      "persistence_boundaries": [
+        "overworld_save_restore",
+        "overworld_to_quest",
+        "rpg_save_restore",
+        "quest_to_overworld"
+      ],
+      "contract_tags": [
+        "delayed",
+        "cross_system",
+        "cross_phase",
+        "build_profile",
+        "failure_forward",
+        "irreversible_tradeoff"
+      ],
+      "baseline_evidence": [
+        "tests/unit/world_opening_preparation.test.ts",
+        "tests/unit/world_opening_preparation_journal.test.ts",
+        "tests/regression/opening_preparation_snapshot_integrity.test.ts",
+        "tests/starting_slice/preparation_profile_gameplay.test.ts",
+        "tests/starting_slice/preparation_profiles_return_e2e.test.ts",
+        "traces/bugs/bug_0522_wolf_winter_preparation_profiles.yaml"
+      ],
+      "counterfactual_test": "tests/starting_slice/preparation_profiles_counterfactual.test.ts"
+    },
+    {
+      "id": "SS-F06-relief-allocation",
+      "title": "Spend Albany's limited relief capacity before departure",
+      "phase": "albany_preparation",
+      "implementation_status": "planned",
+      "proof_status": "unproven",
+      "counts_toward_contract": false,
+      "visible_choice": "Allocate scarce relief capacity among Cade's steading, Albany's vulnerable residents, and mobile reserve.",
+      "immediate_state_delta": [
+        "albany.relief_capacity",
+        "albany.public_trust",
+        "character.faction_standing",
+        "wolf.cattle_safety"
+      ],
+      "delayed_consumers": [
+        "Starting conditions at the steading",
+        "Failure recovery resources",
+        "Albany service availability and prices on return"
+      ],
+      "visible_feedback": [
+        "The dispatch board shows what each allocation can cover and what remains exposed.",
+        "Both the steading and Albany visibly consume the selected allocation."
+      ],
+      "systems": ["resources", "factions", "pressure", "services"],
+      "persistence_boundaries": ["overworld_to_quest", "quest_to_overworld"],
+      "contract_tags": ["delayed", "cross_system", "cross_phase", "irreversible_tradeoff"],
+      "baseline_evidence": ["src/world/journey_campaign.ts"],
+      "counterfactual_test": "tests/starting_slice/relief_allocation_counterfactual.test.ts"
+    },
+    {
+      "id": "SS-F07-hill-route",
+      "title": "Choose how and when to reach the steading",
+      "phase": "albany_preparation",
+      "implementation_status": "planned",
+      "proof_status": "unproven",
+      "counts_toward_contract": false,
+      "visible_choice": "Take the fast exposed road, a slower sheltered route, or travel with a local caravan when available.",
+      "immediate_state_delta": [
+        "world.minutes",
+        "world.fatigue",
+        "wolf.weather_pressure",
+        "character.knowledge",
+        "character.relationships"
+      ],
+      "delayed_consumers": [
+        "Arrival weather and cattle pressure",
+        "Encounter position and available opening plans",
+        "Caravan or warden testimony on return"
+      ],
+      "visible_feedback": [
+        "The route choice forecasts known time, fatigue, and exposure bands.",
+        "Arrival describes the exact threshold crossed and exposes resulting actions."
+      ],
+      "systems": ["travel", "time", "weather", "relationships", "encounters"],
+      "persistence_boundaries": ["overworld_to_quest"],
+      "contract_tags": ["delayed", "cross_system", "cross_phase", "pressure"],
+      "baseline_evidence": [],
+      "counterfactual_test": "tests/starting_slice/hill_route_counterfactual.test.ts"
+    },
+    {
+      "id": "SS-F08-cade-trust",
+      "title": "Establish trust, leverage, or conflict with Cade",
+      "phase": "wolf_winter",
+      "implementation_status": "partial",
+      "proof_status": "unproven",
+      "counts_toward_contract": false,
+      "visible_choice": "Share evidence and make a promise, invoke Albany authority, deceive Cade about support, or work without his consent.",
+      "immediate_state_delta": [
+        "character.relationships.cade",
+        "character.promises",
+        "character.crimes",
+        "wolf.plan_access"
+      ],
+      "delayed_consumers": [
+        "Cade's aid, refusal, or independent action",
+        "Access to steading resources and noncombat plans",
+        "Cade's return testimony and future availability"
+      ],
+      "visible_feedback": [
+        "Cade states what he believes, grants, or refuses.",
+        "Later aid or refusal names the relevant promise, lie, trespass, or evidence."
+      ],
+      "systems": ["dialogue", "relationships", "promises", "crime", "planning"],
+      "persistence_boundaries": ["quest_to_overworld"],
+      "contract_tags": ["delayed", "cross_system", "cross_phase", "npc_memory"],
+      "baseline_evidence": ["tests/regression/wolf_winter_dialogue_surface.test.ts"],
+      "counterfactual_test": "tests/starting_slice/cade_trust_counterfactual.test.ts"
+    },
+    {
+      "id": "SS-F09-wolf-strategy",
+      "title": "Commit to a materially different wolf resolution strategy",
+      "phase": "wolf_winter",
+      "implementation_status": "implemented",
+      "proof_status": "proven",
+      "counts_toward_contract": true,
+      "visible_choice": "Before entering the breach, ask about Cade's feed plan without cost, then either decline it or explicitly commit his one finite winter-feed sack to three downwind casts. The feed plan forecasts visible cattle alarm, no clean retry after a fouled first cast, split-rail recovery, and a bounded one-fight hybrid fallback.",
+      "immediate_state_delta": [
+        "quest.flags.strategy_lure_committed",
+        "quest.inventory.winter_feed_sack",
+        "quest.vars.cattle_alarm",
+        "quest.wolf_defeat_or_redirect_flags",
+        "campaign.quest_outcome"
+      ],
+      "delayed_consumers": [
+        "A clean feed commitment removes combat from all three encounters and preserves every wolf at full implicit HP; the established prepared combat route instead defeats all three.",
+        "A failed first cast permanently raises cattle alarm to 2 and removes the identical retry. Spending a failed split rail preserves the all-alive route; fighting only the yearling creates a bounded hybrid with its own survivor identity.",
+        "Cattle alarm 3 keeps the herd whole, while alarm 4 leaves two cattle missing. Clean, recovered-noncombat, hybrid, and combat endings remain mechanically and textually distinct.",
+        "Quest exports give Cade and Emery ending-specific memories and world facts. Only the all-alive, whole-herd result unlocks Emery's one-time 15-minute Greenway resupply cache after the truthful Albany return."
+      ],
+      "visible_feedback": [
+        "Cade's free explanation, separate commitment prompt, finite non-droppable feed, locked pre-breach handoff, room copy, and legal actions expose the plan and its irreversibility before execution.",
+        "Full MCP, compact MCP, and browser views show exact Steady, Restless, and Breaking cattle-alarm bands with the next threshold.",
+        "Ending, Albany dispatch, Emery's reactive Greenway copy, campaign facts and memories, and the conditional service all name the exact wolf/cattle count rather than collapsing mixed and noncombat results."
+      ],
+      "systems": [
+        "dialogue",
+        "inventory",
+        "skills",
+        "environment",
+        "combat",
+        "pressure",
+        "failure_recovery",
+        "campaign_exports",
+        "relationships",
+        "services"
+      ],
+      "persistence_boundaries": [
+        "rpg_save_restore",
+        "quest_to_overworld",
+        "overworld_save_restore"
+      ],
+      "contract_tags": [
+        "delayed",
+        "cross_system",
+        "cross_phase",
+        "pressure",
+        "resolution_strategy",
+        "failure_forward"
+      ],
+      "baseline_evidence": [
+        "tests/regression/wolf_winter_three_fight_gauntlet.test.ts",
+        "tests/regression/wolf_winter_cross_encounter_agency.test.ts",
+        "tests/unit/rpg_pressure_tracks.test.ts",
+        "tests/starting_slice/wolf_strategy_counterfactual.test.ts",
+        "traces/bugs/bug_0520_wolf_winter_noncombat_strategy.yaml"
+      ],
+      "counterfactual_test": "tests/starting_slice/wolf_strategy_return_e2e.test.ts"
+    },
+    {
+      "id": "SS-F10-crisis-priority",
+      "title": "Choose what to protect when the plan breaks",
+      "phase": "wolf_winter",
+      "implementation_status": "planned",
+      "proof_status": "unproven",
+      "counts_toward_contract": false,
+      "visible_choice": "At a visible pressure threshold, prioritize a person, cattle, the ally, or scarce relief resources; not every loss can be prevented.",
+      "immediate_state_delta": [
+        "character.wounds",
+        "character.relationships",
+        "wolf.cattle_safety",
+        "albany.relief_capacity",
+        "wolf.pack_morale"
+      ],
+      "delayed_consumers": [
+        "Remaining resolution actions",
+        "NPC survival, aid, or refusal",
+        "Return resources, services, and testimony"
+      ],
+      "visible_feedback": [
+        "The crisis presents the threatened states and irreversible cost.",
+        "Later scenes show both what was saved and what the choice exposed."
+      ],
+      "systems": ["pressure", "relationships", "injury", "resources", "encounters"],
+      "persistence_boundaries": ["quest_to_overworld"],
+      "contract_tags": [
+        "delayed",
+        "cross_system",
+        "cross_phase",
+        "irreversible_tradeoff",
+        "failure_forward"
+      ],
+      "baseline_evidence": [],
+      "counterfactual_test": "tests/starting_slice/crisis_priority_counterfactual.test.ts"
+    },
+    {
+      "id": "SS-F11-saved-wood",
+      "title": "Use sound wood now or carry it into the aftermath",
+      "phase": "wolf_winter",
+      "implementation_status": "implemented",
+      "proof_status": "proven",
+      "counts_toward_contract": true,
+      "visible_choice": "Bar the cattle gate with surviving wood or retain it for repairing the outer paling after the immediate crisis.",
+      "immediate_state_delta": [
+        "character.equipment",
+        "wolf.inner_gate_state",
+        "wolf.repair_material"
+      ],
+      "delayed_consumers": [
+        "The exported Wolf-Winter world fact selects one mutually exclusive, one-time Albany Station Quarter service: retained timber returns repair-wagon stores for a 15-minute resupply, while committed guard wood releases a Road Warden cot for a 15-minute rest.",
+        "After the offer is consumed, its journal-bound rule id removes it across save/restore and the ordinary 45-minute resupply or 180-minute minimum rest applies again.",
+        "Paired reachable resource states reverse the advantage: retained timber saves 30 minutes when supplies are low, while committed guard wood saves 165 minutes after identical road strain creates fatigue."
+      ],
+      "visible_feedback": [
+        "The gate interaction states that the guard can bar the herd's inner gate now or be carried into dawn for the broken outer paling.",
+        "On the Albany return, full view, compact MCP context, and the web UI name the unlocked one-time service, its cause, its effect, and its 15-minute term beside the affected action.",
+        "The service result repeats the authored cause and exact resource change; consumption removes the offer while the persistent service journal binds the rule and Station Quarter area."
+      ],
+      "systems": ["equipment", "environment", "resources", "services"],
+      "persistence_boundaries": ["quest_to_overworld", "save_restore"],
+      "contract_tags": ["delayed", "cross_system", "cross_phase", "irreversible_tradeoff"],
+      "baseline_evidence": [
+        "tests/regression/wolf_winter_post_hunt_consequence.test.ts",
+        "tests/unit/world_journey_campaign.test.ts",
+        "tests/unit/world_campaign_service_rules.test.ts",
+        "tests/unit/world_session_services.test.ts",
+        "tests/unit/world_session_resource_replay.test.ts"
+      ],
+      "counterfactual_test": "tests/starting_slice/saved_wood_world_state_counterfactual.test.ts"
+    },
+    {
+      "id": "SS-F12-albany-return",
+      "title": "Allocate the truthful Albany response",
+      "phase": "albany_return",
+      "implementation_status": "implemented",
+      "proof_status": "proven",
+      "counts_toward_contract": true,
+      "visible_choice": "After the actual Wolf-Winter ending is reported, send Albany's only dawn wagon back to Cade and carry Hedrick's packet alone, or send the wagon and wardens north and travel with them. Each option discloses its mutually exclusive named-NPC service credit before commitment.",
+      "immediate_state_delta": [
+        "journey.goal",
+        "campaign.story_choice",
+        "albany.market.resupply_credit",
+        "albany.greenway.rest_claim"
+      ],
+      "delayed_consumers": [
+        "The selected branch is recovered generically from the trusted current or historical journey goal, so its consequence survives later goal activation without a duplicate mutable save field.",
+        "Sending the wagon to Cade makes Jamie Tanner's one-time Market road-store credit available: resupply takes 15 minutes instead of the ordinary 45.",
+        "Sending the wagon and wardens north makes Emery Sloane's one-time Greenway watch-shelter claim available: rest takes 15 minutes instead of the ordinary 180.",
+        "The mutually exclusive rule-and-area journal proof consumes the selected credit across save/restore; the other provider never offers the unchosen benefit."
+      ],
+      "visible_feedback": [
+        "Before commitment, both dispatch consequences name Jamie or Emery, the Market or Greenway district, the affected action, the one-time nature, and the 15-minute term.",
+        "Full overworld and UI views identify the named provider and repeat the authored branch cause; compact MCP context preserves the provider name, cause, action, and minutes in its bounded offer tuple.",
+        "The service result repeats the cause and exact resource transition; consumption removes the offer, and its persistent journal binds the selected story proof, rule, provider district, and decision boundary."
+      ],
+      "systems": ["campaign", "npc_availability", "resources", "services"],
+      "persistence_boundaries": ["quest_to_overworld", "overworld_save_restore"],
+      "contract_tags": ["delayed", "cross_system", "cross_phase", "irreversible_tradeoff"],
+      "baseline_evidence": [
+        "tests/regression/wolf_winter_post_hunt_consequence.test.ts",
+        "tests/regression/campaign_service_migration_integrity.test.ts",
+        "tests/regression/campaign_service_snapshot_integrity.test.ts",
+        "tests/unit/world_journey_campaign.test.ts",
+        "tests/unit/world_campaign_service_rules.test.ts",
+        "tests/unit/world_session_resource_replay.test.ts",
+        "tests/unit/ui_overworld.test.ts"
+      ],
+      "counterfactual_test": "tests/starting_slice/albany_return_counterfactual.test.ts"
+    }
+  ]
+}

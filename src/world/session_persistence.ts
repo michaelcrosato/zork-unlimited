@@ -1,4 +1,5 @@
 import { buildOverworldSessionSnapshot } from "./session_snapshot_builder.js";
+import type { CampaignCharacterState } from "./campaign_character_state.js";
 import type { JourneyContractSnapshot } from "./journey_contract.js";
 import {
   applyOverworldSessionSnapshotRestore,
@@ -8,6 +9,7 @@ import {
 } from "./session_snapshot_restore.js";
 import type { OverworldSnapshotManifestIndex } from "./session_manifest_index.js";
 import type {
+  OverworldOpeningLeadSourceDecisionTrail,
   OverworldJournalEntry,
   OverworldPendingRoadEncounter,
   OverworldSessionSnapshot,
@@ -17,12 +19,14 @@ import type {
 export type OverworldSessionPersistenceState = OverworldSessionSnapshotRestoreState & {
   worldId: string;
   worldHash: string;
+  character: CampaignCharacterState;
   currentId: string;
   currentAreaId: string | null;
   minutes: number;
   supplies: number;
   fatigue: number;
   pendingRoadEncounter: OverworldPendingRoadEncounter | null;
+  openingLeadSourceDecisionTrail: OverworldOpeningLeadSourceDecisionTrail | null;
   journey: JourneyContractSnapshot;
   discoveredIds: Set<string>;
   visitedIds: Set<string>;
@@ -38,6 +42,7 @@ export function buildOverworldSessionSnapshotFromState(
   return buildOverworldSessionSnapshot({
     worldId: state.worldId,
     worldHash: state.worldHash,
+    character: state.character,
     currentId: state.currentId,
     currentAreaId: state.currentAreaId,
     minutes: state.minutes,
@@ -62,6 +67,7 @@ export function buildOverworldSessionSnapshotFromState(
     regionRenown: state.regionRenown,
     completedRegionalArcIds: state.completedRegionalArcIds,
     pendingRoadEncounter: state.pendingRoadEncounter,
+    openingLeadSourceDecisionTrail: state.openingLeadSourceDecisionTrail,
     journey: state.journey,
   });
 }

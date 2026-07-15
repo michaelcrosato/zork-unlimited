@@ -1,4 +1,5 @@
 import type { OverworldArea, OverworldNode, OverworldQuest } from "./overworld.js";
+import type { CampaignCharacterState } from "./campaign_character_state.js";
 import {
   recordOverworldSessionAction,
   type OverworldSessionActionApplication,
@@ -30,9 +31,11 @@ export type OverworldSessionQuestStartPlanState = {
 export type OverworldSessionQuestCompletionPlanState = {
   questId: string;
   outcome: OverworldQuestCompletionOutcome;
+  character: CampaignCharacterState;
   questsById: ReadonlyMap<string, OverworldQuest>;
   areasById: ReadonlyMap<string, OverworldArea>;
   nodesById: ReadonlyMap<string, OverworldNode>;
+  questOutcomeIds: ReadonlyMap<string, string>;
   startedQuestIds: ReadonlySet<string>;
 };
 
@@ -57,6 +60,8 @@ export type OverworldAppliedSessionQuestStart = OverworldSessionActionApplicatio
 
 export type OverworldAppliedSessionQuestCompletion = {
   result: OverworldQuestCompletionResult;
+  characterAfter: CampaignCharacterState;
+  worldFactIds: readonly string[];
   minutesAfter: number;
   stateChanged: boolean;
 };
@@ -128,6 +133,8 @@ export function applyOverworldSessionQuestCompletion(
       renownAfter: award.renownAfter,
       entry: applied.result.entry,
     },
+    characterAfter: plan.characterAfter,
+    worldFactIds: plan.worldFactIds,
     minutesAfter: applied.minutesAfter,
     stateChanged: applied.stateChanged,
   };

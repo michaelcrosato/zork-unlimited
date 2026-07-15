@@ -1,4 +1,5 @@
 import type { OverworldJourneyQuestStartResult, OverworldSession } from "../world/session.js";
+import type { CampaignCharacterState } from "../world/campaign_character_state.js";
 import type { OverworldQuestCompletionOutcome } from "../world/session_quests.js";
 import type { Session } from "./sessions.js";
 
@@ -12,8 +13,17 @@ export type OverworldQuestRpgStartOptions = {
 
 export type OverworldQuestRpgStartArgs = {
   world_quest_id: string;
-  overworldSessionId: string;
 } & OverworldQuestRpgStartOptions;
+
+/**
+ * Closure-private authority for an embedded launch. It is deliberately a
+ * separate parameter from the public RPG start arguments so no caller can
+ * smuggle a parent binding or a forged character through start_world_quest.
+ */
+export type EmbeddedOverworldQuestStartContext = {
+  overworldSessionId: string;
+  character: CampaignCharacterState;
+};
 
 export type OverworldStartedRpgSession = {
   session_id: string;
@@ -31,12 +41,10 @@ export type OverworldQuestCompletionSync = {
 
 function rpgStartArgsForOverworldQuest(
   questId: string,
-  overworldSessionId: string,
   options: OverworldQuestRpgStartOptions,
 ): OverworldQuestRpgStartArgs {
   return {
     world_quest_id: questId,
-    overworldSessionId,
     ...(options.seed !== undefined ? { seed: options.seed } : {}),
     ...(options.hide_graph ? { hide_graph: true } : {}),
     ...(options.compact_actions !== undefined ? { compact_actions: options.compact_actions } : {}),
@@ -52,11 +60,18 @@ export function startOverworldQuestThroughRpg<Payload extends OverworldStartedRp
   overworldSessionId: string;
   questId: string;
   startOptions: OverworldQuestRpgStartOptions;
-  startWorldQuest: (startArgs: OverworldQuestRpgStartArgs) => Payload;
+  startEmbeddedWorldQuest: (
+    startArgs: OverworldQuestRpgStartArgs,
+    context: EmbeddedOverworldQuestStartContext,
+  ) => Payload;
 }): OverworldQuestStartSync<Payload> {
   const quest = args.session.previewQuestStart(args.questId);
-  const rpgSession = args.startWorldQuest(
-    rpgStartArgsForOverworldQuest(quest.id, args.overworldSessionId, args.startOptions),
+  const rpgSession = args.startEmbeddedWorldQuest(
+    rpgStartArgsForOverworldQuest(quest.id, args.startOptions),
+    {
+      overworldSessionId: args.overworldSessionId,
+      character: args.session.campaignCharacterState(),
+    },
   );
   const startedQuest = args.session.startQuest(quest.id);
   return { quest: startedQuest, rpgSession };

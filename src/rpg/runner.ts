@@ -36,6 +36,9 @@ import { decorateRpgScoreEvents } from "./score_events.js";
 import { endGameEffects } from "./terminal_effects.js";
 import { maneuverActionId } from "./action_ids.js";
 import { maneuverPhase, maneuverSequenceConditions } from "./maneuver_sequence.js";
+import type { CampaignCharacterImportInput } from "./campaign_character_import.js";
+
+export type { CampaignCharacterImportInput } from "./campaign_character_import.js";
 
 export { enumerateRpgBlockedActions };
 export type { RpgBlockedActionOption };
@@ -251,6 +254,10 @@ export function buildRpgRules(
 }
 
 /** Fresh state for an RPG pack (player stats come from meta.vars_init). */
-export function initStateForRpgPack(index: RpgIndex, seed: number): GameState {
-  return initStateForRpgModel(index, seed);
+export function initStateForRpgPack(
+  index: RpgIndex,
+  seed: number,
+  campaignImport?: CampaignCharacterImportInput,
+): GameState {
+  return initStateForRpgModel(index, seed, campaignImport);
 }

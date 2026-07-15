@@ -1,0 +1,44 @@
+id: bug_0520
+title: "Wolf-Winter required three kills and could not express a truthful mixed recovery"
+pack: content/rpg/quests/wolf_winter.yaml
+reported_by: starting-slice causal audit and adversarial counterexample
+reports:
+  - docs/STARTING_SLICE.md
+severity: S2
+symptom: >
+  Every successful Wolf-Winter route defeated the same three wolves. During the
+  noncombat implementation, a forced failed cast followed by killing only the
+  yearling initially reached copy and campaign exports claiming all three wolves
+  survived, proving that a new action label alone was not a truthful strategy.
+root_cause: >
+  The pack had no visible authored pressure track, no finite noncombat resource,
+  and no encounter retirement state independent of enemy defeat flags. Its ending
+  and campaign-export catalogs therefore described only all-kill timber outcomes.
+fix: >
+  Add reusable visible numeric pressure bands and Cade's finite feed-and-hounds
+  commitment. Clean casts retire all three encounters without materializing enemy
+  HP. A fouled first cast cannot retry: a split-rail guard redirects the yearling
+  at a resource cost, or one bounded fight leads to a distinct mixed ending. Clean,
+  cattle-loss, mixed, and combat outcomes export different facts and memories; only
+  the clean all-alive/whole-herd result unlocks Emery's later Greenway cache.
+deterministic_witnesses:
+  - route: "clean feed line -> loft cast -> outer cast"
+    ending: ending_pack_diverted
+    state: "three wolves alive; cattle_alarm 3; herd whole; no combat actions"
+  - route: "fouled feed line -> split-rail recovery -> loft cast -> outer cast"
+    ending: ending_pack_diverted_cattle_scattered
+    state: "three wolves alive; cattle_alarm 4; two cattle missing; guard spent"
+  - route: "fouled feed line -> fight yearling -> loft cast -> outer cast"
+    ending: ending_pack_diverted_after_blood
+    state: "yearling dead; two wolves alive; cattle_alarm 4; two cattle missing"
+  - counterfactual: "same Road-Warden, Rowan source, seed 901, and dawn dispatch: clean strategy unlocks Emery's cache; combat does not"
+tests:
+  - tests/unit/rpg_pressure_tracks.test.ts
+  - tests/starting_slice/wolf_strategy_counterfactual.test.ts
+  - tests/starting_slice/wolf_strategy_return_e2e.test.ts
+  - tests/regression/wolf_winter_compact_surface.test.ts
+verification:
+  - npm run validate -- wolf_winter
+  - npm test -- --run wolf_winter
+  - npm run crawl:smoke
+  - npm run health

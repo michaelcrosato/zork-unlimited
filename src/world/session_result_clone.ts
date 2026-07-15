@@ -12,15 +12,11 @@ import type { OverworldQuestCompletionResult } from "./session_quests.js";
 import type { OverworldRoadEncounterResult } from "./session_road_encounters.js";
 import type { OverworldServiceResult } from "./session_services.js";
 import type { OverworldGoalPassageResult } from "./session_goal_passage.js";
-import type {
-  OverworldJournalEntry,
-  OverworldPendingRoadEncounter,
-  TravelLogEntry,
+import type { OverworldPendingRoadEncounter, TravelLogEntry } from "./session_snapshot.js";
+import {
+  cloneOverworldJournalEntry,
+  redactOverworldJournalEntryForPresentation,
 } from "./session_snapshot.js";
-
-export function cloneOverworldJournalEntry(entry: OverworldJournalEntry): OverworldJournalEntry {
-  return { ...entry };
-}
 
 export function cloneOverworldQuestView(quest: OverworldQuestView): OverworldQuestView {
   return { ...quest };
@@ -88,7 +84,7 @@ export function cloneOverworldServiceResult(
 ): OverworldServiceResult {
   return {
     ...result,
-    entry: result.entry ? cloneOverworldJournalEntry(result.entry) : null,
+    entry: result.entry ? redactOverworldJournalEntryForPresentation(result.entry) : null,
   };
 }
 
@@ -108,6 +104,6 @@ export function cloneOverworldQuestCompletionResult(
   return {
     ...result,
     quest: cloneOverworldQuestView(result.quest),
-    entry: cloneOverworldJournalEntry(result.entry),
+    entry: redactOverworldJournalEntryForPresentation(result.entry),
   };
 }

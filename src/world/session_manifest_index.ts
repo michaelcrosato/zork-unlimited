@@ -1,5 +1,7 @@
 import type {
   OverworldArea,
+  OverworldAreaEdge,
+  OverworldCampaignServiceRule,
   OverworldCharacter,
   OverworldEdge,
   OverworldExit,
@@ -17,11 +19,36 @@ import {
   allOverworldContactPresentations,
   type OverworldContactPresentation,
 } from "./session_contact_presentation.js";
+import type { OpeningRegistration } from "./opening_registration.js";
+import type { OpeningAlly } from "./opening_ally.js";
+import {
+  openingAllyJournalId,
+  openingAllyOfferJournalDraft,
+  type OpeningAllyJournalDraft,
+} from "./opening_ally_journal.js";
+import type { OpeningLeadSource } from "./opening_lead_source.js";
+import {
+  openingLeadSourceJournalId,
+  openingLeadSourceOfferJournalDraft,
+  type OpeningLeadSourceJournalDraft,
+} from "./opening_lead_source_journal.js";
+import type { OpeningPreparation } from "./opening_preparation.js";
+import {
+  openingPreparationJournalId,
+  openingPreparationOfferJournalDraft,
+  type OpeningPreparationJournalDraft,
+} from "./opening_preparation_journal.js";
+import {
+  allOpeningRegistrationJournalDrafts,
+  openingRegistrationOfferJournalDraft,
+  type OpeningRegistrationJournalDraft,
+} from "./opening_registration_journal.js";
 
 export type OverworldSnapshotManifestIndex = {
   arcIds: ReadonlySet<string>;
   arcRegionNames: ReadonlyMap<string, string>;
   areaHomes: ReadonlyMap<string, string>;
+  areaEdgesById: ReadonlyMap<string, OverworldAreaEdge>;
   areaIds: ReadonlySet<string>;
   areasById: ReadonlyMap<string, OverworldArea>;
   areasByTown: ReadonlyMap<string, readonly OverworldArea[]>;
@@ -29,6 +56,7 @@ export type OverworldSnapshotManifestIndex = {
   characterIds: ReadonlySet<string>;
   charactersById: ReadonlyMap<string, OverworldCharacter>;
   characterTownNames: ReadonlyMap<string, string>;
+  campaignServiceRulesById: ReadonlyMap<string, OverworldCampaignServiceRule>;
   contactPresentationsByJournalId: ReadonlyMap<string, OverworldContactPresentation>;
   edgeIds: ReadonlySet<string>;
   edgesById: ReadonlyMap<string, OverworldEdge>;
@@ -41,6 +69,21 @@ export type OverworldSnapshotManifestIndex = {
   jobTownNames: ReadonlyMap<string, string>;
   nodeIds: ReadonlySet<string>;
   nodesById: ReadonlyMap<string, OverworldNode>;
+  openingLeadSource: OpeningLeadSource | null;
+  openingLeadSourceJournalIds: ReadonlySet<string>;
+  openingLeadSourceOfferDraft: OpeningLeadSourceJournalDraft | null;
+  openingLeadSourceTownName: string | null;
+  openingAlly: OpeningAlly | null;
+  openingAllyJournalIds: ReadonlySet<string>;
+  openingAllyOfferDraft: OpeningAllyJournalDraft | null;
+  openingAllyTownName: string | null;
+  openingPreparation: OpeningPreparation | null;
+  openingPreparationJournalIds: ReadonlySet<string>;
+  openingPreparationOfferDraft: OpeningPreparationJournalDraft | null;
+  openingPreparationTownName: string | null;
+  openingRegistration: OpeningRegistration | null;
+  openingRegistrationJournalDraftsById: ReadonlyMap<string, OpeningRegistrationJournalDraft>;
+  openingRegistrationTownName: string | null;
   poiIds: ReadonlySet<string>;
   poisById: ReadonlyMap<string, OverworldPoi>;
   poiTownNames: ReadonlyMap<string, string>;
@@ -90,6 +133,63 @@ export function buildOverworldSnapshotManifestIndex(
     townNames.add(node.name);
   }
   const townNameForSource = (nodeId: string): string => townNameById.get(nodeId) ?? nodeId;
+
+  const campaignServiceRulesById = new Map<string, OverworldCampaignServiceRule>();
+  for (const rule of sources.world.campaign_service_rules ?? []) {
+    if (campaignServiceRulesById.has(rule.id)) {
+      throw new Error(`Duplicate campaign service rule id "${rule.id}".`);
+    }
+    campaignServiceRulesById.set(rule.id, rule);
+  }
+
+  const areaEdgesById = new Map<string, OverworldAreaEdge>();
+  for (const edge of sources.world.area_edges) {
+    if (areaEdgesById.has(edge.id)) {
+      throw new Error(`Duplicate overworld area edge id "${edge.id}".`);
+    }
+    areaEdgesById.set(edge.id, edge);
+  }
+
+  const openingRegistration = sources.world.opening_registration ?? null;
+  const openingAlly = sources.world.opening_ally ?? null;
+  const openingAllyJournalIds = new Set<string>();
+  const openingAllyOfferDraft = openingAlly ? openingAllyOfferJournalDraft(openingAlly) : null;
+  if (openingAlly) {
+    for (const option of openingAlly.options) {
+      openingAllyJournalIds.add(openingAllyJournalId(openingAlly.id, option.id));
+    }
+  }
+  const openingLeadSource = sources.world.opening_lead_source ?? null;
+  const openingLeadSourceJournalIds = new Set<string>();
+  const openingLeadSourceOfferDraft = openingLeadSource
+    ? openingLeadSourceOfferJournalDraft(openingLeadSource)
+    : null;
+  if (openingLeadSource) {
+    for (const option of openingLeadSource.options) {
+      openingLeadSourceJournalIds.add(openingLeadSourceJournalId(openingLeadSource.id, option.id));
+    }
+  }
+  const openingPreparation = sources.world.opening_preparation ?? null;
+  const openingPreparationJournalIds = new Set<string>();
+  const openingPreparationOfferDraft = openingPreparation
+    ? openingPreparationOfferJournalDraft(openingPreparation)
+    : null;
+  if (openingPreparation) {
+    for (const profile of openingPreparation.profiles) {
+      openingPreparationJournalIds.add(
+        openingPreparationJournalId(openingPreparation.id, profile.id),
+      );
+    }
+  }
+  const openingRegistrationJournalDraftsById = new Map<string, OpeningRegistrationJournalDraft>();
+  if (openingRegistration) {
+    for (const draft of [
+      openingRegistrationOfferJournalDraft(openingRegistration),
+      ...allOpeningRegistrationJournalDrafts(openingRegistration),
+    ]) {
+      openingRegistrationJournalDraftsById.set(draft.id, draft);
+    }
+  }
 
   const edgesById = new Map<string, OverworldEdge>();
   const edgeIds = new Set<string>();
@@ -170,6 +270,7 @@ export function buildOverworldSnapshotManifestIndex(
     arcIds,
     arcRegionNames,
     areaHomes,
+    areaEdgesById,
     areaIds,
     areasById: sources.areasById,
     areasByTown: sources.areasByTown,
@@ -177,6 +278,7 @@ export function buildOverworldSnapshotManifestIndex(
     characterIds,
     charactersById: sources.charactersById,
     characterTownNames,
+    campaignServiceRulesById,
     contactPresentationsByJournalId,
     edgeIds,
     edgesById,
@@ -189,6 +291,25 @@ export function buildOverworldSnapshotManifestIndex(
     jobTownNames,
     nodeIds,
     nodesById: sources.nodesById,
+    openingLeadSource,
+    openingLeadSourceJournalIds,
+    openingLeadSourceOfferDraft,
+    openingLeadSourceTownName: openingLeadSource ? townNameForSource(openingLeadSource.home) : null,
+    openingAlly,
+    openingAllyJournalIds,
+    openingAllyOfferDraft,
+    openingAllyTownName: openingAlly ? townNameForSource(openingAlly.home) : null,
+    openingPreparation,
+    openingPreparationJournalIds,
+    openingPreparationOfferDraft,
+    openingPreparationTownName: openingPreparation
+      ? townNameForSource(openingPreparation.home)
+      : null,
+    openingRegistration,
+    openingRegistrationJournalDraftsById,
+    openingRegistrationTownName: openingRegistration
+      ? townNameForSource(openingRegistration.home)
+      : null,
     poiIds,
     poisById: sources.poisById,
     poiTownNames,

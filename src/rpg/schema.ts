@@ -321,6 +321,48 @@ export const EndingSchema = z
   .strict();
 
 /**
+ * One named state of an authored pressure track. `min` is the inclusive value
+ * at which the band replaces the previous band; authored order is therefore
+ * both its display order and its deterministic threshold order.
+ */
+export const RpgPressureBandSchema = z
+  .object({
+    min: z.number().finite(),
+    label: z.string().min(1),
+    description: z.string().min(1).optional(),
+  })
+  .strict();
+
+/**
+ * A semantic, player-visible projection over an ordinary numeric RPG variable.
+ * Effects still use the generic set/inc/dec-var DSL; this declaration supplies
+ * stable band names and thresholds to every client without adding a hidden
+ * timer or a second mutable source of truth.
+ */
+export const RpgPressureTrackSchema = z
+  .object({
+    id: z.string().min(1),
+    title: z.string().min(1),
+    var: z.string().min(1),
+    bands: z.array(RpgPressureBandSchema).min(2),
+  })
+  .strict()
+  .superRefine((track, ctx) => {
+    let previousThreshold: number | undefined;
+
+    track.bands.forEach((band, index) => {
+      if (previousThreshold !== undefined && band.min <= previousThreshold) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["bands", index, "min"],
+          message: "Pressure band min thresholds must be strictly increasing.",
+        });
+      }
+      previousThreshold = band.min;
+    });
+  });
+
+/**
  * The deliberately narrow persistent-state surface a combat maneuver may use.
  * Inventory deltas can carry a tactical decision into a later encounter without
  * letting authored combat mutate HP, score, routing, quest stages, or endings and
@@ -405,11 +447,36 @@ export const RpgPackSchema = z
     rooms: z.array(RoomSchema).min(1),
     objects: z.array(ObjectSchema).default([]),
     npcs: z.array(NpcSchema).default([]),
+    // Optional with no default so every legacy pack retains its exact compiled
+    // object shape and content hash.
+    pressure_tracks: z.array(RpgPressureTrackSchema).min(1).optional(),
     win_conditions: z.array(WinConditionSchema).min(1),
     endings: z.array(EndingSchema).default([]),
     enemies: z.array(EnemySchema).default([]),
   })
-  .strict();
+  .strict()
+  .superRefine((pack, ctx) => {
+    const ids = new Set<string>();
+    const vars = new Set<string>();
+    pack.pressure_tracks?.forEach((track, index) => {
+      if (ids.has(track.id)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["pressure_tracks", index, "id"],
+          message: `Duplicate pressure track id "${track.id}".`,
+        });
+      }
+      ids.add(track.id);
+      if (vars.has(track.var)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["pressure_tracks", index, "var"],
+          message: `Pressure variable "${track.var}" is projected by more than one track.`,
+        });
+      }
+      vars.add(track.var);
+    });
+  });
 
 export type Exit = z.infer<typeof ExitSchema>;
 export type RoomVariant = z.infer<typeof RoomVariantSchema>;
@@ -425,6 +492,8 @@ export type Npc = z.infer<typeof NpcSchema>;
 export type WinCondition = z.infer<typeof WinConditionSchema>;
 export type EndingVariant = z.infer<typeof EndingVariantSchema>;
 export type Ending = z.infer<typeof EndingSchema>;
+export type RpgPressureBand = z.infer<typeof RpgPressureBandSchema>;
+export type RpgPressureTrack = z.infer<typeof RpgPressureTrackSchema>;
 export type EnemyManeuver = z.infer<typeof EnemyManeuverSchema>;
 export type ManeuverResourceEffect = z.infer<typeof ManeuverResourceEffectSchema>;
 export type Enemy = z.infer<typeof EnemySchema>;

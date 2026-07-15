@@ -17,14 +17,18 @@ import {
   type OverworldRegionalArcProgress,
 } from "./session_regional_arcs.js";
 import { cloneOverworldRouteOption, type OverworldSessionRoutePlan } from "./session_routes.js";
-import type {
-  OverworldJournalEntry,
-  OverworldPendingRoadEncounter,
-  TravelLogEntry,
+import {
+  redactOverworldJournalEntryForPresentation,
+  type OverworldJournalEntry,
+  type OverworldPendingRoadEncounter,
+  type TravelLogEntry,
 } from "./session_snapshot.js";
 import { OVERWORLD_MAX_SUPPLIES as MAX_SUPPLIES, travelCondition } from "./travel_mechanics.js";
+import type { CampaignCharacterView } from "./campaign_character_view.js";
+import type { CampaignServiceOffer } from "./campaign_service_rules.js";
 
 export type OverworldView = {
+  character: CampaignCharacterView;
   world: string;
   timeLabel: string;
   current: OverworldNode;
@@ -51,6 +55,7 @@ export type OverworldView = {
   maxSupplies: number;
   fatigue: number;
   travelCondition: string;
+  serviceOffers: CampaignServiceOffer[];
   journal: OverworldJournalEntry[];
   discoveredSiteIds: string[];
   discoveredAreaIds: string[];
@@ -70,6 +75,7 @@ export type OverworldView = {
 };
 
 export type OverworldSessionViewState = {
+  character: CampaignCharacterView;
   worldName: string;
   worldTownCount: number;
   current: OverworldNode;
@@ -77,6 +83,7 @@ export type OverworldSessionViewState = {
   minutes: number;
   supplies: number;
   fatigue: number;
+  serviceOffers: readonly CampaignServiceOffer[];
   roads: readonly OverworldExit[];
   areaExits: readonly OverworldAreaExit[];
   areas: readonly OverworldArea[];
@@ -144,6 +151,7 @@ function regionalArcProgressForView(
 
 export function buildOverworldSessionView(state: OverworldSessionViewState): OverworldView {
   return {
+    character: state.character,
     world: state.worldName,
     timeLabel: timeLabel(state.minutes),
     current: state.current,
@@ -170,7 +178,17 @@ export function buildOverworldSessionView(state: OverworldSessionViewState): Ove
     maxSupplies: MAX_SUPPLIES,
     fatigue: state.fatigue,
     travelCondition: travelCondition(state.fatigue, state.supplies),
-    journal: [...state.journalEntries],
+    serviceOffers: state.serviceOffers.map((offer) => ({
+      id: offer.id,
+      action: offer.action,
+      title: offer.title,
+      summary: offer.summary,
+      minutes: offer.minutes,
+      ...(offer.providerId && offer.providerName
+        ? { providerId: offer.providerId, providerName: offer.providerName }
+        : {}),
+    })),
+    journal: state.journalEntries.map(redactOverworldJournalEntryForPresentation),
     discoveredAreaIds: [...state.discoveredAreaIds].sort(),
     discoveredJobIds: [...state.discoveredJobIds].sort(),
     visitedAreaIds: [...state.visitedAreaIds].sort(),

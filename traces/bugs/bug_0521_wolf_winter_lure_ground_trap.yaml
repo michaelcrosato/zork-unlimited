@@ -1,0 +1,33 @@
+id: bug_0521
+title: "Committed lure route admitted the player to a flank room with no plan"
+pack: content/rpg/quests/wolf_winter.yaml
+reported_by: blind-tester/reports/20260714T233512Z_overworld_seed2710.md
+severity: S3
+symptom: >
+  A fresh pure player asked about Cade's lure, was committed immediately, fouled
+  the first cast, killed the yearling, and legally walked north into the byre
+  door. The committed route intentionally hid flank-wolf combat until the loft
+  cast, so the room had no progressing action. Retreat remained technically
+  legal, but neither the current room nor Cade made the south-west-up recovery
+  legible; the player ended without completing the first goal.
+root_cause: >
+  Asking and committing were one dialogue action, and the paling's north exit
+  gated only on the yearling outcome. It did not also require the committed
+  route's second loft cast before ground ingress.
+fix: >
+  Split Cade's explanation from an explicit ask_commit_lure confirmation. On the
+  committed route, keep the ground way north closed until flank_redirected and
+  name the exact recovery path: south to the yard, west to the store, then up to
+  the loft. Combat routes retain their original ground ingress.
+deterministic_witnesses:
+  - "ask_lure leaves strategy_lure_committed unset and exposes ask_commit_lure"
+  - "after a fouled cast and yearling kill, go_north is absent and the blocked exit names south-west-up"
+  - "the same state can take go_south, go_west, go_up, cast at the loft, and finish"
+tests:
+  - tests/starting_slice/wolf_strategy_counterfactual.test.ts
+  - tests/starting_slice/wolf_strategy_return_e2e.test.ts
+  - tests/regression/no_dead_pocket.test.ts
+verification:
+  - npm run validate -- wolf_winter
+  - npm run crawl:smoke
+  - npm run health

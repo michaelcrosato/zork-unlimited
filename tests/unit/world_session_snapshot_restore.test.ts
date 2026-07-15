@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { createInitialCampaignCharacterState } from "../../src/world/campaign_character_state.js";
 import { createInitialJourneyContractSnapshot } from "../../src/world/journey_contract.js";
 import type {
   OverworldJournalEntry,
@@ -17,6 +18,7 @@ function snapshot(overrides: Partial<OverworldSessionSnapshot> = {}): OverworldS
     version: OVERWORLD_SESSION_SAVE_VERSION,
     worldId: "world",
     worldHash: "0".repeat(64),
+    character: createInitialCampaignCharacterState(),
     currentId: "town_b",
     currentAreaId: "area_b",
     minutes: 620,
@@ -81,7 +83,11 @@ function restorePlan(
   overrides: Partial<OverworldSessionSnapshotRestorePlan> = {},
 ): OverworldSessionSnapshotRestorePlan {
   return {
+    characterAfter: createInitialCampaignCharacterState(),
     currentAreaByTown: new Map([["town_b", "area_b"]]),
+    discoveredQuestIdsAfter: ["quest_b"],
+    journalEntriesAfter: [],
+    openingLeadSourceDecisionTrailAfter: null,
     pendingRoadEncounter: null,
     questOutcomeIds: new Map([["quest_b", "ending_b"]]),
     regionRenown: new Map([["Region", 3]]),
@@ -130,20 +136,23 @@ function restoreState(
 describe("overworld session snapshot restore application", () => {
   it("replaces mutable runtime state from a validated restore plan", () => {
     const sourceSnapshot = snapshot();
-    const plan = restorePlan();
+    const plan = restorePlan({ journalEntriesAfter: sourceSnapshot.journalEntries });
     const state = restoreState();
 
     const applied = applyOverworldSessionSnapshotRestore(state, sourceSnapshot, plan);
 
     expect(applied).toEqual({
+      characterAfter: createInitialCampaignCharacterState(),
       currentIdAfter: "town_b",
       currentAreaIdAfter: "area_b",
       minutesAfter: 620,
       suppliesAfter: 4,
       fatigueAfter: 7,
+      openingLeadSourceDecisionTrailAfter: null,
       pendingRoadEncounterAfter: null,
       journeyAfter: createInitialJourneyContractSnapshot(),
     });
+    expect(applied.characterAfter).not.toBe(sourceSnapshot.character);
     expect([...state.discoveredIds]).toEqual(["town_a", "town_b"]);
     expect([...state.visitedIds]).toEqual(["town_b"]);
     expect([...state.currentAreaByTown]).toEqual([["town_b", "area_b"]]);

@@ -61,7 +61,7 @@ meta:
   id: wolf_winter_v1
   title: "The Wolf-Winter"
   start_room: steading_yard
-  vars_init: { hp: 30, attack: 5, defense: 3 }
+  vars_init: { hp: 30, attack: 5, defense: 3, fieldcraft: 0, repair: 0, streetwise: 0, mediation: 0, cattle_alarm: 0 }
   flags_init: []
   # The opt-in fairness promise (bug_0114). With this set the validator proves the
   # per-fight UPPER bound for every wolf AND the cumulative-HP bound across the whole
@@ -83,6 +83,26 @@ meta:
   # the fully-prepared path reaches exactly 60 (rpg_score_economy_sound proves it).
   max_score: 60
 
+# The same public pressure grammar can be reused by any RPG pack. Wolf-Winter's
+# lure route raises cattle alarm only at authored commitments; it is not an
+# invisible turn clock. A clean three-beat diversion ends at 3 (restless), while
+# a fouled opening reaches 4 (breaking) and carries a visible cattle loss into
+# the ending and Albany campaign state.
+pressure_tracks:
+  - id: cattle_alarm
+    title: "Cattle alarm"
+    var: cattle_alarm
+    bands:
+      - min: 0
+        label: "Steady"
+        description: "The herd is frightened but still bunched behind the inner slats."
+      - min: 2
+        label: "Restless"
+        description: "The herd is pressing the slats; another loud reversal will make it run."
+      - min: 4
+        label: "Breaking"
+        description: "The herd has broken formation; saving the byre now cannot keep every animal together."
+
 rooms:
   - id: steading_yard
     name: "The Steading Yard"
@@ -103,6 +123,12 @@ rooms:
           relief spear in your fist. The watch is taken up now, and whatever remains
           of the night must be settled at the byre. Its yard lies through the gate to
           the north.
+      - when: [{ has_flag: june_pike_present }, { not_visited: byre_yard }]
+        text: >
+          The Albany packet brought you and Road Warden June Pike down the hill road.
+          June checks her cattle rope, then takes the lower stock path: cattle-first
+          authority, no place on the wolf line, and no agreement after first blood.
+          The byre-yard lies north; hold the cattle till dawn.
     exits:
       - { direction: north, to: byre_yard }
 
@@ -112,11 +138,31 @@ rooms:
       The cattle-byre yard. Old Cade props its door, too stiff for a spear, and turns his
       lantern on the day-book: its last wolf-count is worth reading before you leave the
       yard. Store-shed west. North, a young wolf is through the broken paling; gate south.
-    objects: [day_book]
+    objects: [day_book, relief_protocol_docket]
     # Progress variants are ordered from the deepest completed fight back to the opening
     # clue state. Re-entering this hub must describe the wolves actually left alive; visit
     # history alone handles the steading-yard watch prose without emitting repeat state.
     variants:
+      - when:
+          - { has_flag: relief_protocol_prepared }
+          - { has_flag: yearling_redirected_with_split_guard }
+          - { not_flag: relief_protocol_attempted }
+          - { not_flag: yearling_down }
+          - { not_flag: flank_redirected }
+        text: >
+          The rail recovery sent the yearling alive into the high wood, but the cattle
+          still hammer the slats. Cade holds Jamie's sealed docket beside the herd tally.
+          Call its named sequence here before carrying the feed west through the store
+          and up to the loft; it is one-use.
+      - when:
+          - { has_flag: strategy_lure_committed }
+          - any_of:
+              - { has_flag: yearling_down }
+              - { has_flag: yearling_redirected }
+          - { not_flag: flank_redirected }
+        text: >
+          The first lure beat is settled. Cade points west through the store, then up to
+          the loft for the second cast. The yard's north gate is not the feed line.
       - when: [{ has_flag: leader_down }]
         text: >
           The trampled yard before the cattle-byre. Old Cade waits beside the day-book
@@ -142,7 +188,17 @@ rooms:
     exits:
       - { direction: south, to: steading_yard }
       - { direction: west, to: store }
-      - { direction: north, to: paling_gap }
+      - direction: north
+        to: paling_gap
+        conditions:
+          - any_of:
+              - { not_flag: strategy_lure_committed }
+              - all_of:
+                  - { has_item: winter_feed_sack }
+                  - { not_flag: yearling_down }
+                  - { not_flag: yearling_redirected }
+              - { has_flag: flank_redirected }
+        locked_msg: "Take Cade's feed before the first breach. Once the yearling is settled, the feed plan continues west through the store and up to the loft—not north from the yard."
 
   - id: store
     name: "The Store-Shed"
@@ -151,26 +207,55 @@ rooms:
       byre-jerkin waits on a peg: hide and wool meant to turn horns, hooves, or teeth.
       A ladder climbs toward broken loft boards a bound cross-piece could bridge; yard east.
     variants:
+      - when: [{ has_item: winter_feed_sack }]
+        text: >
+          The winter-feed peg is bare. Cade's finite oat-and-tallow sack rides with you:
+          enough to lay one downwind trail past all three wolves, not enough to restart
+          a fouled trail. The padded jerkin and loft ladder remain here; yard east.
+      - when:
+          - { has_flag: strategy_lure_committed }
+          - { not_item: winter_feed_sack }
+          - { not_flag: pack_diverted }
+        text: >
+          The padded byre-jerkin waits on its peg beside Cade's last winter-feed sack.
+          His nonlethal plan spends those oats and tallow drawing the wolves out through
+          the broken paling. Take the finite feed before entering the breach. Loft ladder
+          up; yard east.
       - when: [{ has_item: byre_jerkin }, { none_of: [{ has_flag: jerkin_donned }] }]
         text: >
           The peg by the door is bare where the steading's padded byre-jerkin hung. Its
           hide is in your hands, not yet on your back: carried hide will not turn teeth.
           Don it. Loft ladder up; yard east.
+      - when:
+          - { has_flag: jamie_market_testimony_certified }
+          - { not_item: split_rail_guard }
+          - { not_flag: flank_wolf_down }
+        text: >
+          Jamie's certified testimony marks the feed-hauler's crawlboard above this
+          ladder: eaves-beam to low hatch. It needs no bound rail, but the yearling must
+          fall before you leave the yard exposed. Taking it commits east behind the
+          flank-wolf. Yard east.
       - when: [{ has_flag: byre_jerkin_taken }]
         text: >
           A low store-shed off the byre-yard, hung with harness and winter gear. The peg
           by the door is bare where the steading's padded byre-jerkin hung before you took
           it down. The loft ladder rises above; the byre-yard is east.
-    objects: [byre_jerkin]
+    objects: [byre_jerkin, winter_feed_sack]
     exits:
       - { direction: east, to: byre_yard }
       - direction: up
         to: fodder_loft
         conditions:
-          - { has_flag: yearling_down }
-          - { has_item: split_rail_guard }
+          - any_of:
+              - { has_flag: yearling_down }
+              - { has_flag: yearling_redirected }
+          - any_of:
+              - { has_item: split_rail_guard }
+              - { has_flag: jamie_market_testimony_certified }
+              - { has_flag: strategy_lure_committed }
           - { not_flag: flank_wolf_down }
-        locked_msg: "The loft is only a failed-rail recovery: if frost splits the wedge, bind that split rail into its guard, then return to bridge these boards; a sound rail stays at the breach."
+          - { not_flag: flank_redirected }
+        locked_msg: "Before the flank-wolf falls, settle the yearling. Then follow a crawlboard in your packet, or bind a frost-split rail over the broken boards and leave the sound rail wedged."
 
   - id: fodder_loft
     name: "The Fodder-Loft"
@@ -178,9 +263,29 @@ rooms:
       Your bound rail bridges broken boards under the byre eaves. Beyond it, a low hatch
       overlooks the flank-wolf circling the door-post. You reclaim the one-use guard and
       haul the ladder after you; this recovery route now commits east through the hatch.
+    variants:
+      - when: [{ has_flag: strategy_lure_committed }, { has_item: winter_feed_sack }]
+        text: >
+          You cross the feed-hauler's crawlboard with Cade's oat-and-tallow sack.
+          Below, the flank-wolf circles away from the low hatch. Cast the second
+          measure through it before the committed drop east; the hauled ladder
+          leaves no retreat.
+      - when:
+          - { has_flag: jamie_market_testimony_certified }
+          - { not_item: split_rail_guard }
+        text: >
+          Jamie's testimony was exact: the narrow feed-hauler's crawlboard reaches this
+          low fodder hatch. You haul the ladder after crossing. With no bound guard, the
+          route commits east to a fast drop behind the flank-wolf below.
     objects: [loft_hatch]
     exits:
-      - { direction: east, to: byre_door }
+      - direction: east
+        to: byre_door
+        conditions:
+          - any_of:
+              - { not_flag: strategy_lure_committed }
+              - { has_flag: flank_redirected }
+        locked_msg: "The hauled ladder leaves no retreat. Complete the committed second feed cast through the low hatch before dropping east."
 
   - id: paling_gap
     name: "The Broken Paling"
@@ -189,13 +294,50 @@ rooms:
       Its shoulders bunch for a straight rush: set the Albany spear, then drive on the
       shaft. A stout rail has fallen clear into the snow at your feet; wedge it across
       the gap. The byre-yard is south.
-    objects: [paling_rail]
-    # Reactive prose keeps the yearling follow-through and every rail state legible:
-    # braced success, split-but-bindable failure, the carried recovered guard, and the
-    # empty rail-bed after that guard is spent at either later fight. The north exit is
-    # it still rides yearling_down alone. These choices affect later combat lines and
-    # the ending remembers them, but they never gate locomotion or victory.
+    objects: [paling_rail, downwind_feed_line, drover_route_marks]
+    # Reactive prose keeps the lure recovery plus every combat rail state legible.
+    # A committed feed line returns through the yard and loft for its second cast;
+    # ordinary combat states retain the ground road north after the yearling falls.
     variants:
+      - when:
+          - { has_flag: strategy_lure_committed }
+          - { has_flag: yearling_redirected }
+          - { not_flag: flank_redirected }
+        text: >
+          The yearling is alive beyond the breach, following Cade's scent into the high
+          wood. The ground line north stays shut until the second cast. Return south to
+          the yard, west into the store, then up to the loft.
+      - when:
+          - { has_flag: strategy_lure_committed }
+          - { has_flag: yearling_down }
+          - { not_flag: flank_redirected }
+        text: >
+          The yearling lies dead after the fouled cast. The remaining feed must reach the
+          flank-wolf from above; ground north is not this plan. Return south to the yard,
+          west into the store, then up to the loft.
+      - when: [{ has_flag: yearling_redirected }]
+        text: >
+          The yearling is alive beyond the broken paling, nose down on Cade's
+          oat-and-tallow trail into the high wood. Its tracks turn away from the byre.
+          The route north is clear; the yard is south, and the fallen rail remains here.
+      - when:
+          - { has_flag: drover_route_prepared }
+          - { has_flag: lure_trail_fouled }
+          - { not_flag: drover_route_attempted }
+          - { not_flag: yearling_down }
+          - { not_flag: yearling_redirected }
+        text: >
+          The first cast fouled, but Emery's packet marks one snowed drover cut above
+          the churned feed. Run that one-use route now to peel the yearling across the
+          high-wood scent—or leave it unused and recover with the rail or spear.
+      - when:
+          - { has_flag: lure_trail_fouled }
+          - { not_flag: yearling_down }
+        text: >
+          The first feed cast fouled in the breach. The yearling still stands and the
+          herd's alarm is rising. There is no second sack or retry: bind a failed rail
+          into a guard and pen the wolf onto the scent, or fight it and carry the lure
+          plan deeper.
       - when:
           - { has_flag: yearling_down }
           - { has_flag: leader_turned_over_crossbrace }
@@ -238,6 +380,16 @@ rooms:
           take another opening and save it for the heavier wolf. The byre runs north.
       - when:
           - { has_flag: yearling_down }
+          - { has_flag: hayden_frost_report_certified }
+          - { has_flag: rail_split }
+          - { not_flag: split_rail_guard_made }
+          - { not_item: split_rail_guard }
+        text: >
+          The yearling lies dead beside the failed rail. Hayden's report names a matching
+          frost-jammed brace at the byre door. Leave the lengths unbound and the bare spear
+          can trip it; binding a guard commits away from that line. Byre north—choose first.
+      - when:
+          - { has_flag: yearling_down }
           - { has_flag: rail_split }
           - { not_flag: split_rail_guard_made }
         text: >
@@ -270,6 +422,16 @@ rooms:
           this wolf, then carry that splinter guard to the byre door.
       - when:
           - { has_flag: yearling_spear_set }
+          - { has_flag: hayden_frost_report_certified }
+          - { has_flag: rail_split }
+          - { not_flag: split_rail_guard_made }
+          - { not_item: split_rail_guard }
+        text: >
+          The yearling recoils alive. Hayden's report marks the same frost-load at the
+          byre jamb: leave the rail here to keep the spear bare, or bind a guard and commit
+          away. Finish the yearling, then choose what travels north.
+      - when:
+          - { has_flag: yearling_spear_set }
           - { has_flag: rail_split }
           - { not_flag: split_rail_guard_made }
         text: >
@@ -291,6 +453,15 @@ rooms:
           The young wolf still holds the broken paling. The rail did not brace the gap,
           but its joined lengths ride in your hands, lashed across the spear as a rough
           guard for the byre door. The yearling's low rush still wants the spear set against it.
+      - when:
+          - { has_flag: hayden_frost_report_certified }
+          - { has_flag: rail_split }
+          - { not_flag: split_rail_guard_made }
+          - { not_item: split_rail_guard }
+        text: >
+          The young wolf holds the paling beside the split rail. Hayden's report marks a
+          frost-jammed brace north: leave the rail unbound for the bare-spear trip, or bind
+          a carried guard and commit away. First set the spear against this rush.
       - when: [{ has_flag: rail_split }, { not_flag: split_rail_guard_made }]
         text: >
           The young wolf still holds the broken paling, and the rail you tried to set
@@ -300,16 +471,27 @@ rooms:
       - { direction: south, to: byre_yard }
       - direction: north
         to: byre_door
-        conditions: [{ has_flag: yearling_down }]
-        locked_msg: "The young wolf holds the breach, hackled and snarling; you cannot pass it by while it stands."
+        conditions:
+          - any_of:
+              - { has_flag: yearling_down }
+              - { has_flag: yearling_redirected }
+          - any_of:
+              - { not_flag: strategy_lure_committed }
+              - { has_flag: flank_redirected }
+        locked_msg: "Settle the yearling first. On the feed plan, the ground way north then stays shut until the loft cast. Return south to the yard, west into the store, then up."
 
   - id: byre_door
     name: "The Byre Door"
     description: >
       A flank-wolf circles at the byre door. A prepared rail can guard or funnel; Cade's
       lesson offers a riskier wheel. Without either, only a plain spear exchange remains.
-      The failed-rail loft drops from overhead if chosen. Cattle north; paling south.
+      The committed loft route drops from overhead if chosen. Cattle north; paling south.
     variants:
+      - when: [{ has_flag: flank_redirected }]
+        text: >
+          The flank-wolf is alive in the high wood, following the feed cast from the
+          loft after the yearling's trail. The byre threshold is empty now. Deep north,
+          the grey leader still stands between the scent line and the herd; paling south.
       - when:
           - { has_flag: flank_wolf_down }
           - { has_flag: leader_split_guard_set }
@@ -331,7 +513,34 @@ rooms:
           The flank-wolf lies across the threshold. You gave up the decisive pin to
           wrench the paling's brace-stake free, and the hardwood length rides against
           your spear now. The dark byre is north; the canted paling is south.
-      - when: [{ has_flag: flank_wolf_down }, { has_flag: flank_dropped_from_loft }]
+      - when:
+          - { has_flag: flank_wolf_down }
+          - { has_flag: flank_fallen_brace_driven }
+        text: >
+          The flank-wolf lies beneath the frost-jammed door-brace. Hayden's report let
+          you trip that dead weight across its turn, then drive the fallen timber home
+          with the bare spear. The split paling remains unbound to the south; the byre
+          runs north.
+      - when:
+          - { has_flag: flank_wolf_down }
+          - { has_flag: flank_frost_brace_tripped }
+        text: >
+          The flank-wolf lies beneath the door-brace Hayden's frost report taught you to
+          trip. The bare spear and falling timber ended its turn in one violent opening;
+          the split paling remains unbound to the south, and the byre runs north.
+      - when:
+          - { has_flag: flank_wolf_down }
+          - { has_flag: flank_dropped_from_loft }
+          - { has_flag: jamie_market_testimony_certified }
+          - { not_item: split_rail_guard }
+        text: >
+          The flank-wolf lies below the open loft-hatch, beaten by the drop Jamie's
+          certified feed-hauler's crawlboard put behind its circle. You brought no split-rail
+          guard over the eaves. The byre runs north; the paling is south.
+      - when:
+          - { has_flag: flank_wolf_down }
+          - { has_flag: flank_dropped_from_loft }
+          - { has_item: split_rail_guard }
         text: >
           The flank-wolf lies below the open loft-hatch, beaten by the drop behind its
           circle and the finishing spear-thrust. The saved split-rail guard remains in
@@ -395,6 +604,11 @@ rooms:
           The flank-wolf is alive at the byre door with its first turn caught on the
           carried splinter guard. Hook the Albany spear over that cross-piece and drive
           through before the rawhide gives way.
+      - when: [{ has_flag: flank_frost_brace_tripped }]
+        text: >
+          The flank-wolf is alive but checked beneath the frost-jammed door-brace you
+          tripped across its turn. Hayden's opening is spent but the fallen timber still
+          pins its line: drive that brace through with the bare spear before it twists free.
       - when: [{ has_flag: flank_dropped_from_loft }]
         text: >
           The flank-wolf is alive but wrong-footed below the hatch where you dropped
@@ -402,11 +616,30 @@ rooms:
           before it can wheel and make you pay for the height you spent.
       - when:
           - { visited: fodder_loft }
+          - { has_flag: jamie_market_testimony_certified }
+          - { not_item: split_rail_guard }
+        text: >
+          Jamie's certified feed-hauler's crawlboard put you at the low hatch behind the
+          flank-wolf with no bound guard in hand. Drive from that fast, open drop now;
+          taking the eaves committed you away from every ground opening.
+      - when:
+          - { visited: fodder_loft }
           - { has_item: split_rail_guard }
         text: >
           You committed to the loft road and dropped behind the flank-wolf. Drive from
           that fast, open angle now; the ground openings are behind you, but the bound
           rail stays unspent for the grey leader if this risk carries through.
+      - when:
+          - { has_flag: hayden_frost_report_certified }
+          - { has_flag: rail_split }
+          - { not_flag: split_rail_guard_made }
+          - { not_item: split_rail_guard }
+          - { none_of: [{ visited: fodder_loft }] }
+        text: >
+          The flank-wolf circles beneath the frost-jammed brace Hayden marked. Leaving the
+          rail unbound kept the spear bare: trip the brace across its turn, then drive
+          through the fallen timber if it lives. Other earned ground openings remain;
+          cattle wait north.
       - when: [{ has_flag: breach_braced }, { has_flag: heard_counsel }]
         text: >
           The flank-wolf circles at the byre door. The braced breach can hold it in a
@@ -437,8 +670,11 @@ rooms:
       - { direction: south, to: paling_gap }
       - direction: north
         to: byre_mouth
-        conditions: [{ has_flag: flank_wolf_down }]
-        locked_msg: "The flank-wolf still holds the byre door; whatever line you chose must be finished before you can push north."
+        conditions:
+          - any_of:
+              - { has_flag: flank_wolf_down }
+              - { has_flag: flank_redirected }
+        locked_msg: "The flank-wolf still holds the byre door; finish the fight or cast Cade's loft feed line before pushing north."
 
   - id: byre_mouth
     name: "Deep in the Byre"
@@ -447,8 +683,26 @@ rooms:
       heart, shaping a practiced feint. Cade may have taught you to hold or close; a
       saved guard offers another catch. Without either, only plain spear work remains.
       The door is south.
-    objects: [inner_cattle_gate]
+    objects: [inner_cattle_gate, outer_scent_gate]
     variants:
+      - when: [{ has_flag: leader_redirected }]
+        text: >
+          The grey leader is alive beyond the broken paling, following the last feed
+          cast and the two younger wolves into the high wood. The route to the cattle is
+          open north. Behind you, the empty threshold runs south to the spent scent line.
+      - when:
+          - { has_flag: june_pike_present }
+          - { has_flag: strategy_lure_committed }
+          - { has_flag: lure_trail_fouled }
+          - { has_flag: yearling_redirected }
+          - { has_flag: flank_redirected }
+          - { not_flag: june_blood_condition_broken }
+          - { not_flag: june_cattle_line_taken }
+        text: >
+          The old grey leader waits between you and the bellowing cattle. June Pike
+          reaches the inner rail from the lower stock path. The failed lure left the
+          herd pressing; speak to her before the last cast if her cattle-first authority
+          still matters. The byre door is south.
       - when:
           - { has_flag: leader_down }
           - { has_item: split_rail_guard }
@@ -594,21 +848,24 @@ rooms:
       - { direction: south, to: byre_door }
       - direction: north
         to: cattle_stand
-        conditions: [{ has_flag: leader_down }]
-        locked_msg: "The grey leader still stands between you and the cattle; finish the tactical line before you try to pass her."
+        conditions:
+          - any_of:
+              - { has_flag: leader_down }
+              - { has_flag: leader_redirected }
+        locked_msg: "The grey leader still stands between you and the cattle; defeat her or complete Cade's outer scent line before passing."
 
   - id: cattle_stand
     name: "Among the Cattle"
     description: >
-      Warm, whole cattle press around you at the byre's penned end. The leader is dead;
-      beyond the broken paling, her pack falls silent in the high wood. Cold grey dawn
-      lifts over the hill. The byre is held, and its dark heart lies south.
+      Grey dawn finds you among the cattle left inside the byre. The last wolf no longer
+      blocks this penned end; the exact count of cattle and wolves belongs to the
+      ending Cade will carry back to Albany. The byre's dark heart lies south.
     # The locomotion win (visited: cattle_stand), like the Beacon's crown and cold_forge's
     # ember chamber: the +15 capstone rides reaching the safe cattle with all three wolves
     # down (the chained exit gates), so the full 60 coincides with the byre being held,
     # never before. SCORE_PEAKS_BEFORE_WIN does not fire on a navigation win (bug_0116).
     on_enter:
-      - add_journal: "The pack has broken and gone, and the cattle stand whole around you in the first grey light."
+      - add_journal: "The pack has broken from the byre. Grey dawn reveals the herd and the cost of the line that held it."
       - inc_var: { name: score, by: 15 }
     exits:
       - { direction: south, to: byre_mouth }
@@ -674,6 +931,208 @@ objects:
           against the yearling's first rush.
     held: true
 
+  # Cade owns one finite noncombat resource. Accepting his plan before entering the
+  # breach commits the feed-and-hounds strategy; once the player has seen the first
+  # wolf, Cade will not offer the steading's last feed as a retroactive accessory.
+  # The same sack must survive through the loft and leader beats, so a fouled opening
+  # cannot be reset by returning to the store for invisible replacement bait.
+  - id: winter_feed_sack
+    name: "Cade's winter-feed sack"
+    aliases: [feed, feed sack, winter feed, oats, tallow, bait, lure]
+    description: >
+      Cade's last small sack of oats rubbed with rendered tallow. It can carry one
+      continuous downwind trail from the broken paling, through the loft hatch, and
+      out beyond the byre. Spending it on the wolves leaves no feed reserve to try the
+      same plan again tonight.
+    visible_when:
+      - { has_flag: strategy_lure_committed }
+      - { not_visited: paling_gap }
+    takeable: true
+    droppable: false
+    take_effects:
+      - add_journal: "You take Cade's finite feed. It must carry one trail through all three encounters; a fouled cast cannot be restocked."
+
+  # The first noncombat execution beat. Everyone can attempt the public Cade-taught
+  # route after committing the sack; an imported Fieldcraft rank makes the opening
+  # more reliable without class-locking it. Failure permanently changes pressure
+  # and legal recovery.
+  - id: downwind_feed_line
+    name: "downwind feed line"
+    aliases: [feed line, scent line, trail, downwind trail, breach trail]
+    description: >
+      Cade's route begins where the broken paling opens downwind. Cast the finite feed
+      cleanly across the yearling's nose and into the high wood, then carry the same
+      line over the loft and past the leader. A bad first cast raises the herd's alarm
+      and cannot be rolled again.
+    visible_when: [{ has_flag: strategy_lure_committed }]
+    variants:
+      - when: [{ has_flag: yearling_redirected }]
+        text: "The clean oat-and-tallow line runs through the broken paling into the high wood; the living yearling's tracks follow it away from the byre."
+      - when: [{ has_flag: yearling_down }]
+        text: "The first cast fouled here and the yearling lies dead. The remaining feed line continues toward the loft and the two wolves deeper in the byre."
+      - when:
+          - { has_flag: lure_trail_fouled }
+          - { not_flag: yearling_down }
+        text: "Oats and tallow smear the churned snow where the first cast fouled. There is no second sack; a bound split rail can pen the yearling onto what remains, or combat can clear the breach."
+    interactions:
+      - verb: USE
+        item: winter_feed_sack
+        target: downwind_feed_line
+        command_verb: lay
+        command_template: "lay {target} with {item}"
+        conditions:
+          - { has_item: winter_feed_sack }
+          - { has_flag: strategy_lure_committed }
+          - { not_flag: lure_trail_fouled }
+          - { not_flag: yearling_down }
+          - { not_flag: yearling_redirected }
+        effects:
+          - inc_var: { name: cattle_alarm, by: 1 }
+        skill_check:
+          skill: fieldcraft
+          difficulty: 12
+          on_success:
+            - set_flag: yearling_redirected
+            - inc_var: { name: score, by: 10 }
+            - set_quest_stage: { quest: the_watch, stage: breach_redirected }
+            - add_journal: "The first feed cast runs clean through the paling. The living yearling follows it into the high wood; cattle alarm rises by 1."
+            - narrate: >
+                You wait for the wind to flatten the steam from the yearling's muzzle,
+                then cast oats and tallow across its nose and beyond the gap. Hunger turns
+                the low head. The wolf slips out alive after the scent while the herd
+                shifts once behind the slats.
+          on_failure:
+            - set_flag: lure_trail_fouled
+            - inc_var: { name: cattle_alarm, by: 1 }
+            - add_journal: "The first cast fouls. No retry: cattle alarm rises by 2; bind a split rail to redirect the yearling or fight it."
+            - narrate: >
+                Wind folds the first cast back into the churned snow. The yearling smells
+                it but does not leave, and the cattle hammer the inner slats. The finite
+                feed is committed: bind a failed rail to force the wolf onto the remaining
+                scent, or clear this one fight and carry the lure deeper.
+      - verb: USE
+        item: split_rail_guard
+        target: downwind_feed_line
+        command_verb: pen
+        command_template: "pen {target} with {item}"
+        conditions:
+          - { has_item: split_rail_guard }
+          - { has_flag: lure_trail_fouled }
+          - { not_flag: yearling_down }
+          - { not_flag: yearling_redirected }
+        effects:
+          - remove_item: split_rail_guard
+          - set_flag: yearling_redirected
+          - set_flag: yearling_redirected_with_split_guard
+          - inc_var: { name: score, by: 10 }
+          - set_quest_stage: { quest: the_watch, stage: breach_redirected }
+          - add_journal: "You spend the split-rail guard to pen the yearling onto the scent. It leaves alive; that wood cannot guard a later fight."
+          - narrate: >
+              You drive bound splinters into the breach without striking the wolf. The
+              yearling can turn only toward the remaining tallow and bolts through alive.
+              The recovery saves the lure but spends wood that might have guarded a later
+              jaw or barred the cattle gate.
+
+  # Emery's preparation is a one-shot recovery, not a second lure roll. It exists only
+  # after the public first cast has failed. Failure adds pressure and retires the route
+  # while the existing split-rail and combat recoveries remain legal.
+  - id: drover_route_marks
+    name: "Emery's drover-route marks"
+    aliases: [drover route, route marks, service cut, drover cut, emery's route]
+    description: >
+      Three charcoal cuts on the relief packet match a snowed livestock service path
+      above the breach. It can turn one fouled yearling toward the high-wood scent, but
+      crossing the herd's sightline badly will make the cattle press harder.
+    visible_when:
+      - { has_flag: drover_route_prepared }
+      - { has_flag: lure_trail_fouled }
+      - { not_flag: drover_route_attempted }
+      - { not_flag: yearling_down }
+      - { not_flag: yearling_redirected }
+    interactions:
+      - verb: USE
+        target: drover_route_marks
+        command_verb: run
+        conditions:
+          - { has_flag: drover_route_prepared }
+          - { has_flag: lure_trail_fouled }
+          - { not_flag: drover_route_attempted }
+          - { not_flag: yearling_down }
+          - { not_flag: yearling_redirected }
+        effects:
+          - set_flag: drover_route_attempted
+        skill_check:
+          skill: streetwise
+          difficulty: 12
+          on_success:
+            - set_flag: yearling_redirected
+            - dec_var: { name: cattle_alarm, by: 1 }
+            - inc_var: { name: score, by: 10 }
+            - set_quest_stage: { quest: the_watch, stage: breach_redirected }
+            - add_journal: "You run Emery's one-use drover cut. The yearling leaves alive and cattle alarm falls by 1."
+            - narrate: >
+                You read the half-buried fence corners as an old service lane, step wide
+                of the herd's sightline, and slap the packet against the far post. The
+                yearling turns onto the high-wood scent. Cade answers with one low call;
+                hooves ease back from the slats as the cattle alarm falls.
+          on_failure:
+            - inc_var: { name: cattle_alarm, by: 1 }
+            - add_journal: "Emery's drover cut crosses the herd's sightline. Alarm rises by 1; the route is spent, but rail or spear recovery remains."
+            - narrate: >
+                You mistake charcoal for a gate. The yearling wheels across the cattle's
+                sightline and stops in the breach; the herd surges harder. Emery's route
+                is spent. Bind a failed rail onto the remaining scent or fight the wolf,
+                then carry the lure deeper.
+
+  # Jamie's protocol waits for the specific public rail recovery: the first cast fouled,
+  # the ordinary wedge split, and its bound guard was spent redirecting the yearling.
+  # Mediation changes visible pressure once and never blocks the committed loft route.
+  - id: relief_protocol_docket
+    name: "Jamie's sealed relief protocol"
+    aliases: [relief protocol, protocol, sealed docket, jamie's protocol, herd calls]
+    description: >
+      A witnessed order of names, head-counts, and low yard calls for Cade to answer in
+      sequence. It applies only after a rough rail recovery has sent the yearling alive
+      away from the breach, while the cattle can still be brought back off the slats.
+    visible_when:
+      - { has_flag: relief_protocol_prepared }
+      - { has_flag: yearling_redirected_with_split_guard }
+      - { not_flag: relief_protocol_attempted }
+      - { not_flag: yearling_down }
+      - { not_flag: flank_redirected }
+    interactions:
+      - verb: USE
+        target: relief_protocol_docket
+        command_verb: call
+        conditions:
+          - { has_flag: relief_protocol_prepared }
+          - { has_flag: yearling_redirected_with_split_guard }
+          - { not_flag: relief_protocol_attempted }
+          - { not_flag: yearling_down }
+          - { not_flag: flank_wolf_down }
+          - { not_flag: flank_redirected }
+        effects:
+          - set_flag: relief_protocol_attempted
+        skill_check:
+          skill: mediation
+          difficulty: 12
+          on_success:
+            - dec_var: { name: cattle_alarm, by: 1 }
+            - add_journal: "You and Cade complete Jamie's witnessed relief calls in order. Cattle alarm falls by 1 before the loft cast."
+            - narrate: >
+                You name each missing delivery, Cade answers with its accustomed yard
+                call, and neither of you talks over the other. The familiar cadence
+                reaches the herd through the slats. Heads turn from the breach and the
+                cattle alarm falls before you carry the feed line upstairs.
+          on_failure:
+            - inc_var: { name: cattle_alarm, by: 1 }
+            - add_journal: "Your relief calls cross Cade's count and cattle alarm rises by 1. The protocol is spent; the loft route remains open."
+            - narrate: >
+                You call the tally before Cade has closed the missing name. Two commands
+                cross in the yard; the herd answers the sharper voice and strikes the
+                slats again. Jamie's protocol is spent, but nothing has changed the
+                committed route west through the store and up to the loft.
+
   # A spatial tactic rather than another inventory buff. The store signposts this hatch
   # immediately, but the loft route opens only after the yearling is down. Entering that
   # one-way room is the approach commitment, recorded by ordinary visit history instead
@@ -685,6 +1144,89 @@ objects:
       A low fodder hatch above the byre door. The flank-wolf circles the post below
       without looking up. The hauled store ladder lies behind you across the hay; east
       through this hatch is the committed drop, with no safe climb back during the fight.
+    interactions:
+      - verb: USE
+        item: winter_feed_sack
+        target: loft_hatch
+        command_verb: cast
+        command_template: "cast {item} through {target}"
+        conditions:
+          - { has_item: winter_feed_sack }
+          - { has_flag: strategy_lure_committed }
+          - any_of:
+              - { has_flag: yearling_down }
+              - { has_flag: yearling_redirected }
+          - { not_flag: flank_wolf_down }
+          - { not_flag: flank_redirected }
+        effects:
+          - set_flag: flank_redirected
+          - inc_var: { name: cattle_alarm, by: 1 }
+          - inc_var: { name: score, by: 10 }
+          - set_quest_stage: { quest: the_watch, stage: threshold_redirected }
+          - add_journal: "You cast the second feed measure from the loft. The living flank-wolf follows the trail out; cattle alarm rises by 1."
+          - narrate: >
+              You cast the second measure beyond the circling wolf instead of dropping
+              on its back. Tallow strikes the first trail below. The flank-wolf checks,
+              follows that scent through the paling, and leaves the threshold empty
+              while the herd presses harder against the slats.
+
+  - id: outer_scent_gate
+    name: "outer scent gate"
+    aliases: [outer line, scent gate, final trail, last feed, leader trail]
+    description: >
+      The final downwind opening beside the inner cattle pen. Casting the rest of Cade's
+      feed through it commits the whole sack and gives the grey leader a living pack to
+      follow. The herd's current alarm decides whether every cow remains together.
+    visible_when: [{ has_flag: strategy_lure_committed }]
+    variants:
+      - when: [{ has_flag: pack_diverted }, { has_flag: yearling_down }]
+        text: "The spent line runs beyond the paling. The yearling is dead; the other two wolves followed the feed alive into the high wood."
+      - when: [{ has_flag: pack_diverted }, { not_flag: yearling_down }]
+        text: "The spent outer scent line runs beyond the paling. All three wolves are alive in the high wood; the feed sack is empty."
+    interactions:
+      - verb: USE
+        item: winter_feed_sack
+        target: outer_scent_gate
+        command_verb: cast
+        command_template: "cast {item} through {target}"
+        conditions:
+          - { has_item: winter_feed_sack }
+          - { has_flag: strategy_lure_committed }
+          - any_of:
+              - { has_flag: flank_wolf_down }
+              - { has_flag: flank_redirected }
+          - { not_flag: leader_down }
+          - { not_flag: leader_redirected }
+          # If June's disclosed cattle-first condition has actually triggered,
+          # her independent refusal/action must resolve before the player can
+          # silently finish the same pressure line without her.
+          - any_of:
+              - { not_flag: june_pike_present }
+              - { not_flag: lure_trail_fouled }
+              - { has_flag: june_blood_condition_broken }
+              - { has_flag: june_cattle_line_taken }
+        blocked_hint:
+          visible_when:
+            - { has_flag: june_pike_present }
+            - { has_flag: lure_trail_fouled }
+            - { has_flag: yearling_redirected }
+            - { has_flag: flank_redirected }
+            - { not_flag: june_blood_condition_broken }
+            - { not_flag: june_cattle_line_taken }
+          reason: "June has reached the pressing cattle under the authority you granted. Speak to her before committing the last scent cast."
+        effects:
+          - remove_item: winter_feed_sack
+          - set_flag: leader_redirected
+          - set_flag: pack_diverted
+          - inc_var: { name: cattle_alarm, by: 1 }
+          - inc_var: { name: score, by: 10 }
+          - set_quest_stage: { quest: the_watch, stage: byre_redirected }
+          - add_journal: "You spend the last feed. The leader follows it alive; cattle alarm rises by 1 and decides whether the herd holds."
+          - narrate: >
+              You throw the last oats through the outer gap, dragging tallow clear of the
+              cattle. The old leader hears a wolf outside, chooses that trail over the
+              herd, and slips after it alive. Behind you, hooves strike the slats at the
+              pressure your choices built.
 
   # A terminal post-hunt resource choice. Spending either saved cross-piece moves
   # straight into cattle_stand, whose existing on_enter awards the capstone and ends the
@@ -799,7 +1341,8 @@ objects:
   # set before the d20 branch; failure sets `rail_split` and exposes a second, deterministic
   # target-only USE with the SAME stable `use_paling_rail` id. Binding the joined lengths
   # makes real, non-droppable `split_rail_guard` gear and a distinct recovered flank line;
-  # it does not reroll or counterfeit the stronger braced-funnel success.
+  # leaving them unbound preserves Hayden's imported frost-jamb line. Neither choice
+  # rerolls or counterfeits the stronger braced-funnel success.
   #   - skill: defense (the only fitting reachable stat — vars_init.defense 3, +2 from the
   #     byre-jerkin = ceiling 5; shoring a defensive line is defence work, not the spear-arm).
   #   - difficulty 11: passable on a MID roll at BASE defence (d20 + 3 ≥ 11 needs a roll of
@@ -809,8 +1352,8 @@ objects:
   #     The flag drives reactive prose and the flank-wolf's `funnel_thrust` maneuver, but no
   #     exit/win/ending. Temporary maneuver defense never changes the pack's stored stats.
   #   - on_failure: the rail splits. The guarded funnel is lost, but the explicitly
-  #     signposted bind action salvages a weaker carried guard, turning a bad roll into a
-  #     recoverable tactical branch rather than deleting the player's preparation.
+  #     signposted choice either salvages a weaker carried guard or, with Hayden's report,
+  #     keeps the spear bare for a high-variance door-brace line.
   - id: paling_rail
     name: "fallen paling-rail"
     aliases: [rail, paling-rail, post, stake, timber, bar]
@@ -827,9 +1370,28 @@ objects:
       - when: [{ has_item: saved_brace_stake }]
         name: "canted paling-rail"
         text: "The paling-rail rests canted after you wrenched out its hardwood brace-stake at the byre door. The saved stake rides against your spear now."
+      - when:
+          - { has_flag: works_fortification_splice_needed }
+          - { has_flag: rail_split }
+        name: "marked split paling-rail"
+        text: >
+          Reese's first measured set split the frozen rail, but ink still joins the
+          marked splice across both lengths. Cold-set it now without another roll. The
+          hammering will restore the half-shut breach and raise cattle alarm by 1.
       - when: [{ has_flag: breach_braced }]
         name: "braced paling-rail"
         text: "The fallen paling-rail, wedged hard across the breach now and stamped home — the gap half-shut, so what comes through the paling must come singly and slow."
+      - when:
+          - { has_flag: hayden_frost_report_certified }
+          - { has_flag: rail_split }
+          - { not_flag: split_rail_guard_made }
+          - { not_item: split_rail_guard }
+        name: "split paling-rail"
+        text: >
+          The failed rail lies split but joined. Bind it across the spear for a carried
+          guard, or leave it here: Hayden's certified report says the same frost-load has
+          jammed a brace at the byre door, and only a bare spear can trip that line.
+          Binding the guard commits away from it.
       - when: [{ has_flag: rail_split }, { not_flag: split_rail_guard_made }]
         name: "split paling-rail"
         text: >
@@ -838,6 +1400,40 @@ objects:
           enough to bind across the spear as a splinter guard. Use the rail again to lash
           that recovery together before you go north.
     interactions:
+      # Reese's allocation replaces the public wedge with one Repair check. A miss keeps
+      # the honest split-rail consequence, then exposes a deterministic cold-set recovery
+      # instead of a retry or the public carried-guard branch.
+      - verb: USE
+        target: paling_rail
+        command_verb: set
+        conditions:
+          - { has_flag: works_fortification_prepared }
+          - { not_flag: rail_attempted }
+          - { not_flag: breach_braced }
+          - any_of:
+              - { not_flag: strategy_lure_committed }
+              - { has_flag: lure_trail_fouled }
+        effects:
+          - set_flag: rail_attempted
+        skill_check:
+          skill: repair
+          difficulty: 12
+          on_success:
+            - set_flag: breach_braced
+            - add_journal: "Reese's measured cold-set seats cleanly. The half-shut breach is braced without raising cattle alarm."
+            - narrate: >
+                You match Reese's three packet marks to grain, frost line, and post,
+                then drive the rail in that order. The timber seats on the first set.
+                The breach stands half-shut before the herd can answer the hammer.
+          on_failure:
+            - set_flag: rail_split
+            - set_flag: works_fortification_splice_needed
+            - add_journal: "The first works set splits the frozen rail. Reese's marked splice remains as a deterministic cold-set recovery."
+            - narrate: >
+                The first measured blow finds hidden frost and splits the rail along its
+                joined grain. Reese marked this failure too: overlap the inked lengths
+                and cold-set the splice. It will hold, but the extra hammering will carry
+                into the byre.
       # Target-only USE: the rail is visible scenery already lying in the breach, so
       # "wedge rail" means lifting and setting it in place without a TAKE/drop cycle.
       # This prevents a wedged or split rail from being immediately re-taken into the
@@ -847,8 +1443,12 @@ objects:
         target: paling_rail
         command_verb: wedge
         conditions:
+          - { not_flag: works_fortification_prepared }
           - { not_flag: rail_attempted }
           - { not_flag: breach_braced }
+          - any_of:
+              - { not_flag: strategy_lure_committed }
+              - { has_flag: lure_trail_fouled }
         effects:
           - set_flag: rail_attempted
         skill_check:
@@ -860,22 +1460,41 @@ objects:
             - narrate: "You heft the rail and drive its splintered end down hard into the trampled snow, then lever the length of it up across the breach and set your shoulder to it till it bites. The gap is half-shut now — no wolf will come through it but singly, and none of them fast."
           on_failure:
             - set_flag: rail_split
-            - add_journal: "Frozen ground splits the rail. The funnel is lost, but you can bind its joined lengths into a guard before the door."
-            - narrate: "Frozen ground kicks the splintered end aside with a crack. The rail splits but holds together. The guarded funnel is lost; the joined lengths can still make a rough spear-guard. Use the rail again to bind it before going north."
+            - add_journal: "Frozen ground splits the rail. The funnel is lost; its joined lengths remain unbound until you choose whether to make a guard."
+            - narrate: "Frozen ground kicks the splintered end aside with a crack. The rail splits but holds together. The guarded funnel is lost; the joined lengths can still make a rough spear-guard, but binding them commits the spear to that recovery. Decide at the rail before going north."
+      - verb: USE
+        target: paling_rail
+        command_verb: splice
+        conditions:
+          - { has_flag: works_fortification_prepared }
+          - { has_flag: works_fortification_splice_needed }
+          - { has_flag: rail_split }
+          - { not_flag: breach_braced }
+        effects:
+          - clear_flag: rail_split
+          - clear_flag: works_fortification_splice_needed
+          - set_flag: breach_braced
+          - inc_var: { name: cattle_alarm, by: 1 }
+          - add_journal: "You overlap Reese's marked splice and cold-set the rail. The breach is braced; extra hammering raises cattle alarm by 1."
+          - narrate: >
+              You overlap the inked lengths, turn the split against the post, and hammer
+              the cold splice until both halves bite. The half-shut breach is restored.
+              Behind it the herd answers every blow, and cattle alarm rises by 1.
       # Recoverable failure: target-only again, therefore the stable action id remains
       # `use_paling_rail`. Mutually exclusive with the initial wedge and with itself.
       - verb: USE
         target: paling_rail
         command_verb: bind
         conditions:
+          - { not_flag: works_fortification_prepared }
           - { has_flag: rail_split }
           - { not_flag: split_rail_guard_made }
           - { not_item: split_rail_guard }
         effects:
           - add_item: split_rail_guard
           - set_flag: split_rail_guard_made
-          - add_journal: "You bind the split rail across the Albany spear. It cannot funnel the flank-wolf, but can catch its turn at the door."
-          - narrate: "You tear a rawhide thong from the broken fence, overlap the split rail, and cinch both lengths across the Albany spear. The makeshift guard is shorter than the braced breach and must travel in your hands, but it gives the next wolf something wooden to bite before it reaches you."
+          - add_journal: "You bind split rail across the spear, committing away from any bare-spear line. It can catch the flank-wolf at the door."
+          - narrate: "You overlap the split rail and cinch both lengths across the Albany spear. This shorter guard must travel in your hands, but gives the next wolf wood to bite before you. The spear is no longer bare for another opening."
 
   - id: split_rail_guard
     name: "bound split-rail guard"
@@ -920,11 +1539,25 @@ npcs:
       nodes:
         - id: cade_root
           npc_text: >
-            You came from Albany awake—good. My hands cannot hold it; yours must.
-            The byre is our winter; without its cattle we starve. Three wolves are through,
-            old grey leading. Ask for either lesson—or both before you go: quick spear-hand
-            or guarded byre plan.
+            You came from Albany awake—good. Without these cattle we starve. Three wolves
+            are through. Ask for either lesson—or both before you go: quick spear-hand or
+            guarded byre plan. Or commit my one-sack feed-and-hounds line to draw all
+            three alive.
           variants:
+            - when:
+                - { has_flag: strategy_lure_committed }
+                - { visited: paling_gap }
+              text: >
+                The feed-and-hounds line is in motion now. There is no replacement sack
+                and no second primary plan. Finish the line the breach has left you, then
+                bring Cade and Albany the exact count—wolves and cattle both.
+            - when:
+                - { has_flag: strategy_lure_committed }
+                - { not_visited: paling_gap }
+              text: >
+                You committed the one-sack feed-and-hounds line: three downwind casts,
+                no clean retry. Earlier combat lessons remain fallbacks, but Cade will
+                teach no new primary plan. Take the feed before entering the breach.
             - when: [{ has_flag: heard_counsel }, { has_flag: heard_plan }]
               text: >
                 Both lessons are yours. You do not choose a road here: commit to the quick
@@ -944,13 +1577,24 @@ npcs:
             - id: wolves
               aliases: [ask_wolves]
               prompt: "Ask for Cade's quick spear-hand lesson."
-              conditions: [{ not_flag: heard_counsel }]
+              conditions:
+                - { not_flag: heard_counsel }
+                - { not_flag: strategy_lure_committed }
               goto: cade_wolves
             - id: byre
               aliases: [ask_byre]
               prompt: "Ask for Cade's guarded byre plan."
-              conditions: [{ not_flag: heard_plan }]
+              conditions:
+                - { not_flag: heard_plan }
+                - { not_flag: strategy_lure_committed }
               goto: cade_byre
+            - id: lure
+              aliases: [ask_lure, ask_feed, ask_alive]
+              prompt: "Ask how Cade's one-sack plan could draw the pack out alive."
+              conditions:
+                - { not_flag: strategy_lure_committed }
+                - { not_visited: paling_gap }
+              goto: cade_lure
             - id: leave
               aliases: [leave_cade]
               prompt: "Leave old Cade and hold the byre."
@@ -977,8 +1621,17 @@ npcs:
             - id: byre
               aliases: [ask_byre]
               prompt: "Ask next for Cade's guarded byre plan."
-              conditions: [{ not_flag: heard_plan }]
+              conditions:
+                - { not_flag: heard_plan }
+                - { not_flag: strategy_lure_committed }
               goto: cade_byre
+            - id: lure
+              aliases: [ask_lure, ask_feed, ask_alive]
+              prompt: "Ask how Cade could draw the pack out alive instead."
+              conditions:
+                - { not_flag: strategy_lure_committed }
+                - { not_visited: paling_gap }
+              goto: cade_lure
             - id: wolves_back
               prompt: "Nod, and ask something else."
               goto: cade_root
@@ -999,14 +1652,110 @@ npcs:
             - id: wolves
               aliases: [ask_wolves]
               prompt: "Ask next for Cade's quick spear-hand lesson."
-              conditions: [{ not_flag: heard_counsel }]
+              conditions:
+                - { not_flag: heard_counsel }
+                - { not_flag: strategy_lure_committed }
               goto: cade_wolves
+            - id: lure
+              aliases: [ask_lure, ask_feed, ask_alive]
+              prompt: "Ask how Cade could draw the pack out alive instead."
+              conditions:
+                - { not_flag: strategy_lure_committed }
+                - { not_visited: paling_gap }
+              goto: cade_lure
             - id: byre_back
               prompt: "Thank him, and ask something else."
               goto: cade_root
             - id: leave
               aliases: [leave_cade]
               prompt: "Leave old Cade and hold the byre."
+              end: true
+        - id: cade_lure
+          npc_text: >
+            Cade's feed line spends one sack in three casts: paling, loft, then old grey.
+            Each raises cattle alarm. Foul the first and there is no retry: bind a split
+            rail to turn the yearling, or fight it and carry on. Asking is free; commit
+            before the breach.
+          topics:
+            - id: commit_lure
+              aliases: [commit_feed, commit_alive]
+              prompt: "Commit to the finite feed-and-hounds line now."
+              goto: cade_lure_committed
+            - id: lure_back
+              prompt: "Decline for now, and ask something else."
+              goto: cade_root
+            - id: leave
+              aliases: [leave_cade]
+              prompt: "Leave old Cade without committing the feed."
+              end: true
+        - id: cade_lure_committed
+          npc_text: >
+            Committed, then. Take my feed before the breach. Cast first at the paling,
+            then return through the yard and store to the loft for the second cast; the
+            last line runs past old grey. No replacement sack, and Albany gets the exact
+            count.
+          effects:
+            - set_flag: strategy_lure_committed
+            - add_journal: "You commit Cade's finite feed: paling first; then south, west, and up to the loft; outer gate last. No retry after a foul."
+          topics:
+            - id: wolves
+              aliases: [ask_wolves]
+              prompt: "Ask next for Cade's quick spear-hand lesson."
+              conditions:
+                - { not_flag: heard_counsel }
+                - { not_flag: strategy_lure_committed }
+              goto: cade_wolves
+            - id: byre
+              aliases: [ask_byre]
+              prompt: "Ask next for Cade's guarded byre plan."
+              conditions:
+                - { not_flag: heard_plan }
+                - { not_flag: strategy_lure_committed }
+              goto: cade_byre
+            - id: lure_back
+              prompt: "Repeat the risks, then ask something else."
+              goto: cade_root
+            - id: leave
+              aliases: [leave_cade]
+              prompt: "Leave old Cade and choose at the breach."
+              end: true
+
+  # June is an optional campaign companion, never a direct-start assumption or
+  # another combatant. She appears only after the failed lure has been recovered
+  # alive through both younger wolves. Speaking to her triggers the independent
+  # cattle-first decision Albany disclosed: she refuses the grey-wolf line, takes
+  # the herd instead, and retires after changing pressure once.
+  - id: june_pike
+    name: "Road Warden June Pike"
+    description: >
+      June Pike stands at the inner rail with her cattle rope looped short. She came
+      under cattle-first authority, not as another spear, and the recovered lure has
+      kept her blood condition intact this far.
+    room: byre_mouth
+    conditions:
+      - { has_flag: june_pike_present }
+      - { has_flag: strategy_lure_committed }
+      - { has_flag: lure_trail_fouled }
+      - { has_flag: yearling_redirected }
+      - { has_flag: flank_redirected }
+      - { not_flag: june_blood_condition_broken }
+      - { not_flag: june_cattle_line_taken }
+    dialogue:
+      root: june_cattle_first
+      nodes:
+        - id: june_cattle_first
+          npc_text: >
+            No. I will not join the line on old grey. You granted me the cattle call,
+            and that failed scent has them on the slats. I take the lower rail now;
+            you finish the living route you chose.
+          effects:
+            - set_flag: june_cattle_line_taken
+            - dec_var: { name: cattle_alarm, by: 1 }
+            - add_journal: "June refuses the wolf line and takes the lower rail under cattle-first authority. Cattle alarm falls by 1; she leaves the hunt."
+          topics:
+            - id: acknowledge
+              aliases: [leave_june, take_cattle_line]
+              prompt: "Acknowledge June's decision and face old grey."
               end: true
 
 enemies:
@@ -1048,6 +1797,11 @@ enemies:
     name: "yearling wolf"
     description: "A young wolf in the broken paling, all hunger and no caution, hackles up and head low — the first of the pack through the gap."
     room: paling_gap
+    conditions:
+      - { not_flag: yearling_redirected }
+      - any_of:
+          - { not_flag: strategy_lure_committed }
+          - { has_flag: lure_trail_fouled }
     hp: 11
     attack: 4
     defense: 2
@@ -1058,7 +1812,7 @@ enemies:
     maneuvers:
       - id: set_spear
         command: "set the Albany relief spear against the yearling's rush"
-        conditions: [{ has_item: relief_spear }]
+        conditions: [{ has_item: relief_spear }, { not_flag: strategy_lure_committed }]
         result_flag: yearling_spear_set
         attack_bonus: 2
         defense_bonus: 0
@@ -1069,7 +1823,7 @@ enemies:
       - id: drive_set_spear
         command: "drive the set spear through the yearling's committed rush"
         after: set_spear
-        conditions: [{ has_item: relief_spear }]
+        conditions: [{ has_item: relief_spear }, { not_flag: strategy_lure_committed }]
         result_flag: yearling_spear_driven
         attack_bonus: 0
         defense_bonus: 1
@@ -1079,6 +1833,7 @@ enemies:
           keep the hide shoulder between its teeth and your hands.
     on_defeat:
       - add_journal: "You take the yearling on its rush as it commits, and it goes down in the snow of the breach. The byre runs on north."
+      - set_flag: june_blood_condition_broken
       - inc_var: { name: score, by: 10 }
       # Milestone: the breach is held (quest the_watch). Progress-tracking only — the way
       # north still gates on the yearling_down FLAG, not on this stage; nothing changes.
@@ -1087,21 +1842,26 @@ enemies:
     name: "flank-wolf"
     description: "A rangy flank-wolf turned at the byre door, quicker and warier than the yearling, circling for your off side."
     room: byre_door
+    conditions:
+      - { not_flag: flank_redirected }
+      - { not_flag: strategy_lure_committed }
     hp: 12
     attack: 5
     defense: 2
     defeat_flag: flank_wolf_down
     death_ending: ending_pulled_down
-    # The second fight cashes in environmental preparation, recovered failure, or
-    # Cade's attack lesson or the approach physically earned through the fodder-loft.
-    # Each root retires the other roots; the funnel offers reliable pin or riskier
-    # stake salvage. The split guard can be spent here, or a loft/off-side line can
-    # carry it past this fight for the grey leader.
+    # The second fight cashes in environmental preparation, recovered failure, Cade's
+    # attack lesson, Hayden's certified frost report, or an approach physically earned
+    # through the fodder-loft. Each root retires the other roots; the funnel offers
+    # reliable pin or riskier stake salvage. The split guard can be spent here, or a
+    # loft/off-side line can carry it past this fight for the grey leader. Hayden's
+    # high-variance brace line instead requires deliberately leaving that guard unbound.
     maneuvers:
       - id: funnel_thrust
         command: "hold the flank-wolf in the braced breach's funnel"
         conditions:
           - { has_item: relief_spear }
+          - { not_flag: strategy_lure_committed }
           - { has_flag: breach_braced }
           - { none_of: [{ visited: fodder_loft }] }
         result_flag: flank_funneled
@@ -1114,7 +1874,7 @@ enemies:
       - id: pin_at_rail
         command: "pin the flank-wolf against the braced rail"
         after: funnel_thrust
-        conditions: [{ has_item: relief_spear }]
+        conditions: [{ has_item: relief_spear }, { not_flag: strategy_lure_committed }]
         result_flag: flank_pinned_at_rail
         attack_bonus: 1
         defense_bonus: 0
@@ -1127,6 +1887,7 @@ enemies:
         after: funnel_thrust
         conditions:
           - { has_item: relief_spear }
+          - { not_flag: strategy_lure_committed }
           - { not_item: saved_brace_stake }
         result_flag: flank_brace_stake_saved
         attack_bonus: 0
@@ -1142,6 +1903,7 @@ enemies:
         command: "wheel into the flank-wolf's off-side cut"
         conditions:
           - { has_item: relief_spear }
+          - { not_flag: strategy_lure_committed }
           - { has_flag: heard_counsel }
           - { none_of: [{ visited: fodder_loft }] }
         result_flag: flank_offside_cut
@@ -1155,7 +1917,7 @@ enemies:
       - id: turn_through_return
         command: "turn through the flank-wolf's returning stroke"
         after: offside_cut
-        conditions: [{ has_item: relief_spear }]
+        conditions: [{ has_item: relief_spear }, { not_flag: strategy_lure_committed }]
         result_flag: flank_turned_through_return
         attack_bonus: 0
         defense_bonus: 1
@@ -1163,10 +1925,47 @@ enemies:
           You do not stop at the first wheel. As the flank-wolf snaps back toward the
           offered side, you carry the spear through its return, recover the guard, and
           turn the rangy body across the threshold.
+      - id: frost_brace_trip
+        command: "trip Hayden's frost-jammed brace across the flank-wolf's turn"
+        conditions:
+          - { has_item: relief_spear }
+          - { not_flag: strategy_lure_committed }
+          - { has_flag: hayden_frost_report_certified }
+          - { has_flag: rail_split }
+          - { not_flag: split_rail_guard_made }
+          - { not_item: split_rail_guard }
+          - { none_of: [{ visited: fodder_loft }] }
+        result_flag: flank_frost_brace_tripped
+        attack_bonus: 4
+        defense_bonus: -2
+        narration: >
+          Hayden's report was right: frost lifts the sill, jamming the hanging brace on
+          one iron dog. With the split rail left behind, your bare spear knocks it free.
+          Timber falls across the wolf's turn and your point follows hard, but the violent
+          opening leaves both hands exposed.
+      - id: fallen_brace_drive
+        command: "drive Hayden's fallen brace through the checked flank-wolf"
+        after: frost_brace_trip
+        conditions:
+          - { has_item: relief_spear }
+          - { not_flag: strategy_lure_committed }
+          - { has_flag: hayden_frost_report_certified }
+          - { has_flag: rail_split }
+          - { not_flag: split_rail_guard_made }
+          - { not_item: split_rail_guard }
+          - { none_of: [{ visited: fodder_loft }] }
+        result_flag: flank_fallen_brace_driven
+        attack_bonus: -1
+        defense_bonus: 2
+        narration: >
+          The frost-jammed brace lies across the wolf's line. You shorten the bare spear,
+          set its shaft behind the timber, and drive both forward. The cross-weight costs
+          force but closes the turn while the point finishes Hayden's opening.
       - id: drop_from_loft
         command: "drive from the fodder-loft drop behind the flank-wolf"
         conditions:
           - { has_item: relief_spear }
+          - { not_flag: strategy_lure_committed }
           - { visited: fodder_loft }
         result_flag: flank_dropped_from_loft
         attack_bonus: 2
@@ -1179,6 +1978,7 @@ enemies:
         command: "catch the flank-wolf's turn on the bound splinter guard"
         conditions:
           - { has_item: relief_spear }
+          - { not_flag: strategy_lure_committed }
           - { has_item: split_rail_guard }
           - { none_of: [{ visited: fodder_loft }] }
         result_flag: flank_splinter_guarded
@@ -1193,6 +1993,7 @@ enemies:
         after: splinter_guard
         conditions:
           - { has_item: relief_spear }
+          - { not_flag: strategy_lure_committed }
           - { has_item: split_rail_guard }
         result_flag: flank_hooked_over_guard
         attack_bonus: 0
@@ -1205,6 +2006,7 @@ enemies:
           brace into one last controlled stroke before the cross-piece gives way.
     on_defeat:
       - add_journal: "You put the flank-wolf down across the byre threshold; the dark of the byre runs on north."
+      - set_flag: june_blood_condition_broken
       - inc_var: { name: score, by: 10 }
       # Milestone: the threshold is held (quest the_watch). Progress-tracking only — the
       # way north still gates on the flank_wolf_down FLAG, not on this stage.
@@ -1213,6 +2015,9 @@ enemies:
     name: "grey leader"
     description: "The pack-leader deep in the byre: the old grey bitch, lean and scarred and unhurried, who has killed in byres before and waits for you to be careless."
     room: byre_mouth
+    conditions:
+      - { not_flag: leader_redirected }
+      - { not_flag: strategy_lure_committed }
     hp: 13
     attack: 6
     defense: 2
@@ -1227,6 +2032,7 @@ enemies:
         command: "set the saved brace-stake across the spear against the grey leader"
         conditions:
           - { has_item: relief_spear }
+          - { not_flag: strategy_lure_committed }
           - { has_item: saved_brace_stake }
         result_flag: leader_stake_crossbraced
         attack_bonus: 0
@@ -1240,6 +2046,7 @@ enemies:
         after: crossbrace_saved_stake
         conditions:
           - { has_item: relief_spear }
+          - { not_flag: strategy_lure_committed }
           - { has_item: saved_brace_stake }
         result_flag: leader_turned_over_crossbrace
         attack_bonus: 1
@@ -1254,6 +2061,7 @@ enemies:
         command: "set the saved split-rail guard across the grey leader's rush"
         conditions:
           - { has_item: relief_spear }
+          - { not_flag: strategy_lure_committed }
           - { has_item: split_rail_guard }
         result_flag: leader_split_guard_set
         attack_bonus: 2
@@ -1268,6 +2076,7 @@ enemies:
         command: "hold the spear point and wait out the grey leader's feint"
         conditions:
           - { has_item: relief_spear }
+          - { not_flag: strategy_lure_committed }
           - { has_flag: heard_plan }
         result_flag: leader_waited_out
         attack_bonus: 0
@@ -1279,7 +2088,7 @@ enemies:
       - id: take_true_rush
         command: "take the grey leader's true rush on the held spear"
         after: wait_out_feint
-        conditions: [{ has_item: relief_spear }]
+        conditions: [{ has_item: relief_spear }, { not_flag: strategy_lure_committed }]
         result_flag: leader_true_rush_taken
         attack_bonus: 1
         defense_bonus: 0
@@ -1291,6 +2100,7 @@ enemies:
         command: "close before the grey leader can finish her feint"
         conditions:
           - { has_item: relief_spear }
+          - { not_flag: strategy_lure_committed }
           - { has_flag: heard_counsel }
         result_flag: leader_closed_on
         attack_bonus: 4
@@ -1303,7 +2113,7 @@ enemies:
       - id: drive_before_recovery
         command: "drive again before the grey leader can recover"
         after: close_on_feint
-        conditions: [{ has_item: relief_spear }]
+        conditions: [{ has_item: relief_spear }, { not_flag: strategy_lure_committed }]
         result_flag: leader_driven_before_recovery
         attack_bonus: 0
         defense_bonus: 1
@@ -1313,6 +2123,7 @@ enemies:
           taking back enough guard to survive the committed line.
     on_defeat:
       - add_journal: "The grey leader falls among the straw; beyond her the cattle stand unhurt."
+      - set_flag: june_blood_condition_broken
       - inc_var: { name: score, by: 10 }
       # Milestone: the byre is held (quest the_watch) — the last of the three down. Progress
       # tracking only; the cattle-stand win still gates on the leader_down FLAG, not on this.
@@ -1327,6 +2138,40 @@ win_conditions:
   # Specific terminal consequences precede the generic mission result. All award the
   # same score and remain nondeath; their ids/titles let the overworld completion journal
   # remember whether saved wood barred the herd now or was carried into dawn for repair.
+  - id: divert_pack_after_blood
+    conditions:
+      - { visited: cattle_stand }
+      - { has_flag: pack_diverted }
+      - { has_flag: yearling_down }
+      - { has_flag: flank_redirected }
+      - { has_flag: leader_redirected }
+      - { not_flag: flank_wolf_down }
+      - { not_flag: leader_down }
+    ending: ending_pack_diverted_after_blood
+  - id: divert_pack_cattle_scattered
+    conditions:
+      - { visited: cattle_stand }
+      - { has_flag: pack_diverted }
+      - { has_flag: yearling_redirected }
+      - { has_flag: flank_redirected }
+      - { has_flag: leader_redirected }
+      - { not_flag: yearling_down }
+      - { not_flag: flank_wolf_down }
+      - { not_flag: leader_down }
+      - { var_gte: { name: cattle_alarm, value: 4 } }
+    ending: ending_pack_diverted_cattle_scattered
+  - id: divert_pack_clean
+    conditions:
+      - { visited: cattle_stand }
+      - { has_flag: pack_diverted }
+      - { has_flag: yearling_redirected }
+      - { has_flag: flank_redirected }
+      - { has_flag: leader_redirected }
+      - { not_flag: yearling_down }
+      - { not_flag: flank_wolf_down }
+      - { not_flag: leader_down }
+      - { var_lte: { name: cattle_alarm, value: 3 } }
+    ending: ending_pack_diverted
   - id: hold_the_byre_gate_barred_split_guard
     conditions: [{ visited: cattle_stand }, { has_flag: cattle_gate_barred_with_split_guard }]
     ending: ending_held_gate_barred
@@ -1344,6 +2189,51 @@ win_conditions:
     ending: ending_held
 
 endings:
+  - id: ending_pack_diverted_after_blood
+    title: "The Pack Broken After Blood"
+    text: >
+      Grey dawn finds the yearling dead, but the flank-wolf and grey leader alive beyond
+      the spent scent line. Two animals are still missing after the fouled opening broke
+      the herd. The mixed strategy killed one wolf, saved two, and held most of Cade's
+      cattle. Albany gets the full count.
+      *** You have won, by a mixed line and with loss. ***
+    variants:
+      - when: [{ has_flag: june_pike_present }, { has_flag: june_blood_condition_broken }]
+        text: >
+          Grey dawn finds the yearling dead and the other two wolves alive beyond the
+          scent line. First blood ended June Pike's field agreement before the inner
+          rail; two cattle are missing, and her separate return names both the broken
+          condition and the herd's cost. *** You have won, by a mixed line and with loss. ***
+  - id: ending_pack_diverted_cattle_scattered
+    title: "The Pack Diverted, Cattle Scattered"
+    text: >
+      Grey dawn finds every wolf alive and the byre standing, but the fouled first cast
+      broke the herd before the leader left. Most cattle are safe; two animals are missing
+      down the lower pasture. Cade counts the nonlethal victory and its cost. Albany
+      receives both truths.
+      *** You have won, with loss. ***
+    variants:
+      - when: [{ has_flag: june_cattle_line_taken }]
+        text: >
+          Grey dawn finds every wolf alive. June Pike refused the wolf line and took
+          the lower rail, but the herd had already crossed its breaking point; two
+          cattle remain missing. Her return supports the living victory without hiding
+          its cost. *** You have won, with loss. ***
+  - id: ending_pack_diverted
+    title: "The Pack Diverted Alive"
+    text: >
+      Grey dawn finds the cattle whole and all three wolves alive in the high wood.
+      Cade's finite winter feed is gone, spent across three committed downwind lines,
+      but the herd never crossed its breaking threshold. Cade sees an empty byre, an
+      unbloodied spear, and a difficult road Albany can truthfully call held.
+      *** You have won. ***
+    variants:
+      - when: [{ has_flag: june_cattle_line_taken }]
+        text: >
+          Grey dawn finds every wolf alive and the herd whole. June Pike refused the
+          old-grey line, took the lower rail under her cattle-first authority, and held
+          the alarm below Breaking while you finished the scent. Albany receives two
+          matching accounts. *** You have won. ***
   - id: ending_held_gate_barred
     title: "The Byre Held, Inner Gate Barred"
     text: >

@@ -17,9 +17,11 @@ import { hashState } from "../core/hash.js";
 
 import type { CompiledRpgSource } from "../rpg/source.js";
 import { assertRpgStateReferences } from "../rpg/state_integrity.js";
+import { initStateForRpgPack } from "../rpg/runner.js";
 
 import type { ValidationReport } from "../validate/report.js";
 import { assertWellFormedState } from "../persist/save_load.js";
+import { assertCampaignImportReceiptCatalogCompatibility } from "../persist/campaign_import_integrity.js";
 import { assertTraceMode, replayTrace } from "../trace/replay.js";
 import type { Trace } from "../trace/record.js";
 import { safeResolve } from "./paths.js";
@@ -222,8 +224,6 @@ type RpgStartWorldQuestArgs = {
   seed?: number;
   hide_graph?: boolean;
   include_world_intro?: boolean;
-  /** Internal bridge binding; not registered as public MCP input. */
-  overworldSessionId?: string;
 } & RpgViewOptions;
 
 type RpgGetObservationArgs = {
@@ -370,12 +370,6 @@ function compactInspectTraceStepSummary(
 type RpgWorldQuestStartPayload<Args extends RpgStartWorldQuestArgs> =
   RpgRuntimeWorldQuestStartPayload<Args>;
 
-type RpgStartWorldQuestInvoker = {
-  start_world_quest<Args extends RpgStartWorldQuestArgs>(
-    args: Args,
-  ): RpgWorldQuestStartPayload<Args>;
-};
-
 type RpgGetStateArgs = {
   session_id: string;
   include_state?: boolean;
@@ -437,7 +431,6 @@ export function createToolApi(opts: { root: string }) {
   const rpgSources = new RpgSourceRuntime(root);
   const rpgRuntime = new RpgMcpSessionRuntime(sessions);
   const overworldSessions = new OverworldMcpSessionStore(() => loadOverworldManifestFromRoot(root));
-  const apiRef: { current?: RpgStartWorldQuestInvoker } = {};
 
   function embeddedJourneyField(rpgSessionId: string): EmbeddedJourneyField | null {
     const rpgSession = sessions.get(rpgSessionId);
@@ -476,16 +469,29 @@ export function createToolApi(opts: { root: string }) {
       rpgRuntime,
       overworldSessions,
       loadOverworldManifest: () => loadOverworldManifestFromRoot(root),
-      startWorldQuest: <Args extends RpgStartWorldQuestArgs>(
-        startArgs: Args,
-      ): RpgWorldQuestStartPayload<Args> => {
-        const current = apiRef.current;
-        if (!current) throw new Error("Tool API is not initialized.");
+      startEmbeddedWorldQuest: (startArgs, context) => {
         const responseOptions = {
           compact_observation: true,
           ...startArgs,
-        } as Args;
-        return current.start_world_quest(responseOptions) as RpgWorldQuestStartPayload<Args>;
+        };
+        const source = rpgSources.requireWorldQuestPlayable(startArgs.world_quest_id);
+        const index = rpgRuntime.runtimeFor(source.compiled.pack).index;
+        const initialState =
+          source.campaignImports === undefined
+            ? initStateForRpgPack(index, startArgs.seed ?? 1)
+            : initStateForRpgPack(index, startArgs.seed ?? 1, {
+                character: context.character,
+                imports: source.campaignImports,
+              });
+        return rpgRuntime.startRpgSession(
+          source.compiled,
+          responseOptions,
+          {
+            worldQuestId: source.questId,
+            overworldSessionId: context.overworldSessionId,
+          },
+          initialState,
+        );
       },
     }),
 
@@ -721,7 +727,8 @@ export function createToolApi(opts: { root: string }) {
     replay_trace(args: { trace_path: string; world_quest_id?: string }) {
       const trace = readTraceJson(root, args.trace_path);
       assertTraceMode(trace);
-      const { compiled } = rpgSources.resolveTraceSource(args, trace, "replay_trace");
+      const source = rpgSources.resolveTraceSource(args, trace, "replay_trace");
+      const { compiled } = source;
       if (trace.content_hash !== compiled.contentHash) {
         return {
           ok: false,
@@ -732,6 +739,10 @@ export function createToolApi(opts: { root: string }) {
       // content-hash check above guards WHICH source, not WHETHER the state is well-
       // formed). Gate it the same way a loaded save is gated, BEFORE any engine call.
       assertWellFormedState(trace.initial_state);
+      assertCampaignImportReceiptCatalogCompatibility(
+        trace.initial_state,
+        source.kind === "worldQuest" ? source.campaignImports : undefined,
+      );
       const { index, rules } = rpgRuntime.runtimeFor(compiled.pack);
       assertRpgStateReferences(index, trace.initial_state);
       // Replay asserts the recorded final hash, and — for a Trace-v2 trace that
@@ -761,6 +772,10 @@ export function createToolApi(opts: { root: string }) {
       // is fed RAW into the per-step loop (let state = trace.initial_state) and into
       // diagnose() below, so it must be well-formed + referentially sound first.
       assertWellFormedState(trace.initial_state);
+      assertCampaignImportReceiptCatalogCompatibility(
+        trace.initial_state,
+        source.kind === "worldQuest" ? source.campaignImports : undefined,
+      );
       const { index, rules, step } = rpgRuntime.runtimeFor(compiled.pack);
       assertRpgStateReferences(index, trace.initial_state);
       let state = trace.initial_state;
@@ -834,6 +849,5 @@ export function createToolApi(opts: { root: string }) {
       };
     },
   };
-  apiRef.current = api;
   return api;
 }

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { createInitialCampaignCharacterState } from "../../src/world/campaign_character_state.js";
 import { createInitialJourneyContractSnapshot } from "../../src/world/journey_contract.js";
 import { buildOverworldSessionSnapshot } from "../../src/world/session_snapshot_builder.js";
 import type {
@@ -66,9 +67,11 @@ describe("overworld session snapshot builder", () => {
   it("builds a deterministic compact snapshot from runtime state", () => {
     const journal = [journalEntry()];
     const journey = createInitialJourneyContractSnapshot();
+    const character = createInitialCampaignCharacterState();
     const snapshot = buildOverworldSessionSnapshot({
       worldId: "world:new-york",
       worldHash: "a".repeat(64),
+      character,
       currentId: "troy",
       currentAreaId: "troy:downtown",
       minutes: 507,
@@ -99,11 +102,13 @@ describe("overworld session snapshot builder", () => {
       ]),
       completedRegionalArcIds: new Set(["arc:b", "arc:a"]),
       pendingRoadEncounter: pendingRoadEncounter(),
+      openingLeadSourceDecisionTrail: null,
       journey,
     });
 
     snapshot.journalEntries[0]!.title = "Changed";
     snapshot.journey.goal.status = "completed";
+    snapshot.character.health.current = 1;
 
     expect(snapshot.discoveredIds).toEqual(["albany", "troy"]);
     expect(snapshot.currentAreaByTown).toEqual([
@@ -131,5 +136,6 @@ describe("overworld session snapshot builder", () => {
     expect(snapshot.pendingRoadEncounter).toEqual({ edgeId: "road:albany:troy" });
     expect(journal[0]!.title).toBe("Capitol Hill");
     expect(journey.goal.status).toBe("active");
+    expect(character.health.current).toBe(30);
   });
 });

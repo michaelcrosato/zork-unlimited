@@ -39,6 +39,10 @@ jobs:
         run: npm run lint
       - name: Format check (Prettier)
         run: npm run format:check
+      # Root tests SSR-load UI modules through the real Vite config, so its
+      # package-local React/Vite dependencies must exist before `npm test`.
+      - name: Install UI deps
+        run: npm --prefix ui ci
       - name: Tests (unit + property + determinism)
         run: npm test
       # The granular steps above are exactly `npm run health` minus pack
@@ -54,8 +58,6 @@ jobs:
       # build can't (esbuild strips types without checking — exactly how six
       # real App.tsx type errors against a changed engine API shipped green
       # before this gate existed).
-      - name: Install UI deps
-        run: npm --prefix ui ci
       - name: Typecheck UI
         run: npx tsc -p ui/tsconfig.json --noEmit
       - name: Build UI (catch UI rot)

@@ -1,5 +1,10 @@
 import { readFileSync } from "node:fs";
+import { createRequire } from "node:module";
+import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
+import { createServer } from "vite";
+import { buildCampaignCharacterState } from "../../src/world/campaign_character_state.js";
+import { buildCampaignCharacterView } from "../../src/world/campaign_character_view.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
 import {
   OVERWORLD_COMPACT_COMPLETED_ARC_LIMIT,
@@ -10,16 +15,70 @@ import {
   OVERWORLD_COMPACT_RISK_CHAR_LIMIT,
   OVERWORLD_COMPACT_ROAD_EVENT_SUMMARY_CHAR_LIMIT,
   OVERWORLD_COMPACT_ROUTE_STEP_LIMIT,
+  OVERWORLD_COMPACT_SERVICE_SUMMARY_CHAR_LIMIT,
   OVERWORLD_COMPACT_TITLE_CHAR_LIMIT,
+  OVERWORLD_COMPACT_VIEW_VERSION,
   cloneOverworldCompactView,
   compactRouteOption,
   compactOverworldView,
 } from "../../src/world/compact_view.js";
 import { buildOverworldSessionCompactView } from "../../src/world/session_compact_view.js";
 import { questCompletionMinutes } from "../../src/world/session_quests.js";
+import { cloneOverworldView } from "../../src/world/session_view_clone.js";
 import { OverworldSession } from "../../ui/src/overworld.js";
 
 const world = loadOverworldManifest(process.cwd());
+
+function populatedUiCharacter() {
+  return buildCampaignCharacterView(
+    buildCampaignCharacterState({
+      background: "background:road_warden",
+      skills: [{ skillId: "skill:fieldcraft", rank: 3 }],
+      values: [{ valueId: "value:keep_promises", strength: 4 }],
+      health: { current: 23, max: 30 },
+      wounds: [{ woundId: "wound:wolf_bite", severity: 2, treatment: "stabilized" }],
+      equipment: [
+        {
+          equipmentId: "equipment:warden_spear_1",
+          itemId: "item:warden_spear",
+          quantity: 1,
+          condition: 76,
+          equipped: true,
+        },
+      ],
+      money: 18,
+      abilities: ["ability:brace"],
+      knowledge: ["knowledge:wolf_spoor"],
+      promises: [
+        {
+          promiseId: "promise:return_wagon",
+          recipientId: "npc:hayden_hale",
+          status: "active",
+        },
+      ],
+      companions: ["albany:june_pike"],
+      crimes: [
+        {
+          crimeId: "crime:steading_trespass",
+          jurisdictionId: "jurisdiction:albany_hinterland",
+          severity: 1,
+          status: "suspected",
+        },
+      ],
+      relationships: [
+        {
+          npcId: "npc:old_cade",
+          trust: 25,
+          regard: -25,
+          owesPlayer: 2,
+          playerOwes: 1,
+          memories: ["memory:kept_watch"],
+        },
+      ],
+      factionStanding: [{ factionId: "faction:road_wardens", standing: 60 }],
+    }),
+  );
+}
 
 function roadPath(from: string, to: string): string[] {
   const queue: { town: string; roadIds: string[] }[] = [{ town: from, roadIds: [] }];
@@ -46,12 +105,25 @@ function travelTo(session: OverworldSession, townId: string): void {
   }
 }
 
+function settleOpeningRegistration(session: OverworldSession): void {
+  if (session.journey().storyChoice?.kind === "registration") {
+    session.chooseJourneyStory("albany:ledger_advocate");
+  }
+  if (session.journey().storyChoice?.kind === "lead_source") {
+    session.chooseJourneyStory("albany:source_rowan_civic_docket");
+  }
+  if (session.journey().storyChoice?.kind === "preparation") {
+    session.chooseJourneyStory("albany:prep_works_fortification");
+  }
+}
+
 function resolveCurrentTownEvent(session: OverworldSession): void {
   const view = session.view();
   const event = view.events.find((candidate) => !view.resolvedEventIds.includes(candidate.id));
   if (!event) throw new Error(`No unresolved event in ${view.current.id}.`);
   session.scoutPoi(view.pois[0]!.id);
   session.talkToCharacter(view.characters[0]!.id);
+  settleOpeningRegistration(session);
   session.investigateEvent(event.id);
   session.resolveEvent(event.id);
 }
@@ -59,8 +131,9 @@ function resolveCurrentTownEvent(session: OverworldSession): void {
 function reachAlbanyStoryChoice(session: OverworldSession): void {
   const opening = session.view();
   session.scoutPoi(opening.pois[0]!.id);
-  const revealed = session.talkToCharacter(opening.characters[0]!.id);
-  const quest = revealed.discoveredQuests?.find((candidate) => candidate.id === "wolf_winter");
+  session.talkToCharacter(opening.characters[0]!.id);
+  settleOpeningRegistration(session);
+  const quest = session.view().quests.find((candidate) => candidate.id === "wolf_winter");
   if (!quest) throw new Error("Expected the Albany Wolf-Winter lead.");
   const route = session
     .view()
@@ -127,6 +200,33 @@ describe("OverworldSession", () => {
     expect(view.fatigue).toBe(0);
     expect(view.travelCondition).toBe("ready");
     expect(view.pendingRoadEncounter).toBeNull();
+    expect(view.character).toMatchObject({
+      background: null,
+      health: { current: 30, max: 30 },
+      money: 0,
+      skills: [],
+      equipment: [],
+      companions: [],
+      relationships: [],
+      factionStanding: [],
+    });
+    expect(session.compactView().character).toEqual([
+      null,
+      [30, 30],
+      0,
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    ]);
     const colonieOption = view.routeOptions.find(
       (route) => route.destination.id === "colonie_town",
     );
@@ -224,6 +324,7 @@ describe("OverworldSession", () => {
   it("routes visible story-choice ids through generic app plumbing", () => {
     const app = readFileSync("ui/src/App.tsx", "utf8");
     const screen = readFileSync("ui/src/JourneyStoryChoiceScreen.tsx", "utf8");
+    const styles = readFileSync("ui/src/styles.css", "utf8");
     const handlerStart = app.indexOf("function chooseJourneyStory(choiceId: string)");
     const handlerEnd = app.indexOf("if (tutorialOpen)", handlerStart);
     expect(handlerStart).toBeGreaterThanOrEqual(0);
@@ -231,6 +332,15 @@ describe("OverworldSession", () => {
     const handler = app.slice(handlerStart, handlerEnd);
 
     expect(handler).toContain("worldSession.chooseJourneyStory(choiceId)");
+    expect(handler).toContain('journey.storyChoice?.kind === "registration"');
+    expect(handler).toContain('journey.storyChoice?.kind === "lead_source"');
+    expect(handler).toContain('journey.storyChoice?.kind === "preparation"');
+    expect(handler).toContain('journey.storyChoice?.kind === "ally"');
+    expect(handler).toContain("Character registered: ${result.consequence}");
+    expect(handler).toContain("Current goal: ${result.goal.text}");
+    expect(handler).toContain("Lead source certified: ${result.consequence}");
+    expect(handler).toContain("Preparation committed: ${result.consequence}");
+    expect(handler).toContain("Field team committed: ${result.consequence}");
     expect(handler).toContain("Story consequence: ${result.consequence}");
     expect(handler).toContain("New goal: ${result.goal.text}");
     expect(handler).not.toMatch(/AlbanyDawnDispatchChoiceId|Albany dawn dispatch/i);
@@ -239,7 +349,307 @@ describe("OverworldSession", () => {
     );
     expect(screen).toContain("Journey consequence");
     expect(screen).toContain("Choose what follows");
+    expect(screen).toContain("Character registration");
+    expect(screen).toContain("Choose your lived background");
+    expect(screen).toContain("Albany evidence source");
+    expect(screen).toContain("Choose your Albany lead source");
+    expect(screen).toContain("Albany preparation budget");
+    expect(screen).toContain("Choose what Albany prepares");
+    expect(screen).toContain("Field-team commitment");
+    expect(screen).toContain("Choose who leaves Albany");
+    expect(screen).toContain('" journey-choice-actions-registration"');
+    expect(styles).toContain(
+      ".journey-choice-actions:not(.journey-choice-actions-registration) button:first-child",
+    );
     expect(screen).not.toMatch(/Albany Station Quarter|dawn dispatch|relief wagon/i);
+  });
+
+  it("keeps standard service actions and accessibly associates their one-time terms", async () => {
+    const app = readFileSync("ui/src/App.tsx", "utf8");
+    const actionsStart = app.indexOf('<div className="service-actions">');
+    const actionsEnd = app.indexOf('<aside className="atlas-panel">', actionsStart);
+    expect(actionsStart).toBeGreaterThanOrEqual(0);
+    expect(actionsEnd).toBeGreaterThan(actionsStart);
+    const actions = app.slice(actionsStart, actionsEnd);
+
+    expect(actions).toContain("worldSession.resupplyAtTown()");
+    expect(actions).toContain("worldSession.restAtTown()");
+    expect(actions).toContain('action="resupply"');
+    expect(actions).toContain('action="rest"');
+    expect(app).toContain("aria-describedby={termsId}");
+    expect(app).toContain("{offer.title}");
+    expect(app).toContain("{offer.summary}");
+    expect(app).toContain("{offer.minutes} min, one time");
+
+    const uiRoot = resolve(process.cwd(), "ui");
+    const server = await createServer({
+      root: uiRoot,
+      configFile: resolve(uiRoot, "vite.config.ts"),
+      appType: "custom",
+      logLevel: "silent",
+      optimizeDeps: { noDiscovery: true },
+      server: { middlewareMode: true },
+    });
+    try {
+      const module = (await server.ssrLoadModule("/src/App.tsx")) as {
+        ServiceAction: unknown;
+      };
+      const requireFromUi = createRequire(resolve(uiRoot, "package.json"));
+      const react = requireFromUi("react") as {
+        createElement: (type: unknown, props: Record<string, unknown>) => unknown;
+      };
+      const reactDomServer = requireFromUi("react-dom/server") as {
+        renderToStaticMarkup: (element: unknown) => string;
+      };
+      const offer = {
+        id: "albany:test_accessible_service",
+        action: "resupply",
+        title: "Draw the one-time relief issue",
+        summary: "Fill the field pack from Albany's reserved relief stock.",
+        minutes: 15,
+        providerId: "albany_city__market__contact",
+        providerName: "Jamie Tanner",
+      } as const;
+      const markup = reactDomServer.renderToStaticMarkup(
+        react.createElement(module.ServiceAction, {
+          action: "resupply",
+          offer,
+          onActivate: () => undefined,
+        }),
+      );
+
+      expect(markup).toContain('aria-describedby="service-offer-resupply-terms"');
+      expect(markup).toContain('id="service-offer-resupply-terms"');
+      expect(markup).toContain("Draw the one-time relief issue");
+      expect(markup).toContain("Available from Jamie Tanner.");
+      expect(markup).toContain("15 min, one time");
+    } finally {
+      await server.close();
+    }
+  });
+
+  it("renders registration choices without claiming a goal was completed or replaced", async () => {
+    const uiRoot = resolve(process.cwd(), "ui");
+    const server = await createServer({
+      root: uiRoot,
+      configFile: resolve(uiRoot, "vite.config.ts"),
+      appType: "custom",
+      logLevel: "silent",
+      optimizeDeps: { noDiscovery: true },
+      server: { middlewareMode: true },
+    });
+    try {
+      const module = (await server.ssrLoadModule("/src/JourneyStoryChoiceScreen.tsx")) as {
+        JourneyStoryChoiceScreen: unknown;
+      };
+      const requireFromUi = createRequire(resolve(uiRoot, "package.json"));
+      const react = requireFromUi("react") as {
+        createElement: (type: unknown, props: Record<string, unknown>) => unknown;
+      };
+      const reactDomServer = requireFromUi("react-dom/server") as {
+        renderToStaticMarkup: (element: unknown) => string;
+      };
+      const journey = new OverworldSession(world).journey();
+      const registrationJourney = {
+        ...journey,
+        storyChoice: {
+          id: "albany_registration",
+          kind: "registration",
+          message: "Which lived history goes on Rowan's relief docket?",
+          options: ["stockhand", "ledger_runner", "road_volunteer", "clinic_aide"].map((id) => ({
+            id,
+            label: id,
+            consequence: `Carry ${id} into the journey.`,
+          })),
+        },
+      };
+      const markup = reactDomServer.renderToStaticMarkup(
+        react.createElement(module.JourneyStoryChoiceScreen, {
+          journey: registrationJourney,
+          onChoose: () => undefined,
+        }),
+      );
+
+      expect(markup).toContain("Character registration");
+      expect(markup).toContain("Choose your lived background");
+      expect(markup).toContain("Current objective");
+      expect(markup).toContain("registered history persists");
+      expect(markup.match(/<button/g)).toHaveLength(4);
+      expect(markup).not.toContain("Goal just completed");
+      expect(markup).not.toContain("sets your next objective");
+    } finally {
+      await server.close();
+    }
+  });
+
+  it("renders Albany lead-source choices without claiming a completed or replaced goal", async () => {
+    const uiRoot = resolve(process.cwd(), "ui");
+    const server = await createServer({
+      root: uiRoot,
+      configFile: resolve(uiRoot, "vite.config.ts"),
+      appType: "custom",
+      logLevel: "silent",
+      optimizeDeps: { noDiscovery: true },
+      server: { middlewareMode: true },
+    });
+    try {
+      const module = (await server.ssrLoadModule("/src/JourneyStoryChoiceScreen.tsx")) as {
+        JourneyStoryChoiceScreen: unknown;
+      };
+      const requireFromUi = createRequire(resolve(uiRoot, "package.json"));
+      const react = requireFromUi("react") as {
+        createElement: (type: unknown, props: Record<string, unknown>) => unknown;
+      };
+      const reactDomServer = requireFromUi("react-dom/server") as {
+        renderToStaticMarkup: (element: unknown) => string;
+      };
+      const journey = new OverworldSession(world).journey();
+      const leadSourceJourney = {
+        ...journey,
+        storyChoice: {
+          id: "albany_wolf_winter_source",
+          kind: "lead_source",
+          message: "Which Albany source certifies the relief packet?",
+          options: ["reese_manifest", "emery_survey", "decline_source"].map((id) => ({
+            id,
+            label: id,
+            consequence: `Carry ${id} evidence into the journey.`,
+          })),
+        },
+      };
+      const markup = reactDomServer.renderToStaticMarkup(
+        react.createElement(module.JourneyStoryChoiceScreen, {
+          journey: leadSourceJourney,
+          onChoose: () => undefined,
+        }),
+      );
+
+      expect(markup).toContain("Albany evidence source");
+      expect(markup).toContain("Choose your Albany lead source");
+      expect(markup).toContain("Current objective");
+      expect(markup).toContain("does not replace this objective");
+      expect(markup.match(/<button/g)).toHaveLength(3);
+      expect(markup).not.toContain("Goal just completed");
+      expect(markup).not.toContain("sets your next objective");
+    } finally {
+      await server.close();
+    }
+  });
+
+  it("renders ally commitments with an honest current-objective and field-terms frame", async () => {
+    const uiRoot = resolve(process.cwd(), "ui");
+    const server = await createServer({
+      root: uiRoot,
+      configFile: resolve(uiRoot, "vite.config.ts"),
+      appType: "custom",
+      logLevel: "silent",
+      optimizeDeps: { noDiscovery: true },
+      server: { middlewareMode: true },
+    });
+    try {
+      const module = (await server.ssrLoadModule("/src/JourneyStoryChoiceScreen.tsx")) as {
+        JourneyStoryChoiceScreen: unknown;
+      };
+      const requireFromUi = createRequire(resolve(uiRoot, "package.json"));
+      const react = requireFromUi("react") as {
+        createElement: (type: unknown, props: Record<string, unknown>) => unknown;
+      };
+      const reactDomServer = requireFromUi("react-dom/server") as {
+        renderToStaticMarkup: (element: unknown) => string;
+      };
+      const journey = new OverworldSession(world).journey();
+      const allyJourney = {
+        ...journey,
+        storyChoice: {
+          id: "albany_wolf_ally",
+          kind: "ally",
+          message: "Capability: June can hold the cattle line. Condition: cattle come first.",
+          options: ["join", "relay", "solo"].map((id, index) => ({
+            id,
+            label: id,
+            consequence: `Preview ${id}. Actual cost: ${String(index * 5)} minutes.`,
+          })),
+        },
+      };
+      const markup = reactDomServer.renderToStaticMarkup(
+        react.createElement(module.JourneyStoryChoiceScreen, {
+          journey: allyJourney,
+          onChoose: () => undefined,
+        }),
+      );
+
+      expect(markup).toContain("Field-team commitment");
+      expect(markup).toContain("Choose who leaves Albany");
+      expect(markup).toContain("Current objective");
+      expect(markup).toContain("Capability: June can hold the cattle line");
+      expect(markup).toContain("Condition: cattle come first");
+      expect(markup).toContain("actual cost");
+      expect(markup).toContain("Actual cost: 10 minutes");
+      expect(markup.match(/<button/g)).toHaveLength(3);
+      expect(markup).not.toContain("Goal just completed");
+      expect(markup).not.toContain("sets your next objective");
+    } finally {
+      await server.close();
+    }
+  });
+
+  it("renders the fully populated canonical character as a semantic read-only record", async () => {
+    const app = readFileSync("ui/src/App.tsx", "utf8");
+    expect(app).toContain("<CampaignCharacterPanel character={worldView.character} />");
+
+    const uiRoot = resolve(process.cwd(), "ui");
+    const server = await createServer({
+      root: uiRoot,
+      configFile: resolve(uiRoot, "vite.config.ts"),
+      appType: "custom",
+      logLevel: "silent",
+      optimizeDeps: { noDiscovery: true },
+      server: { middlewareMode: true },
+    });
+    try {
+      const module = (await server.ssrLoadModule("/src/CampaignCharacterPanel.tsx")) as {
+        CampaignCharacterPanel: unknown;
+      };
+      const requireFromUi = createRequire(resolve(uiRoot, "package.json"));
+      const react = requireFromUi("react") as {
+        createElement: (type: unknown, props: Record<string, unknown>) => unknown;
+      };
+      const reactDomServer = requireFromUi("react-dom/server") as {
+        renderToStaticMarkup: (element: unknown) => string;
+      };
+      const markup = reactDomServer.renderToStaticMarkup(
+        react.createElement(module.CampaignCharacterPanel, {
+          character: populatedUiCharacter(),
+        }),
+      );
+
+      expect(markup).toMatch(
+        /^<details class="character-panel"><summary class="character-heading"><h2 class="character-heading-layout">[\s\S]*<\/h2><\/summary>/,
+      );
+      expect(markup.match(/<h3>/g)).toHaveLength(11);
+      for (const visibleText of [
+        "Your Record",
+        "Road Warden",
+        "Fieldcraft",
+        "Keep Promises",
+        "Warden Spear",
+        "Wolf Bite",
+        "Brace",
+        "Wolf Spoor",
+        "Hayden Hale",
+        "June Pike",
+        "Albany Hinterland",
+        "Old Cade",
+        "Kept Watch",
+        "Road Wardens",
+        "Read only",
+      ]) {
+        expect(markup).toContain(visibleText);
+      }
+      expect(markup).not.toMatch(/<(?:button|input|select|textarea)\b/);
+    } finally {
+      await server.close();
+    }
   });
 
   it("keeps Albany's first scout, talk, and explore choices on the same reveal loop", () => {
@@ -385,6 +795,7 @@ describe("OverworldSession", () => {
     const currentAreaId = start.currentArea!.id;
 
     session.talkToCharacter(start.characters[0]!.id);
+    settleOpeningRegistration(session);
     const scouted = session.scoutPoi(start.pois[0]!.id);
     const rememberedJob = (scouted.discoveredJobs ?? []).find((job) => job.area !== currentAreaId);
     expect(rememberedJob).toBeDefined();
@@ -669,7 +1080,7 @@ describe("OverworldSession", () => {
     expect(view.discovered.length).toBeGreaterThan(24);
     const compact = compactOverworldView(view);
     expect(session.compactView()).toEqual(compact);
-    expect(compact.v).toBe(14);
+    expect(compact.v).toBe(OVERWORLD_COMPACT_VIEW_VERSION);
     expect(compact.hidden).toEqual([
       view.hiddenAreaCount,
       view.hiddenJobCount,
@@ -688,6 +1099,68 @@ describe("OverworldSession", () => {
     if (view.resolvedEventIds.length === 0) {
       expect("resolved_events" in compact.ids).toBe(false);
     }
+  });
+
+  it("projects and detaches one-time service terms in compact context", () => {
+    const view = new OverworldSession(world).view();
+    const longSummary = "dispatch terms ".repeat(40);
+    const sourceOffers = [
+      {
+        id: "albany:service:rest",
+        action: "rest" as const,
+        title: "Rest under Rowan's relief seal",
+        summary: `Emery Sloane opens the shelter. ${longSummary}`,
+        minutes: 180,
+        providerId: "albany_city__greenway__contact",
+        providerName: "Emery Sloane",
+      },
+      {
+        id: "albany:service:resupply",
+        action: "resupply" as const,
+        title: "Draw the one-time relief issue",
+        summary: "Fill the field pack from Albany's reserved relief stock.",
+        minutes: 15,
+      },
+    ];
+    const fullClone = cloneOverworldView({ ...view, serviceOffers: sourceOffers });
+    const compact = compactOverworldView({ ...view, serviceOffers: sourceOffers });
+
+    expect(compact.service_offers).toEqual([
+      [
+        sourceOffers[0]!.id,
+        "rest",
+        sourceOffers[0]!.title,
+        expect.stringMatching(/\.\.\.\(\+\d+ chars\)$/),
+        180,
+      ],
+      [sourceOffers[1]!.id, "resupply", sourceOffers[1]!.title, sourceOffers[1]!.summary, 15],
+    ]);
+    expect(compact.service_offers?.[0]?.[3]).toHaveLength(
+      OVERWORLD_COMPACT_SERVICE_SUMMARY_CHAR_LIMIT,
+    );
+
+    sourceOffers[0]!.title = "mutated source";
+    expect(Object.keys(fullClone.serviceOffers[0]!).sort()).toEqual([
+      "action",
+      "id",
+      "minutes",
+      "providerId",
+      "providerName",
+      "summary",
+      "title",
+    ]);
+    expect(fullClone.serviceOffers[0]?.title).toBe("Rest under Rowan's relief seal");
+    expect(fullClone.serviceOffers[0]?.providerName).toBe("Emery Sloane");
+    expect(compact.service_offers?.[0]?.[2]).toBe("Rest under Rowan's relief seal");
+    expect(compact.service_offers?.[0]?.[3]).toContain("Emery Sloane");
+
+    fullClone.serviceOffers[0]!.summary = "mutated full clone";
+    expect(sourceOffers[0]!.summary).toBe(`Emery Sloane opens the shelter. ${longSummary}`);
+
+    const cloned = cloneOverworldCompactView(compact);
+    if (!cloned.service_offers) throw new Error("expected cloned service offers");
+    (cloned.service_offers[0] as unknown as string[])[2] = "mutated clone";
+    expect(compact.service_offers?.[0]?.[2]).toBe("Rest under Rowan's relief seal");
   });
 
   it("caps compact context progress lists while marking truncated renown and completed arcs", () => {
@@ -724,6 +1197,7 @@ describe("OverworldSession", () => {
     );
 
     const built = buildOverworldSessionCompactView({
+      character: view.character,
       worldName: view.world,
       worldTownCount: view.totalTowns,
       current: view.current,
@@ -731,6 +1205,7 @@ describe("OverworldSession", () => {
       minutes: 0,
       supplies: view.supplies,
       fatigue: view.fatigue,
+      serviceOffers: view.serviceOffers,
       roads: view.exits,
       areaExits: view.areaExits,
       routeOptions: view.routeOptions,
@@ -823,6 +1298,7 @@ describe("OverworldSession", () => {
     expect(compact.area_routes_truncated).toBe(true);
 
     const built = buildOverworldSessionCompactView({
+      character: view.character,
       worldName: view.world,
       worldTownCount: view.totalTowns,
       current: view.current,
@@ -830,6 +1306,7 @@ describe("OverworldSession", () => {
       minutes: 0,
       supplies: view.supplies,
       fatigue: view.fatigue,
+      serviceOffers: view.serviceOffers,
       roads: denseRoads,
       areaExits: denseAreaRoutes,
       routeOptions: view.routeOptions,
@@ -909,6 +1386,7 @@ describe("OverworldSession", () => {
     expect(compact.route_paths_truncated).toBe(true);
 
     const built = buildOverworldSessionCompactView({
+      character: view.character,
       worldName: view.world,
       worldTownCount: view.totalTowns,
       current: view.current,
@@ -916,6 +1394,7 @@ describe("OverworldSession", () => {
       minutes: 0,
       supplies: view.supplies,
       fatigue: view.fatigue,
+      serviceOffers: view.serviceOffers,
       roads: view.exits,
       areaExits: view.areaExits,
       routeOptions: [densePlan],
@@ -1015,6 +1494,7 @@ describe("OverworldSession", () => {
     ]);
 
     const built = buildOverworldSessionCompactView({
+      character: view.character,
       worldName: view.world,
       worldTownCount: view.totalTowns,
       current: view.current,
@@ -1022,6 +1502,7 @@ describe("OverworldSession", () => {
       minutes: 0,
       supplies: view.supplies,
       fatigue: view.fatigue,
+      serviceOffers: view.serviceOffers,
       roads: view.exits,
       areaExits: view.areaExits,
       routeOptions: view.routeOptions,
@@ -1294,11 +1775,10 @@ describe("OverworldSession", () => {
     expect(repeated.discoveredQuests).toEqual([]);
 
     const talked = session.talkToCharacter(contact.id);
+    settleOpeningRegistration(session);
     expect(talked.minutes).toBe(15);
     expect(talked.entry.text).toContain(contact.agenda);
-    expect(talked.discoveredQuests?.map((quest) => quest.id)).toEqual(
-      localQuests.slice(0, 1).map((quest) => quest.id),
-    );
+    expect(talked.discoveredQuests).toEqual([]);
     expect(talked.discoveredQuests?.every((quest) => !("pack" in quest))).toBe(true);
     expect(session.view().quests.map((quest) => quest.id)).toEqual(
       localQuests.slice(0, 1).map((quest) => quest.id),
@@ -1312,7 +1792,7 @@ describe("OverworldSession", () => {
 
     const after = session.view();
     expect(after.timeLabel).not.toBe(before.timeLabel);
-    expect(after.journal).toHaveLength(3);
+    expect(after.journal).toHaveLength(9);
   });
 
   it("requires reaching a quest's local area before starting it", () => {
@@ -1323,12 +1803,13 @@ describe("OverworldSession", () => {
       .sort((a, b) => a.title.localeCompare(b.title))[0]!;
 
     expect(firstLocalQuest.area).not.toBe(initial.currentArea?.id);
-    expect(() => session.startQuest(firstLocalQuest.id)).toThrow(/Discover/i);
+    expect(initial.discoveredQuestIds).not.toContain(firstLocalQuest.id);
 
     const scouted = session.scoutPoi(initial.pois[0]!.id);
     expect(scouted.discoveredQuests).toEqual([]);
-    const talked = session.talkToCharacter(initial.characters[0]!.id);
-    const discoveredQuests = talked.discoveredQuests ?? [];
+    session.talkToCharacter(initial.characters[0]!.id);
+    settleOpeningRegistration(session);
+    const discoveredQuests = session.view().quests;
     expect(discoveredQuests).toHaveLength(1);
     const discoveredQuest = discoveredQuests[0]!;
     expect(discoveredQuest.id).toBe(firstLocalQuest.id);
@@ -1373,7 +1854,7 @@ describe("OverworldSession", () => {
     const beforeCompletionMinutes = session.snapshot().minutes;
     const completedQuest = session.completeQuest(discoveredQuest.id, {
       endingId: "ending_held",
-      endingTitle: "Held",
+      endingTitle: "The Byre Held",
       death: false,
     });
     const questSource = world.quests.find((quest) => quest.id === discoveredQuest.id);
@@ -1408,7 +1889,7 @@ describe("OverworldSession", () => {
 
     const repeatedCompletion = session.completeQuest(discoveredQuest.id, {
       endingId: "ending_held",
-      endingTitle: "Held",
+      endingTitle: "The Byre Held",
       death: false,
     });
     expect(repeatedCompletion.alreadyKnown).toBe(true);
@@ -1498,6 +1979,7 @@ describe("OverworldSession", () => {
     expect(() => session.resolveEvent(event.id)).toThrow(/Before resolving/i);
     session.scoutPoi(poi.id);
     session.talkToCharacter(contact.id);
+    settleOpeningRegistration(session);
     session.investigateEvent(event.id);
 
     const resolved = session.resolveEvent(event.id);
@@ -1509,7 +1991,7 @@ describe("OverworldSession", () => {
     expect(after.resolvedEventIds).toContain(event.id);
     expect(after.events.map((candidate) => candidate.id)).not.toContain(event.id);
     expect(after.regionRenown[start.current.region]).toBe(event.intensity);
-    expect(after.journal).toHaveLength(4);
+    expect(after.journal).toHaveLength(10);
 
     const compactAfter = session.compactView();
     expect(compactAfter.events.map(([id]) => id)).not.toContain(event.id);

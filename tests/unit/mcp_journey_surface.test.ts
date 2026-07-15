@@ -31,6 +31,11 @@ function moveUiSessionToArea(session: OverworldSession, destinationAreaId: strin
 function uiSessionAtPostGallowmereHayden(): OverworldSession {
   const session = new OverworldSession(WORLD);
   session.scoutPoi("albany_city__civic_core__poi");
+  session.talkToCharacter("albany_city__civic_core__contact");
+  session.chooseJourneyStory("albany:ledger_advocate");
+  session.chooseJourneyStory("albany:source_rowan_civic_docket");
+  expect(session.journey().storyChoice?.kind).toBe("preparation");
+  session.chooseJourneyStory("albany:prep_works_fortification");
   moveUiSessionToArea(session, "albany_city__market");
   session.scoutPoi("albany_city__market__poi");
   moveUiSessionToArea(session, "albany_city__transport_hub");
@@ -72,8 +77,17 @@ function uiSessionAtAlbanyStoryChoice(): OverworldSession {
   const session = new OverworldSession(WORLD);
   const opening = session.view();
   session.scoutPoi(opening.pois[0]!.id);
-  const revealed = session.talkToCharacter(opening.characters[0]!.id);
-  const quest = revealed.discoveredQuests?.find((candidate) => candidate.id === "wolf_winter");
+  const talked = session.talkToCharacter(opening.characters[0]!.id);
+  expect(talked.discoveredQuests?.map((candidate) => candidate.id)).not.toContain("wolf_winter");
+  if (session.journey().storyChoice?.kind === "registration") {
+    session.chooseJourneyStory("albany:ledger_advocate");
+  }
+  expect(session.journey().storyChoice?.kind).toBe("lead_source");
+  session.chooseJourneyStory("albany:source_rowan_civic_docket");
+  expect(session.journey().storyChoice?.kind).toBe("preparation");
+  expect(session.view().quests.map((candidate) => candidate.id)).not.toContain("wolf_winter");
+  session.chooseJourneyStory("albany:prep_works_fortification");
+  const quest = session.view().quests.find((candidate) => candidate.id === "wolf_winter");
   if (!quest) throw new Error("expected the Albany Wolf-Winter lead");
   const route = session
     .view()
@@ -147,6 +161,37 @@ function mcpWolfWinterCheckpointInsideQuest() {
     session_id: overworldSessionId,
     include_observation: true,
   }).observation;
+  const rowan = view.characters[0];
+  if (!rowan) throw new Error("expected Albany registration contact");
+  const registrationTalk = a.talk_overworld_session_contact({
+    ...FULL_OVERWORLD,
+    session_id: overworldSessionId,
+    character_id: rowan.id,
+  });
+  expect(registrationTalk.journey.storyChoice?.kind).toBe("registration");
+  expect(registrationTalk.result.discoveredQuests).toEqual([]);
+  const registered = a.choose_overworld_session_story({
+    ...FULL_OVERWORLD,
+    session_id: overworldSessionId,
+    choice: "albany:ledger_advocate",
+  });
+  expect(registered.journey.storyChoice?.kind).toBe("lead_source");
+  expect(registered.observation.quests.map((candidate) => candidate.id)).not.toContain(
+    "wolf_winter",
+  );
+  const sourced = a.choose_overworld_session_story({
+    ...FULL_OVERWORLD,
+    session_id: overworldSessionId,
+    choice: "albany:source_rowan_civic_docket",
+  });
+  expect(sourced.journey.storyChoice?.kind).toBe("preparation");
+  expect(sourced.observation.quests.map((candidate) => candidate.id)).not.toContain("wolf_winter");
+  const prepared = a.choose_overworld_session_story({
+    ...FULL_OVERWORLD,
+    session_id: overworldSessionId,
+    choice: "albany:prep_works_fortification",
+  });
+  view = prepared.observation;
 
   const marketRoute = view.areaExits.find(
     (route) => route.destination.id === "albany_city__market",
@@ -167,7 +212,7 @@ function mcpWolfWinterCheckpointInsideQuest() {
     session_id: overworldSessionId,
     poi_id: view.pois[0]!.id,
   });
-  const quest = revealed.result.discoveredQuests?.[0];
+  const quest = prepared.observation.quests.find((candidate) => candidate.id === "wolf_winter");
   if (!quest) throw new Error("expected Albany quest lead");
   const questRoute = revealed.observation.areaExits.find(
     (route) => route.destination.id === quest.area,
@@ -185,12 +230,27 @@ function mcpWolfWinterCheckpointInsideQuest() {
 
   const contact = view.characters[0];
   if (!contact) throw new Error("expected quest-area contact");
+  const questAreaPoi = view.pois[0];
+  if (!questAreaPoi) throw new Error("expected quest-area point of interest");
+  const questAreaScouted = a.scout_overworld_session_poi({
+    ...FULL_OVERWORLD,
+    session_id: overworldSessionId,
+    poi_id: questAreaPoi.id,
+  });
   let journey = a.talk_overworld_session_contact({
     ...FULL_OVERWORLD,
     session_id: overworldSessionId,
     character_id: contact.id,
   }).journey;
-  expect(journey.acceptedDecisions).toBe(5);
+  expect(journey.acceptedDecisions).toBe(10);
+  const questAreaSite = questAreaScouted.observation.sites[0];
+  if (!questAreaSite) throw new Error("expected a quest-area exploration site");
+  journey = a.explore_overworld_session_site({
+    ...FULL_OVERWORLD,
+    session_id: overworldSessionId,
+    site_id: questAreaSite.id,
+  }).journey;
+  expect(journey.acceptedDecisions).toBe(11);
 
   // Reach decision 37 through real reversible local movement, so quest start and
   // two accepted quest moves put the checkpoint inside the RPG at decision 40.
@@ -351,7 +411,7 @@ describe("MCP journey surface", () => {
       /"variants"|"after_quests"|wolf_winter_closed|wolf_winter_and_gallowmere_closed/i,
     );
     expect(observationPayload).not.toMatch(
-      /packet Rowan flagged|before the cattle are lost|return board|other live report in that chain/i,
+      /controlling source certification|settled packets|return board|other live report in that chain/i,
     );
 
     const uiTalk = ui.talkToCharacter(HAYDEN_ID);
@@ -372,7 +432,7 @@ describe("MCP journey surface", () => {
     expect(uiTalk.entry.text).toMatch(/Cade/i);
     expect(uiTalk.entry.text).toMatch(/Hedrick|Gallowmere/i);
     expect(uiTalk.entry.text).toMatch(/current journey goal|journey ledger/i);
-    expect(uiTalk.entry.text).not.toMatch(/packet Rowan flagged|before the cattle are lost/i);
+    expect(uiTalk.entry.text).not.toMatch(/controlling source certification|settled packets/i);
     expect(fullTalk.journey).toEqual(ui.journey());
     expect(compactTalk.journey).toEqual(ui.journey());
     expect(compactTalk.snapshot_hash).toBe(fullTalk.snapshot_hash);
@@ -583,7 +643,7 @@ describe("MCP journey surface", () => {
     expect(endedRun.a.sessions.embeddedJourneyPause(endedRun.overworldSessionId)).toBeNull();
   });
 
-  it("shares one story-choice presentation with the UI and blocks every embedded RPG action", () => {
+  it("shares one story-choice presentation with the UI and rejects forged embedded authority", () => {
     const uiSession = uiSessionAtAlbanyStoryChoice();
     const uiJourney = uiSession.journey();
     const snapshot = uiSession.snapshot();
@@ -613,46 +673,16 @@ describe("MCP journey surface", () => {
       /targetQuestId|endingId|ending_held|wolf_winter|content\/rpg|win_conditions|maneuver_/i,
     );
 
-    const embedded = a.start_world_quest({
-      world_quest_id: "wolf_winter",
-      seed: 1,
-      overworldSessionId: restored.session_id,
-      compact_observation: false,
-    });
-    const legalAction = embedded.observation.available_actions[0];
-    if (!legalAction) throw new Error("expected an opening RPG action before journey projection");
-    const rpgHashBefore = a.sessions.get(embedded.session_id).stateHash;
-
-    const observed = a.get_observation({
-      session_id: embedded.session_id,
-      compact_observation: false,
-    });
-    expect(observed.journey).toEqual(uiJourney);
-    expect(observed.observation.available_actions).toEqual([]);
-    const listed = a.list_legal_actions({
-      session_id: embedded.session_id,
-      compact_actions: false,
-    });
-    expect(listed.journey).toEqual(uiJourney);
-    expect(listed.actions).toEqual([]);
+    expect(() =>
+      (a.start_world_quest as (args: Record<string, unknown>) => unknown)({
+        world_quest_id: "wolf_winter",
+        seed: 1,
+        overworldSessionId: restored.session_id,
+      }),
+    ).toThrow(/does not accept embedded field "overworldSessionId"/);
     expect(() => a.rest_overworld_session({ session_id: restored.session_id })).toThrow(
       /presented story consequence/i,
     );
-
-    const blocked = a.step_action({
-      session_id: embedded.session_id,
-      action_id: legalAction.id,
-      compact_observation: false,
-      compact_events: false,
-    });
-    expect(blocked).toMatchObject({
-      ok: false,
-      rejection_reason: uiJourney.storyChoice!.message,
-      journeyDecision: { countsTowardJourney: false, reason: "rejected" },
-      journey: uiJourney,
-    });
-    expect(blocked.observation.available_actions).toEqual([]);
-    expect(a.sessions.get(embedded.session_id).stateHash).toBe(rpgHashBefore);
 
     const uiBranch = OverworldSession.restore(WORLD, snapshot);
     const uiResult = uiBranch.chooseJourneyStory("send_wagon_to_cade");
@@ -671,10 +701,6 @@ describe("MCP journey surface", () => {
     expect(JSON.stringify(mcpBranch.journey.goalGuidance)).not.toMatch(
       /targetQuestId|endingId|wolf_winter|content\/rpg|win_conditions|maneuver_/i,
     );
-    expect(
-      a.list_legal_actions({ session_id: embedded.session_id, compact_actions: true }).actions
-        .length,
-    ).toBeGreaterThan(0);
   });
 
   it.each(TANNERS_FEVER_ACCOUNTABILITY_CHOICE_IDS)(

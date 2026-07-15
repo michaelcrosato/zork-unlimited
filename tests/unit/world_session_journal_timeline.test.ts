@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { createInitialCampaignCharacterState } from "../../src/world/campaign_character_state.js";
 import { createInitialJourneyContractSnapshot } from "../../src/world/journey_contract.js";
 import { timeLabel } from "../../src/world/session_journal_codec.js";
 import {
@@ -78,6 +79,7 @@ function snapshot(
     version: OVERWORLD_SESSION_SAVE_VERSION,
     worldId: "new_york_overworld",
     worldHash: "a".repeat(64),
+    character: createInitialCampaignCharacterState(),
     currentId: "town_b",
     currentAreaId: null,
     minutes,
@@ -122,6 +124,8 @@ function sources(
     contactPresentationsByJournalId: new Map(
       contactPresentations.map((presentation) => [presentation.journalId, presentation]),
     ),
+    openingRegistrationJournalDraftsById: new Map(),
+    openingRegistrationTownName: null,
     edgeIds: new Set(["road_a_b"]),
     eventIds: new Set(["event_1"]),
     eventTownNames: new Map([["event_1", "Town B"]]),

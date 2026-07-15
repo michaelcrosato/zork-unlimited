@@ -5,6 +5,7 @@ import { SaveIntegrityError } from "../persist/save_load.js";
 import type { RpgIndex } from "./runner.js";
 import { ATTACK_VAR, DEFENSE_VAR, HP_VAR, SCORE_VAR, enemyHpVar } from "./schema.js";
 import { maneuverChildren, maneuverParent, rootManeuvers } from "./maneuver_sequence.js";
+import { campaignImportReceiptTargetIssues } from "./campaign_character_import.js";
 
 /**
  * Collect item ids that can legitimately enter inventory through authored effects.
@@ -203,6 +204,35 @@ export function assertRpgStateReferences(index: RpgIndex, state: GameState): voi
   });
   const dialogueVars = new Map<string, { room: string; maxOrdinal: number }>();
   const enemyHpVars = new Map<string, number>();
+  if (state.campaignImportReceipt !== undefined) {
+    let receiptIssues;
+    try {
+      receiptIssues = campaignImportReceiptTargetIssues(index.pack, state.campaignImportReceipt);
+    } catch (error) {
+      throw new SaveIntegrityError(
+        `Save has malformed campaign import receipt: ${(error as Error).message}`,
+      );
+    }
+    if (receiptIssues.length > 0) {
+      throw new SaveIntegrityError(
+        `Save campaign import receipt is incompatible with this pack: ${receiptIssues
+          .map((issue) => issue.message)
+          .join(" ")}`,
+      );
+    }
+    for (const effect of state.campaignImportReceipt.effects) {
+      if (effect.type === "equipment_to_item") {
+        items.add(effect.target_object);
+      } else if (
+        effect.type === "background_to_flag" ||
+        effect.type === "ability_to_flag" ||
+        effect.type === "knowledge_to_flag" ||
+        effect.type === "companion_to_flag"
+      ) {
+        addBooleanRuntimeTarget(flags, effect.target_flag, true);
+      }
+    }
+  }
   for (const id of index.pack.meta.flags_init) addBooleanRuntimeTarget(flags, id, true);
   // Built-in OPEN/UNLOCK actions write sparse runtime state; static defaults do not.
   for (const object of index.pack.objects) {

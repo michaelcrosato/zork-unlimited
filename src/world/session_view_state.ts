@@ -35,6 +35,12 @@ import type {
   TravelLogEntry,
 } from "./session_snapshot.js";
 import { buildOverworldSessionView, type OverworldView } from "./session_view.js";
+import type { CampaignCharacterState } from "./campaign_character_state.js";
+import {
+  buildCampaignCharacterView,
+  type CampaignCharacterView,
+} from "./campaign_character_view.js";
+import type { CampaignServiceOffer } from "./campaign_service_rules.js";
 
 type OverworldSessionViewLocalContentState = Pick<
   MutableOverworldSessionLocalState,
@@ -42,6 +48,7 @@ type OverworldSessionViewLocalContentState = Pick<
 >;
 
 export type OverworldSessionViewModelState = {
+  character: CampaignCharacterView;
   worldName: string;
   worldTownCount: number;
   current: OverworldNode;
@@ -49,6 +56,7 @@ export type OverworldSessionViewModelState = {
   minutes: number;
   supplies: number;
   fatigue: number;
+  serviceOffers: readonly CampaignServiceOffer[];
   roads: readonly OverworldExit[];
   areaExits: readonly OverworldAreaExit[];
   routeOptions: readonly OverworldSessionRoutePlan[];
@@ -70,6 +78,7 @@ export type OverworldSessionFullViewModelState = OverworldSessionViewModelState 
 };
 
 export type OverworldSessionViewModelSourceState = {
+  character: CampaignCharacterState;
   caches: OverworldSessionCaches;
   worldName: string;
   worldTownCount: number;
@@ -79,6 +88,7 @@ export type OverworldSessionViewModelSourceState = {
   minutes: number;
   supplies: number;
   fatigue: number;
+  serviceOffers: readonly CampaignServiceOffer[];
   roads: readonly OverworldExit[];
   areaExits: readonly OverworldAreaExit[];
   localState: OverworldSessionViewLocalContentState;
@@ -145,6 +155,7 @@ export function buildOverworldSessionViewModelState(
 ): OverworldSessionViewModelState {
   if (source.pendingRoadEncounter) {
     return {
+      character: buildCampaignCharacterView(source.character),
       worldName: source.worldName,
       worldTownCount: source.worldTownCount,
       current: pendingRoadLocationNode(source.pendingRoadEncounter, source.current),
@@ -152,6 +163,7 @@ export function buildOverworldSessionViewModelState(
       minutes: source.minutes,
       supplies: source.supplies,
       fatigue: source.fatigue,
+      serviceOffers: [],
       roads: [],
       areaExits: [],
       routeOptions: [],
@@ -176,6 +188,7 @@ export function buildOverworldSessionViewModelState(
   const contacts = currentAreaContent.characters.map(
     (character) =>
       presentOverworldContact(character, {
+        character: source.character,
         completedQuestIds: source.completedQuestIds,
       }).contact,
   );
@@ -193,6 +206,7 @@ export function buildOverworldSessionViewModelState(
   });
 
   return {
+    character: buildCampaignCharacterView(source.character),
     worldName: source.worldName,
     worldTownCount: source.worldTownCount,
     current: source.current,
@@ -200,6 +214,16 @@ export function buildOverworldSessionViewModelState(
     minutes: source.minutes,
     supplies: source.supplies,
     fatigue: source.fatigue,
+    serviceOffers: source.serviceOffers.map((offer) => ({
+      id: offer.id,
+      action: offer.action,
+      title: offer.title,
+      summary: offer.summary,
+      minutes: offer.minutes,
+      ...(offer.providerId && offer.providerName
+        ? { providerId: offer.providerId, providerName: offer.providerName }
+        : {}),
+    })),
     roads: source.roads,
     areaExits: source.areaExits,
     routeOptions,
@@ -236,6 +260,7 @@ export function buildOverworldSessionFullViewModelState(
 
 function compactViewState(state: OverworldSessionViewModelState): OverworldSessionCompactViewState {
   return {
+    character: state.character,
     worldName: state.worldName,
     worldTownCount: state.worldTownCount,
     current: state.current,
@@ -243,6 +268,7 @@ function compactViewState(state: OverworldSessionViewModelState): OverworldSessi
     minutes: state.minutes,
     supplies: state.supplies,
     fatigue: state.fatigue,
+    serviceOffers: state.serviceOffers,
     roads: state.roads,
     areaExits: state.areaExits,
     routeOptions: state.routeOptions,
@@ -284,6 +310,7 @@ export function buildOverworldSessionViewFromState(
   state: OverworldSessionFullViewModelState,
 ): OverworldView {
   return buildOverworldSessionView({
+    character: state.character,
     worldName: state.worldName,
     worldTownCount: state.worldTownCount,
     current: state.current,
@@ -291,6 +318,7 @@ export function buildOverworldSessionViewFromState(
     minutes: state.minutes,
     supplies: state.supplies,
     fatigue: state.fatigue,
+    serviceOffers: state.serviceOffers,
     roads: state.roads,
     areaExits: state.areaExits,
     areas: state.localView.areas,

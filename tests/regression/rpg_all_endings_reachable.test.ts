@@ -71,7 +71,7 @@ const packFiles = readdirSync(PACK_DIR)
 
 // Same backstop as the CYOA/parser suites. The RPG search adds a bounded combat lattice
 // (reachable (playerHP, enemyHP) pairs over the two roll regimes) on top of the parser
-// state space. The route-rich Wolf-Winter graph exhausts at 335,482 states
+// state space. The route-rich Wolf-Winter graph exhausts at 315,100 states
 // (measured 2026-07-11); this ceiling leaves bounded headroom while a future blowup still
 // fails loudly (cap hit) rather than hanging or silently truncating.
 const MAX_STATES = 400_000;

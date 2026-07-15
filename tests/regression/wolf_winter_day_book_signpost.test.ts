@@ -84,6 +84,17 @@ describe("bug_0399 — wolf_winter signposts the score-bearing day-book", () => 
     expect(s.vars.attack).toBe(before.vars.attack);
     expect(s.vars.defense).toBe(before.vars.defense);
     expect(s.vars.hp).toBe(before.vars.hp);
-    expect(validateRpg(pack).findings).toHaveLength(0);
+    expect(
+      validateRpg(pack, {
+        extraSettableFlags: [
+          "jamie_market_testimony_certified",
+          "hayden_frost_report_certified",
+          "works_fortification_prepared",
+          "drover_route_prepared",
+          "relief_protocol_prepared",
+          "june_pike_present",
+        ],
+      }).findings,
+    ).toHaveLength(0);
   });
 });

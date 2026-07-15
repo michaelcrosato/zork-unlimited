@@ -8,6 +8,8 @@ import {
   overworldEventsAt,
   overworldExplorationSitesNear,
   overworldJobsAt,
+  overworldQuestCampaignExportForEnding,
+  parseOverworldManifest,
   planOverworldRoute,
 } from "../../src/world/overworld.js";
 import { cloneOverworldRoadEvent } from "../../src/world/overworld_clone.js";
@@ -71,6 +73,94 @@ describe("New York overworld graph", () => {
     expect(buffaloRoute!.steps.some((step) => step.edge.route.includes("I-90"))).toBe(true);
     expect(buffaloRoute!.totalMinutes).toBe(
       buffaloRoute!.steps.reduce((sum, step) => sum + step.edge.travel_minutes, 0),
+    );
+  });
+
+  it("binds opening registration packages to Albany contacts and complete character state", () => {
+    const registration = world.opening_registration;
+    expect(registration).toMatchObject({
+      id: "albany:relief_registration",
+      home: "albany_city",
+      area: "albany_city__civic_core",
+      contact: "albany_city__civic_core__contact",
+    });
+    expect(registration?.profiles.map((profile) => profile.id)).toEqual([
+      "albany:road_warden",
+      "albany:ledger_advocate",
+      "albany:ironhands_repairer",
+      "albany:unaffiliated_courier",
+    ]);
+    const campaignNpcIds = new Set(
+      world.characters.flatMap((character) =>
+        character.campaign_npc_id === undefined ? [] : [character.campaign_npc_id],
+      ),
+    );
+    const contactByCampaignNpcId = new Map(
+      world.characters.flatMap((character) =>
+        character.campaign_npc_id === undefined
+          ? []
+          : ([[character.campaign_npc_id, character]] as const),
+      ),
+    );
+    for (const profile of registration?.profiles ?? []) {
+      expect(profile.character.relationships).toHaveLength(2);
+      expect(
+        profile.character.relationships.every((relationship) =>
+          campaignNpcIds.has(relationship.npcId),
+        ),
+      ).toBe(true);
+      for (const relationship of profile.character.relationships) {
+        expect(relationship.memories.length).toBeGreaterThan(0);
+        const contact = contactByCampaignNpcId.get(relationship.npcId);
+        expect(
+          relationship.memories.every((memoryId) =>
+            contact?.variants?.some((variant) =>
+              variant.after_relationship_memories?.includes(memoryId),
+            ),
+          ),
+        ).toBe(true);
+      }
+      expect(
+        profile.character.promises.every((promise) => campaignNpcIds.has(promise.recipientId)),
+      ).toBe(true);
+    }
+
+    const missingContact = structuredClone(world);
+    missingContact.opening_registration!.contact = "missing_contact";
+    expect(() => assertOverworldIntegrity(missingContact)).toThrow(
+      /registration contact must exist/i,
+    );
+
+    const emptyPackage = structuredClone(world);
+    emptyPackage.opening_registration!.profiles[0]!.character.skills = [];
+    expect(() => assertOverworldIntegrity(emptyPackage)).toThrow(
+      /must provide a skill, value, equipment package, obligation/i,
+    );
+
+    const inactiveObligation = structuredClone(world);
+    inactiveObligation.opening_registration!.profiles[0]!.character.promises[0]!.status =
+      "released";
+    expect(() => assertOverworldIntegrity(inactiveObligation)).toThrow(
+      /must provide a skill, value, equipment package, obligation/i,
+    );
+
+    const unboundRelationship = structuredClone(world);
+    unboundRelationship.opening_registration!.profiles[0]!.character.relationships[0]!.npcId =
+      "albany:unbound_person";
+    expect(() => assertOverworldIntegrity(unboundRelationship)).toThrow(
+      /references unbound campaign npc/i,
+    );
+
+    const emptyMemory = structuredClone(world);
+    emptyMemory.opening_registration!.profiles[0]!.character.relationships[0]!.memories = [];
+    expect(() => assertOverworldIntegrity(emptyMemory)).toThrow(/has no authored memory/i);
+
+    const unconsumedMemory = structuredClone(world);
+    unconsumedMemory.opening_registration!.profiles[0]!.character.relationships[0]!.memories = [
+      "albany:memory_no_contact_consumes_this",
+    ];
+    expect(() => assertOverworldIntegrity(unconsumedMemory)).toThrow(
+      /has no consuming contact variant/i,
     );
   });
 
@@ -205,6 +295,265 @@ describe("New York overworld graph", () => {
     }
   });
 
+  it("authors every Wolf-Winter non-death campaign export as distinct monotonic history", () => {
+    const wolfWinter = world.quests.find((quest) => quest.id === "wolf_winter")!;
+    const legacyQuests = world.quests.filter((quest) => quest.id !== wolfWinter.id);
+
+    expect(legacyQuests.every((quest) => !("campaign_exports" in quest))).toBe(true);
+    expect(wolfWinter.campaign_exports?.map((entry) => entry.ending_id)).toEqual([
+      "ending_pack_diverted_after_blood",
+      "ending_pack_diverted_cattle_scattered",
+      "ending_pack_diverted",
+      "ending_held_gate_barred",
+      "ending_held_timber_saved",
+      "ending_held",
+    ]);
+    expect(wolfWinter.campaign_exports?.map((entry) => entry.ending_title)).toEqual([
+      "The Pack Broken After Blood",
+      "The Pack Diverted, Cattle Scattered",
+      "The Pack Diverted Alive",
+      "The Byre Held, Inner Gate Barred",
+      "The Byre Held, Paling Timber Saved",
+      "The Byre Held",
+    ]);
+    expect(overworldQuestCampaignExportForEnding(wolfWinter, "ending_pulled_down")).toBeNull();
+
+    const expectedOutcomeFacts = {
+      ending_pack_diverted_after_blood: [
+        "fact:wolf_winter_byre_held",
+        "fact:wolf_winter_outer_paling_broken",
+        "fact:wolf_winter_yearling_killed",
+        "fact:wolf_winter_two_wolves_diverted_alive",
+        "fact:wolf_winter_winter_feed_spent",
+        "fact:wolf_winter_cattle_scattered",
+      ],
+      ending_pack_diverted_cattle_scattered: [
+        "fact:wolf_winter_byre_held",
+        "fact:wolf_winter_outer_paling_broken",
+        "fact:wolf_winter_pack_diverted_alive",
+        "fact:wolf_winter_winter_feed_spent",
+        "fact:wolf_winter_cattle_scattered",
+      ],
+      ending_pack_diverted: [
+        "fact:wolf_winter_byre_held",
+        "fact:wolf_winter_outer_paling_broken",
+        "fact:wolf_winter_pack_diverted_alive",
+        "fact:wolf_winter_winter_feed_spent",
+        "fact:wolf_winter_cattle_whole",
+      ],
+      ending_held_gate_barred: [
+        "fact:wolf_winter_byre_held",
+        "fact:wolf_winter_outer_paling_broken",
+        "fact:wolf_winter_inner_gate_barred_at_dawn",
+        "fact:wolf_winter_guard_wood_committed",
+      ],
+      ending_held_timber_saved: [
+        "fact:wolf_winter_byre_held",
+        "fact:wolf_winter_outer_paling_broken",
+        "fact:wolf_winter_repair_timber_available",
+      ],
+      ending_held: [
+        "fact:wolf_winter_byre_held",
+        "fact:wolf_winter_outer_paling_broken",
+        "fact:wolf_winter_repair_timber_spent",
+      ],
+    } as const;
+    const expectedMemories = {
+      ending_pack_diverted_after_blood: [
+        ["npc:old_cade", "memory:wolf_winter_mixed_line_after_blood", 7, 7, 0],
+        ["albany:emery_sloane", "albany:memory_emery_wolf_pack_diverted_after_blood", 4, 5, 0],
+      ],
+      ending_pack_diverted_cattle_scattered: [
+        ["npc:old_cade", "memory:wolf_winter_cattle_scattered", 5, 5, 0],
+        ["albany:emery_sloane", "albany:memory_emery_wolf_pack_diverted_with_loss", 2, 3, 0],
+      ],
+      ending_pack_diverted: [
+        ["npc:old_cade", "memory:wolf_winter_pack_diverted_alive", 12, 12, 1],
+        ["albany:emery_sloane", "albany:memory_emery_wolf_pack_diverted_alive", 6, 8, 1],
+      ],
+      ending_held_gate_barred: [
+        ["npc:old_cade", "memory:wolf_winter_inner_gate_barred", 10, 10, 1],
+      ],
+      ending_held_timber_saved: [
+        ["npc:old_cade", "memory:wolf_winter_repair_timber_saved", 10, 10, 1],
+      ],
+      ending_held: [["npc:old_cade", "memory:wolf_winter_guard_wood_spent", 10, 10, 1]],
+    } as const;
+
+    for (const [endingId, facts] of Object.entries(expectedOutcomeFacts)) {
+      const campaignExport = overworldQuestCampaignExportForEnding(wolfWinter, endingId);
+      expect(campaignExport).not.toBeNull();
+      expect(campaignExport?.effects.filter((effect) => effect.type === "set_world_fact")).toEqual(
+        facts.map((fact_id) => ({ type: "set_world_fact", fact_id })),
+      );
+      expect(
+        campaignExport?.effects.filter((effect) => effect.type === "remember_relationship"),
+      ).toEqual(
+        expectedMemories[endingId as keyof typeof expectedMemories].map(
+          ([npc_id, memory_id, trust_at_least, regard_at_least, owes_player_at_least]) => ({
+            type: "remember_relationship",
+            npc_id,
+            memory_id,
+            trust_at_least,
+            regard_at_least,
+            owes_player_at_least,
+          }),
+        ),
+      );
+    }
+  });
+
+  it("authors Wolf-Winter's trusted campaign imports without opting legacy quests in", () => {
+    const wolfWinter = world.quests.find((quest) => quest.id === "wolf_winter")!;
+    const legacyQuests = world.quests.filter((quest) => quest.id !== wolfWinter.id);
+
+    expect(legacyQuests.every((quest) => !("campaign_imports" in quest))).toBe(true);
+    expect(wolfWinter.campaign_imports).toEqual({
+      version: 1,
+      rules: [
+        {
+          id: "import:wolf_winter_fieldcraft",
+          type: "skill_rank_to_var",
+          skill_id: "skill:fieldcraft",
+          target_var: "defense",
+        },
+        {
+          id: "import:wolf_winter_lure_fieldcraft",
+          type: "skill_rank_to_var",
+          skill_id: "skill:fieldcraft",
+          target_var: "fieldcraft",
+        },
+        {
+          id: "import:wolf_winter_works_repair",
+          type: "skill_rank_to_var",
+          skill_id: "skill:repair",
+          target_var: "repair",
+        },
+        {
+          id: "import:wolf_winter_drover_streetwise",
+          type: "skill_rank_to_var",
+          skill_id: "skill:streetwise",
+          target_var: "streetwise",
+        },
+        {
+          id: "import:wolf_winter_relief_mediation",
+          type: "skill_rank_to_var",
+          skill_id: "skill:mediation",
+          target_var: "mediation",
+        },
+        {
+          id: "import:wolf_winter_market_testimony",
+          type: "knowledge_to_flag",
+          knowledge_id: "albany:knowledge_wolf_market_testimony",
+          target_flag: "jamie_market_testimony_certified",
+        },
+        {
+          id: "import:wolf_winter_frost_report",
+          type: "knowledge_to_flag",
+          knowledge_id: "albany:knowledge_wolf_frost_report",
+          target_flag: "hayden_frost_report_certified",
+        },
+        {
+          id: "import:wolf_winter_works_fortification",
+          type: "knowledge_to_flag",
+          knowledge_id: "albany:knowledge_wolf_works_fortification",
+          target_flag: "works_fortification_prepared",
+        },
+        {
+          id: "import:wolf_winter_drover_route",
+          type: "knowledge_to_flag",
+          knowledge_id: "albany:knowledge_wolf_drover_route",
+          target_flag: "drover_route_prepared",
+        },
+        {
+          id: "import:wolf_winter_relief_protocol",
+          type: "knowledge_to_flag",
+          knowledge_id: "albany:knowledge_wolf_relief_protocol",
+          target_flag: "relief_protocol_prepared",
+        },
+        {
+          id: "import:wolf_winter_june_companion",
+          type: "companion_to_flag",
+          companion_id: "albany:june_pike",
+          target_flag: "june_pike_present",
+        },
+      ],
+    });
+  });
+
+  it("keeps campaign imports strict, unique, and opt-in", () => {
+    const duplicateRule = structuredClone(world);
+    const imports = duplicateRule.quests.find(
+      (quest) => quest.id === "wolf_winter",
+    )!.campaign_imports!;
+    imports.rules.push(structuredClone(imports.rules[0]!));
+    expect(() => assertOverworldIntegrity(duplicateRule)).toThrow(/duplicate.*rule id/i);
+    expect(() => parseOverworldManifest(duplicateRule)).toThrow(/duplicate.*rule id/i);
+
+    const duplicateWriter = structuredClone(world);
+    const writerImports = duplicateWriter.quests.find(
+      (quest) => quest.id === "wolf_winter",
+    )!.campaign_imports!;
+    writerImports.rules.push({
+      id: "import:wolf_winter_other_health",
+      type: "skill_rank_to_var",
+      skill_id: "skill:other",
+      target_var: "defense",
+    });
+    expect(() => parseOverworldManifest(duplicateWriter)).toThrow(/both write/i);
+
+    const legacyRaw = structuredClone(world);
+    delete legacyRaw.quests.find((quest) => quest.id === "wolf_winter")!.campaign_imports;
+    const legacyParsed = parseOverworldManifest(legacyRaw);
+    expect(legacyParsed.quests.every((quest) => !("campaign_imports" in quest))).toBe(true);
+  });
+
+  it("rejects duplicate campaign export identities and effects without defaulting legacy quests", () => {
+    const duplicateEndingId = structuredClone(world);
+    const duplicateIdExports = duplicateEndingId.quests.find(
+      (quest) => quest.id === "wolf_winter",
+    )!.campaign_exports!;
+    duplicateIdExports.push({
+      ...structuredClone(duplicateIdExports[0]!),
+      ending_title: "A Distinct Test Title",
+    });
+    expect(() => assertOverworldIntegrity(duplicateEndingId)).toThrow(
+      /repeats campaign export ending id/i,
+    );
+    expect(() => parseOverworldManifest(duplicateEndingId)).toThrow(
+      /duplicate campaign export ending id/i,
+    );
+
+    const duplicateEndingTitle = structuredClone(world);
+    const duplicateTitleExports = duplicateEndingTitle.quests.find(
+      (quest) => quest.id === "wolf_winter",
+    )!.campaign_exports!;
+    duplicateTitleExports.push({
+      ...structuredClone(duplicateTitleExports[0]!),
+      ending_id: "ending_distinct_test_id",
+    });
+    expect(() => assertOverworldIntegrity(duplicateEndingTitle)).toThrow(
+      /repeats campaign export ending title/i,
+    );
+    expect(() => parseOverworldManifest(duplicateEndingTitle)).toThrow(
+      /duplicate campaign export ending title/i,
+    );
+
+    const duplicateEffect = structuredClone(world);
+    const duplicatedEffects = duplicateEffect.quests.find((quest) => quest.id === "wolf_winter")!
+      .campaign_exports![0]!.effects;
+    duplicatedEffects.push(structuredClone(duplicatedEffects[0]!));
+    expect(() => assertOverworldIntegrity(duplicateEffect)).toThrow(/repeats effect/i);
+    expect(() => parseOverworldManifest(duplicateEffect)).toThrow(
+      /duplicate campaign consequence effect/i,
+    );
+
+    const legacyRaw = structuredClone(world);
+    delete legacyRaw.quests.find((quest) => quest.id === "wolf_winter")!.campaign_exports;
+    const legacyParsed = parseOverworldManifest(legacyRaw);
+    expect(legacyParsed.quests.every((quest) => !("campaign_exports" in quest))).toBe(true);
+  });
+
   it("hand-authors Albany's opening bridge into The Wolf-Winter", () => {
     const nodesById = new Map(world.nodes.map((node) => [node.id, node]));
     const areasById = new Map(world.areas.map((area) => [area.id, area]));
@@ -232,8 +581,8 @@ describe("New York overworld graph", () => {
     expect(station?.discovery).toContain("wolf-winter packet linking Albany's relief desk");
     expect(stationPoi?.summary).toContain("Hayden's route pin");
     expect(stationPoi?.summary).toContain("Old Cade waiting");
-    expect(hayden?.agenda).toContain("packet Rowan flagged");
-    expect(hayden?.agenda).toContain("Old Cade's hill steading");
+    expect(hayden?.agenda).toContain("controlling source certification");
+    expect(hayden?.agenda).toContain("Old Cade's steading");
     expect(stationEvent?.summary).toContain("Hayden's route pin");
     expect(stationEvent?.summary).toContain("Old Cade's cattle");
     expect(stationJob?.summary).toMatch(/wolf-winter/i);
@@ -266,11 +615,44 @@ describe("New York overworld graph", () => {
     expect(authoredBridge).not.toContain("from the station board");
   });
 
-  it("authors Hayden's quest-reactive contact phases most-specific first", () => {
+  it("authors Jamie and Hayden's source-reactive contact phases most-specific first", () => {
+    const jamie = world.characters.find(
+      (character) => character.id === "albany_city__market__contact",
+    );
+    expect(jamie?.campaign_npc_id).toBe("albany:jamie_tanner");
+    expect(jamie?.variants).toEqual([
+      {
+        id: "wolf_relief_protocol_allocated",
+        after_relationship_memories: ["albany:memory_jamie_wolf_relief_protocol_allocated"],
+        summary: expect.stringContaining("named-call relief order"),
+        agenda: expect.stringContaining("one accountable attempt"),
+      },
+      {
+        id: "market_testimony_certified",
+        after_relationship_memories: ["albany:memory_jamie_market_testimony_certified"],
+        summary: expect.stringContaining("certification number"),
+        agenda: expect.stringContaining("feed-hauler route"),
+      },
+      {
+        id: "sponsored_ledger_advocate",
+        after_relationship_memories: ["albany:memory_jamie_sponsored_ledger_advocate"],
+        summary: expect.stringContaining("Ledger Advocate"),
+        agenda: expect.stringContaining("named witnesses"),
+      },
+    ]);
+
     const hayden = world.characters.find(
       (character) => character.id === "albany_city__transport_hub__contact",
     );
+    expect(hayden?.campaign_npc_id).toBe("albany:hayden_hale");
     expect(hayden?.variants).toEqual([
+      {
+        id: "wolf_winter_returned_road_warden",
+        after_quests: ["wolf_winter"],
+        after_relationship_memories: ["albany:memory_hayden_sponsored_road_warden"],
+        summary: expect.stringContaining("sponsorship"),
+        agenda: expect.stringContaining("honest field account"),
+      },
       {
         id: "wolf_winter_and_gallowmere_closed",
         after_quests: ["wolf_winter", "gallowmere"],
@@ -282,6 +664,18 @@ describe("New York overworld graph", () => {
         after_quests: ["wolf_winter"],
         summary: expect.stringContaining("return board"),
         agenda: expect.stringContaining("current journey goal"),
+      },
+      {
+        id: "frost_report_certified",
+        after_relationship_memories: ["albany:memory_hayden_frost_report_certified"],
+        summary: expect.stringContaining("frost-heave sketch"),
+        agenda: expect.stringContaining("dangerous line"),
+      },
+      {
+        id: "sponsored_road_warden",
+        after_relationship_memories: ["albany:memory_hayden_sponsored_road_warden"],
+        summary: expect.stringContaining("Road-Warden field kit"),
+        agenda: expect.stringContaining("fieldcraft record"),
       },
     ]);
 
@@ -299,7 +693,7 @@ describe("New York overworld graph", () => {
     const missingQuest = structuredClone(world);
     missingQuest.characters.find(
       (character) => character.id === haydenId,
-    )!.variants![0]!.after_quests[0] = "missing_quest";
+    )!.variants![0]!.after_quests![0] = "missing_quest";
     expect(() => assertOverworldIntegrity(missingQuest)).toThrow(/references missing quest/);
 
     const broaderFirst = structuredClone(world);
@@ -319,10 +713,44 @@ describe("New York overworld graph", () => {
     expect(() => assertOverworldIntegrity(noOverride)).toThrow(/must override summary or agenda/);
 
     const noCondition = structuredClone(world);
-    noCondition.characters.find(
+    noCondition.characters
+      .find((character) => character.id === haydenId)!
+      .variants!.find((variant) => variant.id === "wolf_winter_closed")!.after_quests = [];
+    expect(() => assertOverworldIntegrity(noCondition)).toThrow(
+      /has no quest or relationship-memory condition/,
+    );
+
+    const unboundMemory = structuredClone(world);
+    const unboundHayden = unboundMemory.characters.find((character) => character.id === haydenId)!;
+    delete unboundHayden.campaign_npc_id;
+    const unboundVariant = unboundHayden.variants![0]!;
+    delete unboundVariant.after_quests;
+    unboundVariant.after_relationship_memories = ["memory:albany_relief_packet"];
+    expect(() => assertOverworldIntegrity(unboundMemory)).toThrow(
+      /requires relationship memories without a campaign_npc_id/,
+    );
+
+    const broaderMemoryFirst = structuredClone(world);
+    const memoryHayden = broaderMemoryFirst.characters.find(
       (character) => character.id === haydenId,
-    )!.variants![0]!.after_quests = [];
-    expect(() => assertOverworldIntegrity(noCondition)).toThrow(/has no after_quests condition/);
+    )!;
+    memoryHayden.campaign_npc_id = "npc:hayden_hale";
+    memoryHayden.variants = [
+      {
+        id: "packet_known",
+        after_relationship_memories: ["memory:albany_relief_packet"],
+        agenda: "The packet is familiar.",
+      },
+      {
+        id: "packet_and_wolf_closed",
+        after_quests: ["wolf_winter"],
+        after_relationship_memories: ["memory:albany_relief_packet"],
+        agenda: "The packet and closed winter road are familiar.",
+      },
+    ];
+    expect(() => assertOverworldIntegrity(broaderMemoryFirst)).toThrow(
+      /orders broader variant .* before more-specific variant/,
+    );
 
     const journalCollision = structuredClone(world);
     const haydenVariantId = journalCollision.characters.find(

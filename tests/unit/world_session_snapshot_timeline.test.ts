@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { createInitialCampaignCharacterState } from "../../src/world/campaign_character_state.js";
 import { createInitialJourneyContractSnapshot } from "../../src/world/journey_contract.js";
 import {
   OVERWORLD_SESSION_SAVE_VERSION,
@@ -36,6 +37,7 @@ function snapshot(travelLog: TravelLogEntrySnapshot[], minutes = 720): Overworld
     version: OVERWORLD_SESSION_SAVE_VERSION,
     worldId: "new_york_overworld",
     worldHash: "a".repeat(64),
+    character: createInitialCampaignCharacterState(),
     currentId: "town_a",
     currentAreaId: null,
     minutes,

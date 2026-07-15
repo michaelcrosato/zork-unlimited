@@ -18,13 +18,24 @@ import type { GameEvent } from "../../src/core/events.js";
 
 import { RpgPackSchema } from "../../src/rpg/schema.js";
 import {
+  CampaignCharacterImportsSchema,
+  type CampaignCharacterImports,
+} from "../../src/rpg/campaign_character_import.js";
+import {
   indexRpgPack,
   buildRpgRules,
   initStateForRpgPack,
   enumerateRpgActions,
   type RpgIndex,
 } from "../../src/rpg/runner.js";
-import { buildRpgObservation } from "../../src/rpg/observation.js";
+import {
+  parseCampaignCharacterState,
+  type CampaignCharacterState,
+} from "../../src/world/campaign_character_state.js";
+import {
+  buildRpgObservation,
+  type RpgObservation,
+} from "../../src/rpg/observation.js";
 import {
   classifyRpgJourneyDecision,
   excludedJourneyDecision,
@@ -59,6 +70,7 @@ export type View = {
   choices: { id: string; label: string }[];
   unavailableChoices: { id: string; label: string; reason: string }[];
   inventory: string[];
+  pressureTracks?: NonNullable<RpgObservation["pressure_tracks"]>;
   facts: string[];
   journal: string[];
   ended: boolean;
@@ -122,6 +134,38 @@ export class GameSession {
     });
   }
 
+  /**
+   * Start a quest from a live overworld character using only the import catalog
+   * authored on that trusted quest. Standalone `start` deliberately has no such
+   * input surface.
+   */
+  static startEmbedded(
+    source: string,
+    character: CampaignCharacterState,
+    imports: CampaignCharacterImports | undefined,
+    seed = 1,
+  ): GameSession {
+    const c = compileRpgSource(source);
+    const index = indexRpgPack(c.pack);
+    const characterSnapshot = parseCampaignCharacterState(character);
+    const importsSnapshot =
+      imports === undefined ? undefined : CampaignCharacterImportsSchema.parse(imports);
+    return new GameSession({
+      packId: c.pack.meta.id,
+      title: c.pack.meta.title,
+      contentHash: c.contentHash,
+      rules: buildRpgRules(index),
+      index,
+      fresh: () =>
+        importsSnapshot === undefined
+          ? initStateForRpgPack(index, seed)
+          : initStateForRpgPack(index, seed, {
+              character: characterSnapshot,
+              imports: importsSnapshot,
+            }),
+    });
+  }
+
   /** Map a choice id from the current view to its structured Action. */
   private actionFor(id: string): ReturnType<typeof enumerateRpgActions>[number] | null {
     return enumerateRpgActions(this.index, this.state).find((option) => option.id === id) ?? null;
@@ -149,8 +193,10 @@ export class GameSession {
         reason: action.reason,
       })),
       inventory: o.inventory,
+      ...(o.pressure_tracks ? { pressureTracks: o.pressure_tracks } : {}),
       facts: [
         `HP ${o.stats.hp}  ATK ${o.stats.attack}  DEF ${o.stats.defense}`,
+        ...(o.pressure_tracks ?? []).map(pressureFact),
         ...o.enemies_present.map((e) => `foe: ${e.name} (HP ${e.hp})`),
         ...o.exits.map((e) => `exit: ${e.direction}`),
         ...o.blocked_exits.map((e) => `blocked: ${e.direction} — ${e.message}`),
@@ -221,6 +267,14 @@ export class GameSession {
 
 function signed(value: number): string {
   return value >= 0 ? `+${value}` : String(value);
+}
+
+function pressureFact(track: NonNullable<RpgObservation["pressure_tracks"]>[number]): string {
+  const next = track.next
+    ? `; next ${track.next.label} at ${track.next.min}`
+    : "; highest band";
+  const description = track.band.description ? ` — ${track.band.description}` : "";
+  return `pressure: ${track.title} — ${track.band.label} (${track.value}${next})${description}`;
 }
 
 function resourceHint(resources: { gains: string[]; costs: string[] } | undefined): string {

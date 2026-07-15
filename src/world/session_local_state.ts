@@ -186,6 +186,7 @@ export function buildOverworldSessionCurrentLocalView(
 export function applyOverworldSessionLocalDiscoveryForTown(
   state: MutableOverworldSessionLocalState,
   townId: string,
+  excludedQuestIds: ReadonlySet<string> = new Set(),
 ): OverworldSessionLocalDiscoveryApplication {
   const discovery = planOverworldLocalDiscovery({
     townId,
@@ -201,6 +202,7 @@ export function applyOverworldSessionLocalDiscoveryForTown(
     discoveredJobIds: state.discoveredJobIds,
     discoveredSiteIds: state.discoveredSiteIds,
     discoveredQuestIds: state.discoveredQuestIds,
+    excludedQuestIds,
   });
   return {
     discovery,

@@ -70,7 +70,7 @@ const packFiles = readdirSync(PACK_DIR)
   .sort();
 
 // Matches the RPG reachability oracle's evidence-backed bound. Wolf-Winter's progress
-// graph exhausts at 332,551 states (measured 2026-07-11); original and relabeled twin
+// graph exhausts at 315,100 states (measured 2026-07-14); original and relabeled twin
 // each get bounded headroom, and a cap-out remains a loud failure rather than a hang.
 const MAX_STATES = 400_000;
 // Matches rpg_metamorphic_observation_stream's budget: tide_mill's census legs stretch

@@ -32,6 +32,8 @@ graph.
 - `src/mcp/tools.ts` is the tested ToolApi source of truth.
 - `src/validate/rpg_foundation_validator.ts` carries high-depth RPG foundation
   checks.
+- `docs/STARTING_SLICE.md` is the active durable product milestone and
+  `docs/starting_slice_causal_matrix.json` is its machine-readable proof ledger.
 - `docs/CURRENT_PLAN.md` is the rolling plan (overwritten each ultraplan; the
   implementation subagent's sole hand-off), while `AI_LOOP_STATE.md` is the
   rotating per-cycle result log (machine-parsed). Superseded planning docs move
@@ -63,16 +65,20 @@ game-native travel decision shared by UI and MCP. The earlier one-off 50-run
 soak measurements are superseded by the continuous pure-blind fleet and the
 compiled feedback ledger.)
 
+The active product milestone is now the bounded Albany → Wolf-Winter → truthful
+Albany-return starting slice. New towns and unrelated quest ports are frozen
+until its contract in `docs/STARTING_SLICE.md` is proven.
+
 - **Keep the pure-blind cohorts flowing**: fresh fleet seeds per cycle, with
   the feedback compiler's three-report threshold deciding when a new hotspot
   is actionable; vary start town / seed so the other 11 quests beyond
   `wolf_winter` stay exercised before drawing content-quality conclusions.
-- Port retired stories back as RPG world quests one at a time (36 retired packs
-  are tagged `stories-52-pre-rpg-consolidation`; each port reuses playtested
-  prose and is a well-scoped cycle: adapt → validate → blind-playtest → gate).
-- Deepen gameplay per Priority 2: combat formulas, stat tables, scaling, and
-  stateful NPC/event consequences, each with deterministic tests and validator
-  coverage.
+- Build the starting slice's reusable campaign-character and data-driven
+  consequence boundary before adding more Wolf-specific branches.
+- Replace the visible Albany slice's generic discovery/jobs/events with authored
+  scenes only after that persistent state can be consumed across phases.
+- Deepen Wolf-Winter into combat, fully noncombat, and hybrid resolution
+  families with deterministic counterfactual and failure-forward proofs.
 - Tighten the remaining restore-time sequencing proofs beyond discovery prefixes.
 - Extend token/cost telemetry to the loop's agent work turns (blind-run
   telemetry landed 2026-07-06: `blind-tester/telemetry.mjs` records every run

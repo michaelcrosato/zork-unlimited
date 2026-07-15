@@ -8,6 +8,7 @@
  * and corrupting it.
  */
 import { z } from "zod";
+import { CampaignImportReceiptSchema } from "../core/campaign_import_receipt.js";
 import { MAX_ENGINE_STEP, cloneGameState, isRuntimeSeed, type GameState } from "../core/state.js";
 import { canonicalize } from "../core/hash.js";
 import { generatedRpgSeedValidationMessage, isGeneratedRpgSeed } from "../gen/seed.js";
@@ -83,6 +84,7 @@ const GameStateSchema = z
     // termination
     ended: z.boolean(),
     endingId: z.string().nullable(),
+    campaignImportReceipt: CampaignImportReceiptSchema.optional(),
   })
   .strict();
 

@@ -14,3 +14,4 @@ export {
   type OverworldView,
   type TravelLogEntry,
 } from "../../src/world/session.js";
+export type { CampaignCharacterView } from "../../src/world/campaign_character_view.js";

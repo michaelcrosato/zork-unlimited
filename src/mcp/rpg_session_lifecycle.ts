@@ -1,4 +1,5 @@
 import { SAVE_MODE, assertSaveContentHash, load } from "../persist/save_load.js";
+import { assertCampaignImportReceiptCatalogCompatibility } from "../persist/campaign_import_integrity.js";
 import { resolveGameSource, resolveSaveGameSource } from "../world/source.js";
 import {
   rpgObservationNeedsActions,
@@ -27,8 +28,6 @@ export type RpgStartWorldQuestToolArgs = {
   seed?: number;
   hide_graph?: boolean;
   include_world_intro?: boolean;
-  /** Internal bridge binding for RPG sessions launched from an overworld session. */
-  overworldSessionId?: string;
 } & RpgViewOptions;
 
 export type RpgLoadGameToolArgs = {
@@ -49,6 +48,23 @@ type RpgLifecycleDeps = {
   rpgSources: RpgSourceRuntime;
 };
 
+const EMBEDDED_START_FIELDS = [
+  "overworldSessionId",
+  "overworld_session_id",
+  "campaignCharacter",
+  "campaign_character",
+  "campaignImports",
+  "campaign_imports",
+] as const;
+
+function assertPublicWorldQuestStart(args: object): void {
+  for (const field of EMBEDDED_START_FIELDS) {
+    if (Object.prototype.hasOwnProperty.call(args, field)) {
+      throw new Error(`start_world_quest does not accept embedded field "${field}".`);
+    }
+  }
+}
+
 export function runRpgNewGame<Args extends RpgNewGameToolArgs>(
   deps: Pick<RpgLifecycleDeps, "root" | "rpgRuntime" | "rpgSources">,
   args: Args,
@@ -64,6 +80,7 @@ export function runRpgStartWorldQuest<Args extends RpgStartWorldQuestToolArgs>(
   deps: Pick<RpgLifecycleDeps, "rpgRuntime" | "rpgSources">,
   args: Args,
 ): RpgWorldQuestStartPayload<Args> {
+  assertPublicWorldQuestStart(args);
   if ((args as { quest_id?: unknown }).quest_id !== undefined) {
     throw new Error("start_world_quest accepts world_quest_id, not quest_id.");
   }
@@ -71,9 +88,12 @@ export function runRpgStartWorldQuest<Args extends RpgStartWorldQuestToolArgs>(
     throw new Error("start_world_quest requires world_quest_id.");
   }
   const source = deps.rpgSources.requireWorldQuestPlayable(args.world_quest_id);
+  // This public structural/QA entry point has no trusted campaign parent.
+  // Preserve standalone pack semantics even when the quest catalog declares
+  // campaign imports; only the closure-private overworld bridge may project a
+  // persistent campaign character into the initial RPG state.
   const started = deps.rpgRuntime.startRpgSession(source.compiled, args, {
     worldQuestId: source.questId,
-    ...(args.overworldSessionId ? { overworldSessionId: args.overworldSessionId } : {}),
   });
   return started as RpgWorldQuestStartPayload<Args>;
 }
@@ -84,8 +104,16 @@ export function runRpgLoadGame<Args extends RpgLoadGameToolArgs>(
 ): RpgSessionPayload<Args> {
   const bundle = load(args.save, undefined, SAVE_MODE);
   const source = resolveSaveGameSource(deps.root, args, bundle, "load_game");
-  const compiled = deps.rpgSources.requireGameSourcePlayable(source);
+  const playable =
+    source.kind === "worldQuest"
+      ? deps.rpgSources.requireWorldQuestPlayable(source.worldQuestId)
+      : {
+          compiled: deps.rpgSources.requireGeneratedRpgPlayable(source.generateRpgSeed),
+          campaignImports: undefined,
+        };
+  const { compiled } = playable;
   assertSaveContentHash(bundle, compiled.contentHash);
+  assertCampaignImportReceiptCatalogCompatibility(bundle.state, playable.campaignImports);
   const session = deps.rpgRuntime.startSession(compiled, bundle.state, {
     ...(source.worldQuestId ? { worldQuestId: source.worldQuestId } : {}),
     ...(source.generateRpgSeed !== null ? { generatedRpgSeed: source.generateRpgSeed } : {}),

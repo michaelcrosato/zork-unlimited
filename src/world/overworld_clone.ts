@@ -57,7 +57,12 @@ export function cloneOverworldCharacter(character: OverworldCharacter): Overworl
       ? {
           variants: character.variants.map((variant) => ({
             ...variant,
-            after_quests: [...variant.after_quests],
+            ...(variant.after_quests ? { after_quests: [...variant.after_quests] } : {}),
+            ...(variant.after_relationship_memories
+              ? {
+                  after_relationship_memories: [...variant.after_relationship_memories],
+                }
+              : {}),
           })),
         }
       : {}),

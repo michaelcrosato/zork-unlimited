@@ -220,8 +220,9 @@ export class RpgMcpSessionRuntime {
     compiled: CompiledRpgSource,
     args: Args & { seed?: number; hide_graph?: boolean },
     source: RpgSessionSource,
+    initialState?: GameState,
   ): RpgSessionPayload<Args> {
-    const session = this.startSession(compiled, undefined, {
+    const session = this.startSession(compiled, initialState, {
       seed: args.seed ?? 1,
       ...(args.hide_graph ? { hideGraph: true } : {}),
       ...(source.worldQuestId ? { worldQuestId: source.worldQuestId } : {}),

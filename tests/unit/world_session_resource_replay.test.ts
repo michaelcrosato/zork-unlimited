@@ -1,6 +1,15 @@
 import { describe, expect, it } from "vitest";
+import {
+  buildCampaignCharacterState,
+  createInitialCampaignCharacterState,
+} from "../../src/world/campaign_character_state.js";
+import { campaignStoryChoiceRefKey } from "../../src/world/campaign_story_choices.js";
 import { createInitialJourneyContractSnapshot } from "../../src/world/journey_contract.js";
-import type { OverworldEdge, OverworldRoadEvent } from "../../src/world/overworld.js";
+import type {
+  OverworldCampaignServiceRule,
+  OverworldEdge,
+  OverworldRoadEvent,
+} from "../../src/world/overworld.js";
 import {
   assertSnapshotResourceReplay,
   recordRoadJournalResolution,
@@ -8,7 +17,12 @@ import {
   roadJournalResolutionIndex,
   type OverworldRoadJournalResolutionEntry,
   type OverworldServiceJournalReplayEntry,
+  type OverworldCampaignBoundaryReplayIndex,
 } from "../../src/world/session_resource_replay.js";
+import {
+  campaignServiceJournalCopy,
+  campaignServiceJourneyActionId,
+} from "../../src/world/session_services.js";
 import {
   OVERWORLD_SESSION_SAVE_VERSION,
   type OverworldJournalEntry,
@@ -109,6 +123,7 @@ function snapshot(
     version: OVERWORLD_SESSION_SAVE_VERSION,
     worldId: "new_york_overworld",
     worldHash: "a".repeat(64),
+    character: createInitialCampaignCharacterState(),
     currentId: "town_b",
     currentAreaId: null,
     minutes: 540,
@@ -142,10 +157,103 @@ function timeline(snapshotValue: OverworldSessionSnapshot) {
   return snapshotTravelTimelineIndex(snapshotValue, (townId) => townId, "town_a");
 }
 
-function sources(roadEvents: readonly OverworldRoadEvent[] = []) {
+function campaignServiceRule(
+  overrides: Partial<OverworldCampaignServiceRule> = {},
+): OverworldCampaignServiceRule {
   return {
+    id: "service_rule:test_rest",
+    home: "town_b",
+    area: "area_b",
+    action: "rest",
+    title: "A private recovery room",
+    summary: "A trusted contact clears a private room for you.",
+    minutes: 120,
+    requires_all_world_facts: ["fact:trusted_contact"],
+    ...overrides,
+  };
+}
+
+const SERVICE_DECISION_ORDINAL = 7;
+const SERVICE_DECISION_HASH = "b".repeat(64);
+
+function proofBoundServiceEntry(
+  rule: OverworldCampaignServiceRule,
+  recordedAt: number,
+  overrides: Partial<OverworldJournalEntry> = {},
+): OverworldJournalEntry {
+  const copy = campaignServiceJournalCopy(rule, { supplies: 5, fatigue: 2 });
+  return {
+    ...journalEntry(
+      "service",
+      `service:${rule.action}:${recordedAt}`,
+      `Day 1, ${String(Math.floor(recordedAt / 60)).padStart(2, "0")}:${String(recordedAt % 60).padStart(2, "0")}`,
+    ),
+    ...copy,
+    serviceRuleId: rule.id,
+    serviceAreaId: rule.area,
+    serviceBoundary: {
+      acceptedDecisions: SERVICE_DECISION_ORDINAL,
+      decisionProofHash: SERVICE_DECISION_HASH,
+      townId: rule.home,
+      areaId: rule.area,
+      minutes: recordedAt,
+    },
+    ...overrides,
+  };
+}
+
+function campaignBoundaryIndex(
+  rule: OverworldCampaignServiceRule,
+  worldFactProofOrdinalById: ReadonlyMap<string, number | null>,
+  includeSecondUse = false,
+  storyChoiceProofOrdinalByKey: ReadonlyMap<string, number> = new Map(),
+): OverworldCampaignBoundaryReplayIndex {
+  const byAcceptedDecisions = new Map([
+    [
+      SERVICE_DECISION_ORDINAL,
+      {
+        decision: {
+          number: SERVICE_DECISION_ORDINAL,
+          surface: "overworld" as const,
+          actionId: campaignServiceJourneyActionId(rule.id, rule.action),
+          reason: "preparation" as const,
+        },
+        decisionProofHash: SERVICE_DECISION_HASH,
+        townId: rule.home,
+        areaId: rule.area,
+      },
+    ],
+  ]);
+  if (includeSecondUse) {
+    byAcceptedDecisions.set(SERVICE_DECISION_ORDINAL + 1, {
+      decision: {
+        number: SERVICE_DECISION_ORDINAL + 1,
+        surface: "overworld",
+        actionId: campaignServiceJourneyActionId(rule.id, rule.action),
+        reason: "preparation",
+      },
+      decisionProofHash: "c".repeat(64),
+      townId: rule.home,
+      areaId: rule.area,
+    });
+  }
+  return {
+    byAcceptedDecisions,
+    worldFactProofOrdinalById,
+    storyChoiceProofOrdinalByKey,
+  };
+}
+
+function sources(
+  roadEvents: readonly OverworldRoadEvent[] = [],
+  campaignServiceRules: readonly OverworldCampaignServiceRule[] = [],
+) {
+  return {
+    areaHomes: new Map([["area_b", "town_b"]]),
+    campaignServiceRulesById: new Map(campaignServiceRules.map((rule) => [rule.id, rule])),
     edgesById: new Map([["road:a-b", edge()]]),
     roadEventsByEdgeId: new Map(roadEvents.map((event) => [event.edge, event])),
+    townNameForSource: () => "Town",
   };
 }
 
@@ -387,6 +495,322 @@ describe("overworld snapshot resource replay", () => {
         { entries: [] },
       ),
     ).not.toThrow();
+  });
+
+  it("replays a proof-bound one-time service with its authored duration", () => {
+    const rule = campaignServiceRule();
+    const snapshotValue = snapshot([travelEntry()], {
+      minutes: 660,
+      fatigue: 0,
+    });
+    const travelTimeline = timeline(snapshotValue);
+    const replaySources = sources([], [rule]);
+    const roadJournal = roadJournalResolutionIndex(
+      replaySources,
+      { roadJournalEntries: [] },
+      travelTimeline,
+      null,
+    );
+    const serviceJournal = {
+      entries: [
+        {
+          entry: {
+            ...proofBoundServiceEntry(rule, 660),
+          },
+          parsed: { action: "rest" as const, recordedAt: 660 },
+          recordedAt: 660,
+        },
+      ],
+    };
+
+    expect(() =>
+      assertSnapshotResourceReplay(
+        snapshotValue,
+        replaySources,
+        travelTimeline,
+        roadJournal,
+        serviceJournal,
+        { entries: [] },
+        campaignBoundaryIndex(rule, new Map([["fact:trusted_contact", 6]])),
+      ),
+    ).not.toThrow();
+  });
+
+  it("checks companion and promise predicates at the historical service boundary", () => {
+    const rule = campaignServiceRule({
+      requires_all_companions: ["npc:test_ally"],
+      requires_all_promises: [{ promise_id: "promise:test_bond", status: "kept" }],
+    });
+    const beforeRemoval = buildCampaignCharacterState({
+      companions: ["npc:test_ally"],
+      promises: [
+        {
+          promiseId: "promise:test_bond",
+          recipientId: "npc:test_ally",
+          status: "kept",
+        },
+      ],
+    });
+    const afterRemoval = buildCampaignCharacterState({
+      promises: [
+        {
+          promiseId: "promise:test_bond",
+          recipientId: "npc:test_ally",
+          status: "broken",
+        },
+      ],
+    });
+    const replayAt = (recordedAt: number) => {
+      const snapshotValue = snapshot([travelEntry()], {
+        minutes: recordedAt,
+        fatigue: 0,
+      });
+      const replaySources = sources([], [rule]);
+      const travelTimeline = timeline(snapshotValue);
+      return () =>
+        assertSnapshotResourceReplay(
+          snapshotValue,
+          replaySources,
+          travelTimeline,
+          roadJournalResolutionIndex(
+            replaySources,
+            { roadJournalEntries: [] },
+            travelTimeline,
+            null,
+          ),
+          {
+            entries: [
+              {
+                entry: proofBoundServiceEntry(rule, recordedAt),
+                parsed: { action: "rest", recordedAt },
+                recordedAt,
+              },
+            ],
+          },
+          { entries: [] },
+          campaignBoundaryIndex(rule, new Map([["fact:trusted_contact", 6]])),
+          (_entry, serviceTime) => (serviceTime < 700 ? beforeRemoval : afterRemoval),
+        );
+    };
+
+    expect(replayAt(660)).not.toThrow();
+    expect(replayAt(720)).toThrow(/companion and promise conditions.*service boundary/i);
+  });
+
+  it("rejects forged campaign service identity, action, area, town, duration, and reuse", () => {
+    const rule = campaignServiceRule();
+    const makeReplay = (args: {
+      entryOverrides?: Partial<OverworldJournalEntry>;
+      id?: string;
+      recordedAt?: number;
+      rules?: readonly OverworldCampaignServiceRule[];
+      secondUse?: boolean;
+    }) => {
+      const recordedAt = args.recordedAt ?? 660;
+      const entry: OverworldJournalEntry = {
+        ...proofBoundServiceEntry(rule, recordedAt),
+        ...(args.id ? { id: args.id } : {}),
+        ...args.entryOverrides,
+      };
+      const serviceEntries: OverworldServiceJournalReplayEntry[] = [
+        {
+          entry,
+          parsed: {
+            action: entry.id.includes(":resupply:") ? "resupply" : "rest",
+            recordedAt,
+          },
+          recordedAt,
+        },
+      ];
+      if (args.secondUse) {
+        serviceEntries.push({
+          entry: {
+            ...entry,
+            id: "service:rest:780",
+            recordedAt: "Day 1, 13:00",
+            serviceBoundary: {
+              ...entry.serviceBoundary!,
+              acceptedDecisions: SERVICE_DECISION_ORDINAL + 1,
+              decisionProofHash: "c".repeat(64),
+              minutes: 780,
+            },
+          },
+          parsed: { action: "rest", recordedAt: 780 },
+          recordedAt: 780,
+        });
+      }
+      const snapshotValue = snapshot([travelEntry()], {
+        minutes: args.secondUse ? 780 : recordedAt,
+        fatigue: 0,
+      });
+      const replaySources = sources([], args.rules ?? [rule]);
+      const travelTimeline = timeline(snapshotValue);
+      return () =>
+        assertSnapshotResourceReplay(
+          snapshotValue,
+          replaySources,
+          travelTimeline,
+          roadJournalResolutionIndex(
+            replaySources,
+            { roadJournalEntries: [] },
+            travelTimeline,
+            null,
+          ),
+          { entries: serviceEntries },
+          { entries: [] },
+          campaignBoundaryIndex(rule, new Map([["fact:trusted_contact", 6]]), args.secondUse),
+        );
+    };
+
+    expect(makeReplay({ rules: [] })).toThrow(/unknown campaign service rule/i);
+    expect(makeReplay({ id: "service:resupply:660" })).toThrow(/action does not match/i);
+    expect(makeReplay({ entryOverrides: { serviceAreaId: "area_elsewhere" } })).toThrow(
+      /area does not match/i,
+    );
+    expect(makeReplay({ entryOverrides: { town: "Elsewhere" } })).toThrow(/bound to town/i);
+    expect(makeReplay({ entryOverrides: { title: "Relabeled quick service" } })).toThrow(
+      /canonical authored copy/i,
+    );
+    expect(makeReplay({ entryOverrides: { text: "Relabeled service consequence." } })).toThrow(
+      /canonical authored copy/i,
+    );
+    expect(makeReplay({ recordedAt: 650 })).toThrow(/before enough clock time elapsed/i);
+    expect(makeReplay({ secondUse: true })).toThrow(/used more than once/i);
+  });
+
+  it("checks required and forbidden facts at the service timestamp, not final state", () => {
+    const rule = campaignServiceRule({
+      forbids_any_world_facts: ["fact:contact_betrayed"],
+    });
+    const snapshotValue = snapshot([travelEntry()], { minutes: 660, fatigue: 0 });
+    const replaySources = sources([], [rule]);
+    const travelTimeline = timeline(snapshotValue);
+    const roadJournal = roadJournalResolutionIndex(
+      replaySources,
+      { roadJournalEntries: [] },
+      travelTimeline,
+      null,
+    );
+    const serviceJournal = {
+      entries: [
+        {
+          entry: proofBoundServiceEntry(rule, 660),
+          parsed: { action: "rest" as const, recordedAt: 660 },
+          recordedAt: 660,
+        },
+      ],
+    };
+    const replay = (proofs: ReadonlyMap<string, number | null>) =>
+      assertSnapshotResourceReplay(
+        snapshotValue,
+        replaySources,
+        travelTimeline,
+        roadJournal,
+        serviceJournal,
+        { entries: [] },
+        campaignBoundaryIndex(rule, proofs),
+      );
+
+    expect(() =>
+      replay(
+        new Map([
+          ["fact:trusted_contact", 8],
+          ["fact:contact_betrayed", 9],
+        ]),
+      ),
+    ).toThrow(/lacks required world fact/i);
+    expect(() =>
+      replay(
+        new Map([
+          ["fact:trusted_contact", 6],
+          ["fact:contact_betrayed", 6],
+        ]),
+      ),
+    ).toThrow(/does not precede forbidden world fact/i);
+    expect(() =>
+      replay(
+        new Map([
+          ["fact:trusted_contact", 6],
+          ["fact:contact_betrayed", SERVICE_DECISION_ORDINAL],
+        ]),
+      ),
+    ).not.toThrow();
+    expect(() =>
+      replay(
+        new Map([
+          ["fact:trusted_contact", 6],
+          ["fact:contact_betrayed", 8],
+        ]),
+      ),
+    ).not.toThrow();
+  });
+
+  it("checks required and forbidden story choices before the service decision", () => {
+    const requiredRef = {
+      story_choice_id: "albany_dawn_dispatch",
+      choice_id: "send_wagon_to_cade",
+    } as const;
+    const forbiddenRef = {
+      story_choice_id: "albany_dawn_dispatch",
+      choice_id: "send_wardens_north",
+    } as const;
+    const rule = campaignServiceRule({
+      requires_all_world_facts: undefined,
+      requires_all_story_choices: [requiredRef],
+      forbids_any_story_choices: [forbiddenRef],
+    });
+    const snapshotValue = snapshot([travelEntry()], { minutes: 660, fatigue: 0 });
+    const replaySources = sources([], [rule]);
+    const travelTimeline = timeline(snapshotValue);
+    const roadJournal = roadJournalResolutionIndex(
+      replaySources,
+      { roadJournalEntries: [] },
+      travelTimeline,
+      null,
+    );
+    const serviceJournal = {
+      entries: [
+        {
+          entry: proofBoundServiceEntry(rule, 660),
+          parsed: { action: "rest" as const, recordedAt: 660 },
+          recordedAt: 660,
+        },
+      ],
+    };
+    const replay = (proofs: ReadonlyMap<string, number>) =>
+      assertSnapshotResourceReplay(
+        snapshotValue,
+        replaySources,
+        travelTimeline,
+        roadJournal,
+        serviceJournal,
+        { entries: [] },
+        campaignBoundaryIndex(rule, new Map(), false, proofs),
+      );
+    const requiredKey = campaignStoryChoiceRefKey(requiredRef);
+    const forbiddenKey = campaignStoryChoiceRefKey(forbiddenRef);
+
+    expect(() => replay(new Map())).toThrow(/lacks required story choice/i);
+    expect(() => replay(new Map([[requiredKey, SERVICE_DECISION_ORDINAL]]))).toThrow(
+      /lacks required story choice/i,
+    );
+    expect(() =>
+      replay(
+        new Map([
+          [requiredKey, SERVICE_DECISION_ORDINAL - 1],
+          [forbiddenKey, SERVICE_DECISION_ORDINAL - 1],
+        ]),
+      ),
+    ).toThrow(/does not precede forbidden story choice/i);
+    expect(() =>
+      replay(
+        new Map([
+          [requiredKey, SERVICE_DECISION_ORDINAL - 1],
+          [forbiddenKey, SERVICE_DECISION_ORDINAL],
+        ]),
+      ),
+    ).not.toThrow();
+    expect(() => replay(new Map([[requiredKey, SERVICE_DECISION_ORDINAL - 1]]))).not.toThrow();
   });
 
   it("rejects quest completion journals recorded before enough time elapsed", () => {

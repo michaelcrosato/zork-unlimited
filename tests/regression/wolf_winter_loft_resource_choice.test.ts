@@ -140,9 +140,18 @@ describe("Wolf-Winter loft route and split-guard resource choice", () => {
     );
     expect(blockedLoft).toBeDefined();
     expect(blockedLoft?.message).toMatch(
-      /only a failed-rail recovery[^]*frost splits[^]*split rail[^]*guard[^]*sound rail stays/i,
+      /before the flank-wolf falls[^]*settle the yearling[^]*crawlboard in your packet[^]*or bind a frost-split rail[^]*sound rail wedged/i,
     );
+    expect(blockedLoft?.message).not.toMatch(/Jamie|Hayden|certified/i);
     expect(blockedLoft?.message).not.toMatch(/brace-stake|saved stake/i);
+
+    const jamieBefore = structuredClone(before);
+    jamieBefore.flags.jamie_market_testimony_certified = true;
+    const jamieBlockedLoft = buildRpgObservation(index, jamieBefore).blocked_exits.find(
+      (exit) => exit.direction === "up",
+    );
+    expect(jamieBlockedLoft?.message).toMatch(/crawlboard in your packet[^]*or bind/i);
+    expect(jamieBlockedLoft?.message).not.toMatch(/must bind|needs? a bound rail/i);
 
     let after = reachBoundGuardAtGap();
     for (const id of ["go_south", "go_west"]) after = act(after, id);

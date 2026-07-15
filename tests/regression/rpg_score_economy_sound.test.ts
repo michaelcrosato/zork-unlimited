@@ -77,7 +77,7 @@
  * progress action while skipping inert observations and DROP. The search FAILS on cappedOut,
  * so it can never pass by truncating an unexplored region. Every shipped pack settles under
  * the bounded cap. Wolf Winter's authored route/combat choices expand the complete bracket
- * to 665,101 states; the 800k ceiling remains a loud runaway guard with roughly 20% headroom
+ * to 630,199 states; the 800k ceiling remains a loud runaway guard with bounded headroom
  * rather than an implicit truncation.
  *
  * Packs are auto-discovered from content/rpg/quests, so a new RPG pack is covered the moment
@@ -110,8 +110,8 @@ const packFiles = readdirSync(PACK_DIR)
 const SCORE_VAR = "score";
 
 // Same evidence-backed safety bound as the action-id / variant-liveness / metamorphic
-// proofs. Route-rich Wolf Winter settles at 665,101 states under this policy
-// (measured 2026-07-11); bounded headroom still makes a future combinatorial blowup fail
+// proofs. Route-rich Wolf Winter settles at 630,199 states under this policy
+// (measured 2026-07-14); bounded headroom still makes a future combinatorial blowup fail
 // LOUDLY rather than truncating into a silent pass.
 const MAX_STATES = 800_000;
 

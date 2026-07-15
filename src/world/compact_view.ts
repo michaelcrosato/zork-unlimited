@@ -3,6 +3,8 @@ import type { OverworldSessionRoutePlan } from "./session_routes.js";
 import type { OverworldView } from "./session_view.js";
 import type { OverworldRoadEncounterOption } from "./travel_mechanics.js";
 import { compactText } from "../core/compact_text.js";
+import type { CampaignCharacterView } from "./campaign_character_view.js";
+import type { CampaignServiceOffer } from "./campaign_service_rules.js";
 
 export const OVERWORLD_COMPACT_JOURNAL_LIMIT = 5;
 export const OVERWORLD_COMPACT_ROUTE_LIMIT = 8;
@@ -13,15 +15,25 @@ export const OVERWORLD_COMPACT_ID_LIST_LIMIT = 16;
 export const OVERWORLD_COMPACT_LOCAL_REF_LIMIT = 12;
 export const OVERWORLD_COMPACT_RENOWN_LIMIT = 16;
 export const OVERWORLD_COMPACT_COMPLETED_ARC_LIMIT = 16;
+export const OVERWORLD_COMPACT_CHARACTER_ENTRY_LIMIT = 8;
+export const OVERWORLD_COMPACT_CHARACTER_MEMORY_LIMIT = 4;
 export const OVERWORLD_COMPACT_LABEL_CHAR_LIMIT = 96;
 export const OVERWORLD_COMPACT_TITLE_CHAR_LIMIT = 140;
 export const OVERWORLD_COMPACT_RISK_CHAR_LIMIT = 160;
 export const OVERWORLD_COMPACT_ROAD_EVENT_SUMMARY_CHAR_LIMIT = 240;
-export const OVERWORLD_COMPACT_VIEW_VERSION = 14 as const;
+export const OVERWORLD_COMPACT_SERVICE_SUMMARY_CHAR_LIMIT = 240;
+export const OVERWORLD_COMPACT_VIEW_VERSION = 17 as const;
 
 export type OverworldCompactRef = readonly [id: string, name: string];
 export type OverworldCompactJobLeadRef = readonly [id: string, title: string, areaId: string];
 export type OverworldCompactQuestRef = readonly [id: string, title: string, areaId: string];
+export type OverworldCompactServiceOffer = readonly [
+  id: string,
+  action: CampaignServiceOffer["action"],
+  title: string,
+  summary: string,
+  minutes: number,
+];
 export type OverworldCompactHere = readonly [
   id: string,
   name: string,
@@ -168,12 +180,80 @@ export type OverworldCompactIdPayload = {
   ids_truncated?: OverworldCompactIdTruncation;
 };
 
+export type OverworldCompactCampaignCharacterCount = readonly [
+  skills: number,
+  values: number,
+  wounds: number,
+  equipment: number,
+  abilities: number,
+  knowledge: number,
+  promises: number,
+  companions: number,
+  crimes: number,
+  relationships: number,
+  factionStanding: number,
+];
+
+export type OverworldCompactCampaignCharacterTruncation =
+  | "skills"
+  | "values"
+  | "wounds"
+  | "equipment"
+  | "abilities"
+  | "knowledge"
+  | "promises"
+  | "companions"
+  | "crimes"
+  | "relationships"
+  | "relationship_memories"
+  | "faction_standing";
+
+export type OverworldCompactCampaignCharacter = readonly [
+  background: string | null,
+  health: readonly [current: number, max: number],
+  money: number,
+  skills: readonly (readonly [skillId: string, rank: number])[],
+  values: readonly (readonly [valueId: string, strength: number])[],
+  wounds: readonly (readonly [woundId: string, severity: number, treatment: string])[],
+  equipment: readonly (readonly [
+    equipmentId: string,
+    itemId: string,
+    quantity: number,
+    condition: number,
+    equipped: boolean,
+  ])[],
+  abilities: readonly string[],
+  knowledge: readonly string[],
+  promises: readonly (readonly [promiseId: string, recipientId: string, status: string])[],
+  companions: readonly string[],
+  crimes: readonly (readonly [
+    crimeId: string,
+    jurisdictionId: string,
+    severity: number,
+    status: string,
+  ])[],
+  relationships: readonly (readonly [
+    npcId: string,
+    trust: string,
+    regard: string,
+    owesPlayer: number,
+    playerOwes: number,
+    memoryCount: number,
+    memories: readonly string[],
+  ])[],
+  factionStanding: readonly (readonly [factionId: string, standing: string])[],
+  counts: OverworldCompactCampaignCharacterCount,
+  truncated?: readonly OverworldCompactCampaignCharacterTruncation[],
+];
+
 export type OverworldCompactView = {
   v: typeof OVERWORLD_COMPACT_VIEW_VERSION;
+  character: OverworldCompactCampaignCharacter;
   world: string;
   time: string;
   here: OverworldCompactHere;
   vitals: OverworldCompactVitals;
+  service_offers?: OverworldCompactServiceOffer[];
   hidden: OverworldCompactHiddenCounts;
   roads: OverworldCompactRoad[];
   roads_truncated?: true;
@@ -214,10 +294,14 @@ export type OverworldCompactView = {
  */
 export const OVERWORLD_COMPACT_LEGEND = {
   v: "compact context schema version",
+  character:
+    "[background, [health_current, health_max], money, [[skill_id, rank]], [[value_id, strength]], [[wound_id, severity, treatment]], [[equipment_id, item_id, quantity, condition_0to100, equipped]], [ability_id], [knowledge_id], [[promise_id, recipient_id, status]], [companion_npc_id], [[crime_id, jurisdiction_id, severity, status]], [[npc_id, trust_tier, regard_tier, owes_player, player_owes, known_memory_count, [known_memory]]], [[faction_id, standing_tier]], [skills_count, values_count, wounds_count, equipment_count, abilities_count, knowledge_count, promises_count, companions_count, crimes_count, relationships_count, faction_standing_count], [truncated_category]?] persistent player character; lists cap at 8 and visible relationship memories at 4, counts are uncapped totals, optional truncation categories identify omitted entries, and tiers hide numeric disposition",
   world: "world name (include_world_name only)",
   time: "in-game clock 'Day N, HH:MM'",
   here: "[town_id, town_name, region_name, area_id|null, area_name|null] current location; when pending_road exists this is the on-route id/name instead of a town",
   vitals: "[supplies, max_supplies, fatigue_0to100, condition_label] travel readiness",
+  service_offers:
+    "[[offer_id, action, title, terms_summary, minutes], ...] current one-time service terms; use the normal rest or resupply action named by action to accept that offer",
   hidden:
     "[areas, jobs, sites, quests] counts still undiscovered at this town; scout/talk/explore to reveal them",
   roads:
@@ -344,6 +428,24 @@ export function compactOverworldQuestRefs(
     refs.push(compactOverworldQuestRef(values[index]!));
   }
   return refs;
+}
+
+export function compactCampaignServiceOffer(
+  value: CampaignServiceOffer,
+): OverworldCompactServiceOffer {
+  return [
+    value.id,
+    value.action,
+    compactOverworldTitle(value.title),
+    compactText(value.summary, OVERWORLD_COMPACT_SERVICE_SUMMARY_CHAR_LIMIT),
+    value.minutes,
+  ];
+}
+
+export function compactCampaignServiceOffers(
+  values: readonly CampaignServiceOffer[],
+): OverworldCompactServiceOffer[] {
+  return values.map(compactCampaignServiceOffer);
 }
 
 export function compactLocalRefTruncation(
@@ -651,9 +753,145 @@ export function compactIdPayloadFromBuckets(
   };
 }
 
+export function compactCampaignCharacterView(
+  view: CampaignCharacterView,
+): OverworldCompactCampaignCharacter {
+  const relationships = view.relationships.slice(0, OVERWORLD_COMPACT_CHARACTER_ENTRY_LIMIT);
+  const counts: OverworldCompactCampaignCharacterCount = [
+    view.skills.length,
+    view.values.length,
+    view.wounds.length,
+    view.equipment.length,
+    view.abilities.length,
+    view.knowledge.length,
+    view.promises.length,
+    view.companions.length,
+    view.crimes.length,
+    view.relationships.length,
+    view.factionStanding.length,
+  ];
+  const truncated: OverworldCompactCampaignCharacterTruncation[] = [];
+  if (view.skills.length > OVERWORLD_COMPACT_CHARACTER_ENTRY_LIMIT) truncated.push("skills");
+  if (view.values.length > OVERWORLD_COMPACT_CHARACTER_ENTRY_LIMIT) truncated.push("values");
+  if (view.wounds.length > OVERWORLD_COMPACT_CHARACTER_ENTRY_LIMIT) truncated.push("wounds");
+  if (view.equipment.length > OVERWORLD_COMPACT_CHARACTER_ENTRY_LIMIT) {
+    truncated.push("equipment");
+  }
+  if (view.abilities.length > OVERWORLD_COMPACT_CHARACTER_ENTRY_LIMIT) {
+    truncated.push("abilities");
+  }
+  if (view.knowledge.length > OVERWORLD_COMPACT_CHARACTER_ENTRY_LIMIT) {
+    truncated.push("knowledge");
+  }
+  if (view.promises.length > OVERWORLD_COMPACT_CHARACTER_ENTRY_LIMIT) {
+    truncated.push("promises");
+  }
+  if (view.companions.length > OVERWORLD_COMPACT_CHARACTER_ENTRY_LIMIT) {
+    truncated.push("companions");
+  }
+  if (view.crimes.length > OVERWORLD_COMPACT_CHARACTER_ENTRY_LIMIT) truncated.push("crimes");
+  if (view.relationships.length > OVERWORLD_COMPACT_CHARACTER_ENTRY_LIMIT) {
+    truncated.push("relationships");
+  }
+  if (
+    relationships.some(
+      (relationship) => relationship.memories.length > OVERWORLD_COMPACT_CHARACTER_MEMORY_LIMIT,
+    )
+  ) {
+    truncated.push("relationship_memories");
+  }
+  if (view.factionStanding.length > OVERWORLD_COMPACT_CHARACTER_ENTRY_LIMIT) {
+    truncated.push("faction_standing");
+  }
+
+  const compact = [
+    view.background,
+    [view.health.current, view.health.max],
+    view.money,
+    view.skills
+      .slice(0, OVERWORLD_COMPACT_CHARACTER_ENTRY_LIMIT)
+      .map((skill) => [skill.skillId, skill.rank] as const),
+    view.values
+      .slice(0, OVERWORLD_COMPACT_CHARACTER_ENTRY_LIMIT)
+      .map((value) => [value.valueId, value.strength] as const),
+    view.wounds
+      .slice(0, OVERWORLD_COMPACT_CHARACTER_ENTRY_LIMIT)
+      .map((wound) => [wound.woundId, wound.severity, wound.treatment] as const),
+    view.equipment
+      .slice(0, OVERWORLD_COMPACT_CHARACTER_ENTRY_LIMIT)
+      .map(
+        (item) =>
+          [item.equipmentId, item.itemId, item.quantity, item.condition, item.equipped] as const,
+      ),
+    view.abilities.slice(0, OVERWORLD_COMPACT_CHARACTER_ENTRY_LIMIT),
+    view.knowledge.slice(0, OVERWORLD_COMPACT_CHARACTER_ENTRY_LIMIT),
+    view.promises
+      .slice(0, OVERWORLD_COMPACT_CHARACTER_ENTRY_LIMIT)
+      .map((promise) => [promise.promiseId, promise.recipientId, promise.status] as const),
+    view.companions.slice(0, OVERWORLD_COMPACT_CHARACTER_ENTRY_LIMIT),
+    view.crimes
+      .slice(0, OVERWORLD_COMPACT_CHARACTER_ENTRY_LIMIT)
+      .map((crime) => [crime.crimeId, crime.jurisdictionId, crime.severity, crime.status] as const),
+    relationships.map(
+      (relationship) =>
+        [
+          relationship.npcId,
+          relationship.trust,
+          relationship.regard,
+          relationship.owesPlayer,
+          relationship.playerOwes,
+          relationship.memories.length,
+          relationship.memories.slice(0, OVERWORLD_COMPACT_CHARACTER_MEMORY_LIMIT),
+        ] as const,
+    ),
+    view.factionStanding
+      .slice(0, OVERWORLD_COMPACT_CHARACTER_ENTRY_LIMIT)
+      .map((faction) => [faction.factionId, faction.standing] as const),
+    counts,
+  ] as const;
+
+  return truncated.length > 0 ? ([...compact, truncated] as const) : compact;
+}
+
+function cloneCompactCampaignCharacter(
+  character: OverworldCompactCampaignCharacter,
+): OverworldCompactCampaignCharacter {
+  const clone = [
+    character[0],
+    [...character[1]],
+    character[2],
+    cloneTupleList(character[3]),
+    cloneTupleList(character[4]),
+    cloneTupleList(character[5]),
+    cloneTupleList(character[6]),
+    [...character[7]],
+    [...character[8]],
+    cloneTupleList(character[9]),
+    [...character[10]],
+    cloneTupleList(character[11]),
+    character[12].map(
+      (relationship) =>
+        [
+          relationship[0],
+          relationship[1],
+          relationship[2],
+          relationship[3],
+          relationship[4],
+          relationship[5],
+          [...relationship[6]],
+        ] as const,
+    ),
+    cloneTupleList(character[13]),
+    [...character[14]],
+  ] as const;
+
+  return character[15] ? ([...clone, [...character[15]]] as const) : clone;
+}
+
 export function cloneOverworldCompactView(view: OverworldCompactView): OverworldCompactView {
   const clone: OverworldCompactView = {
     v: view.v,
+    character: cloneCompactCampaignCharacter(view.character),
     world: view.world,
     time: view.time,
     here: [...view.here] as OverworldCompactHere,
@@ -671,6 +909,7 @@ export function cloneOverworldCompactView(view: OverworldCompactView): Overworld
   };
 
   if (view.area_routes) clone.area_routes = cloneTupleList(view.area_routes);
+  if (view.service_offers) clone.service_offers = cloneTupleList(view.service_offers);
   if (view.roads_truncated) clone.roads_truncated = true;
   if (view.area_routes_truncated) clone.area_routes_truncated = true;
   if (view.route_options_truncated) clone.route_options_truncated = true;
@@ -716,6 +955,7 @@ export function compactOverworldView(view: OverworldView): OverworldCompactView 
   const rememberedJobs = compactOverworldJobLeadRefs(view.rememberedJobs);
   const sites = compactOverworldTitleRefs(view.sites);
   const quests = compactOverworldQuestRefs(view.quests);
+  const serviceOffers = compactCampaignServiceOffers(view.serviceOffers);
   const localRefsTruncated = compactLocalRefTruncation({
     areas: view.areas.length,
     poi: view.pois.length,
@@ -749,6 +989,7 @@ export function compactOverworldView(view: OverworldView): OverworldCompactView 
   const pendingRoad = compactPendingRoad(view.pendingRoadEncounter);
   return {
     v: OVERWORLD_COMPACT_VIEW_VERSION,
+    character: compactCampaignCharacterView(view.character),
     world: compactOverworldLabel(view.world),
     time: view.timeLabel,
     here: [
@@ -759,6 +1000,7 @@ export function compactOverworldView(view: OverworldView): OverworldCompactView 
       view.currentArea ? compactOverworldLabel(view.currentArea.name) : null,
     ],
     vitals: [view.supplies, view.maxSupplies, view.fatigue, view.travelCondition],
+    ...(serviceOffers.length > 0 ? { service_offers: serviceOffers } : {}),
     hidden: [
       view.hiddenAreaCount,
       view.hiddenJobCount,

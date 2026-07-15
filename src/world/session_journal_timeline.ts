@@ -1,10 +1,31 @@
 import type { OverworldCharacter, OverworldLocalEvent, OverworldPoi } from "./overworld.js";
+import {
+  openingAllyLegacyJournalDraft,
+  openingAllyLegacySourceWorldHash,
+  type OpeningAllyJournalDraft,
+} from "./opening_ally_journal.js";
 import type { OverworldContactPresentation } from "./session_contact_presentation.js";
+import {
+  openingLeadSourceLegacyJournalDraft,
+  openingLeadSourceLegacySourceWorldHash,
+  type OpeningLeadSourceJournalDraft,
+} from "./opening_lead_source_journal.js";
+import {
+  openingPreparationLegacyJournalDraft,
+  openingPreparationLegacySourceWorldHash,
+  type OpeningPreparationJournalDraft,
+} from "./opening_preparation_journal.js";
+import {
+  openingRegistrationLegacyJournalDraft,
+  openingRegistrationLegacySourceWorldHash,
+  type OpeningRegistrationJournalDraft,
+} from "./opening_registration_journal.js";
 import {
   parseRoadJournalId,
   parseServiceJournalId,
   parseTimeLabel,
 } from "./session_journal_codec.js";
+import { describeOverworldContactAction } from "./local_actions.js";
 import {
   emptyProgressJournalSourceIndex,
   recordProgressJournalSource,
@@ -32,6 +53,17 @@ export type OverworldJournalSourceIndex = {
   eventTownNames: ReadonlyMap<string, string>;
   jobIds: ReadonlySet<string>;
   jobTownNames: ReadonlyMap<string, string>;
+  openingLeadSourceJournalIds?: ReadonlySet<string>;
+  openingLeadSourceOfferDraft?: OpeningLeadSourceJournalDraft | null;
+  openingLeadSourceTownName?: string | null;
+  openingAllyJournalIds?: ReadonlySet<string>;
+  openingAllyOfferDraft?: OpeningAllyJournalDraft | null;
+  openingAllyTownName?: string | null;
+  openingPreparationJournalIds?: ReadonlySet<string>;
+  openingPreparationOfferDraft?: OpeningPreparationJournalDraft | null;
+  openingPreparationTownName?: string | null;
+  openingRegistrationJournalDraftsById: ReadonlyMap<string, OpeningRegistrationJournalDraft>;
+  openingRegistrationTownName: string | null;
   poiIds: ReadonlySet<string>;
   poiTownNames: ReadonlyMap<string, string>;
   questIds: ReadonlySet<string>;
@@ -113,14 +145,37 @@ function assertKnownJournalSource(
   }
 }
 
+function contactPresentationForJournalEntry(
+  entry: OverworldJournalEntry,
+  sources: Pick<OverworldJournalSourceIndex, "contactPresentationsByJournalId">,
+): OverworldContactPresentation | null {
+  const exact = sources.contactPresentationsByJournalId.get(entry.id);
+  if (exact) return exact;
+  const repeated = /^(.*):(\d+)$/.exec(entry.id);
+  if (!repeated || Number(repeated[2]) !== parseTimeLabel(entry.recordedAt)) return null;
+  return sources.contactPresentationsByJournalId.get(repeated[1]!) ?? null;
+}
+
 function assertKnownContactPresentation(
   entry: OverworldJournalEntry,
   sources: OverworldJournalSourceIndex,
 ): void {
-  const presentation = sources.contactPresentationsByJournalId.get(entry.id);
+  const presentation = contactPresentationForJournalEntry(entry, sources);
   if (!presentation) {
     throw new Error(
       `Overworld session snapshot journal contact entry references unknown contact presentation "${entry.id}".`,
+    );
+  }
+  const expected = describeOverworldContactAction(
+    presentation.contact,
+    presentation.presentationId,
+  );
+  if (
+    entry.id !== expected.id &&
+    (entry.title !== expected.title || entry.text !== expected.text)
+  ) {
+    throw new Error(
+      `Overworld session snapshot journal contact entry "${entry.id}" does not match its authored copy.`,
     );
   }
   const expectedTown = sources.characterTownNames.get(presentation.character.id);
@@ -167,6 +222,181 @@ function assertServiceJournalSource(entry: OverworldJournalEntry, recordedAt: nu
   }
 }
 
+function assertOpeningRegistrationJournalSource(
+  entry: OverworldJournalEntry,
+  sources: OverworldJournalSourceIndex,
+): void {
+  const draft = sources.openingRegistrationJournalDraftsById.get(entry.id);
+  if (!draft || draft.kind !== entry.kind) {
+    throw new Error(
+      `Overworld session snapshot journal ${entry.kind} entry references unknown opening registration evidence "${entry.id}".`,
+    );
+  }
+  if (entry.title !== draft.title || entry.text !== draft.text) {
+    throw new Error(
+      `Overworld session snapshot journal ${entry.kind} entry "${entry.id}" does not match its authored copy.`,
+    );
+  }
+  if (
+    sources.openingRegistrationTownName !== null &&
+    entry.town !== sources.openingRegistrationTownName
+  ) {
+    throw new Error(
+      `Overworld session snapshot journal ${entry.kind} entry "${entry.id}" is bound to town "${entry.town}", expected "${sources.openingRegistrationTownName}".`,
+    );
+  }
+}
+
+function assertOpeningRegistrationLegacyJournalSource(entry: OverworldJournalEntry): void {
+  const sourceWorldHash = openingRegistrationLegacySourceWorldHash(entry.id);
+  if (!sourceWorldHash) {
+    throw new Error(
+      `Overworld session snapshot journal registration_legacy entry id "${entry.id}" must contain a source world hash.`,
+    );
+  }
+  const draft = openingRegistrationLegacyJournalDraft(sourceWorldHash);
+  if (entry.title !== draft.title || entry.text !== draft.text) {
+    throw new Error(
+      `Overworld session snapshot journal registration_legacy entry "${entry.id}" does not match its canonical copy.`,
+    );
+  }
+}
+
+function assertOpeningLeadSourceJournalSource(
+  entry: OverworldJournalEntry,
+  sources: OverworldJournalSourceIndex,
+): void {
+  if (entry.kind === "lead_source_offer") {
+    const draft = sources.openingLeadSourceOfferDraft;
+    if (
+      !draft ||
+      entry.id !== draft.id ||
+      entry.title !== draft.title ||
+      entry.text !== draft.text
+    ) {
+      throw new Error(
+        `Overworld session snapshot journal lead_source_offer entry "${entry.id}" does not match its authored copy.`,
+      );
+    }
+  } else if (!sources.openingLeadSourceJournalIds?.has(entry.id)) {
+    throw new Error(
+      `Overworld session snapshot journal lead_source entry references unknown evidence "${entry.id}".`,
+    );
+  }
+  if (
+    sources.openingLeadSourceTownName != null &&
+    entry.town !== sources.openingLeadSourceTownName
+  ) {
+    throw new Error(
+      `Overworld session snapshot journal ${entry.kind} entry "${entry.id}" is bound to town "${entry.town}", expected "${sources.openingLeadSourceTownName}".`,
+    );
+  }
+}
+
+function assertOpeningLeadSourceLegacyJournalSource(entry: OverworldJournalEntry): void {
+  const sourceWorldHash = openingLeadSourceLegacySourceWorldHash(entry.id);
+  if (!sourceWorldHash) {
+    throw new Error(
+      `Overworld session snapshot journal lead_source_legacy entry id "${entry.id}" must contain a source world hash.`,
+    );
+  }
+  const draft = openingLeadSourceLegacyJournalDraft(sourceWorldHash);
+  if (entry.title !== draft.title || entry.text !== draft.text) {
+    throw new Error(
+      `Overworld session snapshot journal lead_source_legacy entry "${entry.id}" does not match its canonical copy.`,
+    );
+  }
+}
+
+function assertOpeningPreparationJournalSource(
+  entry: OverworldJournalEntry,
+  sources: OverworldJournalSourceIndex,
+): void {
+  if (entry.kind === "preparation_offer") {
+    const draft = sources.openingPreparationOfferDraft;
+    if (
+      !draft ||
+      entry.id !== draft.id ||
+      entry.title !== draft.title ||
+      entry.text !== draft.text
+    ) {
+      throw new Error(
+        `Overworld session snapshot journal preparation_offer entry "${entry.id}" does not match its authored copy.`,
+      );
+    }
+  } else if (!sources.openingPreparationJournalIds?.has(entry.id)) {
+    throw new Error(
+      `Overworld session snapshot journal preparation entry references unknown evidence "${entry.id}".`,
+    );
+  }
+  if (
+    sources.openingPreparationTownName != null &&
+    entry.town !== sources.openingPreparationTownName
+  ) {
+    throw new Error(
+      `Overworld session snapshot journal ${entry.kind} entry "${entry.id}" is bound to town "${entry.town}", expected "${sources.openingPreparationTownName}".`,
+    );
+  }
+}
+
+function assertOpeningPreparationLegacyJournalSource(entry: OverworldJournalEntry): void {
+  const sourceWorldHash = openingPreparationLegacySourceWorldHash(entry.id);
+  if (!sourceWorldHash) {
+    throw new Error(
+      `Overworld session snapshot journal preparation_legacy entry id "${entry.id}" must contain a source world hash.`,
+    );
+  }
+  const draft = openingPreparationLegacyJournalDraft(sourceWorldHash);
+  if (entry.title !== draft.title || entry.text !== draft.text) {
+    throw new Error(
+      `Overworld session snapshot journal preparation_legacy entry "${entry.id}" does not match its canonical copy.`,
+    );
+  }
+}
+
+function assertOpeningAllyJournalSource(
+  entry: OverworldJournalEntry,
+  sources: OverworldJournalSourceIndex,
+): void {
+  if (entry.kind === "ally_offer") {
+    const draft = sources.openingAllyOfferDraft;
+    if (
+      !draft ||
+      entry.id !== draft.id ||
+      entry.title !== draft.title ||
+      entry.text !== draft.text
+    ) {
+      throw new Error(
+        `Overworld session snapshot journal ally_offer entry "${entry.id}" does not match its authored copy.`,
+      );
+    }
+  } else if (!sources.openingAllyJournalIds?.has(entry.id)) {
+    throw new Error(
+      `Overworld session snapshot journal ally entry references unknown evidence "${entry.id}".`,
+    );
+  }
+  if (sources.openingAllyTownName != null && entry.town !== sources.openingAllyTownName) {
+    throw new Error(
+      `Overworld session snapshot journal ${entry.kind} entry "${entry.id}" is bound to town "${entry.town}", expected "${sources.openingAllyTownName}".`,
+    );
+  }
+}
+
+function assertOpeningAllyLegacyJournalSource(entry: OverworldJournalEntry): void {
+  const sourceWorldHash = openingAllyLegacySourceWorldHash(entry.id);
+  if (!sourceWorldHash) {
+    throw new Error(
+      `Overworld session snapshot journal ally_legacy entry id "${entry.id}" must contain a source world hash.`,
+    );
+  }
+  const draft = openingAllyLegacyJournalDraft(sourceWorldHash);
+  if (entry.title !== draft.title || entry.text !== draft.text) {
+    throw new Error(
+      `Overworld session snapshot journal ally_legacy entry "${entry.id}" does not match its canonical copy.`,
+    );
+  }
+}
+
 function assertSnapshotJournalSource(
   entry: OverworldJournalEntry,
   recordedAt: number,
@@ -179,8 +409,75 @@ function assertSnapshotJournalSource(
       `Overworld session snapshot journal ${entry.kind} references unknown ${placeLabel} "${entry.town}".`,
     );
   }
+  const isRegistrationEvidence =
+    entry.kind === "registration" ||
+    entry.kind === "registration_legacy" ||
+    entry.kind === "registration_offer";
+  if (isRegistrationEvidence !== (entry.registrationBoundary !== undefined)) {
+    throw new Error(
+      `Overworld session snapshot journal ${entry.kind} entry has an invalid registration boundary.`,
+    );
+  }
+  const isStoryChoiceEvidence =
+    entry.kind === "ally" ||
+    entry.kind === "ally_legacy" ||
+    entry.kind === "ally_offer" ||
+    entry.kind === "lead_source" ||
+    entry.kind === "lead_source_legacy" ||
+    entry.kind === "lead_source_offer" ||
+    entry.kind === "preparation" ||
+    entry.kind === "preparation_legacy" ||
+    entry.kind === "preparation_offer";
+  if (isStoryChoiceEvidence !== (entry.storyChoiceBoundary !== undefined)) {
+    throw new Error(
+      `Overworld session snapshot journal ${entry.kind} entry has an invalid story-choice boundary.`,
+    );
+  }
+  const decisionBoundaryCount = [
+    entry.questCompletionBoundary,
+    entry.registrationBoundary,
+    entry.serviceBoundary,
+    entry.storyChoiceBoundary,
+  ].filter((boundary) => boundary !== undefined).length;
+  if (decisionBoundaryCount > 1) {
+    throw new Error(
+      `Overworld session snapshot journal ${entry.kind} entry cannot carry multiple decision boundaries.`,
+    );
+  }
+  const hasServiceRuleId = entry.serviceRuleId !== undefined;
+  const hasServiceAreaId = entry.serviceAreaId !== undefined;
+  if (hasServiceRuleId !== hasServiceAreaId) {
+    throw new Error(
+      `Overworld session snapshot journal ${entry.kind} entry has incomplete campaign service proof.`,
+    );
+  }
+  if ((hasServiceRuleId || hasServiceAreaId) && entry.kind !== "service") {
+    throw new Error(
+      `Overworld session snapshot journal ${entry.kind} entry cannot carry campaign service proof.`,
+    );
+  }
+  if (
+    (hasServiceRuleId || hasServiceAreaId) !== (entry.serviceBoundary !== undefined) ||
+    (entry.serviceBoundary !== undefined && entry.kind !== "service")
+  ) {
+    throw new Error(
+      `Overworld session snapshot journal ${entry.kind} entry has an invalid campaign service boundary.`,
+    );
+  }
+  if (entry.questCompletionBoundary !== undefined && entry.kind !== "quest_done") {
+    throw new Error(
+      `Overworld session snapshot journal ${entry.kind} entry has an invalid quest completion boundary.`,
+    );
+  }
 
   switch (entry.kind) {
+    case "ally":
+    case "ally_offer":
+      assertOpeningAllyJournalSource(entry, sources);
+      return;
+    case "ally_legacy":
+      assertOpeningAllyLegacyJournalSource(entry);
+      return;
     case "area":
       assertKnownJournalSource(entry, "area:", sources.areaIds, "area", sources.areaTownNames);
       return;
@@ -206,6 +503,13 @@ function assertSnapshotJournalSource(
     case "job":
       assertKnownJournalSource(entry, "job:", sources.jobIds, "job", sources.jobTownNames);
       return;
+    case "lead_source":
+    case "lead_source_offer":
+      assertOpeningLeadSourceJournalSource(entry, sources);
+      return;
+    case "lead_source_legacy":
+      assertOpeningLeadSourceLegacyJournalSource(entry);
+      return;
     case "poi":
       assertKnownJournalSource(
         entry,
@@ -214,6 +518,13 @@ function assertSnapshotJournalSource(
         "point of interest",
         sources.poiTownNames,
       );
+      return;
+    case "preparation":
+    case "preparation_offer":
+      assertOpeningPreparationJournalSource(entry, sources);
+      return;
+    case "preparation_legacy":
+      assertOpeningPreparationLegacyJournalSource(entry);
       return;
     case "quest":
       assertKnownJournalSource(entry, "quest:", sources.questIds, "quest", sources.questTownNames);
@@ -226,6 +537,13 @@ function assertSnapshotJournalSource(
         "quest",
         sources.questTownNames,
       );
+      return;
+    case "registration":
+    case "registration_offer":
+      assertOpeningRegistrationJournalSource(entry, sources);
+      return;
+    case "registration_legacy":
+      assertOpeningRegistrationLegacyJournalSource(entry);
       return;
     case "regional_arc":
       assertKnownJournalSource(
@@ -287,7 +605,7 @@ function recordEventResolutionJournalProof(
       return;
     }
     case "contact": {
-      const presentation = sources.contactPresentationsByJournalId.get(entry.id);
+      const presentation = contactPresentationForJournalEntry(entry, sources);
       if (presentation) {
         recordEarliestTime(proofs.contactTimeByArea, presentation.character.area, recordedAt);
       }
@@ -324,6 +642,7 @@ export function assertSnapshotTimeline(
   sources: OverworldJournalTimelineSourceIndex,
 ): OverworldJournalTimelineIndex {
   let previousRecordedAt = Number.POSITIVE_INFINITY;
+  let previousBoundaryDecision = Number.POSITIVE_INFINITY;
   const progressSources = emptyProgressJournalSourceIndex();
   const localActionEntries: OverworldLocalActionJournalTimelineEntry[] = [];
   const recordedAtById = new Map<string, number>();
@@ -341,6 +660,24 @@ export function assertSnapshotTimeline(
     }
     const recordedAt = parseTimeLabel(entry.recordedAt);
     assertSnapshotJournalSource(entry, recordedAt, sources);
+    const decisionBoundary =
+      entry.questCompletionBoundary ??
+      entry.registrationBoundary ??
+      entry.serviceBoundary ??
+      entry.storyChoiceBoundary;
+    if (decisionBoundary) {
+      if (decisionBoundary.minutes !== recordedAt) {
+        throw new Error(
+          `Overworld session snapshot journal ${entry.kind} entry boundary time does not match its timestamp.`,
+        );
+      }
+      if (decisionBoundary.acceptedDecisions > previousBoundaryDecision) {
+        throw new Error(
+          "Overworld session snapshot journal decision boundaries must be newest-first.",
+        );
+      }
+      previousBoundaryDecision = decisionBoundary.acceptedDecisions;
+    }
     if (recordedAt > snapshot.minutes) {
       throw new Error("Overworld session snapshot journal contains a future entry.");
     }

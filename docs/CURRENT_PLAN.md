@@ -1,51 +1,73 @@
 # Current Plan
 
-Token-small AFK-loop handoff: keep one synthesis and chosen move under 60 lines.
+Token-small AFK-loop handoff. The durable milestone and evidence rules live in
+[`STARTING_SLICE.md`](STARTING_SLICE.md); do not replace that contract during an
+ultraplan.
 
-## Cycle: 2026-07-12 - Current-Goal Passage
+## Cycle: 2026-07-15 — Albany Ally Commitment
 
 ## Synthesis
 
-Journey contract v3 now has 17 sidecar-verified pure/fresh exits at 74–130
-meaningful decisions. Every player continued at least once and all 17 said they
-would replay, so current evidence does not prove travel causes churn.
+June Pike is now a persistent Road Warden ally rather than a proposed cast note.
+After preparation, the Station Quarter offers three exact terms: spend 15
+minutes granting her cattle-first authority and record a companion plus active
+promise; spend 5 minutes asking for a subordinate relay that she refuses; or
+leave explicitly solo at no delay. Departing without speaking to June also
+remains truthfully solo and creates no retroactive relationship evidence.
 
-It does prove a repeated pacing defect: 14/17 mentioned long-haul or routing
-friction, nine hit manual/non-adjacent routing, and nine called connective
-logistics repetitive or padding. The game privately knows the unrestricted
-route to its authored goal, but the public planner rejects an undiscovered goal
-town, destination travel accepts only adjacent towns despite promising
-multi-leg routing, and every predetermined road click advances the retention
-clock as if it were a new player decision.
+The accepted bond crosses a generic companion-to-flag import. On the recovered
+failed-lure route, June's presence changes the legal menu: the last cast waits
+until she refuses the old-grey line and independently takes the lower cattle
+rail, reducing alarm by 1. Under otherwise equal state this reverses the final
+herd threshold. First blood cancels that action without blocking completion,
+then chronological quest foldback resolves the promise broken and removes June
+from the party. Living cooperation, negotiated refusal, explicit solo, and
+relationship loss produce different memories, Station testimony, and one-time
+service availability.
+
+Reusable state now supports canonical companions, companion imports,
+add/remove-party and record/resolve-promise consequences, character-conditioned
+quest exports and services, and completion-order replay. The offer and choice
+are bound to exact location, time, decision proof, and authored copy; current and
+predecessor restores reject invented ally state. Full/compact MCP, browser,
+overworld save/restore, and RPG save/load agree.
+
+`SS-F04-ally-commitment` is therefore the seventh counted fork, alongside F01,
+F03, F05, F09, F11, and F12. This proves the first ally-agency clause. It does
+not create either missing full resolution family or satisfy the twelve-fork and
+fleet-level depth contract.
 
 ## Chosen Move
 
-Make the current objective's road commitment a shared, interruptible Goal
-Passage choice while retaining manual travel.
+Build `SS-F10-crisis-priority` as the irreversible pressure decision at the
+center of a real `drive_and_evacuate` family, using the new ally grammar without
+making June mandatory.
 
-- Derive one identical presentation in the Journey object used by UI and MCP.
-- Show the named destination and aggregate time/supply/fatigue consequences.
-- Apply every real leg, cost, discovery, ambient report, and travel-log entry.
-- Stop for authored road choices, objective arrival, or a new resource tier.
-- Count one successful passage selection once; count later choices separately.
-- Reveal no intermediate route, future event, hidden target, or solution first.
+- Commit to driving the pack while moving Cade's cattle before the final room;
+  do not relabel the existing one-fight lure recovery as a new family.
+- At a visible pressure threshold, force an informed choice among protecting a
+  person/ally, cattle, or scarce relief resources. Every branch must expose what
+  it saves and what it leaves vulnerable.
+- Let June disagree or take a different task when present, while solo and
+  relationship-loss states retain distinct failure-forward completion.
+- Keep consequences in shared pressure, party/promise, injury/resource, quest
+  export, and Albany opportunity primitives rather than Wolf-specific campaign
+  conditionals.
+- Preserve the two proven hunt/lure families, all direct-start defaults, and the
+  existing nondeath identities unless a genuinely new route earns a distinct
+  ending.
 
-## Acceptance
+## Acceptance for the next increment
 
-1. UI, full MCP, and compact MCP expose the same Goal Passage choice.
-2. One passage has exact resource/log parity with the same manual road legs.
-3. Required road events remain unresolved and interrupt passage immediately.
-4. Resource boundaries yield before an unaccepted later penalty tier.
-5. Checkpoints, save/restore, and decision proofs remain exact after passage.
-6. Manual roads and discovered-route planning retain their prior behavior.
-7. The pure harness remains neutral; the game alone presents this action.
-8. Pre/post crawl, a fresh pure exit, health, and integrity are green.
-
-## Deferred Levers
-
-- Measure whether passage improves pacing/retention in later pure cohorts;
-  recurrence supports this correction, but retention causality is unproven.
-- Clarify `area_route_id` versus `area_id` only if the fresh seed-7 mismatch
-  recurs; it was a one-time, low-severity transport-schema learning cost.
-- Deepen road-event prose only if post-passage players still report sameness.
-- Audit NPC-name collisions and town-template diversity after fresh evidence.
+1. `drive_and_evacuate` diverges through different prior actions, costs, risks,
+   and legal steps before the last input and is not reducible to the current
+   failed-lure hybrid.
+2. One visible crisis choice changes at least two systems immediately and later
+   changes remaining actions plus truthful Albany testimony or opportunity.
+3. Companion, solo, refusal/departure, success, and seeded failure-forward
+   routes remain completable and causally distinct.
+4. Paired deterministic proofs cover pressure thresholds, non-dominance,
+   save/replay, quest import/export, chronological foldback, full/compact/UI
+   parity, and direct starts within the 45-decision first-goal ceiling.
+5. Only proven rows and resolution families advance; pre/post crawls, one fresh
+   canonical pure exit, independent audit, and `npm run health` remain green.

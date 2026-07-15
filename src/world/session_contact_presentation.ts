@@ -4,6 +4,7 @@ import {
   type OverworldCharacterVariant,
   type OverworldCharacterView,
 } from "./overworld.js";
+import type { CampaignCharacterState } from "./campaign_character_state.js";
 
 export type OverworldContactPresentation = Readonly<{
   character: OverworldCharacter;
@@ -11,9 +12,11 @@ export type OverworldContactPresentation = Readonly<{
   presentationId: string | null;
   journalId: string;
   afterQuestIds: readonly string[];
+  afterRelationshipMemoryIds: readonly string[];
 }>;
 
 export type OverworldContactPresentationState = Readonly<{
+  character: CampaignCharacterState;
   completedQuestIds: ReadonlySet<string>;
 }>;
 
@@ -21,7 +24,7 @@ function contactView(
   character: OverworldCharacter,
   variant: OverworldCharacterVariant | null,
 ): OverworldCharacterView {
-  const { variants: _variants, ...base } = character;
+  const { campaign_npc_id: _campaignNpcId, variants: _variants, ...base } = character;
   return Object.freeze({
     ...base,
     ...(variant?.summary !== undefined ? { summary: variant.summary } : {}),
@@ -40,17 +43,34 @@ function presentation(
     presentationId,
     journalId: overworldContactTalkJournalId(character.id, presentationId),
     afterQuestIds: Object.freeze([...(variant?.after_quests ?? [])]),
+    afterRelationshipMemoryIds: Object.freeze([...(variant?.after_relationship_memories ?? [])]),
   });
 }
 
-/** Resolve the first authored contact variant whose monotonic quest proof is satisfied. */
+function relationshipMemoryIdsForContact(
+  character: OverworldCharacter,
+  state: CampaignCharacterState,
+): ReadonlySet<string> {
+  if (character.campaign_npc_id === undefined) return new Set();
+  const relationship = state.relationships.find(
+    (candidate) => candidate.npcId === character.campaign_npc_id,
+  );
+  return new Set(relationship?.memories ?? []);
+}
+
+/** Resolve the first authored contact variant whose monotonic campaign proof is satisfied. */
 export function presentOverworldContact(
   character: OverworldCharacter,
   state: OverworldContactPresentationState,
 ): OverworldContactPresentation {
+  const relationshipMemoryIds = relationshipMemoryIdsForContact(character, state.character);
   const variant =
-    character.variants?.find((candidate) =>
-      candidate.after_quests.every((questId) => state.completedQuestIds.has(questId)),
+    character.variants?.find(
+      (candidate) =>
+        (candidate.after_quests ?? []).every((questId) => state.completedQuestIds.has(questId)) &&
+        (candidate.after_relationship_memories ?? []).every((memoryId) =>
+          relationshipMemoryIds.has(memoryId),
+        ),
     ) ?? null;
   return presentation(character, variant);
 }

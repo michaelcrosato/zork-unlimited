@@ -4,6 +4,10 @@
  * One state shape carries the RPG world runtime. The engine treats GameState
  * as immutable — every transition returns a fresh value (see core/engine.ts).
  */
+import {
+  cloneCampaignImportReceipt,
+  type CampaignImportReceipt,
+} from "./campaign_import_receipt.js";
 
 /**
  * Highest persisted action counter the engine will accept. The reducer needs
@@ -63,6 +67,9 @@ export type GameState = {
   // termination
   ended: boolean;
   endingId: string | null;
+
+  /** Present only when persistent campaign state materially changed this RPG's fresh state. */
+  campaignImportReceipt?: CampaignImportReceipt;
 };
 
 export type InitOptions = {
@@ -111,5 +118,8 @@ export function cloneGameState(state: GameState): GameState {
     objectState,
     journal: [...state.journal],
     questStage: { ...state.questStage },
+    ...(state.campaignImportReceipt !== undefined
+      ? { campaignImportReceipt: cloneCampaignImportReceipt(state.campaignImportReceipt) }
+      : {}),
   };
 }

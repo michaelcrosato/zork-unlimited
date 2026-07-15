@@ -3,6 +3,778 @@
   "name": "New York State Overworld",
   "start": "albany_city",
   "premise": "A text-first open world over New York State: towns are real population centers, roads are weighted travel edges, and quests are discovered locally instead of selected globally.",
+  "opening_registration": {
+    "version": 1,
+    "id": "albany:relief_registration",
+    "home": "albany_city",
+    "area": "albany_city__civic_core",
+    "contact": "albany_city__civic_core__contact",
+    "title": "Enter Albany's Relief Compact",
+    "message": "Rowan lays four registration cards across the municipal counter. Albany's electric grid, buses, clinics, and radio repeaters protect the dense corridor, but plowed service ends before many chartered steadings and old-boundary farms. The Relief Compact lets an independent troubleshooter carry a public emergency tag across both systems, provided the traveler names the experience, sponsor, kit, and obligation they will answer for. Your registration is permanent; the field package and relationships travel with you.",
+    "profiles": [
+      {
+        "id": "albany:road_warden",
+        "title": "Road-Warden Relief Hand",
+        "summary": "You have worked the unplowed miles between Albany's staffed route desks and isolated charter steadings.",
+        "preview": "Contact: Hayden Hale. Skill edge: Fieldcraft 4. Value: Stewardship 4. Kit: weatherproof field kit. Funds: 12. Standing: Road Wardens +5. Knowledge: Relief Compact and winter routes. Obligation: return Hayden's winter packet with an honest account.",
+        "consequence": "Rowan stamps you as a Road-Warden Relief Hand. Your Fieldcraft 4 raises Wolf-Winter's imported starting DEF floor from 3 to 4 when that quest is launched from this journey. Hayden remembers sponsoring you, you carry a weatherproof field kit, and his return-packet promise remains active.",
+        "character": {
+          "version": 1,
+          "background": "albany:road_warden",
+          "skills": [
+            {
+              "skillId": "skill:fieldcraft",
+              "rank": 4
+            }
+          ],
+          "values": [
+            {
+              "valueId": "value:stewardship",
+              "strength": 4
+            }
+          ],
+          "health": {
+            "current": 30,
+            "max": 30
+          },
+          "wounds": [],
+          "equipment": [
+            {
+              "equipmentId": "albany:road_warden_field_kit",
+              "itemId": "albany:item_weatherproof_field_kit",
+              "quantity": 1,
+              "condition": 100,
+              "equipped": true
+            }
+          ],
+          "money": 12,
+          "abilities": [],
+          "knowledge": [
+            "albany:knowledge_relief_compact",
+            "albany:knowledge_winter_routes"
+          ],
+          "promises": [
+            {
+              "promiseId": "albany:promise_return_hayden_packet",
+              "recipientId": "albany:hayden_hale",
+              "status": "active"
+            }
+          ],
+          "crimes": [],
+          "relationships": [
+            {
+              "npcId": "albany:hayden_hale",
+              "trust": 2,
+              "regard": 2,
+              "owesPlayer": 0,
+              "playerOwes": 1,
+              "memories": [
+                "albany:memory_hayden_sponsored_road_warden"
+              ]
+            },
+            {
+              "npcId": "albany:rowan_quill",
+              "trust": 1,
+              "regard": 1,
+              "owesPlayer": 0,
+              "playerOwes": 0,
+              "memories": [
+                "albany:memory_rowan_registered_road_warden"
+              ]
+            }
+          ],
+          "factionStanding": [
+            {
+              "factionId": "faction:road_wardens",
+              "standing": 5
+            }
+          ]
+        }
+      },
+      {
+        "id": "albany:ledger_advocate",
+        "title": "Ledger Advocate",
+        "summary": "You know how emergency authority, testimony, and scarce municipal aid move through Albany's public counters.",
+        "preview": "Contact: Jamie Tanner. Skill edge: Mediation 4. Value: Accountability 4. Kit: sealed evidence folio. Funds: 25. Standing: Municipal Ledger +5. Knowledge: emergency ledger and Relief Compact. Obligation: return a truthful relief account to Rowan.",
+        "consequence": "Rowan registers you as a Ledger Advocate and Jamie remembers vouching for your judgment. You carry a sealed evidence folio and owe Rowan a truthful relief account. Wolf-Winter remains fully winnable through its default routes, but this profile does not receive the Road-Warden's current Fieldcraft DEF import.",
+        "character": {
+          "version": 1,
+          "background": "albany:ledger_advocate",
+          "skills": [
+            {
+              "skillId": "skill:mediation",
+              "rank": 4
+            }
+          ],
+          "values": [
+            {
+              "valueId": "value:accountability",
+              "strength": 4
+            }
+          ],
+          "health": {
+            "current": 30,
+            "max": 30
+          },
+          "wounds": [],
+          "equipment": [
+            {
+              "equipmentId": "albany:ledger_advocate_folio",
+              "itemId": "albany:item_sealed_evidence_folio",
+              "quantity": 1,
+              "condition": 100,
+              "equipped": true
+            }
+          ],
+          "money": 25,
+          "abilities": [],
+          "knowledge": [
+            "albany:knowledge_emergency_ledger",
+            "albany:knowledge_relief_compact"
+          ],
+          "promises": [
+            {
+              "promiseId": "albany:promise_truthful_relief_account",
+              "recipientId": "albany:rowan_quill",
+              "status": "active"
+            }
+          ],
+          "crimes": [],
+          "relationships": [
+            {
+              "npcId": "albany:jamie_tanner",
+              "trust": 2,
+              "regard": 2,
+              "owesPlayer": 0,
+              "playerOwes": 1,
+              "memories": [
+                "albany:memory_jamie_sponsored_ledger_advocate"
+              ]
+            },
+            {
+              "npcId": "albany:rowan_quill",
+              "trust": 2,
+              "regard": 1,
+              "owesPlayer": 0,
+              "playerOwes": 0,
+              "memories": [
+                "albany:memory_rowan_registered_ledger_advocate"
+              ]
+            }
+          ],
+          "factionStanding": [
+            {
+              "factionId": "faction:municipal_ledger",
+              "standing": 5
+            }
+          ]
+        }
+      },
+      {
+        "id": "albany:ironhands_repairer",
+        "title": "Ironhands Repairer",
+        "summary": "You have kept pumps, heaters, gates, and improvised ward-housings alive after staffed crews clocked out.",
+        "preview": "Contact: Reese Pryce. Skill edge: Repair 4. Value: Ingenuity 4. Kit: insulated repair roll. Funds: 10. Standing: Ironhands Local +5. Knowledge: field infrastructure and Relief Compact. Obligation: return Reese's borrowed diagnostic tools intact.",
+        "consequence": "Rowan registers you as an Ironhands Repairer and Reese remembers staking borrowed tools on your field judgment. You carry an insulated repair roll and owe Reese its safe return. Wolf-Winter remains fully winnable through its default routes, but this profile does not receive the Road-Warden's current Fieldcraft DEF import.",
+        "character": {
+          "version": 1,
+          "background": "albany:ironhands_repairer",
+          "skills": [
+            {
+              "skillId": "skill:repair",
+              "rank": 4
+            }
+          ],
+          "values": [
+            {
+              "valueId": "value:ingenuity",
+              "strength": 4
+            }
+          ],
+          "health": {
+            "current": 30,
+            "max": 30
+          },
+          "wounds": [],
+          "equipment": [
+            {
+              "equipmentId": "albany:ironhands_repair_roll",
+              "itemId": "albany:item_insulated_repair_roll",
+              "quantity": 1,
+              "condition": 100,
+              "equipped": true
+            }
+          ],
+          "money": 10,
+          "abilities": [],
+          "knowledge": [
+            "albany:knowledge_field_infrastructure",
+            "albany:knowledge_relief_compact"
+          ],
+          "promises": [
+            {
+              "promiseId": "albany:promise_return_reese_tools",
+              "recipientId": "albany:reese_pryce",
+              "status": "active"
+            }
+          ],
+          "crimes": [],
+          "relationships": [
+            {
+              "npcId": "albany:reese_pryce",
+              "trust": 2,
+              "regard": 2,
+              "owesPlayer": 0,
+              "playerOwes": 1,
+              "memories": [
+                "albany:memory_reese_sponsored_ironhands_repairer"
+              ]
+            },
+            {
+              "npcId": "albany:rowan_quill",
+              "trust": 1,
+              "regard": 2,
+              "owesPlayer": 0,
+              "playerOwes": 0,
+              "memories": [
+                "albany:memory_rowan_registered_ironhands_repairer"
+              ]
+            }
+          ],
+          "factionStanding": [
+            {
+              "factionId": "faction:ironhands_local",
+              "standing": 5
+            }
+          ]
+        }
+      },
+      {
+        "id": "albany:unaffiliated_courier",
+        "title": "Unaffiliated Courier",
+        "summary": "You refuse a faction oath, but accept one emergency tag on your own name and the consequences of carrying it alone.",
+        "preview": "Contact: Emery Sloane. Skill edge: Streetwise 4. Value: Independence 4. Kit: unmarked courier satchel. Funds: 18. Standing: Independent Carriers +2. Knowledge: Relief Compact and service corridors. Obligation: return or publicly void the emergency tag; no unchanged refusal retry.",
+        "consequence": "You decline institutional sponsorship. Rowan records the refusal instead of reopening the same question, then issues one limited emergency tag on your personal bond. Emery remembers witnessing the arrangement. You carry an unmarked courier satchel and must return or publicly void the tag. Wolf-Winter remains fully winnable through its default routes, but this profile does not receive the Road-Warden's current Fieldcraft DEF import.",
+        "character": {
+          "version": 1,
+          "background": "albany:unaffiliated_courier",
+          "skills": [
+            {
+              "skillId": "skill:streetwise",
+              "rank": 4
+            }
+          ],
+          "values": [
+            {
+              "valueId": "value:independence",
+              "strength": 4
+            }
+          ],
+          "health": {
+            "current": 30,
+            "max": 30
+          },
+          "wounds": [],
+          "equipment": [
+            {
+              "equipmentId": "albany:unaffiliated_courier_satchel",
+              "itemId": "albany:item_unmarked_courier_satchel",
+              "quantity": 1,
+              "condition": 100,
+              "equipped": true
+            }
+          ],
+          "money": 18,
+          "abilities": [],
+          "knowledge": [
+            "albany:knowledge_relief_compact",
+            "albany:knowledge_service_corridors"
+          ],
+          "promises": [
+            {
+              "promiseId": "albany:promise_close_emergency_tag",
+              "recipientId": "albany:rowan_quill",
+              "status": "active"
+            }
+          ],
+          "crimes": [],
+          "relationships": [
+            {
+              "npcId": "albany:emery_sloane",
+              "trust": 1,
+              "regard": 3,
+              "owesPlayer": 0,
+              "playerOwes": 0,
+              "memories": [
+                "albany:memory_emery_witnessed_independent_bond"
+              ]
+            },
+            {
+              "npcId": "albany:rowan_quill",
+              "trust": 0,
+              "regard": 2,
+              "owesPlayer": 0,
+              "playerOwes": 1,
+              "memories": [
+                "albany:memory_rowan_recorded_oath_refusal"
+              ]
+            }
+          ],
+          "factionStanding": [
+            {
+              "factionId": "faction:independent_carriers",
+              "standing": 2
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "opening_lead_source": {
+    "version": 1,
+    "id": "albany:wolf_source_priority",
+    "after_registration": "albany:relief_registration",
+    "target_quest": "wolf_winter",
+    "home": "albany_city",
+    "area": "albany_city__civic_core",
+    "title": "Certify the Wolf-Winter Source Packet",
+    "message": "Rowan can attach one account before the hill dispatch closes. The civic docket leaves immediately with only the public facts. Jamie Tanner's market testimony costs time and money to verify but maps a feed-hauler's crawlboard into Cade's loft. Hayden Hale's frost report costs time but identifies a failed paling line that can be exploited only while the split rail remains unbound. Albany will pack this run against the one source you certify now; the other packets cannot be added after departure.",
+    "options": [
+      {
+        "id": "albany:source_rowan_civic_docket",
+        "title": "Leave on Rowan's Civic Docket",
+        "source_npc_id": "albany:rowan_quill",
+        "summary": "Take the signed public docket without delaying the hill dispatch.",
+        "preview": "You keep the public routes already recorded in Cade's packet, including the split-rail recovery, but carry no private market or frost evidence.",
+        "consequence": "Rowan certifies the unaugmented civic docket. It leaves at once without a fee; the relief party will have to work from public routes and whatever it learns at the steading.",
+        "terms": {
+          "minutes": 0,
+          "money": 0
+        },
+        "effects": []
+      },
+      {
+        "id": "albany:source_jamie_market_testimony",
+        "title": "Verify Jamie's Market Testimony",
+        "source_npc_id": "albany:jamie_tanner",
+        "summary": "Cross-check missing cattle feed against Jamie Tanner's named delivery witnesses.",
+        "preview": "The certified testimony identifies the feed-hauler's crawlboard into Cade's fodder loft. After the yearling is dealt with, that knowledge opens the loft approach to the flank-wolf without requiring a bound split rail; taking the drop commits you away from the ground approaches.",
+        "consequence": "Rowan seals Jamie's witness list into the relief packet. Jamie remembers that you put the market account on the public record; after the yearling falls, the certified crawlboard becomes a committed loft approach at Cade's steading.",
+        "terms": {
+          "minutes": 35,
+          "money": 6
+        },
+        "sponsor": {
+          "memory_id": "albany:memory_jamie_sponsored_ledger_advocate",
+          "minutes": 15,
+          "money": 0,
+          "note": "Jamie's Ledger Advocate sponsorship pre-clears the witness counter, waiving $6 and reducing review time from 35 minutes to 15."
+        },
+        "effects": [
+          {
+            "type": "learn_knowledge",
+            "knowledge_id": "albany:knowledge_wolf_market_testimony"
+          },
+          {
+            "type": "remember_relationship",
+            "npc_id": "albany:jamie_tanner",
+            "memory_id": "albany:memory_jamie_market_testimony_certified",
+            "trust_at_least": 3,
+            "regard_at_least": 3
+          }
+        ]
+      },
+      {
+        "id": "albany:source_hayden_frost_report",
+        "title": "Take Hayden's Frost-Heave Report",
+        "source_npc_id": "albany:hayden_hale",
+        "summary": "Review Hayden Hale's boundary sketch and overnight frost-heave readings.",
+        "preview": "If the paling rail splits in Wolf-Winter and you leave it unbound, the report unlocks a fast, exposed frost-jamb line against the flank-wolf. Binding the familiar splinter guard commits away from that line.",
+        "consequence": "Rowan stamps Hayden's route report as the controlling field account. Hayden remembers that his boundary reading carried the dispatch; at Cade's byre, an unbound failed rail can become the exposed frost-jamb maneuver.",
+        "terms": {
+          "minutes": 20,
+          "money": 0
+        },
+        "sponsor": {
+          "memory_id": "albany:memory_hayden_sponsored_road_warden",
+          "minutes": 5,
+          "money": 0,
+          "note": "Hayden's Road-Warden sponsorship reduces the route-desk review from 20 minutes to 5."
+        },
+        "effects": [
+          {
+            "type": "learn_knowledge",
+            "knowledge_id": "albany:knowledge_wolf_frost_report"
+          },
+          {
+            "type": "remember_relationship",
+            "npc_id": "albany:hayden_hale",
+            "memory_id": "albany:memory_hayden_frost_report_certified",
+            "trust_at_least": 3,
+            "regard_at_least": 3
+          }
+        ]
+      }
+    ]
+  },
+  "opening_preparation": {
+    "version": 1,
+    "id": "albany:wolf_preparation",
+    "after_lead_source": "albany:wolf_source_priority",
+    "target_quest": "wolf_winter",
+    "home": "albany_city",
+    "area": "albany_city__civic_core",
+    "title": "Allocate One Wolf-Winter Preparation",
+    "message": "The hill dispatch can carry one specialist allocation before it leaves Rowan's counter. Reese Pryce can mark a cold-set repair sequence onto the failing paling, Emery Sloane can map a drover's cut that peels a fouled yearling away from the herd, or Jamie Tanner can seal a relief protocol for calming the cattle after an improvised recovery. Each plan remains usable by any registered traveler, but the provider who sponsored your registration can waive the public charge and shorten the handoff. Choose one: Albany cannot put three incompatible field plans into the same urgent packet.",
+    "profiles": [
+      {
+        "id": "albany:prep_works_fortification",
+        "title": "Reese's Works Fortification",
+        "provider_npc_id": "albany:reese_pryce",
+        "summary": "Carry Reese Pryce's measured wedge, splice, and cold-set sequence for Cade's failing paling.",
+        "preview": "At the first loose paling rail, this replaces the ordinary wedge with one Repair check (DC 12). Success braces the breach immediately. Failure still splits the frozen rail, but the marked splice can then cold-set it without another roll; the breach is restored while the extra hammering raises cattle alarm by 1. Repair training improves the check, but every background retains the deterministic recovery.",
+        "consequence": "Reese inks three measured cuts and a cold-set order onto Cade's boundary sketch. Only this fortification sequence enters the packet; Reese records who accepted the works allocation and reserves one Albany Works resupply claim if the byre is truthfully returned held.",
+        "terms": { "minutes": 25, "money": 4 },
+        "sponsor": {
+          "memory_id": "albany:memory_reese_sponsored_ironhands_repairer",
+          "minutes": 10,
+          "money": 0,
+          "note": "Reese's Ironhands sponsorship waives the $4 works charge and reduces the measured handoff from 25 minutes to 10."
+        },
+        "effects": [
+          {
+            "type": "learn_knowledge",
+            "knowledge_id": "albany:knowledge_wolf_works_fortification"
+          },
+          {
+            "type": "remember_relationship",
+            "npc_id": "albany:reese_pryce",
+            "memory_id": "albany:memory_reese_wolf_works_fortification_allocated",
+            "trust_at_least": 3,
+            "regard_at_least": 3
+          }
+        ]
+      },
+      {
+        "id": "albany:prep_drover_route",
+        "title": "Emery's Drover Route",
+        "provider_npc_id": "albany:emery_sloane",
+        "summary": "Carry Emery Sloane's one-use drover cut for recovering a fouled first feed cast.",
+        "preview": "Only after the first lure cast fails, the route opens one Streetwise check (DC 12). Success turns the yearling down a service cut and lowers cattle alarm by 1. Failure sends it across the herd's sightline and raises alarm by 1; the route retires, but the existing split-rail bind or fight remains available. Streetwise training improves the attempt without class-locking it.",
+        "consequence": "Emery fixes one snowed service cut between Cade's breach and the high-wood scent line. Only this drover route enters the packet; Emery records who accepted it and arranges one Albany Campus recovery cot if the byre is truthfully returned held.",
+        "terms": { "minutes": 20, "money": 4 },
+        "sponsor": {
+          "memory_id": "albany:memory_emery_witnessed_independent_bond",
+          "minutes": 5,
+          "money": 0,
+          "note": "Emery's witness to the independent bond waives the $4 route charge and reduces the field-map handoff from 20 minutes to 5."
+        },
+        "effects": [
+          {
+            "type": "learn_knowledge",
+            "knowledge_id": "albany:knowledge_wolf_drover_route"
+          },
+          {
+            "type": "remember_relationship",
+            "npc_id": "albany:emery_sloane",
+            "memory_id": "albany:memory_emery_wolf_drover_route_allocated",
+            "trust_at_least": 3,
+            "regard_at_least": 3
+          }
+        ]
+      },
+      {
+        "id": "albany:prep_relief_protocol",
+        "title": "Jamie's Relief Protocol",
+        "provider_npc_id": "albany:jamie_tanner",
+        "summary": "Carry Jamie Tanner's witnessed cadence for settling the herd after a rough rail recovery.",
+        "preview": "After an ordinary split-rail recovery redirects the yearling alive, this opens one Mediation check (DC 12) before the loft cast. Success coordinates Cade's count and lowers cattle alarm by 1. Failure contradicts the yard calls and raises alarm by 1; the protocol retires without blocking the lure route. Mediation training improves the single attempt.",
+        "consequence": "Jamie seals a named-call relief order beside Cade's herd tally. Only this protocol enters the packet; Jamie records who accepted it and reserves one Civic relief-counter resupply claim if the byre is truthfully returned held.",
+        "terms": { "minutes": 30, "money": 4 },
+        "sponsor": {
+          "memory_id": "albany:memory_jamie_sponsored_ledger_advocate",
+          "minutes": 10,
+          "money": 0,
+          "note": "Jamie's Ledger Advocate sponsorship waives the $4 witness fee and reduces the protocol review from 30 minutes to 10."
+        },
+        "effects": [
+          {
+            "type": "learn_knowledge",
+            "knowledge_id": "albany:knowledge_wolf_relief_protocol"
+          },
+          {
+            "type": "remember_relationship",
+            "npc_id": "albany:jamie_tanner",
+            "memory_id": "albany:memory_jamie_wolf_relief_protocol_allocated",
+            "trust_at_least": 3,
+            "regard_at_least": 3
+          }
+        ]
+      }
+    ]
+  },
+  "opening_ally": {
+    "version": 1,
+    "id": "albany:wolf_ally_commitment",
+    "after_preparation": "albany:wolf_preparation",
+    "target_quest": "wolf_winter",
+    "home": "albany_city",
+    "area": "albany_city__transport_hub",
+    "contact": "albany_city__transport_hub__june_pike",
+    "ally_npc_id": "albany:june_pike",
+    "solo_option_id": "albany:ally_travel_solo",
+    "title": "Choose the Wolf-Winter Field Team",
+    "message": "June Pike has one Road-Warden field seat beside Hayden's outgoing packet. She can ride with you, but only under a named division of authority; leaving without that agreement sends the relief rider alone and does not delay the dispatch.",
+    "capability": "After a failed living-pack lure is recovered without blood, June can leave the wolf line at the final byre threshold and take the cattle line, lowering cattle alarm by 1.",
+    "condition": "June keeps cattle-first authority. She will not become an extra hunter, and the first wolf killed ends her place on the field team.",
+    "options": [
+      {
+        "id": "albany:ally_june_cattle_first",
+        "title": "Grant June Cattle-First Authority",
+        "summary": "Ask June Pike to ride as an independent Road-Warden ally.",
+        "preview": "The briefing takes 15 minutes. June joins the field team and records your promise that she chooses the cattle line if the recovered lure still leaves the herd pressing. Her help is one pressure intervention, never a combat bonus; any wolf death ends the agreement.",
+        "consequence": "June signs beside your name, takes the second field seat, and remembers that you granted rather than merely borrowed her authority.",
+        "terms": { "minutes": 15 },
+        "effects": [
+          {
+            "type": "remember_relationship",
+            "npc_id": "albany:june_pike",
+            "memory_id": "albany:memory_june_joined_cattle_first",
+            "trust_at_least": 3,
+            "regard_at_least": 3
+          },
+          {
+            "type": "add_companion",
+            "npc_id": "albany:june_pike"
+          },
+          {
+            "type": "record_promise",
+            "promise_id": "albany:promise_june_cattle_first",
+            "recipient_id": "albany:june_pike"
+          }
+        ]
+      },
+      {
+        "id": "albany:ally_june_relay_only",
+        "title": "Negotiate for a Subordinate Relay",
+        "summary": "Ask June to relay your orders without retaining cattle-first authority.",
+        "preview": "The exchange takes 5 minutes. June refuses the reduced role: no unchanged retry, no companion, no field promise, and no Wolf-Winter pressure action. She remains at the Station desk while the solo route stays fully viable.",
+        "consequence": "June records that you asked for a relay rather than an ally and declined the condition under which she would ride.",
+        "terms": { "minutes": 5 },
+        "effects": [
+          {
+            "type": "remember_relationship",
+            "npc_id": "albany:june_pike",
+            "memory_id": "albany:memory_june_refused_subordinate_relay",
+            "trust_at_least": 0,
+            "regard_at_least": 1
+          }
+        ]
+      },
+      {
+        "id": "albany:ally_travel_solo",
+        "title": "Leave with a Solo Field Team",
+        "summary": "Keep the existing one-rider Wolf-Winter dispatch.",
+        "preview": "No time is added. June remains with Albany's Road-Warden reserve; Wolf-Winter keeps every established route and receives no companion flag or ally action.",
+        "consequence": "June records the clean refusal and does not reopen the same field seat after departure.",
+        "terms": { "minutes": 0 },
+        "effects": [
+          {
+            "type": "remember_relationship",
+            "npc_id": "albany:june_pike",
+            "memory_id": "albany:memory_june_solo_dispatch_chosen",
+            "trust_at_least": 1,
+            "regard_at_least": 1
+          }
+        ]
+      }
+    ]
+  },
+  "campaign_service_rules": [
+    {
+      "id": "albany:wolf_works_fortification_return_resupply",
+      "home": "albany_city",
+      "area": "albany_city__industrial",
+      "action": "resupply",
+      "title": "Claim Reese's Returned-Works Stores",
+      "summary": "Because Reese allocated the fortification sequence and your truthful return says Cade's byre held, Albany Works releases one reserved cache of road food, lamp oil, rawhide, and repair stock.",
+      "provider_character_id": "albany_city__industrial__contact",
+      "minutes": 15,
+      "requires_all_world_facts": ["fact:wolf_winter_byre_held"],
+      "requires_all_story_choices": [
+        {
+          "story_choice_id": "albany:wolf_preparation",
+          "choice_id": "albany:prep_works_fortification"
+        }
+      ]
+    },
+    {
+      "id": "albany:wolf_drover_route_return_rest",
+      "home": "albany_city",
+      "area": "albany_city__campus",
+      "action": "rest",
+      "title": "Take the Drover Recovery Cot",
+      "summary": "Because Emery allocated the drover route and your truthful return says Cade's byre held, the Campus stockyard clinic opens one reserved warmed cot and recovery watch.",
+      "provider_character_id": "albany_city__campus__contact",
+      "minutes": 15,
+      "requires_all_world_facts": ["fact:wolf_winter_byre_held"],
+      "requires_all_story_choices": [
+        {
+          "story_choice_id": "albany:wolf_preparation",
+          "choice_id": "albany:prep_drover_route"
+        }
+      ]
+    },
+    {
+      "id": "albany:wolf_relief_protocol_return_resupply",
+      "home": "albany_city",
+      "area": "albany_city__civic_core",
+      "action": "resupply",
+      "title": "Claim the Closed-Protocol Relief Cache",
+      "summary": "Because Jamie allocated the relief protocol and your truthful return says Cade's byre held, Rowan releases one sealed Civic cache of road food, lamp oil, tally paper, and relief stores.",
+      "provider_character_id": "albany_city__civic_core__contact",
+      "minutes": 15,
+      "requires_all_world_facts": ["fact:wolf_winter_byre_held"],
+      "requires_all_story_choices": [
+        {
+          "story_choice_id": "albany:wolf_preparation",
+          "choice_id": "albany:prep_relief_protocol"
+        }
+      ]
+    },
+    {
+      "id": "albany:wolf_live_pack_greenway_resupply",
+      "home": "albany_city",
+      "area": "albany_city__greenway",
+      "action": "resupply",
+      "title": "Claim Emery's Nonlethal Response Cache",
+      "summary": "Because you returned a living corridor pack to the high wood while keeping Cade's herd whole, Emery Sloane releases a one-time Greenway cache of food, lamp oil, and wildlife flares for your next road.",
+      "provider_character_id": "albany_city__greenway__contact",
+      "minutes": 15,
+      "requires_all_world_facts": [
+        "fact:wolf_winter_pack_diverted_alive",
+        "fact:wolf_winter_cattle_whole"
+      ],
+      "forbids_any_world_facts": [
+        "fact:wolf_winter_cattle_scattered"
+      ]
+    },
+    {
+      "id": "albany:june_kept_line_station_resupply",
+      "home": "albany_city",
+      "area": "albany_city__transport_hub",
+      "action": "resupply",
+      "title": "Claim June's Returned Field Stores",
+      "summary": "June's matching living-pack testimony and kept cattle-first promise return the unused second-seat stores to one bounded Station Quarter road claim.",
+      "provider_character_id": "albany_city__transport_hub__june_pike",
+      "minutes": 15,
+      "requires_all_world_facts": ["fact:wolf_winter_pack_diverted_alive"],
+      "requires_all_story_choices": [
+        {
+          "story_choice_id": "albany:wolf_ally_commitment",
+          "choice_id": "albany:ally_june_cattle_first"
+        }
+      ],
+      "requires_all_companions": ["albany:june_pike"],
+      "requires_all_promises": [
+        {
+          "promise_id": "albany:promise_june_cattle_first",
+          "status": "kept"
+        }
+      ]
+    },
+    {
+      "id": "albany:june_relay_refusal_station_rest",
+      "home": "albany_city",
+      "area": "albany_city__transport_hub",
+      "action": "rest",
+      "title": "Take June's Reserve-Desk Cot",
+      "summary": "June did not ride under subordinate terms, so Albany's reserve desk stayed staffed; after the living-pack return she releases its one warmed relief cot without pretending she joined the field team.",
+      "provider_character_id": "albany_city__transport_hub__june_pike",
+      "minutes": 15,
+      "requires_all_world_facts": ["fact:wolf_winter_pack_diverted_alive"],
+      "requires_all_story_choices": [
+        {
+          "story_choice_id": "albany:wolf_ally_commitment",
+          "choice_id": "albany:ally_june_relay_only"
+        }
+      ]
+    },
+    {
+      "id": "albany:wolf_saved_timber_quick_resupply",
+      "home": "albany_city",
+      "area": "albany_city__transport_hub",
+      "action": "resupply",
+      "title": "Reclaim the Unused Repair-Wagon Stores",
+      "summary": "Because Cade already has sound timber for the broken paling, Hayden returns the repair wagon's food, lamp oil, and road gear to the Station Quarter relief tag.",
+      "minutes": 15,
+      "requires_all_world_facts": [
+        "fact:wolf_winter_repair_timber_available"
+      ],
+      "forbids_any_world_facts": [
+        "fact:wolf_winter_guard_wood_committed"
+      ]
+    },
+    {
+      "id": "albany:wolf_barred_gate_quick_rest",
+      "home": "albany_city",
+      "area": "albany_city__transport_hub",
+      "action": "rest",
+      "title": "Take the Released Night-Watch Cot",
+      "summary": "Because the inner cattle gate held behind the committed guard wood, Hayden closes the overnight watch request and releases a warmed Road Warden cot at the Station Quarter.",
+      "minutes": 15,
+      "requires_all_world_facts": [
+        "fact:wolf_winter_guard_wood_committed"
+      ],
+      "forbids_any_world_facts": [
+        "fact:wolf_winter_repair_timber_available"
+      ]
+    },
+    {
+      "id": "albany:dawn_wagon_solo_packet_resupply",
+      "home": "albany_city",
+      "area": "albany_city__market",
+      "action": "resupply",
+      "title": "Claim Jamie's Solo-Packet Road Stores",
+      "summary": "Because you assigned the dawn wagon to rebuild Cade's outer line, Jamie Tanner holds a one-time Market road-store credit for carrying Hedrick's packet alone.",
+      "provider_character_id": "albany_city__market__contact",
+      "minutes": 15,
+      "requires_all_story_choices": [
+        {
+          "story_choice_id": "albany_dawn_dispatch",
+          "choice_id": "send_wagon_to_cade"
+        }
+      ],
+      "forbids_any_story_choices": [
+        {
+          "story_choice_id": "albany_dawn_dispatch",
+          "choice_id": "send_wardens_north"
+        }
+      ]
+    },
+    {
+      "id": "albany:dawn_wardens_greenway_rest",
+      "home": "albany_city",
+      "area": "albany_city__greenway",
+      "action": "rest",
+      "title": "Claim Emery's Greenway Watch Shelter",
+      "summary": "Because you assigned the dawn wagon and wardens north, Emery Sloane holds a one-time Greenway watch-shelter claim for your part in their dispatch.",
+      "provider_character_id": "albany_city__greenway__contact",
+      "minutes": 15,
+      "requires_all_story_choices": [
+        {
+          "story_choice_id": "albany_dawn_dispatch",
+          "choice_id": "send_wardens_north"
+        }
+      ],
+      "forbids_any_story_choices": [
+        {
+          "story_choice_id": "albany_dawn_dispatch",
+          "choice_id": "send_wagon_to_cade"
+        }
+      ]
+    }
+  ],
   "sources": [
     {
       "label": "U.S. Census Bureau Vintage 2025 subcounty population estimates",
@@ -23215,7 +23987,42 @@
       "role": "records clerk",
       "faction": "Municipal Ledger",
       "summary": "Rowan Quill has ink on both cuffs and a clerk's memory for which petitions are real trouble.",
-      "agenda": "Ask Rowan what matters before the office closes: they can separate ledger work, basement writs, and station-yard relief tags from ordinary counter noise."
+      "agenda": "Ask Rowan what matters before the office closes: they can separate ledger work, basement writs, and station-yard relief tags from ordinary counter noise.",
+      "campaign_npc_id": "albany:rowan_quill",
+      "variants": [
+        {
+          "id": "registered_road_warden",
+          "after_relationship_memories": [
+            "albany:memory_rowan_registered_road_warden"
+          ],
+          "summary": "Rowan checks the Road-Warden stamp drying on your card and remembers the fieldcraft record you put under your own name.",
+          "agenda": "The registration is closed, not a form to repeat. Rowan directs you to Hayden Hale's Station Quarter desk, where the first winter relief packet is waiting."
+        },
+        {
+          "id": "registered_ledger_advocate",
+          "after_relationship_memories": [
+            "albany:memory_rowan_registered_ledger_advocate"
+          ],
+          "summary": "Rowan recognizes the sealed folio and the Ledger Advocate entry they countersigned for your truthful return account.",
+          "agenda": "The registration is closed, not a form to repeat. Rowan directs you to Hayden Hale's Station Quarter desk and reminds you that a relief return must distinguish evidence from rumor."
+        },
+        {
+          "id": "registered_ironhands_repairer",
+          "after_relationship_memories": [
+            "albany:memory_rowan_registered_ironhands_repairer"
+          ],
+          "summary": "Rowan remembers Reese Pryce's tool bond beside your Ironhands registration and checks that the repair roll is still sealed.",
+          "agenda": "The registration is closed, not a form to repeat. Rowan directs you to Hayden Hale's Station Quarter desk, where a failing steading boundary has become a relief matter."
+        },
+        {
+          "id": "recorded_oath_refusal",
+          "after_relationship_memories": [
+            "albany:memory_rowan_recorded_oath_refusal"
+          ],
+          "summary": "Rowan remembers that you refused every faction oath and accepted a single emergency tag on your personal bond instead.",
+          "agenda": "The refusal stands and cannot be retried into a cleaner bargain. Rowan directs you to Hayden Hale's Station Quarter desk and keeps the public-voiding form ready for your eventual return."
+        }
+      ]
     },
     {
       "id": "albany_city__market__contact",
@@ -23225,7 +24032,34 @@
       "role": "market broker",
       "faction": "Merchants Exchange",
       "summary": "Jamie Tanner works as the market broker in Albany Market Streets, watching how shortages, disputed deliveries, and late counters affect Albany city.",
-      "agenda": "Wants a traveler to handle Albany Market Streets's local problems before they spread through the Capital / Mohawk road network."
+      "agenda": "Wants a traveler to handle Albany Market Streets's local problems before they spread through the Capital / Mohawk road network.",
+      "campaign_npc_id": "albany:jamie_tanner",
+      "variants": [
+        {
+          "id": "wolf_relief_protocol_allocated",
+          "after_relationship_memories": [
+            "albany:memory_jamie_wolf_relief_protocol_allocated"
+          ],
+          "summary": "Jamie remembers sealing Cade's named-call relief order into your packet and keeps its witness list beside the herd tally.",
+          "agenda": "The protocol offers one accountable attempt after a rough rail recovery, not blanket calm. Jamie expects the return to record whether the calls settled the herd or worsened its alarm."
+        },
+        {
+          "id": "market_testimony_certified",
+          "after_relationship_memories": [
+            "albany:memory_jamie_market_testimony_certified"
+          ],
+          "summary": "Jamie sees Rowan's certification number beside the missing-feed witnesses and remembers that you made the market account answerable in public.",
+          "agenda": "The testimony bought a real feed-hauler route into Cade's loft, not a guaranteed outcome. Jamie keeps the named witnesses and certification number fixed in the public record."
+        },
+        {
+          "id": "sponsored_ledger_advocate",
+          "after_relationship_memories": [
+            "albany:memory_jamie_sponsored_ledger_advocate"
+          ],
+          "summary": "Jamie remembers vouching for your Ledger Advocate judgment and keeps a clear witness counter beside the ordinary market books.",
+          "agenda": "Jamie will compare any disputed relief account against named witnesses; the sponsorship buys scrutiny, not automatic agreement."
+        }
+      ]
     },
     {
       "id": "albany_city__transport_hub__contact",
@@ -23235,8 +24069,20 @@
       "role": "route dispatcher",
       "faction": "Road Wardens",
       "summary": "Hayden Hale dispatches road wardens from Albany Station Quarter, matching late coaches, snow reports, and relief freight to travelers who can move faster than official crews.",
-      "agenda": "Needs someone to carry the packet Rowan flagged from the Station Quarter route desk to Old Cade's hill steading before the cattle are lost; he can point you to the active lead.",
+      "agenda": "Hayden matches every hill dispatch to Rowan's controlling source certification; settled packets carry route timing to Old Cade's steading and the other winter stops.",
+      "campaign_npc_id": "albany:hayden_hale",
       "variants": [
+        {
+          "id": "wolf_winter_returned_road_warden",
+          "after_quests": [
+            "wolf_winter"
+          ],
+          "after_relationship_memories": [
+            "albany:memory_hayden_sponsored_road_warden"
+          ],
+          "summary": "Hayden remembers putting his own name behind your Road-Warden registration and has Cade's surviving cattle and broken paling entered beneath that sponsorship on the return board.",
+          "agenda": "The winter packet is closed, but Hayden expects the honest field account you promised and treats its facts as a live test of his future dispatches."
+        },
         {
           "id": "wolf_winter_and_gallowmere_closed",
           "after_quests": [
@@ -23253,6 +24099,86 @@
           ],
           "summary": "Hayden Hale has Cade's surviving cattle and the broken paling entered on the Station Quarter return board.",
           "agenda": "The Cade packet is closed. The other live report in that chain is already reflected in the current journey goal on your docket."
+        },
+        {
+          "id": "frost_report_certified",
+          "after_relationship_memories": [
+            "albany:memory_hayden_frost_report_certified"
+          ],
+          "summary": "Hayden recognizes his frost-heave sketch under Rowan's certification stamp and remembers that you made his boundary reading the controlling field account.",
+          "agenda": "The report exposes one dangerous line only if the paling fails and remains unbound. Hayden keeps that condition exact rather than treating the report as a general field advantage."
+        },
+        {
+          "id": "sponsored_road_warden",
+          "after_relationship_memories": [
+            "albany:memory_hayden_sponsored_road_warden"
+          ],
+          "summary": "Hayden recognizes the Road-Warden field kit and remembers staking his dispatch reputation on your winter registration.",
+          "agenda": "He has a specific hill-steading packet ready. Your fieldcraft record may steady the dangerous work, but the signed return account remains your debt."
+        }
+      ]
+    },
+    {
+      "id": "albany_city__transport_hub__june_pike",
+      "home": "albany_city",
+      "area": "albany_city__transport_hub",
+      "name": "June Pike",
+      "role": "road-warden field lead",
+      "faction": "Road Wardens",
+      "summary": "June Pike checks a cattle rope, hooded lantern, and one empty field seat beside Hayden Hale's Wolf-Winter packet.",
+      "agenda": "June will ride only with cattle-first authority of her own. She offers one herd-pressure intervention after a bloodless recovery, not another spear, and remains in Albany if that condition is refused.",
+      "campaign_npc_id": "albany:june_pike",
+      "variants": [
+        {
+          "id": "returned_after_holding_cattle_line",
+          "after_relationship_memories": [
+            "albany:memory_june_joined_cattle_first",
+            "albany:memory_june_held_cattle_line"
+          ],
+          "summary": "June has returned beside you with an unbloodied rope and a matching account: she held the lower cattle line while the living pack cleared the byre.",
+          "agenda": "The cattle-first promise is kept. She remains on the field roster and opens one Station-quarter resupply claim before the next road."
+        },
+        {
+          "id": "returned_with_cattle_loss",
+          "after_relationship_memories": [
+            "albany:memory_june_joined_cattle_first",
+            "albany:memory_june_returned_with_cattle_loss"
+          ],
+          "summary": "June has returned beside you with the living-pack result and the two missing cattle entered on the same truthful line.",
+          "agenda": "The cattle-first authority remained intact despite the loss. She stays on the roster and will release one bounded Station resupply claim."
+        },
+        {
+          "id": "left_after_blood",
+          "after_relationship_memories": [
+            "albany:memory_june_joined_cattle_first",
+            "albany:memory_june_left_after_blood"
+          ],
+          "summary": "June's field seat is empty. Her separate return says first blood broke the cattle-first line before she could take the lower rail.",
+          "agenda": "The promise is recorded broken, June has left the party, and no ally return claim is available; the completed Wolf-Winter result still stands."
+        },
+        {
+          "id": "joined_wolf_cattle_first",
+          "after_relationship_memories": [
+            "albany:memory_june_joined_cattle_first"
+          ],
+          "summary": "June has signed the Wolf-Winter field line beside your name and remembers that cattle-first authority was granted explicitly.",
+          "agenda": "She will take the cattle line after a failed lure is recovered alive, but the first wolf killed ends her place on the team."
+        },
+        {
+          "id": "refused_subordinate_relay",
+          "after_relationship_memories": [
+            "albany:memory_june_refused_subordinate_relay"
+          ],
+          "summary": "June remembers refusing the request to serve as a subordinate relay without authority over the cattle line.",
+          "agenda": "The refusal stands without an unchanged retry. She remains with Albany's reserve while the solo Wolf-Winter dispatch stays open."
+        },
+        {
+          "id": "solo_dispatch_chosen",
+          "after_relationship_memories": [
+            "albany:memory_june_solo_dispatch_chosen"
+          ],
+          "summary": "June has your clean solo refusal marked beside the still-empty second field seat.",
+          "agenda": "She will not reopen the same departure bargain; Albany keeps its Road-Warden reserve and you carry the established packet alone."
         }
       ]
     },
@@ -23264,7 +24190,26 @@
       "role": "works foreman",
       "faction": "Ironhands Local",
       "summary": "Reese Pryce works as the works foreman in Albany Works District, watching how locked yards, bad machinery, and crews staying past dusk affect Albany city.",
-      "agenda": "Wants a traveler to handle Albany Works District's local problems before they spread through the Capital / Mohawk road network."
+      "agenda": "Wants a traveler to handle Albany Works District's local problems before they spread through the Capital / Mohawk road network.",
+      "campaign_npc_id": "albany:reese_pryce",
+      "variants": [
+        {
+          "id": "wolf_works_fortification_allocated",
+          "after_relationship_memories": [
+            "albany:memory_reese_wolf_works_fortification_allocated"
+          ],
+          "summary": "Reese remembers measuring the Wolf-Winter wedge and cold-set splice into your relief packet, with each cut serialed against the Albany Works ledger.",
+          "agenda": "The fortification gets one Repair attempt and one noisy deterministic recovery. Reese wants the return to distinguish a clean brace from a split rail cold-set under pressure."
+        },
+        {
+          "id": "sponsored_ironhands_repairer",
+          "after_relationship_memories": [
+            "albany:memory_reese_sponsored_ironhands_repairer"
+          ],
+          "summary": "Reese remembers serialing the insulated repair roll to your registration and checks its seals before discussing any new yard work.",
+          "agenda": "The borrowed tools make you accountable for what returns, what breaks, and what evidence of field failure you bring back."
+        }
+      ]
     },
     {
       "id": "albany_city__greenway__contact",
@@ -23274,7 +24219,50 @@
       "role": "park warden",
       "faction": "Greenway Stewards",
       "summary": "Emery Sloane works as the park warden in Albany Greenway, watching how tracks, utility cuts, and witnesses who avoid main streets affect Albany city.",
-      "agenda": "Wants a traveler to handle Albany Greenway's local problems before they spread through the Capital / Mohawk road network."
+      "agenda": "Wants a traveler to handle Albany Greenway's local problems before they spread through the Capital / Mohawk road network.",
+      "campaign_npc_id": "albany:emery_sloane",
+      "variants": [
+        {
+          "id": "wolf_drover_route_allocated",
+          "after_relationship_memories": [
+            "albany:memory_emery_wolf_drover_route_allocated"
+          ],
+          "summary": "Emery remembers fixing the snowed drover cut into your Wolf-Winter packet and marking the single turn where it can peel a fouled yearling away.",
+          "agenda": "The route is one recovery attempt, not another feed cast. Emery expects the return to count both the living wolf's direction and any alarm raised across the herd's sightline."
+        },
+        {
+          "id": "wolf_pack_diverted_after_blood",
+          "after_relationship_memories": [
+            "albany:memory_emery_wolf_pack_diverted_after_blood"
+          ],
+          "summary": "Emery has Cade's exact mixed-line tally: the yearling died at the breach, two wolves returned alive to the high wood, and two cattle remain missing down the lower pasture.",
+          "agenda": "Emery will not call the result clean or useless; recovering the missing cattle and watching the two surviving wolves now outrank either reward or reprisal."
+        },
+        {
+          "id": "wolf_pack_diverted_alive",
+          "after_relationship_memories": [
+            "albany:memory_emery_wolf_pack_diverted_alive"
+          ],
+          "summary": "Emery has Cade's whole-herd tally beside the unbloodied relief report and remembers that you returned the living pack to the high-wood corridor.",
+          "agenda": "Emery will release one Greenway nonlethal-response cache, then wants the pack's new range watched without turning the successful diversion into an excuse for another hunt."
+        },
+        {
+          "id": "wolf_pack_diverted_with_loss",
+          "after_relationship_memories": [
+            "albany:memory_emery_wolf_pack_diverted_with_loss"
+          ],
+          "summary": "Emery remembers that you spared the pack but returned with Cade's honest count of two cattle scattered after the herd broke.",
+          "agenda": "Emery accepts the nonlethal result without calling it clean; finding the missing cattle and tracking the displaced pack now outrank any reward."
+        },
+        {
+          "id": "witnessed_independent_bond",
+          "after_relationship_memories": [
+            "albany:memory_emery_witnessed_independent_bond"
+          ],
+          "summary": "Emery remembers witnessing your refusal of a faction oath and the limited emergency tag Rowan issued on your personal bond.",
+          "agenda": "Emery will witness an honest return or public voiding of the tag, but will not let independence erase the consequences carried under it."
+        }
+      ]
     },
     {
       "id": "albany_city__campus__contact",
@@ -46467,9 +47455,466 @@
       "title": "The Wolf-Winter",
       "source": "content/rpg/quests/wolf_winter.yaml",
       "home": "albany_city",
-      "discovery": "A winter-relief tag moves from Albany's civic records to the Albany Station Quarter route desk: Old Cade's hill steading, a cattle byre, and a wolf pack coming down with the weather. The Wolf-Winter lead is the live dispatch attached to that hill road.",
+      "discovery": "A winter-relief tag moves from Albany's civic records to the Albany Station Quarter route desk: Old Cade's hill steading, a cattle byre, and a wolf pack coming down with the weather. The live dispatch has June Pike's optional second field seat, but starting without her cattle-first bond sends the relief rider alone on the established route.",
       "visibility": "local_notice_board",
-      "area": "albany_city__transport_hub"
+      "area": "albany_city__transport_hub",
+      "campaign_imports": {
+        "version": 1,
+        "rules": [
+          {
+            "id": "import:wolf_winter_fieldcraft",
+            "type": "skill_rank_to_var",
+            "skill_id": "skill:fieldcraft",
+            "target_var": "defense"
+          },
+          {
+            "id": "import:wolf_winter_lure_fieldcraft",
+            "type": "skill_rank_to_var",
+            "skill_id": "skill:fieldcraft",
+            "target_var": "fieldcraft"
+          },
+          {
+            "id": "import:wolf_winter_works_repair",
+            "type": "skill_rank_to_var",
+            "skill_id": "skill:repair",
+            "target_var": "repair"
+          },
+          {
+            "id": "import:wolf_winter_drover_streetwise",
+            "type": "skill_rank_to_var",
+            "skill_id": "skill:streetwise",
+            "target_var": "streetwise"
+          },
+          {
+            "id": "import:wolf_winter_relief_mediation",
+            "type": "skill_rank_to_var",
+            "skill_id": "skill:mediation",
+            "target_var": "mediation"
+          },
+          {
+            "id": "import:wolf_winter_market_testimony",
+            "type": "knowledge_to_flag",
+            "knowledge_id": "albany:knowledge_wolf_market_testimony",
+            "target_flag": "jamie_market_testimony_certified"
+          },
+          {
+            "id": "import:wolf_winter_frost_report",
+            "type": "knowledge_to_flag",
+            "knowledge_id": "albany:knowledge_wolf_frost_report",
+            "target_flag": "hayden_frost_report_certified"
+          },
+          {
+            "id": "import:wolf_winter_works_fortification",
+            "type": "knowledge_to_flag",
+            "knowledge_id": "albany:knowledge_wolf_works_fortification",
+            "target_flag": "works_fortification_prepared"
+          },
+          {
+            "id": "import:wolf_winter_drover_route",
+            "type": "knowledge_to_flag",
+            "knowledge_id": "albany:knowledge_wolf_drover_route",
+            "target_flag": "drover_route_prepared"
+          },
+          {
+            "id": "import:wolf_winter_relief_protocol",
+            "type": "knowledge_to_flag",
+            "knowledge_id": "albany:knowledge_wolf_relief_protocol",
+            "target_flag": "relief_protocol_prepared"
+          },
+          {
+            "id": "import:wolf_winter_june_companion",
+            "type": "companion_to_flag",
+            "companion_id": "albany:june_pike",
+            "target_flag": "june_pike_present"
+          }
+        ]
+      },
+      "campaign_exports": [
+        {
+          "ending_id": "ending_pack_diverted_after_blood",
+          "ending_title": "The Pack Broken After Blood",
+          "effects": [
+            {
+              "type": "remember_relationship",
+              "npc_id": "npc:old_cade",
+              "memory_id": "memory:wolf_winter_mixed_line_after_blood",
+              "trust_at_least": 7,
+              "regard_at_least": 7,
+              "owes_player_at_least": 0
+            },
+            {
+              "type": "remember_relationship",
+              "npc_id": "albany:emery_sloane",
+              "memory_id": "albany:memory_emery_wolf_pack_diverted_after_blood",
+              "trust_at_least": 4,
+              "regard_at_least": 5,
+              "owes_player_at_least": 0
+            },
+            {
+              "type": "set_world_fact",
+              "fact_id": "fact:wolf_winter_byre_held"
+            },
+            {
+              "type": "set_world_fact",
+              "fact_id": "fact:wolf_winter_outer_paling_broken"
+            },
+            {
+              "type": "set_world_fact",
+              "fact_id": "fact:wolf_winter_yearling_killed"
+            },
+            {
+              "type": "set_world_fact",
+              "fact_id": "fact:wolf_winter_two_wolves_diverted_alive"
+            },
+            {
+              "type": "set_world_fact",
+              "fact_id": "fact:wolf_winter_winter_feed_spent"
+            },
+            {
+              "type": "set_world_fact",
+              "fact_id": "fact:wolf_winter_cattle_scattered"
+            }
+          ],
+          "conditional_effects": [
+            {
+              "id": "albany:june_departed_after_mixed_blood",
+              "when": {
+                "requires_all_companions": ["albany:june_pike"],
+                "requires_all_promises": [
+                  {
+                    "promise_id": "albany:promise_june_cattle_first",
+                    "status": "active"
+                  }
+                ]
+              },
+              "effects": [
+                {
+                  "type": "resolve_promise",
+                  "promise_id": "albany:promise_june_cattle_first",
+                  "status": "broken"
+                },
+                {
+                  "type": "remove_companion",
+                  "npc_id": "albany:june_pike"
+                },
+                {
+                  "type": "remember_relationship",
+                  "npc_id": "albany:june_pike",
+                  "memory_id": "albany:memory_june_left_after_blood"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ending_id": "ending_pack_diverted_cattle_scattered",
+          "ending_title": "The Pack Diverted, Cattle Scattered",
+          "effects": [
+            {
+              "type": "remember_relationship",
+              "npc_id": "npc:old_cade",
+              "memory_id": "memory:wolf_winter_cattle_scattered",
+              "trust_at_least": 5,
+              "regard_at_least": 5,
+              "owes_player_at_least": 0
+            },
+            {
+              "type": "remember_relationship",
+              "npc_id": "albany:emery_sloane",
+              "memory_id": "albany:memory_emery_wolf_pack_diverted_with_loss",
+              "trust_at_least": 2,
+              "regard_at_least": 3,
+              "owes_player_at_least": 0
+            },
+            {
+              "type": "set_world_fact",
+              "fact_id": "fact:wolf_winter_byre_held"
+            },
+            {
+              "type": "set_world_fact",
+              "fact_id": "fact:wolf_winter_outer_paling_broken"
+            },
+            {
+              "type": "set_world_fact",
+              "fact_id": "fact:wolf_winter_pack_diverted_alive"
+            },
+            {
+              "type": "set_world_fact",
+              "fact_id": "fact:wolf_winter_winter_feed_spent"
+            },
+            {
+              "type": "set_world_fact",
+              "fact_id": "fact:wolf_winter_cattle_scattered"
+            }
+          ],
+          "conditional_effects": [
+            {
+              "id": "albany:june_returned_with_cattle_loss",
+              "when": {
+                "requires_all_companions": ["albany:june_pike"],
+                "requires_all_promises": [
+                  {
+                    "promise_id": "albany:promise_june_cattle_first",
+                    "status": "active"
+                  }
+                ]
+              },
+              "effects": [
+                {
+                  "type": "resolve_promise",
+                  "promise_id": "albany:promise_june_cattle_first",
+                  "status": "kept"
+                },
+                {
+                  "type": "remember_relationship",
+                  "npc_id": "albany:june_pike",
+                  "memory_id": "albany:memory_june_returned_with_cattle_loss"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ending_id": "ending_pack_diverted",
+          "ending_title": "The Pack Diverted Alive",
+          "effects": [
+            {
+              "type": "remember_relationship",
+              "npc_id": "npc:old_cade",
+              "memory_id": "memory:wolf_winter_pack_diverted_alive",
+              "trust_at_least": 12,
+              "regard_at_least": 12,
+              "owes_player_at_least": 1
+            },
+            {
+              "type": "remember_relationship",
+              "npc_id": "albany:emery_sloane",
+              "memory_id": "albany:memory_emery_wolf_pack_diverted_alive",
+              "trust_at_least": 6,
+              "regard_at_least": 8,
+              "owes_player_at_least": 1
+            },
+            {
+              "type": "set_world_fact",
+              "fact_id": "fact:wolf_winter_byre_held"
+            },
+            {
+              "type": "set_world_fact",
+              "fact_id": "fact:wolf_winter_outer_paling_broken"
+            },
+            {
+              "type": "set_world_fact",
+              "fact_id": "fact:wolf_winter_pack_diverted_alive"
+            },
+            {
+              "type": "set_world_fact",
+              "fact_id": "fact:wolf_winter_winter_feed_spent"
+            },
+            {
+              "type": "set_world_fact",
+              "fact_id": "fact:wolf_winter_cattle_whole"
+            }
+          ],
+          "conditional_effects": [
+            {
+              "id": "albany:june_held_cattle_line",
+              "when": {
+                "requires_all_companions": ["albany:june_pike"],
+                "requires_all_promises": [
+                  {
+                    "promise_id": "albany:promise_june_cattle_first",
+                    "status": "active"
+                  }
+                ]
+              },
+              "effects": [
+                {
+                  "type": "resolve_promise",
+                  "promise_id": "albany:promise_june_cattle_first",
+                  "status": "kept"
+                },
+                {
+                  "type": "remember_relationship",
+                  "npc_id": "albany:june_pike",
+                  "memory_id": "albany:memory_june_held_cattle_line"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ending_id": "ending_held_gate_barred",
+          "ending_title": "The Byre Held, Inner Gate Barred",
+          "effects": [
+            {
+              "type": "remember_relationship",
+              "npc_id": "npc:old_cade",
+              "memory_id": "memory:wolf_winter_inner_gate_barred",
+              "trust_at_least": 10,
+              "regard_at_least": 10,
+              "owes_player_at_least": 1
+            },
+            {
+              "type": "set_world_fact",
+              "fact_id": "fact:wolf_winter_byre_held"
+            },
+            {
+              "type": "set_world_fact",
+              "fact_id": "fact:wolf_winter_outer_paling_broken"
+            },
+            {
+              "type": "set_world_fact",
+              "fact_id": "fact:wolf_winter_inner_gate_barred_at_dawn"
+            },
+            {
+              "type": "set_world_fact",
+              "fact_id": "fact:wolf_winter_guard_wood_committed"
+            }
+          ],
+          "conditional_effects": [
+            {
+              "id": "albany:june_departed_after_gate_blood",
+              "when": {
+                "requires_all_companions": ["albany:june_pike"],
+                "requires_all_promises": [
+                  {
+                    "promise_id": "albany:promise_june_cattle_first",
+                    "status": "active"
+                  }
+                ]
+              },
+              "effects": [
+                {
+                  "type": "resolve_promise",
+                  "promise_id": "albany:promise_june_cattle_first",
+                  "status": "broken"
+                },
+                {
+                  "type": "remove_companion",
+                  "npc_id": "albany:june_pike"
+                },
+                {
+                  "type": "remember_relationship",
+                  "npc_id": "albany:june_pike",
+                  "memory_id": "albany:memory_june_left_after_blood"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ending_id": "ending_held_timber_saved",
+          "ending_title": "The Byre Held, Paling Timber Saved",
+          "effects": [
+            {
+              "type": "remember_relationship",
+              "npc_id": "npc:old_cade",
+              "memory_id": "memory:wolf_winter_repair_timber_saved",
+              "trust_at_least": 10,
+              "regard_at_least": 10,
+              "owes_player_at_least": 1
+            },
+            {
+              "type": "set_world_fact",
+              "fact_id": "fact:wolf_winter_byre_held"
+            },
+            {
+              "type": "set_world_fact",
+              "fact_id": "fact:wolf_winter_outer_paling_broken"
+            },
+            {
+              "type": "set_world_fact",
+              "fact_id": "fact:wolf_winter_repair_timber_available"
+            }
+          ],
+          "conditional_effects": [
+            {
+              "id": "albany:june_departed_after_timber_blood",
+              "when": {
+                "requires_all_companions": ["albany:june_pike"],
+                "requires_all_promises": [
+                  {
+                    "promise_id": "albany:promise_june_cattle_first",
+                    "status": "active"
+                  }
+                ]
+              },
+              "effects": [
+                {
+                  "type": "resolve_promise",
+                  "promise_id": "albany:promise_june_cattle_first",
+                  "status": "broken"
+                },
+                {
+                  "type": "remove_companion",
+                  "npc_id": "albany:june_pike"
+                },
+                {
+                  "type": "remember_relationship",
+                  "npc_id": "albany:june_pike",
+                  "memory_id": "albany:memory_june_left_after_blood"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ending_id": "ending_held",
+          "ending_title": "The Byre Held",
+          "effects": [
+            {
+              "type": "remember_relationship",
+              "npc_id": "npc:old_cade",
+              "memory_id": "memory:wolf_winter_guard_wood_spent",
+              "trust_at_least": 10,
+              "regard_at_least": 10,
+              "owes_player_at_least": 1
+            },
+            {
+              "type": "set_world_fact",
+              "fact_id": "fact:wolf_winter_byre_held"
+            },
+            {
+              "type": "set_world_fact",
+              "fact_id": "fact:wolf_winter_outer_paling_broken"
+            },
+            {
+              "type": "set_world_fact",
+              "fact_id": "fact:wolf_winter_repair_timber_spent"
+            }
+          ],
+          "conditional_effects": [
+            {
+              "id": "albany:june_departed_after_watch_blood",
+              "when": {
+                "requires_all_companions": ["albany:june_pike"],
+                "requires_all_promises": [
+                  {
+                    "promise_id": "albany:promise_june_cattle_first",
+                    "status": "active"
+                  }
+                ]
+              },
+              "effects": [
+                {
+                  "type": "resolve_promise",
+                  "promise_id": "albany:promise_june_cattle_first",
+                  "status": "broken"
+                },
+                {
+                  "type": "remove_companion",
+                  "npc_id": "albany:june_pike"
+                },
+                {
+                  "type": "remember_relationship",
+                  "npc_id": "albany:june_pike",
+                  "memory_id": "albany:memory_june_left_after_blood"
+                }
+              ]
+            }
+          ]
+        }
+      ]
     }
   ],
   "local_jobs": [

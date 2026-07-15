@@ -24,6 +24,7 @@ import {
 import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import { assertRpgStateReferences } from "../../src/rpg/state_integrity.js";
 import { classifyRpgJourneyDecision } from "../../src/world/journey_decision.js";
+import { loadOverworldManifest } from "../../src/world/source.js";
 import { GameSession } from "../../ui/src/engine.js";
 
 const PACK_PATH = "content/rpg/quests/breaking_weir.yaml";
@@ -32,6 +33,7 @@ const loaded = loadRpgSourceFile(PACK_PATH);
 if (!loaded.ok) throw new Error("breaking_weir must compile");
 const pack = loaded.compiled.pack;
 const index = indexRpgPack(pack);
+const world = loadOverworldManifest(process.cwd());
 
 /** Best legal roll: keeps this content regression focused on the authored fork. */
 const maxRoll = (): Rng => ({
@@ -61,6 +63,132 @@ const COURSES = [
     consequence: /relief works fit[^]*winter grain[^]*silt/i,
   },
 ] as const;
+
+type ToolApi = ReturnType<typeof createToolApi>;
+
+function pathBetween(
+  from: string,
+  to: string,
+  edges: readonly { id: string; from: string; to: string }[],
+): string[] {
+  const queue: { at: string; path: string[] }[] = [{ at: from, path: [] }];
+  const seen = new Set([from]);
+  for (let cursor = 0; cursor < queue.length; cursor += 1) {
+    const current = queue[cursor]!;
+    if (current.at === to) return current.path;
+    for (const edge of edges) {
+      if (edge.from !== current.at && edge.to !== current.at) continue;
+      const next = edge.from === current.at ? edge.to : edge.from;
+      if (seen.has(next)) continue;
+      seen.add(next);
+      queue.push({ at: next, path: [...current.path, edge.id] });
+    }
+  }
+  throw new Error(`No path from ${from} to ${to}.`);
+}
+
+function launchBreakingWeir(api: ToolApi): { overworldSessionId: string; rpgSessionId: string } {
+  const quest = world.quests.find((candidate) => candidate.id === "breaking_weir");
+  if (!quest) throw new Error("Expected the Breaking Weir overworld quest.");
+  const full = { compact_context: false, compact_result: false } as const;
+  const started = api.start_overworld({ compact_context: false });
+  const overworldSessionId = started.session_id;
+  const registrationContact = started.observation.characters.find(
+    (character) => character.id === world.opening_registration?.contact,
+  );
+  if (!registrationContact) throw new Error("Expected Albany's registration contact.");
+  api.talk_overworld_session_contact({
+    ...full,
+    session_id: overworldSessionId,
+    character_id: registrationContact.id,
+  });
+  api.choose_overworld_session_story({
+    ...full,
+    session_id: overworldSessionId,
+    choice: "albany:ledger_advocate",
+  });
+  const sourced = api.choose_overworld_session_story({
+    ...full,
+    session_id: overworldSessionId,
+    choice: "albany:source_rowan_civic_docket",
+  });
+  expect(sourced.journey.storyChoice?.kind).toBe("preparation");
+  api.choose_overworld_session_story({
+    ...full,
+    session_id: overworldSessionId,
+    choice: "albany:prep_works_fortification",
+  });
+
+  for (const roadId of pathBetween(started.observation.current.id, quest.home, world.edges)) {
+    api.travel_overworld_session({ session_id: overworldSessionId, road_id: roadId });
+    let observation = api.get_overworld_session({
+      session_id: overworldSessionId,
+      include_observation: true,
+    }).observation;
+    if (observation.pendingRoadEncounter) {
+      api.resolve_overworld_session_road_encounter({
+        ...full,
+        session_id: overworldSessionId,
+        strategy: "press_on",
+      });
+      observation = api.get_overworld_session({
+        session_id: overworldSessionId,
+        include_observation: true,
+      }).observation;
+    }
+    if (observation.supplies <= 2)
+      api.resupply_overworld_session({ session_id: overworldSessionId });
+    if (observation.fatigue >= 70) api.rest_overworld_session({ session_id: overworldSessionId });
+  }
+
+  let observation = api.get_overworld_session({
+    session_id: overworldSessionId,
+    include_observation: true,
+  }).observation;
+  for (
+    let attempt = 0;
+    attempt < 8 && !observation.discoveredAreaIds.includes(quest.area);
+    attempt += 1
+  ) {
+    if (!observation.currentArea) throw new Error("Expected a current Rome area.");
+    api.explore_overworld_session_area({
+      session_id: overworldSessionId,
+      area_id: observation.currentArea.id,
+    });
+    observation = api.get_overworld_session({
+      session_id: overworldSessionId,
+      include_observation: true,
+    }).observation;
+  }
+  const areaEdges = world.area_edges.map((edge) => ({
+    id: edge.id,
+    from: edge.from_area,
+    to: edge.to_area,
+  }));
+  for (const areaRouteId of pathBetween(observation.currentArea!.id, quest.area, areaEdges)) {
+    api.move_overworld_session_area({
+      session_id: overworldSessionId,
+      area_route_id: areaRouteId,
+    });
+  }
+  observation = api.get_overworld_session({
+    session_id: overworldSessionId,
+    include_observation: true,
+  }).observation;
+  if (!observation.discoveredQuestIds.includes(quest.id)) {
+    const poi = observation.pois[0];
+    if (!poi) throw new Error("Expected a Rome market point of interest.");
+    api.scout_overworld_session_poi({ session_id: overworldSessionId, poi_id: poi.id });
+  }
+  const launched = api.start_overworld_session_quest({
+    ...full,
+    compact_observation: false,
+    session_id: overworldSessionId,
+    quest_id: quest.id,
+    seed: 517,
+  });
+  return { overworldSessionId, rpgSessionId: launched.rpg_session_id };
+}
 
 function options(state: GameState) {
   return enumerateRpgActions(index, state);
@@ -358,17 +486,12 @@ describe("Breaking Weir mandatory flood-course choice", () => {
     for (const course of COURSES) {
       const finalState = completeCourse(fork, course.actionId).ended.state;
       const api = createToolApi({ root: process.cwd() });
-      const overworldSessionId = `ow-breaking-weir-${course.actionId}`;
-      const started = api.start_world_quest({
-        world_quest_id: "breaking_weir",
-        seed: 517,
-        overworldSessionId,
-      });
-      api.sessions.update(started.session_id, finalState);
+      const started = launchBreakingWeir(api);
+      api.sessions.update(started.rpgSessionId, finalState);
       expect(
         overworldQuestCompletionFromRpgSession(
-          api.sessions.get(started.session_id),
-          overworldSessionId,
+          api.sessions.get(started.rpgSessionId),
+          started.overworldSessionId,
         ),
       ).toEqual({
         questId: "breaking_weir",

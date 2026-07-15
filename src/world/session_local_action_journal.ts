@@ -21,6 +21,7 @@ import {
 import { journalSourceId, type OverworldJournalTimelineIndex } from "./session_journal_timeline.js";
 import type { OverworldJournalEntry } from "./session_snapshot.js";
 import { indexedList } from "./session_collections.js";
+import type { CampaignCharacterState } from "./campaign_character_state.js";
 
 export type OverworldDiscoveryLocalityIndex = {
   areaHomes: ReadonlyMap<string, string>;
@@ -31,6 +32,7 @@ export type OverworldDiscoveryLocalityIndex = {
   discoveredSiteIds: ReadonlySet<string>;
   eventsById: ReadonlyMap<string, OverworldLocalEvent>;
   jobsById: ReadonlyMap<string, OverworldLocalJob>;
+  questIdsAllowedOutsideDiscoveredArea?: ReadonlySet<string>;
   questsById: ReadonlyMap<string, OverworldQuest>;
   resolvedEventIds: ReadonlySet<string>;
   sitesById: ReadonlyMap<string, OverworldExplorationSite>;
@@ -51,6 +53,7 @@ export type OverworldLocalActionJournalReachabilityIndex = {
   eventsById: ReadonlyMap<string, OverworldLocalEvent>;
   jobsById: ReadonlyMap<string, OverworldLocalJob>;
   jobsByTown: ReadonlyMap<string, readonly OverworldLocalJob[]>;
+  nonFifoQuestIds?: ReadonlySet<string>;
   poisById: ReadonlyMap<string, OverworldPoi>;
   questsById: ReadonlyMap<string, OverworldQuest>;
   questsByTown: ReadonlyMap<string, readonly OverworldQuest[]>;
@@ -199,6 +202,7 @@ export function assertSnapshotDiscoveryLocality(sources: OverworldDiscoveryLocal
     const quest = sources.questsById.get(questId);
     if (!quest) continue;
     assertVisitedTownForDiscovery("discovered quest", questId, quest.home, sources.visitedTownIds);
+    if (sources.questIdsAllowedOutsideDiscoveredArea?.has(questId)) continue;
     assertDiscoveredAreaForDiscovery(
       "discovered quest",
       questId,
@@ -359,6 +363,7 @@ function localJournalSource(
 export function assertSnapshotContactPresentationProofs(
   sources: OverworldLocalActionJournalReachabilityIndex,
   journalTimeline: OverworldJournalTimelineIndex,
+  characterAt: (entry: OverworldJournalEntry, recordedAt: number) => CampaignCharacterState,
 ): void {
   for (const { entry, recordedAt } of journalTimeline.localActionEntries) {
     if (entry.kind !== "contact") continue;
@@ -374,7 +379,10 @@ export function assertSnapshotContactPresentationProofs(
         completedQuestIds.add(questId);
       }
     }
-    const expected = presentOverworldContact(stored.character, { completedQuestIds });
+    const expected = presentOverworldContact(stored.character, {
+      character: characterAt(entry, recordedAt),
+      completedQuestIds,
+    });
     if (expected.journalId !== entry.id) {
       throw new Error(
         `Overworld session snapshot contact presentation "${entry.id}" was not active at ${entry.recordedAt}.`,
@@ -647,6 +655,7 @@ export function assertSnapshotDiscoveredLocalSourceCountReplay(
     if (site) incrementCount(discoveredSiteCountByArea, site.area);
   }
   for (const questId of sources.discoveredQuestIds) {
+    if (sources.nonFifoQuestIds?.has(questId)) continue;
     const quest = sources.questsById.get(questId);
     if (quest) incrementCount(discoveredQuestCountByTown, quest.home);
   }
@@ -663,8 +672,10 @@ export function assertSnapshotDiscoveredLocalSourceCountReplay(
       discoveredJobCountByTown.get(townId) ?? 0,
       Math.min(localActionCount, availableJobCount),
     );
-    const availableQuestCount = countValues(indexedList(sources.questsByTown, townId), (quest) =>
-      sources.discoveredAreaIds.has(quest.area),
+    const availableQuestCount = countValues(
+      indexedList(sources.questsByTown, townId),
+      (quest) =>
+        sources.discoveredAreaIds.has(quest.area) && !sources.nonFifoQuestIds?.has(quest.id),
     );
     assertDiscoveredSourceCountReplay(
       "quest",

@@ -15,6 +15,7 @@ export type OverworldDiscoveredLocalSourcePrefixIndex = {
   discoveredAreaIds: ReadonlySet<string>;
   discoveredJobIds: ReadonlySet<string>;
   discoveredQuestIds: ReadonlySet<string>;
+  nonFifoQuestIds?: ReadonlySet<string>;
   discoveredSiteIds: ReadonlySet<string>;
   jobsByTown: ReadonlyMap<string, readonly { id: string; area: string }[]>;
   questsByTown: ReadonlyMap<string, readonly { id: string; area: string }[]>;
@@ -245,9 +246,11 @@ export function assertSnapshotDiscoveredLocalSourcePrefixes(
     );
     assertSnapshotDiscoveredSourcePrefix(
       "quest",
-      sources.discoveredQuestIds,
-      indexedList(sources.questsByTown, townId).filter((quest) =>
-        discoveredAreaIds.has(quest.area),
+      new Set(
+        [...sources.discoveredQuestIds].filter((questId) => !sources.nonFifoQuestIds?.has(questId)),
+      ),
+      indexedList(sources.questsByTown, townId).filter(
+        (quest) => discoveredAreaIds.has(quest.area) && !sources.nonFifoQuestIds?.has(quest.id),
       ),
       townId,
     );

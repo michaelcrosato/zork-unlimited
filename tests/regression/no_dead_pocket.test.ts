@@ -63,7 +63,7 @@ import { HP_VAR } from "../../src/rpg/schema.js";
 import type { RpgAction } from "../../src/api/types.js";
 
 // Same backstop as the ending suites. The route-rich Wolf-Winter progress graph
-// exhausts at 335,482 states (measured 2026-07-11). The cap keeps bounded headroom while a
+// exhausts at 315,100 states (measured 2026-07-14). The cap keeps bounded headroom while a
 // future blowup still fails loudly instead of truncating a possibly dead region.
 const MAX_STATES = 400_000;
 

@@ -771,7 +771,7 @@ tool(
 );
 tool(
   "choose_overworld_session_story",
-  "Choose a story consequence.",
+  "Choose a presented story, registration, lead, preparation, or field-team option.",
   {
     ...SESSION,
     choice: z.string().describe("Choice id from journey.storyChoice.options."),

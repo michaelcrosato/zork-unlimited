@@ -4,6 +4,10 @@ import {
   type JourneyContractSnapshot,
   type JourneyGoalDefinition,
 } from "./journey_contract.js";
+import {
+  campaignStoryChoiceRefKey,
+  type CampaignStoryChoiceRef,
+} from "./campaign_story_choices.js";
 
 export const JOURNEY_CAMPAIGN_START_TOWN_ID = "albany_city" as const;
 /**
@@ -174,7 +178,13 @@ const BREAKING_WEIR_OUTCOME_BY_ID: ReadonlyMap<string, BreakingWeirCampaignOutco
     Object.values(BREAKING_WEIR_CAMPAIGN_OUTCOMES).map((outcome) => [outcome.endingId, outcome]),
   );
 
-export type WolfWinterCampaignOutcome = "gate_barred" | "timber_saved" | "held";
+export type WolfWinterCampaignOutcome =
+  | "pack_diverted"
+  | "pack_diverted_cattle_scattered"
+  | "pack_diverted_after_blood"
+  | "gate_barred"
+  | "timber_saved"
+  | "held";
 
 export type WolfWinterCampaignOutcomeContext = Readonly<{
   id: WolfWinterCampaignOutcome;
@@ -183,6 +193,24 @@ export type WolfWinterCampaignOutcomeContext = Readonly<{
 }>;
 
 export const WOLF_WINTER_CAMPAIGN_OUTCOMES = Object.freeze({
+  ending_pack_diverted: Object.freeze({
+    id: "pack_diverted",
+    endingId: "ending_pack_diverted",
+    albanyReturnContext:
+      "Cade's cattle are whole and all three wolves remain alive in the high wood, but his finite winter feed is spent and the broken outer paling still leaves the herd exposed.",
+  }),
+  ending_pack_diverted_cattle_scattered: Object.freeze({
+    id: "pack_diverted_cattle_scattered",
+    endingId: "ending_pack_diverted_cattle_scattered",
+    albanyReturnContext:
+      "Most of Cade's herd is safe and all three wolves remain alive in the high wood, but two cattle are still missing down the lower pasture, his finite winter feed is spent, and the outer paling remains broken.",
+  }),
+  ending_pack_diverted_after_blood: Object.freeze({
+    id: "pack_diverted_after_blood",
+    endingId: "ending_pack_diverted_after_blood",
+    albanyReturnContext:
+      "The yearling is dead, the flank wolf and grey leader remain alive in the high wood, and most of Cade's herd is safe; two cattle are still missing down the lower pasture, his winter feed is spent, and the outer paling remains broken.",
+  }),
   ending_held_gate_barred: Object.freeze({
     id: "gate_barred",
     endingId: "ending_held_gate_barred",
@@ -208,6 +236,24 @@ const WOLF_OUTCOME_BY_ID: ReadonlyMap<string, WolfWinterCampaignOutcomeContext> 
 );
 
 const ALBANY_DAWN_DISPATCH_CONSEQUENCES = Object.freeze({
+  pack_diverted: Object.freeze({
+    send_wagon_to_cade:
+      "The wagon replaces the broken outer paling while Cade keeps the whole herd in; the diverted pack remains alive in the high wood. You take Hedrick's packet north alone.",
+    send_wardens_north:
+      "The wagon follows Hedrick's report; Cade watches the whole herd behind the broken outer line with no winter feed left, while the diverted pack remains alive in the high wood.",
+  }),
+  pack_diverted_cattle_scattered: Object.freeze({
+    send_wagon_to_cade:
+      "The wagon returns to repair Cade's broken outer line and help search the lower pasture; two cattle are still missing when you take Hedrick's packet north alone.",
+    send_wardens_north:
+      "The wagon follows Hedrick's report; Cade remains with a broken outer line and two cattle still missing down the lower pasture, while the diverted pack remains alive in the high wood.",
+  }),
+  pack_diverted_after_blood: Object.freeze({
+    send_wagon_to_cade:
+      "The wagon returns to repair Cade's broken outer line and help search the lower pasture; the yearling remains dead, the other two wolves remain alive, and two cattle are still missing when you take Hedrick's packet north alone.",
+    send_wardens_north:
+      "The wagon follows Hedrick's report; Cade remains with a broken outer line and two cattle still missing down the lower pasture; the yearling is dead and the other two wolves remain alive in the high wood.",
+  }),
   gate_barred: Object.freeze({
     send_wagon_to_cade:
       "The wagon replaces the broken outer paling; the timber at the inner gate stays as Cade's last bar. You take Hedrick's packet north alone.",
@@ -227,6 +273,13 @@ const ALBANY_DAWN_DISPATCH_CONSEQUENCES = Object.freeze({
       "The wagon follows Hedrick's report; Cade faces the broken outer line without sound timber until another relief run.",
   }),
 } as const satisfies Record<WolfWinterCampaignOutcome, Record<AlbanyDawnDispatchChoiceId, string>>);
+
+const ALBANY_DAWN_DISPATCH_SERVICE_TERMS = Object.freeze({
+  send_wagon_to_cade:
+    "Jamie Tanner enters a one-time Market road-store credit for carrying Hedrick's packet alone: a 15-minute resupply whenever you claim it.",
+  send_wardens_north:
+    "Emery Sloane sets aside a one-time Greenway watch-shelter claim for joining the wardens' northbound dispatch: a 15-minute rest whenever you claim it.",
+} as const satisfies Record<AlbanyDawnDispatchChoiceId, string>);
 
 const TANNERS_FEVER_ACCOUNTABILITY_CONSEQUENCES = Object.freeze({
   keep_household_correction:
@@ -360,12 +413,12 @@ export function albanyDawnDispatchStoryChoice(
       Object.freeze({
         id: "send_wagon_to_cade" as const,
         label: "Send the wagon to rebuild Cade's outer line",
-        consequence: consequences.send_wagon_to_cade,
+        consequence: `${consequences.send_wagon_to_cade} ${ALBANY_DAWN_DISPATCH_SERVICE_TERMS.send_wagon_to_cade}`,
       }),
       Object.freeze({
         id: "send_wardens_north" as const,
         label: "Send the wagon and wardens north",
-        consequence: consequences.send_wardens_north,
+        consequence: `${consequences.send_wardens_north} ${ALBANY_DAWN_DISPATCH_SERVICE_TERMS.send_wardens_north}`,
       }),
     ] as const),
   });
@@ -483,6 +536,63 @@ function albanyDispatchChoiceForGoal(
   );
 }
 
+/**
+ * Recover the canonical authored story selection from the goal it activated.
+ * This inverse keeps campaign consequences derived from trusted goal history
+ * instead of introducing a second mutable choice field into saves.
+ */
+export function journeyCampaignStoryChoiceRefForGoal(
+  definition: JourneyCampaignGoalDefinition,
+): CampaignStoryChoiceRef | null {
+  const dispatchChoice = albanyDispatchChoiceForGoal(definition);
+  if (dispatchChoice) {
+    return Object.freeze({
+      story_choice_id: ALBANY_DAWN_DISPATCH_ID,
+      choice_id: dispatchChoice,
+    });
+  }
+  const accountabilityChoice = tannersFeverAccountabilityChoiceForGoal(definition);
+  if (accountabilityChoice) {
+    return Object.freeze({
+      story_choice_id: TANNERS_FEVER_ACCOUNTABILITY_ID,
+      choice_id: accountabilityChoice,
+    });
+  }
+  const postWeirDispatchChoice = romePostWeirDispatchChoiceForGoal(definition);
+  if (postWeirDispatchChoice) {
+    return Object.freeze({
+      story_choice_id: ROME_POST_WEIR_DISPATCH_ID,
+      choice_id: postWeirDispatchChoice,
+    });
+  }
+  return null;
+}
+
+/** Ordered, deduplicated selections proven by current plus historical goals. */
+export function journeyCampaignSelectedStoryChoiceRefs(
+  journey: Pick<JourneyContractSnapshot, "goal" | "goalHistory">,
+): CampaignStoryChoiceRef[] {
+  const refs = new Map<string, CampaignStoryChoiceRef>();
+  const choiceByStoryId = new Map<string, string>();
+  for (const goal of [...journey.goalHistory, journey.goal]) {
+    const definition = journeyCampaignGoalDefinition(goal);
+    if (!definition) continue;
+    const ref = journeyCampaignStoryChoiceRefForGoal(definition);
+    if (!ref) continue;
+    const selectedChoice = choiceByStoryId.get(ref.story_choice_id);
+    if (selectedChoice !== undefined && selectedChoice !== ref.choice_id) {
+      throw new Error(
+        `Journey campaign story choice "${ref.story_choice_id}" selects both "${selectedChoice}" and "${ref.choice_id}".`,
+      );
+    }
+    choiceByStoryId.set(ref.story_choice_id, ref.choice_id);
+    refs.set(campaignStoryChoiceRefKey(ref), ref);
+  }
+  return [...refs.entries()]
+    .sort(([left], [right]) => (left < right ? -1 : left > right ? 1 : 0))
+    .map(([, ref]) => ({ ...ref }));
+}
+
 function tannersFeverAccountabilityChoiceForGoal(
   definition: JourneyCampaignGoalDefinition,
 ): TannersFeverAccountabilityChoiceId | null {
@@ -515,7 +625,14 @@ export function journeyCampaignGoalJournalCopy(
       (candidate) => candidate.id === dispatchChoice,
     );
     if (!option) throw new Error(`Albany dawn dispatch option "${dispatchChoice}" is unavailable.`);
-    return Object.freeze({ title: option.label, text: option.consequence });
+    // The durable campaign journal records the irreversible wagon disposition.
+    // Its exact copy predates one-time service offers and therefore remains
+    // stable across the direct campaign-service migration. The live choice and
+    // named service offer disclose the additional terms before and after choice.
+    return Object.freeze({
+      title: option.label,
+      text: ALBANY_DAWN_DISPATCH_CONSEQUENCES[outcome.id][dispatchChoice],
+    });
   }
   const accountabilityChoice = tannersFeverAccountabilityChoiceForGoal(definition);
   if (accountabilityChoice) {

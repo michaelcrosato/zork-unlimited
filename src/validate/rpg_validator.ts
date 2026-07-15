@@ -674,14 +674,21 @@ function rpgRuntimeEffects(pack: RpgPack): Effect[] {
   ];
 }
 
-export function validateRpg(pack: RpgPack): ValidationReport {
+export type ValidateRpgOptions = {
+  /** Flags a trusted higher-level boundary can set before the first RPG turn. */
+  extraSettableFlags?: readonly string[];
+  /** Pack-local objects a trusted higher-level boundary can place in starting inventory. */
+  extraObtainable?: readonly string[];
+};
+
+export function validateRpg(pack: RpgPack, opts: ValidateRpgOptions = {}): ValidationReport {
   // Flags/items that combat provides to the foundation validator. Authored
   // skill-check branch effects are scanned by the RPG foundation validator, so do
   // not inject them here again (score/list extras would double-count them).
   const enemyEffects = enemyRuntimeEffects(pack);
   const maneuverEffects = maneuverRuntimeEffects(pack);
-  const extraSettableFlags: string[] = [];
-  const extraObtainable: string[] = [];
+  const extraSettableFlags: string[] = [...(opts.extraSettableFlags ?? [])];
+  const extraObtainable: string[] = [...(opts.extraObtainable ?? [])];
   for (const enemy of pack.enemies) {
     if (enemy.defeat_flag) extraSettableFlags.push(enemy.defeat_flag);
     for (const maneuver of enemy.maneuvers ?? []) {
@@ -760,6 +767,31 @@ export function validateRpg(pack: RpgPack): ValidationReport {
     findings.push(
       err("BAD_HP", `meta.vars_init.${HP_VAR} must start positive.`, ["meta:vars_init"]),
     );
+
+  // ── Visible pressure tracks ─────────────────────────────────────────────────
+  // A track is a read-only semantic projection over one ordinary var. Require
+  // that source to exist and that the fresh value lies inside the authored
+  // threshold domain; runtime effects remain the generic, deterministic var DSL.
+  for (const track of pack.pressure_tracks ?? []) {
+    const initial = vi[track.var];
+    if (initial === undefined) {
+      findings.push(
+        err(
+          "PRESSURE_VAR_UNDECLARED",
+          `pressure track "${track.id}" reads var "${track.var}", which is not declared in meta.vars_init.`,
+          [`pressure:${track.id}`, `var:${track.var}`],
+        ),
+      );
+    } else if (initial < track.bands[0]!.min) {
+      findings.push(
+        err(
+          "PRESSURE_INITIAL_BELOW_MIN",
+          `pressure track "${track.id}" starts at ${initial}, below its first band minimum ${track.bands[0]!.min}.`,
+          [`pressure:${track.id}`, `var:${track.var}`],
+        ),
+      );
+    }
+  }
 
   // Best reachable value of a stat/skill = init + every positive inc_var that
   // targets it, across all reachable effect sources (room on_enter, object

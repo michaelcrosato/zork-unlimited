@@ -385,6 +385,16 @@ export function relabelRpgPack(pack: RpgPack): {
       rooms: pack.rooms.map((room) => relabelRoom(room, r, rvar)),
       objects: pack.objects.map((o) => relabelObject(o, r, rvar)),
       npcs: pack.npcs.map((npc) => relabelNpc(npc, r, rvar)),
+      ...(pack.pressure_tracks
+        ? {
+            pressure_tracks: pack.pressure_tracks.map((track) => ({
+              id: r(track.id),
+              title: track.title,
+              var: rvar(track.var),
+              bands: track.bands.map((band) => ({ ...band })),
+            })),
+          }
+        : {}),
       win_conditions: pack.win_conditions.map((w) => relabelWinCondition(w, r, rvar)),
       endings: pack.endings.map((e) => relabelEnding(e, r, rvar)),
       enemies: pack.enemies.map((e) => relabelEnemy(e, r, rvar)),

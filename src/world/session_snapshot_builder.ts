@@ -1,8 +1,14 @@
 import { sortedNumberMap, sortedStringMap, sortedStringSet } from "./session_collections.js";
+import {
+  cloneCampaignCharacterState,
+  type CampaignCharacterState,
+} from "./campaign_character_state.js";
 import { cloneJourneyContractSnapshot, type JourneyContractSnapshot } from "./journey_contract.js";
 import {
   OVERWORLD_SESSION_SAVE_VERSION,
+  cloneOpeningLeadSourceDecisionTrail,
   cloneJournalEntries,
+  type OverworldOpeningLeadSourceDecisionTrail,
   snapshotTravelLogEntries,
   type OverworldJournalEntry,
   type OverworldPendingRoadEncounter,
@@ -13,6 +19,7 @@ import {
 export type OverworldSessionSnapshotBuildState = {
   worldId: string;
   worldHash: string;
+  character: CampaignCharacterState;
   currentId: string;
   currentAreaId: string | null;
   minutes: number;
@@ -37,6 +44,7 @@ export type OverworldSessionSnapshotBuildState = {
   regionRenown: ReadonlyMap<string, number>;
   completedRegionalArcIds: ReadonlySet<string>;
   pendingRoadEncounter: OverworldPendingRoadEncounter | null;
+  openingLeadSourceDecisionTrail: OverworldOpeningLeadSourceDecisionTrail | null;
   journey: JourneyContractSnapshot;
 };
 
@@ -47,6 +55,7 @@ export function buildOverworldSessionSnapshot(
     version: OVERWORLD_SESSION_SAVE_VERSION,
     worldId: state.worldId,
     worldHash: state.worldHash,
+    character: cloneCampaignCharacterState(state.character),
     currentId: state.currentId,
     currentAreaId: state.currentAreaId,
     minutes: state.minutes,
@@ -73,6 +82,13 @@ export function buildOverworldSessionSnapshot(
     pendingRoadEncounter: state.pendingRoadEncounter
       ? { edgeId: state.pendingRoadEncounter.edgeId }
       : null,
+    ...(state.openingLeadSourceDecisionTrail
+      ? {
+          openingLeadSourceDecisionTrail: cloneOpeningLeadSourceDecisionTrail(
+            state.openingLeadSourceDecisionTrail,
+          ),
+        }
+      : {}),
     journey: cloneJourneyContractSnapshot(state.journey),
   };
 }

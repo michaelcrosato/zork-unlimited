@@ -23,6 +23,7 @@ import { JourneyChoiceScreen } from "./JourneyChoiceScreen.js";
 import { JourneyStoryChoiceScreen } from "./JourneyStoryChoiceScreen.js";
 import { JourneyEndedScreen } from "./JourneyEndedScreen.js";
 import { JourneyStatus } from "./JourneyStatus.js";
+import { CampaignCharacterPanel } from "./CampaignCharacterPanel.js";
 import { formatGoalPassageLog } from "./goalPassage.js";
 import { FRESH_GAME_TUTORIAL } from "../../src/world/fresh_game_tutorial.js";
 import type { JourneyChoice } from "../../src/world/journey_contract.js";
@@ -94,6 +95,43 @@ function clearWorldSessionSave(): void {
   }
 }
 
+export function ServiceOfferTerms({
+  offer,
+  id,
+}: {
+  offer: OverworldView["serviceOffers"][number] | undefined;
+  id: string | undefined;
+}): JSX.Element | null {
+  if (!offer) return null;
+  return (
+    <small className="service-offer-terms" id={id}>
+      <strong>{offer.title}</strong>
+      {offer.providerName ? ` — Available from ${offer.providerName}.` : " —"} {offer.summary} (
+      {offer.minutes} min, one time)
+    </small>
+  );
+}
+
+export function ServiceAction({
+  action,
+  offer,
+  onActivate,
+}: {
+  action: "rest" | "resupply";
+  offer: OverworldView["serviceOffers"][number] | undefined;
+  onActivate: () => void;
+}): JSX.Element {
+  const termsId = offer ? `service-offer-${action}-terms` : undefined;
+  return (
+    <div>
+      <button aria-describedby={termsId} onClick={onActivate}>
+        {action === "rest" ? "Rest" : "Resupply"}
+      </button>
+      <ServiceOfferTerms id={termsId} offer={offer} />
+    </div>
+  );
+}
+
 export default function App(): JSX.Element {
   const [worldState, setWorldState] = useState(loadInitialWorldSession);
   const worldSession = worldState.session;
@@ -123,6 +161,8 @@ export default function App(): JSX.Element {
         .join(" / "),
     [worldView.exits],
   );
+  const resupplyOffer = worldView.serviceOffers.find((offer) => offer.action === "resupply");
+  const restOffer = worldView.serviceOffers.find((offer) => offer.action === "rest");
 
   function questAreaName(quest: OverworldQuestView): string {
     return OVERWORLD.areas.find((area) => area.id === quest.area)?.name ?? quest.area;
@@ -167,13 +207,22 @@ export default function App(): JSX.Element {
     const manifestQuest = questsById.get(quest.id);
     const source = manifestQuest ? normalizePackPath(manifestQuest.source) : undefined;
     const pack = source ? packsByPath.get(source) : undefined;
-    if (!pack) {
+    if (!manifestQuest || !pack) {
       setError(`Quest pack is missing: ${source ?? quest.id}`);
       return;
     }
     try {
-      const localQuest = worldSession.startQuest(quest.id);
-      const session = GameSession.start(pack.source, 1);
+      // Keep launch failure-atomic: all quest eligibility, pack compilation,
+      // target validation, and imported-state construction happen before the
+      // overworld records that the quest has started.
+      const preview = worldSession.previewQuestStart(quest.id);
+      const session = GameSession.startEmbedded(
+        pack.source,
+        worldSession.campaignCharacterState(),
+        manifestQuest.campaign_imports,
+        1,
+      );
+      const localQuest = worldSession.startQuest(preview.id);
       setQuestSession(session);
       setQuestView(session.view());
       setActiveQuest(localQuest);
@@ -331,14 +380,44 @@ export default function App(): JSX.Element {
   }
 
   function chooseJourneyStory(choiceId: string): void {
+    const isRegistration = journey.storyChoice?.kind === "registration";
+    const isLeadSource = journey.storyChoice?.kind === "lead_source";
+    const isPreparation = journey.storyChoice?.kind === "preparation";
+    const isAlly = journey.storyChoice?.kind === "ally";
     try {
       const result = worldSession.chooseJourneyStory(choiceId);
       setWorldView(worldSession.view());
-      setLog((previous) => [
-        `Story consequence: ${result.consequence}`,
-        `New goal: ${result.goal.text}`,
-        ...previous,
-      ]);
+      setLog((previous) =>
+        isRegistration
+          ? [
+              `Character registered: ${result.consequence}`,
+              `Current goal: ${result.goal.text}`,
+              ...previous,
+            ]
+          : isLeadSource
+            ? [
+                `Lead source certified: ${result.consequence}`,
+                `Current goal: ${result.goal.text}`,
+                ...previous,
+              ]
+            : isPreparation
+              ? [
+                  `Preparation committed: ${result.consequence}`,
+                  `Current goal: ${result.goal.text}`,
+                  ...previous,
+                ]
+              : isAlly
+                ? [
+                    `Field team committed: ${result.consequence}`,
+                    `Current goal: ${result.goal.text}`,
+                    ...previous,
+                  ]
+                : [
+                    `Story consequence: ${result.consequence}`,
+                    `New goal: ${result.goal.text}`,
+                    ...previous,
+                  ],
+      );
       setError(null);
     } catch (e) {
       setError((e as Error).message);
@@ -375,6 +454,8 @@ export default function App(): JSX.Element {
       </header>
 
       <JourneyStatus journey={journey} onFollowGoalPassage={followGoalPassage} />
+
+      <CampaignCharacterPanel character={worldView.character} />
 
       <section className="overworld">
         <article className="location-panel">
@@ -413,10 +494,16 @@ export default function App(): JSX.Element {
             </div>
           </dl>
           <div className="service-actions">
-            <button onClick={() => runServiceAction(() => worldSession.resupplyAtTown())}>
-              Resupply
-            </button>
-            <button onClick={() => runServiceAction(() => worldSession.restAtTown())}>Rest</button>
+            <ServiceAction
+              action="resupply"
+              offer={resupplyOffer}
+              onActivate={() => runServiceAction(() => worldSession.resupplyAtTown())}
+            />
+            <ServiceAction
+              action="rest"
+              offer={restOffer}
+              onActivate={() => runServiceAction(() => worldSession.restAtTown())}
+            />
             <button className="secondary" onClick={startNewJourney}>
               New Journey
             </button>
