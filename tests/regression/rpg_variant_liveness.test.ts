@@ -382,6 +382,127 @@ function wolfJuneCampaignWitnesses(index: RpgIndex): {
   return { displayed, present };
 }
 
+/**
+ * Wolf-Winter's campaign imports have compact constructive routes. Replaying those
+ * routes is both stronger evidence and dramatically cheaper than crawling another
+ * 200k-state graph for every persistent import flag: each credited view is reached
+ * through the real legality/resolution path on a real best/worst die face.
+ *
+ * `works_fortification_prepared` has no direct display predicate, but its failed repair
+ * sets the derived `works_fortification_splice_needed` flag; the Works route therefore
+ * witnesses that unique object variant while the fully exhausted unimported graph covers
+ * the shared successful `breach_braced` views. If either surface changes, the final
+ * declaration census below still fails until a concrete view is witnessed here.
+ */
+const WOLF_CONCRETE_IMPORT_FLAGS = new Set([
+  "jamie_market_testimony_certified",
+  "hayden_frost_report_certified",
+  "works_fortification_prepared",
+  "drover_route_prepared",
+  "relief_protocol_prepared",
+  "june_pike_present",
+]);
+
+function wolfCampaignImportWitnesses(index: RpgIndex): {
+  displayed: Set<string>;
+  present: Set<string>;
+} {
+  const displayed = new Set<string>();
+  const present = new Set<string>();
+  const run = (flag: string, actions: readonly WitnessAction[]): void => {
+    const initial = initStateForRpgPack(index, 7);
+    initial.flags[flag] = true;
+    const witness = replayConcreteWitness(index, initial, actions);
+    for (const key of witness.displayed) displayed.add(key);
+    for (const key of witness.present) present.add(key);
+  };
+
+  run("jamie_market_testimony_certified", [
+    "go_north",
+    "go_north",
+    ["maneuver_yearling_wolf_set_spear", "best"],
+    "go_south",
+    "go_west",
+    "go_up",
+    "go_east",
+    ["maneuver_flank_wolf_drop_from_loft", "best"],
+    ["attack_flank_wolf", "best"],
+  ]);
+  const reachHaydenBrace: readonly WitnessAction[] = [
+    "go_north",
+    "go_north",
+    ["use_paling_rail", "worst"],
+    ["maneuver_yearling_wolf_set_spear", "worst"],
+    ["maneuver_yearling_wolf_drive_set_spear", "best"],
+    "go_north",
+  ];
+  run("hayden_frost_report_certified", [
+    ...reachHaydenBrace,
+    ["maneuver_flank_wolf_frost_brace_trip", "worst"],
+    ["maneuver_flank_wolf_fallen_brace_drive", "worst"],
+    ["attack_flank_wolf", "best"],
+  ]);
+  run("hayden_frost_report_certified", [
+    "go_north",
+    "go_north",
+    ["use_paling_rail", "worst"],
+    ["maneuver_yearling_wolf_set_spear", "best"],
+    "go_north",
+    ["maneuver_flank_wolf_frost_brace_trip", "best"],
+  ]);
+  run("works_fortification_prepared", ["go_north", "go_north", ["use_paling_rail", "worst"]]);
+
+  const startFouled: readonly WitnessAction[] = [
+    "go_north",
+    "talk_houndsman",
+    "ask_lure",
+    "ask_commit_lure",
+    "ask_leave",
+    "go_west",
+    "take_winter_feed_sack",
+    "go_east",
+    "go_north",
+    ["use_winter_feed_sack_on_downwind_feed_line", "worst"],
+  ];
+  run("drover_route_prepared", startFouled);
+  run("relief_protocol_prepared", [
+    ...startFouled,
+    ["use_paling_rail", "worst"],
+    "use_paling_rail",
+    "use_split_rail_guard_on_downwind_feed_line",
+    "go_south",
+  ]);
+
+  const june = wolfJuneCampaignWitnesses(index);
+  for (const key of june.displayed) displayed.add(key);
+  for (const key of june.present) present.add(key);
+
+  const required = [
+    "room:store#3",
+    "room:fodder_loft#1",
+    "room:byre_door#6",
+    "room:byre_door#21",
+    "room:paling_gap#3",
+    "object:drover_route_marks@present",
+    "room:paling_gap#11",
+    "room:paling_gap#17",
+    "room:paling_gap#22",
+    "room:byre_door#23",
+    "object:paling_rail#4",
+    "room:byre_door#19",
+    "room:byre_door#5",
+    "room:byre_door#4",
+    "object:paling_rail#2",
+    "room:byre_yard#0",
+    "object:relief_protocol_docket@present",
+  ];
+  const missing = required.filter((key) => !displayed.has(key) && !present.has(key));
+  if (missing.length > 0) {
+    throw new Error(`Concrete Wolf-Winter import routes did not display: ${missing.join(", ")}`);
+  }
+  return { displayed, present };
+}
+
 /** Run the best/worst-roll bracket under the liveness policy and mine displayed variants. */
 function analyze(
   index: RpgIndex,
@@ -439,7 +560,7 @@ describe("bug_0147 — every reactive variant of every RPG pack is reachable as 
     const loaded = loadRpgSourceFile(join(PACK_DIR, "wolf_winter.yaml"));
     expect(loaded.ok).toBe(true);
     if (!loaded.ok) return;
-    const witness = wolfJuneCampaignWitnesses(indexRpgPack(loaded.compiled.pack));
+    const witness = wolfCampaignImportWitnesses(indexRpgPack(loaded.compiled.pack));
     expect([...witness.displayed].filter((key) => key.includes("pack_diverted"))).toEqual(
       expect.arrayContaining([
         "ending:ending_pack_diverted#0",
@@ -482,9 +603,9 @@ describe("bug_0147 — every reactive variant of every RPG pack is reachable as 
           ),
         );
         for (const importedFlag of importedFlags) {
-          // June's deep and multi-import states have short constructive witnesses below;
-          // do not spend this capped single-flag search proving a state it cannot model.
-          if (questId === "wolf_winter" && importedFlag === "june_pike_present") continue;
+          // Wolf-Winter's imported displays have exact legal-action witnesses below;
+          // retain bounded fallback crawls for any future or other pack import.
+          if (questId === "wolf_winter" && WOLF_CONCRETE_IMPORT_FLAGS.has(importedFlag)) continue;
           const importedState = initStateForRpgPack(indexRpgPack(pack), 7);
           importedState.flags[importedFlag] = true;
           const witness = analyze(
@@ -496,9 +617,9 @@ describe("bug_0147 — every reactive variant of every RPG pack is reachable as 
           for (const key of witness.displayed) displayed.add(key);
           for (const key of witness.present) present.add(key);
         }
-        if (questId === "wolf_winter" && importedFlags.has("june_pike_present")) {
-          expect(importedFlags.has("relief_protocol_prepared")).toBe(true);
-          const witness = wolfJuneCampaignWitnesses(indexRpgPack(pack));
+        if (questId === "wolf_winter") {
+          expect(importedFlags).toEqual(WOLF_CONCRETE_IMPORT_FLAGS);
+          const witness = wolfCampaignImportWitnesses(indexRpgPack(pack));
           for (const key of witness.displayed) displayed.add(key);
           for (const key of witness.present) present.add(key);
         }
