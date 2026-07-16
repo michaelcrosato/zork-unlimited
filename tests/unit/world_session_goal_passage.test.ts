@@ -35,7 +35,7 @@ function sessionAtGallowmereGoal(): OverworldSession {
   expect(session.journey().storyChoice?.kind).toBe("lead_source");
   session.chooseJourneyStory("albany:source_rowan_civic_docket");
   expect(session.journey().storyChoice?.kind).toBe("preparation");
-  expect(session.view().quests.map((candidate) => candidate.id)).not.toContain("wolf_winter");
+  expect(session.view().quests.map((candidate) => candidate.id)).toContain("wolf_winter");
   session.chooseJourneyStory("albany:prep_works_fortification");
   const quest = session.view().quests.find((candidate) => candidate.id === "wolf_winter");
   if (!quest) throw new Error("Expected Wolf-Winter to be discovered in Albany.");

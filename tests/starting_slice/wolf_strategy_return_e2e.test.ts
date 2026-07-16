@@ -148,7 +148,7 @@ function launchAlbanyWolf(api: ToolApi) {
     choice: "albany:source_rowan_civic_docket",
   });
   expect(sourced.journey.storyChoice?.kind).toBe("preparation");
-  expect(sourced.observation.quests.map((candidate) => candidate.id)).not.toContain(WOLF_QUEST.id);
+  expect(sourced.observation.quests.map((candidate) => candidate.id)).toContain(WOLF_QUEST.id);
   const prepared = api.choose_overworld_session_story({
     ...FULL,
     session_id: overworldSessionId,

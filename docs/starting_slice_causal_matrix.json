@@ -131,7 +131,7 @@
       "implementation_status": "implemented",
       "proof_status": "proven",
       "counts_toward_contract": true,
-      "visible_choice": "After permanent character registration, certify exactly one controlling Wolf-Winter account: Rowan's immediate civic docket, Jamie Tanner's paid market testimony, or Hayden Hale's timed frost-heave report. Wolf-Winter remains hidden until this irreversible choice is made.",
+      "visible_choice": "After permanent character registration, certify exactly one controlling Wolf-Winter account: Rowan's immediate civic docket, Jamie Tanner's paid market testimony, or Hayden Hale's timed frost-heave report. The opening mission preview is already visible, but Wolf-Winter's quest card, live launch approaches, and discovered state remain hidden until this irreversible choice is made.",
       "immediate_state_delta": [
         "character.knowledge",
         "character.relationships",
@@ -147,6 +147,7 @@
       ],
       "visible_feedback": [
         "The blocking three-card choice states each packet's exact source, actual sponsored or public cost, commitment, and later Wolf-Winter consumer before confirmation.",
+        "Certifying one source immediately exposes Wolf-Winter's authored mission card and both hill-approach previews while the separate preparation decision remains pending.",
         "The persistent journal records the certified source and paid terms; the character panel exposes money, knowledge, and source memory after confirmation.",
         "Wolf-Winter's room descriptions, legal exits, visible maneuver commands and bonuses, and mutually exclusive follow-up actions cite only the account actually certified."
       ],

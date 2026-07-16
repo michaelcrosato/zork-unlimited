@@ -403,7 +403,7 @@ describe("MCP pure play mode", () => {
           (sourced.observation as AreaView & { quests?: { id: string }[] }).quests?.map(
             (quest) => quest.id,
           ),
-        ).not.toContain("wolf_winter");
+        ).toContain("wolf_winter");
         const worksFortification = preparationChoice?.options?.find(
           (option) => option.id === "albany:prep_works_fortification",
         );
