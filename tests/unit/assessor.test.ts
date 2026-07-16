@@ -4,9 +4,18 @@
  * ranking), and reads real quest health.
  */
 import { describe, it, expect } from "vitest";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  utimesSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { hashState } from "../../src/core/hash.js";
 import {
   assess,
   allGeneratedChecksClean,
@@ -508,6 +517,106 @@ describe("blind-pass rotation (bug_0128)", () => {
       const offsets = blindReportAttendanceOffsets(root);
       expect(offsets.has("aleconners_seal")).toBe(true);
       expect(offsets.has("alnagers_fault")).toBe(false);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("counts V2 pure attendance only with a fresh matching adjacent sidecar", () => {
+    const root = mkdtempSync(join(tmpdir(), "af-blind-pure-attendance-"));
+    try {
+      const reportsDir = join(root, "blind-tester", "reports");
+      mkdirSync(reportsDir, { recursive: true });
+      const receiptFor = (proofCharacter: string) => {
+        const payload = {
+          contractVersion: 1,
+          exitReason: "player_ended_at_choice" as const,
+          goalVersion: 1,
+          goalId: "albany_local_lead",
+          goalStatus: "active" as const,
+          acceptedDecisions: 40,
+          exitReasons: ["checkpoint"] as const,
+          checkpoint: 40,
+          decisionProofHash: proofCharacter.repeat(64),
+          retentionHistory: [
+            {
+              sequence: 1,
+              atDecision: 40,
+              reasons: ["checkpoint"] as const,
+              checkpoint: 40,
+              choice: "end" as const,
+              decisionProofHash: proofCharacter.repeat(64),
+            },
+          ],
+        };
+        return { ...payload, receiptHash: hashState(payload) };
+      };
+      const receipt = receiptFor("a");
+      const reportPath = join(reportsDir, "20260619T193000Z_overworld_seed8.md");
+      const sidecarPath = reportPath.replace(/\.md$/, ".run.json");
+      const exitInterview = {
+        schema_version: 2,
+        play_mode: "pure",
+        start_surface: "fresh_overworld",
+        retention_eligible: true,
+        journey_exit_receipt: receipt,
+        clarity: 4,
+        enjoyment: 4,
+        goal_understood: true,
+        got_stuck: false,
+        confusions: [],
+        bugs: [],
+        best_moment: "The evidence chain paying off at the journey choice.",
+        worst_moment: "Nothing stood out as a significant problem.",
+        would_replay: true,
+        verdict: "A real player would understand the opening and willingly continue playing.",
+      };
+      writeFileSync(
+        reportPath,
+        `
+## Playthrough log
+
+I started the open world, followed the evidence, and ended at a journey choice.
+
+## Understandable & fun?
+
+Clarity: 4/5. Enjoyment: 4/5.
+
+## Verdict
+
+A real player would understand the opening and willingly continue playing.
+
+\`\`\`json exit-interview
+${JSON.stringify(exitInterview, null, 2)}
+\`\`\`
+`,
+      );
+
+      expect(blindReportAttendanceOffsets(root).has("overworld")).toBe(false);
+
+      const sidecarFor = (sidecarReceipt: typeof receipt) =>
+        JSON.stringify({
+          schema_version: 1,
+          report_schema_version: 2,
+          play_mode: "pure",
+          start_surface: "fresh_overworld",
+          retention_eligible: true,
+          evidence_status: "verified",
+          session_id: "ow-assessor-attendance",
+          receipt: sidecarReceipt,
+        });
+      writeFileSync(sidecarPath, sidecarFor(receiptFor("b")));
+      const nowSeconds = Date.now() / 1000;
+      utimesSync(reportPath, nowSeconds - 20, nowSeconds - 20);
+      utimesSync(sidecarPath, nowSeconds - 10, nowSeconds - 10);
+      expect(blindReportAttendanceOffsets(root).has("overworld")).toBe(false);
+
+      writeFileSync(sidecarPath, sidecarFor(receipt));
+      utimesSync(sidecarPath, nowSeconds, nowSeconds);
+      expect(blindReportAttendanceOffsets(root).has("overworld")).toBe(true);
+
+      utimesSync(sidecarPath, nowSeconds - 30, nowSeconds - 30);
+      expect(blindReportAttendanceOffsets(root).has("overworld")).toBe(false);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

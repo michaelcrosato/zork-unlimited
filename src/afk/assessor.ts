@@ -17,6 +17,8 @@
  */
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
+import { isPureExitInterviewV2 } from "../blind/exit_interview.js";
+import { parseBlindRunSidecar } from "../blind/run_evidence.js";
 import { createToolApi } from "../mcp/tools.js";
 import { RpgSourceRuntime } from "../mcp/rpg_source_runtime.js";
 import { verifyBlindReportText } from "../blind/report_verifier.js";
@@ -337,7 +339,24 @@ export function blindReportAttendanceOffsets(root: string): Map<string, number> 
   const acceptedReports = readdirSync(reportsDir).filter((name) => {
     if (!BLIND_REPORT_FILE_RE.test(name)) return false;
     try {
-      return verifyBlindReportText(readFileSync(join(reportsDir, name), "utf8")).ok;
+      const reportPath = join(reportsDir, name);
+      const reportText = readFileSync(reportPath, "utf8");
+      const verification = verifyBlindReportText(reportText);
+      if (!verification.ok) return false;
+
+      // Unversioned historical reports remain useful attendance evidence. A
+      // V2 pure report, however, is only authoritative when its adjacent
+      // server-evidence sidecar is present, fresh, valid, and receipt-matched.
+      if (!isPureExitInterviewV2(verification.interview)) return true;
+      const sidecarPath = reportPath.replace(/\.md$/, ".run.json");
+      if (!existsSync(sidecarPath)) return false;
+      if (statSync(sidecarPath).mtimeMs < statSync(reportPath).mtimeMs) return false;
+      const sidecar = parseBlindRunSidecar(readFileSync(sidecarPath, "utf8"));
+      if (!sidecar.ok) return false;
+      return verifyBlindReportText(reportText, {
+        requiredPlayMode: "pure",
+        runSidecar: sidecar.sidecar,
+      }).ok;
     } catch {
       return false;
     }

@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 570 -->
+<!-- historical_cycle_count: 571 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,15 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - authenticated_slice_fleet_certifier
+
+- Evidence choice: the prior milestone diagnostic could resume successes, erase failed attempts, trust planned model labels, and accept reports before raw evidence publication, so it could not decide the greater-than-BG3 slice claim.
+- Surface: live fleets now close one fresh label with ordered attempt histories; authoritative certification requires 100 no-resume, one-attempt, unrecovered pure/default rows on one clean build/world, current-stamp basenames, the exact 9:1 model plan, unique Claude UUIDs, and byte-reconstructed report/sidecar/evidence/envelope attestations.
+- Integrity: the sterile Claude home imports only subscription OAuth, disables filesystem settings/auto-memory, positively allows only AdventureForge MCP, names each session to prevent an auxiliary Haiku title call, and publishes `.run.json` last as the transaction marker. Recovered interviews remain diagnostic and cannot certify subjective gates.
+- Pure evidence: seed 2737 verified singleton Sonnet/fresh, completed Wolf-Winter, The Gallowmere, and The Tanner's Fever, continued four times, then ended at checkpoint 80; clarity/enjoyment 4/4, stuck false, replay true, zero denials, and one S1 cross-town name-reuse report. Seed 2736 proved the transaction but is intentionally non-attestable because its pre-fix envelope included the title model.
+- Self-critique: PASS for authenticated certification tooling, not fleet reliability or the greater-than-BG3 milestone. Two consecutive players disliked the five-choice Albany opening gauntlet; a fresh 10-player no-resume/no-retry diagnostic must test that pacing and the 9:1 model plan before any authoritative 100-player spend.
+- Guard: two adversarial audit rounds closed safe-mode MCP loss, survivor selection, shell injection, recovery laundering, premature publication, user customization, and AFK sidecar gaps; 157 integrated checks pass, and final crawls `20260716T133150Z`/`20260716T134744Z` found zero issues across 247/247 nodes, 344/344 edges, 12/12 boards, and 12/12 quests.
 
 ### Cycle result - pure_run_evidence_v2
 
@@ -139,11 +148,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Pure evidence: verified pure/fresh seed 13 chose Road-Warden, completed Wolf-Winter, Gallowmere, Tanner's Fever, and Breaking Weir, continued at 25/40/49/71/80, then ended voluntarily at 92; clarity/enjoyment 4/4, replay true, no rejects, stuck state, or blocker.
 - Compile/self-critique: the ledger is 773 accepted/33 rejected, two reports beyond the 771-report compile and below threshold. PASS for one delayed cross-system background fork, not overall slice depth: three profiles still lack mechanical Wolf consumers, and the player again identified the repeated town/quest chassis as S0 debt.
 - Guard: adversarial reviews closed registration bypass, save-boundary, migration, memory-consumer, projection, UI-bias, and structural-QA defects; live Vite verification exercised all four cards with no errors; final 6,000-step crawl `20260714T153351Z` reached 247/247 nodes, 344/344 edges, and 12/12 quests; full health passed (325 files/2,359 tests, UI, 12 packs).
-
-### Cycle result - trusted_campaign_quest_imports
-
-- Change: a strict per-quest import catalog now projects selected campaign-character facts only through closure-private embedded starts; direct/public quest starts remain pack-default. Wolf-Winter currently imports only `fieldcraft` as a defense floor, with health and equipment deliberately unmapped until authored consequences can tell the truth about them.
-- Integrity: canonical receipts bind the exact catalog hash, rule ids, effect types, and targets through saves and MCP/CLI replay/inspect; stale or absent catalogs reject before session/world mutation. This is deterministic compatibility for intentionally editable local saves, not cryptographic authentication.
-- Pure evidence: verified pure/fresh seed 12 completed Wolf-Winter plus five later goals, continued through every earlier goal/checkpoint, and ended voluntarily at decision 133; clarity 4/5, enjoyment 5/5, replay true, no stuck state. Seed 11's report was correctly rejected for omitting its mandatory playthrough log.
-- Compile/self-critique: the ledger is 772 accepted/33 rejected, one report beyond the 771-report compile and below threshold. PASS for a trusted inbound boundary, not a depth claim: no causal-matrix fork is counted, and the player again identified the shared board→contact→items→checks chassis as S1 repetition.
-- Guard: three adversarial reviews closed validation, authority, solvability, combat-guarantee, provenance, and mutable-input defects; pre/post 6,000-step crawls (`20260714T044643Z`, `20260714T054135Z`) reached 247/247 nodes, 344/344 edges, and 12/12 quests.

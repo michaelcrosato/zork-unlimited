@@ -40,7 +40,8 @@ const ExitInterviewFields = {
 } as const;
 
 /** Pre-contract reports. Absence of schema_version is the durable legacy tag. */
-export const LegacyExitInterviewSchema = z.object(ExitInterviewFields).strict();
+export const SubjectiveExitInterviewSchema = z.object(ExitInterviewFields).strict();
+export const LegacyExitInterviewSchema = SubjectiveExitInterviewSchema;
 
 const JourneyChoiceReasonSchema = z.enum(["checkpoint", "goal_completed"]);
 const HashSchema = z.string().regex(/^[0-9a-f]{64}$/);

@@ -1,0 +1,1642 @@
+import {
+  existsSync,
+  lstatSync,
+  readFileSync,
+  readdirSync,
+  realpathSync,
+  type Stats,
+} from "node:fs";
+import { createHash } from "node:crypto";
+import { basename, extname, isAbsolute, relative, resolve, sep } from "node:path";
+import { isDeepStrictEqual } from "node:util";
+import { z } from "zod";
+import { isPureExitInterviewV2, type PureExitInterviewV2 } from "../blind/exit_interview.js";
+import { verifyBlindReportText } from "../blind/report_verifier.js";
+import {
+  CanonicalQuestOutcomesSchema,
+  parseBlindRunSidecar,
+  PureRunBuildSchema,
+} from "../blind/run_evidence.js";
+import { prepareShippedQuest } from "../crawl/prepare.js";
+import { clusterIssues, type IssueRecord, type IssueSeverity } from "../feedback/cluster.js";
+import {
+  buildLocationIndex,
+  canonicalizeLocation,
+  type LocationIndex,
+} from "../feedback/normalize.js";
+import type { CanonicalLocation } from "../feedback/schema.js";
+import {
+  parsePureFleetAttestation,
+  PureFleetAttestationSchema,
+  pureFleetAttestationPathFor,
+} from "./fleet_attestation.js";
+import { capturePureFleetBuild } from "./fleet_build.js";
+import {
+  pureFleetRunArtifactPaths,
+  validatePureFleetRunArtifactBytes,
+} from "./fleet_run_artifacts.js";
+import { WOLF_WINTER_CAMPAIGN_OUTCOMES } from "../world/journey_campaign.js";
+import { INITIAL_JOURNEY_GOAL } from "../world/journey_contract.js";
+import { loadOverworldManifest } from "../world/source.js";
+
+export const STARTING_SLICE_CERTIFICATION_SCHEMA_VERSION = 1 as const;
+export const STARTING_SLICE_INITIAL_GOAL = Object.freeze({
+  version: INITIAL_JOURNEY_GOAL.version,
+  id: INITIAL_JOURNEY_GOAL.id,
+});
+
+export type WolfStrategy =
+  | "hunt_and_hold"
+  | "lure_and_divert"
+  | "drive_and_evacuate"
+  | "fortify_and_outlast";
+export type WolfStrategyVariant =
+  | "clean_diversion"
+  | "cattle_scattered"
+  | "hybrid_recovery"
+  | "cattle_wounded"
+  | "people_saved_cattle_lost"
+  | "reserve_spent"
+  | "cade_terms"
+  | "albany_authority"
+  | "gate_barred"
+  | "timber_saved"
+  | "line_held";
+
+type WolfEndingId = keyof typeof WOLF_WINTER_CAMPAIGN_OUTCOMES;
+
+/**
+ * The certification taxonomy is deliberately explicit. Adding a campaign
+ * outcome to the world contract is a compile error here until its strategy is
+ * classified; removing one is an excess-property error. The mixed
+ * after-blood recovery remains a lure result for top-level diversity while
+ * retaining its distinct diagnostic tag.
+ */
+export const WOLF_WINTER_STRATEGY_BY_ENDING = Object.freeze({
+  ending_pack_diverted: { strategy: "lure_and_divert", variant: "clean_diversion" },
+  ending_pack_diverted_cattle_scattered: {
+    strategy: "lure_and_divert",
+    variant: "cattle_scattered",
+  },
+  ending_pack_diverted_after_blood: {
+    strategy: "lure_and_divert",
+    variant: "hybrid_recovery",
+  },
+  ending_drive_cattle_wounded: {
+    strategy: "drive_and_evacuate",
+    variant: "cattle_wounded",
+  },
+  ending_drive_person_cattle_lost: {
+    strategy: "drive_and_evacuate",
+    variant: "people_saved_cattle_lost",
+  },
+  ending_drive_reserve_spent: {
+    strategy: "drive_and_evacuate",
+    variant: "reserve_spent",
+  },
+  ending_fortified_cade_terms: {
+    strategy: "fortify_and_outlast",
+    variant: "cade_terms",
+  },
+  ending_fortified_albany_authority: {
+    strategy: "fortify_and_outlast",
+    variant: "albany_authority",
+  },
+  ending_held_gate_barred: { strategy: "hunt_and_hold", variant: "gate_barred" },
+  ending_held_timber_saved: { strategy: "hunt_and_hold", variant: "timber_saved" },
+  ending_held: { strategy: "hunt_and_hold", variant: "line_held" },
+} as const satisfies Record<
+  WolfEndingId,
+  Readonly<{ strategy: WolfStrategy; variant: WolfStrategyVariant }>
+>);
+
+export type PureRunBuild = z.infer<typeof PureRunBuildSchema>;
+type CanonicalQuestOutcomes = z.infer<typeof CanonicalQuestOutcomesSchema>;
+
+export interface StartingSliceIssueInput {
+  where: string;
+  severity: IssueSeverity;
+  note: string;
+}
+
+export interface StartingSliceGoalCompletionInput {
+  version: number;
+  id: string;
+  completed_at_decision: number;
+}
+
+export interface StartingSliceGoalRetentionInput {
+  goal_version: number | null;
+  goal_id: string | null;
+  at_decision: number;
+  reasons: readonly ("checkpoint" | "goal_completed")[];
+  choice: "continue" | "end";
+}
+
+/** A server-authored report after evidence authentication and schema re-verification. */
+export interface StartingSliceEvaluationRun {
+  ref: string;
+  wolf_outcome: string | null;
+  initial_goal_completion: StartingSliceGoalCompletionInput | null;
+  initial_goal_retention: StartingSliceGoalRetentionInput | null;
+  clarity: number;
+  enjoyment: number;
+  got_stuck: boolean;
+  issues: readonly StartingSliceIssueInput[];
+}
+
+export interface StartingSliceEvaluationOptions {
+  root: string;
+  runs: readonly StartingSliceEvaluationRun[];
+  /** Defaults to runs.length. The filesystem path fixes this to the planned fleet count. */
+  expectedCount?: number;
+}
+
+export interface StartingSliceMetrics {
+  total_runs: number;
+  evaluated_runs: number;
+  completed_runs: number;
+  incomplete_runs: number;
+  completion_decision_p50: number | null;
+  stuck_runs: number;
+  clarity_total: number;
+  enjoyment_total: number;
+  continued_after_initial_goal: number;
+  completed_runs_with_continuation_choice: number;
+  strategies_represented: number;
+  largest_strategy_count: number;
+  in_scope_issue_reports: number;
+}
+
+export interface StartingSliceGates {
+  completion_at_least_90_percent: boolean;
+  completion_p50_at_most_45_decisions: boolean;
+  got_stuck_at_most_5_percent: boolean;
+  clarity_average_at_least_4_2: boolean;
+  enjoyment_average_at_least_4_2: boolean;
+  initial_goal_continuation_at_least_70_percent: boolean;
+  at_least_3_top_level_strategies: boolean;
+  no_strategy_above_75_percent: boolean;
+  no_in_scope_s3_or_s4: boolean;
+  no_in_scope_s2_cluster_at_or_above_5_percent: boolean;
+}
+
+export interface StartingSliceBlockingCluster {
+  key: string;
+  max_severity: IssueSeverity;
+  affected_reports: number;
+  report_refs: string[];
+  issue_mentions: number;
+  location: CanonicalLocation;
+  tokens: string[];
+}
+
+export interface StartingSliceFleetIdentity {
+  label: string;
+  stamp: string;
+  fleet_dir: string;
+  reports_dir: string;
+  manifest_rows: number;
+}
+
+export interface StartingSliceCertificationResult {
+  schema_version: typeof STARTING_SLICE_CERTIFICATION_SCHEMA_VERSION;
+  valid: boolean;
+  passed: boolean;
+  fleet: StartingSliceFleetIdentity | null;
+  certified_build: PureRunBuild | null;
+  validity_errors: string[];
+  gate_failures: (keyof StartingSliceGates)[];
+  metrics: StartingSliceMetrics;
+  gates: StartingSliceGates;
+  strategy_counts: Record<WolfStrategy, number>;
+  blocking_issue_clusters: StartingSliceBlockingCluster[];
+}
+
+export interface CertifyStartingSliceFleetOptions {
+  root: string;
+  fleetDir: string;
+  expectedCount: number;
+  /** Test seam for a synthetic clean build; production callers omit it. */
+  expectedBuild?: PureRunBuild;
+}
+
+const FleetSummarySchema = z
+  .object({
+    label: z.string().refine(isSafeFleetLabel, "unsafe or reserved fleet label"),
+    stamp: z.string().regex(/^\d{8}T\d{6}Z$/),
+    count: z.number().int().positive(),
+    concurrency: z.number().int().positive(),
+    reportsDir: z.string().min(1),
+    report_schema_version: z.literal(2),
+    play_mode: z.literal("pure"),
+    start_surface: z.literal("fresh_overworld"),
+    retention_contract_eligible: z.literal(true),
+    retention_eligible_verified_runs: z.number().int().nonnegative(),
+    retention_ineligible_or_unverified_runs: z.number().int().nonnegative(),
+    session_contract_version: z.literal(3),
+    baseline_decisions: z.literal(40),
+    verified: z.number().int().nonnegative(),
+    "skipped-resume": z.number().int().nonnegative(),
+    failed: z.number().int().nonnegative(),
+    total_attempts: z.number().int().nonnegative(),
+    failed_attempts: z.number().int().nonnegative(),
+    technical_timeouts: z.number().int().nonnegative(),
+    report_recovered_runs: z.number().int().nonnegative(),
+    seed_base: z.number().int().safe(),
+    model: z.literal("mix"),
+    personas: z.literal("default"),
+    target: z.literal("overworld"),
+    resume_enabled: z.boolean(),
+    evidence_schema_version: z.literal(2),
+    model_attestation_schema_version: z.literal(2),
+    build: PureRunBuildSchema,
+  })
+  .strict();
+
+const FleetAttemptArtifactSchema = z
+  .object({
+    name: z
+      .string()
+      .min(1)
+      .refine(
+        (name) => name !== "." && name !== ".." && !name.includes("/") && !name.includes("\\"),
+        "artifact name must be one path segment",
+      ),
+    bytes: z.number().int().nonnegative().safe(),
+    sha256: z.string().regex(/^[0-9a-f]{64}$/),
+  })
+  .strict();
+
+const FleetAttemptArchiveSchema = z
+  .object({
+    directory: z.string().min(1),
+    artifacts: z.array(FleetAttemptArtifactSchema).min(1),
+  })
+  .strict();
+
+const FleetAttemptSchema = z
+  .object({
+    attempt: z.number().int().positive().safe(),
+    exit: z.number().int().nonnegative().safe(),
+    classification: z.enum([
+      "technical_timeout",
+      "launcher_or_run_failure",
+      "verifier_failure",
+      "verified",
+    ]),
+    report_recovered: z.boolean(),
+    archive: FleetAttemptArchiveSchema.nullable(),
+  })
+  .strict();
+
+const FleetManifestRowSchema = z
+  .object({
+    planned_index: z.number().int().nonnegative(),
+    seed: z.number().int().safe(),
+    persona: z.literal("default"),
+    model: z.enum(["haiku", "sonnet"]),
+    target: z.literal("overworld"),
+    report: z.string().min(1),
+    status: z.enum(["verified", "skipped-resume"]),
+    attempts: z.number().int().nonnegative(),
+    attempt_history: z.array(FleetAttemptSchema),
+    report_recovered: z.boolean(),
+    exit: z.literal(0),
+    log: z.null(),
+    report_schema_version: z.literal(2),
+    play_mode: z.literal("pure"),
+    start_surface: z.literal("fresh_overworld"),
+    retention_eligible: z.literal(true),
+    evidence_status: z.literal("verified"),
+    session_contract_version: z.literal(3),
+    baseline_decisions: z.literal(40),
+    accepted_decisions: z.number().int().nonnegative(),
+    retention_choices: z.array(z.unknown()),
+    checkpoint: z.number().int().nonnegative().nullable(),
+    exit_reason: z.literal("player_ended_at_choice"),
+    exit_reasons: z
+      .array(z.enum(["checkpoint", "goal_completed"]))
+      .min(1)
+      .max(2),
+    receipt_hash: z.string().regex(/^[0-9a-f]{64}$/),
+    failure_reason: z.null(),
+    evidence_schema_version: z.literal(2),
+    model_attestation: PureFleetAttestationSchema,
+    run_seed: z.number().int().safe(),
+    build: PureRunBuildSchema,
+    quest_outcomes: CanonicalQuestOutcomesSchema,
+  })
+  .strict();
+
+type FleetSummary = z.infer<typeof FleetSummarySchema>;
+type FleetManifestRow = z.infer<typeof FleetManifestRowSchema>;
+type FleetAttempt = z.infer<typeof FleetAttemptSchema>;
+
+const STRATEGIES: readonly WolfStrategy[] = [
+  "hunt_and_hold",
+  "lure_and_divert",
+  "drive_and_evacuate",
+  "fortify_and_outlast",
+];
+const SEVERE: ReadonlySet<IssueSeverity> = new Set(["S3", "S4"]);
+const LOCATION_INDEX_CACHE = new Map<string, LocationIndex>();
+
+interface CertifiedArtifactTracker {
+  identities: Set<string>;
+  real_paths: Set<string>;
+}
+
+function compareStrings(left: string, right: string): number {
+  return left < right ? -1 : left > right ? 1 : 0;
+}
+
+function uniqueSorted(values: readonly string[]): string[] {
+  return [...new Set(values)].sort(compareStrings);
+}
+
+function isSafeFleetLabel(label: string): boolean {
+  const windowsBase = label.split(".", 1)[0]!.toUpperCase();
+  return (
+    label !== "." &&
+    label !== ".." &&
+    !label.endsWith(".") &&
+    !/^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])$/.test(windowsBase) &&
+    /^[A-Za-z0-9][A-Za-z0-9._-]{0,79}$/.test(label)
+  );
+}
+
+function canonicalRealpath(path: string): string {
+  return realpathSync.native(path);
+}
+
+function pathIdentity(path: string): string {
+  return process.platform === "win32" ? path.toLowerCase() : path;
+}
+
+function containedPath(root: string, candidate: string): boolean {
+  const rel = relative(root, candidate);
+  return rel !== "" && rel !== ".." && !rel.startsWith(`..${sep}`) && !isAbsolute(rel);
+}
+
+function pathEntryExists(path: string): boolean {
+  try {
+    lstatSync(path);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function requireRealDirectory(path: string, label: string): string {
+  const stats = lstatSync(path);
+  if (stats.isSymbolicLink()) throw new Error(`${label} must not be a symbolic link`);
+  if (!stats.isDirectory()) throw new Error(`${label} must be a directory`);
+  return canonicalRealpath(path);
+}
+
+function statsIdentity(stats: Stats, realPath: string): string {
+  // Some Windows filesystems report inode 0. Canonical path still detects
+  // aliases there; normal filesystems additionally get hard-link identity.
+  return stats.ino === 0 ? `path:${pathIdentity(realPath)}` : `${stats.dev}:${stats.ino}`;
+}
+
+function requireContainedRegularFile(
+  path: string,
+  rootRealPath: string,
+  label: string,
+  tracker: CertifiedArtifactTracker,
+): string {
+  const stats = lstatSync(path);
+  if (stats.isSymbolicLink()) throw new Error(`${label} must not be a symbolic link`);
+  if (!stats.isFile()) throw new Error(`${label} must be a regular file`);
+  if (stats.nlink !== 1) throw new Error(`${label} must not have multiple hard links`);
+  const realPath = canonicalRealpath(path);
+  if (!containedPath(rootRealPath, realPath)) {
+    throw new Error(`${label} escapes its declared artifact root`);
+  }
+  const realKey = pathIdentity(realPath);
+  const identity = statsIdentity(stats, realPath);
+  if (tracker.real_paths.has(realKey) || tracker.identities.has(identity)) {
+    throw new Error(`${label} aliases another certified artifact`);
+  }
+  tracker.real_paths.add(realKey);
+  tracker.identities.add(identity);
+  return realPath;
+}
+
+function fleetRelativePath(fleetDir: string, path: string): string {
+  return relative(fleetDir, path).split(sep).join("/");
+}
+
+function validateAttemptArchive(
+  fleetDir: string,
+  fleetRootReal: string,
+  seed: number,
+  attempt: FleetAttempt,
+  tracker: CertifiedArtifactTracker,
+  errors: string[],
+  referencedDirectories: Set<string>,
+): void {
+  if (attempt.archive === null) return;
+  const expectedDirectory = `attempts/seed_${seed}/attempt_${attempt.attempt}`;
+  if (attempt.archive.directory !== expectedDirectory) {
+    errors.push(
+      `seed ${seed} attempt ${attempt.attempt}: archive directory ${JSON.stringify(attempt.archive.directory)} != ${JSON.stringify(expectedDirectory)}`,
+    );
+    return;
+  }
+  if (referencedDirectories.has(expectedDirectory)) {
+    errors.push(`seed ${seed} attempt ${attempt.attempt}: duplicate archive directory`);
+    return;
+  }
+  referencedDirectories.add(expectedDirectory);
+
+  const attemptDir = resolve(fleetDir, ...expectedDirectory.split("/"));
+  let attemptRootReal: string;
+  try {
+    attemptRootReal = requireRealDirectory(
+      attemptDir,
+      `seed ${seed} attempt ${attempt.attempt} archive`,
+    );
+    if (!containedPath(fleetRootReal, attemptRootReal)) {
+      throw new Error("archive directory escapes the fleet bundle");
+    }
+  } catch (error) {
+    errors.push(
+      `seed ${seed} attempt ${attempt.attempt}: archive unsafe or unreadable: ${error instanceof Error ? error.message : String(error)}`,
+    );
+    return;
+  }
+
+  const indexedNames = attempt.archive.artifacts.map((artifact) => artifact.name);
+  const canonicalNames = [...indexedNames].sort(compareStrings);
+  if (
+    !isDeepStrictEqual(indexedNames, canonicalNames) ||
+    new Set(indexedNames).size !== indexedNames.length
+  ) {
+    errors.push(
+      `seed ${seed} attempt ${attempt.attempt}: archive artifact index is not unique canonical order`,
+    );
+  }
+  let physicalNames: string[];
+  try {
+    physicalNames = readdirSync(attemptRootReal).slice().sort(compareStrings);
+  } catch (error) {
+    errors.push(
+      `seed ${seed} attempt ${attempt.attempt}: archive entries unreadable: ${error instanceof Error ? error.message : String(error)}`,
+    );
+    return;
+  }
+  if (!isDeepStrictEqual(physicalNames, canonicalNames)) {
+    errors.push(
+      `seed ${seed} attempt ${attempt.attempt}: archived files differ from manifest index`,
+    );
+  }
+  for (const artifact of attempt.archive.artifacts) {
+    try {
+      const artifactPath = requireContainedRegularFile(
+        resolve(attemptDir, artifact.name),
+        fleetRootReal,
+        `seed ${seed} attempt ${attempt.attempt} artifact ${artifact.name}`,
+        tracker,
+      );
+      const bytes = readFileSync(artifactPath);
+      if (bytes.byteLength !== artifact.bytes) {
+        errors.push(
+          `seed ${seed} attempt ${attempt.attempt}: artifact ${artifact.name} byte count differs`,
+        );
+      }
+      if (sha256(bytes) !== artifact.sha256) {
+        errors.push(
+          `seed ${seed} attempt ${attempt.attempt}: artifact ${artifact.name} digest differs`,
+        );
+      }
+    } catch (error) {
+      errors.push(
+        `seed ${seed} attempt ${attempt.attempt}: artifact ${artifact.name} unsafe or unreadable: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+  }
+}
+
+function discoverAttemptArchiveDirectories(fleetDir: string, fleetRootReal: string): string[] {
+  const attemptsDir = resolve(fleetDir, "attempts");
+  if (!existsSync(attemptsDir)) return [];
+  const attemptsRootReal = requireRealDirectory(attemptsDir, "attempt archive root");
+  if (!containedPath(fleetRootReal, attemptsRootReal)) {
+    throw new Error("attempt archive root escapes the fleet bundle");
+  }
+  const found: string[] = [];
+  for (const seedEntry of readdirSync(attemptsRootReal, { withFileTypes: true })) {
+    if (seedEntry.isSymbolicLink() || !seedEntry.isDirectory()) {
+      throw new Error(`attempt archive root contains non-directory ${seedEntry.name}`);
+    }
+    const seedDir = resolve(attemptsRootReal, seedEntry.name);
+    const seedRootReal = requireRealDirectory(seedDir, `attempt archive seed ${seedEntry.name}`);
+    if (!containedPath(attemptsRootReal, seedRootReal)) {
+      throw new Error(`attempt archive seed ${seedEntry.name} escapes its root`);
+    }
+    for (const attemptEntry of readdirSync(seedRootReal, { withFileTypes: true })) {
+      if (attemptEntry.isSymbolicLink() || !attemptEntry.isDirectory()) {
+        throw new Error(
+          `attempt archive seed ${seedEntry.name} contains non-directory ${attemptEntry.name}`,
+        );
+      }
+      const attemptDir = resolve(seedRootReal, attemptEntry.name);
+      const attemptRootReal = requireRealDirectory(
+        attemptDir,
+        `attempt archive ${seedEntry.name}/${attemptEntry.name}`,
+      );
+      if (!containedPath(seedRootReal, attemptRootReal)) {
+        throw new Error(`attempt archive ${seedEntry.name}/${attemptEntry.name} escapes its root`);
+      }
+      found.push(fleetRelativePath(fleetDir, attemptDir));
+    }
+  }
+  return found.sort(compareStrings);
+}
+
+function firstSchemaIssue(error: z.ZodError): string {
+  const issue = error.issues[0];
+  return `${issue?.path.join(".") || "<root>"}: ${issue?.message ?? "schema mismatch"}`;
+}
+
+function ownWolfMapping(
+  ending: string,
+): (typeof WOLF_WINTER_STRATEGY_BY_ENDING)[WolfEndingId] | null {
+  if (!Object.prototype.hasOwnProperty.call(WOLF_WINTER_STRATEGY_BY_ENDING, ending)) return null;
+  return WOLF_WINTER_STRATEGY_BY_ENDING[ending as WolfEndingId];
+}
+
+function locationIndex(root: string): LocationIndex {
+  const canonicalRoot = resolve(root);
+  const cached = LOCATION_INDEX_CACHE.get(canonicalRoot);
+  if (cached) return cached;
+  const built = buildLocationIndex(canonicalRoot);
+  LOCATION_INDEX_CACHE.set(canonicalRoot, built);
+  return built;
+}
+
+function isStartingSliceLocation(location: CanonicalLocation, albanyNode: string): boolean {
+  if (location.kind === "unmapped") return true;
+  if (location.kind === "quest") {
+    return location.questId === null || location.questId === "wolf_winter";
+  }
+  return location.node === null || location.node === albanyNode;
+}
+
+/**
+ * Runtime counterpart to the compile-time exhaustive map. It protects against
+ * drift in both authored sources: compiled non-death endings and overworld
+ * campaign exports must equal the eleven mapped identities.
+ */
+export function wolfStrategyMappingDrift(root: string): string[] {
+  try {
+    const mapped = Object.keys(WOLF_WINTER_STRATEGY_BY_ENDING).sort(compareStrings);
+    const campaign = Object.entries(WOLF_WINTER_CAMPAIGN_OUTCOMES);
+    const declared = campaign.map(([key]) => key).sort(compareStrings);
+    const contextEndingIds = campaign.map(([, value]) => value.endingId).sort(compareStrings);
+    const compiled = prepareShippedQuest(resolve(root), "wolf_winter")
+      .index.pack.endings.filter((ending) => !ending.death)
+      .map((ending) => ending.id)
+      .sort(compareStrings);
+    const worldQuest = loadOverworldManifest(resolve(root)).quests.find(
+      (quest) => quest.id === "wolf_winter",
+    );
+    const world = (worldQuest?.campaign_exports ?? [])
+      .map((entry) => entry.ending_id)
+      .sort(compareStrings);
+
+    const errors: string[] = [];
+    for (const [label, actual] of [
+      ["campaign outcome keys", declared],
+      ["campaign outcome ending ids", contextEndingIds],
+      ["compiled non-death endings", compiled],
+      ["overworld campaign exports", world],
+    ] as const) {
+      if (!isDeepStrictEqual(actual, mapped)) {
+        errors.push(
+          `Wolf strategy map drift: ${label} ${JSON.stringify(actual)} != mapped ${JSON.stringify(mapped)}`,
+        );
+      }
+    }
+    return errors.sort(compareStrings);
+  } catch (error) {
+    return [
+      `Wolf strategy map drift check failed: ${error instanceof Error ? error.message : String(error)}`,
+    ];
+  }
+}
+
+function canonicalIssueRecords(
+  root: string,
+  runs: readonly StartingSliceEvaluationRun[],
+  validityErrors: string[],
+): IssueRecord[] {
+  const issueInputs = runs.flatMap((run) => run.issues.map((issue) => ({ run, issue })));
+  if (issueInputs.length === 0) return [];
+
+  let index: LocationIndex;
+  let albanyNode: string;
+  try {
+    index = locationIndex(root);
+    albanyNode = loadOverworldManifest(resolve(root)).start;
+  } catch (error) {
+    validityErrors.push(
+      `Issue location index failed: ${error instanceof Error ? error.message : String(error)}`,
+    );
+    return [];
+  }
+
+  const records: IssueRecord[] = [];
+  for (const { run, issue } of issueInputs) {
+    if (issue.where.trim().length === 0 || issue.note.trim().length === 0) {
+      validityErrors.push(`${run.ref}: issue location and note must be non-empty`);
+      continue;
+    }
+    if (!["S0", "S1", "S2", "S3", "S4"].includes(issue.severity)) {
+      validityErrors.push(`${run.ref}: issue has invalid severity ${String(issue.severity)}`);
+      continue;
+    }
+    const location = canonicalizeLocation(issue.where, index);
+    if (!isStartingSliceLocation(location, albanyNode)) continue;
+    records.push({
+      source: "fleet",
+      ref: run.ref,
+      location,
+      severity: issue.severity,
+      text: issue.note,
+      persona: "default",
+      target: "overworld",
+    });
+  }
+  return records;
+}
+
+function emptyStrategyCounts(): Record<WolfStrategy, number> {
+  return {
+    hunt_and_hold: 0,
+    lure_and_divert: 0,
+    drive_and_evacuate: 0,
+    fortify_and_outlast: 0,
+  };
+}
+
+/** Deterministic threshold evaluator; it performs no filesystem I/O. */
+export function evaluateStartingSliceRuns(
+  options: StartingSliceEvaluationOptions,
+): StartingSliceCertificationResult {
+  const runs = [...options.runs].sort((left, right) => compareStrings(left.ref, right.ref));
+  const requestedCount = options.expectedCount ?? runs.length;
+  const validExpectedCount = Number.isSafeInteger(requestedCount) && requestedCount > 0;
+  const expectedCount = validExpectedCount ? requestedCount : Math.max(1, runs.length);
+  const validityErrors: string[] = [];
+  if (!validExpectedCount) {
+    validityErrors.push(`expectedCount must be a positive safe integer (got ${requestedCount})`);
+  }
+  if (runs.length !== expectedCount) {
+    validityErrors.push(`Expected ${expectedCount} evaluated runs, found ${runs.length}`);
+  }
+  const refs = runs.map((run) => run.ref);
+  if (new Set(refs).size !== refs.length) validityErrors.push("Evaluation run refs must be unique");
+
+  const strategyCounts = emptyStrategyCounts();
+  const completionDecisions: number[] = [];
+  let continued = 0;
+  let stuck = 0;
+  let clarityTotal = 0;
+  let enjoymentTotal = 0;
+
+  for (const run of runs) {
+    if (run.ref.trim().length === 0) validityErrors.push("Evaluation run ref must be non-empty");
+    if (!Number.isInteger(run.clarity) || run.clarity < 1 || run.clarity > 5) {
+      validityErrors.push(`${run.ref}: clarity must be an integer from 1 to 5`);
+    } else {
+      clarityTotal += run.clarity;
+    }
+    if (!Number.isInteger(run.enjoyment) || run.enjoyment < 1 || run.enjoyment > 5) {
+      validityErrors.push(`${run.ref}: enjoyment must be an integer from 1 to 5`);
+    } else {
+      enjoymentTotal += run.enjoyment;
+    }
+    if (typeof run.got_stuck !== "boolean") {
+      validityErrors.push(`${run.ref}: got_stuck must be boolean`);
+    } else if (run.got_stuck) {
+      stuck += 1;
+    }
+
+    let mapping: (typeof WOLF_WINTER_STRATEGY_BY_ENDING)[WolfEndingId] | null = null;
+    if (run.wolf_outcome !== null) {
+      mapping = ownWolfMapping(run.wolf_outcome);
+      if (mapping === null) {
+        const kind = run.wolf_outcome === "ending_pulled_down" ? "death" : "unknown";
+        validityErrors.push(`${run.ref}: ${kind} Wolf-Winter outcome ${run.wolf_outcome}`);
+      }
+    }
+
+    const completion = run.initial_goal_completion;
+    const retention = run.initial_goal_retention;
+    const hasAnyGoalEvidence = completion !== null || retention !== null;
+    let hasExactGoalEvidence = false;
+    if ((completion === null) !== (retention === null)) {
+      validityErrors.push(`${run.ref}: initial goal completion and retention evidence disagree`);
+    } else if (completion !== null && retention !== null) {
+      const completionValid =
+        completion.version === STARTING_SLICE_INITIAL_GOAL.version &&
+        completion.id === STARTING_SLICE_INITIAL_GOAL.id &&
+        Number.isSafeInteger(completion.completed_at_decision) &&
+        completion.completed_at_decision >= 1;
+      const retentionValid =
+        retention.goal_version === STARTING_SLICE_INITIAL_GOAL.version &&
+        retention.goal_id === STARTING_SLICE_INITIAL_GOAL.id &&
+        retention.reasons.includes("goal_completed") &&
+        Number.isSafeInteger(retention.at_decision) &&
+        retention.at_decision === completion.completed_at_decision;
+      if (!completionValid || !retentionValid) {
+        validityErrors.push(
+          `${run.ref}: initial goal retention event is not exactly bound to completion`,
+        );
+      } else {
+        hasExactGoalEvidence = true;
+      }
+    }
+
+    if (mapping !== null && !hasExactGoalEvidence) {
+      validityErrors.push(
+        `${run.ref}: Wolf-Winter outcome exists without exact initial-goal completion`,
+      );
+    } else if (run.wolf_outcome === null && hasAnyGoalEvidence) {
+      validityErrors.push(
+        `${run.ref}: initial-goal completion exists without a Wolf-Winter outcome`,
+      );
+    }
+
+    if (mapping !== null && hasExactGoalEvidence && completion !== null && retention !== null) {
+      strategyCounts[mapping.strategy] += 1;
+      completionDecisions.push(completion.completed_at_decision);
+      if (retention.choice === "continue") continued += 1;
+    }
+  }
+
+  const issueRecords = canonicalIssueRecords(resolve(options.root), runs, validityErrors);
+  const clusters = clusterIssues(issueRecords);
+  const blockingClusters: StartingSliceBlockingCluster[] = [];
+  for (const cluster of clusters) {
+    const reportRefs = uniqueSorted(cluster.issues.map((issue) => issue.ref));
+    const severe = SEVERE.has(cluster.maxSeverity);
+    const repeatedS2 = cluster.maxSeverity === "S2" && reportRefs.length * 100 >= expectedCount * 5;
+    if (!severe && !repeatedS2) continue;
+    blockingClusters.push({
+      key: cluster.key,
+      max_severity: cluster.maxSeverity,
+      affected_reports: reportRefs.length,
+      report_refs: reportRefs,
+      issue_mentions: cluster.issues.length,
+      location: cluster.location,
+      tokens: cluster.tokens,
+    });
+  }
+  blockingClusters.sort((left, right) => compareStrings(left.key, right.key));
+
+  completionDecisions.sort((left, right) => left - right);
+  const completed = completionDecisions.length;
+  const p50 = completed === 0 ? null : (completionDecisions[Math.ceil(completed / 2) - 1] ?? null);
+  const represented = STRATEGIES.filter((strategy) => strategyCounts[strategy] > 0).length;
+  const largestStrategy = Math.max(...STRATEGIES.map((strategy) => strategyCounts[strategy]));
+  const severeBlocked = blockingClusters.some((cluster) => SEVERE.has(cluster.max_severity));
+  const s2Blocked = blockingClusters.some((cluster) => cluster.max_severity === "S2");
+
+  // Every ratio is decided through integer cross-multiplication. No rounded
+  // averages or binary floating-point values can move a boundary run.
+  const gates: StartingSliceGates = {
+    completion_at_least_90_percent: completed * 100 >= expectedCount * 90,
+    completion_p50_at_most_45_decisions: p50 !== null && p50 <= 45,
+    got_stuck_at_most_5_percent: stuck * 100 <= expectedCount * 5,
+    clarity_average_at_least_4_2: clarityTotal * 10 >= expectedCount * 42,
+    enjoyment_average_at_least_4_2: enjoymentTotal * 10 >= expectedCount * 42,
+    initial_goal_continuation_at_least_70_percent:
+      completed > 0 && continued * 100 >= completed * 70,
+    at_least_3_top_level_strategies: represented >= 3,
+    no_strategy_above_75_percent: completed > 0 && largestStrategy * 100 <= completed * 75,
+    no_in_scope_s3_or_s4: !severeBlocked,
+    no_in_scope_s2_cluster_at_or_above_5_percent: !s2Blocked,
+  };
+  const gateFailures = (Object.keys(gates) as (keyof StartingSliceGates)[]).filter(
+    (gate) => !gates[gate],
+  );
+  const finalValidityErrors = uniqueSorted(validityErrors);
+
+  return {
+    schema_version: STARTING_SLICE_CERTIFICATION_SCHEMA_VERSION,
+    valid: finalValidityErrors.length === 0,
+    passed: finalValidityErrors.length === 0 && gateFailures.length === 0,
+    fleet: null,
+    certified_build: null,
+    validity_errors: finalValidityErrors,
+    gate_failures: gateFailures,
+    metrics: {
+      total_runs: expectedCount,
+      evaluated_runs: runs.length,
+      completed_runs: completed,
+      incomplete_runs: Math.max(0, expectedCount - completed),
+      completion_decision_p50: p50,
+      stuck_runs: stuck,
+      clarity_total: clarityTotal,
+      enjoyment_total: enjoymentTotal,
+      continued_after_initial_goal: continued,
+      completed_runs_with_continuation_choice: completed,
+      strategies_represented: represented,
+      largest_strategy_count: largestStrategy,
+      in_scope_issue_reports: new Set(issueRecords.map((issue) => issue.ref)).size,
+    },
+    gates,
+    strategy_counts: strategyCounts,
+    blocking_issue_clusters: blockingClusters,
+  };
+}
+
+function parseJsonFile(path: string): unknown {
+  return JSON.parse(readFileSync(path, "utf8")) as unknown;
+}
+
+function sha256(bytes: Uint8Array): string {
+  return createHash("sha256").update(bytes).digest("hex");
+}
+
+function reportPathInside(reportsDir: string, report: string): string | null {
+  const candidate = resolve(report);
+  const rel = relative(reportsDir, candidate);
+  if (rel === "" || rel === ".." || rel.startsWith(`..${sep}`) || isAbsolute(rel)) return null;
+  return candidate;
+}
+
+function relativeReportRef(reportsDir: string, reportPath: string): string {
+  return relative(reportsDir, reportPath).split(sep).join("/");
+}
+
+function normalizeVerifiedRun(
+  ref: string,
+  interview: PureExitInterviewV2,
+  questOutcomes: CanonicalQuestOutcomes,
+): StartingSliceEvaluationRun {
+  if (interview.journey_exit_receipt.contractVersion !== 3) {
+    throw new Error("current journey receipt required");
+  }
+  const receipt = interview.journey_exit_receipt;
+  const completion = receipt.completedGoals.find(
+    (goal) =>
+      goal.version === STARTING_SLICE_INITIAL_GOAL.version &&
+      goal.id === STARTING_SLICE_INITIAL_GOAL.id,
+  );
+  const retention = receipt.retentionHistory.find(
+    (event) =>
+      event.goalVersion === STARTING_SLICE_INITIAL_GOAL.version &&
+      event.goalId === STARTING_SLICE_INITIAL_GOAL.id &&
+      event.reasons.includes("goal_completed"),
+  );
+  const wolfOutcome = questOutcomes.find(([questId]) => questId === "wolf_winter")?.[1] ?? null;
+  return {
+    ref,
+    wolf_outcome: wolfOutcome,
+    initial_goal_completion:
+      completion === undefined
+        ? null
+        : {
+            version: completion.version,
+            id: completion.id,
+            completed_at_decision: completion.completedAtDecision,
+          },
+    initial_goal_retention:
+      retention === undefined
+        ? null
+        : {
+            goal_version: retention.goalVersion,
+            goal_id: retention.goalId,
+            at_decision: retention.atDecision,
+            reasons: retention.reasons,
+            choice: retention.choice,
+          },
+    clarity: interview.clarity,
+    enjoyment: interview.enjoyment,
+    got_stuck: interview.got_stuck,
+    issues: interview.bugs,
+  };
+}
+
+function attachFleetValidity(
+  result: StartingSliceCertificationResult,
+  validityErrors: readonly string[],
+  fleet: StartingSliceFleetIdentity,
+  build: PureRunBuild,
+): StartingSliceCertificationResult {
+  const combined = uniqueSorted([...result.validity_errors, ...validityErrors]);
+  return {
+    ...result,
+    valid: combined.length === 0,
+    passed: combined.length === 0 && result.gate_failures.length === 0,
+    fleet,
+    certified_build: build,
+    validity_errors: combined,
+  };
+}
+
+function invalidFilesystemResult(
+  root: string,
+  expectedCount: number,
+  errors: readonly string[],
+): StartingSliceCertificationResult {
+  const evaluated = evaluateStartingSliceRuns({
+    root,
+    runs: [],
+    expectedCount: Number.isSafeInteger(expectedCount) && expectedCount > 0 ? expectedCount : 1,
+  });
+  const combined = uniqueSorted([...evaluated.validity_errors, ...errors]);
+  return {
+    ...evaluated,
+    valid: false,
+    passed: false,
+    validity_errors: combined,
+  };
+}
+
+/**
+ * Certify one already-closed fleet directory. The manifest is only an index:
+ * each row is rebound to its adjacent private sidecar and the markdown is
+ * independently re-verified before it contributes to any metric.
+ */
+export function certifyStartingSliceFleet(
+  options: CertifyStartingSliceFleetOptions,
+): StartingSliceCertificationResult {
+  const root = resolve(options.root);
+  const fleetDir = resolve(options.fleetDir);
+  if (!Number.isSafeInteger(options.expectedCount) || options.expectedCount <= 0) {
+    return invalidFilesystemResult(root, options.expectedCount, [
+      `expectedCount must be a positive safe integer (got ${options.expectedCount})`,
+    ]);
+  }
+
+  const artifacts: CertifiedArtifactTracker = {
+    identities: new Set<string>(),
+    real_paths: new Set<string>(),
+  };
+  let fleetRootReal: string;
+  let summaryPath: string;
+  try {
+    fleetRootReal = requireRealDirectory(fleetDir, "fleet directory");
+    summaryPath = requireContainedRegularFile(
+      resolve(fleetDir, "summary.json"),
+      fleetRootReal,
+      "summary.json",
+      artifacts,
+    );
+  } catch (error) {
+    return invalidFilesystemResult(root, options.expectedCount, [
+      `fleet bundle unsafe: ${error instanceof Error ? error.message : String(error)}`,
+    ]);
+  }
+
+  let summary: FleetSummary;
+  try {
+    const parsed = FleetSummarySchema.safeParse(parseJsonFile(summaryPath));
+    if (!parsed.success) {
+      return invalidFilesystemResult(root, options.expectedCount, [
+        `summary.json invalid: ${firstSchemaIssue(parsed.error)}`,
+      ]);
+    }
+    summary = parsed.data;
+  } catch (error) {
+    return invalidFilesystemResult(root, options.expectedCount, [
+      `summary.json unreadable: ${error instanceof Error ? error.message : String(error)}`,
+    ]);
+  }
+
+  const reportsDir = isAbsolute(summary.reportsDir)
+    ? resolve(summary.reportsDir)
+    : resolve(root, summary.reportsDir);
+  const errors = wolfStrategyMappingDrift(root);
+  const fleetBasename = basename(fleetDir);
+  const labelBoundToDirectory = summary.label === fleetBasename;
+  const displayLabel = labelBoundToDirectory ? summary.label : "invalid-fleet-label";
+  if (!labelBoundToDirectory) {
+    errors.push(
+      `summary label ${JSON.stringify(summary.label)} does not exactly match fleet directory ${JSON.stringify(fleetBasename)}`,
+    );
+  }
+  let reportsRootReal: string;
+  try {
+    reportsRootReal = requireRealDirectory(reportsDir, "summary reportsDir");
+  } catch (error) {
+    return attachFleetValidity(
+      invalidFilesystemResult(root, options.expectedCount, [
+        `reports directory unsafe: ${error instanceof Error ? error.message : String(error)}`,
+      ]),
+      errors,
+      {
+        label: displayLabel,
+        stamp: summary.stamp,
+        fleet_dir: fleetDir,
+        reports_dir: reportsDir,
+        manifest_rows: 0,
+      },
+      summary.build,
+    );
+  }
+  if (summary.count !== options.expectedCount) {
+    errors.push(`summary count ${summary.count} != expected ${options.expectedCount}`);
+  }
+  if (summary.retention_eligible_verified_runs !== options.expectedCount) {
+    errors.push(
+      `summary retention-eligible runs ${summary.retention_eligible_verified_runs} != expected ${options.expectedCount}`,
+    );
+  }
+  if (summary.retention_ineligible_or_unverified_runs !== 0) {
+    errors.push("summary contains retention-ineligible or unverified runs");
+  }
+  if (summary.resume_enabled) errors.push("authoritative certification requires --no-resume");
+  if (summary.verified !== options.expectedCount) {
+    errors.push(`summary verified runs ${summary.verified} != expected ${options.expectedCount}`);
+  }
+  if (summary["skipped-resume"] !== 0) {
+    errors.push(`summary contains ${summary["skipped-resume"]} skipped-resume runs`);
+  }
+  if (summary.failed !== 0) errors.push(`summary contains ${summary.failed} failed runs`);
+  if (summary.total_attempts !== options.expectedCount) {
+    errors.push(
+      `summary total attempts ${summary.total_attempts} != expected ${options.expectedCount}`,
+    );
+  }
+  if (summary.failed_attempts !== 0) {
+    errors.push(`summary contains ${summary.failed_attempts} failed attempts`);
+  }
+  if (summary.technical_timeouts !== 0) {
+    errors.push(`summary contains ${summary.technical_timeouts} technical timeouts`);
+  }
+  if (summary.report_recovered_runs !== 0) {
+    errors.push(
+      `summary contains ${summary.report_recovered_runs} report-recovered runs; authoritative certification requires primary reports`,
+    );
+  }
+  if (!summary.build.tracked_worktree_clean) {
+    errors.push("summary build was captured from a dirty tracked worktree");
+  }
+  if (summary.build.world_id !== "new_york_overworld") {
+    errors.push(
+      `summary build world_id ${JSON.stringify(summary.build.world_id)} != "new_york_overworld"`,
+    );
+  }
+  let expectedBuild: PureRunBuild | null = null;
+  if (options.expectedBuild !== undefined) {
+    const parsedExpectedBuild = PureRunBuildSchema.safeParse(options.expectedBuild);
+    if (!parsedExpectedBuild.success) {
+      errors.push(`expectedBuild invalid: ${firstSchemaIssue(parsedExpectedBuild.error)}`);
+    } else {
+      expectedBuild = parsedExpectedBuild.data;
+    }
+  } else {
+    try {
+      expectedBuild = capturePureFleetBuild(root);
+    } catch (error) {
+      errors.push(
+        `could not capture current clean certification build: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+  }
+  if (expectedBuild !== null && !isDeepStrictEqual(summary.build, expectedBuild)) {
+    errors.push("summary build does not match the current certification build");
+  }
+  if (!Number.isSafeInteger(summary.seed_base + options.expectedCount - 1)) {
+    errors.push("planned seed range exceeds safe integers");
+  }
+
+  let rawLines: string[];
+  try {
+    const manifestPath = requireContainedRegularFile(
+      resolve(fleetDir, "manifest.jsonl"),
+      fleetRootReal,
+      "manifest.jsonl",
+      artifacts,
+    );
+    rawLines = readFileSync(manifestPath, "utf8")
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0);
+  } catch (error) {
+    return attachFleetValidity(
+      invalidFilesystemResult(root, options.expectedCount, [
+        `manifest.jsonl unreadable: ${error instanceof Error ? error.message : String(error)}`,
+      ]),
+      errors,
+      {
+        label: displayLabel,
+        stamp: summary.stamp,
+        fleet_dir: fleetDir,
+        reports_dir: reportsDir,
+        manifest_rows: 0,
+      },
+      summary.build,
+    );
+  }
+  if (rawLines.length !== options.expectedCount) {
+    errors.push(`manifest rows ${rawLines.length} != expected ${options.expectedCount}`);
+  }
+
+  const rowsBySeed = new Map<number, FleetManifestRow>();
+  const reportPaths = new Set<string>();
+  for (const [index, line] of rawLines.entries()) {
+    let raw: unknown;
+    try {
+      raw = JSON.parse(line) as unknown;
+    } catch {
+      errors.push(`manifest row ${index + 1} is not valid JSON`);
+      continue;
+    }
+    const parsed = FleetManifestRowSchema.safeParse(raw);
+    if (!parsed.success) {
+      errors.push(`manifest row ${index + 1} invalid: ${firstSchemaIssue(parsed.error)}`);
+      continue;
+    }
+    const row = parsed.data;
+    if (row.planned_index !== index) {
+      errors.push(
+        `manifest row ${index + 1}: physical order does not match planned_index ${row.planned_index}`,
+      );
+    }
+    if (rowsBySeed.has(row.seed)) errors.push(`manifest duplicate seed ${row.seed}`);
+    else rowsBySeed.set(row.seed, row);
+    const reportPath = resolve(row.report);
+    const reportKey = process.platform === "win32" ? reportPath.toLowerCase() : reportPath;
+    if (reportPaths.has(reportKey)) errors.push(`manifest duplicate report path ${row.report}`);
+    reportPaths.add(reportKey);
+  }
+
+  for (const seed of rowsBySeed.keys()) {
+    if (seed < summary.seed_base || seed >= summary.seed_base + options.expectedCount) {
+      errors.push(`manifest contains unplanned seed ${seed}`);
+    }
+  }
+
+  const normalizedRuns: StartingSliceEvaluationRun[] = [];
+  let verifiedRows = 0;
+  let resumedRows = 0;
+  let manifestTotalAttempts = 0;
+  let manifestFailedAttempts = 0;
+  let manifestTechnicalTimeouts = 0;
+  let manifestReportRecoveredRuns = 0;
+  const claudeSessionIds = new Set<string>();
+  const referencedArchiveDirectories = new Set<string>();
+  for (let plannedIndex = 0; plannedIndex < options.expectedCount; plannedIndex += 1) {
+    const seed = summary.seed_base + plannedIndex;
+    const row = rowsBySeed.get(seed);
+    if (!row) {
+      errors.push(`manifest missing planned seed ${seed}`);
+      continue;
+    }
+    const rowErrorStart = errors.length;
+    const expectedModel = plannedIndex % 10 === 9 ? "sonnet" : "haiku";
+    if (row.planned_index !== plannedIndex) {
+      errors.push(
+        `seed ${seed}: planned_index ${row.planned_index} != sorted seed index ${plannedIndex}`,
+      );
+    }
+    if (row.model !== expectedModel) {
+      errors.push(`seed ${seed}: model ${row.model} != sorted-index model ${expectedModel}`);
+    }
+    if (row.run_seed !== seed) errors.push(`seed ${seed}: row run_seed differs`);
+    if (!isDeepStrictEqual(row.build, summary.build)) {
+      errors.push(`seed ${seed}: row build differs from summary build`);
+    }
+    if (row.report_recovered) {
+      manifestReportRecoveredRuns += 1;
+      errors.push(
+        `seed ${seed}: authoritative certification does not accept a report-recovered row`,
+      );
+    }
+    if (row.attempts !== row.attempt_history.length) {
+      errors.push(
+        `seed ${seed}: attempts ${row.attempts} != attempt_history length ${row.attempt_history.length}`,
+      );
+    }
+    if (row.status !== "verified") {
+      errors.push(`seed ${seed}: authoritative row must be freshly verified, not resumed`);
+    }
+    if (row.attempts !== 1 || row.attempt_history.length !== 1) {
+      errors.push(`seed ${seed}: authoritative row must contain exactly one launcher attempt`);
+    }
+    for (const [attemptIndex, attempt] of row.attempt_history.entries()) {
+      manifestTotalAttempts += 1;
+      const expectedAttempt = attemptIndex + 1;
+      const isTerminal = attemptIndex === row.attempt_history.length - 1;
+      if (attempt.report_recovered) {
+        errors.push(
+          `seed ${seed} attempt ${attempt.attempt}: authoritative certification does not accept report recovery`,
+        );
+      }
+      if (attempt.attempt !== expectedAttempt) {
+        errors.push(
+          `seed ${seed}: attempt_history entry ${expectedAttempt} has attempt ${attempt.attempt}`,
+        );
+      }
+      if (attempt.classification === "verified") {
+        if (attempt.exit !== 0) {
+          errors.push(`seed ${seed} attempt ${attempt.attempt}: verified attempt must exit 0`);
+        }
+        if (attempt.archive !== null) {
+          errors.push(
+            `seed ${seed} attempt ${attempt.attempt}: verified attempt must not be archived`,
+          );
+        }
+        if (!isTerminal) {
+          errors.push(`seed ${seed} attempt ${attempt.attempt}: verified attempt must be terminal`);
+        }
+      } else {
+        manifestFailedAttempts += 1;
+        if (attempt.classification === "technical_timeout") manifestTechnicalTimeouts += 1;
+        if (attempt.exit === 0) {
+          errors.push(`seed ${seed} attempt ${attempt.attempt}: failed attempt cannot exit 0`);
+        }
+        if (
+          attempt.classification === "technical_timeout" &&
+          attempt.exit !== 124 &&
+          attempt.exit !== 137
+        ) {
+          errors.push(
+            `seed ${seed} attempt ${attempt.attempt}: technical timeout must exit 124 or 137`,
+          );
+        }
+        if (
+          attempt.classification !== "technical_timeout" &&
+          (attempt.exit === 124 || attempt.exit === 137)
+        ) {
+          errors.push(
+            `seed ${seed} attempt ${attempt.attempt}: timeout exit must be classified technical_timeout`,
+          );
+        }
+        if (attempt.report_recovered) {
+          errors.push(
+            `seed ${seed} attempt ${attempt.attempt}: failed attempt cannot report recovery`,
+          );
+        }
+        if (attempt.archive === null) {
+          errors.push(`seed ${seed} attempt ${attempt.attempt}: failed attempt archive is missing`);
+        } else {
+          validateAttemptArchive(
+            fleetDir,
+            fleetRootReal,
+            seed,
+            attempt,
+            artifacts,
+            errors,
+            referencedArchiveDirectories,
+          );
+        }
+      }
+    }
+    if (row.status === "verified") {
+      verifiedRows += 1;
+      if (row.attempts < 1) errors.push(`seed ${seed}: verified row must have attempts >= 1`);
+      const terminalAttempt = row.attempt_history.at(-1);
+      if (terminalAttempt?.classification !== "verified") {
+        errors.push(`seed ${seed}: verified row must end in a verified attempt`);
+      } else if (terminalAttempt.report_recovered !== row.report_recovered) {
+        errors.push(`seed ${seed}: terminal attempt report_recovered differs from row`);
+      }
+    } else {
+      resumedRows += 1;
+      if (row.attempts !== 0) errors.push(`seed ${seed}: skipped-resume row must have 0 attempts`);
+      if (row.attempt_history.length !== 0) {
+        errors.push(`seed ${seed}: skipped-resume row must have empty attempt_history`);
+      }
+    }
+
+    const reportPath = reportPathInside(reportsDir, row.report);
+    if (reportPath === null) {
+      errors.push(`seed ${seed}: report is not inside summary reportsDir`);
+      continue;
+    }
+    if (extname(reportPath) !== ".md") {
+      errors.push(`seed ${seed}: report path must end in .md`);
+      continue;
+    }
+    const expectedReportBasename = `${summary.stamp}_overworld_seed${seed}.md`;
+    if (basename(reportPath) !== expectedReportBasename) {
+      errors.push(
+        `seed ${seed}: report basename ${JSON.stringify(basename(reportPath))} != fresh cohort basename ${JSON.stringify(expectedReportBasename)}`,
+      );
+    }
+    const runArtifactPaths = pureFleetRunArtifactPaths(reportPath);
+    const sidecarPath = runArtifactPaths.runSidecar;
+    const attestationPath = pureFleetAttestationPathFor(reportPath);
+    let safeReportPath: string;
+    let safeSidecarPath: string;
+    let safeAttestationPath: string;
+    let reportBytes: Buffer;
+    let sidecarBytes: Buffer;
+    let runEvidenceBytes: Buffer;
+    let primaryEnvelopeBytes: Buffer;
+    let initialReportBytes: Buffer | null = null;
+    let recoveryMetadataBytes: Buffer | null = null;
+    let recoveryEnvelopeBytes: Buffer | null = null;
+    let reportText: string;
+    let sidecarText: string;
+    let attestationText: string;
+    try {
+      safeReportPath = requireContainedRegularFile(
+        reportPath,
+        reportsRootReal,
+        `seed ${seed} report`,
+        artifacts,
+      );
+      safeSidecarPath = requireContainedRegularFile(
+        sidecarPath,
+        reportsRootReal,
+        `seed ${seed} run sidecar`,
+        artifacts,
+      );
+      safeAttestationPath = requireContainedRegularFile(
+        attestationPath,
+        reportsRootReal,
+        `seed ${seed} model attestation`,
+        artifacts,
+      );
+      const safeRunEvidencePath = requireContainedRegularFile(
+        runArtifactPaths.runEvidence,
+        reportsRootReal,
+        `seed ${seed} raw run evidence`,
+        artifacts,
+      );
+      const safePrimaryEnvelopePath = requireContainedRegularFile(
+        runArtifactPaths.primaryEnvelope,
+        reportsRootReal,
+        `seed ${seed} primary Claude envelope`,
+        artifacts,
+      );
+      reportBytes = readFileSync(safeReportPath);
+      sidecarBytes = readFileSync(safeSidecarPath);
+      runEvidenceBytes = readFileSync(safeRunEvidencePath);
+      primaryEnvelopeBytes = readFileSync(safePrimaryEnvelopePath);
+      reportText = reportBytes.toString("utf8");
+      sidecarText = sidecarBytes.toString("utf8");
+      attestationText = readFileSync(safeAttestationPath, "utf8");
+      const recoveryEntries = [
+        ["initial report", runArtifactPaths.initialReport],
+        ["recovery metadata", runArtifactPaths.recoveryMetadata],
+        ["recovery Claude envelope", runArtifactPaths.recoveryEnvelope],
+      ] as const;
+      const recoveryPresence = recoveryEntries.map(([, path]) => pathEntryExists(path));
+      if (recoveryPresence.some(Boolean) && !recoveryPresence.every(Boolean)) {
+        throw new Error("report recovery artifacts must be all present or all absent");
+      }
+      if (row.report_recovered !== recoveryPresence.every(Boolean)) {
+        errors.push(`seed ${seed}: manifest recovery status differs from durable artifacts`);
+      }
+      if (recoveryPresence.every(Boolean)) {
+        errors.push(
+          `seed ${seed}: authoritative certification does not accept report-recovery artifacts`,
+        );
+        const safeInitialReportPath = requireContainedRegularFile(
+          runArtifactPaths.initialReport,
+          reportsRootReal,
+          `seed ${seed} initial report`,
+          artifacts,
+        );
+        const safeRecoveryMetadataPath = requireContainedRegularFile(
+          runArtifactPaths.recoveryMetadata,
+          reportsRootReal,
+          `seed ${seed} recovery metadata`,
+          artifacts,
+        );
+        const safeRecoveryEnvelopePath = requireContainedRegularFile(
+          runArtifactPaths.recoveryEnvelope,
+          reportsRootReal,
+          `seed ${seed} recovery Claude envelope`,
+          artifacts,
+        );
+        initialReportBytes = readFileSync(safeInitialReportPath);
+        recoveryMetadataBytes = readFileSync(safeRecoveryMetadataPath);
+        recoveryEnvelopeBytes = readFileSync(safeRecoveryEnvelopePath);
+      }
+    } catch (error) {
+      errors.push(
+        `seed ${seed}: authenticated run artifact unsafe or unreadable: ${error instanceof Error ? error.message : String(error)}`,
+      );
+      continue;
+    }
+    const parsedSidecar = parseBlindRunSidecar(sidecarText);
+    if (!parsedSidecar.ok) {
+      errors.push(`seed ${seed}: ${parsedSidecar.reason}`);
+      continue;
+    }
+    const sidecar = parsedSidecar.sidecar;
+    if (sidecar.play_mode !== "pure" || sidecar.schema_version !== 2) {
+      errors.push(`seed ${seed}: sidecar is not pure evidence schema v2`);
+      continue;
+    }
+    const artifactValidation = validatePureFleetRunArtifactBytes(
+      {
+        report: reportBytes,
+        runSidecar: sidecarBytes,
+        runEvidence: runEvidenceBytes,
+        primaryEnvelope: primaryEnvelopeBytes,
+        initialReport: initialReportBytes,
+        recoveryMetadata: recoveryMetadataBytes,
+        recoveryEnvelope: recoveryEnvelopeBytes,
+      },
+      {
+        seed,
+        model: row.model,
+        build: { ...summary.build, tracked_worktree_clean: true },
+      },
+    );
+    if (!artifactValidation.ok) {
+      errors.push(
+        `seed ${seed}: authenticated run artifacts invalid: ${artifactValidation.reason}`,
+      );
+      continue;
+    }
+    const artifactFacts = artifactValidation.facts;
+    const normalizedClaudeSessionId = artifactFacts.claude_session_id.toLowerCase();
+    if (claudeSessionIds.has(normalizedClaudeSessionId)) {
+      errors.push(
+        `seed ${seed}: Claude session UUID ${artifactFacts.claude_session_id} is reused by another fleet slot`,
+      );
+    } else {
+      claudeSessionIds.add(normalizedClaudeSessionId);
+    }
+    const parsedAttestation = parsePureFleetAttestation(attestationText);
+    if (!parsedAttestation.ok) {
+      errors.push(`seed ${seed}: ${parsedAttestation.reason}`);
+      continue;
+    }
+    const attestation = parsedAttestation.attestation;
+    if (!isDeepStrictEqual(attestation, row.model_attestation)) {
+      errors.push(`seed ${seed}: adjacent model attestation differs from manifest row`);
+    }
+    if (attestation.run_seed !== seed) {
+      errors.push(`seed ${seed}: model attestation run_seed differs`);
+    }
+    if (attestation.model !== row.model) {
+      errors.push(`seed ${seed}: model attestation model differs from planned row model`);
+    }
+    if (!isDeepStrictEqual(attestation.build, summary.build)) {
+      errors.push(`seed ${seed}: model attestation build differs from summary build`);
+    }
+    if (attestation.game_session_id !== artifactFacts.game_session_id) {
+      errors.push(`seed ${seed}: model attestation game_session_id differs from run evidence`);
+    }
+    if (attestation.claude_session_id !== artifactFacts.claude_session_id) {
+      errors.push(
+        `seed ${seed}: model attestation claude_session_id differs from primary envelope`,
+      );
+    }
+    if (attestation.actual_model !== artifactFacts.actual_model) {
+      errors.push(`seed ${seed}: model attestation actual_model differs from primary envelope`);
+    }
+    if (attestation.report_recovered !== artifactFacts.report_recovered) {
+      errors.push(`seed ${seed}: model attestation recovery status differs from run artifacts`);
+    }
+    if (attestation.report_recovered) {
+      errors.push(
+        `seed ${seed}: authoritative certification does not accept a report-recovered attestation`,
+      );
+    }
+    if (artifactFacts.report_recovered) {
+      errors.push(
+        `seed ${seed}: authoritative certification does not accept authenticated report-recovery facts`,
+      );
+    }
+    if (row.report_recovered !== artifactFacts.report_recovered) {
+      errors.push(
+        `seed ${seed}: manifest recovery status differs from authenticated run artifacts`,
+      );
+    }
+    for (const [field, digest] of Object.entries(artifactFacts.hashes)) {
+      if (attestation[field as keyof typeof artifactFacts.hashes] !== digest) {
+        errors.push(`seed ${seed}: model attestation ${field} differs from artifact bytes`);
+      }
+    }
+    if (sidecar.run_seed !== seed) errors.push(`seed ${seed}: sidecar run_seed differs`);
+    if (!isDeepStrictEqual(sidecar.build, summary.build)) {
+      errors.push(`seed ${seed}: sidecar build differs from summary build`);
+    }
+    if (!isDeepStrictEqual(sidecar.quest_outcomes, row.quest_outcomes)) {
+      errors.push(`seed ${seed}: sidecar quest outcomes differ from manifest row`);
+    }
+    if (sidecar.receipt.contractVersion !== 3) {
+      errors.push(`seed ${seed}: sidecar receipt is not journey contract v3`);
+    }
+    if (row.accepted_decisions !== sidecar.receipt.acceptedDecisions) {
+      errors.push(`seed ${seed}: accepted decision metadata differs from sidecar`);
+    }
+    if (!isDeepStrictEqual(row.retention_choices, sidecar.receipt.retentionHistory)) {
+      errors.push(`seed ${seed}: retention choice metadata differs from sidecar`);
+    }
+    if (row.checkpoint !== sidecar.receipt.checkpoint) {
+      errors.push(`seed ${seed}: checkpoint metadata differs from sidecar`);
+    }
+    if (row.exit_reason !== sidecar.receipt.exitReason) {
+      errors.push(`seed ${seed}: exit reason metadata differs from sidecar`);
+    }
+    if (!isDeepStrictEqual(row.exit_reasons, sidecar.receipt.exitReasons)) {
+      errors.push(`seed ${seed}: exit reasons metadata differs from sidecar`);
+    }
+    if (row.receipt_hash !== sidecar.receipt.receiptHash) {
+      errors.push(`seed ${seed}: receipt hash metadata differs from sidecar`);
+    }
+    if (attestation.game_session_id !== sidecar.session_id) {
+      errors.push(`seed ${seed}: model attestation game_session_id differs from sidecar`);
+    }
+    if (attestation.receipt_hash !== sidecar.receipt.receiptHash) {
+      errors.push(`seed ${seed}: model attestation receipt_hash differs from sidecar`);
+    }
+
+    const verification = verifyBlindReportText(reportText, {
+      requiredPlayMode: "pure",
+      runSidecar: sidecar,
+    });
+    if (!verification.ok) {
+      errors.push(`seed ${seed}: report verification failed: ${verification.reason}`);
+      continue;
+    }
+    if (!isPureExitInterviewV2(verification.interview)) {
+      errors.push(`seed ${seed}: verified report did not yield a pure v2 interview`);
+      continue;
+    }
+    if (errors.length !== rowErrorStart) continue;
+    try {
+      normalizedRuns.push(
+        normalizeVerifiedRun(
+          relativeReportRef(reportsDir, reportPath),
+          verification.interview,
+          sidecar.quest_outcomes,
+        ),
+      );
+    } catch (error) {
+      errors.push(
+        `seed ${seed}: could not normalize verified run: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+  }
+  if (verifiedRows !== summary.verified) {
+    errors.push(`manifest verified rows ${verifiedRows} != summary ${summary.verified}`);
+  }
+  if (resumedRows !== summary["skipped-resume"]) {
+    errors.push(
+      `manifest skipped-resume rows ${resumedRows} != summary ${summary["skipped-resume"]}`,
+    );
+  }
+  if (manifestTotalAttempts !== summary.total_attempts) {
+    errors.push(
+      `manifest total attempts ${manifestTotalAttempts} != summary ${summary.total_attempts}`,
+    );
+  }
+  if (manifestFailedAttempts !== summary.failed_attempts) {
+    errors.push(
+      `manifest failed attempts ${manifestFailedAttempts} != summary ${summary.failed_attempts}`,
+    );
+  }
+  if (manifestTechnicalTimeouts !== summary.technical_timeouts) {
+    errors.push(
+      `manifest technical timeouts ${manifestTechnicalTimeouts} != summary ${summary.technical_timeouts}`,
+    );
+  }
+  if (manifestReportRecoveredRuns !== summary.report_recovered_runs) {
+    errors.push(
+      `manifest report-recovered runs ${manifestReportRecoveredRuns} != summary ${summary.report_recovered_runs}`,
+    );
+  }
+  try {
+    const physicalArchiveDirectories = discoverAttemptArchiveDirectories(fleetDir, fleetRootReal);
+    const indexedArchiveDirectories = [...referencedArchiveDirectories].sort(compareStrings);
+    if (!isDeepStrictEqual(physicalArchiveDirectories, indexedArchiveDirectories)) {
+      errors.push("physical failed-attempt archive directories differ from manifest history");
+    }
+  } catch (error) {
+    errors.push(
+      `failed-attempt archive tree unsafe or unreadable: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
+
+  const result = evaluateStartingSliceRuns({
+    root,
+    runs: normalizedRuns,
+    expectedCount: options.expectedCount,
+  });
+  return attachFleetValidity(
+    result,
+    errors,
+    {
+      label: displayLabel,
+      stamp: summary.stamp,
+      fleet_dir: fleetDir,
+      reports_dir: reportsDir,
+      manifest_rows: rawLines.length,
+    },
+    summary.build,
+  );
+}
+
+/** Human-readable source identity used by thin CLI wrappers. */
+export function startingSliceFleetDisplayName(result: StartingSliceCertificationResult): string {
+  return result.fleet === null ? "starting-slice evaluation" : result.fleet.label;
+}

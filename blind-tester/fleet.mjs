@@ -15,9 +15,21 @@
  * each agent from a fresh overworld game.
  */
 import { spawn, execFileSync } from "node:child_process";
-import { existsSync, mkdirSync, appendFileSync, writeFileSync, readdirSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { Buffer } from "node:buffer";
+import { createHash } from "node:crypto";
+import {
+  existsSync,
+  lstatSync,
+  mkdirSync,
+  readFileSync,
+  readdirSync,
+  realpathSync,
+  unlinkSync,
+  writeFileSync,
+} from "node:fs";
+import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { isDeepStrictEqual } from "node:util";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const GAME_DIR = resolve(HERE, "..");
@@ -26,6 +38,8 @@ const RUN_SH = join(HERE, "run.sh");
 // independently schema-checked against these values before a row is verified.
 export const PURE_SESSION_CONTRACT_VERSION = 3;
 export const PURE_BASELINE_DECISIONS = 40;
+export const PURE_FLEET_EVIDENCE_SCHEMA_VERSION = 2;
+export const PURE_FLEET_ATTESTATION_SCHEMA_VERSION = 2;
 
 // Rotation order for explicit structural `--mock --personas mixed`; live pure
 // fleets reject mixed/non-default personas.
@@ -43,10 +57,39 @@ const DEFAULT_MODEL_MIX = [
  * pass `undefined` for flags with no floor (seedBase — negative seeds are
  * legal, see reportPathFor's `-?\d+` ledger regex). */
 function assertFleetInt(value, flag, min) {
-  if (!Number.isInteger(value) || (min !== undefined && value < min)) {
-    const bound = min !== undefined ? `an integer >= ${min}` : "an integer";
+  if (!Number.isSafeInteger(value) || (min !== undefined && value < min)) {
+    const bound = min !== undefined ? `a safe integer >= ${min}` : "a safe integer";
     throw new Error(`fleet: --${flag} must be ${bound} (got ${value})`);
   }
+}
+
+export function assertFleetSeedRange(opts) {
+  assertFleetInt(opts.count, "count", 1);
+  assertFleetInt(opts.seedBase, "seed-base", undefined);
+  const offset = opts.count - 1;
+  const finalSeed = opts.seedBase + offset;
+  if (!Number.isSafeInteger(finalSeed) || finalSeed - opts.seedBase !== offset) {
+    throw new Error(
+      `fleet: seed range ${opts.seedBase}..${String(finalSeed)} must contain only safe integers`,
+    );
+  }
+}
+
+export function validateFleetLabel(label) {
+  const windowsBase = typeof label === "string" ? label.split(".", 1)[0].toUpperCase() : "";
+  if (
+    typeof label !== "string" ||
+    label === "." ||
+    label === ".." ||
+    label.endsWith(".") ||
+    /^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])$/.test(windowsBase) ||
+    !/^[A-Za-z0-9][A-Za-z0-9._-]{0,79}$/.test(label)
+  ) {
+    throw new Error(
+      "fleet: --label must be one non-reserved 1-80 character path segment using only letters, numbers, '.', '_', or '-', beginning with a letter or number, and not ending in '.'",
+    );
+  }
+  return label;
 }
 
 /** Parse fleet CLI args into a plain options object (pure; exported for tests).
@@ -57,13 +100,14 @@ export function parseFleetArgs(argv) {
   const opts = {
     count: 100,
     concurrency: 4,
-    model: "haiku",
+    model: "mix",
     personas: "default",
     target: "overworld",
     seedBase: 1000,
     mock: false,
     label: null,
     maxRetries: 2,
+    resume: true,
     out: null,
     modelMix: DEFAULT_MODEL_MIX,
   };
@@ -97,6 +141,9 @@ export function parseFleetArgs(argv) {
       case "--max-retries":
         opts.maxRetries = Number(argv[++i]);
         break;
+      case "--no-resume":
+        opts.resume = false;
+        break;
       case "--out":
         opts.out = argv[++i];
         break;
@@ -110,13 +157,20 @@ export function parseFleetArgs(argv) {
   assertFleetInt(opts.concurrency, "concurrency", 1);
   assertFleetInt(opts.seedBase, "seed-base", undefined);
   assertFleetInt(opts.maxRetries, "max-retries", 0);
+  assertFleetSeedRange(opts);
+  if (opts.label !== null) validateFleetLabel(opts.label);
   assertFleetTargetPolicy(opts);
   return opts;
 }
 
 function assertFleetTargetPolicy(opts) {
-  if (opts.target !== "overworld" && !/^quest:\S+$/.test(String(opts.target ?? ""))) {
-    throw new Error(`fleet: --target must be overworld or quest:<id> (got ${opts.target})`);
+  if (
+    opts.target !== "overworld" &&
+    !/^quest:[a-z0-9]+(?:_[a-z0-9]+)*$/.test(String(opts.target ?? ""))
+  ) {
+    throw new Error(
+      `fleet: --target must be overworld or quest:<id> using a lowercase shipped quest id (got ${opts.target})`,
+    );
   }
   if (!opts.mock && opts.target !== "overworld") {
     throw new Error(
@@ -127,6 +181,9 @@ function assertFleetTargetPolicy(opts) {
     throw new Error(
       "fleet: pure live runs use the default first-time-player persona; non-default or mixed personas require explicit --mock structural mode",
     );
+  }
+  if (!opts.mock && opts.model !== "mix" && !isFleetModel(opts.model)) {
+    throw new Error("fleet: pure live models must be one of haiku, sonnet, opus, or mix");
   }
 }
 
@@ -143,12 +200,16 @@ export function planFleetRuns(opts) {
   // Programmatic callers do not necessarily pass through parseFleetArgs; keep
   // the fresh-world live contract at the planning boundary as well.
   assertFleetTargetPolicy(opts);
+  assertFleetSeedRange(opts);
   const runs = [];
   for (let i = 0; i < opts.count; i++) {
     const seed = opts.seedBase + i;
     const persona =
       opts.personas === "mixed" ? PERSONA_ROTATION[i % PERSONA_ROTATION.length] : opts.personas;
     const model = opts.model === "mix" ? modelForMixIndex(opts.modelMix, i) : opts.model;
+    if (!opts.mock && !isFleetModel(model)) {
+      throw new Error("fleet: pure live model plans may contain only haiku, sonnet, or opus");
+    }
     runs.push({ seed, persona, model, target: opts.target });
   }
   return runs;
@@ -270,19 +331,460 @@ export function runSidecarPathFor(reportMdPath) {
     : `${reportMdPath}.run.json`;
 }
 
-export async function verifyReportForResume(reportMdPath, requiredMode) {
-  const runSidecarPath = runSidecarPathFor(reportMdPath);
-  if (!existsSync(reportMdPath) || !existsSync(runSidecarPath)) {
-    return { ok: false, stdout: "", stderr: "", run: null };
+export function fleetAttestationPathFor(reportMdPath) {
+  return reportMdPath.endsWith(".md")
+    ? `${reportMdPath.slice(0, -".md".length)}.fleet.json`
+    : `${reportMdPath}.fleet.json`;
+}
+
+export function pureFleetRunArtifactPathsFor(reportMdPath) {
+  const prefix = reportMdPath.endsWith(".md") ? reportMdPath.slice(0, -".md".length) : reportMdPath;
+  return {
+    report: reportMdPath,
+    run_sidecar: `${prefix}.run.json`,
+    run_evidence: `${prefix}.evidence.jsonl`,
+    primary_envelope: `${prefix}.json`,
+    initial_report: `${prefix}.initial-report.txt`,
+    recovery_metadata: `${prefix}.repair.meta.json`,
+    recovery_envelope: `${prefix}.repair.json`,
+  };
+}
+
+/** A resumable artifact must be an ordinary file, never a symlink, whose
+ * resolved path stays within the selected reports directory. */
+export function isTrustedFleetArtifactFile(filePath, reportsDir) {
+  try {
+    const metadata = lstatSync(filePath);
+    if (metadata.isSymbolicLink() || !metadata.isFile() || metadata.nlink !== 1) return false;
+    const reportsRoot = realpathSync(reportsDir);
+    const artifact = realpathSync(filePath);
+    const fromRoot = relative(reportsRoot, artifact);
+    return (
+      fromRoot !== "" &&
+      fromRoot !== ".." &&
+      !fromRoot.startsWith(`..${sep}`) &&
+      !isAbsolute(fromRoot)
+    );
+  } catch {
+    return false;
   }
+}
+
+function trustedArtifactIdentity(filePath) {
+  const metadata = lstatSync(filePath);
+  if (metadata.ino !== 0) return `${String(metadata.dev)}:${String(metadata.ino)}`;
+  const resolved = realpathSync(filePath);
+  return process.platform === "win32" ? resolved.toLowerCase() : resolved;
+}
+
+const PURE_BUILD_KEYS = ["git_commit", "tracked_worktree_clean", "world_hash", "world_id"].sort();
+
+function isExactPureFleetBuild(build) {
+  if (build === null || typeof build !== "object" || Array.isArray(build)) return false;
+  const keys = Object.keys(build).sort();
+  return (
+    keys.length === PURE_BUILD_KEYS.length &&
+    keys.every((key, index) => key === PURE_BUILD_KEYS[index]) &&
+    /^[0-9a-f]{40}$/.test(build.git_commit) &&
+    build.tracked_worktree_clean === true &&
+    typeof build.world_id === "string" &&
+    build.world_id.length > 0 &&
+    /^[0-9a-f]{64}$/.test(build.world_hash)
+  );
+}
+
+function samePureFleetBuild(actual, expected) {
+  return (
+    isExactPureFleetBuild(actual) &&
+    isExactPureFleetBuild(expected) &&
+    actual.git_commit === expected.git_commit &&
+    actual.tracked_worktree_clean === expected.tracked_worktree_clean &&
+    actual.world_id === expected.world_id &&
+    actual.world_hash === expected.world_hash
+  );
+}
+
+const PURE_FLEET_ATTESTATION_KEYS = [
+  "actual_model",
+  "build",
+  "claude_session_id",
+  "game_session_id",
+  "initial_report_sha256",
+  "model",
+  "persona",
+  "play_mode",
+  "primary_envelope_sha256",
+  "receipt_hash",
+  "recovery_envelope_sha256",
+  "recovery_metadata_sha256",
+  "report_recovered",
+  "report_sha256",
+  "run_evidence_sha256",
+  "run_seed",
+  "run_sidecar_sha256",
+  "schema_version",
+  "start_surface",
+  "target",
+].sort();
+
+function isFleetModel(model) {
+  return model === "haiku" || model === "sonnet" || model === "opus";
+}
+
+function isExactPureFleetAttestation(attestation) {
+  if (attestation === null || typeof attestation !== "object" || Array.isArray(attestation)) {
+    return false;
+  }
+  const keys = Object.keys(attestation).sort();
+  return (
+    keys.length === PURE_FLEET_ATTESTATION_KEYS.length &&
+    keys.every((key, index) => key === PURE_FLEET_ATTESTATION_KEYS[index]) &&
+    attestation.schema_version === PURE_FLEET_ATTESTATION_SCHEMA_VERSION &&
+    Number.isSafeInteger(attestation.run_seed) &&
+    isFleetModel(attestation.model) &&
+    attestation.persona === "default" &&
+    attestation.target === "overworld" &&
+    attestation.play_mode === "pure" &&
+    attestation.start_surface === "fresh_overworld" &&
+    isExactPureFleetBuild(attestation.build) &&
+    typeof attestation.game_session_id === "string" &&
+    attestation.game_session_id.length > 0 &&
+    typeof attestation.claude_session_id === "string" &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+      attestation.claude_session_id,
+    ) &&
+    typeof attestation.actual_model === "string" &&
+    attestation.actual_model.length > 0 &&
+    typeof attestation.report_recovered === "boolean" &&
+    /^[0-9a-f]{64}$/.test(attestation.receipt_hash) &&
+    /^[0-9a-f]{64}$/.test(attestation.report_sha256) &&
+    /^[0-9a-f]{64}$/.test(attestation.run_sidecar_sha256) &&
+    /^[0-9a-f]{64}$/.test(attestation.run_evidence_sha256) &&
+    /^[0-9a-f]{64}$/.test(attestation.primary_envelope_sha256) &&
+    (attestation.initial_report_sha256 === null ||
+      /^[0-9a-f]{64}$/.test(attestation.initial_report_sha256)) &&
+    (attestation.recovery_metadata_sha256 === null ||
+      /^[0-9a-f]{64}$/.test(attestation.recovery_metadata_sha256)) &&
+    (attestation.recovery_envelope_sha256 === null ||
+      /^[0-9a-f]{64}$/.test(attestation.recovery_envelope_sha256)) &&
+    (attestation.report_recovered
+      ? attestation.initial_report_sha256 !== null &&
+        attestation.recovery_metadata_sha256 !== null &&
+        attestation.recovery_envelope_sha256 !== null
+      : attestation.initial_report_sha256 === null &&
+        attestation.recovery_metadata_sha256 === null &&
+        attestation.recovery_envelope_sha256 === null)
+  );
+}
+
+export function parsePureFleetAttestation(text) {
+  let raw;
+  try {
+    raw = JSON.parse(text);
+  } catch {
+    return { ok: false, reason: "pure fleet attestation is not valid JSON" };
+  }
+  if (!isExactPureFleetAttestation(raw)) {
+    return { ok: false, reason: "pure fleet attestation does not match its strict schema" };
+  }
+  return { ok: true, attestation: raw };
+}
+
+function sha256FileBytes(path) {
+  return createHash("sha256").update(readFileSync(path)).digest("hex");
+}
+
+export function pureFleetArtifactHashes(reportMdPath) {
+  const paths = pureFleetRunArtifactPathsFor(reportMdPath);
+  return {
+    report_sha256: sha256FileBytes(paths.report),
+    run_sidecar_sha256: sha256FileBytes(paths.run_sidecar),
+    run_evidence_sha256: sha256FileBytes(paths.run_evidence),
+    primary_envelope_sha256: sha256FileBytes(paths.primary_envelope),
+    initial_report_sha256: artifactEntryExists(paths.initial_report)
+      ? sha256FileBytes(paths.initial_report)
+      : null,
+    recovery_metadata_sha256: artifactEntryExists(paths.recovery_metadata)
+      ? sha256FileBytes(paths.recovery_metadata)
+      : null,
+    recovery_envelope_sha256: artifactEntryExists(paths.recovery_envelope)
+      ? sha256FileBytes(paths.recovery_envelope)
+      : null,
+  };
+}
+
+function isExactFleetArtifactHashes(hashes) {
+  return (
+    hashes !== null &&
+    typeof hashes === "object" &&
+    /^[0-9a-f]{64}$/.test(hashes.report_sha256) &&
+    /^[0-9a-f]{64}$/.test(hashes.run_sidecar_sha256) &&
+    /^[0-9a-f]{64}$/.test(hashes.run_evidence_sha256) &&
+    /^[0-9a-f]{64}$/.test(hashes.primary_envelope_sha256) &&
+    (hashes.initial_report_sha256 === null ||
+      /^[0-9a-f]{64}$/.test(hashes.initial_report_sha256)) &&
+    (hashes.recovery_metadata_sha256 === null ||
+      /^[0-9a-f]{64}$/.test(hashes.recovery_metadata_sha256)) &&
+    (hashes.recovery_envelope_sha256 === null ||
+      /^[0-9a-f]{64}$/.test(hashes.recovery_envelope_sha256))
+  );
+}
+
+function artifactEntryExists(path) {
+  try {
+    lstatSync(path);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function isExactPureFleetRunArtifactFacts(facts) {
+  return (
+    facts !== null &&
+    typeof facts === "object" &&
+    facts.run !== null &&
+    typeof facts.run === "object" &&
+    typeof facts.game_session_id === "string" &&
+    facts.game_session_id.length > 0 &&
+    typeof facts.claude_session_id === "string" &&
+    facts.claude_session_id.length > 0 &&
+    typeof facts.actual_model === "string" &&
+    facts.actual_model.length > 0 &&
+    typeof facts.report_recovered === "boolean" &&
+    isExactFleetArtifactHashes(facts.hashes)
+  );
+}
+
+async function validatePureFleetRunArtifacts(reportMdPath, expected, reportsDir) {
+  const paths = pureFleetRunArtifactPathsFor(reportMdPath);
+  for (const [label, path] of [
+    ["report", paths.report],
+    ["run sidecar", paths.run_sidecar],
+    ["raw run evidence", paths.run_evidence],
+    ["primary Claude envelope", paths.primary_envelope],
+  ]) {
+    if (!isTrustedFleetArtifactFile(path, reportsDir)) {
+      return { ok: false, reason: `${label} must be a contained private regular file` };
+    }
+  }
+  const recoveryEntries = [
+    ["initial report", paths.initial_report],
+    ["recovery metadata", paths.recovery_metadata],
+    ["recovery Claude envelope", paths.recovery_envelope],
+  ];
+  const recoveryPresence = recoveryEntries.map(([, path]) => artifactEntryExists(path));
+  if (recoveryPresence.some(Boolean) && !recoveryPresence.every(Boolean)) {
+    return { ok: false, reason: "report recovery artifacts must be all present or all absent" };
+  }
+  if (recoveryPresence.every(Boolean)) {
+    for (const [label, path] of recoveryEntries) {
+      if (!isTrustedFleetArtifactFile(path, reportsDir)) {
+        return { ok: false, reason: `${label} must be a contained private regular file` };
+      }
+    }
+  }
+
+  const tsxCli = join(GAME_DIR, "node_modules", "tsx", "dist", "cli.mjs");
+  const validatorScript = join(GAME_DIR, "scripts", "validate-pure-fleet-run.ts");
   const result = await spawnAsync(
-    "npm",
+    process.execPath,
     [
-      "--silent",
-      "exec",
-      "tsx",
-      "--",
-      "scripts/verify-blind-report.ts",
+      tsxCli,
+      validatorScript,
+      "--report",
+      reportMdPath,
+      "--seed",
+      String(expected.seed),
+      "--model",
+      expected.model,
+      "--git-commit",
+      expected.build.git_commit,
+      "--world-id",
+      expected.build.world_id,
+      "--world-hash",
+      expected.build.world_hash,
+    ],
+    { cwd: GAME_DIR, env: { ...process.env } },
+  );
+  let parsed;
+  try {
+    parsed = JSON.parse(result.stdout.trim());
+  } catch {
+    return {
+      ok: false,
+      reason: `pure fleet artifact validator returned invalid JSON: ${firstErrorLine(result.stderr)}`,
+    };
+  }
+  if (
+    result.status !== 0 ||
+    parsed?.ok !== true ||
+    !isExactPureFleetRunArtifactFacts(parsed.facts)
+  ) {
+    return {
+      ok: false,
+      reason:
+        typeof parsed?.reason === "string"
+          ? parsed.reason
+          : `pure fleet artifact validator failed: ${firstErrorLine(result.stderr)}`,
+    };
+  }
+  return { ok: true, facts: parsed.facts };
+}
+
+export function pureFleetAttestationMismatch(attestation, run, expected, artifactFacts) {
+  if (!isExactPureFleetAttestation(attestation)) {
+    return "pure resume requires a valid adjacent fleet attestation";
+  }
+  if (
+    expected === null ||
+    typeof expected !== "object" ||
+    !Number.isSafeInteger(expected.seed) ||
+    !isFleetModel(expected.model) ||
+    !isExactPureFleetBuild(expected.build)
+  ) {
+    return "pure resume requires an exact expected seed, model, and clean fleet build";
+  }
+  if (attestation.run_seed !== expected.seed || attestation.run_seed !== run?.run_seed) {
+    return "pure fleet attestation seed does not match the plan and run evidence";
+  }
+  if (attestation.model !== expected.model) {
+    return "pure fleet attestation model does not match the planned model";
+  }
+  if (
+    !samePureFleetBuild(attestation.build, expected.build) ||
+    !samePureFleetBuild(attestation.build, run?.build)
+  ) {
+    return "pure fleet attestation build does not match the plan and run evidence";
+  }
+  if (!isExactPureFleetRunArtifactFacts(artifactFacts)) {
+    return "pure fleet attestation requires semantically validated run artifacts";
+  }
+  if (!isDeepStrictEqual(artifactFacts.run, run)) {
+    return "raw run evidence does not reproduce the verifier run sidecar";
+  }
+  if (
+    attestation.game_session_id !== run?.session_id ||
+    attestation.game_session_id !== artifactFacts.game_session_id
+  ) {
+    return "pure fleet attestation game session does not match the run evidence";
+  }
+  if (attestation.claude_session_id !== artifactFacts.claude_session_id) {
+    return "pure fleet attestation Claude session does not match the primary envelope";
+  }
+  if (attestation.actual_model !== artifactFacts.actual_model) {
+    return "pure fleet attestation actual model does not match the primary envelope";
+  }
+  if (attestation.report_recovered !== artifactFacts.report_recovered) {
+    return "pure fleet attestation recovery status does not match durable recovery evidence";
+  }
+  if (attestation.receipt_hash !== run?.receipt?.receiptHash) {
+    return "pure fleet attestation receipt hash does not match the verified receipt";
+  }
+  if (
+    !isExactFleetArtifactHashes(artifactFacts.hashes) ||
+    attestation.report_sha256 !== artifactFacts.hashes.report_sha256 ||
+    attestation.run_sidecar_sha256 !== artifactFacts.hashes.run_sidecar_sha256 ||
+    attestation.run_evidence_sha256 !== artifactFacts.hashes.run_evidence_sha256 ||
+    attestation.primary_envelope_sha256 !== artifactFacts.hashes.primary_envelope_sha256 ||
+    attestation.initial_report_sha256 !== artifactFacts.hashes.initial_report_sha256 ||
+    attestation.recovery_metadata_sha256 !== artifactFacts.hashes.recovery_metadata_sha256 ||
+    attestation.recovery_envelope_sha256 !== artifactFacts.hashes.recovery_envelope_sha256
+  ) {
+    return "pure fleet attestation artifact hashes do not match the authenticated run bytes";
+  }
+  return null;
+}
+
+function buildPureFleetAttestation(run, expected, artifactFacts) {
+  const attestation = {
+    schema_version: PURE_FLEET_ATTESTATION_SCHEMA_VERSION,
+    run_seed: expected.seed,
+    model: expected.model,
+    persona: "default",
+    target: "overworld",
+    play_mode: "pure",
+    start_surface: "fresh_overworld",
+    build: expected.build,
+    game_session_id: run.session_id,
+    claude_session_id: artifactFacts.claude_session_id,
+    actual_model: artifactFacts.actual_model,
+    report_recovered: artifactFacts.report_recovered,
+    receipt_hash: run.receipt.receiptHash,
+    ...artifactFacts.hashes,
+  };
+  const mismatch = pureFleetAttestationMismatch(attestation, run, expected, artifactFacts);
+  if (mismatch !== null) throw new Error(mismatch);
+  return attestation;
+}
+
+export async function writeFreshPureFleetAttestation(
+  reportMdPath,
+  run,
+  expected,
+  reportsDir = dirname(reportMdPath),
+) {
+  const validation = await validatePureFleetRunArtifacts(reportMdPath, expected, reportsDir);
+  if (!validation.ok) throw new Error(validation.reason);
+  const attestation = buildPureFleetAttestation(run, expected, validation.facts);
+  writeFileSync(
+    fleetAttestationPathFor(reportMdPath),
+    `${JSON.stringify(attestation, null, 2)}\n`,
+    { encoding: "utf8", flag: "wx" },
+  );
+  return attestation;
+}
+
+function pureFleetEvidenceMismatch(run, expected) {
+  if (
+    expected === null ||
+    typeof expected !== "object" ||
+    !Number.isSafeInteger(expected.seed) ||
+    !isFleetModel(expected.model) ||
+    !isExactPureFleetBuild(expected.build)
+  ) {
+    return "pure resume requires an exact expected seed, model, and clean fleet build";
+  }
+  if (run?.schema_version !== PURE_FLEET_EVIDENCE_SCHEMA_VERSION) {
+    return `pure resume requires evidence schema v${PURE_FLEET_EVIDENCE_SCHEMA_VERSION}`;
+  }
+  if (run?.receipt?.contractVersion !== PURE_SESSION_CONTRACT_VERSION) {
+    return `pure resume requires journey contract v${PURE_SESSION_CONTRACT_VERSION}`;
+  }
+  if (run.run_seed !== expected.seed) {
+    return `pure resume evidence seed ${String(run.run_seed)} does not match planned seed ${expected.seed}`;
+  }
+  if (!samePureFleetBuild(run.build, expected.build)) {
+    return "pure resume evidence build does not match the authenticated fleet build";
+  }
+  return null;
+}
+
+async function verifyReportEvidence(
+  reportMdPath,
+  requiredMode,
+  expectedPure = null,
+  reportsDir = dirname(reportMdPath),
+) {
+  const runSidecarPath = runSidecarPathFor(reportMdPath);
+  if (
+    !isTrustedFleetArtifactFile(reportMdPath, reportsDir) ||
+    !isTrustedFleetArtifactFile(runSidecarPath, reportsDir)
+  ) {
+    return {
+      ok: false,
+      stdout: "",
+      stderr: "fleet report and run sidecar must be contained regular non-symlink files",
+      run: null,
+    };
+  }
+  const tsxCli = join(GAME_DIR, "node_modules", "tsx", "dist", "cli.mjs");
+  const verifierScript = join(GAME_DIR, "scripts", "verify-blind-report.ts");
+  const result = await spawnAsync(
+    process.execPath,
+    [
+      tsxCli,
+      verifierScript,
       reportMdPath,
       "--require-mode",
       requiredMode,
@@ -290,7 +792,7 @@ export async function verifyReportForResume(reportMdPath, requiredMode) {
       runSidecarPath,
       "--json",
     ],
-    { cwd: GAME_DIR, shell: process.platform === "win32" },
+    { cwd: GAME_DIR, env: { ...process.env } },
   );
   let run = null;
   if (result.status === 0) {
@@ -304,19 +806,101 @@ export async function verifyReportForResume(reportMdPath, requiredMode) {
         run: null,
       };
     }
-    if (
-      requiredMode === "pure" &&
-      run?.receipt?.contractVersion !== PURE_SESSION_CONTRACT_VERSION
-    ) {
+    const pureMismatch =
+      requiredMode === "pure" ? pureFleetEvidenceMismatch(run, expectedPure) : null;
+    if (pureMismatch !== null) {
       return {
         ok: false,
         stdout: result.stdout,
-        stderr: `pure resume requires journey contract v${PURE_SESSION_CONTRACT_VERSION}`,
+        stderr: pureMismatch,
         run,
       };
     }
   }
   return { ok: result.status === 0, stdout: result.stdout, stderr: result.stderr, run };
+}
+
+export async function verifyReportForResume(
+  reportMdPath,
+  requiredMode,
+  expectedPure = null,
+  reportsDir = dirname(reportMdPath),
+) {
+  const verified = await verifyReportEvidence(reportMdPath, requiredMode, expectedPure, reportsDir);
+  if (!verified.ok || requiredMode !== "pure") {
+    return { ...verified, attestation: null };
+  }
+  const attestationPath = fleetAttestationPathFor(reportMdPath);
+  if (!isTrustedFleetArtifactFile(attestationPath, reportsDir)) {
+    return {
+      ...verified,
+      ok: false,
+      stderr:
+        "pure resume requires an adjacent contained regular non-symlink runner-owned fleet attestation",
+      attestation: null,
+    };
+  }
+  let parsed;
+  try {
+    parsed = parsePureFleetAttestation(readFileSync(attestationPath, "utf8"));
+  } catch (error) {
+    return {
+      ...verified,
+      ok: false,
+      stderr: `pure fleet attestation could not be read: ${error instanceof Error ? error.message : String(error)}`,
+      attestation: null,
+    };
+  }
+  if (!parsed.ok) {
+    return { ...verified, ok: false, stderr: parsed.reason, attestation: null };
+  }
+  const artifactValidation = await validatePureFleetRunArtifacts(
+    reportMdPath,
+    expectedPure,
+    reportsDir,
+  );
+  if (!artifactValidation.ok) {
+    return {
+      ...verified,
+      ok: false,
+      stderr: artifactValidation.reason,
+      attestation: parsed.attestation,
+    };
+  }
+  const mismatch = pureFleetAttestationMismatch(
+    parsed.attestation,
+    verified.run,
+    expectedPure,
+    artifactValidation.facts,
+  );
+  if (mismatch !== null) {
+    return { ...verified, ok: false, stderr: mismatch, attestation: parsed.attestation };
+  }
+  return { ...verified, attestation: parsed.attestation };
+}
+
+async function captureExpectedPureFleetBuild() {
+  const tsxCli = join(GAME_DIR, "node_modules", "tsx", "dist", "cli.mjs");
+  const script = join(GAME_DIR, "scripts", "print-pure-fleet-build.ts");
+  const result = await spawnAsync(process.execPath, [tsxCli, script, GAME_DIR], {
+    cwd: GAME_DIR,
+    env: { ...process.env },
+  });
+  if (result.status !== 0) {
+    throw new Error(
+      `fleet: pure build preflight failed: ${firstErrorLine(result.stderr || result.stdout)}`,
+    );
+  }
+  let build;
+  try {
+    build = JSON.parse(result.stdout.trim());
+  } catch {
+    throw new Error("fleet: pure build preflight returned invalid JSON");
+  }
+  if (!isExactPureFleetBuild(build)) {
+    throw new Error("fleet: pure build preflight returned an invalid or dirty build identity");
+  }
+  return build;
 }
 
 /** Pure matcher (exported for tests): which `readdirSync` entries are resume
@@ -329,7 +913,9 @@ export function resumeCandidatesFor(entries, sourceSlug, seed) {
   const re = new RegExp(
     `^\\d{8}T\\d{6}Z_${escapeRegExp(sourceSlug)}_seed${escapeRegExp(String(seed))}\\.md$`,
   );
-  return entries.filter((f) => re.test(f)).sort((a, b) => (a < b ? 1 : a > b ? -1 : 0));
+  return [...new Set(entries.filter((f) => re.test(f)))].sort((a, b) =>
+    a < b ? 1 : a > b ? -1 : 0,
+  );
 }
 
 /** Stamp-agnostic resume lookup: ALL existing reports matching this run's
@@ -344,7 +930,20 @@ function findExistingReport(reportsDir, target, seed) {
   } catch {
     return [];
   }
-  return resumeCandidatesFor(entries, slug, seed).map((f) => join(reportsDir, f));
+  const seenFiles = new Set();
+  return resumeCandidatesFor(entries, slug, seed)
+    .map((f) => join(reportsDir, f))
+    .filter((candidate) => {
+      if (!isTrustedFleetArtifactFile(candidate, reportsDir)) return false;
+      try {
+        const identity = trustedArtifactIdentity(candidate);
+        if (seenFiles.has(identity)) return false;
+        seenFiles.add(identity);
+        return true;
+      } catch {
+        return false;
+      }
+    });
 }
 
 /** Last ~n chars of a string — bounded tail for per-attempt diagnostic logs. */
@@ -364,6 +963,138 @@ function firstErrorLine(text) {
   return lines.find((l) => /error/i.test(l)) ?? lines[0] ?? "(empty stderr)";
 }
 
+export const FLEET_ATTEMPT_CLASSIFICATIONS = Object.freeze([
+  "technical_timeout",
+  "launcher_or_run_failure",
+  "verifier_failure",
+  "verified",
+]);
+
+/** Classify one launcher attempt from durable process/evidence facts. A
+ * timeout wins over the stage marker because report-recovery itself may time
+ * out after the first verifier ran. */
+export function classifyFleetAttempt({ runnerExit, verifierAttempted, verified }) {
+  if (verified) return "verified";
+  if (runnerExit === 124 || runnerExit === 137) return "technical_timeout";
+  if (runnerExit === 0 || verifierAttempted) return "verifier_failure";
+  return "launcher_or_run_failure";
+}
+
+function reportPrefixFor(reportMdPath) {
+  return reportMdPath.endsWith(".md") ? reportMdPath.slice(0, -".md".length) : reportMdPath;
+}
+
+function recoveryMarkerPathFor(reportMdPath) {
+  return `${reportPrefixFor(reportMdPath)}.initial-report.txt`;
+}
+
+/** `run.sh` writes `.initial-report.txt` before its one permitted same-session,
+ * report-only repair. On an exit-0 run that regular adjacent file is the
+ * durable fact that the accepted Markdown was recovered rather than the
+ * model's first response. The `.txt` suffix deliberately keeps the rejected
+ * response outside feedback compiler `*.md` discovery. */
+export function pureFleetReportWasRecovered(reportMdPath, reportsDir = dirname(reportMdPath)) {
+  const marker = recoveryMarkerPathFor(reportMdPath);
+  if (!existsSync(marker)) return false;
+  if (!isTrustedFleetArtifactFile(marker, reportsDir)) {
+    throw new Error("report-recovery marker must be a contained regular non-symlink file");
+  }
+  return true;
+}
+
+function sha256Bytes(bytes) {
+  return createHash("sha256").update(bytes).digest("hex");
+}
+
+function fleetRelativePath(fleetDir, path) {
+  return relative(fleetDir, path).split(sep).join("/");
+}
+
+/** Copy every artifact owned by a failed out-prefix into a unique per-slot,
+ * per-attempt directory before the next launcher can overwrite it. Only after
+ * every exclusive copy and its diagnostic log exist are the source files
+ * removed. The returned closed index is embedded in the final manifest. */
+export function archiveFailedFleetAttemptArtifacts({
+  outPrefix,
+  fleetDir,
+  seed,
+  attempt,
+  diagnostic,
+}) {
+  const sourceDir = dirname(outPrefix);
+  const sourceBase = basename(outPrefix);
+  const attemptDir = join(fleetDir, "attempts", `seed_${seed}`, `attempt_${attempt}`);
+  mkdirSync(dirname(attemptDir), { recursive: true });
+  mkdirSync(attemptDir);
+
+  const sources = readdirSync(sourceDir, { withFileTypes: true })
+    .filter((entry) => entry.name.startsWith(`${sourceBase}.`))
+    .sort((left, right) => left.name.localeCompare(right.name))
+    .map((entry) => {
+      const source = join(sourceDir, entry.name);
+      const metadata = lstatSync(source);
+      if (
+        entry.isSymbolicLink() ||
+        metadata.isSymbolicLink() ||
+        !entry.isFile() ||
+        !metadata.isFile() ||
+        metadata.nlink !== 1
+      ) {
+        throw new Error(`fleet: failed-attempt artifact is not a private regular file: ${source}`);
+      }
+      return { source, name: entry.name, bytes: readFileSync(source) };
+    });
+
+  const archived = [];
+  for (const source of sources) {
+    const destination = join(attemptDir, source.name);
+    writeFileSync(destination, source.bytes, { flag: "wx" });
+    archived.push({
+      name: source.name,
+      bytes: source.bytes.byteLength,
+      sha256: sha256Bytes(source.bytes),
+    });
+  }
+  const diagnosticName = "fleet-diagnostic.log";
+  const diagnosticBytes = Buffer.from(diagnostic, "utf8");
+  writeFileSync(join(attemptDir, diagnosticName), diagnosticBytes, { flag: "wx" });
+  archived.push({
+    name: diagnosticName,
+    bytes: diagnosticBytes.byteLength,
+    sha256: sha256Bytes(diagnosticBytes),
+  });
+
+  for (const source of sources) unlinkSync(source.source);
+  archived.sort((left, right) => left.name.localeCompare(right.name));
+  return {
+    directory: fleetRelativePath(fleetDir, attemptDir),
+    artifacts: archived,
+  };
+}
+
+/** Summary counters are always reduced from every closed per-slot attempt,
+ * never from only the terminal result. */
+export function summarizeFleetAttemptHistory(rows) {
+  let totalAttempts = 0;
+  let failedAttempts = 0;
+  let technicalTimeouts = 0;
+  let reportRecoveredRuns = 0;
+  for (const row of rows) {
+    if (row?.report_recovered === true) reportRecoveredRuns += 1;
+    for (const attempt of row?.attempt_history ?? []) {
+      totalAttempts += 1;
+      if (attempt.classification !== "verified") failedAttempts += 1;
+      if (attempt.classification === "technical_timeout") technicalTimeouts += 1;
+    }
+  }
+  return {
+    total_attempts: totalAttempts,
+    failed_attempts: failedAttempts,
+    technical_timeouts: technicalTimeouts,
+    report_recovered_runs: reportRecoveredRuns,
+  };
+}
+
 /** A promise pool of bounded size — the fleet's concurrency knob. */
 async function runPool(items, size, worker) {
   let next = 0;
@@ -379,24 +1110,32 @@ async function runPool(items, size, worker) {
 
 /** Run one fleet slot to completion: resume check, then launch (with pacing
  * retries up to opts.maxRetries), returning the manifest row for this run. */
-async function executeRun(run, { reportsDir, stamp, opts, bashPath, fleetDir }) {
+async function executeRun(run, { reportsDir, stamp, opts, bashPath, fleetDir, fleetBuild }) {
   const target = run.target;
   const questId = questIdFor(target);
   const requiredMode = opts.mock ? "structural" : "pure";
+  const expectedPure = opts.mock ? null : { seed: run.seed, model: run.model, build: fleetBuild };
 
   // Check ALL stamp-agnostic candidates, newest-stamp-first, stopping at the
   // first that re-verifies — a stale FAILED report must never shadow a later
   // VERIFIED one produced by a prior fleet invocation.
-  for (const candidate of findExistingReport(reportsDir, target, run.seed)) {
-    const verify = await verifyReportForResume(candidate, requiredMode);
-    if (verify.ok) {
-      return {
-        report: candidate,
-        status: "skipped-resume",
-        attempts: 0,
-        exit: 0,
-        run: verify.run,
-      };
+  if (opts.resume) {
+    for (const candidate of findExistingReport(reportsDir, target, run.seed)) {
+      const verify = await verifyReportForResume(candidate, requiredMode, expectedPure, reportsDir);
+      if (verify.ok) {
+        const reportRecovered =
+          requiredMode === "pure" ? verify.attestation.report_recovered : false;
+        return {
+          report: candidate,
+          status: "skipped-resume",
+          attempts: 0,
+          attempt_history: [],
+          exit: 0,
+          run: verify.run,
+          attestation: verify.attestation,
+          report_recovered: reportRecovered,
+        };
+      }
     }
   }
 
@@ -406,6 +1145,7 @@ async function executeRun(run, { reportsDir, stamp, opts, bashPath, fleetDir }) 
 
   let lastExit = 1;
   let lastLogPath = null;
+  const attemptHistory = [];
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     const args = [
       "--seed",
@@ -428,24 +1168,65 @@ async function executeRun(run, { reportsDir, stamp, opts, bashPath, fleetDir }) 
     let verifyResult = null;
 
     if (lastExit === 0) {
-      verifyResult = await verifyReportForResume(reportMd, requiredMode);
+      verifyResult = await verifyReportEvidence(reportMd, requiredMode, expectedPure, reportsDir);
       if (verifyResult.ok) {
-        return {
-          report: reportMd,
-          status: "verified",
-          attempts: attempt + 1,
-          exit: 0,
-          run: verifyResult.run,
-        };
+        let attestation = null;
+        if (!opts.mock) {
+          try {
+            attestation = await writeFreshPureFleetAttestation(
+              reportMd,
+              verifyResult.run,
+              expectedPure,
+              reportsDir,
+            );
+          } catch (error) {
+            verifyResult = {
+              ...verifyResult,
+              ok: false,
+              stderr: `pure fleet attestation could not be created exclusively: ${error instanceof Error ? error.message : String(error)}`,
+            };
+          }
+        }
+        if (!verifyResult.ok) {
+          lastExit = 5;
+        } else {
+          const reportRecovered = attestation?.report_recovered ?? false;
+          attemptHistory.push({
+            attempt: attempt + 1,
+            exit: 0,
+            classification: "verified",
+            report_recovered: reportRecovered,
+            archive: null,
+          });
+          return {
+            report: reportMd,
+            status: "verified",
+            attempts: attempt + 1,
+            attempt_history: attemptHistory,
+            exit: 0,
+            run: verifyResult.run,
+            attestation,
+            report_recovered: reportRecovered,
+          };
+        }
+      } else {
+        lastExit = 5; // run.sh exited 0 but the belt-and-braces re-verify rejected it
       }
-      lastExit = 5; // run.sh exited 0 but the belt-and-braces re-verify rejected it
     }
 
     // Failed attempt: persist stdout/stderr tails to a per-attempt log file
     // (verified runs never reach here — they returned above) and print a
     // one-line stderr summary to the fleet's own stderr for live monitoring.
-    const logPath = join(fleetDir, `seed_${run.seed}_attempt_${attempt + 1}.log`);
+    const verifierAttempted =
+      verifyResult !== null || existsSync(`${outPrefix}.verify.initial.log`);
+    const classification = classifyFleetAttempt({
+      runnerExit: bashResult.status ?? 1,
+      verifierAttempted,
+      verified: false,
+    });
     const sections = [
+      `attempt=${attempt + 1}`,
+      `classification=${classification}`,
       `run.sh exit=${bashResult.status ?? "null"}`,
       "--- run.sh stdout (tail) ---",
       tail(bashResult.stdout),
@@ -460,8 +1241,21 @@ async function executeRun(run, { reportsDir, stamp, opts, bashPath, fleetDir }) 
         tail(verifyResult.stderr),
       );
     }
-    writeFileSync(logPath, `${sections.join("\n")}\n`);
-    lastLogPath = logPath;
+    const archive = archiveFailedFleetAttemptArtifacts({
+      outPrefix,
+      fleetDir,
+      seed: run.seed,
+      attempt: attempt + 1,
+      diagnostic: `${sections.join("\n")}\n`,
+    });
+    lastLogPath = join(fleetDir, archive.directory, "fleet-diagnostic.log");
+    attemptHistory.push({
+      attempt: attempt + 1,
+      exit: lastExit,
+      classification,
+      report_recovered: false,
+      archive,
+    });
     const summarySource =
       verifyResult && verifyResult.stderr ? verifyResult.stderr : bashResult.stderr;
     console.error(
@@ -478,12 +1272,115 @@ async function executeRun(run, { reportsDir, stamp, opts, bashPath, fleetDir }) 
     report: reportMd,
     status: "failed",
     attempts: maxAttempts,
+    attempt_history: attemptHistory,
     exit: lastExit,
     log: lastLogPath,
     run: null,
+    attestation: null,
+    report_recovered: false,
     failure_reason:
       lastExit === 124 || lastExit === 137 ? "technical_timeout" : "run_or_verification_failed",
   };
+}
+
+/** Render a complete manifest in planned order, independent of pool completion order. */
+export function renderClosedFleetManifest(rows) {
+  if (
+    !Array.isArray(rows) ||
+    rows.length === 0 ||
+    Array.from({ length: rows.length }, (_, index) => rows[index]).some((row) => row === undefined)
+  ) {
+    throw new Error("fleet: closed manifest requires a complete nonempty row set");
+  }
+  const sorted = [...rows].sort((a, b) => a.planned_index - b.planned_index || a.seed - b.seed);
+  for (const [expectedIndex, row] of sorted.entries()) {
+    if (!Number.isSafeInteger(row.planned_index) || row.planned_index !== expectedIndex) {
+      throw new Error("fleet: closed manifest planned indexes must be contiguous from zero");
+    }
+  }
+  return `${sorted.map((row) => JSON.stringify(row)).join("\n")}\n`;
+}
+
+export function fleetReportLockSpec(reportsDir, stamp, runs) {
+  if (!Array.isArray(runs) || runs.length === 0) {
+    throw new Error("fleet: report lock requires at least one planned run");
+  }
+  const target = runs[0].target;
+  if (runs.some((run) => run.target !== target)) {
+    throw new Error("fleet: one report lock cannot cover mixed targets");
+  }
+  const identity = {
+    schema_version: 1,
+    stamp,
+    target,
+    seed_start: runs[0].seed,
+    seed_end: runs.at(-1).seed,
+    seeds: runs.map((run) => run.seed),
+    model_plan: runs.map((run) => ({ seed: run.seed, model: run.model })),
+  };
+  // The exclusive filename intentionally covers the entire stamp+target report
+  // namespace, so different labels, overlapping ranges, and different model
+  // plans cannot race on ledger-compatible report paths. The full range/model
+  // key remains inspectable in the lock payload.
+  const namespace = createHash("sha256").update(JSON.stringify({ stamp, target })).digest("hex");
+  return {
+    path: join(reportsDir, `.fleet-report-${namespace}.lock`),
+    identity,
+  };
+}
+
+export function acquireFleetReportLock(reportsDir, stamp, runs) {
+  const lock = fleetReportLockSpec(reportsDir, stamp, runs);
+  try {
+    writeFileSync(lock.path, `${JSON.stringify(lock.identity, null, 2)}\n`, {
+      encoding: "utf8",
+      flag: "wx",
+    });
+  } catch (error) {
+    if (error && typeof error === "object" && error.code === "EEXIST") {
+      throw new Error(`fleet: report namespace is already locked by another fleet: ${lock.path}`, {
+        cause: error,
+      });
+    }
+    throw error;
+  }
+  return lock;
+}
+
+export function releaseFleetReportLock(lock) {
+  unlinkSync(lock.path);
+}
+
+function resolveFleetBashPath() {
+  let bashPath;
+  if (process.platform === "win32") {
+    const found = gitBash();
+    if (!found) {
+      throw new Error(
+        "fleet: could not find Git Bash; install Git for Windows or set BLIND_BASH to a real bash.exe path",
+      );
+    }
+    bashPath = found;
+  } else {
+    try {
+      execFileSync("bash", ["--version"], { stdio: "ignore" });
+    } catch (error) {
+      throw new Error("fleet: bash runtime is unavailable", { cause: error });
+    }
+    bashPath = "bash";
+  }
+  if (!existsSync(RUN_SH)) {
+    throw new Error(`fleet: blind runner is unavailable: ${RUN_SH}`);
+  }
+  try {
+    execFileSync("npm", ["--version"], {
+      stdio: "ignore",
+      shell: process.platform === "win32",
+    });
+  } catch (error) {
+    throw new Error("fleet: npm runtime is unavailable", { cause: error });
+  }
+  return bashPath;
 }
 
 async function main() {
@@ -499,97 +1396,147 @@ async function main() {
   }
   const runs = planFleetRuns(opts);
 
+  // Resolve every launcher prerequisite before reserving a report namespace or
+  // label directory. A missing runtime must leave no misleading fleet shell.
+  const bashPath = resolveFleetBashPath();
+
+  // One fail-closed build identity is captured before any live launcher can
+  // spend tokens. Structural mocks retain their historical no-provenance path.
+  const fleetBuild = opts.mock ? null : await captureExpectedPureFleetBuild();
+
   const reportsDir = opts.out ? resolve(opts.out) : join(HERE, "reports");
-  mkdirSync(reportsDir, { recursive: true });
-
   const stamp = utcStamp();
-  const label = opts.label ?? stamp;
-  const fleetDir = join(GAME_DIR, "ai-runs", "fleet", label);
-  mkdirSync(fleetDir, { recursive: true });
-  const manifestPath = join(fleetDir, "manifest.jsonl");
-  const summaryPath = join(fleetDir, "summary.json");
+  const label = validateFleetLabel(opts.label ?? stamp);
 
-  let bashPath = "bash";
-  if (process.platform === "win32") {
-    const found = gitBash();
-    if (!found) {
-      console.error(
-        "Could not find Git Bash (looked via `where git`; System32 bash.exe is the WSL launcher and cannot run this harness against a Windows checkout).",
-      );
-      console.error("Install Git for Windows or set BLIND_BASH to a bash.exe path.");
-      process.exit(3);
+  mkdirSync(reportsDir, { recursive: true });
+  const reportLock = acquireFleetReportLock(reportsDir, stamp, runs);
+  try {
+    const fleetDir = join(GAME_DIR, "ai-runs", "fleet", label);
+    mkdirSync(dirname(fleetDir), { recursive: true });
+    if (opts.mock) {
+      // Mock fleets are structural QA and preserve their historical reusable
+      // labels; their closed manifest is replaced wholesale below, never appended.
+      mkdirSync(fleetDir, { recursive: true });
+    } else {
+      try {
+        mkdirSync(fleetDir);
+      } catch (error) {
+        if (error && typeof error === "object" && error.code === "EEXIST") {
+          throw new Error(
+            `fleet: label directory already exists; choose a fresh label: ${fleetDir}`,
+            { cause: error },
+          );
+        }
+        throw error;
+      }
     }
-    bashPath = found;
-  }
+    const manifestPath = join(fleetDir, "manifest.jsonl");
+    const summaryPath = join(fleetDir, "summary.json");
+    const counts = { verified: 0, "skipped-resume": 0, failed: 0 };
+    const rows = new Array(runs.length);
 
-  const counts = { verified: 0, "skipped-resume": 0, failed: 0 };
-  let technicalTimeouts = 0;
+    await runPool(runs, Math.max(1, opts.concurrency), async (run, plannedIndex) => {
+      const result = await executeRun(run, {
+        reportsDir,
+        stamp,
+        opts,
+        bashPath,
+        fleetDir,
+        fleetBuild,
+      });
+      counts[result.status] += 1;
+      const runMeta = result.run;
+      const row = {
+        planned_index: plannedIndex,
+        seed: run.seed,
+        persona: run.persona,
+        model: run.model,
+        target: run.target,
+        report: result.report,
+        status: result.status,
+        attempts: result.attempts,
+        attempt_history: result.attempt_history,
+        report_recovered: result.report_recovered,
+        exit: result.exit,
+        log: result.log ?? null,
+        model_attestation: result.attestation ?? null,
+        evidence_schema_version: runMeta?.schema_version ?? null,
+        run_seed: runMeta?.run_seed ?? null,
+        build: runMeta?.build ?? null,
+        quest_outcomes: runMeta?.quest_outcomes ?? null,
+        report_schema_version: runMeta?.report_schema_version ?? null,
+        play_mode: runMeta?.play_mode ?? (opts.mock ? "structural" : "pure"),
+        start_surface:
+          runMeta?.start_surface ??
+          (run.target === "overworld" ? "fresh_overworld" : "direct_quest"),
+        retention_eligible: runMeta?.retention_eligible ?? false,
+        evidence_status: runMeta?.evidence_status ?? "unverified",
+        session_contract_version: runMeta?.receipt?.contractVersion ?? null,
+        baseline_decisions: opts.mock ? null : PURE_BASELINE_DECISIONS,
+        accepted_decisions: runMeta?.receipt?.acceptedDecisions ?? null,
+        retention_choices: runMeta?.receipt?.retentionHistory ?? [],
+        checkpoint: runMeta?.receipt?.checkpoint ?? null,
+        exit_reason: runMeta?.receipt?.exitReason ?? null,
+        exit_reasons: runMeta?.receipt?.exitReasons ?? [],
+        receipt_hash: runMeta?.receipt?.receiptHash ?? null,
+        failure_reason: result.failure_reason ?? null,
+      };
+      rows[plannedIndex] = row;
+      console.log(
+        `[fleet] seed=${run.seed} persona=${run.persona} model=${run.model} → ${result.status}`,
+      );
+    });
 
-  await runPool(runs, Math.max(1, opts.concurrency), async (run) => {
-    const result = await executeRun(run, { reportsDir, stamp, opts, bashPath, fleetDir });
-    counts[result.status] += 1;
-    if (result.failure_reason === "technical_timeout") technicalTimeouts += 1;
-    const runMeta = result.run;
-    const row = {
-      seed: run.seed,
-      persona: run.persona,
-      model: run.model,
-      target: run.target,
-      report: result.report,
-      status: result.status,
-      attempts: result.attempts,
-      exit: result.exit,
-      log: result.log ?? null, // per-attempt diagnostic log path; null for verified/skipped-resume
-      report_schema_version: runMeta?.report_schema_version ?? null,
-      play_mode: runMeta?.play_mode ?? (opts.mock ? "structural" : "pure"),
-      start_surface:
-        runMeta?.start_surface ?? (run.target === "overworld" ? "fresh_overworld" : "direct_quest"),
-      retention_eligible: runMeta?.retention_eligible ?? false,
-      evidence_status: runMeta?.evidence_status ?? "unverified",
-      session_contract_version: runMeta?.receipt?.contractVersion ?? null,
+    writeFileSync(manifestPath, renderClosedFleetManifest(rows), {
+      encoding: "utf8",
+      flag: opts.mock ? "w" : "wx",
+    });
+
+    const attemptSummary = summarizeFleetAttemptHistory(rows);
+    const summary = {
+      label,
+      stamp,
+      count: runs.length,
+      concurrency: opts.concurrency,
+      reportsDir,
+      seed_base: opts.seedBase,
+      model: opts.model,
+      personas: opts.personas,
+      target: opts.target,
+      resume_enabled: opts.resume,
+      evidence_schema_version: opts.mock ? 1 : PURE_FLEET_EVIDENCE_SCHEMA_VERSION,
+      model_attestation_schema_version: opts.mock ? null : PURE_FLEET_ATTESTATION_SCHEMA_VERSION,
+      build: fleetBuild,
+      report_schema_version: 2,
+      play_mode: opts.mock ? "structural" : "pure",
+      start_surface: opts.target === "overworld" ? "fresh_overworld" : "direct_quest",
+      retention_contract_eligible: !opts.mock,
+      retention_eligible_verified_runs: opts.mock ? 0 : counts.verified + counts["skipped-resume"],
+      retention_ineligible_or_unverified_runs:
+        runs.length - (opts.mock ? 0 : counts.verified + counts["skipped-resume"]),
+      session_contract_version: opts.mock ? null : PURE_SESSION_CONTRACT_VERSION,
       baseline_decisions: opts.mock ? null : PURE_BASELINE_DECISIONS,
-      accepted_decisions: runMeta?.receipt?.acceptedDecisions ?? null,
-      retention_choices: runMeta?.receipt?.retentionHistory ?? [],
-      checkpoint: runMeta?.receipt?.checkpoint ?? null,
-      exit_reason: runMeta?.receipt?.exitReason ?? null,
-      exit_reasons: runMeta?.receipt?.exitReasons ?? [],
-      receipt_hash: runMeta?.receipt?.receiptHash ?? null,
-      failure_reason: result.failure_reason ?? null,
+      verified: counts.verified,
+      "skipped-resume": counts["skipped-resume"],
+      failed: counts.failed,
+      ...attemptSummary,
     };
-    appendFileSync(manifestPath, `${JSON.stringify(row)}\n`);
+    writeFileSync(summaryPath, `${JSON.stringify(summary, null, 2)}\n`, {
+      encoding: "utf8",
+      flag: opts.mock ? "w" : "wx",
+    });
+
+    const ok =
+      counts.verified + counts["skipped-resume"] === runs.length &&
+      attemptSummary.failed_attempts === 0;
     console.log(
-      `[fleet] seed=${run.seed} persona=${run.persona} model=${run.model} → ${result.status}`,
+      `Fleet ${label}: ${counts.verified} verified, ${counts["skipped-resume"]} skipped-resume, ${counts.failed} failed slots, ${attemptSummary.failed_attempts} failed attempts (of ${runs.length})`,
     );
-  });
-
-  const summary = {
-    label,
-    stamp,
-    count: runs.length,
-    concurrency: opts.concurrency,
-    reportsDir,
-    report_schema_version: 2,
-    play_mode: opts.mock ? "structural" : "pure",
-    start_surface: opts.target === "overworld" ? "fresh_overworld" : "direct_quest",
-    retention_contract_eligible: !opts.mock,
-    retention_eligible_verified_runs: opts.mock ? 0 : counts.verified + counts["skipped-resume"],
-    retention_ineligible_or_unverified_runs:
-      runs.length - (opts.mock ? 0 : counts.verified + counts["skipped-resume"]),
-    session_contract_version: opts.mock ? null : PURE_SESSION_CONTRACT_VERSION,
-    baseline_decisions: opts.mock ? null : PURE_BASELINE_DECISIONS,
-    verified: counts.verified,
-    "skipped-resume": counts["skipped-resume"],
-    failed: counts.failed,
-    technical_timeouts: technicalTimeouts,
-  };
-  writeFileSync(summaryPath, `${JSON.stringify(summary, null, 2)}\n`);
-
-  const ok = counts.verified + counts["skipped-resume"] === runs.length;
-  console.log(
-    `Fleet ${label}: ${counts.verified} verified, ${counts["skipped-resume"]} skipped-resume, ${counts.failed} failed (of ${runs.length})`,
-  );
-  console.log(`Manifest: ${manifestPath}`);
-  process.exitCode = ok ? 0 : 1;
+    console.log(`Manifest: ${manifestPath}`);
+    process.exitCode = ok ? 0 : 1;
+  } finally {
+    releaseFleetReportLock(reportLock);
+  }
 }
 
 // Entry guard so tests can import the pure planning functions without

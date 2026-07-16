@@ -23,7 +23,8 @@ does, when it runs, and its exact shapes.
   v3, every goal-completion retention event identifies the goal it closed and a
   post-continue authored choice may install the next objective. The harness
   interviews only after a confirmed exit and cross-checks the schema-V2 report
-  receipt against server evidence. One per normal cycle; the
+  receipt against server evidence. Evidence-sidecar v2 binds seed, clean tracked
+  commit, canonical world id/hash, and quest outcomes. One per normal cycle; the
   milestone/feedback-harvest `fleet` runs 100 seed/model variants of that same
   neutral pure contract. Direct quest, persona-coverage, crawler, smoke, and
   mock paths are explicit structural QA and never pure retention evidence.
@@ -52,14 +53,15 @@ does, when it runs, and its exact shapes.
 
 ## 2. When each runs + budgets
 
-| Lane                   | Trigger                                                                                                     | Budget                                                                                                                                                                                                                                                                                                                      | Cost                      |
-| ---------------------- | ----------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------- |
-| `crawl:smoke`          | every loop cycle (pre- and post-work gate)                                                                  | ~10s deterministic (single-worker smoke config, ~3660 steps/s)                                                                                                                                                                                                                                                              | free                      |
-| `crawl:deep`           | nightly / manual                                                                                            | ≥2min soak (multi-worker; measured 352k steps @ ~1935 steps/s incl. 20k-state solver; findings are byte-identical across `--workers` only absent `--seconds` truncation — per-worker deadlines mean WHICH items truncate can vary with worker count once the soak budget bites, always loud via `truncated`/`skippedItems`) | free                      |
-| `blind` (single)       | every normal cycle                                                                                          | one pure journey; game-native goal/checkpoints govern exit                                                                                                                                                                                                                                                                  | $ (one LLM playtest)      |
-| `fleet -- --count 100` | milestone / feedback-harvest cycles (~every 10, or when the ledger's open questions outgrow single reports) | 100 pure fresh-overworld runs at `--concurrency C`                                                                                                                                                                                                                                                                          | $ × 100 (real LLM tokens) |
-| `fleet:mock`           | every CI run (rides `npm test`)                                                                             | explicit structural acceptance e2e; never retention evidence                                                                                                                                                                                                                                                                | zero tokens               |
-| `feedback:compile`     | whenever ≥3 new verified reports exist since the last compile                                               | seconds (deterministic clustering)                                                                                                                                                                                                                                                                                          | free                      |
+| Lane                     | Trigger                                                                                                     | Budget                                                                                                                                                                                                                                                                                                                      | Cost                      |
+| ------------------------ | ----------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------- |
+| `crawl:smoke`            | every loop cycle (pre- and post-work gate)                                                                  | ~10s deterministic (single-worker smoke config, ~3660 steps/s)                                                                                                                                                                                                                                                              | free                      |
+| `crawl:deep`             | nightly / manual                                                                                            | ≥2min soak (multi-worker; measured 352k steps @ ~1935 steps/s incl. 20k-state solver; findings are byte-identical across `--workers` only absent `--seconds` truncation — per-worker deadlines mean WHICH items truncate can vary with worker count once the soak budget bites, always loud via `truncated`/`skippedItems`) | free                      |
+| `blind` (single)         | every normal cycle                                                                                          | one pure journey; game-native goal/checkpoints govern exit                                                                                                                                                                                                                                                                  | $ (one LLM playtest)      |
+| `fleet -- --count 100`   | milestone / feedback-harvest cycles (~every 10, or when the ledger's open questions outgrow single reports) | 100 pure fresh-overworld runs at `--concurrency C`                                                                                                                                                                                                                                                                          | $ × 100 (real LLM tokens) |
+| `starting-slice:certify` | after an authoritative starting-slice fleet closes                                                          | reverify the exact 100-report authenticated bundle and evaluate the milestone gates                                                                                                                                                                                                                                         | free                      |
+| `fleet:mock`             | every CI run (rides `npm test`)                                                                             | explicit structural acceptance e2e; never retention evidence                                                                                                                                                                                                                                                                | zero tokens               |
+| `feedback:compile`       | whenever ≥3 new verified reports exist since the last compile                                               | seconds (deterministic clustering)                                                                                                                                                                                                                                                                                          | free                      |
 
 ## 3. Exact commands
 
@@ -73,8 +75,9 @@ npm run crawl -- --workers 4 --seed 7              # custom invocation (flags in
 npm run blind                                      # canonical pure player, fresh overworld
 npm run blind:smoke                                # explicit structural MCP check, no LLM/tokens
 bash blind-tester/run.sh --smoke --quest sunken_barrow --seed 7 # targeted structural check, no LLM
-npm run fleet -- --count 100 --concurrency 4 --model mix --seed-base 1000
+npm run fleet -- --count 100 --concurrency 4 --model mix --seed-base <fresh-seed-base> --label <fresh-label> --no-resume --max-retries 0
 npm run fleet:mock -- --count 2                    # structural, zero-token, CI-safe
+npm run starting-slice:certify -- --fleet ai-runs/fleet/<label>
 
 # Tier 3 — feedback compiler
 npm run feedback:compile                           # defaults: --in blind-tester/reports + newest crawl findings
@@ -85,14 +88,34 @@ npm run assess                                     # preview the ranked next-bes
 npm run ai:loop                                    # one cycle: assess + emit prompt/artifacts
 ```
 
-`crawl:deep` and a live (non-mock) `fleet` run spend real time/tokens — run
-them nightly or manually, never inside an automated smoke check. Live fleets
-enforce `play_mode: pure`, `start_surface: fresh_overworld`, and the neutral
-default persona; only a reverified current-contract report can resume a member,
-while historical v1/v2 and legacy/structural reports cannot. The
-15-minute member timeout is a technical failure/failsafe, not the intended
-endpoint. Launch live fleets from a plain shell, not from inside a Claude Code
-session (nested CLI auth returns 401). Targeted quest starts remain available
+`crawl:deep` and a live (non-mock) `fleet` run spend real time/tokens — run them
+nightly or manually, never inside an automated smoke check. Before launching a
+live member, fleet preflight freezes the full clean tracked Git commit,
+canonical world id/hash, contiguous seeds, and run/model plan. Dirty state or a
+Git/provenance error fails before token spend; untracked notes do not dirty the
+check. A live fleet label must be fresh and names one closed cohort, so an
+existing label is rejected rather than appended to or mixed with stale rows.
+
+Live fleets enforce `play_mode: pure`, `start_surface: fresh_overworld`, and the
+neutral default persona; an authoritative certification cohort also requires
+the deterministic repository-standard 9:1 Haiku/Sonnet mix, which is the live
+fleet launcher's default when `--model` is omitted. Resume is a diagnostic
+convenience and requires a
+reverified evidence-sidecar-v2 report with the current journey contract and
+exact planned seed/build/world. Generic readers retain historical sidecar-v1
+readability, but v1, legacy, and structural reports cannot enter the cohort. The
+20-minute member timeout is a technical failure/failsafe, not the intended
+endpoint. Failed artifacts are digest-indexed in a per-attempt bundle archive
+before retry; the closed manifest and summary count every attempt, so an eventual
+success cannot erase a prior timeout or verification/launcher failure. Any such
+label exits nonzero and cannot certify. A resume-enabled fleet or skipped slot
+is also non-certifying: an authoritative fresh label must use
+`--no-resume --max-retries 0` and launch exactly one successful attempt for each
+of its 100 slots. A recovered report requires a complete, byte-bound
+`.initial-report.txt` / `.repair.meta.json` / `.repair.json` set, never another
+discoverable Markdown report, and remains diagnostic-only because its
+subjective interview was generated after the primary report. Launch live fleets from a plain shell, not from inside a Claude
+Code session (nested CLI auth returns 401). Targeted quest starts remain available
 only to non-LLM smoke/mock lanes and the mechanical crawler.
 
 ## 4. Schemas
@@ -106,7 +129,7 @@ RENDER · WORLD · ORPHAN`, each with a fixed severity (`CODE_SEVERITY`);
 repeats, and `repro` holds a ddmin-minimized, replayable trace.
 
 **Pure exit evidence** (`src/blind/exit_interview.ts` plus the server-authored
-run JSONL): V2 reports declare `play_mode: pure`,
+run JSONL): report-schema V2 reports declare `play_mode: pure`,
 `start_surface: fresh_overworld`, `retention_eligible: true`, and carry the exact
 journey receipt returned on exit. The receipt records the versioned game
 contract, meaningful-decision proof/count, current goal, ordered completed-goal
@@ -117,8 +140,19 @@ Goal Passage choice and aggregate consequence forecast. Passage applies each
 real road leg but yields at authored choices, objective arrival, and resource
 boundaries; intermediate route and future-event knowledge remain hidden before
 travel, while the pure harness remains route-blind and non-prescriptive.
-An independently verified `.run.json` sidecar and fleet manifest preserve that
-metadata; structural and legacy outputs are explicitly retention-ineligible.
+An independently verified evidence-sidecar v2 and fleet manifest preserve that
+metadata plus the private run seed, full Git commit, tracked-worktree-clean bit,
+canonical world id/hash, and sorted quest outcomes. Fresh-start and exit events
+must carry identical provenance. Historical sidecar v1 remains readable by the
+generic evidence parser but is ineligible for current fleet resume or
+certification; structural and legacy outputs are explicitly
+retention-ineligible.
+Each live member's runner-owned v2 attestation binds its planned model, actual
+singleton model use, unique Claude session, completed clean primary envelope,
+game session, and raw-byte SHA-256 digests of the report, run sidecar, raw JSONL
+evidence, primary envelope, and any complete recovery set. Resume and
+certification reconstruct these facts; certification then rejects every
+recovered member.
 
 **Retention compile** (`src/feedback/evidence_summary.ts`) writes
 `retention.json`: verified report counts split by pure/structural/legacy-guided,
@@ -127,6 +161,17 @@ trigger/checkpoint within each journey-contract version. Historical v1 and
 v2 curves and current v3 curves remain independently verifiable but are never
 pooled.
 `would_replay` remains a separate post-exit attitude metric.
+
+**Starting-slice certification** reparses every report and sidecar in one closed
+fleet bundle. It requires exactly 100 unique contiguous planned seeds, no
+failed/missing/resumed/recovered slots, exactly one verified attempt per slot,
+one clean build/world, the current pure fresh-overworld/default-player contract, and the
+standard 9:1 model mix. Its report basename must also carry the cohort's current
+stamp, preventing historical reports from being relabeled as fresh.
+Malformed evidence exits 2, a threshold miss exits 1, and a pass exits 0. Exact
+quality gates, outcome mapping, and the conservative fleet-local issue-scope rule
+live in [`STARTING_SLICE.md`](STARTING_SLICE.md); `would_replay` is not
+continuation, and global feedback history never certifies the slice.
 
 **Hotspots file** (`src/feedback/schema.ts`, zod `.strict()`),
 `hotspots.json` top level: `{ version, generated_at, commit, inputs, metrics,

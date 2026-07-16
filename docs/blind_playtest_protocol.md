@@ -106,12 +106,29 @@ exit reason.
 5. After the game confirms end and returns the journey receipt, the MCP run is
    closed. Only then does the harness collect the exit interview.
 6. `scripts/verify-blind-report.ts` verifies the V2 pure interview against the
-   server evidence. A report counts only when fresh-start and journey-exit
-   events share the same session, the receipt matches exactly, and the exit is
-   the last gameplay event.
+   server evidence using a work-private sidecar. A report counts only when
+   fresh-start and journey-exit events share the same session, the receipt
+   matches exactly, and the exit is the last gameplay event. After exact raw
+   evidence, recovery evidence when applicable, and final Git provenance all
+   pass, the runner exclusively copies that private sidecar to adjacent
+   `.run.json` as the last, byte-checked publication commit.
 
-The runner's 15-minute timeout is a technical failsafe. A timeout is a failed
+The runner's 20-minute timeout is a technical failsafe. A timeout is a failed
 run with no retention-eligible interview, not an intended gameplay endpoint.
+Likewise, a discoverable `.md` or durable `.evidence.jsonl` without the adjacent
+`.run.json` commit marker is an interrupted/rejected pure publication, not a
+legacy report. Normal unsuccessful exits remove those unfinished artifacts;
+the missing marker keeps hard-kill remnants out of feedback and attendance.
+
+One fail-closed report-only exception exists: after a normal CLI exit, current
+v2 private evidence must independently prove exactly one fresh start followed
+by exactly one journey exit, and the unchanged verifier must reject only a
+missing exit-interview block. The runner may then resume the same Claude
+session/model once with no tools or MCP to extract strict subjective fields.
+Original prose and ratings remain byte-bound, while the runner injects the
+authenticated receipt and reverifies the promoted report and sidecar. This is
+never a gameplay continuation and cannot recover a timeout, missing exit,
+mechanical/MCP failure, or any other report defect.
 
 ## Pure prompt boundary
 
@@ -180,6 +197,14 @@ completed goals, checkpoint/goal choices, exit reason, and evidence status. The
 continue/end decisions themselves are the primary retention signal;
 `would_replay` remains the post-exit attitudinal question.
 
+Evidence-sidecar schema v2 also binds the run to its private integer seed, full
+40-character Git commit, tracked-worktree cleanliness, canonical world id/hash,
+and sorted quest outcomes. The server writes the same seed/build/world at fresh
+start and journey exit; any mismatch fails verification. This sidecar version is
+separate from report schema V2 and journey contract v3. Generic readers keep
+historical evidence-sidecar schema v1 readable for old feedback, but v1 lacks
+the provenance needed for an authenticated current fleet.
+
 `npm run feedback:compile` writes `retention.json` beside the ranked hot spots.
 It separates pure, structural, and legacy-guided report counts and aggregates
 only sidecar-verified pure continue/end choices as retention evidence. Pure
@@ -196,16 +221,76 @@ resume a current-contract fleet slot.
 ## Fleet mode
 
 ```bash
-npm run fleet -- --count 100 --concurrency 4 --model mix --seed-base 1000
+npm run fleet -- --count 100 --concurrency 4 --model mix --seed-base <fresh-seed-base> --label <fresh-label> --no-resume --max-retries 0
 ```
 
 Every live member is the same canonical pure contract with a different seed
 (and, optionally, model). Pure fleets use the neutral default persona; persona
-mixtures are structural experiments only. Bounded concurrency, retry/backoff,
-manifest output, and resume remain deterministic. Resume accepts only an
-independently reverified schema-V2 pure report whose evidence sidecar matches
-the same seed/run contract and whose receipt carries the current
-journey-contract version.
+mixtures are structural experiments only. The repository-standard `mix` is a
+deterministic 9 Haiku : 1 Sonnet weighting by planned slot and is the default
+when `--model` is omitted. Thus `npm run fleet -- --count 100` creates the
+required 90/10 plan without an extra flag.
+
+Before any live member launches, preflight freezes one full tracked Git commit,
+the canonical fresh-overworld world id/hash, the contiguous planned seeds, and
+the run/model contract. The tracked worktree must be clean; dirty state or a Git
+or world-provenance error aborts before tokens are spent. Untracked local notes
+are ignored by the cleanliness test.
+
+Each live fleet label must be fresh and names one closed cohort. An existing
+label directory is rejected rather than appended to or mixed with stale rows.
+Bounded concurrency and retry/backoff remain deterministic. Before each retry,
+the runner copies every failed out-prefix artifact and its diagnostic into a
+per-seed/per-attempt bundle archive indexed by byte count and SHA-256. Manifest
+rows retain the complete ordered attempt history; summary timeout/failure counts
+cover every attempt, including failures before an eventual success. Such a
+label closes nonzero and is ineligible for certification. Resume remains the
+default for diagnostic fleets, but every resume-enabled bundle and every
+skipped slot is non-certifying. A fresh authoritative label must run all slots
+with `--no-resume --max-retries 0`; historical successes cannot be relabeled
+into it. Successful report-only recovery requires the complete adjacent
+`.initial-report.txt`, `.repair.meta.json`, and `.repair.json` set, and must
+deterministically reproduce the accepted report bytes. The text suffix keeps
+the rejected response out of feedback `*.md` discovery. It remains diagnostic
+evidence only: its confusion, bug, stuck, and replay-intent answers were not
+byte-bound to the primary report. Diagnostic resume may reuse a report only
+when an independent reverify finds evidence-sidecar
+schema v2, the current journey contract, exact planned seed, and exact clean
+commit and world id/hash. Historical sidecar v1 remains readable but never
+resumes a slot. Manifest rows expose the authenticated seed, build, world, quest
+outcomes, and journey result rather than relying on a filename or summary count.
+An adjacent runner-owned v2 attestation binds each live member to its planned
+model, actual singleton model use, unique Claude session, completed clean
+primary envelope, game session, and raw-byte SHA-256 digests of the report,
+sidecar, raw JSONL evidence, primary envelope, and complete recovery artifacts
+when present. Diagnostic resume reconstructs those facts from the bytes;
+certification reconstructs them and rejects any recovered member.
+
+### Starting-slice certification
+
+After the live cohort is closed, run:
+
+```bash
+npm run starting-slice:certify -- --fleet ai-runs/fleet/<label>
+```
+
+The certifier independently reparses every authenticated artifact. It requires
+exactly 100 unique contiguous planned seeds, no failed or missing slots, the
+default pure fresh-overworld contract, `--no-resume`, exactly one verified
+attempt per slot, zero skipped/resumed or report-recovered slots, and the
+repository-standard 9:1 Haiku/Sonnet mix on one clean build/world. Malformed or unauthenticated evidence
+exits 2, an authenticated cohort that misses a threshold exits 1, and a pass
+exits 0.
+
+The exact numeric gates and Wolf-Winter ending-to-strategy mapping are the
+certification contract in [`STARTING_SLICE.md`](STARTING_SLICE.md). In
+particular, `would_replay` is not continuation, `after_blood` is a lure hybrid
+recovery, a missing Wolf outcome is incomplete, and a death or unknown Wolf
+ending invalidates the bundle. Issue scope is conservative: ambiguity remains in
+scope. Only issues in this exact authenticated cohort can decide the severity
+gates; global historical feedback and compiler clusters are diagnostic context,
+not certification evidence. These checks define a future certification run and
+do not claim that the current slice has passed.
 
 `npm run fleet:mock -- --count 2` is the zero-token CI pipeline. It is explicitly
 structural even when it exercises the same journey mechanics. Direct quest

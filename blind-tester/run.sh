@@ -33,7 +33,8 @@ MODEL="${BLIND_MODEL:-sonnet}"   # sonnet = strong + best subscription value; ov
 OUT=""
 SMOKE=0
 MOCK=0
-TIMEOUT="${BLIND_TIMEOUT:-900}"
+TIMEOUT="${BLIND_TIMEOUT:-1200}"
+REPORT_RECOVERY_TIMEOUT="${BLIND_REPORT_RECOVERY_TIMEOUT:-120}"
 SPECTATE="${BLIND_SPECTATE:-0}"                   # 1 = server writes a human-watchable feed
 SPECTATE_DELAY_MS="${BLIND_SPECTATE_DELAY_MS:-}"  # optional pacing delay per tool response
 OVERWORLD="${BLIND_OVERWORLD:-0}"                 # CORE-GAME open-world mode — the DEFAULT unless a quest is named
@@ -188,6 +189,13 @@ if [[ "$PLAY_MODE" == "pure" && -n "${BLIND_AGENT_CMD:-}" ]]; then
   exit 2
 fi
 
+case "$REPORT_RECOVERY_TIMEOUT" in
+  ''|*[!0-9]*|0) echo "BLIND_REPORT_RECOVERY_TIMEOUT requires a positive whole number of seconds." >&2; exit 2 ;;
+esac
+case "$TIMEOUT" in
+  ''|*[!0-9]*|0) echo "BLIND_TIMEOUT requires a positive whole number of seconds." >&2; exit 2 ;;
+esac
+
 # The live mode is always the default CORE-GAME test (start the open world from
 # a fresh start and experience it as a new player). Structural smoke/mock tests
 # may use the targeted single-QUEST seam. The two surfaces use different prompts
@@ -253,29 +261,57 @@ fi
 
 # Bind private evidence to the exact launch commit and to staged/unstaged
 # tracked state. Untracked local notes are deliberately outside this signal.
-if ! BUILD_COMMIT="$(git -C "$GAME_DIR" rev-parse --verify 'HEAD^{commit}')"; then
-  echo "Cannot identify the Git commit for blind-run provenance." >&2
-  exit 4
-fi
-if [[ ! "$BUILD_COMMIT" =~ ^[0-9a-f]{40}$ ]]; then
-  echo "Blind-run provenance requires a full 40-character lowercase Git commit hash." >&2
-  exit 4
-fi
+# The same probe is repeated after Claude exits and before artifacts publish so
+# a long run cannot silently outlive the code/build identity it claims.
+CURRENT_BUILD_COMMIT=""
+CURRENT_TRACKED_WORKTREE_CLEAN=""
+read_current_tracked_provenance() {
+  local unstaged_status staged_status
+  if ! CURRENT_BUILD_COMMIT="$(git -C "$GAME_DIR" rev-parse --verify 'HEAD^{commit}')"; then
+    return 1
+  fi
+  if [[ ! "$CURRENT_BUILD_COMMIT" =~ ^[0-9a-f]{40}$ ]]; then
+    return 1
+  fi
+  if git -C "$GAME_DIR" diff --quiet --ignore-submodules=untracked --; then
+    unstaged_status=0
+  else
+    unstaged_status=$?
+  fi
+  if git -C "$GAME_DIR" diff --cached --quiet --ignore-submodules=untracked --; then
+    staged_status=0
+  else
+    staged_status=$?
+  fi
+  if [[ "$unstaged_status" -gt 1 || "$staged_status" -gt 1 ]]; then
+    return 1
+  fi
+  CURRENT_TRACKED_WORKTREE_CLEAN=true
+  if [[ "$unstaged_status" -eq 1 || "$staged_status" -eq 1 ]]; then
+    CURRENT_TRACKED_WORKTREE_CLEAN=false
+  fi
+}
 
-set +e
-git -C "$GAME_DIR" diff --quiet --ignore-submodules=untracked --
-UNSTAGED_STATUS=$?
-git -C "$GAME_DIR" diff --cached --quiet --ignore-submodules=untracked --
-STAGED_STATUS=$?
-set -e
-if [[ "$UNSTAGED_STATUS" -gt 1 || "$STAGED_STATUS" -gt 1 ]]; then
-  echo "Git failed while checking tracked blind-run provenance." >&2
+if ! read_current_tracked_provenance; then
+  echo "Git failed while reading tracked blind-run provenance." >&2
   exit 4
 fi
-TRACKED_WORKTREE_CLEAN=true
-if [[ "$UNSTAGED_STATUS" -eq 1 || "$STAGED_STATUS" -eq 1 ]]; then
-  TRACKED_WORKTREE_CLEAN=false
-fi
+BUILD_COMMIT="$CURRENT_BUILD_COMMIT"
+TRACKED_WORKTREE_CLEAN="$CURRENT_TRACKED_WORKTREE_CLEAN"
+
+assert_launch_provenance_unchanged() {
+  if ! read_current_tracked_provenance; then
+    echo "Git failed while rechecking blind-run provenance." >&2
+    return 1
+  fi
+  if [[ "$CURRENT_BUILD_COMMIT" != "$BUILD_COMMIT" || \
+        "$CURRENT_TRACKED_WORKTREE_CLEAN" != "$TRACKED_WORKTREE_CLEAN" ]]; then
+    echo "Blind-run provenance changed after launch; refusing to publish retention evidence." >&2
+    echo "  launch:  commit=$BUILD_COMMIT tracked_clean=$TRACKED_WORKTREE_CLEAN" >&2
+    echo "  current: commit=$CURRENT_BUILD_COMMIT tracked_clean=$CURRENT_TRACKED_WORKTREE_CLEAN" >&2
+    return 1
+  fi
+}
 
 case "$GAME_DIR" in
   *\'*|*\"*) echo "Refusing: game path contains a quote, which breaks the MCP launch command." >&2; exit 4 ;;
@@ -289,7 +325,29 @@ esac
 # makes npm itself change to the game dir, which is cwd-independent on every
 # platform. stdout stays a clean JSON-RPC channel (no -l).
 WORK="$(mktemp -d)"
-trap 'rm -rf "$WORK"' EXIT
+PURE_PUBLICATION_COMPLETE=0
+PURE_OUTPUT_PREFIX_OWNED=0
+cleanup_runner() {
+  local status=$?
+  # A pure report is discoverable as soon as its canonical .md path exists, so
+  # remove every acceptance artifact unless the final exclusive sidecar commit
+  # completed. Raw envelopes/logs remain available for failure diagnosis.
+  if [[ "${PLAY_MODE:-}" == "pure" && "${PURE_OUTPUT_PREFIX_OWNED:-0}" == "1" && \
+        "${PURE_PUBLICATION_COMPLETE:-0}" != "1" ]]; then
+    if [[ -n "${OUT:-}" ]]; then
+      rm -f -- "$OUT.md"
+    fi
+    if [[ -n "${RUN_SIDECAR:-}" ]]; then
+      rm -f -- "$RUN_SIDECAR"
+    fi
+    if [[ -n "${DURABLE_RUN_EVIDENCE:-}" ]]; then
+      rm -f -- "$DURABLE_RUN_EVIDENCE"
+    fi
+  fi
+  rm -rf -- "$WORK"
+  return "$status"
+}
+trap cleanup_runner EXIT
 MCP_CONFIG="$WORK/mcp.json"
 RUN_EVIDENCE="$WORK/run-evidence.jsonl"
 
@@ -394,9 +452,35 @@ if [[ -z "$OUT" ]]; then
 fi
 mkdir -p "$(dirname "$OUT")"
 RUN_SIDECAR="$OUT.run.json"
-# An explicit --out prefix may be reused after a failed attempt. Never leave a
-# previously verified receipt beside a newly truncated/timed-out report.
-rm -f "$RUN_SIDECAR"
+DURABLE_RUN_EVIDENCE="$OUT.evidence.jsonl"
+# Pure verification writes only inside WORK. The adjacent sidecar is the final
+# acceptance marker and is published exclusively after every other gate passes.
+PRIVATE_RUN_SIDECAR="$WORK/verified-run-sidecar.json"
+# One prefix names one launcher attempt. Fleet retries archive and remove every
+# failed `$OUT.*` artifact before invoking us again; standalone callers must
+# likewise choose a fresh prefix instead of mixing stale receipts or repairs.
+OUT_PREFIX_ARG="$(node_path_arg "$OUT")"
+if ! PREEXISTING_OUT_ARTIFACTS="$("$NODE_CMD" -e '
+const fs = require("node:fs");
+const path = require("node:path");
+const prefix = process.argv[1];
+const directory = path.dirname(prefix);
+const ownedPrefix = `${path.basename(prefix)}.`;
+const matches = fs.readdirSync(directory)
+  .filter((name) => name.startsWith(ownedPrefix))
+  .sort()
+  .map((name) => path.join(directory, name));
+process.stdout.write(matches.join("\n"));
+' "$OUT_PREFIX_ARG")"; then
+  echo "Cannot inspect the report prefix for pre-existing artifacts." >&2
+  exit 4
+fi
+if [[ -n "$PREEXISTING_OUT_ARTIFACTS" ]]; then
+  echo "Refusing to reuse report prefix; pre-existing owned artifact(s):" >&2
+  printf '%s\n' "$PREEXISTING_OUT_ARTIFACTS" | sed 's/^/  /' >&2
+  exit 4
+fi
+PURE_OUTPUT_PREFIX_OWNED=1
 
 echo "Blind playtest → $SOURCE_LABEL seed=$SEED model=$MODEL"
 echo "Play contract: $PLAY_MODE / $START_SURFACE"
@@ -467,9 +551,9 @@ if [[ -n "${BLIND_AGENT_CMD:-}" ]]; then
   if command -v wslpath >/dev/null 2>&1 && [[ "$REPORT_MD" == /mnt/* ]]; then
     REPORT_MD="$(wslpath -w "$REPORT_MD")"
   fi
-  RUN_SIDECAR_ARG="$(node_path_arg "$RUN_SIDECAR")"
+  STRUCTURAL_RUN_SIDECAR_ARG="$(node_path_arg "$RUN_SIDECAR")"
   ( cd "$GAME_DIR" && npm --silent exec tsx -- scripts/verify-blind-report.ts "$REPORT_MD" \
-    --require-mode structural --write-run-sidecar "$RUN_SIDECAR_ARG" )
+    --require-mode structural --write-run-sidecar "$STRUCTURAL_RUN_SIDECAR_ARG" )
   echo "✓ Blind report saved: $OUT.md"
   exit 0
 fi
@@ -481,61 +565,440 @@ if ! command -v claude >/dev/null 2>&1; then
   exit 3
 fi
 
-# Blindness is enforced two ways: (1) the agent runs from an isolated temp cwd with
-# no game source, and (2) every file/shell/web tool is hard-DISALLOWED (a deny that
-# overrides bypassPermissions). bypassPermissions makes the MCP tool calls run
-# unattended in headless mode; --strict-mcp-config drops any global MCP servers so
-# only adventureforge is reachable. ToolSearch is left available for clients that
-# defer MCP tools, but the prompts also allow direct adventureforge tool calls.
-# The prompt is delivered on stdin so the variadic --disallowedTools cannot swallow it.
+# Claude always consults its config home for authentication/session state. Give
+# this run a sterile home so global CLAUDE.md, settings, hooks, plugins, skills,
+# MCP OAuth, and auto-memory cannot affect the blind player. The only imported
+# state is the subscription OAuth object needed to authenticate; the exclusive
+# 0600 write also prevents a pre-planted destination from being overwritten.
+SOURCE_CLAUDE_CONFIG_DIR="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
+SOURCE_CLAUDE_CREDENTIALS="$SOURCE_CLAUDE_CONFIG_DIR/.credentials.json"
+STERILE_CLAUDE_CONFIG_DIR="$WORK/claude-config"
+mkdir -p "$STERILE_CLAUDE_CONFIG_DIR"
+SOURCE_CLAUDE_CREDENTIALS_ARG="$(node_path_arg "$SOURCE_CLAUDE_CREDENTIALS")"
+STERILE_CLAUDE_CREDENTIALS_ARG="$(node_path_arg "$STERILE_CLAUDE_CONFIG_DIR/.credentials.json")"
 set +e
-printf '%s' "$PROMPT" | ( cd "$WORK" && timeout "$TIMEOUT" claude \
+"$NODE_CMD" -e '
+const fs = require("node:fs");
+const source = process.argv[1];
+const destination = process.argv[2];
+try {
+  const parsed = JSON.parse(fs.readFileSync(source, "utf8"));
+  const oauth = parsed?.claudeAiOauth;
+  if (oauth === null || typeof oauth !== "object" || Array.isArray(oauth) || Object.keys(oauth).length === 0) {
+    throw new Error("source credentials lack a valid claudeAiOauth object");
+  }
+  fs.writeFileSync(destination, `${JSON.stringify({ claudeAiOauth: oauth })}\n`, {
+    flag: "wx",
+    mode: 0o600,
+  });
+  fs.chmodSync(destination, 0o600);
+} catch (error) {
+  try { fs.rmSync(destination, { force: true }); } catch {}
+  console.error(error instanceof Error ? error.message : String(error));
+  process.exit(1);
+}
+' "$SOURCE_CLAUDE_CREDENTIALS_ARG" "$STERILE_CLAUDE_CREDENTIALS_ARG" \
+  >"$OUT.credentials.log" 2>&1
+CREDENTIAL_COPY_STATUS=$?
+set -e
+if [[ "$CREDENTIAL_COPY_STATUS" -ne 0 ]]; then
+  echo "Could not create the sterile Claude credential store; pure run refused." >&2
+  cat "$OUT.credentials.log" >&2 || true
+  exit 4
+fi
+
+# Keep one telemetry row for the gameplay turn and, when the narrowly gated
+# repair path is used, one separately phased row for its token/cost overhead.
+# Recovery rows are excluded from playthrough run counts by telemetry.mjs.
+PLAYTHROUGH_TELEMETRY_RECORDED=0
+RECOVERY_TELEMETRY_RECORDED=0
+RECOVERY_ATTEMPTED=0
+record_blind_telemetry() {
+  local envelope="$1"
+  local phase="$2"
+  local outcome="${3:-}"
+  if [[ -n "$outcome" ]]; then
+    "$NODE_CMD" "$(node_path_arg "$SCRIPT_DIR/telemetry.mjs")" record "$(node_path_arg "$envelope")" \
+      --source "$SOURCE_SLUG" --seed "$SEED" --model "$MODEL" --phase "$phase" --outcome "$outcome" \
+      || echo "(telemetry append failed — non-fatal)" >&2
+  else
+    "$NODE_CMD" "$(node_path_arg "$SCRIPT_DIR/telemetry.mjs")" record "$(node_path_arg "$envelope")" \
+      --source "$SOURCE_SLUG" --seed "$SEED" --model "$MODEL" --phase "$phase" \
+      || echo "(telemetry append failed — non-fatal)" >&2
+  fi
+}
+
+record_playthrough_terminal() {
+  local outcome="$1"
+  if [[ "$PLAYTHROUGH_TELEMETRY_RECORDED" == "1" ]]; then
+    return
+  fi
+  record_blind_telemetry "$OUT.json" playthrough "$outcome"
+  PLAYTHROUGH_TELEMETRY_RECORDED=1
+}
+
+record_recovery_terminal() {
+  local outcome="$1"
+  if [[ "$RECOVERY_ATTEMPTED" != "1" || "$RECOVERY_TELEMETRY_RECORDED" == "1" ]]; then
+    return
+  fi
+  record_blind_telemetry "$OUT.repair.json" report_recovery "$outcome"
+  RECOVERY_TELEMETRY_RECORDED=1
+}
+
+# Blindness is enforced two ways: the agent runs from an isolated temp cwd, and
+# Claude receives a positive capability allowlist containing only ToolSearch and
+# AdventureForge MCP. This excludes every evolving built-in file/shell/Agent tool
+# without depending on a stale negative list. The strict exact MCP config drops
+# global servers, while dontAsk permits only the explicitly allowed game surface.
+set +e
+printf '%s' "$PROMPT" | ( cd "$WORK" && \
+  CLAUDE_CONFIG_DIR="$STERILE_CLAUDE_CONFIG_DIR" CLAUDE_CODE_DISABLE_AUTO_MEMORY=1 \
+  timeout "$TIMEOUT" claude \
   --print \
   --output-format json \
+  --prompt-suggestions false \
+  --name "adventureforge-blind-seed-$SEED" \
   --model "$MODEL" \
+  --no-chrome \
+  --disable-slash-commands \
+  --setting-sources '' \
   --mcp-config "$MCP_CONFIG" \
   --strict-mcp-config \
-  --permission-mode bypassPermissions \
-  --disallowedTools \
-    Read Edit Write Bash Glob Grep WebFetch WebSearch Task NotebookEdit \
+  --permission-mode dontAsk \
+  --tools ToolSearch \
+  --allowedTools ToolSearch "mcp__adventureforge__*" \
 ) > "$OUT.json" 2> "$OUT.log"
 STATUS=$?
 set -e
 
 if [[ $STATUS -ne 0 ]]; then
   if [[ $STATUS -eq 124 || $STATUS -eq 137 ]]; then
+    record_playthrough_terminal technical_timeout
     echo "✗ blind run hit the ${TIMEOUT}s technical timeout; no exit interview or retention result is accepted." >&2
+  else
+    record_playthrough_terminal cli_failed
   fi
   echo "✗ blind run failed (exit $STATUS). See $OUT.log" >&2
   tail -5 "$OUT.log" >&2 || true
   exit $STATUS
 fi
 
-# Extract the agent's final report text from the JSON envelope. jq when
-# available, else node (always present) — copying the raw envelope would leave
-# the exit-interview block JSON-escaped and the verifier would reject a good run.
-if command -v jq >/dev/null 2>&1; then
-  jq -r '.result // .text // empty' "$OUT.json" > "$OUT.md" 2>/dev/null || cp "$OUT.json" "$OUT.md"
-else
-  OUT_JSON_ARG="$(node_path_arg "$OUT.json")"
-  "$NODE_CMD" -e 'const fs=require("node:fs");let t="";try{const j=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));t=j.result??j.text??"";}catch{}process.stdout.write(String(t));' "$OUT_JSON_ARG" > "$OUT.md" || cp "$OUT.json" "$OUT.md"
+if ! assert_launch_provenance_unchanged; then
+  record_playthrough_terminal provenance_failed
+  exit 4
 fi
+
+# Extract exact result bytes. `jq -r` adds a newline, which would break the
+# recovery gate's byte-for-byte binding between envelope and original prose.
+OUT_JSON_ARG="$(node_path_arg "$OUT.json")"
+"$NODE_CMD" -e 'const fs=require("node:fs");let t="";try{const j=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));t=typeof j.result==="string"?j.result:"";}catch{}process.stdout.write(t);' "$OUT_JSON_ARG" > "$OUT.md"
 
 REPORT_MD="$OUT.md"
 if command -v wslpath >/dev/null 2>&1 && [[ "$REPORT_MD" == /mnt/* ]]; then
   REPORT_MD="$(wslpath -w "$REPORT_MD")"
 fi
 RUN_SIDECAR_ARG="$(node_path_arg "$RUN_SIDECAR")"
+PRIVATE_RUN_SIDECAR_ARG="$(node_path_arg "$PRIVATE_RUN_SIDECAR")"
 RUN_EVIDENCE_ARG="$(node_path_arg "$RUN_EVIDENCE")"
+# Verification must not create the canonical publication marker. A failed
+# verifier may have partially touched only this WORK-private destination.
+rm -f "$PRIVATE_RUN_SIDECAR"
+INITIAL_VERIFY_LOG="$OUT.verify.initial.log"
+set +e
 ( cd "$GAME_DIR" && npm --silent exec tsx -- scripts/verify-blind-report.ts "$REPORT_MD" \
-  --require-mode pure --run-evidence "$RUN_EVIDENCE_ARG" --write-run-sidecar "$RUN_SIDECAR_ARG" )
+  --require-mode pure --run-evidence "$RUN_EVIDENCE_ARG" \
+  --write-run-sidecar "$PRIVATE_RUN_SIDECAR_ARG" ) \
+  >"$INITIAL_VERIFY_LOG" 2>&1
+VERIFY_STATUS=$?
+set -e
+REPORT_RECOVERED=0
 
-# Token/cost telemetry (measure loop efficiency instead of guessing): fold the
-# claude envelope's usage into the gitignored ai-runs/blind-telemetry.jsonl.
-# Best-effort — measurement must never fail the run it measures.
-"$NODE_CMD" "$(node_path_arg "$SCRIPT_DIR/telemetry.mjs")" record "$(node_path_arg "$OUT.json")" \
-  --source "$SOURCE_SLUG" --seed "$SEED" --model "$MODEL" \
-  || echo "(telemetry append failed — non-fatal)" >&2
+if [[ "$VERIFY_STATUS" -ne 0 ]]; then
+  cat "$INITIAL_VERIFY_LOG" >&2
+
+  # The sole repairable case is an otherwise complete report that omitted its
+  # exit-interview block after a real journey exit. The resumed original session
+  # returns strict subjective JSON only; the runner preserves all prose bytes and
+  # injects the authenticated receipt. Every other failure remains final.
+  RECOVERY_PROMPT="$WORK/report-recovery.prompt"
+  RECOVERY_PROMPT_ARG="$(node_path_arg "$RECOVERY_PROMPT")"
+  RECOVERY_METADATA="$OUT.repair.meta.json"
+  RECOVERY_METADATA_ARG="$(node_path_arg "$RECOVERY_METADATA")"
+  REPORT_RECOVERY_SOURCE_ARG="$(node_path_arg "$OUT.md")"
+  set +e
+  CLAUDE_SESSION_ID="$(
+    cd "$GAME_DIR" && npm --silent exec tsx -- scripts/blind-report-recovery.ts prepare \
+      --play-mode "$PLAY_MODE" --agent-status "$STATUS" --verifier-status "$VERIFY_STATUS" \
+      --attempt 0 --model "$MODEL" --seed "$SEED" --git-commit "$BUILD_COMMIT" \
+      --tracked-worktree-clean "$TRACKED_WORKTREE_CLEAN" \
+      --envelope "$OUT_JSON_ARG" --run-evidence "$RUN_EVIDENCE_ARG" \
+      --report "$REPORT_RECOVERY_SOURCE_ARG" --prompt-out "$RECOVERY_PROMPT_ARG" \
+      --metadata-out "$RECOVERY_METADATA_ARG"
+  )" 2>"$OUT.repair-gate.log"
+  RECOVERY_GATE_STATUS=$?
+  set -e
+  if [[ "$RECOVERY_GATE_STATUS" -ne 0 ]]; then
+    cat "$OUT.repair-gate.log" >&2 || true
+    record_playthrough_terminal verification_failed
+    exit "$VERIFY_STATUS"
+  fi
+
+  # Preserve the rejected response outside the reports/*.md discovery surface.
+  INITIAL_REPORT_MARKER="$OUT.initial-report.txt"
+  INITIAL_REPORT_MARKER_ARG="$(node_path_arg "$INITIAL_REPORT_MARKER")"
+  cp -- "$OUT.md" "$INITIAL_REPORT_MARKER"
+
+  EMPTY_MCP_CONFIG="$WORK/report-recovery-empty-mcp.json"
+  printf '{"mcpServers":{}}\n' > "$EMPTY_MCP_CONFIG"
+  RECOVERY_JSON_SCHEMA='{"type":"object","additionalProperties":false,"required":["clarity","enjoyment","goal_understood","got_stuck","confusions","bugs","best_moment","worst_moment","would_replay","verdict"],"properties":{"clarity":{"type":"integer","minimum":1,"maximum":5},"enjoyment":{"type":"integer","minimum":1,"maximum":5},"goal_understood":{"type":"boolean"},"got_stuck":{"type":"boolean"},"confusions":{"type":"array","items":{"type":"string","minLength":1}},"bugs":{"type":"array","items":{"type":"object","additionalProperties":false,"required":["where","severity","note"],"properties":{"where":{"type":"string","minLength":1},"severity":{"type":"string","enum":["S0","S1","S2","S3","S4"]},"note":{"type":"string","minLength":1}}}},"best_moment":{"type":"string","minLength":1},"worst_moment":{"type":"string","minLength":1},"would_replay":{"type":"boolean"},"verdict":{"type":"string","minLength":20}}}'
+  RECOVERY_ATTEMPTED=1
+  set +e
+  ( cd "$WORK" && MAX_STRUCTURED_OUTPUT_RETRIES=0 \
+    CLAUDE_CONFIG_DIR="$STERILE_CLAUDE_CONFIG_DIR" CLAUDE_CODE_DISABLE_AUTO_MEMORY=1 \
+    timeout "$REPORT_RECOVERY_TIMEOUT" claude \
+    --print \
+    --output-format json \
+    --prompt-suggestions false \
+    --json-schema "$RECOVERY_JSON_SCHEMA" \
+    --max-turns 1 \
+    --resume "$CLAUDE_SESSION_ID" \
+    --model "$MODEL" \
+    --safe-mode \
+    --no-chrome \
+    --setting-sources '' \
+    --mcp-config "$EMPTY_MCP_CONFIG" \
+    --strict-mcp-config \
+    --permission-mode dontAsk \
+    --disable-slash-commands \
+    --tools "" \
+    --disallowedTools \
+      Read Edit Write Bash PowerShell Agent Glob Grep WebFetch WebSearch Task NotebookEdit ToolSearch "mcp__adventureforge__*" \
+    < "$RECOVERY_PROMPT" \
+  ) > "$OUT.repair.json" 2> "$OUT.repair.log"
+  RECOVERY_STATUS=$?
+  set -e
+
+  if [[ "$RECOVERY_STATUS" -ne 0 ]]; then
+    record_recovery_terminal failed
+    record_playthrough_terminal recovery_failed
+    if [[ "$RECOVERY_STATUS" -eq 124 || "$RECOVERY_STATUS" -eq 137 ]]; then
+      echo "✗ report-only recovery hit the ${REPORT_RECOVERY_TIMEOUT}s technical timeout." >&2
+    fi
+    echo "✗ report-only recovery failed (exit $RECOVERY_STATUS). See $OUT.repair.log" >&2
+    tail -5 "$OUT.repair.log" >&2 || true
+    exit "$RECOVERY_STATUS"
+  fi
+
+  # Hash assertion after the model turn proves the raw private evidence used to
+  # authorize repair was not changed while the original session was resumed.
+  set +e
+  ( cd "$GAME_DIR" && npm --silent exec tsx -- scripts/blind-report-recovery.ts assert-evidence \
+    --run-evidence "$RUN_EVIDENCE_ARG" --metadata "$RECOVERY_METADATA_ARG" \
+    --initial-report "$INITIAL_REPORT_MARKER_ARG" ) \
+    >"$OUT.repair-evidence.log" 2>&1
+  RECOVERY_EVIDENCE_STATUS=$?
+  set -e
+  if [[ "$RECOVERY_EVIDENCE_STATUS" -ne 0 ]]; then
+    record_recovery_terminal failed
+    record_playthrough_terminal recovery_failed
+    cat "$OUT.repair-evidence.log" >&2 || true
+    exit "$RECOVERY_EVIDENCE_STATUS"
+  fi
+
+  REPAIR_JSON_ARG="$(node_path_arg "$OUT.repair.json")"
+  REPAIR_REPORT="$OUT.repair-report.txt"
+  REPAIR_REPORT_ARG="$(node_path_arg "$REPAIR_REPORT")"
+  set +e
+  ( cd "$GAME_DIR" && npm --silent exec tsx -- scripts/blind-report-recovery.ts extract \
+    --envelope "$REPAIR_JSON_ARG" --primary-envelope "$OUT_JSON_ARG" \
+    --run-evidence "$RUN_EVIDENCE_ARG" --report "$REPORT_RECOVERY_SOURCE_ARG" \
+    --metadata "$RECOVERY_METADATA_ARG" --report-out "$REPAIR_REPORT_ARG" ) \
+    >"$OUT.repair-extract.log" 2>&1
+  RECOVERY_EXTRACT_STATUS=$?
+  set -e
+  if [[ "$RECOVERY_EXTRACT_STATUS" -ne 0 ]]; then
+    record_recovery_terminal failed
+    record_playthrough_terminal recovery_failed
+    cat "$OUT.repair-extract.log" >&2 || true
+    exit "$RECOVERY_EXTRACT_STATUS"
+  fi
+
+  # Verify the candidate while it is still outside reports/*.md. Only a green
+  # candidate is promoted to the canonical discovered report path.
+  RECOVERY_CANDIDATE_SIDECAR="$WORK/recovery-candidate.run.json"
+  RECOVERY_CANDIDATE_SIDECAR_ARG="$(node_path_arg "$RECOVERY_CANDIDATE_SIDECAR")"
+  set +e
+  ( cd "$GAME_DIR" && npm --silent exec tsx -- scripts/verify-blind-report.ts "$REPAIR_REPORT_ARG" \
+    --require-mode pure --run-evidence "$RUN_EVIDENCE_ARG" \
+    --write-run-sidecar "$RECOVERY_CANDIDATE_SIDECAR_ARG" ) \
+    >"$OUT.verify.repair-candidate.log" 2>&1
+  RECOVERY_CANDIDATE_VERIFY_STATUS=$?
+  set -e
+  if [[ "$RECOVERY_CANDIDATE_VERIFY_STATUS" -ne 0 ]]; then
+    record_recovery_terminal failed
+    record_playthrough_terminal recovery_failed
+    cat "$OUT.verify.repair-candidate.log" >&2 || true
+    exit "$RECOVERY_CANDIDATE_VERIFY_STATUS"
+  fi
+
+  # Promote the repaired report, then reproduce its sidecar privately. The
+  # canonical adjacent sidecar remains absent until the transaction commits.
+  cp -- "$REPAIR_REPORT" "$OUT.md"
+  rm -f "$PRIVATE_RUN_SIDECAR"
+  set +e
+  ( cd "$GAME_DIR" && npm --silent exec tsx -- scripts/verify-blind-report.ts "$REPORT_MD" \
+    --require-mode pure --run-evidence "$RUN_EVIDENCE_ARG" \
+    --write-run-sidecar "$PRIVATE_RUN_SIDECAR_ARG" ) \
+    >"$OUT.verify.repair-canonical.log" 2>&1
+  RECOVERY_VERIFY_STATUS=$?
+  set -e
+  if [[ "$RECOVERY_VERIFY_STATUS" -ne 0 ]]; then
+    rm -f "$OUT.md" "$RUN_SIDECAR"
+    record_recovery_terminal failed
+    record_playthrough_terminal recovery_failed
+    cat "$OUT.verify.repair-canonical.log" >&2 || true
+    exit "$RECOVERY_VERIFY_STATUS"
+  fi
+
+  # Recheck the evidence hash after the unchanged verifier and delete its
+  # sidecar if any concurrent mutation occurred during verification.
+  set +e
+  ( cd "$GAME_DIR" && npm --silent exec tsx -- scripts/blind-report-recovery.ts assert-evidence \
+    --run-evidence "$RUN_EVIDENCE_ARG" --metadata "$RECOVERY_METADATA_ARG" \
+    --initial-report "$INITIAL_REPORT_MARKER_ARG" ) \
+    >>"$OUT.repair-evidence.log" 2>&1
+  RECOVERY_FINAL_EVIDENCE_STATUS=$?
+  set -e
+  if [[ "$RECOVERY_FINAL_EVIDENCE_STATUS" -ne 0 ]]; then
+    rm -f "$OUT.md" "$RUN_SIDECAR"
+    record_recovery_terminal failed
+    record_playthrough_terminal recovery_failed
+    cat "$OUT.repair-evidence.log" >&2 || true
+    exit "$RECOVERY_FINAL_EVIDENCE_STATUS"
+  fi
+
+  # Re-open the final canonical report bytes against the WORK-private sidecar.
+  # Consumers still reject the report because its adjacent commit marker has
+  # not been published.
+  set +e
+  ( cd "$GAME_DIR" && npm --silent exec tsx -- scripts/verify-blind-report.ts "$REPORT_MD" \
+    --require-mode pure --run-sidecar "$PRIVATE_RUN_SIDECAR_ARG" ) \
+    >"$OUT.verify.repair-final.log" 2>&1
+  RECOVERY_FINAL_VERIFY_STATUS=$?
+  set -e
+  if [[ "$RECOVERY_FINAL_VERIFY_STATUS" -ne 0 ]]; then
+    rm -f "$OUT.md" "$RUN_SIDECAR"
+    record_recovery_terminal failed
+    record_playthrough_terminal recovery_failed
+    cat "$OUT.verify.repair-final.log" >&2 || true
+    exit "$RECOVERY_FINAL_VERIFY_STATUS"
+  fi
+
+  REPORT_RECOVERED=1
+fi
+
+if ! assert_launch_provenance_unchanged; then
+  rm -f "$OUT.md" "$RUN_SIDECAR" "$DURABLE_RUN_EVIDENCE"
+  record_recovery_terminal failed
+  record_playthrough_terminal provenance_failed
+  exit 4
+fi
+
+# Persist the exact server-authored JSONL only after the report and private
+# sidecar have passed their final verification. COPYFILE_EXCL preserves the
+# one-prefix/one-attempt contract, and the byte comparison guards publication.
+DURABLE_RUN_EVIDENCE_ARG="$(node_path_arg "$DURABLE_RUN_EVIDENCE")"
+set +e
+"$NODE_CMD" -e '
+const fs = require("node:fs");
+const source = process.argv[1];
+const destination = process.argv[2];
+try {
+  fs.copyFileSync(source, destination, fs.constants.COPYFILE_EXCL);
+  if (!fs.readFileSync(source).equals(fs.readFileSync(destination))) {
+    throw new Error("published evidence bytes differ from private evidence");
+  }
+} catch (error) {
+  try { fs.rmSync(destination, { force: true }); } catch {}
+  console.error(error instanceof Error ? error.message : String(error));
+  process.exit(1);
+}
+' "$RUN_EVIDENCE_ARG" "$DURABLE_RUN_EVIDENCE_ARG" >"$OUT.evidence-publish.log" 2>&1
+EVIDENCE_PUBLISH_STATUS=$?
+set -e
+if [[ "$EVIDENCE_PUBLISH_STATUS" -ne 0 ]]; then
+  rm -f "$OUT.md" "$RUN_SIDECAR" "$DURABLE_RUN_EVIDENCE"
+  record_recovery_terminal failed
+  record_playthrough_terminal publication_failed
+  cat "$OUT.evidence-publish.log" >&2 || true
+  exit 4
+fi
+
+if [[ "$REPORT_RECOVERED" == "1" ]]; then
+  set +e
+  ( cd "$GAME_DIR" && npm --silent exec tsx -- scripts/blind-report-recovery.ts assert-evidence \
+    --run-evidence "$DURABLE_RUN_EVIDENCE_ARG" --metadata "$RECOVERY_METADATA_ARG" \
+    --initial-report "$INITIAL_REPORT_MARKER_ARG" ) \
+    >"$OUT.repair-published-evidence.log" 2>&1
+  PUBLISHED_RECOVERY_EVIDENCE_STATUS=$?
+  set -e
+  if [[ "$PUBLISHED_RECOVERY_EVIDENCE_STATUS" -ne 0 ]]; then
+    rm -f "$OUT.md" "$RUN_SIDECAR" "$DURABLE_RUN_EVIDENCE"
+    record_recovery_terminal failed
+    record_playthrough_terminal publication_failed
+    cat "$OUT.repair-published-evidence.log" >&2 || true
+    exit "$PUBLISHED_RECOVERY_EVIDENCE_STATUS"
+  fi
+fi
+
+# Close the small check/copy race. Any late tracked drift removes every artifact
+# that could otherwise be mistaken for accepted retention evidence.
+if ! assert_launch_provenance_unchanged; then
+  rm -f "$OUT.md" "$RUN_SIDECAR" "$DURABLE_RUN_EVIDENCE"
+  record_recovery_terminal failed
+  record_playthrough_terminal provenance_failed
+  exit 4
+fi
+
+# Commit the pure publication transaction by creating the canonical adjacent
+# sidecar LAST. Until this exclusive, byte-checked copy succeeds, feedback,
+# resume, and fleet consumers reject the report as unpublished. No verifier
+# ever receives this canonical destination as an output path.
+set +e
+"$NODE_CMD" -e '
+const fs = require("node:fs");
+const source = process.argv[1];
+const destination = process.argv[2];
+try {
+  fs.copyFileSync(source, destination, fs.constants.COPYFILE_EXCL);
+  if (!fs.readFileSync(source).equals(fs.readFileSync(destination))) {
+    throw new Error("published sidecar bytes differ from private sidecar");
+  }
+} catch (error) {
+  try { fs.rmSync(destination, { force: true }); } catch {}
+  console.error(error instanceof Error ? error.message : String(error));
+  process.exit(1);
+}
+' "$PRIVATE_RUN_SIDECAR_ARG" "$RUN_SIDECAR_ARG" >"$OUT.sidecar-publish.log" 2>&1
+SIDECAR_PUBLISH_STATUS=$?
+set -e
+if [[ "$SIDECAR_PUBLISH_STATUS" -ne 0 ]]; then
+  rm -f "$OUT.md" "$RUN_SIDECAR" "$DURABLE_RUN_EVIDENCE"
+  record_recovery_terminal failed
+  record_playthrough_terminal publication_failed
+  cat "$OUT.sidecar-publish.log" >&2 || true
+  exit 4
+fi
+PURE_PUBLICATION_COMPLETE=1
+
+if [[ "$REPORT_RECOVERED" == "1" ]]; then
+  record_recovery_terminal passed
+  record_playthrough_terminal verified_recovered
+  echo "✓ Recovered a verifier-valid report from the ended journey (report-only; no tools)."
+else
+  record_playthrough_terminal verified
+fi
 
 echo "✓ Blind report saved: $OUT.md"
 grep -iE 'clarity .*[0-9]|enjoyment .*[0-9]' "$OUT.md" | head -2 || true

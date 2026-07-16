@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  linkSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { hashState } from "../../src/core/hash.js";
@@ -12,14 +21,29 @@ import {
 // @ts-expect-error — plain .mjs module without type declarations
 import { fillPrompt } from "../../blind-tester/fill-prompt.mjs";
 import {
+  acquireFleetReportLock,
+  archiveFailedFleetAttemptArtifacts,
+  classifyFleetAttempt,
+  fleetAttestationPathFor,
+  fleetReportLockSpec,
+  isTrustedFleetArtifactFile,
   parseFleetArgs,
   planFleetRuns,
+  pureFleetReportWasRecovered,
+  pureFleetArtifactHashes,
   PURE_BASELINE_DECISIONS,
+  PURE_FLEET_ATTESTATION_SCHEMA_VERSION,
+  PURE_FLEET_EVIDENCE_SCHEMA_VERSION,
   PURE_SESSION_CONTRACT_VERSION,
+  releaseFleetReportLock,
+  renderClosedFleetManifest,
   reportPathFor,
   resumeCandidatesFor,
   runSidecarPathFor,
+  summarizeFleetAttemptHistory,
+  validateFleetLabel,
   verifyReportForResume,
+  writeFreshPureFleetAttestation,
   // @ts-expect-error — plain .mjs module without type declarations
 } from "../../blind-tester/fleet.mjs";
 
@@ -57,7 +81,17 @@ describe("fleet planning", () => {
     expect(opts.count).toBe(100);
     expect(opts.target).toBe("overworld");
     expect(opts.personas).toBe("default");
-    expect(planFleetRuns(opts)).toHaveLength(100);
+    expect(opts.model).toBe("mix");
+    expect(opts.resume).toBe(true);
+    const runs = planFleetRuns(opts);
+    expect(runs).toHaveLength(100);
+    expect(runs.filter((run: { model: string }) => run.model === "haiku")).toHaveLength(90);
+    expect(runs.filter((run: { model: string }) => run.model === "sonnet")).toHaveLength(10);
+  });
+
+  it("makes authoritative no-resume behavior explicit without changing diagnostic defaults", () => {
+    expect(parseFleetArgs([]).resume).toBe(true);
+    expect(parseFleetArgs(["--no-resume"]).resume).toBe(false);
   });
 
   it("rotates personas only for explicit structural mocks and honors seed base", () => {
@@ -74,6 +108,12 @@ describe("fleet planning", () => {
     expect(() => parseFleetArgs(["--personas", "mixed"])).toThrow(/pure live runs/i);
     expect(() => parseFleetArgs(["--personas", "breaker"])).toThrow(/structural mode/i);
     expect(parseFleetArgs(["--mock", "--personas", "breaker"]).personas).toBe("breaker");
+  });
+  it("pins live model plans to supported aliases", () => {
+    expect(parseFleetArgs(["--model", "opus"]).model).toBe("opus");
+    expect(parseFleetArgs(["--model", "mix"]).model).toBe("mix");
+    expect(() => parseFleetArgs(["--model", "claude-custom"])).toThrow(/haiku, sonnet, opus/i);
+    expect(parseFleetArgs(["--mock", "--model", "synthetic"]).model).toBe("synthetic");
   });
   it("explicit mock quest targets parse and reach the structural plan", () => {
     const runs = planFleetRuns(
@@ -110,6 +150,20 @@ describe("fleet planning", () => {
     expect(() => parseFleetArgs(["--mock", "--target", "quest:two words"])).toThrow(
       /overworld or quest:<id>/i,
     );
+    for (const target of [
+      "quest:../wolf_winter",
+      "quest:wolf/winter",
+      "quest:wolf\\winter",
+      "quest:Wolf_Winter",
+      "quest:wolf-winter",
+      "quest:_wolf_winter",
+      "quest:wolf__winter",
+      "quest:wolf\nwinter",
+    ]) {
+      expect(() => parseFleetArgs(["--mock", "--target", target]), target).toThrow(
+        /lowercase shipped quest id/i,
+      );
+    }
   });
 
   it("report filenames match the ledger regex", () => {
@@ -118,9 +172,122 @@ describe("fleet planning", () => {
   });
 });
 
+it("rejects symlinked or out-of-directory resume candidates", async () => {
+  const reportsDir = mkdtempSync(join(tmpdir(), "af-fleet-symlink-"));
+  const outsideDir = mkdtempSync(join(tmpdir(), "af-fleet-outside-"));
+  try {
+    const target = join(reportsDir, "real-report.md");
+    const alias = join(reportsDir, "20270101T000000Z_overworld_seed5.md");
+    writeFileSync(target, "not parsed because trust checks run first\n");
+    writeFileSync(runSidecarPathFor(alias), "{}\n");
+    const outside = join(outsideDir, "outside.md");
+    writeFileSync(outside, "ordinary but outside the reports root\n");
+    expect(isTrustedFleetArtifactFile(outside, reportsDir)).toBe(false);
+    try {
+      symlinkSync(target, alias, "file");
+    } catch (error) {
+      const code = (error as NodeJS.ErrnoException).code;
+      if (code === "EPERM" || code === "EACCES" || code === "ENOSYS") {
+        return;
+      }
+      throw error;
+    }
+    expect(isTrustedFleetArtifactFile(alias, reportsDir)).toBe(false);
+    const rejected = await verifyReportForResume(alias, "structural", null, reportsDir);
+    expect(rejected.ok).toBe(false);
+    expect(rejected.stderr).toMatch(/regular non-symlink/i);
+  } finally {
+    rmSync(reportsDir, { recursive: true, force: true });
+    rmSync(outsideDir, { recursive: true, force: true });
+  }
+});
+
+it("rejects hardlinked resume artifacts that certification cannot accept", async () => {
+  const reportsDir = mkdtempSync(join(tmpdir(), "af-fleet-hardlink-"));
+  try {
+    const target = join(reportsDir, "real-report.md");
+    const alias = join(reportsDir, "20270101T000000Z_overworld_seed5.md");
+    writeFileSync(target, "not parsed because trust checks run first\n");
+    try {
+      linkSync(target, alias);
+    } catch (error) {
+      const code = (error as NodeJS.ErrnoException).code;
+      if (code === "EPERM" || code === "EACCES" || code === "ENOSYS") return;
+      throw error;
+    }
+    writeFileSync(runSidecarPathFor(alias), "{}\n");
+    expect(isTrustedFleetArtifactFile(alias, reportsDir)).toBe(false);
+    const rejected = await verifyReportForResume(alias, "structural", null, reportsDir);
+    expect(rejected.ok).toBe(false);
+    expect(rejected.stderr).toMatch(/regular non-symlink/i);
+  } finally {
+    rmSync(reportsDir, { recursive: true, force: true });
+  }
+});
+
+it("verifies a report beneath Windows shell-metacharacter paths without invoking a shell", async () => {
+  const base = mkdtempSync(join(tmpdir(), "af-fleet-metachar-"));
+  const reportsDir = join(base, "reports & %PATH% (literal)");
+  mkdirSync(reportsDir);
+  const reportPath = join(reportsDir, "structural report.md");
+  try {
+    writeFileSync(
+      reportPath,
+      `## Playthrough log
+
+The structural opening completed.
+
+## Verdict
+
+The deterministic smoke route remained understandable.
+
+\`\`\`json exit-interview
+${JSON.stringify({
+  schema_version: 2,
+  play_mode: "structural",
+  start_surface: "fresh_overworld",
+  retention_eligible: false,
+  structural_kind: "mock",
+  clarity: 4,
+  enjoyment: 4,
+  goal_understood: true,
+  got_stuck: false,
+  confusions: [],
+  bugs: [],
+  best_moment: "The route exposed the opening state clearly.",
+  worst_moment: "The smoke run was intentionally brief.",
+  would_replay: true,
+  verdict: "The deterministic route is suitable for structural verification only.",
+})}
+\`\`\`
+`,
+    );
+    writeFileSync(
+      runSidecarPathFor(reportPath),
+      JSON.stringify({
+        schema_version: 1,
+        report_schema_version: 2,
+        play_mode: "structural",
+        start_surface: "fresh_overworld",
+        retention_eligible: false,
+        evidence_status: "not_applicable",
+        structural_kind: "mock",
+      }),
+    );
+    const verified = await verifyReportForResume(reportPath, "structural", null, reportsDir);
+    expect(verified.ok).toBe(true);
+  } finally {
+    rmSync(base, { recursive: true, force: true });
+  }
+});
+
 describe("resumeCandidatesFor", () => {
   it("anchors the seed so seed1 never matches seed10", () => {
-    const entries = ["20260709T010203Z_overworld_seed10.md", "20260709T010203Z_overworld_seed1.md"];
+    const entries = [
+      "20260709T010203Z_overworld_seed10.md",
+      "20260709T010203Z_overworld_seed1.md",
+      "20260709T010203Z_overworld_seed1.md",
+    ];
     expect(resumeCandidatesFor(entries, "overworld", 1)).toEqual([
       "20260709T010203Z_overworld_seed1.md",
     ]);
@@ -164,6 +331,11 @@ describe("resumeCandidatesFor", () => {
 6. Verdict: A real player could understand this legacy opening.
 \`\`\`json exit-interview
 ${JSON.stringify({
+  schema_version: 2,
+  play_mode: "structural",
+  start_surface: "fresh_overworld",
+  retention_eligible: false,
+  structural_kind: "mock",
   clarity: 4,
   enjoyment: 4,
   goal_understood: true,
@@ -193,6 +365,7 @@ ${JSON.stringify({
         }),
       );
       expect((await verifyReportForResume(reportPath, "pure")).ok).toBe(false);
+      expect((await verifyReportForResume(reportPath, "structural")).ok).toBe(true);
 
       const decisionProofHash = "a".repeat(64);
       const receiptPayload = {
@@ -281,6 +454,13 @@ ${JSON.stringify(pureInterview)}
         ...currentPayload,
         receiptHash: hashState(currentPayload),
       };
+      const expectedBuild = {
+        git_commit: "b".repeat(40),
+        tracked_worktree_clean: true,
+        world_id: "new_york_overworld",
+        world_hash: "c".repeat(64),
+      };
+      const expectedPure = { seed: 5, model: "haiku", build: expectedBuild };
       writeFileSync(
         reportPath,
         `
@@ -298,28 +478,370 @@ ${JSON.stringify({ ...pureInterview, journey_exit_receipt: currentReceipt })}
       writeFileSync(
         runSidecarPathFor(reportPath),
         JSON.stringify({
-          schema_version: 2,
+          schema_version: 1,
           report_schema_version: 2,
           play_mode: "pure",
           start_surface: "fresh_overworld",
           retention_eligible: true,
           evidence_status: "verified",
           session_id: "ow-resume",
-          run_seed: 5,
-          build: {
-            git_commit: "b".repeat(40),
-            tracked_worktree_clean: true,
-            world_id: "new_york_overworld",
-            world_hash: "c".repeat(64),
-          },
-          quest_outcomes: [],
           receipt: currentReceipt,
         }),
       );
-      expect((await verifyReportForResume(reportPath, "pure")).ok).toBe(true);
+      const currentContractV1 = await verifyReportForResume(reportPath, "pure", expectedPure);
+      expect(currentContractV1.ok).toBe(false);
+      expect(currentContractV1.stderr).toMatch(/evidence schema v2/i);
+
+      const validV2Sidecar = {
+        schema_version: PURE_FLEET_EVIDENCE_SCHEMA_VERSION,
+        report_schema_version: 2,
+        play_mode: "pure",
+        start_surface: "fresh_overworld",
+        retention_eligible: true,
+        evidence_status: "verified",
+        session_id: "ow-resume",
+        run_seed: 5,
+        build: expectedBuild,
+        quest_outcomes: [],
+        receipt: currentReceipt,
+      };
+      writeFileSync(runSidecarPathFor(reportPath), JSON.stringify(validV2Sidecar));
+      expect((await verifyReportForResume(reportPath, "pure", expectedPure)).ok).toBe(false);
+      expect((await verifyReportForResume(reportPath, "pure")).ok).toBe(false);
+
+      const claudeSessionId = "10852ae5-43b1-424a-aa39-7ba347361cec";
+      const actualModel = "claude-haiku-4-5-20251001";
+      const evidenceBody = `${[
+        {
+          schema_version: 2,
+          play_mode: "pure",
+          event: "fresh_start",
+          start_surface: "fresh_overworld",
+          session_id: validV2Sidecar.session_id,
+          run_seed: 5,
+          build: expectedBuild,
+        },
+        {
+          schema_version: 2,
+          play_mode: "pure",
+          event: "journey_exit",
+          start_surface: "fresh_overworld",
+          session_id: validV2Sidecar.session_id,
+          run_seed: 5,
+          build: expectedBuild,
+          quest_outcomes: [],
+          receipt: currentReceipt,
+        },
+      ]
+        .map((event) => JSON.stringify(event))
+        .join("\n")}\n`;
+      const primaryEnvelopeBody = JSON.stringify({
+        type: "result",
+        subtype: "success",
+        is_error: false,
+        session_id: claudeSessionId,
+        result: readFileSync(reportPath, "utf8"),
+        stop_reason: "end_turn",
+        terminal_reason: "completed",
+        permission_denials: [],
+        modelUsage: { [actualModel]: {} },
+      });
+      writeFileSync(reportPath.replace(/\.md$/, ".evidence.jsonl"), evidenceBody);
+      writeFileSync(reportPath.replace(/\.md$/, ".json"), primaryEnvelopeBody);
+
+      const validAttestation = {
+        schema_version: PURE_FLEET_ATTESTATION_SCHEMA_VERSION,
+        run_seed: 5,
+        model: "haiku",
+        persona: "default",
+        target: "overworld",
+        play_mode: "pure",
+        start_surface: "fresh_overworld",
+        build: expectedBuild,
+        game_session_id: "ow-resume",
+        claude_session_id: claudeSessionId,
+        actual_model: actualModel,
+        report_recovered: false,
+        receipt_hash: currentReceipt.receiptHash,
+        ...pureFleetArtifactHashes(reportPath),
+      };
+      expect(fleetAttestationPathFor(reportPath)).toBe(reportPath.replace(/\.md$/, ".fleet.json"));
+      writeFileSync(
+        fleetAttestationPathFor(reportPath),
+        JSON.stringify({ ...validAttestation, model: "sonnet" }),
+      );
+      expect((await verifyReportForResume(reportPath, "pure", expectedPure)).ok).toBe(false);
+      writeFileSync(fleetAttestationPathFor(reportPath), JSON.stringify(validAttestation));
+      const exactResume = await verifyReportForResume(reportPath, "pure", expectedPure);
+      expect(exactResume.ok).toBe(true);
+      expect(exactResume.attestation).toEqual(validAttestation);
+
+      const reportBytes = readFileSync(reportPath);
+      const sidecarBytes = readFileSync(runSidecarPathFor(reportPath));
+      const qualitativelyTamperedReport = reportBytes
+        .toString("utf8")
+        .replace("clarity 4/5", "clarity 5/5")
+        .replace('"clarity":4', '"clarity":5');
+      writeFileSync(reportPath, qualitativelyTamperedReport);
+      const markdownTamper = await verifyReportForResume(reportPath, "pure", expectedPure);
+      expect(markdownTamper.ok).toBe(false);
+      expect(markdownTamper.stderr).toMatch(/primary Claude result bytes/i);
+      writeFileSync(reportPath, reportBytes);
+
+      writeFileSync(
+        runSidecarPathFor(reportPath),
+        JSON.stringify({
+          ...validV2Sidecar,
+          quest_outcomes: [["wolf_winter", "ending_pack_diverted"]],
+        }),
+      );
+      const sidecarTamper = await verifyReportForResume(reportPath, "pure", expectedPure);
+      expect(sidecarTamper.ok).toBe(false);
+      expect(sidecarTamper.stderr).toMatch(/raw run evidence/i);
+      writeFileSync(runSidecarPathFor(reportPath), sidecarBytes);
+
+      const freshReportPath = join(dir, "fresh.md");
+      writeFileSync(freshReportPath, reportBytes);
+      writeFileSync(runSidecarPathFor(freshReportPath), sidecarBytes);
+      writeFileSync(freshReportPath.replace(/\.md$/, ".evidence.jsonl"), evidenceBody);
+      writeFileSync(freshReportPath.replace(/\.md$/, ".json"), primaryEnvelopeBody);
+      await expect(
+        writeFreshPureFleetAttestation(freshReportPath, validV2Sidecar, expectedPure),
+      ).resolves.toEqual(validAttestation);
+      await expect(
+        writeFreshPureFleetAttestation(freshReportPath, validV2Sidecar, expectedPure),
+      ).rejects.toThrow();
+
+      const attestationMismatches = [
+        { ...validAttestation, game_session_id: "another-session" },
+        { ...validAttestation, receipt_hash: "f".repeat(64) },
+        {
+          ...validAttestation,
+          build: { ...expectedBuild, world_hash: "f".repeat(64) },
+        },
+      ];
+      for (const attestation of attestationMismatches) {
+        writeFileSync(fleetAttestationPathFor(reportPath), JSON.stringify(attestation));
+        expect((await verifyReportForResume(reportPath, "pure", expectedPure)).ok).toBe(false);
+      }
+      writeFileSync(fleetAttestationPathFor(reportPath), JSON.stringify(validAttestation));
+
+      const mismatches = [
+        ["seed", { ...validV2Sidecar, run_seed: 6 }],
+        [
+          "commit",
+          {
+            ...validV2Sidecar,
+            build: { ...expectedBuild, git_commit: "d".repeat(40) },
+          },
+        ],
+        [
+          "cleanliness",
+          {
+            ...validV2Sidecar,
+            build: { ...expectedBuild, tracked_worktree_clean: false },
+          },
+        ],
+        [
+          "world id",
+          {
+            ...validV2Sidecar,
+            build: { ...expectedBuild, world_id: "another_world" },
+          },
+        ],
+        [
+          "world hash",
+          {
+            ...validV2Sidecar,
+            build: { ...expectedBuild, world_hash: "e".repeat(64) },
+          },
+        ],
+      ];
+      for (const [name, sidecar] of mismatches) {
+        writeFileSync(runSidecarPathFor(reportPath), JSON.stringify(sidecar));
+        expect(
+          (await verifyReportForResume(reportPath, "pure", expectedPure)).ok,
+          `${name} mismatch must fail closed`,
+        ).toBe(false);
+      }
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
+  });
+});
+
+describe("fleet attempt evidence", () => {
+  it("classifies timeout, launcher, verifier, and verified attempts from durable stages", () => {
+    expect(
+      classifyFleetAttempt({ runnerExit: 124, verifierAttempted: false, verified: false }),
+    ).toBe("technical_timeout");
+    expect(classifyFleetAttempt({ runnerExit: 9, verifierAttempted: false, verified: false })).toBe(
+      "launcher_or_run_failure",
+    );
+    expect(classifyFleetAttempt({ runnerExit: 1, verifierAttempted: true, verified: false })).toBe(
+      "verifier_failure",
+    );
+    expect(classifyFleetAttempt({ runnerExit: 0, verifierAttempted: true, verified: true })).toBe(
+      "verified",
+    );
+    expect(
+      classifyFleetAttempt({ runnerExit: 137, verifierAttempted: true, verified: false }),
+    ).toBe("technical_timeout");
+  });
+
+  it("archives failed artifacts before retry and reduces every attempt, not only the terminal one", () => {
+    const root = mkdtempSync(join(tmpdir(), "af-fleet-attempts-"));
+    const reportsDir = join(root, "reports");
+    const fleetDir = join(root, "fleet");
+    mkdirSync(reportsDir);
+    mkdirSync(fleetDir);
+    const outPrefix = join(reportsDir, "20260716T120000Z_overworld_seed7");
+    const reportPath = `${outPrefix}.md`;
+    const sidecarPath = `${outPrefix}.run.json`;
+    const unrelatedPath = join(reportsDir, "unrelated.md");
+    try {
+      writeFileSync(reportPath, "rejected report\n");
+      writeFileSync(sidecarPath, '{"rejected":true}\n');
+      writeFileSync(unrelatedPath, "keep me\n");
+      const archive = archiveFailedFleetAttemptArtifacts({
+        outPrefix,
+        fleetDir,
+        seed: 7,
+        attempt: 1,
+        diagnostic: "attempt=1\nclassification=verifier_failure\n",
+      });
+
+      expect(archive.directory).toBe("attempts/seed_7/attempt_1");
+      expect(archive.artifacts.map((artifact: { name: string }) => artifact.name)).toEqual([
+        "20260716T120000Z_overworld_seed7.md",
+        "20260716T120000Z_overworld_seed7.run.json",
+        "fleet-diagnostic.log",
+      ]);
+      for (const artifact of archive.artifacts as {
+        name: string;
+        bytes: number;
+        sha256: string;
+      }[]) {
+        expect(artifact.bytes).toBeGreaterThan(0);
+        expect(artifact.sha256).toMatch(/^[0-9a-f]{64}$/);
+        expect(existsSync(join(fleetDir, archive.directory, artifact.name))).toBe(true);
+      }
+      expect(existsSync(reportPath)).toBe(false);
+      expect(existsSync(sidecarPath)).toBe(false);
+      expect(readFileSync(unrelatedPath, "utf8")).toBe("keep me\n");
+
+      const summary = summarizeFleetAttemptHistory([
+        {
+          report_recovered: false,
+          attempt_history: [
+            { classification: "technical_timeout" },
+            { classification: "verifier_failure" },
+            { classification: "verified" },
+          ],
+        },
+        { report_recovered: true, attempt_history: [] },
+      ]);
+      expect(summary).toEqual({
+        total_attempts: 3,
+        failed_attempts: 2,
+        technical_timeouts: 1,
+        report_recovered_runs: 1,
+      });
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("declares report recovery only from the trusted adjacent durable marker", () => {
+    const reportsDir = mkdtempSync(join(tmpdir(), "af-fleet-recovered-"));
+    const reportPath = join(reportsDir, "report.md");
+    const markerPath = join(reportsDir, "report.initial-report.txt");
+    try {
+      writeFileSync(reportPath, "accepted\n");
+      expect(pureFleetReportWasRecovered(reportPath, reportsDir)).toBe(false);
+      writeFileSync(join(reportsDir, "report.initial.md"), "legacy discoverable marker\n");
+      expect(pureFleetReportWasRecovered(reportPath, reportsDir)).toBe(false);
+      writeFileSync(markerPath, "rejected initial response\n");
+      expect(pureFleetReportWasRecovered(reportPath, reportsDir)).toBe(true);
+    } finally {
+      rmSync(reportsDir, { recursive: true, force: true });
+    }
+  });
+});
+
+it("renders a closed fleet manifest in deterministic planned order", () => {
+  const later = { planned_index: 1, seed: 101, status: "verified" };
+  const earlier = { planned_index: 0, seed: 100, status: "verified" };
+  const rendered = renderClosedFleetManifest([later, earlier]);
+  expect(rendered.trim().split("\n").map(JSON.parse)).toEqual([earlier, later]);
+  expect(rendered.endsWith("\n")).toBe(true);
+});
+
+it("rejects incomplete or noncontiguous closed manifest rows", () => {
+  expect(() =>
+    renderClosedFleetManifest([{ planned_index: 1, seed: 101, status: "verified" }]),
+  ).toThrow(/contiguous from zero/i);
+  expect(() =>
+    renderClosedFleetManifest([
+      { planned_index: 0, seed: 100, status: "verified" },
+      { planned_index: 2, seed: 102, status: "verified" },
+    ]),
+  ).toThrow(/contiguous from zero/i);
+  const sparse = new Array(2);
+  sparse[0] = { planned_index: 0, seed: 100, status: "verified" };
+  expect(() => renderClosedFleetManifest(sparse)).toThrow(/complete nonempty row set/i);
+});
+
+it("atomically locks a same-stamp report namespace across labels and model plans", () => {
+  const reportsDir = mkdtempSync(join(tmpdir(), "af-fleet-lock-"));
+  const stamp = "20260716T120000Z";
+  const haikuRuns = [
+    { seed: 100, model: "haiku", target: "overworld" },
+    { seed: 101, model: "haiku", target: "overworld" },
+  ];
+  const sonnetRuns = haikuRuns.map((run) => ({ ...run, model: "sonnet" }));
+  try {
+    const haikuSpec = fleetReportLockSpec(reportsDir, stamp, haikuRuns);
+    const sonnetSpec = fleetReportLockSpec(reportsDir, stamp, sonnetRuns);
+    expect(haikuSpec.path).toBe(sonnetSpec.path);
+    expect(haikuSpec.identity.model_plan).not.toEqual(sonnetSpec.identity.model_plan);
+
+    const lock = acquireFleetReportLock(reportsDir, stamp, haikuRuns);
+    expect(existsSync(lock.path)).toBe(true);
+    expect(() => acquireFleetReportLock(reportsDir, stamp, sonnetRuns)).toThrow(/already locked/i);
+    releaseFleetReportLock(lock);
+    expect(existsSync(lock.path)).toBe(false);
+
+    const reacquired = acquireFleetReportLock(reportsDir, stamp, sonnetRuns);
+    releaseFleetReportLock(reacquired);
+  } finally {
+    rmSync(reportsDir, { recursive: true, force: true });
+  }
+});
+
+describe("fleet labels", () => {
+  it("accepts one bounded safe path segment", () => {
+    expect(validateFleetLabel("slice-v1.2_candidate")).toBe("slice-v1.2_candidate");
+    expect(parseFleetArgs(["--label", "slice-v1.2_candidate"]).label).toBe("slice-v1.2_candidate");
+  });
+
+  it.each([
+    "",
+    ".",
+    "..",
+    "../escape",
+    "a/b",
+    "a\\b",
+    ".hidden",
+    "release.",
+    "CON",
+    "con.txt",
+    "NUL.json",
+    "COM1",
+    "lpt9.log",
+    "a".repeat(81),
+  ])("rejects unsafe label %j", (label) => {
+    expect(() => parseFleetArgs(["--label", label])).toThrow(/one non-reserved 1-80 character/i);
   });
 });
 
@@ -346,5 +868,21 @@ describe("parseFleetArgs numeric validation", () => {
     expect(() =>
       parseFleetArgs(["--count", "1", "--concurrency", "1", "--max-retries", "0"]),
     ).not.toThrow();
+  });
+
+  it("accepts the last two distinct safe seeds and rejects an unsafe final seed", () => {
+    const max = Number.MAX_SAFE_INTEGER;
+    const edge = parseFleetArgs(["--count", "2", "--seed-base", String(max - 1)]);
+    expect(planFleetRuns(edge).map((run: { seed: number }) => run.seed)).toEqual([max - 1, max]);
+    expect(() => parseFleetArgs(["--count", "2", "--seed-base", String(max)])).toThrow(
+      /seed range.*safe integers/i,
+    );
+    expect(() => parseFleetArgs(["--seed-base", String(max + 1)])).toThrow(/safe integer/i);
+  });
+
+  it("rechecks safe seed uniqueness for programmatic plans", () => {
+    const opts = parseFleetArgs(["--count", "1", "--seed-base", String(Number.MAX_SAFE_INTEGER)]);
+    opts.count = 2;
+    expect(() => planFleetRuns(opts)).toThrow(/seed range.*safe integers/i);
   });
 });
