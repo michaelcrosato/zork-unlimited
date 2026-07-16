@@ -50,6 +50,7 @@ const index = indexRpgPack(pack);
 const ACCEPT = "albany:ally_june_cattle_first";
 const RELAY = "albany:ally_june_relay_only";
 const SOLO = "albany:ally_travel_solo";
+const JUNE_PROMISE = "albany:promise_june_cattle_first";
 
 function fixedRolls(...values: number[]): Rng {
   let cursor = 0;
@@ -149,7 +150,11 @@ describe("SS-F04 — June Pike authored ally gameplay", () => {
     const malformedWolf = malformed.quests.find((quest) => quest.id === "wolf_winter");
     const group = malformedWolf?.campaign_exports
       ?.flatMap((campaignExport) => campaignExport.conditional_effects ?? [])
-      .find((candidate) => candidate.effects.some((effect) => effect.type === "resolve_promise"));
+      .find((candidate) =>
+        candidate.effects.some(
+          (effect) => effect.type === "resolve_promise" && effect.promise_id === JUNE_PROMISE,
+        ),
+      );
     const promiseCondition = group?.when.requires_all_promises?.[0];
     const promiseEffect = group?.effects.find((effect) => effect.type === "resolve_promise");
     if (!group || !promiseCondition || !promiseEffect) {
@@ -165,7 +170,12 @@ describe("SS-F04 — June Pike authored ally gameplay", () => {
     const omittedWolf = omitted.quests.find((quest) => quest.id === "wolf_winter");
     if (!omittedWolf?.campaign_exports) throw new Error("Wolf-Winter requires campaign exports");
     for (const campaignExport of omittedWolf.campaign_exports) {
-      delete campaignExport.conditional_effects;
+      campaignExport.conditional_effects = campaignExport.conditional_effects?.filter(
+        (candidate) =>
+          !candidate.effects.some(
+            (effect) => effect.type === "resolve_promise" && effect.promise_id === JUNE_PROMISE,
+          ),
+      );
     }
     expect(() => assertOverworldIntegrity(omitted)).toThrow(/leaves field promise.*unresolved/i);
 
@@ -174,7 +184,7 @@ describe("SS-F04 — June Pike authored ally gameplay", () => {
     if (!exportlessWolf) throw new Error("Wolf-Winter must exist");
     delete exportlessWolf.campaign_exports;
     expect(() => assertOverworldIntegrity(exportless)).toThrow(
-      /requires target-quest campaign exports/i,
+      /requires target-quest campaign exports|relief oath must target .* campaign exports/i,
     );
 
     const retained = structuredClone(world);
@@ -183,7 +193,10 @@ describe("SS-F04 — June Pike authored ally gameplay", () => {
       ?.flatMap((campaignExport) => campaignExport.conditional_effects ?? [])
       .find((candidate) =>
         candidate.effects.some(
-          (effect) => effect.type === "resolve_promise" && effect.status === "broken",
+          (effect) =>
+            effect.type === "resolve_promise" &&
+            effect.promise_id === JUNE_PROMISE &&
+            effect.status === "broken",
         ),
       );
     if (!brokenGroup) throw new Error("Wolf-Winter requires one broken June promise export");
@@ -200,7 +213,10 @@ describe("SS-F04 — June Pike authored ally gameplay", () => {
       ?.flatMap((campaignExport) => campaignExport.conditional_effects ?? [])
       .find((candidate) =>
         candidate.effects.some(
-          (effect) => effect.type === "resolve_promise" && effect.status === "kept",
+          (effect) =>
+            effect.type === "resolve_promise" &&
+            effect.promise_id === JUNE_PROMISE &&
+            effect.status === "kept",
         ),
       );
     if (!keptGroup) throw new Error("Wolf-Winter requires one kept June promise export");

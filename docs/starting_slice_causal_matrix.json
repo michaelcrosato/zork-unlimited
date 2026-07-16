@@ -65,29 +65,63 @@
       "id": "SS-F02-relief-oath",
       "title": "Define what the relief rider owes Albany",
       "phase": "albany_opening",
-      "implementation_status": "planned",
-      "proof_status": "unproven",
-      "counts_toward_contract": false,
-      "visible_choice": "Accept an official relief oath, negotiate limited duty, or remain an unaffiliated helper.",
+      "implementation_status": "implemented",
+      "proof_status": "proven",
+      "counts_toward_contract": true,
+      "visible_choice": "Immediately after permanent registration and before source certification, bind exactly one irreversible Wolf-Winter term. Take Full Compact Duty for 10 minutes, negotiate Aid-Only Duty for 5 minutes, or remain an Unaffiliated Helper on a witnessed personal bond for 0 minutes. Every card discloses its access, duty, field consequence, promise consequence, and conditional return service; none removes hunt, lure, drive, fortify, June, or solo play.",
       "immediate_state_delta": [
+        "world.minutes",
         "character.values",
         "character.promises",
-        "character.faction_standing",
-        "albany.public_trust"
+        "character.factionStanding",
+        "character.knowledge",
+        "character.relationships",
+        "journey.story_choice_proof"
       ],
       "delayed_consumers": [
-        "Access to Albany stores and records",
-        "Cade's willingness to accept authority",
-        "Consequences for keeping or breaking the promise on return"
+        "Full Compact Duty imports Rowan's boundary annex. If the player later chooses Albany-authority fortification, it lowers the first public-seal Repair check from DC 14 to 12, or from the Works-prepared DC 12 to 10, without changing Cade's refusal, the spent attempt, pressure, or Albany-strip recovery. Choosing Cade's legal household fortification remains available but truthfully breaks this public-seal term.",
+        "Aid-Only Duty imports Jamie's witnessed count slip. Only on the final scent cast of a wholly bloodless lure does it suppress the ordinary +1 cattle-alarm step; approach pressure, a fouled cast, recovery costs, and every other strategy retain their original consequences. Invoking Albany authority remains legal but releases the limited promise with Rowan's recorded public bend.",
+        "The Unaffiliated Personal Bond imports Emery's ash-lane service-cut insert. It lowers only the first drive shutter check from DC 12 to 10; the finite charge, failed-check alarm, no-retry rule, loose-hurdle recovery, and all other strategies remain unchanged. Invoking Albany authority remains legal but breaks the personal bond.",
+        "Quest foldback resolves each active oath in the truthful return record: Full Duty is kept except when Cade's household shutters substitute for its required public seals, Aid-Only is kept except for the released authority bend, and the Unaffiliated Bond is kept except when authority breaks it. The distinct Unaffiliated Courier registration-tag promise also closes as kept on any truthful Wolf-Winter return under all three terms, while other backgrounds never invent it. Matching kept proof and outcome facts conditionally unlock one 15-minute service: Civic resupply after lawful full-duty authority fortification, Market rest after an aid-only living-pack/whole-herd return, or Greenway resupply after a qualifying unaffiliated living-drive returned-rig line. Equivalent same-counter claims consolidate rather than duplicate stock or recovery: Relief Protocol with the full-duty Civic cache, Resident Shelter with the aid-only Market cot, and a whole-herd drive with the unaffiliated Greenway cache."
       ],
       "visible_feedback": [
-        "The oath states its concrete access and obligation.",
-        "Return scenes name whether the promise was kept, bent, or broken and change services."
+        "The blocking three-card oath screen and durable offer/selection journal state the exact 10/5/0-minute cost, access, duty, field benefit, overstep consequence, return promise, and any same-counter service consolidation before confirmation; the persistent character record then exposes its value, faction standing, Rowan memory, knowledge, and active promise.",
+        "Cade's authored strategy conversation, room variants, legal action copy, displayed DC, cattle-alarm change, and action journal name the selected term where it is consumed while leaving the nonmatching strategies visible and legal.",
+        "On return, chronological campaign foldback exposes the promise as kept, released, or broken with Rowan's matching memory. Eligible Albany service copy names the exact oath and outcome facts that opened its one-time 15-minute benefit."
       ],
-      "systems": ["values", "promises", "factions", "services"],
-      "persistence_boundaries": ["overworld_to_quest", "quest_to_overworld"],
-      "contract_tags": ["delayed", "cross_system", "cross_phase", "irreversible_tradeoff"],
-      "baseline_evidence": [],
+      "systems": [
+        "time",
+        "values",
+        "promises",
+        "factions",
+        "knowledge",
+        "relationships",
+        "quest_imports",
+        "risk",
+        "pressure",
+        "dialogue",
+        "services"
+      ],
+      "persistence_boundaries": [
+        "overworld_save_restore",
+        "overworld_to_quest",
+        "rpg_save_restore",
+        "quest_to_overworld"
+      ],
+      "contract_tags": [
+        "delayed",
+        "cross_system",
+        "cross_phase",
+        "npc_memory",
+        "irreversible_tradeoff"
+      ],
+      "baseline_evidence": [
+        "tests/unit/world_opening_relief_oath.test.ts",
+        "tests/unit/world_opening_relief_oath_journal.test.ts",
+        "tests/unit/world_opening_lead_source.test.ts",
+        "tests/unit/world_campaign_consequences.test.ts",
+        "tests/unit/ui_overworld.test.ts"
+      ],
       "counterfactual_test": "tests/starting_slice/relief_oath_counterfactual.test.ts"
     },
     {

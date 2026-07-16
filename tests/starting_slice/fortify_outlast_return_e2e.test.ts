@@ -191,6 +191,11 @@ function launchAlbanyWolf(api: ToolApi, seed: number) {
   api.choose_overworld_session_story({
     ...FULL,
     session_id: overworldSessionId,
+    choice: "albany:oath_limited_aid_only",
+  });
+  api.choose_overworld_session_story({
+    ...FULL,
+    session_id: overworldSessionId,
     choice: "albany:source_rowan_civic_docket",
   });
   api.choose_overworld_session_story({

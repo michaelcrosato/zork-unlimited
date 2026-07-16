@@ -9,6 +9,7 @@ import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import { createInitialCampaignCharacterState } from "../../src/world/campaign_character_state.js";
 import { openingRegistrationLegacyJournalEntry } from "../../src/world/opening_registration_journal.js";
 import { applyOpeningPreparationProfile } from "../../src/world/opening_preparation.js";
+import { applyOpeningReliefOathOption } from "../../src/world/opening_relief_oath.js";
 import { planOverworldRoute } from "../../src/world/overworld.js";
 import { OverworldSession } from "../../src/world/session.js";
 import { parseTimeLabel, timeLabel } from "../../src/world/session_journal_codec.js";
@@ -18,6 +19,7 @@ import {
   OVERWORLD_PRE_CAMPAIGN_EXPORTS_WORLD_HASH,
 } from "../../src/world/session_snapshot_restore.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
+import { exactF06World } from "../regression/fixtures/historical_overworlds.js";
 
 const WORLD = loadOverworldManifest(process.cwd());
 const openingRegistration = WORLD.opening_registration;
@@ -26,6 +28,10 @@ const REGISTRATION = openingRegistration;
 const openingLeadSource = WORLD.opening_lead_source;
 if (!openingLeadSource) throw new Error("The starting slice requires an opening lead source.");
 const LEAD_SOURCE = openingLeadSource;
+const openingReliefOath = WORLD.opening_relief_oath;
+if (!openingReliefOath) throw new Error("The starting slice requires an opening relief oath.");
+const RELIEF_OATH = openingReliefOath;
+const DEFAULT_OATH_ID = "albany:oath_full_compact_duty";
 const DEFAULT_SOURCE_ID = "albany:source_rowan_civic_docket";
 const DEFAULT_PREPARATION_ID = "albany:prep_works_fortification";
 const COUNTERFACTUAL_PREPARATION_ID = "albany:prep_relief_protocol";
@@ -48,9 +54,14 @@ function expectedPreparedCharacter(
   character: (typeof REGISTRATION.profiles)[number]["character"],
   profileId = DEFAULT_PREPARATION_ID,
 ) {
+  const oathBound = applyOpeningReliefOathOption({
+    scene: RELIEF_OATH,
+    character,
+    optionId: DEFAULT_OATH_ID,
+  }).characterAfter;
   return applyOpeningPreparationProfile({
     scene: PREPARATION,
-    character,
+    character: oathBound,
     profileId,
   }).characterAfter;
 }
@@ -68,6 +79,12 @@ function registerSession(profileId: string): OverworldSession {
   });
   session.chooseJourneyStory(profileId);
   expect(session.view().quests.map((quest) => quest.id)).not.toContain("wolf_winter");
+  expect(session.journey().storyChoice).toMatchObject({
+    id: RELIEF_OATH.id,
+    kind: "relief_oath",
+    options: RELIEF_OATH.options.map((option) => ({ id: option.id })),
+  });
+  session.chooseJourneyStory(DEFAULT_OATH_ID);
   expect(session.journey().storyChoice).toMatchObject({
     id: LEAD_SOURCE.id,
     kind: "lead_source",
@@ -101,6 +118,8 @@ function prooflessStartedWolfSnapshot(): {
     (entry) =>
       entry.kind !== "registration" &&
       entry.kind !== "registration_offer" &&
+      entry.kind !== "relief_oath" &&
+      entry.kind !== "relief_oath_offer" &&
       entry.kind !== "lead_source" &&
       entry.kind !== "lead_source_offer" &&
       entry.kind !== "preparation" &&
@@ -112,7 +131,7 @@ function prooflessStartedWolfSnapshot(): {
 }
 
 function preRegistrationUnrelatedQuestSnapshot(): ReturnType<OverworldSession["snapshot"]> {
-  const predecessorWorld = structuredClone(WORLD);
+  const predecessorWorld = exactF06World(WORLD);
   delete predecessorWorld.opening_registration;
   delete predecessorWorld.opening_lead_source;
   delete predecessorWorld.opening_preparation;
@@ -202,7 +221,13 @@ function launchRegisteredWolf(profileId: string): {
     session_id: sessionId,
     choice: profileId,
   });
-  expect(registered.journey.storyChoice).toMatchObject({
+  expect(registered.journey.storyChoice).toMatchObject({ kind: "relief_oath" });
+  const oathBound = api.choose_overworld_session_story({
+    ...FULL_OVERWORLD,
+    session_id: sessionId,
+    choice: DEFAULT_OATH_ID,
+  });
+  expect(oathBound.journey.storyChoice).toMatchObject({
     id: LEAD_SOURCE.id,
     kind: "lead_source",
   });
@@ -392,6 +417,10 @@ describe("SS-F01 — Albany character background counterfactual", () => {
     moveSessionToArea(session, REGISTRATION.area);
     session.talkToCharacter(ROWAN_ID);
     session.chooseJourneyStory("albany:unaffiliated_courier");
+    expect(session.journey().storyChoice).toMatchObject({ kind: "relief_oath" });
+    expect(session.view().quests.map((quest) => quest.id)).not.toContain(wolf.id);
+    expect(() => session.previewQuestStart(wolf.id)).toThrow(/relief oath|relief terms/i);
+    session.chooseJourneyStory(DEFAULT_OATH_ID);
     expect(session.journey().storyChoice).toMatchObject({ kind: "lead_source" });
     expect(session.view().quests.map((quest) => quest.id)).not.toContain(wolf.id);
     expect(() => session.previewQuestStart(wolf.id)).toThrow(
@@ -602,19 +631,20 @@ describe("SS-F01 — Albany character background counterfactual", () => {
       ),
     );
     expect(warden.rowanJournalId).toBe(
-      "talk:albany_city__civic_core__contact@registered_road_warden",
+      "talk:albany_city__civic_core__contact@wolf_full_compact_duty_selected",
     );
     expect(warden.haydenJournalId).toBe(
       "talk:albany_city__transport_hub__contact@sponsored_road_warden",
     );
     expect(advocate.rowanJournalId).toBe(
-      "talk:albany_city__civic_core__contact@registered_ledger_advocate",
+      "talk:albany_city__civic_core__contact@wolf_full_compact_duty_selected",
     );
 
     expect(warden.state.vars.defense).toBe(4);
     expect(warden.state.campaignImportReceipt?.applied_rules).toEqual([
       "import:wolf_winter_approach_sheltered_stockway",
       "import:wolf_winter_fieldcraft",
+      "import:wolf_winter_full_compact_duty",
       "import:wolf_winter_lure_fieldcraft",
       "import:wolf_winter_relief_protocol",
       "import:wolf_winter_relief_resident_shelter",
@@ -623,6 +653,7 @@ describe("SS-F01 — Albany character background counterfactual", () => {
     expect(advocate.state.vars.defense).toBe(3);
     expect(advocate.state.campaignImportReceipt?.applied_rules).toEqual([
       "import:wolf_winter_approach_sheltered_stockway",
+      "import:wolf_winter_full_compact_duty",
       "import:wolf_winter_relief_mediation",
       "import:wolf_winter_relief_protocol",
       "import:wolf_winter_relief_resident_shelter",
@@ -730,6 +761,7 @@ describe("SS-F01 — Albany character background counterfactual", () => {
     );
 
     const movedAfterSelection = pending;
+    movedAfterSelection.chooseJourneyStory(DEFAULT_OATH_ID);
     movedAfterSelection.chooseJourneyStory(DEFAULT_SOURCE_ID);
     expect(movedAfterSelection.journey().storyChoice?.kind).toBe("preparation");
     movedAfterSelection.chooseJourneyStory(DEFAULT_PREPARATION_ID);
@@ -738,6 +770,8 @@ describe("SS-F01 — Albany character background counterfactual", () => {
     wrongLocation.journalEntries = wrongLocation.journalEntries.filter(
       (entry) =>
         entry.kind !== "registration" &&
+        entry.kind !== "relief_oath" &&
+        entry.kind !== "relief_oath_offer" &&
         entry.kind !== "lead_source" &&
         entry.kind !== "lead_source_offer" &&
         entry.kind !== "preparation" &&
@@ -758,6 +792,8 @@ describe("SS-F01 — Albany character background counterfactual", () => {
     wrongClock.journalEntries = wrongClock.journalEntries.filter(
       (entry) =>
         entry.kind !== "registration" &&
+        entry.kind !== "relief_oath" &&
+        entry.kind !== "relief_oath_offer" &&
         entry.kind !== "lead_source" &&
         entry.kind !== "lead_source_offer" &&
         entry.kind !== "preparation" &&

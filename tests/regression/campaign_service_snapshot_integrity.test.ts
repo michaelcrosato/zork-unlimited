@@ -40,6 +40,7 @@ function albanyStationSession(): OverworldSession {
   session.scoutPoi(poi.id);
   session.talkToCharacter(contact.id);
   session.chooseJourneyStory("albany:ledger_advocate");
+  session.chooseJourneyStory("albany:oath_limited_aid_only");
   session.chooseJourneyStory("albany:source_jamie_market_testimony");
   expect(session.journey().storyChoice?.kind).toBe("preparation");
   session.chooseJourneyStory("albany:prep_works_fortification");

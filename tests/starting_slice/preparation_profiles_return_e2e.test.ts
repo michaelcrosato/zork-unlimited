@@ -137,6 +137,11 @@ function launchPreparedWolf(api: ToolApi) {
     session_id: overworldSessionId,
     choice: "albany:unaffiliated_courier",
   });
+  api.choose_overworld_session_story({
+    ...FULL,
+    session_id: overworldSessionId,
+    choice: "albany:oath_unaffiliated_personal_bond",
+  });
   const sourced = api.choose_overworld_session_story({
     ...FULL,
     session_id: overworldSessionId,
@@ -202,6 +207,7 @@ describe("SS-F05 — preparation survives Wolf-Winter and the Albany return", ()
       "import:wolf_winter_drover_route",
       "import:wolf_winter_drover_streetwise",
       "import:wolf_winter_relief_resident_shelter",
+      "import:wolf_winter_unaffiliated_bond",
     ]);
 
     // The browser starts from the post-launch persistent character, including

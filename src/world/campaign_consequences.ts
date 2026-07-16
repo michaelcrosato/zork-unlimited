@@ -19,6 +19,24 @@ const CAMPAIGN_SCORE_FLOOR = z
   .min(CAMPAIGN_CHARACTER_MIN_SCORE)
   .max(CAMPAIGN_CHARACTER_MAX_SCORE);
 const CAMPAIGN_OWED_FLOOR = z.number().int().min(0).max(CAMPAIGN_CHARACTER_MAX_OWED);
+const CAMPAIGN_RANK_FLOOR = z.number().int().min(1).max(CAMPAIGN_CHARACTER_MAX_RANK);
+const CAMPAIGN_POSITIVE_SCORE_FLOOR = z.number().int().min(1).max(CAMPAIGN_CHARACTER_MAX_SCORE);
+
+export const AffirmValueConsequenceSchema = z
+  .object({
+    type: z.literal("affirm_value"),
+    value_id: CampaignCharacterIdSchema,
+    strength_at_least: CAMPAIGN_RANK_FLOOR,
+  })
+  .strict();
+
+export const RaiseFactionStandingConsequenceSchema = z
+  .object({
+    type: z.literal("raise_faction_standing"),
+    faction_id: CampaignCharacterIdSchema,
+    standing_at_least: CAMPAIGN_POSITIVE_SCORE_FLOOR,
+  })
+  .strict();
 
 export const RememberRelationshipConsequenceSchema = z
   .object({
@@ -89,7 +107,9 @@ export const SufferWoundConsequenceSchema = z
 
 export const CampaignConsequenceEffectSchema = z.discriminatedUnion("type", [
   AddCompanionConsequenceSchema,
+  AffirmValueConsequenceSchema,
   LearnKnowledgeConsequenceSchema,
+  RaiseFactionStandingConsequenceSchema,
   RecordPromiseConsequenceSchema,
   RememberRelationshipConsequenceSchema,
   RemoveCompanionConsequenceSchema,
@@ -99,7 +119,9 @@ export const CampaignConsequenceEffectSchema = z.discriminatedUnion("type", [
 ]);
 
 export type AddCompanionConsequence = z.infer<typeof AddCompanionConsequenceSchema>;
+export type AffirmValueConsequence = z.infer<typeof AffirmValueConsequenceSchema>;
 export type LearnKnowledgeConsequence = z.infer<typeof LearnKnowledgeConsequenceSchema>;
+export type RaiseFactionStandingConsequence = z.infer<typeof RaiseFactionStandingConsequenceSchema>;
 export type RecordPromiseConsequence = z.infer<typeof RecordPromiseConsequenceSchema>;
 export type RememberRelationshipConsequence = z.infer<typeof RememberRelationshipConsequenceSchema>;
 export type RemoveCompanionConsequence = z.infer<typeof RemoveCompanionConsequenceSchema>;
@@ -206,8 +228,12 @@ export function campaignConsequenceEffectKey(effect: CampaignConsequenceEffect):
     case "add_companion":
     case "remove_companion":
       return JSON.stringify([effect.type, effect.npc_id]);
+    case "affirm_value":
+      return JSON.stringify([effect.type, effect.value_id]);
     case "learn_knowledge":
       return JSON.stringify([effect.type, effect.knowledge_id]);
+    case "raise_faction_standing":
+      return JSON.stringify([effect.type, effect.faction_id]);
     case "record_promise":
     case "resolve_promise":
       return JSON.stringify([effect.type, effect.promise_id]);
@@ -297,6 +323,35 @@ function applyRelationshipMemory(
   }
 }
 
+function affirmValue(character: CampaignCharacterState, effect: AffirmValueConsequence): void {
+  const existing = character.values.find((value) => value.valueId === effect.value_id);
+  if (existing === undefined) {
+    character.values.push({
+      valueId: effect.value_id,
+      strength: effect.strength_at_least,
+    });
+    return;
+  }
+  existing.strength = Math.max(existing.strength, effect.strength_at_least);
+}
+
+function raiseFactionStanding(
+  character: CampaignCharacterState,
+  effect: RaiseFactionStandingConsequence,
+): void {
+  const existing = character.factionStanding.find(
+    (standing) => standing.factionId === effect.faction_id,
+  );
+  if (existing === undefined) {
+    character.factionStanding.push({
+      factionId: effect.faction_id,
+      standing: effect.standing_at_least,
+    });
+    return;
+  }
+  existing.standing = Math.max(existing.standing, effect.standing_at_least);
+}
+
 function recordPromise(character: CampaignCharacterState, effect: RecordPromiseConsequence): void {
   const existing = character.promises.find((promise) => promise.promiseId === effect.promise_id);
   if (existing === undefined) {
@@ -374,10 +429,16 @@ export function applyCampaignConsequences(args: {
             draft.companions.push(effect.npc_id);
           }
           break;
+        case "affirm_value":
+          affirmValue(draft, effect);
+          break;
         case "learn_knowledge":
           if (!draft.knowledge.includes(effect.knowledge_id)) {
             draft.knowledge.push(effect.knowledge_id);
           }
+          break;
+        case "raise_faction_standing":
+          raiseFactionStanding(draft, effect);
           break;
         case "record_promise":
           recordPromise(draft, effect);

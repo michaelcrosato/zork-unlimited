@@ -21,6 +21,7 @@ import { GameSession } from "../../ui/src/engine.js";
 const ROOT = process.cwd();
 const SHELTERED_APPROACH_ID = "albany:wolf_approach_sheltered_stockway";
 const RESIDENT_SHELTER_ALLOCATION_ID = "albany:relief_resident_shelter";
+const LIMITED_AID_OATH_ID = "albany:oath_limited_aid_only";
 const WORLD = loadOverworldManifest(ROOT);
 const WOLF_SOURCE = readFileSync("content/rpg/quests/wolf_winter.yaml", "utf8");
 const WOLF_QUEST = WORLD.quests.find((quest) => quest.id === "wolf_winter");
@@ -40,6 +41,8 @@ function revealAlbanyWolf(session: OverworldSession) {
   if (session.journey().storyChoice?.kind === "registration") {
     session.chooseJourneyStory("albany:ledger_advocate");
   }
+  expect(session.journey().storyChoice?.kind).toBe("relief_oath");
+  session.chooseJourneyStory(LIMITED_AID_OATH_ID);
   expect(session.journey().storyChoice?.kind).toBe("lead_source");
   session.chooseJourneyStory("albany:source_rowan_civic_docket");
   expect(session.journey().storyChoice?.kind).toBe("preparation");
@@ -87,10 +90,17 @@ function launchAlbanyWolf(
     session_id: overworldSessionId,
     choice: "albany:ledger_advocate",
   });
-  expect(registered.journey.storyChoice?.kind).toBe("lead_source");
+  expect(registered.journey.storyChoice?.kind).toBe("relief_oath");
   expect(registered.observation.quests.map((candidate) => candidate.id)).not.toContain(
     "wolf_winter",
   );
+  const sworn = api.choose_overworld_session_story({
+    ...full,
+    session_id: overworldSessionId,
+    choice: LIMITED_AID_OATH_ID,
+  });
+  expect(sworn.journey.storyChoice?.kind).toBe("lead_source");
+  expect(sworn.observation.quests.map((candidate) => candidate.id)).not.toContain("wolf_winter");
   const sourced = api.choose_overworld_session_story({
     ...full,
     session_id: overworldSessionId,
@@ -404,6 +414,7 @@ describe("trusted campaign-character quest launch bridge", () => {
     expect(fullSession.stateHash).toBe(compactSession.stateHash);
     expect(fullSession.state.campaignImportReceipt?.applied_rules).toEqual([
       "import:wolf_winter_approach_sheltered_stockway",
+      "import:wolf_winter_limited_aid_only",
       "import:wolf_winter_relief_mediation",
       "import:wolf_winter_relief_resident_shelter",
       "import:wolf_winter_works_fortification",

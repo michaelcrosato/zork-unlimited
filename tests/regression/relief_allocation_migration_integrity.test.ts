@@ -41,6 +41,9 @@ function sessionAtWolf(world: OverworldManifest): OverworldSession {
   session.scoutPoi("albany_city__civic_core__poi");
   session.talkToCharacter("albany_city__civic_core__contact");
   session.chooseJourneyStory("albany:ledger_advocate");
+  if (session.journey().storyChoice?.kind === "relief_oath") {
+    session.chooseJourneyStory("albany:oath_limited_aid_only");
+  }
   session.chooseJourneyStory("albany:source_rowan_civic_docket");
   session.chooseJourneyStory("albany:prep_works_fortification");
   moveToArea(session, "albany_city__transport_hub");
@@ -152,6 +155,7 @@ describe("F12 to F06 relief-allocation migration integrity", () => {
     session.scoutPoi("albany_city__civic_core__poi");
     session.talkToCharacter("albany_city__civic_core__contact");
     session.chooseJourneyStory("albany:ledger_advocate");
+    session.chooseJourneyStory("albany:oath_limited_aid_only");
     session.chooseJourneyStory("albany:source_rowan_civic_docket");
     session.chooseJourneyStory("albany:prep_works_fortification");
 

@@ -13,6 +13,7 @@ import {
   type OpeningLeadSourceTerms,
 } from "./opening_lead_source.js";
 import type { OpeningRegistrationJournalProof } from "./opening_registration_journal.js";
+import type { OpeningReliefOathJournalProof } from "./opening_relief_oath_journal.js";
 import { parseTimeLabel } from "./session_journal_codec.js";
 import type {
   OverworldJournalDecisionBoundary,
@@ -170,8 +171,10 @@ function boundariesEqual(
 export function proveOpeningLeadSourceJournal(args: {
   scene: OpeningLeadSource | null | undefined;
   registrationProof: OpeningRegistrationJournalProof;
+  reliefOathProof?: OpeningReliefOathJournalProof;
   journalEntries: readonly OverworldJournalEntry[];
   expectedTown: string | null;
+  allowMissingReliefOathForMigration?: boolean;
 }): OpeningLeadSourceJournalProof {
   const selections = args.journalEntries
     .map((entry, index) => ({ entry, index }))
@@ -190,7 +193,7 @@ export function proveOpeningLeadSourceJournal(args: {
   if (selections.length === 0 && offers.length === 0) {
     return Object.freeze({
       characterAfterSource: cloneCampaignCharacterState(
-        args.registrationProof.characterAtRegistration,
+        args.reliefOathProof?.characterAfterOath ?? args.registrationProof.characterAtRegistration,
       ),
       offered: false,
       offerBoundary: null,
@@ -212,6 +215,103 @@ export function proveOpeningLeadSourceJournal(args: {
     );
   }
   const scene = parseOpeningLeadSource(args.scene);
+  let characterBeforeSource = args.registrationProof.characterAtRegistration;
+  let predecessorBoundary = args.registrationProof.selectionBoundary;
+  let predecessorJournalIndex = args.registrationProof.journalIndex;
+  let predecessorLabel = "registration";
+
+  const reliefOathProof = args.reliefOathProof;
+  if (reliefOathProof !== undefined) {
+    const selectedOath =
+      reliefOathProof.offered &&
+      !reliefOathProof.legacy &&
+      reliefOathProof.legacySourceWorldHash === null &&
+      reliefOathProof.offerBoundary !== null &&
+      reliefOathProof.option !== null &&
+      reliefOathProof.selectionBoundary !== null &&
+      reliefOathProof.terms !== null &&
+      reliefOathProof.journalIndex !== null &&
+      reliefOathProof.recordedAt !== null;
+    const legacyOath =
+      !reliefOathProof.offered &&
+      reliefOathProof.legacy &&
+      reliefOathProof.legacySourceWorldHash !== null &&
+      reliefOathProof.offerBoundary === null &&
+      reliefOathProof.option === null &&
+      reliefOathProof.selectionBoundary === null &&
+      reliefOathProof.terms === null &&
+      reliefOathProof.journalIndex !== null &&
+      reliefOathProof.recordedAt !== null;
+    const emptyOath =
+      !reliefOathProof.offered &&
+      !reliefOathProof.legacy &&
+      reliefOathProof.legacySourceWorldHash === null &&
+      reliefOathProof.offerBoundary === null &&
+      reliefOathProof.option === null &&
+      reliefOathProof.selectionBoundary === null &&
+      reliefOathProof.terms === null &&
+      reliefOathProof.journalIndex === null &&
+      reliefOathProof.recordedAt === null;
+
+    if (selectedOath) {
+      const oathEntry = args.journalEntries[reliefOathProof.journalIndex!];
+      if (
+        !oathEntry ||
+        oathEntry.kind !== "relief_oath" ||
+        !oathEntry.storyChoiceBoundary ||
+        !boundariesEqual(oathEntry.storyChoiceBoundary, reliefOathProof.selectionBoundary!) ||
+        reliefOathProof.recordedAt !== reliefOathProof.selectionBoundary!.minutes ||
+        oathEntry.storyChoiceBoundary.minutes !== parseTimeLabel(oathEntry.recordedAt)
+      ) {
+        throw new Error(
+          "Overworld session snapshot opening lead source cannot locate its selected relief-oath boundary.",
+        );
+      }
+      characterBeforeSource = reliefOathProof.characterAfterOath;
+      predecessorBoundary = reliefOathProof.selectionBoundary;
+      predecessorJournalIndex = reliefOathProof.journalIndex;
+      predecessorLabel = "the selected relief oath";
+    } else if (legacyOath) {
+      const oathEntry = args.journalEntries[reliefOathProof.journalIndex!];
+      if (
+        !oathEntry ||
+        oathEntry.kind !== "relief_oath_legacy" ||
+        !oathEntry.storyChoiceBoundary ||
+        reliefOathProof.recordedAt !== oathEntry.storyChoiceBoundary.minutes ||
+        oathEntry.storyChoiceBoundary.minutes !== parseTimeLabel(oathEntry.recordedAt)
+      ) {
+        throw new Error(
+          "Overworld session snapshot opening lead source cannot locate its trusted legacy relief-oath boundary.",
+        );
+      }
+      characterBeforeSource = reliefOathProof.characterAfterOath;
+      predecessorBoundary = oathEntry.storyChoiceBoundary;
+      predecessorJournalIndex = reliefOathProof.journalIndex;
+      predecessorLabel = "the trusted legacy relief-oath marker";
+    } else if (emptyOath && args.allowMissingReliefOathForMigration === true) {
+      predecessorLabel = "registration under the authorized relief-oath migration gap";
+    } else if (emptyOath) {
+      throw new Error(
+        "Overworld session snapshot opening lead source is missing its required relief-oath predecessor; only trusted migration may retain registration adjacency.",
+      );
+    } else {
+      throw new Error(
+        "Overworld session snapshot opening lead source requires a selected or trusted legacy relief-oath predecessor.",
+      );
+    }
+  }
+
+  if (predecessorBoundary === null || predecessorJournalIndex === null) {
+    throw new Error(
+      `Overworld session snapshot opening lead source has no durable ${predecessorLabel} boundary.`,
+    );
+  }
+  const predecessorEntry = args.journalEntries[predecessorJournalIndex];
+  if (!predecessorEntry) {
+    throw new Error(
+      `Overworld session snapshot opening lead source cannot locate its ${predecessorLabel} journal boundary.`,
+    );
+  }
   const offered = offers[0];
   if (!offered) {
     throw new Error("Overworld session snapshot lead-source selection has no replayable offer.");
@@ -232,23 +332,21 @@ export function proveOpeningLeadSourceJournal(args: {
     );
   }
   const offerBoundary = offered.entry.storyChoiceBoundary;
-  const registrationBoundary = args.registrationProof.selectionBoundary;
-  if (!offerBoundary || !registrationBoundary) {
+  if (!offerBoundary) {
     throw new Error(
       "Overworld session snapshot lead-source offer has no durable story-choice boundary.",
     );
   }
   if (
-    offered.index + 1 !== args.registrationProof.journalIndex ||
-    offered.entry.recordedAt !==
-      args.journalEntries[args.registrationProof.journalIndex]!.recordedAt ||
-    !boundariesEqual(offerBoundary, registrationBoundary) ||
+    offered.index + 1 !== predecessorJournalIndex ||
+    offered.entry.recordedAt !== predecessorEntry.recordedAt ||
+    !boundariesEqual(offerBoundary, predecessorBoundary) ||
     offerBoundary.townId !== scene.home ||
     offerBoundary.areaId !== scene.area ||
     offerBoundary.minutes !== parseTimeLabel(offered.entry.recordedAt)
   ) {
     throw new Error(
-      "Overworld session snapshot lead-source offer must immediately follow registration at the same world and journey boundary.",
+      `Overworld session snapshot lead-source offer must immediately follow ${predecessorLabel} at the same world and journey boundary.`,
     );
   }
   for (let index = offered.index + 1; index < args.journalEntries.length; index += 1) {
@@ -267,9 +365,7 @@ export function proveOpeningLeadSourceJournal(args: {
       );
     }
     return Object.freeze({
-      characterAfterSource: cloneCampaignCharacterState(
-        args.registrationProof.characterAtRegistration,
-      ),
+      characterAfterSource: cloneCampaignCharacterState(characterBeforeSource),
       offered: true,
       offerBoundary: { ...offerBoundary },
       option: null,
@@ -291,12 +387,12 @@ export function proveOpeningLeadSourceJournal(args: {
   }
   const application = applyOpeningLeadSourceOption({
     scene,
-    character: args.registrationProof.characterAtRegistration,
+    character: characterBeforeSource,
     optionId: option.id,
   });
   const expectedSelection = openingLeadSourceJournalDraft({
     scene,
-    character: args.registrationProof.characterAtRegistration,
+    character: characterBeforeSource,
     optionId: option.id,
   });
   if (

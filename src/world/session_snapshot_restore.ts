@@ -91,7 +91,6 @@ import {
   type OpeningAllyJournalProof,
 } from "./opening_ally_journal.js";
 import {
-  openingLeadSourceOfferJournalEntry,
   openingLeadSourceOfferJournalId,
   proveOpeningLeadSourceJournal,
   type OpeningLeadSourceJournalProof,
@@ -110,6 +109,13 @@ import {
   type OpeningReliefAllocationJournalProof,
 } from "./opening_relief_allocation_journal.js";
 import { applyOpeningReliefAllocationOption } from "./opening_relief_allocation.js";
+import {
+  openingReliefOathLegacyJournalEntry,
+  openingReliefOathLegacySourceWorldHash,
+  openingReliefOathOfferJournalEntry,
+  proveOpeningReliefOathJournal,
+  type OpeningReliefOathJournalProof,
+} from "./opening_relief_oath_journal.js";
 import {
   openingRegistrationLegacyJournalDraft,
   openingRegistrationLegacySourceWorldHash,
@@ -320,8 +326,34 @@ export const OVERWORLD_HILL_APPROACH_WORLD_HASH =
   "634fd4e93143343fd813edd9c59d3a8c098c0d78b94497cf689988492de154e3";
 export const OVERWORLD_RELIEF_ALLOCATION_PREDECESSOR_WORLD_HASH =
   OVERWORLD_HILL_APPROACH_WORLD_HASH;
-export const OVERWORLD_RELIEF_ALLOCATION_WORLD_HASH =
+export const OVERWORLD_RELIEF_OATH_PREDECESSOR_WORLD_HASH =
   "50350884ebb7d118849fca040256a19c0c63ed4bfe3353d4cd202ee7a6ba8e7f";
+export const OVERWORLD_RELIEF_OATH_WORLD_HASH =
+  "a2ddc6e9042a208f2821451f10b0152874ef55bc77b0f7801f3ea58591357474";
+/** @deprecated Current-target alias retained for earlier migration callers. */
+export const OVERWORLD_RELIEF_ALLOCATION_WORLD_HASH = OVERWORLD_RELIEF_OATH_WORLD_HASH;
+const OVERWORLD_RELIEF_OATH_PREDECESSOR_WORLD_RULE_IDS: ReadonlySet<string> = new Set([
+  ...OVERWORLD_HILL_APPROACH_PREDECESSOR_WORLD_RULE_IDS,
+  "albany:resident_shelter_return_rest",
+  "albany:mobile_reserve_return_resupply",
+]);
+const OVERWORLD_RELIEF_OATH_PREDECESSOR_WOLF_OUTCOME_IDS =
+  OVERWORLD_HILL_APPROACH_PREDECESSOR_WOLF_OUTCOME_IDS;
+const OVERWORLD_RELIEF_OATH_CHARACTER_IDS: ReadonlySet<string> = new Set([
+  "albany:knowledge_wolf_full_compact_duty",
+  "albany:knowledge_wolf_limited_aid_only",
+  "albany:knowledge_wolf_unaffiliated_bond",
+  "value:public_duty",
+  "value:bounded_authority",
+  "value:voluntary_aid",
+  "faction:albany_relief_compact",
+  "albany:memory_rowan_full_compact_duty",
+  "albany:memory_rowan_limited_aid_only",
+  "albany:memory_rowan_unaffiliated_personal_bond",
+  "albany:promise_wolf_full_compact_duty",
+  "albany:promise_wolf_limited_aid_only",
+  "albany:promise_wolf_unaffiliated_bond",
+]);
 const OVERWORLD_RELIEF_ALLOCATION_PREDECESSOR_WORLD_RULE_IDS =
   OVERWORLD_HILL_APPROACH_PREDECESSOR_WORLD_RULE_IDS;
 const OVERWORLD_RELIEF_ALLOCATION_PREDECESSOR_WOLF_OUTCOME_IDS =
@@ -434,8 +466,22 @@ const OVERWORLD_LEGACY_WOLF_START_BY_WORLD_HASH: ReadonlyMap<
 const OVERWORLD_QUEST_START_TRUSTED_LEGACY_WORLD_HASHES: ReadonlySet<string> = new Set(
   OVERWORLD_LEGACY_WOLF_START_BY_WORLD_HASH.keys(),
 );
+const OVERWORLD_RELIEF_OATH_TRUSTED_LEGACY_WORLD_HASHES: ReadonlySet<string> = new Set([
+  OVERWORLD_RELIEF_OATH_PREDECESSOR_WORLD_HASH,
+  OVERWORLD_RELIEF_ALLOCATION_PREDECESSOR_WORLD_HASH,
+  OVERWORLD_HILL_APPROACH_PREDECESSOR_WORLD_HASH,
+  OVERWORLD_FORTIFY_OUTLAST_PREDECESSOR_WORLD_HASH,
+  OVERWORLD_CRISIS_PRIORITY_PREDECESSOR_WORLD_HASH,
+  OVERWORLD_OPENING_ALLY_PREDECESSOR_WORLD_HASH,
+  OVERWORLD_OPENING_PREPARATION_PREDECESSOR_WORLD_HASH,
+  OVERWORLD_CAMPAIGN_SERVICE_WORLD_HASH,
+  OVERWORLD_OPENING_LEAD_SOURCE_WORLD_HASH,
+  OVERWORLD_OPENING_REGISTRATION_WORLD_HASH,
+  ...OVERWORLD_OPENING_REGISTRATION_TRUSTED_PREDECESSOR_WORLD_HASHES,
+]);
 
 type TrustedMigrationEra =
+  | "relief_oath"
   | "relief_allocation"
   | "hill_approach"
   | "fortify_outlast"
@@ -1386,6 +1432,22 @@ function assertNoFortifyOutlastApproachEvidence(args: {
   }
 }
 
+function hasOpeningReliefOathCharacterEvidence(character: CampaignCharacterState): boolean {
+  return (
+    character.knowledge.some((id) => OVERWORLD_RELIEF_OATH_CHARACTER_IDS.has(id)) ||
+    character.values.some((value) => OVERWORLD_RELIEF_OATH_CHARACTER_IDS.has(value.valueId)) ||
+    character.factionStanding.some((standing) =>
+      OVERWORLD_RELIEF_OATH_CHARACTER_IDS.has(standing.factionId),
+    ) ||
+    character.promises.some((promise) =>
+      OVERWORLD_RELIEF_OATH_CHARACTER_IDS.has(promise.promiseId),
+    ) ||
+    character.relationships.some((relationship) =>
+      relationship.memories.some((id) => OVERWORLD_RELIEF_OATH_CHARACTER_IDS.has(id)),
+    )
+  );
+}
+
 function replaySnapshotQuestStarts(args: {
   campaignBoundaryReplay: OverworldCampaignBoundaryReplayIndex;
   character: CampaignCharacterState;
@@ -1396,7 +1458,26 @@ function replaySnapshotQuestStarts(args: {
   storedCharacter: CampaignCharacterState;
   startedQuestIds: ReadonlySet<string>;
 }): ReplayedQuestStarts {
-  if (args.migrationEra === "relief_allocation") {
+  if (args.migrationEra === "relief_oath") {
+    const hasOathJournal = args.journalEntries.some(
+      (entry) =>
+        entry.kind === "relief_oath" ||
+        entry.kind === "relief_oath_legacy" ||
+        entry.kind === "relief_oath_offer",
+    );
+    const hasOathDecision = [...args.campaignBoundaryReplay.byAcceptedDecisions.values()].some(
+      (proof) => proof.decision?.actionId.startsWith("campaign_story:albany:wolf_relief_oath:"),
+    );
+    if (
+      hasOathJournal ||
+      hasOathDecision ||
+      hasOpeningReliefOathCharacterEvidence(args.storedCharacter)
+    ) {
+      throw new Error(
+        "Relief-allocation predecessor snapshot has relief-oath evidence introduced by the later manifest.",
+      );
+    }
+  } else if (args.migrationEra === "relief_allocation") {
     const hasAllocationJournal = args.journalEntries.some(
       (entry) =>
         entry.kind === "relief_allocation" ||
@@ -1470,7 +1551,11 @@ function replaySnapshotQuestStarts(args: {
       );
     }
 
-    if (args.migrationEra !== null && args.migrationEra !== "relief_allocation") {
+    if (
+      args.migrationEra !== null &&
+      args.migrationEra !== "relief_oath" &&
+      args.migrationEra !== "relief_allocation"
+    ) {
       assertCanonicalQuestStartJournalCopy({
         entry,
         expectedTown: args.indexes.questTownNames.get(questId) ?? quest.home,
@@ -1585,9 +1670,36 @@ function deriveCampaignStoryChoiceProofOrdinals(args: {
   preparationSceneId: string | null;
   reliefAllocationProof: OpeningReliefAllocationJournalProof;
   reliefAllocationSceneId: string | null;
+  reliefOathProof: OpeningReliefOathJournalProof;
+  reliefOathSceneId: string | null;
 }): ReadonlyMap<string, number> {
   const proofOrdinalByKey = new Map<string, number>();
   const selectedRefs = [...journeyCampaignSelectedStoryChoiceRefs(args.journey)];
+  if (
+    args.reliefOathProof.option !== null &&
+    args.reliefOathProof.selectionBoundary !== null &&
+    args.reliefOathSceneId !== null
+  ) {
+    const boundary = args.reliefOathProof.selectionBoundary;
+    const replayed = args.decisionProofsByOrdinal.get(boundary.acceptedDecisions);
+    if (
+      !replayed ||
+      replayed.decisionProofHash !== boundary.decisionProofHash ||
+      replayed.townId !== boundary.townId ||
+      replayed.areaId !== boundary.areaId
+    ) {
+      throw new Error(
+        "Overworld session snapshot relief-oath selection does not anchor the lead-source campaign replay boundary.",
+      );
+    }
+    proofOrdinalByKey.set(
+      campaignStoryChoiceRefKey({
+        story_choice_id: args.reliefOathSceneId,
+        choice_id: args.reliefOathProof.option.id,
+      }),
+      boundary.acceptedDecisions,
+    );
+  }
   if (args.preparationProof.profile !== null && args.preparationSceneId !== null) {
     selectedRefs.push({
       story_choice_id: args.preparationSceneId,
@@ -1608,6 +1720,7 @@ function deriveCampaignStoryChoiceProofOrdinals(args: {
   }
   for (const ref of selectedRefs) {
     const key = campaignStoryChoiceRefKey(ref);
+    if (proofOrdinalByKey.has(key)) continue;
     const expectedActionId = `campaign_story:${ref.story_choice_id}:${ref.choice_id}`;
     const matches = [...args.decisionProofsByOrdinal.entries()].filter(
       ([, proof]) =>
@@ -1749,34 +1862,38 @@ export function planOverworldSessionSnapshotRestore(args: {
   const migrationEra: TrustedMigrationEra =
     !migrationTargetsCurrentManifest || sourceSnapshot.worldHash === worldHash
       ? null
-      : sourceSnapshot.worldHash === OVERWORLD_RELIEF_ALLOCATION_PREDECESSOR_WORLD_HASH
-        ? "relief_allocation"
-        : sourceSnapshot.worldHash === OVERWORLD_HILL_APPROACH_PREDECESSOR_WORLD_HASH
-          ? "hill_approach"
-          : sourceSnapshot.worldHash === OVERWORLD_FORTIFY_OUTLAST_PREDECESSOR_WORLD_HASH
-            ? "fortify_outlast"
-            : sourceSnapshot.worldHash === OVERWORLD_CRISIS_PRIORITY_PREDECESSOR_WORLD_HASH
-              ? "crisis_priority"
-              : sourceSnapshot.worldHash === OVERWORLD_OPENING_ALLY_PREDECESSOR_WORLD_HASH
-                ? "opening_ally"
-                : sourceSnapshot.worldHash === OVERWORLD_OPENING_PREPARATION_PREDECESSOR_WORLD_HASH
-                  ? "opening_preparation"
-                  : sourceSnapshot.worldHash === OVERWORLD_CAMPAIGN_SERVICE_WORLD_HASH
-                    ? "campaign_service"
-                    : sourceSnapshot.worldHash === OVERWORLD_OPENING_LEAD_SOURCE_WORLD_HASH
-                      ? "opening_lead_source"
-                      : OVERWORLD_OPENING_REGISTRATION_TRUSTED_PREDECESSOR_WORLD_HASHES.has(
-                            sourceSnapshot.worldHash,
-                          )
-                        ? "pre_registration"
-                        : sourceSnapshot.worldHash === OVERWORLD_OPENING_REGISTRATION_WORLD_HASH
-                          ? "opening_registration"
-                          : null;
+      : sourceSnapshot.worldHash === OVERWORLD_RELIEF_OATH_PREDECESSOR_WORLD_HASH
+        ? "relief_oath"
+        : sourceSnapshot.worldHash === OVERWORLD_RELIEF_ALLOCATION_PREDECESSOR_WORLD_HASH
+          ? "relief_allocation"
+          : sourceSnapshot.worldHash === OVERWORLD_HILL_APPROACH_PREDECESSOR_WORLD_HASH
+            ? "hill_approach"
+            : sourceSnapshot.worldHash === OVERWORLD_FORTIFY_OUTLAST_PREDECESSOR_WORLD_HASH
+              ? "fortify_outlast"
+              : sourceSnapshot.worldHash === OVERWORLD_CRISIS_PRIORITY_PREDECESSOR_WORLD_HASH
+                ? "crisis_priority"
+                : sourceSnapshot.worldHash === OVERWORLD_OPENING_ALLY_PREDECESSOR_WORLD_HASH
+                  ? "opening_ally"
+                  : sourceSnapshot.worldHash ===
+                      OVERWORLD_OPENING_PREPARATION_PREDECESSOR_WORLD_HASH
+                    ? "opening_preparation"
+                    : sourceSnapshot.worldHash === OVERWORLD_CAMPAIGN_SERVICE_WORLD_HASH
+                      ? "campaign_service"
+                      : sourceSnapshot.worldHash === OVERWORLD_OPENING_LEAD_SOURCE_WORLD_HASH
+                        ? "opening_lead_source"
+                        : OVERWORLD_OPENING_REGISTRATION_TRUSTED_PREDECESSOR_WORLD_HASHES.has(
+                              sourceSnapshot.worldHash,
+                            )
+                          ? "pre_registration"
+                          : sourceSnapshot.worldHash === OVERWORLD_OPENING_REGISTRATION_WORLD_HASH
+                            ? "opening_registration"
+                            : null;
   if (sourceSnapshot.worldHash !== worldHash && migrationEra === null) {
     throw new Error("Overworld session snapshot was made against a different world manifest.");
   }
   const snapshotWithCampaignCopy =
     migrationEra === null ||
+    migrationEra === "relief_oath" ||
     migrationEra === "relief_allocation" ||
     migrationEra === "hill_approach"
       ? sourceSnapshot
@@ -1919,17 +2036,19 @@ export function planOverworldSessionSnapshotRestore(args: {
     }
   }
   const trustedPredecessorWolfOutcomeIds =
-    migrationEra === "relief_allocation"
-      ? OVERWORLD_RELIEF_ALLOCATION_PREDECESSOR_WOLF_OUTCOME_IDS
-      : migrationEra === "hill_approach"
-        ? OVERWORLD_HILL_APPROACH_PREDECESSOR_WOLF_OUTCOME_IDS
-        : migrationEra === "fortify_outlast"
-          ? OVERWORLD_FORTIFY_OUTLAST_PREDECESSOR_WOLF_OUTCOME_IDS
-          : migrationEra === "crisis_priority"
-            ? OVERWORLD_CRISIS_PRIORITY_PREDECESSOR_WOLF_OUTCOME_IDS
-            : migrationEra === "opening_ally" || migrationEra === "opening_preparation"
-              ? OVERWORLD_OPENING_PREPARATION_WORLD_WOLF_OUTCOME_IDS
-              : OVERWORLD_CAMPAIGN_SERVICE_WORLD_WOLF_OUTCOME_IDS;
+    migrationEra === "relief_oath"
+      ? OVERWORLD_RELIEF_OATH_PREDECESSOR_WOLF_OUTCOME_IDS
+      : migrationEra === "relief_allocation"
+        ? OVERWORLD_RELIEF_ALLOCATION_PREDECESSOR_WOLF_OUTCOME_IDS
+        : migrationEra === "hill_approach"
+          ? OVERWORLD_HILL_APPROACH_PREDECESSOR_WOLF_OUTCOME_IDS
+          : migrationEra === "fortify_outlast"
+            ? OVERWORLD_FORTIFY_OUTLAST_PREDECESSOR_WOLF_OUTCOME_IDS
+            : migrationEra === "crisis_priority"
+              ? OVERWORLD_CRISIS_PRIORITY_PREDECESSOR_WOLF_OUTCOME_IDS
+              : migrationEra === "opening_ally" || migrationEra === "opening_preparation"
+                ? OVERWORLD_OPENING_PREPARATION_WORLD_WOLF_OUTCOME_IDS
+                : OVERWORLD_CAMPAIGN_SERVICE_WORLD_WOLF_OUTCOME_IDS;
   if (
     migrationEra !== null &&
     [...questOutcomeIds].some(
@@ -1974,19 +2093,21 @@ export function planOverworldSessionSnapshotRestore(args: {
     travelLogTownByArrival: travelTimeline.townByArrival,
   });
   const trustedPredecessorServiceRuleIds =
-    migrationEra === "relief_allocation"
-      ? OVERWORLD_RELIEF_ALLOCATION_PREDECESSOR_WORLD_RULE_IDS
-      : migrationEra === "hill_approach"
-        ? OVERWORLD_HILL_APPROACH_PREDECESSOR_WORLD_RULE_IDS
-        : migrationEra === "fortify_outlast"
-          ? OVERWORLD_FORTIFY_OUTLAST_PREDECESSOR_WORLD_RULE_IDS
-          : migrationEra === "crisis_priority"
-            ? OVERWORLD_CRISIS_PRIORITY_PREDECESSOR_WORLD_RULE_IDS
-            : migrationEra === "opening_ally" || migrationEra === "opening_preparation"
-              ? OVERWORLD_OPENING_PREPARATION_WORLD_RULE_IDS
-              : migrationEra === "campaign_service"
-                ? OVERWORLD_CAMPAIGN_SERVICE_WORLD_RULE_IDS
-                : null;
+    migrationEra === "relief_oath"
+      ? OVERWORLD_RELIEF_OATH_PREDECESSOR_WORLD_RULE_IDS
+      : migrationEra === "relief_allocation"
+        ? OVERWORLD_RELIEF_ALLOCATION_PREDECESSOR_WORLD_RULE_IDS
+        : migrationEra === "hill_approach"
+          ? OVERWORLD_HILL_APPROACH_PREDECESSOR_WORLD_RULE_IDS
+          : migrationEra === "fortify_outlast"
+            ? OVERWORLD_FORTIFY_OUTLAST_PREDECESSOR_WORLD_RULE_IDS
+            : migrationEra === "crisis_priority"
+              ? OVERWORLD_CRISIS_PRIORITY_PREDECESSOR_WORLD_RULE_IDS
+              : migrationEra === "opening_ally" || migrationEra === "opening_preparation"
+                ? OVERWORLD_OPENING_PREPARATION_WORLD_RULE_IDS
+                : migrationEra === "campaign_service"
+                  ? OVERWORLD_CAMPAIGN_SERVICE_WORLD_RULE_IDS
+                  : null;
   if (
     trustedPredecessorServiceRuleIds !== null &&
     snapshot.journalEntries.some(
@@ -2001,6 +2122,7 @@ export function planOverworldSessionSnapshotRestore(args: {
   }
   if (
     migrationEra !== null &&
+    migrationEra !== "relief_oath" &&
     migrationEra !== "relief_allocation" &&
     migrationEra !== "hill_approach" &&
     migrationEra !== "fortify_outlast" &&
@@ -2018,6 +2140,7 @@ export function planOverworldSessionSnapshotRestore(args: {
   }
   if (
     migrationEra !== null &&
+    migrationEra !== "relief_oath" &&
     migrationEra !== "relief_allocation" &&
     migrationEra !== "hill_approach" &&
     migrationEra !== "fortify_outlast" &&
@@ -2105,6 +2228,103 @@ export function planOverworldSessionSnapshotRestore(args: {
       }
     }
   }
+  const hasOpeningReliefOathEvidence = snapshot.journalEntries.some(
+    (entry) =>
+      entry.kind === "relief_oath" ||
+      entry.kind === "relief_oath_legacy" ||
+      entry.kind === "relief_oath_offer",
+  );
+  const openingReliefOathDecisionPrefix = indexes.openingReliefOath
+    ? `campaign_story:${indexes.openingReliefOath.id}:`
+    : null;
+  const hasOpeningReliefOathDecisionEvidence =
+    openingReliefOathDecisionPrefix !== null &&
+    (snapshot.openingLeadSourceDecisionTrail?.decisions.some((decision) =>
+      decision.actionId.startsWith(openingReliefOathDecisionPrefix),
+    ) === true ||
+      snapshot.journey.decisionProof.last?.actionId.startsWith(openingReliefOathDecisionPrefix) ===
+        true ||
+      journeyCampaignSelectedStoryChoiceRefs(snapshot.journey).some(
+        (ref) => ref.story_choice_id === indexes.openingReliefOath?.id,
+      ));
+  if (
+    migrationEra !== null &&
+    (hasOpeningReliefOathEvidence ||
+      hasOpeningReliefOathDecisionEvidence ||
+      hasOpeningReliefOathCharacterEvidence(snapshot.character))
+  ) {
+    throw new Error(
+      "Trusted predecessor snapshot has relief-oath evidence introduced by the later manifest.",
+    );
+  }
+  const storedReliefOathLegacySourceWorldHash = snapshot.journalEntries
+    .filter((entry) => entry.kind === "relief_oath_legacy")
+    .map((entry) => openingReliefOathLegacySourceWorldHash(entry.id))
+    .find(
+      (sourceWorldHash): sourceWorldHash is string =>
+        sourceWorldHash !== null &&
+        OVERWORLD_RELIEF_OATH_TRUSTED_LEGACY_WORLD_HASHES.has(sourceWorldHash),
+    );
+  const reliefOathProof = proveOpeningReliefOathJournal({
+    scene: indexes.openingReliefOath,
+    registrationProof,
+    journalEntries: snapshot.journalEntries,
+    expectedTown: indexes.openingReliefOathTownName,
+    trustedLegacySourceWorldHash: storedReliefOathLegacySourceWorldHash ?? null,
+  });
+  const reliefOathRequiredByCurrentManifest =
+    indexes.openingReliefOath !== null && migrationEra === null;
+  if (
+    reliefOathRequiredByCurrentManifest &&
+    registrationProof.profile !== null &&
+    !reliefOathProof.offered &&
+    !reliefOathProof.legacy
+  ) {
+    throw new Error(
+      "Overworld session snapshot selected registration has no required relief-oath offer or trusted legacy marker.",
+    );
+  }
+  if (reliefOathProof.offered) {
+    const offerBoundary = reliefOathProof.offerBoundary!;
+    const selectionBoundary = reliefOathProof.selectionBoundary;
+    if (selectionBoundary === null) {
+      if (
+        snapshot.currentId !== offerBoundary.townId ||
+        snapshot.currentAreaId !== offerBoundary.areaId ||
+        snapshot.minutes !== offerBoundary.minutes ||
+        snapshot.startedQuestIds.length > 0 ||
+        snapshot.completedQuestIds.length > 0 ||
+        snapshot.journey.acceptedDecisions !== offerBoundary.acceptedDecisions ||
+        snapshot.journey.decisionProof.hash !== offerBoundary.decisionProofHash
+      ) {
+        throw new Error(
+          "Overworld session snapshot pending relief oath no longer matches its offered world and journey boundary.",
+        );
+      }
+    } else {
+      if (snapshot.journey.acceptedDecisions < selectionBoundary.acceptedDecisions) {
+        throw new Error(
+          "Overworld session snapshot relief-oath selection is ahead of its journey decision count.",
+        );
+      }
+      if (snapshot.journey.acceptedDecisions === selectionBoundary.acceptedDecisions) {
+        const expectedLast = {
+          number: selectionBoundary.acceptedDecisions,
+          surface: "overworld" as const,
+          actionId: `campaign_story:${indexes.openingReliefOath!.id}:${reliefOathProof.option!.id}`,
+          reason: "situation_changed" as const,
+        };
+        if (
+          snapshot.journey.decisionProof.hash !== selectionBoundary.decisionProofHash ||
+          JSON.stringify(snapshot.journey.decisionProof.last) !== JSON.stringify(expectedLast)
+        ) {
+          throw new Error(
+            "Overworld session snapshot relief-oath selection does not match the current journey proof.",
+          );
+        }
+      }
+    }
+  }
   const hasOpeningLeadSourceEvidence = snapshot.journalEntries.some(
     (entry) =>
       entry.kind === "lead_source" ||
@@ -2120,6 +2340,7 @@ export function planOverworldSessionSnapshotRestore(args: {
       true;
   if (
     migrationEra !== null &&
+    migrationEra !== "relief_oath" &&
     migrationEra !== "relief_allocation" &&
     migrationEra !== "hill_approach" &&
     migrationEra !== "fortify_outlast" &&
@@ -2144,8 +2365,10 @@ export function planOverworldSessionSnapshotRestore(args: {
   const leadSourceProof = proveOpeningLeadSourceJournal({
     scene: indexes.openingLeadSource,
     registrationProof,
+    reliefOathProof,
     journalEntries: snapshot.journalEntries,
     expectedTown: indexes.openingLeadSourceTownName,
+    allowMissingReliefOathForMigration: migrationEra !== null,
   });
   const targetLeadQuestId = indexes.openingLeadSource?.target_quest ?? null;
   const targetLeadQuestDiscovered =
@@ -2155,6 +2378,7 @@ export function planOverworldSessionSnapshotRestore(args: {
     (startedQuestIds.has(targetLeadQuestId) || completedQuestIds.has(targetLeadQuestId));
   const leadDiscoveryDeferredToPreparation =
     (migrationEra === null ||
+      migrationEra === "relief_oath" ||
       migrationEra === "relief_allocation" ||
       migrationEra === "hill_approach" ||
       migrationEra === "fortify_outlast" ||
@@ -2164,6 +2388,7 @@ export function planOverworldSessionSnapshotRestore(args: {
     indexes.openingPreparation.target_quest === targetLeadQuestId;
   const hasLeadSourceManifestEvidence =
     migrationEra === null ||
+    migrationEra === "relief_oath" ||
     migrationEra === "relief_allocation" ||
     migrationEra === "hill_approach" ||
     migrationEra === "fortify_outlast" ||
@@ -2185,7 +2410,8 @@ export function planOverworldSessionSnapshotRestore(args: {
   if (
     hasLeadSourceManifestEvidence &&
     registrationProof.profile !== null &&
-    !leadSourceProof.offered
+    !leadSourceProof.offered &&
+    !(reliefOathProof.offered && reliefOathProof.option === null)
   ) {
     throw new Error(
       "Overworld session snapshot selected registration has no required opening lead-source offer or trusted legacy provenance.",
@@ -2277,6 +2503,7 @@ export function planOverworldSessionSnapshotRestore(args: {
         true);
   if (
     migrationEra !== null &&
+    migrationEra !== "relief_oath" &&
     migrationEra !== "relief_allocation" &&
     migrationEra !== "hill_approach" &&
     migrationEra !== "fortify_outlast" &&
@@ -2306,6 +2533,7 @@ export function planOverworldSessionSnapshotRestore(args: {
   const preparationRequiredByCurrentManifest =
     indexes.openingPreparation !== null &&
     (migrationEra === null ||
+      migrationEra === "relief_oath" ||
       migrationEra === "relief_allocation" ||
       migrationEra === "hill_approach" ||
       migrationEra === "fortify_outlast" ||
@@ -2431,6 +2659,7 @@ export function planOverworldSessionSnapshotRestore(args: {
       ) === true);
   if (
     migrationEra !== null &&
+    migrationEra !== "relief_oath" &&
     (hasOpeningReliefAllocationEvidence || hasOpeningReliefAllocationDecisionEvidence)
   ) {
     throw new Error(
@@ -2459,7 +2688,7 @@ export function planOverworldSessionSnapshotRestore(args: {
     (startedQuestIds.has(targetReliefAllocationQuestId) ||
       completedQuestIds.has(targetReliefAllocationQuestId));
   if (
-    migrationEra === null &&
+    (migrationEra === null || migrationEra === "relief_oath") &&
     targetReliefAllocationQuestProgressed &&
     reliefAllocationProof.option === null &&
     !reliefAllocationProof.legacy
@@ -2469,7 +2698,7 @@ export function planOverworldSessionSnapshotRestore(args: {
     );
   }
   if (
-    migrationEra === null &&
+    (migrationEra === null || migrationEra === "relief_oath") &&
     indexes.openingReliefAllocation !== null &&
     (preparationProof.profile !== null || preparationProof.legacy) &&
     !targetReliefAllocationQuestProgressed &&
@@ -2539,6 +2768,7 @@ export function planOverworldSessionSnapshotRestore(args: {
   const openingAllyContact = indexes.openingAlly?.contact ?? null;
   if (
     migrationEra !== null &&
+    migrationEra !== "relief_oath" &&
     migrationEra !== "relief_allocation" &&
     migrationEra !== "hill_approach" &&
     migrationEra !== "fortify_outlast" &&
@@ -2658,6 +2888,7 @@ export function planOverworldSessionSnapshotRestore(args: {
       questOutcomeIds,
       requireBoundServiceFacts:
         migrationEra === null ||
+        migrationEra === "relief_oath" ||
         migrationEra === "relief_allocation" ||
         migrationEra === "hill_approach" ||
         migrationEra === "fortify_outlast" ||
@@ -2675,13 +2906,16 @@ export function planOverworldSessionSnapshotRestore(args: {
       preparationSceneId: indexes.openingPreparation?.id ?? null,
       reliefAllocationProof,
       reliefAllocationSceneId: indexes.openingReliefAllocation?.id ?? null,
+      reliefOathProof,
+      reliefOathSceneId: indexes.openingReliefOath?.id ?? null,
     }),
   };
   const neutralCharacter = createInitialCampaignCharacterState();
   const initialCharacter = registrationProof.characterAtRegistration;
-  const characterAfterSource = leadSourceProof.option
-    ? leadSourceProof.characterAfterSource
+  const characterAfterOath = reliefOathProof.option
+    ? reliefOathProof.characterAfterOath
     : initialCharacter;
+  const characterAfterSource = leadSourceProof.characterAfterSource;
   const characterAfterPreparation = preparationProof.profile
     ? preparationProof.characterAfterPreparation
     : characterAfterSource;
@@ -2783,6 +3017,8 @@ export function planOverworldSessionSnapshotRestore(args: {
     }
     const registrationActive =
       registrationProof.journalIndex !== null && registrationProof.journalIndex > contactIndex;
+    const reliefOathActive =
+      reliefOathProof.journalIndex !== null && reliefOathProof.journalIndex > contactIndex;
     const leadSourceActive =
       leadSourceProof.journalIndex !== null && leadSourceProof.journalIndex > contactIndex;
     const preparationActive =
@@ -2815,7 +3051,9 @@ export function planOverworldSessionSnapshotRestore(args: {
                 ? characterAfterReliefAllocation
                 : characterAfterPreparation
           : characterAfterSource
-        : initialCharacter
+        : reliefOathActive
+          ? characterAfterOath
+          : initialCharacter
       : neutralCharacter;
     for (const start of questStartReplay.starts) {
       if (start.journalIndex <= contactIndex || start.effects.length === 0) continue;
@@ -3000,43 +3238,89 @@ export function planOverworldSessionSnapshotRestore(args: {
     );
   }
   const registrationBoundary = registrationProof.selectionBoundary;
-  const canOfferMigratedLeadSource =
-    migrationEra === "opening_registration" &&
-    indexes.openingLeadSource !== null &&
-    registrationProof.profile !== null &&
-    registrationProof.journalIndex === 0 &&
+  const registrationMatchesCurrentBoundary =
     registrationBoundary !== null &&
     snapshot.currentId === registrationBoundary.townId &&
     snapshot.currentAreaId === registrationBoundary.areaId &&
     snapshot.minutes === registrationBoundary.minutes &&
     snapshot.journey.acceptedDecisions === registrationBoundary.acceptedDecisions &&
     snapshot.journey.decisionProof.hash === registrationBoundary.decisionProofHash;
-  if (canOfferMigratedLeadSource) {
-    const offer = openingLeadSourceOfferJournalEntry({
-      scene: indexes.openingLeadSource!,
+  const canReplaceMigratedPendingLead =
+    migrationEra !== null &&
+    leadSourceProof.offered &&
+    leadSourceProof.option === null &&
+    leadSourceProof.offerBoundary !== null &&
+    JSON.stringify(leadSourceProof.offerBoundary) === JSON.stringify(registrationBoundary) &&
+    migratedJournalEntries[0]?.kind === "lead_source_offer";
+  const canOfferMigratedReliefOath =
+    migrationEra !== null &&
+    indexes.openingReliefOath !== null &&
+    registrationProof.profile !== null &&
+    registrationMatchesCurrentBoundary &&
+    (canReplaceMigratedPendingLead ||
+      (!leadSourceProof.offered && registrationProof.journalIndex === 0 && !hasQuestProgress));
+  if (canOfferMigratedReliefOath) {
+    if (canReplaceMigratedPendingLead) {
+      migratedJournalEntries.shift();
+    }
+    const offer = openingReliefOathOfferJournalEntry({
+      scene: indexes.openingReliefOath!,
       town: indexes.townNameForSource(snapshot.currentId),
       recordedAt: timeLabel(snapshot.minutes),
-      storyChoiceBoundary: { ...registrationBoundary },
+      storyChoiceBoundary: { ...registrationBoundary! },
     });
     migratedJournalEntries.unshift(offer);
-    openingLeadSourceDecisionTrailAfter = {
-      anchorId: offer.id,
-      baseAcceptedDecisions: registrationBoundary.acceptedDecisions,
-      baseDecisionProofHash: registrationBoundary.decisionProofHash,
-      decisions: [],
-    };
+    openingLeadSourceDecisionTrailAfter = null;
+  }
+  const canGrandfatherMigratedReliefOath =
+    migrationEra !== null &&
+    indexes.openingReliefOath !== null &&
+    registrationProof.profile !== null &&
+    registrationBoundary !== null &&
+    leadSourceProof.offered &&
+    leadSourceProof.option !== null;
+  if (canGrandfatherMigratedReliefOath) {
+    const registrationEntryId =
+      registrationProof.journalIndex === null
+        ? null
+        : snapshot.journalEntries[registrationProof.journalIndex]?.id;
+    const registrationIndex =
+      registrationEntryId === null
+        ? -1
+        : migratedJournalEntries.findIndex((entry) => entry.id === registrationEntryId);
+    const registrationEntry = migratedJournalEntries[registrationIndex];
+    const leadOfferEntry = migratedJournalEntries[registrationIndex - 1];
+    if (
+      registrationIndex < 1 ||
+      !registrationEntry ||
+      !leadOfferEntry ||
+      leadOfferEntry.kind !== "lead_source_offer"
+    ) {
+      throw new Error(
+        "Trusted predecessor snapshot cannot locate the registration-adjacent lead offer for relief-oath migration.",
+      );
+    }
+    const marker = openingReliefOathLegacyJournalEntry({
+      sourceWorldHash: snapshot.worldHash,
+      town: registrationEntry.town,
+      recordedAt: registrationEntry.recordedAt,
+      storyChoiceBoundary: { ...registrationBoundary },
+    });
+    migratedJournalEntries.splice(registrationIndex, 0, marker);
   }
   if (
-    migrationEra === "opening_registration" &&
+    migrationEra !== null &&
     registrationProof.profile !== null &&
-    !canOfferMigratedLeadSource
+    !canOfferMigratedReliefOath &&
+    !canGrandfatherMigratedReliefOath
   ) {
     throw new Error(
-      "Legacy overworld session snapshot selected registration has an opaque post-registration decision suffix; it cannot be certified as source-free safely.",
+      "Trusted predecessor snapshot selected registration has neither an exact relief-oath offer boundary nor a replayable later lead-source path.",
     );
   }
   const canGrandfatherOpeningPreparation =
     migrationEra !== null &&
+    migrationEra !== "relief_oath" &&
     migrationEra !== "relief_allocation" &&
     migrationEra !== "hill_approach" &&
     migrationEra !== "fortify_outlast" &&
@@ -3050,6 +3334,7 @@ export function planOverworldSessionSnapshotRestore(args: {
     OVERWORLD_OPENING_PREPARATION_TRUSTED_LEGACY_WORLD_HASHES.has(snapshot.worldHash);
   const canOfferMigratedPreparation =
     migrationEra !== null &&
+    migrationEra !== "relief_oath" &&
     migrationEra !== "relief_allocation" &&
     migrationEra !== "hill_approach" &&
     migrationEra !== "fortify_outlast" &&
@@ -3093,6 +3378,7 @@ export function planOverworldSessionSnapshotRestore(args: {
   }
   if (
     migrationEra !== null &&
+    migrationEra !== "relief_oath" &&
     migrationEra !== "relief_allocation" &&
     migrationEra !== "hill_approach" &&
     migrationEra !== "fortify_outlast" &&
@@ -3109,6 +3395,7 @@ export function planOverworldSessionSnapshotRestore(args: {
   }
   const canGrandfatherOpeningReliefAllocation =
     migrationEra !== null &&
+    migrationEra !== "relief_oath" &&
     indexes.openingReliefAllocation !== null &&
     targetReliefAllocationQuestProgressed &&
     (preparationProof.profile !== null ||
@@ -3143,6 +3430,7 @@ export function planOverworldSessionSnapshotRestore(args: {
   }
   if (
     migrationEra !== null &&
+    migrationEra !== "relief_oath" &&
     indexes.openingReliefAllocation !== null &&
     targetReliefAllocationQuestProgressed &&
     !canGrandfatherOpeningReliefAllocation

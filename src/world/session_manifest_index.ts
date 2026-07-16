@@ -44,6 +44,12 @@ import {
   openingReliefAllocationOfferJournalDraft,
   type OpeningReliefAllocationJournalDraft,
 } from "./opening_relief_allocation_journal.js";
+import type { OpeningReliefOath } from "./opening_relief_oath.js";
+import {
+  openingReliefOathJournalId,
+  openingReliefOathOfferJournalDraft,
+  type OpeningReliefOathJournalDraft,
+} from "./opening_relief_oath_journal.js";
 import {
   allOpeningRegistrationJournalDrafts,
   openingRegistrationOfferJournalDraft,
@@ -91,6 +97,10 @@ export type OverworldSnapshotManifestIndex = {
   openingReliefAllocationJournalIds: ReadonlySet<string>;
   openingReliefAllocationOfferDraft: OpeningReliefAllocationJournalDraft | null;
   openingReliefAllocationTownName: string | null;
+  openingReliefOath: OpeningReliefOath | null;
+  openingReliefOathJournalIds: ReadonlySet<string>;
+  openingReliefOathOfferDraft: OpeningReliefOathJournalDraft | null;
+  openingReliefOathTownName: string | null;
   openingRegistration: OpeningRegistration | null;
   openingRegistrationJournalDraftsById: ReadonlyMap<string, OpeningRegistrationJournalDraft>;
   openingRegistrationTownName: string | null;
@@ -201,6 +211,16 @@ export function buildOverworldSnapshotManifestIndex(
       openingReliefAllocationJournalIds.add(
         openingReliefAllocationJournalId(openingReliefAllocation.id, option.id),
       );
+    }
+  }
+  const openingReliefOath = sources.world.opening_relief_oath ?? null;
+  const openingReliefOathJournalIds = new Set<string>();
+  const openingReliefOathOfferDraft = openingReliefOath
+    ? openingReliefOathOfferJournalDraft(openingReliefOath)
+    : null;
+  if (openingReliefOath) {
+    for (const option of openingReliefOath.options) {
+      openingReliefOathJournalIds.add(openingReliefOathJournalId(openingReliefOath.id, option.id));
     }
   }
   const openingRegistrationJournalDraftsById = new Map<string, OpeningRegistrationJournalDraft>();
@@ -333,6 +353,10 @@ export function buildOverworldSnapshotManifestIndex(
     openingReliefAllocationTownName: openingReliefAllocation
       ? townNameForSource(openingReliefAllocation.home)
       : null,
+    openingReliefOath,
+    openingReliefOathJournalIds,
+    openingReliefOathOfferDraft,
+    openingReliefOathTownName: openingReliefOath ? townNameForSource(openingReliefOath.home) : null,
     openingRegistration,
     openingRegistrationJournalDraftsById,
     openingRegistrationTownName: openingRegistration

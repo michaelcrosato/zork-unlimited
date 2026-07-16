@@ -498,6 +498,9 @@ function wolfJuneCampaignWitnesses(index: RpgIndex): {
  * declaration census below still fails until a concrete view is witnessed here.
  */
 const WOLF_CONCRETE_IMPORT_FLAGS = new Set([
+  "relief_oath_full_duty",
+  "relief_oath_limited_duty",
+  "relief_oath_unaffiliated_bond",
   "jamie_market_testimony_certified",
   "hayden_frost_report_certified",
   "works_fortification_prepared",
@@ -526,6 +529,48 @@ function wolfCampaignImportWitnesses(index: RpgIndex): {
     for (const key of witness.displayed) displayed.add(key);
     for (const key of witness.present) present.add(key);
   };
+
+  const reachAuthorityFortification: readonly WitnessAction[] = [
+    "go_north",
+    "talk_houndsman",
+    "ask_fortify",
+    "ask_invoke_authority",
+    "ask_leave",
+    "take_albany_relief_seals",
+    "go_north",
+  ];
+  run(["relief_oath_full_duty", "works_fortification_prepared"], reachAuthorityFortification);
+  run("relief_oath_full_duty", reachAuthorityFortification);
+  run("relief_oath_limited_duty", [
+    "go_north",
+    "talk_houndsman",
+    "ask_lure",
+    "ask_commit_lure",
+    "ask_leave",
+    "go_west",
+    "take_winter_feed_sack",
+    "go_east",
+    "go_north",
+    ["use_winter_feed_sack_on_downwind_feed_line", "best"],
+    "go_south",
+    "go_west",
+    "go_up",
+    "use_winter_feed_sack_on_loft_hatch",
+    "go_east",
+    "go_north",
+    "use_winter_feed_sack_on_outer_scent_gate",
+    "go_north",
+  ]);
+  run("relief_oath_unaffiliated_bond", [
+    "go_north",
+    "talk_houndsman",
+    "ask_drive",
+    "ask_commit_drive",
+    "ask_leave",
+    "take_drive_signal_rope_kit",
+    "go_north",
+    ["use_drive_signal_rope_kit_on_drive_breach_signal", "best"],
+  ]);
 
   run("jamie_market_testimony_certified", [
     "go_north",
@@ -624,6 +669,10 @@ function wolfCampaignImportWitnesses(index: RpgIndex): {
   for (const key of june.present) present.add(key);
 
   const required = [
+    "object:fortify_outer_seal#0",
+    "object:fortify_outer_seal#1",
+    "object:outer_scent_gate#2",
+    "object:drive_breach_signal#0",
     "room:store#3",
     "room:fodder_loft#1",
     "room:byre_door#8",

@@ -31,6 +31,7 @@ import {
   OpeningReliefAllocationSchema,
   applyOpeningReliefAllocationOption,
 } from "./opening_relief_allocation.js";
+import { OpeningReliefOathSchema, applyOpeningReliefOathOption } from "./opening_relief_oath.js";
 import { OpeningRegistrationSchema } from "./opening_registration.js";
 import { OverworldQuestLaunchSchema } from "./quest_launch.js";
 
@@ -488,6 +489,7 @@ export const OverworldManifestSchema = z
     start: z.string().min(1),
     premise: z.string().min(1),
     opening_registration: OpeningRegistrationSchema.optional(),
+    opening_relief_oath: OpeningReliefOathSchema.optional(),
     opening_lead_source: OpeningLeadSourceSchema.optional(),
     opening_preparation: OpeningPreparationSchema.optional(),
     opening_relief_allocation: OpeningReliefAllocationSchema.optional(),
@@ -1414,12 +1416,105 @@ function assertOpeningRegistrationIntegrity(
   }
 }
 
+function assertOpeningReliefOathIntegrity(world: OverworldManifest): void {
+  const scene = world.opening_relief_oath;
+  if (!scene) return;
+  const registration = world.opening_registration;
+  if (!registration || scene.after_registration !== registration.id) {
+    throw new Error("Overworld opening relief oath must follow this world's registration.");
+  }
+  if (scene.home !== registration.home || scene.area !== registration.area) {
+    throw new Error(
+      "Overworld opening relief oath must share the registration's home and Civic area.",
+    );
+  }
+  const contact = world.characters.find((character) => character.id === scene.contact);
+  if (
+    !contact ||
+    contact.home !== scene.home ||
+    contact.area !== scene.area ||
+    contact.campaign_npc_id !== scene.clerk_npc_id
+  ) {
+    throw new Error(
+      "Overworld opening relief oath contact must bind its named campaign clerk in the Civic area.",
+    );
+  }
+  const quest = world.quests.find((candidate) => candidate.id === scene.target_quest);
+  if (!quest || quest.home !== scene.home || !quest.campaign_exports?.length) {
+    throw new Error(
+      "Overworld opening relief oath must target an authored home-town quest with campaign exports.",
+    );
+  }
+
+  for (const option of scene.options) {
+    const knowledge = option.effects.find((effect) => effect.type === "learn_knowledge");
+    const promise = option.effects.find((effect) => effect.type === "record_promise");
+    const memory = option.effects.find((effect) => effect.type === "remember_relationship");
+    if (!knowledge || !promise || !memory) {
+      throw new Error(`Opening relief oath option "${option.id}" has an incomplete state package.`);
+    }
+    const imported = quest.campaign_imports?.rules.some(
+      (rule) => rule.type === "knowledge_to_flag" && rule.knowledge_id === knowledge.knowledge_id,
+    );
+    if (!imported) {
+      throw new Error(
+        `Opening relief oath knowledge "${knowledge.knowledge_id}" has no target-quest import consumer.`,
+      );
+    }
+    if (
+      !(contact.variants ?? []).some((variant) =>
+        variant.after_relationship_memories?.includes(memory.memory_id),
+      )
+    ) {
+      throw new Error(
+        `Opening relief oath memory "${memory.memory_id}" has no consuming clerk variant.`,
+      );
+    }
+    const hasChoiceService = (world.campaign_service_rules ?? []).some((rule) =>
+      (rule.requires_all_story_choices ?? []).some(
+        (ref) => ref.story_choice_id === scene.id && ref.choice_id === option.id,
+      ),
+    );
+    if (!hasChoiceService) {
+      throw new Error(
+        `Opening relief oath option "${option.id}" has no authored return-service consumer.`,
+      );
+    }
+
+    for (const profile of registration.profiles) {
+      const afterOath = applyOpeningReliefOathOption({
+        scene,
+        character: profile.character,
+        optionId: option.id,
+      }).characterAfter;
+      for (const campaignExport of quest.campaign_exports) {
+        const afterQuest = applyCampaignConsequences({
+          character: afterOath,
+          effects: overworldQuestCampaignEffectsForCharacter(campaignExport, afterOath),
+        }).characterAfter;
+        const resolved = afterQuest.promises.find(
+          (candidate) => candidate.promiseId === promise.promise_id,
+        );
+        if (!resolved || resolved.status === "active") {
+          throw new Error(
+            `Opening relief oath target ending "${campaignExport.ending_id}" leaves promise "${promise.promise_id}" unresolved.`,
+          );
+        }
+      }
+    }
+  }
+}
+
 function assertOpeningLeadSourceIntegrity(world: OverworldManifest): void {
   const scene = world.opening_lead_source;
   if (!scene) return;
   const registration = world.opening_registration;
+  const oath = world.opening_relief_oath;
   if (!registration || scene.after_registration !== registration.id) {
     throw new Error("Overworld opening lead source must follow this world's opening registration.");
+  }
+  if (oath && oath.after_registration !== registration.id) {
+    throw new Error("Overworld opening lead source has an invalid relief-oath predecessor.");
   }
   if (scene.home !== registration.home || scene.area !== registration.area) {
     throw new Error(
@@ -1717,6 +1812,7 @@ function assertOpeningAllyIntegrity(world: OverworldManifest): void {
   const preparation = world.opening_preparation;
   const leadSource = world.opening_lead_source;
   const registration = world.opening_registration;
+  const reliefOath = world.opening_relief_oath;
   if (!preparation || scene.after_preparation !== preparation.id) {
     throw new Error("Overworld opening ally must follow this world's opening preparation.");
   }
@@ -1787,24 +1883,35 @@ function assertOpeningAllyIntegrity(world: OverworldManifest): void {
       }
     }
     for (const registrationProfile of registration.profiles) {
-      for (const leadOption of leadSource.options) {
-        const afterLeadSource = applyOpeningLeadSourceOption({
-          scene: leadSource,
-          character: registrationProfile.character,
-          optionId: leadOption.id,
-        }).characterAfter;
-        for (const preparationProfile of preparation.profiles) {
-          const afterPreparation = applyOpeningPreparationProfile({
-            scene: preparation,
-            character: afterLeadSource,
-            profileId: preparationProfile.id,
+      const oathOptions = reliefOath ? reliefOath.options : [null];
+      for (const oathOption of oathOptions) {
+        const afterOath =
+          reliefOath && oathOption
+            ? applyOpeningReliefOathOption({
+                scene: reliefOath,
+                character: registrationProfile.character,
+                optionId: oathOption.id,
+              }).characterAfter
+            : registrationProfile.character;
+        for (const leadOption of leadSource.options) {
+          const afterLeadSource = applyOpeningLeadSourceOption({
+            scene: leadSource,
+            character: afterOath,
+            optionId: leadOption.id,
           }).characterAfter;
-          const afterAlly = applyOpeningAllyOption({
-            scene,
-            character: afterPreparation,
-            optionId: option.id,
-          }).characterAfter;
-          reachableAllyCharacters.push({ optionId: option.id, character: afterAlly });
+          for (const preparationProfile of preparation.profiles) {
+            const afterPreparation = applyOpeningPreparationProfile({
+              scene: preparation,
+              character: afterLeadSource,
+              profileId: preparationProfile.id,
+            }).characterAfter;
+            const afterAlly = applyOpeningAllyOption({
+              scene,
+              character: afterPreparation,
+              optionId: option.id,
+            }).characterAfter;
+            reachableAllyCharacters.push({ optionId: option.id, character: afterAlly });
+          }
         }
       }
     }
@@ -2029,6 +2136,7 @@ function canonicalOpeningAllyCampaignServiceStates(world: OverworldManifest): Re
   allyPromiseIds: ReadonlySet<string>;
 }> | null {
   const ally = world.opening_ally;
+  const reliefOath = world.opening_relief_oath;
   const reliefAllocation = world.opening_relief_allocation;
   const preparation = world.opening_preparation;
   const leadSource = world.opening_lead_source;
@@ -2047,7 +2155,7 @@ function canonicalOpeningAllyCampaignServiceStates(world: OverworldManifest): Re
     ),
   );
   const allyPromiseIds = new Set(
-    ally.options.flatMap((option) =>
+    [...ally.options, ...(reliefOath?.options ?? [])].flatMap((option) =>
       option.effects.flatMap((effect) =>
         effect.type === "record_promise" ? [effect.promise_id] : [],
       ),
@@ -2059,74 +2167,88 @@ function canonicalOpeningAllyCampaignServiceStates(world: OverworldManifest): Re
   };
 
   for (const registrationProfile of registration.profiles) {
-    for (const leadOption of leadSource.options) {
-      const afterLeadSource = applyOpeningLeadSourceOption({
-        scene: leadSource,
-        character: registrationProfile.character,
-        optionId: leadOption.id,
-      }).characterAfter;
-      for (const preparationProfile of preparation.profiles) {
-        const afterPreparation = applyOpeningPreparationProfile({
-          scene: preparation,
-          character: afterLeadSource,
-          profileId: preparationProfile.id,
+    const oathOptions = reliefOath ? reliefOath.options : [null];
+    for (const oathOption of oathOptions) {
+      const afterOath =
+        reliefOath && oathOption
+          ? applyOpeningReliefOathOption({
+              scene: reliefOath,
+              character: registrationProfile.character,
+              optionId: oathOption.id,
+            }).characterAfter
+          : registrationProfile.character;
+      for (const leadOption of leadSource.options) {
+        const afterLeadSource = applyOpeningLeadSourceOption({
+          scene: leadSource,
+          character: afterOath,
+          optionId: leadOption.id,
         }).characterAfter;
-        const allocationOptions = reliefAllocation ? reliefAllocation.options : [null];
-        for (const allocationOption of allocationOptions) {
-          const afterAllocation =
-            reliefAllocation && allocationOption
-              ? applyOpeningReliefAllocationOption({
-                  scene: reliefAllocation,
-                  character: afterPreparation,
-                  optionId: allocationOption.id,
-                }).characterAfter
-              : afterPreparation;
-          for (const allyOption of ally.options) {
-            const beforeQuest = applyOpeningAllyOption({
-              scene: ally,
-              character: afterAllocation,
-              optionId: allyOption.id,
-            }).characterAfter;
-            const openingStoryChoices = [
-              { story_choice_id: preparation.id, choice_id: preparationProfile.id },
-              ...(reliefAllocation && allocationOption
-                ? [
-                    {
-                      story_choice_id: reliefAllocation.id,
-                      choice_id: allocationOption.id,
-                    },
-                  ]
-                : []),
-              { story_choice_id: ally.id, choice_id: allyOption.id },
-            ];
-            rememberState({
-              character: beforeQuest,
-              worldFactIds: [],
-              selectedStoryChoices: openingStoryChoices,
-            });
-
-            for (const campaignExport of targetQuest.campaign_exports ?? []) {
-              const applied = applyCampaignConsequences({
+        for (const preparationProfile of preparation.profiles) {
+          const afterPreparation = applyOpeningPreparationProfile({
+            scene: preparation,
+            character: afterLeadSource,
+            profileId: preparationProfile.id,
+          }).characterAfter;
+          const allocationOptions = reliefAllocation ? reliefAllocation.options : [null];
+          for (const allocationOption of allocationOptions) {
+            const afterAllocation =
+              reliefAllocation && allocationOption
+                ? applyOpeningReliefAllocationOption({
+                    scene: reliefAllocation,
+                    character: afterPreparation,
+                    optionId: allocationOption.id,
+                  }).characterAfter
+                : afterPreparation;
+            for (const allyOption of ally.options) {
+              const beforeQuest = applyOpeningAllyOption({
+                scene: ally,
+                character: afterAllocation,
+                optionId: allyOption.id,
+              }).characterAfter;
+              const openingStoryChoices = [
+                ...(reliefOath && oathOption
+                  ? [{ story_choice_id: reliefOath.id, choice_id: oathOption.id }]
+                  : []),
+                { story_choice_id: preparation.id, choice_id: preparationProfile.id },
+                ...(reliefAllocation && allocationOption
+                  ? [
+                      {
+                        story_choice_id: reliefAllocation.id,
+                        choice_id: allocationOption.id,
+                      },
+                    ]
+                  : []),
+                { story_choice_id: ally.id, choice_id: allyOption.id },
+              ];
+              rememberState({
                 character: beforeQuest,
-                effects: overworldQuestCampaignEffectsForCharacter(campaignExport, beforeQuest),
-              });
-              const afterQuest: CanonicalCampaignServiceIntegrityState = {
-                character: applied.characterAfter,
-                worldFactIds: applied.worldFactIds,
+                worldFactIds: [],
                 selectedStoryChoices: openingStoryChoices,
-              };
-              rememberState(afterQuest);
-              for (const dawnChoiceId of ALBANY_DAWN_DISPATCH_CHOICE_IDS) {
-                rememberState({
-                  ...afterQuest,
-                  selectedStoryChoices: [
-                    ...openingStoryChoices,
-                    {
-                      story_choice_id: ALBANY_DAWN_DISPATCH_ID,
-                      choice_id: dawnChoiceId,
-                    },
-                  ],
+              });
+
+              for (const campaignExport of targetQuest.campaign_exports ?? []) {
+                const applied = applyCampaignConsequences({
+                  character: beforeQuest,
+                  effects: overworldQuestCampaignEffectsForCharacter(campaignExport, beforeQuest),
                 });
+                const afterQuest: CanonicalCampaignServiceIntegrityState = {
+                  character: applied.characterAfter,
+                  worldFactIds: applied.worldFactIds,
+                  selectedStoryChoices: openingStoryChoices,
+                };
+                rememberState(afterQuest);
+                for (const dawnChoiceId of ALBANY_DAWN_DISPATCH_CHOICE_IDS) {
+                  rememberState({
+                    ...afterQuest,
+                    selectedStoryChoices: [
+                      ...openingStoryChoices,
+                      {
+                        story_choice_id: ALBANY_DAWN_DISPATCH_ID,
+                        choice_id: dawnChoiceId,
+                      },
+                    ],
+                  });
+                }
               }
             }
           }
@@ -2196,8 +2318,12 @@ function assertCampaignServiceRulesIntegrity(
         world.opening_relief_allocation?.id === ref.story_choice_id
           ? world.opening_relief_allocation.options.find((option) => option.id === ref.choice_id)
           : undefined;
+      const reliefOathOption =
+        world.opening_relief_oath?.id === ref.story_choice_id
+          ? world.opening_relief_oath.options.find((option) => option.id === ref.choice_id)
+          : undefined;
       try {
-        if (!preparationProfile && !allyOption && !reliefAllocationOption) {
+        if (!preparationProfile && !allyOption && !reliefAllocationOption && !reliefOathOption) {
           journeyCampaignStoryChoiceSelection(ref.story_choice_id, ref.choice_id);
         }
       } catch {
@@ -2222,7 +2348,10 @@ function assertCampaignServiceRulesIntegrity(
     }
     for (const promise of rule.requires_all_promises ?? []) {
       if (
-        !world.opening_ally?.options.some((option) =>
+        ![
+          ...(world.opening_ally?.options ?? []),
+          ...(world.opening_relief_oath?.options ?? []),
+        ].some((option) =>
           option.effects.some(
             (effect) =>
               effect.type === "record_promise" && effect.promise_id === promise.promise_id,
@@ -2290,7 +2419,7 @@ function assertCampaignServiceRulesIntegrity(
     );
     if (hasAllyCondition && requiredFactsAreBounded && !canonicallyReachableRuleIds.has(rule.id)) {
       throw new Error(
-        `Campaign service rule "${rule.id}" has ally conditions unreachable in every canonical pre-Wolf and post-Wolf target state.`,
+        `Campaign service rule "${rule.id}" has opening promise or companion conditions unreachable in every canonical pre-Wolf and post-Wolf target state.`,
       );
     }
   }
@@ -2333,6 +2462,8 @@ export function assertOverworldIntegrity(world: OverworldManifest): void {
   assertEntitiesIntegrity(world, nodes, areaIds, areaHomes, edgeIds);
 
   assertOpeningRegistrationIntegrity(world, nodes, areaIds, areaHomes);
+
+  assertOpeningReliefOathIntegrity(world);
 
   assertOpeningLeadSourceIntegrity(world);
 

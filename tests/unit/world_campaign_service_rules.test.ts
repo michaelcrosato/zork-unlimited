@@ -44,6 +44,8 @@ function serviceRule(overrides: Partial<CampaignServiceRule> = {}): CampaignServ
 
 function worldWithRule(rule: CampaignServiceRule): OverworldManifest {
   const world = structuredClone(WORLD);
+  delete world.opening_ally;
+  delete world.opening_relief_oath;
   world.campaign_service_rules = [rule];
   return world;
 }
@@ -214,7 +216,7 @@ describe("campaign service-rule authoring", () => {
     if (!releasedPromise) throw new Error("expected June's kept-line service predicate");
     releasedPromise.status = "released";
     expect(() => assertOverworldIntegrity(released)).toThrow(
-      /ally conditions unreachable.*canonical pre-Wolf and post-Wolf/i,
+      /opening promise or companion conditions unreachable.*canonical pre-Wolf and post-Wolf/i,
     );
 
     const brokenWithJune = structuredClone(WORLD);
@@ -225,7 +227,7 @@ describe("campaign service-rule authoring", () => {
     if (!brokenPromise) throw new Error("expected June's kept-line service predicate");
     brokenPromise.status = "broken";
     expect(() => assertOverworldIntegrity(brokenWithJune)).toThrow(
-      /ally conditions unreachable.*canonical pre-Wolf and post-Wolf/i,
+      /opening promise or companion conditions unreachable.*canonical pre-Wolf and post-Wolf/i,
     );
   });
 

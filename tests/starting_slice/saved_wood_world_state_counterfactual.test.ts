@@ -139,6 +139,11 @@ function launchAlbanyWolf(api: ToolApi): { overworldSessionId: string; rpgSessio
     session_id: overworldSessionId,
     choice: "albany:ledger_advocate",
   });
+  api.choose_overworld_session_story({
+    ...FULL,
+    session_id: overworldSessionId,
+    choice: "albany:oath_full_compact_duty",
+  });
   const sourced = api.choose_overworld_session_story({
     ...FULL,
     session_id: overworldSessionId,

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { createInitialCampaignCharacterState } from "../../src/world/campaign_character_state.js";
 import { createInitialJourneyContractSnapshot } from "../../src/world/journey_contract.js";
+import { openingReliefOathLegacyJournalDraft } from "../../src/world/opening_relief_oath_journal.js";
 import { timeLabel } from "../../src/world/session_journal_codec.js";
 import {
   assertSnapshotTimeline,
@@ -231,5 +232,73 @@ describe("overworld snapshot journal timeline", () => {
 
     expect(journalSourceId(entry, "resolve:")).toBe("event_1");
     expect(journalSourceId(entry, "scout:")).toBeNull();
+  });
+
+  it("validates current and legacy relief-oath sources as story-choice boundaries", () => {
+    const boundary = {
+      acceptedDecisions: 0,
+      decisionProofHash: "b".repeat(64),
+      townId: "town_b",
+      areaId: "area_b",
+      minutes: 500,
+    };
+    const offerDraft = {
+      id: "relief_oath_offer:albany:wolf_relief_oath",
+      kind: "relief_oath_offer" as const,
+      title: "Set the Wolf-Winter Duty",
+      text: "Choose the access and duty Albany records.",
+    };
+    const selectionId = "relief_oath:albany:wolf_relief_oath:albany:oath_official_relief";
+    const oathSources = sources({
+      openingReliefOathJournalIds: new Set([selectionId]),
+      openingReliefOathOfferDraft: offerDraft,
+      openingReliefOathTownName: "Town B",
+    });
+    const currentEntries: OverworldJournalEntry[] = [
+      {
+        id: selectionId,
+        kind: "relief_oath",
+        town: "Town B",
+        title: "Relief oath: Take the Official Relief Oath",
+        text: "The disclosed official terms were accepted.",
+        recordedAt: timeLabel(500),
+        storyChoiceBoundary: boundary,
+      },
+      {
+        ...offerDraft,
+        town: "Town B",
+        recordedAt: timeLabel(500),
+        storyChoiceBoundary: boundary,
+      },
+    ];
+    expect(() => assertSnapshotTimeline(snapshot(currentEntries), oathSources)).not.toThrow();
+
+    const missingBoundary = structuredClone(currentEntries);
+    delete missingBoundary[0]!.storyChoiceBoundary;
+    expect(() => assertSnapshotTimeline(snapshot(missingBoundary), oathSources)).toThrow(
+      /invalid story-choice boundary/i,
+    );
+
+    const forgedOffer = structuredClone(currentEntries);
+    forgedOffer[1]!.text = "Forged oath terms.";
+    expect(() => assertSnapshotTimeline(snapshot(forgedOffer), oathSources)).toThrow(
+      /relief_oath_offer.*authored copy/i,
+    );
+
+    const sourceWorldHash = "c".repeat(64);
+    const legacyDraft = openingReliefOathLegacyJournalDraft(sourceWorldHash);
+    const legacy: OverworldJournalEntry = {
+      ...legacyDraft,
+      town: "Town B",
+      recordedAt: timeLabel(500),
+      storyChoiceBoundary: boundary,
+    };
+    expect(() => assertSnapshotTimeline(snapshot([legacy]), oathSources)).not.toThrow();
+    expect(() =>
+      assertSnapshotTimeline(
+        snapshot([{ ...legacy, text: "Forged legacy oath terms." }]),
+        oathSources,
+      ),
+    ).toThrow(/relief_oath_legacy.*canonical copy/i);
   });
 });

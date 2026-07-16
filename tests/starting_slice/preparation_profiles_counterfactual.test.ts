@@ -154,6 +154,7 @@ function choosePreparation(args: {
   session.scoutPoi(opening.pois[0]!.id);
   session.talkToCharacter(REGISTRATION.contact);
   session.chooseJourneyStory(args.backgroundId);
+  session.chooseJourneyStory("albany:oath_full_compact_duty");
   session.chooseJourneyStory(args.sourceId);
 
   const prompt = session.journey().storyChoice;

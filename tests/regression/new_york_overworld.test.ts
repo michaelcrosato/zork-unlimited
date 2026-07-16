@@ -530,6 +530,24 @@ describe("New York overworld graph", () => {
           target_var: "mediation",
         },
         {
+          id: "import:wolf_winter_full_compact_duty",
+          type: "knowledge_to_flag",
+          knowledge_id: "albany:knowledge_wolf_full_compact_duty",
+          target_flag: "relief_oath_full_duty",
+        },
+        {
+          id: "import:wolf_winter_limited_aid_only",
+          type: "knowledge_to_flag",
+          knowledge_id: "albany:knowledge_wolf_limited_aid_only",
+          target_flag: "relief_oath_limited_duty",
+        },
+        {
+          id: "import:wolf_winter_unaffiliated_bond",
+          type: "knowledge_to_flag",
+          knowledge_id: "albany:knowledge_wolf_unaffiliated_bond",
+          target_flag: "relief_oath_unaffiliated_bond",
+        },
+        {
           id: "import:wolf_winter_market_testimony",
           type: "knowledge_to_flag",
           knowledge_id: "albany:knowledge_wolf_market_testimony",
@@ -661,7 +679,9 @@ describe("New York overworld graph", () => {
     const duplicatedEffects = duplicateEffect.quests.find((quest) => quest.id === "wolf_winter")!
       .campaign_exports![0]!.effects;
     duplicatedEffects.push(structuredClone(duplicatedEffects[0]!));
-    expect(() => assertOverworldIntegrity(duplicateEffect)).toThrow(/repeats effect/i);
+    expect(() => assertOverworldIntegrity(duplicateEffect)).toThrow(
+      /duplicate campaign consequence effect/i,
+    );
     expect(() => parseOverworldManifest(duplicateEffect)).toThrow(
       /duplicate campaign consequence effect/i,
     );

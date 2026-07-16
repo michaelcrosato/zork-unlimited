@@ -20,6 +20,7 @@ import {
   type JourneyContractSnapshot,
   type JourneyGoalDefinition,
   type JourneyAllyStoryChoiceOptions,
+  type JourneyReliefOathStoryChoiceOptions,
   type JourneyRegistrationStoryChoiceOptions,
   type JourneyStoryChoicePrompt,
 } from "../../src/world/journey_contract.js";
@@ -491,6 +492,35 @@ describe("journey contract presentation context", () => {
         } as unknown as JourneyStoryChoicePrompt,
       }),
     ).toThrow(/ally choice requires between three and four options/i);
+  });
+
+  it("requires and deep-freezes exactly three relief-oath terms", () => {
+    const state = createInitialJourneyContractSnapshot();
+    const reliefOath = {
+      id: "albany_relief_oath",
+      kind: "relief_oath",
+      message: "Choose the exact term that binds this dispatch.",
+      options: Array.from({ length: 3 }, (_, index) => ({
+        id: `oath_${String(index)}`,
+        label: `Term ${String(index)}`,
+        consequence: `Access and duty ${String(index)}.`,
+      })) as unknown as JourneyReliefOathStoryChoiceOptions,
+    } satisfies JourneyStoryChoicePrompt;
+
+    const view = journeyPresentation(state, { storyChoice: reliefOath });
+    expect(view.storyChoice).toEqual(reliefOath);
+    expect(view.storyChoice?.options).toHaveLength(3);
+    expect(Object.isFrozen(view.storyChoice)).toBe(true);
+    expect(view.storyChoice?.options.every((option) => Object.isFrozen(option))).toBe(true);
+
+    expect(() =>
+      journeyPresentation(state, {
+        storyChoice: {
+          ...reliefOath,
+          options: reliefOath.options.slice(0, 2),
+        } as unknown as JourneyStoryChoicePrompt,
+      }),
+    ).toThrow(/relief-oath choice requires exactly three options/i);
   });
 });
 

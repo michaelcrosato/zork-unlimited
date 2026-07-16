@@ -13,6 +13,10 @@ import {
   sortedIndex,
 } from "../../src/world/session_collections.js";
 import { buildOverworldSnapshotManifestIndex } from "../../src/world/session_manifest_index.js";
+import {
+  openingReliefOathJournalId,
+  openingReliefOathOfferJournalId,
+} from "../../src/world/opening_relief_oath_journal.js";
 
 const world = loadOverworldManifest(process.cwd());
 
@@ -107,5 +111,20 @@ describe("overworld snapshot manifest index", () => {
     expect(index.arcIds.has(firstArc.id)).toBe(true);
     expect(index.arcRegionNames.get(firstArc.id)).toBe(firstArc.region);
     expect(index.regionNames.has(firstArc.region)).toBe(true);
+
+    const reliefOath = world.opening_relief_oath!;
+    expect(index.openingReliefOath).toBe(reliefOath);
+    expect(index.openingReliefOathOfferDraft).toMatchObject({
+      id: openingReliefOathOfferJournalId(reliefOath.id),
+      kind: "relief_oath_offer",
+      title: reliefOath.title,
+      text: reliefOath.message,
+    });
+    expect(index.openingReliefOathJournalIds).toEqual(
+      new Set(
+        reliefOath.options.map((option) => openingReliefOathJournalId(reliefOath.id, option.id)),
+      ),
+    );
+    expect(index.openingReliefOathTownName).toBe(startTown.name);
   });
 });

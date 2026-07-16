@@ -13,6 +13,7 @@ import type { OverworldSessionSnapshot } from "../../src/world/session_snapshot.
 import { OVERWORLD_OPENING_ALLY_PREDECESSOR_WORLD_HASH } from "../../src/world/session_snapshot_restore.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
 import { GameSession } from "../../ui/src/engine.js";
+import { exactF06World } from "../regression/fixtures/historical_overworlds.js";
 
 const WORLD = loadOverworldManifest(process.cwd());
 const REGISTRATION = WORLD.opening_registration!;
@@ -29,10 +30,11 @@ const JUNE = "albany:june_pike";
 const PROMISE = "albany:promise_june_cattle_first";
 const SHELTERED = "albany:wolf_approach_sheltered_stockway";
 const RESIDENT_SHELTER = "albany:relief_resident_shelter";
+const DEFAULT_OATH = "albany:oath_full_compact_duty";
 const WOLF_SOURCE = readFileSync("content/rpg/quests/wolf_winter.yaml", "utf8");
 const FULL = { compact_context: false, compact_result: false } as const;
 
-const PRE_RELIEF_WORLD = structuredClone(WORLD);
+const PRE_RELIEF_WORLD = exactF06World(WORLD);
 delete PRE_RELIEF_WORLD.opening_relief_allocation;
 
 function moveToArea(session: OverworldSession, targetAreaId: string): void {
@@ -79,6 +81,7 @@ function reachAlly(
   session.scoutPoi(opening.pois[0]!.id);
   session.talkToCharacter(REGISTRATION.contact);
   session.chooseJourneyStory(args.backgroundId ?? REGISTRATION.profiles[0]!.id);
+  session.chooseJourneyStory(DEFAULT_OATH);
   session.chooseJourneyStory(args.sourceId ?? LEAD.options[0]!.id);
   session.chooseJourneyStory(args.preparationId ?? PREPARATION.profiles[0]!.id);
   moveToArea(session, ALLY.area);
@@ -138,7 +141,7 @@ function addRoadStrain(session: OverworldSession): void {
 }
 
 describe("SS-F04 — Albany ally commitment counterfactual", () => {
-  it("offers all three honest contracts after every 4×3×3 prior opening state", () => {
+  it("offers all three honest contracts across every background/source/preparation state under one neutral oath", () => {
     expect(REGISTRATION.profiles).toHaveLength(4);
     expect(LEAD.options).toHaveLength(3);
     expect(PREPARATION.profiles).toHaveLength(3);
@@ -190,6 +193,7 @@ describe("SS-F04 — Albany ally commitment counterfactual", () => {
     noContact.scoutPoi(opening.pois[0]!.id);
     noContact.talkToCharacter(REGISTRATION.contact);
     noContact.chooseJourneyStory(REGISTRATION.profiles[0]!.id);
+    noContact.chooseJourneyStory(DEFAULT_OATH);
     noContact.chooseJourneyStory(LEAD.options[0]!.id);
     noContact.chooseJourneyStory(PREPARATION.profiles[0]!.id);
     moveToArea(noContact, WOLF.area);
@@ -221,6 +225,7 @@ describe("SS-F04 — Albany ally commitment counterfactual", () => {
     moveToArea(session, REGISTRATION.area);
     session.talkToCharacter(REGISTRATION.contact);
     session.chooseJourneyStory(REGISTRATION.profiles[0]!.id);
+    session.chooseJourneyStory(DEFAULT_OATH);
     session.chooseJourneyStory(LEAD.options[0]!.id);
     session.chooseJourneyStory(PREPARATION.profiles[0]!.id);
 

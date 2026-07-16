@@ -128,6 +128,7 @@ function wolfBoundary(allyOptionId: typeof ACCEPT | typeof SOLO): OverworldSessi
   session.scoutPoi(session.view().pois[0]!.id);
   session.talkToCharacter(REGISTRATION.contact);
   session.chooseJourneyStory(REGISTRATION.profiles[0]!.id);
+  session.chooseJourneyStory("albany:oath_limited_aid_only");
   session.chooseJourneyStory(LEAD.options[0]!.id);
   session.chooseJourneyStory(PREPARATION.profiles[0]!.id);
   moveToArea(session, "albany_city__market");

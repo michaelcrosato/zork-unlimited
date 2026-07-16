@@ -30,6 +30,7 @@ const WOLF_ID = "wolf_winter";
 const COURIER = "albany:unaffiliated_courier";
 const LEDGER_ADVOCATE = "albany:ledger_advocate";
 const ROAD_WARDEN = "albany:road_warden";
+const DEFAULT_OATH = "albany:oath_full_compact_duty";
 const ROWAN_SOURCE = "albany:source_rowan_civic_docket";
 const JAMIE_SOURCE = "albany:source_jamie_market_testimony";
 const HAYDEN_SOURCE = "albany:source_hayden_frost_report";
@@ -73,12 +74,19 @@ function reachMcpLeadSource(
     choice: profileId,
   });
   expect(questIds(registered.observation)).not.toContain(WOLF_ID);
-  expect(registered.journey.storyChoice).toMatchObject({
+  expect(registered.journey.storyChoice).toMatchObject({ kind: "relief_oath" });
+  const oathBound = api.choose_overworld_session_story({
+    ...FULL_OVERWORLD,
+    session_id: sessionId,
+    choice: DEFAULT_OATH,
+  });
+  expect(questIds(oathBound.observation)).not.toContain(WOLF_ID);
+  expect(oathBound.journey.storyChoice).toMatchObject({
     id: LEAD_SOURCE.id,
     kind: "lead_source",
     options: LEAD_SOURCE.options.map((option) => ({ id: option.id })),
   });
-  return { sessionId, pendingJourney: registered.journey };
+  return { sessionId, pendingJourney: oathBound.journey };
 }
 
 function launchMcpWolf(sourceId: string): {
@@ -139,6 +147,8 @@ function reachDirectLeadSource(profileId: string): OverworldSession {
   session.scoutPoi(opening.pois[0]!.id);
   session.talkToCharacter(ROWAN_ID);
   session.chooseJourneyStory(profileId);
+  expect(session.journey().storyChoice?.kind).toBe("relief_oath");
+  session.chooseJourneyStory(DEFAULT_OATH);
   expect(session.journey().storyChoice?.kind).toBe("lead_source");
   return session;
 }
@@ -437,12 +447,14 @@ describe("SS-F03 — Albany lead-source counterfactual", () => {
     expect(rowan.campaignImportReceipt?.applied_rules).toEqual([
       "import:wolf_winter_approach_sheltered_stockway",
       "import:wolf_winter_drover_streetwise",
+      "import:wolf_winter_full_compact_duty",
       "import:wolf_winter_relief_protocol",
       "import:wolf_winter_relief_resident_shelter",
     ]);
     expect(jamie.campaignImportReceipt?.applied_rules).toEqual([
       "import:wolf_winter_approach_sheltered_stockway",
       "import:wolf_winter_drover_streetwise",
+      "import:wolf_winter_full_compact_duty",
       "import:wolf_winter_market_testimony",
       "import:wolf_winter_relief_protocol",
       "import:wolf_winter_relief_resident_shelter",
@@ -451,6 +463,7 @@ describe("SS-F03 — Albany lead-source counterfactual", () => {
       "import:wolf_winter_approach_sheltered_stockway",
       "import:wolf_winter_drover_streetwise",
       "import:wolf_winter_frost_report",
+      "import:wolf_winter_full_compact_duty",
       "import:wolf_winter_relief_protocol",
       "import:wolf_winter_relief_resident_shelter",
     ]);

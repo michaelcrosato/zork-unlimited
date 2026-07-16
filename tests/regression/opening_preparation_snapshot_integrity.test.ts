@@ -12,6 +12,7 @@ import {
   OVERWORLD_OPENING_PREPARATION_WORLD_HASH,
 } from "../../src/world/session_snapshot_restore.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
+import { exactF06World } from "./fixtures/historical_overworlds.js";
 
 const WORLD = loadOverworldManifest(process.cwd());
 const PREPARATION = WORLD.opening_preparation;
@@ -19,10 +20,11 @@ if (!PREPARATION) throw new Error("expected the Albany opening preparation scene
 
 const REGISTRATION_PROFILE = "albany:ledger_advocate";
 const LEAD_SOURCE = "albany:source_jamie_market_testimony";
+const RELIEF_OATH = "albany:oath_limited_aid_only";
 const PREPARATION_PROFILE = "albany:prep_relief_protocol";
 
-function registerAndSelectLead(): OverworldSession {
-  const session = new OverworldSession(WORLD);
+function registerAndSelectLead(world: typeof WORLD = WORLD): OverworldSession {
+  const session = new OverworldSession(world);
   const opening = session.view();
   const poi = opening.pois[0];
   const contact = opening.characters[0];
@@ -30,13 +32,16 @@ function registerAndSelectLead(): OverworldSession {
   session.scoutPoi(poi.id);
   session.talkToCharacter(contact.id);
   session.chooseJourneyStory(REGISTRATION_PROFILE);
+  if (session.journey().storyChoice?.kind === "relief_oath") {
+    session.chooseJourneyStory(RELIEF_OATH);
+  }
   session.chooseJourneyStory(LEAD_SOURCE);
   expect(session.journey().storyChoice?.kind).toBe("preparation");
   return session;
 }
 
-function selectPreparation(): OverworldSession {
-  const session = registerAndSelectLead();
+function selectPreparation(world: typeof WORLD = WORLD): OverworldSession {
+  const session = registerAndSelectLead(world);
   session.chooseJourneyStory(PREPARATION_PROFILE);
   expect(session.journey().storyChoice).toBeNull();
   return session;
@@ -80,7 +85,7 @@ describe("opening preparation snapshot integrity", () => {
   });
 
   it("rejects preparation journal or action evidence relabeled as the 742 predecessor", () => {
-    const selected = selectPreparation().snapshot();
+    const selected = selectPreparation(exactF06World(WORLD)).snapshot();
 
     const journalRelabel = structuredClone(selected);
     journalRelabel.worldHash = OVERWORLD_OPENING_PREPARATION_PREDECESSOR_WORLD_HASH;
@@ -99,7 +104,7 @@ describe("opening preparation snapshot integrity", () => {
   });
 
   it("migrates a lead-selected no-progress 742 snapshot into the real preparation prompt", () => {
-    const predecessor = registerAndSelectLead().snapshot();
+    const predecessor = registerAndSelectLead(exactF06World(WORLD)).snapshot();
     predecessor.worldHash = OVERWORLD_OPENING_PREPARATION_PREDECESSOR_WORLD_HASH;
     predecessor.journalEntries = predecessor.journalEntries.filter(
       (entry) => entry.kind !== "preparation_offer",

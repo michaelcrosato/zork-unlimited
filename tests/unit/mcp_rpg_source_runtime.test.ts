@@ -58,6 +58,7 @@ type FixtureOverworld = Record<string, unknown> & {
   opening_lead_source?: unknown;
   opening_preparation?: unknown;
   opening_relief_allocation?: unknown;
+  opening_relief_oath?: unknown;
   opening_registration?: unknown;
 };
 
@@ -73,6 +74,7 @@ function fixtureOverworldWithoutQuestConditionedFeatures(): FixtureOverworld {
   delete world.opening_lead_source;
   delete world.opening_preparation;
   delete world.opening_relief_allocation;
+  delete world.opening_relief_oath;
   delete world.opening_registration;
   return world;
 }

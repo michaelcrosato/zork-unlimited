@@ -32,6 +32,8 @@ function sessionAtQueensburyGoalPassage(): OverworldSession {
   if (session.journey().storyChoice?.kind === "registration") {
     session.chooseJourneyStory("albany:ledger_advocate");
   }
+  expect(session.journey().storyChoice?.kind).toBe("relief_oath");
+  session.chooseJourneyStory("albany:oath_limited_aid_only");
   expect(session.journey().storyChoice?.kind).toBe("lead_source");
   session.chooseJourneyStory("albany:source_rowan_civic_docket");
   expect(session.journey().storyChoice?.kind).toBe("preparation");

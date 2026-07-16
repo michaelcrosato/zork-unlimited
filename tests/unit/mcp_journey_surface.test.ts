@@ -17,6 +17,7 @@ const api = () => createToolApi({ root: process.cwd() });
 const FULL_OVERWORLD = { compact_context: false, compact_result: false } as const;
 const WORLD = loadOverworldManifest(process.cwd());
 const HAYDEN_ID = "albany_city__transport_hub__contact";
+const LIMITED_RELIEF_OATH_ID = "albany:oath_limited_aid_only";
 const SHELTERED_APPROACH_ID = "albany:wolf_approach_sheltered_stockway";
 const RESIDENT_SHELTER_ALLOCATION_ID = "albany:relief_resident_shelter";
 const ALBANY_TO_SARATOGA = "road_albany_city__saratoga_springs_city";
@@ -35,6 +36,7 @@ function uiSessionAtPostGallowmereHayden(): OverworldSession {
   session.scoutPoi("albany_city__civic_core__poi");
   session.talkToCharacter("albany_city__civic_core__contact");
   session.chooseJourneyStory("albany:ledger_advocate");
+  session.chooseJourneyStory(LIMITED_RELIEF_OATH_ID);
   session.chooseJourneyStory("albany:source_rowan_civic_docket");
   expect(session.journey().storyChoice?.kind).toBe("preparation");
   session.chooseJourneyStory("albany:prep_works_fortification");
@@ -85,6 +87,8 @@ function uiSessionAtAlbanyStoryChoice(): OverworldSession {
   if (session.journey().storyChoice?.kind === "registration") {
     session.chooseJourneyStory("albany:ledger_advocate");
   }
+  expect(session.journey().storyChoice?.kind).toBe("relief_oath");
+  session.chooseJourneyStory(LIMITED_RELIEF_OATH_ID);
   expect(session.journey().storyChoice?.kind).toBe("lead_source");
   session.chooseJourneyStory("albany:source_rowan_civic_docket");
   expect(session.journey().storyChoice?.kind).toBe("preparation");
@@ -179,10 +183,16 @@ function mcpWolfWinterCheckpointInsideQuest() {
     session_id: overworldSessionId,
     choice: "albany:ledger_advocate",
   });
-  expect(registered.journey.storyChoice?.kind).toBe("lead_source");
+  expect(registered.journey.storyChoice?.kind).toBe("relief_oath");
   expect(registered.observation.quests.map((candidate) => candidate.id)).not.toContain(
     "wolf_winter",
   );
+  const oathed = a.choose_overworld_session_story({
+    ...FULL_OVERWORLD,
+    session_id: overworldSessionId,
+    choice: LIMITED_RELIEF_OATH_ID,
+  });
+  expect(oathed.journey.storyChoice?.kind).toBe("lead_source");
   const sourced = a.choose_overworld_session_story({
     ...FULL_OVERWORLD,
     session_id: overworldSessionId,
@@ -246,7 +256,7 @@ function mcpWolfWinterCheckpointInsideQuest() {
     poi_id: questAreaPoi.id,
   });
   let journey = questAreaScouted.journey;
-  expect(journey.acceptedDecisions).toBe(10);
+  expect(journey.acceptedDecisions).toBe(11);
   const questAreaSite = questAreaScouted.observation.sites[0];
   if (!questAreaSite) throw new Error("expected a quest-area exploration site");
   journey = a.explore_overworld_session_site({
@@ -254,10 +264,18 @@ function mcpWolfWinterCheckpointInsideQuest() {
     session_id: overworldSessionId,
     site_id: questAreaSite.id,
   }).journey;
-  expect(journey.acceptedDecisions).toBe(11);
+  expect(journey.acceptedDecisions).toBe(12);
 
-  // Reach decision 37 through real reversible local movement, so quest start and
-  // two accepted quest moves put the checkpoint inside the RPG at decision 40.
+  journey = a.talk_overworld_session_contact({
+    ...FULL_OVERWORLD,
+    session_id: overworldSessionId,
+    character_id: HAYDEN_ID,
+  }).journey;
+  expect(journey.acceptedDecisions).toBe(13);
+
+  // Reach decision 37 through one real local contact and reversible movement,
+  // so quest start and two accepted quest moves put the checkpoint inside the
+  // RPG at decision 40 while ending back in the quest's area.
   while (journey.acceptedDecisions < 37) {
     const current = a.get_overworld_session({
       session_id: overworldSessionId,
@@ -500,6 +518,75 @@ describe("MCP journey surface", () => {
         include_observation: true,
       }).journey,
     );
+  });
+
+  it("projects identical relief-oath terms and selection across compact and full MCP play", () => {
+    const a = api();
+    const compact = a.start_overworld();
+    const full = a.start_overworld({ compact_context: false });
+    const registrationContact = WORLD.opening_registration?.contact;
+    if (!registrationContact) throw new Error("expected Albany registration contact");
+
+    const reachOath = (sessionId: string, compactResult: boolean) => {
+      const observation = a.get_overworld_session({
+        session_id: sessionId,
+        include_observation: true,
+      }).observation;
+      const poi = observation.pois[0];
+      if (!poi) throw new Error("expected Albany Civic POI");
+      a.scout_overworld_session_poi({
+        session_id: sessionId,
+        poi_id: poi.id,
+        compact_context: compactResult,
+        compact_result: compactResult,
+      });
+      a.talk_overworld_session_contact({
+        session_id: sessionId,
+        character_id: registrationContact,
+        compact_context: compactResult,
+        compact_result: compactResult,
+      });
+      return a.choose_overworld_session_story({
+        session_id: sessionId,
+        choice: "albany:ledger_advocate",
+        compact_context: compactResult,
+        compact_result: compactResult,
+      });
+    };
+
+    const compactOath = reachOath(compact.session_id, true);
+    const fullOath = reachOath(full.session_id, false);
+    expect(compactOath.journey).toEqual(fullOath.journey);
+    expect(compactOath.snapshot_hash).toBe(fullOath.snapshot_hash);
+    expect(compactOath.journey.storyChoice).toMatchObject({
+      id: "albany:wolf_relief_oath",
+      kind: "relief_oath",
+      options: [
+        { id: "albany:oath_full_compact_duty" },
+        { id: LIMITED_RELIEF_OATH_ID },
+        { id: "albany:oath_unaffiliated_personal_bond" },
+      ],
+    });
+    expect(compactOath.journey.storyChoice?.options).toHaveLength(3);
+    expect(compactOath.journey.storyChoice?.options.every((option) => option.consequence)).toBe(
+      true,
+    );
+    expect("observation" in compactOath).toBe(false);
+
+    const compactLead = a.choose_overworld_session_story({
+      session_id: compact.session_id,
+      choice: LIMITED_RELIEF_OATH_ID,
+      compact_context: true,
+      compact_result: true,
+    });
+    const fullLead = a.choose_overworld_session_story({
+      ...FULL_OVERWORLD,
+      session_id: full.session_id,
+      choice: LIMITED_RELIEF_OATH_ID,
+    });
+    expect(compactLead.journey).toEqual(fullLead.journey);
+    expect(compactLead.snapshot_hash).toBe(fullLead.snapshot_hash);
+    expect(compactLead.journey.storyChoice?.kind).toBe("lead_source");
   });
 
   it("makes a pending parent choice the only legal move inside an embedded quest", () => {

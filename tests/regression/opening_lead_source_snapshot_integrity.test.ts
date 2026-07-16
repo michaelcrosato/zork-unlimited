@@ -20,7 +20,7 @@ import {
   OVERWORLD_PRE_CAMPAIGN_EXPORTS_WORLD_HASH,
 } from "../../src/world/session_snapshot_restore.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
-import { exactF12World } from "./fixtures/historical_overworlds.js";
+import { exactF06World, exactF12World } from "./fixtures/historical_overworlds.js";
 
 const WORLD = loadOverworldManifest(process.cwd());
 const SCENE = WORLD.opening_lead_source;
@@ -31,6 +31,7 @@ const COURIER_PROFILE = "albany:unaffiliated_courier";
 const ROWAN_SOURCE = "albany:source_rowan_civic_docket";
 const JAMIE_SOURCE = "albany:source_jamie_market_testimony";
 const HAYDEN_SOURCE = "albany:source_hayden_frost_report";
+const DEFAULT_OATH = "albany:oath_limited_aid_only";
 const DEFAULT_PREPARATION = "albany:prep_works_fortification";
 const NEUTRAL_RELIEF_ALLOCATION = "albany:relief_cade_fodder";
 const TARGET_QUEST = SCENE.target_quest;
@@ -52,6 +53,9 @@ function register(profileId = LEDGER_PROFILE, world: typeof WORLD = WORLD): Over
   session.scoutPoi(poi.id);
   session.talkToCharacter(contact.id);
   session.chooseJourneyStory(profileId);
+  if (session.journey().storyChoice?.kind === "relief_oath") {
+    session.chooseJourneyStory(DEFAULT_OATH);
+  }
   expect(session.journey().storyChoice?.kind).toBe("lead_source");
   return session;
 }
@@ -113,7 +117,7 @@ function travelToTown(
 }
 
 function registrationEraSnapshot(): OverworldSessionSnapshot {
-  const snapshot = register().snapshot();
+  const snapshot = register(LEDGER_PROFILE, exactF06World(WORLD)).snapshot();
   delete snapshot.openingLeadSourceDecisionTrail;
   snapshot.worldHash = OVERWORLD_OPENING_REGISTRATION_WORLD_HASH;
   snapshot.journalEntries = snapshot.journalEntries.filter(
@@ -131,6 +135,7 @@ describe("opening lead-source snapshot integrity", () => {
 
     session.talkToCharacter(rowan.id);
     session.chooseJourneyStory(LEDGER_PROFILE);
+    session.chooseJourneyStory(DEFAULT_OATH);
     session.chooseJourneyStory(ROWAN_SOURCE);
     const snapshot = session.snapshot();
     const questArea = WORLD.quests.find((quest) => quest.id === TARGET_QUEST)?.area;
@@ -409,7 +414,7 @@ describe("opening lead-source snapshot integrity", () => {
     const migratedSession = OverworldSession.restore(WORLD, predecessor);
     const migrated = migratedSession.snapshot();
     expect(migrated.worldHash).toBe(OVERWORLD_OPENING_LEAD_SOURCE_MIGRATION_TARGET_WORLD_HASH);
-    expect(entry(migrated, "lead_source_offer").storyChoiceBoundary).toMatchObject({
+    expect(entry(migrated, "relief_oath_offer").storyChoiceBoundary).toMatchObject({
       acceptedDecisions: predecessor.journey.acceptedDecisions,
       decisionProofHash: predecessor.journey.decisionProof.hash,
       townId: predecessor.currentId,
@@ -417,19 +422,21 @@ describe("opening lead-source snapshot integrity", () => {
       minutes: predecessor.minutes,
     });
     expect(migrated.discoveredQuestIds).not.toContain(TARGET_QUEST);
-    expect(migratedSession.journey().storyChoice?.kind).toBe("lead_source");
+    expect(migratedSession.journey().storyChoice?.kind).toBe("relief_oath");
     expect(migratedSession.view().quests.map((quest) => quest.id)).not.toContain(TARGET_QUEST);
 
     const restoredAgain = OverworldSession.restore(WORLD, migrated);
     expect(restoredAgain.snapshot()).toEqual(migrated);
     expect(restoredAgain.snapshotHash()).toBe(migratedSession.snapshotHash());
+    restoredAgain.chooseJourneyStory(DEFAULT_OATH);
+    expect(restoredAgain.journey().storyChoice?.kind).toBe("lead_source");
     restoredAgain.chooseJourneyStory(ROWAN_SOURCE);
     expect(restoredAgain.journey().storyChoice?.kind).toBe("preparation");
     expect(restoredAgain.view().quests.map((quest) => quest.id)).not.toContain(TARGET_QUEST);
   });
 
   it("migrates the exact no-progress F03 predecessor into preparation", () => {
-    const predecessor = selectSource(LEDGER_PROFILE, ROWAN_SOURCE).snapshot();
+    const predecessor = selectSource(LEDGER_PROFILE, ROWAN_SOURCE, exactF06World(WORLD)).snapshot();
     predecessor.worldHash = OVERWORLD_OPENING_LEAD_SOURCE_WORLD_HASH;
     predecessor.journalEntries = predecessor.journalEntries.filter(
       (candidate) => candidate.kind !== "preparation_offer",
@@ -497,7 +504,7 @@ describe("opening lead-source snapshot integrity", () => {
   });
 
   it("rejects a truncated Rowan selection even when its remaining move replays", () => {
-    const played = selectSourceAndPrepare(LEDGER_PROFILE, ROWAN_SOURCE);
+    const played = selectSourceAndPrepare(LEDGER_PROFILE, ROWAN_SOURCE, exactF06World(WORLD));
     moveToArea(played, "albany_city__market");
     const predecessor = played.snapshot();
     const registrationBoundary = entry(predecessor, "registration").registrationBoundary;
@@ -573,7 +580,7 @@ describe("opening lead-source snapshot integrity", () => {
   });
 
   it("rejects a hash-valid but semantically opaque one-decision predecessor suffix", () => {
-    const forged = selectSource(LEDGER_PROFILE, ROWAN_SOURCE).snapshot();
+    const forged = selectSource(LEDGER_PROFILE, ROWAN_SOURCE, exactF06World(WORLD)).snapshot();
     const registrationBoundary = entry(forged, "registration").registrationBoundary;
     if (!registrationBoundary) throw new Error("expected registration selection boundary");
     const forgedDecision = {
@@ -601,7 +608,7 @@ describe("opening lead-source snapshot integrity", () => {
     };
 
     expect(() => OverworldSession.restore(WORLD, forged)).toThrow(
-      /opaque post-registration decision suffix.*cannot be certified/i,
+      /opaque post-registration decision suffix.*cannot be certified|selected registration has neither an exact relief-oath offer boundary nor a replayable later lead-source path/i,
     );
   });
 
@@ -609,23 +616,28 @@ describe("opening lead-source snapshot integrity", () => {
     const session = new OverworldSession(WORLD);
     const opening = session.view();
     session.scoutPoi(opening.pois[0]!.id);
-    session.investigateEvent(opening.events[0]!.id);
 
-    while (session.journey().acceptedDecisions < 38) {
+    while (session.journey().acceptedDecisions < 37) {
       const destination =
         session.view().currentArea?.id === SCENE.area ? "albany_city__market" : SCENE.area;
       moveToArea(session, destination);
     }
     expect(session.view().currentArea?.id).toBe(SCENE.area);
-    expect(session.journey().acceptedDecisions).toBe(38);
+    expect(session.journey().acceptedDecisions).toBe(37);
 
     session.talkToCharacter(session.view().characters[0]!.id);
     expect(session.journey()).toMatchObject({
       status: "active",
-      acceptedDecisions: 39,
+      acceptedDecisions: 38,
       storyChoice: { kind: "registration" },
     });
     session.chooseJourneyStory(LEDGER_PROFILE);
+    expect(session.journey()).toMatchObject({
+      status: "active",
+      acceptedDecisions: 39,
+      storyChoice: { kind: "relief_oath" },
+    });
+    session.chooseJourneyStory(DEFAULT_OATH);
     expect(session.journey()).toMatchObject({
       status: "awaiting_choice",
       acceptedDecisions: 40,
@@ -710,7 +722,14 @@ describe("opening lead-source snapshot integrity", () => {
       /quest progress without selected opening registration or trusted legacy provenance/i,
     );
 
-    const relabeledLaterEvidence = selectSource().snapshot();
+    const relabeledLaterEvidence = selectSource(
+      LEDGER_PROFILE,
+      JAMIE_SOURCE,
+      exactF06World(WORLD),
+    ).snapshot();
+    expect(
+      relabeledLaterEvidence.journalEntries.some((entry) => entry.kind.startsWith("relief_oath")),
+    ).toBe(false);
     relabeledLaterEvidence.journalEntries = relabeledLaterEvidence.journalEntries.filter(
       (candidate) => !candidate.kind.startsWith("preparation"),
     );
@@ -719,7 +738,14 @@ describe("opening lead-source snapshot integrity", () => {
       /opening lead-source evidence from a later manifest/i,
     );
 
-    const hiddenInJourneyProof = selectSource(LEDGER_PROFILE, ROWAN_SOURCE).snapshot();
+    const hiddenInJourneyProof = selectSource(
+      LEDGER_PROFILE,
+      ROWAN_SOURCE,
+      exactF06World(WORLD),
+    ).snapshot();
+    expect(
+      hiddenInJourneyProof.journalEntries.some((entry) => entry.kind.startsWith("relief_oath")),
+    ).toBe(false);
     hiddenInJourneyProof.worldHash = OVERWORLD_OPENING_REGISTRATION_WORLD_HASH;
     hiddenInJourneyProof.journalEntries = hiddenInJourneyProof.journalEntries.filter(
       (candidate) =>

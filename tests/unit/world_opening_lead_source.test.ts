@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { hashState } from "../../src/core/hash.js";
 import {
   cloneCampaignCharacterState,
   evolveCampaignCharacterState,
@@ -20,19 +21,44 @@ import {
   type OpeningLeadSourceOption,
 } from "../../src/world/opening_lead_source.js";
 import {
+  openingLeadSourceJournalEntry,
+  openingLeadSourceOfferJournalEntry,
+  proveOpeningLeadSourceJournal,
+} from "../../src/world/opening_lead_source_journal.js";
+import type { OpeningRegistrationJournalProof } from "../../src/world/opening_registration_journal.js";
+import { applyOpeningReliefOathOption } from "../../src/world/opening_relief_oath.js";
+import {
+  openingReliefOathJournalEntry,
+  openingReliefOathLegacyJournalEntry,
+  openingReliefOathOfferJournalEntry,
+  type OpeningReliefOathJournalProof,
+} from "../../src/world/opening_relief_oath_journal.js";
+import {
   assertOverworldIntegrity,
   parseOverworldManifest,
   type OverworldManifest,
 } from "../../src/world/overworld.js";
+import { timeLabel } from "../../src/world/session_journal_codec.js";
+import type {
+  OverworldJournalDecisionBoundary,
+  OverworldJournalEntry,
+} from "../../src/world/session_snapshot.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
 
 const world = loadOverworldManifest(process.cwd());
 const openingLeadSource = world.opening_lead_source;
 const openingRegistration = world.opening_registration;
+const openingReliefOath = world.opening_relief_oath;
 
-if (!openingLeadSource || !openingRegistration) {
-  throw new Error("The shipped Albany opening must author registration and lead-source scenes.");
+if (!openingLeadSource || !openingRegistration || !openingReliefOath) {
+  throw new Error(
+    "The shipped Albany opening must author registration, relief-oath, and lead-source scenes.",
+  );
 }
+
+const journalLeadSourceScene = openingLeadSource;
+const journalRegistrationScene = openingRegistration;
+const journalReliefOathScene = openingReliefOath;
 
 function optionById(scene: OpeningLeadSource, optionId: string): OpeningLeadSourceOption {
   const option = scene.options.find((candidate) => candidate.id === optionId);
@@ -311,5 +337,394 @@ describe("Albany opening lead-source authoring", () => {
       delete optionById(scene, "albany:source_jamie_market_testimony").sponsor;
       delete optionById(scene, "albany:source_hayden_frost_report").sponsor;
     }, /at least one sponsor term mechanical/i);
+  });
+});
+
+const JOURNAL_TOWN = "Albany city";
+const JOURNAL_BASE_HASH = "a".repeat(64);
+const JOURNAL_LEGACY_HASH = "7".repeat(64);
+const JOURNAL_PROFILE_ID = "albany:unaffiliated_courier";
+const JOURNAL_OATH_OPTION_ID = "albany:oath_unaffiliated_personal_bond";
+const JOURNAL_SOURCE_OPTION_ID = "albany:source_jamie_market_testimony";
+
+function journalRegistrationCharacter(): CampaignCharacterState {
+  return cloneCampaignCharacterState(profileCharacter(JOURNAL_PROFILE_ID));
+}
+
+function journalRegistrationBoundary(): OverworldJournalDecisionBoundary {
+  return {
+    acceptedDecisions: 2,
+    decisionProofHash: JOURNAL_BASE_HASH,
+    townId: journalLeadSourceScene.home,
+    areaId: journalLeadSourceScene.area,
+    minutes: 60,
+  };
+}
+
+function journalRegistrationEntry(
+  boundary: OverworldJournalDecisionBoundary,
+): OverworldJournalEntry {
+  return {
+    id: `registration:${journalRegistrationScene.id}:${JOURNAL_PROFILE_ID}`,
+    kind: "registration",
+    town: JOURNAL_TOWN,
+    title: "Registered: Unaffiliated courier",
+    text: "The courier registration was selected.",
+    recordedAt: timeLabel(boundary.minutes),
+    registrationBoundary: { ...boundary },
+  };
+}
+
+function journalRegistrationProof(args: {
+  character: CampaignCharacterState;
+  boundary: OverworldJournalDecisionBoundary;
+  journalIndex: number;
+}): OpeningRegistrationJournalProof {
+  const profile = journalRegistrationScene.profiles.find(
+    (candidate) => candidate.id === JOURNAL_PROFILE_ID,
+  );
+  if (!profile) throw new Error(`Missing journal test profile ${JOURNAL_PROFILE_ID}.`);
+  return {
+    characterAtRegistration: cloneCampaignCharacterState(args.character),
+    offered: true,
+    offerBoundary: { ...args.boundary },
+    profile,
+    selectionBoundary: { ...args.boundary },
+    journalIndex: args.journalIndex,
+    recordedAt: args.boundary.minutes,
+  };
+}
+
+function nextStoryBoundary(args: {
+  previous: OverworldJournalDecisionBoundary;
+  sceneId: string;
+  optionId: string;
+  minutes: number;
+}): OverworldJournalDecisionBoundary {
+  const number = args.previous.acceptedDecisions + 1;
+  return {
+    acceptedDecisions: number,
+    decisionProofHash: hashState({
+      previous: args.previous.decisionProofHash,
+      number,
+      surface: "overworld",
+      actionId: `campaign_story:${args.sceneId}:${args.optionId}`,
+      reason: "situation_changed",
+    }),
+    townId: args.previous.townId,
+    areaId: args.previous.areaId,
+    minutes: args.previous.minutes + args.minutes,
+  };
+}
+
+function leadEvidence(args: {
+  character: CampaignCharacterState;
+  predecessorBoundary: OverworldJournalDecisionBoundary;
+  olderEntries: readonly OverworldJournalEntry[];
+}) {
+  const terms = openingLeadSourceTerms(
+    optionById(journalLeadSourceScene, JOURNAL_SOURCE_OPTION_ID),
+    args.character,
+  );
+  const selectionBoundary = nextStoryBoundary({
+    previous: args.predecessorBoundary,
+    sceneId: journalLeadSourceScene.id,
+    optionId: JOURNAL_SOURCE_OPTION_ID,
+    minutes: terms.minutes,
+  });
+  const entries = [
+    openingLeadSourceJournalEntry({
+      scene: journalLeadSourceScene,
+      character: args.character,
+      optionId: JOURNAL_SOURCE_OPTION_ID,
+      town: JOURNAL_TOWN,
+      recordedAt: timeLabel(selectionBoundary.minutes),
+      storyChoiceBoundary: selectionBoundary,
+    }),
+    openingLeadSourceOfferJournalEntry({
+      scene: journalLeadSourceScene,
+      town: JOURNAL_TOWN,
+      recordedAt: timeLabel(args.predecessorBoundary.minutes),
+      storyChoiceBoundary: args.predecessorBoundary,
+    }),
+    ...args.olderEntries,
+  ];
+  return { entries, selectionBoundary, terms };
+}
+
+function selectedOathLeadFixture() {
+  const registrationCharacter = journalRegistrationCharacter();
+  const registrationBoundary = journalRegistrationBoundary();
+  const oathApplication = applyOpeningReliefOathOption({
+    scene: journalReliefOathScene,
+    character: registrationCharacter,
+    optionId: JOURNAL_OATH_OPTION_ID,
+  });
+  const oathBoundary = nextStoryBoundary({
+    previous: registrationBoundary,
+    sceneId: journalReliefOathScene.id,
+    optionId: JOURNAL_OATH_OPTION_ID,
+    minutes: oathApplication.terms.minutes,
+  });
+  const oathSelection = openingReliefOathJournalEntry({
+    scene: journalReliefOathScene,
+    character: registrationCharacter,
+    optionId: JOURNAL_OATH_OPTION_ID,
+    town: JOURNAL_TOWN,
+    recordedAt: timeLabel(oathBoundary.minutes),
+    storyChoiceBoundary: oathBoundary,
+  });
+  const oathOffer = openingReliefOathOfferJournalEntry({
+    scene: journalReliefOathScene,
+    town: JOURNAL_TOWN,
+    recordedAt: timeLabel(registrationBoundary.minutes),
+    storyChoiceBoundary: registrationBoundary,
+  });
+  const lead = leadEvidence({
+    character: oathApplication.characterAfter,
+    predecessorBoundary: oathBoundary,
+    olderEntries: [oathSelection, oathOffer, journalRegistrationEntry(registrationBoundary)],
+  });
+  const reliefOathProof: OpeningReliefOathJournalProof = {
+    characterAfterOath: cloneCampaignCharacterState(oathApplication.characterAfter),
+    offered: true,
+    legacy: false,
+    legacySourceWorldHash: null,
+    offerBoundary: { ...registrationBoundary },
+    option: oathApplication.option,
+    selectionBoundary: { ...oathBoundary },
+    terms: { ...oathApplication.terms },
+    journalIndex: 2,
+    recordedAt: oathBoundary.minutes,
+  };
+  return {
+    ...lead,
+    registrationCharacter,
+    registrationBoundary,
+    registrationProof: journalRegistrationProof({
+      character: registrationCharacter,
+      boundary: registrationBoundary,
+      journalIndex: 4,
+    }),
+    reliefOathProof,
+  };
+}
+
+function legacyOathLeadFixture() {
+  const registrationCharacter = journalRegistrationCharacter();
+  const registrationBoundary = journalRegistrationBoundary();
+  const legacyMarker = openingReliefOathLegacyJournalEntry({
+    sourceWorldHash: JOURNAL_LEGACY_HASH,
+    town: JOURNAL_TOWN,
+    recordedAt: timeLabel(registrationBoundary.minutes),
+    storyChoiceBoundary: registrationBoundary,
+  });
+  const lead = leadEvidence({
+    character: registrationCharacter,
+    predecessorBoundary: registrationBoundary,
+    olderEntries: [legacyMarker, journalRegistrationEntry(registrationBoundary)],
+  });
+  const reliefOathProof: OpeningReliefOathJournalProof = {
+    characterAfterOath: cloneCampaignCharacterState(registrationCharacter),
+    offered: false,
+    legacy: true,
+    legacySourceWorldHash: JOURNAL_LEGACY_HASH,
+    offerBoundary: null,
+    option: null,
+    selectionBoundary: null,
+    terms: null,
+    journalIndex: 2,
+    recordedAt: registrationBoundary.minutes,
+  };
+  return {
+    ...lead,
+    registrationCharacter,
+    registrationBoundary,
+    registrationProof: journalRegistrationProof({
+      character: registrationCharacter,
+      boundary: registrationBoundary,
+      journalIndex: 3,
+    }),
+    reliefOathProof,
+  };
+}
+
+function registrationAdjacentLeadFixture() {
+  const registrationCharacter = journalRegistrationCharacter();
+  const registrationBoundary = journalRegistrationBoundary();
+  const lead = leadEvidence({
+    character: registrationCharacter,
+    predecessorBoundary: registrationBoundary,
+    olderEntries: [journalRegistrationEntry(registrationBoundary)],
+  });
+  const registrationProof = journalRegistrationProof({
+    character: registrationCharacter,
+    boundary: registrationBoundary,
+    journalIndex: 2,
+  });
+  const emptyReliefOathProof: OpeningReliefOathJournalProof = {
+    characterAfterOath: cloneCampaignCharacterState(registrationCharacter),
+    offered: false,
+    legacy: false,
+    legacySourceWorldHash: null,
+    offerBoundary: null,
+    option: null,
+    selectionBoundary: null,
+    terms: null,
+    journalIndex: null,
+    recordedAt: null,
+  };
+  return {
+    ...lead,
+    registrationCharacter,
+    registrationBoundary,
+    registrationProof,
+    emptyReliefOathProof,
+  };
+}
+
+describe("opening lead-source relief-oath chronology", () => {
+  it("follows a selected oath exactly and applies source effects to characterAfterOath", () => {
+    const fixture = selectedOathLeadFixture();
+    const result = proveOpeningLeadSourceJournal({
+      scene: journalLeadSourceScene,
+      registrationProof: fixture.registrationProof,
+      reliefOathProof: fixture.reliefOathProof,
+      journalEntries: fixture.entries,
+      expectedTown: JOURNAL_TOWN,
+    });
+
+    expect(result.selectionBoundary).toEqual(fixture.selectionBoundary);
+    expect(result.characterAfterSource.knowledge).toContain(
+      "albany:knowledge_wolf_unaffiliated_bond",
+    );
+    expect(result.characterAfterSource.knowledge).toContain(
+      "albany:knowledge_wolf_market_testimony",
+    );
+    expect(result.characterAfterSource.promises).toContainEqual({
+      promiseId: "albany:promise_wolf_unaffiliated_bond",
+      recipientId: "albany:rowan_quill",
+      status: "active",
+    });
+
+    const separated = structuredClone(fixture.entries);
+    separated.splice(2, 0, {
+      id: "area:interposed_oath",
+      kind: "area",
+      town: JOURNAL_TOWN,
+      title: "Interposed",
+      text: "This cannot divide the source offer from the oath.",
+      recordedAt: timeLabel(fixture.reliefOathProof.recordedAt!),
+    });
+    expect(() =>
+      proveOpeningLeadSourceJournal({
+        scene: journalLeadSourceScene,
+        registrationProof: { ...fixture.registrationProof, journalIndex: 5 },
+        reliefOathProof: { ...fixture.reliefOathProof, journalIndex: 3 },
+        journalEntries: separated,
+        expectedTown: JOURNAL_TOWN,
+      }),
+    ).toThrow(/immediately follow the selected relief oath/i);
+  });
+
+  it("follows a trusted oath legacy marker at its exact neutral boundary", () => {
+    const fixture = legacyOathLeadFixture();
+    const result = proveOpeningLeadSourceJournal({
+      scene: journalLeadSourceScene,
+      registrationProof: fixture.registrationProof,
+      reliefOathProof: fixture.reliefOathProof,
+      journalEntries: fixture.entries,
+      expectedTown: JOURNAL_TOWN,
+    });
+
+    expect(result.option?.id).toBe(JOURNAL_SOURCE_OPTION_ID);
+    expect(result.characterAfterSource.knowledge).toContain(
+      "albany:knowledge_wolf_market_testimony",
+    );
+    expect(result.characterAfterSource.knowledge).not.toContain(
+      "albany:knowledge_wolf_unaffiliated_bond",
+    );
+
+    const forgedBoundary = structuredClone(fixture.entries);
+    forgedBoundary[2]!.storyChoiceBoundary!.decisionProofHash = "0".repeat(64);
+    expect(() =>
+      proveOpeningLeadSourceJournal({
+        scene: journalLeadSourceScene,
+        registrationProof: fixture.registrationProof,
+        reliefOathProof: fixture.reliefOathProof,
+        journalEntries: forgedBoundary,
+        expectedTown: JOURNAL_TOWN,
+      }),
+    ).toThrow(/trusted legacy relief-oath marker/i);
+
+    const separated = structuredClone(fixture.entries);
+    separated.splice(2, 0, {
+      id: "area:interposed_legacy_oath",
+      kind: "area",
+      town: JOURNAL_TOWN,
+      title: "Interposed",
+      text: "This cannot divide the source offer from the legacy oath marker.",
+      recordedAt: timeLabel(fixture.registrationBoundary.minutes),
+    });
+    expect(() =>
+      proveOpeningLeadSourceJournal({
+        scene: journalLeadSourceScene,
+        registrationProof: { ...fixture.registrationProof, journalIndex: 4 },
+        reliefOathProof: { ...fixture.reliefOathProof, journalIndex: 3 },
+        journalEntries: separated,
+        expectedTown: JOURNAL_TOWN,
+      }),
+    ).toThrow(/immediately follow the trusted legacy relief-oath marker/i);
+  });
+
+  it("fails closed on an empty oath proof and opens only the explicit migration gap", () => {
+    const fixture = registrationAdjacentLeadFixture();
+    const withoutOathWorld = proveOpeningLeadSourceJournal({
+      scene: journalLeadSourceScene,
+      registrationProof: fixture.registrationProof,
+      journalEntries: fixture.entries,
+      expectedTown: JOURNAL_TOWN,
+    });
+    expect(withoutOathWorld.option?.id).toBe(JOURNAL_SOURCE_OPTION_ID);
+
+    expect(() =>
+      proveOpeningLeadSourceJournal({
+        scene: journalLeadSourceScene,
+        registrationProof: fixture.registrationProof,
+        reliefOathProof: fixture.emptyReliefOathProof,
+        journalEntries: fixture.entries,
+        expectedTown: JOURNAL_TOWN,
+      }),
+    ).toThrow(/missing.*relief-oath predecessor.*trusted migration/i);
+
+    const migrated = proveOpeningLeadSourceJournal({
+      scene: journalLeadSourceScene,
+      registrationProof: fixture.registrationProof,
+      reliefOathProof: fixture.emptyReliefOathProof,
+      journalEntries: fixture.entries,
+      expectedTown: JOURNAL_TOWN,
+      allowMissingReliefOathForMigration: true,
+    });
+    expect(migrated.option?.id).toBe(JOURNAL_SOURCE_OPTION_ID);
+    expect(migrated.characterAfterSource.knowledge).toContain(
+      "albany:knowledge_wolf_market_testimony",
+    );
+
+    const pendingProof: OpeningReliefOathJournalProof = {
+      ...fixture.emptyReliefOathProof,
+      offered: true,
+      offerBoundary: { ...fixture.registrationBoundary },
+      recordedAt: fixture.registrationBoundary.minutes,
+    };
+    expect(() =>
+      proveOpeningLeadSourceJournal({
+        scene: journalLeadSourceScene,
+        registrationProof: fixture.registrationProof,
+        reliefOathProof: pendingProof,
+        journalEntries: fixture.entries,
+        expectedTown: JOURNAL_TOWN,
+        allowMissingReliefOathForMigration: true,
+      }),
+    ).toThrow(/selected or trusted legacy relief-oath predecessor/i);
   });
 });

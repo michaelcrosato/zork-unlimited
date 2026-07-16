@@ -484,6 +484,7 @@ export default function App(): JSX.Element {
     const isPreparation = journey.storyChoice?.kind === "preparation";
     const isAlly = journey.storyChoice?.kind === "ally";
     const isReliefAllocation = journey.storyChoice?.kind === "relief_allocation";
+    const isReliefOath = journey.storyChoice?.kind === "relief_oath";
     try {
       const result = worldSession.chooseJourneyStory(choiceId);
       setWorldView(worldSession.view());
@@ -518,11 +519,17 @@ export default function App(): JSX.Element {
                       `Current goal: ${result.goal.text}`,
                       ...previous,
                     ]
-                : [
-                    `Story consequence: ${result.consequence}`,
-                    `New goal: ${result.goal.text}`,
-                    ...previous,
-                  ],
+                  : isReliefOath
+                    ? [
+                        `Relief terms bound: ${result.consequence}`,
+                        `Current goal: ${result.goal.text}`,
+                        ...previous,
+                      ]
+                    : [
+                        `Story consequence: ${result.consequence}`,
+                        `New goal: ${result.goal.text}`,
+                        ...previous,
+                      ],
       );
       setError(null);
     } catch (e) {

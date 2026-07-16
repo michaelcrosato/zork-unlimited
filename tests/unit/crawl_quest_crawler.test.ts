@@ -207,24 +207,28 @@ describe("quest crawler", () => {
     SOLVER_TEST_TIMEOUT_MS,
   );
 
-  it("SOFTLOCK(solver): no false positive on a healthy generated pack (Fix 1)", () => {
-    // Task 5 review fix: the solver oracle must pass an explicit `explore: () =>
-    // true` policy to exhaustiveEndingsMulti — the module's default (correct for the
-    // reachability-PROOF callers it was built for) skips DROP/CLOSE/LOOK/INVENTORY/
-    // READ/INSPECT, which can only ever HIDE an ending from THIS search, turning a
-    // real, findable ending into a false SOFTLOCK (reached.size === 0). A healthy
-    // pack must report zero SOFTLOCK findings regardless of seed.
-    for (const seed of [1, 2, 3, 4]) {
-      const r = crawlQuest(preparePack(generateRpgPack(seed)), {
-        seed,
-        maxSteps: 800,
-        policy: "mixed",
-        commit: "test",
-        solverBudget: 20000,
-      });
-      expect(r.findings.filter((f) => f.code === "SOFTLOCK")).toEqual([]);
-    }
-  });
+  it(
+    "SOFTLOCK(solver): no false positive on a healthy generated pack (Fix 1)",
+    () => {
+      // Task 5 review fix: the solver oracle must pass an explicit `explore: () =>
+      // true` policy to exhaustiveEndingsMulti — the module's default (correct for the
+      // reachability-PROOF callers it was built for) skips DROP/CLOSE/LOOK/INVENTORY/
+      // READ/INSPECT, which can only ever HIDE an ending from THIS search, turning a
+      // real, findable ending into a false SOFTLOCK (reached.size === 0). A healthy
+      // pack must report zero SOFTLOCK findings regardless of seed.
+      for (const seed of [1, 2, 3, 4]) {
+        const r = crawlQuest(preparePack(generateRpgPack(seed)), {
+          seed,
+          maxSteps: 800,
+          policy: "mixed",
+          commit: "test",
+          solverBudget: 20000,
+        });
+        expect(r.findings.filter((f) => f.code === "SOFTLOCK")).toEqual([]);
+      }
+    },
+    SOLVER_TEST_TIMEOUT_MS,
+  );
 
   it("SOFTLOCK: the immediate S4 does not also fire the solver form for the same dead end (Fix 2)", () => {
     const pack = generateRpgPack(8);
