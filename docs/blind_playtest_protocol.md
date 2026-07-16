@@ -221,15 +221,17 @@ resume a current-contract fleet slot.
 ## Fleet mode
 
 ```bash
-npm run fleet -- --count 100 --concurrency 4 --model mix --seed-base <fresh-seed-base> --label <fresh-label> --no-resume --max-retries 0
+npm run fleet -- --count 10 --concurrency 4 --model sonnet --seed-base <fresh-pilot-seed-base> --label <fresh-pilot-label> --no-resume --max-retries 0
+npm run starting-slice:pilot -- --fleet ai-runs/fleet/<fresh-pilot-label>
+npm run fleet -- --count 100 --concurrency 4 --model sonnet --seed-base <fresh-seed-base> --label <fresh-label> --no-resume --max-retries 0
 ```
 
 Every live member is the same canonical pure contract with a different seed
-(and, optionally, model). Pure fleets use the neutral default persona; persona
-mixtures are structural experiments only. The repository-standard `mix` is a
-deterministic 9 Haiku : 1 Sonnet weighting by planned slot and is the default
-when `--model` is omitted. Thus `npm run fleet -- --count 100` creates the
-required 90/10 plan without an extra flag.
+(and, for diagnostic experiments, optionally a different model). Pure fleets
+use the neutral default persona; persona mixtures are structural experiments
+only. Homogeneous Sonnet is the default and the only authoritative requested
+model plan. Explicit `mix` retains its deterministic 9 Haiku : 1 Sonnet
+weighting for diagnostics; explicit Haiku and Opus are also non-certifying.
 
 Before any live member launches, preflight freezes one full tracked Git commit,
 the canonical fresh-overworld world id/hash, the contiguous planned seeds, and
@@ -268,7 +270,20 @@ certification reconstructs them and rejects any recovered member.
 
 ### Starting-slice certification
 
-After the live cohort is closed, run:
+Before the authority spend, close and validate a fresh ten-Sonnet pilot:
+
+```bash
+npm run fleet -- --count 10 --concurrency 4 --model sonnet --seed-base <fresh-pilot-seed-base> --label <fresh-pilot-label> --no-resume --max-retries 0
+npm run starting-slice:pilot -- --fleet ai-runs/fleet/<fresh-pilot-label>
+```
+
+The pilot requires 10/10 primary unrecovered/no-retry reports, unique game and
+Claude sessions, one exact actual model id, recognized Wolf-Winter outcomes, at
+least three strategy families, and no family above 7/10. It checks the other
+slice gates but writes a distinct readiness result and can never certify the
+milestone. If the exact provider model id later changes, repilot.
+
+After the authoritative live cohort is closed, run:
 
 ```bash
 npm run starting-slice:certify -- --fleet ai-runs/fleet/<label>
@@ -278,7 +293,8 @@ The certifier independently reparses every authenticated artifact. It requires
 exactly 100 unique contiguous planned seeds, no failed or missing slots, the
 default pure fresh-overworld contract, `--no-resume`, exactly one verified
 attempt per slot, zero skipped/resumed or report-recovered slots, and the
-repository-standard 9:1 Haiku/Sonnet mix on one clean build/world. Malformed or unauthenticated evidence
+homogeneous requested Sonnet plan authenticated to one exact actual model id,
+with unique game and Claude sessions, on one clean build/world. Malformed or unauthenticated evidence
 exits 2, an authenticated cohort that misses a threshold exits 1, and a pass
 exits 0.
 

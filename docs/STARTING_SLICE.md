@@ -653,16 +653,32 @@ commit and the canonical fresh-overworld world id/hash. The tracked worktree mus
 be clean; a dirty tree or Git/provenance error fails before launch. Untracked
 notes do not dirty this check. It also freezes the contiguous planned seed range,
 current journey contract, default pure fresh-overworld player contract, and the
-repository-standard deterministic 9:1 Haiku/Sonnet model mix.
+repository-standard homogeneous Sonnet model plan.
 
-That mix is the live launcher's default. The canonical authoritative launch is:
+Sonnet is the live launcher's default. Explicit `mix`, Haiku, and Opus plans
+remain diagnostic experiments and cannot certify the slice. Before the
+100-player spend, a fresh ten-player Sonnet pilot must pass this go/no-go pair:
 
 ```bash
-npm run fleet -- --count 100 --concurrency 4 --model mix --seed-base <fresh-seed-base> --label <fresh-label> --no-resume --max-retries 0
+npm run fleet -- --count 10 --concurrency 4 --model sonnet --seed-base <fresh-pilot-seed-base> --label <fresh-pilot-label> --no-resume --max-retries 0
+npm run starting-slice:pilot -- --fleet ai-runs/fleet/<fresh-pilot-label>
 ```
 
-It produces the required 90 Haiku and 10 Sonnet slots. Other model plans are
-non-certifying experiments.
+The pilot requires all ten primary reports to authenticate without resume,
+retry, recovery, or failed attempts; ten unique game sessions and Claude
+sessions; one exact authenticated actual model id; recognized Wolf-Winter
+outcomes; at least three organic strategy families; and no family above 7/10.
+It also evaluates the slice's completion-speed, clarity, enjoyment,
+continuation, stuck, and severity gates. A passing pilot is readiness evidence,
+never milestone certification. If the later authority cohort resolves to a
+different exact provider model id, run a new pilot before treating that cohort
+as comparable.
+
+Only after that pilot passes, launch the canonical authoritative cohort:
+
+```bash
+npm run fleet -- --count 100 --concurrency 4 --model sonnet --seed-base <fresh-seed-base> --label <fresh-label> --no-resume --max-retries 0
+```
 
 A live fleet label must be fresh and its bundle is a closed cohort; an existing
 label directory is rejected rather than appended to or mixed with stale rows.
@@ -690,7 +706,7 @@ primary prose and cannot participate in authoritative certification.
 
 Each live member also has an adjacent runner-owned v2 attestation that binds its
 planned model, actual singleton model use, unique Claude session, completed
-clean primary envelope, game session, and raw-byte SHA-256 digests of the
+clean primary envelope, unique game session, and raw-byte SHA-256 digests of the
 report, run sidecar, raw JSONL evidence, primary envelope, and any complete
 recovery set. Diagnostic resume reconstructs these facts from the bytes;
 certification reconstructs them and rejects every recovered member.
@@ -703,10 +719,12 @@ npm run starting-slice:certify -- --fleet ai-runs/fleet/<label>
 
 It reparses and reverifies every report and sidecar instead of trusting summary
 counts. Certification requires exactly 100 unique rows for the contiguous
-planned seeds, all successful and present, under the frozen pure/default/build/
-world/model contract, with `--no-resume`, the cohort's current-stamp report
-basename, exactly one verified attempt per slot, and zero report-recovered rows
-or artifacts.
+planned seeds, all requested as Sonnet and authenticated to one exact actual
+model id, all successful and present, under the frozen pure/default/build/world
+contract, with unique game and Claude sessions, `--no-resume`, the cohort's
+current-stamp report basename, exactly one verified attempt per slot, and zero
+report-recovered rows or artifacts. The ten-player pilot uses a separate result
+kind and artifact and can never satisfy this 100-player authority boundary.
 Malformed or unauthenticated evidence exits 2; a valid
 cohort that misses a quality threshold exits 1; a pass exits 0.
 

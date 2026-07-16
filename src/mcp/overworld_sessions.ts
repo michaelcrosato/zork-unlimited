@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+
 import {
   OVERWORLD_COMPACT_LEGEND,
   type OverworldCompactLegend,
@@ -347,7 +349,6 @@ export function isOverworldMcpRejectedSessionPayload(
 }
 
 export class OverworldMcpSessionStore {
-  private counter = 0n;
   private readonly sessions = new Map<string, OverworldSession>();
 
   constructor(
@@ -359,14 +360,19 @@ export class OverworldMcpSessionStore {
 
   create(): OverworldMcpSessionEntry {
     const session = new OverworldSession(this.loadManifest());
-    const session_id = `o${++this.counter}`;
+    // Each live fleet member owns a separate MCP process, so a process-local
+    // counter would give every independently authenticated run the same `o1`
+    // handle. Keep the handle outside deterministic game state while making it
+    // globally unique enough to prove that cohort rows came from distinct game
+    // sessions.
+    const session_id = `o-${randomUUID()}`;
     rememberOverworldSessionEntry(this.sessions, session_id, session, this.maxSessions);
     return { session_id, session };
   }
 
   restore(snapshot: unknown): OverworldMcpSessionEntry {
     const session = OverworldSession.restore(this.loadManifest(), snapshot);
-    const session_id = `o${++this.counter}`;
+    const session_id = `o-${randomUUID()}`;
     rememberOverworldSessionEntry(this.sessions, session_id, session, this.maxSessions);
     return { session_id, session };
   }

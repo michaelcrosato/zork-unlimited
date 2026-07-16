@@ -188,7 +188,9 @@ describe("MCP pure play mode", () => {
         });
         const payload = textPayload(started);
         sessionId = String(payload.session_id);
-        expect(sessionId).toMatch(/^o\d+$/);
+        expect(sessionId).toMatch(
+          /^o-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
+        );
 
         const invalidStoryChoice = await client.callTool({
           name: "choose_overworld_session_story",
