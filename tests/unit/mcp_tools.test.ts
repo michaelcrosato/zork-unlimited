@@ -750,6 +750,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(startedQuest.rpg_session.observation.mode).toBe("rpg");
     expect(startedQuest.rpg_session.observation.ended).toBe(false);
     expect(startedQuest.rpg_session.observation.available_actions.length).toBeGreaterThan(0);
+    expect(a.sessions.get(startedQuest.rpg_session_id).state.seed).toBe(1);
     expect(startedQuest.observation.startedQuestIds).toEqual([discoveredQuest.id]);
     expect(startedQuest.observation.journal[0]).toMatchObject({
       id: `quest:${discoveredQuest.id}`,
@@ -800,6 +801,33 @@ describe("MCP tools — validate / load (§9.4)", () => {
         compact_observation: false,
       }).observation.title,
     ).toBe(startedQuest.rpg_session.observation.title);
+
+    const privatelySeededApi = createToolApi({ root: ROOT, embeddedQuestSeed: 2731 });
+    const privateSeedSource = privatelySeededApi.restore_overworld_session({
+      ...FULL_OVERWORLD_RESPONSE,
+      snapshot: beforeQuestStart.snapshot,
+    });
+    const privateSeedQuest = privatelySeededApi.start_overworld_session_quest({
+      ...FULL_OVERWORLD_QUEST_START,
+      session_id: privateSeedSource.session_id,
+      quest_id: discoveredQuest.id,
+      approach_id: SHELTERED_APPROACH_ID,
+    });
+    expect(privatelySeededApi.sessions.get(privateSeedQuest.rpg_session_id).state.seed).toBe(2731);
+
+    const explicitSeedSource = privatelySeededApi.restore_overworld_session({
+      ...FULL_OVERWORLD_RESPONSE,
+      snapshot: beforeQuestStart.snapshot,
+    });
+    const explicitSeedQuest = privatelySeededApi.start_overworld_session_quest({
+      ...FULL_OVERWORLD_QUEST_START,
+      session_id: explicitSeedSource.session_id,
+      quest_id: discoveredQuest.id,
+      approach_id: SHELTERED_APPROACH_ID,
+      seed: 2732,
+    });
+    expect(privatelySeededApi.sessions.get(explicitSeedQuest.rpg_session_id).state.seed).toBe(2732);
+
     const compactSource = a.restore_overworld_session({
       snapshot: beforeQuestStart.snapshot,
       compact_context: true,

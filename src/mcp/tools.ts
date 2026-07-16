@@ -12,7 +12,7 @@
  */
 import { readFileSync } from "node:fs";
 import type { RpgAction } from "../api/types.js";
-import type { GameState } from "../core/state.js";
+import { assertRuntimeSeed, type GameState } from "../core/state.js";
 import { hashState } from "../core/hash.js";
 
 import type { CompiledRpgSource } from "../rpg/source.js";
@@ -425,8 +425,11 @@ type RpgSaveResponse<Args extends RpgSaveArgs> =
   | (Args extends { expected_state_hash: string } ? RpgSaveRejection : never)
   | (Args extends { if_state_hash: string } ? RpgSaveUnchanged : never);
 
-export function createToolApi(opts: { root: string }) {
+export function createToolApi(opts: { root: string; embeddedQuestSeed?: number }) {
   const root = opts.root;
+  if (opts.embeddedQuestSeed !== undefined) {
+    assertRuntimeSeed(opts.embeddedQuestSeed, "Embedded quest seed");
+  }
   const sessions = new SessionStore();
   const rpgSources = new RpgSourceRuntime(root);
   const rpgRuntime = new RpgMcpSessionRuntime(sessions);
@@ -476,10 +479,11 @@ export function createToolApi(opts: { root: string }) {
         };
         const source = rpgSources.requireWorldQuestPlayable(startArgs.world_quest_id);
         const index = rpgRuntime.runtimeFor(source.compiled.pack).index;
+        const seed = startArgs.seed ?? opts.embeddedQuestSeed ?? 1;
         const initialState =
           source.campaignImports === undefined
-            ? initStateForRpgPack(index, startArgs.seed ?? 1)
-            : initStateForRpgPack(index, startArgs.seed ?? 1, {
+            ? initStateForRpgPack(index, seed)
+            : initStateForRpgPack(index, seed, {
                 character: context.character,
                 imports: source.campaignImports,
               });

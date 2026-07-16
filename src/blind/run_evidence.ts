@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isDeepStrictEqual } from "node:util";
 import { JourneyExitReceiptSchema } from "./exit_interview.js";
 
 export const FreshStartRunEvidenceSchema = z
@@ -22,12 +23,64 @@ export const JourneyExitRunEvidenceSchema = z
   })
   .strict();
 
-export const RunEvidenceEventSchema = z.discriminatedUnion("event", [
+export const PureRunBuildSchema = z
+  .object({
+    git_commit: z.string().regex(/^[0-9a-f]{40}$/),
+    tracked_worktree_clean: z.boolean(),
+    world_id: z.string().min(1),
+    world_hash: z.string().regex(/^[0-9a-f]{64}$/),
+  })
+  .strict();
+
+export const CanonicalQuestOutcomesSchema = z
+  .array(z.tuple([z.string().min(1), z.string().min(1)]))
+  .superRefine((outcomes, ctx) => {
+    for (let index = 1; index < outcomes.length; index += 1) {
+      if (outcomes[index - 1]![0].localeCompare(outcomes[index]![0]) >= 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: [index],
+          message: "quest outcomes must be strictly sorted and unique by quest id",
+        });
+      }
+    }
+  });
+
+export const FreshStartRunEvidenceV2Schema = z
+  .object({
+    schema_version: z.literal(2),
+    play_mode: z.literal("pure"),
+    event: z.literal("fresh_start"),
+    start_surface: z.literal("fresh_overworld"),
+    session_id: z.string().min(1),
+    run_seed: z.number().int().safe(),
+    build: PureRunBuildSchema,
+  })
+  .strict();
+
+export const JourneyExitRunEvidenceV2Schema = z
+  .object({
+    schema_version: z.literal(2),
+    play_mode: z.literal("pure"),
+    event: z.literal("journey_exit"),
+    start_surface: z.literal("fresh_overworld"),
+    session_id: z.string().min(1),
+    run_seed: z.number().int().safe(),
+    build: PureRunBuildSchema,
+    quest_outcomes: CanonicalQuestOutcomesSchema,
+    receipt: JourneyExitReceiptSchema,
+  })
+  .strict();
+
+// A flat union is required because v1 and v2 deliberately share event names.
+export const RunEvidenceEventSchema = z.union([
   FreshStartRunEvidenceSchema,
   JourneyExitRunEvidenceSchema,
+  FreshStartRunEvidenceV2Schema,
+  JourneyExitRunEvidenceV2Schema,
 ]);
 
-export const PureBlindRunSidecarSchema = z
+export const PureBlindRunSidecarV1Schema = z
   .object({
     schema_version: z.literal(1),
     report_schema_version: z.literal(2),
@@ -39,6 +92,27 @@ export const PureBlindRunSidecarSchema = z
     receipt: JourneyExitReceiptSchema,
   })
   .strict();
+
+export const PureBlindRunSidecarV2Schema = z
+  .object({
+    schema_version: z.literal(2),
+    report_schema_version: z.literal(2),
+    play_mode: z.literal("pure"),
+    start_surface: z.literal("fresh_overworld"),
+    retention_eligible: z.literal(true),
+    evidence_status: z.literal("verified"),
+    session_id: z.string().min(1),
+    run_seed: z.number().int().safe(),
+    build: PureRunBuildSchema,
+    quest_outcomes: CanonicalQuestOutcomesSchema,
+    receipt: JourneyExitReceiptSchema,
+  })
+  .strict();
+
+export const PureBlindRunSidecarSchema = z.union([
+  PureBlindRunSidecarV1Schema,
+  PureBlindRunSidecarV2Schema,
+]);
 
 export const StructuralBlindRunSidecarSchema = z
   .object({
@@ -52,7 +126,8 @@ export const StructuralBlindRunSidecarSchema = z
   })
   .strict();
 
-export const BlindRunSidecarSchema = z.discriminatedUnion("play_mode", [
+// Pure evidence has two versions with the same play_mode discriminator.
+export const BlindRunSidecarSchema = z.union([
   PureBlindRunSidecarSchema,
   StructuralBlindRunSidecarSchema,
 ]);
@@ -125,16 +200,61 @@ export function parseRunEvidenceJsonl(text: string): RunEvidenceParseResult {
     return { ok: false, reason: "run evidence fresh_start and journey_exit session ids differ" };
   }
 
+  if (start.schema_version !== exit.schema_version) {
+    return {
+      ok: false,
+      reason: "run evidence fresh_start and journey_exit schema versions differ",
+    };
+  }
+
+  if (start.schema_version === 1) {
+    if (exit.schema_version !== 1) {
+      return {
+        ok: false,
+        reason: "run evidence fresh_start and journey_exit schema versions differ",
+      };
+    }
+    return {
+      ok: true,
+      sidecar: {
+        schema_version: 1,
+        report_schema_version: 2,
+        play_mode: "pure",
+        start_surface: "fresh_overworld",
+        retention_eligible: true,
+        evidence_status: "verified",
+        session_id: start.session_id,
+        receipt: exit.receipt,
+      },
+    };
+  }
+
+  if (exit.schema_version !== 2) {
+    return {
+      ok: false,
+      reason: "run evidence fresh_start and journey_exit schema versions differ",
+    };
+  }
+  if (start.run_seed !== exit.run_seed) {
+    return { ok: false, reason: "run evidence fresh_start and journey_exit seeds differ" };
+  }
+  if (!isDeepStrictEqual(start.build, exit.build)) {
+    return { ok: false, reason: "run evidence fresh_start and journey_exit builds differ" };
+  }
+
   return {
     ok: true,
     sidecar: {
-      schema_version: 1,
+      schema_version: 2,
       report_schema_version: 2,
       play_mode: "pure",
       start_surface: "fresh_overworld",
       retention_eligible: true,
       evidence_status: "verified",
       session_id: start.session_id,
+      run_seed: start.run_seed,
+      build: start.build,
+      quest_outcomes: exit.quest_outcomes,
       receipt: exit.receipt,
     },
   };

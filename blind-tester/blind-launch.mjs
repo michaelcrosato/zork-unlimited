@@ -52,6 +52,19 @@ const NPM_EATEN_FLAGS = [
  */
 export function recoverNpmEatenFlags(argv, env) {
   const args = [...argv];
+  const unresolvedValueFlags = NPM_EATEN_FLAGS.filter(
+    ([key, flag, takesValue]) =>
+      takesValue && env[`npm_config_${key}`] === "true" && !args.includes(flag),
+  );
+  const numericOrphans = args.filter((value) => /^-?\d+$/.test(value));
+  if (
+    unresolvedValueFlags.length > 1 ||
+    (unresolvedValueFlags.length === 1 && numericOrphans.length !== 1)
+  ) {
+    throw new Error(
+      `Cannot safely recover space-separated ${unresolvedValueFlags.map(([, flag]) => flag).join(" / ")} values from npm; use equals form (for example --seed=-17 --delay-ms=1500).`,
+    );
+  }
   let recovered = false;
   for (const [key, flag, takesValue] of NPM_EATEN_FLAGS) {
     const value = env[`npm_config_${key}`];
@@ -64,7 +77,7 @@ export function recoverNpmEatenFlags(argv, env) {
       args.push(flag, value);
       recovered = true;
     } else {
-      const orphan = args.findIndex((t) => /^\d+$/.test(t));
+      const orphan = args.findIndex((t) => /^-?\d+$/.test(t));
       if (orphan >= 0) {
         const [num] = args.splice(orphan, 1);
         args.push(flag, num);
@@ -117,7 +130,14 @@ function gitBash() {
 }
 
 function main() {
-  const { args, recovered } = recoverNpmEatenFlags(process.argv.slice(2), process.env);
+  let recovery;
+  try {
+    recovery = recoverNpmEatenFlags(process.argv.slice(2), process.env);
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : String(error));
+    process.exit(2);
+  }
+  const { args, recovered } = recovery;
   if (recovered) {
     console.error(
       "(recovered flags npm consumed — PowerShell strips `--`; `npm run blind --flag=value` works directly)",
