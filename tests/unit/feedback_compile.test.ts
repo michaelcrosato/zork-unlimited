@@ -368,6 +368,10 @@ describe("collectInputs", () => {
     const base = join(dir, "20260101T000004Z_overworld_seed4");
     const fixture = pureReportAndSidecar();
     writeFileSync(`${base}.md`, fixture.report);
+    // Simulate SIGKILL after the runner published durable JSONL but before its
+    // final adjacent-sidecar commit. Raw evidence alone must not make the
+    // discoverable markdown accepted or downgrade it to legacy evidence.
+    writeFileSync(`${base}.evidence.jsonl`, '{"type":"journey_exit"}\n');
 
     expect(collectInputs(process.cwd(), [dir])).toMatchObject({ verified: 0, rejected: 1 });
 

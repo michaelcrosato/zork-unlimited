@@ -93,35 +93,97 @@ for a full-speed feed. Spectate is fully inert when not enabled.
 `blind-tester/fleet.mjs` (Tier 2 of the testing pyramid,
 `docs/testing_pyramid.md`) runs the 100 independent pure fresh-overworld players
 required at a milestone or feedback-harvest cycle, with bounded concurrency,
-mode-aware resume, and a manifest — each one an ordinary `run.sh` spawn:
+optional authenticated diagnostic resume, and a closed manifest bundle — each
+one an ordinary `run.sh` spawn. The authoritative starting-slice command is:
 
 ```bash
-npm run fleet -- --count 100 --concurrency 4 --model mix --seed-base 1000
+npm run fleet -- --count 100 --concurrency 4 --model mix --seed-base <fresh-seed-base> --label <fresh-label> --no-resume --max-retries 0
 npm run fleet:mock -- --count 2     # structural zero-token dry run
 npm run fleet:mock -- --count 2 --target quest:sunken_barrow # structural drop-in
 ```
 
+- **Preflight**: before spending tokens, a live fleet freezes the full clean
+  tracked Git commit, canonical world id/hash, contiguous planned seeds, and
+  run/model plan. A dirty tree or Git/provenance error aborts launch. Untracked
+  notes do not dirty this check.
 - **Persona**: pure live fleets enforce the neutral `default` first-time-player
   persona. `explorer`, `speedrunner`, `breaker`, `casual`, `lore-reader`, and
   `mixed` remain explicit structural experiments; their prescribed behavior
   changes the retention measurement.
 - **Model**: `--model <alias>` (`haiku`, `sonnet`, `opus`) or `--model mix`
   (deterministic 9 haiku : 1 sonnet weighting by index). No temperature/top_p
-  flag exists — model × seed is the live diversity axis.
-- **Resume**: only a reverified schema-V2 pure report with matching
-  server-authored run evidence and the current journey-contract version may
-  skip a pure member. Historical contract-v1/v2, guided, legacy, mock, and
-  structural reports never match. Failed attempts back off exponentially up to
-  `--max-retries` (default 2).
+  flag exists — model × seed is the live diversity axis. Live fleets default to
+  `mix`, so `npm run fleet -- --count 100` produces the certifying 90/10 plan.
+- **Resume**: resume is enabled by default for diagnostic fleets only. Only a
+  reverified report plus evidence-sidecar schema v2 with the
+  current journey contract, exact planned seed, and exact clean commit and world
+  id/hash may skip a pure member. Generic readers retain historical sidecar-v1
+  readability, but v1, historical contract-v1/v2, guided, legacy, mock, and
+  structural evidence never enters a diagnostic pure cohort. `--no-resume`
+  disables lookup entirely and is mandatory for certification. Failed attempts back off
+  exponentially up to `--max-retries` (default 2). Before a retry, every
+  generated artifact and a diagnostic log are copied into the bundle's
+  per-seed/per-attempt archive with byte counts and SHA-256 digests.
+- **Runner attestation**: each accepted live member has an adjacent runner-owned
+  v2 attestation. It binds the plan to the game session, unique Claude session,
+  actual singleton model usage, completed clean primary envelope, and raw-byte
+  SHA-256 digests of the report, sidecar, raw JSONL evidence, primary envelope,
+  and any complete recovery artifact set. Diagnostic resume reconstructs these
+  facts rather than trusting the attestation; certification also reconstructs
+  them, then rejects any member whose report was recovered.
 - **Output**: reports plus verified `.run.json` evidence sidecars in `reports/`
-  (or `--out <dir>`); a manifest at
+  (or `--out <dir>`). For pure runs the adjacent sidecar is the final publication
+  commit marker: verification uses a work-private sidecar, then the runner
+  publishes exact raw JSONL, completes recovery/provenance gates, and creates
+  `.run.json` last with an exclusive byte-checked copy. A `.md` or
+  `.evidence.jsonl` left without that marker is rejected, never treated as
+  legacy evidence; ordinary unsuccessful exits also remove those unfinished
+  acceptance artifacts. A manifest at
   `ai-runs/fleet/<label>/manifest.jsonl` and `summary.json` preserve play mode,
-  start surface, journey contract, current/completed goals, goal/checkpoint
-  choices, exit reason, and eligibility.
+  start surface, journey contract, authenticated seed/build/world/quest
+  outcomes, current/completed goals, goal/checkpoint choices, exit reason, and
+  eligibility. Every row carries the complete ordered attempt history and
+  declares report-only recovery only when `.initial-report.txt`,
+  `.repair.meta.json`, and `.repair.json` form a complete, deterministically
+  reproducible byte-bound set; rejected originals stay outside feedback
+  compiler `*.md` discovery. Recovery is diagnostic only: subjective fields
+  such as confusion, bugs, stuck state, and replay intent were generated after
+  the primary report and therefore cannot certify the slice. Summary
+  failure/timeout counts are reduced from all attempts, not only each slot's
+  final result. Each live label must be fresh and identifies one frozen cohort;
+  an existing label is rejected rather than appended to or mixed with stale
+  rows. Resume, a skipped slot, any retry, or any failed attempt makes a bundle
+  diagnostic and non-certifying. A new authoritative label must launch all 100
+  slots with `--no-resume --max-retries 0`; historical successes cannot be
+  relabeled into that cohort.
 - Live (non-mock) fleets spend real tokens — run them from a plain shell, not
   from inside a Claude Code session (nested CLI auth returns 401 there). A live
   fleet always enforces pure/fresh-overworld/default-persona; `quest:<id>` and
   non-default personas are accepted only by explicit mock structural runs.
+
+### Certifying the starting slice
+
+Close an authoritative 100-player bundle, then run:
+
+```bash
+npm run fleet -- --count 100 --concurrency 4 --model mix --seed-base <fresh-seed-base> --label <fresh-label> --no-resume --max-retries 0
+npm run starting-slice:certify -- --fleet ai-runs/fleet/<label>
+```
+
+The certifier reparses and reverifies all reports and sidecars. It requires
+exactly 100 unique contiguous planned seeds, no failed/missing slots, one clean
+build/world, zero failed attempts or report-recovered members across the closed
+histories, the current pure fresh-overworld/default-player contract, and the
+standard deterministic 9 Haiku : 1 Sonnet mix. Malformed or unauthenticated
+evidence exits 2; valid evidence that misses a gate exits 1; a pass exits 0.
+
+The exact simultaneous quality gates and Wolf-Winter outcome mapping live in
+[`docs/STARTING_SLICE.md`](../docs/STARTING_SLICE.md). The certifier uses the
+receipt's initial-goal choice, never `would_replay`; treats absent Wolf completion
+as incomplete and death/unknown endings as invalid; and keeps ambiguous issue
+scope in-scope. Only this fleet can decide certification—global historical
+feedback remains diagnostic. This command defines the later certification run;
+the slice remains `active_unproven` until a bundle passes.
 
 ## Mock mode — zero-token CI fleet
 
@@ -170,7 +232,10 @@ Claude envelope to measure.
 
 1. **Isolation.** The agent runs from an isolated temporary directory. File,
    shell, source, and web access are disallowed; it cannot read the repository,
-   content, instructions, or solutions.
+   content, instructions, or solutions. Claude also receives a sterile per-run
+   config containing only a mode-0600 copy of `claudeAiOauth`: user/project/local
+   setting sources and auto-memory are disabled, so global instructions, hooks,
+   plugins, skills, settings, and unrelated OAuth state cannot enter the run.
 2. **Player-only server.** The runner launches MCP with `--play-mode pure`.
    Tool discovery returns only human-equivalent world/quest reads and decisions,
    one fresh overworld start, the journey choice, and an authored story-choice
@@ -178,9 +243,11 @@ Claude envelope to measure.
    restore, direct quest, validation, replay, generation, and authoring tools
    are absent. Calls after game-confirmed exit are rejected.
 3. **Server-authored evidence.** A private JSONL records the fresh start and
-   final journey exit. The report verifier matches their session and exact
-   receipt before writing a verified run sidecar. Model prose cannot relabel a
-   structural run as pure.
+   final journey exit, including identical seed, full Git commit, tracked-clean
+   bit, and canonical world id/hash, plus exit quest outcomes. The report
+   verifier matches their session, provenance, and exact receipt before writing
+   a verified evidence-sidecar v2. Model prose cannot relabel a structural run
+   as pure.
 
 This mirrors the canonical procedure in [`docs/blind_playtest_protocol.md`](../docs/blind_playtest_protocol.md);
 the live [`prompt-overworld.md`](./prompt-overworld.md) carries only the MCP
@@ -219,9 +286,21 @@ rhythm. The structural-only [`prompt.md`](./prompt.md) is a QA fixture.
 ```
 
 Environment: `BLIND_QUEST_ID` (structural runs only), `BLIND_MODEL`,
-`BLIND_TIMEOUT` (seconds, default 900; technical failure/failsafe, never a play budget),
+`BLIND_TIMEOUT` (seconds, default 1200; technical failure/failsafe, never a play budget),
+`BLIND_REPORT_RECOVERY_TIMEOUT` (seconds, default 120; report-only failsafe),
 `BLIND_SPECTATE=1`, `BLIND_SPECTATE_DELAY_MS`, `BLIND_BASH` (Windows: path to Git
 Bash if auto-detection fails).
+
+If a normally completed pure run has current v2 evidence proving exactly one
+fresh start and one journey exit, but its otherwise complete Markdown omitted
+only the exit-interview block, the runner may resume that exact Claude
+session/model once. The repair turn has no tools or MCP and returns strict
+subjective JSON only. The runner preserves the original prose byte-for-byte,
+injects the authenticated receipt, then verifies the candidate and final
+report with the unchanged verifier. Timeouts, missing exits, MCP/mechanical
+failures, other report defects, model/session drift, or a second attempt never
+enter this path. Recovery artifacts and phased telemetry remain durable for
+audit without adding extra `reports/*.md` inputs.
 
 ## Why arbitrary provider overrides are not pure evidence
 

@@ -186,6 +186,23 @@ describe("blind runner MCP config contract", () => {
     expect(runner).toContain("--play-mode");
     expect(runner).toContain("--run-evidence");
     expect(runner).toContain("--require-mode pure");
+    expect(runner).toContain("--tools ToolSearch");
+    expect(runner).toContain('--allowedTools ToolSearch "mcp__adventureforge__*"');
+    expect(runner).toContain("--permission-mode dontAsk");
+    expect(runner).not.toContain("--permission-mode bypassPermissions");
+    const primaryLaunch = runner.slice(
+      runner.indexOf("printf '%s' \"$PROMPT\""),
+      runner.indexOf(') > "$OUT.json"'),
+    );
+    expect(primaryLaunch).toContain("--no-chrome");
+    expect(primaryLaunch).toContain("--disable-slash-commands");
+    expect(primaryLaunch).toContain("--prompt-suggestions false");
+    expect(primaryLaunch).toContain('--name "adventureforge-blind-seed-$SEED"');
+    expect(primaryLaunch).toContain("--setting-sources ''");
+    expect(primaryLaunch).toContain('CLAUDE_CONFIG_DIR="$STERILE_CLAUDE_CONFIG_DIR"');
+    expect(primaryLaunch).toContain("CLAUDE_CODE_DISABLE_AUTO_MEMORY=1");
+    expect(primaryLaunch).not.toContain("--safe-mode");
+    expect(primaryLaunch).not.toContain("--bare");
     // Structural flags survive PowerShell's `--` stripping via launcher recovery.
     expect(launcher).toContain('"--overworld"');
     expect(launcher).toContain('"--mock"');
@@ -267,7 +284,9 @@ describe("blind runner MCP config contract", () => {
     expect(output).not.toContain("Using BLIND_AGENT_CMD override");
   }, 30_000);
 
-  it("treats the 900-second runner timeout knob as technical failure, never an exit", () => {
+  it("keeps a 1200-second default failsafe and treats timeout as failure, never an exit", () => {
+    const runner = readFileSync(join(process.cwd(), "blind-tester", "run.sh"), "utf8");
+    expect(runner).toContain('TIMEOUT="${BLIND_TIMEOUT:-1200}"');
     const dir = mkdtempSync(join(tmpdir(), "af-blind-timeout-"));
     try {
       const result = spawnSync(
@@ -293,6 +312,129 @@ describe("blind runner MCP config contract", () => {
       rmSync(dir, { recursive: true, force: true });
     }
   }, 20_000);
+
+  it("rejects a reused output prefix before launching an agent", () => {
+    const dir = mkdtempSync(join(tmpdir(), "af-blind-prefix-"));
+    const out = join(dir, "attempt");
+    try {
+      writeFileSync(`${out}.md`, "prior accepted report\n", "utf8");
+      writeFileSync(`${out}.run.json`, '{"prior":"sidecar"}\n', "utf8");
+      const env = { ...process.env };
+      delete env.BLIND_AGENT_CMD;
+      delete env.BLIND_MOCK_AGENT_CMD;
+      const result = spawnSync(process.execPath, ["blind-tester/blind-launch.mjs", "--out", out], {
+        cwd: process.cwd(),
+        encoding: "utf8",
+        env,
+        timeout: 30_000,
+      });
+      const output = `${result.stdout ?? ""}\n${result.stderr ?? ""}\n${result.error?.message ?? ""}`;
+      expect(result.status, output).toBe(4);
+      expect(output).toContain("Refusing to reuse report prefix");
+      expect(output).not.toContain("Using structural BLIND_AGENT_CMD override");
+      expect(readFileSync(`${out}.md`, "utf8")).toBe("prior accepted report\n");
+      expect(readFileSync(`${out}.run.json`, "utf8")).toBe('{"prior":"sidecar"}\n');
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }, 30_000);
+
+  it("allows only one authenticated, same-session, tool-free missing-interview repair", () => {
+    const runner = readFileSync(join(process.cwd(), "blind-tester", "run.sh"), "utf8");
+
+    expect(runner).toContain("scripts/blind-report-recovery.ts prepare");
+    expect(runner).toContain("--attempt 0");
+    expect(runner).toContain('--resume "$CLAUDE_SESSION_ID"');
+    expect(runner).toContain('--model "$MODEL"');
+    expect(runner).not.toContain("--fork-session");
+    expect(runner).toContain("--safe-mode");
+    expect(runner).toContain("--no-chrome");
+    expect(runner.match(/--setting-sources ''/g)).toHaveLength(2);
+    expect(runner.match(/CLAUDE_CONFIG_DIR="\$STERILE_CLAUDE_CONFIG_DIR"/g)).toHaveLength(2);
+    expect(runner.match(/CLAUDE_CODE_DISABLE_AUTO_MEMORY=1/g)).toHaveLength(2);
+    expect(runner).toContain('--tools ""');
+    expect(runner).toContain("printf '{\"mcpServers\":{}}\\n'");
+    expect(runner).toContain('ToolSearch "mcp__adventureforge__*"');
+    expect(runner).toContain("MAX_STRUCTURED_OUTPUT_RETRIES=0");
+    expect(runner).toContain('--json-schema "$RECOVERY_JSON_SCHEMA"');
+    expect(runner).toContain("--max-turns 1");
+    expect(runner).toContain("scripts/blind-report-recovery.ts assert-evidence");
+    expect(runner.match(/scripts\/blind-report-recovery\.ts assert-evidence/g)).toHaveLength(3);
+    expect(runner).toContain('--initial-report "$INITIAL_REPORT_MARKER_ARG"');
+    expect(runner).toContain("$OUT.initial-report.txt");
+    expect(runner).toContain("$OUT.repair-report.txt");
+    expect(runner).not.toContain("$OUT.initial.md");
+    expect(runner).not.toContain("$OUT.repair.md");
+
+    const canonicalCopy = runner.indexOf('cp -- "$REPAIR_REPORT" "$OUT.md"');
+    const canonicalVerify = runner.indexOf(
+      'scripts/verify-blind-report.ts "$REPORT_MD"',
+      canonicalCopy,
+    );
+    expect(canonicalCopy).toBeGreaterThan(0);
+    expect(canonicalVerify).toBeGreaterThan(canonicalCopy);
+  });
+
+  it("imports only subscription OAuth into an exclusive sterile Claude config", () => {
+    const runner = readFileSync(join(process.cwd(), "blind-tester", "run.sh"), "utf8");
+
+    expect(runner).toContain('SOURCE_CLAUDE_CONFIG_DIR="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"');
+    expect(runner).toContain('STERILE_CLAUDE_CONFIG_DIR="$WORK/claude-config"');
+    expect(runner).toContain("parsed?.claudeAiOauth");
+    expect(runner).toContain("JSON.stringify({ claudeAiOauth: oauth })");
+    expect(runner).toContain('flag: "wx"');
+    expect(runner).toContain("mode: 0o600");
+    expect(runner).toContain("fs.chmodSync(destination, 0o600)");
+    expect(runner).not.toMatch(/JSON\.stringify\(parsed\)/);
+  });
+
+  it("commits pure publication with an exclusive canonical sidecar only after every gate", () => {
+    const runner = readFileSync(join(process.cwd(), "blind-tester", "run.sh"), "utf8");
+    expect(runner).toContain('DURABLE_RUN_EVIDENCE="$OUT.evidence.jsonl"');
+    expect(runner).toContain('PRIVATE_RUN_SIDECAR="$WORK/verified-run-sidecar.json"');
+    expect(runner).toContain("fs.constants.COPYFILE_EXCL");
+    expect(runner).toContain("assert_launch_provenance_unchanged");
+    expect(runner).not.toContain('--write-run-sidecar "$RUN_SIDECAR_ARG"');
+    expect(runner.match(/--write-run-sidecar "\$PRIVATE_RUN_SIDECAR_ARG"/g)).toHaveLength(2);
+    expect(runner).toContain('--require-mode pure --run-sidecar "$PRIVATE_RUN_SIDECAR_ARG"');
+
+    const privateVerification = runner.indexOf('--write-run-sidecar "$PRIVATE_RUN_SIDECAR_ARG"');
+    const evidencePublication = runner.indexOf(
+      "published evidence bytes differ from private evidence",
+    );
+    const recoveryEvidenceGate = runner.indexOf(
+      '--run-evidence "$DURABLE_RUN_EVIDENCE_ARG" --metadata "$RECOVERY_METADATA_ARG"',
+    );
+    const finalProvenanceGate = runner.lastIndexOf("if ! assert_launch_provenance_unchanged");
+    const canonicalSidecarPublication = runner.indexOf(
+      '"$PRIVATE_RUN_SIDECAR_ARG" "$RUN_SIDECAR_ARG"',
+    );
+    const publicationComplete = runner.indexOf("PURE_PUBLICATION_COMPLETE=1");
+
+    expect(privateVerification).toBeGreaterThan(0);
+    expect(evidencePublication).toBeGreaterThan(privateVerification);
+    expect(recoveryEvidenceGate).toBeGreaterThan(evidencePublication);
+    expect(finalProvenanceGate).toBeGreaterThan(recoveryEvidenceGate);
+    expect(canonicalSidecarPublication).toBeGreaterThan(finalProvenanceGate);
+    expect(publicationComplete).toBeGreaterThan(canonicalSidecarPublication);
+    expect(runner.slice(publicationComplete)).not.toContain("assert_launch_provenance_unchanged");
+
+    // An ordinary exit anywhere before the final marker removes the canonical
+    // report/evidence too, while SIGKILL still leaves no sidecar for consumers.
+    expect(runner).toContain('"${PURE_OUTPUT_PREFIX_OWNED:-0}" == "1"');
+    expect(runner).toContain('"${PURE_PUBLICATION_COMPLETE:-0}" != "1"');
+    expect(runner).toContain('rm -f -- "$OUT.md"');
+    expect(runner).toContain('rm -f -- "$RUN_SIDECAR"');
+    expect(runner).toContain('rm -f -- "$DURABLE_RUN_EVIDENCE"');
+
+    expect(runner).toContain("record_playthrough_terminal verified");
+    expect(runner).toContain("record_playthrough_terminal verified_recovered");
+    expect(runner).toContain("record_playthrough_terminal verification_failed");
+    expect(runner).not.toContain("transport_completed");
+    expect(
+      runner.match(/record_blind_telemetry "\$OUT\.json" playthrough "\$outcome"/g),
+    ).toHaveLength(1);
+  });
 
   it("smokes BOTH start surfaces — the default overworld and the quest drop-in", () => {
     const smoke = readFileSync(join(process.cwd(), "blind-tester", "smoke.mjs"), "utf8");

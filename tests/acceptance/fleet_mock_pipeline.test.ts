@@ -41,6 +41,28 @@ describe("fleet:mock end to end (zero tokens)", () => {
     reportsDir = out;
     const reports = readdirSync(out).filter((f) => f.endsWith(".md"));
     expect(reports).toHaveLength(4);
+    const fleetDir = join(process.cwd(), "ai-runs", "fleet", "citest");
+    const manifestRows = readFileSync(join(fleetDir, "manifest.jsonl"), "utf8")
+      .trim()
+      .split("\n")
+      .map((line) => JSON.parse(line));
+    expect(manifestRows).toHaveLength(4);
+    expect(
+      manifestRows.every(
+        (row) =>
+          row.attempts === 1 &&
+          row.report_recovered === false &&
+          row.attempt_history?.length === 1 &&
+          row.attempt_history[0]?.classification === "verified" &&
+          row.attempt_history[0]?.archive === null,
+      ),
+    ).toBe(true);
+    expect(JSON.parse(readFileSync(join(fleetDir, "summary.json"), "utf8"))).toMatchObject({
+      total_attempts: 4,
+      failed_attempts: 0,
+      technical_timeouts: 0,
+      report_recovered_runs: 0,
+    });
     let overlap = 0;
     for (const f of reports) {
       const text = readFileSync(join(out, f), "utf8");
@@ -166,6 +188,17 @@ describe("fleet:mock end to end (zero tokens)", () => {
     expect(row).toMatchObject({
       target: "quest:breaking_weir",
       status: "verified",
+      attempts: 1,
+      report_recovered: false,
+      attempt_history: [
+        {
+          attempt: 1,
+          exit: 0,
+          classification: "verified",
+          report_recovered: false,
+          archive: null,
+        },
+      ],
       report_schema_version: 2,
       play_mode: "structural",
       start_surface: "direct_quest",

@@ -1,6 +1,7 @@
 # Albany Winter Relief — Starting Slice Contract
 
-Status: active product milestone  
+Status: `active_unproven` — structural depth is proven; fleet certification is not
+
 Scope owner: Albany fresh journey → The Wolf-Winter → truthful Albany return  
 Machine-readable ledger: [`starting_slice_causal_matrix.json`](starting_slice_causal_matrix.json)
 
@@ -627,12 +628,102 @@ Required proof:
 - milestone `npm run crawl:deep -- --seconds 120 --workers 8` and a current
   100-player pure fleet.
 
-Final experiential evidence requires at least 90% verified first-goal completion,
-got-stuck at or below 5%, mean clarity and enjoyment at least 4.2, and at least
-70% continuation at the first completion choice. At least three solution
-signatures must arise organically, no one signature may exceed 75% of completed
-runs, no S3/S4 starting-slice issue may remain, and no recurring S2 cluster may
-affect 5% or more of runs.
+### Authenticated milestone fleet
+
+Before spending live-player tokens, fleet preflight freezes the full tracked Git
+commit and the canonical fresh-overworld world id/hash. The tracked worktree must
+be clean; a dirty tree or Git/provenance error fails before launch. Untracked
+notes do not dirty this check. It also freezes the contiguous planned seed range,
+current journey contract, default pure fresh-overworld player contract, and the
+repository-standard deterministic 9:1 Haiku/Sonnet model mix.
+
+That mix is the live launcher's default. The canonical authoritative launch is:
+
+```bash
+npm run fleet -- --count 100 --concurrency 4 --model mix --seed-base <fresh-seed-base> --label <fresh-label> --no-resume --max-retries 0
+```
+
+It produces the required 90 Haiku and 10 Sonnet slots. Other model plans are
+non-certifying experiments.
+
+A live fleet label must be fresh and its bundle is a closed cohort; an existing
+label directory is rejected rather than appended to or mixed with stale rows.
+Resume is enabled by default for diagnostic fleets and may reuse a report only
+after reverifying its report and
+evidence sidecar: sidecar schema v2, the current journey contract, exact planned
+seed, and the exact clean commit and world id/hash must all match the frozen
+cohort. Generic evidence readers retain historical schema-v1 readability, but v1
+evidence cannot enter or resume this cohort. Manifest rows expose the
+authenticated seed, build, world, and canonical quest outcomes so a bundle can
+be audited independently. They also retain every ordered launcher attempt and
+classify timeouts, launcher/run failures, verifier failures, and success. Before
+a retry can overwrite its prefix, all failed artifacts and a diagnostic are
+copied into a digest-indexed per-attempt bundle archive. Summary failure and
+timeout counts are recomputed from all histories. An eventual success therefore
+leaves that label non-certifying. Resume-enabled bundles and skipped slots are
+also non-certifying; a new authoritative label must use
+`--no-resume --max-retries 0` and run every slot exactly once. A recovered final
+report is declared only when the runner's adjacent `.initial-report.txt`,
+`.repair.meta.json`, and `.repair.json` bytes form a complete set that
+deterministically reproduces it; the rejected original is not another
+feedback-discoverable Markdown report. Such a report remains diagnostic-only:
+its confusion, bug, stuck, and replay-intent fields were generated after the
+primary prose and cannot participate in authoritative certification.
+
+Each live member also has an adjacent runner-owned v2 attestation that binds its
+planned model, actual singleton model use, unique Claude session, completed
+clean primary envelope, game session, and raw-byte SHA-256 digests of the
+report, run sidecar, raw JSONL evidence, primary envelope, and any complete
+recovery set. Diagnostic resume reconstructs these facts from the bytes;
+certification reconstructs them and rejects every recovered member.
+
+The authoritative check is:
+
+```bash
+npm run starting-slice:certify -- --fleet ai-runs/fleet/<label>
+```
+
+It reparses and reverifies every report and sidecar instead of trusting summary
+counts. Certification requires exactly 100 unique rows for the contiguous
+planned seeds, all successful and present, under the frozen pure/default/build/
+world/model contract, with `--no-resume`, the cohort's current-stamp report
+basename, exactly one verified attempt per slot, and zero report-recovered rows
+or artifacts.
+Malformed or unauthenticated evidence exits 2; a valid
+cohort that misses a quality threshold exits 1; a pass exits 0.
+
+Wolf-Winter outcomes map to strategy families as follows:
+
+| Strategy family       | Accepted Wolf-Winter ending ids                                                                     |
+| --------------------- | --------------------------------------------------------------------------------------------------- |
+| `hunt_and_hold`       | `ending_held_gate_barred`, `ending_held_timber_saved`, `ending_held`                                |
+| `lure_and_divert`     | `ending_pack_diverted`, `ending_pack_diverted_cattle_scattered`, `ending_pack_diverted_after_blood` |
+| `fortify_and_outlast` | `ending_fortified_cade_terms`, `ending_fortified_albany_authority`                                  |
+| `drive_and_evacuate`  | `ending_drive_cattle_wounded`, `ending_drive_person_cattle_lost`, `ending_drive_reserve_spent`      |
+
+`ending_pack_diverted_after_blood` is the lure family's bounded hybrid
+recovery, not a fifth strategy. A missing Wolf-Winter outcome is an incomplete
+starting-goal run. A death ending or any unknown Wolf-Winter ending invalidates
+the certification bundle rather than being silently bucketed.
+
+Final experiential certification requires all of these gates simultaneously:
+
+- verified starting-goal completion at or above 90%;
+- median meaningful decisions to first-goal completion at or below 45;
+- `got_stuck` at or below 5%;
+- mean clarity at or above 4.2 and mean enjoyment at or above 4.2;
+- continuation at the initial goal-completion choice at or above 70%;
+- at least three of the four strategy families observed organically, with no
+  family above 75% of completed runs;
+- no in-scope S3/S4 issue and no in-scope S2 cluster present in five or more
+  distinct runs.
+
+`would_replay` is a separate post-exit attitude and never substitutes for the
+game-recorded continuation choice. The certifier uses only this authenticated
+fleet and treats ambiguous issue scope conservatively; global historical
+feedback and compiler aggregates remain useful diagnosis, never certification
+evidence. This tooling enables the later diagnostic and authoritative 100-player
+fleets. It does not change the current `active_unproven` status by itself.
 
 ## Increment discipline
 

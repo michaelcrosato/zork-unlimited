@@ -7,7 +7,10 @@
 import { describe, expect, it } from "vitest";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore — plain-JS harness module without type declarations.
-import { extractBlindTelemetry, summarizeBlindTelemetry } from "../../blind-tester/telemetry.mjs";
+import * as blindTelemetry from "../../blind-tester/telemetry.mjs";
+
+const { extractBlindTelemetry, parseBlindTelemetryEnvelope, summarizeBlindTelemetry } =
+  blindTelemetry;
 
 // Trimmed from a real overworld blind run's saved envelope.
 const ENVELOPE = {
@@ -36,6 +39,8 @@ describe("extractBlindTelemetry", () => {
     expect(row).toEqual({
       ts: "2026-07-07T00:00:00.000Z",
       source: "overworld",
+      phase: "playthrough",
+      report_outcome: null,
       seed: 7,
       model: "sonnet",
       ok: true,
@@ -64,6 +69,25 @@ describe("extractBlindTelemetry", () => {
     const row = extractBlindTelemetry({ ...ENVELOPE, is_error: true }, { source: "overworld" });
     expect(row.ok).toBe(false);
   });
+
+  it("records report-recovery outcome without relabeling it as a playthrough", () => {
+    const row = extractBlindTelemetry(ENVELOPE, {
+      source: "overworld",
+      phase: "report_recovery",
+      outcome: "failed",
+    });
+    expect(row).toMatchObject({
+      phase: "report_recovery",
+      report_outcome: "failed",
+      total_cost_usd: 1.42,
+    });
+  });
+
+  it("turns empty or malformed CLI output into a null-usage envelope", () => {
+    expect(parseBlindTelemetryEnvelope("")).toEqual({});
+    expect(parseBlindTelemetryEnvelope("{partial")).toEqual({});
+    expect(parseBlindTelemetryEnvelope(JSON.stringify(ENVELOPE))).toEqual(ENVELOPE);
+  });
 });
 
 describe("summarizeBlindTelemetry", () => {
@@ -75,6 +99,10 @@ describe("summarizeBlindTelemetry", () => {
         { source: "overworld", seed: "11" },
       ),
       extractBlindTelemetry({ is_error: true }, { source: "sunken_barrow" }),
+      extractBlindTelemetry(
+        { ...ENVELOPE, total_cost_usd: 0.08, usage: { output_tokens: 320 } },
+        { source: "overworld", phase: "report_recovery", outcome: "failed" },
+      ),
     ];
     const summary = summarizeBlindTelemetry(rows);
 
@@ -86,9 +114,37 @@ describe("summarizeBlindTelemetry", () => {
       total_cost_usd: 2.42,
       mean_turns: 50,
       output_tokens: 42920,
+      recovery_attempts: 1,
+      recovery_failed: 1,
+      recovery_total_cost_usd: 0.08,
+      recovery_output_tokens: 320,
     });
     const quest = summary.find((s: { source: string }) => s.source === "sunken_barrow");
     // A failed, empty-envelope run still shows up — with null means, not fake zeros.
     expect(quest).toMatchObject({ runs: 1, failed: 1, mean_turns: null, mean_minutes: null });
+  });
+
+  it("counts terminal report outcomes instead of transport success", () => {
+    const rows = [
+      extractBlindTelemetry(ENVELOPE, {
+        source: "overworld",
+        phase: "playthrough",
+        outcome: "verification_failed",
+      }),
+      extractBlindTelemetry(ENVELOPE, {
+        source: "overworld",
+        phase: "playthrough",
+        outcome: "verified",
+      }),
+      extractBlindTelemetry(
+        {},
+        {
+          source: "overworld",
+          phase: "playthrough",
+          outcome: "technical_timeout",
+        },
+      ),
+    ];
+    expect(summarizeBlindTelemetry(rows)[0]).toMatchObject({ runs: 3, failed: 2 });
   });
 });

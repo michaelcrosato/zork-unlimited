@@ -43,15 +43,16 @@ describe("pure blind prompt + runner contract", () => {
     expect(prompt).not.toContain("include_actions: false");
   });
 
-  it("pins live mode to pure/default and treats 900 seconds as failure only", () => {
-    expect(runner).toContain('TIMEOUT="${BLIND_TIMEOUT:-900}"');
+  it("pins live mode to pure/default and treats the 1200-second failsafe as failure only", () => {
+    expect(runner).toContain('TIMEOUT="${BLIND_TIMEOUT:-1200}"');
     expect(runner).toContain('PLAY_MODE="pure"');
     expect(runner).toContain('if [[ "$PLAY_MODE" == "pure" && "$PERSONA" != "default" ]]');
     expect(runner).toContain("no exit interview or retention result is accepted");
     expect(runner).toContain("--play-mode");
     expect(runner).toContain("--run-evidence");
     expect(runner).toContain("--require-mode pure");
-    expect(runner).toContain('rm -f "$RUN_SIDECAR"');
+    expect(runner).toContain('rm -f "$PRIVATE_RUN_SIDECAR"');
+    expect(runner).toContain("PURE_PUBLICATION_COMPLETE=1");
     for (const persona of ["breaker", "casual", "explorer", "lore-reader", "speedrunner"]) {
       expect(
         readFileSync(join(ROOT, "blind-tester", "personas", `${persona}.md`), "utf8"),
