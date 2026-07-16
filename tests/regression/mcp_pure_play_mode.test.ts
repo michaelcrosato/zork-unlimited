@@ -1,5 +1,6 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
+import { spawnSync } from "node:child_process";
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -9,14 +10,30 @@ import { PURE_PLAYER_TOOLS, toolAvailableInPlayMode } from "../../src/mcp/server
 
 const ROOT = process.cwd();
 const TSX = join(ROOT, "node_modules", "tsx", "dist", "cli.mjs");
+const TEST_RUN_SEED = 2731;
+const TEST_BUILD_COMMIT = "b".repeat(40);
 
 async function withPureServer<T>(
   evidencePath: string,
   body: (client: Client) => Promise<T>,
+  runSeed = TEST_RUN_SEED,
 ): Promise<T> {
   const transport = new StdioClientTransport({
     command: process.execPath,
-    args: [TSX, "src/mcp/server.ts", "--play-mode", "pure", "--run-evidence", evidencePath],
+    args: [
+      TSX,
+      "src/mcp/server.ts",
+      "--play-mode",
+      "pure",
+      "--run-evidence",
+      evidencePath,
+      "--run-seed",
+      String(runSeed),
+      "--build-commit",
+      TEST_BUILD_COMMIT,
+      "--tracked-worktree-clean",
+      "true",
+    ],
     cwd: ROOT,
     stderr: "pipe",
   });
@@ -47,6 +64,71 @@ describe("MCP pure play mode", () => {
     expect(PURE_PLAYER_TOOLS.has("follow_overworld_session_goal")).toBe(true);
     expect(PURE_PLAYER_TOOLS.has("choose_overworld_session_story")).toBe(true);
   });
+
+  it("fails closed when private pure-evidence provenance is missing or malformed", () => {
+    const cases = [
+      {
+        label: "missing seed",
+        args: ["--build-commit", TEST_BUILD_COMMIT, "--tracked-worktree-clean", "true"],
+        message: /requires --run-seed/i,
+      },
+      {
+        label: "unsafe seed",
+        args: [
+          "--run-seed",
+          "9007199254740992",
+          "--build-commit",
+          TEST_BUILD_COMMIT,
+          "--tracked-worktree-clean",
+          "true",
+        ],
+        message: /safe integer/i,
+      },
+      {
+        label: "malformed commit",
+        args: [
+          "--run-seed",
+          String(TEST_RUN_SEED),
+          "--build-commit",
+          "abc",
+          "--tracked-worktree-clean",
+          "true",
+        ],
+        message: /40-character lowercase Git commit hash/i,
+      },
+      {
+        label: "malformed clean flag",
+        args: [
+          "--run-seed",
+          String(TEST_RUN_SEED),
+          "--build-commit",
+          TEST_BUILD_COMMIT,
+          "--tracked-worktree-clean",
+          "yes",
+        ],
+        message: /exactly "true" or "false"/i,
+      },
+    ];
+    for (const testCase of cases) {
+      const evidence = join(tmpdir(), `mcp-pure-invalid-${testCase.label.replaceAll(" ", "-")}`);
+      const result = spawnSync(
+        process.execPath,
+        [
+          TSX,
+          "src/mcp/server.ts",
+          "--play-mode",
+          "pure",
+          "--run-evidence",
+          evidence,
+          ...testCase.args,
+        ],
+        { cwd: ROOT, encoding: "utf8", timeout: 15_000 },
+      );
+      const output = `${result.stdout ?? ""}\n${result.stderr ?? ""}\n${result.error?.message ?? ""}`;
+      expect(result.status, `${testCase.label}: ${output}`).not.toBe(0);
+      expect(output, testCase.label).toMatch(testCase.message);
+    }
+  }, 60_000);
 
   it("advertises only player tools and records exactly one fresh overworld start", async () => {
     const dir = mkdtempSync(join(tmpdir(), "mcp-pure-"));
@@ -134,13 +216,20 @@ describe("MCP pure play mode", () => {
         .split("\n")
         .map((line) => JSON.parse(line));
       expect(lines).toEqual([
-        {
-          schema_version: 1,
+        expect.objectContaining({
+          schema_version: 2,
           play_mode: "pure",
           event: "fresh_start",
           start_surface: "fresh_overworld",
           session_id: sessionId,
-        },
+          run_seed: TEST_RUN_SEED,
+          build: {
+            git_commit: TEST_BUILD_COMMIT,
+            tracked_worktree_clean: true,
+            world_id: "new_york_overworld",
+            world_hash: expect.stringMatching(/^[0-9a-f]{64}$/),
+          },
+        }),
       ]);
     } finally {
       rmSync(dir, { recursive: true, force: true });
@@ -179,6 +268,9 @@ describe("MCP pure play mode", () => {
           (candidate) => candidate.name === "start_overworld_session_quest",
         )?.inputSchema.properties;
         expect(questStartSchema).not.toHaveProperty("seed");
+        expect(JSON.stringify(listed.tools)).not.toMatch(
+          /run_seed|build_commit|tracked_worktree_clean|quest_outcomes/i,
+        );
         const legalActionSchema = listed.tools.find(
           (candidate) => candidate.name === "list_legal_actions",
         )?.inputSchema.properties as Record<string, { description?: string }> | undefined;
@@ -702,23 +794,32 @@ describe("MCP pure play mode", () => {
         .trim()
         .split("\n")
         .map((line) => JSON.parse(line));
-      expect(lines).toEqual([
-        {
-          schema_version: 1,
-          play_mode: "pure",
-          event: "fresh_start",
-          start_surface: "fresh_overworld",
-          session_id: sessionId,
+      expect(lines).toHaveLength(2);
+      expect(lines[0]).toMatchObject({
+        schema_version: 2,
+        play_mode: "pure",
+        event: "fresh_start",
+        start_surface: "fresh_overworld",
+        session_id: sessionId,
+        run_seed: TEST_RUN_SEED,
+        build: {
+          git_commit: TEST_BUILD_COMMIT,
+          tracked_worktree_clean: true,
+          world_id: "new_york_overworld",
+          world_hash: expect.stringMatching(/^[0-9a-f]{64}$/),
         },
-        {
-          schema_version: 1,
-          play_mode: "pure",
-          event: "journey_exit",
-          start_surface: "fresh_overworld",
-          session_id: sessionId,
-          receipt: expectedReceipt,
-        },
-      ]);
+      });
+      expect(lines[1]).toMatchObject({
+        schema_version: 2,
+        play_mode: "pure",
+        event: "journey_exit",
+        start_surface: "fresh_overworld",
+        session_id: sessionId,
+        run_seed: TEST_RUN_SEED,
+        build: lines[0].build,
+        quest_outcomes: [],
+        receipt: expectedReceipt,
+      });
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

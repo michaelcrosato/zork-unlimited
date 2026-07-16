@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { CurrentJourneyExitReceiptSchema } from "../../src/blind/exit_interview.js";
 import { verifyBlindReportText } from "../../src/blind/report_verifier.js";
-import { parseRunEvidenceJsonl } from "../../src/blind/run_evidence.js";
+import { parseBlindRunSidecar, parseRunEvidenceJsonl } from "../../src/blind/run_evidence.js";
 import { hashState } from "../../src/core/hash.js";
 import {
   INITIAL_JOURNEY_GOAL,
@@ -10,6 +10,12 @@ import {
 import { ALBANY_DAWN_DISPATCH_GOALS } from "../../src/world/journey_campaign.js";
 
 const HASH_A = "a".repeat(64);
+const V2_BUILD = {
+  git_commit: "b".repeat(40),
+  tracked_worktree_clean: true,
+  world_id: "new_york_overworld",
+  world_hash: "c".repeat(64),
+};
 
 function receipt(atDecision = 40, contractVersion: 1 | 2 | 3 = JOURNEY_CONTRACT_VERSION) {
   const retentionHistory = [];
@@ -223,6 +229,33 @@ function evidence(receiptValue: Record<string, unknown> = receipt()): string {
     .join("\n");
 }
 
+function evidenceV2(receiptValue: Record<string, unknown> = receipt()): string {
+  return [
+    {
+      schema_version: 2,
+      play_mode: "pure",
+      event: "fresh_start",
+      start_surface: "fresh_overworld",
+      session_id: "ow-v2",
+      run_seed: 2731,
+      build: V2_BUILD,
+    },
+    {
+      schema_version: 2,
+      play_mode: "pure",
+      event: "journey_exit",
+      start_surface: "fresh_overworld",
+      session_id: "ow-v2",
+      run_seed: 2731,
+      build: V2_BUILD,
+      quest_outcomes: [["wolf_winter", "ending_pack_diverted"]],
+      receipt: receiptValue,
+    },
+  ]
+    .map((row) => JSON.stringify(row))
+    .join("\n");
+}
+
 describe("blind V2 pure/structural report contract", () => {
   it("accepts a 40-decision pure receipt only with matching private run evidence", () => {
     const result = verifyBlindReportText(report(pureInterview()), {
@@ -358,5 +391,96 @@ describe("blind V2 pure/structural report contract", () => {
     const wrongSession = parseRunEvidenceJsonl(rows.map((row) => JSON.stringify(row)).join("\n"));
     expect(wrongSession.ok).toBe(false);
     if (!wrongSession.ok) expect(wrongSession.reason).toContain("session ids differ");
+  });
+
+  it("preserves private v2 seed, build, and authoritative quest outcomes", () => {
+    const parsed = parseRunEvidenceJsonl(evidenceV2());
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+    expect(parsed.sidecar).toMatchObject({
+      schema_version: 2,
+      run_seed: 2731,
+      build: V2_BUILD,
+      quest_outcomes: [["wolf_winter", "ending_pack_diverted"]],
+    });
+
+    const verified = verifyBlindReportText(report(pureInterview()), {
+      requiredPlayMode: "pure",
+      runEvidenceText: evidenceV2(),
+    });
+    expect(verified.ok).toBe(true);
+    expect(parseBlindRunSidecar(JSON.stringify(parsed.sidecar)).ok).toBe(true);
+
+    const punctuationIds = ["a_b", "a-b"].sort((left, right) => left.localeCompare(right));
+    const punctuationRows = evidenceV2()
+      .split("\n")
+      .map((line) => JSON.parse(line));
+    punctuationRows[1].quest_outcomes = punctuationIds.map((questId) => [questId, "ending"]);
+    expect(
+      parseRunEvidenceJsonl(punctuationRows.map((row) => JSON.stringify(row)).join("\n")).ok,
+    ).toBe(true);
+
+    const historical = parseRunEvidenceJsonl(evidence());
+    expect(historical.ok).toBe(true);
+    if (historical.ok) {
+      expect(historical.sidecar.schema_version).toBe(1);
+      expect(parseBlindRunSidecar(JSON.stringify(historical.sidecar)).ok).toBe(true);
+    }
+  });
+
+  it("rejects mixed, detached, or noncanonical v2 provenance", () => {
+    const rows = evidenceV2()
+      .split("\n")
+      .map((line) => JSON.parse(line));
+
+    const mismatchedSeed = structuredClone(rows);
+    mismatchedSeed[1].run_seed = 2732;
+    const seedResult = parseRunEvidenceJsonl(
+      mismatchedSeed.map((row) => JSON.stringify(row)).join("\n"),
+    );
+    expect(seedResult.ok).toBe(false);
+    if (!seedResult.ok) expect(seedResult.reason).toContain("seeds differ");
+
+    const mismatchedBuild = structuredClone(rows);
+    mismatchedBuild[1].build.git_commit = "d".repeat(40);
+    const buildResult = parseRunEvidenceJsonl(
+      mismatchedBuild.map((row) => JSON.stringify(row)).join("\n"),
+    );
+    expect(buildResult.ok).toBe(false);
+    if (!buildResult.ok) expect(buildResult.reason).toContain("builds differ");
+
+    const mixed = structuredClone(rows);
+    mixed[0] = JSON.parse(evidence().split("\n")[0]!);
+    mixed[0].session_id = "ow-v2";
+    const mixedResult = parseRunEvidenceJsonl(mixed.map((row) => JSON.stringify(row)).join("\n"));
+    expect(mixedResult.ok).toBe(false);
+    if (!mixedResult.ok) expect(mixedResult.reason).toContain("schema versions differ");
+
+    for (const mutate of [
+      (candidate: typeof rows) => {
+        candidate[0].run_seed = Number.MAX_SAFE_INTEGER + 1;
+      },
+      (candidate: typeof rows) => {
+        candidate[0].build.world_hash = "not-a-world-hash";
+      },
+      (candidate: typeof rows) => {
+        candidate[1].quest_outcomes = [
+          ["wolf_winter", "ending_held"],
+          ["sunken_barrow", "ending_treasure"],
+        ];
+      },
+      (candidate: typeof rows) => {
+        candidate[1].quest_outcomes = [
+          ["wolf_winter", "ending_held"],
+          ["wolf_winter", "ending_pack_diverted"],
+        ];
+      },
+    ]) {
+      const candidate = structuredClone(rows);
+      mutate(candidate);
+      expect(parseRunEvidenceJsonl(candidate.map((row) => JSON.stringify(row)).join("\n")).ok).toBe(
+        false,
+      );
+    }
   });
 });

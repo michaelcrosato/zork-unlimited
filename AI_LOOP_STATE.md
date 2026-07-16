@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 569 -->
+<!-- historical_cycle_count: 570 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,15 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - pure_run_evidence_v2
+
+- Evidence choice: the rejected milestone diagnostic exposed that fleet seed labels did not drive embedded RPG randomness and durable sidecars authenticated only the exit receipt, so a 100-player result could not prove seed diversity, build identity, or Wolf-Winter strategy outcomes.
+- Surface: the runner now passes a canonical private safe-integer seed plus exact Git/tracked-state provenance; pure MCP injects that seed into every embedded quest without exposing a player control, and schema-v2 start/exit evidence records the actual world id/hash and authoritative sorted quest outcomes. Explicit structural seeds still override it and historical v1 feedback remains readable.
+- Integrity: exact-two-event parsing rejects mixed schemas, sessions, seeds, builds, malformed hashes, and noncanonical outcomes; ambiguous PowerShell orphan recovery and unsafe WSL `cmd.exe` paths fail closed. The pre-commit blind correctly records `tracked_worktree_clean:false`, so it is retention evidence but cannot certify a build.
+- Pure evidence: seed 2732 verified pure/fresh, completed Wolf-Winter by fully noncombat pack diversion at decision 29, continued at the first goal choice, ended at checkpoint 40, and rated clarity/enjoyment 4/4 with stuck false, replay true, and no bugs; its only friction was compact density, approach framing, and lighter road texture.
+- Self-critique: PASS for authentic per-run seed/build/world/outcome evidence, not fleet certification or the greater-than-BG3 milestone. Fleet resume still needs a fail-closed v2 expected-seed/build bundle before any diagnostic or authoritative cohort is counted; unknown Wolf endings must be rejected by that certifier.
+- Guard: three implementation reviews found no server defect and closed ordering/launcher portability gaps; 121 focused checks pass, and pre/final crawls `20260716T081747Z`/`20260716T084516Z` each found zero issues across 247/247 nodes, 344/344 edges, 12/12 boards, and 12/12 quests.
 
 ### Cycle result - pure_report_exit_preflight
 
@@ -138,11 +147,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Pure evidence: verified pure/fresh seed 12 completed Wolf-Winter plus five later goals, continued through every earlier goal/checkpoint, and ended voluntarily at decision 133; clarity 4/5, enjoyment 5/5, replay true, no stuck state. Seed 11's report was correctly rejected for omitting its mandatory playthrough log.
 - Compile/self-critique: the ledger is 772 accepted/33 rejected, one report beyond the 771-report compile and below threshold. PASS for a trusted inbound boundary, not a depth claim: no causal-matrix fork is counted, and the player again identified the shared board→contact→items→checks chassis as S1 repetition.
 - Guard: three adversarial reviews closed validation, authority, solvability, combat-guarantee, provenance, and mutable-input defects; pre/post 6,000-step crawls (`20260714T044643Z`, `20260714T054135Z`) reached 247/247 nodes, 344/344 edges, and 12/12 quests.
-
-### Cycle result - trusted_quest_campaign_exports
-
-- Change: a strict, reusable quest-export catalog now applies monotonic relationship memories/floors and derives historical world facts; Wolf-Winter's three non-death endings author distinct Old Cade and byre/gate/timber aftermaths while the death ending exports nothing.
-- Integrity: opted-in catalogs equal the compiled non-death ending set; effects are transactional and detached, repeats are exact no-ops, conflicts reject before mutation, canonical journals bind outcomes, and v8/v9 migration is fenced to the exact pre/post manifest hashes with no persisted fact field.
-- Pure evidence: verified pure/fresh seed 10 completed Wolf-Winter at decision 21, continued through checkpoint 40 and Gallowmere at 45, then ended honestly after Tanner's Fever at 67; clarity/enjoyment 4/4, replay true, no stuck state. Seed 9's malformed report was correctly rejected.
-- Compile/self-critique: 771 verified reports/31 rejected compile to 22 journey-v3 pure exits, all continued at least once. PASS for a trusted outbound boundary, not a depth claim: no matrix fork has a downstream consumer, and the fresh player surfaced an existing S1 jerkin equip step plus S0 quest-shell repetition.
-- Guard: adversarial review closed a one-way catalog-parity defect; 275 focused tests and pre/final 6,000-step crawls (`20260714T034655Z`, `20260714T044001Z`) reached 247/247 nodes, 344/344 edges, and 12/12 quests; full health passed (319 files/2,274 tests, UI, 12 packs).

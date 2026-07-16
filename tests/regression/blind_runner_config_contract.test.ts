@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -31,6 +31,98 @@ describe("blind runner MCP config contract", () => {
     const pkg = readFileSync(join(process.cwd(), "package.json"), "utf8");
     expect(pkg).toContain('"blind": "node blind-tester/blind-launch.mjs"');
   });
+
+  it("binds every MCP launch form to runner-owned seed and Git provenance", () => {
+    const runner = readFileSync(join(process.cwd(), "blind-tester", "run.sh"), "utf8");
+    expect(runner).toContain("--run-seed");
+    expect(runner).toContain("--build-commit");
+    expect(runner).toContain("--tracked-worktree-clean");
+    expect(runner).toContain("RUN_PROVENANCE_ARGS_JSON");
+    expect(runner).toContain("RUN_PROVENANCE_CMD_SUFFIX");
+    expect(runner).toContain("cmd.exe metacharacter");
+    expect(runner).toContain('git -C "$GAME_DIR" diff --quiet --ignore-submodules=untracked --');
+    expect(runner).toContain(
+      'git -C "$GAME_DIR" diff --cached --quiet --ignore-submodules=untracked --',
+    );
+    expect(runner).not.toContain("git status --porcelain");
+  });
+
+  it("emits canonical private provenance while ignoring untracked files", () => {
+    const dir = mkdtempSync(join(tmpdir(), "af-blind-provenance-"));
+    const out = join(dir, "capture");
+    const untracked = join(
+      process.cwd(),
+      `.af-untracked-provenance-${process.pid}-${Date.now()}.tmp`,
+    );
+    try {
+      writeFileSync(untracked, "untracked provenance fixture\n", "utf8");
+      const result = spawnSync(
+        process.execPath,
+        ["blind-tester/blind-launch.mjs", "--mock", "--seed", "-17", "--out", out],
+        {
+          cwd: process.cwd(),
+          encoding: "utf8",
+          env: {
+            ...process.env,
+            BLIND_MOCK_AGENT_CMD: 'cat "$BLIND_MCP_CONFIG"; exit 93',
+            BLIND_PERSONA: "default",
+          },
+          timeout: 30_000,
+        },
+      );
+      const output = `${result.stdout ?? ""}\n${result.stderr ?? ""}\n${result.error?.message ?? ""}`;
+      expect(result.status, output).toBe(93);
+
+      const config = JSON.parse(readFileSync(`${out}.md`, "utf8")) as {
+        mcpServers: { adventureforge: { args: string[] } };
+      };
+      const args = config.mcpServers.adventureforge.args;
+      const valueAfter = (flag: string) => args[args.indexOf(flag) + 1];
+
+      const head = spawnSync("git", ["rev-parse", "--verify", "HEAD^{commit}"], {
+        cwd: process.cwd(),
+        encoding: "utf8",
+      });
+      expect(head.status).toBe(0);
+      const unstaged = spawnSync(
+        "git",
+        ["diff", "--quiet", "--ignore-submodules=untracked", "--"],
+        { cwd: process.cwd() },
+      );
+      const staged = spawnSync(
+        "git",
+        ["diff", "--cached", "--quiet", "--ignore-submodules=untracked", "--"],
+        { cwd: process.cwd() },
+      );
+      const expectedClean = unstaged.status === 0 && staged.status === 0;
+
+      expect(valueAfter("--run-seed")).toBe("-17");
+      expect(valueAfter("--build-commit")).toBe(head.stdout.trim());
+      expect(valueAfter("--tracked-worktree-clean")).toBe(String(expectedClean));
+    } finally {
+      rmSync(untracked, { force: true });
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }, 30_000);
+
+  it("rejects non-integer and unsafe seeds before constructing MCP argv", () => {
+    for (const seed of ["7&whoami", "1.5", "9007199254740992"]) {
+      const result = spawnSync(
+        process.execPath,
+        ["blind-tester/blind-launch.mjs", "--mock", "--seed", seed],
+        {
+          cwd: process.cwd(),
+          encoding: "utf8",
+          env: { ...process.env, BLIND_MOCK_AGENT_CMD: "exit 93" },
+          timeout: 30_000,
+        },
+      );
+      const output = `${result.stdout ?? ""}\n${result.stderr ?? ""}\n${result.error?.message ?? ""}`;
+      expect(result.status, `${seed}: ${output}`).toBe(2);
+      expect(output).toContain("--seed requires a JavaScript safe integer");
+      expect(output).not.toContain("Using structural BLIND_AGENT_CMD override");
+    }
+  }, 30_000);
 
   it("DEFAULTS live play to the CORE GAME overworld and reserves quest mode for structural tests", () => {
     const runner = readFileSync(join(process.cwd(), "blind-tester", "run.sh"), "utf8");

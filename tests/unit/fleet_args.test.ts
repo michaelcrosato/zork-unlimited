@@ -298,13 +298,21 @@ ${JSON.stringify({ ...pureInterview, journey_exit_receipt: currentReceipt })}
       writeFileSync(
         runSidecarPathFor(reportPath),
         JSON.stringify({
-          schema_version: 1,
+          schema_version: 2,
           report_schema_version: 2,
           play_mode: "pure",
           start_surface: "fresh_overworld",
           retention_eligible: true,
           evidence_status: "verified",
           session_id: "ow-resume",
+          run_seed: 5,
+          build: {
+            git_commit: "b".repeat(40),
+            tracked_worktree_clean: true,
+            world_id: "new_york_overworld",
+            world_hash: "c".repeat(64),
+          },
+          quest_outcomes: [],
           receipt: currentReceipt,
         }),
       );

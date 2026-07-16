@@ -20,12 +20,18 @@ import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
 import { appendFileSync, mkdirSync } from "node:fs";
+import { isDeepStrictEqual } from "node:util";
 import { createToolApi } from "./tools.js";
 import { TRANSCRIPT_TURN_LIMIT_DEFAULT } from "./transcript_projection.js";
 import { isGeneratedRpgSeed as genSeed } from "../gen/seed.js";
 import { formatSpectateEntry } from "./spectate.js";
-
-const api = createToolApi({ root: process.cwd() });
+import { OverworldSessionSnapshotSchema } from "../world/session_snapshot.js";
+import {
+  FreshStartRunEvidenceV2Schema,
+  JourneyExitRunEvidenceV2Schema,
+  PureRunBuildSchema,
+} from "../blind/run_evidence.js";
+import { JourneyExitReceiptSchema } from "../blind/exit_interview.js";
 
 export type McpPlayMode = "full" | "structural" | "pure";
 
@@ -75,23 +81,6 @@ export function toolAvailableInPlayMode(name: string, playMode: McpPlayMode): bo
 
 const PLAY_MODE = parsePlayMode();
 
-type PureRunEvidence =
-  | {
-      schema_version: 1;
-      play_mode: "pure";
-      event: "fresh_start";
-      start_surface: "fresh_overworld";
-      session_id: string;
-    }
-  | {
-      schema_version: 1;
-      play_mode: "pure";
-      event: "journey_exit";
-      start_surface: "fresh_overworld";
-      session_id: string;
-      receipt: unknown;
-    };
-
 const RUN_EVIDENCE_PATH = (() => {
   const requested = process.argv.includes("--run-evidence");
   const value = argValue("--run-evidence");
@@ -102,9 +91,69 @@ const RUN_EVIDENCE_PATH = (() => {
   return resolve(value);
 })();
 
-const pureRunState: { overworldSessionId: string | null; journeyExitRecorded: boolean } = {
+const RUN_SEED: number | null = (() => {
+  if (!process.argv.includes("--run-seed")) return null;
+  const raw = argValue("--run-seed");
+  const value = raw === undefined ? Number.NaN : Number(raw);
+  if (!Number.isSafeInteger(value)) {
+    throw new Error(`--run-seed requires a JavaScript safe integer, got ${JSON.stringify(raw)}.`);
+  }
+  return value;
+})();
+
+const BUILD_COMMIT: string | null = (() => {
+  if (!process.argv.includes("--build-commit")) return null;
+  const value = argValue("--build-commit");
+  if (!value || !/^[0-9a-f]{40}$/.test(value)) {
+    throw new Error("--build-commit requires the full 40-character lowercase Git commit hash.");
+  }
+  return value;
+})();
+
+const TRACKED_WORKTREE_CLEAN: boolean | null = (() => {
+  if (!process.argv.includes("--tracked-worktree-clean")) return null;
+  const value = argValue("--tracked-worktree-clean");
+  if (value === "true") return true;
+  if (value === "false") return false;
+  throw new Error('--tracked-worktree-clean requires exactly "true" or "false".');
+})();
+
+const PURE_RUN_PROVENANCE = (() => {
+  if (PLAY_MODE !== "pure" || RUN_EVIDENCE_PATH === null) return null;
+  if (RUN_SEED === null) {
+    throw new Error("Pure run evidence requires --run-seed.");
+  }
+  if (BUILD_COMMIT === null) {
+    throw new Error("Pure run evidence requires --build-commit.");
+  }
+  if (TRACKED_WORKTREE_CLEAN === null) {
+    throw new Error("Pure run evidence requires --tracked-worktree-clean.");
+  }
+  return {
+    runSeed: RUN_SEED,
+    gitCommit: BUILD_COMMIT,
+    trackedWorktreeClean: TRACKED_WORKTREE_CLEAN,
+  };
+})();
+
+const api = createToolApi({
+  root: process.cwd(),
+  ...(PLAY_MODE === "pure" && RUN_SEED !== null ? { embeddedQuestSeed: RUN_SEED } : {}),
+});
+
+type PureRunBuild = z.infer<typeof PureRunBuildSchema>;
+type PureRunEvidenceV2 =
+  | z.infer<typeof FreshStartRunEvidenceV2Schema>
+  | z.infer<typeof JourneyExitRunEvidenceV2Schema>;
+
+const pureRunState: {
+  overworldSessionId: string | null;
+  journeyExitRecorded: boolean;
+  build: PureRunBuild | null;
+} = {
   overworldSessionId: null,
   journeyExitRecorded: false,
+  build: null,
 };
 
 const PURE_RPG_SESSION_TOOLS = new Set(["get_observation", "list_legal_actions", "step_action"]);
@@ -114,10 +163,32 @@ const PURE_OVERWORLD_SESSION_TOOLS = new Set(
   ),
 );
 
-function appendRunEvidence(event: PureRunEvidence): void {
+function appendRunEvidence(event: PureRunEvidenceV2): void {
   if (!RUN_EVIDENCE_PATH) return;
+  const validated =
+    event.event === "fresh_start"
+      ? FreshStartRunEvidenceV2Schema.parse(event)
+      : JourneyExitRunEvidenceV2Schema.parse(event);
   mkdirSync(dirname(RUN_EVIDENCE_PATH), { recursive: true });
-  appendFileSync(RUN_EVIDENCE_PATH, `${JSON.stringify(event)}\n`);
+  appendFileSync(RUN_EVIDENCE_PATH, `${JSON.stringify(validated)}\n`);
+}
+
+function pureRunSnapshot(sessionId: string) {
+  const exported = api.export_overworld_session({ session_id: sessionId });
+  if (!exported.ok) throw new Error("Pure run evidence could not export its overworld session.");
+  return OverworldSessionSnapshotSchema.parse(exported.snapshot);
+}
+
+function pureRunBuild(snapshot: z.infer<typeof OverworldSessionSnapshotSchema>): PureRunBuild {
+  if (PURE_RUN_PROVENANCE === null) {
+    throw new Error("Pure run evidence provenance was not configured.");
+  }
+  return PureRunBuildSchema.parse({
+    git_commit: PURE_RUN_PROVENANCE.gitCommit,
+    tracked_worktree_clean: PURE_RUN_PROVENANCE.trackedWorktreeClean,
+    world_id: snapshot.worldId,
+    world_hash: snapshot.worldHash,
+  });
 }
 
 function objectRecord(value: unknown): Record<string, unknown> | null {
@@ -170,13 +241,20 @@ function pureCallEvidence(name: string, value: unknown): void {
       throw new Error("Fresh overworld start returned no session id.");
     }
     pureRunState.overworldSessionId = sessionId;
-    appendRunEvidence({
-      schema_version: 1,
-      play_mode: "pure",
-      event: "fresh_start",
-      start_surface: "fresh_overworld",
-      session_id: sessionId,
-    });
+    if (RUN_EVIDENCE_PATH !== null) {
+      const snapshot = pureRunSnapshot(sessionId);
+      const build = pureRunBuild(snapshot);
+      pureRunState.build = build;
+      appendRunEvidence({
+        schema_version: 2,
+        play_mode: "pure",
+        event: "fresh_start",
+        start_surface: "fresh_overworld",
+        session_id: sessionId,
+        run_seed: PURE_RUN_PROVENANCE!.runSeed,
+        build,
+      });
+    }
     return;
   }
   if (name !== "choose_overworld_session_journey" || pureRunState.journeyExitRecorded) return;
@@ -189,14 +267,25 @@ function pureCallEvidence(name: string, value: unknown): void {
   ) {
     return;
   }
-  appendRunEvidence({
-    schema_version: 1,
-    play_mode: "pure",
-    event: "journey_exit",
-    start_surface: "fresh_overworld",
-    session_id: pureRunState.overworldSessionId!,
-    receipt,
-  });
+  const verifiedReceipt = JourneyExitReceiptSchema.parse(receipt);
+  if (RUN_EVIDENCE_PATH !== null) {
+    const snapshot = pureRunSnapshot(pureRunState.overworldSessionId!);
+    const build = pureRunBuild(snapshot);
+    if (pureRunState.build === null || !isDeepStrictEqual(build, pureRunState.build)) {
+      throw new Error("Pure run world/build provenance changed between start and journey exit.");
+    }
+    appendRunEvidence({
+      schema_version: 2,
+      play_mode: "pure",
+      event: "journey_exit",
+      start_surface: "fresh_overworld",
+      session_id: pureRunState.overworldSessionId!,
+      run_seed: PURE_RUN_PROVENANCE!.runSeed,
+      build,
+      quest_outcomes: snapshot.questOutcomes,
+      receipt: verifiedReceipt,
+    });
+  }
   pureRunState.journeyExitRecorded = true;
 }
 

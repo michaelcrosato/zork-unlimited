@@ -50,6 +50,23 @@ describe("recoverNpmEatenFlags", () => {
     );
   });
 
+  it("recovers a negative seed as one value argument", () => {
+    const { args, recovered } = recoverNpmEatenFlags(["-17"], {
+      npm_config_seed: "true",
+    });
+    expect(recovered).toBe(true);
+    expect(args).toEqual(["--seed", "-17"]);
+  });
+
+  it("fails closed instead of swapping ambiguous seed and delay orphans", () => {
+    expect(() =>
+      recoverNpmEatenFlags(["1500", "-17"], {
+        npm_config_seed: "true",
+        npm_config_delay_ms: "true",
+      }),
+    ).toThrow(/use equals form/i);
+  });
+
   it("never duplicates flags a correctly-forwarding shell already passed", () => {
     const { args, recovered } = recoverNpmEatenFlags(["--spectate", "--quest", "gallowmere"], {
       npm_config_spectate: "true",

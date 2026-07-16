@@ -121,6 +121,21 @@ if [[ ${#POSITIONAL[@]} -gt 3 ]]; then
   exit 2
 fi
 
+# The seed becomes private MCP server argv in pure mode, so canonicalize it
+# before any shell/JSON interpolation and reject values the deterministic engine
+# cannot represent exactly.
+if ! CANONICAL_SEED="$("$NODE_CMD" -e '
+const raw = process.argv[1];
+if (!/^-?[0-9]+$/.test(raw ?? "")) process.exit(2);
+const seed = Number(raw);
+if (!Number.isSafeInteger(seed)) process.exit(2);
+process.stdout.write(String(seed));
+' -- "$SEED")"; then
+  echo "--seed requires a JavaScript safe integer." >&2
+  exit 2
+fi
+SEED="$CANONICAL_SEED"
+
 # Mode resolution — the CORE GAME (overworld, fresh start) is the DEFAULT blind
 # test: it is how a real new player actually meets the game. A quest source
 # (--quest <id>, a positional id, or BLIND_QUEST_ID) is retained only for the
@@ -236,6 +251,32 @@ if [[ "$OVERWORLD" != "1" ]] && ! ( cd "$GAME_DIR" && npm --silent run validate 
   exit 2
 fi
 
+# Bind private evidence to the exact launch commit and to staged/unstaged
+# tracked state. Untracked local notes are deliberately outside this signal.
+if ! BUILD_COMMIT="$(git -C "$GAME_DIR" rev-parse --verify 'HEAD^{commit}')"; then
+  echo "Cannot identify the Git commit for blind-run provenance." >&2
+  exit 4
+fi
+if [[ ! "$BUILD_COMMIT" =~ ^[0-9a-f]{40}$ ]]; then
+  echo "Blind-run provenance requires a full 40-character lowercase Git commit hash." >&2
+  exit 4
+fi
+
+set +e
+git -C "$GAME_DIR" diff --quiet --ignore-submodules=untracked --
+UNSTAGED_STATUS=$?
+git -C "$GAME_DIR" diff --cached --quiet --ignore-submodules=untracked --
+STAGED_STATUS=$?
+set -e
+if [[ "$UNSTAGED_STATUS" -gt 1 || "$STAGED_STATUS" -gt 1 ]]; then
+  echo "Git failed while checking tracked blind-run provenance." >&2
+  exit 4
+fi
+TRACKED_WORKTREE_CLEAN=true
+if [[ "$UNSTAGED_STATUS" -eq 1 || "$STAGED_STATUS" -eq 1 ]]; then
+  TRACKED_WORKTREE_CLEAN=false
+fi
+
 case "$GAME_DIR" in
   *\'*|*\"*) echo "Refusing: game path contains a quote, which breaks the MCP launch command." >&2; exit 4 ;;
 esac
@@ -270,6 +311,9 @@ if [[ "$SPECTATE" == "1" ]]; then
   fi
 fi
 
+RUN_PROVENANCE_ARGS_JSON=", \"--run-seed\", \"$SEED\", \"--build-commit\", \"$BUILD_COMMIT\", \"--tracked-worktree-clean\", \"$TRACKED_WORKTREE_CLEAN\""
+RUN_PROVENANCE_CMD_SUFFIX=" --run-seed $SEED --build-commit $BUILD_COMMIT --tracked-worktree-clean $TRACKED_WORKTREE_CLEAN"
+
 GAME_DIR_WIN=""
 if command -v wslpath >/dev/null 2>&1 && [[ "$GAME_DIR" == /mnt/* ]]; then
   GAME_DIR_WIN="$(wslpath -w "$GAME_DIR")"
@@ -288,33 +332,36 @@ case "$GAME_DIR_MCP|$RUN_EVIDENCE_MCP" in
 esac
 
 if [[ -n "$GAME_DIR_WIN" ]]; then
-  case "$GAME_DIR_WIN" in
-    *" "*) echo "Refusing: WSL blind runner path contains a space, which breaks cmd.exe MCP launch quoting." >&2; exit 4 ;;
+  RUN_EVIDENCE_WIN="$(wslpath -w "$RUN_EVIDENCE")"
+  case "$GAME_DIR_WIN|$RUN_EVIDENCE_WIN" in
+    *" "*|*"&"*|*"|"*|*"^"*|*"<"*|*">"*|*"%"*|*"!"*|*"("*|*")"*)
+      echo "Refusing: WSL game or evidence path contains a cmd.exe metacharacter." >&2
+      exit 4
+      ;;
   esac
   GAME_DIR_WIN_JSON="${GAME_DIR_WIN//\\/\\\\}"
-  RUN_EVIDENCE_WIN="$(wslpath -w "$RUN_EVIDENCE")"
   RUN_EVIDENCE_WIN_JSON="${RUN_EVIDENCE_WIN//\\/\\\\}"
   CODEX_MCP_CMD="cmd.exe"
-  CODEX_MCP_ARGS_TOML='["/c", "cd /d '"$GAME_DIR_WIN_JSON"' && npm --silent run mcp -- --play-mode '"$PLAY_MODE"' --run-evidence '"$RUN_EVIDENCE_WIN_JSON$SPECTATE_CMD_SUFFIX"'"]'
+  CODEX_MCP_ARGS_TOML="[\"/c\", \"cd /d $GAME_DIR_WIN_JSON && npm --silent run mcp -- --play-mode $PLAY_MODE --run-evidence $RUN_EVIDENCE_WIN_JSON$RUN_PROVENANCE_CMD_SUFFIX$SPECTATE_CMD_SUFFIX\"]"
   cat > "$MCP_CONFIG" <<JSON
 {
   "mcpServers": {
     "adventureforge": {
       "command": "cmd.exe",
-      "args": ["/c", "cd /d $GAME_DIR_WIN_JSON && npm --silent run mcp -- --play-mode $PLAY_MODE --run-evidence $RUN_EVIDENCE_WIN_JSON$SPECTATE_CMD_SUFFIX"]
+      "args": ["/c", "cd /d $GAME_DIR_WIN_JSON && npm --silent run mcp -- --play-mode $PLAY_MODE --run-evidence $RUN_EVIDENCE_WIN_JSON$RUN_PROVENANCE_CMD_SUFFIX$SPECTATE_CMD_SUFFIX"]
     }
   }
 }
 JSON
 else
   CODEX_MCP_CMD="npm"
-  CODEX_MCP_ARGS_TOML='["--silent", "--prefix", "'"$GAME_DIR_MCP"'", "run", "mcp", "--", "--play-mode", "'"$PLAY_MODE"'", "--run-evidence", "'"$RUN_EVIDENCE_MCP"'"'"$SPECTATE_ARGS_JSON"']'
+  CODEX_MCP_ARGS_TOML="[\"--silent\", \"--prefix\", \"$GAME_DIR_MCP\", \"run\", \"mcp\", \"--\", \"--play-mode\", \"$PLAY_MODE\", \"--run-evidence\", \"$RUN_EVIDENCE_MCP\"$RUN_PROVENANCE_ARGS_JSON$SPECTATE_ARGS_JSON]"
   cat > "$MCP_CONFIG" <<JSON
 {
   "mcpServers": {
     "adventureforge": {
       "command": "npm",
-      "args": ["--silent", "--prefix", "$GAME_DIR_MCP", "run", "mcp", "--", "--play-mode", "$PLAY_MODE", "--run-evidence", "$RUN_EVIDENCE_MCP"$SPECTATE_ARGS_JSON]
+      "args": ["--silent", "--prefix", "$GAME_DIR_MCP", "run", "mcp", "--", "--play-mode", "$PLAY_MODE", "--run-evidence", "$RUN_EVIDENCE_MCP"$RUN_PROVENANCE_ARGS_JSON$SPECTATE_ARGS_JSON]
     }
   }
 }
