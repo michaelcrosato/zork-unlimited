@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 568 -->
+<!-- historical_cycle_count: 569 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,14 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - pure_report_exit_preflight
+
+- Evidence choice: the first exact milestone fleet on merged `6fa0ef15` was rejected as diagnostic evidence after 8/8 finalized Haiku rows failed all three retries (21/24 missing the labeled interview fence; 3/24 missing the Playthrough heading) and seed 1009 Sonnet hit the 900-second cap; artifact `20260716T043042Z` cannot certify the slice.
+- Surface: the pure prompt now has a final report gate that forbids self-appointed early stops and null/empty/partial/reconstructed receipts, requires the complete server `exitReceipt`, and makes the literal heading/fence contract concrete. The receipt schema, private evidence match, and verifier are unchanged.
+- Pure evidence: first hardened seed 2730 correctly reached the labeled fence but was rejected for a null receipt after self-stopping at decision 29; sharpened seed 2731 then verified pure/fresh, completed Wolf-Winter at decision 29, continued at the first goal choice, ended at checkpoint 40, and rated clarity/enjoyment 5/5 with no confusion, bug, stuck state, or replay refusal.
+- Self-critique: PASS for one representative Haiku report-contract recovery, not fleet reliability or the greater-than-BG3 milestone. A fresh ten-member mixed-model diagnostic remains required before spending on the authoritative 100-player cohort; only one new verified report exists, so no feedback compile is due.
+- Guard: contract review added an exact-one literal fence regression and clarified that a signed exit may keep the next goal active; 3 focused suites are 22/22, and pre/final crawls `20260716T052856Z`/`20260716T070103Z` each found zero issues across 247/247 nodes, 344/344 edges, 12/12 boards, and 12/12 quests.
 
 ### Cycle result - albany_wolf_relief_oath
 
@@ -138,11 +146,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Pure evidence: verified pure/fresh seed 10 completed Wolf-Winter at decision 21, continued through checkpoint 40 and Gallowmere at 45, then ended honestly after Tanner's Fever at 67; clarity/enjoyment 4/4, replay true, no stuck state. Seed 9's malformed report was correctly rejected.
 - Compile/self-critique: 771 verified reports/31 rejected compile to 22 journey-v3 pure exits, all continued at least once. PASS for a trusted outbound boundary, not a depth claim: no matrix fork has a downstream consumer, and the fresh player surfaced an existing S1 jerkin equip step plus S0 quest-shell repetition.
 - Guard: adversarial review closed a one-way catalog-parity defect; 275 focused tests and pre/final 6,000-step crawls (`20260714T034655Z`, `20260714T044001Z`) reached 247/247 nodes, 344/344 edges, and 12/12 quests; full health passed (319 files/2,274 tests, UI, 12 packs).
-
-### Cycle result - campaign_character_foundation
-
-- Change: campaign-character v1 now canonically models background, skills, values, health/wounds, instance equipment, money, abilities, knowledge, promises, crimes, NPC relationships, and faction standing; overworld snapshot v9 persists it with strict v8 migration and full/compact/UI read-only projection.
-- Integrity: non-default v9 state rejects until trusted consequences can replay it, blocking invented money/abilities/memories; compact v15 caps every family at 8 and visible memories at 4 while exposing truthful totals/truncation, with a maximum-width payload below 15 KB.
-- Pure evidence: verified pure/fresh seed 8 completed Wolf-Winter at decision 24, continued through five completed goals and checkpoints 40/80, then ended honestly at 120; clarity 4/5, enjoyment 5/5, replay true, no stuck state or S2+ defect. One prior exact-candidate attempt timed out with no transcript and is rejected evidence.
-- Self-critique: PASS for reusable persistence, tamper resistance, and surface parity—not a depth claim. All causal-matrix forks remain uncounted; the player again found thorough preparation highly rewarding and only flagged repeated out-of-scope hub boilerplate (S1).
-- Guard: pre/final 6,000-step crawls reached 247/247 towns, 344/344 roads, and 12/12 quests (`20260714T023528Z`, `20260714T030833Z`); 165 focused tests, responsive rendered UI checks, adversarial review, and full health passed.

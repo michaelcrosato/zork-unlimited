@@ -90,6 +90,25 @@ Before writing the block, answer independently: “Would you personally choose t
 start another fresh run of the experience you just tested?” Set `would_replay`
 to the matching JSON boolean; do not copy the placeholder.
 
+REPORT GATE — check every item immediately before sending:
+
+- Do not write any part of the report until a game response contains
+  `exitReceipt`. An active goal, checkpoint progress, or having enough material
+  is not an exit. If you chose continue, keep playing until the game presents
+  another journey choice; never invent an early receipt. There is no acceptable
+  early report: a `journey_exit_receipt` that is `null`, empty, partial,
+  reconstructed, or merely a current-state snapshot substituted for
+  `exitReceipt` rejects the entire playtest.
+- Copy the entire `exitReceipt` object without omitting, renaming, nesting, or
+  reconstructing fields. Replace the `{}` example below with that complete
+  server-returned object; if you do not have it, continue playing instead of
+  reporting.
+- The opening fence must be exactly the three backticks followed by `json`, one
+  space, and `exit-interview`, as shown below. A plain `json` fence is invalid
+  and causes the whole run to be rejected.
+- Confirm the reply contains the literal heading `Playthrough log`, a `Verdict`,
+  both integer ratings, and exactly one final `json exit-interview` block.
+
 ```json exit-interview
 {
   "schema_version": 2,

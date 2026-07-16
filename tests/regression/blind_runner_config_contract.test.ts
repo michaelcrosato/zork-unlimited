@@ -68,7 +68,27 @@ describe("blind runner MCP config contract", () => {
     expect(owPrompt).not.toContain("start_overworld_session_quest");
     expect(owPrompt).toContain("game presents its actual journey choice");
     expect(owPrompt).toContain("After the game confirms the end");
+    expect(owPrompt).toContain("REPORT GATE — check every item immediately before sending");
+    expect(owPrompt).toContain(
+      "Do not write any part of the report until a game response contains",
+    );
+    expect(owPrompt).toContain("An active goal, checkpoint progress, or having enough material");
+    expect(owPrompt).toContain("never invent an early receipt");
+    expect(owPrompt).toContain("a `journey_exit_receipt` that is `null`, empty, partial");
+    expect(owPrompt).toContain("current-state snapshot substituted for");
+    expect(owPrompt).toContain("rejects the entire playtest");
+    expect(owPrompt).toContain("Copy the entire `exitReceipt` object without omitting");
+    expect(owPrompt).toContain("if you do not have it, continue playing instead of");
+    expect(owPrompt).toContain("A plain `json` fence is invalid");
+    expect(owPrompt).toContain("literal heading `Playthrough log`");
+    expect(owPrompt.indexOf("REPORT GATE")).toBeGreaterThan(
+      owPrompt.indexOf("After the game confirms the end"),
+    );
     expect(owPrompt).toContain("json exit-interview");
+    expect(owPrompt.match(/^```json exit-interview\r?$/gm)).toHaveLength(1);
+    expect(owPrompt.indexOf("\n```json exit-interview")).toBeGreaterThan(
+      owPrompt.indexOf("REPORT GATE"),
+    );
     expect(owPrompt).toContain('"play_mode": "pure"');
     expect(owPrompt).not.toContain("pack_path");
     expect(runner).toContain("--play-mode");
