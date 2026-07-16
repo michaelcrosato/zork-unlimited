@@ -673,6 +673,60 @@ describe("OverworldSession", () => {
     }
   });
 
+  it("renders the source-earned Wolf-Winter mission and compact route preview on the blocking preparation screen", async () => {
+    const session = new OverworldSession(world);
+    const opening = session.view();
+    session.scoutPoi(opening.pois[0]!.id);
+    session.talkToCharacter(world.opening_registration!.contact);
+    session.chooseJourneyStory("albany:ledger_advocate");
+    session.chooseJourneyStory("albany:oath_limited_aid_only");
+    session.chooseJourneyStory("albany:source_rowan_civic_docket");
+    const journey = session.journey();
+    expect(journey.storyChoice?.kind).toBe("preparation");
+
+    const uiRoot = resolve(process.cwd(), "ui");
+    const server = await createServer({
+      root: uiRoot,
+      configFile: resolve(uiRoot, "vite.config.ts"),
+      appType: "custom",
+      logLevel: "silent",
+      optimizeDeps: { noDiscovery: true },
+      server: { middlewareMode: true },
+    });
+    try {
+      const module = (await server.ssrLoadModule("/src/JourneyStoryChoiceScreen.tsx")) as {
+        JourneyStoryChoiceScreen: unknown;
+      };
+      const requireFromUi = createRequire(resolve(uiRoot, "package.json"));
+      const react = requireFromUi("react") as {
+        createElement: (type: unknown, props: Record<string, unknown>) => unknown;
+      };
+      const reactDomServer = requireFromUi("react-dom/server") as {
+        renderToStaticMarkup: (element: unknown) => string;
+      };
+      const markup = reactDomServer.renderToStaticMarkup(
+        react.createElement(module.JourneyStoryChoiceScreen, {
+          journey,
+          onChoose: () => undefined,
+        }),
+      );
+
+      expect(markup).toContain("Mission —");
+      expect(markup).toContain("Old Cade");
+      expect(markup).toContain("wolf pack coming down with the weather");
+      expect(markup).toContain("Take the Exposed Ridge Road");
+      expect(markup).toContain("30 min, 1 supply, fatigue +25");
+      expect(markup).toContain("harder cattle arrival for a clearer first feed cast");
+      expect(markup).toContain("Take the Sheltered Stockway");
+      expect(markup).toContain("75 min, 2 supplies, fatigue +10");
+      expect(markup).toContain("keep the herd calm");
+      expect(markup).not.toContain("clean three-cast lure line");
+      expect(markup.match(/<button/g)).toHaveLength(3);
+    } finally {
+      await server.close();
+    }
+  });
+
   it("renders all three relief-oath terms with their complete binding consequences", async () => {
     const uiRoot = resolve(process.cwd(), "ui");
     const server = await createServer({

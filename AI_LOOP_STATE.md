@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 571 -->
+<!-- historical_cycle_count: 572 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,15 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - informed_wolf_winter_dispatch
+
+- Evidence choice: a fresh ten-slot no-resume/no-retry diagnostic verified 7/10 players (Haiku 6/9, Sonnet 1/1); all seven completed Wolf-Winter in 22–38 decisions, none stuck, clarity/enjoyment averaged 4.00/4.29, first continuation was 5/7, three strategies appeared with 57.1% maximum share, and three Haiku null-receipt self-stops disqualified the 9:1 authority plan.
+- Surface: before registration binds, the authored Wolf-Winter mission and plain `1/5` role→duty→evidence→preparation→allocation roadmap are visible; source certification now reveals the real quest plus both routes' authored tradeoffs and exact travel costs while preparation and allocation remain mandatory.
+- Integrity: exact pending-preparation predecessor saves regain only the certified source-earned quest id; repair requires matching source/offer proofs, no selection boundary or quest progress, and resolved missing-discovery tampering still rejects. UI and compact/full MCP share the same briefing without persisting presentation copy.
+- Pure evidence: finished-build seed 2812 completed Wolf-Winter at decision 29, continued through The Gallowmere and The Tanner's Fever, and ended at checkpoint 80; clarity/enjoyment 4/5, stuck false, replay true, no S1+, and the prior paperwork/density complaint disappeared, leaving choice-to-quest-mechanic mapping as the clarity debt.
+- Compile/self-critique: compile `20260716T163052Z` has 804 verified reports and 53 current-contract pure exits, 51 continuing. PASS for informed dispatch, not the greater-than-BG3 milestone: clarity remains below 4.2 and homogeneous-Sonnet pilot/authority tooling, deep crawl, exact 100-player cohort, numeric gates, and severity audit remain.
+- Guard: two adversarial presentation/integrity audits closed hidden UI mission context, save-repair aperture, optional-sixth-choice wording, and a 32% copy-load regression; 14 affected suites are 118/118, and pre/final crawls `20260716T154146Z`/`20260716T162059Z` found zero issues across 247/247 nodes, 344/344 edges, 12/12 boards, and 12/12 quests.
 
 ### Cycle result - authenticated_slice_fleet_certifier
 
@@ -139,12 +148,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Pure evidence: verified pure/fresh seed 2705 chose Road-Warden + Hayden, completed Wolf-Winter at decision 27, continued through three later goals and checkpoints 40/80, then ended voluntarily at 96; clarity/enjoyment 4/4, replay true, no rejects, stuck state, or mechanical bug.
 - Compile/self-critique: 776 verified reports/33 rejected and 27 v3 pure exits all continued at least once; compile `20260714T184840Z` has zero crawl findings. PASS for a delayed Albany→Wolf counterfactual, not the greater-than-BG3 slice claim: repeated quest structure and cross-town contact-name reuse remain fresh S0/S1 debt.
 - Guard: three independent adversarial audits found no remaining P0/P1; pre/final 6,000-step crawls (`20260714T154421Z`, `20260714T183455Z`) reached 247/247 nodes, 344/344 edges, and 12/12 quests; full health passed (328 files/2,391 tests, UI, 12 packs).
-
-### Cycle result - albany_character_registration
-
-- Change: Rowan now presents four permanent Albany backgrounds with visible contact, rank-4 skill/value, kit, funds, standing, knowledge, and active obligation; the selected canonical package survives save/restore, reaches embedded quests, and changes Rowan plus its named sponsor's later response. Refusal is an authored Unaffiliated Courier record, not an unchanged retry.
-- Integrity/parity: offer and selection journals bind exact Albany area/time and journey decision proof; restore rejects splices, deletion/newer-action bypasses, post-quest registration, mutable package claims, and predecessor hashes carrying later evidence, while progressed trusted saves receive bound legacy provenance. Private proof metadata is deep-cloned and redacted from UI/full/compact MCP; fresh journeys cannot start any first quest before choosing a visible card.
-- Measured effect: `SS-F01-character-background` is the sole counted fork. With the same broken-paling roll of 7, Road-Warden Fieldcraft imports DEF 4 and braces the rail; Ledger Advocate remains DEF 3, splits it, and receives the bind-the-rail recovery. Direct/public starts remain pack-default.
-- Pure evidence: verified pure/fresh seed 13 chose Road-Warden, completed Wolf-Winter, Gallowmere, Tanner's Fever, and Breaking Weir, continued at 25/40/49/71/80, then ended voluntarily at 92; clarity/enjoyment 4/4, replay true, no rejects, stuck state, or blocker.
-- Compile/self-critique: the ledger is 773 accepted/33 rejected, two reports beyond the 771-report compile and below threshold. PASS for one delayed cross-system background fork, not overall slice depth: three profiles still lack mechanical Wolf consumers, and the player again identified the repeated town/quest chassis as S0 debt.
-- Guard: adversarial reviews closed registration bypass, save-boundary, migration, memory-consumer, projection, UI-bias, and structural-QA defects; live Vite verification exercised all four cards with no errors; final 6,000-step crawl `20260714T153351Z` reached 247/247 nodes, 344/344 edges, and 12/12 quests; full health passed (325 files/2,359 tests, UI, 12 packs).

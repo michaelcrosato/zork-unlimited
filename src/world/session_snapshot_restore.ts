@@ -2555,6 +2555,21 @@ export function planOverworldSessionSnapshotRestore(args: {
     );
   const targetPreparationQuestDiscovered =
     targetPreparationQuestId !== null && discoveredQuestIds.has(targetPreparationQuestId);
+  // Builds before source-bound mission previewing offered preparation at this
+  // exact boundary but did not yet persist the derived quest discovery. The
+  // offer/source proofs make that single missing id safe to reconstruct; a
+  // resolved preparation with the id removed still fails below.
+  const repairsPendingPreparationQuestDiscovery =
+    preparationRequiredByCurrentManifest &&
+    preparationProof.offered &&
+    preparationProof.profile === null &&
+    preparationProof.selectionBoundary === null &&
+    !preparationProof.legacy &&
+    leadSourceProof.option !== null &&
+    targetPreparationQuestId !== null &&
+    targetPreparationQuestId === targetLeadQuestId &&
+    !targetPreparationQuestProgressed &&
+    !targetPreparationQuestDiscovered;
   if (preparationProof.legacy && !targetPreparationQuestHasReplayableProgress) {
     throw new Error(
       "Overworld session snapshot legacy opening preparation has no later replayable Wolf-Winter progress to grandfather.",
@@ -2578,16 +2593,6 @@ export function planOverworldSessionSnapshotRestore(args: {
   ) {
     throw new Error(
       "Overworld session snapshot has opening-quest progress without a selected preparation profile or trusted legacy marker.",
-    );
-  }
-  if (
-    preparationRequiredByCurrentManifest &&
-    preparationProof.offered &&
-    preparationProof.profile === null &&
-    targetPreparationQuestDiscovered
-  ) {
-    throw new Error(
-      "Overworld session snapshot pending preparation revealed its target quest before a profile was committed.",
     );
   }
   if (
@@ -3439,13 +3444,20 @@ export function planOverworldSessionSnapshotRestore(args: {
       "Trusted predecessor snapshot has Wolf-Winter progress without a replayable preparation boundary for relief-allocation migration.",
     );
   }
-  const discoveredQuestIdsAfter = Object.freeze(
+  const discoveredQuestIdsAfterSet = new Set(
     snapshot.discoveredQuestIds.filter(
       (questId) =>
         questId !== targetLeadQuestId ||
         (hasLeadSourceManifestEvidence && !canOfferMigratedPreparation),
     ),
   );
+  if (
+    targetPreparationQuestId !== null &&
+    (repairsPendingPreparationQuestDiscovery || canOfferMigratedPreparation)
+  ) {
+    discoveredQuestIdsAfterSet.add(targetPreparationQuestId);
+  }
+  const discoveredQuestIdsAfter = Object.freeze([...discoveredQuestIdsAfterSet].sort());
   const journalEntriesAfter = Object.freeze(migratedJournalEntries);
 
   return {

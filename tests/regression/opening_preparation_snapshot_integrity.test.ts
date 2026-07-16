@@ -62,8 +62,22 @@ describe("opening preparation snapshot integrity", () => {
 
     const pending = registerAndSelectLead().snapshot();
     expect(journalEntry(pending, "preparation_offer").storyChoiceBoundary).toBeDefined();
-    expect(pending.discoveredQuestIds).not.toContain(PREPARATION.target_quest);
+    expect(pending.discoveredQuestIds).toContain(PREPARATION.target_quest);
     expect(OverworldSession.restore(WORLD, pending).snapshot()).toEqual(pending);
+
+    const preMissionPreview = structuredClone(pending);
+    preMissionPreview.discoveredQuestIds = preMissionPreview.discoveredQuestIds.filter(
+      (questId) => questId !== PREPARATION.target_quest,
+    );
+    const upgraded = OverworldSession.restore(WORLD, preMissionPreview).snapshot();
+    expect(upgraded).toEqual({
+      ...preMissionPreview,
+      discoveredQuestIds: [
+        ...preMissionPreview.discoveredQuestIds,
+        PREPARATION.target_quest,
+      ].sort(),
+    });
+    expect(OverworldSession.restore(WORLD, upgraded).snapshot()).toEqual(upgraded);
 
     const selected = selectPreparation().snapshot();
     expect(selected.discoveredQuestIds).toContain(PREPARATION.target_quest);
@@ -109,7 +123,6 @@ describe("opening preparation snapshot integrity", () => {
     predecessor.journalEntries = predecessor.journalEntries.filter(
       (entry) => entry.kind !== "preparation_offer",
     );
-    predecessor.discoveredQuestIds.push(PREPARATION.target_quest);
 
     const migratedSession = OverworldSession.restore(WORLD, predecessor);
     const migrated = migratedSession.snapshot();
@@ -121,7 +134,7 @@ describe("opening preparation snapshot integrity", () => {
     expect(migrated.journalEntries[0]?.recordedAt).toBe(migrated.journalEntries[1]?.recordedAt);
     expect(migrated.character).toEqual(predecessor.character);
     expect(migratedSession.journey().storyChoice?.kind).toBe("preparation");
-    expect(migratedSession.view().quests.map((quest) => quest.id)).not.toContain(
+    expect(migratedSession.view().quests.map((quest) => quest.id)).toContain(
       PREPARATION.target_quest,
     );
 
@@ -151,8 +164,6 @@ describe("opening preparation snapshot integrity", () => {
         storyChoiceBoundary: lead.storyChoiceBoundary,
       }),
     );
-    forged.discoveredQuestIds.push(PREPARATION.target_quest);
-
     expect(() => OverworldSession.restore(WORLD, forged)).toThrow(
       /no later replayable Wolf-Winter progress to grandfather/i,
     );

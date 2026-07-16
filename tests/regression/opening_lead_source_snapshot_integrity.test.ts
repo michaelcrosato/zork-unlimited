@@ -140,13 +140,13 @@ describe("opening lead-source snapshot integrity", () => {
     const snapshot = session.snapshot();
     const questArea = WORLD.quests.find((quest) => quest.id === TARGET_QUEST)?.area;
     if (!questArea) throw new Error("expected the source-bound quest area");
-    expect(snapshot.discoveredQuestIds).not.toContain(TARGET_QUEST);
+    expect(snapshot.discoveredQuestIds).toContain(TARGET_QUEST);
     expect(snapshot.discoveredAreaIds).not.toContain(questArea);
     expect(session.journey().storyChoice?.kind).toBe("preparation");
 
     const restored = OverworldSession.restore(WORLD, snapshot);
     expect(restored.snapshot()).toEqual(snapshot);
-    expect(restored.view().quests.map((quest) => quest.id)).not.toContain(TARGET_QUEST);
+    expect(restored.view().quests.map((quest) => quest.id)).toContain(TARGET_QUEST);
     expect(restored.journey().storyChoice?.kind).toBe("preparation");
   });
 
@@ -177,7 +177,7 @@ describe("opening lead-source snapshot integrity", () => {
         .find((relationship) => relationship.npcId === "albany:jamie_tanner")
         ?.memories.includes("albany:memory_jamie_market_testimony_certified"),
     ).toBe(true);
-    expect(selectedSnapshot.discoveredQuestIds).not.toContain(TARGET_QUEST);
+    expect(selectedSnapshot.discoveredQuestIds).toContain(TARGET_QUEST);
     expect(restoredPending.journey().storyChoice?.kind).toBe("preparation");
     expect(entry(selectedSnapshot, "lead_source").text).toMatch(
       /Actual cost: 15 minutes and \$0.*sponsorship pre-clears/i,
@@ -324,7 +324,7 @@ describe("opening lead-source snapshot integrity", () => {
     expect(deletedSelection.character.knowledge).toContain(
       "albany:knowledge_wolf_market_testimony",
     );
-    expect(deletedSelection.discoveredQuestIds).not.toContain(TARGET_QUEST);
+    expect(deletedSelection.discoveredQuestIds).toContain(TARGET_QUEST);
     expect(() => OverworldSession.restore(WORLD, deletedSelection)).toThrow(
       /pending lead-source|pending lead source|certified lead source|campaign character/i,
     );
@@ -432,7 +432,7 @@ describe("opening lead-source snapshot integrity", () => {
     expect(restoredAgain.journey().storyChoice?.kind).toBe("lead_source");
     restoredAgain.chooseJourneyStory(ROWAN_SOURCE);
     expect(restoredAgain.journey().storyChoice?.kind).toBe("preparation");
-    expect(restoredAgain.view().quests.map((quest) => quest.id)).not.toContain(TARGET_QUEST);
+    expect(restoredAgain.view().quests.map((quest) => quest.id)).toContain(TARGET_QUEST);
   });
 
   it("migrates the exact no-progress F03 predecessor into preparation", () => {
@@ -441,7 +441,6 @@ describe("opening lead-source snapshot integrity", () => {
     predecessor.journalEntries = predecessor.journalEntries.filter(
       (candidate) => candidate.kind !== "preparation_offer",
     );
-    predecessor.discoveredQuestIds.push(TARGET_QUEST);
     expect(predecessor.journalEntries.some((candidate) => candidate.kind === "lead_source")).toBe(
       true,
     );
@@ -458,7 +457,7 @@ describe("opening lead-source snapshot integrity", () => {
     expect(migrated.openingLeadSourceDecisionTrail).toEqual(
       predecessor.openingLeadSourceDecisionTrail,
     );
-    expect(migrated.discoveredQuestIds).not.toContain(TARGET_QUEST);
+    expect(migrated.discoveredQuestIds).toContain(TARGET_QUEST);
     const restored = OverworldSession.restore(WORLD, migrated);
     expect(restored.journey().storyChoice?.kind).toBe("preparation");
     restored.chooseJourneyStory(DEFAULT_PREPARATION);

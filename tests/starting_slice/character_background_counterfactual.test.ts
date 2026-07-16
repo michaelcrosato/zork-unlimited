@@ -92,7 +92,7 @@ function registerSession(profileId: string): OverworldSession {
   });
   session.chooseJourneyStory(DEFAULT_SOURCE_ID);
   expect(session.journey().storyChoice?.kind).toBe("preparation");
-  expect(session.view().quests.map((quest) => quest.id)).not.toContain("wolf_winter");
+  expect(session.view().quests.map((quest) => quest.id)).toContain("wolf_winter");
   session.chooseJourneyStory(DEFAULT_PREPARATION_ID);
   expect(session.view().quests.map((quest) => quest.id)).toContain("wolf_winter");
   return session;
@@ -237,7 +237,7 @@ function launchRegisteredWolf(profileId: string): {
     choice: DEFAULT_SOURCE_ID,
   });
   expect(sourced.journey.storyChoice?.kind).toBe("preparation");
-  expect(sourced.observation.quests.map((quest) => quest.id)).not.toContain("wolf_winter");
+  expect(sourced.observation.quests.map((quest) => quest.id)).toContain("wolf_winter");
   api.choose_overworld_session_story({
     ...FULL_OVERWORLD,
     session_id: sessionId,
@@ -428,7 +428,7 @@ describe("SS-F01 — Albany character background counterfactual", () => {
     );
     session.chooseJourneyStory(DEFAULT_SOURCE_ID);
     expect(session.journey().storyChoice?.kind).toBe("preparation");
-    expect(session.view().quests.map((quest) => quest.id)).not.toContain(wolf.id);
+    expect(session.view().quests.map((quest) => quest.id)).toContain(wolf.id);
     expect(() => session.previewQuestStart(wolf.id)).toThrow(/preparation/i);
     session.chooseJourneyStory(DEFAULT_PREPARATION_ID);
     moveSessionToArea(session, wolf.area);

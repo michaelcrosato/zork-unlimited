@@ -145,6 +145,7 @@ import {
   openingRegistrationOfferJournalId,
 } from "./opening_registration_journal.js";
 import { presentOpeningRegistration } from "./opening_registration_presentation.js";
+import { withOpeningDispatchBriefing } from "./opening_dispatch_briefing.js";
 import {
   clearOverworldSessionCaches,
   type OverworldSessionCaches,
@@ -1032,6 +1033,8 @@ export class OverworldSession {
                 ? presentOpeningAlly(ally, this.characterState)
                 : undefined;
 
+    storyChoice = withOpeningDispatchBriefing(this.world, storyChoice);
+
     if (campaign) {
       if (pendingGoalCompletion && campaign.preRetentionTeaser) {
         goalCompletion = {
@@ -1286,10 +1289,12 @@ export class OverworldSession {
       });
       this.characterState = application.characterAfter;
       addOverworldJournalEntry(this.journalEntries, this.journalEntriesById, entry);
+      // Source certification is the point at which Wolf-Winter becomes a real,
+      // inspectable mission. Preparation remains mandatory before launch, but
+      // its choice is now made against the authored quest and route briefing.
+      this.discoveredQuestIds.add(scene.target_quest);
       if (this.world.opening_preparation?.after_lead_source === scene.id) {
         this.offerOpeningPreparationAfterLeadSource();
-      } else {
-        this.discoveredQuestIds.add(scene.target_quest);
       }
       this.clearSessionCaches();
       return Object.freeze({

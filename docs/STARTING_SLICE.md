@@ -240,6 +240,24 @@ source NPC's memory, crosses the trusted quest boundary, and is named at its
 consumer; Rowan preserves the import-independent routes. Paired proof lives in
 [`lead_source_counterfactual.test.ts`](../tests/starting_slice/lead_source_counterfactual.test.ts).
 
+The informed-dispatch follow-up keeps that causal structure while removing a
+blind planning interval exposed by the first authenticated fleet diagnostic.
+Before registration binds, the journey surface reuses Wolf-Winter's authored
+discovery as a concrete mission preview and names the five-decision dispatch
+plan in plain role, duty, evidence, preparation, and relief-allocation terms.
+Each later prompt identifies the completed and still-open decisions, while the
+fifth preserves June Pike's optional field-team follow-up. Source certification
+now reveals the real quest card and a compact, authored cost/tradeoff comparison
+of both hill approaches while the preparation choice is pending; full tactical
+route detail remains on the actual launch choice. Preparation and relief
+allocation remain mandatory launch gates. Exact pending-preparation saves from
+the earlier timing are normalized by certified source and offer proofs, while a
+resolved save with the discovery removed remains invalid. Presentation and state proof live in
+[`opening_dispatch_briefing.test.ts`](../tests/starting_slice/opening_dispatch_briefing.test.ts),
+[`lead_source_counterfactual.test.ts`](../tests/starting_slice/lead_source_counterfactual.test.ts),
+and
+[`opening_preparation_snapshot_integrity.test.ts`](../tests/regression/opening_preparation_snapshot_integrity.test.ts).
+
 Legacy migration is deliberately fail-closed at this causal boundary. An
 untouched registration-era save receives the real source prompt. Every progressed
 post-registration suffix is rejected rather than being falsely certified as

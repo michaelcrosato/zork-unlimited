@@ -102,7 +102,7 @@ function launchMcpWolf(sourceId: string): {
     choice: sourceId,
   });
   expect(selected.journey.storyChoice?.kind).toBe("preparation");
-  expect(questIds(selected.observation)).not.toContain(WOLF_ID);
+  expect(questIds(selected.observation)).toContain(WOLF_ID);
   const prepared = api.choose_overworld_session_story({
     ...FULL_OVERWORLD,
     session_id: pending.sessionId,
@@ -273,7 +273,7 @@ describe("SS-F03 — Albany lead-source counterfactual", () => {
     expect(selected.journeyDecision).toEqual(expectedJourneyDecision);
     expect(selected.journey.acceptedDecisions).toBe(pending.pendingJourney.acceptedDecisions + 1);
     expect(selected.journey.storyChoice?.kind).toBe("preparation");
-    expect(questIds(selected.observation)).not.toContain(WOLF_ID);
+    expect(questIds(selected.observation)).toContain(WOLF_ID);
 
     const accepted = api.export_overworld_session({ session_id: pending.sessionId });
     expect(() =>
@@ -326,7 +326,17 @@ describe("SS-F03 — Albany lead-source counterfactual", () => {
       choice: JAMIE_SOURCE,
     });
     expect(selected.journey.storyChoice?.kind).toBe("preparation");
-    expect(questIds(selected.observation)).not.toContain(WOLF_ID);
+    const selectedWolf = selected.observation.quests.find((quest) => quest.id === WOLF_ID);
+    expect(selectedWolf).toMatchObject({
+      title: "The Wolf-Winter",
+      discovery: WORLD.quests.find((quest) => quest.id === WOLF_ID)?.discovery,
+      launch: {
+        options: [
+          { id: "albany:wolf_approach_exposed_ridge" },
+          { id: "albany:wolf_approach_sheltered_stockway" },
+        ],
+      },
+    });
     expect(selected.result.entry).toMatchObject({ kind: "lead_source" });
     expect(selected.observation.character).toMatchObject({
       money: 12,
@@ -345,7 +355,10 @@ describe("SS-F03 — Albany lead-source counterfactual", () => {
     expect(restoredSelected.journey).toEqual(selected.journey);
     expect(uiSelected.journey()).toEqual(selected.journey);
     expect(restoredSelected.observation.character).toEqual(selected.observation.character);
-    expect(questIds(restoredSelected.observation)).not.toContain(WOLF_ID);
+    expect(restoredSelected.observation.quests.find((quest) => quest.id === WOLF_ID)).toEqual(
+      selectedWolf,
+    );
+    expect(uiSelected.view().quests.find((quest) => quest.id === WOLF_ID)).toEqual(selectedWolf);
     expect(() => uiSelected.chooseJourneyStory(HAYDEN_SOURCE)).toThrow(/unknown story choice/i);
   });
 
