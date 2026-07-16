@@ -94,10 +94,13 @@ for a full-speed feed. Spectate is fully inert when not enabled.
 `docs/testing_pyramid.md`) runs the 100 independent pure fresh-overworld players
 required at a milestone or feedback-harvest cycle, with bounded concurrency,
 optional authenticated diagnostic resume, and a closed manifest bundle — each
-one an ordinary `run.sh` spawn. The authoritative starting-slice command is:
+one an ordinary `run.sh` spawn. The starting-slice pilot and authority commands
+are:
 
 ```bash
-npm run fleet -- --count 100 --concurrency 4 --model mix --seed-base <fresh-seed-base> --label <fresh-label> --no-resume --max-retries 0
+npm run fleet -- --count 10 --concurrency 4 --model sonnet --seed-base <fresh-pilot-seed-base> --label <fresh-pilot-label> --no-resume --max-retries 0
+npm run starting-slice:pilot -- --fleet ai-runs/fleet/<fresh-pilot-label>
+npm run fleet -- --count 100 --concurrency 4 --model sonnet --seed-base <fresh-seed-base> --label <fresh-label> --no-resume --max-retries 0
 npm run fleet:mock -- --count 2     # structural zero-token dry run
 npm run fleet:mock -- --count 2 --target quest:sunken_barrow # structural drop-in
 ```
@@ -113,7 +116,8 @@ npm run fleet:mock -- --count 2 --target quest:sunken_barrow # structural drop-i
 - **Model**: `--model <alias>` (`haiku`, `sonnet`, `opus`) or `--model mix`
   (deterministic 9 haiku : 1 sonnet weighting by index). No temperature/top_p
   flag exists — model × seed is the live diversity axis. Live fleets default to
-  `mix`, so `npm run fleet -- --count 100` produces the certifying 90/10 plan.
+  homogeneous Sonnet, the only authoritative requested model plan. Explicit
+  `mix`, Haiku, and Opus fleets are diagnostic-only.
 - **Resume**: resume is enabled by default for diagnostic fleets only. Only a
   reverified report plus evidence-sidecar schema v2 with the
   current journey contract, exact planned seed, and exact clean commit and world
@@ -163,10 +167,24 @@ npm run fleet:mock -- --count 2 --target quest:sunken_barrow # structural drop-i
 
 ### Certifying the starting slice
 
-Close an authoritative 100-player bundle, then run:
+First close a fresh 10-player Sonnet pilot bundle and run its distinct go/no-go
+checker:
 
 ```bash
-npm run fleet -- --count 100 --concurrency 4 --model mix --seed-base <fresh-seed-base> --label <fresh-label> --no-resume --max-retries 0
+npm run fleet -- --count 10 --concurrency 4 --model sonnet --seed-base <fresh-pilot-seed-base> --label <fresh-pilot-label> --no-resume --max-retries 0
+npm run starting-slice:pilot -- --fleet ai-runs/fleet/<fresh-pilot-label>
+```
+
+The pilot requires 10/10 primary unrecovered/no-retry members, unique game and
+Claude sessions, one exact authenticated actual model id, at least three
+recognized Wolf-Winter strategies, and no strategy above 7/10. It writes a
+separate pilot artifact and never certifies the slice. If the exact provider
+model id changes before authority, repilot.
+
+Then close the authoritative 100-player Sonnet bundle and run:
+
+```bash
+npm run fleet -- --count 100 --concurrency 4 --model sonnet --seed-base <fresh-seed-base> --label <fresh-label> --no-resume --max-retries 0
 npm run starting-slice:certify -- --fleet ai-runs/fleet/<label>
 ```
 
@@ -174,7 +192,8 @@ The certifier reparses and reverifies all reports and sidecars. It requires
 exactly 100 unique contiguous planned seeds, no failed/missing slots, one clean
 build/world, zero failed attempts or report-recovered members across the closed
 histories, the current pure fresh-overworld/default-player contract, and the
-standard deterministic 9 Haiku : 1 Sonnet mix. Malformed or unauthenticated
+homogeneous requested Sonnet plan authenticated to one exact actual model id,
+with unique game and Claude sessions. Malformed or unauthenticated
 evidence exits 2; valid evidence that misses a gate exits 1; a pass exits 0.
 
 The exact simultaneous quality gates and Wolf-Winter outcome mapping live in

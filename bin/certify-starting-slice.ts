@@ -14,11 +14,9 @@ import { randomBytes } from "node:crypto";
 import { isAbsolute, join, relative, resolve, sep } from "node:path";
 import { pathToFileURL } from "node:url";
 import {
-  certifyStartingSliceFleet,
+  certifyStartingSliceAuthority,
   startingSliceFleetDisplayName,
 } from "../src/starting_slice/fleet_certifier.js";
-
-const AUTHORITATIVE_FLEET_SIZE = 100;
 
 class StartingSliceCertificationUsageError extends Error {}
 
@@ -40,7 +38,11 @@ function containedPath(root: string, candidate: string): boolean {
   return rel !== "" && rel !== ".." && !rel.startsWith(`..${sep}`) && !isAbsolute(rel);
 }
 
-function existingOutputIsSafe(outputPath: string, fleetRoot: string): void {
+function existingOutputIsSafe(
+  outputPath: string,
+  fleetRoot: string,
+  kind: StartingSliceResultArtifactKind,
+): void {
   let stats;
   try {
     stats = lstatSync(outputPath);
@@ -49,29 +51,35 @@ function existingOutputIsSafe(outputPath: string, fleetRoot: string): void {
     throw error;
   }
   if (stats.isSymbolicLink()) {
-    throw new Error("existing certification output must not be a symbolic link");
+    throw new Error(`existing ${kind} output must not be a symbolic link`);
   }
   if (!stats.isFile()) {
-    throw new Error("existing certification output must be a regular file");
+    throw new Error(`existing ${kind} output must be a regular file`);
   }
   if (stats.nlink !== 1) {
-    throw new Error("existing certification output must not have multiple hard links");
+    throw new Error(`existing ${kind} output must not have multiple hard links`);
   }
   if (!containedPath(fleetRoot, canonicalRealpath(outputPath))) {
-    throw new Error("existing certification output escapes the fleet directory");
+    throw new Error(`existing ${kind} output escapes the fleet directory`);
   }
 }
 
-/** Safely publish one certification result without ever truncating a link target. */
-export function writeCertificationArtifactSafely(fleetDir: string, result: unknown): string {
+type StartingSliceResultArtifactKind = "certification" | "pilot";
+
+/** Safely publish one fleet result without ever truncating a link target. */
+function writeStartingSliceResultArtifactSafely(
+  fleetDir: string,
+  result: unknown,
+  kind: StartingSliceResultArtifactKind,
+): string {
   const canonicalFleetDir = resolve(fleetDir);
   const fleetStats = lstatSync(canonicalFleetDir);
   if (fleetStats.isSymbolicLink() || !fleetStats.isDirectory()) {
-    throw new Error("certification fleet directory must be a real directory");
+    throw new Error(`${kind} fleet directory must be a real directory`);
   }
   const fleetRoot = canonicalRealpath(canonicalFleetDir);
-  const outputPath = resolve(canonicalFleetDir, "starting-slice-certification.json");
-  existingOutputIsSafe(outputPath, fleetRoot);
+  const outputPath = resolve(canonicalFleetDir, `starting-slice-${kind}.json`);
+  existingOutputIsSafe(outputPath, fleetRoot, kind);
 
   const payload = `${JSON.stringify(result, null, 2)}\n`;
   let tempPath: string | null = null;
@@ -80,7 +88,7 @@ export function writeCertificationArtifactSafely(fleetDir: string, result: unkno
     for (let attempt = 0; attempt < 16; attempt += 1) {
       const candidate = join(
         canonicalFleetDir,
-        `.starting-slice-certification.${process.pid}.${randomBytes(8).toString("hex")}.tmp`,
+        `.starting-slice-${kind}.${process.pid}.${randomBytes(8).toString("hex")}.tmp`,
       );
       try {
         descriptor = openSync(candidate, "wx", 0o600);
@@ -91,7 +99,7 @@ export function writeCertificationArtifactSafely(fleetDir: string, result: unkno
       }
     }
     if (descriptor === null || tempPath === null) {
-      throw new Error("could not reserve an exclusive certification temp file");
+      throw new Error(`could not reserve an exclusive ${kind} temp file`);
     }
     writeFileSync(descriptor, payload, "utf8");
     fsyncSync(descriptor);
@@ -100,10 +108,10 @@ export function writeCertificationArtifactSafely(fleetDir: string, result: unkno
 
     const tempStats = lstatSync(tempPath);
     if (!tempStats.isFile() || tempStats.isSymbolicLink() || tempStats.nlink !== 1) {
-      throw new Error("certification temp artifact is not a private regular file");
+      throw new Error(`${kind} temp artifact is not a private regular file`);
     }
     if (!containedPath(fleetRoot, canonicalRealpath(tempPath))) {
-      throw new Error("certification temp artifact escaped the fleet directory");
+      throw new Error(`${kind} temp artifact escaped the fleet directory`);
     }
     // Rename replaces the directory entry itself; it never opens or truncates
     // a destination symlink/hardlink target.
@@ -122,6 +130,14 @@ export function writeCertificationArtifactSafely(fleetDir: string, result: unkno
   }
 }
 
+export function writeCertificationArtifactSafely(fleetDir: string, result: unknown): string {
+  return writeStartingSliceResultArtifactSafely(fleetDir, result, "certification");
+}
+
+export function writePilotArtifactSafely(fleetDir: string, result: unknown): string {
+  return writeStartingSliceResultArtifactSafely(fleetDir, result, "pilot");
+}
+
 function main(): void {
   let fleetDir: string;
   try {
@@ -135,10 +151,9 @@ function main(): void {
     throw error;
   }
 
-  const result = certifyStartingSliceFleet({
+  const result = certifyStartingSliceAuthority({
     root: process.cwd(),
     fleetDir,
-    expectedCount: AUTHORITATIVE_FLEET_SIZE,
   });
   let outputPath: string;
   try {
@@ -159,7 +174,7 @@ function main(): void {
     process.exitCode = 2;
     return;
   }
-  if (!result.passed) {
+  if (!result.authority_certified) {
     console.error(`${name}: authenticated cohort missed ${result.gate_failures.length} gate(s)`);
     for (const gate of result.gate_failures) console.error(`- ${gate}`);
     console.error(`Wrote ${outputPath}`);

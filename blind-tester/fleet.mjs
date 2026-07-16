@@ -45,8 +45,9 @@ export const PURE_FLEET_ATTESTATION_SCHEMA_VERSION = 2;
 // fleets reject mixed/non-default personas.
 const PERSONA_ROTATION = ["explorer", "speedrunner", "breaker", "casual", "lore-reader"];
 
-// `--model mix` weighting: 9 haiku : 1 sonnet by default. There is no
-// temperature/top_p axis to spend instead — see the module docstring.
+// Explicit diagnostic `--model mix` weighting: 9 haiku : 1 sonnet. The
+// authority/default plan is homogeneous Sonnet; mixed and single-model
+// overrides remain available for diagnostic comparison.
 const DEFAULT_MODEL_MIX = [
   { model: "haiku", weight: 9 },
   { model: "sonnet", weight: 1 },
@@ -100,7 +101,7 @@ export function parseFleetArgs(argv) {
   const opts = {
     count: 100,
     concurrency: 4,
-    model: "mix",
+    model: "sonnet",
     personas: "default",
     target: "overworld",
     seedBase: 1000,

@@ -39,7 +39,9 @@ import { WOLF_WINTER_CAMPAIGN_OUTCOMES } from "../world/journey_campaign.js";
 import { INITIAL_JOURNEY_GOAL } from "../world/journey_contract.js";
 import { loadOverworldManifest } from "../world/source.js";
 
-export const STARTING_SLICE_CERTIFICATION_SCHEMA_VERSION = 1 as const;
+export const STARTING_SLICE_CERTIFICATION_SCHEMA_VERSION = 2 as const;
+export const STARTING_SLICE_AUTHORITY_COUNT = 100 as const;
+export const STARTING_SLICE_PILOT_COUNT = 10 as const;
 export const STARTING_SLICE_INITIAL_GOAL = Object.freeze({
   version: INITIAL_JOURNEY_GOAL.version,
   id: INITIAL_JOURNEY_GOAL.id,
@@ -205,6 +207,8 @@ export interface StartingSliceCertificationResult {
   passed: boolean;
   fleet: StartingSliceFleetIdentity | null;
   certified_build: PureRunBuild | null;
+  /** Exact primary-envelope model id when all authenticated rows agree. */
+  authenticated_actual_model: string | null;
   validity_errors: string[];
   gate_failures: (keyof StartingSliceGates)[];
   metrics: StartingSliceMetrics;
@@ -213,12 +217,41 @@ export interface StartingSliceCertificationResult {
   blocking_issue_clusters: StartingSliceBlockingCluster[];
 }
 
-export interface CertifyStartingSliceFleetOptions {
+interface StartingSliceFleetPathOptions {
   root: string;
   fleetDir: string;
-  expectedCount: number;
-  /** Test seam for a synthetic clean build; production callers omit it. */
-  expectedBuild?: PureRunBuild;
+}
+
+export type CertifyStartingSliceAuthorityOptions = StartingSliceFleetPathOptions;
+
+export type ValidateStartingSlicePilotOptions = StartingSliceFleetPathOptions;
+
+export interface StartingSlicePilotGates {
+  all_10_recognized_wolf_outcomes: boolean;
+  at_least_3_top_level_strategies: boolean;
+  no_strategy_above_7_of_10: boolean;
+}
+
+export interface StartingSlicePilotEvaluation {
+  evaluation: StartingSliceCertificationResult;
+  pilot_passed: boolean;
+  pilot_gate_failures: (keyof StartingSlicePilotGates)[];
+  pilot_gates: StartingSlicePilotGates;
+}
+
+export interface StartingSliceAuthorityResult extends StartingSliceCertificationResult {
+  cohort_kind: "authority";
+  expected_count: typeof STARTING_SLICE_AUTHORITY_COUNT;
+  authority_certified: boolean;
+}
+
+export interface StartingSlicePilotResult extends StartingSliceCertificationResult {
+  cohort_kind: "pilot";
+  expected_count: typeof STARTING_SLICE_PILOT_COUNT;
+  authority_certified: false;
+  pilot_passed: boolean;
+  pilot_gate_failures: (keyof StartingSlicePilotGates)[];
+  pilot_gates: StartingSlicePilotGates;
 }
 
 const FleetSummarySchema = z
@@ -244,7 +277,7 @@ const FleetSummarySchema = z
     technical_timeouts: z.number().int().nonnegative(),
     report_recovered_runs: z.number().int().nonnegative(),
     seed_base: z.number().int().safe(),
-    model: z.literal("mix"),
+    model: z.literal("sonnet"),
     personas: z.literal("default"),
     target: z.literal("overworld"),
     resume_enabled: z.boolean(),
@@ -396,9 +429,13 @@ function requireRealDirectory(path: string, label: string): string {
 }
 
 function statsIdentity(stats: Stats, realPath: string): string {
-  // Some Windows filesystems report inode 0. Canonical path still detects
-  // aliases there; normal filesystems additionally get hard-link identity.
-  return stats.ino === 0 ? `path:${pathIdentity(realPath)}` : `${stats.dev}:${stats.ino}`;
+  // Some Windows filesystems report inode 0 or an unsigned 64-bit value that
+  // loses precision in Node's numeric Stats shape. Canonical path plus the
+  // mandatory nlink===1 check remains reliable there; safe inode values add a
+  // second hard-link identity defense on normal filesystems.
+  return stats.ino === 0 || !Number.isSafeInteger(stats.ino)
+    ? `path:${pathIdentity(realPath)}`
+    : `${stats.dev}:${stats.ino}`;
 }
 
 function requireContainedRegularFile(
@@ -833,6 +870,7 @@ export function evaluateStartingSliceRuns(
     passed: finalValidityErrors.length === 0 && gateFailures.length === 0,
     fleet: null,
     certified_build: null,
+    authenticated_actual_model: null,
     validity_errors: finalValidityErrors,
     gate_failures: gateFailures,
     metrics: {
@@ -854,6 +892,44 @@ export function evaluateStartingSliceRuns(
     strategy_counts: strategyCounts,
     blocking_issue_clusters: blockingClusters,
   };
+}
+
+/**
+ * Deterministic ten-run readiness check. This evaluates gameplay evidence only;
+ * `validateStartingSlicePilot` additionally authenticates every durable fleet
+ * artifact before `pilot_passed` can be true.
+ */
+function pilotEvaluationFor(
+  evaluation: StartingSliceCertificationResult,
+): StartingSlicePilotEvaluation {
+  const pilotGates: StartingSlicePilotGates = {
+    all_10_recognized_wolf_outcomes:
+      evaluation.metrics.completed_runs === STARTING_SLICE_PILOT_COUNT,
+    at_least_3_top_level_strategies: evaluation.metrics.strategies_represented >= 3,
+    no_strategy_above_7_of_10:
+      evaluation.metrics.completed_runs === STARTING_SLICE_PILOT_COUNT &&
+      evaluation.metrics.largest_strategy_count <= 7,
+  };
+  const pilotGateFailures = (Object.keys(pilotGates) as (keyof StartingSlicePilotGates)[]).filter(
+    (gate) => !pilotGates[gate],
+  );
+  return {
+    evaluation,
+    pilot_passed: evaluation.passed && pilotGateFailures.length === 0,
+    pilot_gate_failures: pilotGateFailures,
+    pilot_gates: pilotGates,
+  };
+}
+
+export function evaluateStartingSlicePilotRuns(
+  options: Omit<StartingSliceEvaluationOptions, "expectedCount">,
+): StartingSlicePilotEvaluation {
+  return pilotEvaluationFor(
+    evaluateStartingSliceRuns({
+      ...options,
+      expectedCount: STARTING_SLICE_PILOT_COUNT,
+    }),
+  );
 }
 
 function parseJsonFile(path: string): unknown {
@@ -960,13 +1036,20 @@ function invalidFilesystemResult(
   };
 }
 
+type StartingSliceCohortKind = "authority" | "pilot";
+
+interface ValidateAuthenticatedCohortOptions extends StartingSliceFleetPathOptions {
+  cohortKind: StartingSliceCohortKind;
+  expectedCount: number;
+}
+
 /**
- * Certify one already-closed fleet directory. The manifest is only an index:
+ * Validate one already-closed fleet directory. The manifest is only an index:
  * each row is rebound to its adjacent private sidecar and the markdown is
  * independently re-verified before it contributes to any metric.
  */
-export function certifyStartingSliceFleet(
-  options: CertifyStartingSliceFleetOptions,
+function validateAuthenticatedStartingSliceCohort(
+  options: ValidateAuthenticatedCohortOptions,
 ): StartingSliceCertificationResult {
   const root = resolve(options.root);
   const fleetDir = resolve(options.fleetDir);
@@ -1053,7 +1136,7 @@ export function certifyStartingSliceFleet(
   if (summary.retention_ineligible_or_unverified_runs !== 0) {
     errors.push("summary contains retention-ineligible or unverified runs");
   }
-  if (summary.resume_enabled) errors.push("authoritative certification requires --no-resume");
+  if (summary.resume_enabled) errors.push(`${options.cohortKind} cohort requires --no-resume`);
   if (summary.verified !== options.expectedCount) {
     errors.push(`summary verified runs ${summary.verified} != expected ${options.expectedCount}`);
   }
@@ -1074,7 +1157,7 @@ export function certifyStartingSliceFleet(
   }
   if (summary.report_recovered_runs !== 0) {
     errors.push(
-      `summary contains ${summary.report_recovered_runs} report-recovered runs; authoritative certification requires primary reports`,
+      `summary contains ${summary.report_recovered_runs} report-recovered runs; ${options.cohortKind} cohort requires primary reports`,
     );
   }
   if (!summary.build.tracked_worktree_clean) {
@@ -1086,21 +1169,12 @@ export function certifyStartingSliceFleet(
     );
   }
   let expectedBuild: PureRunBuild | null = null;
-  if (options.expectedBuild !== undefined) {
-    const parsedExpectedBuild = PureRunBuildSchema.safeParse(options.expectedBuild);
-    if (!parsedExpectedBuild.success) {
-      errors.push(`expectedBuild invalid: ${firstSchemaIssue(parsedExpectedBuild.error)}`);
-    } else {
-      expectedBuild = parsedExpectedBuild.data;
-    }
-  } else {
-    try {
-      expectedBuild = capturePureFleetBuild(root);
-    } catch (error) {
-      errors.push(
-        `could not capture current clean certification build: ${error instanceof Error ? error.message : String(error)}`,
-      );
-    }
+  try {
+    expectedBuild = capturePureFleetBuild(root);
+  } catch (error) {
+    errors.push(
+      `could not capture current clean certification build: ${error instanceof Error ? error.message : String(error)}`,
+    );
   }
   if (expectedBuild !== null && !isDeepStrictEqual(summary.build, expectedBuild)) {
     errors.push("summary build does not match the current certification build");
@@ -1184,6 +1258,8 @@ export function certifyStartingSliceFleet(
   let manifestTechnicalTimeouts = 0;
   let manifestReportRecoveredRuns = 0;
   const claudeSessionIds = new Set<string>();
+  const gameSessionIds = new Set<string>();
+  const actualModels = new Set<string>();
   const referencedArchiveDirectories = new Set<string>();
   for (let plannedIndex = 0; plannedIndex < options.expectedCount; plannedIndex += 1) {
     const seed = summary.seed_base + plannedIndex;
@@ -1193,14 +1269,13 @@ export function certifyStartingSliceFleet(
       continue;
     }
     const rowErrorStart = errors.length;
-    const expectedModel = plannedIndex % 10 === 9 ? "sonnet" : "haiku";
     if (row.planned_index !== plannedIndex) {
       errors.push(
         `seed ${seed}: planned_index ${row.planned_index} != sorted seed index ${plannedIndex}`,
       );
     }
-    if (row.model !== expectedModel) {
-      errors.push(`seed ${seed}: model ${row.model} != sorted-index model ${expectedModel}`);
+    if (row.model !== "sonnet") {
+      errors.push(`seed ${seed}: requested model ${row.model} != required sonnet`);
     }
     if (row.run_seed !== seed) errors.push(`seed ${seed}: row run_seed differs`);
     if (!isDeepStrictEqual(row.build, summary.build)) {
@@ -1209,7 +1284,7 @@ export function certifyStartingSliceFleet(
     if (row.report_recovered) {
       manifestReportRecoveredRuns += 1;
       errors.push(
-        `seed ${seed}: authoritative certification does not accept a report-recovered row`,
+        `seed ${seed}: ${options.cohortKind} cohort does not accept a report-recovered row`,
       );
     }
     if (row.attempts !== row.attempt_history.length) {
@@ -1218,10 +1293,12 @@ export function certifyStartingSliceFleet(
       );
     }
     if (row.status !== "verified") {
-      errors.push(`seed ${seed}: authoritative row must be freshly verified, not resumed`);
+      errors.push(`seed ${seed}: ${options.cohortKind} row must be freshly verified, not resumed`);
     }
     if (row.attempts !== 1 || row.attempt_history.length !== 1) {
-      errors.push(`seed ${seed}: authoritative row must contain exactly one launcher attempt`);
+      errors.push(
+        `seed ${seed}: ${options.cohortKind} row must contain exactly one launcher attempt`,
+      );
     }
     for (const [attemptIndex, attempt] of row.attempt_history.entries()) {
       manifestTotalAttempts += 1;
@@ -1229,7 +1306,7 @@ export function certifyStartingSliceFleet(
       const isTerminal = attemptIndex === row.attempt_history.length - 1;
       if (attempt.report_recovered) {
         errors.push(
-          `seed ${seed} attempt ${attempt.attempt}: authoritative certification does not accept report recovery`,
+          `seed ${seed} attempt ${attempt.attempt}: ${options.cohortKind} cohort does not accept report recovery`,
         );
       }
       if (attempt.attempt !== expectedAttempt) {
@@ -1392,7 +1469,7 @@ export function certifyStartingSliceFleet(
       }
       if (recoveryPresence.every(Boolean)) {
         errors.push(
-          `seed ${seed}: authoritative certification does not accept report-recovery artifacts`,
+          `seed ${seed}: ${options.cohortKind} cohort does not accept report-recovery artifacts`,
         );
         const safeInitialReportPath = requireContainedRegularFile(
           runArtifactPaths.initialReport,
@@ -1463,6 +1540,14 @@ export function certifyStartingSliceFleet(
     } else {
       claudeSessionIds.add(normalizedClaudeSessionId);
     }
+    if (gameSessionIds.has(artifactFacts.game_session_id)) {
+      errors.push(
+        `seed ${seed}: game session ID ${artifactFacts.game_session_id} is reused by another fleet slot`,
+      );
+    } else {
+      gameSessionIds.add(artifactFacts.game_session_id);
+    }
+    actualModels.add(artifactFacts.actual_model);
     const parsedAttestation = parsePureFleetAttestation(attestationText);
     if (!parsedAttestation.ok) {
       errors.push(`seed ${seed}: ${parsedAttestation.reason}`);
@@ -1497,12 +1582,12 @@ export function certifyStartingSliceFleet(
     }
     if (attestation.report_recovered) {
       errors.push(
-        `seed ${seed}: authoritative certification does not accept a report-recovered attestation`,
+        `seed ${seed}: ${options.cohortKind} cohort does not accept a report-recovered attestation`,
       );
     }
     if (artifactFacts.report_recovered) {
       errors.push(
-        `seed ${seed}: authoritative certification does not accept authenticated report-recovery facts`,
+        `seed ${seed}: ${options.cohortKind} cohort does not accept authenticated report-recovery facts`,
       );
     }
     if (row.report_recovered !== artifactFacts.report_recovered) {
@@ -1605,6 +1690,11 @@ export function certifyStartingSliceFleet(
       `manifest report-recovered runs ${manifestReportRecoveredRuns} != summary ${summary.report_recovered_runs}`,
     );
   }
+  if (actualModels.size !== 1) {
+    errors.push(
+      `authenticated ${options.cohortKind} cohort must use one exact actual_model string; found ${JSON.stringify([...actualModels].sort(compareStrings))}`,
+    );
+  }
   try {
     const physicalArchiveDirectories = discoverAttemptArchiveDirectories(fleetDir, fleetRootReal);
     const indexedArchiveDirectories = [...referencedArchiveDirectories].sort(compareStrings);
@@ -1622,7 +1712,7 @@ export function certifyStartingSliceFleet(
     runs: normalizedRuns,
     expectedCount: options.expectedCount,
   });
-  return attachFleetValidity(
+  const attached = attachFleetValidity(
     result,
     errors,
     {
@@ -1634,6 +1724,50 @@ export function certifyStartingSliceFleet(
     },
     summary.build,
   );
+  return {
+    ...attached,
+    authenticated_actual_model: actualModels.size === 1 ? ([...actualModels][0] ?? null) : null,
+  };
+}
+
+/** Authenticate and certify the fixed 100-player authority cohort. */
+export function certifyStartingSliceAuthority(
+  options: CertifyStartingSliceAuthorityOptions,
+): StartingSliceAuthorityResult {
+  const result = validateAuthenticatedStartingSliceCohort({
+    root: options.root,
+    fleetDir: options.fleetDir,
+    cohortKind: "authority",
+    expectedCount: STARTING_SLICE_AUTHORITY_COUNT,
+  });
+  return {
+    ...result,
+    cohort_kind: "authority",
+    expected_count: STARTING_SLICE_AUTHORITY_COUNT,
+    authority_certified: result.passed,
+  };
+}
+
+/** Authenticate the fixed 10-player Sonnet pilot without granting authority. */
+export function validateStartingSlicePilot(
+  options: ValidateStartingSlicePilotOptions,
+): StartingSlicePilotResult {
+  const result = validateAuthenticatedStartingSliceCohort({
+    root: options.root,
+    fleetDir: options.fleetDir,
+    cohortKind: "pilot",
+    expectedCount: STARTING_SLICE_PILOT_COUNT,
+  });
+  const pilot = pilotEvaluationFor(result);
+  return {
+    ...result,
+    cohort_kind: "pilot",
+    expected_count: STARTING_SLICE_PILOT_COUNT,
+    authority_certified: false,
+    pilot_passed: pilot.pilot_passed,
+    pilot_gate_failures: pilot.pilot_gate_failures,
+    pilot_gates: pilot.pilot_gates,
+  };
 }
 
 /** Human-readable source identity used by thin CLI wrappers. */

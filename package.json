@@ -38,6 +38,7 @@
     "blind:telemetry": "node blind-tester/telemetry.mjs summary",
     "fleet": "node blind-tester/fleet.mjs",
     "fleet:mock": "node blind-tester/fleet.mjs --mock",
+    "starting-slice:pilot": "tsx bin/check-starting-slice-pilot.ts",
     "starting-slice:certify": "tsx bin/certify-starting-slice.ts",
     "feedback:compile": "tsx bin/feedback.ts",
     "spectate": "tsx bin/spectate.ts",

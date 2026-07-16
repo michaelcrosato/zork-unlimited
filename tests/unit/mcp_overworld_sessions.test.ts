@@ -8,17 +8,22 @@ function boundedStore(maxSessions = 2): OverworldMcpSessionStore {
 }
 
 describe("OverworldMcpSessionStore", () => {
-  it("keeps session ids monotonic past the safe integer boundary", () => {
-    const store = boundedStore();
-    (store as unknown as { counter: bigint }).counter = BigInt(Number.MAX_SAFE_INTEGER);
+  it("gives sessions from independent MCP stores globally distinct opaque ids", () => {
+    const firstStore = boundedStore();
+    const secondStore = boundedStore();
 
-    const first = store.create();
-    const second = store.create();
+    const first = firstStore.create();
+    const second = secondStore.create();
 
-    expect(first.session_id).toBe("o9007199254740992");
-    expect(second.session_id).toBe("o9007199254740993");
-    expect(store.get(first.session_id)).toBe(first.session);
-    expect(store.get(second.session_id)).toBe(second.session);
+    expect(first.session_id).toMatch(
+      /^o-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
+    );
+    expect(second.session_id).toMatch(
+      /^o-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
+    );
+    expect(second.session_id).not.toBe(first.session_id);
+    expect(firstStore.get(first.session_id)).toBe(first.session);
+    expect(secondStore.get(second.session_id)).toBe(second.session);
   });
 
   it("bounds created sessions and keeps recently accessed sessions", () => {

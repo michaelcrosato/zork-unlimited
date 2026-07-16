@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 572 -->
+<!-- historical_cycle_count: 573 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,15 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - homogeneous_sonnet_authority_contract
+
+- Evidence choice: assessor hotspot `3344db50` was stale structural board copy; the fresh 7/10 diagnostic instead disqualified 9:1 authority after three Haiku null-receipt self-stops, so Sonnet reliability and an honest pre-spend gate were the milestone prerequisite.
+- Surface: live fleets now default to Sonnet; fixed public APIs validate exactly ten pilot or 100 authority rows, with distinct result kinds/files and `authority_certified:false` permanently on pilots. Explicit mix/Haiku/Opus remain diagnostic.
+- Integrity: both cohorts require one exact actual model, unique UUID-backed game and Claude sessions, current clean build/world, one primary attempt, and no resume/retry/recovery; caller-selected count/build seams are gone and unsafe NTFS inode fallback retains single-link/hardlink checks.
+- Pure evidence: seed 2813 completed Wolf-Winter at decision 28, continued through The Gallowmere and The Tanner's Fever, then ended at goal 3/decision 76; clarity/enjoyment 4/4, stuck false, replay true, and the UUID stayed transport-only.
+- Self-critique: PASS for authority/pilot authenticity, not the greater-than-BG3 milestone. Seed 2813's repeated S2 June/rail promise mismatch joins seeds 2811–2812; fix that causal defect before paying for the ten-Sonnet pilot, then deep crawl/exact 100 remain.
+- Guard: adversarial audit closed impossible process-local `o1` uniqueness and public build injection with no remaining P0–P2; 142 affected checks pass, and pre/final crawls `20260716T175228Z`/`20260716T181815Z` found zero issues across 247/247 nodes, 344/344 edges, 12/12 boards, and 12/12 quests.
 
 ### Cycle result - informed_wolf_winter_dispatch
 
@@ -139,12 +148,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Pure evidence: verified pure/fresh seed 2706 completed Wolf-Winter, Gallowmere, Tanner's Fever, and Breaking Weir; continued at decisions 26/40/51/73/80, ended honestly at goal 4 on decision 94, clarity 4/5, enjoyment 5/5, got-stuck false, replay true, and no bugs. It validates the surrounding journey but did not independently isolate the new service counterfactual; deterministic paired tests carry that proof.
 - Compile/self-critique: compile `20260714T202925Z` has 777 verified reports and 28 eligible contract-v3 pure exits, all with at least one continue. PASS for F11's delayed Albany service consequence, not the whole depth contract; 9 counted forks, broader return NPC/opportunity reactivity, and the recurring front-loaded Albany jargon/Station-board clarity debt remain.
 - Guard: pre/post 6,000-step crawls `20260714T185834Z`/`20260714T201921Z` reached 247/247 nodes, 344/344 edges, and 12/12 quests; 180 focused tests and rendered UI smoke (no console errors or horizontal overflow) passed; full health is green at 332 files/2,420 tests, UI typecheck, and all 12 packs.
-
-### Cycle result - albany_lead_source_counterfactual
-
-- Change: Wolf-Winter is no longer a FIFO reveal. After registration, Albany blocks play on one permanent certification: Rowan's public docket is free, Jamie's testimony costs 35 minutes/$6 (Ledger: 15/$0), and Hayden's frost report costs 20 minutes (Road-Warden: 5); each changes source memory and imports only its own knowledge.
-- Measured effect: Jamie alone opens a rail-free crawlboard after the yearling; Hayden alone turns an unbound failed rail into a high-variance frost-brace sequence; Rowan preserves the import-independent routes. Paired same-state counterfactuals prove `SS-F03-lead-source`, bringing the honest slice total to 2/12 forks.
-- Integrity/parity: the selected source must be the first decision after its durable offer and a full suffix trail binds later play. Restore rejects deletion, splicing, forged decisions/markers, every progressed registration-era suffix, and opaque pre-registration progress; only the exact untouched registration boundary migrates to the real source prompt. UI/full/compact MCP and decision-40 Continue/End behavior agree.
-- Pure evidence: verified pure/fresh seed 2705 chose Road-Warden + Hayden, completed Wolf-Winter at decision 27, continued through three later goals and checkpoints 40/80, then ended voluntarily at 96; clarity/enjoyment 4/4, replay true, no rejects, stuck state, or mechanical bug.
-- Compile/self-critique: 776 verified reports/33 rejected and 27 v3 pure exits all continued at least once; compile `20260714T184840Z` has zero crawl findings. PASS for a delayed Albany→Wolf counterfactual, not the greater-than-BG3 slice claim: repeated quest structure and cross-town contact-name reuse remain fresh S0/S1 debt.
-- Guard: three independent adversarial audits found no remaining P0/P1; pre/final 6,000-step crawls (`20260714T154421Z`, `20260714T183455Z`) reached 247/247 nodes, 344/344 edges, and 12/12 quests; full health passed (328 files/2,391 tests, UI, 12 packs).

@@ -76,17 +76,16 @@ describe("fill-prompt", () => {
 });
 
 describe("fleet planning", () => {
-  it("defaults milestone fleets to exactly 100 fresh-overworld runs", () => {
+  it("defaults milestone fleets to exactly 100 homogeneous-Sonnet fresh-overworld runs", () => {
     const opts = parseFleetArgs([]);
     expect(opts.count).toBe(100);
     expect(opts.target).toBe("overworld");
     expect(opts.personas).toBe("default");
-    expect(opts.model).toBe("mix");
+    expect(opts.model).toBe("sonnet");
     expect(opts.resume).toBe(true);
     const runs = planFleetRuns(opts);
     expect(runs).toHaveLength(100);
-    expect(runs.filter((run: { model: string }) => run.model === "haiku")).toHaveLength(90);
-    expect(runs.filter((run: { model: string }) => run.model === "sonnet")).toHaveLength(10);
+    expect(runs.every((run: { model: string }) => run.model === "sonnet")).toBe(true);
   });
 
   it("makes authoritative no-resume behavior explicit without changing diagnostic defaults", () => {
@@ -110,8 +109,29 @@ describe("fleet planning", () => {
     expect(parseFleetArgs(["--mock", "--personas", "breaker"]).personas).toBe("breaker");
   });
   it("pins live model plans to supported aliases", () => {
-    expect(parseFleetArgs(["--model", "opus"]).model).toBe("opus");
-    expect(parseFleetArgs(["--model", "mix"]).model).toBe("mix");
+    for (const model of ["haiku", "sonnet", "opus"] as const) {
+      const opts = parseFleetArgs(["--count", "3", "--model", model]);
+      expect(opts.model).toBe(model);
+      expect(planFleetRuns(opts).map((run: { model: string }) => run.model)).toEqual([
+        model,
+        model,
+        model,
+      ]);
+    }
+    const mixed = parseFleetArgs(["--count", "10", "--model", "mix"]);
+    expect(mixed.model).toBe("mix");
+    expect(planFleetRuns(mixed).map((run: { model: string }) => run.model)).toEqual([
+      "haiku",
+      "haiku",
+      "haiku",
+      "haiku",
+      "haiku",
+      "haiku",
+      "haiku",
+      "haiku",
+      "haiku",
+      "sonnet",
+    ]);
     expect(() => parseFleetArgs(["--model", "claude-custom"])).toThrow(/haiku, sonnet, opus/i);
     expect(parseFleetArgs(["--mock", "--model", "synthetic"]).model).toBe("synthetic");
   });

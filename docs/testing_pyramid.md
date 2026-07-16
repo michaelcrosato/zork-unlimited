@@ -59,6 +59,7 @@ does, when it runs, and its exact shapes.
 | `crawl:deep`             | nightly / manual                                                                                            | ≥2min soak (multi-worker; measured 352k steps @ ~1935 steps/s incl. 20k-state solver; findings are byte-identical across `--workers` only absent `--seconds` truncation — per-worker deadlines mean WHICH items truncate can vary with worker count once the soak budget bites, always loud via `truncated`/`skippedItems`) | free                      |
 | `blind` (single)         | every normal cycle                                                                                          | one pure journey; game-native goal/checkpoints govern exit                                                                                                                                                                                                                                                                  | $ (one LLM playtest)      |
 | `fleet -- --count 100`   | milestone / feedback-harvest cycles (~every 10, or when the ledger's open questions outgrow single reports) | 100 pure fresh-overworld runs at `--concurrency C`                                                                                                                                                                                                                                                                          | $ × 100 (real LLM tokens) |
+| `starting-slice:pilot`   | after authority/model tooling changes and before an authoritative spend                                     | reverify one exact fresh 10-Sonnet no-retry cohort as a go/no-go pilot; never certification                                                                                                                                                                                                                                 | free                      |
 | `starting-slice:certify` | after an authoritative starting-slice fleet closes                                                          | reverify the exact 100-report authenticated bundle and evaluate the milestone gates                                                                                                                                                                                                                                         | free                      |
 | `fleet:mock`             | every CI run (rides `npm test`)                                                                             | explicit structural acceptance e2e; never retention evidence                                                                                                                                                                                                                                                                | zero tokens               |
 | `feedback:compile`       | whenever ≥3 new verified reports exist since the last compile                                               | seconds (deterministic clustering)                                                                                                                                                                                                                                                                                          | free                      |
@@ -75,7 +76,9 @@ npm run crawl -- --workers 4 --seed 7              # custom invocation (flags in
 npm run blind                                      # canonical pure player, fresh overworld
 npm run blind:smoke                                # explicit structural MCP check, no LLM/tokens
 bash blind-tester/run.sh --smoke --quest sunken_barrow --seed 7 # targeted structural check, no LLM
-npm run fleet -- --count 100 --concurrency 4 --model mix --seed-base <fresh-seed-base> --label <fresh-label> --no-resume --max-retries 0
+npm run fleet -- --count 10 --concurrency 4 --model sonnet --seed-base <fresh-pilot-seed-base> --label <fresh-pilot-label> --no-resume --max-retries 0
+npm run starting-slice:pilot -- --fleet ai-runs/fleet/<fresh-pilot-label>
+npm run fleet -- --count 100 --concurrency 4 --model sonnet --seed-base <fresh-seed-base> --label <fresh-label> --no-resume --max-retries 0
 npm run fleet:mock -- --count 2                    # structural, zero-token, CI-safe
 npm run starting-slice:certify -- --fleet ai-runs/fleet/<label>
 
@@ -97,9 +100,14 @@ check. A live fleet label must be fresh and names one closed cohort, so an
 existing label is rejected rather than appended to or mixed with stale rows.
 
 Live fleets enforce `play_mode: pure`, `start_surface: fresh_overworld`, and the
-neutral default persona; an authoritative certification cohort also requires
-the deterministic repository-standard 9:1 Haiku/Sonnet mix, which is the live
-fleet launcher's default when `--model` is omitted. Resume is a diagnostic
+neutral default persona. Sonnet is the live fleet launcher's default when
+`--model` is omitted and is the only authoritative requested model plan.
+Explicit `mix`, Haiku, and Opus plans remain diagnostic. Before the 100-player
+spend, `starting-slice:pilot` must pass one fresh ten-Sonnet cohort with 10/10
+primary unrecovered members, unique game and Claude sessions, one exact actual
+model id, at least three recognized Wolf-Winter strategies, and no strategy
+above 7/10. The pilot has a distinct result kind and cannot certify the slice.
+Resume is a diagnostic
 convenience and requires a
 reverified evidence-sidecar-v2 report with the current journey contract and
 exact planned seed/build/world. Generic readers retain historical sidecar-v1
@@ -162,12 +170,16 @@ v2 curves and current v3 curves remain independently verifiable but are never
 pooled.
 `would_replay` remains a separate post-exit attitude metric.
 
-**Starting-slice certification** reparses every report and sidecar in one closed
-fleet bundle. It requires exactly 100 unique contiguous planned seeds, no
+**Starting-slice pilot/certification** reparses every report and sidecar in one
+closed fleet bundle. Both require unique contiguous planned seeds, no
 failed/missing/resumed/recovered slots, exactly one verified attempt per slot,
-one clean build/world, the current pure fresh-overworld/default-player contract, and the
-standard 9:1 model mix. Its report basename must also carry the cohort's current
-stamp, preventing historical reports from being relabeled as fresh.
+one clean build/world, unique game and Claude sessions, one exact authenticated
+actual model id, and the current pure fresh-overworld/default-player Sonnet
+contract. The pilot fixes the count to ten and requires 10/10 completion plus
+its 7/10 strategy cap; its distinct artifact is readiness evidence only.
+Certification fixes the count to 100 and is the only authority result. Report
+basenames must carry the cohort's current stamp, preventing historical reports
+from being relabeled as fresh.
 Malformed evidence exits 2, a threshold miss exits 1, and a pass exits 0. Exact
 quality gates, outcome mapping, and the conservative fleet-local issue-scope rule
 live in [`STARTING_SLICE.md`](STARTING_SLICE.md); `would_replay` is not

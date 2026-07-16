@@ -556,7 +556,9 @@ describe("MCP tools — validate / load (§9.4)", () => {
   it("plays a stateful New York overworld session through MCP", () => {
     const a = api();
     const started = a.start_overworld({ compact_context: false });
-    expect(started.session_id).toMatch(/^o\d+$/);
+    expect(started.session_id).toMatch(
+      /^o-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
+    );
     expect(started.observation.current.id).toBe("albany_city");
     expect(started.observation.journal).toEqual([]);
     expect(started.observation.areas).toHaveLength(1);

@@ -12,20 +12,55 @@ import {
 import { createHash } from "node:crypto";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { extractRecoveredReport } from "../../src/blind/report_recovery.js";
 import { hashState } from "../../src/core/hash.js";
 import { writeCertificationArtifactSafely } from "../../bin/certify-starting-slice.js";
 import {
-  certifyStartingSliceFleet,
+  certifyStartingSliceAuthority as certifyStartingSliceAuthorityOnCurrentBuild,
+  evaluateStartingSlicePilotRuns,
   evaluateStartingSliceRuns,
   startingSliceFleetDisplayName,
+  validateStartingSlicePilot as validateStartingSlicePilotOnCurrentBuild,
   WOLF_WINTER_STRATEGY_BY_ENDING,
   wolfStrategyMappingDrift,
   type StartingSliceEvaluationRun,
   type WolfStrategy,
 } from "../../src/starting_slice/fleet_certifier.js";
 import { INITIAL_JOURNEY_GOAL } from "../../src/world/journey_contract.js";
+
+const { fixtureBuild } = vi.hoisted(() => ({
+  fixtureBuild: {
+    git_commit: "c".repeat(40),
+    tracked_worktree_clean: true as const,
+    world_id: "new_york_overworld",
+    world_hash: "d".repeat(64),
+  },
+}));
+
+vi.mock("../../src/starting_slice/fleet_build.js", () => ({
+  capturePureFleetBuild: () => fixtureBuild,
+}));
+
+type SyntheticBuildOptions = {
+  root: string;
+  fleetDir: string;
+  expectedBuild?: typeof fixtureBuild;
+};
+
+function validateStartingSlicePilot(options: SyntheticBuildOptions) {
+  return validateStartingSlicePilotOnCurrentBuild({
+    root: options.root,
+    fleetDir: options.fleetDir,
+  });
+}
+
+function certifyStartingSliceAuthority(options: SyntheticBuildOptions) {
+  return certifyStartingSliceAuthorityOnCurrentBuild({
+    root: options.root,
+    fleetDir: options.fleetDir,
+  });
+}
 
 const ROOT = process.cwd();
 const tempDirs: string[] = [];
@@ -418,6 +453,78 @@ describe("starting-slice evidence validity", () => {
   });
 });
 
+describe("ten-player Sonnet pilot thresholds", () => {
+  function pilotRuns(counts: readonly [WolfStrategy, number][]): StartingSliceEvaluationRun[] {
+    const outcomes = counts.flatMap(([strategy, count]) =>
+      Array.from({ length: count }, () => OUTCOME_FOR_STRATEGY[strategy]),
+    );
+    expect(outcomes).toHaveLength(10);
+    return Array.from({ length: 10 }, (_, index) => ({
+      ...run(index),
+      wolf_outcome: outcomes[index]!,
+      clarity: 5,
+      enjoyment: 5,
+    }));
+  }
+
+  it("passes seven-of-ten concentration but fails eight-of-ten", () => {
+    const seven = evaluateStartingSlicePilotRuns({
+      root: ROOT,
+      runs: pilotRuns([
+        ["hunt_and_hold", 7],
+        ["lure_and_divert", 2],
+        ["drive_and_evacuate", 1],
+      ]),
+    });
+    const eight = evaluateStartingSlicePilotRuns({
+      root: ROOT,
+      runs: pilotRuns([
+        ["hunt_and_hold", 8],
+        ["lure_and_divert", 1],
+        ["drive_and_evacuate", 1],
+      ]),
+    });
+
+    expect(seven.pilot_passed).toBe(true);
+    expect(seven.pilot_gates.no_strategy_above_7_of_10).toBe(true);
+    expect(eight.pilot_passed).toBe(false);
+    expect(eight.pilot_gate_failures).toEqual(["no_strategy_above_7_of_10"]);
+  });
+
+  it("rejects nine recognized outcomes even though the ordinary 90% completion gate passes", () => {
+    const runs = pilotRuns([
+      ["hunt_and_hold", 4],
+      ["lure_and_divert", 3],
+      ["drive_and_evacuate", 3],
+    ]);
+    runs[9] = {
+      ...runs[9]!,
+      wolf_outcome: null,
+      initial_goal_completion: null,
+      initial_goal_retention: null,
+    };
+    const result = evaluateStartingSlicePilotRuns({ root: ROOT, runs });
+
+    expect(result.evaluation.gates.completion_at_least_90_percent).toBe(true);
+    expect(result.evaluation.metrics.completed_runs).toBe(9);
+    expect(result.pilot_gates.all_10_recognized_wolf_outcomes).toBe(false);
+    expect(result.pilot_passed).toBe(false);
+  });
+
+  it("cannot pass when an ordinary quality gate misses", () => {
+    const runs = pilotRuns([
+      ["hunt_and_hold", 4],
+      ["lure_and_divert", 3],
+      ["drive_and_evacuate", 3],
+    ]).map((candidate) => ({ ...candidate, clarity: 4 }));
+    const result = evaluateStartingSlicePilotRuns({ root: ROOT, runs });
+
+    expect(Object.values(result.pilot_gates).every(Boolean)).toBe(true);
+    expect(result.evaluation.gates.clarity_average_at_least_4_2).toBe(false);
+    expect(result.pilot_passed).toBe(false);
+  });
+});
+
 function currentReceipt() {
   const goalProof = "a".repeat(64);
   const exitProof = "b".repeat(64);
@@ -518,12 +625,7 @@ describe("closed fleet filesystem integrity", () => {
     const reportsDir = join(base, "reports");
     mkdirSync(fleetDir, { recursive: true });
     mkdirSync(reportsDir, { recursive: true });
-    const build = {
-      git_commit: "c".repeat(40),
-      tracked_worktree_clean: true,
-      world_id: "new_york_overworld",
-      world_hash: "d".repeat(64),
-    };
+    const build = fixtureBuild;
     const receipt = currentReceipt();
     const outcomes = Array.from(
       { length: 10 },
@@ -537,7 +639,7 @@ describe("closed fleet filesystem integrity", () => {
     );
     const rows = outcomes.map((outcome, index) => {
       const seed = 500 + index;
-      const model = index === 9 ? "sonnet" : "haiku";
+      const model = "sonnet" as const;
       const prefix = join(reportsDir, `20260101T000000Z_overworld_seed${seed}`);
       const report = `${prefix}.md`;
       const sidecar = {
@@ -556,7 +658,7 @@ describe("closed fleet filesystem integrity", () => {
       const reportBody = reportText(receipt);
       const sidecarBody = `${JSON.stringify(sidecar, null, 2)}\n`;
       const claudeSessionId = `00000000-0000-4000-8000-${String(seed).padStart(12, "0")}`;
-      const actualModel = `claude-${model}-4-5-20260716`;
+      const actualModel = "claude-sonnet-4-5-20260716";
       const evidenceBody = `${[
         {
           schema_version: 2,
@@ -683,7 +785,7 @@ describe("closed fleet filesystem integrity", () => {
       technical_timeouts: 0,
       report_recovered_runs: 0,
       seed_base: 500,
-      model: "mix",
+      model: "sonnet",
       personas: "default",
       target: "overworld",
       resume_enabled: false,
@@ -713,21 +815,135 @@ describe("closed fleet filesystem integrity", () => {
     const canonicalPrimaryEnvelopeBody = readFileSync(firstPrimaryEnvelopePath, "utf8");
     const canonicalAttestationBody = readFileSync(firstAttestationPath, "utf8");
 
-    const certified = certifyStartingSliceFleet({
+    const rewriteFirstIdentity = (changes: { actualModel?: string; gameSessionId?: string }) => {
+      const sidecar = JSON.parse(canonicalSidecarBody) as Record<string, unknown>;
+      const evidence = canonicalEvidenceBody
+        .trim()
+        .split(/\r?\n/)
+        .map((line) => JSON.parse(line) as Record<string, unknown>);
+      const primaryEnvelope = JSON.parse(canonicalPrimaryEnvelopeBody) as Record<string, unknown>;
+      if (changes.gameSessionId !== undefined) {
+        sidecar.session_id = changes.gameSessionId;
+        for (const event of evidence) event.session_id = changes.gameSessionId;
+      }
+      if (changes.actualModel !== undefined) {
+        primaryEnvelope.modelUsage = { [changes.actualModel]: {} };
+      }
+      const sidecarBody = `${JSON.stringify(sidecar, null, 2)}\n`;
+      const evidenceBody = `${evidence.map((event) => JSON.stringify(event)).join("\n")}\n`;
+      const primaryEnvelopeBody = `${JSON.stringify(primaryEnvelope)}\n`;
+      const attestation = {
+        ...rows[0]!.model_attestation,
+        game_session_id: changes.gameSessionId ?? rows[0]!.model_attestation.game_session_id,
+        actual_model: changes.actualModel ?? rows[0]!.model_attestation.actual_model,
+        run_sidecar_sha256: sha256Text(sidecarBody),
+        run_evidence_sha256: sha256Text(evidenceBody),
+        primary_envelope_sha256: sha256Text(primaryEnvelopeBody),
+      };
+      writeFileSync(firstSidecarPath, sidecarBody);
+      writeFileSync(firstEvidencePath, evidenceBody);
+      writeFileSync(firstPrimaryEnvelopePath, primaryEnvelopeBody);
+      writeFileSync(firstAttestationPath, `${JSON.stringify(attestation, null, 2)}\n`);
+      writeFileSync(
+        manifestPath,
+        `${rows
+          .map((row, index) => (index === 0 ? { ...row, model_attestation: attestation } : row))
+          .map((row) => JSON.stringify(row))
+          .join("\n")}\n`,
+      );
+    };
+    const restoreFirstIdentity = () => {
+      writeFileSync(firstSidecarPath, canonicalSidecarBody);
+      writeFileSync(firstEvidencePath, canonicalEvidenceBody);
+      writeFileSync(firstPrimaryEnvelopePath, canonicalPrimaryEnvelopeBody);
+      writeFileSync(firstAttestationPath, canonicalAttestationBody);
+      writeFileSync(manifestPath, canonicalManifestBody);
+    };
+
+    const certified = validateStartingSlicePilot({
       root: ROOT,
       fleetDir,
-      expectedCount: 10,
       expectedBuild: build,
     });
     expect(certified.validity_errors).toEqual([]);
+    expect(certified.schema_version).toBe(2);
     expect(certified.valid).toBe(true);
     expect(certified.metrics).toMatchObject({
       total_runs: 10,
       evaluated_runs: 10,
       completed_runs: 10,
     });
-    expect(certified.passed).toBe(true);
+    expect(certified.pilot_passed).toBe(true);
+    expect(certified.authority_certified).toBe(false);
+    expect(certified.cohort_kind).toBe("pilot");
+    expect(certified.authenticated_actual_model).toBe("claude-sonnet-4-5-20260716");
     expect(certified.certified_build).toEqual(build);
+
+    const authorityIsolation = certifyStartingSliceAuthority({
+      root: ROOT,
+      fleetDir,
+      expectedBuild: build,
+    });
+    expect(authorityIsolation.authority_certified).toBe(false);
+    expect(authorityIsolation.expected_count).toBe(100);
+    expect(authorityIsolation.validity_errors.join("\n")).toContain(
+      "summary count 10 != expected 100",
+    );
+
+    writeFileSync(summaryPath, `${JSON.stringify({ ...summary, model: "mix" }, null, 2)}\n`);
+    writeFileSync(
+      manifestPath,
+      `${rows
+        .map((row, index) => (index < 9 ? { ...row, model: "haiku" } : row))
+        .map((row) => JSON.stringify(row))
+        .join("\n")}\n`,
+    );
+    const rejectedLegacyMix = validateStartingSlicePilot({
+      root: ROOT,
+      fleetDir,
+      expectedBuild: build,
+    });
+    expect(rejectedLegacyMix.valid).toBe(false);
+    expect(rejectedLegacyMix.validity_errors.join("\n")).toContain("summary.json invalid: model");
+    writeFileSync(summaryPath, canonicalSummaryBody);
+    writeFileSync(manifestPath, canonicalManifestBody);
+
+    const oneHaikuRow = rows.map((row, index) => (index === 0 ? { ...row, model: "haiku" } : row));
+    writeFileSync(manifestPath, `${oneHaikuRow.map((row) => JSON.stringify(row)).join("\n")}\n`);
+    const rejectedHaikuRow = validateStartingSlicePilot({
+      root: ROOT,
+      fleetDir,
+      expectedBuild: build,
+    });
+    expect(rejectedHaikuRow.validity_errors.join("\n")).toContain(
+      "requested model haiku != required sonnet",
+    );
+    writeFileSync(manifestPath, canonicalManifestBody);
+
+    rewriteFirstIdentity({ actualModel: "claude-sonnet-4-5-20260717" });
+    const rejectedActualModelMix = validateStartingSlicePilot({
+      root: ROOT,
+      fleetDir,
+      expectedBuild: build,
+    });
+    expect(rejectedActualModelMix.authenticated_actual_model).toBeNull();
+    expect(rejectedActualModelMix.validity_errors.join("\n")).toContain(
+      "must use one exact actual_model string",
+    );
+    restoreFirstIdentity();
+
+    rewriteFirstIdentity({
+      gameSessionId: rows[1]!.model_attestation.game_session_id,
+    });
+    const rejectedDuplicateGameSession = validateStartingSlicePilot({
+      root: ROOT,
+      fleetDir,
+      expectedBuild: build,
+    });
+    expect(rejectedDuplicateGameSession.validity_errors.join("\n")).toContain(
+      "game session ID session-501 is reused by another fleet slot",
+    );
+    restoreFirstIdentity();
 
     const failedAttemptLog = "attempt=1\nclassification=technical_timeout\nrun.sh exit=124\n";
     const failedAttemptDir = join(fleetDir, "attempts", "seed_500", "attempt_1");
@@ -780,10 +996,9 @@ describe("closed fleet filesystem integrity", () => {
         2,
       )}\n`,
     );
-    const rejectedRetryHistory = certifyStartingSliceFleet({
+    const rejectedRetryHistory = validateStartingSlicePilot({
       root: ROOT,
       fleetDir,
-      expectedCount: 10,
       expectedBuild: build,
     });
     expect(rejectedRetryHistory.valid).toBe(false);
@@ -791,14 +1006,13 @@ describe("closed fleet filesystem integrity", () => {
       "summary contains 1 failed attempts",
     );
     expect(rejectedRetryHistory.validity_errors.join("\n")).toContain(
-      "authoritative row must contain exactly one launcher attempt",
+      "pilot row must contain exactly one launcher attempt",
     );
 
     writeFileSync(summaryPath, canonicalSummaryBody);
-    const rejectedHiddenRetry = certifyStartingSliceFleet({
+    const rejectedHiddenRetry = validateStartingSlicePilot({
       root: ROOT,
       fleetDir,
-      expectedCount: 10,
       expectedBuild: build,
     });
     expect(rejectedHiddenRetry.validity_errors.join("\n")).toContain(
@@ -809,10 +1023,9 @@ describe("closed fleet filesystem integrity", () => {
 
     const recoveryMarkerPath = `${firstPrefix}.initial-report.txt`;
     writeFileSync(recoveryMarkerPath, "Rejected initial response retained byte-for-byte.\n");
-    const rejectedUndeclaredRecovery = certifyStartingSliceFleet({
+    const rejectedUndeclaredRecovery = validateStartingSlicePilot({
       root: ROOT,
       fleetDir,
-      expectedCount: 10,
       expectedBuild: build,
     });
     expect(rejectedUndeclaredRecovery.validity_errors.join("\n")).toContain(
@@ -835,10 +1048,9 @@ describe("closed fleet filesystem integrity", () => {
       summaryPath,
       `${JSON.stringify({ ...summary, report_recovered_runs: 1 }, null, 2)}\n`,
     );
-    const rejectedMarkerOnlyRecovery = certifyStartingSliceFleet({
+    const rejectedMarkerOnlyRecovery = validateStartingSlicePilot({
       root: ROOT,
       fleetDir,
-      expectedCount: 10,
       expectedBuild: build,
     });
     expect(rejectedMarkerOnlyRecovery.validity_errors.join("\n")).toContain(
@@ -953,15 +1165,14 @@ The opening worked and invited continuation.
       summaryPath,
       `${JSON.stringify({ ...summary, report_recovered_runs: 1 }, null, 2)}\n`,
     );
-    const rejectedAuthenticatedRecovery = certifyStartingSliceFleet({
+    const rejectedAuthenticatedRecovery = validateStartingSlicePilot({
       root: ROOT,
       fleetDir,
-      expectedCount: 10,
       expectedBuild: build,
     });
     const recoveredErrors = rejectedAuthenticatedRecovery.validity_errors.join("\n");
     expect(rejectedAuthenticatedRecovery.valid).toBe(false);
-    expect(recoveredErrors).toContain("authoritative certification requires primary reports");
+    expect(recoveredErrors).toContain("pilot cohort requires primary reports");
     expect(recoveredErrors).toContain("does not accept a report-recovered row");
     expect(recoveredErrors).toContain("does not accept report-recovery artifacts");
     expect(recoveredErrors).toContain("does not accept a report-recovered attestation");
@@ -980,14 +1191,13 @@ The opening worked and invited continuation.
       summaryPath,
       `${JSON.stringify({ ...summary, resume_enabled: true }, null, 2)}\n`,
     );
-    const rejectedResumableCohort = certifyStartingSliceFleet({
+    const rejectedResumableCohort = validateStartingSlicePilot({
       root: ROOT,
       fleetDir,
-      expectedCount: 10,
       expectedBuild: build,
     });
     expect(rejectedResumableCohort.validity_errors.join("\n")).toContain(
-      "authoritative certification requires --no-resume",
+      "pilot cohort requires --no-resume",
     );
     writeFileSync(summaryPath, canonicalSummaryBody);
 
@@ -997,10 +1207,9 @@ The opening worked and invited continuation.
         : row,
     );
     writeFileSync(manifestPath, `${relabeledRows.map((row) => JSON.stringify(row)).join("\n")}\n`);
-    const rejectedHistoricalBasename = certifyStartingSliceFleet({
+    const rejectedHistoricalBasename = validateStartingSlicePilot({
       root: ROOT,
       fleetDir,
-      expectedCount: 10,
       expectedBuild: build,
     });
     expect(rejectedHistoricalBasename.validity_errors.join("\n")).toContain(
@@ -1017,7 +1226,7 @@ The opening worked and invited continuation.
       {
         envelope: {
           ...canonicalPrimaryEnvelope,
-          modelUsage: { "claude-sonnet-4-5-20260716": {} },
+          modelUsage: { "claude-haiku-4-5-20260716": {} },
         },
         reason: "does not match planned model",
       },
@@ -1038,10 +1247,9 @@ The opening worked and invited continuation.
     ];
     for (const candidate of rejectedPrimaryEnvelopes) {
       writeFileSync(firstPrimaryEnvelopePath, `${JSON.stringify(candidate.envelope)}\n`);
-      const rejectedEnvelope = certifyStartingSliceFleet({
+      const rejectedEnvelope = validateStartingSlicePilot({
         root: ROOT,
         fleetDir,
-        expectedCount: 10,
         expectedBuild: build,
       });
       expect(rejectedEnvelope.validity_errors.join("\n")).toContain(candidate.reason);
@@ -1052,10 +1260,9 @@ The opening worked and invited continuation.
       firstEvidencePath,
       canonicalEvidenceBody.replace('"run_seed":500', '"run_seed":999'),
     );
-    const rejectedEvidenceTamper = certifyStartingSliceFleet({
+    const rejectedEvidenceTamper = validateStartingSlicePilot({
       root: ROOT,
       fleetDir,
-      expectedCount: 10,
       expectedBuild: build,
     });
     expect(rejectedEvidenceTamper.validity_errors.join("\n")).toContain(
@@ -1086,10 +1293,9 @@ The opening worked and invited continuation.
       manifestPath,
       `${duplicatedSessionRows.map((row) => JSON.stringify(row)).join("\n")}\n`,
     );
-    const rejectedDuplicateClaudeSession = certifyStartingSliceFleet({
+    const rejectedDuplicateClaudeSession = validateStartingSlicePilot({
       root: ROOT,
       fleetDir,
-      expectedCount: 10,
       expectedBuild: build,
     });
     expect(rejectedDuplicateClaudeSession.validity_errors.join("\n")).toContain(
@@ -1106,10 +1312,9 @@ The opening worked and invited continuation.
         '"bugs": [{"where":"wolf_winter","severity":"S0","note":"Digest test."}]',
       );
     writeFileSync(firstReportPath, tamperedReportBody);
-    const rejectedReportDigest = certifyStartingSliceFleet({
+    const rejectedReportDigest = validateStartingSlicePilot({
       root: ROOT,
       fleetDir,
-      expectedCount: 10,
       expectedBuild: build,
     });
     expect(rejectedReportDigest.valid).toBe(false);
@@ -1131,10 +1336,9 @@ The opening worked and invited continuation.
     );
     writeFileSync(firstSidecarPath, `${JSON.stringify(changedSidecar, null, 2)}\n`);
     writeFileSync(manifestPath, `${changedRows.map((row) => JSON.stringify(row)).join("\n")}\n`);
-    const rejectedSidecarDigest = certifyStartingSliceFleet({
+    const rejectedSidecarDigest = validateStartingSlicePilot({
       root: ROOT,
       fleetDir,
-      expectedCount: 10,
       expectedBuild: build,
     });
     expect(rejectedSidecarDigest.valid).toBe(false);
@@ -1166,10 +1370,9 @@ The opening worked and invited continuation.
       ),
     };
     writeFileSync(firstSidecarPath, `${JSON.stringify(tampered, null, 2)}\n`);
-    const rejected = certifyStartingSliceFleet({
+    const rejected = validateStartingSlicePilot({
       root: ROOT,
       fleetDir,
-      expectedCount: 10,
       expectedBuild: build,
     });
     expect(rejected.valid).toBe(false);
@@ -1180,12 +1383,11 @@ The opening worked and invited continuation.
     writeFileSync(firstSidecarPath, `${JSON.stringify({ ...tampered, run_seed: 500 }, null, 2)}\n`);
     writeFileSync(
       firstAttestationPath,
-      `${JSON.stringify({ ...rows[0]!.model_attestation, model: "sonnet" }, null, 2)}\n`,
+      `${JSON.stringify({ ...rows[0]!.model_attestation, model: "haiku" }, null, 2)}\n`,
     );
-    const rejectedModel = certifyStartingSliceFleet({
+    const rejectedModel = validateStartingSlicePilot({
       root: ROOT,
       fleetDir,
-      expectedCount: 10,
       expectedBuild: build,
     });
     expect(rejectedModel.valid).toBe(false);
@@ -1205,20 +1407,18 @@ The opening worked and invited continuation.
         summaryPath,
         `${JSON.stringify({ ...summary, label: unsafeLabel }, null, 2)}\n`,
       );
-      const rejectedLabel = certifyStartingSliceFleet({
+      const rejectedLabel = validateStartingSlicePilot({
         root: ROOT,
         fleetDir,
-        expectedCount: 10,
         expectedBuild: build,
       });
       expect(rejectedLabel.valid).toBe(false);
       expect(rejectedLabel.validity_errors.join("\n")).toContain("unsafe or reserved fleet label");
     }
     writeFileSync(summaryPath, `${JSON.stringify({ ...summary, label: "other-safe" }, null, 2)}\n`);
-    const rejectedUnboundLabel = certifyStartingSliceFleet({
+    const rejectedUnboundLabel = validateStartingSlicePilot({
       root: ROOT,
       fleetDir,
-      expectedCount: 10,
       expectedBuild: build,
     });
     expect(rejectedUnboundLabel.validity_errors.join("\n")).toContain(
@@ -1240,10 +1440,9 @@ The opening worked and invited continuation.
       else throw error;
     }
     if (symlinkSupported) {
-      const rejectedSymlink = certifyStartingSliceFleet({
+      const rejectedSymlink = validateStartingSlicePilot({
         root: ROOT,
         fleetDir,
-        expectedCount: 10,
         expectedBuild: build,
       });
       expect(rejectedSymlink.validity_errors.join("\n")).toContain(
@@ -1252,10 +1451,9 @@ The opening worked and invited continuation.
       unlinkSync(firstReportPath);
     }
     linkSync(outsideReport, firstReportPath);
-    const rejectedHardlink = certifyStartingSliceFleet({
+    const rejectedHardlink = validateStartingSlicePilot({
       root: ROOT,
       fleetDir,
-      expectedCount: 10,
       expectedBuild: build,
     });
     expect(rejectedHardlink.validity_errors.join("\n")).toContain(
