@@ -188,6 +188,11 @@ function launchAlbanyWolf(api: ToolApi): {
     session_id: overworldSessionId,
     choice: "albany:ledger_advocate",
   });
+  api.choose_overworld_session_story({
+    ...full,
+    session_id: overworldSessionId,
+    choice: "albany:oath_limited_aid_only",
+  });
   const sourced = api.choose_overworld_session_story({
     ...full,
     session_id: overworldSessionId,
@@ -399,6 +404,11 @@ describe("bug_0505 — Wolf-Winter saved wood has a post-hunt consequence", () =
       ...full,
       session_id: sessionId,
       choice: "albany:ledger_advocate",
+    });
+    api.choose_overworld_session_story({
+      ...full,
+      session_id: sessionId,
+      choice: "albany:oath_limited_aid_only",
     });
     const sourced = api.choose_overworld_session_story({
       ...full,
@@ -705,6 +715,7 @@ describe("bug_0505 — Wolf-Winter saved wood has a post-hunt consequence", () =
         entry.kind !== "lead_source" &&
         entry.kind !== "preparation_offer" &&
         entry.kind !== "preparation" &&
+        !entry.kind.startsWith("relief_oath") &&
         !entry.kind.startsWith("relief_allocation"),
     );
     for (const entry of prooflessCurrent.journalEntries) {
@@ -714,6 +725,9 @@ describe("bug_0505 — Wolf-Winter saved wood has a post-hunt consequence", () =
       delete entry.serviceAreaId;
     }
     delete prooflessCurrent.openingLeadSourceDecisionTrail;
+    expect(
+      prooflessCurrent.journalEntries.some((entry) => entry.kind.startsWith("relief_oath")),
+    ).toBe(false);
     const legacyConsequenceCharacter = createInitialCampaignCharacterState();
     legacyConsequenceCharacter.relationships.push({
       npcId: "npc:old_cade",

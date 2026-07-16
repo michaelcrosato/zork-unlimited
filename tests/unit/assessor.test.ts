@@ -92,6 +92,7 @@ function withStaleAuditFixtureRoot(run: (root: string) => void): void {
         opening_lead_source: undefined,
         opening_preparation: undefined,
         opening_relief_allocation: undefined,
+        opening_relief_oath: undefined,
         quests: [
           {
             id: "stale_fixture",

@@ -21,6 +21,11 @@ import {
   type OpeningReliefAllocationJournalDraft,
 } from "./opening_relief_allocation_journal.js";
 import {
+  openingReliefOathLegacyJournalDraft,
+  openingReliefOathLegacySourceWorldHash,
+  type OpeningReliefOathJournalDraft,
+} from "./opening_relief_oath_journal.js";
+import {
   openingRegistrationLegacyJournalDraft,
   openingRegistrationLegacySourceWorldHash,
   type OpeningRegistrationJournalDraft,
@@ -70,6 +75,9 @@ export type OverworldJournalSourceIndex = {
   openingReliefAllocationJournalIds?: ReadonlySet<string>;
   openingReliefAllocationOfferDraft?: OpeningReliefAllocationJournalDraft | null;
   openingReliefAllocationTownName?: string | null;
+  openingReliefOathJournalIds?: ReadonlySet<string>;
+  openingReliefOathOfferDraft?: OpeningReliefOathJournalDraft | null;
+  openingReliefOathTownName?: string | null;
   openingRegistrationJournalDraftsById: ReadonlyMap<string, OpeningRegistrationJournalDraft>;
   openingRegistrationTownName: string | null;
   poiIds: ReadonlySet<string>;
@@ -408,6 +416,52 @@ function assertOpeningReliefAllocationLegacyJournalSource(entry: OverworldJourna
   }
 }
 
+function assertOpeningReliefOathJournalSource(
+  entry: OverworldJournalEntry,
+  sources: OverworldJournalSourceIndex,
+): void {
+  if (entry.kind === "relief_oath_offer") {
+    const draft = sources.openingReliefOathOfferDraft;
+    if (
+      !draft ||
+      entry.id !== draft.id ||
+      entry.title !== draft.title ||
+      entry.text !== draft.text
+    ) {
+      throw new Error(
+        `Overworld session snapshot journal relief_oath_offer entry "${entry.id}" does not match its authored copy.`,
+      );
+    }
+  } else if (!sources.openingReliefOathJournalIds?.has(entry.id)) {
+    throw new Error(
+      `Overworld session snapshot journal relief_oath entry references unknown evidence "${entry.id}".`,
+    );
+  }
+  if (
+    sources.openingReliefOathTownName != null &&
+    entry.town !== sources.openingReliefOathTownName
+  ) {
+    throw new Error(
+      `Overworld session snapshot journal ${entry.kind} entry "${entry.id}" is bound to town "${entry.town}", expected "${sources.openingReliefOathTownName}".`,
+    );
+  }
+}
+
+function assertOpeningReliefOathLegacyJournalSource(entry: OverworldJournalEntry): void {
+  const sourceWorldHash = openingReliefOathLegacySourceWorldHash(entry.id);
+  if (!sourceWorldHash) {
+    throw new Error(
+      `Overworld session snapshot journal relief_oath_legacy entry id "${entry.id}" must contain a source world hash.`,
+    );
+  }
+  const draft = openingReliefOathLegacyJournalDraft(sourceWorldHash);
+  if (entry.title !== draft.title || entry.text !== draft.text) {
+    throw new Error(
+      `Overworld session snapshot journal relief_oath_legacy entry "${entry.id}" does not match its canonical copy.`,
+    );
+  }
+}
+
 function assertOpeningAllyJournalSource(
   entry: OverworldJournalEntry,
   sources: OverworldJournalSourceIndex,
@@ -484,7 +538,10 @@ function assertSnapshotJournalSource(
     entry.kind === "preparation_offer" ||
     entry.kind === "relief_allocation" ||
     entry.kind === "relief_allocation_legacy" ||
-    entry.kind === "relief_allocation_offer";
+    entry.kind === "relief_allocation_offer" ||
+    entry.kind === "relief_oath" ||
+    entry.kind === "relief_oath_legacy" ||
+    entry.kind === "relief_oath_offer";
   if (isStoryChoiceEvidence !== (entry.storyChoiceBoundary !== undefined)) {
     throw new Error(
       `Overworld session snapshot journal ${entry.kind} entry has an invalid story-choice boundary.`,
@@ -590,6 +647,13 @@ function assertSnapshotJournalSource(
       return;
     case "relief_allocation_legacy":
       assertOpeningReliefAllocationLegacyJournalSource(entry);
+      return;
+    case "relief_oath":
+    case "relief_oath_offer":
+      assertOpeningReliefOathJournalSource(entry, sources);
+      return;
+    case "relief_oath_legacy":
+      assertOpeningReliefOathLegacyJournalSource(entry);
       return;
     case "quest":
       assertKnownJournalSource(entry, "quest:", sources.questIds, "quest", sources.questTownNames);

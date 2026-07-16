@@ -107,6 +107,11 @@ function launchBreakingWeir(api: ToolApi): { overworldSessionId: string; rpgSess
     session_id: overworldSessionId,
     choice: "albany:ledger_advocate",
   });
+  api.choose_overworld_session_story({
+    ...full,
+    session_id: overworldSessionId,
+    choice: "albany:oath_limited_aid_only",
+  });
   const sourced = api.choose_overworld_session_story({
     ...full,
     session_id: overworldSessionId,

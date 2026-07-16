@@ -112,7 +112,8 @@ Relevant guards include
 and
 [`wolf_winter_post_hunt_consequence.test.ts`](../tests/regression/wolf_winter_post_hunt_consequence.test.ts).
 
-The current slice does **not** yet meet the full contract:
+The current slice now satisfies the twelve-fork structural proof threshold, but
+it is **not yet milestone-certified**:
 
 - Wolf-Winter is now withheld from Albany's FIFO discovery and requires one of
   three certified source packets, but the other visible Albany jobs/sites/events
@@ -139,21 +140,25 @@ The current slice does **not** yet meet the full contract:
   origin-honest quest-local equipment pattern;
 - prepared combat, fully noncombat diversion, bounded mixed recovery,
   drive/evacuate, and fortify/outlast now supply four distinct resolution
-  families; the full twelve-fork depth contract and fleet-level balance remain
+  families; all twelve counted forks have paired deterministic proof, while
+  fleet-level strategy balance and the final numeric quality bar remain
   unproven;
 - Wolf-Winter now starts through one visible, replay-bound hill-route choice
   whose exact time, supplies, fatigue, Hayden memory, quest import, first-cast
   risk, cattle pressure, ending, and return record diverge. A separate Station
   dispatch now spends Albany's last relief wagon and crew on exactly one of
-  three named needs, changing the field or the truthful return; the relief oath
-  is the one remaining unproven Albany fork;
-- three early decisions now drive replay-bound services through reusable
+  three named needs, changing the field or the truthful return. The opening
+  relief oath now has paired proof for three binding terms, three different
+  field consumers, unchanged failure recoveries, promise resolution, and three
+  conditional return services;
+- four early decisions now drive replay-bound services through reusable
   world-fact, story-choice, companion, and promise predicates, but the other
   return facts still lack mechanical NPC and opportunity consumers.
 
-The causal ledger marks existing partial proofs honestly. No fork counts toward
-the target until its later mechanical consumer and paired counterfactual test are
-both present.
+The causal ledger marks all twelve material forks as structurally proven. That
+does not certify the greater-than-BG3 target: certification still requires the
+current deep crawl, 100-player pure fleet, numeric thresholds, and severity
+audit named below.
 
 ## Reusable foundation first
 
@@ -463,16 +468,75 @@ service. Paired proof lives in
 and the predecessor boundary lives in
 [`relief_allocation_migration_integrity.test.ts`](../tests/regression/relief_allocation_migration_integrity.test.ts).
 
-This proves `SS-F01-character-background`, `SS-F03-lead-source`,
+The twelfth authored increment proves `SS-F02-relief-oath` as the final counted
+fork. Immediately after permanent registration
+and before source certification, Rowan requires one exact Wolf-Winter term. Full
+Compact Duty costs ten minutes and records public duty, Relief Compact standing,
+Rowan's official memory, a boundary-annex knowledge import, and an active
+full-duty promise. Aid-Only Duty costs five minutes and records bounded
+authority, limited Compact standing, Rowan's negotiated memory, a witnessed-count
+knowledge import, and an active limited promise. The Unaffiliated Personal Bond
+costs no time and records voluntary aid, Independent Carriers standing, Rowan's
+personal-bond memory, an ash-lane knowledge import, and an active return promise.
+Each term is a dispatch obligation, not a replacement background or sponsor, and
+the source screen cannot appear until one has been selected.
+
+The three field consumers are narrow and nonexclusive. Full Duty lowers only the
+first Albany-authority public-seal Repair check by 2 DC: ordinary DC 14 becomes
+12 and Works-prepared DC 12 becomes 10. Cade still refuses the failed-seat hand,
+the attempt and public stock are still spent, and the Albany-strip recovery is
+unchanged. Aid-Only suppresses only the final ordinary +1 cattle-alarm step on a
+wholly bloodless lure; it erases no approach pressure, failed cast, or recovery
+cost. The Unaffiliated Bond lowers only the first drive
+shutter from DC 12 to 10; its finite charge, miss pressure, no-retry rule, and
+loose-hurdle recovery stay intact. Hunt, lure, drive, fortify, June, and solo
+play remain legal under all three terms. An oath changes advantage and
+accountability, not the set of available strategy families.
+
+Return foldback closes the promises truthfully. Full Duty is kept on its lawful
+line and broken if the player substitutes Cade's household shutters for the
+required public-seal fortification. Aid-Only is kept unless the player invokes
+Albany property authority, which releases the narrow promise with Rowan's bend
+memory. The Unaffiliated Bond is kept unless that same authority claim breaks
+it. If the permanent background is Unaffiliated Courier, its separate
+registration emergency-tag promise also closes as kept on any truthful
+Wolf-Winter return, regardless of the selected dispatch term; other backgrounds
+never acquire that promise. A kept oath promise plus the matching outcome facts can open one bounded
+15-minute service: a Civic resupply audit after lawful full-duty authority
+fortification, a Market rest after an aid-only living-pack/whole-herd return, or
+a Greenway resupply after a qualifying unaffiliated living-drive returned-rig
+line. Nonmatching outcomes and bent or broken promises do not receive those
+services. Equivalent same-counter claims do not duplicate stock or recovery:
+Jamie's Relief Protocol consolidates with the full-duty Civic cache, the
+Resident Shelter cot consolidates with the aid-only Market rest, and a
+whole-herd drive consolidates the unaffiliated returned-rig claim with Emery's
+existing Greenway cache. Each oath card discloses that consolidation before the
+player commits.
+
+Unit, schema, chronology, and UI evidence covers the authored choice, durable
+character effects, journal ordering, lead-source handoff, generic value and
+faction floors, and the three-card presentation. The dedicated paired
+field/return proof at
+[`relief_oath_counterfactual.test.ts`](../tests/starting_slice/relief_oath_counterfactual.test.ts)
+uses identical rolls to isolate all three consumers, proves established
+miss/recovery paths remain intact, resolves kept/released/broken promises, and
+checks positive and negative eligibility for every conditional service. Exact
+predecessor migration, anti-relabel rejection, repeated restore, and the shared
+Independent Carriers standing case live in
+[`relief_oath_migration_integrity.test.ts`](../tests/regression/relief_oath_migration_integrity.test.ts).
+The causal row is therefore `implemented`, `proven`, and counted.
+
+This proves `SS-F01-character-background`, `SS-F02-relief-oath`, `SS-F03-lead-source`,
 `SS-F04-ally-commitment`, `SS-F05-preparation-profile`,
 `SS-F06-relief-allocation`, `SS-F07-hill-route`, `SS-F08-cade-trust`,
 `SS-F09-wolf-strategy`, `SS-F10-crisis-priority`, `SS-F11-saved-wood`, and
-`SS-F12-albany-return`: eleven of the twelve required material forks. It proves
+`SS-F12-albany-return`: all twelve required material forks. It proves
 the ally-agency clause, three preparation profiles, all four resolution
-families, and distinct consumers for all four concepts, but it does not prove
-the remaining relief-oath fork, the full twelve-fork contract, or fleet-level
-balance. Those remain the next work, not implied credit for the eleven proven
-counterfactuals.
+families, and distinct consumers for all four concepts. It does not yet prove
+fleet-level balance, verified player-completion/clarity/enjoyment/continuation
+thresholds, or the absence of recurring severe issues. Those remain the next
+work; twelve deterministic fork proofs are necessary evidence, not final
+greater-than-BG3 certification.
 
 ## Required resolution families
 
@@ -514,8 +578,8 @@ Certification requires all of the following simultaneously:
    agendas, and two remain mechanically relevant after Wolf-Winter.
 5. At least one ally relationship has independent agency: the ally can refuse,
    leave, disagree, or solve a problem differently because of remembered conduct.
-6. At least one visible pressure system—time, weather, cattle safety, public
-   trust, or relief capacity—has multiple thresholds and cross-system effects.
+6. At least one visible pressure system—time, weather, cattle safety, winter
+   siege, or pack drive—has multiple thresholds and cross-system effects.
    It is never a hidden real-time trap.
 7. Combat can be avoided, shortened, redirected, surrendered from, or transformed
    by earlier play. The mandatory three-kill golden path is removed.

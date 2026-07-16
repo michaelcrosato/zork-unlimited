@@ -137,6 +137,11 @@ function launchAlbanyWolf(api: ToolApi) {
     session_id: overworldSessionId,
     choice: ROAD_WARDEN.id,
   });
+  api.choose_overworld_session_story({
+    ...FULL,
+    session_id: overworldSessionId,
+    choice: "albany:oath_full_compact_duty",
+  });
   const sourced = api.choose_overworld_session_story({
     ...FULL,
     session_id: overworldSessionId,
@@ -212,6 +217,7 @@ function playStrategy(strategy: Strategy) {
   expect(initial.state.campaignImportReceipt?.applied_rules).toEqual([
     "import:wolf_winter_approach_sheltered_stockway",
     "import:wolf_winter_fieldcraft",
+    "import:wolf_winter_full_compact_duty",
     "import:wolf_winter_lure_fieldcraft",
     "import:wolf_winter_relief_resident_shelter",
     "import:wolf_winter_works_fortification",

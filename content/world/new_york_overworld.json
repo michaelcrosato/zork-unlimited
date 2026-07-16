@@ -330,6 +330,137 @@
       }
     ]
   },
+  "opening_relief_oath": {
+    "version": 1,
+    "id": "albany:wolf_relief_oath",
+    "after_registration": "albany:relief_registration",
+    "target_quest": "wolf_winter",
+    "home": "albany_city",
+    "area": "albany_city__civic_core",
+    "contact": "albany_city__civic_core__contact",
+    "clerk_npc_id": "albany:rowan_quill",
+    "title": "Set the Wolf-Winter Relief Terms",
+    "message": "Your registration says who you are; this line binds only the Wolf-Winter dispatch and does not replace your background or sponsor. Rowan offers three exact terms. Full Compact duty carries a provisional warrant and public-stock obligation. Aid-only duty keeps property authority with Cade. A personal bond declines deputization but still promises an exact return account. Rowan will close the selected promise as kept, released with a recorded bend, or broken; the choice cannot be rewritten after source certification.",
+    "options": [
+      {
+        "id": "albany:oath_full_compact_duty",
+        "kind": "official",
+        "title": "Take Full Compact Duty",
+        "summary": "Accept Rowan's provisional Wolf-Winter warrant and answer for Albany's public relief authority.",
+        "preview": "The sealed boundary annex lowers the first Albany-authority fortification seat by 2 DC without changing Cade's refusal or the one-shot recovery. A kept authority return creates one fast Civic resupply claim. The ten-minute oath makes Cade's household-shutter substitution a disclosed breach.",
+        "consequence": "Rowan countersigns full duty. Public duty becomes a named value, the Relief Compact records official standing, and the exact promise travels with the character until Wolf-Winter closes it.",
+        "access": "A provisional warrant, boundary annex, and one Civic return-cache claim. Jamie's identical Relief Protocol claim consolidates into that cache.",
+        "duty": "If you fortify, use Albany's assigned public seals; otherwise act life-first. Return the exact count of people, wolves, cattle, property, and public stock. Substituting Cade's household fortification breaks this term.",
+        "terms": { "minutes": 10 },
+        "effects": [
+          {
+            "type": "learn_knowledge",
+            "knowledge_id": "albany:knowledge_wolf_full_compact_duty"
+          },
+          {
+            "type": "affirm_value",
+            "value_id": "value:public_duty",
+            "strength_at_least": 4
+          },
+          {
+            "type": "raise_faction_standing",
+            "faction_id": "faction:albany_relief_compact",
+            "standing_at_least": 6
+          },
+          {
+            "type": "remember_relationship",
+            "npc_id": "albany:rowan_quill",
+            "memory_id": "albany:memory_rowan_full_compact_duty",
+            "trust_at_least": 4,
+            "regard_at_least": 3
+          },
+          {
+            "type": "record_promise",
+            "promise_id": "albany:promise_wolf_full_compact_duty",
+            "recipient_id": "albany:rowan_quill"
+          }
+        ]
+      },
+      {
+        "id": "albany:oath_limited_aid_only",
+        "kind": "limited",
+        "title": "Negotiate Aid-Only Duty",
+        "summary": "Accept a bounded public duty to protect and testify without taking authority over Cade's property.",
+        "preview": "Jamie's witnessed count slip suppresses only the final ordinary cattle-alarm step on a wholly bloodless lure; it never repairs a failed cast or helps another strategy. A kept living-pack, whole-herd return creates one fast Market-rest claim. Invoking Albany authority releases the promise with a public bend on record.",
+        "consequence": "Rowan seals the limit into the dispatch. Bounded authority becomes a named value, the Relief Compact records limited standing, and any later overstep must survive as part of the return account.",
+        "access": "A witnessed count slip and one Market cot after a whole-herd living-pack return. A Resident Shelter cot consolidates into that same rest.",
+        "duty": "Protect people and cattle, leave property authority with Cade, and return the exact count. Invoking Albany authority bends the limit and releases—rather than silently erases—the promise.",
+        "terms": { "minutes": 5 },
+        "effects": [
+          {
+            "type": "learn_knowledge",
+            "knowledge_id": "albany:knowledge_wolf_limited_aid_only"
+          },
+          {
+            "type": "affirm_value",
+            "value_id": "value:bounded_authority",
+            "strength_at_least": 4
+          },
+          {
+            "type": "raise_faction_standing",
+            "faction_id": "faction:albany_relief_compact",
+            "standing_at_least": 3
+          },
+          {
+            "type": "remember_relationship",
+            "npc_id": "albany:rowan_quill",
+            "memory_id": "albany:memory_rowan_limited_aid_only",
+            "trust_at_least": 3,
+            "regard_at_least": 4
+          },
+          {
+            "type": "record_promise",
+            "promise_id": "albany:promise_wolf_limited_aid_only",
+            "recipient_id": "albany:rowan_quill"
+          }
+        ]
+      },
+      {
+        "id": "albany:oath_unaffiliated_personal_bond",
+        "kind": "unaffiliated",
+        "title": "Remain an Unaffiliated Helper",
+        "summary": "Decline deputization and carry the Wolf-Winter tag on a witnessed personal bond.",
+        "preview": "Emery's service-cut insert lowers the first drive shutter signal from DC 12 to DC 10 without helping lure, hunt, or fortification. A kept returned-rig line creates one fast Independent Carriers resupply claim. Claiming Albany authority breaks the personal bond.",
+        "consequence": "Rowan records no public warrant. Voluntary aid becomes a named value, Independent Carriers standing rises, and the personal return promise remains binding without turning the helper into Albany staff.",
+        "access": "An ash-lane insert and one Greenway cache when the rig returns. A whole-herd drive consolidates this with Emery's existing cache; cattle-scattered return keeps the oath-named claim.",
+        "duty": "Claim no Albany authority; return or publicly void the emergency tag with the exact count. Invoking Albany authority breaks this personal bond.",
+        "terms": { "minutes": 0 },
+        "effects": [
+          {
+            "type": "learn_knowledge",
+            "knowledge_id": "albany:knowledge_wolf_unaffiliated_bond"
+          },
+          {
+            "type": "affirm_value",
+            "value_id": "value:voluntary_aid",
+            "strength_at_least": 4
+          },
+          {
+            "type": "raise_faction_standing",
+            "faction_id": "faction:independent_carriers",
+            "standing_at_least": 5
+          },
+          {
+            "type": "remember_relationship",
+            "npc_id": "albany:rowan_quill",
+            "memory_id": "albany:memory_rowan_unaffiliated_personal_bond",
+            "trust_at_least": 2,
+            "regard_at_least": 5
+          },
+          {
+            "type": "record_promise",
+            "promise_id": "albany:promise_wolf_unaffiliated_bond",
+            "recipient_id": "albany:rowan_quill"
+          }
+        ]
+      }
+    ]
+  },
   "opening_lead_source": {
     "version": 1,
     "id": "albany:wolf_source_priority",
@@ -675,6 +806,99 @@
     ]
   },
   "campaign_service_rules": [
+    {
+      "id": "albany:full_oath_authority_return_resupply",
+      "home": "albany_city",
+      "area": "albany_city__civic_core",
+      "action": "resupply",
+      "title": "Close the Full-Duty Civic Audit",
+      "summary": "Your kept full-duty promise, lawful use of Albany's public seals, and exact return count close Rowan's audit. The Civic counter releases one bounded road cache without changing Cade's refusal or refunding the spent seals.",
+      "provider_character_id": "albany_city__civic_core__contact",
+      "minutes": 15,
+      "requires_all_world_facts": [
+        "fact:wolf_winter_albany_authority_invoked",
+        "fact:wolf_winter_public_relief_seals_spent"
+      ],
+      "requires_all_story_choices": [
+        {
+          "story_choice_id": "albany:wolf_relief_oath",
+          "choice_id": "albany:oath_full_compact_duty"
+        }
+      ],
+      "forbids_any_story_choices": [
+        {
+          "story_choice_id": "albany:wolf_preparation",
+          "choice_id": "albany:prep_relief_protocol"
+        }
+      ],
+      "requires_all_promises": [
+        {
+          "promise_id": "albany:promise_wolf_full_compact_duty",
+          "status": "kept"
+        }
+      ]
+    },
+    {
+      "id": "albany:limited_oath_living_pack_return_rest",
+      "home": "albany_city",
+      "area": "albany_city__market",
+      "action": "rest",
+      "title": "Close the Aid-Only Named Count",
+      "summary": "Your kept aid-only promise returns a living pack and Cade's whole herd under Jamie's witnessed count. The Market opens one warmed recovery cot; it restores fatigue only and grants no property authority.",
+      "provider_character_id": "albany_city__market__contact",
+      "minutes": 15,
+      "requires_all_world_facts": [
+        "fact:wolf_winter_pack_diverted_alive",
+        "fact:wolf_winter_cattle_whole"
+      ],
+      "requires_all_story_choices": [
+        {
+          "story_choice_id": "albany:wolf_relief_oath",
+          "choice_id": "albany:oath_limited_aid_only"
+        }
+      ],
+      "forbids_any_story_choices": [
+        {
+          "story_choice_id": "albany:wolf_relief_allocation",
+          "choice_id": "albany:relief_resident_shelter"
+        }
+      ],
+      "requires_all_promises": [
+        {
+          "promise_id": "albany:promise_wolf_limited_aid_only",
+          "status": "kept"
+        }
+      ]
+    },
+    {
+      "id": "albany:unaffiliated_bond_returned_rig_resupply",
+      "home": "albany_city",
+      "area": "albany_city__greenway",
+      "action": "resupply",
+      "title": "Close the Independent Returned-Rig Bond",
+      "summary": "Your kept personal bond returns Cade's signal housing, bell, and rope after a living drive. Emery closes the unaffiliated tag and releases one Independent Carriers road cache without treating you as Albany staff.",
+      "provider_character_id": "albany_city__greenway__contact",
+      "minutes": 15,
+      "requires_all_world_facts": [
+        "fact:wolf_winter_pack_driven_alive",
+        "fact:wolf_winter_drive_reserve_returned"
+      ],
+      "forbids_any_world_facts": [
+        "fact:wolf_winter_cattle_whole"
+      ],
+      "requires_all_story_choices": [
+        {
+          "story_choice_id": "albany:wolf_relief_oath",
+          "choice_id": "albany:oath_unaffiliated_personal_bond"
+        }
+      ],
+      "requires_all_promises": [
+        {
+          "promise_id": "albany:promise_wolf_unaffiliated_bond",
+          "status": "kept"
+        }
+      ]
+    },
     {
       "id": "albany:resident_shelter_return_rest",
       "home": "albany_city",
@@ -24183,6 +24407,78 @@
       "agenda": "Ask Rowan what matters before the office closes: they can separate ledger work, basement writs, and station-yard relief tags from ordinary counter noise.",
       "campaign_npc_id": "albany:rowan_quill",
       "variants": [
+        {
+          "id": "wolf_full_duty_kept",
+          "after_relationship_memories": [
+            "albany:memory_rowan_full_duty_kept"
+          ],
+          "summary": "Rowan closes the full Compact oath as kept: the Wolf-Winter count, public authority, and spent relief seals all match the returned record.",
+          "agenda": "The kept oath remains history rather than a reusable warrant. Its one Civic audit cache is available only if the exact authority return still satisfies the authored service claim."
+        },
+        {
+          "id": "wolf_full_duty_broken",
+          "after_relationship_memories": [
+            "albany:memory_rowan_full_duty_broken"
+          ],
+          "summary": "Rowan closes the full Compact oath as broken: you substituted Cade's private shutters after accepting a term that required Albany's public seals for fortification.",
+          "agenda": "The byre may have survived, but the promised authority line did not. No kept-duty Civic cache can be claimed, and the breach remains on the character record."
+        },
+        {
+          "id": "wolf_limited_duty_kept",
+          "after_relationship_memories": [
+            "albany:memory_rowan_limited_duty_kept"
+          ],
+          "summary": "Rowan closes the aid-only promise as kept: the exact return never claimed authority beyond the bounded public duty you negotiated.",
+          "agenda": "A living-pack, whole-herd return may still support Jamie's one witnessed Market recovery; the limit itself grants no continuing property authority."
+        },
+        {
+          "id": "wolf_limited_duty_bent",
+          "after_relationship_memories": [
+            "albany:memory_rowan_limited_duty_bent_to_authority"
+          ],
+          "summary": "Rowan releases the aid-only promise with a recorded bend: you invoked Albany authority after promising to leave Cade's property authority bounded.",
+          "agenda": "The bend is neither relabelled as fulfilment nor escalated into the personal-bond breach. The released promise cannot unlock the kept-duty Market claim."
+        },
+        {
+          "id": "wolf_unaffiliated_bond_kept",
+          "after_relationship_memories": [
+            "albany:memory_rowan_unaffiliated_bond_kept"
+          ],
+          "summary": "Rowan closes the unaffiliated personal bond as kept: you returned the exact count without claiming Albany's warrant as your own.",
+          "agenda": "If the living drive also returned Cade's finite rig, Emery can release the one Independent Carriers road cache attached to this closed bond."
+        },
+        {
+          "id": "wolf_unaffiliated_bond_broken",
+          "after_relationship_memories": [
+            "albany:memory_rowan_unaffiliated_bond_broken"
+          ],
+          "summary": "Rowan closes the personal bond as broken: the dispatch recorded no deputization, but you later invoked Albany authority over Cade's property.",
+          "agenda": "The successful field result does not rewrite the authority claim. The broken bond cannot unlock the Independent Carriers return cache."
+        },
+        {
+          "id": "wolf_full_compact_duty_selected",
+          "after_relationship_memories": [
+            "albany:memory_rowan_full_compact_duty"
+          ],
+          "summary": "Rowan remembers countersigning your provisional Wolf-Winter warrant and sealing the public boundary annex into the packet.",
+          "agenda": "Full duty improves only the first Albany-authority seal seat. Fortifying with Cade's household shutters is the disclosed breach; every other strategy remains open."
+        },
+        {
+          "id": "wolf_limited_aid_only_selected",
+          "after_relationship_memories": [
+            "albany:memory_rowan_limited_aid_only"
+          ],
+          "summary": "Rowan remembers the aid-only limit: protect and testify, but leave authority over Cade's property with Cade.",
+          "agenda": "Jamie's named-count slip suppresses only the last ordinary pressure step on a wholly bloodless lure. Invoking Albany authority records a bend and releases the promise."
+        },
+        {
+          "id": "wolf_unaffiliated_bond_selected",
+          "after_relationship_memories": [
+            "albany:memory_rowan_unaffiliated_personal_bond"
+          ],
+          "summary": "Rowan remembers issuing no warrant: your Wolf-Winter tag rides on an unaffiliated personal bond witnessed for the Independent Carriers.",
+          "agenda": "Emery's ash-lane insert improves only the first drive signal. Claiming Albany authority breaks the bond; lure, hunt, and household fortification remain fully viable."
+        },
         {
           "id": "registered_road_warden",
           "after_relationship_memories": [
@@ -47849,6 +48145,24 @@
             "target_var": "mediation"
           },
           {
+            "id": "import:wolf_winter_full_compact_duty",
+            "type": "knowledge_to_flag",
+            "knowledge_id": "albany:knowledge_wolf_full_compact_duty",
+            "target_flag": "relief_oath_full_duty"
+          },
+          {
+            "id": "import:wolf_winter_limited_aid_only",
+            "type": "knowledge_to_flag",
+            "knowledge_id": "albany:knowledge_wolf_limited_aid_only",
+            "target_flag": "relief_oath_limited_duty"
+          },
+          {
+            "id": "import:wolf_winter_unaffiliated_bond",
+            "type": "knowledge_to_flag",
+            "knowledge_id": "albany:knowledge_wolf_unaffiliated_bond",
+            "target_flag": "relief_oath_unaffiliated_bond"
+          },
+          {
             "id": "import:wolf_winter_market_testimony",
             "type": "knowledge_to_flag",
             "knowledge_id": "albany:knowledge_wolf_market_testimony",
@@ -47964,6 +48278,93 @@
           ],
           "conditional_effects": [
             {
+              "id": "albany:close_unaffiliated_courier_emergency_tag",
+              "when": {
+                "requires_all_promises": [
+                  {
+                    "promise_id": "albany:promise_close_emergency_tag",
+                    "status": "active"
+                  }
+                ]
+              },
+              "effects": [
+                {
+                  "type": "resolve_promise",
+                  "promise_id": "albany:promise_close_emergency_tag",
+                  "status": "kept"
+                }
+              ]
+            },
+            {
+              "id": "albany:resolve_full_relief_oath",
+              "when": {
+                "requires_all_promises": [
+                  {
+                    "promise_id": "albany:promise_wolf_full_compact_duty",
+                    "status": "active"
+                  }
+                ]
+              },
+              "effects": [
+                {
+                  "type": "resolve_promise",
+                  "promise_id": "albany:promise_wolf_full_compact_duty",
+                  "status": "kept"
+                },
+                {
+                  "type": "remember_relationship",
+                  "npc_id": "albany:rowan_quill",
+                  "memory_id": "albany:memory_rowan_full_duty_kept"
+                }
+              ]
+            },
+            {
+              "id": "albany:resolve_limited_relief_oath",
+              "when": {
+                "requires_all_promises": [
+                  {
+                    "promise_id": "albany:promise_wolf_limited_aid_only",
+                    "status": "active"
+                  }
+                ]
+              },
+              "effects": [
+                {
+                  "type": "resolve_promise",
+                  "promise_id": "albany:promise_wolf_limited_aid_only",
+                  "status": "kept"
+                },
+                {
+                  "type": "remember_relationship",
+                  "npc_id": "albany:rowan_quill",
+                  "memory_id": "albany:memory_rowan_limited_duty_kept"
+                }
+              ]
+            },
+            {
+              "id": "albany:resolve_unaffiliated_relief_bond",
+              "when": {
+                "requires_all_promises": [
+                  {
+                    "promise_id": "albany:promise_wolf_unaffiliated_bond",
+                    "status": "active"
+                  }
+                ]
+              },
+              "effects": [
+                {
+                  "type": "resolve_promise",
+                  "promise_id": "albany:promise_wolf_unaffiliated_bond",
+                  "status": "kept"
+                },
+                {
+                  "type": "remember_relationship",
+                  "npc_id": "albany:rowan_quill",
+                  "memory_id": "albany:memory_rowan_unaffiliated_bond_kept"
+                }
+              ]
+            },
+            {
               "id": "albany:june_departed_after_mixed_blood",
               "when": {
                 "requires_all_companions": ["albany:june_pike"],
@@ -48036,6 +48437,93 @@
           ],
           "conditional_effects": [
             {
+              "id": "albany:close_unaffiliated_courier_emergency_tag",
+              "when": {
+                "requires_all_promises": [
+                  {
+                    "promise_id": "albany:promise_close_emergency_tag",
+                    "status": "active"
+                  }
+                ]
+              },
+              "effects": [
+                {
+                  "type": "resolve_promise",
+                  "promise_id": "albany:promise_close_emergency_tag",
+                  "status": "kept"
+                }
+              ]
+            },
+            {
+              "id": "albany:resolve_full_relief_oath",
+              "when": {
+                "requires_all_promises": [
+                  {
+                    "promise_id": "albany:promise_wolf_full_compact_duty",
+                    "status": "active"
+                  }
+                ]
+              },
+              "effects": [
+                {
+                  "type": "resolve_promise",
+                  "promise_id": "albany:promise_wolf_full_compact_duty",
+                  "status": "kept"
+                },
+                {
+                  "type": "remember_relationship",
+                  "npc_id": "albany:rowan_quill",
+                  "memory_id": "albany:memory_rowan_full_duty_kept"
+                }
+              ]
+            },
+            {
+              "id": "albany:resolve_limited_relief_oath",
+              "when": {
+                "requires_all_promises": [
+                  {
+                    "promise_id": "albany:promise_wolf_limited_aid_only",
+                    "status": "active"
+                  }
+                ]
+              },
+              "effects": [
+                {
+                  "type": "resolve_promise",
+                  "promise_id": "albany:promise_wolf_limited_aid_only",
+                  "status": "kept"
+                },
+                {
+                  "type": "remember_relationship",
+                  "npc_id": "albany:rowan_quill",
+                  "memory_id": "albany:memory_rowan_limited_duty_kept"
+                }
+              ]
+            },
+            {
+              "id": "albany:resolve_unaffiliated_relief_bond",
+              "when": {
+                "requires_all_promises": [
+                  {
+                    "promise_id": "albany:promise_wolf_unaffiliated_bond",
+                    "status": "active"
+                  }
+                ]
+              },
+              "effects": [
+                {
+                  "type": "resolve_promise",
+                  "promise_id": "albany:promise_wolf_unaffiliated_bond",
+                  "status": "kept"
+                },
+                {
+                  "type": "remember_relationship",
+                  "npc_id": "albany:rowan_quill",
+                  "memory_id": "albany:memory_rowan_unaffiliated_bond_kept"
+                }
+              ]
+            },
+            {
               "id": "albany:june_returned_with_cattle_loss",
               "when": {
                 "requires_all_companions": ["albany:june_pike"],
@@ -48103,6 +48591,93 @@
             }
           ],
           "conditional_effects": [
+            {
+              "id": "albany:close_unaffiliated_courier_emergency_tag",
+              "when": {
+                "requires_all_promises": [
+                  {
+                    "promise_id": "albany:promise_close_emergency_tag",
+                    "status": "active"
+                  }
+                ]
+              },
+              "effects": [
+                {
+                  "type": "resolve_promise",
+                  "promise_id": "albany:promise_close_emergency_tag",
+                  "status": "kept"
+                }
+              ]
+            },
+            {
+              "id": "albany:resolve_full_relief_oath",
+              "when": {
+                "requires_all_promises": [
+                  {
+                    "promise_id": "albany:promise_wolf_full_compact_duty",
+                    "status": "active"
+                  }
+                ]
+              },
+              "effects": [
+                {
+                  "type": "resolve_promise",
+                  "promise_id": "albany:promise_wolf_full_compact_duty",
+                  "status": "kept"
+                },
+                {
+                  "type": "remember_relationship",
+                  "npc_id": "albany:rowan_quill",
+                  "memory_id": "albany:memory_rowan_full_duty_kept"
+                }
+              ]
+            },
+            {
+              "id": "albany:resolve_limited_relief_oath",
+              "when": {
+                "requires_all_promises": [
+                  {
+                    "promise_id": "albany:promise_wolf_limited_aid_only",
+                    "status": "active"
+                  }
+                ]
+              },
+              "effects": [
+                {
+                  "type": "resolve_promise",
+                  "promise_id": "albany:promise_wolf_limited_aid_only",
+                  "status": "kept"
+                },
+                {
+                  "type": "remember_relationship",
+                  "npc_id": "albany:rowan_quill",
+                  "memory_id": "albany:memory_rowan_limited_duty_kept"
+                }
+              ]
+            },
+            {
+              "id": "albany:resolve_unaffiliated_relief_bond",
+              "when": {
+                "requires_all_promises": [
+                  {
+                    "promise_id": "albany:promise_wolf_unaffiliated_bond",
+                    "status": "active"
+                  }
+                ]
+              },
+              "effects": [
+                {
+                  "type": "resolve_promise",
+                  "promise_id": "albany:promise_wolf_unaffiliated_bond",
+                  "status": "kept"
+                },
+                {
+                  "type": "remember_relationship",
+                  "npc_id": "albany:rowan_quill",
+                  "memory_id": "albany:memory_rowan_unaffiliated_bond_kept"
+                }
+              ]
+            },
             {
               "id": "albany:june_held_cattle_line",
               "when": {
@@ -48187,6 +48762,93 @@
           ],
           "conditional_effects": [
             {
+              "id": "albany:close_unaffiliated_courier_emergency_tag",
+              "when": {
+                "requires_all_promises": [
+                  {
+                    "promise_id": "albany:promise_close_emergency_tag",
+                    "status": "active"
+                  }
+                ]
+              },
+              "effects": [
+                {
+                  "type": "resolve_promise",
+                  "promise_id": "albany:promise_close_emergency_tag",
+                  "status": "kept"
+                }
+              ]
+            },
+            {
+              "id": "albany:resolve_full_relief_oath",
+              "when": {
+                "requires_all_promises": [
+                  {
+                    "promise_id": "albany:promise_wolf_full_compact_duty",
+                    "status": "active"
+                  }
+                ]
+              },
+              "effects": [
+                {
+                  "type": "resolve_promise",
+                  "promise_id": "albany:promise_wolf_full_compact_duty",
+                  "status": "kept"
+                },
+                {
+                  "type": "remember_relationship",
+                  "npc_id": "albany:rowan_quill",
+                  "memory_id": "albany:memory_rowan_full_duty_kept"
+                }
+              ]
+            },
+            {
+              "id": "albany:resolve_limited_relief_oath",
+              "when": {
+                "requires_all_promises": [
+                  {
+                    "promise_id": "albany:promise_wolf_limited_aid_only",
+                    "status": "active"
+                  }
+                ]
+              },
+              "effects": [
+                {
+                  "type": "resolve_promise",
+                  "promise_id": "albany:promise_wolf_limited_aid_only",
+                  "status": "kept"
+                },
+                {
+                  "type": "remember_relationship",
+                  "npc_id": "albany:rowan_quill",
+                  "memory_id": "albany:memory_rowan_limited_duty_kept"
+                }
+              ]
+            },
+            {
+              "id": "albany:resolve_unaffiliated_relief_bond",
+              "when": {
+                "requires_all_promises": [
+                  {
+                    "promise_id": "albany:promise_wolf_unaffiliated_bond",
+                    "status": "active"
+                  }
+                ]
+              },
+              "effects": [
+                {
+                  "type": "resolve_promise",
+                  "promise_id": "albany:promise_wolf_unaffiliated_bond",
+                  "status": "kept"
+                },
+                {
+                  "type": "remember_relationship",
+                  "npc_id": "albany:rowan_quill",
+                  "memory_id": "albany:memory_rowan_unaffiliated_bond_kept"
+                }
+              ]
+            },
+            {
               "id": "albany:june_drive_herd_out_rider_wounded",
               "when": {
                 "requires_all_companions": ["albany:june_pike"],
@@ -48263,6 +48925,93 @@
           ],
           "conditional_effects": [
             {
+              "id": "albany:close_unaffiliated_courier_emergency_tag",
+              "when": {
+                "requires_all_promises": [
+                  {
+                    "promise_id": "albany:promise_close_emergency_tag",
+                    "status": "active"
+                  }
+                ]
+              },
+              "effects": [
+                {
+                  "type": "resolve_promise",
+                  "promise_id": "albany:promise_close_emergency_tag",
+                  "status": "kept"
+                }
+              ]
+            },
+            {
+              "id": "albany:resolve_full_relief_oath",
+              "when": {
+                "requires_all_promises": [
+                  {
+                    "promise_id": "albany:promise_wolf_full_compact_duty",
+                    "status": "active"
+                  }
+                ]
+              },
+              "effects": [
+                {
+                  "type": "resolve_promise",
+                  "promise_id": "albany:promise_wolf_full_compact_duty",
+                  "status": "kept"
+                },
+                {
+                  "type": "remember_relationship",
+                  "npc_id": "albany:rowan_quill",
+                  "memory_id": "albany:memory_rowan_full_duty_kept"
+                }
+              ]
+            },
+            {
+              "id": "albany:resolve_limited_relief_oath",
+              "when": {
+                "requires_all_promises": [
+                  {
+                    "promise_id": "albany:promise_wolf_limited_aid_only",
+                    "status": "active"
+                  }
+                ]
+              },
+              "effects": [
+                {
+                  "type": "resolve_promise",
+                  "promise_id": "albany:promise_wolf_limited_aid_only",
+                  "status": "kept"
+                },
+                {
+                  "type": "remember_relationship",
+                  "npc_id": "albany:rowan_quill",
+                  "memory_id": "albany:memory_rowan_limited_duty_kept"
+                }
+              ]
+            },
+            {
+              "id": "albany:resolve_unaffiliated_relief_bond",
+              "when": {
+                "requires_all_promises": [
+                  {
+                    "promise_id": "albany:promise_wolf_unaffiliated_bond",
+                    "status": "active"
+                  }
+                ]
+              },
+              "effects": [
+                {
+                  "type": "resolve_promise",
+                  "promise_id": "albany:promise_wolf_unaffiliated_bond",
+                  "status": "kept"
+                },
+                {
+                  "type": "remember_relationship",
+                  "npc_id": "albany:rowan_quill",
+                  "memory_id": "albany:memory_rowan_unaffiliated_bond_kept"
+                }
+              ]
+            },
+            {
               "id": "albany:june_drive_cattle_line_overrun",
               "when": {
                 "requires_all_companions": ["albany:june_pike"],
@@ -48334,6 +49083,93 @@
             }
           ],
           "conditional_effects": [
+            {
+              "id": "albany:close_unaffiliated_courier_emergency_tag",
+              "when": {
+                "requires_all_promises": [
+                  {
+                    "promise_id": "albany:promise_close_emergency_tag",
+                    "status": "active"
+                  }
+                ]
+              },
+              "effects": [
+                {
+                  "type": "resolve_promise",
+                  "promise_id": "albany:promise_close_emergency_tag",
+                  "status": "kept"
+                }
+              ]
+            },
+            {
+              "id": "albany:resolve_full_relief_oath",
+              "when": {
+                "requires_all_promises": [
+                  {
+                    "promise_id": "albany:promise_wolf_full_compact_duty",
+                    "status": "active"
+                  }
+                ]
+              },
+              "effects": [
+                {
+                  "type": "resolve_promise",
+                  "promise_id": "albany:promise_wolf_full_compact_duty",
+                  "status": "kept"
+                },
+                {
+                  "type": "remember_relationship",
+                  "npc_id": "albany:rowan_quill",
+                  "memory_id": "albany:memory_rowan_full_duty_kept"
+                }
+              ]
+            },
+            {
+              "id": "albany:resolve_limited_relief_oath",
+              "when": {
+                "requires_all_promises": [
+                  {
+                    "promise_id": "albany:promise_wolf_limited_aid_only",
+                    "status": "active"
+                  }
+                ]
+              },
+              "effects": [
+                {
+                  "type": "resolve_promise",
+                  "promise_id": "albany:promise_wolf_limited_aid_only",
+                  "status": "kept"
+                },
+                {
+                  "type": "remember_relationship",
+                  "npc_id": "albany:rowan_quill",
+                  "memory_id": "albany:memory_rowan_limited_duty_kept"
+                }
+              ]
+            },
+            {
+              "id": "albany:resolve_unaffiliated_relief_bond",
+              "when": {
+                "requires_all_promises": [
+                  {
+                    "promise_id": "albany:promise_wolf_unaffiliated_bond",
+                    "status": "active"
+                  }
+                ]
+              },
+              "effects": [
+                {
+                  "type": "resolve_promise",
+                  "promise_id": "albany:promise_wolf_unaffiliated_bond",
+                  "status": "kept"
+                },
+                {
+                  "type": "remember_relationship",
+                  "npc_id": "albany:rowan_quill",
+                  "memory_id": "albany:memory_rowan_unaffiliated_bond_kept"
+                }
+              ]
+            },
             {
               "id": "albany:june_drive_signal_spent_herd_out",
               "when": {
@@ -48410,6 +49246,93 @@
             }
           ],
           "conditional_effects": [
+            {
+              "id": "albany:close_unaffiliated_courier_emergency_tag",
+              "when": {
+                "requires_all_promises": [
+                  {
+                    "promise_id": "albany:promise_close_emergency_tag",
+                    "status": "active"
+                  }
+                ]
+              },
+              "effects": [
+                {
+                  "type": "resolve_promise",
+                  "promise_id": "albany:promise_close_emergency_tag",
+                  "status": "kept"
+                }
+              ]
+            },
+            {
+              "id": "albany:resolve_full_relief_oath",
+              "when": {
+                "requires_all_promises": [
+                  {
+                    "promise_id": "albany:promise_wolf_full_compact_duty",
+                    "status": "active"
+                  }
+                ]
+              },
+              "effects": [
+                {
+                  "type": "resolve_promise",
+                  "promise_id": "albany:promise_wolf_full_compact_duty",
+                  "status": "broken"
+                },
+                {
+                  "type": "remember_relationship",
+                  "npc_id": "albany:rowan_quill",
+                  "memory_id": "albany:memory_rowan_full_duty_broken"
+                }
+              ]
+            },
+            {
+              "id": "albany:resolve_limited_relief_oath",
+              "when": {
+                "requires_all_promises": [
+                  {
+                    "promise_id": "albany:promise_wolf_limited_aid_only",
+                    "status": "active"
+                  }
+                ]
+              },
+              "effects": [
+                {
+                  "type": "resolve_promise",
+                  "promise_id": "albany:promise_wolf_limited_aid_only",
+                  "status": "kept"
+                },
+                {
+                  "type": "remember_relationship",
+                  "npc_id": "albany:rowan_quill",
+                  "memory_id": "albany:memory_rowan_limited_duty_kept"
+                }
+              ]
+            },
+            {
+              "id": "albany:resolve_unaffiliated_relief_bond",
+              "when": {
+                "requires_all_promises": [
+                  {
+                    "promise_id": "albany:promise_wolf_unaffiliated_bond",
+                    "status": "active"
+                  }
+                ]
+              },
+              "effects": [
+                {
+                  "type": "resolve_promise",
+                  "promise_id": "albany:promise_wolf_unaffiliated_bond",
+                  "status": "kept"
+                },
+                {
+                  "type": "remember_relationship",
+                  "npc_id": "albany:rowan_quill",
+                  "memory_id": "albany:memory_rowan_unaffiliated_bond_kept"
+                }
+              ]
+            },
             {
               "id": "albany:june_fortified_cade_terms",
               "when": {
@@ -48491,6 +49414,93 @@
           ],
           "conditional_effects": [
             {
+              "id": "albany:close_unaffiliated_courier_emergency_tag",
+              "when": {
+                "requires_all_promises": [
+                  {
+                    "promise_id": "albany:promise_close_emergency_tag",
+                    "status": "active"
+                  }
+                ]
+              },
+              "effects": [
+                {
+                  "type": "resolve_promise",
+                  "promise_id": "albany:promise_close_emergency_tag",
+                  "status": "kept"
+                }
+              ]
+            },
+            {
+              "id": "albany:resolve_full_relief_oath",
+              "when": {
+                "requires_all_promises": [
+                  {
+                    "promise_id": "albany:promise_wolf_full_compact_duty",
+                    "status": "active"
+                  }
+                ]
+              },
+              "effects": [
+                {
+                  "type": "resolve_promise",
+                  "promise_id": "albany:promise_wolf_full_compact_duty",
+                  "status": "kept"
+                },
+                {
+                  "type": "remember_relationship",
+                  "npc_id": "albany:rowan_quill",
+                  "memory_id": "albany:memory_rowan_full_duty_kept"
+                }
+              ]
+            },
+            {
+              "id": "albany:resolve_limited_relief_oath",
+              "when": {
+                "requires_all_promises": [
+                  {
+                    "promise_id": "albany:promise_wolf_limited_aid_only",
+                    "status": "active"
+                  }
+                ]
+              },
+              "effects": [
+                {
+                  "type": "resolve_promise",
+                  "promise_id": "albany:promise_wolf_limited_aid_only",
+                  "status": "released"
+                },
+                {
+                  "type": "remember_relationship",
+                  "npc_id": "albany:rowan_quill",
+                  "memory_id": "albany:memory_rowan_limited_duty_bent_to_authority"
+                }
+              ]
+            },
+            {
+              "id": "albany:resolve_unaffiliated_relief_bond",
+              "when": {
+                "requires_all_promises": [
+                  {
+                    "promise_id": "albany:promise_wolf_unaffiliated_bond",
+                    "status": "active"
+                  }
+                ]
+              },
+              "effects": [
+                {
+                  "type": "resolve_promise",
+                  "promise_id": "albany:promise_wolf_unaffiliated_bond",
+                  "status": "broken"
+                },
+                {
+                  "type": "remember_relationship",
+                  "npc_id": "albany:rowan_quill",
+                  "memory_id": "albany:memory_rowan_unaffiliated_bond_broken"
+                }
+              ]
+            },
+            {
               "id": "albany:june_fortified_albany_authority",
               "when": {
                 "requires_all_companions": ["albany:june_pike"],
@@ -48546,6 +49556,93 @@
             }
           ],
           "conditional_effects": [
+            {
+              "id": "albany:close_unaffiliated_courier_emergency_tag",
+              "when": {
+                "requires_all_promises": [
+                  {
+                    "promise_id": "albany:promise_close_emergency_tag",
+                    "status": "active"
+                  }
+                ]
+              },
+              "effects": [
+                {
+                  "type": "resolve_promise",
+                  "promise_id": "albany:promise_close_emergency_tag",
+                  "status": "kept"
+                }
+              ]
+            },
+            {
+              "id": "albany:resolve_full_relief_oath",
+              "when": {
+                "requires_all_promises": [
+                  {
+                    "promise_id": "albany:promise_wolf_full_compact_duty",
+                    "status": "active"
+                  }
+                ]
+              },
+              "effects": [
+                {
+                  "type": "resolve_promise",
+                  "promise_id": "albany:promise_wolf_full_compact_duty",
+                  "status": "kept"
+                },
+                {
+                  "type": "remember_relationship",
+                  "npc_id": "albany:rowan_quill",
+                  "memory_id": "albany:memory_rowan_full_duty_kept"
+                }
+              ]
+            },
+            {
+              "id": "albany:resolve_limited_relief_oath",
+              "when": {
+                "requires_all_promises": [
+                  {
+                    "promise_id": "albany:promise_wolf_limited_aid_only",
+                    "status": "active"
+                  }
+                ]
+              },
+              "effects": [
+                {
+                  "type": "resolve_promise",
+                  "promise_id": "albany:promise_wolf_limited_aid_only",
+                  "status": "kept"
+                },
+                {
+                  "type": "remember_relationship",
+                  "npc_id": "albany:rowan_quill",
+                  "memory_id": "albany:memory_rowan_limited_duty_kept"
+                }
+              ]
+            },
+            {
+              "id": "albany:resolve_unaffiliated_relief_bond",
+              "when": {
+                "requires_all_promises": [
+                  {
+                    "promise_id": "albany:promise_wolf_unaffiliated_bond",
+                    "status": "active"
+                  }
+                ]
+              },
+              "effects": [
+                {
+                  "type": "resolve_promise",
+                  "promise_id": "albany:promise_wolf_unaffiliated_bond",
+                  "status": "kept"
+                },
+                {
+                  "type": "remember_relationship",
+                  "npc_id": "albany:rowan_quill",
+                  "memory_id": "albany:memory_rowan_unaffiliated_bond_kept"
+                }
+              ]
+            },
             {
               "id": "albany:june_departed_after_gate_blood",
               "when": {
@@ -48603,6 +49700,93 @@
           ],
           "conditional_effects": [
             {
+              "id": "albany:close_unaffiliated_courier_emergency_tag",
+              "when": {
+                "requires_all_promises": [
+                  {
+                    "promise_id": "albany:promise_close_emergency_tag",
+                    "status": "active"
+                  }
+                ]
+              },
+              "effects": [
+                {
+                  "type": "resolve_promise",
+                  "promise_id": "albany:promise_close_emergency_tag",
+                  "status": "kept"
+                }
+              ]
+            },
+            {
+              "id": "albany:resolve_full_relief_oath",
+              "when": {
+                "requires_all_promises": [
+                  {
+                    "promise_id": "albany:promise_wolf_full_compact_duty",
+                    "status": "active"
+                  }
+                ]
+              },
+              "effects": [
+                {
+                  "type": "resolve_promise",
+                  "promise_id": "albany:promise_wolf_full_compact_duty",
+                  "status": "kept"
+                },
+                {
+                  "type": "remember_relationship",
+                  "npc_id": "albany:rowan_quill",
+                  "memory_id": "albany:memory_rowan_full_duty_kept"
+                }
+              ]
+            },
+            {
+              "id": "albany:resolve_limited_relief_oath",
+              "when": {
+                "requires_all_promises": [
+                  {
+                    "promise_id": "albany:promise_wolf_limited_aid_only",
+                    "status": "active"
+                  }
+                ]
+              },
+              "effects": [
+                {
+                  "type": "resolve_promise",
+                  "promise_id": "albany:promise_wolf_limited_aid_only",
+                  "status": "kept"
+                },
+                {
+                  "type": "remember_relationship",
+                  "npc_id": "albany:rowan_quill",
+                  "memory_id": "albany:memory_rowan_limited_duty_kept"
+                }
+              ]
+            },
+            {
+              "id": "albany:resolve_unaffiliated_relief_bond",
+              "when": {
+                "requires_all_promises": [
+                  {
+                    "promise_id": "albany:promise_wolf_unaffiliated_bond",
+                    "status": "active"
+                  }
+                ]
+              },
+              "effects": [
+                {
+                  "type": "resolve_promise",
+                  "promise_id": "albany:promise_wolf_unaffiliated_bond",
+                  "status": "kept"
+                },
+                {
+                  "type": "remember_relationship",
+                  "npc_id": "albany:rowan_quill",
+                  "memory_id": "albany:memory_rowan_unaffiliated_bond_kept"
+                }
+              ]
+            },
+            {
               "id": "albany:june_departed_after_timber_blood",
               "when": {
                 "requires_all_companions": ["albany:june_pike"],
@@ -48658,6 +49842,93 @@
             }
           ],
           "conditional_effects": [
+            {
+              "id": "albany:close_unaffiliated_courier_emergency_tag",
+              "when": {
+                "requires_all_promises": [
+                  {
+                    "promise_id": "albany:promise_close_emergency_tag",
+                    "status": "active"
+                  }
+                ]
+              },
+              "effects": [
+                {
+                  "type": "resolve_promise",
+                  "promise_id": "albany:promise_close_emergency_tag",
+                  "status": "kept"
+                }
+              ]
+            },
+            {
+              "id": "albany:resolve_full_relief_oath",
+              "when": {
+                "requires_all_promises": [
+                  {
+                    "promise_id": "albany:promise_wolf_full_compact_duty",
+                    "status": "active"
+                  }
+                ]
+              },
+              "effects": [
+                {
+                  "type": "resolve_promise",
+                  "promise_id": "albany:promise_wolf_full_compact_duty",
+                  "status": "kept"
+                },
+                {
+                  "type": "remember_relationship",
+                  "npc_id": "albany:rowan_quill",
+                  "memory_id": "albany:memory_rowan_full_duty_kept"
+                }
+              ]
+            },
+            {
+              "id": "albany:resolve_limited_relief_oath",
+              "when": {
+                "requires_all_promises": [
+                  {
+                    "promise_id": "albany:promise_wolf_limited_aid_only",
+                    "status": "active"
+                  }
+                ]
+              },
+              "effects": [
+                {
+                  "type": "resolve_promise",
+                  "promise_id": "albany:promise_wolf_limited_aid_only",
+                  "status": "kept"
+                },
+                {
+                  "type": "remember_relationship",
+                  "npc_id": "albany:rowan_quill",
+                  "memory_id": "albany:memory_rowan_limited_duty_kept"
+                }
+              ]
+            },
+            {
+              "id": "albany:resolve_unaffiliated_relief_bond",
+              "when": {
+                "requires_all_promises": [
+                  {
+                    "promise_id": "albany:promise_wolf_unaffiliated_bond",
+                    "status": "active"
+                  }
+                ]
+              },
+              "effects": [
+                {
+                  "type": "resolve_promise",
+                  "promise_id": "albany:promise_wolf_unaffiliated_bond",
+                  "status": "kept"
+                },
+                {
+                  "type": "remember_relationship",
+                  "npc_id": "albany:rowan_quill",
+                  "memory_id": "albany:memory_rowan_unaffiliated_bond_kept"
+                }
+              ]
+            },
             {
               "id": "albany:june_departed_after_watch_blood",
               "when": {

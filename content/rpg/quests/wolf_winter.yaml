@@ -1379,6 +1379,14 @@ objects:
       once behind the yearling, turning the wolf onto the outside ash lane while the herd
       begins to move. A folded call cannot be fired again tonight.
     variants:
+      - when:
+          - { has_flag: relief_oath_unaffiliated_bond }
+          - { not_flag: drive_opening_fouled }
+          - { not_flag: drive_yearling_turned }
+        text: >
+          Your unaffiliated bond opened Emery's unmarked service-cut insert, which Cade
+          matched to this ash-lane wind break. The first signal is DC 10 instead of 12. It
+          spends one charge; a miss keeps the same alarm, no retry, and loose-hurdle recovery.
       - when: [{ has_flag: drive_opening_fouled }]
         text: >
           The feed shutter hangs folded against the byre wall after its single spent call.
@@ -1399,6 +1407,45 @@ objects:
           - { has_item: drive_signal_rope_kit }
           - { has_flag: strategy_drive_committed }
           - { has_flag: drive_combat_withheld }
+          - { has_flag: relief_oath_unaffiliated_bond }
+          - { var_gte: { name: drive_kit_charges, value: 2 } }
+          - { not_flag: drive_opening_fouled }
+          - { not_flag: june_blood_condition_broken }
+          - { not_flag: yearling_down }
+          - { not_flag: drive_yearling_turned }
+        effects:
+          - dec_var: { name: drive_kit_charges, by: 1 }
+          - inc_var: { name: pack_drive, by: 1 }
+        skill_check:
+          skill: fieldcraft
+          difficulty: 10
+          on_success:
+            - set_flag: drive_yearling_turned
+            - set_quest_stage: { quest: the_watch, stage: breach_redirected }
+            - add_journal: "The personal-bond ash mark steadies the one-shot signal (DC 10). The yearling turns alive; one charge remains."
+            - narrate: >
+                Cade's ash mark and Emery's unregistered cut put the copper click behind the
+                crosswind. You fire the shutter once; the yearling takes the outside lane
+                alive as the herd begins to move. One charge remains for the door.
+          on_failure:
+            - set_flag: drive_opening_fouled
+            - inc_var: { name: pack_drive, by: 1 }
+            - inc_var: { name: cattle_alarm, by: 1 }
+            - add_journal: "The DC 10 personal-bond signal still folds. No retry: cattle alarm +1; continue by loose hurdle."
+            - narrate: >
+                Even on the marked ash line, wind folds the shutter's crack into the wall.
+                The charge is gone, cattle alarm rises, and the unaffiliated term creates no
+                retry. Drop the loose hurdle for the same living recovery.
+      - verb: USE
+        item: drive_signal_rope_kit
+        target: drive_breach_signal
+        command_verb: fire
+        command_template: "fire {target} with {item}"
+        conditions:
+          - { has_item: drive_signal_rope_kit }
+          - { has_flag: strategy_drive_committed }
+          - { has_flag: drive_combat_withheld }
+          - { not_flag: relief_oath_unaffiliated_bond }
           - { var_gte: { name: drive_kit_charges, value: 2 } }
           - { not_flag: drive_opening_fouled }
           - { not_flag: june_blood_condition_broken }
@@ -1769,6 +1816,25 @@ objects:
       A pegged frame inside the broken paling, clear of the living wolves outside. Seat the
       first committed shutter or public band here once. A failed Repair check raises visible
       winter-siege pressure and cannot be retried; only the disclosed stance recovery remains.
+    variants:
+      - when:
+          - { has_flag: relief_oath_full_duty }
+          - { has_flag: fortify_albany_authority_invoked }
+          - { has_flag: works_fortification_prepared }
+          - { not_flag: fortify_outer_seal_attempted }
+        text: >
+          Rowan's full-duty boundary annex and Reese's Works marks identify Cade's registered
+          lower peg. The first public seal is Repair DC 10 instead of 12. Cade still refuses
+          recovery; a miss keeps harder pressure and spends Albany's emergency strip.
+      - when:
+          - { has_flag: relief_oath_full_duty }
+          - { has_flag: fortify_albany_authority_invoked }
+          - { not_flag: works_fortification_prepared }
+          - { not_flag: fortify_outer_seal_attempted }
+        text: >
+          Rowan's full-duty boundary annex matches the registered lower peg Cade identified.
+          The first public seal is Repair DC 12 instead of 14. Cade still refuses the recovery
+          hand; a miss keeps its harder pressure and Albany-strip recovery exactly as disclosed.
     visible_when:
       - { has_flag: strategy_fortify_committed }
       - { has_flag: fortify_combat_withheld }
@@ -1844,6 +1910,71 @@ objects:
         conditions:
           - { has_item: albany_relief_seals }
           - { has_flag: fortify_albany_authority_invoked }
+          - { has_flag: relief_oath_full_duty }
+          - { has_flag: works_fortification_prepared }
+          - { not_flag: fortify_outer_seal_attempted }
+        effects:
+          - set_flag: fortify_outer_seal_attempted
+          - inc_var: { name: fortification_pressure, by: 1 }
+        skill_check:
+          skill: repair
+          difficulty: 10
+          on_success:
+            - set_flag: fortify_outer_sealed
+            - set_quest_stage: { quest: the_watch, stage: outer_sealed }
+            - add_journal: "Full-duty annex plus Reese's marks seat the first public seal at DC 10. Cade's refusal remains; winter siege reaches Testing."
+            - narrate: >
+                Cade's registered peg, Rowan's annex, and Reese's spacing marks align. You
+                cinch Albany's first band before the pack can fold around it. Cade's property
+                stays covered; his refusal remains, and the public roll goes north.
+          on_failure:
+            - set_flag: fortify_outer_seal_failed
+            - inc_var: { name: fortification_pressure, by: 1 }
+            - add_journal: "The DC 10 full-duty public seal slips. No retry: Cade still refuses aid; spend Albany's emergency strip."
+            - narrate: >
+                The registered lower fastening rolls despite both sets of marks. The one
+                Repair attempt is spent and pressure reaches Hammering. Full duty changes
+                the opening, not Cade's refusal or Albany's sole emergency-strip recovery.
+      - verb: USE
+        item: albany_relief_seals
+        target: fortify_outer_seal
+        command_verb: seat
+        conditions:
+          - { has_item: albany_relief_seals }
+          - { has_flag: fortify_albany_authority_invoked }
+          - { has_flag: relief_oath_full_duty }
+          - { not_flag: works_fortification_prepared }
+          - { not_flag: fortify_outer_seal_attempted }
+        effects:
+          - set_flag: fortify_outer_seal_attempted
+          - inc_var: { name: fortification_pressure, by: 1 }
+        skill_check:
+          skill: repair
+          difficulty: 12
+          on_success:
+            - set_flag: fortify_outer_sealed
+            - set_quest_stage: { quest: the_watch, stage: outer_sealed }
+            - add_journal: "The full-duty boundary annex seats the first public seal at DC 12. Cade's refusal remains; winter siege reaches Testing."
+            - narrate: >
+                You match Albany's first band to the registered lower peg Cade named and
+                cinch it before the pack can fold around the frame. His property stays
+                covered; his refusal remains, and the public roll goes north.
+          on_failure:
+            - set_flag: fortify_outer_seal_failed
+            - inc_var: { name: fortification_pressure, by: 1 }
+            - add_journal: "The DC 12 full-duty public seal slips. No retry: Cade still refuses aid; spend Albany's emergency strip."
+            - narrate: >
+                The registered lower fastening rolls under the band. The one Repair attempt
+                is spent and pressure reaches Hammering. Full duty changes the opening, not
+                Cade's refusal or Albany's sole emergency-strip recovery.
+      - verb: USE
+        item: albany_relief_seals
+        target: fortify_outer_seal
+        command_verb: seat
+        conditions:
+          - { has_item: albany_relief_seals }
+          - { has_flag: fortify_albany_authority_invoked }
+          - { not_flag: relief_oath_full_duty }
           - { has_flag: works_fortification_prepared }
           - { not_flag: fortify_outer_seal_attempted }
         effects:
@@ -1875,6 +2006,7 @@ objects:
         conditions:
           - { has_item: albany_relief_seals }
           - { has_flag: fortify_albany_authority_invoked }
+          - { not_flag: relief_oath_full_duty }
           - { not_flag: works_fortification_prepared }
           - { not_flag: fortify_outer_seal_attempted }
         effects:
@@ -2536,6 +2668,16 @@ objects:
         text: "The spent line runs beyond the paling. The yearling is dead; the other two wolves followed the feed alive into the high wood."
       - when: [{ has_flag: pack_diverted }, { not_flag: yearling_down }]
         text: "The spent outer scent line runs beyond the paling. All three wolves are alive in the high wood; the feed sack is empty."
+      - when:
+          - { has_flag: relief_oath_limited_duty }
+          - { has_flag: yearling_redirected }
+          - { has_flag: flank_redirected }
+          - { not_flag: yearling_down }
+          - { not_flag: flank_wolf_down }
+        text: >
+          All three wolves remain alive. Cade accepts your aid-only limit and answers the
+          witnessed low herd count as you cast. That suppresses only this final ordinary
+          +1 cattle-alarm step; every earlier approach, failed cast, and recovery cost remains.
     interactions:
       - verb: USE
         item: winter_feed_sack
@@ -2545,6 +2687,51 @@ objects:
         conditions:
           - { has_item: winter_feed_sack }
           - { has_flag: strategy_lure_committed }
+          - { has_flag: relief_oath_limited_duty }
+          - { has_flag: yearling_redirected }
+          - { has_flag: flank_redirected }
+          - { not_flag: yearling_down }
+          - { not_flag: flank_wolf_down }
+          - { not_flag: leader_down }
+          - { not_flag: leader_redirected }
+          - any_of:
+              - { not_flag: june_pike_present }
+              - { not_flag: lure_trail_fouled }
+              - { has_flag: june_blood_condition_broken }
+              - { has_flag: june_cattle_line_taken }
+        blocked_hint:
+          visible_when:
+            - { has_flag: june_pike_present }
+            - { has_flag: lure_trail_fouled }
+            - { has_flag: yearling_redirected }
+            - { has_flag: flank_redirected }
+            - { not_flag: june_blood_condition_broken }
+            - { not_flag: june_cattle_line_taken }
+          reason: "June has reached the pressing cattle under the authority you granted. Speak to her before committing the last scent cast."
+        effects:
+          - remove_item: winter_feed_sack
+          - set_flag: leader_redirected
+          - set_flag: pack_diverted
+          - inc_var: { name: score, by: 10 }
+          - set_quest_stage: { quest: the_watch, stage: byre_redirected }
+          - add_journal: "The limited-duty low count suppresses only the last ordinary alarm. Earlier pressure remains; old grey follows the spent feed."
+          - narrate: >
+              You cast the last oats through the outer gap. Cade gives the exact low count
+              entrusted to an aid-only helper, so the herd adds no final ordinary pressure.
+              Any approach alarm or failed-cast pressure remains; old grey follows her living
+              pack into the high wood.
+      - verb: USE
+        item: winter_feed_sack
+        target: outer_scent_gate
+        command_verb: cast
+        command_template: "cast {item} through {target}"
+        conditions:
+          - { has_item: winter_feed_sack }
+          - { has_flag: strategy_lure_committed }
+          - any_of:
+              - { not_flag: relief_oath_limited_duty }
+              - { has_flag: yearling_down }
+              - { has_flag: flank_wolf_down }
           - any_of:
               - { has_flag: flank_wolf_down }
               - { has_flag: flank_redirected }
@@ -3131,6 +3318,14 @@ npcs:
             Each raises cattle alarm. Foul the first and there is no retry: bind a split
             rail to turn the yearling, or fight it and carry on. Asking is free; commit
             before the breach.
+          variants:
+            - when:
+                - { has_flag: relief_oath_limited_duty }
+                - { not_flag: strategy_lure_committed }
+              text: >
+                Your aid-only term claims no property authority, so I give its witnessed low
+                herd count. Keep every wolf alive through the first two lines and it suppresses
+                only the final ordinary alarm. A fouled first cast keeps full pressure and no retry.
           topics:
             - id: commit_lure
               aliases: [commit_feed, commit_alive]
@@ -3185,6 +3380,15 @@ npcs:
             Every completion forfeits the steading's outer defense line; no later switch to
             lure or spear combat. Rig: two charges, paling/door. First miss: no retry; drop
             hurdle.
+          variants:
+            - when:
+                - { has_flag: relief_oath_unaffiliated_bond }
+                - { not_flag: strategy_drive_committed }
+              text: >
+                You came on a personal bond, not an Albany order. Emery's unmarked service cut
+                matches my ash-lane wind break: first shutter DC 10 instead of 12. It spends
+                one charge. A miss raises cattle alarm, has no retry, and keeps the loose-hurdle
+                recovery.
           topics:
             - id: commit_drive
               aliases: [commit_evacuate, commit_signal]
@@ -3226,6 +3430,25 @@ npcs:
             Keep wolves outside at paling and threshold. Household terms expose outer
             property, save public seals, and earn my help after a slip. Albany authority
             covers my property, spends public stock, gets no help. Outlast them to dawn.
+          variants:
+            - when: [{ has_flag: relief_oath_full_duty }]
+              text: >
+                Your full-duty annex names my registered lower peg. Under Albany authority,
+                the first public seal drops from DC 14 to 12, or Reese's prepared 12 to 10.
+                I still refuse recovery. Taking household shutters instead breaches your
+                accepted public line.
+            - when: [{ has_flag: relief_oath_limited_duty }]
+              text: >
+                Your aid-only term claims no property authority. My household terms fit:
+                expose outer buildings, preserve public seals, and gain my failed-seat help.
+                Albany authority stays legal but exceeds your recorded limit; I refuse its
+                recovery hand.
+            - when: [{ has_flag: relief_oath_unaffiliated_bond }]
+              text: >
+                Your personal bond claims no Albany authority. My household terms remain
+                open, as do every other strategy. You may still invoke the lawful public
+                order, but that breaks the unaffiliated term you carried, and I refuse the
+                failed-seat hand under it.
           topics:
             - id: accept_terms
               aliases: [accept_household_terms, take_shutters]
@@ -3257,6 +3480,12 @@ npcs:
             Terms accepted. Take two shutters north: paling, threshold, then dawn. My
             smokehouse stays exposed; Albany's seals remain public. If the first seat
             slips, I brace it once. No retreat, lure, drive, or spear switch.
+          variants:
+            - when: [{ has_flag: relief_oath_full_duty }]
+              text: >
+                Household terms knowingly replace your full-duty public fortification, and
+                Rowan will record the breach. The legal route exposes outer property,
+                preserves public seals, and gives my shoulder for one failed first seat.
           effects:
             - set_flag: strategy_fortify_committed
             - set_flag: fortify_combat_withheld
@@ -3278,6 +3507,22 @@ npcs:
             Authority invoked. Take Albany's seals north: paling, threshold, dawn. My
             property stays covered; public stock pays. If the first seat slips, I refuse
             it—spend the emergency strip. No retreat, lure, drive, or spear switch.
+          variants:
+            - when: [{ has_flag: relief_oath_full_duty }]
+              text: >
+                Full duty invoked. I will name the registered lower peg, lowering the first
+                public-seal Repair opening by 2, but I will not brace a failed order. My
+                property stays covered; public stock and its emergency strip pay.
+            - when: [{ has_flag: relief_oath_limited_duty }]
+              text: >
+                Authority invoked beyond your aid-only limit. The lawful route remains open,
+                but Rowan will record the bend and release that narrow promise on return. My
+                property stays covered; public stock pays, and I refuse a failed-seat hand.
+            - when: [{ has_flag: relief_oath_unaffiliated_bond }]
+              text: >
+                Authority invoked despite your personal-bond refusal. The route remains
+                legal, but Rowan will record the unaffiliated term broken. My property stays
+                covered; public stock pays, and I refuse a failed-seat hand.
           effects:
             - set_flag: strategy_fortify_committed
             - set_flag: fortify_combat_withheld

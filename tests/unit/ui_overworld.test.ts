@@ -111,6 +111,9 @@ function settleOpeningRegistration(session: OverworldSession): void {
   if (session.journey().storyChoice?.kind === "registration") {
     session.chooseJourneyStory("albany:ledger_advocate");
   }
+  if (session.journey().storyChoice?.kind === "relief_oath") {
+    session.chooseJourneyStory("albany:oath_limited_aid_only");
+  }
   if (session.journey().storyChoice?.kind === "lead_source") {
     session.chooseJourneyStory("albany:source_rowan_civic_docket");
   }
@@ -353,12 +356,14 @@ describe("OverworldSession", () => {
     expect(handler).toContain('journey.storyChoice?.kind === "lead_source"');
     expect(handler).toContain('journey.storyChoice?.kind === "preparation"');
     expect(handler).toContain('journey.storyChoice?.kind === "relief_allocation"');
+    expect(handler).toContain('journey.storyChoice?.kind === "relief_oath"');
     expect(handler).toContain('journey.storyChoice?.kind === "ally"');
     expect(handler).toContain("Character registered: ${result.consequence}");
     expect(handler).toContain("Current goal: ${result.goal.text}");
     expect(handler).toContain("Lead source certified: ${result.consequence}");
     expect(handler).toContain("Preparation committed: ${result.consequence}");
     expect(handler).toContain("Relief capacity committed: ${result.consequence}");
+    expect(handler).toContain("Relief terms bound: ${result.consequence}");
     expect(handler).toContain("Field team committed: ${result.consequence}");
     expect(handler).toContain("Story consequence: ${result.consequence}");
     expect(handler).toContain("New goal: ${result.goal.text}");
@@ -374,6 +379,8 @@ describe("OverworldSession", () => {
     expect(screen).toContain("Choose your Albany lead source");
     expect(screen).toContain("Albany preparation budget");
     expect(screen).toContain("Choose what Albany prepares");
+    expect(screen).toContain("Relief terms");
+    expect(screen).toContain("Choose one binding term");
     expect(screen).toContain("Field-team commitment");
     expect(screen).toContain("Choose who leaves Albany");
     expect(screen).toContain('" journey-choice-actions-registration"');
@@ -661,6 +668,195 @@ describe("OverworldSession", () => {
       expect(markup.match(/<button/g)).toHaveLength(3);
       expect(markup).not.toContain("Goal just completed");
       expect(markup).not.toContain("sets your next objective");
+    } finally {
+      await server.close();
+    }
+  });
+
+  it("renders all three relief-oath terms with their complete binding consequences", async () => {
+    const uiRoot = resolve(process.cwd(), "ui");
+    const server = await createServer({
+      root: uiRoot,
+      configFile: resolve(uiRoot, "vite.config.ts"),
+      appType: "custom",
+      logLevel: "silent",
+      optimizeDeps: { noDiscovery: true },
+      server: { middlewareMode: true },
+    });
+    try {
+      const module = (await server.ssrLoadModule("/src/JourneyStoryChoiceScreen.tsx")) as {
+        JourneyStoryChoiceScreen: unknown;
+      };
+      const requireFromUi = createRequire(resolve(uiRoot, "package.json"));
+      const react = requireFromUi("react") as {
+        createElement: (type: unknown, props: Record<string, unknown>) => unknown;
+      };
+      const reactDomServer = requireFromUi("react-dom/server") as {
+        renderToStaticMarkup: (element: unknown) => string;
+      };
+      const journey = new OverworldSession(world).journey();
+      const oathJourney = {
+        ...journey,
+        storyChoice: {
+          id: "albany:wolf_relief_oath",
+          kind: "relief_oath",
+          message: "Choose the Wolf-Winter term that will bind this dispatch.",
+          options: [
+            [
+              "full",
+              "Take Full Compact Duty",
+              "Access: boundary annex. Duty: public seals. Actual cost: 10 minutes.",
+            ],
+            [
+              "limited",
+              "Negotiate Aid-Only Duty",
+              "Access: witnessed count. Duty: no property authority. Actual cost: 5 minutes.",
+            ],
+            [
+              "unaffiliated",
+              "Remain an Unaffiliated Helper",
+              "Access: service cut. Duty: personal bond. Actual cost: 0 minutes.",
+            ],
+          ].map(([id, label, consequence]) => ({ id, label, consequence })),
+        },
+      };
+      const markup = reactDomServer.renderToStaticMarkup(
+        react.createElement(module.JourneyStoryChoiceScreen, {
+          journey: oathJourney,
+          onChoose: () => undefined,
+        }),
+      );
+
+      expect(markup).toContain("Relief terms");
+      expect(markup).toContain("Choose one binding term");
+      expect(markup).toContain("Current objective");
+      expect(markup).toContain("access, duty, actual cost, field consequence, and return promise");
+      expect(markup).toContain(
+        "Access: boundary annex. Duty: public seals. Actual cost: 10 minutes.",
+      );
+      expect(markup).toContain(
+        "Access: witnessed count. Duty: no property authority. Actual cost: 5 minutes.",
+      );
+      expect(markup).toContain("Access: service cut. Duty: personal bond. Actual cost: 0 minutes.");
+      expect(markup.match(/<button/g)).toHaveLength(3);
+      expect(markup).not.toContain("Goal just completed");
+      expect(markup).not.toContain("sets your next objective");
+    } finally {
+      await server.close();
+    }
+  });
+
+  it("drives a real relief-oath button to the same snapshot as direct production play", async () => {
+    const uiSession = new OverworldSession(world);
+    const opening = uiSession.view();
+    uiSession.scoutPoi(opening.pois[0]!.id);
+    uiSession.talkToCharacter(opening.characters[0]!.id);
+    expect(uiSession.journey().storyChoice?.kind).toBe("registration");
+    uiSession.chooseJourneyStory("albany:ledger_advocate");
+
+    const journey = uiSession.journey();
+    if (journey.storyChoice?.kind !== "relief_oath") {
+      throw new Error("Expected the production opening relief-oath prompt.");
+    }
+    const selectedIndex = journey.storyChoice.options.findIndex(
+      (option) => option.id === "albany:oath_limited_aid_only",
+    );
+    if (selectedIndex < 0) throw new Error("Expected the authored aid-only oath term.");
+    const selectedOption = journey.storyChoice.options[selectedIndex]!;
+    const beforeChoice = uiSession.snapshot();
+    const directSession = OverworldSession.restore(world, beforeChoice);
+
+    const uiRoot = resolve(process.cwd(), "ui");
+    const server = await createServer({
+      root: uiRoot,
+      configFile: resolve(uiRoot, "vite.config.ts"),
+      appType: "custom",
+      logLevel: "silent",
+      optimizeDeps: { noDiscovery: true },
+      server: { middlewareMode: true },
+    });
+    try {
+      const module = (await server.ssrLoadModule("/src/JourneyStoryChoiceScreen.tsx")) as {
+        JourneyStoryChoiceScreen: (props: {
+          journey: ReturnType<OverworldSession["journey"]>;
+          onChoose: (choiceId: string) => void;
+        }) => unknown;
+      };
+      const requireFromUi = createRequire(resolve(uiRoot, "package.json"));
+      const react = requireFromUi("react") as {
+        Children: { toArray: (children: unknown) => unknown[] };
+        __SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED: {
+          ReactCurrentDispatcher: { current: unknown };
+        };
+        createElement: (type: unknown, props: Record<string, unknown>) => unknown;
+        isValidElement: (value: unknown) => boolean;
+      };
+      const reactDomServer = requireFromUi("react-dom/server") as {
+        renderToStaticMarkup: (element: unknown) => string;
+      };
+      const selectedByUi: string[] = [];
+      let uiResult: ReturnType<OverworldSession["chooseJourneyStory"]> | undefined;
+      const componentProps = {
+        journey,
+        onChoose: (choiceId: string): void => {
+          selectedByUi.push(choiceId);
+          uiResult = uiSession.chooseJourneyStory(choiceId);
+        },
+      };
+      const markup = reactDomServer.renderToStaticMarkup(
+        react.createElement(module.JourneyStoryChoiceScreen, componentProps),
+      );
+
+      expect(markup).toContain("Relief terms");
+      expect(markup).toContain(journey.storyChoice.message);
+      expect(markup).toContain(selectedOption.label);
+      expect(markup).toContain("Actual cost: 5 minutes.");
+      expect(markup).toContain("Bounded authority becomes a named value");
+      expect(markup.match(/<button/g)).toHaveLength(journey.storyChoice.options.length);
+
+      type ReactElementNode = {
+        type: unknown;
+        props: { children?: unknown; onClick?: unknown };
+      };
+      const dispatcher =
+        react.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED.ReactCurrentDispatcher;
+      const previousDispatcher = dispatcher.current;
+      dispatcher.current = {
+        useEffect: () => undefined,
+        useRef: <T>(initialValue: T) => ({ current: initialValue }),
+      };
+      let elementTree: unknown;
+      try {
+        elementTree = module.JourneyStoryChoiceScreen(componentProps);
+      } finally {
+        dispatcher.current = previousDispatcher;
+      }
+      const buttons: ReactElementNode[] = [];
+      const collectButtons = (node: unknown): void => {
+        if (!react.isValidElement(node)) return;
+        const element = node as ReactElementNode;
+        if (element.type === "button") buttons.push(element);
+        for (const child of react.Children.toArray(element.props.children)) {
+          collectButtons(child);
+        }
+      };
+      collectButtons(elementTree);
+      expect(buttons).toHaveLength(journey.storyChoice.options.length);
+      const onClick = buttons[selectedIndex]?.props.onClick;
+      if (typeof onClick !== "function") {
+        throw new Error("Expected the production relief-oath button click handler.");
+      }
+
+      onClick();
+      const directResult = directSession.chooseJourneyStory(selectedOption.id);
+
+      expect(selectedByUi).toEqual([selectedOption.id]);
+      expect(uiResult).toEqual(directResult);
+      expect(uiSession.journey()).toEqual(directSession.journey());
+      expect(uiSession.snapshot()).toEqual(directSession.snapshot());
+      expect(uiSession.snapshotHash()).toBe(directSession.snapshotHash());
+      expect(uiSession.snapshot().minutes).toBe(beforeChoice.minutes + 5);
+      expect(uiSession.journey().storyChoice?.kind).toBe("lead_source");
     } finally {
       await server.close();
     }
@@ -1922,7 +2118,7 @@ describe("OverworldSession", () => {
 
     const after = session.view();
     expect(after.timeLabel).not.toBe(before.timeLabel);
-    expect(after.journal).toHaveLength(9);
+    expect(after.journal).toHaveLength(11);
   });
 
   it("requires reaching a quest's local area before starting it", () => {
@@ -2180,7 +2376,7 @@ describe("OverworldSession", () => {
     expect(after.resolvedEventIds).toContain(event.id);
     expect(after.events.map((candidate) => candidate.id)).not.toContain(event.id);
     expect(after.regionRenown[start.current.region]).toBe(event.intensity);
-    expect(after.journal).toHaveLength(10);
+    expect(after.journal).toHaveLength(12);
 
     const compactAfter = session.compactView();
     expect(compactAfter.events.map(([id]) => id)).not.toContain(event.id);

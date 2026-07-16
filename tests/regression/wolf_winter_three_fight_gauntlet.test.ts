@@ -64,6 +64,9 @@ function codes(pack: RpgPack): string[] {
     extraSettableFlags: [
       "jamie_market_testimony_certified",
       "hayden_frost_report_certified",
+      "relief_oath_full_duty",
+      "relief_oath_limited_duty",
+      "relief_oath_unaffiliated_bond",
       "works_fortification_prepared",
       "drover_route_prepared",
       "relief_protocol_prepared",
@@ -263,6 +266,9 @@ describe("bug_0189 — The Wolf-Winter: a fair THREE-fight combat_guaranteed gau
       extraSettableFlags: [
         "jamie_market_testimony_certified",
         "hayden_frost_report_certified",
+        "relief_oath_full_duty",
+        "relief_oath_limited_duty",
+        "relief_oath_unaffiliated_bond",
         "works_fortification_prepared",
         "drover_route_prepared",
         "relief_protocol_prepared",

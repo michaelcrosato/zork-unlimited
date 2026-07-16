@@ -130,6 +130,14 @@ import {
   openingReliefAllocationOfferJournalId,
 } from "./opening_relief_allocation_journal.js";
 import { presentOpeningReliefAllocation } from "./opening_relief_allocation_presentation.js";
+import { applyOpeningReliefOathOption } from "./opening_relief_oath.js";
+import {
+  openingReliefOathJournalEntry,
+  openingReliefOathJournalId,
+  openingReliefOathOfferJournalEntry,
+  openingReliefOathOfferJournalId,
+} from "./opening_relief_oath_journal.js";
+import { presentOpeningReliefOath } from "./opening_relief_oath_presentation.js";
 import {
   openingRegistrationJournalEntry,
   openingRegistrationJournalId,
@@ -624,6 +632,12 @@ export class OverworldSession {
     );
   }
 
+  private openingReliefOathResolved(): boolean {
+    return this.journalEntries.some(
+      (entry) => entry.kind === "relief_oath" || entry.kind === "relief_oath_legacy",
+    );
+  }
+
   private openingPreparationResolved(): boolean {
     return this.journalEntries.some(
       (entry) => entry.kind === "preparation" || entry.kind === "preparation_legacy",
@@ -691,8 +705,32 @@ export class OverworldSession {
     return scene;
   }
 
+  private openingReliefOathAvailable(): NonNullable<
+    OverworldManifest["opening_relief_oath"]
+  > | null {
+    const scene = this.world.opening_relief_oath;
+    if (!scene || this.journeyState.status !== "active" || this.openingReliefOathResolved()) {
+      return null;
+    }
+    const latestEntry = this.journalEntries[0];
+    if (
+      latestEntry?.kind !== "relief_oath_offer" ||
+      latestEntry.id !== openingReliefOathOfferJournalId(scene.id)
+    ) {
+      return null;
+    }
+    return scene;
+  }
+
   private selectedCampaignStoryChoiceRefs(): CampaignStoryChoiceRef[] {
     const selected = [...journeyCampaignSelectedStoryChoiceRefs(this.journeyState)];
+    const reliefOath = this.world.opening_relief_oath;
+    const oathOption = reliefOath?.options.find((candidate) =>
+      this.journalEntriesById.has(openingReliefOathJournalId(reliefOath.id, candidate.id)),
+    );
+    if (reliefOath && oathOption) {
+      selected.push({ story_choice_id: reliefOath.id, choice_id: oathOption.id });
+    }
     const preparation = this.world.opening_preparation;
     const profile = preparation?.profiles.find((candidate) =>
       this.journalEntriesById.has(openingPreparationJournalId(preparation.id, candidate.id)),
@@ -739,13 +777,48 @@ export class OverworldSession {
     return scene;
   }
 
-  private offerOpeningLeadSourceAfterRegistration(): void {
-    const scene = this.world.opening_lead_source;
+  private offerOpeningReliefOathAfterRegistration(): void {
+    const scene = this.world.opening_relief_oath;
     const registration = this.world.opening_registration;
     if (
       !scene ||
       !registration ||
       scene.after_registration !== registration.id ||
+      this.openingReliefOathResolved() ||
+      this.currentId !== scene.home ||
+      this.currentAreaId !== scene.area
+    ) {
+      return;
+    }
+    const entryId = openingReliefOathOfferJournalId(scene.id);
+    if (this.journalEntriesById.has(entryId)) return;
+    const offer = openingReliefOathOfferJournalEntry({
+      scene,
+      town: this.currentNode().name,
+      recordedAt: timeLabel(this.minutes),
+      storyChoiceBoundary: {
+        acceptedDecisions: this.journeyState.acceptedDecisions,
+        decisionProofHash: this.journeyState.decisionProof.hash,
+        townId: this.currentId,
+        areaId: this.currentAreaIdOrThrow(),
+        minutes: this.minutes,
+      },
+    });
+    addOverworldJournalEntry(this.journalEntries, this.journalEntriesById, offer);
+    this.clearSessionCaches();
+  }
+
+  private offerOpeningLeadSourceAfterRegistration(): void {
+    const scene = this.world.opening_lead_source;
+    const registration = this.world.opening_registration;
+    const reliefOath = this.world.opening_relief_oath;
+    if (
+      !scene ||
+      !registration ||
+      scene.after_registration !== registration.id ||
+      (reliefOath !== undefined &&
+        reliefOath.after_registration === registration.id &&
+        !this.openingReliefOathResolved()) ||
       this.openingLeadSourceResolved() ||
       this.currentId !== scene.home ||
       this.currentAreaId !== scene.area
@@ -896,6 +969,10 @@ export class OverworldSession {
     if (preparation && !this.openingPreparationResolved()) {
       return new Set([preparation.target_quest]);
     }
+    const reliefOath = this.world.opening_relief_oath;
+    if (reliefOath && !this.openingReliefOathResolved()) {
+      return new Set([reliefOath.target_quest]);
+    }
     const scene = this.world.opening_lead_source;
     return scene && !this.openingLeadSourceResolved()
       ? new Set([scene.target_quest])
@@ -936,21 +1013,24 @@ export class OverworldSession {
     const goalGuidance = this.journeyGoalGuidance(goalRoute);
     let goalCompletion: JourneyPresentationContext["goalCompletion"];
     const registration = this.openingRegistrationAvailable();
+    const reliefOath = this.openingReliefOathAvailable();
     const leadSource = this.openingLeadSourceAvailable();
     const preparation = this.openingPreparationAvailable();
     const reliefAllocation = this.openingReliefAllocationAvailable();
     const ally = this.openingAllyAvailable();
     let storyChoice: JourneyPresentationContext["storyChoice"] = registration
       ? presentOpeningRegistration(registration)
-      : leadSource
-        ? presentOpeningLeadSource(leadSource, this.characterState)
-        : preparation
-          ? presentOpeningPreparation(preparation, this.characterState)
-          : reliefAllocation
-            ? presentOpeningReliefAllocation(reliefAllocation, this.characterState)
-            : ally
-              ? presentOpeningAlly(ally, this.characterState)
-              : undefined;
+      : reliefOath
+        ? presentOpeningReliefOath(reliefOath, this.characterState)
+        : leadSource
+          ? presentOpeningLeadSource(leadSource, this.characterState)
+          : preparation
+            ? presentOpeningPreparation(preparation, this.characterState)
+            : reliefAllocation
+              ? presentOpeningReliefAllocation(reliefAllocation, this.characterState)
+              : ally
+                ? presentOpeningAlly(ally, this.characterState)
+                : undefined;
 
     if (campaign) {
       if (pendingGoalCompletion && campaign.preRetentionTeaser) {
@@ -1003,7 +1083,7 @@ export class OverworldSession {
     assertJourneyContractAcceptingDecision(this.journeyState);
     if (this.journey().storyChoice) {
       throw new Error(
-        "Choose the presented story consequence, character registration, Albany lead source, preparation, relief allocation, or field-team commitment before taking another action.",
+        "Choose the presented story consequence, character registration, relief oath, Albany lead source, preparation, relief allocation, or field-team commitment before taking another action.",
       );
     }
   }
@@ -1105,6 +1185,58 @@ export class OverworldSession {
         },
       });
       this.characterState = characterAfter;
+      addOverworldJournalEntry(this.journalEntries, this.journalEntriesById, entry);
+      if (this.world.opening_relief_oath?.after_registration === registration.id) {
+        this.offerOpeningReliefOathAfterRegistration();
+      } else {
+        this.offerOpeningLeadSourceAfterRegistration();
+      }
+      this.clearSessionCaches();
+      return Object.freeze({
+        storyChoiceId: storyChoice.id,
+        choiceId,
+        consequence: option.consequence,
+        goal: this.journey().goal,
+        entry: Object.freeze(redactOverworldJournalEntryForPresentation(entry)),
+        journeyDecision,
+      });
+    }
+    if (storyChoice.kind === "relief_oath") {
+      const scene = this.openingReliefOathAvailable();
+      if (!scene || storyChoice.id !== scene.id) {
+        throw new Error("The presented opening relief oath is no longer available.");
+      }
+      const application = applyOpeningReliefOathOption({
+        scene,
+        character: this.characterState,
+        optionId: choiceId,
+      });
+      const entryId = openingReliefOathJournalId(scene.id, choiceId);
+      if (this.journalEntriesById.has(entryId)) {
+        throw new Error(`Opening relief-oath journal entry "${entryId}" already exists.`);
+      }
+      const characterBefore = this.characterState;
+      const journeyDecision = this.recordOverworldDecision(
+        `campaign_story:${storyChoice.id}:${choiceId}`,
+        "progress",
+        true,
+      );
+      this.minutes += application.terms.minutes;
+      const entry = openingReliefOathJournalEntry({
+        scene,
+        character: characterBefore,
+        optionId: choiceId,
+        town: this.currentNode().name,
+        recordedAt: timeLabel(this.minutes),
+        storyChoiceBoundary: {
+          acceptedDecisions: this.journeyState.acceptedDecisions,
+          decisionProofHash: this.journeyState.decisionProof.hash,
+          townId: this.currentId,
+          areaId: this.currentAreaIdOrThrow(),
+          minutes: this.minutes,
+        },
+      });
+      this.characterState = application.characterAfter;
       addOverworldJournalEntry(this.journalEntries, this.journalEntriesById, entry);
       this.offerOpeningLeadSourceAfterRegistration();
       this.clearSessionCaches();
@@ -1674,6 +1806,12 @@ export class OverworldSession {
       const area = this.areasById.get(registration.area);
       throw new Error(
         `Complete ${registration.title} with ${contact?.name ?? "the registration contact"} in ${area?.name ?? "the opening registration area"} before starting this journey's first quest.`,
+      );
+    }
+    const reliefOath = this.world.opening_relief_oath;
+    if (reliefOath?.target_quest === questId && !this.openingReliefOathResolved()) {
+      throw new Error(
+        `Set ${reliefOath.title} before starting this journey's first relief dispatch.`,
       );
     }
     const leadSource = this.world.opening_lead_source;

@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   CAMPAIGN_CHARACTER_MAX_OWED,
   CAMPAIGN_CHARACTER_MAX_HEALTH,
+  CAMPAIGN_CHARACTER_MAX_RANK,
   CAMPAIGN_CHARACTER_MAX_SCORE,
   CAMPAIGN_CHARACTER_MIN_SCORE,
   buildCampaignCharacterState,
@@ -11,9 +12,11 @@ import {
 } from "../../src/world/campaign_character_state.js";
 import {
   AddCompanionConsequenceSchema,
+  AffirmValueConsequenceSchema,
   CampaignConsequenceEffectSchema,
   CampaignConsequenceEffectsSchema,
   LearnKnowledgeConsequenceSchema,
+  RaiseFactionStandingConsequenceSchema,
   RecordPromiseConsequenceSchema,
   RememberRelationshipConsequenceSchema,
   RemoveCompanionConsequenceSchema,
@@ -47,6 +50,16 @@ function baseCharacter(): CampaignCharacterState {
 function syntheticEffects(): CampaignConsequenceEffects {
   return CampaignConsequenceEffectsSchema.parse([
     {
+      type: "affirm_value",
+      value_id: "value:archive_stewardship",
+      strength_at_least: 3,
+    },
+    {
+      type: "raise_faction_standing",
+      faction_id: "faction:archive_collective",
+      standing_at_least: 12,
+    },
+    {
       type: "learn_knowledge",
       knowledge_id: "knowledge:archive_route",
     },
@@ -79,6 +92,28 @@ function syntheticEffects(): CampaignConsequenceEffects {
 
 describe("generic campaign consequences", () => {
   it("parses the complete strict monotonic vocabulary", () => {
+    expect(
+      AffirmValueConsequenceSchema.parse({
+        type: "affirm_value",
+        value_id: "value:accountability",
+        strength_at_least: CAMPAIGN_CHARACTER_MAX_RANK,
+      }),
+    ).toEqual({
+      type: "affirm_value",
+      value_id: "value:accountability",
+      strength_at_least: CAMPAIGN_CHARACTER_MAX_RANK,
+    });
+    expect(
+      RaiseFactionStandingConsequenceSchema.parse({
+        type: "raise_faction_standing",
+        faction_id: "faction:municipal_ledger",
+        standing_at_least: CAMPAIGN_CHARACTER_MAX_SCORE,
+      }),
+    ).toEqual({
+      type: "raise_faction_standing",
+      faction_id: "faction:municipal_ledger",
+      standing_at_least: CAMPAIGN_CHARACTER_MAX_SCORE,
+    });
     expect(
       LearnKnowledgeConsequenceSchema.parse({
         type: "learn_knowledge",
@@ -364,6 +399,70 @@ describe("generic campaign consequences", () => {
         owes_player_at_least: 101,
       },
     ],
+    [
+      "unscoped affirmed value id",
+      {
+        type: "affirm_value",
+        value_id: "accountability",
+        strength_at_least: 1,
+      },
+    ],
+    [
+      "zero affirmed value strength",
+      {
+        type: "affirm_value",
+        value_id: "value:accountability",
+        strength_at_least: 0,
+      },
+    ],
+    [
+      "affirmed value strength above rank range",
+      {
+        type: "affirm_value",
+        value_id: "value:accountability",
+        strength_at_least: CAMPAIGN_CHARACTER_MAX_RANK + 1,
+      },
+    ],
+    [
+      "fractional affirmed value strength",
+      {
+        type: "affirm_value",
+        value_id: "value:accountability",
+        strength_at_least: 1.5,
+      },
+    ],
+    [
+      "unscoped faction id",
+      {
+        type: "raise_faction_standing",
+        faction_id: "municipal_ledger",
+        standing_at_least: 1,
+      },
+    ],
+    [
+      "zero faction standing floor",
+      {
+        type: "raise_faction_standing",
+        faction_id: "faction:municipal_ledger",
+        standing_at_least: 0,
+      },
+    ],
+    [
+      "faction standing floor above score range",
+      {
+        type: "raise_faction_standing",
+        faction_id: "faction:municipal_ledger",
+        standing_at_least: CAMPAIGN_CHARACTER_MAX_SCORE + 1,
+      },
+    ],
+    [
+      "fractional faction standing floor",
+      {
+        type: "raise_faction_standing",
+        faction_id: "faction:municipal_ledger",
+        standing_at_least: 1.5,
+      },
+    ],
   ] satisfies readonly [string, unknown][])(
     "rejects malformed consequence: %s",
     (_label, effect) => {
@@ -376,6 +475,36 @@ describe("generic campaign consequences", () => {
       CampaignConsequenceEffectsSchema.parse([
         { type: "learn_knowledge", knowledge_id: "knowledge:archive_route" },
         { type: "learn_knowledge", knowledge_id: "knowledge:archive_route" },
+      ]),
+    ).toThrow(/duplicate campaign consequence effect/i);
+
+    expect(() =>
+      CampaignConsequenceEffectsSchema.parse([
+        {
+          type: "affirm_value",
+          value_id: "value:accountability",
+          strength_at_least: 2,
+        },
+        {
+          type: "affirm_value",
+          value_id: "value:accountability",
+          strength_at_least: 4,
+        },
+      ]),
+    ).toThrow(/duplicate campaign consequence effect/i);
+
+    expect(() =>
+      CampaignConsequenceEffectsSchema.parse([
+        {
+          type: "raise_faction_standing",
+          faction_id: "faction:municipal_ledger",
+          standing_at_least: 20,
+        },
+        {
+          type: "raise_faction_standing",
+          faction_id: "faction:municipal_ledger",
+          standing_at_least: 40,
+        },
       ]),
     ).toThrow(/duplicate campaign consequence effect/i);
 
@@ -483,6 +612,12 @@ describe("generic campaign consequences", () => {
       "knowledge:private_map",
     ]);
     expect(result.characterAfter.health).toEqual({ current: 18, max: 30 });
+    expect(result.characterAfter.values).toEqual([
+      { valueId: "value:archive_stewardship", strength: 3 },
+    ]);
+    expect(result.characterAfter.factionStanding).toEqual([
+      { factionId: "faction:archive_collective", standing: 12 },
+    ]);
     expect(result.characterAfter.wounds).toEqual([
       {
         woundId: "wound:archive_fall",
@@ -545,6 +680,59 @@ describe("generic campaign consequences", () => {
       playerOwes: 3,
       memories: ["memory:minor_favor"],
     });
+  });
+
+  it("affirms values and raises faction standing as canonical replay-idempotent floors", () => {
+    const source = buildCampaignCharacterState({
+      values: [{ valueId: "value:stewardship", strength: 4 }],
+      factionStanding: [
+        { factionId: "faction:road_wardens", standing: 80 },
+        { factionId: "faction:former_rivals", standing: -20 },
+      ],
+    });
+    const sourceBefore = cloneCampaignCharacterState(source);
+    const effects: CampaignConsequenceEffects = [
+      {
+        type: "affirm_value",
+        value_id: "value:accountability",
+        strength_at_least: 3,
+      },
+      {
+        type: "affirm_value",
+        value_id: "value:stewardship",
+        strength_at_least: 2,
+      },
+      {
+        type: "raise_faction_standing",
+        faction_id: "faction:municipal_ledger",
+        standing_at_least: 25,
+      },
+      {
+        type: "raise_faction_standing",
+        faction_id: "faction:road_wardens",
+        standing_at_least: 50,
+      },
+      {
+        type: "raise_faction_standing",
+        faction_id: "faction:former_rivals",
+        standing_at_least: 10,
+      },
+    ];
+
+    const first = applyCampaignConsequences({ character: source, effects });
+    const second = applyCampaignConsequences({ character: first.characterAfter, effects });
+
+    expect(source).toEqual(sourceBefore);
+    expect(first.characterAfter.values).toEqual([
+      { valueId: "value:accountability", strength: 3 },
+      { valueId: "value:stewardship", strength: 4 },
+    ]);
+    expect(first.characterAfter.factionStanding).toEqual([
+      { factionId: "faction:former_rivals", standing: 10 },
+      { factionId: "faction:municipal_ledger", standing: 25 },
+      { factionId: "faction:road_wardens", standing: 80 },
+    ]);
+    expect(second).toEqual(first);
   });
 
   it("adds and removes companions and records and resolves promises idempotently", () => {

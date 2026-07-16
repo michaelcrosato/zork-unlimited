@@ -25,8 +25,14 @@ export function JourneyStoryChoiceScreen({
   const isPreparation = storyChoice.kind === "preparation";
   const isAlly = storyChoice.kind === "ally";
   const isReliefAllocation = storyChoice.kind === "relief_allocation";
+  const isReliefOath = storyChoice.kind === "relief_oath";
   const keepsCurrentObjective =
-    isRegistration || isLeadSource || isPreparation || isAlly || isReliefAllocation;
+    isRegistration ||
+    isLeadSource ||
+    isPreparation ||
+    isAlly ||
+    isReliefAllocation ||
+    isReliefOath;
 
   return (
     <main className="journey-decision-page">
@@ -48,7 +54,9 @@ export function JourneyStoryChoiceScreen({
                   ? "Field-team commitment"
                   : isReliefAllocation
                     ? "Albany relief capacity"
-                  : "Journey consequence"}
+                    : isReliefOath
+                      ? "Relief terms"
+                      : "Journey consequence"}
         </p>
         <h1 id="journey-story-choice-title" ref={headingRef} tabIndex={-1}>
           {isRegistration
@@ -61,7 +69,9 @@ export function JourneyStoryChoiceScreen({
                   ? "Choose who leaves Albany"
                   : isReliefAllocation
                     ? "Choose what Albany can protect"
-                  : "Choose what follows"}
+                    : isReliefOath
+                      ? "Choose one binding term"
+                      : "Choose what follows"}
         </h1>
         <p id="journey-story-choice-message" className="journey-choice-message">
           {storyChoice.message}
@@ -81,7 +91,9 @@ export function JourneyStoryChoiceScreen({
                     ? "Compare the field capability, binding condition, and actual cost in these terms; your commitment changes who can act independently without replacing this objective."
                     : isReliefAllocation
                       ? "Albany can cover one need. Each choice names what it protects, what remains exposed, and which field or return resource changes."
-                    : "Choose the consequence that sets your next objective."}
+                      : isReliefOath
+                        ? "Compare each term's access, duty, actual cost, field consequence, and return promise. This binds the dispatch without replacing your current objective."
+                        : "Choose the consequence that sets your next objective."}
           </small>
         </div>
 

@@ -74,6 +74,7 @@ function startCampaignThroughDispatch(): OverworldSession {
   session.scoutPoi("albany_city__civic_core__poi");
   session.talkToCharacter("albany_city__civic_core__contact");
   session.chooseJourneyStory("albany:ledger_advocate");
+  session.chooseJourneyStory("albany:oath_limited_aid_only");
   session.chooseJourneyStory("albany:source_rowan_civic_docket");
   expect(session.journey().storyChoice?.kind).toBe("preparation");
   session.chooseJourneyStory("albany:prep_works_fortification");
@@ -144,6 +145,7 @@ describe("journey campaign out-of-order recovery", () => {
     session.scoutPoi("albany_city__civic_core__poi");
     session.talkToCharacter("albany_city__civic_core__contact");
     session.chooseJourneyStory("albany:ledger_advocate");
+    session.chooseJourneyStory("albany:oath_limited_aid_only");
     session.chooseJourneyStory("albany:source_rowan_civic_docket");
     expect(session.journey().storyChoice?.kind).toBe("preparation");
     session.chooseJourneyStory("albany:prep_works_fortification");

@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 567 -->
+<!-- historical_cycle_count: 568 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,15 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - albany_wolf_relief_oath
+
+- Evidence choice: `SS-F02-relief-oath` was the last structural slice gap because registration defined identity but not what the Wolf-Winter dispatch owed Albany, Cade, or a personal witness.
+- Surface: one blocking post-registration term binds Full Compact Duty (10 minutes), Aid-Only Duty (5), or an Unaffiliated Personal Bond (0) into value, faction, Rowan memory, knowledge, and promise state; each has one narrow field advantage, truthful promise closure, and conditional 15-minute return service without gating hunt, lure, drive, fortify, June, or solo play.
+- Counterfactual: identical rolls isolate full-duty public-seal DC -2, aid-only final clean-lure alarm suppression, and unaffiliated first-drive DC -2 while established misses/recoveries remain; paired returns prove kept/released/broken states, service positive/negative cases, real consumption, one-use replay, UI/MCP parity, and exact F06 migration. The ledger advances 11/12→12/12 structurally proven.
+- Pure evidence: final-build seed 2721 verified pure/fresh, completed Wolf-Winter at decision 28, continued through three completed goals, and ended voluntarily at checkpoint 80; clarity/enjoyment 4/5 and 5/5, stuck false, replay true, no S2+. Its S1 unexplained Tanner score and S0 opening-density/name-reuse findings remain debt; seed 2718 remains rejected.
+- Compile/self-critique: compile `20260716T024738Z` has 788 verified reports and 39/39 current-contract pure exits continuing at least once. PASS for F02 and twelve paired fork proofs, not the greater-than-BG3 claim: deep crawl, 100-player fleet, numeric thresholds, severity audit, and publication remain.
+- Guard: independent audits closed chronology, anti-relabel, shared-faction, June/solo, service consumption, UI click, compact copy, import liveness, hidden service consolidation, courier-tag closure, and false-positive tamper assertions. Pre/final crawls `20260715T234034Z`/`20260716T023728Z` each found zero issues and reached 247/247 nodes, 344/344 edges, 12/12 boards, and 12/12 quests.
 
 ### Cycle result - albany_wolf_relief_allocation
 
@@ -137,11 +146,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Pure evidence: verified pure/fresh seed 8 completed Wolf-Winter at decision 24, continued through five completed goals and checkpoints 40/80, then ended honestly at 120; clarity 4/5, enjoyment 5/5, replay true, no stuck state or S2+ defect. One prior exact-candidate attempt timed out with no transcript and is rejected evidence.
 - Self-critique: PASS for reusable persistence, tamper resistance, and surface parity—not a depth claim. All causal-matrix forks remain uncounted; the player again found thorough preparation highly rewarding and only flagged repeated out-of-scope hub boilerplate (S1).
 - Guard: pre/final 6,000-step crawls reached 247/247 towns, 344/344 roads, and 12/12 quests (`20260714T023528Z`, `20260714T030833Z`); 165 focused tests, responsive rendered UI checks, adversarial review, and full health passed.
-
-### Cycle result - starting_slice_contract
-
-- Change: `docs/STARTING_SLICE.md` now fixes Albany → The Wolf-Winter → truthful Albany return as the defining vertical slice; its machine-readable 12-fork ledger and validator reject any row counted before implementation and paired counterfactual proof.
-- Evidence choice: the current bridge exports only ending identity and Albany remains mostly generic transactions, so the durable contract freezes unrelated expansion and orders campaign-character persistence before additional Wolf-specific branches.
-- Pure evidence: independently verified pure/fresh seed 7 completed Wolf-Winter plus three later quests in 89 decisions, continued at the first three goals and checkpoints 40/80, then ended honestly at goal 4; clarity 4/5, enjoyment 5/5, replay true, no stuck state or S1+ defect.
-- Self-critique: PASS for an executable, honesty-preserving product contract—not a depth claim. All 12 target forks remain explicitly unproven and this increment changes no gameplay.
-- Guard: pre/post 6,000-step crawls reached 247/247 towns, 344/344 roads, and 12/12 quests (`20260714T020100Z`, `20260714T021135Z`); focused matrix tests, typecheck, and full health passed (315 files/2,204 tests, UI, 12 packs).

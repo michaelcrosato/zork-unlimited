@@ -336,6 +336,10 @@ function resolveCurrentOverworldSessionEvent(a: ReturnType<typeof api>, sessionI
       session_id: sessionId,
       choice: "albany:ledger_advocate",
     });
+    a.choose_overworld_session_story({
+      session_id: sessionId,
+      choice: "albany:oath_limited_aid_only",
+    });
     const sourced = a.choose_overworld_session_story({
       session_id: sessionId,
       choice: "albany:source_rowan_civic_docket",
@@ -1252,6 +1256,11 @@ describe("overworld snapshot restore integrity", () => {
         session_id: started.session_id,
         choice: "albany:ledger_advocate",
       });
+      a.choose_overworld_session_story({
+        ...FULL_OVERWORLD_RESPONSE,
+        session_id: started.session_id,
+        choice: "albany:oath_limited_aid_only",
+      });
       const sourced = a.choose_overworld_session_story({
         ...FULL_OVERWORLD_RESPONSE,
         session_id: started.session_id,
@@ -1489,6 +1498,11 @@ describe("overworld snapshot restore integrity", () => {
       ...FULL_OVERWORLD_RESPONSE,
       session_id: started.session_id,
       choice: "albany:ledger_advocate",
+    });
+    a.choose_overworld_session_story({
+      ...FULL_OVERWORLD_RESPONSE,
+      session_id: started.session_id,
+      choice: "albany:oath_limited_aid_only",
     });
     const sourced = a.choose_overworld_session_story({
       ...FULL_OVERWORLD_RESPONSE,

@@ -76,6 +76,9 @@ describe("Wolf-Winter dialogue surface", () => {
       extraSettableFlags: [
         "jamie_market_testimony_certified",
         "hayden_frost_report_certified",
+        "relief_oath_full_duty",
+        "relief_oath_limited_duty",
+        "relief_oath_unaffiliated_bond",
         "works_fortification_prepared",
         "drover_route_prepared",
         "relief_protocol_prepared",

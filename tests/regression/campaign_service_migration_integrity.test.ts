@@ -67,7 +67,10 @@ function snapshotAsPredecessor(
   predecessor.worldHash = worldHash;
   predecessor.journalEntries = predecessor.journalEntries
     .filter(
-      (entry) => entry.kind !== "preparation_legacy" && !entry.kind.startsWith("relief_allocation"),
+      (entry) =>
+        entry.kind !== "preparation_legacy" &&
+        !entry.kind.startsWith("relief_allocation") &&
+        !entry.kind.startsWith("relief_oath"),
     )
     .map((entry) => {
       if (entry.kind === "quest" && entry.questStartProof?.kind === "legacy") {

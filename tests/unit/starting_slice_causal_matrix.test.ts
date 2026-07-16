@@ -16,6 +16,7 @@ describe("starting-slice causal matrix", () => {
       matrix.forks.filter((fork) => fork.counts_toward_contract).map((fork) => fork.id),
     ).toEqual([
       "SS-F01-character-background",
+      "SS-F02-relief-oath",
       "SS-F03-lead-source",
       "SS-F04-ally-commitment",
       "SS-F05-preparation-profile",
@@ -39,19 +40,19 @@ describe("starting-slice causal matrix", () => {
 
     const falselyCounted = structuredClone(matrix) as unknown as Record<string, unknown>;
     const falselyCountedForks = falselyCounted.forks as Record<string, unknown>[];
-    const plannedFork = falselyCountedForks.find(
-      (fork) => fork.implementation_status !== "implemented",
-    );
-    if (!plannedFork) throw new Error("expected an unimplemented starting-slice fork");
-    plannedFork.counts_toward_contract = true;
+    const plannedFork = falselyCountedForks.find((fork) => fork.counts_toward_contract === true);
+    if (!plannedFork) throw new Error("expected a counted starting-slice fork");
+    plannedFork.implementation_status = "planned";
     expect(() => parseStartingSliceCausalMatrix(falselyCounted)).toThrow(
       /counted fork must be implemented/i,
     );
   });
 
-  it("refuses certification until every numeric contract threshold is proven", () => {
+  it("refuses structural certification while any required fork remains uncounted", () => {
     const matrix = loadStartingSliceCausalMatrix();
-    const premature = { ...structuredClone(matrix), status: "certified" };
+    const premature = structuredClone(matrix);
+    premature.status = "certified";
+    premature.forks[1]!.counts_toward_contract = false;
     expect(() => parseStartingSliceCausalMatrix(premature)).toThrow(
       /Certification requires 12 material forks/,
     );

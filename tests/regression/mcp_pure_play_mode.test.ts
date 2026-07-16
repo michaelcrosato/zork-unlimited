@@ -250,8 +250,32 @@ describe("MCP pure play mode", () => {
             },
           }),
         );
-        const sourceChoice = (
+        const oathChoice = (
           selected.journey as {
+            storyChoice?: {
+              kind?: string;
+              options?: { id: string }[];
+            };
+          }
+        ).storyChoice;
+        expect(oathChoice?.kind).toBe("relief_oath");
+        const limitedOath = oathChoice?.options?.find(
+          (option) => option.id === "albany:oath_limited_aid_only",
+        );
+        if (!limitedOath) throw new Error("expected visible limited aid-only oath");
+        const oathed = textPayload(
+          await client.callTool({
+            name: "choose_overworld_session_story",
+            arguments: {
+              session_id: sessionId,
+              choice: limitedOath.id,
+              compact_context: false,
+              compact_result: false,
+            },
+          }),
+        );
+        const sourceChoice = (
+          oathed.journey as {
             storyChoice?: {
               kind?: string;
               options?: { id: string }[];
