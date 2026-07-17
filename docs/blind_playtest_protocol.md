@@ -154,10 +154,28 @@ default to labeled `available_actions`. These projections expose only the same
 current commands a human sees; they neither select an action nor reveal
 authoring structure.
 
+Pure mode repeats the parent `overworld_session_id` on every successful player
+response. While an embedded quest is unresolved, it also repeats the current
+child `rpg_session_id`; the two handles are never interchangeable. Missing,
+mistyped, stale, or wrong-domain handles receive a structured error containing
+the authoritative recoverable handle(s) and the expected field. Starting again
+cannot mint a second fresh run, and parent gameplay mutations cannot orphan an
+active child. Pure overworld reads always remain on the compact player surface;
+verbose observation, graph, id-catalog, and route-expansion knobs are absent.
+
+A non-death terminal quest step folds its result back automatically and stops
+echoing the child. A death ending does not complete that quest, but also releases
+the parent surface so the player can pursue another visible lead instead of
+being trapped in an ended RPG session. The separate technical quest-completion
+tool is therefore absent from pure mode. Both terminal responses retain the
+parent handle.
+
 The runner enforces this boundary independently of the prose prompt:
 
 - live quest targets and non-default personas are rejected before model launch;
 - the MCP server exposes a pure allowlist and permits one fresh start;
+- session recovery echoes only the singleton parent and its current unresolved
+  child, never handles from full-mode or unrelated sessions;
 - authored choices are available only when the same player-facing choice is due;
 - authoring, validation, raw state, save/import/restore, direct quest, and other
   structural tools are absent;

@@ -169,7 +169,7 @@ describe("MCP server registration", () => {
   });
 
   it("keeps public MCP content and trace tools quest-id first", () => {
-    const sharedSource = serverSourceBlock("const WORLD_QUEST_SOURCE", "const SESSION");
+    const sharedSource = serverSourceBlock("const WORLD_QUEST_SOURCE", "const OVERWORLD_SESSION");
     expect(sharedSource).toContain("world_quest_id");
     expect(sharedSource).not.toMatch(/\n\s+quest_id:/);
     expect(sharedSource).not.toContain("Alias.");
@@ -225,7 +225,7 @@ describe("MCP server registration", () => {
       registeredToolBlock("get_transcript"),
     ].join("\n");
 
-    expect(blindToolSchemaSource.length).toBeLessThanOrEqual(4300);
+    expect(blindToolSchemaSource.length).toBeLessThanOrEqual(4650);
     expect(blindToolSchemaSource).not.toContain("Token economy:");
     expect(blindToolSchemaSource).toContain("compact_observation");
     expect(blindToolSchemaSource).toContain("compact_state");
@@ -276,7 +276,7 @@ describe("MCP server registration", () => {
 
     // The game-native passage action and optional quest-approach id add bounded
     // schema blocks; retain a tight ceiling so transport prose cannot regrow.
-    expect(overworldSchemaSource.length).toBeLessThanOrEqual(7800);
+    expect(overworldSchemaSource.length).toBeLessThanOrEqual(8250);
     expect(overworldSchemaSource).not.toContain("Session id returned by start_overworld");
     expect(overworldSchemaSource).not.toContain("returns compact context by default");
     expect(overworldSchemaSource).not.toContain("from the session observation");
@@ -364,6 +364,10 @@ describe("MCP server registration", () => {
       overworldAndRpgDefaults.indexOf("...input"),
     );
     expect(overworldAndRpgDefaults).toContain('PLAY_MODE !== "pure"');
+    expect(overworldAndRpgDefaults).toContain("compact_context: true");
+    expect(overworldAndRpgDefaults.lastIndexOf("compact_context: true")).toBeGreaterThan(
+      overworldAndRpgDefaults.indexOf("...input"),
+    );
     expect(overworldAndRpgDefaults).toContain("input.compact_observation === false");
     expect(overworldAndRpgDefaults).toContain("compact_actions: input.compact_actions ?? false");
     expect(overworldAndRpgDefaults).toContain("include_actions: true");

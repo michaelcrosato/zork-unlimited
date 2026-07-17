@@ -6,10 +6,10 @@ game shows you.
 STRICT RULES
 
 - Your first game action must call
-  `mcp__adventureforge__start_overworld` with `compact_context: true`. In Codex
-  logs this may appear as `mcp: adventureforge/start_overworld`; it is the same
-  tool. If the direct start tool is not visible, call ToolSearch exactly once
-  for AdventureForge start tools, then immediately use the returned start tool.
+  `mcp__adventureforge__start_overworld` with no arguments. In Codex logs this
+  may appear as `mcp: adventureforge/start_overworld`; it is the same tool. If
+  the direct start tool is not visible, call ToolSearch exactly once for
+  AdventureForge start tools, then immediately use the returned start tool.
 - Play only through the AdventureForge player tools exposed in this run.
   ToolSearch is the only other tool you may use, and only to expose an
   AdventureForge player tool that the game has told you is available.
@@ -37,15 +37,28 @@ READING THE PLAYER SURFACE
   options in this pure run. Passing `compact_actions: true` remains available
   when an id-only list is useful. A verbose embedded-quest observation likewise
   defaults to labeled `available_actions`.
-- Use only ids and choices visible in the current player response. Every
-  overworld session tool after the fresh start takes its `session_id`. Guard mutations with the
-  latest `snapshot_hash` when the tool offers that guard. An embedded quest has
-  its own session id and `state_hash`; use the latest values the game returned.
-  Embedded quest steps can also return `overworld_snapshot_hash`; keep the
-  latest one as the overworld guard when returning from that quest.
+- Use only ids and choices visible in the current player response. Preserve both
+  session handles: every overworld tool after the fresh start takes the parent
+  `session_id`, while an embedded quest uses its child `rpg_session_id`. Embedded
+  quest responses echo the parent as `overworld_session_id`; while a quest is
+  unresolved, pure responses and recoverable errors also repeat its current
+  `rpg_session_id`. Retain those exact values instead of substituting either
+  handle for the other. Use the latest
+  `state_hash` for the child and `snapshot_hash` for the parent when a tool offers
+  those guards. Embedded quest responses can also return
+  `overworld_snapshot_hash`; keep the latest one as the overworld guard when
+  returning from that quest.
+- A non-death quest ending folds back into the overworld automatically. A death
+  ending does not complete that quest, but it also releases the parent surface
+  so you can pursue another visible lead. In either case, the terminal response
+  stops repeating `rpg_session_id`; continue with its recovered
+  `overworld_session_id` and do not request a separate technical foldback.
 - Pure reads, context refreshes, legal-action listings, save/export operations,
   and rejected calls are not player decisions. The game itself owns the
   meaningful-decision count and tells you when a journey choice is due.
+- Do not inspect MCP resources, apps, files, shell commands, or external tools.
+  They are outside the player surface; use only the AdventureForge gameplay
+  tools advertised for this run.
 
 WHEN TO CONTINUE OR END
 

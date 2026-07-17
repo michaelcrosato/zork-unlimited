@@ -25,6 +25,16 @@ describe("pure blind prompt + runner contract", () => {
     expect(prompt).toContain("defaults to labeled `{ id, command }`");
     expect(prompt).toContain("`compact_actions: true`");
     expect(prompt).toContain("defaults to labeled `available_actions`");
+    expect(prompt).toContain("Preserve both");
+    expect(prompt).toContain("`overworld_session_id`");
+    expect(prompt).toContain("`rpg_session_id`");
+    expect(prompt).toContain("recoverable errors also repeat");
+    expect(prompt).toContain("non-death quest ending folds back");
+    expect(prompt).toContain("A death");
+    expect(prompt).toContain("releases the parent surface");
+    expect(prompt).toContain("stops repeating `rpg_session_id`");
+    expect(prompt).toContain("do not request a separate technical foldback");
+    expect(prompt).toContain("Do not inspect MCP resources");
     expect(prompt).toContain("Only then conduct the exit interview");
     expect(prompt).toContain("`exitReceipt`");
     expect(prompt).toContain('"journey_exit_receipt": {}');

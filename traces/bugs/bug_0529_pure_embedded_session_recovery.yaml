@@ -1,0 +1,61 @@
+id: bug_0529
+title: "Pure embedded-session handles were lossy and terminal death could lock the player"
+pack: src/mcp/server.ts
+reported_by: four unretried ten-player GPT-5.3-Codex-Spark cohorts
+reports:
+  - ai-runs/spark-seed2836.md
+  - ai-runs/spark-seed2842.md
+  - ai-runs/spark-seed2844.md
+  - ai-runs/spark-seed2848.md
+  - ai-runs/spark-seed2849.md
+severity: S2
+symptom: >
+  Ten of forty fresh pure players failed to publish a valid journey exit. Compacted
+  players lost the parent or child UUID, substituted one domain for the other,
+  restarted and received no recoverable handle, or exhausted context after requesting
+  verbose overworld and MCP resource catalogs. A repeated quest start could not recover
+  its live child. After the first recovery patch, non-death endings still suggested a
+  redundant manual foldback, while a deterministic death before checkpoint 40 left an
+  ended child active and every parent mutation blocked.
+root_cause: >
+  Pure mode enforced singleton provenance but did not retain or echo the singleton
+  parent and its current embedded child. Required Zod fields rejected missing handles
+  before the server could recover them, generic session errors did not identify the
+  domain, and parent mutations could overwrite the one tracked child. Response
+  decoration ran before lifecycle updates. Pure schemas also retained expansion knobs
+  that let a player request the full overworld surface. Finally, non-death foldback and
+  death shared no explicit terminal child-release contract.
+fix: >
+  Track the parent overworld_session_id and current rpg_session_id as one pure-run
+  lifecycle. Every successful response and structured recoverable error repeats the
+  authoritative applicable handles and names the expected field. Pure handle schemas
+  admit missing or coercible values so preflight can repair them; full mode remains
+  required and isolated. Reject parent gameplay mutations while a child is active,
+  make duplicate fresh starts recover the existing parent, and distinguish RPG from
+  overworld SessionStore errors. Update lifecycle state before decorating responses.
+  Non-death endings auto-fold and both non-death and death terminals clear the child;
+  death releases parent play without falsely completing the quest. The obsolete manual
+  completion tool and verbose/id/route overworld expansion controls are absent in pure.
+deterministic_witnesses:
+  - wrong_domain_and_missing_handles: "missing, null, numeric, wrong-key, stale, parent-as-child, and child-as-parent calls"
+    result: "one structured rejection names the expected field and returns the exact live parent plus unresolved child without changing either state"
+  - duplicate_start: "start_overworld called again after launch and during an embedded quest"
+    result: "no second session or fresh-start evidence is minted; the original parent and child are recovered"
+  - active_child_guard: "repeat the same quest start while Wolf-Winter is unresolved"
+    result: "preflight rejects before a second decision or child is created; the parent snapshot and child handle remain exact"
+  - successful_terminal: "seed 0 sheltered-stockway combat reaches ending_held"
+    result: "the final step folds Wolf-Winter once, retains the parent, omits the retired child, and Continue succeeds on the parent"
+  - death_terminal: "seed 6 sheltered-stockway combat reaches ending_pulled_down at decision 22"
+    result: "the quest remains incomplete, the terminal response retires the ended child, and a subsequent parent-area move succeeds instead of hard-locking"
+  - mode_isolation: "two full-mode overworld sessions plus an invalid handle"
+    result: "full schemas still require session_id and no singleton recovery UUID or pure structured payload leaks"
+tests:
+  - tests/regression/mcp_pure_play_mode.test.ts
+  - tests/regression/mcp_server_registration.test.ts
+  - tests/regression/blind_pure_prompt_contract.test.ts
+  - tests/unit/mcp_sessions.test.ts
+verification:
+  - "Pre/post crawl gates 20260717T062550Z and 20260717T074806Z each reached 247/247 nodes, 344/344 edges, and 12/12 quests."
+  - "Focused pure/full/schema/session tests cover success, rejection, pause, resume, unchanged, terminal success, terminal death, and post-exit lifecycle branches."
+  - "Candidate Spark seeds 2856-2859 were 4/4 verifier-valid with 116, 24, 45, and 80 accepted decisions; their two redundant-foldback complaints produced the terminal contract regression before the clean cohort."
+  - "npm run health"
