@@ -200,7 +200,7 @@ rooms:
         text: >
           The Albany packet brought you and Road Warden June Pike down the hill road.
           June checks her cattle rope, then takes the lower stock path: cattle-first
-          authority, no place on the wolf line, and no agreement after first blood. The
+          authority, no place on the wolf line, and no agreement after a wolf dies. The
           byre-yard lies north; hold the cattle till dawn.
     objects: [exposed_ridge_last_mile, sheltered_stockway_last_mile]
     exits:
@@ -276,6 +276,19 @@ rooms:
           the store-shed is west. North, the yearling lies dead in the broken paling, but
           the flank-wolf holds the byre door and the grey leader waits deeper in. The yard
           gate is south.
+      - when:
+          - { has_flag: june_pike_present }
+          - { not_flag: june_blood_condition_broken }
+          - { not_flag: june_combat_line_acknowledged }
+          - { not_flag: strategy_lure_committed }
+          - { not_flag: strategy_drive_committed }
+          - { not_flag: strategy_fortify_committed }
+          - { not_visited: paling_gap }
+        text: >
+          June holds the north gate. The loose rail beyond is a spear-fighting funnel,
+          not a living turn. Cross without Cade's feed, drive rig, or seals and you choose
+          hunt-and-hold; any wolf death ends her agreement. Speak to June, or ask Cade for a
+          living plan now. Store west.
       - when: [{ has_flag: read_tally }, { not_flag: strategy_fortify_committed }]
         text: >
           The trampled byre-yard. Old Cade waits by the day-book where you checked its
@@ -327,7 +340,14 @@ rooms:
                   - { not_flag: yearling_down }
                   - { not_flag: yearling_redirected }
               - { has_flag: flank_redirected }
-        locked_msg: "Carry the committed plan's finite feed, drive rig, shutters, or seals. After the lure's first beat, continue west through the store and up to the loft."
+          - any_of:
+              - { not_flag: june_pike_present }
+              - { has_flag: june_combat_line_acknowledged }
+              - { has_flag: june_blood_condition_broken }
+              - { has_flag: strategy_lure_committed }
+              - { has_flag: strategy_drive_committed }
+              - { has_flag: strategy_fortify_committed }
+        locked_msg: "Resolve the field line before crossing: speak with anyone holding the gate or carry committed feed, rig, shutters, or seals. After lure's first beat, go west and up."
 
   - id: store
     name: "The Store-Shed"
@@ -419,10 +439,9 @@ rooms:
   - id: paling_gap
     name: "The Broken Paling"
     description: >
-      A young wolf holds the broken paling, low and hungry—the first of the pack through.
-      Its shoulders bunch for a straight rush: set the Albany spear, then drive on the
-      shaft. A stout rail has fallen clear into the snow at your feet; wedge it across
-      the gap. The byre-yard is south.
+      A hungry young wolf bunches to rush at the broken paling. The rail has fallen clear
+      into the snow at your feet. Wedge it only as a combat funnel; it does not turn the
+      wolf alive. Set the Albany spear, then drive. The byre-yard is south.
     objects:
       [
         paling_rail,
@@ -474,6 +493,15 @@ rooms:
           leaves no combat switch. The byre door lies north; the yard south is closed.
       - when:
           - { has_flag: strategy_lure_committed }
+          - { has_flag: yearling_redirected_with_braced_rail }
+          - { not_flag: flank_redirected }
+        text: >
+          The braced rail narrowed the fouled scent line without a spear stroke. The
+          yearling is alive in the high wood, following what remained of Cade's feed;
+          no blood was drawn. The ground line north is not this plan. Return south, then
+          west and up to the loft for the second cast.
+      - when:
+          - { has_flag: strategy_lure_committed }
           - { has_flag: yearling_redirected }
           - { not_flag: flank_redirected }
         text: >
@@ -496,6 +524,7 @@ rooms:
       - when:
           - { has_flag: drover_route_prepared }
           - { has_flag: lure_trail_fouled }
+          - { not_flag: lure_hybrid_combat_entered }
           - { not_flag: drover_route_attempted }
           - { not_flag: yearling_down }
           - { not_flag: yearling_redirected }
@@ -504,7 +533,29 @@ rooms:
           the churned feed. Run that one-use route now to peel the yearling across the
           high-wood scent—or leave it unused and recover with the rail or spear.
       - when:
+          - { has_flag: strategy_lure_committed }
+          - { has_flag: lure_hybrid_combat_entered }
+          - { not_flag: yearling_down }
+        text: >
+          Your first spear stroke committed the hybrid line. The yearling still holds the
+          gap; finish this fight, then carry the remaining feed deeper. Braced, split, and
+          drover scent recoveries are closed. The yard is south.
+      - when:
+          - { has_flag: strategy_lure_committed }
           - { has_flag: lure_trail_fouled }
+          - { has_flag: breach_braced }
+          - { not_flag: lure_hybrid_combat_entered }
+          - { not_flag: strategy_drive_committed }
+          - { not_flag: strategy_fortify_committed }
+          - { not_flag: yearling_down }
+          - { not_flag: yearling_redirected }
+        text: >
+          The first feed cast fouled, but the braced rail half-shuts the breach. Turn it
+          as a scent-pen and the yearling can leave alive on the remaining tallow. Strike
+          instead and commit the hybrid line. No second sack or repeated check.
+      - when:
+          - { has_flag: lure_trail_fouled }
+          - { not_flag: lure_hybrid_combat_entered }
           - { not_flag: yearling_down }
         text: >
           The first feed cast fouled in the breach. The yearling still stands and the
@@ -620,7 +671,8 @@ rooms:
         text: >
           The fallen rail is wedged hard across it: the broken paling is half-shut. The
           yearling still holds the narrowed gap, snarling, but must rush singly and slow.
-          Set the spear against it; the yard is south.
+          Outside a committed fouled lure this is a combat funnel, not a living turn: set
+          the spear against it. The yard is south.
       - when: [{ has_item: split_rail_guard }]
         text: >
           The young wolf still holds the broken paling. The rail did not brace the gap,
@@ -2337,7 +2389,12 @@ objects:
       - when: [{ has_flag: yearling_down }]
         text: "The first cast fouled here and the yearling lies dead. The remaining feed line continues toward the loft and the two wolves deeper in the byre."
       - when:
+          - { has_flag: lure_hybrid_combat_entered }
+          - { not_flag: yearling_down }
+        text: "The first spear stroke committed the hybrid line. Living scent recoveries are closed; finish the yearling, then carry the remaining feed toward the loft."
+      - when:
           - { has_flag: lure_trail_fouled }
+          - { not_flag: lure_hybrid_combat_entered }
           - { not_flag: yearling_down }
         text: "Oats and tallow smear the churned snow where the first cast fouled. There is no second sack; a bound split rail can pen the yearling onto what remains, or combat can clear the breach."
     interactions:
@@ -2503,6 +2560,7 @@ objects:
         conditions:
           - { has_item: split_rail_guard }
           - { has_flag: lure_trail_fouled }
+          - { not_flag: lure_hybrid_combat_entered }
           - { not_flag: yearling_down }
           - { not_flag: yearling_redirected }
         effects:
@@ -2531,6 +2589,7 @@ objects:
     visible_when:
       - { has_flag: drover_route_prepared }
       - { has_flag: lure_trail_fouled }
+      - { not_flag: lure_hybrid_combat_entered }
       - { not_flag: drover_route_attempted }
       - { not_flag: yearling_down }
       - { not_flag: yearling_redirected }
@@ -2541,6 +2600,7 @@ objects:
         conditions:
           - { has_flag: drover_route_prepared }
           - { has_flag: lure_trail_fouled }
+          - { not_flag: lure_hybrid_combat_entered }
           - { not_flag: drover_route_attempted }
           - { not_flag: yearling_down }
           - { not_flag: yearling_redirected }
@@ -2881,9 +2941,11 @@ objects:
   # The one skill_check this pack carries — added so the RPG mode is uniform (every
   # curated RPG pack now has at least one §13 check). It is a defence skill check, the
   # breaking_weir tool-on-target shape: wedge a fallen paling-rail back across the breach
-  # to shore the line. It remains OPTIONAL — no exit, win or ending turns on its flag —
-  # but it is no longer decorative: success unlocks the guarded funnel sequence against
-  # the flank-wolf. The frozen timber gives ONE honest wedge attempt. `rail_attempted` is
+  # to shore the line. The initial check remains OPTIONAL — no exit, win, or ending turns
+  # on its flag alone — but it is no longer decorative: ordinary success unlocks the
+  # guarded funnel sequence, while a committed fouled lure can consume that same brace as
+  # a deterministic scent-pen before combat starts. The frozen timber gives ONE honest
+  # wedge attempt. `rail_attempted` is
   # set before the d20 branch; failure sets `rail_split` and exposes a second, deterministic
   # target-only USE with the SAME stable `use_paling_rail` id. Binding the joined lengths
   # makes real, non-droppable `split_rail_guard` gear and a distinct recovered flank line;
@@ -2895,15 +2957,16 @@ objects:
   #     8, ~65%) and easier once the jerkin is on (d20 + 5, roll of 6). Well under the
   #     SKILL_CHECK_IMPOSSIBLE ceiling 20 + 5 = 25, so the check always reads as winnable.
   #   - on_success: breach_braced + journal + narration, NO persistent stat or score change.
-  #     The flag drives reactive prose and the flank-wolf's `funnel_thrust` maneuver, but no
-  #     exit/win/ending. Temporary maneuver defense never changes the pack's stored stats.
+  #     The flag drives reactive prose, the flank-wolf's `funnel_thrust`, and only inside an
+  #     unbloodied fouled lure the separate scent-pen action; the flag alone satisfies no
+  #     exit/win/ending. Temporary maneuver defense never changes stored stats.
   #   - on_failure: the rail splits. The guarded funnel is lost, but the explicitly
   #     signposted choice either salvages a weaker carried guard or, with Hayden's report,
   #     keeps the spear bare for a high-variance door-brace line.
   - id: paling_rail
     name: "fallen paling-rail"
     aliases: [rail, paling-rail, post, stake, timber, bar]
-    description: "A stout length of the broken paling, splintered off at one end but seasoned and sound — the kind of heavy timber a man could wedge across a gap to half-shut it, so what comes through must come singly."
+    description: "A stout broken-paling timber. On an ordinary hunt it half-shuts the gap as a combat funnel; it neither spares nor redirects the yearling. Only a committed lure after a fouled cast can turn the brace into a living recovery."
     # The rail is real scenery while loose, split, or wedged into the breach. Once the
     # split lengths become carried gear, the sticky made flag retires this world object;
     # the room text narrates the empty bed and later spent guard without leaving a stale
@@ -2919,6 +2982,11 @@ objects:
         name: "canted paling-rail"
         text: "The paling-rail rests canted after you wrenched out its hardwood brace-stake at the byre door. The saved stake rides against your spear now."
       - when:
+          - { has_flag: lure_hybrid_combat_entered }
+          - { not_flag: yearling_down }
+        name: "combat paling-rail"
+        text: "The first spear stroke closed every living scent turn. Whatever its loose, split, or braced state, leave this timber; the committed fight is now the only way through."
+      - when:
           - { has_flag: works_fortification_splice_needed }
           - { has_flag: rail_split }
         name: "marked split paling-rail"
@@ -2926,9 +2994,21 @@ objects:
           Reese's first measured set split the frozen rail, but ink still joins the
           marked splice across both lengths. Cold-set it now without another roll. The
           hammering will restore the half-shut breach and raise cattle alarm by 1.
+      - when:
+          - { has_flag: strategy_lure_committed }
+          - { has_flag: lure_trail_fouled }
+          - { has_flag: breach_braced }
+          - { not_flag: lure_hybrid_combat_entered }
+          - { not_flag: yearling_down }
+          - { not_flag: yearling_redirected }
+        name: "braced scent-pen"
+        text: >
+          The rail half-shuts the breach beside the fouled feed. Turn it across the open
+          side now and the yearling has one living exit: away from the cattle and onto
+          the remaining tallow. This spends no second roll and draws no blood.
       - when: [{ has_flag: breach_braced }]
         name: "braced paling-rail"
-        text: "The fallen paling-rail, wedged hard across the breach now and stamped home — the gap half-shut, so what comes through the paling must come singly and slow."
+        text: "The fallen paling-rail is wedged hard across the breach. Without an unbloodied fouled lure, it is a combat funnel: the half-shut gap makes each rush come singly and slow."
       - when:
           - { has_flag: hayden_frost_report_certified }
           - { has_flag: rail_split }
@@ -2956,6 +3036,7 @@ objects:
         command_verb: set
         conditions:
           - { has_flag: works_fortification_prepared }
+          - { not_flag: lure_hybrid_combat_entered }
           - { not_flag: rail_attempted }
           - { not_flag: breach_braced }
           - any_of:
@@ -2996,6 +3077,7 @@ objects:
         command_verb: wedge
         conditions:
           - { not_flag: works_fortification_prepared }
+          - { not_flag: lure_hybrid_combat_entered }
           - { not_flag: rail_attempted }
           - { not_flag: breach_braced }
           - any_of:
@@ -3023,6 +3105,7 @@ objects:
         command_verb: splice
         conditions:
           - { has_flag: works_fortification_prepared }
+          - { not_flag: lure_hybrid_combat_entered }
           - { has_flag: works_fortification_splice_needed }
           - { has_flag: rail_split }
           - { not_flag: breach_braced }
@@ -3037,6 +3120,34 @@ objects:
               You overlap the inked lengths, turn the split against the post, and hammer
               the cold splice until both halves bite. The half-shut breach is restored.
               Behind it the herd answers every blow, and cattle alarm rises by 1.
+      # A successful wedge must not force blood while the authored split-rail failure can
+      # redirect alive. This second stable USE exists only inside a previously committed
+      # lure after its one feed check fouled. The brace becomes a scent-pen, not a second
+      # check or a general-purpose noncombat answer for ordinary hunt-and-hold. Jamie's
+      # paid protocol remains a deliberately split-recovery-specific failure mitigator.
+      - verb: USE
+        target: paling_rail
+        command_verb: turn
+        conditions:
+          - { has_flag: strategy_lure_committed }
+          - { has_flag: lure_trail_fouled }
+          - { has_flag: breach_braced }
+          - { not_flag: strategy_drive_committed }
+          - { not_flag: strategy_fortify_committed }
+          - { not_flag: lure_hybrid_combat_entered }
+          - { not_flag: yearling_down }
+          - { not_flag: yearling_redirected }
+        effects:
+          - set_flag: yearling_redirected
+          - set_flag: yearling_redirected_with_braced_rail
+          - inc_var: { name: score, by: 10 }
+          - set_quest_stage: { quest: the_watch, stage: breach_redirected }
+          - add_journal: "You turn the braced rail into a scent-pen. The yearling follows the remaining feed alive and no blood is drawn."
+          - narrate: >
+              You shoulder the brace across the yearling's open side without striking.
+              Timber closes the cattle path; the only gap lies over smeared tallow. The
+              wolf catches the scent and bolts alive into the high wood. No spear follows;
+              the fouled cast's cattle pressure remains.
       # Recoverable failure: target-only again, therefore the stable action id remains
       # `use_paling_rail`. Mutually exclusive with the initial wedge and with itself.
       - verb: USE
@@ -3044,6 +3155,7 @@ objects:
         command_verb: bind
         conditions:
           - { not_flag: works_fortification_prepared }
+          - { not_flag: lure_hybrid_combat_entered }
           - { has_flag: rail_split }
           - { not_flag: split_rail_guard_made }
           - { not_item: split_rail_guard }
@@ -3099,7 +3211,8 @@ npcs:
           npc_text: >
             You came from Albany awake—good. Three wolves are through; without these cattle
             we starve. Ask for either lesson—or both before you go: quick spear-hand or
-            guarded byre plan. Or hear the living lure, signal drive, or seal-and-outlast line.
+            guarded spear-fighting plan. Or hear the living lure, signal drive, or
+            seal-and-outlast line.
           variants:
             - when:
                 - { has_flag: strategy_drive_committed }
@@ -3135,18 +3248,18 @@ npcs:
             - when: [{ has_flag: heard_counsel }, { has_flag: heard_plan }]
               text: >
                 Both lessons are yours. You do not choose a road here: commit to the quick
-                or guarded line later, at the wolves, when each opening makes the choice
-                real. Leave now and hold the byre.
+                or guarded combat line later, at the wolves, when each opening makes the
+                choice real. Living plans must be committed before you enter the breach.
             - when: [{ has_flag: heard_counsel }, { not_flag: heard_plan }]
               text: >
-                You have the quick spear-hand. The guarded byre plan is still yours to
-                learn: rail, breach, and patient line. Ask for it—or leave, and commit later
-                at the wolves.
+                You have the quick spear-hand. The guarded spear-fighting plan is still
+                yours to learn: rail, breach, and patient line. Ask for it—or leave and
+                accept that crossing without a living commitment means hunt-and-hold.
             - when: [{ has_flag: heard_plan }, { not_flag: heard_counsel }]
               text: >
-                You have the guarded byre plan. The quick spear-hand is still yours to
-                learn: set, wheel, and violent close. Ask for it—or leave, and commit later
-                at the wolves.
+                You have the guarded spear-fighting plan. The quick spear-hand is still
+                yours to learn: set, wheel, and violent close. Ask for it—or leave and
+                accept that crossing without a living commitment means hunt-and-hold.
           topics:
             - id: wolves
               aliases: [ask_wolves]
@@ -3159,7 +3272,7 @@ npcs:
               goto: cade_wolves
             - id: byre
               aliases: [ask_byre]
-              prompt: "Ask for Cade's guarded byre plan."
+              prompt: "Ask for Cade's guarded spear-fighting plan."
               conditions:
                 - { not_flag: heard_plan }
                 - { not_flag: strategy_lure_committed }
@@ -3195,7 +3308,7 @@ npcs:
               goto: cade_fortify
             - id: leave
               aliases: [leave_cade]
-              prompt: "Leave old Cade and hold the byre."
+              prompt: "Leave Cade. Entering the breach without feed, drive, or seals commits hunt-and-hold."
               end: true
         - id: cade_wolves
           # The combat_guaranteed promise spoken aloud — and TRUE, because the validator
@@ -3218,7 +3331,7 @@ npcs:
           topics:
             - id: byre
               aliases: [ask_byre]
-              prompt: "Ask next for Cade's guarded byre plan."
+              prompt: "Ask next for Cade's guarded spear-fighting plan."
               conditions:
                 - { not_flag: heard_plan }
                 - { not_flag: strategy_lure_committed }
@@ -3257,17 +3370,17 @@ npcs:
               goto: cade_root
             - id: leave
               aliases: [leave_cade]
-              prompt: "Leave old Cade and hold the byre."
+              prompt: "Leave Cade. Entering the breach without feed, drive, or seals commits hunt-and-hold."
               end: true
         - id: cade_byre
           npc_text: >
-            Guarded lines: at the fallen rail, wedge it back across to half-shut the
-            breach—a guarded funnel. If it splits, bind the lengths across your spear. At
-            old grey, wait out her lie, then take the true rush: the patient alternative
+            Guarded spear line: wedge the rail to half-shut the breach as a combat funnel;
+            if it splits, bind a guard across your spear. Neither turns a wolf alive. At
+            old grey, wait out the feint and take the true rush—the patient alternative
             to closing early.
           effects:
             - set_flag: heard_plan
-            - add_journal: "Cade's guarded/patient: wedge the fallen rail; if it splits, bind the joined lengths. Wait out grey's feint; take true rush."
+            - add_journal: "Cade's guarded/patient combat: wedge rail; if split, bind. Neither turns a wolf alive. Wait out grey; take true rush."
           topics:
             - id: wolves
               aliases: [ask_wolves]
@@ -3310,7 +3423,7 @@ npcs:
               goto: cade_root
             - id: leave
               aliases: [leave_cade]
-              prompt: "Leave old Cade and hold the byre."
+              prompt: "Leave Cade. Entering the breach without feed, drive, or seals commits hunt-and-hold."
               end: true
         - id: cade_lure
           npc_text: >
@@ -3540,6 +3653,56 @@ npcs:
               prompt: "Leave Cade and begin the committed public fortification."
               end: true
 
+  # Before the first paling visit, June makes the ordinary hunt's commitment boundary
+  # explicit. The player can still ask Cade for any living strategy without speaking to
+  # her; only an uncommitted north crossing waits for this acknowledgement. This prevents
+  # the rail's defensive vocabulary from silently masquerading as a bloodless route.
+  - id: june_pike_combat_boundary
+    name: "Road Warden June Pike"
+    description: >
+      June Pike holds the byre-yard's north gate with her cattle rope across the latch.
+      Her Albany authority is cattle-first; she will not let a guarded spear tactic pass
+      for a living-pack plan without naming the consequence first.
+    room: byre_yard
+    conditions:
+      - { has_flag: june_pike_present }
+      - { not_flag: june_blood_condition_broken }
+      - { not_flag: june_combat_line_acknowledged }
+      - { not_flag: strategy_lure_committed }
+      - { not_flag: strategy_drive_committed }
+      - { not_flag: strategy_fortify_committed }
+      - { not_visited: paling_gap }
+    dialogue:
+      root: june_wolf_line_boundary
+      nodes:
+        - id: june_wolf_line_boundary
+          npc_text: >
+            Hear this before you cross. Cade's rail is a spear funnel, not a living turn.
+            Commit feed, drive, or seals here and our terms hold. Cross without one and
+            you choose hunt-and-hold; first wolf down ends our agreement.
+          topics:
+            - id: acknowledge_combat_line
+              aliases: [accept_wolf_line, choose_hunt_and_hold]
+              prompt: "Acknowledge that crossing north uncommitted chooses hunt-and-hold and first wolf death ends June's agreement."
+              goto: june_combat_line_disclosed
+            - id: keep_cattle_terms
+              aliases: [choose_living_plan, ask_cade]
+              prompt: "Keep June's terms and ask Cade here for the feed lure, pack drive, or joined-seal plan."
+              end: true
+        - id: june_combat_line_disclosed
+          npc_text: >
+            Exact: wedge or bind for a safer spear line, but neither spares the yearling
+            on an ordinary hunt. I take cattle. Cade's living plans close when you cross.
+            Once a wolf falls, I return alone.
+          effects:
+            - set_flag: june_combat_line_acknowledged
+            - add_journal: "June: ordinary rail means combat. Cross without a living plan and choose hunt-and-hold; first wolf death ends her agreement."
+          topics:
+            - id: leave_june_boundary
+              aliases: [cross_to_paling, leave_june]
+              prompt: "End the exchange; the north gate is open, and Cade's living commitments remain available until you cross."
+              end: true
+
   # June is an optional campaign companion, never a direct-start assumption or
   # another combatant. She appears only after the failed lure has been recovered
   # alive through both younger wolves. Speaking to her triggers the independent
@@ -3714,6 +3877,20 @@ enemies:
     # The first fight teaches the two-beat surface with a readable, forgiving set
     # and drive. Neither temporary bonus enters persistent stats or the score economy.
     maneuvers:
+      - id: commit_hybrid_strike
+        command: "make a guarded strike and abandon the living recovery"
+        conditions:
+          - { has_item: relief_spear }
+          - { has_flag: strategy_lure_committed }
+          - { has_flag: lure_trail_fouled }
+          - { not_flag: lure_hybrid_combat_entered }
+        result_flag: lure_hybrid_combat_entered
+        attack_bonus: 0
+        defense_bonus: 1
+        narration: >
+          You abandon the scent and strike behind the spear's guard. Whether this stroke
+          drops the yearling or opens the fight, the hybrid line is committed; rail and
+          drover turns are closed. Carry the feed deeper once the breach clears.
       - id: set_spear
         command: "set the Albany relief spear against the yearling's rush"
         conditions: [{ has_item: relief_spear }, { not_flag: strategy_lure_committed }]
@@ -4231,7 +4408,7 @@ endings:
       - when: [{ has_flag: june_pike_present }, { has_flag: june_blood_condition_broken }]
         text: >
           Grey dawn finds the yearling dead and the other two wolves alive beyond the
-          scent line. First blood ended June Pike's field agreement before the inner
+          scent line. The first wolf death ended June Pike's field agreement before the inner
           rail; two cattle are missing, and her separate return names both the broken
           condition and the herd's cost. *** You have won, by a mixed line and with loss. ***
   - id: ending_pack_diverted_cattle_scattered

@@ -90,7 +90,8 @@ describe("bug_0256 — The Wolf-Winter: the braced breach has a legible, stat-ne
     const both = roomDescription(room, stateWithFlags(pack, ["yearling_down", "breach_braced"]));
 
     // (4) neither flag → base description: the live wolf, the loose rail in the snow.
-    expect(base).toContain("first of the pack through");
+    expect(base).toContain("hungry young wolf");
+    expect(base).toContain("combat funnel");
     expect(base).not.toContain("wedged");
 
     // (3) braced before the kill → the wolf still holds the gap, but the breach is wedged.

@@ -354,7 +354,7 @@ function wolfJuneCampaignWitnesses(index: RpgIndex): {
     ["june_pike_present"],
     [
       ...startFouled,
-      ["attack_yearling_wolf", "best"],
+      ["maneuver_yearling_wolf_commit_hybrid_strike", "best"],
       ["attack_yearling_wolf", "best"],
       "go_south",
       "go_west",
@@ -619,6 +619,8 @@ function wolfCampaignImportWitnesses(index: RpgIndex): {
     "go_north",
     ["use_winter_feed_sack_on_downwind_feed_line", "worst"],
   ];
+  run([], [...startFouled, ["use_paling_rail", "best"], "use_paling_rail"]);
+  run([], [...startFouled, ["maneuver_yearling_wolf_commit_hybrid_strike", "worst"]]);
   run("drover_route_prepared", startFouled);
   run("relief_protocol_prepared", [
     ...startFouled,
@@ -677,17 +679,22 @@ function wolfCampaignImportWitnesses(index: RpgIndex): {
     "room:fodder_loft#1",
     "room:byre_door#8",
     "room:byre_door#23",
-    "room:paling_gap#7",
+    "room:paling_gap#8",
     "object:drover_route_marks@present",
-    "room:paling_gap#15",
-    "room:paling_gap#21",
-    "room:paling_gap#26",
+    "room:paling_gap#18",
+    "room:paling_gap#24",
+    "room:paling_gap#29",
     "room:byre_door#25",
-    "object:paling_rail#4",
+    "object:paling_rail#6",
     "room:byre_door#21",
     "room:byre_door#7",
     "room:byre_door#6",
+    "object:paling_rail#3",
+    "room:paling_gap#4",
+    "room:paling_gap#9",
+    "room:paling_gap#10",
     "object:paling_rail#2",
+    "object:paling_rail#4",
     "room:byre_yard#1",
     "object:relief_protocol_docket@present",
     "room:steading_yard#2",

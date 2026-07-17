@@ -82,14 +82,16 @@ describe("bug_0504 — Wolf-Winter clues are complementary rather than contradic
     const fortify = node("cade_fortify")?.npc_text ?? "";
 
     expect(root?.npc_text).toMatch(
-      /either lesson[^]*or both before you go[^]*quick spear-hand[^]*guarded byre plan/i,
+      /either lesson[^]*or both before you go[^]*quick spear-hand[^]*guarded spear-fighting plan/i,
     );
     expect(root?.npc_text).not.toMatch(/two roads/i);
     expect(root?.npc_text).toMatch(/living lure[^]*signal drive[^]*seal-and-outlast line/i);
     expect(root?.topics.find((topic) => topic.id === "wolves")?.prompt).toMatch(
       /quick spear-hand/i,
     );
-    expect(root?.topics.find((topic) => topic.id === "byre")?.prompt).toMatch(/guarded byre plan/i);
+    expect(root?.topics.find((topic) => topic.id === "byre")?.prompt).toMatch(
+      /guarded spear-fighting plan/i,
+    );
     expect(root?.topics.find((topic) => topic.id === "fortify")?.prompt).toMatch(
       /seal the byre[^]*outlast the living pack[^]*dawn/i,
     );
@@ -99,7 +101,7 @@ describe("bug_0504 — Wolf-Winter clues are complementary rather than contradic
     expect(quick).toMatch(/jerkin[^]*both[^]*no wolf[^]*pull you down/i);
     expect(quick).not.toMatch(/wait[^]*true rush|wedge[^]*rail/i);
 
-    expect(guarded).toMatch(/Guarded lines[^]*rail[^]*wedge[^]*guarded funnel/i);
+    expect(guarded).toMatch(/Guarded spear line[^]*wedge[^]*rail[^]*combat funnel/i);
     expect(guarded).toMatch(/splits[^]*bind/i);
     expect(guarded).toMatch(/wait[^]*true rush[^]*patient alternative[^]*closing early/i);
     expect(guarded).not.toMatch(/\bset\b[^]*\bdrive\b|\bwheel\b[^]*\bturn\b/i);
@@ -128,7 +130,7 @@ describe("bug_0504 — Wolf-Winter clues are complementary rather than contradic
     expect(activeDialogue(index, state)?.node.id).toBe("cade_root");
     observation = buildRpgObservation(index, state);
     expect(observation.dialogue?.npc_text).toMatch(
-      /quick spear-hand[^]*guarded byre plan is still yours to learn[^]*Ask for it/i,
+      /quick spear-hand[^]*guarded spear-fighting plan is still yours to learn[^]*Ask for it/i,
     );
     expect(dialogueActionIds(state)).toEqual([
       "ask_byre",
@@ -141,7 +143,7 @@ describe("bug_0504 — Wolf-Winter clues are complementary rather than contradic
 
     const guarded = takeAction(state, "ask_byre");
     state = guarded.state;
-    expect(narration(guarded.events)).toMatch(/Guarded lines[^]*patient alternative/i);
+    expect(narration(guarded.events)).toMatch(/Guarded spear line[^]*patient alternative/i);
     expect(activeDialogue(index, state)?.node.id).toBe("cade_root");
     observation = buildRpgObservation(index, state);
     expect(observation.dialogue?.npc_text).toMatch(
@@ -160,7 +162,7 @@ describe("bug_0504 — Wolf-Winter clues are complementary rather than contradic
 
     let observation = buildRpgObservation(index, state);
     expect(observation.dialogue?.npc_text).toMatch(
-      /guarded byre plan[^]*quick spear-hand is still yours to learn[^]*Ask for it/i,
+      /guarded spear-fighting plan[^]*quick spear-hand is still yours to learn[^]*Ask for it/i,
     );
     expect(dialogueActionIds(state)).toEqual([
       "ask_wolves",

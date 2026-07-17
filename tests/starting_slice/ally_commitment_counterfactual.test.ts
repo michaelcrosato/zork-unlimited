@@ -333,7 +333,7 @@ describe("SS-F04 — Albany ally commitment counterfactual", () => {
     expect(lost.view().serviceOffers).toEqual([]);
     expect(
       lost.view().characters.find((character) => character.id === ALLY.contact)?.summary,
-    ).toMatch(/field seat is empty[^]*crossed into combat[^]*cattle-first field agreement/i);
+    ).toMatch(/field seat is empty[^]*first wolf death[^]*ended the cattle-first field agreement/i);
     expect(OverworldSession.restore(WORLD, lost.snapshot()).snapshot()).toEqual(lost.snapshot());
   });
 
@@ -354,6 +354,189 @@ describe("SS-F04 — Albany ally commitment counterfactual", () => {
     ).toContain("albany:memory_june_solo_dispatch_chosen");
 
     expect(relay.snapshot().character).not.toEqual(solo.snapshot().character);
+  });
+
+  it("carries the disclosed braced-lure recovery through real field play and Albany foldback", () => {
+    const campaign = selectAlly(ACCEPT).snapshot();
+    const api = createToolApi({ root: process.cwd() });
+    const restored = api.restore_overworld_session({ ...FULL, snapshot: campaign });
+    const launched = api.start_overworld_session_quest({
+      ...FULL,
+      compact_actions: false,
+      compact_observation: false,
+      include_actions: true,
+      session_id: restored.session_id,
+      quest_id: WOLF.id,
+      approach_id: SHELTERED,
+      seed: 3,
+    });
+    const rpgSessionId = launched.rpg_session_id;
+    const launchedCharacter = api.export_overworld_session({
+      session_id: restored.session_id,
+    }).snapshot.character;
+    const browser = GameSession.startEmbedded(
+      WOLF_SOURCE,
+      launchedCharacter,
+      WOLF.campaign_imports,
+      3,
+    );
+    expect(browser.view().stateHash).toBe(api.sessions.get(rpgSessionId).stateHash);
+
+    const step = (actionId: string) => {
+      const primary = api.step_action({
+        session_id: rpgSessionId,
+        action_id: actionId,
+        compact_observation: false,
+        compact_events: false,
+      });
+      expect(primary.ok, primary.rejection_reason).toBe(true);
+      const ui = browser.choose(actionId);
+      expect(ui.ok, ui.rejection ?? undefined).toBe(true);
+      expect(browser.view().stateHash).toBe(api.sessions.get(rpgSessionId).stateHash);
+      return primary;
+    };
+
+    step("use_sheltered_stockway_last_mile");
+    const boundary = api.get_observation({
+      session_id: rpgSessionId,
+      compact_observation: false,
+      hide_graph: true,
+    });
+    expect(boundary.observation.description).toMatch(
+      /spear-fighting funnel[^]*not a living turn[^]*any wolf death ends/i,
+    );
+    expect(boundary.observation.available_actions.map((action) => action.id)).toContain(
+      "talk_june_pike_combat_boundary",
+    );
+    expect(boundary.observation.available_actions.map((action) => action.id)).not.toContain(
+      "go_north",
+    );
+    expect(browser.view().text).toMatch(/spear-fighting funnel[^]*any wolf death ends/i);
+    expect(browser.view().choices.map((choice) => choice.id)).not.toContain("go_north");
+
+    const boundarySave = api.save_game({
+      session_id: rpgSessionId,
+      include_source: true,
+      include_content_hash: true,
+    });
+    const boundaryLoaded = api.load_game({
+      save: boundarySave.save,
+      compact_observation: false,
+    });
+    expect(api.get_state({ session_id: boundaryLoaded.session_id }).state_hash).toBe(
+      api.sessions.get(rpgSessionId).stateHash.slice(0, 24),
+    );
+    const boundaryCompact = api.get_observation({
+      session_id: boundaryLoaded.session_id,
+      compact_observation: true,
+      hide_graph: true,
+    });
+    expect(boundaryCompact.context.text).toMatch(/spear-fighting funnel[^]*any wolf death ends/i);
+
+    step("talk_june_pike_combat_boundary");
+    const dialogueCompact = api.get_observation({
+      session_id: rpgSessionId,
+      compact_observation: true,
+      hide_graph: true,
+    });
+    expect(dialogueCompact.context.dialogue?.[1]).toMatch(
+      /spear funnel[^]*not a living turn[^]*first wolf down ends our agreement/i,
+    );
+    step("ask_keep_cattle_terms");
+    expect(api.list_legal_actions({ session_id: rpgSessionId }).actions).not.toContain("go_north");
+
+    for (const actionId of [
+      "talk_houndsman",
+      "ask_lure",
+      "ask_commit_lure",
+      "ask_leave",
+      "go_west",
+      "take_winter_feed_sack",
+      "go_east",
+      "go_north",
+      "use_winter_feed_sack_on_downwind_feed_line",
+    ]) {
+      step(actionId);
+    }
+    let state = api.get_state({ session_id: rpgSessionId, include_state: true });
+    expect(state.state.flags.lure_trail_fouled).toBe(true);
+    expect(state.state.flags.june_blood_condition_broken).not.toBe(true);
+
+    step("use_paling_rail");
+    state = api.get_state({ session_id: rpgSessionId, include_state: true });
+    expect(state.state.flags.breach_braced).toBe(true);
+    expect(state.state.flags.yearling_redirected).not.toBe(true);
+    const bracedActions = api.list_legal_actions({
+      session_id: rpgSessionId,
+      compact_actions: false,
+    }).actions;
+    expect(bracedActions.find((action) => action.id === "use_paling_rail")?.command).toMatch(
+      /turn.*braced scent-pen/i,
+    );
+    expect(browser.view().choices.find((choice) => choice.id === "use_paling_rail")?.label).toMatch(
+      /turn.*braced scent-pen/i,
+    );
+
+    const bracedSave = api.save_game({
+      session_id: rpgSessionId,
+      include_source: true,
+      include_content_hash: true,
+    });
+    const bracedLoaded = api.load_game({
+      save: bracedSave.save,
+      compact_observation: true,
+      include_actions: true,
+    });
+    expect(api.get_state({ session_id: bracedLoaded.session_id }).state_hash).toBe(
+      state.state_hash,
+    );
+    expect(bracedLoaded.context.actions).toContain("use_paling_rail");
+
+    step("use_paling_rail");
+    state = api.get_state({ session_id: rpgSessionId, include_state: true });
+    expect(state.state.flags).toMatchObject({
+      yearling_redirected: true,
+      yearling_redirected_with_braced_rail: true,
+    });
+    expect(state.state.flags.june_blood_condition_broken).not.toBe(true);
+
+    let completion: ReturnType<typeof step> | null = null;
+    for (const actionId of [
+      "go_south",
+      "go_west",
+      "go_up",
+      "use_winter_feed_sack_on_loft_hatch",
+      "go_east",
+      "go_north",
+      "talk_june_pike",
+      "ask_acknowledge",
+      "use_winter_feed_sack_on_outer_scent_gate",
+      "go_north",
+    ]) {
+      completion = step(actionId);
+    }
+    expect(completion?.questCompletion?.endingId).toBe("ending_pack_diverted");
+    expect(completion!.journey!.acceptedDecisions).toBeLessThanOrEqual(45);
+
+    const folded = api.export_overworld_session({
+      session_id: restored.session_id,
+    }).snapshot;
+    expect(folded.questOutcomes).toContainEqual([WOLF.id, "ending_pack_diverted"]);
+    expect(folded.character.companions).toContain(JUNE);
+    expect(folded.character.promises.find((promise) => promise.promiseId === PROMISE)?.status).toBe(
+      "kept",
+    );
+    expect(
+      folded.character.relationships.find((relationship) => relationship.npcId === JUNE)?.memories,
+    ).toContain("albany:memory_june_held_cattle_line");
+    expect(
+      api
+        .get_overworld_session({
+          session_id: restored.session_id,
+          include_observation: true,
+        })
+        .observation.serviceOffers.map((offer) => offer.id),
+    ).toEqual(["albany:june_kept_line_station_resupply"]);
   });
 
   it("imports the same ally state into full MCP, compact MCP, and the browser engine", () => {

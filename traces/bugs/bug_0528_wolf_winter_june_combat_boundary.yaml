@@ -1,0 +1,72 @@
+id: bug_0528
+title: "Wolf-Winter hid June's combat boundary and inverted the failed-lure rail recovery"
+pack: content/rpg/quests/wolf_winter.yaml
+reported_by: three consecutive canonical pure blind playtests
+reports:
+  - blind-tester/reports/20260716T160929Z_overworld_seed2811.md
+  - blind-tester/reports/20260716T162128Z_overworld_seed2812.md
+  - blind-tester/reports/20260716T181847Z_overworld_seed2813.md
+  - blind-tester/reports/20260717T033956Z_gpt-5-3-codex-spark_seed2825.md
+  - blind-tester/reports/20260717T044605Z_gpt-5-3-codex-spark_seed2850.md
+severity: S2
+symptom: >
+  Players who accepted June Pike's cattle-first, no-wolf-killing agreement read
+  Cade's guarded rail as a living or defensive tactic. Crossing into the paling
+  silently retired lure, drive, and fortification, while an ordinary rail could
+  only lead into hunt-and-hold combat. Worse, after a correctly committed lure
+  fouled its one feed cast, a failed rail could be bound into a living recovery
+  but a successful brace itself supplied no living rail recovery. The
+  apparently better rail result therefore pushed the player toward the first
+  wolf death, June's departure, and a broken Albany promise.
+root_cause: >
+  The last pre-paling surface did not distinguish Cade's guarded combat lesson
+  from the three living strategy commitments, even though every commitment was
+  gated by not having visited the paling. The failed-lure recovery authored a
+  scent turn only for `rail_split` plus a bound guard; the successful
+  `breach_braced` state had no equivalent interaction. Generic paling prose and
+  reused rail commands concealed both facts.
+fix: >
+  With June present and no strategy committed, hold the north gate in the
+  byre-yard. June now states that the ordinary rail is a spear-fighting funnel,
+  that crossing uncommitted chooses hunt-and-hold, and that the first wolf death ends her
+  agreement. Keeping cattle-first terms leaves Cade and all three living plans
+  available; explicit acknowledgement alone opens the ordinary combat crossing.
+  On a committed fouled lure, a successful rail now exposes one second,
+  target-only `turn braced scent-pen` action that redirects the yearling alive,
+  records distinct braced-rail provenance, and mirrors the existing split-guard
+  recovery without a new check, retry, blood event, or alarm reduction. Narrow
+  conditions keep the ordinary rail combat-only. The first spear choice after a
+  fouled lure is now an explicit guarded hybrid maneuver: its one-round +1 defense
+  is authored and nonpersistent, its result flag retires every rail, split-guard,
+  and Drover living recovery, and ordinary attacks resume until wolf death.
+deterministic_witnesses:
+  - june_boundary: "same accepted June contract in the byre-yard before any strategy commitment"
+    keep_terms: "north remains blocked, no combat or death flag is set, and Cade plus lure, drive, and fortify remain available"
+    acknowledge: "only `june_combat_line_acknowledged` is set; north opens and the ordinary rail still offers combat actions only"
+    solo_control: "north retains the original legal route and no June prose, NPC, journal, or flag appears"
+  - paired_failed_lure: "same committed lure, fouled first cast, no wolf death, and two rail outcomes"
+    successful_rail: "first use sets `breach_braced`; second same-id action turns the braced scent-pen and records `yearling_redirected_with_braced_rail`"
+    failed_rail: "the existing bind-plus-split-guard scent recovery records `yearling_redirected_with_split_guard`"
+    result: "both routes redirect the yearling alive with the same score, stage, alarm, and living-pack ending; neither exposes an attack-free recovery outside the failed committed lure"
+  - irreversible_hybrid: "same fouled lure with braced, split-guard, Drover, or still-loose rail recovery available before the first spear choice"
+    result: "the guarded commitment sets `lure_hybrid_combat_entered`, grants only +1 defense for that round, leaves June's death condition intact while the wolf lives, retires every living recovery and inert rail action, then exposes ordinary attack until the wolf dies and June's condition breaks"
+  - preparation_composition: "same fouled lure after Reese's Works packet"
+    result: "both the successful Repair set and failed Repair followed by its cold-splice recovery expose the braced scent-pen; the failed preparation retains its +1 alarm complication"
+  - full_foldback: "real Albany June selection, Wolf-Winter launch, boundary choice, fouled lure, successful brace, scent-pen turn, living completion, and return replay"
+    result: "full/compact MCP, browser, save/load, quest outcome, companion, promise, June memory, and one-time Station service agree; the journey remains within its decision budget"
+tests:
+  - tests/starting_slice/ally_content_gameplay.test.ts
+  - tests/starting_slice/wolf_strategy_counterfactual.test.ts
+  - tests/starting_slice/preparation_profile_gameplay.test.ts
+  - tests/starting_slice/ally_commitment_counterfactual.test.ts
+  - tests/regression/wolf_winter_combat_tactics.test.ts
+  - tests/regression/wolf_winter_wedge_signposted.test.ts
+  - tests/regression/wolf_winter_braced_breach_legible.test.ts
+  - tests/regression/wolf_winter_compact_surface.test.ts
+  - tests/regression/rpg_variant_liveness.test.ts
+verification:
+  - "Wolf-Winter pack validation passes with zero errors or warnings; compact projection passes 13/13 with every new room, dialogue, journal, action, and narration under its real budget."
+  - "The exact one-copy world migration and every trusted historical era pass `june_return_copy_migration_integrity.test.ts` plus the seven-file migration suite; forged predecessor presentation and adjacent unknown hashes reject."
+  - "The focused boundary, paired recovery, preparation, foldback, combat-control, and prose regression set passes 53/53; exhaustive ending reachability passes 13/13."
+  - "The concrete Wolf-Winter import witness passes 1/1 and credits the new braced-opportunity, braced-result, irreversible-hybrid, and rail-object variants."
+  - "Final-world canonical pure/fresh Spark seed 2850 completed the all-three-wolves-alive lure, continued twice, completed The Gallowmere, and ended honestly at decision 58 with clarity/enjoyment 4/4, no stuck state, replay intent, and no declared bug. Its evidence binds the corrected 696049 world manifest; deterministic witnesses carry the repaired failed-lure, hybrid, and June-return branches."

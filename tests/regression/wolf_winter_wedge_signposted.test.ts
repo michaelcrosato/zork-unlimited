@@ -20,11 +20,12 @@
  *       returns to Cade's post-effect root, so the affordance is discoverable naturally;
  *   (2) DISCOVERABILITY — at the paling, target-only USE "wedge" is immediately legal and
  *       TAKE is not; the affordance cannot hide behind inventory ceremony;
- *   (3) OPTIONAL TACTICAL PAYOFF — no exit/win/ending turns on breach_braced, but success
- *       now earns the flank-wolf's guarded opening, so the check is meaningful.
+ *   (3) CONTEXTUAL PAYOFF — breach_braced alone satisfies no exit/win/ending. Ordinary
+ *       success earns the flank-wolf's guarded opening; only an unbloodied committed
+ *       fouled lure can consume the brace as a separate deterministic scent-pen.
  *
  * If a future edit drops the signpost, re-gates the wedge behind inventory ceremony, or
- * makes breach_braced a route/ending gate, a case flips RED.
+ * makes breach_braced alone a route/ending gate, a case flips RED.
  */
 import { describe, it, expect } from "vitest";
 import { makeStep } from "../../src/core/engine.js";
@@ -86,7 +87,7 @@ function driver(rules: ReturnType<typeof setup>["rules"], step: ReturnType<typeo
 }
 
 describe("bug_0258 — The Wolf-Winter: the optional wedge is signposted and discoverable", () => {
-  it("Cade's byre counsel names the rail, the wedge, and the half-shut-breach payoff", () => {
+  it("Cade names the rail as a guarded combat tactic rather than a living route", () => {
     const { pack } = setup();
     const cade = pack.npcs.find((n) => n.id === "houndsman");
     expect(cade, "old Cade must exist").toBeTruthy();
@@ -96,7 +97,9 @@ describe("bug_0258 — The Wolf-Winter: the optional wedge is signposted and dis
     expect(text).toContain("rail");
     expect(text).toContain("wedge");
     expect(text).toContain("breach");
-    expect(text).toContain("guarded funnel");
+    expect(text).toContain("guarded spear line");
+    expect(text).toContain("combat funnel");
+    expect(text).toContain("neither turns a wolf alive");
     expect(text).toContain("splits");
     expect(text).toContain("bind");
   });
@@ -127,21 +130,24 @@ describe("bug_0258 — The Wolf-Winter: the optional wedge is signposted and dis
       .flatMap((event) => (event.type === "narration" ? [event.text] : []))
       .join(" ")
       .toLowerCase();
-    expect(spoken).toContain("wedge it back across");
+    expect(spoken).toContain("wedge the rail");
     expect(spoken).toContain("half-shut the breach");
+    expect(spoken).toContain("combat funnel");
+    expect(spoken).toContain("neither turns a wolf alive");
 
     const obs = buildRpgObservation(index, d.state());
     expect(activeDialogue(index, d.state())?.node.id).toBe("cade_root");
     expect(obs.dialogue?.npc_text).toMatch(
-      /guarded byre plan[^]*quick spear-hand is still yours to learn[^]*Ask for it/i,
+      /guarded spear-fighting plan[^]*quick spear-hand is still yours to learn[^]*Ask for it/i,
     );
     const resumedIds = obs.available_actions.map((action) => action.id);
     expect(resumedIds).toEqual(expect.arrayContaining(["ask_wolves", "ask_leave"]));
     expect(resumedIds).not.toContain("ask_byre_back");
     expect(d.state().flags["heard_plan"]).toBe(true);
     const journal = d.state().journal.join(" ").toLowerCase();
-    expect(journal).toContain("wedge the fallen rail");
-    expect(journal).toContain("if it splits, bind the joined lengths");
+    expect(journal).toContain("guarded/patient combat");
+    expect(journal).toContain("wedge rail; if split, bind");
+    expect(journal).toContain("neither turns a wolf alive");
   });
 
   it("the signposted wedge is immediately legal as target-only USE, never TAKE", () => {
@@ -188,13 +194,27 @@ describe("bug_0258 — The Wolf-Winter: the optional wedge is signposted and dis
     });
     expect(JSON.stringify(funnel?.conditions ?? [])).toContain("breach_braced");
 
-    // The wedge itself retires after either outcome, but failure exposes one mutually
-    // exclusive same-target bind that creates the real recovered guard.
+    // On the ordinary hunt the wedge retires after either outcome; only a previously
+    // committed fouled lure can expose the new same-target living turn after success.
     const rail = pack.objects.find((o) => o.id === "paling_rail")!;
     const wedge = rail.interactions.find((it) => it.skill_check?.skill === "defense")!;
     expect(JSON.stringify(wedge.conditions ?? [])).toContain("rail_attempted");
     expect(JSON.stringify(wedge.conditions ?? [])).toContain("breach_braced");
     expect(JSON.stringify(wedge.skill_check?.on_failure ?? [])).toContain("rail_split");
+
+    const turn = rail.interactions.find(
+      (interaction) =>
+        interaction.verb === "USE" &&
+        interaction.target === "paling_rail" &&
+        interaction.command_verb === "turn",
+    );
+    expect(turn).toBeDefined();
+    expect(JSON.stringify(turn?.conditions ?? [])).toContain("strategy_lure_committed");
+    expect(JSON.stringify(turn?.conditions ?? [])).toContain("lure_trail_fouled");
+    expect(JSON.stringify(turn?.conditions ?? [])).toContain("breach_braced");
+    expect(JSON.stringify(turn?.effects ?? [])).toContain(
+      '"set_flag":"yearling_redirected_with_braced_rail"',
+    );
 
     const bind = rail.interactions.find(
       (interaction) =>

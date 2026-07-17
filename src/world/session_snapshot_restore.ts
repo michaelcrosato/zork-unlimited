@@ -328,10 +328,20 @@ export const OVERWORLD_RELIEF_ALLOCATION_PREDECESSOR_WORLD_HASH =
   OVERWORLD_HILL_APPROACH_WORLD_HASH;
 export const OVERWORLD_RELIEF_OATH_PREDECESSOR_WORLD_HASH =
   "50350884ebb7d118849fca040256a19c0c63ed4bfe3353d4cd202ee7a6ba8e7f";
-export const OVERWORLD_RELIEF_OATH_WORLD_HASH =
+export const OVERWORLD_JUNE_RETURN_COPY_PREDECESSOR_WORLD_HASH =
   "a2ddc6e9042a208f2821451f10b0152874ef55bc77b0f7801f3ea58591357474";
+export const OVERWORLD_JUNE_RETURN_COPY_WORLD_HASH =
+  "69604947643a24fc2d7c2377a85963742282ac7f83e7cec18a58bfc5eb8f53fc";
+/** @deprecated Relief-oath-era current-target name retained for existing callers. */
+export const OVERWORLD_RELIEF_OATH_WORLD_HASH = OVERWORLD_JUNE_RETURN_COPY_WORLD_HASH;
 /** @deprecated Current-target alias retained for earlier migration callers. */
-export const OVERWORLD_RELIEF_ALLOCATION_WORLD_HASH = OVERWORLD_RELIEF_OATH_WORLD_HASH;
+export const OVERWORLD_RELIEF_ALLOCATION_WORLD_HASH = OVERWORLD_JUNE_RETURN_COPY_WORLD_HASH;
+const OVERWORLD_JUNE_RETURN_COPY_PREDECESSOR_LEFT_CONTACT = Object.freeze({
+  id: "talk:albany_city__transport_hub__june_pike@left_after_blood",
+  kind: "contact" as const,
+  title: "Talked to June Pike",
+  text: "June's field seat is empty. Her separate return says the route crossed into combat before she could take the lower rail, ending the cattle-first field agreement. The promise is recorded broken, June has left the party, and no ally return claim is available; the completed Wolf-Winter result still stands.",
+});
 const OVERWORLD_RELIEF_OATH_PREDECESSOR_WORLD_RULE_IDS: ReadonlySet<string> = new Set([
   ...OVERWORLD_HILL_APPROACH_PREDECESSOR_WORLD_RULE_IDS,
   "albany:resident_shelter_return_rest",
@@ -499,6 +509,41 @@ type OpeningRegistrationLegacyJournalProof = Readonly<{
   journalIndex: number;
   sourceWorldHash: string;
 }>;
+
+function normalizeJuneReturnCopyPredecessorJournal(args: {
+  currentContact: Readonly<{ id: string; text: string; title: string }>;
+  journalEntries: readonly OverworldJournalEntry[];
+}): OverworldJournalEntry[] {
+  return args.journalEntries.map((entry) => {
+    const repeatedContact = /^(.*):(\d+)$/.exec(entry.id);
+    const canonicalEntryId =
+      repeatedContact !== null && Number(repeatedContact[2]) === parseTimeLabel(entry.recordedAt)
+        ? repeatedContact[1]!
+        : entry.id;
+    if (canonicalEntryId !== OVERWORLD_JUNE_RETURN_COPY_PREDECESSOR_LEFT_CONTACT.id) {
+      return entry;
+    }
+    if (
+      entry.title !== OVERWORLD_JUNE_RETURN_COPY_PREDECESSOR_LEFT_CONTACT.title ||
+      entry.text !== OVERWORLD_JUNE_RETURN_COPY_PREDECESSOR_LEFT_CONTACT.text ||
+      entry.kind !== OVERWORLD_JUNE_RETURN_COPY_PREDECESSOR_LEFT_CONTACT.kind
+    ) {
+      throw new Error(
+        `June-return-copy predecessor journal entry "${entry.id}" does not match its exact authored contact copy.`,
+      );
+    }
+    if (args.currentContact.id !== canonicalEntryId) {
+      throw new Error(
+        `June-return-copy predecessor journal entry "${entry.id}" has no current authored counterpart.`,
+      );
+    }
+    return Object.freeze({
+      ...entry,
+      title: args.currentContact.title,
+      text: args.currentContact.text,
+    });
+  });
+}
 
 function normalizeCrisisPriorityPredecessorAllyJournalCopy(args: {
   currentContacts: ReadonlyMap<string, Readonly<{ id: string; text: string; title: string }>>;
@@ -1858,7 +1903,10 @@ export function planOverworldSessionSnapshotRestore(args: {
       `Overworld session snapshot is for world "${sourceSnapshot.worldId}", not "${worldId}".`,
     );
   }
-  const migrationTargetsCurrentManifest = worldHash === OVERWORLD_RELIEF_ALLOCATION_WORLD_HASH;
+  const migrationTargetsCurrentManifest = worldHash === OVERWORLD_JUNE_RETURN_COPY_WORLD_HASH;
+  const migratesJuneReturnCopy =
+    migrationTargetsCurrentManifest &&
+    sourceSnapshot.worldHash === OVERWORLD_JUNE_RETURN_COPY_PREDECESSOR_WORLD_HASH;
   const migrationEra: TrustedMigrationEra =
     !migrationTargetsCurrentManifest || sourceSnapshot.worldHash === worldHash
       ? null
@@ -1888,21 +1936,49 @@ export function planOverworldSessionSnapshotRestore(args: {
                           : sourceSnapshot.worldHash === OVERWORLD_OPENING_REGISTRATION_WORLD_HASH
                             ? "opening_registration"
                             : null;
-  if (sourceSnapshot.worldHash !== worldHash && migrationEra === null) {
+  if (sourceSnapshot.worldHash !== worldHash && migrationEra === null && !migratesJuneReturnCopy) {
     throw new Error("Overworld session snapshot was made against a different world manifest.");
   }
+  const normalizesJuneReturnCopy =
+    migratesJuneReturnCopy ||
+    migrationEra === "relief_oath" ||
+    migrationEra === "relief_allocation" ||
+    migrationEra === "hill_approach";
+  const snapshotWithJuneReturnCopy = normalizesJuneReturnCopy
+    ? (() => {
+        const presentation = indexes.contactPresentationsByJournalId.get(
+          OVERWORLD_JUNE_RETURN_COPY_PREDECESSOR_LEFT_CONTACT.id,
+        );
+        if (!presentation) {
+          throw new Error(
+            `June-return-copy migration target has no contact presentation "${OVERWORLD_JUNE_RETURN_COPY_PREDECESSOR_LEFT_CONTACT.id}".`,
+          );
+        }
+        const currentContact = describeOverworldContactAction(
+          presentation.contact,
+          presentation.presentationId,
+        );
+        return Object.freeze({
+          ...sourceSnapshot,
+          journalEntries: normalizeJuneReturnCopyPredecessorJournal({
+            currentContact,
+            journalEntries: sourceSnapshot.journalEntries,
+          }),
+        });
+      })()
+    : sourceSnapshot;
   const snapshotWithCampaignCopy =
     migrationEra === null ||
     migrationEra === "relief_oath" ||
     migrationEra === "relief_allocation" ||
     migrationEra === "hill_approach"
-      ? sourceSnapshot
+      ? snapshotWithJuneReturnCopy
       : Object.freeze({
-          ...sourceSnapshot,
+          ...snapshotWithJuneReturnCopy,
           journalEntries: normalizePreFortifyDawnWagonServiceJournalCopy({
             indexes,
             journalEntries: normalizePreFortifyAlbanyWagonJournalTitle(
-              sourceSnapshot.journalEntries,
+              snapshotWithJuneReturnCopy.journalEntries,
             ),
           }),
         });

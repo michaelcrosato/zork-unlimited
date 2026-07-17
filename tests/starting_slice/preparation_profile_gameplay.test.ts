@@ -240,6 +240,46 @@ describe("SS-F05 — Albany preparation profile gameplay", () => {
     expect(publicRail?.command).toMatch(/wedge.*rail/i);
   });
 
+  it("lets both Works brace outcomes recover a committed fouled lure without blood", () => {
+    let hybrid = foulFirstCast(profileState(WORKS, IRONHANDS));
+    expect(actionIds(hybrid)).toContain("use_paling_rail");
+    hybrid = act(hybrid, "maneuver_yearling_wolf_commit_hybrid_strike", 1, 1);
+    expect(hybrid.flags.lure_hybrid_combat_entered).toBe(true);
+    expect(actionIds(hybrid)).not.toContain("use_paling_rail");
+
+    for (const firstRoll of [20, 1]) {
+      let state = foulFirstCast(profileState(WORKS, IRONHANDS));
+      const alarmAfterFoul = state.vars.cattle_alarm ?? 0;
+      state = act(state, "use_paling_rail", firstRoll);
+
+      if (firstRoll === 1) {
+        expect(state.flags).toMatchObject({
+          rail_split: true,
+          works_fortification_splice_needed: true,
+        });
+        state = act(state, "use_paling_rail");
+        expect(state.vars.cattle_alarm).toBe(alarmAfterFoul + 1);
+      } else {
+        expect(state.vars.cattle_alarm).toBe(alarmAfterFoul);
+      }
+
+      expect(state.flags.breach_braced).toBe(true);
+      expect(
+        buildRpgObservation(index, state).available_actions.find(
+          (option) => option.id === "use_paling_rail",
+        )?.command,
+      ).toMatch(/turn.*braced scent-pen/i);
+      state = act(state, "use_paling_rail");
+      expect(state.flags).toMatchObject({
+        yearling_redirected: true,
+        yearling_redirected_with_braced_rail: true,
+      });
+      expect(state.flags.yearling_down).not.toBe(true);
+      expect(state.flags.june_blood_condition_broken).not.toBe(true);
+      expect(actionIds(state)).not.toContain("attack_yearling_wolf");
+    }
+  });
+
   it("makes the one-shot Drover route cleanly recover or worsen the same failed cast", () => {
     let specialist = foulFirstCast(profileState(DROVER, COURIER));
     let generalist = foulFirstCast(profileState(DROVER, WARDEN));
@@ -249,6 +289,12 @@ describe("SS-F05 — Albany preparation profile gameplay", () => {
       "import:wolf_winter_drover_streetwise",
     ]);
     expect(actionIds(specialist)).toContain("use_drover_route_marks");
+
+    const hybrid = act(specialist, "maneuver_yearling_wolf_commit_hybrid_strike", 1, 1);
+    expect(hybrid.flags.lure_hybrid_combat_entered).toBe(true);
+    expect(hybrid.flags.yearling_down).not.toBe(true);
+    expect(actionIds(hybrid)).not.toContain("use_drover_route_marks");
+    expect(buildRpgObservation(index, hybrid).description).not.toMatch(/run that one-use route/i);
 
     specialist = act(specialist, "use_drover_route_marks", 8);
     generalist = act(generalist, "use_drover_route_marks", 8);

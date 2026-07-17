@@ -195,7 +195,7 @@ describe("Wolf-Winter dialogue surface", () => {
     expect(narrations(advised.events).join(" ")).toContain("Quick lines");
     const obs = buildRpgObservation(index, advised.state);
     expect(obs.dialogue?.npc_text).toMatch(
-      /guarded byre plan is still yours to learn[^]*Ask for it/i,
+      /guarded spear-fighting plan is still yours to learn[^]*Ask for it/i,
     );
     expect(obs.dialogue?.npc_text).not.toContain("Old Cade shifts");
     expect(obs.dialogue?.npc_text).not.toMatch(/: "Old Cade\b/);
