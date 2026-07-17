@@ -1,7 +1,7 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -1020,9 +1020,11 @@ describe("MCP pure play mode", () => {
     }
   }, 120_000);
 
-  it("clears terminal child handles after both non-death foldback and death", async () => {
+  it("auto-folds non-death and holds a dead child until the end-only journey receipt", async () => {
     const nonDeathDir = mkdtempSync(join(tmpdir(), "mcp-pure-terminal-success-"));
     const deathDir = mkdtempSync(join(tmpdir(), "mcp-pure-terminal-death-"));
+    const deathEvidence = join(deathDir, "run.jsonl");
+    const preservedDeathEvidence = join(deathDir, "run-preserved.jsonl");
     try {
       await withPureServer(
         join(nonDeathDir, "run.jsonl"),
@@ -1061,7 +1063,7 @@ describe("MCP pure play mode", () => {
       );
 
       await withPureServer(
-        join(deathDir, "run.jsonl"),
+        deathEvidence,
         async (client) => {
           const launch = await launchPreparedPureWolf(client);
           const final = await playPureQuestActions(client, launch, [
@@ -1084,21 +1086,112 @@ describe("MCP pure play mode", () => {
             ending: { death: true },
           });
           expect(final.overworld_session_id).toBe(launch.overworldSessionId);
-          expect(final).not.toHaveProperty("rpg_session_id");
+          expect(final.rpg_session_id).toBe(launch.rpgSessionId);
+          expect(final.journey).toMatchObject({
+            status: "awaiting_choice",
+            goal: { status: "active" },
+            pendingChoice: {
+              reasons: ["character_died"],
+              checkpoint: null,
+              goalVersion: null,
+              goalId: null,
+              options: [{ id: "end" }],
+            },
+          });
 
           const parent = await callPlayerTool(client, "get_overworld_session_context", {
             session_id: launch.overworldSessionId,
           });
-          expect(parent).not.toHaveProperty("rpg_session_id");
-          const moved = await callPlayerTool(client, "move_overworld_session_area", {
-            session_id: launch.overworldSessionId,
-            area_route_id: compactAreaRoute(parent, "albany_city__market"),
+          expect(parent.rpg_session_id).toBe(launch.rpgSessionId);
+
+          const continuedCall = await client.callTool({
+            name: "choose_overworld_session_journey",
+            arguments: { session_id: launch.overworldSessionId, choice: "continue" },
           });
-          expect(moved.overworld_session_id).toBe(launch.overworldSessionId);
-          expect(moved).not.toHaveProperty("rpg_session_id");
+          expect(continuedCall.isError).toBe(true);
+          expect(textPayload(continuedCall)).toMatchObject({
+            ok: false,
+            overworld_session_id: launch.overworldSessionId,
+            rpg_session_id: launch.rpgSessionId,
+            error: expect.stringMatching(/character died/i),
+          });
+
+          // Make the evidence target unwritable after fresh-start evidence has
+          // landed. The journey end itself must remain committed and recoverable.
+          renameSync(deathEvidence, preservedDeathEvidence);
+          mkdirSync(deathEvidence);
+          const ended = await callPlayerTool(client, "choose_overworld_session_journey", {
+            session_id: launch.overworldSessionId,
+            choice: "end",
+          });
+          expect(ended.overworld_session_id).toBe(launch.overworldSessionId);
+          expect(ended).not.toHaveProperty("rpg_session_id");
+          expect(ended.journey).toMatchObject({ status: "ended", pendingChoice: null });
+          const exitReceipt = (ended.result as { exitReceipt: Record<string, unknown> })
+            .exitReceipt;
+          expect(exitReceipt).toMatchObject({
+            exitReason: "player_ended_at_choice",
+            goalStatus: "active",
+            exitReasons: ["character_died"],
+          });
+          expect(ended.run_evidence).toMatchObject({
+            recorded: false,
+            retryable: true,
+            message: expect.stringMatching(/journey ended.*exactly one more call.*end choice/i),
+          });
+
+          const blockedAfterCommittedExit = await client.callTool({
+            name: "get_overworld_session_context",
+            arguments: { session_id: launch.overworldSessionId },
+          });
+          expect(blockedAfterCommittedExit.isError).toBe(true);
+          expect(textPayload(blockedAfterCommittedExit)).toMatchObject({
+            ok: false,
+            overworld_session_id: launch.overworldSessionId,
+            error: expect.stringMatching(/exit receipt is the final run event/i),
+          });
+          expect(textPayload(blockedAfterCommittedExit)).not.toHaveProperty("rpg_session_id");
+
+          // Repair the target and replay the exact terminal choice. The handler
+          // must not mutate twice; it re-emits the cached receipt and persists one
+          // journey-exit event.
+          rmSync(deathEvidence, { recursive: true, force: true });
+          renameSync(preservedDeathEvidence, deathEvidence);
+          const retried = await callPlayerTool(client, "choose_overworld_session_journey", {
+            session_id: launch.overworldSessionId,
+            choice: "end",
+          });
+          expect(retried).not.toHaveProperty("run_evidence");
+          expect(retried).not.toHaveProperty("rpg_session_id");
+          expect((retried.result as { exitReceipt: Record<string, unknown> }).exitReceipt).toEqual(
+            exitReceipt,
+          );
+
+          const replayed = await callPlayerTool(client, "choose_overworld_session_journey", {
+            session_id: launch.overworldSessionId,
+            choice: "end",
+          });
+          expect(replayed).not.toHaveProperty("rpg_session_id");
+          expect((replayed.result as { exitReceipt: Record<string, unknown> }).exitReceipt).toEqual(
+            exitReceipt,
+          );
         },
         6,
       );
+
+      const deathEvents = readFileSync(deathEvidence, "utf8")
+        .trim()
+        .split("\n")
+        .map((line) => JSON.parse(line));
+      expect(deathEvents).toHaveLength(2);
+      expect(deathEvents[1]).toMatchObject({
+        event: "journey_exit",
+        quest_outcomes: [],
+        receipt: {
+          goalStatus: "active",
+          exitReasons: ["character_died"],
+        },
+      });
     } finally {
       rmSync(nonDeathDir, { recursive: true, force: true });
       rmSync(deathDir, { recursive: true, force: true });

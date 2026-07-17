@@ -7,8 +7,10 @@ import { cloneJourneyContractSnapshot, type JourneyContractSnapshot } from "./jo
 import {
   OVERWORLD_SESSION_SAVE_VERSION,
   cloneOpeningLeadSourceDecisionTrail,
+  cloneQuestCharacterDeathBoundary,
   cloneJournalEntries,
   type OverworldOpeningLeadSourceDecisionTrail,
+  type OverworldQuestCharacterDeathBoundary,
   snapshotTravelLogEntries,
   type OverworldJournalEntry,
   type OverworldPendingRoadEncounter,
@@ -45,6 +47,7 @@ export type OverworldSessionSnapshotBuildState = {
   completedRegionalArcIds: ReadonlySet<string>;
   pendingRoadEncounter: OverworldPendingRoadEncounter | null;
   openingLeadSourceDecisionTrail: OverworldOpeningLeadSourceDecisionTrail | null;
+  questCharacterDeathBoundary?: OverworldQuestCharacterDeathBoundary | null;
   journey: JourneyContractSnapshot;
 };
 
@@ -86,6 +89,13 @@ export function buildOverworldSessionSnapshot(
       ? {
           openingLeadSourceDecisionTrail: cloneOpeningLeadSourceDecisionTrail(
             state.openingLeadSourceDecisionTrail,
+          ),
+        }
+      : {}),
+    ...(state.questCharacterDeathBoundary
+      ? {
+          questCharacterDeathBoundary: cloneQuestCharacterDeathBoundary(
+            state.questCharacterDeathBoundary,
           ),
         }
       : {}),

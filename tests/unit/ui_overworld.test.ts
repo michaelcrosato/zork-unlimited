@@ -390,6 +390,98 @@ describe("OverworldSession", () => {
     expect(screen).not.toMatch(/Albany Station Quarter|dawn dispatch|relief wagon/i);
   });
 
+  it("renders embedded character death as a mandatory ending, not voluntary continuation", async () => {
+    const app = readFileSync("ui/src/App.tsx", "utf8");
+    const deathBranchStart = app.indexOf("} else if (ending?.death)");
+    const deathBranchEnd = app.indexOf("setLog((prev)", deathBranchStart);
+    expect(deathBranchStart).toBeGreaterThanOrEqual(0);
+    expect(deathBranchEnd).toBeGreaterThan(deathBranchStart);
+    expect(app.slice(deathBranchStart, deathBranchEnd)).toContain(
+      "worldSession.recordQuestCharacterDeath(activeQuest.id, {",
+    );
+
+    const session = new OverworldSession(world);
+    expect(() =>
+      session.recordQuestCharacterDeath("wolf_winter", {
+        endingId: "ending_pulled_down",
+        death: true,
+      }),
+    ).toThrow(/exact unfinished started quest/i);
+    const opening = session.view();
+    session.scoutPoi(opening.pois[0]!.id);
+    session.talkToCharacter(opening.characters[0]!.id);
+    settleOpeningRegistration(session);
+    const quest = session.view().quests.find((candidate) => candidate.id === "wolf_winter");
+    if (!quest) throw new Error("Expected the Albany Wolf-Winter lead.");
+    const route = session
+      .view()
+      .areaExits.find((candidate) => candidate.destination.id === quest.area);
+    if (!route) throw new Error("Expected a route to the Albany lead.");
+    session.moveArea(route.id);
+    startVisibleQuest(session, quest);
+    session.recordQuestCharacterDeath(quest.id, {
+      endingId: "ending_pulled_down",
+      death: true,
+    });
+    const pendingSnapshot = JSON.parse(JSON.stringify(session.snapshot())) as ReturnType<
+      typeof session.snapshot
+    >;
+    const restored = OverworldSession.restore(world, pendingSnapshot);
+    const pendingJourney = restored.journey();
+    expect(pendingJourney.pendingChoice?.options.map((option) => option.id)).toEqual(["end"]);
+
+    const uiRoot = resolve(process.cwd(), "ui");
+    const server = await createServer({
+      root: uiRoot,
+      configFile: resolve(uiRoot, "vite.config.ts"),
+      appType: "custom",
+      logLevel: "silent",
+      optimizeDeps: { noDiscovery: true },
+      server: { middlewareMode: true },
+    });
+    try {
+      const choiceModule = (await server.ssrLoadModule("/src/JourneyChoiceScreen.tsx")) as {
+        JourneyChoiceScreen: unknown;
+      };
+      const endedModule = (await server.ssrLoadModule("/src/JourneyEndedScreen.tsx")) as {
+        JourneyEndedScreen: unknown;
+      };
+      const requireFromUi = createRequire(resolve(uiRoot, "package.json"));
+      const react = requireFromUi("react") as {
+        createElement: (type: unknown, props: Record<string, unknown>) => unknown;
+      };
+      const reactDomServer = requireFromUi("react-dom/server") as {
+        renderToStaticMarkup: (element: unknown) => string;
+      };
+
+      const choiceMarkup = reactDomServer.renderToStaticMarkup(
+        react.createElement(choiceModule.JourneyChoiceScreen, {
+          journey: pendingJourney,
+          onChoose: () => undefined,
+        }),
+      );
+      expect(choiceMarkup).toContain("Your character died");
+      expect(choiceMarkup).toContain("End this journey");
+      expect(choiceMarkup.match(/<button/g)).toHaveLength(1);
+      expect(choiceMarkup).not.toContain("Continue this journey?");
+
+      restored.chooseJourney("end");
+      const endedMarkup = reactDomServer.renderToStaticMarkup(
+        react.createElement(endedModule.JourneyEndedScreen, {
+          journey: restored.journey(),
+          onNewJourney: () => undefined,
+        }),
+      );
+      expect(endedMarkup).toContain("Your character died after");
+      expect(endedMarkup).toContain("unfinished goal and completed history");
+      expect(endedMarkup).toContain("Journey decisions");
+      expect(endedMarkup).not.toContain("You chose to end");
+      expect(endedMarkup).not.toContain("Continuation choices");
+    } finally {
+      await server.close();
+    }
+  });
+
   it("keeps standard service actions and accessibly associates their one-time terms", async () => {
     const app = readFileSync("ui/src/App.tsx", "utf8");
     const actionsStart = app.indexOf('<div className="service-actions">');

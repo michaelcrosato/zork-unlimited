@@ -48,11 +48,12 @@ READING THE PLAYER SURFACE
   those guards. Embedded quest responses can also return
   `overworld_snapshot_hash`; keep the latest one as the overworld guard when
   returning from that quest.
-- A non-death quest ending folds back into the overworld automatically. A death
-  ending does not complete that quest, but it also releases the parent surface
-  so you can pursue another visible lead. In either case, the terminal response
-  stops repeating `rpg_session_id`; continue with its recovered
-  `overworld_session_id` and do not request a separate technical foldback.
+- A non-death quest ending folds back into the overworld automatically and stops
+  repeating `rpg_session_id`. A death ending does not complete that quest. It
+  keeps the ended child visible and presents an end-only journey choice on the
+  parent; choose its visible `end` option to receive the truthful unfinished-goal
+  exit receipt, then conduct the interview. Never invent a resurrection, pursue
+  another parent action after death, or request a separate technical foldback.
 - Pure reads, context refreshes, legal-action listings, save/export operations,
   and rejected calls are not player decisions. The game itself owns the
   meaningful-decision count and tells you when a journey choice is due.
@@ -64,7 +65,8 @@ WHEN TO CONTINUE OR END
 
 - Keep playing naturally until the game presents its actual journey choice:
   continue the same journey or end it. This may happen when the current goal is
-  completed or at a scheduled decision checkpoint.
+  completed or at a scheduled decision checkpoint. Character death instead
+  presents only the truthful `end` choice described above.
 - At every such choice, decide honestly. If you choose continue, keep playing
   until the game presents another journey choice. If you choose end, submit the
   shown end choice and wait for the game to confirm that the journey ended. To
@@ -79,8 +81,14 @@ WHEN TO CONTINUE OR END
   decision that can set the next current goal; it is not a harness task.
 - Do not impose your own tool-call, turn, route, content, or coverage budget.
   Never stop merely because you think a test has run long enough.
-- After the game confirms the end and returns its journey exit receipt, make no
-  more MCP calls. Only then conduct the exit interview and write the report.
+- After the game confirms the end and returns its journey exit receipt, normally
+  make no more MCP calls. One recorder-recovery exception is explicit: if that
+  same response has `run_evidence.recorded: false` and `retryable: true`, do not
+  report yet; make exactly one more call using the same parent session and the
+  same `end` choice. Make no other call. A response without that warning confirms
+  evidence and closes the run. If the retry says `retryable: false`, make no more
+  calls and report the recorder failure truthfully; that run will not count as
+  verified evidence. Only then conduct the exit interview and write the report.
 
 REPORT
 
@@ -106,8 +114,9 @@ to the matching JSON boolean; do not copy the placeholder.
 REPORT GATE — check every item immediately before sending:
 
 - Do not write any part of the report until a game response contains
-  `exitReceipt`. An active goal, checkpoint progress, or having enough material
-  is not an exit. If you chose continue, keep playing until the game presents
+  `exitReceipt` and does not request the one exact evidence retry above.
+  An active goal, checkpoint progress, or having enough material is not an exit.
+  If you chose continue, keep playing until the game presents
   another journey choice; never invent an early receipt. There is no acceptable
   early report: a `journey_exit_receipt` that is `null`, empty, partial,
   reconstructed, or merely a current-state snapshot substituted for

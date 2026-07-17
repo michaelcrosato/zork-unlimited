@@ -104,7 +104,11 @@ exit reason.
    `choose_overworld_session_story`, then follows the resulting current goal. It
    does not stop because of elapsed tool calls or presumed coverage.
 5. After the game confirms end and returns the journey receipt, the MCP run is
-   closed. Only then does the harness collect the exit interview.
+   closed. The only exception is a response explicitly carrying
+   `run_evidence.recorded: false` and `retryable: true`: the player repeats that
+   exact parent-session `end` once, makes no other call, and waits for evidence
+   confirmation before reporting. A non-retryable recorder failure closes an
+   invalid run truthfully. Only then does the harness collect the exit interview.
 6. `scripts/verify-blind-report.ts` verifies the V2 pure interview against the
    server evidence using a work-private sidecar. A report counts only when
    fresh-start and journey-exit events share the same session, the receipt
@@ -164,11 +168,14 @@ active child. Pure overworld reads always remain on the compact player surface;
 verbose observation, graph, id-catalog, and route-expansion knobs are absent.
 
 A non-death terminal quest step folds its result back automatically and stops
-echoing the child. A death ending does not complete that quest, but also releases
-the parent surface so the player can pursue another visible lead instead of
-being trapped in an ended RPG session. The separate technical quest-completion
-tool is therefore absent from pure mode. Both terminal responses retain the
-parent handle.
+echoing the child. A death ending does not complete that quest or resurrect the
+character: it retains the ended child and opens an end-only journey pause on the
+parent. Choosing `end` produces the normal read-only exit receipt with the
+current goal still active and `character_died` in its exit reasons. The separate
+technical quest-completion tool is therefore absent from pure mode. Both
+terminal responses retain the parent handle, and only the death receipt retires
+the ended child. Save/restore binds this terminal to the exact unfinished quest,
+fatal ending id, accepted-decision count, and full journey decision proof.
 
 The runner enforces this boundary independently of the prose prompt:
 
@@ -229,6 +236,11 @@ only sidecar-verified pure continue/end choices as retention evidence. Pure
 decision counts, checkpoint choices, and continuation curves are grouped by
 the receipt's journey-contract version; historical v1 and v2 evidence remains
 valid but is never pooled with current v3 evidence.
+Character-death exits remain valid observational evidence but are classified in
+their own `character_died` trigger buckets, never as voluntary checkpoint or
+goal-completion retention. `character_died` is an additive current-v3 reason, so
+this separation is reason-level rather than something the contract-version cohort
+provides by itself. Starting-slice certification rejects death exits explicitly.
 
 Legacy interview-schema V1/guided reports may remain in historical feedback
 compiles, clearly labeled as such; they never count as pure retention evidence.

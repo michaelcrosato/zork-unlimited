@@ -8,6 +8,7 @@ reports:
   - ai-runs/spark-seed2844.md
   - ai-runs/spark-seed2848.md
   - ai-runs/spark-seed2849.md
+  - ai-runs/spark-seed2867.md
 severity: S2
 symptom: >
   Ten of forty fresh pure players failed to publish a valid journey exit. Compacted
@@ -15,16 +16,18 @@ symptom: >
   restarted and received no recoverable handle, or exhausted context after requesting
   verbose overworld and MCP resource catalogs. A repeated quest start could not recover
   its live child. After the first recovery patch, non-death endings still suggested a
-  redundant manual foldback, while a deterministic death before checkpoint 40 left an
-  ended child active and every parent mutation blocked.
+  redundant manual foldback. Clean-build Spark seed 2867 then died in Breaking Weir:
+  the child was retired but its quest and goal stayed unfinished, so the parent wandered
+  for 194 posthumous decisions instead of reaching a truthful terminal receipt.
 root_cause: >
   Pure mode enforced singleton provenance but did not retain or echo the singleton
   parent and its current embedded child. Required Zod fields rejected missing handles
   before the server could recover them, generic session errors did not identify the
   domain, and parent mutations could overwrite the one tracked child. Response
   decoration ran before lifecycle updates. Pure schemas also retained expansion knobs
-  that let a player request the full overworld surface. Finally, non-death foldback and
-  death shared no explicit terminal child-release contract.
+  that let a player request the full overworld surface. Finally, death had no explicit
+  game-owned journey terminal, durable save boundary, or end-receipt lifecycle distinct
+  from successful quest foldback.
 fix: >
   Track the parent overworld_session_id and current rpg_session_id as one pure-run
   lifecycle. Every successful response and structured recoverable error repeats the
@@ -33,9 +36,11 @@ fix: >
   required and isolated. Reject parent gameplay mutations while a child is active,
   make duplicate fresh starts recover the existing parent, and distinguish RPG from
   overworld SessionStore errors. Update lifecycle state before decorating responses.
-  Non-death endings auto-fold and both non-death and death terminals clear the child;
-  death releases parent play without falsely completing the quest. The obsolete manual
-  completion tool and verbose/id/route overworld expansion controls are absent in pure.
+  Non-death endings auto-fold and retire the child. Death instead retains the ended child,
+  records an exact unfinished-quest boundary bound to the journey proof, and opens an
+  end-only parent pause; its normal exit receipt preserves the active goal and completed
+  history, then retires the child. The obsolete manual completion tool and verbose/id/route
+  overworld expansion controls are absent in pure.
 deterministic_witnesses:
   - wrong_domain_and_missing_handles: "missing, null, numeric, wrong-key, stale, parent-as-child, and child-as-parent calls"
     result: "one structured rejection names the expected field and returns the exact live parent plus unresolved child without changing either state"
@@ -46,7 +51,7 @@ deterministic_witnesses:
   - successful_terminal: "seed 0 sheltered-stockway combat reaches ending_held"
     result: "the final step folds Wolf-Winter once, retains the parent, omits the retired child, and Continue succeeds on the parent"
   - death_terminal: "seed 6 sheltered-stockway combat reaches ending_pulled_down at decision 22"
-    result: "the quest remains incomplete, the terminal response retires the ended child, and a subsequent parent-area move succeeds instead of hard-locking"
+    result: "the exact unfinished quest and ended child persist through save/restore, Continue and parent mutations are rejected, and the sole End choice emits a character_died receipt before retiring the child"
   - mode_isolation: "two full-mode overworld sessions plus an invalid handle"
     result: "full schemas still require session_id and no singleton recovery UUID or pure structured payload leaks"
 tests:
@@ -55,7 +60,9 @@ tests:
   - tests/regression/blind_pure_prompt_contract.test.ts
   - tests/unit/mcp_sessions.test.ts
 verification:
-  - "Pre/post crawl gates 20260717T062550Z and 20260717T074806Z each reached 247/247 nodes, 344/344 edges, and 12/12 quests."
+  - "Crawl gates 20260717T062550Z, 20260717T074806Z, and post-death-fix 20260717T215659Z each reached 247/247 nodes, 344/344 edges, and 12/12 quests."
   - "Focused pure/full/schema/session tests cover success, rejection, pause, resume, unchanged, terminal success, terminal death, and post-exit lifecycle branches."
-  - "Candidate Spark seeds 2856-2859 were 4/4 verifier-valid with 116, 24, 45, and 80 accepted decisions; their two redundant-foldback complaints produced the terminal contract regression before the clean cohort."
-  - "npm run health"
+  - "Candidate dirty-build seeds 2856-2859 produced four engine exits but only seed 2857 passed the canonical report verifier; the three failures were interview-fence/start-surface formatting errors, not authenticated retention evidence."
+  - "Exact clean commit 1ad03375 produced valid engine evidence in 14/14 Spark runs and canonical reports in 11/14: seeds 2860-2869 were 7/10 and top-off seeds 2870-2873 were 4/4, using 113,824,347 input and 620,153 output tokens."
+  - "Seed 2867 supplied the posthumous-wandering S2 witness; seeds 2870-2873 supplied long-session and handle-recovery evidence but no death, so deterministic seed 6 remains the death-path certification."
+  - "Final npm run health passed verifier integrity, typecheck, lint, format, 373 files/2,796 tests, UI typecheck, and all 12 content packs."

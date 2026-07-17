@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { CurrentJourneyExitReceiptSchema } from "../../src/blind/exit_interview.js";
+import {
+  CurrentJourneyExitReceiptSchema,
+  CurrentJourneyRetentionEventSchema,
+  HistoricalJourneyExitReceiptSchema,
+} from "../../src/blind/exit_interview.js";
 import { verifyBlindReportText } from "../../src/blind/report_verifier.js";
 import { parseBlindRunSidecar, parseRunEvidenceJsonl } from "../../src/blind/run_evidence.js";
 import { hashState } from "../../src/core/hash.js";
@@ -89,6 +93,61 @@ function earlyGoalReceipt() {
       },
     ],
   };
+  return { ...payload, receiptHash: hashState(payload) };
+}
+
+function characterDeathReceipt(atDecision = 23) {
+  const payload = {
+    contractVersion: JOURNEY_CONTRACT_VERSION,
+    exitReason: "player_ended_at_choice",
+    goalVersion: INITIAL_JOURNEY_GOAL.version,
+    goalId: INITIAL_JOURNEY_GOAL.id,
+    goalText: INITIAL_JOURNEY_GOAL.text,
+    goalStatus: "active",
+    goalCompletedAtDecision: null,
+    completedGoals: [],
+    acceptedDecisions: atDecision,
+    exitReasons: ["character_died"],
+    checkpoint: null,
+    decisionProofHash: HASH_A,
+    retentionHistory: [
+      {
+        sequence: 1,
+        atDecision,
+        reasons: ["character_died"],
+        checkpoint: null,
+        goalVersion: null,
+        goalId: null,
+        choice: "end",
+        decisionProofHash: HASH_A,
+      },
+    ],
+  } as const;
+  return { ...payload, receiptHash: hashState(payload) };
+}
+
+function historicalCharacterDeathReceipt() {
+  const payload = {
+    contractVersion: 2,
+    exitReason: "player_ended_at_choice",
+    goalVersion: INITIAL_JOURNEY_GOAL.version,
+    goalId: INITIAL_JOURNEY_GOAL.id,
+    goalStatus: "active",
+    acceptedDecisions: 23,
+    exitReasons: ["character_died"],
+    checkpoint: null,
+    decisionProofHash: HASH_A,
+    retentionHistory: [
+      {
+        sequence: 1,
+        atDecision: 23,
+        reasons: ["character_died"],
+        checkpoint: null,
+        choice: "end",
+        decisionProofHash: HASH_A,
+      },
+    ],
+  } as const;
   return { ...payload, receiptHash: hashState(payload) };
 }
 
@@ -309,6 +368,65 @@ describe("blind V2 pure/structural report contract", () => {
     if (result.ok && result.run?.play_mode === "pure") {
       expect(result.run.receipt.acceptedDecisions).toBe(17);
       expect(result.run.receipt.checkpoint).toBeNull();
+    }
+  });
+
+  it("accepts an honest current-contract character-death exit with matching evidence", () => {
+    const death = characterDeathReceipt();
+    expect(CurrentJourneyExitReceiptSchema.safeParse(death).success).toBe(true);
+
+    const result = verifyBlindReportText(report(pureInterview({ journey_exit_receipt: death })), {
+      requiredPlayMode: "pure",
+      runEvidenceText: evidence(death),
+    });
+    expect(result.ok).toBe(true);
+    if (result.ok && result.run?.play_mode === "pure") {
+      expect(result.run.receipt.exitReasons).toEqual(["character_died"]);
+      expect(result.run.receipt.goalStatus).toBe("active");
+    }
+  });
+
+  it("keeps character death exclusive to current v3 receipts", () => {
+    const historicalDeath = historicalCharacterDeathReceipt();
+    const parsed = HistoricalJourneyExitReceiptSchema.safeParse(historicalDeath);
+    expect(parsed.success).toBe(false);
+    if (!parsed.success) {
+      expect(parsed.error.issues.some((issue) => issue.path.includes("exitReasons"))).toBe(true);
+    }
+  });
+
+  it("rejects continue directly on a current-contract character-death event", () => {
+    const parsed = CurrentJourneyRetentionEventSchema.safeParse({
+      sequence: 1,
+      atDecision: 23,
+      reasons: ["character_died"],
+      checkpoint: null,
+      goalVersion: null,
+      goalId: null,
+      choice: "continue",
+      decisionProofHash: HASH_A,
+    });
+    expect(parsed.success).toBe(false);
+    if (!parsed.success) {
+      expect(parsed.error.issues.map((issue) => issue.message)).toContain(
+        "character death is an end-only retention event",
+      );
+    }
+  });
+
+  it("rejects a character-death receipt that claims the current goal completed", () => {
+    const death = characterDeathReceipt();
+    const { receiptHash: _receiptHash, ...payload } = death;
+    const invalidPayload = { ...payload, goalStatus: "completed" as const };
+    const parsed = CurrentJourneyExitReceiptSchema.safeParse({
+      ...invalidPayload,
+      receiptHash: hashState(invalidPayload),
+    });
+    expect(parsed.success).toBe(false);
+    if (!parsed.success) {
+      expect(parsed.error.issues.map((issue) => issue.message)).toContain(
+        "character death requires an unfinished active current goal",
+      );
     }
   });
 

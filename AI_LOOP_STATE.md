@@ -17,12 +17,12 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 
 ### Cycle result - pure_embedded_session_recovery
 
-- Evidence choice: four unretried ten-Spark cohorts verified 30/40 fresh pure exits; failures clustered around compacted parent/child UUID loss, wrong-domain substitutions, unrecoverable duplicate starts, and context exhaustion from verbose reads/resource probes rather than Claude authentication or game intent.
-- Surface: pure responses and structured errors now preserve the singleton parent plus unresolved child, name the expected handle domain, recover missing/coerced inputs before SDK rejection, block child-orphaning parent mutations, and force compact overworld reads without graph/id/route expansion controls; full multi-session mode remains isolated.
-- Lifecycle: non-death endings auto-fold once and death remains an incomplete quest, but both retire the ended child and return the parent surface. The redundant pure completion tool is absent; deterministic seed 0 success and seed 6 death prove Continue or parent movement instead of stale-child ceremony or a pre-checkpoint hard lock.
-- Pure evidence: candidate seeds 2856–2859 were 4/4 verifier-valid, replay-positive, and completed 116/24/45/80 decisions; two manual-foldback complaints exposed the ordering defect now closed before the clean commit-bound cohort.
-- Self-critique: PASS for the Spark S2 transport/recovery cluster, not the greater-than-BG3 milestone. This removes harness loss from gameplay evidence; starting-slice depth, Albany authored work, deep crawl, clean pilot, and exact 100-player certification remain open.
-- Guard: pre/post crawls `20260717T062550Z`/`20260717T074806Z` reached 247/247 nodes, 344/344 edges, and 12/12 quests; pure/full lifecycle, schema, prompt, session, typecheck, and full health pass.
+- Evidence choice: four unretried ten-Spark cohorts verified 30/40 fresh pure exits; failures clustered around compacted/lost handle recovery and verbose context exhaustion, not Claude authentication or game intent. Exact clean commit `1ad03375` then produced 14/14 engine exits and 11/14 canonical reports across seeds 2860–2873.
+- Surface: pure responses/errors preserve the singleton parent plus unresolved child, name the handle domain, recover missing/coerced inputs, block child-orphaning parent mutations, and force compact reads; full multi-session mode stays isolated.
+- Lifecycle: non-death endings auto-fold once. A death keeps the exact unfinished quest and ended child, persists a quest/ending/decision-proof boundary, and opens a sole End choice whose receipt preserves the active goal and completed history before retiring the child; no resurrection or posthumous parent wandering remains.
+- Pure evidence: dirty candidate seeds 2856–2859 were only 1/4 canonical. Clean seeds 2860–2869 were 7/10 and top-off 2870–2873 were 4/4 canonical, consuming 113,824,347 input and 620,153 output tokens; seed 2867 supplied the death soft-lock witness and seed 2873 survived 160 decisions/five quests.
+- Self-critique: PASS for the Spark S2 transport/recovery cluster, not the greater-than-BG3 milestone. Starting-slice depth, Albany authored work, deep crawl, clean pilot, and exact 100-player certification remain open; repeated quest-launch confusion is the next compact-surface gap.
+- Guard: crawl gates `20260717T062550Z`/`20260717T074806Z`/`20260717T215659Z` reached 247/247 nodes, 344/344 edges, and 12/12 quests; deterministic seed 0 success and seed 6 death cover terminal contracts, adversarial review has no P0/P1/P2, and full health passes at 373 files/2,796 tests plus UI and all packs.
 
 ### Cycle result - june_nonlethal_combat_boundary
 

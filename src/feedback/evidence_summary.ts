@@ -27,6 +27,7 @@ const ContractRetentionSchema = z
     eligible_reports: z.number().int().positive(),
     continued_reports: z.number().int().nonnegative(),
     ended_at_first_choice_reports: z.number().int().nonnegative(),
+    forced_character_death_reports: z.number().int().nonnegative(),
     accepted_decisions: z
       .object({
         minimum: z.number().int().nonnegative(),
@@ -111,21 +112,36 @@ export const FeedbackEvidenceSummarySchema = z
 
     retention.contract_versions.forEach((version, index) => {
       const path = ["pure_retention", "contract_versions", index] as const;
-      if (
-        version.continued_reports + version.ended_at_first_choice_reports !==
-        version.eligible_reports
-      ) {
+      const voluntarilyClassifiedReports =
+        version.continued_reports + version.ended_at_first_choice_reports;
+      if (voluntarilyClassifiedReports > version.eligible_reports) {
         ctx.addIssue({
           code: "custom",
           path: [...path, "continued_reports"],
-          message: "every pure report must either continue or end at its first choice",
+          message: "voluntary report classifications cannot exceed eligible pure reports",
         });
       }
-      if (version.choices.end !== version.eligible_reports) {
+      const reportsWithoutVoluntaryChoice = version.eligible_reports - voluntarilyClassifiedReports;
+      if (
+        version.forced_character_death_reports < reportsWithoutVoluntaryChoice ||
+        version.forced_character_death_reports >
+          reportsWithoutVoluntaryChoice + version.continued_reports
+      ) {
+        ctx.addIssue({
+          code: "custom",
+          path: [...path, "forced_character_death_reports"],
+          message:
+            "forced character-death reports must cover every report without a voluntary choice",
+        });
+      }
+      if (
+        version.choices.end !==
+        version.eligible_reports - version.forced_character_death_reports
+      ) {
         ctx.addIssue({
           code: "custom",
           path: [...path, "choices", "end"],
-          message: "every verified pure exit must contain exactly one end choice",
+          message: "only non-death exits contribute a voluntary end choice",
         });
       }
       const exitReasonTotal = version.exit_reasons.reduce((sum, row) => sum + row.count, 0);
@@ -169,7 +185,7 @@ function emptyChoiceCounts(): ChoiceCounts {
   return { continue: 0, end: 0 };
 }
 
-function triggerFor(reasons: readonly ("checkpoint" | "goal_completed")[]): ChoiceTrigger {
+function triggerFor(reasons: readonly string[]): ChoiceTrigger {
   return reasons.length === 2
     ? "checkpoint_and_goal_completed"
     : reasons[0] === "checkpoint"
@@ -191,14 +207,24 @@ function summarizeContractVersion(
   const exitReasons = new Map<string, number>();
   const decisionCounts: number[] = [];
   let continuedReports = 0;
+  let endedAtFirstChoiceReports = 0;
+  let forcedCharacterDeathReports = 0;
 
   for (const receipt of receipts) {
     decisionCounts.push(receipt.acceptedDecisions);
     exitReasons.set(receipt.exitReason, (exitReasons.get(receipt.exitReason) ?? 0) + 1);
     let continued = false;
+    let firstVoluntaryChoice: "continue" | "end" | null = null;
+    let characterDied = false;
     for (const event of receipt.retentionHistory) {
+      const reasons: readonly string[] = event.reasons;
+      if (reasons.includes("character_died")) {
+        characterDied = true;
+        continue;
+      }
+      if (firstVoluntaryChoice === null) firstVoluntaryChoice = event.choice;
       choices[event.choice] += 1;
-      choiceTriggers[triggerFor(event.reasons)][event.choice] += 1;
+      choiceTriggers[triggerFor(reasons)][event.choice] += 1;
       if (event.choice === "continue") continued = true;
       if (event.checkpoint !== null) {
         const counts = checkpointChoices.get(event.checkpoint) ?? emptyChoiceCounts();
@@ -207,13 +233,16 @@ function summarizeContractVersion(
       }
     }
     if (continued) continuedReports += 1;
+    else if (firstVoluntaryChoice === "end") endedAtFirstChoiceReports += 1;
+    if (characterDied) forcedCharacterDeathReports += 1;
   }
 
   return {
     contract_version: contractVersion,
     eligible_reports: receipts.length,
     continued_reports: continuedReports,
-    ended_at_first_choice_reports: receipts.length - continuedReports,
+    ended_at_first_choice_reports: endedAtFirstChoiceReports,
+    forced_character_death_reports: forcedCharacterDeathReports,
     accepted_decisions: {
       minimum: Math.min(...decisionCounts),
       maximum: Math.max(...decisionCounts),

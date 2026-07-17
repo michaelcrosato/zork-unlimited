@@ -12,6 +12,7 @@ import type {
   OverworldOpeningLeadSourceDecisionTrail,
   OverworldJournalEntry,
   OverworldPendingRoadEncounter,
+  OverworldQuestCharacterDeathBoundary,
   OverworldSessionSnapshot,
   TravelLogEntry,
 } from "./session_snapshot.js";
@@ -27,6 +28,7 @@ export type OverworldSessionPersistenceState = OverworldSessionSnapshotRestoreSt
   fatigue: number;
   pendingRoadEncounter: OverworldPendingRoadEncounter | null;
   openingLeadSourceDecisionTrail: OverworldOpeningLeadSourceDecisionTrail | null;
+  questCharacterDeathBoundary: OverworldQuestCharacterDeathBoundary | null;
   journey: JourneyContractSnapshot;
   discoveredIds: Set<string>;
   visitedIds: Set<string>;
@@ -68,6 +70,7 @@ export function buildOverworldSessionSnapshotFromState(
     completedRegionalArcIds: state.completedRegionalArcIds,
     pendingRoadEncounter: state.pendingRoadEncounter,
     openingLeadSourceDecisionTrail: state.openingLeadSourceDecisionTrail,
+    questCharacterDeathBoundary: state.questCharacterDeathBoundary,
     journey: state.journey,
   });
 }

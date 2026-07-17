@@ -43,7 +43,8 @@ const ExitInterviewFields = {
 export const SubjectiveExitInterviewSchema = z.object(ExitInterviewFields).strict();
 export const LegacyExitInterviewSchema = SubjectiveExitInterviewSchema;
 
-const JourneyChoiceReasonSchema = z.enum(["checkpoint", "goal_completed"]);
+const HistoricalJourneyChoiceReasonSchema = z.enum(["checkpoint", "goal_completed"]);
+const CurrentJourneyChoiceReasonSchema = z.enum(["checkpoint", "goal_completed", "character_died"]);
 const HashSchema = z.string().regex(/^[0-9a-f]{64}$/);
 const JourneyCheckpointSchema = z
   .number()
@@ -54,10 +55,9 @@ const JourneyCheckpointSchema = z
     `checkpoints must be positive multiples of ${JOURNEY_BASELINE_DECISIONS}`,
   );
 
-const JourneyRetentionEventBaseFields = {
+const JourneyRetentionEventCommonFields = {
   sequence: z.number().int().positive(),
   atDecision: z.number().int().nonnegative(),
-  reasons: z.array(JourneyChoiceReasonSchema).min(1).max(2),
   checkpoint: JourneyCheckpointSchema.nullable(),
   choice: z.enum(["continue", "end"]),
   decisionProofHash: HashSchema,
@@ -66,21 +66,29 @@ const JourneyRetentionEventBaseFields = {
 type JourneyRetentionEventBase = {
   sequence: number;
   atDecision: number;
-  reasons: ("checkpoint" | "goal_completed")[];
+  reasons: ("checkpoint" | "goal_completed" | "character_died")[];
   checkpoint: number | null;
   choice: "continue" | "end";
   decisionProofHash: string;
 };
 
-function validateRetentionEventShape(event: JourneyRetentionEventBase, ctx: z.RefinementCtx): void {
+function validateRetentionEventShape(
+  event: JourneyRetentionEventBase,
+  ctx: z.RefinementCtx,
+  allowCharacterDeath: boolean,
+): void {
   if (
     event.reasons.length === 2 &&
-    (event.reasons[0] !== "checkpoint" || event.reasons[1] !== "goal_completed")
+    (event.reasons[0] !== "checkpoint" ||
+      (event.reasons[1] !== "goal_completed" &&
+        (!allowCharacterDeath || event.reasons[1] !== "character_died")))
   ) {
     ctx.addIssue({
       code: "custom",
       path: ["reasons"],
-      message: "combined reasons must be checkpoint then goal_completed",
+      message: allowCharacterDeath
+        ? "combined reasons must be checkpoint then goal_completed or character_died"
+        : "combined reasons must be checkpoint then goal_completed",
     });
   }
   const hasCheckpoint = event.reasons.includes("checkpoint");
@@ -95,25 +103,36 @@ function validateRetentionEventShape(event: JourneyRetentionEventBase, ctx: z.Re
     ctx.addIssue({
       code: "custom",
       path: ["checkpoint"],
-      message: "early goal-completion choices must not carry a checkpoint",
+      message: "retention events without a checkpoint reason must carry a null checkpoint",
     });
   }
 }
 
 export const HistoricalJourneyRetentionEventSchema = z
-  .object(JourneyRetentionEventBaseFields)
+  .object({
+    ...JourneyRetentionEventCommonFields,
+    reasons: z.array(HistoricalJourneyChoiceReasonSchema).min(1).max(2),
+  })
   .strict()
-  .superRefine(validateRetentionEventShape);
+  .superRefine((event, ctx) => validateRetentionEventShape(event, ctx, false));
 
 export const CurrentJourneyRetentionEventSchema = z
   .object({
-    ...JourneyRetentionEventBaseFields,
+    ...JourneyRetentionEventCommonFields,
+    reasons: z.array(CurrentJourneyChoiceReasonSchema).min(1).max(2),
     goalVersion: z.number().int().positive().nullable(),
     goalId: z.string().min(1).nullable(),
   })
   .strict()
   .superRefine((event, ctx) => {
-    validateRetentionEventShape(event, ctx);
+    validateRetentionEventShape(event, ctx, true);
+    if (event.reasons.includes("character_died") && event.choice !== "end") {
+      ctx.addIssue({
+        code: "custom",
+        path: ["choice"],
+        message: "character death is an end-only retention event",
+      });
+    }
     const hasGoal = event.reasons.includes("goal_completed");
     if (
       (hasGoal && (event.goalVersion === null || event.goalId === null)) ||
@@ -123,7 +142,7 @@ export const CurrentJourneyRetentionEventSchema = z
         code: "custom",
         path: ["goalId"],
         message:
-          "goal-completion events require both goalVersion and goalId, and checkpoints forbid them",
+          "goal-completion events require both goalVersion and goalId; other events forbid them",
       });
     }
   });
@@ -135,7 +154,7 @@ export const JourneyRetentionEventSchema = z.union([
 
 type ReceiptTimeline = {
   acceptedDecisions: number;
-  exitReasons: ("checkpoint" | "goal_completed")[];
+  exitReasons: ("checkpoint" | "goal_completed" | "character_died")[];
   checkpoint: number | null;
   decisionProofHash: string;
   retentionHistory: JourneyRetentionEventBase[];
@@ -165,6 +184,16 @@ function validateReceiptTimeline(receipt: ReceiptTimeline, ctx: z.RefinementCtx)
         code: "custom",
         path: ["retentionHistory", index, "choice"],
         message: "only the final retention event may end the journey",
+      });
+    }
+    if (
+      event.reasons.includes("character_died") &&
+      (index !== receipt.retentionHistory.length - 1 || event.choice !== "end")
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["retentionHistory", index, "reasons"],
+        message: "character death must be the final end-only retention event",
       });
     }
     if (event.reasons.includes("checkpoint")) {
@@ -251,7 +280,7 @@ export const HistoricalJourneyExitReceiptSchema = z
     goalId: z.literal(INITIAL_JOURNEY_GOAL.id),
     goalStatus: z.enum(["active", "completed"]),
     acceptedDecisions: z.number().int().nonnegative(),
-    exitReasons: z.array(JourneyChoiceReasonSchema).min(1).max(2),
+    exitReasons: z.array(HistoricalJourneyChoiceReasonSchema).min(1).max(2),
     checkpoint: JourneyCheckpointSchema.nullable(),
     decisionProofHash: HashSchema,
     retentionHistory: z.array(HistoricalJourneyRetentionEventSchema).min(1),
@@ -291,7 +320,7 @@ export const CurrentJourneyExitReceiptSchema = z
     goalCompletedAtDecision: z.number().int().nonnegative().nullable(),
     completedGoals: z.array(CompletedJourneyGoalSchema),
     acceptedDecisions: z.number().int().nonnegative(),
-    exitReasons: z.array(JourneyChoiceReasonSchema).min(1).max(2),
+    exitReasons: z.array(CurrentJourneyChoiceReasonSchema).min(1).max(2),
     checkpoint: JourneyCheckpointSchema.nullable(),
     decisionProofHash: HashSchema,
     retentionHistory: z.array(CurrentJourneyRetentionEventSchema).min(1),
@@ -301,6 +330,14 @@ export const CurrentJourneyExitReceiptSchema = z
   .superRefine((receipt, ctx) => {
     validateReceiptHash(receipt, ctx);
     validateReceiptTimeline(receipt, ctx);
+
+    if (receipt.exitReasons.includes("character_died") && receipt.goalStatus !== "active") {
+      ctx.addIssue({
+        code: "custom",
+        path: ["goalStatus"],
+        message: "character death requires an unfinished active current goal",
+      });
+    }
 
     let previousGoalCompletion = -1;
     for (const [index, goal] of receipt.completedGoals.entries()) {

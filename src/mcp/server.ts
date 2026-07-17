@@ -19,7 +19,7 @@ import { z, type ZodRawShape } from "zod";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
-import { appendFileSync, mkdirSync } from "node:fs";
+import { appendFileSync, mkdirSync, renameSync, unlinkSync, writeFileSync } from "node:fs";
 import { isDeepStrictEqual } from "node:util";
 import { createToolApi } from "./tools.js";
 import { TRANSCRIPT_TURN_LIMIT_DEFAULT } from "./transcript_projection.js";
@@ -141,19 +141,31 @@ const api = createToolApi({
 });
 
 type PureRunBuild = z.infer<typeof PureRunBuildSchema>;
-type PureRunEvidenceV2 =
-  | z.infer<typeof FreshStartRunEvidenceV2Schema>
-  | z.infer<typeof JourneyExitRunEvidenceV2Schema>;
+type FreshStartRunEvidenceV2 = z.infer<typeof FreshStartRunEvidenceV2Schema>;
+type JourneyExitRunEvidenceV2 = z.infer<typeof JourneyExitRunEvidenceV2Schema>;
+type PureRunEvidenceV2 = FreshStartRunEvidenceV2 | JourneyExitRunEvidenceV2;
 
 const pureRunState: {
   overworldSessionId: string | null;
   rpgSessionId: string | null;
   journeyExitRecorded: boolean;
+  journeyExitResponse: unknown | null;
+  journeyExitEvidence: JourneyExitRunEvidenceV2 | null;
+  journeyExitRetryable: boolean;
+  journeyExitWriteFailures: number;
+  freshStartEvidence: FreshStartRunEvidenceV2 | null;
+  callInFlight: boolean;
   build: PureRunBuild | null;
 } = {
   overworldSessionId: null,
   rpgSessionId: null,
   journeyExitRecorded: false,
+  journeyExitResponse: null,
+  journeyExitEvidence: null,
+  journeyExitRetryable: false,
+  journeyExitWriteFailures: 0,
+  freshStartEvidence: null,
+  callInFlight: false,
   build: null,
 };
 
@@ -170,14 +182,41 @@ const PURE_OVERWORLD_TOOLS_DURING_RPG = new Set([
   "choose_overworld_session_story",
 ]);
 
-function appendRunEvidence(event: PureRunEvidenceV2): void {
+function validateRunEvidence(event: PureRunEvidenceV2): PureRunEvidenceV2 {
+  return event.event === "fresh_start"
+    ? FreshStartRunEvidenceV2Schema.parse(event)
+    : JourneyExitRunEvidenceV2Schema.parse(event);
+}
+
+/**
+ * Replace the tiny two-row pure evidence ledger from validated in-memory events.
+ * Writing a sibling first prevents a failed write from leaving a partial JSONL row;
+ * the unlink fallback is only for Windows, where rename does not replace a file.
+ */
+function writeRunEvidence(events: readonly PureRunEvidenceV2[]): void {
   if (!RUN_EVIDENCE_PATH) return;
-  const validated =
-    event.event === "fresh_start"
-      ? FreshStartRunEvidenceV2Schema.parse(event)
-      : JourneyExitRunEvidenceV2Schema.parse(event);
+  const validated = events.map(validateRunEvidence);
   mkdirSync(dirname(RUN_EVIDENCE_PATH), { recursive: true });
-  appendFileSync(RUN_EVIDENCE_PATH, `${JSON.stringify(validated)}\n`);
+  const temporaryPath = `${RUN_EVIDENCE_PATH}.tmp`;
+  try {
+    writeFileSync(temporaryPath, `${validated.map((event) => JSON.stringify(event)).join("\n")}\n`);
+    try {
+      renameSync(temporaryPath, RUN_EVIDENCE_PATH);
+    } catch (renameError) {
+      try {
+        unlinkSync(RUN_EVIDENCE_PATH);
+      } catch (unlinkError) {
+        if ((unlinkError as NodeJS.ErrnoException).code !== "ENOENT") throw renameError;
+      }
+      renameSync(temporaryPath, RUN_EVIDENCE_PATH);
+    }
+  } finally {
+    try {
+      unlinkSync(temporaryPath);
+    } catch {
+      // Best-effort cleanup only; never mask the evidence write/replace result.
+    }
+  }
 }
 
 function pureRunSnapshot(sessionId: string) {
@@ -267,6 +306,17 @@ function pureSessionResponsePayload(name: string, value: unknown): unknown {
 
 function pureCallPreflight(name: string, args: unknown): void {
   if (PLAY_MODE !== "pure") return;
+  const input = objectRecord(args);
+  const exactCommittedEndReplay =
+    pureRunState.journeyExitResponse !== null &&
+    name === "choose_overworld_session_journey" &&
+    input?.session_id === pureRunState.overworldSessionId &&
+    input.choice === "end" &&
+    (pureRunState.journeyExitRecorded || pureRunState.journeyExitRetryable);
+  if (pureRunState.journeyExitResponse !== null && !exactCommittedEndReplay) {
+    throw new Error("This pure-play journey has ended; the exit receipt is the final run event.");
+  }
+  if (exactCommittedEndReplay) return;
   if (pureRunState.journeyExitRecorded) {
     throw new Error("This pure-play journey has ended; the exit receipt is the final run event.");
   }
@@ -282,7 +332,6 @@ function pureCallPreflight(name: string, args: unknown): void {
   if (pureRunState.overworldSessionId === null) {
     throw new Error("Pure play must begin with start_overworld.");
   }
-  const input = objectRecord(args);
   const sessionId = input?.session_id;
   if (PURE_OVERWORLD_SESSION_TOOLS.has(name) && sessionId !== pureRunState.overworldSessionId) {
     throw new PureSessionRecoveryError(
@@ -323,10 +372,55 @@ function pureCallPreflight(name: string, args: unknown): void {
   }
 }
 
-function pureCallEvidence(name: string, value: unknown): void {
-  if (PLAY_MODE !== "pure") return;
+function pureJourneyExitEvidenceFailure(
+  response: Record<string, unknown>,
+  detail: string,
+  retryable: boolean,
+): unknown {
+  pureRunState.journeyExitRetryable = retryable;
+  process.stderr.write(`Pure journey-exit evidence finalization failed: ${detail}\n`);
+  return {
+    ...response,
+    run_evidence: {
+      recorded: false,
+      retryable,
+      message: retryable
+        ? "The journey ended and its exit receipt is final, but server evidence was not recorded; make exactly one more call with the same parent session and End choice to retry evidence recording."
+        : "The journey ended and its exit receipt is final, but server evidence could not be recorded; do not retry or make another gameplay call.",
+    },
+  };
+}
+
+function persistPureJourneyExitEvidence(response: Record<string, unknown>): unknown {
+  if (RUN_EVIDENCE_PATH === null) {
+    pureRunState.journeyExitRecorded = true;
+    pureRunState.journeyExitRetryable = false;
+    return pureRunState.journeyExitResponse;
+  }
+  if (pureRunState.freshStartEvidence === null || pureRunState.journeyExitEvidence === null) {
+    return pureJourneyExitEvidenceFailure(
+      response,
+      "validated fresh-start or journey-exit evidence is unavailable",
+      false,
+    );
+  }
+  try {
+    writeRunEvidence([pureRunState.freshStartEvidence, pureRunState.journeyExitEvidence]);
+    pureRunState.journeyExitRecorded = true;
+    pureRunState.journeyExitRetryable = false;
+    return pureRunState.journeyExitResponse;
+  } catch (error) {
+    pureRunState.journeyExitWriteFailures += 1;
+    const retryable = pureRunState.journeyExitWriteFailures === 1;
+    const detail = error instanceof Error ? error.message : String(error);
+    return pureJourneyExitEvidenceFailure(response, detail, retryable);
+  }
+}
+
+function pureCallEvidence(name: string, value: unknown): unknown {
+  if (PLAY_MODE !== "pure") return value;
   const response = objectRecord(value);
-  if (!response) return;
+  if (!response) return value;
   if (name === "start_overworld") {
     const sessionId = response.session_id;
     if (typeof sessionId !== "string" || sessionId.length === 0) {
@@ -337,7 +431,7 @@ function pureCallEvidence(name: string, value: unknown): void {
       const snapshot = pureRunSnapshot(sessionId);
       const build = pureRunBuild(snapshot);
       pureRunState.build = build;
-      appendRunEvidence({
+      const freshStartEvidence = FreshStartRunEvidenceV2Schema.parse({
         schema_version: 2,
         play_mode: "pure",
         event: "fresh_start",
@@ -346,8 +440,19 @@ function pureCallEvidence(name: string, value: unknown): void {
         run_seed: PURE_RUN_PROVENANCE!.runSeed,
         build,
       });
+      pureRunState.freshStartEvidence = freshStartEvidence;
+      writeRunEvidence([freshStartEvidence]);
     }
-    return;
+    return value;
+  }
+  const receipt =
+    name === "choose_overworld_session_journey"
+      ? (response.exitReceipt ?? objectRecord(response.result)?.exitReceipt)
+      : undefined;
+  const receiptRecord = objectRecord(receipt);
+  if (receiptRecord && pureRunState.journeyExitRecorded) {
+    pureRunState.rpgSessionId = null;
+    return pureRunState.journeyExitResponse ?? value;
   }
   if (name === "start_overworld_session_quest" && response.ok === true) {
     const rpgSessionId = response.rpg_session_id;
@@ -363,43 +468,64 @@ function pureCallEvidence(name: string, value: unknown): void {
   } else if (
     name === "step_action" &&
     response.ok === true &&
-    (response.questCompletion !== undefined ||
-      objectRecord(response.context)?.ended === true ||
-      objectRecord(response.observation)?.ended === true)
+    response.questCompletion !== undefined
   ) {
     pureRunState.rpgSessionId = null;
   }
-  if (name !== "choose_overworld_session_journey" || pureRunState.journeyExitRecorded) return;
-  const receipt = response.exitReceipt ?? objectRecord(response.result)?.exitReceipt;
-  const receiptRecord = objectRecord(receipt);
-  if (
-    !receiptRecord ||
-    receiptRecord.exitReason !== "player_ended_at_choice" ||
-    typeof receiptRecord.receiptHash !== "string"
-  ) {
-    return;
-  }
-  const verifiedReceipt = JourneyExitReceiptSchema.parse(receipt);
-  if (RUN_EVIDENCE_PATH !== null) {
-    const snapshot = pureRunSnapshot(pureRunState.overworldSessionId!);
-    const build = pureRunBuild(snapshot);
-    if (pureRunState.build === null || !isDeepStrictEqual(build, pureRunState.build)) {
-      throw new Error("Pure run world/build provenance changed between start and journey exit.");
-    }
-    appendRunEvidence({
-      schema_version: 2,
-      play_mode: "pure",
-      event: "journey_exit",
-      start_surface: "fresh_overworld",
-      session_id: pureRunState.overworldSessionId!,
-      run_seed: PURE_RUN_PROVENANCE!.runSeed,
-      build,
-      quest_outcomes: snapshot.questOutcomes,
-      receipt: verifiedReceipt,
-    });
-  }
-  pureRunState.journeyExitRecorded = true;
+  if (name !== "choose_overworld_session_journey" || pureRunState.journeyExitRecorded) return value;
+  if (!receiptRecord) return value;
+
+  // The game mutation has already committed by the time the raw receipt reaches
+  // this boundary. Retain that terminal response and release any embedded child
+  // before fallible validation/export/file IO so a recorder failure cannot
+  // strand the run between an ended journey and an active child handle.
+  pureRunState.journeyExitResponse ??= value;
   pureRunState.rpgSessionId = null;
+  if (pureRunState.journeyExitEvidence !== null) {
+    return persistPureJourneyExitEvidence(response);
+  }
+  let verifiedReceipt: z.infer<typeof JourneyExitReceiptSchema>;
+  try {
+    verifiedReceipt = JourneyExitReceiptSchema.parse(receipt);
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    return pureJourneyExitEvidenceFailure(response, detail, false);
+  }
+  if (RUN_EVIDENCE_PATH !== null) {
+    try {
+      const snapshot = pureRunSnapshot(pureRunState.overworldSessionId!);
+      const build = pureRunBuild(snapshot);
+      if (pureRunState.build === null || !isDeepStrictEqual(build, pureRunState.build)) {
+        throw new Error("Pure run world/build provenance changed between start and journey exit.");
+      }
+      pureRunState.journeyExitEvidence = JourneyExitRunEvidenceV2Schema.parse({
+        schema_version: 2,
+        play_mode: "pure",
+        event: "journey_exit",
+        start_surface: "fresh_overworld",
+        session_id: pureRunState.overworldSessionId!,
+        run_seed: PURE_RUN_PROVENANCE!.runSeed,
+        build,
+        quest_outcomes: snapshot.questOutcomes,
+        receipt: verifiedReceipt,
+      });
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error);
+      return pureJourneyExitEvidenceFailure(response, detail, false);
+    }
+  }
+  return persistPureJourneyExitEvidence(response);
+}
+
+function pureCommittedJourneyExitResponse(name: string, args: unknown): unknown | null {
+  if (PLAY_MODE !== "pure" || pureRunState.journeyExitResponse === null) return null;
+  const input = objectRecord(args);
+  return name === "choose_overworld_session_journey" &&
+    input?.session_id === pureRunState.overworldSessionId &&
+    input.choice === "end" &&
+    (pureRunState.journeyExitRecorded || pureRunState.journeyExitRetryable)
+    ? pureRunState.journeyExitResponse
+    : null;
 }
 
 // ── Spectate mode ─────────────────────────────────────────────────────────────
@@ -471,11 +597,22 @@ function ok(value: unknown): CallToolResult {
 function wrap<A>(name: string, handler: (args: A) => unknown) {
   return async (args: A): Promise<CallToolResult> => {
     let result: CallToolResult;
+    let ownsPureCall = false;
     try {
+      if (PLAY_MODE === "pure") {
+        if (pureRunState.callInFlight) {
+          throw new Error(
+            "Another pure-play tool call is still in progress; wait for its response before retrying.",
+          );
+        }
+        pureRunState.callInFlight = true;
+        ownsPureCall = true;
+      }
       pureCallPreflight(name, args);
-      const rawValue = await handler(args); // await is a no-op for the sync handlers
-      pureCallEvidence(name, rawValue);
-      const value = pureSessionResponsePayload(name, rawValue);
+      const committedExit = pureCommittedJourneyExitResponse(name, args);
+      const rawValue = committedExit ?? (await handler(args)); // await is a no-op for sync handlers
+      const evidencedValue = pureCallEvidence(name, rawValue);
+      const value = pureSessionResponsePayload(name, evidencedValue);
       result = ok(value);
     } catch (e) {
       result =
@@ -488,6 +625,8 @@ function wrap<A>(name: string, handler: (args: A) => unknown) {
               content: [{ type: "text", text: `Error: ${(e as Error).message}` }],
               isError: true,
             };
+    } finally {
+      if (ownsPureCall) pureRunState.callInFlight = false;
     }
     spectateRecord(name, args, result);
     if (SPECTATE_DELAY_MS > 0) await new Promise((r) => setTimeout(r, SPECTATE_DELAY_MS));

@@ -3,7 +3,11 @@ import { mkdirSync, mkdtempSync, readFileSync, utimesSync, writeFileSync } from 
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { collectInputs, compileFeedback } from "../../src/feedback/compile.js";
-import { FeedbackEvidenceSummarySchema } from "../../src/feedback/evidence_summary.js";
+import {
+  FeedbackEvidenceSummarySchema,
+  summarizeFeedbackEvidence,
+} from "../../src/feedback/evidence_summary.js";
+import { PureExitInterviewV2Schema } from "../../src/blind/exit_interview.js";
 import { HotspotsFileSchema } from "../../src/feedback/schema.js";
 import { CrawlFindingSchema, type CrawlFinding } from "../../src/crawl/findings.js";
 import { hashState } from "../../src/core/hash.js";
@@ -459,6 +463,7 @@ describe("compileFeedback", () => {
           eligible_reports: 3,
           continued_reports: 1,
           ended_at_first_choice_reports: 2,
+          forced_character_death_reports: 0,
           accepted_decisions: { minimum: 12, maximum: 80, mean: 44 },
           choices: { continue: 1, end: 3 },
           choice_triggers: {
@@ -480,7 +485,10 @@ describe("compileFeedback", () => {
     const markdown = readFileSync(mdPath, "utf8");
     expect(markdown).toContain("Verified report modes: pure 3, structural 1, legacy-guided 1");
     expect(markdown).toContain("### Journey contract v1");
-    expect(markdown).toContain("Actual game choices: 1 continue, 3 end");
+    expect(markdown).toContain("Actual voluntary game choices: 1 continue, 3 end");
+    expect(markdown).toContain(
+      "Forced character-death terminals (excluded from voluntary retention): 0",
+    );
     expect(markdown).toContain("`would_replay` is a post-exit attitude metric");
   });
 
@@ -520,6 +528,7 @@ describe("compileFeedback", () => {
           eligible_reports: 1,
           continued_reports: 1,
           ended_at_first_choice_reports: 0,
+          forced_character_death_reports: 0,
           accepted_decisions: { minimum: 80, maximum: 80, mean: 80 },
           choices: { continue: 1, end: 1 },
           choice_triggers: {
@@ -538,6 +547,7 @@ describe("compileFeedback", () => {
           eligible_reports: 1,
           continued_reports: 0,
           ended_at_first_choice_reports: 1,
+          forced_character_death_reports: 0,
           accepted_decisions: { minimum: 40, maximum: 40, mean: 40 },
           choices: { continue: 0, end: 1 },
           choice_triggers: {
@@ -559,5 +569,89 @@ describe("compileFeedback", () => {
     expect(markdown).toContain("### Journey contract v1");
     expect(markdown).toContain("### Journey contract v2");
     expect(markdown).toContain("incompatible contracts are never pooled");
+  });
+
+  it("separates forced death from voluntary attrition while preserving earlier choices", () => {
+    const deathInterview = (continued: boolean) => {
+      const checkpointProofHash = "c".repeat(64);
+      const deathProofHash = "d".repeat(64);
+      const acceptedDecisions = continued ? 53 : 23;
+      const payload = {
+        contractVersion: 3,
+        exitReason: "player_ended_at_choice",
+        goalVersion: 1,
+        goalId: "albany_local_lead",
+        goalText: "Find one local lead in Albany and see it through.",
+        goalStatus: "active",
+        goalCompletedAtDecision: null,
+        completedGoals: [],
+        acceptedDecisions,
+        exitReasons: ["character_died"],
+        checkpoint: null,
+        decisionProofHash: deathProofHash,
+        retentionHistory: [
+          ...(continued
+            ? [
+                {
+                  sequence: 1,
+                  atDecision: 40,
+                  reasons: ["checkpoint"],
+                  checkpoint: 40,
+                  goalVersion: null,
+                  goalId: null,
+                  choice: "continue",
+                  decisionProofHash: checkpointProofHash,
+                },
+              ]
+            : []),
+          {
+            sequence: continued ? 2 : 1,
+            atDecision: acceptedDecisions,
+            reasons: ["character_died"],
+            checkpoint: null,
+            goalVersion: null,
+            goalId: null,
+            choice: "end",
+            decisionProofHash: deathProofHash,
+          },
+        ],
+      } as const;
+      return PureExitInterviewV2Schema.parse({
+        schema_version: 2,
+        play_mode: "pure",
+        start_surface: "fresh_overworld",
+        retention_eligible: true,
+        journey_exit_receipt: { ...payload, receiptHash: hashState(payload) },
+        clarity: 4,
+        enjoyment: 3,
+        goal_understood: true,
+        got_stuck: false,
+        confusions: [],
+        bugs: [],
+        best_moment: "The fatal consequence remained legible and final.",
+        worst_moment: "The character died before the lead was resolved.",
+        would_replay: true,
+        verdict: "The run ended honestly and I would replay to try another approach.",
+      });
+    };
+
+    const evidence = summarizeFeedbackEvidence([
+      { ref: "death-before-choice.md", interview: deathInterview(false) },
+      { ref: "continued-then-death.md", interview: deathInterview(true) },
+    ]);
+    expect(evidence.pure_retention.contract_versions[0]).toMatchObject({
+      contract_version: 3,
+      eligible_reports: 2,
+      continued_reports: 1,
+      ended_at_first_choice_reports: 0,
+      forced_character_death_reports: 2,
+      choices: { continue: 1, end: 0 },
+      choice_triggers: {
+        checkpoint: { continue: 1, end: 0 },
+        goal_completed: { continue: 0, end: 0 },
+        checkpoint_and_goal_completed: { continue: 0, end: 0 },
+      },
+      checkpoints: [{ decision: 40, continue: 1, end: 0 }],
+    });
   });
 });

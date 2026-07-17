@@ -15,6 +15,7 @@ import {
   journeyExitReceipt,
   journeyPresentation,
   recordJourneyAcceptedDecision,
+  recordJourneyCharacterDied,
   recordJourneyDecision,
   recordJourneyGoalCompleted,
   type JourneyContractSnapshot,
@@ -315,6 +316,74 @@ describe("journey contract v3 goals", () => {
       JourneyContractSnapshotSchema.parse(activateJourneyGoal(continued, GOAL_THREE)),
     ).toBeTruthy();
   });
+
+  it("turns character death into an end-only pause with an unfinished-goal receipt", () => {
+    const active = decideUntil(createInitialJourneyContractSnapshot(), 7);
+    const died = recordJourneyCharacterDied(active);
+
+    expect(JourneyContractSnapshotSchema.safeParse(died).success).toBe(true);
+    expect(journeyPresentation(died)).toMatchObject({
+      status: "awaiting_choice",
+      goal: { status: "active", completedAtDecision: null },
+      pendingChoice: {
+        atDecision: 7,
+        reasons: ["character_died"],
+        checkpoint: null,
+        goalVersion: null,
+        goalId: null,
+        options: [{ id: "end" }],
+      },
+    });
+    expect(journeyPresentation(died).pendingChoice?.options).toHaveLength(1);
+    expect(() => chooseJourney(died, "continue")).toThrow(/character died/i);
+
+    const ended = chooseJourney(died, "end").state;
+    expect(JourneyContractSnapshotSchema.safeParse(ended).success).toBe(true);
+    expect(journeyExitReceipt(ended)).toMatchObject({
+      goalStatus: "active",
+      goalCompletedAtDecision: null,
+      exitReasons: ["character_died"],
+      checkpoint: null,
+      retentionHistory: [{ choice: "end", reasons: ["character_died"] }],
+    });
+
+    const forgedContinue = cloneJourneyContractSnapshot(ended);
+    forgedContinue.retentionHistory[0]!.choice = "continue";
+    const forged = JourneyContractSnapshotSchema.safeParse(forgedContinue);
+    expect(forged.success).toBe(false);
+    if (!forged.success) {
+      expect(forged.error.issues.map((issue) => issue.message).join("\n")).toMatch(
+        /character death can only end/i,
+      );
+    }
+  });
+
+  it("preserves a fixed checkpoint when character death lands on its exact decision", () => {
+    const checkpoint = decideUntil(
+      createInitialJourneyContractSnapshot(),
+      JOURNEY_BASELINE_DECISIONS,
+    );
+    const died = recordJourneyCharacterDied(checkpoint);
+
+    expect(JourneyContractSnapshotSchema.safeParse(died).success).toBe(true);
+    expect(died.pendingChoice).toMatchObject({
+      atDecision: JOURNEY_BASELINE_DECISIONS,
+      reasons: ["checkpoint", "character_died"],
+      checkpoint: JOURNEY_BASELINE_DECISIONS,
+      goalVersion: null,
+      goalId: null,
+    });
+    expect(chooseJourney(died, "end").result.exitReceipt).toMatchObject({
+      goalStatus: "active",
+      exitReasons: ["checkpoint", "character_died"],
+      checkpoint: JOURNEY_BASELINE_DECISIONS,
+    });
+
+    const completed = recordJourneyGoalCompleted(
+      decide(createInitialJourneyContractSnapshot(), "finish-goal"),
+    );
+    expect(() => recordJourneyCharacterDied(completed)).toThrow(/completed-goal choice/i);
+  });
 });
 
 describe("journey contract presentation context", () => {
@@ -557,7 +626,7 @@ describe("journey contract persistence and validation", () => {
     forgedCheckpoint.pendingChoice!.goalVersion = 1;
     forgedCheckpoint.pendingChoice!.goalId = INITIAL_JOURNEY_GOAL.id;
     expect(() => JourneyContractSnapshotSchema.parse(forgedCheckpoint)).toThrow(
-      /checkpoint-only.*null/i,
+      /without goal completion.*null/i,
     );
 
     const completion = recordJourneyGoalCompleted(

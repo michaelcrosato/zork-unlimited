@@ -575,7 +575,23 @@ function currentReceipt() {
   return { ...payload, receiptHash: hashState(payload) };
 }
 
-function reportText(receipt: ReturnType<typeof currentReceipt>): string {
+function currentDeathReceipt() {
+  const { receiptHash: _receiptHash, ...payload } = currentReceipt();
+  const deathPayload = {
+    ...payload,
+    exitReasons: ["checkpoint", "character_died"] as const,
+    retentionHistory: payload.retentionHistory.map((event, index) =>
+      index === payload.retentionHistory.length - 1
+        ? { ...event, reasons: ["checkpoint", "character_died"] as const }
+        : event,
+    ),
+  };
+  return { ...deathPayload, receiptHash: hashState(deathPayload) };
+}
+
+function reportText(
+  receipt: ReturnType<typeof currentReceipt> | ReturnType<typeof currentDeathReceipt>,
+): string {
   const interview = {
     schema_version: 2,
     play_mode: "pure",
@@ -859,6 +875,57 @@ describe("closed fleet filesystem integrity", () => {
       writeFileSync(firstAttestationPath, canonicalAttestationBody);
       writeFileSync(manifestPath, canonicalManifestBody);
     };
+    const rewriteFirstReceipt = (
+      nextReceipt: ReturnType<typeof currentReceipt> | ReturnType<typeof currentDeathReceipt>,
+    ) => {
+      const reportBody = reportText(nextReceipt);
+      const sidecar = {
+        ...(JSON.parse(canonicalSidecarBody) as Record<string, unknown>),
+        receipt: nextReceipt,
+      };
+      const evidence = canonicalEvidenceBody
+        .trim()
+        .split(/\r?\n/)
+        .map((line) => JSON.parse(line) as Record<string, unknown>);
+      evidence[1]!.receipt = nextReceipt;
+      const primaryEnvelope = {
+        ...(JSON.parse(canonicalPrimaryEnvelopeBody) as Record<string, unknown>),
+        result: reportBody,
+      };
+      const sidecarBody = `${JSON.stringify(sidecar, null, 2)}\n`;
+      const evidenceBody = `${evidence.map((event) => JSON.stringify(event)).join("\n")}\n`;
+      const primaryEnvelopeBody = `${JSON.stringify(primaryEnvelope)}\n`;
+      const attestation = {
+        ...rows[0]!.model_attestation,
+        receipt_hash: nextReceipt.receiptHash,
+        report_sha256: sha256Text(reportBody),
+        run_sidecar_sha256: sha256Text(sidecarBody),
+        run_evidence_sha256: sha256Text(evidenceBody),
+        primary_envelope_sha256: sha256Text(primaryEnvelopeBody),
+      };
+      const firstRow = {
+        ...rows[0]!,
+        accepted_decisions: nextReceipt.acceptedDecisions,
+        retention_choices: nextReceipt.retentionHistory,
+        checkpoint: nextReceipt.checkpoint,
+        exit_reason: nextReceipt.exitReason,
+        exit_reasons: nextReceipt.exitReasons,
+        receipt_hash: nextReceipt.receiptHash,
+        model_attestation: attestation,
+      };
+      writeFileSync(firstReportPath, reportBody);
+      writeFileSync(firstSidecarPath, sidecarBody);
+      writeFileSync(firstEvidencePath, evidenceBody);
+      writeFileSync(firstPrimaryEnvelopePath, primaryEnvelopeBody);
+      writeFileSync(firstAttestationPath, `${JSON.stringify(attestation, null, 2)}\n`);
+      writeFileSync(
+        manifestPath,
+        `${rows
+          .map((row, index) => (index === 0 ? firstRow : row))
+          .map((row) => JSON.stringify(row))
+          .join("\n")}\n`,
+      );
+    };
 
     const certified = validateStartingSlicePilot({
       root: ROOT,
@@ -878,6 +945,21 @@ describe("closed fleet filesystem integrity", () => {
     expect(certified.cohort_kind).toBe("pilot");
     expect(certified.authenticated_actual_model).toBe("claude-sonnet-4-5-20260716");
     expect(certified.certified_build).toEqual(build);
+
+    rewriteFirstReceipt(currentDeathReceipt());
+    const rejectedCharacterDeath = validateStartingSlicePilot({
+      root: ROOT,
+      fleetDir,
+      expectedBuild: build,
+    });
+    const deathErrors = rejectedCharacterDeath.validity_errors.join("\n");
+    expect(deathErrors).toContain(
+      "character-death receipt is valid blind evidence but cannot certify the starting slice",
+    );
+    expect(deathErrors).not.toContain("authenticated run artifacts invalid");
+    expect(deathErrors).not.toContain("report verification failed");
+    restoreFirstIdentity();
+    writeFileSync(firstReportPath, canonicalReportBody);
 
     const authorityIsolation = certifyStartingSliceAuthority({
       root: ROOT,

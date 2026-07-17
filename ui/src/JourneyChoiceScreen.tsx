@@ -23,6 +23,7 @@ export function JourneyChoiceScreen({
   if (!pendingChoice) {
     throw new Error("JourneyChoiceScreen requires a pending journey choice.");
   }
+  const characterDied = pendingChoice.reasons.includes("character_died");
 
   return (
     <main className="journey-decision-page">
@@ -35,7 +36,7 @@ export function JourneyChoiceScreen({
       >
         <p className="kicker">Journey pause · decision {pendingChoice.atDecision}</p>
         <h1 id="journey-choice-title" ref={headingRef} tabIndex={-1}>
-          Continue this journey?
+          {characterDied ? "Your character died" : "Continue this journey?"}
         </h1>
         <p id="journey-choice-message" className="journey-choice-message">
           {pendingChoice.message}

@@ -531,10 +531,13 @@ function renderHotspotsMarkdown(
     lines.push(`- Eligible pure exits: ${cohort.eligible_reports}`);
     lines.push(`- Players who continued at least once: ${cohort.continued_reports}`);
     lines.push(
-      `- Players who ended at their first choice: ${cohort.ended_at_first_choice_reports}`,
+      `- Players who ended at their first voluntary choice: ${cohort.ended_at_first_choice_reports}`,
     );
     lines.push(
-      `- Actual game choices: ${cohort.choices.continue} continue, ${cohort.choices.end} end`,
+      `- Actual voluntary game choices: ${cohort.choices.continue} continue, ${cohort.choices.end} end`,
+    );
+    lines.push(
+      `- Forced character-death terminals (excluded from voluntary retention): ${cohort.forced_character_death_reports}`,
     );
     lines.push(
       `- Journey decisions under this contract: ${cohort.accepted_decisions.minimum}–${cohort.accepted_decisions.maximum} (mean ${cohort.accepted_decisions.mean.toFixed(2)})`,
