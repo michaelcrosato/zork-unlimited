@@ -48,9 +48,18 @@ const RELIEF_ALLOCATION_IMPORT_IDS: ReadonlySet<string> = new Set([
   "import:wolf_winter_relief_mobile_reserve",
 ]);
 
-/** Reconstruct the exact F06 manifest by reversing only F02 relief-oath authorship. */
+const JUNE_LEFT_AFTER_BLOOD_PREDECESSOR_SUMMARY =
+  "June's field seat is empty. Her separate return says the route crossed into combat before she could take the lower rail, ending the cattle-first field agreement.";
+
+/** Reconstruct exact F06 by restoring its return copy and reversing F02 oath authorship. */
 export function exactF06World(current: OverworldManifest): OverworldManifest {
   const predecessor = structuredClone(current);
+  const june = predecessor.characters.find(
+    (character) => character.id === "albany_city__transport_hub__june_pike",
+  );
+  const leftAfterBlood = june?.variants?.find((variant) => variant.id === "left_after_blood");
+  if (!leftAfterBlood) throw new Error("June must have a left-after-blood presentation");
+  leftAfterBlood.summary = JUNE_LEFT_AFTER_BLOOD_PREDECESSOR_SUMMARY;
   delete predecessor.opening_relief_oath;
   predecessor.campaign_service_rules = (predecessor.campaign_service_rules ?? []).filter(
     (rule) => !RELIEF_OATH_SERVICE_IDS.has(rule.id),

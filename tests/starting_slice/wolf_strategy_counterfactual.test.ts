@@ -39,13 +39,16 @@ type Route = Readonly<{
   observations: readonly ReturnType<typeof buildRpgObservation>[];
 }>;
 
-function lureRoute(opening: "clean" | "fouled" | "hybrid"): Route {
+function lureRoute(opening: "clean" | "fouled" | "fouled_braced" | "hybrid"): Route {
   let state = initStateForRpgPack(
     index,
-    opening === "clean" ? 901 : opening === "fouled" ? 902 : 903,
-  );
-  const step = makeStep(
-    buildRpgRules(index, () => fixedRng(opening === "clean" ? "best" : "worst")),
+    opening === "clean"
+      ? 901
+      : opening === "fouled"
+        ? 902
+        : opening === "fouled_braced"
+          ? 904
+          : 903,
   );
   const actions: string[] = [];
   const observations = [buildRpgObservation(index, state)];
@@ -58,6 +61,12 @@ function lureRoute(opening: "clean" | "fouled" | "hybrid"): Route {
         .join(", ")}`,
     ).toBeDefined();
     if (!option) throw new Error(`missing ${id}`);
+    const face =
+      opening === "clean" ||
+      (opening === "fouled_braced" && id === "use_paling_rail" && state.flags.lure_trail_fouled)
+        ? "best"
+        : "worst";
+    const step = makeStep(buildRpgRules(index, () => fixedRng(face)));
     const result = step(state, option.action);
     expect(result.ok, result.rejectionReason).toBe(true);
     state = result.state;
@@ -92,7 +101,11 @@ function lureRoute(opening: "clean" | "fouled" | "hybrid"): Route {
       act("use_paling_rail"); // worst field roll: the rail splits
       act("use_paling_rail"); // deterministic salvage: bind the split guard
       act("use_split_rail_guard_on_downwind_feed_line");
+    } else if (opening === "fouled_braced") {
+      act("use_paling_rail"); // best rail roll: the breach braces
+      act("use_paling_rail"); // deterministic scent-pen: redirect alive
     } else {
+      act("maneuver_yearling_wolf_commit_hybrid_strike");
       while (!state.flags.yearling_down) act("attack_yearling_wolf");
     }
   }
@@ -120,7 +133,7 @@ function lureRoute(opening: "clean" | "fouled" | "hybrid"): Route {
   expect(yard.blocked_exits).toContainEqual({
     direction: "north",
     message:
-      "Carry the committed plan's finite feed, drive rig, shutters, or seals. After the lure's first beat, continue west through the store and up to the loft.",
+      "Resolve the field line before crossing: speak with anyone holding the gate or carry committed feed, rig, shutters, or seals. After lure's first beat, go west and up.",
   });
   act("go_west");
   act("go_up");
@@ -187,6 +200,31 @@ describe("SS-F09 — pressure-backed Wolf-Winter strategy counterfactual", () =>
 
     expect(clean.state.vars.score).toBe(fouled.state.vars.score);
     expect(clean.state.endingId).not.toBe(fouled.state.endingId);
+  });
+
+  it("makes a successful brace a living failed-lure recovery instead of a forced kill", () => {
+    const split = lureRoute("fouled");
+    const braced = lureRoute("fouled_braced");
+
+    expect(braced.actions.filter((id) => id === "use_paling_rail")).toHaveLength(2);
+    expect(braced.actions).not.toContain("use_split_rail_guard_on_downwind_feed_line");
+    expect(
+      braced.actions.some((id) => id.startsWith("attack_") || id.startsWith("maneuver_")),
+    ).toBe(false);
+    expect(braced.state.flags).toMatchObject({
+      lure_trail_fouled: true,
+      breach_braced: true,
+      yearling_redirected: true,
+      yearling_redirected_with_braced_rail: true,
+      pack_diverted: true,
+    });
+    expect(braced.state.flags.yearling_down).not.toBe(true);
+    expect(braced.state.flags.yearling_redirected_with_split_guard).not.toBe(true);
+    expect(braced.state.endingId).toBe(split.state.endingId);
+    expect(braced.state.questStage).toEqual(split.state.questStage);
+    expect(braced.state.questStage.the_watch).toBe("byre_redirected");
+    expect(braced.state.vars.cattle_alarm).toBe(split.state.vars.cattle_alarm);
+    expect(braced.state.vars.score).toBe(split.state.vars.score);
   });
 
   it("keeps the bounded combat recovery as a truthful hybrid identity", () => {

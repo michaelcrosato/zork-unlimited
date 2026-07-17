@@ -68,16 +68,16 @@ a separate game mode.
 
 The starting cast grows from Albany's existing six district contacts and Cade:
 
-| Character                         | Starting-slice agenda and memory                                                                                                                               |
-| --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Rowan Quill — Municipal Ledger    | Wants a defensible public record; remembers certified claims, lies, and unauthorized dispatch.                                                                 |
-| Jamie Tanner — Merchants Exchange | Protects scarce winter stock; remembers purchases, coercion, credit, and diverted goods.                                                                       |
-| Hayden Hale — Road Wardens        | Prioritizes corridor relief; remembers wagon promises and abandoned travellers.                                                                                |
-| Reese Pryce — Ironhands Local     | Protects workers and the only repair shift; remembers which asset received it.                                                                                 |
-| Emery Sloane — Greenway Stewards  | Protects people without destroying the wildlife corridor; remembers evidence custody and needless killing.                                                     |
-| Blair Drake — Survey College      | Wants accurate hazard evidence published; remembers findings shared or concealed.                                                                              |
-| Old Cade — hill steading          | Protects household and cattle; remembers truth, demands, promises, trespass, and violence.                                                                     |
-| June Pike — Road Warden ally      | Has independent cattle-first authority; she can refuse unequal terms, leave after first blood, solve herd pressure differently, and change return opportunity. |
+| Character                         | Starting-slice agenda and memory                                                                                                                                        |
+| --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Rowan Quill — Municipal Ledger    | Wants a defensible public record; remembers certified claims, lies, and unauthorized dispatch.                                                                          |
+| Jamie Tanner — Merchants Exchange | Protects scarce winter stock; remembers purchases, coercion, credit, and diverted goods.                                                                                |
+| Hayden Hale — Road Wardens        | Prioritizes corridor relief; remembers wagon promises and abandoned travellers.                                                                                         |
+| Reese Pryce — Ironhands Local     | Protects workers and the only repair shift; remembers which asset received it.                                                                                          |
+| Emery Sloane — Greenway Stewards  | Protects people without destroying the wildlife corridor; remembers evidence custody and needless killing.                                                              |
+| Blair Drake — Survey College      | Wants accurate hazard evidence published; remembers findings shared or concealed.                                                                                       |
+| Old Cade — hill steading          | Protects household and cattle; remembers truth, demands, promises, trespass, and violence.                                                                              |
+| June Pike — Road Warden ally      | Has independent cattle-first authority; she can refuse unequal terms, leave after the first wolf death, solve herd pressure differently, and change return opportunity. |
 
 At least five of these people must remain mechanically relevant after
 Wolf-Winter. June is the initial ally grammar; implementation may rename her
@@ -127,7 +127,7 @@ it is **not yet milestone-certified**:
   four completed resolution families remains unproven;
 - June Pike now supplies the first persistent ally grammar: her visible
   cattle-first contract, subordinate-role refusal, independent Wolf action,
-  first-blood departure, promise state, testimony, and Station opportunity all
+  first-wolf-death departure, promise state, testimony, and Station opportunity all
   replay across the Albany/quest boundary. The wider cast still needs more
   independent agendas and mechanically changed availability;
 - Wolf-Winter's saved-wood and clean living-pack facts now change Albany
@@ -336,20 +336,31 @@ terms: spend 15 minutes and grant June cattle-first authority, spend 5 minutes
 asking for a subordinate relay that she refuses, or leave solo without delay.
 Direct departure without contacting her also stays truthfully solo. The accepted
 contract records June as a companion plus an active promise and imports only
-that state into Wolf-Winter. On the same recovered failed-lure route, her
-presence adds a named legal conversation and blocks the final cast until she
-refuses the old-grey line, independently takes the lower cattle rail, and lowers
-cattle alarm by 1. That changes the identical route from a scattered herd to a
-whole-herd living-pack return. First blood removes the action but preserves
-hybrid/combat completion, then resolves the promise broken and June out of the
-party. Clean cooperation, negotiated refusal, explicit solo, and relationship
-loss produce distinct memories, Station testimony, and one-time service
-availability. Companion/promise state, chronological quest replay, RPG import
-receipts, overworld and RPG save/restore, and full/compact/UI parity are
-tamper-checked. Proof lives in
+that state into Wolf-Winter. Before June permits an uncommitted crossing into
+the paling, she holds the north gate and states that Cade's ordinary rail is a
+hunt-and-hold combat funnel whose first wolf death ends her agreement. Keeping the
+cattle-first terms leaves lure, drive, and fortification available; explicit
+acknowledgement opens the disclosed uncommitted crossing, while living commitments
+remain available until crossing. If a committed lure's one
+feed cast fouls, either a successful brace turned into a scent-pen or the
+existing failed-rail bind recovery redirects the yearling alive with distinct
+provenance. The ordinary rail remains combat-only. A first spear strike after
+the fouled lure irreversibly commits the hybrid line and retires every living
+recovery; June's agreement breaks only when the wolf dies. On a living recovery, June's
+named legal conversation blocks the final cast until she refuses the old-grey
+line, independently takes the lower cattle rail, and lowers cattle alarm by 1.
+That changes the identical route from a scattered herd to a whole-herd return.
+The first wolf death removes the action but preserves hybrid/combat completion, then
+resolves the promise broken and June out of the party. Clean cooperation,
+negotiated refusal, explicit solo, and relationship loss produce distinct
+memories, Station testimony, and one-time service availability. Companion and
+promise state, chronological quest replay, RPG import receipts, overworld and
+RPG save/restore, and full/compact/UI parity are tamper-checked. Proof lives in
 [`ally_commitment_counterfactual.test.ts`](../tests/starting_slice/ally_commitment_counterfactual.test.ts)
 and
-[`ally_content_gameplay.test.ts`](../tests/starting_slice/ally_content_gameplay.test.ts).
+[`ally_content_gameplay.test.ts`](../tests/starting_slice/ally_content_gameplay.test.ts),
+with the paired rail proof in
+[`wolf_strategy_counterfactual.test.ts`](../tests/starting_slice/wolf_strategy_counterfactual.test.ts).
 
 The eighth authored increment adds `drive_and_evacuate` as a complete third
 resolution family rather than renaming the failed-lure hybrid. Cade first

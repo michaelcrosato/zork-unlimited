@@ -569,8 +569,9 @@ describe("MCP pure play mode", () => {
           Object.fromEntries(labeledActions.map((action) => [action.id, action.command])),
         ).toMatchObject({
           ask_wolves: "ask: Ask for Cade's quick spear-hand lesson.",
-          ask_byre: "ask: Ask for Cade's guarded byre plan.",
-          ask_leave: "ask: Leave old Cade and hold the byre.",
+          ask_byre: "ask: Ask for Cade's guarded spear-fighting plan.",
+          ask_leave:
+            "ask: Leave Cade. Entering the breach without feed, drive, or seals commits hunt-and-hold.",
         });
 
         const compactMenu = textPayload(

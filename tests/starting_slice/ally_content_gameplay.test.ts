@@ -275,6 +275,107 @@ describe("SS-F04 — June Pike authored ally gameplay", () => {
     expect(initStateForRpgPack(index, 504).flags.june_pike_present).not.toBe(true);
   });
 
+  it("makes the hidden paling commitment explicit before June permits an ordinary combat line", () => {
+    let withJune = act(optionState(ACCEPT), "go_north");
+    const boundary = buildRpgObservation(index, withJune);
+    expect(boundary.description).toMatch(
+      /June holds the north gate[^]*spear-fighting funnel[^]*not a living turn[^]*any wolf death ends/i,
+    );
+    expect(actionIds(withJune)).toContain("talk_june_pike_combat_boundary");
+    expect(actionIds(withJune)).not.toContain("go_north");
+    expect(boundary.blocked_exits).toContainEqual({
+      direction: "north",
+      message: expect.stringMatching(/speak with anyone holding the gate[^]*committed feed/i),
+    });
+
+    withJune = act(withJune, "talk_june_pike_combat_boundary");
+    expect(actionIds(withJune)).toEqual(
+      expect.arrayContaining(["ask_acknowledge_combat_line", "ask_keep_cattle_terms"]),
+    );
+
+    const keepTerms = act(withJune, "ask_keep_cattle_terms");
+    expect(keepTerms.flags.june_combat_line_acknowledged).not.toBe(true);
+    expect(actionIds(keepTerms)).not.toContain("go_north");
+    expect(actionIds(keepTerms)).toContain("talk_houndsman");
+
+    let acknowledged = act(withJune, "ask_acknowledge_combat_line");
+    expect(acknowledged.flags.june_combat_line_acknowledged).toBe(true);
+    expect(acknowledged.flags.june_blood_condition_broken).not.toBe(true);
+    expect(acknowledged.journal.at(-1)).toMatch(
+      /ordinary rail means combat[^]*without a living plan[^]*first wolf death ends/i,
+    );
+    expect(buildRpgObservation(index, acknowledged).dialogue).toBeNull();
+    expect(actionIds(acknowledged)).toContain("go_north");
+    acknowledged = act(acknowledged, "go_north");
+    expect(buildRpgObservation(index, acknowledged).description).toMatch(
+      /combat funnel[^]*does not turn the wolf alive/i,
+    );
+    acknowledged = act(acknowledged, "use_paling_rail", 20);
+    expect(acknowledged.flags.breach_braced).toBe(true);
+    expect(actionIds(acknowledged)).not.toContain("use_paling_rail");
+    expect(
+      actionIds(acknowledged).some(
+        (id) => id === "attack_yearling_wolf" || id.startsWith("maneuver_yearling_wolf_"),
+      ),
+    ).toBe(true);
+
+    const solo = act(optionState(SOLO), "go_north");
+    expect(actionIds(solo)).toContain("go_north");
+    expect(actionIds(solo)).not.toContain("talk_june_pike_combat_boundary");
+    expect(buildRpgObservation(index, solo).description).not.toMatch(/June Pike/i);
+  });
+
+  it("lets a successful rail recover a fouled lure alive instead of forcing June-breaking blood", () => {
+    let state = foulFirstCast(optionState(ACCEPT));
+    const scoreBeforeRail = state.vars.score ?? 0;
+
+    state = act(state, "use_paling_rail", 20);
+    expect(state.flags).toMatchObject({
+      lure_trail_fouled: true,
+      breach_braced: true,
+    });
+    expect(state.flags.yearling_redirected).not.toBe(true);
+    expect(state.flags.june_blood_condition_broken).not.toBe(true);
+    expect(state.vars.score ?? 0).toBe(scoreBeforeRail);
+    expect(
+      buildRpgObservation(index, state).available_actions.find(
+        (option) => option.id === "use_paling_rail",
+      )?.command,
+    ).toMatch(/turn.*braced scent-pen/i);
+
+    expect(actionIds(state)).toContain("maneuver_yearling_wolf_commit_hybrid_strike");
+    expect(actionIds(state)).not.toContain("attack_yearling_wolf");
+    const hybrid = act(state, "maneuver_yearling_wolf_commit_hybrid_strike", 1, 1);
+    expect(hybrid.flags.lure_hybrid_combat_entered).toBe(true);
+    expect(hybrid.flags.yearling_down).not.toBe(true);
+    expect(hybrid.flags.june_blood_condition_broken).not.toBe(true);
+    expect(actionIds(hybrid)).toContain("attack_yearling_wolf");
+    expect(actionIds(hybrid)).not.toContain("use_paling_rail");
+    expect(buildRpgObservation(index, hybrid).description).toMatch(
+      /first spear stroke committed the hybrid line[^]*recoveries are closed/i,
+    );
+
+    state = act(state, "use_paling_rail");
+    expect(state.flags).toMatchObject({
+      yearling_redirected: true,
+      yearling_redirected_with_braced_rail: true,
+    });
+    expect(state.flags.yearling_redirected_with_split_guard).not.toBe(true);
+    expect(state.flags.june_blood_condition_broken).not.toBe(true);
+    expect(state.vars.score).toBe(scoreBeforeRail + 10);
+    expect(actionIds(state)).not.toContain("attack_yearling_wolf");
+    expect(actionIds(state)).not.toContain("use_paling_rail");
+
+    state = reachLeaderAfterLivingRecovery(state);
+    state = act(state, "talk_june_pike");
+    state = act(state, "ask_acknowledge");
+    state = finishLivingLine(state);
+    expect(buildRpgObservation(index, state)).toMatchObject({
+      ending_id: "ending_pack_diverted",
+    });
+    expect(state.flags.june_blood_condition_broken).not.toBe(true);
+  });
+
   it("lets June independently take the cattle line and reverse the same failed-lure outcome", () => {
     let withJune = reachLeaderAfterLivingRecovery(foulAndRecoverAlive(optionState(ACCEPT)));
     let solo = reachLeaderAfterLivingRecovery(foulAndRecoverAlive(optionState(SOLO)));
@@ -311,9 +412,38 @@ describe("SS-F04 — June Pike authored ally gameplay", () => {
     });
   });
 
-  it("breaks June's condition at first blood and removes her action without blocking the hybrid", () => {
+  it("makes the first lure strike irreversible, then breaks June's condition on wolf death", () => {
+    const hybridManeuver = pack.enemies
+      .find((enemy) => enemy.id === "yearling_wolf")
+      ?.maneuvers?.find((maneuver) => maneuver.id === "commit_hybrid_strike");
+    expect(hybridManeuver).toMatchObject({
+      result_flag: "lure_hybrid_combat_entered",
+      attack_bonus: 0,
+      defense_bonus: 1,
+    });
+    expect(hybridManeuver?.conditions).toContainEqual({
+      not_flag: "lure_hybrid_combat_entered",
+    });
+
+    const freshFoul = foulFirstCast(optionState(ACCEPT));
+    expect(actionIds(freshFoul)).toContain("use_paling_rail");
+    const freshHybrid = act(freshFoul, "maneuver_yearling_wolf_commit_hybrid_strike", 1, 1);
+    expect(freshHybrid.flags.lure_hybrid_combat_entered).toBe(true);
+    expect(actionIds(freshHybrid)).not.toContain("use_paling_rail");
+
     let state = foulFirstCast(optionState(ACCEPT));
-    state = act(state, "attack_yearling_wolf", 6, 1);
+    state = act(state, "use_paling_rail", 1);
+    state = act(state, "use_paling_rail");
+    expect(actionIds(state)).toContain("use_split_rail_guard_on_downwind_feed_line");
+    expect(actionIds(state)).toContain("maneuver_yearling_wolf_commit_hybrid_strike");
+    expect(actionIds(state)).not.toContain("attack_yearling_wolf");
+    state = act(state, "maneuver_yearling_wolf_commit_hybrid_strike", 1, 1);
+    expect(state.flags.lure_hybrid_combat_entered).toBe(true);
+    expect(state.flags.yearling_down).not.toBe(true);
+    expect(state.flags.june_blood_condition_broken).not.toBe(true);
+    expect(actionIds(state)).toContain("attack_yearling_wolf");
+    expect(actionIds(state)).not.toContain("use_paling_rail");
+    expect(actionIds(state)).not.toContain("use_split_rail_guard_on_downwind_feed_line");
     state = act(state, "attack_yearling_wolf", 6);
     expect(state.flags.yearling_down).toBe(true);
     expect(state.flags.june_blood_condition_broken).toBe(true);
@@ -323,7 +453,7 @@ describe("SS-F04 — June Pike authored ally gameplay", () => {
     state = finishLivingLine(state);
     const ending = buildRpgObservation(index, state);
     expect(ending.ending_id).toBe("ending_pack_diverted_after_blood");
-    expect(ending.ending?.text).toMatch(/First blood ended June Pike's field agreement/i);
+    expect(ending.ending?.text).toMatch(/first wolf death ended June Pike's field agreement/i);
 
     for (const enemyId of ["yearling_wolf", "flank_wolf", "grey_leader"]) {
       const enemy = pack.enemies.find((candidate) => candidate.id === enemyId);

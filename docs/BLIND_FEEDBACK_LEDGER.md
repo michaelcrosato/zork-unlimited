@@ -5,25 +5,31 @@ Generated deterministically from verified blind reports. The latest entries stay
 ## Summary
 
 - Reports dir: `blind-tester/reports`
-- Accepted reports: 804
+- Accepted reports: 806
 - Rejected or ignored markdown reports: 59
-- Latest report stamp: 20260716T181847Z
+- Latest report stamp: 20260717T044605Z
 - Recent entry limit: 100
-- Archived accepted entries collapsed into traits: 704
+- Archived accepted entries collapsed into traits: 706
 
 ## Recent Common Traits
 
 | Count | Latest | Category | Trait | Sources |
 | ---: | --- | --- | --- | --- |
-| 32 | 20260716T101651Z | replay | player would not replay | overworld |
-| 28 | 20260716T101651Z | bug S3 | Albany Station Quarter: notice board wording is confusing about where the quest actually starts | overworld |
-| 28 | 20260716T101651Z | confusion | the notice board near Albany Station Quarter doesn't say where the quest actually starts | overworld |
-| 28 | 20260716T101651Z | worst moment | Running into the Albany Station Quarter issue. | overworld |
+| 31 | 20260716T101651Z | replay | player would not replay | overworld |
+| 27 | 20260716T101651Z | bug S3 | Albany Station Quarter: notice board wording is confusing about where the quest actually starts | overworld |
+| 27 | 20260716T101651Z | confusion | the notice board near Albany Station Quarter doesn't say where the quest actually starts | overworld |
+| 27 | 20260716T101651Z | worst moment | Running into the Albany Station Quarter issue. | overworld |
 | 19 | 20260716T101651Z | bug S2 | road to Colonie: road encounter text repeats itself on back-to-back trips | overworld |
 | 12 | 20260713T055537Z | stuck | player got stuck | overworld |
 | 12 | 20260713T055537Z | understanding | goal was not understood | overworld |
 | 11 | 20260716T101651Z | worst moment | Running into the road to Colonie issue. | overworld |
 | 9 | 20260713T055537Z | worst moment | Nothing stood out as bad — tried hard to break it and it held up. | overworld |
+| 1 | 20260717T044605Z | confusion | Initial puzzle in the moor hunt (kill-site wind/angle reads) is learnable but not immediately explicit until NPC clue... | gpt-5-3-codex-spark |
+| 1 | 20260717T044605Z | worst moment | The kill-site read and combat feel a little random and could use one more hint or fallback cue before repeated attemp... | gpt-5-3-codex-spark |
+| 1 | 20260717T033956Z | confusion | Journey checkpoint interrupts flow exactly at goal completion with a big narrative handoff | gpt-5-3-codex-spark |
+| 1 | 20260717T033956Z | confusion | Pre-quest setup choices are dense and can feel like a long information gate | gpt-5-3-codex-spark |
+| 1 | 20260717T033956Z | confusion | The one-way feed sequence requires strict ordering and can be hard to internalize quickly | gpt-5-3-codex-spark |
+| 1 | 20260717T033956Z | worst moment | The setup phase (registration, duty, source, prep, relief, ally) is long before the first meaningful action happens. | gpt-5-3-codex-spark |
 | 1 | 20260716T181847Z | bug S1 | Albany Civic Center, first batch of scout+talk+investigate calls: Parallel calls after a mutating action were rejecte... | overworld |
 | 1 | 20260716T181847Z | bug S2 | Wolf-Winter quest, The Broken Paling / Byre Door: Non-lethal-seeming rail-bind setup still forced wolf-killing combat... | overworld |
 | 1 | 20260716T181847Z | confusion | Fortification/rail-bind option implied a non-lethal path but still led to killing wolves, breaking an ally promise | overworld |
@@ -34,17 +40,13 @@ Generated deterministically from verified blind reports. The latest entries stay
 | 1 | 20260716T162128Z | confusion | unclear how overworld registration choices map to in-quest mechanics until inside the quest | overworld |
 | 1 | 20260716T162128Z | worst moment | Being forced to kill the yearling wolf despite trying the non-lethal rail-wedge first, breaking June's bloodless pact... | overworld |
 | 1 | 20260716T160929Z | bug S0 | list_legal_actions tool on overworld session: Errors with a generic 'Unknown session' message instead of clarifying i... | overworld |
-| 1 | 20260716T160929Z | bug S1 | Wolf-Winter quest, June Pike ally agreement: Granting June cattle-first authority is framed as meaningful, but the ne... | overworld |
-| 1 | 20260716T160929Z | confusion | dense five-card registration sequence before any actual play began in Albany | overworld |
-| 1 | 20260716T160929Z | confusion | list_legal_actions rejected the overworld session id with no explanation that it's quest-only | overworld |
-| 1 | 20260716T160929Z | confusion | not always clear which discovered quest needed travel to an anchor area vs. immediate start | overworld |
-| 1 | 20260716T160929Z | worst moment | Realizing my carefully-negotiated ally agreement with June Pike broke the instant combat became unavoidable. | overworld |
-| 1 | 20260716T155813Z | bug S0 | Oneonta apothecary's house (sickroom/apothecary/herb store): Reaching the herb store from the apothecary's store requ... | overworld |
 
 ## Recent Entries
 
 | Stamp | Source | Seed | Mode | Decisions | C/E | Stuck | Replay | Report | Signal |
 | --- | --- | ---: | --- | ---: | --- | --- | --- | --- | --- |
+| 20260717T044605Z | gpt-5-3-codex-spark | 2850 | pure | 58 | 4/4 | no | yes | `blind-tester/reports/20260717T044605Z_gpt-5-3-codex-spark_seed2850.md` | confusions: Initial puzzle in the moor hunt (kill-site wind/angle reads) is learnable but not immediately explicit until NPC clues are consumed. |
+| 20260717T033956Z | gpt-5-3-codex-spark | 2825 | pure | 30 | 4/4 | no | yes | `blind-tester/reports/20260717T033956Z_gpt-5-3-codex-spark_seed2825.md` | confusions: Pre-quest setup choices are dense and can feel like a long information gate; The one-way feed sequence requires strict ordering and can be hard to internal... |
 | 20260716T181847Z | overworld | 2813 | pure | 76 | 4/4 | no | yes | `blind-tester/reports/20260716T181847Z_overworld_seed2813.md` | confusions: Long multi-step registration flow before first real quest action; Parallel tool calls silently invalidated by snapshot-hash staleness with no explanation;... |
 | 20260716T162128Z | overworld | 2812 | pure | 80 | 4/5 | no | yes | `blind-tester/reports/20260716T162128Z_overworld_seed2812.md` | confusions: unclear how overworld registration choices map to in-quest mechanics until inside the quest; alternate strategy options vanishing after committing to an ap... |
 | 20260716T160929Z | overworld | 2811 | pure | 74 | 4/5 | no | yes | `blind-tester/reports/20260716T160929Z_overworld_seed2811.md` | confusions: list_legal_actions rejected the overworld session id with no explanation that it's quest-only; dense five-card registration sequence before any actual play... |
@@ -143,17 +145,15 @@ Generated deterministically from verified blind reports. The latest entries stay
 | 20260713T055537Z | overworld | 6041 | structural | — | 4/4 | no | yes | `blind-tester/reports/20260713T055537Z_overworld_seed6041.md` | worst: Nothing stood out as bad — tried hard to break it and it held up. |
 | 20260713T055537Z | overworld | 6040 | structural | — | 3/4 | yes | no | `blind-tester/reports/20260713T055537Z_overworld_seed6040.md` | confusions: the notice board near Albany Station Quarter doesn't say where the quest actually starts \| bugs: S3 Albany Station Quarter: notice board wording is confusi... |
 | 20260713T055537Z | overworld | 6039 | structural | — | 2/3 | no | yes | `blind-tester/reports/20260713T055537Z_overworld_seed6039.md` | bugs: S2 road to Colonie: road encounter text repeats itself on back-to-back trips; S1 seed-6039 corner: minor wording nit unique to seed 6039 |
-| 20260713T055537Z | overworld | 6038 | structural | — | 4/3 | no | no | `blind-tester/reports/20260713T055537Z_overworld_seed6038.md` | confusions: the notice board near Albany Station Quarter doesn't say where the quest actually starts \| bugs: S3 Albany Station Quarter: notice board wording is confusi... |
-| 20260713T055537Z | overworld | 6037 | structural | — | 3/2 | no | yes | `blind-tester/reports/20260713T055537Z_overworld_seed6037.md` | bugs: S1 seed-6037 corner: minor wording nit unique to seed 6037 |
 
 ## Archived Trait Categories
 
 | Count | Latest | Category | Trait | Sources |
 | ---: | --- | --- | --- | --- |
-| 289 | 20260713T055537Z | replay | player would not replay | overworld, tide_mill, wolf_winter |
-| 102 | 20260713T055537Z | bug S3 | Albany Station Quarter: notice board wording is confusing about where the quest actually starts | overworld |
-| 102 | 20260713T055537Z | confusion | the notice board near Albany Station Quarter doesn't say where the quest actually starts | overworld |
-| 102 | 20260713T055537Z | worst moment | Running into the Albany Station Quarter issue. | overworld |
+| 290 | 20260713T055537Z | replay | player would not replay | overworld, tide_mill, wolf_winter |
+| 103 | 20260713T055537Z | bug S3 | Albany Station Quarter: notice board wording is confusing about where the quest actually starts | overworld |
+| 103 | 20260713T055537Z | confusion | the notice board near Albany Station Quarter doesn't say where the quest actually starts | overworld |
+| 103 | 20260713T055537Z | worst moment | Running into the Albany Station Quarter issue. | overworld |
 | 68 | 20260713T055537Z | bug S2 | road to Colonie: road encounter text repeats itself on back-to-back trips | overworld |
 | 51 | 20260713T055537Z | stuck | player got stuck | overworld |
 | 48 | 20260713T055537Z | understanding | goal was not understood | overworld |

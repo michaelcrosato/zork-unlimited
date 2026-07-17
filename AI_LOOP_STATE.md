@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 573 -->
+<!-- historical_cycle_count: 574 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - june_nonlethal_combat_boundary
+
+- Evidence choice: three consecutive canonical pure players (2811–2813) accepted June's cattle-first/no-killing terms but read Cade's ordinary rail as defensive; it silently committed hunt-and-hold, while a successful failed-lure brace paradoxically removed the living recovery that a failed rail retained.
+- Surface: June now stops an uncommitted paling crossing, names the ordinary rail as a combat funnel and first wolf death as her boundary, and leaves lure, drive, and fortify open. A fouled committed lure can turn either a braced or bound-split rail into a living scent-pen; the first guarded spear maneuver irreversibly retires every living recovery without breaking June's promise until a wolf actually dies.
+- Counterfactual: same-origin June boundary, successful/failed rail, Reese preparation, hybrid commitment, solo control, save/restore, foldback, service, full/compact MCP, and UI witnesses prove the disclosed choice, equal living recoveries, irreversible combat commitment, and truthful Albany consequence.
+- Pure evidence: final-world verifier-valid Spark seed 2850 completed the all-three-wolves-alive lure, continued twice, completed The Gallowmere, and ended honestly at decision 58; clarity/enjoyment 4/4, stuck false, replay true, no declared bug. Deterministic pairs carry the repaired failed-lure, hybrid, and June-return branches.
+- Diagnostic: four unretried ten-Spark cohorts verified 30/40 fresh pure exits, including 124-, 120-, and 80-decision journeys; rejected runs preserve parent-handle/tool confusion and two Codex compactor failures, localizing separate harness recoverability debt rather than laundering it away.
+- Self-critique: PASS for June's S2 combat boundary, not the greater-than-BG3 milestone. Echo the parent overworld handle through embedded play next; generic one-click Albany district work, global failure-forward proof, current deep crawl, clean pilot, and exact 100-player certification remain open.
+- Guard: pre/post crawls `20260716T195010Z`/`20260717T045146Z` reached 247/247 nodes, 344/344 edges, and 12/12 quests; focused boundary/liveness/migration/parity proofs and full health pass at 372 files/2,779 tests, UI typecheck, and all 12 packs.
 
 ### Cycle result - homogeneous_sonnet_authority_contract
 
@@ -139,12 +149,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Pure evidence: seed 2708 verified pure/fresh, completed Wolf-Winter, Gallowmere, Tanner's Fever, and Breaking Weir, continued at 24/40/48/68/80, and ended honestly at goal 4 on decision 89; clarity 4/5, enjoyment 5/5, stuck false, replay true. Seed 2707 timed out with a zero-byte log and is rejected technical evidence.
 - Compile/self-critique: fewer than three verified reports exist since compile `20260714T202925Z`, so no compile is due. PASS for one truthful return fork, not the greater-than-BG3 slice claim: eight forks, noncombat/hybrid Wolf resolutions, broader NPC agendas, and the recurring cross-town contact-name reuse remain.
 - Guard: adversarial review closed stable-journal migration, later-service hash relabeling, dual-choice, unreachable-rule, temporal-copy, and ordinary-service-fixture defects; pre/post 6,000-step crawls `20260714T205359Z`/`20260714T213657Z` reached 247/247 nodes, 344/344 edges, and 12/12 quests; 86 focused checks and full health passed at 333 files/2,429 tests, UI, and all 12 packs.
-
-### Cycle result - albany_saved_wood_service_counterfactual
-
-- Evidence choice: the assessor ranked a fleet-only Station Quarter board-wording cluster; the starting-slice matrix instead showed `SS-F11-saved-wood` already had a reachable equal-score irreversible fork but no delayed mechanical consumer, making it the highest-leverage contract increment.
-- Surface: generic fact-gated campaign-service rules now turn retained Wolf-Winter timber into one 15-minute Albany Station resupply and committed gate wood into one 15-minute rest; the alternatives remain the ordinary 45-minute resupply and 180-minute minimum rest. Full, compact, and web views state cause/terms before use, and the default compact result keeps the authored cause afterward.
-- Integrity/counterfactual: service use is bound to exact decision hash/action, replayed town/area, canonical copy, quest-completion ordinal, and one-time journal consumption; predecessor saves synthesize only provable completion boundaries and reject opaque legacy passages. Paired reachable resource states reverse which branch is advantageous, advancing the contract from 2/12 to 3/12 counted forks.
-- Pure evidence: verified pure/fresh seed 2706 completed Wolf-Winter, Gallowmere, Tanner's Fever, and Breaking Weir; continued at decisions 26/40/51/73/80, ended honestly at goal 4 on decision 94, clarity 4/5, enjoyment 5/5, got-stuck false, replay true, and no bugs. It validates the surrounding journey but did not independently isolate the new service counterfactual; deterministic paired tests carry that proof.
-- Compile/self-critique: compile `20260714T202925Z` has 777 verified reports and 28 eligible contract-v3 pure exits, all with at least one continue. PASS for F11's delayed Albany service consequence, not the whole depth contract; 9 counted forks, broader return NPC/opportunity reactivity, and the recurring front-loaded Albany jargon/Station-board clarity debt remain.
-- Guard: pre/post 6,000-step crawls `20260714T185834Z`/`20260714T201921Z` reached 247/247 nodes, 344/344 edges, and 12/12 quests; 180 focused tests and rendered UI smoke (no console errors or horizontal overflow) passed; full health is green at 332 files/2,420 tests, UI typecheck, and all 12 packs.

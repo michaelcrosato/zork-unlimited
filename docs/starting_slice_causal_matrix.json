@@ -186,13 +186,15 @@
         "world.minutes"
       ],
       "delayed_consumers": [
-        "Wolf-Winter imports only a real companion as `june_pike_present`; direct and solo starts keep exact pack defaults. On the same recovered failed-lure route, June adds a named legal conversation and blocks the final scent cast until she independently refuses the wolf line, takes the cattle line, and lowers cattle alarm by 1.",
+        "Wolf-Winter imports only a real companion as `june_pike_present`; direct and solo starts keep exact pack defaults. Before an uncommitted player can cross into the paling with June, she names the ordinary rail as hunt-and-hold combat and blocks the crossing until the player explicitly acknowledges that line or commits lure, drive, or fortification; keeping her cattle-first terms leaves every living commitment open.",
+        "On a committed fouled lure, either a successful brace or the existing bound split-rail failure recovery exposes an explicit scent-pen that redirects the yearling alive; the ordinary guarded rail remains a disclosed hunt-and-hold combat tactic. June then blocks the final scent cast until she independently refuses the wolf line, takes the cattle line, and lowers cattle alarm by 1.",
         "With identical prior state, June's action changes cattle alarm 4 and a scattered-herd ending into alarm 3 and a whole-herd ending. Any first wolf death breaks her disclosed condition, removes the action without blocking the hybrid or combat completion, and later resolves the promise broken while removing her from the party.",
         "Conditional quest exports resolve the cattle-first promise kept or broken in chronological replay, preserve June's ending-specific memory, and drive matching Station testimony. A living-pack return gives the kept companion one one-time 15-minute Station resupply; her negotiated relay refusal instead gives one distinct Station rest; explicit solo and relationship loss receive neither."
       ],
       "visible_feedback": [
-        "The blocking field-team screen and durable offer journal state June's one pressure intervention, cattle-first authority, no-combat condition, exact time cost, and solo consequence before confirmation; the persistent character panel then shows companion and promise state.",
-        "Wolf room prose, legal and blocked actions, June's spoken refusal, the visible cattle-alarm band, journal narration, and existing ending variants expose when she acts or when first blood cancels the agreement.",
+        "The blocking field-team screen and durable offer journal state June's one pressure intervention, cattle-first authority, no-wolf-death condition, exact time cost, and solo consequence before confirmation; the persistent character panel then shows companion and promise state.",
+        "Cade's menu and the last pre-paling June boundary distinguish guarded hunt-and-hold from the lure, drive, and fortification commitments. Explicit blocked exits, dialogue, journal, room prose, and legal actions disclose what crossing or a wolf death will do before either is chosen.",
+        "After a fouled lure, state-specific room prose and legal actions distinguish the braced-rail scent-pen from the bound-split-guard scent-pen. The first spear strike irreversibly commits the hybrid line and retires every living recovery; killing that wolf then breaks June's agreement on the Albany return.",
         "On return, June's memory-conditioned Station account, companion/promise projection, and cause-named one-time service distinguish cooperation, refusal, solo travel, and relationship loss across full, compact, UI, and restored views."
       ],
       "systems": [
@@ -227,7 +229,10 @@
         "tests/unit/world_session_quests.test.ts",
         "tests/unit/world_campaign_service_rules.test.ts",
         "tests/starting_slice/ally_content_gameplay.test.ts",
-        "traces/bugs/bug_0523_wolf_winter_ally_commitment.yaml"
+        "tests/starting_slice/wolf_strategy_counterfactual.test.ts",
+        "tests/starting_slice/preparation_profile_gameplay.test.ts",
+        "traces/bugs/bug_0523_wolf_winter_ally_commitment.yaml",
+        "traces/bugs/bug_0528_wolf_winter_june_combat_boundary.yaml"
       ],
       "counterfactual_test": "tests/starting_slice/ally_commitment_counterfactual.test.ts"
     },

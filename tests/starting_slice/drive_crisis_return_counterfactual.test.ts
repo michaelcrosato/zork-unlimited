@@ -237,7 +237,7 @@ describe("SS-F10 — drive crisis survives the truthful Albany return", () => {
     }
   });
 
-  it("keeps June's held-byre return cause truthful when combat was chosen before blood", () => {
+  it("attributes June's held-byre break to the first wolf death, not combat entry", () => {
     const session = OverworldSession.restore(WORLD, wolfBoundary(ACCEPT));
     session.completeQuest(WOLF.id, {
       endingId: "ending_held",
@@ -249,10 +249,10 @@ describe("SS-F10 — drive crisis survives the truthful Albany return", () => {
     expect(promiseStatus(session)).toBe("broken");
     expect(
       session.view().characters.find((character) => character.id === ALLY.contact)?.summary,
-    ).toMatch(/route crossed into combat[^]*before she could take the lower rail/i);
+    ).toMatch(/first wolf death[^]*before she could take the lower rail/i);
     expect(
       session.view().characters.find((character) => character.id === ALLY.contact)?.summary,
-    ).not.toMatch(/first blood broke/i);
+    ).not.toMatch(/crossed into combat[^]*ending the cattle-first field agreement/i);
   });
 
   it("round-trips the wound through core, compact, UI, and MCP projections without charging twice", () => {
