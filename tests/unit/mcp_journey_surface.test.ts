@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { createToolApi } from "../../src/mcp/tools.js";
 import {
   INITIAL_JOURNEY_GOAL,
+  INITIAL_JOURNEY_GOAL_GUIDANCE,
   JOURNEY_CONTRACT_VERSION,
 } from "../../src/world/journey_contract.js";
 import {
@@ -474,7 +475,7 @@ describe("MCP journey surface", () => {
       acceptedDecisions: 0,
       baselineDecisions: 40,
       nextCheckpoint: 40,
-      goalGuidance: null,
+      goalGuidance: INITIAL_JOURNEY_GOAL_GUIDANCE,
       pendingChoice: null,
     });
     expect(full.journey).toEqual(compact.journey);

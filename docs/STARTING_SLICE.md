@@ -50,6 +50,11 @@ A typical blind completion of the first Albany goal must remain at or below 45
 meaningful decisions. Optionality, interaction, and consequences create depth;
 mandatory length does not.
 
+The proof-hashed opening goal remains “Find one local lead in Albany and see it
+through.” Shared player guidance states the mechanical boundary separately:
+completing one Albany quest satisfies the goal, while jobs, events, and sites
+may reveal leads but do not finish it themselves.
+
 ## Local canon and player role
 
 Albany is a functioning civic and transport corridor serving hill communities
@@ -440,6 +445,11 @@ and one legal last-mile action. Direct structural starts retain the old neutral
 entry, while contradictory route flags fail closed. The route action replaces
 the old first local movement input, so it adds systemic optionality without
 raising first-goal length.
+
+The human UI and pure MCP share that session-owned launch. MCP names the normal
+player bridge `start_overworld_session_quest`; compact `context.quest_starts`
+lists its exact currently executable quest-and-approach tuples. `start_world_quest`
+bypasses that state and remains a structural QA drop-in, never a pure-play action.
 
 At seed 9 the ridge's DC 10 cast succeeds while the stockway's DC 12 cast fails
 and enters the authored no-retry split-rail recovery, proving the faster route's

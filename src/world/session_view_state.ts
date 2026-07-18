@@ -1,4 +1,4 @@
-import type { OverworldCompactView } from "./compact_view.js";
+import type { OverworldCompactQuestStart, OverworldCompactView } from "./compact_view.js";
 import type {
   OverworldArea,
   OverworldAreaExit,
@@ -71,6 +71,7 @@ export type OverworldSessionViewModelState = {
   regionRenown: ReadonlyMap<string, number>;
   completedRegionalArcIds: ReadonlySet<string>;
   pendingRoadEncounter: OverworldPendingRoadEncounter | null;
+  questStarts: readonly OverworldCompactQuestStart[];
   ids: OverworldCompactSessionIdState;
 };
 
@@ -103,6 +104,7 @@ export type OverworldSessionViewModelSourceState = {
   regionRenown: ReadonlyMap<string, number>;
   completedRegionalArcIds: ReadonlySet<string>;
   pendingRoadEncounter: OverworldPendingRoadEncounter | null;
+  questStarts: readonly OverworldCompactQuestStart[];
   ids: OverworldCompactSessionIdState;
 };
 
@@ -178,6 +180,7 @@ export function buildOverworldSessionViewModelState(
       regionRenown: source.regionRenown,
       completedRegionalArcIds: source.completedRegionalArcIds,
       pendingRoadEncounter: source.pendingRoadEncounter,
+      questStarts: [],
       ids: source.ids,
     };
   }
@@ -248,6 +251,7 @@ export function buildOverworldSessionViewModelState(
     regionRenown: source.regionRenown,
     completedRegionalArcIds: source.completedRegionalArcIds,
     pendingRoadEncounter: source.pendingRoadEncounter,
+    questStarts: source.questStarts,
     ids: source.ids,
   };
 }
@@ -291,6 +295,7 @@ function compactViewState(state: OverworldSessionViewModelState): OverworldSessi
     rememberedJobs: state.localView.rememberedJobs,
     sites: state.localView.sites,
     quests: state.localView.quests,
+    questStarts: state.questStarts,
     hiddenAreaCount: state.localView.hiddenAreaCount,
     hiddenJobCount: state.localView.hiddenJobCount,
     hiddenSiteCount: state.localView.hiddenSiteCount,
@@ -357,6 +362,7 @@ export function buildOverworldSessionViewFromState(
     discoveredQuestIds: state.ids.discoveredQuestIds,
     startedQuestIds: state.ids.startedQuestIds,
     completedQuestIds: state.ids.completedQuestIds,
+    questStarts: state.questStarts,
     exploredSiteIds: state.ids.exploredSiteIds,
     resolvedEventIds: state.ids.resolvedEventIds,
     regionRenown: state.regionRenown,

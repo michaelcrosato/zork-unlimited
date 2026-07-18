@@ -1071,6 +1071,11 @@ describe("MCP tools — validate / load (§9.4)", () => {
     registerLedgerAdvocate(a, started.session_id);
     revealOverworldQuest(a, started.session_id, "sunken_barrow");
 
+    const readyToLaunch = a.get_overworld_session_context({
+      session_id: started.session_id,
+    });
+    expect(readyToLaunch.context.quest_starts).toContainEqual(["sunken_barrow", null]);
+
     const launched = a.start_overworld_session_quest({
       ...FULL_OVERWORLD_QUEST_START,
       session_id: started.session_id,

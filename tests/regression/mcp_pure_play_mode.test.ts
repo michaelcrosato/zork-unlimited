@@ -123,19 +123,29 @@ async function launchPreparedPureWolf(client: Client): Promise<{
     poi_id: "albany_city__market__poi",
   });
   view = await callPlayerTool(client, "get_overworld_session_context", parent);
-  await callPlayerTool(client, "move_overworld_session_area", {
+  expect((view.context as { quest_starts?: unknown }).quest_starts).toBeUndefined();
+  const departure = await callPlayerTool(client, "move_overworld_session_area", {
     ...parent,
     area_route_id: compactAreaRoute(view, "albany_city__transport_hub"),
   });
-  await callPlayerTool(client, "choose_overworld_session_story", {
+  expect((departure.journey as { storyChoice?: unknown }).storyChoice).not.toBeNull();
+  expect((departure.context as { quest_starts?: unknown }).quest_starts).toBeUndefined();
+  const ready = await callPlayerTool(client, "choose_overworld_session_story", {
     ...parent,
     choice: "albany:relief_resident_shelter",
   });
+  expect((ready.context as { quest_starts?: unknown }).quest_starts).toEqual([
+    ["wolf_winter", "albany:wolf_approach_exposed_ridge"],
+    ["wolf_winter", "albany:wolf_approach_sheltered_stockway"],
+  ]);
   const launched = await callPlayerTool(client, "start_overworld_session_quest", {
     ...parent,
     quest_id: "wolf_winter",
     approach_id: "albany:wolf_approach_sheltered_stockway",
   });
+  expect(
+    (launched.context as { quest_starts?: unknown } | undefined)?.quest_starts,
+  ).toBeUndefined();
   const rpgSession = launched.rpg_session as { state_hash: string };
   return {
     overworldSessionId,

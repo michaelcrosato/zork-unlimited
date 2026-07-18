@@ -25,6 +25,7 @@ import {
 } from "../../src/world/compact_view.js";
 import { buildOverworldSessionCompactView } from "../../src/world/session_compact_view.js";
 import { questCompletionMinutes } from "../../src/world/session_quests.js";
+import { INITIAL_JOURNEY_GOAL_GUIDANCE } from "../../src/world/journey_contract.js";
 import { cloneOverworldView } from "../../src/world/session_view_clone.js";
 import type { OverworldQuestView } from "../../src/world/session_local_discovery.js";
 import { OverworldSession } from "../../ui/src/overworld.js";
@@ -182,7 +183,7 @@ describe("OverworldSession", () => {
       acceptedDecisions: 0,
       baselineDecisions: 40,
       nextCheckpoint: 40,
-      goalGuidance: null,
+      goalGuidance: INITIAL_JOURNEY_GOAL_GUIDANCE,
       pendingChoice: null,
     });
 
@@ -1689,6 +1690,7 @@ describe("OverworldSession", () => {
       rememberedJobs: view.rememberedJobs,
       sites: view.sites,
       quests: view.quests,
+      questStarts: view.questStarts,
       hiddenAreaCount: view.hiddenAreaCount,
       hiddenJobCount: view.hiddenJobCount,
       hiddenSiteCount: view.hiddenSiteCount,
@@ -1790,6 +1792,7 @@ describe("OverworldSession", () => {
       rememberedJobs: view.rememberedJobs,
       sites: view.sites,
       quests: view.quests,
+      questStarts: view.questStarts,
       hiddenAreaCount: view.hiddenAreaCount,
       hiddenJobCount: view.hiddenJobCount,
       hiddenSiteCount: view.hiddenSiteCount,
@@ -1878,6 +1881,7 @@ describe("OverworldSession", () => {
       rememberedJobs: view.rememberedJobs,
       sites: view.sites,
       quests: view.quests,
+      questStarts: view.questStarts,
       hiddenAreaCount: view.hiddenAreaCount,
       hiddenJobCount: view.hiddenJobCount,
       hiddenSiteCount: view.hiddenSiteCount,
@@ -1944,6 +1948,7 @@ describe("OverworldSession", () => {
       rememberedJobs: denseRememberedJobs,
       sites: denseTitles as typeof view.sites,
       quests: denseTitles as typeof view.quests,
+      questStarts: view.questStarts,
     });
 
     expect(compact.areas).toHaveLength(OVERWORLD_COMPACT_LOCAL_REF_LIMIT);
@@ -1986,6 +1991,7 @@ describe("OverworldSession", () => {
       rememberedJobs: denseRememberedJobs,
       sites: denseTitles as typeof view.sites,
       quests: denseTitles as typeof view.quests,
+      questStarts: view.questStarts,
       hiddenAreaCount: view.hiddenAreaCount,
       hiddenJobCount: view.hiddenJobCount,
       hiddenSiteCount: view.hiddenSiteCount,
@@ -2378,12 +2384,25 @@ describe("OverworldSession", () => {
       settleOpeningRegistration(session);
       const quest = session.view().quests.find((candidate) => candidate.id === "wolf_winter");
       if (!quest) throw new Error("expected Wolf-Winter launch fixture");
+      expect(session.compactView().quest_starts).toBeUndefined();
       const route = session
         .view()
         .areaExits.find((candidate) => candidate.destination.id === quest.area);
       if (!route) throw new Error("expected route to Wolf-Winter launch area");
       session.moveArea(route.id);
+      expect(session.journey().storyChoice?.kind).toBe("relief_allocation");
+      expect(session.compactView().quest_starts).toBeUndefined();
       settleReliefAllocation(session);
+      const readyQuest = session.view().quests.find((candidate) => candidate.id === quest.id)!;
+      const legalStarts = readyQuest.launch?.options
+        .filter((option) => option.projection?.available === true)
+        .map((option) => [readyQuest.id, option.id] as const) ?? [[readyQuest.id, null] as const];
+      expect(session.compactView().quest_starts).toEqual(
+        legalStarts.length > 0 ? legalStarts : undefined,
+      );
+      expect(compactOverworldView(session.view()).quest_starts).toEqual(
+        session.compactView().quest_starts,
+      );
       return {
         session,
         quest: session.view().quests.find((candidate) => candidate.id === quest.id)!,
@@ -2391,6 +2410,10 @@ describe("OverworldSession", () => {
     };
 
     const missing = readyWolf(world);
+    expect(missing.session.compactView().quest_starts).toEqual([
+      ["wolf_winter", "albany:wolf_approach_exposed_ridge"],
+      ["wolf_winter", "albany:wolf_approach_sheltered_stockway"],
+    ]);
     const beforeMissing = missing.session.snapshot();
     expect(() => missing.session.prepareQuestStart(missing.quest.id)).toThrow(
       /Choose an approach before starting/i,
@@ -2410,6 +2433,11 @@ describe("OverworldSession", () => {
       actionId: `quest_start:${playable.quest.id}:${approach.id}`,
     });
     expect(started.launch?.selected?.optionId).toBe(approach.id);
+    expect(playable.session.compactView().quest_starts).toBeUndefined();
+    expect(playable.session.view().questStarts).toEqual([]);
+    expect(() => playable.session.prepareQuestStart(playable.quest.id, approach.id)).toThrow(
+      /already been started/i,
+    );
 
     const blockedManifest = structuredClone(world);
     const blockedSource = blockedManifest.quests.find((quest) => quest.id === "wolf_winter");
@@ -2425,7 +2453,38 @@ describe("OverworldSession", () => {
     expect(() => blocked.session.startQuest(blocked.quest.id, blockedApproach!.id)).toThrow(
       "Requires 8 supplies; you have 6.",
     );
+    expect(blocked.session.compactView().quest_starts).toEqual([
+      ["wolf_winter", "albany:wolf_approach_sheltered_stockway"],
+    ]);
     expect(blocked.session.snapshot()).toEqual(beforeBlocked);
+
+    const unavailableManifest = structuredClone(world);
+    const unavailableSource = unavailableManifest.quests.find(
+      (quest) => quest.id === "wolf_winter",
+    );
+    if (!unavailableSource?.launch) throw new Error("expected authored Wolf-Winter launch");
+    for (const option of unavailableSource.launch.options) option.terms.supplies = 8;
+    expect(readyWolf(unavailableManifest).session.compactView().quest_starts).toBeUndefined();
+  });
+
+  it("does not advertise a custom non-target quest before opening registration", () => {
+    const manifest = structuredClone(world);
+    const probe = manifest.quests.find((quest) => quest.id === "advocates_case");
+    if (!probe) throw new Error("expected a non-opening quest fixture");
+    probe.home = "albany_city";
+    probe.area = "albany_city__civic_core";
+    probe.discovery = "A separate Albany brief is pinned beside the registration desk.";
+
+    const session = new OverworldSession(manifest);
+    const opening = session.view();
+    session.scoutPoi(opening.pois[0]!.id);
+    expect(session.view().quests.map((quest) => quest.id)).toContain(probe.id);
+    expect(session.journey().storyChoice).toBeNull();
+    expect(() => session.prepareQuestStart(probe.id)).toThrow(
+      /before starting this journey's first quest/i,
+    );
+    expect(session.view().questStarts).toEqual([]);
+    expect(session.compactView().quest_starts).toBeUndefined();
   });
 
   it("reveals exploration leads from the current local area", () => {

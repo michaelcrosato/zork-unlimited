@@ -33,6 +33,7 @@ const NPM_EATEN_FLAGS = [
   ["quest", "--quest", true],
   ["quest_id", "--quest", true],
   ["seed", "--seed", true],
+  ["provider", "--provider", true],
   ["model", "--model", true],
   ["out", "--out", true],
   ["delay_ms", "--delay-ms", true],

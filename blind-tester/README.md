@@ -2,18 +2,19 @@
 
 A self-contained harness that has a frontier model **play an AdventureForge game
 blind** — through the MCP server, with no access to the source — and write a
-ruthless first-time-player critique. It runs on your **Claude Code subscription via
-the `claude` CLI**: **no `ANTHROPIC_API_KEY`, no metered/billed API usage.**
+ruthless first-time-player critique. Pure single runs support hardened **Claude
+Code** and **OpenAI Codex** subscription CLI providers: no API key is passed to
+the game or harness.
 
 ## Why no API key
 
 There are two different ways a model touches this project, with different auth:
 
-|                       | Authoring (`adapt_story`)                 | **Blind playing (this harness)**         |
-| --------------------- | ----------------------------------------- | ---------------------------------------- |
-| Who calls the model   | the repo's own code, in-process           | an **external** agent CLI, as a client   |
-| How it reaches Claude | HTTP to `api.anthropic.com` (`x-api-key`) | the `claude` CLI = **your subscription** |
-| Needs an API key      | yes (metered)                             | **no**                                   |
+|                     | Authoring (`adapt_story`)       | **Blind playing (this harness)**               |
+| ------------------- | ------------------------------- | ---------------------------------------------- |
+| Who calls the model | the repo's own code, in-process | an isolated external `claude` or `codex` CLI   |
+| Authentication      | provider API key                | the selected CLI's existing subscription login |
+| Needs a harness key | yes                             | **no**                                         |
 
 This harness is the right-hand column: the model is an external player that reaches
 the game **only** through the `mcp__adventureforge__*` MCP tools. That uses your
@@ -59,14 +60,25 @@ npm run blind --spectate                  # then `npm run spectate` in another t
 # 3) Targeted quest plumbing — explicit structural smoke, NO LLM/tokens:
 bash blind-tester/run.sh --smoke --quest sunken_barrow --seed 11
 
-# Custom model preserves the pure contract:
+# Claude remains the default; a custom Claude model preserves the pure contract:
 bash blind-tester/run.sh --model opus
+
+# Hardened Codex pure player (PowerShell-safe equals form):
+npm run blind --provider=codex --model=gpt-5.6-sol --seed=2875
 ```
 
 The report is written to `blind-tester/reports/<stamp>_<source>_seed<n>.md`
 (`<source>` is `overworld` for the default core-game run, or the quest id)
-(and the raw `--output-format json` envelope alongside as `.json`). `reports/` is
-gitignored.
+(and the provider envelope alongside as `.json`; Codex also keeps its audited
+`.codex.jsonl` transport). `reports/` is gitignored.
+
+The built-in Codex path starts from an isolated temporary directory, ignores
+user/project config and rules, disables shell/web/apps/plugins/browser/computer
+and subagent capabilities, injects only the pure AdventureForge MCP server, and
+rejects the run if its JSONL contains any non-game tool event. Codex report
+recovery is intentionally unavailable: malformed output is rejected and needs
+a fresh seed. Current fleet attestation and starting-slice certification remain
+Claude/Sonnet-only because Codex JSONL does not authenticate the actual model id.
 
 ## Watching a playthrough live (spectate mode)
 
@@ -96,6 +108,9 @@ required at a milestone or feedback-harvest cycle, with bounded concurrency,
 optional authenticated diagnostic resume, and a closed manifest bundle — each
 one an ordinary `run.sh` spawn. The starting-slice pilot and authority commands
 are:
+
+> Fleet model attestation is currently Claude-only. Use `--provider=codex` for
+> canonical single-run feedback, not for a certifying fleet.
 
 ```bash
 npm run fleet -- --count 10 --concurrency 4 --model sonnet --seed-base <fresh-pilot-seed-base> --label <fresh-pilot-label> --no-resume --max-retries 0

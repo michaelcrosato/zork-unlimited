@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { hashState } from "../../src/core/hash.js";
 import {
   INITIAL_JOURNEY_GOAL,
+  INITIAL_JOURNEY_GOAL_GUIDANCE,
   JOURNEY_BASELINE_DECISIONS,
   JOURNEY_CONTRACT_VERSION,
   JOURNEY_EXIT_REASON,
@@ -89,7 +90,7 @@ describe("journey contract v3 goals", () => {
       acceptedDecisions: 0,
       baselineDecisions: JOURNEY_BASELINE_DECISIONS,
       nextCheckpoint: 40,
-      goalGuidance: null,
+      goalGuidance: INITIAL_JOURNEY_GOAL_GUIDANCE,
       pendingChoice: null,
       storyChoice: null,
       retentionHistory: [],
@@ -99,6 +100,10 @@ describe("journey contract v3 goals", () => {
     expect(Object.isFrozen(view.completedGoals)).toBe(true);
     expect(Object.isFrozen(view.decisionProof)).toBe(true);
     expect(Object.isFrozen(view.retentionHistory)).toBe(true);
+    expect(view.goal.text).toBe(INITIAL_JOURNEY_GOAL.text);
+    expect(state.decisionProof.hash).toBe(
+      createInitialJourneyContractSnapshot().decisionProof.hash,
+    );
 
     const customGoal = {
       version: 1,
@@ -108,6 +113,7 @@ describe("journey contract v3 goals", () => {
     const custom = createInitialJourneyContractSnapshot(customGoal);
     expect(JourneyContractSnapshotSchema.parse(custom)).toEqual(custom);
     expect(custom.goal).toMatchObject(customGoal);
+    expect(journeyPresentation(custom).goalGuidance).toBeNull();
     expect(custom.decisionProof.hash).not.toBe(state.decisionProof.hash);
     expect(() => createInitialJourneyContractSnapshot({ ...customGoal, version: 2 })).toThrow(
       /version must be 1/i,
@@ -144,6 +150,7 @@ describe("journey contract v3 goals", () => {
           ],
         },
       });
+      expect(view.goalGuidance).toBe(INITIAL_JOURNEY_GOAL_GUIDANCE);
       expect(JourneyContractSnapshotSchema.parse(state)).toEqual(state);
       expect(() => decide(state, "blocked")).toThrow(/choose whether to continue or end/i);
 
@@ -335,6 +342,7 @@ describe("journey contract v3 goals", () => {
       },
     });
     expect(journeyPresentation(died).pendingChoice?.options).toHaveLength(1);
+    expect(journeyPresentation(died).goalGuidance).toBeNull();
     expect(() => chooseJourney(died, "continue")).toThrow(/character died/i);
 
     const ended = chooseJourney(died, "end").state;
@@ -373,6 +381,7 @@ describe("journey contract v3 goals", () => {
       goalVersion: null,
       goalId: null,
     });
+    expect(journeyPresentation(died).goalGuidance).toBeNull();
     expect(chooseJourney(died, "end").result.exitReceipt).toMatchObject({
       goalStatus: "active",
       exitReasons: ["checkpoint", "character_died"],

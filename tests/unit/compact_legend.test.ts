@@ -53,6 +53,8 @@ describe("compact legends", () => {
       expect(typeof text, `legend entry "${key}"`).toBe("string");
       expect(text.length, `legend entry "${key}"`).toBeGreaterThan(10);
     }
+    expect(started.legend?.quest_starts).toContain("start_overworld_session_quest");
+    expect(started.legend?.quest_starts).toContain("approach_id");
   });
 
   it("restore_overworld_session repeats the legend; per-action responses do not", () => {

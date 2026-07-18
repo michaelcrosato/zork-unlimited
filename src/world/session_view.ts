@@ -26,6 +26,7 @@ import {
 import { OVERWORLD_MAX_SUPPLIES as MAX_SUPPLIES, travelCondition } from "./travel_mechanics.js";
 import type { CampaignCharacterView } from "./campaign_character_view.js";
 import type { CampaignServiceOffer } from "./campaign_service_rules.js";
+import type { OverworldCompactQuestStart } from "./compact_view.js";
 
 export type OverworldView = {
   character: CampaignCharacterView;
@@ -65,6 +66,7 @@ export type OverworldView = {
   discoveredQuestIds: string[];
   startedQuestIds: string[];
   completedQuestIds: string[];
+  questStarts: OverworldCompactQuestStart[];
   exploredSiteIds: string[];
   resolvedEventIds: string[];
   regionRenown: Record<string, number>;
@@ -111,6 +113,7 @@ export type OverworldSessionViewState = {
   discoveredQuestIds: ReadonlySet<string>;
   startedQuestIds: ReadonlySet<string>;
   completedQuestIds: ReadonlySet<string>;
+  questStarts: readonly OverworldCompactQuestStart[];
   exploredSiteIds: ReadonlySet<string>;
   resolvedEventIds: ReadonlySet<string>;
   regionRenown: ReadonlyMap<string, number>;
@@ -197,6 +200,7 @@ export function buildOverworldSessionView(state: OverworldSessionViewState): Ove
     discoveredQuestIds: [...state.discoveredQuestIds].sort(),
     startedQuestIds: [...state.startedQuestIds].sort(),
     completedQuestIds: [...state.completedQuestIds].sort(),
+    questStarts: state.questStarts.map(([questId, approachId]) => [questId, approachId]),
     exploredSiteIds: [...state.exploredSiteIds].sort(),
     resolvedEventIds: [...state.resolvedEventIds].sort(),
     regionRenown: sortedNumberRecord(state.regionRenown),

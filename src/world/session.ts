@@ -16,7 +16,12 @@ import {
   type OverworldRoadEvent,
   type OverworldRoutePlan,
 } from "./overworld.js";
-import { cloneOverworldCompactView, type OverworldCompactView } from "./compact_view.js";
+import {
+  OVERWORLD_COMPACT_LOCAL_REF_LIMIT,
+  cloneOverworldCompactView,
+  type OverworldCompactQuestStart,
+  type OverworldCompactView,
+} from "./compact_view.js";
 import {
   OVERWORLD_STARTING_MINUTES as STARTING_MINUTES,
   OVERWORLD_STARTING_SUPPLIES as STARTING_SUPPLIES,
@@ -1813,6 +1818,7 @@ export class OverworldSession {
     const currentArea = this.currentArea();
     const localState = this.localState();
     const currentAreaId = requireOverworldSessionCurrentAreaId(currentArea);
+    const localView = buildOverworldSessionCurrentLocalView(localState, currentAreaId);
     return {
       caches: this.caches,
       character: this.characterState,
@@ -1828,7 +1834,8 @@ export class OverworldSession {
       roads: this.roadsFrom(this.currentId),
       areaExits: visibleOverworldSessionAreaExits(localState, currentArea),
       localState,
-      localView: buildOverworldSessionCurrentLocalView(localState, currentAreaId),
+      localView,
+      questStarts: this.liveQuestStarts(localView.quests),
       routePlannerIndex: this.routePlannerIndex,
       roadEventState: {
         activeGoalId: this.journeyState.goal.id,
@@ -1859,6 +1866,32 @@ export class OverworldSession {
     };
   }
 
+  private liveQuestStarts(quests: readonly OverworldQuestView[]): OverworldCompactQuestStart[] {
+    try {
+      this.assertJourneyAcceptingDecision();
+    } catch {
+      return [];
+    }
+
+    const starts: OverworldCompactQuestStart[] = [];
+    const capped = Math.min(quests.length, OVERWORLD_COMPACT_LOCAL_REF_LIMIT);
+    for (let index = 0; index < capped; index += 1) {
+      const quest = quests[index]!;
+      const approachIds = quest.launch
+        ? quest.launch.options.map((option) => option.id)
+        : [undefined];
+      for (const approachId of approachIds) {
+        try {
+          const plan = this.prepareQuestStart(quest.id, approachId);
+          starts.push([plan.quest.id, plan.approachId]);
+        } catch {
+          // Canonical preparation is the sole authority for executable quest starts.
+        }
+      }
+    }
+    return starts;
+  }
+
   private buildCompactView(): OverworldCompactView {
     return buildOverworldSessionCompactViewFromSource(this.viewModelSourceState());
   }
@@ -1884,6 +1917,15 @@ export class OverworldSession {
 
   private questStartState(questId: string, approachId?: string): OverworldSessionQuestStartState {
     this.assertNoPendingRoadEncounter("starting a quest");
+    const unfinishedQuestId = [...this.startedQuestIds].find(
+      (startedQuestId) => !this.completedQuestIds.has(startedQuestId),
+    );
+    if (unfinishedQuestId && unfinishedQuestId !== questId) {
+      const unfinishedQuest = this.questsById.get(unfinishedQuestId);
+      throw new Error(
+        `Finish the active quest ${unfinishedQuest?.title ?? unfinishedQuestId} before starting another quest.`,
+      );
+    }
     const registration = this.world.opening_registration;
     if (
       registration &&

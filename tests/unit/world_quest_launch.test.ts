@@ -6,6 +6,7 @@ import {
 } from "../../src/world/campaign_character_state.js";
 import {
   compactOverworldQuestRef,
+  compactOverworldQuestStarts,
   OVERWORLD_COMPACT_VIEW_VERSION,
 } from "../../src/world/compact_view.js";
 import {
@@ -364,7 +365,7 @@ describe("overworld quest launch", () => {
         "test:exposed_ridge",
       ],
     ]);
-    expect(OVERWORLD_COMPACT_VIEW_VERSION).toBe(18);
+    expect(OVERWORLD_COMPACT_VIEW_VERSION).toBe(19);
 
     const blocked = compactOverworldQuestRef({
       id: "test_quest",
@@ -378,6 +379,17 @@ describe("overworld quest launch", () => {
     });
     expect(blocked[3]?.[2][1]?.[5]).toBe(false);
     expect(blocked[3]?.[2][1]?.[10]).toBe("Requires 2 supplies; you have 1.");
+  });
+
+  it("clones authoritative quest-start tuples without inventing transport choices", () => {
+    const source = [
+      ["test_quest", "test:exposed_ridge"],
+      ["optionless", null],
+    ] as const;
+    const projected = compactOverworldQuestStarts(source);
+    expect(projected).toEqual(source);
+    expect(projected).not.toBe(source);
+    expect(projected[0]).not.toBe(source[0]);
   });
 
   it("rejects non-launch effects and fingerprints the exact approach precondition", () => {
