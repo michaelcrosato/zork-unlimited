@@ -23,7 +23,7 @@ export const OVERWORLD_COMPACT_TITLE_CHAR_LIMIT = 140;
 export const OVERWORLD_COMPACT_RISK_CHAR_LIMIT = 160;
 export const OVERWORLD_COMPACT_ROAD_EVENT_SUMMARY_CHAR_LIMIT = 240;
 export const OVERWORLD_COMPACT_SERVICE_SUMMARY_CHAR_LIMIT = 240;
-export const OVERWORLD_COMPACT_VIEW_VERSION = 18 as const;
+export const OVERWORLD_COMPACT_VIEW_VERSION = 19 as const;
 
 export type OverworldCompactRef = readonly [id: string, name: string];
 export type OverworldCompactJobLeadRef = readonly [id: string, title: string, areaId: string];
@@ -51,6 +51,7 @@ export type OverworldCompactQuestLaunch = readonly [
 export type OverworldCompactQuestRef =
   | readonly [id: string, title: string, areaId: string]
   | readonly [id: string, title: string, areaId: string, launch: OverworldCompactQuestLaunch];
+export type OverworldCompactQuestStart = readonly [questId: string, approachId: string | null];
 export type OverworldCompactServiceOffer = readonly [
   id: string,
   action: CampaignServiceOffer["action"],
@@ -295,6 +296,7 @@ export type OverworldCompactView = {
   remembered_jobs?: OverworldCompactJobLeadRef[];
   sites?: OverworldCompactRef[];
   quests?: OverworldCompactQuestRef[];
+  quest_starts?: OverworldCompactQuestStart[];
   pending_road?: OverworldCompactRoadEncounter;
   journal?: OverworldCompactJournalEntry[];
   travel_log?: OverworldCompactTravelLogEntry[];
@@ -350,6 +352,8 @@ export const OVERWORLD_COMPACT_LEGEND = {
   sites: "[[site_id, title], ...] discovered sites (explore_overworld_session_site)",
   quests:
     "[[quest_id, title, anchor_area_id, [launch_id, prompt, [[approach_id, title, minutes, supplies_cost, fatigue_gained, available|null, minutes_after|null, supplies_after|null, fatigue_after|null, condition_after|null, blocked_reason|null, preview, consequence]], selected_approach_id|null]?], ...] discovered quest leads; choose one available approach for launch-enabled quests, then be IN anchor_area_id (compare to here[3]; walk there via area_routes) before start_overworld_session_quest",
+  quest_starts:
+    "[[quest_id, approach_id|null], ...] currently legal quest launches; call start_overworld_session_quest with these exact quest_id and approach_id values (omit approach_id when null)",
   pending_road:
     "{id, edge: road_id, route: route_name, where: [from_town, to_town, at_time], event: [road_event_id, risk_text, title, summary], options: [[strategy, label, minutes, supplies_cost, fatigue_gained, renown_gained], ...]} unresolved on-route scene; choose from the same labeled costs a human sees, then resolve it before town actions or more travel",
   journal: "[[kind, title, 'Day N, HH:MM'], ...] recent journal entries",
@@ -483,6 +487,12 @@ export function compactOverworldQuestRefs(
     refs.push(compactOverworldQuestRef(values[index]!));
   }
   return refs;
+}
+
+export function compactOverworldQuestStarts(
+  values: readonly OverworldCompactQuestStart[],
+): OverworldCompactQuestStart[] {
+  return values.map(([questId, approachId]) => [questId, approachId]);
 }
 
 export function compactCampaignServiceOffer(
@@ -983,6 +993,7 @@ export function cloneOverworldCompactView(view: OverworldCompactView): Overworld
       ];
     });
   }
+  if (view.quest_starts) clone.quest_starts = cloneTupleList(view.quest_starts);
   if (view.local_refs_truncated) clone.local_refs_truncated = [...view.local_refs_truncated];
   if (view.pending_road) {
     clone.pending_road = {
@@ -1020,6 +1031,7 @@ export function compactOverworldView(view: OverworldView): OverworldCompactView 
   const rememberedJobs = compactOverworldJobLeadRefs(view.rememberedJobs);
   const sites = compactOverworldTitleRefs(view.sites);
   const quests = compactOverworldQuestRefs(view.quests);
+  const questStarts = compactOverworldQuestStarts(view.questStarts);
   const serviceOffers = compactCampaignServiceOffers(view.serviceOffers);
   const localRefsTruncated = compactLocalRefTruncation({
     areas: view.areas.length,
@@ -1090,6 +1102,7 @@ export function compactOverworldView(view: OverworldView): OverworldCompactView 
     ...(rememberedJobs.length > 0 ? { remembered_jobs: rememberedJobs } : {}),
     ...(sites.length > 0 ? { sites } : {}),
     ...(quests.length > 0 ? { quests } : {}),
+    ...(questStarts.length > 0 ? { quest_starts: questStarts } : {}),
     ...(pendingRoad ? { pending_road: pendingRoad } : {}),
     ...(journal.length > 0 ? { journal } : {}),
     ...(travelLog.length > 0 ? { travel_log: travelLog } : {}),

@@ -14,8 +14,14 @@ STRICT RULES
   ToolSearch is the only other tool you may use, and only to expose an
   AdventureForge player tool that the game has told you is available.
 - Do not read, open, grep, list, or inspect files. Do not use shell, web, source,
-  test, authoring, diagnostic, restore/import, or direct quest-start tools. Your
-  only knowledge of the game comes from its player-facing responses.
+  test, authoring, diagnostic, restore/import, or structural direct quest-start
+  tools. Your only knowledge of the game comes from its player-facing responses.
+- `mcp__adventureforge__start_overworld_session_quest` is the normal player
+  bridge into a quest currently shown by the overworld. Use it only when
+  `context.quest_starts` presents an exact `[quest_id, approach_id|null]` tuple;
+  pass those values unchanged, omitting `approach_id` when it is null. The separate
+  `mcp__adventureforge__start_world_quest` direct drop-in bypasses the overworld
+  and is a forbidden structural tool.
 - This is a pure human-equivalent run. Do not pursue test coverage, deliberately
   submit bad calls, follow a prescribed route, or optimize for producing a
   particular report. Make the choices you personally would make as a new player.
@@ -129,7 +135,9 @@ REPORT GATE — check every item immediately before sending:
   space, and `exit-interview`, as shown below. A plain `json` fence is invalid
   and causes the whole run to be rejected.
 - Confirm the reply contains the literal heading `Playthrough log`, a `Verdict`,
-  both integer ratings, and exactly one final `json exit-interview` block.
+  both integer ratings, and exactly one final `json exit-interview` block. After
+  the JSON object's closing brace, add a newline and the three-backtick closing
+  fence shown below; the reply is incomplete without that closing fence.
 
 ```json exit-interview
 {

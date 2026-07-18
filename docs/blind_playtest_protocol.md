@@ -42,6 +42,11 @@ identically in UI and MCP:
 
 > Find one local lead in Albany and see it through.
 
+The proof-hashed goal text stays exactly that short. Its shared UI/MCP
+`goalGuidance` explains the completion rule separately: completing one Albany
+quest satisfies the goal; jobs, events, and sites may reveal leads, but do not
+finish it themselves.
+
 The baseline is 40 meaningful accepted gameplay decisions. The game offers an
 actual continue/end choice at decision 40, then at 80, 120, 160, and every
 additional 40. If the current goal is completed earlier, the game offers the
@@ -93,11 +98,18 @@ exit reason.
 ## One pure run
 
 1. Run the deterministic pre-crawl gate: `npm run crawl:smoke`.
-2. Start `npm run blind` with a fresh seed. The runner launches MCP in `pure`
-   mode and supplies a private JSONL evidence path.
+2. Start `npm run blind` with a fresh seed. Claude is the default provider;
+   `npm run blind --provider=codex --model=gpt-5.6-sol --seed=<fresh>` selects
+   the built-in hardened Codex path. Both launch MCP in `pure` mode and supply a
+   private JSONL evidence path. Neither path permits an arbitrary
+   `BLIND_AGENT_CMD` to claim pure evidence.
 3. The player calls `start_overworld` once and plays independently. It follows
    only game-presented goals and choices, including any quest reached naturally
-   through the overworld bridge.
+   through the normal `start_overworld_session_quest` bridge. A compact
+   `context.quest_starts` tuple is the executable authority for that
+   human-equivalent player action; its quest and approach values are passed
+   unchanged, with a null approach omitted. `start_world_quest` and any other
+   quest drop-in that bypasses the overworld remain forbidden in pure play.
 4. At every game-presented journey choice, the player honestly chooses continue
    or end. After continuing, it also answers any game-presented authored story
    choice by passing a visible option id to
@@ -124,7 +136,7 @@ Likewise, a discoverable `.md` or durable `.evidence.jsonl` without the adjacent
 legacy report. Normal unsuccessful exits remove those unfinished artifacts;
 the missing marker keeps hard-kill remnants out of feedback and attendance.
 
-One fail-closed report-only exception exists: after a normal CLI exit, current
+One Claude-provider fail-closed report-only exception exists: after a normal CLI exit, current
 v2 private evidence must independently prove exactly one fresh start followed
 by exactly one journey exit, and the unchanged verifier must reject only a
 missing exit-interview block. The runner may then resume the same Claude
@@ -133,6 +145,16 @@ Original prose and ratings remain byte-bound, while the runner injects the
 authenticated receipt and reverifies the promoted report and sidecar. This is
 never a gameplay continuation and cannot recover a timeout, missing exit,
 mechanical/MCP failure, or any other report defect.
+
+Codex single runs reuse the same evidence verifier and sidecar-last publication
+transaction, but do not yet attempt report recovery. The runner starts Codex in
+an isolated temporary directory with user/project config and rules ignored,
+shell/web/apps/plugins/browser/computer/subagents disabled, and only the exact
+pure AdventureForge MCP tools enabled. It audits the provider JSONL and rejects
+unknown events, non-game tools, another MCP server, incomplete/duplicate turns,
+or malformed final output. A rejected Codex run must use a fresh seed. Codex is
+not yet accepted by fleet attestation or starting-slice certification because
+its JSONL identifies the session but does not authenticate the actual model id.
 
 ## Pure prompt boundary
 
@@ -249,6 +271,10 @@ receipts remain valid historical pure evidence in their own cohorts, but cannot
 resume a current-contract fleet slot.
 
 ## Fleet mode
+
+Fleet attestation and starting-slice certification in this section remain
+Claude/Sonnet-only. Hardened Codex support currently applies to canonical
+single-run feedback, not authenticated fleet cohorts.
 
 ```bash
 npm run fleet -- --count 10 --concurrency 4 --model sonnet --seed-base <fresh-pilot-seed-base> --label <fresh-pilot-label> --no-resume --max-retries 0

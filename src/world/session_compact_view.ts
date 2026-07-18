@@ -10,6 +10,7 @@ import {
   compactOverworldJobLeadRefs,
   compactOverworldMovementTruncated,
   compactOverworldQuestRefs,
+  compactOverworldQuestStarts,
   compactOverworldRefs,
   compactOverworldRenownEntries,
   compactOverworldRoads,
@@ -18,6 +19,7 @@ import {
   compactOverworldTitleRefs,
   compactOverworldTravelLog,
   compactPendingRoad,
+  type OverworldCompactQuestStart,
   type OverworldCompactView,
 } from "./compact_view.js";
 import type { CampaignCharacterView } from "./campaign_character_view.js";
@@ -69,6 +71,7 @@ export type OverworldSessionCompactViewState = {
   rememberedJobs: readonly OverworldLocalJob[];
   sites: readonly OverworldExplorationSite[];
   quests: readonly OverworldQuestView[];
+  questStarts: readonly OverworldCompactQuestStart[];
   hiddenAreaCount: number;
   hiddenJobCount: number;
   hiddenSiteCount: number;
@@ -95,6 +98,7 @@ export function buildOverworldSessionCompactView(
   const rememberedJobs = compactOverworldJobLeadRefs(state.rememberedJobs);
   const sites = compactOverworldTitleRefs(state.sites);
   const quests = compactOverworldQuestRefs(state.quests);
+  const questStarts = compactOverworldQuestStarts(state.questStarts);
   const pendingRoad = compactPendingRoad(state.pendingRoadEncounter);
   const journal = compactOverworldJournalEntries(state.journalEntries);
   const travelLog = compactOverworldTravelLog(state.travelLog);
@@ -162,6 +166,7 @@ export function buildOverworldSessionCompactView(
     ...(rememberedJobs.length > 0 ? { remembered_jobs: rememberedJobs } : {}),
     ...(sites.length > 0 ? { sites } : {}),
     ...(quests.length > 0 ? { quests } : {}),
+    ...(questStarts.length > 0 ? { quest_starts: questStarts } : {}),
     ...(pendingRoad ? { pending_road: pendingRoad } : {}),
     ...(journal.length > 0 ? { journal } : {}),
     ...(travelLog.length > 0 ? { travel_log: travelLog } : {}),

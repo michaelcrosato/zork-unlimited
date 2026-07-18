@@ -1,21 +1,21 @@
 #!/usr/bin/env bash
 #
 # blind-tester/run.sh — drive a BLIND playtest through the AdventureForge MCP
-# server, using the Claude Code CLI on your SUBSCRIPTION (no API key, no metered
-# billing). The agent runs from an isolated temp dir and is restricted to the
+# server, using a runner-owned Claude or Codex subscription CLI provider. The
+# agent runs from an isolated temp dir and is restricted to the
 # `mcp__adventureforge__*` tools, so it can only experience the game through the same
 # structured surface a real player would — never the source, the YAML, or the repo's
 # own CLAUDE.md.
 #
 # Usage:
-#   blind-tester/run.sh [--seed <n>] [--model <alias>] [--out <prefix>]   # CORE GAME (overworld, the default)
+#   blind-tester/run.sh [--provider claude|codex] [--seed <n>] [--model <id>] [--out <prefix>]   # CORE GAME
 #   blind-tester/run.sh --quest <id> --mock [--seed <n>] ...              # structural targeted test, no LLM
 #   blind-tester/run.sh --smoke [--quest <id>] [--seed <n>]               # structural MCP smoke, no LLM
 #   ... [--persona <name>]  # play-style overlay; see blind-tester/personas/*.md (default: "default", a no-op)
 #
-# Pure evidence uses the built-in hardened Claude launcher. BLIND_AGENT_CMD is an
-# internal structural mock/QA seam only; arbitrary provider commands cannot be
-# labeled pure because this runner cannot prove that they lack file/shell/web access.
+# Pure evidence uses one of the built-in hardened launchers. BLIND_AGENT_CMD is
+# an internal structural mock/QA seam only; arbitrary provider commands cannot
+# be labeled pure because this runner cannot prove their isolation.
 #
 set -euo pipefail
 
@@ -29,7 +29,8 @@ if [[ -n "$PACK" ]]; then
   exit 2
 fi
 SEED=7
-MODEL="${BLIND_MODEL:-sonnet}"   # sonnet = strong + best subscription value; override per run
+PROVIDER="${BLIND_PROVIDER:-claude}"
+MODEL="${BLIND_MODEL:-}"
 OUT=""
 SMOKE=0
 MOCK=0
@@ -86,6 +87,7 @@ while [[ $# -gt 0 ]]; do
       echo "Blind runs start shipped quests by quest id only; use --quest <id>, not --pack." >&2
       exit 2 ;;
     --seed)             SEED="$2"; shift 2 ;;
+    --provider)         PROVIDER="$2"; shift 2 ;;
     --model)            MODEL="$2"; shift 2 ;;
     --out)              OUT="$2"; shift 2 ;;
     --smoke)            SMOKE=1; shift ;;
@@ -120,6 +122,18 @@ fi
 if [[ ${#POSITIONAL[@]} -gt 3 ]]; then
   echo "Too many positional args: ${POSITIONAL[*]}" >&2
   exit 2
+fi
+
+case "$PROVIDER" in
+  claude|codex) ;;
+  *) echo "--provider must be exactly claude or codex." >&2; exit 2 ;;
+esac
+if [[ -z "$MODEL" ]]; then
+  if [[ "$PROVIDER" == "codex" ]]; then
+    MODEL="gpt-5.6-sol"
+  else
+    MODEL="sonnet"
+  fi
 fi
 
 # The seed becomes private MCP server argv in pure mode, so canonicalize it
@@ -185,7 +199,7 @@ fi
 # from pure evidence rather than relying on operator discipline.
 if [[ "$PLAY_MODE" == "pure" && -n "${BLIND_AGENT_CMD:-}" ]]; then
   echo "BLIND_AGENT_CMD cannot produce pure retention evidence: its file/shell/web isolation is not enforceable by this runner." >&2
-  echo "Use the built-in Claude player, or an explicit --mock structural QA run." >&2
+  echo "Use a built-in --provider, or an explicit --mock structural QA run." >&2
   exit 2
 fi
 
@@ -482,7 +496,7 @@ if [[ -n "$PREEXISTING_OUT_ARTIFACTS" ]]; then
 fi
 PURE_OUTPUT_PREFIX_OWNED=1
 
-echo "Blind playtest → $SOURCE_LABEL seed=$SEED model=$MODEL"
+echo "Blind playtest → $SOURCE_LABEL seed=$SEED provider=$PROVIDER model=$MODEL"
 echo "Play contract: $PLAY_MODE / $START_SURFACE"
 echo "Report prefix: $OUT"
 
@@ -558,10 +572,13 @@ if [[ -n "${BLIND_AGENT_CMD:-}" ]]; then
   exit 0
 fi
 
-# Default pure blind player: Claude Code on your subscription, launched through
-# the runner-owned isolation and tool-denial contract below.
+# Built-in pure providers never fall back to one another. Claude imports only
+# subscription OAuth into a sterile home. Codex uses --ignore-user-config,
+# --ignore-rules, and --ephemeral so its normal CODEX_HOME contributes auth but
+# no configuration, rules, plugins, skills, memories, or prior sessions.
+if [[ "$PROVIDER" == "claude" ]]; then
 if ! command -v claude >/dev/null 2>&1; then
-  echo "claude CLI not found. Install Claude Code to produce canonical pure blind evidence." >&2
+  echo "claude CLI not found. Install Claude Code or choose --provider codex." >&2
   exit 3
 fi
 
@@ -606,6 +623,12 @@ if [[ "$CREDENTIAL_COPY_STATUS" -ne 0 ]]; then
   cat "$OUT.credentials.log" >&2 || true
   exit 4
 fi
+else
+  if ! command -v codex >/dev/null 2>&1; then
+    echo "codex CLI not found. Install Codex or choose --provider claude." >&2
+    exit 3
+  fi
+fi
 
 # Keep one telemetry row for the gameplay turn and, when the narrowly gated
 # repair path is used, one separately phased row for its token/cost overhead.
@@ -646,12 +669,70 @@ record_recovery_terminal() {
   RECOVERY_TELEMETRY_RECORDED=1
 }
 
-# Blindness is enforced two ways: the agent runs from an isolated temp cwd, and
-# Claude receives a positive capability allowlist containing only ToolSearch and
-# AdventureForge MCP. This excludes every evolving built-in file/shell/Agent tool
-# without depending on a stale negative list. The strict exact MCP config drops
-# global servers, while dontAsk permits only the explicitly allowed game surface.
+# Blindness is provider-specific but converges on one contract: an isolated temp
+# cwd and only the pure AdventureForge MCP surface. Claude has a positive CLI
+# tool allowlist. Codex starts without user/project config, rules, shell, web,
+# apps, plugins, hooks, browser, computer, image, or subagent capabilities; its
+# JSONL is then audited against the exact pure MCP tool set before verification.
 set +e
+if [[ "$PROVIDER" == "codex" ]]; then
+  CODEX_EVENTS="$OUT.codex.jsonl"
+  CODEX_EVENTS_ARG="$(node_path_arg "$CODEX_EVENTS")"
+  CODEX_REPORT_ARG="$(node_path_arg "$OUT.md")"
+  CODEX_ENVELOPE_SCRIPT="$(node_path_arg "$SCRIPT_DIR/codex-pure-envelope.mjs")"
+  CODEX_STARTED_AT_MS="$("$NODE_CMD" -e 'process.stdout.write(String(Date.now()))')"
+  CODEX_PURE_TOOLS_TOML="$("$NODE_CMD" "$CODEX_ENVELOPE_SCRIPT" --print-tools-toml)"
+  printf "%s" "$PROMPT" | ( cd "$WORK" && \
+    timeout "$TIMEOUT" codex exec \
+    --model "$MODEL" \
+    --sandbox read-only \
+    --skip-git-repo-check \
+    --ephemeral \
+    --ignore-user-config \
+    --ignore-rules \
+    --strict-config \
+    --disable apps \
+    --disable auth_elicitation \
+    --disable browser_use \
+    --disable browser_use_external \
+    --disable browser_use_full_cdp_access \
+    --disable computer_use \
+    --disable goals \
+    --disable hooks \
+    --disable image_generation \
+    --disable in_app_browser \
+    --disable multi_agent \
+    --disable plugins \
+    --disable remote_plugin \
+    --disable tool_suggest \
+    --disable workspace_dependencies \
+    --json \
+    --output-last-message "$CODEX_REPORT_ARG" \
+    --config 'model_reasoning_effort="xhigh"' \
+    --config 'features.shell_tool=false' \
+    --config 'web_search="disabled"' \
+    --config 'approval_policy="never"' \
+    --config "mcp_servers.adventureforge.command=\"$CODEX_MCP_CMD\"" \
+    --config "mcp_servers.adventureforge.args=$CODEX_MCP_ARGS_TOML" \
+    --config "mcp_servers.adventureforge.enabled_tools=$CODEX_PURE_TOOLS_TOML" \
+    --config 'mcp_servers.adventureforge.startup_timeout_sec=20' \
+    --config 'mcp_servers.adventureforge.tool_timeout_sec=60' \
+    --config 'mcp_servers.adventureforge.required=true' \
+    - \
+  ) > "$CODEX_EVENTS" 2> "$OUT.log"
+  STATUS=$?
+  if [[ "$STATUS" -eq 0 ]]; then
+    "$NODE_CMD" "$CODEX_ENVELOPE_SCRIPT" \
+      --events "$CODEX_EVENTS_ARG" --report "$CODEX_REPORT_ARG" \
+      --model "$MODEL" --started-at-ms "$CODEX_STARTED_AT_MS" \
+      > "$OUT.json" 2> "$OUT.codex-audit.log"
+    CODEX_AUDIT_STATUS=$?
+    if [[ "$CODEX_AUDIT_STATUS" -ne 0 ]]; then
+      STATUS=4
+      cat "$OUT.codex-audit.log" >&2 || true
+    fi
+  fi
+else
 printf '%s' "$PROMPT" | ( cd "$WORK" && \
   CLAUDE_CONFIG_DIR="$STERILE_CLAUDE_CONFIG_DIR" CLAUDE_CODE_DISABLE_AUTO_MEMORY=1 \
   timeout "$TIMEOUT" claude \
@@ -670,6 +751,7 @@ printf '%s' "$PROMPT" | ( cd "$WORK" && \
   --allowedTools ToolSearch "mcp__adventureforge__*" \
 ) > "$OUT.json" 2> "$OUT.log"
 STATUS=$?
+fi
 set -e
 
 if [[ $STATUS -ne 0 ]]; then
@@ -716,6 +798,15 @@ REPORT_RECOVERED=0
 
 if [[ "$VERIFY_STATUS" -ne 0 ]]; then
   cat "$INITIAL_VERIFY_LOG" >&2
+
+  # Codex runs are ephemeral and intentionally have no provider-specific
+  # report-recovery path yet. Preserve diagnostics but publish no report,
+  # evidence, or sidecar; a new seed must produce a complete report itself.
+  if [[ "$PROVIDER" == "codex" ]]; then
+    record_playthrough_terminal verification_failed
+    echo "✗ Codex blind report failed verification; report recovery is unavailable, so this run is rejected." >&2
+    exit "$VERIFY_STATUS"
+  fi
 
   # The sole repairable case is an otherwise complete report that omitted its
   # exit-interview block after a real journey exit. The resumed original session

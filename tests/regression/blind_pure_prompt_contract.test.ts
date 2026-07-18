@@ -36,6 +36,12 @@ describe("pure blind prompt + runner contract", () => {
     expect(prompt).toContain("Never invent a resurrection");
     expect(prompt).toContain("or request a separate technical foldback");
     expect(prompt).toContain("Do not inspect MCP resources");
+    expect(prompt).toContain("mcp__adventureforge__start_overworld_session_quest");
+    expect(prompt).toContain("normal player");
+    expect(prompt).toContain("context.quest_starts");
+    expect(prompt).toContain("pass those values unchanged");
+    expect(prompt).toContain("mcp__adventureforge__start_world_quest");
+    expect(prompt).toContain("forbidden structural tool");
     expect(prompt).toContain("Only then conduct the exit interview");
     expect(prompt).toContain("`exitReceipt`");
     expect(prompt).toContain("`run_evidence.recorded: false`");
@@ -52,9 +58,7 @@ describe("pure blind prompt + runner contract", () => {
     expect(prompt).not.toMatch(/(?:call|turn|request|invocation)\s*(?:budget|limit|quota)/i);
     expect(prompt).not.toMatch(/aim for roughly|take at least|if budget allows|watch for/i);
     expect(prompt).not.toMatch(/Albany|Colonie|Wolf-Winter|breaking_weir|cautious_scout/i);
-    expect(prompt).not.toContain("mcp__adventureforge__start_world_quest");
     expect(prompt).not.toContain("resolve_overworld_session_road_encounter");
-    expect(prompt).not.toContain("start_overworld_session_quest");
     expect(prompt).not.toContain("include_actions: false");
   });
 

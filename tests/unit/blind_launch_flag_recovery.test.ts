@@ -35,6 +35,7 @@ describe("recoverNpmEatenFlags", () => {
       npm_config_mock: "true",
       npm_config_spectate: "true",
       npm_config_persona: "breaker",
+      npm_config_provider: "codex",
     });
     expect(args).toEqual(
       expect.arrayContaining([
@@ -46,6 +47,8 @@ describe("recoverNpmEatenFlags", () => {
         "--spectate",
         "--persona",
         "breaker",
+        "--provider",
+        "codex",
       ]),
     );
   });
@@ -68,12 +71,17 @@ describe("recoverNpmEatenFlags", () => {
   });
 
   it("never duplicates flags a correctly-forwarding shell already passed", () => {
-    const { args, recovered } = recoverNpmEatenFlags(["--spectate", "--quest", "gallowmere"], {
-      npm_config_spectate: "true",
-      npm_config_quest: "gallowmere",
-    });
+    const { args, recovered } = recoverNpmEatenFlags(
+      ["--spectate", "--quest", "gallowmere", "--provider", "codex"],
+      {
+        npm_config_spectate: "true",
+        npm_config_quest: "gallowmere",
+        npm_config_provider: "codex",
+      },
+    );
     expect(args.filter((a: string) => a === "--spectate")).toHaveLength(1);
     expect(args.filter((a: string) => a === "--quest")).toHaveLength(1);
+    expect(args.filter((a: string) => a === "--provider")).toHaveLength(1);
     expect(recovered).toBe(false);
   });
 

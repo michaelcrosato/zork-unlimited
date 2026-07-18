@@ -150,14 +150,16 @@ describe("blind runner MCP config contract", () => {
     expect(owPrompt).toContain("mcp__adventureforge__start_overworld");
     expect(owPrompt).toContain("first game action");
     expect(owPrompt).toContain("one-time tutorial");
-    expect(owPrompt).not.toContain("mcp__adventureforge__start_world_quest");
     expect(owPrompt).not.toMatch(/30.?45|tool calls|take at least one road/i);
     expect(owPrompt).not.toMatch(
       /(?:stop|end|exit|finish|quit).{0,80}(?:after|at|around|within|once).{0,50}(?:\d+|ten|twenty|thirty|forty|fifty).{0,30}(?:mcp|tool)?\s*(?:calls?|invocations?|requests?|turns?)/is,
     );
     expect(owPrompt).not.toMatch(/(?:call|turn|request|invocation)\s*(?:budget|limit|quota)/i);
     expect(owPrompt).not.toContain("resolve_overworld_session_road_encounter");
-    expect(owPrompt).not.toContain("start_overworld_session_quest");
+    expect(owPrompt).toContain("mcp__adventureforge__start_overworld_session_quest");
+    expect(owPrompt).toContain("context.quest_starts");
+    expect(owPrompt).toContain("mcp__adventureforge__start_world_quest");
+    expect(owPrompt).toContain("forbidden structural tool");
     expect(owPrompt).toContain("game presents its actual journey choice");
     expect(owPrompt).toContain("After the game confirms the end");
     expect(owPrompt).toContain("REPORT GATE — check every item immediately before sending");
@@ -225,6 +227,78 @@ describe("blind runner MCP config contract", () => {
     expect(output).toContain("cannot produce pure retention evidence");
     expect(output).toContain("file/shell/web isolation is not enforceable");
     expect(output).not.toContain("Using structural BLIND_AGENT_CMD override");
+  }, 30_000);
+
+  it("offers a first-class fail-closed Codex pure provider without reopening overrides", () => {
+    const runner = readFileSync(join(process.cwd(), "blind-tester", "run.sh"), "utf8");
+    const launcher = readFileSync(join(process.cwd(), "blind-tester", "blind-launch.mjs"), "utf8");
+    const envelope = readFileSync(
+      join(process.cwd(), "blind-tester", "codex-pure-envelope.mjs"),
+      "utf8",
+    );
+
+    expect(runner).toContain('PROVIDER="${BLIND_PROVIDER:-claude}"');
+    expect(runner).toContain("--provider)");
+    expect(runner).toContain("--provider must be exactly claude or codex");
+    expect(runner).toContain('MODEL="gpt-5.6-sol"');
+    expect(launcher).toContain('["provider", "--provider", true]');
+
+    const launchAt = runner.indexOf('CODEX_EVENTS="$OUT.codex.jsonl"');
+    const launchEnd = runner.indexOf("else\nprintf '%s'", launchAt);
+    expect(launchAt).toBeGreaterThan(0);
+    expect(launchEnd).toBeGreaterThan(launchAt);
+    const codexLaunch = runner.slice(launchAt, launchEnd);
+    expect(codexLaunch).toContain("codex exec");
+    expect(codexLaunch).toContain("--sandbox read-only");
+    expect(codexLaunch).toContain("--ephemeral");
+    expect(codexLaunch).toContain("--ignore-user-config");
+    expect(codexLaunch).toContain("--ignore-rules");
+    expect(codexLaunch).toContain("--strict-config");
+    expect(codexLaunch).toContain("--disable apps");
+    expect(codexLaunch).toContain("--disable browser_use");
+    expect(codexLaunch).toContain("--disable computer_use");
+    expect(codexLaunch).toContain("--disable multi_agent");
+    expect(codexLaunch).toContain("--disable plugins");
+    expect(codexLaunch).toContain("features.shell_tool=false");
+    expect(codexLaunch).toContain('web_search="disabled"');
+    expect(codexLaunch).toContain('approval_policy="never"');
+    expect(codexLaunch).toContain("mcp_servers.adventureforge.enabled_tools");
+    expect(codexLaunch).toContain("mcp_servers.adventureforge.required=true");
+    expect(codexLaunch).not.toContain("dangerously-bypass");
+    expect(codexLaunch).not.toContain("danger-full-access");
+
+    expect(envelope).toContain('new Set(["agent_message", "reasoning", "mcp_tool_call"])');
+    expect(envelope).toContain('item.server !== "adventureforge"');
+    expect(envelope).toContain("CODEX_PURE_PLAYER_TOOLS.has(item.tool)");
+    expect(envelope).toContain('rows.at(-1)?.type !== "turn.completed"');
+    expect(runner).toContain('if [[ "$PROVIDER" == "codex" ]]; then');
+    expect(runner).toContain("report recovery is unavailable");
+    expect(runner).toContain("a new seed must produce a complete report itself");
+
+    const overrideGuard = runner.indexOf(
+      'if [[ "$PLAY_MODE" == "pure" && -n "${BLIND_AGENT_CMD:-}" ]]',
+    );
+    expect(overrideGuard).toBeGreaterThan(0);
+    expect(overrideGuard).toBeLessThan(launchAt);
+    expect(runner.indexOf('DURABLE_RUN_EVIDENCE="$OUT.evidence.jsonl"')).toBeLessThan(launchAt);
+    expect(runner.indexOf("PURE_PUBLICATION_COMPLETE=1")).toBeGreaterThan(launchEnd);
+  });
+
+  it("rejects an unknown pure provider before launching anything", () => {
+    const result = spawnSync(
+      process.execPath,
+      ["blind-tester/blind-launch.mjs", "--provider", "not-a-provider"],
+      {
+        cwd: process.cwd(),
+        encoding: "utf8",
+        env: { ...process.env, BLIND_PROVIDER: "claude" },
+        timeout: 30_000,
+      },
+    );
+    const output = `${result.stdout ?? ""}\n${result.stderr ?? ""}\n${result.error?.message ?? ""}`;
+    expect(result.status, output).toBe(2);
+    expect(output).toContain("--provider must be exactly claude or codex");
+    expect(output).not.toContain("Blind playtest →");
   }, 30_000);
 
   it("rejects every live quest source before launching an override agent", () => {

@@ -55,6 +55,7 @@ export function cloneOverworldView(view: OverworldView): OverworldView {
     discoveredQuestIds: [...view.discoveredQuestIds],
     startedQuestIds: [...view.startedQuestIds],
     completedQuestIds: [...view.completedQuestIds],
+    questStarts: view.questStarts.map(([questId, approachId]) => [questId, approachId]),
     exploredSiteIds: [...view.exploredSiteIds],
     resolvedEventIds: [...view.resolvedEventIds],
     regionRenown: { ...view.regionRenown },

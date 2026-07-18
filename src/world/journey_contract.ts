@@ -12,6 +12,9 @@ export const INITIAL_JOURNEY_GOAL = Object.freeze({
   text: "Find one local lead in Albany and see it through.",
 } as const);
 
+export const INITIAL_JOURNEY_GOAL_GUIDANCE =
+  "Complete one Albany quest to satisfy this goal. Jobs, events, and sites may reveal leads, but do not finish the goal themselves." as const;
+
 export type JourneyChoice = "continue" | "end";
 export type JourneyChoiceReason = "checkpoint" | "goal_completed" | "character_died";
 export type JourneyStatus = "active" | "awaiting_choice" | "ended";
@@ -1062,7 +1065,20 @@ export function journeyPresentation(
   state: JourneyContractSnapshot,
   context?: JourneyPresentationContext,
 ): JourneyPresentation {
-  const goalGuidance = context?.goalGuidance ?? null;
+  const presentsActiveInitialGoal =
+    state.status !== "ended" &&
+    state.goal.status === "active" &&
+    state.goal.version === INITIAL_JOURNEY_GOAL.version &&
+    state.goal.id === INITIAL_JOURNEY_GOAL.id &&
+    state.goal.text === INITIAL_JOURNEY_GOAL.text &&
+    state.pendingChoice?.reasons.includes("character_died") !== true;
+  const contextualGoalGuidance = context?.goalGuidance;
+  const goalGuidance =
+    contextualGoalGuidance === undefined
+      ? presentsActiveInitialGoal
+        ? INITIAL_JOURNEY_GOAL_GUIDANCE
+        : null
+      : contextualGoalGuidance;
   if (goalGuidance !== null && goalGuidance.trim().length === 0) {
     throw new Error("Journey goal guidance cannot be empty.");
   }
