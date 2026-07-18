@@ -82,12 +82,14 @@ import {
 } from "./session_local_lifecycle.js";
 import {
   cloneOpeningLeadSourceDecisionTrail,
+  cloneQuestCharacterDeathBoundary,
   cloneOverworldSessionSnapshot,
   parseOverworldSessionSnapshot,
   redactOverworldJournalEntryForPresentation,
   type OverworldJournalEntry,
   type OverworldOpeningLeadSourceDecisionTrail,
   type OverworldPendingRoadEncounter,
+  type OverworldQuestCharacterDeathBoundary,
   type OverworldSessionSnapshot,
   type TravelLogEntry,
 } from "./session_snapshot.js";
@@ -211,6 +213,7 @@ import {
   INITIAL_JOURNEY_GOAL,
   journeyExitReceipt,
   journeyPresentation,
+  recordJourneyCharacterDied,
   recordJourneyDecision,
   recordJourneyGoalCompleted,
   type JourneyChoice,
@@ -390,6 +393,7 @@ export class OverworldSession {
   private characterState: CampaignCharacterState = createInitialCampaignCharacterState();
   private journeyState: JourneyContractSnapshot = createInitialJourneyContractSnapshot();
   private openingLeadSourceDecisionTrail: OverworldOpeningLeadSourceDecisionTrail | null = null;
+  private questCharacterDeathBoundary: OverworldQuestCharacterDeathBoundary | null = null;
   private readonly journeyGoalBaseRouteByEndpoints = new Map<string, OverworldRoutePlan>();
   private readonly journeyGoalGuidanceByRoute = new Map<string, string>();
   private readonly caches: OverworldSessionCaches = {};
@@ -1113,6 +1117,36 @@ export class OverworldSession {
     return this.journey();
   }
 
+  recordQuestCharacterDeath(
+    questId: string,
+    outcome: Pick<OverworldQuestCompletionOutcome, "endingId" | "death">,
+  ): JourneyPresentation {
+    if (!this.startedQuestIds.has(questId) || this.completedQuestIds.has(questId)) {
+      throw new Error(`Character death requires the exact unfinished started quest "${questId}".`);
+    }
+    if (!outcome.death || outcome.endingId.trim().length === 0) {
+      throw new Error("A quest character-death boundary requires an identified death ending.");
+    }
+    if (this.questCharacterDeathBoundary !== null) {
+      throw new Error("This journey already has a quest character-death boundary.");
+    }
+    const nextJourneyState = recordJourneyCharacterDied(this.journeyState);
+    this.questCharacterDeathBoundary = {
+      questId,
+      endingId: outcome.endingId,
+      acceptedDecisions: this.journeyState.acceptedDecisions,
+      journeyDecisionProof: {
+        hash: this.journeyState.decisionProof.hash,
+        last: this.journeyState.decisionProof.last
+          ? { ...this.journeyState.decisionProof.last }
+          : null,
+      },
+    };
+    this.journeyState = nextJourneyState;
+    this.clearSessionCaches();
+    return this.journey();
+  }
+
   chooseJourney(choice: JourneyChoice): JourneyChoiceResult {
     const chosen = chooseJourneyContract(this.journeyState, choice);
     this.journeyState = chosen.state;
@@ -1504,6 +1538,7 @@ export class OverworldSession {
       completedRegionalArcIds: this.completedRegionalArcIds,
       pendingRoadEncounter: this.pendingRoadEncounter,
       openingLeadSourceDecisionTrail: this.openingLeadSourceDecisionTrail,
+      questCharacterDeathBoundary: this.questCharacterDeathBoundary,
       journey: this.journeyState,
     };
   }
@@ -1527,10 +1562,59 @@ export class OverworldSession {
     this.applyPendingRoadEncounterState(applied);
     this.characterState = applied.characterAfter;
     this.journeyState = applied.journeyAfter;
+    this.questCharacterDeathBoundary = snapshot.questCharacterDeathBoundary
+      ? cloneQuestCharacterDeathBoundary(snapshot.questCharacterDeathBoundary)
+      : null;
+    this.assertQuestCharacterDeathBoundary();
     this.openingLeadSourceDecisionTrail = applied.openingLeadSourceDecisionTrailAfter
       ? cloneOpeningLeadSourceDecisionTrail(applied.openingLeadSourceDecisionTrailAfter)
       : null;
     this.clearSessionCaches();
+  }
+
+  private assertQuestCharacterDeathBoundary(): void {
+    const pendingDeath =
+      this.journeyState.pendingChoice?.reasons.includes("character_died") === true;
+    const endedDeath =
+      this.journeyState.retentionHistory.at(-1)?.reasons.includes("character_died") === true;
+    const boundary = this.questCharacterDeathBoundary;
+    if (!pendingDeath && !endedDeath) {
+      if (boundary !== null) {
+        throw new Error(
+          "Overworld session quest character-death boundary exists without a death journey.",
+        );
+      }
+      return;
+    }
+    if (boundary === null) {
+      throw new Error("Overworld session character death has no durable quest death boundary.");
+    }
+    if (
+      !this.startedQuestIds.has(boundary.questId) ||
+      this.completedQuestIds.has(boundary.questId)
+    ) {
+      throw new Error(
+        `Overworld session character death is not bound to its exact unfinished quest "${boundary.questId}".`,
+      );
+    }
+    if (boundary.acceptedDecisions !== this.journeyState.acceptedDecisions) {
+      throw new Error(
+        "Overworld session character death does not match its accepted journey decision.",
+      );
+    }
+    if (boundary.journeyDecisionProof.hash !== this.journeyState.decisionProof.hash) {
+      throw new Error(
+        "Overworld session character death does not match its journey decision proof hash.",
+      );
+    }
+    if (
+      hashState(boundary.journeyDecisionProof.last) !==
+      hashState(this.journeyState.decisionProof.last)
+    ) {
+      throw new Error(
+        "Overworld session character death does not match its last journey decision proof.",
+      );
+    }
   }
 
   private markSeen(nodeId: string): void {

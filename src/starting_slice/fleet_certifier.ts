@@ -349,7 +349,7 @@ const FleetManifestRowSchema = z
     checkpoint: z.number().int().nonnegative().nullable(),
     exit_reason: z.literal("player_ended_at_choice"),
     exit_reasons: z
-      .array(z.enum(["checkpoint", "goal_completed"]))
+      .array(z.enum(["checkpoint", "goal_completed", "character_died"]))
       .min(1)
       .max(2),
     receipt_hash: z.string().regex(/^[0-9a-f]{64}$/),
@@ -960,6 +960,11 @@ function normalizeVerifiedRun(
     throw new Error("current journey receipt required");
   }
   const receipt = interview.journey_exit_receipt;
+  if (receipt.exitReasons.includes("character_died")) {
+    throw new Error(
+      "character-death receipt is valid blind evidence but cannot certify the starting slice",
+    );
+  }
   const completion = receipt.completedGoals.find(
     (goal) =>
       goal.version === STARTING_SLICE_INITIAL_GOAL.version &&
@@ -990,7 +995,7 @@ function normalizeVerifiedRun(
             goal_version: retention.goalVersion,
             goal_id: retention.goalId,
             at_decision: retention.atDecision,
-            reasons: retention.reasons,
+            reasons: retention.reasons.filter((reason) => reason !== "character_died"),
             choice: retention.choice,
           },
     clarity: interview.clarity,
@@ -1508,6 +1513,14 @@ function validateAuthenticatedStartingSliceCohort(
     if (sidecar.play_mode !== "pure" || sidecar.schema_version !== 2) {
       errors.push(`seed ${seed}: sidecar is not pure evidence schema v2`);
       continue;
+    }
+    if (
+      sidecar.receipt.contractVersion === 3 &&
+      sidecar.receipt.exitReasons.includes("character_died")
+    ) {
+      errors.push(
+        `seed ${seed}: character-death receipt is valid blind evidence but cannot certify the starting slice`,
+      );
     }
     const artifactValidation = validatePureFleetRunArtifactBytes(
       {

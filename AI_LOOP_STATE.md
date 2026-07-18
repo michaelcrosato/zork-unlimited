@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 574 -->
+<!-- historical_cycle_count: 575 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,15 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - pure_embedded_session_recovery
+
+- Evidence choice: four unretried ten-Spark cohorts verified 30/40 fresh pure exits; failures clustered around compacted/lost handle recovery and verbose context exhaustion, not Claude authentication or game intent. Exact clean commit `1ad03375` then produced 14/14 engine exits and 11/14 canonical reports across seeds 2860–2873.
+- Surface: pure responses/errors preserve the singleton parent plus unresolved child, name the handle domain, recover missing/coerced inputs, block child-orphaning parent mutations, and force compact reads; full multi-session mode stays isolated.
+- Lifecycle: non-death endings auto-fold once. A death keeps the exact unfinished quest and ended child, persists a quest/ending/decision-proof boundary, and opens a sole End choice whose receipt preserves the active goal and completed history before retiring the child; no resurrection or posthumous parent wandering remains.
+- Pure evidence: dirty candidate seeds 2856–2859 were only 1/4 canonical. Clean seeds 2860–2869 were 7/10 and top-off 2870–2873 were 4/4 canonical, consuming 113,824,347 input and 620,153 output tokens; seed 2867 supplied the death soft-lock witness and seed 2873 survived 160 decisions/five quests.
+- Self-critique: PASS for the Spark S2 transport/recovery cluster, not the greater-than-BG3 milestone. Starting-slice depth, Albany authored work, deep crawl, clean pilot, and exact 100-player certification remain open; repeated quest-launch confusion is the next compact-surface gap.
+- Guard: crawl gates `20260717T062550Z`/`20260717T074806Z`/`20260717T215659Z` reached 247/247 nodes, 344/344 edges, and 12/12 quests; deterministic seed 0 success and seed 6 death cover terminal contracts, adversarial review has no P0/P1/P2, and full health passes at 373 files/2,796 tests plus UI and all packs.
 
 ### Cycle result - june_nonlethal_combat_boundary
 
@@ -140,12 +149,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Pure evidence: seed 2711 verified pure/fresh, completed Wolf-Winter plus four later goals, continued at 27/40/53/73/80/95, and ended voluntarily at decision 118; clarity/enjoyment 4/4, stuck false, replay true. It chose combat, so paired deterministic proof carries the new path; rejected seeds 2709/2710 supplied no retention evidence, while 2710 exposed and drove the lure-ground-trap fix.
 - Compile/self-critique: compile `20260715T000942Z` contains 779 verified/35 rejected reports and 30 current-contract pure exits, all continuing at least once. PASS for F09, not the greater-than-BG3 slice claim: only two of four target strategy families currently land, with fortify/outlast and full drive/evacuate still missing; F05 preparation is next.
 - Guard: independent adversarial audit found no remaining P0/P1; the exact Wolf graph is 315 states/100 transitions with all seven endings; pre/final 6,000-step crawls `20260714T221312Z`/`20260714T235542Z` reached 247/247 nodes, 344/344 edges, and 12/12 quests; full health passed at 336 files/2,447 tests, UI, and all 12 packs.
-
-### Cycle result - albany_dawn_dispatch_service_counterfactual
-
-- Evidence choice: the starting-slice goal overrode a compiled Station-board wording hot spot because `SS-F12-albany-return` already offered an irreversible dawn dispatch but had no delayed mechanical consumer.
-- Surface: the Cade-wagon branch now creates Jamie Tanner's durable one-time Market credit (15-minute resupply versus 45), while the northbound-wardens branch creates Emery Sloane's mutually exclusive Greenway claim (15-minute rest versus 180); both exact terms are visible before commitment and provider/cause survive full, compact, and UI projection.
-- Integrity/counterfactual: generic story-choice predicates derive only from canonical current/history goals, reject contradictory branches, and bind required/forbidden choice ordinals plus named-provider location to one-time service replay. The exact predecessor accepts only its two historical service ids; paired fresh runs visit all six Albany districts, hold the Wolf-Winter strategy/ending constant, and reverse the resource advantage. The causal ledger advances from 3/12 to 4/12.
-- Pure evidence: seed 2708 verified pure/fresh, completed Wolf-Winter, Gallowmere, Tanner's Fever, and Breaking Weir, continued at 24/40/48/68/80, and ended honestly at goal 4 on decision 89; clarity 4/5, enjoyment 5/5, stuck false, replay true. Seed 2707 timed out with a zero-byte log and is rejected technical evidence.
-- Compile/self-critique: fewer than three verified reports exist since compile `20260714T202925Z`, so no compile is due. PASS for one truthful return fork, not the greater-than-BG3 slice claim: eight forks, noncombat/hybrid Wolf resolutions, broader NPC agendas, and the recurring cross-town contact-name reuse remain.
-- Guard: adversarial review closed stable-journal migration, later-service hash relabeling, dual-choice, unreachable-rule, temporal-copy, and ordinary-service-fixture defects; pre/post 6,000-step crawls `20260714T205359Z`/`20260714T213657Z` reached 247/247 nodes, 344/344 edges, and 12/12 quests; 86 focused checks and full health passed at 333 files/2,429 tests, UI, and all 12 packs.

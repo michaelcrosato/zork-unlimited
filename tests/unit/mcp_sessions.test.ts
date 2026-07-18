@@ -126,7 +126,7 @@ describe("SessionStore", () => {
     } as unknown as SessionInit);
     expect(forged.id).toBe("r3");
     expect(store.get("r3")).toBe(forged);
-    expect(() => store.get("forged_session")).toThrow('Unknown session "forged_session".');
+    expect(() => store.get("forged_session")).toThrow('Unknown RPG session "forged_session".');
   });
 
   it("keeps session ids monotonic past the safe integer boundary", () => {
@@ -145,9 +145,9 @@ describe("SessionStore", () => {
   it("rejects unknown sessions with the id in the error message", () => {
     const store = new SessionStore();
 
-    expect(() => store.get("missing-session")).toThrow('Unknown session "missing-session".');
+    expect(() => store.get("missing-session")).toThrow('Unknown RPG session "missing-session".');
     expect(() => store.update("missing-session", state("next"))).toThrow(
-      'Unknown session "missing-session".',
+      'Unknown RPG session "missing-session".',
     );
   });
 
@@ -177,7 +177,7 @@ describe("SessionStore", () => {
 
     expect(validWorld.id).toBe("r1");
     expect(validGenerated.id).toBe("r2");
-    expect(() => store.get("r3")).toThrow('Unknown session "r3".');
+    expect(() => store.get("r3")).toThrow('Unknown RPG session "r3".');
   });
 
   it("bounds stored sessions and keeps recently accessed sessions", () => {
@@ -191,7 +191,7 @@ describe("SessionStore", () => {
 
     expect(store.get(first.id)).toBe(first);
     expect(store.get(third.id)).toBe(third);
-    expect(() => store.get(second.id)).toThrow('Unknown session "r2".');
+    expect(() => store.get(second.id)).toThrow('Unknown RPG session "r2".');
   });
 
   it("updates only the addressed session while preserving session metadata", () => {

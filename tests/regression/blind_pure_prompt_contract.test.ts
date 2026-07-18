@@ -25,8 +25,23 @@ describe("pure blind prompt + runner contract", () => {
     expect(prompt).toContain("defaults to labeled `{ id, command }`");
     expect(prompt).toContain("`compact_actions: true`");
     expect(prompt).toContain("defaults to labeled `available_actions`");
+    expect(prompt).toContain("Preserve both");
+    expect(prompt).toContain("`overworld_session_id`");
+    expect(prompt).toContain("`rpg_session_id`");
+    expect(prompt).toContain("recoverable errors also repeat");
+    expect(prompt).toContain("non-death quest ending folds back");
+    expect(prompt).toContain("A death");
+    expect(prompt).toContain("end-only journey choice");
+    expect(prompt).toContain("truthful unfinished-goal");
+    expect(prompt).toContain("Never invent a resurrection");
+    expect(prompt).toContain("or request a separate technical foldback");
+    expect(prompt).toContain("Do not inspect MCP resources");
     expect(prompt).toContain("Only then conduct the exit interview");
     expect(prompt).toContain("`exitReceipt`");
+    expect(prompt).toContain("`run_evidence.recorded: false`");
+    expect(prompt).toContain("make exactly one more call");
+    expect(prompt).toContain("same `end` choice");
+    expect(prompt).toContain("`retryable: false`");
     expect(prompt).toContain('"journey_exit_receipt": {}');
     expect(prompt).not.toMatch(/"journey_exit_receipt"\s*:\s*"/);
 

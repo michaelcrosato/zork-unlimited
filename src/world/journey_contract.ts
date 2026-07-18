@@ -13,7 +13,7 @@ export const INITIAL_JOURNEY_GOAL = Object.freeze({
 } as const);
 
 export type JourneyChoice = "continue" | "end";
-export type JourneyChoiceReason = "checkpoint" | "goal_completed";
+export type JourneyChoiceReason = "checkpoint" | "goal_completed" | "character_died";
 export type JourneyStatus = "active" | "awaiting_choice" | "ended";
 export type JourneyGoalStatus = "active" | "completed";
 export type JourneyDecisionSurface = "overworld" | "quest";
@@ -149,7 +149,7 @@ export type JourneyChoicePrompt = Readonly<{
   goalVersion: number | null;
   goalId: string | null;
   message: string;
-  options: readonly [JourneyChoiceOption, JourneyChoiceOption];
+  options: readonly [JourneyChoiceOption, ...JourneyChoiceOption[]];
 }>;
 
 export type JourneyStoryChoiceOption = Readonly<{
@@ -344,7 +344,7 @@ const HASH_PATTERN = /^[0-9a-f]{64}$/;
 const SAFE_NONNEGATIVE_INT = z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER);
 const POSITIVE_SAFE_INT = z.number().int().positive().max(Number.MAX_SAFE_INTEGER);
 const JourneyChoiceSchema = z.enum(["continue", "end"]);
-const JourneyChoiceReasonSchema = z.enum(["checkpoint", "goal_completed"]);
+const JourneyChoiceReasonSchema = z.enum(["checkpoint", "goal_completed", "character_died"]);
 const JourneyGoalStatusSchema = z.enum(["active", "completed"]);
 const JourneyCountedDecisionReasonSchema = z.enum([
   "movement",
@@ -411,7 +411,11 @@ const JourneyRetentionEventSchema = z
 
 function reasonsAreCanonical(reasons: readonly JourneyChoiceReason[]): boolean {
   if (reasons.length === 1) return true;
-  return reasons.length === 2 && reasons[0] === "checkpoint" && reasons[1] === "goal_completed";
+  return (
+    reasons.length === 2 &&
+    reasons[0] === "checkpoint" &&
+    (reasons[1] === "goal_completed" || reasons[1] === "character_died")
+  );
 }
 
 function hasReason(
@@ -559,7 +563,7 @@ export const JourneyContractSnapshotSchema = z
           addIssue(
             ctx,
             path,
-            "Checkpoint-only retention evidence must use null goalVersion and goalId.",
+            "Retention evidence without goal completion must use null goalVersion and goalId.",
           );
         }
         return;
@@ -617,6 +621,9 @@ export const JourneyContractSnapshotSchema = z
           [...path, "reasons"],
           "Retention reasons must be unique and in canonical order.",
         );
+      }
+      if (hasReason(event, "character_died") && event.choice !== "end") {
+        addIssue(ctx, [...path, "choice"], "Character death can only end the journey.");
       }
       const checkpointReason = hasReason(event, "checkpoint");
       if (checkpointReason) {
@@ -698,6 +705,13 @@ export const JourneyContractSnapshotSchema = z
           );
         }
       }
+      if (hasReason(pendingChoice, "character_died") && goal.status !== "active") {
+        addIssue(
+          ctx,
+          ["pendingChoice"],
+          "Character death must preserve an unfinished active goal.",
+        );
+      }
     } else if (state.status === "awaiting_choice") {
       addIssue(ctx, ["pendingChoice"], "awaiting_choice status requires a pending choice.");
     }
@@ -727,6 +741,10 @@ export const JourneyContractSnapshotSchema = z
           ["status"],
           "Ended journeys require a final end event and no pending/next checkpoint.",
         );
+      }
+      const endedByDeath = retentionHistory.at(-1)?.reasons.includes("character_died") === true;
+      if (endedByDeath && goal.status !== "active") {
+        addIssue(ctx, ["goal"], "A journey ended by character death must keep its goal active.");
       }
     } else {
       if (sawEnd) {
@@ -835,6 +853,9 @@ function pendingChoiceMessage(state: JourneyContractSnapshot): string {
   if (!pending) throw new Error("Journey has no pending choice.");
   const checkpoint = hasReason(pending, "checkpoint");
   const goal = hasReason(pending, "goal_completed");
+  if (hasReason(pending, "character_died")) {
+    return `Your character died before completing the current goal after ${pending.atDecision} meaningful decisions. This run cannot continue; end the journey to preserve its truthful unfinished-goal receipt.`;
+  }
   if (checkpoint && goal) {
     return `You completed your current goal at the ${String(pending.checkpoint)}-decision checkpoint. Continue for ${JOURNEY_BASELINE_DECISIONS} more decisions, or end this journey?`;
   }
@@ -871,6 +892,7 @@ function pendingChoicePresentation(
   const pending = state.pendingChoice;
   if (!pending) return null;
   const checkpoint = hasReason(pending, "checkpoint");
+  const characterDied = hasReason(pending, "character_died");
   const goalContext = matchingGoalCompletionContext(pending, context);
   const continueTo = checkpoint
     ? (state.nextCheckpoint ?? 0) + JOURNEY_BASELINE_DECISIONS
@@ -890,22 +912,34 @@ function pendingChoicePresentation(
       goalContext?.messagePrefix,
       goalContext?.messageSuffix,
     ),
-    options: Object.freeze([
-      Object.freeze({
-        id: "continue" as const,
-        label: continueLabel,
-        consequence: affix(
-          `Play remains open; the next fixed checkpoint is decision ${String(continueTo)}.`,
-          goalContext?.continueConsequencePrefix,
-          goalContext?.continueConsequenceSuffix,
-        ),
-      }),
-      Object.freeze({
-        id: "end" as const,
-        label: "End this journey",
-        consequence: "This journey becomes read-only and its exit receipt is ready for review.",
-      }),
-    ]) as readonly [JourneyChoiceOption, JourneyChoiceOption],
+    options: Object.freeze(
+      characterDied
+        ? [
+            Object.freeze({
+              id: "end" as const,
+              label: "End this journey",
+              consequence:
+                "The journey becomes read-only; its receipt preserves the unfinished goal and completed history.",
+            }),
+          ]
+        : [
+            Object.freeze({
+              id: "continue" as const,
+              label: continueLabel,
+              consequence: affix(
+                `Play remains open; the next fixed checkpoint is decision ${String(continueTo)}.`,
+                goalContext?.continueConsequencePrefix,
+                goalContext?.continueConsequenceSuffix,
+              ),
+            }),
+            Object.freeze({
+              id: "end" as const,
+              label: "End this journey",
+              consequence:
+                "This journey becomes read-only and its exit receipt is ready for review.",
+            }),
+          ],
+    ) as readonly [JourneyChoiceOption, ...JourneyChoiceOption[]],
   });
 }
 
@@ -1118,7 +1152,7 @@ export function recordJourneyDecision(
 }
 
 function canonicalReasons(reasons: readonly JourneyChoiceReason[]): JourneyChoiceReason[] {
-  return ["checkpoint", "goal_completed"].filter((reason) =>
+  return ["checkpoint", "goal_completed", "character_died"].filter((reason) =>
     reasons.includes(reason as JourneyChoiceReason),
   ) as JourneyChoiceReason[];
 }
@@ -1158,6 +1192,42 @@ export function recordJourneyGoalCompleted(
       checkpoint: null,
       goalVersion: goal.version,
       goalId: goal.id,
+    },
+  };
+}
+
+/**
+ * Stop an embedded death on the game-owned journey surface. Death never completes
+ * the current goal and never offers a resurrection disguised as continuation.
+ */
+export function recordJourneyCharacterDied(
+  state: JourneyContractSnapshot,
+): JourneyContractSnapshot {
+  if (state.status === "ended") throw new Error("This journey has ended.");
+  if (state.goal.status === "completed") {
+    throw new Error("A character-death pause cannot replace a completed-goal choice.");
+  }
+  if (state.pendingChoice) {
+    return {
+      ...state,
+      status: "awaiting_choice",
+      pendingChoice: {
+        ...state.pendingChoice,
+        reasons: canonicalReasons([...state.pendingChoice.reasons, "character_died"]),
+        goalVersion: null,
+        goalId: null,
+      },
+    };
+  }
+  return {
+    ...state,
+    status: "awaiting_choice",
+    pendingChoice: {
+      atDecision: state.acceptedDecisions,
+      reasons: ["character_died"],
+      checkpoint: null,
+      goalVersion: null,
+      goalId: null,
     },
   };
 }
@@ -1253,6 +1323,9 @@ export function chooseJourney(
     throw new Error("There is no journey continuation choice to make right now.");
   }
   const pending = state.pendingChoice;
+  if (choice === "continue" && hasReason(pending, "character_died")) {
+    throw new Error("This character died; end the journey to preserve its final receipt.");
+  }
   const retentionEvent: JourneyRetentionEventSnapshot = {
     sequence: state.retentionHistory.length + 1,
     atDecision: state.acceptedDecisions,

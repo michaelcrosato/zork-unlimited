@@ -421,8 +421,8 @@ export default function App(): JSX.Element {
     }
     // Close a finished quest back into the overworld (MCP-bridge parity,
     // src/mcp/overworld_quest_bridge.ts): a non-death ending completes the lead
-    // (journal entry + completedQuestIds); a death ending must not — the engine
-    // rejects it and the lead stays permanently open for this journey.
+    // (journal entry + completedQuestIds); a death ending preserves the unfinished
+    // goal and moves play to the journey's mandatory end choice.
     if (view.ended && activeQuest) {
       const ending = questSession.ending();
       if (ending && !ending.death) {
@@ -438,7 +438,14 @@ export default function App(): JSX.Element {
           setError((e as Error).message);
         }
       } else if (ending?.death) {
-        lines.unshift(`${activeQuest.title} ends in death — the lead stays open in the journal.`);
+        worldSession.recordQuestCharacterDeath(activeQuest.id, {
+          endingId: ending.id,
+          death: ending.death,
+        });
+        setWorldView(worldSession.view());
+        lines.unshift(
+          `${activeQuest.title} ends in death — this journey must now be ended with its unfinished goal preserved.`,
+        );
       }
     }
     setLog((prev) => [...lines, ...prev]);

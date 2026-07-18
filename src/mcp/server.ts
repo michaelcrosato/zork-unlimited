@@ -19,7 +19,7 @@ import { z, type ZodRawShape } from "zod";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
-import { appendFileSync, mkdirSync } from "node:fs";
+import { appendFileSync, mkdirSync, renameSync, unlinkSync, writeFileSync } from "node:fs";
 import { isDeepStrictEqual } from "node:util";
 import { createToolApi } from "./tools.js";
 import { TRANSCRIPT_TURN_LIMIT_DEFAULT } from "./transcript_projection.js";
@@ -67,7 +67,6 @@ export const PURE_PLAYER_TOOLS = new Set<string>([
   "move_overworld_session_area",
   "work_overworld_session_job",
   "start_overworld_session_quest",
-  "complete_overworld_session_quest",
   "choose_overworld_session_journey",
   "choose_overworld_session_story",
   "get_observation",
@@ -142,17 +141,31 @@ const api = createToolApi({
 });
 
 type PureRunBuild = z.infer<typeof PureRunBuildSchema>;
-type PureRunEvidenceV2 =
-  | z.infer<typeof FreshStartRunEvidenceV2Schema>
-  | z.infer<typeof JourneyExitRunEvidenceV2Schema>;
+type FreshStartRunEvidenceV2 = z.infer<typeof FreshStartRunEvidenceV2Schema>;
+type JourneyExitRunEvidenceV2 = z.infer<typeof JourneyExitRunEvidenceV2Schema>;
+type PureRunEvidenceV2 = FreshStartRunEvidenceV2 | JourneyExitRunEvidenceV2;
 
 const pureRunState: {
   overworldSessionId: string | null;
+  rpgSessionId: string | null;
   journeyExitRecorded: boolean;
+  journeyExitResponse: unknown | null;
+  journeyExitEvidence: JourneyExitRunEvidenceV2 | null;
+  journeyExitRetryable: boolean;
+  journeyExitWriteFailures: number;
+  freshStartEvidence: FreshStartRunEvidenceV2 | null;
+  callInFlight: boolean;
   build: PureRunBuild | null;
 } = {
   overworldSessionId: null,
+  rpgSessionId: null,
   journeyExitRecorded: false,
+  journeyExitResponse: null,
+  journeyExitEvidence: null,
+  journeyExitRetryable: false,
+  journeyExitWriteFailures: 0,
+  freshStartEvidence: null,
+  callInFlight: false,
   build: null,
 };
 
@@ -162,15 +175,48 @@ const PURE_OVERWORLD_SESSION_TOOLS = new Set(
     (name) => name !== "start_overworld" && !PURE_RPG_SESSION_TOOLS.has(name),
   ),
 );
+const PURE_OVERWORLD_TOOLS_DURING_RPG = new Set([
+  "get_overworld_session",
+  "get_overworld_session_context",
+  "choose_overworld_session_journey",
+  "choose_overworld_session_story",
+]);
 
-function appendRunEvidence(event: PureRunEvidenceV2): void {
+function validateRunEvidence(event: PureRunEvidenceV2): PureRunEvidenceV2 {
+  return event.event === "fresh_start"
+    ? FreshStartRunEvidenceV2Schema.parse(event)
+    : JourneyExitRunEvidenceV2Schema.parse(event);
+}
+
+/**
+ * Replace the tiny two-row pure evidence ledger from validated in-memory events.
+ * Writing a sibling first prevents a failed write from leaving a partial JSONL row;
+ * the unlink fallback is only for Windows, where rename does not replace a file.
+ */
+function writeRunEvidence(events: readonly PureRunEvidenceV2[]): void {
   if (!RUN_EVIDENCE_PATH) return;
-  const validated =
-    event.event === "fresh_start"
-      ? FreshStartRunEvidenceV2Schema.parse(event)
-      : JourneyExitRunEvidenceV2Schema.parse(event);
+  const validated = events.map(validateRunEvidence);
   mkdirSync(dirname(RUN_EVIDENCE_PATH), { recursive: true });
-  appendFileSync(RUN_EVIDENCE_PATH, `${JSON.stringify(validated)}\n`);
+  const temporaryPath = `${RUN_EVIDENCE_PATH}.tmp`;
+  try {
+    writeFileSync(temporaryPath, `${validated.map((event) => JSON.stringify(event)).join("\n")}\n`);
+    try {
+      renameSync(temporaryPath, RUN_EVIDENCE_PATH);
+    } catch (renameError) {
+      try {
+        unlinkSync(RUN_EVIDENCE_PATH);
+      } catch (unlinkError) {
+        if ((unlinkError as NodeJS.ErrnoException).code !== "ENOENT") throw renameError;
+      }
+      renameSync(temporaryPath, RUN_EVIDENCE_PATH);
+    }
+  } finally {
+    try {
+      unlinkSync(temporaryPath);
+    } catch {
+      // Best-effort cleanup only; never mask the evidence write/replace result.
+    }
+  }
 }
 
 function pureRunSnapshot(sessionId: string) {
@@ -195,46 +241,186 @@ function objectRecord(value: unknown): Record<string, unknown> | null {
   return value !== null && typeof value === "object" ? (value as Record<string, unknown>) : null;
 }
 
+type PureSessionField = "overworld_session_id" | "rpg_session_id";
+
+class PureSessionRecoveryError extends Error {
+  constructor(
+    message: string,
+    readonly expectedSessionField: PureSessionField,
+  ) {
+    super(message);
+    this.name = "PureSessionRecoveryError";
+  }
+}
+
+function pureSessionRecoveryFields(): Record<string, string> {
+  return {
+    ...(pureRunState.overworldSessionId
+      ? { overworld_session_id: pureRunState.overworldSessionId }
+      : {}),
+    ...(pureRunState.rpgSessionId ? { rpg_session_id: pureRunState.rpgSessionId } : {}),
+  };
+}
+
+function pureSessionErrorPayload(error: unknown): Record<string, unknown> {
+  const resolved = error instanceof Error ? error : new Error(String(error));
+  return {
+    ok: false,
+    error: resolved.message,
+    ...(resolved instanceof PureSessionRecoveryError
+      ? { expected_session_field: resolved.expectedSessionField }
+      : {}),
+    ...pureSessionRecoveryFields(),
+  };
+}
+
+function pureSessionResponsePayload(name: string, value: unknown): unknown {
+  if (PLAY_MODE !== "pure") return value;
+  const response = objectRecord(value);
+  if (!response) return value;
+  const { rpg_session_id: _staleResponseChildId, ...responseWithoutChild } = response;
+  const parentId =
+    name === "start_overworld" && typeof response.session_id === "string"
+      ? response.session_id
+      : pureRunState.overworldSessionId;
+  const childId = pureRunState.rpgSessionId;
+  const nestedRpg = objectRecord(response.rpg_session);
+  const nestedRpgWithoutChild = nestedRpg
+    ? (({ rpg_session_id: _staleNestedChildId, ...rest }) => rest)(nestedRpg)
+    : null;
+  return {
+    ...responseWithoutChild,
+    ...(parentId ? { overworld_session_id: parentId } : {}),
+    ...(childId ? { rpg_session_id: childId } : {}),
+    ...(nestedRpgWithoutChild && parentId
+      ? {
+          rpg_session: {
+            ...nestedRpgWithoutChild,
+            overworld_session_id: parentId,
+            ...(childId ? { rpg_session_id: childId } : {}),
+          },
+        }
+      : {}),
+  };
+}
+
 function pureCallPreflight(name: string, args: unknown): void {
   if (PLAY_MODE !== "pure") return;
+  const input = objectRecord(args);
+  const exactCommittedEndReplay =
+    pureRunState.journeyExitResponse !== null &&
+    name === "choose_overworld_session_journey" &&
+    input?.session_id === pureRunState.overworldSessionId &&
+    input.choice === "end" &&
+    (pureRunState.journeyExitRecorded || pureRunState.journeyExitRetryable);
+  if (pureRunState.journeyExitResponse !== null && !exactCommittedEndReplay) {
+    throw new Error("This pure-play journey has ended; the exit receipt is the final run event.");
+  }
+  if (exactCommittedEndReplay) return;
   if (pureRunState.journeyExitRecorded) {
     throw new Error("This pure-play journey has ended; the exit receipt is the final run event.");
   }
   if (name === "start_overworld") {
     if (pureRunState.overworldSessionId !== null) {
-      throw new Error("Pure play permits exactly one fresh overworld start per run.");
+      throw new PureSessionRecoveryError(
+        "Pure play already has exactly one fresh overworld session; continue it with the recovered overworld_session_id.",
+        "overworld_session_id",
+      );
     }
     return;
   }
   if (pureRunState.overworldSessionId === null) {
     throw new Error("Pure play must begin with start_overworld.");
   }
-  const input = objectRecord(args);
   const sessionId = input?.session_id;
   if (PURE_OVERWORLD_SESSION_TOOLS.has(name) && sessionId !== pureRunState.overworldSessionId) {
-    throw new Error("Pure play tools must use the fresh overworld session from this run.");
+    throw new PureSessionRecoveryError(
+      "This overworld tool requires the parent overworld_session_id, not an RPG child handle.",
+      "overworld_session_id",
+    );
+  }
+  if (
+    pureRunState.rpgSessionId !== null &&
+    PURE_OVERWORLD_SESSION_TOOLS.has(name) &&
+    !PURE_OVERWORLD_TOOLS_DURING_RPG.has(name)
+  ) {
+    throw new PureSessionRecoveryError(
+      "Finish the active embedded quest with its rpg_session_id before taking another overworld action.",
+      "rpg_session_id",
+    );
   }
   if (PURE_RPG_SESSION_TOOLS.has(name)) {
-    if (typeof sessionId !== "string") throw new Error("Embedded quest session id is required.");
+    if (pureRunState.rpgSessionId === null) {
+      throw new PureSessionRecoveryError(
+        "No embedded RPG quest is active; enter a visible overworld quest before using RPG tools.",
+        "rpg_session_id",
+      );
+    }
+    if (sessionId !== pureRunState.rpgSessionId) {
+      throw new PureSessionRecoveryError(
+        "This RPG tool requires the active child rpg_session_id, not the parent overworld_session_id.",
+        "rpg_session_id",
+      );
+    }
     const rpgSession = api.sessions.get(sessionId);
     if (rpgSession.overworldSessionId !== pureRunState.overworldSessionId) {
-      throw new Error("Pure play RPG tools require a quest entered from this fresh overworld run.");
-    }
-  }
-  if (name === "complete_overworld_session_quest") {
-    const rpgSessionId = input?.rpg_session_id;
-    if (typeof rpgSessionId !== "string") throw new Error("Ended quest session id is required.");
-    const rpgSession = api.sessions.get(rpgSessionId);
-    if (rpgSession.overworldSessionId !== pureRunState.overworldSessionId) {
-      throw new Error("Only a quest entered from this fresh overworld run can be completed.");
+      throw new PureSessionRecoveryError(
+        "The RPG child is not bound to this pure run's parent overworld session.",
+        "rpg_session_id",
+      );
     }
   }
 }
 
-function pureCallEvidence(name: string, value: unknown): void {
-  if (PLAY_MODE !== "pure") return;
+function pureJourneyExitEvidenceFailure(
+  response: Record<string, unknown>,
+  detail: string,
+  retryable: boolean,
+): unknown {
+  pureRunState.journeyExitRetryable = retryable;
+  process.stderr.write(`Pure journey-exit evidence finalization failed: ${detail}\n`);
+  return {
+    ...response,
+    run_evidence: {
+      recorded: false,
+      retryable,
+      message: retryable
+        ? "The journey ended and its exit receipt is final, but server evidence was not recorded; make exactly one more call with the same parent session and End choice to retry evidence recording."
+        : "The journey ended and its exit receipt is final, but server evidence could not be recorded; do not retry or make another gameplay call.",
+    },
+  };
+}
+
+function persistPureJourneyExitEvidence(response: Record<string, unknown>): unknown {
+  if (RUN_EVIDENCE_PATH === null) {
+    pureRunState.journeyExitRecorded = true;
+    pureRunState.journeyExitRetryable = false;
+    return pureRunState.journeyExitResponse;
+  }
+  if (pureRunState.freshStartEvidence === null || pureRunState.journeyExitEvidence === null) {
+    return pureJourneyExitEvidenceFailure(
+      response,
+      "validated fresh-start or journey-exit evidence is unavailable",
+      false,
+    );
+  }
+  try {
+    writeRunEvidence([pureRunState.freshStartEvidence, pureRunState.journeyExitEvidence]);
+    pureRunState.journeyExitRecorded = true;
+    pureRunState.journeyExitRetryable = false;
+    return pureRunState.journeyExitResponse;
+  } catch (error) {
+    pureRunState.journeyExitWriteFailures += 1;
+    const retryable = pureRunState.journeyExitWriteFailures === 1;
+    const detail = error instanceof Error ? error.message : String(error);
+    return pureJourneyExitEvidenceFailure(response, detail, retryable);
+  }
+}
+
+function pureCallEvidence(name: string, value: unknown): unknown {
+  if (PLAY_MODE !== "pure") return value;
   const response = objectRecord(value);
-  if (!response) return;
+  if (!response) return value;
   if (name === "start_overworld") {
     const sessionId = response.session_id;
     if (typeof sessionId !== "string" || sessionId.length === 0) {
@@ -245,7 +431,7 @@ function pureCallEvidence(name: string, value: unknown): void {
       const snapshot = pureRunSnapshot(sessionId);
       const build = pureRunBuild(snapshot);
       pureRunState.build = build;
-      appendRunEvidence({
+      const freshStartEvidence = FreshStartRunEvidenceV2Schema.parse({
         schema_version: 2,
         play_mode: "pure",
         event: "fresh_start",
@@ -254,39 +440,92 @@ function pureCallEvidence(name: string, value: unknown): void {
         run_seed: PURE_RUN_PROVENANCE!.runSeed,
         build,
       });
+      pureRunState.freshStartEvidence = freshStartEvidence;
+      writeRunEvidence([freshStartEvidence]);
     }
-    return;
+    return value;
   }
-  if (name !== "choose_overworld_session_journey" || pureRunState.journeyExitRecorded) return;
-  const receipt = response.exitReceipt ?? objectRecord(response.result)?.exitReceipt;
+  const receipt =
+    name === "choose_overworld_session_journey"
+      ? (response.exitReceipt ?? objectRecord(response.result)?.exitReceipt)
+      : undefined;
   const receiptRecord = objectRecord(receipt);
-  if (
-    !receiptRecord ||
-    receiptRecord.exitReason !== "player_ended_at_choice" ||
-    typeof receiptRecord.receiptHash !== "string"
-  ) {
-    return;
+  if (receiptRecord && pureRunState.journeyExitRecorded) {
+    pureRunState.rpgSessionId = null;
+    return pureRunState.journeyExitResponse ?? value;
   }
-  const verifiedReceipt = JourneyExitReceiptSchema.parse(receipt);
-  if (RUN_EVIDENCE_PATH !== null) {
-    const snapshot = pureRunSnapshot(pureRunState.overworldSessionId!);
-    const build = pureRunBuild(snapshot);
-    if (pureRunState.build === null || !isDeepStrictEqual(build, pureRunState.build)) {
-      throw new Error("Pure run world/build provenance changed between start and journey exit.");
+  if (name === "start_overworld_session_quest" && response.ok === true) {
+    const rpgSessionId = response.rpg_session_id;
+    if (typeof rpgSessionId !== "string" || rpgSessionId.length === 0) {
+      throw new Error("Embedded quest start returned no RPG session id.");
     }
-    appendRunEvidence({
-      schema_version: 2,
-      play_mode: "pure",
-      event: "journey_exit",
-      start_surface: "fresh_overworld",
-      session_id: pureRunState.overworldSessionId!,
-      run_seed: PURE_RUN_PROVENANCE!.runSeed,
-      build,
-      quest_outcomes: snapshot.questOutcomes,
-      receipt: verifiedReceipt,
-    });
+    pureRunState.rpgSessionId = rpgSessionId;
+  } else if (
+    name === "choose_overworld_session_journey" &&
+    typeof response.rpg_session_id === "string"
+  ) {
+    pureRunState.rpgSessionId = response.rpg_session_id;
+  } else if (
+    name === "step_action" &&
+    response.ok === true &&
+    response.questCompletion !== undefined
+  ) {
+    pureRunState.rpgSessionId = null;
   }
-  pureRunState.journeyExitRecorded = true;
+  if (name !== "choose_overworld_session_journey" || pureRunState.journeyExitRecorded) return value;
+  if (!receiptRecord) return value;
+
+  // The game mutation has already committed by the time the raw receipt reaches
+  // this boundary. Retain that terminal response and release any embedded child
+  // before fallible validation/export/file IO so a recorder failure cannot
+  // strand the run between an ended journey and an active child handle.
+  pureRunState.journeyExitResponse ??= value;
+  pureRunState.rpgSessionId = null;
+  if (pureRunState.journeyExitEvidence !== null) {
+    return persistPureJourneyExitEvidence(response);
+  }
+  let verifiedReceipt: z.infer<typeof JourneyExitReceiptSchema>;
+  try {
+    verifiedReceipt = JourneyExitReceiptSchema.parse(receipt);
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    return pureJourneyExitEvidenceFailure(response, detail, false);
+  }
+  if (RUN_EVIDENCE_PATH !== null) {
+    try {
+      const snapshot = pureRunSnapshot(pureRunState.overworldSessionId!);
+      const build = pureRunBuild(snapshot);
+      if (pureRunState.build === null || !isDeepStrictEqual(build, pureRunState.build)) {
+        throw new Error("Pure run world/build provenance changed between start and journey exit.");
+      }
+      pureRunState.journeyExitEvidence = JourneyExitRunEvidenceV2Schema.parse({
+        schema_version: 2,
+        play_mode: "pure",
+        event: "journey_exit",
+        start_surface: "fresh_overworld",
+        session_id: pureRunState.overworldSessionId!,
+        run_seed: PURE_RUN_PROVENANCE!.runSeed,
+        build,
+        quest_outcomes: snapshot.questOutcomes,
+        receipt: verifiedReceipt,
+      });
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error);
+      return pureJourneyExitEvidenceFailure(response, detail, false);
+    }
+  }
+  return persistPureJourneyExitEvidence(response);
+}
+
+function pureCommittedJourneyExitResponse(name: string, args: unknown): unknown | null {
+  if (PLAY_MODE !== "pure" || pureRunState.journeyExitResponse === null) return null;
+  const input = objectRecord(args);
+  return name === "choose_overworld_session_journey" &&
+    input?.session_id === pureRunState.overworldSessionId &&
+    input.choice === "end" &&
+    (pureRunState.journeyExitRecorded || pureRunState.journeyExitRetryable)
+    ? pureRunState.journeyExitResponse
+    : null;
 }
 
 // ── Spectate mode ─────────────────────────────────────────────────────────────
@@ -358,16 +597,36 @@ function ok(value: unknown): CallToolResult {
 function wrap<A>(name: string, handler: (args: A) => unknown) {
   return async (args: A): Promise<CallToolResult> => {
     let result: CallToolResult;
+    let ownsPureCall = false;
     try {
+      if (PLAY_MODE === "pure") {
+        if (pureRunState.callInFlight) {
+          throw new Error(
+            "Another pure-play tool call is still in progress; wait for its response before retrying.",
+          );
+        }
+        pureRunState.callInFlight = true;
+        ownsPureCall = true;
+      }
       pureCallPreflight(name, args);
-      const value = await handler(args); // await is a no-op for the sync handlers
-      pureCallEvidence(name, value);
+      const committedExit = pureCommittedJourneyExitResponse(name, args);
+      const rawValue = committedExit ?? (await handler(args)); // await is a no-op for sync handlers
+      const evidencedValue = pureCallEvidence(name, rawValue);
+      const value = pureSessionResponsePayload(name, evidencedValue);
       result = ok(value);
     } catch (e) {
-      result = {
-        content: [{ type: "text", text: `Error: ${(e as Error).message}` }],
-        isError: true,
-      };
+      result =
+        PLAY_MODE === "pure"
+          ? {
+              content: [{ type: "text", text: JSON.stringify(pureSessionErrorPayload(e)) }],
+              isError: true,
+            }
+          : {
+              content: [{ type: "text", text: `Error: ${(e as Error).message}` }],
+              isError: true,
+            };
+    } finally {
+      if (ownsPureCall) pureRunState.callInFlight = false;
     }
     spectateRecord(name, args, result);
     if (SPECTATE_DELAY_MS > 0) await new Promise((r) => setTimeout(r, SPECTATE_DELAY_MS));
@@ -450,8 +709,13 @@ const WORLD_QUEST_SOURCE = {
 };
 const G = z.number().int().refine(genSeed);
 const B = (d: string) => z.boolean().optional().describe(d);
-const SESSION = {
-  session_id: z.string().describe("Session id from the tool that created the session."),
+const SESSION_HANDLE = (description: string) =>
+  (PLAY_MODE === "pure" ? z.coerce.string().optional() : z.string()).describe(description);
+const OVERWORLD_SESSION = {
+  session_id: SESSION_HANDLE("Parent handle: overworld_session_id; never rpg_session_id."),
+};
+const RPG_SESSION = {
+  session_id: SESSION_HANDLE("Child handle: rpg_session_id; never overworld_session_id."),
 };
 const HIDE_GRAPH = {
   hide_graph: B("Omit the world graph from observations."),
@@ -527,7 +791,19 @@ function defaultCompactActions(args: unknown): never {
 
 function defaultCompactOverworld(args: unknown): never {
   const input = typeof args === "object" && args !== null ? args : {};
-  return { compact_context: true, compact_result: true, ...input } as never;
+  return {
+    compact_context: true,
+    compact_result: true,
+    ...input,
+    ...(PLAY_MODE === "pure"
+      ? {
+          compact_context: true,
+          compact_result: true,
+          include_ids: false,
+          include_route_options: false,
+        }
+      : {}),
+  } as never;
 }
 
 function defaultCompactOverworldAndRpg(args: unknown): never {
@@ -549,6 +825,10 @@ function defaultCompactOverworldAndRpg(args: unknown): never {
   return {
     ...response,
     hide_graph: true,
+    compact_context: true,
+    compact_result: true,
+    include_ids: false,
+    include_route_options: false,
     ...(input.compact_observation === false
       ? { compact_actions: input.compact_actions ?? false }
       : { include_actions: true }),
@@ -586,7 +866,7 @@ type McpOverworldReadArgs = {
 };
 
 function compactMcpOverworldSession(args: McpOverworldReadArgs): unknown {
-  return args.include_observation === true
+  return PLAY_MODE !== "pure" && args.include_observation === true
     ? api.get_overworld_session(args)
     : api.get_overworld_session_context(args);
 }
@@ -612,15 +892,22 @@ const W = {
 const S = {
   include_session_id: B("Echo the session id."),
 };
-const COMPACT_OVERWORLD_CONTEXT = {
-  compact_context: B("False swaps the compact context for the verbose observation."),
-  ...W,
-  ...IDS,
-  ...ROUTES,
-};
-const COMPACT_OVERWORLD_RESULT = {
-  compact_result: B("False returns the verbose action result."),
-};
+const OVERWORLD_READ_DETAILS = PLAY_MODE === "pure" ? {} : { ...S, ...W, ...IDS, ...ROUTES };
+const COMPACT_OVERWORLD_CONTEXT =
+  PLAY_MODE === "pure"
+    ? {}
+    : {
+        compact_context: B("False swaps the compact context for the verbose observation."),
+        ...W,
+        ...IDS,
+        ...ROUTES,
+      };
+const COMPACT_OVERWORLD_RESULT =
+  PLAY_MODE === "pure"
+    ? {}
+    : {
+        compact_result: B("False returns the verbose action result."),
+      };
 const OVERWORLD_ACTION_CONTEXT = {
   ...EXPECTED_SNAPSHOT_HASH,
   ...COMPACT_OVERWORLD_CONTEXT,
@@ -637,15 +924,18 @@ tool(
 );
 tool(
   "get_overworld_session",
-  "Re-read an overworld session without acting; include_observation swaps the compact context for the verbose view.",
+  PLAY_MODE === "pure"
+    ? "Re-read the bounded compact context of the current overworld session without acting."
+    : "Re-read an overworld session without acting; include_observation swaps the compact context for the verbose view.",
   {
-    ...SESSION,
+    ...OVERWORLD_SESSION,
     ...IF_SNAPSHOT_HASH,
-    include_observation: z.boolean().optional().describe("Return the verbose observation."),
-    ...S,
-    ...W,
-    ...IDS,
-    ...ROUTES,
+    ...(PLAY_MODE === "pure"
+      ? {}
+      : {
+          include_observation: z.boolean().optional().describe("Return the verbose observation."),
+        }),
+    ...OVERWORLD_READ_DETAILS,
   },
   (a) => compactMcpOverworldSession(a),
 );
@@ -653,12 +943,9 @@ tool(
   "get_overworld_session_context",
   "Re-read only the compact context of an overworld session, with if_snapshot_hash change detection.",
   {
-    ...SESSION,
+    ...OVERWORLD_SESSION,
     ...IF_SNAPSHOT_HASH,
-    ...S,
-    ...W,
-    ...IDS,
-    ...ROUTES,
+    ...OVERWORLD_READ_DETAILS,
   },
   (a) => api.get_overworld_session_context(a),
 );
@@ -666,7 +953,7 @@ tool(
   "export_overworld_session",
   "Export a resumable overworld snapshot; pass it to restore_overworld_session to continue the run later.",
   {
-    ...SESSION,
+    ...OVERWORLD_SESSION,
     ...EXPECTED_SNAPSHOT_HASH,
     ...IF_SNAPSHOT_HASH,
   },
@@ -685,7 +972,7 @@ tool(
   "travel_overworld_session",
   "Travel one road to an adjacent town, spending minutes and supplies and gaining fatigue; may trigger a road encounter.",
   {
-    ...SESSION,
+    ...OVERWORLD_SESSION,
     destination_town_id: z.string().optional().describe("Adjacent destination town."),
     road_id: z.string().optional().describe("Adjacent road to walk instead."),
     ...OVERWORLD_ACTION_CONTEXT,
@@ -696,7 +983,7 @@ tool(
   "follow_overworld_session_goal",
   "Follow the current goal passage until the game stops at its objective, a road choice, or a resource boundary.",
   {
-    ...SESSION,
+    ...OVERWORLD_SESSION,
     ...OVERWORLD_ACTION_CONTEXT,
   },
   (a) => api.follow_overworld_session_goal(defaultCompactOverworld(a)),
@@ -705,7 +992,7 @@ tool(
   "resolve_overworld_session_road_encounter",
   "Choose a strategy for the pending road encounter; travel stays blocked until it is resolved.",
   {
-    ...SESSION,
+    ...OVERWORLD_SESSION,
     strategy: z
       .enum(["cautious_scout", "assist_travelers", "press_on"])
       .describe("Option from pending_road.options."),
@@ -717,7 +1004,7 @@ tool(
   "resupply_overworld_session",
   "Buy supplies back up to the cap at the current town, spending time.",
   {
-    ...SESSION,
+    ...OVERWORLD_SESSION,
     ...OVERWORLD_ACTION_CONTEXT,
   },
   (a) => api.resupply_overworld_session(defaultCompactOverworld(a)),
@@ -726,7 +1013,7 @@ tool(
   "rest_overworld_session",
   "Rest at the current town to lower fatigue, spending time.",
   {
-    ...SESSION,
+    ...OVERWORLD_SESSION,
     ...OVERWORLD_ACTION_CONTEXT,
   },
   (a) => api.rest_overworld_session(defaultCompactOverworld(a)),
@@ -735,7 +1022,7 @@ tool(
   "plan_overworld_session_route",
   "Preview the best route to a town — minutes, supplies, fatigue — without moving.",
   {
-    ...SESSION,
+    ...OVERWORLD_SESSION,
     destination_town_id: z.string().describe("Destination town id."),
     ...OVERWORLD_ACTION_CONTEXT,
   },
@@ -745,7 +1032,7 @@ tool(
   "scout_overworld_session_poi",
   "Scout a point of interest in the current area; can reveal hidden areas, jobs, sites, or quests.",
   {
-    ...SESSION,
+    ...OVERWORLD_SESSION,
     poi_id: z.string().describe("POI id."),
     ...OVERWORLD_ACTION_CONTEXT,
   },
@@ -755,7 +1042,7 @@ tool(
   "talk_overworld_session_contact",
   "Talk to a local contact; can reveal leads, jobs, quests, or renown.",
   {
-    ...SESSION,
+    ...OVERWORLD_SESSION,
     character_id: z.string().describe("Contact id."),
     ...OVERWORLD_ACTION_CONTEXT,
   },
@@ -765,7 +1052,7 @@ tool(
   "investigate_overworld_session_event",
   "Investigate a local event to uncover details before resolving it.",
   {
-    ...SESSION,
+    ...OVERWORLD_SESSION,
     event_id: z.string().describe("Event id."),
     ...OVERWORLD_ACTION_CONTEXT,
   },
@@ -775,7 +1062,7 @@ tool(
   "resolve_overworld_session_event",
   "Resolve an investigated local event, spending time and earning renown.",
   {
-    ...SESSION,
+    ...OVERWORLD_SESSION,
     event_id: z.string().describe("Event id."),
     ...OVERWORLD_ACTION_CONTEXT,
   },
@@ -785,7 +1072,7 @@ tool(
   "explore_overworld_session_site",
   "Explore a discovered exploration site for renown and journal finds.",
   {
-    ...SESSION,
+    ...OVERWORLD_SESSION,
     site_id: z.string().describe("Site id."),
     ...OVERWORLD_ACTION_CONTEXT,
   },
@@ -795,7 +1082,7 @@ tool(
   "explore_overworld_session_area",
   "Survey the current local area to reveal its points of interest, contacts, events, and exits.",
   {
-    ...SESSION,
+    ...OVERWORLD_SESSION,
     area_id: z.string().describe("Area id."),
     ...OVERWORLD_ACTION_CONTEXT,
   },
@@ -805,7 +1092,7 @@ tool(
   "move_overworld_session_area",
   "Walk an area route to another local area inside the current town.",
   {
-    ...SESSION,
+    ...OVERWORLD_SESSION,
     area_route_id: z.string().describe("Route id from area_routes."),
     ...OVERWORLD_ACTION_CONTEXT,
   },
@@ -815,7 +1102,7 @@ tool(
   "work_overworld_session_job",
   "Work a discovered local job, spending time to earn renown.",
   {
-    ...SESSION,
+    ...OVERWORLD_SESSION,
     job_id: z.string().describe("Job id."),
     ...OVERWORLD_ACTION_CONTEXT,
   },
@@ -823,9 +1110,9 @@ tool(
 );
 tool(
   "start_overworld_session_quest",
-  "Start a discovered quest as an embedded RPG session; play it via step_action, then complete_overworld_session_quest.",
+  "Start a discovered quest as an embedded RPG session; play via step_action, and non-death endings fold back automatically.",
   {
-    ...SESSION,
+    ...OVERWORLD_SESSION,
     quest_id: z.string().describe("Quest id."),
     approach_id: z
       .string()
@@ -841,10 +1128,12 @@ tool(
 );
 tool(
   "complete_overworld_session_quest",
-  "Fold an ended RPG quest session's outcome back into overworld progress and renown.",
+  "Fold back an ended child only when its ending response still exposes rpg_session_id; non-death endings fold automatically.",
   {
-    ...SESSION,
-    rpg_session_id: z.string().describe("Ended RPG session."),
+    ...OVERWORLD_SESSION,
+    rpg_session_id: SESSION_HANDLE(
+      "Ended child RPG handle from rpg_session_id; distinct from parent overworld session_id.",
+    ),
     expected_rpg_state_hash: z.string().optional().describe("Reject stale RPG state."),
     ...OVERWORLD_ACTION_CONTEXT,
   },
@@ -854,7 +1143,7 @@ tool(
   "choose_overworld_session_journey",
   "Choose continue or end at a shown journey pause.",
   {
-    ...SESSION,
+    ...OVERWORLD_SESSION,
     choice: z.enum(["continue", "end"]).describe("Choice from journey.pendingChoice.options."),
     ...COMPACT_ACTIONS,
     ...COMPACT_OBSERVATION,
@@ -866,7 +1155,7 @@ tool(
   "choose_overworld_session_story",
   "Choose a presented story, registration, lead, preparation, or field-team option.",
   {
-    ...SESSION,
+    ...OVERWORLD_SESSION,
     choice: z.string().describe("Choice id from journey.storyChoice.options."),
     ...OVERWORLD_ACTION_CONTEXT,
   },
@@ -923,7 +1212,7 @@ tool(
   "get_observation",
   "Re-read the current RPG context without acting; embedded quests also return the parent journey.",
   {
-    ...SESSION,
+    ...RPG_SESSION,
     ...PLAYER_HIDE_GRAPH,
     ...IF_STATE_HASH,
     ...COMPACT_ACTIONS,
@@ -935,7 +1224,7 @@ tool(
   "list_legal_actions",
   "List legal RPG actions and authored unavailable choices with reasons.",
   {
-    ...SESSION,
+    ...RPG_SESSION,
     ...IF_STATE_HASH,
     compact_actions: z
       .boolean()
@@ -953,7 +1242,7 @@ tool(
   "step_action",
   "Apply a legal RPG action or select an unavailable id for its authored reason.",
   {
-    ...SESSION,
+    ...RPG_SESSION,
     action_id: z.string().describe("Id from legal or unavailable action rows."),
     ...EXPECTED_STATE_HASH,
     ...PLAYER_HIDE_GRAPH,
@@ -967,7 +1256,7 @@ tool(
   "get_state",
   "Read the RPG session's state hash for change detection; raw or compact state is opt-in.",
   {
-    ...SESSION,
+    ...RPG_SESSION,
     ...IF_STATE_HASH,
     include_state: z.boolean().optional().describe("Include the raw state object."),
     compact_state: z.boolean().optional().describe("Include a compact state summary."),
@@ -978,7 +1267,7 @@ tool(
   "get_transcript",
   "Summarize an RPG session's play history; per-turn rows and events are opt-in.",
   {
-    ...SESSION,
+    ...RPG_SESSION,
     ...S,
     include_source: z.boolean().optional(),
     ...IF_TRANSCRIPT_HASH,
@@ -994,7 +1283,7 @@ tool(
   "save_game",
   "Serialize the RPG session to a save string for load_game; hash guards reject stale saves.",
   {
-    ...SESSION,
+    ...RPG_SESSION,
     ...EXPECTED_STATE_HASH,
     ...IF_STATE_HASH,
     include_source: z.boolean().optional().describe("Echo source id."),

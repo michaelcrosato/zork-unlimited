@@ -6,10 +6,10 @@ game shows you.
 STRICT RULES
 
 - Your first game action must call
-  `mcp__adventureforge__start_overworld` with `compact_context: true`. In Codex
-  logs this may appear as `mcp: adventureforge/start_overworld`; it is the same
-  tool. If the direct start tool is not visible, call ToolSearch exactly once
-  for AdventureForge start tools, then immediately use the returned start tool.
+  `mcp__adventureforge__start_overworld` with no arguments. In Codex logs this
+  may appear as `mcp: adventureforge/start_overworld`; it is the same tool. If
+  the direct start tool is not visible, call ToolSearch exactly once for
+  AdventureForge start tools, then immediately use the returned start tool.
 - Play only through the AdventureForge player tools exposed in this run.
   ToolSearch is the only other tool you may use, and only to expose an
   AdventureForge player tool that the game has told you is available.
@@ -37,21 +37,36 @@ READING THE PLAYER SURFACE
   options in this pure run. Passing `compact_actions: true` remains available
   when an id-only list is useful. A verbose embedded-quest observation likewise
   defaults to labeled `available_actions`.
-- Use only ids and choices visible in the current player response. Every
-  overworld session tool after the fresh start takes its `session_id`. Guard mutations with the
-  latest `snapshot_hash` when the tool offers that guard. An embedded quest has
-  its own session id and `state_hash`; use the latest values the game returned.
-  Embedded quest steps can also return `overworld_snapshot_hash`; keep the
-  latest one as the overworld guard when returning from that quest.
+- Use only ids and choices visible in the current player response. Preserve both
+  session handles: every overworld tool after the fresh start takes the parent
+  `session_id`, while an embedded quest uses its child `rpg_session_id`. Embedded
+  quest responses echo the parent as `overworld_session_id`; while a quest is
+  unresolved, pure responses and recoverable errors also repeat its current
+  `rpg_session_id`. Retain those exact values instead of substituting either
+  handle for the other. Use the latest
+  `state_hash` for the child and `snapshot_hash` for the parent when a tool offers
+  those guards. Embedded quest responses can also return
+  `overworld_snapshot_hash`; keep the latest one as the overworld guard when
+  returning from that quest.
+- A non-death quest ending folds back into the overworld automatically and stops
+  repeating `rpg_session_id`. A death ending does not complete that quest. It
+  keeps the ended child visible and presents an end-only journey choice on the
+  parent; choose its visible `end` option to receive the truthful unfinished-goal
+  exit receipt, then conduct the interview. Never invent a resurrection, pursue
+  another parent action after death, or request a separate technical foldback.
 - Pure reads, context refreshes, legal-action listings, save/export operations,
   and rejected calls are not player decisions. The game itself owns the
   meaningful-decision count and tells you when a journey choice is due.
+- Do not inspect MCP resources, apps, files, shell commands, or external tools.
+  They are outside the player surface; use only the AdventureForge gameplay
+  tools advertised for this run.
 
 WHEN TO CONTINUE OR END
 
 - Keep playing naturally until the game presents its actual journey choice:
   continue the same journey or end it. This may happen when the current goal is
-  completed or at a scheduled decision checkpoint.
+  completed or at a scheduled decision checkpoint. Character death instead
+  presents only the truthful `end` choice described above.
 - At every such choice, decide honestly. If you choose continue, keep playing
   until the game presents another journey choice. If you choose end, submit the
   shown end choice and wait for the game to confirm that the journey ended. To
@@ -66,8 +81,14 @@ WHEN TO CONTINUE OR END
   decision that can set the next current goal; it is not a harness task.
 - Do not impose your own tool-call, turn, route, content, or coverage budget.
   Never stop merely because you think a test has run long enough.
-- After the game confirms the end and returns its journey exit receipt, make no
-  more MCP calls. Only then conduct the exit interview and write the report.
+- After the game confirms the end and returns its journey exit receipt, normally
+  make no more MCP calls. One recorder-recovery exception is explicit: if that
+  same response has `run_evidence.recorded: false` and `retryable: true`, do not
+  report yet; make exactly one more call using the same parent session and the
+  same `end` choice. Make no other call. A response without that warning confirms
+  evidence and closes the run. If the retry says `retryable: false`, make no more
+  calls and report the recorder failure truthfully; that run will not count as
+  verified evidence. Only then conduct the exit interview and write the report.
 
 REPORT
 
@@ -93,8 +114,9 @@ to the matching JSON boolean; do not copy the placeholder.
 REPORT GATE — check every item immediately before sending:
 
 - Do not write any part of the report until a game response contains
-  `exitReceipt`. An active goal, checkpoint progress, or having enough material
-  is not an exit. If you chose continue, keep playing until the game presents
+  `exitReceipt` and does not request the one exact evidence retry above.
+  An active goal, checkpoint progress, or having enough material is not an exit.
+  If you chose continue, keep playing until the game presents
   another journey choice; never invent an early receipt. There is no acceptable
   early report: a `journey_exit_receipt` that is `null`, empty, partial,
   reconstructed, or merely a current-state snapshot substituted for

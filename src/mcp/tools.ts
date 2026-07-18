@@ -645,20 +645,22 @@ export function createToolApi(opts: { root: string; embeddedQuestSeed?: number }
             response.journeyActionId,
             response.journeyDecision,
           );
-          if (journey.pendingChoice !== null && !rpgSession.state.ended) {
-            sessions.markEmbeddedJourneyPause(rpgSession.id);
-          }
           if (rpgSession.state.ended) {
             const completion = overworldQuestCompletionFromRpgSession(
               rpgSession,
               rpgSession.overworldSessionId,
             );
-            if (!completion.outcome.death) {
+            if (completion.outcome.death) {
+              overworldSession.recordQuestCharacterDeath(completion.questId, completion.outcome);
+              sessions.markEmbeddedJourneyPause(rpgSession.id);
+            } else {
               questCompletion = overworldSession.completeQuest(
                 completion.questId,
                 completion.outcome,
               );
             }
+          } else if (journey.pendingChoice !== null) {
+            sessions.markEmbeddedJourneyPause(rpgSession.id);
           }
         }
       }

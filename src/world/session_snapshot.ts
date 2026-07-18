@@ -123,6 +123,36 @@ export type OverworldOpeningLeadSourceDecisionTrail = {
   decisions: JourneyDecisionProofLast[];
 };
 
+const OverworldQuestCharacterDeathBoundarySchema = z
+  .object({
+    questId: z.string().min(1),
+    endingId: z.string().min(1),
+    acceptedDecisions: z.number().int().nonnegative().safe(),
+    journeyDecisionProof: z
+      .object({
+        hash: z.string().regex(/^[0-9a-f]{64}$/),
+        last: JourneyDecisionProofLastSchema.nullable(),
+      })
+      .strict(),
+  })
+  .strict();
+
+export type OverworldQuestCharacterDeathBoundary = z.infer<
+  typeof OverworldQuestCharacterDeathBoundarySchema
+>;
+
+export function cloneQuestCharacterDeathBoundary(
+  boundary: OverworldQuestCharacterDeathBoundary,
+): OverworldQuestCharacterDeathBoundary {
+  return {
+    ...boundary,
+    journeyDecisionProof: {
+      ...boundary.journeyDecisionProof,
+      last: boundary.journeyDecisionProof.last ? { ...boundary.journeyDecisionProof.last } : null,
+    },
+  };
+}
+
 export function cloneOpeningLeadSourceDecisionTrail(
   trail: OverworldOpeningLeadSourceDecisionTrail,
 ): OverworldOpeningLeadSourceDecisionTrail {
@@ -337,7 +367,29 @@ export const OverworldSessionSnapshotSchema = OverworldSessionSnapshotV8Schema.e
   version: z.literal(OVERWORLD_SESSION_SAVE_VERSION),
   character: CampaignCharacterStateSchema,
   openingLeadSourceDecisionTrail: OverworldOpeningLeadSourceDecisionTrailSchema.optional(),
-}).strict();
+  questCharacterDeathBoundary: OverworldQuestCharacterDeathBoundarySchema.optional(),
+})
+  .strict()
+  .superRefine((snapshot, ctx) => {
+    const pendingDeath =
+      snapshot.journey.pendingChoice?.reasons.includes("character_died") === true;
+    const finalDeath =
+      snapshot.journey.retentionHistory.at(-1)?.reasons.includes("character_died") === true;
+    const hasDeath = pendingDeath || finalDeath;
+    if (hasDeath && snapshot.questCharacterDeathBoundary === undefined) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["questCharacterDeathBoundary"],
+        message: "A character-death journey requires its quest death boundary.",
+      });
+    } else if (!hasDeath && snapshot.questCharacterDeathBoundary !== undefined) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["questCharacterDeathBoundary"],
+        message: "A quest death boundary is forbidden without a character-death journey.",
+      });
+    }
+  });
 
 export type OverworldSessionSnapshotV8 = z.infer<typeof OverworldSessionSnapshotV8Schema>;
 export type OverworldSessionSnapshot = z.infer<typeof OverworldSessionSnapshotSchema>;
@@ -468,6 +520,13 @@ export function cloneOverworldSessionSnapshot(
       ? {
           openingLeadSourceDecisionTrail: cloneOpeningLeadSourceDecisionTrail(
             snapshot.openingLeadSourceDecisionTrail,
+          ),
+        }
+      : {}),
+    ...(snapshot.questCharacterDeathBoundary
+      ? {
+          questCharacterDeathBoundary: cloneQuestCharacterDeathBoundary(
+            snapshot.questCharacterDeathBoundary,
           ),
         }
       : {}),
