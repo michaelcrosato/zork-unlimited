@@ -237,10 +237,10 @@ describe("blind runner MCP config contract", () => {
       "utf8",
     );
 
-    expect(runner).toContain('PROVIDER="${BLIND_PROVIDER:-claude}"');
+    expect(runner).toContain('PROVIDER="${BLIND_PROVIDER:-codex}"');
     expect(runner).toContain("--provider)");
     expect(runner).toContain("--provider must be exactly claude or codex");
-    expect(runner).toContain('MODEL="gpt-5.6-sol"');
+    expect(runner).toContain('MODEL="gpt-5.3-codex-spark"');
     expect(launcher).toContain('["provider", "--provider", true]');
 
     const launchAt = runner.indexOf('CODEX_EVENTS="$OUT.codex.jsonl"');
@@ -250,7 +250,14 @@ describe("blind runner MCP config contract", () => {
     const codexLaunch = runner.slice(launchAt, launchEnd);
     expect(codexLaunch).toContain("codex exec");
     expect(codexLaunch).toContain("--sandbox read-only");
-    expect(codexLaunch).toContain("--ephemeral");
+    expect(codexLaunch).not.toContain("--ephemeral");
+    expect(codexLaunch).toContain('cd "$CODEX_PLAYER_CWD"');
+    expect(codexLaunch).toContain('CODEX_HOME="$STERILE_CODEX_HOME_ARG"');
+    expect(codexLaunch).toContain('CODEX_ROLLOUT="$OUT.codex-rollout.jsonl"');
+    expect(codexLaunch).toContain('CODEX_CAPTURE="$OUT.codex-capture.json"');
+    expect(codexLaunch).toContain('--receipt "$CODEX_CAPTURE_ARG"');
+    expect(codexLaunch).toContain('--expected-cwd "$CODEX_PLAYER_CWD_ARG"');
+    expect(runner).toContain("codex-rollout.mjs");
     expect(codexLaunch).toContain("--ignore-user-config");
     expect(codexLaunch).toContain("--ignore-rules");
     expect(codexLaunch).toContain("--strict-config");

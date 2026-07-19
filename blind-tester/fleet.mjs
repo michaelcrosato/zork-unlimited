@@ -40,14 +40,21 @@ export const PURE_SESSION_CONTRACT_VERSION = 3;
 export const PURE_BASELINE_DECISIONS = 40;
 export const PURE_FLEET_EVIDENCE_SCHEMA_VERSION = 2;
 export const PURE_FLEET_ATTESTATION_SCHEMA_VERSION = 2;
+export const PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION = 3;
+export const CERTIFIED_CODEX_MODELS = [
+  "gpt-5.6-sol",
+  "gpt-5.6-terra",
+  "gpt-5.6-luna",
+  "gpt-5.3-codex-spark",
+];
 
 // Rotation order for explicit structural `--mock --personas mixed`; live pure
 // fleets reject mixed/non-default personas.
 const PERSONA_ROTATION = ["explorer", "speedrunner", "breaker", "casual", "lore-reader"];
 
-// Explicit diagnostic `--model mix` weighting: 9 haiku : 1 sonnet. The
-// authority/default plan is homogeneous Sonnet; mixed and single-model
-// overrides remain available for diagnostic comparison.
+// Explicit Claude diagnostic `--model mix` weighting: 9 haiku : 1 sonnet.
+// Codex fleets require one exact model id and never permit aliases, mixing, or
+// fallback.
 const DEFAULT_MODEL_MIX = [
   { model: "haiku", weight: 9 },
   { model: "sonnet", weight: 1 },
@@ -101,7 +108,8 @@ export function parseFleetArgs(argv) {
   const opts = {
     count: 100,
     concurrency: 4,
-    model: "sonnet",
+    provider: "codex",
+    model: null,
     personas: "default",
     target: "overworld",
     seedBase: 1000,
@@ -123,6 +131,9 @@ export function parseFleetArgs(argv) {
         break;
       case "--model":
         opts.model = argv[++i];
+        break;
+      case "--provider":
+        opts.provider = argv[++i];
         break;
       case "--personas":
         opts.personas = argv[++i];
@@ -159,12 +170,18 @@ export function parseFleetArgs(argv) {
   assertFleetInt(opts.seedBase, "seed-base", undefined);
   assertFleetInt(opts.maxRetries, "max-retries", 0);
   assertFleetSeedRange(opts);
+  if (opts.provider !== "claude" && opts.provider !== "codex") {
+    throw new Error("fleet: --provider must be exactly claude or codex");
+  }
+  if (opts.model === null)
+    opts.model = opts.provider === "codex" ? "gpt-5.3-codex-spark" : "sonnet";
   if (opts.label !== null) validateFleetLabel(opts.label);
   assertFleetTargetPolicy(opts);
   return opts;
 }
 
 function assertFleetTargetPolicy(opts) {
+  const provider = opts.provider ?? "claude";
   if (
     opts.target !== "overworld" &&
     !/^quest:[a-z0-9]+(?:_[a-z0-9]+)*$/.test(String(opts.target ?? ""))
@@ -183,8 +200,12 @@ function assertFleetTargetPolicy(opts) {
       "fleet: pure live runs use the default first-time-player persona; non-default or mixed personas require explicit --mock structural mode",
     );
   }
-  if (!opts.mock && opts.model !== "mix" && !isFleetModel(opts.model)) {
-    throw new Error("fleet: pure live models must be one of haiku, sonnet, opus, or mix");
+  if (!opts.mock && !isProviderModel(provider, opts.model, true)) {
+    throw new Error(
+      provider === "codex"
+        ? "fleet: Codex pure fleets require exact model gpt-5.6-sol, gpt-5.6-terra, gpt-5.6-luna, or gpt-5.3-codex-spark; aliases, mix, and fallback are forbidden"
+        : "fleet: Claude pure fleets require haiku, sonnet, opus, or diagnostic mix",
+    );
   }
 }
 
@@ -202,16 +223,25 @@ export function planFleetRuns(opts) {
   // the fresh-world live contract at the planning boundary as well.
   assertFleetTargetPolicy(opts);
   assertFleetSeedRange(opts);
+  const provider = opts.provider ?? "claude";
   const runs = [];
   for (let i = 0; i < opts.count; i++) {
     const seed = opts.seedBase + i;
     const persona =
       opts.personas === "mixed" ? PERSONA_ROTATION[i % PERSONA_ROTATION.length] : opts.personas;
     const model = opts.model === "mix" ? modelForMixIndex(opts.modelMix, i) : opts.model;
-    if (!opts.mock && !isFleetModel(model)) {
-      throw new Error("fleet: pure live model plans may contain only haiku, sonnet, or opus");
+    if (!opts.mock && !isProviderModel(provider, model, false)) {
+      throw new Error("fleet: pure live plans require an exact provider/model allowlist match");
     }
-    runs.push({ seed, persona, model, target: opts.target });
+    runs.push({
+      seed,
+      persona,
+      // Structural mode still launches run.sh through one valid built-in
+      // provider selector; --mock replaces the agent after runner validation.
+      provider,
+      model,
+      target: opts.target,
+    });
   }
   return runs;
 }
@@ -348,6 +378,9 @@ export function pureFleetRunArtifactPathsFor(reportMdPath) {
     initial_report: `${prefix}.initial-report.txt`,
     recovery_metadata: `${prefix}.repair.meta.json`,
     recovery_envelope: `${prefix}.repair.json`,
+    provider_events: `${prefix}.codex.jsonl`,
+    provider_rollout: `${prefix}.codex-rollout.jsonl`,
+    provider_capture: `${prefix}.codex-capture.json`,
   };
 }
 
@@ -374,8 +407,10 @@ export function isTrustedFleetArtifactFile(filePath, reportsDir) {
 function trustedArtifactIdentity(filePath) {
   const metadata = lstatSync(filePath);
   if (metadata.ino !== 0) return `${String(metadata.dev)}:${String(metadata.ino)}`;
-  const resolved = realpathSync(filePath);
-  return process.platform === "win32" ? resolved.toLowerCase() : resolved;
+  // realpathSync.native returns the filesystem's canonical spelling. Keep it
+  // exact: lowercasing would alias distinct entries on case-sensitive Windows
+  // directories.
+  return `path:${realpathSync.native(filePath)}`;
 }
 
 const PURE_BUILD_KEYS = ["git_commit", "tracked_worktree_clean", "world_hash", "world_id"].sort();
@@ -405,7 +440,7 @@ function samePureFleetBuild(actual, expected) {
   );
 }
 
-const PURE_FLEET_ATTESTATION_KEYS = [
+const PURE_FLEET_CLAUDE_ATTESTATION_KEYS = [
   "actual_model",
   "build",
   "claude_session_id",
@@ -428,8 +463,49 @@ const PURE_FLEET_ATTESTATION_KEYS = [
   "target",
 ].sort();
 
+const PURE_FLEET_CODEX_ATTESTATION_KEYS = [
+  "actual_model",
+  "actual_provider",
+  "build",
+  "game_session_id",
+  "initial_report_sha256",
+  "model",
+  "persona",
+  "play_mode",
+  "primary_envelope_sha256",
+  "provider",
+  "provider_cwd",
+  "provider_events_sha256",
+  "provider_rollout_sha256",
+  "provider_capture_sha256",
+  "provider_session_id",
+  "provider_turn_id",
+  "reasoning_effort",
+  "receipt_hash",
+  "recovery_envelope_sha256",
+  "recovery_metadata_sha256",
+  "report_recovered",
+  "report_sha256",
+  "run_evidence_sha256",
+  "run_seed",
+  "run_sidecar_sha256",
+  "schema_version",
+  "start_surface",
+  "target",
+].sort();
+
 function isFleetModel(model) {
   return model === "haiku" || model === "sonnet" || model === "opus";
+}
+
+function isCodexFleetModel(model) {
+  return CERTIFIED_CODEX_MODELS.includes(model);
+}
+
+function isProviderModel(provider, model, allowMix) {
+  if (provider === "codex") return isCodexFleetModel(model);
+  if (provider === "claude") return isFleetModel(model) || (allowMix && model === "mix");
+  return false;
 }
 
 function isExactPureFleetAttestation(attestation) {
@@ -437,12 +513,8 @@ function isExactPureFleetAttestation(attestation) {
     return false;
   }
   const keys = Object.keys(attestation).sort();
-  return (
-    keys.length === PURE_FLEET_ATTESTATION_KEYS.length &&
-    keys.every((key, index) => key === PURE_FLEET_ATTESTATION_KEYS[index]) &&
-    attestation.schema_version === PURE_FLEET_ATTESTATION_SCHEMA_VERSION &&
+  const common =
     Number.isSafeInteger(attestation.run_seed) &&
-    isFleetModel(attestation.model) &&
     attestation.persona === "default" &&
     attestation.target === "overworld" &&
     attestation.play_mode === "pure" &&
@@ -450,31 +522,66 @@ function isExactPureFleetAttestation(attestation) {
     isExactPureFleetBuild(attestation.build) &&
     typeof attestation.game_session_id === "string" &&
     attestation.game_session_id.length > 0 &&
-    typeof attestation.claude_session_id === "string" &&
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
-      attestation.claude_session_id,
-    ) &&
-    typeof attestation.actual_model === "string" &&
-    attestation.actual_model.length > 0 &&
-    typeof attestation.report_recovered === "boolean" &&
     /^[0-9a-f]{64}$/.test(attestation.receipt_hash) &&
     /^[0-9a-f]{64}$/.test(attestation.report_sha256) &&
     /^[0-9a-f]{64}$/.test(attestation.run_sidecar_sha256) &&
     /^[0-9a-f]{64}$/.test(attestation.run_evidence_sha256) &&
-    /^[0-9a-f]{64}$/.test(attestation.primary_envelope_sha256) &&
-    (attestation.initial_report_sha256 === null ||
-      /^[0-9a-f]{64}$/.test(attestation.initial_report_sha256)) &&
-    (attestation.recovery_metadata_sha256 === null ||
-      /^[0-9a-f]{64}$/.test(attestation.recovery_metadata_sha256)) &&
-    (attestation.recovery_envelope_sha256 === null ||
-      /^[0-9a-f]{64}$/.test(attestation.recovery_envelope_sha256)) &&
-    (attestation.report_recovered
-      ? attestation.initial_report_sha256 !== null &&
-        attestation.recovery_metadata_sha256 !== null &&
-        attestation.recovery_envelope_sha256 !== null
-      : attestation.initial_report_sha256 === null &&
-        attestation.recovery_metadata_sha256 === null &&
-        attestation.recovery_envelope_sha256 === null)
+    /^[0-9a-f]{64}$/.test(attestation.primary_envelope_sha256);
+  if (!common) return false;
+  if (attestation.schema_version === PURE_FLEET_ATTESTATION_SCHEMA_VERSION) {
+    return (
+      keys.length === PURE_FLEET_CLAUDE_ATTESTATION_KEYS.length &&
+      keys.every((key, index) => key === PURE_FLEET_CLAUDE_ATTESTATION_KEYS[index]) &&
+      attestation.schema_version === PURE_FLEET_ATTESTATION_SCHEMA_VERSION &&
+      isFleetModel(attestation.model) &&
+      typeof attestation.claude_session_id === "string" &&
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+        attestation.claude_session_id,
+      ) &&
+      typeof attestation.actual_model === "string" &&
+      attestation.actual_model.length > 0 &&
+      typeof attestation.report_recovered === "boolean" &&
+      (attestation.initial_report_sha256 === null ||
+        /^[0-9a-f]{64}$/.test(attestation.initial_report_sha256)) &&
+      (attestation.recovery_metadata_sha256 === null ||
+        /^[0-9a-f]{64}$/.test(attestation.recovery_metadata_sha256)) &&
+      (attestation.recovery_envelope_sha256 === null ||
+        /^[0-9a-f]{64}$/.test(attestation.recovery_envelope_sha256)) &&
+      (attestation.report_recovered
+        ? attestation.initial_report_sha256 !== null &&
+          attestation.recovery_metadata_sha256 !== null &&
+          attestation.recovery_envelope_sha256 !== null
+        : attestation.initial_report_sha256 === null &&
+          attestation.recovery_metadata_sha256 === null &&
+          attestation.recovery_envelope_sha256 === null)
+    );
+  }
+  return (
+    attestation.schema_version === PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION &&
+    keys.length === PURE_FLEET_CODEX_ATTESTATION_KEYS.length &&
+    keys.every((key, index) => key === PURE_FLEET_CODEX_ATTESTATION_KEYS[index]) &&
+    attestation.provider === "codex" &&
+    isCodexFleetModel(attestation.model) &&
+    attestation.actual_provider === "openai" &&
+    attestation.actual_model === attestation.model &&
+    attestation.reasoning_effort === "xhigh" &&
+    typeof attestation.provider_session_id === "string" &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+      attestation.provider_session_id,
+    ) &&
+    typeof attestation.provider_turn_id === "string" &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+      attestation.provider_turn_id,
+    ) &&
+    typeof attestation.provider_cwd === "string" &&
+    attestation.provider_cwd.length > 0 &&
+    attestation.report_recovered === false &&
+    /^[0-9a-f]{64}$/.test(attestation.provider_events_sha256) &&
+    /^[0-9a-f]{64}$/.test(attestation.provider_rollout_sha256) &&
+    /^[0-9a-f]{64}$/.test(attestation.provider_capture_sha256) &&
+    attestation.initial_report_sha256 === null &&
+    attestation.recovery_metadata_sha256 === null &&
+    attestation.recovery_envelope_sha256 === null
   );
 }
 
@@ -511,6 +618,15 @@ export function pureFleetArtifactHashes(reportMdPath) {
     recovery_envelope_sha256: artifactEntryExists(paths.recovery_envelope)
       ? sha256FileBytes(paths.recovery_envelope)
       : null,
+    provider_events_sha256: artifactEntryExists(paths.provider_events)
+      ? sha256FileBytes(paths.provider_events)
+      : null,
+    provider_rollout_sha256: artifactEntryExists(paths.provider_rollout)
+      ? sha256FileBytes(paths.provider_rollout)
+      : null,
+    provider_capture_sha256: artifactEntryExists(paths.provider_capture)
+      ? sha256FileBytes(paths.provider_capture)
+      : null,
   };
 }
 
@@ -527,7 +643,13 @@ function isExactFleetArtifactHashes(hashes) {
     (hashes.recovery_metadata_sha256 === null ||
       /^[0-9a-f]{64}$/.test(hashes.recovery_metadata_sha256)) &&
     (hashes.recovery_envelope_sha256 === null ||
-      /^[0-9a-f]{64}$/.test(hashes.recovery_envelope_sha256))
+      /^[0-9a-f]{64}$/.test(hashes.recovery_envelope_sha256)) &&
+    (hashes.provider_events_sha256 === null ||
+      /^[0-9a-f]{64}$/.test(hashes.provider_events_sha256)) &&
+    (hashes.provider_rollout_sha256 === null ||
+      /^[0-9a-f]{64}$/.test(hashes.provider_rollout_sha256)) &&
+    (hashes.provider_capture_sha256 === null ||
+      /^[0-9a-f]{64}$/.test(hashes.provider_capture_sha256))
   );
 }
 
@@ -548,26 +670,43 @@ function isExactPureFleetRunArtifactFacts(facts) {
     typeof facts.run === "object" &&
     typeof facts.game_session_id === "string" &&
     facts.game_session_id.length > 0 &&
-    typeof facts.claude_session_id === "string" &&
-    facts.claude_session_id.length > 0 &&
+    (facts.provider === "claude" || facts.provider === "codex") &&
+    typeof facts.provider_session_id === "string" &&
+    facts.provider_session_id.length > 0 &&
     typeof facts.actual_model === "string" &&
     facts.actual_model.length > 0 &&
+    (facts.actual_provider === "anthropic" || facts.actual_provider === "openai") &&
     typeof facts.report_recovered === "boolean" &&
     isExactFleetArtifactHashes(facts.hashes)
   );
 }
 
 async function validatePureFleetRunArtifacts(reportMdPath, expected, reportsDir) {
+  const expectedProvider = expected.provider ?? "claude";
   const paths = pureFleetRunArtifactPathsFor(reportMdPath);
   for (const [label, path] of [
     ["report", paths.report],
     ["run sidecar", paths.run_sidecar],
     ["raw run evidence", paths.run_evidence],
-    ["primary Claude envelope", paths.primary_envelope],
+    ["primary provider envelope", paths.primary_envelope],
   ]) {
     if (!isTrustedFleetArtifactFile(path, reportsDir)) {
       return { ok: false, reason: `${label} must be a contained private regular file` };
     }
+  }
+  const codexEntries = [
+    ["Codex provider events", paths.provider_events],
+    ["Codex rollout", paths.provider_rollout],
+    ["Codex capture receipt", paths.provider_capture],
+  ];
+  if (expectedProvider === "codex") {
+    for (const [label, path] of codexEntries) {
+      if (!isTrustedFleetArtifactFile(path, reportsDir)) {
+        return { ok: false, reason: `${label} must be a contained private regular file` };
+      }
+    }
+  } else if (codexEntries.some(([, path]) => artifactEntryExists(path))) {
+    return { ok: false, reason: "Claude fleet slot must not contain Codex provider artifacts" };
   }
   const recoveryEntries = [
     ["initial report", paths.initial_report],
@@ -597,6 +736,8 @@ async function validatePureFleetRunArtifacts(reportMdPath, expected, reportsDir)
       reportMdPath,
       "--seed",
       String(expected.seed),
+      "--provider",
+      expectedProvider,
       "--model",
       expected.model,
       "--git-commit",
@@ -634,6 +775,7 @@ async function validatePureFleetRunArtifacts(reportMdPath, expected, reportsDir)
 }
 
 export function pureFleetAttestationMismatch(attestation, run, expected, artifactFacts) {
+  const expectedProvider = expected?.provider ?? "claude";
   if (!isExactPureFleetAttestation(attestation)) {
     return "pure resume requires a valid adjacent fleet attestation";
   }
@@ -641,7 +783,7 @@ export function pureFleetAttestationMismatch(attestation, run, expected, artifac
     expected === null ||
     typeof expected !== "object" ||
     !Number.isSafeInteger(expected.seed) ||
-    !isFleetModel(expected.model) ||
+    !isProviderModel(expectedProvider, expected.model, false) ||
     !isExactPureFleetBuild(expected.build)
   ) {
     return "pure resume requires an exact expected seed, model, and clean fleet build";
@@ -651,6 +793,10 @@ export function pureFleetAttestationMismatch(attestation, run, expected, artifac
   }
   if (attestation.model !== expected.model) {
     return "pure fleet attestation model does not match the planned model";
+  }
+  const attestationProvider = attestation.schema_version === 2 ? "claude" : attestation.provider;
+  if (attestationProvider !== expectedProvider || artifactFacts.provider !== expectedProvider) {
+    return "pure fleet attestation provider does not match the planned provider";
   }
   if (
     !samePureFleetBuild(attestation.build, expected.build) ||
@@ -670,11 +816,24 @@ export function pureFleetAttestationMismatch(attestation, run, expected, artifac
   ) {
     return "pure fleet attestation game session does not match the run evidence";
   }
-  if (attestation.claude_session_id !== artifactFacts.claude_session_id) {
-    return "pure fleet attestation Claude session does not match the primary envelope";
+  const attestedProviderSession =
+    attestation.schema_version === 2
+      ? attestation.claude_session_id
+      : attestation.provider_session_id;
+  if (attestedProviderSession !== artifactFacts.provider_session_id) {
+    return "pure fleet attestation provider session does not match authenticated artifacts";
   }
   if (attestation.actual_model !== artifactFacts.actual_model) {
     return "pure fleet attestation actual model does not match the primary envelope";
+  }
+  if (
+    expectedProvider === "codex" &&
+    (attestation.actual_provider !== artifactFacts.actual_provider ||
+      attestation.reasoning_effort !== artifactFacts.reasoning_effort ||
+      attestation.provider_turn_id !== artifactFacts.provider_turn_id ||
+      attestation.provider_cwd !== artifactFacts.provider_cwd)
+  ) {
+    return "pure fleet attestation Codex rollout facts do not match authenticated artifacts";
   }
   if (attestation.report_recovered !== artifactFacts.report_recovered) {
     return "pure fleet attestation recovery status does not match durable recovery evidence";
@@ -690,7 +849,11 @@ export function pureFleetAttestationMismatch(attestation, run, expected, artifac
     attestation.primary_envelope_sha256 !== artifactFacts.hashes.primary_envelope_sha256 ||
     attestation.initial_report_sha256 !== artifactFacts.hashes.initial_report_sha256 ||
     attestation.recovery_metadata_sha256 !== artifactFacts.hashes.recovery_metadata_sha256 ||
-    attestation.recovery_envelope_sha256 !== artifactFacts.hashes.recovery_envelope_sha256
+    attestation.recovery_envelope_sha256 !== artifactFacts.hashes.recovery_envelope_sha256 ||
+    (expectedProvider === "codex" &&
+      (attestation.provider_events_sha256 !== artifactFacts.hashes.provider_events_sha256 ||
+        attestation.provider_rollout_sha256 !== artifactFacts.hashes.provider_rollout_sha256 ||
+        attestation.provider_capture_sha256 !== artifactFacts.hashes.provider_capture_sha256))
   ) {
     return "pure fleet attestation artifact hashes do not match the authenticated run bytes";
   }
@@ -698,8 +861,8 @@ export function pureFleetAttestationMismatch(attestation, run, expected, artifac
 }
 
 function buildPureFleetAttestation(run, expected, artifactFacts) {
-  const attestation = {
-    schema_version: PURE_FLEET_ATTESTATION_SCHEMA_VERSION,
+  const expectedProvider = expected.provider ?? "claude";
+  const common = {
     run_seed: expected.seed,
     model: expected.model,
     persona: "default",
@@ -708,12 +871,37 @@ function buildPureFleetAttestation(run, expected, artifactFacts) {
     start_surface: "fresh_overworld",
     build: expected.build,
     game_session_id: run.session_id,
-    claude_session_id: artifactFacts.claude_session_id,
     actual_model: artifactFacts.actual_model,
     report_recovered: artifactFacts.report_recovered,
     receipt_hash: run.receipt.receiptHash,
-    ...artifactFacts.hashes,
+    report_sha256: artifactFacts.hashes.report_sha256,
+    run_sidecar_sha256: artifactFacts.hashes.run_sidecar_sha256,
+    run_evidence_sha256: artifactFacts.hashes.run_evidence_sha256,
+    primary_envelope_sha256: artifactFacts.hashes.primary_envelope_sha256,
+    initial_report_sha256: artifactFacts.hashes.initial_report_sha256,
+    recovery_metadata_sha256: artifactFacts.hashes.recovery_metadata_sha256,
+    recovery_envelope_sha256: artifactFacts.hashes.recovery_envelope_sha256,
   };
+  const attestation =
+    expectedProvider === "codex"
+      ? {
+          ...common,
+          schema_version: PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION,
+          provider: "codex",
+          provider_session_id: artifactFacts.provider_session_id,
+          actual_provider: artifactFacts.actual_provider,
+          reasoning_effort: artifactFacts.reasoning_effort,
+          provider_turn_id: artifactFacts.provider_turn_id,
+          provider_cwd: artifactFacts.provider_cwd,
+          provider_events_sha256: artifactFacts.hashes.provider_events_sha256,
+          provider_rollout_sha256: artifactFacts.hashes.provider_rollout_sha256,
+          provider_capture_sha256: artifactFacts.hashes.provider_capture_sha256,
+        }
+      : {
+          ...common,
+          schema_version: PURE_FLEET_ATTESTATION_SCHEMA_VERSION,
+          claude_session_id: artifactFacts.provider_session_id,
+        };
   const mismatch = pureFleetAttestationMismatch(attestation, run, expected, artifactFacts);
   if (mismatch !== null) throw new Error(mismatch);
   return attestation;
@@ -737,11 +925,12 @@ export async function writeFreshPureFleetAttestation(
 }
 
 function pureFleetEvidenceMismatch(run, expected) {
+  const expectedProvider = expected?.provider ?? "claude";
   if (
     expected === null ||
     typeof expected !== "object" ||
     !Number.isSafeInteger(expected.seed) ||
-    !isFleetModel(expected.model) ||
+    !isProviderModel(expectedProvider, expected.model, false) ||
     !isExactPureFleetBuild(expected.build)
   ) {
     return "pure resume requires an exact expected seed, model, and clean fleet build";
@@ -1115,7 +1304,9 @@ async function executeRun(run, { reportsDir, stamp, opts, bashPath, fleetDir, fl
   const target = run.target;
   const questId = questIdFor(target);
   const requiredMode = opts.mock ? "structural" : "pure";
-  const expectedPure = opts.mock ? null : { seed: run.seed, model: run.model, build: fleetBuild };
+  const expectedPure = opts.mock
+    ? null
+    : { seed: run.seed, provider: run.provider, model: run.model, build: fleetBuild };
 
   // Check ALL stamp-agnostic candidates, newest-stamp-first, stopping at the
   // first that re-verifies — a stale FAILED report must never shadow a later
@@ -1153,6 +1344,8 @@ async function executeRun(run, { reportsDir, stamp, opts, bashPath, fleetDir, fl
       String(run.seed),
       "--model",
       run.model,
+      "--provider",
+      run.provider,
       "--persona",
       run.persona,
       "--out",
@@ -1317,7 +1510,7 @@ export function fleetReportLockSpec(reportsDir, stamp, runs) {
     seed_start: runs[0].seed,
     seed_end: runs.at(-1).seed,
     seeds: runs.map((run) => run.seed),
-    model_plan: runs.map((run) => ({ seed: run.seed, model: run.model })),
+    model_plan: runs.map((run) => ({ seed: run.seed, provider: run.provider, model: run.model })),
   };
   // The exclusive filename intentionally covers the entire stamp+target report
   // namespace, so different labels, overlapping ranges, and different model
@@ -1451,6 +1644,7 @@ async function main() {
         planned_index: plannedIndex,
         seed: run.seed,
         persona: run.persona,
+        provider: run.provider,
         model: run.model,
         target: run.target,
         report: result.report,
@@ -1501,12 +1695,17 @@ async function main() {
       concurrency: opts.concurrency,
       reportsDir,
       seed_base: opts.seedBase,
+      provider: opts.mock ? "mock" : opts.provider,
       model: opts.model,
       personas: opts.personas,
       target: opts.target,
       resume_enabled: opts.resume,
       evidence_schema_version: opts.mock ? 1 : PURE_FLEET_EVIDENCE_SCHEMA_VERSION,
-      model_attestation_schema_version: opts.mock ? null : PURE_FLEET_ATTESTATION_SCHEMA_VERSION,
+      model_attestation_schema_version: opts.mock
+        ? null
+        : opts.provider === "codex"
+          ? PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION
+          : PURE_FLEET_ATTESTATION_SCHEMA_VERSION,
       build: fleetBuild,
       report_schema_version: 2,
       play_mode: opts.mock ? "structural" : "pure",

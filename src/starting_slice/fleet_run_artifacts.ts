@@ -1,6 +1,9 @@
 import { createHash } from "node:crypto";
+import { basename, isAbsolute, win32 } from "node:path";
 import { isDeepStrictEqual } from "node:util";
 import { z } from "zod";
+// @ts-expect-error -- hardened runner module is intentionally plain ESM.
+import { inspectCodexPureEvents } from "../../blind-tester/codex-pure-envelope.mjs";
 import { verifyBlindReportText } from "../blind/report_verifier.js";
 import {
   PureReportRecoveryMetadataSchema,
@@ -29,6 +32,31 @@ export const PureFleetPrimaryClaudeEnvelopeSchema = z
   })
   .passthrough();
 
+export const CERTIFIED_CODEX_MODELS = [
+  "gpt-5.6-sol",
+  "gpt-5.6-terra",
+  "gpt-5.6-luna",
+  "gpt-5.3-codex-spark",
+] as const;
+export const CertifiedCodexModelSchema = z.enum(CERTIFIED_CODEX_MODELS);
+export type CertifiedCodexModel = z.infer<typeof CertifiedCodexModelSchema>;
+export type CertifiedClaudeModel = "haiku" | "sonnet" | "opus";
+export type PureFleetProvider = "claude" | "codex";
+export type CertifiedFleetModel = CertifiedClaudeModel | CertifiedCodexModel;
+
+const PureFleetPrimaryCodexEnvelopeSchema = z
+  .object({
+    type: z.literal("result"),
+    subtype: z.literal("success"),
+    provider: z.literal("codex"),
+    is_error: z.literal(false),
+    session_id: z.string().uuid(),
+    result: z.string(),
+    terminal_reason: z.literal("completed"),
+    num_turns: z.number().int().positive(),
+  })
+  .passthrough();
+
 export interface PureFleetRunArtifactBytes {
   report: Uint8Array;
   runSidecar: Uint8Array;
@@ -37,6 +65,9 @@ export interface PureFleetRunArtifactBytes {
   initialReport: Uint8Array | null;
   recoveryMetadata: Uint8Array | null;
   recoveryEnvelope: Uint8Array | null;
+  providerEvents: Uint8Array | null;
+  providerRollout: Uint8Array | null;
+  providerCapture: Uint8Array | null;
 }
 
 export interface PureFleetRunArtifactPaths {
@@ -47,6 +78,9 @@ export interface PureFleetRunArtifactPaths {
   initialReport: string;
   recoveryMetadata: string;
   recoveryEnvelope: string;
+  providerEvents: string;
+  providerRollout: string;
+  providerCapture: string;
 }
 
 export function pureFleetRunArtifactPaths(reportPath: string): PureFleetRunArtifactPaths {
@@ -59,12 +93,16 @@ export function pureFleetRunArtifactPaths(reportPath: string): PureFleetRunArtif
     initialReport: `${prefix}.initial-report.txt`,
     recoveryMetadata: `${prefix}.repair.meta.json`,
     recoveryEnvelope: `${prefix}.repair.json`,
+    providerEvents: `${prefix}.codex.jsonl`,
+    providerRollout: `${prefix}.codex-rollout.jsonl`,
+    providerCapture: `${prefix}.codex-capture.json`,
   };
 }
 
 export interface PureFleetRunArtifactExpectation {
   seed: number;
-  model: "haiku" | "sonnet" | "opus";
+  provider: PureFleetProvider;
+  model: CertifiedFleetModel;
   build: z.infer<typeof PureRunBuildSchema> & { tracked_worktree_clean: true };
 }
 
@@ -76,13 +114,21 @@ export interface PureFleetRunArtifactHashes {
   initial_report_sha256: string | null;
   recovery_metadata_sha256: string | null;
   recovery_envelope_sha256: string | null;
+  provider_events_sha256: string | null;
+  provider_rollout_sha256: string | null;
+  provider_capture_sha256: string | null;
 }
 
 export interface PureFleetRunArtifactFacts {
   run: Extract<PureBlindRunSidecar, { schema_version: 2 }>;
   game_session_id: string;
-  claude_session_id: string;
+  provider: PureFleetProvider;
+  provider_session_id: string;
   actual_model: string;
+  actual_provider: "anthropic" | "openai";
+  reasoning_effort: string | null;
+  provider_turn_id: string | null;
+  provider_cwd: string | null;
   report_recovered: boolean;
   hashes: PureFleetRunArtifactHashes;
 }
@@ -163,6 +209,341 @@ function parsePrimaryEnvelope(
   return { ok: true, envelope: parsed.data, actualModel: model.key };
 }
 
+function parseJsonLines(
+  text: string,
+  label: string,
+): { ok: true; rows: unknown[] } | { ok: false; reason: string } {
+  const lines = text.split(/\r?\n/u).filter((line) => line.trim().length > 0);
+  if (lines.length === 0) return { ok: false, reason: `${label} is empty` };
+  try {
+    return { ok: true, rows: lines.map((line) => JSON.parse(line) as unknown) };
+  } catch {
+    return { ok: false, reason: `${label} is not valid JSONL` };
+  }
+}
+
+const CodexSessionMetaSchema = z
+  .object({
+    id: z.string().uuid(),
+    cwd: z.string().min(1),
+    cli_version: z.string().min(1),
+    model_provider: z.literal("openai"),
+  })
+  .passthrough();
+
+const CodexTurnContextSchema = z
+  .object({
+    turn_id: z.string().uuid(),
+    cwd: z.string().min(1),
+    approval_policy: z.literal("never"),
+    sandbox_policy: z.object({ type: z.literal("read-only") }).passthrough(),
+    model: CertifiedCodexModelSchema,
+    effort: z.literal("xhigh"),
+  })
+  .passthrough();
+
+const CodexDirectoryIdentitySchema = z
+  .object({
+    device_id: z.string().regex(/^\d+$/),
+    file_id: z.string().regex(/^\d+$/),
+  })
+  .strict();
+
+const CodexCaptureReceiptSchema = z
+  .object({
+    schema_version: z.literal(1),
+    binding: z.literal("runner_work_player"),
+    recorded_session_cwd: z.string().min(1),
+    recorded_turn_cwd: z.string().min(1),
+    canonical_expected_cwd: z.string().min(1),
+    canonical_session_cwd: z.string().min(1),
+    canonical_turn_cwd: z.string().min(1),
+    expected_directory_identity: CodexDirectoryIdentitySchema,
+    session_directory_identity: CodexDirectoryIdentitySchema,
+    turn_directory_identity: CodexDirectoryIdentitySchema,
+    copied_rollout_sha256: z.string().regex(/^[0-9a-f]{64}$/),
+  })
+  .strict();
+
+interface CodexAuthorityFacts {
+  sessionId: string;
+  actualModel: CertifiedCodexModel;
+  turnId: string;
+  cwd: string;
+}
+
+function finalCodexPublicMessage(rows: unknown[]): string | null {
+  let final: string | null = null;
+  for (const row of rows) {
+    if (!isRecord(row) || row.type !== "item.completed" || !isRecord(row.item)) continue;
+    if (row.item.type === "agent_message" && typeof row.item.text === "string")
+      final = row.item.text;
+  }
+  return final;
+}
+
+function finalCodexRolloutMessage(rows: unknown[]): { text: string; index: number } | null {
+  let final: { text: string; index: number } | null = null;
+  for (const [index, row] of rows.entries()) {
+    if (!isRecord(row) || row.type !== "response_item" || !isRecord(row.payload)) continue;
+    if (
+      row.payload.type !== "message" ||
+      row.payload.role !== "assistant" ||
+      !Array.isArray(row.payload.content)
+    )
+      continue;
+    const text = row.payload.content
+      .filter(
+        (part): part is Record<string, unknown> =>
+          isRecord(part) && part.type === "output_text" && typeof part.text === "string",
+      )
+      .map((part) => String(part.text))
+      .join("");
+    if (text.length > 0) final = { text, index };
+  }
+  return final;
+}
+
+const CodexTaskStartedSchema = z
+  .object({ type: z.literal("task_started"), turn_id: z.string().uuid() })
+  .passthrough();
+
+const CodexTaskCompleteSchema = z
+  .object({
+    type: z.literal("task_complete"),
+    turn_id: z.string().uuid(),
+    last_agent_message: z.string(),
+  })
+  .passthrough();
+
+function indexedEventMessages(
+  rows: unknown[],
+  eventType: string,
+): { index: number; row: unknown }[] {
+  return rows.flatMap((row, index) =>
+    isRecord(row) &&
+    row.type === "event_msg" &&
+    isRecord(row.payload) &&
+    row.payload.type === eventType
+      ? [{ index, row }]
+      : [],
+  );
+}
+
+function isAbsolutePlayerDirectory(path: string): boolean {
+  const pathBasename = basename(path);
+  return (
+    (isAbsolute(path) || win32.isAbsolute(path)) &&
+    (pathBasename === "player" || win32.basename(path) === "player")
+  );
+}
+
+function forbiddenCodexLifecycleType(row: unknown): string | null {
+  if (!isRecord(row)) return null;
+  if (typeof row.type === "string" && /(?:abort|cancel|error|fail)/iu.test(row.type)) {
+    return row.type;
+  }
+  if (
+    row.type === "event_msg" &&
+    isRecord(row.payload) &&
+    typeof row.payload.type === "string" &&
+    /(?:abort|cancel|error|fail)/iu.test(row.payload.type)
+  ) {
+    return row.payload.type;
+  }
+  return null;
+}
+
+function parseCodexCaptureReceipt(
+  captureText: string,
+  rolloutText: string,
+  sessionCwd: string,
+  turnCwd: string,
+): { ok: true; canonicalCwd: string } | { ok: false; reason: string } {
+  let raw: unknown;
+  try {
+    raw = JSON.parse(captureText);
+  } catch {
+    return { ok: false, reason: "Codex capture receipt is not valid JSON" };
+  }
+  const parsed = CodexCaptureReceiptSchema.safeParse(raw);
+  if (!parsed.success) {
+    return { ok: false, reason: "Codex capture receipt is not an exact runner-work-player proof" };
+  }
+  const receipt = parsed.data;
+  if (receipt.recorded_session_cwd !== sessionCwd || receipt.recorded_turn_cwd !== turnCwd) {
+    return { ok: false, reason: "Codex capture receipt recorded cwd differs from rollout bytes" };
+  }
+  if (
+    receipt.canonical_expected_cwd !== receipt.canonical_session_cwd ||
+    receipt.canonical_expected_cwd !== receipt.canonical_turn_cwd ||
+    !isAbsolutePlayerDirectory(receipt.canonical_expected_cwd)
+  ) {
+    return {
+      ok: false,
+      reason: "Codex capture receipt does not bind one canonical isolated player cwd",
+    };
+  }
+  if (
+    !isDeepStrictEqual(receipt.expected_directory_identity, receipt.session_directory_identity) ||
+    !isDeepStrictEqual(receipt.expected_directory_identity, receipt.turn_directory_identity)
+  ) {
+    return { ok: false, reason: "Codex capture receipt directory identities differ" };
+  }
+  if (receipt.copied_rollout_sha256 !== sha256ArtifactBytes(exactUtf8Bytes(rolloutText))) {
+    return { ok: false, reason: "Codex capture receipt rollout hash differs from copied bytes" };
+  }
+  return { ok: true, canonicalCwd: receipt.canonical_expected_cwd };
+}
+
+function parseCodexAuthority(
+  eventsText: string,
+  rolloutText: string,
+  captureText: string,
+  expectedModel: CertifiedCodexModel,
+  report: string,
+): { ok: true; facts: CodexAuthorityFacts } | { ok: false; reason: string } {
+  const events = parseJsonLines(eventsText, "Codex provider events");
+  if (!events.ok) return events;
+  const inspected = inspectCodexPureEvents(events.rows) as
+    | { ok: true; threadId: string }
+    | { ok: false; reason: string };
+  if (!inspected.ok)
+    return { ok: false, reason: `Codex provider events rejected: ${inspected.reason}` };
+  if (finalCodexPublicMessage(events.rows) !== report) {
+    return { ok: false, reason: "Codex public final message bytes do not equal the report" };
+  }
+
+  const rollout = parseJsonLines(rolloutText, "Codex rollout");
+  if (!rollout.ok) return rollout;
+  const sessionRows = rollout.rows.flatMap((row, index) =>
+    isRecord(row) && row.type === "session_meta" ? [{ index, row }] : [],
+  );
+  const turnRows = rollout.rows.flatMap((row, index) =>
+    isRecord(row) && row.type === "turn_context" ? [{ index, row }] : [],
+  );
+  if (sessionRows.length !== 1 || sessionRows[0]?.index !== 0) {
+    return {
+      ok: false,
+      reason: `Codex rollout requires one leading session_meta (found ${sessionRows.length})`,
+    };
+  }
+  if (turnRows.length !== 1) {
+    return {
+      ok: false,
+      reason: `Codex rollout requires exactly one turn_context (found ${turnRows.length})`,
+    };
+  }
+  const session = CodexSessionMetaSchema.safeParse(
+    (sessionRows[0]!.row as Record<string, unknown>).payload,
+  );
+  if (!session.success) return { ok: false, reason: "Codex rollout session_meta is malformed" };
+  const turn = CodexTurnContextSchema.safeParse(
+    (turnRows[0]!.row as Record<string, unknown>).payload,
+  );
+  if (!turn.success)
+    return { ok: false, reason: "Codex rollout turn_context is not a strict read-only xhigh turn" };
+  if (session.data.id !== inspected.threadId) {
+    return { ok: false, reason: "Codex rollout session id differs from public thread.started" };
+  }
+  if (turn.data.model !== expectedModel) {
+    return {
+      ok: false,
+      reason: `Codex rollout actual model ${turn.data.model} differs from planned ${expectedModel}`,
+    };
+  }
+  if (turn.data.cwd !== session.data.cwd) {
+    return { ok: false, reason: "Codex rollout turn cwd differs from session cwd" };
+  }
+  if (!isAbsolutePlayerDirectory(turn.data.cwd)) {
+    return { ok: false, reason: "Codex rollout cwd is not an absolute isolated player directory" };
+  }
+  const capture = parseCodexCaptureReceipt(
+    captureText,
+    rolloutText,
+    session.data.cwd,
+    turn.data.cwd,
+  );
+  if (!capture.ok) return capture;
+  const forbiddenTerminal = rollout.rows
+    .map(forbiddenCodexLifecycleType)
+    .find((type): type is string => type !== null);
+  if (forbiddenTerminal !== undefined) {
+    return {
+      ok: false,
+      reason: `Codex rollout contains forbidden abort/error lifecycle ${forbiddenTerminal}`,
+    };
+  }
+  const taskStarts = indexedEventMessages(rollout.rows, "task_started");
+  const taskCompletes = indexedEventMessages(rollout.rows, "task_complete");
+  if (taskStarts.length !== 1 || taskCompletes.length !== 1) {
+    return {
+      ok: false,
+      reason: `Codex rollout requires exactly one task_started and task_complete (found ${taskStarts.length}/${taskCompletes.length})`,
+    };
+  }
+  if (taskCompletes[0]!.index !== rollout.rows.length - 1) {
+    return { ok: false, reason: "Codex rollout task_complete must be the final rollout row" };
+  }
+  const taskStarted = CodexTaskStartedSchema.safeParse(
+    (taskStarts[0]!.row as Record<string, unknown>).payload,
+  );
+  const taskComplete = CodexTaskCompleteSchema.safeParse(
+    (taskCompletes[0]!.row as Record<string, unknown>).payload,
+  );
+  if (!taskStarted.success || !taskComplete.success) {
+    return { ok: false, reason: "Codex rollout task lifecycle is malformed" };
+  }
+  if (
+    taskStarted.data.turn_id !== turn.data.turn_id ||
+    taskComplete.data.turn_id !== turn.data.turn_id
+  ) {
+    return { ok: false, reason: "Codex rollout task lifecycle turn id differs from turn_context" };
+  }
+  const finalMessage = finalCodexRolloutMessage(rollout.rows);
+  if (finalMessage?.text !== report || taskComplete.data.last_agent_message !== report) {
+    return {
+      ok: false,
+      reason: "Codex rollout final assistant and task_complete message bytes must equal the report",
+    };
+  }
+  if (
+    !(
+      taskStarts[0]!.index < turnRows[0]!.index &&
+      turnRows[0]!.index < finalMessage.index &&
+      finalMessage.index < taskCompletes[0]!.index
+    )
+  ) {
+    return {
+      ok: false,
+      reason: "Codex rollout task lifecycle is out of order",
+    };
+  }
+  return {
+    ok: true,
+    facts: {
+      sessionId: session.data.id,
+      actualModel: turn.data.model,
+      turnId: turn.data.turn_id,
+      cwd: capture.canonicalCwd,
+    },
+  };
+}
+
+export function validateCodexFleetProviderAuthority(input: {
+  events: string;
+  rollout: string;
+  capture: string;
+  model: CertifiedCodexModel;
+  report: string;
+}): { ok: true; facts: CodexAuthorityFacts } | { ok: false; reason: string } {
+  return parseCodexAuthority(input.events, input.rollout, input.capture, input.model, input.report);
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
 function bytesEqual(left: Uint8Array, right: Uint8Array): boolean {
   return left.byteLength === right.byteLength && left.every((byte, index) => byte === right[index]);
 }
@@ -183,6 +564,12 @@ function artifactHashes(input: PureFleetRunArtifactBytes): PureFleetRunArtifactH
       input.recoveryMetadata === null ? null : sha256ArtifactBytes(input.recoveryMetadata),
     recovery_envelope_sha256:
       input.recoveryEnvelope === null ? null : sha256ArtifactBytes(input.recoveryEnvelope),
+    provider_events_sha256:
+      input.providerEvents === null ? null : sha256ArtifactBytes(input.providerEvents),
+    provider_rollout_sha256:
+      input.providerRollout === null ? null : sha256ArtifactBytes(input.providerRollout),
+    provider_capture_sha256:
+      input.providerCapture === null ? null : sha256ArtifactBytes(input.providerCapture),
   };
 }
 
@@ -194,12 +581,27 @@ export function validatePureFleetRunArtifactBytes(
     report: decodeUtf8(input.report, "report"),
     runSidecar: decodeUtf8(input.runSidecar, "run sidecar"),
     runEvidence: decodeUtf8(input.runEvidence, "run evidence"),
-    primaryEnvelope: decodeUtf8(input.primaryEnvelope, "primary Claude envelope"),
+    primaryEnvelope: decodeUtf8(input.primaryEnvelope, "primary provider envelope"),
+    providerEvents:
+      input.providerEvents === null
+        ? null
+        : decodeUtf8(input.providerEvents, "Codex provider events"),
+    providerRollout:
+      input.providerRollout === null ? null : decodeUtf8(input.providerRollout, "Codex rollout"),
+    providerCapture:
+      input.providerCapture === null
+        ? null
+        : decodeUtf8(input.providerCapture, "Codex capture receipt"),
   };
   if (!decoded.report.ok) return decoded.report;
   if (!decoded.runSidecar.ok) return decoded.runSidecar;
   if (!decoded.runEvidence.ok) return decoded.runEvidence;
   if (!decoded.primaryEnvelope.ok) return decoded.primaryEnvelope;
+  if (decoded.providerEvents !== null && !decoded.providerEvents.ok) return decoded.providerEvents;
+  if (decoded.providerRollout !== null && !decoded.providerRollout.ok)
+    return decoded.providerRollout;
+  if (decoded.providerCapture !== null && !decoded.providerCapture.ok)
+    return decoded.providerCapture;
 
   const parsedSidecar = parseBlindRunSidecar(decoded.runSidecar.text);
   if (!parsedSidecar.ok) return parsedSidecar;
@@ -228,6 +630,84 @@ export function validatePureFleetRunArtifactBytes(
   });
   if (!reportVerification.ok) {
     return { ok: false, reason: `report verification failed: ${reportVerification.reason}` };
+  }
+
+  if (expected.provider === "codex") {
+    const expectedModel = CertifiedCodexModelSchema.safeParse(expected.model);
+    if (!expectedModel.success) {
+      return { ok: false, reason: "Codex fleet plan requires one exact certified Codex model id" };
+    }
+    if (
+      input.initialReport !== null ||
+      input.recoveryMetadata !== null ||
+      input.recoveryEnvelope !== null
+    ) {
+      return { ok: false, reason: "Codex certified runs do not permit report recovery artifacts" };
+    }
+    if (
+      decoded.providerEvents === null ||
+      decoded.providerRollout === null ||
+      decoded.providerCapture === null
+    ) {
+      return {
+        ok: false,
+        reason:
+          "Codex certified runs require provider events, one rollout, and its capture receipt",
+      };
+    }
+    const primaryRaw = (() => {
+      try {
+        return JSON.parse(decoded.primaryEnvelope.text) as unknown;
+      } catch {
+        return null;
+      }
+    })();
+    const primary = PureFleetPrimaryCodexEnvelopeSchema.safeParse(primaryRaw);
+    if (!primary.success) {
+      return { ok: false, reason: "primary Codex envelope is not a completed audited turn" };
+    }
+    if (!bytesEqual(input.report, exactUtf8Bytes(primary.data.result))) {
+      return { ok: false, reason: "primary Codex result bytes do not equal the final report" };
+    }
+    const authority = parseCodexAuthority(
+      decoded.providerEvents.text,
+      decoded.providerRollout.text,
+      decoded.providerCapture.text,
+      expectedModel.data,
+      decoded.report.text,
+    );
+    if (!authority.ok) return authority;
+    if (primary.data.session_id !== authority.facts.sessionId) {
+      return { ok: false, reason: "primary Codex envelope session differs from rollout authority" };
+    }
+    const hashes = artifactHashes(input);
+    return {
+      ok: true,
+      facts: {
+        run,
+        game_session_id: run.session_id,
+        provider: "codex",
+        provider_session_id: authority.facts.sessionId,
+        actual_model: authority.facts.actualModel,
+        actual_provider: "openai",
+        reasoning_effort: "xhigh",
+        provider_turn_id: authority.facts.turnId,
+        provider_cwd: authority.facts.cwd,
+        report_recovered: false,
+        hashes,
+      },
+    };
+  }
+
+  if (expected.provider !== "claude" || !["haiku", "sonnet", "opus"].includes(expected.model)) {
+    return { ok: false, reason: "Claude fleet plan requires one supported exact alias" };
+  }
+  if (
+    input.providerEvents !== null ||
+    input.providerRollout !== null ||
+    input.providerCapture !== null
+  ) {
+    return { ok: false, reason: "Claude fleet artifacts must not contain Codex provider evidence" };
   }
 
   const primary = parsePrimaryEnvelope(decoded.primaryEnvelope.text, expected.model);
@@ -305,8 +785,13 @@ export function validatePureFleetRunArtifactBytes(
     facts: {
       run,
       game_session_id: run.session_id,
-      claude_session_id: primary.envelope.session_id,
+      provider: "claude",
+      provider_session_id: primary.envelope.session_id,
       actual_model: primary.actualModel,
+      actual_provider: "anthropic",
+      reasoning_effort: null,
+      provider_turn_id: null,
+      provider_cwd: null,
       report_recovered: reportRecovered,
       hashes,
     },
