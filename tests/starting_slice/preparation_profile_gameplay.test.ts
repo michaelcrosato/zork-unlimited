@@ -168,19 +168,31 @@ describe("SS-F05 — Albany preparation profile gameplay", () => {
     );
     expect(
       serviceRules.map((rule) => [
+        rule.id,
         rule.requires_all_story_choices?.[0]?.choice_id,
         rule.area,
         rule.action,
       ]),
     ).toEqual([
-      [WORKS, "albany_city__industrial", "resupply"],
-      [DROVER, "albany_city__campus", "rest"],
-      [RELIEF, "albany_city__civic_core", "resupply"],
+      ["albany:campus_calibrated_warning_drover_rest", DROVER, "albany_city__campus", "rest"],
+      [
+        "albany:wolf_works_fortification_return_resupply",
+        WORKS,
+        "albany_city__industrial",
+        "resupply",
+      ],
+      ["albany:wolf_drover_route_return_rest", DROVER, "albany_city__campus", "rest"],
+      [
+        "albany:wolf_relief_protocol_return_resupply",
+        RELIEF,
+        "albany_city__civic_core",
+        "resupply",
+      ],
     ]);
     expect(
-      serviceRules.every((rule) =>
-        rule.requires_all_world_facts?.includes("fact:wolf_winter_byre_held"),
-      ),
+      serviceRules
+        .filter((rule) => rule.id !== "albany:campus_calibrated_warning_drover_rest")
+        .every((rule) => rule.requires_all_world_facts?.includes("fact:wolf_winter_byre_held")),
     ).toBe(true);
 
     for (const memoryId of [

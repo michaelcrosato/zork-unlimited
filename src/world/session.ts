@@ -59,6 +59,7 @@ import { deriveCampaignWorldFactIds } from "./campaign_consequences.js";
 import {
   resolveCampaignServiceRules,
   type CampaignServiceOffer,
+  type CampaignServiceLocalJobOption,
 } from "./campaign_service_rules.js";
 import {
   applyOverworldSessionQuestStart,
@@ -530,6 +531,26 @@ export class OverworldSession {
     );
   }
 
+  /** Only current authored scene proofs can activate a local-job service. */
+  private completedLocalJobOptions(): CampaignServiceLocalJobOption[] {
+    return this.journalEntries.flatMap((entry) => {
+      if (entry.kind !== "job" || !entry.id.startsWith("job:")) return [];
+      const jobId = entry.id.slice("job:".length);
+      const job = this.jobsById.get(jobId);
+      const proof = entry.localSceneProof;
+      if (
+        !job?.authored_scene ||
+        !proof ||
+        proof.sceneId !== job.authored_scene.id ||
+        proof.sourceWorldHash !== undefined ||
+        !job.authored_scene.options.some((option) => option.id === proof.optionId)
+      ) {
+        return [];
+      }
+      return [{ job_id: jobId, option_id: proof.optionId }];
+    });
+  }
+
   private campaignServiceOffers(currentAreaId: string): CampaignServiceOffer[] {
     return resolveCampaignServiceRules({
       rules: this.world.campaign_service_rules ?? [],
@@ -538,6 +559,7 @@ export class OverworldSession {
       worldFactIds: this.campaignWorldFactIds(),
       selectedStoryChoices: this.selectedCampaignStoryChoiceRefs(),
       consumedRuleIds: this.consumedCampaignServiceRuleIds(),
+      completedLocalJobOptions: this.completedLocalJobOptions(),
       character: this.characterState,
       regionRenown: this.regionRenown,
       providersById: this.charactersById,
@@ -2418,6 +2440,7 @@ export class OverworldSession {
         campaignWorldFactIds: this.campaignWorldFactIds(),
         campaignStoryChoiceRefs: this.selectedCampaignStoryChoiceRefs(),
         consumedCampaignServiceRuleIds: this.consumedCampaignServiceRuleIds(),
+        completedLocalJobOptions: this.completedLocalJobOptions(),
         campaignCharacter: this.characterState,
         regionRenown: this.regionRenown,
         fatigue: this.fatigue,
@@ -2440,6 +2463,7 @@ export class OverworldSession {
         campaignWorldFactIds: this.campaignWorldFactIds(),
         campaignStoryChoiceRefs: this.selectedCampaignStoryChoiceRefs(),
         consumedCampaignServiceRuleIds: this.consumedCampaignServiceRuleIds(),
+        completedLocalJobOptions: this.completedLocalJobOptions(),
         campaignCharacter: this.characterState,
         regionRenown: this.regionRenown,
         fatigue: this.fatigue,

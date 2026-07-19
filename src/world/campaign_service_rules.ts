@@ -66,6 +66,55 @@ const CampaignServiceStoryChoiceRefsSchema = z
     });
   });
 
+/** An authored local-job decision, never a generic completion marker. */
+export const CampaignServiceLocalJobOptionSchema = z
+  .object({
+    job_id: z.string().min(1),
+    option_id: z.string().min(1),
+  })
+  .strict();
+
+function campaignServiceLocalJobOptionsSchema(kind: "required" | "forbidden") {
+  return z
+    .array(CampaignServiceLocalJobOptionSchema)
+    .min(1)
+    .max(8)
+    .superRefine((options, ctx) => {
+      const seen = new Set<string>();
+      options.forEach((option, index) => {
+        const key = campaignServiceLocalJobOptionKey(option);
+        if (seen.has(key)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: [index],
+            message: `Duplicate ${kind} campaign service local-job option ${key}.`,
+          });
+        }
+        seen.add(key);
+      });
+    });
+}
+
+const CampaignServiceRequiredLocalJobOptionsSchema = campaignServiceLocalJobOptionsSchema(
+  "required",
+).superRefine((options, ctx) => {
+  const selectedByJobId = new Map<string, string>();
+  options.forEach((option, index) => {
+    const selected = selectedByJobId.get(option.job_id);
+    if (selected !== undefined && selected !== option.option_id) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: [index],
+        message: `Campaign service rule cannot require mutually exclusive local-job options "${selected}" and "${option.option_id}" for "${option.job_id}".`,
+      });
+    }
+    selectedByJobId.set(option.job_id, option.option_id);
+  });
+});
+
+const CampaignServiceForbiddenLocalJobOptionsSchema =
+  campaignServiceLocalJobOptionsSchema("forbidden");
+
 export const CampaignServiceRuleSchema = z
   .object({
     id: CampaignCharacterIdSchema,
@@ -87,6 +136,8 @@ export const CampaignServiceRuleSchema = z
     requires_all_companions: CampaignCharacterConditionIdsSchema.optional(),
     requires_all_promises: CampaignPromiseConditionsSchema.optional(),
     requires_region_renown: CampaignServiceRegionRenownRequirementSchema.optional(),
+    requires_all_local_job_options: CampaignServiceRequiredLocalJobOptionsSchema.optional(),
+    forbids_any_local_job_options: CampaignServiceForbiddenLocalJobOptionsSchema.optional(),
   })
   .strict()
   .superRefine((rule, ctx) => {
@@ -95,7 +146,8 @@ export const CampaignServiceRuleSchema = z
       (rule.requires_all_story_choices?.length ?? 0) === 0 &&
       (rule.requires_all_companions?.length ?? 0) === 0 &&
       (rule.requires_all_promises?.length ?? 0) === 0 &&
-      rule.requires_region_renown === undefined
+      rule.requires_region_renown === undefined &&
+      (rule.requires_all_local_job_options?.length ?? 0) === 0
     ) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
@@ -137,6 +189,19 @@ export const CampaignServiceRuleSchema = z
         });
       }
     });
+    const requiredLocalJobOptions = new Set(
+      (rule.requires_all_local_job_options ?? []).map(campaignServiceLocalJobOptionKey),
+    );
+    rule.forbids_any_local_job_options?.forEach((option, index) => {
+      const key = campaignServiceLocalJobOptionKey(option);
+      if (requiredLocalJobOptions.has(key)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["forbids_any_local_job_options", index],
+          message: `Campaign service rule "${rule.id}" cannot both require and forbid local-job option ${key}.`,
+        });
+      }
+    });
   });
 
 function compareStrings(left: string, right: string): number {
@@ -167,6 +232,12 @@ function campaignServiceRulePredicateKey(rule: CampaignServiceRule): string {
       return idOrder === 0 ? compareStrings(left.status, right.status) : idOrder;
     }),
     requires_region_renown: rule.requires_region_renown ?? null,
+    requires_all_local_job_options: (rule.requires_all_local_job_options ?? [])
+      .map(campaignServiceLocalJobOptionKey)
+      .sort(compareStrings),
+    forbids_any_local_job_options: (rule.forbids_any_local_job_options ?? [])
+      .map(campaignServiceLocalJobOptionKey)
+      .sort(compareStrings),
   });
 }
 
@@ -201,6 +272,7 @@ export const CampaignServiceRulesSchema = z
 
 export type CampaignServiceAction = z.infer<typeof CampaignServiceActionSchema>;
 export type CampaignServiceRule = z.infer<typeof CampaignServiceRuleSchema>;
+export type CampaignServiceLocalJobOption = z.infer<typeof CampaignServiceLocalJobOptionSchema>;
 export type CampaignServiceOffer = {
   id: string;
   action: CampaignServiceAction;
@@ -222,6 +294,7 @@ export type CampaignServiceRuleResolutionState = Readonly<{
   consumedRuleIds: IdCollection;
   character?: CampaignCharacterState;
   regionRenown?: ReadonlyMap<string, number>;
+  completedLocalJobOptions?: readonly CampaignServiceLocalJobOption[] | undefined;
 }>;
 
 export type CampaignServiceOfferProvider = Readonly<{ name: string }>;
@@ -233,6 +306,12 @@ export type CampaignServiceOfferResolutionState = CampaignServiceRuleResolutionS
 
 function stringSet(values: IdCollection): ReadonlySet<string> {
   return values instanceof Set ? values : new Set(values);
+}
+
+export function campaignServiceLocalJobOptionKey(
+  option: Pick<CampaignServiceLocalJobOption, "job_id" | "option_id">,
+): string {
+  return JSON.stringify([option.job_id, option.option_id]);
 }
 
 function compareRules(left: CampaignServiceRule, right: CampaignServiceRule): number {
@@ -247,6 +326,7 @@ function ruleIsActive(
   consumedRuleIds: ReadonlySet<string>,
   character: CampaignCharacterState | undefined,
   regionRenown: ReadonlyMap<string, number> | undefined,
+  completedLocalJobOptionKeys: ReadonlySet<string>,
 ): boolean {
   const hasCharacterConditions =
     rule.requires_all_companions !== undefined || rule.requires_all_promises !== undefined;
@@ -263,6 +343,12 @@ function ruleIsActive(
     (rule.requires_region_renown === undefined ||
       (regionRenown?.get(rule.requires_region_renown.region) ?? 0) >=
         rule.requires_region_renown.at_least) &&
+    (rule.requires_all_local_job_options ?? []).every((option) =>
+      completedLocalJobOptionKeys.has(campaignServiceLocalJobOptionKey(option)),
+    ) &&
+    !(rule.forbids_any_local_job_options ?? []).some((option) =>
+      completedLocalJobOptionKeys.has(campaignServiceLocalJobOptionKey(option)),
+    ) &&
     (!hasCharacterConditions ||
       (character !== undefined &&
         campaignCharacterMatchesConditions(character, {
@@ -289,6 +375,9 @@ export function resolveParsedActiveCampaignServiceRules(
     (state.selectedStoryChoices ?? []).map(campaignStoryChoiceRefKey),
   );
   const consumedRuleIds = stringSet(state.consumedRuleIds);
+  const completedLocalJobOptionKeys = new Set(
+    (state.completedLocalJobOptions ?? []).map(campaignServiceLocalJobOptionKey),
+  );
   const offers = state.rules
     .filter(
       (rule) =>
@@ -301,6 +390,7 @@ export function resolveParsedActiveCampaignServiceRules(
           consumedRuleIds,
           state.character,
           state.regionRenown,
+          completedLocalJobOptionKeys,
         ),
     )
     .sort(compareRules);

@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 582 -->
+<!-- historical_cycle_count: 583 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - campus_archive_query
+
+- Evidence choice: Depth Contract #11 and the existing Works preparation relationship made Blair's generic Campus job the next bounded Albany conversion; it remains an optional post-Wolf scene rather than mandatory opening length.
+- Surface: warning spends 35 minutes/+2 renown and banks one exact 15-minute rest, while archive spends 75 minutes/+5 and banks one exact 15-minute resupply; the held/evacuated byre fact changes truthful aftermath copy without changing the mutually exclusive terms.
+- Counterfactual: generic exact local-job option predicates drive later services without Campus conditionals; paired scene/service, clone, journal, save/restore, full/compact MCP, UI, collision, tamper, and static reachability proofs preserve the chosen option and consume each benefit once.
+- Compatibility: every exact trusted predecessor carrying Blair's old contact copy normalizes it without inventing a Campus completion, option, or service; unsupported or inconsistent snapshots still fail closed.
+- Pure evidence: clean commit `d223430f` Terra seed 4181 completed all-wolves-alive fortification at decision 22, continued through The Gallowmere at decision 47, rated clarity/enjoyment 4/4, was unstuck/replay-yes, and skipped the optional Campus scene, so deterministic pairs carry its direct behavior.
+- Feedback/self-critique: the ledger is 864 accepted/59 rejected with one new report since the last compile. PASS for Albany's third of six authored jobs, not the greater-than-BG3 milestone; setup density and local `route_id` discoverability repeated and remain the next presentation/tooling work.
+- Guard: an independent audit caught and closed the older-save contact migration gap; crawl `20260719T172303Z` is zero-finding at 247/247 nodes, 344/344 edges, and 12/12 boards/quests, and health passes 385 files/2,955 tests plus UI/all packs.
 
 ### Cycle result - mcp_action_alias_parity
 
@@ -146,12 +156,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Pure evidence: first hardened seed 2730 correctly reached the labeled fence but was rejected for a null receipt after self-stopping at decision 29; sharpened seed 2731 then verified pure/fresh, completed Wolf-Winter at decision 29, continued at the first goal choice, ended at checkpoint 40, and rated clarity/enjoyment 5/5 with no confusion, bug, stuck state, or replay refusal.
 - Self-critique: PASS for one representative Haiku report-contract recovery, not fleet reliability or the greater-than-BG3 milestone. A fresh ten-member mixed-model diagnostic remains required before spending on the authoritative 100-player cohort; only one new verified report exists, so no feedback compile is due.
 - Guard: contract review added an exact-one literal fence regression and clarified that a signed exit may keep the next goal active; 3 focused suites are 22/22, and pre/final crawls `20260716T052856Z`/`20260716T070103Z` each found zero issues across 247/247 nodes, 344/344 edges, 12/12 boards, and 12/12 quests.
-
-### Cycle result - albany_wolf_relief_oath
-
-- Evidence choice: `SS-F02-relief-oath` was the last structural slice gap because registration defined identity but not what the Wolf-Winter dispatch owed Albany, Cade, or a personal witness.
-- Surface: one blocking post-registration term binds Full Compact Duty (10 minutes), Aid-Only Duty (5), or an Unaffiliated Personal Bond (0) into value, faction, Rowan memory, knowledge, and promise state; each has one narrow field advantage, truthful promise closure, and conditional 15-minute return service without gating hunt, lure, drive, fortify, June, or solo play.
-- Counterfactual: identical rolls isolate full-duty public-seal DC -2, aid-only final clean-lure alarm suppression, and unaffiliated first-drive DC -2 while established misses/recoveries remain; paired returns prove kept/released/broken states, service positive/negative cases, real consumption, one-use replay, UI/MCP parity, and exact F06 migration. The ledger advances 11/12→12/12 structurally proven.
-- Pure evidence: final-build seed 2721 verified pure/fresh, completed Wolf-Winter at decision 28, continued through three completed goals, and ended voluntarily at checkpoint 80; clarity/enjoyment 4/5 and 5/5, stuck false, replay true, no S2+. Its S1 unexplained Tanner score and S0 opening-density/name-reuse findings remain debt; seed 2718 remains rejected.
-- Compile/self-critique: compile `20260716T024738Z` has 788 verified reports and 39/39 current-contract pure exits continuing at least once. PASS for F02 and twelve paired fork proofs, not the greater-than-BG3 claim: deep crawl, 100-player fleet, numeric thresholds, severity audit, and publication remain.
-- Guard: independent audits closed chronology, anti-relabel, shared-faction, June/solo, service consumption, UI click, compact copy, import liveness, hidden service consolidation, courier-tag closure, and false-positive tamper assertions. Pre/final crawls `20260715T234034Z`/`20260716T023728Z` each found zero issues and reached 247/247 nodes, 344/344 edges, 12/12 boards, and 12/12 quests.

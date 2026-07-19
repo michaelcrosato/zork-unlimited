@@ -35,6 +35,11 @@ export const AUTHORED_ALBANY_CIVIC_JOB_ID = "albany_city__civic_core__job";
 export const AUTHORED_ALBANY_CIVIC_SCENE_ID = "albany:winter-return-docket";
 export const AUTHORED_ALBANY_CIVIC_PREDECESSOR_WORLD_HASH =
   "815a138cbeeafbc9595c04e37260ccaba9d2d52d6a3341b3c38afe9eade62636";
+/** Exact manifest immediately before Albany Campus gained its authored archive scene. */
+export const AUTHORED_ALBANY_CAMPUS_PREDECESSOR_WORLD_HASH =
+  "db23dea42bb2cd62beb8ac5871e4b5c74ee127c05b36941b4e170247ab8a5858";
+export const AUTHORED_ALBANY_CAMPUS_JOB_ID = "albany_city__campus__job";
+export const AUTHORED_ALBANY_CAMPUS_SCENE_ID = "albany:campus-wolf-archive-query";
 
 export const AUTHORED_ALBANY_WORKS_LEGACY_JOB: OverworldLocalJob = Object.freeze({
   id: AUTHORED_ALBANY_WORKS_JOB_ID,
@@ -68,6 +73,22 @@ export const AUTHORED_ALBANY_CIVIC_LEGACY_JOB: OverworldLocalJob = Object.freeze
   visibility: "local_job_board",
 });
 
+export const AUTHORED_ALBANY_CAMPUS_LEGACY_JOB: OverworldLocalJob = Object.freeze({
+  id: AUTHORED_ALBANY_CAMPUS_JOB_ID,
+  home: "albany_city",
+  area: "albany_city__campus",
+  kind: "research",
+  title: "Albany Campus Row: Archive Query",
+  summary:
+    "Albany Campus Row has archives, labs, libraries, and student messengers. The job is small enough to finish locally but specific enough to make Albany City feel worked-in rather than decorative.",
+  objective:
+    "Spend time in Albany Campus Row to compare notes, maps, and local testimony for a researcher who needs field confirmation.",
+  reward: "Earn 4 Capital / Mohawk renown and a concrete lead about Albany City.",
+  minutes: 91,
+  difficulty: 4,
+  visibility: "local_job_board",
+});
+
 export const AUTHORED_LOCAL_JOB_LEGACY_DEFINITIONS: readonly AuthoredLocalJobLegacyDefinition[] =
   Object.freeze([
     Object.freeze({
@@ -82,6 +103,13 @@ export const AUTHORED_LOCAL_JOB_LEGACY_DEFINITIONS: readonly AuthoredLocalJobLeg
       sceneId: AUTHORED_ALBANY_CIVIC_SCENE_ID,
       legacyJob: AUTHORED_ALBANY_CIVIC_LEGACY_JOB,
       acceptedSourceWorldHashes: WINTER_RETURN_DOCKET_GENERIC_PREDECESSOR_WORLD_HASHES,
+    }),
+    Object.freeze({
+      sourceWorldHash: AUTHORED_ALBANY_CAMPUS_PREDECESSOR_WORLD_HASH,
+      jobId: AUTHORED_ALBANY_CAMPUS_JOB_ID,
+      sceneId: AUTHORED_ALBANY_CAMPUS_SCENE_ID,
+      legacyJob: AUTHORED_ALBANY_CAMPUS_LEGACY_JOB,
+      acceptedSourceWorldHashes: new Set([AUTHORED_ALBANY_CAMPUS_PREDECESSOR_WORLD_HASH]),
     }),
   ]);
 

@@ -53,7 +53,7 @@ const JUNE_LEFT_AFTER_BLOOD_PREDECESSOR_SUMMARY =
 
 /** Reconstruct ff630a1e, immediately before the Winter Return Docket conversion. */
 export function exactWinterReturnDocketPredecessor(current: OverworldManifest): OverworldManifest {
-  const predecessor = structuredClone(current);
+  const predecessor = exactCampusArchiveQueryPredecessor(current);
   const event = predecessor.local_events.find(
     (candidate) => candidate.id === "albany_city__civic_core__event",
   );
@@ -69,6 +69,41 @@ export function exactWinterReturnDocketPredecessor(current: OverworldManifest): 
     "Verify the Notice Hall mark, witness names, and counter records before Rowan has to close the file.";
   job.reward = "Earn 3 Capital / Mohawk renown and leave with a cleaner Albany lead.";
   delete job.authored_scene;
+  return predecessor;
+}
+
+/** Reconstruct the exact manifest immediately before Albany Campus got its authored archive query. */
+export function exactCampusArchiveQueryPredecessor(current: OverworldManifest): OverworldManifest {
+  const predecessor = structuredClone(current);
+  const job = predecessor.local_jobs.find(
+    (candidate) => candidate.id === "albany_city__campus__job",
+  );
+  if (!job) throw new Error("Albany Campus must have its local job");
+  job.title = "Albany Campus Row: Archive Query";
+  job.summary =
+    "Albany Campus Row has archives, labs, libraries, and student messengers. The job is small enough to finish locally but specific enough to make Albany City feel worked-in rather than decorative.";
+  job.objective =
+    "Spend time in Albany Campus Row to compare notes, maps, and local testimony for a researcher who needs field confirmation.";
+  job.reward = "Earn 4 Capital / Mohawk renown and a concrete lead about Albany City.";
+  delete job.authored_scene;
+  const contact = predecessor.characters.find(
+    (candidate) => candidate.id === "albany_city__campus__contact",
+  );
+  if (!contact) throw new Error("Albany Campus must have Blair's contact");
+  contact.summary =
+    "Blair Drake works as the field archivist in Albany Campus Row, watching how old maps, clinic notes, and experts with narrow hours affect Albany city.";
+  contact.agenda =
+    "Wants a traveler to handle Albany Campus Row's local problems before they spread through the Capital / Mohawk road network.";
+  predecessor.campaign_service_rules = (predecessor.campaign_service_rules ?? []).filter(
+    (rule) =>
+      rule.id !== "albany:campus_calibrated_warning_rest" &&
+      rule.id !== "albany:campus_calibrated_warning_drover_rest" &&
+      rule.id !== "albany:campus_traceable_archive_resupply" &&
+      rule.id !== "albany:campus_traceable_archive_mobile_resupply",
+  );
+  for (const rule of predecessor.campaign_service_rules ?? []) {
+    delete rule.forbids_any_local_job_options;
+  }
   return predecessor;
 }
 
