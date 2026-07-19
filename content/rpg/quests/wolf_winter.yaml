@@ -358,18 +358,19 @@ rooms:
     variants:
       - when: [{ has_item: winter_feed_sack }]
         text: >
-          The winter-feed peg is bare. Cade's finite oat-and-tallow sack rides with you:
-          enough to lay one downwind trail past all three wolves, not enough to restart
-          a fouled trail. The padded jerkin and loft ladder remain here; yard east.
+          The winter-feed peg is bare. Cade's finite sack rides with you: one downwind
+          trail past all three wolves, no restart after a foul. His local instruction
+          sends the second cast across the feed-hauler's crawlboard from this loft ladder
+          to the low hatch. Yard east.
       - when:
           - { has_flag: strategy_lure_committed }
           - { not_item: winter_feed_sack }
           - { not_flag: pack_diverted }
         text: >
-          The padded byre-jerkin waits on its peg beside Cade's last winter-feed sack.
-          His nonlethal plan spends those oats and tallow drawing the wolves out through
-          the broken paling. Take the finite feed before entering the breach. Loft ladder
-          up; yard east.
+          The padded byre-jerkin hangs beside Cade's last feed sack. His nonlethal plan
+          draws the wolves through the broken paling. Take the finite feed before the
+          breach; his local instruction sends the second cast across the feed-hauler's
+          crawlboard above this ladder. Yard east.
       - when: [{ has_item: byre_jerkin }, { none_of: [{ has_flag: jerkin_donned }] }]
         text: >
           The peg by the door is bare where the steading's padded byre-jerkin hung. Its
@@ -404,7 +405,7 @@ rooms:
               - { has_flag: strategy_lure_committed }
           - { not_flag: flank_wolf_down }
           - { not_flag: flank_redirected }
-        locked_msg: "Before the flank-wolf falls, settle the yearling. Then follow a crawlboard in your packet, or bind a frost-split rail over the broken boards and leave the sound rail wedged."
+        locked_msg: "Before the flank-wolf falls, settle the yearling. Then take the crawlboard named by certified testimony or Cade's committed plan, or bind a split rail; leave the sound rail wedged."
 
   - id: fodder_loft
     name: "The Fodder-Loft"
@@ -415,10 +416,9 @@ rooms:
     variants:
       - when: [{ has_flag: strategy_lure_committed }, { has_item: winter_feed_sack }]
         text: >
-          You cross the feed-hauler's crawlboard with Cade's oat-and-tallow sack.
-          Below, the flank-wolf circles away from the low hatch. Cast the second
-          measure through it before the committed drop east; the hauled ladder
-          leaves no retreat.
+          Cade's local feed-plan instruction takes you across the feed-hauler's crawlboard
+          with his sack. Below, the flank-wolf circles from the low hatch. Cast the second
+          measure through it before dropping east; the hauled ladder leaves no retreat.
       - when:
           - { has_flag: jamie_market_testimony_certified }
           - { not_item: split_rail_guard }
@@ -3427,9 +3427,9 @@ npcs:
               end: true
         - id: cade_lure
           npc_text: >
-            Cade's feed line spends one sack in three casts: paling, loft, then old grey.
-            Each raises cattle alarm. Foul the first and there is no retry: bind a split
-            rail to turn the yearling, or fight it and carry on. Asking is free; commit
+            My feed line has three casts: paling, loft, old grey. My local instruction
+            crosses the feed-hauler's crawlboard for the second; Tanner's sheet is not
+            required. Each cast raises alarm. Foul the first and there is no retry. Commit
             before the breach.
           variants:
             - when:
@@ -3458,13 +3458,12 @@ npcs:
               end: true
         - id: cade_lure_committed
           npc_text: >
-            Committed, then. Take my feed before the breach. Cast first at the paling,
-            then return through the yard and store to the loft for the second cast; the
-            last line runs past old grey. No replacement sack, and Albany gets the exact
-            count.
+            Committed. Take my feed before the breach. Cast at the paling, then follow my
+            feed-hauler crawlboard to the loft for the second cast; old grey is last. No
+            replacement sack, and Albany gets the exact count.
           effects:
             - set_flag: strategy_lure_committed
-            - add_journal: "You commit Cade's finite feed: paling first; then south, west, and up to the loft; outer gate last. No retry after a foul."
+            - add_journal: "You commit Cade's finite feed and crawlboard route: paling first, loft second, outer gate last. No retry after a foul."
           topics:
             - id: wolves
               aliases: [ask_wolves]

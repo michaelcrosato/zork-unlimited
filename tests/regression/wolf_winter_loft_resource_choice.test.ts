@@ -140,9 +140,9 @@ describe("Wolf-Winter loft route and split-guard resource choice", () => {
     );
     expect(blockedLoft).toBeDefined();
     expect(blockedLoft?.message).toMatch(
-      /before the flank-wolf falls[^]*settle the yearling[^]*crawlboard in your packet[^]*or bind a frost-split rail[^]*sound rail wedged/i,
+      /before the flank-wolf falls[^]*settle the yearling[^]*crawlboard named by certified testimony or Cade's committed plan[^]*or bind a split rail[^]*sound rail wedged/i,
     );
-    expect(blockedLoft?.message).not.toMatch(/Jamie|Hayden|certified/i);
+    expect(blockedLoft?.message).not.toMatch(/in your packet|Jamie|Hayden/i);
     expect(blockedLoft?.message).not.toMatch(/brace-stake|saved stake/i);
 
     const jamieBefore = structuredClone(before);
@@ -150,7 +150,10 @@ describe("Wolf-Winter loft route and split-guard resource choice", () => {
     const jamieBlockedLoft = buildRpgObservation(index, jamieBefore).blocked_exits.find(
       (exit) => exit.direction === "up",
     );
-    expect(jamieBlockedLoft?.message).toMatch(/crawlboard in your packet[^]*or bind/i);
+    expect(jamieBlockedLoft?.message).toMatch(
+      /crawlboard named by certified testimony or Cade's committed plan[^]*or bind/i,
+    );
+    expect(jamieBlockedLoft?.message).not.toMatch(/in your packet/i);
     expect(jamieBlockedLoft?.message).not.toMatch(/must bind|needs? a bound rail/i);
 
     let after = reachBoundGuardAtGap();

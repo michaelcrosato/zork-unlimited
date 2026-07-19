@@ -241,9 +241,12 @@ defaults. Paired proof lives in
 The second authored Albany increment replaces Wolf-Winter's FIFO reveal with a
 blocking, irreversible source certification. Rowan's public docket costs no
 time or money and preserves the established routes. Jamie Tanner's testimony
-costs 35 minutes and $6, reduced to 15 minutes and $0 by Ledger sponsorship; it
-alone opens a rail-free feed-hauler crawlboard into the established committed
-loft drop after the yearling falls. Hayden Hale's report costs 20 minutes, reduced to 5 by
+costs 35 minutes and $6, reduced to 15 minutes and $0 by Ledger sponsorship. Without
+committing Cade's finite feed plan, it alone opens the feed-hauler crawlboard as a
+rail-free combat drop after the yearling falls. Cade can independently teach the same
+physical board only as the second cast of his irreversible nonlethal plan; that local
+instruction neither imports Jamie's evidence nor grants Jamie's combat opening. Hayden
+Hale's report costs 20 minutes, reduced to 5 by
 Road-Warden sponsorship; after a failed rail check it alone rewards leaving the
 split rail unbound with an exposed high-variance frost-brace sequence. The
 selection persists through save/restore. Each private report also changes its
