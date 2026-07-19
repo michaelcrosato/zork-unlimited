@@ -40,6 +40,7 @@ import {
 } from "./travel_mechanics.js";
 import { campaignServiceJournalCopy, campaignServiceJourneyActionId } from "./session_services.js";
 import { campaignStoryChoiceRefKey } from "./campaign_story_choices.js";
+import { campaignServiceLocalJobOptionKey } from "./campaign_service_rules.js";
 import type { CampaignCharacterState } from "./campaign_character_state.js";
 import { campaignCharacterMatchesConditions } from "./campaign_consequences.js";
 import { resolveLocalJobSceneOption } from "./local_job_scene.js";
@@ -72,6 +73,7 @@ export type OverworldCampaignBoundaryReplayIndex = Readonly<{
   byAcceptedDecisions: ReadonlyMap<number, OverworldCampaignBoundaryReplayProof>;
   worldFactProofOrdinalById: ReadonlyMap<string, number | null>;
   storyChoiceProofOrdinalByKey: ReadonlyMap<string, number>;
+  localJobOptionProofOrdinalByKey?: ReadonlyMap<string, number>;
 }>;
 
 /** Facts with an exact quest-completion proof strictly before one accepted decision. */
@@ -593,6 +595,24 @@ function campaignServiceRuleForReplay(
       );
     }
   }
+  for (const requirement of rule.requires_all_local_job_options ?? []) {
+    const key = campaignServiceLocalJobOptionKey(requirement);
+    const provenAt = campaignBoundaries.localJobOptionProofOrdinalByKey?.get(key);
+    if (provenAt === undefined || boundary.acceptedDecisions <= provenAt) {
+      throw new Error(
+        `Overworld session snapshot campaign service rule "${rule.id}" lacks required authored local-job option "${requirement.job_id}:${requirement.option_id}" before its service decision.`,
+      );
+    }
+  }
+  for (const forbidden of rule.forbids_any_local_job_options ?? []) {
+    const key = campaignServiceLocalJobOptionKey(forbidden);
+    const provenAt = campaignBoundaries.localJobOptionProofOrdinalByKey?.get(key);
+    if (provenAt !== undefined && boundary.acceptedDecisions > provenAt) {
+      throw new Error(
+        `Overworld session snapshot campaign service rule "${rule.id}" does not precede forbidden authored local-job option "${forbidden.job_id}:${forbidden.option_id}".`,
+      );
+    }
+  }
   const renownRequirement = rule.requires_region_renown;
   if (
     renownRequirement &&
@@ -618,6 +638,7 @@ export function assertSnapshotResourceReplay(
     byAcceptedDecisions: new Map(),
     worldFactProofOrdinalById: new Map(),
     storyChoiceProofOrdinalByKey: new Map(),
+    localJobOptionProofOrdinalByKey: new Map(),
   },
   campaignCharacterAt?: (
     entry: OverworldJournalEntry,

@@ -946,6 +946,100 @@
           "story_choice_id": "albany:wolf_relief_allocation",
           "choice_id": "albany:relief_mobile_reserve"
         }
+      ],
+      "forbids_any_local_job_options": [
+        {
+          "job_id": "albany_city__campus__job",
+          "option_id": "prepare_traceable_field_archive"
+        }
+      ]
+    },
+    {
+      "id": "albany:campus_calibrated_warning_rest",
+      "home": "albany_city",
+      "area": "albany_city__campus",
+      "action": "rest",
+      "title": "Take Blair's Dispatch-Room Recovery Cot",
+      "summary": "Because you issued a confidence-labelled road warning instead of presenting an archive as settled fact, Blair clears one short dispatch-room recovery cot. It restores fatigue only; it neither changes the warning nor supplies a field record.",
+      "provider_character_id": "albany_city__campus__contact",
+      "minutes": 15,
+      "requires_all_local_job_options": [
+        {
+          "job_id": "albany_city__campus__job",
+          "option_id": "issue_calibrated_road_warning"
+        }
+      ],
+      "forbids_any_story_choices": [
+        {
+          "story_choice_id": "albany:wolf_preparation",
+          "choice_id": "albany:prep_drover_route"
+        }
+      ]
+    },
+    {
+      "id": "albany:campus_calibrated_warning_drover_rest",
+      "home": "albany_city",
+      "area": "albany_city__campus",
+      "action": "rest",
+      "title": "Consolidate the Warning and Drover Recovery Cot",
+      "summary": "The drover packet and Blair's calibrated warning share one Campus clinic counter. The warning proof alone releases this 15-minute recovery cot after any truthful Wolf-Winter return; if the held-byre drover claim also exists, both claims consolidate instead of duplicating recovery.",
+      "provider_character_id": "albany_city__campus__contact",
+      "minutes": 15,
+      "requires_all_story_choices": [
+        {
+          "story_choice_id": "albany:wolf_preparation",
+          "choice_id": "albany:prep_drover_route"
+        }
+      ],
+      "requires_all_local_job_options": [
+        {
+          "job_id": "albany_city__campus__job",
+          "option_id": "issue_calibrated_road_warning"
+        }
+      ]
+    },
+    {
+      "id": "albany:campus_traceable_archive_resupply",
+      "home": "albany_city",
+      "area": "albany_city__campus",
+      "action": "resupply",
+      "title": "Claim Blair's Traceable Field Cache",
+      "summary": "Because you preserved route marks, uncertainty notes, and the field provenance chain, Blair releases one Survey College cache of road food, lamp oil, tally paper, and archive sleeves. It refills supplies only; it does not certify the warning as a legal finding.",
+      "provider_character_id": "albany_city__campus__contact",
+      "minutes": 15,
+      "requires_all_local_job_options": [
+        {
+          "job_id": "albany_city__campus__job",
+          "option_id": "prepare_traceable_field_archive"
+        }
+      ],
+      "forbids_any_story_choices": [
+        {
+          "story_choice_id": "albany:wolf_relief_allocation",
+          "choice_id": "albany:relief_mobile_reserve"
+        }
+      ]
+    },
+    {
+      "id": "albany:campus_traceable_archive_mobile_resupply",
+      "home": "albany_city",
+      "area": "albany_city__campus",
+      "action": "resupply",
+      "title": "Consolidate the Archive and Mobile Field Cache",
+      "summary": "The mobile-allocation docket and Blair's traceable archive share one Campus stores counter. The archive proof alone releases this 15-minute cache after any truthful Wolf-Winter return; if the held-byre mobile-reserve claim also exists, both claims consolidate instead of duplicating supplies.",
+      "provider_character_id": "albany_city__campus__contact",
+      "minutes": 15,
+      "requires_all_story_choices": [
+        {
+          "story_choice_id": "albany:wolf_relief_allocation",
+          "choice_id": "albany:relief_mobile_reserve"
+        }
+      ],
+      "requires_all_local_job_options": [
+        {
+          "job_id": "albany_city__campus__job",
+          "option_id": "prepare_traceable_field_archive"
+        }
       ]
     },
     {
@@ -979,6 +1073,12 @@
         {
           "story_choice_id": "albany:wolf_preparation",
           "choice_id": "albany:prep_drover_route"
+        }
+      ],
+      "forbids_any_local_job_options": [
+        {
+          "job_id": "albany_city__campus__job",
+          "option_id": "issue_calibrated_road_warning"
         }
       ]
     },
@@ -24884,8 +24984,8 @@
       "name": "Blair Drake",
       "role": "field archivist",
       "faction": "Survey College",
-      "summary": "Blair Drake works as the field archivist in Albany Campus Row, watching how old maps, clinic notes, and experts with narrow hours affect Albany city.",
-      "agenda": "Wants a traveler to handle Albany Campus Row's local problems before they spread through the Capital / Mohawk road network."
+      "summary": "Blair Drake cross-indexes winter road marks, clinic testimony, and field reports at Albany Campus Row, where a confident warning can save hours and a false certainty can misroute the next relief crew.",
+      "agenda": "After Wolf-Winter, Blair wants one honest operational record: either a fast warning labelled by confidence or a slower audit-ready archive preserving provenance, uncertainty, and route marks. Blair refuses to present either as a Civic legal finding or let one traveler claim both rewards."
     },
     {
       "id": "greenburgh_town__civic_core__contact",
@@ -51566,12 +51666,44 @@
       "area": "albany_city__campus",
       "kind": "research",
       "title": "Albany Campus Row: Archive Query",
-      "summary": "Albany Campus Row has archives, labs, libraries, and student messengers. The job is small enough to finish locally but specific enough to make Albany City feel worked-in rather than decorative.",
-      "objective": "Spend time in Albany Campus Row to compare notes, maps, and local testimony for a researcher who needs field confirmation.",
-      "reward": "Earn 4 Capital / Mohawk renown and a concrete lead about Albany City.",
+      "summary": "After Wolf-Winter closes, Blair can either send a fast confidence-labelled warning to road crews or preserve the uncertain route evidence as a traceable field archive. The choice is operational, not a Civic public-versus-protected policy.",
+      "objective": "Read the surviving maps, clinic notes, and return marks with Blair, then commit one bounded form of road knowledge for Albany's next travelers.",
+      "reward": "Choose either 2 Capital / Mohawk renown for a 35-minute calibrated warning or 5 renown for a 75-minute traceable archive, with one exclusive 15-minute Campus service after each exact proof.",
       "minutes": 91,
       "difficulty": 4,
-      "visibility": "local_job_board"
+      "visibility": "local_job_board",
+      "authored_scene": {
+        "version": 1,
+        "id": "albany:campus-wolf-archive-query",
+        "prompt": "Blair has the Wolf-Winter route marks, but not a right to turn uncertainty into certainty. Commit one operational record; neither can be reopened as the other.",
+        "required_poi_id": "albany_city__campus__poi",
+        "required_contact_id": "albany_city__campus__contact",
+        "requires_completed_quests": [
+          "wolf_winter"
+        ],
+        "options": [
+          {
+            "id": "issue_calibrated_road_warning",
+            "title": "Issue a Calibrated Road Warning",
+            "preview": "Spend 35 minutes sending crews a fast, confidence-labelled warning: useful now, explicit about what the return evidence cannot prove.",
+            "consequence": "Blair marks the warning as operational rather than settled. It earns 2 Capital / Mohawk renown and reserves one 15-minute Campus recovery cot, not a cache or legal certification.",
+            "terms": {
+              "minutes": 35,
+              "renown": 2
+            }
+          },
+          {
+            "id": "prepare_traceable_field_archive",
+            "title": "Prepare a Traceable Field Archive",
+            "preview": "Spend 75 minutes preserving provenance, uncertainty notes, and route marks so the next field team can audit the record.",
+            "consequence": "Blair indexes the uncertain evidence without presenting it as a public finding. It earns 5 Capital / Mohawk renown and reserves one 15-minute Campus resupply cache, not a recovery cot.",
+            "terms": {
+              "minutes": 75,
+              "renown": 5
+            }
+          }
+        ]
+      }
     },
     {
       "id": "greenburgh_town__civic_core__job",

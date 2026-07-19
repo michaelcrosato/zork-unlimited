@@ -16,7 +16,9 @@ import {
 } from "./campaign_character_state.js";
 import {
   CampaignServiceRulesSchema,
+  campaignServiceLocalJobOptionKey,
   resolveParsedActiveCampaignServiceRules,
+  type CampaignServiceLocalJobOption,
   type CampaignServiceRule,
 } from "./campaign_service_rules.js";
 import {
@@ -2230,6 +2232,7 @@ function assertQuestsIntegrity(
 
 type CanonicalCampaignServiceIntegrityState = Readonly<{
   character: CampaignCharacterState;
+  completedQuestIds: readonly string[];
   worldFactIds: readonly string[];
   selectedStoryChoices: readonly Readonly<{
     story_choice_id: string;
@@ -2245,6 +2248,7 @@ function canonicalCampaignServiceIntegrityStateKey(
     promises: state.character.promises
       .map((promise) => `${promise.promiseId}\u0000${promise.status}`)
       .sort(),
+    completedQuestIds: [...state.completedQuestIds].sort(),
     worldFactIds: [...state.worldFactIds].sort(),
     selectedStoryChoices: state.selectedStoryChoices
       .map((choice) => `${choice.story_choice_id}\u0000${choice.choice_id}`)
@@ -2252,8 +2256,356 @@ function canonicalCampaignServiceIntegrityStateKey(
   });
 }
 
+const MAX_CANONICAL_CAMPAIGN_SERVICE_COMBINATIONS_PER_LOCATION = 4_096;
+const MAX_CANONICAL_CAMPAIGN_SERVICE_EVALUATIONS_PER_LOCATION = 65_536;
+
+function canonicalCampaignServiceLocalJobRefsForLocation(
+  rules: readonly CampaignServiceRule[],
+): readonly CampaignServiceLocalJobOption[] {
+  const uniqueRefs = new Map<string, CampaignServiceLocalJobOption>();
+  for (const rule of rules) {
+    for (const ref of [
+      ...(rule.requires_all_local_job_options ?? []),
+      ...(rule.forbids_any_local_job_options ?? []),
+    ]) {
+      uniqueRefs.set(campaignServiceLocalJobOptionKey(ref), ref);
+    }
+  }
+  return [...uniqueRefs.values()].sort((left, right) =>
+    campaignServiceLocalJobOptionKey(left).localeCompare(campaignServiceLocalJobOptionKey(right)),
+  );
+}
+
+type CanonicalCampaignServiceLocationStateProjection = Readonly<{
+  completedQuestIds: ReadonlySet<string>;
+  worldFactIds: ReadonlySet<string>;
+  companionIds: ReadonlySet<string>;
+  promiseIds: ReadonlySet<string>;
+  storyChoiceKeys: ReadonlySet<string>;
+}>;
+
+function canonicalCampaignServiceLocationStateProjection(
+  world: OverworldManifest,
+  rules: readonly CampaignServiceRule[],
+): CanonicalCampaignServiceLocationStateProjection {
+  const completedQuestIds = new Set<string>();
+  const worldFactIds = new Set<string>();
+  const companionIds = new Set<string>();
+  const promiseIds = new Set<string>();
+  const storyChoiceKeys = new Set<string>();
+  const rememberFacts = (requires?: readonly string[], forbids?: readonly string[]): void => {
+    requires?.forEach((factId) => worldFactIds.add(factId));
+    forbids?.forEach((factId) => worldFactIds.add(factId));
+  };
+
+  for (const rule of rules) {
+    rememberFacts(rule.requires_all_world_facts, rule.forbids_any_world_facts);
+    rule.requires_all_companions?.forEach((companionId) => companionIds.add(companionId));
+    rule.requires_all_promises?.forEach((promise) => promiseIds.add(promise.promise_id));
+    for (const choice of [
+      ...(rule.requires_all_story_choices ?? []),
+      ...(rule.forbids_any_story_choices ?? []),
+    ]) {
+      storyChoiceKeys.add(JSON.stringify([choice.story_choice_id, choice.choice_id]));
+    }
+  }
+  for (const ref of canonicalCampaignServiceLocalJobRefsForLocation(rules)) {
+    const scene = world.local_jobs.find((job) => job.id === ref.job_id)?.authored_scene;
+    const option = scene?.options.find((candidate) => candidate.id === ref.option_id);
+    if (!scene || !option) continue;
+    scene.requires_completed_quests.forEach((questId) => completedQuestIds.add(questId));
+    rememberFacts(scene.requires_all_world_facts, scene.forbids_any_world_facts);
+    rememberFacts(option.requires_all_world_facts, option.forbids_any_world_facts);
+  }
+  return { completedQuestIds, worldFactIds, companionIds, promiseIds, storyChoiceKeys };
+}
+
+/** Service-observable state only; transitive quest dependencies have already run. */
+function canonicalCampaignServiceLocationStateKey(
+  state: CanonicalCampaignServiceIntegrityState,
+  projection: CanonicalCampaignServiceLocationStateProjection,
+): string {
+  return JSON.stringify({
+    companions: state.character.companions
+      .filter((companionId) => projection.companionIds.has(companionId))
+      .sort(),
+    promises: state.character.promises
+      .filter((promise) => projection.promiseIds.has(promise.promiseId))
+      .map((promise) => `${promise.promiseId}\u0000${promise.status}`)
+      .sort(),
+    completedQuestIds: state.completedQuestIds
+      .filter((questId) => projection.completedQuestIds.has(questId))
+      .sort(),
+    worldFactIds: state.worldFactIds.filter((factId) => projection.worldFactIds.has(factId)).sort(),
+    selectedStoryChoices: state.selectedStoryChoices
+      .map((choice) => JSON.stringify([choice.story_choice_id, choice.choice_id]))
+      .filter((choiceKey) => projection.storyChoiceKeys.has(choiceKey))
+      .sort(),
+  });
+}
+
+/**
+ * Derive only quests that can affect this location's exact service predicates
+ * or the exact authored local-job capabilities those predicates reference.
+ */
+function canonicalCampaignServiceRelevantQuestIdsForLocation(
+  world: OverworldManifest,
+  rules: readonly CampaignServiceRule[],
+  targetQuestId: string,
+): readonly string[] {
+  const relevantQuestIds = new Set<string>();
+  const relevantFactIds = new Set<string>();
+  const relevantCompanionIds = new Set<string>();
+  const relevantPromiseIds = new Set<string>();
+  const rememberFacts = (requires?: readonly string[], forbids?: readonly string[]): void => {
+    requires?.forEach((factId) => relevantFactIds.add(factId));
+    forbids?.forEach((factId) => relevantFactIds.add(factId));
+  };
+
+  for (const rule of rules) {
+    rememberFacts(rule.requires_all_world_facts, rule.forbids_any_world_facts);
+    rule.requires_all_companions?.forEach((companionId) => relevantCompanionIds.add(companionId));
+    rule.requires_all_promises?.forEach((promise) => relevantPromiseIds.add(promise.promise_id));
+  }
+  for (const ref of canonicalCampaignServiceLocalJobRefsForLocation(rules)) {
+    const job = world.local_jobs.find((candidate) => candidate.id === ref.job_id);
+    const scene = job?.authored_scene;
+    const option = scene?.options.find((candidate) => candidate.id === ref.option_id);
+    if (!scene || !option) continue;
+    scene.requires_completed_quests.forEach((questId) => relevantQuestIds.add(questId));
+    rememberFacts(scene.requires_all_world_facts, scene.forbids_any_world_facts);
+    rememberFacts(option.requires_all_world_facts, option.forbids_any_world_facts);
+  }
+
+  const mutatesRelevantCharacterPredicate = (effect: CampaignConsequenceEffect): boolean => {
+    switch (effect.type) {
+      case "add_companion":
+      case "remove_companion":
+        return relevantCompanionIds.has(effect.npc_id);
+      case "record_promise":
+      case "resolve_promise":
+        return relevantPromiseIds.has(effect.promise_id);
+      default:
+        return false;
+    }
+  };
+  const addRelevantCompanion = (companionId: string): boolean => {
+    if (relevantCompanionIds.has(companionId)) return false;
+    relevantCompanionIds.add(companionId);
+    return true;
+  };
+  const addRelevantPromise = (promiseId: string): boolean => {
+    if (relevantPromiseIds.has(promiseId)) return false;
+    relevantPromiseIds.add(promiseId);
+    return true;
+  };
+
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const quest of world.quests) {
+      const exports = quest.campaign_exports ?? [];
+      const producesRelevantOutput = exports.some((campaignExport) =>
+        [
+          ...campaignExport.effects,
+          ...(campaignExport.conditional_effects ?? []).flatMap((group) => group.effects),
+        ].some(
+          (effect) =>
+            (effect.type === "set_world_fact" && relevantFactIds.has(effect.fact_id)) ||
+            mutatesRelevantCharacterPredicate(effect),
+        ),
+      );
+      if (producesRelevantOutput && !relevantQuestIds.has(quest.id)) {
+        relevantQuestIds.add(quest.id);
+        changed = true;
+      }
+      if (!relevantQuestIds.has(quest.id)) continue;
+
+      for (const campaignExport of exports) {
+        for (const group of campaignExport.conditional_effects ?? []) {
+          if (!group.effects.some(mutatesRelevantCharacterPredicate)) continue;
+          for (const companionId of [
+            ...(group.when.requires_all_companions ?? []),
+            ...(group.when.forbids_any_companions ?? []),
+          ]) {
+            changed = addRelevantCompanion(companionId) || changed;
+          }
+          for (const promise of group.when.requires_all_promises ?? []) {
+            changed = addRelevantPromise(promise.promise_id) || changed;
+          }
+        }
+      }
+    }
+  }
+
+  const hasNonTargetCharacterOrderingInteraction = [...relevantQuestIds].some((questId) => {
+    if (questId === targetQuestId) return false;
+    const quest = world.quests.find((candidate) => candidate.id === questId);
+    return (quest?.campaign_exports ?? []).some((campaignExport) =>
+      [
+        ...campaignExport.effects,
+        ...(campaignExport.conditional_effects ?? []).flatMap((group) => group.effects),
+      ].some(mutatesRelevantCharacterPredicate),
+    );
+  });
+  if (!hasNonTargetCharacterOrderingInteraction) relevantQuestIds.delete(targetQuestId);
+
+  return [...relevantQuestIds].sort();
+}
+
+/**
+ * Explore every relevant completion prefix and one outcome per completed quest.
+ * Semantic state deduplication preserves meaningful order effects without a
+ * factorial product when quest order makes no service-visible difference.
+ */
+function canonicalCampaignServiceRelevantQuestStatesForLocation(
+  world: OverworldManifest,
+  rules: readonly CampaignServiceRule[],
+  baseState: CanonicalCampaignServiceIntegrityState,
+  relevantQuestIds: readonly string[],
+  targetQuestId: string,
+): readonly CanonicalCampaignServiceIntegrityState[] {
+  const statesByKey = new Map<string, CanonicalCampaignServiceIntegrityState>();
+  const visit = (state: CanonicalCampaignServiceIntegrityState): void => {
+    const key = canonicalCampaignServiceIntegrityStateKey(state);
+    if (statesByKey.has(key)) return;
+    statesByKey.set(key, state);
+    if (statesByKey.size > MAX_CANONICAL_CAMPAIGN_SERVICE_COMBINATIONS_PER_LOCATION) {
+      throw new Error(
+        `Campaign service relevant-quest space at "${rules[0]?.home}:${rules[0]?.area}" exceeds ${MAX_CANONICAL_CAMPAIGN_SERVICE_COMBINATIONS_PER_LOCATION} canonical states.`,
+      );
+    }
+
+    const completedQuestIds = new Set(state.completedQuestIds);
+    for (const questId of relevantQuestIds) {
+      if (completedQuestIds.has(questId)) continue;
+      const quest = world.quests.find((candidate) => candidate.id === questId);
+      if (!quest) continue;
+      const exportedOutcomes = [...(quest.campaign_exports ?? [])].sort((left, right) =>
+        left.ending_id.localeCompare(right.ending_id),
+      );
+      const outcomes: readonly (OverworldQuestCampaignExport | null)[] = [
+        ...(quest.id !== targetQuestId || exportedOutcomes.length === 0 ? [null] : []),
+        ...exportedOutcomes,
+      ];
+      for (const outcome of outcomes) {
+        const applied = outcome
+          ? applyCampaignConsequences({
+              character: state.character,
+              effects: overworldQuestCampaignEffectsForCharacter(outcome, state.character),
+            })
+          : { characterAfter: state.character, worldFactIds: [] };
+        visit({
+          character: applied.characterAfter,
+          completedQuestIds: [...completedQuestIds, quest.id].sort(),
+          worldFactIds: [...new Set([...state.worldFactIds, ...applied.worldFactIds])].sort(),
+          selectedStoryChoices: state.selectedStoryChoices,
+        });
+      }
+    }
+  };
+  visit(baseState);
+  return [...statesByKey.values()];
+}
+
+/**
+ * A completed local job is a capability selected once from that job's authored
+ * options. Event choices may have been resolved before a quest that now blocks
+ * the event, so reachability models that chronology instead of asking whether
+ * the event remains available in the current post-quest state.
+ */
+function canonicalCampaignServiceLocalJobSelectionIsReachable(
+  world: OverworldManifest,
+  state: CanonicalCampaignServiceIntegrityState,
+  selection: readonly CampaignServiceLocalJobOption[],
+): boolean {
+  const completedQuestIds = new Set(state.completedQuestIds);
+  const worldFactIds = new Set(state.worldFactIds);
+  const requiredEventOptions = new Map<string, string>();
+  const selected = selection.map((capability) => {
+    const job = world.local_jobs.find((candidate) => candidate.id === capability.job_id);
+    const scene = job?.authored_scene;
+    const option = scene?.options.find((candidate) => candidate.id === capability.option_id);
+    if (!job || !scene || !option) return null;
+    for (const requirement of option.requires_event_options ?? []) {
+      const requiredOptionId = requiredEventOptions.get(requirement.event_id);
+      if (requiredOptionId !== undefined && requiredOptionId !== requirement.option_id) return null;
+      requiredEventOptions.set(requirement.event_id, requirement.option_id);
+    }
+    return { scene, option };
+  });
+  if (selected.some((entry) => entry === null)) return false;
+
+  for (const [eventId, optionId] of requiredEventOptions) {
+    const event = world.local_events.find((candidate) => candidate.id === eventId);
+    if (!event?.authored_scene?.options.some((option) => option.id === optionId)) return false;
+  }
+
+  return selected.every((entry) => {
+    if (!entry) return false;
+    const { scene, option } = entry;
+    return (
+      scene.requires_completed_quests.every((questId) => completedQuestIds.has(questId)) &&
+      (scene.requires_all_world_facts ?? []).every((factId) => worldFactIds.has(factId)) &&
+      !(scene.forbids_any_world_facts ?? []).some((factId) => worldFactIds.has(factId)) &&
+      (scene.requires_resolved_events ?? []).every((eventId) =>
+        world.local_events.some((event) => event.id === eventId),
+      ) &&
+      (option.requires_event_options ?? []).every(
+        (requirement) => requiredEventOptions.get(requirement.event_id) === requirement.option_id,
+      ) &&
+      (option.requires_all_world_facts ?? []).every((factId) => worldFactIds.has(factId)) &&
+      !(option.forbids_any_world_facts ?? []).some((factId) => worldFactIds.has(factId))
+    );
+  });
+}
+
+/**
+ * Enumerate only exact capabilities named by one service location's rules:
+ * none or one option per job. Unrelated locations cannot multiply this space.
+ */
+function canonicalCampaignServiceLocalJobOptionSelectionsForLocation(
+  world: OverworldManifest,
+  rules: readonly CampaignServiceRule[],
+  state: CanonicalCampaignServiceIntegrityState,
+): readonly (readonly CampaignServiceLocalJobOption[])[] {
+  const refsByJobId = new Map<string, CampaignServiceLocalJobOption[]>();
+  for (const ref of canonicalCampaignServiceLocalJobRefsForLocation(rules)) {
+    const refs = refsByJobId.get(ref.job_id);
+    if (refs) refs.push(ref);
+    else refsByJobId.set(ref.job_id, [ref]);
+  }
+
+  let selections: readonly (readonly CampaignServiceLocalJobOption[])[] = [[]];
+  for (const jobId of [...refsByJobId.keys()].sort()) {
+    const reachableOptions = refsByJobId
+      .get(jobId)!
+      .filter((option) =>
+        canonicalCampaignServiceLocalJobSelectionIsReachable(world, state, [option]),
+      );
+    const next: (readonly CampaignServiceLocalJobOption[])[] = [];
+    for (const selection of selections) {
+      next.push(selection);
+      for (const option of reachableOptions) {
+        const candidate = [...selection, option];
+        if (canonicalCampaignServiceLocalJobSelectionIsReachable(world, state, candidate)) {
+          next.push(candidate);
+        }
+      }
+    }
+    if (next.length > MAX_CANONICAL_CAMPAIGN_SERVICE_COMBINATIONS_PER_LOCATION) {
+      throw new Error(
+        `Campaign service local-job selection space at "${rules[0]?.home}:${rules[0]?.area}" exceeds ${MAX_CANONICAL_CAMPAIGN_SERVICE_COMBINATIONS_PER_LOCATION} reachable states.`,
+      );
+    }
+    selections = next;
+  }
+  return selections;
+}
+
 function canonicalOpeningAllyCampaignServiceStates(world: OverworldManifest): Readonly<{
   states: readonly CanonicalCampaignServiceIntegrityState[];
+  targetQuestId: string;
   targetQuestWorldFactIds: ReadonlySet<string>;
   allyNpcId: string;
   allyPromiseIds: ReadonlySet<string>;
@@ -2345,6 +2697,7 @@ function canonicalOpeningAllyCampaignServiceStates(world: OverworldManifest): Re
               ];
               rememberState({
                 character: beforeQuest,
+                completedQuestIds: [],
                 worldFactIds: [],
                 selectedStoryChoices: openingStoryChoices,
               });
@@ -2356,6 +2709,7 @@ function canonicalOpeningAllyCampaignServiceStates(world: OverworldManifest): Re
                 });
                 const afterQuest: CanonicalCampaignServiceIntegrityState = {
                   character: applied.characterAfter,
+                  completedQuestIds: [targetQuest.id],
                   worldFactIds: applied.worldFactIds,
                   selectedStoryChoices: openingStoryChoices,
                 };
@@ -2382,6 +2736,7 @@ function canonicalOpeningAllyCampaignServiceStates(world: OverworldManifest): Re
 
   return {
     states: [...statesByKey.values()],
+    targetQuestId: targetQuest.id,
     targetQuestWorldFactIds,
     allyNpcId: ally.ally_npc_id,
     allyPromiseIds,
@@ -2420,6 +2775,22 @@ function assertCampaignServiceRulesIntegrity(
       throw new Error(
         `Campaign service rule "${rule.id}" references unknown renown region "${rule.requires_region_renown.region}".`,
       );
+    }
+    for (const requirement of [
+      ...(rule.requires_all_local_job_options ?? []),
+      ...(rule.forbids_any_local_job_options ?? []),
+    ]) {
+      const job = world.local_jobs.find((candidate) => candidate.id === requirement.job_id);
+      if (!job?.authored_scene) {
+        throw new Error(
+          `Campaign service rule "${rule.id}" references local job "${requirement.job_id}" without an authored scene.`,
+        );
+      }
+      if (!job.authored_scene.options.some((option) => option.id === requirement.option_id)) {
+        throw new Error(
+          `Campaign service rule "${rule.id}" references unknown authored local-job option "${requirement.job_id}:${requirement.option_id}".`,
+        );
+      }
     }
     for (const factId of [
       ...(rule.requires_all_world_facts ?? []),
@@ -2511,16 +2882,36 @@ function assertCampaignServiceRulesIntegrity(
 
   const bounded = canonicalOpeningAllyCampaignServiceStates(world);
   if (!bounded) return;
-  const locations = new Map<string, { home: string; area: string; rules: CampaignServiceRule[] }>();
+  const locations = new Map<
+    string,
+    {
+      home: string;
+      area: string;
+      rules: CampaignServiceRule[];
+    }
+  >();
   for (const rule of rules) {
     const key = `${rule.home}\u0000${rule.area}`;
     const location = locations.get(key);
     if (location) {
       location.rules.push(rule);
     } else {
-      locations.set(key, { home: rule.home, area: rule.area, rules: [rule] });
+      locations.set(key, {
+        home: rule.home,
+        area: rule.area,
+        rules: [rule],
+      });
     }
   }
+  const scopedLocations = [...locations.values()].map((location) => ({
+    ...location,
+    relevantQuestIds: canonicalCampaignServiceRelevantQuestIdsForLocation(
+      world,
+      location.rules,
+      bounded.targetQuestId,
+    ),
+    stateProjection: canonicalCampaignServiceLocationStateProjection(world, location.rules),
+  }));
   const canonicallyReachableRuleIds = new Set<string>();
   const maximumRequiredRenownByRegion = new Map<string, number>();
   for (const rule of rules) {
@@ -2531,19 +2922,57 @@ function assertCampaignServiceRulesIntegrity(
       Math.max(maximumRequiredRenownByRegion.get(requirement.region) ?? 0, requirement.at_least),
     );
   }
-  for (const state of bounded.states) {
-    for (const location of locations.values()) {
-      const activeRules = resolveParsedActiveCampaignServiceRules({
-        rules: location.rules,
-        currentTownId: location.home,
-        currentAreaId: location.area,
-        worldFactIds: state.worldFactIds,
-        selectedStoryChoices: state.selectedStoryChoices,
-        consumedRuleIds: [],
-        character: state.character,
-        regionRenown: maximumRequiredRenownByRegion,
-      });
-      activeRules.forEach((rule) => canonicallyReachableRuleIds.add(rule.id));
+  for (const location of scopedLocations) {
+    const relevantQuestStatesByKey = new Map<string, CanonicalCampaignServiceIntegrityState>();
+    for (const state of bounded.states) {
+      for (const relevantQuestState of canonicalCampaignServiceRelevantQuestStatesForLocation(
+        world,
+        location.rules,
+        state,
+        location.relevantQuestIds,
+        bounded.targetQuestId,
+      )) {
+        relevantQuestStatesByKey.set(
+          canonicalCampaignServiceLocationStateKey(relevantQuestState, location.stateProjection),
+          relevantQuestState,
+        );
+        if (
+          relevantQuestStatesByKey.size > MAX_CANONICAL_CAMPAIGN_SERVICE_EVALUATIONS_PER_LOCATION
+        ) {
+          throw new Error(
+            `Campaign service relevant state space at "${location.home}:${location.area}" exceeds ${MAX_CANONICAL_CAMPAIGN_SERVICE_EVALUATIONS_PER_LOCATION} canonical states.`,
+          );
+        }
+      }
+    }
+
+    let evaluationCount = 0;
+    for (const relevantQuestState of relevantQuestStatesByKey.values()) {
+      const localJobOptionSelections = canonicalCampaignServiceLocalJobOptionSelectionsForLocation(
+        world,
+        location.rules,
+        relevantQuestState,
+      );
+      evaluationCount += localJobOptionSelections.length;
+      if (evaluationCount > MAX_CANONICAL_CAMPAIGN_SERVICE_EVALUATIONS_PER_LOCATION) {
+        throw new Error(
+          `Campaign service combined quest and local-job selection space at "${location.home}:${location.area}" exceeds ${MAX_CANONICAL_CAMPAIGN_SERVICE_EVALUATIONS_PER_LOCATION} reachable states.`,
+        );
+      }
+      for (const completedLocalJobOptions of localJobOptionSelections) {
+        const activeRules = resolveParsedActiveCampaignServiceRules({
+          rules: location.rules,
+          currentTownId: location.home,
+          currentAreaId: location.area,
+          worldFactIds: relevantQuestState.worldFactIds,
+          selectedStoryChoices: relevantQuestState.selectedStoryChoices,
+          consumedRuleIds: [],
+          character: relevantQuestState.character,
+          regionRenown: maximumRequiredRenownByRegion,
+          completedLocalJobOptions,
+        });
+        activeRules.forEach((rule) => canonicallyReachableRuleIds.add(rule.id));
+      }
     }
   }
 

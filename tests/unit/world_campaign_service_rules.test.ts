@@ -144,6 +144,26 @@ describe("campaign service-rule authoring", () => {
     ).toThrow(/both require and forbid/i);
   });
 
+  it("distinguishes impossible required job options from valid forbidden-any option sets", () => {
+    const first = { job_id: "job:test", option_id: "first" };
+    const second = { job_id: "job:test", option_id: "second" };
+    expect(() =>
+      CampaignServiceRuleSchema.parse(
+        serviceRule({ requires_all_local_job_options: [first, second] }),
+      ),
+    ).toThrow(/cannot require mutually exclusive local-job options/i);
+    expect(() =>
+      CampaignServiceRuleSchema.parse(
+        serviceRule({ forbids_any_local_job_options: [first, second] }),
+      ),
+    ).not.toThrow();
+    expect(() =>
+      CampaignServiceRuleSchema.parse(
+        serviceRule({ forbids_any_local_job_options: [first, first] }),
+      ),
+    ).toThrow(/duplicate forbidden campaign service local-job option/i);
+  });
+
   it("binds manifest rules to an authored town, area, and trusted quest-export fact", () => {
     const valid = worldWithRule(serviceRule());
     expect(parseOverworldManifest(valid).campaign_service_rules).toEqual(

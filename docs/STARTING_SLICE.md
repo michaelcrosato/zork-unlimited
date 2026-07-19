@@ -122,12 +122,15 @@ The current slice now satisfies the twelve-fork structural proof threshold, but
 it is **not yet milestone-certified**:
 
 - Wolf-Winter is now withheld from Albany's FIFO discovery and requires one of
-  three certified source packets. Albany Works and Civic are the first two of
-  six district jobs converted to authored scenes. Works' exclusive return
+  three certified source packets. Albany Works, Civic, and Campus are the first
+  three of six district jobs converted to authored scenes. Works' exclusive return
   priority can cross a 13-standing threshold for a Civic recovery cot; Civic's
   first authored event fixes a public-or-protected policy before Wolf-Winter,
   then its return docket exposes exactly one lawful closure from that policy
-  and the truthful held-or-evacuated outcome. Four jobs and five checklist
+  and the truthful held-or-evacuated outcome. Campus adds a post-Wolf
+  confidence-labelled warning versus traceable-archive decision: fast, lower
+  standing recovery versus slower, higher standing resupply, with both exact
+  options replay-bound and neither a Civic legal-policy substitute. Three jobs and five checklist
   events remain generic;
 - Albany authors four permanent registration profiles. Road-Warden and Ledger
   sponsorship now change the actual terms of their matching source packet, and
@@ -653,7 +656,14 @@ duration and policy-dependent standing. The paired held/evacuated, restore,
 migration, replay, and surface
 proof is
 [`winter_return_docket_counterfactual.test.ts`](../tests/starting_slice/winter_return_docket_counterfactual.test.ts).
-Four generic district jobs and five checklist events are still visible.
+Campus extends the job grammar with exact scene-option predicates for exclusive
+one-use services; generic predecessor completions deliberately satisfy neither
+option. Drover-rest and mobile-reserve overlaps consolidate at Blair's Campus
+counter, so both advertised Archive Query payoffs remain available after held
+or evacuated returns without creating two same-action offers. Its
+full/compact/UI/MCP and replay proof is
+[`campus_archive_query_counterfactual.test.ts`](../tests/starting_slice/campus_archive_query_counterfactual.test.ts).
+Three generic district jobs and five checklist events are still visible.
 
 ## Evidence contract
 

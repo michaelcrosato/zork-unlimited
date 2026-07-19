@@ -79,6 +79,7 @@ import {
   journeyCampaignSelectedStoryChoiceRefs,
 } from "./journey_campaign.js";
 import { campaignStoryChoiceRefKey } from "./campaign_story_choices.js";
+import { campaignServiceLocalJobOptionKey } from "./campaign_service_rules.js";
 import { describeOverworldContactAction } from "./local_actions.js";
 import {
   localJobSceneOptionRequirementsMet,
@@ -91,6 +92,7 @@ import {
   authoredLocalJobLegacyCompletion,
   describeAuthoredLocalJobLegacyAction,
   migrateAuthoredLocalJobLegacyEntry,
+  AUTHORED_ALBANY_CAMPUS_PREDECESSOR_WORLD_HASH,
   OVERWORLD_AUTHORED_LOCAL_JOB_PREDECESSOR_WORLD_HASH,
 } from "./local_job_scene_legacy.js";
 import {
@@ -362,7 +364,7 @@ export { OVERWORLD_AUTHORED_LOCAL_JOB_PREDECESSOR_WORLD_HASH };
 export const OVERWORLD_AUTHORED_LOCAL_JOB_FIRST_SCENE_WORLD_HASH =
   "9b8cc75b05e77af160f46dbcd177333cc0f27af89e56f504af0bf6c6a2422c31";
 export const OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH =
-  "db23dea42bb2cd62beb8ac5871e4b5c74ee127c05b36941b4e170247ab8a5858";
+  "be2bb804d5e107449aeab1fd6e96cbfb6f0b71d587ee40283d0aac8b28298f6f";
 /**
  * Exact manifests whose already-valid job evidence can be normalized into the
  * current authored-job registry. Each later conversion adds its immediate
@@ -373,6 +375,17 @@ export const OVERWORLD_AUTHORED_LOCAL_JOB_TRUSTED_PREDECESSOR_WORLD_HASHES: Read
     OVERWORLD_AUTHORED_LOCAL_JOB_PREDECESSOR_WORLD_HASH,
     OVERWORLD_AUTHORED_LOCAL_JOB_FIRST_SCENE_WORLD_HASH,
     WINTER_RETURN_DOCKET_PREDECESSOR_WORLD_HASH,
+    AUTHORED_ALBANY_CAMPUS_PREDECESSOR_WORLD_HASH,
+  ]);
+/**
+ * Every still-supported manifest before Campus Archive Query carried Blair's
+ * former contact copy. Keep this exact hash fence separate from local-job
+ * evidence: a player could have spoken to Blair without taking the generic job.
+ */
+const OVERWORLD_CAMPUS_ARCHIVE_CONTACT_COPY_TRUSTED_PREDECESSOR_WORLD_HASHES: ReadonlySet<string> =
+  new Set([
+    ...WINTER_RETURN_DOCKET_GENERIC_PREDECESSOR_WORLD_HASHES,
+    AUTHORED_ALBANY_CAMPUS_PREDECESSOR_WORLD_HASH,
   ]);
 /** @deprecated Relief-oath-era current-target name retained for existing callers. */
 export const OVERWORLD_RELIEF_OATH_WORLD_HASH = OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH;
@@ -383,6 +396,12 @@ const OVERWORLD_JUNE_RETURN_COPY_PREDECESSOR_LEFT_CONTACT = Object.freeze({
   kind: "contact" as const,
   title: "Talked to June Pike",
   text: "June's field seat is empty. Her separate return says the route crossed into combat before she could take the lower rail, ending the cattle-first field agreement. The promise is recorded broken, June has left the party, and no ally return claim is available; the completed Wolf-Winter result still stands.",
+});
+const OVERWORLD_CAMPUS_ARCHIVE_PREDECESSOR_CONTACT = Object.freeze({
+  id: "talk:albany_city__campus__contact",
+  kind: "contact" as const,
+  title: "Talked to Blair Drake",
+  text: "Blair Drake works as the field archivist in Albany Campus Row, watching how old maps, clinic notes, and experts with narrow hours affect Albany city. Wants a traveler to handle Albany Campus Row's local problems before they spread through the Capital / Mohawk road network.",
 });
 const OVERWORLD_RELIEF_OATH_PREDECESSOR_WORLD_RULE_IDS: ReadonlySet<string> = new Set([
   ...OVERWORLD_HILL_APPROACH_PREDECESSOR_WORLD_RULE_IDS,
@@ -577,6 +596,35 @@ function normalizeJuneReturnCopyPredecessorJournal(args: {
     if (args.currentContact.id !== canonicalEntryId) {
       throw new Error(
         `June-return-copy predecessor journal entry "${entry.id}" has no current authored counterpart.`,
+      );
+    }
+    return Object.freeze({
+      ...entry,
+      title: args.currentContact.title,
+      text: args.currentContact.text,
+    });
+  });
+}
+
+function normalizeCampusArchivePredecessorContactJournal(args: {
+  currentContact: Readonly<{ id: string; text: string; title: string }>;
+  journalEntries: readonly OverworldJournalEntry[];
+}): OverworldJournalEntry[] {
+  return args.journalEntries.map((entry) => {
+    const repeatedContact = /^(.*):(\d+)$/.exec(entry.id);
+    const canonicalEntryId =
+      repeatedContact !== null && Number(repeatedContact[2]) === parseTimeLabel(entry.recordedAt)
+        ? repeatedContact[1]!
+        : entry.id;
+    if (canonicalEntryId !== OVERWORLD_CAMPUS_ARCHIVE_PREDECESSOR_CONTACT.id) return entry;
+    if (
+      entry.kind !== OVERWORLD_CAMPUS_ARCHIVE_PREDECESSOR_CONTACT.kind ||
+      entry.title !== OVERWORLD_CAMPUS_ARCHIVE_PREDECESSOR_CONTACT.title ||
+      entry.text !== OVERWORLD_CAMPUS_ARCHIVE_PREDECESSOR_CONTACT.text ||
+      args.currentContact.id !== canonicalEntryId
+    ) {
+      throw new Error(
+        `Campus-archive predecessor journal entry "${entry.id}" does not match its exact trusted contact copy.`,
       );
     }
     return Object.freeze({
@@ -2187,18 +2235,43 @@ export function planOverworldSessionSnapshotRestore(args: {
         });
       })()
     : sourceSnapshot;
+  const snapshotWithCampusContact =
+    OVERWORLD_CAMPUS_ARCHIVE_CONTACT_COPY_TRUSTED_PREDECESSOR_WORLD_HASHES.has(
+      sourceSnapshot.worldHash,
+    )
+      ? (() => {
+          const presentation = indexes.contactPresentationsByJournalId.get(
+            OVERWORLD_CAMPUS_ARCHIVE_PREDECESSOR_CONTACT.id,
+          );
+          if (!presentation) {
+            throw new Error(
+              `Campus-archive migration target has no contact presentation "${OVERWORLD_CAMPUS_ARCHIVE_PREDECESSOR_CONTACT.id}".`,
+            );
+          }
+          return Object.freeze({
+            ...snapshotWithJuneReturnCopy,
+            journalEntries: normalizeCampusArchivePredecessorContactJournal({
+              currentContact: describeOverworldContactAction(
+                presentation.contact,
+                presentation.presentationId,
+              ),
+              journalEntries: snapshotWithJuneReturnCopy.journalEntries,
+            }),
+          });
+        })()
+      : snapshotWithJuneReturnCopy;
   const snapshotWithCampaignCopy =
     migrationEra === null ||
     migrationEra === "relief_oath" ||
     migrationEra === "relief_allocation" ||
     migrationEra === "hill_approach"
-      ? snapshotWithJuneReturnCopy
+      ? snapshotWithCampusContact
       : Object.freeze({
-          ...snapshotWithJuneReturnCopy,
+          ...snapshotWithCampusContact,
           journalEntries: normalizePreFortifyDawnWagonServiceJournalCopy({
             indexes,
             journalEntries: normalizePreFortifyAlbanyWagonJournalTitle(
-              snapshotWithJuneReturnCopy.journalEntries,
+              snapshotWithCampusContact.journalEntries,
             ),
           }),
         });
@@ -3210,6 +3283,7 @@ export function planOverworldSessionSnapshotRestore(args: {
       reliefOathProof,
       reliefOathSceneId: indexes.openingReliefOath?.id ?? null,
     }),
+    localJobOptionProofOrdinalByKey: new Map(),
   };
   if (migratesLegacyLocalJobSemantics) {
     const eventMigratedSnapshot = Object.freeze({
@@ -3239,6 +3313,13 @@ export function planOverworldSessionSnapshotRestore(args: {
     indexes,
     journalEntries: snapshot.journalEntries,
   });
+  const serviceCampaignBoundaries: OverworldCampaignBoundaryReplayIndex = {
+    ...campaignBoundaries,
+    localJobOptionProofOrdinalByKey: deriveLocalJobOptionProofOrdinals({
+      indexes,
+      journalEntries: snapshot.journalEntries,
+    }),
+  };
   assertSnapshotLocalEventSceneProofs({
     campaignBoundaries,
     indexes,
@@ -3552,7 +3633,7 @@ export function planOverworldSessionSnapshotRestore(args: {
     roadJournal,
     serviceJournal,
     localActionJournal,
-    campaignBoundaries,
+    serviceCampaignBoundaries,
     characterAt,
   );
 
@@ -3806,6 +3887,44 @@ export function planOverworldSessionSnapshotRestore(args: {
       roadEventsByEdgeId: indexes.roadEventsByEdgeId,
     }),
   };
+}
+
+/**
+ * Service predicates use only a current authored job proof with its own exact
+ * accepted-decision boundary. Generic predecessor completions intentionally
+ * produce no option capability.
+ */
+function deriveLocalJobOptionProofOrdinals(args: {
+  indexes: OverworldSnapshotManifestIndex;
+  journalEntries: readonly OverworldJournalEntry[];
+}): ReadonlyMap<string, number> {
+  const ordinals = new Map<string, number>();
+  for (const entry of args.journalEntries) {
+    if (entry.kind !== "job" || !entry.id.startsWith("job:")) continue;
+    const job = args.indexes.jobsById.get(entry.id.slice("job:".length));
+    const proof = entry.localSceneProof;
+    if (
+      !job?.authored_scene ||
+      !proof ||
+      proof.sceneId !== job.authored_scene.id ||
+      proof.sourceWorldHash !== undefined ||
+      !proof.boundary
+    ) {
+      continue;
+    }
+    resolveLocalJobSceneOption(job.authored_scene, proof.optionId);
+    const key = campaignServiceLocalJobOptionKey({
+      job_id: job.id,
+      option_id: proof.optionId,
+    });
+    if (ordinals.has(key)) {
+      throw new Error(
+        `Overworld session snapshot repeats authored local-job option proof "${job.id}:${proof.optionId}".`,
+      );
+    }
+    ordinals.set(key, proof.boundary.acceptedDecisions);
+  }
+  return ordinals;
 }
 
 function assertSnapshotLocalJobSceneProofs(args: {
