@@ -126,9 +126,9 @@ function validResourceProbeArguments(tool, arguments_) {
   if (!isRecord(arguments_)) return false;
   if (tool === "list_mcp_resources") {
     return (
-      hasOnlyKeys(arguments_, ["cursor", "server"]) &&
-      arguments_.cursor === "" &&
-      arguments_.server === "adventureforge"
+      arguments_.server === "adventureforge" &&
+      (hasOnlyKeys(arguments_, ["server"]) ||
+        (hasOnlyKeys(arguments_, ["cursor", "server"]) && arguments_.cursor === ""))
     );
   }
   if (tool === "list_mcp_resource_templates") {
@@ -348,6 +348,7 @@ export function inspectCodexPureEvents(rows) {
           if (row.type === "item.started") {
             if (
               !validResourceProbeStart(item) ||
+              gameplayCallsStarted !== 0 ||
               resourceProbes.has(item.tool) ||
               mcpCallIds.has(item.id)
             ) {
@@ -360,6 +361,7 @@ export function inspectCodexPureEvents(rows) {
           } else {
             const started = resourceProbes.get(item.tool);
             if (
+              gameplayCallsStarted !== 0 ||
               !started ||
               started.completed === true ||
               !validResourceProbeCompletion(item, started)

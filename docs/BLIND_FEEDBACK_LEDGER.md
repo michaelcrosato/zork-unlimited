@@ -5,46 +5,53 @@ Generated deterministically from verified blind reports. The latest entries stay
 ## Summary
 
 - Reports dir: `blind-tester/reports`
-- Accepted reports: 810
+- Accepted reports: 817
 - Rejected or ignored markdown reports: 59
-- Latest report stamp: 20260719T035317Z
+- Latest report stamp: 20260719T061252Z
 - Recent entry limit: 100
-- Archived accepted entries collapsed into traits: 710
+- Archived accepted entries collapsed into traits: 717
 
 ## Recent Common Traits
 
 | Count | Latest | Category | Trait | Sources |
 | ---: | --- | --- | --- | --- |
-| 29 | 20260716T101651Z | replay | player would not replay | overworld |
-| 25 | 20260716T101651Z | bug S3 | Albany Station Quarter: notice board wording is confusing about where the quest actually starts | overworld |
-| 25 | 20260716T101651Z | confusion | the notice board near Albany Station Quarter doesn't say where the quest actually starts | overworld |
-| 25 | 20260716T101651Z | worst moment | Running into the Albany Station Quarter issue. | overworld |
-| 17 | 20260716T101651Z | bug S2 | road to Colonie: road encounter text repeats itself on back-to-back trips | overworld |
-| 11 | 20260713T055537Z | stuck | player got stuck | overworld |
-| 11 | 20260713T055537Z | understanding | goal was not understood | overworld |
-| 10 | 20260716T101651Z | worst moment | Running into the road to Colonie issue. | overworld |
-| 8 | 20260713T055537Z | worst moment | Nothing stood out as bad — tried hard to break it and it held up. | overworld |
-| 1 | 20260719T035317Z | confusion | The fixed decision checkpoint at 40 interrupted the second quest mid-flow, but it was clear and non-blocking. | codex_spark |
-| 1 | 20260719T035317Z | worst moment | Quest-completion checkpoint arrived while the hunt lead was still unfolding, forcing an extra meta choice before cont... | codex_spark |
-| 1 | 20260719T022002Z | bug S1 | Albany relief dispatch and several quest descriptions: Compact text exposed truncation markers that hid parts of play... | codex |
-| 1 | 20260719T022002Z | bug S1 | Byre-Yard conversation with June Pike: Keeping her cattle-first terms closed the dialogue without confirming the choice. | codex |
-| 1 | 20260719T022002Z | bug S1 | Wolf-Winter sheltered-route preview: The alarm forecast did not visibly account for the already-selected aid-only sup... | codex |
-| 1 | 20260719T022002Z | confusion | Compact prose exposed +N chars truncation markers | codex |
-| 1 | 20260719T022002Z | confusion | Dense five-stage relief setup before the first quest | codex |
-| 1 | 20260719T022002Z | confusion | June's keep-cattle-terms response gave no acknowledgment | codex |
-| 1 | 20260719T022002Z | confusion | Sheltered-route alarm preview did not visibly incorporate the aid-only oath | codex |
-| 1 | 20260719T022002Z | worst moment | Parsing the heavily front-loaded Wolf-Winter setup while some long consequences were visibly truncated. | codex |
-| 1 | 20260719T022001Z | bug S1 | Albany Civic Center route to Albany Station Quarter: Movement guidance emphasized the destination area while the tool... | codex |
-| 1 | 20260719T022001Z | bug S1 | Hedrick dialogue and authored quest endings: Compact truncation hid portions of emotionally and tactically relevant p... | codex |
-| 1 | 20260719T022001Z | bug S2 | The Wolf-Winter, Broken Paling after the failed first feed cast: The journal and examination framed the rail as a liv... | codex |
-| 1 | 20260719T022001Z | bug S2 | The Wolf-Winter, first embedded action at the Steading Yard: The child handle was exposed as rpg_session_id, but the... | codex |
-| 1 | 20260719T022001Z | confusion | Area-route ID versus destination-area ID | codex |
-| 1 | 20260719T022001Z | confusion | Broken-paling text implied a nonlethal rail recovery | codex |
+| 26 | 20260716T101651Z | replay | player would not replay | overworld |
+| 23 | 20260716T101651Z | bug S3 | Albany Station Quarter: notice board wording is confusing about where the quest actually starts | overworld |
+| 23 | 20260716T101651Z | confusion | the notice board near Albany Station Quarter doesn't say where the quest actually starts | overworld |
+| 23 | 20260716T101651Z | worst moment | Running into the Albany Station Quarter issue. | overworld |
+| 16 | 20260716T101651Z | bug S2 | road to Colonie: road encounter text repeats itself on back-to-back trips | overworld |
+| 10 | 20260713T055537Z | stuck | player got stuck | overworld |
+| 10 | 20260713T055537Z | understanding | goal was not understood | overworld |
+| 9 | 20260716T101651Z | worst moment | Running into the road to Colonie issue. | overworld |
+| 7 | 20260713T055537Z | worst moment | Nothing stood out as bad — tried hard to break it and it held up. | overworld |
+| 1 | 20260719T061252Z | confusion | The first failed quest attempt was blocked by missing prerequisites, which is clear once you see the message but requ... | codex_spark |
+| 1 | 20260719T061252Z | worst moment | One short interruption from a state-hash mismatch rejection required an immediate context refresh and retry. | codex_spark |
+| 1 | 20260719T060904Z | confusion | Objective text can stay generic while local combat-entry prerequisites gate progress, so first-time players may need... | codex_spark |
+| 1 | 20260719T060904Z | worst moment | The first quest’s initial combat had a few forced sequencing calls and strict action gating, which felt a bit procedu... | codex_spark |
+| 1 | 20260719T054801Z | confusion | After goal pursuit, it was not always obvious when the goal-passage-follow helper was expected to be usable. | codex_spark |
+| 1 | 20260719T054801Z | confusion | I had to infer when the embedded quest became startable from context updates and quest_starts timing rather than a de... | codex_spark |
+| 1 | 20260719T054801Z | confusion | The campaign-style pre-quest choice chain (role, duty, evidence, prep, allocation) was deep and easy to miss when rus... | codex_spark |
+| 1 | 20260719T054801Z | confusion | The multi-step registration and relief allocation sequence is clear but lengthy before field action starts. | codex_spark |
+| 1 | 20260719T054801Z | worst moment | Multiple strict state/handle errors required re-reading context before proceeding. | codex_spark |
+| 1 | 20260719T054801Z | worst moment | The long chain of mandated setup story choices before reaching direct combat felt heavy for a single quest entry. | codex_spark |
+| 1 | 20260719T051324Z | confusion | Goal labels in campaign text can lag behind immediate quest scene context, so scene-level clues are needed to know ex... | codex_spark |
+| 1 | 20260719T051324Z | worst moment | The story registration sequence was longer than expected before the main quest could start. | codex_spark |
+| 1 | 20260719T051324Z | worst moment | Two failed reads on the kill-site spoor before the final read-through felt like a tense stall at a key narrative moment. | codex_spark |
+| 1 | 20260719T050913Z | confusion | At the Shepherd's Bothy, the first impulse to go north was blocked until I backed out to the moor edge, which is easy... | codex_spark |
+| 1 | 20260719T050913Z | confusion | One action was rejected due stale state hash and needed a refresh cycle; that flow is mechanical friction rather than... | codex_spark |
+| 1 | 20260719T050913Z | worst moment | Several small friction points in the Gallowmere sequence (blocked movement text, repeated state updates) added avoida... | codex_spark |
 
 ## Recent Entries
 
 | Stamp | Source | Seed | Mode | Decisions | C/E | Stuck | Replay | Report | Signal |
 | --- | --- | ---: | --- | ---: | --- | --- | --- | --- | --- |
+| 20260719T061252Z | codex_spark | 2929 | pure | 27 | 4/4 | no | yes | `blind-tester/reports/20260719T061252Z_codex_spark_seed2929.md` | confusions: The first failed quest attempt was blocked by missing prerequisites, which is clear once you see the message but requires carefully following each prerequi... |
+| 20260719T060904Z | codex_spark | 2925 | pure | 46 | 4/4 | no | yes | `blind-tester/reports/20260719T060904Z_codex_spark_seed2925.md` | confusions: Objective text can stay generic while local combat-entry prerequisites gate progress, so first-time players may need to notice environment blockers. |
+| 20260719T054801Z | codex_spark | 2910 | pure | 22 | 4/4 | no | yes | `blind-tester/reports/20260719T054801Z_codex_spark_seed2910.md` | confusions: The multi-step registration and relief allocation sequence is clear but lengthy before field action starts.; After goal pursuit, it was not always obvious... |
+| 20260719T054801Z | codex_spark | 2909 | pure | 24 | 4/4 | no | yes | `blind-tester/reports/20260719T054801Z_codex_spark_seed2909.md` | confusions: I had to infer when the embedded quest became startable from context updates and quest_starts timing rather than a dedicated quest menu.; The campaign-styl... |
+| 20260719T051324Z | codex_spark | 2898 | pure | 46 | 4/4 | no | yes | `blind-tester/reports/20260719T051324Z_codex_spark_seed2898.md` | confusions: Goal labels in campaign text can lag behind immediate quest scene context, so scene-level clues are needed to know exactly what to do next. |
+| 20260719T051324Z | codex_spark | 2895 | pure | 22 | 4/4 | no | yes | `blind-tester/reports/20260719T051324Z_codex_spark_seed2895.md` | worst: The story registration sequence was longer than expected before the main quest could start. |
+| 20260719T050913Z | codex_spark | 2891 | pure | 43 | 4/4 | no | yes | `blind-tester/reports/20260719T050913Z_codex_spark_seed2891.md` | confusions: At the Shepherd's Bothy, the first impulse to go north was blocked until I backed out to the moor edge, which is easy to misread as a temporary UI issue.;... |
 | 20260719T035317Z | codex_spark | 2890 | pure | 46 | 4/4 | no | yes | `blind-tester/reports/20260719T035317Z_codex_spark_seed2890.md` | confusions: The fixed decision checkpoint at 40 interrupted the second quest mid-flow, but it was clear and non-blocking. |
 | 20260719T022002Z | codex | 2882 | pure | 53 | 4/4 | no | yes | `blind-tester/reports/20260719T022002Z_codex_seed2882.md` | confusions: Dense five-stage relief setup before the first quest; Compact prose exposed +N chars truncation markers; Sheltered-route alarm preview did not visibly inco... |
 | 20260719T022001Z | codex | 2881 | pure | 54 | 3/4 | no | yes | `blind-tester/reports/20260719T022001Z_codex_seed2881.md` | confusions: Area-route ID versus destination-area ID; Child session field naming contradicted the action endpoint; Broken-paling text implied a nonlethal rail recovery... |
@@ -138,27 +145,20 @@ Generated deterministically from verified blind reports. The latest entries stay
 | 20260713T055537Z | overworld | 6052 | structural | — | 3/4 | no | no | `blind-tester/reports/20260713T055537Z_overworld_seed6052.md` | confusions: the notice board near Albany Station Quarter doesn't say where the quest actually starts \| bugs: S3 Albany Station Quarter: notice board wording is confusi... |
 | 20260713T055537Z | overworld | 6051 | structural | — | 2/3 | no | yes | `blind-tester/reports/20260713T055537Z_overworld_seed6051.md` | bugs: S2 road to Colonie: road encounter text repeats itself on back-to-back trips; S1 seed-6051 corner: minor wording nit unique to seed 6051 |
 | 20260713T055537Z | overworld | 6050 | structural | — | 4/3 | yes | no | `blind-tester/reports/20260713T055537Z_overworld_seed6050.md` | confusions: the notice board near Albany Station Quarter doesn't say where the quest actually starts \| bugs: S3 Albany Station Quarter: notice board wording is confusi... |
-| 20260713T055537Z | overworld | 6049 | structural | — | 3/2 | no | yes | `blind-tester/reports/20260713T055537Z_overworld_seed6049.md` | bugs: S1 seed-6049 corner: minor wording nit unique to seed 6049 |
-| 20260713T055537Z | overworld | 6048 | structural | — | 2/2 | no | no | `blind-tester/reports/20260713T055537Z_overworld_seed6048.md` | would not replay |
-| 20260713T055537Z | overworld | 6047 | structural | — | 4/4 | no | yes | `blind-tester/reports/20260713T055537Z_overworld_seed6047.md` | bugs: S1 seed-6047 corner: minor wording nit unique to seed 6047 |
-| 20260713T055537Z | overworld | 6046 | structural | — | 3/4 | no | no | `blind-tester/reports/20260713T055537Z_overworld_seed6046.md` | confusions: the notice board near Albany Station Quarter doesn't say where the quest actually starts \| bugs: S3 Albany Station Quarter: notice board wording is confusi... |
-| 20260713T055537Z | overworld | 6045 | structural | — | 2/3 | yes | yes | `blind-tester/reports/20260713T055537Z_overworld_seed6045.md` | bugs: S2 road to Colonie: road encounter text repeats itself on back-to-back trips; S1 seed-6045 corner: minor wording nit unique to seed 6045 \| got stuck \| goal unclear |
-| 20260713T055537Z | overworld | 6044 | structural | — | 4/3 | no | no | `blind-tester/reports/20260713T055537Z_overworld_seed6044.md` | confusions: the notice board near Albany Station Quarter doesn't say where the quest actually starts \| bugs: S3 Albany Station Quarter: notice board wording is confusi... |
-| 20260713T055537Z | overworld | 6043 | structural | — | 3/2 | no | yes | `blind-tester/reports/20260713T055537Z_overworld_seed6043.md` | bugs: S1 seed-6043 corner: minor wording nit unique to seed 6043 |
 
 ## Archived Trait Categories
 
 | Count | Latest | Category | Trait | Sources |
 | ---: | --- | --- | --- | --- |
-| 292 | 20260713T055537Z | replay | player would not replay | overworld, tide_mill, wolf_winter |
-| 105 | 20260713T055537Z | bug S3 | Albany Station Quarter: notice board wording is confusing about where the quest actually starts | overworld |
-| 105 | 20260713T055537Z | confusion | the notice board near Albany Station Quarter doesn't say where the quest actually starts | overworld |
-| 105 | 20260713T055537Z | worst moment | Running into the Albany Station Quarter issue. | overworld |
-| 70 | 20260713T055537Z | bug S2 | road to Colonie: road encounter text repeats itself on back-to-back trips | overworld |
-| 52 | 20260713T055537Z | stuck | player got stuck | overworld |
-| 49 | 20260713T055537Z | understanding | goal was not understood | overworld |
-| 35 | 20260713T055537Z | worst moment | Nothing stood out as bad — tried hard to break it and it held up. | overworld |
-| 35 | 20260713T055537Z | worst moment | Running into the road to Colonie issue. | overworld |
+| 295 | 20260713T055537Z | replay | player would not replay | overworld, tide_mill, wolf_winter |
+| 107 | 20260713T055537Z | bug S3 | Albany Station Quarter: notice board wording is confusing about where the quest actually starts | overworld |
+| 107 | 20260713T055537Z | confusion | the notice board near Albany Station Quarter doesn't say where the quest actually starts | overworld |
+| 107 | 20260713T055537Z | worst moment | Running into the Albany Station Quarter issue. | overworld |
+| 71 | 20260713T055537Z | bug S2 | road to Colonie: road encounter text repeats itself on back-to-back trips | overworld |
+| 53 | 20260713T055537Z | stuck | player got stuck | overworld |
+| 50 | 20260713T055537Z | understanding | goal was not understood | overworld |
+| 36 | 20260713T055537Z | worst moment | Nothing stood out as bad — tried hard to break it and it held up. | overworld |
+| 36 | 20260713T055537Z | worst moment | Running into the road to Colonie issue. | overworld |
 | 17 | 20260708T190729Z | confusion | completed quest still listed | overworld |
 | 17 | 20260708T173453Z | confusion | road encounter appears after arrival | overworld |
 | 7 | 20260708T211319Z | confusion | hidden counts are abstract | overworld |
