@@ -20,6 +20,11 @@ export function presentOpeningReliefOath(
       Object.freeze({
         id: option.id,
         label: option.title,
+        summary: Object.freeze({
+          commitment: option.summary,
+          fieldTrigger: option.preview,
+          immediateCost: formatOpeningReliefOathCost(option.terms),
+        }),
         consequence:
           `${option.summary} ${option.preview} Access: ${option.access} Duty: ${option.duty} ` +
           `Actual cost: ${formatOpeningReliefOathCost(option.terms)}. ${option.consequence}`,

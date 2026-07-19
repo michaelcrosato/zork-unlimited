@@ -145,13 +145,22 @@ describe("opening registration presentation", () => {
       options: scene.profiles.map((profile) => ({
         id: profile.id,
         label: profile.title,
+        summary: {
+          commitment: profile.summary,
+          fieldTrigger: profile.preview,
+        },
         consequence: `${profile.summary} ${profile.preview} ${profile.consequence}`,
       })),
     });
     expect(prompt.options).toHaveLength(4);
     for (const [index, option] of prompt.options.entries()) {
       expect(option.consequence).toContain(scene.profiles[index]!.preview);
-      expect(Object.keys(option).sort()).toEqual(["consequence", "id", "label"]);
+      expect(option.summary).toEqual({
+        commitment: scene.profiles[index]!.summary,
+        fieldTrigger: scene.profiles[index]!.preview,
+      });
+      expect(Object.keys(option).sort()).toEqual(["consequence", "id", "label", "summary"]);
+      expect(Object.isFrozen(option.summary)).toBe(true);
       expect(Object.isFrozen(option)).toBe(true);
     }
     expect(Object.isFrozen(prompt)).toBe(true);

@@ -18,6 +18,10 @@ export function presentOpeningRegistration(
         Object.freeze({
           id: profile.id,
           label: profile.title,
+          summary: Object.freeze({
+            commitment: profile.summary,
+            fieldTrigger: profile.preview,
+          }),
           consequence: `${profile.summary} ${profile.preview} ${profile.consequence}`,
         }),
       ),

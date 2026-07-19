@@ -385,9 +385,29 @@ describe("OverworldSession", () => {
     expect(screen).toContain("Field-team commitment");
     expect(screen).toContain("Choose who leaves Albany");
     expect(screen).toContain('" journey-choice-actions-registration"');
-    expect(styles).toContain(
-      ".journey-choice-actions:not(.journey-choice-actions-registration) button:first-child",
+    const choiceCardStart = screen.indexOf('className="journey-choice-card"');
+    const chooseButtonStart = screen.indexOf(
+      '<button type="button" onClick={() => onChoose(option.id)}>',
+      choiceCardStart,
     );
+    const chooseButtonEnd = screen.indexOf("</button>", chooseButtonStart);
+    const fullTermsStart = screen.indexOf(
+      '<details className="journey-choice-details">',
+      chooseButtonEnd,
+    );
+    expect(choiceCardStart).toBeGreaterThanOrEqual(0);
+    expect(chooseButtonStart).toBeGreaterThan(choiceCardStart);
+    expect(chooseButtonEnd).toBeGreaterThan(chooseButtonStart);
+    expect(fullTermsStart).toBeGreaterThan(chooseButtonEnd);
+    expect(screen).toContain('className="journey-choice-summary"');
+    expect(screen).toContain('className="journey-choice-trigger"');
+    expect(screen).toContain('className="journey-choice-cost"');
+    expect(screen).toContain("<summary>Full terms and consequence</summary>");
+    expect(styles).toContain(".journey-choice-actions .journey-choice-card > button");
+    expect(styles).toContain(
+      ".journey-choice-actions:not(.journey-choice-actions-registration)\n  .journey-choice-card:first-child\n  > button",
+    );
+    expect(styles).toContain(".journey-choice-details summary");
     expect(screen).not.toMatch(/Albany Station Quarter|dawn dispatch|relief wagon/i);
   });
 

@@ -155,9 +155,21 @@ export type JourneyChoicePrompt = Readonly<{
   options: readonly [JourneyChoiceOption, ...JourneyChoiceOption[]];
 }>;
 
+/**
+ * A short, scannable account of a choice before its complete authored terms.
+ * Optional so historic two-option aftermath cards and persisted saves remain
+ * compatible with the original journey presentation.
+ */
+export type JourneyStoryChoiceSummary = Readonly<{
+  commitment: string;
+  fieldTrigger: string;
+  immediateCost?: string;
+}>;
+
 export type JourneyStoryChoiceOption = Readonly<{
   id: string;
   label: string;
+  summary?: JourneyStoryChoiceSummary;
   consequence: string;
 }>;
 
@@ -994,16 +1006,37 @@ function freezeStoryChoice(
   } else if (storyChoice.options.length !== 2) {
     throw new Error("Journey aftermath story choice requires exactly two options.");
   }
+  const requiresStructuredSummary =
+    presentationKind === "registration" ||
+    presentationKind === "relief_oath" ||
+    presentationKind === "lead_source" ||
+    presentationKind === "preparation" ||
+    presentationKind === "relief_allocation";
   const optionIds = new Set<string>();
   const options = storyChoice.options.map((option) => {
     if (option.id.length === 0 || option.label.length === 0 || option.consequence.length === 0) {
       throw new Error("Journey story choice option fields cannot be empty.");
     }
+    if (requiresStructuredSummary && !option.summary) {
+      throw new Error("Journey setup choice options require a concise summary.");
+    }
+    if (
+      option.summary &&
+      (option.summary.commitment.length === 0 || option.summary.fieldTrigger.length === 0)
+    ) {
+      throw new Error("Journey story choice summary fields cannot be empty.");
+    }
+    if (option.summary?.immediateCost !== undefined && option.summary.immediateCost.length === 0) {
+      throw new Error("Journey story choice immediate cost cannot be empty when provided.");
+    }
     if (optionIds.has(option.id)) {
       throw new Error("Journey story choice option ids must be unique.");
     }
     optionIds.add(option.id);
-    return Object.freeze({ ...option });
+    return Object.freeze({
+      ...option,
+      ...(option.summary ? { summary: Object.freeze({ ...option.summary }) } : {}),
+    });
   });
   const frozenOptions = Object.freeze(options);
   return Object.freeze({

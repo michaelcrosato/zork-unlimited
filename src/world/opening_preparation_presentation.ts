@@ -27,6 +27,11 @@ export function presentOpeningPreparation(
         return Object.freeze({
           id: profile.id,
           label: profile.title,
+          summary: Object.freeze({
+            commitment: profile.summary,
+            fieldTrigger: profile.preview,
+            immediateCost: formatOpeningPreparationCost(terms),
+          }),
           consequence: `${profile.summary} ${profile.preview} Actual cost: ${formatOpeningPreparationCost(terms)}.${sponsorship} ${profile.consequence}`,
         });
       }),

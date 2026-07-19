@@ -443,6 +443,7 @@ describe("journey contract presentation context", () => {
     expect(Object.isFrozen(view.storyChoice)).toBe(true);
     expect(Object.isFrozen(view.storyChoice?.options)).toBe(true);
     expect(Object.isFrozen(view.storyChoice?.options[0])).toBe(true);
+    expect(view.storyChoice?.options.every((option) => option.summary === undefined)).toBe(true);
     expect(() => {
       (view.storyChoice as unknown as { message: string }).message = "forged";
     }).toThrow(TypeError);
@@ -518,6 +519,10 @@ describe("journey contract presentation context", () => {
       options: Array.from({ length: 8 }, (_, index) => ({
         id: `background_${String(index)}`,
         label: `Background ${String(index)}`,
+        summary: {
+          commitment: `Carry background ${String(index)}.`,
+          fieldTrigger: `Its first field tradeoff is known before departure.`,
+        },
         consequence: `Carry background ${String(index)} into the journey.`,
       })) as unknown as JourneyRegistrationStoryChoiceOptions,
     } satisfies JourneyStoryChoicePrompt;
@@ -531,6 +536,31 @@ describe("journey contract presentation context", () => {
     expect(Object.isFrozen(view.storyChoice)).toBe(true);
     expect(Object.isFrozen(view.storyChoice?.options)).toBe(true);
     expect(view.storyChoice?.options.every((option) => Object.isFrozen(option))).toBe(true);
+    expect(view.storyChoice?.options.every((option) => Object.isFrozen(option.summary))).toBe(true);
+  });
+
+  it.each([
+    ["registration", 4],
+    ["relief_oath", 3],
+    ["lead_source", 3],
+    ["preparation", 3],
+    ["relief_allocation", 3],
+  ] as const)("rejects summary-less %s setup options", (kind, optionCount) => {
+    const state = createInitialJourneyContractSnapshot();
+    const summaryLessSetup = {
+      id: `albany:${kind}`,
+      kind,
+      message: "Choose an Albany setup term.",
+      options: Array.from({ length: optionCount }, (_, index) => ({
+        id: `${kind}_${String(index)}`,
+        label: `Option ${String(index)}`,
+        consequence: `Complete consequence ${String(index)}.`,
+      })),
+    } as unknown as JourneyStoryChoicePrompt;
+
+    expect(() => journeyPresentation(state, { storyChoice: summaryLessSetup })).toThrow(
+      /setup choice options require a concise summary/i,
+    );
   });
 
   it("deep-freezes a typed ally commitment with three or four unique options", () => {
@@ -581,6 +611,11 @@ describe("journey contract presentation context", () => {
       options: Array.from({ length: 3 }, (_, index) => ({
         id: `oath_${String(index)}`,
         label: `Term ${String(index)}`,
+        summary: {
+          commitment: `Bind term ${String(index)}.`,
+          fieldTrigger: `Its first field tradeoff is known before departure.`,
+          immediateCost: `${String(index)} minutes`,
+        },
         consequence: `Access and duty ${String(index)}.`,
       })) as unknown as JourneyReliefOathStoryChoiceOptions,
     } satisfies JourneyStoryChoicePrompt;
@@ -590,6 +625,7 @@ describe("journey contract presentation context", () => {
     expect(view.storyChoice?.options).toHaveLength(3);
     expect(Object.isFrozen(view.storyChoice)).toBe(true);
     expect(view.storyChoice?.options.every((option) => Object.isFrozen(option))).toBe(true);
+    expect(view.storyChoice?.options.every((option) => Object.isFrozen(option.summary))).toBe(true);
 
     expect(() =>
       journeyPresentation(state, {

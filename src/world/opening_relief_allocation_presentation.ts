@@ -24,6 +24,11 @@ export function presentOpeningReliefAllocation(
         Object.freeze({
           id: option.id,
           label: option.title,
+          summary: Object.freeze({
+            commitment: option.summary,
+            fieldTrigger: option.preview,
+            immediateCost: formatOpeningReliefAllocationCost(option.terms),
+          }),
           consequence:
             `${option.summary} ${option.preview} Protects: ${option.protects} ` +
             `Leaves exposed: ${option.leaves_exposed} Actual cost: ${formatOpeningReliefAllocationCost(option.terms)}. ${option.consequence}`,
