@@ -746,6 +746,10 @@ unique game session, and all artifact hashes. An exclusive strict capture receip
 binds the copied rollout hash to the exact canonical expected/session/turn cwd and
 native filesystem identity; later validation reparses it and rejects
 abort/error history or any row after terminal `task_complete`.
+Each automatic CLI compaction may add a replay with an exact deep-equal context
+payload only in the immediate `compacted` → `world_state` → `turn_context`
+sequence before completion. Wrapper keys must match and only the timestamp may
+differ; every other duplicate context fails closed.
 `turn_context.model` is durable CLI provenance, not a provider-signed
 remote-backend snapshot. Diagnostic resume reparses these retained facts;
 certification rejects recovery, reuse, links, and path escape.

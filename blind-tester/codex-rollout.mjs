@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { createHash } from "node:crypto";
+import { isDeepStrictEqual } from "node:util";
 import { constants as fsConstants } from "node:fs";
 import {
   copyFileSync,
@@ -110,6 +111,21 @@ function requireContainedDirectory(path, rootReal, label) {
   return authority;
 }
 
+function isExactTurnContextReplay(initial, replay) {
+  const initialKeys = Object.keys(initial).sort();
+  const replayKeys = Object.keys(replay).sort();
+  if (!isDeepStrictEqual(replayKeys, initialKeys)) return false;
+  if (
+    Object.hasOwn(initial, "timestamp") &&
+    (typeof initial.timestamp !== "string" || typeof replay.timestamp !== "string")
+  ) {
+    return false;
+  }
+  return initialKeys.every(
+    (key) => key === "timestamp" || isDeepStrictEqual(replay[key], initial[key]),
+  );
+}
+
 function rolloutRecordedCwds(rolloutPath) {
   const rows = readFileSync(rolloutPath, "utf8")
     .split(/\r?\n/u)
@@ -122,12 +138,31 @@ function rolloutRecordedCwds(rolloutPath) {
       }
     });
   const sessions = rows.filter((row) => row?.type === "session_meta");
-  const turns = rows.filter((row) => row?.type === "turn_context");
-  if (sessions.length !== 1 || turns.length !== 1) {
-    fail("Codex rollout cwd capture requires exactly one session_meta and turn_context");
+  const turns = rows.flatMap((row, index) =>
+    row?.type === "turn_context" ? [{ index, row }] : [],
+  );
+  if (sessions.length !== 1 || turns.length === 0) {
+    fail("Codex rollout cwd capture requires exactly one session_meta and a turn_context");
+  }
+  const initialTurn = turns[0];
+  for (const duplicateTurn of turns.slice(1)) {
+    const precededByCompaction =
+      duplicateTurn.index >= 2 &&
+      rows[duplicateTurn.index - 2]?.type === "compacted" &&
+      rows[duplicateTurn.index - 1]?.type === "world_state";
+    const afterCompletion = rows
+      .slice(0, duplicateTurn.index)
+      .some((row) => row?.type === "event_msg" && row?.payload?.type === "task_complete");
+    if (
+      !precededByCompaction ||
+      afterCompletion ||
+      !isExactTurnContextReplay(initialTurn.row, duplicateTurn.row)
+    ) {
+      fail("Codex rollout cwd capture permits only an exact compacted duplicate turn_context");
+    }
   }
   const sessionCwd = sessions[0]?.payload?.cwd;
-  const turnCwd = turns[0]?.payload?.cwd;
+  const turnCwd = initialTurn.row?.payload?.cwd;
   if (typeof sessionCwd !== "string" || typeof turnCwd !== "string") {
     fail("Codex rollout cwd fields are missing");
   }

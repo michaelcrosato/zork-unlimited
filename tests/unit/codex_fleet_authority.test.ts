@@ -99,6 +99,18 @@ function rollout(): unknown[] {
   ];
 }
 
+function insertCompactedContextReplay(rows: unknown[]): void {
+  const replay = structuredClone(rows[2]) as Record<string, unknown>;
+  replay.timestamp = "2026-07-19T00:00:00.500Z";
+  rows.splice(
+    3,
+    0,
+    { type: "compacted", payload: { window_number: 2 } },
+    { type: "world_state", payload: { full: true } },
+    replay,
+  );
+}
+
 function captureReceipt(rows: unknown[]): string {
   const rolloutBody = jsonl(rows);
   const session = rows.find((row) => (row as { type?: string }).type === "session_meta") as {
@@ -145,6 +157,29 @@ describe("Codex certified fleet rollout authority", () => {
     });
   });
 
+  it("accepts exact context replays immediately after each compaction", () => {
+    const rows = rollout();
+    insertCompactedContextReplay(rows);
+    const replay = structuredClone(rows[5]) as Record<string, unknown>;
+    replay.timestamp = "2026-07-19T00:00:00.750Z";
+    rows.splice(
+      rows.length - 1,
+      0,
+      { type: "compacted", payload: {} },
+      { type: "world_state", payload: {} },
+      replay,
+    );
+    expect(
+      validateCodexFleetProviderAuthority({
+        events: jsonl(publicEvents()),
+        rollout: jsonl(rows),
+        capture: captureReceipt(rows),
+        model: "gpt-5.3-codex-spark",
+        report: REPORT,
+      }),
+    ).toMatchObject({ ok: true, facts: { turnId: TURN } });
+  });
+
   it.each([
     [
       "model substitution",
@@ -177,9 +212,33 @@ describe("Codex certified fleet rollout authority", () => {
       /rollout final assistant/i,
     ],
     [
-      "multiple rollout turns",
+      "second context without compaction",
       (rows: unknown[]) => rows.push(structuredClone(rows[2])),
-      /exactly one turn_context/i,
+      /exact compacted pre-completion replay/i,
+    ],
+    [
+      "altered compacted context",
+      (rows: unknown[]) => {
+        insertCompactedContextReplay(rows);
+        payload(rows, 5).model = "gpt-5.6-sol";
+      },
+      /exact compacted pre-completion replay/i,
+    ],
+    [
+      "altered compacted context envelope",
+      (rows: unknown[]) => {
+        insertCompactedContextReplay(rows);
+        (rows[5] as Record<string, unknown>).untrusted_marker = true;
+      },
+      /exact compacted pre-completion replay/i,
+    ],
+    [
+      "post-completion compacted context replay",
+      (rows: unknown[]) => {
+        const replay = structuredClone(rows[2]);
+        rows.push({ type: "compacted", payload: {} }, { type: "world_state", payload: {} }, replay);
+      },
+      /exact compacted pre-completion replay/i,
     ],
     ["missing completion", (rows: unknown[]) => rows.pop(), /exactly one task_started/i],
     [

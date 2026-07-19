@@ -396,6 +396,66 @@ function parseCodexCaptureReceipt(
   return { ok: true, canonicalCwd: receipt.canonical_expected_cwd };
 }
 
+function isExactCodexTurnContextReplay(
+  initial: Record<string, unknown>,
+  replay: Record<string, unknown>,
+): boolean {
+  const initialKeys = Object.keys(initial).sort();
+  const replayKeys = Object.keys(replay).sort();
+  if (!isDeepStrictEqual(replayKeys, initialKeys)) return false;
+  if (
+    Object.hasOwn(initial, "timestamp") &&
+    (typeof initial.timestamp !== "string" || typeof replay.timestamp !== "string")
+  ) {
+    return false;
+  }
+  return initialKeys.every(
+    (key) => key === "timestamp" || isDeepStrictEqual(replay[key], initial[key]),
+  );
+}
+
+function codexTurnContexts(
+  rows: unknown[],
+):
+  | { ok: true; initial: { index: number; row: Record<string, unknown> } }
+  | { ok: false; reason: string } {
+  const contexts = rows.flatMap((row, index) =>
+    isRecord(row) && row.type === "turn_context" ? [{ index, row }] : [],
+  );
+  if (contexts.length === 0) {
+    return { ok: false, reason: "Codex rollout requires one initial turn_context" };
+  }
+  const initial = contexts[0]!;
+  for (const duplicate of contexts.slice(1)) {
+    const precedingCompacted = rows[duplicate.index - 2];
+    const precedingWorldState = rows[duplicate.index - 1];
+    const exactDuplicate = isExactCodexTurnContextReplay(initial.row, duplicate.row);
+    const followsCompaction =
+      duplicate.index >= 2 &&
+      isRecord(precedingCompacted) &&
+      precedingCompacted.type === "compacted" &&
+      isRecord(precedingWorldState) &&
+      precedingWorldState.type === "world_state";
+    const followsCompletion = rows
+      .slice(0, duplicate.index)
+      .some(
+        (row) =>
+          isRecord(row) &&
+          row.type === "event_msg" &&
+          isRecord(row.payload) &&
+          row.payload.type === "task_complete",
+      );
+    if (!exactDuplicate || !followsCompaction || followsCompletion) {
+      return {
+        ok: false,
+        reason:
+          "Codex rollout permits duplicate turn_context only as an exact compacted pre-completion replay",
+      };
+    }
+  }
+  return { ok: true, initial };
+}
+
 function parseCodexAuthority(
   eventsText: string,
   rolloutText: string,
@@ -419,28 +479,20 @@ function parseCodexAuthority(
   const sessionRows = rollout.rows.flatMap((row, index) =>
     isRecord(row) && row.type === "session_meta" ? [{ index, row }] : [],
   );
-  const turnRows = rollout.rows.flatMap((row, index) =>
-    isRecord(row) && row.type === "turn_context" ? [{ index, row }] : [],
-  );
   if (sessionRows.length !== 1 || sessionRows[0]?.index !== 0) {
     return {
       ok: false,
       reason: `Codex rollout requires one leading session_meta (found ${sessionRows.length})`,
     };
   }
-  if (turnRows.length !== 1) {
-    return {
-      ok: false,
-      reason: `Codex rollout requires exactly one turn_context (found ${turnRows.length})`,
-    };
-  }
+  const turnContexts = codexTurnContexts(rollout.rows);
+  if (!turnContexts.ok) return turnContexts;
+  const turnRow = turnContexts.initial;
   const session = CodexSessionMetaSchema.safeParse(
     (sessionRows[0]!.row as Record<string, unknown>).payload,
   );
   if (!session.success) return { ok: false, reason: "Codex rollout session_meta is malformed" };
-  const turn = CodexTurnContextSchema.safeParse(
-    (turnRows[0]!.row as Record<string, unknown>).payload,
-  );
+  const turn = CodexTurnContextSchema.safeParse((turnRow.row as Record<string, unknown>).payload);
   if (!turn.success)
     return { ok: false, reason: "Codex rollout turn_context is not a strict read-only xhigh turn" };
   if (session.data.id !== inspected.threadId) {
@@ -509,8 +561,8 @@ function parseCodexAuthority(
   }
   if (
     !(
-      taskStarts[0]!.index < turnRows[0]!.index &&
-      turnRows[0]!.index < finalMessage.index &&
+      taskStarts[0]!.index < turnRow.index &&
+      turnRow.index < finalMessage.index &&
       finalMessage.index < taskCompletes[0]!.index
     )
   ) {

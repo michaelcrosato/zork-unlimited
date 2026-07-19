@@ -30,6 +30,36 @@ function cwdRollout(cwd: string): string {
   return `${JSON.stringify({ type: "session_meta", payload: { cwd } })}\n${JSON.stringify({ type: "turn_context", payload: { cwd } })}\n`;
 }
 
+function compactedCwdRollout(cwd: string): string {
+  const initial = {
+    timestamp: "2026-07-19T09:26:51.354Z",
+    type: "turn_context",
+    payload: { cwd },
+  };
+  const replay = { ...structuredClone(initial), timestamp: "2026-07-19T09:37:36.748Z" };
+  return `${JSON.stringify({ type: "session_meta", payload: { cwd } })}\n${JSON.stringify(initial)}\n${JSON.stringify({ type: "compacted", payload: {} })}\n${JSON.stringify({ type: "world_state", payload: {} })}\n${JSON.stringify(replay)}\n`;
+}
+
+function alterSecondTurnContext(text: string): string {
+  const rows = text
+    .trim()
+    .split("\n")
+    .map((line) => JSON.parse(line) as { type: string; payload: { cwd?: string } });
+  const secondContext = rows.filter((row) => row.type === "turn_context")[1]!;
+  secondContext.payload.cwd = "C:\\other\\player";
+  return `${rows.map((row) => JSON.stringify(row)).join("\n")}\n`;
+}
+
+function alterSecondTurnContextEnvelope(text: string): string {
+  const rows = text
+    .trim()
+    .split("\n")
+    .map((line) => JSON.parse(line) as Record<string, unknown>);
+  const secondContext = rows.filter((row) => row.type === "turn_context")[1]!;
+  secondContext.untrusted_marker = true;
+  return `${rows.map((row) => JSON.stringify(row)).join("\n")}\n`;
+}
+
 afterEach(() => {
   for (const root of temporaryRoots.splice(0)) {
     rmSync(root, { recursive: true, force: true });
@@ -87,6 +117,59 @@ describe("sterile Codex rollout capture", () => {
     expect(capture.expected_directory_identity).toEqual(capture.session_directory_identity);
     expect(capture.expected_directory_identity).toEqual(capture.turn_directory_identity);
     expect(() => captureSingleCodexRollout(home, destination, receipt, player)).toThrow(/EEXIST/i);
+  });
+
+  it("accepts only an exact compacted replay of the initial turn context", () => {
+    const root = temporaryRoot("af-codex-compacted-context-");
+    const source = join(root, "source-auth.json");
+    const home = join(root, "home");
+    const destination = join(root, "run.codex-rollout.jsonl");
+    const receipt = join(root, "run.codex-capture.json");
+    const player = join(root, "player");
+    mkdirSync(player);
+    writeFileSync(source, "{}\n");
+    prepareSterileCodexHome(source, home);
+    mkdirSync(join(home, "sessions"));
+    writeFileSync(join(home, "sessions", "rollout-one.jsonl"), compactedCwdRollout(player));
+
+    captureSingleCodexRollout(home, destination, receipt, player);
+
+    for (const [label, mutate] of [
+      [
+        "missing compaction",
+        (text: string) => text.replace('{"type":"compacted","payload":{}}\n', ""),
+      ],
+      ["altered context", alterSecondTurnContext],
+      ["altered context envelope", alterSecondTurnContextEnvelope],
+      [
+        "post-completion replay",
+        (text: string) =>
+          text.replace(
+            '{"type":"compacted"',
+            '{"type":"event_msg","payload":{"type":"task_complete"}}\n{"type":"compacted"',
+          ),
+      ],
+    ] as const) {
+      const invalidRoot = temporaryRoot(`af-codex-${label.replaceAll(" ", "-")}-`);
+      const invalidHome = join(invalidRoot, "home");
+      const invalidPlayer = join(invalidRoot, "player");
+      mkdirSync(invalidPlayer);
+      writeFileSync(join(invalidRoot, "auth.json"), "{}\n");
+      prepareSterileCodexHome(join(invalidRoot, "auth.json"), invalidHome);
+      mkdirSync(join(invalidHome, "sessions"));
+      writeFileSync(
+        join(invalidHome, "sessions", "rollout-one.jsonl"),
+        mutate(compactedCwdRollout(invalidPlayer)),
+      );
+      expect(() =>
+        captureSingleCodexRollout(
+          invalidHome,
+          join(invalidRoot, "out.jsonl"),
+          join(invalidRoot, "out.capture.json"),
+          invalidPlayer,
+        ),
+      ).toThrow(/exact compacted duplicate/i);
+    }
   });
 
   it("rejects multiple rollouts and hard-linked rollout substitution", () => {
