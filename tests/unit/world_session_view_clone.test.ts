@@ -125,7 +125,13 @@ describe("overworld session view clone", () => {
 
     expect(fresh.journal[0]?.title).toBe(originalJournalTitle);
     expect(fresh.sites[0]?.title).toBe(originalSiteTitle);
-    expect(fresh.jobs[0]?.title).toBe(originalJobTitle);
+    // The newly authored Winter Return docket is deliberately discovered before
+    // it is chronologically actionable.  It is therefore absent from the live
+    // job list until Wolf-Winter has closed; mutating the action result must not
+    // make it visible early or alter its cached discovery record.
+    expect(originalJobTitle).toBe("Rowan's Winter Return Docket");
+    expect(fresh.jobs).toEqual([]);
+    expect(fresh.hiddenJobCount).toBeGreaterThan(0);
   });
 
   it("keeps returned travel, encounter, and service results detached", () => {

@@ -4,65 +4,85 @@ Token-small AFK-loop handoff. The durable milestone and evidence rules live in
 [`STARTING_SLICE.md`](STARTING_SLICE.md); do not replace that contract during an
 ultraplan.
 
-## Cycle: 2026-07-19 — Codex Compaction Snapshot Attestation
+## Cycle: 2026-07-19 — Civic Winter Return Docket
 
 ## Synthesis
 
-The first long Luna blind exposed a verifier false rejection, not an
-authentication failure. Its retained private rollout had one session, one
-logical turn, one completed lifecycle, and two `turn_context` rows. The second
-row was the same logical context replayed by the Codex CLI immediately after an
-automatic `compacted → world_state` snapshot; only its wrapper timestamp had
-advanced.
+The Civic Center now carries the second of six authored Albany district jobs
+and the first of six authored local events. `LocalEventScene` v1 is a reusable,
+validated two-to-four-option grammar with ordinary POI/contact/investigation
+prerequisites and a generic completed-quest exclusion; Albany content, rather
+than campaign code, supplies the Wolf-Winter relationship.
 
-Capture and fleet authority now share the same narrow normalization. The first
-context remains authoritative. A later context is accepted only immediately
-after that exact two-row compaction prefix and before `task_complete`, with an
-identical wrapper key set and deep-strict equality for every non-timestamp field,
-including model, effort, turn id, cwd, sandbox, and full payload. Timestamp
-presence and string type must match, but its value may advance. An arbitrary,
-altered, extra-field, out-of-sequence, second-turn, or post-completion context
-still fails closed.
+Before Wolf-Winter, the Charter Backlog offers one permanent policy choice.
+Opening a public winter-relief record or protecting household details each
+costs 50 minutes and earns 2 Capital / Mohawk renown, so the immediate terms do
+not disguise the delayed tradeoff. After Wolf-Winter, Rowan's Winter Return
+Docket reads that exact event receipt and the truthful outcome facts. It exposes
+exactly one lawful closure: public held (70 minutes, +3), public evacuated (60,
++3), protected held (25, +1), or protected evacuated (20, +1). The player
+cannot revise the policy after seeing the outcome.
 
-The actual rejected Luna seed 4102 public/private artifacts now reparse as one
-authenticated `gpt-5.6-luna` turn under the repaired authority path. Negative
-tests cover payload substitution, extra wrapper fields, missing compaction,
-repeated valid compactions, and post-terminal replay in both capture and fleet
-validation. A future unrecognized CLI format intentionally rejects until
-reviewed.
+All eleven non-death Wolf-Winter outcomes resolve to held-byre or evacuated
+facts and therefore one—not zero or several—docket options. The event choice is
+available only before Wolf-Winter, remains optional, and adds no decision to
+the direct first-goal path. Exact POI/contact/investigation chronology,
+local-scene option receipts, journal replay, save/restore, full/compact MCP, UI,
+and clone parity preserve the current authored policy and closure. Bounded
+historical migration retains exact prior generic terms under neutral legacy
+markers without inventing a policy or unlocking a docket closure. Compact
+schema v21 carries the event scene without inventing a second state source.
 
-Fresh Luna seed 4103 then played 99 turns through three completed goals without
-an auth or launcher failure, but omitted `acceptedDecisions` from its copied
-exit receipt. The verifier correctly rejected it and no report is counted.
-Fresh Terra seed 4104 produced a fully verified report: it completed Wolf-Winter
-by living-pack diversion at decision 31, continued through The Gallowmere, ended
-at goal completion on decision 56, rated clarity/enjoyment 4/4, was not stuck,
-and would replay. Its crawlboard report is a real S2 causal-copy defect, not a
-source-state leak; the Gallowmere blank result was the blind agent failing to
-forward a nonempty tool response, not a game defect. Both stay outside this
-infrastructure fix.
+The exact hotfix-rebased crawl is zero-finding at 247/247 nodes, 344/344 edges,
+and all 12 boards/quests (`20260719T120308Z`). Full health is green at 384 files
+and 2,925 tests, including integrity, typecheck, lint, format, UI, and all 12
+packs. A browser smoke check rendered both Charter cards, enforced their
+prerequisites, and produced no Vite overlay or console error.
 
-The exact post-change crawl `20260719T100738Z` is zero-finding at 247/247 nodes,
-344/344 edges, and all 12 boards/quests. Focused capture, authority, attestation,
-and certifier checks are green. Full health passes at 381 files and 2,906 tests,
-including integrity, typecheck, lint, format, UI typecheck, and all 12 packs.
+Clean final-tree Terra seed 4108 completed Wolf-Winter by living-pack diversion
+at decision 29, continued, completed The Gallowmere at 53, rated clarity and
+enjoyment 4/4, was not stuck, and would replay. It skipped the optional
+Charter/Docket, so the deterministic pairs—not an invented organic sample—still
+carry the new scene. Its repeated crawlboard copy report is addressed by the
+separate prepared causal-copy increment rather than folded into Civic.
 
-The greater-than-BG3 milestone remains `active_unproven`; this increment repairs
-the evidence pipeline and does not claim gameplay-depth progress.
+The Codex compaction false-rejection repair is now merged through PR #104 with
+both required checks green. It accepts only exact logical context replays in the
+CLI's compaction sequence and keeps altered or second-turn evidence fail-closed;
+the earlier Luna failure was not an authentication problem. A clean final-tree
+blind remains required for this Civic landing.
+
+Feedback compile `20260719T095400Z` remains at 830 verified reports, 79
+journey-v3 pure exits, and 65 continuing players. Two verifier-valid reports are
+new since that compile, below the three-report threshold; the ledger now has 831
+accepted and 59 rejected/ignored. The historical top hot spot remains
+Station-board clarity; Charter visibility is tenth and is now addressed
+structurally, but no fresh organic player sampled the new docket, so its
+retention effect is not claimed.
+
+The greater-than-BG3 milestone remains `active_unproven`. Four Albany jobs and
+five events remain generic; broader independent NPC agendas, current deep crawl,
+organic strategy certification, and the exact same-model pilot plus 100-player
+authority fleet remain open.
 
 ## Chosen Move
 
-Commit this as a separate infrastructure increment, push it through the required
-GitHub `verify` and `crawl-smoke` checks, and merge only when both are green.
-Then rebase the completed Civic Winter Return Docket on the hotfix and land that
-authored Albany increment with a clean final-tree blind.
+Amend the rebased Civic commit with the final evidence, push it through GitHub's
+required checks, and merge only when both are green. The separate crawlboard
+causal-copy repair is already implemented with mechanics locked and should land
+as its own small increment. After those land, author Campus Row's Archive Query
+around Blair's evidence-governance agenda and a mechanically changed return
+service or availability; do not add another mandatory pre-Wolf briefing layer.
 
 ## Acceptance for this increment
 
-1. Real automatic compaction replays attest as one logical turn despite a later
-   wrapper timestamp.
-2. Any payload, wrapper shape, sequence, lifecycle, model, cwd, or turn change
-   remains rejected in capture and fleet authority.
-3. The retained Luna witness reparses, a fresh canonical report verifies, exact
-   post-crawl and full health pass, and no rejected run is counted as evidence.
-4. Required GitHub checks are green before merge.
+1. Equal-term pre-Wolf policy choices persist and cannot be made or changed
+   after Wolf-Winter.
+2. Every non-death Wolf outcome exposes exactly one policy/outcome closure, with
+   paired cases proving that each side can be preferable in reachable states.
+3. Migration, chronology, replay, restore, clone, compact/full MCP, and UI
+   surfaces agree and reject missing, conflicting, or fabricated evidence.
+4. The direct first-goal route stays at or below 45 meaningful decisions because
+   both authored Civic scenes remain optional.
+5. Exact-tree post-crawl, full health, a canonical pure report, and required
+   GitHub checks are green before merge.

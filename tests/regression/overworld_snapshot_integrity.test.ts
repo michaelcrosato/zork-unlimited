@@ -351,7 +351,11 @@ function resolveCurrentOverworldSessionEvent(a: ReturnType<typeof api>, sessionI
     });
   }
   a.investigate_overworld_session_event({ session_id: sessionId, event_id: event.id });
-  a.resolve_overworld_session_event({ session_id: sessionId, event_id: event.id });
+  a.resolve_overworld_session_event({
+    session_id: sessionId,
+    event_id: event.id,
+    ...(event.authored_scene?.options[0] ? { option_id: event.authored_scene.options[0].id } : {}),
+  });
 }
 
 function exportedSnapshotWithCompletedRegionalArc() {
@@ -1199,14 +1203,33 @@ describe("overworld snapshot restore integrity", () => {
   it("rejects local job journal entries recorded before job discovery", () => {
     const a = api();
     const started = a.start_overworld({ compact_context: false });
-    const firstArea = started.observation.areas[0]!;
-    const exploredFirstArea = a.explore_overworld_session_area({
+    const civicPoi = started.observation.pois[0];
+    if (!civicPoi) throw new Error("expected an initial point of interest");
+    a.scout_overworld_session_poi({
       ...FULL_OVERWORLD_RESPONSE,
       session_id: started.session_id,
-      area_id: firstArea.id,
+      poi_id: civicPoi.id,
     });
-    const job = exploredFirstArea.observation.jobs[0];
-    if (!job) throw new Error("expected an initial-area job after local discovery");
+    const afterScout = a.get_overworld_session({
+      include_observation: true,
+      session_id: started.session_id,
+    }).observation;
+    const marketRoute = afterScout.areaExits.find(
+      (route) => route.destination.id === "albany_city__market",
+    );
+    if (!marketRoute) throw new Error("expected a discovered route to Albany Market");
+    a.move_overworld_session_area({
+      ...FULL_OVERWORLD_RESPONSE,
+      session_id: started.session_id,
+      area_route_id: marketRoute.id,
+    });
+    const exploredMarket = a.explore_overworld_session_area({
+      ...FULL_OVERWORLD_RESPONSE,
+      session_id: started.session_id,
+      area_id: "albany_city__market",
+    });
+    const job = exploredMarket.observation.jobs.find((candidate) => !candidate.authored_scene);
+    if (!job) throw new Error("expected a generic Market job after local discovery");
 
     a.work_overworld_session_job({
       ...FULL_OVERWORLD_RESPONSE,
@@ -1217,15 +1240,16 @@ describe("overworld snapshot restore integrity", () => {
     const jobEntryId = `job:${job.id}`;
     const jobEntry = snapshot.journalEntries.find((entry) => entry.id === jobEntryId);
     if (!jobEntry) throw new Error("expected job journal entry");
+    const journalEntries = snapshot.journalEntries.filter((entry) => entry.id !== jobEntryId);
+    const scoutIndex = journalEntries.findIndex((entry) => entry.id === `scout:${civicPoi.id}`);
+    if (scoutIndex < 0) throw new Error("expected the earlier Civic scout entry");
+    journalEntries.splice(scoutIndex, 0, {
+      ...jobEntry,
+      recordedAt: timeLabelForMinutes(8 * 60 + 21),
+    });
     const forgedEarlyJobEntry = {
       ...snapshot,
-      journalEntries: [
-        ...snapshot.journalEntries.filter((entry) => entry.id !== jobEntryId),
-        {
-          ...jobEntry,
-          recordedAt: timeLabelForMinutes(8 * 60),
-        },
-      ],
+      journalEntries,
     };
 
     expect(() => a.restore_overworld_session({ snapshot: forgedEarlyJobEntry })).toThrow(

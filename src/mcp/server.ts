@@ -1060,10 +1060,11 @@ tool(
 );
 tool(
   "resolve_overworld_session_event",
-  "Resolve an investigated local event, spending time and earning renown.",
+  "Resolve an investigated event; use exact option_id for authored scenes.",
   {
     ...OVERWORLD_SESSION,
     event_id: z.string().describe("Event id."),
+    option_id: z.string().optional().describe("Exact option id."),
     ...OVERWORLD_ACTION_CONTEXT,
   },
   (a) => api.resolve_overworld_session_event(defaultCompactOverworld(a)),
@@ -1100,14 +1101,11 @@ tool(
 );
 tool(
   "work_overworld_session_job",
-  "Work a discovered local job, selecting an exact authored option when the job presents a scene.",
+  "Work a discovered job; use exact option_id for authored scenes.",
   {
     ...OVERWORLD_SESSION,
     job_id: z.string().describe("Job id."),
-    option_id: z
-      .string()
-      .optional()
-      .describe("Required exact option id when the job presents an authored scene."),
+    option_id: z.string().optional().describe("Required exact option id."),
     ...OVERWORLD_ACTION_CONTEXT,
   },
   (a) => api.work_overworld_session_job(defaultCompactOverworld(a)),

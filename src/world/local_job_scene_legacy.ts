@@ -5,6 +5,7 @@ import type {
   OverworldLocalSceneProof,
 } from "./session_snapshot.js";
 import { describeOverworldJobAction } from "./local_actions.js";
+import { WINTER_RETURN_DOCKET_GENERIC_PREDECESSOR_WORLD_HASHES } from "./local_event_scene_legacy.js";
 
 export type AuthoredLocalJobLegacyDefinition = Readonly<{
   /** Hash whose generic job copy and terms are preserved by this marker. */
@@ -12,6 +13,8 @@ export type AuthoredLocalJobLegacyDefinition = Readonly<{
   jobId: string;
   sceneId: string;
   legacyJob: OverworldLocalJob;
+  /** Optional exact source-manifest fence for conversions that are not historically global. */
+  acceptedSourceWorldHashes?: ReadonlySet<string>;
 }>;
 
 export type AuthoredLocalJobLegacyCompletion = Readonly<{
@@ -28,6 +31,10 @@ export const OVERWORLD_AUTHORED_LOCAL_JOB_PREDECESSOR_WORLD_HASH =
   "69604947643a24fc2d7c2377a85963742282ac7f83e7cec18a58bfc5eb8f53fc";
 export const AUTHORED_ALBANY_WORKS_JOB_ID = "albany_city__industrial__job";
 export const AUTHORED_ALBANY_WORKS_SCENE_ID = "albany:works-yard-winter-shift";
+export const AUTHORED_ALBANY_CIVIC_JOB_ID = "albany_city__civic_core__job";
+export const AUTHORED_ALBANY_CIVIC_SCENE_ID = "albany:winter-return-docket";
+export const AUTHORED_ALBANY_CIVIC_PREDECESSOR_WORLD_HASH =
+  "815a138cbeeafbc9595c04e37260ccaba9d2d52d6a3341b3c38afe9eade62636";
 
 export const AUTHORED_ALBANY_WORKS_LEGACY_JOB: OverworldLocalJob = Object.freeze({
   id: AUTHORED_ALBANY_WORKS_JOB_ID,
@@ -45,6 +52,22 @@ export const AUTHORED_ALBANY_WORKS_LEGACY_JOB: OverworldLocalJob = Object.freeze
   visibility: "local_job_board",
 });
 
+export const AUTHORED_ALBANY_CIVIC_LEGACY_JOB: OverworldLocalJob = Object.freeze({
+  id: AUTHORED_ALBANY_CIVIC_JOB_ID,
+  home: "albany_city",
+  area: "albany_city__civic_core",
+  kind: "civic_errand",
+  title: "Albany Civic Center: Civic Ledger Run",
+  summary:
+    "The Civic Ledger Run is not make-work: a relief petition, a market license, and a basement seal all need matching before noon.",
+  objective:
+    "Verify the Notice Hall mark, witness names, and counter records before Rowan has to close the file.",
+  reward: "Earn 3 Capital / Mohawk renown and leave with a cleaner Albany lead.",
+  minutes: 61,
+  difficulty: 3,
+  visibility: "local_job_board",
+});
+
 export const AUTHORED_LOCAL_JOB_LEGACY_DEFINITIONS: readonly AuthoredLocalJobLegacyDefinition[] =
   Object.freeze([
     Object.freeze({
@@ -52,6 +75,13 @@ export const AUTHORED_LOCAL_JOB_LEGACY_DEFINITIONS: readonly AuthoredLocalJobLeg
       jobId: AUTHORED_ALBANY_WORKS_JOB_ID,
       sceneId: AUTHORED_ALBANY_WORKS_SCENE_ID,
       legacyJob: AUTHORED_ALBANY_WORKS_LEGACY_JOB,
+    }),
+    Object.freeze({
+      sourceWorldHash: AUTHORED_ALBANY_CIVIC_PREDECESSOR_WORLD_HASH,
+      jobId: AUTHORED_ALBANY_CIVIC_JOB_ID,
+      sceneId: AUTHORED_ALBANY_CIVIC_SCENE_ID,
+      legacyJob: AUTHORED_ALBANY_CIVIC_LEGACY_JOB,
+      acceptedSourceWorldHashes: WINTER_RETURN_DOCKET_GENERIC_PREDECESSOR_WORLD_HASHES,
     }),
   ]);
 
@@ -80,10 +110,12 @@ export function authoredLocalJobLegacyCompletion(
     (candidate) =>
       candidate.jobId === jobId &&
       candidate.sceneId === proof.sceneId &&
-      candidate.sourceWorldHash === proof.sourceWorldHash,
+      (candidate.sourceWorldHash === proof.sourceWorldHash ||
+        candidate.acceptedSourceWorldHashes?.has(proof.sourceWorldHash ?? "")),
   );
   if (!definition) return null;
-  const optionId = authoredLocalJobLegacyOptionId(definition.sourceWorldHash);
+  const sourceWorldHash = proof.sourceWorldHash ?? definition.sourceWorldHash;
+  const optionId = authoredLocalJobLegacyOptionId(sourceWorldHash);
   return proof.optionId === optionId ? { definition, optionId } : null;
 }
 
@@ -105,6 +137,7 @@ export function migrateAuthoredLocalJobLegacyEntry(args: {
   currentJob: OverworldLocalJob;
   definition: AuthoredLocalJobLegacyDefinition;
   entry: OverworldJournalEntry;
+  sourceWorldHash?: string | undefined;
   townName: string;
 }): OverworldJournalEntry {
   if (
@@ -115,9 +148,18 @@ export function migrateAuthoredLocalJobLegacyEntry(args: {
       `Authored local-job migration target does not match registered scene "${args.definition.sceneId}".`,
     );
   }
+  const sourceWorldHash = args.sourceWorldHash ?? args.definition.sourceWorldHash;
+  if (
+    sourceWorldHash !== args.definition.sourceWorldHash &&
+    !args.definition.acceptedSourceWorldHashes?.has(sourceWorldHash)
+  ) {
+    throw new Error(
+      `Authored local-job predecessor for "${args.definition.jobId}" names an unsupported source manifest.`,
+    );
+  }
   const completion = {
     definition: args.definition,
-    optionId: authoredLocalJobLegacyOptionId(args.definition.sourceWorldHash),
+    optionId: authoredLocalJobLegacyOptionId(sourceWorldHash),
   };
   const expected = describeAuthoredLocalJobLegacyAction(completion, args.area);
   if (
@@ -137,7 +179,7 @@ export function migrateAuthoredLocalJobLegacyEntry(args: {
     localSceneProof: {
       sceneId: args.definition.sceneId,
       optionId: completion.optionId,
-      sourceWorldHash: args.definition.sourceWorldHash,
+      sourceWorldHash,
       ...(args.boundary ? { boundary: { ...args.boundary } } : {}),
     },
   });

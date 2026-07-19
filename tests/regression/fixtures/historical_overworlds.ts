@@ -51,11 +51,32 @@ const RELIEF_ALLOCATION_IMPORT_IDS: ReadonlySet<string> = new Set([
 const JUNE_LEFT_AFTER_BLOOD_PREDECESSOR_SUMMARY =
   "June's field seat is empty. Her separate return says the route crossed into combat before she could take the lower rail, ending the cattle-first field agreement.";
 
+/** Reconstruct ff630a1e, immediately before the Winter Return Docket conversion. */
+export function exactWinterReturnDocketPredecessor(current: OverworldManifest): OverworldManifest {
+  const predecessor = structuredClone(current);
+  const event = predecessor.local_events.find(
+    (candidate) => candidate.id === "albany_city__civic_core__event",
+  );
+  const job = predecessor.local_jobs.find(
+    (candidate) => candidate.id === "albany_city__civic_core__job",
+  );
+  if (!event || !job) throw new Error("Albany Civic event and job must exist");
+  delete event.authored_scene;
+  job.title = "Albany Civic Center: Civic Ledger Run";
+  job.summary =
+    "The Civic Ledger Run is not make-work: a relief petition, a market license, and a basement seal all need matching before noon.";
+  job.objective =
+    "Verify the Notice Hall mark, witness names, and counter records before Rowan has to close the file.";
+  job.reward = "Earn 3 Capital / Mohawk renown and leave with a cleaner Albany lead.";
+  delete job.authored_scene;
+  return predecessor;
+}
+
 /** Reconstruct the exact first-authored-scene manifest before its renown consumer was added. */
 export function exactAuthoredAlbanyWorksFirstSceneWorld(
   current: OverworldManifest,
 ): OverworldManifest {
-  const firstScene = structuredClone(current);
+  const firstScene = exactWinterReturnDocketPredecessor(current);
   firstScene.campaign_service_rules = (firstScene.campaign_service_rules ?? []).filter(
     (rule) => rule.id !== "albany:works_public_shift_civic_rest",
   );

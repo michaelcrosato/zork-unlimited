@@ -146,7 +146,7 @@ function resolveCurrentTownEvent(session: OverworldSession): void {
   session.talkToCharacter(view.characters[0]!.id);
   settleOpeningRegistration(session);
   session.investigateEvent(event.id);
-  session.resolveEvent(event.id);
+  session.resolveEvent(event.id, event.authored_scene?.options[0]?.id);
 }
 
 function reachAlbanyStoryChoice(session: OverworldSession): void {
@@ -1243,9 +1243,13 @@ describe("OverworldSession", () => {
   });
 
   it("reveals and completes local jobs tied to mapped areas", () => {
-    const session = new OverworldSession(world);
+    const genericWorld = structuredClone(world);
+    const genericJob = genericWorld.local_jobs.find((job) => job.home === genericWorld.start);
+    if (!genericJob) throw new Error("expected a generic local-job fixture");
+    delete genericJob.authored_scene;
+    const session = new OverworldSession(genericWorld);
     const start = session.view();
-    const hiddenJob = world.local_jobs.find((job) => job.home === start.current.id);
+    const hiddenJob = genericWorld.local_jobs.find((job) => job.home === start.current.id);
     expect(hiddenJob).toBeDefined();
     expect(() => session.workLocalJob(hiddenJob!.id)).toThrow(/Explore local areas/i);
 
@@ -2584,6 +2588,7 @@ describe("OverworldSession", () => {
     const poi = start.pois[0]!;
     const contact = start.characters[0]!;
     const event = start.events[0]!;
+    const optionId = event.authored_scene?.options[0]?.id;
 
     expect(() => session.resolveEvent(event.id)).toThrow(/Before resolving/i);
     session.scoutPoi(poi.id);
@@ -2591,15 +2596,19 @@ describe("OverworldSession", () => {
     settleOpeningRegistration(session);
     session.investigateEvent(event.id);
 
-    const resolved = session.resolveEvent(event.id);
-    expect(resolved.minutes).toBe(30 + event.intensity * 10);
+    const resolved = session.resolveEvent(event.id, optionId);
+    expect(resolved.minutes).toBe(
+      event.authored_scene?.options[0]?.terms.minutes ?? 30 + event.intensity * 10,
+    );
     expect(resolved.entry.kind).toBe("resolution");
     expect(resolved.entry.text).toContain(start.current.region);
 
     const after = session.view();
     expect(after.resolvedEventIds).toContain(event.id);
     expect(after.events.map((candidate) => candidate.id)).not.toContain(event.id);
-    expect(after.regionRenown[start.current.region]).toBe(event.intensity);
+    expect(after.regionRenown[start.current.region]).toBe(
+      event.authored_scene?.options[0]?.terms.renown ?? event.intensity,
+    );
     expect(after.journal).toHaveLength(12);
 
     const compactAfter = session.compactView();
@@ -2607,14 +2616,16 @@ describe("OverworldSession", () => {
     expect(compactAfter.ids.resolved_events ?? []).toContain(event.id);
     expect(compactAfter.journal?.[0]?.[0]).toBe("resolution");
 
-    const repeated = session.resolveEvent(event.id);
+    const repeated = session.resolveEvent(event.id, optionId);
     expect(repeated.alreadyKnown).toBe(true);
     expect(repeated.minutes).toBe(0);
     expect(repeated.discoveredAreas).toEqual([]);
     expect(repeated.discoveredJobs).toEqual([]);
     expect(repeated.discoveredSites).toEqual([]);
     expect(repeated.discoveredQuests).toEqual([]);
-    expect(session.view().regionRenown[start.current.region]).toBe(event.intensity);
+    expect(session.view().regionRenown[start.current.region]).toBe(
+      event.authored_scene?.options[0]?.terms.renown ?? event.intensity,
+    );
   });
 
   it("completes a regional arc after enough anchor-town event resolutions", () => {

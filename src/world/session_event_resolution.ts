@@ -11,6 +11,12 @@ import {
 } from "./session_journal_timeline.js";
 import type { OverworldJournalEntry } from "./session_snapshot.js";
 import { OVERWORLD_STARTING_MINUTES as STARTING_MINUTES } from "./travel_mechanics.js";
+import {
+  localEventSceneRequirementsMet,
+  resolveLocalEventSceneOption,
+  type LocalEventScene,
+  type LocalEventSceneOption,
+} from "./local_event_scene.js";
 
 export type OverworldRegionalArcCompletionIndex = {
   eventsById: ReadonlyMap<string, OverworldLocalEvent>;
@@ -40,7 +46,7 @@ export type OverworldJournalEntryPresence = {
 };
 
 export type OverworldEventResolutionReadinessIndex = {
-  event: Pick<OverworldLocalEvent, "area" | "id">;
+  event: Pick<OverworldLocalEvent, "area" | "authored_scene" | "id">;
   poisByArea: ReadonlyMap<string, readonly Pick<OverworldPoi, "id">[]>;
   charactersByArea: ReadonlyMap<string, readonly OverworldCharacter[]>;
   journalEntryIds: OverworldJournalEntryPresence;
@@ -59,11 +65,13 @@ export type OverworldJournalEntryReadIndex = OverworldJournalEntryPresence & {
 
 export type OverworldEventResolutionPlanState = {
   eventId: string;
+  optionId?: string | undefined;
   eventsById: ReadonlyMap<string, OverworldLocalEvent>;
   currentTownId: string;
   currentTownName: string;
   currentRegion: string;
   currentAreaId: string | null;
+  completedQuestIds: ReadonlySet<string>;
   resolvedEventIds: ReadonlySet<string>;
   journalEntries: OverworldJournalEntryReadIndex;
   poisByArea: ReadonlyMap<string, readonly Pick<OverworldPoi, "id">[]>;
@@ -77,6 +85,10 @@ export type OverworldEventResolutionActionPlan = {
   renown: number;
   region: string;
   entryDraft: Omit<OverworldJournalEntry, "recordedAt">;
+  localScene?: {
+    scene: LocalEventScene;
+    option: LocalEventSceneOption;
+  };
 };
 
 export type OverworldEventResolutionAlreadyKnownPlan = {
@@ -109,6 +121,33 @@ export type OverworldAppliedEventResolution = {
   renownAfter: number;
 };
 
+export type OverworldEventResolutionDescription = Readonly<{
+  title: string;
+  text: string;
+  minutes: number;
+  renown: number;
+}>;
+
+export function describeOverworldEventResolution(
+  event: OverworldLocalEvent,
+  townName: string,
+  region: string,
+  sceneOption: LocalEventSceneOption | null = null,
+): OverworldEventResolutionDescription {
+  const minutes = sceneOption?.terms.minutes ?? 30 + event.intensity * 10;
+  const renown = sceneOption?.terms.renown ?? event.intensity;
+  return {
+    minutes,
+    renown,
+    title: sceneOption
+      ? `Resolved ${event.title}: ${sceneOption.title}`
+      : `Resolved ${event.title}`,
+    text: sceneOption
+      ? `${sceneOption.consequence} The decision costs ${minutes} minutes and earns ${renown} ${region} renown.`
+      : `${townName} stabilizes around ${event.title}. Your work reduces ${event.pressure} pressure and earns ${event.intensity} ${region} renown.`,
+  };
+}
+
 function prerequisiteLabel(prerequisite: OverworldEventResolutionPrerequisite): string {
   return OVERWORLD_EVENT_RESOLUTION_PREREQUISITES.find((entry) => entry.id === prerequisite)!.label;
 }
@@ -116,14 +155,25 @@ function prerequisiteLabel(prerequisite: OverworldEventResolutionPrerequisite): 
 export function overworldEventResolutionReadiness(
   sources: OverworldEventResolutionReadinessIndex,
 ): OverworldEventResolutionReadiness {
-  const scoutedPoi = (sources.poisByArea.get(sources.event.area) ?? []).some((poi) =>
-    sources.journalEntryIds.has(`scout:${poi.id}`),
-  );
-  const talkedContact = (sources.charactersByArea.get(sources.event.area) ?? []).some((character) =>
-    allOverworldContactPresentations(character).some((presentation) =>
-      sources.journalEntryIds.has(presentation.journalId),
-    ),
-  );
+  const scene = sources.event.authored_scene;
+  const scoutedPoi = scene
+    ? sources.journalEntryIds.has(`scout:${scene.required_poi_id}`)
+    : (sources.poisByArea.get(sources.event.area) ?? []).some((poi) =>
+        sources.journalEntryIds.has(`scout:${poi.id}`),
+      );
+  const talkedContact = scene
+    ? (sources.charactersByArea.get(sources.event.area) ?? [])
+        .filter((character) => character.id === scene.required_contact_id)
+        .some((character) =>
+          allOverworldContactPresentations(character).some((presentation) =>
+            sources.journalEntryIds.has(presentation.journalId),
+          ),
+        )
+    : (sources.charactersByArea.get(sources.event.area) ?? []).some((character) =>
+        allOverworldContactPresentations(character).some((presentation) =>
+          sources.journalEntryIds.has(presentation.journalId),
+        ),
+      );
   const investigatedEvent = sources.journalEntryIds.has(`investigate:${sources.event.id}`);
   const missing: OverworldEventResolutionPrerequisite[] = [];
   if (!scoutedPoi) missing.push("scout_poi");
@@ -164,10 +214,26 @@ export function planOverworldEventResolution(
     throw new Error("Move to that local area before resolving that event.");
   }
 
+  const scene = event.authored_scene;
+  let sceneOption: LocalEventSceneOption | null = null;
+  if (scene) {
+    if (state.optionId) sceneOption = resolveLocalEventSceneOption(scene, state.optionId);
+  } else if (state.optionId !== undefined) {
+    throw new Error(`Local event ${event.title} has no authored option "${state.optionId}".`);
+  }
+
   const entryId = `resolve:${event.id}`;
   if (state.resolvedEventIds.has(event.id)) {
     const existing = state.journalEntries.get(entryId);
     if (existing) {
+      if (scene && !sceneOption) {
+        throw new Error(`Choose one authored option for ${event.title}.`);
+      }
+      if (scene && existing.localSceneProof?.optionId !== sceneOption?.id) {
+        throw new Error(
+          `Local event ${event.title} was resolved with a different authored option.`,
+        );
+      }
       return {
         alreadyKnown: true,
         event,
@@ -184,19 +250,44 @@ export function planOverworldEventResolution(
     poisByArea: state.poisByArea,
   });
 
+  if (scene && !localEventSceneRequirementsMet(scene, state)) {
+    throw new Error(
+      `The authored choice for ${event.title} must be made before completing ${scene.forbids_completed_quests?.join(", ") ?? "its forbidden quest"}.`,
+    );
+  }
+  if (scene && !sceneOption) {
+    throw new Error(`Choose one authored option for ${event.title}.`);
+  }
+
+  const action = describeOverworldEventResolution(
+    event,
+    state.currentTownName,
+    state.currentRegion,
+    sceneOption,
+  );
+
   return {
     alreadyKnown: false,
     event,
-    minutes: 30 + event.intensity * 10,
-    renown: event.intensity,
+    minutes: action.minutes,
+    renown: action.renown,
     region: state.currentRegion,
     entryDraft: {
       id: entryId,
       kind: "resolution",
       town: state.currentTownName,
-      title: `Resolved ${event.title}`,
-      text: `${state.currentTownName} stabilizes around ${event.title}. Your work reduces ${event.pressure} pressure and earns ${event.intensity} ${state.currentRegion} renown.`,
+      title: action.title,
+      text: action.text,
+      ...(scene && sceneOption
+        ? {
+            localSceneProof: {
+              sceneId: scene.id,
+              optionId: sceneOption.id,
+            },
+          }
+        : {}),
     },
+    ...(scene && sceneOption ? { localScene: { scene, option: sceneOption } } : {}),
   };
 }
 
@@ -227,24 +318,49 @@ export function assertSnapshotEventResolutionProofs(
     const resolvedAt = journal.recordedAtById.get(`resolve:${eventId}`);
     if (resolvedAt === undefined) continue;
 
-    const scoutAt = journal.scoutTimeByArea.get(event.area);
-    if (scoutAt === undefined || scoutAt > resolvedAt) {
+    const scene = event.authored_scene;
+    const scoutAt = scene
+      ? journal.recordedAtById.get(`scout:${scene.required_poi_id}`)
+      : journal.scoutTimeByArea.get(event.area);
+    if (scoutAt === undefined || (scene ? scoutAt >= resolvedAt : scoutAt > resolvedAt)) {
       throw new Error(
-        `Overworld session snapshot resolved event "${eventId}" is missing a local scout prerequisite.`,
+        scene
+          ? `Overworld session snapshot resolved event "${eventId}" is missing its earlier exact point-of-interest scout prerequisite.`
+          : `Overworld session snapshot resolved event "${eventId}" is missing a local scout prerequisite.`,
       );
     }
 
-    const contactAt = journal.contactTimeByArea.get(event.area);
-    if (contactAt === undefined || contactAt > resolvedAt) {
+    const requiredContact = scene
+      ? sources.charactersById.get(scene.required_contact_id)
+      : undefined;
+    const contactTimes = requiredContact
+      ? allOverworldContactPresentations(requiredContact).flatMap((presentation) => {
+          const recordedAt = journal.recordedAtById.get(presentation.journalId);
+          return recordedAt === undefined ? [] : [recordedAt];
+        })
+      : [];
+    const contactAt = scene
+      ? contactTimes.length > 0
+        ? Math.min(...contactTimes)
+        : undefined
+      : journal.contactTimeByArea.get(event.area);
+    if (contactAt === undefined || (scene ? contactAt >= resolvedAt : contactAt > resolvedAt)) {
       throw new Error(
-        `Overworld session snapshot resolved event "${eventId}" is missing a local contact prerequisite.`,
+        scene
+          ? `Overworld session snapshot resolved event "${eventId}" is missing its earlier exact contact prerequisite.`
+          : `Overworld session snapshot resolved event "${eventId}" is missing a local contact prerequisite.`,
       );
     }
 
     const investigationAt = journal.recordedAtById.get(`investigate:${eventId}`);
-    if (investigationAt === undefined || investigationAt > resolvedAt) {
+    if (
+      investigationAt === undefined ||
+      (scene ? investigationAt >= resolvedAt : investigationAt > resolvedAt)
+    ) {
       throw new Error(
-        `Overworld session snapshot resolved event "${eventId}" is missing an investigated event prerequisite.`,
+        scene
+          ? `Overworld session snapshot resolved event "${eventId}" is missing its earlier exact investigation prerequisite.`
+          : `Overworld session snapshot resolved event "${eventId}" is missing an investigated event prerequisite.`,
       );
     }
   }

@@ -19,6 +19,7 @@ import {
 import {
   OVERWORLD_COMPACT_LOCAL_REF_LIMIT,
   cloneOverworldCompactView,
+  type OverworldCompactEventChoice,
   type OverworldCompactJobChoice,
   type OverworldCompactQuestStart,
   type OverworldCompactView,
@@ -184,7 +185,10 @@ import {
   type OverworldSessionViewModelSourceState,
 } from "./session_view_state.js";
 import { planOverworldSessionRoadRoute } from "./session_route_lifecycle.js";
-import { applyOverworldSessionEventResolutionFromState } from "./session_event_lifecycle.js";
+import {
+  applyOverworldSessionEventResolutionFromState,
+  planOverworldSessionEventResolution,
+} from "./session_event_lifecycle.js";
 import {
   applyOverworldSessionCurrentAreaForTown,
   applyOverworldSessionLocalDiscoveryForTown,
@@ -1670,6 +1674,9 @@ export class OverworldSession {
       discoveredSiteIds: this.discoveredSiteIds,
       discoveredQuestIds: this.discoveredQuestIds,
       completedQuestIds: this.completedQuestIds,
+      resolvedEventIds: this.resolvedEventIds,
+      campaignWorldFactIds: new Set(this.campaignWorldFactIds()),
+      journalEntries: this.journalEntriesById,
     };
   }
 
@@ -1851,6 +1858,9 @@ export class OverworldSession {
       areaExits: visibleOverworldSessionAreaExits(localState, currentArea),
       localState,
       localView,
+      eventChoices: this.liveEventChoices(
+        currentArea ? (this.eventsByArea.get(currentArea.id) ?? []) : [],
+      ),
       jobChoices: this.liveJobChoices(localView.jobs),
       questStarts: this.liveQuestStarts(localView.quests),
       routePlannerIndex: this.routePlannerIndex,
@@ -1908,11 +1918,49 @@ export class OverworldSession {
             discoveredJobIds: this.discoveredJobIds,
             completedJobIds: this.completedJobIds,
             completedQuestIds: this.completedQuestIds,
+            resolvedEventIds: this.resolvedEventIds,
+            campaignWorldFactIds: new Set(this.campaignWorldFactIds()),
             journalEntries: this.journalEntriesById,
           });
           if (!plan.alreadyKnown) choices.push([job.id, option.id]);
         } catch {
           // Canonical preparation is the sole authority for executable job choices.
+        }
+      }
+    }
+    return choices;
+  }
+
+  private liveEventChoices(events: readonly OverworldLocalEvent[]): OverworldCompactEventChoice[] {
+    try {
+      this.assertJourneyAcceptingDecision();
+      this.assertNoPendingRoadEncounter("resolving a local event");
+    } catch {
+      return [];
+    }
+
+    const choices: OverworldCompactEventChoice[] = [];
+    for (const event of events) {
+      if (!event.authored_scene || this.resolvedEventIds.has(event.id)) continue;
+      for (const option of event.authored_scene.options) {
+        try {
+          const plan = planOverworldSessionEventResolution({
+            eventId: event.id,
+            optionId: option.id,
+            eventsById: this.localEventsById,
+            currentTownId: this.currentId,
+            currentTownName: this.currentNode().name,
+            currentRegion: this.currentNode().region,
+            currentAreaId: this.currentAreaIdOrThrow(),
+            completedQuestIds: this.completedQuestIds,
+            resolvedEventIds: this.resolvedEventIds,
+            journalEntries: this.journalEntriesById,
+            poisByArea: this.poisByArea,
+            charactersByArea: this.charactersByArea,
+          });
+          if (!plan.alreadyKnown) choices.push([event.id, option.id]);
+        } catch {
+          // Canonical preparation is the sole authority for executable event choices.
         }
       }
     }
@@ -2240,6 +2288,8 @@ export class OverworldSession {
         discoveredJobIds: this.discoveredJobIds,
         completedJobIds: this.completedJobIds,
         completedQuestIds: this.completedQuestIds,
+        resolvedEventIds: this.resolvedEventIds,
+        campaignWorldFactIds: new Set(this.campaignWorldFactIds()),
         journalEntriesById: this.journalEntriesById,
         regionRenown: this.regionRenown,
         currentTownName: current.name,
@@ -2293,6 +2343,7 @@ export class OverworldSession {
         ...this.actionJournalState(),
         eventId,
         eventsById: this.localEventsById,
+        completedQuestIds: this.completedQuestIds,
         currentTownId: this.currentId,
         currentAreaId: () => this.currentAreaIdOrThrow(),
         currentTownName: current.name,
@@ -2302,7 +2353,7 @@ export class OverworldSession {
     );
   }
 
-  resolveEvent(eventId: string): OverworldJourneyActionResult {
+  resolveEvent(eventId: string, optionId?: string): OverworldJourneyActionResult {
     this.assertJourneyAcceptingDecision();
     this.assertNoPendingRoadEncounter("resolving a local event");
     const current = this.currentNode();
@@ -2311,11 +2362,13 @@ export class OverworldSession {
       applyOverworldSessionEventResolutionFromState({
         ...this.actionJournalState(),
         eventId,
+        optionId,
         eventsById: this.localEventsById,
         currentTownId: this.currentId,
         currentTownName: current.name,
         currentRegion: current.region,
         currentAreaId: this.currentAreaIdOrThrow(),
+        completedQuestIds: this.completedQuestIds,
         resolvedEventIds: this.resolvedEventIds,
         resolvedEventHomeIds: this.resolvedEventHomeIds,
         regionRenown: this.regionRenown,
@@ -2324,7 +2377,7 @@ export class OverworldSession {
         poisByArea: this.poisByArea,
         charactersByArea: this.charactersByArea,
       }),
-      `resolve_event:${eventId}`,
+      optionId ? `resolve_event:${eventId}:${optionId}` : `resolve_event:${eventId}`,
       "progress",
     );
   }

@@ -30,6 +30,7 @@ export function cloneOverworldView(view: OverworldView): OverworldView {
     pois: view.pois.map(cloneOverworldPoi),
     characters: view.characters.map(cloneOverworldCharacterView),
     events: view.events.map(cloneOverworldLocalEvent),
+    eventChoices: view.eventChoices.map(([eventId, optionId]) => [eventId, optionId]),
     jobs: view.jobs.map(cloneOverworldLocalJob),
     jobChoices: view.jobChoices.map(([jobId, optionId]) => [jobId, optionId]),
     rememberedJobs: view.rememberedJobs.map(cloneOverworldLocalJob),

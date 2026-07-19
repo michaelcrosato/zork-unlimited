@@ -365,7 +365,16 @@ function resolveCurrentOverworldSessionEvent(
     });
   }
   a.investigate_overworld_session_event({ session_id: sessionId, event_id: event.id });
-  return a.resolve_overworld_session_event({ session_id: sessionId, event_id: event.id });
+  const prepared = a.get_overworld_session({
+    include_observation: true,
+    session_id: sessionId,
+  }).observation;
+  const optionId = prepared.eventChoices.find(([eventId]) => eventId === event.id)?.[1];
+  return a.resolve_overworld_session_event({
+    session_id: sessionId,
+    event_id: event.id,
+    ...(optionId ? { option_id: optionId } : {}),
+  });
 }
 
 describe("MCP tools — validate / load (§9.4)", () => {
@@ -641,9 +650,13 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(scouted.observation.sites.map((site) => site.id)).toEqual(
       scouted.result.discoveredSites?.map((site) => site.id),
     );
-    expect(scouted.observation.jobs.map((job) => job.id)).toEqual(
+    // Albany's first discovered job is the post-Wolf return docket.  The
+    // player can learn that the counter exists now, but it is not actionable
+    // or displayed as a live job until its authored prerequisites are true.
+    expect(scouted.observation.discoveredJobIds).toEqual(
       scouted.result.discoveredJobs?.map((job) => job.id),
     );
+    expect(scouted.observation.jobs).toEqual([]);
     expect(scouted.observation.quests).toEqual([]);
     expect(scouted.observation.hiddenQuestCount).toBe(localQuests.length);
     expect(scouted.observation.journal[0]?.title).toContain(poi.title);
@@ -900,11 +913,16 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(investigated.result.discoveredQuests).toEqual([]);
     expect(investigated.observation.journal).toHaveLength(16);
     expect(investigated.observation.timeLabel).not.toBe(started.observation.timeLabel);
+    const eventOptionId = investigated.observation.eventChoices.find(
+      ([eventId]) => eventId === event.id,
+    )?.[1];
+    if (!eventOptionId) throw new Error(`Expected a live authored option for ${event.id}.`);
 
     const resolved = a.resolve_overworld_session_event({
       ...FULL_OVERWORLD_RESPONSE,
       session_id: started.session_id,
       event_id: event.id,
+      option_id: eventOptionId,
     });
     expect(resolved.result.minutes).toBe(30 + event.intensity * 10);
     expect(resolved.result.entry.kind).toBe("resolution");
@@ -922,6 +940,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
       ...FULL_OVERWORLD_RESPONSE,
       session_id: started.session_id,
       event_id: event.id,
+      option_id: eventOptionId,
     });
     expect(repeatedResolved.result.alreadyKnown).toBe(true);
     expect(repeatedResolved.result.minutes).toBe(0);
@@ -2095,51 +2114,68 @@ describe("MCP tools — validate / load (§9.4)", () => {
   it("discovers and works local jobs through stateful MCP overworld play", () => {
     const a = api();
     const started = a.start_overworld({ compact_context: false });
-    const area = started.observation.areas[0]!;
-    const hiddenJob = overworld.local_jobs.find(
-      (candidate) => candidate.home === started.observation.current.id,
+    const marketAreaId = "albany_city__market";
+    const marketJob = overworld.local_jobs.find(
+      (candidate) => candidate.id === "albany_city__market__job",
     );
-    expect(hiddenJob).toBeDefined();
+    expect(marketJob).toBeDefined();
     expect(started.observation.jobs).toEqual([]);
     expect(() =>
       a.work_overworld_session_job({
         ...FULL_OVERWORLD_RESPONSE,
         session_id: started.session_id,
-        job_id: hiddenJob!.id,
+        job_id: marketJob!.id,
       }),
     ).toThrow(/Explore local areas/i);
 
-    const explored = a.explore_overworld_session_area({
+    const scoutedCivic = a.scout_overworld_session_poi({
       ...FULL_OVERWORLD_RESPONSE,
       session_id: started.session_id,
-      area_id: area.id,
+      poi_id: started.observation.pois[0]!.id,
     });
-    expect(explored.result.discoveredJobs).toHaveLength(1);
-    const job = explored.observation.jobs[0]!;
-    expect(job.home).toBe(started.observation.current.id);
-    expect(explored.observation.discoveredJobIds).toContain(job.id);
+    const marketRoute = scoutedCivic.observation.areaExits.find(
+      (route) => route.destination.id === marketAreaId,
+    );
+    expect(marketRoute).toBeDefined();
+    const moved = a.move_overworld_session_area({
+      ...FULL_OVERWORLD_RESPONSE,
+      session_id: started.session_id,
+      area_route_id: marketRoute!.id,
+    });
+    const explored = a.scout_overworld_session_poi({
+      ...FULL_OVERWORLD_RESPONSE,
+      session_id: started.session_id,
+      poi_id: moved.observation.pois[0]!.id,
+    });
+    expect(explored.result.discoveredJobs?.map((candidate) => candidate.id)).toContain(
+      marketJob!.id,
+    );
+    const job = explored.observation.jobs.find((candidate) => candidate.id === marketJob!.id);
+    expect(job).toBeDefined();
+    expect(job!.home).toBe(started.observation.current.id);
+    expect(explored.observation.discoveredJobIds).toContain(job!.id);
     expect(explored.observation.hiddenJobCount).toBeGreaterThan(0);
 
     const worked = a.work_overworld_session_job({
       ...FULL_OVERWORLD_RESPONSE,
       session_id: started.session_id,
-      job_id: job.id,
+      job_id: job!.id,
     });
     expect(worked.result.entry).toMatchObject({
       kind: "job",
-      title: `Completed ${job.title}`,
+      title: `Completed ${job!.title}`,
     });
-    expect(worked.result.minutes).toBe(job.minutes);
-    expect(worked.observation.completedJobIds).toContain(job.id);
+    expect(worked.result.minutes).toBe(job!.minutes);
+    expect(worked.observation.completedJobIds).toContain(job!.id);
     expect(worked.observation.regionRenown[started.observation.current.region]).toBe(
-      job.difficulty,
+      job!.difficulty,
     );
     expect(worked.observation.journal[0]?.kind).toBe("job");
 
     const repeated = a.work_overworld_session_job({
       ...FULL_OVERWORLD_RESPONSE,
       session_id: started.session_id,
-      job_id: job.id,
+      job_id: job!.id,
     });
     expect(repeated.result.alreadyKnown).toBe(true);
     expect(repeated.result.minutes).toBe(0);

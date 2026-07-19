@@ -26,7 +26,11 @@ import {
 import { OVERWORLD_MAX_SUPPLIES as MAX_SUPPLIES, travelCondition } from "./travel_mechanics.js";
 import type { CampaignCharacterView } from "./campaign_character_view.js";
 import type { CampaignServiceOffer } from "./campaign_service_rules.js";
-import type { OverworldCompactJobChoice, OverworldCompactQuestStart } from "./compact_view.js";
+import type {
+  OverworldCompactEventChoice,
+  OverworldCompactJobChoice,
+  OverworldCompactQuestStart,
+} from "./compact_view.js";
 
 export type OverworldView = {
   character: CampaignCharacterView;
@@ -41,6 +45,7 @@ export type OverworldView = {
   pois: OverworldPoi[];
   characters: OverworldCharacterView[];
   events: OverworldLocalEvent[];
+  eventChoices: OverworldCompactEventChoice[];
   jobs: OverworldLocalJob[];
   jobChoices: OverworldCompactJobChoice[];
   rememberedJobs: OverworldLocalJob[];
@@ -94,6 +99,7 @@ export type OverworldSessionViewState = {
   poi: readonly OverworldPoi[];
   contacts: readonly OverworldCharacterView[];
   events: readonly OverworldLocalEvent[];
+  eventChoices?: readonly OverworldCompactEventChoice[];
   jobs: readonly OverworldLocalJob[];
   jobChoices?: readonly OverworldCompactJobChoice[];
   rememberedJobs: readonly OverworldLocalJob[];
@@ -168,6 +174,7 @@ export function buildOverworldSessionView(state: OverworldSessionViewState): Ove
     pois: [...state.poi],
     characters: [...state.contacts],
     events: [...state.events],
+    eventChoices: (state.eventChoices ?? []).map(([eventId, optionId]) => [eventId, optionId]),
     jobs: [...state.jobs],
     jobChoices: (state.jobChoices ?? []).map(([jobId, optionId]) => [jobId, optionId]),
     rememberedJobs: [...state.rememberedJobs],

@@ -43,10 +43,9 @@ import { campaignStoryChoiceRefKey } from "./campaign_story_choices.js";
 import type { CampaignCharacterState } from "./campaign_character_state.js";
 import { campaignCharacterMatchesConditions } from "./campaign_consequences.js";
 import { resolveLocalJobSceneOption } from "./local_job_scene.js";
-import {
-  AUTHORED_ALBANY_WORKS_LEGACY_JOB,
-  isAuthoredAlbanyWorksLegacyProof,
-} from "./local_job_scene_legacy.js";
+import { resolveLocalEventSceneOption } from "./local_event_scene.js";
+import { authoredLocalJobLegacyCompletion } from "./local_job_scene_legacy.js";
+import { authoredAlbanyCharterLegacyCompletion } from "./local_event_scene_legacy.js";
 import { QUEST_COMPLETION_RENOWN } from "./session_quests.js";
 
 export type OverworldResourceReplaySourceIndex = {
@@ -74,6 +73,18 @@ export type OverworldCampaignBoundaryReplayIndex = Readonly<{
   worldFactProofOrdinalById: ReadonlyMap<string, number | null>;
   storyChoiceProofOrdinalByKey: ReadonlyMap<string, number>;
 }>;
+
+/** Facts with an exact quest-completion proof strictly before one accepted decision. */
+export function campaignWorldFactsProvenBeforeDecision(
+  campaignBoundaries: OverworldCampaignBoundaryReplayIndex,
+  acceptedDecisions: number,
+): ReadonlySet<string> {
+  return new Set(
+    [...campaignBoundaries.worldFactProofOrdinalById].flatMap(([factId, provenAt]) =>
+      provenAt !== null && acceptedDecisions > provenAt ? [factId] : [],
+    ),
+  );
+}
 
 export type OverworldRoadJournalResolutionEntry = {
   entry: OverworldJournalEntry;
@@ -345,8 +356,9 @@ function replayLocalRegionRenown(
     if (!job) return;
     let amount = job.difficulty;
     if (job.authored_scene && entry.localSceneProof) {
-      amount = isAuthoredAlbanyWorksLegacyProof(job.id, entry.localSceneProof)
-        ? AUTHORED_ALBANY_WORKS_LEGACY_JOB.difficulty
+      const legacyCompletion = authoredLocalJobLegacyCompletion(job.id, entry.localSceneProof);
+      amount = legacyCompletion
+        ? legacyCompletion.definition.legacyJob.difficulty
         : resolveLocalJobSceneOption(job.authored_scene, entry.localSceneProof.optionId).terms
             .renown;
     }
@@ -361,7 +373,26 @@ function replayLocalRegionRenown(
   if (entry.kind === "resolution") {
     const event = sources.eventsById?.get(entry.id.slice("resolve:".length));
     if (event) {
-      addReplayRegionRenown(state, replayNodeRegion(sources, event.home), event.intensity);
+      let amount = event.intensity;
+      if (event.authored_scene && entry.localSceneProof?.sceneId === event.authored_scene.id) {
+        const legacyCompletion = authoredAlbanyCharterLegacyCompletion(
+          event.id,
+          entry.localSceneProof,
+        );
+        if (legacyCompletion) {
+          amount = legacyCompletion.legacyEvent.intensity;
+        } else if (entry.localSceneProof.sourceWorldHash === undefined) {
+          amount = resolveLocalEventSceneOption(
+            event.authored_scene,
+            entry.localSceneProof.optionId,
+          ).terms.renown;
+        } else {
+          throw new Error(
+            `Overworld session snapshot authored event "${event.id}" names an untrusted replay source.`,
+          );
+        }
+      }
+      addReplayRegionRenown(state, replayNodeRegion(sources, event.home), amount);
     }
     return;
   }

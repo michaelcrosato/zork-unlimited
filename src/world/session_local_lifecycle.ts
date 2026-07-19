@@ -39,6 +39,7 @@ import {
 } from "./session_local_actions.js";
 import type { OverworldJournalEntry } from "./session_snapshot.js";
 import type { CampaignCharacterState } from "./campaign_character_state.js";
+import { localEventSceneRequirementsMet } from "./local_event_scene.js";
 
 export type OverworldSessionAreaPlanState = {
   areaId: string;
@@ -84,6 +85,8 @@ export type OverworldSessionLocalJobPlanState = {
   discoveredJobIds: ReadonlySet<string>;
   completedJobIds: ReadonlySet<string>;
   completedQuestIds?: ReadonlySet<string> | undefined;
+  resolvedEventIds?: ReadonlySet<string> | undefined;
+  campaignWorldFactIds?: ReadonlySet<string> | undefined;
   journalEntries: ReadonlyMap<string, OverworldJournalEntry>;
 };
 
@@ -116,6 +119,7 @@ export type OverworldSessionContactTalkPlanState = {
 export type OverworldSessionEventInvestigationPlanState = {
   eventId: string;
   eventsById: ReadonlyMap<string, OverworldLocalEvent>;
+  completedQuestIds: ReadonlySet<string>;
   currentTownId: string;
   currentAreaId: () => string;
 };
@@ -259,6 +263,16 @@ export function planOverworldSessionEventInvestigation(
   }
   if (event.area !== state.currentAreaId()) {
     throw new Error("Move to that local area before investigating that event.");
+  }
+  if (
+    event.authored_scene &&
+    !localEventSceneRequirementsMet(event.authored_scene, {
+      completedQuestIds: state.completedQuestIds,
+    })
+  ) {
+    throw new Error(
+      `The authored choice for ${event.title} must be made before completing ${event.authored_scene.forbids_completed_quests?.join(", ") ?? "its forbidden quest"}.`,
+    );
   }
   return { action: describeOverworldEventAction(event) };
 }

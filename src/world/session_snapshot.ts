@@ -349,10 +349,14 @@ const OverworldJournalEntrySchema = z
         message: "Quest-start proofs are only valid on quest entries.",
       });
     }
-    if (entry.localSceneProof !== undefined && entry.kind !== "job") {
+    if (
+      entry.localSceneProof !== undefined &&
+      entry.kind !== "job" &&
+      entry.kind !== "resolution"
+    ) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "Local-scene proofs are only valid on job entries.",
+        message: "Local-scene proofs are only valid on job or resolution entries.",
       });
     }
   });

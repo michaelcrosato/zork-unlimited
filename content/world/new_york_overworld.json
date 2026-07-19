@@ -31732,7 +31732,37 @@
       "title": "Albany Civic Center: charter backlog",
       "pressure": "rumor",
       "intensity": 2,
-      "summary": "Charter runners stack sealed files by the public stair while a deputy keeps sending people to the wrong counter. To clear the backlog, read the Notice Hall marks, ask Rowan which docket matters, then inspect the stair and underrooms."
+      "summary": "Charter runners stack sealed files by the public stair while a deputy keeps sending people to the wrong counter. To clear the backlog, read the Notice Hall marks, ask Rowan which docket matters, then inspect the stair and underrooms.",
+      "authored_scene": {
+        "version": 1,
+        "id": "albany:winter-return-charter-record",
+        "prompt": "Rowan can clear the blocked winter-relief petitions only if you choose how the household affidavits enter Albany's record. A public record supports stronger later scrutiny and standing but takes longer to close; a protected schedule keeps names sealed and can be closed faster. Both clear today's stair on identical terms, and Rowan will not reopen the choice after a field return.",
+        "required_poi_id": "albany_city__civic_core__poi",
+        "required_contact_id": "albany_city__civic_core__contact",
+        "forbids_completed_quests": ["wolf_winter"],
+        "options": [
+          {
+            "id": "open_public_relief_record",
+            "title": "Open a public winter-relief record",
+            "preview": "Spend 50 minutes matching the petition marks into a public, auditable relief count. Earn 2 Capital / Mohawk renown.",
+            "consequence": "Rowan publishes the relief totals and household claims under the public charter. The filing is permanent: a truthful field return can support stronger public scrutiny and standing, but takes longer to audit and puts named hardship in the open record.",
+            "terms": {
+              "minutes": 50,
+              "renown": 2
+            }
+          },
+          {
+            "id": "protect_household_relief_details",
+            "title": "Protect the household relief details",
+            "preview": "Spend 50 minutes matching the same petition marks into a sealed household schedule. Earn 2 Capital / Mohawk renown.",
+            "consequence": "Rowan records the relief totals while sealing names and household details under the charter's privacy rule. The filing is permanent: a truthful field return can close faster for less public standing, and hardship stays protected.",
+            "terms": {
+              "minutes": 50,
+              "renown": 2
+            }
+          }
+        ]
+      }
     },
     {
       "id": "albany_city__market__event",
@@ -51335,13 +51365,116 @@
       "home": "albany_city",
       "area": "albany_city__civic_core",
       "kind": "civic_errand",
-      "title": "Albany Civic Center: Civic Ledger Run",
-      "summary": "The Civic Ledger Run is not make-work: a relief petition, a market license, and a basement seal all need matching before noon.",
-      "objective": "Verify the Notice Hall mark, witness names, and counter records before Rowan has to close the file.",
-      "reward": "Earn 3 Capital / Mohawk renown and leave with a cleaner Albany lead.",
+      "title": "Rowan's Winter Return Docket",
+      "summary": "After The Wolf-Winter, Rowan must reconcile the permanent charter filing with what actually happened at Cade's steading. The earlier public-or-protected record and the truthful held-or-evacuated return determine the only lawful closure.",
+      "objective": "Return to the Notice Hall and close the exact relief record you authored before departure against Albany's certified Wolf-Winter outcome.",
+      "reward": "Earn 1 or 3 Capital / Mohawk renown according to the lawful closure, with public scrutiny costing more time than protected filing.",
       "minutes": 61,
       "difficulty": 3,
-      "visibility": "local_job_board"
+      "visibility": "local_job_board",
+      "authored_scene": {
+        "version": 1,
+        "id": "albany:winter-return-docket",
+        "prompt": "Rowan lays the pre-departure charter record beside the certified return. There is no second policy choice now: Albany can close only the filing you actually authored, against whether Cade's byre held or the steading evacuated.",
+        "required_poi_id": "albany_city__civic_core__poi",
+        "required_contact_id": "albany_city__civic_core__contact",
+        "requires_completed_quests": [
+          "wolf_winter"
+        ],
+        "requires_resolved_events": [
+          "albany_city__civic_core__event"
+        ],
+        "options": [
+          {
+            "id": "file_public_held_return",
+            "title": "File the public held-byre return",
+            "preview": "Spend 70 minutes publishing the held-byre count against every open household claim. Earn 3 Capital / Mohawk renown.",
+            "consequence": "Rowan closes the public relief record with Cade's byre held, names the claims met and still exposed, and makes the exact return available for civic scrutiny.",
+            "terms": {
+              "minutes": 70,
+              "renown": 3
+            },
+            "requires_event_options": [
+              {
+                "event_id": "albany_city__civic_core__event",
+                "option_id": "open_public_relief_record"
+              }
+            ],
+            "requires_all_world_facts": [
+              "fact:wolf_winter_byre_held"
+            ],
+            "forbids_any_world_facts": [
+              "fact:wolf_winter_steading_evacuated"
+            ]
+          },
+          {
+            "id": "seal_protected_held_return",
+            "title": "Seal the protected held-byre return",
+            "preview": "Spend 25 minutes certifying the held-byre count without reopening household details. Earn 1 Capital / Mohawk renown.",
+            "consequence": "Rowan closes the protected schedule with Cade's byre held, preserves the household seals, and records only the minimum certified relief count.",
+            "terms": {
+              "minutes": 25,
+              "renown": 1
+            },
+            "requires_event_options": [
+              {
+                "event_id": "albany_city__civic_core__event",
+                "option_id": "protect_household_relief_details"
+              }
+            ],
+            "requires_all_world_facts": [
+              "fact:wolf_winter_byre_held"
+            ],
+            "forbids_any_world_facts": [
+              "fact:wolf_winter_steading_evacuated"
+            ]
+          },
+          {
+            "id": "file_public_evacuated_return",
+            "title": "File the public evacuation return",
+            "preview": "Spend 60 minutes publishing the evacuation and loss count against every open household claim. Earn 3 Capital / Mohawk renown.",
+            "consequence": "Rowan closes the public relief record with the steading evacuated, names the losses and displaced claims, and makes Albany's exact shortfall available for civic scrutiny.",
+            "terms": {
+              "minutes": 60,
+              "renown": 3
+            },
+            "requires_event_options": [
+              {
+                "event_id": "albany_city__civic_core__event",
+                "option_id": "open_public_relief_record"
+              }
+            ],
+            "requires_all_world_facts": [
+              "fact:wolf_winter_steading_evacuated"
+            ],
+            "forbids_any_world_facts": [
+              "fact:wolf_winter_byre_held"
+            ]
+          },
+          {
+            "id": "seal_protected_evacuated_return",
+            "title": "Seal the protected evacuation return",
+            "preview": "Spend 20 minutes certifying the evacuation and minimum warning without reopening household details. Earn 1 Capital / Mohawk renown.",
+            "consequence": "Rowan closes the protected schedule with the steading evacuated, preserves the household seals, and records the minimum warning needed for Albany's next relief action.",
+            "terms": {
+              "minutes": 20,
+              "renown": 1
+            },
+            "requires_event_options": [
+              {
+                "event_id": "albany_city__civic_core__event",
+                "option_id": "protect_household_relief_details"
+              }
+            ],
+            "requires_all_world_facts": [
+              "fact:wolf_winter_steading_evacuated"
+            ],
+            "forbids_any_world_facts": [
+              "fact:wolf_winter_byre_held"
+            ]
+          }
+        ]
+      }
     },
     {
       "id": "albany_city__market__job",

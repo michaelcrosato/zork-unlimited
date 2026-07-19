@@ -6,7 +6,7 @@ import { compactText } from "../core/compact_text.js";
 import type { CampaignCharacterView } from "./campaign_character_view.js";
 import type { CampaignServiceOffer } from "./campaign_service_rules.js";
 import type { OverworldQuestLaunchView } from "./quest_launch.js";
-import type { OverworldLocalJob } from "./overworld.js";
+import type { OverworldLocalEvent, OverworldLocalJob } from "./overworld.js";
 
 export const OVERWORLD_COMPACT_JOURNAL_LIMIT = 5;
 export const OVERWORLD_COMPACT_ROUTE_LIMIT = 8;
@@ -24,9 +24,26 @@ export const OVERWORLD_COMPACT_TITLE_CHAR_LIMIT = 140;
 export const OVERWORLD_COMPACT_RISK_CHAR_LIMIT = 160;
 export const OVERWORLD_COMPACT_ROAD_EVENT_SUMMARY_CHAR_LIMIT = 240;
 export const OVERWORLD_COMPACT_SERVICE_SUMMARY_CHAR_LIMIT = 240;
-export const OVERWORLD_COMPACT_VIEW_VERSION = 20 as const;
+export const OVERWORLD_COMPACT_VIEW_VERSION = 21 as const;
 
 export type OverworldCompactRef = readonly [id: string, name: string];
+export type OverworldCompactEventSceneOption = readonly [
+  optionId: string,
+  title: string,
+  minutes: number,
+  renown: number,
+  preview: string,
+  consequence: string,
+];
+export type OverworldCompactEventScene = readonly [
+  eventId: string,
+  sceneId: string,
+  prompt: string,
+  requiredPoiId: string,
+  requiredContactId: string,
+  options: readonly OverworldCompactEventSceneOption[],
+];
+export type OverworldCompactEventChoice = readonly [eventId: string, optionId: string];
 export type OverworldCompactJobLeadRef = readonly [id: string, title: string, areaId: string];
 export type OverworldCompactJobSceneOption = readonly [
   optionId: string,
@@ -310,6 +327,8 @@ export type OverworldCompactView = {
   poi: OverworldCompactRef[];
   contacts: OverworldCompactRef[];
   events: OverworldCompactRef[];
+  event_scenes?: OverworldCompactEventScene[];
+  event_choices?: OverworldCompactEventChoice[];
   local_refs_truncated?: OverworldCompactLocalRefTruncation;
   jobs?: OverworldCompactRef[];
   job_scenes?: OverworldCompactJobScene[];
@@ -365,6 +384,10 @@ export const OVERWORLD_COMPACT_LEGEND = {
   poi: "[[poi_id, title], ...] points of interest (scout_overworld_session_poi)",
   contacts: "[[character_id, name], ...] people here (talk_overworld_session_contact)",
   events: "[[event_id, title], ...] local events (investigate/resolve_overworld_session_event)",
+  event_scenes:
+    "[[event_id, scene_id, prompt, required_poi_id, required_contact_id, [[option_id, title, minutes, renown, preview, consequence]]], ...] authored event scenes; complete the named setup and investigate before choosing",
+  event_choices:
+    "[[event_id, option_id], ...] currently legal authored event choices; call resolve_overworld_session_event with these exact ids",
   local_refs_truncated:
     "keys among areas/poi/contacts/events/jobs/sites/quests whose lists were capped",
   jobs: "[[job_id, title], ...] discovered jobs (work_overworld_session_job)",
@@ -495,6 +518,39 @@ export function compactOverworldJobLeadRefs(
     refs.push(compactOverworldJobLeadRef(values[index]!));
   }
   return refs;
+}
+
+export function compactOverworldEventScenes(
+  values: readonly OverworldLocalEvent[],
+  limit = OVERWORLD_COMPACT_LOCAL_REF_LIMIT,
+): OverworldCompactEventScene[] {
+  const scenes: OverworldCompactEventScene[] = [];
+  for (const event of values.slice(0, limit)) {
+    const scene = event.authored_scene;
+    if (!scene) continue;
+    scenes.push([
+      event.id,
+      scene.id,
+      compactText(scene.prompt, OVERWORLD_COMPACT_SERVICE_SUMMARY_CHAR_LIMIT),
+      scene.required_poi_id,
+      scene.required_contact_id,
+      scene.options.map((option) => [
+        option.id,
+        compactOverworldTitle(option.title),
+        option.terms.minutes,
+        option.terms.renown,
+        compactText(option.preview, OVERWORLD_COMPACT_SERVICE_SUMMARY_CHAR_LIMIT),
+        compactText(option.consequence, OVERWORLD_COMPACT_SERVICE_SUMMARY_CHAR_LIMIT),
+      ]),
+    ]);
+  }
+  return scenes;
+}
+
+export function compactOverworldEventChoices(
+  values: readonly OverworldCompactEventChoice[],
+): OverworldCompactEventChoice[] {
+  return values.map(([eventId, optionId]) => [eventId, optionId]);
 }
 
 export function compactOverworldJobScenes(
@@ -1033,6 +1089,17 @@ export function cloneOverworldCompactView(view: OverworldCompactView): Overworld
   };
 
   if (view.area_routes) clone.area_routes = cloneTupleList(view.area_routes);
+  if (view.event_scenes) {
+    clone.event_scenes = view.event_scenes.map((scene) => [
+      scene[0],
+      scene[1],
+      scene[2],
+      scene[3],
+      scene[4],
+      cloneTupleList(scene[5]),
+    ]);
+  }
+  if (view.event_choices) clone.event_choices = cloneTupleList(view.event_choices);
   if (view.service_offers) clone.service_offers = cloneTupleList(view.service_offers);
   if (view.roads_truncated) clone.roads_truncated = true;
   if (view.area_routes_truncated) clone.area_routes_truncated = true;
@@ -1098,6 +1165,12 @@ export function compactOverworldView(view: OverworldView): OverworldCompactView 
   const areaRoutes = compactOverworldAreaRoutes(view.areaExits);
   const roadsTruncated = compactOverworldMovementTruncated(view.exits);
   const areaRoutesTruncated = compactOverworldMovementTruncated(view.areaExits);
+  const visibleEvents = view.events.slice(0, OVERWORLD_COMPACT_LOCAL_REF_LIMIT);
+  const visibleEventIds = new Set(visibleEvents.map((event) => event.id));
+  const eventScenes = compactOverworldEventScenes(visibleEvents);
+  const eventChoices = compactOverworldEventChoices(
+    view.eventChoices.filter(([eventId]) => visibleEventIds.has(eventId)),
+  );
   const visibleJobs = view.jobs.slice(0, OVERWORLD_COMPACT_LOCAL_REF_LIMIT);
   const visibleJobIds = new Set(visibleJobs.map((job) => job.id));
   const jobs = compactOverworldTitleRefs(visibleJobs);
@@ -1173,7 +1246,9 @@ export function compactOverworldView(view: OverworldView): OverworldCompactView 
     areas: compactOverworldRefs(view.areas),
     poi: compactOverworldTitleRefs(view.pois),
     contacts: compactOverworldRefs(view.characters),
-    events: compactOverworldTitleRefs(view.events),
+    events: compactOverworldTitleRefs(visibleEvents),
+    ...(eventScenes.length > 0 ? { event_scenes: eventScenes } : {}),
+    ...(eventChoices.length > 0 ? { event_choices: eventChoices } : {}),
     ...(localRefsTruncated.length > 0 ? { local_refs_truncated: localRefsTruncated } : {}),
     ...(jobs.length > 0 ? { jobs } : {}),
     ...(jobScenes.length > 0 ? { job_scenes: jobScenes } : {}),

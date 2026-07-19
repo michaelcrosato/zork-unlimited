@@ -55,7 +55,14 @@ type FixtureOverworld = Record<string, unknown> & {
   };
   characters: Array<{ variants?: FixtureContactVariant[] }>;
   local_jobs?: Array<{
-    authored_scene?: { requires_completed_quests?: string[] };
+    authored_scene?: {
+      requires_completed_quests?: string[];
+      requires_all_world_facts?: string[];
+      forbids_any_world_facts?: string[];
+    };
+  }>;
+  local_events?: Array<{
+    authored_scene?: { forbids_completed_quests?: string[] };
   }>;
 };
 
@@ -83,9 +90,23 @@ function fixtureOverworldWithOpeningContactVariants(
     else delete character.variants;
   }
   // Keep the required one-job-per-area topology, but strip authored overlays
-  // whose quest prerequisites are deliberately absent from this one-quest catalog.
+  // whose quest or campaign-fact prerequisites are deliberately absent from
+  // this one-quest, no-export fixture catalog. Generic local content remains
+  // valid without these optional authored layers.
+  for (const event of world.local_events ?? []) {
+    if (
+      !event.authored_scene?.forbids_completed_quests?.every((questId) => questIds.has(questId))
+    ) {
+      delete event.authored_scene;
+    }
+  }
   for (const job of world.local_jobs ?? []) {
-    if (!job.authored_scene?.requires_completed_quests?.every((questId) => questIds.has(questId))) {
+    const scene = job.authored_scene;
+    if (
+      !scene?.requires_completed_quests?.every((questId) => questIds.has(questId)) ||
+      (scene?.requires_all_world_facts?.length ?? 0) > 0 ||
+      (scene?.forbids_any_world_facts?.length ?? 0) > 0
+    ) {
       delete job.authored_scene;
     }
   }
