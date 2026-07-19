@@ -137,6 +137,11 @@ function lureRoute(opening: "clean" | "fouled" | "fouled_braced" | "hybrid"): Ro
   });
   act("go_west");
   act("go_up");
+  const loft = buildRpgObservation(index, state);
+  expect(loft.description).toMatch(
+    /Cade's local feed-plan instruction[^]*feed-hauler's crawlboard/i,
+  );
+  expect(loft.description).not.toMatch(/Jamie|packet/i);
   act("use_winter_feed_sack_on_loft_hatch");
   expect(state.flags.flank_redirected).toBe(true);
   act("go_east");

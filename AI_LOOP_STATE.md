@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 580 -->
+<!-- historical_cycle_count: 581 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - wolf_winter_crawlboard_source_copy
+
+- Evidence choice: verifier-valid Terra seed 4104 exposed a real S2 causal-copy defect: Jamie's certified combat opening and Cade's separately taught nonlethal second cast use the same physical feed-hauler crawlboard, but generic “in your packet” copy falsely made Cade's route sound imported.
+- Surface: mechanics are unchanged; Jamie alone opens the uncommitted rail-free combat drop, while only Cade's irreversible finite-feed commitment teaches its own second-cast route. Hayden plus combat remains barred, and Hayden plus Cade never gains Jamie's evidence or prose.
+- Counterfactual: source, strategy, loft-resource, full observation, and compact no-truncation tests prove Jamie/combat, Hayden/blocked, and Hayden/Cade-lure provenance without packet leakage; docs and the causal matrix now state the same boundary.
+- Pure evidence: Terra seed 4116 verified 46 decisions across Wolf-Winter fortification and The Gallowmere at 4/4, unstuck/replay-yes. Clean ten-Spark seeds 4120–4129 consumed 59.48M input tokens with one valid report: seed 4122 ended Wolf at 23, 4/5, unstuck/replay-yes; nine forbidden resource probes remain excluded. Rejected seed 4121 alone explored Cade's pack-diversion crawlboard, so deterministic pairs still carry direct evidence.
+- Compile: `20260719T130217Z` has 833 verified reports and 82 current-contract pure exits, 68 continuing; seed 4122 is the sole new accepted report, below the next compile threshold. One real low-severity child-session argument naming inconsistency remains separate; contact-id and fixed-checkpoint complaints audited as player misuse/disclosed pacing.
+- Self-critique: PASS for truthful crawlboard provenance, not the greater-than-BG3 milestone. Albany now has 2/6 authored jobs and 1/6 authored events; Campus/Blair remains the next bounded depth conversion.
+- Guard: independent red-team found no P0–P2, exact rebased crawl `20260719T132548Z` is zero-finding at 247/247 nodes, 344/344 edges, and 12/12 boards/quests, and health passes 384 files/2,926 tests plus UI/all packs.
 
 ### Cycle result - winter_return_docket
 
@@ -144,12 +154,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Pure evidence: seed 2717 verified pure/fresh, completed Wolf-Winter at decision 25, continued seven times through five goals, and ended voluntarily at 122; clarity/enjoyment 4/5 and 5/5, stuck false, replay true, with only later-quest S1/S0 findings.
 - Compile/self-critique: compile `20260715T221223Z` has 785 verified reports and 36/36 current-contract pure players continuing at least once. PASS for F06, not the greater-than-BG3 claim: F02, numeric/fleet certification, and publication remain.
 - Guard: independent audit closed exact F12 ally-before-allocation replay and compact-surface gaps; concrete import liveness is 17/17, and final crawl `20260715T215635Z` reached 247/247 nodes, 344/344 edges, and 12/12 quests with zero findings.
-
-### Cycle result - wolf_winter_hill_approach
-
-- Evidence choice: `SS-F07-hill-route` was the next defining-slice gap because Albany preparation still ended in a consequence-free teleport to Cade's yard instead of a material road commitment.
-- Surface: Hayden now offers an exposed ridge (30 minutes, one supply, 25 fatigue, alarm 1, first lure DC 10) or sheltered stockway (75 minutes, two supplies, 10 fatigue, alarm 0, first lure DC 12). The generic atomic launch boundary records one suffixed start decision, exact route proof/import, exclusive knowledge and Hayden memory, and fails closed without adding a mandatory input.
-- Counterfactual: seed 9 makes the identical first cast pass on the ridge and fail into no-retry rail recovery on the stockway; seed 26 makes both pass but reaches alarm 4/scattered cattle versus alarm 3/whole herd. Exact resources, condition, action, outcome, return summary, save replay, compact/full/UI/CLI/crawler parity, and bounded F11 migration are proven.
-- Pure evidence: seed 2716 verified pure/fresh, understood the stockway tradeoff, completed Wolf-Winter at decision 27 with an unharmed herd, continued through three goals, and ended voluntarily at checkpoint 80; clarity/enjoyment 4/5, stuck false, replay true. It reported only recurring S1 duplicate generated names outside the authored slice and S0 prose issues.
-- Compile/self-critique: only this report is new since compile `20260715T120239Z`, so no compile is due. PASS for F07, not the greater-than-BG3 slice claim: the ledger advances 9/12→10/12; F06, F02, numeric/fleet certification, and publication remain.
-- Guard: adversarial audit closed a legacy-copy relabelling gap by pinning exact per-era quest-start copy and found no remaining P0/P1/P2 issue. Final crawl `20260715T175121Z` reached 247/247 nodes, 344/344 edges, 12/12 boards, and 12/12 quests with zero findings; the fresh report sidecar is verified.

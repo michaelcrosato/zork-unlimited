@@ -452,7 +452,7 @@ describe("SS-F03 — Albany lead-source counterfactual", () => {
     expect(sponsoredHayden.choice.consequence).toContain("reduces the route-desk review");
   });
 
-  it("imports exactly one equal-seed source and makes only Jamie's crawlboard reach the loft", () => {
+  it("imports exactly one equal-seed source and reserves the uncommitted combat loft for Jamie", () => {
     const rowan = launchMcpWolf(ROWAN_SOURCE).state;
     const jamie = launchMcpWolf(JAMIE_SOURCE).state;
     const hayden = launchMcpWolf(HAYDEN_SOURCE).state;
@@ -501,11 +501,55 @@ describe("SS-F03 — Albany lead-source counterfactual", () => {
     expect(actionIds(atStores[1]!)).toContain("go_up");
     expect(actionIds(atStores[2]!)).not.toContain("go_up");
 
+    const haydenCombatStore = buildRpgObservation(wolfIndex, atStores[2]!);
+    const haydenBlockedLoft = haydenCombatStore.blocked_exits.find(
+      (candidate) => candidate.direction === "up",
+    );
+    expect(haydenBlockedLoft).toEqual({
+      direction: "up",
+      message:
+        "Before the flank-wolf falls, settle the yearling. Then take the crawlboard named by certified testimony or Cade's committed plan, or bind a split rail; leave the sound rail wedged.",
+    });
+    expect(haydenBlockedLoft?.message).not.toMatch(/in your packet/i);
+    expect(haydenCombatStore.description).not.toMatch(/Jamie's certified testimony/i);
+
     let jamieAtFlank = act(atStores[1]!, "go_up");
     expect(jamieAtFlank.current).toBe("fodder_loft");
     jamieAtFlank = act(jamieAtFlank, "go_east");
     expect(actionIds(jamieAtFlank)).toContain("maneuver_flank_wolf_drop_from_loft");
     expect(actionIds(jamieAtFlank)).not.toContain("maneuver_flank_wolf_frost_brace_trip");
+  });
+
+  it("lets Hayden's source use Cade's separately committed nonlethal crawlboard instruction", () => {
+    let state = launchMcpWolf(HAYDEN_SOURCE).state;
+    for (const actionId of [
+      "use_sheltered_stockway_last_mile",
+      "talk_houndsman",
+      "ask_lure",
+      "ask_commit_lure",
+      "ask_leave",
+      "go_west",
+      "take_winter_feed_sack",
+      "go_east",
+      "go_north",
+      "use_winter_feed_sack_on_downwind_feed_line",
+      "go_south",
+      "go_west",
+    ]) {
+      state = act(state, actionId);
+    }
+
+    expect(state.flags.hayden_frost_report_certified).toBe(true);
+    expect(state.flags.jamie_market_testimony_certified).not.toBe(true);
+    expect(state.flags.strategy_lure_committed).toBe(true);
+    expect(actionIds(state)).toContain("go_up");
+
+    state = act(state, "go_up");
+    const loft = buildRpgObservation(wolfIndex, state);
+    expect(loft.description).toMatch(
+      /Cade's local feed-plan instruction[^]*feed-hauler's crawlboard/i,
+    );
+    expect(loft.description).not.toMatch(/Jamie|packet/i);
   });
 
   it("makes only Hayden's unbound failed-rail line expose its high-variance two-beat maneuver", () => {
