@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 576 -->
+<!-- historical_cycle_count: 577 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - codex_pure_probe_compatibility
+
+- Evidence choice: mass Spark play exposed a current Codex CLI preflight spelling that omitted the optional empty resource cursor; exact seed 2905 was otherwise a valid 38-call fresh-overworld Wolf-Winter journey, while malformed comparison streams were genuine contract violations.
+- Surface: the pure envelope accepts only one paired, content-free, exact method-not-found `list_mcp_resources` probe for `adventureforge` with either omitted or explicit empty cursor, and requires its complete start/finish pair before the first gameplay call.
+- Fail closed: nonempty or missing-server arguments, duplicate, unpaired, successful/content-bearing, cross-server, post-start, and gameplay-interleaved probes still reject; real seed 2905 passes while seeds 2901–2904 and 2906–2908 remain rejected.
+- Pure evidence: dirty-candidate Spark seed 2925 completed Wolf-Winter and The Gallowmere in 46 decisions after two continuations; seed 2929 organically resolved Charter Backlog then completed Wolf-Winter by fully nonlethal Pack Diverted in 27. Both were 4/4, unstuck, replay-yes, and bug-free.
+- Feedback: the ledger reaches 817 accepted reports; only two are new since compile `20260719T055755Z`, so no recompile is due. Seed 2929 preserves Charter Backlog as an early lead and makes its delayed Civic return consequence the next authored scene.
+- Self-critique: PASS for strict CLI compatibility, `active_unproven` for the greater-than-BG3 milestone; five Albany jobs/events, Codex-native fleet attestation, global failure-forward proof, three NPC agendas, deep crawl, and exact 100-player certification remain.
+- Guard: the unmodified event-stream witness and negative comparisons pass; health is green at 379 files/2,872 tests plus integrity, UI, and all 12 packs, and final crawl `20260719T063820Z` reached 247/247 nodes, 344/344 edges, and 12/12 boards/quests with zero findings.
 
 ### Cycle result - authored_albany_works_scene
 
@@ -140,12 +150,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Pure evidence: seed 2713 verified pure/fresh, chose Road-Warden + Hayden's report + Emery's route, completed Wolf-Winter at decision 23, continued at 23/40/47/68/80/91, and ended voluntarily after five goals at 114; clarity/enjoyment 5/5, stuck false, replay true, no bugs. It chose combat and skipped June, so paired deterministic and live embedded proofs carry F04's ally counterfactual.
 - Compile/self-critique: only seeds 2712/2713 are verified since compile `20260715T000942Z`, so no compile is due. PASS for the first evidence-grade ally fork, not the greater-than-BG3 slice claim: 7/12 forks and two of four strategy families are complete; `SS-F10-crisis-priority` and full drive/evacuate remain next.
 - Guard: independent acceptance/adversarial audits closed early-contact restore, quest-order, promise/export, service-reachability/collision, fixture, and liveness gaps; live UI showed June + active promise with zero console errors. Pre/final 6,000-step crawls `20260715T015517Z`/`20260715T073849Z` reached 247/247 nodes, 344/344 edges, and 12/12 quests; full health passed at 346 files/2,504 tests, UI, and all 12 packs.
-
-### Cycle result - albany_wolf_preparation_profiles
-
-- Evidence choice: starting-slice `SS-F05-preparation-profile` overrode a stale Station-board wording hot spot because the defining Albany → Wolf → return slice still lacked a paid build commitment with distinct field and aftermath consumers.
-- Surface: after source certification, every background can afford exactly one of Reese's Works sequence, Emery's drover route, or Jamie's relief protocol. The plans change different one-shot checks/recoveries and cattle pressure, persist provider memory, and unlock mutually exclusive 15-minute Works, Campus, or Civic return services after a truthful held-byre return.
-- Integrity/counterfactual: all 36 background/source/profile combinations are legal; reselection fails live and after restore. Same-state comparisons include paid preparation, weighted-shortest Albany relocation, and each rival's best matching service, so every profile wins somewhere without global dominance. A frozen quest-started 742 save alone receives no-prep grandfathering; a forged current marker fails and a no-progress predecessor receives the real prompt. The ledger advances from 5/12 to 6/12.
-- Pure evidence: seed 2712 verified pure/fresh, chose Road-Warden + Hayden's report + Emery's route without guidance, completed Wolf-Winter at decision 24, continued at 24/40/48, and ended voluntarily after three goals at 69; clarity/enjoyment 4/4, stuck false, replay true. It chose combat, so paired deterministic proof carries the three field consumers; its dense three-screen opening and recurring-contact-name notes remain real polish debt.
-- Compile/self-critique: only this one verified report exists since compile `20260715T000942Z`, so no compile is due. PASS for F05 and the third evidence-grade irreversible counterexample, not the greater-than-BG3 slice claim: ally agency, six more material forks, and full fortify/outlast and drive/evacuate families remain.
-- Guard: independent audits closed self-minted legacy authority and shortest-route proof gaps; pre/final 6,000-step crawls `20260715T002437Z`/`20260715T015236Z` reached 247/247 nodes, 344/344 edges, and 12/12 quests; focused migration/profile/parity proofs and full health passed.

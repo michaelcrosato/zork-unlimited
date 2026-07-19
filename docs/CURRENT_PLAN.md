@@ -4,77 +4,75 @@ Token-small AFK-loop handoff. The durable milestone and evidence rules live in
 [`STARTING_SLICE.md`](STARTING_SLICE.md); do not replace that contract during an
 ultraplan.
 
-## Cycle: 2026-07-18 — Authored Albany Works Scene
+## Cycle: 2026-07-18 — Codex Pure Probe Compatibility
 
 ## Synthesis
 
-The Albany → Wolf-Winter → truthful Albany-return slice has twelve proven
-structural forks and four resolution families, but Depth Contract #11 remains
-open because Albany's visible local work is still mostly generic one-click
-time/renown transactions. This increment establishes the reusable replacement
-grammar and converts Albany Works, the first of six district jobs.
+The authored Albany Works increment is merged on `main` with both required
+GitHub checks green. Five clean final-build Spark reports are now in the ledger:
+seeds 2891, 2895, 2898, 2909, and 2910. All completed Wolf-Winter, none got
+stuck, all rated clarity/enjoyment 4/4 and would replay; two continued beyond
+the first Albany completion. No player selected Works, so its new branches are
+still carried by deterministic counterfactuals rather than organic evidence.
 
-After Wolf-Winter, discovering Reese and the Works yard exposes one exclusive
-priority scene. Protecting the trapped public shift spends 80 minutes and earns
-5 Capital / Mohawk renown; inventorying outbound cold-set stock spends 35
-minutes and earns 2. The unchosen line goes to Reese's crew, so a single journey
-cannot collect both proofs. The exact choice, cost, renown, area, contact, and
-completed-quest prerequisite survive save/restore and appear consistently in
-full, compact, UI, and MCP surfaces.
+Mass Spark testing exposed two different classes of resource discovery. Calls
+with invented cursors, missing servers, repeated probes, or post-start probes
+remain contract violations and cannot become feedback. One current Codex CLI
+shape is equivalent inert preflight noise: a single paired
+`list_mcp_resources({server:"adventureforge"})` that fails with exact MCP
+method-not-found before gameplay. The verifier previously required the older
+explicit `cursor:""` spelling and therefore rejected seed 2905 before checking
+the otherwise valid 38-call journey.
 
-The choice has a delayed consumer rather than stopping at a renamed payout.
-Wolf-Winter's truthful held-byre return plus 13 Capital / Mohawk renown unlocks
-one 15-minute Civic recovery cot. In the ordinary post-Wolf state, protecting
-the shift reaches that threshold while the faster inventory line does not.
-Paired fatigued and rested states reverse which branch is advantageous, and an
-independent route to the same earned standing remains valid. The generic
-`requires_region_renown` service predicate is replayed at each chronological
-service boundary and is reusable outside Albany Works.
+Two fresh dirty-candidate reports also verify the patched envelope rather than
+the immutable build: seed 2925 completed Wolf-Winter and The Gallowmere in 46
+decisions after continuing twice, while seed 2929 organically resolved Charter
+Backlog before completing Wolf-Winter by a fully nonlethal pack diversion in 27
+decisions. Both rated clarity/enjoyment 4/4, were unstuck, would replay, and
+reported no bug. Their dirty-build marker keeps them out of milestone
+certification while still satisfying this cycle's canonical playtest gate.
 
-The reusable authored-job schema is strict and bounded: two to four unique
-options, real POI/contact prerequisites, at most four completed-quest
-prerequisites, exact result proofs, and registry-driven historical migration.
-Full views no longer hide executable jobs after an arbitrary twelve-item cap;
-compact views remain bounded. Restore accepts the matching historical
-POI/contact/job boundary even when a newer reactive contact exists.
+This increment accepts only those two equivalent empty-cursor spellings. It
+also closes the broader historical aperture by requiring every tolerated
+resource probe to occur before the first gameplay call. Successful,
+content-bearing, malformed, repeated, unpaired, cross-server, and post-start
+probes still fail closed. The real seed-2905 event stream is a regression
+witness; seeds 2901–2904 and 2906–2908 remain rejected.
 
-Spark authentication is healthy. Fresh pure seed 2890 is verified against
-world hash `815a138c…`: it completed Wolf-Winter and The Gallowmere in 46
-decisions, rated clarity/enjoyment 4/4, was not stuck, reported no bugs, and
-would replay. It did not select the Works scene, so deterministic paired tests
-carry that branch. Seeds 2888/2889 were rejected for duplicate forbidden
-resource probes and are not feedback evidence.
+The compiled cohort now has 65 journey-contract-v3 pure exits, 59 with at least
+one continuation. Its old aggregate hot spots are dominated by superseded
+fleet copy, but the still-live Albany Civic `charter backlog` event appears in
+ten reports and aligns with Depth Contract #11. The next authored gameplay
+scene should therefore replace Civic Ledger work and that checklist event as
+one interconnected return-state decision, while Codex-native fleet attestation
+continues independently.
 
 The greater-than-BG3 milestone remains `active_unproven`. Five district jobs
-and the checklist events still need authored interconnected scenes. Global
-failure-forward coverage, three independent NPC agendas, Codex-native fleet
-attestation, a current deep crawl, and the exact 100-player certification also
-remain open.
+and visible checklist events remain generic; Codex-native certified fleets,
+global failure-forward proof, three independent NPC agendas, deep crawl, and
+the exact 100-player certification are still open.
 
 ## Chosen Move
 
-Land this isolated Albany Works increment with its verified report, zero-finding
-post-crawl, full health, and GitHub checks. On clean `main`, continue the dev
-cycle with the highest-leverage remaining Albany job while fresh Codex/Spark
-blind cohorts run independently against immutable builds. Development consumes
-feedback only after enough verified reports accumulate to distinguish a pattern
-from one player's route.
+Land this narrow verifier compatibility increment with a fresh pure report,
+zero-finding crawl, full health, and required GitHub checks. Keep the rejected
+raw streams as diagnostics and never retry or relabel them as evidence.
 
-In parallel, replace the obsolete Claude/Sonnet-only milestone attestation with
-a fail-closed Codex-native authority contract. Model identity, fresh seed,
-world/build identity, complete MCP lifecycle, exit receipt, report, and
-sidecar-last publication must be authenticated without accepting invalid Spark
-transport noise or treating diagnostic runs as certification.
+In parallel, finish the fail-closed Codex fleet contract by binding each public
+`thread.started` id to one private CLI rollout whose session metadata records
+provider `openai` and whose sole turn context records the exact allowlisted
+Sol, Terra, Luna, or Spark model and effort. Requested-model labels and synthesized
+usage remain non-authoritative. After infrastructure is green, implement Civic
+Ledger plus the charter-backlog event as the second of six authored Albany
+district scenes.
 
 ## Acceptance for this increment
 
-1. Albany Works offers exactly one of two authored priorities only after the
-   required Wolf-Winter, POI, and contact state.
-2. Exact costs, renown, choice proof, journal chronology, exclusivity, migration,
-   save/restore, full/compact MCP, and UI parity are deterministic.
-3. The 13-renown Civic rest is a genuine delayed consumer, and paired reachable
-   states prove both Works options can be advantageous.
-4. The schema and region-renown service predicate have negative and synthetic
-   reuse proof; historical generic Works saves migrate without relabelling.
-5. Post-change crawl, one canonical pure fresh-overworld report, full health,
+1. Exact paired method-not-found preflight accepts explicit empty or omitted
+   optional resource cursor and counts neither as gameplay.
+2. Nonempty/missing-server, duplicate, unpaired, successful/content-bearing,
+   cross-server, and post-start resource calls reject.
+3. The unmodified seed-2905 raw stream passes the patched event audit while the
+   seven genuinely invalid comparison streams remain rejected.
+4. Post-change crawl, one canonical fresh-overworld report, full health,
    required GitHub checks, and merge are green before the next increment lands.

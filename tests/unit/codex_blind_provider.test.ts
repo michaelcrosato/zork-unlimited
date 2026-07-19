@@ -227,6 +227,16 @@ describe("Codex pure blind provider envelope", () => {
     expect(inspectCodexPureEvents(rows)).toMatchObject({ ok: true, completedMcpCalls: 1 });
   });
 
+  it("accepts Codex's omitted optional resource cursor before gameplay", () => {
+    const probe = resourceProbeRows("list_mcp_resources");
+    for (const row of probe) {
+      delete (row as { item: { arguments: Record<string, unknown> } }).item.arguments.cursor;
+    }
+    const rows = insertBeforeGameplay(validRows(), probe);
+
+    expect(inspectCodexPureEvents(rows)).toMatchObject({ ok: true, completedMcpCalls: 1 });
+  });
+
   it("accepts one paired in-memory todo lifecycle and excludes it from gameplay", () => {
     const todo = todoLifecycleRows();
     const rows = insertBeforeGameplay(validRows(), [todo[0], todoUpdateRow(), todo[1]]);
@@ -277,6 +287,46 @@ describe("Codex pure blind provider envelope", () => {
         (duplicate[0] as { item: Record<string, unknown> }).item.id = "probe-duplicate";
         (duplicate[1] as { item: Record<string, unknown> }).item.id = "probe-duplicate";
         insertBeforeGameplay(rows, [...first, ...duplicate]);
+      },
+      reason: /invalid or duplicate resource probe list_mcp_resources/i,
+    },
+    {
+      label: "a resource probe after gameplay starts",
+      mutate: (rows: ReturnType<typeof validRows>) => {
+        const terminalIndex = rows.findIndex((row) => row.type === "turn.completed");
+        rows.splice(terminalIndex, 0, ...resourceProbeRows());
+      },
+      reason: /invalid or duplicate resource probe list_mcp_resources/i,
+    },
+    {
+      label: "a resource probe that completes after gameplay starts",
+      mutate: (rows: ReturnType<typeof validRows>) => {
+        const probe = resourceProbeRows();
+        insertBeforeGameplay(rows, [probe[0]]);
+        const terminalIndex = rows.findIndex((row) => row.type === "turn.completed");
+        rows.splice(terminalIndex, 0, probe[1]);
+      },
+      reason: /unpaired or invalid resource probe list_mcp_resources/i,
+    },
+    {
+      label: "a nonempty resource cursor",
+      mutate: (rows: ReturnType<typeof validRows>) => {
+        const probe = resourceProbeRows();
+        for (const row of probe) {
+          (row as { item: { arguments: { cursor: string } } }).item.arguments.cursor = "n/a";
+        }
+        insertBeforeGameplay(rows, probe);
+      },
+      reason: /invalid or duplicate resource probe list_mcp_resources/i,
+    },
+    {
+      label: "a resource probe without its server",
+      mutate: (rows: ReturnType<typeof validRows>) => {
+        const probe = resourceProbeRows();
+        for (const row of probe) {
+          (row as { item: { arguments: Record<string, unknown> } }).item.arguments = {};
+        }
+        insertBeforeGameplay(rows, probe);
       },
       reason: /invalid or duplicate resource probe list_mcp_resources/i,
     },
