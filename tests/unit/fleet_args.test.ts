@@ -76,16 +76,22 @@ describe("fill-prompt", () => {
 });
 
 describe("fleet planning", () => {
-  it("defaults milestone fleets to exactly 100 homogeneous-Sonnet fresh-overworld runs", () => {
+  it("defaults milestone fleets to exactly 100 homogeneous-Spark fresh-overworld runs", () => {
     const opts = parseFleetArgs([]);
     expect(opts.count).toBe(100);
     expect(opts.target).toBe("overworld");
     expect(opts.personas).toBe("default");
-    expect(opts.model).toBe("sonnet");
+    expect(opts.provider).toBe("codex");
+    expect(opts.model).toBe("gpt-5.3-codex-spark");
     expect(opts.resume).toBe(true);
     const runs = planFleetRuns(opts);
     expect(runs).toHaveLength(100);
-    expect(runs.every((run: { model: string }) => run.model === "sonnet")).toBe(true);
+    expect(
+      runs.every(
+        (run: { provider: string; model: string }) =>
+          run.provider === "codex" && run.model === "gpt-5.3-codex-spark",
+      ),
+    ).toBe(true);
   });
 
   it("makes authoritative no-resume behavior explicit without changing diagnostic defaults", () => {
@@ -110,7 +116,7 @@ describe("fleet planning", () => {
   });
   it("pins live model plans to supported aliases", () => {
     for (const model of ["haiku", "sonnet", "opus"] as const) {
-      const opts = parseFleetArgs(["--count", "3", "--model", model]);
+      const opts = parseFleetArgs(["--provider", "claude", "--count", "3", "--model", model]);
       expect(opts.model).toBe(model);
       expect(planFleetRuns(opts).map((run: { model: string }) => run.model)).toEqual([
         model,
@@ -118,7 +124,7 @@ describe("fleet planning", () => {
         model,
       ]);
     }
-    const mixed = parseFleetArgs(["--count", "10", "--model", "mix"]);
+    const mixed = parseFleetArgs(["--provider", "claude", "--count", "10", "--model", "mix"]);
     expect(mixed.model).toBe("mix");
     expect(planFleetRuns(mixed).map((run: { model: string }) => run.model)).toEqual([
       "haiku",
@@ -132,14 +138,42 @@ describe("fleet planning", () => {
       "haiku",
       "sonnet",
     ]);
-    expect(() => parseFleetArgs(["--model", "claude-custom"])).toThrow(/haiku, sonnet, opus/i);
+    expect(() => parseFleetArgs(["--provider", "claude", "--model", "claude-custom"])).toThrow(
+      /haiku, sonnet, opus/i,
+    );
     expect(parseFleetArgs(["--mock", "--model", "synthetic"]).model).toBe("synthetic");
+  });
+  it("pins Codex fleets to exact provider/model pairs without mix, aliases, or fallback", () => {
+    for (const model of [
+      "gpt-5.6-sol",
+      "gpt-5.6-terra",
+      "gpt-5.6-luna",
+      "gpt-5.3-codex-spark",
+    ] as const) {
+      const opts = parseFleetArgs(["--provider", "codex", "--model", model, "--count", "2"]);
+      expect(planFleetRuns(opts)).toEqual([
+        { seed: 1000, persona: "default", provider: "codex", model, target: "overworld" },
+        { seed: 1001, persona: "default", provider: "codex", model, target: "overworld" },
+      ]);
+    }
+    expect(parseFleetArgs([]).model).toBe("gpt-5.3-codex-spark");
+    expect(parseFleetArgs(["--provider", "claude"]).model).toBe("sonnet");
+    expect(() => parseFleetArgs(["--provider", "codex", "--model", "sol"])).toThrow(/aliases/i);
+    expect(() => parseFleetArgs(["--provider", "codex", "--model", "mix"])).toThrow(/mix/i);
+    expect(() => parseFleetArgs(["--provider", "claude", "--model", "gpt-5.6-sol"])).toThrow(
+      /Claude pure fleets/i,
+    );
   });
   it("explicit mock quest targets parse and reach the structural plan", () => {
     const runs = planFleetRuns(
       parseFleetArgs(["--mock", "--count", "2", "--target", "quest:sunken_barrow"]),
     );
     expect(runs.every((r: { target: string }) => r.target === "quest:sunken_barrow")).toBe(true);
+    expect(runs.every((r: { provider: string }) => r.provider === "codex")).toBe(true);
+    const claudeMock = planFleetRuns(
+      parseFleetArgs(["--mock", "--provider", "claude", "--count", "1", "--model", "synthetic"]),
+    );
+    expect(claudeMock[0]?.provider).toBe("claude");
   });
 
   it("rejects quest targets for live fleets regardless of flag order", () => {
@@ -569,6 +603,12 @@ ${JSON.stringify({ ...pureInterview, journey_exit_receipt: currentReceipt })}
       writeFileSync(reportPath.replace(/\.md$/, ".evidence.jsonl"), evidenceBody);
       writeFileSync(reportPath.replace(/\.md$/, ".json"), primaryEnvelopeBody);
 
+      const {
+        provider_events_sha256: _providerEventsSha256,
+        provider_rollout_sha256: _providerRolloutSha256,
+        provider_capture_sha256: _providerCaptureSha256,
+        ...historicalClaudeArtifactHashes
+      } = pureFleetArtifactHashes(reportPath);
       const validAttestation = {
         schema_version: PURE_FLEET_ATTESTATION_SCHEMA_VERSION,
         run_seed: 5,
@@ -583,7 +623,7 @@ ${JSON.stringify({ ...pureInterview, journey_exit_receipt: currentReceipt })}
         actual_model: actualModel,
         report_recovered: false,
         receipt_hash: currentReceipt.receiptHash,
-        ...pureFleetArtifactHashes(reportPath),
+        ...historicalClaudeArtifactHashes,
       };
       expect(fleetAttestationPathFor(reportPath)).toBe(reportPath.replace(/\.md$/, ".fleet.json"));
       writeFileSync(

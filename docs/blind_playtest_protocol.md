@@ -98,9 +98,10 @@ exit reason.
 ## One pure run
 
 1. Run the deterministic pre-crawl gate: `npm run crawl:smoke`.
-2. Start `npm run blind` with a fresh seed. Claude is the default provider;
-   `npm run blind --provider=codex --model=gpt-5.6-sol --seed=<fresh>` selects
-   the built-in hardened Codex path. Both launch MCP in `pure` mode and supply a
+2. Start `npm run blind --seed=<fresh>` with a fresh seed. The default is the
+   built-in hardened Codex Spark path;
+   `npm run blind --provider=claude --model=sonnet --seed=<fresh>` selects the
+   explicit Claude compatibility provider. Both launch MCP in `pure` mode and supply a
    private JSONL evidence path. Neither path permits an arbitrary
    `BLIND_AGENT_CMD` to claim pure evidence.
 3. The player calls `start_overworld` once and plays independently. It follows
@@ -146,9 +147,10 @@ authenticated receipt and reverifies the promoted report and sidecar. This is
 never a gameplay continuation and cannot recover a timeout, missing exit,
 mechanical/MCP failure, or any other report defect.
 
-Codex single runs reuse the same evidence verifier and sidecar-last publication
-transaction, but do not yet attempt report recovery. The runner starts Codex in
-an isolated temporary directory with user/project config and rules ignored,
+Codex runs reuse the same evidence verifier and sidecar-last publication
+transaction, but do not attempt report recovery. The runner starts Codex in an
+isolated temporary player directory with a fresh per-run `CODEX_HOME` containing
+only a private copy of `auth.json`; user/project config and rules are ignored,
 shell/web/apps/plugins/browser/computer/subagents disabled, and only the exact
 pure AdventureForge MCP tools enabled. It audits the provider JSONL and rejects
 unknown events, non-game tools, another MCP server, incomplete/duplicate turns,
@@ -160,9 +162,27 @@ events expose no content, do not count as gameplay, and fail closed on success,
 content, another server, malformed pairing, or an unbounded payload. Every normal
 AdventureForge call is separately paired by id, tool, arguments, status, and
 result; the first pair must be a successful argument-free `start_overworld`.
-A rejected Codex run must use a fresh seed. Codex is
-not yet accepted by fleet attestation or starting-slice certification because
-its JSONL identifies the session but does not authenticate the actual model id.
+A rejected Codex run must use a fresh seed. For a fleet member, the runner also
+captures exactly one non-linked rollout JSONL from that sterile home and verifies
+its recorded cwd resolves to the still-live isolated `player` directory by exact
+canonical path and native filesystem identity before publication. It writes an
+exclusive `.codex-capture.json` receipt binding the canonical expected/session/turn
+cwd values, directory identities, and copied rollout SHA-256. Certification
+independently revalidates that strict receipt against the rollout bytes and
+requires one `session_meta`, one `task_started`, one `turn_context`, one final
+assistant response, and one terminal `task_complete` in order; any abort/error
+lifecycle history or row after `task_complete` rejects the run. The lifecycle
+shares one turn id, the public thread/session agree, provider is
+`openai`, sandbox is read-only, effort is `xhigh`, and both final-message fields
+equal the report. `turn_context.model` is Codex CLI-recorded selected-model
+provenance bound to the artifact, not a provider-signed snapshot proving which
+remote backend served the turn. The primary envelope's requested model and
+synthesized `modelUsage` are never model authority.
+The receipt is a trusted local runner assertion made while the isolated directory
+still exists. Once cleanup deletes that directory, resume and certification can
+reparse the receipt and reject inconsistent hashes or fields but cannot re-stat
+the old cwd or resist a privileged actor coherently rewriting the entire bundle;
+it is neither cryptographic nor provider-signed attestation.
 
 ## Pure prompt boundary
 
@@ -280,22 +300,26 @@ resume a current-contract fleet slot.
 
 ## Fleet mode
 
-Fleet attestation and starting-slice certification in this section remain
-Claude/Sonnet-only. Hardened Codex support currently applies to canonical
-single-run feedback, not authenticated fleet cohorts.
+Fleet attestation supports historical Claude/Sonnet cohorts and homogeneous
+Codex cohorts using exactly `gpt-5.6-sol`, `gpt-5.6-terra`, `gpt-5.6-luna`, or
+`gpt-5.3-codex-spark`. Codex aliases, fallback, and mixed-model plans are
+forbidden.
 
 ```bash
-npm run fleet -- --count 10 --concurrency 4 --model sonnet --seed-base <fresh-pilot-seed-base> --label <fresh-pilot-label> --no-resume --max-retries 0
+npm run fleet -- --provider codex --model gpt-5.6-terra --count 10 --concurrency 4 --seed-base <fresh-pilot-seed-base> --label <fresh-pilot-label> --no-resume --max-retries 0
 npm run starting-slice:pilot -- --fleet ai-runs/fleet/<fresh-pilot-label>
-npm run fleet -- --count 100 --concurrency 4 --model sonnet --seed-base <fresh-seed-base> --label <fresh-label> --no-resume --max-retries 0
+npm run fleet -- --provider codex --model gpt-5.6-terra --count 100 --concurrency 4 --seed-base <fresh-seed-base> --label <fresh-label> --no-resume --max-retries 0
 ```
 
 Every live member is the same canonical pure contract with a different seed
 (and, for diagnostic experiments, optionally a different model). Pure fleets
 use the neutral default persona; persona mixtures are structural experiments
-only. Homogeneous Sonnet is the default and the only authoritative requested
-model plan. Explicit `mix` retains its deterministic 9 Haiku : 1 Sonnet
-weighting for diagnostics; explicit Haiku and Opus are also non-certifying.
+only. The fleet command defaults to Codex with homogeneous
+`gpt-5.3-codex-spark` for ordinary feedback harvests; canonical certification
+commands pin Terra for both pilot and authority;
+Claude/Sonnet requires explicit `--provider claude --model sonnet` and keeps
+`mix`, Haiku, and Opus for diagnostics. All four exact Codex model ids listed
+above are eligible when their CLI rollout provenance verifies.
 
 Before any live member launches, preflight freezes one full tracked Git commit,
 the canonical fresh-overworld world id/hash, the contiguous planned seeds, and
@@ -303,7 +327,8 @@ the run/model contract. The tracked worktree must be clean; dirty state or a Git
 or world-provenance error aborts before tokens are spent. Untracked local notes
 are ignored by the cleanliness test.
 
-Each live fleet label must be fresh and names one closed cohort. An existing
+Each plan and lock row records the exact provider and model. Each live fleet
+label must be fresh and names one closed cohort. An existing
 label directory is rejected rather than appended to or mixed with stale rows.
 Bounded concurrency and retry/backoff remain deterministic. Before each retry,
 the runner copies every failed out-prefix artifact and its diagnostic into a
@@ -325,27 +350,32 @@ schema v2, the current journey contract, exact planned seed, and exact clean
 commit and world id/hash. Historical sidecar v1 remains readable but never
 resumes a slot. Manifest rows expose the authenticated seed, build, world, quest
 outcomes, and journey result rather than relying on a filename or summary count.
-An adjacent runner-owned v2 attestation binds each live member to its planned
-model, actual singleton model use, unique Claude session, completed clean
-primary envelope, game session, and raw-byte SHA-256 digests of the report,
-sidecar, raw JSONL evidence, primary envelope, and complete recovery artifacts
-when present. Diagnostic resume reconstructs those facts from the bytes;
-certification reconstructs them and rejects any recovered member.
+An adjacent runner-owned attestation binds each live member to its planned
+provider/model, exact singleton model provenance, unique provider session,
+completed clean primary envelope, game session, and artifact hashes. Historical
+Claude members retain v2 compatibility. Codex v3 additionally binds the actual
+provider, reasoning effort, turn id, working directory, public provider events,
+copied rollout JSONL, and cwd capture receipt; recovery is forbidden. Diagnostic
+resume reparses those retained facts from the bytes, while certification also rejects
+reuse, links, path escape, and any recovered member.
 
 ### Starting-slice certification
 
-Before the authority spend, close and validate a fresh ten-Sonnet pilot:
+Before the authority spend, close and validate a fresh ten-Terra pilot:
 
 ```bash
-npm run fleet -- --count 10 --concurrency 4 --model sonnet --seed-base <fresh-pilot-seed-base> --label <fresh-pilot-label> --no-resume --max-retries 0
+npm run fleet -- --provider codex --model gpt-5.6-terra --count 10 --concurrency 4 --seed-base <fresh-pilot-seed-base> --label <fresh-pilot-label> --no-resume --max-retries 0
 npm run starting-slice:pilot -- --fleet ai-runs/fleet/<fresh-pilot-label>
 ```
 
 The pilot requires 10/10 primary unrecovered/no-retry reports, unique game and
-Claude sessions, one exact actual model id, recognized Wolf-Winter outcomes, at
+provider sessions, one exact provider-evidence model value, recognized Wolf-Winter outcomes, at
 least three strategy families, and no family above 7/10. It checks the other
 slice gates but writes a distinct readiness result and can never certify the
-milestone. If the exact provider model id later changes, repilot.
+milestone. If the exact provider model id later changes, repilot. The authority
+checker validates only its submitted homogeneous 100-member bundle; the
+corresponding fresh same-model pilot remains an explicit operational gate that
+operators retain and review, not an automatically linked authority field.
 
 After the authoritative live cohort is closed, run:
 
@@ -357,8 +387,8 @@ The certifier independently reparses every authenticated artifact. It requires
 exactly 100 unique contiguous planned seeds, no failed or missing slots, the
 default pure fresh-overworld contract, `--no-resume`, exactly one verified
 attempt per slot, zero skipped/resumed or report-recovered slots, and the
-homogeneous requested Sonnet plan authenticated to one exact actual model id,
-with unique game and Claude sessions, on one clean build/world. Malformed or unauthenticated evidence
+homogeneous supported provider/model plan bound to one exact provider-evidence
+model value, with unique game and provider sessions, on one clean build/world. Malformed or unauthenticated evidence
 exits 2, an authenticated cohort that misses a threshold exits 1, and a pass
 exits 0.
 

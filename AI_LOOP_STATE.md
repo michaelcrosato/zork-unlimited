@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 577 -->
+<!-- historical_cycle_count: 578 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - codex_native_fleet_attestation
+
+- Evidence choice: the milestone certifier trusted Claude-only requested-model envelopes, while routine blind work had moved to Codex/Spark; exact provider/model authority was therefore the next prerequisite for honest parallel playtesting.
+- Surface: normal blinds/fleets default to Codex Spark; v3 Codex members allow only exact Sol/Terra/Luna/Spark and bind public events to one private rollout carrying provider `openai`, exact model, `xhigh`, read-only cwd, one session/turn, and completed lifecycle. Historical Claude v2 remains compatible.
+- Integrity: each sterile home imports only `auth.json`; one exclusive capture receipt records live canonical cwd/filesystem identity and rollout hash, all provider/game bytes are rehashed, and recovery, aliases/fallback/mixing, abort/error history, post-completion rows, reuse, links, resume, retries, or dirty authority builds reject.
+- Pure evidence: Terra seed 4096 authenticated the new capture path and completed Wolf-Winter plus The Gallowmere; clean fleet seed 4100 then verified the full no-resume/no-retry production path 1/1 with zero failed attempts, exact Terra/openai/xhigh provenance, a clean `58d9e6cd` build, pack-diversion Wolf completion at decision 31, and an honest checkpoint-40 exit.
+- Feedback: compile `20260719T075635Z` has 824 verified reports and 73 journey-v3 pure exits, 63 continuing; six new accepted reports are all 4/4 and replay-yes, with front-loaded registration the repeated live slice signal.
+- Self-critique: PASS for Codex-native evidence authority, `active_unproven` for greater-than-BG3; five authored Albany conversions, failure-forward/NPC-agenda proof, deep crawl, same-model pilot, and exact 100-player authority remain.
+- Guard: adversarial reviews closed mock-provider, terminal-history, cwd/session-link, case, and evidence-binding gaps; rebased focused checks are 159/159, dirty and clean Terra artifacts reparse, health is green at 381 files/2,901 tests plus UI/all packs, and crawl `20260719T081322Z` is zero-finding at 247/247 nodes, 344/344 edges, 12/12 boards/quests.
 
 ### Cycle result - codex_pure_probe_compatibility
 
@@ -141,12 +151,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Pure evidence: seed 2714 verified pure/fresh, chose Road-Warden + Hayden's report + Reese's Works, completed Wolf-Winter by combat at decision 30, continued at 30/40/55/76/80, and ended voluntarily after four goals at 96; clarity/enjoyment 4/5, stuck false, replay true, no functional bug. Deterministic paired proofs carry the unsampled drive family.
 - Compile/self-critique: compile `20260715T120239Z` contains 782 verified/35 rejected reports and 33 current-contract pure exits, all continuing at least once. PASS for F10 and `drive_and_evacuate`, not the greater-than-BG3 slice claim: 8/12 forks and three of four families are proven; binary `SS-F08-cade-trust` plus `fortify_and_outlast` is next.
 - Guard: independent gameplay and world/migration audits closed state-cap, dead-copy, compact-copy, semantic-witness, prep-leak, disclosure, rig-copy, wound-zero, and historical-save gaps. Unchanged 800,000-state liveness/score searches passed 17/17 and 19/19; pre/post crawls `20260715T092531Z`/`20260715T123630Z` reached 247/247 nodes, 344/344 edges, and 12/12 quests.
-
-### Cycle result - albany_wolf_ally_commitment
-
-- Evidence choice: `SS-F04-ally-commitment` was the highest-leverage missing slice foundation because Albany → Wolf-Winter still had no persistent ally with disclosed authority, refusal, conduct boundary, independent field action, and return consequence.
-- Surface: June Pike now offers three irreversible departure terms after preparation: 15-minute cattle-first partnership, 5-minute subordinate-relay refusal, or immediate solo travel. Partnership creates a companion and active promise; a recovered bloodless lure gives June one independent cattle-line intervention, while first blood ends the agreement without blocking hybrid/combat completion. Truthful return yields distinct one-time Station resupply/rest consequences for kept authority versus refused relay.
-- Integrity/counterfactual: generic conditional quest exports, companion/promise predicates, journal/replay boundaries, projections, and save migration carry the relationship across overworld, quest, and return. All opening combinations and Wolf endings are simulated; unreachable/colliding service rules and malformed conditional mutations fail authoring. Same-state paired routes reverse cattle alarm 4→3 and scattered→whole herd, while exact first-blood routes prove June leaves and both sides remain viable. The ledger advances from 6/12 to 7/12.
-- Pure evidence: seed 2713 verified pure/fresh, chose Road-Warden + Hayden's report + Emery's route, completed Wolf-Winter at decision 23, continued at 23/40/47/68/80/91, and ended voluntarily after five goals at 114; clarity/enjoyment 5/5, stuck false, replay true, no bugs. It chose combat and skipped June, so paired deterministic and live embedded proofs carry F04's ally counterfactual.
-- Compile/self-critique: only seeds 2712/2713 are verified since compile `20260715T000942Z`, so no compile is due. PASS for the first evidence-grade ally fork, not the greater-than-BG3 slice claim: 7/12 forks and two of four strategy families are complete; `SS-F10-crisis-priority` and full drive/evacuate remain next.
-- Guard: independent acceptance/adversarial audits closed early-contact restore, quest-order, promise/export, service-reachability/collision, fixture, and liveness gaps; live UI showed June + active promise with zero console errors. Pre/final 6,000-step crawls `20260715T015517Z`/`20260715T073849Z` reached 247/247 nodes, 344/344 edges, and 12/12 quests; full health passed at 346 files/2,504 tests, UI, and all 12 packs.

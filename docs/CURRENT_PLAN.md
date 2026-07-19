@@ -4,75 +4,87 @@ Token-small AFK-loop handoff. The durable milestone and evidence rules live in
 [`STARTING_SLICE.md`](STARTING_SLICE.md); do not replace that contract during an
 ultraplan.
 
-## Cycle: 2026-07-18 — Codex Pure Probe Compatibility
+## Cycle: 2026-07-19 — Codex-Native Fleet Attestation
 
 ## Synthesis
 
-The authored Albany Works increment is merged on `main` with both required
-GitHub checks green. Five clean final-build Spark reports are now in the ledger:
-seeds 2891, 2895, 2898, 2909, and 2910. All completed Wolf-Winter, none got
-stuck, all rated clarity/enjoyment 4/4 and would replay; two continued beyond
-the first Albany completion. No player selected Works, so its new branches are
-still carried by deterministic counterfactuals rather than organic evidence.
+Strict Codex resource-preflight compatibility is merged on `main` with both
+required GitHub checks green. Routine pure single runs and fleets now default to
+Codex `gpt-5.3-codex-spark`, using the dedicated weekly allowance, while the
+canonical readiness and authority commands explicitly pin homogeneous Terra.
+Claude remains an explicit compatibility provider.
 
-Mass Spark testing exposed two different classes of resource discovery. Calls
-with invented cursors, missing servers, repeated probes, or post-start probes
-remain contract violations and cannot become feedback. One current Codex CLI
-shape is equivalent inert preflight noise: a single paired
-`list_mcp_resources({server:"adventureforge"})` that fails with exact MCP
-method-not-found before gameplay. The verifier previously required the older
-explicit `cursor:""` spelling and therefore rejected seed 2905 before checking
-the otherwise valid 38-call journey.
+This increment replaces requested-model trust with a provider-discriminated
+fleet contract. Codex members accept only exact Sol, Terra, Luna, or Spark ids.
+Each run starts in an isolated `player` directory with a fresh `CODEX_HOME` that
+imports only `auth.json`; user/project rules, shell, web, apps, plugins, browser,
+computer use, and subagents are disabled. The CLI runs read-only at `xhigh` and
+persists exactly one private rollout rather than relying on synthesized usage
+fields.
 
-Two fresh dirty-candidate reports also verify the patched envelope rather than
-the immutable build: seed 2925 completed Wolf-Winter and The Gallowmere in 46
-decisions after continuing twice, while seed 2929 organically resolved Charter
-Backlog before completing Wolf-Winter by a fully nonlethal pack diversion in 27
-decisions. Both rated clarity/enjoyment 4/4, were unstuck, would replay, and
-reported no bug. Their dirty-build marker keeps them out of milestone
-certification while still satisfying this cycle's canonical playtest gate.
+Codex attestation v3 binds the public thread to one private `session_meta`, one
+turn, the exact selected model, provider `openai`, effort, turn id, completed
+lifecycle, final report bytes, game session, and every provider/game artifact
+hash. A capture-time receipt verifies the still-live player cwd by canonical
+path plus filesystem identity and binds the copied rollout hash. Later checks
+reparse that retained assertion; they do not claim a provider signature or the
+ability to re-stat the deleted temporary directory.
 
-This increment accepts only those two equivalent empty-cursor spellings. It
-also closes the broader historical aperture by requiring every tolerated
-resource probe to occur before the first gameplay call. Successful,
-content-bearing, malformed, repeated, unpaired, cross-server, and post-start
-probes still fail closed. The real seed-2905 event stream is a regression
-witness; seeds 2901–2904 and 2906–2908 remain rejected.
+Abort/error history, a row after terminal `task_complete`, report recovery,
+missing/duplicate rollouts, aliases, fallback, mixed models, reused sessions,
+links, path escape, stale artifacts, dirty certification builds, retries, and
+resume all fail closed. Historical Claude v2 remains readable. Structural mock
+fleets preserve a valid launcher provider and remain zero-token/non-certifying.
 
-The compiled cohort now has 65 journey-contract-v3 pure exits, 59 with at least
-one continuation. Its old aggregate hot spots are dominated by superseded
-fleet copy, but the still-live Albany Civic `charter backlog` event appears in
-ten reports and aligns with Depth Contract #11. The next authored gameplay
-scene should therefore replace Civic Ledger work and that checklist event as
-one interconnected return-state decision, while Codex-native fleet attestation
-continues independently.
+A real dirty-build Terra seed 4096 exercised the new runner path end to end. Its
+940 KB private rollout reparsed as exact `gpt-5.6-terra`, provider `openai`, one
+session/turn, read-only `xhigh`, and the captured isolated cwd. The verifier-valid
+fresh journey completed Wolf-Winter by fortification at decision 20, continued
+twice, completed The Gallowmere at 44, rated clarity/enjoyment 4/4, and would
+replay. It again identified front-loaded Albany registration density.
 
-The greater-than-BG3 milestone remains `active_unproven`. Five district jobs
-and visible checklist events remain generic; Codex-native certified fleets,
-global failure-forward proof, three independent NPC agendas, deep crawl, and
-the exact 100-player certification are still open.
+Clean-build Terra seed 4100 then exercised the complete production fleet path:
+`fleet.mjs → run.sh → rollout capture → v3 attestation → manifest`.
+The one-member no-resume/no-retry cohort verified 1/1 with zero failed attempts,
+bound exact model/provider/effort and all artifact hashes, completed Wolf-Winter
+by pack diversion at decision 31, continued once, and ended honestly at the
+decision-40 checkpoint. Its manifest records clean commit `58d9e6cd` and world
+hash `815a138c`.
+
+The new compile contains 824 verified reports and 73 current-contract pure
+exits, 63 with at least one continuation. Six new accepted reports all rated
+clarity/enjoyment 4/4 and would replay; the meaningful repeated signal is still
+the long mandatory Wolf registration chain, not an auth failure. The compiled
+historical top rank remains stale structural board copy. Civic Charter Backlog
+is the live Depth Contract #11 target and must stay optional for Wolf progress.
+
+The greater-than-BG3 milestone remains `active_unproven`. Five Albany district
+jobs/events remain generic; global failure-forward proof, three independent NPC
+agendas, current deep crawl, organic strategy diversity, and the exact
+same-model pilot plus 100-player certification remain open.
 
 ## Chosen Move
 
-Land this narrow verifier compatibility increment with a fresh pure report,
-zero-finding crawl, full health, and required GitHub checks. Keep the rejected
-raw streams as diagnostics and never retry or relabel them as evidence.
+Re-run the affected gates on the exact rebased tree, push the attestation
+increment through a short-lived PR, and merge only after GitHub `verify` and
+`crawl-smoke` pass.
 
-In parallel, finish the fail-closed Codex fleet contract by binding each public
-`thread.started` id to one private CLI rollout whose session metadata records
-provider `openai` and whose sole turn context records the exact allowlisted
-Sol, Terra, Luna, or Spark model and effort. Requested-model labels and synthesized
-usage remain non-authoritative. After infrastructure is green, implement Civic
-Ledger plus the charter-backlog event as the second of six authored Albany
-district scenes.
+In parallel, finish the Civic Ledger/Charter Backlog authored scene. Its policy
+choice must occur before Wolf-Winter, survive migration honestly, and select
+exactly one outcome-aware return closure. Consume the accumulated cohort signal
+by keeping this scene optional and its cards focused on the immediate policy
+tradeoff plus one delayed return hook instead of adding another mandatory
+briefing layer.
 
 ## Acceptance for this increment
 
-1. Exact paired method-not-found preflight accepts explicit empty or omitted
-   optional resource cursor and counts neither as gameplay.
-2. Nonempty/missing-server, duplicate, unpaired, successful/content-bearing,
-   cross-server, and post-start resource calls reject.
-3. The unmodified seed-2905 raw stream passes the patched event audit while the
-   seven genuinely invalid comparison streams remain rejected.
-4. Post-change crawl, one canonical fresh-overworld report, full health,
-   required GitHub checks, and merge are green before the next increment lands.
+1. Exact provider/model/effort/session/turn/lifecycle facts are reconstructed
+   from one retained private Codex rollout and agree with public events/report.
+2. Capture receipt, artifact hashes, sterile home, cwd isolation, clean-build
+   fleet rules, resume, retries, and failure histories all fail closed under
+   coherent negative tests while historical Claude v2 remains compatible.
+3. Ordinary blind/fleet defaults are Codex Spark; canonical pilot/authority
+   examples pin Terra and state the same-model pilot as an operational gate.
+4. One real Terra blind run and one clean real fleet member pass, post-crawl is
+   zero-finding, full health is green, and required GitHub checks pass before
+   merge.

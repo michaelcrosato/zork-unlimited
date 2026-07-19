@@ -29,7 +29,7 @@ if [[ -n "$PACK" ]]; then
   exit 2
 fi
 SEED=7
-PROVIDER="${BLIND_PROVIDER:-claude}"
+PROVIDER="${BLIND_PROVIDER:-codex}"
 MODEL="${BLIND_MODEL:-}"
 OUT=""
 SMOKE=0
@@ -130,9 +130,22 @@ case "$PROVIDER" in
 esac
 if [[ -z "$MODEL" ]]; then
   if [[ "$PROVIDER" == "codex" ]]; then
-    MODEL="gpt-5.6-sol"
+    MODEL="gpt-5.3-codex-spark"
   else
     MODEL="sonnet"
+  fi
+fi
+if [[ "$MOCK" == "0" && "$SMOKE" == "0" ]]; then
+  if [[ "$PROVIDER" == "codex" ]]; then
+    case "$MODEL" in
+      gpt-5.6-sol|gpt-5.6-terra|gpt-5.6-luna|gpt-5.3-codex-spark) ;;
+      *) echo "Codex pure runs require exact model gpt-5.6-sol, gpt-5.6-terra, gpt-5.6-luna, or gpt-5.3-codex-spark; aliases and fallbacks are forbidden." >&2; exit 2 ;;
+    esac
+  else
+    case "$MODEL" in
+      haiku|sonnet|opus) ;;
+      *) echo "Claude pure runs require exact supported alias haiku, sonnet, or opus." >&2; exit 2 ;;
+    esac
   fi
 fi
 
@@ -572,10 +585,10 @@ if [[ -n "${BLIND_AGENT_CMD:-}" ]]; then
   exit 0
 fi
 
-# Built-in pure providers never fall back to one another. Claude imports only
-# subscription OAuth into a sterile home. Codex uses --ignore-user-config,
-# --ignore-rules, and --ephemeral so its normal CODEX_HOME contributes auth but
-# no configuration, rules, plugins, skills, memories, or prior sessions.
+# Built-in pure providers never fall back to one another. Each imports only its
+# subscription authentication into a per-run sterile home. Codex deliberately
+# persists exactly one rollout inside that disposable home so fleet attestation
+# can authenticate the actual provider/model/effort independently of stdout.
 if [[ "$PROVIDER" == "claude" ]]; then
 if ! command -v claude >/dev/null 2>&1; then
   echo "claude CLI not found. Install Claude Code or choose --provider codex." >&2
@@ -628,6 +641,26 @@ else
     echo "codex CLI not found. Install Codex or choose --provider claude." >&2
     exit 3
   fi
+  SOURCE_CODEX_HOME="${CODEX_HOME:-$HOME/.codex}"
+  SOURCE_CODEX_AUTH="$SOURCE_CODEX_HOME/auth.json"
+  STERILE_CODEX_HOME="$WORK/codex-home"
+  CODEX_PLAYER_CWD="$WORK/player"
+  mkdir -p "$CODEX_PLAYER_CWD"
+  CODEX_ROLLOUT_SCRIPT="$(node_path_arg "$SCRIPT_DIR/codex-rollout.mjs")"
+  SOURCE_CODEX_AUTH_ARG="$(node_path_arg "$SOURCE_CODEX_AUTH")"
+  STERILE_CODEX_HOME_ARG="$(node_path_arg "$STERILE_CODEX_HOME")"
+  CODEX_PLAYER_CWD_ARG="$(node_path_arg "$CODEX_PLAYER_CWD")"
+  set +e
+  "$NODE_CMD" "$CODEX_ROLLOUT_SCRIPT" prepare-home \
+    --source-auth "$SOURCE_CODEX_AUTH_ARG" --home "$STERILE_CODEX_HOME_ARG" \
+    >"$OUT.codex-home.log" 2>&1
+  CODEX_HOME_STATUS=$?
+  set -e
+  if [[ "$CODEX_HOME_STATUS" -ne 0 ]]; then
+    echo "Could not create the sterile Codex auth store; pure run refused." >&2
+    cat "$OUT.codex-home.log" >&2 || true
+    exit 4
+  fi
 fi
 
 # Keep one telemetry row for the gameplay turn and, when the narrowly gated
@@ -679,15 +712,18 @@ if [[ "$PROVIDER" == "codex" ]]; then
   CODEX_EVENTS="$OUT.codex.jsonl"
   CODEX_EVENTS_ARG="$(node_path_arg "$CODEX_EVENTS")"
   CODEX_REPORT_ARG="$(node_path_arg "$OUT.md")"
+  CODEX_ROLLOUT="$OUT.codex-rollout.jsonl"
+  CODEX_ROLLOUT_ARG="$(node_path_arg "$CODEX_ROLLOUT")"
+  CODEX_CAPTURE="$OUT.codex-capture.json"
+  CODEX_CAPTURE_ARG="$(node_path_arg "$CODEX_CAPTURE")"
   CODEX_ENVELOPE_SCRIPT="$(node_path_arg "$SCRIPT_DIR/codex-pure-envelope.mjs")"
   CODEX_STARTED_AT_MS="$("$NODE_CMD" -e 'process.stdout.write(String(Date.now()))')"
   CODEX_PURE_TOOLS_TOML="$("$NODE_CMD" "$CODEX_ENVELOPE_SCRIPT" --print-tools-toml)"
-  printf "%s" "$PROMPT" | ( cd "$WORK" && \
+  printf "%s" "$PROMPT" | ( cd "$CODEX_PLAYER_CWD" && CODEX_HOME="$STERILE_CODEX_HOME_ARG" \
     timeout "$TIMEOUT" codex exec \
     --model "$MODEL" \
     --sandbox read-only \
     --skip-git-repo-check \
-    --ephemeral \
     --ignore-user-config \
     --ignore-rules \
     --strict-config \
@@ -721,6 +757,18 @@ if [[ "$PROVIDER" == "codex" ]]; then
     - \
   ) > "$CODEX_EVENTS" 2> "$OUT.log"
   STATUS=$?
+  if [[ "$STATUS" -eq 0 ]]; then
+    "$NODE_CMD" "$CODEX_ROLLOUT_SCRIPT" capture \
+      --home "$STERILE_CODEX_HOME_ARG" --out "$CODEX_ROLLOUT_ARG" \
+      --receipt "$CODEX_CAPTURE_ARG" \
+      --expected-cwd "$CODEX_PLAYER_CWD_ARG" \
+      >"$OUT.codex-rollout.log" 2>&1
+    CODEX_ROLLOUT_STATUS=$?
+    if [[ "$CODEX_ROLLOUT_STATUS" -ne 0 ]]; then
+      STATUS=4
+      cat "$OUT.codex-rollout.log" >&2 || true
+    fi
+  fi
   if [[ "$STATUS" -eq 0 ]]; then
     "$NODE_CMD" "$CODEX_ENVELOPE_SCRIPT" \
       --events "$CODEX_EVENTS_ARG" --report "$CODEX_REPORT_ARG" \

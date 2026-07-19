@@ -277,15 +277,45 @@ const FleetSummarySchema = z
     technical_timeouts: z.number().int().nonnegative(),
     report_recovered_runs: z.number().int().nonnegative(),
     seed_base: z.number().int().safe(),
-    model: z.literal("sonnet"),
+    provider: z.enum(["claude", "codex"]).optional(),
+    model: z.enum([
+      "sonnet",
+      "gpt-5.6-sol",
+      "gpt-5.6-terra",
+      "gpt-5.6-luna",
+      "gpt-5.3-codex-spark",
+    ]),
     personas: z.literal("default"),
     target: z.literal("overworld"),
     resume_enabled: z.boolean(),
     evidence_schema_version: z.literal(2),
-    model_attestation_schema_version: z.literal(2),
+    model_attestation_schema_version: z.union([z.literal(2), z.literal(3)]),
     build: PureRunBuildSchema,
   })
-  .strict();
+  .strict()
+  .superRefine((summary, context) => {
+    const provider = summary.provider ?? "claude";
+    if (
+      provider === "claude" &&
+      (summary.model !== "sonnet" || summary.model_attestation_schema_version !== 2)
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["model"],
+        message: "historical Claude certification requires Sonnet attestation v2",
+      });
+    }
+    if (
+      provider === "codex" &&
+      (!summary.model.startsWith("gpt-") || summary.model_attestation_schema_version !== 3)
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["model"],
+        message: "Codex certification requires one exact Codex model and attestation v3",
+      });
+    }
+  });
 
 const FleetAttemptArtifactSchema = z
   .object({
@@ -328,7 +358,15 @@ const FleetManifestRowSchema = z
     planned_index: z.number().int().nonnegative(),
     seed: z.number().int().safe(),
     persona: z.literal("default"),
-    model: z.enum(["haiku", "sonnet"]),
+    provider: z.enum(["claude", "codex"]).optional(),
+    model: z.enum([
+      "haiku",
+      "sonnet",
+      "gpt-5.6-sol",
+      "gpt-5.6-terra",
+      "gpt-5.6-luna",
+      "gpt-5.3-codex-spark",
+    ]),
     target: z.literal("overworld"),
     report: z.string().min(1),
     status: z.enum(["verified", "skipped-resume"]),
@@ -404,7 +442,10 @@ function canonicalRealpath(path: string): string {
 }
 
 function pathIdentity(path: string): string {
-  return process.platform === "win32" ? path.toLowerCase() : path;
+  // Inputs are canonical realpaths. Exact comparison preserves distinct files
+  // on case-sensitive Windows directories while canonicalization still folds
+  // alternate spellings of the same entry.
+  return path;
 }
 
 function containedPath(root: string, candidate: string): boolean {
@@ -1102,6 +1143,7 @@ function validateAuthenticatedStartingSliceCohort(
   const reportsDir = isAbsolute(summary.reportsDir)
     ? resolve(summary.reportsDir)
     : resolve(root, summary.reportsDir);
+  const expectedProvider = summary.provider ?? "claude";
   const errors = wolfStrategyMappingDrift(root);
   const fleetBasename = basename(fleetDir);
   const labelBoundToDirectory = summary.label === fleetBasename;
@@ -1244,7 +1286,7 @@ function validateAuthenticatedStartingSliceCohort(
     if (rowsBySeed.has(row.seed)) errors.push(`manifest duplicate seed ${row.seed}`);
     else rowsBySeed.set(row.seed, row);
     const reportPath = resolve(row.report);
-    const reportKey = process.platform === "win32" ? reportPath.toLowerCase() : reportPath;
+    const reportKey = reportPath;
     if (reportPaths.has(reportKey)) errors.push(`manifest duplicate report path ${row.report}`);
     reportPaths.add(reportKey);
   }
@@ -1262,7 +1304,7 @@ function validateAuthenticatedStartingSliceCohort(
   let manifestFailedAttempts = 0;
   let manifestTechnicalTimeouts = 0;
   let manifestReportRecoveredRuns = 0;
-  const claudeSessionIds = new Set<string>();
+  const providerSessionIds = new Set<string>();
   const gameSessionIds = new Set<string>();
   const actualModels = new Set<string>();
   const referencedArchiveDirectories = new Set<string>();
@@ -1279,8 +1321,12 @@ function validateAuthenticatedStartingSliceCohort(
         `seed ${seed}: planned_index ${row.planned_index} != sorted seed index ${plannedIndex}`,
       );
     }
-    if (row.model !== "sonnet") {
-      errors.push(`seed ${seed}: requested model ${row.model} != required sonnet`);
+    const rowProvider = row.provider ?? "claude";
+    if (rowProvider !== expectedProvider) {
+      errors.push(`seed ${seed}: provider ${rowProvider} != summary provider ${expectedProvider}`);
+    }
+    if (row.model !== summary.model) {
+      errors.push(`seed ${seed}: requested model ${row.model} != summary model ${summary.model}`);
     }
     if (row.run_seed !== seed) errors.push(`seed ${seed}: row run_seed differs`);
     if (!isDeepStrictEqual(row.build, summary.build)) {
@@ -1419,6 +1465,9 @@ function validateAuthenticatedStartingSliceCohort(
     let initialReportBytes: Buffer | null = null;
     let recoveryMetadataBytes: Buffer | null = null;
     let recoveryEnvelopeBytes: Buffer | null = null;
+    let providerEventsBytes: Buffer | null = null;
+    let providerRolloutBytes: Buffer | null = null;
+    let providerCaptureBytes: Buffer | null = null;
     let reportText: string;
     let sidecarText: string;
     let attestationText: string;
@@ -1457,6 +1506,39 @@ function validateAuthenticatedStartingSliceCohort(
       sidecarBytes = readFileSync(safeSidecarPath);
       runEvidenceBytes = readFileSync(safeRunEvidencePath);
       primaryEnvelopeBytes = readFileSync(safePrimaryEnvelopePath);
+      const providerEntries = [
+        ["Codex provider events", runArtifactPaths.providerEvents],
+        ["Codex rollout", runArtifactPaths.providerRollout],
+        ["Codex capture receipt", runArtifactPaths.providerCapture],
+      ] as const;
+      if (rowProvider === "codex") {
+        providerEventsBytes = readFileSync(
+          requireContainedRegularFile(
+            runArtifactPaths.providerEvents,
+            reportsRootReal,
+            `seed ${seed} Codex provider events`,
+            artifacts,
+          ),
+        );
+        providerRolloutBytes = readFileSync(
+          requireContainedRegularFile(
+            runArtifactPaths.providerRollout,
+            reportsRootReal,
+            `seed ${seed} Codex rollout`,
+            artifacts,
+          ),
+        );
+        providerCaptureBytes = readFileSync(
+          requireContainedRegularFile(
+            runArtifactPaths.providerCapture,
+            reportsRootReal,
+            `seed ${seed} Codex capture receipt`,
+            artifacts,
+          ),
+        );
+      } else if (providerEntries.some(([, path]) => pathEntryExists(path))) {
+        throw new Error("Claude fleet slot contains unexpected Codex provider artifacts");
+      }
       reportText = reportBytes.toString("utf8");
       sidecarText = sidecarBytes.toString("utf8");
       attestationText = readFileSync(safeAttestationPath, "utf8");
@@ -1531,9 +1613,13 @@ function validateAuthenticatedStartingSliceCohort(
         initialReport: initialReportBytes,
         recoveryMetadata: recoveryMetadataBytes,
         recoveryEnvelope: recoveryEnvelopeBytes,
+        providerEvents: providerEventsBytes,
+        providerRollout: providerRolloutBytes,
+        providerCapture: providerCaptureBytes,
       },
       {
         seed,
+        provider: rowProvider,
         model: row.model,
         build: { ...summary.build, tracked_worktree_clean: true },
       },
@@ -1545,13 +1631,13 @@ function validateAuthenticatedStartingSliceCohort(
       continue;
     }
     const artifactFacts = artifactValidation.facts;
-    const normalizedClaudeSessionId = artifactFacts.claude_session_id.toLowerCase();
-    if (claudeSessionIds.has(normalizedClaudeSessionId)) {
+    const normalizedProviderSessionId = artifactFacts.provider_session_id.toLowerCase();
+    if (providerSessionIds.has(normalizedProviderSessionId)) {
       errors.push(
-        `seed ${seed}: Claude session UUID ${artifactFacts.claude_session_id} is reused by another fleet slot`,
+        `seed ${seed}: provider session UUID ${artifactFacts.provider_session_id} is reused by another fleet slot`,
       );
     } else {
-      claudeSessionIds.add(normalizedClaudeSessionId);
+      providerSessionIds.add(normalizedProviderSessionId);
     }
     if (gameSessionIds.has(artifactFacts.game_session_id)) {
       errors.push(
@@ -1582,13 +1668,31 @@ function validateAuthenticatedStartingSliceCohort(
     if (attestation.game_session_id !== artifactFacts.game_session_id) {
       errors.push(`seed ${seed}: model attestation game_session_id differs from run evidence`);
     }
-    if (attestation.claude_session_id !== artifactFacts.claude_session_id) {
+    const attestedProvider = attestation.schema_version === 2 ? "claude" : attestation.provider;
+    const attestedProviderSession =
+      attestation.schema_version === 2
+        ? attestation.claude_session_id
+        : attestation.provider_session_id;
+    if (attestedProvider !== artifactFacts.provider) {
+      errors.push(`seed ${seed}: model attestation provider differs from authenticated artifacts`);
+    }
+    if (attestedProviderSession !== artifactFacts.provider_session_id) {
       errors.push(
-        `seed ${seed}: model attestation claude_session_id differs from primary envelope`,
+        `seed ${seed}: model attestation provider session differs from authenticated artifacts`,
       );
     }
     if (attestation.actual_model !== artifactFacts.actual_model) {
       errors.push(`seed ${seed}: model attestation actual_model differs from primary envelope`);
+    }
+    if (
+      rowProvider === "codex" &&
+      attestation.schema_version === 3 &&
+      (attestation.actual_provider !== artifactFacts.actual_provider ||
+        attestation.reasoning_effort !== artifactFacts.reasoning_effort ||
+        attestation.provider_turn_id !== artifactFacts.provider_turn_id ||
+        attestation.provider_cwd !== artifactFacts.provider_cwd)
+    ) {
+      errors.push(`seed ${seed}: model attestation Codex rollout facts differ`);
     }
     if (attestation.report_recovered !== artifactFacts.report_recovered) {
       errors.push(`seed ${seed}: model attestation recovery status differs from run artifacts`);
@@ -1609,7 +1713,10 @@ function validateAuthenticatedStartingSliceCohort(
       );
     }
     for (const [field, digest] of Object.entries(artifactFacts.hashes)) {
-      if (attestation[field as keyof typeof artifactFacts.hashes] !== digest) {
+      if (!(field in attestation)) {
+        if (digest === null) continue;
+        errors.push(`seed ${seed}: model attestation omits ${field}`);
+      } else if ((attestation as Record<string, unknown>)[field] !== digest) {
         errors.push(`seed ${seed}: model attestation ${field} differs from artifact bytes`);
       }
     }
@@ -1761,7 +1868,7 @@ export function certifyStartingSliceAuthority(
   };
 }
 
-/** Authenticate the fixed 10-player Sonnet pilot without granting authority. */
+/** Authenticate the fixed 10-player homogeneous provider/model pilot without granting authority. */
 export function validateStartingSlicePilot(
   options: ValidateStartingSlicePilotOptions,
 ): StartingSlicePilotResult {

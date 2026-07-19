@@ -681,31 +681,38 @@ commit and the canonical fresh-overworld world id/hash. The tracked worktree mus
 be clean; a dirty tree or Git/provenance error fails before launch. Untracked
 notes do not dirty this check. It also freezes the contiguous planned seed range,
 current journey contract, default pure fresh-overworld player contract, and the
-repository-standard homogeneous Sonnet model plan.
+repository-standard homogeneous Codex `gpt-5.6-terra` model plan.
 
-Sonnet is the live launcher's default. Explicit `mix`, Haiku, and Opus plans
-remain diagnostic experiments and cannot certify the slice. Before the
-100-player spend, a fresh ten-player Sonnet pilot must pass this go/no-go pair:
+Spark is the ordinary live fleet launcher's default so routine blind feedback
+uses the dedicated Spark allowance. The canonical certification workflow pins
+Terra explicitly for both pilot and authority. Exact homogeneous Sol, Terra,
+Luna, and Spark plans can certify; Codex aliases, fallback, and mixing are forbidden.
+Claude/Sonnet must be selected explicitly, while Claude `mix`, Haiku, and Opus
+remain diagnostic. Before the 100-player spend, a fresh ten-player homogeneous
+pilot must pass this go/no-go pair:
 
 ```bash
-npm run fleet -- --count 10 --concurrency 4 --model sonnet --seed-base <fresh-pilot-seed-base> --label <fresh-pilot-label> --no-resume --max-retries 0
+npm run fleet -- --provider codex --model gpt-5.6-terra --count 10 --concurrency 4 --seed-base <fresh-pilot-seed-base> --label <fresh-pilot-label> --no-resume --max-retries 0
 npm run starting-slice:pilot -- --fleet ai-runs/fleet/<fresh-pilot-label>
 ```
 
 The pilot requires all ten primary reports to authenticate without resume,
-retry, recovery, or failed attempts; ten unique game sessions and Claude
-sessions; one exact authenticated actual model id; recognized Wolf-Winter
+retry, recovery, or failed attempts; ten unique game and provider sessions; one
+exact provider-evidence model value; recognized Wolf-Winter
 outcomes; at least three organic strategy families; and no family above 7/10.
 It also evaluates the slice's completion-speed, clarity, enjoyment,
 continuation, stuck, and severity gates. A passing pilot is readiness evidence,
 never milestone certification. If the later authority cohort resolves to a
 different exact provider model id, run a new pilot before treating that cohort
-as comparable.
+as comparable. The authority checker validates only the submitted 100-member
+bundle; retaining and reviewing the corresponding fresh same-model pilot is an
+explicit operational prerequisite rather than an automatically linked authority
+field.
 
 Only after that pilot passes, launch the canonical authoritative cohort:
 
 ```bash
-npm run fleet -- --count 100 --concurrency 4 --model sonnet --seed-base <fresh-seed-base> --label <fresh-label> --no-resume --max-retries 0
+npm run fleet -- --provider codex --model gpt-5.6-terra --count 100 --concurrency 4 --seed-base <fresh-seed-base> --label <fresh-label> --no-resume --max-retries 0
 ```
 
 A live fleet label must be fresh and its bundle is a closed cohort; an existing
@@ -732,12 +739,21 @@ feedback-discoverable Markdown report. Such a report remains diagnostic-only:
 its confusion, bug, stuck, and replay-intent fields were generated after the
 primary prose and cannot participate in authoritative certification.
 
-Each live member also has an adjacent runner-owned v2 attestation that binds its
-planned model, actual singleton model use, unique Claude session, completed
-clean primary envelope, unique game session, and raw-byte SHA-256 digests of the
-report, run sidecar, raw JSONL evidence, primary envelope, and any complete
-recovery set. Diagnostic resume reconstructs these facts from the bytes;
-certification reconstructs them and rejects every recovered member.
+Each live member has an adjacent runner-owned provider-discriminated attestation.
+Historical Claude v2 remains compatible. Codex v3 binds its exact CLI-recorded
+selected model, provider/session/turn, effort, isolated cwd, completed lifecycle,
+unique game session, and all artifact hashes. An exclusive strict capture receipt
+binds the copied rollout hash to the exact canonical expected/session/turn cwd and
+native filesystem identity; later validation reparses it and rejects
+abort/error history or any row after terminal `task_complete`.
+`turn_context.model` is durable CLI provenance, not a provider-signed
+remote-backend snapshot. Diagnostic resume reparses these retained facts;
+certification rejects recovery, reuse, links, and path escape.
+The cwd receipt is likewise trusted local runner provenance recorded while the
+temporary player directory still exists. After cleanup, later validation reparses
+the receipt and hashes but cannot re-stat that deleted directory or resist a
+privileged actor coherently rewriting the whole bundle; it is not a cryptographic
+attestation.
 
 The authoritative check is:
 
@@ -747,9 +763,9 @@ npm run starting-slice:certify -- --fleet ai-runs/fleet/<label>
 
 It reparses and reverifies every report and sidecar instead of trusting summary
 counts. Certification requires exactly 100 unique rows for the contiguous
-planned seeds, all requested as Sonnet and authenticated to one exact actual
-model id, all successful and present, under the frozen pure/default/build/world
-contract, with unique game and Claude sessions, `--no-resume`, the cohort's
+planned seeds, all using one supported homogeneous provider/model plan bound to
+one exact provider-evidence model value, all successful and present, under the
+frozen pure/default/build/world contract, with unique game and provider sessions, `--no-resume`, the cohort's
 current-stamp report basename, exactly one verified attempt per slot, and zero
 report-recovered rows or artifacts. The ten-player pilot uses a separate result
 kind and artifact and can never satisfy this 100-player authority boundary.

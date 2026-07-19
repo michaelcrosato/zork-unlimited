@@ -59,7 +59,7 @@ does, when it runs, and its exact shapes.
 | `crawl:deep`             | nightly / manual                                                                                            | ≥2min soak (multi-worker; measured 352k steps @ ~1935 steps/s incl. 20k-state solver; findings are byte-identical across `--workers` only absent `--seconds` truncation — per-worker deadlines mean WHICH items truncate can vary with worker count once the soak budget bites, always loud via `truncated`/`skippedItems`) | free                      |
 | `blind` (single)         | every normal cycle                                                                                          | one pure journey; game-native goal/checkpoints govern exit                                                                                                                                                                                                                                                                  | $ (one LLM playtest)      |
 | `fleet -- --count 100`   | milestone / feedback-harvest cycles (~every 10, or when the ledger's open questions outgrow single reports) | 100 pure fresh-overworld runs at `--concurrency C`                                                                                                                                                                                                                                                                          | $ × 100 (real LLM tokens) |
-| `starting-slice:pilot`   | after authority/model tooling changes and before an authoritative spend                                     | reverify one exact fresh 10-Sonnet no-retry cohort as a go/no-go pilot; never certification                                                                                                                                                                                                                                 | free                      |
+| `starting-slice:pilot`   | after authority/model tooling changes and before an authoritative spend                                     | reverify one exact fresh 10-member homogeneous-provider/model no-retry cohort as a go/no-go pilot; never certification                                                                                                                                                                                                      | free                      |
 | `starting-slice:certify` | after an authoritative starting-slice fleet closes                                                          | reverify the exact 100-report authenticated bundle and evaluate the milestone gates                                                                                                                                                                                                                                         | free                      |
 | `fleet:mock`             | every CI run (rides `npm test`)                                                                             | explicit structural acceptance e2e; never retention evidence                                                                                                                                                                                                                                                                | zero tokens               |
 | `feedback:compile`       | whenever ≥3 new verified reports exist since the last compile                                               | seconds (deterministic clustering)                                                                                                                                                                                                                                                                                          | free                      |
@@ -76,9 +76,9 @@ npm run crawl -- --workers 4 --seed 7              # custom invocation (flags in
 npm run blind                                      # canonical pure player, fresh overworld
 npm run blind:smoke                                # explicit structural MCP check, no LLM/tokens
 bash blind-tester/run.sh --smoke --quest sunken_barrow --seed 7 # targeted structural check, no LLM
-npm run fleet -- --count 10 --concurrency 4 --model sonnet --seed-base <fresh-pilot-seed-base> --label <fresh-pilot-label> --no-resume --max-retries 0
+npm run fleet -- --provider codex --model gpt-5.6-terra --count 10 --concurrency 4 --seed-base <fresh-pilot-seed-base> --label <fresh-pilot-label> --no-resume --max-retries 0
 npm run starting-slice:pilot -- --fleet ai-runs/fleet/<fresh-pilot-label>
-npm run fleet -- --count 100 --concurrency 4 --model sonnet --seed-base <fresh-seed-base> --label <fresh-label> --no-resume --max-retries 0
+npm run fleet -- --provider codex --model gpt-5.6-terra --count 100 --concurrency 4 --seed-base <fresh-seed-base> --label <fresh-label> --no-resume --max-retries 0
 npm run fleet:mock -- --count 2                    # structural, zero-token, CI-safe
 npm run starting-slice:certify -- --fleet ai-runs/fleet/<label>
 
@@ -100,11 +100,14 @@ check. A live fleet label must be fresh and names one closed cohort, so an
 existing label is rejected rather than appended to or mixed with stale rows.
 
 Live fleets enforce `play_mode: pure`, `start_surface: fresh_overworld`, and the
-neutral default persona. Sonnet is the live fleet launcher's default when
-`--model` is omitted and is the only authoritative requested model plan.
-Explicit `mix`, Haiku, and Opus plans remain diagnostic. Before the 100-player
-spend, `starting-slice:pilot` must pass one fresh ten-Sonnet cohort with 10/10
-primary unrecovered members, unique game and Claude sessions, one exact actual
+neutral default persona. The live fleet defaults to Codex
+`gpt-5.3-codex-spark` for ordinary feedback harvests and
+accepts only exact homogeneous `gpt-5.6-sol`, `gpt-5.6-terra`, `gpt-5.6-luna`,
+or `gpt-5.3-codex-spark` plans. The canonical pilot and authority commands pin
+Terra explicitly so both cohorts use the same model. Claude/Sonnet must be selected explicitly;
+Claude `mix`, Haiku, and Opus plans remain diagnostic. Before the 100-player spend, `starting-slice:pilot`
+must pass one fresh ten-member homogeneous cohort with 10/10 primary
+unrecovered members, unique game and provider sessions, one exact actual
 model id, at least three recognized Wolf-Winter strategies, and no strategy
 above 7/10. The pilot has a distinct result kind and cannot certify the slice.
 Resume is a diagnostic
@@ -155,12 +158,19 @@ must carry identical provenance. Historical sidecar v1 remains readable by the
 generic evidence parser but is ineligible for current fleet resume or
 certification; structural and legacy outputs are explicitly
 retention-ineligible.
-Each live member's runner-owned v2 attestation binds its planned model, actual
-singleton model use, unique Claude session, completed clean primary envelope,
-game session, and raw-byte SHA-256 digests of the report, run sidecar, raw JSONL
-evidence, primary envelope, and any complete recovery set. Resume and
-certification reconstruct these facts; certification then rejects every
-recovered member.
+Each live member's runner-owned attestation binds its planned provider/model,
+exact singleton provider-evidence model provenance, unique provider session, completed clean
+primary envelope, game session, and artifact hashes. Historical Claude v2
+attestations remain compatible. Codex v3 also binds actual provider, effort,
+turn id, working directory, public events, exactly one copied rollout, and its
+strict canonical-cwd/filesystem-identity capture receipt. The receipt and rollout
+are independently rehashed; `task_complete` must be the last row and abort/error
+lifecycle history is forbidden. Recovery is forbidden. Codex
+`turn_context.model` is a CLI-recorded selected-model value, not a provider-signed
+remote-backend identity. Resume and certification reparse these retained facts.
+The cwd receipt is a trusted capture-time runner assertion: after cleanup they
+cannot re-stat the deleted temporary directory or defend against a privileged
+actor coherently rewriting the entire artifact bundle.
 
 **Retention compile** (`src/feedback/evidence_summary.ts`) writes
 `retention.json`: verified report counts split by pure/structural/legacy-guided,
@@ -173,10 +183,13 @@ pooled.
 **Starting-slice pilot/certification** reparses every report and sidecar in one
 closed fleet bundle. Both require unique contiguous planned seeds, no
 failed/missing/resumed/recovered slots, exactly one verified attempt per slot,
-one clean build/world, unique game and Claude sessions, one exact authenticated
-actual model id, and the current pure fresh-overworld/default-player Sonnet
-contract. The pilot fixes the count to ten and requires 10/10 completion plus
-its 7/10 strategy cap; its distinct artifact is readiness evidence only.
+one clean build/world, unique game and provider sessions, one exact authenticated
+actual model id, and a homogeneous supported provider/model under the current
+pure fresh-overworld/default-player contract. The pilot fixes the count to ten and requires 10/10 completion plus
+its 7/10 strategy cap; its distinct artifact is readiness evidence only. The
+authority checker does not automatically discover or link that artifact, so
+retaining and reviewing a fresh same-model pilot is an operational prerequisite
+before the 100-player spend.
 Certification fixes the count to 100 and is the only authority result. Report
 basenames must carry the cohort's current stamp, preventing historical reports
 from being relabeled as fresh.

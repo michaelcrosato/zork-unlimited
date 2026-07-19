@@ -16,14 +16,16 @@ function valueOf(flag: string): string {
 function main(): void {
   const report = resolve(valueOf("--report"));
   const seed = Number(valueOf("--seed"));
+  const provider = valueOf("--provider");
   const model = valueOf("--model");
   if (!Number.isSafeInteger(seed)) throw new Error("--seed must be a safe integer");
-  if (model !== "haiku" && model !== "sonnet" && model !== "opus") {
-    throw new Error("--model must be haiku, sonnet, or opus");
+  if (provider !== "claude" && provider !== "codex") {
+    throw new Error("--provider must be claude or codex");
   }
   const expected: PureFleetRunArtifactExpectation = {
     seed,
-    model,
+    provider,
+    model: model as PureFleetRunArtifactExpectation["model"],
     build: {
       git_commit: valueOf("--git-commit"),
       tracked_worktree_clean: true,
@@ -44,6 +46,13 @@ function main(): void {
         : null,
       recoveryEnvelope: existsSync(paths.recoveryEnvelope)
         ? readFileSync(paths.recoveryEnvelope)
+        : null,
+      providerEvents: existsSync(paths.providerEvents) ? readFileSync(paths.providerEvents) : null,
+      providerRollout: existsSync(paths.providerRollout)
+        ? readFileSync(paths.providerRollout)
+        : null,
+      providerCapture: existsSync(paths.providerCapture)
+        ? readFileSync(paths.providerCapture)
         : null,
     },
     expected,

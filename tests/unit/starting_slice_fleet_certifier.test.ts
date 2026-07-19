@@ -634,6 +634,336 @@ function sha256Text(text: string): string {
 }
 
 describe("closed fleet filesystem integrity", () => {
+  it("accepts a synthetic Codex pilot and rejects a coherently re-hashed lifecycle tamper", () => {
+    const base = mkdtempSync(join(tmpdir(), "af-codex-slice-certifier-"));
+    tempDirs.push(base);
+    const fleetDir = join(base, "fleet", "codex-pilot");
+    const reportsDir = join(base, "reports");
+    mkdirSync(fleetDir, { recursive: true });
+    mkdirSync(reportsDir, { recursive: true });
+    const build = fixtureBuild;
+    const receipt = currentReceipt();
+    const model = "gpt-5.6-luna" as const;
+    const outcomes = [
+      "ending_held",
+      "ending_pack_diverted",
+      "ending_drive_reserve_spent",
+      "ending_fortified_cade_terms",
+    ];
+    const rows = Array.from({ length: 10 }, (_, index) => {
+      const seed = 700 + index;
+      const outcome = outcomes[index % outcomes.length]!;
+      const prefix = join(reportsDir, `20260102T000000Z_overworld_seed${seed}`);
+      const reportPath = `${prefix}.md`;
+      const reportBody = reportText(receipt);
+      const providerSessionId = `10000000-0000-4000-8000-${String(seed).padStart(12, "0")}`;
+      const providerTurnId = `20000000-0000-4000-8000-${String(seed).padStart(12, "0")}`;
+      const providerCwd = `C:\\isolated\\seed-${seed}\\player`;
+      const sidecar = {
+        schema_version: 2,
+        report_schema_version: 2,
+        play_mode: "pure",
+        start_surface: "fresh_overworld",
+        retention_eligible: true,
+        evidence_status: "verified",
+        session_id: `codex-session-${seed}`,
+        run_seed: seed,
+        build,
+        quest_outcomes: [["wolf_winter", outcome]],
+        receipt,
+      };
+      const sidecarBody = `${JSON.stringify(sidecar, null, 2)}\n`;
+      const evidenceBody = `${[
+        {
+          schema_version: 2,
+          play_mode: "pure",
+          event: "fresh_start",
+          start_surface: "fresh_overworld",
+          session_id: sidecar.session_id,
+          run_seed: seed,
+          build,
+        },
+        {
+          schema_version: 2,
+          play_mode: "pure",
+          event: "journey_exit",
+          start_surface: "fresh_overworld",
+          session_id: sidecar.session_id,
+          run_seed: seed,
+          build,
+          quest_outcomes: sidecar.quest_outcomes,
+          receipt,
+        },
+      ]
+        .map((event) => JSON.stringify(event))
+        .join("\n")}\n`;
+      const call = {
+        id: "item_1",
+        type: "mcp_tool_call",
+        server: "adventureforge",
+        tool: "start_overworld",
+        arguments: {},
+      };
+      const providerEventsBody = `${[
+        { type: "thread.started", thread_id: providerSessionId },
+        { type: "turn.started" },
+        {
+          type: "item.started",
+          item: { ...call, result: null, error: null, status: "in_progress" },
+        },
+        {
+          type: "item.completed",
+          item: {
+            ...call,
+            result: { content: [], structured_content: null },
+            error: null,
+            status: "completed",
+          },
+        },
+        { type: "item.completed", item: { id: "item_2", type: "agent_message", text: reportBody } },
+        {
+          type: "turn.completed",
+          usage: { input_tokens: 10, cached_input_tokens: 0, output_tokens: 10 },
+        },
+      ]
+        .map((event) => JSON.stringify(event))
+        .join("\n")}\n`;
+      const providerRolloutBody = `${[
+        {
+          timestamp: "2026-07-19T00:00:00.000Z",
+          type: "session_meta",
+          payload: {
+            id: providerSessionId,
+            cwd: providerCwd,
+            cli_version: "0.145.0",
+            model_provider: "openai",
+          },
+        },
+        {
+          timestamp: "2026-07-19T00:00:00.001Z",
+          type: "event_msg",
+          payload: { type: "task_started", turn_id: providerTurnId },
+        },
+        {
+          timestamp: "2026-07-19T00:00:00.002Z",
+          type: "turn_context",
+          payload: {
+            turn_id: providerTurnId,
+            cwd: providerCwd,
+            approval_policy: "never",
+            sandbox_policy: { type: "read-only" },
+            model,
+            effort: "xhigh",
+          },
+        },
+        {
+          timestamp: "2026-07-19T00:00:01.000Z",
+          type: "response_item",
+          payload: {
+            type: "message",
+            role: "assistant",
+            content: [{ type: "output_text", text: reportBody }],
+          },
+        },
+        {
+          timestamp: "2026-07-19T00:00:01.001Z",
+          type: "event_msg",
+          payload: {
+            type: "task_complete",
+            turn_id: providerTurnId,
+            last_agent_message: reportBody,
+          },
+        },
+      ]
+        .map((event) => JSON.stringify(event))
+        .join("\n")}\n`;
+      const providerCaptureBody = `${JSON.stringify(
+        {
+          schema_version: 1,
+          binding: "runner_work_player",
+          recorded_session_cwd: providerCwd,
+          recorded_turn_cwd: providerCwd,
+          canonical_expected_cwd: providerCwd,
+          canonical_session_cwd: providerCwd,
+          canonical_turn_cwd: providerCwd,
+          expected_directory_identity: { device_id: "1", file_id: String(seed) },
+          session_directory_identity: { device_id: "1", file_id: String(seed) },
+          turn_directory_identity: { device_id: "1", file_id: String(seed) },
+          copied_rollout_sha256: sha256Text(providerRolloutBody),
+        },
+        null,
+        2,
+      )}\n`;
+      const primaryEnvelopeBody = `${JSON.stringify({
+        type: "result",
+        subtype: "success",
+        provider: "codex",
+        is_error: false,
+        session_id: providerSessionId,
+        result: reportBody,
+        terminal_reason: "completed",
+        num_turns: 1,
+        requested_model: model,
+        modelUsage: { [model]: {} },
+      })}\n`;
+      const modelAttestation = {
+        schema_version: 3,
+        provider: "codex",
+        run_seed: seed,
+        model,
+        persona: "default",
+        target: "overworld",
+        play_mode: "pure",
+        start_surface: "fresh_overworld",
+        build,
+        game_session_id: sidecar.session_id,
+        provider_session_id: providerSessionId,
+        actual_provider: "openai",
+        actual_model: model,
+        reasoning_effort: "xhigh",
+        provider_turn_id: providerTurnId,
+        provider_cwd: providerCwd,
+        report_recovered: false,
+        receipt_hash: receipt.receiptHash,
+        report_sha256: sha256Text(reportBody),
+        run_sidecar_sha256: sha256Text(sidecarBody),
+        run_evidence_sha256: sha256Text(evidenceBody),
+        primary_envelope_sha256: sha256Text(primaryEnvelopeBody),
+        provider_events_sha256: sha256Text(providerEventsBody),
+        provider_rollout_sha256: sha256Text(providerRolloutBody),
+        provider_capture_sha256: sha256Text(providerCaptureBody),
+        initial_report_sha256: null,
+        recovery_metadata_sha256: null,
+        recovery_envelope_sha256: null,
+      };
+      writeFileSync(reportPath, reportBody);
+      writeFileSync(`${prefix}.run.json`, sidecarBody);
+      writeFileSync(`${prefix}.evidence.jsonl`, evidenceBody);
+      writeFileSync(`${prefix}.json`, primaryEnvelopeBody);
+      writeFileSync(`${prefix}.codex.jsonl`, providerEventsBody);
+      writeFileSync(`${prefix}.codex-rollout.jsonl`, providerRolloutBody);
+      writeFileSync(`${prefix}.codex-capture.json`, providerCaptureBody);
+      writeFileSync(`${prefix}.fleet.json`, `${JSON.stringify(modelAttestation, null, 2)}\n`);
+      return {
+        planned_index: index,
+        seed,
+        persona: "default",
+        provider: "codex",
+        model,
+        target: "overworld",
+        report: reportPath,
+        status: "verified",
+        attempts: 1,
+        attempt_history: [
+          {
+            attempt: 1,
+            exit: 0,
+            classification: "verified",
+            report_recovered: false,
+            archive: null,
+          },
+        ],
+        report_recovered: false,
+        exit: 0,
+        log: null,
+        report_schema_version: 2,
+        play_mode: "pure",
+        start_surface: "fresh_overworld",
+        retention_eligible: true,
+        evidence_status: "verified",
+        session_contract_version: 3,
+        baseline_decisions: 40,
+        accepted_decisions: receipt.acceptedDecisions,
+        retention_choices: receipt.retentionHistory,
+        checkpoint: receipt.checkpoint,
+        exit_reason: receipt.exitReason,
+        exit_reasons: receipt.exitReasons,
+        receipt_hash: receipt.receiptHash,
+        failure_reason: null,
+        evidence_schema_version: 2,
+        model_attestation: modelAttestation,
+        run_seed: seed,
+        build,
+        quest_outcomes: sidecar.quest_outcomes,
+      };
+    });
+    const summary = {
+      label: "codex-pilot",
+      stamp: "20260102T000000Z",
+      count: 10,
+      concurrency: 4,
+      reportsDir,
+      report_schema_version: 2,
+      play_mode: "pure",
+      start_surface: "fresh_overworld",
+      retention_contract_eligible: true,
+      retention_eligible_verified_runs: 10,
+      retention_ineligible_or_unverified_runs: 0,
+      session_contract_version: 3,
+      baseline_decisions: 40,
+      verified: 10,
+      "skipped-resume": 0,
+      failed: 0,
+      total_attempts: 10,
+      failed_attempts: 0,
+      technical_timeouts: 0,
+      report_recovered_runs: 0,
+      seed_base: 700,
+      provider: "codex",
+      model,
+      personas: "default",
+      target: "overworld",
+      resume_enabled: false,
+      evidence_schema_version: 2,
+      model_attestation_schema_version: 3,
+      build,
+    };
+    const manifestPath = join(fleetDir, "manifest.jsonl");
+    writeFileSync(join(fleetDir, "summary.json"), `${JSON.stringify(summary, null, 2)}\n`);
+    writeFileSync(manifestPath, `${rows.map((row) => JSON.stringify(row)).join("\n")}\n`);
+
+    const accepted = validateStartingSlicePilot({ root: ROOT, fleetDir, expectedBuild: build });
+    expect(accepted.validity_errors).toEqual([]);
+    expect(accepted.pilot_passed).toBe(true);
+    expect(accepted.authenticated_actual_model).toBe(model);
+
+    const firstPrefix = join(reportsDir, "20260102T000000Z_overworld_seed700");
+    const rolloutPath = `${firstPrefix}.codex-rollout.jsonl`;
+    const tamperedRollout = readFileSync(rolloutPath, "utf8")
+      .trim()
+      .split(/\r?\n/u)
+      .map((line) => JSON.parse(line) as Record<string, unknown>);
+    const completion = tamperedRollout.at(-1)!.payload as Record<string, unknown>;
+    completion.last_agent_message = "coherently re-hashed substitution";
+    const tamperedRolloutBody = `${tamperedRollout.map((row) => JSON.stringify(row)).join("\n")}\n`;
+    writeFileSync(rolloutPath, tamperedRolloutBody);
+    const capturePath = `${firstPrefix}.codex-capture.json`;
+    const tamperedCapture = JSON.parse(readFileSync(capturePath, "utf8")) as Record<
+      string,
+      unknown
+    >;
+    tamperedCapture.copied_rollout_sha256 = sha256Text(tamperedRolloutBody);
+    const tamperedCaptureBody = `${JSON.stringify(tamperedCapture, null, 2)}\n`;
+    writeFileSync(capturePath, tamperedCaptureBody);
+    const tamperedAttestation = {
+      ...rows[0]!.model_attestation,
+      provider_rollout_sha256: sha256Text(tamperedRolloutBody),
+      provider_capture_sha256: sha256Text(tamperedCaptureBody),
+    };
+    writeFileSync(`${firstPrefix}.fleet.json`, `${JSON.stringify(tamperedAttestation, null, 2)}\n`);
+    writeFileSync(
+      manifestPath,
+      `${rows
+        .map((row, index) =>
+          index === 0 ? { ...row, model_attestation: tamperedAttestation } : row,
+        )
+        .map((row) => JSON.stringify(row))
+        .join("\n")}\n`,
+    );
+    const rejected = validateStartingSlicePilot({ root: ROOT, fleetDir, expectedBuild: build });
+    expect(rejected.validity_errors.join("\n")).toMatch(/task_complete message bytes/i);
+  });
+
   it("reopens every sidecar, model attestation, and report instead of trusting the manifest", () => {
     const base = mkdtempSync(join(tmpdir(), "af-slice-certifier-"));
     tempDirs.push(base);
@@ -998,7 +1328,7 @@ describe("closed fleet filesystem integrity", () => {
       expectedBuild: build,
     });
     expect(rejectedHaikuRow.validity_errors.join("\n")).toContain(
-      "requested model haiku != required sonnet",
+      "requested model haiku != summary model sonnet",
     );
     writeFileSync(manifestPath, canonicalManifestBody);
 

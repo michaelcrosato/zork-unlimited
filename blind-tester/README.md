@@ -60,11 +60,11 @@ npm run blind --spectate                  # then `npm run spectate` in another t
 # 3) Targeted quest plumbing — explicit structural smoke, NO LLM/tokens:
 bash blind-tester/run.sh --smoke --quest sunken_barrow --seed 11
 
-# Claude remains the default; a custom Claude model preserves the pure contract:
-bash blind-tester/run.sh --model opus
+# Codex Spark is the default pure player (PowerShell-safe equals form):
+npm run blind --seed=2875
 
-# Hardened Codex pure player (PowerShell-safe equals form):
-npm run blind --provider=codex --model=gpt-5.6-sol --seed=2875
+# Claude remains an explicit hardened compatibility provider:
+npm run blind --provider=claude --model=opus --seed=2876
 ```
 
 The report is written to `blind-tester/reports/<stamp>_<source>_seed<n>.md`
@@ -72,7 +72,8 @@ The report is written to `blind-tester/reports/<stamp>_<source>_seed<n>.md`
 (and the provider envelope alongside as `.json`; Codex also keeps its audited
 `.codex.jsonl` transport). `reports/` is gitignored.
 
-The built-in Codex path starts from an isolated temporary directory, ignores
+The built-in Codex path starts from an isolated temporary player directory and
+a fresh per-run `CODEX_HOME` containing only a private copy of `auth.json`, ignores
 user/project config and rules, disables shell/web/apps/plugins/browser/computer
 and subagent capabilities, injects only the pure AdventureForge MCP server, and
 pair-audits every normal game call. Exact paired/null `-32601` probes against the
@@ -80,8 +81,18 @@ empty AdventureForge resource namespace and one bounded in-memory todo lifecycle
 are tolerated as non-gameplay transport noise; any content, success, other
 server, malformed lifecycle, or unbounded payload rejects the run. Codex report
 recovery is intentionally unavailable: malformed output is rejected and needs
-a fresh seed. Current fleet attestation and starting-slice certification remain
-Claude/Sonnet-only because Codex JSONL does not authenticate the actual model id.
+a fresh seed. Fleet runs capture one rollout JSONL from the sterile home and
+verify its cwd against the still-live isolated player directory by exact
+canonical path and native filesystem identity. An exclusive adjacent
+`.codex-capture.json` receipt records that capture-time check and binds it to the
+copied rollout's SHA-256; resume and certification revalidate its strict fields
+and rollout bytes. Because the temporary directory is then deleted, later checks
+cannot re-stat it: this is trusted local runner provenance, not a cryptographic
+attestation against a privileged actor coherently rewriting the whole bundle.
+The CLI-recorded selected model/provider/session/effort/turn and completed
+lifecycle are bound independently of requested-model and synthesized usage
+fields. This is durable Codex CLI provenance, not a provider-signed snapshot of
+the remote backend.
 
 ## Watching a playthrough live (spectate mode)
 
@@ -112,13 +123,10 @@ optional authenticated diagnostic resume, and a closed manifest bundle — each
 one an ordinary `run.sh` spawn. The starting-slice pilot and authority commands
 are:
 
-> Fleet model attestation is currently Claude-only. Use `--provider=codex` for
-> canonical single-run feedback, not for a certifying fleet.
-
 ```bash
-npm run fleet -- --count 10 --concurrency 4 --model sonnet --seed-base <fresh-pilot-seed-base> --label <fresh-pilot-label> --no-resume --max-retries 0
+npm run fleet -- --provider codex --model gpt-5.6-terra --count 10 --concurrency 4 --seed-base <fresh-pilot-seed-base> --label <fresh-pilot-label> --no-resume --max-retries 0
 npm run starting-slice:pilot -- --fleet ai-runs/fleet/<fresh-pilot-label>
-npm run fleet -- --count 100 --concurrency 4 --model sonnet --seed-base <fresh-seed-base> --label <fresh-label> --no-resume --max-retries 0
+npm run fleet -- --provider codex --model gpt-5.6-terra --count 100 --concurrency 4 --seed-base <fresh-seed-base> --label <fresh-label> --no-resume --max-retries 0
 npm run fleet:mock -- --count 2     # structural zero-token dry run
 npm run fleet:mock -- --count 2 --target quest:sunken_barrow # structural drop-in
 ```
@@ -131,11 +139,15 @@ npm run fleet:mock -- --count 2 --target quest:sunken_barrow # structural drop-i
   persona. `explorer`, `speedrunner`, `breaker`, `casual`, `lore-reader`, and
   `mixed` remain explicit structural experiments; their prescribed behavior
   changes the retention measurement.
-- **Model**: `--model <alias>` (`haiku`, `sonnet`, `opus`) or `--model mix`
+- **Provider/model**: Claude accepts `--model <alias>` (`haiku`, `sonnet`,
+  `opus`) or diagnostic `--model mix`
   (deterministic 9 haiku : 1 sonnet weighting by index). No temperature/top_p
-  flag exists — model × seed is the live diversity axis. Live fleets default to
-  homogeneous Sonnet, the only authoritative requested model plan. Explicit
-  `mix`, Haiku, and Opus fleets are diagnostic-only.
+  flag exists — model × seed is the live diversity axis. The live fleet default
+  is Codex `gpt-5.3-codex-spark`, using the dedicated Spark allowance for
+  ordinary blind feedback; Claude must be selected explicitly. Codex accepts
+  only exact homogeneous
+  `gpt-5.6-sol`, `gpt-5.6-terra`, `gpt-5.6-luna`, or
+  `gpt-5.3-codex-spark` plans; aliases, fallback, and mixing fail before launch.
 - **Resume**: resume is enabled by default for diagnostic fleets only. Only a
   reverified report plus evidence-sidecar schema v2 with the
   current journey contract, exact planned seed, and exact clean commit and world
@@ -146,13 +158,17 @@ npm run fleet:mock -- --count 2 --target quest:sunken_barrow # structural drop-i
   exponentially up to `--max-retries` (default 2). Before a retry, every
   generated artifact and a diagnostic log are copied into the bundle's
   per-seed/per-attempt archive with byte counts and SHA-256 digests.
-- **Runner attestation**: each accepted live member has an adjacent runner-owned
-  v2 attestation. It binds the plan to the game session, unique Claude session,
-  actual singleton model usage, completed clean primary envelope, and raw-byte
-  SHA-256 digests of the report, sidecar, raw JSONL evidence, primary envelope,
-  and any complete recovery artifact set. Diagnostic resume reconstructs these
-  facts rather than trusting the attestation; certification also reconstructs
-  them, then rejects any member whose report was recovered.
+- **Runner attestation**: historical Claude members retain the adjacent v2
+  attestation. Codex members use v3, binding the exact CLI-recorded selected
+  model, provider `openai`, effort `xhigh`, provider session/turn, verified
+  isolated working directory, completed one-turn lifecycle, public events,
+  final report, the single copied rollout, and its strict cwd capture receipt.
+  `task_complete` must be the final rollout row and any abort/error lifecycle
+  history rejects the run. All artifact bytes are hashed. Requested-model and
+  synthesized usage fields are not authority; missing or ambiguous rollout proof
+  fails closed. Certification independently reparses the retained chain and
+  rejects recovery, reuse, links, and path escape; it does not re-stat the
+  already-deleted temporary cwd or provide a provider signature.
 - **Output**: reports plus verified `.run.json` evidence sidecars in `reports/`
   (or `--out <dir>`). For pure runs the adjacent sidecar is the final publication
   commit marker: verification uses a work-private sidecar, then the runner
@@ -185,33 +201,36 @@ npm run fleet:mock -- --count 2 --target quest:sunken_barrow # structural drop-i
 
 ### Certifying the starting slice
 
-First close a fresh 10-player Sonnet pilot bundle and run its distinct go/no-go
-checker:
+First close a fresh 10-player homogeneous provider/model pilot bundle and run
+its distinct go/no-go checker:
 
 ```bash
-npm run fleet -- --count 10 --concurrency 4 --model sonnet --seed-base <fresh-pilot-seed-base> --label <fresh-pilot-label> --no-resume --max-retries 0
+npm run fleet -- --provider codex --model gpt-5.6-terra --count 10 --concurrency 4 --seed-base <fresh-pilot-seed-base> --label <fresh-pilot-label> --no-resume --max-retries 0
 npm run starting-slice:pilot -- --fleet ai-runs/fleet/<fresh-pilot-label>
 ```
 
 The pilot requires 10/10 primary unrecovered/no-retry members, unique game and
-Claude sessions, one exact authenticated actual model id, at least three
+provider sessions, one exact provider-evidence model value, at least three
 recognized Wolf-Winter strategies, and no strategy above 7/10. It writes a
 separate pilot artifact and never certifies the slice. If the exact provider
-model id changes before authority, repilot.
+model id changes before authority, repilot. The authority checker validates only
+the submitted 100-member bundle; retaining and reviewing the corresponding
+fresh same-model pilot is an explicit operational prerequisite, not an
+automatically linked field in the authority artifact.
 
-Then close the authoritative 100-player Sonnet bundle and run:
+Then close the authoritative 100-player homogeneous bundle and run, for example:
 
 ```bash
-npm run fleet -- --count 100 --concurrency 4 --model sonnet --seed-base <fresh-seed-base> --label <fresh-label> --no-resume --max-retries 0
+npm run fleet -- --provider codex --model gpt-5.6-terra --count 100 --concurrency 4 --seed-base <fresh-seed-base> --label <fresh-label> --no-resume --max-retries 0
 npm run starting-slice:certify -- --fleet ai-runs/fleet/<label>
 ```
 
 The certifier reparses and reverifies all reports and sidecars. It requires
 exactly 100 unique contiguous planned seeds, no failed/missing slots, one clean
 build/world, zero failed attempts or report-recovered members across the closed
-histories, the current pure fresh-overworld/default-player contract, and the
-homogeneous requested Sonnet plan authenticated to one exact actual model id,
-with unique game and Claude sessions. Malformed or unauthenticated
+histories, the current pure fresh-overworld/default-player contract, and a
+homogeneous supported provider/model bound to one exact provider-evidence model
+value, with unique game and provider sessions. Malformed or unauthenticated
 evidence exits 2; valid evidence that misses a gate exits 1; a pass exits 0.
 
 The exact simultaneous quality gates and Wolf-Winter outcome mapping live in
@@ -314,7 +333,9 @@ rhythm. The structural-only [`prompt.md`](./prompt.md) is a QA fixture.
 --quest <id>     target ONE shipped quest for a structural dev/QA drop-in;
                  requires --smoke (or --mock through fleet), never a live agent
 --seed <n>       deterministic seed (default: 7)
---model <alias>  claude model alias: sonnet (default, best value) | opus
+--provider <id>  codex (default) | claude
+--model <id>     exact Codex id (default: gpt-5.3-codex-spark), or an explicit
+                 Claude alias: haiku | sonnet | opus
 --out <prefix>   report path prefix (default: reports/<stamp>_<source>_seed<n>)
 --smoke          run the no-LLM MCP smoke test instead of a real playtest
 --overworld      explicit fresh-overworld target (already fixed for pure live play)
@@ -341,12 +362,12 @@ audit without adding extra `reports/*.md` inputs.
 
 ## Why arbitrary provider overrides are not pure evidence
 
-The canonical live player is the runner-owned `claude --print` launch. It runs
-from an isolated temporary directory with file, shell, and web tools denied.
-An arbitrary external command may connect only to the player MCP server yet
-still retain filesystem or shell access outside MCP; a valid exit receipt cannot
-prove that it stayed blind. Therefore `BLIND_AGENT_CMD` is rejected on live pure
-runs instead of relying on operator discipline. Alternative providers may be
-added only through a provider-specific hardened adapter that enforces the same
-tool denial in code and has an acceptance regression. Explicit `--smoke` and
-`--mock` remain the non-pure development/QA instruments.
+The canonical live player is the runner-owned Codex launch, defaulting to Spark
+inside an isolated temporary directory with file, shell, web, configuration,
+and unrelated tools denied. The explicit Claude adapter remains compatible and
+hardened. An arbitrary external command may connect only to the player MCP
+server yet still retain filesystem or shell access outside MCP; a valid exit
+receipt cannot prove that it stayed blind. Therefore `BLIND_AGENT_CMD` is
+rejected on live pure runs instead of relying on operator discipline. Additional
+providers require an equally hardened adapter and acceptance regression.
+Explicit `--smoke` and `--mock` remain non-pure development/QA instruments.
