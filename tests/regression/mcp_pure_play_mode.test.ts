@@ -1826,8 +1826,7 @@ describe("MCP pure play mode", () => {
         ).toMatchObject({
           ask_wolves: "ask: Ask for Cade's quick spear-hand lesson.",
           ask_byre: "ask: Ask for Cade's guarded spear-fighting plan.",
-          ask_leave:
-            "ask: Leave Cade. Entering the breach without feed, drive, or seals commits hunt-and-hold.",
+          ask_leave: "ask: Leave Cade.",
         });
         expect(labeledMenu).toMatchObject({
           overworld_session_id: sessionId,
