@@ -6,6 +6,7 @@ import { compactText } from "../core/compact_text.js";
 import type { CampaignCharacterView } from "./campaign_character_view.js";
 import type { CampaignServiceOffer } from "./campaign_service_rules.js";
 import type { OverworldQuestLaunchView } from "./quest_launch.js";
+import type { OverworldLocalJob } from "./overworld.js";
 
 export const OVERWORLD_COMPACT_JOURNAL_LIMIT = 5;
 export const OVERWORLD_COMPACT_ROUTE_LIMIT = 8;
@@ -23,10 +24,28 @@ export const OVERWORLD_COMPACT_TITLE_CHAR_LIMIT = 140;
 export const OVERWORLD_COMPACT_RISK_CHAR_LIMIT = 160;
 export const OVERWORLD_COMPACT_ROAD_EVENT_SUMMARY_CHAR_LIMIT = 240;
 export const OVERWORLD_COMPACT_SERVICE_SUMMARY_CHAR_LIMIT = 240;
-export const OVERWORLD_COMPACT_VIEW_VERSION = 19 as const;
+export const OVERWORLD_COMPACT_VIEW_VERSION = 20 as const;
 
 export type OverworldCompactRef = readonly [id: string, name: string];
 export type OverworldCompactJobLeadRef = readonly [id: string, title: string, areaId: string];
+export type OverworldCompactJobSceneOption = readonly [
+  optionId: string,
+  title: string,
+  minutes: number,
+  renown: number,
+  preview: string,
+  consequence: string,
+];
+export type OverworldCompactJobScene = readonly [
+  jobId: string,
+  sceneId: string,
+  prompt: string,
+  requiredPoiId: string,
+  requiredContactId: string,
+  requiredQuestIds: readonly string[],
+  options: readonly OverworldCompactJobSceneOption[],
+];
+export type OverworldCompactJobChoice = readonly [jobId: string, optionId: string];
 export type OverworldCompactQuestLaunchOption = readonly [
   id: string,
   title: string,
@@ -293,6 +312,8 @@ export type OverworldCompactView = {
   events: OverworldCompactRef[];
   local_refs_truncated?: OverworldCompactLocalRefTruncation;
   jobs?: OverworldCompactRef[];
+  job_scenes?: OverworldCompactJobScene[];
+  job_choices?: OverworldCompactJobChoice[];
   remembered_jobs?: OverworldCompactJobLeadRef[];
   sites?: OverworldCompactRef[];
   quests?: OverworldCompactQuestRef[];
@@ -347,6 +368,10 @@ export const OVERWORLD_COMPACT_LEGEND = {
   local_refs_truncated:
     "keys among areas/poi/contacts/events/jobs/sites/quests whose lists were capped",
   jobs: "[[job_id, title], ...] discovered jobs (work_overworld_session_job)",
+  job_scenes:
+    "[[job_id, scene_id, prompt, required_poi_id, required_contact_id, [required_quest_id], [[option_id, title, minutes, renown, preview, consequence]]], ...] authored job scenes; complete the named setup before choosing",
+  job_choices:
+    "[[job_id, option_id], ...] currently legal authored job choices; call work_overworld_session_job with these exact ids",
   remembered_jobs:
     "[[job_id, title, area_id], ...] discovered unfinished jobs in other known areas; walk to area_id via area_routes before work_overworld_session_job",
   sites: "[[site_id, title], ...] discovered sites (explore_overworld_session_site)",
@@ -470,6 +495,40 @@ export function compactOverworldJobLeadRefs(
     refs.push(compactOverworldJobLeadRef(values[index]!));
   }
   return refs;
+}
+
+export function compactOverworldJobScenes(
+  values: readonly OverworldLocalJob[],
+  limit = OVERWORLD_COMPACT_LOCAL_REF_LIMIT,
+): OverworldCompactJobScene[] {
+  const scenes: OverworldCompactJobScene[] = [];
+  for (const job of values.slice(0, limit)) {
+    const scene = job.authored_scene;
+    if (!scene) continue;
+    scenes.push([
+      job.id,
+      scene.id,
+      compactText(scene.prompt, OVERWORLD_COMPACT_SERVICE_SUMMARY_CHAR_LIMIT),
+      scene.required_poi_id,
+      scene.required_contact_id,
+      [...(scene.requires_completed_quests ?? [])],
+      scene.options.map((option) => [
+        option.id,
+        compactOverworldTitle(option.title),
+        option.terms.minutes,
+        option.terms.renown,
+        compactText(option.preview, OVERWORLD_COMPACT_SERVICE_SUMMARY_CHAR_LIMIT),
+        compactText(option.consequence, OVERWORLD_COMPACT_SERVICE_SUMMARY_CHAR_LIMIT),
+      ]),
+    ]);
+  }
+  return scenes;
+}
+
+export function compactOverworldJobChoices(
+  values: readonly OverworldCompactJobChoice[],
+): OverworldCompactJobChoice[] {
+  return values.map(([jobId, optionId]) => [jobId, optionId]);
 }
 
 export function compactOverworldQuestRefs(
@@ -980,6 +1039,18 @@ export function cloneOverworldCompactView(view: OverworldCompactView): Overworld
   if (view.route_options_truncated) clone.route_options_truncated = true;
   if (view.route_paths_truncated) clone.route_paths_truncated = true;
   if (view.jobs) clone.jobs = cloneTupleList(view.jobs);
+  if (view.job_scenes) {
+    clone.job_scenes = view.job_scenes.map((scene) => [
+      scene[0],
+      scene[1],
+      scene[2],
+      scene[3],
+      scene[4],
+      [...scene[5]],
+      cloneTupleList(scene[6]),
+    ]);
+  }
+  if (view.job_choices) clone.job_choices = cloneTupleList(view.job_choices);
   if (view.remembered_jobs) clone.remembered_jobs = cloneTupleList(view.remembered_jobs);
   if (view.sites) clone.sites = cloneTupleList(view.sites);
   if (view.quests) {
@@ -1027,7 +1098,13 @@ export function compactOverworldView(view: OverworldView): OverworldCompactView 
   const areaRoutes = compactOverworldAreaRoutes(view.areaExits);
   const roadsTruncated = compactOverworldMovementTruncated(view.exits);
   const areaRoutesTruncated = compactOverworldMovementTruncated(view.areaExits);
-  const jobs = compactOverworldTitleRefs(view.jobs);
+  const visibleJobs = view.jobs.slice(0, OVERWORLD_COMPACT_LOCAL_REF_LIMIT);
+  const visibleJobIds = new Set(visibleJobs.map((job) => job.id));
+  const jobs = compactOverworldTitleRefs(visibleJobs);
+  const jobScenes = compactOverworldJobScenes(visibleJobs);
+  const jobChoices = compactOverworldJobChoices(
+    view.jobChoices.filter(([jobId]) => visibleJobIds.has(jobId)),
+  );
   const rememberedJobs = compactOverworldJobLeadRefs(view.rememberedJobs);
   const sites = compactOverworldTitleRefs(view.sites);
   const quests = compactOverworldQuestRefs(view.quests);
@@ -1099,6 +1176,8 @@ export function compactOverworldView(view: OverworldView): OverworldCompactView 
     events: compactOverworldTitleRefs(view.events),
     ...(localRefsTruncated.length > 0 ? { local_refs_truncated: localRefsTruncated } : {}),
     ...(jobs.length > 0 ? { jobs } : {}),
+    ...(jobScenes.length > 0 ? { job_scenes: jobScenes } : {}),
+    ...(jobChoices.length > 0 ? { job_choices: jobChoices } : {}),
     ...(rememberedJobs.length > 0 ? { remembered_jobs: rememberedJobs } : {}),
     ...(sites.length > 0 ? { sites } : {}),
     ...(quests.length > 0 ? { quests } : {}),

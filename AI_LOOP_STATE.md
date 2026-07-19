@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 575 -->
+<!-- historical_cycle_count: 576 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,15 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - authored_albany_works_scene
+
+- Evidence choice: Depth Contract #11 overrode the generic content hot spot because Albany Works was still a one-click time/renown payout with no authored priority or delayed consumer.
+- Surface: after Wolf-Winter, one exclusive Works scene spends 80 minutes/+5 renown to protect the trapped public shift or 35 minutes/+2 to inventory outbound cold-set stock; exact POI/contact/quest prerequisites, choice proof, full/compact MCP, UI, journal, restore, and bounded historical migration agree.
+- Counterfactual: the truthful held-byre fact plus 13 Capital / Mohawk renown unlocks one 15-minute Civic rest, so the public-shift line reaches it from the ordinary Wolf return while inventory does not; paired rested/fatigued states reverse which option wins, and generic chronological renown replay accepts an independently earned threshold.
+- Pure evidence: final-world Spark seed 2890 verified fresh/overworld, completed Wolf-Winter and The Gallowmere in 46 decisions, rated clarity/enjoyment 4/4, stuck false, replay true, and reported no bug; it skipped Works, so deterministic pairs carry the new scene. Seeds 2888/2889 remain rejected for duplicate forbidden resource probes.
+- Self-critique: PASS for the reusable authored-job grammar and first of six conversions, not the greater-than-BG3 milestone. Five district jobs, checklist events, global failure-forward proof, three independent NPC agendas, Codex-native fleet attestation, deep crawl, and exact 100-player certification remain open.
+- Guard: final crawl `20260719T035234Z` reached 247/247 nodes, 344/344 edges, and 12/12 boards/quests with zero findings; fixture hardening closes the full-suite integration regression, and health passes at 379 files/2,867 tests plus UI and all 12 packs.
 
 ### Cycle result - pure_embedded_session_recovery
 
@@ -140,21 +149,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Pure evidence: seed 2712 verified pure/fresh, chose Road-Warden + Hayden's report + Emery's route without guidance, completed Wolf-Winter at decision 24, continued at 24/40/48, and ended voluntarily after three goals at 69; clarity/enjoyment 4/4, stuck false, replay true. It chose combat, so paired deterministic proof carries the three field consumers; its dense three-screen opening and recurring-contact-name notes remain real polish debt.
 - Compile/self-critique: only this one verified report exists since compile `20260715T000942Z`, so no compile is due. PASS for F05 and the third evidence-grade irreversible counterexample, not the greater-than-BG3 slice claim: ally agency, six more material forks, and full fortify/outlast and drive/evacuate families remain.
 - Guard: independent audits closed self-minted legacy authority and shortest-route proof gaps; pre/final 6,000-step crawls `20260715T002437Z`/`20260715T015236Z` reached 247/247 nodes, 344/344 edges, and 12/12 quests; focused migration/profile/parity proofs and full health passed.
-
-### Cycle result - wolf_winter_noncombat_strategy
-
-- Evidence choice: starting-slice `SS-F09-resolution-strategy` overrode a stale Station-board wording hot spot because Wolf-Winter's mandatory three-kill resolution contradicted the four-family, failure-forward slice contract.
-- Surface: Cade's lure is now free information followed by explicit commitment; finite feed plus a visible cattle-alarm track supports a clean all-three-alive/whole-herd route, failed-rail all-three-alive/two-cattle-loss recovery, and a truthful hybrid yearling-dead/two-alive outcome. All six nondeath endings export exact Albany facts/memories; only clean preservation unlocks Greenway resupply.
-- Integrity/counterfactual: the reusable validated pressure primitive has full/compact/UI parity plus synthetic second-pack and negative proofs; same-origin clean/combat routes cover detached save lockstep, exact return state, MCP/UI parity, service reversal, and a ≤45-decision first goal. Migration rejects future Wolf endings across every trusted era, and the causal ledger advances from 4/12 to 5/12.
-- Pure evidence: seed 2711 verified pure/fresh, completed Wolf-Winter plus four later goals, continued at 27/40/53/73/80/95, and ended voluntarily at decision 118; clarity/enjoyment 4/4, stuck false, replay true. It chose combat, so paired deterministic proof carries the new path; rejected seeds 2709/2710 supplied no retention evidence, while 2710 exposed and drove the lure-ground-trap fix.
-- Compile/self-critique: compile `20260715T000942Z` contains 779 verified/35 rejected reports and 30 current-contract pure exits, all continuing at least once. PASS for F09, not the greater-than-BG3 slice claim: only two of four target strategy families currently land, with fortify/outlast and full drive/evacuate still missing; F05 preparation is next.
-- Guard: independent adversarial audit found no remaining P0/P1; the exact Wolf graph is 315 states/100 transitions with all seven endings; pre/final 6,000-step crawls `20260714T221312Z`/`20260714T235542Z` reached 247/247 nodes, 344/344 edges, and 12/12 quests; full health passed at 336 files/2,447 tests, UI, and all 12 packs.
-## AFK Cycle 2026-07-18T01-03-14-331Z
-- Evidence choice: Spark seeds 2870/2872/2873 overrode the stale content hot spot because fresh players mistook authored approach ids for story choices or never found the normal quest-launch bridge; seed 2871 also treated jobs/events as goal completion.
-- Surface: compact schema v19 exposes only exact currently executable `quest_starts` tuples from canonical `prepareQuestStart`; tuples disappear while paused, on a pending road, or with an active embedded quest, and optionless quests use `[quest_id,null]`. Initial Albany guidance now says a quest completes the goal and survives ordinary checkpoints, but not completion, ending, or death.
-- Safety/parity: full and compact projections, clone transport, legend, UI, prompt, MCP, active-quest exclusion, canonical registration rejection, Wolf approaches, and optionless omitted-approach launch are covered; the focused launch/prompt/provider suites and typecheck are green.
-- Blind provider: a first-class hardened Codex pure runner now supports GPT/Spark without Claude or `BLIND_AGENT_CMD`; isolated config/tool denial plus an exact JSONL AdventureForge-only audit converges on the existing provenance, receipt verification, evidence copy, and sidecar-last publication. Malformed Codex reports fail closed; Claude fleet certification remains unchanged.
-- Pure evidence: GPT-5.6 seed 2876 is verified pure/fresh with 68 audited MCP calls, completed Wolf-Winter at decision 32, continued through checkpoint 40 and Gallowmere, then ended voluntarily at decision 55; clarity/enjoyment 4/5, stuck false, replay true. It found no launch confusion or blocker and reported four S1 polish debts: dense setup, clipped prose, two stale room descriptions, and an implicit Gallowmere handoff.
-- Spark audit: seed 2867's genuine post-death continuation was fixed by PR #99; 2870/2872/2873 drove this affordance, while five recent reports are verifier-invalid and generic MCP resource errors are tool-selection noise, not auth failure. Codex and Claude login status are healthy; Spark quota is exhausted.
-- Crawl/compile: pre `20260718T010335Z` and post `20260718T024503Z` crawls reached 247/247 nodes, 344/344 edges, 12/12 boards, and 12/12 quests with zero findings. Only one new canonical report exists, so no feedback compile is due.
-- Guard: independent review found no P0/P1 and both P2 gaps are closed; full `npm run health` runs after this record and gates the commit.

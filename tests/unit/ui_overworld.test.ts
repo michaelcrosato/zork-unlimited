@@ -391,6 +391,25 @@ describe("OverworldSession", () => {
     expect(screen).not.toMatch(/Albany Station Quarter|dawn dispatch|relief wagon/i);
   });
 
+  it("authorizes authored local-job buttons from exact projected choices", () => {
+    const app = readFileSync("ui/src/App.tsx", "utf8");
+    const panelStart = app.indexOf("<h2>Local Jobs</h2>");
+    const panelEnd = app.indexOf("<h2>Local Discoveries</h2>", panelStart);
+    expect(panelStart).toBeGreaterThanOrEqual(0);
+    expect(panelEnd).toBeGreaterThan(panelStart);
+    const panel = app.slice(panelStart, panelEnd);
+
+    expect(app).toContain("worldView.jobChoices.map(([jobId, optionId])");
+    expect(panel).toContain("legalJobChoiceKeys.has(");
+    expect(panel).toContain("jobChoiceKey(job.id, option.id)");
+    expect(panel).toContain("disabled={!optionAvailable}");
+    expect(panel).not.toContain("disabled={!sceneReady}");
+    expect(panel).toContain("Required first:");
+    expect(panel).toContain("poiTitlesById.get(scene.required_poi_id)");
+    expect(panel).toContain("characterNamesById.get(scene.required_contact_id)");
+    expect(panel).toContain("<b>Commitment:</b> {option.consequence}");
+  });
+
   it("renders embedded character death as a mandatory ending, not voluntary continuation", async () => {
     const app = readFileSync("ui/src/App.tsx", "utf8");
     const deathBranchStart = app.indexOf("} else if (ending?.death)");

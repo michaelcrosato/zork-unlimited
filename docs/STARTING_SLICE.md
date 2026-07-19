@@ -122,8 +122,10 @@ The current slice now satisfies the twelve-fork structural proof threshold, but
 it is **not yet milestone-certified**:
 
 - Wolf-Winter is now withheld from Albany's FIFO discovery and requires one of
-  three certified source packets, but the other visible Albany jobs/sites/events
-  remain mostly one-click time/renown transactions;
+  three certified source packets. Albany Works is the first of six district jobs
+  converted to an authored post-return priority scene: its exclusive time/renown
+  choice can cross a 13-standing threshold for a later Civic recovery cot. The
+  other five jobs and checklist events remain mostly one-click transactions;
 - Albany authors four permanent registration profiles. Road-Warden and Ledger
   sponsorship now change the actual terms of their matching source packet, and
   the Road-Warden retains its fieldcraft import. Ironhands Repairer,
@@ -182,9 +184,9 @@ The first implementation sequence is:
    landed)_ — quest content declares reusable, validated character/world
    effects; campaign code consumes generic state rather than adding
    Wolf-specific ending conditionals.
-4. **Authored Albany** — replace the visible slice's generic local transactions
-   with scenes whose evidence, time, relationships, resources, and promises
-   alter Wolf-Winter.
+4. **Authored Albany** _(1/6 district jobs converted)_ — replace the visible
+   slice's generic local transactions with scenes whose evidence, time,
+   relationships, resources, and promises alter Wolf-Winter and its return.
 5. **Systemic Wolf-Winter** — combat, fully noncombat, and hybrid solutions share
    pressure state and produce truthful, mechanically distinct Albany returns.
 
@@ -634,6 +636,11 @@ Certification requires all of the following simultaneously:
     visible slice; authored scenes replace them.
 12. One playthrough cannot expose every meaningful scene, relationship state,
     resolution family, or outcome.
+
+Depth Contract #11 remains open: Albany Works proves the reusable authored-job
+grammar, one exclusive post-return priority, and a delayed 13-standing Civic
+service consumer, but five generic district jobs and the checklist events are
+still visible.
 
 ## Evidence contract
 

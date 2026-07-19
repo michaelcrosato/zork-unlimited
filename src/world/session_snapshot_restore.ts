@@ -78,6 +78,14 @@ import {
 } from "./journey_campaign.js";
 import { campaignStoryChoiceRefKey } from "./campaign_story_choices.js";
 import { describeOverworldContactAction } from "./local_actions.js";
+import { resolveLocalJobSceneOption } from "./local_job_scene.js";
+import {
+  AUTHORED_LOCAL_JOB_LEGACY_DEFINITIONS,
+  authoredLocalJobLegacyCompletion,
+  describeAuthoredLocalJobLegacyAction,
+  migrateAuthoredLocalJobLegacyEntry,
+  OVERWORLD_AUTHORED_LOCAL_JOB_PREDECESSOR_WORLD_HASH,
+} from "./local_job_scene_legacy.js";
 import {
   questCampaignExportForEnding,
   questCompletionJournalEntryDraft,
@@ -332,10 +340,25 @@ export const OVERWORLD_JUNE_RETURN_COPY_PREDECESSOR_WORLD_HASH =
   "a2ddc6e9042a208f2821451f10b0152874ef55bc77b0f7801f3ea58591357474";
 export const OVERWORLD_JUNE_RETURN_COPY_WORLD_HASH =
   "69604947643a24fc2d7c2377a85963742282ac7f83e7cec18a58bfc5eb8f53fc";
+export { OVERWORLD_AUTHORED_LOCAL_JOB_PREDECESSOR_WORLD_HASH };
+export const OVERWORLD_AUTHORED_LOCAL_JOB_FIRST_SCENE_WORLD_HASH =
+  "9b8cc75b05e77af160f46dbcd177333cc0f27af89e56f504af0bf6c6a2422c31";
+export const OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH =
+  "815a138cbeeafbc9595c04e37260ccaba9d2d52d6a3341b3c38afe9eade62636";
+/**
+ * Exact manifests whose already-valid job evidence can be normalized into the
+ * current authored-job registry. Each later conversion adds its immediate
+ * predecessor here; the generic loop preserves proofs from earlier conversions.
+ */
+export const OVERWORLD_AUTHORED_LOCAL_JOB_TRUSTED_PREDECESSOR_WORLD_HASHES: ReadonlySet<string> =
+  new Set([
+    OVERWORLD_AUTHORED_LOCAL_JOB_PREDECESSOR_WORLD_HASH,
+    OVERWORLD_AUTHORED_LOCAL_JOB_FIRST_SCENE_WORLD_HASH,
+  ]);
 /** @deprecated Relief-oath-era current-target name retained for existing callers. */
-export const OVERWORLD_RELIEF_OATH_WORLD_HASH = OVERWORLD_JUNE_RETURN_COPY_WORLD_HASH;
+export const OVERWORLD_RELIEF_OATH_WORLD_HASH = OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH;
 /** @deprecated Current-target alias retained for earlier migration callers. */
-export const OVERWORLD_RELIEF_ALLOCATION_WORLD_HASH = OVERWORLD_JUNE_RETURN_COPY_WORLD_HASH;
+export const OVERWORLD_RELIEF_ALLOCATION_WORLD_HASH = OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH;
 const OVERWORLD_JUNE_RETURN_COPY_PREDECESSOR_LEFT_CONTACT = Object.freeze({
   id: "talk:albany_city__transport_hub__june_pike@left_after_blood",
   kind: "contact" as const,
@@ -1890,6 +1913,89 @@ export function applyOverworldSessionSnapshotRestore(
   };
 }
 
+function migrateAuthoredLocalJobPredecessorJournal(args: {
+  campaignBoundaries: OverworldCampaignBoundaryReplayIndex;
+  indexes: OverworldSnapshotManifestIndex;
+  snapshot: OverworldSessionSnapshot;
+}): OverworldJournalEntry[] {
+  let journalEntries = [...args.snapshot.journalEntries];
+  for (const definition of AUTHORED_LOCAL_JOB_LEGACY_DEFINITIONS) {
+    const completed = args.snapshot.completedJobIds.includes(definition.jobId);
+    const matchingEntries = journalEntries.filter(
+      (entry) => entry.id === `job:${definition.jobId}`,
+    );
+    if (completed !== (matchingEntries.length === 1)) {
+      throw new Error(
+        `The authored-local-job predecessor has inconsistent completion evidence for "${definition.jobId}".`,
+      );
+    }
+    if (!completed) continue;
+
+    const entry = matchingEntries[0]!;
+    if (entry.localSceneProof !== undefined) {
+      // Stacked conversions retain already-authored choices and older trusted
+      // generic markers; only the newly converted proofless job is normalized.
+      continue;
+    }
+    const job = args.indexes.jobsById.get(definition.jobId);
+    if (!job?.authored_scene || job.authored_scene.id !== definition.sceneId) {
+      throw new Error(
+        `The authored-local-job migration target is missing scene "${definition.sceneId}" for job "${definition.jobId}".`,
+      );
+    }
+    const recordedAt = parseTimeLabel(entry.recordedAt);
+    const boundaryMatches = [...args.campaignBoundaries.byAcceptedDecisions.entries()].filter(
+      ([, replayed]) =>
+        replayed.decision?.surface === "overworld" &&
+        replayed.decision.reason === "situation_changed" &&
+        replayed.decision.actionId === `work_job:${definition.jobId}` &&
+        replayed.townId === job.home &&
+        replayed.areaId === job.area,
+    );
+    if (boundaryMatches.length > 1) {
+      throw new Error(
+        `The authored-local-job predecessor completion for "${definition.jobId}" lacks one exact journey decision.`,
+      );
+    }
+    const leadOfferEntry = args.snapshot.journalEntries.find(
+      (candidate) => candidate.kind === "lead_source_offer",
+    );
+    if (
+      boundaryMatches.length === 0 &&
+      leadOfferEntry &&
+      recordedAt >= parseTimeLabel(leadOfferEntry.recordedAt)
+    ) {
+      throw new Error(
+        `The authored-local-job predecessor completion for "${definition.jobId}" is missing from its available campaign trail.`,
+      );
+    }
+    const boundaryMatch = boundaryMatches[0];
+    const boundary = boundaryMatch
+      ? {
+          acceptedDecisions: boundaryMatch[0],
+          decisionProofHash: boundaryMatch[1].decisionProofHash,
+          townId: job.home,
+          areaId: job.area,
+          minutes: recordedAt,
+        }
+      : undefined;
+
+    journalEntries = journalEntries.map((candidate) =>
+      candidate === entry
+        ? migrateAuthoredLocalJobLegacyEntry({
+            area: args.indexes.areasById.get(job.area) ?? null,
+            boundary,
+            currentJob: job,
+            definition,
+            entry,
+            townName: args.indexes.townNameForSource(job.home),
+          })
+        : candidate,
+    );
+  }
+  return journalEntries;
+}
+
 export function planOverworldSessionSnapshotRestore(args: {
   indexes: OverworldSnapshotManifestIndex;
   snapshot: OverworldSessionSnapshot;
@@ -1903,7 +2009,10 @@ export function planOverworldSessionSnapshotRestore(args: {
       `Overworld session snapshot is for world "${sourceSnapshot.worldId}", not "${worldId}".`,
     );
   }
-  const migrationTargetsCurrentManifest = worldHash === OVERWORLD_JUNE_RETURN_COPY_WORLD_HASH;
+  const migrationTargetsCurrentManifest = worldHash === OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH;
+  const migratesAuthoredLocalJob =
+    migrationTargetsCurrentManifest &&
+    OVERWORLD_AUTHORED_LOCAL_JOB_TRUSTED_PREDECESSOR_WORLD_HASHES.has(sourceSnapshot.worldHash);
   const migratesJuneReturnCopy =
     migrationTargetsCurrentManifest &&
     sourceSnapshot.worldHash === OVERWORLD_JUNE_RETURN_COPY_PREDECESSOR_WORLD_HASH;
@@ -1936,7 +2045,16 @@ export function planOverworldSessionSnapshotRestore(args: {
                           : sourceSnapshot.worldHash === OVERWORLD_OPENING_REGISTRATION_WORLD_HASH
                             ? "opening_registration"
                             : null;
-  if (sourceSnapshot.worldHash !== worldHash && migrationEra === null && !migratesJuneReturnCopy) {
+  const migratesLegacyLocalJobSemantics =
+    migrationTargetsCurrentManifest &&
+    sourceSnapshot.worldHash !== worldHash &&
+    (migratesAuthoredLocalJob || migratesJuneReturnCopy || migrationEra !== null);
+  if (
+    sourceSnapshot.worldHash !== worldHash &&
+    migrationEra === null &&
+    !migratesJuneReturnCopy &&
+    !migratesAuthoredLocalJob
+  ) {
     throw new Error("Overworld session snapshot was made against a different world manifest.");
   }
   const normalizesJuneReturnCopy =
@@ -1982,7 +2100,7 @@ export function planOverworldSessionSnapshotRestore(args: {
             ),
           }),
         });
-  const snapshot =
+  let snapshot =
     migrationEra === "fortify_outlast" || migrationEra === "crisis_priority"
       ? (() => {
           if (indexes.openingAlly === null) {
@@ -2163,7 +2281,7 @@ export function planOverworldSessionSnapshotRestore(args: {
   };
   const currentAreaByTown = assertUniqueTupleMap("area-map town", snapshot.currentAreaByTown);
   const regionRenown = assertUniqueTupleMap("renown region", snapshot.regionRenown);
-  const journalTimeline = assertSnapshotTimeline(snapshot, {
+  let journalTimeline = assertSnapshotTimeline(snapshot, {
     ...indexes,
     travelLogArrivals: travelTimeline.arrivals,
     travelLogTownByArrival: travelTimeline.townByArrival,
@@ -2991,6 +3109,26 @@ export function planOverworldSessionSnapshotRestore(args: {
       reliefOathSceneId: indexes.openingReliefOath?.id ?? null,
     }),
   };
+  if (migratesLegacyLocalJobSemantics) {
+    snapshot = Object.freeze({
+      ...snapshot,
+      journalEntries: migrateAuthoredLocalJobPredecessorJournal({
+        campaignBoundaries,
+        indexes,
+        snapshot,
+      }),
+    });
+    journalTimeline = assertSnapshotTimeline(snapshot, {
+      ...indexes,
+      travelLogArrivals: travelTimeline.arrivals,
+      travelLogTownByArrival: travelTimeline.townByArrival,
+    });
+  }
+  assertSnapshotLocalJobSceneProofs({
+    campaignBoundaries,
+    indexes,
+    journalEntries: snapshot.journalEntries,
+  });
   const neutralCharacter = createInitialCampaignCharacterState();
   const initialCharacter = registrationProof.characterAtRegistration;
   const characterAfterOath = reliefOathProof.option
@@ -3215,6 +3353,7 @@ export function planOverworldSessionSnapshotRestore(args: {
       travelLogByArrival: travelTimeline.byArrival,
     },
     roadJournal,
+    snapshot.journalEntries,
   );
   assertSnapshotCurrentAreaReachability(snapshot.currentAreaId, discoveredAreaIds);
   const nonFifoQuestIds = new Set(
@@ -3552,6 +3691,115 @@ export function planOverworldSessionSnapshotRestore(args: {
       roadEventsByEdgeId: indexes.roadEventsByEdgeId,
     }),
   };
+}
+
+function assertSnapshotLocalJobSceneProofs(args: {
+  campaignBoundaries: OverworldCampaignBoundaryReplayIndex;
+  indexes: OverworldSnapshotManifestIndex;
+  journalEntries: readonly OverworldJournalEntry[];
+}): void {
+  args.journalEntries.forEach((entry, entryIndex) => {
+    if (entry.kind !== "job") return;
+    const jobId = entry.id.startsWith("job:") ? entry.id.slice("job:".length) : "";
+    const job = args.indexes.jobsById.get(jobId);
+    if (!job) return;
+    const scene = job.authored_scene;
+    const proof = entry.localSceneProof;
+    if (!scene) {
+      if (proof) {
+        throw new Error(
+          `Overworld session snapshot legacy job "${job.id}" cannot carry local-scene proof.`,
+        );
+      }
+      return;
+    }
+    if (!proof || proof.sceneId !== scene.id) {
+      throw new Error(
+        `Overworld session snapshot authored job "${job.id}" is missing its exact local-scene proof.`,
+      );
+    }
+    const legacyCompletion = authoredLocalJobLegacyCompletion(job.id, proof);
+    if (legacyCompletion) {
+      const expected = describeAuthoredLocalJobLegacyAction(
+        legacyCompletion,
+        args.indexes.areasById.get(job.area) ?? null,
+      );
+      if (
+        entry.title !== expected.title ||
+        entry.text !== expected.text ||
+        entry.town !== args.indexes.townNameForSource(job.home)
+      ) {
+        throw new Error(
+          `Overworld session snapshot legacy-authored job "${job.id}" does not match its trusted predecessor copy.`,
+        );
+      }
+      if (!proof.boundary) return;
+    } else {
+      if (proof.sourceWorldHash !== undefined) {
+        throw new Error(
+          `Overworld session snapshot authored job "${job.id}" names an untrusted legacy source.`,
+        );
+      }
+      resolveLocalJobSceneOption(scene, proof.optionId);
+      if (!proof.boundary) {
+        throw new Error(
+          `Overworld session snapshot authored job "${job.id}" is missing its accepted decision boundary.`,
+        );
+      }
+    }
+    const boundary = proof.boundary;
+    const replayed = args.campaignBoundaries.byAcceptedDecisions.get(boundary.acceptedDecisions);
+    const expectedActionId = legacyCompletion
+      ? `work_job:${job.id}`
+      : `work_job:${job.id}:${proof.optionId}`;
+    if (
+      !replayed ||
+      replayed.decision === null ||
+      replayed.decisionProofHash !== boundary.decisionProofHash ||
+      replayed.decision.surface !== "overworld" ||
+      replayed.decision.reason !== "situation_changed" ||
+      replayed.decision.actionId !== expectedActionId
+    ) {
+      throw new Error(
+        `Overworld session snapshot authored job "${job.id}" does not match its accepted decision proof.`,
+      );
+    }
+    if (
+      boundary.townId !== job.home ||
+      boundary.areaId !== job.area ||
+      replayed.townId !== boundary.townId ||
+      replayed.areaId !== boundary.areaId ||
+      boundary.minutes !== parseTimeLabel(entry.recordedAt)
+    ) {
+      throw new Error(
+        `Overworld session snapshot authored job "${job.id}" does not match its location and clock boundary.`,
+      );
+    }
+    if (legacyCompletion) return;
+    const earlierEntries = args.journalEntries.slice(entryIndex + 1);
+    const hasEarlierPoi = earlierEntries.some(
+      (candidate) => candidate.id === `scout:${scene.required_poi_id}`,
+    );
+    const contactPrefix = `talk:${scene.required_contact_id}`;
+    const hasEarlierContact = earlierEntries.some(
+      (candidate) => candidate.id === contactPrefix || candidate.id.startsWith(`${contactPrefix}@`),
+    );
+    if (!hasEarlierPoi || !hasEarlierContact) {
+      throw new Error(
+        `Overworld session snapshot authored job "${job.id}" lacks its earlier scene setup.`,
+      );
+    }
+    for (const questId of scene.requires_completed_quests) {
+      const hasEarlierQuest = earlierEntries.some(
+        (candidate) => candidate.id === `quest_done:${questId}`,
+      );
+      if (!hasEarlierQuest) {
+        throw new Error(
+          `Overworld session snapshot authored job "${job.id}" lacks earlier quest "${questId}".`,
+        );
+      }
+    }
+  });
 }
 
 function assertSnapshotQuestCompletionOutcomeJournalProof(args: {

@@ -24,6 +24,13 @@ const AUTHORED_TEXT = z
 
 export const CampaignServiceActionSchema = z.enum(["rest", "resupply"]);
 
+export const CampaignServiceRegionRenownRequirementSchema = z
+  .object({
+    region: z.string().min(1),
+    at_least: z.number().int().positive().max(1_000),
+  })
+  .strict();
+
 const CampaignServiceWorldFactIdsSchema = z
   .array(CampaignCharacterIdSchema)
   .min(1)
@@ -79,6 +86,7 @@ export const CampaignServiceRuleSchema = z
     forbids_any_story_choices: CampaignServiceStoryChoiceRefsSchema.optional(),
     requires_all_companions: CampaignCharacterConditionIdsSchema.optional(),
     requires_all_promises: CampaignPromiseConditionsSchema.optional(),
+    requires_region_renown: CampaignServiceRegionRenownRequirementSchema.optional(),
   })
   .strict()
   .superRefine((rule, ctx) => {
@@ -86,7 +94,8 @@ export const CampaignServiceRuleSchema = z
       (rule.requires_all_world_facts?.length ?? 0) === 0 &&
       (rule.requires_all_story_choices?.length ?? 0) === 0 &&
       (rule.requires_all_companions?.length ?? 0) === 0 &&
-      (rule.requires_all_promises?.length ?? 0) === 0
+      (rule.requires_all_promises?.length ?? 0) === 0 &&
+      rule.requires_region_renown === undefined
     ) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
@@ -157,6 +166,7 @@ function campaignServiceRulePredicateKey(rule: CampaignServiceRule): string {
       const idOrder = compareStrings(left.promise_id, right.promise_id);
       return idOrder === 0 ? compareStrings(left.status, right.status) : idOrder;
     }),
+    requires_region_renown: rule.requires_region_renown ?? null,
   });
 }
 
@@ -211,6 +221,7 @@ export type CampaignServiceRuleResolutionState = Readonly<{
   selectedStoryChoices?: readonly CampaignStoryChoiceRef[];
   consumedRuleIds: IdCollection;
   character?: CampaignCharacterState;
+  regionRenown?: ReadonlyMap<string, number>;
 }>;
 
 export type CampaignServiceOfferProvider = Readonly<{ name: string }>;
@@ -235,6 +246,7 @@ function ruleIsActive(
   selectedStoryChoiceKeys: ReadonlySet<string>,
   consumedRuleIds: ReadonlySet<string>,
   character: CampaignCharacterState | undefined,
+  regionRenown: ReadonlyMap<string, number> | undefined,
 ): boolean {
   const hasCharacterConditions =
     rule.requires_all_companions !== undefined || rule.requires_all_promises !== undefined;
@@ -248,6 +260,9 @@ function ruleIsActive(
     !(rule.forbids_any_story_choices ?? []).some((ref) =>
       selectedStoryChoiceKeys.has(campaignStoryChoiceRefKey(ref)),
     ) &&
+    (rule.requires_region_renown === undefined ||
+      (regionRenown?.get(rule.requires_region_renown.region) ?? 0) >=
+        rule.requires_region_renown.at_least) &&
     (!hasCharacterConditions ||
       (character !== undefined &&
         campaignCharacterMatchesConditions(character, {
@@ -279,7 +294,14 @@ export function resolveParsedActiveCampaignServiceRules(
       (rule) =>
         rule.home === state.currentTownId &&
         rule.area === state.currentAreaId &&
-        ruleIsActive(rule, worldFactIds, selectedStoryChoiceKeys, consumedRuleIds, state.character),
+        ruleIsActive(
+          rule,
+          worldFactIds,
+          selectedStoryChoiceKeys,
+          consumedRuleIds,
+          state.character,
+          state.regionRenown,
+        ),
     )
     .sort(compareRules);
 

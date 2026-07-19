@@ -26,7 +26,7 @@ import {
 import { OVERWORLD_MAX_SUPPLIES as MAX_SUPPLIES, travelCondition } from "./travel_mechanics.js";
 import type { CampaignCharacterView } from "./campaign_character_view.js";
 import type { CampaignServiceOffer } from "./campaign_service_rules.js";
-import type { OverworldCompactQuestStart } from "./compact_view.js";
+import type { OverworldCompactJobChoice, OverworldCompactQuestStart } from "./compact_view.js";
 
 export type OverworldView = {
   character: CampaignCharacterView;
@@ -42,6 +42,7 @@ export type OverworldView = {
   characters: OverworldCharacterView[];
   events: OverworldLocalEvent[];
   jobs: OverworldLocalJob[];
+  jobChoices: OverworldCompactJobChoice[];
   rememberedJobs: OverworldLocalJob[];
   hiddenJobCount: number;
   sites: OverworldExplorationSite[];
@@ -94,6 +95,7 @@ export type OverworldSessionViewState = {
   contacts: readonly OverworldCharacterView[];
   events: readonly OverworldLocalEvent[];
   jobs: readonly OverworldLocalJob[];
+  jobChoices?: readonly OverworldCompactJobChoice[];
   rememberedJobs: readonly OverworldLocalJob[];
   hiddenJobCount: number;
   sites: readonly OverworldExplorationSite[];
@@ -167,6 +169,7 @@ export function buildOverworldSessionView(state: OverworldSessionViewState): Ove
     characters: [...state.contacts],
     events: [...state.events],
     jobs: [...state.jobs],
+    jobChoices: (state.jobChoices ?? []).map(([jobId, optionId]) => [jobId, optionId]),
     rememberedJobs: [...state.rememberedJobs],
     hiddenJobCount: state.hiddenJobCount,
     sites: [...state.sites],

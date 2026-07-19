@@ -1,4 +1,8 @@
-import type { OverworldCompactQuestStart, OverworldCompactView } from "./compact_view.js";
+import type {
+  OverworldCompactJobChoice,
+  OverworldCompactQuestStart,
+  OverworldCompactView,
+} from "./compact_view.js";
 import type {
   OverworldArea,
   OverworldAreaExit,
@@ -71,6 +75,7 @@ export type OverworldSessionViewModelState = {
   regionRenown: ReadonlyMap<string, number>;
   completedRegionalArcIds: ReadonlySet<string>;
   pendingRoadEncounter: OverworldPendingRoadEncounter | null;
+  jobChoices: readonly OverworldCompactJobChoice[];
   questStarts: readonly OverworldCompactQuestStart[];
   ids: OverworldCompactSessionIdState;
 };
@@ -104,6 +109,7 @@ export type OverworldSessionViewModelSourceState = {
   regionRenown: ReadonlyMap<string, number>;
   completedRegionalArcIds: ReadonlySet<string>;
   pendingRoadEncounter: OverworldPendingRoadEncounter | null;
+  jobChoices: readonly OverworldCompactJobChoice[];
   questStarts: readonly OverworldCompactQuestStart[];
   ids: OverworldCompactSessionIdState;
 };
@@ -180,6 +186,7 @@ export function buildOverworldSessionViewModelState(
       regionRenown: source.regionRenown,
       completedRegionalArcIds: source.completedRegionalArcIds,
       pendingRoadEncounter: source.pendingRoadEncounter,
+      jobChoices: [],
       questStarts: [],
       ids: source.ids,
     };
@@ -251,6 +258,7 @@ export function buildOverworldSessionViewModelState(
     regionRenown: source.regionRenown,
     completedRegionalArcIds: source.completedRegionalArcIds,
     pendingRoadEncounter: source.pendingRoadEncounter,
+    jobChoices: source.jobChoices,
     questStarts: source.questStarts,
     ids: source.ids,
   };
@@ -292,6 +300,7 @@ function compactViewState(state: OverworldSessionViewModelState): OverworldSessi
     contacts: state.contacts,
     events: state.events,
     jobs: state.localView.jobs,
+    jobChoices: state.jobChoices,
     rememberedJobs: state.localView.rememberedJobs,
     sites: state.localView.sites,
     quests: state.localView.quests,
@@ -343,6 +352,7 @@ export function buildOverworldSessionViewFromState(
     contacts: state.contacts,
     events: state.events,
     jobs: state.localView.jobs,
+    jobChoices: state.jobChoices,
     rememberedJobs: state.localView.rememberedJobs,
     hiddenJobCount: state.localView.hiddenJobCount,
     sites: state.localView.sites,

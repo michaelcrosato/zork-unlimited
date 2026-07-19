@@ -111,6 +111,13 @@ export type OverworldQuestStartProof =
       boundary: OverworldJournalDecisionBoundary;
     };
 
+export type OverworldLocalSceneProof = {
+  sceneId: string;
+  optionId: string;
+  sourceWorldHash?: string | undefined;
+  boundary?: OverworldJournalDecisionBoundary | undefined;
+};
+
 /**
  * Replayable suffix from the source offer (or a trusted migration marker) to
  * the current journey proof. This makes the chosen source part of every later
@@ -201,6 +208,7 @@ export type OverworldJournalEntry = {
   text: string;
   recordedAt: string;
   questStartProof?: OverworldQuestStartProof | undefined;
+  localSceneProof?: OverworldLocalSceneProof | undefined;
   questCompletionBoundary?: OverworldJournalDecisionBoundary | undefined;
   registrationBoundary?: OverworldJournalDecisionBoundary | undefined;
   serviceBoundary?: OverworldJournalDecisionBoundary | undefined;
@@ -235,6 +243,18 @@ const OverworldQuestStartProofSchema = z.discriminatedUnion("kind", [
     })
     .strict(),
 ]);
+
+const OverworldLocalSceneProofSchema = z
+  .object({
+    sceneId: z.string().min(1),
+    optionId: z.string().min(1),
+    sourceWorldHash: z
+      .string()
+      .regex(/^[0-9a-f]{64}$/)
+      .optional(),
+    boundary: OverworldJournalRegistrationBoundarySchema.optional(),
+  })
+  .strict();
 
 const OverworldOpeningLeadSourceDecisionTrailSchema = z
   .object({
@@ -286,6 +306,7 @@ const OverworldJournalEntrySchema = z
     text: z.string().min(1),
     recordedAt: z.string().min(1),
     questStartProof: OverworldQuestStartProofSchema.optional(),
+    localSceneProof: OverworldLocalSceneProofSchema.optional(),
     questCompletionBoundary: OverworldJournalRegistrationBoundarySchema.optional(),
     registrationBoundary: OverworldJournalRegistrationBoundarySchema.optional(),
     serviceBoundary: OverworldJournalRegistrationBoundarySchema.optional(),
@@ -326,6 +347,12 @@ const OverworldJournalEntrySchema = z
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         message: "Quest-start proofs are only valid on quest entries.",
+      });
+    }
+    if (entry.localSceneProof !== undefined && entry.kind !== "job") {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Local-scene proofs are only valid on job entries.",
       });
     }
   });
@@ -371,6 +398,20 @@ export const OverworldSessionSnapshotSchema = OverworldSessionSnapshotV8Schema.e
 })
   .strict()
   .superRefine((snapshot, ctx) => {
+    snapshot.journalEntries.forEach((entry, index) => {
+      if (
+        entry.localSceneProof !== undefined &&
+        entry.localSceneProof.boundary === undefined &&
+        entry.localSceneProof.sourceWorldHash === undefined
+      ) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["journalEntries", index, "localSceneProof", "boundary"],
+          message:
+            "A serialized local-scene proof requires its accepted-decision boundary or trusted legacy source hash.",
+        });
+      }
+    });
     const pendingDeath =
       snapshot.journey.pendingChoice?.reasons.includes("character_died") === true;
     const finalDeath =
@@ -442,6 +483,20 @@ export function cloneOverworldJournalEntry(entry: OverworldJournalEntry): Overwo
                 },
         }
       : {}),
+    ...(entry.localSceneProof
+      ? {
+          localSceneProof: {
+            sceneId: entry.localSceneProof.sceneId,
+            optionId: entry.localSceneProof.optionId,
+            ...(entry.localSceneProof.sourceWorldHash
+              ? { sourceWorldHash: entry.localSceneProof.sourceWorldHash }
+              : {}),
+            ...(entry.localSceneProof.boundary
+              ? { boundary: { ...entry.localSceneProof.boundary } }
+              : {}),
+          },
+        }
+      : {}),
     ...(entry.questCompletionBoundary
       ? { questCompletionBoundary: { ...entry.questCompletionBoundary } }
       : {}),
@@ -458,6 +513,7 @@ export function redactOverworldJournalEntryForPresentation(
 ): OverworldJournalEntry {
   const {
     questStartProof: _questStartProof,
+    localSceneProof: _localSceneProof,
     questCompletionBoundary: _questCompletionBoundary,
     registrationBoundary: _registrationBoundary,
     serviceBoundary: _serviceBoundary,

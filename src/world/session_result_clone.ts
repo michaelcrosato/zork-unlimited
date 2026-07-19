@@ -79,7 +79,7 @@ export function cloneOverworldAreaTravelResult(
 export function cloneOverworldActionResult(result: OverworldActionResult): OverworldActionResult {
   return {
     ...result,
-    entry: cloneOverworldJournalEntry(result.entry),
+    entry: redactOverworldJournalEntryForPresentation(result.entry),
     ...(result.discoveredAreas
       ? { discoveredAreas: result.discoveredAreas.map(cloneOverworldArea) }
       : {}),

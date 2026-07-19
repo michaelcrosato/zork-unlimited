@@ -75,6 +75,7 @@ export type MutableOverworldSessionTownVisitState = {
 
 export type OverworldSessionLocalJobPlanState = {
   jobId: string;
+  optionId?: string | undefined;
   jobsById: ReadonlyMap<string, OverworldLocalJob>;
   areasById: ReadonlyMap<string, OverworldArea>;
   currentTownId: string;
@@ -82,6 +83,7 @@ export type OverworldSessionLocalJobPlanState = {
   currentAreaId: string | null;
   discoveredJobIds: ReadonlySet<string>;
   completedJobIds: ReadonlySet<string>;
+  completedQuestIds?: ReadonlySet<string> | undefined;
   journalEntries: ReadonlyMap<string, OverworldJournalEntry>;
 };
 
@@ -385,6 +387,12 @@ export function applyOverworldSessionLocalJob(
 
   const applied = recordOverworldSessionLocalAction(state, plan.action, townName);
   if (!applied.result.alreadyKnown) {
+    if (plan.localScene) {
+      applied.result.entry.localSceneProof = {
+        sceneId: plan.localScene.scene.id,
+        optionId: plan.localScene.option.id,
+      };
+    }
     applyOverworldLocalJobCompletion(
       {
         completedJobIds: state.completedJobIds,

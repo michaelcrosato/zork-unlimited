@@ -19,6 +19,7 @@ import {
 import {
   OVERWORLD_COMPACT_LOCAL_REF_LIMIT,
   cloneOverworldCompactView,
+  type OverworldCompactJobChoice,
   type OverworldCompactQuestStart,
   type OverworldCompactView,
 } from "./compact_view.js";
@@ -84,6 +85,7 @@ import {
   applyOverworldSessionPoiScoutFromState,
   applyOverworldSessionSiteFromState,
   applyOverworldSessionTownVisit,
+  planOverworldSessionLocalJob,
 } from "./session_local_lifecycle.js";
 import {
   cloneOpeningLeadSourceDecisionTrail,
@@ -533,6 +535,7 @@ export class OverworldSession {
       selectedStoryChoices: this.selectedCampaignStoryChoiceRefs(),
       consumedRuleIds: this.consumedCampaignServiceRuleIds(),
       character: this.characterState,
+      regionRenown: this.regionRenown,
       providersById: this.charactersById,
     });
   }
@@ -1714,6 +1717,19 @@ export class OverworldSession {
   ): OverworldJourneyActionResult {
     this.applyClockState(applied);
     const journeyDecision = this.recordOverworldDecision(actionId, kind, applied.stateChanged);
+    const localSceneProof = applied.result.entry.localSceneProof;
+    if (localSceneProof && !localSceneProof.boundary) {
+      if (!journeyDecision.countsTowardJourney) {
+        throw new Error("An authored local scene is missing its accepted decision proof.");
+      }
+      localSceneProof.boundary = {
+        acceptedDecisions: this.journeyState.acceptedDecisions,
+        decisionProofHash: this.journeyState.decisionProof.hash,
+        townId: this.currentId,
+        areaId: this.currentAreaIdOrThrow(),
+        minutes: this.minutes,
+      };
+    }
     if (applied.stateChanged || journeyDecision.countsTowardJourney) this.clearSessionCaches();
     return withJourneyDecision(applied.result, journeyDecision);
   }
@@ -1835,6 +1851,7 @@ export class OverworldSession {
       areaExits: visibleOverworldSessionAreaExits(localState, currentArea),
       localState,
       localView,
+      jobChoices: this.liveJobChoices(localView.jobs),
       questStarts: this.liveQuestStarts(localView.quests),
       routePlannerIndex: this.routePlannerIndex,
       roadEventState: {
@@ -1864,6 +1881,42 @@ export class OverworldSession {
         resolvedEventIds: this.resolvedEventIds,
       },
     };
+  }
+
+  private liveJobChoices(jobs: readonly OverworldLocalJob[]): OverworldCompactJobChoice[] {
+    try {
+      this.assertJourneyAcceptingDecision();
+      this.assertNoPendingRoadEncounter("working a local job");
+    } catch {
+      return [];
+    }
+
+    const choices: OverworldCompactJobChoice[] = [];
+    for (let index = 0; index < jobs.length; index += 1) {
+      const job = jobs[index]!;
+      if (!job.authored_scene) continue;
+      for (const option of job.authored_scene.options) {
+        try {
+          const plan = planOverworldSessionLocalJob({
+            jobId: job.id,
+            optionId: option.id,
+            jobsById: this.jobsById,
+            areasById: this.areasById,
+            currentTownId: this.currentId,
+            currentRegion: this.currentNode().region,
+            currentAreaId: this.currentAreaIdOrThrow(),
+            discoveredJobIds: this.discoveredJobIds,
+            completedJobIds: this.completedJobIds,
+            completedQuestIds: this.completedQuestIds,
+            journalEntries: this.journalEntriesById,
+          });
+          if (!plan.alreadyKnown) choices.push([job.id, option.id]);
+        } catch {
+          // Canonical preparation is the sole authority for executable job choices.
+        }
+      }
+    }
+    return choices;
   }
 
   private liveQuestStarts(quests: readonly OverworldQuestView[]): OverworldCompactQuestStart[] {
@@ -2169,7 +2222,7 @@ export class OverworldSession {
     );
   }
 
-  workLocalJob(jobId: string): OverworldJourneyActionResult {
+  workLocalJob(jobId: string, optionId?: string): OverworldJourneyActionResult {
     this.assertJourneyAcceptingDecision();
     this.assertNoPendingRoadEncounter("working a local job");
     const current = this.currentNode();
@@ -2178,6 +2231,7 @@ export class OverworldSession {
       applyOverworldSessionLocalJobFromState({
         ...this.actionJournalState(),
         jobId,
+        optionId,
         jobsById: this.jobsById,
         areasById: this.areasById,
         currentTownId: this.currentId,
@@ -2185,11 +2239,12 @@ export class OverworldSession {
         currentAreaId: this.currentAreaIdOrThrow(),
         discoveredJobIds: this.discoveredJobIds,
         completedJobIds: this.completedJobIds,
+        completedQuestIds: this.completedQuestIds,
         journalEntriesById: this.journalEntriesById,
         regionRenown: this.regionRenown,
         currentTownName: current.name,
       }),
-      `work_job:${jobId}`,
+      optionId ? `work_job:${jobId}:${optionId}` : `work_job:${jobId}`,
       "progress",
     );
   }
@@ -2311,6 +2366,7 @@ export class OverworldSession {
         campaignStoryChoiceRefs: this.selectedCampaignStoryChoiceRefs(),
         consumedCampaignServiceRuleIds: this.consumedCampaignServiceRuleIds(),
         campaignCharacter: this.characterState,
+        regionRenown: this.regionRenown,
         fatigue: this.fatigue,
         supplies: this.supplies,
       }),
@@ -2332,6 +2388,7 @@ export class OverworldSession {
         campaignStoryChoiceRefs: this.selectedCampaignStoryChoiceRefs(),
         consumedCampaignServiceRuleIds: this.consumedCampaignServiceRuleIds(),
         campaignCharacter: this.characterState,
+        regionRenown: this.regionRenown,
         fatigue: this.fatigue,
         supplies: this.supplies,
       }),

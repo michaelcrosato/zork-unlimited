@@ -54,6 +54,7 @@ const TEST_CAMPAIGN_EFFECTS = [
 // exactly the temp pack on disk. The temp quest is anchored to a real Albany area.
 type FixtureOverworld = Record<string, unknown> & {
   characters: Array<{ variants?: unknown }>;
+  local_jobs: Array<{ authored_scene?: unknown }>;
   opening_ally?: unknown;
   opening_lead_source?: unknown;
   opening_preparation?: unknown;
@@ -69,6 +70,7 @@ const REAL_OVERWORLD = JSON.parse(
 function fixtureOverworldWithoutQuestConditionedFeatures(): FixtureOverworld {
   const world = structuredClone(REAL_OVERWORLD);
   for (const character of world.characters) delete character.variants;
+  for (const job of world.local_jobs) delete job.authored_scene;
   delete world.campaign_service_rules;
   delete world.opening_ally;
   delete world.opening_lead_source;

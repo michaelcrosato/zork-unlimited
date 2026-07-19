@@ -8,6 +8,7 @@ import {
   type OverworldNode,
   type OverworldPoi,
 } from "./overworld.js";
+import type { LocalJobSceneOption } from "./local_job_scene.js";
 
 export type OverworldLocalActionKind = "area" | "job" | "poi" | "contact" | "event" | "site";
 
@@ -51,7 +52,18 @@ export function describeOverworldAreaAction(
 export function describeOverworldJobAction(
   job: OverworldLocalJob,
   area: OverworldArea | null,
+  sceneOption: LocalJobSceneOption | null = null,
 ): OverworldLocalActionDescriptor<"job"> {
+  if (sceneOption) {
+    return {
+      id: `job:${job.id}`,
+      kind: "job",
+      title: `Completed ${job.title}: ${sceneOption.title}`,
+      text: `${sceneOption.consequence}${area ? ` The decision is logged against ${area.name}.` : ""}`,
+      minutes: sceneOption.terms.minutes,
+      regionalRenown: sceneOption.terms.renown,
+    };
+  }
   return {
     id: `job:${job.id}`,
     kind: "job",

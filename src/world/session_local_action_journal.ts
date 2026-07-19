@@ -22,6 +22,11 @@ import { journalSourceId, type OverworldJournalTimelineIndex } from "./session_j
 import type { OverworldJournalEntry } from "./session_snapshot.js";
 import { indexedList } from "./session_collections.js";
 import type { CampaignCharacterState } from "./campaign_character_state.js";
+import { resolveLocalJobSceneOption } from "./local_job_scene.js";
+import {
+  authoredLocalJobLegacyCompletion,
+  describeAuthoredLocalJobLegacyAction,
+} from "./local_job_scene_legacy.js";
 
 export type OverworldDiscoveryLocalityIndex = {
   areaHomes: ReadonlyMap<string, string>;
@@ -110,7 +115,38 @@ function localJournalActionDuration(
       const job = sourceId ? sources.jobsById.get(sourceId) : undefined;
       if (!job) return null;
       const area = sources.areasById.get(job.area) ?? null;
-      return describeOverworldJobAction(job, area).minutes;
+      if (!job.authored_scene) {
+        if (entry.localSceneProof) {
+          throw new Error(
+            `Overworld session snapshot legacy job "${job.id}" cannot carry local-scene proof.`,
+          );
+        }
+        return describeOverworldJobAction(job, area).minutes;
+      }
+      const proof = entry.localSceneProof;
+      if (!proof || proof.sceneId !== job.authored_scene.id) {
+        throw new Error(
+          `Overworld session snapshot authored job "${job.id}" is missing its exact local-scene proof.`,
+        );
+      }
+      const legacyCompletion = authoredLocalJobLegacyCompletion(job.id, proof);
+      if (legacyCompletion) {
+        const expected = describeAuthoredLocalJobLegacyAction(legacyCompletion, area);
+        if (entry.title !== expected.title || entry.text !== expected.text) {
+          throw new Error(
+            `Overworld session snapshot legacy-authored job "${job.id}" does not match its trusted predecessor copy.`,
+          );
+        }
+        return expected.minutes;
+      }
+      const option = resolveLocalJobSceneOption(job.authored_scene, proof.optionId);
+      const expected = describeOverworldJobAction(job, area, option);
+      if (entry.title !== expected.title || entry.text !== expected.text) {
+        throw new Error(
+          `Overworld session snapshot authored job "${job.id}" does not match its canonical option copy.`,
+        );
+      }
+      return expected.minutes;
     }
     case "poi": {
       const sourceId = journalSourceId(entry, "scout:");

@@ -51,9 +51,35 @@ const RELIEF_ALLOCATION_IMPORT_IDS: ReadonlySet<string> = new Set([
 const JUNE_LEFT_AFTER_BLOOD_PREDECESSOR_SUMMARY =
   "June's field seat is empty. Her separate return says the route crossed into combat before she could take the lower rail, ending the cattle-first field agreement.";
 
+/** Reconstruct the exact first-authored-scene manifest before its renown consumer was added. */
+export function exactAuthoredAlbanyWorksFirstSceneWorld(
+  current: OverworldManifest,
+): OverworldManifest {
+  const firstScene = structuredClone(current);
+  firstScene.campaign_service_rules = (firstScene.campaign_service_rules ?? []).filter(
+    (rule) => rule.id !== "albany:works_public_shift_civic_rest",
+  );
+  return firstScene;
+}
+
+/** Reconstruct the exact manifest immediately before the first authored local-job scene. */
+export function exactAuthoredAlbanyWorksPredecessor(current: OverworldManifest): OverworldManifest {
+  const predecessor = exactAuthoredAlbanyWorksFirstSceneWorld(current);
+  const worksJob = predecessor.local_jobs.find((job) => job.id === "albany_city__industrial__job");
+  if (!worksJob) throw new Error("Albany Works must have its local job");
+  worksJob.title = "Albany Works District: Works Yard Repair";
+  worksJob.summary =
+    "Albany Works District has loading doors, tools, machine noise, and labor disputes. The job is small enough to finish locally but specific enough to make Albany City feel worked-in rather than decorative.";
+  worksJob.objective =
+    "Spend time in Albany Works District to trace a failing piece of infrastructure before it turns into a wider hazard.";
+  worksJob.reward = "Earn 4 Capital / Mohawk renown and a concrete lead about Albany City.";
+  delete worksJob.authored_scene;
+  return predecessor;
+}
+
 /** Reconstruct exact F06 by restoring its return copy and reversing F02 oath authorship. */
 export function exactF06World(current: OverworldManifest): OverworldManifest {
-  const predecessor = structuredClone(current);
+  const predecessor = exactAuthoredAlbanyWorksPredecessor(current);
   const june = predecessor.characters.find(
     (character) => character.id === "albany_city__transport_hub__june_pike",
   );

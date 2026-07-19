@@ -11,6 +11,8 @@ import type { OverworldProgressJournalSourceIndex } from "./session_progress_jou
 import { QUEST_COMPLETION_RENOWN } from "./session_quests.js";
 import type { OverworldJournalEntry, TravelLogEntrySnapshot } from "./session_snapshot.js";
 import { roadEncounterOptionFor } from "./travel_mechanics.js";
+import { resolveLocalJobSceneOption } from "./local_job_scene.js";
+import { authoredLocalJobLegacyCompletion } from "./local_job_scene_legacy.js";
 
 export type OverworldRegionRenownSourceIndex = {
   eventsById: ReadonlyMap<string, OverworldLocalEvent>;
@@ -53,16 +55,31 @@ export function expectedSnapshotRegionRenown(
   stateIds: OverworldProgressJournalSourceIndex,
   sources: OverworldRegionRenownSourceIndex,
   roadJournal: OverworldRegionRenownRoadJournalIndex,
+  journalEntries: readonly OverworldJournalEntry[] = [],
 ): Map<string, number> {
   const expected = new Map<string, number>();
+  const journalEntriesById = new Map(journalEntries.map((entry) => [entry.id, entry] as const));
 
   for (const jobId of stateIds.completedJobIds) {
     const job = sources.jobsById.get(jobId);
     if (!job) continue;
+    let renown = job.difficulty;
+    if (job.authored_scene) {
+      const proof = journalEntriesById.get(`job:${job.id}`)?.localSceneProof;
+      if (!proof || proof.sceneId !== job.authored_scene.id) {
+        throw new Error(
+          `Overworld session snapshot authored job "${job.id}" is missing its renown proof.`,
+        );
+      }
+      const legacyCompletion = authoredLocalJobLegacyCompletion(job.id, proof);
+      renown = legacyCompletion
+        ? legacyCompletion.definition.legacyJob.difficulty
+        : resolveLocalJobSceneOption(job.authored_scene, proof.optionId).terms.renown;
+    }
     addRegionRenown(
       expected,
       nodeRegionFor(sources.nodesById, job.home, `completed job "${jobId}"`),
-      job.difficulty,
+      renown,
     );
   }
   for (const siteId of stateIds.exploredSiteIds) {
@@ -110,8 +127,9 @@ export function assertSnapshotRegionRenown(
   stateIds: OverworldProgressJournalSourceIndex,
   sources: OverworldRegionRenownSourceIndex,
   roadJournal: OverworldRegionRenownRoadJournalIndex,
+  journalEntries: readonly OverworldJournalEntry[] = [],
 ): void {
-  const expected = expectedSnapshotRegionRenown(stateIds, sources, roadJournal);
+  const expected = expectedSnapshotRegionRenown(stateIds, sources, roadJournal, journalEntries);
   for (const [region, expectedRenown] of expected) {
     const actualRenown = actual.get(region) ?? 0;
     if (actualRenown !== expectedRenown) {

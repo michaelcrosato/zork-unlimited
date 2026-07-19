@@ -46,6 +46,10 @@ READING THE WORLD (it is COMPACT):
   `jobs` / `sites`, each [[id, name], ...]; and `quests` =
   [[id, name, anchor_area_id], ...] — a list is OMITTED entirely until you have
   discovered something in it.
+- `job_scenes` contains authored local decisions and `job_choices` contains the
+  exact currently legal `[job_id, option_id]` pairs. Pass both ids unchanged to
+  `work_overworld_session_job`. A job absent from `job_scenes` remains a legacy
+  one-argument job.
 - Every overworld tool takes `session_id` (from start_overworld). Guard writes and
   re-read state with `expected_snapshot_hash` / `if_snapshot_hash` = the latest
   `snapshot_hash`. NOTE the two phases use different hash names: the OVERWORLD uses
@@ -61,7 +65,8 @@ HOW A NEW PLAYER PLAYS (do this, in this spirit):
    `move_overworld_session_area` (area_route_id) walks to other areas of the town.
    Each can reveal new jobs, sites, contacts, events, and quest LEADS (the `quests`
    field). Follow what a curious person would, guided by the `hidden` counts.
-3. LIVE IN IT. Do something real: `work_overworld_session_job` (job_id), or
+3. LIVE IN IT. Do something real: `work_overworld_session_job` (job_id and the
+   exact option_id too when `job_choices` requires it), or
    `investigate_overworld_session_event` then `resolve_overworld_session_event`
    (event_id); `rest_overworld_session` / `resupply_overworld_session` where a town
    offers it. Take at least one ROAD with `travel_overworld_session`

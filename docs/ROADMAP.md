@@ -75,8 +75,11 @@ until its contract in `docs/STARTING_SLICE.md` is proven.
   `wolf_winter` stay exercised before drawing content-quality conclusions.
 - Build the starting slice's reusable campaign-character and data-driven
   consequence boundary before adding more Wolf-specific branches.
-- Replace the visible Albany slice's generic discovery/jobs/events with authored
-  scenes only after that persistent state can be consumed across phases.
+- Continue replacing the visible Albany slice's generic discovery/jobs/events
+  with authored scenes that consume persistent state across phases. Albany
+  Works is the first of six district jobs converted and its priority can unlock
+  a delayed 13-standing Civic recovery service; five jobs and the checklist
+  events remain.
 - Deepen Wolf-Winter into combat, fully noncombat, and hybrid resolution
   families with deterministic counterfactual and failure-forward proofs.
 - Tighten the remaining restore-time sequencing proofs beyond discovery prefixes.

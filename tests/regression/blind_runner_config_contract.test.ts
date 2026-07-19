@@ -148,7 +148,7 @@ describe("blind runner MCP config contract", () => {
     // The pure prompt carries only transport syntax. Gameplay objectives,
     // routes, coverage targets, and stopping are owned by the game itself.
     expect(owPrompt).toContain("mcp__adventureforge__start_overworld");
-    expect(owPrompt).toContain("first game action");
+    expect(owPrompt).toContain("first tool invocation");
     expect(owPrompt).toContain("one-time tutorial");
     expect(owPrompt).not.toMatch(/30.?45|tool calls|take at least one road/i);
     expect(owPrompt).not.toMatch(
@@ -267,7 +267,9 @@ describe("blind runner MCP config contract", () => {
     expect(codexLaunch).not.toContain("dangerously-bypass");
     expect(codexLaunch).not.toContain("danger-full-access");
 
-    expect(envelope).toContain('new Set(["agent_message", "reasoning", "mcp_tool_call"])');
+    expect(envelope).toContain(
+      'new Set(["agent_message", "reasoning", "mcp_tool_call", "todo_list"])',
+    );
     expect(envelope).toContain('item.server !== "adventureforge"');
     expect(envelope).toContain("CODEX_PURE_PLAYER_TOOLS.has(item.tool)");
     expect(envelope).toContain('rows.at(-1)?.type !== "turn.completed"');

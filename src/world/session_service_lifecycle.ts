@@ -28,6 +28,7 @@ export type OverworldSessionTownServicePlanState = {
   campaignStoryChoiceRefs?: readonly CampaignStoryChoiceRef[];
   consumedCampaignServiceRuleIds?: readonly string[] | ReadonlySet<string>;
   campaignCharacter?: CampaignCharacterState;
+  regionRenown?: ReadonlyMap<string, number>;
   supplies: number;
   fatigue: number;
 };
@@ -49,6 +50,7 @@ function overworldSessionTownServiceState(
           selectedStoryChoices: state.campaignStoryChoiceRefs ?? [],
           consumedRuleIds: state.consumedCampaignServiceRuleIds ?? [],
           ...(state.campaignCharacter ? { character: state.campaignCharacter } : {}),
+          ...(state.regionRenown ? { regionRenown: state.regionRenown } : {}),
         });
   return {
     townName: state.currentTown.name,

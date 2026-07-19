@@ -1,4 +1,5 @@
 import {
+  OVERWORLD_COMPACT_LOCAL_REF_LIMIT,
   OVERWORLD_COMPACT_VIEW_VERSION,
   compactCampaignServiceOffers,
   compactCampaignCharacterView,
@@ -8,6 +9,8 @@ import {
   compactOverworldJournalEntries,
   compactOverworldLabel,
   compactOverworldJobLeadRefs,
+  compactOverworldJobChoices,
+  compactOverworldJobScenes,
   compactOverworldMovementTruncated,
   compactOverworldQuestRefs,
   compactOverworldQuestStarts,
@@ -20,6 +23,7 @@ import {
   compactOverworldTravelLog,
   compactPendingRoad,
   type OverworldCompactQuestStart,
+  type OverworldCompactJobChoice,
   type OverworldCompactView,
 } from "./compact_view.js";
 import type { CampaignCharacterView } from "./campaign_character_view.js";
@@ -68,6 +72,7 @@ export type OverworldSessionCompactViewState = {
   contacts: readonly OverworldCharacterView[];
   events: readonly OverworldLocalEvent[];
   jobs: readonly OverworldLocalJob[];
+  jobChoices?: readonly OverworldCompactJobChoice[];
   rememberedJobs: readonly OverworldLocalJob[];
   sites: readonly OverworldExplorationSite[];
   quests: readonly OverworldQuestView[];
@@ -94,7 +99,13 @@ export function buildOverworldSessionCompactView(
   const compactRouteOptions = compactOverworldRouteOptions(state.routeOptions);
   const routePathsTruncated = compactOverworldRoutePathsTruncated(state.routeOptions);
   const idPayload = compactOverworldSessionIdPayload(state.ids);
-  const jobs = compactOverworldTitleRefs(state.jobs);
+  const visibleJobs = state.jobs.slice(0, OVERWORLD_COMPACT_LOCAL_REF_LIMIT);
+  const visibleJobIds = new Set(visibleJobs.map((job) => job.id));
+  const jobs = compactOverworldTitleRefs(visibleJobs);
+  const jobScenes = compactOverworldJobScenes(visibleJobs);
+  const jobChoices = compactOverworldJobChoices(
+    (state.jobChoices ?? []).filter(([jobId]) => visibleJobIds.has(jobId)),
+  );
   const rememberedJobs = compactOverworldJobLeadRefs(state.rememberedJobs);
   const sites = compactOverworldTitleRefs(state.sites);
   const quests = compactOverworldQuestRefs(state.quests);
@@ -163,6 +174,8 @@ export function buildOverworldSessionCompactView(
     events,
     ...(localRefsTruncated.length > 0 ? { local_refs_truncated: localRefsTruncated } : {}),
     ...(jobs.length > 0 ? { jobs } : {}),
+    ...(jobScenes.length > 0 ? { job_scenes: jobScenes } : {}),
+    ...(jobChoices.length > 0 ? { job_choices: jobChoices } : {}),
     ...(rememberedJobs.length > 0 ? { remembered_jobs: rememberedJobs } : {}),
     ...(sites.length > 0 ? { sites } : {}),
     ...(quests.length > 0 ? { quests } : {}),

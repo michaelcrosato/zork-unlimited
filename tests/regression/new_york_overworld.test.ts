@@ -753,6 +753,47 @@ describe("New York overworld graph", () => {
     expect(authoredBridge).not.toContain("from the station board");
   });
 
+  it("authors Albany Works as a post-Wolf priority scene instead of a template job", () => {
+    const worksJob = world.local_jobs.find((job) => job.id === "albany_city__industrial__job");
+    const scene = worksJob?.authored_scene;
+
+    expect(worksJob).toBeDefined();
+    expect(worksJob?.title).toBe("Reese's Two Winter Lines");
+    expect(scene?.id).toBe("albany:works-yard-winter-shift");
+    expect(scene?.required_poi_id).toBe("albany_city__industrial__poi");
+    expect(scene?.required_contact_id).toBe("albany_city__industrial__contact");
+    expect(scene?.requires_completed_quests).toEqual(["wolf_winter"]);
+    expect(scene?.options).toEqual([
+      expect.objectContaining({
+        id: "protect_trapped_public_shift",
+        title: "Protect the trapped public Works shift",
+        terms: { minutes: 80, renown: 5 },
+      }),
+      expect.objectContaining({
+        id: "inventory_outbound_cold_set_stock",
+        title: "Inventory and seal the outbound cold-set reserve for the next dispatch",
+        terms: { minutes: 35, renown: 2 },
+      }),
+    ]);
+
+    const worksCopy = [
+      worksJob?.summary,
+      worksJob?.objective,
+      worksJob?.reward,
+      scene?.prompt,
+      ...(scene?.options ?? []).flatMap((option) => [
+        option.title,
+        option.preview,
+        option.consequence,
+      ]),
+    ].join(" ");
+    expect(worksCopy).not.toContain("The job is small enough to finish locally");
+    expect(worksCopy).not.toContain("feel worked-in rather than decorative");
+    expect(worksCopy).not.toContain("returned cold-set");
+    expect(worksCopy).not.toContain("Spend time in Albany Works District");
+    expect(worksCopy).not.toContain("concrete lead about Albany City");
+  });
+
   it("authors Jamie and Hayden's source-reactive contact phases most-specific first", () => {
     const jamie = world.characters.find(
       (character) => character.id === "albany_city__market__contact",

@@ -1,6 +1,10 @@
 import type {
   OverworldCampaignServiceRule,
   OverworldEdge,
+  OverworldExplorationSite,
+  OverworldLocalEvent,
+  OverworldLocalJob,
+  OverworldNode,
   OverworldQuest,
   OverworldRoadEvent,
 } from "./overworld.js";
@@ -38,13 +42,23 @@ import { campaignServiceJournalCopy, campaignServiceJourneyActionId } from "./se
 import { campaignStoryChoiceRefKey } from "./campaign_story_choices.js";
 import type { CampaignCharacterState } from "./campaign_character_state.js";
 import { campaignCharacterMatchesConditions } from "./campaign_consequences.js";
+import { resolveLocalJobSceneOption } from "./local_job_scene.js";
+import {
+  AUTHORED_ALBANY_WORKS_LEGACY_JOB,
+  isAuthoredAlbanyWorksLegacyProof,
+} from "./local_job_scene_legacy.js";
+import { QUEST_COMPLETION_RENOWN } from "./session_quests.js";
 
 export type OverworldResourceReplaySourceIndex = {
   areaHomes: ReadonlyMap<string, string>;
   campaignServiceRulesById: ReadonlyMap<string, OverworldCampaignServiceRule>;
   edgesById: ReadonlyMap<string, OverworldEdge>;
+  eventsById?: ReadonlyMap<string, OverworldLocalEvent>;
+  jobsById?: ReadonlyMap<string, OverworldLocalJob>;
+  nodesById?: ReadonlyMap<string, OverworldNode>;
   roadEventsByEdgeId: ReadonlyMap<string, OverworldRoadEvent>;
   questsById?: ReadonlyMap<string, OverworldQuest>;
+  sitesById?: ReadonlyMap<string, OverworldExplorationSite>;
   townNameForSource: (nodeId: string) => string;
 };
 
@@ -100,6 +114,7 @@ type OverworldReplayState = {
   minimumClock: number;
   supplies: number;
   fatigue: number;
+  regionRenown: Map<string, number>;
 };
 
 type OverworldResourceReplayEvent =
@@ -304,6 +319,60 @@ function replayEventOrder(kind: OverworldResourceReplayEvent["kind"]): number {
   }
 }
 
+function addReplayRegionRenown(
+  state: OverworldReplayState,
+  region: string | undefined,
+  amount: number,
+): void {
+  if (!region || amount <= 0) return;
+  state.regionRenown.set(region, (state.regionRenown.get(region) ?? 0) + amount);
+}
+
+function replayNodeRegion(
+  sources: OverworldResourceReplaySourceIndex,
+  nodeId: string,
+): string | undefined {
+  return sources.nodesById?.get(nodeId)?.region;
+}
+
+function replayLocalRegionRenown(
+  entry: OverworldJournalEntry,
+  sources: OverworldResourceReplaySourceIndex,
+  state: OverworldReplayState,
+): void {
+  if (entry.kind === "job") {
+    const job = sources.jobsById?.get(entry.id.slice("job:".length));
+    if (!job) return;
+    let amount = job.difficulty;
+    if (job.authored_scene && entry.localSceneProof) {
+      amount = isAuthoredAlbanyWorksLegacyProof(job.id, entry.localSceneProof)
+        ? AUTHORED_ALBANY_WORKS_LEGACY_JOB.difficulty
+        : resolveLocalJobSceneOption(job.authored_scene, entry.localSceneProof.optionId).terms
+            .renown;
+    }
+    addReplayRegionRenown(state, replayNodeRegion(sources, job.home), amount);
+    return;
+  }
+  if (entry.kind === "site") {
+    const site = sources.sitesById?.get(entry.id.slice("site:".length));
+    if (site) addReplayRegionRenown(state, site.region, site.danger);
+    return;
+  }
+  if (entry.kind === "resolution") {
+    const event = sources.eventsById?.get(entry.id.slice("resolve:".length));
+    if (event) {
+      addReplayRegionRenown(state, replayNodeRegion(sources, event.home), event.intensity);
+    }
+    return;
+  }
+  if (entry.kind === "quest_done") {
+    const quest = sources.questsById?.get(entry.id.slice("quest_done:".length));
+    if (quest) {
+      addReplayRegionRenown(state, replayNodeRegion(sources, quest.home), QUEST_COMPLETION_RENOWN);
+    }
+  }
+}
+
 function replayQuestLaunchResources(
   entry: OverworldJournalEntry,
   recordedAt: number,
@@ -493,6 +562,15 @@ function campaignServiceRuleForReplay(
       );
     }
   }
+  const renownRequirement = rule.requires_region_renown;
+  if (
+    renownRequirement &&
+    (state.regionRenown.get(renownRequirement.region) ?? 0) < renownRequirement.at_least
+  ) {
+    throw new Error(
+      `Overworld session snapshot campaign service rule "${rule.id}" lacks ${renownRequirement.at_least} ${renownRequirement.region} renown at its service boundary.`,
+    );
+  }
 
   consumedRuleIds.add(rule.id);
   return rule;
@@ -555,6 +633,7 @@ export function assertSnapshotResourceReplay(
     minimumClock: STARTING_MINUTES,
     supplies: STARTING_SUPPLIES,
     fatigue: 0,
+    regionRenown: new Map(),
   };
   const consumedCampaignServiceRuleIds = new Set<string>();
   for (const event of replayEvents) {
@@ -593,6 +672,12 @@ export function assertSnapshotResourceReplay(
         MAX_FATIGUE,
         state.fatigue + option.fatigueGained + supplyDeficit * 3,
       );
+      const travel = travelTimeline.byArrival.get(event.resolution.key);
+      addReplayRegionRenown(
+        state,
+        travel ? replayNodeRegion(sources, travel.toId) : undefined,
+        option.renownGained,
+      );
       continue;
     }
 
@@ -603,6 +688,7 @@ export function assertSnapshotResourceReplay(
         event.duration,
         state,
       );
+      replayLocalRegionRenown(event.entry, sources, state);
       continue;
     }
 

@@ -581,7 +581,11 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
     },
 
     work_overworld_session_job<
-      Args extends { session_id: string; job_id: string } & OverworldResponseOptions,
+      Args extends {
+        session_id: string;
+        job_id: string;
+        option_id?: string;
+      } & OverworldResponseOptions,
     >(
       args: Args,
     ): OverworldSessionResponse<
@@ -595,7 +599,7 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
         responseOptions,
         args.session_id,
         "result",
-        (session) => session.workLocalJob(args.job_id),
+        (session) => session.workLocalJob(args.job_id, args.option_id),
         compactOverworldActionResult,
       );
     },
