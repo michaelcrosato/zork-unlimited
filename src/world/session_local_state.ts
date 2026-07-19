@@ -41,6 +41,9 @@ export type MutableOverworldSessionLocalState = {
   discoveredSiteIds: Set<string>;
   discoveredQuestIds: Set<string>;
   completedQuestIds: Set<string>;
+  resolvedEventIds?: ReadonlySet<string>;
+  campaignWorldFactIds?: ReadonlySet<string>;
+  journalEntries?: ReadonlyMap<string, import("./session_snapshot.js").OverworldJournalEntry>;
 };
 
 export type OverworldSessionAreaContent = {
@@ -180,6 +183,9 @@ export function buildOverworldSessionCurrentLocalView(
     discoveredSiteIds: state.discoveredSiteIds,
     discoveredQuestIds: state.discoveredQuestIds,
     completedQuestIds: state.completedQuestIds,
+    ...(state.resolvedEventIds ? { resolvedEventIds: state.resolvedEventIds } : {}),
+    ...(state.campaignWorldFactIds ? { campaignWorldFactIds: state.campaignWorldFactIds } : {}),
+    ...(state.journalEntries ? { journalEntries: state.journalEntries } : {}),
   });
 }
 

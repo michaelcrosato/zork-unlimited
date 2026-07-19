@@ -5,6 +5,8 @@ import type {
   OverworldQuest,
 } from "./overworld.js";
 import { questView, type OverworldQuestView } from "./session_local_discovery.js";
+import { availableLocalJobSceneOptions } from "./local_job_scene.js";
+import type { OverworldJournalEntry } from "./session_snapshot.js";
 
 export type OverworldSessionLocalView = {
   areas: OverworldArea[];
@@ -30,6 +32,9 @@ export type OverworldSessionLocalViewState = {
   discoveredSiteIds: ReadonlySet<string>;
   discoveredQuestIds: ReadonlySet<string>;
   completedQuestIds: ReadonlySet<string>;
+  resolvedEventIds?: ReadonlySet<string>;
+  campaignWorldFactIds?: ReadonlySet<string>;
+  journalEntries?: ReadonlyMap<string, OverworldJournalEntry>;
 };
 
 function discoveredValues<T extends { id: string }>(
@@ -57,10 +62,19 @@ function hiddenCount<T extends { id: string }>(
 function localJobIsChronologicallyAvailable(
   job: OverworldLocalJob,
   completedQuestIds: ReadonlySet<string>,
+  resolvedEventIds: ReadonlySet<string>,
+  campaignWorldFactIds: ReadonlySet<string>,
+  journalEntries: ReadonlyMap<string, OverworldJournalEntry>,
 ): boolean {
+  if (!job.authored_scene) return true;
   return (
-    !job.authored_scene ||
-    job.authored_scene.requires_completed_quests.every((questId) => completedQuestIds.has(questId))
+    availableLocalJobSceneOptions(job.authored_scene, {
+      completedQuestIds,
+      resolvedEventIds,
+      worldFactIds: campaignWorldFactIds,
+      eventOptionIdFor: (eventId) =>
+        journalEntries.get(`resolve:${eventId}`)?.localSceneProof?.optionId ?? null,
+    }).length > 0
   );
 }
 
@@ -120,7 +134,13 @@ export function buildOverworldSessionLocalView(
   state: OverworldSessionLocalViewState,
 ): OverworldSessionLocalView {
   const chronologicallyAvailableJobs = state.localJobs.filter((job) =>
-    localJobIsChronologicallyAvailable(job, state.completedQuestIds),
+    localJobIsChronologicallyAvailable(
+      job,
+      state.completedQuestIds,
+      state.resolvedEventIds ?? new Set<string>(),
+      state.campaignWorldFactIds ?? new Set<string>(),
+      state.journalEntries ?? new Map<string, OverworldJournalEntry>(),
+    ),
   );
   return {
     areas: discoveredValues(state.localAreas, state.discoveredAreaIds),
@@ -141,7 +161,13 @@ export function buildOverworldSessionLocalView(
       (job) =>
         !state.discoveredJobIds.has(job.id) ||
         (!state.completedJobIds.has(job.id) &&
-          !localJobIsChronologicallyAvailable(job, state.completedQuestIds)),
+          !localJobIsChronologicallyAvailable(
+            job,
+            state.completedQuestIds,
+            state.resolvedEventIds ?? new Set<string>(),
+            state.campaignWorldFactIds ?? new Set<string>(),
+            state.journalEntries ?? new Map<string, OverworldJournalEntry>(),
+          )),
     ).length,
     sites: discoveredValues(state.currentAreaSites, state.discoveredSiteIds),
     hiddenSiteCount: hiddenCount(state.currentAreaSites, state.discoveredSiteIds),

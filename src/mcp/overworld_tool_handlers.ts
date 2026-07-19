@@ -521,7 +521,11 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
     },
 
     resolve_overworld_session_event<
-      Args extends { session_id: string; event_id: string } & OverworldResponseOptions,
+      Args extends {
+        session_id: string;
+        event_id: string;
+        option_id?: string;
+      } & OverworldResponseOptions,
     >(
       args: Args,
     ): OverworldSessionResponse<
@@ -535,7 +539,7 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
         responseOptions,
         args.session_id,
         "result",
-        (session) => session.resolveEvent(args.event_id),
+        (session) => session.resolveEvent(args.event_id, args.option_id),
         compactOverworldActionResult,
       );
     },

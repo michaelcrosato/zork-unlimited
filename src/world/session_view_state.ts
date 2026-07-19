@@ -1,4 +1,5 @@
 import type {
+  OverworldCompactEventChoice,
   OverworldCompactJobChoice,
   OverworldCompactQuestStart,
   OverworldCompactView,
@@ -26,6 +27,7 @@ import {
   type OverworldSessionAreaContent,
 } from "./session_local_state.js";
 import type { OverworldSessionLocalView } from "./session_local_view.js";
+import { localEventSceneRequirementsMet } from "./local_event_scene.js";
 import type { OverworldRegionalArcProgress } from "./session_regional_arcs.js";
 import {
   cachedOverworldSessionDiscoveredRouteOptions,
@@ -69,6 +71,7 @@ export type OverworldSessionViewModelState = {
   poi: readonly OverworldPoi[];
   contacts: readonly OverworldCharacterView[];
   events: readonly OverworldLocalEvent[];
+  eventChoices: readonly OverworldCompactEventChoice[];
   journalEntries: readonly OverworldJournalEntry[];
   travelLog: readonly TravelLogEntry[];
   visitedCount: number;
@@ -110,6 +113,7 @@ export type OverworldSessionViewModelSourceState = {
   completedRegionalArcIds: ReadonlySet<string>;
   pendingRoadEncounter: OverworldPendingRoadEncounter | null;
   jobChoices: readonly OverworldCompactJobChoice[];
+  eventChoices: readonly OverworldCompactEventChoice[];
   questStarts: readonly OverworldCompactQuestStart[];
   ids: OverworldCompactSessionIdState;
 };
@@ -155,8 +159,14 @@ function pendingRoadLocationNode(
 function activeOverworldEvents(
   events: readonly OverworldLocalEvent[],
   resolvedEventIds: ReadonlySet<string>,
+  completedQuestIds: ReadonlySet<string>,
 ): OverworldLocalEvent[] {
-  return events.filter((event) => !resolvedEventIds.has(event.id));
+  return events.filter(
+    (event) =>
+      !resolvedEventIds.has(event.id) &&
+      (!event.authored_scene ||
+        localEventSceneRequirementsMet(event.authored_scene, { completedQuestIds })),
+  );
 }
 
 export function buildOverworldSessionViewModelState(
@@ -180,6 +190,7 @@ export function buildOverworldSessionViewModelState(
       poi: [],
       contacts: [],
       events: [],
+      eventChoices: [],
       journalEntries: source.journalEntries,
       travelLog: source.travelLog,
       visitedCount: source.visitedCount,
@@ -195,7 +206,11 @@ export function buildOverworldSessionViewModelState(
   const currentAreaContent = source.currentArea
     ? currentOverworldSessionAreaContent(source.localState, source.currentArea.id)
     : EMPTY_AREA_CONTENT;
-  const events = activeOverworldEvents(currentAreaContent.events, source.ids.resolvedEventIds);
+  const events = activeOverworldEvents(
+    currentAreaContent.events,
+    source.ids.resolvedEventIds,
+    source.completedQuestIds,
+  );
   const contacts = currentAreaContent.characters.map(
     (character) =>
       presentOverworldContact(character, {
@@ -252,6 +267,7 @@ export function buildOverworldSessionViewModelState(
     poi: currentAreaContent.poi,
     contacts,
     events,
+    eventChoices: source.eventChoices,
     journalEntries: source.journalEntries,
     travelLog: source.travelLog,
     visitedCount: source.visitedCount,
@@ -299,6 +315,7 @@ function compactViewState(state: OverworldSessionViewModelState): OverworldSessi
     poi: state.poi,
     contacts: state.contacts,
     events: state.events,
+    eventChoices: state.eventChoices,
     jobs: state.localView.jobs,
     jobChoices: state.jobChoices,
     rememberedJobs: state.localView.rememberedJobs,
@@ -351,6 +368,7 @@ export function buildOverworldSessionViewFromState(
     poi: state.poi,
     contacts: state.contacts,
     events: state.events,
+    eventChoices: state.eventChoices,
     jobs: state.localView.jobs,
     jobChoices: state.jobChoices,
     rememberedJobs: state.localView.rememberedJobs,

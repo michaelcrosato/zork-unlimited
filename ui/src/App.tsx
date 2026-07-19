@@ -47,6 +47,10 @@ function jobChoiceKey(jobId: string, optionId: string): string {
   return JSON.stringify([jobId, optionId]);
 }
 
+function eventChoiceKey(eventId: string, optionId: string): string {
+  return JSON.stringify([eventId, optionId]);
+}
+
 type InitialWorldSession = {
   session: OverworldSession;
   origin: "new" | "resume";
@@ -269,6 +273,15 @@ export default function App(): JSX.Element {
         worldView.jobChoices.map(([jobId, optionId]) => jobChoiceKey(jobId, optionId)),
       ),
     [worldView.jobChoices],
+  );
+  const legalEventChoiceKeys = useMemo(
+    () =>
+      new Set(
+        worldView.eventChoices.map(([eventId, optionId]) =>
+          eventChoiceKey(eventId, optionId),
+        ),
+      ),
+    [worldView.eventChoices],
   );
   const resupplyOffer = worldView.serviceOffers.find((offer) => offer.action === "resupply");
   const restOffer = worldView.serviceOffers.find((offer) => offer.action === "rest");
@@ -999,33 +1012,105 @@ export default function App(): JSX.Element {
 
           <h3>Current Events</h3>
           <div className="event-list">
-            {worldView.events.map((event) => (
-              <div key={event.id} className={`event ${event.pressure}`}>
-                <strong>{event.title}</strong>
-                <span>
-                  {event.pressure} - intensity {event.intensity}
-                </span>
-                <p>{event.summary}</p>
-                {worldView.resolvedEventIds.includes(event.id) ? (
-                  <small className="resolved-label">Resolved</small>
-                ) : (
-                  <div className="inline-actions">
-                    <button
-                      className="mini-command"
-                      onClick={() => runWorldAction(() => worldSession.investigateEvent(event.id))}
-                    >
-                      Investigate
-                    </button>
-                    <button
-                      className="mini-command"
-                      onClick={() => runWorldAction(() => worldSession.resolveEvent(event.id))}
-                    >
-                      Resolve
-                    </button>
-                  </div>
-                )}
-              </div>
-            ))}
+            {worldView.events.map((event) => {
+              const scene = event.authored_scene;
+              const journalIds = new Set(worldView.journal.map((entry) => entry.id));
+              const hasPoi = scene
+                ? journalIds.has(`scout:${scene.required_poi_id}`)
+                : true;
+              const contactPrefix = scene ? `talk:${scene.required_contact_id}` : "";
+              const hasContact = scene
+                ? [...journalIds].some(
+                    (id) => id === contactPrefix || id.startsWith(`${contactPrefix}@`),
+                  )
+                : true;
+              const hasInvestigation = journalIds.has(`investigate:${event.id}`);
+              const missing: string[] = [];
+              if (scene && !hasPoi) {
+                missing.push(
+                  `scout ${poiTitlesById.get(scene.required_poi_id) ?? "the marked point"}`,
+                );
+              }
+              if (scene && !hasContact) {
+                missing.push(
+                  `talk to ${characterNamesById.get(scene.required_contact_id) ?? "the local contact"}`,
+                );
+              }
+              if (scene && !hasInvestigation) missing.push("investigate this event");
+
+              return (
+                <div key={event.id} className={`event ${event.pressure}`}>
+                  <strong>{event.title}</strong>
+                  <span>
+                    {event.pressure} - intensity {event.intensity}
+                  </span>
+                  <p>{event.summary}</p>
+                  {worldView.resolvedEventIds.includes(event.id) ? (
+                    <small className="resolved-label">Resolved</small>
+                  ) : scene ? (
+                    <div className="event-scene">
+                      <p>{scene.prompt}</p>
+                      {missing.length > 0 && (
+                        <small className="empty">Required first: {missing.join(", ")}.</small>
+                      )}
+                      <button
+                        className="mini-command"
+                        onClick={() =>
+                          runWorldAction(() => worldSession.investigateEvent(event.id))
+                        }
+                      >
+                        Investigate
+                      </button>
+                      {scene.options.map((option) => {
+                        const optionAvailable = legalEventChoiceKeys.has(
+                          eventChoiceKey(event.id, option.id),
+                        );
+                        return (
+                          <div key={option.id} className="event-scene-option">
+                            <strong>{option.title}</strong>
+                            <span>
+                              {option.terms.minutes} min - {option.terms.renown} renown
+                            </span>
+                            <p>{option.preview}</p>
+                            <p>
+                              <b>Commitment:</b> {option.consequence}
+                            </p>
+                            <button
+                              className="mini-command"
+                              disabled={!optionAvailable}
+                              onClick={() =>
+                                runWorldAction(() =>
+                                  worldSession.resolveEvent(event.id, option.id),
+                                )
+                              }
+                            >
+                              Choose {option.title}
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="inline-actions">
+                      <button
+                        className="mini-command"
+                        onClick={() =>
+                          runWorldAction(() => worldSession.investigateEvent(event.id))
+                        }
+                      >
+                        Investigate
+                      </button>
+                      <button
+                        className="mini-command"
+                        onClick={() => runWorldAction(() => worldSession.resolveEvent(event.id))}
+                      >
+                        Resolve
+                      </button>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
 
           <h3>Notice Board</h3>

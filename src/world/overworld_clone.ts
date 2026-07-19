@@ -76,7 +76,25 @@ export function cloneOverworldCharacterView(
 }
 
 export function cloneOverworldLocalEvent(event: OverworldLocalEvent): OverworldLocalEvent {
-  return { ...event };
+  return {
+    ...event,
+    ...(event.authored_scene
+      ? {
+          authored_scene: {
+            ...event.authored_scene,
+            ...(event.authored_scene.forbids_completed_quests
+              ? {
+                  forbids_completed_quests: [...event.authored_scene.forbids_completed_quests],
+                }
+              : {}),
+            options: event.authored_scene.options.map((option) => ({
+              ...option,
+              terms: { ...option.terms },
+            })),
+          },
+        }
+      : {}),
+  };
 }
 
 export function cloneOverworldLocalJob(job: OverworldLocalJob): OverworldLocalJob {
@@ -91,9 +109,37 @@ export function cloneOverworldLocalJob(job: OverworldLocalJob): OverworldLocalJo
                   requires_completed_quests: [...job.authored_scene.requires_completed_quests],
                 }
               : {}),
+            ...(job.authored_scene.requires_resolved_events
+              ? {
+                  requires_resolved_events: [...job.authored_scene.requires_resolved_events],
+                }
+              : {}),
+            ...(job.authored_scene.requires_all_world_facts
+              ? {
+                  requires_all_world_facts: [...job.authored_scene.requires_all_world_facts],
+                }
+              : {}),
+            ...(job.authored_scene.forbids_any_world_facts
+              ? {
+                  forbids_any_world_facts: [...job.authored_scene.forbids_any_world_facts],
+                }
+              : {}),
             options: job.authored_scene.options.map((option) => ({
               ...option,
               terms: { ...option.terms },
+              ...(option.requires_event_options
+                ? {
+                    requires_event_options: option.requires_event_options.map((requirement) => ({
+                      ...requirement,
+                    })),
+                  }
+                : {}),
+              ...(option.requires_all_world_facts
+                ? { requires_all_world_facts: [...option.requires_all_world_facts] }
+                : {}),
+              ...(option.forbids_any_world_facts
+                ? { forbids_any_world_facts: [...option.forbids_any_world_facts] }
+                : {}),
             })),
           },
         }

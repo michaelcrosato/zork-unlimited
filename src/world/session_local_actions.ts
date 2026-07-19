@@ -11,6 +11,8 @@ import type {
   OverworldLocalJob,
 } from "./overworld.js";
 import {
+  localJobSceneOptionRequirementsMet,
+  localJobSceneRequirementsMet,
   resolveLocalJobSceneOption,
   type LocalJobScene,
   type LocalJobSceneOption,
@@ -160,6 +162,8 @@ export type OverworldLocalJobCompletionState = {
   discoveredJobIds: ReadonlySet<string>;
   completedJobIds: ReadonlySet<string>;
   completedQuestIds?: ReadonlySet<string> | undefined;
+  resolvedEventIds?: ReadonlySet<string> | undefined;
+  campaignWorldFactIds?: ReadonlySet<string> | undefined;
   journalEntries: ReadonlyMap<string, OverworldJournalEntry>;
 };
 
@@ -367,6 +371,25 @@ export function planOverworldLocalJobCompletion(
     );
     if (missingQuest) {
       throw new Error(`Complete quest "${missingQuest}" before working ${job.title}.`);
+    }
+    const missingEvent = scene.requires_resolved_events?.find(
+      (eventId) => !state.resolvedEventIds?.has(eventId),
+    );
+    if (missingEvent) {
+      throw new Error(`Resolve event "${missingEvent}" before working ${job.title}.`);
+    }
+    const conditionState = {
+      completedQuestIds: state.completedQuestIds ?? new Set<string>(),
+      resolvedEventIds: state.resolvedEventIds ?? new Set<string>(),
+      worldFactIds: state.campaignWorldFactIds ?? new Set<string>(),
+      eventOptionIdFor: (eventId: string) =>
+        state.journalEntries.get(`resolve:${eventId}`)?.localSceneProof?.optionId ?? null,
+    };
+    if (!localJobSceneRequirementsMet(scene, conditionState)) {
+      throw new Error(`The authored requirements for ${job.title} are not satisfied.`);
+    }
+    if (!localJobSceneOptionRequirementsMet(sceneOption, conditionState)) {
+      throw new Error(`That authored option for ${job.title} is not available in this journey.`);
     }
   } else if (state.optionId !== undefined) {
     throw new Error(`Local job ${job.title} has no authored option "${state.optionId}".`);

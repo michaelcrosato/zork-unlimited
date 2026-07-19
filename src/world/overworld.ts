@@ -25,6 +25,7 @@ import {
   journeyCampaignStoryChoiceSelection,
 } from "./journey_campaign.js";
 import { LocalJobSceneSchema } from "./local_job_scene.js";
+import { LocalEventSceneSchema } from "./local_event_scene.js";
 import { OpeningAllySchema, applyOpeningAllyOption } from "./opening_ally.js";
 import { OpeningLeadSourceSchema, applyOpeningLeadSourceOption } from "./opening_lead_source.js";
 import { OpeningPreparationSchema, applyOpeningPreparationProfile } from "./opening_preparation.js";
@@ -211,6 +212,7 @@ export const OverworldLocalEventSchema = z
     pressure: z.enum(["rumor", "hazard", "opportunity", "conflict"]),
     intensity: z.number().int().min(1).max(5),
     summary: z.string().min(1),
+    authored_scene: LocalEventSceneSchema.optional(),
   })
   .strict();
 
@@ -1049,6 +1051,15 @@ function assertEntitiesIntegrity(
   edgeIds: Set<string>,
 ): void {
   const questIds = new Set(world.quests.map((quest) => quest.id));
+  const authoredWorldFactIds = new Set(
+    world.quests.flatMap((quest) =>
+      (quest.campaign_exports ?? []).flatMap((campaignExport) =>
+        campaignExport.effects.flatMap((effect) =>
+          effect.type === "set_world_fact" ? [effect.fact_id] : [],
+        ),
+      ),
+    ),
+  );
   const seenPoi = new Set<string>();
   const poiAreas = new Set<string>();
   for (const poi of world.points_of_interest) {
@@ -1208,6 +1219,7 @@ function assertEntitiesIntegrity(
   }
 
   const seenLocalEvent = new Set<string>();
+  const seenLocalEventScene = new Set<string>();
   const eventAreas = new Set<string>();
   for (const event of world.local_events) {
     if (seenLocalEvent.has(event.id))
@@ -1219,6 +1231,36 @@ function assertEntitiesIntegrity(
       throw new Error(`Overworld local event "${event.id}" has missing area.`);
     if (areaHomes.get(event.area) !== event.home) {
       throw new Error(`Overworld local event "${event.id}" is anchored outside its home town.`);
+    }
+    const scene = event.authored_scene;
+    if (scene) {
+      if (seenLocalEventScene.has(scene.id)) {
+        throw new Error(`Duplicate authored local-event scene id "${scene.id}".`);
+      }
+      seenLocalEventScene.add(scene.id);
+      const poi = world.points_of_interest.find(
+        (candidate) => candidate.id === scene.required_poi_id,
+      );
+      if (!poi || poi.home !== event.home || poi.area !== event.area) {
+        throw new Error(
+          `Authored local-event scene "${scene.id}" requires a point of interest in its event area.`,
+        );
+      }
+      const contact = world.characters.find(
+        (candidate) => candidate.id === scene.required_contact_id,
+      );
+      if (!contact || contact.home !== event.home || contact.area !== event.area) {
+        throw new Error(
+          `Authored local-event scene "${scene.id}" requires a contact in its event area.`,
+        );
+      }
+      for (const questId of scene.forbids_completed_quests ?? []) {
+        if (!questIds.has(questId)) {
+          throw new Error(
+            `Authored local-event scene "${scene.id}" forbids missing quest "${questId}".`,
+          );
+        }
+      }
     }
     eventAreas.add(event.area);
   }
@@ -1272,6 +1314,54 @@ function assertEntitiesIntegrity(
         if (!questIds.has(questId)) {
           throw new Error(
             `Authored local-job scene "${scene.id}" requires missing quest "${questId}".`,
+          );
+        }
+      }
+      for (const eventId of scene.requires_resolved_events ?? []) {
+        if (!seenLocalEvent.has(eventId)) {
+          throw new Error(
+            `Authored local-job scene "${scene.id}" requires missing or later event "${eventId}".`,
+          );
+        }
+      }
+      for (const [optionIndex, option] of scene.options.entries()) {
+        for (const requirement of option.requires_event_options ?? []) {
+          if (!(scene.requires_resolved_events ?? []).includes(requirement.event_id)) {
+            throw new Error(
+              `Authored local-job scene "${scene.id}" option "${option.id}" references event "${requirement.event_id}" without requiring its resolution.`,
+            );
+          }
+          const event = world.local_events.find(
+            (candidate) => candidate.id === requirement.event_id,
+          );
+          if (
+            !event?.authored_scene?.options.some(
+              (eventOption) => eventOption.id === requirement.option_id,
+            )
+          ) {
+            throw new Error(
+              `Authored local-job scene "${scene.id}" option ${optionIndex} references unauthored event option "${requirement.event_id}:${requirement.option_id}".`,
+            );
+          }
+        }
+        for (const factId of [
+          ...(option.requires_all_world_facts ?? []),
+          ...(option.forbids_any_world_facts ?? []),
+        ]) {
+          if (!authoredWorldFactIds.has(factId)) {
+            throw new Error(
+              `Authored local-job scene "${scene.id}" option "${option.id}" references unauthored world fact "${factId}".`,
+            );
+          }
+        }
+      }
+      for (const factId of [
+        ...(scene.requires_all_world_facts ?? []),
+        ...(scene.forbids_any_world_facts ?? []),
+      ]) {
+        if (!authoredWorldFactIds.has(factId)) {
+          throw new Error(
+            `Authored local-job scene "${scene.id}" references unauthored world fact "${factId}".`,
           );
         }
       }

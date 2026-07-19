@@ -3,6 +3,8 @@ import {
   OVERWORLD_COMPACT_VIEW_VERSION,
   compactCampaignServiceOffers,
   compactCampaignCharacterView,
+  compactOverworldEventChoices,
+  compactOverworldEventScenes,
   compactLocalRefTruncation,
   compactOverworldAreaRoutes,
   compactOverworldCompletedArcs,
@@ -23,6 +25,7 @@ import {
   compactOverworldTravelLog,
   compactPendingRoad,
   type OverworldCompactQuestStart,
+  type OverworldCompactEventChoice,
   type OverworldCompactJobChoice,
   type OverworldCompactView,
 } from "./compact_view.js";
@@ -71,6 +74,7 @@ export type OverworldSessionCompactViewState = {
   poi: readonly OverworldPoi[];
   contacts: readonly OverworldCharacterView[];
   events: readonly OverworldLocalEvent[];
+  eventChoices?: readonly OverworldCompactEventChoice[];
   jobs: readonly OverworldLocalJob[];
   jobChoices?: readonly OverworldCompactJobChoice[];
   rememberedJobs: readonly OverworldLocalJob[];
@@ -122,6 +126,12 @@ export function buildOverworldSessionCompactView(
   const poi = compactOverworldTitleRefs(state.poi);
   const contacts = compactOverworldRefs(state.contacts);
   const events = compactOverworldTitleRefs(state.events);
+  const visibleEvents = state.events.slice(0, OVERWORLD_COMPACT_LOCAL_REF_LIMIT);
+  const visibleEventIds = new Set(visibleEvents.map((event) => event.id));
+  const eventScenes = compactOverworldEventScenes(visibleEvents);
+  const eventChoices = compactOverworldEventChoices(
+    (state.eventChoices ?? []).filter(([eventId]) => visibleEventIds.has(eventId)),
+  );
   const serviceOffers = compactCampaignServiceOffers(state.serviceOffers);
   const localRefsTruncated = compactLocalRefTruncation({
     areas: state.areas.length,
@@ -172,6 +182,8 @@ export function buildOverworldSessionCompactView(
     poi,
     contacts,
     events,
+    ...(eventScenes.length > 0 ? { event_scenes: eventScenes } : {}),
+    ...(eventChoices.length > 0 ? { event_choices: eventChoices } : {}),
     ...(localRefsTruncated.length > 0 ? { local_refs_truncated: localRefsTruncated } : {}),
     ...(jobs.length > 0 ? { jobs } : {}),
     ...(jobScenes.length > 0 ? { job_scenes: jobScenes } : {}),

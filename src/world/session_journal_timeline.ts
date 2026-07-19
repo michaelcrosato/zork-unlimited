@@ -585,7 +585,7 @@ function assertSnapshotJournalSource(
       `Overworld session snapshot journal ${entry.kind} entry has an invalid quest completion boundary.`,
     );
   }
-  if (entry.localSceneProof !== undefined && entry.kind !== "job") {
+  if (entry.localSceneProof !== undefined && entry.kind !== "job" && entry.kind !== "resolution") {
     throw new Error(
       `Overworld session snapshot journal ${entry.kind} entry has an invalid local-scene proof.`,
     );

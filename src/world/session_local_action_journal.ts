@@ -23,10 +23,12 @@ import type { OverworldJournalEntry } from "./session_snapshot.js";
 import { indexedList } from "./session_collections.js";
 import type { CampaignCharacterState } from "./campaign_character_state.js";
 import { resolveLocalJobSceneOption } from "./local_job_scene.js";
+import { resolveLocalEventSceneOption } from "./local_event_scene.js";
 import {
   authoredLocalJobLegacyCompletion,
   describeAuthoredLocalJobLegacyAction,
 } from "./local_job_scene_legacy.js";
+import { authoredAlbanyCharterLegacyCompletion } from "./local_event_scene_legacy.js";
 
 export type OverworldDiscoveryLocalityIndex = {
   areaHomes: ReadonlyMap<string, string>;
@@ -161,7 +163,29 @@ function localJournalActionDuration(
     case "resolution": {
       const sourceId = journalSourceId(entry, "resolve:");
       const event = sourceId ? sources.eventsById.get(sourceId) : undefined;
-      return event ? 30 + event.intensity * 10 : null;
+      if (!event) return null;
+      if (!event.authored_scene) {
+        if (entry.localSceneProof) {
+          throw new Error(
+            `Overworld session snapshot legacy event "${event.id}" cannot carry local-scene proof.`,
+          );
+        }
+        return 30 + event.intensity * 10;
+      }
+      const proof = entry.localSceneProof;
+      if (!proof || proof.sceneId !== event.authored_scene.id) {
+        throw new Error(
+          `Overworld session snapshot authored event "${event.id}" is missing its exact local-scene proof.`,
+        );
+      }
+      const legacyCompletion = authoredAlbanyCharterLegacyCompletion(event.id, proof);
+      if (legacyCompletion) return 30 + legacyCompletion.legacyEvent.intensity * 10;
+      if (proof.sourceWorldHash !== undefined) {
+        throw new Error(
+          `Overworld session snapshot authored event "${event.id}" names an untrusted legacy source.`,
+        );
+      }
+      return resolveLocalEventSceneOption(event.authored_scene, proof.optionId).terms.minutes;
     }
     case "site": {
       const sourceId = journalSourceId(entry, "site:");

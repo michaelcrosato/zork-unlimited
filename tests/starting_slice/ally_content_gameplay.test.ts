@@ -52,6 +52,26 @@ const RELAY = "albany:ally_june_relay_only";
 const SOLO = "albany:ally_travel_solo";
 const JUNE_PROMISE = "albany:promise_june_cattle_first";
 
+function withoutWolfReturnJobOverlays<T extends typeof world>(manifest: T): T {
+  for (const job of manifest.local_jobs) {
+    const scene = job.authored_scene;
+    if (
+      scene &&
+      [
+        ...(scene.requires_all_world_facts ?? []),
+        ...(scene.forbids_any_world_facts ?? []),
+        ...scene.options.flatMap((option) => [
+          ...(option.requires_all_world_facts ?? []),
+          ...(option.forbids_any_world_facts ?? []),
+        ]),
+      ].some((factId) => factId.startsWith("fact:wolf_winter_"))
+    ) {
+      delete job.authored_scene;
+    }
+  }
+  return manifest;
+}
+
 function fixedRolls(...values: number[]): Rng {
   let cursor = 0;
   return {
@@ -179,7 +199,10 @@ describe("SS-F04 — June Pike authored ally gameplay", () => {
     }
     expect(() => assertOverworldIntegrity(omitted)).toThrow(/leaves field promise.*unresolved/i);
 
-    const exportless = structuredClone(world);
+    // This assertion is about the opening contract's target export requirement.
+    // Remove optional Albany return jobs which correctly depend on those exports
+    // so their downstream reference error cannot mask the target-contract error.
+    const exportless = withoutWolfReturnJobOverlays(structuredClone(world));
     const exportlessWolf = exportless.quests.find((quest) => quest.id === "wolf_winter");
     if (!exportlessWolf) throw new Error("Wolf-Winter must exist");
     delete exportlessWolf.campaign_exports;

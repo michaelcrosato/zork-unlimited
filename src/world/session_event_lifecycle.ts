@@ -19,11 +19,13 @@ import type { OverworldJournalEntry } from "./session_snapshot.js";
 
 export type OverworldSessionEventResolutionPlanState = {
   eventId: string;
+  optionId?: string | undefined;
   eventsById: ReadonlyMap<string, OverworldLocalEvent>;
   currentTownId: string;
   currentTownName: string;
   currentRegion: string;
   currentAreaId: string | null;
+  completedQuestIds: ReadonlySet<string>;
   resolvedEventIds: ReadonlySet<string>;
   journalEntries: ReadonlyMap<string, OverworldJournalEntry>;
   poisByArea: ReadonlyMap<string, readonly Pick<OverworldPoi, "id">[]>;

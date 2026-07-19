@@ -13,6 +13,8 @@ import type { OverworldJournalEntry, TravelLogEntrySnapshot } from "./session_sn
 import { roadEncounterOptionFor } from "./travel_mechanics.js";
 import { resolveLocalJobSceneOption } from "./local_job_scene.js";
 import { authoredLocalJobLegacyCompletion } from "./local_job_scene_legacy.js";
+import { resolveLocalEventSceneOption } from "./local_event_scene.js";
+import { authoredAlbanyCharterLegacyCompletion } from "./local_event_scene_legacy.js";
 
 export type OverworldRegionRenownSourceIndex = {
   eventsById: ReadonlyMap<string, OverworldLocalEvent>;
@@ -89,10 +91,29 @@ export function expectedSnapshotRegionRenown(
   for (const eventId of stateIds.resolvedEventIds) {
     const event = sources.eventsById.get(eventId);
     if (!event) continue;
+    let renown = event.intensity;
+    if (event.authored_scene) {
+      const proof = journalEntriesById.get(`resolve:${event.id}`)?.localSceneProof;
+      if (!proof || proof.sceneId !== event.authored_scene.id) {
+        throw new Error(
+          `Overworld session snapshot authored event "${event.id}" is missing its renown proof.`,
+        );
+      }
+      const legacyCompletion = authoredAlbanyCharterLegacyCompletion(event.id, proof);
+      if (legacyCompletion) {
+        renown = legacyCompletion.legacyEvent.intensity;
+      } else if (proof.sourceWorldHash === undefined) {
+        renown = resolveLocalEventSceneOption(event.authored_scene, proof.optionId).terms.renown;
+      } else {
+        throw new Error(
+          `Overworld session snapshot authored event "${event.id}" names an untrusted renown source.`,
+        );
+      }
+    }
     addRegionRenown(
       expected,
       nodeRegionFor(sources.nodesById, event.home, `resolved event "${eventId}"`),
-      event.intensity,
+      renown,
     );
   }
   // Quest completions award QUEST_COMPLETION_RENOWN to the quest home's region

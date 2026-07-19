@@ -26,6 +26,7 @@ import { replaceOverworldJournalEntries } from "./session_journal_store.js";
 import {
   assertSnapshotEventResolutionProofs,
   assertSnapshotRegionalArcCompletionProofs,
+  describeOverworldEventResolution,
 } from "./session_event_resolution.js";
 import {
   assertSnapshotContactPresentationProofs,
@@ -45,6 +46,7 @@ import {
 import { assertSnapshotRegionRenown } from "./session_region_renown.js";
 import {
   assertSnapshotResourceReplay,
+  campaignWorldFactsProvenBeforeDecision,
   roadJournalResolutionIndex,
   type OverworldCampaignBoundaryReplayIndex,
   type OverworldCampaignBoundaryReplayProof,
@@ -78,7 +80,12 @@ import {
 } from "./journey_campaign.js";
 import { campaignStoryChoiceRefKey } from "./campaign_story_choices.js";
 import { describeOverworldContactAction } from "./local_actions.js";
-import { resolveLocalJobSceneOption } from "./local_job_scene.js";
+import {
+  localJobSceneOptionRequirementsMet,
+  localJobSceneRequirementsMet,
+  resolveLocalJobSceneOption,
+  type LocalJobSceneOption,
+} from "./local_job_scene.js";
 import {
   AUTHORED_LOCAL_JOB_LEGACY_DEFINITIONS,
   authoredLocalJobLegacyCompletion,
@@ -86,6 +93,17 @@ import {
   migrateAuthoredLocalJobLegacyEntry,
   OVERWORLD_AUTHORED_LOCAL_JOB_PREDECESSOR_WORLD_HASH,
 } from "./local_job_scene_legacy.js";
+import {
+  AUTHORED_ALBANY_CHARTER_EVENT_ID,
+  WINTER_RETURN_DOCKET_PREDECESSOR_WORLD_HASH,
+  WINTER_RETURN_DOCKET_GENERIC_PREDECESSOR_WORLD_HASHES,
+  authoredAlbanyCharterLegacyCompletion,
+  migrateAuthoredAlbanyCharterLegacyEntry,
+} from "./local_event_scene_legacy.js";
+import {
+  localEventSceneRequirementsMet,
+  resolveLocalEventSceneOption,
+} from "./local_event_scene.js";
 import {
   questCampaignExportForEnding,
   questCompletionJournalEntryDraft,
@@ -344,7 +362,7 @@ export { OVERWORLD_AUTHORED_LOCAL_JOB_PREDECESSOR_WORLD_HASH };
 export const OVERWORLD_AUTHORED_LOCAL_JOB_FIRST_SCENE_WORLD_HASH =
   "9b8cc75b05e77af160f46dbcd177333cc0f27af89e56f504af0bf6c6a2422c31";
 export const OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH =
-  "815a138cbeeafbc9595c04e37260ccaba9d2d52d6a3341b3c38afe9eade62636";
+  "db23dea42bb2cd62beb8ac5871e4b5c74ee127c05b36941b4e170247ab8a5858";
 /**
  * Exact manifests whose already-valid job evidence can be normalized into the
  * current authored-job registry. Each later conversion adds its immediate
@@ -354,6 +372,7 @@ export const OVERWORLD_AUTHORED_LOCAL_JOB_TRUSTED_PREDECESSOR_WORLD_HASHES: Read
   new Set([
     OVERWORLD_AUTHORED_LOCAL_JOB_PREDECESSOR_WORLD_HASH,
     OVERWORLD_AUTHORED_LOCAL_JOB_FIRST_SCENE_WORLD_HASH,
+    WINTER_RETURN_DOCKET_PREDECESSOR_WORLD_HASH,
   ]);
 /** @deprecated Relief-oath-era current-target name retained for existing callers. */
 export const OVERWORLD_RELIEF_OATH_WORLD_HASH = OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH;
@@ -1920,6 +1939,12 @@ function migrateAuthoredLocalJobPredecessorJournal(args: {
 }): OverworldJournalEntry[] {
   let journalEntries = [...args.snapshot.journalEntries];
   for (const definition of AUTHORED_LOCAL_JOB_LEGACY_DEFINITIONS) {
+    if (
+      definition.acceptedSourceWorldHashes &&
+      !definition.acceptedSourceWorldHashes.has(args.snapshot.worldHash)
+    ) {
+      continue;
+    }
     const completed = args.snapshot.completedJobIds.includes(definition.jobId);
     const matchingEntries = journalEntries.filter(
       (entry) => entry.id === `job:${definition.jobId}`,
@@ -1988,12 +2013,89 @@ function migrateAuthoredLocalJobPredecessorJournal(args: {
             currentJob: job,
             definition,
             entry,
+            ...(definition.acceptedSourceWorldHashes
+              ? { sourceWorldHash: args.snapshot.worldHash }
+              : {}),
             townName: args.indexes.townNameForSource(job.home),
           })
         : candidate,
     );
   }
   return journalEntries;
+}
+
+function migrateAuthoredLocalEventPredecessorJournal(args: {
+  campaignBoundaries: OverworldCampaignBoundaryReplayIndex;
+  indexes: OverworldSnapshotManifestIndex;
+  snapshot: OverworldSessionSnapshot;
+}): OverworldJournalEntry[] {
+  if (!WINTER_RETURN_DOCKET_GENERIC_PREDECESSOR_WORLD_HASHES.has(args.snapshot.worldHash)) {
+    return [...args.snapshot.journalEntries];
+  }
+  const completed = args.snapshot.resolvedEventIds.includes(AUTHORED_ALBANY_CHARTER_EVENT_ID);
+  const matchingEntries = args.snapshot.journalEntries.filter(
+    (entry) => entry.id === `resolve:${AUTHORED_ALBANY_CHARTER_EVENT_ID}`,
+  );
+  if (completed !== (matchingEntries.length === 1)) {
+    throw new Error(
+      `The authored-local-event predecessor has inconsistent resolution evidence for "${AUTHORED_ALBANY_CHARTER_EVENT_ID}".`,
+    );
+  }
+  if (!completed) return [...args.snapshot.journalEntries];
+
+  const entry = matchingEntries[0]!;
+  const event = args.indexes.eventsById.get(AUTHORED_ALBANY_CHARTER_EVENT_ID);
+  const node = event ? args.indexes.nodesById.get(event.home) : undefined;
+  if (!event?.authored_scene || !node) {
+    throw new Error("The Winter Return Docket migration target is incomplete.");
+  }
+  const recordedAt = parseTimeLabel(entry.recordedAt);
+  const boundaryMatches = [...args.campaignBoundaries.byAcceptedDecisions.entries()].filter(
+    ([, replayed]) =>
+      replayed.decision?.surface === "overworld" &&
+      replayed.decision.reason === "situation_changed" &&
+      replayed.decision.actionId === `resolve_event:${event.id}` &&
+      replayed.townId === event.home &&
+      replayed.areaId === event.area,
+  );
+  if (boundaryMatches.length > 1) {
+    throw new Error(
+      `The authored-local-event predecessor resolution for "${event.id}" lacks one exact journey decision.`,
+    );
+  }
+  const leadOfferEntry = args.snapshot.journalEntries.find(
+    (candidate) => candidate.kind === "lead_source_offer",
+  );
+  if (
+    boundaryMatches.length === 0 &&
+    leadOfferEntry &&
+    recordedAt >= parseTimeLabel(leadOfferEntry.recordedAt)
+  ) {
+    throw new Error(
+      `The authored-local-event predecessor resolution for "${event.id}" is missing from its available campaign trail.`,
+    );
+  }
+  const boundaryMatch = boundaryMatches[0];
+  const boundary = boundaryMatch
+    ? {
+        acceptedDecisions: boundaryMatch[0],
+        decisionProofHash: boundaryMatch[1].decisionProofHash,
+        townId: event.home,
+        areaId: event.area,
+        minutes: recordedAt,
+      }
+    : undefined;
+  const migrated = migrateAuthoredAlbanyCharterLegacyEntry({
+    boundary,
+    currentEvent: event,
+    entry,
+    region: node.region,
+    sourceWorldHash: args.snapshot.worldHash,
+    townName: args.indexes.townNameForSource(event.home),
+  });
+  return args.snapshot.journalEntries.map((candidate) =>
+    candidate === entry ? migrated : candidate,
+  );
 }
 
 export function planOverworldSessionSnapshotRestore(args: {
@@ -3110,12 +3212,20 @@ export function planOverworldSessionSnapshotRestore(args: {
     }),
   };
   if (migratesLegacyLocalJobSemantics) {
-    snapshot = Object.freeze({
+    const eventMigratedSnapshot = Object.freeze({
       ...snapshot,
-      journalEntries: migrateAuthoredLocalJobPredecessorJournal({
+      journalEntries: migrateAuthoredLocalEventPredecessorJournal({
         campaignBoundaries,
         indexes,
         snapshot,
+      }),
+    });
+    snapshot = Object.freeze({
+      ...eventMigratedSnapshot,
+      journalEntries: migrateAuthoredLocalJobPredecessorJournal({
+        campaignBoundaries,
+        indexes,
+        snapshot: eventMigratedSnapshot,
       }),
     });
     journalTimeline = assertSnapshotTimeline(snapshot, {
@@ -3125,6 +3235,11 @@ export function planOverworldSessionSnapshotRestore(args: {
     });
   }
   assertSnapshotLocalJobSceneProofs({
+    campaignBoundaries,
+    indexes,
+    journalEntries: snapshot.journalEntries,
+  });
+  assertSnapshotLocalEventSceneProofs({
     campaignBoundaries,
     indexes,
     journalEntries: snapshot.journalEntries,
@@ -3719,6 +3834,7 @@ function assertSnapshotLocalJobSceneProofs(args: {
       );
     }
     const legacyCompletion = authoredLocalJobLegacyCompletion(job.id, proof);
+    let selectedOption: LocalJobSceneOption | null = null;
     if (legacyCompletion) {
       const expected = describeAuthoredLocalJobLegacyAction(
         legacyCompletion,
@@ -3740,7 +3856,7 @@ function assertSnapshotLocalJobSceneProofs(args: {
           `Overworld session snapshot authored job "${job.id}" names an untrusted legacy source.`,
         );
       }
-      resolveLocalJobSceneOption(scene, proof.optionId);
+      selectedOption = resolveLocalJobSceneOption(scene, proof.optionId);
       if (!proof.boundary) {
         throw new Error(
           `Overworld session snapshot authored job "${job.id}" is missing its accepted decision boundary.`,
@@ -3798,6 +3914,142 @@ function assertSnapshotLocalJobSceneProofs(args: {
           `Overworld session snapshot authored job "${job.id}" lacks earlier quest "${questId}".`,
         );
       }
+    }
+    const earlierResolvedEventIds = new Set(
+      earlierEntries.flatMap((candidate) =>
+        candidate.kind === "resolution" && candidate.id.startsWith("resolve:")
+          ? [candidate.id.slice("resolve:".length)]
+          : [],
+      ),
+    );
+    const earlierCompletedQuestIds = new Set(
+      earlierEntries.flatMap((candidate) =>
+        candidate.kind === "quest_done" && candidate.id.startsWith("quest_done:")
+          ? [candidate.id.slice("quest_done:".length)]
+          : [],
+      ),
+    );
+    const conditionState = {
+      completedQuestIds: earlierCompletedQuestIds,
+      resolvedEventIds: earlierResolvedEventIds,
+      worldFactIds: campaignWorldFactsProvenBeforeDecision(
+        args.campaignBoundaries,
+        boundary.acceptedDecisions,
+      ),
+      eventOptionIdFor: (eventId: string) =>
+        earlierEntries.find((candidate) => candidate.id === `resolve:${eventId}`)?.localSceneProof
+          ?.optionId ?? null,
+    };
+    if (
+      !selectedOption ||
+      !localJobSceneRequirementsMet(scene, conditionState) ||
+      !localJobSceneOptionRequirementsMet(selectedOption, conditionState)
+    ) {
+      throw new Error(
+        `Overworld session snapshot authored job "${job.id}" violates its earlier event or world-fact requirements.`,
+      );
+    }
+  });
+}
+
+function assertSnapshotLocalEventSceneProofs(args: {
+  campaignBoundaries: OverworldCampaignBoundaryReplayIndex;
+  indexes: OverworldSnapshotManifestIndex;
+  journalEntries: readonly OverworldJournalEntry[];
+}): void {
+  args.journalEntries.forEach((entry, entryIndex) => {
+    if (entry.kind !== "resolution") return;
+    const eventId = entry.id.startsWith("resolve:") ? entry.id.slice("resolve:".length) : "";
+    const event = args.indexes.eventsById.get(eventId);
+    if (!event) return;
+    const scene = event.authored_scene;
+    const proof = entry.localSceneProof;
+    if (!scene) {
+      if (proof) {
+        throw new Error(
+          `Overworld session snapshot legacy event "${event.id}" cannot carry local-scene proof.`,
+        );
+      }
+      return;
+    }
+    if (!proof || proof.sceneId !== scene.id) {
+      throw new Error(
+        `Overworld session snapshot authored event "${event.id}" is missing its exact local-scene proof.`,
+      );
+    }
+    const node = args.indexes.nodesById.get(event.home);
+    if (!node) return;
+    const legacy = authoredAlbanyCharterLegacyCompletion(event.id, proof);
+    if (!legacy && proof.sourceWorldHash !== undefined) {
+      throw new Error(
+        `Overworld session snapshot authored event "${event.id}" names an untrusted legacy source.`,
+      );
+    }
+    const option = legacy ? null : resolveLocalEventSceneOption(scene, proof.optionId);
+    if (!legacy) {
+      const earlierCompletedQuestIds = new Set(
+        args.journalEntries
+          .slice(entryIndex + 1)
+          .flatMap((candidate) =>
+            candidate.kind === "quest_done" && candidate.id.startsWith("quest_done:")
+              ? [candidate.id.slice("quest_done:".length)]
+              : [],
+          ),
+      );
+      if (!localEventSceneRequirementsMet(scene, { completedQuestIds: earlierCompletedQuestIds })) {
+        throw new Error(
+          `Overworld session snapshot authored event "${event.id}" was resolved after a forbidden quest completion.`,
+        );
+      }
+    }
+    const expected = describeOverworldEventResolution(
+      legacy?.legacyEvent ?? event,
+      args.indexes.townNameForSource(event.home),
+      node.region,
+      option,
+    );
+    if (
+      entry.title !== expected.title ||
+      entry.text !== expected.text ||
+      entry.town !== args.indexes.townNameForSource(event.home)
+    ) {
+      throw new Error(
+        `Overworld session snapshot authored event "${event.id}" does not match its canonical option copy.`,
+      );
+    }
+    if (legacy && !proof.boundary) return;
+    if (!proof.boundary) {
+      throw new Error(
+        `Overworld session snapshot authored event "${event.id}" is missing its accepted decision boundary.`,
+      );
+    }
+    const boundary = proof.boundary;
+    const replayed = args.campaignBoundaries.byAcceptedDecisions.get(boundary.acceptedDecisions);
+    const expectedActionId = legacy
+      ? `resolve_event:${event.id}`
+      : `resolve_event:${event.id}:${proof.optionId}`;
+    if (
+      !replayed ||
+      replayed.decision === null ||
+      replayed.decisionProofHash !== boundary.decisionProofHash ||
+      replayed.decision.surface !== "overworld" ||
+      replayed.decision.reason !== "situation_changed" ||
+      replayed.decision.actionId !== expectedActionId
+    ) {
+      throw new Error(
+        `Overworld session snapshot authored event "${event.id}" does not match its accepted decision proof.`,
+      );
+    }
+    if (
+      boundary.townId !== event.home ||
+      boundary.areaId !== event.area ||
+      replayed.townId !== boundary.townId ||
+      replayed.areaId !== boundary.areaId ||
+      boundary.minutes !== parseTimeLabel(entry.recordedAt)
+    ) {
+      throw new Error(
+        `Overworld session snapshot authored event "${event.id}" does not match its location and clock boundary.`,
+      );
     }
   });
 }
@@ -3960,12 +4212,24 @@ function deriveCampaignWorldFactProofOrdinals(args: {
 }): ReadonlyMap<string, number | null> {
   const proofOrdinals = new Map<string, number | null>();
   const entriesById = new Map(args.journalEntries.map((entry) => [entry.id, entry]));
-  const serviceFactIds = new Set(
-    [...args.indexes.campaignServiceRulesById.values()].flatMap((rule) => [
+  const replayBoundFactIds = new Set([
+    ...[...args.indexes.campaignServiceRulesById.values()].flatMap((rule) => [
       ...(rule.requires_all_world_facts ?? []),
       ...(rule.forbids_any_world_facts ?? []),
     ]),
-  );
+    ...[...args.indexes.jobsById.values()].flatMap((job) =>
+      job.authored_scene
+        ? [
+            ...(job.authored_scene.requires_all_world_facts ?? []),
+            ...(job.authored_scene.forbids_any_world_facts ?? []),
+            ...job.authored_scene.options.flatMap((option) => [
+              ...(option.requires_all_world_facts ?? []),
+              ...(option.forbids_any_world_facts ?? []),
+            ]),
+          ]
+        : [],
+    ),
+  ]);
   const completionOrdinalByQuestId = new Map<string, number>();
   for (const goal of [...args.journey.goalHistory, args.journey.goal]) {
     if (goal.status !== "completed" || goal.completedAtDecision === null) continue;
@@ -3980,8 +4244,8 @@ function deriveCampaignWorldFactProofOrdinals(args: {
     if (!campaignExport) continue;
     const completionEntry = entriesById.get(`quest_done:${questId}`);
     if (!completionEntry) continue;
-    const exportsServiceFact = campaignExport.effects.some(
-      (effect) => effect.type === "set_world_fact" && serviceFactIds.has(effect.fact_id),
+    const exportsReplayBoundFact = campaignExport.effects.some(
+      (effect) => effect.type === "set_world_fact" && replayBoundFactIds.has(effect.fact_id),
     );
     const proofOrdinal = questCompletionBoundaryOrdinal(
       completionEntry,
@@ -3989,7 +4253,7 @@ function deriveCampaignWorldFactProofOrdinals(args: {
       {
         expectedCompletedAtDecision: completionOrdinalByQuestId.get(questId) ?? null,
         questId,
-        requireBound: args.requireBoundServiceFacts && exportsServiceFact,
+        requireBound: args.requireBoundServiceFacts && exportsReplayBoundFact,
       },
     );
     for (const effect of campaignExport.effects) {

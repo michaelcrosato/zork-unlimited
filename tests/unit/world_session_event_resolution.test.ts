@@ -33,6 +33,35 @@ function event(id: string, home: string, area: string): OverworldLocalEvent {
   };
 }
 
+function authoredEvent(id: string, home: string, area: string): OverworldLocalEvent {
+  return {
+    ...event(id, home, area),
+    authored_scene: {
+      version: 1,
+      id: `${id}:scene`,
+      prompt: "Choose one durable record.",
+      required_poi_id: "poi_exact",
+      required_contact_id: "character_exact",
+      options: [
+        {
+          id: "open",
+          title: "Open the record",
+          preview: "Publish the record.",
+          consequence: "The record is public.",
+          terms: { minutes: 50, renown: 2 },
+        },
+        {
+          id: "seal",
+          title: "Seal the record",
+          preview: "Protect the record.",
+          consequence: "The record stays sealed.",
+          terms: { minutes: 50, renown: 2 },
+        },
+      ],
+    },
+  };
+}
+
 function poi(id: string, area = "area_a"): OverworldPoi {
   return {
     id,
@@ -178,6 +207,7 @@ describe("overworld event and regional arc proof replay", () => {
         currentTownName: "Alden",
         currentRegion: "North",
         currentAreaId: "area_a",
+        completedQuestIds: new Set<string>(),
         resolvedEventIds: new Set(),
         journalEntries,
         poisByArea: new Map([["area_a", [poi("poi_a")]]]),
@@ -213,6 +243,7 @@ describe("overworld event and regional arc proof replay", () => {
       currentTownName: "Alden",
       currentRegion: "North",
       currentAreaId: "area_a",
+      completedQuestIds: new Set<string>(),
       resolvedEventIds: new Set(),
       journalEntries: new Map([
         ["scout:poi_a", journalEntry("scout:poi_a", "poi")],
@@ -253,6 +284,7 @@ describe("overworld event and regional arc proof replay", () => {
         currentTownName: "Alden",
         currentRegion: "North",
         currentAreaId: "area_a",
+        completedQuestIds: new Set<string>(),
         resolvedEventIds: new Set([localEvent.id]),
         journalEntries: new Map([[existing.id, existing]]),
         poisByArea: new Map(),
@@ -275,6 +307,7 @@ describe("overworld event and regional arc proof replay", () => {
       currentTownName: "Alden",
       currentRegion: "North",
       currentAreaId: "area_a",
+      completedQuestIds: new Set<string>(),
       resolvedEventIds: new Set<string>(),
       journalEntries: new Map<string, OverworldJournalEntry>(),
       poisByArea: new Map<string, readonly OverworldPoi[]>(),
@@ -331,6 +364,70 @@ describe("overworld event and regional arc proof replay", () => {
         }),
       ),
     ).toThrow(/missing an investigated event prerequisite/);
+  });
+
+  it("requires exact authored scene setup and strict pre-resolution chronology", () => {
+    const localEvent = authoredEvent("event_a", "town_a", "area_a");
+    const sources: OverworldResolutionProofIndex = {
+      charactersById: new Map([
+        ["character_exact", character("character_exact")],
+        ["character_other", character("character_other")],
+      ]),
+      contactPresentationsByJournalId: new Map(),
+      eventsById: new Map([[localEvent.id, localEvent]]),
+      poisById: new Map([
+        ["poi_exact", poi("poi_exact")],
+        ["poi_other", poi("poi_other")],
+      ]),
+    };
+    const exactTimes = new Map([
+      ["scout:poi_exact", 580],
+      ["talk:character_exact", 590],
+      ["investigate:event_a", 600],
+      ["resolve:event_a", 620],
+    ]);
+    const exactJournal = journal({ recordedAtById: exactTimes });
+    expect(() =>
+      assertSnapshotEventResolutionProofs(new Set([localEvent.id]), sources, exactJournal),
+    ).not.toThrow();
+
+    const sameAreaScoutOnly = new Map(exactTimes);
+    sameAreaScoutOnly.delete("scout:poi_exact");
+    sameAreaScoutOnly.set("scout:poi_other", 580);
+    expect(() =>
+      assertSnapshotEventResolutionProofs(
+        new Set([localEvent.id]),
+        sources,
+        journal({ recordedAtById: sameAreaScoutOnly }),
+      ),
+    ).toThrow(/exact point-of-interest scout prerequisite/i);
+
+    const sameAreaContactOnly = new Map(exactTimes);
+    sameAreaContactOnly.delete("talk:character_exact");
+    sameAreaContactOnly.set("talk:character_other", 590);
+    expect(() =>
+      assertSnapshotEventResolutionProofs(
+        new Set([localEvent.id]),
+        sources,
+        journal({ recordedAtById: sameAreaContactOnly }),
+      ),
+    ).toThrow(/exact contact prerequisite/i);
+
+    for (const prerequisiteId of [
+      "scout:poi_exact",
+      "talk:character_exact",
+      "investigate:event_a",
+    ]) {
+      const reordered = new Map(exactTimes);
+      reordered.set(prerequisiteId, 620);
+      expect(() =>
+        assertSnapshotEventResolutionProofs(
+          new Set([localEvent.id]),
+          sources,
+          journal({ recordedAtById: reordered }),
+        ),
+      ).toThrow(/earlier exact/i);
+    }
   });
 
   it("computes regional arc completion proof time from the required earliest anchors", () => {

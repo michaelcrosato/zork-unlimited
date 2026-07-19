@@ -401,7 +401,9 @@ describe("Wolf-Winter to Gallowmere authored handoff", () => {
     const stationJob = syntheticWorld.local_jobs.find(
       (job) => job.id === "albany_city__transport_hub__job",
     );
-    const worksScene = syntheticWorld.local_jobs.find((job) => job.authored_scene)?.authored_scene;
+    const worksScene = syntheticWorld.local_jobs.find(
+      (job) => job.id === "albany_city__industrial__job",
+    )?.authored_scene;
     if (!stationJob || !worksScene) throw new Error("Expected station job and authored fixture.");
     stationJob.authored_scene = {
       ...structuredClone(worksScene),

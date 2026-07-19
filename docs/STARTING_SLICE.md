@@ -122,10 +122,13 @@ The current slice now satisfies the twelve-fork structural proof threshold, but
 it is **not yet milestone-certified**:
 
 - Wolf-Winter is now withheld from Albany's FIFO discovery and requires one of
-  three certified source packets. Albany Works is the first of six district jobs
-  converted to an authored post-return priority scene: its exclusive time/renown
-  choice can cross a 13-standing threshold for a later Civic recovery cot. The
-  other five jobs and checklist events remain mostly one-click transactions;
+  three certified source packets. Albany Works and Civic are the first two of
+  six district jobs converted to authored scenes. Works' exclusive return
+  priority can cross a 13-standing threshold for a Civic recovery cot; Civic's
+  first authored event fixes a public-or-protected policy before Wolf-Winter,
+  then its return docket exposes exactly one lawful closure from that policy
+  and the truthful held-or-evacuated outcome. Four jobs and five checklist
+  events remain generic;
 - Albany authors four permanent registration profiles. Road-Warden and Ledger
   sponsorship now change the actual terms of their matching source packet, and
   the Road-Warden retains its fieldcraft import. Ironhands Repairer,
@@ -184,9 +187,10 @@ The first implementation sequence is:
    landed)_ — quest content declares reusable, validated character/world
    effects; campaign code consumes generic state rather than adding
    Wolf-specific ending conditionals.
-4. **Authored Albany** _(1/6 district jobs converted)_ — replace the visible
-   slice's generic local transactions with scenes whose evidence, time,
-   relationships, resources, and promises alter Wolf-Winter and its return.
+4. **Authored Albany** _(2/6 district jobs and 1/6 events converted)_ — replace
+   the visible slice's generic local transactions with scenes whose evidence,
+   time, relationships, resources, and promises alter Wolf-Winter and its
+   return.
 5. **Systemic Wolf-Winter** — combat, fully noncombat, and hybrid solutions share
    pressure state and produce truthful, mechanically distinct Albany returns.
 
@@ -637,10 +641,16 @@ Certification requires all of the following simultaneously:
 12. One playthrough cannot expose every meaningful scene, relationship state,
     resolution family, or outcome.
 
-Depth Contract #11 remains open: Albany Works proves the reusable authored-job
+Depth Contract #11 remains open. Albany Works proves the reusable authored-job
 grammar, one exclusive post-return priority, and a delayed 13-standing Civic
-service consumer, but five generic district jobs and the checklist events are
-still visible.
+service consumer. Civic adds the reusable authored-event grammar: equal
+pre-Wolf terms bind a public-or-protected charter policy, and the post-Wolf job
+selects exactly one of four policy/outcome closures with outcome-dependent
+duration and policy-dependent standing. The paired held/evacuated, restore,
+migration, replay, and surface
+proof is
+[`winter_return_docket_counterfactual.test.ts`](../tests/starting_slice/winter_return_docket_counterfactual.test.ts).
+Four generic district jobs and five checklist events are still visible.
 
 ## Evidence contract
 

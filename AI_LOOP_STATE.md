@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 579 -->
+<!-- historical_cycle_count: 580 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - winter_return_docket
+
+- Evidence choice: Depth Contract #11 and the tenth-ranked Charter visibility signal made Civic's generic event/job pair the next authored Albany conversion, while opening density required both scenes to remain optional.
+- Surface: equal 50-minute/+2 pre-Wolf terms bind a permanent public-or-protected filing; after Wolf-Winter exactly one lawful public-held (70/+3), public-evacuated (60/+3), protected-held (25/+1), or protected-evacuated (20/+1) docket closure is legal.
+- Counterfactual: all 11 non-death exports map to exactly one policy/outcome closure; current-scene replay, restore, clone, journal, full/compact MCP, UI, and tamper witnesses preserve the actual policy and held/evacuated fact, while bounded legacy hashes retain neutral predecessor semantics without inventing either.
+- Pure evidence: clean final-tree Terra seed 4108 completed Wolf-Winter by living-pack diversion at decision 29, continued through The Gallowmere, ended at 53, rated 4/4, was unstuck, and would replay; it skipped the optional Civic scenes, so deterministic pairs—not an invented organic sample—carry the new behavior.
+- Feedback: compile `20260719T095400Z` remains 830 verified/79 journey-v3 exits/65 continuing; two valid reports are new, below compile threshold, and the ledger is 831 accepted/59 rejected. Seed 4108 repeated the separate crawlboard-copy S2.
+- Self-critique: PASS for the second of six authored Albany jobs and first of six events, `active_unproven` for greater-than-BG3; four jobs, five events, broader NPC agendas, deep crawl, and exact pilot/100-player certification remain, with Campus/Blair next.
+- Guard: browser cards/prerequisites are truthful with no overlay or console error; exact rebased health is green at 384 files/2,925 tests, and crawl `20260719T120308Z` is zero-finding at 247/247 nodes, 344/344 edges, and 12/12 boards/quests.
 
 ### Cycle result - codex_compaction_context_replay
 
@@ -143,12 +153,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Pure evidence: seed 2716 verified pure/fresh, understood the stockway tradeoff, completed Wolf-Winter at decision 27 with an unharmed herd, continued through three goals, and ended voluntarily at checkpoint 80; clarity/enjoyment 4/5, stuck false, replay true. It reported only recurring S1 duplicate generated names outside the authored slice and S0 prose issues.
 - Compile/self-critique: only this report is new since compile `20260715T120239Z`, so no compile is due. PASS for F07, not the greater-than-BG3 slice claim: the ledger advances 9/12→10/12; F06, F02, numeric/fleet certification, and publication remain.
 - Guard: adversarial audit closed a legacy-copy relabelling gap by pinning exact per-era quest-start copy and found no remaining P0/P1/P2 issue. Final crawl `20260715T175121Z` reached 247/247 nodes, 344/344 edges, 12/12 boards, and 12/12 quests with zero findings; the fresh report sidecar is verified.
-
-### Cycle result - wolf_winter_fortify_outlast
-
-- Evidence choice: `SS-F08-cade-trust` plus `fortify_and_outlast` was the next defining-slice gap because Wolf-Winter still lacked its fourth complete strategy family and Cade's promised consent/authority conduct fork had no mechanics.
-- Surface: Cade now discloses a hard household-terms versus Albany-authority commitment with mutually exclusive finite shutters/seals, outer-property/public-stock costs, one-shot Repair, stance-owned no-retry recovery, three spatial beats, visible Winter Siege pressure, zero combat, and June's independent cattle brace. Both lines keep the whole herd and all three wolves alive, then export exclusive facts, Cade/Hayden/June memories, truthful dispatches, and one-use Station services.
-- Integrity/counterfactual: same-boundary paired rolls reverse resource, legal recovery, property, relief stock, memories, and service while clean/failure runs share only two outcome families. Exact F10 migration accepts all 9 outcomes/12 services plus old June/wagon/service copy and rejects both F11 endings/services or current copy relabeled backward; full/compact/UI save, foldback, consumption, and ≤45 first-goal proofs are green. The ledger advances 8/12→9/12 and 3/4→4/4 strategy families.
-- Pure evidence: seed 2715 verified pure/fresh, chose Road-Warden + Hayden + Emery and combat, completed Wolf-Winter at decision 28, continued at 28/40/54/75/80, and ended voluntarily after four goals at 97; clarity/enjoyment 5/5, stuck false, replay true. It noted only S0 recurring cross-town NPC names and strategy-preview clarity; deterministic tests carry unsampled fortification.
-- Compile/self-critique: only this verified report is new since compile `20260715T120239Z`, so no compile is due. PASS for F08 and the fourth family, not the greater-than-BG3 slice claim: 9/12 forks are proven; three forks, numeric/fleet certification, and publication remain.
-- Guard: two adversarial audits closed Hammering-copy, hard-lock, migration symmetry, memory/prose, stale-ledger, and false wagon-service gaps. Unchanged-cap ending/action 29/29, liveness 17/17, and score/metamorphic 45/45 passed; post-crawl `20260715T152355Z` reached 247/247 nodes, 344/344 edges, and 12/12 quests; health passed 352 files/2,579 tests, UI, and all 12 packs.
