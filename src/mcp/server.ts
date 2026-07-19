@@ -15,7 +15,10 @@
  */
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { toJsonSchemaCompat } from "@modelcontextprotocol/sdk/server/zod-json-schema-compat.js";
 import { z, type ZodRawShape } from "zod";
+import * as z4 from "zod/v4-mini";
+import type { $ZodType } from "zod/v4/core";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
@@ -247,6 +250,7 @@ class PureSessionRecoveryError extends Error {
   constructor(
     message: string,
     readonly expectedSessionField: PureSessionField,
+    readonly expectedArgument = "session_id",
   ) {
     super(message);
     this.name = "PureSessionRecoveryError";
@@ -268,7 +272,14 @@ function pureSessionErrorPayload(error: unknown): Record<string, unknown> {
     ok: false,
     error: resolved.message,
     ...(resolved instanceof PureSessionRecoveryError
-      ? { expected_session_field: resolved.expectedSessionField }
+      ? {
+          // `expected_session_field` is retained for existing clients. The two
+          // additive names distinguish the MCP input key from the response key
+          // carrying the recoverable handle.
+          expected_session_field: resolved.expectedSessionField,
+          expected_argument: resolved.expectedArgument,
+          returned_handle_field: resolved.expectedSessionField,
+        }
       : {}),
     ...pureSessionRecoveryFields(),
   };
@@ -594,6 +605,98 @@ function ok(value: unknown): CallToolResult {
   return { content: [{ type: "text", text: JSON.stringify(value) }] };
 }
 
+const RPG_SESSION_ALIAS_TOOLS = new Set([
+  "get_observation",
+  "list_legal_actions",
+  "step_action",
+  "get_state",
+  "get_transcript",
+  "save_game",
+]);
+
+function normalizeEquivalentAlias(
+  input: Record<string, unknown>,
+  canonicalName: string,
+  aliasName: string,
+): Record<string, unknown> {
+  const canonical = input[canonicalName];
+  const alias = input[aliasName];
+  if (canonical !== undefined && alias !== undefined && canonical !== alias) {
+    throw new Error(
+      `Conflicting ${canonicalName} and ${aliasName}; provide one value or the same value in both fields.`,
+    );
+  }
+  if (alias === undefined) return input;
+  const normalized = { ...input, [canonicalName]: canonical ?? alias };
+  delete normalized[aliasName];
+  return normalized;
+}
+
+function normalizeSimplePlayerAliases(name: string, args: unknown): unknown {
+  const input = objectRecord(args);
+  if (!input) return args;
+  let normalized = input;
+  if (RPG_SESSION_ALIAS_TOOLS.has(name)) {
+    normalized = normalizeEquivalentAlias(normalized, "session_id", "rpg_session_id");
+  }
+  if (name === "talk_overworld_session_contact") {
+    normalized = normalizeEquivalentAlias(normalized, "character_id", "contact_id");
+  }
+  return normalized;
+}
+
+export function resolveVisibleAreaRouteId(
+  routes: readonly (readonly [routeId: string, destinationAreaId: string, minutes: number])[],
+  destinationAreaId: string,
+): string {
+  const matches = routes.filter(([, candidateAreaId]) => candidateAreaId === destinationAreaId);
+  if (matches.length !== 1) {
+    throw new Error(
+      matches.length === 0
+        ? `Area ${JSON.stringify(destinationAreaId)} is not a currently visible destination from here.`
+        : `Area ${JSON.stringify(destinationAreaId)} has multiple currently visible routes from here; provide area_route_id.`,
+    );
+  }
+  return matches[0]![0];
+}
+
+function normalizeAreaDestinationAlias(name: string, args: unknown): unknown {
+  if (name !== "move_overworld_session_area") return args;
+  const input = objectRecord(args);
+  if (!input || input.area_id === undefined) return args;
+  if (typeof input.area_id !== "string" || typeof input.session_id !== "string") return args;
+
+  const routes =
+    PLAY_MODE !== "pure" && input.compact_context === false
+      ? api
+          .get_overworld_session({
+            session_id: input.session_id,
+            include_observation: true,
+          })
+          .observation.areaExits.map(
+            (route) => [route.id, route.destination.id, route.travel_minutes] as const,
+          )
+      : (() => {
+          const read = api.get_overworld_session_context({ session_id: input.session_id });
+          if (!("context" in read)) {
+            throw new Error("Cannot resolve area_id while the overworld context is unchanged.");
+          }
+          return read.context.area_routes ?? [];
+        })();
+  const resolvedRouteId = resolveVisibleAreaRouteId(routes, input.area_id);
+  if (input.area_route_id !== undefined && input.area_route_id !== resolvedRouteId) {
+    throw new Error(
+      "Conflicting area_route_id and area_id; the route does not lead to that currently visible destination.",
+    );
+  }
+  const normalized: Record<string, unknown> = {
+    ...input,
+    area_route_id: input.area_route_id ?? resolvedRouteId,
+  };
+  delete normalized.area_id;
+  return normalized;
+}
+
 function wrap<A>(name: string, handler: (args: A) => unknown) {
   return async (args: A): Promise<CallToolResult> => {
     let result: CallToolResult;
@@ -608,9 +711,11 @@ function wrap<A>(name: string, handler: (args: A) => unknown) {
         pureRunState.callInFlight = true;
         ownsPureCall = true;
       }
-      pureCallPreflight(name, args);
-      const committedExit = pureCommittedJourneyExitResponse(name, args);
-      const rawValue = committedExit ?? (await handler(args)); // await is a no-op for sync handlers
+      const simpleNormalizedArgs = normalizeSimplePlayerAliases(name, args);
+      pureCallPreflight(name, simpleNormalizedArgs);
+      const normalizedArgs = normalizeAreaDestinationAlias(name, simpleNormalizedArgs) as A;
+      const committedExit = pureCommittedJourneyExitResponse(name, normalizedArgs);
+      const rawValue = committedExit ?? (await handler(normalizedArgs)); // await is a no-op for sync handlers
       const evidencedValue = pureCallEvidence(name, rawValue);
       const value = pureSessionResponsePayload(name, evidencedValue);
       result = ok(value);
@@ -684,7 +789,7 @@ export const READ_ONLY_TOOLS = new Set<string>([
 function tool(
   name: string,
   description: string,
-  inputSchema: ZodRawShape,
+  inputSchema: ZodRawShape | z.ZodTypeAny | $ZodType,
   handler: (args: never) => unknown,
 ): void {
   if (!toolAvailableInPlayMode(name, PLAY_MODE)) return;
@@ -699,9 +804,51 @@ function tool(
   TOOL_REGISTRATIONS.push({ name, description, annotations });
   server.registerTool(
     name,
-    { description, inputSchema, annotations },
+    { description, inputSchema: inputSchema as never, annotations },
     wrap(name, handler) as never,
   );
+}
+
+function requireAliasedArgument(
+  inputShape: ZodRawShape,
+  canonicalName: string,
+  aliasName: string,
+): $ZodType {
+  const objectSchema = z.object(inputShape);
+  const schema = z4.pipe(
+    z4.custom(
+      (value) =>
+        value !== null &&
+        typeof value === "object" &&
+        (Object.prototype.hasOwnProperty.call(value, canonicalName) ||
+          Object.prototype.hasOwnProperty.call(value, aliasName)),
+      `Provide ${canonicalName} or ${aliasName}.`,
+    ),
+    z4.transform((value, context) => {
+      const parsed = objectSchema.safeParse(value);
+      if (parsed.success) return parsed.data;
+      for (const issue of parsed.error.issues) {
+        context.issues.push({
+          code: "custom",
+          input: value,
+          path: issue.path,
+          message: issue.message,
+        });
+      }
+      return z4.NEVER;
+    }),
+  );
+  const publishedSchema = {
+    ...toJsonSchemaCompat(objectSchema, { strictUnions: true, pipeStrategy: "input" }),
+    anyOf: [{ required: [canonicalName] }, { required: [aliasName] }],
+  };
+  // The MCP SDK accepts Zod v4 object schemas, and v4 deliberately exposes a
+  // JSON-schema override hook. This bridge keeps v3's established parsing while
+  // publishing the cross-field presence rule that a plain Zod object cannot
+  // represent. `shape` lets the SDK recognize the pipe as an object input.
+  Object.defineProperty(schema._zod.def, "shape", { value: {} });
+  schema._zod.toJSONSchema = () => publishedSchema;
+  return schema;
 }
 
 const WORLD_QUEST_SOURCE = {
@@ -709,13 +856,14 @@ const WORLD_QUEST_SOURCE = {
 };
 const G = z.number().int().refine(genSeed);
 const B = (d: string) => z.boolean().optional().describe(d);
+const REQUIRED_SESSION_HANDLE = (description: string) =>
+  (PLAY_MODE === "pure" ? z.coerce.string() : z.string()).describe(description);
 const SESSION_HANDLE = (description: string) =>
-  (PLAY_MODE === "pure" ? z.coerce.string().optional() : z.string()).describe(description);
+  PLAY_MODE === "pure"
+    ? REQUIRED_SESSION_HANDLE(description).optional()
+    : REQUIRED_SESSION_HANDLE(description);
 const OVERWORLD_SESSION = {
   session_id: SESSION_HANDLE("Parent handle: overworld_session_id; never rpg_session_id."),
-};
-const RPG_SESSION = {
-  session_id: SESSION_HANDLE("Child handle: rpg_session_id; never overworld_session_id."),
 };
 const HIDE_GRAPH = {
   hide_graph: B("Omit the world graph from observations."),
@@ -759,6 +907,23 @@ tool(
   },
   (a) => api.list_overworld(a),
 );
+
+const CONTACT_ID = z.string().describe("Contact id.");
+const CONTACT_ID_ALIAS = z.string().describe("Alias for character_id.");
+const CONTACT_INPUT = (shape: ZodRawShape) =>
+  requireAliasedArgument(
+    { ...shape, character_id: CONTACT_ID.optional(), contact_id: CONTACT_ID_ALIAS.optional() },
+    "character_id",
+    "contact_id",
+  );
+const AREA_ROUTE_ID = z.string().describe("Route id from area_routes.");
+const AREA_ID_ALIAS = z.string().describe("Visible destination alias.");
+const AREA_MOVE_INPUT = (shape: ZodRawShape) =>
+  requireAliasedArgument(
+    { ...shape, area_route_id: AREA_ROUTE_ID.optional(), area_id: AREA_ID_ALIAS.optional() },
+    "area_route_id",
+    "area_id",
+  );
 
 function defaultCompactRpg(args: unknown): never {
   const input: Record<string, unknown> =
@@ -1040,12 +1205,11 @@ tool(
 );
 tool(
   "talk_overworld_session_contact",
-  "Talk to a local contact; can reveal leads, jobs, quests, or renown.",
-  {
+  "Talk to a local contact by character_id or contact_id; can reveal leads, jobs, quests, or renown.",
+  CONTACT_INPUT({
     ...OVERWORLD_SESSION,
-    character_id: z.string().describe("Contact id."),
     ...OVERWORLD_ACTION_CONTEXT,
-  },
+  }),
   (a) => api.talk_overworld_session_contact(defaultCompactOverworld(a)),
 );
 tool(
@@ -1091,12 +1255,11 @@ tool(
 );
 tool(
   "move_overworld_session_area",
-  "Walk an area route to another local area inside the current town.",
-  {
+  "Walk inside town by area_route_id or a visible destination area_id.",
+  AREA_MOVE_INPUT({
     ...OVERWORLD_SESSION,
-    area_route_id: z.string().describe("Route id from area_routes."),
     ...OVERWORLD_ACTION_CONTEXT,
-  },
+  }),
   (a) => api.move_overworld_session_area(defaultCompactOverworld(a)),
 );
 tool(
@@ -1176,6 +1339,21 @@ tool(
   (a) => api.load_quest(a),
 );
 
+const RPG_SESSION_ID = REQUIRED_SESSION_HANDLE(
+  "Child handle: rpg_session_id; never overworld_session_id.",
+);
+const RPG_SESSION_ID_ALIAS = REQUIRED_SESSION_HANDLE("Alias for session_id.");
+const RPG_SESSION_INPUT = (shape: ZodRawShape) =>
+  requireAliasedArgument(
+    {
+      ...shape,
+      session_id: RPG_SESSION_ID.optional(),
+      rpg_session_id: RPG_SESSION_ID_ALIAS.optional(),
+    },
+    "session_id",
+    "rpg_session_id",
+  );
+
 tool(
   "generate_rpg_pack",
   "Mint and validate a deterministic RPG pack from a seed, writing nothing; play it via new_game's generate_rpg_seed.",
@@ -1213,20 +1391,18 @@ tool(
 tool(
   "get_observation",
   "Re-read the current RPG context without acting; embedded quests also return the parent journey.",
-  {
-    ...RPG_SESSION,
+  RPG_SESSION_INPUT({
     ...PLAYER_HIDE_GRAPH,
     ...IF_STATE_HASH,
     ...COMPACT_ACTIONS,
     ...COMPACT_OBSERVATION,
-  },
+  }),
   (a) => api.get_observation(defaultCompactRpg(a)),
 );
 tool(
   "list_legal_actions",
   "List legal RPG actions and authored unavailable choices with reasons.",
-  {
-    ...RPG_SESSION,
+  RPG_SESSION_INPUT({
     ...IF_STATE_HASH,
     compact_actions: z
       .boolean()
@@ -1236,40 +1412,37 @@ tool(
           ? "True returns bare action ids; defaults to labeled options."
           : "False returns labeled options.",
       ),
-  },
+  }),
   (a) => api.list_legal_actions(defaultCompactActions(a)),
 );
 
 tool(
   "step_action",
   "Apply a legal RPG action or select an unavailable id for its authored reason.",
-  {
-    ...RPG_SESSION,
+  RPG_SESSION_INPUT({
     action_id: z.string().describe("Id from legal or unavailable action rows."),
     ...EXPECTED_STATE_HASH,
     ...PLAYER_HIDE_GRAPH,
     ...COMPACT_ACTIONS,
     ...COMPACT_EVENTS,
     ...COMPACT_OBSERVATION,
-  },
+  }),
   (a) => api.step_action(defaultCompactRpg(a)),
 );
 tool(
   "get_state",
   "Read the RPG session's state hash for change detection; raw or compact state is opt-in.",
-  {
-    ...RPG_SESSION,
+  RPG_SESSION_INPUT({
     ...IF_STATE_HASH,
     include_state: z.boolean().optional().describe("Include the raw state object."),
     compact_state: z.boolean().optional().describe("Include a compact state summary."),
-  },
+  }),
   (a) => compactMcpState(a),
 );
 tool(
   "get_transcript",
   "Summarize an RPG session's play history; per-turn rows and events are opt-in.",
-  {
-    ...RPG_SESSION,
+  RPG_SESSION_INPUT({
     ...S,
     include_source: z.boolean().optional(),
     ...IF_TRANSCRIPT_HASH,
@@ -1278,19 +1451,18 @@ tool(
     compact_turns: z.boolean().optional().describe("Turn rows as tuples."),
     turn_limit: z.number().int().min(0).optional().describe("Max turn rows."),
     ...COMPACT_EVENTS,
-  },
+  }),
   (a) => api.get_transcript(defaultCompactTranscript(a)),
 );
 tool(
   "save_game",
   "Serialize the RPG session to a save string for load_game; hash guards reject stale saves.",
-  {
-    ...RPG_SESSION,
+  RPG_SESSION_INPUT({
     ...EXPECTED_STATE_HASH,
     ...IF_STATE_HASH,
     include_source: z.boolean().optional().describe("Echo source id."),
     include_content_hash: z.boolean().optional().describe("Echo content hash."),
-  },
+  }),
   (a) => api.save_game(a),
 );
 tool(

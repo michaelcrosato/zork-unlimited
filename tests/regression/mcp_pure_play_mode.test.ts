@@ -1,15 +1,28 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync } from "node:fs";
+import {
+  cpSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
-import { PURE_PLAYER_TOOLS, toolAvailableInPlayMode } from "../../src/mcp/server.js";
+import {
+  PURE_PLAYER_TOOLS,
+  resolveVisibleAreaRouteId,
+  toolAvailableInPlayMode,
+} from "../../src/mcp/server.js";
 
 const ROOT = process.cwd();
 const TSX = join(ROOT, "node_modules", "tsx", "dist", "cli.mjs");
+const MCP_SERVER = join(ROOT, "src", "mcp", "server.ts");
 const TEST_RUN_SEED = 2731;
 const TEST_BUILD_COMMIT = "b".repeat(40);
 
@@ -17,12 +30,13 @@ async function withPureServer<T>(
   evidencePath: string,
   body: (client: Client) => Promise<T>,
   runSeed = TEST_RUN_SEED,
+  root = ROOT,
 ): Promise<T> {
   const transport = new StdioClientTransport({
     command: process.execPath,
     args: [
       TSX,
-      "src/mcp/server.ts",
+      MCP_SERVER,
       "--play-mode",
       "pure",
       "--run-evidence",
@@ -34,7 +48,7 @@ async function withPureServer<T>(
       "--tracked-worktree-clean",
       "true",
     ],
-    cwd: ROOT,
+    cwd: root,
     stderr: "pipe",
   });
   const client = new Client({ name: "pure-play-test", version: "1.0.0" }, { capabilities: {} });
@@ -46,11 +60,11 @@ async function withPureServer<T>(
   }
 }
 
-async function withFullServer<T>(body: (client: Client) => Promise<T>): Promise<T> {
+async function withFullServer<T>(body: (client: Client) => Promise<T>, root = ROOT): Promise<T> {
   const transport = new StdioClientTransport({
     command: process.execPath,
-    args: [TSX, "src/mcp/server.ts", "--play-mode", "full"],
-    cwd: ROOT,
+    args: [TSX, MCP_SERVER, "--play-mode", "full"],
+    cwd: root,
     stderr: "pipe",
   });
   const client = new Client({ name: "full-play-test", version: "1.0.0" }, { capabilities: {} });
@@ -63,10 +77,34 @@ async function withFullServer<T>(body: (client: Client) => Promise<T>): Promise<
 }
 
 function textPayload(result: Awaited<ReturnType<Client["callTool"]>>): Record<string, unknown> {
+  return JSON.parse(textResult(result)) as Record<string, unknown>;
+}
+
+function textResult(result: Awaited<ReturnType<Client["callTool"]>>): string {
   const content = result.content as { type: string; text?: string }[];
   const first = content[0];
   if (!first || first.type !== "text") throw new Error("expected text tool result");
-  return JSON.parse(first.text ?? "") as Record<string, unknown>;
+  return first.text ?? "";
+}
+
+function expectAliasedToolSchema(
+  listed: Awaited<ReturnType<Client["listTools"]>>,
+  name: string,
+  canonicalName: string,
+  aliasName: string,
+): void {
+  const schema = listed.tools.find((tool) => tool.name === name)?.inputSchema;
+  expect(schema, name).toBeDefined();
+  expect(schema?.type, name).toBe("object");
+  expect(schema?.properties, name).toHaveProperty(canonicalName);
+  expect(schema?.properties, name).toHaveProperty(aliasName);
+  const presenceOptions = schema?.anyOf as { required?: string[] }[] | undefined;
+  expect(presenceOptions, name).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({ required: [canonicalName] }),
+      expect.objectContaining({ required: [aliasName] }),
+    ]),
+  );
 }
 
 async function callPlayerTool(
@@ -173,7 +211,330 @@ async function playPureQuestActions(
   return response;
 }
 
+type MutableDenseWorld = {
+  areas: Record<string, unknown>[];
+  points_of_interest: Record<string, unknown>[];
+  characters: Record<string, unknown>[];
+  local_events: Record<string, unknown>[];
+  local_jobs: Record<string, unknown>[];
+  exploration_sites: Record<string, unknown>[];
+  area_edges: Record<string, unknown>[];
+};
+
+function fixtureEntry(
+  values: readonly Record<string, unknown>[],
+  predicate: (value: Record<string, unknown>) => boolean,
+  label: string,
+): Record<string, unknown> {
+  const value = values.find(predicate);
+  if (!value) throw new Error(`expected ${label} fixture source`);
+  return value;
+}
+
+function createDenseAreaFixture(root: string): {
+  revealPoiIds: string[];
+  hiddenDestinationId: string;
+} {
+  cpSync(join(ROOT, "content"), join(root, "content"), { recursive: true });
+  const worldPath = join(root, "content", "world", "new_york_overworld.json");
+  const world = JSON.parse(readFileSync(worldPath, "utf8")) as MutableDenseWorld;
+  const sourceArea = fixtureEntry(
+    world.areas,
+    (area) => area.id === "airmont_village__civic_core",
+    "area",
+  );
+  const sourcePoi = fixtureEntry(
+    world.points_of_interest,
+    (poi) => poi.id === "airmont_village__civic_core__poi",
+    "point of interest",
+  );
+  const sourceCharacter = fixtureEntry(
+    world.characters,
+    (character) => character.id === "airmont_village__civic_core__contact",
+    "character",
+  );
+  const sourceEvent = fixtureEntry(
+    world.local_events,
+    (event) => event.id === "airmont_village__civic_core__event",
+    "local event",
+  );
+  const sourceJob = fixtureEntry(
+    world.local_jobs,
+    (job) => job.id === "airmont_village__civic_core__job",
+    "local job",
+  );
+  const sourceSite = fixtureEntry(
+    world.exploration_sites,
+    (site) => site.id === "airmont_village__civic_core__site",
+    "exploration site",
+  );
+
+  const denseAreaIds = Array.from(
+    { length: 14 },
+    (_, index) => `albany_city__dense_alias_${String(index).padStart(2, "0")}`,
+  );
+  for (const [index, areaId] of denseAreaIds.entries()) {
+    const suffix = String(index).padStart(2, "0");
+    const title = `ZZ Dense Alias District ${suffix}`;
+    world.areas.push({
+      ...sourceArea,
+      id: areaId,
+      home: "albany_city",
+      name: title,
+      summary: `${title} exists only in the dense MCP visibility regression fixture.`,
+      discovery: `A local Albany lead maps ${title}.`,
+      travel_minutes: 100 + index,
+    });
+    world.points_of_interest.push({
+      ...sourcePoi,
+      id: `${areaId}__poi`,
+      home: "albany_city",
+      area: areaId,
+      title: `${title} Marker`,
+      summary: `${title} has a concrete marker for fixture integrity.`,
+    });
+    world.characters.push({
+      ...sourceCharacter,
+      id: `${areaId}__contact`,
+      home: "albany_city",
+      area: areaId,
+      name: `Dense Guide ${suffix}`,
+      summary: `Dense Guide ${suffix} watches the fixture district.`,
+      agenda: `Keep ${title} legible to the visibility regression.`,
+    });
+    world.local_events.push({
+      ...sourceEvent,
+      id: `${areaId}__event`,
+      home: "albany_city",
+      area: areaId,
+      title: `${title}: visibility check`,
+      summary: `${title} carries a harmless fixture event.`,
+    });
+    world.local_jobs.push({
+      ...sourceJob,
+      id: `${areaId}__job`,
+      home: "albany_city",
+      area: areaId,
+      title: `${title}: Route Ledger`,
+      summary: `${title} has a bounded route-ledger fixture job.`,
+      objective: `Verify the route ledger in ${title}.`,
+      reward: "Earn 1 Capital / Mohawk renown for checking the fixture route.",
+    });
+    world.exploration_sites.push({
+      ...sourceSite,
+      id: `${areaId}__site`,
+      region: "Capital / Mohawk",
+      nearest_town: "albany_city",
+      area: areaId,
+      title: `${title} Archive`,
+      summary: `${title} contains a bounded fixture archive.`,
+      discovery: `The route ledger points toward the ${title} archive.`,
+      reward: "You verify the fixture archive and gain 2 Capital / Mohawk renown.",
+    });
+    world.area_edges.push({
+      id: `albany_city__area_route__civic_core__dense_alias_${suffix}`,
+      home: "albany_city",
+      from_area: "albany_city__civic_core",
+      to_area: areaId,
+      route: `Albany Civic Center to ${title}`,
+      travel_minutes: 20 + index,
+    });
+  }
+  for (let index = 0; index < 4; index += 1) {
+    world.area_edges.push({
+      id: `albany_city__area_route__dense_alias_${index}__${index + 1}`,
+      home: "albany_city",
+      from_area: denseAreaIds[index]!,
+      to_area: denseAreaIds[index + 1]!,
+      route: `Dense fixture cross-route ${index} to ${index + 1}`,
+      travel_minutes: 8,
+    });
+  }
+
+  const revealPoiIds = Array.from({ length: 18 }, (_, index) => {
+    const suffix = String(index).padStart(2, "0");
+    const id = `albany_city__civic_core__dense_reveal_${suffix}`;
+    world.points_of_interest.push({
+      ...sourcePoi,
+      id,
+      home: "albany_city",
+      area: "albany_city__civic_core",
+      title: `ZZ Dense Route Notice ${suffix}`,
+      summary: `This fixture notice reveals the next local area in deterministic order ${suffix}.`,
+    });
+    return id;
+  });
+
+  writeFileSync(worldPath, JSON.stringify(world));
+  return { revealPoiIds, hiddenDestinationId: denseAreaIds.at(-1)! };
+}
+
+async function prepareDenseAreaSession(
+  client: Client,
+  revealPoiIds: readonly string[],
+): Promise<string> {
+  const startResult = await client.callTool({ name: "start_overworld", arguments: {} });
+  if (startResult.isError) throw new Error(textResult(startResult));
+  const started = textPayload(startResult);
+  const sessionId = String(started.session_id);
+  const contact = await client.callTool({
+    name: "talk_overworld_session_contact",
+    arguments: {
+      session_id: sessionId,
+      character_id: "albany_city__civic_core__contact",
+    },
+  });
+  expect(contact.isError).not.toBe(true);
+  for (const choice of [
+    "albany:ledger_advocate",
+    "albany:oath_limited_aid_only",
+    "albany:source_rowan_civic_docket",
+    "albany:prep_works_fortification",
+  ]) {
+    const chosen = await client.callTool({
+      name: "choose_overworld_session_story",
+      arguments: { session_id: sessionId, choice },
+    });
+    expect(chosen.isError, choice).not.toBe(true);
+  }
+  for (const poiId of revealPoiIds) {
+    const scouted = await client.callTool({
+      name: "scout_overworld_session_poi",
+      arguments: { session_id: sessionId, poi_id: poiId },
+    });
+    expect(scouted.isError, poiId).not.toBe(true);
+  }
+  return sessionId;
+}
+
 describe("MCP pure play mode", () => {
+  it("requires a unique currently visible route for the destination-area alias", () => {
+    expect(resolveVisibleAreaRouteId([["r1", "market", 5]], "market")).toBe("r1");
+    expect(() => resolveVisibleAreaRouteId([["r1", "market", 5]], "campus")).toThrow(
+      /not a currently visible destination/,
+    );
+    expect(() =>
+      resolveVisibleAreaRouteId(
+        [
+          ["r1", "market", 5],
+          ["r2", "market", 7],
+        ],
+        "market",
+      ),
+    ).toThrow(/multiple currently visible routes/);
+  });
+
+  it("uses verbose full visibility beyond the compact route cap without widening pure play", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "mcp-dense-area-alias-"));
+    const fixtureRoot = join(dir, "fixture");
+    mkdirSync(fixtureRoot, { recursive: true });
+    const { revealPoiIds, hiddenDestinationId } = createDenseAreaFixture(fixtureRoot);
+    try {
+      await withFullServer(async (client) => {
+        const sessionId = await prepareDenseAreaSession(client, revealPoiIds);
+        const compactBefore = textPayload(
+          await client.callTool({
+            name: "get_overworld_session_context",
+            arguments: { session_id: sessionId },
+          }),
+        );
+        const compactContext = compactBefore.context as {
+          area_routes?: [string, string, number][];
+          area_routes_truncated?: true;
+        };
+        expect(compactContext.area_routes).toHaveLength(12);
+        expect(compactContext.area_routes_truncated).toBe(true);
+        expect(
+          compactContext.area_routes?.some(([, areaId]) => areaId === hiddenDestinationId),
+        ).toBe(false);
+
+        const verbose = textPayload(
+          await client.callTool({
+            name: "get_overworld_session",
+            arguments: { session_id: sessionId, include_observation: true },
+          }),
+        );
+        const fullRoutes = (
+          verbose.observation as {
+            areaExits: { id: string; destination: { id: string }; travel_minutes: number }[];
+          }
+        ).areaExits;
+        expect(fullRoutes.length).toBeGreaterThan(12);
+        expect(fullRoutes.some((route) => route.destination.id === hiddenDestinationId)).toBe(true);
+
+        const compactRejected = await client.callTool({
+          name: "move_overworld_session_area",
+          arguments: { session_id: sessionId, area_id: hiddenDestinationId },
+        });
+        expect(compactRejected.isError).toBe(true);
+        expect(textResult(compactRejected)).toMatch(/not a currently visible destination/);
+        const afterCompactRejection = textPayload(
+          await client.callTool({
+            name: "get_overworld_session_context",
+            arguments: { session_id: sessionId },
+          }),
+        );
+        expect(afterCompactRejection.snapshot_hash).toBe(compactBefore.snapshot_hash);
+
+        const moved = textPayload(
+          await client.callTool({
+            name: "move_overworld_session_area",
+            arguments: {
+              session_id: sessionId,
+              area_id: hiddenDestinationId,
+              compact_context: false,
+              compact_result: false,
+            },
+          }),
+        );
+        expect((moved.observation as { currentArea?: { id: string } }).currentArea?.id).toBe(
+          hiddenDestinationId,
+        );
+      }, fixtureRoot);
+
+      await withPureServer(
+        join(dir, "pure-evidence.jsonl"),
+        async (client) => {
+          const sessionId = await prepareDenseAreaSession(client, revealPoiIds);
+          const compactBefore = textPayload(
+            await client.callTool({
+              name: "get_overworld_session_context",
+              arguments: { session_id: sessionId },
+            }),
+          );
+          const compactRoutes = (
+            compactBefore.context as { area_routes?: [string, string, number][] }
+          ).area_routes;
+          expect(compactRoutes).toHaveLength(12);
+          expect(compactRoutes?.some(([, areaId]) => areaId === hiddenDestinationId)).toBe(false);
+
+          const rejected = await client.callTool({
+            name: "move_overworld_session_area",
+            arguments: {
+              session_id: sessionId,
+              area_id: hiddenDestinationId,
+              // Pure strips this unadvertised escape attempt and remains compact.
+              compact_context: false,
+            },
+          });
+          expect(rejected.isError).toBe(true);
+          expect(textPayload(rejected).error).toMatch(/not a currently visible destination/);
+          const after = textPayload(
+            await client.callTool({
+              name: "get_overworld_session_context",
+              arguments: { session_id: sessionId },
+            }),
+          );
+          expect(after.snapshot_hash).toBe(compactBefore.snapshot_hash);
+        },
+        TEST_RUN_SEED,
+        fixtureRoot,
+      );
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }, 120_000);
+
   it("keeps structural QA on the full tool surface", () => {
     expect(toolAvailableInPlayMode("start_world_quest", "structural")).toBe(true);
     expect(toolAvailableInPlayMode("start_world_quest", "full")).toBe(true);
@@ -209,6 +570,396 @@ describe("MCP pure play mode", () => {
       expect(text).not.toContain("rpg_session_id");
     });
   });
+
+  it("publishes and honors the full-mode alias matrix", async () => {
+    await withFullServer(async (client) => {
+      const listed = await client.listTools();
+      for (const [name, canonicalName, aliasName] of [
+        ["talk_overworld_session_contact", "character_id", "contact_id"],
+        ["move_overworld_session_area", "area_route_id", "area_id"],
+        ["get_observation", "session_id", "rpg_session_id"],
+        ["list_legal_actions", "session_id", "rpg_session_id"],
+        ["step_action", "session_id", "rpg_session_id"],
+        ["get_state", "session_id", "rpg_session_id"],
+        ["get_transcript", "session_id", "rpg_session_id"],
+        ["save_game", "session_id", "rpg_session_id"],
+      ] as const) {
+        expectAliasedToolSchema(listed, name, canonicalName, aliasName);
+      }
+
+      for (const [name, argumentsValue, message] of [
+        ["talk_overworld_session_contact", {}, /Provide character_id or contact_id/],
+        ["move_overworld_session_area", {}, /Provide area_route_id or area_id/],
+        ["get_state", {}, /Provide session_id or rpg_session_id/],
+      ] as const) {
+        const omitted = await client.callTool({ name, arguments: argumentsValue });
+        expect(omitted.isError, name).toBe(true);
+        expect(textResult(omitted), name).toMatch(message);
+      }
+
+      const started = textPayload(
+        await client.callTool({ name: "start_overworld", arguments: {} }),
+      );
+      const overworldSessionId = String(started.session_id);
+      const contactId = "albany_city__civic_core__contact";
+      const contacted = await client.callTool({
+        name: "talk_overworld_session_contact",
+        arguments: { session_id: overworldSessionId, contact_id: contactId },
+      });
+      expect(contacted.isError).not.toBe(true);
+      for (const choice of [
+        "albany:ledger_advocate",
+        "albany:oath_limited_aid_only",
+        "albany:source_rowan_civic_docket",
+        "albany:prep_works_fortification",
+      ]) {
+        const chosen = await client.callTool({
+          name: "choose_overworld_session_story",
+          arguments: { session_id: overworldSessionId, choice },
+        });
+        expect(chosen.isError, choice).not.toBe(true);
+      }
+      const dualStarted = textPayload(
+        await client.callTool({ name: "start_overworld", arguments: {} }),
+      );
+      const sameContact = await client.callTool({
+        name: "talk_overworld_session_contact",
+        arguments: {
+          session_id: String(dualStarted.session_id),
+          character_id: contactId,
+          contact_id: contactId,
+        },
+      });
+      expect(sameContact.isError).not.toBe(true);
+      const moved = textPayload(
+        await client.callTool({
+          name: "move_overworld_session_area",
+          arguments: {
+            session_id: overworldSessionId,
+            area_id: "albany_city__market",
+            compact_context: false,
+            compact_result: false,
+          },
+        }),
+      );
+      expect((moved.observation as { currentArea?: { id: string } }).currentArea?.id).toBe(
+        "albany_city__market",
+      );
+
+      const created = textPayload(
+        await client.callTool({ name: "new_game", arguments: { generate_rpg_seed: 3 } }),
+      );
+      const rpgSessionId = String(created.session_id);
+      const initialStateHash = String(created.state_hash);
+      for (const name of [
+        "get_observation",
+        "list_legal_actions",
+        "get_state",
+        "get_transcript",
+        "save_game",
+      ]) {
+        const aliasOnly = await client.callTool({
+          name,
+          arguments: { rpg_session_id: rpgSessionId },
+        });
+        expect(aliasOnly.isError, `${name} alias-only`).not.toBe(true);
+        const sameDual = await client.callTool({
+          name,
+          arguments: { session_id: rpgSessionId, rpg_session_id: rpgSessionId },
+        });
+        expect(sameDual.isError, `${name} same dual`).not.toBe(true);
+        const conflict = await client.callTool({
+          name,
+          arguments: { session_id: rpgSessionId, rpg_session_id: "r-conflict" },
+        });
+        expect(conflict.isError, `${name} conflict`).toBe(true);
+        expect(textResult(conflict), name).toMatch(/Conflicting session_id and rpg_session_id/);
+      }
+
+      const menu = textPayload(
+        await client.callTool({
+          name: "list_legal_actions",
+          arguments: { rpg_session_id: rpgSessionId, compact_actions: true },
+        }),
+      );
+      const actionId = (menu.actions as string[])[0];
+      if (!actionId) throw new Error("expected a legal opening RPG action");
+      const stepConflict = await client.callTool({
+        name: "step_action",
+        arguments: {
+          session_id: rpgSessionId,
+          rpg_session_id: "r-conflict",
+          action_id: actionId,
+        },
+      });
+      expect(stepConflict.isError).toBe(true);
+      expect(textResult(stepConflict)).toMatch(/Conflicting session_id and rpg_session_id/);
+      const stepped = textPayload(
+        await client.callTool({
+          name: "step_action",
+          arguments: {
+            rpg_session_id: rpgSessionId,
+            action_id: actionId,
+            expected_state_hash: initialStateHash,
+          },
+        }),
+      );
+      expect(stepped.ok).toBe(true);
+    });
+  }, 120_000);
+
+  it("reports unrelated full-mode alias validation failures without mutation", async () => {
+    await withFullServer(async (client) => {
+      const started = textPayload(
+        await client.callTool({ name: "start_overworld", arguments: {} }),
+      );
+      const overworldSessionId = String(started.session_id);
+      const parentBefore = textPayload(
+        await client.callTool({
+          name: "get_overworld_session_context",
+          arguments: { session_id: overworldSessionId },
+        }),
+      );
+
+      for (const [name, argumentsValue, aliasPresenceMessage] of [
+        [
+          "talk_overworld_session_contact",
+          { contact_id: "albany_city__civic_core__contact" },
+          /Provide character_id or contact_id/,
+        ],
+        [
+          "move_overworld_session_area",
+          { area_id: "albany_city__market" },
+          /Provide area_route_id or area_id/,
+        ],
+      ] as const) {
+        const rejected = await client.callTool({ name, arguments: argumentsValue });
+        expect(rejected.isError, name).toBe(true);
+        const error = textResult(rejected);
+        expect(error, name).toMatch(/session_id/);
+        expect(error, name).toMatch(/Required/);
+        expect(error, name).not.toMatch(aliasPresenceMessage);
+      }
+      const parentAfter = textPayload(
+        await client.callTool({
+          name: "get_overworld_session_context",
+          arguments: { session_id: overworldSessionId },
+        }),
+      );
+      expect(parentAfter.snapshot_hash).toBe(parentBefore.snapshot_hash);
+
+      const created = textPayload(
+        await client.callTool({ name: "new_game", arguments: { generate_rpg_seed: 3 } }),
+      );
+      const rpgSessionId = String(created.session_id);
+      const rpgBefore = textPayload(
+        await client.callTool({
+          name: "get_state",
+          arguments: { session_id: rpgSessionId },
+        }),
+      );
+      for (const [argumentsValue, expectedMessage] of [
+        [{ rpg_session_id: rpgSessionId }, /Required/],
+        [{ rpg_session_id: rpgSessionId, action_id: 7 }, /Expected string, received number/],
+      ] as const) {
+        const rejected = await client.callTool({
+          name: "step_action",
+          arguments: argumentsValue,
+        });
+        expect(rejected.isError).toBe(true);
+        const error = textResult(rejected);
+        expect(error).toMatch(/action_id/);
+        expect(error).toMatch(expectedMessage);
+        expect(error).not.toMatch(/Provide session_id or rpg_session_id/);
+      }
+      const rpgAfter = textPayload(
+        await client.callTool({
+          name: "get_state",
+          arguments: { session_id: rpgSessionId },
+        }),
+      );
+      expect(rpgAfter.state_hash).toBe(rpgBefore.state_hash);
+    });
+  }, 120_000);
+
+  it("accepts player-facing MCP aliases and rejects conflicts without changing state", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "mcp-pure-aliases-"));
+    const evidence = join(dir, "run.jsonl");
+    try {
+      await withPureServer(evidence, async (client) => {
+        const listed = await client.listTools();
+        for (const [name, canonicalName, aliasName] of [
+          ["talk_overworld_session_contact", "character_id", "contact_id"],
+          ["move_overworld_session_area", "area_route_id", "area_id"],
+          ["get_observation", "session_id", "rpg_session_id"],
+          ["list_legal_actions", "session_id", "rpg_session_id"],
+          ["step_action", "session_id", "rpg_session_id"],
+        ] as const) {
+          expectAliasedToolSchema(listed, name, canonicalName, aliasName);
+        }
+        for (const [name, message] of [
+          ["talk_overworld_session_contact", /Provide character_id or contact_id/],
+          ["move_overworld_session_area", /Provide area_route_id or area_id/],
+          ["get_observation", /Provide session_id or rpg_session_id/],
+        ] as const) {
+          const omitted = await client.callTool({ name, arguments: {} });
+          expect(omitted.isError, name).toBe(true);
+          expect(textResult(omitted), name).toMatch(message);
+        }
+
+        const started = await callPlayerTool(client, "start_overworld", {});
+        const sessionId = String(started.session_id);
+        const parent = { session_id: sessionId };
+        const parentState = async () => {
+          const read = await callPlayerTool(client, "get_overworld_session_context", parent);
+          return {
+            snapshot_hash: read.snapshot_hash,
+            journey: read.journey,
+          };
+        };
+
+        const beforeContactConflict = await parentState();
+        const contactConflict = await client.callTool({
+          name: "talk_overworld_session_contact",
+          arguments: {
+            ...parent,
+            character_id: "albany_city__civic_core__contact",
+            contact_id: "albany_city__market__contact",
+          },
+        });
+        expect(contactConflict.isError).toBe(true);
+        expect(textPayload(contactConflict).error).toMatch(
+          /Conflicting character_id and contact_id/,
+        );
+        expect(await parentState()).toEqual(beforeContactConflict);
+
+        await callPlayerTool(client, "talk_overworld_session_contact", {
+          ...parent,
+          character_id: "albany_city__civic_core__contact",
+          contact_id: "albany_city__civic_core__contact",
+        });
+        for (const choice of [
+          "albany:ledger_advocate",
+          "albany:oath_limited_aid_only",
+          "albany:source_rowan_civic_docket",
+          "albany:prep_works_fortification",
+        ]) {
+          await callPlayerTool(client, "choose_overworld_session_story", { ...parent, choice });
+        }
+
+        let context = await callPlayerTool(client, "get_overworld_session_context", parent);
+        let areaRoutes = (context.context as { area_routes?: [string, string, number][] })
+          .area_routes;
+        const marketRoute = areaRoutes?.find(
+          ([, destination]) => destination === "albany_city__market",
+        );
+        if (!marketRoute) throw new Error("expected a visible Albany market route");
+        await callPlayerTool(client, "move_overworld_session_area", {
+          ...parent,
+          area_id: marketRoute[1],
+        });
+        await callPlayerTool(client, "scout_overworld_session_poi", {
+          ...parent,
+          poi_id: "albany_city__market__poi",
+        });
+        await callPlayerTool(client, "talk_overworld_session_contact", {
+          ...parent,
+          contact_id: "albany_city__market__contact",
+        });
+        context = await callPlayerTool(client, "get_overworld_session_context", parent);
+        areaRoutes = (context.context as { area_routes?: [string, string, number][] }).area_routes;
+        const civicRoute = areaRoutes?.find(
+          ([, destination]) => destination === "albany_city__civic_core",
+        );
+        const stationRoute = areaRoutes?.find(
+          ([, destination]) => destination === "albany_city__transport_hub",
+        );
+        if (!civicRoute || !stationRoute) throw new Error("expected two visible Albany routes");
+
+        const beforeAreaConflict = await parentState();
+        const areaConflict = await client.callTool({
+          name: "move_overworld_session_area",
+          arguments: {
+            ...parent,
+            area_route_id: stationRoute[0],
+            area_id: civicRoute[1],
+          },
+        });
+        expect(areaConflict.isError).toBe(true);
+        expect(textPayload(areaConflict).error).toMatch(/Conflicting area_route_id and area_id/);
+        expect(await parentState()).toEqual(beforeAreaConflict);
+
+        await callPlayerTool(client, "move_overworld_session_area", {
+          ...parent,
+          area_route_id: stationRoute[0],
+          area_id: stationRoute[1],
+        });
+        const ready = await callPlayerTool(client, "choose_overworld_session_story", {
+          ...parent,
+          choice: "albany:relief_resident_shelter",
+        });
+        expect((ready.context as { quest_starts?: unknown }).quest_starts).toBeDefined();
+        const launched = await callPlayerTool(client, "start_overworld_session_quest", {
+          ...parent,
+          quest_id: "wolf_winter",
+          approach_id: "albany:wolf_approach_sheltered_stockway",
+        });
+        const rpgSessionId = String(launched.rpg_session_id);
+        const rpgStateHash = String((launched.rpg_session as { state_hash: string }).state_hash);
+
+        const aliasRead = await callPlayerTool(client, "get_observation", {
+          rpg_session_id: rpgSessionId,
+        });
+        expect(aliasRead.state_hash).toBe(rpgStateHash);
+        const sameHandleRead = await callPlayerTool(client, "list_legal_actions", {
+          session_id: rpgSessionId,
+          rpg_session_id: rpgSessionId,
+        });
+        expect(sameHandleRead.rpg_session_id).toBe(rpgSessionId);
+
+        const beforeRpgConflict = await parentState();
+        const rpgConflict = await client.callTool({
+          name: "step_action",
+          arguments: {
+            session_id: rpgSessionId,
+            rpg_session_id: "r-conflict",
+            action_id: "use_sheltered_stockway_last_mile",
+            expected_state_hash: rpgStateHash,
+          },
+        });
+        expect(rpgConflict.isError).toBe(true);
+        expect(textPayload(rpgConflict).error).toMatch(/Conflicting session_id and rpg_session_id/);
+        expect(await parentState()).toEqual(beforeRpgConflict);
+        const afterConflictRead = await callPlayerTool(client, "get_observation", {
+          rpg_session_id: rpgSessionId,
+        });
+        expect(afterConflictRead.state_hash).toBe(rpgStateHash);
+
+        const wrongDomain = await client.callTool({
+          name: "list_legal_actions",
+          arguments: { session_id: sessionId },
+        });
+        expect(wrongDomain.isError).toBe(true);
+        expect(textPayload(wrongDomain)).toMatchObject({
+          expected_session_field: "rpg_session_id",
+          expected_argument: "session_id",
+          returned_handle_field: "rpg_session_id",
+          overworld_session_id: sessionId,
+          rpg_session_id: rpgSessionId,
+        });
+
+        const stepped = await callPlayerTool(client, "step_action", {
+          rpg_session_id: rpgSessionId,
+          action_id: "use_sheltered_stockway_last_mile",
+          expected_state_hash: rpgStateHash,
+        });
+        expect(stepped.ok).toBe(true);
+        expect(stepped.state_hash).not.toBe(rpgStateHash);
+      });
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }, 120_000);
 
   it("fails closed when private pure-evidence provenance is missing or malformed", () => {
     const cases = [
@@ -788,8 +1539,6 @@ describe("MCP pure play mode", () => {
           rpg_session_id: rpgSessionId,
         });
         for (const [name, argumentsValue, expectedField] of [
-          ["list_legal_actions", {}, "rpg_session_id"],
-          ["list_legal_actions", { overworld_session_id: rpgSessionId }, "rpg_session_id"],
           ["list_legal_actions", { session_id: null }, "rpg_session_id"],
           ["list_legal_actions", { session_id: 7 }, "rpg_session_id"],
           ["list_legal_actions", { session_id: sessionId }, "rpg_session_id"],
