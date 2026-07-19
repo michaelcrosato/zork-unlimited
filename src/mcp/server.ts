@@ -639,6 +639,12 @@ function normalizeSimplePlayerAliases(name: string, args: unknown): unknown {
   if (RPG_SESSION_ALIAS_TOOLS.has(name)) {
     normalized = normalizeEquivalentAlias(normalized, "session_id", "rpg_session_id");
   }
+  if (name === "step_action") {
+    normalized = normalizeEquivalentAlias(normalized, "action_id", "action");
+  }
+  if (name === "travel_overworld_session" || name === "plan_overworld_session_route") {
+    normalized = normalizeEquivalentAlias(normalized, "destination_town_id", "dest_town_id");
+  }
   if (name === "talk_overworld_session_contact") {
     normalized = normalizeEquivalentAlias(normalized, "character_id", "contact_id");
   }
@@ -907,46 +913,69 @@ function formatArgumentAlternatives(argumentNames: readonly string[]): string {
   return `${argumentNames.slice(0, -1).join(", ")}, or ${argumentNames.at(-1)}`;
 }
 
-function requireOneOfArguments(
+type RequiredArgumentGroup = readonly [string, ...string[]];
+
+function requireArgumentGroups(
   inputShape: ZodRawShape,
-  argumentNames: readonly [string, ...string[]],
+  argumentGroups: readonly RequiredArgumentGroup[],
 ): $ZodType {
   const objectSchema = z.object(inputShape);
   const schema = z4.pipe(
-    z4.custom(
-      (value) =>
-        value !== null &&
-        typeof value === "object" &&
-        argumentNames.some((argumentName) =>
-          Object.prototype.hasOwnProperty.call(value, argumentName),
-        ),
-      `Provide ${formatArgumentAlternatives(argumentNames)}.`,
-    ),
+    z4.custom((value) => value !== null && typeof value === "object", "Expected an object."),
     z4.transform((value, context) => {
       const parsed = objectSchema.safeParse(value);
-      if (parsed.success) return parsed.data;
-      for (const issue of parsed.error.issues) {
-        context.issues.push({
-          code: "custom",
-          input: value,
-          path: issue.path,
-          message: issue.message,
-        });
+      if (!parsed.success) {
+        for (const issue of parsed.error.issues) {
+          context.issues.push({
+            code: "custom",
+            input: value,
+            path: issue.path,
+            message: issue.message,
+          });
+        }
       }
-      return z4.NEVER;
+      for (const argumentNames of argumentGroups) {
+        if (
+          !argumentNames.some((argumentName) =>
+            Object.prototype.hasOwnProperty.call(value, argumentName),
+          )
+        ) {
+          context.issues.push({
+            code: "custom",
+            input: value,
+            path: [argumentNames[0]],
+            message: `Required: Provide ${formatArgumentAlternatives(argumentNames)}.`,
+          });
+        }
+      }
+      return parsed.success && context.issues.length === 0 ? parsed.data : z4.NEVER;
     }),
   );
+  const requiredGroups = argumentGroups.map((argumentNames) => ({
+    anyOf: argumentNames.map((argumentName) => ({ required: [argumentName] })),
+  }));
   const publishedSchema = {
     ...toJsonSchemaCompat(objectSchema, { strictUnions: true, pipeStrategy: "input" }),
-    anyOf: argumentNames.map((argumentName) => ({ required: [argumentName] })),
+    ...(requiredGroups.length === 1
+      ? requiredGroups[0]
+      : {
+          allOf: requiredGroups,
+        }),
   };
   // The MCP SDK accepts Zod v4 object schemas, and v4 deliberately exposes a
-  // JSON-schema override hook. This bridge keeps v3's established parsing while
-  // publishing the cross-field presence rule that a plain Zod object cannot
-  // represent. `shape` lets the SDK recognize the pipe as an object input.
+  // JSON-schema override hook. This one root pipe keeps v3's established
+  // field-level diagnostics while publishing every independent presence group.
+  // `shape` lets the SDK recognize the pipe as an object input.
   Object.defineProperty(schema._zod.def, "shape", { value: {} });
   schema._zod.toJSONSchema = () => publishedSchema;
   return schema;
+}
+
+function requireOneOfArguments(
+  inputShape: ZodRawShape,
+  argumentNames: RequiredArgumentGroup,
+): $ZodType {
+  return requireArgumentGroups(inputShape, [argumentNames]);
 }
 
 function requireAliasedArgument(
@@ -954,7 +983,7 @@ function requireAliasedArgument(
   canonicalName: string,
   aliasName: string,
 ): $ZodType {
-  return requireOneOfArguments(inputShape, [canonicalName, aliasName]);
+  return requireArgumentGroups(inputShape, [[canonicalName, aliasName]]);
 }
 
 const WORLD_QUEST_SOURCE = {
@@ -1244,12 +1273,23 @@ tool(
   },
   (a) => api.restore_overworld_session(defaultCompactOverworld(a)),
 );
+
+const DESTINATION_TOWN_ID = z.string().describe("Destination town id.");
+const DEST_TOWN_ID_ALIAS = z.string().describe("Alias for destination_town_id.");
+const DESTINATION_TOWN = {
+  destination_town_id: DESTINATION_TOWN_ID.optional(),
+  dest_town_id: DEST_TOWN_ID_ALIAS.optional(),
+};
+const DESTINATION_TOWN_INPUT = (shape: ZodRawShape) =>
+  requireAliasedArgument({ ...shape, ...DESTINATION_TOWN }, "destination_town_id", "dest_town_id");
+
 tool(
   "travel_overworld_session",
   "Travel one road to an adjacent town, spending minutes and supplies and gaining fatigue; may trigger a road encounter.",
   {
     ...OVERWORLD_SESSION,
     destination_town_id: z.string().optional().describe("Adjacent destination town."),
+    dest_town_id: DEST_TOWN_ID_ALIAS.optional(),
     road_id: z.string().optional().describe("Adjacent road to walk instead."),
     ...OVERWORLD_ACTION_CONTEXT,
   },
@@ -1297,11 +1337,10 @@ tool(
 tool(
   "plan_overworld_session_route",
   "Preview the best route to a town — minutes, supplies, fatigue — without moving.",
-  {
+  DESTINATION_TOWN_INPUT({
     ...OVERWORLD_SESSION,
-    destination_town_id: z.string().describe("Destination town id."),
     ...OVERWORLD_ACTION_CONTEXT,
-  },
+  }),
   (a) => api.plan_overworld_session_route(defaultCompactOverworld(a)),
 );
 tool(
@@ -1464,6 +1503,22 @@ const RPG_SESSION_INPUT = (shape: ZodRawShape) =>
     "session_id",
     "rpg_session_id",
   );
+const ACTION_ID = z.string().describe("Id from legal or unavailable action rows.");
+const ACTION_ID_ALIAS = z.string().describe("Alias for action_id.");
+const RPG_STEP_ACTION_INPUT = (shape: ZodRawShape) =>
+  requireArgumentGroups(
+    {
+      ...shape,
+      session_id: RPG_SESSION_ID.optional(),
+      rpg_session_id: RPG_SESSION_ID_ALIAS.optional(),
+      action_id: ACTION_ID.optional(),
+      action: ACTION_ID_ALIAS.optional(),
+    },
+    [
+      ["session_id", "rpg_session_id"],
+      ["action_id", "action"],
+    ],
+  );
 
 tool(
   "generate_rpg_pack",
@@ -1530,8 +1585,7 @@ tool(
 tool(
   "step_action",
   "Apply a legal RPG action or select an unavailable id for its authored reason.",
-  RPG_SESSION_INPUT({
-    action_id: z.string().describe("Id from legal or unavailable action rows."),
+  RPG_STEP_ACTION_INPUT({
     ...EXPECTED_STATE_HASH,
     ...PLAYER_HIDE_GRAPH,
     ...COMPACT_ACTIONS,

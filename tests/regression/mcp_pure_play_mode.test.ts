@@ -99,7 +99,16 @@ function expectAliasedToolSchema(
   expect(schema?.type, name).toBe("object");
   expect(schema?.properties, name).toHaveProperty(canonicalName);
   expect(schema?.properties, name).toHaveProperty(aliasName);
-  const presenceOptions = schema?.anyOf as { required?: string[] }[] | undefined;
+  const schemaWithGroups = schema as
+    | {
+        anyOf?: { required?: string[] }[];
+        allOf?: { anyOf?: { required?: string[] }[] }[];
+      }
+    | undefined;
+  const presenceOptions = [
+    ...(schemaWithGroups?.anyOf ? [schemaWithGroups] : []),
+    ...(schemaWithGroups?.allOf ?? []),
+  ].find((part) => part.anyOf?.some((option) => option.required?.[0] === canonicalName))?.anyOf;
   expect(presenceOptions, name).toEqual(
     expect.arrayContaining([
       expect.objectContaining({ required: [canonicalName] }),
@@ -122,6 +131,19 @@ function expectOneOfToolSchema(
   expect(schema?.anyOf, name).toEqual(
     argumentNames.map((argumentName) => ({ required: [argumentName] })),
   );
+}
+
+function expectToolSchemaFields(
+  listed: Awaited<ReturnType<Client["listTools"]>>,
+  name: string,
+  fieldNames: readonly string[],
+): void {
+  const schema = listed.tools.find((tool) => tool.name === name)?.inputSchema;
+  expect(schema, name).toBeDefined();
+  expect(schema?.type, name).toBe("object");
+  for (const fieldName of fieldNames) {
+    expect(schema?.properties, name).toHaveProperty(fieldName);
+  }
 }
 
 async function callPlayerTool(
@@ -701,6 +723,7 @@ describe("MCP pure play mode", () => {
       for (const [name, canonicalName, aliasName] of [
         ["talk_overworld_session_contact", "character_id", "contact_id"],
         ["move_overworld_session_area", "area_route_id", "area_id"],
+        ["plan_overworld_session_route", "destination_town_id", "dest_town_id"],
         ["get_observation", "session_id", "rpg_session_id"],
         ["list_legal_actions", "session_id", "rpg_session_id"],
         ["step_action", "session_id", "rpg_session_id"],
@@ -710,6 +733,11 @@ describe("MCP pure play mode", () => {
       ] as const) {
         expectAliasedToolSchema(listed, name, canonicalName, aliasName);
       }
+      expectAliasedToolSchema(listed, "step_action", "action_id", "action");
+      expectToolSchemaFields(listed, "travel_overworld_session", [
+        "destination_town_id",
+        "dest_town_id",
+      ]);
       expectOneOfToolSchema(listed, "move_overworld_session_area", [
         "area_route_id",
         "route_id",
@@ -730,6 +758,122 @@ describe("MCP pure play mode", () => {
         await client.callTool({ name: "start_overworld", arguments: {} }),
       );
       const overworldSessionId = String(started.session_id);
+      const planBefore = textPayload(
+        await client.callTool({
+          name: "get_overworld_session_context",
+          arguments: { session_id: overworldSessionId },
+        }),
+      );
+      const plannedByAlias = await client.callTool({
+        name: "plan_overworld_session_route",
+        arguments: { session_id: overworldSessionId, dest_town_id: "colonie_town" },
+      });
+      expect(plannedByAlias.isError).not.toBe(true);
+      const plannedBySameDual = await client.callTool({
+        name: "plan_overworld_session_route",
+        arguments: {
+          session_id: overworldSessionId,
+          destination_town_id: "colonie_town",
+          dest_town_id: "colonie_town",
+        },
+      });
+      expect(plannedBySameDual.isError).not.toBe(true);
+      const planConflict = await client.callTool({
+        name: "plan_overworld_session_route",
+        arguments: {
+          session_id: overworldSessionId,
+          destination_town_id: "colonie_town",
+          dest_town_id: "bethlehem_town",
+        },
+      });
+      expect(planConflict.isError).toBe(true);
+      expect(textResult(planConflict)).toMatch(/Conflicting destination_town_id and dest_town_id/);
+      const planAfter = textPayload(
+        await client.callTool({
+          name: "get_overworld_session_context",
+          arguments: { session_id: overworldSessionId },
+        }),
+      );
+      expect(planAfter.snapshot_hash).toBe(planBefore.snapshot_hash);
+
+      const travelAliasStarted = textPayload(
+        await client.callTool({ name: "start_overworld", arguments: {} }),
+      );
+      const travelAliasId = String(travelAliasStarted.session_id);
+      const traveledByAlias = await client.callTool({
+        name: "travel_overworld_session",
+        arguments: { session_id: travelAliasId, dest_town_id: "colonie_town" },
+      });
+      expect(traveledByAlias.isError).not.toBe(true);
+      const travelAliasAfter = textPayload(
+        await client.callTool({
+          name: "get_overworld_session_context",
+          arguments: { session_id: travelAliasId },
+        }),
+      );
+      expect(travelAliasAfter.snapshot_hash).not.toBe(travelAliasStarted.snapshot_hash);
+
+      const travelDualStarted = textPayload(
+        await client.callTool({ name: "start_overworld", arguments: {} }),
+      );
+      const travelDual = await client.callTool({
+        name: "travel_overworld_session",
+        arguments: {
+          session_id: String(travelDualStarted.session_id),
+          destination_town_id: "colonie_town",
+          dest_town_id: "colonie_town",
+        },
+      });
+      expect(travelDual.isError).not.toBe(true);
+
+      const travelConflictStarted = textPayload(
+        await client.callTool({ name: "start_overworld", arguments: {} }),
+      );
+      const travelConflictId = String(travelConflictStarted.session_id);
+      const travelConflictBefore = textPayload(
+        await client.callTool({
+          name: "get_overworld_session_context",
+          arguments: { session_id: travelConflictId },
+        }),
+      );
+      const travelConflict = await client.callTool({
+        name: "travel_overworld_session",
+        arguments: {
+          session_id: travelConflictId,
+          destination_town_id: "colonie_town",
+          dest_town_id: "bethlehem_town",
+        },
+      });
+      expect(travelConflict.isError).toBe(true);
+      expect(textResult(travelConflict)).toMatch(
+        /Conflicting destination_town_id and dest_town_id/,
+      );
+      const travelConflictAfter = textPayload(
+        await client.callTool({
+          name: "get_overworld_session_context",
+          arguments: { session_id: travelConflictId },
+        }),
+      );
+      expect(travelConflictAfter.snapshot_hash).toBe(travelConflictBefore.snapshot_hash);
+      const roadDestinationConflict = await client.callTool({
+        name: "travel_overworld_session",
+        arguments: {
+          session_id: travelConflictId,
+          road_id: "road_albany_city__colonie_town",
+          dest_town_id: "colonie_town",
+        },
+      });
+      expect(roadDestinationConflict.isError).toBe(true);
+      expect(textResult(roadDestinationConflict)).toMatch(
+        /exactly one of road_id or destination_town_id/,
+      );
+      const roadDestinationAfter = textPayload(
+        await client.callTool({
+          name: "get_overworld_session_context",
+          arguments: { session_id: travelConflictId },
+        }),
+      );
+      expect(roadDestinationAfter.snapshot_hash).toBe(travelConflictBefore.snapshot_hash);
       const contactId = "albany_city__civic_core__contact";
       const scouted = await client.callTool({
         name: "scout_overworld_session_poi",
@@ -838,17 +982,63 @@ describe("MCP pure play mode", () => {
       });
       expect(stepConflict.isError).toBe(true);
       expect(textResult(stepConflict)).toMatch(/Conflicting session_id and rpg_session_id/);
+      const actionConflictBefore = textPayload(
+        await client.callTool({
+          name: "get_state",
+          arguments: { rpg_session_id: rpgSessionId },
+        }),
+      );
+      const actionConflict = await client.callTool({
+        name: "step_action",
+        arguments: {
+          rpg_session_id: rpgSessionId,
+          action_id: actionId,
+          action: "not_the_same_action",
+          expected_state_hash: initialStateHash,
+        },
+      });
+      expect(actionConflict.isError).toBe(true);
+      expect(textResult(actionConflict)).toMatch(/Conflicting action_id and action/);
+      const actionConflictAfter = textPayload(
+        await client.callTool({
+          name: "get_state",
+          arguments: { rpg_session_id: rpgSessionId },
+        }),
+      );
+      expect(actionConflictAfter.state_hash).toBe(actionConflictBefore.state_hash);
       const stepped = textPayload(
         await client.callTool({
           name: "step_action",
           arguments: {
             rpg_session_id: rpgSessionId,
-            action_id: actionId,
+            action: actionId,
             expected_state_hash: initialStateHash,
           },
         }),
       );
       expect(stepped.ok).toBe(true);
+      const sameDualGame = textPayload(
+        await client.callTool({ name: "new_game", arguments: { generate_rpg_seed: 3 } }),
+      );
+      const sameDualId = String(sameDualGame.session_id);
+      const sameDualMenu = textPayload(
+        await client.callTool({
+          name: "list_legal_actions",
+          arguments: { session_id: sameDualId, compact_actions: true },
+        }),
+      );
+      const sameDualAction = (sameDualMenu.actions as string[])[0];
+      if (!sameDualAction) throw new Error("expected a legal opening RPG action");
+      const sameDualStep = await client.callTool({
+        name: "step_action",
+        arguments: {
+          session_id: sameDualId,
+          action_id: sameDualAction,
+          action: sameDualAction,
+          expected_state_hash: String(sameDualGame.state_hash),
+        },
+      });
+      expect(sameDualStep.isError).not.toBe(true);
     });
   }, 120_000);
 
@@ -914,9 +1104,14 @@ describe("MCP pure play mode", () => {
           arguments: { session_id: rpgSessionId },
         }),
       );
-      for (const [argumentsValue, expectedMessage] of [
-        [{ rpg_session_id: rpgSessionId }, /Required/],
-        [{ rpg_session_id: rpgSessionId, action_id: 7 }, /Expected string, received number/],
+      for (const [argumentsValue, expectedField, expectedMessage] of [
+        [{ rpg_session_id: rpgSessionId }, "action_id", /Required/],
+        [
+          { rpg_session_id: rpgSessionId, action_id: 7 },
+          "action_id",
+          /Expected string, received number/,
+        ],
+        [{ rpg_session_id: rpgSessionId, action: 7 }, "action", /Expected string, received number/],
       ] as const) {
         const rejected = await client.callTool({
           name: "step_action",
@@ -924,9 +1119,36 @@ describe("MCP pure play mode", () => {
         });
         expect(rejected.isError).toBe(true);
         const error = textResult(rejected);
-        expect(error).toMatch(/action_id/);
+        expect(error).toMatch(new RegExp(expectedField));
         expect(error).toMatch(expectedMessage);
         expect(error).not.toMatch(/Provide session_id or rpg_session_id/);
+      }
+      const missingSessionWrongAliasAction = await client.callTool({
+        name: "step_action",
+        arguments: { action: 7 },
+      });
+      expect(missingSessionWrongAliasAction.isError).toBe(true);
+      expect(textResult(missingSessionWrongAliasAction)).toMatch(/session_id/);
+      expect(textResult(missingSessionWrongAliasAction)).toMatch(/action/);
+      expect(textResult(missingSessionWrongAliasAction)).toMatch(
+        /Expected string, received number/,
+      );
+      for (const [name, argumentsValue, fieldName] of [
+        ["plan_overworld_session_route", { session_id: overworldSessionId }, "destination_town_id"],
+        [
+          "plan_overworld_session_route",
+          { session_id: overworldSessionId, dest_town_id: 7 },
+          "dest_town_id",
+        ],
+        [
+          "travel_overworld_session",
+          { session_id: overworldSessionId, dest_town_id: 7 },
+          "dest_town_id",
+        ],
+      ] as const) {
+        const rejected = await client.callTool({ name, arguments: argumentsValue });
+        expect(rejected.isError, name).toBe(true);
+        expect(textResult(rejected), name).toMatch(new RegExp(fieldName));
       }
       const rpgAfter = textPayload(
         await client.callTool({
@@ -947,12 +1169,18 @@ describe("MCP pure play mode", () => {
         for (const [name, canonicalName, aliasName] of [
           ["talk_overworld_session_contact", "character_id", "contact_id"],
           ["move_overworld_session_area", "area_route_id", "area_id"],
+          ["plan_overworld_session_route", "destination_town_id", "dest_town_id"],
           ["get_observation", "session_id", "rpg_session_id"],
           ["list_legal_actions", "session_id", "rpg_session_id"],
           ["step_action", "session_id", "rpg_session_id"],
         ] as const) {
           expectAliasedToolSchema(listed, name, canonicalName, aliasName);
         }
+        expectAliasedToolSchema(listed, "step_action", "action_id", "action");
+        expectToolSchemaFields(listed, "travel_overworld_session", [
+          "destination_town_id",
+          "dest_town_id",
+        ]);
         expectOneOfToolSchema(listed, "move_overworld_session_area", [
           "area_route_id",
           "route_id",
@@ -978,6 +1206,17 @@ describe("MCP pure play mode", () => {
             journey: read.journey,
           };
         };
+
+        for (const [name, argumentsValue, fieldName] of [
+          ["plan_overworld_session_route", { ...parent, dest_town_id: 7 }, "dest_town_id"],
+          ["travel_overworld_session", { ...parent, dest_town_id: 7 }, "dest_town_id"],
+          ["step_action", { action: 7 }, "action"],
+        ] as const) {
+          const rejected = await client.callTool({ name, arguments: argumentsValue });
+          expect(rejected.isError, name).toBe(true);
+          expect(textResult(rejected), name).toMatch(new RegExp(fieldName));
+          expect(textResult(rejected), name).toMatch(/Expected string, received number/);
+        }
 
         const beforeContactConflict = await parentState();
         const contactConflict = await client.callTool({
@@ -1154,13 +1393,119 @@ describe("MCP pure play mode", () => {
           rpg_session_id: rpgSessionId,
         });
 
+        const beforeActionAliasConflict = await parentState();
+        const actionAliasConflict = await client.callTool({
+          name: "step_action",
+          arguments: {
+            rpg_session_id: rpgSessionId,
+            action_id: "use_sheltered_stockway_last_mile",
+            action: "look_around",
+            expected_state_hash: rpgStateHash,
+          },
+        });
+        expect(actionAliasConflict.isError).toBe(true);
+        expect(textPayload(actionAliasConflict).error).toMatch(/Conflicting action_id and action/);
+        expect(await parentState()).toEqual(beforeActionAliasConflict);
+
         const stepped = await callPlayerTool(client, "step_action", {
           rpg_session_id: rpgSessionId,
-          action_id: "use_sheltered_stockway_last_mile",
+          action: "use_sheltered_stockway_last_mile",
           expected_state_hash: rpgStateHash,
         });
         expect(stepped.ok).toBe(true);
         expect(stepped.state_hash).not.toBe(rpgStateHash);
+        const afterStepActions = await callPlayerTool(client, "list_legal_actions", {
+          rpg_session_id: rpgSessionId,
+          compact_actions: true,
+        });
+        const sameAction = (afterStepActions.actions as string[])[0];
+        if (!sameAction) throw new Error("expected a legal post-step RPG action");
+        const sameDualAction = await callPlayerTool(client, "step_action", {
+          session_id: rpgSessionId,
+          rpg_session_id: rpgSessionId,
+          action_id: sameAction,
+          action: sameAction,
+          expected_state_hash: String(afterStepActions.state_hash),
+        });
+        expect(sameDualAction.ok).toBe(true);
+      });
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }, 120_000);
+
+  it("honors destination-town aliases in pure play without weakening travel exclusivity", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "mcp-pure-destination-aliases-"));
+    try {
+      await withPureServer(join(dir, "alias-only.jsonl"), async (client) => {
+        const started = await callPlayerTool(client, "start_overworld", {});
+        const sessionId = String(started.session_id);
+        const parent = { session_id: sessionId };
+        const beforePlan = await callPlayerTool(client, "get_overworld_session_context", parent);
+        await callPlayerTool(client, "plan_overworld_session_route", {
+          ...parent,
+          dest_town_id: "colonie_town",
+        });
+        await callPlayerTool(client, "plan_overworld_session_route", {
+          ...parent,
+          destination_town_id: "colonie_town",
+          dest_town_id: "colonie_town",
+        });
+        const planConflict = await client.callTool({
+          name: "plan_overworld_session_route",
+          arguments: {
+            ...parent,
+            destination_town_id: "colonie_town",
+            dest_town_id: "bethlehem_town",
+          },
+        });
+        expect(planConflict.isError).toBe(true);
+        expect(textPayload(planConflict).error).toMatch(
+          /Conflicting destination_town_id and dest_town_id/,
+        );
+        const afterPlan = await callPlayerTool(client, "get_overworld_session_context", parent);
+        expect(afterPlan.snapshot_hash).toBe(beforePlan.snapshot_hash);
+
+        const traveled = await callPlayerTool(client, "travel_overworld_session", {
+          ...parent,
+          dest_town_id: "colonie_town",
+        });
+        expect(traveled.ok).toBe(true);
+        const beforeRoadDestinationConflict = await callPlayerTool(
+          client,
+          "get_overworld_session_context",
+          parent,
+        );
+        const roadDestinationConflict = await client.callTool({
+          name: "travel_overworld_session",
+          arguments: {
+            ...parent,
+            road_id: "road_albany_city__colonie_town",
+            dest_town_id: "colonie_town",
+          },
+        });
+        expect(roadDestinationConflict.isError).toBe(true);
+        expect(textPayload(roadDestinationConflict).error).toMatch(
+          /exactly one of road_id or destination_town_id/,
+        );
+        const afterRoadDestinationConflict = await callPlayerTool(
+          client,
+          "get_overworld_session_context",
+          parent,
+        );
+        expect(afterRoadDestinationConflict.snapshot_hash).toBe(
+          beforeRoadDestinationConflict.snapshot_hash,
+        );
+      });
+
+      await withPureServer(join(dir, "same-dual.jsonl"), async (client) => {
+        const started = await callPlayerTool(client, "start_overworld", {});
+        const traveled = await callPlayerTool(client, "travel_overworld_session", {
+          session_id: String(started.session_id),
+          destination_town_id: "colonie_town",
+          dest_town_id: "colonie_town",
+        });
+        expect(traveled.ok).toBe(true);
       });
     } finally {
       rmSync(dir, { recursive: true, force: true });
