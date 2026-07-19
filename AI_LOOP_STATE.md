@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 581 -->
+<!-- historical_cycle_count: 582 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - mcp_action_alias_parity
+
+- Evidence choice: current-build Terra seeds 4160–4169 completed Wolf-Winter 10/10 with 0 stuck and 10/10 first-choice continuation, but clarity averaged 3.6/5 and recoverable argument friction recurred for the child RPG session in 6/10 and contact selection in 6/10.
+- Surface: eight affected MCP actions now accept the displayed canonical field or its player-natural alias; equal dual fields normalize, conflicts reject before mutation, pure/compact area movement remains capped to projected routes, and full verbose mode resolves every currently visible exit.
+- Recovery: exported schemas truthfully require one field through root-object `anyOf`; missing aliases and unrelated missing/type errors retain their own paths, while parent/child ownership, contact legality, action legality, and save semantics remain unchanged.
+- Pure evidence: exact clean commit `cd5e541b` Terra seed 4170 completed Wolf-Winter by all-wolves-alive fortification at decision 21, continued through The Gallowmere at decision 44, rated clarity/enjoyment 4/4, was unstuck/replay-yes, and had no session/contact rejection; setup density and a road `strategy` parameter remained S1.
+- Compile: `20260719T152553Z` has 853 verified reports and 102 current-contract pure exits, 86 continuing; the ten-run cohort was compiled before this one-report exact-build top-off.
+- Self-critique: PASS for the recurring MCP alias S2, not the greater-than-BG3 milestone. Summary-first setup presentation is next; Rowan identity continuity and the road strategy field remain separate low-severity debt.
+- Guard: two adversarial reviews closed schema omission, compact-cap leakage, full-action parity, error masking, and non-mutation gaps; crawl `20260719T160003Z` is zero-finding at 247/247 nodes, 344/344 edges, and 12/12 boards/quests, and health passes 384 files/2,931 tests plus UI/all packs.
 
 ### Cycle result - wolf_winter_crawlboard_source_copy
 
@@ -145,12 +155,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Pure evidence: final-build seed 2721 verified pure/fresh, completed Wolf-Winter at decision 28, continued through three completed goals, and ended voluntarily at checkpoint 80; clarity/enjoyment 4/5 and 5/5, stuck false, replay true, no S2+. Its S1 unexplained Tanner score and S0 opening-density/name-reuse findings remain debt; seed 2718 remains rejected.
 - Compile/self-critique: compile `20260716T024738Z` has 788 verified reports and 39/39 current-contract pure exits continuing at least once. PASS for F02 and twelve paired fork proofs, not the greater-than-BG3 claim: deep crawl, 100-player fleet, numeric thresholds, severity audit, and publication remain.
 - Guard: independent audits closed chronology, anti-relabel, shared-faction, June/solo, service consumption, UI click, compact copy, import liveness, hidden service consolidation, courier-tag closure, and false-positive tamper assertions. Pre/final crawls `20260715T234034Z`/`20260716T023728Z` each found zero issues and reached 247/247 nodes, 344/344 edges, 12/12 boards, and 12/12 quests.
-
-### Cycle result - albany_wolf_relief_allocation
-
-- Evidence choice: `SS-F06-relief-allocation` was the next defining-slice gap because Albany's claimed winter scarcity had no exclusive public-capacity decision with both a field and truthful-return consumer.
-- Surface: after preparation, one blocking five-minute Station dispatch assigns a single wagon to Cade pre-feed, resident shelter, or a mobile failure crew; every card names one protected and two exposed needs, and selection persists exact knowledge, provider memory, and journey proof without a reserve meter.
-- Counterfactual: Cade flips seed-26 clean ridge alarm 4/scattered to 3/whole while a failed cast stays full-cost; mobile acts only after stance-owned failed-seat recovery, lowers pressure by 1 without erasing failure, and resident/mobile reverse 15-minute Market-rest versus Campus-resupply advantages. The ledger advances 10/12→11/12.
-- Pure evidence: seed 2717 verified pure/fresh, completed Wolf-Winter at decision 25, continued seven times through five goals, and ended voluntarily at 122; clarity/enjoyment 4/5 and 5/5, stuck false, replay true, with only later-quest S1/S0 findings.
-- Compile/self-critique: compile `20260715T221223Z` has 785 verified reports and 36/36 current-contract pure players continuing at least once. PASS for F06, not the greater-than-BG3 claim: F02, numeric/fleet certification, and publication remain.
-- Guard: independent audit closed exact F12 ally-before-allocation replay and compact-surface gaps; concrete import liveness is 17/17, and final crawl `20260715T215635Z` reached 247/247 nodes, 344/344 edges, and 12/12 quests with zero findings.
