@@ -413,23 +413,63 @@ button:hover {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-.journey-choice-actions button {
+.journey-choice-card {
+  background: color-mix(in srgb, var(--panel-3) 88%, black);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.journey-choice-actions .journey-choice-card > button {
   align-content: start;
   display: grid;
   gap: 0.4rem;
   min-height: 7rem;
   text-align: left;
+  width: 100%;
 }
 
-.journey-choice-actions:not(.journey-choice-actions-registration) button:first-child {
+.journey-choice-actions:not(.journey-choice-actions-registration)
+  .journey-choice-card:first-child
+  > button {
   background: var(--road);
   border-color: var(--road);
   color: #17140e;
 }
 
-.journey-choice-actions button span {
+.journey-choice-actions .journey-choice-card > button span,
+.journey-choice-actions .journey-choice-card > button small {
   font-size: 0.82rem;
   line-height: 1.4;
+}
+
+.journey-choice-summary {
+  color: inherit;
+  font-size: 0.9rem !important;
+}
+
+.journey-choice-trigger,
+.journey-choice-cost {
+  color: color-mix(in srgb, currentColor 78%, var(--muted));
+}
+
+.journey-choice-details {
+  border-top: 1px solid var(--line);
+  color: #d8d8cc;
+  padding: 0.65rem 0.8rem 0.75rem;
+}
+
+.journey-choice-details summary {
+  color: var(--road);
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.journey-choice-details p {
+  font-size: 0.82rem;
+  line-height: 1.45;
+  margin: 0.65rem 0 0;
 }
 
 .journey-ended-card dl {

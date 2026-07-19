@@ -51,6 +51,19 @@ function expectCompactRoutePreview(storyChoice: JourneyStoryChoicePrompt): void 
   }
 }
 
+function expectSummaryFirstOptions(storyChoice: JourneyStoryChoicePrompt): void {
+  for (const option of storyChoice.options) {
+    expect(option.summary).toMatchObject({
+      commitment: expect.any(String),
+      fieldTrigger: expect.any(String),
+    });
+    expect(option.summary?.commitment.length).toBeGreaterThan(0);
+    expect(option.summary?.fieldTrigger.length).toBeGreaterThan(0);
+    expect(option.consequence).toContain(option.summary!.commitment);
+    expect(option.consequence).toContain(option.summary!.fieldTrigger);
+  }
+}
+
 describe("Albany Wolf-Winter dispatch briefing", () => {
   it("makes the mission concrete before choice one and tracks the five separate cards", () => {
     const session = new OverworldSession(WORLD);
@@ -73,6 +86,13 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
     expect(registration.message).toContain(
       "Each changes field conditions or consequences; none locks your solution.",
     );
+    expectSummaryFirstOptions(registration);
+    expect(
+      registration.options.every((option) => option.summary?.immediateCost === undefined),
+    ).toBe(true);
+    expect(OverworldSession.restore(WORLD, session.snapshot()).journey().storyChoice).toEqual(
+      registration,
+    );
     const offer = session
       .snapshot()
       .journalEntries.find((entry) => entry.kind === "registration_offer");
@@ -92,6 +112,9 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
     });
     expect(oath.message).toContain("Chosen: role. Now choose: duty.");
     expect(oath.message).toContain("Still ahead: evidence, preparation, and relief allocation.");
+    expectSummaryFirstOptions(oath);
+    expect(oath.options.every((option) => option.summary?.immediateCost)).toBe(true);
+    expect(OverworldSession.restore(WORLD, session.snapshot()).journey().storyChoice).toEqual(oath);
 
     session.chooseJourneyStory(RELIEF_OATH.options[0]!.id);
     const source = expectStage(session, {
@@ -103,6 +126,11 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
       originalMessage: LEAD_SOURCE.message,
     });
     expect(source.message).toContain("Chosen: role and duty. Now choose: evidence.");
+    expectSummaryFirstOptions(source);
+    expect(source.options.every((option) => option.summary?.immediateCost)).toBe(true);
+    expect(OverworldSession.restore(WORLD, session.snapshot()).journey().storyChoice).toEqual(
+      source,
+    );
 
     session.chooseJourneyStory(LEAD_SOURCE.options[0]!.id);
     const preparation = expectStage(session, {
@@ -116,6 +144,11 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
     expect(preparation.message).toContain("Still ahead: relief allocation.");
     expect(preparation.message).toContain(`Mission — ${WOLF.discovery}`);
     expectCompactRoutePreview(preparation);
+    expectSummaryFirstOptions(preparation);
+    expect(preparation.options.every((option) => option.summary?.immediateCost)).toBe(true);
+    expect(OverworldSession.restore(WORLD, session.snapshot()).journey().storyChoice).toEqual(
+      preparation,
+    );
 
     session.chooseJourneyStory(PREPARATION.profiles[0]!.id);
     const route = session
@@ -140,6 +173,11 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
     );
     expect(allocation.message).toContain(`Mission — ${WOLF.discovery}`);
     expectCompactRoutePreview(allocation);
+    expectSummaryFirstOptions(allocation);
+    expect(allocation.options.every((option) => option.summary?.immediateCost)).toBe(true);
+    expect(OverworldSession.restore(WORLD, session.snapshot()).journey().storyChoice).toEqual(
+      allocation,
+    );
   });
 
   it("presents the exact same first briefing through UI and MCP", () => {
@@ -165,6 +203,7 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
 
     expect(talked.journey.storyChoice).toEqual(ui.journey().storyChoice);
     expect(talked.journey.storyChoice?.message).toContain(`Mission preview — ${WOLF.discovery}`);
+    expectSummaryFirstOptions(talked.journey.storyChoice!);
 
     const sharedChoices = [
       REGISTRATION.profiles[0]!.id,
@@ -185,5 +224,6 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
     expect(compactJourney.storyChoice?.kind).toBe("preparation");
     expect(compactJourney.storyChoice?.message).toContain(`Mission — ${WOLF.discovery}`);
     expectCompactRoutePreview(compactJourney.storyChoice!);
+    expectSummaryFirstOptions(compactJourney.storyChoice!);
   });
 });

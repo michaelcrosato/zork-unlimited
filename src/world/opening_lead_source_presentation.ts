@@ -27,6 +27,11 @@ export function presentOpeningLeadSource(
         return Object.freeze({
           id: option.id,
           label: option.title,
+          summary: Object.freeze({
+            commitment: option.summary,
+            fieldTrigger: option.preview,
+            immediateCost: formatOpeningLeadSourceCost(terms),
+          }),
           consequence: `${option.summary} ${option.preview} Actual cost: ${formatOpeningLeadSourceCost(terms)}.${sponsorship} ${option.consequence}`,
         });
       }),

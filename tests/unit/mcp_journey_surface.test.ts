@@ -521,14 +521,35 @@ describe("MCP journey surface", () => {
     );
   });
 
-  it("projects identical relief-oath terms and selection across compact and full MCP play", () => {
+  it("deep-compares every Albany setup story-choice payload across compact and full MCP play", () => {
     const a = api();
     const compact = a.start_overworld();
     const full = a.start_overworld({ compact_context: false });
     const registrationContact = WORLD.opening_registration?.contact;
     if (!registrationContact) throw new Error("expected Albany registration contact");
 
-    const reachOath = (sessionId: string, compactResult: boolean) => {
+    const responseOptions = (compactResult: boolean) =>
+      compactResult ? { compact_context: true, compact_result: true } : FULL_OVERWORLD;
+    const expectStoryChoiceParity = (
+      compactJourney: typeof compact.journey,
+      fullJourney: typeof full.journey,
+      kind: string,
+    ) => {
+      expect(compactJourney.storyChoice).toEqual(fullJourney.storyChoice);
+      expect(compactJourney.storyChoice).toMatchObject({ kind });
+      expect(compactJourney.storyChoice?.options).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            consequence: expect.any(String),
+            summary: expect.objectContaining({
+              commitment: expect.any(String),
+              fieldTrigger: expect.any(String),
+            }),
+          }),
+        ]),
+      );
+    };
+    const reachRegistration = (sessionId: string, compactResult: boolean) => {
       const observation = a.get_overworld_session({
         session_id: sessionId,
         include_observation: true,
@@ -536,58 +557,60 @@ describe("MCP journey surface", () => {
       const poi = observation.pois[0];
       if (!poi) throw new Error("expected Albany Civic POI");
       a.scout_overworld_session_poi({
+        ...responseOptions(compactResult),
         session_id: sessionId,
         poi_id: poi.id,
-        compact_context: compactResult,
-        compact_result: compactResult,
       });
-      a.talk_overworld_session_contact({
+      return a.talk_overworld_session_contact({
+        ...responseOptions(compactResult),
         session_id: sessionId,
         character_id: registrationContact,
-        compact_context: compactResult,
-        compact_result: compactResult,
       });
-      return a.choose_overworld_session_story({
+    };
+    const choose = (sessionId: string, choice: string, compactResult: boolean) =>
+      a.choose_overworld_session_story({
+        ...responseOptions(compactResult),
         session_id: sessionId,
-        choice: "albany:ledger_advocate",
-        compact_context: compactResult,
-        compact_result: compactResult,
+        choice,
+      });
+    const moveToAllocation = (sessionId: string, compactResult: boolean) => {
+      const observation = a.get_overworld_session({
+        session_id: sessionId,
+        include_observation: true,
+      }).observation;
+      const route = observation.areaExits.find(
+        (candidate) => candidate.destination.id === "albany_city__transport_hub",
+      );
+      if (!route) throw new Error("expected a route to Albany's relief allocation board");
+      return a.move_overworld_session_area({
+        ...responseOptions(compactResult),
+        session_id: sessionId,
+        area_route_id: route.id,
       });
     };
 
-    const compactOath = reachOath(compact.session_id, true);
-    const fullOath = reachOath(full.session_id, false);
-    expect(compactOath.journey).toEqual(fullOath.journey);
-    expect(compactOath.snapshot_hash).toBe(fullOath.snapshot_hash);
-    expect(compactOath.journey.storyChoice).toMatchObject({
-      id: "albany:wolf_relief_oath",
-      kind: "relief_oath",
-      options: [
-        { id: "albany:oath_full_compact_duty" },
-        { id: LIMITED_RELIEF_OATH_ID },
-        { id: "albany:oath_unaffiliated_personal_bond" },
-      ],
-    });
-    expect(compactOath.journey.storyChoice?.options).toHaveLength(3);
-    expect(compactOath.journey.storyChoice?.options.every((option) => option.consequence)).toBe(
-      true,
-    );
-    expect("observation" in compactOath).toBe(false);
+    const compactRegistration = reachRegistration(compact.session_id, true);
+    const fullRegistration = reachRegistration(full.session_id, false);
+    expectStoryChoiceParity(compactRegistration.journey, fullRegistration.journey, "registration");
+    expect("observation" in compactRegistration).toBe(false);
 
-    const compactLead = a.choose_overworld_session_story({
-      session_id: compact.session_id,
-      choice: LIMITED_RELIEF_OATH_ID,
-      compact_context: true,
-      compact_result: true,
-    });
-    const fullLead = a.choose_overworld_session_story({
-      ...FULL_OVERWORLD,
-      session_id: full.session_id,
-      choice: LIMITED_RELIEF_OATH_ID,
-    });
-    expect(compactLead.journey).toEqual(fullLead.journey);
-    expect(compactLead.snapshot_hash).toBe(fullLead.snapshot_hash);
-    expect(compactLead.journey.storyChoice?.kind).toBe("lead_source");
+    const compactOath = choose(compact.session_id, "albany:ledger_advocate", true);
+    const fullOath = choose(full.session_id, "albany:ledger_advocate", false);
+    expectStoryChoiceParity(compactOath.journey, fullOath.journey, "relief_oath");
+
+    const compactLead = choose(compact.session_id, LIMITED_RELIEF_OATH_ID, true);
+    const fullLead = choose(full.session_id, LIMITED_RELIEF_OATH_ID, false);
+    expectStoryChoiceParity(compactLead.journey, fullLead.journey, "lead_source");
+
+    const compactPreparation = choose(compact.session_id, "albany:source_rowan_civic_docket", true);
+    const fullPreparation = choose(full.session_id, "albany:source_rowan_civic_docket", false);
+    expectStoryChoiceParity(compactPreparation.journey, fullPreparation.journey, "preparation");
+
+    choose(compact.session_id, "albany:prep_works_fortification", true);
+    choose(full.session_id, "albany:prep_works_fortification", false);
+    const compactAllocation = moveToAllocation(compact.session_id, true);
+    const fullAllocation = moveToAllocation(full.session_id, false);
+    expectStoryChoiceParity(compactAllocation.journey, fullAllocation.journey, "relief_allocation");
   });
 
   it("makes a pending parent choice the only legal move inside an embedded quest", () => {
@@ -757,6 +780,7 @@ describe("MCP journey surface", () => {
     expect(Object.keys(restored.journey.storyChoice!).sort()).toEqual(["id", "message", "options"]);
     for (const option of restored.journey.storyChoice!.options) {
       expect(Object.keys(option).sort()).toEqual(["consequence", "id", "label"]);
+      expect(option.summary).toBeUndefined();
     }
     const playerChoicePayload = JSON.stringify({
       goal: restored.journey.goal,

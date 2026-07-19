@@ -102,12 +102,39 @@ export function JourneyStoryChoiceScreen({
             keepsCurrentObjective ? " journey-choice-actions-registration" : ""
           }`}
         >
-          {storyChoice.options.map((option) => (
-            <button key={option.id} type="button" onClick={() => onChoose(option.id)}>
-              <strong>{option.label}</strong>
-              <span>{option.consequence}</span>
-            </button>
-          ))}
+          {storyChoice.options.map((option) => {
+            const conciseSummary = option.summary;
+            return (
+              <div key={option.id} className="journey-choice-card">
+                <button type="button" onClick={() => onChoose(option.id)}>
+                  <strong>{option.label}</strong>
+                  {conciseSummary ? (
+                    <span className="journey-choice-summary">
+                      <b>Commitment:</b> {conciseSummary.commitment}
+                    </span>
+                  ) : (
+                    <span>{option.consequence}</span>
+                  )}
+                  {conciseSummary && (
+                    <small className="journey-choice-trigger">
+                      <b>First field trigger / tradeoff:</b> {conciseSummary.fieldTrigger}
+                    </small>
+                  )}
+                  {conciseSummary?.immediateCost && (
+                    <small className="journey-choice-cost">
+                      <b>Immediate cost:</b> {conciseSummary.immediateCost}
+                    </small>
+                  )}
+                </button>
+                {conciseSummary && (
+                  <details className="journey-choice-details">
+                    <summary>Full terms and consequence</summary>
+                    <p>{option.consequence}</p>
+                  </details>
+                )}
+              </div>
+            );
+          })}
         </div>
       </section>
     </main>

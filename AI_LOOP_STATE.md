@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 585 -->
+<!-- historical_cycle_count: 586 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - summary_first_setup_cards
+
+- Evidence choice: nine of ten clean Terra players struggled to compare five permanent setup decisions before field play, with literal truncation and accumulated-detail complaints despite reliable first-goal completion.
+- Surface: each of the five setup stages now exposes a short commitment, later field trigger, and actual immediate cost first; the unchanged authored consequence sits in a keyboard-accessible native details disclosure that is a sibling—not part—of the choice button.
+- Contract: structured summaries are required and deeply frozen only for registration, oath, source, preparation, and allocation; legacy aftermath choices remain compatible, full/compact MCP payloads are identical, and mouse/Enter disclosure cannot select or double-submit an option.
+- Pure evidence: clean commit `9d9d47fc` seed 4195 completed all-wolves-alive lure at decision 33, rated clarity/enjoyment 3/4, was unstuck/replay-yes, and still called setup dense. Exact ten-Terra seeds 4196–4205 completed 10/10 in 27–36 decisions, continued 9/10, were 0 stuck/9 replay, and averaged clarity 3.7/enjoyment 4.0.
+- Measured result: literal truncation complaints fell to 0/10, but structural setup-density complaints rose from 8/10 to 10/10 and all ten chose living lure. The summary-card hypothesis PASSes for UI disclosure mechanics but FAILs to solve onboarding pacing or route diversity.
+- Feedback/self-critique: compile `20260719T211958Z` has 889 verified reports, 138 current pure exits, and 116 continuing; the ledger is 888 accepted/59 rejected. The greater-than-BG3 milestone remains active_unproven; move decisions closer to their field consumers rather than adding more card copy.
+- Guard: independent audit plus real React/JSDOM proves accessible non-selection and exact five-stage parity; crawl `20260719T201048Z` is zero-finding at 247/247 nodes, 344/344 edges, and 12/12 boards/quests, and exact stacked health passes 388 files/2,965 tests plus UI/all packs.
 
 ### Cycle result - wolf_commitment_boundaries
 
@@ -150,12 +160,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Pure evidence: finished-build seed 2812 completed Wolf-Winter at decision 29, continued through The Gallowmere and The Tanner's Fever, and ended at checkpoint 80; clarity/enjoyment 4/5, stuck false, replay true, no S1+, and the prior paperwork/density complaint disappeared, leaving choice-to-quest-mechanic mapping as the clarity debt.
 - Compile/self-critique: compile `20260716T163052Z` has 804 verified reports and 53 current-contract pure exits, 51 continuing. PASS for informed dispatch, not the greater-than-BG3 milestone: clarity remains below 4.2 and homogeneous-Sonnet pilot/authority tooling, deep crawl, exact 100-player cohort, numeric gates, and severity audit remain.
 - Guard: two adversarial presentation/integrity audits closed hidden UI mission context, save-repair aperture, optional-sixth-choice wording, and a 32% copy-load regression; 14 affected suites are 118/118, and pre/final crawls `20260716T154146Z`/`20260716T162059Z` found zero issues across 247/247 nodes, 344/344 edges, 12/12 boards, and 12/12 quests.
-
-### Cycle result - authenticated_slice_fleet_certifier
-
-- Evidence choice: the prior milestone diagnostic could resume successes, erase failed attempts, trust planned model labels, and accept reports before raw evidence publication, so it could not decide the greater-than-BG3 slice claim.
-- Surface: live fleets now close one fresh label with ordered attempt histories; authoritative certification requires 100 no-resume, one-attempt, unrecovered pure/default rows on one clean build/world, current-stamp basenames, the exact 9:1 model plan, unique Claude UUIDs, and byte-reconstructed report/sidecar/evidence/envelope attestations.
-- Integrity: the sterile Claude home imports only subscription OAuth, disables filesystem settings/auto-memory, positively allows only AdventureForge MCP, names each session to prevent an auxiliary Haiku title call, and publishes `.run.json` last as the transaction marker. Recovered interviews remain diagnostic and cannot certify subjective gates.
-- Pure evidence: seed 2737 verified singleton Sonnet/fresh, completed Wolf-Winter, The Gallowmere, and The Tanner's Fever, continued four times, then ended at checkpoint 80; clarity/enjoyment 4/4, stuck false, replay true, zero denials, and one S1 cross-town name-reuse report. Seed 2736 proved the transaction but is intentionally non-attestable because its pre-fix envelope included the title model.
-- Self-critique: PASS for authenticated certification tooling, not fleet reliability or the greater-than-BG3 milestone. Two consecutive players disliked the five-choice Albany opening gauntlet; a fresh 10-player no-resume/no-retry diagnostic must test that pacing and the 9:1 model plan before any authoritative 100-player spend.
-- Guard: two adversarial audit rounds closed safe-mode MCP loss, survivor selection, shell injection, recovery laundering, premature publication, user customization, and AFK sidecar gaps; 157 integrated checks pass, and final crawls `20260716T133150Z`/`20260716T134744Z` found zero issues across 247/247 nodes, 344/344 edges, 12/12 boards, and 12/12 quests.

@@ -385,6 +385,11 @@ describe("opening preparation application and presentation", () => {
     expect(publicPrompt.options[0]).toEqual({
       id: "albany:prepare_civic_works",
       label: "Civic works survey",
+      summary: {
+        commitment: "Reese walks you through the damaged waterworks ledger.",
+        fieldTrigger: "You will enter knowing which frozen valves matter.",
+        immediateCost: "25 minutes and $4",
+      },
       consequence:
         "Reese walks you through the damaged waterworks ledger. You will enter knowing which frozen valves matter. Actual cost: 25 minutes and $4. Reese remembers that you trusted the civic plan.",
     });
