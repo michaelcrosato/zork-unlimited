@@ -80,7 +80,25 @@ export function cloneOverworldLocalEvent(event: OverworldLocalEvent): OverworldL
 }
 
 export function cloneOverworldLocalJob(job: OverworldLocalJob): OverworldLocalJob {
-  return { ...job };
+  return {
+    ...job,
+    ...(job.authored_scene
+      ? {
+          authored_scene: {
+            ...job.authored_scene,
+            ...(job.authored_scene.requires_completed_quests
+              ? {
+                  requires_completed_quests: [...job.authored_scene.requires_completed_quests],
+                }
+              : {}),
+            options: job.authored_scene.options.map((option) => ({
+              ...option,
+              terms: { ...option.terms },
+            })),
+          },
+        }
+      : {}),
+  };
 }
 
 export function cloneOverworldExplorationSite(

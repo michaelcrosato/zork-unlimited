@@ -75,7 +75,10 @@ The report is written to `blind-tester/reports/<stamp>_<source>_seed<n>.md`
 The built-in Codex path starts from an isolated temporary directory, ignores
 user/project config and rules, disables shell/web/apps/plugins/browser/computer
 and subagent capabilities, injects only the pure AdventureForge MCP server, and
-rejects the run if its JSONL contains any non-game tool event. Codex report
+pair-audits every normal game call. Exact paired/null `-32601` probes against the
+empty AdventureForge resource namespace and one bounded in-memory todo lifecycle
+are tolerated as non-gameplay transport noise; any content, success, other
+server, malformed lifecycle, or unbounded payload rejects the run. Codex report
 recovery is intentionally unavailable: malformed output is rejected and needs
 a fresh seed. Current fleet attestation and starting-slice certification remain
 Claude/Sonnet-only because Codex JSONL does not authenticate the actual model id.

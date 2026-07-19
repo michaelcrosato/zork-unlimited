@@ -549,6 +549,7 @@ function assertSnapshotJournalSource(
   }
   const decisionBoundaryCount = [
     entry.questStartProof?.boundary,
+    entry.localSceneProof?.boundary,
     entry.questCompletionBoundary,
     entry.registrationBoundary,
     entry.serviceBoundary,
@@ -582,6 +583,11 @@ function assertSnapshotJournalSource(
   if (entry.questCompletionBoundary !== undefined && entry.kind !== "quest_done") {
     throw new Error(
       `Overworld session snapshot journal ${entry.kind} entry has an invalid quest completion boundary.`,
+    );
+  }
+  if (entry.localSceneProof !== undefined && entry.kind !== "job") {
+    throw new Error(
+      `Overworld session snapshot journal ${entry.kind} entry has an invalid local-scene proof.`,
     );
   }
 
@@ -791,6 +797,7 @@ export function assertSnapshotTimeline(
     assertSnapshotJournalSource(entry, recordedAt, sources);
     const decisionBoundary =
       entry.questStartProof?.boundary ??
+      entry.localSceneProof?.boundary ??
       entry.questCompletionBoundary ??
       entry.registrationBoundary ??
       entry.serviceBoundary ??

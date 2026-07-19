@@ -31,6 +31,7 @@ export function cloneOverworldView(view: OverworldView): OverworldView {
     characters: view.characters.map(cloneOverworldCharacterView),
     events: view.events.map(cloneOverworldLocalEvent),
     jobs: view.jobs.map(cloneOverworldLocalJob),
+    jobChoices: view.jobChoices.map(([jobId, optionId]) => [jobId, optionId]),
     rememberedJobs: view.rememberedJobs.map(cloneOverworldLocalJob),
     sites: view.sites.map(cloneOverworldExplorationSite),
     quests: view.quests.map(cloneOverworldQuestView),

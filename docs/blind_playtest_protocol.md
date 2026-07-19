@@ -152,7 +152,15 @@ an isolated temporary directory with user/project config and rules ignored,
 shell/web/apps/plugins/browser/computer/subagents disabled, and only the exact
 pure AdventureForge MCP tools enabled. It audits the provider JSONL and rejects
 unknown events, non-game tools, another MCP server, incomplete/duplicate turns,
-or malformed final output. A rejected Codex run must use a fresh seed. Codex is
+or malformed final output. Codex may emit generic resource-transport probes even
+when the player obeys the game-tool boundary. The audit tolerates only a bounded,
+paired `-32601 Method not found` failure against AdventureForge's empty resource
+namespace, with a null result, plus one bounded in-memory todo lifecycle. These
+events expose no content, do not count as gameplay, and fail closed on success,
+content, another server, malformed pairing, or an unbounded payload. Every normal
+AdventureForge call is separately paired by id, tool, arguments, status, and
+result; the first pair must be a successful argument-free `start_overworld`.
+A rejected Codex run must use a fresh seed. Codex is
 not yet accepted by fleet attestation or starting-slice certification because
 its JSONL identifies the session but does not authenticate the actual model id.
 

@@ -24,6 +24,7 @@ import {
   ALBANY_DAWN_DISPATCH_ID,
   journeyCampaignStoryChoiceSelection,
 } from "./journey_campaign.js";
+import { LocalJobSceneSchema } from "./local_job_scene.js";
 import { OpeningAllySchema, applyOpeningAllyOption } from "./opening_ally.js";
 import { OpeningLeadSourceSchema, applyOpeningLeadSourceOption } from "./opening_lead_source.js";
 import { OpeningPreparationSchema, applyOpeningPreparationProfile } from "./opening_preparation.js";
@@ -226,6 +227,7 @@ export const OverworldLocalJobSchema = z
     minutes: z.number().int().positive(),
     difficulty: z.number().int().min(1).max(5),
     visibility: z.literal("local_job_board"),
+    authored_scene: LocalJobSceneSchema.optional(),
   })
   .strict();
 
@@ -1230,6 +1232,7 @@ function assertEntitiesIntegrity(
   }
 
   const seenJob = new Set<string>();
+  const seenJobScene = new Set<string>();
   const jobCounts = new Map<string, number>();
   const jobAreas = new Set<string>();
   for (const job of world.local_jobs) {
@@ -1242,6 +1245,36 @@ function assertEntitiesIntegrity(
     }
     if (areaHomes.get(job.area) !== job.home) {
       throw new Error(`Overworld local job "${job.id}" is anchored outside its home town.`);
+    }
+    const scene = job.authored_scene;
+    if (scene) {
+      if (seenJobScene.has(scene.id)) {
+        throw new Error(`Duplicate authored local-job scene id "${scene.id}".`);
+      }
+      seenJobScene.add(scene.id);
+      const poi = world.points_of_interest.find(
+        (candidate) => candidate.id === scene.required_poi_id,
+      );
+      if (!poi || poi.home !== job.home || poi.area !== job.area) {
+        throw new Error(
+          `Authored local-job scene "${scene.id}" requires a point of interest in its job area.`,
+        );
+      }
+      const contact = world.characters.find(
+        (candidate) => candidate.id === scene.required_contact_id,
+      );
+      if (!contact || contact.home !== job.home || contact.area !== job.area) {
+        throw new Error(
+          `Authored local-job scene "${scene.id}" requires a contact in its job area.`,
+        );
+      }
+      for (const questId of scene.requires_completed_quests) {
+        if (!questIds.has(questId)) {
+          throw new Error(
+            `Authored local-job scene "${scene.id}" requires missing quest "${questId}".`,
+          );
+        }
+      }
     }
     jobCounts.set(job.home, (jobCounts.get(job.home) ?? 0) + 1);
     jobAreas.add(job.area);
@@ -2268,6 +2301,7 @@ function canonicalOpeningAllyCampaignServiceStates(world: OverworldManifest): Re
 function assertCampaignServiceRulesIntegrity(
   world: OverworldManifest,
   nodes: Map<string, OverworldNode>,
+  regionNames: ReadonlySet<string>,
   areaIds: Set<string>,
   areaHomes: Map<string, string>,
 ): void {
@@ -2291,6 +2325,11 @@ function assertCampaignServiceRulesIntegrity(
     }
     if (areaHomes.get(rule.area) !== rule.home) {
       throw new Error(`Campaign service rule "${rule.id}" is anchored outside its home town.`);
+    }
+    if (rule.requires_region_renown && !regionNames.has(rule.requires_region_renown.region)) {
+      throw new Error(
+        `Campaign service rule "${rule.id}" references unknown renown region "${rule.requires_region_renown.region}".`,
+      );
     }
     for (const factId of [
       ...(rule.requires_all_world_facts ?? []),
@@ -2393,6 +2432,15 @@ function assertCampaignServiceRulesIntegrity(
     }
   }
   const canonicallyReachableRuleIds = new Set<string>();
+  const maximumRequiredRenownByRegion = new Map<string, number>();
+  for (const rule of rules) {
+    const requirement = rule.requires_region_renown;
+    if (!requirement) continue;
+    maximumRequiredRenownByRegion.set(
+      requirement.region,
+      Math.max(maximumRequiredRenownByRegion.get(requirement.region) ?? 0, requirement.at_least),
+    );
+  }
   for (const state of bounded.states) {
     for (const location of locations.values()) {
       const activeRules = resolveParsedActiveCampaignServiceRules({
@@ -2403,6 +2451,7 @@ function assertCampaignServiceRulesIntegrity(
         selectedStoryChoices: state.selectedStoryChoices,
         consumedRuleIds: [],
         character: state.character,
+        regionRenown: maximumRequiredRenownByRegion,
       });
       activeRules.forEach((rule) => canonicallyReachableRuleIds.add(rule.id));
     }
@@ -2474,7 +2523,7 @@ export function assertOverworldIntegrity(world: OverworldManifest): void {
 
   assertExplorationSitesIntegrity(world, nodes, regionNames, areaIds, areaHomes);
 
-  assertCampaignServiceRulesIntegrity(world, nodes, areaIds, areaHomes);
+  assertCampaignServiceRulesIntegrity(world, nodes, regionNames, areaIds, areaHomes);
 
   assertGraphConnectivity(world);
 }

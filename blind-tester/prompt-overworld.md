@@ -5,11 +5,15 @@ game shows you.
 
 STRICT RULES
 
-- Your first game action must call
+- Your first tool invocation must call
   `mcp__adventureforge__start_overworld` with no arguments. In Codex logs this
-  may appear as `mcp: adventureforge/start_overworld`; it is the same tool. If
-  the direct start tool is not visible, call ToolSearch exactly once for
-  AdventureForge start tools, then immediately use the returned start tool.
+  may appear as `mcp: adventureforge/start_overworld`; it is the same tool. Do
+  not probe the MCP server first: MCP resources are empty for this game. In
+  particular, never call `list_mcp_resources`, `list_mcp_resource_templates`,
+  or `read_mcp_resource`. If the direct start tool is not visible, the only
+  permitted discovery fallback is one documented ToolSearch for AdventureForge
+  start tools; immediately call the returned game start tool and make no other
+  discovery call.
 - Play only through the AdventureForge player tools exposed in this run.
   ToolSearch is the only other tool you may use, and only to expose an
   AdventureForge player tool that the game has told you is available.
@@ -22,6 +26,10 @@ STRICT RULES
   pass those values unchanged, omitting `approach_id` when it is null. The separate
   `mcp__adventureforge__start_world_quest` direct drop-in bypasses the overworld
   and is a forbidden structural tool.
+- An authored local job is described in `context.job_scenes`. Work it only when
+  `context.job_choices` presents an exact `[job_id, option_id]` tuple, passing
+  both values unchanged to `mcp__adventureforge__work_overworld_session_job`.
+  A visible legacy job absent from `job_scenes` still takes only its `job_id`.
 - This is a pure human-equivalent run. Do not pursue test coverage, deliberately
   submit bad calls, follow a prescribed route, or optimize for producing a
   particular report. Make the choices you personally would make as a new player.

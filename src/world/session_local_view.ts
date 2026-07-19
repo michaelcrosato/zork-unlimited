@@ -54,6 +54,16 @@ function hiddenCount<T extends { id: string }>(
   return count;
 }
 
+function localJobIsChronologicallyAvailable(
+  job: OverworldLocalJob,
+  completedQuestIds: ReadonlySet<string>,
+): boolean {
+  return (
+    !job.authored_scene ||
+    job.authored_scene.requires_completed_quests.every((questId) => completedQuestIds.has(questId))
+  );
+}
+
 function discoveredCurrentAreaJobs(
   jobs: readonly OverworldLocalJob[],
   currentAreaId: string,
@@ -109,22 +119,30 @@ function discoveredQuestViews(
 export function buildOverworldSessionLocalView(
   state: OverworldSessionLocalViewState,
 ): OverworldSessionLocalView {
+  const chronologicallyAvailableJobs = state.localJobs.filter((job) =>
+    localJobIsChronologicallyAvailable(job, state.completedQuestIds),
+  );
   return {
     areas: discoveredValues(state.localAreas, state.discoveredAreaIds),
     hiddenAreaCount: hiddenCount(state.localAreas, state.discoveredAreaIds),
     jobs: discoveredCurrentAreaJobs(
-      state.localJobs,
+      chronologicallyAvailableJobs,
       state.currentAreaId,
       state.discoveredJobIds,
       state.completedJobIds,
     ),
     rememberedJobs: discoveredOtherAreaJobs(
-      state.localJobs,
+      chronologicallyAvailableJobs,
       state.currentAreaId,
       state.discoveredJobIds,
       state.completedJobIds,
     ),
-    hiddenJobCount: hiddenCount(state.localJobs, state.discoveredJobIds),
+    hiddenJobCount: state.localJobs.filter(
+      (job) =>
+        !state.discoveredJobIds.has(job.id) ||
+        (!state.completedJobIds.has(job.id) &&
+          !localJobIsChronologicallyAvailable(job, state.completedQuestIds)),
+    ).length,
     sites: discoveredValues(state.currentAreaSites, state.discoveredSiteIds),
     hiddenSiteCount: hiddenCount(state.currentAreaSites, state.discoveredSiteIds),
     quests: discoveredQuestViews(

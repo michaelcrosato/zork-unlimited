@@ -39,7 +39,13 @@ const packsByPath = new Map(PACKS.map((pack) => [normalizePackPath(pack.path), p
 // The session exposes quests as OverworldQuestView (no pack source — the view
 // is what a PLAYER knows); the pack path lives only on the manifest quest.
 const questsById = new Map<string, OverworldQuest>(OVERWORLD.quests.map((q) => [q.id, q]));
+const poiTitlesById = new Map(OVERWORLD.points_of_interest.map((poi) => [poi.id, poi.title]));
+const characterNamesById = new Map(OVERWORLD.characters.map((character) => [character.id, character.name]));
 const OVERWORLD_SAVE_KEY = "adventureforge:new-york-overworld:v1";
+
+function jobChoiceKey(jobId: string, optionId: string): string {
+  return JSON.stringify([jobId, optionId]);
+}
 
 type InitialWorldSession = {
   session: OverworldSession;
@@ -256,6 +262,13 @@ export default function App(): JSX.Element {
         .map((exit) => exit.destination.name)
         .join(" / "),
     [worldView.exits],
+  );
+  const legalJobChoiceKeys = useMemo(
+    () =>
+      new Set(
+        worldView.jobChoices.map(([jobId, optionId]) => jobChoiceKey(jobId, optionId)),
+      ),
+    [worldView.jobChoices],
   );
   const resupplyOffer = worldView.serviceOffers.find((offer) => offer.action === "resupply");
   const restOffer = worldView.serviceOffers.find((offer) => offer.action === "rest");
@@ -810,25 +823,108 @@ export default function App(): JSX.Element {
             </p>
           ) : (
             <div className="job-list">
-              {worldView.jobs.map((job) => (
-                <div key={job.id} className={`job ${job.kind}`}>
-                  <strong>{job.title}</strong>
-                  <span>
-                    {job.kind.replace("_", " ")} - difficulty {job.difficulty} - {job.minutes} min
-                  </span>
-                  <p>{job.summary}</p>
-                  {worldView.completedJobIds.includes(job.id) ? (
-                    <small className="resolved-label">Completed</small>
-                  ) : (
-                    <button
-                      className="mini-command"
-                      onClick={() => runWorldAction(() => worldSession.workLocalJob(job.id))}
-                    >
-                      Work Job
-                    </button>
-                  )}
-                </div>
-              ))}
+              {worldView.jobs.map((job) => {
+                const scene = job.authored_scene;
+                const journalIds = new Set(worldView.journal.map((entry) => entry.id));
+                const hasPoi = scene
+                  ? journalIds.has(`scout:${scene.required_poi_id}`)
+                  : true;
+                const contactPrefix = scene ? `talk:${scene.required_contact_id}` : "";
+                const hasContact = scene
+                  ? [...journalIds].some(
+                      (id) => id === contactPrefix || id.startsWith(`${contactPrefix}@`),
+                    )
+                  : true;
+                const hasQuests = scene
+                  ? (scene.requires_completed_quests ?? []).every((id) =>
+                      worldView.completedQuestIds.includes(id),
+                    )
+                  : true;
+                const missingSceneRequirements: string[] = [];
+                if (scene && !hasPoi) {
+                  missingSceneRequirements.push(
+                    `scout ${poiTitlesById.get(scene.required_poi_id) ?? "the marked point"}`,
+                  );
+                }
+                if (scene && !hasContact) {
+                  missingSceneRequirements.push(
+                    `talk to ${characterNamesById.get(scene.required_contact_id) ?? "the local contact"}`,
+                  );
+                }
+                if (scene && !hasQuests) {
+                  for (const questId of scene.requires_completed_quests ?? []) {
+                    if (!worldView.completedQuestIds.includes(questId)) {
+                      missingSceneRequirements.push(
+                        `complete ${questsById.get(questId)?.title ?? questId}`,
+                      );
+                    }
+                  }
+                }
+                const hasLegalSceneChoice =
+                  scene?.options.some((option) =>
+                    legalJobChoiceKeys.has(jobChoiceKey(job.id, option.id)),
+                  ) ?? false;
+
+                return (
+                  <div key={job.id} className={`job ${job.kind}`}>
+                    <strong>{job.title}</strong>
+                    {!scene && (
+                      <span>
+                        {job.kind.replace("_", " ")} - difficulty {job.difficulty} - {job.minutes}{" "}
+                        min
+                      </span>
+                    )}
+                    <p>{job.summary}</p>
+                    {worldView.completedJobIds.includes(job.id) ? (
+                      <small className="resolved-label">Completed</small>
+                    ) : scene ? (
+                      <div className="job-scene">
+                        <p>{scene.prompt}</p>
+                        {!hasLegalSceneChoice && (
+                          <small className="empty">
+                            {missingSceneRequirements.length > 0
+                              ? `Required first: ${missingSceneRequirements.join(", ")}.`
+                              : "No priority is currently available in this journey state."}
+                          </small>
+                        )}
+                        {scene.options.map((option) => {
+                          const optionAvailable = legalJobChoiceKeys.has(
+                            jobChoiceKey(job.id, option.id),
+                          );
+                          return (
+                            <div key={option.id} className="job-scene-option">
+                              <strong>{option.title}</strong>
+                              <span>
+                                {option.terms.minutes} min - {option.terms.renown} renown
+                              </span>
+                              <p>{option.preview}</p>
+                              <p>
+                                <b>Commitment:</b> {option.consequence}
+                              </p>
+                              <button
+                                className="mini-command"
+                                disabled={!optionAvailable}
+                                onClick={() =>
+                                  runWorldAction(() => worldSession.workLocalJob(job.id, option.id))
+                                }
+                              >
+                                Choose {option.title}
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <button
+                        className="mini-command"
+                        onClick={() => runWorldAction(() => worldSession.workLocalJob(job.id))}
+                      >
+                        Work Job
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
           {worldView.hiddenJobCount > 0 && (

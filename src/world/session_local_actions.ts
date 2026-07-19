@@ -10,6 +10,11 @@ import type {
   OverworldExplorationSite,
   OverworldLocalJob,
 } from "./overworld.js";
+import {
+  resolveLocalJobSceneOption,
+  type LocalJobScene,
+  type LocalJobSceneOption,
+} from "./local_job_scene.js";
 import { timeLabel } from "./session_journal_codec.js";
 import type { OverworldJournalEntry } from "./session_snapshot.js";
 
@@ -44,6 +49,10 @@ export type OverworldLocalJobCompletionPlan =
       action: OverworldLocalActionDescriptor<"job">;
       renownRegion: string;
       renown: number;
+      localScene?: {
+        scene: LocalJobScene;
+        option: LocalJobSceneOption;
+      };
     };
 
 export type OverworldPlannedLocalJobCompletion = Extract<
@@ -142,6 +151,7 @@ export type OverworldAreaExplorationState = {
 
 export type OverworldLocalJobCompletionState = {
   jobId: string;
+  optionId?: string | undefined;
   jobsById: ReadonlyMap<string, OverworldLocalJob>;
   areasById: ReadonlyMap<string, OverworldArea>;
   currentTownId: string;
@@ -149,7 +159,8 @@ export type OverworldLocalJobCompletionState = {
   currentAreaId: string | null;
   discoveredJobIds: ReadonlySet<string>;
   completedJobIds: ReadonlySet<string>;
-  journalEntries: OverworldJournalEntryLookup;
+  completedQuestIds?: ReadonlySet<string> | undefined;
+  journalEntries: ReadonlyMap<string, OverworldJournalEntry>;
 };
 
 export type OverworldSiteExplorationState = {
@@ -333,18 +344,56 @@ export function planOverworldLocalJobCompletion(
   if (job.area !== state.currentAreaId) {
     throw new Error("Move to that local area before working that job.");
   }
-  if (state.completedJobIds.has(job.id)) {
-    const existing = state.journalEntries.get(`job:${job.id}`);
-    if (existing) return { alreadyKnown: true, minutes: 0, entry: existing };
+  const scene = job.authored_scene;
+  let sceneOption: LocalJobSceneOption | null = null;
+  if (scene) {
+    if (!state.optionId) {
+      throw new Error(`Choose one authored option for ${job.title}.`);
+    }
+    sceneOption = resolveLocalJobSceneOption(scene, state.optionId);
+    if (!state.journalEntries.has(`scout:${scene.required_poi_id}`)) {
+      throw new Error(`Scout the scene's point of interest before working ${job.title}.`);
+    }
+    const baseContactJournalId = `talk:${scene.required_contact_id}`;
+    const talkedToRequiredContact = [...state.journalEntries.keys()].some(
+      (entryId) =>
+        entryId === baseContactJournalId || entryId.startsWith(`${baseContactJournalId}@`),
+    );
+    if (!talkedToRequiredContact) {
+      throw new Error(`Talk to the scene's contact before working ${job.title}.`);
+    }
+    const missingQuest = scene.requires_completed_quests?.find(
+      (questId) => !state.completedQuestIds?.has(questId),
+    );
+    if (missingQuest) {
+      throw new Error(`Complete quest "${missingQuest}" before working ${job.title}.`);
+    }
+  } else if (state.optionId !== undefined) {
+    throw new Error(`Local job ${job.title} has no authored option "${state.optionId}".`);
   }
 
-  const action = describeOverworldJobAction(job, state.areasById.get(job.area) ?? null);
+  if (state.completedJobIds.has(job.id)) {
+    const existing = state.journalEntries.get(`job:${job.id}`);
+    if (existing) {
+      if (scene && existing.localSceneProof?.optionId !== sceneOption?.id) {
+        throw new Error(`Local job ${job.title} was completed with a different authored option.`);
+      }
+      return { alreadyKnown: true, minutes: 0, entry: existing };
+    }
+  }
+
+  const action = describeOverworldJobAction(
+    job,
+    state.areasById.get(job.area) ?? null,
+    sceneOption,
+  );
   return {
     alreadyKnown: false,
     jobId: job.id,
     action,
     renownRegion: state.currentRegion,
     renown: action.regionalRenown ?? 0,
+    ...(scene && sceneOption ? { localScene: { scene, option: sceneOption } } : {}),
   };
 }
 

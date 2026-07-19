@@ -839,6 +839,21 @@
       ]
     },
     {
+      "id": "albany:works_public_shift_civic_rest",
+      "home": "albany_city",
+      "area": "albany_city__civic_core",
+      "action": "rest",
+      "title": "Take the Civic Standing Recovery Cot",
+      "summary": "Your truthful Wolf-Winter return and 13-point Capital / Mohawk standing let Rowan close one Civic recovery docket. The staffed cot clears fatigue once; it grants no supplies, wound treatment, or authority over any Works line.",
+      "provider_character_id": "albany_city__civic_core__contact",
+      "minutes": 15,
+      "requires_all_world_facts": ["fact:wolf_winter_byre_held"],
+      "requires_region_renown": {
+        "region": "Capital / Mohawk",
+        "at_least": 13
+      }
+    },
+    {
       "id": "albany:limited_oath_living_pack_return_rest",
       "home": "albany_city",
       "area": "albany_city__market",
@@ -51359,13 +51374,45 @@
       "home": "albany_city",
       "area": "albany_city__industrial",
       "kind": "repair",
-      "title": "Albany Works District: Works Yard Repair",
-      "summary": "Albany Works District has loading doors, tools, machine noise, and labor disputes. The job is small enough to finish locally but specific enough to make Albany City feel worked-in rather than decorative.",
-      "objective": "Spend time in Albany Works District to trace a failing piece of infrastructure before it turns into a wider hazard.",
-      "reward": "Earn 4 Capital / Mohawk renown and a concrete lead about Albany City.",
+      "title": "Reese's Two Winter Lines",
+      "summary": "After The Wolf-Winter return, Reese has a public Works shift held safely behind a jammed yard gate and an outbound municipal cold-set reserve waiting for an accountable serial count.",
+      "objective": "Inspect the Works Gate, hear Reese's two time-sensitive lines, and decide which one receives your help first.",
+      "reward": "Earn 2 or 5 Capital / Mohawk renown according to the Works priority you complete.",
       "minutes": 83,
       "difficulty": 4,
-      "visibility": "local_job_board"
+      "visibility": "local_job_board",
+      "authored_scene": {
+        "version": 1,
+        "id": "albany:works-yard-winter-shift",
+        "prompt": "Reese has a public shift warm behind a jammed safety gate, while the outbound municipal cold-set reserve needs an accountable count before dispatch. You can own only one line before your shift closes; Reese routes the other to his crew.",
+        "required_poi_id": "albany_city__industrial__poi",
+        "required_contact_id": "albany_city__industrial__contact",
+        "requires_completed_quests": [
+          "wolf_winter"
+        ],
+        "options": [
+          {
+            "id": "protect_trapped_public_shift",
+            "title": "Protect the trapped public Works shift",
+            "preview": "Spend 80 minutes isolating the failed hoist, bracing the access lane, and bringing the waiting shift through the safety gate. Earn 5 Capital / Mohawk renown.",
+            "consequence": "The shift walks out together under Reese's count, your completed-work journal fixes the public crew as your priority, and Reese routes the reserve inventory to his yard crew.",
+            "terms": {
+              "minutes": 80,
+              "renown": 5
+            }
+          },
+          {
+            "id": "inventory_outbound_cold_set_stock",
+            "title": "Inventory and seal the outbound cold-set reserve for the next dispatch",
+            "preview": "Spend 35 minutes matching every reserve wedge, seal, and splice to the outbound municipal ledger before the next dispatch. Earn 2 Capital / Mohawk renown.",
+            "consequence": "The serial count closes and the outbound reserve is sealed in its marked bays, your completed-work journal fixes inventory as your priority, and Reese routes the trapped-shift extraction to his public crew.",
+            "terms": {
+              "minutes": 35,
+              "renown": 2
+            }
+          }
+        ]
+      }
     },
     {
       "id": "albany_city__greenway__job",

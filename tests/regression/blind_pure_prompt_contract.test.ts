@@ -5,10 +5,17 @@ import { describe, expect, it } from "vitest";
 const ROOT = process.cwd();
 const prompt = readFileSync(join(ROOT, "blind-tester", "prompt-overworld.md"), "utf8");
 const runner = readFileSync(join(ROOT, "blind-tester", "run.sh"), "utf8");
+const mockAgent = readFileSync(join(ROOT, "blind-tester", "mock-agent.mjs"), "utf8");
 
 describe("pure blind prompt + runner contract", () => {
   it("contains transport and game-owned exit instructions without guided coverage", () => {
     expect(prompt).toContain("mcp__adventureforge__start_overworld");
+    expect(prompt).toContain("first tool invocation");
+    expect(prompt).toContain("MCP resources are empty");
+    expect(prompt).toContain("`list_mcp_resources`");
+    expect(prompt).toContain("`list_mcp_resource_templates`");
+    expect(prompt).toContain("`read_mcp_resource`");
+    expect(prompt).toContain("only\n  permitted discovery fallback is one documented ToolSearch");
     expect(prompt).toContain("current in-game goal");
     expect(prompt).toContain("game presents its actual journey choice");
     expect(prompt).toContain("If you choose continue");
@@ -40,6 +47,10 @@ describe("pure blind prompt + runner contract", () => {
     expect(prompt).toContain("normal player");
     expect(prompt).toContain("context.quest_starts");
     expect(prompt).toContain("pass those values unchanged");
+    expect(prompt).toContain("context.job_scenes");
+    expect(prompt).toContain("context.job_choices");
+    expect(prompt).toContain("exact `[job_id, option_id]` tuple");
+    expect(prompt).toMatch(/passing\s+both values unchanged/);
     expect(prompt).toContain("mcp__adventureforge__start_world_quest");
     expect(prompt).toContain("forbidden structural tool");
     expect(prompt).toContain("Only then conduct the exit interview");
@@ -60,6 +71,13 @@ describe("pure blind prompt + runner contract", () => {
     expect(prompt).not.toMatch(/Albany|Colonie|Wolf-Winter|breaking_weir|cautious_scout/i);
     expect(prompt).not.toContain("resolve_overworld_session_road_encounter");
     expect(prompt).not.toContain("include_actions: false");
+  });
+
+  it("keeps the deterministic selector on exact authored job tuples", () => {
+    expect(mockAgent).toContain("ctx.job_choices");
+    expect(mockAgent).toContain("optionId");
+    expect(mockAgent).toContain("{ option_id: optionId }");
+    expect(mockAgent).toContain("authoredJobIds");
   });
 
   it("pins live mode to pure/default and treats the 1200-second failsafe as failure only", () => {

@@ -157,7 +157,22 @@ const OVERWORLD_ACTION_KINDS = [
     list: (ctx) => ctx.areas,
     tupleIndex: 0,
   },
-  { tool: "work_overworld_session_job", idArg: "job_id", list: (ctx) => ctx.jobs, tupleIndex: 0 },
+  {
+    tool: "work_overworld_session_job",
+    idArg: "job_id",
+    list: (ctx) => {
+      const authoredJobIds = new Set((ctx.job_scenes ?? []).map((scene) => scene[0]));
+      const legacy = (ctx.jobs ?? [])
+        .filter((job) => !authoredJobIds.has(job[0]))
+        .map((job) => ({ id: job[0] }));
+      const authored = (ctx.job_choices ?? []).map(([jobId, optionId]) => ({
+        id: jobId,
+        optionId,
+      }));
+      return [...legacy, ...authored];
+    },
+    tupleIndex: 0,
+  },
   {
     tool: "explore_overworld_session_site",
     idArg: "site_id",
@@ -215,11 +230,23 @@ function pickOverworldAction(ctx, rng) {
     const list = kind.list(ctx) ?? [];
     if (list.length === 0) continue;
     const entry = list[rng.int(0, list.length - 1)];
-    const id = Array.isArray(entry) ? entry[kind.tupleIndex] : entry;
+    const id = Array.isArray(entry)
+      ? entry[kind.tupleIndex]
+      : typeof entry === "object" && entry !== null
+        ? entry.id
+        : entry;
+    const optionId =
+      typeof entry === "object" && entry !== null && "optionId" in entry
+        ? entry.optionId
+        : undefined;
+    const args = {
+      [kind.idArg]: id,
+      ...(optionId === undefined ? {} : { option_id: optionId }),
+    };
     return {
       tool: kind.tool,
-      args: { [kind.idArg]: id },
-      gist: `${kind.tool}(${kind.idArg}=${id})`,
+      args,
+      gist: `${kind.tool}(${kind.idArg}=${id}${optionId === undefined ? "" : `,option_id=${optionId}`})`,
     };
   }
   return null;

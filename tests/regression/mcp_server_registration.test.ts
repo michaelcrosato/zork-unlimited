@@ -274,9 +274,9 @@ describe("MCP server registration", () => {
       registeredToolBlock(toolName),
     ).join("\n");
 
-    // The game-native passage action and optional quest-approach id add bounded
-    // schema blocks; retain a tight ceiling so transport prose cannot regrow.
-    expect(overworldSchemaSource.length).toBeLessThanOrEqual(8250);
+    // The game-native passage action, optional quest approach, and exact authored
+    // job option add bounded schema blocks; retain a tight ceiling around them.
+    expect(overworldSchemaSource.length).toBeLessThanOrEqual(8400);
     expect(overworldSchemaSource).not.toContain("Session id returned by start_overworld");
     expect(overworldSchemaSource).not.toContain("returns compact context by default");
     expect(overworldSchemaSource).not.toContain("from the session observation");
@@ -330,6 +330,11 @@ describe("MCP server registration", () => {
     );
     expect(registeredToolBlock("travel_overworld_session")).toContain("Adjacent destination town.");
     expect(registeredToolBlock("travel_overworld_session")).not.toContain("routes multi-leg");
+    const localJobBlock = registeredToolBlock("work_overworld_session_job");
+    expect(localJobBlock).toContain("option_id: z");
+    expect(localJobBlock).toContain(".optional()");
+    expect(localJobBlock).toContain("Required exact option id");
+    expect(localJobBlock).toContain("api.work_overworld_session_job");
 
     const overworldDefaults = serverSourceBlock(
       "function defaultCompactOverworld",

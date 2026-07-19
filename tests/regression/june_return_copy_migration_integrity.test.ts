@@ -4,6 +4,7 @@ import { hashState } from "../../src/core/hash.js";
 import type { OverworldManifest } from "../../src/world/overworld.js";
 import { OverworldSession } from "../../src/world/session.js";
 import {
+  OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH,
   OVERWORLD_JUNE_RETURN_COPY_PREDECESSOR_WORLD_HASH,
   OVERWORLD_JUNE_RETURN_COPY_WORLD_HASH,
   OVERWORLD_RELIEF_ALLOCATION_WORLD_HASH,
@@ -11,7 +12,10 @@ import {
   OVERWORLD_RELIEF_OATH_WORLD_HASH,
 } from "../../src/world/session_snapshot_restore.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
-import { exactF06World } from "./fixtures/historical_overworlds.js";
+import {
+  exactAuthoredAlbanyWorksPredecessor,
+  exactF06World,
+} from "./fixtures/historical_overworlds.js";
 
 const WORLD = loadOverworldManifest(process.cwd());
 const JUNE_CONTACT_ID = "albany_city__transport_hub__june_pike";
@@ -27,7 +31,7 @@ const PREDECESSOR_CONTACT_TEXT = `${PREDECESSOR_SUMMARY} ${JUNE_LEFT_AGENDA}`;
 const CURRENT_CONTACT_TEXT = `${CURRENT_SUMMARY} ${JUNE_LEFT_AGENDA}`;
 
 function exactJuneReturnCopyPredecessor(world: OverworldManifest): OverworldManifest {
-  const predecessor = structuredClone(world);
+  const predecessor = exactAuthoredAlbanyWorksPredecessor(world);
   const june = predecessor.characters.find((character) => character.id === JUNE_CONTACT_ID);
   const left = june?.variants?.find((variant) => variant.id === JUNE_LEFT_PRESENTATION_ID);
   if (!left) throw new Error("Expected June's left-after-blood contact presentation.");
@@ -124,12 +128,15 @@ describe("June return-copy migration integrity", () => {
     expect(OVERWORLD_JUNE_RETURN_COPY_PREDECESSOR_WORLD_HASH).toBe(
       "a2ddc6e9042a208f2821451f10b0152874ef55bc77b0f7801f3ea58591357474",
     );
-    expect(hashState(WORLD)).toBe(OVERWORLD_JUNE_RETURN_COPY_WORLD_HASH);
+    expect(hashState(exactAuthoredAlbanyWorksPredecessor(WORLD))).toBe(
+      OVERWORLD_JUNE_RETURN_COPY_WORLD_HASH,
+    );
     expect(OVERWORLD_JUNE_RETURN_COPY_WORLD_HASH).toBe(
       "69604947643a24fc2d7c2377a85963742282ac7f83e7cec18a58bfc5eb8f53fc",
     );
-    expect(OVERWORLD_RELIEF_OATH_WORLD_HASH).toBe(OVERWORLD_JUNE_RETURN_COPY_WORLD_HASH);
-    expect(OVERWORLD_RELIEF_ALLOCATION_WORLD_HASH).toBe(OVERWORLD_JUNE_RETURN_COPY_WORLD_HASH);
+    expect(hashState(WORLD)).toBe(OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH);
+    expect(OVERWORLD_RELIEF_OATH_WORLD_HASH).toBe(OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH);
+    expect(OVERWORLD_RELIEF_ALLOCATION_WORLD_HASH).toBe(OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH);
   });
 
   it("normalizes only the exact old June contact copy and remains stable on replay", () => {
@@ -143,7 +150,7 @@ describe("June return-copy migration integrity", () => {
     const restored = restoredSession.snapshot();
     const restoredEntries = juneLeftJournalEntries(restored);
     expect(restored).toMatchObject({
-      worldHash: OVERWORLD_JUNE_RETURN_COPY_WORLD_HASH,
+      worldHash: OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH,
       minutes: predecessor.minutes,
       supplies: predecessor.supplies,
       fatigue: predecessor.fatigue,
@@ -168,7 +175,7 @@ describe("June return-copy migration integrity", () => {
 
     const restored = OverworldSession.restore(WORLD, predecessor).snapshot();
     const restoredEntries = juneLeftJournalEntries(restored);
-    expect(restored.worldHash).toBe(OVERWORLD_JUNE_RETURN_COPY_WORLD_HASH);
+    expect(restored.worldHash).toBe(OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH);
     expect(restoredEntries).toHaveLength(predecessorEntries.length);
     expect(restoredEntries.every((entry) => entry.text === CURRENT_CONTACT_TEXT)).toBe(true);
     expect(OverworldSession.restore(WORLD, restored).snapshot()).toEqual(restored);

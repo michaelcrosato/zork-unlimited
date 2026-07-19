@@ -54,13 +54,18 @@ type FixtureOverworld = Record<string, unknown> & {
     }>;
   };
   characters: Array<{ variants?: FixtureContactVariant[] }>;
+  local_jobs?: Array<{
+    authored_scene?: { requires_completed_quests?: string[] };
+  }>;
 };
 
 const REAL_OVERWORLD = JSON.parse(
   readFileSync(join(process.cwd(), "content", "world", "new_york_overworld.json"), "utf8"),
 ) as FixtureOverworld;
 
-function fixtureOverworldWithOpeningContactVariants(): FixtureOverworld {
+function fixtureOverworldWithOpeningContactVariants(
+  questIds: ReadonlySet<string>,
+): FixtureOverworld {
   const world = structuredClone(REAL_OVERWORLD);
   delete world.campaign_service_rules;
   const openingMemories = new Set(
@@ -76,6 +81,13 @@ function fixtureOverworldWithOpeningContactVariants(): FixtureOverworld {
     );
     if (openingVariants?.length) character.variants = openingVariants;
     else delete character.variants;
+  }
+  // Keep the required one-job-per-area topology, but strip authored overlays
+  // whose quest prerequisites are deliberately absent from this one-quest catalog.
+  for (const job of world.local_jobs ?? []) {
+    if (!job.authored_scene?.requires_completed_quests?.every((questId) => questIds.has(questId))) {
+      delete job.authored_scene;
+    }
   }
   return world;
 }
@@ -96,7 +108,7 @@ function withStaleAuditFixtureRoot(run: (root: string) => void): void {
     writeFileSync(
       join(root, "content", "world", "new_york_overworld.json"),
       JSON.stringify({
-        ...fixtureOverworldWithOpeningContactVariants(),
+        ...fixtureOverworldWithOpeningContactVariants(new Set(["stale_fixture"])),
         opening_ally: undefined,
         opening_lead_source: undefined,
         opening_preparation: undefined,
