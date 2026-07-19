@@ -5,11 +5,11 @@ Generated deterministically from verified blind reports. The latest entries stay
 ## Summary
 
 - Reports dir: `../zork-unlimited/blind-tester/reports`
-- Accepted reports: 875
+- Accepted reports: 876
 - Rejected or ignored markdown reports: 59
-- Latest report stamp: 20260719T192913Z
+- Latest report stamp: 20260719T200113Z
 - Recent entry limit: 100
-- Archived accepted entries collapsed into traits: 775
+- Archived accepted entries collapsed into traits: 776
 
 ## Recent Common Traits
 
@@ -19,6 +19,12 @@ Generated deterministically from verified blind reports. The latest entries stay
 | 2 | 20260719T183208Z | confusion | Repeated Rowan Quill identity | overworld |
 | 2 | 20260719T163904Z | replay | player would not replay | overworld |
 | 2 | 20260719T145523Z | confusion | Dense permanent registration choices | overworld |
+| 1 | 20260719T200113Z | bug S1 | Moor Gully move north: A successful move returned no player-visible state; a legal-actions read was needed to confirm... | overworld |
+| 1 | 20260719T200113Z | bug S1 | Overworld road travel: Visible road wording used dest_town_id while travel required destination_town_id. | overworld |
+| 1 | 20260719T200113Z | confusion | Blank successful movement response | overworld |
+| 1 | 20260719T200113Z | confusion | Raw action and parameter naming | overworld |
+| 1 | 20260719T200113Z | confusion | Truncated compact consequences | overworld |
+| 1 | 20260719T200113Z | worst moment | A road-travel rejection caused by the mismatch between visible field wording and the required parameter. | overworld |
 | 1 | 20260719T192913Z | bug S1 | Albany Relief Compact briefing: The lengthy cascade of permanent choices arrives before their practical quest consequ... | overworld |
 | 1 | 20260719T192913Z | bug S1 | Compact scene text: Truncated consequence prose makes some consequential option comparisons harder. | overworld |
 | 1 | 20260719T192913Z | confusion | Dense permanent setup choices before the first quest | overworld |
@@ -34,17 +40,12 @@ Generated deterministically from verified blind reports. The latest entries stay
 | 1 | 20260719T183208Z | confusion | Checkpoint interrupts active quest tension | overworld |
 | 1 | 20260719T183208Z | confusion | Dense permanent registration choices before practical context | overworld |
 | 1 | 20260719T183208Z | confusion | Long consequence blocks obscure immediate action and risk | overworld |
-| 1 | 20260719T183208Z | confusion | Lure commitment disappeared after backing out | overworld |
-| 1 | 20260719T183208Z | confusion | Quest anchor route appeared only after talking to a contact | overworld |
-| 1 | 20260719T183208Z | confusion | Quest combat stats appear separate from overworld profile | overworld |
-| 1 | 20260719T183208Z | worst moment | Dense pre-mission consequence text made several choices harder to compare quickly. | overworld |
-| 1 | 20260719T183208Z | worst moment | Discovering that the nonlethal lure branch was no longer available after reading other options. | overworld |
-| 1 | 20260719T183208Z | worst moment | Parsing the very long five-stage Albany dispatch setup before the first quest began. | overworld |
 
 ## Recent Entries
 
 | Stamp | Source | Seed | Mode | Decisions | C/E | Stuck | Replay | Report | Signal |
 | --- | --- | ---: | --- | ---: | --- | --- | --- | --- | --- |
+| 20260719T200113Z | overworld | 4194 | pure | 44 | 4/4 | no | yes | `../zork-unlimited/blind-tester/reports/20260719T200113Z_overworld_seed4194.md` | confusions: Raw action and parameter naming; Truncated compact consequences; Blank successful movement response \| bugs: S1 Moor Gully move north: A successful move ret... |
 | 20260719T192913Z | overworld | 4192 | pure | 53 | 4/5 | no | yes | `../zork-unlimited/blind-tester/reports/20260719T192913Z_overworld_seed4192.md` | confusions: Dense permanent setup choices before the first quest; Truncated compact consequence text \| bugs: S1 Albany Relief Compact briefing: The lengthy cascade of... |
 | 20260719T183208Z | overworld | 4191 | pure | 21 | 3/4 | no | yes | `../zork-unlimited/blind-tester/reports/20260719T183208Z_overworld_seed4191.md` | confusions: Dense permanent registration choices before practical context; Quest anchor route appeared only after talking to a contact \| bugs: S1 The Wolf-Winter non-d... |
 | 20260719T183208Z | overworld | 4190 | pure | 52 | 4/4 | no | yes | `../zork-unlimited/blind-tester/reports/20260719T183208Z_overworld_seed4190.md` | confusions: Long consequence blocks obscure immediate action and risk; Quest combat stats appear separate from overworld profile \| bugs: S1 The Gallowmere, Moor's Edge... |
@@ -144,7 +145,6 @@ Generated deterministically from verified blind reports. The latest entries stay
 | 20260714T235614Z | overworld | 2711 | pure | 118 | 4/4 | no | yes | `../zork-unlimited/blind-tester/reports/20260714T235614Z_overworld_seed2711.md` | confusions: dense bracket-tuple compact schema before first action; recurring NPC names/roles across unrelated towns \| bugs: S1 Civic Center / Market Streets discovery... |
 | 20260714T215247Z | overworld | 2708 | pure | 89 | 4/5 | no | yes | `../zork-unlimited/blind-tester/reports/20260714T215247Z_overworld_seed2708.md` | confusions: dense unlabeled compact character array; recurring NPC names across distant towns; notice-hall-scouting-unlocks-quests pattern not signposted up front \| bu... |
 | 20260714T201954Z | overworld | 2706 | pure | 94 | 4/5 | no | yes | `../zork-unlimited/blind-tester/reports/20260714T201954Z_overworld_seed2706.md` | confusions: Registration/source-packet jargon front-loaded before any payoff is visible; Recurring generic NPC names across towns momentarily read as the same individu... |
-| 20260714T183530Z | overworld | 2705 | pure | 96 | 4/4 | no | yes | `../zork-unlimited/blind-tester/reports/20260714T183530Z_overworld_seed2705.md` | confusions: dense compact-context legend (not player-facing); unclear which prep items were mandatory vs flavor until blocked; road-encounter risk labels lacked visibl... |
 
 ## Archived Trait Categories
 

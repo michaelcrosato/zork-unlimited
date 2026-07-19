@@ -289,6 +289,32 @@ rooms:
           not a living turn. Cross without Cade's feed, drive rig, or seals and you choose
           hunt-and-hold; any wolf death ends her agreement. Speak to June, or ask Cade for a
           living plan now. Store west.
+      # The ordinary no-June entry must name the same irreversible choice the optional
+      # June gate speaks aloud. A first visit to the paling retires all three Cade topics,
+      # so this warning is deliberately before both the north exit and the generic tally prose.
+      - when:
+          - { not_flag: june_pike_present }
+          - { not_flag: strategy_lure_committed }
+          - { not_flag: strategy_drive_committed }
+          - { not_flag: strategy_fortify_committed }
+          - { not_flag: read_tally }
+          - { not_visited: paling_gap }
+        text: >
+          Cade's lantern marks the day-book: its wolf-count is worth reading before you leave
+          the yard. Cross north uncommitted: hunt-and-hold permanently retires his feed lure,
+          signal drive, and seal-and-outlast plan. Young wolf at the broken paling north;
+          store west; gate south.
+      - when:
+          - { not_flag: june_pike_present }
+          - { not_flag: strategy_lure_committed }
+          - { not_flag: strategy_drive_committed }
+          - { not_flag: strategy_fortify_committed }
+          - { has_flag: read_tally }
+          - { not_visited: paling_gap }
+        text: >
+          You checked its last wolf-count in Cade's day-book. Cross north uncommitted:
+          hunt-and-hold permanently retires his feed lure, signal drive, and seal-and-outlast
+          plan. Young wolf at the broken paling north; store west; gate south.
       - when: [{ has_flag: read_tally }, { not_flag: strategy_fortify_committed }]
         text: >
           The trampled byre-yard. Old Cade waits by the day-book where you checked its
@@ -3209,10 +3235,9 @@ npcs:
       nodes:
         - id: cade_root
           npc_text: >
-            You came from Albany awake—good. Three wolves are through; without these cattle
-            we starve. Ask for either lesson—or both before you go: quick spear-hand or
-            guarded spear-fighting plan. Or hear the living lure, signal drive, or
-            seal-and-outlast line.
+            You came from Albany awake. Cross north uncommitted: hunt-and-hold permanently
+            retires the living lure/feed lure, signal drive, and seal-and-outlast line. Ask for
+            either lesson—or both before you go: quick spear-hand or guarded spear-fighting plan.
           variants:
             - when:
                 - { has_flag: strategy_drive_committed }
@@ -3245,6 +3270,15 @@ npcs:
                 Albany's order stands. Take the public seals north: paling, threshold, then
                 hold to dawn. My property stays covered and relief stock pays. If the first
                 seat slips, I will not aid it; spend the emergency strip. No strategy switch.
+            - when:
+                - { not_flag: strategy_lure_committed }
+                - { not_flag: strategy_drive_committed }
+                - { not_flag: strategy_fortify_committed }
+                - { visited: paling_gap }
+              text: >
+                The broken paling fixed hunt-and-hold; Cade's feed lure, signal drive, and
+                seal-and-outlast commitments are permanently closed. Carry Albany the exact
+                wolf-and-cattle count.
             - when: [{ has_flag: heard_counsel }, { has_flag: heard_plan }]
               text: >
                 Both lessons are yours. You do not choose a road here: commit to the quick
@@ -3308,7 +3342,7 @@ npcs:
               goto: cade_fortify
             - id: leave
               aliases: [leave_cade]
-              prompt: "Leave Cade. Entering the breach without feed, drive, or seals commits hunt-and-hold."
+              prompt: "Leave Cade."
               end: true
         - id: cade_wolves
           # The combat_guaranteed promise spoken aloud — and TRUE, because the validator
@@ -3370,7 +3404,7 @@ npcs:
               goto: cade_root
             - id: leave
               aliases: [leave_cade]
-              prompt: "Leave Cade. Entering the breach without feed, drive, or seals commits hunt-and-hold."
+              prompt: "Leave Cade."
               end: true
         - id: cade_byre
           npc_text: >
@@ -3423,22 +3457,22 @@ npcs:
               goto: cade_root
             - id: leave
               aliases: [leave_cade]
-              prompt: "Leave Cade. Entering the breach without feed, drive, or seals commits hunt-and-hold."
+              prompt: "Leave Cade."
               end: true
         - id: cade_lure
           npc_text: >
-            My feed line has three casts: paling, loft, old grey. My local instruction
-            crosses the feed-hauler's crawlboard for the second; Tanner's sheet is not
-            required. Each cast raises alarm. Foul the first and there is no retry. Commit
-            before the breach.
+            Cross north uncommitted: hunt-and-hold permanently retires Cade's feed lure,
+            signal drive, and seal-and-outlast plan. This feed line has three casts: paling,
+            loft, old grey. Each raises alarm; foul the first and there is no retry. Commit now.
           variants:
             - when:
                 - { has_flag: relief_oath_limited_duty }
                 - { not_flag: strategy_lure_committed }
               text: >
-                Your aid-only term claims no property authority, so I give its witnessed low
-                herd count. Keep every wolf alive through the first two lines and it suppresses
-                only the final ordinary alarm. A fouled first cast keeps full pressure and no retry.
+                Cross north uncommitted: hunt-and-hold permanently retires Cade's feed lure,
+                signal drive, and seal-and-outlast plan. Aid-only's low herd count suppresses
+                the final alarm only if both younger wolves live. A fouled first cast keeps
+                full pressure.
           topics:
             - id: commit_lure
               aliases: [commit_feed, commit_alive]
@@ -3450,7 +3484,7 @@ npcs:
                 - { not_visited: paling_gap }
               goto: cade_lure_committed
             - id: lure_back
-              prompt: "Decline for now, and ask something else."
+              prompt: "Decline for now; crossing uncommitted chooses hunt-and-hold and permanently retires all living plans."
               goto: cade_root
             - id: leave
               aliases: [leave_cade]
@@ -3539,32 +3573,32 @@ npcs:
               end: true
         - id: cade_fortify
           npc_text: >
-            Keep wolves outside at paling and threshold. Household terms expose outer
-            property, save public seals, and earn my help after a slip. Albany authority
-            covers my property, spends public stock, gets no help. Outlast them to dawn.
+            Both commit north. No retreat; no lure/drive/combat switch. Household terms expose
+            outer property, save public seals, and give my help. Albany authority covers my
+            property, spends public stock, and gives no help. Outlast to dawn.
           variants:
             - when: [{ has_flag: relief_oath_full_duty }]
               text: >
-                Your full-duty annex names my registered lower peg. Under Albany authority,
-                the first public seal drops from DC 14 to 12, or Reese's prepared 12 to 10.
-                I still refuse recovery. Taking household shutters instead breaches your
-                accepted public line.
+                Both commit north. No retreat; no lure/drive/combat switch. Household terms
+                expose outer property, save public seals, give failed-seat aid, breach full
+                duty. Albany authority covers property, spends seals, gives no aid; Repair is 2
+                easier. Hold to dawn.
             - when: [{ has_flag: relief_oath_limited_duty }]
               text: >
-                Your aid-only term claims no property authority. My household terms fit:
-                expose outer buildings, preserve public seals, and gain my failed-seat help.
-                Albany authority stays legal but exceeds your recorded limit; I refuse its
-                recovery hand.
+                Both commit north. No retreat; no lure/drive/combat switch. Household terms
+                expose outer property, save public seals, give failed-seat aid, fit aid-only.
+                Albany authority covers property, spends seals, gives no aid, exceeds
+                aid-only. Hold to dawn.
             - when: [{ has_flag: relief_oath_unaffiliated_bond }]
               text: >
-                Your personal bond claims no Albany authority. My household terms remain
-                open, as do every other strategy. You may still invoke the lawful public
-                order, but that breaks the unaffiliated term you carried, and I refuse the
-                failed-seat hand under it.
+                Both commit north. No retreat; no lure/drive/combat switch. Household terms
+                expose outer property, save public seals, give failed-seat aid, fit the bond.
+                Albany authority covers property, spends seals, gives no aid, breaks the
+                bond. Hold to dawn.
           topics:
             - id: accept_terms
               aliases: [accept_household_terms, take_shutters]
-              prompt: "Accept Cade's household terms: expose outer property, preserve public seals, and receive his aid on one failed first seat. Commit north with no retreat or strategy switch."
+              prompt: "Commit Cade's terms: no retreat; no strategy switch to lure, drive, or combat. Expose outer property; preserve public seals; gain one failed-seat aid."
               conditions:
                 - { not_flag: strategy_lure_committed }
                 - { not_flag: strategy_drive_committed }
@@ -3573,7 +3607,7 @@ npcs:
               goto: cade_fortify_cade_terms
             - id: invoke_authority
               aliases: [order_public_seals, invoke_albany]
-              prompt: "Invoke Albany authority: preserve Cade's property, spend finite public seals, and accept his refusal after a failed first seat. Commit north with no retreat or strategy switch."
+              prompt: "Commit Albany authority: no retreat; no strategy switch to lure, drive, or combat. Preserve property; spend public seals; no aid after a failed seat."
               conditions:
                 - { not_flag: strategy_lure_committed }
                 - { not_flag: strategy_drive_committed }
