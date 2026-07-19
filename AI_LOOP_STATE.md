@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 578 -->
+<!-- historical_cycle_count: 579 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - codex_compaction_context_replay
+
+- Evidence choice: Luna seed 4102 completed one logical turn but normal CLI compaction replayed its `turn_context`, so the exact-one-row verifier falsely rejected a valid provider lifecycle; auth was healthy.
+- Surface: capture and fleet authority accept a later context only after immediate `compacted` → `world_state`, before completion, with identical wrapper keys and every non-timestamp field deep-strict-equal; only the string timestamp may advance.
+- Fail closed: payload/model/turn/cwd changes, extra wrapper fields, absent or reordered compaction rows, arbitrary duplicates, and post-terminal replays still reject in both implementations.
+- Pure evidence: Luna seed 4103 played 99 turns/three goals but omitted server-owned `acceptedDecisions` and was correctly rejected; verifier-valid Terra seed 4104 completed Wolf-Winter by living-pack diversion at decision 31, continued through The Gallowmere, ended at 56, rated 4/4, was unstuck, and would replay.
+- Feedback: Terra's crawlboard report is a real S2 causal-copy defect, not a source-state leak; its blank Gallowmere action was the agent failing to forward a nonempty result. The copy repair stays separate, and neither blind encountered authentication failure.
+- Self-critique: PASS for normal Codex compaction attestation, no change to the `active_unproven` greater-than-BG3 milestone; equivalent JS/TS helpers remain a guarded drift risk and unknown future CLI formats intentionally fail closed.
+- Guard: the retained Luna witness reparses as exact Luna/openai/xhigh authority, independent red-team found no P0–P2, focused positive/negative checks pass, and crawl `20260719T100738Z` is zero-finding at 247/247 nodes, 344/344 edges, and 12/12 boards/quests.
 
 ### Cycle result - codex_native_fleet_attestation
 
@@ -142,12 +152,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Pure evidence: seed 2715 verified pure/fresh, chose Road-Warden + Hayden + Emery and combat, completed Wolf-Winter at decision 28, continued at 28/40/54/75/80, and ended voluntarily after four goals at 97; clarity/enjoyment 5/5, stuck false, replay true. It noted only S0 recurring cross-town NPC names and strategy-preview clarity; deterministic tests carry unsampled fortification.
 - Compile/self-critique: only this verified report is new since compile `20260715T120239Z`, so no compile is due. PASS for F08 and the fourth family, not the greater-than-BG3 slice claim: 9/12 forks are proven; three forks, numeric/fleet certification, and publication remain.
 - Guard: two adversarial audits closed Hammering-copy, hard-lock, migration symmetry, memory/prose, stale-ledger, and false wagon-service gaps. Unchanged-cap ending/action 29/29, liveness 17/17, and score/metamorphic 45/45 passed; post-crawl `20260715T152355Z` reached 247/247 nodes, 344/344 edges, and 12/12 quests; health passed 352 files/2,579 tests, UI, and all 12 packs.
-
-### Cycle result - wolf_winter_crisis_priority
-
-- Evidence choice: `SS-F10-crisis-priority` was the next defining-slice gap because Albany → Wolf-Winter had combat and lure resolutions but no complete third strategy with a persistent protection tradeoff.
-- Surface: Cade now discloses a hard `drive_and_evacuate` commitment: a two-charge rig, two spatial living-wolf turns, visible Pack Drive pressure, one non-retry hurdle recovery, and no later switch to lure/combat. At the byre crisis, the player irreversibly chooses a whole herd plus untreated wound, every person plus two scattered cattle, or people/herd unharmed plus a cut-apart rig; every completion knowingly forfeits the outer defense line, and June independently takes the lower gate when present.
-- Integrity/counterfactual: three same-origin traces reverse wound/cattle/resource state and Station/Greenway services; generic atomic `suffer_wound`, exact F04 journal-copy normalization, bounded 10-service/6-ending migration, truthful 9x2 return copy, and full/compact/UI replay carry each cost without double application. The ledger advances from 7/12 to 8/12 and from two to three of four strategy families.
-- Pure evidence: seed 2714 verified pure/fresh, chose Road-Warden + Hayden's report + Reese's Works, completed Wolf-Winter by combat at decision 30, continued at 30/40/55/76/80, and ended voluntarily after four goals at 96; clarity/enjoyment 4/5, stuck false, replay true, no functional bug. Deterministic paired proofs carry the unsampled drive family.
-- Compile/self-critique: compile `20260715T120239Z` contains 782 verified/35 rejected reports and 33 current-contract pure exits, all continuing at least once. PASS for F10 and `drive_and_evacuate`, not the greater-than-BG3 slice claim: 8/12 forks and three of four families are proven; binary `SS-F08-cade-trust` plus `fortify_and_outlast` is next.
-- Guard: independent gameplay and world/migration audits closed state-cap, dead-copy, compact-copy, semantic-witness, prep-leak, disclosure, rig-copy, wound-zero, and historical-save gaps. Unchanged 800,000-state liveness/score searches passed 17/17 and 19/19; pre/post crawls `20260715T092531Z`/`20260715T123630Z` reached 247/247 nodes, 344/344 edges, and 12/12 quests.

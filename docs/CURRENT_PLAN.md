@@ -4,87 +4,65 @@ Token-small AFK-loop handoff. The durable milestone and evidence rules live in
 [`STARTING_SLICE.md`](STARTING_SLICE.md); do not replace that contract during an
 ultraplan.
 
-## Cycle: 2026-07-19 — Codex-Native Fleet Attestation
+## Cycle: 2026-07-19 — Codex Compaction Snapshot Attestation
 
 ## Synthesis
 
-Strict Codex resource-preflight compatibility is merged on `main` with both
-required GitHub checks green. Routine pure single runs and fleets now default to
-Codex `gpt-5.3-codex-spark`, using the dedicated weekly allowance, while the
-canonical readiness and authority commands explicitly pin homogeneous Terra.
-Claude remains an explicit compatibility provider.
+The first long Luna blind exposed a verifier false rejection, not an
+authentication failure. Its retained private rollout had one session, one
+logical turn, one completed lifecycle, and two `turn_context` rows. The second
+row was the same logical context replayed by the Codex CLI immediately after an
+automatic `compacted → world_state` snapshot; only its wrapper timestamp had
+advanced.
 
-This increment replaces requested-model trust with a provider-discriminated
-fleet contract. Codex members accept only exact Sol, Terra, Luna, or Spark ids.
-Each run starts in an isolated `player` directory with a fresh `CODEX_HOME` that
-imports only `auth.json`; user/project rules, shell, web, apps, plugins, browser,
-computer use, and subagents are disabled. The CLI runs read-only at `xhigh` and
-persists exactly one private rollout rather than relying on synthesized usage
-fields.
+Capture and fleet authority now share the same narrow normalization. The first
+context remains authoritative. A later context is accepted only immediately
+after that exact two-row compaction prefix and before `task_complete`, with an
+identical wrapper key set and deep-strict equality for every non-timestamp field,
+including model, effort, turn id, cwd, sandbox, and full payload. Timestamp
+presence and string type must match, but its value may advance. An arbitrary,
+altered, extra-field, out-of-sequence, second-turn, or post-completion context
+still fails closed.
 
-Codex attestation v3 binds the public thread to one private `session_meta`, one
-turn, the exact selected model, provider `openai`, effort, turn id, completed
-lifecycle, final report bytes, game session, and every provider/game artifact
-hash. A capture-time receipt verifies the still-live player cwd by canonical
-path plus filesystem identity and binds the copied rollout hash. Later checks
-reparse that retained assertion; they do not claim a provider signature or the
-ability to re-stat the deleted temporary directory.
+The actual rejected Luna seed 4102 public/private artifacts now reparse as one
+authenticated `gpt-5.6-luna` turn under the repaired authority path. Negative
+tests cover payload substitution, extra wrapper fields, missing compaction,
+repeated valid compactions, and post-terminal replay in both capture and fleet
+validation. A future unrecognized CLI format intentionally rejects until
+reviewed.
 
-Abort/error history, a row after terminal `task_complete`, report recovery,
-missing/duplicate rollouts, aliases, fallback, mixed models, reused sessions,
-links, path escape, stale artifacts, dirty certification builds, retries, and
-resume all fail closed. Historical Claude v2 remains readable. Structural mock
-fleets preserve a valid launcher provider and remain zero-token/non-certifying.
+Fresh Luna seed 4103 then played 99 turns through three completed goals without
+an auth or launcher failure, but omitted `acceptedDecisions` from its copied
+exit receipt. The verifier correctly rejected it and no report is counted.
+Fresh Terra seed 4104 produced a fully verified report: it completed Wolf-Winter
+by living-pack diversion at decision 31, continued through The Gallowmere, ended
+at goal completion on decision 56, rated clarity/enjoyment 4/4, was not stuck,
+and would replay. Its crawlboard report is a real S2 causal-copy defect, not a
+source-state leak; the Gallowmere blank result was the blind agent failing to
+forward a nonempty tool response, not a game defect. Both stay outside this
+infrastructure fix.
 
-A real dirty-build Terra seed 4096 exercised the new runner path end to end. Its
-940 KB private rollout reparsed as exact `gpt-5.6-terra`, provider `openai`, one
-session/turn, read-only `xhigh`, and the captured isolated cwd. The verifier-valid
-fresh journey completed Wolf-Winter by fortification at decision 20, continued
-twice, completed The Gallowmere at 44, rated clarity/enjoyment 4/4, and would
-replay. It again identified front-loaded Albany registration density.
+The exact post-change crawl `20260719T100738Z` is zero-finding at 247/247 nodes,
+344/344 edges, and all 12 boards/quests. Focused capture, authority, attestation,
+and certifier checks are green. Full health passes at 381 files and 2,906 tests,
+including integrity, typecheck, lint, format, UI typecheck, and all 12 packs.
 
-Clean-build Terra seed 4100 then exercised the complete production fleet path:
-`fleet.mjs → run.sh → rollout capture → v3 attestation → manifest`.
-The one-member no-resume/no-retry cohort verified 1/1 with zero failed attempts,
-bound exact model/provider/effort and all artifact hashes, completed Wolf-Winter
-by pack diversion at decision 31, continued once, and ended honestly at the
-decision-40 checkpoint. Its manifest records clean commit `58d9e6cd` and world
-hash `815a138c`.
-
-The new compile contains 824 verified reports and 73 current-contract pure
-exits, 63 with at least one continuation. Six new accepted reports all rated
-clarity/enjoyment 4/4 and would replay; the meaningful repeated signal is still
-the long mandatory Wolf registration chain, not an auth failure. The compiled
-historical top rank remains stale structural board copy. Civic Charter Backlog
-is the live Depth Contract #11 target and must stay optional for Wolf progress.
-
-The greater-than-BG3 milestone remains `active_unproven`. Five Albany district
-jobs/events remain generic; global failure-forward proof, three independent NPC
-agendas, current deep crawl, organic strategy diversity, and the exact
-same-model pilot plus 100-player certification remain open.
+The greater-than-BG3 milestone remains `active_unproven`; this increment repairs
+the evidence pipeline and does not claim gameplay-depth progress.
 
 ## Chosen Move
 
-Re-run the affected gates on the exact rebased tree, push the attestation
-increment through a short-lived PR, and merge only after GitHub `verify` and
-`crawl-smoke` pass.
-
-In parallel, finish the Civic Ledger/Charter Backlog authored scene. Its policy
-choice must occur before Wolf-Winter, survive migration honestly, and select
-exactly one outcome-aware return closure. Consume the accumulated cohort signal
-by keeping this scene optional and its cards focused on the immediate policy
-tradeoff plus one delayed return hook instead of adding another mandatory
-briefing layer.
+Commit this as a separate infrastructure increment, push it through the required
+GitHub `verify` and `crawl-smoke` checks, and merge only when both are green.
+Then rebase the completed Civic Winter Return Docket on the hotfix and land that
+authored Albany increment with a clean final-tree blind.
 
 ## Acceptance for this increment
 
-1. Exact provider/model/effort/session/turn/lifecycle facts are reconstructed
-   from one retained private Codex rollout and agree with public events/report.
-2. Capture receipt, artifact hashes, sterile home, cwd isolation, clean-build
-   fleet rules, resume, retries, and failure histories all fail closed under
-   coherent negative tests while historical Claude v2 remains compatible.
-3. Ordinary blind/fleet defaults are Codex Spark; canonical pilot/authority
-   examples pin Terra and state the same-model pilot as an operational gate.
-4. One real Terra blind run and one clean real fleet member pass, post-crawl is
-   zero-finding, full health is green, and required GitHub checks pass before
-   merge.
+1. Real automatic compaction replays attest as one logical turn despite a later
+   wrapper timestamp.
+2. Any payload, wrapper shape, sequence, lifecycle, model, cwd, or turn change
+   remains rejected in capture and fleet authority.
+3. The retained Luna witness reparses, a fresh canonical report verifies, exact
+   post-crawl and full health pass, and no rejected run is counted as evidence.
+4. Required GitHub checks are green before merge.
