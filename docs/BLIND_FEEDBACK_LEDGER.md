@@ -5,46 +5,57 @@ Generated deterministically from verified blind reports. The latest entries stay
 ## Summary
 
 - Reports dir: `../zork-unlimited/blind-tester/reports`
-- Accepted reports: 864
+- Accepted reports: 875
 - Rejected or ignored markdown reports: 59
-- Latest report stamp: 20260719T174911Z
+- Latest report stamp: 20260719T192913Z
 - Recent entry limit: 100
-- Archived accepted entries collapsed into traits: 764
+- Archived accepted entries collapsed into traits: 775
 
 ## Recent Common Traits
 
 | Count | Latest | Category | Trait | Sources |
 | ---: | --- | --- | --- | --- |
-| 3 | 20260719T163904Z | replay | player would not replay | overworld |
+| 2 | 20260719T183208Z | confusion | Dense permanent setup choices | overworld |
+| 2 | 20260719T183208Z | confusion | Repeated Rowan Quill identity | overworld |
+| 2 | 20260719T163904Z | replay | player would not replay | overworld |
 | 2 | 20260719T145523Z | confusion | Dense permanent registration choices | overworld |
-| 2 | 20260716T101651Z | bug S2 | road to Colonie: road encounter text repeats itself on back-to-back trips | overworld |
-| 2 | 20260716T101651Z | bug S3 | Albany Station Quarter: notice board wording is confusing about where the quest actually starts | overworld |
-| 2 | 20260716T101651Z | confusion | the notice board near Albany Station Quarter doesn't say where the quest actually starts | overworld |
-| 2 | 20260716T101651Z | worst moment | Running into the Albany Station Quarter issue. | overworld |
-| 2 | 20260716T101651Z | worst moment | Running into the road to Colonie issue. | overworld |
-| 1 | 20260719T174911Z | bug S1 | Albany local-area movement: A visible local route id was rejected until the tool-specific area_route_id field was used. | overworld |
-| 1 | 20260719T174911Z | confusion | Checkpoint interrupts active quest | overworld |
-| 1 | 20260719T174911Z | confusion | Dense first-mission setup | overworld |
-| 1 | 20260719T174911Z | confusion | Local route parameter naming | overworld |
-| 1 | 20260719T174911Z | worst moment | The long permanent-choice dispatch briefing arrived before I had learned the core field loop. | overworld |
-| 1 | 20260719T163904Z | bug S1 | Albany Civic Center — Relief Compact registration: Five permanent choices arrive with dense consequence text and no c... | overworld |
-| 1 | 20260719T163904Z | bug S1 | Albany Civic Center to Station Quarter walk: The shown route needed an undocumented area_route_id parameter rather th... | overworld |
-| 1 | 20260719T163904Z | bug S1 | Albany Relief Compact registration: Several permanent, high-context choices arrive before the core quest loop is expe... | overworld |
-| 1 | 20260719T163904Z | bug S1 | Albany relief registration: Long consequence text makes first-time option comparison cumbersome. | overworld |
-| 1 | 20260719T163904Z | bug S1 | Compact choice displays: Important consequence text truncates, making tradeoffs difficult to compare. | overworld |
-| 1 | 20260719T163904Z | bug S1 | Gallowmere kill-site: A failed tracking attempt invites retries without explaining a cap or alternative. | overworld |
-| 1 | 20260719T163904Z | bug S1 | Gallowmere shepherd's bothy: Dialogue options displayed duplicate internal wording such as ask_ask_sow. | overworld |
-| 1 | 20260719T163904Z | bug S1 | Queensbury Civic Center: Rowan Quill reappeared as a local contact after being established in Albany. | overworld |
-| 1 | 20260719T163904Z | bug S1 | Queensbury Market Streets — The Gallowmere launch: A newly launched quest can be immediately paused by the scheduled... | overworld |
-| 1 | 20260719T163904Z | bug S1 | The northbound relief-line road encounter: The strategy choices were visible, but the resolution control was not clea... | overworld |
-| 1 | 20260719T163904Z | bug S1 | Wolf-Winter — The Steading Yard: Legal action IDs are shown without identifying the action-execution control. | overworld |
-| 1 | 20260719T163904Z | bug S1 | Wolf-Winter dispatch setup: The stated next relief-allocation step did not appear until moving to the station. | overworld |
-| 1 | 20260719T163904Z | bug S1 | Wolf-Winter route and relief allocation: Combined modifiers are explained but not recalculated into one final preview. | overworld |
+| 1 | 20260719T192913Z | bug S1 | Albany Relief Compact briefing: The lengthy cascade of permanent choices arrives before their practical quest consequ... | overworld |
+| 1 | 20260719T192913Z | bug S1 | Compact scene text: Truncated consequence prose makes some consequential option comparisons harder. | overworld |
+| 1 | 20260719T192913Z | confusion | Dense permanent setup choices before the first quest | overworld |
+| 1 | 20260719T192913Z | confusion | Truncated compact consequence text | overworld |
+| 1 | 20260719T192913Z | worst moment | Absorbing the dense five-part Albany briefing before experiencing the quest loop. | overworld |
+| 1 | 20260719T183208Z | bug S1 | Albany Civic Center area movement: The displayed route did not make the required area_route_id input clear. | overworld |
+| 1 | 20260719T183208Z | bug S1 | Queensbury Civic Center: A second Rowan Quill appears without enough continuity framing. | overworld |
+| 1 | 20260719T183208Z | bug S1 | The Gallowmere, Moor's Edge: Quest combat stats are not clearly connected to the overworld character sheet. | overworld |
+| 1 | 20260719T183208Z | bug S1 | The Moor Gully: The decision-40 pause interrupts the confrontation immediately after the wind-stone unlocks it. | overworld |
+| 1 | 20260719T183208Z | bug S1 | The Wolf-Winter non-death ending foldback: The ending response still exposed rpg_session_id after returning to the ov... | overworld |
+| 1 | 20260719T183208Z | bug S2 | Old Cade's living-lure dialogue: Backing out to inspect other plans removed the lure commitment without warning. | overworld |
+| 1 | 20260719T183208Z | confusion | Area-route input field was unclear | overworld |
+| 1 | 20260719T183208Z | confusion | Checkpoint interrupts active quest tension | overworld |
+| 1 | 20260719T183208Z | confusion | Dense permanent registration choices before practical context | overworld |
+| 1 | 20260719T183208Z | confusion | Long consequence blocks obscure immediate action and risk | overworld |
+| 1 | 20260719T183208Z | confusion | Lure commitment disappeared after backing out | overworld |
+| 1 | 20260719T183208Z | confusion | Quest anchor route appeared only after talking to a contact | overworld |
+| 1 | 20260719T183208Z | confusion | Quest combat stats appear separate from overworld profile | overworld |
+| 1 | 20260719T183208Z | worst moment | Dense pre-mission consequence text made several choices harder to compare quickly. | overworld |
+| 1 | 20260719T183208Z | worst moment | Discovering that the nonlethal lure branch was no longer available after reading other options. | overworld |
+| 1 | 20260719T183208Z | worst moment | Parsing the very long five-stage Albany dispatch setup before the first quest began. | overworld |
 
 ## Recent Entries
 
 | Stamp | Source | Seed | Mode | Decisions | C/E | Stuck | Replay | Report | Signal |
 | --- | --- | ---: | --- | ---: | --- | --- | --- | --- | --- |
+| 20260719T192913Z | overworld | 4192 | pure | 53 | 4/5 | no | yes | `../zork-unlimited/blind-tester/reports/20260719T192913Z_overworld_seed4192.md` | confusions: Dense permanent setup choices before the first quest; Truncated compact consequence text \| bugs: S1 Albany Relief Compact briefing: The lengthy cascade of... |
+| 20260719T183208Z | overworld | 4191 | pure | 21 | 3/4 | no | yes | `../zork-unlimited/blind-tester/reports/20260719T183208Z_overworld_seed4191.md` | confusions: Dense permanent registration choices before practical context; Quest anchor route appeared only after talking to a contact \| bugs: S1 The Wolf-Winter non-d... |
+| 20260719T183208Z | overworld | 4190 | pure | 52 | 4/4 | no | yes | `../zork-unlimited/blind-tester/reports/20260719T183208Z_overworld_seed4190.md` | confusions: Long consequence blocks obscure immediate action and risk; Quest combat stats appear separate from overworld profile \| bugs: S1 The Gallowmere, Moor's Edge... |
+| 20260719T183208Z | overworld | 4189 | pure | 40 | 4/4 | no | yes | `../zork-unlimited/blind-tester/reports/20260719T183208Z_overworld_seed4189.md` | confusions: Lure commitment disappeared after backing out; Area-route input field was unclear \| bugs: S2 Old Cade's living-lure dialogue: Backing out to inspect other... |
+| 20260719T183208Z | overworld | 4188 | pure | 46 | 4/4 | no | yes | `../zork-unlimited/blind-tester/reports/20260719T183208Z_overworld_seed4188.md` | confusions: Dense permanent setup choices; Checkpoint interrupts active quest tension; Repeated Rowan Quill identity \| bugs: S1 The Moor Gully: The decision-40 pause i... |
+| 20260719T181946Z | overworld | 4187 | pure | 43 | 4/4 | no | yes | `../zork-unlimited/blind-tester/reports/20260719T181946Z_overworld_seed4187.md` | confusions: Dense pre-quest consequence terminology; Unexplained Rowan Quill reappearance; Local movement parameter naming \| bugs: S2 Gallowmere Hollow transition: The... |
+| 20260719T181946Z | overworld | 4186 | pure | 43 | 4/4 | no | yes | `../zork-unlimited/blind-tester/reports/20260719T181946Z_overworld_seed4186.md` | confusions: Dense permanent-effect briefings; Road encounter command unclear; Gallowmere offered only lethal resolution \| bugs: S1 Embedded quest first action: The nat... |
+| 20260719T181946Z | overworld | 4185 | pure | 55 | 4/4 | no | yes | `../zork-unlimited/blind-tester/reports/20260719T181946Z_overworld_seed4185.md` | confusions: Compact quest action ids were mechanical rather than readable labels; Retry consequences for failed tracking were unclear \| bugs: S1 The Kill Site: Trackin... |
+| 20260719T181946Z | overworld | 4184 | pure | 54 | 4/4 | no | yes | `../zork-unlimited/blind-tester/reports/20260719T181946Z_overworld_seed4184.md` | confusions: Area-route tool parameter name; Checkpoint interrupted an active quest \| bugs: S1 Albany Civic Center to Market Streets: The first local movement attempt w... |
+| 20260719T181946Z | overworld | 4183 | pure | 40 | 3/4 | no | yes | `../zork-unlimited/blind-tester/reports/20260719T181946Z_overworld_seed4183.md` | confusions: Compact state schema overload; Raw embedded-quest action IDs; Second rail use was easy to miss \| bugs: S1 The Wolf-Winter embedded quest: Action IDs are te... |
+| 20260719T181946Z | overworld | 4182 | pure | 56 | 4/4 | no | yes | `../zork-unlimited/blind-tester/reports/20260719T181946Z_overworld_seed4182.md` | confusions: Opening registration choices are unusually dense; Urgency versus resting was unclear; Future mechanics appear in option previews before introduction \| bugs... |
 | 20260719T174911Z | overworld | 4181 | pure | 47 | 4/4 | no | yes | `../zork-unlimited/blind-tester/reports/20260719T174911Z_overworld_seed4181.md` | confusions: Dense first-mission setup; Local route parameter naming; Checkpoint interrupts active quest \| bugs: S1 Albany local-area movement: A visible local route id... |
 | 20260719T163904Z | overworld | 4180 | pure | 40 | 3/4 | no | yes | `../zork-unlimited/blind-tester/reports/20260719T163904Z_overworld_seed4180.md` | confusions: Dense permanent-choice setup; Road encounter resolution control was unclear \| bugs: S1 The northbound relief-line road encounter: The strategy choices were... |
 | 20260719T163904Z | overworld | 4179 | pure | 40 | 4/4 | no | yes | `../zork-unlimited/blind-tester/reports/20260719T163904Z_overworld_seed4179.md` | confusions: Dense five-stage relief registration; Quest action executor was not named; New quest immediately paused at checkpoint \| bugs: S1 Albany Civic Center — Reli... |
@@ -134,31 +145,20 @@ Generated deterministically from verified blind reports. The latest entries stay
 | 20260714T215247Z | overworld | 2708 | pure | 89 | 4/5 | no | yes | `../zork-unlimited/blind-tester/reports/20260714T215247Z_overworld_seed2708.md` | confusions: dense unlabeled compact character array; recurring NPC names across distant towns; notice-hall-scouting-unlocks-quests pattern not signposted up front \| bu... |
 | 20260714T201954Z | overworld | 2706 | pure | 94 | 4/5 | no | yes | `../zork-unlimited/blind-tester/reports/20260714T201954Z_overworld_seed2706.md` | confusions: Registration/source-packet jargon front-loaded before any payoff is visible; Recurring generic NPC names across towns momentarily read as the same individu... |
 | 20260714T183530Z | overworld | 2705 | pure | 96 | 4/4 | no | yes | `../zork-unlimited/blind-tester/reports/20260714T183530Z_overworld_seed2705.md` | confusions: dense compact-context legend (not player-facing); unclear which prep items were mandatory vs flavor until blocked; road-encounter risk labels lacked visibl... |
-| 20260714T180613Z | overworld | 2704 | pure | 117 | 5/5 | no | yes | `../zork-unlimited/blind-tester/reports/20260714T180613Z_overworld_seed2704.md` | confusions: list_legal_actions rejects a valid overworld session_id with no signal it's embedded-quest-only; quest discovery pattern (scout POI → find quest) becomes p... |
-| 20260714T174549Z | overworld | 2703 | pure | 91 | 4/5 | no | yes | `../zork-unlimited/blind-tester/reports/20260714T174549Z_overworld_seed2703.md` | confusions: reused NPC names across different towns; Tanner's Fever score capped at 40/50 with no clue why \| bugs: S1 Albany/Queensbury/Oneonta civic centers: Same-nam... |
-| 20260714T145549Z | overworld | 13 | pure | 92 | 4/4 | no | yes | `../zork-unlimited/blind-tester/reports/20260714T145549Z_overworld_seed13.md` | confusions: compact context schema (tuples/legend) needed careful parsing at first; unclear that areas must be scouted before quests/jobs become visible; no explicit w... |
-| 20260714T055100Z | overworld | 12 | pure | 133 | 4/5 | no | yes | `../zork-unlimited/blind-tester/reports/20260714T055100Z_overworld_seed12.md` | confusions: distinguishing goal-completion pause vs. fixed-decision checkpoint vs. story choice at first exposure; one go_east loop back to the same room instead of ro... |
-| 20260714T042417Z | overworld | 10 | pure | 67 | 4/4 | no | yes | `../zork-unlimited/blind-tester/reports/20260714T042417Z_overworld_seed10.md` | confusions: byre-jerkin required a separate wear step after pickup; dense compact-context tuple format has a learning curve \| bugs: S1 Store-Shed, The Wolf-Winter ques... |
-| 20260714T032448Z | overworld | 8 | pure | 120 | 4/5 | no | yes | `../zork-unlimited/blind-tester/reports/20260714T032448Z_overworld_seed8.md` | confusions: templated market-broker and notice-hall flavor text repeated near-verbatim across towns \| bugs: S1 market-broker NPCs and civic-center notice halls, every... |
-| 20260714T025247Z | overworld | 7 | pure | 120 | 4/4 | no | yes | `../zork-unlimited/blind-tester/reports/20260714T025247Z_overworld_seed7.md` | confusions: perfect scores felt achievable regardless of choice quality, reducing stakes; fatigue/supply thresholds and their real consequences were never made explici... |
-| 20260714T021201Z | overworld | 7 | pure | 89 | 4/5 | no | yes | `../zork-unlimited/blind-tester/reports/20260714T021201Z_overworld_seed7.md` | confusions: redundant-seeming explicit quest fold-back call after step_action already showed the completion data; unclear upfront whether NPC dialogue branches are all... |
-| 20260713T055537Z | overworld | 6099 | structural | — | 2/3 | no | yes | `../zork-unlimited/blind-tester/reports/20260713T055537Z_overworld_seed6099.md` | bugs: S2 road to Colonie: road encounter text repeats itself on back-to-back trips; S1 seed-6099 corner: minor wording nit unique to seed 6099 |
-| 20260713T055537Z | overworld | 6098 | structural | — | 4/3 | no | no | `../zork-unlimited/blind-tester/reports/20260713T055537Z_overworld_seed6098.md` | confusions: the notice board near Albany Station Quarter doesn't say where the quest actually starts \| bugs: S3 Albany Station Quarter: notice board wording is confusi... |
-| 20260713T055537Z | overworld | 6097 | structural | — | 3/2 | no | yes | `../zork-unlimited/blind-tester/reports/20260713T055537Z_overworld_seed6097.md` | worst: Nothing stood out as bad — tried hard to break it and it held up. |
 
 ## Archived Trait Categories
 
 | Count | Latest | Category | Trait | Sources |
 | ---: | --- | --- | --- | --- |
-| 319 | 20260713T055537Z | replay | player would not replay | overworld, tide_mill, wolf_winter |
-| 128 | 20260713T055537Z | bug S3 | Albany Station Quarter: notice board wording is confusing about where the quest actually starts | overworld |
-| 128 | 20260713T055537Z | confusion | the notice board near Albany Station Quarter doesn't say where the quest actually starts | overworld |
-| 128 | 20260713T055537Z | worst moment | Running into the Albany Station Quarter issue. | overworld |
-| 85 | 20260713T055537Z | bug S2 | road to Colonie: road encounter text repeats itself on back-to-back trips | overworld |
+| 320 | 20260713T055537Z | replay | player would not replay | overworld, tide_mill, wolf_winter |
+| 129 | 20260713T055537Z | bug S3 | Albany Station Quarter: notice board wording is confusing about where the quest actually starts | overworld |
+| 129 | 20260713T055537Z | confusion | the notice board near Albany Station Quarter doesn't say where the quest actually starts | overworld |
+| 129 | 20260713T055537Z | worst moment | Running into the Albany Station Quarter issue. | overworld |
+| 86 | 20260713T055537Z | bug S2 | road to Colonie: road encounter text repeats itself on back-to-back trips | overworld |
 | 63 | 20260713T055537Z | stuck | player got stuck | overworld |
 | 60 | 20260713T055537Z | understanding | goal was not understood | overworld |
-| 43 | 20260713T055537Z | worst moment | Running into the road to Colonie issue. | overworld |
-| 42 | 20260713T055537Z | worst moment | Nothing stood out as bad — tried hard to break it and it held up. | overworld |
+| 44 | 20260713T055537Z | worst moment | Running into the road to Colonie issue. | overworld |
+| 43 | 20260713T055537Z | worst moment | Nothing stood out as bad — tried hard to break it and it held up. | overworld |
 | 17 | 20260708T190729Z | confusion | completed quest still listed | overworld |
 | 17 | 20260708T173453Z | confusion | road encounter appears after arrival | overworld |
 | 7 | 20260708T211319Z | confusion | hidden counts are abstract | overworld |

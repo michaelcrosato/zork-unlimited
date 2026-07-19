@@ -16,6 +16,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   PURE_PLAYER_TOOLS,
+  resolveAreaMoveSelector,
   resolveVisibleAreaRouteId,
   toolAvailableInPlayMode,
 } from "../../src/mcp/server.js";
@@ -104,6 +105,22 @@ function expectAliasedToolSchema(
       expect.objectContaining({ required: [canonicalName] }),
       expect.objectContaining({ required: [aliasName] }),
     ]),
+  );
+}
+
+function expectOneOfToolSchema(
+  listed: Awaited<ReturnType<Client["listTools"]>>,
+  name: string,
+  argumentNames: readonly string[],
+): void {
+  const schema = listed.tools.find((tool) => tool.name === name)?.inputSchema;
+  expect(schema, name).toBeDefined();
+  expect(schema?.type, name).toBe("object");
+  for (const argumentName of argumentNames) {
+    expect(schema?.properties, name).toHaveProperty(argumentName);
+  }
+  expect(schema?.anyOf, name).toEqual(
+    argumentNames.map((argumentName) => ({ required: [argumentName] })),
   );
 }
 
@@ -234,6 +251,7 @@ function fixtureEntry(
 function createDenseAreaFixture(root: string): {
   revealPoiIds: string[];
   hiddenDestinationId: string;
+  hiddenRouteId: string;
 } {
   cpSync(join(ROOT, "content"), join(root, "content"), { recursive: true });
   const worldPath = join(root, "content", "world", "new_york_overworld.json");
@@ -366,7 +384,11 @@ function createDenseAreaFixture(root: string): {
   });
 
   writeFileSync(worldPath, JSON.stringify(world));
-  return { revealPoiIds, hiddenDestinationId: denseAreaIds.at(-1)! };
+  return {
+    revealPoiIds,
+    hiddenDestinationId: denseAreaIds.at(-1)!,
+    hiddenRouteId: "albany_city__area_route__civic_core__dense_alias_13",
+  };
 }
 
 async function prepareDenseAreaSession(
@@ -424,11 +446,82 @@ describe("MCP pure play mode", () => {
     ).toThrow(/multiple currently visible routes/);
   });
 
+  it("lets a visible exact selector resolve an otherwise ambiguous area_id", () => {
+    const routes = [
+      ["market_short", "market", 5],
+      ["market_safe", "market", 9],
+      ["campus_loop", "campus", 7],
+    ] as const;
+    expect(() => resolveAreaMoveSelector(routes, { area_id: "market" })).toThrow(
+      /multiple currently visible routes.*area_route_id or route_id/,
+    );
+    expect(
+      resolveAreaMoveSelector(routes, { area_route_id: "market_short", area_id: "market" }, true),
+    ).toBe("market_short");
+    expect(
+      resolveAreaMoveSelector(routes, { route_id: "market_safe", area_id: "market" }, true),
+    ).toBe("market_safe");
+    expect(() =>
+      resolveAreaMoveSelector(routes, { route_id: "hidden_edge", area_id: "market" }, true),
+    ).toThrow(/not a currently visible route/);
+    expect(() =>
+      resolveAreaMoveSelector(routes, { route_id: "market_short", area_id: "campus" }, true),
+    ).toThrow(/Conflicting route_id and area_id/);
+  });
+
+  it("accepts the reported Civic-to-Transport-Hub edge through compact route_id", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "mcp-route-id-alias-"));
+    const evidence = join(dir, "run.jsonl");
+    try {
+      await withPureServer(evidence, async (client) => {
+        const started = await callPlayerTool(client, "start_overworld", {});
+        const sessionId = String(started.session_id);
+        const parent = { session_id: sessionId };
+        await callPlayerTool(client, "scout_overworld_session_poi", {
+          ...parent,
+          poi_id: "albany_city__civic_core__poi",
+        });
+        await callPlayerTool(client, "talk_overworld_session_contact", {
+          ...parent,
+          contact_id: "albany_city__civic_core__contact",
+        });
+        for (const choice of [
+          "albany:ledger_advocate",
+          "albany:oath_limited_aid_only",
+          "albany:source_rowan_civic_docket",
+          "albany:prep_works_fortification",
+        ]) {
+          await callPlayerTool(client, "choose_overworld_session_story", { ...parent, choice });
+        }
+        const context = await callPlayerTool(client, "get_overworld_session_context", parent);
+        const exactRouteId = "albany_city__area_route__civic_core__transport_hub__shortcut_1";
+        const routes = (context.context as { area_routes?: [string, string, number][] })
+          .area_routes;
+        expect(routes).toContainEqual([exactRouteId, "albany_city__transport_hub", 5]);
+
+        const moved = await callPlayerTool(client, "move_overworld_session_area", {
+          ...parent,
+          route_id: exactRouteId,
+        });
+        expect((moved.context as { here?: unknown[] }).here?.[3]).toBe(
+          "albany_city__transport_hub",
+        );
+        expect(
+          (moved.journey as { decisionProof?: { last?: { actionId?: string } } }).decisionProof
+            ?.last?.actionId,
+        ).toBe(`move_area:${exactRouteId}`);
+      });
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }, 120_000);
+
   it("uses verbose full visibility beyond the compact route cap without widening pure play", async () => {
     const dir = mkdtempSync(join(tmpdir(), "mcp-dense-area-alias-"));
     const fixtureRoot = join(dir, "fixture");
     mkdirSync(fixtureRoot, { recursive: true });
-    const { revealPoiIds, hiddenDestinationId } = createDenseAreaFixture(fixtureRoot);
+    const { revealPoiIds, hiddenDestinationId, hiddenRouteId } =
+      createDenseAreaFixture(fixtureRoot);
     try {
       await withFullServer(async (client) => {
         const sessionId = await prepareDenseAreaSession(client, revealPoiIds);
@@ -508,7 +601,36 @@ describe("MCP pure play mode", () => {
           expect(compactRoutes).toHaveLength(12);
           expect(compactRoutes?.some(([, areaId]) => areaId === hiddenDestinationId)).toBe(false);
 
-          const rejected = await client.callTool({
+          expect(compactRoutes?.some(([routeId]) => routeId === hiddenRouteId)).toBe(false);
+          for (const [selectorName, selectorValue] of [
+            ["area_route_id", { area_route_id: hiddenRouteId }],
+            ["route_id", { route_id: hiddenRouteId }],
+          ] as const) {
+            const rejected = await client.callTool({
+              name: "move_overworld_session_area",
+              arguments: {
+                session_id: sessionId,
+                ...selectorValue,
+                // Pure strips this unadvertised escape attempt and remains compact.
+                compact_context: false,
+              },
+            });
+            expect(rejected.isError, selectorName).toBe(true);
+            expect(textPayload(rejected).error, selectorName).toMatch(
+              /not a currently visible route/i,
+            );
+            const afterSelectorRejection = textPayload(
+              await client.callTool({
+                name: "get_overworld_session_context",
+                arguments: { session_id: sessionId },
+              }),
+            );
+            expect(afterSelectorRejection.snapshot_hash, selectorName).toBe(
+              compactBefore.snapshot_hash,
+            );
+          }
+
+          const destinationRejected = await client.callTool({
             name: "move_overworld_session_area",
             arguments: {
               session_id: sessionId,
@@ -517,8 +639,10 @@ describe("MCP pure play mode", () => {
               compact_context: false,
             },
           });
-          expect(rejected.isError).toBe(true);
-          expect(textPayload(rejected).error).toMatch(/not a currently visible destination/);
+          expect(destinationRejected.isError).toBe(true);
+          expect(textPayload(destinationRejected).error).toMatch(
+            /not a currently visible destination/,
+          );
           const after = textPayload(
             await client.callTool({
               name: "get_overworld_session_context",
@@ -586,10 +710,15 @@ describe("MCP pure play mode", () => {
       ] as const) {
         expectAliasedToolSchema(listed, name, canonicalName, aliasName);
       }
+      expectOneOfToolSchema(listed, "move_overworld_session_area", [
+        "area_route_id",
+        "route_id",
+        "area_id",
+      ]);
 
       for (const [name, argumentsValue, message] of [
         ["talk_overworld_session_contact", {}, /Provide character_id or contact_id/],
-        ["move_overworld_session_area", {}, /Provide area_route_id or area_id/],
+        ["move_overworld_session_area", {}, /Provide area_route_id, route_id, or area_id/],
         ["get_state", {}, /Provide session_id or rpg_session_id/],
       ] as const) {
         const omitted = await client.callTool({ name, arguments: argumentsValue });
@@ -602,6 +731,11 @@ describe("MCP pure play mode", () => {
       );
       const overworldSessionId = String(started.session_id);
       const contactId = "albany_city__civic_core__contact";
+      const scouted = await client.callTool({
+        name: "scout_overworld_session_poi",
+        arguments: { session_id: overworldSessionId, poi_id: "albany_city__civic_core__poi" },
+      });
+      expect(scouted.isError).not.toBe(true);
       const contacted = await client.callTool({
         name: "talk_overworld_session_contact",
         arguments: { session_id: overworldSessionId, contact_id: contactId },
@@ -631,19 +765,29 @@ describe("MCP pure play mode", () => {
         },
       });
       expect(sameContact.isError).not.toBe(true);
+      const moveContext = textPayload(
+        await client.callTool({
+          name: "get_overworld_session_context",
+          arguments: { session_id: overworldSessionId },
+        }),
+      );
+      const transportHubRoute = (
+        moveContext.context as { area_routes?: [string, string, number][] }
+      ).area_routes?.find(([, destination]) => destination === "albany_city__transport_hub");
+      if (!transportHubRoute) throw new Error("expected a visible Albany transport-hub route");
       const moved = textPayload(
         await client.callTool({
           name: "move_overworld_session_area",
           arguments: {
             session_id: overworldSessionId,
-            area_id: "albany_city__market",
+            route_id: transportHubRoute[0],
             compact_context: false,
             compact_result: false,
           },
         }),
       );
       expect((moved.observation as { currentArea?: { id: string } }).currentArea?.id).toBe(
-        "albany_city__market",
+        "albany_city__transport_hub",
       );
 
       const created = textPayload(
@@ -730,7 +874,12 @@ describe("MCP pure play mode", () => {
         [
           "move_overworld_session_area",
           { area_id: "albany_city__market" },
-          /Provide area_route_id or area_id/,
+          /Provide area_route_id, route_id, or area_id/,
+        ],
+        [
+          "move_overworld_session_area",
+          { route_id: "albany_city__area_route__civic_core__market__1" },
+          /Provide area_route_id, route_id, or area_id/,
         ],
       ] as const) {
         const rejected = await client.callTool({ name, arguments: argumentsValue });
@@ -740,6 +889,13 @@ describe("MCP pure play mode", () => {
         expect(error, name).toMatch(/Required/);
         expect(error, name).not.toMatch(aliasPresenceMessage);
       }
+      const malformedRouteId = await client.callTool({
+        name: "move_overworld_session_area",
+        arguments: { session_id: overworldSessionId, route_id: 7 },
+      });
+      expect(malformedRouteId.isError).toBe(true);
+      expect(textResult(malformedRouteId)).toMatch(/route_id/);
+      expect(textResult(malformedRouteId)).toMatch(/Expected string/);
       const parentAfter = textPayload(
         await client.callTool({
           name: "get_overworld_session_context",
@@ -797,9 +953,14 @@ describe("MCP pure play mode", () => {
         ] as const) {
           expectAliasedToolSchema(listed, name, canonicalName, aliasName);
         }
+        expectOneOfToolSchema(listed, "move_overworld_session_area", [
+          "area_route_id",
+          "route_id",
+          "area_id",
+        ]);
         for (const [name, message] of [
           ["talk_overworld_session_contact", /Provide character_id or contact_id/],
-          ["move_overworld_session_area", /Provide area_route_id or area_id/],
+          ["move_overworld_session_area", /Provide area_route_id, route_id, or area_id/],
           ["get_observation", /Provide session_id or rpg_session_id/],
         ] as const) {
           const omitted = await client.callTool({ name, arguments: {} });
@@ -856,7 +1017,7 @@ describe("MCP pure play mode", () => {
         if (!marketRoute) throw new Error("expected a visible Albany market route");
         await callPlayerTool(client, "move_overworld_session_area", {
           ...parent,
-          area_id: marketRoute[1],
+          route_id: marketRoute[0],
         });
         await callPlayerTool(client, "scout_overworld_session_poi", {
           ...parent,
@@ -889,9 +1050,54 @@ describe("MCP pure play mode", () => {
         expect(textPayload(areaConflict).error).toMatch(/Conflicting area_route_id and area_id/);
         expect(await parentState()).toEqual(beforeAreaConflict);
 
+        const beforeRouteAliasConflict = await parentState();
+        const routeAliasConflict = await client.callTool({
+          name: "move_overworld_session_area",
+          arguments: {
+            ...parent,
+            area_route_id: stationRoute[0],
+            route_id: civicRoute[0],
+          },
+        });
+        expect(routeAliasConflict.isError).toBe(true);
+        expect(textPayload(routeAliasConflict).error).toMatch(
+          /Conflicting area_route_id and route_id/,
+        );
+        expect(await parentState()).toEqual(beforeRouteAliasConflict);
+
+        const beforeRouteDestinationConflict = await parentState();
+        const routeDestinationConflict = await client.callTool({
+          name: "move_overworld_session_area",
+          arguments: {
+            ...parent,
+            route_id: stationRoute[0],
+            area_id: civicRoute[1],
+          },
+        });
+        expect(routeDestinationConflict.isError).toBe(true);
+        expect(textPayload(routeDestinationConflict).error).toMatch(
+          /Conflicting route_id and area_id/,
+        );
+        expect(await parentState()).toEqual(beforeRouteDestinationConflict);
+
+        const beforeTripleConflict = await parentState();
+        const tripleConflict = await client.callTool({
+          name: "move_overworld_session_area",
+          arguments: {
+            ...parent,
+            area_route_id: stationRoute[0],
+            route_id: stationRoute[0],
+            area_id: civicRoute[1],
+          },
+        });
+        expect(tripleConflict.isError).toBe(true);
+        expect(textPayload(tripleConflict).error).toMatch(/Conflicting route selector and area_id/);
+        expect(await parentState()).toEqual(beforeTripleConflict);
+
         await callPlayerTool(client, "move_overworld_session_area", {
           ...parent,
           area_route_id: stationRoute[0],
+          route_id: stationRoute[0],
           area_id: stationRoute[1],
         });
         const ready = await callPlayerTool(client, "choose_overworld_session_story", {

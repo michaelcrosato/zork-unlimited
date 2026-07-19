@@ -654,45 +654,137 @@ export function resolveVisibleAreaRouteId(
     throw new Error(
       matches.length === 0
         ? `Area ${JSON.stringify(destinationAreaId)} is not a currently visible destination from here.`
-        : `Area ${JSON.stringify(destinationAreaId)} has multiple currently visible routes from here; provide area_route_id.`,
+        : `Area ${JSON.stringify(destinationAreaId)} has multiple currently visible routes from here; provide area_route_id or route_id.`,
     );
   }
   return matches[0]![0];
 }
 
+type AreaRouteSelector = {
+  area_route_id?: string;
+  route_id?: string;
+  area_id?: string;
+};
+
+export function resolveAreaMoveSelector(
+  routes: readonly (readonly [routeId: string, destinationAreaId: string, minutes: number])[],
+  selector: AreaRouteSelector,
+  requireVisibleExactRoute = false,
+): string | undefined {
+  const canonicalRouteId = selector.area_route_id;
+  const routeIdAlias = selector.route_id;
+  if (
+    canonicalRouteId !== undefined &&
+    routeIdAlias !== undefined &&
+    canonicalRouteId !== routeIdAlias
+  ) {
+    throw new Error(
+      "Conflicting area_route_id and route_id; provide one value or the same value in both fields.",
+    );
+  }
+
+  const routeSelector = canonicalRouteId ?? routeIdAlias;
+  const routeSelectorName =
+    canonicalRouteId !== undefined && routeIdAlias !== undefined
+      ? "route selector"
+      : canonicalRouteId !== undefined
+        ? "area_route_id"
+        : "route_id";
+  if (
+    requireVisibleExactRoute &&
+    routeSelector !== undefined &&
+    !routes.some(([candidateRouteId]) => candidateRouteId === routeSelector)
+  ) {
+    throw new Error(
+      `Area route ${JSON.stringify(routeSelector)} is not a currently visible route from here.`,
+    );
+  }
+
+  if (selector.area_id === undefined) return routeSelector;
+  const matchingRoutes = routes.filter(
+    ([, candidateAreaId]) => candidateAreaId === selector.area_id,
+  );
+  if (matchingRoutes.length === 0) {
+    return resolveVisibleAreaRouteId(routes, selector.area_id);
+  }
+  if (
+    matchingRoutes.length > 1 &&
+    (!routeSelector ||
+      !matchingRoutes.some(([candidateRouteId]) => candidateRouteId === routeSelector))
+  ) {
+    throw new Error(
+      `Area ${JSON.stringify(selector.area_id)} has multiple currently visible routes from here; provide area_route_id or route_id.`,
+    );
+  }
+  if (
+    routeSelector !== undefined &&
+    !matchingRoutes.some(([candidateRouteId]) => candidateRouteId === routeSelector)
+  ) {
+    throw new Error(
+      `Conflicting ${routeSelectorName} and area_id; the route does not lead to that currently visible destination.`,
+    );
+  }
+  // An exact route selector truthfully resolves an ambiguous destination alias
+  // when that exact edge is one of its visible matches.
+  return routeSelector ?? matchingRoutes[0]![0];
+}
+
+function visibleAreaRoutesForMove(input: Record<string, unknown>) {
+  if (typeof input.session_id !== "string") return [] as const;
+  return PLAY_MODE !== "pure" && input.compact_context === false
+    ? api
+        .get_overworld_session({
+          session_id: input.session_id,
+          include_observation: true,
+        })
+        .observation.areaExits.map(
+          (route) => [route.id, route.destination.id, route.travel_minutes] as const,
+        )
+    : (() => {
+        const read = api.get_overworld_session_context({ session_id: input.session_id });
+        if (!("context" in read)) {
+          throw new Error("Cannot resolve a local route while the overworld context is unchanged.");
+        }
+        return read.context.area_routes ?? [];
+      })();
+}
+
 function normalizeAreaDestinationAlias(name: string, args: unknown): unknown {
   if (name !== "move_overworld_session_area") return args;
   const input = objectRecord(args);
-  if (!input || input.area_id === undefined) return args;
-  if (typeof input.area_id !== "string" || typeof input.session_id !== "string") return args;
-
-  const routes =
-    PLAY_MODE !== "pure" && input.compact_context === false
-      ? api
-          .get_overworld_session({
-            session_id: input.session_id,
-            include_observation: true,
-          })
-          .observation.areaExits.map(
-            (route) => [route.id, route.destination.id, route.travel_minutes] as const,
-          )
-      : (() => {
-          const read = api.get_overworld_session_context({ session_id: input.session_id });
-          if (!("context" in read)) {
-            throw new Error("Cannot resolve area_id while the overworld context is unchanged.");
-          }
-          return read.context.area_routes ?? [];
-        })();
-  const resolvedRouteId = resolveVisibleAreaRouteId(routes, input.area_id);
-  if (input.area_route_id !== undefined && input.area_route_id !== resolvedRouteId) {
-    throw new Error(
-      "Conflicting area_route_id and area_id; the route does not lead to that currently visible destination.",
-    );
+  if (!input) return args;
+  const canonicalRouteId = input.area_route_id;
+  const routeIdAlias = input.route_id;
+  const destinationAreaId = input.area_id;
+  if (
+    (canonicalRouteId !== undefined && typeof canonicalRouteId !== "string") ||
+    (routeIdAlias !== undefined && typeof routeIdAlias !== "string") ||
+    (destinationAreaId !== undefined && typeof destinationAreaId !== "string") ||
+    typeof input.session_id !== "string"
+  ) {
+    return args;
   }
+
+  // In pure play the compact context is the entire player-visible local map.
+  // Exact route tokens must obey that same boundary as destination aliases: a
+  // guessed full-view edge may not turn a bounded disclosure into a hidden exit.
+  const needsVisibleRoutes = PLAY_MODE === "pure" || destinationAreaId !== undefined;
+  const routes = needsVisibleRoutes ? visibleAreaRoutesForMove(input) : undefined;
+  const resolvedRouteId = resolveAreaMoveSelector(
+    routes ?? [],
+    {
+      ...(typeof canonicalRouteId === "string" ? { area_route_id: canonicalRouteId } : {}),
+      ...(typeof routeIdAlias === "string" ? { route_id: routeIdAlias } : {}),
+      ...(typeof destinationAreaId === "string" ? { area_id: destinationAreaId } : {}),
+    },
+    PLAY_MODE === "pure",
+  );
+  if (resolvedRouteId === undefined) return args;
   const normalized: Record<string, unknown> = {
     ...input,
-    area_route_id: input.area_route_id ?? resolvedRouteId,
+    area_route_id: resolvedRouteId,
   };
+  delete normalized.route_id;
   delete normalized.area_id;
   return normalized;
 }
@@ -809,10 +901,15 @@ function tool(
   );
 }
 
-function requireAliasedArgument(
+function formatArgumentAlternatives(argumentNames: readonly string[]): string {
+  if (argumentNames.length === 1) return argumentNames[0]!;
+  if (argumentNames.length === 2) return `${argumentNames[0]} or ${argumentNames[1]}`;
+  return `${argumentNames.slice(0, -1).join(", ")}, or ${argumentNames.at(-1)}`;
+}
+
+function requireOneOfArguments(
   inputShape: ZodRawShape,
-  canonicalName: string,
-  aliasName: string,
+  argumentNames: readonly [string, ...string[]],
 ): $ZodType {
   const objectSchema = z.object(inputShape);
   const schema = z4.pipe(
@@ -820,9 +917,10 @@ function requireAliasedArgument(
       (value) =>
         value !== null &&
         typeof value === "object" &&
-        (Object.prototype.hasOwnProperty.call(value, canonicalName) ||
-          Object.prototype.hasOwnProperty.call(value, aliasName)),
-      `Provide ${canonicalName} or ${aliasName}.`,
+        argumentNames.some((argumentName) =>
+          Object.prototype.hasOwnProperty.call(value, argumentName),
+        ),
+      `Provide ${formatArgumentAlternatives(argumentNames)}.`,
     ),
     z4.transform((value, context) => {
       const parsed = objectSchema.safeParse(value);
@@ -840,7 +938,7 @@ function requireAliasedArgument(
   );
   const publishedSchema = {
     ...toJsonSchemaCompat(objectSchema, { strictUnions: true, pipeStrategy: "input" }),
-    anyOf: [{ required: [canonicalName] }, { required: [aliasName] }],
+    anyOf: argumentNames.map((argumentName) => ({ required: [argumentName] })),
   };
   // The MCP SDK accepts Zod v4 object schemas, and v4 deliberately exposes a
   // JSON-schema override hook. This bridge keeps v3's established parsing while
@@ -849,6 +947,14 @@ function requireAliasedArgument(
   Object.defineProperty(schema._zod.def, "shape", { value: {} });
   schema._zod.toJSONSchema = () => publishedSchema;
   return schema;
+}
+
+function requireAliasedArgument(
+  inputShape: ZodRawShape,
+  canonicalName: string,
+  aliasName: string,
+): $ZodType {
+  return requireOneOfArguments(inputShape, [canonicalName, aliasName]);
 }
 
 const WORLD_QUEST_SOURCE = {
@@ -917,12 +1023,17 @@ const CONTACT_INPUT = (shape: ZodRawShape) =>
     "contact_id",
   );
 const AREA_ROUTE_ID = z.string().describe("Route id from area_routes.");
+const ROUTE_ID_ALIAS = z.string().describe("Alias for area_route_id.");
 const AREA_ID_ALIAS = z.string().describe("Visible destination alias.");
 const AREA_MOVE_INPUT = (shape: ZodRawShape) =>
-  requireAliasedArgument(
-    { ...shape, area_route_id: AREA_ROUTE_ID.optional(), area_id: AREA_ID_ALIAS.optional() },
-    "area_route_id",
-    "area_id",
+  requireOneOfArguments(
+    {
+      ...shape,
+      area_route_id: AREA_ROUTE_ID.optional(),
+      route_id: ROUTE_ID_ALIAS.optional(),
+      area_id: AREA_ID_ALIAS.optional(),
+    },
+    ["area_route_id", "route_id", "area_id"],
   );
 
 function defaultCompactRpg(args: unknown): never {
@@ -1255,7 +1366,7 @@ tool(
 );
 tool(
   "move_overworld_session_area",
-  "Walk inside town by area_route_id or a visible destination area_id.",
+  "Walk inside town by area_route_id or route_id, or a visible destination area_id.",
   AREA_MOVE_INPUT({
     ...OVERWORLD_SESSION,
     ...OVERWORLD_ACTION_CONTEXT,

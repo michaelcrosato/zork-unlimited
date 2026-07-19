@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 583 -->
+<!-- historical_cycle_count: 584 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - visible_route_id_alias
+
+- Evidence choice: three of the twelve latest verified Terra players, including three of ten on the clean Campus cohort, passed the exact displayed Civic-to-Hub edge as `route_id`; each rejection was mutation-free but recurring S1 friction.
+- Surface: local area movement now accepts canonical `area_route_id`, exact-edge alias `route_id`, or destination alias `area_id`; equal dual/triple selectors normalize and every conflicting combination rejects before movement.
+- Authority: pure compact mode accepts either exact-edge spelling only from its currently disclosed 12-route projection, while full mode retains every visible discovered edge and `area_id` keeps its bounded destination-resolution semantics.
+- Recovery: root schemas truthfully publish all three selectors; malformed and missing inputs preserve their own paths, conflict messages retain the field the caller actually supplied, and ambiguous destinations name both exact-edge spellings.
+- Pure evidence: clean commit `65a123a8` Terra seed 4192 completed all-wolves-alive pack diversion at decision 29 and The Gallowmere at 53, continued twice, rated clarity/enjoyment 4/5, was unstuck/replay-yes, and made no rejected player call; deterministic tests carry the exact repaired edge alias.
+- Feedback/self-critique: compile `20260719T184312Z` has 875 verified reports, 124 current pure exits, and 105 continuing; this one clean run is below the next compile threshold, and the ledger is 875 accepted/59 rejected. PASS for the recurring alias S1, not the greater-than-BG3 milestone; summary-first setup presentation remains next.
+- Guard: adversarial review found and closed a guessed-hidden-edge cap bypass plus misleading diagnostics; crawl `20260719T185058Z` is zero-finding at 247/247 nodes, 344/344 edges, and 12/12 boards/quests, and health passes 385 files/2,957 tests plus UI/all packs.
 
 ### Cycle result - campus_archive_query
 
@@ -148,11 +158,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Pure evidence: seed 2732 verified pure/fresh, completed Wolf-Winter by fully noncombat pack diversion at decision 29, continued at the first goal choice, ended at checkpoint 40, and rated clarity/enjoyment 4/4 with stuck false, replay true, and no bugs; its only friction was compact density, approach framing, and lighter road texture.
 - Self-critique: PASS for authentic per-run seed/build/world/outcome evidence, not fleet certification or the greater-than-BG3 milestone. Fleet resume still needs a fail-closed v2 expected-seed/build bundle before any diagnostic or authoritative cohort is counted; unknown Wolf endings must be rejected by that certifier.
 - Guard: three implementation reviews found no server defect and closed ordering/launcher portability gaps; 121 focused checks pass, and pre/final crawls `20260716T081747Z`/`20260716T084516Z` each found zero issues across 247/247 nodes, 344/344 edges, 12/12 boards, and 12/12 quests.
-
-### Cycle result - pure_report_exit_preflight
-
-- Evidence choice: the first exact milestone fleet on merged `6fa0ef15` was rejected as diagnostic evidence after 8/8 finalized Haiku rows failed all three retries (21/24 missing the labeled interview fence; 3/24 missing the Playthrough heading) and seed 1009 Sonnet hit the 900-second cap; artifact `20260716T043042Z` cannot certify the slice.
-- Surface: the pure prompt now has a final report gate that forbids self-appointed early stops and null/empty/partial/reconstructed receipts, requires the complete server `exitReceipt`, and makes the literal heading/fence contract concrete. The receipt schema, private evidence match, and verifier are unchanged.
-- Pure evidence: first hardened seed 2730 correctly reached the labeled fence but was rejected for a null receipt after self-stopping at decision 29; sharpened seed 2731 then verified pure/fresh, completed Wolf-Winter at decision 29, continued at the first goal choice, ended at checkpoint 40, and rated clarity/enjoyment 5/5 with no confusion, bug, stuck state, or replay refusal.
-- Self-critique: PASS for one representative Haiku report-contract recovery, not fleet reliability or the greater-than-BG3 milestone. A fresh ten-member mixed-model diagnostic remains required before spending on the authoritative 100-player cohort; only one new verified report exists, so no feedback compile is due.
-- Guard: contract review added an exact-one literal fence regression and clarified that a signed exit may keep the next goal active; 3 focused suites are 22/22, and pre/final crawls `20260716T052856Z`/`20260716T070103Z` each found zero issues across 247/247 nodes, 344/344 edges, 12/12 boards, and 12/12 quests.
