@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 584 -->
+<!-- historical_cycle_count: 585 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - wolf_commitment_boundaries
+
+- Evidence choice: the clean Terra cohort exposed two real S2 disclosures: seed 4174 crossed the Broken Paling without learning that uncommitted entry permanently retires every living plan, while seed 4177's question-like Albany-authority action silently locked fortification and retreat.
+- Surface: no-June pre-breach room, Cade-root, lure-back, and leave copy now names hunt-and-hold plus permanent lure/drive/fortify retirement; post-cross and committed returns stay state-honest, and both fortification stances lead with irreversible north/no-switch terms.
+- Compatibility: compact/full strings remain equal and untruncated while preserving Albany's handoff, both spear lessons, living-plan names, lantern/day-book clues, checked wolf count, oath terms, Household-versus-Albany costs, dawn/outlast framing, and every existing legal route.
+- Counterfactual: exact seed-4174 aid-only and seed-4177 full-duty import routes prove warning-before-mutation, decline-and-reopen availability, uncommitted closure, committed-lure preservation, both fortify stances, save-visible action labels, and post-commit closures.
+- Pure evidence: clean commit `d8df814a` Terra seed 4194 completed recovered all-wolves-alive fortification at decision 21 and The Gallowmere at 44, continued twice, rated clarity/enjoyment 4/4, and was unstuck/replay-yes; seed 4193 remains rejected because its interview omitted the mandatory playthrough log.
+- Feedback/self-critique: compile `20260719T184312Z` remains 875 verified/124 current pure exits/105 continuing; two clean reports are new, below the next compile threshold, and the ledger is 876 accepted/59 rejected. PASS for the recurring irreversible-boundary S2, not the greater-than-BG3 milestone; setup density and a separate road-field alias remain.
+- Guard: two red-team rounds caught compact overflow, erased legacy signposts, stale-state copy, and relabel risk before landing; crawl `20260719T193859Z` is zero-finding at 247/247 nodes, 344/344 edges, and 12/12 boards/quests, and exact stacked health passes 387 files/2,959 tests plus UI/all packs.
 
 ### Cycle result - visible_route_id_alias
 
@@ -149,12 +159,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Pure evidence: seed 2737 verified singleton Sonnet/fresh, completed Wolf-Winter, The Gallowmere, and The Tanner's Fever, continued four times, then ended at checkpoint 80; clarity/enjoyment 4/4, stuck false, replay true, zero denials, and one S1 cross-town name-reuse report. Seed 2736 proved the transaction but is intentionally non-attestable because its pre-fix envelope included the title model.
 - Self-critique: PASS for authenticated certification tooling, not fleet reliability or the greater-than-BG3 milestone. Two consecutive players disliked the five-choice Albany opening gauntlet; a fresh 10-player no-resume/no-retry diagnostic must test that pacing and the 9:1 model plan before any authoritative 100-player spend.
 - Guard: two adversarial audit rounds closed safe-mode MCP loss, survivor selection, shell injection, recovery laundering, premature publication, user customization, and AFK sidecar gaps; 157 integrated checks pass, and final crawls `20260716T133150Z`/`20260716T134744Z` found zero issues across 247/247 nodes, 344/344 edges, 12/12 boards, and 12/12 quests.
-
-### Cycle result - pure_run_evidence_v2
-
-- Evidence choice: the rejected milestone diagnostic exposed that fleet seed labels did not drive embedded RPG randomness and durable sidecars authenticated only the exit receipt, so a 100-player result could not prove seed diversity, build identity, or Wolf-Winter strategy outcomes.
-- Surface: the runner now passes a canonical private safe-integer seed plus exact Git/tracked-state provenance; pure MCP injects that seed into every embedded quest without exposing a player control, and schema-v2 start/exit evidence records the actual world id/hash and authoritative sorted quest outcomes. Explicit structural seeds still override it and historical v1 feedback remains readable.
-- Integrity: exact-two-event parsing rejects mixed schemas, sessions, seeds, builds, malformed hashes, and noncanonical outcomes; ambiguous PowerShell orphan recovery and unsafe WSL `cmd.exe` paths fail closed. The pre-commit blind correctly records `tracked_worktree_clean:false`, so it is retention evidence but cannot certify a build.
-- Pure evidence: seed 2732 verified pure/fresh, completed Wolf-Winter by fully noncombat pack diversion at decision 29, continued at the first goal choice, ended at checkpoint 40, and rated clarity/enjoyment 4/4 with stuck false, replay true, and no bugs; its only friction was compact density, approach framing, and lighter road texture.
-- Self-critique: PASS for authentic per-run seed/build/world/outcome evidence, not fleet certification or the greater-than-BG3 milestone. Fleet resume still needs a fail-closed v2 expected-seed/build bundle before any diagnostic or authoritative cohort is counted; unknown Wolf endings must be rejected by that certifier.
-- Guard: three implementation reviews found no server defect and closed ordering/launcher portability gaps; 121 focused checks pass, and pre/final crawls `20260716T081747Z`/`20260716T084516Z` each found zero issues across 247/247 nodes, 344/344 edges, 12/12 boards, and 12/12 quests.
