@@ -1,0 +1,23 @@
+id: bug_0530
+title: "Gallowmere kill-site tracking failure was an unlimited free retry"
+pack: content/rpg/quests/gallowmere.yaml
+severity: S2
+symptom: >
+  A failed tracking check at the kill-site only narrated uncertainty. The same action
+  remained a fresh random roll, so a player could retry without cost until receiving
+  the +2 attack, +10 score, and blind-side combat tactic.
+root_cause: >
+  The tracking interaction was guarded solely by not found_kill and its failure branch
+  wrote no durable state, leaving every failed attempt mechanically identical to the first.
+fix: >
+  The initial roll is now guarded by not kill_site_attempted. On failure it records a
+  truthful journal entry and unlocks a mutually exclusive same-id, no-check recovery
+  interaction. Recovery applies the original success effects exactly once, then retires
+  after found_kill; reactive kill-site text explains the deliberate second reading.
+tests:
+  - tests/regression/gallowmere_tracking_failure_recovery.test.ts
+verification:
+  - npm test -- --run tests/regression/gallowmere_tracking_failure_recovery.test.ts
+  - npm test -- --run tests/regression/gallowmere_blind_side_tactic.test.ts tests/regression/gallowmere_peat_sign_kill_site_hint.test.ts tests/regression/gallowmere_starting_knife_truth.test.ts
+  - npm run validate -- gallowmere
+  - git diff --check
