@@ -133,7 +133,7 @@ function lureRoute(opening: "clean" | "fouled" | "fouled_braced" | "hybrid"): Ro
   expect(yard.blocked_exits).toContainEqual({
     direction: "north",
     message:
-      "Resolve the field line before crossing: speak with anyone holding the gate or carry committed feed, rig, shutters, or seals. After lure's first beat, go west and up.",
+      "LURE: commit with Cade; feed then waits west—take it, return east, cross north. After first cast: west, then up. Otherwise speak at gate or carry committed rig/shutters/seals.",
   });
   act("go_west");
   act("go_up");

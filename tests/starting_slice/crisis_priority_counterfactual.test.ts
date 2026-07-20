@@ -78,9 +78,15 @@ function commitDrive(withJune = false): GameState {
   state = act(state, "ask_drive");
 
   expect(state.flags.strategy_drive_committed).not.toBe(true);
-  expect(buildRpgObservation(index, state).dialogue?.npc_text).toMatch(
-    /read, prepare, and don[^]*before you commit[^]*starts the cattle immediately[^]*every completion forfeits the steading's outer defense line[^]*no later switch to lure or spear combat/i,
+  const driveBrief = buildRpgObservation(index, state).dialogue?.npc_text ?? "";
+  expect(driveBrief).toMatch(/drive (?:can spare pack\/people|spares pack\/people)/i);
+  expect(driveBrief).toMatch(/(?:outer defense[^]*lost|loses outer defense)/i);
+  expect(driveBrief).toMatch(
+    /commit starts herd[^]*closes (?:lure\/hunt\/fortify|other plans|alternatives)/i,
   );
+  expect(driveBrief).toMatch(/(?:prepare\/don gear|don gear)[^]*first/i);
+  expect(driveBrief).toMatch(/miss[^]*no retry[^]*hurdle recovery/i);
+  expect(driveBrief).toMatch(/crisis(?: costs|:)[^]*wound[^]*two cattle[^]*rig/i);
   expect(
     enumerateRpgActions(index, state).find((option) => option.id === "ask_commit_drive")?.command,
   ).toMatch(

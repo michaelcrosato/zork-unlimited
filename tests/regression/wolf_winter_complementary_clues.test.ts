@@ -82,10 +82,10 @@ describe("bug_0504 — Wolf-Winter clues are complementary rather than contradic
     const fortify = node("cade_fortify")?.npc_text ?? "";
 
     expect(root?.npc_text).toMatch(
-      /either lesson[^]*or both before you go[^]*quick spear-hand[^]*guarded spear-fighting plan/i,
+      /You came from Albany awake[^]*hunt kills pack[^]*holds herd\/byre[^]*risk death[^]*lure may spare all[^]*feed[^]*foul=2 cattle[^]*drive spares pack\/people[^]*defense lost[^]*crisis cost[^]*fortify spares all[^]*property\/seals[^]*no retreat/i,
     );
     expect(root?.npc_text).not.toMatch(/two roads/i);
-    expect(root?.npc_text).toMatch(/living lure[^]*signal drive[^]*seal-and-outlast line/i);
+    expect(root?.npc_text).toMatch(/lure[^]*drive[^]*fortify/i);
     expect(root?.topics.find((topic) => topic.id === "wolves")?.prompt).toMatch(
       /quick spear-hand/i,
     );
@@ -107,14 +107,14 @@ describe("bug_0504 — Wolf-Winter clues are complementary rather than contradic
     expect(guarded).not.toMatch(/\bset\b[^]*\bdrive\b|\bwheel\b[^]*\bturn\b/i);
 
     expect(fortify).toMatch(
-      /Household terms[^]*expose outer property[^]*save public seals[^]*help[^]*Albany authority[^]*covers my property[^]*spends public stock[^]*no help[^]*dawn/i,
+      /fortify saves lives\/herd\/byre[^]*no retreat\/switch[^]*household terms[^]*property risk[^]*seals saved[^]*Cade aid[^]*Albany[^]*property safe[^]*seals spent[^]*no Cade aid[^]*Works eases first DC[^]*mobile stabilizes recovered miss[^]*first Albany Repair: 2 easier[^]*dawn/i,
     );
   });
 
   it("keeps root copy and legal lesson actions aligned when quick is heard first", () => {
     let state = startCadeDialogue(930014);
     let observation = buildRpgObservation(index, state);
-    expect(observation.dialogue?.npc_text).toMatch(/either lesson[^]*both before you go/i);
+    expect(observation.dialogue?.npc_text).toMatch(/hunt[^]*lure[^]*drive[^]*fortify/i);
     expect(dialogueActionIds(state)).toEqual([
       "ask_wolves",
       "ask_byre",

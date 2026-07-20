@@ -240,6 +240,14 @@ rooms:
           preparation, and donning store gear had to happen before commitment. The moving
           herd forfeits outer defense and retreat; this strategy cannot switch to lure or combat.
       - when:
+          - { has_flag: strategy_lure_committed }
+          - { not_item: winter_feed_sack }
+          - { not_visited: paling_gap }
+        text: >
+          Cade has now released his last feed sack in the open store-shed west. Go west,
+          take the winter-feed sack, return east, then go north for the first cast. The sack
+          was not available before you committed; the yard's north gate is not the feed pickup.
+      - when:
           - { has_flag: relief_protocol_prepared }
           - { has_flag: yearling_redirected_with_split_guard }
           - { not_flag: relief_protocol_attempted }
@@ -285,10 +293,10 @@ rooms:
           - { not_flag: strategy_fortify_committed }
           - { not_visited: paling_gap }
         text: >
-          June holds the north gate. The loose rail beyond is a spear-fighting funnel,
-          not a living turn. Cross without Cade's feed, drive rig, or seals and you choose
-          hunt-and-hold; any wolf death ends her agreement. Speak to June, or ask Cade for a
-          living plan now. Store west.
+          June holds the north gate. Rail now: spear funnel, not a living turn. If a committed
+          first feed cast fouls, a brace can pen the yearling alive. Cross without Cade's feed,
+          drive rig, or seals means hunt-and-hold; any wolf death ends her agreement. Ask
+          June/Cade now. Store west.
       # The ordinary no-June entry must name the same irreversible choice the optional
       # June gate speaks aloud. A first visit to the paling retires all three Cade topics,
       # so this warning is deliberately before both the north exit and the generic tally prose.
@@ -373,7 +381,7 @@ rooms:
               - { has_flag: strategy_lure_committed }
               - { has_flag: strategy_drive_committed }
               - { has_flag: strategy_fortify_committed }
-        locked_msg: "Resolve the field line before crossing: speak with anyone holding the gate or carry committed feed, rig, shutters, or seals. After lure's first beat, go west and up."
+        locked_msg: "LURE: commit with Cade; feed then waits west—take it, return east, cross north. After first cast: west, then up. Otherwise speak at gate or carry committed rig/shutters/seals."
 
   - id: store
     name: "The Store-Shed"
@@ -517,6 +525,16 @@ rooms:
           Drive committed. Fire the rig's shutter once to turn the yearling outside. A miss
           is final: drop the loose hurdle for the sole nonlethal recovery. The moving herd
           leaves no combat switch. The byre door lies north; the yard south is closed.
+      - when:
+          - { has_flag: strategy_lure_committed }
+          - { not_flag: lure_trail_fouled }
+          - { not_flag: lure_hybrid_combat_entered }
+          - { not_flag: yearling_down }
+          - { not_flag: yearling_redirected }
+        text: >
+          Cast Cade's feed first. Before a foul, the rail is only a combat funnel. If the
+          cast fouls, a braced or bound rail can pen the yearling alive; a spear stroke
+          commits the hybrid fight. The byre-yard is south.
       - when:
           - { has_flag: strategy_lure_committed }
           - { has_flag: yearling_redirected_with_braced_rail }
@@ -3235,9 +3253,9 @@ npcs:
       nodes:
         - id: cade_root
           npc_text: >
-            You came from Albany awake. Cross north uncommitted: hunt-and-hold permanently
-            retires the living lure/feed lure, signal drive, and seal-and-outlast line. Ask for
-            either lesson—or both before you go: quick spear-hand or guarded spear-fighting plan.
+            You came from Albany awake. HUNT kills pack; holds herd/byre; risk death. LURE may
+            spare all; feed; foul=2 cattle. DRIVE spares pack/people; defense lost; crisis cost.
+            FORTIFY spares all; property/seals; no retreat. Cross uncommitted=HUNT; others shut.
           variants:
             - when:
                 - { has_flag: strategy_drive_committed }
@@ -3259,7 +3277,8 @@ npcs:
               text: >
                 You committed the one-sack feed-and-hounds line: three downwind casts,
                 no clean retry. Earlier combat lessons remain fallbacks, but Cade will
-                teach no new primary plan. Take the feed before entering the breach.
+                teach no new primary plan. Take the feed Cade released in the store-shed
+                west before entering the breach.
             - when: [{ has_flag: fortify_cade_terms_accepted }]
               text: >
                 Household terms stand. Take my two shutters north: paling, threshold, then
@@ -3461,18 +3480,18 @@ npcs:
               end: true
         - id: cade_lure
           npc_text: >
-            Cross north uncommitted: hunt-and-hold permanently retires Cade's feed lure,
-            signal drive, and seal-and-outlast plan. This feed line has three casts: paling,
-            loft, old grey. Each raises alarm; foul the first and there is no retry. Commit now.
+            FEED LURE can save pack/herd; spends last feed, leaves paling broken. Three casts;
+            first foul risks two cattle; no retry, rail recovery. Supports: Fieldcraft, fodder,
+            aid-only. Commit here. Cross uncommitted chooses HUNT, closing lure/drive/fortify.
           variants:
             - when:
                 - { has_flag: relief_oath_limited_duty }
                 - { not_flag: strategy_lure_committed }
               text: >
-                Cross north uncommitted: hunt-and-hold permanently retires Cade's feed lure,
-                signal drive, and seal-and-outlast plan. Aid-only's low herd count suppresses
-                the final alarm only if both younger wolves live. A fouled first cast keeps
-                full pressure.
+                AID-ONLY MATCH: FEED LURE can save pack/herd; spends last feed, leaves paling
+                broken. Three casts; first foul risks two cattle; no retry, rail recovery.
+                Fieldcraft/fodder help. Commit here. Cross uncommitted chooses HUNT; other plans
+                close.
           topics:
             - id: commit_lure
               aliases: [commit_feed, commit_alive]
@@ -3492,12 +3511,12 @@ npcs:
               end: true
         - id: cade_lure_committed
           npc_text: >
-            Committed. Take my feed before the breach. Cast at the paling, then follow my
-            feed-hauler crawlboard to the loft for the second cast; old grey is last. No
-            replacement sack, and Albany gets the exact count.
+            Committed. My last feed is now in the store-shed west: go west, take the sack,
+            return east, then cross north. Cast at the paling, use the feed-hauler crawlboard
+            to the loft for the second cast; old grey is last. No replacement sack.
           effects:
             - set_flag: strategy_lure_committed
-            - add_journal: "You commit Cade's finite feed and crawlboard route: paling first, loft second, outer gate last. No retry after a foul."
+            - add_journal: "LURE committed. Feed waits in store west: take it, return east, cross north. Then cast at paling, loft, outer gate; no retry."
           topics:
             - id: wolves
               aliases: [ask_wolves]
@@ -3518,23 +3537,39 @@ npcs:
               goto: cade_root
             - id: leave
               aliases: [leave_cade]
-              prompt: "Leave old Cade and choose at the breach."
+              prompt: "Leave Cade and take the committed feed from the store-shed west."
               end: true
         - id: cade_drive
           npc_text: >
-            Read, prepare, and don gear before you commit. Yes starts the cattle immediately.
-            Every completion forfeits the steading's outer defense line; no later switch to
-            lure or spear combat. Rig: two charges, paling/door. First miss: no retry; drop
-            hurdle.
+            Prepare/don gear first. SIGNAL DRIVE can spare pack/people; outer defense
+            always lost. Commit starts herd and closes lure/hunt/fortify. Two charges; miss:
+            no retry, hurdle recovery. Crisis costs wound, two cattle, or rig. Bond/June help.
           variants:
+            - when:
+                - { has_flag: relief_oath_unaffiliated_bond }
+                - { has_flag: june_pike_present }
+                - { not_flag: strategy_drive_committed }
+              text: >
+                BOND+JUNE MATCH: DRIVE spares pack/people; loses outer defense. Commit starts
+                herd/closes alternatives. Unmarked cut aids first shutter; June holds gate.
+                Two charges; first miss: no retry, hurdle recovery. Crisis: wound/two
+                cattle/rig. Don gear first.
             - when:
                 - { has_flag: relief_oath_unaffiliated_bond }
                 - { not_flag: strategy_drive_committed }
               text: >
-                You came on a personal bond, not an Albany order. Emery's unmarked service cut
-                matches my ash-lane wind break: first shutter DC 10 instead of 12. It spends
-                one charge. A miss raises cattle alarm, has no retry, and keeps the loose-hurdle
-                recovery.
+                BOND MATCH: DRIVE spares pack/people; loses outer defense. Commit starts
+                herd/closes alternatives. Unmarked cut lowers first shutter. Two charges;
+                first miss: no retry, hurdle recovery. Crisis: wound/two cattle/rig. June can
+                help. Don gear first.
+            - when:
+                - { has_flag: june_pike_present }
+                - { not_flag: strategy_drive_committed }
+              text: >
+                JUNE MATCH: DRIVE spares pack/people; loses outer defense. Commit starts
+                herd/closes alternatives. June holds lower gate. Two charges; first miss: no
+                retry, hurdle recovery. Crisis: wound/two cattle/rig. Bond can help. Don gear
+                first.
           topics:
             - id: commit_drive
               aliases: [commit_evacuate, commit_signal]
@@ -3573,28 +3608,26 @@ npcs:
               end: true
         - id: cade_fortify
           npc_text: >
-            Both commit north. No retreat; no lure/drive/combat switch. Household terms expose
-            outer property, save public seals, and give my help. Albany authority covers my
-            property, spends public stock, and gives no help. Outlast to dawn.
+            FORTIFY saves lives/herd/byre; no retreat/switch. HOUSEHOLD TERMS: property risk,
+            seals saved, Cade aid. ALBANY: property safe, seals spent, no Cade aid. Works eases
+            first DC; mobile stabilizes recovered miss; first Albany Repair: 2 easier. Till dawn.
           variants:
             - when: [{ has_flag: relief_oath_full_duty }]
               text: >
-                Both commit north. No retreat; no lure/drive/combat switch. Household terms
-                expose outer property, save public seals, give failed-seat aid, breach full
-                duty. Albany authority covers property, spends seals, gives no aid; Repair is 2
-                easier. Hold to dawn.
+                Commit north; no retreat/lure/drive/combat switch. HOUSEHOLD exposes property,
+                saves seals, failed-seat aid; breach full duty. ALBANY covers property, spends
+                seals, no aid; first Albany Repair 2 easier. Mobile stabilizes a recovered miss.
+                Reach dawn.
             - when: [{ has_flag: relief_oath_limited_duty }]
               text: >
-                Both commit north. No retreat; no lure/drive/combat switch. Household terms
-                expose outer property, save public seals, give failed-seat aid, fit aid-only.
-                Albany authority covers property, spends seals, gives no aid, exceeds
-                aid-only. Hold to dawn.
+                AID-ONLY MATCH: FORTIFY saves lives/herd/byre; no retreat/switch. HOUSEHOLD fits
+                duty: exposes property, saves public seals, gains Cade aid. ALBANY exceeds duty:
+                saves property, spends seals, no Cade aid. Works/mobile support first seam.
             - when: [{ has_flag: relief_oath_unaffiliated_bond }]
               text: >
-                Both commit north. No retreat; no lure/drive/combat switch. Household terms
-                expose outer property, save public seals, give failed-seat aid, fit the bond.
-                Albany authority covers property, spends seals, gives no aid, breaks the
-                bond. Hold to dawn.
+                BOND MATCH: FORTIFY saves lives/herd/byre; no retreat/switch. HOUSEHOLD fits
+                bond: exposes property, saves public seals, gains Cade aid. ALBANY breaks bond:
+                saves property, spends seals, no Cade aid. Works/mobile support first seam.
           topics:
             - id: accept_terms
               aliases: [accept_household_terms, take_shutters]
@@ -3710,9 +3743,9 @@ npcs:
       nodes:
         - id: june_wolf_line_boundary
           npc_text: >
-            Hear this before you cross. Cade's rail is a spear funnel, not a living turn.
-            Commit feed, drive, or seals here and our terms hold. Cross without one and
-            you choose hunt-and-hold; first wolf down ends our agreement.
+            Rail now: spear funnel, not a living turn. If a committed first feed cast fouls,
+            a brace can pen the yearling alive. Commit feed, drive, or seals before crossing.
+            Cross without one means hunt-and-hold; first wolf down ends our agreement.
           topics:
             - id: acknowledge_combat_line
               aliases: [accept_wolf_line, choose_hunt_and_hold]
