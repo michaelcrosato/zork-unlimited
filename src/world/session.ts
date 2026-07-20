@@ -449,6 +449,7 @@ export class OverworldSession {
     const session = new OverworldSession(world);
     session.applySnapshot(snapshot);
     if (snapshot.worldHash !== session.worldHash) {
+      session.offerOpeningPreparationAtDeparture();
       session.offerOpeningReliefAllocationAtDeparture();
     }
     return session;
@@ -888,7 +889,7 @@ export class OverworldSession {
     this.clearSessionCaches();
   }
 
-  private offerOpeningPreparationAfterLeadSource(): void {
+  private offerOpeningPreparationAtDeparture(): void {
     const scene = this.world.opening_preparation;
     const leadSource = this.world.opening_lead_source;
     if (
@@ -898,7 +899,10 @@ export class OverworldSession {
       !this.openingLeadSourceResolved() ||
       this.openingPreparationResolved() ||
       this.currentId !== scene.home ||
-      this.currentAreaId !== scene.area
+      this.currentAreaId !== scene.area ||
+      this.startedQuestIds.has(scene.target_quest) ||
+      this.completedQuestIds.has(scene.target_quest) ||
+      this.journeyState.status !== "active"
     ) {
       return;
     }
@@ -1359,11 +1363,12 @@ export class OverworldSession {
       addOverworldJournalEntry(this.journalEntries, this.journalEntriesById, entry);
       // Source certification is the point at which Wolf-Winter becomes a real,
       // inspectable mission. Preparation remains mandatory before launch, but
-      // its choice is now made against the authored quest and route briefing.
+      // waits at the departure board so its field consequences have context.
       this.discoveredQuestIds.add(scene.target_quest);
-      if (this.world.opening_preparation?.after_lead_source === scene.id) {
-        this.offerOpeningPreparationAfterLeadSource();
-      }
+      // Historical manifests anchored preparation beside Rowan. Retain their
+      // exact in-place offer semantics so predecessor snapshots can be replayed
+      // before the restore layer normalizes them into the Station-timed flow.
+      this.offerOpeningPreparationAtDeparture();
       this.clearSessionCaches();
       return Object.freeze({
         storyChoiceId: storyChoice.id,
@@ -2278,6 +2283,7 @@ export class OverworldSession {
       "movement",
       true,
     );
+    this.offerOpeningPreparationAtDeparture();
     this.offerOpeningReliefAllocationAtDeparture();
     this.clearSessionCaches();
     return withJourneyDecision(

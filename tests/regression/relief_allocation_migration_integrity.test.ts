@@ -157,7 +157,6 @@ describe("F12 to F06 relief-allocation migration integrity", () => {
     session.chooseJourneyStory("albany:ledger_advocate");
     session.chooseJourneyStory("albany:oath_limited_aid_only");
     session.chooseJourneyStory("albany:source_rowan_civic_docket");
-    session.chooseJourneyStory("albany:prep_works_fortification");
 
     travelAndResolve(session, "road_albany_city__saratoga_springs_city");
     travelAndResolve(session, "road_saratoga_springs_city__queensbury_town");
@@ -173,6 +172,8 @@ describe("F12 to F06 relief-allocation migration integrity", () => {
     travelAndResolve(session, "road_saratoga_springs_city__queensbury_town");
     travelAndResolve(session, "road_albany_city__saratoga_springs_city");
     moveToArea(session, "albany_city__transport_hub");
+    expect(session.journey().storyChoice?.kind).toBe("preparation");
+    session.chooseJourneyStory("albany:prep_works_fortification");
     expect(session.journey().storyChoice?.kind).toBe("relief_allocation");
     expect(session.snapshot().startedQuestIds).toContain("gallowmere");
 

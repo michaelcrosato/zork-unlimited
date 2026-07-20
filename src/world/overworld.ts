@@ -1743,19 +1743,20 @@ function assertOpeningPreparationIntegrity(world: OverworldManifest): void {
   if (!registration) {
     throw new Error("Overworld opening preparation requires an opening registration.");
   }
-  if (
-    scene.home !== leadSource.home ||
-    scene.area !== leadSource.area ||
-    scene.target_quest !== leadSource.target_quest
-  ) {
+  if (scene.home !== leadSource.home || scene.target_quest !== leadSource.target_quest) {
     throw new Error(
-      "Overworld opening preparation must share its lead source's home, area, and target quest.",
+      "Overworld opening preparation must share its lead source's home and target quest.",
     );
   }
   const quest = world.quests.find((candidate) => candidate.id === scene.target_quest);
   if (!quest || quest.home !== scene.home) {
     throw new Error(
       "Overworld opening preparation must target an authored quest in its home town.",
+    );
+  }
+  if (quest.area !== scene.area) {
+    throw new Error(
+      "Overworld opening preparation must occupy its target quest's authored departure area.",
     );
   }
   const charactersByCampaignNpcId = new Map(

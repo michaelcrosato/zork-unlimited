@@ -57,6 +57,7 @@ function returnedToWorks(): OverworldSession {
   session.chooseJourneyStory("albany:ledger_advocate");
   session.chooseJourneyStory("albany:oath_full_compact_duty");
   session.chooseJourneyStory("albany:source_rowan_civic_docket");
+  moveToArea(session, WORLD.opening_preparation!.area);
   session.chooseJourneyStory("albany:prep_works_fortification");
 
   const wolf = session.view().quests.find((quest) => quest.id === "wolf_winter");

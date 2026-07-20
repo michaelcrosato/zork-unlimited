@@ -299,18 +299,48 @@ function registerLedgerAdvocate(a: ReturnType<typeof api>, sessionId: string): v
   if (oathed.journey.storyChoice?.kind !== "lead_source") {
     throw new Error("Expected the relief oath to present the Albany lead-source choice.");
   }
-  const sourced = a.choose_overworld_session_story({
+  a.choose_overworld_session_story({
     ...FULL_OVERWORLD_RESPONSE,
     session_id: sessionId,
     choice: "albany:source_rowan_civic_docket",
   });
-  if (sourced.journey.storyChoice?.kind !== "preparation") {
-    throw new Error("Expected lead selection to present Albany preparation.");
+  const preparationArea = overworld.opening_preparation?.area;
+  if (!preparationArea) throw new Error("Expected Albany opening preparation.");
+  let stationed = a.get_overworld_session({
+    include_observation: true,
+    session_id: sessionId,
+  });
+  if (stationed.observation.currentArea?.id !== preparationArea) {
+    const currentAreaId = stationed.observation.currentArea?.id;
+    if (!currentAreaId) throw new Error("Expected a current area before opening preparation.");
+    for (const areaRouteId of overworldAreaPath(currentAreaId, preparationArea)) {
+      a.explore_overworld_session_area({
+        session_id: sessionId,
+        area_id: stationed.observation.currentArea!.id,
+      });
+      a.move_overworld_session_area({
+        ...FULL_OVERWORLD_RESPONSE,
+        session_id: sessionId,
+        area_route_id: areaRouteId,
+      });
+      stationed = a.get_overworld_session({
+        include_observation: true,
+        session_id: sessionId,
+      });
+    }
+  }
+  if (stationed.journey.storyChoice?.kind !== "preparation") {
+    throw new Error("Expected Hayden's Station to present Albany preparation.");
   }
   a.choose_overworld_session_story({
     ...FULL_OVERWORLD_RESPONSE,
     session_id: sessionId,
     choice: "albany:prep_works_fortification",
+  });
+  a.choose_overworld_session_story({
+    ...FULL_OVERWORLD_RESPONSE,
+    session_id: sessionId,
+    choice: RESIDENT_SHELTER_ALLOCATION_ID,
   });
 }
 
@@ -346,13 +376,38 @@ function resolveCurrentOverworldSessionEvent(
     }).journey.storyChoice;
   }
   if (storyChoice?.kind === "lead_source") {
-    const sourced = a.choose_overworld_session_story({
+    a.choose_overworld_session_story({
       ...FULL_OVERWORLD_RESPONSE,
       session_id: sessionId,
       choice: "albany:source_rowan_civic_docket",
     });
-    if (sourced.journey.storyChoice?.kind !== "preparation") {
-      throw new Error("Expected lead selection to present Albany preparation.");
+    const preparationArea = overworld.opening_preparation?.area;
+    if (!preparationArea) throw new Error("Expected Albany opening preparation.");
+    let stationed = a.get_overworld_session({
+      include_observation: true,
+      session_id: sessionId,
+    });
+    if (stationed.observation.currentArea?.id !== preparationArea) {
+      const currentAreaId = stationed.observation.currentArea?.id;
+      if (!currentAreaId) throw new Error("Expected a current area before opening preparation.");
+      for (const areaRouteId of overworldAreaPath(currentAreaId, preparationArea)) {
+        a.explore_overworld_session_area({
+          session_id: sessionId,
+          area_id: stationed.observation.currentArea!.id,
+        });
+        a.move_overworld_session_area({
+          ...FULL_OVERWORLD_RESPONSE,
+          session_id: sessionId,
+          area_route_id: areaRouteId,
+        });
+        stationed = a.get_overworld_session({
+          include_observation: true,
+          session_id: sessionId,
+        });
+      }
+    }
+    if (stationed.journey.storyChoice?.kind !== "preparation") {
+      throw new Error("Expected Hayden's Station to present Albany preparation.");
     }
   }
   if (
@@ -363,6 +418,28 @@ function resolveCurrentOverworldSessionEvent(
       session_id: sessionId,
       choice: "albany:prep_works_fortification",
     });
+    a.choose_overworld_session_story({
+      ...FULL_OVERWORLD_RESPONSE,
+      session_id: sessionId,
+      choice: RESIDENT_SHELTER_ALLOCATION_ID,
+    });
+  }
+  let current = a.get_overworld_session({
+    include_observation: true,
+    session_id: sessionId,
+  }).observation;
+  if (current.currentArea?.id !== event.area) {
+    if (!current.currentArea) throw new Error(`No current area before resolving ${event.id}.`);
+    for (const areaRouteId of overworldAreaPath(current.currentArea.id, event.area)) {
+      a.move_overworld_session_area({ session_id: sessionId, area_route_id: areaRouteId });
+    }
+    current = a.get_overworld_session({
+      include_observation: true,
+      session_id: sessionId,
+    }).observation;
+  }
+  if (current.currentArea?.id !== event.area) {
+    throw new Error(`Expected to return to ${event.area} before resolving its event.`);
   }
   a.investigate_overworld_session_event({ session_id: sessionId, event_id: event.id });
   const prepared = a.get_overworld_session({
@@ -706,16 +783,23 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(sourced.hiddenQuestCount).toBe(localQuests.length - 1);
     const discoveredQuest = sourced.quests[0]!;
     expect(discoveredQuest.area).toBeDefined();
-    expect(sourced.currentArea?.id).not.toBe(discoveredQuest.area);
+    expect(sourced.currentArea?.id).toBe(discoveredQuest.area);
+    expect(
+      a.get_overworld_session({ session_id: started.session_id }).journey.storyChoice?.kind,
+    ).not.toBe("relief_allocation");
     expect(
       a.get_overworld_session_context({ session_id: started.session_id }).context.quests?.[0],
     ).toEqual(compactOverworldQuestRef(discoveredQuest));
+    const routeAwayFromQuest = sourced.areaExits.find(
+      (exit) => exit.destination.id !== discoveredQuest.area,
+    );
+    expect(routeAwayFromQuest).toBeDefined();
     areaObservation = a.move_overworld_session_area({
       ...FULL_OVERWORLD_RESPONSE,
       session_id: started.session_id,
-      area_route_id: stagingRoute.id,
+      area_route_id: routeAwayFromQuest!.id,
     }).observation;
-    expect(areaObservation.currentArea?.id).toBe(scoutedQuestLead.observation.currentArea?.id);
+    expect(areaObservation.currentArea?.id).not.toBe(discoveredQuest.area);
     expect(() =>
       a.start_overworld_session_quest({
         ...FULL_OVERWORLD_QUEST_START,
@@ -725,22 +809,19 @@ describe("MCP tools — validate / load (§9.4)", () => {
       }),
     ).toThrow(/Move to/i);
 
-    const routeToQuestArea = areaObservation.areaExits.find(
-      (exit) => exit.destination.id === discoveredQuest.area,
+    const routeToQuestArea = overworldAreaPath(
+      areaObservation.currentArea!.id,
+      discoveredQuest.area,
     );
-    expect(routeToQuestArea).toBeDefined();
-    areaObservation = a.move_overworld_session_area({
-      ...FULL_OVERWORLD_RESPONSE,
-      session_id: started.session_id,
-      area_route_id: routeToQuestArea!.id,
-    }).observation;
+    expect(routeToQuestArea).not.toHaveLength(0);
+    for (const areaRouteId of routeToQuestArea) {
+      areaObservation = a.move_overworld_session_area({
+        ...FULL_OVERWORLD_RESPONSE,
+        session_id: started.session_id,
+        area_route_id: areaRouteId,
+      }).observation;
+    }
     expect(areaObservation.currentArea?.id).toBe(discoveredQuest.area);
-    const allocated = a.choose_overworld_session_story({
-      ...FULL_OVERWORLD_RESPONSE,
-      session_id: started.session_id,
-      choice: RESIDENT_SHELTER_ALLOCATION_ID,
-    });
-    expect(allocated.journey.storyChoice?.kind).not.toBe("relief_allocation");
     const beforeQuestStart = a.export_overworld_session({
       session_id: started.session_id,
     });
@@ -892,7 +973,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(repeated.result.discoveredSites).toEqual([]);
     expect(repeated.result.discoveredJobs).toEqual([]);
     expect(repeated.result.discoveredQuests).toEqual([]);
-    expect(repeated.observation.journal).toHaveLength(14);
+    expect(repeated.observation.journal).toHaveLength(15);
 
     const talked = a.talk_overworld_session_contact({
       ...FULL_OVERWORLD_RESPONSE,
@@ -903,7 +984,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(talked.observation.quests.map((quest) => quest.id)).toEqual(
       localQuests.slice(0, 1).map((quest) => quest.id),
     );
-    expect(talked.observation.journal).toHaveLength(15);
+    expect(talked.observation.journal).toHaveLength(16);
 
     const investigated = a.investigate_overworld_session_event({
       ...FULL_OVERWORLD_RESPONSE,
@@ -911,7 +992,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
       event_id: event.id,
     });
     expect(investigated.result.discoveredQuests).toEqual([]);
-    expect(investigated.observation.journal).toHaveLength(16);
+    expect(investigated.observation.journal).toHaveLength(17);
     expect(investigated.observation.timeLabel).not.toBe(started.observation.timeLabel);
     const eventOptionId = investigated.observation.eventChoices.find(
       ([eventId]) => eventId === event.id,
@@ -926,7 +1007,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
     });
     expect(resolved.result.minutes).toBe(30 + event.intensity * 10);
     expect(resolved.result.entry.kind).toBe("resolution");
-    expect(resolved.observation.journal).toHaveLength(17);
+    expect(resolved.observation.journal).toHaveLength(18);
     expect(resolved.observation.resolvedEventIds).toContain(event.id);
     expect(resolved.observation.regionRenown[started.observation.current.region]).toBe(
       event.intensity,
@@ -995,7 +1076,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
       traveled.observation.pendingRoadEncounter?.options.map((option) => option.strategy),
     ).toEqual(["cautious_scout", "assist_travelers", "press_on"]);
     expect(traveled.observation.log[0]?.to).toBe("Colonie town");
-    expect(traveled.observation.journal).toHaveLength(17);
+    expect(traveled.observation.journal).toHaveLength(18);
 
     expect(() =>
       a.travel_overworld_session({

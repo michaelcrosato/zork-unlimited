@@ -97,6 +97,9 @@ function predecessorLeftAfterBloodSnapshot(
   session.chooseJourneyStory(registration.profiles[0]!.id);
   if (oath) session.chooseJourneyStory(oath.options[0]!.id);
   session.chooseJourneyStory(lead.options[0]!.id);
+  if (session.view().currentArea?.id !== preparation.area) {
+    moveToArea(session, preparation.area);
+  }
   session.chooseJourneyStory(preparation.profiles[0]!.id);
   moveToArea(session, ally.area);
   session.chooseJourneyStory(allocation.options[0]!.id);

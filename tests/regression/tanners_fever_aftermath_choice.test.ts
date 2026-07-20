@@ -57,12 +57,14 @@ function reachTannersGoalCompletion(): OverworldSession {
   session.chooseJourneyStory("albany:ledger_advocate");
   session.chooseJourneyStory("albany:oath_limited_aid_only");
   session.chooseJourneyStory("albany:source_rowan_civic_docket");
+  moveToArea(session, WORLD.opening_preparation!.area);
   expect(session.journey().storyChoice?.kind).toBe("preparation");
   session.chooseJourneyStory("albany:prep_works_fortification");
+  expect(session.journey().storyChoice?.kind).toBe("relief_allocation");
+  session.chooseJourneyStory("albany:relief_resident_shelter");
   moveToArea(session, "albany_city__market");
   session.scoutPoi("albany_city__market__poi");
   moveToArea(session, "albany_city__transport_hub");
-  session.chooseJourneyStory("albany:relief_resident_shelter");
   session.startQuest("wolf_winter", "albany:wolf_approach_sheltered_stockway");
   session.completeQuest("wolf_winter", {
     endingId: "ending_held_timber_saved",

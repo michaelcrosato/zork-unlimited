@@ -12,7 +12,8 @@ type OpeningDispatchPlan = Readonly<{
   questDiscovery: string;
   launchBriefing: string | null;
   optionalFollowup: string | null;
-  stages: readonly OpeningDispatchStage[];
+  civicStages: readonly OpeningDispatchStage[];
+  departureStages: readonly OpeningDispatchStage[];
 }>;
 
 /**
@@ -63,7 +64,7 @@ function openingDispatchPlan(world: OverworldManifest): OpeningDispatchPlan | nu
             ally.options.map((option) => option.title),
           )}.`
         : null,
-    stages: Object.freeze([
+    civicStages: Object.freeze([
       Object.freeze({
         id: registration.id,
         kind: "registration",
@@ -75,6 +76,8 @@ function openingDispatchPlan(world: OverworldManifest): OpeningDispatchPlan | nu
         label: "duty",
       }),
       Object.freeze({ id: leadSource.id, kind: "lead_source", label: "evidence" }),
+    ]),
+    departureStages: Object.freeze([
       Object.freeze({
         id: preparation.id,
         kind: "preparation",
@@ -104,21 +107,28 @@ export function withOpeningDispatchBriefing(
   if (!prompt?.kind) return prompt;
   const plan = openingDispatchPlan(world);
   if (!plan) return prompt;
-  const stageIndex = plan.stages.findIndex(
+  const civicStageIndex = plan.civicStages.findIndex(
     (stage) => stage.id === prompt.id && stage.kind === prompt.kind,
   );
+  const departureStageIndex = plan.departureStages.findIndex(
+    (stage) => stage.id === prompt.id && stage.kind === prompt.kind,
+  );
+  const stages = civicStageIndex >= 0 ? plan.civicStages : plan.departureStages;
+  const stageIndex = civicStageIndex >= 0 ? civicStageIndex : departureStageIndex;
   if (stageIndex < 0) return prompt;
-  const stage = plan.stages[stageIndex]!;
-  const completed = plan.stages.slice(0, stageIndex).map((candidate) => candidate.label);
-  const remaining = plan.stages.slice(stageIndex + 1).map((candidate) => candidate.label);
-  const roadmap = plan.stages.map((candidate) => candidate.label).join(" → ");
-  const progress = `${plan.questTitle} dispatch · ${stageIndex + 1}/${plan.stages.length} — ${stage.label}.`;
+  const stage = stages[stageIndex]!;
+  const completed = stages.slice(0, stageIndex).map((candidate) => candidate.label);
+  const remaining = stages.slice(stageIndex + 1).map((candidate) => candidate.label);
+  const phase = civicStageIndex >= 0 ? "Civic docket" : "Departure plan";
+  const progress = `${plan.questTitle} ${phase} · ${stageIndex + 1}/${stages.length} — ${stage.label}.`;
   const planningContext =
-    stageIndex === 0
-      ? `Mission preview — ${plan.questDiscovery} Before departure: ${roadmap}. Choose only your ${stage.label} now; four decisions stay open. Each changes field conditions or consequences; none locks your solution.`
-      : `Chosen: ${listLabels(completed)}. Now choose: ${stage.label}. Still ahead: ${listLabels(remaining)}.${remaining.length === 0 && plan.optionalFollowup ? ` ${plan.optionalFollowup}` : ""}`;
+    civicStageIndex >= 0
+      ? stageIndex === 0
+        ? `Mission preview — ${plan.questDiscovery} At Civic: role → duty → evidence. Choose only your ${stage.label} now; two docket decisions stay open. Each changes field conditions or consequences; none locks your solution.`
+        : `Chosen at Civic: ${listLabels(completed)}. Now choose: ${stage.label}.${remaining.length > 0 ? ` Still ahead here: ${listLabels(remaining)}.` : " Next: take the certified packet to Hayden's Station departure board for field preparation and relief capacity."}`
+      : `Chosen for departure: ${listLabels(completed)}. Now choose: ${stage.label}. Still ahead: ${listLabels(remaining)}.${remaining.length === 0 && plan.optionalFollowup ? ` ${plan.optionalFollowup}` : ""}`;
   const missionCard =
-    stageIndex >= 3
+    departureStageIndex >= 0
       ? `Mission — ${plan.questDiscovery}${plan.launchBriefing ? ` Route preview — ${plan.launchBriefing}` : ""}`
       : null;
   return {

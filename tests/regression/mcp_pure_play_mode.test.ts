@@ -166,6 +166,17 @@ function compactAreaRoute(payload: Record<string, unknown>, destination: string)
   return route[0];
 }
 
+async function movePlayerToOpeningPreparation(
+  client: Client,
+  parent: { session_id: string },
+): Promise<Record<string, unknown>> {
+  const context = await callPlayerTool(client, "get_overworld_session_context", parent);
+  return callPlayerTool(client, "move_overworld_session_area", {
+    ...parent,
+    area_route_id: compactAreaRoute(context, "albany_city__transport_hub"),
+  });
+}
+
 async function launchPreparedPureWolf(client: Client): Promise<{
   overworldSessionId: string;
   rpgSessionId: string;
@@ -186,8 +197,11 @@ async function launchPreparedPureWolf(client: Client): Promise<{
     "albany:ledger_advocate",
     "albany:oath_limited_aid_only",
     "albany:source_rowan_civic_docket",
-    "albany:prep_works_fortification",
   ]) {
+    await callPlayerTool(client, "choose_overworld_session_story", { ...parent, choice });
+  }
+  await movePlayerToOpeningPreparation(client, parent);
+  for (const choice of ["albany:prep_works_fortification", "albany:relief_resident_shelter"]) {
     await callPlayerTool(client, "choose_overworld_session_story", { ...parent, choice });
   }
   let view = await callPlayerTool(client, "get_overworld_session_context", parent);
@@ -205,13 +219,8 @@ async function launchPreparedPureWolf(client: Client): Promise<{
     ...parent,
     area_route_id: compactAreaRoute(view, "albany_city__transport_hub"),
   });
-  expect((departure.journey as { storyChoice?: unknown }).storyChoice).not.toBeNull();
-  expect((departure.context as { quest_starts?: unknown }).quest_starts).toBeUndefined();
-  const ready = await callPlayerTool(client, "choose_overworld_session_story", {
-    ...parent,
-    choice: "albany:relief_resident_shelter",
-  });
-  expect((ready.context as { quest_starts?: unknown }).quest_starts).toEqual([
+  expect((departure.journey as { storyChoice?: unknown }).storyChoice).toBeNull();
+  expect((departure.context as { quest_starts?: unknown }).quest_starts).toEqual([
     ["wolf_winter", "albany:wolf_approach_exposed_ridge"],
     ["wolf_winter", "albany:wolf_approach_sheltered_stockway"],
   ]);
@@ -421,6 +430,18 @@ async function prepareDenseAreaSession(
   if (startResult.isError) throw new Error(textResult(startResult));
   const started = textPayload(startResult);
   const sessionId = String(started.session_id);
+  const civicScout = await client.callTool({
+    name: "scout_overworld_session_poi",
+    arguments: { session_id: sessionId, poi_id: "albany_city__civic_core__poi" },
+  });
+  expect(civicScout.isError).not.toBe(true);
+  for (const poiId of revealPoiIds) {
+    const scouted = await client.callTool({
+      name: "scout_overworld_session_poi",
+      arguments: { session_id: sessionId, poi_id: poiId },
+    });
+    expect(scouted.isError, poiId).not.toBe(true);
+  }
   const contact = await client.callTool({
     name: "talk_overworld_session_contact",
     arguments: {
@@ -433,7 +454,6 @@ async function prepareDenseAreaSession(
     "albany:ledger_advocate",
     "albany:oath_limited_aid_only",
     "albany:source_rowan_civic_docket",
-    "albany:prep_works_fortification",
   ]) {
     const chosen = await client.callTool({
       name: "choose_overworld_session_story",
@@ -441,13 +461,21 @@ async function prepareDenseAreaSession(
     });
     expect(chosen.isError, choice).not.toBe(true);
   }
-  for (const poiId of revealPoiIds) {
-    const scouted = await client.callTool({
-      name: "scout_overworld_session_poi",
-      arguments: { session_id: sessionId, poi_id: poiId },
+  await movePlayerToOpeningPreparation(client, { session_id: sessionId });
+  for (const choice of ["albany:prep_works_fortification", "albany:relief_resident_shelter"]) {
+    const chosen = await client.callTool({
+      name: "choose_overworld_session_story",
+      arguments: { session_id: sessionId, choice },
     });
-    expect(scouted.isError, poiId).not.toBe(true);
+    expect(chosen.isError, choice).not.toBe(true);
   }
+  const stationContext = await callPlayerTool(client, "get_overworld_session_context", {
+    session_id: sessionId,
+  });
+  await callPlayerTool(client, "move_overworld_session_area", {
+    session_id: sessionId,
+    area_route_id: compactAreaRoute(stationContext, "albany_city__civic_core"),
+  });
   return sessionId;
 }
 
@@ -511,7 +539,6 @@ describe("MCP pure play mode", () => {
           "albany:ledger_advocate",
           "albany:oath_limited_aid_only",
           "albany:source_rowan_civic_docket",
-          "albany:prep_works_fortification",
         ]) {
           await callPlayerTool(client, "choose_overworld_session_story", { ...parent, choice });
         }
@@ -528,6 +555,12 @@ describe("MCP pure play mode", () => {
         expect((moved.context as { here?: unknown[] }).here?.[3]).toBe(
           "albany_city__transport_hub",
         );
+        for (const choice of [
+          "albany:prep_works_fortification",
+          "albany:relief_resident_shelter",
+        ]) {
+          await callPlayerTool(client, "choose_overworld_session_story", { ...parent, choice });
+        }
         expect(
           (moved.journey as { decisionProof?: { last?: { actionId?: string } } }).decisionProof
             ?.last?.actionId,
@@ -889,7 +922,6 @@ describe("MCP pure play mode", () => {
         "albany:ledger_advocate",
         "albany:oath_limited_aid_only",
         "albany:source_rowan_civic_docket",
-        "albany:prep_works_fortification",
       ]) {
         const chosen = await client.callTool({
           name: "choose_overworld_session_story",
@@ -933,6 +965,13 @@ describe("MCP pure play mode", () => {
       expect((moved.observation as { currentArea?: { id: string } }).currentArea?.id).toBe(
         "albany_city__transport_hub",
       );
+      for (const choice of ["albany:prep_works_fortification", "albany:relief_resident_shelter"]) {
+        const chosen = await client.callTool({
+          name: "choose_overworld_session_story",
+          arguments: { session_id: overworldSessionId, choice },
+        });
+        expect(chosen.isError, choice).not.toBe(true);
+      }
 
       const created = textPayload(
         await client.callTool({ name: "new_game", arguments: { generate_rpg_seed: 3 } }),
@@ -1233,6 +1272,10 @@ describe("MCP pure play mode", () => {
         );
         expect(await parentState()).toEqual(beforeContactConflict);
 
+        await callPlayerTool(client, "scout_overworld_session_poi", {
+          ...parent,
+          poi_id: "albany_city__civic_core__poi",
+        });
         await callPlayerTool(client, "talk_overworld_session_contact", {
           ...parent,
           character_id: "albany_city__civic_core__contact",
@@ -1242,7 +1285,13 @@ describe("MCP pure play mode", () => {
           "albany:ledger_advocate",
           "albany:oath_limited_aid_only",
           "albany:source_rowan_civic_docket",
+        ]) {
+          await callPlayerTool(client, "choose_overworld_session_story", { ...parent, choice });
+        }
+        await movePlayerToOpeningPreparation(client, parent);
+        for (const choice of [
           "albany:prep_works_fortification",
+          "albany:relief_resident_shelter",
         ]) {
           await callPlayerTool(client, "choose_overworld_session_story", { ...parent, choice });
         }
@@ -1333,15 +1382,11 @@ describe("MCP pure play mode", () => {
         expect(textPayload(tripleConflict).error).toMatch(/Conflicting route selector and area_id/);
         expect(await parentState()).toEqual(beforeTripleConflict);
 
-        await callPlayerTool(client, "move_overworld_session_area", {
+        const ready = await callPlayerTool(client, "move_overworld_session_area", {
           ...parent,
           area_route_id: stationRoute[0],
           route_id: stationRoute[0],
           area_id: stationRoute[1],
-        });
-        const ready = await callPlayerTool(client, "choose_overworld_session_story", {
-          ...parent,
-          choice: "albany:relief_resident_shelter",
         });
         expect((ready.context as { quest_starts?: unknown }).quest_starts).toBeDefined();
         const launched = await callPlayerTool(client, "start_overworld_session_quest", {
@@ -1890,8 +1935,31 @@ describe("MCP pure play mode", () => {
             },
           }),
         );
+        expect(
+          (
+            sourced.journey as {
+              storyChoice?: { kind?: string };
+            }
+          ).storyChoice,
+        ).toBeNull();
+        expect(areaView(sourced).quests.map((quest) => quest.id)).toContain("wolf_winter");
+        const preparationRoute = areaView(sourced).areaExits.find(
+          (route) => route.destination.id === "albany_city__transport_hub",
+        );
+        if (!preparationRoute) throw new Error("expected route to Albany Station Quarter");
+        const stationed = textPayload(
+          await client.callTool({
+            name: "move_overworld_session_area",
+            arguments: {
+              session_id: sessionId,
+              area_route_id: preparationRoute.id,
+              compact_context: false,
+              compact_result: false,
+            },
+          }),
+        );
         const preparationChoice = (
-          sourced.journey as {
+          stationed.journey as {
             storyChoice?: {
               kind?: string;
               options?: { id: string }[];
@@ -1899,7 +1967,6 @@ describe("MCP pure play mode", () => {
           }
         ).storyChoice;
         expect(preparationChoice?.kind).toBe("preparation");
-        expect(areaView(sourced).quests.map((quest) => quest.id)).toContain("wolf_winter");
         const worksFortification = preparationChoice?.options?.find(
           (option) => option.id === "albany:prep_works_fortification",
         );
@@ -1918,7 +1985,18 @@ describe("MCP pure play mode", () => {
         );
         const wolfWinter = areaView(prepared).quests.find((quest) => quest.id === "wolf_winter");
         if (!wolfWinter) throw new Error("expected selected preparation to reveal Wolf-Winter");
-        view = areaView(prepared);
+        const allocated = textPayload(
+          await client.callTool({
+            name: "choose_overworld_session_story",
+            arguments: {
+              session_id: sessionId,
+              choice: "albany:relief_resident_shelter",
+              compact_context: false,
+              compact_result: false,
+            },
+          }),
+        );
+        view = areaView(allocated);
         const marketRoute = view.areaExits.find(
           (route) => route.destination.id === "albany_city__market",
         );
@@ -1965,28 +2043,7 @@ describe("MCP pure play mode", () => {
             },
           }),
         );
-        const allocationChoice = (
-          departure.journey as {
-            storyChoice?: {
-              kind?: string;
-              options?: { id: string }[];
-            };
-          }
-        ).storyChoice;
-        expect(allocationChoice?.kind).toBe("relief_allocation");
-        const residentShelter = allocationChoice?.options?.find(
-          (option) => option.id === "albany:relief_resident_shelter",
-        );
-        if (!residentShelter) throw new Error("expected visible resident-shelter allocation");
-        await client.callTool({
-          name: "choose_overworld_session_story",
-          arguments: {
-            session_id: sessionId,
-            choice: residentShelter.id,
-            compact_context: false,
-            compact_result: false,
-          },
-        });
+        expect((departure.journey as { storyChoice?: unknown }).storyChoice).toBeNull();
 
         const launched = textPayload(
           await client.callTool({

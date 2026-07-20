@@ -193,23 +193,34 @@ function launchAlbanyWolf(api: ToolApi, seed: number) {
     session_id: overworldSessionId,
     choice: "albany:oath_limited_aid_only",
   });
-  api.choose_overworld_session_story({
+  const sourced = api.choose_overworld_session_story({
     ...FULL,
     session_id: overworldSessionId,
     choice: "albany:source_rowan_civic_docket",
+  });
+  const preparationArea = WORLD.opening_preparation?.area;
+  if (!preparationArea) throw new Error("Albany requires opening preparation");
+  const preparationRoute = sourced.observation.areaExits.find(
+    (candidate) => candidate.destination.id === preparationArea,
+  );
+  if (!preparationRoute) throw new Error("Expected a route to the opening preparation board");
+  api.move_overworld_session_area({
+    ...FULL,
+    session_id: overworldSessionId,
+    area_route_id: preparationRoute.id,
   });
   api.choose_overworld_session_story({
     ...FULL,
     session_id: overworldSessionId,
     choice: "albany:prep_works_fortification",
   });
-
-  moveToArea(api, overworldSessionId, ALLY.area);
   api.choose_overworld_session_story({
     ...FULL,
     session_id: overworldSessionId,
     choice: RESIDENT_SHELTER,
   });
+
+  moveToArea(api, overworldSessionId, ALLY.area);
   api.talk_overworld_session_contact({
     ...FULL,
     session_id: overworldSessionId,

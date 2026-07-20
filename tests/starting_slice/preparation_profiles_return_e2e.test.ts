@@ -147,12 +147,25 @@ function launchPreparedWolf(api: ToolApi) {
     session_id: overworldSessionId,
     choice: "albany:source_rowan_civic_docket",
   });
-  expect(sourced.journey.storyChoice).toMatchObject({
+  const preparationArea = WORLD.opening_preparation?.area;
+  if (!preparationArea) {
+    throw new Error("the Albany starting slice requires opening preparation");
+  }
+  const preparationRoute = sourced.observation.areaExits.find(
+    (candidate) => candidate.destination.id === preparationArea,
+  );
+  if (!preparationRoute) throw new Error("expected a route to the opening preparation board");
+  const atPreparation = api.move_overworld_session_area({
+    ...FULL,
+    session_id: overworldSessionId,
+    area_route_id: preparationRoute.id,
+  });
+  expect(atPreparation.journey.storyChoice).toMatchObject({
     id: "albany:wolf_preparation",
     kind: "preparation",
   });
   expect(
-    sourced.journey.storyChoice?.options.find((option) => option.id === PROFILE)?.consequence,
+    atPreparation.journey.storyChoice?.options.find((option) => option.id === PROFILE)?.consequence,
   ).toMatch(/actual cost: 5 minutes and \$0[^]*independent bond/i);
 
   const prepared = api.choose_overworld_session_story({
@@ -173,12 +186,12 @@ function launchPreparedWolf(api: ToolApi) {
     prepared.observation.character,
   );
 
-  moveToVisibleArea(api, overworldSessionId, WOLF.area);
   api.choose_overworld_session_story({
     ...FULL,
     session_id: overworldSessionId,
     choice: NEUTRAL_RELIEF_ALLOCATION,
   });
+  moveToVisibleArea(api, overworldSessionId, WOLF.area);
   const launched = api.start_overworld_session_quest({
     ...FULL,
     compact_observation: false,

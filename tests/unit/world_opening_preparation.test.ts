@@ -428,7 +428,7 @@ describe("opening preparation manifest integrity", () => {
     }, /must follow.*opening lead source/i);
     expectIntegrityFailure((draft) => {
       shippedScene(draft).area = "albany_city__market";
-    }, /share.*lead source.*home, area, and target quest/i);
+    }, /occupy.*target quest.*departure area/i);
     expectIntegrityFailure((draft) => {
       shippedScene(draft).target_quest = "missing_quest";
     }, /share.*lead source.*target quest/i);

@@ -130,7 +130,9 @@ function wolfBoundary(allyOptionId: typeof ACCEPT | typeof SOLO): OverworldSessi
   session.chooseJourneyStory(REGISTRATION.profiles[0]!.id);
   session.chooseJourneyStory("albany:oath_limited_aid_only");
   session.chooseJourneyStory(LEAD.options[0]!.id);
+  moveToArea(session, PREPARATION.area);
   session.chooseJourneyStory(PREPARATION.profiles[0]!.id);
+  session.chooseJourneyStory(RESIDENT_SHELTER);
   moveToArea(session, "albany_city__market");
   session.scoutPoi(session.view().pois[0]!.id);
   session.talkToCharacter("albany_city__market__contact");
@@ -138,7 +140,6 @@ function wolfBoundary(allyOptionId: typeof ACCEPT | typeof SOLO): OverworldSessi
   if (!marketSite) throw new Error("Expected Jamie's Market discovery site.");
   session.exploreSite(marketSite.id);
   moveToArea(session, ALLY.area);
-  session.chooseJourneyStory(RESIDENT_SHELTER);
   session.talkToCharacter(ALLY.contact);
   session.chooseJourneyStory(allyOptionId);
   session.startQuest(WOLF.id, "albany:wolf_approach_sheltered_stockway");

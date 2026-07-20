@@ -306,6 +306,7 @@ function moveToArea(session: OverworldSession, targetAreaId: string): void {
 function startedCampaign(oathId: OathId, profileId = LEDGER_PROFILE): OverworldSession {
   const session = selectOath(oathId, profileId);
   session.chooseJourneyStory("albany:source_rowan_civic_docket");
+  moveToArea(session, PREPARATION.area);
   expect(session.journey().storyChoice).toMatchObject({
     id: PREPARATION.id,
     kind: "preparation",
@@ -324,6 +325,7 @@ function startedCampaign(oathId: OathId, profileId = LEDGER_PROFILE): OverworldS
 function reachAllyOffer(oathId: OathId): OverworldSession {
   const session = selectOath(oathId);
   session.chooseJourneyStory("albany:source_rowan_civic_docket");
+  moveToArea(session, PREPARATION.area);
   session.chooseJourneyStory("albany:prep_works_fortification");
   moveToArea(session, ALLOCATION.area);
   session.chooseJourneyStory("albany:relief_mobile_reserve");

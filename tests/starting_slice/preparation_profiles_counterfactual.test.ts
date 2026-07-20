@@ -156,6 +156,7 @@ function choosePreparation(args: {
   session.chooseJourneyStory(args.backgroundId);
   session.chooseJourneyStory("albany:oath_full_compact_duty");
   session.chooseJourneyStory(args.sourceId);
+  moveToArea(session, PREPARATION.area);
 
   const prompt = session.journey().storyChoice;
   expect(prompt).toMatchObject({ id: PREPARATION.id, kind: "preparation" });
@@ -165,9 +166,13 @@ function choosePreparation(args: {
   const after = session.snapshot();
 
   const otherProfile = PROFILE_IDS.find((profileId) => profileId !== args.profileId)!;
-  expect(() => session.chooseJourneyStory(otherProfile)).toThrow(/no story consequence/i);
+  expect(() => session.chooseJourneyStory(otherProfile)).toThrow(
+    /no story consequence|unknown story choice/i,
+  );
   const restored = OverworldSession.restore(WORLD, after);
-  expect(() => restored.chooseJourneyStory(otherProfile)).toThrow(/no story consequence/i);
+  expect(() => restored.chooseJourneyStory(otherProfile)).toThrow(
+    /no story consequence|unknown story choice/i,
+  );
 
   expect(after.discoveredQuestIds).toContain(WOLF.id);
   expect(after.character.knowledge).toContain(PROFILE_KNOWLEDGE[args.profileId]);

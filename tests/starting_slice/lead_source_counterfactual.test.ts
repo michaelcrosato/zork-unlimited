@@ -44,6 +44,14 @@ function questIds(observation: { quests: readonly { id: string }[] }): string[] 
   return observation.quests.map((quest) => quest.id);
 }
 
+function moveToOpeningPreparation(session: OverworldSession): void {
+  const areaId = WORLD.opening_preparation?.area;
+  if (!areaId || session.view().currentArea?.id === areaId) return;
+  const route = session.view().areaExits.find((candidate) => candidate.destination.id === areaId);
+  if (!route) throw new Error(`Expected a visible route to ${areaId}.`);
+  session.moveArea(route.id);
+}
+
 function reachMcpLeadSource(
   api: ToolApi,
   profileId = COURIER,
@@ -101,29 +109,43 @@ function launchMcpWolf(sourceId: string): {
     session_id: pending.sessionId,
     choice: sourceId,
   });
-  expect(selected.journey.storyChoice?.kind).toBe("preparation");
-  expect(questIds(selected.observation)).toContain(WOLF_ID);
+  const preparationArea = WORLD.opening_preparation?.area;
+  if (!preparationArea) throw new Error("Expected Albany opening preparation.");
+  const preparationRoute = selected.observation.areaExits.find(
+    (candidate) => candidate.destination.id === preparationArea,
+  );
+  if (!preparationRoute) throw new Error(`Expected a visible route to ${preparationArea}.`);
+  const atPreparation = api.move_overworld_session_area({
+    ...FULL_OVERWORLD,
+    session_id: pending.sessionId,
+    area_route_id: preparationRoute.id,
+  });
+  expect(atPreparation.journey.storyChoice?.kind).toBe("preparation");
+  expect(questIds(atPreparation.observation)).toContain(WOLF_ID);
   const prepared = api.choose_overworld_session_story({
     ...FULL_OVERWORLD,
     session_id: pending.sessionId,
     choice: COUNTERFACTUAL_PREPARATION,
   });
-  const wolf = prepared.observation.quests.find((quest) => quest.id === WOLF_ID);
-  if (!wolf) throw new Error("The selected preparation must reveal Wolf-Winter.");
-  const route = prepared.observation.areaExits.find(
-    (candidate) => candidate.destination.id === wolf.area,
-  );
-  if (!route) throw new Error("The selected preparation must leave a route to Wolf-Winter.");
-  api.move_overworld_session_area({
-    ...FULL_OVERWORLD,
-    session_id: pending.sessionId,
-    area_route_id: route.id,
-  });
-  api.choose_overworld_session_story({
+  expect(prepared.journey.storyChoice?.kind).toBe("relief_allocation");
+  const allocated = api.choose_overworld_session_story({
     ...FULL_OVERWORLD,
     session_id: pending.sessionId,
     choice: RESIDENT_SHELTER_ALLOCATION,
   });
+  const wolf = allocated.observation.quests.find((quest) => quest.id === WOLF_ID);
+  if (!wolf) throw new Error("The selected preparation must reveal Wolf-Winter.");
+  if (allocated.observation.currentArea?.id !== wolf.area) {
+    const route = allocated.observation.areaExits.find(
+      (candidate) => candidate.destination.id === wolf.area,
+    );
+    if (!route) throw new Error("The selected preparation must leave a route to Wolf-Winter.");
+    api.move_overworld_session_area({
+      ...FULL_OVERWORLD,
+      session_id: pending.sessionId,
+      area_route_id: route.id,
+    });
+  }
   const launched = api.start_overworld_session_quest({
     ...FULL_OVERWORLD,
     compact_observation: false,
@@ -272,7 +294,7 @@ describe("SS-F03 — Albany lead-source counterfactual", () => {
     });
     expect(selected.journeyDecision).toEqual(expectedJourneyDecision);
     expect(selected.journey.acceptedDecisions).toBe(pending.pendingJourney.acceptedDecisions + 1);
-    expect(selected.journey.storyChoice?.kind).toBe("preparation");
+    expect(selected.journey.storyChoice).toBeNull();
     expect(questIds(selected.observation)).toContain(WOLF_ID);
 
     const accepted = api.export_overworld_session({ session_id: pending.sessionId });
@@ -282,7 +304,7 @@ describe("SS-F03 — Albany lead-source counterfactual", () => {
         session_id: pending.sessionId,
         choice: ROWAN_SOURCE,
       }),
-    ).toThrow(/unknown story choice/i);
+    ).toThrow(/unknown story choice|no story consequence/i);
     const afterRejectedRepeat = api.export_overworld_session({
       session_id: pending.sessionId,
     });
@@ -325,7 +347,7 @@ describe("SS-F03 — Albany lead-source counterfactual", () => {
       session_id: restoredPending.session_id,
       choice: JAMIE_SOURCE,
     });
-    expect(selected.journey.storyChoice?.kind).toBe("preparation");
+    expect(selected.journey.storyChoice).toBeNull();
     const selectedWolf = selected.observation.quests.find((quest) => quest.id === WOLF_ID);
     expect(selectedWolf).toMatchObject({
       title: "The Wolf-Winter",
@@ -359,7 +381,9 @@ describe("SS-F03 — Albany lead-source counterfactual", () => {
       selectedWolf,
     );
     expect(uiSelected.view().quests.find((quest) => quest.id === WOLF_ID)).toEqual(selectedWolf);
-    expect(() => uiSelected.chooseJourneyStory(HAYDEN_SOURCE)).toThrow(/unknown story choice/i);
+    expect(() => uiSelected.chooseJourneyStory(HAYDEN_SOURCE)).toThrow(
+      /unknown story choice|no story consequence/i,
+    );
   });
 
   it("persists Hayden's certified-source memory through save/restore and presents his reactive contact", () => {
@@ -374,17 +398,13 @@ describe("SS-F03 — Albany lead-source counterfactual", () => {
 
     const restored = OverworldSession.restore(WORLD, snapshot);
     expect(restored.snapshot()).toEqual(snapshot);
+    expect(restored.journey().storyChoice).toBeNull();
+    moveToOpeningPreparation(restored);
     expect(restored.journey().storyChoice?.kind).toBe("preparation");
     restored.chooseJourneyStory(DEFAULT_PREPARATION);
+    restored.chooseJourneyStory(RESIDENT_SHELTER_ALLOCATION);
     const hayden = WORLD.characters.find((character) => character.id === HAYDEN_ID);
     if (!hayden) throw new Error("Expected Hayden's Albany contact.");
-    const route = restored
-      .view()
-      .areaExits.find((candidate) => candidate.destination.id === hayden.area);
-    if (!route) throw new Error("Expected a local route from Rowan's desk to Hayden.");
-    restored.moveArea(route.id);
-    restored.chooseJourneyStory(RESIDENT_SHELTER_ALLOCATION);
-
     const contact = restored.view().characters.find((character) => character.id === HAYDEN_ID);
     expect(contact).toMatchObject({
       summary: expect.stringContaining("frost-heave sketch"),
@@ -404,13 +424,10 @@ describe("SS-F03 — Albany lead-source counterfactual", () => {
     for (const sourceId of [ROWAN_SOURCE, JAMIE_SOURCE]) {
       const session = reachDirectLeadSource(COURIER);
       session.chooseJourneyStory(sourceId);
+      moveToOpeningPreparation(session);
       expect(session.journey().storyChoice?.kind).toBe("preparation");
       session.chooseJourneyStory(DEFAULT_PREPARATION);
-      const route = session
-        .view()
-        .areaExits.find((candidate) => candidate.destination.id === "albany_city__transport_hub");
-      if (!route) throw new Error("expected the certified lead route to Station Quarter");
-      session.moveArea(route.id);
+      session.chooseJourneyStory(RESIDENT_SHELTER_ALLOCATION);
       const hayden = session.view().characters.find((candidate) => candidate.id === HAYDEN_ID);
       expect(hayden?.agenda).toContain("controlling source certification");
       expect(hayden?.agenda).toContain("settled packets carry route timing");

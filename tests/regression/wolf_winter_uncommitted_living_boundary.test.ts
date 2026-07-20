@@ -57,9 +57,23 @@ function launchSeed4174Imports(): GameState {
     "albany:source_jamie_market_testimony",
     "albany:prep_relief_protocol",
   ] as const;
-  for (const choice of openingChoices.slice(0, -1)) {
+  for (const choice of openingChoices.slice(0, -2)) {
     api.choose_overworld_session_story({ ...FULL, session_id: sessionId, choice });
   }
+  const sourced = api.choose_overworld_session_story({
+    ...FULL,
+    session_id: sessionId,
+    choice: "albany:source_jamie_market_testimony",
+  });
+  const preparationRoute = sourced.observation.areaExits.find(
+    (candidate) => candidate.destination.id === "albany_city__transport_hub",
+  );
+  if (!preparationRoute) throw new Error("Wolf-Winter's preparation area must be reachable.");
+  api.move_overworld_session_area({
+    ...FULL,
+    session_id: sessionId,
+    area_route_id: preparationRoute.id,
+  });
   const prepared = api.choose_overworld_session_story({
     ...FULL,
     session_id: sessionId,
@@ -67,11 +81,6 @@ function launchSeed4174Imports(): GameState {
   });
   const wolf = prepared.observation.quests.find((quest) => quest.id === "wolf_winter");
   if (!wolf) throw new Error("Jamie testimony and herd-calming must reveal Wolf-Winter.");
-  const route = prepared.observation.areaExits.find(
-    (candidate) => candidate.destination.id === wolf.area,
-  );
-  if (!route) throw new Error("Wolf-Winter's relief allocation area must be reachable.");
-  api.move_overworld_session_area({ ...FULL, session_id: sessionId, area_route_id: route.id });
   api.choose_overworld_session_story({
     ...FULL,
     session_id: sessionId,

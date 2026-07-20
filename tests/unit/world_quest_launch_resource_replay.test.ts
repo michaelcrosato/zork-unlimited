@@ -23,6 +23,7 @@ const APPROACHES = [
 ] as const;
 
 function moveToArea(session: OverworldSession, areaId: string): void {
+  if (session.view().currentArea?.id === areaId) return;
   const route = session.view().areaExits.find((candidate) => candidate.destination.id === areaId);
   if (!route) throw new Error(`expected a visible route to ${areaId}`);
   session.moveArea(route.id);
@@ -37,8 +38,8 @@ function sessionAtWolf(): OverworldSession {
   session.chooseJourneyStory("albany:oath_limited_aid_only");
   expect(session.journey().storyChoice?.kind).toBe("lead_source");
   session.chooseJourneyStory("albany:source_rowan_civic_docket");
+  moveToArea(session, WORLD.opening_preparation!.area);
   session.chooseJourneyStory("albany:prep_works_fortification");
-  moveToArea(session, "albany_city__transport_hub");
   session.chooseJourneyStory("albany:relief_resident_shelter");
   return session;
 }

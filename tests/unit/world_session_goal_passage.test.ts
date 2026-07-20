@@ -14,6 +14,7 @@ const SARATOGA_TO_QUEENSBURY = "road_saratoga_springs_city__queensbury_town";
 const ALBANY_TO_COLONIE = "road_colonie_town__albany_city";
 
 function moveToArea(session: OverworldSession, destinationAreaId: string): void {
+  if (session.view().currentArea?.id === destinationAreaId) return;
   const route = session
     .view()
     .areaExits.find((candidate) => candidate.destination.id === destinationAreaId);
@@ -34,6 +35,7 @@ function sessionAtGallowmereGoal(): OverworldSession {
   session.chooseJourneyStory("albany:oath_limited_aid_only");
   expect(session.journey().storyChoice?.kind).toBe("lead_source");
   session.chooseJourneyStory("albany:source_rowan_civic_docket");
+  moveToArea(session, WORLD.opening_preparation!.area);
   expect(session.journey().storyChoice?.kind).toBe("preparation");
   expect(session.view().quests.map((candidate) => candidate.id)).toContain("wolf_winter");
   session.chooseJourneyStory("albany:prep_works_fortification");

@@ -56,13 +56,23 @@ function launchSeed4177Imports(): GameState {
     session_id: sessionId,
     character_id: "albany_city__civic_core__contact",
   });
-  for (const choice of [
-    "albany:road_warden",
-    "albany:oath_full_compact_duty",
-    "albany:source_hayden_frost_report",
-  ]) {
+  for (const choice of ["albany:road_warden", "albany:oath_full_compact_duty"]) {
     api.choose_overworld_session_story({ ...FULL, session_id: sessionId, choice });
   }
+  const sourced = api.choose_overworld_session_story({
+    ...FULL,
+    session_id: sessionId,
+    choice: "albany:source_hayden_frost_report",
+  });
+  const preparationRoute = sourced.observation.areaExits.find(
+    (candidate) => candidate.destination.id === "albany_city__transport_hub",
+  );
+  if (!preparationRoute) throw new Error("Wolf-Winter's preparation area must be reachable.");
+  api.move_overworld_session_area({
+    ...FULL,
+    session_id: sessionId,
+    area_route_id: preparationRoute.id,
+  });
   const prepared = api.choose_overworld_session_story({
     ...FULL,
     session_id: sessionId,
@@ -70,11 +80,6 @@ function launchSeed4177Imports(): GameState {
   });
   const wolf = prepared.observation.quests.find((quest) => quest.id === "wolf_winter");
   if (!wolf) throw new Error("Hayden's report and Reese's plan must reveal Wolf-Winter.");
-  const route = prepared.observation.areaExits.find(
-    (candidate) => candidate.destination.id === wolf.area,
-  );
-  if (!route) throw new Error("Wolf-Winter's relief allocation area must be reachable.");
-  api.move_overworld_session_area({ ...FULL, session_id: sessionId, area_route_id: route.id });
   api.choose_overworld_session_story({
     ...FULL,
     session_id: sessionId,

@@ -554,9 +554,9 @@
     "after_lead_source": "albany:wolf_source_priority",
     "target_quest": "wolf_winter",
     "home": "albany_city",
-    "area": "albany_city__civic_core",
+    "area": "albany_city__transport_hub",
     "title": "Allocate One Wolf-Winter Preparation",
-    "message": "The hill dispatch can carry one specialist allocation before it leaves Rowan's counter. Reese Pryce can mark a cold-set repair sequence onto the failing paling, Emery Sloane can map a drover's cut that peels a fouled yearling away from the herd, or Jamie Tanner can seal a relief protocol for calming the cattle after an improvised recovery. Each plan remains usable by any registered traveler, but the provider who sponsored your registration can waive the public charge and shorten the handoff. Choose one: Albany cannot put three incompatible field plans into the same urgent packet.",
+    "message": "At Hayden's departure board, choose the one sealed specialist packet that rides with the relief dispatch. Reese Pryce can mark a cold-set repair sequence onto the failing paling, Emery Sloane can map a drover's cut that peels a fouled yearling away from the herd, or Jamie Tanner can seal a relief protocol for calming the cattle after an improvised recovery. Each plan remains usable by any registered traveler, but the provider who sponsored your registration can waive the public charge and shorten the handoff. Choose one: Albany cannot put three incompatible field plans into the same urgent packet.",
     "profiles": [
       {
         "id": "albany:prep_works_fortification",

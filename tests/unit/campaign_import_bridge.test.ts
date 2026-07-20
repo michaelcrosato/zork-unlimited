@@ -33,6 +33,14 @@ const wolfIndex = indexRpgPack(loadedWolf.compiled.pack);
 
 type ToolApi = ReturnType<typeof createToolApi>;
 
+function moveToOpeningPreparation(session: OverworldSession): void {
+  const areaId = WORLD.opening_preparation?.area;
+  if (!areaId || session.view().currentArea?.id === areaId) return;
+  const route = session.view().areaExits.find((candidate) => candidate.destination.id === areaId);
+  if (!route) throw new Error(`Expected a visible route to opening preparation at ${areaId}.`);
+  session.moveArea(route.id);
+}
+
 function revealAlbanyWolf(session: OverworldSession) {
   const opening = session.view();
   session.scoutPoi(opening.pois[0]!.id);
@@ -45,18 +53,21 @@ function revealAlbanyWolf(session: OverworldSession) {
   session.chooseJourneyStory(LIMITED_AID_OATH_ID);
   expect(session.journey().storyChoice?.kind).toBe("lead_source");
   session.chooseJourneyStory("albany:source_rowan_civic_docket");
+  moveToOpeningPreparation(session);
   expect(session.journey().storyChoice?.kind).toBe("preparation");
   expect(session.view().quests.map((candidate) => candidate.id)).toContain("wolf_winter");
   session.chooseJourneyStory("albany:prep_works_fortification");
-  const quest = session.view().quests.find((candidate) => candidate.id === "wolf_winter");
-  if (!quest) throw new Error("Expected the Albany Wolf-Winter lead.");
-  const route = session
-    .view()
-    .areaExits.find((candidate) => candidate.destination.id === quest.area);
-  if (!route) throw new Error("Expected a route to the Albany Wolf-Winter lead.");
-  session.moveArea(route.id);
   expect(session.journey().storyChoice?.kind).toBe("relief_allocation");
   session.chooseJourneyStory(RESIDENT_SHELTER_ALLOCATION_ID);
+  const quest = session.view().quests.find((candidate) => candidate.id === "wolf_winter");
+  if (!quest) throw new Error("Expected the Albany Wolf-Winter lead.");
+  if (session.view().currentArea?.id !== quest.area) {
+    const route = session
+      .view()
+      .areaExits.find((candidate) => candidate.destination.id === quest.area);
+    if (!route) throw new Error("Expected a route to the Albany Wolf-Winter lead.");
+    session.moveArea(route.id);
+  }
   return quest;
 }
 
@@ -106,14 +117,39 @@ function launchAlbanyWolf(
     session_id: overworldSessionId,
     choice: "albany:source_rowan_civic_docket",
   });
-  expect(sourced.journey.storyChoice?.kind).toBe("preparation");
-  expect(sourced.observation.quests.map((candidate) => candidate.id)).toContain("wolf_winter");
+  const preparationArea = WORLD.opening_preparation?.area;
+  if (!preparationArea) throw new Error("Expected Albany opening preparation.");
+  const atPreparation =
+    sourced.observation.currentArea?.id === preparationArea
+      ? sourced
+      : (() => {
+          const preparationRoute = sourced.observation.areaExits.find(
+            (route) => route.destination.id === preparationArea,
+          );
+          if (!preparationRoute) throw new Error(`Expected a visible route to ${preparationArea}.`);
+          return api.move_overworld_session_area({
+            ...full,
+            session_id: overworldSessionId,
+            area_route_id: preparationRoute.id,
+          });
+        })();
+  expect(atPreparation.journey.storyChoice?.kind).toBe("preparation");
+  expect(atPreparation.observation.quests.map((candidate) => candidate.id)).toContain(
+    "wolf_winter",
+  );
   const prepared = api.choose_overworld_session_story({
     ...full,
     session_id: overworldSessionId,
     choice: "albany:prep_works_fortification",
   });
-  observation = prepared.observation;
+  expect(prepared.journey.storyChoice?.kind).toBe("relief_allocation");
+  const allocated = api.choose_overworld_session_story({
+    ...full,
+    session_id: overworldSessionId,
+    choice: RESIDENT_SHELTER_ALLOCATION_ID,
+  });
+  expect(allocated.journey.storyChoice?.kind).not.toBe("relief_allocation");
+  observation = allocated.observation;
   const quest = observation.quests.find((candidate) => candidate.id === "wolf_winter");
   if (!quest) throw new Error("Expected the Wolf-Winter lead after registration.");
   const marketRoute = observation.areaExits.find(
@@ -143,12 +179,6 @@ function launchAlbanyWolf(
     session_id: overworldSessionId,
     area_route_id: questRoute.id,
   });
-  const allocated = api.choose_overworld_session_story({
-    ...full,
-    session_id: overworldSessionId,
-    choice: RESIDENT_SHELTER_ALLOCATION_ID,
-  });
-  expect(allocated.journey.storyChoice?.kind).not.toBe("relief_allocation");
   const launched = api.start_overworld_session_quest({
     ...full,
     ...view,

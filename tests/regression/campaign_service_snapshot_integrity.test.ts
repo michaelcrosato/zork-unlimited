@@ -42,12 +42,13 @@ function albanyStationSession(): OverworldSession {
   session.chooseJourneyStory("albany:ledger_advocate");
   session.chooseJourneyStory("albany:oath_limited_aid_only");
   session.chooseJourneyStory("albany:source_jamie_market_testimony");
+  moveToArea(session, WORLD.opening_preparation!.area);
   expect(session.journey().storyChoice?.kind).toBe("preparation");
   session.chooseJourneyStory("albany:prep_works_fortification");
-  moveToArea(session, "albany_city__market");
-  moveToArea(session, "albany_city__transport_hub");
   expect(session.journey().storyChoice).toMatchObject({ kind: "relief_allocation" });
   session.chooseJourneyStory(NEUTRAL_RELIEF_ALLOCATION);
+  moveToArea(session, "albany_city__market");
+  moveToArea(session, "albany_city__transport_hub");
   return session;
 }
 

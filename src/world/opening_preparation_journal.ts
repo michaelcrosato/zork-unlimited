@@ -212,6 +212,7 @@ export function proveOpeningPreparationJournal(args: {
   journalEntries: readonly OverworldJournalEntry[];
   expectedTown: string | null;
   trustedLegacySourceWorldHash?: string | null;
+  trustedCivicSourceWorldHash?: string | null;
 }): OpeningPreparationJournalProof {
   const selections = args.journalEntries
     .map((entry, index) => ({ entry, index }))
@@ -298,7 +299,7 @@ export function proveOpeningPreparationJournal(args: {
       legacy.entry.recordedAt !== leadEntry.recordedAt ||
       !boundariesEqual(legacyBoundary, leadBoundary) ||
       legacyBoundary.townId !== scene.home ||
-      legacyBoundary.areaId !== scene.area ||
+      legacyBoundary.areaId !== leadBoundary.areaId ||
       legacyBoundary.minutes !== parseTimeLabel(legacy.entry.recordedAt)
     ) {
       throw new Error(
@@ -347,27 +348,60 @@ export function proveOpeningPreparationJournal(args: {
       "Overworld session snapshot preparation offer has no durable story-choice boundary.",
     );
   }
+  const selected = selections[0];
+  const historicCivicSource = args.trustedCivicSourceWorldHash;
+  const isTrustedCivicEvidence =
+    historicCivicSource !== null &&
+    historicCivicSource !== undefined &&
+    offered.entry.sourceWorldHash === historicCivicSource &&
+    (selected === undefined || selected.entry.sourceWorldHash === historicCivicSource);
   if (
-    offered.index + 1 !== leadJournalIndex ||
-    offered.entry.recordedAt !== leadEntry.recordedAt ||
-    !boundariesEqual(offerBoundary, leadBoundary) ||
+    (offered.entry.sourceWorldHash !== undefined ||
+      selected?.entry.sourceWorldHash !== undefined) &&
+    !isTrustedCivicEvidence
+  ) {
+    throw new Error("Overworld session snapshot preparation provenance is not trusted.");
+  }
+  const offeredAtLeadBoundary = isTrustedCivicEvidence || scene.area === leadBoundary.areaId;
+  const invalidOfferBoundary = offeredAtLeadBoundary
+    ? offered.index + 1 !== leadJournalIndex ||
+      offered.entry.recordedAt !== leadEntry.recordedAt ||
+      !boundariesEqual(offerBoundary, leadBoundary)
+    : offered.index >= leadJournalIndex ||
+      offerBoundary.acceptedDecisions <= leadBoundary.acceptedDecisions ||
+      offerBoundary.decisionProofHash === leadBoundary.decisionProofHash;
+  if (
+    invalidOfferBoundary ||
     offerBoundary.townId !== scene.home ||
-    offerBoundary.areaId !== scene.area ||
+    offerBoundary.areaId !== (isTrustedCivicEvidence ? leadBoundary.areaId : scene.area) ||
     offerBoundary.minutes !== parseTimeLabel(offered.entry.recordedAt)
   ) {
     throw new Error(
-      "Overworld session snapshot preparation offer must immediately follow the lead selection at the same world and journey boundary.",
+      "Overworld session snapshot preparation offer must follow source certification at its authored departure boundary.",
     );
   }
-  for (let index = offered.index + 1; index < args.journalEntries.length; index += 1) {
-    const kind = args.journalEntries[index]!.kind;
-    if (kind === "quest" || kind === "quest_done") {
-      throw new Error(
-        "Overworld session snapshot preparation offer cannot follow a started or completed quest.",
-      );
+  if (offeredAtLeadBoundary) {
+    for (let index = offered.index + 1; index < leadJournalIndex; index += 1) {
+      const kind = args.journalEntries[index]!.kind;
+      if (kind === "quest" || kind === "quest_done") {
+        throw new Error(
+          "Overworld session snapshot preparation offer cannot follow a started or completed quest.",
+        );
+      }
     }
   }
-
+  const targetQuestEvidence = args.journalEntries
+    .map((entry, index) => ({ entry, index }))
+    .filter(
+      ({ entry }) =>
+        (entry.kind === "quest" && entry.id === `quest:${scene.target_quest}`) ||
+        (entry.kind === "quest_done" && entry.id === `quest_done:${scene.target_quest}`),
+    );
+  if (targetQuestEvidence.some(({ index }) => selected === undefined || index >= selected.index)) {
+    throw new Error(
+      "Overworld session snapshot opening preparation cannot follow a started or completed quest for its target.",
+    );
+  }
   if (selections.length === 0) {
     if (offered.index !== 0) {
       throw new Error(
@@ -391,7 +425,7 @@ export function proveOpeningPreparationJournal(args: {
     });
   }
 
-  const selected = selections[0]!;
+  if (!selected) throw new Error("Expected opening preparation selection.");
   const profile = scene.profiles.find(
     (candidate) => openingPreparationJournalId(scene.id, candidate.id) === selected.entry.id,
   );

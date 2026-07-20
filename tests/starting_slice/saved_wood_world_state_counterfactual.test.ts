@@ -149,12 +149,28 @@ function launchAlbanyWolf(api: ToolApi): { overworldSessionId: string; rpgSessio
     session_id: overworldSessionId,
     choice: "albany:source_rowan_civic_docket",
   });
-  expect(sourced.journey.storyChoice?.kind).toBe("preparation");
-  expect(sourced.observation.quests.map((candidate) => candidate.id)).toContain("wolf_winter");
+  const preparationRoute = sourced.observation.areaExits.find(
+    (candidate) => candidate.destination.id === WORLD.opening_preparation?.area,
+  );
+  if (!preparationRoute) throw new Error("expected a route to the opening preparation board");
+  const atPreparation = api.move_overworld_session_area({
+    ...FULL,
+    session_id: overworldSessionId,
+    area_route_id: preparationRoute.id,
+  });
+  expect(atPreparation.journey.storyChoice?.kind).toBe("preparation");
+  expect(atPreparation.observation.quests.map((candidate) => candidate.id)).toContain(
+    "wolf_winter",
+  );
   api.choose_overworld_session_story({
     ...FULL,
     session_id: overworldSessionId,
     choice: "albany:prep_works_fortification",
+  });
+  api.choose_overworld_session_story({
+    ...FULL,
+    session_id: overworldSessionId,
+    choice: NEUTRAL_RELIEF_ALLOCATION,
   });
 
   view = api.get_overworld_session({
@@ -184,20 +200,17 @@ function launchAlbanyWolf(api: ToolApi): { overworldSessionId: string; rpgSessio
   });
   const quest = revealed.observation.quests.find((candidate) => candidate.id === "wolf_winter");
   if (!quest) throw new Error("expected the certified Wolf-Winter lead");
-  const stationRoute = revealed.observation.areaExits.find(
-    (route) => route.destination.id === quest.area,
-  );
-  if (!stationRoute) throw new Error("expected the route to Albany Station Quarter");
-  api.move_overworld_session_area({
-    ...FULL,
-    session_id: overworldSessionId,
-    area_route_id: stationRoute.id,
-  });
-  api.choose_overworld_session_story({
-    ...FULL,
-    session_id: overworldSessionId,
-    choice: NEUTRAL_RELIEF_ALLOCATION,
-  });
+  if (revealed.observation.currentArea?.id !== quest.area) {
+    const stationRoute = revealed.observation.areaExits.find(
+      (route) => route.destination.id === quest.area,
+    );
+    if (!stationRoute) throw new Error("expected the route to Albany Station Quarter");
+    api.move_overworld_session_area({
+      ...FULL,
+      session_id: overworldSessionId,
+      area_route_id: stationRoute.id,
+    });
+  }
 
   const launched = api.start_overworld_session_quest({
     ...FULL,

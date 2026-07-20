@@ -112,6 +112,7 @@ function freshAtWolfFor(
   session.talkToCharacter(REGISTRATION.contact);
   session.chooseJourneyStory(REGISTRATION.profiles[0]!.id);
   session.chooseJourneyStory(LEAD.options[0]!.id);
+  moveToArea(session, PRE_ROUTE_WORLD.opening_preparation!.area);
   session.chooseJourneyStory(args.preparationId ?? PREPARATION.profiles[0]!.id);
   discoverAlbanyDistricts(session);
   moveToArea(session, ALLY.area);

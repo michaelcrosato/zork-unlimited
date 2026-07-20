@@ -214,6 +214,7 @@ export type OverworldJournalEntry = {
   serviceBoundary?: OverworldJournalDecisionBoundary | undefined;
   serviceRuleId?: string | undefined;
   serviceAreaId?: string | undefined;
+  sourceWorldHash?: string | undefined;
   storyChoiceBoundary?: OverworldJournalDecisionBoundary | undefined;
 };
 
@@ -312,6 +313,10 @@ const OverworldJournalEntrySchema = z
     serviceBoundary: OverworldJournalRegistrationBoundarySchema.optional(),
     serviceRuleId: z.string().min(1).optional(),
     serviceAreaId: z.string().min(1).optional(),
+    sourceWorldHash: z
+      .string()
+      .regex(/^[0-9a-f]{64}$/)
+      .optional(),
     storyChoiceBoundary: OverworldJournalRegistrationBoundarySchema.optional(),
   })
   .strict()
@@ -325,6 +330,16 @@ const OverworldJournalEntrySchema = z
       });
     }
     const hasServiceProof = hasRuleId || hasAreaId;
+    if (
+      entry.sourceWorldHash !== undefined &&
+      entry.kind !== "preparation" &&
+      entry.kind !== "preparation_offer"
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Source-world provenance is only valid on migrated preparation evidence.",
+      });
+    }
     if (hasServiceProof && entry.kind !== "service") {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
