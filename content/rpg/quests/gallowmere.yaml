@@ -41,8 +41,8 @@
 #
 # Score (max 50, the 5+10+10+10+15 milestone shape the corpus shares): read the
 # shepherd's log (+5, §17 clue naming the sow's lair, wind-stone, and charge angle),
-# pass the tracking check at the kill-site (+10, one-shot on_success, gated none_of
-# found_kill), pass the lore check at the gully (+10, one-shot on_success, gated
+# read the kill-site (+10 after one tracking roll or its deterministic recovery, then
+# retired by found_kill), pass the lore check at the gully (+10, one-shot on_success, gated
 # none_of read_wind — scored ONLY on survival, never on the death branch per the
 # score-economy bracket rule), put the sow down (+10, on_defeat), and reach the ridge
 # with the Gallowmere behind you (+15, locomotion win). The perfect 50 coincides with
@@ -132,12 +132,20 @@ rooms:
       around — big prints, the hind pair far wider-spaced than the fore, the charging
       signature of a sow coming in fast. Your hunting-knife will let you read the
       angle if you work the ground carefully. The moor trail is back to the west.
-    # Reactive: once the site is read, the ground no longer invites close reading.
+    # Reactive: after a failed first reading, the disturbed ground truthfully frames
+    # the one deterministic recovery; once read, it no longer invites close reading.
     variants:
       - when: [{ has_flag: found_kill }]
         text: >
           The kill site, already read — hoof angle and charge line noted, the sow's
           attack pivot clear in your mind. The moor trail is back to the west.
+      - when:
+          - { has_flag: kill_site_attempted }
+          - { not_flag: found_kill }
+        text: >
+          The kill site after your first reading. The churned prints are still there,
+          but the clean charge-line only comes clear when you set Cradoc's last stance
+          against the deepest heel-mark. The moor trail is back to the west.
     objects: [spoor_ground]
     exits:
       - { direction: west, to: moor_trail }
@@ -339,28 +347,33 @@ objects:
       crusted now, but the hoof-prints are clear in the soft ground — big prints, the
       sow coming in fast from the east. Your hunting-knife will let you read the charge
       angle off the strike-marks if you take your time with it.
-    # Reactive: once read, the ground shows as already worked.
+    # Reactive: a failed first reading names the remaining, deliberate recovery.
     variants:
       - when: [{ has_flag: found_kill }]
         text: >
           The kill-site, already read — right tusk on the pivot, coming in low from
           the east. You know the angle now.
+      - when:
+          - { has_flag: kill_site_attempted }
+          - { not_flag: found_kill }
+        text: >
+          The churned peat after your first pass. The overlaid prints are no longer a
+          matter of luck: set the deepest heel-mark against Cradoc's last stance and
+          the charge-line will resolve.
     takeable: false
     interactions:
-      # Tracking skill check (the §13 RPG mechanic). Tool-on-target USE: the hunter reads
-      # the ground by setting the blade-edge as a pointer and working the hoof-strike
-      # geometry backward to the charge line. RETRYABLE and NON-LETHAL: on a failed roll
-      # the sign is unclear but not gone — work it again. One-shot award: gated none_of
-      # found_kill so the +10 cannot be farmed by re-reading an already-read site.
-      # DC 10 vs tracking 3: d20>=7 required (~70% per try), retryable, always eventually
-      # passable — honest work, never a hard block (bug_0027 honesty discipline). No score
-      # on the failure branch (score-economy bracket rule, rpg_score_economy_sound.test.ts).
+      # The first tracking reading is a real check. Failure retires that random roll,
+      # records what was learned, and exposes the deterministic same-action recovery
+      # below; the +10 can still never be farmed after found_kill.
       - verb: USE
         item: hunting_knife
         target: spoor_ground
         command_verb: track
         command_template: "track {target} with {item}"
-        conditions: [{ none_of: [{ has_flag: found_kill }] }]
+        conditions:
+          - all_of:
+              - { not_flag: kill_site_attempted }
+              - { not_flag: found_kill }
         skill_check:
           skill: tracking
           difficulty: 10
@@ -380,11 +393,44 @@ objects:
                 angle. A dagger of clarity opens in your chest — you did not have that
                 a minute ago.
           on_failure:
+            - set_flag: kill_site_attempted
+            - add_journal: >
+                The first reading blurred in the overlaid hoofprints, but Cradoc's last
+                stance and the deepest heel-mark will settle the charge-line. The kill-site
+                can be read once more without trusting another lucky guess.
             - narrate: >
-                The ground tells you something but not enough — there are too many
-                overlaid prints where she milled after the kill, and the clean charge-line
-                is not out of it yet. The evidence is here. Work it again from the
-                heaviest prints.
+                The ground tells you something but not enough on the first pass — too many
+                prints overlap where she milled after the kill. Cradoc's final stance and
+                the deepest heel-mark give you a fixed way through it now: set them together
+                and the charge-line will come clear. You will not be guessing at the same
+                spoor again.
+
+      # Same player-facing track action after the failed first reading: no second die
+      # roll, but the original successful preparation, reward, and combat option remain.
+      - verb: USE
+        item: hunting_knife
+        target: spoor_ground
+        command_verb: track
+        command_template: "track {target} against Cradoc's stance with {item}"
+        conditions:
+          - all_of:
+              - { has_flag: kill_site_attempted }
+              - { not_flag: found_kill }
+        effects:
+          - set_flag: found_kill
+          - set_quest_stage: { quest: gallowmere_hunt, stage: kill_read }
+          - inc_var: { name: attack, by: 2 }
+          - inc_var: { name: score, by: 10 }
+          - add_journal: >
+              Kill-site read: the sow pivots right on the charge, rolling the left tusk
+              up. You know exactly which angle to take her from — the attack opens up
+              from her blind side. (+2 attack)
+          - narrate: >
+              You set Cradoc's last stance against the deepest heel-mark and the overlaid
+              prints resolve at once: hind-prints wide and forward-heavy, the left-hoof
+              strike harder. She pivots right on the kill, rolling the left tusk up. You
+              know the angle. A dagger of clarity opens in your chest — you did not have
+              that a minute ago.
 
   - id: wind_stone
     name: "wind-stone"
