@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 586 -->
+<!-- historical_cycle_count: 587 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - displayed_action_aliases
+
+- Evidence choice: clean Terra seed 4186 used the displayed embedded-quest field `action`, while seed 4194 used the displayed road field `dest_town_id`; both exact, mutation-free rejections were S1 contract friction rather than player mistakes.
+- Surface: `step_rpg_session` now accepts `action` beside canonical `action_id`, and road planning/travel accept `dest_town_id` beside `destination_town_id`; equal aliases normalize while conflicts reject before state changes.
+- Authority: root input schemas require both the session selector group and action selector group, so the new spelling does not weaken stale-session, pure-route, or legal-action boundaries; road aliases remain mutually exclusive with exact road selection.
+- Counterfactual: exact seed-4186 and seed-4194 reproductions cover success, one-step advancement, stale hashes, illegal ids, equal/conflicting aliases, nonmutation, full/pure schemas, and bounded destination legality.
+- Pure evidence: clean commit `ef6cea4a` Terra seed 4206 completed recovered all-wolves-alive fortification at decision 23, rated clarity/enjoyment 4/4, was unstuck/replay-yes, and made no rejected player action.
+- Feedback/self-critique: compile `20260719T211958Z` has 889 verified reports, 138 current pure exits, and 116 continuing; the ledger is 888 accepted/59 rejected. PASS for the two displayed-field S1s, not the greater-than-BG3 milestone; front-loaded setup density remains the dominant current signal.
+- Guard: independent adversarial review found no bypass; crawl `20260719T205237Z` is zero-finding at 247/247 nodes, 344/344 edges, and 12/12 boards/quests, and exact stacked health passes 387 files/2,960 tests plus UI/all packs.
 
 ### Cycle result - summary_first_setup_cards
 
@@ -151,12 +161,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Pure evidence: seed 2813 completed Wolf-Winter at decision 28, continued through The Gallowmere and The Tanner's Fever, then ended at goal 3/decision 76; clarity/enjoyment 4/4, stuck false, replay true, and the UUID stayed transport-only.
 - Self-critique: PASS for authority/pilot authenticity, not the greater-than-BG3 milestone. Seed 2813's repeated S2 June/rail promise mismatch joins seeds 2811–2812; fix that causal defect before paying for the ten-Sonnet pilot, then deep crawl/exact 100 remain.
 - Guard: adversarial audit closed impossible process-local `o1` uniqueness and public build injection with no remaining P0–P2; 142 affected checks pass, and pre/final crawls `20260716T175228Z`/`20260716T181815Z` found zero issues across 247/247 nodes, 344/344 edges, 12/12 boards, and 12/12 quests.
-
-### Cycle result - informed_wolf_winter_dispatch
-
-- Evidence choice: a fresh ten-slot no-resume/no-retry diagnostic verified 7/10 players (Haiku 6/9, Sonnet 1/1); all seven completed Wolf-Winter in 22–38 decisions, none stuck, clarity/enjoyment averaged 4.00/4.29, first continuation was 5/7, three strategies appeared with 57.1% maximum share, and three Haiku null-receipt self-stops disqualified the 9:1 authority plan.
-- Surface: before registration binds, the authored Wolf-Winter mission and plain `1/5` role→duty→evidence→preparation→allocation roadmap are visible; source certification now reveals the real quest plus both routes' authored tradeoffs and exact travel costs while preparation and allocation remain mandatory.
-- Integrity: exact pending-preparation predecessor saves regain only the certified source-earned quest id; repair requires matching source/offer proofs, no selection boundary or quest progress, and resolved missing-discovery tampering still rejects. UI and compact/full MCP share the same briefing without persisting presentation copy.
-- Pure evidence: finished-build seed 2812 completed Wolf-Winter at decision 29, continued through The Gallowmere and The Tanner's Fever, and ended at checkpoint 80; clarity/enjoyment 4/5, stuck false, replay true, no S1+, and the prior paperwork/density complaint disappeared, leaving choice-to-quest-mechanic mapping as the clarity debt.
-- Compile/self-critique: compile `20260716T163052Z` has 804 verified reports and 53 current-contract pure exits, 51 continuing. PASS for informed dispatch, not the greater-than-BG3 milestone: clarity remains below 4.2 and homogeneous-Sonnet pilot/authority tooling, deep crawl, exact 100-player cohort, numeric gates, and severity audit remain.
-- Guard: two adversarial presentation/integrity audits closed hidden UI mission context, save-repair aperture, optional-sixth-choice wording, and a 32% copy-load regression; 14 affected suites are 118/118, and pre/final crawls `20260716T154146Z`/`20260716T162059Z` found zero issues across 247/247 nodes, 344/344 edges, 12/12 boards, and 12/12 quests.
