@@ -7,6 +7,10 @@ import type { CampaignCharacterView } from "./campaign_character_view.js";
 import type { CampaignServiceOffer } from "./campaign_service_rules.js";
 import type { OverworldQuestLaunchView } from "./quest_launch.js";
 import type { OverworldLocalEvent, OverworldLocalJob } from "./overworld.js";
+import {
+  compactOverworldRoadEncounterNextAction,
+  type OverworldCompactRoadEncounterNextAction,
+} from "./session_road_next_action.js";
 
 export const OVERWORLD_COMPACT_JOURNAL_LIMIT = 5;
 export const OVERWORLD_COMPACT_ROUTE_LIMIT = 8;
@@ -24,7 +28,7 @@ export const OVERWORLD_COMPACT_TITLE_CHAR_LIMIT = 140;
 export const OVERWORLD_COMPACT_RISK_CHAR_LIMIT = 160;
 export const OVERWORLD_COMPACT_ROAD_EVENT_SUMMARY_CHAR_LIMIT = 240;
 export const OVERWORLD_COMPACT_SERVICE_SUMMARY_CHAR_LIMIT = 240;
-export const OVERWORLD_COMPACT_VIEW_VERSION = 21 as const;
+export const OVERWORLD_COMPACT_VIEW_VERSION = 22 as const;
 
 export type OverworldCompactRef = readonly [id: string, name: string];
 export type OverworldCompactEventSceneOption = readonly [
@@ -148,6 +152,7 @@ export type OverworldCompactRoadEncounter = {
   where: readonly [from: string, to: string, at: string];
   event: readonly [id: string, risk: string, title: string, summary: string];
   options: readonly OverworldCompactRoadEncounterOption[];
+  next_action: OverworldCompactRoadEncounterNextAction;
 };
 export type OverworldCompactJournalEntry = readonly [
   kind: string,
@@ -403,7 +408,7 @@ export const OVERWORLD_COMPACT_LEGEND = {
   quest_starts:
     "[[quest_id, approach_id|null], ...] currently legal quest launches; call start_overworld_session_quest with these exact quest_id and approach_id values (omit approach_id when null)",
   pending_road:
-    "{id, edge: road_id, route: route_name, where: [from_town, to_town, at_time], event: [road_event_id, risk_text, title, summary], options: [[strategy, label, minutes, supplies_cost, fatigue_gained, renown_gained], ...]} unresolved on-route scene; choose from the same labeled costs a human sees, then resolve it before town actions or more travel",
+    "{id, edge: road_id, route: route_name, where: [from_town, to_town, at_time], event: [road_event_id, risk_text, title, summary], options: [[strategy, label, minutes, supplies_cost, fatigue_gained, renown_gained], ...], next_action: {tool, argument, values_from}} unresolved on-route scene; call next_action.tool with next_action.argument set from next_action.values_from, then resolve it before town actions or more travel",
   journal: "[[kind, title, 'Day N, HH:MM'], ...] recent journal entries",
   travel_log:
     "[[road_id, from_town_id, to_town_id, minutes, supplies_used, fatigue_gained, road_event_id|null], ...] recent trips; the immediate travel result extends that tuple with [road_event_risk|null, road_event_title|null, road_event_summary|null]",
@@ -792,6 +797,7 @@ export function compactPendingRoad(
       compactText(encounter.event.summary, OVERWORLD_COMPACT_ROAD_EVENT_SUMMARY_CHAR_LIMIT),
     ],
     options,
+    next_action: compactOverworldRoadEncounterNextAction(),
   };
 }
 
@@ -1144,6 +1150,7 @@ export function cloneOverworldCompactView(view: OverworldCompactView): Overworld
         summary: string,
       ],
       options: cloneTupleList(view.pending_road.options),
+      next_action: { ...view.pending_road.next_action },
     };
   }
   if (view.journal) clone.journal = cloneTupleList(view.journal);

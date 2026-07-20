@@ -70,6 +70,7 @@ export function cloneOverworldView(view: OverworldView): OverworldView {
           options: view.pendingRoadEncounter.options.map((option) =>
             redactOverworldRoadEncounterOptionForPresentation(option),
           ),
+          nextAction: { ...view.pendingRoadEncounter.nextAction },
         }
       : null,
     log: view.log.map((entry) => ({
