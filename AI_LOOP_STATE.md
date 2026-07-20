@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 590 -->
+<!-- historical_cycle_count: 591 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - road_encounter_next_action
+
+- Evidence choice: the Wolf comparison cohort produced recurring S2 friction at unresolved road scenes, so this cycle exposed the already-required resolver instead of adding guidance prose or another travel decision.
+- Surface: full `pendingRoadEncounter.nextAction` and compact `pending_road.next_action` now name `resolve_overworld_session_road_encounter`, its `strategy` argument, and the exact displayed option path; derived presentation leaves the persisted `{edgeId}` contract unchanged.
+- Counterfactual: one regression proves the descriptor appears only while a road encounter is pending, survives save/restore by rederivation, stays full/compact truthful, accepts a displayed strategy, and disappears after resolution.
+- Pure evidence: exact clean-build Terra seed 4239 completed Wolf-Winter and The Gallowmere in 43 decisions, continued at decisions 19 and 40, ended at 43, was unstuck at clarity 3/enjoyment 4, and followed compact `next_action` with valid `press_on` on its first attempt.
+- Measured result: resolver discovery PASSes directly in blind play without changing route mechanics or persistence; the run independently found the pre-existing compact `ask_invoke_authority` commitment label misleading, now isolated as its own follow-up.
+- Feedback/follow-through: the ledger is 911 accepted/59 rejected; only two verified reports are new since compile `20260720T200813Z`, below the three-report threshold. Fix the recurring lure-feed location cue and fortification commitment id, then land optional Station interactions.
+- Guard: exact commit `2c8b62b3` has zero-finding crawl `20260720T221223Z` at 247/247 nodes, 344/344 edges, and 12/12 boards/quests; health passes 390 files/2,975 tests plus UI/all packs, and independent review found no P0-P2.
 
 ### Cycle result - wolf_strategy_comparison
 
@@ -154,12 +164,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Feedback: the ledger reaches 817 accepted reports; only two are new since compile `20260719T055755Z`, so no recompile is due. Seed 2929 preserves Charter Backlog as an early lead and makes its delayed Civic return consequence the next authored scene.
 - Self-critique: PASS for strict CLI compatibility, `active_unproven` for the greater-than-BG3 milestone; five Albany jobs/events, Codex-native fleet attestation, global failure-forward proof, three NPC agendas, deep crawl, and exact 100-player certification remain.
 - Guard: the unmodified event-stream witness and negative comparisons pass; health is green at 379 files/2,872 tests plus integrity, UI, and all 12 packs, and final crawl `20260719T063820Z` reached 247/247 nodes, 344/344 edges, and 12/12 boards/quests with zero findings.
-
-### Cycle result - authored_albany_works_scene
-
-- Evidence choice: Depth Contract #11 overrode the generic content hot spot because Albany Works was still a one-click time/renown payout with no authored priority or delayed consumer.
-- Surface: after Wolf-Winter, one exclusive Works scene spends 80 minutes/+5 renown to protect the trapped public shift or 35 minutes/+2 to inventory outbound cold-set stock; exact POI/contact/quest prerequisites, choice proof, full/compact MCP, UI, journal, restore, and bounded historical migration agree.
-- Counterfactual: the truthful held-byre fact plus 13 Capital / Mohawk renown unlocks one 15-minute Civic rest, so the public-shift line reaches it from the ordinary Wolf return while inventory does not; paired rested/fatigued states reverse which option wins, and generic chronological renown replay accepts an independently earned threshold.
-- Pure evidence: final-world Spark seed 2890 verified fresh/overworld, completed Wolf-Winter and The Gallowmere in 46 decisions, rated clarity/enjoyment 4/4, stuck false, replay true, and reported no bug; it skipped Works, so deterministic pairs carry the new scene. Seeds 2888/2889 remain rejected for duplicate forbidden resource probes.
-- Self-critique: PASS for the reusable authored-job grammar and first of six conversions, not the greater-than-BG3 milestone. Five district jobs, checklist events, global failure-forward proof, three independent NPC agendas, Codex-native fleet attestation, deep crawl, and exact 100-player certification remain open.
-- Guard: final crawl `20260719T035234Z` reached 247/247 nodes, 344/344 edges, and 12/12 boards/quests with zero findings; fixture hardening closes the full-suite integration regression, and health passes at 379 files/2,867 tests plus UI and all 12 packs.

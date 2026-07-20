@@ -5,11 +5,11 @@ Generated deterministically from verified blind reports. The latest entries stay
 ## Summary
 
 - Reports dir: `../zork-unlimited/blind-tester/reports`
-- Accepted reports: 910
+- Accepted reports: 911
 - Rejected or ignored markdown reports: 59
-- Latest report stamp: 20260720T203824Z
+- Latest report stamp: 20260720T220026Z
 - Recent entry limit: 100
-- Archived accepted entries collapsed into traits: 810
+- Archived accepted entries collapsed into traits: 811
 
 ## Recent Common Traits
 
@@ -23,6 +23,10 @@ Generated deterministically from verified blind reports. The latest entries stay
 | 2 | 20260720T185127Z | confusion | Truncated compact consequences | overworld |
 | 2 | 20260719T210058Z | confusion | Dense permanent-choice setup | overworld |
 | 2 | 20260719T183208Z | confusion | Repeated Rowan Quill identity | overworld |
+| 1 | 20260720T220026Z | bug S2 | The Byre-Yard, Old Cade's fortification dialogue: ask_invoke_authority immediately hard-commits the strategy despite... | overworld |
+| 1 | 20260720T220026Z | confusion | Irreversible commitment hidden behind an ask-style dialogue action | overworld |
+| 1 | 20260720T220026Z | confusion | Very dense pre-quest consequence text | overworld |
+| 1 | 20260720T220026Z | worst moment | Parsing the initial stack of role, oath, source, preparation, and allocation consequences. | overworld |
 | 1 | 20260720T203824Z | bug S1 | Albany Relief Compact and departure planning: Long conditional option descriptions are difficult to compare on a firs... | overworld |
 | 1 | 20260720T203824Z | bug S1 | Hedrick dialogue at the 40-decision checkpoint: The journey choice interrupts conversational flow, though continuing... | overworld |
 | 1 | 20260720T203824Z | confusion | Checkpoint interrupts active dialogue | overworld |
@@ -36,15 +40,12 @@ Generated deterministically from verified blind reports. The latest entries stay
 | 1 | 20260720T195526Z | bug S2 | Road encounter — The northbound relief line: The resolver was unnamed, ToolSearch was unavailable, and several reason... | overworld |
 | 1 | 20260720T195526Z | confusion | Compact prose and consequences were frequently truncated | overworld |
 | 1 | 20260720T195526Z | confusion | Dense interlocking preparation choices before the first quest | overworld |
-| 1 | 20260720T195526Z | confusion | The fixed checkpoint interrupted an active conversation | overworld |
-| 1 | 20260720T195526Z | confusion | The road encounter did not identify its resolver tool | overworld |
-| 1 | 20260720T195526Z | worst moment | Stalling at the northbound road encounter because its required resolver was not identified and ToolSearch was unavail... | overworld |
-| 1 | 20260720T191302Z | bug S1 | Albany relief docket and compact quest endings: Player-facing consequence and ending text was truncated behind charac... | overworld |
 
 ## Recent Entries
 
 | Stamp | Source | Seed | Mode | Decisions | C/E | Stuck | Replay | Report | Signal |
 | --- | --- | ---: | --- | ---: | --- | --- | --- | --- | --- |
+| 20260720T220026Z | overworld | 4239 | pure | 43 | 3/4 | no | yes | `../zork-unlimited/blind-tester/reports/20260720T220026Z_overworld_seed4239.md` | confusions: Irreversible commitment hidden behind an ask-style dialogue action; Very dense pre-quest consequence text \| bugs: S2 The Byre-Yard, Old Cade's fortificatio... |
 | 20260720T203824Z | overworld | 4238 | pure | 53 | 4/4 | no | yes | `../zork-unlimited/blind-tester/reports/20260720T203824Z_overworld_seed4238.md` | confusions: Dense early permanent-choice setup; Checkpoint interrupts active dialogue \| bugs: S1 Albany Relief Compact and departure planning: Long conditional option... |
 | 20260720T195943Z | overworld | 4237 | pure | 50 | 3/4 | no | no | `../zork-unlimited/blind-tester/reports/20260720T195943Z_overworld_seed4237.md` | confusions: Dense permanent registration choices before the core loop was clear; Verbose consequence previews; Overworld and quest interaction systems felt separate \|... |
 | 20260720T195526Z | overworld | 4236 | pure | 53 | 4/4 | no | yes | `../zork-unlimited/blind-tester/reports/20260720T195526Z_overworld_seed4236.md` | confusions: Dense interlocking preparation choices before the first quest; Compact prose and consequences were frequently truncated; The road encounter did not identif... |
@@ -144,7 +145,6 @@ Generated deterministically from verified blind reports. The latest entries stay
 | 20260719T054801Z | codex_spark | 2909 | pure | 24 | 4/4 | no | yes | `../zork-unlimited/blind-tester/reports/20260719T054801Z_codex_spark_seed2909.md` | confusions: I had to infer when the embedded quest became startable from context updates and quest_starts timing rather than a dedicated quest menu.; The campaign-styl... |
 | 20260719T051324Z | codex_spark | 2898 | pure | 46 | 4/4 | no | yes | `../zork-unlimited/blind-tester/reports/20260719T051324Z_codex_spark_seed2898.md` | confusions: Goal labels in campaign text can lag behind immediate quest scene context, so scene-level clues are needed to know exactly what to do next. |
 | 20260719T051324Z | codex_spark | 2895 | pure | 22 | 4/4 | no | yes | `../zork-unlimited/blind-tester/reports/20260719T051324Z_codex_spark_seed2895.md` | worst: The story registration sequence was longer than expected before the main quest could start. |
-| 20260719T050913Z | codex_spark | 2891 | pure | 43 | 4/4 | no | yes | `../zork-unlimited/blind-tester/reports/20260719T050913Z_codex_spark_seed2891.md` | confusions: At the Shepherd's Bothy, the first impulse to go north was blocked until I backed out to the moor edge, which is easy to misread as a temporary UI issue.;... |
 
 ## Archived Trait Categories
 
