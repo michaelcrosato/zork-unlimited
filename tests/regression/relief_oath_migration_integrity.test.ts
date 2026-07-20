@@ -31,6 +31,13 @@ function moveToArea(session: OverworldSession, areaId: string): void {
   session.moveArea(route.id);
 }
 
+function moveToOpeningPreparation(session: OverworldSession, world: OverworldManifest): void {
+  const preparationArea = world.opening_preparation?.area;
+  if (preparationArea && session.view().currentArea?.id !== preparationArea) {
+    moveToArea(session, preparationArea);
+  }
+}
+
 function sessionAtPendingLead(
   world: OverworldManifest,
   registrationId = "albany:ledger_advocate",
@@ -46,6 +53,7 @@ function sessionAtPendingLead(
 function sessionAtPendingPreparation(world: OverworldManifest): OverworldSession {
   const session = sessionAtPendingLead(world);
   session.chooseJourneyStory("albany:source_rowan_civic_docket");
+  moveToOpeningPreparation(session, world);
   expect(session.journey().storyChoice?.kind).toBe("preparation");
   return session;
 }
@@ -158,6 +166,8 @@ describe("F06 to F02 relief-oath migration integrity", () => {
       (entry) => entry.kind === "registration",
     );
 
+    expect(restoredSession.journey().storyChoice).toBeNull();
+    moveToOpeningPreparation(restoredSession, WORLD);
     expect(restoredSession.journey().storyChoice?.kind).toBe("preparation");
     expect(openingReliefOathLegacySourceWorldHash(marker!.id)).toBe(
       OVERWORLD_RELIEF_OATH_PREDECESSOR_WORLD_HASH,
@@ -189,6 +199,8 @@ describe("F06 to F02 relief-oath migration integrity", () => {
 
     const restoredTwice = OverworldSession.restore(WORLD, restored);
     expect(restoredTwice.snapshot()).toEqual(restored);
+    expect(restoredTwice.journey().storyChoice).toBeNull();
+    moveToOpeningPreparation(restoredTwice, WORLD);
     expect(restoredTwice.journey().storyChoice?.kind).toBe("preparation");
   });
 

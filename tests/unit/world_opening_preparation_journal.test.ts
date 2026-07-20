@@ -408,7 +408,7 @@ describe("opening preparation journal proof", () => {
     const forgedOffer = structuredClone(fixture.entries);
     forgedOffer[1]!.storyChoiceBoundary!.minutes += 1;
     expect(() => prove({ ...fixture, entries: forgedOffer })).toThrow(
-      /same world and journey boundary/i,
+      /authored departure boundary/i,
     );
   });
 

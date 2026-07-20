@@ -50,6 +50,7 @@ const F11_SERVICES = new Set([
 ]);
 
 function moveToArea(session: OverworldSession, areaId: string): void {
+  if (session.view().currentArea?.id === areaId) return;
   const route = session.view().areaExits.find((candidate) => candidate.destination.id === areaId);
   if (!route) throw new Error(`expected a visible route to ${areaId}`);
   session.moveArea(route.id);
@@ -61,6 +62,7 @@ function sessionAtWolf(world: OverworldManifest): OverworldSession {
   session.talkToCharacter("albany_city__civic_core__contact");
   session.chooseJourneyStory("albany:ledger_advocate");
   session.chooseJourneyStory("albany:source_rowan_civic_docket");
+  moveToArea(session, world.opening_preparation!.area);
   session.chooseJourneyStory("albany:prep_works_fortification");
   moveToArea(session, "albany_city__transport_hub");
   expect(session.view().quests.map((quest) => quest.id)).toContain(QUEST_ID);

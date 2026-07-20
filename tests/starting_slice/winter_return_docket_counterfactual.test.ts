@@ -95,9 +95,14 @@ function preparedForWolf(
   session.chooseJourneyStory("albany:ledger_advocate");
   session.chooseJourneyStory("albany:oath_full_compact_duty");
   session.chooseJourneyStory("albany:source_rowan_civic_docket");
+  moveToArea(session, world.opening_preparation!.area, world);
   session.chooseJourneyStory("albany:prep_works_fortification");
+  if (session.journey().storyChoice?.kind === "relief_allocation") {
+    session.chooseJourneyStory("albany:relief_cade_fodder");
+  }
 
   if (eventOption !== null) {
+    moveToArea(session, CIVIC_AREA, world);
     session.investigateEvent(EVENT_ID);
     session.resolveEvent(EVENT_ID, eventOption);
   }
@@ -105,9 +110,6 @@ function preparedForWolf(
   const wolf = session.view().quests.find((quest) => quest.id === "wolf_winter");
   if (!wolf) throw new Error("The Albany opening must expose Wolf-Winter.");
   moveToArea(session, wolf.area, world);
-  if (session.journey().storyChoice?.kind === "relief_allocation") {
-    session.chooseJourneyStory("albany:relief_cade_fodder");
-  }
   return { session, wolf };
 }
 
@@ -390,6 +392,9 @@ describe("Winter Return Docket", () => {
     expect(hashState(WORLD)).toBe(OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH);
 
     const legacy = preparedForWolf(null, PREDECESSOR).session;
+    if (legacy.journey().storyChoice?.kind === "relief_allocation") {
+      legacy.chooseJourneyStory("albany:relief_cade_fodder");
+    }
     moveToArea(legacy, CIVIC_AREA, PREDECESSOR);
     legacy.investigateEvent(EVENT_ID);
     legacy.resolveEvent(EVENT_ID);
@@ -430,6 +435,9 @@ describe("Winter Return Docket", () => {
     (_label, legacyWorld, sourceWorldHash) => {
       expect(hashState(legacyWorld)).toBe(sourceWorldHash);
       const legacy = preparedForWolf(null, legacyWorld).session;
+      if (legacy.journey().storyChoice?.kind === "relief_allocation") {
+        legacy.chooseJourneyStory("albany:relief_cade_fodder");
+      }
       moveToArea(legacy, CIVIC_AREA, legacyWorld);
       legacy.investigateEvent(EVENT_ID);
       legacy.resolveEvent(EVENT_ID);

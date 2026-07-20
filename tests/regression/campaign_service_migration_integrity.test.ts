@@ -144,12 +144,16 @@ function savedTimberReturnBeforeService(withQuestDecision = false): OverworldSes
 function livePackCompletion(): OverworldSession {
   // F12 owns the live-pack result but predates F06 allocation, so it is the
   // truthful source for snapshots relabeled as still older service eras.
-  const session = new OverworldSession(exactF12World(WORLD));
+  const liveWorld = exactF12World(WORLD);
+  const session = new OverworldSession(liveWorld);
   const opening = session.view();
   session.scoutPoi(opening.pois[0]!.id);
   session.talkToCharacter(opening.characters[0]!.id);
   session.chooseJourneyStory("albany:road_warden");
   session.chooseJourneyStory("albany:source_rowan_civic_docket");
+  if (session.view().currentArea?.id !== liveWorld.opening_preparation?.area) {
+    moveToArea(session, liveWorld.opening_preparation!.area);
+  }
   expect(session.journey().storyChoice?.kind).toBe("preparation");
   session.chooseJourneyStory("albany:prep_works_fortification");
 

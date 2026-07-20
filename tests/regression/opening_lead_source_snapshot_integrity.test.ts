@@ -67,6 +67,10 @@ function selectSource(
 ): OverworldSession {
   const session = register(profileId, world);
   session.chooseJourneyStory(sourceId);
+  const preparationArea = world.opening_preparation?.area;
+  if (preparationArea && session.view().currentArea?.id !== preparationArea) {
+    moveToArea(session, preparationArea);
+  }
   expect(session.journey().storyChoice?.kind).toBe("preparation");
   return session;
 }
@@ -78,6 +82,9 @@ function selectSourceAndPrepare(
 ): OverworldSession {
   const session = selectSource(profileId, sourceId, world);
   session.chooseJourneyStory(DEFAULT_PREPARATION);
+  if (session.journey().storyChoice?.kind === "relief_allocation") {
+    session.chooseJourneyStory(NEUTRAL_RELIEF_ALLOCATION);
+  }
   expect(session.journey().storyChoice).toBeNull();
   return session;
 }
@@ -142,12 +149,12 @@ describe("opening lead-source snapshot integrity", () => {
     if (!questArea) throw new Error("expected the source-bound quest area");
     expect(snapshot.discoveredQuestIds).toContain(TARGET_QUEST);
     expect(snapshot.discoveredAreaIds).not.toContain(questArea);
-    expect(session.journey().storyChoice?.kind).toBe("preparation");
+    expect(session.journey().storyChoice).toBeNull();
 
     const restored = OverworldSession.restore(WORLD, snapshot);
     expect(restored.snapshot()).toEqual(snapshot);
     expect(restored.view().quests.map((quest) => quest.id)).toContain(TARGET_QUEST);
-    expect(restored.journey().storyChoice?.kind).toBe("preparation");
+    expect(restored.journey().storyChoice).toBeNull();
   });
 
   it("round-trips a pending offer and a sponsored selection without losing terms or effects", () => {
@@ -178,7 +185,7 @@ describe("opening lead-source snapshot integrity", () => {
         ?.memories.includes("albany:memory_jamie_market_testimony_certified"),
     ).toBe(true);
     expect(selectedSnapshot.discoveredQuestIds).toContain(TARGET_QUEST);
-    expect(restoredPending.journey().storyChoice?.kind).toBe("preparation");
+    expect(restoredPending.journey().storyChoice).toBeNull();
     expect(entry(selectedSnapshot, "lead_source").text).toMatch(
       /Actual cost: 15 minutes and \$0.*sponsorship pre-clears/i,
     );
@@ -186,6 +193,8 @@ describe("opening lead-source snapshot integrity", () => {
     const restoredSelected = OverworldSession.restore(WORLD, selectedSnapshot);
     expect(restoredSelected.snapshot()).toEqual(selectedSnapshot);
     expect(restoredSelected.snapshotHash()).toBe(restoredPending.snapshotHash());
+    expect(restoredSelected.journey().storyChoice).toBeNull();
+    moveToArea(restoredSelected, WORLD.opening_preparation!.area);
     expect(restoredSelected.journey().storyChoice?.kind).toBe("preparation");
   });
 
@@ -364,8 +373,6 @@ describe("opening lead-source snapshot integrity", () => {
     const session = selectSourceAndPrepare(LEDGER_PROFILE, ROWAN_SOURCE);
     moveToArea(session, "albany_city__market");
     moveToArea(session, "albany_city__transport_hub");
-    expect(session.journey().storyChoice).toMatchObject({ kind: "relief_allocation" });
-    session.chooseJourneyStory(NEUTRAL_RELIEF_ALLOCATION);
     session.startQuest(TARGET_QUEST, "albany:wolf_approach_sheltered_stockway");
 
     const forged = session.snapshot();
@@ -431,6 +438,10 @@ describe("opening lead-source snapshot integrity", () => {
     restoredAgain.chooseJourneyStory(DEFAULT_OATH);
     expect(restoredAgain.journey().storyChoice?.kind).toBe("lead_source");
     restoredAgain.chooseJourneyStory(ROWAN_SOURCE);
+    const preparationArea = WORLD.opening_preparation?.area;
+    if (preparationArea && restoredAgain.view().currentArea?.id !== preparationArea) {
+      moveToArea(restoredAgain, preparationArea);
+    }
     expect(restoredAgain.journey().storyChoice?.kind).toBe("preparation");
     expect(restoredAgain.view().quests.map((quest) => quest.id)).toContain(TARGET_QUEST);
   });
@@ -446,20 +457,25 @@ describe("opening lead-source snapshot integrity", () => {
     );
     expect(predecessor.openingLeadSourceDecisionTrail).toBeDefined();
 
-    const migrated = OverworldSession.restore(WORLD, predecessor).snapshot();
+    const migratedSession = OverworldSession.restore(WORLD, predecessor);
+    const migrated = migratedSession.snapshot();
     expect(migrated.worldHash).toBe(OVERWORLD_OPENING_LEAD_SOURCE_MIGRATION_TARGET_WORLD_HASH);
-    expect(migrated.journalEntries).toContainEqual(
-      expect.objectContaining({
-        kind: "preparation_offer",
-        id: "preparation_offer:albany:wolf_preparation",
-      }),
-    );
+    expect(migrated.journalEntries.some((entry) => entry.kind === "preparation_offer")).toBe(false);
+    expect(migratedSession.journey().storyChoice).toBeNull();
     expect(migrated.openingLeadSourceDecisionTrail).toEqual(
       predecessor.openingLeadSourceDecisionTrail,
     );
     expect(migrated.discoveredQuestIds).toContain(TARGET_QUEST);
     const restored = OverworldSession.restore(WORLD, migrated);
+    expect(restored.journey().storyChoice).toBeNull();
+    moveToArea(restored, WORLD.opening_preparation!.area);
     expect(restored.journey().storyChoice?.kind).toBe("preparation");
+    expect(restored.snapshot().journalEntries).toContainEqual(
+      expect.objectContaining({
+        kind: "preparation_offer",
+        id: "preparation_offer:albany:wolf_preparation",
+      }),
+    );
     restored.chooseJourneyStory(DEFAULT_PREPARATION);
     expect(restored.view().quests.map((quest) => quest.id)).toContain(TARGET_QUEST);
   });

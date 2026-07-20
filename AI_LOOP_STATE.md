@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 587 -->
+<!-- historical_cycle_count: 588 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - field_timed_preparation
+
+- Evidence choice: the exact ten-Terra summary-card cohort completed 10/10 but called setup dense 10/10, so this cycle tested moving choices beside their field consumers instead of adding more explanation.
+- Surface: Civic registration now commits only role, duty, and evidence; preparation and relief allocation occur at Albany Station Quarter immediately before departure, with phase-specific briefings and migration/replay compatibility for trusted predecessors.
+- Pure evidence: six clean exact-build exits completed Wolf-Winter 6/6, were 0 stuck and 6/6 replay-yes, and continued past the first goal 5/6; clarity averaged 3.33/5 and enjoyment 4.0/5, with five lure/diversion outcomes and one fortification.
+- Measured result: contextual timing PASSes as a truthful scene break, but opening-density relief remains FAIL/unproven because mandatory choice count is unchanged and density recurred; a 122-decision Luna diagnostic completed five goals but timed out before interview and is excluded.
+- Follow-through: Wolf copy now needs genuine four-plan comparison plus clearer Scout/Station handoff; separate verified debt includes Gallowmere no-progress Tracking retries, Rowan continuity, decision-40 quest-start interruption, and compact ending loss.
+- Feedback/self-critique: compile `20260720T160358Z` has 896 verified reports, 145 current-contract pure exits, and 122 continuing; the ledger is 895 accepted/59 rejected. This is not the greater-than-BG3 milestone, and the final three-strategy/retention authority gates remain open.
+- Guard: crawl `20260720T151018Z` is zero-finding at 247/247 nodes, 344/344 edges, and 12/12 boards/quests; health passes 388 files/2,972 tests plus UI/all packs, and the real departure dialog passed browser smoke with no console warning or error.
 
 ### Cycle result - displayed_action_aliases
 
@@ -152,12 +162,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Diagnostic: four unretried ten-Spark cohorts verified 30/40 fresh pure exits, including 124-, 120-, and 80-decision journeys; rejected runs preserve parent-handle/tool confusion and two Codex compactor failures, localizing separate harness recoverability debt rather than laundering it away.
 - Self-critique: PASS for June's S2 combat boundary, not the greater-than-BG3 milestone. Echo the parent overworld handle through embedded play next; generic one-click Albany district work, global failure-forward proof, current deep crawl, clean pilot, and exact 100-player certification remain open.
 - Guard: pre/post crawls `20260716T195010Z`/`20260717T045146Z` reached 247/247 nodes, 344/344 edges, and 12/12 quests; focused boundary/liveness/migration/parity proofs and full health pass at 372 files/2,779 tests, UI typecheck, and all 12 packs.
-
-### Cycle result - homogeneous_sonnet_authority_contract
-
-- Evidence choice: assessor hotspot `3344db50` was stale structural board copy; the fresh 7/10 diagnostic instead disqualified 9:1 authority after three Haiku null-receipt self-stops, so Sonnet reliability and an honest pre-spend gate were the milestone prerequisite.
-- Surface: live fleets now default to Sonnet; fixed public APIs validate exactly ten pilot or 100 authority rows, with distinct result kinds/files and `authority_certified:false` permanently on pilots. Explicit mix/Haiku/Opus remain diagnostic.
-- Integrity: both cohorts require one exact actual model, unique UUID-backed game and Claude sessions, current clean build/world, one primary attempt, and no resume/retry/recovery; caller-selected count/build seams are gone and unsafe NTFS inode fallback retains single-link/hardlink checks.
-- Pure evidence: seed 2813 completed Wolf-Winter at decision 28, continued through The Gallowmere and The Tanner's Fever, then ended at goal 3/decision 76; clarity/enjoyment 4/4, stuck false, replay true, and the UUID stayed transport-only.
-- Self-critique: PASS for authority/pilot authenticity, not the greater-than-BG3 milestone. Seed 2813's repeated S2 June/rail promise mismatch joins seeds 2811–2812; fix that causal defect before paying for the ten-Sonnet pilot, then deep crawl/exact 100 remain.
-- Guard: adversarial audit closed impossible process-local `o1` uniqueness and public build injection with no remaining P0–P2; 142 affected checks pass, and pre/final crawls `20260716T175228Z`/`20260716T181815Z` found zero issues across 247/247 nodes, 344/344 edges, 12/12 boards, and 12/12 quests.

@@ -25,10 +25,10 @@ const REGISTRATION =
 const FULL = { compact_context: false, compact_result: false } as const;
 const SEED = 26;
 const RESIDENT_SHELTER = "albany:relief_resident_shelter";
-const PARENT_MINUTES = 587;
+const PARENT_MINUTES = 560;
 const PARENT_SUPPLIES = 6;
 const PARENT_FATIGUE = 0;
-const PARENT_DECISIONS = 10;
+const PARENT_DECISIONS = 8;
 const QUEST_AREA = "albany_city__transport_hub";
 
 const CLEAN_LURE_TAIL = [
@@ -67,8 +67,8 @@ const ROUTES = {
     otherFlag: "approach_sheltered_stockway",
     terms: { minutes: 30, supplies: 1, fatigue: 25 },
     after: {
-      minutes: 617,
-      timeLabel: "Day 1, 10:17",
+      minutes: 590,
+      timeLabel: "Day 1, 09:50",
       supplies: 5,
       fatigue: 25,
       travelCondition: "tired",
@@ -95,8 +95,8 @@ const ROUTES = {
     otherFlag: "approach_exposed_ridge",
     terms: { minutes: 75, supplies: 2, fatigue: 10 },
     after: {
-      minutes: 662,
-      timeLabel: "Day 1, 11:02",
+      minutes: 635,
+      timeLabel: "Day 1, 10:35",
       supplies: 4,
       fatigue: 10,
       travelCondition: "ready",
@@ -172,10 +172,21 @@ function buildAlbanyPreStartBoundary(api: ToolApi) {
     session_id: sessionId,
     choice: "albany:oath_full_compact_duty",
   });
-  api.choose_overworld_session_story({
+  const sourced = api.choose_overworld_session_story({
     ...FULL,
     session_id: sessionId,
     choice: "albany:source_rowan_civic_docket",
+  });
+  const preparationArea = WORLD.opening_preparation?.area;
+  if (!preparationArea) throw new Error("the Albany starting slice requires opening preparation");
+  const preparationRoute = sourced.observation.areaExits.find(
+    (candidate) => candidate.destination.id === preparationArea,
+  );
+  if (!preparationRoute) throw new Error("expected a route to the opening preparation board");
+  api.move_overworld_session_area({
+    ...FULL,
+    session_id: sessionId,
+    area_route_id: preparationRoute.id,
   });
   const prepared = api.choose_overworld_session_story({
     ...FULL,
@@ -183,23 +194,13 @@ function buildAlbanyPreStartBoundary(api: ToolApi) {
     choice: "albany:prep_works_fortification",
   });
   expect(prepared.observation.quests.map((quest) => quest.id)).toContain(WOLF.id);
-
-  moveToVisibleArea(api, sessionId, "albany_city__market");
-  const market = fullView(api, sessionId);
-  const marketPoi = market.pois[0];
-  if (!marketPoi) throw new Error("expected the Albany Market lead source");
-  const scouted = api.scout_overworld_session_poi({
-    ...FULL,
-    session_id: sessionId,
-    poi_id: marketPoi.id,
-  });
-  expect(scouted.observation.discoveredAreaIds).toContain(QUEST_AREA);
-  moveToVisibleArea(api, sessionId, WOLF.area);
   api.choose_overworld_session_story({
     ...FULL,
     session_id: sessionId,
     choice: RESIDENT_SHELTER,
   });
+
+  moveToVisibleArea(api, sessionId, WOLF.area);
 
   return { sessionId, exported: exportSession(api, sessionId) };
 }
@@ -505,7 +506,7 @@ describe("SS-F07 — hill approach survives the full Wolf-Winter return", () => 
       completedQuestIds: [],
       journey: { acceptedDecisions: PARENT_DECISIONS },
     });
-    expect(fullView(api, parent.sessionId).timeLabel).toBe("Day 1, 09:47");
+    expect(fullView(api, parent.sessionId).timeLabel).toBe("Day 1, 09:20");
 
     for (const approachId of [undefined, "albany:wolf_approach_unknown"] as const) {
       const before = exportSession(api, parent.sessionId);

@@ -39,12 +39,13 @@ function uiSessionAtPostGallowmereHayden(): OverworldSession {
   session.chooseJourneyStory("albany:ledger_advocate");
   session.chooseJourneyStory(LIMITED_RELIEF_OATH_ID);
   session.chooseJourneyStory("albany:source_rowan_civic_docket");
+  moveUiSessionToArea(session, "albany_city__transport_hub");
   expect(session.journey().storyChoice?.kind).toBe("preparation");
   session.chooseJourneyStory("albany:prep_works_fortification");
+  session.chooseJourneyStory(RESIDENT_SHELTER_ALLOCATION_ID);
   moveUiSessionToArea(session, "albany_city__market");
   session.scoutPoi("albany_city__market__poi");
   moveUiSessionToArea(session, "albany_city__transport_hub");
-  session.chooseJourneyStory(RESIDENT_SHELTER_ALLOCATION_ID);
   session.startQuest("wolf_winter", SHELTERED_APPROACH_ID);
   session.completeQuest("wolf_winter", {
     endingId: "ending_held_timber_saved",
@@ -92,17 +93,13 @@ function uiSessionAtAlbanyStoryChoice(): OverworldSession {
   session.chooseJourneyStory(LIMITED_RELIEF_OATH_ID);
   expect(session.journey().storyChoice?.kind).toBe("lead_source");
   session.chooseJourneyStory("albany:source_rowan_civic_docket");
+  moveUiSessionToArea(session, "albany_city__transport_hub");
   expect(session.journey().storyChoice?.kind).toBe("preparation");
   expect(session.view().quests.map((candidate) => candidate.id)).toContain("wolf_winter");
   session.chooseJourneyStory("albany:prep_works_fortification");
+  session.chooseJourneyStory(RESIDENT_SHELTER_ALLOCATION_ID);
   const quest = session.view().quests.find((candidate) => candidate.id === "wolf_winter");
   if (!quest) throw new Error("expected the Albany Wolf-Winter lead");
-  const route = session
-    .view()
-    .areaExits.find((candidate) => candidate.destination.id === quest.area);
-  if (!route) throw new Error("expected a route to the Albany lead");
-  session.moveArea(route.id);
-  session.chooseJourneyStory(RESIDENT_SHELTER_ALLOCATION_ID);
   session.startQuest(quest.id, SHELTERED_APPROACH_ID);
   session.completeQuest(quest.id, {
     endingId: "ending_held",
@@ -199,14 +196,29 @@ function mcpWolfWinterCheckpointInsideQuest() {
     session_id: overworldSessionId,
     choice: "albany:source_rowan_civic_docket",
   });
-  expect(sourced.journey.storyChoice?.kind).toBe("preparation");
+  expect(sourced.journey.storyChoice).toBeNull();
   expect(sourced.observation.quests.map((candidate) => candidate.id)).toContain("wolf_winter");
+  const stationRoute = sourced.observation.areaExits.find(
+    (route) => route.destination.id === "albany_city__transport_hub",
+  );
+  if (!stationRoute) throw new Error("expected route to the preparation board");
+  const stationed = a.move_overworld_session_area({
+    ...FULL_OVERWORLD,
+    session_id: overworldSessionId,
+    area_route_id: stationRoute.id,
+  });
+  expect(stationed.journey.storyChoice?.kind).toBe("preparation");
   const prepared = a.choose_overworld_session_story({
     ...FULL_OVERWORLD,
     session_id: overworldSessionId,
     choice: "albany:prep_works_fortification",
   });
-  view = prepared.observation;
+  const allocationChosen = a.choose_overworld_session_story({
+    ...FULL_OVERWORLD,
+    session_id: overworldSessionId,
+    choice: RESIDENT_SHELTER_ALLOCATION_ID,
+  });
+  view = allocationChosen.observation;
 
   const marketRoute = view.areaExits.find(
     (route) => route.destination.id === "albany_city__market",
@@ -238,12 +250,6 @@ function mcpWolfWinterCheckpointInsideQuest() {
     session_id: overworldSessionId,
     area_route_id: questRoute.id,
   });
-  const allocated = a.choose_overworld_session_story({
-    ...FULL_OVERWORLD,
-    session_id: overworldSessionId,
-    choice: RESIDENT_SHELTER_ALLOCATION_ID,
-  });
-  expect(allocated.journey.storyChoice?.kind).not.toBe("relief_allocation");
   view = a.get_overworld_session({
     session_id: overworldSessionId,
     include_observation: true,
@@ -257,7 +263,7 @@ function mcpWolfWinterCheckpointInsideQuest() {
     poi_id: questAreaPoi.id,
   });
   let journey = questAreaScouted.journey;
-  expect(journey.acceptedDecisions).toBe(11);
+  expect(journey.acceptedDecisions).toBe(12);
   const questAreaSite = questAreaScouted.observation.sites[0];
   if (!questAreaSite) throw new Error("expected a quest-area exploration site");
   journey = a.explore_overworld_session_site({
@@ -265,16 +271,30 @@ function mcpWolfWinterCheckpointInsideQuest() {
     session_id: overworldSessionId,
     site_id: questAreaSite.id,
   }).journey;
-  expect(journey.acceptedDecisions).toBe(12);
+  expect(journey.acceptedDecisions).toBe(13);
 
+  // Resolve the Station's visible dispatch event before leaving it. These are
+  // actual local actions (rather than a repeated scout), and retain an even
+  // movement count so the helper returns to the quest departure area.
   journey = a.talk_overworld_session_contact({
     ...FULL_OVERWORLD,
     session_id: overworldSessionId,
     character_id: HAYDEN_ID,
   }).journey;
-  expect(journey.acceptedDecisions).toBe(13);
+  expect(journey.acceptedDecisions).toBe(14);
+  const stationEvent = a.get_overworld_session({
+    session_id: overworldSessionId,
+    include_observation: true,
+  }).observation.events[0];
+  if (!stationEvent) throw new Error("expected the Station Quarter dispatch event");
+  journey = a.investigate_overworld_session_event({
+    ...FULL_OVERWORLD,
+    session_id: overworldSessionId,
+    event_id: stationEvent.id,
+  }).journey;
+  expect(journey.acceptedDecisions).toBe(15);
 
-  // Reach decision 37 through one real local contact and reversible movement,
+  // Reach decision 37 through real local work and reversible movement,
   // so quest start and two accepted quest moves put the checkpoint inside the
   // RPG at decision 40 while ending back in the quest's area.
   while (journey.acceptedDecisions < 37) {
@@ -292,6 +312,19 @@ function mcpWolfWinterCheckpointInsideQuest() {
       session_id: overworldSessionId,
       area_route_id: route.id,
     }).journey;
+  }
+  const finalArea = a.get_overworld_session({
+    session_id: overworldSessionId,
+    include_observation: true,
+  }).observation;
+  if (finalArea.currentArea?.id !== quest.area) {
+    const route = finalArea.areaExits.find((candidate) => candidate.destination.id === quest.area);
+    if (!route) throw new Error("expected a final route back to the Albany quest area");
+    a.move_overworld_session_area({
+      ...FULL_OVERWORLD,
+      session_id: overworldSessionId,
+      area_route_id: route.id,
+    });
   }
   expect(
     a.get_overworld_session({ session_id: overworldSessionId, include_observation: true })
@@ -602,14 +635,24 @@ describe("MCP journey surface", () => {
     const fullLead = choose(full.session_id, LIMITED_RELIEF_OATH_ID, false);
     expectStoryChoiceParity(compactLead.journey, fullLead.journey, "lead_source");
 
-    const compactPreparation = choose(compact.session_id, "albany:source_rowan_civic_docket", true);
-    const fullPreparation = choose(full.session_id, "albany:source_rowan_civic_docket", false);
+    choose(compact.session_id, "albany:source_rowan_civic_docket", true);
+    choose(full.session_id, "albany:source_rowan_civic_docket", false);
+    const compactPreparation = moveToAllocation(compact.session_id, true);
+    const fullPreparation = moveToAllocation(full.session_id, false);
     expectStoryChoiceParity(compactPreparation.journey, fullPreparation.journey, "preparation");
 
     choose(compact.session_id, "albany:prep_works_fortification", true);
     choose(full.session_id, "albany:prep_works_fortification", false);
-    const compactAllocation = moveToAllocation(compact.session_id, true);
-    const fullAllocation = moveToAllocation(full.session_id, false);
+    const compactAllocation = a.get_overworld_session({
+      session_id: compact.session_id,
+      compact_context: true,
+      include_observation: true,
+    });
+    const fullAllocation = a.get_overworld_session({
+      session_id: full.session_id,
+      compact_context: false,
+      include_observation: true,
+    });
     expectStoryChoiceParity(compactAllocation.journey, fullAllocation.journey, "relief_allocation");
   });
 

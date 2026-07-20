@@ -9,6 +9,7 @@ import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import { createInitialCampaignCharacterState } from "../../src/world/campaign_character_state.js";
 import { openingRegistrationLegacyJournalEntry } from "../../src/world/opening_registration_journal.js";
 import { applyOpeningPreparationProfile } from "../../src/world/opening_preparation.js";
+import { applyOpeningReliefAllocationOption } from "../../src/world/opening_relief_allocation.js";
 import { applyOpeningReliefOathOption } from "../../src/world/opening_relief_oath.js";
 import { planOverworldRoute } from "../../src/world/overworld.js";
 import { OverworldSession } from "../../src/world/session.js";
@@ -53,17 +54,25 @@ type ToolApi = ReturnType<typeof createToolApi>;
 function expectedPreparedCharacter(
   character: (typeof REGISTRATION.profiles)[number]["character"],
   profileId = DEFAULT_PREPARATION_ID,
+  reliefAllocationId?: string,
 ) {
   const oathBound = applyOpeningReliefOathOption({
     scene: RELIEF_OATH,
     character,
     optionId: DEFAULT_OATH_ID,
   }).characterAfter;
-  return applyOpeningPreparationProfile({
+  const prepared = applyOpeningPreparationProfile({
     scene: PREPARATION,
     character: oathBound,
     profileId,
   }).characterAfter;
+  return reliefAllocationId
+    ? applyOpeningReliefAllocationOption({
+        scene: WORLD.opening_relief_allocation!,
+        character: prepared,
+        optionId: reliefAllocationId,
+      }).characterAfter
+    : prepared;
 }
 
 function registerSession(profileId: string): OverworldSession {
@@ -91,9 +100,11 @@ function registerSession(profileId: string): OverworldSession {
     options: LEAD_SOURCE.options.map((option) => ({ id: option.id })),
   });
   session.chooseJourneyStory(DEFAULT_SOURCE_ID);
+  moveSessionToArea(session, WORLD.opening_preparation!.area);
   expect(session.journey().storyChoice?.kind).toBe("preparation");
   expect(session.view().quests.map((quest) => quest.id)).toContain("wolf_winter");
   session.chooseJourneyStory(DEFAULT_PREPARATION_ID);
+  expect(session.journey().storyChoice?.kind).toBe("relief_allocation");
   expect(session.view().quests.map((quest) => quest.id)).toContain("wolf_winter");
   return session;
 }
@@ -102,8 +113,8 @@ function startedWolfSession(profileId = "albany:unaffiliated_courier"): Overworl
   const session = registerSession(profileId);
   const wolf = WORLD.quests.find((quest) => quest.id === "wolf_winter");
   if (!wolf) throw new Error("expected Wolf-Winter in the starting world");
-  moveSessionToArea(session, wolf.area);
   session.chooseJourneyStory(RESIDENT_SHELTER_ALLOCATION_ID);
+  moveSessionToArea(session, wolf.area);
   session.startQuest(wolf.id, "albany:wolf_approach_sheltered_stockway");
   return session;
 }
@@ -236,12 +247,26 @@ function launchRegisteredWolf(profileId: string): {
     session_id: sessionId,
     choice: DEFAULT_SOURCE_ID,
   });
-  expect(sourced.journey.storyChoice?.kind).toBe("preparation");
-  expect(sourced.observation.quests.map((quest) => quest.id)).toContain("wolf_winter");
+  const preparationRoute = sourced.observation.areaExits.find(
+    (candidate) => candidate.destination.id === PREPARATION.area,
+  );
+  if (!preparationRoute) throw new Error("expected a route to the opening preparation board");
+  const atPreparation = api.move_overworld_session_area({
+    ...FULL_OVERWORLD,
+    session_id: sessionId,
+    area_route_id: preparationRoute.id,
+  });
+  expect(atPreparation.journey.storyChoice?.kind).toBe("preparation");
+  expect(atPreparation.observation.quests.map((quest) => quest.id)).toContain("wolf_winter");
   api.choose_overworld_session_story({
     ...FULL_OVERWORLD,
     session_id: sessionId,
     choice: COUNTERFACTUAL_PREPARATION_ID,
+  });
+  api.choose_overworld_session_story({
+    ...FULL_OVERWORLD,
+    session_id: sessionId,
+    choice: RESIDENT_SHELTER_ALLOCATION_ID,
   });
 
   const registeredSnapshot = api.export_overworld_session({ session_id: sessionId }).snapshot;
@@ -250,6 +275,19 @@ function launchRegisteredWolf(profileId: string): {
     compact_context: false,
     compact_result: false,
   });
+  const rowanArea = WORLD.characters.find((character) => character.id === ROWAN_ID)?.area;
+  if (!rowanArea) throw new Error("The starting slice requires Rowan's Civic area.");
+  if (restored.observation.currentArea?.id !== rowanArea) {
+    const route = restored.observation.areaExits.find(
+      (candidate) => candidate.destination.id === rowanArea,
+    );
+    if (!route) throw new Error("The Civic route must remain visible after restore.");
+    api.move_overworld_session_area({
+      ...FULL_OVERWORLD,
+      session_id: restored.session_id,
+      area_route_id: route.id,
+    });
+  }
   const rowan = api.talk_overworld_session_contact({
     ...FULL_OVERWORLD,
     session_id: restored.session_id,
@@ -265,11 +303,6 @@ function launchRegisteredWolf(profileId: string): {
     ...FULL_OVERWORLD,
     session_id: restored.session_id,
     area_route_id: route.id,
-  });
-  api.choose_overworld_session_story({
-    ...FULL_OVERWORLD,
-    session_id: restored.session_id,
-    choice: RESIDENT_SHELTER_ALLOCATION_ID,
   });
   let haydenJournalId: string | null = null;
   if (profileId === "albany:road_warden") {
@@ -349,7 +382,15 @@ describe("SS-F01 — Albany character background counterfactual", () => {
       expect(restored.campaignCharacterState()).toEqual(
         expectedPreparedCharacter(profile.character),
       );
-      expect(restored.journey().storyChoice).toBeNull();
+      expect(restored.journey().storyChoice).toMatchObject({ kind: "relief_allocation" });
+      restored.chooseJourneyStory(
+        profile.character.relationships.some(
+          (relationship) => relationship.npcId === "albany:jamie_tanner",
+        )
+          ? "albany:relief_cade_fodder"
+          : RESIDENT_SHELTER_ALLOCATION_ID,
+      );
+      moveSessionToArea(restored, REGISTRATION.area);
       expect(restored.talkToCharacter(ROWAN_ID).entry.id).toContain("@");
       const sponsorRelationship = profile.character.relationships.find(
         (relationship) => relationship.npcId !== "albany:rowan_quill",
@@ -367,12 +408,6 @@ describe("SS-F01 — Albany character background counterfactual", () => {
           ),
       );
       if (!sponsorVariant) throw new Error(`${profile.id} sponsor must consume its memory`);
-      moveSessionToArea(restored, WORLD.opening_relief_allocation!.area);
-      restored.chooseJourneyStory(
-        sponsorRelationship.npcId === "albany:jamie_tanner"
-          ? "albany:relief_cade_fodder"
-          : RESIDENT_SHELTER_ALLOCATION_ID,
-      );
       moveSessionToArea(restored, sponsor.area);
       const sponsorTalk = restored.talkToCharacter(sponsor.id);
       expect(sponsorTalk.entry.id).toBe(
@@ -427,12 +462,13 @@ describe("SS-F01 — Albany character background counterfactual", () => {
       /certify .*Wolf-Winter Source Packet/i,
     );
     session.chooseJourneyStory(DEFAULT_SOURCE_ID);
+    moveSessionToArea(session, WORLD.opening_preparation!.area);
     expect(session.journey().storyChoice?.kind).toBe("preparation");
     expect(session.view().quests.map((quest) => quest.id)).toContain(wolf.id);
     expect(() => session.previewQuestStart(wolf.id)).toThrow(/preparation/i);
     session.chooseJourneyStory(DEFAULT_PREPARATION_ID);
-    moveSessionToArea(session, wolf.area);
     session.chooseJourneyStory(RESIDENT_SHELTER_ALLOCATION_ID);
+    moveSessionToArea(session, wolf.area);
     expect(session.previewQuestStart(wolf.id).id).toBe(wolf.id);
     expect(session.startQuest(wolf.id, "albany:wolf_approach_sheltered_stockway").id).toBe(wolf.id);
 
@@ -622,12 +658,14 @@ describe("SS-F01 — Albany character background counterfactual", () => {
       expectedPreparedCharacter(
         REGISTRATION.profiles.find((profile) => profile.id === "albany:road_warden")!.character,
         COUNTERFACTUAL_PREPARATION_ID,
+        RESIDENT_SHELTER_ALLOCATION_ID,
       ),
     );
     expect(advocate.registeredSnapshot.character).toEqual(
       expectedPreparedCharacter(
         REGISTRATION.profiles.find((profile) => profile.id === "albany:ledger_advocate")!.character,
         COUNTERFACTUAL_PREPARATION_ID,
+        RESIDENT_SHELTER_ALLOCATION_ID,
       ),
     );
     expect(warden.rowanJournalId).toBe(
@@ -748,6 +786,7 @@ describe("SS-F01 — Albany character background counterfactual", () => {
     );
 
     const selectedWithLaterPlay = registerSession("albany:road_warden");
+    selectedWithLaterPlay.chooseJourneyStory(RESIDENT_SHELTER_ALLOCATION_ID);
     const event = selectedWithLaterPlay.view().events[0];
     if (!event) throw new Error("expected Albany's opening event");
     selectedWithLaterPlay.investigateEvent(event.id);
@@ -763,8 +802,10 @@ describe("SS-F01 — Albany character background counterfactual", () => {
     const movedAfterSelection = pending;
     movedAfterSelection.chooseJourneyStory(DEFAULT_OATH_ID);
     movedAfterSelection.chooseJourneyStory(DEFAULT_SOURCE_ID);
+    moveSessionToArea(movedAfterSelection, WORLD.opening_preparation!.area);
     expect(movedAfterSelection.journey().storyChoice?.kind).toBe("preparation");
     movedAfterSelection.chooseJourneyStory(DEFAULT_PREPARATION_ID);
+    movedAfterSelection.chooseJourneyStory(RESIDENT_SHELTER_ALLOCATION_ID);
     moveSessionToArea(movedAfterSelection, "albany_city__market");
     const wrongLocation = structuredClone(movedAfterSelection.snapshot());
     wrongLocation.journalEntries = wrongLocation.journalEntries.filter(
@@ -784,7 +825,7 @@ describe("SS-F01 — Albany character background counterfactual", () => {
     wrongLocation.character = createInitialCampaignCharacterState();
     wrongLocation.journey = structuredClone(pendingSnapshot.journey);
     expect(() => OverworldSession.restore(WORLD, wrongLocation)).toThrow(
-      /pending registration no longer matches its offered world and journey boundary/i,
+      /pending registration (no longer matches its offered world and journey boundary|offer must remain the latest journal boundary)/i,
     );
 
     moveSessionToArea(movedAfterSelection, REGISTRATION.area);
@@ -806,7 +847,7 @@ describe("SS-F01 — Albany character background counterfactual", () => {
     wrongClock.character = createInitialCampaignCharacterState();
     wrongClock.journey = structuredClone(pendingSnapshot.journey);
     expect(() => OverworldSession.restore(WORLD, wrongClock)).toThrow(
-      /pending registration no longer matches its offered world and journey boundary/i,
+      /pending registration (no longer matches its offered world and journey boundary|offer must remain the latest journal boundary)/i,
     );
   });
 });

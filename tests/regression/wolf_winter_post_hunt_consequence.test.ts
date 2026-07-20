@@ -198,11 +198,25 @@ function launchAlbanyWolf(api: ToolApi): {
     session_id: overworldSessionId,
     choice: "albany:source_rowan_civic_docket",
   });
-  expect(sourced.journey.storyChoice?.kind).toBe("preparation");
+  const preparationRoute = sourced.observation.areaExits.find(
+    (candidate) => candidate.destination.id === WORLD.opening_preparation?.area,
+  );
+  if (!preparationRoute) throw new Error("expected a route to the opening preparation board");
+  const atPreparation = api.move_overworld_session_area({
+    ...full,
+    session_id: overworldSessionId,
+    area_route_id: preparationRoute.id,
+  });
+  expect(atPreparation.journey.storyChoice?.kind).toBe("preparation");
   api.choose_overworld_session_story({
     ...full,
     session_id: overworldSessionId,
     choice: "albany:prep_works_fortification",
+  });
+  api.choose_overworld_session_story({
+    ...full,
+    session_id: overworldSessionId,
+    choice: RESIDENT_SHELTER_ALLOCATION,
   });
   view = api.get_overworld_session({
     session_id: overworldSessionId,
@@ -236,11 +250,6 @@ function launchAlbanyWolf(api: ToolApi): {
     ...full,
     session_id: overworldSessionId,
     area_route_id: questRoute.id,
-  });
-  api.choose_overworld_session_story({
-    ...full,
-    session_id: overworldSessionId,
-    choice: RESIDENT_SHELTER_ALLOCATION,
   });
   const launched = api.start_overworld_session_quest({
     ...full,
@@ -415,11 +424,25 @@ describe("bug_0505 — Wolf-Winter saved wood has a post-hunt consequence", () =
       session_id: sessionId,
       choice: "albany:source_rowan_civic_docket",
     });
-    expect(sourced.journey.storyChoice?.kind).toBe("preparation");
+    const preparationRoute = sourced.observation.areaExits.find(
+      (candidate) => candidate.destination.id === WORLD.opening_preparation?.area,
+    );
+    if (!preparationRoute) throw new Error("expected a route to the opening preparation board");
+    const atPreparation = api.move_overworld_session_area({
+      ...full,
+      session_id: sessionId,
+      area_route_id: preparationRoute.id,
+    });
+    expect(atPreparation.journey.storyChoice?.kind).toBe("preparation");
     api.choose_overworld_session_story({
       ...full,
       session_id: sessionId,
       choice: "albany:prep_works_fortification",
+    });
+    api.choose_overworld_session_story({
+      ...full,
+      session_id: sessionId,
+      choice: RESIDENT_SHELTER_ALLOCATION,
     });
     view = api.get_overworld_session({
       session_id: sessionId,
@@ -453,11 +476,6 @@ describe("bug_0505 — Wolf-Winter saved wood has a post-hunt consequence", () =
       ...full,
       session_id: sessionId,
       area_route_id: questRoute.id,
-    });
-    api.choose_overworld_session_story({
-      ...full,
-      session_id: sessionId,
-      choice: RESIDENT_SHELTER_ALLOCATION,
     });
 
     let journey = api.get_overworld_session_context({ session_id: sessionId }).journey;

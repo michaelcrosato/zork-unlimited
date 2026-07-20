@@ -35,6 +35,9 @@ function moveToArea(session: OverworldSession, destinationAreaId: string): void 
 }
 
 function startAlbanyWolf(session: OverworldSession): void {
+  if (session.view().currentArea?.id !== "albany_city__civic_core") {
+    moveToArea(session, "albany_city__civic_core");
+  }
   session.scoutPoi("albany_city__civic_core__poi");
   if (session.campaignCharacterState().background === null) {
     session.talkToCharacter("albany_city__civic_core__contact");
@@ -46,18 +49,24 @@ function startAlbanyWolf(session: OverworldSession): void {
   if (session.journey().storyChoice?.kind === "lead_source") {
     session.chooseJourneyStory("albany:source_rowan_civic_docket");
   }
+  moveToArea(session, world.opening_preparation!.area);
   if (session.journey().storyChoice?.kind === "preparation") {
     session.chooseJourneyStory("albany:prep_works_fortification");
+  }
+  if (session.journey().storyChoice?.kind === "relief_allocation") {
+    session.chooseJourneyStory("albany:relief_resident_shelter");
   }
   moveToArea(session, "albany_city__market");
   session.scoutPoi("albany_city__market__poi");
   moveToArea(session, "albany_city__transport_hub");
-  session.chooseJourneyStory("albany:relief_resident_shelter");
   expect(session.view().quests.map((quest) => quest.id)).toContain("wolf_winter");
   session.startQuest("wolf_winter", "albany:wolf_approach_sheltered_stockway");
 }
 
 function revealAlbanyWolfAtStation(session: OverworldSession): void {
+  if (session.view().currentArea?.id !== "albany_city__civic_core") {
+    moveToArea(session, "albany_city__civic_core");
+  }
   session.scoutPoi("albany_city__civic_core__poi");
   if (session.campaignCharacterState().background === null) {
     session.talkToCharacter("albany_city__civic_core__contact");
@@ -69,13 +78,16 @@ function revealAlbanyWolfAtStation(session: OverworldSession): void {
   if (session.journey().storyChoice?.kind === "lead_source") {
     session.chooseJourneyStory("albany:source_rowan_civic_docket");
   }
+  moveToArea(session, world.opening_preparation!.area);
   if (session.journey().storyChoice?.kind === "preparation") {
     session.chooseJourneyStory("albany:prep_works_fortification");
+  }
+  if (session.journey().storyChoice?.kind === "relief_allocation") {
+    session.chooseJourneyStory("albany:relief_resident_shelter");
   }
   moveToArea(session, "albany_city__market");
   session.scoutPoi("albany_city__market__poi");
   moveToArea(session, "albany_city__transport_hub");
-  session.chooseJourneyStory("albany:relief_resident_shelter");
   expect(session.view().quests.map((quest) => quest.id)).toContain("wolf_winter");
 }
 
@@ -498,8 +510,11 @@ describe("Wolf-Winter to Gallowmere authored handoff", () => {
     session.chooseJourneyStory("albany:ledger_advocate");
     session.chooseJourneyStory("albany:oath_limited_aid_only");
     session.chooseJourneyStory("albany:source_rowan_civic_docket");
+    moveToArea(session, world.opening_preparation!.area);
     expect(session.journey().storyChoice?.kind).toBe("preparation");
     session.chooseJourneyStory("albany:prep_works_fortification");
+    expect(session.journey().storyChoice?.kind).toBe("relief_allocation");
+    session.chooseJourneyStory("albany:relief_resident_shelter");
     session.travel(ALBANY_TO_SARATOGA);
     if (session.view().pendingRoadEncounter) session.resolveRoadEncounter("press_on");
     session.travel(SARATOGA_TO_QUEENSBURY);

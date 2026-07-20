@@ -36,13 +36,15 @@ function sessionAtQueensburyGoalPassage(): OverworldSession {
   session.chooseJourneyStory("albany:oath_limited_aid_only");
   expect(session.journey().storyChoice?.kind).toBe("lead_source");
   session.chooseJourneyStory("albany:source_rowan_civic_docket");
+  moveToArea(session, WORLD.opening_preparation!.area);
   expect(session.journey().storyChoice?.kind).toBe("preparation");
   expect(session.view().quests.map((candidate) => candidate.id)).toContain("wolf_winter");
   session.chooseJourneyStory("albany:prep_works_fortification");
+  expect(session.journey().storyChoice?.kind).toBe("relief_allocation");
+  session.chooseJourneyStory("albany:relief_resident_shelter");
   const quest = session.view().quests.find((candidate) => candidate.id === "wolf_winter");
   if (!quest) throw new Error("expected the Albany Wolf-Winter lead");
-  moveToArea(session, quest.area);
-  session.chooseJourneyStory("albany:relief_resident_shelter");
+  if (session.view().currentArea?.id !== quest.area) moveToArea(session, quest.area);
   session.startQuest(quest.id, "albany:wolf_approach_sheltered_stockway");
   session.completeQuest(quest.id, {
     endingId: "ending_held_timber_saved",

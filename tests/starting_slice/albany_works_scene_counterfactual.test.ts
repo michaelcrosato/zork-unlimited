@@ -84,6 +84,7 @@ function preparedForWolf(
   session.chooseJourneyStory("albany:ledger_advocate");
   session.chooseJourneyStory("albany:oath_full_compact_duty");
   session.chooseJourneyStory("albany:source_rowan_civic_docket");
+  moveToArea(session, world.opening_preparation!.area, world);
   session.chooseJourneyStory(preparationId);
 
   const wolf = session.view().quests.find((quest) => quest.id === "wolf_winter");

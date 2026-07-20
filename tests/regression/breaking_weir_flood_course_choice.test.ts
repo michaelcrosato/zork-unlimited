@@ -97,6 +97,11 @@ function launchBreakingWeir(api: ToolApi): { overworldSessionId: string; rpgSess
     (character) => character.id === world.opening_registration?.contact,
   );
   if (!registrationContact) throw new Error("Expected Albany's registration contact.");
+  api.scout_overworld_session_poi({
+    ...full,
+    session_id: overworldSessionId,
+    poi_id: started.observation.pois[0]!.id,
+  });
   api.talk_overworld_session_contact({
     ...full,
     session_id: overworldSessionId,
@@ -117,11 +122,27 @@ function launchBreakingWeir(api: ToolApi): { overworldSessionId: string; rpgSess
     session_id: overworldSessionId,
     choice: "albany:source_rowan_civic_docket",
   });
-  expect(sourced.journey.storyChoice?.kind).toBe("preparation");
+  const preparationArea = world.opening_preparation?.area;
+  if (!preparationArea) throw new Error("expected Albany opening preparation");
+  const preparationRoute = sourced.observation.areaExits.find(
+    (candidate) => candidate.destination.id === preparationArea,
+  );
+  if (!preparationRoute) throw new Error("expected a route to the opening preparation board");
+  const atPreparation = api.move_overworld_session_area({
+    ...full,
+    session_id: overworldSessionId,
+    area_route_id: preparationRoute.id,
+  });
+  expect(atPreparation.journey.storyChoice?.kind).toBe("preparation");
   api.choose_overworld_session_story({
     ...full,
     session_id: overworldSessionId,
     choice: "albany:prep_works_fortification",
+  });
+  api.choose_overworld_session_story({
+    ...full,
+    session_id: overworldSessionId,
+    choice: "albany:relief_resident_shelter",
   });
 
   for (const roadId of pathBetween(started.observation.current.id, quest.home, world.edges)) {

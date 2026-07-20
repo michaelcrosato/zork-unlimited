@@ -147,12 +147,30 @@ function launchAlbanyWolf(api: ToolApi) {
     session_id: overworldSessionId,
     choice: "albany:source_rowan_civic_docket",
   });
-  expect(sourced.journey.storyChoice?.kind).toBe("preparation");
-  expect(sourced.observation.quests.map((candidate) => candidate.id)).toContain(WOLF_QUEST.id);
+  const preparationArea = WORLD.opening_preparation?.area;
+  if (!preparationArea) throw new Error("the Albany starting slice requires opening preparation");
+  const preparationRoute = sourced.observation.areaExits.find(
+    (candidate) => candidate.destination.id === preparationArea,
+  );
+  if (!preparationRoute) throw new Error("expected a route to the opening preparation board");
+  const atPreparation = api.move_overworld_session_area({
+    ...FULL,
+    session_id: overworldSessionId,
+    area_route_id: preparationRoute.id,
+  });
+  expect(atPreparation.journey.storyChoice?.kind).toBe("preparation");
+  expect(atPreparation.observation.quests.map((candidate) => candidate.id)).toContain(
+    WOLF_QUEST.id,
+  );
   const prepared = api.choose_overworld_session_story({
     ...FULL,
     session_id: overworldSessionId,
     choice: "albany:prep_works_fortification",
+  });
+  api.choose_overworld_session_story({
+    ...FULL,
+    session_id: overworldSessionId,
+    choice: NEUTRAL_RELIEF_ALLOCATION,
   });
   const quest = prepared.observation.quests.find((candidate) => candidate.id === WOLF_QUEST.id);
   if (!quest) throw new Error("Albany preparation must reveal Wolf-Winter");
@@ -182,11 +200,6 @@ function launchAlbanyWolf(api: ToolApi) {
   expect(explored.observation.discoveredAreaIds).toHaveLength(6);
 
   moveToArea(api, overworldSessionId, quest.area);
-  api.choose_overworld_session_story({
-    ...FULL,
-    session_id: overworldSessionId,
-    choice: NEUTRAL_RELIEF_ALLOCATION,
-  });
   const launched = api.start_overworld_session_quest({
     ...FULL,
     compact_observation: false,

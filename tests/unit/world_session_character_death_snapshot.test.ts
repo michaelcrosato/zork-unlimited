@@ -10,6 +10,14 @@ import { loadOverworldManifest } from "../../src/world/source.js";
 const world = loadOverworldManifest(process.cwd());
 const DEATH_ENDING_ID = "ending_pulled_down";
 
+function moveToOpeningPreparation(session: OverworldSession): void {
+  const areaId = world.opening_preparation?.area;
+  if (!areaId || session.view().currentArea?.id === areaId) return;
+  const route = session.view().areaExits.find((candidate) => candidate.destination.id === areaId);
+  if (!route) throw new Error(`Expected a visible route to ${areaId}.`);
+  session.moveArea(route.id);
+}
+
 function settleOpeningChoices(session: OverworldSession): void {
   if (session.journey().storyChoice?.kind === "registration") {
     session.chooseJourneyStory("albany:ledger_advocate");
@@ -19,9 +27,13 @@ function settleOpeningChoices(session: OverworldSession): void {
   }
   if (session.journey().storyChoice?.kind === "lead_source") {
     session.chooseJourneyStory("albany:source_rowan_civic_docket");
+    moveToOpeningPreparation(session);
   }
   if (session.journey().storyChoice?.kind === "preparation") {
     session.chooseJourneyStory("albany:prep_works_fortification");
+  }
+  if (session.journey().storyChoice?.kind === "relief_allocation") {
+    session.chooseJourneyStory("albany:relief_resident_shelter");
   }
 }
 
@@ -49,11 +61,13 @@ function buildDeathSnapshots(): {
 
   const quest = session.view().quests.find((candidate) => candidate.id === "wolf_winter");
   if (!quest) throw new Error("Expected the Albany Wolf-Winter lead.");
-  const route = session
-    .view()
-    .areaExits.find((candidate) => candidate.destination.id === quest.area);
-  if (!route) throw new Error("Expected a route to the Albany Wolf-Winter lead.");
-  session.moveArea(route.id);
+  if (session.view().currentArea?.id !== quest.area) {
+    const route = session
+      .view()
+      .areaExits.find((candidate) => candidate.destination.id === quest.area);
+    if (!route) throw new Error("Expected a route to the Albany Wolf-Winter lead.");
+    session.moveArea(route.id);
+  }
   startVisibleQuest(session, quest);
 
   while (session.journey().acceptedDecisions < 40) {

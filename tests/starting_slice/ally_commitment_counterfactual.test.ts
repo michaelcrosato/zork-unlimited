@@ -83,13 +83,14 @@ function reachAlly(
   session.chooseJourneyStory(args.backgroundId ?? REGISTRATION.profiles[0]!.id);
   session.chooseJourneyStory(DEFAULT_OATH);
   session.chooseJourneyStory(args.sourceId ?? LEAD.options[0]!.id);
+  moveToArea(session, PREPARATION.area);
   session.chooseJourneyStory(args.preparationId ?? PREPARATION.profiles[0]!.id);
-  moveToArea(session, ALLY.area);
   expect(session.journey().storyChoice).toMatchObject({
     id: RELIEF_ALLOCATION.id,
     kind: "relief_allocation",
   });
   session.chooseJourneyStory(RESIDENT_SHELTER);
+  moveToArea(session, ALLY.area);
   session.talkToCharacter(ALLY.contact);
   return session;
 }
@@ -195,9 +196,10 @@ describe("SS-F04 — Albany ally commitment counterfactual", () => {
     noContact.chooseJourneyStory(REGISTRATION.profiles[0]!.id);
     noContact.chooseJourneyStory(DEFAULT_OATH);
     noContact.chooseJourneyStory(LEAD.options[0]!.id);
+    moveToArea(noContact, PREPARATION.area);
     noContact.chooseJourneyStory(PREPARATION.profiles[0]!.id);
-    moveToArea(noContact, WOLF.area);
     noContact.chooseJourneyStory(RESIDENT_SHELTER);
+    moveToArea(noContact, WOLF.area);
     expect(noContact.previewQuestStart(WOLF.id).id).toBe(WOLF.id);
     noContact.startQuest(WOLF.id, SHELTERED);
     expect(noContact.snapshot().character.relationships).not.toEqual(
@@ -227,10 +229,11 @@ describe("SS-F04 — Albany ally commitment counterfactual", () => {
     session.chooseJourneyStory(REGISTRATION.profiles[0]!.id);
     session.chooseJourneyStory(DEFAULT_OATH);
     session.chooseJourneyStory(LEAD.options[0]!.id);
+    moveToArea(session, PREPARATION.area);
     session.chooseJourneyStory(PREPARATION.profiles[0]!.id);
 
-    moveToArea(session, ALLY.area);
     session.chooseJourneyStory(RESIDENT_SHELTER);
+    moveToArea(session, ALLY.area);
     const decisionsBeforeContact = session.journey().acceptedDecisions;
     const repeated = session.talkToCharacter(ALLY.contact);
     expect(repeated.alreadyKnown).toBe(true);

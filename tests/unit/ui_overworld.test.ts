@@ -108,6 +108,48 @@ function travelTo(session: OverworldSession, townId: string): void {
   }
 }
 
+function areaPath(from: string, to: string): string[] {
+  const queue: { area: string; routeIds: string[] }[] = [{ area: from, routeIds: [] }];
+  const seen = new Set<string>([from]);
+  for (let i = 0; i < queue.length; i += 1) {
+    const current = queue[i]!;
+    if (current.area === to) return current.routeIds;
+    for (const edge of world.area_edges.filter(
+      (candidate) => candidate.from_area === current.area || candidate.to_area === current.area,
+    )) {
+      const next = edge.from_area === current.area ? edge.to_area : edge.from_area;
+      if (seen.has(next)) continue;
+      seen.add(next);
+      queue.push({ area: next, routeIds: [...current.routeIds, edge.id] });
+    }
+  }
+  throw new Error(`No area path from ${from} to ${to}.`);
+}
+
+function moveToArea(session: OverworldSession, areaId: string): void {
+  const currentAreaId = session.view().currentArea?.id;
+  if (!currentAreaId || currentAreaId === areaId) return;
+  for (const routeId of areaPath(currentAreaId, areaId)) {
+    let view = session.view();
+    let route = view.areaExits.find((candidate) => candidate.id === routeId);
+    if (!route || !view.discoveredAreaIds.includes(route.destination.id)) {
+      session.exploreArea(view.currentArea!.id);
+      view = session.view();
+      route = view.areaExits.find((candidate) => candidate.id === routeId);
+    }
+    if (!route || !view.discoveredAreaIds.includes(route.destination.id)) {
+      throw new Error(`Expected a visible mapped route to ${areaId}.`);
+    }
+    session.moveArea(route.id);
+  }
+}
+
+function moveToOpeningPreparation(session: OverworldSession): void {
+  const areaId = world.opening_preparation?.area;
+  if (!areaId) return;
+  moveToArea(session, areaId);
+}
+
 function settleOpeningRegistration(session: OverworldSession): void {
   if (session.journey().storyChoice?.kind === "registration") {
     session.chooseJourneyStory("albany:ledger_advocate");
@@ -117,10 +159,12 @@ function settleOpeningRegistration(session: OverworldSession): void {
   }
   if (session.journey().storyChoice?.kind === "lead_source") {
     session.chooseJourneyStory("albany:source_rowan_civic_docket");
+    moveToOpeningPreparation(session);
   }
   if (session.journey().storyChoice?.kind === "preparation") {
     session.chooseJourneyStory("albany:prep_works_fortification");
   }
+  settleReliefAllocation(session);
 }
 
 function settleReliefAllocation(session: OverworldSession): void {
@@ -145,6 +189,7 @@ function resolveCurrentTownEvent(session: OverworldSession): void {
   session.scoutPoi(view.pois[0]!.id);
   session.talkToCharacter(view.characters[0]!.id);
   settleOpeningRegistration(session);
+  moveToArea(session, event.area);
   session.investigateEvent(event.id);
   session.resolveEvent(event.id, event.authored_scene?.options[0]?.id);
 }
@@ -156,11 +201,13 @@ function reachAlbanyStoryChoice(session: OverworldSession): void {
   settleOpeningRegistration(session);
   const quest = session.view().quests.find((candidate) => candidate.id === "wolf_winter");
   if (!quest) throw new Error("Expected the Albany Wolf-Winter lead.");
-  const route = session
-    .view()
-    .areaExits.find((candidate) => candidate.destination.id === quest.area);
-  if (!route) throw new Error("Expected a route to the Albany lead.");
-  session.moveArea(route.id);
+  if (session.view().currentArea?.id !== quest.area) {
+    const route = session
+      .view()
+      .areaExits.find((candidate) => candidate.destination.id === quest.area);
+    if (!route) throw new Error("Expected a route to the Albany lead.");
+    session.moveArea(route.id);
+  }
   startVisibleQuest(session, quest);
   session.completeQuest(quest.id, {
     endingId: "ending_held",
@@ -453,11 +500,13 @@ describe("OverworldSession", () => {
     settleOpeningRegistration(session);
     const quest = session.view().quests.find((candidate) => candidate.id === "wolf_winter");
     if (!quest) throw new Error("Expected the Albany Wolf-Winter lead.");
-    const route = session
-      .view()
-      .areaExits.find((candidate) => candidate.destination.id === quest.area);
-    if (!route) throw new Error("Expected a route to the Albany lead.");
-    session.moveArea(route.id);
+    if (session.view().currentArea?.id !== quest.area) {
+      const route = session
+        .view()
+        .areaExits.find((candidate) => candidate.destination.id === quest.area);
+      if (!route) throw new Error("Expected a route to the Albany lead.");
+      session.moveArea(route.id);
+    }
     startVisibleQuest(session, quest);
     session.recordQuestCharacterDeath(quest.id, {
       endingId: "ending_pulled_down",
@@ -813,6 +862,7 @@ describe("OverworldSession", () => {
     session.chooseJourneyStory("albany:ledger_advocate");
     session.chooseJourneyStory("albany:oath_limited_aid_only");
     session.chooseJourneyStory("albany:source_rowan_civic_docket");
+    moveToOpeningPreparation(session);
     const journey = session.journey();
     expect(journey.storyChoice?.kind).toBe("preparation");
 
@@ -1312,6 +1362,7 @@ describe("OverworldSession", () => {
 
     session.talkToCharacter(start.characters[0]!.id);
     settleOpeningRegistration(session);
+    moveToArea(session, currentAreaId);
     const scouted = session.scoutPoi(start.pois[0]!.id);
     const rememberedJob = (scouted.discoveredJobs ?? []).find((job) => job.area !== currentAreaId);
     expect(rememberedJob).toBeDefined();
@@ -1320,10 +1371,12 @@ describe("OverworldSession", () => {
     expect(afterDiscovery.currentArea?.id).toBe(currentAreaId);
     expect(afterDiscovery.jobs.map((job) => job.id)).not.toContain(rememberedJob!.id);
     expect(afterDiscovery.rememberedJobs.map((job) => job.id)).toContain(rememberedJob!.id);
-    expect(afterDiscovery.rememberedJobs[0]).toMatchObject({
-      id: rememberedJob!.id,
-      area: rememberedJob!.area,
-    });
+    expect(afterDiscovery.rememberedJobs.find((job) => job.id === rememberedJob!.id)).toMatchObject(
+      {
+        id: rememberedJob!.id,
+        area: rememberedJob!.area,
+      },
+    );
     expect(() => session.workLocalJob(rememberedJob!.id)).toThrow(/Move to that local area/i);
 
     const compactAfterDiscovery = session.compactView();
@@ -2306,6 +2359,7 @@ describe("OverworldSession", () => {
     );
     expect(session.view().quests.every((quest) => !("pack" in quest))).toBe(true);
 
+    moveToArea(session, event.area);
     const investigated = session.investigateEvent(event.id);
     expect(investigated.minutes).toBe(20 + event.intensity * 5);
     expect(investigated.entry.text).toContain(event.pressure);
@@ -2313,7 +2367,7 @@ describe("OverworldSession", () => {
 
     const after = session.view();
     expect(after.timeLabel).not.toBe(before.timeLabel);
-    expect(after.journal).toHaveLength(11);
+    expect(after.journal).toHaveLength(13);
   });
 
   it("requires reaching a quest's local area before starting it", () => {
@@ -2335,6 +2389,12 @@ describe("OverworldSession", () => {
     const discoveredQuest = discoveredQuests[0]!;
     expect(discoveredQuest.id).toBe(firstLocalQuest.id);
     expect("pack" in discoveredQuest).toBe(false);
+    expect(session.view().currentArea?.id).toBe(discoveredQuest.area);
+    const routeAwayFromQuest = session
+      .view()
+      .areaExits.find((exit) => exit.destination.id === "albany_city__market");
+    expect(routeAwayFromQuest).toBeDefined();
+    session.moveArea(routeAwayFromQuest!.id);
     expect(session.view().currentArea?.id).not.toBe(discoveredQuest.area);
     expect(() => session.startQuest(discoveredQuest.id)).toThrow(/Move to/i);
     expect(() =>
@@ -2427,14 +2487,30 @@ describe("OverworldSession", () => {
       settleOpeningRegistration(session);
       const quest = session.view().quests.find((candidate) => candidate.id === "wolf_winter");
       if (!quest) throw new Error("expected Wolf-Winter launch fixture");
-      expect(session.compactView().quest_starts).toBeUndefined();
-      const route = session
-        .view()
-        .areaExits.find((candidate) => candidate.destination.id === quest.area);
-      if (!route) throw new Error("expected route to Wolf-Winter launch area");
-      session.moveArea(route.id);
-      expect(session.journey().storyChoice?.kind).toBe("relief_allocation");
-      expect(session.compactView().quest_starts).toBeUndefined();
+      expect(session.compactView().quest_starts).toEqual(
+        (() => {
+          const starts = quest.launch?.options
+            .filter((option) => option.projection?.available === true)
+            .map((option) => [quest.id, option.id] as const) ?? [[quest.id, null] as const];
+          return starts.length > 0 ? starts : undefined;
+        })(),
+      );
+      if (session.view().currentArea?.id !== quest.area) {
+        const route = session
+          .view()
+          .areaExits.find((candidate) => candidate.destination.id === quest.area);
+        if (!route) throw new Error("expected route to Wolf-Winter launch area");
+        session.moveArea(route.id);
+      }
+      expect(session.journey().storyChoice?.kind).not.toBe("relief_allocation");
+      expect(session.compactView().quest_starts).toEqual(
+        (() => {
+          const starts = quest.launch?.options
+            .filter((option) => option.projection?.available === true)
+            .map((option) => [quest.id, option.id] as const) ?? [[quest.id, null] as const];
+          return starts.length > 0 ? starts : undefined;
+        })(),
+      );
       settleReliefAllocation(session);
       const readyQuest = session.view().quests.find((candidate) => candidate.id === quest.id)!;
       const legalStarts = readyQuest.launch?.options
@@ -2614,6 +2690,7 @@ describe("OverworldSession", () => {
     session.scoutPoi(poi.id);
     session.talkToCharacter(contact.id);
     settleOpeningRegistration(session);
+    moveToArea(session, event.area);
     session.investigateEvent(event.id);
 
     const resolved = session.resolveEvent(event.id, optionId);
@@ -2629,7 +2706,7 @@ describe("OverworldSession", () => {
     expect(after.regionRenown[start.current.region]).toBe(
       event.authored_scene?.options[0]?.terms.renown ?? event.intensity,
     );
-    expect(after.journal).toHaveLength(12);
+    expect(after.journal).toHaveLength(14);
 
     const compactAfter = session.compactView();
     expect(compactAfter.events.map(([id]) => id)).not.toContain(event.id);

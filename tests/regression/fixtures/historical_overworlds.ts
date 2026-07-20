@@ -51,6 +51,19 @@ const RELIEF_ALLOCATION_IMPORT_IDS: ReadonlySet<string> = new Set([
 const JUNE_LEFT_AFTER_BLOOD_PREDECESSOR_SUMMARY =
   "June's field seat is empty. Her separate return says the route crossed into combat before she could take the lower rail, ending the cattle-first field agreement.";
 
+const CIVIC_PREPARATION_MESSAGE =
+  "The hill dispatch can carry one specialist allocation before it leaves Rowan's counter. Reese Pryce can mark a cold-set repair sequence onto the failing paling, Emery Sloane can map a drover's cut that peels a fouled yearling away from the herd, or Jamie Tanner can seal a relief protocol for calming the cattle after an improvised recovery. Each plan remains usable by any registered traveler, but the provider who sponsored your registration can waive the public charge and shorten the handoff. Choose one: Albany cannot put three incompatible field plans into the same urgent packet.";
+
+/** Reconstruct the manifest immediately before preparation moved to the Station board. */
+export function exactCivicPreparationPredecessor(current: OverworldManifest): OverworldManifest {
+  const predecessor = structuredClone(current);
+  const preparation = predecessor.opening_preparation;
+  if (!preparation) throw new Error("Albany must have Wolf-Winter preparation");
+  preparation.area = "albany_city__civic_core";
+  preparation.message = CIVIC_PREPARATION_MESSAGE;
+  return predecessor;
+}
+
 /** Reconstruct ff630a1e, immediately before the Winter Return Docket conversion. */
 export function exactWinterReturnDocketPredecessor(current: OverworldManifest): OverworldManifest {
   const predecessor = exactCampusArchiveQueryPredecessor(current);
@@ -74,7 +87,7 @@ export function exactWinterReturnDocketPredecessor(current: OverworldManifest): 
 
 /** Reconstruct the exact manifest immediately before Albany Campus got its authored archive query. */
 export function exactCampusArchiveQueryPredecessor(current: OverworldManifest): OverworldManifest {
-  const predecessor = structuredClone(current);
+  const predecessor = exactCivicPreparationPredecessor(current);
   const job = predecessor.local_jobs.find(
     (candidate) => candidate.id === "albany_city__campus__job",
   );

@@ -341,14 +341,38 @@ function resolveCurrentOverworldSessionEvent(a: ReturnType<typeof api>, sessionI
       choice: "albany:oath_limited_aid_only",
     });
     const sourced = a.choose_overworld_session_story({
+      ...FULL_OVERWORLD_RESPONSE,
       session_id: sessionId,
       choice: "albany:source_rowan_civic_docket",
     });
-    expect(sourced.journey.storyChoice?.kind).toBe("preparation");
+    const preparationArea = overworld.opening_preparation?.area;
+    if (!preparationArea) throw new Error("expected Albany opening preparation");
+    const preparationRoute = sourced.observation.areaExits.find(
+      (route) => route.destination.id === preparationArea,
+    );
+    if (!preparationRoute) throw new Error("expected a route to the opening preparation board");
+    const stationed = a.move_overworld_session_area({
+      session_id: sessionId,
+      area_route_id: preparationRoute.id,
+    });
+    expect(stationed.journey.storyChoice?.kind).toBe("preparation");
     a.choose_overworld_session_story({
       session_id: sessionId,
       choice: "albany:prep_works_fortification",
     });
+    a.choose_overworld_session_story({
+      session_id: sessionId,
+      choice: "albany:relief_resident_shelter",
+    });
+  }
+  const afterOpening = a.get_overworld_session({
+    include_observation: true,
+    session_id: sessionId,
+  }).observation;
+  if (afterOpening.currentArea?.id !== event.area) {
+    const eventRoute = afterOpening.areaExits.find((route) => route.destination.id === event.area);
+    if (!eventRoute) throw new Error(`expected a route to event area ${event.area}`);
+    a.move_overworld_session_area({ session_id: sessionId, area_route_id: eventRoute.id });
   }
   a.investigate_overworld_session_event({ session_id: sessionId, event_id: event.id });
   a.resolve_overworld_session_event({
@@ -1290,11 +1314,27 @@ describe("overworld snapshot restore integrity", () => {
         session_id: started.session_id,
         choice: "albany:source_rowan_civic_docket",
       });
-      expect(sourced.journey.storyChoice?.kind).toBe("preparation");
+      const preparationArea = overworld.opening_preparation?.area;
+      if (!preparationArea) throw new Error("expected Albany opening preparation");
+      const preparationRoute = sourced.observation.areaExits.find(
+        (route) => route.destination.id === preparationArea,
+      );
+      if (!preparationRoute) throw new Error("expected a route to the opening preparation board");
+      const stationed = a.move_overworld_session_area({
+        ...FULL_OVERWORLD_RESPONSE,
+        session_id: started.session_id,
+        area_route_id: preparationRoute.id,
+      });
+      expect(stationed.journey.storyChoice?.kind).toBe("preparation");
       a.choose_overworld_session_story({
         ...FULL_OVERWORLD_RESPONSE,
         session_id: started.session_id,
         choice: "albany:prep_works_fortification",
+      });
+      a.choose_overworld_session_story({
+        ...FULL_OVERWORLD_RESPONSE,
+        session_id: started.session_id,
+        choice: "albany:relief_resident_shelter",
       });
     }
     const secondJob = talked.result.discoveredJobs?.[0];
@@ -1533,11 +1573,27 @@ describe("overworld snapshot restore integrity", () => {
       session_id: started.session_id,
       choice: "albany:source_rowan_civic_docket",
     });
-    expect(sourced.journey.storyChoice?.kind).toBe("preparation");
+    const preparationArea = overworld.opening_preparation?.area;
+    if (!preparationArea) throw new Error("expected Albany opening preparation");
+    const preparationRoute = sourced.observation.areaExits.find(
+      (route) => route.destination.id === preparationArea,
+    );
+    if (!preparationRoute) throw new Error("expected a route to the opening preparation board");
+    const stationed = a.move_overworld_session_area({
+      ...FULL_OVERWORLD_RESPONSE,
+      session_id: started.session_id,
+      area_route_id: preparationRoute.id,
+    });
+    expect(stationed.journey.storyChoice?.kind).toBe("preparation");
     a.choose_overworld_session_story({
       ...FULL_OVERWORLD_RESPONSE,
       session_id: started.session_id,
       choice: "albany:prep_works_fortification",
+    });
+    a.choose_overworld_session_story({
+      ...FULL_OVERWORLD_RESPONSE,
+      session_id: started.session_id,
+      choice: "albany:relief_resident_shelter",
     });
     const quest = overworld.opening_lead_source?.target_quest;
     if (!quest) throw new Error("expected Albany's source-bound quest");
