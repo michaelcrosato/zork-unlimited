@@ -57,7 +57,7 @@ const ALLOCATION_KNOWLEDGE = {
 
 const STANCES = {
   cade: {
-    choice: "ask_accept_terms",
+    choice: "ask_commit_cade_terms",
     stanceFlag: "fortify_cade_terms_accepted",
     oppositeStanceFlag: "fortify_albany_authority_invoked",
     take: "take_cade_household_shutters",
@@ -69,7 +69,7 @@ const STANCES = {
     ending: "ending_fortified_cade_terms",
   },
   authority: {
-    choice: "ask_invoke_authority",
+    choice: "ask_commit_albany_authority",
     stanceFlag: "fortify_albany_authority_invoked",
     oppositeStanceFlag: "fortify_cade_terms_accepted",
     take: "take_albany_relief_seals",

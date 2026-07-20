@@ -10,6 +10,7 @@ import { makeStep } from "../../src/core/engine.js";
 import { MCP_ACTION_LABEL_CHAR_LIMIT } from "../../src/mcp/action_labels.js";
 import { compactRpgObservation } from "../../src/mcp/compact_rpg_observation.js";
 import { createToolApi } from "../../src/mcp/tools.js";
+import { parseCommand } from "../../src/rpg/command_map.js";
 import { buildRpgObservation } from "../../src/rpg/observation.js";
 import { buildRpgRules, enumerateRpgActions, indexRpgPack } from "../../src/rpg/runner.js";
 import type { GameState } from "../../src/core/state.js";
@@ -122,9 +123,14 @@ describe("Wolf-Winter authority commitment boundary", () => {
 
     const before = observation(state);
     const fullDialogue = before.dialogue?.npc_text;
-    const compactDialogue = compactRpgObservation(before, [], {
-      includeActions: true,
-    }).dialogue?.[1];
+    const compact = compactRpgObservation(
+      before,
+      before.available_actions.map((action) => action.id),
+      {
+        includeActions: true,
+      },
+    );
+    const compactDialogue = compact.dialogue?.[1];
     expect(fullDialogue).toMatch(COMMITMENT_WARNING);
     expect(fullDialogue).toMatch(CADE_STANCE);
     expect(fullDialogue).toMatch(ALBANY_STANCE);
@@ -135,15 +141,47 @@ describe("Wolf-Winter authority commitment boundary", () => {
     expect(compactDialogue).toMatch(CADE_STANCE);
     expect(compactDialogue).toMatch(ALBANY_STANCE);
     expect(compactDialogue).toMatch(FULL_DUTY_TERMS);
+    expect(compact.actions).toEqual(
+      expect.arrayContaining(["ask_commit_cade_terms", "ask_commit_albany_authority"]),
+    );
+    expect(compact.actions).not.toEqual(
+      expect.arrayContaining(["ask_accept_terms", "ask_invoke_authority"]),
+    );
+    expect(state.flags.strategy_fortify_committed).not.toBe(true);
+    expect(state.flags.fortify_cade_terms_accepted).not.toBe(true);
+    expect(state.flags.fortify_albany_authority_invoked).not.toBe(true);
+    expect(before.available_actions.map((action) => action.id)).toEqual(
+      expect.arrayContaining([
+        "ask_commit_cade_terms",
+        "ask_commit_albany_authority",
+        "ask_fortify_back",
+      ]),
+    );
+    expect(before.available_actions.map((action) => action.id)).not.toEqual(
+      expect.arrayContaining(["ask_accept_terms", "ask_invoke_authority"]),
+    );
+    expect(parseCommand(index, state, "ask invoke_authority")).toEqual({
+      ok: true,
+      action: { type: "ASK", npc: "houndsman", topic: "commit_albany_authority" },
+    });
+    expect(parseCommand(index, state, "ask accept_terms")).toEqual({
+      ok: true,
+      action: { type: "ASK", npc: "houndsman", topic: "commit_cade_terms" },
+    });
+    const reconsidered = act(structuredClone(state), "ask_fortify_back");
+    expect(reconsidered.flags.strategy_fortify_committed).not.toBe(true);
+    expect(enumerateRpgActions(index, reconsidered).map((action) => action.id)).toEqual(
+      expect.arrayContaining(["ask_lure", "ask_drive", "ask_fortify"]),
+    );
     const authority = before.available_actions.find(
-      (action) => action.id === "ask_invoke_authority",
+      (action) => action.id === "ask_commit_albany_authority",
     );
     expect(authority?.command).toMatch(
       /^ask: Commit Albany authority:[^]*no retreat[^]*no strategy switch to lure, drive, or combat/i,
     );
     expect(authority?.command.length).toBeLessThanOrEqual(MCP_ACTION_LABEL_CHAR_LIMIT);
 
-    state = act(state, "ask_invoke_authority");
+    state = act(state, "ask_commit_albany_authority");
     expect(state.flags).toMatchObject({
       strategy_fortify_committed: true,
       fortify_albany_authority_invoked: true,
@@ -152,7 +190,7 @@ describe("Wolf-Winter authority commitment boundary", () => {
     });
     expect(state.flags.fortify_cade_terms_accepted).not.toBe(true);
     expect(enumerateRpgActions(index, state).map((action) => action.id)).not.toEqual(
-      expect.arrayContaining(["ask_lure", "ask_drive", "ask_fortify", "ask_accept_terms"]),
+      expect.arrayContaining(["ask_lure", "ask_drive", "ask_fortify", "ask_commit_cade_terms"]),
     );
 
     state = act(state, "ask_leave");

@@ -215,7 +215,7 @@ function reachCadeDialogue(oathId: OathId): GameState {
 function commitAuthorityFortify(oathId: OathId): GameState {
   let state = reachCadeDialogue(oathId);
   state = act(state, "ask_fortify");
-  state = act(state, "ask_invoke_authority");
+  state = act(state, "ask_commit_albany_authority");
   state = act(state, "ask_leave");
   state = act(state, "take_albany_relief_seals");
   return act(state, "go_north");

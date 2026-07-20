@@ -58,7 +58,7 @@ type Stance = "cade" | "authority";
 const CASES = {
   cade: {
     seed: 3,
-    choice: "ask_accept_terms",
+    choice: "ask_commit_cade_terms",
     take: "take_cade_household_shutters",
     outer: "use_cade_household_shutters_on_fortify_outer_seal",
     recovery: "use_cade_failed_seal_help",
@@ -100,7 +100,7 @@ const CASES = {
   },
   authority: {
     seed: 6,
-    choice: "ask_invoke_authority",
+    choice: "ask_commit_albany_authority",
     take: "take_albany_relief_seals",
     outer: "use_albany_relief_seals_on_fortify_outer_seal",
     recovery: null,
