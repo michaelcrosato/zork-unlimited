@@ -80,10 +80,17 @@ describe("bug_0504 — Wolf-Winter clues are complementary rather than contradic
     const quick = node("cade_wolves")?.npc_text ?? "";
     const guarded = node("cade_byre")?.npc_text ?? "";
     const fortify = node("cade_fortify")?.npc_text ?? "";
+    const fullDutyFortify =
+      node("cade_fortify")?.variants?.find((variant) =>
+        variant.when.some(
+          (condition) => "has_flag" in condition && condition.has_flag === "relief_oath_full_duty",
+        ),
+      )?.text ?? "";
 
     expect(root?.npc_text).toMatch(
-      /You came from Albany awake[^]*hunt kills pack[^]*holds herd\/byre[^]*risk death[^]*lure may spare all[^]*feed[^]*foul=2 cattle[^]*drive spares pack\/people[^]*defense lost[^]*crisis cost[^]*fortify spares all[^]*property\/seals[^]*no retreat/i,
+      /You came from Albany awake[^]*hunt kills pack[^]*holds herd\/byre[^]*risk death[^]*lure spares all if fed[^]*foul risks herd[^]*drive spares pack\/people[^]*defense lost[^]*crisis cost[^]*fortify spares all[^]*property\/seals[^]*no retreat/i,
     );
+    expect(root?.npc_text).not.toMatch(/foul\s*=\s*(?:2|two) cattle/i);
     expect(root?.npc_text).not.toMatch(/two roads/i);
     expect(root?.npc_text).toMatch(/lure[^]*drive[^]*fortify/i);
     expect(root?.topics.find((topic) => topic.id === "wolves")?.prompt).toMatch(
@@ -107,8 +114,40 @@ describe("bug_0504 — Wolf-Winter clues are complementary rather than contradic
     expect(guarded).not.toMatch(/\bset\b[^]*\bdrive\b|\bwheel\b[^]*\bturn\b/i);
 
     expect(fortify).toMatch(
-      /fortify saves lives\/herd\/byre[^]*no retreat\/switch[^]*household terms[^]*property risk[^]*seals saved[^]*Cade aid[^]*Albany[^]*property safe[^]*seals spent[^]*no Cade aid[^]*Works eases first DC[^]*mobile stabilizes recovered miss[^]*first Albany Repair: 2 easier[^]*dawn/i,
+      /fortify saves lives\/herd\/byre[^]*no retreat\/switch[^]*household terms[^]*property risk[^]*seals saved[^]*Cade aid[^]*Albany[^]*property safe[^]*seals spent[^]*no Cade aid[^]*Works eases first DC[^]*mobile stabilizes a recovered miss[^]*dawn/i,
     );
+    expect(fortify).not.toMatch(/Albany Repair[^]*2 easier/i);
+    expect(fullDutyFortify).toMatch(/first Albany Repair 2 easier/i);
+
+    const publicSealChecks =
+      pack.objects
+        .find((object) => object.id === "fortify_outer_seal")
+        ?.interactions.filter(
+          (interaction) =>
+            interaction.item === "albany_relief_seals" && interaction.skill_check !== undefined,
+        ) ?? [];
+    const publicSealDc = (fullDuty: boolean, worksPrepared: boolean) => {
+      const conditions = publicSealChecks.find((interaction) => {
+        const encoded = JSON.stringify(interaction.conditions);
+        const oath = fullDuty
+          ? '{"has_flag":"relief_oath_full_duty"}'
+          : '{"not_flag":"relief_oath_full_duty"}';
+        const works = worksPrepared
+          ? '{"has_flag":"works_fortification_prepared"}'
+          : '{"not_flag":"works_fortification_prepared"}';
+        return encoded.includes(oath) && encoded.includes(works);
+      });
+      return conditions?.skill_check?.difficulty;
+    };
+    expect([publicSealDc(true, true), publicSealDc(true, false)]).toEqual([10, 12]);
+    expect([publicSealDc(false, true), publicSealDc(false, false)]).toEqual([12, 14]);
+
+    const scattered = pack.win_conditions.find(
+      (condition) => condition.ending === "ending_pack_diverted_cattle_scattered",
+    );
+    expect(scattered?.conditions).toContainEqual({
+      var_gte: { name: "cattle_alarm", value: 4 },
+    });
   });
 
   it("keeps root copy and legal lesson actions aligned when quick is heard first", () => {

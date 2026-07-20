@@ -3253,8 +3253,8 @@ npcs:
       nodes:
         - id: cade_root
           npc_text: >
-            You came from Albany awake. HUNT kills pack; holds herd/byre; risk death. LURE may
-            spare all; feed; foul=2 cattle. DRIVE spares pack/people; defense lost; crisis cost.
+            You came from Albany awake. HUNT kills pack; holds herd/byre; risk death. LURE spares
+            all if fed; foul risks herd. DRIVE spares pack/people; defense lost; crisis cost.
             FORTIFY spares all; property/seals; no retreat. Cross uncommitted=HUNT; others shut.
           variants:
             - when:
@@ -3610,7 +3610,7 @@ npcs:
           npc_text: >
             FORTIFY saves lives/herd/byre; no retreat/switch. HOUSEHOLD TERMS: property risk,
             seals saved, Cade aid. ALBANY: property safe, seals spent, no Cade aid. Works eases
-            first DC; mobile stabilizes recovered miss; first Albany Repair: 2 easier. Till dawn.
+            first DC; mobile stabilizes a recovered miss. Till dawn.
           variants:
             - when: [{ has_flag: relief_oath_full_duty }]
               text: >

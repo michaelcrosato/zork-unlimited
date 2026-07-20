@@ -120,8 +120,9 @@ describe("Wolf-Winter uncommitted living-plan boundary", () => {
     const rootDialogue = observation(uncommitted);
     expect(rootDialogue.dialogue?.npc_text).toMatch(LIVING_BOUNDARY);
     expect(rootDialogue.dialogue?.npc_text).toMatch(
-      /You came from Albany awake[^]*hunt kills pack[^]*holds herd\/byre[^]*risk death[^]*lure may spare all[^]*feed[^]*foul=2 cattle[^]*drive spares pack\/people[^]*defense lost[^]*crisis cost[^]*fortify spares all[^]*property\/seals[^]*no retreat/i,
+      /You came from Albany awake[^]*hunt kills pack[^]*holds herd\/byre[^]*risk death[^]*lure spares all if fed[^]*foul risks herd[^]*drive spares pack\/people[^]*defense lost[^]*crisis cost[^]*fortify spares all[^]*property\/seals[^]*no retreat/i,
     );
+    expect(rootDialogue.dialogue?.npc_text).not.toMatch(/foul\s*=\s*(?:2|two) cattle/i);
     expect(rootDialogue.dialogue?.npc_text).toMatch(/lure[^]*drive[^]*fortify/i);
     const compactRootDialogue = compactRpgObservation(rootDialogue, [], {
       includeActions: true,
