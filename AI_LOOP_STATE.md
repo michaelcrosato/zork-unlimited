@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 589 -->
+<!-- historical_cycle_count: 590 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -24,6 +24,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Measured result: maximum family share is 60% and four exact endings appeared, but only two broad strategy families were organic; setup density recurred 10/10, compact truncation 3/10, and road-resolver discovery was a recurring S2 at 2/10. PASS for truthful comparison, FAIL for three-family/certification proof.
 - Feedback/follow-through: compile `20260720T200813Z` has 910 verified reports, 159 current-contract pure exits, and 136 continuing; the ledger is 909 accepted/59 rejected. The road descriptor passes its first exact blind use; make Station preparation/allocation optional next instead of adding another mandatory scene.
 - Guard: corrected clean build `f8444cad` contains independently reviewed code commit `fddbb1ec` and verified seed 4236; zero-finding crawl `20260720T192801Z` covers 247/247 nodes, 344/344 edges, and 12/12 boards/quests, while health passes 388 files/2,972 tests plus UI/all packs.
+
+### Cycle result - gallowmere_tracking_recovery
+
+- Evidence choice: verified blind reports repeatedly found that a failed first Kill-Site Tracking check made no progress and could be rerolled indefinitely, so this cycle replaced the retry loop instead of adding more hunt prose.
+- Surface: the first miss now records one authored failure, exposes Cradoc's fixed stance, and turns the same visible Track action into a deterministic recovery that grants the original charge-angle clue and retires cleanly.
+- Counterfactual: a regression trace proves first failure, persistent recovery state, deterministic second use, one-time reward, and action retirement while preserving the successful-first-check route.
+- Pure evidence: two clean exact-build Sol/Terra exits completed Wolf-Winter and The Gallowmere, continued at decisions 29 and 40, were 0 stuck and 2/2 replay-yes at clarity/enjoyment 4/4; seed 4233 failed Tracking, used the authored recovery, and completed the hunt at decision 53.
+- Measured result: finite recovery PASSes directly in blind play without erasing the failed check; character-stat continuity remains a separate S2, and compact truncation, Albany density, Rowan duplication, and the unnamed road resolver remain open.
+- Feedback/follow-through: the ledger is 907 accepted/59 rejected; only two reports are new since compile `20260720T190413Z`, below the three-report compile threshold. Expose the pending-road action next, then address persistent-to-quest character continuity.
+- Guard: feature commit `04f85b98` has zero-finding crawl `20260720T183221Z` at 247/247 nodes, 344/344 edges, and 12/12 boards/quests; health passes 389 files/2,973 tests plus UI/all packs, and both exact report sidecars independently verify.
 
 ### Cycle result - field_timed_preparation
 
@@ -153,12 +163,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Pure evidence: final-world Spark seed 2890 verified fresh/overworld, completed Wolf-Winter and The Gallowmere in 46 decisions, rated clarity/enjoyment 4/4, stuck false, replay true, and reported no bug; it skipped Works, so deterministic pairs carry the new scene. Seeds 2888/2889 remain rejected for duplicate forbidden resource probes.
 - Self-critique: PASS for the reusable authored-job grammar and first of six conversions, not the greater-than-BG3 milestone. Five district jobs, checklist events, global failure-forward proof, three independent NPC agendas, Codex-native fleet attestation, deep crawl, and exact 100-player certification remain open.
 - Guard: final crawl `20260719T035234Z` reached 247/247 nodes, 344/344 edges, and 12/12 boards/quests with zero findings; fixture hardening closes the full-suite integration regression, and health passes at 379 files/2,867 tests plus UI and all 12 packs.
-
-### Cycle result - pure_embedded_session_recovery
-
-- Evidence choice: four unretried ten-Spark cohorts verified 30/40 fresh pure exits; failures clustered around compacted/lost handle recovery and verbose context exhaustion, not Claude authentication or game intent. Exact clean commit `1ad03375` then produced 14/14 engine exits and 11/14 canonical reports across seeds 2860–2873.
-- Surface: pure responses/errors preserve the singleton parent plus unresolved child, name the handle domain, recover missing/coerced inputs, block child-orphaning parent mutations, and force compact reads; full multi-session mode stays isolated.
-- Lifecycle: non-death endings auto-fold once. A death keeps the exact unfinished quest and ended child, persists a quest/ending/decision-proof boundary, and opens a sole End choice whose receipt preserves the active goal and completed history before retiring the child; no resurrection or posthumous parent wandering remains.
-- Pure evidence: dirty candidate seeds 2856–2859 were only 1/4 canonical. Clean seeds 2860–2869 were 7/10 and top-off 2870–2873 were 4/4 canonical, consuming 113,824,347 input and 620,153 output tokens; seed 2867 supplied the death soft-lock witness and seed 2873 survived 160 decisions/five quests.
-- Self-critique: PASS for the Spark S2 transport/recovery cluster, not the greater-than-BG3 milestone. Starting-slice depth, Albany authored work, deep crawl, clean pilot, and exact 100-player certification remain open; repeated quest-launch confusion is the next compact-surface gap.
-- Guard: crawl gates `20260717T062550Z`/`20260717T074806Z`/`20260717T215659Z` reached 247/247 nodes, 344/344 edges, and 12/12 quests; deterministic seed 0 success and seed 6 death cover terminal contracts, adversarial review has no P0/P1/P2, and full health passes at 373 files/2,796 tests plus UI and all packs.
