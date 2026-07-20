@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 588 -->
+<!-- historical_cycle_count: 589 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - gallowmere_tracking_recovery
+
+- Evidence choice: verified blind reports repeatedly found that a failed first Kill-Site Tracking check made no progress and could be rerolled indefinitely, so this cycle replaced the retry loop instead of adding more hunt prose.
+- Surface: the first miss now records one authored failure, exposes Cradoc's fixed stance, and turns the same visible Track action into a deterministic recovery that grants the original charge-angle clue and retires cleanly.
+- Counterfactual: a regression trace proves first failure, persistent recovery state, deterministic second use, one-time reward, and action retirement while preserving the successful-first-check route.
+- Pure evidence: two clean exact-build Sol/Terra exits completed Wolf-Winter and The Gallowmere, continued at decisions 29 and 40, were 0 stuck and 2/2 replay-yes at clarity/enjoyment 4/4; seed 4233 failed Tracking, used the authored recovery, and completed the hunt at decision 53.
+- Measured result: finite recovery PASSes directly in blind play without erasing the failed check; character-stat continuity remains a separate S2, and compact truncation, Albany density, Rowan duplication, and the unnamed road resolver remain open.
+- Feedback/follow-through: the ledger is 907 accepted/59 rejected; only two reports are new since compile `20260720T190413Z`, below the three-report compile threshold. Expose the pending-road action next, then address persistent-to-quest character continuity.
+- Guard: feature commit `04f85b98` has zero-finding crawl `20260720T183221Z` at 247/247 nodes, 344/344 edges, and 12/12 boards/quests; health passes 389 files/2,973 tests plus UI/all packs, and both exact report sidecars independently verify.
 
 ### Cycle result - field_timed_preparation
 
@@ -152,13 +162,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Pure evidence: dirty candidate seeds 2856–2859 were only 1/4 canonical. Clean seeds 2860–2869 were 7/10 and top-off 2870–2873 were 4/4 canonical, consuming 113,824,347 input and 620,153 output tokens; seed 2867 supplied the death soft-lock witness and seed 2873 survived 160 decisions/five quests.
 - Self-critique: PASS for the Spark S2 transport/recovery cluster, not the greater-than-BG3 milestone. Starting-slice depth, Albany authored work, deep crawl, clean pilot, and exact 100-player certification remain open; repeated quest-launch confusion is the next compact-surface gap.
 - Guard: crawl gates `20260717T062550Z`/`20260717T074806Z`/`20260717T215659Z` reached 247/247 nodes, 344/344 edges, and 12/12 quests; deterministic seed 0 success and seed 6 death cover terminal contracts, adversarial review has no P0/P1/P2, and full health passes at 373 files/2,796 tests plus UI and all packs.
-
-### Cycle result - june_nonlethal_combat_boundary
-
-- Evidence choice: three consecutive canonical pure players (2811–2813) accepted June's cattle-first/no-killing terms but read Cade's ordinary rail as defensive; it silently committed hunt-and-hold, while a successful failed-lure brace paradoxically removed the living recovery that a failed rail retained.
-- Surface: June now stops an uncommitted paling crossing, names the ordinary rail as a combat funnel and first wolf death as her boundary, and leaves lure, drive, and fortify open. A fouled committed lure can turn either a braced or bound-split rail into a living scent-pen; the first guarded spear maneuver irreversibly retires every living recovery without breaking June's promise until a wolf actually dies.
-- Counterfactual: same-origin June boundary, successful/failed rail, Reese preparation, hybrid commitment, solo control, save/restore, foldback, service, full/compact MCP, and UI witnesses prove the disclosed choice, equal living recoveries, irreversible combat commitment, and truthful Albany consequence.
-- Pure evidence: final-world verifier-valid Spark seed 2850 completed the all-three-wolves-alive lure, continued twice, completed The Gallowmere, and ended honestly at decision 58; clarity/enjoyment 4/4, stuck false, replay true, no declared bug. Deterministic pairs carry the repaired failed-lure, hybrid, and June-return branches.
-- Diagnostic: four unretried ten-Spark cohorts verified 30/40 fresh pure exits, including 124-, 120-, and 80-decision journeys; rejected runs preserve parent-handle/tool confusion and two Codex compactor failures, localizing separate harness recoverability debt rather than laundering it away.
-- Self-critique: PASS for June's S2 combat boundary, not the greater-than-BG3 milestone. Echo the parent overworld handle through embedded play next; generic one-click Albany district work, global failure-forward proof, current deep crawl, clean pilot, and exact 100-player certification remain open.
-- Guard: pre/post crawls `20260716T195010Z`/`20260717T045146Z` reached 247/247 nodes, 344/344 edges, and 12/12 quests; focused boundary/liveness/migration/parity proofs and full health pass at 372 files/2,779 tests, UI typecheck, and all 12 packs.
