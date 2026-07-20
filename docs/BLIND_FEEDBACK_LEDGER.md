@@ -5,11 +5,11 @@ Generated deterministically from verified blind reports. The latest entries stay
 ## Summary
 
 - Reports dir: `../zork-unlimited/blind-tester/reports`
-- Accepted reports: 909
+- Accepted reports: 910
 - Rejected or ignored markdown reports: 59
-- Latest report stamp: 20260720T195943Z
+- Latest report stamp: 20260720T203824Z
 - Recent entry limit: 100
-- Archived accepted entries collapsed into traits: 809
+- Archived accepted entries collapsed into traits: 810
 
 ## Recent Common Traits
 
@@ -18,10 +18,15 @@ Generated deterministically from verified blind reports. The latest entries stay
 | 5 | 20260720T195943Z | replay | player would not replay | overworld |
 | 3 | 20260720T184317Z | confusion | Dense permanent setup choices | overworld |
 | 3 | 20260720T183223Z | confusion | Dense permanent registration choices | overworld |
+| 2 | 20260720T203824Z | confusion | Dense early permanent-choice setup | overworld |
 | 2 | 20260720T185642Z | confusion | Raw embedded-quest action IDs | overworld |
 | 2 | 20260720T185127Z | confusion | Truncated compact consequences | overworld |
 | 2 | 20260719T210058Z | confusion | Dense permanent-choice setup | overworld |
 | 2 | 20260719T183208Z | confusion | Repeated Rowan Quill identity | overworld |
+| 1 | 20260720T203824Z | bug S1 | Albany Relief Compact and departure planning: Long conditional option descriptions are difficult to compare on a firs... | overworld |
+| 1 | 20260720T203824Z | bug S1 | Hedrick dialogue at the 40-decision checkpoint: The journey choice interrupts conversational flow, though continuing... | overworld |
+| 1 | 20260720T203824Z | confusion | Checkpoint interrupts active dialogue | overworld |
+| 1 | 20260720T203824Z | worst moment | Absorbing several dense, permanent Albany decisions before the first field scene. | overworld |
 | 1 | 20260720T195943Z | bug S2 | The Wolf-Winter — The Pack Diverted, Cattle Scattered: The ending says the first feed cast was fouled although the di... | overworld |
 | 1 | 20260720T195943Z | confusion | Dense permanent registration choices before the core loop was clear | overworld |
 | 1 | 20260720T195943Z | confusion | Overworld and quest interaction systems felt separate | overworld |
@@ -35,16 +40,12 @@ Generated deterministically from verified blind reports. The latest entries stay
 | 1 | 20260720T195526Z | confusion | The road encounter did not identify its resolver tool | overworld |
 | 1 | 20260720T195526Z | worst moment | Stalling at the northbound road encounter because its required resolver was not identified and ToolSearch was unavail... | overworld |
 | 1 | 20260720T191302Z | bug S1 | Albany relief docket and compact quest endings: Player-facing consequence and ending text was truncated behind charac... | overworld |
-| 1 | 20260720T191302Z | bug S1 | I-87 northbound relief-line road encounter: The compact surface presented the choice but not the exact road-encounter... | overworld |
-| 1 | 20260720T191302Z | bug S1 | Queensbury Civic Center: The local contact was also named Rowan Quill, duplicating Albany's clerk without explanation. | overworld |
-| 1 | 20260720T191302Z | bug S2 | The Gallowmere quest start and overworld foldback: Quest statistics, equipment, and combat damage did not visibly per... | overworld |
-| 1 | 20260720T191302Z | confusion | Compact responses truncated important consequence and ending prose | overworld |
-| 1 | 20260720T191302Z | confusion | Permanent Albany docket choices were densely front-loaded | overworld |
 
 ## Recent Entries
 
 | Stamp | Source | Seed | Mode | Decisions | C/E | Stuck | Replay | Report | Signal |
 | --- | --- | ---: | --- | ---: | --- | --- | --- | --- | --- |
+| 20260720T203824Z | overworld | 4238 | pure | 53 | 4/4 | no | yes | `../zork-unlimited/blind-tester/reports/20260720T203824Z_overworld_seed4238.md` | confusions: Dense early permanent-choice setup; Checkpoint interrupts active dialogue \| bugs: S1 Albany Relief Compact and departure planning: Long conditional option... |
 | 20260720T195943Z | overworld | 4237 | pure | 50 | 3/4 | no | no | `../zork-unlimited/blind-tester/reports/20260720T195943Z_overworld_seed4237.md` | confusions: Dense permanent registration choices before the core loop was clear; Verbose consequence previews; Overworld and quest interaction systems felt separate \|... |
 | 20260720T195526Z | overworld | 4236 | pure | 53 | 4/4 | no | yes | `../zork-unlimited/blind-tester/reports/20260720T195526Z_overworld_seed4236.md` | confusions: Dense interlocking preparation choices before the first quest; Compact prose and consequences were frequently truncated; The road encounter did not identif... |
 | 20260720T191302Z | overworld | 4233 | pure | 53 | 4/4 | no | yes | `../zork-unlimited/blind-tester/reports/20260720T191302Z_overworld_seed4233.md` | confusions: Permanent Albany docket choices were densely front-loaded; Compact responses truncated important consequence and ending prose; Persistent and embedded-ques... |
@@ -144,7 +145,6 @@ Generated deterministically from verified blind reports. The latest entries stay
 | 20260719T051324Z | codex_spark | 2898 | pure | 46 | 4/4 | no | yes | `../zork-unlimited/blind-tester/reports/20260719T051324Z_codex_spark_seed2898.md` | confusions: Goal labels in campaign text can lag behind immediate quest scene context, so scene-level clues are needed to know exactly what to do next. |
 | 20260719T051324Z | codex_spark | 2895 | pure | 22 | 4/4 | no | yes | `../zork-unlimited/blind-tester/reports/20260719T051324Z_codex_spark_seed2895.md` | worst: The story registration sequence was longer than expected before the main quest could start. |
 | 20260719T050913Z | codex_spark | 2891 | pure | 43 | 4/4 | no | yes | `../zork-unlimited/blind-tester/reports/20260719T050913Z_codex_spark_seed2891.md` | confusions: At the Shepherd's Bothy, the first impulse to go north was blocked until I backed out to the moor edge, which is easy to misread as a temporary UI issue.;... |
-| 20260719T035317Z | codex_spark | 2890 | pure | 46 | 4/4 | no | yes | `../zork-unlimited/blind-tester/reports/20260719T035317Z_codex_spark_seed2890.md` | confusions: The fixed decision checkpoint at 40 interrupted the second quest mid-flow, but it was clear and non-blocking. |
 
 ## Archived Trait Categories
 
