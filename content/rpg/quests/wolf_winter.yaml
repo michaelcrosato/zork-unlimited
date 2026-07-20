@@ -4480,10 +4480,10 @@ endings:
   - id: ending_pack_diverted_cattle_scattered
     title: "The Pack Diverted, Cattle Scattered"
     text: >
-      Grey dawn finds every wolf alive and the byre standing, but the fouled first cast
-      broke the herd before the leader left. Most cattle are safe; two animals are missing
-      down the lower pasture. Cade counts the nonlethal victory and its cost. Albany
-      receives both truths.
+      Grey dawn finds every wolf alive and the byre standing, but the watch's accumulated
+      alarm broke the herd before the leader left. Most cattle are safe; two animals are
+      missing down the lower pasture. Cade counts the nonlethal victory and its cost.
+      Albany receives both truths.
       *** You have won, with loss. ***
     variants:
       - when: [{ has_flag: june_cattle_line_taken }]
@@ -4492,6 +4492,12 @@ endings:
           the lower rail, but the herd had already crossed its breaking point; two
           cattle remain missing. Her return supports the living victory without hiding
           its cost. *** You have won, with loss. ***
+      - when: [{ has_flag: lure_trail_fouled }]
+        text: >
+          Grey dawn finds every wolf alive and the byre standing, but the fouled first cast
+          broke the herd before the leader left. Most cattle are safe; two animals are
+          missing down the lower pasture. Cade counts the nonlethal victory and its cost.
+          Albany receives both truths. *** You have won, with loss. ***
   - id: ending_pack_diverted
     title: "The Pack Diverted Alive"
     text: >

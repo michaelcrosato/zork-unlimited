@@ -148,6 +148,18 @@ describe("bug_0504 — Wolf-Winter clues are complementary rather than contradic
     expect(scattered?.conditions).toContainEqual({
       var_gte: { name: "cattle_alarm", value: 4 },
     });
+
+    const scatteredEnding = pack.endings.find(
+      (ending) => ending.id === "ending_pack_diverted_cattle_scattered",
+    );
+    expect(scatteredEnding?.text).toMatch(/accumulated[^]*alarm/i);
+    expect(scatteredEnding?.text).not.toMatch(/fouled first cast/i);
+    const fouledVariant = scatteredEnding?.variants?.find((variant) =>
+      variant.when.some(
+        (condition) => "has_flag" in condition && condition.has_flag === "lure_trail_fouled",
+      ),
+    );
+    expect(fouledVariant?.text).toMatch(/fouled first cast/i);
   });
 
   it("keeps root copy and legal lesson actions aligned when quick is heard first", () => {

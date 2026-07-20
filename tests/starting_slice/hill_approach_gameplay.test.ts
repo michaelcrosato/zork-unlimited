@@ -280,7 +280,9 @@ describe("SS-F07 — Wolf-Winter hill-approach gameplay", () => {
     });
     expect(ridge.flags.lure_trail_fouled).not.toBe(true);
     expect(stockway.flags.lure_trail_fouled).not.toBe(true);
-    expect(buildRpgObservation(index, ridge).ending?.text).toMatch(/two animals are missing/i);
+    const ridgeEnding = buildRpgObservation(index, ridge).ending?.text ?? "";
+    expect(ridgeEnding).toMatch(/accumulated[^]*alarm[^]*two animals are missing/i);
+    expect(ridgeEnding).not.toMatch(/fouled first cast/i);
     expect(buildRpgObservation(index, stockway).ending?.text).toMatch(/cattle whole/i);
   });
 });
