@@ -31,6 +31,14 @@ import type {
   OverworldCompactJobChoice,
   OverworldCompactQuestStart,
 } from "./compact_view.js";
+import {
+  overworldRoadEncounterNextAction,
+  type OverworldRoadEncounterNextAction,
+} from "./session_road_next_action.js";
+
+export type OverworldPendingRoadEncounterView = OverworldPendingRoadEncounter & {
+  nextAction: OverworldRoadEncounterNextAction;
+};
 
 export type OverworldView = {
   character: CampaignCharacterView;
@@ -78,7 +86,7 @@ export type OverworldView = {
   regionRenown: Record<string, number>;
   regionalArcs: OverworldRegionalArcProgress[];
   completedRegionalArcIds: string[];
-  pendingRoadEncounter: OverworldPendingRoadEncounter | null;
+  pendingRoadEncounter: OverworldPendingRoadEncounterView | null;
   log: TravelLogEntry[];
 };
 
@@ -216,7 +224,12 @@ export function buildOverworldSessionView(state: OverworldSessionViewState): Ove
     regionRenown: sortedNumberRecord(state.regionRenown),
     regionalArcs: regionalArcProgressForView(state.regionalArcs),
     completedRegionalArcIds: [...state.completedRegionalArcIds].sort(),
-    pendingRoadEncounter: state.pendingRoadEncounter,
+    pendingRoadEncounter: state.pendingRoadEncounter
+      ? {
+          ...state.pendingRoadEncounter,
+          nextAction: overworldRoadEncounterNextAction(),
+        }
+      : null,
     log: [...state.travelLog],
   };
 }
