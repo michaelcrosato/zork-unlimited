@@ -80,12 +80,19 @@ describe("bug_0504 — Wolf-Winter clues are complementary rather than contradic
     const quick = node("cade_wolves")?.npc_text ?? "";
     const guarded = node("cade_byre")?.npc_text ?? "";
     const fortify = node("cade_fortify")?.npc_text ?? "";
+    const fullDutyFortify =
+      node("cade_fortify")?.variants?.find((variant) =>
+        variant.when.some(
+          (condition) => "has_flag" in condition && condition.has_flag === "relief_oath_full_duty",
+        ),
+      )?.text ?? "";
 
     expect(root?.npc_text).toMatch(
-      /either lesson[^]*or both before you go[^]*quick spear-hand[^]*guarded spear-fighting plan/i,
+      /You came from Albany awake[^]*hunt kills pack[^]*holds herd\/byre[^]*risk death[^]*lure spares all if fed[^]*foul risks herd[^]*drive spares pack\/people[^]*defense lost[^]*crisis cost[^]*fortify spares all[^]*property\/seals[^]*no retreat/i,
     );
+    expect(root?.npc_text).not.toMatch(/foul\s*=\s*(?:2|two) cattle/i);
     expect(root?.npc_text).not.toMatch(/two roads/i);
-    expect(root?.npc_text).toMatch(/living lure[^]*signal drive[^]*seal-and-outlast line/i);
+    expect(root?.npc_text).toMatch(/lure[^]*drive[^]*fortify/i);
     expect(root?.topics.find((topic) => topic.id === "wolves")?.prompt).toMatch(
       /quick spear-hand/i,
     );
@@ -107,14 +114,58 @@ describe("bug_0504 — Wolf-Winter clues are complementary rather than contradic
     expect(guarded).not.toMatch(/\bset\b[^]*\bdrive\b|\bwheel\b[^]*\bturn\b/i);
 
     expect(fortify).toMatch(
-      /Household terms[^]*expose outer property[^]*save public seals[^]*help[^]*Albany authority[^]*covers my property[^]*spends public stock[^]*no help[^]*dawn/i,
+      /fortify saves lives\/herd\/byre[^]*no retreat\/switch[^]*household terms[^]*property risk[^]*seals saved[^]*Cade aid[^]*Albany[^]*property safe[^]*seals spent[^]*no Cade aid[^]*Works eases first DC[^]*mobile stabilizes a recovered miss[^]*dawn/i,
     );
+    expect(fortify).not.toMatch(/Albany Repair[^]*2 easier/i);
+    expect(fullDutyFortify).toMatch(/first Albany Repair 2 easier/i);
+
+    const publicSealChecks =
+      pack.objects
+        .find((object) => object.id === "fortify_outer_seal")
+        ?.interactions.filter(
+          (interaction) =>
+            interaction.item === "albany_relief_seals" && interaction.skill_check !== undefined,
+        ) ?? [];
+    const publicSealDc = (fullDuty: boolean, worksPrepared: boolean) => {
+      const conditions = publicSealChecks.find((interaction) => {
+        const encoded = JSON.stringify(interaction.conditions);
+        const oath = fullDuty
+          ? '{"has_flag":"relief_oath_full_duty"}'
+          : '{"not_flag":"relief_oath_full_duty"}';
+        const works = worksPrepared
+          ? '{"has_flag":"works_fortification_prepared"}'
+          : '{"not_flag":"works_fortification_prepared"}';
+        return encoded.includes(oath) && encoded.includes(works);
+      });
+      return conditions?.skill_check?.difficulty;
+    };
+    expect([publicSealDc(true, true), publicSealDc(true, false)]).toEqual([10, 12]);
+    expect([publicSealDc(false, true), publicSealDc(false, false)]).toEqual([12, 14]);
+
+    const scattered = pack.win_conditions.find(
+      (condition) => condition.ending === "ending_pack_diverted_cattle_scattered",
+    );
+    expect(scattered?.conditions).toContainEqual({
+      var_gte: { name: "cattle_alarm", value: 4 },
+    });
+
+    const scatteredEnding = pack.endings.find(
+      (ending) => ending.id === "ending_pack_diverted_cattle_scattered",
+    );
+    expect(scatteredEnding?.text).toMatch(/accumulated[^]*alarm/i);
+    expect(scatteredEnding?.text).not.toMatch(/fouled first cast/i);
+    const fouledVariant = scatteredEnding?.variants?.find((variant) =>
+      variant.when.some(
+        (condition) => "has_flag" in condition && condition.has_flag === "lure_trail_fouled",
+      ),
+    );
+    expect(fouledVariant?.text).toMatch(/fouled first cast/i);
   });
 
   it("keeps root copy and legal lesson actions aligned when quick is heard first", () => {
     let state = startCadeDialogue(930014);
     let observation = buildRpgObservation(index, state);
-    expect(observation.dialogue?.npc_text).toMatch(/either lesson[^]*both before you go/i);
+    expect(observation.dialogue?.npc_text).toMatch(/hunt[^]*lure[^]*drive[^]*fortify/i);
     expect(dialogueActionIds(state)).toEqual([
       "ask_wolves",
       "ask_byre",

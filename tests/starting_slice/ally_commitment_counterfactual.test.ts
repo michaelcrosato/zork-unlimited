@@ -406,7 +406,7 @@ describe("SS-F04 — Albany ally commitment counterfactual", () => {
       hide_graph: true,
     });
     expect(boundary.observation.description).toMatch(
-      /spear-fighting funnel[^]*not a living turn[^]*any wolf death ends/i,
+      /spear funnel[^]*not a living turn[^]*committed first feed cast fouls[^]*brace[^]*pen the yearling alive[^]*any wolf death ends/i,
     );
     expect(boundary.observation.available_actions.map((action) => action.id)).toContain(
       "talk_june_pike_combat_boundary",
@@ -414,7 +414,9 @@ describe("SS-F04 — Albany ally commitment counterfactual", () => {
     expect(boundary.observation.available_actions.map((action) => action.id)).not.toContain(
       "go_north",
     );
-    expect(browser.view().text).toMatch(/spear-fighting funnel[^]*any wolf death ends/i);
+    expect(browser.view().text).toMatch(
+      /spear funnel[^]*committed first feed cast fouls[^]*pen the yearling alive[^]*any wolf death ends/i,
+    );
     expect(browser.view().choices.map((choice) => choice.id)).not.toContain("go_north");
 
     const boundarySave = api.save_game({
@@ -434,7 +436,9 @@ describe("SS-F04 — Albany ally commitment counterfactual", () => {
       compact_observation: true,
       hide_graph: true,
     });
-    expect(boundaryCompact.context.text).toMatch(/spear-fighting funnel[^]*any wolf death ends/i);
+    expect(boundaryCompact.context.text).toMatch(
+      /spear funnel[^]*committed first feed cast fouls[^]*pen the yearling alive[^]*any wolf death ends/i,
+    );
 
     step("talk_june_pike_combat_boundary");
     const dialogueCompact = api.get_observation({
@@ -443,7 +447,7 @@ describe("SS-F04 — Albany ally commitment counterfactual", () => {
       hide_graph: true,
     });
     expect(dialogueCompact.context.dialogue?.[1]).toMatch(
-      /spear funnel[^]*not a living turn[^]*first wolf down ends our agreement/i,
+      /spear funnel[^]*not a living turn[^]*committed first feed cast fouls[^]*brace[^]*pen the yearling alive[^]*first wolf down ends our agreement/i,
     );
     step("ask_keep_cattle_terms");
     expect(api.list_legal_actions({ session_id: rpgSessionId }).actions).not.toContain("go_north");

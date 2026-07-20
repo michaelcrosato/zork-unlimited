@@ -19,11 +19,12 @@ const loaded = loadRpgSourceFile("content/rpg/quests/wolf_winter.yaml");
 if (!loaded.ok) throw new Error("Wolf-Winter must compile");
 const index = indexRpgPack(loaded.compiled.pack);
 const FULL = { compact_context: false, compact_result: false } as const;
-const COMMITMENT_WARNING = /both commit north[^]*no retreat[^]*no lure\/drive\/combat switch/i;
-const CADE_STANCE =
-  /Household terms[^]*expose outer property[^]*save public seals[^]*failed-seat aid/i;
-const ALBANY_STANCE = /Albany authority[^]*covers property[^]*spends seals[^]*no aid/i;
-const FULL_DUTY_TERMS = /breach full duty[^]*Repair is 2 easier[^]*dawn/i;
+const COMMITMENT_WARNING =
+  /commit north[^]*no retreat[^]*(?:no )?lure\/drive\/combat (?:switch|shut)/i;
+const CADE_STANCE = /HOUSEHOLD[^]*exposes property[^]*saves seals[^]*failed-seat aid/i;
+const ALBANY_STANCE = /ALBANY[^]*covers property[^]*spends seals[^]*no aid/i;
+const FULL_DUTY_TERMS =
+  /breach full duty[^]*first Albany Repair 2 easier[^]*Mobile stabilizes a recovered miss[^]*dawn/i;
 const TRUNCATION_MARKER = /(?:\.\.\.\(\+\d+ chars\)|#[0-9a-f]{12}\b)/i;
 
 function act(state: GameState, actionId: string): GameState {

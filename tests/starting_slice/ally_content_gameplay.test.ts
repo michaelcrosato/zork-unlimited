@@ -302,13 +302,15 @@ describe("SS-F04 — June Pike authored ally gameplay", () => {
     let withJune = act(optionState(ACCEPT), "go_north");
     const boundary = buildRpgObservation(index, withJune);
     expect(boundary.description).toMatch(
-      /June holds the north gate[^]*spear-fighting funnel[^]*not a living turn[^]*any wolf death ends/i,
+      /June holds the north gate[^]*spear funnel[^]*not a living turn[^]*committed first feed cast fouls[^]*brace[^]*pen the yearling alive[^]*any wolf death ends/i,
     );
     expect(actionIds(withJune)).toContain("talk_june_pike_combat_boundary");
     expect(actionIds(withJune)).not.toContain("go_north");
     expect(boundary.blocked_exits).toContainEqual({
       direction: "north",
-      message: expect.stringMatching(/speak with anyone holding the gate[^]*committed feed/i),
+      message: expect.stringMatching(
+        /commit with Cade[^]*feed then waits west[^]*carry committed rig/i,
+      ),
     });
 
     withJune = act(withJune, "talk_june_pike_combat_boundary");

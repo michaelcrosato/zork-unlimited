@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 589 -->
+<!-- historical_cycle_count: 590 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - wolf_strategy_comparison
+
+- Evidence choice: the field-timed cohort produced five lure/diversion outcomes and one fortification while repeatedly asking for a usable plan comparison, so this cycle tested one truthful four-plan decision surface rather than more setup prose.
+- Surface: Cade now compares HUNT/LURE/DRIVE/FORTIFY by lives, herd/byre, finite stock, crisis cost, retreat, and commitment boundary; detailed plan copy names exact support/costs, and cattle-scattered endings distinguish accumulated clean alarm from a genuinely fouled cast.
+- Counterfactual: paired strategy, commitment-boundary, ally, crisis-priority, clue, compact/full, and variant-liveness tests prove each statement against reachable state, including clean/fouled/June scattered endings, committed-lure rail recovery, and both fortification authorities.
+- Pure evidence: the ten-run cohort completed Wolf-Winter 10/10, continued 10/10, was 0 stuck and 8/10 replay-yes at clarity 3.5/enjoyment 4.1, with six lure-family and four fortify-family outcomes. Corrected Sol seed 4236 found the comparison truthful; exact combined Terra seed 4238 completed both goals, naturally used Gallowmere's failed-Tracking recovery, scored 4/4, was unstuck/replay-yes, and reported no P0-P2.
+- Measured result: maximum family share is 60% and four exact endings appeared, but only two broad strategy families were organic; setup density recurred 10/10, compact truncation 3/10, and road-resolver discovery was a recurring S2 at 2/10. PASS for truthful comparison, FAIL for three-family/certification proof.
+- Feedback/follow-through: compile `20260720T200813Z` has 910 verified reports, 159 current-contract pure exits, and 136 continuing; the ledger is 910 accepted/59 rejected, with one new report below the next compile threshold. The road descriptor passes exact blind use; make Station preparation/allocation optional next.
+- Guard: exact combined commit `9b9332d1` has verified seed 4238, zero-finding crawl `20260720T203737Z` at 247/247 nodes, 344/344 edges, and 12/12 boards/quests, plus uncontended health at 389 files/2,973 tests and UI/all packs; independent review found no remaining P0-P2.
 
 ### Cycle result - gallowmere_tracking_recovery
 
@@ -153,12 +163,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Pure evidence: final-world Spark seed 2890 verified fresh/overworld, completed Wolf-Winter and The Gallowmere in 46 decisions, rated clarity/enjoyment 4/4, stuck false, replay true, and reported no bug; it skipped Works, so deterministic pairs carry the new scene. Seeds 2888/2889 remain rejected for duplicate forbidden resource probes.
 - Self-critique: PASS for the reusable authored-job grammar and first of six conversions, not the greater-than-BG3 milestone. Five district jobs, checklist events, global failure-forward proof, three independent NPC agendas, Codex-native fleet attestation, deep crawl, and exact 100-player certification remain open.
 - Guard: final crawl `20260719T035234Z` reached 247/247 nodes, 344/344 edges, and 12/12 boards/quests with zero findings; fixture hardening closes the full-suite integration regression, and health passes at 379 files/2,867 tests plus UI and all 12 packs.
-
-### Cycle result - pure_embedded_session_recovery
-
-- Evidence choice: four unretried ten-Spark cohorts verified 30/40 fresh pure exits; failures clustered around compacted/lost handle recovery and verbose context exhaustion, not Claude authentication or game intent. Exact clean commit `1ad03375` then produced 14/14 engine exits and 11/14 canonical reports across seeds 2860–2873.
-- Surface: pure responses/errors preserve the singleton parent plus unresolved child, name the handle domain, recover missing/coerced inputs, block child-orphaning parent mutations, and force compact reads; full multi-session mode stays isolated.
-- Lifecycle: non-death endings auto-fold once. A death keeps the exact unfinished quest and ended child, persists a quest/ending/decision-proof boundary, and opens a sole End choice whose receipt preserves the active goal and completed history before retiring the child; no resurrection or posthumous parent wandering remains.
-- Pure evidence: dirty candidate seeds 2856–2859 were only 1/4 canonical. Clean seeds 2860–2869 were 7/10 and top-off 2870–2873 were 4/4 canonical, consuming 113,824,347 input and 620,153 output tokens; seed 2867 supplied the death soft-lock witness and seed 2873 survived 160 decisions/five quests.
-- Self-critique: PASS for the Spark S2 transport/recovery cluster, not the greater-than-BG3 milestone. Starting-slice depth, Albany authored work, deep crawl, clean pilot, and exact 100-player certification remain open; repeated quest-launch confusion is the next compact-surface gap.
-- Guard: crawl gates `20260717T062550Z`/`20260717T074806Z`/`20260717T215659Z` reached 247/247 nodes, 344/344 edges, and 12/12 quests; deterministic seed 0 success and seed 6 death cover terminal contracts, adversarial review has no P0/P1/P2, and full health passes at 373 files/2,796 tests plus UI and all packs.

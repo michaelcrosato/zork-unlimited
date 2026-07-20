@@ -19,7 +19,8 @@ if (!loaded.ok) throw new Error("Wolf-Winter must compile");
 const index = indexRpgPack(loaded.compiled.pack);
 const FULL = { compact_context: false, compact_result: false } as const;
 const LIVING_BOUNDARY =
-  /cross north uncommitted[^]*hunt-and-hold[^]*permanently retire[^]*feed lure[^]*signal drive[^]*seal-and-outlast/i;
+  /cross (?:north )?uncommitted[^]*hunt[^]*(?:others shut|other plans close|closing lure\/drive\/fortify|retires[^]*feed lure[^]*signal drive[^]*seal-and-outlast)/i;
+const TRUNCATION_MARKER = /(?:\.\.\.\(\+\d+ chars\)|#[0-9a-f]{12}\b)/i;
 
 function act(state: GameState, actionId: string): GameState {
   const option = enumerateRpgActions(index, state).find((candidate) => candidate.id === actionId);
@@ -119,15 +120,22 @@ describe("Wolf-Winter uncommitted living-plan boundary", () => {
     const rootDialogue = observation(uncommitted);
     expect(rootDialogue.dialogue?.npc_text).toMatch(LIVING_BOUNDARY);
     expect(rootDialogue.dialogue?.npc_text).toMatch(
-      /either lesson[^]*or both before you go[^]*quick spear-hand[^]*guarded spear-fighting plan/i,
+      /You came from Albany awake[^]*hunt kills pack[^]*holds herd\/byre[^]*risk death[^]*lure spares all if fed[^]*foul risks herd[^]*drive spares pack\/people[^]*defense lost[^]*crisis cost[^]*fortify spares all[^]*property\/seals[^]*no retreat/i,
     );
-    expect(rootDialogue.dialogue?.npc_text).toMatch(
-      /living lure[^]*signal drive[^]*seal-and-outlast line/i,
-    );
+    expect(rootDialogue.dialogue?.npc_text).not.toMatch(/foul\s*=\s*(?:2|two) cattle/i);
+    expect(rootDialogue.dialogue?.npc_text).toMatch(/lure[^]*drive[^]*fortify/i);
+    const compactRootDialogue = compactRpgObservation(rootDialogue, [], {
+      includeActions: true,
+    }).dialogue?.[1];
+    expect(compactRootDialogue).toBe(rootDialogue.dialogue?.npc_text.trimEnd());
+    expect(compactRootDialogue).not.toMatch(TRUNCATION_MARKER);
     uncommitted = act(uncommitted, "ask_lure");
 
     const lureDialogue = observation(uncommitted);
     expect(lureDialogue.dialogue?.npc_text).toMatch(LIVING_BOUNDARY);
+    expect(lureDialogue.dialogue?.npc_text).toMatch(
+      /first foul risks two cattle[^]*no retry[^]*rail recovery/i,
+    );
     expect(compactRpgObservation(lureDialogue, [], { includeActions: true }).dialogue?.[1]).toMatch(
       LIVING_BOUNDARY,
     );
@@ -192,17 +200,43 @@ describe("Wolf-Winter uncommitted living-plan boundary", () => {
     expect(beforeCommittedCrossing.dialogue?.npc_text).not.toMatch(
       /cross north uncommitted|crossing uncommitted|hunt-and-hold/i,
     );
+    expect(beforeCommittedCrossing.dialogue?.npc_text).toMatch(
+      /store-shed west[^]*go west[^]*take the sack[^]*return east[^]*cross north/i,
+    );
     expect(
       beforeCommittedCrossing.available_actions.find((action) => action.id === "ask_leave")
         ?.command,
-    ).not.toMatch(/uncommitted|hunt-and-hold/i);
+    ).toMatch(/take the committed feed from the store-shed west/i);
     committed = act(committed, "ask_leave");
+    const committedPickup = observation(committed);
+    expect(committedPickup.description).toMatch(
+      /released[^]*feed sack[^]*west[^]*take the winter-feed sack[^]*return east[^]*go north[^]*not available before you committed/i,
+    );
+    expect(committedPickup.available_actions.map((action) => action.id)).toContain("go_west");
+    expect(
+      committedPickup.blocked_exits.find((exit) => exit.direction === "north")?.message,
+    ).toMatch(/commit with Cade[^]*feed then waits west[^]*take it[^]*return east[^]*cross north/i);
+    expect(compactRpgObservation(committedPickup, [], { includeActions: true }).text).toMatch(
+      /go west[^]*take the winter-feed sack[^]*return east[^]*go north/i,
+    );
     committed = act(committed, "go_west");
+    const committedStore = observation(committed);
+    expect(committedStore.description).toMatch(/take the finite feed before the breach/i);
+    expect(committedStore.available_actions.map((action) => action.id)).toContain(
+      "take_winter_feed_sack",
+    );
     committed = act(committed, "take_winter_feed_sack");
     committed = act(committed, "go_east");
     committed = act(committed, "go_north");
     expect(committed.current).toBe("paling_gap");
     expect(committed.flags.strategy_lure_committed).toBe(true);
+    const preFoulPaling = observation(committed);
+    expect(preFoulPaling.description).toMatch(
+      /cast Cade's feed first[^]*before a foul[^]*rail is only a combat funnel[^]*if the cast fouls[^]*braced or bound rail can pen the yearling alive[^]*spear stroke commits the hybrid fight/i,
+    );
+    expect(compactRpgObservation(preFoulPaling, [], { includeActions: true }).text).toMatch(
+      /cast Cade's feed first[^]*before a foul[^]*rail is only a combat funnel[^]*if the cast fouls[^]*braced or bound rail can pen the yearling alive[^]*spear stroke commits the hybrid fight/i,
+    );
     expect(enumerateRpgActions(index, committed).map((action) => action.id)).toContain(
       "use_winter_feed_sack_on_downwind_feed_line",
     );
