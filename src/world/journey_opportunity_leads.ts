@@ -20,6 +20,7 @@ export type JourneyOpportunityProjectionState = Readonly<{
   discoveredJobIds: ReadonlySet<string>;
   completedJobIds: ReadonlySet<string>;
   worldFactIds: ReadonlySet<string>;
+  storyChoiceKeys?: ReadonlySet<string> | undefined;
   eventOptionIdFor: (eventId: string) => string | null;
 }>;
 

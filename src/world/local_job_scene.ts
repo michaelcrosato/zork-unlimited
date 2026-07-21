@@ -1,5 +1,10 @@
 import { z } from "zod";
 
+import {
+  CampaignStoryChoiceRefSchema,
+  campaignStoryChoiceRefKey,
+} from "./campaign_story_choices.js";
+
 export const LOCAL_JOB_SCENE_VERSION = 1 as const;
 export const LOCAL_JOB_SCENE_MIN_OPTIONS = 2 as const;
 export const LOCAL_JOB_SCENE_MAX_OPTIONS = 4 as const;
@@ -22,6 +27,25 @@ export const LocalJobSceneTermsSchema = z
     renown: z.number().int().min(1).max(LOCAL_JOB_SCENE_MAX_RENOWN),
   })
   .strict();
+
+const LocalJobSceneStoryChoiceRefsSchema = z
+  .array(CampaignStoryChoiceRefSchema)
+  .min(1)
+  .max(LOCAL_JOB_SCENE_MAX_REQUIREMENTS)
+  .superRefine((refs, context) => {
+    const seen = new Set<string>();
+    refs.forEach((ref, index) => {
+      const key = campaignStoryChoiceRefKey(ref);
+      if (seen.has(key)) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: [index],
+          message: `Duplicate local-job story-choice requirement ${key}.`,
+        });
+      }
+      seen.add(key);
+    });
+  });
 
 export const LocalJobSceneOptionSchema = z
   .object({
@@ -52,6 +76,8 @@ export const LocalJobSceneOptionSchema = z
       .min(1)
       .max(LOCAL_JOB_SCENE_MAX_REQUIREMENTS)
       .optional(),
+    requires_all_story_choices: LocalJobSceneStoryChoiceRefsSchema.optional(),
+    forbids_any_story_choices: LocalJobSceneStoryChoiceRefsSchema.optional(),
   })
   .strict()
   .superRefine((option, context) => {
@@ -88,6 +114,31 @@ export const LocalJobSceneOptionSchema = z
           code: z.ZodIssueCode.custom,
           path: ["forbids_any_world_facts", index],
           message: `Local-job option cannot both require and forbid world fact "${factId}".`,
+        });
+      }
+    });
+    const requiredStoryChoices = new Set(
+      (option.requires_all_story_choices ?? []).map(campaignStoryChoiceRefKey),
+    );
+    const requiredChoiceByStoryId = new Map<string, string>();
+    option.requires_all_story_choices?.forEach((ref, index) => {
+      const selectedChoice = requiredChoiceByStoryId.get(ref.story_choice_id);
+      if (selectedChoice !== undefined && selectedChoice !== ref.choice_id) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["requires_all_story_choices", index],
+          message: `Local-job option cannot require mutually exclusive choices "${selectedChoice}" and "${ref.choice_id}" from story "${ref.story_choice_id}".`,
+        });
+      }
+      requiredChoiceByStoryId.set(ref.story_choice_id, ref.choice_id);
+    });
+    option.forbids_any_story_choices?.forEach((ref, index) => {
+      const key = campaignStoryChoiceRefKey(ref);
+      if (requiredStoryChoices.has(key)) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["forbids_any_story_choices", index],
+          message: `Local-job option cannot both require and forbid story choice ${key}.`,
         });
       }
     });
@@ -193,6 +244,7 @@ export type LocalJobSceneConditionState = Readonly<{
   completedQuestIds: ReadonlySet<string>;
   resolvedEventIds: ReadonlySet<string>;
   worldFactIds: ReadonlySet<string>;
+  storyChoiceKeys?: ReadonlySet<string> | undefined;
   eventOptionIdFor: (eventId: string) => string | null;
 }>;
 
@@ -248,6 +300,17 @@ function matchesWorldFacts(
   );
 }
 
+function matchesStoryChoices(
+  requires: LocalJobSceneOption["requires_all_story_choices"],
+  forbids: LocalJobSceneOption["forbids_any_story_choices"],
+  storyChoiceKeys: ReadonlySet<string>,
+): boolean {
+  return (
+    (requires ?? []).every((ref) => storyChoiceKeys.has(campaignStoryChoiceRefKey(ref))) &&
+    !(forbids ?? []).some((ref) => storyChoiceKeys.has(campaignStoryChoiceRefKey(ref)))
+  );
+}
+
 /** Generic scene-level chronology gate shared by view projection and execution. */
 export function localJobSceneRequirementsMet(
   scene: LocalJobScene,
@@ -267,7 +330,7 @@ export function localJobSceneRequirementsMet(
   );
 }
 
-/** Generic option gate: trusted event decisions and quest-exported world facts only. */
+/** Generic option gate over replayable local, quest, and campaign decisions. */
 export function localJobSceneOptionRequirementsMet(
   option: LocalJobSceneOption,
   state: LocalJobSceneConditionState,
@@ -283,6 +346,11 @@ export function localJobSceneOptionRequirementsMet(
       parsed.requires_all_world_facts,
       parsed.forbids_any_world_facts,
       state.worldFactIds,
+    ) &&
+    matchesStoryChoices(
+      parsed.requires_all_story_choices,
+      parsed.forbids_any_story_choices,
+      state.storyChoiceKeys ?? new Set<string>(),
     )
   );
 }

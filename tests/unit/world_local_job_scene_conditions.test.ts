@@ -6,9 +6,14 @@ import {
   type LocalJobScene,
   type LocalJobSceneConditionState,
 } from "../../src/world/local_job_scene.js";
+import { campaignStoryChoiceRefKey } from "../../src/world/campaign_story_choices.js";
 import { assertOverworldIntegrity } from "../../src/world/overworld.js";
+import { cloneOverworldLocalJob } from "../../src/world/overworld_clone.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
-import { campaignWorldFactsProvenBeforeDecision } from "../../src/world/session_resource_replay.js";
+import {
+  campaignStoryChoiceKeysProvenBeforeDecision,
+  campaignWorldFactsProvenBeforeDecision,
+} from "../../src/world/session_resource_replay.js";
 
 const WORLD = loadOverworldManifest(process.cwd());
 const EVENT_ID = "test:event";
@@ -51,12 +56,14 @@ function conditionState(
     facts?: string[];
     quests?: string[];
     resolved?: string[];
+    storyChoices?: readonly { story_choice_id: string; choice_id: string }[];
   } = {},
 ): LocalJobSceneConditionState {
   return {
     completedQuestIds: new Set(overrides.quests ?? ["test:quest"]),
     resolvedEventIds: new Set(overrides.resolved ?? [EVENT_ID]),
     worldFactIds: new Set(overrides.facts ?? ["fact:held"]),
+    storyChoiceKeys: new Set((overrides.storyChoices ?? []).map(campaignStoryChoiceRefKey)),
     eventOptionIdFor: () => overrides.eventOption ?? "open",
   };
 }
@@ -98,6 +105,46 @@ describe("generic authored local-job conditions", () => {
     expect(() => assertOverworldIntegrity(optionLocalWorld)).not.toThrow();
   });
 
+  it("matches exact required and forbidden story choices at option scope", () => {
+    const storyScene = structuredClone(SYNTHETIC_SCENE);
+    storyScene.options[0]!.requires_all_story_choices = [
+      { story_choice_id: "test:dispatch", choice_id: "send_wardens" },
+    ];
+    storyScene.options[0]!.forbids_any_story_choices = [
+      { story_choice_id: "test:dispatch", choice_id: "send_wagon" },
+    ];
+
+    expect(
+      availableLocalJobSceneOptions(
+        storyScene,
+        conditionState({
+          storyChoices: [{ story_choice_id: "test:dispatch", choice_id: "send_wardens" }],
+        }),
+      ).map((option) => option.id),
+    ).toEqual(["open_held"]);
+    expect(
+      availableLocalJobSceneOptions(
+        storyScene,
+        conditionState({
+          storyChoices: [{ story_choice_id: "test:dispatch", choice_id: "send_wagon" }],
+        }),
+      ),
+    ).toEqual([]);
+    expect(availableLocalJobSceneOptions(storyScene, conditionState())).toEqual([]);
+  });
+
+  it("deep-clones option story-choice predicates", () => {
+    const station = WORLD.local_jobs.find((job) => job.id === "albany_city__transport_hub__job");
+    if (!station?.authored_scene) throw new Error("expected Station scene");
+    const clone = cloneOverworldLocalJob(station);
+    const sourceRef = station.authored_scene.options[0]!.requires_all_story_choices![0]!;
+    const cloneRef = clone.authored_scene!.options[0]!.requires_all_story_choices![0]!;
+    expect(cloneRef).toEqual(sourceRef);
+    expect(cloneRef).not.toBe(sourceRef);
+    cloneRef.choice_id = "forged";
+    expect(sourceRef.choice_id).toBe("send_wardens_north");
+  });
+
   it("grants no option for missing chronology, contradictory facts, or a neutral legacy event", () => {
     expect(availableLocalJobSceneOptions(SYNTHETIC_SCENE, conditionState({ quests: [] }))).toEqual(
       [],
@@ -133,6 +180,26 @@ describe("generic authored local-job conditions", () => {
     expect([...campaignWorldFactsProvenBeforeDecision(boundaries, 5)]).toEqual(["fact:earlier"]);
   });
 
+  it("does not treat a same-boundary or later story choice as earlier authority", () => {
+    const earlier = campaignStoryChoiceRefKey({
+      story_choice_id: "test:dispatch",
+      choice_id: "earlier",
+    });
+    const same = campaignStoryChoiceRefKey({
+      story_choice_id: "test:dispatch",
+      choice_id: "same",
+    });
+    const boundaries = {
+      byAcceptedDecisions: new Map(),
+      worldFactProofOrdinalById: new Map(),
+      storyChoiceProofOrdinalByKey: new Map([
+        [earlier, 4],
+        [same, 5],
+      ]),
+    };
+    expect([...campaignStoryChoiceKeysProvenBeforeDecision(boundaries, 5)]).toEqual([earlier]);
+  });
+
   it("rejects duplicate and self-contradictory conditional authoring", () => {
     expect(() =>
       LocalJobSceneSchema.parse({
@@ -154,6 +221,69 @@ describe("generic authored local-job conditions", () => {
         ),
       }),
     ).toThrow(/both require and forbid/i);
+    expect(() =>
+      LocalJobSceneSchema.parse({
+        ...SYNTHETIC_SCENE,
+        options: SYNTHETIC_SCENE.options.map((option, index) =>
+          index === 0
+            ? {
+                ...option,
+                requires_all_story_choices: [
+                  { story_choice_id: "test:dispatch", choice_id: "wardens" },
+                  { story_choice_id: "test:dispatch", choice_id: "wardens" },
+                ],
+              }
+            : option,
+        ),
+      }),
+    ).toThrow(/Duplicate local-job story-choice requirement/i);
+    expect(() =>
+      LocalJobSceneSchema.parse({
+        ...SYNTHETIC_SCENE,
+        options: SYNTHETIC_SCENE.options.map((option, index) =>
+          index === 0
+            ? {
+                ...option,
+                requires_all_story_choices: [
+                  { story_choice_id: "test:dispatch", choice_id: "wardens" },
+                  { story_choice_id: "test:dispatch", choice_id: "wagon" },
+                ],
+              }
+            : option,
+        ),
+      }),
+    ).toThrow(/mutually exclusive choices/i);
+    expect(() =>
+      LocalJobSceneSchema.parse({
+        ...SYNTHETIC_SCENE,
+        options: SYNTHETIC_SCENE.options.map((option, index) =>
+          index === 0
+            ? {
+                ...option,
+                requires_all_story_choices: [
+                  { story_choice_id: "test:dispatch", choice_id: "wardens" },
+                ],
+                forbids_any_story_choices: [
+                  { story_choice_id: "test:dispatch", choice_id: "wardens" },
+                ],
+              }
+            : option,
+        ),
+      }),
+    ).toThrow(/both require and forbid story choice/i);
+    expect(() =>
+      LocalJobSceneSchema.parse({
+        ...SYNTHETIC_SCENE,
+        options: SYNTHETIC_SCENE.options.map((option, index) =>
+          index === 0
+            ? {
+                ...option,
+                requires_all_story_choices: [{ story_choice_id: "INVALID", choice_id: "wardens" }],
+              }
+            : option,
+        ),
+      }),
+    ).toThrow();
   });
 
   it("fails manifest integrity for missing event options and unauthored facts", () => {
@@ -170,6 +300,16 @@ describe("generic authored local-job conditions", () => {
     if (!secondCivic?.authored_scene) throw new Error("expected Civic scene");
     secondCivic.authored_scene.options[0]!.requires_all_world_facts = ["fact:invented"];
     expect(() => assertOverworldIntegrity(missingFact)).toThrow(/unauthored world fact/i);
+
+    const missingStoryChoice = structuredClone(WORLD);
+    const station = missingStoryChoice.local_jobs.find(
+      (job) => job.id === "albany_city__transport_hub__job",
+    );
+    if (!station?.authored_scene) throw new Error("expected Station scene");
+    station.authored_scene.options[0]!.requires_all_story_choices = [
+      { story_choice_id: "albany_dawn_dispatch", choice_id: "invented" },
+    ];
+    expect(() => assertOverworldIntegrity(missingStoryChoice)).toThrow(/unauthored story choice/i);
   });
 
   it("fails manifest integrity for an authored event's missing required quest", () => {

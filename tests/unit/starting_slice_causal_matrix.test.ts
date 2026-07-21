@@ -34,6 +34,22 @@ describe("starting-slice causal matrix", () => {
       "SS-F11-saved-wood",
       "SS-F12-albany-return",
     ]);
+    const albanyReturn = matrix.forks.find((fork) => fork.id === "SS-F12-albany-return");
+    expect(albanyReturn).toMatchObject({
+      implementation_status: "implemented",
+      proof_status: "proven",
+      counts_toward_contract: true,
+    });
+    expect(albanyReturn?.delayed_consumers.join(" ")).toMatch(
+      /wagon to Cade suppresses.*paling and evacuation-line.*wardens north preserves.*lower-pasture search.*either dawn dispatch/i,
+    );
+    expect(albanyReturn?.visible_feedback.join(" ")).toMatch(
+      /full, compact, UI, MCP, and opportunity surfaces.*omit Cade's structural packet.*retain that work.*lower-pasture search/i,
+    );
+    expect(albanyReturn?.systems).toContain("jobs");
+    expect(albanyReturn?.baseline_evidence).toContain(
+      "tests/starting_slice/cade_return_packet_counterfactual.test.ts",
+    );
     expect(() => assertCountedStartingSliceProofsExist(matrix)).not.toThrow();
   });
 

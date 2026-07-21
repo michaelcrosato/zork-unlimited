@@ -42,12 +42,16 @@ function genericOpportunityState() {
     title: "Canal Ward Winter Hearing",
   };
   const job: OverworldLocalJob = {
-    ...sourceJob,
+    ...structuredClone(sourceJob),
     id: "utica_city__canal_ward__job",
     home: "utica_city",
     area: area.id,
     title: "Canal Ward Repair Ledger",
   };
+  for (const option of job.authored_scene!.options) {
+    delete option.requires_all_story_choices;
+    delete option.forbids_any_story_choices;
+  }
   return {
     area,
     event,

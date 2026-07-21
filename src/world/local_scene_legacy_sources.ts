@@ -52,6 +52,22 @@ export const AUTHORED_ALBANY_GREENWAY_PREDECESSOR_WORLD_HASH =
 /** Exact manifest immediately before Albany Works gained its hazard-shift charter. */
 export const AUTHORED_ALBANY_WORKS_HAZARD_PREDECESSOR_WORLD_HASH =
   "9238b5f273e03e0a49487058233443e872c18a542525dcd449531708cd3003e5";
+/** Exact manifest before Cade's structural packet options honored the dawn wagon dispatch. */
+export const AUTHORED_ALBANY_STATION_STORY_PREDICATE_PREDECESSOR_WORLD_HASH =
+  "53afa5830619f12b547f8a6c9d55798477a09676afe02debba155081ea115edc";
+/**
+ * Exact post-Station manifests that shipped the same three-option Cade packet
+ * before its structural options honored the dawn dispatch. Migrations fence on
+ * the actual source set, then canonicalize equivalent structural semantics to
+ * the immediate predecessor marker above.
+ */
+export const AUTHORED_ALBANY_STATION_STORY_PREDICATE_SOURCE_WORLD_HASHES: ReadonlySet<string> =
+  new Set([
+    AUTHORED_ALBANY_MARKET_PREDECESSOR_WORLD_HASH,
+    AUTHORED_ALBANY_GREENWAY_PREDECESSOR_WORLD_HASH,
+    AUTHORED_ALBANY_WORKS_HAZARD_PREDECESSOR_WORLD_HASH,
+    AUTHORED_ALBANY_STATION_STORY_PREDICATE_PREDECESSOR_WORLD_HASH,
+  ]);
 
 export const AUTHORED_ALBANY_WORKS_GENERIC_PREDECESSOR_WORLD_HASHES: ReadonlySet<string> = new Set([
   ...PRE_AUTHORED_WORKS_WORLD_HASHES,

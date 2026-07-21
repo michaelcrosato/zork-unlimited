@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 608 -->
+<!-- historical_cycle_count: 609 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - cade_packet_story_predicates
+
+- Evidence choice: exact-build seeds 4334 and 4350 both saw Hayden offer a second paling rebuild after `send_wagon_to_cade` said the wagon had already replaced it, so this cycle fixes the causal state instead of weakening the historical Wolf-Winter loss fact or changing only prose.
+- Surface: generic authored-job options can now require or forbid exact campaign story-choice refs across projection and execution; Cade's paling/evacuation options require wardens north and forbid the wagon, while pasture search remains available whenever cattle are still missing.
+- Counterfactual: all 11 nondeath endings × both dawn choices, direct invocation, opportunities, full/compact/UI/MCP, clone, save/restore, and replay agree; four exact post-Station predecessor eras preserve valid structural/pasture completions and services while altered copies, sources, chronology, and forged capability fail closed.
+- Pure evidence: exact clean `978d46ac` passed first-attempt Terra 4352, Luna 4353, and Sol 4354; all completed Wolf-Winter, continued, were unstuck/replay-yes, and rated clarity/enjoyment 4/4, 4/5, and 3/4, with Luna continuing through four goals to decision 120.
+- Measured result: Terra and Luna organically sent the wagon after whole-herd `ending_pack_diverted` and saw no Cade packet; Sol sent it after `ending_pack_diverted_cattle_scattered`, saw only `dispatch_pasture_search`, completed that work, and retired the packet. Both sides of the intended branch are directly witnessed.
+- Feedback/follow-through: compile `20260721T211251Z` has 962 verified/58 rejected reports, 211 eligible pure exits, and 186 continuing; seed 4354's active Hayden-packet promise and June-still-companion reports are under independent causal review as the next current-build continuity debt.
+- Guard: final crawl is zero-finding at 247/247 nodes, 344/344 edges, and 12/12 boards/quests; full health, 204 historical migration tests, 22 focused counterfactuals, both typechecks, and two independent re-reviews are green, with current/predecessor hashes `282cf142…`/`53afa583…` exact.
 
 ### Cycle result - pure_step_action_prompt_contract
 
@@ -154,13 +164,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Measured result: exact loss-to-option discovery PASSes; organic packet use remains UNPROVEN and its salience against the immediate north goal is a one-report P2 signal. Repeated `use_paling_rail` labels were also understandable but awkward S1/P2 debt.
 - Feedback/follow-through: compile `20260721T012144Z` has 916 verified reports, 165 eligible pure exits, and 142 continuing; the ledger is 917 accepted/59 rejected with two later verified reports, still below the three-report compile threshold. Current-build triage ranks conditional hill-route tradeoff projection above stale fleet-heavy hotspots, then Station-route guidance and embedded-action naming.
 - Guard: the final combined tree has zero-finding crawl at 247/247 nodes, 344/344 edges, and 12/12 boards/quests; health passes 392 files/2,991 tests plus UI/all packs, and the exact gameplay build carries verified seed 4246.
-
-### Cycle result - optional_station_departure_interactions
-
-- Evidence choice: field-timed preparation moved two commitments beside Wolf-Winter but blind reports still called the sequence dense, so this cycle made both interactions pull-based and optional without delaying the already-legal departure routes.
-- Surface: full, compact, UI, and MCP views expose preparation/allocation inspection and exact choice ids only while relevant; players may depart with neither, preparation only, or both, while trusted saves carrying the former mandatory offers remain finishable.
-- Counterfactual: paired engine/UI/MCP tests prove inspection is read-only, choice is exact and one-shot, launch remains legal through every skip/select permutation, deep clones do not leak mutation, and predecessor saves neither lose nor invent commitments.
-- Pure evidence: exact clean commit `d28a2971` Terra seed 4245 voluntarily inspected and chose both interactions, retained both route starts after each choice, launched Wolf-Winter, completed it at decision 29, continued, then ended unstuck at decision 40 with clarity/enjoyment 3/4; no auth, classifier, boundary, or tool failure occurred.
-- Measured result: mechanical optionality and uninterrupted departure PASS; organic skipping remains UNPROVEN because this cohort selected both. The tester wanted to continue its existing Gallowmere journey but marked new-run replay no after the fixed checkpoint interrupted it.
-- Feedback/follow-through: the ledger is 914 accepted/59 rejected. Current signals retain dense sequential commitments, compact Gallowmere truncation, raw embedded action ids, and decision-40 interruption as separate S1s; Cade's bounded return packet is next while fresh cohorts test actual skipping.
-- Guard: exact feature commit `d28a2971` has zero-finding crawl at 247/247 nodes, 344/344 edges, and 12/12 boards/quests; health passes 391 files/2,981 tests plus UI/all packs, and independent review found no P0-P2.

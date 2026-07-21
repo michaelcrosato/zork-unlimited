@@ -1,4 +1,5 @@
 import type { OverworldManifest } from "../../../src/world/overworld.js";
+import { AUTHORED_ALBANY_STATION_PRE_STORY_PREDICATE_PASTURE_CONSEQUENCE } from "../../../src/world/local_job_scene_legacy.js";
 
 const RELIEF_OATH_SERVICE_IDS: ReadonlySet<string> = new Set([
   "albany:full_oath_authority_return_resupply",
@@ -61,9 +62,29 @@ const CADE_RETURN_PACKET_SERVICE_IDS: ReadonlySet<string> = new Set([
   "albany:cade_pasture_search_unaffiliated_greenway_resupply",
 ]);
 
+/** Reconstruct the exact manifest before Cade's structural packet honored dawn dispatch. */
+export function exactCadeStoryPredicatePredecessor(current: OverworldManifest): OverworldManifest {
+  const predecessor = structuredClone(current);
+  const scene = predecessor.local_jobs.find(
+    (candidate) => candidate.id === "albany_city__transport_hub__job",
+  )?.authored_scene;
+  if (!scene) throw new Error("Albany Station must have Cade's authored return packet");
+  for (const option of scene.options) {
+    if (option.id === "dispatch_pasture_search") {
+      option.consequence = AUTHORED_ALBANY_STATION_PRE_STORY_PREDICATE_PASTURE_CONSEQUENCE;
+    }
+    if (option.id !== "dispatch_paling_rebuild" && option.id !== "dispatch_evacuation_line") {
+      continue;
+    }
+    delete option.requires_all_story_choices;
+    delete option.forbids_any_story_choices;
+  }
+  return predecessor;
+}
+
 /** Reconstruct the exact manifest immediately before Works gained its hazard-shift charter. */
 export function exactAlbanyWorksHazardPredecessor(current: OverworldManifest): OverworldManifest {
-  const predecessor = structuredClone(current);
+  const predecessor = exactCadeStoryPredicatePredecessor(current);
   const event = predecessor.local_events.find(
     (candidate) => candidate.id === "albany_city__industrial__event",
   );
