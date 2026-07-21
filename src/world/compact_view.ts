@@ -15,6 +15,7 @@ import {
   compactOverworldDepartureInteractions,
   type OverworldCompactDepartureInteraction,
 } from "./session_departure_interactions.js";
+import type { JourneyOpportunityPresentation } from "./journey_contract.js";
 
 export const OVERWORLD_COMPACT_JOURNAL_LIMIT = 5;
 export const OVERWORLD_COMPACT_ROUTE_LIMIT = 8;
@@ -23,6 +24,7 @@ export const OVERWORLD_COMPACT_MOVEMENT_LIMIT = 12;
 export const OVERWORLD_COMPACT_TRAVEL_LOG_LIMIT = 5;
 export const OVERWORLD_COMPACT_ID_LIST_LIMIT = 16;
 export const OVERWORLD_COMPACT_LOCAL_REF_LIMIT = 12;
+export const OVERWORLD_COMPACT_OPPORTUNITY_LEAD_LIMIT = 8;
 export const OVERWORLD_COMPACT_RENOWN_LIMIT = 16;
 export const OVERWORLD_COMPACT_COMPLETED_ARC_LIMIT = 16;
 export const OVERWORLD_COMPACT_CHARACTER_ENTRY_LIMIT = 8;
@@ -35,6 +37,13 @@ export const OVERWORLD_COMPACT_SERVICE_SUMMARY_CHAR_LIMIT = 240;
 export const OVERWORLD_COMPACT_VIEW_VERSION = 24 as const;
 
 export type OverworldCompactRef = readonly [id: string, name: string];
+export type OverworldCompactOpportunityLead = readonly [
+  kind: "event" | "job",
+  rootId: string,
+  title: string,
+  district: string,
+  access: "here" | "mapped" | "route_unmapped",
+];
 export type OverworldCompactEventSceneOption = readonly [
   optionId: string,
   title: string,
@@ -327,6 +336,8 @@ export type OverworldCompactView = {
   vitals: OverworldCompactVitals;
   service_offers?: OverworldCompactServiceOffer[];
   departure_interactions?: OverworldCompactDepartureInteraction[];
+  opportunity_leads?: OverworldCompactOpportunityLead[];
+  opportunity_leads_truncated?: true;
   hidden: OverworldCompactHiddenCounts;
   roads: OverworldCompactRoad[];
   roads_truncated?: true;
@@ -382,6 +393,9 @@ export const OVERWORLD_COMPACT_LEGEND = {
     "[[offer_id, action, title, terms_summary, minutes], ...] current one-time service terms; use the normal rest or resupply action named by action to accept that offer",
   departure_interactions:
     "[[story_choice_id, kind, title], ...] optional Station departure interactions; inspect with inspect_overworld_session_story(story_choice_id), then choose one id from story.options[*].id with choose_overworld_session_story(story_choice_id, choice), or depart without choosing",
+  opportunity_leads:
+    "[[kind, root_id, title, district, access], ...] optional authored aftermath; access is here|mapped|route_unmapped, the journey objective remains available, and no choices, rewards, or outcomes are disclosed",
+  opportunity_leads_truncated: "true when more optional aftermath leads exist than listed",
   hidden:
     "[areas, jobs, sites, quests] counts still undiscovered at this town; scout/talk/explore to reveal them",
   roads:
@@ -441,6 +455,22 @@ export function compactOverworldLabel(value: string): string {
 
 export function compactOverworldTitle(value: string): string {
   return compactText(value, OVERWORLD_COMPACT_TITLE_CHAR_LIMIT);
+}
+
+export function compactJourneyOpportunityLeads(
+  opportunities: JourneyOpportunityPresentation | null | undefined,
+  limit = OVERWORLD_COMPACT_OPPORTUNITY_LEAD_LIMIT,
+): OverworldCompactOpportunityLead[] {
+  if (!opportunities || limit <= 0) return [];
+  return opportunities.leads
+    .slice(0, limit)
+    .map((lead) => [
+      lead.kind,
+      lead.id,
+      compactOverworldTitle(lead.title),
+      compactOverworldLabel(lead.area),
+      lead.access,
+    ]);
 }
 
 export function compactOverworldRisk(value: string): string {
@@ -1123,6 +1153,10 @@ export function cloneOverworldCompactView(view: OverworldCompactView): Overworld
   if (view.departure_interactions) {
     clone.departure_interactions = cloneTupleList(view.departure_interactions);
   }
+  if (view.opportunity_leads) {
+    clone.opportunity_leads = cloneTupleList(view.opportunity_leads);
+  }
+  if (view.opportunity_leads_truncated) clone.opportunity_leads_truncated = true;
   if (view.roads_truncated) clone.roads_truncated = true;
   if (view.area_routes_truncated) clone.area_routes_truncated = true;
   if (view.route_options_truncated) clone.route_options_truncated = true;

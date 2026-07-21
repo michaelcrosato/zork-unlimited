@@ -235,10 +235,12 @@ import {
   type JourneyExitReceipt,
   type JourneyGoalDefinition,
   type JourneyGoalPresentation,
+  type JourneyOpportunityPresentation,
   type JourneyPresentation,
   type JourneyPresentationContext,
   type JourneyStoryChoicePrompt,
 } from "./journey_contract.js";
+import { projectJourneyOpportunities } from "./journey_opportunity_leads.js";
 import {
   assertJourneyCampaignQuestOutcome,
   journeyCampaignGoalIsComplete,
@@ -1171,6 +1173,7 @@ export class OverworldSession {
     const pendingGoalCompletion = pending?.reasons.includes("goal_completed") === true;
     const goalRoute = this.currentGoalRoute();
     const goalGuidance = this.journeyGoalGuidance(goalRoute);
+    const opportunities = this.journeyOpportunities();
     let goalCompletion: JourneyPresentationContext["goalCompletion"];
     const registration = this.openingRegistrationAvailable();
     const reliefOath = this.openingReliefOathAvailable();
@@ -1224,11 +1227,14 @@ export class OverworldSession {
       }
     }
     const goalPassage = this.journeyGoalPassage(goalRoute, storyChoice);
-    if (!goalCompletion && !storyChoice && !goalGuidance && !goalPassage) return undefined;
+    if (!goalCompletion && !storyChoice && !goalGuidance && !goalPassage && !opportunities) {
+      return undefined;
+    }
     return {
       ...(goalCompletion ? { goalCompletion } : {}),
       ...(goalGuidance ? { goalGuidance } : {}),
       ...(goalPassage ? { goalPassage } : {}),
+      ...(opportunities ? { opportunities } : {}),
       ...(storyChoice ? { storyChoice } : {}),
     };
   }
@@ -1961,6 +1967,30 @@ export class OverworldSession {
     return requireOverworldSessionCurrentAreaId(this.currentArea());
   }
 
+  private journeyOpportunities(): JourneyOpportunityPresentation | null {
+    if (
+      this.journeyState.status === "ended" ||
+      this.journeyState.pendingChoice?.reasons.includes("character_died") === true
+    ) {
+      return null;
+    }
+    return projectJourneyOpportunities({
+      currentAreaId: this.pendingRoadEncounter ? null : this.currentAreaId,
+      areasById: this.areasById,
+      events: this.world.local_events,
+      jobs: this.world.local_jobs,
+      visitedTownIds: this.visitedIds,
+      completedQuestIds: this.completedQuestIds,
+      resolvedEventIds: this.resolvedEventIds,
+      discoveredAreaIds: this.discoveredAreaIds,
+      discoveredJobIds: this.discoveredJobIds,
+      completedJobIds: this.completedJobIds,
+      worldFactIds: new Set(this.campaignWorldFactIds()),
+      eventOptionIdFor: (eventId) =>
+        this.journalEntriesById.get(`resolve:${eventId}`)?.localSceneProof?.optionId ?? null,
+    });
+  }
+
   private discoverLocalProgressForTown(nodeId: string): OverworldLocalDiscoveryResult {
     const applied = applyOverworldSessionLocalDiscoveryForTown(
       this.localState(),
@@ -2016,6 +2046,7 @@ export class OverworldSession {
       minutes: this.minutes,
       supplies: this.supplies,
       fatigue: this.fatigue,
+      opportunities: this.journeyOpportunities(),
       serviceOffers: this.campaignServiceOffers(currentAreaId),
       departureInteractions: this.departureInteractions(),
       roads: this.roadsFrom(this.currentId),

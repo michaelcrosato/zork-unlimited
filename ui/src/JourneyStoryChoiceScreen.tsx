@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import type { JourneyPresentation } from "../../src/world/journey_contract.js";
+import { JourneyOpportunityLeads } from "./JourneyOpportunityLeads.js";
 
 type JourneyStoryChoiceScreenProps = {
   journey: JourneyPresentation;
@@ -98,6 +99,11 @@ export function JourneyStoryChoiceScreen({
                         : "Choose the consequence that sets your next objective."}
           </small>
         </div>
+
+        <JourneyOpportunityLeads
+          opportunities={journey.opportunities}
+          headingId="journey-story-opportunities-title"
+        />
 
         <div
           className={`journey-choice-actions${

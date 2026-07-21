@@ -711,6 +711,17 @@ without adding a new rest/resupply coupon or delaying first-goal completion.
 Full/compact/UI/MCP projection, current replay, exact neutral
 generic migration, and chronology/tamper guards live in
 [`albany_greenway_scene_counterfactual.test.ts`](../tests/starting_slice/albany_greenway_scene_counterfactual.test.ts).
+The journey now also projects optional return opportunities without adding a
+counted fork: unresolved post-quest event roots in visited towns and eligible
+authored jobs whose roots were already discovered remain visible beside the
+current objective after the player leaves. Each lead exposes only its title,
+district, kind, and exact `here` / `mapped` / `route_unmapped` access state;
+choices, outcomes, rewards, and scene terms remain undisclosed until normal
+play reaches them. The structured journey object is authoritative, while the
+existing compact v24 context receives only a bounded additive tuple and legend.
+Projection is read-only, adds no decision or action, and is covered across the
+Wolf completion, dawn choice, northward departure, restore, MCP, and UI surfaces
+by [`albany_return_opportunity_leads.test.ts`](../tests/starting_slice/albany_return_opportunity_leads.test.ts).
 No generic district jobs remain. Three checklist events—Station, Works, and
 Campus—are still visible and generic.
 

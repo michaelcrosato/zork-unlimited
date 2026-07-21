@@ -3,6 +3,7 @@ import type {
   JourneyChoice,
   JourneyPresentation,
 } from "../../src/world/journey_contract.js";
+import { JourneyOpportunityLeads } from "./JourneyOpportunityLeads.js";
 
 type JourneyChoiceScreenProps = {
   journey: JourneyPresentation;
@@ -48,6 +49,11 @@ export function JourneyChoiceScreen({
           <small>{journey.goal.status === "completed" ? "Completed" : "In progress"}</small>
           {journey.goalGuidance && <small>{journey.goalGuidance}</small>}
         </div>
+
+        <JourneyOpportunityLeads
+          opportunities={journey.opportunities}
+          headingId="journey-choice-opportunities-title"
+        />
 
         <div className="journey-choice-actions">
           {pendingChoice.options.map((option) => (

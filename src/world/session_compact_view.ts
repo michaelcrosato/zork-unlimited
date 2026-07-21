@@ -1,8 +1,10 @@
 import {
   OVERWORLD_COMPACT_LOCAL_REF_LIMIT,
+  OVERWORLD_COMPACT_OPPORTUNITY_LEAD_LIMIT,
   OVERWORLD_COMPACT_VIEW_VERSION,
   compactCampaignServiceOffers,
   compactCampaignCharacterView,
+  compactJourneyOpportunityLeads,
   compactOverworldEventChoices,
   compactOverworldEventScenes,
   compactLocalRefTruncation,
@@ -60,6 +62,7 @@ import {
   compactOverworldDepartureInteractions,
   type OverworldDepartureInteraction,
 } from "./session_departure_interactions.js";
+import type { JourneyOpportunityPresentation } from "./journey_contract.js";
 
 export type OverworldSessionCompactViewState = {
   character: CampaignCharacterView;
@@ -70,6 +73,7 @@ export type OverworldSessionCompactViewState = {
   minutes: number;
   supplies: number;
   fatigue: number;
+  opportunities?: JourneyOpportunityPresentation | null;
   serviceOffers: readonly CampaignServiceOffer[];
   departureInteractions?: readonly OverworldDepartureInteraction[];
   roads: readonly OverworldExit[];
@@ -141,6 +145,7 @@ export function buildOverworldSessionCompactView(
   const departureInteractions = compactOverworldDepartureInteractions(
     state.departureInteractions ?? [],
   );
+  const opportunityLeads = compactJourneyOpportunityLeads(state.opportunities);
   const localRefsTruncated = compactLocalRefTruncation({
     areas: state.areas.length,
     poi: state.poi.length,
@@ -172,6 +177,11 @@ export function buildOverworldSessionCompactView(
     ],
     ...(serviceOffers.length > 0 ? { service_offers: serviceOffers } : {}),
     ...(departureInteractions.length > 0 ? { departure_interactions: departureInteractions } : {}),
+    ...(opportunityLeads.length > 0 ? { opportunity_leads: opportunityLeads } : {}),
+    ...(state.opportunities &&
+    state.opportunities.leads.length > OVERWORLD_COMPACT_OPPORTUNITY_LEAD_LIMIT
+      ? { opportunity_leads_truncated: true as const }
+      : {}),
     hidden: [
       state.hiddenAreaCount,
       state.hiddenJobCount,
