@@ -93,6 +93,7 @@ import {
   describeAuthoredLocalJobLegacyAction,
   migrateAuthoredLocalJobLegacyEntry,
   AUTHORED_ALBANY_CAMPUS_PREDECESSOR_WORLD_HASH,
+  AUTHORED_ALBANY_STATION_PREDECESSOR_WORLD_HASH,
   OVERWORLD_AUTHORED_LOCAL_JOB_PREDECESSOR_WORLD_HASH,
 } from "./local_job_scene_legacy.js";
 import {
@@ -365,7 +366,7 @@ export { OVERWORLD_AUTHORED_LOCAL_JOB_PREDECESSOR_WORLD_HASH };
 export const OVERWORLD_AUTHORED_LOCAL_JOB_FIRST_SCENE_WORLD_HASH =
   "9b8cc75b05e77af160f46dbcd177333cc0f27af89e56f504af0bf6c6a2422c31";
 export const OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH =
-  "a27b2db04b359e9ca38380ca2b0b7a328df4008d1f899bf65e1332d0998aa6b2";
+  "9ae4b2be87d9f5bf0ede03aed8c7c775bdd7ac327dfd96c2f1e4b2154ee610f0";
 /** Exact manifest immediately before preparation moved from Civic to the Station board. */
 export const OVERWORLD_FIELD_TIMED_PREPARATION_PREDECESSOR_WORLD_HASH =
   "be2bb804d5e107449aeab1fd6e96cbfb6f0b71d587ee40283d0aac8b28298f6f";
@@ -380,6 +381,7 @@ export const OVERWORLD_AUTHORED_LOCAL_JOB_TRUSTED_PREDECESSOR_WORLD_HASHES: Read
     OVERWORLD_AUTHORED_LOCAL_JOB_FIRST_SCENE_WORLD_HASH,
     WINTER_RETURN_DOCKET_PREDECESSOR_WORLD_HASH,
     AUTHORED_ALBANY_CAMPUS_PREDECESSOR_WORLD_HASH,
+    AUTHORED_ALBANY_STATION_PREDECESSOR_WORLD_HASH,
   ]);
 /** Exact supported manifests in which opening preparation was still anchored at Civic. */
 const OVERWORLD_CIVIC_PREPARATION_TRUSTED_SOURCE_WORLD_HASHES: ReadonlySet<string> = new Set([
@@ -391,7 +393,11 @@ const OVERWORLD_CIVIC_PREPARATION_TRUSTED_SOURCE_WORLD_HASHES: ReadonlySet<strin
   OVERWORLD_CRISIS_PRIORITY_PREDECESSOR_WORLD_HASH,
   OVERWORLD_OPENING_ALLY_PREDECESSOR_WORLD_HASH,
   OVERWORLD_JUNE_RETURN_COPY_PREDECESSOR_WORLD_HASH,
-  ...OVERWORLD_AUTHORED_LOCAL_JOB_TRUSTED_PREDECESSOR_WORLD_HASHES,
+  // The Station predecessor already carries the current field-timed proof;
+  // normalizing it as Civic evidence would move its authored boundary backward.
+  ...[...OVERWORLD_AUTHORED_LOCAL_JOB_TRUSTED_PREDECESSOR_WORLD_HASHES].filter(
+    (sourceWorldHash) => sourceWorldHash !== AUTHORED_ALBANY_STATION_PREDECESSOR_WORLD_HASH,
+  ),
 ]);
 /**
  * Every still-supported manifest before Campus Archive Query carried Blair's

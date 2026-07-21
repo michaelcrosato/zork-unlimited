@@ -794,6 +794,34 @@ describe("New York overworld graph", () => {
     expect(worksCopy).not.toContain("concrete lead about Albany City");
   });
 
+  it("turns Cade's certified losses into one exact Station return priority", () => {
+    const stationJob = world.local_jobs.find((job) => job.id === "albany_city__transport_hub__job");
+    const scene = stationJob?.authored_scene;
+
+    expect(stationJob?.title).toBe("Hayden's Cade Return Packet");
+    expect(scene?.id).toBe("albany:cade-return-packet");
+    expect(scene?.required_poi_id).toBe("albany_city__transport_hub__poi");
+    expect(scene?.required_contact_id).toBe("albany_city__transport_hub__contact");
+    expect(scene?.requires_completed_quests).toEqual(["wolf_winter"]);
+    expect(scene?.options).toEqual([
+      expect.objectContaining({
+        id: "dispatch_paling_rebuild",
+        terms: { minutes: 45, renown: 3 },
+        requires_all_world_facts: ["fact:wolf_winter_outer_paling_broken"],
+      }),
+      expect.objectContaining({
+        id: "dispatch_evacuation_line",
+        terms: { minutes: 35, renown: 2 },
+        requires_all_world_facts: ["fact:wolf_winter_outer_line_abandoned"],
+      }),
+      expect.objectContaining({
+        id: "dispatch_pasture_search",
+        terms: { minutes: 60, renown: 4 },
+        requires_all_world_facts: ["fact:wolf_winter_cattle_scattered"],
+      }),
+    ]);
+  });
+
   it("authors Jamie and Hayden's source-reactive contact phases most-specific first", () => {
     const jamie = world.characters.find(
       (character) => character.id === "albany_city__market__contact",

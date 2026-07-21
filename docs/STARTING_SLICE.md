@@ -190,7 +190,7 @@ The first implementation sequence is:
    landed)_ — quest content declares reusable, validated character/world
    effects; campaign code consumes generic state rather than adding
    Wolf-specific ending conditionals.
-4. **Authored Albany** _(3/6 district jobs and 1/6 events converted)_ — replace
+4. **Authored Albany** _(4/6 district jobs and 1/6 events converted)_ — replace
    the visible slice's generic local transactions with scenes whose evidence,
    time, relationships, resources, and promises alter Wolf-Winter and its
    return.
@@ -672,7 +672,16 @@ counter, so both advertised Archive Query payoffs remain available after held
 or evacuated returns without creating two same-action offers. Its
 full/compact/UI/MCP and replay proof is
 [`campus_archive_query_counterfactual.test.ts`](../tests/starting_slice/campus_archive_query_counterfactual.test.ts).
-Three generic district jobs and five checklist events are still visible.
+Cade's Return Packet adds an outcome-authored Station job after Wolf-Winter:
+broken outer paling, an abandoned evacuation line, and scattered cattle expose
+different mutually exclusive repair dispatches, while fortified no-loss
+returns expose none. The chosen dispatch consumes time, changes standing, and
+creates or consolidates an exact one-use Albany service without duplicating a
+legacy returned-rig cache. Migration, replay, action-order, full/compact/UI/MCP,
+and all eleven non-death ending counterfactuals are proved by
+[`cade_return_packet_counterfactual.test.ts`](../tests/starting_slice/cade_return_packet_counterfactual.test.ts).
+Two generic district jobs—Market Shortfall and Greenway Survey—and five
+checklist events are still visible.
 
 ## Evidence contract
 
