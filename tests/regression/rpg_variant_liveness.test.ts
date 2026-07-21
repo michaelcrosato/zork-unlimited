@@ -315,8 +315,8 @@ function wolfJuneCampaignWitnesses(index: RpgIndex): {
     ["use_winter_feed_sack_on_downwind_feed_line", "worst"],
   ];
   const livingRecovery: readonly WitnessAction[] = [
-    ["use_paling_rail", "worst"],
-    "use_paling_rail",
+    ["wedge_paling_rail", "worst"],
+    "bind_split_paling_rail",
     "use_split_rail_guard_on_downwind_feed_line",
     "go_south",
   ];
@@ -586,7 +586,7 @@ function wolfCampaignImportWitnesses(index: RpgIndex): {
   const reachHaydenBrace: readonly WitnessAction[] = [
     "go_north",
     "go_north",
-    ["use_paling_rail", "worst"],
+    ["wedge_paling_rail", "worst"],
     ["maneuver_yearling_wolf_set_spear", "worst"],
     ["maneuver_yearling_wolf_drive_set_spear", "best"],
     "go_north",
@@ -600,12 +600,12 @@ function wolfCampaignImportWitnesses(index: RpgIndex): {
   run("hayden_frost_report_certified", [
     "go_north",
     "go_north",
-    ["use_paling_rail", "worst"],
+    ["wedge_paling_rail", "worst"],
     ["maneuver_yearling_wolf_set_spear", "best"],
     "go_north",
     ["maneuver_flank_wolf_frost_brace_trip", "best"],
   ]);
-  run("works_fortification_prepared", ["go_north", "go_north", ["use_paling_rail", "worst"]]);
+  run("works_fortification_prepared", ["go_north", "go_north", ["set_paling_rail", "worst"]]);
 
   const startFouled: readonly WitnessAction[] = [
     "go_north",
@@ -619,13 +619,13 @@ function wolfCampaignImportWitnesses(index: RpgIndex): {
     "go_north",
     ["use_winter_feed_sack_on_downwind_feed_line", "worst"],
   ];
-  run([], [...startFouled, ["use_paling_rail", "best"], "use_paling_rail"]);
+  run([], [...startFouled, ["wedge_paling_rail", "best"], "turn_paling_rail_scent_pen"]);
   run([], [...startFouled, ["maneuver_yearling_wolf_commit_hybrid_strike", "worst"]]);
   run("drover_route_prepared", startFouled);
   run("relief_protocol_prepared", [
     ...startFouled,
-    ["use_paling_rail", "worst"],
-    "use_paling_rail",
+    ["wedge_paling_rail", "worst"],
+    "bind_split_paling_rail",
     "use_split_rail_guard_on_downwind_feed_line",
     "go_south",
   ]);

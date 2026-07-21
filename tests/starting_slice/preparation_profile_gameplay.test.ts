@@ -118,9 +118,9 @@ function foulFirstCast(state: GameState): GameState {
 }
 
 function recoverWithSplitRail(state: GameState): GameState {
-  state = act(state, "use_paling_rail", 1);
+  state = act(state, "wedge_paling_rail", 1);
   expect(state.flags.rail_split).toBe(true);
-  state = act(state, "use_paling_rail");
+  state = act(state, "bind_split_paling_rail");
   state = act(state, "use_split_rail_guard_on_downwind_feed_line");
   expect(state.flags.yearling_redirected_with_split_guard).toBe(true);
   return state;
@@ -224,29 +224,29 @@ describe("SS-F05 — Albany preparation profile gameplay", () => {
     generalist = reachPaling(generalist);
     expect(
       buildRpgObservation(index, specialist).available_actions.find(
-        (option) => option.id === "use_paling_rail",
+        (option) => option.id === "set_paling_rail",
       )?.command,
     ).toMatch(/set.*rail/i);
-    specialist = act(specialist, "use_paling_rail", 8);
-    generalist = act(generalist, "use_paling_rail", 8);
+    specialist = act(specialist, "set_paling_rail", 8);
+    generalist = act(generalist, "set_paling_rail", 8);
 
     expect(specialist.flags.breach_braced).toBe(true);
     expect(specialist.vars.cattle_alarm).toBe(0);
     expect(generalist.flags.rail_split).toBe(true);
     expect(generalist.flags.works_fortification_splice_needed).toBe(true);
-    expect(actionIds(generalist)).toContain("use_paling_rail");
-    generalist = act(generalist, "use_paling_rail");
+    expect(actionIds(generalist)).toContain("splice_paling_rail");
+    generalist = act(generalist, "splice_paling_rail");
     expect(generalist.flags.rail_split).not.toBe(true);
     expect(generalist.flags.works_fortification_splice_needed).not.toBe(true);
     expect(generalist.flags.breach_braced).toBe(true);
     expect(generalist.inventory).not.toContain("split_rail_guard");
     expect(generalist.vars.cattle_alarm).toBe(1);
-    expect(actionIds(generalist)).not.toContain("use_paling_rail");
+    expect(actionIds(generalist)).not.toContain("splice_paling_rail");
 
     let publicState = initStateForRpgPack(index, 505);
     publicState = reachPaling(publicState);
     const publicRail = buildRpgObservation(index, publicState).available_actions.find(
-      (option) => option.id === "use_paling_rail",
+      (option) => option.id === "wedge_paling_rail",
     );
     expect(publicState.vars).toMatchObject({ repair: 0, streetwise: 0, mediation: 0 });
     expect(publicRail?.command).toMatch(/wedge.*rail/i);
@@ -254,22 +254,22 @@ describe("SS-F05 — Albany preparation profile gameplay", () => {
 
   it("lets both Works brace outcomes recover a committed fouled lure without blood", () => {
     let hybrid = foulFirstCast(profileState(WORKS, IRONHANDS));
-    expect(actionIds(hybrid)).toContain("use_paling_rail");
+    expect(actionIds(hybrid)).toContain("set_paling_rail");
     hybrid = act(hybrid, "maneuver_yearling_wolf_commit_hybrid_strike", 1, 1);
     expect(hybrid.flags.lure_hybrid_combat_entered).toBe(true);
-    expect(actionIds(hybrid)).not.toContain("use_paling_rail");
+    expect(actionIds(hybrid)).not.toContain("set_paling_rail");
 
     for (const firstRoll of [20, 1]) {
       let state = foulFirstCast(profileState(WORKS, IRONHANDS));
       const alarmAfterFoul = state.vars.cattle_alarm ?? 0;
-      state = act(state, "use_paling_rail", firstRoll);
+      state = act(state, "set_paling_rail", firstRoll);
 
       if (firstRoll === 1) {
         expect(state.flags).toMatchObject({
           rail_split: true,
           works_fortification_splice_needed: true,
         });
-        state = act(state, "use_paling_rail");
+        state = act(state, "splice_paling_rail");
         expect(state.vars.cattle_alarm).toBe(alarmAfterFoul + 1);
       } else {
         expect(state.vars.cattle_alarm).toBe(alarmAfterFoul);
@@ -278,10 +278,10 @@ describe("SS-F05 — Albany preparation profile gameplay", () => {
       expect(state.flags.breach_braced).toBe(true);
       expect(
         buildRpgObservation(index, state).available_actions.find(
-          (option) => option.id === "use_paling_rail",
+          (option) => option.id === "turn_paling_rail_scent_pen",
         )?.command,
       ).toMatch(/turn.*braced scent-pen/i);
-      state = act(state, "use_paling_rail");
+      state = act(state, "turn_paling_rail_scent_pen");
       expect(state.flags).toMatchObject({
         yearling_redirected: true,
         yearling_redirected_with_braced_rail: true,
@@ -316,7 +316,7 @@ describe("SS-F05 — Albany preparation profile gameplay", () => {
     expect(generalist.flags.yearling_redirected).not.toBe(true);
     expect(generalist.vars.cattle_alarm).toBe(3);
     expect(actionIds(generalist)).not.toContain("use_drover_route_marks");
-    expect(actionIds(generalist)).toContain("use_paling_rail");
+    expect(actionIds(generalist)).toContain("wedge_paling_rail");
 
     const clean = finishLure(specialist);
     const recovered = finishLure(recoverWithSplitRail(generalist));

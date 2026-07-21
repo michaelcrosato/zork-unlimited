@@ -14,6 +14,7 @@ import type { Resolution } from "../core/engine.js";
 import type { GameState } from "../core/state.js";
 import type { DialogueTopic, Interaction } from "./schema.js";
 import type { ManeuverPhase } from "./maneuver_sequence.js";
+import { authoredUseActionIdentity } from "./action_ids.js";
 import {
   type RpgModelIndex,
   activeDialogue,
@@ -42,6 +43,8 @@ export type RpgActionOption = {
   id: string;
   command: string;
   action: RpgAction;
+  /** Input-only legacy spellings. Player surfaces expose only `id`. */
+  inputAliases?: readonly string[];
   skill_check?: { skill: string; difficulty: number; die: string };
   combat?: {
     attack_bonus: number;
@@ -466,7 +469,19 @@ function option(
   return { id, command, action };
 }
 
-type UseActionProjection = Pick<RpgActionOption, "id" | "command" | "action">;
+type UseActionProjection = Pick<RpgActionOption, "id" | "command" | "action" | "inputAliases">;
+
+/** Resolve an exact current id first, then an unambiguous input-only legacy alias.
+ * Ambiguous aliases deliberately fail closed rather than guessing a stage. */
+export function rpgActionOptionForInputId(
+  actions: readonly RpgActionOption[],
+  id: string,
+): RpgActionOption | null {
+  const exact = actions.find((action) => action.id === id);
+  if (exact) return exact;
+  const aliases = actions.filter((action) => action.inputAliases?.includes(id));
+  return aliases.length === 1 ? aliases[0]! : null;
+}
 
 /** Build the stable player-facing identity shared by legal and blocked USE
  * projections. Keeping this in one place prevents a hint from naming a command
@@ -478,12 +493,19 @@ function projectUseAction(
 ): UseActionProjection | null {
   if (it.verb !== "USE" || it.target === undefined) return null;
   const selfUse = it.item !== undefined && it.item === it.target;
-  const id =
+  const legacyId =
     it.item === undefined
       ? `use_${it.target}`
       : selfUse
         ? `use_${it.item}`
         : `use_${it.item}_on_${it.target}`;
+  const identity = authoredUseActionIdentity({
+    packId: index.pack.meta.id,
+    ...(it.item !== undefined ? { item: it.item } : {}),
+    target: it.target,
+    ...(it.command_verb !== undefined ? { commandVerb: it.command_verb } : {}),
+    legacyId,
+  });
   const itemName = it.item === undefined ? "" : objName(index, state, it.item);
   const targetName = objName(index, state, it.target);
   const command =
@@ -500,7 +522,12 @@ function projectUseAction(
     it.item === undefined
       ? { type: "USE", target: it.target }
       : { type: "USE", item: it.item, target: it.target };
-  return { id, command, action };
+  return {
+    id: identity.id,
+    command,
+    action,
+    ...(identity.inputAliases ? { inputAliases: identity.inputAliases } : {}),
+  };
 }
 
 function structurallyPresentUse(
@@ -615,6 +642,7 @@ export function enumerateRpgBaseActions(index: RpgModelIndex, state: GameState):
       // <target>" when no template is given, or the generic "use ... on ..." with no
       // command_verb at all.
       const opt = option(index, state, projection.id, projection.command, projection.action);
+      if (opt && projection.inputAliases) opt.inputAliases = projection.inputAliases;
       // Surface the rolled skill + difficulty + die type when this USE is a skill check,
       // so the listed command reads as the intentional d20 roll it is (bug_0274). `die`
       // surfaces the ceiling so the check never looks impossible (bug_0311). Never branch

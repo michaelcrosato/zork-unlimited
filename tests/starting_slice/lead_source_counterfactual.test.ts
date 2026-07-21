@@ -238,7 +238,7 @@ function defeatYearlingWithEqualRolls(state: GameState): GameState {
 function failRailWithEqualRolls(state: GameState): GameState {
   state = act(state, "use_sheltered_stockway_last_mile");
   state = act(state, "go_north");
-  state = act(state, "use_paling_rail", 1);
+  state = act(state, "wedge_paling_rail", 1);
   expect(state.flags.rail_split).toBe(true);
   expect(state.flags.split_rail_guard_made).not.toBe(true);
   return state;
@@ -608,9 +608,10 @@ describe("SS-F03 — Albany lead-source counterfactual", () => {
       /Hayden's report marks a frost-jammed brace north.*leave the rail unbound.*bind.*commit away/is,
     );
     expect(
-      forkObservation.available_actions.find((action) => action.id === "use_paling_rail")?.command,
+      forkObservation.available_actions.find((action) => action.id === "bind_split_paling_rail")
+        ?.command,
     ).toMatch(/bind.*rail/i);
-    boundHayden = act(boundHayden, "use_paling_rail");
+    boundHayden = act(boundHayden, "bind_split_paling_rail");
     expect(boundHayden.flags.split_rail_guard_made).toBe(true);
     expect(boundHayden.inventory).toContain("split_rail_guard");
     boundHayden = act(boundHayden, "maneuver_yearling_wolf_set_spear", 6, 1);

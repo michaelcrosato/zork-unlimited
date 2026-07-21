@@ -451,8 +451,8 @@ function playTacticalRoute(route: TacticalRoute): PlayedRoute {
   ]) {
     act(id);
   }
-  act("use_paling_rail", route.rail === "braced" ? "best" : "worst");
-  if (route.rail === "split") act("use_paling_rail");
+  act("wedge_paling_rail", route.rail === "braced" ? "best" : "worst");
+  if (route.rail === "split") act("bind_split_paling_rail");
 
   act("maneuver_yearling_wolf_set_spear", "worst");
   if (!state.flags.yearling_down) {

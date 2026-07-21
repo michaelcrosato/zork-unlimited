@@ -233,9 +233,9 @@ function commitLure(oathId: OathId): GameState {
 }
 
 function recoverFailedFirstLure(state: GameState): GameState {
-  state = act(state, "use_paling_rail", 1);
+  state = act(state, "wedge_paling_rail", 1);
   expect(state.flags.rail_split).toBe(true);
-  state = act(state, "use_paling_rail");
+  state = act(state, "bind_split_paling_rail");
   state = act(state, "use_split_rail_guard_on_downwind_feed_line");
   expect(state.flags.yearling_redirected_with_split_guard).toBe(true);
   return state;
@@ -652,7 +652,7 @@ describe("SS-F02 — relief oath paired counterfactual", () => {
         vars: { cattle_alarm: 2 },
       });
       expect(actionIds(failed)).not.toContain("use_winter_feed_sack_on_downwind_feed_line");
-      expect(actionIds(failed)).toContain("use_paling_rail");
+      expect(actionIds(failed)).toContain("wedge_paling_rail");
     }
     expect(roundTripRpg(limitedFailed)).toEqual(limitedFailed);
 
