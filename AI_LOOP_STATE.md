@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 608 -->
+<!-- historical_cycle_count: 609 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -24,6 +24,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Measured result: Terra and Luna organically sent the wagon after whole-herd `ending_pack_diverted` and saw no Cade packet; Sol sent it after `ending_pack_diverted_cattle_scattered`, saw only `dispatch_pasture_search`, completed that work, and retired the packet. Both sides of the intended branch are directly witnessed.
 - Feedback/follow-through: compile `20260721T211251Z` has 962 verified/58 rejected reports, 211 eligible pure exits, and 186 continuing; seed 4354's active Hayden-packet promise and June-still-companion reports are under independent causal review as the next current-build continuity debt.
 - Guard: final crawl is zero-finding at 247/247 nodes, 344/344 edges, and 12/12 boards/quests; full health, 204 historical migration tests, 22 focused counterfactuals, both typechecks, and two independent re-reviews are green, with current/predecessor hashes `282cf142…`/`53afa583…` exact.
+
+### Cycle result - pure_step_action_prompt_contract
+
+- Evidence choice: exact-build Sol 4350 invented a nonexistent embedded-quest bridge because the live pure-overworld prompt named legal-action reads but omitted the already-loaded `step_action` mutation tool, so this cycle repairs the tester contract rather than changing the healthy MCP engine.
+- Surface: the player now receives the exact `mcp__adventureforge__step_action` name and maps the current child session, exact visible action id, and latest state hash to `session_id`, `action_id`, and `expected_state_hash`; no route, hidden state, game mechanic, allowlist, or ToolSearch policy changes.
+- Counterfactual: one prompt-contract assertion binds all four identifiers together while existing pure-mode integration tests retain stale-hash rejection, current-menu authority, compact projection, and the no-leakage boundary; independent review found no P0-P2.
+- Pure evidence: exact clean `49c8fbd2` Sol seed 4351 completed Wolf-Winter (`ending_pack_diverted`) and The Gallowmere (`ending_hunt_won`) in 55 decisions, continued at 29 and 40, ended at 55, rated clarity/enjoyment 4/4, and was unstuck/replay-yes.
+- Measured result: all 50 embedded-quest mutations used the named bridge and all 50 carried a valid 24-hex `expected_state_hash`; there were zero discovery calls, MCP errors, retries, auth/login/security/DEP0190 warnings, or tracked changes.
+- Feedback/follow-through: verified seeds 4350 and 4351 are two reports since compile `20260721T181636Z`, below the next three-report threshold; fresh friction remains compact truncation, repeated Rowan identity, and Gallowmere strike narration, while the real Cade packet contradiction proceeds separately.
+- Guard: pre/post crawl stays zero-finding at 247/247 nodes, 344/344 edges, and 12/12 boards/quests; the final combined branch passes health at 406 files/3,112 tests plus UI/all packs, prompt/tool-reference suites pass 58/58, and independent review found no P0-P2.
 
 ### Cycle result - albany_works_hazard_charter
 
@@ -154,13 +164,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Measured result: exact loss-to-option discovery PASSes; organic packet use remains UNPROVEN and its salience against the immediate north goal is a one-report P2 signal. Repeated `use_paling_rail` labels were also understandable but awkward S1/P2 debt.
 - Feedback/follow-through: compile `20260721T012144Z` has 916 verified reports, 165 eligible pure exits, and 142 continuing; the ledger is 917 accepted/59 rejected with two later verified reports, still below the three-report compile threshold. Current-build triage ranks conditional hill-route tradeoff projection above stale fleet-heavy hotspots, then Station-route guidance and embedded-action naming.
 - Guard: the final combined tree has zero-finding crawl at 247/247 nodes, 344/344 edges, and 12/12 boards/quests; health passes 392 files/2,991 tests plus UI/all packs, and the exact gameplay build carries verified seed 4246.
-
-### Cycle result - optional_station_departure_interactions
-
-- Evidence choice: field-timed preparation moved two commitments beside Wolf-Winter but blind reports still called the sequence dense, so this cycle made both interactions pull-based and optional without delaying the already-legal departure routes.
-- Surface: full, compact, UI, and MCP views expose preparation/allocation inspection and exact choice ids only while relevant; players may depart with neither, preparation only, or both, while trusted saves carrying the former mandatory offers remain finishable.
-- Counterfactual: paired engine/UI/MCP tests prove inspection is read-only, choice is exact and one-shot, launch remains legal through every skip/select permutation, deep clones do not leak mutation, and predecessor saves neither lose nor invent commitments.
-- Pure evidence: exact clean commit `d28a2971` Terra seed 4245 voluntarily inspected and chose both interactions, retained both route starts after each choice, launched Wolf-Winter, completed it at decision 29, continued, then ended unstuck at decision 40 with clarity/enjoyment 3/4; no auth, classifier, boundary, or tool failure occurred.
-- Measured result: mechanical optionality and uninterrupted departure PASS; organic skipping remains UNPROVEN because this cohort selected both. The tester wanted to continue its existing Gallowmere journey but marked new-run replay no after the fixed checkpoint interrupted it.
-- Feedback/follow-through: the ledger is 914 accepted/59 rejected. Current signals retain dense sequential commitments, compact Gallowmere truncation, raw embedded action ids, and decision-40 interruption as separate S1s; Cade's bounded return packet is next while fresh cohorts test actual skipping.
-- Guard: exact feature commit `d28a2971` has zero-finding crawl at 247/247 nodes, 344/344 edges, and 12/12 boards/quests; health passes 391 files/2,981 tests plus UI/all packs, and independent review found no P0-P2.
