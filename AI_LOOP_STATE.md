@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 594 -->
+<!-- historical_cycle_count: 595 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - cade_return_packet
+
+- Evidence choice: Wolf-Winter exported exact surviving losses but Albany offered no bounded way to act on them, so this cycle converted the generic Station job into one optional post-return crew allocation rather than adding another mandatory opening decision.
+- Surface: all eleven Wolf endings expose only their certified paling, evacuation-line, or pasture-search dispatches; simultaneous losses compete for one crew, and the selected proof grants one exact Works recovery or creates/consolidates one Greenway stores line while the other loss stays deferred.
+- Counterfactual: full/compact/UI/MCP parity, every ending, mutual exclusion, both cache-consumption orders, downstream one-shot services, tamper rejection, exact predecessor service replay, generic-job migration, collision guards, and clone boundaries are covered; independent re-review found no P0-P2.
+- Pure evidence: exact clean commit `a6ad1937` Terra seed 4246 completed Wolf-Winter at decision 32, continued, ended unstuck/replay-yes at 40 with clarity/enjoyment 4/4, and had no auth, classifier, boundary, or tool failure. The two loss-backed packet options surfaced organically after the return, but the player followed the north goal without selecting one.
+- Measured result: exact loss-to-option discovery PASSes; organic packet use remains UNPROVEN and its salience against the immediate north goal is a one-report P2 signal. Repeated `use_paling_rail` labels were also understandable but awkward S1/P2 debt.
+- Feedback/follow-through: compile `20260721T012144Z` has 916 verified reports, 165 eligible pure exits, and 142 continuing; the ledger is 917 accepted/59 rejected with two later verified reports, still below the three-report compile threshold. Current-build triage ranks conditional hill-route tradeoff projection above stale fleet-heavy hotspots, then Station-route guidance and embedded-action naming.
+- Guard: the final combined tree has zero-finding crawl at 247/247 nodes, 344/344 edges, and 12/12 boards/quests; health passes 392 files/2,991 tests plus UI/all packs, and the exact gameplay build carries verified seed 4246.
 
 ### Cycle result - optional_station_departure_interactions
 
@@ -155,17 +165,9 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Self-critique: PASS for truthful crawlboard provenance, not the greater-than-BG3 milestone. Albany now has 2/6 authored jobs and 1/6 authored events; Campus/Blair remains the next bounded depth conversion.
 - Guard: independent red-team found no P0–P2, exact rebased crawl `20260719T132548Z` is zero-finding at 247/247 nodes, 344/344 edges, and 12/12 boards/quests, and health passes 384 files/2,926 tests plus UI/all packs.
 
-### Cycle result - winter_return_docket
+## AFK Cycle 2026-07-21T01-36-33-482Z
 
-- Evidence choice: Depth Contract #11 and the tenth-ranked Charter visibility signal made Civic's generic event/job pair the next authored Albany conversion, while opening density required both scenes to remain optional.
-- Surface: equal 50-minute/+2 pre-Wolf terms bind a permanent public-or-protected filing; after Wolf-Winter exactly one lawful public-held (70/+3), public-evacuated (60/+3), protected-held (25/+1), or protected-evacuated (20/+1) docket closure is legal.
-- Counterfactual: all 11 non-death exports map to exactly one policy/outcome closure; current-scene replay, restore, clone, journal, full/compact MCP, UI, and tamper witnesses preserve the actual policy and held/evacuated fact, while bounded legacy hashes retain neutral predecessor semantics without inventing either.
-- Pure evidence: clean final-tree Terra seed 4108 completed Wolf-Winter by living-pack diversion at decision 29, continued through The Gallowmere, ended at 53, rated 4/4, was unstuck, and would replay; it skipped the optional Civic scenes, so deterministic pairs—not an invented organic sample—carry the new behavior.
-- Feedback: compile `20260719T095400Z` remains 830 verified/79 journey-v3 exits/65 continuing; two valid reports are new, below compile threshold, and the ledger is 831 accepted/59 rejected. Seed 4108 repeated the separate crawlboard-copy S2.
-- Self-critique: PASS for the second of six authored Albany jobs and first of six events, `active_unproven` for greater-than-BG3; four jobs, five events, broader NPC agendas, deep crawl, and exact pilot/100-player certification remain, with Campus/Blair next.
-- Guard: browser cards/prerequisites are truthful with no overlay or console error; exact rebased health is green at 384 files/2,925 tests, and crawl `20260719T120308Z` is zero-finding at 247/247 nodes, 344/344 edges, and 12/12 boards/quests.
-## AFK Cycle 2026-07-21T01-08-29-239Z
-- Assess: rpg=12; world=12; candidates=13.
-- Rec: playtest-advocates_case (content_fix/M; score=0.5).
+- Assess: rpg=12; world=12; candidates=15.
+- Rec: hotspot-3344db50 (content_fix/M; score=2.5).
 - Playtest: overworld.
 - Guard: blind report + health + verify:integrity before commit.
