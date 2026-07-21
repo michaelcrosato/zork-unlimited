@@ -3,11 +3,11 @@
  * commands are debugging surfaces, so they must reject forged trace files before
  * stepping untrusted state through the engine.
  */
-import { spawnSync } from "node:child_process";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { describe, expect, it, beforeAll } from "vitest";
 import type { Trace } from "../../src/trace/record.js";
 import type { RpgAction } from "../../src/api/types.js";
+import { runNpmScript } from "../../scripts/npm-cli.js";
 
 const ROOT = process.cwd();
 const PACK = "content/rpg/quests/sunken_barrow.yaml";
@@ -15,13 +15,8 @@ const SOURCE_TRACE = "traces/rpg/barrow_victory.json";
 const PHANTOM_CURRENT = "traces/bug_cli_phantom_current.json";
 const MISSING_MODE = "traces/bug_cli_missing_mode.json";
 
-function run(command: string) {
-  return spawnSync(command, {
-    cwd: ROOT,
-    encoding: "utf8",
-    shell: true,
-    timeout: 30_000,
-  });
+function run(script: "inspect" | "replay", args: readonly string[]) {
+  return runNpmScript(script, args, { cwd: ROOT, timeout: 30_000 });
 }
 
 function outputOf(result: ReturnType<typeof run>): string {
@@ -45,7 +40,7 @@ beforeAll(() => {
 
 describe("trace CLI integrity gate", () => {
   it("npm run replay infers a shipped trace source from embedded source_ref", () => {
-    const result = run(`npm run replay -- ${SOURCE_TRACE}`);
+    const result = run("replay", [SOURCE_TRACE]);
     const output = outputOf(result);
 
     expect(result.status, output).toBe(0);
@@ -58,7 +53,7 @@ describe("trace CLI integrity gate", () => {
   });
 
   it("npm run inspect infers a shipped trace source from embedded source_ref", () => {
-    const result = run(`npm run inspect -- ${SOURCE_TRACE}`);
+    const result = run("inspect", [SOURCE_TRACE]);
     const output = outputOf(result);
 
     expect(result.status, output).toBe(0);
@@ -70,7 +65,7 @@ describe("trace CLI integrity gate", () => {
   });
 
   it("npm run inspect summarizes shipped quests by world quest id", () => {
-    const result = run("npm run inspect -- sunken_barrow");
+    const result = run("inspect", ["sunken_barrow"]);
     const output = outputOf(result);
 
     expect(result.status, output).toBe(0);
@@ -87,7 +82,7 @@ describe("trace CLI integrity gate", () => {
   });
 
   it("npm run inspect rejects positional raw pack paths for quest summaries", () => {
-    const result = run(`npm run inspect -- ${PACK}`);
+    const result = run("inspect", [PACK]);
     const output = outputOf(result);
 
     expect(result.status, output).toBe(2);
@@ -96,7 +91,7 @@ describe("trace CLI integrity gate", () => {
   });
 
   it("npm run inspect rejects explicit raw pack summary mode", () => {
-    const result = run(`npm run inspect -- --pack ${PACK}`);
+    const result = run("inspect", ["--pack", PACK]);
     const output = outputOf(result);
 
     expect(result.status, output).toBe(2);
@@ -104,8 +99,8 @@ describe("trace CLI integrity gate", () => {
   });
 
   it("trace CLIs reject an explicit source that conflicts with the trace source_ref", () => {
-    const replay = run(`npm run replay -- ${SOURCE_TRACE} --world-quest-id cold_forge`);
-    const inspect = run(`npm run inspect -- ${SOURCE_TRACE} --world-quest-id cold_forge`);
+    const replay = run("replay", [SOURCE_TRACE, "--world-quest-id", "cold_forge"]);
+    const inspect = run("inspect", [SOURCE_TRACE, "--world-quest-id", "cold_forge"]);
 
     expect(replay.status, outputOf(replay)).not.toBe(0);
     expect(outputOf(replay)).toContain("source_ref");
@@ -114,8 +109,8 @@ describe("trace CLI integrity gate", () => {
   });
 
   it("trace CLIs reject positional raw pack paths as source selectors", () => {
-    const replay = run(`npm run replay -- ${SOURCE_TRACE} ${PACK}`);
-    const inspect = run(`npm run inspect -- ${SOURCE_TRACE} ${PACK}`);
+    const replay = run("replay", [SOURCE_TRACE, PACK]);
+    const inspect = run("inspect", [SOURCE_TRACE, PACK]);
 
     expect(replay.status, outputOf(replay)).not.toBe(0);
     expect(outputOf(replay)).toContain("world quest ids");
@@ -124,8 +119,8 @@ describe("trace CLI integrity gate", () => {
   });
 
   it("trace CLIs reject explicit raw pack source flags", () => {
-    const replay = run(`npm run replay -- ${SOURCE_TRACE} --pack ${PACK}`);
-    const inspect = run(`npm run inspect -- ${SOURCE_TRACE} --pack ${PACK}`);
+    const replay = run("replay", [SOURCE_TRACE, "--pack", PACK]);
+    const inspect = run("inspect", [SOURCE_TRACE, "--pack", PACK]);
 
     expect(replay.status, outputOf(replay)).not.toBe(0);
     expect(outputOf(replay)).toContain("not --pack");
@@ -134,7 +129,7 @@ describe("trace CLI integrity gate", () => {
   });
 
   it("npm run replay rejects a trace whose initial room is not in the RPG pack", () => {
-    const result = run(`npm run replay -- ${PHANTOM_CURRENT}`);
+    const result = run("replay", [PHANTOM_CURRENT]);
     const output = outputOf(result);
 
     expect(result.status, output).not.toBe(0);
@@ -142,7 +137,7 @@ describe("trace CLI integrity gate", () => {
   });
 
   it("npm run inspect rejects a trace that omits the RPG mode", () => {
-    const result = run(`npm run inspect -- ${MISSING_MODE}`);
+    const result = run("inspect", [MISSING_MODE]);
     const output = outputOf(result);
 
     expect(result.status, output).not.toBe(0);

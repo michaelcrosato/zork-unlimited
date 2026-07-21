@@ -6,13 +6,13 @@
  * should delegate to that gate instead of carrying a hand-maintained multi-mode
  * list of legacy CYOA/parser packs.
  */
-import { spawnSync } from "node:child_process";
 import { describe, it, expect } from "vitest";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import { validateRpg } from "../../src/validate/rpg_validator.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
+import { runNpmScript } from "../../scripts/npm-cli.js";
 
 const root = process.cwd();
 const RPG_PACK_DIR = "content/rpg/quests";
@@ -29,15 +29,6 @@ const pkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8")) as {
 };
 const readme = readFileSync(join(root, "README.md"), "utf8");
 const validateCli = readFileSync(join(root, "bin", "validate.ts"), "utf8");
-
-function runNpm(command: string, timeout = 120_000) {
-  return spawnSync(command, {
-    cwd: root,
-    encoding: "utf8",
-    shell: true,
-    timeout,
-  });
-}
 
 describe("single-engine RPG validation bar", () => {
   const packs = discoverRpgPacks();
@@ -104,7 +95,7 @@ describe("single-engine RPG validation bar", () => {
   });
 
   it("npm run validate defaults to every shipped RPG pack", () => {
-    const result = runNpm("npm run validate");
+    const result = runNpmScript("validate", [], { cwd: root });
     const output = `${result.stdout ?? ""}\n${result.stderr ?? ""}\n${result.error?.message ?? ""}`;
 
     expect(result.status, output).toBe(0);
@@ -128,7 +119,7 @@ describe("single-engine RPG validation bar", () => {
   });
 
   it("npm run validate accepts targeted world quest ids without raw pack paths", () => {
-    const result = runNpm("npm run validate -- sunken_barrow", 30_000);
+    const result = runNpmScript("validate", ["sunken_barrow"], { cwd: root, timeout: 30_000 });
     const output = `${result.stdout ?? ""}\n${result.stderr ?? ""}\n${result.error?.message ?? ""}`;
 
     expect(result.status, output).toBe(0);
@@ -141,7 +132,10 @@ describe("single-engine RPG validation bar", () => {
   });
 
   it("npm run validate rejects positional raw pack path targets", () => {
-    const result = runNpm("npm run validate -- content/rpg/quests/sunken_barrow.yaml", 30_000);
+    const result = runNpmScript("validate", ["content/rpg/quests/sunken_barrow.yaml"], {
+      cwd: root,
+      timeout: 30_000,
+    });
     const output = `${result.stdout ?? ""}\n${result.stderr ?? ""}\n${result.error?.message ?? ""}`;
 
     expect(result.status, output).toBe(2);
@@ -150,9 +144,10 @@ describe("single-engine RPG validation bar", () => {
   });
 
   it("npm run validate rejects explicit raw pack mode before loading a path", () => {
-    const result = runNpm(
-      "npm run validate -- --pack content/broken-fixtures/duplicate_id.yaml",
-      30_000,
+    const result = runNpmScript(
+      "validate",
+      ["--pack", "content/broken-fixtures/duplicate_id.yaml"],
+      { cwd: root, timeout: 30_000 },
     );
     const output = `${result.stdout ?? ""}\n${result.stderr ?? ""}\n${result.error?.message ?? ""}`;
 

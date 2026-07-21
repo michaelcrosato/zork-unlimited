@@ -7,12 +7,9 @@
  * `npm run verify:integrity`; this wrapper keeps old hooks on that same bar
  * instead of forcing agents to bypass hooks when the old target is missing.
  */
-import { spawnSync } from "node:child_process";
+import { runNpmScript } from "./npm-cli.js";
 
-const result = spawnSync("npm", ["run", "verify:integrity"], {
-  shell: process.platform === "win32",
-  stdio: "inherit",
-});
+const result = runNpmScript("verify:integrity", [], { stdio: "inherit" });
 
 if (result.error) {
   console.error(result.error.message);
