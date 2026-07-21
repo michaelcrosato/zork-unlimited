@@ -478,10 +478,10 @@ describe("SS-F04 — Albany ally commitment counterfactual", () => {
       compact_actions: false,
     }).actions;
     expect(
-      bracedActions.find((action) => action.id === "turn_paling_rail_scent_pen")?.command,
+      bracedActions.find((action) => action.id === "turn_paling_rail")?.command,
     ).toMatch(/turn.*braced scent-pen/i);
     expect(
-      browser.view().choices.find((choice) => choice.id === "turn_paling_rail_scent_pen")?.label,
+      browser.view().choices.find((choice) => choice.id === "turn_paling_rail")?.label,
     ).toMatch(/turn.*braced scent-pen/i);
 
     const bracedSave = api.save_game({
@@ -497,9 +497,9 @@ describe("SS-F04 — Albany ally commitment counterfactual", () => {
     expect(api.get_state({ session_id: bracedLoaded.session_id }).state_hash).toBe(
       state.state_hash,
     );
-    expect(bracedLoaded.context.actions).toContain("turn_paling_rail_scent_pen");
+    expect(bracedLoaded.context.actions).toContain("turn_paling_rail");
 
-    step("turn_paling_rail_scent_pen");
+    step("turn_paling_rail");
     state = api.get_state({ session_id: rpgSessionId, include_state: true });
     expect(state.state.flags).toMatchObject({
       yearling_redirected: true,

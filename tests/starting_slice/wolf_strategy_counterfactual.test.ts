@@ -99,11 +99,11 @@ function lureRoute(opening: "clean" | "fouled" | "fouled_braced" | "hybrid"): Ro
     );
     if (opening === "fouled") {
       act("wedge_paling_rail"); // worst field roll: the rail splits
-      act("bind_split_paling_rail"); // deterministic salvage: bind the split guard
+      act("bind_paling_rail"); // deterministic salvage: bind the split guard
       act("use_split_rail_guard_on_downwind_feed_line");
     } else if (opening === "fouled_braced") {
       act("wedge_paling_rail"); // best rail roll: the breach braces
-      act("turn_paling_rail_scent_pen"); // deterministic scent-pen: redirect alive
+      act("turn_paling_rail"); // deterministic scent-pen: redirect alive
     } else {
       act("maneuver_yearling_wolf_commit_hybrid_strike");
       while (!state.flags.yearling_down) act("attack_yearling_wolf");
@@ -212,7 +212,7 @@ describe("SS-F09 — pressure-backed Wolf-Winter strategy counterfactual", () =>
     const braced = lureRoute("fouled_braced");
 
     expect(braced.actions).toContain("wedge_paling_rail");
-    expect(braced.actions).toContain("turn_paling_rail_scent_pen");
+    expect(braced.actions).toContain("turn_paling_rail");
     expect(braced.actions).not.toContain("use_split_rail_guard_on_downwind_feed_line");
     expect(
       braced.actions.some((id) => id.startsWith("attack_") || id.startsWith("maneuver_")),

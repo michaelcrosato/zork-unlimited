@@ -15,35 +15,24 @@ export type UseActionIdentity = {
 /**
  * Stable public identity for authored USE actions.
  *
- * Most USE identities remain the long-established verb-agnostic target shape.
- * Wolf-Winter's paling has five mutually-exclusive, materially distinct stages,
- * however. Give those stages truthful compact ids without changing the shipped
- * YAML: its parsed-source content hash is also the compatibility fence for
- * standalone saves and traces.
+ * Most USE identities remain the long-established verb-agnostic target shape. When
+ * every authored target-only interaction on an overloaded target has its own natural
+ * verb, that verb is a structurally stable stage identity. Deriving the id preserves
+ * identifier-relabeling invariance without changing source content hashes, saves, or
+ * structured traces.
  */
 export function authoredUseActionIdentity(args: {
-  packId: string;
   item?: string;
   target: string;
   commandVerb?: string;
   legacyId: string;
+  verbIdentifiedTarget: boolean;
 }): UseActionIdentity {
-  if (
-    args.packId !== "wolf_winter_v1" ||
-    args.item !== undefined ||
-    args.target !== "paling_rail"
-  ) {
+  if (args.item !== undefined || args.commandVerb === undefined || !args.verbIdentifiedTarget) {
     return { id: args.legacyId };
   }
-
-  const stageId =
-    {
-      set: "set_paling_rail",
-      wedge: "wedge_paling_rail",
-      splice: "splice_paling_rail",
-      turn: "turn_paling_rail_scent_pen",
-      bind: "bind_split_paling_rail",
-    }[args.commandVerb ?? ""] ?? null;
-
-  return stageId === null ? { id: args.legacyId } : { id: stageId, inputAliases: [args.legacyId] };
+  return {
+    id: `${args.commandVerb}_${args.target}`,
+    inputAliases: [args.legacyId],
+  };
 }

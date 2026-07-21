@@ -255,7 +255,7 @@ describe("SS-F07 — Wolf-Winter hill-approach gameplay", () => {
 
     stockway = act(stockway, "wedge_paling_rail");
     expect(stockway.flags.rail_split).toBe(true);
-    stockway = act(stockway, "bind_split_paling_rail");
+    stockway = act(stockway, "bind_paling_rail");
     stockway = act(stockway, "use_split_rail_guard_on_downwind_feed_line");
     expect(stockway.flags).toMatchObject({
       yearling_redirected: true,

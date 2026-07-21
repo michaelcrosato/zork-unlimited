@@ -107,7 +107,7 @@ function finishLeaderWithoutResource(state: GameState): GameState {
 function retainSplitGuard(): GameState {
   let state = act(fullyPrepared(), "go_north");
   state = act(state, "wedge_paling_rail", 1);
-  state = act(state, "bind_split_paling_rail");
+  state = act(state, "bind_paling_rail");
   state = act(state, "maneuver_yearling_wolf_set_spear", 6);
   state = act(state, "go_north");
   state = act(state, "maneuver_flank_wolf_offside_cut", 6);

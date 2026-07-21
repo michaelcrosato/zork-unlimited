@@ -733,7 +733,7 @@ describe("SS-F01 — Albany character background counterfactual", () => {
     const wardenNext = enumerateRpgActions(wolfIndex, wardenAtRail).map((option) => option.id);
     const advocateNext = enumerateRpgActions(wolfIndex, advocateAtRail).map((option) => option.id);
     expect(wardenNext).not.toContain("wedge_paling_rail");
-    expect(advocateNext).toContain("bind_split_paling_rail");
+    expect(advocateNext).toContain("bind_paling_rail");
     expect(wardenNext).not.toEqual(advocateNext);
 
     const direct = warden.api.start_world_quest({ world_quest_id: "wolf_winter", seed: 505 });

@@ -500,11 +500,11 @@ function projectUseAction(
         ? `use_${it.item}`
         : `use_${it.item}_on_${it.target}`;
   const identity = authoredUseActionIdentity({
-    packId: index.pack.meta.id,
     ...(it.item !== undefined ? { item: it.item } : {}),
     target: it.target,
     ...(it.command_verb !== undefined ? { commandVerb: it.command_verb } : {}),
     legacyId,
+    verbIdentifiedTarget: index.verbIdentifiedTargetOnlyUseTargets.has(it.target),
   });
   const itemName = it.item === undefined ? "" : objName(index, state, it.item);
   const targetName = objName(index, state, it.target);
@@ -635,7 +635,9 @@ export function enumerateRpgBaseActions(index: RpgModelIndex, state: GameState):
       if (!projection) continue;
       if (!evalConditions(it.conditions, state)) continue;
       // A USE may declare a natural verb (command_verb) so the listed command matches
-      // the prose that primes it; the id stays verb-agnostic and stable. A self-USE
+      // the prose that primes it. Its id stays verb-agnostic unless every target-only
+      // row on an overloaded target has a distinct verb, in which case that verb names
+      // the stage and the old target-only id remains an input alias. A self-USE
       // reads "<verb> <obj>" ("drink black phial"). An item-on-target USE reads via
       // command_template ("tie {item} to {target}", "lever {target} with {item}") so
       // the word order/preposition match too, falling back to "<verb> <item> on

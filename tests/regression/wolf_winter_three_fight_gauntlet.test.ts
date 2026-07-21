@@ -189,7 +189,7 @@ function playPreparedWorst(
   act("go_east");
   act("go_north");
   act("wedge_paling_rail", flankOpening === "splinter_guard" ? "worst" : "best");
-  if (flankOpening === "splinter_guard") act("bind_split_paling_rail"); // bind the failed rail
+  if (flankOpening === "splinter_guard") act("bind_paling_rail"); // bind the failed rail
 
   act("maneuver_yearling_wolf_set_spear", "worst");
   if (state.ended) return state;

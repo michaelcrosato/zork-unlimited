@@ -69,6 +69,31 @@ function assertOnlyCanonicalRailId(state: GameState, id: string, command: RegExp
 }
 
 describe("Wolf-Winter paling stage action identities", () => {
+  it("qualifies only one-to-one verb hubs and rejects legacy-id shadows", () => {
+    expect([...index.verbIdentifiedTargetOnlyUseTargets]).toEqual(["paling_rail"]);
+
+    const tideLoaded = loadRpgSourceFile("content/rpg/quests/tide_mill.yaml");
+    if (!tideLoaded.ok) throw new Error("tide_mill must compile");
+    const tideIndex = indexRpgPack(tideLoaded.compiled.pack);
+    expect(tideIndex.verbIdentifiedTargetOnlyUseTargets.has("choked_sluice")).toBe(false);
+
+    const shadowed = structuredClone(loaded.compiled.pack);
+    const rail = shadowed.objects.find((object) => object.id === "paling_rail");
+    const template = rail?.interactions.find(
+      (interaction) => interaction.verb === "USE" && interaction.target === "paling_rail",
+    );
+    if (!rail || !template) throw new Error("paling fixture must carry a USE interaction");
+    rail.interactions.push({
+      ...template,
+      item: "paling_rail",
+      target: "paling_rail",
+      command_verb: "reuse",
+    });
+    expect(indexRpgPack(shadowed).verbIdentifiedTargetOnlyUseTargets.has("paling_rail")).toBe(
+      false,
+    );
+  });
+
   it("projects all five real stages from the loaded pack without changing its source hash", () => {
     expect(loaded.compiled.contentHash).toBe(SOURCE_HASH);
 
@@ -76,8 +101,8 @@ describe("Wolf-Winter paling stage action identities", () => {
     assertOnlyCanonicalRailId(publicOpening, "wedge_paling_rail", /^wedge /i);
 
     const split = choose(publicOpening, "wedge_paling_rail", "worst");
-    assertOnlyCanonicalRailId(split, "bind_split_paling_rail", /^bind /i);
-    expect(choose(split, "bind_split_paling_rail").inventory).toContain("split_rail_guard");
+    assertOnlyCanonicalRailId(split, "bind_paling_rail", /^bind /i);
+    expect(choose(split, "bind_paling_rail").inventory).toContain("split_rail_guard");
 
     const worksOpening = atPaling();
     worksOpening.flags.works_fortification_prepared = true;
@@ -94,8 +119,8 @@ describe("Wolf-Winter paling stage action identities", () => {
       lure_trail_fouled: true,
       breach_braced: true,
     });
-    assertOnlyCanonicalRailId(scentPen, "turn_paling_rail_scent_pen", /^turn .*scent-pen/i);
-    const redirected = choose(scentPen, "turn_paling_rail_scent_pen");
+    assertOnlyCanonicalRailId(scentPen, "turn_paling_rail", /^turn .*scent-pen/i);
+    const redirected = choose(scentPen, "turn_paling_rail");
     expect(redirected.flags.yearling_redirected_with_braced_rail).toBe(true);
     expect(redirected.vars.score).toBe((scentPen.vars.score ?? 0) + 10);
   });
@@ -175,7 +200,7 @@ describe("Wolf-Winter paling stage action identities", () => {
     const saved = save(split, SOURCE_HASH, SAVE_MODE, { worldQuestId: "wolf_winter" });
     const restored = load(saved, SOURCE_HASH);
     expect(restored.state).toEqual(split);
-    expect(ids(restored.state)).toContain("bind_split_paling_rail");
+    expect(ids(restored.state)).toContain("bind_paling_rail");
 
     const trace = recordTrace(
       buildRpgRules(index, () => rng("worst")),

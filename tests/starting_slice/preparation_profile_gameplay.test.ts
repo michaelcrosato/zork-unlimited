@@ -120,7 +120,7 @@ function foulFirstCast(state: GameState): GameState {
 function recoverWithSplitRail(state: GameState): GameState {
   state = act(state, "wedge_paling_rail", 1);
   expect(state.flags.rail_split).toBe(true);
-  state = act(state, "bind_split_paling_rail");
+  state = act(state, "bind_paling_rail");
   state = act(state, "use_split_rail_guard_on_downwind_feed_line");
   expect(state.flags.yearling_redirected_with_split_guard).toBe(true);
   return state;
@@ -278,10 +278,10 @@ describe("SS-F05 — Albany preparation profile gameplay", () => {
       expect(state.flags.breach_braced).toBe(true);
       expect(
         buildRpgObservation(index, state).available_actions.find(
-          (option) => option.id === "turn_paling_rail_scent_pen",
+          (option) => option.id === "turn_paling_rail",
         )?.command,
       ).toMatch(/turn.*braced scent-pen/i);
-      state = act(state, "turn_paling_rail_scent_pen");
+      state = act(state, "turn_paling_rail");
       expect(state.flags).toMatchObject({
         yearling_redirected: true,
         yearling_redirected_with_braced_rail: true,

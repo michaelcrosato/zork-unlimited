@@ -316,7 +316,7 @@ function wolfJuneCampaignWitnesses(index: RpgIndex): {
   ];
   const livingRecovery: readonly WitnessAction[] = [
     ["wedge_paling_rail", "worst"],
-    "bind_split_paling_rail",
+    "bind_paling_rail",
     "use_split_rail_guard_on_downwind_feed_line",
     "go_south",
   ];
@@ -619,13 +619,13 @@ function wolfCampaignImportWitnesses(index: RpgIndex): {
     "go_north",
     ["use_winter_feed_sack_on_downwind_feed_line", "worst"],
   ];
-  run([], [...startFouled, ["wedge_paling_rail", "best"], "turn_paling_rail_scent_pen"]);
+  run([], [...startFouled, ["wedge_paling_rail", "best"], "turn_paling_rail"]);
   run([], [...startFouled, ["maneuver_yearling_wolf_commit_hybrid_strike", "worst"]]);
   run("drover_route_prepared", startFouled);
   run("relief_protocol_prepared", [
     ...startFouled,
     ["wedge_paling_rail", "worst"],
-    "bind_split_paling_rail",
+    "bind_paling_rail",
     "use_split_rail_guard_on_downwind_feed_line",
     "go_south",
   ]);

@@ -137,7 +137,7 @@ function foulFirstCast(state: GameState): GameState {
 function foulAndRecoverAlive(state: GameState): GameState {
   state = foulFirstCast(state);
   state = act(state, "wedge_paling_rail", 1);
-  state = act(state, "bind_split_paling_rail");
+  state = act(state, "bind_paling_rail");
   state = act(state, "use_split_rail_guard_on_downwind_feed_line");
   expect(state.flags.yearling_redirected).toBe(true);
   return state;
@@ -364,7 +364,7 @@ describe("SS-F04 — June Pike authored ally gameplay", () => {
     expect(state.vars.score ?? 0).toBe(scoreBeforeRail);
     expect(
       buildRpgObservation(index, state).available_actions.find(
-        (option) => option.id === "turn_paling_rail_scent_pen",
+        (option) => option.id === "turn_paling_rail",
       )?.command,
     ).toMatch(/turn.*braced scent-pen/i);
 
@@ -375,12 +375,12 @@ describe("SS-F04 — June Pike authored ally gameplay", () => {
     expect(hybrid.flags.yearling_down).not.toBe(true);
     expect(hybrid.flags.june_blood_condition_broken).not.toBe(true);
     expect(actionIds(hybrid)).toContain("attack_yearling_wolf");
-    expect(actionIds(hybrid)).not.toContain("turn_paling_rail_scent_pen");
+    expect(actionIds(hybrid)).not.toContain("turn_paling_rail");
     expect(buildRpgObservation(index, hybrid).description).toMatch(
       /first spear stroke committed the hybrid line[^]*recoveries are closed/i,
     );
 
-    state = act(state, "turn_paling_rail_scent_pen");
+    state = act(state, "turn_paling_rail");
     expect(state.flags).toMatchObject({
       yearling_redirected: true,
       yearling_redirected_with_braced_rail: true,
@@ -389,7 +389,7 @@ describe("SS-F04 — June Pike authored ally gameplay", () => {
     expect(state.flags.june_blood_condition_broken).not.toBe(true);
     expect(state.vars.score).toBe(scoreBeforeRail + 10);
     expect(actionIds(state)).not.toContain("attack_yearling_wolf");
-    expect(actionIds(state)).not.toContain("turn_paling_rail_scent_pen");
+    expect(actionIds(state)).not.toContain("turn_paling_rail");
 
     state = reachLeaderAfterLivingRecovery(state);
     state = act(state, "talk_june_pike");
@@ -458,7 +458,7 @@ describe("SS-F04 — June Pike authored ally gameplay", () => {
 
     let state = foulFirstCast(optionState(ACCEPT));
     state = act(state, "wedge_paling_rail", 1);
-    state = act(state, "bind_split_paling_rail");
+    state = act(state, "bind_paling_rail");
     expect(actionIds(state)).toContain("use_split_rail_guard_on_downwind_feed_line");
     expect(actionIds(state)).toContain("maneuver_yearling_wolf_commit_hybrid_strike");
     expect(actionIds(state)).not.toContain("attack_yearling_wolf");
@@ -467,7 +467,7 @@ describe("SS-F04 — June Pike authored ally gameplay", () => {
     expect(state.flags.yearling_down).not.toBe(true);
     expect(state.flags.june_blood_condition_broken).not.toBe(true);
     expect(actionIds(state)).toContain("attack_yearling_wolf");
-    expect(actionIds(state)).not.toContain("bind_split_paling_rail");
+    expect(actionIds(state)).not.toContain("bind_paling_rail");
     expect(actionIds(state)).not.toContain("use_split_rail_guard_on_downwind_feed_line");
     state = act(state, "attack_yearling_wolf", 6);
     expect(state.flags.yearling_down).toBe(true);

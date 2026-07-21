@@ -254,19 +254,19 @@ describe("Wolf-Winter authored combat tactics", () => {
     expect(state.flags.rail_split).toBe(true);
     expect(state.flags.breach_braced).not.toBe(true);
     expect(state.inventory).not.toContain("split_rail_guard");
-    const recovery = options(state).find((option) => option.id === "bind_split_paling_rail");
+    const recovery = options(state).find((option) => option.id === "bind_paling_rail");
     expect(recovery).toMatchObject({
-      id: "bind_split_paling_rail",
+      id: "bind_paling_rail",
       command: "bind split paling-rail",
       action: { type: "USE", target: "paling_rail" },
     });
     expect(recovery?.skill_check).toBeUndefined();
     expect(buildRpgObservation(index, state).description).toContain("use the rail again");
 
-    state = act(state, "bind_split_paling_rail").state;
+    state = act(state, "bind_paling_rail").state;
     expect(state.flags.split_rail_guard_made).toBe(true);
     expect(state.inventory).toContain("split_rail_guard");
-    expect(optionIds(state)).not.toContain("bind_split_paling_rail");
+    expect(optionIds(state)).not.toContain("bind_paling_rail");
     expect(optionIds(state)).not.toContain("drop_split_rail_guard");
     const carriedAtGap = buildRpgObservation(index, state);
     expect(carriedAtGap.description).toContain("ride in your hands");

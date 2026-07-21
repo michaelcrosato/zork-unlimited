@@ -235,7 +235,7 @@ function commitLure(oathId: OathId): GameState {
 function recoverFailedFirstLure(state: GameState): GameState {
   state = act(state, "wedge_paling_rail", 1);
   expect(state.flags.rail_split).toBe(true);
-  state = act(state, "bind_split_paling_rail");
+  state = act(state, "bind_paling_rail");
   state = act(state, "use_split_rail_guard_on_downwind_feed_line");
   expect(state.flags.yearling_redirected_with_split_guard).toBe(true);
   return state;
