@@ -46,7 +46,7 @@ import { campaignCharacterMatchesConditions } from "./campaign_consequences.js";
 import { resolveLocalJobSceneOption } from "./local_job_scene.js";
 import { resolveLocalEventSceneOption } from "./local_event_scene.js";
 import { authoredLocalJobLegacyCompletion } from "./local_job_scene_legacy.js";
-import { authoredAlbanyCharterLegacyCompletion } from "./local_event_scene_legacy.js";
+import { authoredLocalEventLegacyCompletion } from "./local_event_scene_legacy.js";
 import { QUEST_COMPLETION_RENOWN } from "./session_quests.js";
 
 export type OverworldResourceReplaySourceIndex = {
@@ -377,12 +377,12 @@ function replayLocalRegionRenown(
     if (event) {
       let amount = event.intensity;
       if (event.authored_scene && entry.localSceneProof?.sceneId === event.authored_scene.id) {
-        const legacyCompletion = authoredAlbanyCharterLegacyCompletion(
+        const legacyCompletion = authoredLocalEventLegacyCompletion(
           event.id,
           entry.localSceneProof,
         );
         if (legacyCompletion) {
-          amount = legacyCompletion.legacyEvent.intensity;
+          amount = legacyCompletion.definition.legacyEvent.intensity;
         } else if (entry.localSceneProof.sourceWorldHash === undefined) {
           amount = resolveLocalEventSceneOption(
             event.authored_scene,

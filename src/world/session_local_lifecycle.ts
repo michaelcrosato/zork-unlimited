@@ -39,7 +39,10 @@ import {
 } from "./session_local_actions.js";
 import type { OverworldJournalEntry } from "./session_snapshot.js";
 import type { CampaignCharacterState } from "./campaign_character_state.js";
-import { localEventSceneRequirementsMet } from "./local_event_scene.js";
+import {
+  localEventSceneRequirementError,
+  localEventSceneRequirementsMet,
+} from "./local_event_scene.js";
 
 export type OverworldSessionAreaPlanState = {
   areaId: string;
@@ -271,7 +274,11 @@ export function planOverworldSessionEventInvestigation(
     })
   ) {
     throw new Error(
-      `The authored choice for ${event.title} must be made before completing ${event.authored_scene.forbids_completed_quests?.join(", ") ?? "its forbidden quest"}.`,
+      `${event.title}: ${
+        localEventSceneRequirementError(event.authored_scene, {
+          completedQuestIds: state.completedQuestIds,
+        }) ?? "Its authored requirements are not met."
+      }`,
     );
   }
   return { action: describeOverworldEventAction(event) };

@@ -12,6 +12,7 @@ import {
 import type { OverworldJournalEntry } from "./session_snapshot.js";
 import { OVERWORLD_STARTING_MINUTES as STARTING_MINUTES } from "./travel_mechanics.js";
 import {
+  localEventSceneRequirementError,
   localEventSceneRequirementsMet,
   resolveLocalEventSceneOption,
   type LocalEventScene,
@@ -252,7 +253,7 @@ export function planOverworldEventResolution(
 
   if (scene && !localEventSceneRequirementsMet(scene, state)) {
     throw new Error(
-      `The authored choice for ${event.title} must be made before completing ${scene.forbids_completed_quests?.join(", ") ?? "its forbidden quest"}.`,
+      `${event.title}: ${localEventSceneRequirementError(scene, state) ?? "Its authored requirements are not met."}`,
     );
   }
   if (scene && !sceneOption) {

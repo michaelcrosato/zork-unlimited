@@ -1263,6 +1263,13 @@ function assertEntitiesIntegrity(
           );
         }
       }
+      for (const questId of scene.requires_completed_quests ?? []) {
+        if (!questIds.has(questId)) {
+          throw new Error(
+            `Authored local-event scene "${scene.id}" requires missing quest "${questId}".`,
+          );
+        }
+      }
     }
     eventAreas.add(event.area);
   }
@@ -1328,11 +1335,6 @@ function assertEntitiesIntegrity(
       }
       for (const [optionIndex, option] of scene.options.entries()) {
         for (const requirement of option.requires_event_options ?? []) {
-          if (!(scene.requires_resolved_events ?? []).includes(requirement.event_id)) {
-            throw new Error(
-              `Authored local-job scene "${scene.id}" option "${option.id}" references event "${requirement.event_id}" without requiring its resolution.`,
-            );
-          }
           const event = world.local_events.find(
             (candidate) => candidate.id === requirement.event_id,
           );

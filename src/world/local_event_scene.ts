@@ -37,6 +37,7 @@ export const LocalEventSceneSchema = z
     prompt: NON_BLANK_TEXT,
     required_poi_id: NON_BLANK_TEXT,
     required_contact_id: NON_BLANK_TEXT,
+    requires_completed_quests: z.array(NON_BLANK_TEXT).min(1).optional(),
     forbids_completed_quests: z.array(NON_BLANK_TEXT).min(1).optional(),
     options: z
       .array(LocalEventSceneOptionSchema)
@@ -56,6 +57,17 @@ export const LocalEventSceneSchema = z
       }
       ids.add(option.id);
     });
+    const requiredQuestIds = new Set<string>();
+    scene.requires_completed_quests?.forEach((questId, index) => {
+      if (requiredQuestIds.has(questId)) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["requires_completed_quests", index],
+          message: `Duplicate required completed quest id "${questId}".`,
+        });
+      }
+      requiredQuestIds.add(questId);
+    });
     const forbiddenQuestIds = new Set<string>();
     scene.forbids_completed_quests?.forEach((questId, index) => {
       if (forbiddenQuestIds.has(questId)) {
@@ -63,6 +75,13 @@ export const LocalEventSceneSchema = z
           code: z.ZodIssueCode.custom,
           path: ["forbids_completed_quests", index],
           message: `Duplicate forbidden completed quest id "${questId}".`,
+        });
+      }
+      if (requiredQuestIds.has(questId)) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["forbids_completed_quests", index],
+          message: `Completed quest id "${questId}" cannot be both required and forbidden.`,
         });
       }
       forbiddenQuestIds.add(questId);
@@ -89,15 +108,39 @@ export function parseLocalEventScene(input: unknown): LocalEventScene {
   return LocalEventSceneSchema.parse(input);
 }
 
-/** Whether an unresolved authored choice still precedes every forbidden quest completion. */
+/** Whether every required quest is complete and every forbidden quest remains incomplete. */
 export function localEventSceneRequirementsMet(
   scene: LocalEventScene,
   state: LocalEventSceneConditionState,
 ): boolean {
   const parsed = parseLocalEventScene(scene);
-  return (parsed.forbids_completed_quests ?? []).every(
+  return (
+    (parsed.requires_completed_quests ?? []).every((questId) =>
+      state.completedQuestIds.has(questId),
+    ) &&
+    (parsed.forbids_completed_quests ?? []).every(
+      (questId) => !state.completedQuestIds.has(questId),
+    )
+  );
+}
+
+export function localEventSceneRequirementError(
+  scene: LocalEventScene,
+  state: LocalEventSceneConditionState,
+): string | null {
+  const parsed = parseLocalEventScene(scene);
+  const missing = (parsed.requires_completed_quests ?? []).filter(
     (questId) => !state.completedQuestIds.has(questId),
   );
+  if (missing.length > 0) {
+    return `This authored choice becomes available only after completing ${missing.join(", ")}.`;
+  }
+  const forbidden = (parsed.forbids_completed_quests ?? []).filter((questId) =>
+    state.completedQuestIds.has(questId),
+  );
+  return forbidden.length > 0
+    ? `This authored choice must be made before completing ${forbidden.join(", ")}.`
+    : null;
 }
 
 /** Resolve only an exact authored option id; labels and partial ids are never executable. */

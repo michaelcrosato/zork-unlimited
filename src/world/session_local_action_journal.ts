@@ -28,7 +28,7 @@ import {
   authoredLocalJobLegacyCompletion,
   describeAuthoredLocalJobLegacyAction,
 } from "./local_job_scene_legacy.js";
-import { authoredAlbanyCharterLegacyCompletion } from "./local_event_scene_legacy.js";
+import { authoredLocalEventLegacyCompletion } from "./local_event_scene_legacy.js";
 
 export type OverworldDiscoveryLocalityIndex = {
   areaHomes: ReadonlyMap<string, string>;
@@ -178,8 +178,11 @@ function localJournalActionDuration(
           `Overworld session snapshot authored event "${event.id}" is missing its exact local-scene proof.`,
         );
       }
-      const legacyCompletion = authoredAlbanyCharterLegacyCompletion(event.id, proof);
-      if (legacyCompletion) return 30 + legacyCompletion.legacyEvent.intensity * 10;
+      const legacyCompletion = authoredLocalEventLegacyCompletion(event.id, proof);
+      if (legacyCompletion) {
+        // The generic formula remains the exact duration contract for legacy events.
+        return 30 + legacyCompletion.definition.legacyEvent.intensity * 10;
+      }
       if (proof.sourceWorldHash !== undefined) {
         throw new Error(
           `Overworld session snapshot authored event "${event.id}" names an untrusted legacy source.`,

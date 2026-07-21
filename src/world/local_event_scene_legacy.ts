@@ -47,6 +47,37 @@ export const AUTHORED_ALBANY_CHARTER_LEGACY_EVENT: OverworldLocalEvent = Object.
     "Charter runners stack sealed files by the public stair while a deputy keeps sending people to the wrong counter. To clear the backlog, read the Notice Hall marks, ask Rowan which docket matters, then inspect the stair and underrooms.",
 });
 
+export type AuthoredLocalEventLegacyDefinition = Readonly<{
+  /** Canonical hash for the exact generic event definition being preserved. */
+  sourceWorldHash: string;
+  eventId: string;
+  sceneId: string;
+  legacyEvent: OverworldLocalEvent;
+  /** Exact additional manifests that carried byte-for-byte equivalent copy. */
+  acceptedSourceWorldHashes?: ReadonlySet<string>;
+}>;
+
+export type AuthoredLocalEventLegacyCompletion = Readonly<{
+  definition: AuthoredLocalEventLegacyDefinition;
+  optionId: string;
+}>;
+
+/**
+ * Exact-definition registry for generic events converted into authored scenes.
+ * New conversions add their predecessor definition here; all restore/replay
+ * consumers remain event-agnostic and the marker stays choice-neutral.
+ */
+export const AUTHORED_LOCAL_EVENT_LEGACY_DEFINITIONS: readonly AuthoredLocalEventLegacyDefinition[] =
+  Object.freeze([
+    Object.freeze({
+      sourceWorldHash: WINTER_RETURN_DOCKET_PREDECESSOR_WORLD_HASH,
+      eventId: AUTHORED_ALBANY_CHARTER_EVENT_ID,
+      sceneId: AUTHORED_ALBANY_CHARTER_EVENT_SCENE_ID,
+      legacyEvent: AUTHORED_ALBANY_CHARTER_LEGACY_EVENT,
+      acceptedSourceWorldHashes: WINTER_RETURN_DOCKET_GENERIC_PREDECESSOR_WORLD_HASHES,
+    }),
+  ]);
+
 export function authoredLocalEventLegacyOptionId(sourceWorldHash: string): string {
   return `legacy_generic@${sourceWorldHash}`;
 }
@@ -55,58 +86,90 @@ export const AUTHORED_ALBANY_CHARTER_LEGACY_OPTION_ID = authoredLocalEventLegacy
   WINTER_RETURN_DOCKET_PREDECESSOR_WORLD_HASH,
 );
 
-export type AuthoredAlbanyCharterLegacyCompletion = Readonly<{
-  legacyEvent: OverworldLocalEvent;
-  optionId: string;
-  sourceWorldHash: string;
-}>;
-
-export function authoredAlbanyCharterLegacyCompletion(
+export function authoredLocalEventLegacyDefinitionForEvent(
   eventId: string,
-  proof: OverworldLocalSceneProof | undefined,
-): AuthoredAlbanyCharterLegacyCompletion | null {
-  if (
-    eventId === AUTHORED_ALBANY_CHARTER_EVENT_ID &&
-    proof?.sceneId === AUTHORED_ALBANY_CHARTER_EVENT_SCENE_ID &&
-    proof.sourceWorldHash !== undefined &&
-    WINTER_RETURN_DOCKET_GENERIC_PREDECESSOR_WORLD_HASHES.has(proof.sourceWorldHash) &&
-    proof.optionId === authoredLocalEventLegacyOptionId(proof.sourceWorldHash)
-  ) {
-    return {
-      legacyEvent: AUTHORED_ALBANY_CHARTER_LEGACY_EVENT,
-      optionId: proof.optionId,
-      sourceWorldHash: proof.sourceWorldHash,
-    };
-  }
-  return null;
+  definitions: readonly AuthoredLocalEventLegacyDefinition[] = AUTHORED_LOCAL_EVENT_LEGACY_DEFINITIONS,
+): AuthoredLocalEventLegacyDefinition | null {
+  return definitions.find((definition) => definition.eventId === eventId) ?? null;
 }
 
-export function migrateAuthoredAlbanyCharterLegacyEntry(args: {
+export function authoredLocalEventLegacyDefinitionsForSourceWorldHash(
+  sourceWorldHash: string,
+  definitions: readonly AuthoredLocalEventLegacyDefinition[] = AUTHORED_LOCAL_EVENT_LEGACY_DEFINITIONS,
+): readonly AuthoredLocalEventLegacyDefinition[] {
+  return definitions.filter(
+    (definition) =>
+      definition.sourceWorldHash === sourceWorldHash ||
+      definition.acceptedSourceWorldHashes?.has(sourceWorldHash),
+  );
+}
+
+export function authoredLocalEventLegacyCompletion(
+  eventId: string,
+  proof: OverworldLocalSceneProof | undefined,
+  definitions: readonly AuthoredLocalEventLegacyDefinition[] = AUTHORED_LOCAL_EVENT_LEGACY_DEFINITIONS,
+): AuthoredLocalEventLegacyCompletion | null {
+  if (!proof?.sourceWorldHash) return null;
+  const definition = definitions.find(
+    (candidate) =>
+      candidate.eventId === eventId &&
+      candidate.sceneId === proof.sceneId &&
+      (candidate.sourceWorldHash === proof.sourceWorldHash ||
+        candidate.acceptedSourceWorldHashes?.has(proof.sourceWorldHash ?? "")),
+  );
+  if (!definition) return null;
+  const optionId = authoredLocalEventLegacyOptionId(proof.sourceWorldHash);
+  return proof.optionId === optionId ? { definition, optionId } : null;
+}
+
+/** @deprecated Civic-specific alias retained for existing callers. */
+export const authoredAlbanyCharterLegacyCompletion = authoredLocalEventLegacyCompletion;
+
+export function describeAuthoredLocalEventLegacyResolution(
+  completion: AuthoredLocalEventLegacyCompletion,
+  townName: string,
+  region: string,
+) {
+  return describeOverworldEventResolution(completion.definition.legacyEvent, townName, region);
+}
+
+export function migrateAuthoredLocalEventLegacyEntry(args: {
   boundary?: OverworldJournalDecisionBoundary | undefined;
   currentEvent: OverworldLocalEvent;
+  definition: AuthoredLocalEventLegacyDefinition;
   entry: OverworldJournalEntry;
   region: string;
-  sourceWorldHash: string;
+  sourceWorldHash?: string | undefined;
   townName: string;
 }): OverworldJournalEntry {
   if (
-    args.currentEvent.id !== AUTHORED_ALBANY_CHARTER_EVENT_ID ||
-    args.currentEvent.authored_scene?.id !== AUTHORED_ALBANY_CHARTER_EVENT_SCENE_ID
+    args.currentEvent.id !== args.definition.eventId ||
+    args.currentEvent.authored_scene?.id !== args.definition.sceneId
   ) {
     throw new Error(
-      `Authored local-event migration target does not match scene "${AUTHORED_ALBANY_CHARTER_EVENT_SCENE_ID}".`,
+      `Authored local-event migration target does not match registered scene "${args.definition.sceneId}".`,
     );
   }
-  if (!WINTER_RETURN_DOCKET_GENERIC_PREDECESSOR_WORLD_HASHES.has(args.sourceWorldHash)) {
-    throw new Error("Authored charter-event predecessor names an unsupported source manifest.");
+  const sourceWorldHash = args.sourceWorldHash ?? args.definition.sourceWorldHash;
+  if (
+    sourceWorldHash !== args.definition.sourceWorldHash &&
+    !args.definition.acceptedSourceWorldHashes?.has(sourceWorldHash)
+  ) {
+    throw new Error(
+      `Authored local-event predecessor for "${args.definition.eventId}" names an unsupported source manifest.`,
+    );
   }
-  const expected = describeOverworldEventResolution(
-    AUTHORED_ALBANY_CHARTER_LEGACY_EVENT,
+  const completion = {
+    definition: args.definition,
+    optionId: authoredLocalEventLegacyOptionId(sourceWorldHash),
+  };
+  const expected = describeAuthoredLocalEventLegacyResolution(
+    completion,
     args.townName,
     args.region,
   );
   if (
-    args.entry.id !== `resolve:${AUTHORED_ALBANY_CHARTER_EVENT_ID}` ||
+    args.entry.id !== `resolve:${args.definition.eventId}` ||
     args.entry.kind !== "resolution" ||
     args.entry.title !== expected.title ||
     args.entry.text !== expected.text ||
@@ -114,16 +177,26 @@ export function migrateAuthoredAlbanyCharterLegacyEntry(args: {
     args.entry.localSceneProof !== undefined
   ) {
     throw new Error(
-      `Authored charter-event predecessor entry does not match its exact trusted copy.`,
+      `Authored local-event predecessor entry for "${args.definition.eventId}" does not match its exact trusted copy.`,
     );
   }
   return Object.freeze({
     ...args.entry,
     localSceneProof: {
-      sceneId: AUTHORED_ALBANY_CHARTER_EVENT_SCENE_ID,
-      optionId: authoredLocalEventLegacyOptionId(args.sourceWorldHash),
-      sourceWorldHash: args.sourceWorldHash,
+      sceneId: args.definition.sceneId,
+      optionId: completion.optionId,
+      sourceWorldHash,
       ...(args.boundary ? { boundary: { ...args.boundary } } : {}),
     },
+  });
+}
+
+/** @deprecated Civic-specific wrapper retained for compatibility. */
+export function migrateAuthoredAlbanyCharterLegacyEntry(
+  args: Omit<Parameters<typeof migrateAuthoredLocalEventLegacyEntry>[0], "definition">,
+): OverworldJournalEntry {
+  return migrateAuthoredLocalEventLegacyEntry({
+    ...args,
+    definition: AUTHORED_LOCAL_EVENT_LEGACY_DEFINITIONS[0]!,
   });
 }
