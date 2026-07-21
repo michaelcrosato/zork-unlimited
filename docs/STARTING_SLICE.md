@@ -722,6 +722,11 @@ existing compact v24 context receives only a bounded additive tuple and legend.
 Projection is read-only, adds no decision or action, and is covered across the
 Wolf completion, dawn choice, northward departure, restore, MCP, and UI surfaces
 by [`albany_return_opportunity_leads.test.ts`](../tests/starting_slice/albany_return_opportunity_leads.test.ts).
+Five verified exact-feature Terra journeys completed Wolf-Winter and continued,
+but none organically named, pursued, or declined a listed Return Opportunity;
+the separate Cade dawn dispatch does not count. Deterministic visibility therefore
+passes while discoverability remains unproven, and the next increment should
+improve the immediate action affordance rather than add more content.
 No generic district jobs remain. Three checklist events—Station, Works, and
 Campus—are still visible and generic.
 
