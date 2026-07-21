@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 603 -->
+<!-- historical_cycle_count: 604 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - compact_setup_prose_dedup
+
+- Evidence choice: fresh cohorts still called the pre-mission cards repetitive and dense, so compact MCP removes only exact summary, field-trigger, and immediate-cost sentences already carried by structured fields; canonical full/UI prose and every mechanic remain untouched.
+- Surface: compact start, restore, read, context, rejection, story, and manual-quest paths share one fail-closed projection; the selected consequence appears once while distinct later prose survives.
+- Counterfactual: summary-bearing cards shed only exact leading duplicates, no-summary/ally cards are identities, a cost elsewhere in the lead-in cannot be removed, and copies remain immutable; compact semantic/lifecycle parity and full exports are covered.
+- Pure evidence: exact clean `e291103e` passed Terra 4332, Sol 4334, and Luna 4333; all completed Wolf-Winter at decisions 28/31/27, continued, were unstuck/replay-yes, and rated clarity/enjoyment 4/4. Seed 4331 timed out before launching a process and is excluded.
+- Measured result: Terra no longer reported repeated wording and Sol called preparation unusually transparent; all three still cited working-memory density, terminology, or truncation, so this is a partial presentation PASS rather than a solved onboarding claim.
+- Feedback/follow-through: compile `20260721T131104Z` has 947 verified/58 rejected reports, 196 eligible pure exits, and 172 continuing; the regenerated ledger is 946/59. Distinct player-facing paling-rail stages remain the next current-build gameplay debt.
+- Guard: compact v26, route tuple, world hash `9238b5f2…`, RNG, actions, and full/UI surfaces are unchanged; exact pre/post crawl is zero-finding at 247/247 nodes, 344/344 edges, and 12/12 boards/quests, independent review found no P0-P2, and health passes 403 files/3,091 tests plus UI/all packs.
 
 ### Cycle result - conditional_hill_route_tradeoff
 
@@ -154,13 +164,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Measured result: maximum family share is 60% and four exact endings appeared, but only two broad strategy families were organic; setup density recurred 10/10, compact truncation 3/10, and road-resolver discovery was a recurring S2 at 2/10. PASS for truthful comparison, FAIL for three-family/certification proof.
 - Feedback/follow-through: compile `20260720T200813Z` has 910 verified reports, 159 current-contract pure exits, and 136 continuing; the ledger is 910 accepted/59 rejected, with one new report below the next compile threshold. The road descriptor passes exact blind use; make Station preparation/allocation optional next.
 - Guard: exact combined commit `9b9332d1` has verified seed 4238, zero-finding crawl `20260720T203737Z` at 247/247 nodes, 344/344 edges, and 12/12 boards/quests, plus uncontended health at 389 files/2,973 tests and UI/all packs; independent review found no remaining P0-P2.
-
-### Cycle result - gallowmere_tracking_recovery
-
-- Evidence choice: verified blind reports repeatedly found that a failed first Kill-Site Tracking check made no progress and could be rerolled indefinitely, so this cycle replaced the retry loop instead of adding more hunt prose.
-- Surface: the first miss now records one authored failure, exposes Cradoc's fixed stance, and turns the same visible Track action into a deterministic recovery that grants the original charge-angle clue and retires cleanly.
-- Counterfactual: a regression trace proves first failure, persistent recovery state, deterministic second use, one-time reward, and action retirement while preserving the successful-first-check route.
-- Pure evidence: two clean exact-build Sol/Terra exits completed Wolf-Winter and The Gallowmere, continued at decisions 29 and 40, were 0 stuck and 2/2 replay-yes at clarity/enjoyment 4/4; seed 4233 failed Tracking, used the authored recovery, and completed the hunt at decision 53.
-- Measured result: finite recovery PASSes directly in blind play without erasing the failed check; character-stat continuity remains a separate S2, and compact truncation, Albany density, Rowan duplication, and the unnamed road resolver remain open.
-- Feedback/follow-through: the ledger is 907 accepted/59 rejected; only two reports are new since compile `20260720T190413Z`, below the three-report compile threshold. Expose the pending-road action next, then address persistent-to-quest character continuity.
-- Guard: feature commit `04f85b98` has zero-finding crawl `20260720T183221Z` at 247/247 nodes, 344/344 edges, and 12/12 boards/quests; health passes 389 files/2,973 tests plus UI/all packs, and both exact report sidecars independently verify.
