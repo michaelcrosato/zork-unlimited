@@ -32003,10 +32003,42 @@
       "id": "albany_city__industrial__event",
       "home": "albany_city",
       "area": "albany_city__industrial",
-      "title": "Albany Works District: hazard shift",
+      "title": "Reese Pryce's Hazard-Shift Charter",
       "pressure": "hazard",
       "intensity": 4,
-      "summary": "Albany Works District is under hazard pressure around locked yards, bad machinery, and crews staying past dusk. Resolving it requires scouting this area, talking to its contact, and investigating on site."
+      "summary": "Before the hill dispatch leaves, Reese Pryce needs one permanent authorization for the jammed Works safety gate: license a witnessed public-shift count or authorize a slower cold-set bypass. Either charter makes one different return method lawful without replacing Reese's two established yard priorities.",
+      "authored_scene": {
+        "version": 1,
+        "id": "albany:works-hazard-shift-charter",
+        "prompt": "Reese can bind one safety rule before Albany's relief crew leaves. A licensed witness count later supports a fast 45-minute, 3-standing shift release. An authorized cold-set bypass later supports a slower 60-minute, 4-standing release that reaches Rowan's 13-standing recovery threshold from the lowest 8-standing held return after this charter. Both authorizations cost 20 minutes and earn 1 standing now; neither replaces the ordinary 80-minute public-shift protection or 35-minute reserve inventory.",
+        "required_poi_id": "albany_city__industrial__poi",
+        "required_contact_id": "albany_city__industrial__contact",
+        "forbids_completed_quests": [
+          "wolf_winter"
+        ],
+        "options": [
+          {
+            "id": "license_shift_witness_count",
+            "title": "License the public-shift witness count",
+            "preview": "Spend 20 minutes licensing Reese's named shift witnesses and accountable head count. Earn 1 Capital / Mohawk renown; a truthful return can use a 45-minute, 3-standing witnessed release.",
+            "consequence": "Reese seals the named witness count before the hill dispatch. If the Works gate still needs attention after The Wolf-Winter, the yard board will add the licensed 45-minute shift release for 3 standing while retaining both established priorities. From the lowest 8-standing held return, this charter and release end at 12 and do not open Rowan's 13-standing recovery cot.",
+            "terms": {
+              "minutes": 20,
+              "renown": 1
+            }
+          },
+          {
+            "id": "authorize_cold_set_gate_bypass",
+            "title": "Authorize the cold-set safety-gate bypass",
+            "preview": "Spend 20 minutes signing Reese's measured bypass and isolation order. Earn 1 Capital / Mohawk renown; a truthful return can use a 60-minute, 4-standing cold-set release.",
+            "consequence": "Reese seals the measured bypass order before the hill dispatch. If the Works gate still needs attention after The Wolf-Winter, the yard board will add the authorized 60-minute shift release for 4 standing while retaining both established priorities. From the lowest 8-standing held return, this charter and release reach 13 and open Rowan's one-time Civic recovery cot.",
+            "terms": {
+              "minutes": 20,
+              "renown": 1
+            }
+          }
+        ]
+      }
     },
     {
       "id": "albany_city__greenway__event",
@@ -51889,14 +51921,14 @@
       "title": "Reese's Two Winter Lines",
       "summary": "After The Wolf-Winter return, Reese has a public Works shift held safely behind a jammed yard gate and an outbound municipal cold-set reserve waiting for an accountable serial count.",
       "objective": "Inspect the Works Gate, hear Reese's two time-sensitive lines, and decide which one receives your help first.",
-      "reward": "Earn 2 or 5 Capital / Mohawk renown according to the Works priority you complete.",
+      "reward": "Earn 2-5 Capital / Mohawk renown according to the Works priority and any pre-departure hazard-shift charter you complete.",
       "minutes": 83,
       "difficulty": 4,
       "visibility": "local_job_board",
       "authored_scene": {
         "version": 1,
         "id": "albany:works-yard-winter-shift",
-        "prompt": "Reese has a public shift warm behind a jammed safety gate, while the outbound municipal cold-set reserve needs an accountable count before dispatch. You can own only one line before your shift closes; Reese routes the other to his crew.",
+        "prompt": "Reese has a public shift warm behind a jammed safety gate, while the outbound municipal cold-set reserve needs an accountable count before dispatch. You can own only one line before your shift closes; Reese routes the other to his crew. His established full protection and reserve inventory remain available. If you bound one hazard-shift charter before The Wolf-Winter, its matching release method also appears below.",
         "required_poi_id": "albany_city__industrial__poi",
         "required_contact_id": "albany_city__industrial__contact",
         "requires_completed_quests": [
@@ -51922,6 +51954,38 @@
               "minutes": 35,
               "renown": 2
             }
+          },
+          {
+            "id": "release_shift_under_witness_count",
+            "title": "Release the shift under the licensed witness count",
+            "preview": "Spend 45 minutes matching every worker to the licensed witness count, isolating the failed hoist, and walking the shift through the supervised lane. Earn 3 Capital / Mohawk renown.",
+            "consequence": "The licensed witnesses reconcile Reese's head count and the shift clears through the supervised lane. The faster release preserves less public standing than a full extraction, and Reese routes the reserve inventory to his yard crew.",
+            "terms": {
+              "minutes": 45,
+              "renown": 3
+            },
+            "requires_event_options": [
+              {
+                "event_id": "albany_city__industrial__event",
+                "option_id": "license_shift_witness_count"
+              }
+            ]
+          },
+          {
+            "id": "open_cold_set_gate_bypass",
+            "title": "Open the authorized cold-set gate bypass",
+            "preview": "Spend 60 minutes executing Reese's measured isolation and cold-set bypass before walking the shift through. Earn 4 Capital / Mohawk renown.",
+            "consequence": "The authorized cold-set bypass opens under Reese's measured isolation order and the shift clears behind a durable safety record. Reese routes the reserve inventory to his yard crew.",
+            "terms": {
+              "minutes": 60,
+              "renown": 4
+            },
+            "requires_event_options": [
+              {
+                "event_id": "albany_city__industrial__event",
+                "option_id": "authorize_cold_set_gate_bypass"
+              }
+            ]
           }
         ]
       }

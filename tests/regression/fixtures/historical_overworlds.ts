@@ -61,9 +61,36 @@ const CADE_RETURN_PACKET_SERVICE_IDS: ReadonlySet<string> = new Set([
   "albany:cade_pasture_search_unaffiliated_greenway_resupply",
 ]);
 
+/** Reconstruct the exact manifest immediately before Works gained its hazard-shift charter. */
+export function exactAlbanyWorksHazardPredecessor(current: OverworldManifest): OverworldManifest {
+  const predecessor = structuredClone(current);
+  const event = predecessor.local_events.find(
+    (candidate) => candidate.id === "albany_city__industrial__event",
+  );
+  const job = predecessor.local_jobs.find(
+    (candidate) => candidate.id === "albany_city__industrial__job",
+  );
+  if (!event || !job?.authored_scene) {
+    throw new Error("Albany Works event and authored job must exist");
+  }
+  event.title = "Albany Works District: hazard shift";
+  event.summary =
+    "Albany Works District is under hazard pressure around locked yards, bad machinery, and crews staying past dusk. Resolving it requires scouting this area, talking to its contact, and investigating on site.";
+  delete event.authored_scene;
+  job.reward = "Earn 2 or 5 Capital / Mohawk renown according to the Works priority you complete.";
+  job.authored_scene.prompt =
+    "Reese has a public shift warm behind a jammed safety gate, while the outbound municipal cold-set reserve needs an accountable count before dispatch. You can own only one line before your shift closes; Reese routes the other to his crew.";
+  job.authored_scene.options = job.authored_scene.options.filter(
+    (option) =>
+      option.id === "protect_trapped_public_shift" ||
+      option.id === "inventory_outbound_cold_set_stock",
+  );
+  return predecessor;
+}
+
 /** Reconstruct the Market-authored manifest immediately before Greenway's causal pair. */
 export function exactAlbanyGreenwayDepthPredecessor(current: OverworldManifest): OverworldManifest {
-  const predecessor = structuredClone(current);
+  const predecessor = exactAlbanyWorksHazardPredecessor(current);
   const event = predecessor.local_events.find(
     (candidate) => candidate.id === "albany_city__greenway__event",
   );

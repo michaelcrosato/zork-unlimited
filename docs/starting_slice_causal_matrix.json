@@ -2,7 +2,7 @@
   "schema_version": 1,
   "slice_id": "albany_winter_relief_v1",
   "status": "active_unproven",
-  "updated_local_date": "2026-07-20",
+  "updated_local_date": "2026-07-21",
   "contract": {
     "minimum_material_forks": 12,
     "minimum_delayed": 8,
@@ -743,6 +743,40 @@
         "tests/unit/world_session_region_renown.test.ts"
       ],
       "counterfactual_test": "tests/starting_slice/albany_greenway_scene_counterfactual.test.ts"
+    },
+    {
+      "id": "SS-F16-works-hazard-charter",
+      "title": "License a witnessed shift count or authorize a cold-set gate bypass",
+      "phase": "albany_preparation",
+      "implementation_status": "implemented",
+      "proof_status": "proven",
+      "counts_toward_contract": false,
+      "visible_choice": "Before Wolf-Winter, Reese Pryce offers one optional hazard-shift charter on equal 20-minute/+1-standing terms: license a named public-shift witness count or authorize a measured cold-set safety-gate bypass. The charter expires once Wolf-Winter is complete and never gates departure.",
+      "immediate_state_delta": [
+        "world.minutes",
+        "world.region_renown",
+        "world.resolved_event_ids",
+        "journal.local_scene_proof"
+      ],
+      "delayed_consumers": [
+        "Reese's existing post-Wolf Works job retains its ordinary 80-minute/+5 public-shift protection and 35-minute/+2 reserve inventory. Exact event-option proof appends only the matching return method: a 45-minute/+3 witnessed release or a 60-minute/+4 cold-set bypass. A neutral generic predecessor event completion unlocks neither.",
+        "From the lowest 8-standing held return, either charter first raises standing to 9. The witnessed release ends at 12 and is 15 minutes faster than the bypass when already rested; the bypass ends at 13 and opens Rowan's existing 15-minute Civic recovery cot, beating the witness route plus ordinary 180-minute rest when fatigued."
+      ],
+      "visible_feedback": [
+        "Both charter cards state their equal immediate terms, exact later method, return duration and standing, and the 13-standing Civic threshold consequence before commitment.",
+        "The post-Wolf full, compact, browser, and MCP job board preserves both base priorities, shows only the charter-matching third method, and withholds the opposite authorization. The unresolved pre-Wolf event expires and never appears as a return opportunity, while its already-discovered Works job remains eligible for the normal return lead.",
+        "Save/restore and decision replay retain the exact event and job proofs; current-main and earlier exact generic-event epochs migrate to source-hashed neutral markers without inventing either charter capability, and divergent manifest hashes fail closed."
+      ],
+      "systems": ["events", "time", "regional_standing", "jobs", "services"],
+      "persistence_boundaries": ["overworld_save_restore", "albany_wolf_return"],
+      "contract_tags": ["delayed", "cross_system", "cross_phase", "irreversible_tradeoff"],
+      "baseline_evidence": [
+        "tests/unit/world_local_event_scene.test.ts",
+        "tests/unit/world_local_event_scene_legacy.test.ts",
+        "tests/unit/world_local_job_scene_conditions.test.ts",
+        "tests/starting_slice/albany_return_opportunity_leads.test.ts"
+      ],
+      "counterfactual_test": "tests/starting_slice/albany_works_hazard_charter_counterfactual.test.ts"
     }
   ]
 }
