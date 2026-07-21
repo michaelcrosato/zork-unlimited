@@ -190,7 +190,7 @@ The first implementation sequence is:
    landed)_ — quest content declares reusable, validated character/world
    effects; campaign code consumes generic state rather than adding
    Wolf-specific ending conditionals.
-4. **Authored Albany** _(2/6 district jobs and 1/6 events converted)_ — replace
+4. **Authored Albany** _(3/6 district jobs and 1/6 events converted)_ — replace
    the visible slice's generic local transactions with scenes whose evidence,
    time, relationships, resources, and promises alter Wolf-Winter and its
    return.
@@ -260,20 +260,25 @@ consumer; Rowan preserves the import-independent routes. Paired proof lives in
 The informed-dispatch follow-up keeps that causal structure while removing a
 blind planning interval exposed by the first authenticated fleet diagnostic.
 Before registration binds, the journey surface reuses Wolf-Winter's authored
-discovery as a concrete mission preview and names the five-decision dispatch
-plan in plain role, duty, evidence, preparation, and relief-allocation terms.
-Each later prompt identifies the completed and still-open decisions, while the
-fifth preserves June Pike's optional field-team follow-up. Source certification
-now reveals the real quest card and a compact, authored cost/tradeoff comparison
-of both hill approaches while the preparation choice is pending; full tactical
-route detail remains on the actual launch choice. Preparation and relief
-allocation remain mandatory launch gates. Exact pending-preparation saves from
-the earlier timing are normalized by certified source and offer proofs, while a
-resolved save with the discovery removed remains invalid. Presentation and state proof live in
+discovery as a concrete mission preview and names the three binding Civic
+decisions—role, duty, and evidence—plus two later optional Station interactions:
+preparation and relief allocation. Each Civic prompt identifies the completed
+and still-open decisions; after source certification, Hayden's departure board
+offers pull-based inspection of preparation, then allocation if preparation is
+chosen, alongside both already-legal hill launches. June Pike remains a separate
+optional field-team follow-up. Source certification reveals the real quest card
+and a compact, authored cost/tradeoff comparison of both hill approaches; full
+tactical route detail remains on the actual launch choice. Neither Station
+interaction gates departure, and leaving without choosing invents no proof or
+effect. Trusted predecessor saves carrying the former mandatory offers remain
+finishable, while a resolved save with the discovery removed remains invalid.
+Presentation and state proof live in
 [`opening_dispatch_briefing.test.ts`](../tests/starting_slice/opening_dispatch_briefing.test.ts),
 [`lead_source_counterfactual.test.ts`](../tests/starting_slice/lead_source_counterfactual.test.ts),
 and
-[`opening_preparation_snapshot_integrity.test.ts`](../tests/regression/opening_preparation_snapshot_integrity.test.ts).
+[`opening_preparation_snapshot_integrity.test.ts`](../tests/regression/opening_preparation_snapshot_integrity.test.ts),
+plus
+[`overworld_optional_departure_interactions.test.ts`](../tests/regression/overworld_optional_departure_interactions.test.ts).
 
 Legacy migration is deliberately fail-closed at this causal boundary. An
 untouched registration-era save receives the real source prompt. Every progressed
@@ -477,16 +482,17 @@ and
 [`hill_approach_migration_integrity.test.ts`](../tests/regression/hill_approach_migration_integrity.test.ts).
 
 The eleventh authored increment turns `SS-F06-relief-allocation` into a finite
-public-capacity decision rather than a decorative reserve meter. After
-preparation, reaching the Station Quarter auto-offers the dispatch before the
-optional June contact, so direct no-contact and explicit solo departures remain
-valid. Albany has one unassigned winter-relief wagon and crew. Every option
-costs five minutes, and every card names both what it protects and the two needs
-left exposed: send Emery's fodder and drovers to Cade's herd, keep Jamie's
-Market warm room staffed for vulnerable residents, or hold Hayden's wagon as a
-mobile failure crew. The selection is blocking, irreversible, and mutually
-exclusive; it records one allocation knowledge, one provider memory, one
-journey decision, and no invented stock meter.
+public-capacity decision rather than a decorative reserve meter. At the Station
+Quarter, preparation is a pull-based interaction beside the legal hill launches;
+choosing it exposes allocation as a second optional interaction. The player may
+inspect either without mutation, select preparation only, select both, or depart
+with neither. Albany has one unassigned winter-relief wagon and crew. Every
+allocation option costs five minutes, and every card names both what it protects
+and the two needs left exposed: send Emery's fodder and drovers to Cade's herd,
+keep Jamie's Market warm room staffed for vulnerable residents, or hold Hayden's
+wagon as a mobile failure crew. A selection, once made, is irreversible and
+mutually exclusive; it records one allocation knowledge, one provider memory,
+one journey decision, and no invented stock meter. Skipping it records none.
 
 Each allocation has a different delayed consumer. Cade's pre-feed changes only
 a successful first lure cast from the exposed ridge: at seed 26 it suppresses
@@ -519,6 +525,9 @@ service. Paired proof lives in
 [`relief_allocation_counterfactual.test.ts`](../tests/starting_slice/relief_allocation_counterfactual.test.ts),
 and the predecessor boundary lives in
 [`relief_allocation_migration_integrity.test.ts`](../tests/regression/relief_allocation_migration_integrity.test.ts).
+The nonblocking inspection, skip/select permutations, launch legality, surface
+parity, and trusted mandatory-offer compatibility are proven in
+[`overworld_optional_departure_interactions.test.ts`](../tests/regression/overworld_optional_departure_interactions.test.ts).
 
 The twelfth authored increment proves `SS-F02-relief-oath` as the final counted
 fork. Immediately after permanent registration

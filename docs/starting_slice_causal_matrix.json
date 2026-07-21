@@ -2,7 +2,7 @@
   "schema_version": 1,
   "slice_id": "albany_winter_relief_v1",
   "status": "active_unproven",
-  "updated_local_date": "2026-07-15",
+  "updated_local_date": "2026-07-20",
   "contract": {
     "minimum_material_forks": 12,
     "minimum_delayed": 8,
@@ -243,7 +243,7 @@
       "implementation_status": "implemented",
       "proof_status": "proven",
       "counts_toward_contract": true,
-      "visible_choice": "After certifying one Albany source, commit exactly one urgent specialist packet: Reese's Works fortification sequence, Emery's drover route, or Jamie's relief protocol. Every card names its one-shot Wolf consumer, DC 12 check, failure consequence, provider memory, exact public or sponsored time-and-money cost, and mutually exclusive return service before confirmation.",
+      "visible_choice": "After certifying one Albany source and reaching the Station Quarter, optionally inspect and commit one urgent specialist packet: Reese's Works fortification sequence, Emery's drover route, or Jamie's relief protocol. Every card names its one-shot Wolf consumer, DC 12 check, failure consequence, provider memory, exact public or sponsored time-and-money cost, and mutually exclusive return service before confirmation; both hill launches remain legal without a selection.",
       "immediate_state_delta": [
         "character.money",
         "character.knowledge",
@@ -259,7 +259,7 @@
         "A truthful held-byre return pairs each selected plan with one different 15-minute service: Works District resupply, Campus rest, or Civic Core resupply. Paired low-supply and fatigued states include paid preparation, shortest Albany relocation, and each alternative profile's best matching service; each profile wins somewhere, so none dominates globally."
       ],
       "visible_feedback": [
-        "The blocking Albany screen exposes all three affordable plans for all four backgrounds and all three source choices; its journal and persistent-character panel show the exact paid terms, learned plan, and provider memory.",
+        "The pull-based Station interaction exposes all three affordable plans for all four backgrounds and all three source choices; inspection is read-only, departure remains legal, and an accepted choice records the exact paid terms, learned plan, and provider memory.",
         "Wolf room variants, legal commands, narrated skill arithmetic, cattle-alarm bands, one-shot retirement, and deterministic recoveries name the selected plan and its actual consequence.",
         "A representative Drover route proves full MCP, compact MCP, and browser parity end to end. Paired core-session proofs cover all three matching return services and causes; journal-bound story-choice proof consumes each one-time benefit across restore."
       ],
@@ -293,6 +293,7 @@
         "tests/unit/world_opening_preparation.test.ts",
         "tests/unit/world_opening_preparation_journal.test.ts",
         "tests/regression/opening_preparation_snapshot_integrity.test.ts",
+        "tests/regression/overworld_optional_departure_interactions.test.ts",
         "tests/starting_slice/preparation_profile_gameplay.test.ts",
         "tests/starting_slice/preparation_profiles_return_e2e.test.ts",
         "traces/bugs/bug_0522_wolf_winter_preparation_profiles.yaml"
@@ -306,7 +307,7 @@
       "implementation_status": "implemented",
       "proof_status": "proven",
       "counts_toward_contract": true,
-      "visible_choice": "On first reaching the Station Quarter after preparation, spend five minutes assigning Albany's one unallocated winter-relief wagon and crew to exactly one need. Send fodder and drovers ahead to Cade's herd, keep Jamie's Market warm room staffed for vulnerable residents, or hold Hayden's wagon at the hill turn as a mobile failure crew. Every card names what it protects and the two needs left exposed before the blocking, irreversible selection.",
+      "visible_choice": "After accepting a preparation packet at the Station Quarter, optionally inspect a five-minute assignment of Albany's one unallocated winter-relief wagon and crew. Send fodder and drovers ahead to Cade's herd, keep Jamie's Market warm room staffed for vulnerable residents, or hold Hayden's wagon at the hill turn as a mobile failure crew. Every card names what it protects and the two needs left exposed; choosing is irreversible, while both hill launches remain legal without choosing.",
       "immediate_state_delta": [
         "world.minutes",
         "character.knowledge",
@@ -320,7 +321,7 @@
         "The offer, equal five-minute cost, selected provider memory, quest import, field result, return fact, and service eligibility survive chronological foldback and save/restore. Exact F12 unstarted saves receive the real current offer with no retroactive effects, including saves that already selected June: a later allocation composes after the preserved ally proof and re-restores with both sets of effects. Exact started saves retain their approach proof and receive one neutral legacy marker bound to the pre-start boundary without allocation knowledge, memory, cost, field aid, or service."
       ],
       "visible_feedback": [
-        "Full, compact, browser, and CLI journey surfaces show the single-wagon premise, equal five-minute cost, named provider, protected need, two exposed needs, consequence, and current blocked reason before commitment; the journal and persistent character state retain the exact allocation afterward.",
+        "Full, compact, browser, and MCP surfaces show the optional single-wagon interaction, equal five-minute cost, named provider, protected need, two exposed needs, consequence, exact inspect/choose arguments, and legal departure before commitment; the journal and persistent character state retain an accepted allocation afterward.",
         "Wolf-Winter's imported flag, named pre-feed alarm result or mobile-crew action, visible pressure track, failure-preserving journal, and stabilized-dawn prose expose the selected field consumer without revealing internal effect ids.",
         "On a truthful byre-held return, Albany names either Jamie's staffed Market warm room or the returned mobile Campus cache, shows its 15-minute term, and records one-time consumption. Cade's field-only allocation truthfully produces neither return offer."
       ],
@@ -345,6 +346,7 @@
       "baseline_evidence": [
         "tests/unit/world_opening_relief_allocation.test.ts",
         "tests/unit/world_opening_relief_allocation_journal.test.ts",
+        "tests/regression/overworld_optional_departure_interactions.test.ts",
         "tests/regression/new_york_overworld.test.ts",
         "tests/regression/relief_allocation_migration_integrity.test.ts",
         "traces/bugs/bug_0527_wolf_winter_relief_allocation.yaml"
