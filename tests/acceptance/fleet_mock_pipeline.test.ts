@@ -6,11 +6,7 @@ import { join } from "node:path";
 import { verifyBlindReportText } from "../../src/blind/report_verifier.js";
 import { extractExitInterview } from "../../src/blind/exit_interview.js";
 
-// npx resolves to npx.cmd on Windows — execFile{,Sync} never goes through a
-// shell by default, and Node cannot spawn a .cmd directly without one (bare
-// "npx" ⇒ ENOENT). Mirrors blind-tester/fleet.mjs's own `verifyReport`, which
-// spawns "npm" the same conditional way for the same reason.
-const SHELL_ON_WINDOWS = process.platform === "win32";
+const TSX_CLI = join(process.cwd(), "node_modules", "tsx", "dist", "cli.mjs");
 
 // Reports directory produced by the first test, reused by the compiler leg
 // (Task 16) so the pipeline's clustering has a realistic multi-report fleet
@@ -211,9 +207,9 @@ describe("fleet:mock end to end (zero tokens)", () => {
     // reuse the tmp report dir from the previous test via a module-level variable, or regenerate --count 6
     const out2 = mkdtempSync(join(tmpdir(), "hotspots-"));
     execFileSync(
-      "npx",
-      ["tsx", "bin/feedback.ts", "--in", reportsDir, "--out", out2, "--top", "5"],
-      { stdio: "pipe", timeout: 120_000, shell: SHELL_ON_WINDOWS },
+      process.execPath,
+      [TSX_CLI, "bin/feedback.ts", "--in", reportsDir, "--out", out2, "--top", "5"],
+      { stdio: "pipe", timeout: 120_000 },
     );
     const hs = JSON.parse(readFileSync(join(out2, "hotspots.json"), "utf8"));
     expect(hs.hotspots[0].title).toMatch(/notice board|albany station/i); // planted overlap ranks #1
@@ -224,9 +220,9 @@ describe("fleet:mock end to end (zero tokens)", () => {
     // trends read ai-runs/feedback/ by default — pass the previous dir explicitly instead: implement --prev <dir> for testability
     const out3 = mkdtempSync(join(tmpdir(), "hotspots2-"));
     execFileSync(
-      "npx",
-      ["tsx", "bin/feedback.ts", "--in", reportsDir, "--out", out3, "--top", "5", "--prev", out2],
-      { stdio: "pipe", timeout: 120_000, shell: SHELL_ON_WINDOWS },
+      process.execPath,
+      [TSX_CLI, "bin/feedback.ts", "--in", reportsDir, "--out", out3, "--top", "5", "--prev", out2],
+      { stdio: "pipe", timeout: 120_000 },
     );
     const hs2 = JSON.parse(readFileSync(join(out3, "hotspots.json"), "utf8"));
     expect(hs2.hotspots.length).toBeGreaterThan(0);

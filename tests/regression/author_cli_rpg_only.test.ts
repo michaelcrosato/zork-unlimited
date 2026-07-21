@@ -4,34 +4,23 @@
  * Legacy CYOA/parser authoring loops remain in the repo as migration scaffolding,
  * but the CLI should no longer expose mode selection or default to CYOA.
  */
-import { spawnSync } from "node:child_process";
 import { existsSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { runNpmScript } from "../../scripts/npm-cli.js";
 
-function runAuthor(command: string, timeout = 120_000) {
-  return spawnSync(command, {
-    cwd: process.cwd(),
-    encoding: "utf8",
-    shell: true,
-    timeout,
-  });
+function runAuthor(args: readonly string[], timeout = 120_000) {
+  return runNpmScript("author", args, { timeout });
 }
 
 function outputOf(result: ReturnType<typeof runAuthor>): string {
   return `${result.stdout ?? ""}\n${result.stderr ?? ""}\n${result.error?.message ?? ""}`;
 }
 
-function shellQuote(value: string): string {
-  return `"${value.replace(/"/g, '\\"')}"`;
-}
-
 describe("author CLI RPG-only public surface", () => {
   it("authors a green RPG pack by default", () => {
-    const result = runAuthor(
-      'npm run author -- "A keeper must relight a dead lighthouse before a ship wrecks."',
-    );
+    const result = runAuthor(["A keeper must relight a dead lighthouse before a ship wrecks."]);
     const output = outputOf(result);
 
     expect(result.status, output).toBe(0);
@@ -43,7 +32,7 @@ describe("author CLI RPG-only public surface", () => {
 
   it("rejects legacy mode selection", () => {
     const result = runAuthor(
-      'npm run author -- "A keeper must relight a dead lighthouse before a ship wrecks." --mode cyoa',
+      ["A keeper must relight a dead lighthouse before a ship wrecks.", "--mode", "cyoa"],
       30_000,
     );
     const output = outputOf(result);
@@ -56,9 +45,12 @@ describe("author CLI RPG-only public surface", () => {
     const dir = mkdtempSync(join(tmpdir(), "af-author-"));
     const out = join(dir, "draft.yaml");
     try {
-      const result = runAuthor(
-        `npm run author -- "A keeper must relight a dead lighthouse before a ship wrecks." -- --out ${shellQuote(out)}`,
-      );
+      const result = runAuthor([
+        "A keeper must relight a dead lighthouse before a ship wrecks.",
+        "--",
+        "--out",
+        out,
+      ]);
       const output = outputOf(result);
 
       expect(result.status, output).toBe(0);
@@ -71,7 +63,12 @@ describe("author CLI RPG-only public surface", () => {
 
   it("rejects direct writes into shipped RPG pack storage", () => {
     const result = runAuthor(
-      'npm run author -- "A keeper must relight a dead lighthouse before a ship wrecks." -- --out content/rpg/quests/new_lighthouse.yaml',
+      [
+        "A keeper must relight a dead lighthouse before a ship wrecks.",
+        "--",
+        "--out",
+        "content/rpg/quests/new_lighthouse.yaml",
+      ],
       30_000,
     );
     const output = outputOf(result);

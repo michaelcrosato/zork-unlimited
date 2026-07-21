@@ -18,6 +18,8 @@ describe("pre-commit assertion shield compatibility", () => {
     const text = readFileSync(script, "utf8");
     expect(text).toContain("npm");
     expect(text).toContain("verify:integrity");
-    expect(text).toContain("spawnSync");
+    expect(text).toContain("runNpmScript");
+    expect(text).not.toContain("spawnSync");
+    expect(text).not.toMatch(/\bshell\s*:/);
   });
 });

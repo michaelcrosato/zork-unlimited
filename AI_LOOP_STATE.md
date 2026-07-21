@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 605 -->
+<!-- historical_cycle_count: 606 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - shell_free_node_launchers
+
+- Evidence choice: recurring Windows Node DEP0190 output from child processes using `shell: true` coincided with the Codex UI false-classification banner, so this cycle removes the emitting launch mode instead of suppressing deprecations or weakening tests.
+- Surface: one shell-free npm helper preserves structured argv, nested `--`, cwd, timeout, and output behavior across author/validate/trace/blind regressions and the assertion wrapper; fleet's npm probe and acceptance TSX compiler now use direct JavaScript entrypoints too.
+- Counterfactual: a seven-launcher guard rejects any restored `shell:` option, deprecations promoted to errors pass 50/50 changed tests plus the real assertion wrapper, missing Windows npm fails closed, and a repository-wide executable scan finds no remaining raw npm/npx shell launcher.
+- Pure evidence: exact clean `1b322cb5` Luna seed 4346 completed Wolf-Winter via `ending_pack_diverted`, continued through goals/checkpoints to its voluntary checkpoint-160 exit, rated clarity/enjoyment 4/5, was unstuck/replay-yes, and verified after deterministic receipt binding.
+- Measured result: DEP0190, deprecation, classifier, and banner wording are absent from the report, evidence, rollout, capture, and binding artifacts; this proves the repo-owned trigger is removed, not that the server-owned classifier can never produce another false positive.
+- Feedback/follow-through: the long run reported only implicit resource-boundary recovery, one recoverable stale hash, and an abrupt active-goal checkpoint exit; no gameplay feedback compile is attributed to this tooling-only increment, while the authored Albany Works event proceeds separately.
+- Guard: unchanged pre/post crawl passes 247/247 nodes, 344/344 edges, and 12/12 boards/quests; exact warning code passes health at 404 files/3,098 tests plus UI/all packs, independent final review found no P0-P2, and merged main contributes only separately green PR #130 before final CI.
 
 ### Cycle result - wolf_paling_stage_identities
 
@@ -154,13 +164,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Measured result: repo-side contextual mitigation PASSes one real six-minute session and all mechanical gates; the UI classifier itself remains server-owned, so this does not claim a local permanent threshold fix.
 - Feedback/follow-through: compile `20260720T231307Z` has 913 verified reports, 162 eligible pure exits, and 139 continuing; the ledger is 912 accepted/59 rejected. Current exact feedback supports fixing compact fortification commitment ids, then optional Station interactions; legacy fleet-heavy notice-board clusters still require fresh-cohort confirmation.
 - Guard: exact commit `dde132b4` has zero-finding crawl `20260720T230257Z` at 247/247 nodes, 344/344 edges, and 12/12 boards/quests; health passes 390 files/2,975 tests plus UI/all packs, with the runner allowlist and isolated Codex home unchanged.
-
-### Cycle result - road_encounter_next_action
-
-- Evidence choice: the Wolf comparison cohort produced recurring S2 friction at unresolved road scenes, so this cycle exposed the already-required resolver instead of adding guidance prose or another travel decision.
-- Surface: full `pendingRoadEncounter.nextAction` and compact `pending_road.next_action` now name `resolve_overworld_session_road_encounter`, its `strategy` argument, and the exact displayed option path; derived presentation leaves the persisted `{edgeId}` contract unchanged.
-- Counterfactual: one regression proves the descriptor appears only while a road encounter is pending, survives save/restore by rederivation, stays full/compact truthful, accepts a displayed strategy, and disappears after resolution.
-- Pure evidence: exact clean-build Terra seed 4239 completed Wolf-Winter and The Gallowmere in 43 decisions, continued at decisions 19 and 40, ended at 43, was unstuck at clarity 3/enjoyment 4, and followed compact `next_action` with valid `press_on` on its first attempt.
-- Measured result: resolver discovery PASSes directly in blind play without changing route mechanics or persistence; the run independently found the pre-existing compact `ask_invoke_authority` commitment label misleading, now isolated as its own follow-up.
-- Feedback/follow-through: the ledger is 911 accepted/59 rejected; only two verified reports are new since compile `20260720T200813Z`, below the three-report threshold. Fix the compact fortification commitment id, then land optional Station interactions; the later f799 lure-feed complaint is already fixed by current Store-Shed-west copy.
-- Guard: exact commit `2c8b62b3` has zero-finding crawl `20260720T221223Z` at 247/247 nodes, 344/344 edges, and 12/12 boards/quests; health passes 390 files/2,975 tests plus UI/all packs, and independent review found no P0-P2.

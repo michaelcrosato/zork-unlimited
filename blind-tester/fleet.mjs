@@ -1633,6 +1633,23 @@ export function releaseFleetReportLock(lock) {
   unlinkSync(lock.path);
 }
 
+function npmCliInvocation() {
+  if (process.env.npm_execpath) {
+    return { command: process.execPath, args: [process.env.npm_execpath] };
+  }
+
+  const bundledNpmCli = join(dirname(process.execPath), "node_modules", "npm", "bin", "npm-cli.js");
+  if (existsSync(bundledNpmCli)) {
+    return { command: process.execPath, args: [bundledNpmCli] };
+  }
+
+  if (process.platform !== "win32") {
+    return { command: "npm", args: [] };
+  }
+
+  throw new Error("fleet: could not resolve npm's JavaScript CLI entrypoint");
+}
+
 function resolveFleetBashPath() {
   let bashPath;
   if (process.platform === "win32") {
@@ -1655,10 +1672,8 @@ function resolveFleetBashPath() {
     throw new Error(`fleet: blind runner is unavailable: ${RUN_SH}`);
   }
   try {
-    execFileSync("npm", ["--version"], {
-      stdio: "ignore",
-      shell: process.platform === "win32",
-    });
+    const npm = npmCliInvocation();
+    execFileSync(npm.command, [...npm.args, "--version"], { stdio: "ignore" });
   } catch (error) {
     throw new Error("fleet: npm runtime is unavailable", { cause: error });
   }
