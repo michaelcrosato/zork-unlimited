@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 593 -->
+<!-- historical_cycle_count: 594 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - optional_station_departure_interactions
+
+- Evidence choice: field-timed preparation moved two commitments beside Wolf-Winter but blind reports still called the sequence dense, so this cycle made both interactions pull-based and optional without delaying the already-legal departure routes.
+- Surface: full, compact, UI, and MCP views expose preparation/allocation inspection and exact choice ids only while relevant; players may depart with neither, preparation only, or both, while trusted saves carrying the former mandatory offers remain finishable.
+- Counterfactual: paired engine/UI/MCP tests prove inspection is read-only, choice is exact and one-shot, launch remains legal through every skip/select permutation, deep clones do not leak mutation, and predecessor saves neither lose nor invent commitments.
+- Pure evidence: exact clean commit `d28a2971` Terra seed 4245 voluntarily inspected and chose both interactions, retained both route starts after each choice, launched Wolf-Winter, completed it at decision 29, continued, then ended unstuck at decision 40 with clarity/enjoyment 3/4; no auth, classifier, boundary, or tool failure occurred.
+- Measured result: mechanical optionality and uninterrupted departure PASS; organic skipping remains UNPROVEN because this cohort selected both. The tester wanted to continue its existing Gallowmere journey but marked new-run replay no after the fixed checkpoint interrupted it.
+- Feedback/follow-through: the ledger is 914 accepted/59 rejected. Current signals retain dense sequential commitments, compact Gallowmere truncation, raw embedded action ids, and decision-40 interruption as separate S1s; Cade's bounded return packet is next while fresh cohorts test actual skipping.
+- Guard: exact feature commit `d28a2971` has zero-finding crawl at 247/247 nodes, 344/344 edges, and 12/12 boards/quests; health passes 391 files/2,981 tests plus UI/all packs, and independent review found no P0-P2.
 
 ### Cycle result - wolf_commitment_action_ids
 
@@ -154,13 +164,8 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Feedback: compile `20260719T095400Z` remains 830 verified/79 journey-v3 exits/65 continuing; two valid reports are new, below compile threshold, and the ledger is 831 accepted/59 rejected. Seed 4108 repeated the separate crawlboard-copy S2.
 - Self-critique: PASS for the second of six authored Albany jobs and first of six events, `active_unproven` for greater-than-BG3; four jobs, five events, broader NPC agendas, deep crawl, and exact pilot/100-player certification remain, with Campus/Blair next.
 - Guard: browser cards/prerequisites are truthful with no overlay or console error; exact rebased health is green at 384 files/2,925 tests, and crawl `20260719T120308Z` is zero-finding at 247/247 nodes, 344/344 edges, and 12/12 boards/quests.
-
-### Cycle result - codex_compaction_context_replay
-
-- Evidence choice: Luna seed 4102 completed one logical turn but normal CLI compaction replayed its `turn_context`, so the exact-one-row verifier falsely rejected a valid provider lifecycle; auth was healthy.
-- Surface: capture and fleet authority accept a later context only after immediate `compacted` → `world_state`, before completion, with identical wrapper keys and every non-timestamp field deep-strict-equal; only the string timestamp may advance.
-- Fail closed: payload/model/turn/cwd changes, extra wrapper fields, absent or reordered compaction rows, arbitrary duplicates, and post-terminal replays still reject in both implementations.
-- Pure evidence: Luna seed 4103 played 99 turns/three goals but omitted server-owned `acceptedDecisions` and was correctly rejected; verifier-valid Terra seed 4104 completed Wolf-Winter by living-pack diversion at decision 31, continued through The Gallowmere, ended at 56, rated 4/4, was unstuck, and would replay.
-- Feedback: Terra's crawlboard report is a real S2 causal-copy defect, not a source-state leak; its blank Gallowmere action was the agent failing to forward a nonempty result. The copy repair stays separate, and neither blind encountered authentication failure.
-- Self-critique: PASS for normal Codex compaction attestation, no change to the `active_unproven` greater-than-BG3 milestone; equivalent JS/TS helpers remain a guarded drift risk and unknown future CLI formats intentionally fail closed.
-- Guard: the retained Luna witness reparses as exact Luna/openai/xhigh authority, independent red-team found no P0–P2, focused positive/negative checks pass, and crawl `20260719T100738Z` is zero-finding at 247/247 nodes, 344/344 edges, and 12/12 boards/quests.
+## AFK Cycle 2026-07-21T01-08-29-239Z
+- Assess: rpg=12; world=12; candidates=13.
+- Rec: playtest-advocates_case (content_fix/M; score=0.5).
+- Playtest: overworld.
+- Guard: blind report + health + verify:integrity before commit.
