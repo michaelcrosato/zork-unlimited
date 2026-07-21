@@ -24,17 +24,18 @@ const RIDGE_ID = "albany:wolf_approach_exposed_ridge";
 const STOCKWAY_ID = "albany:wolf_approach_sheltered_stockway";
 const STALE_ABSOLUTE_RIDGE_RESULT =
   "A clean three-cast lure line therefore reaches alarm 4 (Breaking) and scatters cattle.";
+const RIDGE_ENTRY_TIMING = "Hill lip 0; final descent 1";
 
 const WITHOUT_FODDER = {
   ridge:
-    "Arrival alarm 1; first lure cast DC 10; a clean lure reaches alarm 4 and scatters two cattle.",
+    "Hill lip 0; final descent 1; first lure DC 10; a clean lure reaches alarm 4 and scatters two cattle.",
   stockway:
     "Arrival alarm 0; first lure cast DC 12; a clean lure reaches alarm 3 and keeps the whole herd.",
 } as const;
 
 const WITH_FODDER = {
   ridge:
-    "Arrival alarm 1; first lure cast DC 10; Cade fodder suppresses the clean first-cast alarm, so a clean lure reaches alarm 3 and keeps the whole herd.",
+    "Hill lip 0; final descent 1; first lure DC 10; Cade fodder suppresses the clean first-cast alarm, so a clean lure reaches alarm 3 and keeps the herd.",
   stockway:
     "Arrival alarm 0; first lure cast DC 12; Cade fodder does not alter the sheltered route; a clean lure reaches alarm 3 and keeps the whole herd.",
 } as const;
@@ -225,6 +226,11 @@ describe("Wolf-Winter conditional route tradeoff projection", () => {
         expect(ridgePreview).toContain(STALE_ABSOLUTE_RIDGE_RESULT);
         expect(mcpRidgePreview).toContain(STALE_ABSOLUTE_RIDGE_RESULT);
       }
+      expect(full[RIDGE_ID]).toContain(RIDGE_ENTRY_TIMING);
+      expect(compact[RIDGE_ID]).toContain(RIDGE_ENTRY_TIMING);
+      expect(fullSummaries(mcpQuest)[RIDGE_ID]).toContain(RIDGE_ENTRY_TIMING);
+      expect(markup).toContain(RIDGE_ENTRY_TIMING);
+      expect(cli).toContain(RIDGE_ENTRY_TIMING);
       expect(session.snapshot()).toEqual(snapshotBeforeProjection);
     },
   );

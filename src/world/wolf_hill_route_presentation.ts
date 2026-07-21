@@ -16,9 +16,9 @@ const CADE_FODDER_KNOWLEDGE_ID = "albany:knowledge_relief_cade_fodder";
 
 const ROUTE_SUMMARIES = Object.freeze({
   exposedRidge:
-    "Arrival alarm 1; first lure cast DC 10; a clean lure reaches alarm 4 and scatters two cattle.",
+    "Hill lip 0; final descent 1; first lure DC 10; a clean lure reaches alarm 4 and scatters two cattle.",
   exposedRidgeWithFodder:
-    "Arrival alarm 1; first lure cast DC 10; Cade fodder suppresses the clean first-cast alarm, so a clean lure reaches alarm 3 and keeps the whole herd.",
+    "Hill lip 0; final descent 1; first lure DC 10; Cade fodder suppresses the clean first-cast alarm, so a clean lure reaches alarm 3 and keeps the herd.",
   shelteredStockway:
     "Arrival alarm 0; first lure cast DC 12; a clean lure reaches alarm 3 and keeps the whole herd.",
   shelteredStockwayWithFodder:
@@ -26,7 +26,7 @@ const ROUTE_SUMMARIES = Object.freeze({
 });
 
 const EXPOSED_RIDGE_WITH_FODDER_PREVIEW =
-  "Costs 30 minutes, 1 supply, and 25 fatigue. The exposed descent starts cattle alarm at 1; its clear crosswind makes the first lure cast DC 10. Cade fodder suppresses the clean first-cast alarm; Route tradeoff gives the current herd result.";
+  "Hill lip: cattle alarm 0. Take the visible final descent to raise it to 1 before the byre watch. Clear crosswind gives first lure DC 10. Cade fodder suppresses the clean first-cast alarm; Route tradeoff gives herd result.";
 
 export type WolfHillRoutePresentation = Readonly<{
   tradeoffSummary: string;
