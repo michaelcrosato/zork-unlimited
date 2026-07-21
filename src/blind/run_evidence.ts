@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { isDeepStrictEqual } from "node:util";
 import { JourneyExitReceiptSchema } from "./exit_interview.js";
+import { parseJsonRejectingDuplicateKeys } from "./strict_json.js";
 
 export const FreshStartRunEvidenceSchema = z
   .object({
@@ -153,13 +154,9 @@ export function parseRunEvidenceJsonl(text: string): RunEvidenceParseResult {
 
   const events: Array<z.infer<typeof RunEvidenceEventSchema>> = [];
   for (const [index, line] of lines.entries()) {
-    let raw: unknown;
-    try {
-      raw = JSON.parse(line);
-    } catch {
-      return { ok: false, reason: `run evidence line ${index + 1} is not valid JSON` };
-    }
-    const parsed = RunEvidenceEventSchema.safeParse(raw);
+    const raw = parseJsonRejectingDuplicateKeys(line, `run evidence line ${index + 1}`);
+    if (!raw.ok) return raw;
+    const parsed = RunEvidenceEventSchema.safeParse(raw.value);
     if (!parsed.success) {
       const issue = parsed.error.issues[0];
       return {
@@ -263,13 +260,9 @@ export function parseRunEvidenceJsonl(text: string): RunEvidenceParseResult {
 export function parseBlindRunSidecar(
   text: string,
 ): { ok: true; sidecar: BlindRunSidecar } | { ok: false; reason: string } {
-  let raw: unknown;
-  try {
-    raw = JSON.parse(text);
-  } catch {
-    return { ok: false, reason: "run sidecar is not valid JSON" };
-  }
-  const parsed = BlindRunSidecarSchema.safeParse(raw);
+  const raw = parseJsonRejectingDuplicateKeys(text, "run sidecar");
+  if (!raw.ok) return raw;
+  const parsed = BlindRunSidecarSchema.safeParse(raw.value);
   if (!parsed.success) {
     const issue = parsed.error.issues[0];
     return {

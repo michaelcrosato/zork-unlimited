@@ -13,6 +13,7 @@ import { createHash } from "node:crypto";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { bindPureCodexReceipt } from "../../src/blind/receipt_binding.js";
 import { extractRecoveredReport } from "../../src/blind/report_recovery.js";
 import { hashState } from "../../src/core/hash.js";
 import { writeCertificationArtifactSafely } from "../../bin/certify-starting-slice.js";
@@ -589,9 +590,7 @@ function currentDeathReceipt() {
   return { ...deathPayload, receiptHash: hashState(deathPayload) };
 }
 
-function reportText(
-  receipt: ReturnType<typeof currentReceipt> | ReturnType<typeof currentDeathReceipt>,
-): string {
+function reportText(receipt: unknown): string {
   const interview = {
     schema_version: 2,
     play_mode: "pure",
@@ -634,7 +633,7 @@ function sha256Text(text: string): string {
 }
 
 describe("closed fleet filesystem integrity", () => {
-  it("accepts a synthetic Codex pilot and rejects a coherently re-hashed lifecycle tamper", () => {
+  it("accepts historical v3 and receipt-bound v4 Codex pilots, then rejects lifecycle tamper", () => {
     const base = mkdtempSync(join(tmpdir(), "af-codex-slice-certifier-"));
     tempDirs.push(base);
     const fleetDir = join(base, "fleet", "codex-pilot");
@@ -927,8 +926,151 @@ describe("closed fleet filesystem integrity", () => {
     expect(accepted.pilot_passed).toBe(true);
     expect(accepted.authenticated_actual_model).toBe(model);
 
+    const summaryPath = join(fleetDir, "summary.json");
+    writeFileSync(
+      summaryPath,
+      `${JSON.stringify({ ...summary, receipt_bound_runs: 1 }, null, 2)}\n`,
+    );
+    const rejectedV3Binding = validateStartingSlicePilot({
+      root: ROOT,
+      fleetDir,
+      expectedBuild: build,
+    });
+    expect(rejectedV3Binding.validity_errors.join("\n")).toMatch(
+      /receipt-bound runs require Codex attestation v4/i,
+    );
+    writeFileSync(summaryPath, `${JSON.stringify(summary, null, 2)}\n`);
+
     const firstPrefix = join(reportsDir, "20260102T000000Z_overworld_seed700");
+    const originalFinalReportBody = readFileSync(`${firstPrefix}.md`, "utf8");
+    const initialReportBody = reportText({
+      acceptedDecisions: receipt.acceptedDecisions,
+      decisionProofHash: "forged",
+      receiptHash: "forged",
+    });
+    const providerSessionId = "10000000-0000-4000-8000-000000000700";
+    const firstEvidenceBody = readFileSync(`${firstPrefix}.evidence.jsonl`, "utf8");
+    const boundPrimaryEnvelopeBody = `${JSON.stringify({
+      type: "result",
+      subtype: "success",
+      provider: "codex",
+      is_error: false,
+      duration_ms: 1000,
+      num_turns: 1,
+      result: initialReportBody,
+      session_id: providerSessionId,
+      requested_model: model,
+      terminal_reason: "completed",
+      usage: {
+        input_tokens: 10,
+        cache_read_input_tokens: 0,
+        output_tokens: 10,
+        reasoning_output_tokens: 0,
+      },
+      modelUsage: {
+        [model]: {
+          inputTokens: 10,
+          cacheReadInputTokens: 0,
+          outputTokens: 10,
+          reasoningOutputTokens: 0,
+        },
+      },
+    })}\n`;
+    const binding = bindPureCodexReceipt({
+      playMode: "pure",
+      provider: "codex",
+      agentExitStatus: 0,
+      verifierExitStatus: 5,
+      attempt: 0,
+      requestedModel: model,
+      expectedRunSeed: 700,
+      expectedGitCommit: build.git_commit,
+      expectedTrackedWorktreeClean: true,
+      primaryEnvelopeBytes: Buffer.from(boundPrimaryEnvelopeBody),
+      runEvidenceBytes: Buffer.from(firstEvidenceBody),
+      reportBytes: Buffer.from(initialReportBody),
+    });
+    expect(binding.ok, binding.ok ? undefined : binding.reason).toBe(true);
+    if (!binding.ok) throw new Error(binding.reason);
+    const boundReportBody = Buffer.from(binding.reportBytes).toString("utf8");
+    const bindingBody = `${JSON.stringify(binding.metadata, null, 2)}\n`;
+
+    const encodedFinalReport = JSON.stringify(originalFinalReportBody);
+    const encodedInitialReport = JSON.stringify(initialReportBody);
+    const providerEventsPath = `${firstPrefix}.codex.jsonl`;
+    const providerEventsBody = readFileSync(providerEventsPath, "utf8").replaceAll(
+      encodedFinalReport,
+      encodedInitialReport,
+    );
+    writeFileSync(providerEventsPath, providerEventsBody);
     const rolloutPath = `${firstPrefix}.codex-rollout.jsonl`;
+    const boundRolloutBody = readFileSync(rolloutPath, "utf8").replaceAll(
+      encodedFinalReport,
+      encodedInitialReport,
+    );
+    writeFileSync(rolloutPath, boundRolloutBody);
+    const capturePath = `${firstPrefix}.codex-capture.json`;
+    const boundCapture = JSON.parse(readFileSync(capturePath, "utf8")) as Record<string, unknown>;
+    boundCapture.copied_rollout_sha256 = sha256Text(boundRolloutBody);
+    const boundCaptureBody = `${JSON.stringify(boundCapture, null, 2)}\n`;
+    writeFileSync(capturePath, boundCaptureBody);
+    writeFileSync(`${firstPrefix}.json`, boundPrimaryEnvelopeBody);
+    writeFileSync(`${firstPrefix}.initial-report.txt`, initialReportBody);
+    writeFileSync(`${firstPrefix}.receipt-bind.json`, bindingBody);
+    writeFileSync(`${firstPrefix}.md`, boundReportBody);
+
+    const boundRows = rows.map((row, index) => {
+      const receiptBound = index === 0;
+      const modelAttestation = {
+        ...row.model_attestation,
+        schema_version: 4,
+        report_receipt_bound: receiptBound,
+        report_sha256: receiptBound
+          ? sha256Text(boundReportBody)
+          : row.model_attestation.report_sha256,
+        primary_envelope_sha256: receiptBound
+          ? sha256Text(boundPrimaryEnvelopeBody)
+          : row.model_attestation.primary_envelope_sha256,
+        provider_events_sha256: receiptBound
+          ? sha256Text(providerEventsBody)
+          : row.model_attestation.provider_events_sha256,
+        provider_rollout_sha256: receiptBound
+          ? sha256Text(boundRolloutBody)
+          : row.model_attestation.provider_rollout_sha256,
+        provider_capture_sha256: receiptBound
+          ? sha256Text(boundCaptureBody)
+          : row.model_attestation.provider_capture_sha256,
+        initial_report_sha256: receiptBound ? sha256Text(initialReportBody) : null,
+        receipt_binding_sha256: receiptBound ? sha256Text(bindingBody) : null,
+      };
+      const upgraded = {
+        ...row,
+        report_receipt_bound: receiptBound,
+        attempt_history: row.attempt_history.map((attempt) => ({
+          ...attempt,
+          report_receipt_bound: receiptBound,
+        })),
+        model_attestation: modelAttestation,
+      };
+      const prefix = join(reportsDir, `20260102T000000Z_overworld_seed${row.seed}`);
+      writeFileSync(`${prefix}.fleet.json`, `${JSON.stringify(modelAttestation, null, 2)}\n`);
+      return upgraded;
+    });
+    const boundSummary = {
+      ...summary,
+      receipt_bound_runs: 1,
+      model_attestation_schema_version: 4,
+    };
+    writeFileSync(summaryPath, `${JSON.stringify(boundSummary, null, 2)}\n`);
+    writeFileSync(manifestPath, `${boundRows.map((row) => JSON.stringify(row)).join("\n")}\n`);
+    const acceptedBoundV4 = validateStartingSlicePilot({
+      root: ROOT,
+      fleetDir,
+      expectedBuild: build,
+    });
+    expect(acceptedBoundV4.validity_errors).toEqual([]);
+    expect(acceptedBoundV4.pilot_passed).toBe(true);
+
     const tamperedRollout = readFileSync(rolloutPath, "utf8")
       .trim()
       .split(/\r?\n/u)
@@ -937,7 +1079,6 @@ describe("closed fleet filesystem integrity", () => {
     completion.last_agent_message = "coherently re-hashed substitution";
     const tamperedRolloutBody = `${tamperedRollout.map((row) => JSON.stringify(row)).join("\n")}\n`;
     writeFileSync(rolloutPath, tamperedRolloutBody);
-    const capturePath = `${firstPrefix}.codex-capture.json`;
     const tamperedCapture = JSON.parse(readFileSync(capturePath, "utf8")) as Record<
       string,
       unknown
@@ -946,14 +1087,14 @@ describe("closed fleet filesystem integrity", () => {
     const tamperedCaptureBody = `${JSON.stringify(tamperedCapture, null, 2)}\n`;
     writeFileSync(capturePath, tamperedCaptureBody);
     const tamperedAttestation = {
-      ...rows[0]!.model_attestation,
+      ...boundRows[0]!.model_attestation,
       provider_rollout_sha256: sha256Text(tamperedRolloutBody),
       provider_capture_sha256: sha256Text(tamperedCaptureBody),
     };
     writeFileSync(`${firstPrefix}.fleet.json`, `${JSON.stringify(tamperedAttestation, null, 2)}\n`);
     writeFileSync(
       manifestPath,
-      `${rows
+      `${boundRows
         .map((row, index) =>
           index === 0 ? { ...row, model_attestation: tamperedAttestation } : row,
         )
@@ -1275,6 +1416,37 @@ describe("closed fleet filesystem integrity", () => {
     expect(certified.cohort_kind).toBe("pilot");
     expect(certified.authenticated_actual_model).toBe("claude-sonnet-4-5-20260716");
     expect(certified.certified_build).toEqual(build);
+
+    const duplicateSummaryBody = canonicalSummaryBody.replace(
+      "{\n",
+      '{\n  "receipt_bound_runs": 1,\n  "receipt_bound_runs": 0,\n',
+    );
+    writeFileSync(summaryPath, duplicateSummaryBody);
+    const rejectedDuplicateSummary = validateStartingSlicePilot({
+      root: ROOT,
+      fleetDir,
+      expectedBuild: build,
+    });
+    expect(rejectedDuplicateSummary.validity_errors.join("\n")).toMatch(
+      /duplicate JSON object key "receipt_bound_runs"/i,
+    );
+    writeFileSync(summaryPath, canonicalSummaryBody);
+
+    const manifestLines = canonicalManifestBody.trimEnd().split(/\r?\n/u);
+    manifestLines[0] = manifestLines[0]!.replace(
+      "{",
+      '{"report_receipt_bound":true,"report_receipt_bound":false,',
+    );
+    writeFileSync(manifestPath, `${manifestLines.join("\n")}\n`);
+    const rejectedDuplicateManifest = validateStartingSlicePilot({
+      root: ROOT,
+      fleetDir,
+      expectedBuild: build,
+    });
+    expect(rejectedDuplicateManifest.validity_errors.join("\n")).toMatch(
+      /manifest row 1.*duplicate JSON object key "report_receipt_bound"/i,
+    );
+    writeFileSync(manifestPath, canonicalManifestBody);
 
     rewriteFirstReceipt(currentDeathReceipt());
     const rejectedCharacterDeath = validateStartingSlicePilot({

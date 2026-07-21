@@ -79,9 +79,14 @@ and subagent capabilities, injects only the pure AdventureForge MCP server, and
 pair-audits every normal game call. Exact paired/null `-32601` probes against the
 empty AdventureForge resource namespace and one bounded in-memory todo lifecycle
 are tolerated as non-gameplay transport noise; any content, success, other
-server, malformed lifecycle, or unbounded payload rejects the run. Codex report
-recovery is intentionally unavailable: malformed output is rejected and needs
-a fresh seed. Fleet runs capture one rollout JSONL from the sterile home and
+server, malformed lifecycle, or unbounded payload rejects the run. Codex never
+uses a report-recovery model turn. On attempt zero only, an otherwise-valid
+report whose sole verifier defect is its existing `journey_exit_receipt` value
+may use deterministic server-receipt binding. The runner preserves the exact
+provider message in `.json` and `.initial-report.txt`, replaces only that JSON
+value, and writes strict `.receipt-bind.json` hashes; duplicate keys, subjective
+or prose-rating drift, other report defects, provenance mismatch, or failure to
+reproduce and pass the unchanged verifier rejects the run. Fleet runs capture one rollout JSONL from the sterile home and
 verify its cwd against the still-live isolated player directory by exact
 canonical path and native filesystem identity. An exclusive adjacent
 `.codex-capture.json` receipt records that capture-time check and binds it to the
@@ -159,15 +164,18 @@ npm run fleet:mock -- --count 2 --target quest:sunken_barrow # structural drop-i
   generated artifact and a diagnostic log are copied into the bundle's
   per-seed/per-attempt archive with byte counts and SHA-256 digests.
 - **Runner attestation**: historical Claude members retain the adjacent v2
-  attestation. Codex members use v3, binding the exact CLI-recorded selected
+  attestation. Ordinary historical Codex members remain readable as v3; current
+  Codex members use v4, binding the exact CLI-recorded selected
   model, provider `openai`, effort `xhigh`, provider session/turn, verified
   isolated working directory, completed one-turn lifecycle, public events,
-  final report, the single copied rollout, and its strict cwd capture receipt.
+  original provider report, the single copied rollout, and its strict cwd capture receipt.
   `task_complete` must be the final rollout row and any abort/error lifecycle
   history rejects the run. All artifact bytes are hashed. Requested-model and
   synthesized usage fields are not authority; missing or ambiguous rollout proof
   fails closed. Certification independently reparses the retained chain and
-  rejects recovery, reuse, links, and path escape; it does not re-stat the
+  rejects recovery, reuse, links, and path escape. For a receipt-bound member,
+  v4 also hashes `.initial-report.txt` and `.receipt-bind.json`, reproduces the
+  one-value edit from raw evidence, and records `report_receipt_bound`; it does not re-stat the
   already-deleted temporary cwd or provide a provider signature.
 - **Output**: reports plus verified `.run.json` evidence sidecars in `reports/`
   (or `--out <dir>`). For pure runs the adjacent sidecar is the final publication
@@ -184,7 +192,10 @@ npm run fleet:mock -- --count 2 --target quest:sunken_barrow # structural drop-i
   declares report-only recovery only when `.initial-report.txt`,
   `.repair.meta.json`, and `.repair.json` form a complete, deterministically
   reproducible byte-bound set; rejected originals stay outside feedback
-  compiler `*.md` discovery. Recovery is diagnostic only: subjective fields
+  compiler `*.md` discovery. Deterministic Codex receipt binding is recorded
+  separately in each attempt, manifest row, v4 attestation, and the summary's
+  `receipt_bound_runs`; it does not change subjective fields and remains
+  certification-eligible. Recovery is diagnostic only: subjective fields
   such as confusion, bugs, stuck state, and replay intent were generated after
   the primary report and therefore cannot certify the slice. Summary
   failure/timeout counts are reduced from all attempts, not only each slot's

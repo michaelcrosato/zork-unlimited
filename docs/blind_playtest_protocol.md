@@ -147,8 +147,25 @@ authenticated receipt and reverifies the promoted report and sidecar. This is
 never a gameplay continuation and cannot recover a timeout, missing exit,
 mechanical/MCP failure, or any other report defect.
 
-Codex runs reuse the same evidence verifier and sidecar-last publication
-transaction, but do not attempt report recovery. The runner starts Codex in an
+Codex runs reuse the same unchanged evidence verifier and sidecar-last
+publication transaction and never start a second model turn. If the attempt-zero
+provider report has exactly one final, otherwise-valid pure V2 interview and its
+only verifier failure is an invalid or mismatched `journey_exit_receipt`, the
+runner may perform deterministic receipt binding. It authenticates the completed
+audited Codex envelope, exact original report bytes, current v2 raw evidence,
+launch seed/commit/cleanliness, singleton requested model, subjective schema,
+and prose ratings; rejects duplicate JSON keys or any other defect; and replaces
+only the existing top-level receipt JSON value with the server-authored receipt.
+The original provider message remains byte-for-byte in `.json` and
+`.initial-report.txt`. Strict `.receipt-bind.json` metadata hashes those inputs,
+the receipt, and the bound output; reproduction plus the unchanged verifier must
+pass before publication. This is machine evidence binding, not report recovery:
+no prose, rating, bug, confusion, verdict, or replay answer may change.
+It is available only while the private attempt-zero evidence exists inside the
+live publication transaction and never retroactively accepts a historically
+rejected report.
+
+The runner starts Codex in an
 isolated temporary player directory with a fresh per-run `CODEX_HOME` containing
 only a private copy of `auth.json`; user/project config and rules are ignored,
 shell/web/apps/plugins/browser/computer/subagents disabled, and only the exact
@@ -162,7 +179,8 @@ events expose no content, do not count as gameplay, and fail closed on success,
 content, another server, malformed pairing, or an unbounded payload. Every normal
 AdventureForge call is separately paired by id, tool, arguments, status, and
 result; the first pair must be a successful argument-free `start_overworld`.
-A rejected Codex run must use a fresh seed. For a fleet member, the runner also
+A Codex report outside that single receipt-only case remains rejected and must
+use a fresh seed. For a fleet member, the runner also
 captures exactly one non-linked rollout JSONL from that sterile home and verifies
 its recorded cwd resolves to the still-live isolated `player` directory by exact
 canonical path and native filesystem identity before publication. It writes an
@@ -174,7 +192,10 @@ assistant response, and one terminal `task_complete` in order; any abort/error
 lifecycle history or row after `task_complete` rejects the run. The lifecycle
 shares one turn id, the public thread/session agree, provider is
 `openai`, sandbox is read-only, effort is `xhigh`, and both final-message fields
-equal the report. `turn_context.model` is Codex CLI-recorded selected-model
+equal the original provider report. For a receipt-bound run, Codex attestation
+v4 additionally hashes the original report and binding metadata and requires
+deterministic reproduction of the verified final report; ordinary Codex v3
+attestations remain readable. `turn_context.model` is Codex CLI-recorded selected-model
 provenance bound to the artifact, not a provider-signed snapshot proving which
 remote backend served the turn. The primary envelope's requested model and
 synthesized `modelUsage` are never model authority.
@@ -353,11 +374,12 @@ outcomes, and journey result rather than relying on a filename or summary count.
 An adjacent runner-owned attestation binds each live member to its planned
 provider/model, exact singleton model provenance, unique provider session,
 completed clean primary envelope, game session, and artifact hashes. Historical
-Claude members retain v2 compatibility. Codex v3 additionally binds the actual
-provider, reasoning effort, turn id, working directory, public provider events,
-copied rollout JSONL, and cwd capture receipt; recovery is forbidden. Diagnostic
-resume reparses those retained facts from the bytes, while certification also rejects
-reuse, links, path escape, and any recovered member.
+Claude members retain v2 compatibility, and ordinary Codex v3 remains readable.
+Codex v4 additionally binds the actual provider, reasoning effort, turn id,
+working directory, public provider events, copied rollout JSONL, cwd capture
+receipt, and deterministic receipt-binding provenance when present. Diagnostic
+resume reparses those retained facts from the bytes, while certification also
+rejects reuse, links, path escape, and any model-recovered member.
 
 ### Starting-slice certification
 
@@ -368,7 +390,7 @@ npm run fleet -- --provider codex --model gpt-5.6-terra --count 10 --concurrency
 npm run starting-slice:pilot -- --fleet ai-runs/fleet/<fresh-pilot-label>
 ```
 
-The pilot requires 10/10 primary unrecovered/no-retry reports, unique game and
+The pilot requires 10/10 primary-subjective/no-model-recovery/no-retry reports, unique game and
 provider sessions, one exact provider-evidence model value, recognized Wolf-Winter outcomes, at
 least three strategy families, and no family above 7/10. It checks the other
 slice gates but writes a distinct readiness result and can never certify the

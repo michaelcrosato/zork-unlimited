@@ -26,7 +26,12 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 export const DEFAULT_TELEMETRY_FILE = join(HERE, "..", "ai-runs", "blind-telemetry.jsonl");
 
 const num = (v) => (typeof v === "number" && Number.isFinite(v) ? v : null);
-const PLAYTHROUGH_SUCCESS_OUTCOMES = new Set(["success", "verified", "verified_recovered"]);
+const PLAYTHROUGH_SUCCESS_OUTCOMES = new Set([
+  "success",
+  "verified",
+  "verified_receipt_bound",
+  "verified_recovered",
+]);
 const RECOVERY_SUCCESS_OUTCOMES = new Set(["passed", "success"]);
 
 /**

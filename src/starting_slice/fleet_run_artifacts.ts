@@ -10,11 +10,16 @@ import {
   extractRecoveredReport,
 } from "../blind/report_recovery.js";
 import {
+  PureReceiptBindingMetadataSchema,
+  reproducePureCodexReceiptBinding,
+} from "../blind/receipt_binding.js";
+import {
   parseBlindRunSidecar,
   parseRunEvidenceJsonl,
   PureRunBuildSchema,
   type PureBlindRunSidecar,
 } from "../blind/run_evidence.js";
+import { parseJsonRejectingDuplicateKeys } from "../blind/strict_json.js";
 
 const HASH_PATTERN = /^[0-9a-f]{64}$/;
 
@@ -63,6 +68,7 @@ export interface PureFleetRunArtifactBytes {
   runEvidence: Uint8Array;
   primaryEnvelope: Uint8Array;
   initialReport: Uint8Array | null;
+  receiptBinding?: Uint8Array | null;
   recoveryMetadata: Uint8Array | null;
   recoveryEnvelope: Uint8Array | null;
   providerEvents: Uint8Array | null;
@@ -76,6 +82,7 @@ export interface PureFleetRunArtifactPaths {
   runEvidence: string;
   primaryEnvelope: string;
   initialReport: string;
+  receiptBinding: string;
   recoveryMetadata: string;
   recoveryEnvelope: string;
   providerEvents: string;
@@ -91,6 +98,7 @@ export function pureFleetRunArtifactPaths(reportPath: string): PureFleetRunArtif
     runEvidence: `${prefix}.evidence.jsonl`,
     primaryEnvelope: `${prefix}.json`,
     initialReport: `${prefix}.initial-report.txt`,
+    receiptBinding: `${prefix}.receipt-bind.json`,
     recoveryMetadata: `${prefix}.repair.meta.json`,
     recoveryEnvelope: `${prefix}.repair.json`,
     providerEvents: `${prefix}.codex.jsonl`,
@@ -112,6 +120,7 @@ export interface PureFleetRunArtifactHashes {
   run_evidence_sha256: string;
   primary_envelope_sha256: string;
   initial_report_sha256: string | null;
+  receipt_binding_sha256: string | null;
   recovery_metadata_sha256: string | null;
   recovery_envelope_sha256: string | null;
   provider_events_sha256: string | null;
@@ -130,6 +139,7 @@ export interface PureFleetRunArtifactFacts {
   provider_turn_id: string | null;
   provider_cwd: string | null;
   report_recovered: boolean;
+  report_receipt_bound: boolean;
   hashes: PureFleetRunArtifactHashes;
 }
 
@@ -184,13 +194,9 @@ function parsePrimaryEnvelope(
       actualModel: string;
     }
   | { ok: false; reason: string } {
-  let raw: unknown;
-  try {
-    raw = JSON.parse(text);
-  } catch {
-    return { ok: false, reason: "primary Claude envelope is not valid JSON" };
-  }
-  const parsed = PureFleetPrimaryClaudeEnvelopeSchema.safeParse(raw);
+  const raw = parseJsonRejectingDuplicateKeys(text, "primary Claude envelope");
+  if (!raw.ok) return raw;
+  const parsed = PureFleetPrimaryClaudeEnvelopeSchema.safeParse(raw.value);
   if (!parsed.success) {
     const issue = parsed.error.issues[0];
     return {
@@ -612,6 +618,8 @@ function artifactHashes(input: PureFleetRunArtifactBytes): PureFleetRunArtifactH
     primary_envelope_sha256: sha256ArtifactBytes(input.primaryEnvelope),
     initial_report_sha256:
       input.initialReport === null ? null : sha256ArtifactBytes(input.initialReport),
+    receipt_binding_sha256:
+      input.receiptBinding == null ? null : sha256ArtifactBytes(input.receiptBinding),
     recovery_metadata_sha256:
       input.recoveryMetadata === null ? null : sha256ArtifactBytes(input.recoveryMetadata),
     recovery_envelope_sha256:
@@ -689,13 +697,17 @@ export function validatePureFleetRunArtifactBytes(
     if (!expectedModel.success) {
       return { ok: false, reason: "Codex fleet plan requires one exact certified Codex model id" };
     }
-    if (
-      input.initialReport !== null ||
-      input.recoveryMetadata !== null ||
-      input.recoveryEnvelope !== null
-    ) {
+    if (input.recoveryMetadata !== null || input.recoveryEnvelope !== null) {
       return { ok: false, reason: "Codex certified runs do not permit report recovery artifacts" };
     }
+    const receiptBindingPresence = [input.initialReport !== null, input.receiptBinding != null];
+    if (receiptBindingPresence.some(Boolean) && !receiptBindingPresence.every(Boolean)) {
+      return {
+        ok: false,
+        reason: "Codex receipt-binding artifacts must be either both absent or both present",
+      };
+    }
+    const reportReceiptBound = receiptBindingPresence.every(Boolean);
     if (
       decoded.providerEvents === null ||
       decoded.providerRollout === null ||
@@ -707,26 +719,62 @@ export function validatePureFleetRunArtifactBytes(
           "Codex certified runs require provider events, one rollout, and its capture receipt",
       };
     }
-    const primaryRaw = (() => {
-      try {
-        return JSON.parse(decoded.primaryEnvelope.text) as unknown;
-      } catch {
-        return null;
-      }
-    })();
-    const primary = PureFleetPrimaryCodexEnvelopeSchema.safeParse(primaryRaw);
+    const primaryRaw = parseJsonRejectingDuplicateKeys(
+      decoded.primaryEnvelope.text,
+      "primary Codex envelope",
+    );
+    if (!primaryRaw.ok) return primaryRaw;
+    const primary = PureFleetPrimaryCodexEnvelopeSchema.safeParse(primaryRaw.value);
     if (!primary.success) {
       return { ok: false, reason: "primary Codex envelope is not a completed audited turn" };
     }
-    if (!bytesEqual(input.report, exactUtf8Bytes(primary.data.result))) {
-      return { ok: false, reason: "primary Codex result bytes do not equal the final report" };
+    let providerReport = decoded.report.text;
+    if (!reportReceiptBound) {
+      if (!bytesEqual(input.report, exactUtf8Bytes(primary.data.result))) {
+        return { ok: false, reason: "primary Codex result bytes do not equal the final report" };
+      }
+    } else {
+      const decodedInitial = decodeUtf8(input.initialReport!, "initial Codex report");
+      const decodedBinding = decodeUtf8(input.receiptBinding!, "receipt binding metadata");
+      if (!decodedInitial.ok) return decodedInitial;
+      if (!decodedBinding.ok) return decodedBinding;
+      if (!bytesEqual(input.initialReport!, exactUtf8Bytes(primary.data.result))) {
+        return { ok: false, reason: "primary Codex result bytes do not equal the initial report" };
+      }
+      const rawMetadata = parseJsonRejectingDuplicateKeys(
+        decodedBinding.text,
+        "receipt binding metadata",
+      );
+      if (!rawMetadata.ok) return rawMetadata;
+      const parsedMetadata = PureReceiptBindingMetadataSchema.safeParse(rawMetadata.value);
+      if (!parsedMetadata.success) {
+        return { ok: false, reason: "receipt binding metadata does not match its strict schema" };
+      }
+      if (
+        parsedMetadata.data.requested_model !== expectedModel.data ||
+        parsedMetadata.data.run_seed !== expected.seed ||
+        !isDeepStrictEqual(parsedMetadata.data.build, expected.build)
+      ) {
+        return { ok: false, reason: "receipt binding metadata differs from the planned run" };
+      }
+      const reproduced = reproducePureCodexReceiptBinding({
+        primaryEnvelopeBytes: input.primaryEnvelope,
+        originalReportBytes: input.initialReport!,
+        runEvidenceBytes: input.runEvidence,
+        metadata: parsedMetadata.data,
+      });
+      if (!reproduced.ok) return reproduced;
+      if (!bytesEqual(input.report, reproduced.reportBytes)) {
+        return { ok: false, reason: "final report is not the deterministic receipt-bound report" };
+      }
+      providerReport = decodedInitial.text;
     }
     const authority = parseCodexAuthority(
       decoded.providerEvents.text,
       decoded.providerRollout.text,
       decoded.providerCapture.text,
       expectedModel.data,
-      decoded.report.text,
+      providerReport,
     );
     if (!authority.ok) return authority;
     if (primary.data.session_id !== authority.facts.sessionId) {
@@ -746,6 +794,7 @@ export function validatePureFleetRunArtifactBytes(
         provider_turn_id: authority.facts.turnId,
         provider_cwd: authority.facts.cwd,
         report_recovered: false,
+        report_receipt_bound: reportReceiptBound,
         hashes,
       },
     };
@@ -760,6 +809,12 @@ export function validatePureFleetRunArtifactBytes(
     input.providerCapture !== null
   ) {
     return { ok: false, reason: "Claude fleet artifacts must not contain Codex provider evidence" };
+  }
+  if (input.receiptBinding != null) {
+    return {
+      ok: false,
+      reason: "Claude fleet artifacts must not contain receipt binding metadata",
+    };
   }
 
   const primary = parsePrimaryEnvelope(decoded.primaryEnvelope.text, expected.model);
@@ -845,6 +900,7 @@ export function validatePureFleetRunArtifactBytes(
       provider_turn_id: null,
       provider_cwd: null,
       report_recovered: reportRecovered,
+      report_receipt_bound: false,
       hashes,
     },
   };

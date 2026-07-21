@@ -136,6 +136,11 @@ describe("summarizeBlindTelemetry", () => {
         phase: "playthrough",
         outcome: "verified",
       }),
+      extractBlindTelemetry(ENVELOPE, {
+        source: "overworld",
+        phase: "playthrough",
+        outcome: "verified_receipt_bound",
+      }),
       extractBlindTelemetry(
         {},
         {
@@ -145,6 +150,6 @@ describe("summarizeBlindTelemetry", () => {
         },
       ),
     ];
-    expect(summarizeBlindTelemetry(rows)[0]).toMatchObject({ runs: 3, failed: 2 });
+    expect(summarizeBlindTelemetry(rows)[0]).toMatchObject({ runs: 4, failed: 2 });
   });
 });

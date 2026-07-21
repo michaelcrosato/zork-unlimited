@@ -41,6 +41,7 @@ function main(): void {
       runEvidence: readFileSync(paths.runEvidence),
       primaryEnvelope: readFileSync(paths.primaryEnvelope),
       initialReport: existsSync(paths.initialReport) ? readFileSync(paths.initialReport) : null,
+      receiptBinding: existsSync(paths.receiptBinding) ? readFileSync(paths.receiptBinding) : null,
       recoveryMetadata: existsSync(paths.recoveryMetadata)
         ? readFileSync(paths.recoveryMetadata)
         : null,

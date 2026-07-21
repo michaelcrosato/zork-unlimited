@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 595 -->
+<!-- historical_cycle_count: 596 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - blind_receipt_binding
+
+- Evidence choice: a malformed Codex journey receipt had invalidated an otherwise complete pure run, so this cycle bound only that attempt-zero failure path to the work-private server receipt instead of retrying the model or relaxing verification.
+- Surface: strict, duplicate-key-safe metadata records deterministic receipt binding through report, fleet manifest, summary, and attestation; ordinary valid reports remain unbound and byte-for-byte on the existing publication path.
+- Counterfactual: adversarial tests reject forged-first duplicate values and incomplete provenance chains, preserve v3 readability only for zero-bound fleets, and prove malformed recovery cannot alter the original provider report, envelope, subjective answers, or hashes.
+- Pure evidence: exact clean-build Terra seed 4248 completed Wolf-Winter (`ending_fortified_albany_authority`) and The Gallowmere (`ending_hunt_won`) in 43 decisions, continued at goal 20/checkpoint 40, ended at goal 43, rated clarity 3/enjoyment 4, was unstuck/replay-no, and published `verified` with no binding artifact, provenance, or count.
+- Measured result: normal live-path noninterference PASSes; malformed-path recovery is established by deterministic tests, not claimed from this valid run. Feedback retained one S2 identity-continuity gap plus S1 Rowan duplication and mid-combat checkpoint interruption; no auth, security, model, or tool failure occurred.
+- Feedback/follow-through: the ledger is 917 accepted/59 rejected with two verified reports since compile `20260721T012144Z`, below the three-report threshold; dense setup remains the worst moment.
+- Guard: exact rebased increment `fdac1679` has zero-finding crawl at 247/247 nodes, 344/344 edges, and 12/12 boards/quests; health passes 393 files/3,013 tests plus UI/all packs, and independent review found no remaining P0-P2.
 
 ### Cycle result - cade_return_packet
 
@@ -154,20 +164,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Compile: `20260719T152553Z` has 853 verified reports and 102 current-contract pure exits, 86 continuing; the ten-run cohort was compiled before this one-report exact-build top-off.
 - Self-critique: PASS for the recurring MCP alias S2, not the greater-than-BG3 milestone. Summary-first setup presentation is next; Rowan identity continuity and the road strategy field remain separate low-severity debt.
 - Guard: two adversarial reviews closed schema omission, compact-cap leakage, full-action parity, error masking, and non-mutation gaps; crawl `20260719T160003Z` is zero-finding at 247/247 nodes, 344/344 edges, and 12/12 boards/quests, and health passes 384 files/2,931 tests plus UI/all packs.
-
-### Cycle result - wolf_winter_crawlboard_source_copy
-
-- Evidence choice: verifier-valid Terra seed 4104 exposed a real S2 causal-copy defect: Jamie's certified combat opening and Cade's separately taught nonlethal second cast use the same physical feed-hauler crawlboard, but generic “in your packet” copy falsely made Cade's route sound imported.
-- Surface: mechanics are unchanged; Jamie alone opens the uncommitted rail-free combat drop, while only Cade's irreversible finite-feed commitment teaches its own second-cast route. Hayden plus combat remains barred, and Hayden plus Cade never gains Jamie's evidence or prose.
-- Counterfactual: source, strategy, loft-resource, full observation, and compact no-truncation tests prove Jamie/combat, Hayden/blocked, and Hayden/Cade-lure provenance without packet leakage; docs and the causal matrix now state the same boundary.
-- Pure evidence: Terra seed 4116 verified 46 decisions across Wolf-Winter fortification and The Gallowmere at 4/4, unstuck/replay-yes. Clean ten-Spark seeds 4120–4129 consumed 59.48M input tokens with one valid report: seed 4122 ended Wolf at 23, 4/5, unstuck/replay-yes; nine forbidden resource probes remain excluded. Rejected seed 4121 alone explored Cade's pack-diversion crawlboard, so deterministic pairs still carry direct evidence.
-- Compile: `20260719T130217Z` has 833 verified reports and 82 current-contract pure exits, 68 continuing; seed 4122 is the sole new accepted report, below the next compile threshold. One real low-severity child-session argument naming inconsistency remains separate; contact-id and fixed-checkpoint complaints audited as player misuse/disclosed pacing.
-- Self-critique: PASS for truthful crawlboard provenance, not the greater-than-BG3 milestone. Albany now has 2/6 authored jobs and 1/6 authored events; Campus/Blair remains the next bounded depth conversion.
-- Guard: independent red-team found no P0–P2, exact rebased crawl `20260719T132548Z` is zero-finding at 247/247 nodes, 344/344 edges, and 12/12 boards/quests, and health passes 384 files/2,926 tests plus UI/all packs.
-
-## AFK Cycle 2026-07-21T01-36-33-482Z
-
-- Assess: rpg=12; world=12; candidates=15.
-- Rec: hotspot-3344db50 (content_fix/M; score=2.5).
-- Playtest: overworld.
-- Guard: blind report + health + verify:integrity before commit.

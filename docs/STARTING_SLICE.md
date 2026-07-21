@@ -737,8 +737,8 @@ npm run fleet -- --provider codex --model gpt-5.6-terra --count 10 --concurrency
 npm run starting-slice:pilot -- --fleet ai-runs/fleet/<fresh-pilot-label>
 ```
 
-The pilot requires all ten primary reports to authenticate without resume,
-retry, recovery, or failed attempts; ten unique game and provider sessions; one
+The pilot requires all ten primary subjective reports to authenticate without
+resume, retry, model-assisted recovery, or failed attempts; ten unique game and provider sessions; one
 exact provider-evidence model value; recognized Wolf-Winter
 outcomes; at least three organic strategy families; and no family above 7/10.
 It also evaluates the slice's completion-speed, clarity, enjoyment,
@@ -776,14 +776,21 @@ also non-certifying; a new authoritative label must use
 report is declared only when the runner's adjacent `.initial-report.txt`,
 `.repair.meta.json`, and `.repair.json` bytes form a complete set that
 deterministically reproduces it; the rejected original is not another
-feedback-discoverable Markdown report. Such a report remains diagnostic-only:
+feedback-discoverable Markdown report. Such a model-recovered report remains diagnostic-only:
 its confusion, bug, stuck, and replay-intent fields were generated after the
 primary prose and cannot participate in authoritative certification.
 
 Each live member has an adjacent runner-owned provider-discriminated attestation.
-Historical Claude v2 remains compatible. Codex v3 binds its exact CLI-recorded
-selected model, provider/session/turn, effort, isolated cwd, completed lifecycle,
-unique game session, and all artifact hashes. An exclusive strict capture receipt
+Historical Claude v2 remains compatible, as does ordinary historical Codex v3.
+Current Codex v4 binds its exact CLI-recorded selected model,
+provider/session/turn, effort, isolated cwd, completed lifecycle, unique game
+session, and all artifact hashes. It may also declare deterministic
+`report_receipt_bound` provenance: `.initial-report.txt` remains the exact
+provider message, `.receipt-bind.json` hashes the envelope/report/raw evidence
+and one replaced field, and certification must reproduce the final report from
+those bytes. Because this starts no model turn and preserves every subjective
+field and all prose outside the receipt value, it is not report recovery and is
+eligible when every v4 check passes. An exclusive strict capture receipt
 binds the copied rollout hash to the exact canonical expected/session/turn cwd and
 native filesystem identity; later validation reparses it and rejects
 abort/error history or any row after terminal `task_complete`.
@@ -793,7 +800,7 @@ sequence before completion. Wrapper keys must match and only the timestamp may
 differ; every other duplicate context fails closed.
 `turn_context.model` is durable CLI provenance, not a provider-signed
 remote-backend snapshot. Diagnostic resume reparses these retained facts;
-certification rejects recovery, reuse, links, and path escape.
+certification rejects model-assisted recovery, reuse, links, and path escape.
 The cwd receipt is likewise trusted local runner provenance recorded while the
 temporary player directory still exists. After cleanup, later validation reparses
 the receipt and hashes but cannot re-stat that deleted directory or resist a
