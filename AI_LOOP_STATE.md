@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 607 -->
+<!-- historical_cycle_count: 608 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - pure_step_action_prompt_contract
+
+- Evidence choice: exact-build Sol 4350 invented a nonexistent embedded-quest bridge because the live pure-overworld prompt named legal-action reads but omitted the already-loaded `step_action` mutation tool, so this cycle repairs the tester contract rather than changing the healthy MCP engine.
+- Surface: the player now receives the exact `mcp__adventureforge__step_action` name and maps the current child session, exact visible action id, and latest state hash to `session_id`, `action_id`, and `expected_state_hash`; no route, hidden state, game mechanic, allowlist, or ToolSearch policy changes.
+- Counterfactual: one prompt-contract assertion binds all four identifiers together while existing pure-mode integration tests retain stale-hash rejection, current-menu authority, compact projection, and the no-leakage boundary; independent review found no P0-P2.
+- Pure evidence: exact clean `49c8fbd2` Sol seed 4351 completed Wolf-Winter (`ending_pack_diverted`) and The Gallowmere (`ending_hunt_won`) in 55 decisions, continued at 29 and 40, ended at 55, rated clarity/enjoyment 4/4, and was unstuck/replay-yes.
+- Measured result: all 50 embedded-quest mutations used the named bridge and all 50 carried a valid 24-hex `expected_state_hash`; there were zero discovery calls, MCP errors, retries, auth/login/security/DEP0190 warnings, or tracked changes.
+- Feedback/follow-through: verified seeds 4350 and 4351 are two reports since compile `20260721T181636Z`, below the next three-report threshold; fresh friction remains compact truncation, repeated Rowan identity, and Gallowmere strike narration, while the real Cade packet contradiction proceeds separately.
+- Guard: pre/post crawl stays zero-finding at 247/247 nodes, 344/344 edges, and 12/12 boards/quests; the final combined branch passes health at 406 files/3,112 tests plus UI/all packs, prompt/tool-reference suites pass 58/58, and independent review found no P0-P2.
 
 ### Cycle result - albany_works_hazard_charter
 
@@ -154,13 +164,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Measured result: mechanical optionality and uninterrupted departure PASS; organic skipping remains UNPROVEN because this cohort selected both. The tester wanted to continue its existing Gallowmere journey but marked new-run replay no after the fixed checkpoint interrupted it.
 - Feedback/follow-through: the ledger is 914 accepted/59 rejected. Current signals retain dense sequential commitments, compact Gallowmere truncation, raw embedded action ids, and decision-40 interruption as separate S1s; Cade's bounded return packet is next while fresh cohorts test actual skipping.
 - Guard: exact feature commit `d28a2971` has zero-finding crawl at 247/247 nodes, 344/344 edges, and 12/12 boards/quests; health passes 391 files/2,981 tests plus UI/all packs, and independent review found no P0-P2.
-
-### Cycle result - wolf_commitment_action_ids
-
-- Evidence choice: exact Terra seed 4239 found that compact `ask_invoke_authority` looked informational but irreversibly committed fortification, so this cycle fixed the executable id rather than adding another warning paragraph.
-- Surface: the two irreversible choices are now `ask_commit_cade_terms` and `ask_commit_albany_authority`; the old ids remain input aliases for compatibility, while reconsider/back remains visibly noncommitting.
-- Counterfactual: full and compact observations expose only the new ids, legacy text commands parse to them, back restores every strategy, and both choices preserve the same flags, closures, and endings.
-- Pure evidence: exact clean-build Terra seed 4243 completed Wolf-Winter and The Gallowmere in 51 decisions, continued at decisions 28 and 40, ended at 51, rated clarity/enjoyment 4/4, was unstuck/replay-yes, and had no warning, auth, boundary, rejection, loop, or soft-lock failure.
-- Measured result: the commitment surface PASSes mechanically; the blind player organically chose lure, so direct new-id use remains unclaimed. It repeated Station route discovery, parent-goal guidance, and dense consequence copy as separate S1 presentation debt.
-- Feedback/follow-through: the ledger is 913 accepted/59 rejected with one verified report since compile `20260720T231307Z`, below the three-report threshold. Land optional Station interactions, then the fact-gated Cade Return Packet.
-- Guard: exact commit `446901ec` has green pre/post crawl, health at 390 files/2,975 tests plus UI/all packs, and independent review found no remaining P0-P2.
