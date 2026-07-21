@@ -73,9 +73,13 @@ The report is written to `blind-tester/reports/<stamp>_<source>_seed<n>.md`
 `.codex.jsonl` transport). `reports/` is gitignored.
 
 The built-in Codex path starts from an isolated temporary player directory and
-a fresh per-run `CODEX_HOME` containing only a private copy of `auth.json`, ignores
-user/project config and rules, disables shell/web/apps/plugins/browser/computer
-and subagent capabilities, injects only the pure AdventureForge MCP server, and
+a fresh per-run `CODEX_HOME` under the repo's ignored `.tmp/blind-codex-home/`
+runtime tree. Keeping the sterile home outside the operating-system temp directory
+lets Codex create its normal PATH aliases without a warning. The home contains
+only a private copy of `auth.json`, is removed on exit, ignores
+user/project config and rules, disables shell/web/apps/plugins/browser/computer,
+the unused shell snapshot, and subagent capabilities, injects only the pure
+AdventureForge MCP server, and
 pair-audits every normal game call. Exact paired/null `-32601` probes against the
 empty AdventureForge resource namespace and one bounded in-memory todo lifecycle
 are tolerated as non-gameplay transport noise; any content, success, other

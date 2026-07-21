@@ -67,6 +67,41 @@ afterEach(() => {
 });
 
 describe("sterile Codex rollout capture", () => {
+  it("populates only an atomically precreated empty home", () => {
+    const root = temporaryRoot("af-codex-precreated-home-");
+    const source = join(root, "source-auth.json");
+    const home = join(root, "home");
+    writeFileSync(source, '{"tokens":{"access_token":"private"}}\n');
+    mkdirSync(home, { mode: 0o700 });
+
+    prepareSterileCodexHome(source, home, { precreated: true });
+
+    expect(readdirSync(home)).toEqual(["auth.json"]);
+    expect(readFileSync(join(home, "auth.json"), "utf8")).toBe(
+      '{"tokens":{"access_token":"private"}}\n',
+    );
+  });
+
+  it("rejects a nonempty or linked precreated home", () => {
+    const root = temporaryRoot("af-codex-invalid-precreated-home-");
+    const source = join(root, "source-auth.json");
+    const nonemptyHome = join(root, "nonempty-home");
+    const externalHome = join(root, "external-home");
+    const linkedHome = join(root, "linked-home");
+    writeFileSync(source, "{}\n");
+    mkdirSync(nonemptyHome);
+    writeFileSync(join(nonemptyHome, "unexpected"), "occupied\n");
+    mkdirSync(externalHome);
+    symlinkSync(externalHome, linkedHome, "junction");
+
+    expect(() => prepareSterileCodexHome(source, nonemptyHome, { precreated: true })).toThrow(
+      /must be empty/i,
+    );
+    expect(() => prepareSterileCodexHome(source, linkedHome, { precreated: true })).toThrow(
+      /must be one real directory/i,
+    );
+  });
+
   it("copies only auth into a fresh home and exclusively captures one rollout", () => {
     const root = temporaryRoot("af-codex-home-");
     const source = join(root, "source-auth.json");
