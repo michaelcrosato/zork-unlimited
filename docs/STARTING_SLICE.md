@@ -122,16 +122,22 @@ The current slice now satisfies the twelve-fork structural proof threshold, but
 it is **not yet milestone-certified**:
 
 - Wolf-Winter is now withheld from Albany's FIFO discovery and requires one of
-  three certified source packets. Albany Works, Civic, and Campus are the first
-  three of six district jobs converted to authored scenes. Works' exclusive return
+  three certified source packets. Albany Works, Civic, Campus, Station, and Market
+  are five of six district jobs converted to authored scenes; Civic and Market are
+  two of six authored district events. Works' exclusive return
   priority can cross a 13-standing threshold for a Civic recovery cot; Civic's
   first authored event fixes a public-or-protected policy before Wolf-Winter,
   then its return docket exposes exactly one lawful closure from that policy
   and the truthful held-or-evacuated outcome. Campus adds a post-Wolf
   confidence-labelled warning versus traceable-archive decision: fast, lower
   standing recovery versus slower, higher standing resupply, with both exact
-  options replay-bound and neither a Civic legal-policy substitute. Three jobs and five checklist
-  events remain generic;
+  options replay-bound and neither a Civic legal-policy substitute. Jamie's post-Wolf
+  Market policy then binds either named household/kitchen prices or an open-bid
+  ceiling and visible buyer board. From the reachable 10-standing post-policy
+  state, the household fast release takes 30 minutes, earns 3 standing, and
+  exposes the existing Civic cot; the open-bid fast release takes 20 minutes and
+  earns 1. Their thorough settlements preserve the frontier at 75 minutes/+5
+  versus 60 minutes/+4. One job and four checklist events remain generic;
 - Albany authors four permanent registration profiles. Road-Warden and Ledger
   sponsorship now change the actual terms of their matching source packet, and
   the Road-Warden retains its fieldcraft import. Ironhands Repairer,
@@ -190,7 +196,7 @@ The first implementation sequence is:
    landed)_ — quest content declares reusable, validated character/world
    effects; campaign code consumes generic state rather than adding
    Wolf-specific ending conditionals.
-4. **Authored Albany** _(4/6 district jobs and 1/6 events converted)_ — replace
+4. **Authored Albany** _(5/6 district jobs and 2/6 events converted)_ — replace
    the visible slice's generic local transactions with scenes whose evidence,
    time, relationships, resources, and promises alter Wolf-Winter and its
    return.
@@ -680,8 +686,13 @@ creates or consolidates an exact one-use Albany service without duplicating a
 legacy returned-rig cache. Migration, replay, action-order, full/compact/UI/MCP,
 and all eleven non-death ending counterfactuals are proved by
 [`cade_return_packet_counterfactual.test.ts`](../tests/starting_slice/cade_return_packet_counterfactual.test.ts).
-Two generic district jobs—Market Shortfall and Greenway Survey—and five
-checklist events are still visible.
+Jamie's Market policy and disputed-crates pair adds a second authored event and
+fifth authored job: household-price protection consistently buys more standing
+for more time than the open-bid board at both fast and thorough settlement depths.
+Its exact policy predicate, Civic-cot counterfactual, neutral generic migration,
+replay, and full/compact/UI/MCP proof live
+in [`albany_market_scene_counterfactual.test.ts`](../tests/starting_slice/albany_market_scene_counterfactual.test.ts).
+One generic district job—Greenway Survey—and four checklist events are still visible.
 
 ## Evidence contract
 

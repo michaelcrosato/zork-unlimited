@@ -1,5 +1,7 @@
-import { describe, it, expect, beforeAll } from "vitest";
-import { writeFileSync, mkdirSync, readFileSync } from "node:fs";
+import { describe, it, expect, beforeAll, onTestFinished } from "vitest";
+import { cpSync, writeFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { createToolApi } from "../../src/mcp/tools.js";
 import {
   COMPACT_DESCRIPTION_CHAR_LIMIT,
@@ -71,6 +73,29 @@ const PUBLIC_RPG_TRANSCRIPT_HASH_RE = new RegExp(
 const PUBLIC_OVERWORLD_SNAPSHOT_HASH_RE = new RegExp(
   `^[0-9a-f]{${OVERWORLD_PUBLIC_SNAPSHOT_HASH_LENGTH}}$`,
 );
+
+function syntheticLegacyGenericMarketJob(): {
+  a: ReturnType<typeof api>;
+  world: typeof overworld;
+} {
+  const root = mkdtempSync(join(tmpdir(), "mcp-tools-generic-jobs-"));
+  onTestFinished(() => rmSync(root, { recursive: true, force: true }));
+  const world = structuredClone(overworld);
+  const marketJob = world.local_jobs.find(
+    (candidate) => candidate.id === "albany_city__market__job",
+  );
+  if (!marketJob) throw new Error("expected the synthetic Market job fixture");
+  delete marketJob.authored_scene;
+  mkdirSync(join(root, "content", "world"), { recursive: true });
+  writeFileSync(
+    join(root, "content", "world", "new_york_overworld.json"),
+    `${JSON.stringify(world, null, 2)}\n`,
+  );
+  cpSync(join(ROOT, "content", "rpg", "quests"), join(root, "content", "rpg", "quests"), {
+    recursive: true,
+  });
+  return { a: createToolApi({ root }), world };
+}
 
 function numberedIds(prefix: string, count: number): string[] {
   return Array.from({ length: count }, (_, i) => `${prefix}_${i.toString().padStart(2, "0")}`);
@@ -2203,10 +2228,10 @@ describe("MCP tools — validate / load (§9.4)", () => {
   });
 
   it("discovers and works local jobs through stateful MCP overworld play", () => {
-    const a = api();
+    const { a, world } = syntheticLegacyGenericMarketJob();
     const started = a.start_overworld({ compact_context: false });
     const marketAreaId = "albany_city__market";
-    const marketJob = overworld.local_jobs.find(
+    const marketJob = world.local_jobs.find(
       (candidate) => candidate.id === "albany_city__market__job",
     );
     expect(marketJob).toBeDefined();

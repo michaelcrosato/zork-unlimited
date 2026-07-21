@@ -5,7 +5,10 @@ import type {
   OverworldLocalSceneProof,
 } from "./session_snapshot.js";
 import { describeOverworldJobAction } from "./local_actions.js";
-import { WINTER_RETURN_DOCKET_GENERIC_PREDECESSOR_WORLD_HASHES } from "./local_event_scene_legacy.js";
+import {
+  AUTHORED_ALBANY_MARKET_PREDECESSOR_WORLD_HASH,
+  WINTER_RETURN_DOCKET_GENERIC_PREDECESSOR_WORLD_HASHES,
+} from "./local_event_scene_legacy.js";
 
 export type AuthoredLocalJobLegacyDefinition = Readonly<{
   /** Hash whose generic job copy and terms are preserved by this marker. */
@@ -45,6 +48,8 @@ export const AUTHORED_ALBANY_STATION_PREDECESSOR_WORLD_HASH =
   "a27b2db04b359e9ca38380ca2b0b7a328df4008d1f899bf65e1332d0998aa6b2";
 export const AUTHORED_ALBANY_STATION_JOB_ID = "albany_city__transport_hub__job";
 export const AUTHORED_ALBANY_STATION_SCENE_ID = "albany:cade-return-packet";
+export const AUTHORED_ALBANY_MARKET_JOB_ID = "albany_city__market__job";
+export const AUTHORED_ALBANY_MARKET_SCENE_ID = "albany:disputed-winter-crates";
 
 export const AUTHORED_ALBANY_WORKS_LEGACY_JOB: OverworldLocalJob = Object.freeze({
   id: AUTHORED_ALBANY_WORKS_JOB_ID,
@@ -111,6 +116,22 @@ export const AUTHORED_ALBANY_STATION_LEGACY_JOB: OverworldLocalJob = Object.free
   visibility: "local_job_board",
 });
 
+export const AUTHORED_ALBANY_MARKET_LEGACY_JOB: OverworldLocalJob = Object.freeze({
+  id: AUTHORED_ALBANY_MARKET_JOB_ID,
+  home: "albany_city",
+  area: "albany_city__market",
+  kind: "supply_run",
+  title: "Albany Market Streets: Market Shortfall",
+  summary:
+    "Albany Market Streets has trade gossip, missing crates, and practical bargaining. The job is small enough to finish locally but specific enough to make Albany City feel worked-in rather than decorative.",
+  objective:
+    "Spend time in Albany Market Streets to move supplies between stalls, kitchens, and a buyer who cannot wait for a formal posting.",
+  reward: "Earn 3 Capital / Mohawk renown and a concrete lead about Albany City.",
+  minutes: 65,
+  difficulty: 3,
+  visibility: "local_job_board",
+});
+
 export const AUTHORED_LOCAL_JOB_LEGACY_DEFINITIONS: readonly AuthoredLocalJobLegacyDefinition[] =
   Object.freeze([
     Object.freeze({
@@ -139,6 +160,13 @@ export const AUTHORED_LOCAL_JOB_LEGACY_DEFINITIONS: readonly AuthoredLocalJobLeg
       sceneId: AUTHORED_ALBANY_STATION_SCENE_ID,
       legacyJob: AUTHORED_ALBANY_STATION_LEGACY_JOB,
       acceptedSourceWorldHashes: new Set([AUTHORED_ALBANY_STATION_PREDECESSOR_WORLD_HASH]),
+    }),
+    Object.freeze({
+      sourceWorldHash: AUTHORED_ALBANY_MARKET_PREDECESSOR_WORLD_HASH,
+      jobId: AUTHORED_ALBANY_MARKET_JOB_ID,
+      sceneId: AUTHORED_ALBANY_MARKET_SCENE_ID,
+      legacyJob: AUTHORED_ALBANY_MARKET_LEGACY_JOB,
+      acceptedSourceWorldHashes: new Set([AUTHORED_ALBANY_MARKET_PREDECESSOR_WORLD_HASH]),
     }),
   ]);
 

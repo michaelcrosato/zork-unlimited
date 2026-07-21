@@ -61,9 +61,33 @@ const CADE_RETURN_PACKET_SERVICE_IDS: ReadonlySet<string> = new Set([
   "albany:cade_pasture_search_unaffiliated_greenway_resupply",
 ]);
 
+/** Reconstruct the exact manifest immediately before Albany Market got its authored policy pair. */
+export function exactAlbanyMarketDepthPredecessor(current: OverworldManifest): OverworldManifest {
+  const predecessor = structuredClone(current);
+  const event = predecessor.local_events.find(
+    (candidate) => candidate.id === "albany_city__market__event",
+  );
+  const job = predecessor.local_jobs.find(
+    (candidate) => candidate.id === "albany_city__market__job",
+  );
+  if (!event || !job) throw new Error("Albany Market event and job must exist");
+  event.title = "Albany Market Streets: supply price spike";
+  event.summary =
+    "Albany Market Streets is under opportunity pressure around shortages, disputed deliveries, and late counters. Resolving it requires scouting this area, talking to its contact, and investigating on site.";
+  delete event.authored_scene;
+  job.title = "Albany Market Streets: Market Shortfall";
+  job.summary =
+    "Albany Market Streets has trade gossip, missing crates, and practical bargaining. The job is small enough to finish locally but specific enough to make Albany City feel worked-in rather than decorative.";
+  job.objective =
+    "Spend time in Albany Market Streets to move supplies between stalls, kitchens, and a buyer who cannot wait for a formal posting.";
+  job.reward = "Earn 3 Capital / Mohawk renown and a concrete lead about Albany City.";
+  delete job.authored_scene;
+  return predecessor;
+}
+
 /** Reconstruct the exact manifest immediately before Cade's authored Station return packet. */
 export function exactCadeReturnPacketPredecessor(current: OverworldManifest): OverworldManifest {
-  const predecessor = structuredClone(current);
+  const predecessor = exactAlbanyMarketDepthPredecessor(current);
   const job = predecessor.local_jobs.find(
     (candidate) => candidate.id === "albany_city__transport_hub__job",
   );

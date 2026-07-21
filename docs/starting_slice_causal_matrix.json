@@ -642,6 +642,40 @@
         "tests/unit/ui_overworld.test.ts"
       ],
       "counterfactual_test": "tests/starting_slice/albany_return_counterfactual.test.ts"
+    },
+    {
+      "id": "SS-F13-market-policy",
+      "title": "Bind Albany's winter price policy, then settle its disputed crates",
+      "phase": "albany_return",
+      "implementation_status": "implemented",
+      "proof_status": "proven",
+      "counts_toward_contract": false,
+      "visible_choice": "After Wolf-Winter, Jamie Tanner irreversibly either holds named household and kitchen prices or publishes an open-bid ceiling and visible buyer board. The later disputed-crates job offers only that policy's two exact settlements: household-price releases cost 30 or 75 minutes for 3 or 5 standing, while open-bid releases cost 20 or 60 minutes for 1 or 4 standing.",
+      "immediate_state_delta": [
+        "albany.market.winter_price_policy",
+        "world.minutes",
+        "region_renown.Capital / Mohawk",
+        "journal.local_scene_proof"
+      ],
+      "delayed_consumers": [
+        "The resolved Market event option is the sole predicate for two later disputed-crate settlements; the opposite policy's options are never legal.",
+        "From the reachable held-byre return at 8 standing, either policy adds 2 standing. The household fast release then reaches 13 and exposes Albany's existing Civic recovery cot in 30 minutes; the open-bid fast release ends at 11 but saves 10 minutes. The household audit reaches 15 in 75 minutes, while the open-bid audit reaches 14 in 60 minutes, preserving the same time-versus-standing frontier at the thorough depth.",
+        "Exact event and job proof, option-local predicates, journal/resource/renown replay, full/compact/UI/MCP projection, and the hash-fenced generic predecessor all survive save/restore; a legacy generic completion becomes a neutral marker and unlocks neither policy."
+      ],
+      "visible_feedback": [
+        "Jamie names the irreversible price policy, the protected kitchens or visible buyer board, and its later crate consequence before confirmation.",
+        "The crates prompt repeats the previously selected policy, exposes exactly one fast operational release and one slower audited chain, and states that policy's exact time and standing before selection.",
+        "The completed journal names the ledger or board used; the Civic counter visibly offers its existing 13-standing recovery after the household fast counterfactual, while the ten-minute-faster open-bid fast counterfactual remains below threshold."
+      ],
+      "systems": ["events", "jobs", "time", "region_renown", "services", "journal", "save_restore"],
+      "persistence_boundaries": ["overworld_save_restore"],
+      "contract_tags": ["delayed", "cross_system", "irreversible_tradeoff"],
+      "baseline_evidence": [
+        "tests/unit/world_local_job_scene_conditions.test.ts",
+        "tests/unit/world_local_event_scene_legacy.test.ts",
+        "tests/unit/world_campaign_service_region_renown.test.ts"
+      ],
+      "counterfactual_test": "tests/starting_slice/albany_market_scene_counterfactual.test.ts"
     }
   ]
 }

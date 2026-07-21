@@ -35,6 +35,11 @@ export const WINTER_RETURN_DOCKET_GENERIC_PREDECESSOR_WORLD_HASHES: ReadonlySet<
 ]);
 export const AUTHORED_ALBANY_CHARTER_EVENT_ID = "albany_city__civic_core__event";
 export const AUTHORED_ALBANY_CHARTER_EVENT_SCENE_ID = "albany:winter-return-charter-record";
+/** Exact manifest immediately before Albany Market gained its post-Wolf price policy. */
+export const AUTHORED_ALBANY_MARKET_PREDECESSOR_WORLD_HASH =
+  "9ae4b2be87d9f5bf0ede03aed8c7c775bdd7ac327dfd96c2f1e4b2154ee610f0";
+export const AUTHORED_ALBANY_MARKET_EVENT_ID = "albany_city__market__event";
+export const AUTHORED_ALBANY_MARKET_EVENT_SCENE_ID = "albany:winter-price-policy";
 
 export const AUTHORED_ALBANY_CHARTER_LEGACY_EVENT: OverworldLocalEvent = Object.freeze({
   id: AUTHORED_ALBANY_CHARTER_EVENT_ID,
@@ -45,6 +50,17 @@ export const AUTHORED_ALBANY_CHARTER_LEGACY_EVENT: OverworldLocalEvent = Object.
   intensity: 2,
   summary:
     "Charter runners stack sealed files by the public stair while a deputy keeps sending people to the wrong counter. To clear the backlog, read the Notice Hall marks, ask Rowan which docket matters, then inspect the stair and underrooms.",
+});
+
+export const AUTHORED_ALBANY_MARKET_LEGACY_EVENT: OverworldLocalEvent = Object.freeze({
+  id: AUTHORED_ALBANY_MARKET_EVENT_ID,
+  home: "albany_city",
+  area: "albany_city__market",
+  title: "Albany Market Streets: supply price spike",
+  pressure: "opportunity",
+  intensity: 3,
+  summary:
+    "Albany Market Streets is under opportunity pressure around shortages, disputed deliveries, and late counters. Resolving it requires scouting this area, talking to its contact, and investigating on site.",
 });
 
 export type AuthoredLocalEventLegacyDefinition = Readonly<{
@@ -75,6 +91,13 @@ export const AUTHORED_LOCAL_EVENT_LEGACY_DEFINITIONS: readonly AuthoredLocalEven
       sceneId: AUTHORED_ALBANY_CHARTER_EVENT_SCENE_ID,
       legacyEvent: AUTHORED_ALBANY_CHARTER_LEGACY_EVENT,
       acceptedSourceWorldHashes: WINTER_RETURN_DOCKET_GENERIC_PREDECESSOR_WORLD_HASHES,
+    }),
+    Object.freeze({
+      sourceWorldHash: AUTHORED_ALBANY_MARKET_PREDECESSOR_WORLD_HASH,
+      eventId: AUTHORED_ALBANY_MARKET_EVENT_ID,
+      sceneId: AUTHORED_ALBANY_MARKET_EVENT_SCENE_ID,
+      legacyEvent: AUTHORED_ALBANY_MARKET_LEGACY_EVENT,
+      acceptedSourceWorldHashes: new Set([AUTHORED_ALBANY_MARKET_PREDECESSOR_WORLD_HASH]),
     }),
   ]);
 
