@@ -32,7 +32,11 @@ function requirePrivateRegularFile(path, label) {
   }
 }
 
-export function prepareSterileCodexHome(sourceAuthPath, destinationHome) {
+export function prepareSterileCodexHome(
+  sourceAuthPath,
+  destinationHome,
+  { precreated = false } = {},
+) {
   const source = resolve(sourceAuthPath);
   const home = resolve(destinationHome);
   requirePrivateRegularFile(source, "Codex source auth");
@@ -46,7 +50,17 @@ export function prepareSterileCodexHome(sourceAuthPath, destinationHome) {
   if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
     fail("Codex source auth must contain one JSON object");
   }
-  mkdirSync(home, { recursive: false, mode: 0o700 });
+  if (precreated) {
+    const metadata = lstatSync(home);
+    if (metadata.isSymbolicLink() || !metadata.isDirectory()) {
+      fail("Precreated Codex home must be one real directory");
+    }
+    if (readdirSync(home).length !== 0) {
+      fail("Precreated Codex home must be empty");
+    }
+  } else {
+    mkdirSync(home, { recursive: false, mode: 0o700 });
+  }
   const destination = join(home, "auth.json");
   writeFileSync(destination, auth, { flag: "wx", mode: 0o600 });
   return destination;
@@ -258,7 +272,9 @@ function main() {
     const source = option(argv, "--source-auth");
     const home = option(argv, "--home");
     if (!source || !home) fail("prepare-home requires --source-auth and --home");
-    prepareSterileCodexHome(source, home);
+    prepareSterileCodexHome(source, home, {
+      precreated: argv.includes("--precreated-home"),
+    });
     return;
   }
   if (command === "capture") {

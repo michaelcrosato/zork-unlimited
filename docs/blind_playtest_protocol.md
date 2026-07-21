@@ -165,11 +165,14 @@ It is available only while the private attempt-zero evidence exists inside the
 live publication transaction and never retroactively accepts a historically
 rejected report.
 
-The runner starts Codex in an
-isolated temporary player directory with a fresh per-run `CODEX_HOME` containing
-only a private copy of `auth.json`; user/project config and rules are ignored,
-shell/web/apps/plugins/browser/computer/subagents disabled, and only the exact
-pure AdventureForge MCP tools enabled. It audits the provider JSONL and rejects
+The runner starts Codex in an isolated temporary player directory. Its fresh
+per-run `CODEX_HOME` lives under the repo's ignored `.tmp/blind-codex-home/`
+runtime tree (outside the operating-system temp directory, so Codex can create
+its normal PATH aliases without a warning) and contains only a private copy of
+`auth.json`; both isolated directories are removed on exit. User/project config
+and rules are ignored, shell/web/apps/plugins/browser/computer/subagents and the
+unused shell snapshot are disabled, and only the exact pure AdventureForge MCP
+tools are enabled. It audits the provider JSONL and rejects
 unknown events, non-game tools, another MCP server, incomplete/duplicate turns,
 or malformed final output. Codex may emit generic resource-transport probes even
 when the player obeys the game-tool boundary. The audit tolerates only a bounded,

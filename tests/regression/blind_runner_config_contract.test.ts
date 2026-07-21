@@ -266,6 +266,7 @@ describe("blind runner MCP config contract", () => {
     expect(codexLaunch).toContain("--disable computer_use");
     expect(codexLaunch).toContain("--disable multi_agent");
     expect(codexLaunch).toContain("--disable plugins");
+    expect(codexLaunch).toContain("--disable shell_snapshot");
     expect(codexLaunch).toContain("features.shell_tool=false");
     expect(codexLaunch).toContain('web_search="disabled"');
     expect(codexLaunch).toContain('approval_policy="never"');
@@ -293,6 +294,26 @@ describe("blind runner MCP config contract", () => {
     expect(overrideGuard).toBeLessThan(launchAt);
     expect(runner.indexOf('DURABLE_RUN_EVIDENCE="$OUT.evidence.jsonl"')).toBeLessThan(launchAt);
     expect(runner.indexOf("PURE_PUBLICATION_COMPLETE=1")).toBeGreaterThan(launchEnd);
+  });
+
+  it("keeps the sterile Codex home out of the operating-system temp directory", () => {
+    const runner = readFileSync(join(process.cwd(), "blind-tester", "run.sh"), "utf8");
+
+    expect(runner).toContain('CODEX_HOME_RUNTIME_ROOT="$GAME_DIR/.tmp/blind-codex-home"');
+    expect(runner).toContain('STERILE_CODEX_HOME="$CODEX_HOME_RUNTIME_ROOT/$(basename "$WORK")"');
+    expect(runner).not.toContain('STERILE_CODEX_HOME="$WORK/codex-home"');
+    expect(runner).toContain('"${STERILE_CODEX_HOME_OWNED:-0}" == "1"');
+    expect(runner).toContain('if ! mkdir "$STERILE_CODEX_HOME"; then');
+    expect(runner.indexOf("STERILE_CODEX_HOME_OWNED=1")).toBeGreaterThan(
+      runner.indexOf('if ! mkdir "$STERILE_CODEX_HOME"; then'),
+    );
+    expect(runner.indexOf('chmod 700 "$STERILE_CODEX_HOME"')).toBeGreaterThan(
+      runner.indexOf("STERILE_CODEX_HOME_OWNED=1"),
+    );
+    expect(runner).toContain("--precreated-home");
+    expect(runner).toContain('"$CODEX_HOME_RUNTIME_ROOT"/*) rm -rf -- "$STERILE_CODEX_HOME"');
+    expect(runner).toContain("Refusing to remove unexpected sterile Codex home");
+    expect(runner).toContain("Could not exclusively create sterile Codex home");
   });
 
   it("rejects an unknown pure provider before launching anything", () => {

@@ -352,6 +352,9 @@ esac
 # makes npm itself change to the game dir, which is cwd-independent on every
 # platform. stdout stays a clean JSON-RPC channel (no -l).
 WORK="$(mktemp -d)"
+CODEX_HOME_RUNTIME_ROOT=""
+STERILE_CODEX_HOME=""
+STERILE_CODEX_HOME_OWNED=0
 PURE_PUBLICATION_COMPLETE=0
 PURE_OUTPUT_PREFIX_OWNED=0
 cleanup_runner() {
@@ -373,6 +376,16 @@ cleanup_runner() {
     if [[ -n "${RECEIPT_BINDING_METADATA:-}" ]]; then
       rm -f -- "$RECEIPT_BINDING_METADATA"
     fi
+  fi
+  # Codex refuses to install its PATH helper aliases when CODEX_HOME itself is
+  # below the operating-system temp directory. Keep that sterile home in the
+  # repo's ignored runtime tree, but remove only the exact runner-owned child.
+  if [[ "${STERILE_CODEX_HOME_OWNED:-0}" == "1" && -n "${STERILE_CODEX_HOME:-}" && \
+        -n "${CODEX_HOME_RUNTIME_ROOT:-}" ]]; then
+    case "$STERILE_CODEX_HOME" in
+      "$CODEX_HOME_RUNTIME_ROOT"/*) rm -rf -- "$STERILE_CODEX_HOME" ;;
+      *) echo "Refusing to remove unexpected sterile Codex home: $STERILE_CODEX_HOME" >&2 ;;
+    esac
   fi
   rm -rf -- "$WORK"
   return "$status"
@@ -647,7 +660,16 @@ else
   fi
   SOURCE_CODEX_HOME="${CODEX_HOME:-$HOME/.codex}"
   SOURCE_CODEX_AUTH="$SOURCE_CODEX_HOME/auth.json"
-  STERILE_CODEX_HOME="$WORK/codex-home"
+  CODEX_HOME_RUNTIME_ROOT="$GAME_DIR/.tmp/blind-codex-home"
+  mkdir -p "$CODEX_HOME_RUNTIME_ROOT"
+  chmod 700 "$CODEX_HOME_RUNTIME_ROOT" 2>/dev/null || true
+  STERILE_CODEX_HOME="$CODEX_HOME_RUNTIME_ROOT/$(basename "$WORK")"
+  if ! mkdir "$STERILE_CODEX_HOME"; then
+    echo "Could not exclusively create sterile Codex home: $STERILE_CODEX_HOME" >&2
+    exit 4
+  fi
+  STERILE_CODEX_HOME_OWNED=1
+  chmod 700 "$STERILE_CODEX_HOME" 2>/dev/null || true
   CODEX_PLAYER_CWD="$WORK/player"
   mkdir -p "$CODEX_PLAYER_CWD"
   CODEX_ROLLOUT_SCRIPT="$(node_path_arg "$SCRIPT_DIR/codex-rollout.mjs")"
@@ -656,7 +678,7 @@ else
   CODEX_PLAYER_CWD_ARG="$(node_path_arg "$CODEX_PLAYER_CWD")"
   set +e
   "$NODE_CMD" "$CODEX_ROLLOUT_SCRIPT" prepare-home \
-    --source-auth "$SOURCE_CODEX_AUTH_ARG" --home "$STERILE_CODEX_HOME_ARG" \
+    --source-auth "$SOURCE_CODEX_AUTH_ARG" --home "$STERILE_CODEX_HOME_ARG" --precreated-home \
     >"$OUT.codex-home.log" 2>&1
   CODEX_HOME_STATUS=$?
   set -e
@@ -744,6 +766,7 @@ if [[ "$PROVIDER" == "codex" ]]; then
     --disable multi_agent \
     --disable plugins \
     --disable remote_plugin \
+    --disable shell_snapshot \
     --disable tool_suggest \
     --disable workspace_dependencies \
     --json \
