@@ -88,6 +88,18 @@ export function campaignWorldFactsProvenBeforeDecision(
   );
 }
 
+/** Story choices with an exact campaign proof strictly before one accepted decision. */
+export function campaignStoryChoiceKeysProvenBeforeDecision(
+  campaignBoundaries: OverworldCampaignBoundaryReplayIndex,
+  acceptedDecisions: number,
+): ReadonlySet<string> {
+  return new Set(
+    [...campaignBoundaries.storyChoiceProofOrdinalByKey].flatMap(([key, provenAt]) =>
+      acceptedDecisions > provenAt ? [key] : [],
+    ),
+  );
+}
+
 export type OverworldRoadJournalResolutionEntry = {
   entry: OverworldJournalEntry;
   key: string;

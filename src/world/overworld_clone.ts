@@ -145,6 +145,20 @@ export function cloneOverworldLocalJob(job: OverworldLocalJob): OverworldLocalJo
               ...(option.forbids_any_world_facts
                 ? { forbids_any_world_facts: [...option.forbids_any_world_facts] }
                 : {}),
+              ...(option.requires_all_story_choices
+                ? {
+                    requires_all_story_choices: option.requires_all_story_choices.map((ref) => ({
+                      ...ref,
+                    })),
+                  }
+                : {}),
+              ...(option.forbids_any_story_choices
+                ? {
+                    forbids_any_story_choices: option.forbids_any_story_choices.map((ref) => ({
+                      ...ref,
+                    })),
+                  }
+                : {}),
             })),
           },
         }

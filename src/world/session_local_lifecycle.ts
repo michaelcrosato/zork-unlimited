@@ -90,6 +90,7 @@ export type OverworldSessionLocalJobPlanState = {
   completedQuestIds?: ReadonlySet<string> | undefined;
   resolvedEventIds?: ReadonlySet<string> | undefined;
   campaignWorldFactIds?: ReadonlySet<string> | undefined;
+  campaignStoryChoiceKeys?: ReadonlySet<string> | undefined;
   journalEntries: ReadonlyMap<string, OverworldJournalEntry>;
 };
 

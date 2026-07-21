@@ -46,6 +46,7 @@ import {
 import { assertSnapshotRegionRenown } from "./session_region_renown.js";
 import {
   assertSnapshotResourceReplay,
+  campaignStoryChoiceKeysProvenBeforeDecision,
   campaignWorldFactsProvenBeforeDecision,
   roadJournalResolutionIndex,
   type OverworldCampaignBoundaryReplayIndex,
@@ -80,7 +81,7 @@ import {
 } from "./journey_campaign.js";
 import { campaignStoryChoiceRefKey } from "./campaign_story_choices.js";
 import { campaignServiceLocalJobOptionKey } from "./campaign_service_rules.js";
-import { describeOverworldContactAction } from "./local_actions.js";
+import { describeOverworldContactAction, describeOverworldJobAction } from "./local_actions.js";
 import {
   localJobSceneOptionRequirementsMet,
   localJobSceneRequirementsMet,
@@ -89,8 +90,15 @@ import {
 } from "./local_job_scene.js";
 import {
   AUTHORED_LOCAL_JOB_LEGACY_DEFINITIONS,
+  AUTHORED_ALBANY_STATION_JOB_ID,
+  AUTHORED_ALBANY_STATION_PASTURE_OPTION_ID,
+  AUTHORED_ALBANY_STATION_PRE_STORY_PREDICATE_PASTURE_CONSEQUENCE,
+  AUTHORED_ALBANY_STATION_STORY_PREDICATE_OPTION_IDS,
+  AUTHORED_ALBANY_STATION_STORY_PREDICATE_PREDECESSOR_WORLD_HASH,
+  AUTHORED_ALBANY_STATION_STORY_PREDICATE_SOURCE_WORLD_HASHES,
   authoredLocalJobLegacyCompletion,
   authoredLocalJobLegacyDefinitionsForSourceWorldHash,
+  authoredLocalJobPredicatePredecessorCompletion,
   describeAuthoredLocalJobLegacyAction,
   migrateAuthoredLocalJobLegacyEntry,
   AUTHORED_ALBANY_CAMPUS_PREDECESSOR_WORLD_HASH,
@@ -377,7 +385,7 @@ export {
   OVERWORLD_FIELD_TIMED_PREPARATION_PREDECESSOR_WORLD_HASH,
 } from "./local_scene_legacy_sources.js";
 export const OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH =
-  "53afa5830619f12b547f8a6c9d55798477a09676afe02debba155081ea115edc";
+  "282cf14228d10495a12632919a50567960d06325e9182aa77232fc1c333d0aa9";
 /**
  * Exact post-Works manifests retained for the older preparation migration.
  * Authored-job support itself is derived from the scene registry below, so this
@@ -2246,6 +2254,91 @@ export function migrateAuthoredLocalEventPredecessorJournal(args: {
   return journalEntries;
 }
 
+function migrateCadeStoryPredicatePredecessorJournal(args: {
+  indexes: OverworldSnapshotManifestIndex;
+  snapshot: OverworldSessionSnapshot;
+}): OverworldJournalEntry[] {
+  if (!AUTHORED_ALBANY_STATION_STORY_PREDICATE_SOURCE_WORLD_HASHES.has(args.snapshot.worldHash)) {
+    return [...args.snapshot.journalEntries];
+  }
+  const completed = args.snapshot.completedJobIds.includes(AUTHORED_ALBANY_STATION_JOB_ID);
+  const matchingEntries = args.snapshot.journalEntries.filter(
+    (entry) => entry.id === `job:${AUTHORED_ALBANY_STATION_JOB_ID}`,
+  );
+  if (completed !== (matchingEntries.length === 1)) {
+    throw new Error(
+      "The Cade story-predicate predecessor has inconsistent Station completion evidence.",
+    );
+  }
+  if (!completed) return [...args.snapshot.journalEntries];
+
+  const job = args.indexes.jobsById.get(AUTHORED_ALBANY_STATION_JOB_ID);
+  const entry = matchingEntries[0]!;
+  const proof = entry.localSceneProof;
+  if (!job?.authored_scene || !proof || proof.sceneId !== job.authored_scene.id) {
+    throw new Error(
+      "The Cade story-predicate predecessor lacks its exact authored Station decision proof.",
+    );
+  }
+
+  // A generic Station proof may have crossed one or more later authored
+  // manifests already. Its exact legacy marker and copy remain authoritative;
+  // it must never become one of the three authored packet capabilities.
+  if (authoredLocalJobLegacyCompletion(job.id, proof)) {
+    return [...args.snapshot.journalEntries];
+  }
+
+  if (proof.sourceWorldHash !== undefined || !proof.boundary) {
+    throw new Error(
+      "The Cade story-predicate predecessor lacks its exact authored Station decision proof.",
+    );
+  }
+  const option = resolveLocalJobSceneOption(job.authored_scene, proof.optionId);
+  const isStructural = AUTHORED_ALBANY_STATION_STORY_PREDICATE_OPTION_IDS.has(proof.optionId);
+  const isPasture = proof.optionId === AUTHORED_ALBANY_STATION_PASTURE_OPTION_ID;
+  if (!isStructural && !isPasture) {
+    throw new Error("The Cade story-predicate predecessor names an unsupported Station option.");
+  }
+  const area = args.indexes.areasById.get(job.area) ?? null;
+  const predecessorOption: LocalJobSceneOption = {
+    ...option,
+    requires_all_story_choices: undefined,
+    forbids_any_story_choices: undefined,
+    ...(isPasture
+      ? { consequence: AUTHORED_ALBANY_STATION_PRE_STORY_PREDICATE_PASTURE_CONSEQUENCE }
+      : {}),
+  };
+  const expected = describeOverworldJobAction(job, area, predecessorOption);
+  if (
+    entry.kind !== expected.kind ||
+    entry.title !== expected.title ||
+    entry.text !== expected.text ||
+    entry.town !== args.indexes.townNameForSource(job.home)
+  ) {
+    throw new Error(
+      "The Cade story-predicate predecessor entry does not match its exact trusted copy.",
+    );
+  }
+
+  if (isPasture) {
+    const current = describeOverworldJobAction(job, area, option);
+    return args.snapshot.journalEntries.map((candidate) =>
+      candidate === entry ? { ...candidate, title: current.title, text: current.text } : candidate,
+    );
+  }
+  return args.snapshot.journalEntries.map((candidate) =>
+    candidate === entry
+      ? {
+          ...candidate,
+          localSceneProof: {
+            ...proof,
+            sourceWorldHash: AUTHORED_ALBANY_STATION_STORY_PREDICATE_PREDECESSOR_WORLD_HASH,
+          },
+        }
+      : candidate,
+  );
+}
+
 export function planOverworldSessionSnapshotRestore(args: {
   indexes: OverworldSnapshotManifestIndex;
   snapshot: OverworldSessionSnapshot;
@@ -2269,6 +2362,9 @@ export function planOverworldSessionSnapshotRestore(args: {
   const migratesJuneReturnCopy =
     migrationTargetsCurrentManifest &&
     sourceSnapshot.worldHash === OVERWORLD_JUNE_RETURN_COPY_PREDECESSOR_WORLD_HASH;
+  const migratesCadeStoryPredicate =
+    migrationTargetsCurrentManifest &&
+    AUTHORED_ALBANY_STATION_STORY_PREDICATE_SOURCE_WORLD_HASHES.has(sourceSnapshot.worldHash);
   const migrationEra: TrustedMigrationEra =
     !migrationTargetsCurrentManifest || sourceSnapshot.worldHash === worldHash
       ? null
@@ -2314,11 +2410,13 @@ export function planOverworldSessionSnapshotRestore(args: {
     (migratesAuthoredLocalJob ||
       migratesAuthoredLocalEvent ||
       migratesJuneReturnCopy ||
+      migratesCadeStoryPredicate ||
       needsLegacyCampaignScaffolding);
   if (
     sourceSnapshot.worldHash !== worldHash &&
     migrationEra === null &&
     !migratesJuneReturnCopy &&
+    !migratesCadeStoryPredicate &&
     !migratesAuthoredLocalJob &&
     !migratesAuthoredLocalEvent
   ) {
@@ -3467,12 +3565,19 @@ export function planOverworldSessionSnapshotRestore(args: {
         snapshot,
       }),
     });
-    snapshot = Object.freeze({
+    const jobMigratedSnapshot = Object.freeze({
       ...eventMigratedSnapshot,
       journalEntries: migrateAuthoredLocalJobPredecessorJournal({
         campaignBoundaries,
         indexes,
         snapshot: eventMigratedSnapshot,
+      }),
+    });
+    snapshot = Object.freeze({
+      ...jobMigratedSnapshot,
+      journalEntries: migrateCadeStoryPredicatePredecessorJournal({
+        indexes,
+        snapshot: jobMigratedSnapshot,
       }),
     });
     journalTimeline = assertSnapshotTimeline(snapshot, {
@@ -4091,9 +4196,10 @@ export function planOverworldSessionSnapshotRestore(args: {
 }
 
 /**
- * Service predicates use only a current authored job proof with its own exact
+ * Service predicates use only an exact authored option proof with its own
  * accepted-decision boundary. Generic predecessor completions intentionally
- * produce no option capability.
+ * produce no option capability; a trusted predicate predecessor retains the
+ * exact authored capability it actually completed.
  */
 function deriveLocalJobOptionProofOrdinals(args: {
   indexes: OverworldSnapshotManifestIndex;
@@ -4108,7 +4214,8 @@ function deriveLocalJobOptionProofOrdinals(args: {
       !job?.authored_scene ||
       !proof ||
       proof.sceneId !== job.authored_scene.id ||
-      proof.sourceWorldHash !== undefined ||
+      (proof.sourceWorldHash !== undefined &&
+        !authoredLocalJobPredicatePredecessorCompletion(job.id, proof)) ||
       !proof.boundary
     ) {
       continue;
@@ -4154,6 +4261,10 @@ function assertSnapshotLocalJobSceneProofs(args: {
       );
     }
     const legacyCompletion = authoredLocalJobLegacyCompletion(job.id, proof);
+    const predicatePredecessorCompletion = authoredLocalJobPredicatePredecessorCompletion(
+      job.id,
+      proof,
+    );
     let selectedOption: LocalJobSceneOption | null = null;
     if (legacyCompletion) {
       const expected = describeAuthoredLocalJobLegacyAction(
@@ -4171,7 +4282,7 @@ function assertSnapshotLocalJobSceneProofs(args: {
       }
       if (!proof.boundary) return;
     } else {
-      if (proof.sourceWorldHash !== undefined) {
+      if (proof.sourceWorldHash !== undefined && !predicatePredecessorCompletion) {
         throw new Error(
           `Overworld session snapshot authored job "${job.id}" names an untrusted legacy source.`,
         );
@@ -4256,17 +4367,30 @@ function assertSnapshotLocalJobSceneProofs(args: {
         args.campaignBoundaries,
         boundary.acceptedDecisions,
       ),
+      storyChoiceKeys: campaignStoryChoiceKeysProvenBeforeDecision(
+        args.campaignBoundaries,
+        boundary.acceptedDecisions,
+      ),
       eventOptionIdFor: (eventId: string) =>
         earlierEntries.find((candidate) => candidate.id === `resolve:${eventId}`)?.localSceneProof
           ?.optionId ?? null,
     };
+    const conditionOption =
+      predicatePredecessorCompletion && selectedOption
+        ? {
+            ...selectedOption,
+            requires_all_story_choices: undefined,
+            forbids_any_story_choices: undefined,
+          }
+        : selectedOption;
     if (
       !selectedOption ||
       !localJobSceneRequirementsMet(scene, conditionState) ||
-      !localJobSceneOptionRequirementsMet(selectedOption, conditionState)
+      !conditionOption ||
+      !localJobSceneOptionRequirementsMet(conditionOption, conditionState)
     ) {
       throw new Error(
-        `Overworld session snapshot authored job "${job.id}" violates its earlier event or world-fact requirements.`,
+        `Overworld session snapshot authored job "${job.id}" violates its earlier event, world-fact, or story-choice requirements.`,
       );
     }
   });

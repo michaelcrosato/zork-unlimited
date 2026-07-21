@@ -11,6 +11,8 @@ import { createToolApi } from "../../src/mcp/tools.js";
 import {
   AUTHORED_ALBANY_STATION_LEGACY_OPTION_ID,
   AUTHORED_ALBANY_STATION_PREDECESSOR_WORLD_HASH,
+  AUTHORED_ALBANY_STATION_STORY_PREDICATE_PREDECESSOR_WORLD_HASH,
+  AUTHORED_ALBANY_STATION_STORY_PREDICATE_SOURCE_WORLD_HASHES,
   authoredLocalJobLegacyOptionId,
 } from "../../src/world/local_job_scene_legacy.js";
 import { assertOverworldIntegrity, type OverworldManifest } from "../../src/world/overworld.js";
@@ -20,12 +22,39 @@ import { OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH } from "../../src/world/session
 import { loadOverworldManifest } from "../../src/world/source.js";
 import { OverworldSession as UiOverworldSession } from "../../ui/src/overworld.js";
 import {
+  exactAlbanyGreenwayDepthPredecessor,
+  exactAlbanyMarketDepthPredecessor,
+  exactAlbanyWorksHazardPredecessor,
   exactCadeReturnPacketPredecessor,
+  exactCadeStoryPredicatePredecessor,
   exactWinterReturnDocketPredecessor,
 } from "../regression/fixtures/historical_overworlds.js";
 
 const WORLD = loadOverworldManifest(process.cwd());
 const PREDECESSOR = exactCadeReturnPacketPredecessor(WORLD);
+const STORY_PREDICATE_PREDECESSOR = exactCadeStoryPredicatePredecessor(WORLD);
+const STORY_PREDICATE_SOURCE_WORLDS = [
+  {
+    era: "post-Station/pre-Market",
+    world: exactAlbanyMarketDepthPredecessor(WORLD),
+    worldHash: "9ae4b2be87d9f5bf0ede03aed8c7c775bdd7ac327dfd96c2f1e4b2154ee610f0",
+  },
+  {
+    era: "post-Market/pre-Greenway",
+    world: exactAlbanyGreenwayDepthPredecessor(WORLD),
+    worldHash: "8e0bd691f77d7be3154866531b18c5e8c2920e51317beab97bf8d267ae6d6bfa",
+  },
+  {
+    era: "post-Greenway/pre-Works-charter",
+    world: exactAlbanyWorksHazardPredecessor(WORLD),
+    worldHash: "9238b5f273e03e0a49487058233443e872c18a542525dcd449531708cd3003e5",
+  },
+  {
+    era: "immediate story-predicate predecessor",
+    world: STORY_PREDICATE_PREDECESSOR,
+    worldHash: AUTHORED_ALBANY_STATION_STORY_PREDICATE_PREDECESSOR_WORLD_HASH,
+  },
+] as const;
 const JOB = "albany_city__transport_hub__job";
 const SCENE = "albany:cade-return-packet";
 const STATION = "albany_city__transport_hub";
@@ -34,6 +63,9 @@ const GREENWAY = "albany_city__greenway";
 const PALING = "dispatch_paling_rebuild";
 const EVACUATION = "dispatch_evacuation_line";
 const PASTURE = "dispatch_pasture_search";
+const PASTURE_CONSEQUENCE =
+  "Hayden gives the immediate hill slot to the lower-pasture search. Emery creates a Greenway stores line unless your personal-bond returned-rig cache already satisfied it; the packet closes without assigning you a second paling or evacuation-line job.";
+const PASTURE_JOURNAL_TEXT = `${PASTURE_CONSEQUENCE} The decision is logged against Albany Station Quarter.`;
 const PALING_REST = "albany:cade_paling_rebuild_works_rest";
 const EVACUATION_REST = "albany:cade_evacuation_line_works_rest";
 const PASTURE_RESUPPLY = "albany:cade_pasture_search_greenway_resupply";
@@ -80,6 +112,14 @@ const OUTCOMES = {
 } as const;
 
 type OutcomeId = keyof typeof OUTCOMES;
+type DawnChoice = "send_wagon_to_cade" | "send_wardens_north";
+
+function choicesFor(endingId: OutcomeId, dawnChoice: DawnChoice): readonly string[] {
+  const choices = OUTCOMES[endingId].choices;
+  return dawnChoice === "send_wagon_to_cade"
+    ? choices.filter((choice) => choice === PASTURE)
+    : choices;
+}
 
 function moveToArea(
   session: OverworldSession,
@@ -151,6 +191,7 @@ function finishWolf(
   session: OverworldSession,
   wolfId: string,
   endingId: OutcomeId,
+  dawnChoice: DawnChoice = "send_wardens_north",
 ): OverworldSession {
   session.startQuest(wolfId, "albany:wolf_approach_sheltered_stockway");
   session.completeQuest(wolfId, {
@@ -159,20 +200,20 @@ function finishWolf(
     death: false,
   });
   session.chooseJourney("continue");
-  session.chooseJourneyStory("send_wardens_north");
+  session.chooseJourneyStory(dawnChoice);
   return session;
 }
 
 function returned(
   endingId: OutcomeId,
-  options: { world?: OverworldManifest; oathId?: string } = {},
+  options: { world?: OverworldManifest; oathId?: string; dawnChoice?: DawnChoice } = {},
 ): OverworldSession {
   const world = options.world ?? WORLD;
   const { session, wolfId } = preparedForWolf(
     world,
     options.oathId ?? "albany:oath_full_compact_duty",
   );
-  return finishWolf(session, wolfId, endingId);
+  return finishWolf(session, wolfId, endingId, options.dawnChoice);
 }
 
 function addRoadStrain(session: OverworldSession): void {
@@ -199,23 +240,50 @@ describe("Cade Return Packet", () => {
       /Complete quest "wolf_winter"/i,
     );
 
-    for (const [endingId, outcome] of Object.entries(OUTCOMES) as [
-      OutcomeId,
-      (typeof OUTCOMES)[OutcomeId],
-    ][]) {
-      const session = returned(endingId);
-      expect(session.view().currentArea?.id).toBe(STATION);
-      expect(session.view().jobChoices).toEqual(choicePairs(outcome.choices));
-      expect(session.compactView().job_choices).toEqual(
-        outcome.choices.length > 0 ? choicePairs(outcome.choices) : undefined,
-      );
-      expect(
-        session
-          .view()
-          .jobs.map((job) => job.id)
-          .includes(JOB),
-      ).toBe(outcome.choices.length > 0);
+    for (const endingId of Object.keys(OUTCOMES) as OutcomeId[]) {
+      for (const dawnChoice of ["send_wagon_to_cade", "send_wardens_north"] as const) {
+        const session = returned(endingId, { dawnChoice });
+        const expectedChoices = choicesFor(endingId, dawnChoice);
+        expect(session.view().currentArea?.id).toBe(STATION);
+        expect(session.view().jobChoices, `${endingId}:${dawnChoice}`).toEqual(
+          choicePairs(expectedChoices),
+        );
+        expect(session.compactView().job_choices, `${endingId}:${dawnChoice}`).toEqual(
+          expectedChoices.length > 0 ? choicePairs(expectedChoices) : undefined,
+        );
+        expect(
+          session
+            .view()
+            .jobs.map((job) => job.id)
+            .includes(JOB),
+          `${endingId}:${dawnChoice}`,
+        ).toBe(expectedChoices.length > 0);
+        expect(
+          session.journey().opportunities?.leads.some((lead) => lead.id === JOB) ?? false,
+          `${endingId}:${dawnChoice}`,
+        ).toBe(expectedChoices.length > 0);
+      }
     }
+  });
+
+  it("rejects wagon-repaired structural dispatches while preserving cattle search and wardens", () => {
+    const wagon = returned("ending_drive_person_cattle_lost", {
+      dawnChoice: "send_wagon_to_cade",
+    });
+    expect(wagon.view().jobChoices).toEqual(choicePairs([PASTURE]));
+    expect(() => wagon.workLocalJob(JOB, EVACUATION)).toThrow(/not available in this journey/i);
+    expect(wagon.workLocalJob(JOB, PASTURE).entry.text).toBe(PASTURE_JOURNAL_TEXT);
+
+    const wardens = returned("ending_drive_person_cattle_lost", {
+      dawnChoice: "send_wardens_north",
+    });
+    expect(wardens.view().jobChoices).toEqual(choicePairs([EVACUATION, PASTURE]));
+    expect(wardens.workLocalJob(JOB, EVACUATION)).toMatchObject({ minutes: 35 });
+
+    const wardensPasture = returned("ending_drive_person_cattle_lost", {
+      dawnChoice: "send_wardens_north",
+    });
+    expect(wardensPasture.workLocalJob(JOB, PASTURE).entry.text).toBe(PASTURE_JOURNAL_TEXT);
   });
 
   it("makes either simultaneous loss an exact, irreversible priority", () => {
@@ -243,37 +311,57 @@ describe("Cade Return Packet", () => {
   });
 
   it("projects legal choices through full, compact, UI, and MCP surfaces", () => {
-    const session = returned("ending_drive_person_cattle_lost");
-    const expected = choicePairs([EVACUATION, PASTURE]);
-    const compactScene = session
-      .compactView()
-      .job_scenes?.find(([candidateJobId]) => candidateJobId === JOB);
-    expect(session.view().jobs.find((job) => job.id === JOB)?.authored_scene?.id).toBe(SCENE);
-    expect(session.view().jobChoices).toEqual(expected);
-    expect(session.compactView().job_choices).toEqual(expected);
-    expect(compactScene?.[6].map(([optionId]) => optionId)).toEqual(
-      expected.map(([, optionId]) => optionId),
-    );
-    expect(UiOverworldSession.restore(WORLD, session.snapshot()).view().jobChoices).toEqual(
-      expected,
-    );
+    for (const [dawnChoice, expectedIds] of [
+      ["send_wagon_to_cade", [PASTURE]],
+      ["send_wardens_north", [EVACUATION, PASTURE]],
+    ] as const) {
+      const session = returned("ending_drive_person_cattle_lost", { dawnChoice });
+      const expected = choicePairs(expectedIds);
+      const compactScene = session
+        .compactView()
+        .job_scenes?.find(([candidateJobId]) => candidateJobId === JOB);
+      expect(session.view().jobs.find((job) => job.id === JOB)?.authored_scene?.id).toBe(SCENE);
+      expect(session.view().jobChoices).toEqual(expected);
+      expect(session.compactView().job_choices).toEqual(expected);
+      expect(compactScene?.[6].map(([optionId]) => optionId)).toEqual(
+        expected.map(([, optionId]) => optionId),
+      );
+      expect(UiOverworldSession.restore(WORLD, session.snapshot()).view().jobChoices).toEqual(
+        expected,
+      );
 
-    const api = createToolApi({ root: process.cwd() });
-    const full = api.restore_overworld_session({ ...FULL, snapshot: session.snapshot() });
-    const compact = api.restore_overworld_session({
-      compact_context: true,
-      snapshot: session.snapshot(),
-    });
-    expect(full.observation.jobChoices).toEqual(expected);
-    expect(compact.context.job_choices).toEqual(expected);
-    const worked = api.work_overworld_session_job({
-      ...FULL,
-      session_id: full.session_id,
-      job_id: JOB,
-      option_id: PASTURE,
-    });
-    expect(worked.result).toMatchObject({ minutes: 60, alreadyKnown: false });
-    expect(worked.observation.completedJobIds).toContain(JOB);
+      const api = createToolApi({ root: process.cwd() });
+      const full = api.restore_overworld_session({ ...FULL, snapshot: session.snapshot() });
+      const compact = api.restore_overworld_session({
+        compact_context: true,
+        snapshot: session.snapshot(),
+      });
+      expect(full.observation.jobChoices).toEqual(expected);
+      expect(compact.context.job_choices).toEqual(expected);
+      expect(full.journey.opportunities).toEqual(session.journey().opportunities);
+      expect(compact.journey.opportunities).toEqual(full.journey.opportunities);
+      if (dawnChoice === "send_wagon_to_cade") {
+        expect(() =>
+          api.work_overworld_session_job({
+            ...FULL,
+            session_id: full.session_id,
+            job_id: JOB,
+            option_id: EVACUATION,
+          }),
+        ).toThrow(/not available in this journey/i);
+        expect(() =>
+          UiOverworldSession.restore(WORLD, session.snapshot()).workLocalJob(JOB, EVACUATION),
+        ).toThrow(/not available in this journey/i);
+      }
+      const worked = api.work_overworld_session_job({
+        ...FULL,
+        session_id: full.session_id,
+        job_id: JOB,
+        option_id: PASTURE,
+      });
+      expect(worked.result).toMatchObject({ minutes: 60, alreadyKnown: false });
+      expect(worked.observation.completedJobIds).toContain(JOB);
+    }
   });
 
   it.each([
@@ -420,6 +508,132 @@ describe("Cade Return Packet", () => {
     );
   });
 
+  it.each([
+    {
+      endingId: "ending_held" as const,
+      optionId: PALING,
+      serviceId: PALING_REST,
+    },
+    {
+      endingId: "ending_drive_reserve_spent" as const,
+      optionId: EVACUATION,
+      serviceId: EVACUATION_REST,
+    },
+  ])(
+    "durably preserves predecessor $optionId proof without reopening it",
+    ({ endingId, optionId, serviceId }) => {
+      expect(hashState(STORY_PREDICATE_PREDECESSOR)).toBe(
+        AUTHORED_ALBANY_STATION_STORY_PREDICATE_PREDECESSOR_WORLD_HASH,
+      );
+      const predecessor = returned(endingId, {
+        world: STORY_PREDICATE_PREDECESSOR,
+        dawnChoice: "send_wagon_to_cade",
+      });
+      expect(predecessor.view().jobChoices).toEqual(choicePairs([optionId]));
+      predecessor.workLocalJob(JOB, optionId);
+
+      const restored = OverworldSession.restore(WORLD, predecessor.snapshot());
+      const migrated = restored.snapshot();
+      expect(migrated.worldHash).toBe(OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH);
+      expect(
+        migrated.journalEntries.find((entry) => entry.id === `job:${JOB}`)?.localSceneProof,
+      ).toMatchObject({
+        sceneId: SCENE,
+        optionId,
+        sourceWorldHash: AUTHORED_ALBANY_STATION_STORY_PREDICATE_PREDECESSOR_WORLD_HASH,
+      });
+      expect(restored.view().jobChoices).toEqual([]);
+      expect(OverworldSession.restore(WORLD, migrated).snapshot()).toEqual(migrated);
+
+      addRoadStrain(restored);
+      moveToArea(restored, WORKS);
+      expect(restored.view().serviceOffers.map((offer) => offer.id)).toContain(serviceId);
+
+      const forged = structuredClone(migrated);
+      const proof = forged.journalEntries.find(
+        (entry) => entry.id === `job:${JOB}`,
+      )?.localSceneProof;
+      if (!proof) throw new Error("Expected migrated Station proof.");
+      proof.sourceWorldHash = "0".repeat(64);
+      expect(() => OverworldSession.restore(WORLD, forged)).toThrow(/untrusted legacy source/i);
+    },
+  );
+
+  it.each(STORY_PREDICATE_SOURCE_WORLDS)(
+    "grandfathers authored Station choices from $era",
+    ({ world, worldHash }) => {
+      expect(hashState(world)).toBe(worldHash);
+      expect(AUTHORED_ALBANY_STATION_STORY_PREDICATE_SOURCE_WORLD_HASHES.has(worldHash)).toBe(true);
+
+      const structural = returned("ending_held", {
+        world,
+        dawnChoice: "send_wagon_to_cade",
+      });
+      expect(structural.view().jobChoices).toEqual(choicePairs([PALING]));
+      structural.workLocalJob(JOB, PALING);
+      const structuralRestored = OverworldSession.restore(WORLD, structural.snapshot());
+      const structuralSnapshot = structuralRestored.snapshot();
+      expect(
+        structuralSnapshot.journalEntries.find((entry) => entry.id === `job:${JOB}`)
+          ?.localSceneProof,
+      ).toMatchObject({
+        sceneId: SCENE,
+        optionId: PALING,
+        sourceWorldHash: AUTHORED_ALBANY_STATION_STORY_PREDICATE_PREDECESSOR_WORLD_HASH,
+      });
+      expect(OverworldSession.restore(WORLD, structuralSnapshot).snapshot()).toEqual(
+        structuralSnapshot,
+      );
+      addRoadStrain(structuralRestored);
+      moveToArea(structuralRestored, WORKS);
+      expect(structuralRestored.view().serviceOffers.map((offer) => offer.id)).toContain(
+        PALING_REST,
+      );
+
+      const pasture = returned("ending_drive_person_cattle_lost", {
+        world,
+        dawnChoice: "send_wagon_to_cade",
+      });
+      const predecessorEntry = pasture.workLocalJob(JOB, PASTURE).entry;
+      expect(predecessorEntry.text).toMatch(
+        /simultaneous paling or evacuation-line work remains deferred/i,
+      );
+      const predecessorSnapshot = pasture.snapshot();
+      const alteredCopy = structuredClone(predecessorSnapshot);
+      const alteredEntry = alteredCopy.journalEntries.find((entry) => entry.id === `job:${JOB}`);
+      if (!alteredEntry) throw new Error("Expected predecessor pasture entry.");
+      alteredEntry.text = `${alteredEntry.text} forged`;
+      expect(() => OverworldSession.restore(WORLD, alteredCopy)).toThrow(/exact trusted copy/i);
+
+      const pastureRestored = OverworldSession.restore(WORLD, predecessorSnapshot);
+      const pastureSnapshot = pastureRestored.snapshot();
+      const pastureEntry = pastureSnapshot.journalEntries.find(
+        (entry) => entry.id === `job:${JOB}`,
+      );
+      expect(pastureEntry?.text).toBe(PASTURE_JOURNAL_TEXT);
+      expect(pastureEntry?.localSceneProof).toMatchObject({ sceneId: SCENE, optionId: PASTURE });
+      expect(pastureEntry?.localSceneProof?.sourceWorldHash).toBeUndefined();
+      expect(OverworldSession.restore(WORLD, pastureSnapshot).snapshot()).toEqual(pastureSnapshot);
+      addRoadStrain(pastureRestored);
+      moveToArea(pastureRestored, GREENWAY);
+      expect(pastureRestored.view().serviceOffers.map((offer) => offer.id)).toContain(
+        PASTURE_RESUPPLY,
+      );
+    },
+  );
+
+  it("applies the new dispatch predicate to an incomplete exact predecessor", () => {
+    const predecessor = returned("ending_drive_person_cattle_lost", {
+      world: STORY_PREDICATE_PREDECESSOR,
+      dawnChoice: "send_wagon_to_cade",
+    });
+    expect(predecessor.view().jobChoices).toEqual(choicePairs([EVACUATION, PASTURE]));
+    const restored = OverworldSession.restore(WORLD, predecessor.snapshot());
+    expect(restored.view().jobChoices).toEqual(choicePairs([PASTURE]));
+    expect(restored.journey().opportunities?.leads.map((lead) => lead.id)).toContain(JOB);
+    expect(() => restored.workLocalJob(JOB, EVACUATION)).toThrow(/not available/i);
+  });
+
   it("migrates only the exact generic predecessor without inventing a choice or service", () => {
     expect(hashState(PREDECESSOR)).toBe(AUTHORED_ALBANY_STATION_PREDECESSOR_WORLD_HASH);
     expect(hashState(WORLD)).toBe(OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH);
@@ -508,6 +722,48 @@ describe("Cade Return Packet", () => {
     }
     expect(OverworldSession.restore(WORLD, restored.snapshot()).snapshot()).toEqual(
       restored.snapshot(),
+    );
+  });
+
+  it("preserves an exact transitive generic Station proof carried through the predicate predecessor", () => {
+    const prepared = preparedForWolf(PREDECESSOR);
+    finishWolf(prepared.session, prepared.wolfId, "ending_pack_diverted_cattle_scattered");
+    prepared.session.workLocalJob(JOB);
+    const carried = OverworldSession.restore(WORLD, prepared.session.snapshot()).snapshot();
+    carried.worldHash = AUTHORED_ALBANY_STATION_STORY_PREDICATE_PREDECESSOR_WORLD_HASH;
+    const carriedProof = carried.journalEntries.find(
+      (entry) => entry.id === `job:${JOB}`,
+    )?.localSceneProof;
+    expect(carriedProof).toMatchObject({
+      sceneId: SCENE,
+      optionId: AUTHORED_ALBANY_STATION_LEGACY_OPTION_ID,
+      sourceWorldHash: AUTHORED_ALBANY_STATION_PREDECESSOR_WORLD_HASH,
+    });
+
+    const restored = OverworldSession.restore(WORLD, carried);
+    expect(
+      restored.snapshot().journalEntries.find((entry) => entry.id === `job:${JOB}`)
+        ?.localSceneProof,
+    ).toEqual(carriedProof);
+    expect(restored.view().jobChoices).toEqual([]);
+    for (const areaId of [WORKS, GREENWAY]) {
+      moveToArea(restored, areaId);
+      expect(
+        restored
+          .view()
+          .serviceOffers.map((offer) => offer.id)
+          .filter((id) => id.startsWith("albany:cade_")),
+      ).toEqual([]);
+    }
+
+    const forged = structuredClone(carried);
+    const forgedProof = forged.journalEntries.find(
+      (entry) => entry.id === `job:${JOB}`,
+    )?.localSceneProof;
+    if (!forgedProof) throw new Error("Expected transitive generic Station proof.");
+    forgedProof.sourceWorldHash = "0".repeat(64);
+    expect(() => OverworldSession.restore(WORLD, forged)).toThrow(
+      /exact authored Station decision proof/i,
     );
   });
 

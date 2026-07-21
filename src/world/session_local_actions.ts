@@ -164,6 +164,7 @@ export type OverworldLocalJobCompletionState = {
   completedQuestIds?: ReadonlySet<string> | undefined;
   resolvedEventIds?: ReadonlySet<string> | undefined;
   campaignWorldFactIds?: ReadonlySet<string> | undefined;
+  campaignStoryChoiceKeys?: ReadonlySet<string> | undefined;
   journalEntries: ReadonlyMap<string, OverworldJournalEntry>;
 };
 
@@ -382,6 +383,7 @@ export function planOverworldLocalJobCompletion(
       completedQuestIds: state.completedQuestIds ?? new Set<string>(),
       resolvedEventIds: state.resolvedEventIds ?? new Set<string>(),
       worldFactIds: state.campaignWorldFactIds ?? new Set<string>(),
+      storyChoiceKeys: state.campaignStoryChoiceKeys ?? new Set<string>(),
       eventOptionIdFor: (eventId: string) =>
         state.journalEntries.get(`resolve:${eventId}`)?.localSceneProof?.optionId ?? null,
     };

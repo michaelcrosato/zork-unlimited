@@ -22,6 +22,10 @@ import {
   type CampaignServiceRule,
 } from "./campaign_service_rules.js";
 import {
+  campaignStoryChoiceRefKey,
+  type CampaignStoryChoiceRef,
+} from "./campaign_story_choices.js";
+import {
   ALBANY_DAWN_DISPATCH_CHOICE_IDS,
   ALBANY_DAWN_DISPATCH_ID,
   journeyCampaignStoryChoiceSelection,
@@ -1045,6 +1049,28 @@ function assertAreasIntegrity(
   }
 }
 
+function authoredCampaignStoryChoiceRefExists(
+  world: OverworldManifest,
+  ref: CampaignStoryChoiceRef,
+): boolean {
+  const openingChoiceExists =
+    (world.opening_preparation?.id === ref.story_choice_id &&
+      world.opening_preparation.profiles.some((profile) => profile.id === ref.choice_id)) ||
+    (world.opening_ally?.id === ref.story_choice_id &&
+      world.opening_ally.options.some((option) => option.id === ref.choice_id)) ||
+    (world.opening_relief_allocation?.id === ref.story_choice_id &&
+      world.opening_relief_allocation.options.some((option) => option.id === ref.choice_id)) ||
+    (world.opening_relief_oath?.id === ref.story_choice_id &&
+      world.opening_relief_oath.options.some((option) => option.id === ref.choice_id));
+  if (openingChoiceExists) return true;
+  try {
+    journeyCampaignStoryChoiceSelection(ref.story_choice_id, ref.choice_id);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function assertEntitiesIntegrity(
   world: OverworldManifest,
   nodes: Map<string, OverworldNode>,
@@ -1355,6 +1381,16 @@ function assertEntitiesIntegrity(
           if (!authoredWorldFactIds.has(factId)) {
             throw new Error(
               `Authored local-job scene "${scene.id}" option "${option.id}" references unauthored world fact "${factId}".`,
+            );
+          }
+        }
+        for (const ref of [
+          ...(option.requires_all_story_choices ?? []),
+          ...(option.forbids_any_story_choices ?? []),
+        ]) {
+          if (!authoredCampaignStoryChoiceRefExists(world, ref)) {
+            throw new Error(
+              `Authored local-job scene "${scene.id}" option "${option.id}" references unauthored story choice "${ref.story_choice_id}:${ref.choice_id}".`,
             );
           }
         }
@@ -2309,7 +2345,7 @@ function canonicalCampaignServiceLocationStateProjection(
       ...(rule.requires_all_story_choices ?? []),
       ...(rule.forbids_any_story_choices ?? []),
     ]) {
-      storyChoiceKeys.add(JSON.stringify([choice.story_choice_id, choice.choice_id]));
+      storyChoiceKeys.add(campaignStoryChoiceRefKey(choice));
     }
   }
   for (const ref of canonicalCampaignServiceLocalJobRefsForLocation(rules)) {
@@ -2319,6 +2355,12 @@ function canonicalCampaignServiceLocationStateProjection(
     scene.requires_completed_quests.forEach((questId) => completedQuestIds.add(questId));
     rememberFacts(scene.requires_all_world_facts, scene.forbids_any_world_facts);
     rememberFacts(option.requires_all_world_facts, option.forbids_any_world_facts);
+    for (const choice of [
+      ...(option.requires_all_story_choices ?? []),
+      ...(option.forbids_any_story_choices ?? []),
+    ]) {
+      storyChoiceKeys.add(campaignStoryChoiceRefKey(choice));
+    }
   }
   return { completedQuestIds, worldFactIds, companionIds, promiseIds, storyChoiceKeys };
 }
@@ -2341,7 +2383,7 @@ function canonicalCampaignServiceLocationStateKey(
       .sort(),
     worldFactIds: state.worldFactIds.filter((factId) => projection.worldFactIds.has(factId)).sort(),
     selectedStoryChoices: state.selectedStoryChoices
-      .map((choice) => JSON.stringify([choice.story_choice_id, choice.choice_id]))
+      .map(campaignStoryChoiceRefKey)
       .filter((choiceKey) => projection.storyChoiceKeys.has(choiceKey))
       .sort(),
   });
@@ -2524,6 +2566,7 @@ function canonicalCampaignServiceLocalJobSelectionIsReachable(
 ): boolean {
   const completedQuestIds = new Set(state.completedQuestIds);
   const worldFactIds = new Set(state.worldFactIds);
+  const storyChoiceKeys = new Set(state.selectedStoryChoices.map(campaignStoryChoiceRefKey));
   const requiredEventOptions = new Map<string, string>();
   const selected = selection.map((capability) => {
     const job = world.local_jobs.find((candidate) => candidate.id === capability.job_id);
@@ -2558,7 +2601,13 @@ function canonicalCampaignServiceLocalJobSelectionIsReachable(
         (requirement) => requiredEventOptions.get(requirement.event_id) === requirement.option_id,
       ) &&
       (option.requires_all_world_facts ?? []).every((factId) => worldFactIds.has(factId)) &&
-      !(option.forbids_any_world_facts ?? []).some((factId) => worldFactIds.has(factId))
+      !(option.forbids_any_world_facts ?? []).some((factId) => worldFactIds.has(factId)) &&
+      (option.requires_all_story_choices ?? []).every((ref) =>
+        storyChoiceKeys.has(campaignStoryChoiceRefKey(ref)),
+      ) &&
+      !(option.forbids_any_story_choices ?? []).some((ref) =>
+        storyChoiceKeys.has(campaignStoryChoiceRefKey(ref)),
+      )
     );
   });
 }
@@ -2809,27 +2858,7 @@ function assertCampaignServiceRulesIntegrity(
       ...(rule.requires_all_story_choices ?? []),
       ...(rule.forbids_any_story_choices ?? []),
     ]) {
-      const preparationProfile =
-        world.opening_preparation?.id === ref.story_choice_id
-          ? world.opening_preparation.profiles.find((profile) => profile.id === ref.choice_id)
-          : undefined;
-      const allyOption =
-        world.opening_ally?.id === ref.story_choice_id
-          ? world.opening_ally.options.find((option) => option.id === ref.choice_id)
-          : undefined;
-      const reliefAllocationOption =
-        world.opening_relief_allocation?.id === ref.story_choice_id
-          ? world.opening_relief_allocation.options.find((option) => option.id === ref.choice_id)
-          : undefined;
-      const reliefOathOption =
-        world.opening_relief_oath?.id === ref.story_choice_id
-          ? world.opening_relief_oath.options.find((option) => option.id === ref.choice_id)
-          : undefined;
-      try {
-        if (!preparationProfile && !allyOption && !reliefAllocationOption && !reliefOathOption) {
-          journeyCampaignStoryChoiceSelection(ref.story_choice_id, ref.choice_id);
-        }
-      } catch {
+      if (!authoredCampaignStoryChoiceRefExists(world, ref)) {
         throw new Error(
           `Campaign service rule "${rule.id}" references unauthored story choice "${ref.story_choice_id}:${ref.choice_id}".`,
         );

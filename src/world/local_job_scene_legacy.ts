@@ -14,6 +14,7 @@ import {
   AUTHORED_ALBANY_MARKET_PREDECESSOR_WORLD_HASH,
   AUTHORED_ALBANY_STATION_GENERIC_PREDECESSOR_WORLD_HASHES,
   AUTHORED_ALBANY_STATION_PREDECESSOR_WORLD_HASH,
+  AUTHORED_ALBANY_STATION_STORY_PREDICATE_PREDECESSOR_WORLD_HASH,
   AUTHORED_ALBANY_WORKS_GENERIC_PREDECESSOR_WORLD_HASHES,
   OVERWORLD_AUTHORED_LOCAL_JOB_PREDECESSOR_WORLD_HASH,
   WINTER_RETURN_DOCKET_GENERIC_PREDECESSOR_WORLD_HASHES,
@@ -24,6 +25,8 @@ export {
   AUTHORED_ALBANY_CAMPUS_PREDECESSOR_WORLD_HASH,
   AUTHORED_ALBANY_STATION_GENERIC_PREDECESSOR_WORLD_HASHES,
   AUTHORED_ALBANY_STATION_PREDECESSOR_WORLD_HASH,
+  AUTHORED_ALBANY_STATION_STORY_PREDICATE_PREDECESSOR_WORLD_HASH,
+  AUTHORED_ALBANY_STATION_STORY_PREDICATE_SOURCE_WORLD_HASHES,
   AUTHORED_ALBANY_WORKS_GENERIC_PREDECESSOR_WORLD_HASHES,
   OVERWORLD_AUTHORED_LOCAL_JOB_PREDECESSOR_WORLD_HASH,
 } from "./local_scene_legacy_sources.js";
@@ -64,6 +67,13 @@ export const AUTHORED_ALBANY_CAMPUS_JOB_ID = "albany_city__campus__job";
 export const AUTHORED_ALBANY_CAMPUS_SCENE_ID = "albany:campus-wolf-archive-query";
 export const AUTHORED_ALBANY_STATION_JOB_ID = "albany_city__transport_hub__job";
 export const AUTHORED_ALBANY_STATION_SCENE_ID = "albany:cade-return-packet";
+export const AUTHORED_ALBANY_STATION_STORY_PREDICATE_OPTION_IDS: ReadonlySet<string> = new Set([
+  "dispatch_paling_rebuild",
+  "dispatch_evacuation_line",
+]);
+export const AUTHORED_ALBANY_STATION_PASTURE_OPTION_ID = "dispatch_pasture_search";
+export const AUTHORED_ALBANY_STATION_PRE_STORY_PREDICATE_PASTURE_CONSEQUENCE =
+  "Hayden gives the immediate hill slot to the lower-pasture search. Emery creates a Greenway stores line unless your personal-bond returned-rig cache already satisfied it; any simultaneous paling or evacuation-line work remains deferred.";
 export const AUTHORED_ALBANY_MARKET_JOB_ID = "albany_city__market__job";
 export const AUTHORED_ALBANY_MARKET_SCENE_ID = "albany:disputed-winter-crates";
 export const AUTHORED_ALBANY_GREENWAY_JOB_ID = "albany_city__greenway__job";
@@ -262,6 +272,23 @@ export function authoredLocalJobLegacyCompletion(
   const sourceWorldHash = proof.sourceWorldHash ?? definition.sourceWorldHash;
   const optionId = authoredLocalJobLegacyOptionId(sourceWorldHash);
   return proof.optionId === optionId ? { definition, optionId } : null;
+}
+
+/**
+ * A current structural option completed under one exact pre-predicate manifest.
+ * Equivalent source eras are canonicalized to the immediate predecessor marker;
+ * unlike a generic legacy completion, this remains an exact option capability.
+ */
+export function authoredLocalJobPredicatePredecessorCompletion(
+  jobId: string,
+  proof: OverworldLocalSceneProof | undefined,
+): boolean {
+  return (
+    jobId === AUTHORED_ALBANY_STATION_JOB_ID &&
+    proof?.sceneId === AUTHORED_ALBANY_STATION_SCENE_ID &&
+    proof.sourceWorldHash === AUTHORED_ALBANY_STATION_STORY_PREDICATE_PREDECESSOR_WORLD_HASH &&
+    AUTHORED_ALBANY_STATION_STORY_PREDICATE_OPTION_IDS.has(proof.optionId)
+  );
 }
 
 export function describeAuthoredLocalJobLegacyAction(

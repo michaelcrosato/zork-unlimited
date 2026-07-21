@@ -34,6 +34,7 @@ export type OverworldSessionLocalViewState = {
   completedQuestIds: ReadonlySet<string>;
   resolvedEventIds?: ReadonlySet<string>;
   campaignWorldFactIds?: ReadonlySet<string>;
+  campaignStoryChoiceKeys?: ReadonlySet<string>;
   journalEntries?: ReadonlyMap<string, OverworldJournalEntry>;
 };
 
@@ -63,7 +64,11 @@ export function projectOverworldSessionLocalJob(
   job: OverworldLocalJob,
   state: Pick<
     OverworldSessionLocalViewState,
-    "completedQuestIds" | "resolvedEventIds" | "campaignWorldFactIds" | "journalEntries"
+    | "completedQuestIds"
+    | "resolvedEventIds"
+    | "campaignWorldFactIds"
+    | "campaignStoryChoiceKeys"
+    | "journalEntries"
   >,
   retainUnavailable: true,
 ): OverworldLocalJob;
@@ -71,7 +76,11 @@ export function projectOverworldSessionLocalJob(
   job: OverworldLocalJob,
   state: Pick<
     OverworldSessionLocalViewState,
-    "completedQuestIds" | "resolvedEventIds" | "campaignWorldFactIds" | "journalEntries"
+    | "completedQuestIds"
+    | "resolvedEventIds"
+    | "campaignWorldFactIds"
+    | "campaignStoryChoiceKeys"
+    | "journalEntries"
   >,
   retainUnavailable?: false,
 ): OverworldLocalJob | null;
@@ -79,7 +88,11 @@ export function projectOverworldSessionLocalJob(
   job: OverworldLocalJob,
   state: Pick<
     OverworldSessionLocalViewState,
-    "completedQuestIds" | "resolvedEventIds" | "campaignWorldFactIds" | "journalEntries"
+    | "completedQuestIds"
+    | "resolvedEventIds"
+    | "campaignWorldFactIds"
+    | "campaignStoryChoiceKeys"
+    | "journalEntries"
   >,
   retainUnavailable = false,
 ): OverworldLocalJob | null {
@@ -91,6 +104,7 @@ export function projectOverworldSessionLocalJob(
     completedQuestIds: state.completedQuestIds,
     resolvedEventIds,
     worldFactIds: campaignWorldFactIds,
+    storyChoiceKeys: state.campaignStoryChoiceKeys ?? new Set<string>(),
     eventOptionIdFor: (eventId) =>
       journalEntries.get(`resolve:${eventId}`)?.localSceneProof?.optionId ?? null,
   });

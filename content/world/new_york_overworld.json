@@ -51882,6 +51882,18 @@
             },
             "requires_all_world_facts": [
               "fact:wolf_winter_outer_paling_broken"
+            ],
+            "requires_all_story_choices": [
+              {
+                "story_choice_id": "albany_dawn_dispatch",
+                "choice_id": "send_wardens_north"
+              }
+            ],
+            "forbids_any_story_choices": [
+              {
+                "story_choice_id": "albany_dawn_dispatch",
+                "choice_id": "send_wagon_to_cade"
+              }
             ]
           },
           {
@@ -51895,13 +51907,25 @@
             },
             "requires_all_world_facts": [
               "fact:wolf_winter_outer_line_abandoned"
+            ],
+            "requires_all_story_choices": [
+              {
+                "story_choice_id": "albany_dawn_dispatch",
+                "choice_id": "send_wardens_north"
+              }
+            ],
+            "forbids_any_story_choices": [
+              {
+                "story_choice_id": "albany_dawn_dispatch",
+                "choice_id": "send_wagon_to_cade"
+              }
             ]
           },
           {
             "id": "dispatch_pasture_search",
             "title": "Dispatch Emery's lower-pasture search for Cade's missing cattle",
             "preview": "Spend 60 minutes reconciling the missing-cattle marks with Emery's search grid. Earn 4 Capital / Mohawk renown and create or consolidate one 15-minute Greenway stores line; an already-claimed returned-rig cache satisfies that shared line.",
-            "consequence": "Hayden gives the immediate hill slot to the lower-pasture search. Emery creates a Greenway stores line unless your personal-bond returned-rig cache already satisfied it; any simultaneous paling or evacuation-line work remains deferred.",
+            "consequence": "Hayden gives the immediate hill slot to the lower-pasture search. Emery creates a Greenway stores line unless your personal-bond returned-rig cache already satisfied it; the packet closes without assigning you a second paling or evacuation-line job.",
             "terms": {
               "minutes": 60,
               "renown": 4

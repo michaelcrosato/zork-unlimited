@@ -61,6 +61,7 @@ import {
   type CampaignServiceOffer,
   type CampaignServiceLocalJobOption,
 } from "./campaign_service_rules.js";
+import { authoredLocalJobPredicatePredecessorCompletion } from "./local_job_scene_legacy.js";
 import {
   applyOverworldSessionQuestStart,
   applyOverworldSessionQuestCompletion,
@@ -261,7 +262,10 @@ import {
 } from "./journey_decision.js";
 import { addOverworldJournalEntry } from "./session_journal_store.js";
 import { timeLabel } from "./session_journal_codec.js";
-import type { CampaignStoryChoiceRef } from "./campaign_story_choices.js";
+import {
+  campaignStoryChoiceRefKey,
+  type CampaignStoryChoiceRef,
+} from "./campaign_story_choices.js";
 import {
   overworldDepartureInteraction,
   type OverworldDepartureInteraction,
@@ -536,7 +540,7 @@ export class OverworldSession {
     );
   }
 
-  /** Only current authored scene proofs can activate a local-job service. */
+  /** Only exact authored option proofs can activate a local-job service. */
   private completedLocalJobOptions(): CampaignServiceLocalJobOption[] {
     return this.journalEntries.flatMap((entry) => {
       if (entry.kind !== "job" || !entry.id.startsWith("job:")) return [];
@@ -547,7 +551,8 @@ export class OverworldSession {
         !job?.authored_scene ||
         !proof ||
         proof.sceneId !== job.authored_scene.id ||
-        proof.sourceWorldHash !== undefined ||
+        (proof.sourceWorldHash !== undefined &&
+          !authoredLocalJobPredicatePredecessorCompletion(jobId, proof)) ||
         !job.authored_scene.options.some((option) => option.id === proof.optionId)
       ) {
         return [];
@@ -1845,6 +1850,9 @@ export class OverworldSession {
       completedQuestIds: this.completedQuestIds,
       resolvedEventIds: this.resolvedEventIds,
       campaignWorldFactIds: new Set(this.campaignWorldFactIds()),
+      campaignStoryChoiceKeys: new Set(
+        this.selectedCampaignStoryChoiceRefs().map(campaignStoryChoiceRefKey),
+      ),
       journalEntries: this.journalEntriesById,
     };
   }
@@ -1986,6 +1994,9 @@ export class OverworldSession {
       discoveredJobIds: this.discoveredJobIds,
       completedJobIds: this.completedJobIds,
       worldFactIds: new Set(this.campaignWorldFactIds()),
+      storyChoiceKeys: new Set(
+        this.selectedCampaignStoryChoiceRefs().map(campaignStoryChoiceRefKey),
+      ),
       eventOptionIdFor: (eventId) =>
         this.journalEntriesById.get(`resolve:${eventId}`)?.localSceneProof?.optionId ?? null,
     });
@@ -2115,6 +2126,9 @@ export class OverworldSession {
             completedQuestIds: this.completedQuestIds,
             resolvedEventIds: this.resolvedEventIds,
             campaignWorldFactIds: new Set(this.campaignWorldFactIds()),
+            campaignStoryChoiceKeys: new Set(
+              this.selectedCampaignStoryChoiceRefs().map(campaignStoryChoiceRefKey),
+            ),
             journalEntries: this.journalEntriesById,
           });
           if (!plan.alreadyKnown) choices.push([job.id, option.id]);
@@ -2466,6 +2480,9 @@ export class OverworldSession {
         completedQuestIds: this.completedQuestIds,
         resolvedEventIds: this.resolvedEventIds,
         campaignWorldFactIds: new Set(this.campaignWorldFactIds()),
+        campaignStoryChoiceKeys: new Set(
+          this.selectedCampaignStoryChoiceRefs().map(campaignStoryChoiceRefKey),
+        ),
         journalEntriesById: this.journalEntriesById,
         regionRenown: this.regionRenown,
         currentTownName: current.name,

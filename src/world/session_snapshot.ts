@@ -114,6 +114,7 @@ export type OverworldQuestStartProof =
 export type OverworldLocalSceneProof = {
   sceneId: string;
   optionId: string;
+  /** Exact provenance for a trusted generic copy or prior authored predicate. */
   sourceWorldHash?: string | undefined;
   boundary?: OverworldJournalDecisionBoundary | undefined;
 };
@@ -427,7 +428,7 @@ export const OverworldSessionSnapshotSchema = OverworldSessionSnapshotV8Schema.e
           code: z.ZodIssueCode.custom,
           path: ["journalEntries", index, "localSceneProof", "boundary"],
           message:
-            "A serialized local-scene proof requires its accepted-decision boundary or trusted legacy source hash.",
+            "A serialized local-scene proof requires its accepted-decision boundary or trusted source-world provenance.",
         });
       }
     });
