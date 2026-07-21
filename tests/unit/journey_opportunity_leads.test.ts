@@ -70,6 +70,11 @@ function genericOpportunityState() {
 }
 
 describe("journey opportunity projection", () => {
+  it("keeps return-opportunity guidance neutral about the active journey state", () => {
+    expect(JOURNEY_OPPORTUNITY_GUIDANCE).toContain("leave these leads for later");
+    expect(JOURNEY_OPPORTUNITY_GUIDANCE).not.toContain("keep your objective");
+  });
+
   it("derives generic non-Albany event roots and only actually discovered eligible jobs", () => {
     const { event, job, state } = genericOpportunityState();
     const opportunities = projectJourneyOpportunities(state);
@@ -109,7 +114,7 @@ describe("journey opportunity projection", () => {
     ).toEqual([expect.objectContaining({ id: job.id })]);
   });
 
-  it("freezes the journey contract, clones it deeply, and bounds the additive v24 tuple", () => {
+  it("freezes the journey contract, clones it deeply, and bounds the additive v25 tuple", () => {
     const base = projectJourneyOpportunities(genericOpportunityState().state)!;
     const presented = journeyPresentation(createInitialJourneyContractSnapshot(), {
       opportunities: base,

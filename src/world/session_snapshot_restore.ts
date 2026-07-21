@@ -90,12 +90,17 @@ import {
 import {
   AUTHORED_LOCAL_JOB_LEGACY_DEFINITIONS,
   authoredLocalJobLegacyCompletion,
+  authoredLocalJobLegacyDefinitionsForSourceWorldHash,
   describeAuthoredLocalJobLegacyAction,
   migrateAuthoredLocalJobLegacyEntry,
   AUTHORED_ALBANY_CAMPUS_PREDECESSOR_WORLD_HASH,
   AUTHORED_ALBANY_STATION_PREDECESSOR_WORLD_HASH,
   OVERWORLD_AUTHORED_LOCAL_JOB_PREDECESSOR_WORLD_HASH,
 } from "./local_job_scene_legacy.js";
+import {
+  OVERWORLD_AUTHORED_LOCAL_JOB_FIRST_SCENE_WORLD_HASH,
+  OVERWORLD_FIELD_TIMED_PREPARATION_PREDECESSOR_WORLD_HASH,
+} from "./local_scene_legacy_sources.js";
 import {
   AUTHORED_ALBANY_GREENWAY_PREDECESSOR_WORLD_HASH,
   AUTHORED_LOCAL_EVENT_LEGACY_DEFINITIONS,
@@ -367,17 +372,16 @@ export const OVERWORLD_JUNE_RETURN_COPY_PREDECESSOR_WORLD_HASH =
 export const OVERWORLD_JUNE_RETURN_COPY_WORLD_HASH =
   "69604947643a24fc2d7c2377a85963742282ac7f83e7cec18a58bfc5eb8f53fc";
 export { OVERWORLD_AUTHORED_LOCAL_JOB_PREDECESSOR_WORLD_HASH };
-export const OVERWORLD_AUTHORED_LOCAL_JOB_FIRST_SCENE_WORLD_HASH =
-  "9b8cc75b05e77af160f46dbcd177333cc0f27af89e56f504af0bf6c6a2422c31";
+export {
+  OVERWORLD_AUTHORED_LOCAL_JOB_FIRST_SCENE_WORLD_HASH,
+  OVERWORLD_FIELD_TIMED_PREPARATION_PREDECESSOR_WORLD_HASH,
+} from "./local_scene_legacy_sources.js";
 export const OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH =
   "9238b5f273e03e0a49487058233443e872c18a542525dcd449531708cd3003e5";
-/** Exact manifest immediately before preparation moved from Civic to the Station board. */
-export const OVERWORLD_FIELD_TIMED_PREPARATION_PREDECESSOR_WORLD_HASH =
-  "be2bb804d5e107449aeab1fd6e96cbfb6f0b71d587ee40283d0aac8b28298f6f";
 /**
- * Exact manifests whose already-valid job evidence can be normalized into the
- * current authored-job registry. Each later conversion adds its immediate
- * predecessor here; the generic loop preserves proofs from earlier conversions.
+ * Exact post-Works manifests retained for the older preparation migration.
+ * Authored-job support itself is derived from the scene registry below, so this
+ * historical set cannot become an outer gate for later generic roots.
  */
 export const OVERWORLD_AUTHORED_LOCAL_JOB_TRUSTED_PREDECESSOR_WORLD_HASHES: ReadonlySet<string> =
   new Set([
@@ -2071,8 +2075,6 @@ function migrateAuthoredLocalJobPredecessorJournal(args: {
 }): OverworldJournalEntry[] {
   let journalEntries = [...args.snapshot.journalEntries];
   for (const definition of AUTHORED_LOCAL_JOB_LEGACY_DEFINITIONS) {
-    // A missing accepted set is intentionally global within the outer trusted
-    // migration era (the first Works conversion predates per-scene fences).
     if (
       definition.acceptedSourceWorldHashes &&
       !definition.acceptedSourceWorldHashes.has(args.snapshot.worldHash)
@@ -2260,7 +2262,7 @@ export function planOverworldSessionSnapshotRestore(args: {
   const migrationTargetsCurrentManifest = worldHash === OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH;
   const migratesAuthoredLocalJob =
     migrationTargetsCurrentManifest &&
-    OVERWORLD_AUTHORED_LOCAL_JOB_TRUSTED_PREDECESSOR_WORLD_HASHES.has(sourceSnapshot.worldHash);
+    authoredLocalJobLegacyDefinitionsForSourceWorldHash(sourceSnapshot.worldHash).length > 0;
   const migratesAuthoredLocalEvent =
     migrationTargetsCurrentManifest &&
     authoredLocalEventLegacyDefinitionsForSourceWorldHash(sourceSnapshot.worldHash).length > 0;

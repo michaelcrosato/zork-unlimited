@@ -6,10 +6,27 @@ import type {
 } from "./session_snapshot.js";
 import { describeOverworldJobAction } from "./local_actions.js";
 import {
+  AUTHORED_ALBANY_CAMPUS_GENERIC_PREDECESSOR_WORLD_HASHES,
+  AUTHORED_ALBANY_CAMPUS_PREDECESSOR_WORLD_HASH,
+  AUTHORED_ALBANY_GREENWAY_GENERIC_PREDECESSOR_WORLD_HASHES,
   AUTHORED_ALBANY_GREENWAY_PREDECESSOR_WORLD_HASH,
+  AUTHORED_ALBANY_MARKET_GENERIC_PREDECESSOR_WORLD_HASHES,
   AUTHORED_ALBANY_MARKET_PREDECESSOR_WORLD_HASH,
+  AUTHORED_ALBANY_STATION_GENERIC_PREDECESSOR_WORLD_HASHES,
+  AUTHORED_ALBANY_STATION_PREDECESSOR_WORLD_HASH,
+  AUTHORED_ALBANY_WORKS_GENERIC_PREDECESSOR_WORLD_HASHES,
+  OVERWORLD_AUTHORED_LOCAL_JOB_PREDECESSOR_WORLD_HASH,
   WINTER_RETURN_DOCKET_GENERIC_PREDECESSOR_WORLD_HASHES,
-} from "./local_event_scene_legacy.js";
+} from "./local_scene_legacy_sources.js";
+
+export {
+  AUTHORED_ALBANY_CAMPUS_GENERIC_PREDECESSOR_WORLD_HASHES,
+  AUTHORED_ALBANY_CAMPUS_PREDECESSOR_WORLD_HASH,
+  AUTHORED_ALBANY_STATION_GENERIC_PREDECESSOR_WORLD_HASHES,
+  AUTHORED_ALBANY_STATION_PREDECESSOR_WORLD_HASH,
+  AUTHORED_ALBANY_WORKS_GENERIC_PREDECESSOR_WORLD_HASHES,
+  OVERWORLD_AUTHORED_LOCAL_JOB_PREDECESSOR_WORLD_HASH,
+} from "./local_scene_legacy_sources.js";
 
 export type AuthoredLocalJobLegacyDefinition = Readonly<{
   /** Hash whose generic job copy and terms are preserved by this marker. */
@@ -19,6 +36,11 @@ export type AuthoredLocalJobLegacyDefinition = Readonly<{
   legacyJob: OverworldLocalJob;
   /** Optional exact source-manifest fence for conversions that are not historically global. */
   acceptedSourceWorldHashes?: ReadonlySet<string>;
+  /**
+   * Preserve an already-shipped canonical marker while using an explicit
+   * accepted-source fence. Newer conversions record the actual source hash.
+   */
+  canonicalizeLegacyProofSource?: boolean;
 }>;
 
 export type AuthoredLocalJobLegacyCompletion = Readonly<{
@@ -31,8 +53,6 @@ export type AuthoredLocalJobLegacyCompletion = Readonly<{
  * local-job scene. Additional conversions extend the registry with their exact
  * predecessor job; replay/migration consumers remain job-agnostic.
  */
-export const OVERWORLD_AUTHORED_LOCAL_JOB_PREDECESSOR_WORLD_HASH =
-  "69604947643a24fc2d7c2377a85963742282ac7f83e7cec18a58bfc5eb8f53fc";
 export const AUTHORED_ALBANY_WORKS_JOB_ID = "albany_city__industrial__job";
 export const AUTHORED_ALBANY_WORKS_SCENE_ID = "albany:works-yard-winter-shift";
 export const AUTHORED_ALBANY_CIVIC_JOB_ID = "albany_city__civic_core__job";
@@ -40,13 +60,8 @@ export const AUTHORED_ALBANY_CIVIC_SCENE_ID = "albany:winter-return-docket";
 export const AUTHORED_ALBANY_CIVIC_PREDECESSOR_WORLD_HASH =
   "815a138cbeeafbc9595c04e37260ccaba9d2d52d6a3341b3c38afe9eade62636";
 /** Exact manifest immediately before Albany Campus gained its authored archive scene. */
-export const AUTHORED_ALBANY_CAMPUS_PREDECESSOR_WORLD_HASH =
-  "db23dea42bb2cd62beb8ac5871e4b5c74ee127c05b36941b4e170247ab8a5858";
 export const AUTHORED_ALBANY_CAMPUS_JOB_ID = "albany_city__campus__job";
 export const AUTHORED_ALBANY_CAMPUS_SCENE_ID = "albany:campus-wolf-archive-query";
-/** Exact manifest immediately before Albany Station gained Cade's authored return packet. */
-export const AUTHORED_ALBANY_STATION_PREDECESSOR_WORLD_HASH =
-  "a27b2db04b359e9ca38380ca2b0b7a328df4008d1f899bf65e1332d0998aa6b2";
 export const AUTHORED_ALBANY_STATION_JOB_ID = "albany_city__transport_hub__job";
 export const AUTHORED_ALBANY_STATION_SCENE_ID = "albany:cade-return-packet";
 export const AUTHORED_ALBANY_MARKET_JOB_ID = "albany_city__market__job";
@@ -158,6 +173,8 @@ export const AUTHORED_LOCAL_JOB_LEGACY_DEFINITIONS: readonly AuthoredLocalJobLeg
       jobId: AUTHORED_ALBANY_WORKS_JOB_ID,
       sceneId: AUTHORED_ALBANY_WORKS_SCENE_ID,
       legacyJob: AUTHORED_ALBANY_WORKS_LEGACY_JOB,
+      acceptedSourceWorldHashes: AUTHORED_ALBANY_WORKS_GENERIC_PREDECESSOR_WORLD_HASHES,
+      canonicalizeLegacyProofSource: true,
     }),
     Object.freeze({
       sourceWorldHash: AUTHORED_ALBANY_CIVIC_PREDECESSOR_WORLD_HASH,
@@ -171,31 +188,28 @@ export const AUTHORED_LOCAL_JOB_LEGACY_DEFINITIONS: readonly AuthoredLocalJobLeg
       jobId: AUTHORED_ALBANY_CAMPUS_JOB_ID,
       sceneId: AUTHORED_ALBANY_CAMPUS_SCENE_ID,
       legacyJob: AUTHORED_ALBANY_CAMPUS_LEGACY_JOB,
-      acceptedSourceWorldHashes: new Set([AUTHORED_ALBANY_CAMPUS_PREDECESSOR_WORLD_HASH]),
+      acceptedSourceWorldHashes: AUTHORED_ALBANY_CAMPUS_GENERIC_PREDECESSOR_WORLD_HASHES,
     }),
     Object.freeze({
       sourceWorldHash: AUTHORED_ALBANY_STATION_PREDECESSOR_WORLD_HASH,
       jobId: AUTHORED_ALBANY_STATION_JOB_ID,
       sceneId: AUTHORED_ALBANY_STATION_SCENE_ID,
       legacyJob: AUTHORED_ALBANY_STATION_LEGACY_JOB,
-      acceptedSourceWorldHashes: new Set([AUTHORED_ALBANY_STATION_PREDECESSOR_WORLD_HASH]),
+      acceptedSourceWorldHashes: AUTHORED_ALBANY_STATION_GENERIC_PREDECESSOR_WORLD_HASHES,
     }),
     Object.freeze({
       sourceWorldHash: AUTHORED_ALBANY_MARKET_PREDECESSOR_WORLD_HASH,
       jobId: AUTHORED_ALBANY_MARKET_JOB_ID,
       sceneId: AUTHORED_ALBANY_MARKET_SCENE_ID,
       legacyJob: AUTHORED_ALBANY_MARKET_LEGACY_JOB,
-      acceptedSourceWorldHashes: new Set([AUTHORED_ALBANY_MARKET_PREDECESSOR_WORLD_HASH]),
+      acceptedSourceWorldHashes: AUTHORED_ALBANY_MARKET_GENERIC_PREDECESSOR_WORLD_HASHES,
     }),
     Object.freeze({
       sourceWorldHash: AUTHORED_ALBANY_GREENWAY_PREDECESSOR_WORLD_HASH,
       jobId: AUTHORED_ALBANY_GREENWAY_JOB_ID,
       sceneId: AUTHORED_ALBANY_GREENWAY_JOB_SCENE_ID,
       legacyJob: AUTHORED_ALBANY_GREENWAY_LEGACY_JOB,
-      acceptedSourceWorldHashes: new Set([
-        AUTHORED_ALBANY_MARKET_PREDECESSOR_WORLD_HASH,
-        AUTHORED_ALBANY_GREENWAY_PREDECESSOR_WORLD_HASH,
-      ]),
+      acceptedSourceWorldHashes: AUTHORED_ALBANY_GREENWAY_GENERIC_PREDECESSOR_WORLD_HASHES,
     }),
   ]);
 
@@ -218,6 +232,17 @@ export function authoredLocalJobLegacyDefinitionForJob(
   return definitions.find((definition) => definition.jobId === jobId) ?? null;
 }
 
+export function authoredLocalJobLegacyDefinitionsForSourceWorldHash(
+  sourceWorldHash: string,
+  definitions: readonly AuthoredLocalJobLegacyDefinition[] = AUTHORED_LOCAL_JOB_LEGACY_DEFINITIONS,
+): readonly AuthoredLocalJobLegacyDefinition[] {
+  return definitions.filter(
+    (definition) =>
+      definition.sourceWorldHash === sourceWorldHash ||
+      definition.acceptedSourceWorldHashes?.has(sourceWorldHash),
+  );
+}
+
 export function authoredLocalJobLegacyCompletion(
   jobId: string,
   proof: OverworldLocalSceneProof | undefined,
@@ -228,8 +253,10 @@ export function authoredLocalJobLegacyCompletion(
     (candidate) =>
       candidate.jobId === jobId &&
       candidate.sceneId === proof.sceneId &&
-      (candidate.sourceWorldHash === proof.sourceWorldHash ||
-        candidate.acceptedSourceWorldHashes?.has(proof.sourceWorldHash ?? "")),
+      (candidate.canonicalizeLegacyProofSource
+        ? candidate.sourceWorldHash === proof.sourceWorldHash
+        : candidate.sourceWorldHash === proof.sourceWorldHash ||
+          candidate.acceptedSourceWorldHashes?.has(proof.sourceWorldHash ?? "")),
   );
   if (!definition) return null;
   const sourceWorldHash = proof.sourceWorldHash ?? definition.sourceWorldHash;
@@ -266,18 +293,21 @@ export function migrateAuthoredLocalJobLegacyEntry(args: {
       `Authored local-job migration target does not match registered scene "${args.definition.sceneId}".`,
     );
   }
-  const sourceWorldHash = args.sourceWorldHash ?? args.definition.sourceWorldHash;
+  const inputSourceWorldHash = args.sourceWorldHash ?? args.definition.sourceWorldHash;
   if (
-    sourceWorldHash !== args.definition.sourceWorldHash &&
-    !args.definition.acceptedSourceWorldHashes?.has(sourceWorldHash)
+    inputSourceWorldHash !== args.definition.sourceWorldHash &&
+    !args.definition.acceptedSourceWorldHashes?.has(inputSourceWorldHash)
   ) {
     throw new Error(
       `Authored local-job predecessor for "${args.definition.jobId}" names an unsupported source manifest.`,
     );
   }
+  const proofSourceWorldHash = args.definition.canonicalizeLegacyProofSource
+    ? args.definition.sourceWorldHash
+    : inputSourceWorldHash;
   const completion = {
     definition: args.definition,
-    optionId: authoredLocalJobLegacyOptionId(sourceWorldHash),
+    optionId: authoredLocalJobLegacyOptionId(proofSourceWorldHash),
   };
   const expected = describeAuthoredLocalJobLegacyAction(completion, args.area);
   if (
@@ -297,7 +327,7 @@ export function migrateAuthoredLocalJobLegacyEntry(args: {
     localSceneProof: {
       sceneId: args.definition.sceneId,
       optionId: completion.optionId,
-      sourceWorldHash,
+      sourceWorldHash: proofSourceWorldHash,
       ...(args.boundary ? { boundary: { ...args.boundary } } : {}),
     },
   });

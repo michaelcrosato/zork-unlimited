@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { hashState } from "../../src/core/hash.js";
 import { createToolApi } from "../../src/mcp/tools.js";
 import { campaignServiceLocalJobOptionKey } from "../../src/world/campaign_service_rules.js";
+import { authoredLocalJobLegacyOptionId } from "../../src/world/local_job_scene_legacy.js";
 import { assertOverworldIntegrity, type OverworldManifest } from "../../src/world/overworld.js";
 import { OverworldSession } from "../../src/world/session.js";
 import { timeLabel } from "../../src/world/session_journal_codec.js";
@@ -390,15 +391,28 @@ describe("Albany Campus Archive Query", () => {
     expect(OverworldSession.restore(WORLD, migratedSnapshot).snapshot()).toEqual(migratedSnapshot);
   });
 
-  it("does not relabel a non-immediate generic Campus completion as an authored option", () => {
+  it("migrates an older generic Campus completion as a neutral exact-source proof", () => {
     const older = exactWinterReturnDocketPredecessor(WORLD);
-    expect(hashState(older)).not.toBe(
-      "db23dea42bb2cd62beb8ac5871e4b5c74ee127c05b36941b4e170247ab8a5858",
+    const sourceWorldHash = hashState(older);
+    expect(sourceWorldHash).toBe(
+      "815a138cbeeafbc9595c04e37260ccaba9d2d52d6a3341b3c38afe9eade62636",
     );
     const legacy = returnedToCampus(older);
     legacy.workLocalJob(JOB);
-    expect(() => OverworldSession.restore(WORLD, legacy.snapshot())).toThrow(
-      /authored job .* missing its exact local-scene proof/i,
+    const restored = OverworldSession.restore(WORLD, legacy.snapshot());
+    expect(
+      restored.snapshot().journalEntries.find((entry) => entry.id === `job:${JOB}`)
+        ?.localSceneProof,
+    ).toMatchObject({
+      sceneId: "albany:campus-wolf-archive-query",
+      optionId: authoredLocalJobLegacyOptionId(sourceWorldHash),
+      sourceWorldHash,
+    });
+    expect(restored.view().jobChoices).toEqual([]);
+    expect(restored.view().serviceOffers.map((offer) => offer.id)).not.toContain(WARNING_SERVICE);
+    expect(restored.view().serviceOffers.map((offer) => offer.id)).not.toContain(ARCHIVE_SERVICE);
+    expect(OverworldSession.restore(WORLD, restored.snapshot()).snapshot()).toEqual(
+      restored.snapshot(),
     );
   });
 

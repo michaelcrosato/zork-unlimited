@@ -718,15 +718,24 @@ current objective after the player leaves. Each lead exposes only its title,
 district, kind, and exact `here` / `mapped` / `route_unmapped` access state;
 choices, outcomes, rewards, and scene terms remain undisclosed until normal
 play reaches them. The structured journey object is authoritative, while the
-existing compact v24 context receives only a bounded additive tuple and legend.
+the versioned compact v25 context receives only a bounded additive tuple and legend.
 Projection is read-only, adds no decision or action, and is covered across the
 Wolf completion, dawn choice, northward departure, restore, MCP, and UI surfaces
 by [`albany_return_opportunity_leads.test.ts`](../tests/starting_slice/albany_return_opportunity_leads.test.ts).
 Five verified exact-feature Terra journeys completed Wolf-Winter and continued,
 but none organically named, pursued, or declined a listed Return Opportunity;
 the separate Cade dawn dispatch does not count. Deterministic visibility therefore
-passes while discoverability remains unproven, and the next increment should
-improve the immediate action affordance rather than add more content.
+passes while the original discoverability hypothesis fails at 0/5. A shared,
+state-honest pursuit sentence now sits beside every full, compact, and UI lead:
+finish setup before using a lead that is here, return and walk to a mapped
+district, or return and Explore Area to reveal an unmapped local route. This
+adds no action or forced decision, creates no objective, and remains truthful
+when the preceding objective has already completed.
+In the first exact-feature follow-up cohort, one journey never received a
+non-null lead and is excluded; one of the three eligible players organically
+recognized the optional Albany opportunities, none pursued one, and none named
+an individual decline. Recognition therefore improves to 1/3 eligible
+players, while actual return-route uptake remains unproven.
 No generic district jobs remain. Three checklist events—Station, Works, and
 Campus—are still visible and generic.
 

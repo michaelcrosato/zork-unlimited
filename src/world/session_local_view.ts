@@ -59,23 +59,50 @@ function hiddenCount<T extends { id: string }>(
   return count;
 }
 
-function localJobIsChronologicallyAvailable(
+export function projectOverworldSessionLocalJob(
   job: OverworldLocalJob,
-  completedQuestIds: ReadonlySet<string>,
-  resolvedEventIds: ReadonlySet<string>,
-  campaignWorldFactIds: ReadonlySet<string>,
-  journalEntries: ReadonlyMap<string, OverworldJournalEntry>,
-): boolean {
-  if (!job.authored_scene) return true;
-  return (
-    availableLocalJobSceneOptions(job.authored_scene, {
-      completedQuestIds,
-      resolvedEventIds,
-      worldFactIds: campaignWorldFactIds,
-      eventOptionIdFor: (eventId) =>
-        journalEntries.get(`resolve:${eventId}`)?.localSceneProof?.optionId ?? null,
-    }).length > 0
-  );
+  state: Pick<
+    OverworldSessionLocalViewState,
+    "completedQuestIds" | "resolvedEventIds" | "campaignWorldFactIds" | "journalEntries"
+  >,
+  retainUnavailable: true,
+): OverworldLocalJob;
+export function projectOverworldSessionLocalJob(
+  job: OverworldLocalJob,
+  state: Pick<
+    OverworldSessionLocalViewState,
+    "completedQuestIds" | "resolvedEventIds" | "campaignWorldFactIds" | "journalEntries"
+  >,
+  retainUnavailable?: false,
+): OverworldLocalJob | null;
+export function projectOverworldSessionLocalJob(
+  job: OverworldLocalJob,
+  state: Pick<
+    OverworldSessionLocalViewState,
+    "completedQuestIds" | "resolvedEventIds" | "campaignWorldFactIds" | "journalEntries"
+  >,
+  retainUnavailable = false,
+): OverworldLocalJob | null {
+  if (!job.authored_scene) return job;
+  const resolvedEventIds = state.resolvedEventIds ?? new Set<string>();
+  const campaignWorldFactIds = state.campaignWorldFactIds ?? new Set<string>();
+  const journalEntries = state.journalEntries ?? new Map<string, OverworldJournalEntry>();
+  const options = availableLocalJobSceneOptions(job.authored_scene, {
+    completedQuestIds: state.completedQuestIds,
+    resolvedEventIds,
+    worldFactIds: campaignWorldFactIds,
+    eventOptionIdFor: (eventId) =>
+      journalEntries.get(`resolve:${eventId}`)?.localSceneProof?.optionId ?? null,
+  });
+  if (options.length === 0 && !retainUnavailable) return null;
+  if (options.length === job.authored_scene.options.length) return job;
+  return {
+    ...job,
+    authored_scene: {
+      ...job.authored_scene,
+      options,
+    },
+  };
 }
 
 function discoveredCurrentAreaJobs(
@@ -133,15 +160,10 @@ function discoveredQuestViews(
 export function buildOverworldSessionLocalView(
   state: OverworldSessionLocalViewState,
 ): OverworldSessionLocalView {
-  const chronologicallyAvailableJobs = state.localJobs.filter((job) =>
-    localJobIsChronologicallyAvailable(
-      job,
-      state.completedQuestIds,
-      state.resolvedEventIds ?? new Set<string>(),
-      state.campaignWorldFactIds ?? new Set<string>(),
-      state.journalEntries ?? new Map<string, OverworldJournalEntry>(),
-    ),
-  );
+  const chronologicallyAvailableJobs = state.localJobs.flatMap((job) => {
+    const projected = projectOverworldSessionLocalJob(job, state);
+    return projected ? [projected] : [];
+  });
   return {
     areas: discoveredValues(state.localAreas, state.discoveredAreaIds),
     hiddenAreaCount: hiddenCount(state.localAreas, state.discoveredAreaIds),
@@ -160,14 +182,7 @@ export function buildOverworldSessionLocalView(
     hiddenJobCount: state.localJobs.filter(
       (job) =>
         !state.discoveredJobIds.has(job.id) ||
-        (!state.completedJobIds.has(job.id) &&
-          !localJobIsChronologicallyAvailable(
-            job,
-            state.completedQuestIds,
-            state.resolvedEventIds ?? new Set<string>(),
-            state.campaignWorldFactIds ?? new Set<string>(),
-            state.journalEntries ?? new Map<string, OverworldJournalEntry>(),
-          )),
+        (!state.completedJobIds.has(job.id) && !projectOverworldSessionLocalJob(job, state)),
     ).length,
     sites: discoveredValues(state.currentAreaSites, state.discoveredSiteIds),
     hiddenSiteCount: hiddenCount(state.currentAreaSites, state.discoveredSiteIds),

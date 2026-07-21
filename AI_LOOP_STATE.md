@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 601 -->
+<!-- historical_cycle_count: 602 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - albany_return_opportunity_affordance
+
+- Evidence choice: five verified players saw Return Opportunities but recognized 0/5, so this cycle added one shared pursuit sentence beside the existing leads instead of another scene, forced choice, or mandatory step.
+- Surface: full journey, compact v25, and every journey UI state now explain `here`, `mapped`, and `route_unmapped` pursuit using only already-legal town actions; the exact lead tuple, objective, state, rewards, decisions, and persistence contract are unchanged.
+- Counterfactual: guidance and compact legends remain truthful at road, story, and retention boundaries; review also forced exact cumulative old-save input fences while preserving the shipped Works marker, rejection of proof relabeling, policy-option withholding from observations and discovery results, and compact v25.
+- Pure evidence: exact feature `6e7bb9fa` passed Terra 4320/4322 and Sol 4321 through two goals; exact rebased `f76e276c` Terra 4324 completed Wolf-Winter in 31 decisions and ended at the first boundary. All four were unstuck/replay-yes at clarity/enjoyment 4/4, 4/4, 3/4, and 4/4; 4320 had no non-null lead and is uptake-ineligible.
+- Measured result: organic recognition improved from 0/5 to 1/3 eligible fresh players—4321 collectively chose its objective over “unrelated Albany opportunities,” while 4322/4324 did not identify either shown lead; pursuit and named decline remain 0/3, so actual return-route uptake is still unproven.
+- Feedback/follow-through: compile `20260721T093045Z` remains 938 verified/58 rejected, 187 eligible pure exits, and 164 continuing; two later verified reports are below the next compile threshold, and the regenerated ledger is 939/59. Dense opening copy and the overloaded rail action remain fresh friction.
+- Guard: exact zero-finding crawl, full health, and clean independent re-review gate the landing; none of the evidence above authorizes merging a red or incompletely reviewed tree.
 
 ### Cycle result - albany_return_opportunity_leads
 
@@ -154,33 +164,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Follow-through: Wolf copy now needs genuine four-plan comparison plus clearer Scout/Station handoff; separate verified debt includes Gallowmere no-progress Tracking retries, Rowan continuity, decision-40 quest-start interruption, and compact ending loss.
 - Feedback/self-critique: compile `20260720T160358Z` has 896 verified reports, 145 current-contract pure exits, and 122 continuing; the ledger is 895 accepted/59 rejected. This is not the greater-than-BG3 milestone, and the final three-strategy/retention authority gates remain open.
 - Guard: crawl `20260720T151018Z` is zero-finding at 247/247 nodes, 344/344 edges, and 12/12 boards/quests; health passes 388 files/2,972 tests plus UI/all packs, and the real departure dialog passed browser smoke with no console warning or error.
-
-### Cycle result - displayed_action_aliases
-
-- Evidence choice: clean Terra seed 4186 used the displayed embedded-quest field `action`, while seed 4194 used the displayed road field `dest_town_id`; both exact, mutation-free rejections were S1 contract friction rather than player mistakes.
-- Surface: `step_rpg_session` now accepts `action` beside canonical `action_id`, and road planning/travel accept `dest_town_id` beside `destination_town_id`; equal aliases normalize while conflicts reject before state changes.
-- Authority: root input schemas require both the session selector group and action selector group, so the new spelling does not weaken stale-session, pure-route, or legal-action boundaries; road aliases remain mutually exclusive with exact road selection.
-- Counterfactual: exact seed-4186 and seed-4194 reproductions cover success, one-step advancement, stale hashes, illegal ids, equal/conflicting aliases, nonmutation, full/pure schemas, and bounded destination legality.
-- Pure evidence: clean commit `ef6cea4a` Terra seed 4206 completed recovered all-wolves-alive fortification at decision 23, rated clarity/enjoyment 4/4, was unstuck/replay-yes, and made no rejected player action.
-- Feedback/self-critique: compile `20260719T211958Z` has 889 verified reports, 138 current pure exits, and 116 continuing; the ledger is 888 accepted/59 rejected. PASS for the two displayed-field S1s, not the greater-than-BG3 milestone; front-loaded setup density remains the dominant current signal.
-- Guard: independent adversarial review found no bypass; crawl `20260719T205237Z` is zero-finding at 247/247 nodes, 344/344 edges, and 12/12 boards/quests, and exact stacked health passes 387 files/2,960 tests plus UI/all packs.
-
-### Cycle result - summary_first_setup_cards
-
-- Evidence choice: nine of ten clean Terra players struggled to compare five permanent setup decisions before field play, with literal truncation and accumulated-detail complaints despite reliable first-goal completion.
-- Surface: each of the five setup stages now exposes a short commitment, later field trigger, and actual immediate cost first; the unchanged authored consequence sits in a keyboard-accessible native details disclosure that is a sibling—not part—of the choice button.
-- Contract: structured summaries are required and deeply frozen only for registration, oath, source, preparation, and allocation; legacy aftermath choices remain compatible, full/compact MCP payloads are identical, and mouse/Enter disclosure cannot select or double-submit an option.
-- Pure evidence: clean commit `9d9d47fc` seed 4195 completed all-wolves-alive lure at decision 33, rated clarity/enjoyment 3/4, was unstuck/replay-yes, and still called setup dense. Exact ten-Terra seeds 4196–4205 completed 10/10 in 27–36 decisions, continued 9/10, were 0 stuck/9 replay, and averaged clarity 3.7/enjoyment 4.0.
-- Measured result: literal truncation complaints fell to 0/10, but structural setup-density complaints rose from 8/10 to 10/10 and all ten chose living lure. The summary-card hypothesis PASSes for UI disclosure mechanics but FAILs to solve onboarding pacing or route diversity.
-- Feedback/self-critique: compile `20260719T211958Z` has 889 verified reports, 138 current pure exits, and 116 continuing; the ledger is 888 accepted/59 rejected. The greater-than-BG3 milestone remains active_unproven; move decisions closer to their field consumers rather than adding more card copy.
-- Guard: independent audit plus real React/JSDOM proves accessible non-selection and exact five-stage parity; crawl `20260719T201048Z` is zero-finding at 247/247 nodes, 344/344 edges, and 12/12 boards/quests, and exact stacked health passes 388 files/2,965 tests plus UI/all packs.
-
-### Cycle result - wolf_commitment_boundaries
-
-- Evidence choice: the clean Terra cohort exposed two real S2 disclosures: seed 4174 crossed the Broken Paling without learning that uncommitted entry permanently retires every living plan, while seed 4177's question-like Albany-authority action silently locked fortification and retreat.
-- Surface: no-June pre-breach room, Cade-root, lure-back, and leave copy now names hunt-and-hold plus permanent lure/drive/fortify retirement; post-cross and committed returns stay state-honest, and both fortification stances lead with irreversible north/no-switch terms.
-- Compatibility: compact/full strings remain equal and untruncated while preserving Albany's handoff, both spear lessons, living-plan names, lantern/day-book clues, checked wolf count, oath terms, Household-versus-Albany costs, dawn/outlast framing, and every existing legal route.
-- Counterfactual: exact seed-4174 aid-only and seed-4177 full-duty import routes prove warning-before-mutation, decline-and-reopen availability, uncommitted closure, committed-lure preservation, both fortify stances, save-visible action labels, and post-commit closures.
-- Pure evidence: clean commit `d8df814a` Terra seed 4194 completed recovered all-wolves-alive fortification at decision 21 and The Gallowmere at 44, continued twice, rated clarity/enjoyment 4/4, and was unstuck/replay-yes; seed 4193 remains rejected because its interview omitted the mandatory playthrough log.
-- Feedback/self-critique: compile `20260719T184312Z` remains 875 verified/124 current pure exits/105 continuing; two clean reports are new, below the next compile threshold, and the ledger is 876 accepted/59 rejected. PASS for the recurring irreversible-boundary S2, not the greater-than-BG3 milestone; setup density and a separate road-field alias remain.
-- Guard: two red-team rounds caught compact overflow, erased legacy signposts, stale-state copy, and relabel risk before landing; crawl `20260719T193859Z` is zero-finding at 247/247 nodes, 344/344 edges, and 12/12 boards/quests, and exact stacked health passes 387 files/2,959 tests plus UI/all packs.

@@ -22,7 +22,10 @@ import { OverworldSession } from "../../src/world/session.js";
 import { OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH } from "../../src/world/session_snapshot_restore.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
 import { OverworldSession as UiOverworldSession } from "../../ui/src/overworld.js";
-import { exactAlbanyMarketDepthPredecessor } from "../regression/fixtures/historical_overworlds.js";
+import {
+  exactAlbanyMarketDepthPredecessor,
+  exactWinterReturnDocketPredecessor,
+} from "../regression/fixtures/historical_overworlds.js";
 
 const WORLD = loadOverworldManifest(process.cwd());
 const PREDECESSOR = exactAlbanyMarketDepthPredecessor(WORLD);
@@ -185,6 +188,8 @@ describe("Depth Contract #11 — Jamie Tanner's Market policy and disputed crate
       [JOB, HOLD_AUDIT],
     ]);
     expect(session.compactView().job_choices).toEqual(session.view().jobChoices);
+    const compactJobScene = session.compactView().job_scenes?.find(([jobId]) => jobId === JOB);
+    expect(compactJobScene?.[6].map(([optionId]) => optionId)).toEqual([HOLD_FAST, HOLD_AUDIT]);
     expect(
       session
         .view()
@@ -197,24 +202,87 @@ describe("Depth Contract #11 — Jamie Tanner's Market policy and disputed crate
     ).toEqual([
       [HOLD_FAST, 30, 3],
       [HOLD_AUDIT, 75, 5],
-      [BID_FAST, 20, 1],
-      [BID_AUDIT, 60, 4],
     ]);
+    const holdOptions = JSON.stringify(
+      session.view().jobs.find((job) => job.id === JOB)?.authored_scene?.options,
+    );
+    expect(holdOptions).not.toContain(BID_FAST);
+    expect(holdOptions).not.toContain(BID_AUDIT);
+    expect(holdOptions).not.toContain("Release the open-bid crates from the visible buyer board");
+    expect(holdOptions).not.toContain("Audit the open-bid public chain");
+    expect(holdOptions).not.toContain("Earn 1 Capital / Mohawk renown");
+    expect(holdOptions).not.toContain("Earn 4 Capital / Mohawk renown");
     expect(UiOverworldSession.restore(WORLD, session.snapshot()).view().jobChoices).toEqual(
       session.view().jobChoices,
     );
   });
 
   it.each([
-    [HOLD, HOLD_FAST, 30, 3, HOLD_AUDIT, 75, 5],
-    [BID, BID_FAST, 20, 1, BID_AUDIT, 60, 4],
+    [
+      HOLD,
+      HOLD_FAST,
+      30,
+      3,
+      HOLD_AUDIT,
+      75,
+      5,
+      BID_FAST,
+      "Release the open-bid crates from the visible buyer board",
+      1,
+      BID_AUDIT,
+      "Audit the open-bid public chain",
+      4,
+    ],
+    [
+      BID,
+      BID_FAST,
+      20,
+      1,
+      BID_AUDIT,
+      60,
+      4,
+      HOLD_FAST,
+      "Release the price-hold crates through Jamie's kitchen ledger",
+      3,
+      HOLD_AUDIT,
+      "Audit the price-hold household chain in public",
+      5,
+    ],
   ] as const)(
     "makes %s a permanent policy with only its two legal settlements",
-    (policy, fast, fastMinutes, fastRenown, audit, auditMinutes, auditRenown) => {
+    (
+      policy,
+      fast,
+      fastMinutes,
+      fastRenown,
+      audit,
+      auditMinutes,
+      auditRenown,
+      forbiddenFast,
+      forbiddenFastTitle,
+      forbiddenFastRenown,
+      forbiddenAudit,
+      forbiddenAuditTitle,
+      forbiddenAuditRenown,
+    ) => {
       const fastSession = resolvedMarket(policy);
       const auditSession = resolvedMarket(policy);
       const scene = fastSession.view().jobs.find((job) => job.id === JOB)?.authored_scene;
       expect(scene?.id).toBe(AUTHORED_ALBANY_MARKET_SCENE_ID);
+      expect(scene?.options.map((option) => option.id)).toEqual([fast, audit]);
+      const compactScene = fastSession.compactView().job_scenes?.find(([jobId]) => jobId === JOB);
+      expect(compactScene?.[6].map(([optionId]) => optionId)).toEqual([fast, audit]);
+      const serializedOptions = JSON.stringify(scene?.options);
+      for (const forbidden of [
+        forbiddenFast,
+        forbiddenAudit,
+        forbiddenFastTitle,
+        forbiddenAuditTitle,
+        `Earn ${forbiddenFastRenown} Capital / Mohawk renown`,
+        `Earn ${forbiddenAuditRenown} Capital / Mohawk renown`,
+      ]) {
+        expect(serializedOptions).not.toContain(forbidden);
+      }
       expect(fastSession.view().jobChoices).toEqual([
         [JOB, fast],
         [JOB, audit],
@@ -345,6 +413,42 @@ describe("Depth Contract #11 — Jamie Tanner's Market policy and disputed crate
     expect(() => OverworldSession.restore(WORLD, alteredLegacy)).toThrow(/exact trusted copy/i);
     expect(AUTHORED_ALBANY_MARKET_LEGACY_EVENT.authored_scene).toBeUndefined();
     expect(AUTHORED_ALBANY_MARKET_LEGACY_JOB.authored_scene).toBeUndefined();
+  });
+
+  it("migrates an exact older generic Market event and job from their actual source world", () => {
+    const older = exactWinterReturnDocketPredecessor(WORLD);
+    const sourceWorldHash = hashState(older);
+    expect(sourceWorldHash).toBe(
+      "815a138cbeeafbc9595c04e37260ccaba9d2d52d6a3341b3c38afe9eade62636",
+    );
+    expect(older.local_events.find((event) => event.id === EVENT)?.authored_scene).toBeUndefined();
+    expect(older.local_jobs.find((job) => job.id === JOB)?.authored_scene).toBeUndefined();
+
+    const legacy = returnedToMarket(older);
+    legacy.investigateEvent(EVENT);
+    legacy.resolveEvent(EVENT);
+    legacy.workLocalJob(JOB);
+
+    const restored = OverworldSession.restore(WORLD, legacy.snapshot());
+    const restoredSnapshot = restored.snapshot();
+    expect(
+      restoredSnapshot.journalEntries.find((entry) => entry.id === `resolve:${EVENT}`)
+        ?.localSceneProof,
+    ).toMatchObject({
+      sceneId: AUTHORED_ALBANY_MARKET_EVENT_SCENE_ID,
+      optionId: authoredLocalEventLegacyOptionId(sourceWorldHash),
+      sourceWorldHash,
+    });
+    expect(
+      restoredSnapshot.journalEntries.find((entry) => entry.id === `job:${JOB}`)?.localSceneProof,
+    ).toMatchObject({
+      sceneId: AUTHORED_ALBANY_MARKET_SCENE_ID,
+      optionId: authoredLocalJobLegacyOptionId(sourceWorldHash),
+      sourceWorldHash,
+    });
+    expect(restored.view().eventChoices).toEqual([]);
+    expect(restored.view().jobChoices).toEqual([]);
+    expect(OverworldSession.restore(WORLD, restoredSnapshot).snapshot()).toEqual(restoredSnapshot);
   });
 
   it("preserves an old pre-Wolf generic completion neutrally while the current first goal remains finishable unresolved", () => {

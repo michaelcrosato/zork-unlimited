@@ -34,7 +34,7 @@ export const OVERWORLD_COMPACT_TITLE_CHAR_LIMIT = 140;
 export const OVERWORLD_COMPACT_RISK_CHAR_LIMIT = 160;
 export const OVERWORLD_COMPACT_ROAD_EVENT_SUMMARY_CHAR_LIMIT = 240;
 export const OVERWORLD_COMPACT_SERVICE_SUMMARY_CHAR_LIMIT = 240;
-export const OVERWORLD_COMPACT_VIEW_VERSION = 24 as const;
+export const OVERWORLD_COMPACT_VIEW_VERSION = 25 as const;
 
 export type OverworldCompactRef = readonly [id: string, name: string];
 export type OverworldCompactOpportunityLead = readonly [
@@ -397,10 +397,10 @@ export const OVERWORLD_COMPACT_LEGEND = {
   opportunity_guidance:
     "player-facing pursuit guidance for opportunity_leads; shown beside those leads on every compact response where they exist",
   opportunity_leads:
-    "[[kind, root_id, title, district, access], ...] optional authored aftermath; access is here|mapped|route_unmapped, the journey objective remains available, and no choices, rewards, or outcomes are disclosed",
+    "[[kind, root_id, title, district, access], ...] optional authored aftermath; access is here|mapped|route_unmapped, leads do not create, replace, or activate a journey objective, and no choices, rewards, or outcomes are disclosed",
   opportunity_leads_truncated: "true when more optional aftermath leads exist than listed",
   hidden:
-    "[areas, jobs, sites, quests] counts still undiscovered at this town; scout/talk/explore to reveal them",
+    "[areas, jobs, sites, quests] counts not currently listed at this town; jobs include undiscovered jobs plus discovered, incomplete authored job scenes with no legal options currently available. Scout, talk, or explore can reveal more.",
   roads:
     "[[dest_town_id, est_minutes_incl_delays, supplies_needed, fatigue_0to100_on_arrival], ...] direct roads from here",
   roads_truncated: "true when more roads exist than listed",

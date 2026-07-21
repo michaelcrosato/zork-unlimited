@@ -297,7 +297,7 @@ export type JourneyGoalPassagePresentation = Readonly<{
 }>;
 
 export const JOURNEY_OPPORTUNITY_GUIDANCE =
-  "When town actions are available: Here now — finish setup, then investigate/work. Mapped district — if away, return, then walk there. Route not yet mapped — if away, return, then Explore Area to reveal routes. Or keep your objective." as const;
+  "When town actions are available: Here now — finish setup, then investigate/work. Mapped district — if away, return, then walk there. Route not yet mapped — if away, return, then Explore Area to reveal routes. Or leave these leads for later." as const;
 
 export type JourneyOpportunityAccess = "here" | "mapped" | "route_unmapped";
 export type JourneyOpportunityKind = "event" | "job";

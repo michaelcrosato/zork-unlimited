@@ -71,7 +71,7 @@ fleet. Spark remains a separate diagnostic cohort after its quota resets.
 2. Foundation and Market-authored predecessor saves migrate through exact hash
    fences; generic event/job completions stay neutral and native Market proofs
    remain native.
-3. Full, compact v24, UI, and MCP surfaces agree; replay and forged state fail
+3. Full, compact v25, UI, and MCP surfaces agree; replay and forged state fail
    closed; exact crawl and health remain green.
 4. A verifier-valid blind report exists for the exact combined increment, and
    both required GitHub checks pass before merge.

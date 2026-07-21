@@ -13,6 +13,7 @@ import type { OverworldManifest } from "../../src/world/overworld.js";
 import {
   AUTHORED_ALBANY_GREENWAY_LEGACY_JOB,
   AUTHORED_ALBANY_WORKS_LEGACY_OPTION_ID,
+  authoredLocalJobLegacyOptionId,
 } from "../../src/world/local_job_scene_legacy.js";
 import { OverworldSession } from "../../src/world/session.js";
 import type { OverworldSessionSnapshot } from "../../src/world/session_snapshot.js";
@@ -359,6 +360,18 @@ describe("Depth Contract #11 — authored Albany Works scene", () => {
     );
     expect(OverworldSession.restore(WORLD, migratedLegacySnapshot).snapshot()).toEqual(
       migratedLegacySnapshot,
+    );
+
+    const relabeledSource = structuredClone(migratedLegacySnapshot);
+    const relabeledProof = relabeledSource.journalEntries.find(
+      (entry) => entry.id === `job:${JOB_ID}`,
+    )?.localSceneProof;
+    if (!relabeledProof) throw new Error("Expected the canonical Works migration proof.");
+    const earlierSourceWorldHash = hashState(EARLIER_TRUSTED_WORLD);
+    relabeledProof.sourceWorldHash = earlierSourceWorldHash;
+    relabeledProof.optionId = authoredLocalJobLegacyOptionId(earlierSourceWorldHash);
+    expect(() => OverworldSession.restore(WORLD, relabeledSource)).toThrow(
+      /untrusted legacy source/i,
     );
   });
 

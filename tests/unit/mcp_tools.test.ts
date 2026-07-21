@@ -757,6 +757,21 @@ describe("MCP tools — validate / load (§9.4)", () => {
     });
     expect(scouted.result.minutes).toBe(20);
     expect(scouted.result.discoveredJobs).toHaveLength(1);
+    expect(scouted.result.discoveredJobs?.[0]).toMatchObject({
+      id: "albany_city__civic_core__job",
+      title: "Rowan's Winter Return Docket",
+      authored_scene: { options: [] },
+    });
+    const civicAuthoredOptions = overworld.local_jobs.find(
+      (job) => job.id === "albany_city__civic_core__job",
+    )?.authored_scene?.options;
+    if (!civicAuthoredOptions) throw new Error("expected the authored Civic return options");
+    const fullDiscoveryPayload = JSON.stringify(scouted.result.discoveredJobs?.[0]);
+    for (const option of civicAuthoredOptions) {
+      expect(fullDiscoveryPayload).not.toContain(option.id);
+      expect(fullDiscoveryPayload).not.toContain(option.title);
+      expect(fullDiscoveryPayload).not.toContain(option.preview);
+    }
     expect(scouted.result.discoveredSites).toHaveLength(1);
     expect(scouted.result.discoveredQuests).toEqual([]);
     expect(scouted.observation.sites.map((site) => site.id)).toEqual(
@@ -1924,6 +1939,10 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(compactExplore.result.areas?.map(([id]) => id)).toEqual(
       fullExplore.result.discoveredAreas?.map((candidate) => candidate.id),
     );
+    expect(compactExplore.result.jobs).toEqual(
+      fullExplore.result.discoveredJobs?.map((job) => [job.id, job.title]),
+    );
+    expect(JSON.stringify(compactExplore.result)).not.toContain("authored_scene");
     expect(compactExplore.result.text).toBe(
       compactText(fullExplore.result.entry.text, OVERWORLD_COMPACT_ACTION_TEXT_CHAR_LIMIT),
     );
