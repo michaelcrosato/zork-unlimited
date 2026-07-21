@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 596 -->
+<!-- historical_cycle_count: 597 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - authored_event_foundation
+
+- Evidence choice: Depth Contract #11 still had only generic checklist events, so this cycle established one reusable authored-event grammar and converted Civic's charter backlog into a policy whose delayed payoff depends on the truthful Wolf-Winter return.
+- Surface: after exact Notice Hall and Rowan setup, equal-cost public-record versus protected-household terms become permanent; the post-Wolf Return Docket then exposes exactly one of four held/evacuated policy closures with outcome-dependent duration and policy-dependent standing.
+- Counterfactual: full/compact/UI/MCP choice parity, both policy/outcome reversals, exact event-to-job predicates, one lawful closure, legacy migration, replay, chronology/tamper rejection, action-order independence, and clone boundaries are covered; independent review found no P0-P2.
+- Pure evidence: exact clean commit `5e98a620` Sol seed 4300 used compact v24 without a rejected call, bypassed the optional charter event, completed Wolf-Winter and The Gallowmere in 54 decisions, continued at 29 and 40, then ended unstuck/replay-yes at clarity/enjoyment 4/4 with no auth, classifier, provider, or tool failure.
+- Measured result: nonblocking authored-event visibility and ordinary two-quest play PASS; organic policy selection and delayed Return Docket use remain UNPROVEN. The run repeated character-sheet continuity as S2, plus June continuity and dense/truncated Albany copy as S1s.
+- Feedback/follow-through: compile `20260721T035637Z` has 919 verified reports, 168 eligible pure exits, and 145 continuing; the ledger is 918 accepted/59 rejected. Its top ten remain flat historical fleet clusters, while fresh exact reports prioritize persistent-to-quest character mapping, then companion continuity and dense compact copy.
+- Guard: exact rebased increment `ce9679b5` passes health at 394 files/3,019 tests plus UI/all packs; post-rebase crawl `20260721T041411Z` is zero-finding at 247/247 nodes, 344/344 edges, and 12/12 boards/quests, and the clean independent review found no P0-P2.
 
 ### Cycle result - blind_receipt_binding
 
@@ -154,13 +164,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Pure evidence: clean commit `d223430f` Terra seed 4181 completed all-wolves-alive fortification at decision 22, continued through The Gallowmere at decision 47, rated clarity/enjoyment 4/4, was unstuck/replay-yes, and skipped the optional Campus scene, so deterministic pairs carry its direct behavior.
 - Feedback/self-critique: the ledger is 864 accepted/59 rejected with one new report since the last compile. PASS for Albany's third of six authored jobs, not the greater-than-BG3 milestone; setup density and local `route_id` discoverability repeated and remain the next presentation/tooling work.
 - Guard: an independent audit caught and closed the older-save contact migration gap; crawl `20260719T172303Z` is zero-finding at 247/247 nodes, 344/344 edges, and 12/12 boards/quests, and health passes 385 files/2,955 tests plus UI/all packs.
-
-### Cycle result - mcp_action_alias_parity
-
-- Evidence choice: current-build Terra seeds 4160–4169 completed Wolf-Winter 10/10 with 0 stuck and 10/10 first-choice continuation, but clarity averaged 3.6/5 and recoverable argument friction recurred for the child RPG session in 6/10 and contact selection in 6/10.
-- Surface: eight affected MCP actions now accept the displayed canonical field or its player-natural alias; equal dual fields normalize, conflicts reject before mutation, pure/compact area movement remains capped to projected routes, and full verbose mode resolves every currently visible exit.
-- Recovery: exported schemas truthfully require one field through root-object `anyOf`; missing aliases and unrelated missing/type errors retain their own paths, while parent/child ownership, contact legality, action legality, and save semantics remain unchanged.
-- Pure evidence: exact clean commit `cd5e541b` Terra seed 4170 completed Wolf-Winter by all-wolves-alive fortification at decision 21, continued through The Gallowmere at decision 44, rated clarity/enjoyment 4/4, was unstuck/replay-yes, and had no session/contact rejection; setup density and a road `strategy` parameter remained S1.
-- Compile: `20260719T152553Z` has 853 verified reports and 102 current-contract pure exits, 86 continuing; the ten-run cohort was compiled before this one-report exact-build top-off.
-- Self-critique: PASS for the recurring MCP alias S2, not the greater-than-BG3 milestone. Summary-first setup presentation is next; Rowan identity continuity and the road strategy field remain separate low-severity debt.
-- Guard: two adversarial reviews closed schema omission, compact-cap leakage, full-action parity, error masking, and non-mutation gaps; crawl `20260719T160003Z` is zero-finding at 247/247 nodes, 344/344 edges, and 12/12 boards/quests, and health passes 384 files/2,931 tests plus UI/all packs.
