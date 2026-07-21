@@ -47,6 +47,9 @@ const ReceiptEffectSchema = z.discriminatedUnion("type", [
     .strict(),
 ]);
 
+/** Public load-boundary schema for continuity/save sidecars that retain import provenance. */
+export const CampaignImportReceiptEffectSchema = ReceiptEffectSchema;
+
 function writer(effect: z.infer<typeof ReceiptEffectSchema>): string {
   if (effect.type === "health_current_to_var" || effect.type === "skill_rank_to_var") {
     return `var:${effect.target_var}`;

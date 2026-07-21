@@ -12,6 +12,10 @@ import { recordTrace, traceSourceLabel, type RecordOptions } from "../../src/tra
 import { replayTrace } from "../../src/trace/replay.js";
 import type { RpgAction } from "../../src/api/types.js";
 import {
+  EMBEDDED_QUEST_CONTINUITY_EXPLANATION,
+  type EmbeddedQuestCharacterContinuity,
+} from "../../src/rpg/embedded_quest_character_continuity.js";
+import {
   MICRO_ACTIONS,
   microRules,
   microInitState,
@@ -28,6 +32,24 @@ const WIN: RpgAction[] = [
 const UNSAFE_GENERATED_RPG_SEED = Number.MAX_SAFE_INTEGER + 1;
 const MICRO_WORLD_QUEST_ID = "sunken_barrow";
 const MICRO_SAVE_SOURCE: SaveMetadata = { worldQuestId: MICRO_WORLD_QUEST_ID };
+const MICRO_EMBEDDED_CONTINUITY: EmbeddedQuestCharacterContinuity = {
+  continuity: "same_campaign_character",
+  profile_scope: "quest_local",
+  persistent_record: {
+    identity: "persistent_campaign_record",
+    background: "albany:road_warden",
+    health: { current: 30, max: 30 },
+  },
+  quest_local_profile: {
+    hp: 0,
+    attack: 0,
+    defense: 0,
+    skills: [],
+    inventory: [],
+  },
+  applied_campaign_import_effects: [],
+  explanation: EMBEDDED_QUEST_CONTINUITY_EXPLANATION,
+};
 
 function saveMicro(state = microInitState(), metadata: SaveMetadata = MICRO_SAVE_SOURCE): string {
   return save(state, MICRO_CONTENT_HASH, SAVE_MODE, metadata);
@@ -59,6 +81,78 @@ describe("save / load (§8.7)", () => {
     expect("packId" in raw).toBe(false);
     expect("worldQuestId" in raw).toBe(false);
     expect("generatedRpgSeed" in raw).toBe(false);
+    expect("embedded_character_continuity" in raw).toBe(false);
+  });
+
+  it("round-trips and freezes independently-versioned embedded continuity metadata", () => {
+    const bytes = save(microInitState(), MICRO_CONTENT_HASH, SAVE_MODE, {
+      worldQuestId: MICRO_WORLD_QUEST_ID,
+      embeddedCharacterContinuity: MICRO_EMBEDDED_CONTINUITY,
+    });
+    const loaded = load(bytes, MICRO_CONTENT_HASH);
+
+    expect(loaded.embedded_character_continuity).toEqual({
+      version: 1,
+      character_continuity: MICRO_EMBEDDED_CONTINUITY,
+    });
+    expect(Object.isFrozen(loaded.embedded_character_continuity)).toBe(true);
+    expect(Object.isFrozen(loaded.embedded_character_continuity?.character_continuity)).toBe(true);
+    expect(
+      Object.isFrozen(loaded.embedded_character_continuity?.character_continuity.persistent_record),
+    ).toBe(true);
+  });
+
+  it("rejects malformed, mismatched, or generated-source continuity sidecars", () => {
+    const validBytes = save(microInitState(), MICRO_CONTENT_HASH, SAVE_MODE, {
+      worldQuestId: MICRO_WORLD_QUEST_ID,
+      embeddedCharacterContinuity: MICRO_EMBEDDED_CONTINUITY,
+    });
+
+    const wrongVersion = JSON.parse(validBytes) as Record<string, unknown>;
+    (wrongVersion.embedded_character_continuity as { version: number }).version = 2;
+    expect(() => load(JSON.stringify(wrongVersion), MICRO_CONTENT_HASH)).toThrow(
+      /continuity save metadata is malformed/i,
+    );
+
+    const unknownField = JSON.parse(validBytes) as Record<string, unknown>;
+    (
+      unknownField.embedded_character_continuity as {
+        character_continuity: Record<string, unknown>;
+      }
+    ).character_continuity.forged = true;
+    expect(() => load(JSON.stringify(unknownField), MICRO_CONTENT_HASH)).toThrow(
+      /continuity save metadata is malformed/i,
+    );
+
+    const mismatchedEffects = JSON.parse(validBytes) as Record<string, unknown>;
+    (
+      mismatchedEffects.embedded_character_continuity as {
+        character_continuity: { applied_campaign_import_effects: unknown[] };
+      }
+    ).character_continuity.applied_campaign_import_effects = [
+      {
+        rule_id: "import:test_health",
+        type: "health_current_to_var",
+        target_var: "hp",
+        value: 30,
+      },
+    ];
+    expect(() => load(JSON.stringify(mismatchedEffects), MICRO_CONTENT_HASH)).toThrow(
+      /import effects do not match/i,
+    );
+
+    expect(() =>
+      save(microInitState(), MICRO_CONTENT_HASH, SAVE_MODE, {
+        generatedRpgSeed: 3,
+        embeddedCharacterContinuity: MICRO_EMBEDDED_CONTINUITY,
+      }),
+    ).toThrow(/requires a world-quest save source/i);
+
+    const forgedGenerated = JSON.parse(validBytes) as Record<string, unknown>;
+    forgedGenerated.source_ref = ["gen", 3];
+    expect(() => load(JSON.stringify(forgedGenerated), MICRO_CONTENT_HASH)).toThrow(
+      /requires a world-quest save source/i,
+    );
   });
 
   it("returns immutable loaded bundles after validation", () => {

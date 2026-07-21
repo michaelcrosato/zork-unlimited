@@ -300,6 +300,10 @@ describe("trusted campaign-character quest launch bridge", () => {
       ["campaign_character", createInitialCampaignCharacterState()],
       ["campaignImports", WOLF_IMPORTS],
       ["campaign_imports", WOLF_IMPORTS],
+      ["embeddedCharacterContinuity", {}],
+      ["embedded_character_continuity", {}],
+      ["characterContinuity", {}],
+      ["character_continuity", {}],
     ] as const;
 
     for (const [field, value] of forbidden) {
@@ -508,6 +512,57 @@ describe("trusted campaign-character quest launch bridge", () => {
     expect(fullApi.sessions.get(direct.session_id).overworldSessionId).toBeUndefined();
     expect(fullApi.sessions.get(direct.session_id).state.campaignImportReceipt).toBeUndefined();
     expect(direct).not.toHaveProperty("character_continuity");
+    const directSave = fullApi.save_game({ session_id: direct.session_id });
+    expect(JSON.parse(directSave.save)).not.toHaveProperty("embedded_character_continuity");
+    const directFullReload = fullApi.load_game({
+      save: directSave.save,
+      compact_observation: false,
+    });
+    const directCompactReload = fullApi.load_game({
+      save: directSave.save,
+      compact_observation: true,
+    });
+    expect(directFullReload).not.toHaveProperty("character_continuity");
+    expect(directCompactReload).not.toHaveProperty("character_continuity");
+
+    const embeddedSave = fullApi.save_game({ session_id: full.launched.rpg_session_id });
+    expect(JSON.parse(embeddedSave.save)).toMatchObject({
+      embedded_character_continuity: {
+        version: 1,
+        character_continuity: {
+          continuity: "same_campaign_character",
+          applied_campaign_import_effects: fullSession.state.campaignImportReceipt?.effects,
+        },
+      },
+    });
+    const embeddedFullReload = fullApi.load_game({
+      save: embeddedSave.save,
+      compact_observation: false,
+    });
+    const embeddedCompactReload = fullApi.load_game({
+      save: embeddedSave.save,
+      compact_observation: true,
+    });
+    expect(embeddedFullReload.state_hash).toBe(full.launched.rpg_session.state_hash);
+    expect(embeddedFullReload.character_continuity).toMatchObject({
+      persistent_record: fullSession.embeddedCharacterContinuity?.persistent_record,
+      applied_campaign_import_effects: fullSession.state.campaignImportReceipt?.effects,
+    });
+    expect(embeddedCompactReload.character_continuity).toEqual([
+      "same_campaign_character",
+      "quest_local",
+      expect.any(Array),
+      expect.any(Array),
+      expect.any(Array),
+      expect.any(String),
+    ]);
+    expect(embeddedCompactReload.character_continuity_legend).toContain("profile_scope");
+    const reloadedSession = fullApi.sessions.get(embeddedFullReload.session_id);
+    expect(reloadedSession.overworldSessionId).toBeUndefined();
+    expect(Object.isFrozen(reloadedSession.embeddedCharacterContinuity)).toBe(true);
+    expect(fullApi.save_game({ session_id: embeddedFullReload.session_id }).save).toBe(
+      embeddedSave.save,
+    );
     expect(fullSession.state).not.toEqual(fullApi.sessions.get(direct.session_id).state);
   });
 

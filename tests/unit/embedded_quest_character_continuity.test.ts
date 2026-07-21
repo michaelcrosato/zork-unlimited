@@ -6,6 +6,7 @@ import {
   EMBEDDED_QUEST_CONTINUITY_EXPLANATION,
   buildEmbeddedQuestCharacterContinuity,
   compactEmbeddedQuestCharacterContinuity,
+  projectEmbeddedQuestCharacterContinuity,
 } from "../../src/rpg/embedded_quest_character_continuity.js";
 import { indexRpgPack, initStateForRpgPack } from "../../src/rpg/runner.js";
 import { loadRpgSourceFile } from "../../src/rpg/source.js";
@@ -95,5 +96,41 @@ describe("embedded quest character continuity contract", () => {
     (continuity.quest_local_profile.inventory as string[]).push("caller_mutation");
     expect(compact[3][4]).toEqual(["hunting_knife"]);
     expect(child.inventory).toEqual(["hunting_knife"]);
+  });
+
+  it("keeps identity/import provenance fixed while projecting the current child profile", () => {
+    const character = buildCampaignCharacterState({
+      background: "albany:road_warden",
+      health: { current: 30, max: 30 },
+    });
+    const child = initStateForRpgPack(index, 7);
+    const continuity = buildEmbeddedQuestCharacterContinuity({ character, pack, state: child });
+    const changed = {
+      ...child,
+      vars: { ...child.vars, hp: 9, attack: 8, lore: 11 },
+      inventory: [...child.inventory, "field_trophy"],
+    };
+
+    const projected = projectEmbeddedQuestCharacterContinuity({
+      continuity,
+      pack,
+      state: changed,
+    });
+
+    expect(projected.persistent_record).toEqual(continuity.persistent_record);
+    expect(projected.applied_campaign_import_effects).toEqual(
+      continuity.applied_campaign_import_effects,
+    );
+    expect(projected.quest_local_profile).toMatchObject({
+      hp: 9,
+      attack: 8,
+      defense: 2,
+      skills: [
+        { id: "lore", value: 11 },
+        { id: "tracking", value: 3 },
+      ],
+      inventory: ["hunting_knife", "field_trophy"],
+    });
+    expect(continuity.quest_local_profile).toMatchObject({ hp: 24, attack: 4 });
   });
 });

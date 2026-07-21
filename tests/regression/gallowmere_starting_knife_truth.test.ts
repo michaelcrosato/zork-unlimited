@@ -266,6 +266,112 @@ describe("bug_0516 — Gallowmere starts with its promised hunting-knife", () =>
     expect(fullApi.sessions.get(full.rpg_session_id).stateHash).toBe(
       GameSession.start(SOURCE, 2218).view().stateHash,
     );
+
+    const fullOpeningRead = fullApi.get_observation({
+      session_id: full.rpg_session_id,
+      compact_observation: false,
+    });
+    const compactOpeningRead = compactApi.get_observation({
+      session_id: compact.rpg_session_id,
+      compact_observation: true,
+    });
+    expect(fullOpeningRead.character_continuity).toEqual(full.rpg_session.character_continuity);
+    expect(compactOpeningRead.character_continuity).toEqual(
+      compact.rpg_session.character_continuity,
+    );
+    expect(compactOpeningRead.character_continuity_legend).toContain("profile_scope");
+
+    expect(
+      fullApi.step_action({
+        session_id: full.rpg_session_id,
+        action_id: "go_west",
+        compact_observation: false,
+        compact_events: false,
+      }).ok,
+    ).toBe(true);
+    expect(
+      fullApi.step_action({
+        session_id: full.rpg_session_id,
+        action_id: "talk_hedrick",
+        compact_observation: false,
+        compact_events: false,
+      }).ok,
+    ).toBe(true);
+    const fullLoreStep = fullApi.step_action({
+      session_id: full.rpg_session_id,
+      action_id: "ask_ask_sow",
+      compact_observation: false,
+      compact_events: false,
+    });
+    expect(fullLoreStep.ok).toBe(true);
+    expect(fullLoreStep.character_continuity?.quest_local_profile.skills).toContainEqual({
+      id: "lore",
+      value: 8,
+    });
+
+    expect(
+      compactApi.step_action({
+        session_id: compact.rpg_session_id,
+        action_id: "go_west",
+        compact_observation: true,
+        compact_events: true,
+      }).ok,
+    ).toBe(true);
+    expect(
+      compactApi.step_action({
+        session_id: compact.rpg_session_id,
+        action_id: "talk_hedrick",
+        compact_observation: true,
+        compact_events: true,
+      }).ok,
+    ).toBe(true);
+    const compactLoreStep = compactApi.step_action({
+      session_id: compact.rpg_session_id,
+      action_id: "ask_ask_sow",
+      compact_observation: true,
+      compact_events: true,
+    });
+    expect(compactLoreStep.ok).toBe(true);
+    expect(compactLoreStep.character_continuity?.[3][3]).toContainEqual(["lore", 8]);
+    expect(compactLoreStep.character_continuity_legend).toContain("profile_scope");
+
+    const fullReread = fullApi.get_observation({
+      session_id: full.rpg_session_id,
+      compact_observation: false,
+    });
+    const compactReread = compactApi.get_observation({
+      session_id: compact.rpg_session_id,
+      compact_observation: true,
+    });
+    expect(fullReread.character_continuity).toEqual(fullLoreStep.character_continuity);
+    expect(compactReread.character_continuity).toEqual(compactLoreStep.character_continuity);
+
+    const saved = fullApi.save_game({ session_id: full.rpg_session_id });
+    expect(JSON.parse(saved.save)).toMatchObject({
+      embedded_character_continuity: {
+        version: 1,
+        character_continuity: { applied_campaign_import_effects: [] },
+      },
+    });
+    const fullReload = fullApi.load_game({
+      save: saved.save,
+      compact_observation: false,
+    });
+    const compactReload = compactApi.load_game({
+      save: saved.save,
+      compact_observation: true,
+    });
+    expect(fullReload.state_hash).toBe(fullLoreStep.state_hash);
+    expect(fullReload.character_continuity?.quest_local_profile.skills).toContainEqual({
+      id: "lore",
+      value: 8,
+    });
+    expect(compactReload.character_continuity?.[3][3]).toContainEqual(["lore", 8]);
+    expect(compactReload.character_continuity_legend).toContain("profile_scope");
+    const reloadedSession = fullApi.sessions.get(fullReload.session_id);
+    expect(reloadedSession.overworldSessionId).toBeUndefined();
+    expect(Object.isFrozen(reloadedSession.embeddedCharacterContinuity)).toBe(true);
+    expect(fullApi.save_game({ session_id: fullReload.session_id }).save).toBe(saved.save);
   });
 
   it("keeps quest-local combat damage out of the persistent parent record", () => {
@@ -279,6 +385,7 @@ describe("bug_0516 — Gallowmere starts with its promised hunting-knife", () =>
     expect(ending.ended).toBe(true);
     const questHp = Number(/^HP (\d+)/.exec(ending.facts[0] ?? "")?.[1]);
     expect(questHp).toBeLessThan(24);
+    expect(ending.characterContinuity?.quest_local_profile.hp).toBe(questHp);
     expect(ending.characterContinuity?.persistent_record.health.current).toBe(30);
     const endingTitle = pack.endings.find((candidate) => candidate.id === ending.endingId)?.title;
     if (!ending.endingId || !endingTitle)

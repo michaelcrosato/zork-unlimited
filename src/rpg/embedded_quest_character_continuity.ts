@@ -1,6 +1,14 @@
-import type { CampaignImportReceiptEffect } from "../core/campaign_import_receipt.js";
+import { z } from "zod";
+import {
+  CampaignImportReceiptEffectSchema,
+  type CampaignImportReceiptEffect,
+} from "../core/campaign_import_receipt.js";
 import type { GameState } from "../core/state.js";
-import type { CampaignCharacterState } from "../world/campaign_character_state.js";
+import {
+  CampaignCharacterHealthSchema,
+  CampaignCharacterIdSchema,
+  type CampaignCharacterState,
+} from "../world/campaign_character_state.js";
 import type { RpgPack } from "./schema.js";
 
 export const EMBEDDED_QUEST_CONTINUITY_EXPLANATION =
@@ -32,6 +40,40 @@ export type EmbeddedQuestCharacterContinuity = {
   applied_campaign_import_effects: CampaignImportReceiptEffect[];
   explanation: typeof EMBEDDED_QUEST_CONTINUITY_EXPLANATION;
 };
+
+const EmbeddedQuestLocalSkillSchema = z
+  .object({
+    id: z.string().min(1).max(96),
+    value: z.number().finite(),
+  })
+  .strict();
+
+export const EmbeddedQuestCharacterContinuitySchema = z
+  .object({
+    continuity: z.literal("same_campaign_character"),
+    profile_scope: z.literal("quest_local"),
+    persistent_record: z
+      .object({
+        identity: z.literal("persistent_campaign_record"),
+        background: CampaignCharacterIdSchema.nullable(),
+        health: CampaignCharacterHealthSchema,
+      })
+      .strict(),
+    // This is the launch-time profile in persisted/session metadata. Every
+    // player-facing projection replaces it from the current child GameState.
+    quest_local_profile: z
+      .object({
+        hp: z.number().finite(),
+        attack: z.number().finite(),
+        defense: z.number().finite(),
+        skills: z.array(EmbeddedQuestLocalSkillSchema),
+        inventory: z.array(z.string().min(1)),
+      })
+      .strict(),
+    applied_campaign_import_effects: z.array(CampaignImportReceiptEffectSchema),
+    explanation: z.literal(EMBEDDED_QUEST_CONTINUITY_EXPLANATION),
+  })
+  .strict();
 
 export type CompactCampaignImportEffect =
   | readonly [
@@ -96,6 +138,19 @@ function questLocalSkills(pack: RpgPack, state: GameState): EmbeddedQuestLocalSk
     .flatMap((id) => (state.vars[id] === undefined ? [] : [{ id, value: state.vars[id] }]));
 }
 
+function questLocalProfile(
+  pack: RpgPack,
+  state: GameState,
+): EmbeddedQuestCharacterContinuity["quest_local_profile"] {
+  return {
+    hp: state.vars["hp"] ?? 0,
+    attack: state.vars["attack"] ?? 0,
+    defense: state.vars["defense"] ?? 0,
+    skills: questLocalSkills(pack, state),
+    inventory: [...state.inventory],
+  };
+}
+
 function cloneEffect(effect: CampaignImportReceiptEffect): CampaignImportReceiptEffect {
   return { ...effect };
 }
@@ -116,17 +171,27 @@ export function buildEmbeddedQuestCharacterContinuity(args: {
         max: args.character.health.max,
       },
     },
-    quest_local_profile: {
-      hp: args.state.vars["hp"] ?? 0,
-      attack: args.state.vars["attack"] ?? 0,
-      defense: args.state.vars["defense"] ?? 0,
-      skills: questLocalSkills(args.pack, args.state),
-      inventory: [...args.state.inventory],
-    },
+    quest_local_profile: questLocalProfile(args.pack, args.state),
     applied_campaign_import_effects: (args.state.campaignImportReceipt?.effects ?? []).map(
       cloneEffect,
     ),
     explanation: EMBEDDED_QUEST_CONTINUITY_EXPLANATION,
+  };
+}
+
+/**
+ * Project immutable campaign identity/import provenance beside the live child
+ * profile. The session retains a launch snapshot only as saveable metadata;
+ * current quest numbers and kit always come from the authoritative GameState.
+ */
+export function projectEmbeddedQuestCharacterContinuity(args: {
+  continuity: EmbeddedQuestCharacterContinuity;
+  pack: RpgPack;
+  state: GameState;
+}): EmbeddedQuestCharacterContinuity {
+  return {
+    ...cloneEmbeddedQuestCharacterContinuity(args.continuity),
+    quest_local_profile: questLocalProfile(args.pack, args.state),
   };
 }
 

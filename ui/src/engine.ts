@@ -38,7 +38,7 @@ import {
 } from "../../src/rpg/observation.js";
 import {
   buildEmbeddedQuestCharacterContinuity,
-  cloneEmbeddedQuestCharacterContinuity,
+  projectEmbeddedQuestCharacterContinuity,
   type EmbeddedQuestCharacterContinuity,
 } from "../../src/rpg/embedded_quest_character_continuity.js";
 import {
@@ -222,7 +222,13 @@ export class GameSession {
       endingId: o.ending_id,
       stateHash: hashState(this.state),
       ...(this.characterContinuity
-        ? { characterContinuity: cloneEmbeddedQuestCharacterContinuity(this.characterContinuity) }
+        ? {
+            characterContinuity: projectEmbeddedQuestCharacterContinuity({
+              continuity: this.characterContinuity,
+              pack: this.index.pack,
+              state: this.state,
+            }),
+          }
         : {}),
     };
   }

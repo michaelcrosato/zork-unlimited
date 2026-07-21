@@ -1,7 +1,7 @@
 import {
   COMPACT_EMBEDDED_QUEST_CHARACTER_CONTINUITY_LEGEND,
-  cloneEmbeddedQuestCharacterContinuity,
   compactEmbeddedQuestCharacterContinuity,
+  projectEmbeddedQuestCharacterContinuity,
   type CompactEmbeddedQuestCharacterContinuity,
   type EmbeddedQuestCharacterContinuity,
 } from "../rpg/embedded_quest_character_continuity.js";
@@ -18,18 +18,23 @@ export type EmbeddedQuestCharacterContinuityField<Args extends RpgViewOptions> =
   : { character_continuity?: EmbeddedQuestCharacterContinuity };
 
 export function embeddedQuestCharacterContinuityField<Args extends RpgViewOptions>(
-  session: Pick<Session, "embeddedCharacterContinuity">,
+  session: Pick<Session, "embeddedCharacterContinuity" | "index" | "state">,
   args: Args,
 ): EmbeddedQuestCharacterContinuityField<Args> {
   const continuity = session.embeddedCharacterContinuity;
   if (!continuity) return {} as EmbeddedQuestCharacterContinuityField<Args>;
+  const live = projectEmbeddedQuestCharacterContinuity({
+    continuity,
+    pack: session.index.pack,
+    state: session.state,
+  });
   if (args.compact_observation === true) {
     return {
-      character_continuity: compactEmbeddedQuestCharacterContinuity(continuity),
+      character_continuity: compactEmbeddedQuestCharacterContinuity(live),
       character_continuity_legend: COMPACT_EMBEDDED_QUEST_CHARACTER_CONTINUITY_LEGEND,
     } as EmbeddedQuestCharacterContinuityField<Args>;
   }
   return {
-    character_continuity: cloneEmbeddedQuestCharacterContinuity(continuity),
+    character_continuity: live,
   } as EmbeddedQuestCharacterContinuityField<Args>;
 }

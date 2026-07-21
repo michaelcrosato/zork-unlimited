@@ -31,6 +31,7 @@ import { type McpActionOption, type McpBlockedActionOption, type McpObservation 
 import type { RpgCompactLegend, RpgCompactObservation } from "./compact_rpg_observation.js";
 import type { RpgCompactState } from "./compact_rpg_state.js";
 import { RpgMcpSessionRuntime } from "./rpg_session_runtime.js";
+import type { EmbeddedQuestCharacterContinuityField } from "./embedded_quest_character_continuity_projection.js";
 import {
   runRpgLoadGame,
   runRpgNewGame,
@@ -166,11 +167,13 @@ type RpgSessionPayload<Args extends RpgViewOptions = RpgViewOptions> = {
   legend?: RpgCompactLegend;
 } & RpgSourceFields &
   RpgViewField<Args> &
+  EmbeddedQuestCharacterContinuityField<Args> &
   Partial<EmbeddedJourneyField>;
 
 type RpgObservationPayload<Args extends RpgViewOptions> = {
   state_hash: string;
 } & RpgViewField<Args> &
+  EmbeddedQuestCharacterContinuityField<Args> &
   Partial<EmbeddedJourneyField>;
 
 type RpgObservationUnchanged = RpgStateUnchanged & Partial<EmbeddedJourneyField>;
