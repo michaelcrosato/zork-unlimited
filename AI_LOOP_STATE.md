@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 604 -->
+<!-- historical_cycle_count: 605 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - wolf_paling_stage_identities
+
+- Evidence choice: repeated current-build players understood the Broken Paling fiction but saw one `use_paling_rail` id mean set, wedge, splice, scent-pen turn, and split-guard bind, so this cycle fixes executable identity without changing the five authored mechanics.
+- Surface: one structural rule gives target-only USE hubs verb-based ids only when every authored row has a unique verb and no self-use shadows the legacy id; MCP/UI expose `set/wedge/splice/turn/bind_paling_rail`, accept unambiguous `use_paling_rail` input, and record only the canonical id.
+- Counterfactual: public wedge failure exposes bind and a split guard, Works set failure exposes splice and +1 cattle alarm, and a braced fouled lure exposes turn and a living scent-pen redirect; all other packs, Wolf's repeated-hold target, and Tide's duplicate-clear target retain their old ids.
+- Pure evidence: exact final gameplay `fb098bb1` passed Terra 4343, Luna 4344, and Sol 4345 at first goals 29/27/29; all continued, were unstuck/replay-yes, and rated clarity/enjoyment 4/4, 4/5, and 4/4. Four zero-publication Spark/path/operator failures are excluded without retry.
+- Measured result: Terra organically used `set_paling_rail` then `turn_paling_rail`, redirected the yearling, and called the recovery its best moment with no rail confusion; Sol's clean lure and Luna's frost-report route did not expose a recovery id, so one direct witness is a targeted PASS rather than cohort-scale resolution proof.
+- Feedback/follow-through: compile `20260721T153042Z` has 954 verified/58 rejected reports, 203 eligible pure exits, and 179 continuing; the ledger is 953/59. Dense/truncated setup and checkpoint interruption persist, while the rebuilt Works event remains the next systemic starting-slice increment.
+- Guard: exact pre/post crawl is zero-finding at 247/247 nodes, 344/344 edges, and 12/12 boards/quests; health passes 404 files/3,096 tests plus UI/all packs, the independent 630k-state relabel oracle and review are green, and Wolf/world hashes stay `e1a7d6ac…`/`9238b5f2…` with save/trace replay unchanged.
 
 ### Cycle result - compact_setup_prose_dedup
 
@@ -154,13 +164,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Measured result: resolver discovery PASSes directly in blind play without changing route mechanics or persistence; the run independently found the pre-existing compact `ask_invoke_authority` commitment label misleading, now isolated as its own follow-up.
 - Feedback/follow-through: the ledger is 911 accepted/59 rejected; only two verified reports are new since compile `20260720T200813Z`, below the three-report threshold. Fix the compact fortification commitment id, then land optional Station interactions; the later f799 lure-feed complaint is already fixed by current Store-Shed-west copy.
 - Guard: exact commit `2c8b62b3` has zero-finding crawl `20260720T221223Z` at 247/247 nodes, 344/344 edges, and 12/12 boards/quests; health passes 390 files/2,975 tests plus UI/all packs, and independent review found no P0-P2.
-
-### Cycle result - wolf_strategy_comparison
-
-- Evidence choice: the field-timed cohort produced five lure/diversion outcomes and one fortification while repeatedly asking for a usable plan comparison, so this cycle tested one truthful four-plan decision surface rather than more setup prose.
-- Surface: Cade now compares HUNT/LURE/DRIVE/FORTIFY by lives, herd/byre, finite stock, crisis cost, retreat, and commitment boundary; detailed plan copy names exact support/costs, and cattle-scattered endings distinguish accumulated clean alarm from a genuinely fouled cast.
-- Counterfactual: paired strategy, commitment-boundary, ally, crisis-priority, clue, compact/full, and variant-liveness tests prove each statement against reachable state, including clean/fouled/June scattered endings, committed-lure rail recovery, and both fortification authorities.
-- Pure evidence: the ten-run cohort completed Wolf-Winter 10/10, continued 10/10, was 0 stuck and 8/10 replay-yes at clarity 3.5/enjoyment 4.1, with six lure-family and four fortify-family outcomes. Corrected Sol seed 4236 found the comparison truthful; exact combined Terra seed 4238 completed both goals, naturally used Gallowmere's failed-Tracking recovery, scored 4/4, was unstuck/replay-yes, and reported no P0-P2.
-- Measured result: maximum family share is 60% and four exact endings appeared, but only two broad strategy families were organic; setup density recurred 10/10, compact truncation 3/10, and road-resolver discovery was a recurring S2 at 2/10. PASS for truthful comparison, FAIL for three-family/certification proof.
-- Feedback/follow-through: compile `20260720T200813Z` has 910 verified reports, 159 current-contract pure exits, and 136 continuing; the ledger is 910 accepted/59 rejected, with one new report below the next compile threshold. The road descriptor passes exact blind use; make Station preparation/allocation optional next.
-- Guard: exact combined commit `9b9332d1` has verified seed 4238, zero-finding crawl `20260720T203737Z` at 247/247 nodes, 344/344 edges, and 12/12 boards/quests, plus uncontended health at 389 files/2,973 tests and UI/all packs; independent review found no remaining P0-P2.
