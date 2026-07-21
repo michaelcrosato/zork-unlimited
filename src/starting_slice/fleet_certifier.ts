@@ -12,6 +12,7 @@ import { isDeepStrictEqual } from "node:util";
 import { z } from "zod";
 import { isPureExitInterviewV2, type PureExitInterviewV2 } from "../blind/exit_interview.js";
 import { verifyBlindReportText } from "../blind/report_verifier.js";
+import { parseJsonRejectingDuplicateKeys } from "../blind/strict_json.js";
 import {
   CanonicalQuestOutcomesSchema,
   parseBlindRunSidecar,
@@ -276,6 +277,7 @@ const FleetSummarySchema = z
     failed_attempts: z.number().int().nonnegative(),
     technical_timeouts: z.number().int().nonnegative(),
     report_recovered_runs: z.number().int().nonnegative(),
+    receipt_bound_runs: z.number().int().nonnegative().optional(),
     seed_base: z.number().int().safe(),
     provider: z.enum(["claude", "codex"]).optional(),
     model: z.enum([
@@ -289,7 +291,7 @@ const FleetSummarySchema = z
     target: z.literal("overworld"),
     resume_enabled: z.boolean(),
     evidence_schema_version: z.literal(2),
-    model_attestation_schema_version: z.union([z.literal(2), z.literal(3)]),
+    model_attestation_schema_version: z.union([z.literal(2), z.literal(3), z.literal(4)]),
     build: PureRunBuildSchema,
   })
   .strict()
@@ -307,12 +309,20 @@ const FleetSummarySchema = z
     }
     if (
       provider === "codex" &&
-      (!summary.model.startsWith("gpt-") || summary.model_attestation_schema_version !== 3)
+      (!summary.model.startsWith("gpt-") ||
+        ![3, 4].includes(summary.model_attestation_schema_version))
     ) {
       context.addIssue({
         code: "custom",
         path: ["model"],
-        message: "Codex certification requires one exact Codex model and attestation v3",
+        message: "Codex certification requires one exact Codex model and attestation v3 or v4",
+      });
+    }
+    if ((summary.receipt_bound_runs ?? 0) > 0 && summary.model_attestation_schema_version !== 4) {
+      context.addIssue({
+        code: "custom",
+        path: ["model_attestation_schema_version"],
+        message: "receipt-bound runs require Codex attestation v4",
       });
     }
   });
@@ -349,6 +359,7 @@ const FleetAttemptSchema = z
       "verified",
     ]),
     report_recovered: z.boolean(),
+    report_receipt_bound: z.boolean().optional(),
     archive: FleetAttemptArchiveSchema.nullable(),
   })
   .strict();
@@ -373,6 +384,7 @@ const FleetManifestRowSchema = z
     attempts: z.number().int().nonnegative(),
     attempt_history: z.array(FleetAttemptSchema),
     report_recovered: z.boolean(),
+    report_receipt_bound: z.boolean().optional(),
     exit: z.literal(0),
     log: z.null(),
     report_schema_version: z.literal(2),
@@ -973,8 +985,10 @@ export function evaluateStartingSlicePilotRuns(
   );
 }
 
-function parseJsonFile(path: string): unknown {
-  return JSON.parse(readFileSync(path, "utf8")) as unknown;
+function parseJsonFile(path: string, label: string): unknown {
+  const parsed = parseJsonRejectingDuplicateKeys(readFileSync(path, "utf8"), label);
+  if (!parsed.ok) throw new Error(parsed.reason);
+  return parsed.value;
 }
 
 function sha256(bytes: Uint8Array): string {
@@ -1127,7 +1141,7 @@ function validateAuthenticatedStartingSliceCohort(
 
   let summary: FleetSummary;
   try {
-    const parsed = FleetSummarySchema.safeParse(parseJsonFile(summaryPath));
+    const parsed = FleetSummarySchema.safeParse(parseJsonFile(summaryPath, "summary.json"));
     if (!parsed.success) {
       return invalidFilesystemResult(root, options.expectedCount, [
         `summary.json invalid: ${firstSchemaIssue(parsed.error)}`,
@@ -1265,14 +1279,12 @@ function validateAuthenticatedStartingSliceCohort(
   const rowsBySeed = new Map<number, FleetManifestRow>();
   const reportPaths = new Set<string>();
   for (const [index, line] of rawLines.entries()) {
-    let raw: unknown;
-    try {
-      raw = JSON.parse(line) as unknown;
-    } catch {
-      errors.push(`manifest row ${index + 1} is not valid JSON`);
+    const raw = parseJsonRejectingDuplicateKeys(line, `manifest row ${index + 1}`);
+    if (!raw.ok) {
+      errors.push(raw.reason);
       continue;
     }
-    const parsed = FleetManifestRowSchema.safeParse(raw);
+    const parsed = FleetManifestRowSchema.safeParse(raw.value);
     if (!parsed.success) {
       errors.push(`manifest row ${index + 1} invalid: ${firstSchemaIssue(parsed.error)}`);
       continue;
@@ -1304,6 +1316,7 @@ function validateAuthenticatedStartingSliceCohort(
   let manifestFailedAttempts = 0;
   let manifestTechnicalTimeouts = 0;
   let manifestReportRecoveredRuns = 0;
+  let manifestReceiptBoundRuns = 0;
   const providerSessionIds = new Set<string>();
   const gameSessionIds = new Set<string>();
   const actualModels = new Set<string>();
@@ -1338,6 +1351,12 @@ function validateAuthenticatedStartingSliceCohort(
         `seed ${seed}: ${options.cohortKind} cohort does not accept a report-recovered row`,
       );
     }
+    if (row.report_receipt_bound === true) {
+      manifestReceiptBoundRuns += 1;
+      if (summary.model_attestation_schema_version !== 4) {
+        errors.push(`seed ${seed}: receipt-bound row requires summary attestation v4`);
+      }
+    }
     if (row.attempts !== row.attempt_history.length) {
       errors.push(
         `seed ${seed}: attempts ${row.attempts} != attempt_history length ${row.attempt_history.length}`,
@@ -1358,6 +1377,11 @@ function validateAuthenticatedStartingSliceCohort(
       if (attempt.report_recovered) {
         errors.push(
           `seed ${seed} attempt ${attempt.attempt}: ${options.cohortKind} cohort does not accept report recovery`,
+        );
+      }
+      if (attempt.report_receipt_bound === true && attempt.classification !== "verified") {
+        errors.push(
+          `seed ${seed} attempt ${attempt.attempt}: failed attempt cannot report receipt binding`,
         );
       }
       if (attempt.attempt !== expectedAttempt) {
@@ -1428,6 +1452,10 @@ function validateAuthenticatedStartingSliceCohort(
         errors.push(`seed ${seed}: verified row must end in a verified attempt`);
       } else if (terminalAttempt.report_recovered !== row.report_recovered) {
         errors.push(`seed ${seed}: terminal attempt report_recovered differs from row`);
+      } else if (
+        (terminalAttempt.report_receipt_bound ?? false) !== (row.report_receipt_bound ?? false)
+      ) {
+        errors.push(`seed ${seed}: terminal attempt report_receipt_bound differs from row`);
       }
     } else {
       resumedRows += 1;
@@ -1463,6 +1491,7 @@ function validateAuthenticatedStartingSliceCohort(
     let runEvidenceBytes: Buffer;
     let primaryEnvelopeBytes: Buffer;
     let initialReportBytes: Buffer | null = null;
+    let receiptBindingBytes: Buffer | null = null;
     let recoveryMetadataBytes: Buffer | null = null;
     let recoveryEnvelopeBytes: Buffer | null = null;
     let providerEventsBytes: Buffer | null = null;
@@ -1542,43 +1571,85 @@ function validateAuthenticatedStartingSliceCohort(
       reportText = reportBytes.toString("utf8");
       sidecarText = sidecarBytes.toString("utf8");
       attestationText = readFileSync(safeAttestationPath, "utf8");
-      const recoveryEntries = [
-        ["initial report", runArtifactPaths.initialReport],
-        ["recovery metadata", runArtifactPaths.recoveryMetadata],
-        ["recovery Claude envelope", runArtifactPaths.recoveryEnvelope],
-      ] as const;
-      const recoveryPresence = recoveryEntries.map(([, path]) => pathEntryExists(path));
-      if (recoveryPresence.some(Boolean) && !recoveryPresence.every(Boolean)) {
-        throw new Error("report recovery artifacts must be all present or all absent");
-      }
-      if (row.report_recovered !== recoveryPresence.every(Boolean)) {
-        errors.push(`seed ${seed}: manifest recovery status differs from durable artifacts`);
-      }
-      if (recoveryPresence.every(Boolean)) {
-        errors.push(
-          `seed ${seed}: ${options.cohortKind} cohort does not accept report-recovery artifacts`,
-        );
-        const safeInitialReportPath = requireContainedRegularFile(
-          runArtifactPaths.initialReport,
-          reportsRootReal,
-          `seed ${seed} initial report`,
-          artifacts,
-        );
-        const safeRecoveryMetadataPath = requireContainedRegularFile(
-          runArtifactPaths.recoveryMetadata,
-          reportsRootReal,
-          `seed ${seed} recovery metadata`,
-          artifacts,
-        );
-        const safeRecoveryEnvelopePath = requireContainedRegularFile(
-          runArtifactPaths.recoveryEnvelope,
-          reportsRootReal,
-          `seed ${seed} recovery Claude envelope`,
-          artifacts,
-        );
-        initialReportBytes = readFileSync(safeInitialReportPath);
-        recoveryMetadataBytes = readFileSync(safeRecoveryMetadataPath);
-        recoveryEnvelopeBytes = readFileSync(safeRecoveryEnvelopePath);
+      if (rowProvider === "codex") {
+        const bindingPresence = [
+          pathEntryExists(runArtifactPaths.initialReport),
+          pathEntryExists(runArtifactPaths.receiptBinding),
+        ];
+        if (bindingPresence.some(Boolean) && !bindingPresence.every(Boolean)) {
+          throw new Error("Codex receipt-binding artifacts must be all present or all absent");
+        }
+        if ((row.report_receipt_bound ?? false) !== bindingPresence.every(Boolean)) {
+          errors.push(
+            `seed ${seed}: manifest receipt-binding status differs from durable artifacts`,
+          );
+        }
+        if (
+          pathEntryExists(runArtifactPaths.recoveryMetadata) ||
+          pathEntryExists(runArtifactPaths.recoveryEnvelope)
+        ) {
+          throw new Error("Codex fleet slot contains report recovery artifacts");
+        }
+        if (bindingPresence.every(Boolean)) {
+          initialReportBytes = readFileSync(
+            requireContainedRegularFile(
+              runArtifactPaths.initialReport,
+              reportsRootReal,
+              `seed ${seed} initial Codex report`,
+              artifacts,
+            ),
+          );
+          receiptBindingBytes = readFileSync(
+            requireContainedRegularFile(
+              runArtifactPaths.receiptBinding,
+              reportsRootReal,
+              `seed ${seed} receipt binding metadata`,
+              artifacts,
+            ),
+          );
+        }
+      } else {
+        const recoveryEntries = [
+          ["initial report", runArtifactPaths.initialReport],
+          ["recovery metadata", runArtifactPaths.recoveryMetadata],
+          ["recovery Claude envelope", runArtifactPaths.recoveryEnvelope],
+        ] as const;
+        const recoveryPresence = recoveryEntries.map(([, path]) => pathEntryExists(path));
+        if (recoveryPresence.some(Boolean) && !recoveryPresence.every(Boolean)) {
+          throw new Error("report recovery artifacts must be all present or all absent");
+        }
+        if (row.report_recovered !== recoveryPresence.every(Boolean)) {
+          errors.push(`seed ${seed}: manifest recovery status differs from durable artifacts`);
+        }
+        if (pathEntryExists(runArtifactPaths.receiptBinding)) {
+          throw new Error("Claude fleet slot contains receipt binding metadata");
+        }
+        if (recoveryPresence.every(Boolean)) {
+          errors.push(
+            `seed ${seed}: ${options.cohortKind} cohort does not accept report-recovery artifacts`,
+          );
+          const safeInitialReportPath = requireContainedRegularFile(
+            runArtifactPaths.initialReport,
+            reportsRootReal,
+            `seed ${seed} initial report`,
+            artifacts,
+          );
+          const safeRecoveryMetadataPath = requireContainedRegularFile(
+            runArtifactPaths.recoveryMetadata,
+            reportsRootReal,
+            `seed ${seed} recovery metadata`,
+            artifacts,
+          );
+          const safeRecoveryEnvelopePath = requireContainedRegularFile(
+            runArtifactPaths.recoveryEnvelope,
+            reportsRootReal,
+            `seed ${seed} recovery Claude envelope`,
+            artifacts,
+          );
+          initialReportBytes = readFileSync(safeInitialReportPath);
+          recoveryMetadataBytes = readFileSync(safeRecoveryMetadataPath);
+          recoveryEnvelopeBytes = readFileSync(safeRecoveryEnvelopePath);
+        }
       }
     } catch (error) {
       errors.push(
@@ -1611,6 +1682,7 @@ function validateAuthenticatedStartingSliceCohort(
         runEvidence: runEvidenceBytes,
         primaryEnvelope: primaryEnvelopeBytes,
         initialReport: initialReportBytes,
+        receiptBinding: receiptBindingBytes,
         recoveryMetadata: recoveryMetadataBytes,
         recoveryEnvelope: recoveryEnvelopeBytes,
         providerEvents: providerEventsBytes,
@@ -1653,6 +1725,11 @@ function validateAuthenticatedStartingSliceCohort(
       continue;
     }
     const attestation = parsedAttestation.attestation;
+    if (attestation.schema_version !== summary.model_attestation_schema_version) {
+      errors.push(
+        `seed ${seed}: model attestation schema v${attestation.schema_version} differs from summary v${summary.model_attestation_schema_version}`,
+      );
+    }
     if (!isDeepStrictEqual(attestation, row.model_attestation)) {
       errors.push(`seed ${seed}: adjacent model attestation differs from manifest row`);
     }
@@ -1686,7 +1763,7 @@ function validateAuthenticatedStartingSliceCohort(
     }
     if (
       rowProvider === "codex" &&
-      attestation.schema_version === 3 &&
+      attestation.schema_version !== 2 &&
       (attestation.actual_provider !== artifactFacts.actual_provider ||
         attestation.reasoning_effort !== artifactFacts.reasoning_effort ||
         attestation.provider_turn_id !== artifactFacts.provider_turn_id ||
@@ -1696,6 +1773,13 @@ function validateAuthenticatedStartingSliceCohort(
     }
     if (attestation.report_recovered !== artifactFacts.report_recovered) {
       errors.push(`seed ${seed}: model attestation recovery status differs from run artifacts`);
+    }
+    const attestationReceiptBound =
+      attestation.schema_version === 4 ? attestation.report_receipt_bound : false;
+    if (attestationReceiptBound !== artifactFacts.report_receipt_bound) {
+      errors.push(
+        `seed ${seed}: model attestation receipt-binding status differs from run artifacts`,
+      );
     }
     if (attestation.report_recovered) {
       errors.push(
@@ -1710,6 +1794,11 @@ function validateAuthenticatedStartingSliceCohort(
     if (row.report_recovered !== artifactFacts.report_recovered) {
       errors.push(
         `seed ${seed}: manifest recovery status differs from authenticated run artifacts`,
+      );
+    }
+    if ((row.report_receipt_bound ?? false) !== artifactFacts.report_receipt_bound) {
+      errors.push(
+        `seed ${seed}: manifest receipt-binding status differs from authenticated run artifacts`,
       );
     }
     for (const [field, digest] of Object.entries(artifactFacts.hashes)) {
@@ -1808,6 +1897,11 @@ function validateAuthenticatedStartingSliceCohort(
   if (manifestReportRecoveredRuns !== summary.report_recovered_runs) {
     errors.push(
       `manifest report-recovered runs ${manifestReportRecoveredRuns} != summary ${summary.report_recovered_runs}`,
+    );
+  }
+  if (manifestReceiptBoundRuns !== (summary.receipt_bound_runs ?? 0)) {
+    errors.push(
+      `manifest receipt-bound runs ${manifestReceiptBoundRuns} != summary ${summary.receipt_bound_runs ?? 0}`,
     );
   }
   if (actualModels.size !== 1) {

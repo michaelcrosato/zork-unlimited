@@ -281,8 +281,10 @@ describe("blind runner MCP config contract", () => {
     expect(envelope).toContain("CODEX_PURE_PLAYER_TOOLS.has(item.tool)");
     expect(envelope).toContain('rows.at(-1)?.type !== "turn.completed"');
     expect(runner).toContain('if [[ "$PROVIDER" == "codex" ]]; then');
-    expect(runner).toContain("report recovery is unavailable");
-    expect(runner).toContain("a new seed must produce a complete report itself");
+    expect(runner).toContain("Codex has no resumed report turn");
+    expect(runner).toContain("scripts/blind-receipt-binding.ts bind");
+    expect(runner).toContain('--verifier-status "$VERIFY_STATUS" --attempt 0');
+    expect(runner).toContain("was not eligible for receipt-only binding");
 
     const overrideGuard = runner.indexOf(
       'if [[ "$PLAY_MODE" == "pure" && -n "${BLIND_AGENT_CMD:-}" ]]',
@@ -478,7 +480,7 @@ describe("blind runner MCP config contract", () => {
     expect(runner).toContain("fs.constants.COPYFILE_EXCL");
     expect(runner).toContain("assert_launch_provenance_unchanged");
     expect(runner).not.toContain('--write-run-sidecar "$RUN_SIDECAR_ARG"');
-    expect(runner.match(/--write-run-sidecar "\$PRIVATE_RUN_SIDECAR_ARG"/g)).toHaveLength(2);
+    expect(runner.match(/--write-run-sidecar "\$PRIVATE_RUN_SIDECAR_ARG"/g)).toHaveLength(3);
     expect(runner).toContain('--require-mode pure --run-sidecar "$PRIVATE_RUN_SIDECAR_ARG"');
 
     const privateVerification = runner.indexOf('--write-run-sidecar "$PRIVATE_RUN_SIDECAR_ARG"');
@@ -509,9 +511,11 @@ describe("blind runner MCP config contract", () => {
     expect(runner).toContain('rm -f -- "$OUT.md"');
     expect(runner).toContain('rm -f -- "$RUN_SIDECAR"');
     expect(runner).toContain('rm -f -- "$DURABLE_RUN_EVIDENCE"');
+    expect(runner).toContain('rm -f -- "$RECEIPT_BINDING_METADATA"');
 
     expect(runner).toContain("record_playthrough_terminal verified");
     expect(runner).toContain("record_playthrough_terminal verified_recovered");
+    expect(runner).toContain("record_playthrough_terminal verified_receipt_bound");
     expect(runner).toContain("record_playthrough_terminal verification_failed");
     expect(runner).not.toContain("transport_completed");
     expect(

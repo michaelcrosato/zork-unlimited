@@ -30,6 +30,7 @@ import {
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { isDeepStrictEqual } from "node:util";
+import { parseJsonRejectingDuplicateKeys } from "./strict-json.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const GAME_DIR = resolve(HERE, "..");
@@ -40,7 +41,8 @@ export const PURE_SESSION_CONTRACT_VERSION = 3;
 export const PURE_BASELINE_DECISIONS = 40;
 export const PURE_FLEET_EVIDENCE_SCHEMA_VERSION = 2;
 export const PURE_FLEET_ATTESTATION_SCHEMA_VERSION = 2;
-export const PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION = 3;
+export const HISTORICAL_PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION = 3;
+export const PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION = 4;
 export const CERTIFIED_CODEX_MODELS = [
   "gpt-5.6-sol",
   "gpt-5.6-terra",
@@ -376,6 +378,7 @@ export function pureFleetRunArtifactPathsFor(reportMdPath) {
     run_evidence: `${prefix}.evidence.jsonl`,
     primary_envelope: `${prefix}.json`,
     initial_report: `${prefix}.initial-report.txt`,
+    receipt_binding: `${prefix}.receipt-bind.json`,
     recovery_metadata: `${prefix}.repair.meta.json`,
     recovery_envelope: `${prefix}.repair.json`,
     provider_events: `${prefix}.codex.jsonl`,
@@ -482,8 +485,10 @@ const PURE_FLEET_CODEX_ATTESTATION_KEYS = [
   "provider_turn_id",
   "reasoning_effort",
   "receipt_hash",
+  "receipt_binding_sha256",
   "recovery_envelope_sha256",
   "recovery_metadata_sha256",
+  "report_receipt_bound",
   "report_recovered",
   "report_sha256",
   "run_evidence_sha256",
@@ -493,6 +498,10 @@ const PURE_FLEET_CODEX_ATTESTATION_KEYS = [
   "start_surface",
   "target",
 ].sort();
+
+const HISTORICAL_PURE_FLEET_CODEX_ATTESTATION_KEYS = PURE_FLEET_CODEX_ATTESTATION_KEYS.filter(
+  (key) => key !== "receipt_binding_sha256" && key !== "report_receipt_bound",
+);
 
 function isFleetModel(model) {
   return model === "haiku" || model === "sonnet" || model === "opus";
@@ -556,10 +565,16 @@ function isExactPureFleetAttestation(attestation) {
           attestation.recovery_envelope_sha256 === null)
     );
   }
-  return (
+  const currentCodex =
     attestation.schema_version === PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION &&
     keys.length === PURE_FLEET_CODEX_ATTESTATION_KEYS.length &&
-    keys.every((key, index) => key === PURE_FLEET_CODEX_ATTESTATION_KEYS[index]) &&
+    keys.every((key, index) => key === PURE_FLEET_CODEX_ATTESTATION_KEYS[index]);
+  const historicalCodex =
+    attestation.schema_version === HISTORICAL_PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION &&
+    keys.length === HISTORICAL_PURE_FLEET_CODEX_ATTESTATION_KEYS.length &&
+    keys.every((key, index) => key === HISTORICAL_PURE_FLEET_CODEX_ATTESTATION_KEYS[index]);
+  return (
+    (currentCodex || historicalCodex) &&
     attestation.provider === "codex" &&
     isCodexFleetModel(attestation.model) &&
     attestation.actual_provider === "openai" &&
@@ -579,23 +594,30 @@ function isExactPureFleetAttestation(attestation) {
     /^[0-9a-f]{64}$/.test(attestation.provider_events_sha256) &&
     /^[0-9a-f]{64}$/.test(attestation.provider_rollout_sha256) &&
     /^[0-9a-f]{64}$/.test(attestation.provider_capture_sha256) &&
-    attestation.initial_report_sha256 === null &&
     attestation.recovery_metadata_sha256 === null &&
-    attestation.recovery_envelope_sha256 === null
+    attestation.recovery_envelope_sha256 === null &&
+    (historicalCodex
+      ? attestation.initial_report_sha256 === null
+      : typeof attestation.report_receipt_bound === "boolean" &&
+        (attestation.receipt_binding_sha256 === null ||
+          /^[0-9a-f]{64}$/.test(attestation.receipt_binding_sha256)) &&
+        (attestation.initial_report_sha256 === null ||
+          /^[0-9a-f]{64}$/.test(attestation.initial_report_sha256)) &&
+        attestation.report_receipt_bound ===
+          (attestation.initial_report_sha256 !== null &&
+            attestation.receipt_binding_sha256 !== null) &&
+        (attestation.initial_report_sha256 === null) ===
+          (attestation.receipt_binding_sha256 === null))
   );
 }
 
 export function parsePureFleetAttestation(text) {
-  let raw;
-  try {
-    raw = JSON.parse(text);
-  } catch {
-    return { ok: false, reason: "pure fleet attestation is not valid JSON" };
-  }
-  if (!isExactPureFleetAttestation(raw)) {
+  const raw = parseJsonRejectingDuplicateKeys(text, "pure fleet attestation");
+  if (!raw.ok) return raw;
+  if (!isExactPureFleetAttestation(raw.value)) {
     return { ok: false, reason: "pure fleet attestation does not match its strict schema" };
   }
-  return { ok: true, attestation: raw };
+  return { ok: true, attestation: raw.value };
 }
 
 function sha256FileBytes(path) {
@@ -611,6 +633,9 @@ export function pureFleetArtifactHashes(reportMdPath) {
     primary_envelope_sha256: sha256FileBytes(paths.primary_envelope),
     initial_report_sha256: artifactEntryExists(paths.initial_report)
       ? sha256FileBytes(paths.initial_report)
+      : null,
+    receipt_binding_sha256: artifactEntryExists(paths.receipt_binding)
+      ? sha256FileBytes(paths.receipt_binding)
       : null,
     recovery_metadata_sha256: artifactEntryExists(paths.recovery_metadata)
       ? sha256FileBytes(paths.recovery_metadata)
@@ -640,6 +665,8 @@ function isExactFleetArtifactHashes(hashes) {
     /^[0-9a-f]{64}$/.test(hashes.primary_envelope_sha256) &&
     (hashes.initial_report_sha256 === null ||
       /^[0-9a-f]{64}$/.test(hashes.initial_report_sha256)) &&
+    (hashes.receipt_binding_sha256 === null ||
+      /^[0-9a-f]{64}$/.test(hashes.receipt_binding_sha256)) &&
     (hashes.recovery_metadata_sha256 === null ||
       /^[0-9a-f]{64}$/.test(hashes.recovery_metadata_sha256)) &&
     (hashes.recovery_envelope_sha256 === null ||
@@ -677,6 +704,7 @@ function isExactPureFleetRunArtifactFacts(facts) {
     facts.actual_model.length > 0 &&
     (facts.actual_provider === "anthropic" || facts.actual_provider === "openai") &&
     typeof facts.report_recovered === "boolean" &&
+    typeof facts.report_receipt_bound === "boolean" &&
     isExactFleetArtifactHashes(facts.hashes)
   );
 }
@@ -708,19 +736,49 @@ async function validatePureFleetRunArtifacts(reportMdPath, expected, reportsDir)
   } else if (codexEntries.some(([, path]) => artifactEntryExists(path))) {
     return { ok: false, reason: "Claude fleet slot must not contain Codex provider artifacts" };
   }
-  const recoveryEntries = [
-    ["initial report", paths.initial_report],
-    ["recovery metadata", paths.recovery_metadata],
-    ["recovery Claude envelope", paths.recovery_envelope],
-  ];
-  const recoveryPresence = recoveryEntries.map(([, path]) => artifactEntryExists(path));
-  if (recoveryPresence.some(Boolean) && !recoveryPresence.every(Boolean)) {
-    return { ok: false, reason: "report recovery artifacts must be all present or all absent" };
-  }
-  if (recoveryPresence.every(Boolean)) {
-    for (const [label, path] of recoveryEntries) {
-      if (!isTrustedFleetArtifactFile(path, reportsDir)) {
-        return { ok: false, reason: `${label} must be a contained private regular file` };
+  if (expectedProvider === "codex") {
+    const bindingEntries = [
+      ["initial Codex report", paths.initial_report],
+      ["receipt binding metadata", paths.receipt_binding],
+    ];
+    const bindingPresence = bindingEntries.map(([, path]) => artifactEntryExists(path));
+    if (bindingPresence.some(Boolean) && !bindingPresence.every(Boolean)) {
+      return {
+        ok: false,
+        reason: "Codex receipt-binding artifacts must be all present or all absent",
+      };
+    }
+    if (
+      artifactEntryExists(paths.recovery_metadata) ||
+      artifactEntryExists(paths.recovery_envelope)
+    ) {
+      return { ok: false, reason: "Codex fleet slot must not contain report recovery artifacts" };
+    }
+    if (bindingPresence.every(Boolean)) {
+      for (const [label, path] of bindingEntries) {
+        if (!isTrustedFleetArtifactFile(path, reportsDir)) {
+          return { ok: false, reason: `${label} must be a contained private regular file` };
+        }
+      }
+    }
+  } else {
+    const recoveryEntries = [
+      ["initial report", paths.initial_report],
+      ["recovery metadata", paths.recovery_metadata],
+      ["recovery Claude envelope", paths.recovery_envelope],
+    ];
+    const recoveryPresence = recoveryEntries.map(([, path]) => artifactEntryExists(path));
+    if (recoveryPresence.some(Boolean) && !recoveryPresence.every(Boolean)) {
+      return { ok: false, reason: "report recovery artifacts must be all present or all absent" };
+    }
+    if (artifactEntryExists(paths.receipt_binding)) {
+      return { ok: false, reason: "Claude fleet slot must not contain receipt binding metadata" };
+    }
+    if (recoveryPresence.every(Boolean)) {
+      for (const [label, path] of recoveryEntries) {
+        if (!isTrustedFleetArtifactFile(path, reportsDir)) {
+          return { ok: false, reason: `${label} must be a contained private regular file` };
+        }
       }
     }
   }
@@ -838,6 +896,13 @@ export function pureFleetAttestationMismatch(attestation, run, expected, artifac
   if (attestation.report_recovered !== artifactFacts.report_recovered) {
     return "pure fleet attestation recovery status does not match durable recovery evidence";
   }
+  const attestedReceiptBound =
+    attestation.schema_version === PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION
+      ? attestation.report_receipt_bound
+      : false;
+  if (attestedReceiptBound !== artifactFacts.report_receipt_bound) {
+    return "pure fleet attestation receipt-binding status does not match durable artifacts";
+  }
   if (attestation.receipt_hash !== run?.receipt?.receiptHash) {
     return "pure fleet attestation receipt hash does not match the verified receipt";
   }
@@ -848,6 +913,9 @@ export function pureFleetAttestationMismatch(attestation, run, expected, artifac
     attestation.run_evidence_sha256 !== artifactFacts.hashes.run_evidence_sha256 ||
     attestation.primary_envelope_sha256 !== artifactFacts.hashes.primary_envelope_sha256 ||
     attestation.initial_report_sha256 !== artifactFacts.hashes.initial_report_sha256 ||
+    (attestation.schema_version === PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION
+      ? attestation.receipt_binding_sha256 !== artifactFacts.hashes.receipt_binding_sha256
+      : artifactFacts.hashes.receipt_binding_sha256 !== null) ||
     attestation.recovery_metadata_sha256 !== artifactFacts.hashes.recovery_metadata_sha256 ||
     attestation.recovery_envelope_sha256 !== artifactFacts.hashes.recovery_envelope_sha256 ||
     (expectedProvider === "codex" &&
@@ -893,6 +961,8 @@ function buildPureFleetAttestation(run, expected, artifactFacts) {
           reasoning_effort: artifactFacts.reasoning_effort,
           provider_turn_id: artifactFacts.provider_turn_id,
           provider_cwd: artifactFacts.provider_cwd,
+          report_receipt_bound: artifactFacts.report_receipt_bound,
+          receipt_binding_sha256: artifactFacts.hashes.receipt_binding_sha256,
           provider_events_sha256: artifactFacts.hashes.provider_events_sha256,
           provider_rollout_sha256: artifactFacts.hashes.provider_rollout_sha256,
           provider_capture_sha256: artifactFacts.hashes.provider_capture_sha256,
@@ -1189,6 +1259,13 @@ export function pureFleetReportWasRecovered(reportMdPath, reportsDir = dirname(r
   if (!isTrustedFleetArtifactFile(marker, reportsDir)) {
     throw new Error("report-recovery marker must be a contained regular non-symlink file");
   }
+  const receiptBinding = `${reportPrefixFor(reportMdPath)}.receipt-bind.json`;
+  if (existsSync(receiptBinding)) {
+    if (!isTrustedFleetArtifactFile(receiptBinding, reportsDir)) {
+      throw new Error("receipt-binding metadata must be a contained regular non-symlink file");
+    }
+    return false;
+  }
   return true;
 }
 
@@ -1269,8 +1346,10 @@ export function summarizeFleetAttemptHistory(rows) {
   let failedAttempts = 0;
   let technicalTimeouts = 0;
   let reportRecoveredRuns = 0;
+  let receiptBoundRuns = 0;
   for (const row of rows) {
     if (row?.report_recovered === true) reportRecoveredRuns += 1;
+    if (row?.report_receipt_bound === true) receiptBoundRuns += 1;
     for (const attempt of row?.attempt_history ?? []) {
       totalAttempts += 1;
       if (attempt.classification !== "verified") failedAttempts += 1;
@@ -1282,6 +1361,7 @@ export function summarizeFleetAttemptHistory(rows) {
     failed_attempts: failedAttempts,
     technical_timeouts: technicalTimeouts,
     report_recovered_runs: reportRecoveredRuns,
+    receipt_bound_runs: receiptBoundRuns,
   };
 }
 
@@ -1317,6 +1397,8 @@ async function executeRun(run, { reportsDir, stamp, opts, bashPath, fleetDir, fl
       if (verify.ok) {
         const reportRecovered =
           requiredMode === "pure" ? verify.attestation.report_recovered : false;
+        const reportReceiptBound =
+          requiredMode === "pure" ? (verify.attestation.report_receipt_bound ?? false) : false;
         return {
           report: candidate,
           status: "skipped-resume",
@@ -1326,6 +1408,7 @@ async function executeRun(run, { reportsDir, stamp, opts, bashPath, fleetDir, fl
           run: verify.run,
           attestation: verify.attestation,
           report_recovered: reportRecovered,
+          report_receipt_bound: reportReceiptBound,
         };
       }
     }
@@ -1385,11 +1468,13 @@ async function executeRun(run, { reportsDir, stamp, opts, bashPath, fleetDir, fl
           lastExit = 5;
         } else {
           const reportRecovered = attestation?.report_recovered ?? false;
+          const reportReceiptBound = attestation?.report_receipt_bound ?? false;
           attemptHistory.push({
             attempt: attempt + 1,
             exit: 0,
             classification: "verified",
             report_recovered: reportRecovered,
+            report_receipt_bound: reportReceiptBound,
             archive: null,
           });
           return {
@@ -1401,6 +1486,7 @@ async function executeRun(run, { reportsDir, stamp, opts, bashPath, fleetDir, fl
             run: verifyResult.run,
             attestation,
             report_recovered: reportRecovered,
+            report_receipt_bound: reportReceiptBound,
           };
         }
       } else {
@@ -1448,6 +1534,7 @@ async function executeRun(run, { reportsDir, stamp, opts, bashPath, fleetDir, fl
       exit: lastExit,
       classification,
       report_recovered: false,
+      report_receipt_bound: false,
       archive,
     });
     const summarySource =
@@ -1472,6 +1559,7 @@ async function executeRun(run, { reportsDir, stamp, opts, bashPath, fleetDir, fl
     run: null,
     attestation: null,
     report_recovered: false,
+    report_receipt_bound: false,
     failure_reason:
       lastExit === 124 || lastExit === 137 ? "technical_timeout" : "run_or_verification_failed",
   };
@@ -1652,6 +1740,7 @@ async function main() {
         attempts: result.attempts,
         attempt_history: result.attempt_history,
         report_recovered: result.report_recovered,
+        report_receipt_bound: result.report_receipt_bound,
         exit: result.exit,
         log: result.log ?? null,
         model_attestation: result.attestation ?? null,

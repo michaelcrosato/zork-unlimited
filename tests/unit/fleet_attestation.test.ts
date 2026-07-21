@@ -60,6 +60,7 @@ const VALID_CODEX_ATTESTATION = {
   provider_turn_id: "30852ae5-43b1-424a-aa39-7ba347361cec",
   provider_cwd: "C:\\private\\player",
   report_recovered: false,
+  report_receipt_bound: false,
   receipt_hash: "1".repeat(64),
   report_sha256: "2".repeat(64),
   run_sidecar_sha256: "3".repeat(64),
@@ -69,6 +70,7 @@ const VALID_CODEX_ATTESTATION = {
   provider_rollout_sha256: "7".repeat(64),
   provider_capture_sha256: "8".repeat(64),
   initial_report_sha256: null,
+  receipt_binding_sha256: null,
   recovery_metadata_sha256: null,
   recovery_envelope_sha256: null,
 } as const;
@@ -136,6 +138,37 @@ describe("PureFleetAttestationSchema", () => {
     ).toBe(true);
   });
 
+  it("requires complete v4 provenance for receipt-bound Codex reports", () => {
+    const bound = {
+      ...VALID_CODEX_ATTESTATION,
+      report_receipt_bound: true,
+      initial_report_sha256: "9".repeat(64),
+      receipt_binding_sha256: "a".repeat(64),
+    } as const;
+    expect(PureFleetAttestationSchema.parse(bound)).toEqual(bound);
+    expect(parseRunnerAttestation(JSON.stringify(bound))).toEqual({
+      ok: true,
+      attestation: bound,
+    });
+    expect(
+      PureFleetAttestationSchema.safeParse({ ...bound, receipt_binding_sha256: null }).success,
+    ).toBe(false);
+    expect(
+      parseRunnerAttestation(JSON.stringify({ ...bound, report_receipt_bound: false })).ok,
+    ).toBe(false);
+
+    const duplicateBindingDigest = JSON.stringify(bound).replace(
+      '"receipt_binding_sha256":',
+      `"receipt_binding_sha256":"${"f".repeat(64)}","receipt_binding_sha256":`,
+    );
+    for (const parse of [parsePureFleetAttestation, parseRunnerAttestation]) {
+      expect(parse(duplicateBindingDigest)).toMatchObject({
+        ok: false,
+        reason: expect.stringMatching(/duplicate JSON object key "receipt_binding_sha256"/i),
+      });
+    }
+  });
+
   it("binds Codex provider, effort, turn, and cwd back to authenticated rollout facts", () => {
     const run = {
       run_seed: VALID_CODEX_ATTESTATION.run_seed,
@@ -154,12 +187,14 @@ describe("PureFleetAttestationSchema", () => {
       provider_turn_id: VALID_CODEX_ATTESTATION.provider_turn_id,
       provider_cwd: VALID_CODEX_ATTESTATION.provider_cwd,
       report_recovered: false,
+      report_receipt_bound: false,
       hashes: {
         report_sha256: VALID_CODEX_ATTESTATION.report_sha256,
         run_sidecar_sha256: VALID_CODEX_ATTESTATION.run_sidecar_sha256,
         run_evidence_sha256: VALID_CODEX_ATTESTATION.run_evidence_sha256,
         primary_envelope_sha256: VALID_CODEX_ATTESTATION.primary_envelope_sha256,
         initial_report_sha256: null,
+        receipt_binding_sha256: null,
         recovery_metadata_sha256: null,
         recovery_envelope_sha256: null,
         provider_events_sha256: VALID_CODEX_ATTESTATION.provider_events_sha256,

@@ -1,6 +1,16 @@
 import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
-import { validateCodexFleetProviderAuthority } from "../../src/starting_slice/fleet_run_artifacts.js";
+import { bindPureCodexReceipt } from "../../src/blind/receipt_binding.js";
+import { parseRunEvidenceJsonl } from "../../src/blind/run_evidence.js";
+import { hashState } from "../../src/core/hash.js";
+import {
+  validateCodexFleetProviderAuthority,
+  validatePureFleetRunArtifactBytes,
+} from "../../src/starting_slice/fleet_run_artifacts.js";
+import {
+  INITIAL_JOURNEY_GOAL,
+  JOURNEY_CONTRACT_VERSION,
+} from "../../src/world/journey_contract.js";
 
 const SESSION = "019f7250-1ed0-7102-be6c-4f1d5513d91e";
 const TURN = "119f7250-1ed0-7102-be6c-4f1d5513d91e";
@@ -19,7 +29,7 @@ function finalOutput(rows: unknown[]): Record<string, unknown> {
   return content[0]!;
 }
 
-function publicEvents(): unknown[] {
+function publicEvents(report = REPORT): unknown[] {
   const call = {
     id: "item_1",
     type: "mcp_tool_call",
@@ -43,7 +53,7 @@ function publicEvents(): unknown[] {
         status: "completed",
       },
     },
-    { type: "item.completed", item: { id: "item_2", type: "agent_message", text: REPORT } },
+    { type: "item.completed", item: { id: "item_2", type: "agent_message", text: report } },
     {
       type: "turn.completed",
       usage: { input_tokens: 10, cached_input_tokens: 2, output_tokens: 3 },
@@ -51,7 +61,7 @@ function publicEvents(): unknown[] {
   ];
 }
 
-function rollout(): unknown[] {
+function rollout(report = REPORT): unknown[] {
   // Observed Codex CLI ordering: session, task start, turn context, final
   // assistant response, then task_complete as the terminal rollout row.
   return [
@@ -88,13 +98,13 @@ function rollout(): unknown[] {
       payload: {
         type: "message",
         role: "assistant",
-        content: [{ type: "output_text", text: REPORT }],
+        content: [{ type: "output_text", text: report }],
       },
     },
     {
       timestamp: "2026-07-19T00:00:01.001Z",
       type: "event_msg",
-      payload: { type: "task_complete", turn_id: TURN, last_agent_message: REPORT },
+      payload: { type: "task_complete", turn_id: TURN, last_agent_message: report },
     },
   ];
 }
@@ -135,6 +145,156 @@ function captureReceipt(rows: unknown[]): string {
   })}\n`;
 }
 
+const BUILD = {
+  git_commit: "a".repeat(40),
+  tracked_worktree_clean: true as const,
+  world_id: "new_york_overworld",
+  world_hash: "b".repeat(64),
+};
+
+function journeyReceipt() {
+  const decisionHash = "c".repeat(64);
+  const payload = {
+    contractVersion: JOURNEY_CONTRACT_VERSION,
+    exitReason: "player_ended_at_choice" as const,
+    goalVersion: 1,
+    goalId: INITIAL_JOURNEY_GOAL.id,
+    goalText: INITIAL_JOURNEY_GOAL.text,
+    goalStatus: "active" as const,
+    goalCompletedAtDecision: null,
+    completedGoals: [],
+    acceptedDecisions: 40,
+    exitReasons: ["checkpoint" as const],
+    checkpoint: 40,
+    decisionProofHash: decisionHash,
+    retentionHistory: [
+      {
+        sequence: 1,
+        atDecision: 40,
+        reasons: ["checkpoint" as const],
+        checkpoint: 40,
+        goalVersion: null,
+        goalId: null,
+        choice: "end" as const,
+        decisionProofHash: decisionHash,
+      },
+    ],
+  };
+  return { ...payload, receiptHash: hashState(payload) };
+}
+
+function receiptBindingFixture() {
+  const originalReport = `## Playthrough log
+
+I followed the journey until the real end choice and ended it.
+
+## Did it work mechanically?
+
+Yes, state and choices advanced normally.
+
+## Understandable & fun?
+
+Clarity: 4/5. Enjoyment: 5/5.
+
+## Confusion / friction points
+
+One prompt needed a second reading.
+
+## Bugs or design flaws
+
+None found.
+
+## Verdict
+
+The journey felt reactive and worth replaying.
+
+\`\`\`json exit-interview
+${JSON.stringify({
+  schema_version: 2,
+  play_mode: "pure",
+  start_surface: "fresh_overworld",
+  retention_eligible: true,
+  journey_exit_receipt: { acceptedDecisions: 40, decisionProofHash: "925d92dfff? " },
+  clarity: 4,
+  enjoyment: 5,
+  goal_understood: true,
+  got_stuck: false,
+  confusions: ["One prompt needed a second reading."],
+  bugs: [],
+  best_moment: "The route reacted to preparation.",
+  worst_moment: "One prompt needed a second reading.",
+  would_replay: true,
+  verdict: "The journey felt reactive, legible, and worth replaying by another route.",
+})}
+\`\`\`
+`;
+  const start = {
+    schema_version: 2,
+    play_mode: "pure",
+    event: "fresh_start",
+    start_surface: "fresh_overworld",
+    session_id: "ow-fleet-receipt-bound",
+    run_seed: 4244,
+    build: BUILD,
+  };
+  const exit = {
+    schema_version: 2,
+    play_mode: "pure",
+    event: "journey_exit",
+    start_surface: "fresh_overworld",
+    session_id: "ow-fleet-receipt-bound",
+    run_seed: 4244,
+    build: BUILD,
+    quest_outcomes: [["wolf_winter", "ending_pack_diverted"]],
+    receipt: journeyReceipt(),
+  };
+  const evidence = [start, exit].map((event) => JSON.stringify(event)).join("\n");
+  const primaryEnvelope = `${JSON.stringify({
+    type: "result",
+    subtype: "success",
+    provider: "codex",
+    is_error: false,
+    duration_ms: 1000,
+    num_turns: 1,
+    result: originalReport,
+    session_id: SESSION,
+    requested_model: "gpt-5.3-codex-spark",
+    terminal_reason: "completed",
+    usage: {
+      input_tokens: 10,
+      cache_read_input_tokens: 2,
+      output_tokens: 3,
+      reasoning_output_tokens: 0,
+    },
+    modelUsage: {
+      "gpt-5.3-codex-spark": {
+        inputTokens: 10,
+        cacheReadInputTokens: 2,
+        outputTokens: 3,
+        reasoningOutputTokens: 0,
+      },
+    },
+  })}\n`;
+  const bound = bindPureCodexReceipt({
+    playMode: "pure",
+    provider: "codex",
+    agentExitStatus: 0,
+    verifierExitStatus: 5,
+    attempt: 0,
+    requestedModel: "gpt-5.3-codex-spark",
+    expectedRunSeed: 4244,
+    expectedGitCommit: BUILD.git_commit,
+    expectedTrackedWorktreeClean: true,
+    primaryEnvelopeBytes: Buffer.from(primaryEnvelope),
+    runEvidenceBytes: Buffer.from(evidence),
+    reportBytes: Buffer.from(originalReport),
+  });
+  if (!bound.ok) throw new Error(bound.reason);
+  const parsedEvidence = parseRunEvidenceJsonl(evidence);
+  if (!parsedEvidence.ok) throw new Error(parsedEvidence.reason);
+  return { originalReport, evidence, primaryEnvelope, bound, run: parsedEvidence.sidecar };
+}
+
 describe("Codex certified fleet rollout authority", () => {
   it("binds one public thread to one rollout turn and exact final report", () => {
     const rows = rollout();
@@ -154,6 +314,67 @@ describe("Codex certified fleet rollout authority", () => {
         turnId: TURN,
         cwd: "C:\\private\\player",
       },
+    });
+  });
+
+  it("authenticates a receipt-bound report against the original rollout message", () => {
+    const fixture = receiptBindingFixture();
+    const rolloutRows = rollout(fixture.originalReport);
+    const metadataBytes = Buffer.from(`${JSON.stringify(fixture.bound.metadata, null, 2)}\n`);
+    const artifacts = {
+      report: fixture.bound.reportBytes,
+      runSidecar: Buffer.from(JSON.stringify(fixture.run)),
+      runEvidence: Buffer.from(fixture.evidence),
+      primaryEnvelope: Buffer.from(fixture.primaryEnvelope),
+      initialReport: Buffer.from(fixture.originalReport),
+      receiptBinding: metadataBytes,
+      recoveryMetadata: null,
+      recoveryEnvelope: null,
+      providerEvents: Buffer.from(jsonl(publicEvents(fixture.originalReport))),
+      providerRollout: Buffer.from(jsonl(rolloutRows)),
+      providerCapture: Buffer.from(captureReceipt(rolloutRows)),
+    };
+    const expected = {
+      seed: 4244,
+      provider: "codex" as const,
+      model: "gpt-5.3-codex-spark" as const,
+      build: BUILD,
+    };
+    expect(validatePureFleetRunArtifactBytes(artifacts, expected)).toMatchObject({
+      ok: true,
+      facts: {
+        report_recovered: false,
+        report_receipt_bound: true,
+        hashes: { receipt_binding_sha256: expect.stringMatching(/^[0-9a-f]{64}$/) },
+      },
+    });
+
+    const changedMetadata = Buffer.from(
+      `${JSON.stringify({ ...fixture.bound.metadata, bound_report_sha256: "d".repeat(64) })}\n`,
+    );
+    expect(
+      validatePureFleetRunArtifactBytes(
+        { ...artifacts, receiptBinding: changedMetadata },
+        expected,
+      ),
+    ).toMatchObject({ ok: false, reason: expect.stringMatching(/metadata does not reproduce/i) });
+
+    const duplicateDigestMetadata = Buffer.from(
+      metadataBytes
+        .toString("utf8")
+        .replace(
+          '"bound_report_sha256":',
+          `"bound_report_sha256":"${"d".repeat(64)}","bound_report_sha256":`,
+        ),
+    );
+    expect(
+      validatePureFleetRunArtifactBytes(
+        { ...artifacts, receiptBinding: duplicateDigestMetadata },
+        expected,
+      ),
+    ).toMatchObject({
+      ok: false,
+      reason: expect.stringMatching(/duplicate JSON object key "bound_report_sha256"/i),
     });
   });
 

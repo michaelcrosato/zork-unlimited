@@ -370,6 +370,9 @@ cleanup_runner() {
     if [[ -n "${DURABLE_RUN_EVIDENCE:-}" ]]; then
       rm -f -- "$DURABLE_RUN_EVIDENCE"
     fi
+    if [[ -n "${RECEIPT_BINDING_METADATA:-}" ]]; then
+      rm -f -- "$RECEIPT_BINDING_METADATA"
+    fi
   fi
   rm -rf -- "$WORK"
   return "$status"
@@ -480,6 +483,7 @@ fi
 mkdir -p "$(dirname "$OUT")"
 RUN_SIDECAR="$OUT.run.json"
 DURABLE_RUN_EVIDENCE="$OUT.evidence.jsonl"
+RECEIPT_BINDING_METADATA="$OUT.receipt-bind.json"
 # Pure verification writes only inside WORK. The adjacent sidecar is the final
 # acceptance marker and is published exclusively after every other gate passes.
 PRIVATE_RUN_SIDECAR="$WORK/verified-run-sidecar.json"
@@ -843,18 +847,111 @@ set +e
 VERIFY_STATUS=$?
 set -e
 REPORT_RECOVERED=0
+REPORT_RECEIPT_BOUND=0
 
 if [[ "$VERIFY_STATUS" -ne 0 ]]; then
   cat "$INITIAL_VERIFY_LOG" >&2
 
-  # Codex runs are ephemeral and intentionally have no provider-specific
-  # report-recovery path yet. Preserve diagnostics but publish no report,
-  # evidence, or sidecar; a new seed must produce a complete report itself.
+  # Codex has no resumed report turn. On attempt zero only, a deterministic
+  # binder may replace the one existing journey_exit_receipt JSON value with
+  # the exact server-authored receipt. The strict binder authenticates the
+  # audited primary envelope and raw evidence, preserves every other report
+  # byte, and requires the unchanged verifier to accept the resulting bytes.
   if [[ "$PROVIDER" == "codex" ]]; then
-    record_playthrough_terminal verification_failed
-    echo "✗ Codex blind report failed verification; report recovery is unavailable, so this run is rejected." >&2
-    exit "$VERIFY_STATUS"
-  fi
+    RECEIPT_BIND_SOURCE="$OUT.md"
+    RECEIPT_BIND_SOURCE_ARG="$(node_path_arg "$RECEIPT_BIND_SOURCE")"
+    RECEIPT_BIND_CANDIDATE="$WORK/receipt-bound-report.txt"
+    RECEIPT_BIND_CANDIDATE_ARG="$(node_path_arg "$RECEIPT_BIND_CANDIDATE")"
+    PRIVATE_RECEIPT_BINDING_METADATA="$WORK/receipt-bind.json"
+    PRIVATE_RECEIPT_BINDING_METADATA_ARG="$(node_path_arg "$PRIVATE_RECEIPT_BINDING_METADATA")"
+    set +e
+    ( cd "$GAME_DIR" && npm --silent exec tsx -- scripts/blind-receipt-binding.ts bind \
+      --play-mode "$PLAY_MODE" --provider "$PROVIDER" \
+      --agent-status "$STATUS" --verifier-status "$VERIFY_STATUS" --attempt 0 \
+      --model "$MODEL" --seed "$SEED" --git-commit "$BUILD_COMMIT" \
+      --tracked-worktree-clean "$TRACKED_WORKTREE_CLEAN" \
+      --envelope "$OUT_JSON_ARG" --run-evidence "$RUN_EVIDENCE_ARG" \
+      --report "$RECEIPT_BIND_SOURCE_ARG" --report-out "$RECEIPT_BIND_CANDIDATE_ARG" \
+      --metadata-out "$PRIVATE_RECEIPT_BINDING_METADATA_ARG" ) \
+      >"$OUT.receipt-bind.log" 2>&1
+    RECEIPT_BIND_STATUS=$?
+    set -e
+    if [[ "$RECEIPT_BIND_STATUS" -ne 0 ]]; then
+      cat "$OUT.receipt-bind.log" >&2 || true
+      record_playthrough_terminal verification_failed
+      echo "✗ Codex blind report failed verification and was not eligible for receipt-only binding." >&2
+      exit "$VERIFY_STATUS"
+    fi
+
+    # Preserve the exact provider message outside reports/*.md. The primary
+    # envelope remains unchanged and independently carries the same bytes.
+    INITIAL_REPORT_MARKER="$OUT.initial-report.txt"
+    INITIAL_REPORT_MARKER_ARG="$(node_path_arg "$INITIAL_REPORT_MARKER")"
+    cp -- "$OUT.md" "$INITIAL_REPORT_MARKER"
+
+    set +e
+    ( cd "$GAME_DIR" && npm --silent exec tsx -- scripts/blind-receipt-binding.ts verify \
+      --envelope "$OUT_JSON_ARG" --run-evidence "$RUN_EVIDENCE_ARG" \
+      --original-report "$INITIAL_REPORT_MARKER_ARG" \
+      --bound-report "$RECEIPT_BIND_CANDIDATE_ARG" \
+      --metadata "$PRIVATE_RECEIPT_BINDING_METADATA_ARG" ) \
+      >"$OUT.receipt-bind-reproduce.log" 2>&1
+    RECEIPT_BIND_REPRODUCE_STATUS=$?
+    set -e
+    if [[ "$RECEIPT_BIND_REPRODUCE_STATUS" -ne 0 ]]; then
+      record_playthrough_terminal receipt_binding_failed
+      cat "$OUT.receipt-bind-reproduce.log" >&2 || true
+      exit "$RECEIPT_BIND_REPRODUCE_STATUS"
+    fi
+
+    RECEIPT_BIND_CANDIDATE_SIDECAR="$WORK/receipt-bind-candidate.run.json"
+    RECEIPT_BIND_CANDIDATE_SIDECAR_ARG="$(node_path_arg "$RECEIPT_BIND_CANDIDATE_SIDECAR")"
+    set +e
+    ( cd "$GAME_DIR" && npm --silent exec tsx -- scripts/verify-blind-report.ts \
+      "$RECEIPT_BIND_CANDIDATE_ARG" --require-mode pure \
+      --run-evidence "$RUN_EVIDENCE_ARG" \
+      --write-run-sidecar "$RECEIPT_BIND_CANDIDATE_SIDECAR_ARG" ) \
+      >"$OUT.verify.receipt-bind-candidate.log" 2>&1
+    RECEIPT_BIND_CANDIDATE_VERIFY_STATUS=$?
+    set -e
+    if [[ "$RECEIPT_BIND_CANDIDATE_VERIFY_STATUS" -ne 0 ]]; then
+      record_playthrough_terminal receipt_binding_failed
+      cat "$OUT.verify.receipt-bind-candidate.log" >&2 || true
+      exit "$RECEIPT_BIND_CANDIDATE_VERIFY_STATUS"
+    fi
+
+    cp -- "$RECEIPT_BIND_CANDIDATE" "$OUT.md"
+    rm -f "$PRIVATE_RUN_SIDECAR"
+    set +e
+    ( cd "$GAME_DIR" && npm --silent exec tsx -- scripts/verify-blind-report.ts "$REPORT_MD" \
+      --require-mode pure --run-evidence "$RUN_EVIDENCE_ARG" \
+      --write-run-sidecar "$PRIVATE_RUN_SIDECAR_ARG" ) \
+      >"$OUT.verify.receipt-bind-canonical.log" 2>&1
+    RECEIPT_BIND_VERIFY_STATUS=$?
+    set -e
+    if [[ "$RECEIPT_BIND_VERIFY_STATUS" -ne 0 ]]; then
+      rm -f "$OUT.md" "$RUN_SIDECAR"
+      record_playthrough_terminal receipt_binding_failed
+      cat "$OUT.verify.receipt-bind-canonical.log" >&2 || true
+      exit "$RECEIPT_BIND_VERIFY_STATUS"
+    fi
+
+    set +e
+    ( cd "$GAME_DIR" && npm --silent exec tsx -- scripts/blind-receipt-binding.ts verify \
+      --envelope "$OUT_JSON_ARG" --run-evidence "$RUN_EVIDENCE_ARG" \
+      --original-report "$INITIAL_REPORT_MARKER_ARG" --bound-report "$REPORT_MD" \
+      --metadata "$PRIVATE_RECEIPT_BINDING_METADATA_ARG" ) \
+      >>"$OUT.receipt-bind-reproduce.log" 2>&1
+    RECEIPT_BIND_FINAL_STATUS=$?
+    set -e
+    if [[ "$RECEIPT_BIND_FINAL_STATUS" -ne 0 ]]; then
+      rm -f "$OUT.md" "$RUN_SIDECAR"
+      record_playthrough_terminal receipt_binding_failed
+      cat "$OUT.receipt-bind-reproduce.log" >&2 || true
+      exit "$RECEIPT_BIND_FINAL_STATUS"
+    fi
+    REPORT_RECEIPT_BOUND=1
+  else
 
   # The sole repairable case is an otherwise complete report that omitted its
   # exit-interview block after a real journey exit. The resumed original session
@@ -1035,6 +1132,7 @@ if [[ "$VERIFY_STATUS" -ne 0 ]]; then
   fi
 
   REPORT_RECOVERED=1
+  fi
 fi
 
 if ! assert_launch_provenance_unchanged; then
@@ -1091,6 +1189,65 @@ if [[ "$REPORT_RECOVERED" == "1" ]]; then
   fi
 fi
 
+if [[ "$REPORT_RECEIPT_BOUND" == "1" ]]; then
+  RECEIPT_BINDING_METADATA_ARG="$(node_path_arg "$RECEIPT_BINDING_METADATA")"
+  set +e
+  ( cd "$GAME_DIR" && npm --silent exec tsx -- scripts/blind-receipt-binding.ts verify \
+    --envelope "$OUT_JSON_ARG" --run-evidence "$DURABLE_RUN_EVIDENCE_ARG" \
+    --original-report "$INITIAL_REPORT_MARKER_ARG" --bound-report "$REPORT_MD" \
+    --metadata "$PRIVATE_RECEIPT_BINDING_METADATA_ARG" ) \
+    >"$OUT.receipt-bind-published-evidence.log" 2>&1
+  PUBLISHED_RECEIPT_BIND_STATUS=$?
+  set -e
+  if [[ "$PUBLISHED_RECEIPT_BIND_STATUS" -ne 0 ]]; then
+    rm -f "$OUT.md" "$RUN_SIDECAR" "$DURABLE_RUN_EVIDENCE" "$RECEIPT_BINDING_METADATA"
+    record_playthrough_terminal publication_failed
+    cat "$OUT.receipt-bind-published-evidence.log" >&2 || true
+    exit "$PUBLISHED_RECEIPT_BIND_STATUS"
+  fi
+
+  set +e
+  "$NODE_CMD" -e '
+const fs = require("node:fs");
+const source = process.argv[1];
+const destination = process.argv[2];
+try {
+  fs.copyFileSync(source, destination, fs.constants.COPYFILE_EXCL);
+  if (!fs.readFileSync(source).equals(fs.readFileSync(destination))) {
+    throw new Error("published receipt-binding metadata differs from private metadata");
+  }
+} catch (error) {
+  try { fs.rmSync(destination, { force: true }); } catch {}
+  console.error(error instanceof Error ? error.message : String(error));
+  process.exit(1);
+}
+' "$PRIVATE_RECEIPT_BINDING_METADATA_ARG" "$RECEIPT_BINDING_METADATA_ARG" \
+    >"$OUT.receipt-bind-publish.log" 2>&1
+  RECEIPT_BIND_PUBLISH_STATUS=$?
+  set -e
+  if [[ "$RECEIPT_BIND_PUBLISH_STATUS" -ne 0 ]]; then
+    rm -f "$OUT.md" "$RUN_SIDECAR" "$DURABLE_RUN_EVIDENCE" "$RECEIPT_BINDING_METADATA"
+    record_playthrough_terminal publication_failed
+    cat "$OUT.receipt-bind-publish.log" >&2 || true
+    exit 4
+  fi
+
+  set +e
+  ( cd "$GAME_DIR" && npm --silent exec tsx -- scripts/blind-receipt-binding.ts verify \
+    --envelope "$OUT_JSON_ARG" --run-evidence "$DURABLE_RUN_EVIDENCE_ARG" \
+    --original-report "$INITIAL_REPORT_MARKER_ARG" --bound-report "$REPORT_MD" \
+    --metadata "$RECEIPT_BINDING_METADATA_ARG" ) \
+    >>"$OUT.receipt-bind-published-evidence.log" 2>&1
+  PUBLISHED_RECEIPT_BIND_METADATA_STATUS=$?
+  set -e
+  if [[ "$PUBLISHED_RECEIPT_BIND_METADATA_STATUS" -ne 0 ]]; then
+    rm -f "$OUT.md" "$RUN_SIDECAR" "$DURABLE_RUN_EVIDENCE" "$RECEIPT_BINDING_METADATA"
+    record_playthrough_terminal publication_failed
+    cat "$OUT.receipt-bind-published-evidence.log" >&2 || true
+    exit "$PUBLISHED_RECEIPT_BIND_METADATA_STATUS"
+  fi
+fi
+
 # Close the small check/copy race. Any late tracked drift removes every artifact
 # that could otherwise be mistaken for accepted retention evidence.
 if ! assert_launch_provenance_unchanged; then
@@ -1135,6 +1292,9 @@ if [[ "$REPORT_RECOVERED" == "1" ]]; then
   record_recovery_terminal passed
   record_playthrough_terminal verified_recovered
   echo "✓ Recovered a verifier-valid report from the ended journey (report-only; no tools)."
+elif [[ "$REPORT_RECEIPT_BOUND" == "1" ]]; then
+  record_playthrough_terminal verified_receipt_bound
+  echo "✓ Bound the exact server exit receipt into the Codex report (deterministic; no model turn)."
 else
   record_playthrough_terminal verified
 fi

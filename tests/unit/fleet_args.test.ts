@@ -607,6 +607,7 @@ ${JSON.stringify({ ...pureInterview, journey_exit_receipt: currentReceipt })}
         provider_events_sha256: _providerEventsSha256,
         provider_rollout_sha256: _providerRolloutSha256,
         provider_capture_sha256: _providerCaptureSha256,
+        receipt_binding_sha256: _receiptBindingSha256,
         ...historicalClaudeArtifactHashes
       } = pureFleetArtifactHashes(reportPath);
       const validAttestation = {
@@ -806,6 +807,7 @@ describe("fleet attempt evidence", () => {
         failed_attempts: 2,
         technical_timeouts: 1,
         report_recovered_runs: 1,
+        receipt_bound_runs: 0,
       });
     } finally {
       rmSync(root, { recursive: true, force: true });
