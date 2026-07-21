@@ -16,6 +16,7 @@ import {
   OVERWORLD_MAX_SUPPLIES,
   travelCondition,
 } from "./travel_mechanics.js";
+import { wolfHillRoutePresentation } from "./wolf_hill_route_presentation.js";
 
 export const OVERWORLD_QUEST_LAUNCH_VERSION = 1 as const;
 
@@ -139,6 +140,7 @@ export type OverworldQuestLaunchOptionView = Readonly<{
   summary: string;
   preview: string;
   consequence: string;
+  tradeoffSummary?: string;
   terms: OverworldQuestLaunchTerms;
   projection: OverworldQuestLaunchProjection | null;
 }>;
@@ -219,17 +221,26 @@ export function presentOverworldQuestLaunch(
   launch: OverworldQuestLaunch,
   resources?: OverworldQuestLaunchResources,
   selectedOptionId?: string,
+  knowledgeIds?: readonly string[],
 ): OverworldQuestLaunchView {
   const parsed = OverworldQuestLaunchSchema.parse(launch);
-  const options = parsed.options.map((option) => ({
-    id: option.id,
-    title: option.title,
-    summary: option.summary,
-    preview: option.preview,
-    consequence: option.consequence,
-    terms: { ...option.terms },
-    projection: resources ? projectOverworldQuestLaunchOption(option, resources) : null,
-  }));
+  const options = parsed.options.map((option) => {
+    const routePresentation = wolfHillRoutePresentation({
+      launchId: parsed.id,
+      optionId: option.id,
+      ...(knowledgeIds ? { knowledgeIds } : {}),
+    });
+    return {
+      id: option.id,
+      title: option.title,
+      summary: option.summary,
+      preview: routePresentation?.previewOverride ?? option.preview,
+      consequence: option.consequence,
+      ...(routePresentation ? { tradeoffSummary: routePresentation.tradeoffSummary } : {}),
+      terms: { ...option.terms },
+      projection: resources ? projectOverworldQuestLaunchOption(option, resources) : null,
+    };
+  });
   const selectedOption = selectedOptionId
     ? parsed.options.find((option) => option.id === selectedOptionId)
     : undefined;

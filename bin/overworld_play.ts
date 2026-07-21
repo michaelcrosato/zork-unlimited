@@ -125,6 +125,9 @@ export function renderQuestLaunch(quest: OverworldQuestView): string {
       projection?.available === false ? ` [blocked: ${projection.blockedReason}]` : "";
     lines.push(`  ${String(index + 1)}. ${option.title} — ${option.summary}${availability}`);
     lines.push(`     What you expect: ${option.preview}`);
+    if (option.tradeoffSummary) {
+      lines.push(`     Route tradeoff: ${option.tradeoffSummary}`);
+    }
     lines.push(`     Commitment: ${option.consequence}`);
     lines.push(
       `     Actual cost: ${String(option.terms.minutes)} min, ${String(option.terms.supplies)} ${option.terms.supplies === 1 ? "supply" : "supplies"}, fatigue +${String(option.terms.fatigue)}.`,

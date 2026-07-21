@@ -291,11 +291,16 @@ function questStartPreconditionFingerprint(
 
 export function previewOverworldQuestStart(state: OverworldQuestPrepareState): OverworldQuestView {
   const quest = questForOverworldQuestStart(state);
-  return questView(quest, {
-    minutes: state.minutes,
-    supplies: state.supplies,
-    fatigue: state.fatigue,
-  });
+  return questView(
+    quest,
+    {
+      minutes: state.minutes,
+      supplies: state.supplies,
+      fatigue: state.fatigue,
+    },
+    undefined,
+    state.character.knowledge,
+  );
 }
 
 export function planOverworldQuestStart(state: OverworldQuestStartState): OverworldQuestStartPlan {
@@ -343,7 +348,12 @@ export function prepareOverworldQuestStart(
   const fatigueAfter = launchApplication?.projection.fatigueAfter ?? state.fatigue;
   const characterAfter =
     launchApplication?.characterAfter ?? cloneCampaignCharacterState(state.character);
-  const questPresentation = questView(quest, resources, launchApplication?.option.id);
+  const questPresentation = questView(
+    quest,
+    resources,
+    launchApplication?.option.id,
+    state.character.knowledge,
+  );
   return {
     approachId,
     preconditionFingerprint: questStartPreconditionFingerprint(state, quest, approachId),

@@ -322,6 +322,7 @@
       ],
       "visible_feedback": [
         "Full, compact, browser, and MCP surfaces show the optional single-wagon interaction, equal five-minute cost, named provider, protected need, two exposed needs, consequence, exact inspect/choose arguments, and legal departure before commitment; the journal and persistent character state retain an accepted allocation afterward.",
+        "After allocation and before quest start, the bounded hill-route tradeoff summary recomputes both roads from that exact choice: Cade fodder suppresses only the exposed ridge's clean first-cast alarm, while the sheltered stockway explicitly remains unchanged.",
         "Wolf-Winter's imported flag, named pre-feed alarm result or mobile-crew action, visible pressure track, failure-preserving journal, and stabilized-dawn prose expose the selected field consumer without revealing internal effect ids.",
         "On a truthful byre-held return, Albany names either Jamie's staffed Market warm room or the returned mobile Campus cache, shows its 15-minute term, and records one-time consumption. Cade's field-only allocation truthfully produces neither return offer."
       ],
@@ -349,6 +350,7 @@
         "tests/regression/overworld_optional_departure_interactions.test.ts",
         "tests/regression/new_york_overworld.test.ts",
         "tests/regression/relief_allocation_migration_integrity.test.ts",
+        "tests/starting_slice/wolf_route_tradeoff_projection.test.ts",
         "traces/bugs/bug_0527_wolf_winter_relief_allocation.yaml"
       ],
       "counterfactual_test": "tests/starting_slice/relief_allocation_counterfactual.test.ts"
@@ -360,7 +362,7 @@
       "implementation_status": "implemented",
       "proof_status": "proven",
       "counts_toward_contract": true,
-      "visible_choice": "On the Station Quarter quest card, take the exposed ridge for 30 minutes, 1 supply, and 25 fatigue or the sheltered stockway for 75 minutes, 2 supplies, and 10 fatigue. The ridge previews a DC 10 first feed cast plus cattle alarm 1; the stockway previews a DC 12 cast plus a calm herd. Selecting either card is the single quest-start decision.",
+      "visible_choice": "On the Station Quarter quest card, take the exposed ridge for 30 minutes, 1 supply, and 25 fatigue or the sheltered stockway for 75 minutes, 2 supplies, and 10 fatigue. Before the single quest-start decision, a bounded route summary names the ridge's hill-lip alarm 0, final-descent alarm 1, DC 10 baseline and clean alarm-4/two-cattle loss, or its Cade-fodder clean alarm-3/whole-herd result; the stockway always names alarm 0/DC 12 and clean alarm 3/whole herd, explicitly unchanged by fodder.",
       "immediate_state_delta": [
         "world.minutes",
         "world.supplies",
@@ -372,11 +374,11 @@
       "delayed_consumers": [
         "The selected knowledge imports as exactly one route flag. It makes exactly one last-mile action legal, and taking the exposed descent starts cattle alarm at 1 while the sheltered gate leaves it at 0; contradictory flags authorize neither route.",
         "The first committed lure cast reads the route flag: exposed ridge uses DC 10 and sheltered stockway uses DC 12. At seed 9 only the ridge succeeds; the stockway permanently fouls the cast and exposes the authored split-rail recovery instead of an identical retry.",
-        "At seed 26 both first casts succeed. The ridge's clean three-cast line reaches alarm 4 and the two-cattle-scattered living-pack ending, while the stockway reaches alarm 3 and the whole-herd living-pack ending.",
+        "At seed 26 both first casts succeed. Without Cade fodder, the ridge's clean three-cast line reaches alarm 4 and the two-cattle-scattered living-pack ending, while the stockway reaches alarm 3 and the whole-herd living-pack ending. Cade fodder suppresses the ridge's clean first-cast step, producing alarm 3 and the whole herd, but does not alter the stockway.",
         "Exact launch cost, Hayden route memory, route-qualified decision proof, quest import receipt, and route return summary survive quest foldback and save/restore. Remaining overworld supplies, fatigue, and clock state continue into Albany travel and services."
       ],
       "visible_feedback": [
-        "Full MCP, compact MCP, browser, and CLI show each actual time/supply/fatigue cost, projected arrival, remaining supplies, resulting condition, field tradeoff, and blocked reason before commitment.",
+        "Full MCP, compact MCP, browser, and CLI show each actual time/supply/fatigue cost, projected arrival, remaining supplies, resulting condition, blocked reason, and one exact conditional field-tradeoff summary before commitment. The dedicated summary is bounded and never compact-truncated; with Cade fodder, the player projection replaces the baseline-only alarm-4 ridge sentence with current modifier copy while leaving authored and persisted proof unchanged.",
         "Arrival prose and the sole route action name the chosen road; the first cast shows its exact DC and no-retry result, and the visible cattle-alarm band exposes the threshold difference.",
         "The start journal, persistent character panel, RPG import receipt, ending, quest-completion journal, and restored snapshot retain the selected approach without exposing hidden effect ids in player projections."
       ],
@@ -412,6 +414,7 @@
         "tests/unit/world_quest_launch.test.ts",
         "tests/unit/world_quest_launch_resource_replay.test.ts",
         "tests/regression/hill_approach_migration_integrity.test.ts",
+        "tests/starting_slice/wolf_route_tradeoff_projection.test.ts",
         "traces/bugs/bug_0526_wolf_winter_hill_approach.yaml"
       ],
       "counterfactual_test": "tests/starting_slice/hill_approach_return_e2e.test.ts"

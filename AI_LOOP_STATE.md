@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 602 -->
+<!-- historical_cycle_count: 603 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - conditional_hill_route_tradeoff
+
+- Evidence choice: current-build players could see route costs but not the conditional cattle result before commitment, so this cycle derives one live tradeoff summary from the existing oath, evidence, preparation, allocation, and companion state without changing route math.
+- Surface: full/MCP, compact v26, CLI, and UI now show final time/supply/fatigue, arrival condition, lure DC, initial and descent alarm timing, whole-herd risk, and whether Cade's fodder changes that route; legacy tuple indices remain fixed and older saves append only the new field.
+- Counterfactual: exposed ridge is 30m/1 supply/+25 fatigue/DC10 and reaches alarm 1 on descent, ending a clean lure at alarm 4/two cattle scattered unless fodder caps it at 3; sheltered stockway is 75m/2 supplies/+10/DC12, stays at 0 on arrival, and ends clean at 3 with the herd whole regardless of fodder.
+- Pure evidence: exact clean `d55d7793` passed Terra 4328, Sol 4329, and Luna 4330; all completed Wolf-Winter at decisions 30/32/31, continued, were unstuck/replay-yes, and rated clarity/enjoyment 4/4, 3/4, and 4/5 respectively. A later operator-interrupted duplicate 4328 produced no report and is excluded.
+- Measured result: all three made preparation-coherent route choices; Sol and Luna explicitly chose sheltered because the new summary traded time/supply for rest and a calm herd, while Terra chose exposed backed by fodder and June. This is organic legibility evidence, not a randomized balance or diversity claim.
+- Feedback/follow-through: compile `20260721T120433Z` has 944 verified/58 rejected reports, 193 eligible pure exits, and 169 continuing; dense/repetitive setup remains the fresh cross-cohort presentation debt, followed by the repeated paling-rail action.
+- Guard: exact pre/post crawl is zero-finding at 247/247 nodes, 344/344 edges, and 12/12 boards/quests; health passes 402 files/3,080 tests plus UI/all packs, the world hash stays `9238b5f2…`, and independent review found no P0-P2.
 
 ### Cycle result - albany_return_opportunity_affordance
 
@@ -154,13 +164,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Measured result: finite recovery PASSes directly in blind play without erasing the failed check; character-stat continuity remains a separate S2, and compact truncation, Albany density, Rowan duplication, and the unnamed road resolver remain open.
 - Feedback/follow-through: the ledger is 907 accepted/59 rejected; only two reports are new since compile `20260720T190413Z`, below the three-report compile threshold. Expose the pending-road action next, then address persistent-to-quest character continuity.
 - Guard: feature commit `04f85b98` has zero-finding crawl `20260720T183221Z` at 247/247 nodes, 344/344 edges, and 12/12 boards/quests; health passes 389 files/2,973 tests plus UI/all packs, and both exact report sidecars independently verify.
-
-### Cycle result - field_timed_preparation
-
-- Evidence choice: the exact ten-Terra summary-card cohort completed 10/10 but called setup dense 10/10, so this cycle tested moving choices beside their field consumers instead of adding more explanation.
-- Surface: Civic registration now commits only role, duty, and evidence; preparation and relief allocation occur at Albany Station Quarter immediately before departure, with phase-specific briefings and migration/replay compatibility for trusted predecessors.
-- Pure evidence: six clean exact-build exits completed Wolf-Winter 6/6, were 0 stuck and 6/6 replay-yes, and continued past the first goal 5/6; clarity averaged 3.33/5 and enjoyment 4.0/5, with five lure/diversion outcomes and one fortification.
-- Measured result: contextual timing PASSes as a truthful scene break, but opening-density relief remains FAIL/unproven because mandatory choice count is unchanged and density recurred; a 122-decision Luna diagnostic completed five goals but timed out before interview and is excluded.
-- Follow-through: Wolf copy now needs genuine four-plan comparison plus clearer Scout/Station handoff; separate verified debt includes Gallowmere no-progress Tracking retries, Rowan continuity, decision-40 quest-start interruption, and compact ending loss.
-- Feedback/self-critique: compile `20260720T160358Z` has 896 verified reports, 145 current-contract pure exits, and 122 continuing; the ledger is 895 accepted/59 rejected. This is not the greater-than-BG3 milestone, and the final three-strategy/retention authority gates remain open.
-- Guard: crawl `20260720T151018Z` is zero-finding at 247/247 nodes, 344/344 edges, and 12/12 boards/quests; health passes 388 files/2,972 tests plus UI/all packs, and the real departure dialog passed browser smoke with no console warning or error.

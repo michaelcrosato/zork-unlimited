@@ -5,46 +5,50 @@ Generated deterministically from verified blind reports. The latest entries stay
 ## Summary
 
 - Reports dir: `blind-tester/reports`
-- Accepted reports: 939
+- Accepted reports: 943
 - Rejected or ignored markdown reports: 59
-- Latest report stamp: 20260721T094128Z
+- Latest report stamp: 20260721T114710Z
 - Recent entry limit: 100
-- Archived accepted entries collapsed into traits: 839
+- Archived accepted entries collapsed into traits: 843
 
 ## Recent Common Traits
 
-| Count | Latest           | Category     | Trait                                                                                                              | Sources   |
-| ----: | ---------------- | ------------ | ------------------------------------------------------------------------------------------------------------------ | --------- |
-|     8 | 20260721T045811Z | replay       | player would not replay                                                                                            | overworld |
-|     4 | 20260721T060633Z | confusion    | Dense permanent setup choices                                                                                      | overworld |
-|     3 | 20260721T075230Z | confusion    | Dense permanent-choice setup                                                                                       | overworld |
-|     3 | 20260721T060633Z | confusion    | Truncated compact consequences                                                                                     | overworld |
-|     2 | 20260721T094128Z | confusion    | Dense pre-departure consequence text                                                                               | overworld |
-|     2 | 20260721T082141Z | confusion    | Dense permanent-choice onboarding                                                                                  | overworld |
-|     2 | 20260721T021443Z | confusion    | Dense permanent-choice consequences                                                                                | overworld |
-|     2 | 20260721T021443Z | confusion    | Truncated compact consequence text                                                                                 | overworld |
-|     2 | 20260720T235307Z | confusion    | Checkpoint interrupted an active quest                                                                             | overworld |
-|     2 | 20260720T203824Z | confusion    | Dense early permanent-choice setup                                                                                 | overworld |
-|     2 | 20260720T185642Z | confusion    | Raw embedded-quest action IDs                                                                                      | overworld |
-|     2 | 20260720T183223Z | confusion    | Dense permanent registration choices                                                                               | overworld |
-|     2 | 20260719T183208Z | confusion    | Repeated Rowan Quill identity                                                                                      | overworld |
-|     1 | 20260721T094128Z | bug S1       | Albany Station Quarter: Long sequential setup choices create heavy reading friction before play begins.            | overworld |
-|     1 | 20260721T094128Z | bug S1       | Broken Paling: One generic rail action represents multiple distinct recovery stages.                               | overworld |
-|     1 | 20260721T094128Z | confusion    | Rail action changes purpose across stages                                                                          | overworld |
-|     1 | 20260721T094128Z | worst moment | Parsing the large stack of conditional departure options before the quest began.                                   | overworld |
-|     1 | 20260721T092721Z | bug S1       | Journey exit character state: Hayden's packet-return promise remained active despite the apparent truthful return. | overworld |
-|     1 | 20260721T092721Z | bug S1       | Overworld choice previews: Compact player-facing text truncated parts of important consequences.                   | overworld |
-|     1 | 20260721T092721Z | bug S1       | Wolf-Winter Broken Paling: The same use_paling_rail label covered attempt, recovery, and redirect stages.          | overworld |
-|     1 | 20260721T092721Z | bug S1       | Wolf-Winter embedded-quest start: Legal-action listing rejected the natural parent-plus-child handle combination.  | overworld |
-|     1 | 20260721T092721Z | bug S1       | Wolf-Winter June dialogue: Acknowledgment choices only closed dialogue without confirming the selected response.   | overworld |
-|     1 | 20260721T092721Z | confusion    | Embedded legal-action listing unexpectedly required only the child handle                                          | overworld |
-|     1 | 20260721T092721Z | confusion    | Hayden's return-packet promise remained active at journey end                                                      | overworld |
-|     1 | 20260721T092721Z | confusion    | One rail action label represented three different operations                                                       | overworld |
+| Count | Latest           | Category     | Trait                                                                                                                    | Sources   |
+| ----: | ---------------- | ------------ | ------------------------------------------------------------------------------------------------------------------------ | --------- |
+|     8 | 20260721T045811Z | replay       | player would not replay                                                                                                  | overworld |
+|     4 | 20260721T060633Z | confusion    | Dense permanent setup choices                                                                                            | overworld |
+|     3 | 20260721T075230Z | confusion    | Dense permanent-choice setup                                                                                             | overworld |
+|     3 | 20260721T060633Z | confusion    | Truncated compact consequences                                                                                           | overworld |
+|     2 | 20260721T111828Z | confusion    | Checkpoint pause interrupted an active quest                                                                             | overworld |
+|     2 | 20260721T082141Z | confusion    | Dense permanent-choice onboarding                                                                                        | overworld |
+|     2 | 20260721T021443Z | confusion    | Dense permanent-choice consequences                                                                                      | overworld |
+|     2 | 20260721T021443Z | confusion    | Truncated compact consequence text                                                                                       | overworld |
+|     2 | 20260720T235307Z | confusion    | Checkpoint interrupted an active quest                                                                                   | overworld |
+|     2 | 20260720T203824Z | confusion    | Dense early permanent-choice setup                                                                                       | overworld |
+|     2 | 20260720T185642Z | confusion    | Raw embedded-quest action IDs                                                                                            | overworld |
+|     2 | 20260720T183223Z | confusion    | Dense permanent registration choices                                                                                     | overworld |
+|     2 | 20260719T183208Z | confusion    | Repeated Rowan Quill identity                                                                                            | overworld |
+|     1 | 20260721T114710Z | bug S1       | Compact overworld and quest responses: Important authored consequences and ending prose were sometimes visibly trunca... | overworld |
+|     1 | 20260721T114710Z | bug S1       | The Gallowmere — quest start: The persistent Road-Warden's skills and equipment had no import, weakening character co... | overworld |
+|     1 | 20260721T114710Z | bug S1       | Wolf-Winter — Broken Paling: One unchanged action id represented two distinct required rail-recovery stages.             | overworld |
+|     1 | 20260721T114710Z | confusion    | Front-loaded choice text was repetitive and dense                                                                        | overworld |
+|     1 | 20260721T114710Z | confusion    | Several compact quest phrases were hard to parse                                                                         | overworld |
+|     1 | 20260721T114710Z | confusion    | The same paling-rail action had to be used twice for different stages                                                    | overworld |
+|     1 | 20260721T114710Z | confusion    | The second quest reset to scenario-local stats and equipment                                                             | overworld |
+|     1 | 20260721T114710Z | worst moment | Parsing the long chain of overlapping registration, duty, evidence, preparation, allocation, ally, and route conseque... | overworld |
+|     1 | 20260721T114626Z | bug S1       | Charter Office and Guild Records: Taking official books feels narratively wrong instead of requesting certified copies.  | overworld |
+|     1 | 20260721T114626Z | bug S1       | Overworld travel/resource boundary: Repeating the same visible passage is safe but mildly opaque.                        | overworld |
+|     1 | 20260721T114626Z | confusion    | Civic-center exploration required before the market quest appeared                                                       | overworld |
+|     1 | 20260721T114626Z | confusion    | Repeated goal passage after a resource-boundary stop                                                                     | overworld |
 
 ## Recent Entries
 
 | Stamp            | Source    | Seed | Mode | Decisions | C/E | Stuck | Replay | Report                                                        | Signal                                                                                                                                                                      |
 | ---------------- | --------- | ---: | ---- | --------: | --- | ----- | ------ | ------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 20260721T114710Z | overworld | 4329 | pure |        57 | 3/4 | no    | yes    | `blind-tester/reports/20260721T114710Z_overworld_seed4329.md` | confusions: Front-loaded choice text was repetitive and dense; Several compact quest phrases were hard to parse; The same paling-rail action had to be used twice for d...  |
+| 20260721T114626Z | overworld | 4330 | pure |       141 | 4/5 | no    | yes    | `blind-tester/reports/20260721T114626Z_overworld_seed4330.md` | confusions: Repeated goal passage after a resource-boundary stop; Civic-center exploration required before the market quest appeared; Taking official registers felt li...  |
+| 20260721T114246Z | overworld | 4328 | pure |        55 | 4/4 | no    | yes    | `blind-tester/reports/20260721T114246Z_overworld_seed4328.md` | confusions: Dense compact-state legend; Overly mechanical consequence previews; Checkpoint interrupts active quest flow \| bugs: S1 The Wolf-Winter, Fodder-Loft: The se... |
+| 20260721T111828Z | overworld | 4325 | pure |        52 | 4/4 | no    | yes    | `blind-tester/reports/20260721T111828Z_overworld_seed4325.md` | confusions: Permanent registration choices precede the basic play loop; Departure preparation exposes many conditional branches at once; Checkpoint pause interrupted a...  |
 | 20260721T094128Z | overworld | 4324 | pure |        31 | 4/4 | no    | yes    | `blind-tester/reports/20260721T094128Z_overworld_seed4324.md` | confusions: Dense pre-departure consequence text; Rail action changes purpose across stages \| bugs: S1 Broken Paling: One generic rail action represents multiple disti... |
 | 20260721T092721Z | overworld | 4323 | pure |        57 | 4/4 | no    | yes    | `blind-tester/reports/20260721T092721Z_overworld_seed4323.md` | confusions: Embedded legal-action listing unexpectedly required only the child handle; Several consequential previews were truncated; One rail action label represented...  |
 | 20260721T092212Z | overworld | 4322 | pure |        48 | 4/4 | no    | yes    | `blind-tester/reports/20260721T092212Z_overworld_seed4322.md` | confusions: Dense first-mission preparation text; Overlapping fortification recovery rules \| bugs: S1 Albany Station Quarter departure planning: Long, jargon-heavy con... |
@@ -141,10 +145,6 @@ Generated deterministically from verified blind reports. The latest entries stay
 | 20260719T145523Z | overworld | 4163 | pure |        40 | 4/4 | no    | yes    | `blind-tester/reports/20260719T145523Z_overworld_seed4163.md` | confusions: Dense permanent-choice consequences before the first mission; Feed sack appears only after revisiting the store-shed \| bugs: S1 Cade's byre-yard after comm... |
 | 20260719T145523Z | overworld | 4162 | pure |        43 | 3/4 | no    | yes    | `blind-tester/reports/20260719T145523Z_overworld_seed4162.md` | confusions: Player-facing IDs did not match required tool field names; Dense five-step pre-quest dispatch setup; Optional field-team choice was easy to overlook \| bugs... |
 | 20260719T145523Z | overworld | 4161 | pure |        47 | 3/4 | no    | yes    | `blind-tester/reports/20260719T145523Z_overworld_seed4161.md` | confusions: Public-seal fortification text contradicted the broken full-duty promise; Dense pre-mission consequence cards; Two legal quest actions returned blank resul...  |
-| 20260719T145523Z | overworld | 4160 | pure |        53 | 3/4 | no    | yes    | `blind-tester/reports/20260719T145523Z_overworld_seed4160.md` | confusions: Child-session tools accepted session_id despite guidance naming rpg_session_id; Pre-dispatch consequences were overly dense \| bugs: S1 The Wolf-Winter embe... |
-| 20260719T140206Z | overworld | 4149 | pure |        40 | 3/4 | no    | yes    | `blind-tester/reports/20260719T140206Z_overworld_seed4149.md` | confusions: Dense permanent-choice prose; Player-tool argument-name mismatch; Frost-report and crawlboard inconsistency \| bugs: S2 The Wolf-Winter, Fodder-Loft: The un... |
-| 20260719T140206Z | overworld | 4148 | pure |        50 | 4/4 | no    | yes    | `blind-tester/reports/20260719T140206Z_overworld_seed4148.md` | confusions: Route and contact identifiers did not match tool field names; Wolf-Winter preview did not reflect active modifiers; Hayden's route still used Jamie's adver...  |
-| 20260719T140206Z | overworld | 4147 | pure |        34 | 4/4 | no    | yes    | `blind-tester/reports/20260719T140206Z_overworld_seed4147.md` | confusions: Dense pre-departure consequence text; Committed feed appears after revisiting the store                                                                         |
 
 ## Archived Trait Categories
 

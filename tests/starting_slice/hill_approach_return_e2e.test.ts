@@ -323,6 +323,14 @@ function assertFullLaunch(
     session_id: launched.rpg_session_id,
     include_state: true,
   }).state;
+  expect(initial.vars.cattle_alarm).toBe(0);
+  expect(
+    launched.rpg_session.observation.pressure_tracks?.find((track) => track.id === "cattle_alarm"),
+  ).toMatchObject({
+    id: "cattle_alarm",
+    value: 0,
+    band: { label: "Steady" },
+  });
   expect(initial.campaignImportReceipt?.applied_rules).toEqual([
     spec.importRule,
     "import:wolf_winter_full_compact_duty",
