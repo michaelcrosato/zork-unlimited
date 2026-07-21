@@ -36,6 +36,8 @@ export type RpgModelIndex = {
   homeRoom: Map<string, string>;
   containerOf: Map<string, string>;
   objectsWithUseInteractions: GameObject[];
+  /** Target-only USE hubs whose authored rows each have a distinct natural verb. */
+  verbIdentifiedTargetOnlyUseTargets: ReadonlySet<string>;
 };
 
 export function indexRpgModel(pack: RpgPack): RpgModelIndex {
@@ -52,6 +54,41 @@ export function indexRpgModel(pack: RpgPack): RpgModelIndex {
   const objectsWithUseInteractions = pack.objects.filter((o) =>
     o.interactions.some((it) => it.verb === "USE" && it.target !== undefined),
   );
+  const targetOnlyUseVerbs = new Map<string, (string | undefined)[]>();
+  const selfUseTargets = new Set<string>();
+  for (const object of objectsWithUseInteractions) {
+    for (const interaction of object.interactions) {
+      if (
+        interaction.verb === "USE" &&
+        interaction.item !== undefined &&
+        interaction.item === interaction.target
+      ) {
+        selfUseTargets.add(interaction.target);
+      }
+      if (
+        interaction.verb !== "USE" ||
+        interaction.item !== undefined ||
+        interaction.target === undefined
+      ) {
+        continue;
+      }
+      const verbs = targetOnlyUseVerbs.get(interaction.target) ?? [];
+      verbs.push(interaction.command_verb);
+      targetOnlyUseVerbs.set(interaction.target, verbs);
+    }
+  }
+  const verbIdentifiedTargetOnlyUseTargets = new Set<string>();
+  for (const [target, verbs] of targetOnlyUseVerbs) {
+    const authoredVerbs = verbs.filter((verb): verb is string => verb !== undefined);
+    if (
+      verbs.length > 1 &&
+      authoredVerbs.length === verbs.length &&
+      new Set(authoredVerbs).size === verbs.length &&
+      !selfUseTargets.has(target)
+    ) {
+      verbIdentifiedTargetOnlyUseTargets.add(target);
+    }
+  }
   return {
     pack,
     rooms,
@@ -61,6 +98,7 @@ export function indexRpgModel(pack: RpgPack): RpgModelIndex {
     homeRoom,
     containerOf,
     objectsWithUseInteractions,
+    verbIdentifiedTargetOnlyUseTargets,
   };
 }
 

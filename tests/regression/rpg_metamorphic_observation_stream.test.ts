@@ -186,13 +186,88 @@ function mapIdFn(relabeler: RpgRelabeler): (id: string) => string {
 }
 
 /**
- * Derive the enumerated action `id` an RPG observation gives an action — the SAME formula
- * the runner uses: `enumerateRpgActions` (src/rpg/runner.ts) appends `attack_<enemy>` to
- * the parser `enumerateActions` set (src/parser/legal_actions.ts). Applied to an ORIGINAL
- * action it must reproduce the production id (cross-checked in the walk); applied to a
- * bijection-MAPPED action it yields the corresponding twin id.
+ * Derive the enumerated action `id` from its structured action plus invariant command
+ * vocabulary — the SAME formula the runner uses. The index independently identifies
+ * target-only USE hubs whose authored verbs are one-to-one. Applied to an ORIGINAL action
+ * it must reproduce the production id (cross-checked in the walk); applied to a
+ * bijection-MAPPED action and twin index it yields the corresponding twin id.
  */
-function rpgOptionId(a: RpgAction): string {
+const verbIdentifiedUseVerbCache = new WeakMap<
+  RpgIndex,
+  ReadonlyMap<string, ReadonlySet<string>>
+>();
+
+/** Independently derive the structural target-only USE identity policy. Keeping this
+ * local makes the oracle catch drift in the production index instead of trusting it. */
+function verbIdentifiedUseVerbs(index: RpgIndex): ReadonlyMap<string, ReadonlySet<string>> {
+  const cached = verbIdentifiedUseVerbCache.get(index);
+  if (cached) return cached;
+
+  const targetOnlyUseVerbs = new Map<string, (string | undefined)[]>();
+  const selfUseTargets = new Set<string>();
+  for (const object of index.objectsWithUseInteractions) {
+    for (const interaction of object.interactions) {
+      if (
+        interaction.verb === "USE" &&
+        interaction.item !== undefined &&
+        interaction.item === interaction.target
+      ) {
+        selfUseTargets.add(interaction.target);
+      }
+      if (
+        interaction.verb !== "USE" ||
+        interaction.item !== undefined ||
+        interaction.target === undefined
+      ) {
+        continue;
+      }
+      const verbs = targetOnlyUseVerbs.get(interaction.target) ?? [];
+      verbs.push(interaction.command_verb);
+      targetOnlyUseVerbs.set(interaction.target, verbs);
+    }
+  }
+
+  const targets = new Map<string, ReadonlySet<string>>();
+  for (const [target, verbs] of targetOnlyUseVerbs) {
+    const authoredVerbs = verbs.filter((verb): verb is string => verb !== undefined);
+    if (
+      verbs.length > 1 &&
+      authoredVerbs.length === verbs.length &&
+      new Set(authoredVerbs).size === verbs.length &&
+      !selfUseTargets.has(target)
+    ) {
+      targets.set(target, new Set(authoredVerbs));
+    }
+  }
+  verbIdentifiedUseVerbCache.set(index, targets);
+  return targets;
+}
+
+function structuralUseOptionId(
+  index: RpgIndex,
+  action: Extract<RpgAction, { type: "USE" }>,
+  commandVerb: string | undefined,
+): string {
+  const legacyId =
+    action.item === undefined
+      ? `use_${action.target}`
+      : action.item === action.target
+        ? `use_${action.item}`
+        : `use_${action.item}_on_${action.target}`;
+  if (action.item !== undefined) {
+    return legacyId;
+  }
+  const authoredVerbs = verbIdentifiedUseVerbs(index).get(action.target);
+  if (!authoredVerbs) return legacyId;
+  if (commandVerb === undefined || !authoredVerbs.has(commandVerb)) {
+    throw new Error(
+      `verb-identified USE ${String(commandVerb)}_${action.target} has no unique authored row`,
+    );
+  }
+  return `${commandVerb}_${action.target}`;
+}
+
+function rpgOptionId(index: RpgIndex, a: RpgAction, command: string): string {
   switch (a.type) {
     case "ATTACK":
       return `attack_${a.enemy}`;
@@ -213,11 +288,7 @@ function rpgOptionId(a: RpgAction): string {
     case "DROP":
       return `drop_${a.item}`;
     case "USE":
-      return a.item === undefined
-        ? `use_${a.target}`
-        : a.item === a.target
-          ? `use_${a.item}`
-          : `use_${a.item}_on_${a.target}`;
+      return structuralUseOptionId(index, a, command.trim().split(/\s+/, 1)[0]);
     case "MOVE":
       return `go_${a.direction}`;
     case "TALK":
@@ -282,8 +353,10 @@ function relabelAction(a: RpgAction, mapId: (id: string) => string): RpgAction {
 function relabelBlockedActionId(
   id: string,
   index: RpgIndex,
+  twinIndex: RpgIndex,
   mapId: (id: string) => string,
 ): string {
+  const mappedIds = new Set<string>();
   for (const object of index.objectsWithUseInteractions) {
     for (const interaction of object.interactions) {
       if (!interaction.blocked_hint || interaction.target === undefined) continue;
@@ -291,10 +364,19 @@ function relabelBlockedActionId(
         interaction.item === undefined
           ? { type: "USE", target: interaction.target }
           : { type: "USE", item: interaction.item, target: interaction.target };
-      if (rpgOptionId(action) === id) return rpgOptionId(relabelAction(action, mapId));
+      if (action.type !== "USE") throw new Error("blocked action source must be USE");
+      if (structuralUseOptionId(index, action, interaction.command_verb) !== id) continue;
+      const mappedAction = relabelAction(action, mapId);
+      if (mappedAction.type !== "USE") throw new Error("mapped blocked action must be USE");
+      mappedIds.add(structuralUseOptionId(twinIndex, mappedAction, interaction.command_verb));
     }
   }
-  throw new Error(`blocked action id "${id}" has no authored blocked USE interaction`);
+  if (mappedIds.size === 1) return [...mappedIds][0]!;
+  throw new Error(
+    mappedIds.size === 0
+      ? `blocked action id "${id}" has no authored blocked USE interaction`
+      : `blocked action id "${id}" maps ambiguously to ${[...mappedIds].join(", ")}`,
+  );
 }
 
 /** Push an original RPG observation through the bijection to its expected twin form. Ids
@@ -304,6 +386,7 @@ function relabelBlockedActionId(
 function relabelObservation(
   o: RpgObservation,
   index: RpgIndex,
+  twinIndex: RpgIndex,
   mapId: (id: string) => string,
 ): RpgObservation {
   return {
@@ -320,7 +403,7 @@ function relabelObservation(
     ),
     blocked_exits: o.blocked_exits.map((b) => ({ direction: b.direction, message: b.message })),
     blocked_actions: o.blocked_actions.map((action) => ({
-      id: relabelBlockedActionId(action.id, index, mapId),
+      id: relabelBlockedActionId(action.id, index, twinIndex, mapId),
       command: action.command,
       reason: action.reason,
     })),
@@ -350,7 +433,7 @@ function relabelObservation(
       // The surfaced skill name is an author var (e.g. `might`) → it IS in the bijection
       // and must map through, exactly like the var keys in `state.vars` above (bug_0274).
       return {
-        id: rpgOptionId(action),
+        id: rpgOptionId(twinIndex, action, a.command),
         command: a.command,
         action,
         ...(a.skill_check
@@ -448,7 +531,7 @@ function walkInLockStep(
     // test's formula ever drifts from the runner, it fails HERE rather than masking a real
     // divergence below.
     for (const a of origObs.available_actions) {
-      const expectedId = rpgOptionId(a.action);
+      const expectedId = rpgOptionId(origIndex, a.action, a.command);
       // Keep Vitest's useful mismatch diagnostic without constructing a matcher for each of
       // the millions of passing action-id checks in the largest shipped graph.
       if (expectedId !== a.id) {
@@ -466,7 +549,7 @@ function walkInLockStep(
     // states wolf_winter reaches — the heaviest REDUCIBLE cost in this oracle (the engine stepping
     // that drives the walk is irreducible). This oracle is the suite's long pole, and the slow
     // compare was tipping it past its timeout under CI load.
-    const expectedTwin = canonical(relabelObservation(origObs, origIndex, mapId));
+    const expectedTwin = canonical(relabelObservation(origObs, origIndex, twinIndex, mapId));
     const actualTwin = canonical(twinObs);
     if (!isDeepStrictEqual(expectedTwin, actualTwin)) {
       expect(

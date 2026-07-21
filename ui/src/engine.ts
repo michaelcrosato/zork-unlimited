@@ -28,6 +28,7 @@ import {
   enumerateRpgActions,
   type RpgIndex,
 } from "../../src/rpg/runner.js";
+import { rpgActionOptionForInputId } from "../../src/rpg/legal_actions.js";
 import {
   parseCampaignCharacterState,
   type CampaignCharacterState,
@@ -184,7 +185,7 @@ export class GameSession {
 
   /** Map a choice id from the current view to its structured Action. */
   private actionFor(id: string): ReturnType<typeof enumerateRpgActions>[number] | null {
-    return enumerateRpgActions(this.index, this.state).find((option) => option.id === id) ?? null;
+    return rpgActionOptionForInputId(enumerateRpgActions(this.index, this.state), id);
   }
 
   /** The current UI view (the only thing a player sees). */

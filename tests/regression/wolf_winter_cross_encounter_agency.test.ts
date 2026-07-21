@@ -75,7 +75,7 @@ function reachFunnel(playerRoll: number, yearlingRoll = 6): GameState {
   ]) {
     state = act(state, id);
   }
-  state = act(state, "use_paling_rail", 20);
+  state = act(state, "wedge_paling_rail", 20);
   state = act(state, "maneuver_yearling_wolf_set_spear", yearlingRoll, 6);
   if (!state.flags.yearling_down) {
     state = act(state, "maneuver_yearling_wolf_drive_set_spear", 1);

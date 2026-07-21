@@ -136,8 +136,8 @@ function foulFirstCast(state: GameState): GameState {
 
 function foulAndRecoverAlive(state: GameState): GameState {
   state = foulFirstCast(state);
-  state = act(state, "use_paling_rail", 1);
-  state = act(state, "use_paling_rail");
+  state = act(state, "wedge_paling_rail", 1);
+  state = act(state, "bind_paling_rail");
   state = act(state, "use_split_rail_guard_on_downwind_feed_line");
   expect(state.flags.yearling_redirected).toBe(true);
   return state;
@@ -335,9 +335,9 @@ describe("SS-F04 — June Pike authored ally gameplay", () => {
     expect(buildRpgObservation(index, acknowledged).description).toMatch(
       /combat funnel[^]*does not turn the wolf alive/i,
     );
-    acknowledged = act(acknowledged, "use_paling_rail", 20);
+    acknowledged = act(acknowledged, "wedge_paling_rail", 20);
     expect(acknowledged.flags.breach_braced).toBe(true);
-    expect(actionIds(acknowledged)).not.toContain("use_paling_rail");
+    expect(actionIds(acknowledged)).not.toContain("wedge_paling_rail");
     expect(
       actionIds(acknowledged).some(
         (id) => id === "attack_yearling_wolf" || id.startsWith("maneuver_yearling_wolf_"),
@@ -354,7 +354,7 @@ describe("SS-F04 — June Pike authored ally gameplay", () => {
     let state = foulFirstCast(optionState(ACCEPT));
     const scoreBeforeRail = state.vars.score ?? 0;
 
-    state = act(state, "use_paling_rail", 20);
+    state = act(state, "wedge_paling_rail", 20);
     expect(state.flags).toMatchObject({
       lure_trail_fouled: true,
       breach_braced: true,
@@ -364,7 +364,7 @@ describe("SS-F04 — June Pike authored ally gameplay", () => {
     expect(state.vars.score ?? 0).toBe(scoreBeforeRail);
     expect(
       buildRpgObservation(index, state).available_actions.find(
-        (option) => option.id === "use_paling_rail",
+        (option) => option.id === "turn_paling_rail",
       )?.command,
     ).toMatch(/turn.*braced scent-pen/i);
 
@@ -375,12 +375,12 @@ describe("SS-F04 — June Pike authored ally gameplay", () => {
     expect(hybrid.flags.yearling_down).not.toBe(true);
     expect(hybrid.flags.june_blood_condition_broken).not.toBe(true);
     expect(actionIds(hybrid)).toContain("attack_yearling_wolf");
-    expect(actionIds(hybrid)).not.toContain("use_paling_rail");
+    expect(actionIds(hybrid)).not.toContain("turn_paling_rail");
     expect(buildRpgObservation(index, hybrid).description).toMatch(
       /first spear stroke committed the hybrid line[^]*recoveries are closed/i,
     );
 
-    state = act(state, "use_paling_rail");
+    state = act(state, "turn_paling_rail");
     expect(state.flags).toMatchObject({
       yearling_redirected: true,
       yearling_redirected_with_braced_rail: true,
@@ -389,7 +389,7 @@ describe("SS-F04 — June Pike authored ally gameplay", () => {
     expect(state.flags.june_blood_condition_broken).not.toBe(true);
     expect(state.vars.score).toBe(scoreBeforeRail + 10);
     expect(actionIds(state)).not.toContain("attack_yearling_wolf");
-    expect(actionIds(state)).not.toContain("use_paling_rail");
+    expect(actionIds(state)).not.toContain("turn_paling_rail");
 
     state = reachLeaderAfterLivingRecovery(state);
     state = act(state, "talk_june_pike");
@@ -451,14 +451,14 @@ describe("SS-F04 — June Pike authored ally gameplay", () => {
     });
 
     const freshFoul = foulFirstCast(optionState(ACCEPT));
-    expect(actionIds(freshFoul)).toContain("use_paling_rail");
+    expect(actionIds(freshFoul)).toContain("wedge_paling_rail");
     const freshHybrid = act(freshFoul, "maneuver_yearling_wolf_commit_hybrid_strike", 1, 1);
     expect(freshHybrid.flags.lure_hybrid_combat_entered).toBe(true);
-    expect(actionIds(freshHybrid)).not.toContain("use_paling_rail");
+    expect(actionIds(freshHybrid)).not.toContain("wedge_paling_rail");
 
     let state = foulFirstCast(optionState(ACCEPT));
-    state = act(state, "use_paling_rail", 1);
-    state = act(state, "use_paling_rail");
+    state = act(state, "wedge_paling_rail", 1);
+    state = act(state, "bind_paling_rail");
     expect(actionIds(state)).toContain("use_split_rail_guard_on_downwind_feed_line");
     expect(actionIds(state)).toContain("maneuver_yearling_wolf_commit_hybrid_strike");
     expect(actionIds(state)).not.toContain("attack_yearling_wolf");
@@ -467,7 +467,7 @@ describe("SS-F04 — June Pike authored ally gameplay", () => {
     expect(state.flags.yearling_down).not.toBe(true);
     expect(state.flags.june_blood_condition_broken).not.toBe(true);
     expect(actionIds(state)).toContain("attack_yearling_wolf");
-    expect(actionIds(state)).not.toContain("use_paling_rail");
+    expect(actionIds(state)).not.toContain("bind_paling_rail");
     expect(actionIds(state)).not.toContain("use_split_rail_guard_on_downwind_feed_line");
     state = act(state, "attack_yearling_wolf", 6);
     expect(state.flags.yearling_down).toBe(true);

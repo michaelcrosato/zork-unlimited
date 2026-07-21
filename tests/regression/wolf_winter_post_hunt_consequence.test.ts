@@ -106,8 +106,8 @@ function finishLeaderWithoutResource(state: GameState): GameState {
 /** Reach old grey's corpse with the failed rail still bound across the spear. */
 function retainSplitGuard(): GameState {
   let state = act(fullyPrepared(), "go_north");
-  state = act(state, "use_paling_rail", 1);
-  state = act(state, "use_paling_rail");
+  state = act(state, "wedge_paling_rail", 1);
+  state = act(state, "bind_paling_rail");
   state = act(state, "maneuver_yearling_wolf_set_spear", 6);
   state = act(state, "go_north");
   state = act(state, "maneuver_flank_wolf_offside_cut", 6);
@@ -121,7 +121,7 @@ function retainSplitGuard(): GameState {
 /** Reach old grey's corpse with the funnel's brace-stake still sound and unspent. */
 function retainBraceStake(): GameState {
   let state = act(fullyPrepared(), "go_north");
-  state = act(state, "use_paling_rail", 20);
+  state = act(state, "wedge_paling_rail", 20);
   state = act(state, "maneuver_yearling_wolf_set_spear", 6);
   state = act(state, "go_north");
   state = act(state, "maneuver_flank_wolf_funnel_thrust", 3, 6);

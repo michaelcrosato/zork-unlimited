@@ -129,7 +129,7 @@ describe("wolf_winter rooms react to preparation object state", () => {
 
     expect(rail?.takeable).not.toBe(true);
     expect(s.inventory).not.toContain("paling_rail");
-    expect(ids).toContain("use_paling_rail");
+    expect(ids).toContain("wedge_paling_rail");
     expect(ids).not.toContain("take_paling_rail");
     expect(ids).not.toContain("drop_paling_rail");
     expect(desc(s)).toContain("fallen clear into the snow at your feet");
