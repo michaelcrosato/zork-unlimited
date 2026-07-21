@@ -296,10 +296,30 @@ export type JourneyGoalPassagePresentation = Readonly<{
   stopRule: string;
 }>;
 
+export const JOURNEY_OPPORTUNITY_GUIDANCE =
+  "When town actions are available: Here now — finish setup, then investigate/work. Mapped district — if away, return, then walk there. Route not yet mapped — if away, return, then Explore Area to reveal routes. Or leave these leads for later." as const;
+
+export type JourneyOpportunityAccess = "here" | "mapped" | "route_unmapped";
+export type JourneyOpportunityKind = "event" | "job";
+
+export type JourneyOpportunityLeadPresentation = Readonly<{
+  id: string;
+  kind: JourneyOpportunityKind;
+  title: string;
+  area: string;
+  access: JourneyOpportunityAccess;
+}>;
+
+export type JourneyOpportunityPresentation = Readonly<{
+  guidance: string;
+  leads: readonly JourneyOpportunityLeadPresentation[];
+}>;
+
 export type JourneyPresentationContext = Readonly<{
   goalCompletion?: JourneyGoalCompletionPresentationContext;
   goalGuidance?: string | null;
   goalPassage?: JourneyGoalPassagePresentation | null;
+  opportunities?: JourneyOpportunityPresentation | null;
   storyChoice?: JourneyStoryChoicePrompt | null;
 }>;
 
@@ -314,6 +334,7 @@ export type JourneyPresentation = Readonly<{
   decisionProof: JourneyDecisionProof;
   goalGuidance: string | null;
   goalPassage: JourneyGoalPassagePresentation | null;
+  opportunities: JourneyOpportunityPresentation | null;
   pendingChoice: JourneyChoicePrompt | null;
   storyChoice: JourneyStoryChoicePrompt | null;
   retentionHistory: readonly JourneyRetentionEvent[];
@@ -1094,6 +1115,52 @@ function freezeGoalPassage(
   });
 }
 
+export function cloneJourneyOpportunityPresentation(
+  opportunities: JourneyOpportunityPresentation | null,
+): JourneyOpportunityPresentation | null {
+  if (!opportunities) return null;
+  return {
+    guidance: opportunities.guidance,
+    leads: opportunities.leads.map((lead) => ({ ...lead })),
+  };
+}
+
+function freezeJourneyOpportunities(
+  opportunities: JourneyOpportunityPresentation | null | undefined,
+): JourneyOpportunityPresentation | null {
+  if (!opportunities) return null;
+  if (opportunities.guidance.trim().length === 0) {
+    throw new Error("Journey opportunity guidance cannot be empty.");
+  }
+  if (opportunities.leads.length === 0) {
+    throw new Error("Journey opportunities require at least one lead.");
+  }
+  const keys = new Set<string>();
+  const leads = opportunities.leads.map((lead) => {
+    if (
+      lead.id.trim().length === 0 ||
+      lead.title.trim().length === 0 ||
+      lead.area.trim().length === 0
+    ) {
+      throw new Error("Journey opportunity lead text fields cannot be empty.");
+    }
+    if (lead.kind !== "event" && lead.kind !== "job") {
+      throw new Error("Journey opportunity lead has an unknown kind.");
+    }
+    if (lead.access !== "here" && lead.access !== "mapped" && lead.access !== "route_unmapped") {
+      throw new Error("Journey opportunity lead has an unknown access state.");
+    }
+    const key = `${lead.kind}:${lead.id}`;
+    if (keys.has(key)) throw new Error("Journey opportunity lead identities must be unique.");
+    keys.add(key);
+    return Object.freeze({ ...lead });
+  });
+  return Object.freeze({
+    guidance: opportunities.guidance,
+    leads: Object.freeze(leads),
+  });
+}
+
 export function journeyPresentation(
   state: JourneyContractSnapshot,
   context?: JourneyPresentationContext,
@@ -1129,6 +1196,7 @@ export function journeyPresentation(
     }),
     goalGuidance,
     goalPassage: freezeGoalPassage(context?.goalPassage),
+    opportunities: freezeJourneyOpportunities(context?.opportunities),
     pendingChoice: pendingChoicePresentation(state, context),
     storyChoice: freezeStoryChoice(context?.storyChoice),
     retentionHistory: Object.freeze(state.retentionHistory.map(freezeRetentionEvent)),

@@ -880,7 +880,7 @@ export default function App(): JSX.Element {
           {worldView.jobs.length === 0 ? (
             <p className="empty">
               {worldView.hiddenJobCount > 0
-                ? "No local jobs mapped yet. Explore areas, scout, talk, or investigate to surface town work."
+                ? "No local jobs are currently available. Some work may be hidden or unavailable until its conditions change."
                 : "No local jobs remain in this town."}
             </p>
           ) : (
@@ -991,8 +991,9 @@ export default function App(): JSX.Element {
           )}
           {worldView.hiddenJobCount > 0 && (
             <p className="empty">
-              {worldView.hiddenJobCount} undiscovered local{" "}
-              {worldView.hiddenJobCount === 1 ? "job" : "jobs"} remain here.
+              {worldView.hiddenJobCount} local{" "}
+              {worldView.hiddenJobCount === 1 ? "job is" : "jobs are"} hidden or currently
+              unavailable here.
             </p>
           )}
 

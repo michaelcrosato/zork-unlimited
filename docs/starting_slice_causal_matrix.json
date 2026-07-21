@@ -676,6 +676,70 @@
         "tests/unit/world_campaign_service_region_renown.test.ts"
       ],
       "counterfactual_test": "tests/starting_slice/albany_market_scene_counterfactual.test.ts"
+    },
+    {
+      "id": "SS-F14-greenway-trail-policy",
+      "title": "Choose public access or quiet wildlife-corridor marking",
+      "phase": "albany_return",
+      "implementation_status": "implemented",
+      "proof_status": "proven",
+      "counts_toward_contract": false,
+      "visible_choice": "After Wolf-Winter, Emery Sloane permanently records either an obvious accessible public detour around the damaged Greenway crossing or low-profile steward markers that preserve the winter wildlife corridor. Both cost 35 minutes and earn 2 Capital / Mohawk renown; neither can later be relabeled.",
+      "immediate_state_delta": [
+        "world.minutes",
+        "world.region_renown",
+        "world.resolved_event_ids",
+        "journal.local_scene_proof"
+      ],
+      "delayed_consumers": [
+        "Emery's later corridor-survey board reads the exact event-option proof and exposes only the two follow-ups lawful under that policy. A neutral generic predecessor completion satisfies neither branch."
+      ],
+      "visible_feedback": [
+        "The investigated event presents both policies with identical immediate terms and names the distinct later public-access or corridor-preservation work before commitment.",
+        "The later full, compact, browser, and MCP job board shows two policy-matching actions and withholds the opposite pair; the completed event journal retains the selected policy and consequence."
+      ],
+      "systems": ["events", "time", "regional_standing", "jobs"],
+      "persistence_boundaries": ["overworld_save_restore"],
+      "contract_tags": ["delayed", "cross_system", "irreversible_tradeoff"],
+      "baseline_evidence": [
+        "tests/unit/world_local_event_scene.test.ts",
+        "tests/unit/world_local_event_scene_legacy.test.ts",
+        "tests/unit/world_local_job_scene_conditions.test.ts"
+      ],
+      "counterfactual_test": "tests/starting_slice/albany_greenway_scene_counterfactual.test.ts"
+    },
+    {
+      "id": "SS-F15-greenway-corridor-survey",
+      "title": "Choose survey speed or durable Greenway standing",
+      "phase": "albany_return",
+      "implementation_status": "implemented",
+      "proof_status": "proven",
+      "counts_toward_contract": false,
+      "visible_choice": "Within the already-authored trail policy, choose a faster practical field mark or a slower durable survey record. Public policy offers a 30-minute/+3 shortest detour or 75-minute/+5 all-weather loop; quiet policy offers 20-minute/+1 steward markers or a 60-minute/+4 witnessed wildlife-corridor trace.",
+      "immediate_state_delta": [
+        "world.minutes",
+        "world.region_renown",
+        "world.completed_job_ids",
+        "journal.local_scene_proof"
+      ],
+      "delayed_consumers": [
+        "The chosen survey remains a distinct replay-bound journal consequence and persistent Capital / Mohawk standing result across later travel and save/restore, while deliberately granting no new rest or resupply coupon.",
+        "From the reachable 10-standing post-Wolf and trail-policy state, the 30-minute public detour reaches Rowan's existing 13-standing Civic recovery threshold; the corresponding 20-minute quiet markers end at 11 and do not unlock it."
+      ],
+      "visible_feedback": [
+        "Each legal survey card states its exact duration, standing, and policy-specific field result before commitment.",
+        "The completion journal names the selected detour or corridor record; full, compact, browser, and MCP surfaces preserve the same legal pair and the restored campaign retains its exact time and standing.",
+        "On the paired short routes, Civic full view exposes Rowan's recovery cot only after the slower public work reaches 13 standing; quiet work visibly saves 10 minutes and withholds that existing offer."
+      ],
+      "systems": ["jobs", "time", "regional_standing", "journal", "services"],
+      "persistence_boundaries": ["overworld_save_restore"],
+      "contract_tags": ["delayed", "cross_system", "irreversible_tradeoff"],
+      "baseline_evidence": [
+        "tests/unit/world_local_job_scene_conditions.test.ts",
+        "tests/unit/world_session_local_actions.test.ts",
+        "tests/unit/world_session_region_renown.test.ts"
+      ],
+      "counterfactual_test": "tests/starting_slice/albany_greenway_scene_counterfactual.test.ts"
     }
   ]
 }

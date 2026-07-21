@@ -61,9 +61,33 @@ const CADE_RETURN_PACKET_SERVICE_IDS: ReadonlySet<string> = new Set([
   "albany:cade_pasture_search_unaffiliated_greenway_resupply",
 ]);
 
-/** Reconstruct the exact manifest immediately before Albany Market got its authored policy pair. */
-export function exactAlbanyMarketDepthPredecessor(current: OverworldManifest): OverworldManifest {
+/** Reconstruct the Market-authored manifest immediately before Greenway's causal pair. */
+export function exactAlbanyGreenwayDepthPredecessor(current: OverworldManifest): OverworldManifest {
   const predecessor = structuredClone(current);
+  const event = predecessor.local_events.find(
+    (candidate) => candidate.id === "albany_city__greenway__event",
+  );
+  const job = predecessor.local_jobs.find(
+    (candidate) => candidate.id === "albany_city__greenway__job",
+  );
+  if (!event || !job) throw new Error("Albany Greenway event and job must exist");
+  event.title = "Albany Greenway: trail sign damage";
+  event.summary =
+    "Albany Greenway is under hazard pressure around tracks, utility cuts, and witnesses who avoid main streets. Resolving it requires scouting this area, talking to its contact, and investigating on site.";
+  delete event.authored_scene;
+  job.title = "Albany Greenway: Greenway Survey";
+  job.summary =
+    "Albany Greenway has trailheads, utility cuts, camps, and quiet witnesses. The job is small enough to finish locally but specific enough to make Albany City feel worked-in rather than decorative.";
+  job.objective =
+    "Spend time in Albany Greenway to walk the paths, mark fresh tracks, and confirm which approach is still passable.";
+  job.reward = "Earn 4 Capital / Mohawk renown and a concrete lead about Albany City.";
+  delete job.authored_scene;
+  return predecessor;
+}
+
+/** Reconstruct the foundation manifest immediately before Albany Market's policy pair. */
+export function exactAlbanyMarketDepthPredecessor(current: OverworldManifest): OverworldManifest {
+  const predecessor = exactAlbanyGreenwayDepthPredecessor(current);
   const event = predecessor.local_events.find(
     (candidate) => candidate.id === "albany_city__market__event",
   );

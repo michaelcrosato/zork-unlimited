@@ -1137,7 +1137,9 @@ describe("New York overworld graph", () => {
     expect(app).toContain("unmapped local");
     expect(app).toContain("Local Jobs");
     expect(app).toContain("Work Job");
-    expect(app).toContain("undiscovered local");
+    expect(app).toContain("hidden or currently");
+    expect(app).toContain("unavailable here");
+    expect(app).not.toContain("undiscovered local");
     expect(app).toContain("Known Routes");
     expect(app).toContain("road min");
     expect(app).toContain("supplies {route.estimate.suppliesUsed}");

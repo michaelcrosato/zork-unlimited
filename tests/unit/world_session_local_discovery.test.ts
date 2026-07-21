@@ -11,6 +11,13 @@ import {
   planOverworldLocalDiscovery,
   questView,
 } from "../../src/world/session_local_discovery.js";
+import {
+  applyOverworldSessionLocalDiscoveryForTown,
+  type MutableOverworldSessionLocalState,
+} from "../../src/world/session_local_state.js";
+import { loadOverworldManifest } from "../../src/world/source.js";
+
+const WORLD = loadOverworldManifest(process.cwd());
 
 function area(id: string, home = "town_a"): OverworldArea {
   return {
@@ -156,4 +163,97 @@ describe("overworld local discovery planning", () => {
     expect([...state.discoveredQuestIds]).toEqual([nextQuest.id]);
     expect(applyOverworldLocalDiscovery(state, discovery)).toBe(false);
   });
+
+  it.each([
+    [
+      "albany_city__market__job",
+      "albany_city__market__event",
+      "hold_household_kitchen_prices",
+      ["release_price_hold_operational", "audit_price_hold_household_chain"],
+    ],
+    [
+      "albany_city__market__job",
+      "albany_city__market__event",
+      "publish_open_bid_ceiling",
+      ["release_open_bid_operational", "audit_open_bid_public_chain"],
+    ],
+    [
+      "albany_city__greenway__job",
+      "albany_city__greenway__event",
+      "post_accessible_public_detour",
+      ["stake_shortest_accessible_detour", "map_all_weather_public_loop"],
+    ],
+    [
+      "albany_city__greenway__job",
+      "albany_city__greenway__event",
+      "place_quiet_corridor_markers",
+      ["reset_steward_markers", "trace_winter_wildlife_corridor_with_witness_points"],
+    ],
+  ] as const)(
+    "projects only the policy-bound authored options when discovering %s after %s",
+    (jobId, eventId, eventOptionId, expectedOptionIds) => {
+      const sourceJob = WORLD.local_jobs.find((candidate) => candidate.id === jobId);
+      const sourceEvent = WORLD.local_events.find((candidate) => candidate.id === eventId);
+      const sourceArea = WORLD.areas.find((candidate) => candidate.id === sourceJob?.area);
+      if (!sourceJob?.authored_scene || !sourceEvent?.authored_scene || !sourceArea) {
+        throw new Error("Expected an authored Albany policy pair fixture.");
+      }
+      const authoredOptions = sourceJob.authored_scene.options.map((option) => ({ ...option }));
+      const state: MutableOverworldSessionLocalState = {
+        currentTownId: sourceJob.home,
+        currentAreaId: sourceArea.id,
+        areasById: new Map([[sourceArea.id, sourceArea]]),
+        areasByTown: new Map([[sourceJob.home, [sourceArea]]]),
+        currentAreaByTown: new Map([[sourceJob.home, sourceArea.id]]),
+        areaExitsByArea: new Map(),
+        poisByArea: new Map(),
+        charactersByArea: new Map(),
+        eventsByArea: new Map(),
+        sitesByArea: new Map(),
+        jobsByTown: new Map([[sourceJob.home, [sourceJob]]]),
+        questsByTown: new Map(),
+        discoveredAreaIds: new Set([sourceArea.id]),
+        discoveredJobIds: new Set(),
+        completedJobIds: new Set(),
+        discoveredSiteIds: new Set(),
+        discoveredQuestIds: new Set(),
+        completedQuestIds: new Set(["wolf_winter"]),
+        resolvedEventIds: new Set([eventId]),
+        campaignWorldFactIds: new Set(),
+        journalEntries: new Map([
+          [
+            `resolve:${eventId}`,
+            {
+              id: `resolve:${eventId}`,
+              kind: "event",
+              town: sourceJob.home,
+              title: sourceEvent.title,
+              text: sourceEvent.summary,
+              recordedAt: "Day 1, 08:00",
+              localSceneProof: {
+                sceneId: sourceEvent.authored_scene.id,
+                optionId: eventOptionId,
+              },
+            },
+          ],
+        ]),
+      };
+
+      const applied = applyOverworldSessionLocalDiscoveryForTown(state, sourceJob.home);
+      const discovered = applied.discovery.discoveredJobs[0];
+
+      expect(discovered).toMatchObject({ id: jobId, title: sourceJob.title });
+      expect(discovered?.authored_scene?.options.map((option) => option.id)).toEqual(
+        expectedOptionIds,
+      );
+      const serialized = JSON.stringify(discovered);
+      for (const option of authoredOptions) {
+        if (expectedOptionIds.some((expectedOptionId) => expectedOptionId === option.id)) continue;
+        expect(serialized).not.toContain(option.id);
+        expect(serialized).not.toContain(option.title);
+        expect(serialized).not.toContain(option.preview);
+      }
+      expect(sourceJob.authored_scene.options).toEqual(authoredOptions);
+    },
+  );
 });

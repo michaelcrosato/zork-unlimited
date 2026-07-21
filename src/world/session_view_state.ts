@@ -49,6 +49,7 @@ import {
 import type { CampaignServiceOffer } from "./campaign_service_rules.js";
 import { projectOverworldQuestView } from "./session_local_discovery.js";
 import type { OverworldDepartureInteraction } from "./session_departure_interactions.js";
+import type { JourneyOpportunityPresentation } from "./journey_contract.js";
 
 type OverworldSessionViewLocalContentState = Pick<
   MutableOverworldSessionLocalState,
@@ -64,6 +65,7 @@ export type OverworldSessionViewModelState = {
   minutes: number;
   supplies: number;
   fatigue: number;
+  opportunities: JourneyOpportunityPresentation | null;
   serviceOffers: readonly CampaignServiceOffer[];
   departureInteractions: readonly OverworldDepartureInteraction[];
   roads: readonly OverworldExit[];
@@ -100,6 +102,7 @@ export type OverworldSessionViewModelSourceState = {
   minutes: number;
   supplies: number;
   fatigue: number;
+  opportunities: JourneyOpportunityPresentation | null;
   serviceOffers: readonly CampaignServiceOffer[];
   departureInteractions: readonly OverworldDepartureInteraction[];
   roads: readonly OverworldExit[];
@@ -185,6 +188,7 @@ export function buildOverworldSessionViewModelState(
       minutes: source.minutes,
       supplies: source.supplies,
       fatigue: source.fatigue,
+      opportunities: source.opportunities,
       serviceOffers: [],
       departureInteractions: [],
       roads: [],
@@ -254,6 +258,7 @@ export function buildOverworldSessionViewModelState(
     minutes: source.minutes,
     supplies: source.supplies,
     fatigue: source.fatigue,
+    opportunities: source.opportunities,
     serviceOffers: source.serviceOffers.map((offer) => ({
       id: offer.id,
       action: offer.action,
@@ -312,6 +317,7 @@ function compactViewState(state: OverworldSessionViewModelState): OverworldSessi
     minutes: state.minutes,
     supplies: state.supplies,
     fatigue: state.fatigue,
+    opportunities: state.opportunities,
     serviceOffers: state.serviceOffers,
     departureInteractions: state.departureInteractions,
     roads: state.roads,

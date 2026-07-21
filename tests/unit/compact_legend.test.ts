@@ -57,6 +57,24 @@ describe("compact legends", () => {
     expect(started.legend?.quest_starts).toContain("approach_id");
   });
 
+  it("describes unavailable jobs and optional aftermath without overstating either", () => {
+    expect(OVERWORLD_COMPACT_LEGEND.hidden).toContain(
+      "undiscovered jobs plus discovered, incomplete authored job scenes",
+    );
+    expect(OVERWORLD_COMPACT_LEGEND.hidden).toContain("no legal options currently available");
+    expect(OVERWORLD_COMPACT_LEGEND.hidden).not.toContain("counts still undiscovered");
+
+    expect(OVERWORLD_COMPACT_LEGEND.opportunity_leads).toContain(
+      "do not create, replace, or activate a journey objective",
+    );
+    expect(OVERWORLD_COMPACT_LEGEND.opportunity_leads).toContain(
+      "no choices, rewards, or outcomes are disclosed",
+    );
+    expect(OVERWORLD_COMPACT_LEGEND.opportunity_leads).not.toContain(
+      "journey objective remains available",
+    );
+  });
+
   it("restore_overworld_session repeats the legend; per-action responses do not", () => {
     const a = api();
     const started = a.start_overworld();

@@ -18,7 +18,7 @@ skippable; launch works with neither, either, or both, while full, compact,
 browser, and MCP surfaces expose the same exact choices. The corresponding
 starting-slice documentation is in the short landing lane.
 
-Cade's Return Packet is the fourth of six authored district jobs. It converts
+Cade's Return Packet is the fourth authored district job. It converts
 Wolf-Winter losses into one mutually exclusive post-return repair dispatch and
 an exact delayed Albany service. All eleven non-death endings, both action
 orders, migration, replay, tamper resistance, and every player surface have
@@ -26,6 +26,13 @@ deterministic counterfactual coverage. Fresh verifier-valid Terra seed 4246 saw
 both eligible repair offers on its exact build, then freely skipped them to
 pursue Gallowmere; discovery and optionality are therefore observed, while
 organic selection still needs cohort evidence.
+
+Market and Greenway complete the six-job Albany set and raise authored district
+events to three of six. Each post-Wolf policy irreversibly exposes only its two
+lawful job follow-ups, with fast time versus stronger standing crossing Rowan's
+existing 13-standing recovery threshold. Exact generic predecessors migrate to
+neutral markers, while the Market-authored/pre-Greenway era retains its native
+Market proof and gains no invented Greenway policy.
 
 The conditional hill-route explanation has a green exact health run: 391 test
 files and 2,977 tests, plus integrity, types, lint, formatting, UI, and pack
@@ -42,12 +49,12 @@ repo now front-loads bounded fictional TTRPG context, and verifier-valid seeds
 
 ## Chosen Move
 
-Land the documentation contract, then Cade Return Packet, receipt binding, and
-the conditional route explanation as separate green PRs. Development and blind
-testing remain parallel; a fresh report always binds to one exact clean commit.
+Land Market and Greenway as one ordered, green increment after the reusable
+event foundation. Development and blind testing remain parallel; a fresh report
+always binds to one exact clean commit.
 
-Next, replace Market Shortfall, Greenway Survey, and the five remaining generic
-checklist events with optional or post-Wolf authored scenes. Each replacement
+Next, replace the three remaining generic checklist events—Station, Works, and
+Campus—with optional or post-Wolf authored scenes. Each replacement
 must have a real counterfactual, a delayed consumer, visible cause and payoff,
 persistence/migration proof, and full/compact/UI/MCP parity without lengthening
 the mandatory first-goal path.
@@ -58,11 +65,13 @@ fleet. Spark remains a separate diagnostic cohort after its quota resets.
 
 ## Acceptance for this increment
 
-1. Cade's three fact-gated dispatches remain mutually exclusive and absent from
-   fortified no-loss returns.
-2. Completion creates or consolidates exactly one delayed service regardless of
-   action order, while legacy saves and generic predecessor completions restore.
-3. Full, compact, UI, and MCP surfaces agree; replay and forged state fail
+1. Market and Greenway expose only the job actions authorized by their exact
+   event choices; neither adds a new recovery coupon or lengthens the mandatory
+   first-goal path.
+2. Foundation and Market-authored predecessor saves migrate through exact hash
+   fences; generic event/job completions stay neutral and native Market proofs
+   remain native.
+3. Full, compact v25, UI, and MCP surfaces agree; replay and forged state fail
    closed; exact crawl and health remain green.
-4. A verifier-valid blind report exists for the exact increment, and both
-   required GitHub checks pass before merge.
+4. A verifier-valid blind report exists for the exact combined increment, and
+   both required GitHub checks pass before merge.

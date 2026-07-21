@@ -122,22 +122,26 @@ The current slice now satisfies the twelve-fork structural proof threshold, but
 it is **not yet milestone-certified**:
 
 - Wolf-Winter is now withheld from Albany's FIFO discovery and requires one of
-  three certified source packets. Albany Works, Civic, Campus, Station, and Market
-  are five of six district jobs converted to authored scenes; Civic and Market are
-  two of six authored district events. Works' exclusive return
+  three certified source packets. All six Albany district jobs are authored;
+  Civic, Market, and Greenway are three of six authored district events. Works'
+  exclusive return
   priority can cross a 13-standing threshold for a Civic recovery cot; Civic's
   first authored event fixes a public-or-protected policy before Wolf-Winter,
   then its return docket exposes exactly one lawful closure from that policy
   and the truthful held-or-evacuated outcome. Campus adds a post-Wolf
   confidence-labelled warning versus traceable-archive decision: fast, lower
   standing recovery versus slower, higher standing resupply, with both exact
-  options replay-bound and neither a Civic legal-policy substitute. Jamie's post-Wolf
+  options replay-bound and neither a Civic legal-policy substitute. Jamie's
+  post-Wolf
   Market policy then binds either named household/kitchen prices or an open-bid
   ceiling and visible buyer board. From the reachable 10-standing post-policy
   state, the household fast release takes 30 minutes, earns 3 standing, and
   exposes the existing Civic cot; the open-bid fast release takes 20 minutes and
   earns 1. Their thorough settlements preserve the frontier at 75 minutes/+5
-  versus 60 minutes/+4. One job and four checklist events remain generic;
+  versus 60 minutes/+4. Greenway adds a post-Wolf
+  public-access-or-wildlife-corridor policy whose later survey
+  exposes only the two lawful follow-ups for that exact choice. No district jobs
+  and three checklist events—Station, Works, and Campus—remain generic;
 - Albany authors four permanent registration profiles. Road-Warden and Ledger
   sponsorship now change the actual terms of their matching source packet, and
   the Road-Warden retains its fieldcraft import. Ironhands Repairer,
@@ -692,7 +696,48 @@ for more time than the open-bid board at both fast and thorough settlement depth
 Its exact policy predicate, Civic-cot counterfactual, neutral generic migration,
 replay, and full/compact/UI/MCP proof live
 in [`albany_market_scene_counterfactual.test.ts`](../tests/starting_slice/albany_market_scene_counterfactual.test.ts).
-One generic district job—Greenway Survey—and four checklist events are still visible.
+Greenway adds a third authored event and completes the six-job district set
+after Wolf-Winter. Emery Sloane irreversibly records either an obvious
+accessible public detour or quiet
+low-profile markers that preserve the winter wildlife corridor. The later
+corridor survey reads that exact event proof and exposes only its matching two
+actions. Quiet marking is faster for less standing: 20 minutes/+1 for the
+minimum marks or 60/+4 for the witnessed corridor trace. The corresponding
+public work takes 30/+3 or 75/+5; on the reachable 10-standing post-Wolf state,
+the short public detour reaches Rowan's existing 13-standing Civic recovery
+threshold while the short quiet line ends at 11. The paired policies therefore
+change legal action, copy, time, standing, and a delayed existing service
+without adding a new rest/resupply coupon or delaying first-goal completion.
+Full/compact/UI/MCP projection, current replay, exact neutral
+generic migration, and chronology/tamper guards live in
+[`albany_greenway_scene_counterfactual.test.ts`](../tests/starting_slice/albany_greenway_scene_counterfactual.test.ts).
+The journey now also projects optional return opportunities without adding a
+counted fork: unresolved post-quest event roots in visited towns and eligible
+authored jobs whose roots were already discovered remain visible beside the
+current objective after the player leaves. Each lead exposes only its title,
+district, kind, and exact `here` / `mapped` / `route_unmapped` access state;
+choices, outcomes, rewards, and scene terms remain undisclosed until normal
+play reaches them. The structured journey object is authoritative, while the
+the versioned compact v25 context receives only a bounded additive tuple and legend.
+Projection is read-only, adds no decision or action, and is covered across the
+Wolf completion, dawn choice, northward departure, restore, MCP, and UI surfaces
+by [`albany_return_opportunity_leads.test.ts`](../tests/starting_slice/albany_return_opportunity_leads.test.ts).
+Five verified exact-feature Terra journeys completed Wolf-Winter and continued,
+but none organically named, pursued, or declined a listed Return Opportunity;
+the separate Cade dawn dispatch does not count. Deterministic visibility therefore
+passes while the original discoverability hypothesis fails at 0/5. A shared,
+state-honest pursuit sentence now sits beside every full, compact, and UI lead:
+finish setup before using a lead that is here, return and walk to a mapped
+district, or return and Explore Area to reveal an unmapped local route. This
+adds no action or forced decision, creates no objective, and remains truthful
+when the preceding objective has already completed.
+In the first exact-feature follow-up cohort, one journey never received a
+non-null lead and is excluded; one of the three eligible players organically
+recognized the optional Albany opportunities, none pursued one, and none named
+an individual decline. Recognition therefore improves to 1/3 eligible
+players, while actual return-route uptake remains unproven.
+No generic district jobs remain. Three checklist events—Station, Works, and
+Campus—are still visible and generic.
 
 ## Evidence contract
 

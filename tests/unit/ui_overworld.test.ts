@@ -25,10 +25,16 @@ import {
 } from "../../src/world/compact_view.js";
 import { buildOverworldSessionCompactView } from "../../src/world/session_compact_view.js";
 import { questCompletionMinutes } from "../../src/world/session_quests.js";
-import { INITIAL_JOURNEY_GOAL_GUIDANCE } from "../../src/world/journey_contract.js";
+import {
+  INITIAL_JOURNEY_GOAL_GUIDANCE,
+  JOURNEY_OPPORTUNITY_GUIDANCE,
+} from "../../src/world/journey_contract.js";
 import { cloneOverworldView } from "../../src/world/session_view_clone.js";
 import type { OverworldQuestView } from "../../src/world/session_local_discovery.js";
-import { OverworldSession } from "../../ui/src/overworld.js";
+import {
+  OverworldSession,
+  OverworldSession as UiOverworldSession,
+} from "../../ui/src/overworld.js";
 
 const world = loadOverworldManifest(process.cwd());
 
@@ -194,7 +200,7 @@ function resolveCurrentTownEvent(session: OverworldSession): void {
   session.resolveEvent(event.id, event.authored_scene?.options[0]?.id);
 }
 
-function reachAlbanyStoryChoice(session: OverworldSession): void {
+function completeAlbanyFirstGoal(session: OverworldSession): void {
   const opening = session.view();
   session.scoutPoi(opening.pois[0]!.id);
   session.talkToCharacter(opening.characters[0]!.id);
@@ -214,7 +220,23 @@ function reachAlbanyStoryChoice(session: OverworldSession): void {
     endingTitle: "The Byre Held",
     death: false,
   });
+}
+
+function reachAlbanyStoryChoice(session: OverworldSession): void {
+  completeAlbanyFirstGoal(session);
   session.chooseJourney("continue");
+}
+
+function authorMarketHouseholdPolicy(): UiOverworldSession {
+  const session = new OverworldSession(world);
+  reachAlbanyStoryChoice(session);
+  session.chooseJourneyStory("send_wardens_north");
+  moveToArea(session, "albany_city__market");
+  session.scoutPoi("albany_city__market__poi");
+  session.talkToCharacter("albany_city__market__contact");
+  session.investigateEvent("albany_city__market__event");
+  session.resolveEvent("albany_city__market__event", "hold_household_kitchen_prices");
+  return UiOverworldSession.restore(world, session.snapshot());
 }
 
 describe("OverworldSession", () => {
@@ -389,6 +411,64 @@ describe("OverworldSession", () => {
     );
   });
 
+  it("renders state-neutral return-opportunity guidance at the first-goal pause and dawn story", async () => {
+    const session = new OverworldSession(world);
+    completeAlbanyFirstGoal(session);
+    const pendingJourney = session.journey();
+    expect(pendingJourney.pendingChoice?.reasons).toContain("goal_completed");
+    expect(pendingJourney.opportunities?.guidance).toBe(JOURNEY_OPPORTUNITY_GUIDANCE);
+
+    session.chooseJourney("continue");
+    const dawnJourney = session.journey();
+    expect(dawnJourney.storyChoice?.id).toBe("albany_dawn_dispatch");
+    expect(dawnJourney.opportunities?.guidance).toBe(JOURNEY_OPPORTUNITY_GUIDANCE);
+
+    const uiRoot = resolve(process.cwd(), "ui");
+    const server = await createServer({
+      root: uiRoot,
+      configFile: resolve(uiRoot, "vite.config.ts"),
+      appType: "custom",
+      logLevel: "silent",
+      optimizeDeps: { noDiscovery: true },
+      server: { middlewareMode: true },
+    });
+    try {
+      const [choiceModule, storyModule] = await Promise.all([
+        server.ssrLoadModule("/src/JourneyChoiceScreen.tsx"),
+        server.ssrLoadModule("/src/JourneyStoryChoiceScreen.tsx"),
+      ]);
+      const requireFromUi = createRequire(resolve(uiRoot, "package.json"));
+      const react = requireFromUi("react") as {
+        createElement: (type: unknown, props: Record<string, unknown>) => unknown;
+      };
+      const reactDomServer = requireFromUi("react-dom/server") as {
+        renderToStaticMarkup: (element: unknown) => string;
+      };
+      const markups = [
+        reactDomServer.renderToStaticMarkup(
+          react.createElement(choiceModule.JourneyChoiceScreen, {
+            journey: pendingJourney,
+            onChoose: () => undefined,
+          }),
+        ),
+        reactDomServer.renderToStaticMarkup(
+          react.createElement(storyModule.JourneyStoryChoiceScreen, {
+            journey: dawnJourney,
+            onChoose: () => undefined,
+          }),
+        ),
+      ];
+
+      for (const markup of markups) {
+        expect(markup).toContain("Return opportunities");
+        expect(markup).toContain("leave these leads for later");
+        expect(markup).not.toContain("keep your objective");
+      }
+    } finally {
+      await server.close();
+    }
+  });
+
   it("routes visible story-choice ids through generic app plumbing", () => {
     const app = readFileSync("ui/src/App.tsx", "utf8");
     const screen = readFileSync("ui/src/JourneyStoryChoiceScreen.tsx", "utf8");
@@ -480,6 +560,89 @@ describe("OverworldSession", () => {
     expect(panel).toContain("poiTitlesById.get(scene.required_poi_id)");
     expect(panel).toContain("characterNamesById.get(scene.required_contact_id)");
     expect(panel).toContain("<b>Commitment:</b> {option.consequence}");
+  });
+
+  it("describes unlisted local jobs as hidden or unavailable, not all undiscovered", () => {
+    const app = readFileSync("ui/src/App.tsx", "utf8");
+    const panelStart = app.indexOf("<h2>Local Jobs</h2>");
+    const panelEnd = app.indexOf("<h2>Local Discoveries</h2>", panelStart);
+    expect(panelStart).toBeGreaterThanOrEqual(0);
+    expect(panelEnd).toBeGreaterThan(panelStart);
+    const panel = app.slice(panelStart, panelEnd);
+
+    expect(panel).toContain("No local jobs are currently available.");
+    expect(panel).toContain("hidden or unavailable until its conditions change.");
+    expect(panel).toContain("hidden or currently");
+    expect(panel).toContain("unavailable here.");
+    expect(panel).not.toContain("undiscovered local");
+    expect(panel).not.toContain("No local jobs mapped yet.");
+  });
+
+  it("omits policy-hidden authored Market job options from the rendered app", async () => {
+    const uiSession = authorMarketHouseholdPolicy();
+    const job = uiSession
+      .view()
+      .jobs.find((candidate) => candidate.id === "albany_city__market__job");
+    expect(job?.authored_scene?.options.map((option) => option.id)).toEqual([
+      "release_price_hold_operational",
+      "audit_price_hold_household_chain",
+    ]);
+    expect(uiSession.view().jobChoices).toEqual([
+      ["albany_city__market__job", "release_price_hold_operational"],
+      ["albany_city__market__job", "audit_price_hold_household_chain"],
+    ]);
+
+    const savedWindow = Object.getOwnPropertyDescriptor(globalThis, "window");
+    Object.defineProperty(globalThis, "window", {
+      configurable: true,
+      value: {
+        localStorage: {
+          getItem: (key: string) =>
+            key === "adventureforge:new-york-overworld:v1"
+              ? JSON.stringify(uiSession.snapshot())
+              : null,
+          removeItem: () => undefined,
+          setItem: () => undefined,
+        },
+      },
+    });
+
+    const uiRoot = resolve(process.cwd(), "ui");
+    const server = await createServer({
+      root: uiRoot,
+      configFile: resolve(uiRoot, "vite.config.ts"),
+      appType: "custom",
+      logLevel: "silent",
+      optimizeDeps: { noDiscovery: true },
+      server: { middlewareMode: true },
+    });
+    try {
+      const module = (await server.ssrLoadModule("/src/App.tsx")) as { default: unknown };
+      const requireFromUi = createRequire(resolve(uiRoot, "package.json"));
+      const react = requireFromUi("react") as {
+        createElement: (type: unknown, props: Record<string, unknown>) => unknown;
+      };
+      const reactDomServer = requireFromUi("react-dom/server") as {
+        renderToStaticMarkup: (element: unknown) => string;
+      };
+      const markup = reactDomServer.renderToStaticMarkup(react.createElement(module.default, {}));
+
+      expect(markup).toContain("Jamie&#x27;s Disputed Crates");
+      expect(markup).toContain("Release the price-hold crates through Jamie&#x27;s kitchen ledger");
+      expect(markup).toContain("30 min - 3 renown");
+      expect(markup).toContain("Audit the price-hold household chain in public");
+      expect(markup).toContain("75 min - 5 renown");
+      expect(markup.match(/job-scene-option/g)).toHaveLength(2);
+      expect(markup).not.toContain("Release the open-bid crates from the visible buyer board");
+      expect(markup).not.toContain("Earn 1 Capital / Mohawk renown");
+      expect(markup).not.toContain("Audit the open-bid public chain");
+      expect(markup).not.toContain("Earn 4 Capital / Mohawk renown");
+      expect(markup).not.toContain('disabled=""');
+    } finally {
+      await server.close();
+      if (savedWindow) Object.defineProperty(globalThis, "window", savedWindow);
+      else Reflect.deleteProperty(globalThis, "window");
+    }
   });
 
   it("renders embedded character death as a mandatory ending, not voluntary continuation", async () => {
@@ -1254,6 +1417,27 @@ describe("OverworldSession", () => {
       "albany_city__civic_core__site",
     ]);
     expect(explored.discoveredQuests).toEqual([]);
+  });
+
+  it("returns the freshly discovered Civic job without leaking unavailable authored options", () => {
+    const civicJob = world.local_jobs.find((job) => job.id === "albany_city__civic_core__job");
+    if (!civicJob?.authored_scene) throw new Error("expected the authored Civic return job");
+    const authoredOptions = civicJob.authored_scene.options.map((option) => ({ ...option }));
+    const session = new UiOverworldSession(world);
+
+    const result = session.scoutPoi(session.view().pois[0]!.id);
+    const discovered = result.discoveredJobs?.find((job) => job.id === civicJob.id);
+
+    expect(discovered).toMatchObject({ id: civicJob.id, title: civicJob.title });
+    expect(discovered?.authored_scene?.options).toEqual([]);
+    expect(session.view().jobs.map((job) => job.id)).not.toContain(civicJob.id);
+    const serialized = JSON.stringify(discovered);
+    for (const option of authoredOptions) {
+      expect(serialized).not.toContain(option.id);
+      expect(serialized).not.toContain(option.title);
+      expect(serialized).not.toContain(option.preview);
+    }
+    expect(civicJob.authored_scene.options).toEqual(authoredOptions);
   });
 
   it("maps local areas progressively before exhausting a town", () => {

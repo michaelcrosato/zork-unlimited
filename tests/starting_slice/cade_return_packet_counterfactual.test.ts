@@ -11,6 +11,7 @@ import { createToolApi } from "../../src/mcp/tools.js";
 import {
   AUTHORED_ALBANY_STATION_LEGACY_OPTION_ID,
   AUTHORED_ALBANY_STATION_PREDECESSOR_WORLD_HASH,
+  authoredLocalJobLegacyOptionId,
 } from "../../src/world/local_job_scene_legacy.js";
 import { assertOverworldIntegrity, type OverworldManifest } from "../../src/world/overworld.js";
 import { OverworldSession } from "../../src/world/session.js";
@@ -18,7 +19,10 @@ import { timeLabel } from "../../src/world/session_journal_codec.js";
 import { OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH } from "../../src/world/session_snapshot_restore.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
 import { OverworldSession as UiOverworldSession } from "../../ui/src/overworld.js";
-import { exactCadeReturnPacketPredecessor } from "../regression/fixtures/historical_overworlds.js";
+import {
+  exactCadeReturnPacketPredecessor,
+  exactWinterReturnDocketPredecessor,
+} from "../regression/fixtures/historical_overworlds.js";
 
 const WORLD = loadOverworldManifest(process.cwd());
 const PREDECESSOR = exactCadeReturnPacketPredecessor(WORLD);
@@ -247,7 +251,9 @@ describe("Cade Return Packet", () => {
     expect(session.view().jobs.find((job) => job.id === JOB)?.authored_scene?.id).toBe(SCENE);
     expect(session.view().jobChoices).toEqual(expected);
     expect(session.compactView().job_choices).toEqual(expected);
-    expect(compactScene?.[6].map(([optionId]) => optionId)).toEqual([PALING, EVACUATION, PASTURE]);
+    expect(compactScene?.[6].map(([optionId]) => optionId)).toEqual(
+      expected.map(([, optionId]) => optionId),
+    );
     expect(UiOverworldSession.restore(WORLD, session.snapshot()).view().jobChoices).toEqual(
       expected,
     );
@@ -473,6 +479,35 @@ describe("Cade Return Packet", () => {
     ).toEqual(predecessorServiceEntry);
     expect(restoredService.view().serviceOffers.map((offer) => offer.id)).not.toContain(
       UNAFFILIATED_RESUPPLY,
+    );
+  });
+
+  it("migrates an older generic Station completion without inventing a dispatch or service", () => {
+    const older = exactWinterReturnDocketPredecessor(WORLD);
+    const sourceWorldHash = hashState(older);
+    const prepared = preparedForWolf(older);
+    finishWolf(prepared.session, prepared.wolfId, "ending_pack_diverted_cattle_scattered");
+    prepared.session.workLocalJob(JOB);
+
+    const restored = OverworldSession.restore(WORLD, prepared.session.snapshot());
+    expect(
+      restored.snapshot().journalEntries.find((entry) => entry.id === `job:${JOB}`)
+        ?.localSceneProof,
+    ).toMatchObject({
+      sceneId: SCENE,
+      optionId: authoredLocalJobLegacyOptionId(sourceWorldHash),
+      sourceWorldHash,
+    });
+    expect(restored.view().jobChoices).toEqual([]);
+    for (const areaId of [WORKS, GREENWAY]) {
+      moveToArea(restored, areaId);
+      expect(restored.view().serviceOffers.map((offer) => offer.id)).not.toContain(PALING_REST);
+      expect(restored.view().serviceOffers.map((offer) => offer.id)).not.toContain(
+        PASTURE_RESUPPLY,
+      );
+    }
+    expect(OverworldSession.restore(WORLD, restored.snapshot()).snapshot()).toEqual(
+      restored.snapshot(),
     );
   });
 

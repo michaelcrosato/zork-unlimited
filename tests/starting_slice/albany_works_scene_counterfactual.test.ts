@@ -10,7 +10,11 @@ import { describe, expect, it } from "vitest";
 import { createToolApi } from "../../src/mcp/tools.js";
 import { hashState } from "../../src/core/hash.js";
 import type { OverworldManifest } from "../../src/world/overworld.js";
-import { AUTHORED_ALBANY_WORKS_LEGACY_OPTION_ID } from "../../src/world/local_job_scene_legacy.js";
+import {
+  AUTHORED_ALBANY_GREENWAY_LEGACY_JOB,
+  AUTHORED_ALBANY_WORKS_LEGACY_OPTION_ID,
+  authoredLocalJobLegacyOptionId,
+} from "../../src/world/local_job_scene_legacy.js";
 import { OverworldSession } from "../../src/world/session.js";
 import type { OverworldSessionSnapshot } from "../../src/world/session_snapshot.js";
 import {
@@ -192,14 +196,14 @@ describe("Depth Contract #11 — authored Albany Works scene", () => {
   it("keeps a real full-session authored choice legal beyond the compact twelve-job window", () => {
     const denseWorld = structuredClone(WORLD);
     const worksIndex = denseWorld.local_jobs.findIndex((job) => job.id === JOB_ID);
-    const generic = denseWorld.local_jobs.find((job) => job.id === "albany_city__greenway__job");
+    const generic = AUTHORED_ALBANY_GREENWAY_LEGACY_JOB;
     const worksPoi = denseWorld.points_of_interest.find((poi) => poi.id === WORKS_POI_ID);
-    if (worksIndex < 0 || !generic || generic.authored_scene !== undefined || !worksPoi) {
+    if (worksIndex < 0 || generic.authored_scene !== undefined || !worksPoi) {
       throw new Error("Expected Works and generic Albany fixtures.");
     }
-    // Market is now a fourth post-Wolf authored scene hidden until its policy
-    // event resolves, so retain twelve visible generic predecessors ahead of
-    // Works in this compact-cap regression fixture.
+    // Market and Greenway are now post-Wolf authored scenes hidden until their
+    // policy events resolve. Use the exact registered legacy Greenway copy to
+    // retain twelve visible generic predecessors ahead of Works.
     const denseJobs = Array.from({ length: 13 }, (_, index) => ({
       ...structuredClone(generic),
       id: `albany_city__industrial__dense_job_${index}`,
@@ -357,6 +361,18 @@ describe("Depth Contract #11 — authored Albany Works scene", () => {
     expect(OverworldSession.restore(WORLD, migratedLegacySnapshot).snapshot()).toEqual(
       migratedLegacySnapshot,
     );
+
+    const relabeledSource = structuredClone(migratedLegacySnapshot);
+    const relabeledProof = relabeledSource.journalEntries.find(
+      (entry) => entry.id === `job:${JOB_ID}`,
+    )?.localSceneProof;
+    if (!relabeledProof) throw new Error("Expected the canonical Works migration proof.");
+    const earlierSourceWorldHash = hashState(EARLIER_TRUSTED_WORLD);
+    relabeledProof.sourceWorldHash = earlierSourceWorldHash;
+    relabeledProof.optionId = authoredLocalJobLegacyOptionId(earlierSourceWorldHash);
+    expect(() => OverworldSession.restore(WORLD, relabeledSource)).toThrow(
+      /untrusted legacy source/i,
+    );
   });
 
   it("accepts the first authored-Works manifest as a stacked no-op predecessor", () => {
@@ -409,9 +425,10 @@ describe("Depth Contract #11 — authored Albany Works scene", () => {
       expect(migratedSnapshot.minutes).toBe(predecessorSnapshot.minutes);
       expect(migratedSnapshot.regionRenown).toEqual(predecessorSnapshot.regionRenown);
       // The current world also contains the unavailable Winter Return Docket,
-      // Campus Archive Query, Cade Return Packet, and Market crates scene. Their truthful hidden
+      // Campus Archive Query, Cade Return Packet, Market crates scene, and
+      // Greenway Corridor Survey. Their truthful hidden
       // count is independent of preserving this Works completion.
-      expect(migrated.view().hiddenJobCount).toBe(legacyHiddenJobCount + 4);
+      expect(migrated.view().hiddenJobCount).toBe(legacyHiddenJobCount + 5);
       expect(OverworldSession.restore(WORLD, migratedSnapshot).snapshot()).toEqual(
         migratedSnapshot,
       );

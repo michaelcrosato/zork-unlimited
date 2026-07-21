@@ -19,6 +19,7 @@ import {
 } from "./session_local_discovery.js";
 import {
   buildOverworldSessionLocalView,
+  projectOverworldSessionLocalJob,
   type OverworldSessionLocalView,
 } from "./session_local_view.js";
 
@@ -210,8 +211,14 @@ export function applyOverworldSessionLocalDiscoveryForTown(
     discoveredQuestIds: state.discoveredQuestIds,
     excludedQuestIds,
   });
+  const stateChanged = applyOverworldLocalDiscovery(state, discovery);
   return {
-    discovery,
-    stateChanged: applyOverworldLocalDiscovery(state, discovery),
+    discovery: {
+      ...discovery,
+      discoveredJobs: discovery.discoveredJobs.map((job) =>
+        projectOverworldSessionLocalJob(job, state, true),
+      ),
+    },
+    stateChanged,
   };
 }

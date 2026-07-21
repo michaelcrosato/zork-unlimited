@@ -1,4 +1,5 @@
 import type { JourneyPresentation } from "../../src/world/journey_contract.js";
+import { JourneyOpportunityLeads } from "./JourneyOpportunityLeads.js";
 
 type JourneyStatusProps = {
   journey: JourneyPresentation;
@@ -37,6 +38,10 @@ export function JourneyStatus({ journey, onFollowGoalPassage }: JourneyStatusPro
           <dd>{nextChoice}</dd>
         </div>
       </dl>
+      <JourneyOpportunityLeads
+        opportunities={journey.opportunities}
+        headingId="journey-status-opportunities-title"
+      />
       {journey.goalPassage && (
         <article
           className="journey-passage"
