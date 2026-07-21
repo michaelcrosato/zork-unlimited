@@ -377,7 +377,7 @@ export {
   OVERWORLD_FIELD_TIMED_PREPARATION_PREDECESSOR_WORLD_HASH,
 } from "./local_scene_legacy_sources.js";
 export const OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH =
-  "9238b5f273e03e0a49487058233443e872c18a542525dcd449531708cd3003e5";
+  "53afa5830619f12b547f8a6c9d55798477a09676afe02debba155081ea115edc";
 /**
  * Exact post-Works manifests retained for the older preparation migration.
  * Authored-job support itself is derived from the scene registry below, so this

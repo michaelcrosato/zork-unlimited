@@ -123,9 +123,10 @@ it is **not yet milestone-certified**:
 
 - Wolf-Winter is now withheld from Albany's FIFO discovery and requires one of
   three certified source packets. All six Albany district jobs are authored;
-  Civic, Market, and Greenway are three of six authored district events. Works'
-  exclusive return
-  priority can cross a 13-standing threshold for a Civic recovery cot; Civic's
+  Civic, Market, Greenway, and Works are four of six authored district events.
+  Works' optional pre-Wolf hazard charter adds only its matching post-return
+  shift method, and its slower cold-set line can cross the 13-standing threshold
+  for a Civic recovery cot; Civic's
   first authored event fixes a public-or-protected policy before Wolf-Winter,
   then its return docket exposes exactly one lawful closure from that policy
   and the truthful held-or-evacuated outcome. Campus adds a post-Wolf
@@ -141,7 +142,7 @@ it is **not yet milestone-certified**:
   versus 60 minutes/+4. Greenway adds a post-Wolf
   public-access-or-wildlife-corridor policy whose later survey
   exposes only the two lawful follow-ups for that exact choice. No district jobs
-  and three checklist events—Station, Works, and Campus—remain generic;
+  and two checklist events—Station and Campus—remain generic;
 - Albany authors four permanent registration profiles. Road-Warden and Ledger
   sponsorship now change the actual terms of their matching source packet, and
   the Road-Warden retains its fieldcraft import. Ironhands Repairer,
@@ -200,7 +201,7 @@ The first implementation sequence is:
    landed)_ — quest content declares reusable, validated character/world
    effects; campaign code consumes generic state rather than adding
    Wolf-specific ending conditionals.
-4. **Authored Albany** _(5/6 district jobs and 2/6 events converted)_ — replace
+4. **Authored Albany** _(6/6 district jobs and 4/6 events converted)_ — replace
    the visible slice's generic local transactions with scenes whose evidence,
    time, relationships, resources, and promises alter Wolf-Winter and its
    return.
@@ -668,7 +669,9 @@ Certification requires all of the following simultaneously:
 
 Depth Contract #11 remains open. Albany Works proves the reusable authored-job
 grammar, one exclusive post-return priority, and a delayed 13-standing Civic
-service consumer. Civic adds the reusable authored-event grammar: equal
+service consumer. Its hazard-shift charter now also proves a pre-Wolf authored
+event whose exact option adds one legal return method without replacing either
+base Works priority. Civic adds the reusable authored-event grammar: equal
 pre-Wolf terms bind a public-or-protected charter policy, and the post-Wolf job
 selects exactly one of four policy/outcome closures with outcome-dependent
 duration and policy-dependent standing. The paired held/evacuated, restore,
@@ -711,6 +714,22 @@ without adding a new rest/resupply coupon or delaying first-goal completion.
 Full/compact/UI/MCP projection, current replay, exact neutral
 generic migration, and chronology/tamper guards live in
 [`albany_greenway_scene_counterfactual.test.ts`](../tests/starting_slice/albany_greenway_scene_counterfactual.test.ts).
+Works adds the fourth authored district event without gating departure or
+lengthening the mandatory path. Reese's witnessed-count and cold-set-bypass
+charters each cost 20 minutes and earn 1 standing before Wolf-Winter, then add
+only their matching 45-minute/+3 or 60-minute/+4 method to the existing Works
+return job.
+The original 80-minute/+5 public-shift protection and 35-minute/+2 reserve
+inventory remain legal. From the lowest 8-standing held return, the witnessed
+method ends at 12 and beats the bypass by 15 minutes when already rested; the
+bypass ends at 13 and opens Rowan's existing 15-minute Civic cot, beating
+ordinary 180-minute recovery when fatigued. The unresolved charter expires
+after Wolf-Winter and is not projected as a return lead, while an
+already-discovered Works job remains
+eligible for the normal lead. Full/compact-v26/UI/MCP parity, event/job replay,
+exact current-main and cumulative neutral migration, fail-closed divergent
+hashes, and the standing/fatigue reversal live in
+[`albany_works_hazard_charter_counterfactual.test.ts`](../tests/starting_slice/albany_works_hazard_charter_counterfactual.test.ts).
 The journey now also projects optional return opportunities without adding a
 counted fork: unresolved post-quest event roots in visited towns and eligible
 authored jobs whose roots were already discovered remain visible beside the
@@ -718,7 +737,7 @@ current objective after the player leaves. Each lead exposes only its title,
 district, kind, and exact `here` / `mapped` / `route_unmapped` access state;
 choices, outcomes, rewards, and scene terms remain undisclosed until normal
 play reaches them. The structured journey object is authoritative, while the
-the versioned compact v25 context receives only a bounded additive tuple and legend.
+versioned compact v26 context receives only a bounded additive tuple and legend.
 Projection is read-only, adds no decision or action, and is covered across the
 Wolf completion, dawn choice, northward departure, restore, MCP, and UI surfaces
 by [`albany_return_opportunity_leads.test.ts`](../tests/starting_slice/albany_return_opportunity_leads.test.ts).
@@ -736,8 +755,8 @@ non-null lead and is excluded; one of the three eligible players organically
 recognized the optional Albany opportunities, none pursued one, and none named
 an individual decline. Recognition therefore improves to 1/3 eligible
 players, while actual return-route uptake remains unproven.
-No generic district jobs remain. Three checklist events—Station, Works, and
-Campus—are still visible and generic.
+No generic district jobs remain. Two checklist events—Station and Campus—are
+still visible and generic.
 
 ## Evidence contract
 

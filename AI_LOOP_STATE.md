@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 606 -->
+<!-- historical_cycle_count: 607 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - albany_works_hazard_charter
+
+- Evidence choice: Albany Works still exposed a generic checklist event/job pair, so this cycle authors one optional pre-Wolf shift charter whose equal-cost policy changes the matching post-return work method without gating or lengthening the mandatory Wolf-Winter path.
+- Surface: Reese Pryce now licenses a witnessed shift count or a cold-set gate bypass for 20 minutes/+1 standing; the original 80-minute public rescue and 35-minute stock inventory remain, while exactly one policy-bound 45-minute/+3 or 60-minute/+4 method joins them after a truthful return.
+- Counterfactual: rested low-return state favors the witness method by 15 minutes, while fatigued low-return state lets the bypass reach standing 13 and unlock the Civic cot for a 150-minute total advantage; option gating, discovery, expiry, persistence, compact/full/UI/MCP parity, and cumulative neutral migration are deterministic.
+- Pure evidence: exact clean `f878c046` passed first-attempt Terra 4348, Luna 4349, and replacement Sol 4350; all completed Wolf-Winter, were unstuck/replay-yes, and rated clarity/enjoyment 4/4, 4/4, and 3/4. Contaminated duplicate-launch seed 4347 published nothing and is excluded.
+- Measured result: no cohort organically selected the new Works charter or its matching return method; Sol's warm-room allocation, Relief Protocol, and Cade wagon were pre-existing systems and are not counted as uptake. The authored reversal therefore PASSes deterministically while discoverability remains UNPROVEN.
+- Feedback/follow-through: compile `20260721T181636Z` has 957 verified/58 rejected reports, 206 eligible pure exits, and 181 continuing; Sol 4350 is one later verified report. Its fresh S3 embedded-action bridge discovery and S2 stale Cade paling job outrank another content addition for the next cycle.
+- Guard: exact pre/post crawl stays zero-finding at 247/247 nodes, 344/344 edges, and 12/12 boards/quests; the final combined branch passes health at 406 files/3,112 tests plus UI/all packs with stable four-worker scheduling, world/Wolf hashes are `53afa583…`/`e1a7d6ac…`, and two independent reviews found no P0-P2.
 
 ### Cycle result - shell_free_node_launchers
 
@@ -154,13 +164,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Measured result: the commitment surface PASSes mechanically; the blind player organically chose lure, so direct new-id use remains unclaimed. It repeated Station route discovery, parent-goal guidance, and dense consequence copy as separate S1 presentation debt.
 - Feedback/follow-through: the ledger is 913 accepted/59 rejected with one verified report since compile `20260720T231307Z`, below the three-report threshold. Land optional Station interactions, then the fact-gated Cade Return Packet.
 - Guard: exact commit `446901ec` has green pre/post crawl, health at 390 files/2,975 tests plus UI/all packs, and independent review found no remaining P0-P2.
-
-### Cycle result - fictional_ttrpg_run_context
-
-- Evidence choice: repeated Codex UI false classification interrupted ordinary AdventureForge work, so this cycle clarified the legitimate fictional-TTRPG QA context without changing gameplay, relaxing the pure player boundary, or treating any local flag as a classifier bypass.
-- Surface: the blind prompt now opens with its deterministic TTRPG study scope and one affirmative player-surface contract; generated loop handoffs use bounded repo-local maintenance language instead of broad authority phrasing while preserving every crawl, health, integrity, direct-start, and tool-allowlist rule.
-- Counterfactual: prompt and loop-contract tests require the new context, reject the removed broad-authority phrase, and retain the exact start, journey, pure-mode, no-direct-quest, and external-tool boundaries; independent review removed unrelated npm UI churn and found no remaining P0-P2.
-- Pure evidence: exact clean-build Terra seed 4242 completed Wolf-Winter and The Gallowmere in 51 decisions, continued at 29 and 40, ended at 51, scored clarity/enjoyment 4/4, was unstuck/replay-yes, and encountered no classifier, content, auth, or player-boundary failure. Wrapper-killed seed 4241 produced no report and is excluded.
-- Measured result: repo-side contextual mitigation PASSes one real six-minute session and all mechanical gates; the UI classifier itself remains server-owned, so this does not claim a local permanent threshold fix.
-- Feedback/follow-through: compile `20260720T231307Z` has 913 verified reports, 162 eligible pure exits, and 139 continuing; the ledger is 912 accepted/59 rejected. Current exact feedback supports fixing compact fortification commitment ids, then optional Station interactions; legacy fleet-heavy notice-board clusters still require fresh-cohort confirmation.
-- Guard: exact commit `dde132b4` has zero-finding crawl `20260720T230257Z` at 247/247 nodes, 344/344 edges, and 12/12 boards/quests; health passes 390 files/2,975 tests plus UI/all packs, with the runner allowlist and isolated Codex home unchanged.

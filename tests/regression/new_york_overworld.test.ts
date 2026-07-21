@@ -753,10 +753,21 @@ describe("New York overworld graph", () => {
     expect(authoredBridge).not.toContain("from the station board");
   });
 
-  it("authors Albany Works as a post-Wolf priority scene instead of a template job", () => {
+  it("authors Albany Works as a pre-Wolf charter and option-gated return priority", () => {
+    const worksEvent = world.local_events.find(
+      (event) => event.id === "albany_city__industrial__event",
+    );
+    const eventScene = worksEvent?.authored_scene;
     const worksJob = world.local_jobs.find((job) => job.id === "albany_city__industrial__job");
     const scene = worksJob?.authored_scene;
 
+    expect(worksEvent?.title).toBe("Reese Pryce's Hazard-Shift Charter");
+    expect(eventScene?.id).toBe("albany:works-hazard-shift-charter");
+    expect(eventScene?.forbids_completed_quests).toEqual(["wolf_winter"]);
+    expect(eventScene?.options.map((option) => [option.id, option.terms])).toEqual([
+      ["license_shift_witness_count", { minutes: 20, renown: 1 }],
+      ["authorize_cold_set_gate_bypass", { minutes: 20, renown: 1 }],
+    ]);
     expect(worksJob).toBeDefined();
     expect(worksJob?.title).toBe("Reese's Two Winter Lines");
     expect(scene?.id).toBe("albany:works-yard-winter-shift");
@@ -773,6 +784,26 @@ describe("New York overworld graph", () => {
         id: "inventory_outbound_cold_set_stock",
         title: "Inventory and seal the outbound cold-set reserve for the next dispatch",
         terms: { minutes: 35, renown: 2 },
+      }),
+      expect.objectContaining({
+        id: "release_shift_under_witness_count",
+        terms: { minutes: 45, renown: 3 },
+        requires_event_options: [
+          {
+            event_id: "albany_city__industrial__event",
+            option_id: "license_shift_witness_count",
+          },
+        ],
+      }),
+      expect.objectContaining({
+        id: "open_cold_set_gate_bypass",
+        terms: { minutes: 60, renown: 4 },
+        requires_event_options: [
+          {
+            event_id: "albany_city__industrial__event",
+            option_id: "authorize_cold_set_gate_bypass",
+          },
+        ],
       }),
     ]);
 

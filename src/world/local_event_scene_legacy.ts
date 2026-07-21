@@ -10,6 +10,8 @@ import {
   AUTHORED_ALBANY_GREENWAY_PREDECESSOR_WORLD_HASH,
   AUTHORED_ALBANY_MARKET_GENERIC_PREDECESSOR_WORLD_HASHES,
   AUTHORED_ALBANY_MARKET_PREDECESSOR_WORLD_HASH,
+  AUTHORED_ALBANY_WORKS_EVENT_GENERIC_PREDECESSOR_WORLD_HASHES,
+  AUTHORED_ALBANY_WORKS_HAZARD_PREDECESSOR_WORLD_HASH,
   WINTER_RETURN_DOCKET_GENERIC_PREDECESSOR_WORLD_HASHES,
   WINTER_RETURN_DOCKET_PREDECESSOR_WORLD_HASH,
 } from "./local_scene_legacy_sources.js";
@@ -19,6 +21,8 @@ export {
   AUTHORED_ALBANY_GREENWAY_PREDECESSOR_WORLD_HASH,
   AUTHORED_ALBANY_MARKET_GENERIC_PREDECESSOR_WORLD_HASHES,
   AUTHORED_ALBANY_MARKET_PREDECESSOR_WORLD_HASH,
+  AUTHORED_ALBANY_WORKS_EVENT_GENERIC_PREDECESSOR_WORLD_HASHES,
+  AUTHORED_ALBANY_WORKS_HAZARD_PREDECESSOR_WORLD_HASH,
   WINTER_RETURN_DOCKET_GENERIC_PREDECESSOR_WORLD_HASHES,
   WINTER_RETURN_DOCKET_PREDECESSOR_WORLD_HASH,
 } from "./local_scene_legacy_sources.js";
@@ -29,6 +33,8 @@ export const AUTHORED_ALBANY_MARKET_EVENT_ID = "albany_city__market__event";
 export const AUTHORED_ALBANY_MARKET_EVENT_SCENE_ID = "albany:winter-price-policy";
 export const AUTHORED_ALBANY_GREENWAY_EVENT_ID = "albany_city__greenway__event";
 export const AUTHORED_ALBANY_GREENWAY_EVENT_SCENE_ID = "albany:greenway-trail-policy";
+export const AUTHORED_ALBANY_WORKS_EVENT_ID = "albany_city__industrial__event";
+export const AUTHORED_ALBANY_WORKS_EVENT_SCENE_ID = "albany:works-hazard-shift-charter";
 
 export const AUTHORED_ALBANY_CHARTER_LEGACY_EVENT: OverworldLocalEvent = Object.freeze({
   id: AUTHORED_ALBANY_CHARTER_EVENT_ID,
@@ -61,6 +67,17 @@ export const AUTHORED_ALBANY_GREENWAY_LEGACY_EVENT: OverworldLocalEvent = Object
   intensity: 3,
   summary:
     "Albany Greenway is under hazard pressure around tracks, utility cuts, and witnesses who avoid main streets. Resolving it requires scouting this area, talking to its contact, and investigating on site.",
+});
+
+export const AUTHORED_ALBANY_WORKS_LEGACY_EVENT: OverworldLocalEvent = Object.freeze({
+  id: AUTHORED_ALBANY_WORKS_EVENT_ID,
+  home: "albany_city",
+  area: "albany_city__industrial",
+  title: "Albany Works District: hazard shift",
+  pressure: "hazard",
+  intensity: 4,
+  summary:
+    "Albany Works District is under hazard pressure around locked yards, bad machinery, and crews staying past dusk. Resolving it requires scouting this area, talking to its contact, and investigating on site.",
 });
 
 export type AuthoredLocalEventLegacyDefinition = Readonly<{
@@ -105,6 +122,13 @@ export const AUTHORED_LOCAL_EVENT_LEGACY_DEFINITIONS: readonly AuthoredLocalEven
       sceneId: AUTHORED_ALBANY_GREENWAY_EVENT_SCENE_ID,
       legacyEvent: AUTHORED_ALBANY_GREENWAY_LEGACY_EVENT,
       acceptedSourceWorldHashes: AUTHORED_ALBANY_GREENWAY_GENERIC_PREDECESSOR_WORLD_HASHES,
+    }),
+    Object.freeze({
+      sourceWorldHash: AUTHORED_ALBANY_WORKS_HAZARD_PREDECESSOR_WORLD_HASH,
+      eventId: AUTHORED_ALBANY_WORKS_EVENT_ID,
+      sceneId: AUTHORED_ALBANY_WORKS_EVENT_SCENE_ID,
+      legacyEvent: AUTHORED_ALBANY_WORKS_LEGACY_EVENT,
+      acceptedSourceWorldHashes: AUTHORED_ALBANY_WORKS_EVENT_GENERIC_PREDECESSOR_WORLD_HASHES,
     }),
   ]);
 
