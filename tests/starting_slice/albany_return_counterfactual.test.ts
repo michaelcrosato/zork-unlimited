@@ -92,8 +92,8 @@ function fullyPrepared(): GameState {
 /** Reach old grey's corpse with the failed paling rail still bound to the spear. */
 function savedTimberFork(): GameState {
   let state = act(fullyPrepared(), "go_north");
-  state = act(state, "use_paling_rail", 1);
-  state = act(state, "use_paling_rail");
+  state = act(state, "wedge_paling_rail", 1);
+  state = act(state, "bind_paling_rail");
   state = act(state, "maneuver_yearling_wolf_set_spear", 6);
   state = act(state, "go_north");
   state = act(state, "maneuver_flank_wolf_offside_cut", 6);

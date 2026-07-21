@@ -705,10 +705,10 @@ describe("SS-F01 — Albany character background counterfactual", () => {
     let wardenAtRail = act(act(warden.state, "use_sheltered_stockway_last_mile"), "go_north");
     let advocateAtRail = act(act(advocate.state, "use_sheltered_stockway_last_mile"), "go_north");
     const wardenRail = enumerateRpgActions(wolfIndex, wardenAtRail).find(
-      (candidate) => candidate.id === "use_paling_rail",
+      (candidate) => candidate.id === "wedge_paling_rail",
     );
     const advocateRail = enumerateRpgActions(wolfIndex, advocateAtRail).find(
-      (candidate) => candidate.id === "use_paling_rail",
+      (candidate) => candidate.id === "wedge_paling_rail",
     );
     expect(wardenRail?.skill_check).toEqual({
       skill: "defense",
@@ -717,8 +717,8 @@ describe("SS-F01 — Albany character background counterfactual", () => {
     });
     expect(advocateRail?.skill_check).toEqual(wardenRail?.skill_check);
 
-    wardenAtRail = act(wardenAtRail, "use_paling_rail", 7);
-    advocateAtRail = act(advocateAtRail, "use_paling_rail", 7);
+    wardenAtRail = act(wardenAtRail, "wedge_paling_rail", 7);
+    advocateAtRail = act(advocateAtRail, "wedge_paling_rail", 7);
     expect(wardenAtRail.flags).toMatchObject({
       rail_attempted: true,
       breach_braced: true,
@@ -732,8 +732,8 @@ describe("SS-F01 — Albany character background counterfactual", () => {
 
     const wardenNext = enumerateRpgActions(wolfIndex, wardenAtRail).map((option) => option.id);
     const advocateNext = enumerateRpgActions(wolfIndex, advocateAtRail).map((option) => option.id);
-    expect(wardenNext).not.toContain("use_paling_rail");
-    expect(advocateNext).toContain("use_paling_rail");
+    expect(wardenNext).not.toContain("wedge_paling_rail");
+    expect(advocateNext).toContain("bind_paling_rail");
     expect(wardenNext).not.toEqual(advocateNext);
 
     const direct = warden.api.start_world_quest({ world_quest_id: "wolf_winter", seed: 505 });

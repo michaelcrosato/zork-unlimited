@@ -80,8 +80,8 @@ function fullyPrepared(): GameState {
 /** Fail the wedge, bind its split lengths, and defeat the yearling. */
 function reachBoundGuardAtGap(playerRoll = 1, enemyRoll = 6): GameState {
   let state = act(fullyPrepared(), "go_north");
-  state = act(state, "use_paling_rail", 1);
-  state = act(state, "use_paling_rail");
+  state = act(state, "wedge_paling_rail", 1);
+  state = act(state, "bind_paling_rail");
   state = act(state, "maneuver_yearling_wolf_set_spear", playerRoll, enemyRoll);
   if (!state.flags.yearling_down) {
     state = act(state, "maneuver_yearling_wolf_drive_set_spear", playerRoll);

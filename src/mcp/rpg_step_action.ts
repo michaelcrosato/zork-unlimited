@@ -1,4 +1,4 @@
-import type { RpgActionOption } from "../rpg/legal_actions.js";
+import { rpgActionOptionForInputId, type RpgActionOption } from "../rpg/legal_actions.js";
 import { activeDialogue } from "../rpg/model.js";
 import { rpgRoomTitle, type RpgMcpSessionRuntime } from "./rpg_session_runtime.js";
 import type { SessionStore } from "./sessions.js";
@@ -70,7 +70,7 @@ function actionOptionForId(
   id: string,
   active: ReturnType<typeof activeDialogue>,
 ): RpgActionOption | null {
-  const exact = actions.find((action) => action.id === id);
+  const exact = rpgActionOptionForInputId(actions, id);
   if (exact) return exact;
   if (!active || !id.startsWith("ask_")) return null;
   const topicAlias = id.slice("ask_".length);
@@ -167,7 +167,7 @@ export function runRpgStepAction<Args extends RpgStepActionArgs>(
     step: beforeStep,
     scene_id: beforeSceneId,
     title: beforeTitle,
-    action_id: compactMcpTranscriptActionId(args.action_id),
+    action_id: compactMcpTranscriptActionId(actionOption.id),
     action_text: compactMcpActionLabel(actionOption.command),
     events: result.events,
     result_scene_id: obsLocation(after),

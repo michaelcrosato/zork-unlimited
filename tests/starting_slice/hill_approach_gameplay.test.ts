@@ -253,9 +253,9 @@ describe("SS-F07 — Wolf-Winter hill-approach gameplay", () => {
     expect(stockway.vars.cattle_alarm).toBe(2);
     expect(actionIds(stockway)).not.toContain("use_winter_feed_sack_on_downwind_feed_line");
 
-    stockway = act(stockway, "use_paling_rail");
+    stockway = act(stockway, "wedge_paling_rail");
     expect(stockway.flags.rail_split).toBe(true);
-    stockway = act(stockway, "use_paling_rail");
+    stockway = act(stockway, "bind_paling_rail");
     stockway = act(stockway, "use_split_rail_guard_on_downwind_feed_line");
     expect(stockway.flags).toMatchObject({
       yearling_redirected: true,

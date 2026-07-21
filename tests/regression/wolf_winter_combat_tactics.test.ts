@@ -92,7 +92,7 @@ function fullyPrepared(): GameState {
 function reachLeader(): GameState {
   let state = fullyPrepared();
   state = act(state, "go_north").state;
-  state = act(state, "use_paling_rail", "best").state;
+  state = act(state, "wedge_paling_rail", "best").state;
   state = act(state, "maneuver_yearling_wolf_set_spear", "worst").state;
   state = act(state, "maneuver_yearling_wolf_drive_set_spear", "worst").state;
   state = act(state, "go_north").state;
@@ -176,7 +176,7 @@ describe("Wolf-Winter authored combat tactics", () => {
   it("makes a successful target-only wedge earn two competing flank openings", () => {
     let state = hearBoth(start());
     state = act(state, "go_north").state;
-    const wedge = options(state).find((option) => option.id === "use_paling_rail");
+    const wedge = options(state).find((option) => option.id === "wedge_paling_rail");
     expect(wedge).toMatchObject({
       command: "wedge fallen paling-rail",
       action: { type: "USE", target: "paling_rail" },
@@ -184,11 +184,11 @@ describe("Wolf-Winter authored combat tactics", () => {
     });
     expect(optionIds(state)).not.toContain("take_paling_rail");
 
-    state = act(state, "use_paling_rail", "best").state;
+    state = act(state, "wedge_paling_rail", "best").state;
     expect(state.flags.rail_attempted).toBe(true);
     expect(state.flags.breach_braced).toBe(true);
     expect(state.inventory).not.toContain("paling_rail");
-    expect(optionIds(state)).not.toContain("use_paling_rail");
+    expect(optionIds(state)).not.toContain("wedge_paling_rail");
     expect(buildRpgObservation(index, state).visible_objects).toContainEqual({
       id: "paling_rail",
       name: "braced paling-rail",
@@ -247,26 +247,26 @@ describe("Wolf-Winter authored combat tactics", () => {
     expect(state.journal.join(" ")).not.toContain("as it cuts for your off side");
   });
 
-  it("turns a failed wedge into a same-id recovered guard and consumes it coherently", () => {
+  it("turns a failed wedge into a distinct recovered guard action and consumes it coherently", () => {
     let state = act(fullyPrepared(), "go_north").state;
-    state = act(state, "use_paling_rail", "worst").state;
+    state = act(state, "wedge_paling_rail", "worst").state;
     expect(state.flags.rail_attempted).toBe(true);
     expect(state.flags.rail_split).toBe(true);
     expect(state.flags.breach_braced).not.toBe(true);
     expect(state.inventory).not.toContain("split_rail_guard");
-    const recovery = options(state).find((option) => option.id === "use_paling_rail");
+    const recovery = options(state).find((option) => option.id === "bind_paling_rail");
     expect(recovery).toMatchObject({
-      id: "use_paling_rail",
+      id: "bind_paling_rail",
       command: "bind split paling-rail",
       action: { type: "USE", target: "paling_rail" },
     });
     expect(recovery?.skill_check).toBeUndefined();
     expect(buildRpgObservation(index, state).description).toContain("use the rail again");
 
-    state = act(state, "use_paling_rail").state;
+    state = act(state, "bind_paling_rail").state;
     expect(state.flags.split_rail_guard_made).toBe(true);
     expect(state.inventory).toContain("split_rail_guard");
-    expect(optionIds(state)).not.toContain("use_paling_rail");
+    expect(optionIds(state)).not.toContain("bind_paling_rail");
     expect(optionIds(state)).not.toContain("drop_split_rail_guard");
     const carriedAtGap = buildRpgObservation(index, state);
     expect(carriedAtGap.description).toContain("ride in your hands");
@@ -335,7 +335,7 @@ describe("Wolf-Winter authored combat tactics", () => {
 
     // Leaving the split rail unbound preserves Cade's off-side option instead.
     let unbound = act(fullyPrepared(), "go_north").state;
-    unbound = act(unbound, "use_paling_rail", "worst").state;
+    unbound = act(unbound, "wedge_paling_rail", "worst").state;
     unbound = act(unbound, "maneuver_yearling_wolf_set_spear", "best").state;
     unbound = act(unbound, "go_north").state;
     expect(optionIds(unbound)).toContain("maneuver_flank_wolf_offside_cut");
