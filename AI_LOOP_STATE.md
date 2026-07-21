@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 600 -->
+<!-- historical_cycle_count: 601 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - albany_return_opportunity_leads
+
+- Evidence choice: fresh Market/Greenway policy uptake remained 0/5 because the active north goal eclipsed optional Albany aftermath, so this cycle added one journey-level reminder instead of another mandatory choice or content scene.
+- Surface: unresolved visited-town authored events and already-discovered eligible jobs persist as truthful `here`, `mapped`, or `route_unmapped` Return Opportunities across completion, dawn, active play, roads, restore, full/compact MCP, and all journey UI screens; no rewards, outcomes, hidden choices, blockers, saves, hashes, or actions are exposed.
+- Counterfactual: exact Cade-here/Market-mapped/Greenway-unmapped ordering, unvisited suppression, discovery and chronology gates, departure/arrival persistence, compact bounds, clone/freeze behavior, and continuing the north goal are deterministic; independent review found no P0-P2.
+- Pure evidence: exact clean code commit `6e606d27` passed first-attempt Terra seeds 4311 and 4312; both completed Wolf-Winter, continued at the first goal, rated clarity/enjoyment 4/4, were unstuck/replay-yes, and reported no S2-S4 or auth/model/gameplay failure.
+- Measured result: visibility PASSes—all three leads were present and persisted in both runs—but authored-policy uptake remains UNPROVEN at 0/2; both players used the separate Cade dawn dispatch and followed the north goal without naming or pursuing a listed opportunity, so that dispatch is not counted as uptake.
+- Feedback/follow-through: compile `20260721T073941Z` has 931 verified/58 rejected, 180 eligible pure exits, and 157 continuing; the ledger is 930/59. Run three more clean exact-build blinds before changing prominence; if recognition remains 0/5, add immediate affordance rather than content.
+- Guard: exact feature health passes 399 files/3,046 tests plus UI/all packs; final crawl `20260721T071726Z` is zero-finding at 247/247 nodes, 344/344 edges, and 12/12 boards/quests.
 
 ### Cycle result - embedded_quest_character_continuity
 
