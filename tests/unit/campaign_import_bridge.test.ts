@@ -342,6 +342,8 @@ describe("trusted campaign-character quest launch bridge", () => {
     expect(fullState.campaignImportReceipt).toBeUndefined();
     expect(full.state_hash).toBe(compact.state_hash);
     expect(api.sessions.get(full.session_id).overworldSessionId).toBeUndefined();
+    expect(full).not.toHaveProperty("character_continuity");
+    expect(compact).not.toHaveProperty("character_continuity");
   });
 
   it("keeps direct starts on pack defaults while the private bridge imports its parent", () => {
@@ -462,10 +464,50 @@ describe("trusted campaign-character quest launch bridge", () => {
       "import:wolf_winter_works_fortification",
     ]);
     expect(fullSession.state.flags.approach_sheltered_stockway).toBe(true);
+    expect(full.launched.rpg_session.character_continuity).toEqual(
+      fullSession.embeddedCharacterContinuity,
+    );
+    expect(full.launched.rpg_session.character_continuity).toMatchObject({
+      continuity: "same_campaign_character",
+      profile_scope: "quest_local",
+      persistent_record: {
+        background: "albany:ledger_advocate",
+        health: { current: 30, max: 30 },
+      },
+      quest_local_profile: {
+        hp: fullSession.state.vars.hp,
+        attack: fullSession.state.vars.attack,
+        defense: fullSession.state.vars.defense,
+        inventory: fullSession.state.inventory,
+      },
+      applied_campaign_import_effects: fullSession.state.campaignImportReceipt?.effects,
+    });
+    expect(Object.isFrozen(fullSession.embeddedCharacterContinuity)).toBe(true);
+    expect(Object.isFrozen(fullSession.embeddedCharacterContinuity?.quest_local_profile)).toBe(
+      true,
+    );
+    expect(compact.launched.rpg_session.character_continuity).toEqual([
+      "same_campaign_character",
+      "quest_local",
+      expect.any(Array),
+      expect.any(Array),
+      fullSession.state.campaignImportReceipt?.effects.map((effect) =>
+        effect.type === "health_current_to_var" || effect.type === "skill_rank_to_var"
+          ? [effect.rule_id, effect.type, effect.target_var, effect.value]
+          : effect.type === "equipment_to_item"
+            ? [effect.rule_id, effect.type, effect.target_object]
+            : [effect.rule_id, effect.type, effect.target_flag, true],
+      ),
+      expect.any(String),
+    ]);
+    expect(compact.launched.rpg_session.character_continuity_legend).toContain(
+      "quest_inventory_item_id",
+    );
 
     const direct = fullApi.start_world_quest({ world_quest_id: "wolf_winter", seed: 505 });
     expect(fullApi.sessions.get(direct.session_id).overworldSessionId).toBeUndefined();
     expect(fullApi.sessions.get(direct.session_id).state.campaignImportReceipt).toBeUndefined();
+    expect(direct).not.toHaveProperty("character_continuity");
     expect(fullSession.state).not.toEqual(fullApi.sessions.get(direct.session_id).state);
   });
 
@@ -497,6 +539,16 @@ describe("trusted campaign-character quest launch bridge", () => {
       "import:wolf_winter_fieldcraft",
       "import:wolf_winter_lure_fieldcraft",
     ]);
+    expect(view.characterContinuity).toMatchObject({
+      persistent_record: { health: { current: 23, max: 30 } },
+      quest_local_profile: {
+        hp: expected.vars.hp,
+        attack: expected.vars.attack,
+        defense: expected.vars.defense,
+        inventory: expected.inventory,
+      },
+      applied_campaign_import_effects: expected.campaignImportReceipt?.effects,
+    });
   });
 
   it("detaches browser reset state from caller-owned character and catalog objects", () => {
