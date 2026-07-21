@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 599 -->
+<!-- historical_cycle_count: 600 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -24,6 +24,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Measured result: both players understood the launch explanation, with seed 4310 explicitly reasoning about its lower quest-local defenses; the later live/read/step/save/load corrections pass deterministic tests but remain blind-unexercised, and neither two runs nor the patch claims recurring-cluster resolution at cohort scale.
 - Feedback/follow-through: compile `20260721T062538Z` remains 928 verified/58 rejected inputs; one later valid report is below the next compile threshold, and the regenerated ledger is 928 accepted/59 rejected. Fresh friction targets stale Wolf lure prose, duplicate Rowan identity, dense setup, and compact consequence length.
 - Guard: the earlier feature build passed health at 395 files/3,024 tests plus UI/all packs; the reviewed lifecycle correction passes 8 focused files/148 tests, both typechecks, lint/format/integrity, and zero-finding crawl `20260721T072702Z`, with exact full health intentionally left to landing.
+
+### Cycle result - albany_greenway_policy
+
+- Evidence choice: Depth Contract #11 now authors Albany's Market and Greenway instead of leaving their generic jobs/events as checklist filler; the exact neutral migration chain is world hash `9ae4…` → Market `8e0b…` → combined `9238…`.
+- Surface: the truthful post-Wolf Greenway return asks for a public accessible detour or quiet wildlife markers, then makes its local survey job a real time/standing frontier; the public route can cross the existing Civic-cot threshold while the quiet route saves time, and Market carries its parallel household-price/open-bid policy.
+- Counterfactual: full/compact/UI/MCP parity, option-local prerequisites, policy-conditioned consequences, Civic-cot reversal, exact hashes across two neutral migration eras, replay, and clone boundaries are covered; independent combined review found no P0-P2.
+- Pure evidence: exact clean combined build `b20edbaf` passed first-attempt Sol seed 4307 and Terra seed 4309; both completed Wolf-Winter and continued into The Gallowmere (4307 completed it, 4309 ended at checkpoint 40), rated clarity/enjoyment 4/4, were unstuck/replay-yes, and had no auth or security failure.
+- Measured result: deterministic Market+Greenway mechanics PASS, but organic policy uptake remains UNPROVEN—0/2 combined runs and 0/5 eligible fresh feature runs encountered either policy; opportunity-led follow-through is the next evidence need, not a claim of player uptake.
+- Feedback/follow-through: compile `20260721T062538Z` has 928 verified/58 rejected, 177 eligible pure exits, and 154 continuing; the markdown ledger is 927/59. Fresh friction clusters around Station/Market route discovery, checkpoint interruption, compact truncation, and continuity, while the historical top ten remain flat.
+- Guard: exact combined health passes 396 files/3,038 tests plus UI/all packs; exact crawl `20260721T061730Z` is zero-finding at 247/247 nodes, 344/344 edges, and 12/12 boards/quests.
 
 ### Cycle result - albany_market_policy
 
