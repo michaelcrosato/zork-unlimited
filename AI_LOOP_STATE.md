@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 592 -->
+<!-- historical_cycle_count: 593 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - wolf_commitment_action_ids
+
+- Evidence choice: exact Terra seed 4239 found that compact `ask_invoke_authority` looked informational but irreversibly committed fortification, so this cycle fixed the executable id rather than adding another warning paragraph.
+- Surface: the two irreversible choices are now `ask_commit_cade_terms` and `ask_commit_albany_authority`; the old ids remain input aliases for compatibility, while reconsider/back remains visibly noncommitting.
+- Counterfactual: full and compact observations expose only the new ids, legacy text commands parse to them, back restores every strategy, and both choices preserve the same flags, closures, and endings.
+- Pure evidence: exact clean-build Terra seed 4243 completed Wolf-Winter and The Gallowmere in 51 decisions, continued at decisions 28 and 40, ended at 51, rated clarity/enjoyment 4/4, was unstuck/replay-yes, and had no warning, auth, boundary, rejection, loop, or soft-lock failure.
+- Measured result: the commitment surface PASSes mechanically; the blind player organically chose lure, so direct new-id use remains unclaimed. It repeated Station route discovery, parent-goal guidance, and dense consequence copy as separate S1 presentation debt.
+- Feedback/follow-through: the ledger is 913 accepted/59 rejected with one verified report since compile `20260720T231307Z`, below the three-report threshold. Land optional Station interactions, then the fact-gated Cade Return Packet.
+- Guard: exact commit `446901ec` has green pre/post crawl, health at 390 files/2,975 tests plus UI/all packs, and independent review found no remaining P0-P2.
 
 ### Cycle result - fictional_ttrpg_run_context
 
@@ -154,13 +164,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Feedback: Terra's crawlboard report is a real S2 causal-copy defect, not a source-state leak; its blank Gallowmere action was the agent failing to forward a nonempty result. The copy repair stays separate, and neither blind encountered authentication failure.
 - Self-critique: PASS for normal Codex compaction attestation, no change to the `active_unproven` greater-than-BG3 milestone; equivalent JS/TS helpers remain a guarded drift risk and unknown future CLI formats intentionally fail closed.
 - Guard: the retained Luna witness reparses as exact Luna/openai/xhigh authority, independent red-team found no P0–P2, focused positive/negative checks pass, and crawl `20260719T100738Z` is zero-finding at 247/247 nodes, 344/344 edges, and 12/12 boards/quests.
-
-### Cycle result - codex_native_fleet_attestation
-
-- Evidence choice: the milestone certifier trusted Claude-only requested-model envelopes, while routine blind work had moved to Codex/Spark; exact provider/model authority was therefore the next prerequisite for honest parallel playtesting.
-- Surface: normal blinds/fleets default to Codex Spark; v3 Codex members allow only exact Sol/Terra/Luna/Spark and bind public events to one private rollout carrying provider `openai`, exact model, `xhigh`, read-only cwd, one session/turn, and completed lifecycle. Historical Claude v2 remains compatible.
-- Integrity: each sterile home imports only `auth.json`; one exclusive capture receipt records live canonical cwd/filesystem identity and rollout hash, all provider/game bytes are rehashed, and recovery, aliases/fallback/mixing, abort/error history, post-completion rows, reuse, links, resume, retries, or dirty authority builds reject.
-- Pure evidence: Terra seed 4096 authenticated the new capture path and completed Wolf-Winter plus The Gallowmere; clean fleet seed 4100 then verified the full no-resume/no-retry production path 1/1 with zero failed attempts, exact Terra/openai/xhigh provenance, a clean `58d9e6cd` build, pack-diversion Wolf completion at decision 31, and an honest checkpoint-40 exit.
-- Feedback: compile `20260719T075635Z` has 824 verified reports and 73 journey-v3 pure exits, 63 continuing; six new accepted reports are all 4/4 and replay-yes, with front-loaded registration the repeated live slice signal.
-- Self-critique: PASS for Codex-native evidence authority, `active_unproven` for greater-than-BG3; five authored Albany conversions, failure-forward/NPC-agenda proof, deep crawl, same-model pilot, and exact 100-player authority remain.
-- Guard: adversarial reviews closed mock-provider, terminal-history, cwd/session-link, case, and evidence-binding gaps; rebased focused checks are 159/159, dirty and clean Terra artifacts reparse, health is green at 381 files/2,901 tests plus UI/all packs, and crawl `20260719T081322Z` is zero-finding at 247/247 nodes, 344/344 edges, 12/12 boards/quests.

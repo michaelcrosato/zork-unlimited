@@ -5,11 +5,11 @@ Generated deterministically from verified blind reports. The latest entries stay
 ## Summary
 
 - Reports dir: `../zork-unlimited/blind-tester/reports`
-- Accepted reports: 912
+- Accepted reports: 913
 - Rejected or ignored markdown reports: 59
-- Latest report stamp: 20260720T230610Z
+- Latest report stamp: 20260720T235307Z
 - Recent entry limit: 100
-- Archived accepted entries collapsed into traits: 812
+- Archived accepted entries collapsed into traits: 813
 
 ## Recent Common Traits
 
@@ -18,11 +18,18 @@ Generated deterministically from verified blind reports. The latest entries stay
 | 5 | 20260720T195943Z | replay | player would not replay | overworld |
 | 3 | 20260720T184317Z | confusion | Dense permanent setup choices | overworld |
 | 3 | 20260720T183223Z | confusion | Dense permanent registration choices | overworld |
+| 2 | 20260720T235307Z | confusion | Checkpoint interrupted an active quest | overworld |
 | 2 | 20260720T203824Z | confusion | Dense early permanent-choice setup | overworld |
 | 2 | 20260720T185642Z | confusion | Raw embedded-quest action IDs | overworld |
 | 2 | 20260720T185127Z | confusion | Truncated compact consequences | overworld |
 | 2 | 20260719T210058Z | confusion | Dense permanent-choice setup | overworld |
 | 2 | 20260719T183208Z | confusion | Repeated Rowan Quill identity | overworld |
+| 1 | 20260720T235307Z | bug S1 | Albany Civic Center to Station Quarter: The stated destination was not locally navigable until the Market Crossing wa... | overworld |
+| 1 | 20260720T235307Z | bug S1 | Campaign story-choice screens: Long consequence text can obscure the immediate tradeoff for a first-time player. | overworld |
+| 1 | 20260720T235307Z | bug S1 | The Gallowmere: Parent goal guidance remained at Queensbury Market Streets during the embedded moor quest. | overworld |
+| 1 | 20260720T235307Z | confusion | Dense consequence text | overworld |
+| 1 | 20260720T235307Z | confusion | Station route required an indirect scout | overworld |
+| 1 | 20260720T235307Z | worst moment | Being told to reach the Station Quarter before the route to it was discoverable. | overworld |
 | 1 | 20260720T230610Z | bug S1 | Embedded quest action screen: Legal action IDs are shown without naming the control used to execute them. | overworld |
 | 1 | 20260720T230610Z | confusion | Quest action bridge not immediately named | overworld |
 | 1 | 20260720T230610Z | confusion | Route area required separate scouting | overworld |
@@ -33,18 +40,12 @@ Generated deterministically from verified blind reports. The latest entries stay
 | 1 | 20260720T220026Z | worst moment | Parsing the initial stack of role, oath, source, preparation, and allocation consequences. | overworld |
 | 1 | 20260720T203824Z | bug S1 | Albany Relief Compact and departure planning: Long conditional option descriptions are difficult to compare on a firs... | overworld |
 | 1 | 20260720T203824Z | bug S1 | Hedrick dialogue at the 40-decision checkpoint: The journey choice interrupts conversational flow, though continuing... | overworld |
-| 1 | 20260720T203824Z | confusion | Checkpoint interrupts active dialogue | overworld |
-| 1 | 20260720T203824Z | worst moment | Absorbing several dense, permanent Albany decisions before the first field scene. | overworld |
-| 1 | 20260720T195943Z | bug S2 | The Wolf-Winter — The Pack Diverted, Cattle Scattered: The ending says the first feed cast was fouled although the di... | overworld |
-| 1 | 20260720T195943Z | confusion | Dense permanent registration choices before the core loop was clear | overworld |
-| 1 | 20260720T195943Z | confusion | Overworld and quest interaction systems felt separate | overworld |
-| 1 | 20260720T195943Z | confusion | Verbose consequence previews | overworld |
-| 1 | 20260720T195943Z | worst moment | The Wolf-Winter ending contradicted the successful first lure cast. | overworld |
 
 ## Recent Entries
 
 | Stamp | Source | Seed | Mode | Decisions | C/E | Stuck | Replay | Report | Signal |
 | --- | --- | ---: | --- | ---: | --- | --- | --- | --- | --- |
+| 20260720T235307Z | overworld | 4243 | pure | 51 | 4/4 | no | yes | `../zork-unlimited/blind-tester/reports/20260720T235307Z_overworld_seed4243.md` | confusions: Station route required an indirect scout; Dense consequence text; Checkpoint interrupted an active quest \| bugs: S1 Albany Civic Center to Station Quarter:... |
 | 20260720T230610Z | overworld | 4242 | pure | 51 | 4/4 | no | yes | `../zork-unlimited/blind-tester/reports/20260720T230610Z_overworld_seed4242.md` | confusions: Route area required separate scouting; Quest action bridge not immediately named \| bugs: S1 Embedded quest action screen: Legal action IDs are shown withou... |
 | 20260720T220026Z | overworld | 4239 | pure | 43 | 3/4 | no | yes | `../zork-unlimited/blind-tester/reports/20260720T220026Z_overworld_seed4239.md` | confusions: Irreversible commitment hidden behind an ask-style dialogue action; Very dense pre-quest consequence text \| bugs: S2 The Byre-Yard, Old Cade's fortificatio... |
 | 20260720T203824Z | overworld | 4238 | pure | 53 | 4/4 | no | yes | `../zork-unlimited/blind-tester/reports/20260720T203824Z_overworld_seed4238.md` | confusions: Dense early permanent-choice setup; Checkpoint interrupts active dialogue \| bugs: S1 Albany Relief Compact and departure planning: Long conditional option... |
@@ -144,7 +145,6 @@ Generated deterministically from verified blind reports. The latest entries stay
 | 20260719T060904Z | codex_spark | 2925 | pure | 46 | 4/4 | no | yes | `../zork-unlimited/blind-tester/reports/20260719T060904Z_codex_spark_seed2925.md` | confusions: Objective text can stay generic while local combat-entry prerequisites gate progress, so first-time players may need to notice environment blockers. |
 | 20260719T054801Z | codex_spark | 2910 | pure | 22 | 4/4 | no | yes | `../zork-unlimited/blind-tester/reports/20260719T054801Z_codex_spark_seed2910.md` | confusions: The multi-step registration and relief allocation sequence is clear but lengthy before field action starts.; After goal pursuit, it was not always obvious... |
 | 20260719T054801Z | codex_spark | 2909 | pure | 24 | 4/4 | no | yes | `../zork-unlimited/blind-tester/reports/20260719T054801Z_codex_spark_seed2909.md` | confusions: I had to infer when the embedded quest became startable from context updates and quest_starts timing rather than a dedicated quest menu.; The campaign-styl... |
-| 20260719T051324Z | codex_spark | 2898 | pure | 46 | 4/4 | no | yes | `../zork-unlimited/blind-tester/reports/20260719T051324Z_codex_spark_seed2898.md` | confusions: Goal labels in campaign text can lag behind immediate quest scene context, so scene-level clues are needed to know exactly what to do next. |
 
 ## Archived Trait Categories
 
