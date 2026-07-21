@@ -1361,6 +1361,52 @@ dd {
   align-self: start;
 }
 
+.quest-character-continuity {
+  background: color-mix(in srgb, var(--panel-3) 78%, transparent);
+  border: 1px solid color-mix(in srgb, var(--road) 45%, var(--line));
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  padding: 0.85rem;
+}
+
+.quest-character-continuity h3,
+.quest-character-continuity .kicker {
+  margin: 0;
+}
+
+.quest-character-continuity dl {
+  display: grid;
+  gap: 0.55rem;
+  margin: 0.8rem 0;
+}
+
+.quest-character-continuity dl div {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.quest-character-continuity dt {
+  color: var(--muted);
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.quest-character-continuity dd {
+  color: #e1ddd0;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.quest-character-continuity-explanation {
+  color: #c9bda5;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  margin: 0;
+}
+
 .facts li,
 .journal li {
   background: #26231d;

@@ -14,6 +14,10 @@ import type { RpgAction, StepResult } from "../api/types.js";
 import type { RpgActionOption } from "../rpg/legal_actions.js";
 import type { ObservationOptions, RpgObservation } from "../rpg/observation.js";
 import type { RpgIndex } from "../rpg/runner.js";
+import {
+  cloneEmbeddedQuestCharacterContinuity,
+  type EmbeddedQuestCharacterContinuity,
+} from "../rpg/embedded_quest_character_continuity.js";
 import { hashState } from "../core/hash.js";
 import { generatedRpgSeedValidationMessage, isGeneratedRpgSeed } from "../gen/seed.js";
 import { cloneMcpEvent } from "./event_clone.js";
@@ -221,6 +225,7 @@ const SESSION_IMMUTABLE_FIELDS = [
   "contentHash",
   "worldQuestId",
   "overworldSessionId",
+  "embeddedCharacterContinuity",
   "generatedRpgSeed",
   "index",
   "rules",
@@ -318,6 +323,8 @@ export type Session = SessionRuntimeCaches<TranscriptSummary> & {
   worldQuestId?: string;
   /** Overworld session that launched this RPG quest, when started through the bridge. */
   overworldSessionId?: string;
+  /** Player-facing continuity metadata for a quest launched from a campaign parent. */
+  embeddedCharacterContinuity?: EmbeddedQuestCharacterContinuity;
   /** Procedural RPG generation seed for in-memory generated sessions. */
   generatedRpgSeed?: number;
   /** The compiled RPG index for this session. */
@@ -376,6 +383,13 @@ export class SessionStore {
     const transcript = cloneTranscriptRows(init.transcript);
     const session: Session = {
       ...init,
+      ...(init.embeddedCharacterContinuity
+        ? {
+            embeddedCharacterContinuity: deepFreeze(
+              cloneEmbeddedQuestCharacterContinuity(init.embeddedCharacterContinuity),
+            ),
+          }
+        : {}),
       id,
       state,
       stateHash: hashState(state),

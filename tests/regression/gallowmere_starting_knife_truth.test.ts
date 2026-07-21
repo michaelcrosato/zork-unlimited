@@ -18,6 +18,9 @@ import {
   initStateForRpgPack,
 } from "../../src/rpg/runner.js";
 import { validateRpg } from "../../src/validate/rpg_validator.js";
+import { buildCampaignCharacterState } from "../../src/world/campaign_character_state.js";
+import { OverworldSession } from "../../src/world/session.js";
+import { loadOverworldManifest } from "../../src/world/source.js";
 import { GameSession } from "../../ui/src/engine.js";
 
 const SOURCE_PATH = "content/rpg/quests/gallowmere.yaml";
@@ -27,6 +30,58 @@ if (!loaded.ok) throw new Error("gallowmere must compile");
 const pack = loaded.compiled.pack;
 const index = indexRpgPack(pack);
 const rules = buildRpgRules(index);
+const world = loadOverworldManifest(process.cwd());
+
+function registeredQueensburyMarketSession(): OverworldSession {
+  const session = new OverworldSession(world);
+  session.scoutPoi("albany_city__civic_core__poi");
+  session.talkToCharacter("albany_city__civic_core__contact");
+  session.chooseJourneyStory("albany:road_warden");
+  if (session.journey().storyChoice?.kind === "relief_oath") {
+    session.chooseJourneyStory("albany:oath_limited_aid_only");
+  }
+  if (session.journey().storyChoice?.kind === "lead_source") {
+    session.chooseJourneyStory("albany:source_rowan_civic_docket");
+  }
+  session.travel("road_albany_city__saratoga_springs_city");
+  if (session.view().pendingRoadEncounter) session.resolveRoadEncounter("press_on");
+  session.travel("road_saratoga_springs_city__queensbury_town");
+  if (session.view().pendingRoadEncounter) session.resolveRoadEncounter("press_on");
+  session.exploreArea("queensbury_town__civic_core");
+  session.moveArea("queensbury_town__area_route__civic_core__market__1");
+  expect(session.view().quests.map((quest) => quest.id)).toContain("gallowmere");
+  return session;
+}
+
+function finishPreparedGallowmere(ui: GameSession): void {
+  for (const actionId of [
+    "go_west",
+    "talk_hedrick",
+    "ask_ask_sow",
+    "read_shepherd_log",
+    "go_east",
+    "go_north",
+    "go_east",
+    "use_hunting_knife_on_spoor_ground",
+    "go_west",
+    "go_north",
+    "use_hunting_knife_on_wind_stone",
+    "go_north",
+  ]) {
+    expect(ui.choose(actionId).ok, actionId).toBe(true);
+  }
+  if (ui.view().choices.some((choice) => choice.id === "use_hunting_knife_on_sow_blind_side")) {
+    expect(ui.choose("use_hunting_knife_on_sow_blind_side").ok).toBe(true);
+  }
+  for (
+    let guard = 0;
+    guard < 20 && ui.view().choices.some((choice) => choice.id === "attack_gallowmere_sow");
+    guard += 1
+  ) {
+    expect(ui.choose("attack_gallowmere_sow").ok).toBe(true);
+  }
+  expect(ui.choose("go_north").ok).toBe(true);
+}
 
 type CompactContext = {
   here: readonly [string, string];
@@ -102,6 +157,245 @@ describe("bug_0516 — Gallowmere starts with its promised hunting-knife", () =>
       compactText(human.text.trimEnd(), COMPACT_DESCRIPTION_CHAR_LIMIT),
     );
     expect(compact.context.text).not.toMatch(/\.\.\.\(\+\d+ chars\)/);
+    expect(full).not.toHaveProperty("character_continuity");
+    expect(compact).not.toHaveProperty("character_continuity");
+  });
+
+  it("shows embedded browser players the same-character, quest-local profile boundary", () => {
+    const character = buildCampaignCharacterState({
+      background: "albany:road_warden",
+      health: { current: 30, max: 30 },
+    });
+    const direct = GameSession.start(SOURCE, 2218).view();
+    const embedded = GameSession.startEmbedded(SOURCE, character, undefined, 2218).view();
+
+    expect(embedded.stateHash).toBe(direct.stateHash);
+    expect(embedded.facts).toEqual(direct.facts);
+    expect(embedded.inventory).toEqual(["hunting_knife"]);
+    expect(embedded.characterContinuity).toMatchObject({
+      continuity: "same_campaign_character",
+      profile_scope: "quest_local",
+      persistent_record: {
+        background: "albany:road_warden",
+        health: { current: 30, max: 30 },
+      },
+      quest_local_profile: {
+        hp: 24,
+        attack: 4,
+        defense: 2,
+        skills: [
+          { id: "lore", value: 3 },
+          { id: "tracking", value: 3 },
+        ],
+        inventory: ["hunting_knife"],
+      },
+      applied_campaign_import_effects: [],
+    });
+    expect(direct.characterContinuity).toBeUndefined();
+  });
+
+  it("projects the importless boundary in full and compact embedded MCP starts", () => {
+    const snapshot = registeredQueensburyMarketSession().snapshot();
+    const fullApi = createToolApi({ root: process.cwd() });
+    const compactApi = createToolApi({ root: process.cwd() });
+    const fullParent = fullApi.restore_overworld_session({
+      snapshot,
+      compact_context: false,
+    });
+    const compactParent = compactApi.restore_overworld_session({
+      snapshot,
+      compact_context: true,
+    });
+    const full = fullApi.start_overworld_session_quest({
+      session_id: fullParent.session_id,
+      quest_id: "gallowmere",
+      seed: 2218,
+      compact_observation: false,
+      compact_actions: false,
+      compact_result: false,
+    });
+    const compact = compactApi.start_overworld_session_quest({
+      session_id: compactParent.session_id,
+      quest_id: "gallowmere",
+      seed: 2218,
+      compact_observation: true,
+      compact_actions: true,
+      compact_result: false,
+    });
+
+    expect(full.rpg_session.character_continuity).toMatchObject({
+      continuity: "same_campaign_character",
+      profile_scope: "quest_local",
+      persistent_record: {
+        background: "albany:road_warden",
+        health: { current: 30, max: 30 },
+      },
+      quest_local_profile: {
+        hp: 24,
+        attack: 4,
+        defense: 2,
+        skills: [
+          { id: "lore", value: 3 },
+          { id: "tracking", value: 3 },
+        ],
+        inventory: ["hunting_knife"],
+      },
+      applied_campaign_import_effects: [],
+    });
+    expect(compact.rpg_session.character_continuity).toEqual([
+      "same_campaign_character",
+      "quest_local",
+      ["persistent_campaign_record", "albany:road_warden", 30, 30],
+      [
+        24,
+        4,
+        2,
+        [
+          ["lore", 3],
+          ["tracking", 3],
+        ],
+        ["hunting_knife"],
+      ],
+      [],
+      expect.any(String),
+    ]);
+    expect(compact.rpg_session.character_continuity_legend).toContain("profile_scope");
+    expect(fullApi.sessions.get(full.rpg_session_id).stateHash).toBe(
+      compactApi.sessions.get(compact.rpg_session_id).stateHash,
+    );
+    expect(fullApi.sessions.get(full.rpg_session_id).stateHash).toBe(
+      GameSession.start(SOURCE, 2218).view().stateHash,
+    );
+
+    const fullOpeningRead = fullApi.get_observation({
+      session_id: full.rpg_session_id,
+      compact_observation: false,
+    });
+    const compactOpeningRead = compactApi.get_observation({
+      session_id: compact.rpg_session_id,
+      compact_observation: true,
+    });
+    expect(fullOpeningRead.character_continuity).toEqual(full.rpg_session.character_continuity);
+    expect(compactOpeningRead.character_continuity).toEqual(
+      compact.rpg_session.character_continuity,
+    );
+    expect(compactOpeningRead.character_continuity_legend).toContain("profile_scope");
+
+    expect(
+      fullApi.step_action({
+        session_id: full.rpg_session_id,
+        action_id: "go_west",
+        compact_observation: false,
+        compact_events: false,
+      }).ok,
+    ).toBe(true);
+    expect(
+      fullApi.step_action({
+        session_id: full.rpg_session_id,
+        action_id: "talk_hedrick",
+        compact_observation: false,
+        compact_events: false,
+      }).ok,
+    ).toBe(true);
+    const fullLoreStep = fullApi.step_action({
+      session_id: full.rpg_session_id,
+      action_id: "ask_ask_sow",
+      compact_observation: false,
+      compact_events: false,
+    });
+    expect(fullLoreStep.ok).toBe(true);
+    expect(fullLoreStep.character_continuity?.quest_local_profile.skills).toContainEqual({
+      id: "lore",
+      value: 8,
+    });
+
+    expect(
+      compactApi.step_action({
+        session_id: compact.rpg_session_id,
+        action_id: "go_west",
+        compact_observation: true,
+        compact_events: true,
+      }).ok,
+    ).toBe(true);
+    expect(
+      compactApi.step_action({
+        session_id: compact.rpg_session_id,
+        action_id: "talk_hedrick",
+        compact_observation: true,
+        compact_events: true,
+      }).ok,
+    ).toBe(true);
+    const compactLoreStep = compactApi.step_action({
+      session_id: compact.rpg_session_id,
+      action_id: "ask_ask_sow",
+      compact_observation: true,
+      compact_events: true,
+    });
+    expect(compactLoreStep.ok).toBe(true);
+    expect(compactLoreStep.character_continuity?.[3][3]).toContainEqual(["lore", 8]);
+    expect(compactLoreStep.character_continuity_legend).toContain("profile_scope");
+
+    const fullReread = fullApi.get_observation({
+      session_id: full.rpg_session_id,
+      compact_observation: false,
+    });
+    const compactReread = compactApi.get_observation({
+      session_id: compact.rpg_session_id,
+      compact_observation: true,
+    });
+    expect(fullReread.character_continuity).toEqual(fullLoreStep.character_continuity);
+    expect(compactReread.character_continuity).toEqual(compactLoreStep.character_continuity);
+
+    const saved = fullApi.save_game({ session_id: full.rpg_session_id });
+    expect(JSON.parse(saved.save)).toMatchObject({
+      embedded_character_continuity: {
+        version: 1,
+        character_continuity: { applied_campaign_import_effects: [] },
+      },
+    });
+    const fullReload = fullApi.load_game({
+      save: saved.save,
+      compact_observation: false,
+    });
+    const compactReload = compactApi.load_game({
+      save: saved.save,
+      compact_observation: true,
+    });
+    expect(fullReload.state_hash).toBe(fullLoreStep.state_hash);
+    expect(fullReload.character_continuity?.quest_local_profile.skills).toContainEqual({
+      id: "lore",
+      value: 8,
+    });
+    expect(compactReload.character_continuity?.[3][3]).toContainEqual(["lore", 8]);
+    expect(compactReload.character_continuity_legend).toContain("profile_scope");
+    const reloadedSession = fullApi.sessions.get(fullReload.session_id);
+    expect(reloadedSession.overworldSessionId).toBeUndefined();
+    expect(Object.isFrozen(reloadedSession.embeddedCharacterContinuity)).toBe(true);
+    expect(fullApi.save_game({ session_id: fullReload.session_id }).save).toBe(saved.save);
+  });
+
+  it("keeps quest-local combat damage out of the persistent parent record", () => {
+    const parent = registeredQueensburyMarketSession();
+    parent.startQuest("gallowmere");
+    const persistentBefore = parent.campaignCharacterState();
+    const ui = GameSession.startEmbedded(SOURCE, persistentBefore, undefined, 7);
+
+    finishPreparedGallowmere(ui);
+    const ending = ui.view();
+    expect(ending.ended).toBe(true);
+    const questHp = Number(/^HP (\d+)/.exec(ending.facts[0] ?? "")?.[1]);
+    expect(questHp).toBeLessThan(24);
+    expect(ending.characterContinuity?.quest_local_profile.hp).toBe(questHp);
+    expect(ending.characterContinuity?.persistent_record.health.current).toBe(30);
+    const endingTitle = pack.endings.find((candidate) => candidate.id === ending.endingId)?.title;
+    if (!ending.endingId || !endingTitle)
+      throw new Error("Expected the authored Gallowmere ending.");
+    parent.completeQuest("gallowmere", {
+      endingId: ending.endingId,
+      endingTitle,
+      death: false,
+    });
+    expect(parent.campaignCharacterState()).toEqual(persistentBefore);
   });
 
   it("carries the knife to both tool checks without a pickup or recovery detour", () => {

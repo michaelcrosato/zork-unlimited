@@ -27,6 +27,11 @@ import {
 import { RPG_COMPACT_LEGEND, type RpgCompactLegend } from "./compact_rpg_observation.js";
 import { publicRpgStateHash } from "./rpg_state_guards.js";
 import { SessionStore, type RpgStep, type Session } from "./sessions.js";
+import type { EmbeddedQuestCharacterContinuity } from "../rpg/embedded_quest_character_continuity.js";
+import {
+  embeddedQuestCharacterContinuityField,
+  type EmbeddedQuestCharacterContinuityField,
+} from "./embedded_quest_character_continuity_projection.js";
 
 export type RpgRuntimeCacheEntry = {
   readonly index: RpgIndex;
@@ -45,7 +50,8 @@ export type RpgSessionPayload<Args extends RpgViewOptions = RpgViewOptions> = {
   /** Field guide for the compact context/events; sent only on session-creating responses. */
   legend?: RpgCompactLegend;
 } & RpgSourceFields &
-  RpgViewField<Args>;
+  RpgViewField<Args> &
+  EmbeddedQuestCharacterContinuityField<Args>;
 
 type RpgOpeningViewOptions = RpgViewOptions & {
   include_world_intro?: boolean;
@@ -55,6 +61,7 @@ export type RpgSessionSource = {
   worldQuestId?: string | null;
   overworldSessionId?: string | null;
   generatedRpgSeed?: number | null;
+  embeddedCharacterContinuity?: EmbeddedQuestCharacterContinuity | null;
 };
 
 export type RpgSessionStartOptions = RpgSessionSource & {
@@ -177,6 +184,9 @@ export class RpgMcpSessionRuntime {
       ...(opts.generatedRpgSeed !== undefined && opts.generatedRpgSeed !== null
         ? { generatedRpgSeed: opts.generatedRpgSeed }
         : {}),
+      ...(opts.embeddedCharacterContinuity
+        ? { embeddedCharacterContinuity: opts.embeddedCharacterContinuity }
+        : {}),
       index,
       rules,
       step,
@@ -230,6 +240,9 @@ export class RpgMcpSessionRuntime {
       ...(source.generatedRpgSeed !== undefined && source.generatedRpgSeed !== null
         ? { generatedRpgSeed: source.generatedRpgSeed }
         : {}),
+      ...(source.embeddedCharacterContinuity
+        ? { embeddedCharacterContinuity: source.embeddedCharacterContinuity }
+        : {}),
     });
     const openingOpts = this.openingObservationOptions(session, {
       includeWorldIntro: args.compact_observation !== true || args.include_world_intro === true,
@@ -248,6 +261,7 @@ export class RpgMcpSessionRuntime {
         openingOpts,
       ),
       ...rpgSourceFields(session),
+      ...embeddedQuestCharacterContinuityField(session, args),
       state_hash: publicRpgStateHash(session.stateHash),
     } as RpgSessionPayload<Args>;
   }

@@ -15,6 +15,7 @@ import { publicRpgStateHash } from "./rpg_state_guards.js";
 import type { RpgSourceRuntime } from "./rpg_source_runtime.js";
 import type { SessionStore } from "./sessions.js";
 import { RPG_COMPACT_LEGEND } from "./compact_rpg_observation.js";
+import { embeddedQuestCharacterContinuityField } from "./embedded_quest_character_continuity_projection.js";
 
 export type RpgNewGameToolArgs = {
   generate_rpg_seed?: number;
@@ -55,6 +56,10 @@ const EMBEDDED_START_FIELDS = [
   "campaign_character",
   "campaignImports",
   "campaign_imports",
+  "embeddedCharacterContinuity",
+  "embedded_character_continuity",
+  "characterContinuity",
+  "character_continuity",
 ] as const;
 
 function assertPublicWorldQuestStart(args: object): void {
@@ -117,6 +122,11 @@ export function runRpgLoadGame<Args extends RpgLoadGameToolArgs>(
   const session = deps.rpgRuntime.startSession(compiled, bundle.state, {
     ...(source.worldQuestId ? { worldQuestId: source.worldQuestId } : {}),
     ...(source.generateRpgSeed !== null ? { generatedRpgSeed: source.generateRpgSeed } : {}),
+    ...(bundle.embedded_character_continuity
+      ? {
+          embeddedCharacterContinuity: bundle.embedded_character_continuity.character_continuity,
+        }
+      : {}),
     ...(args.hide_graph ? { hideGraph: true } : {}),
   });
   const openingOpts = deps.rpgRuntime.openingObservationOptions(session, {
@@ -141,6 +151,7 @@ export function runRpgLoadGame<Args extends RpgLoadGameToolArgs>(
       openingOpts,
     ),
     ...rpgSourceFields(session),
+    ...embeddedQuestCharacterContinuityField(session, args),
     state_hash: publicRpgStateHash(session.stateHash),
   } as RpgSessionPayload<Args>;
 }

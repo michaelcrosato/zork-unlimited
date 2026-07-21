@@ -24,6 +24,7 @@ import { JourneyStoryChoiceScreen } from "./JourneyStoryChoiceScreen.js";
 import { JourneyEndedScreen } from "./JourneyEndedScreen.js";
 import { JourneyStatus } from "./JourneyStatus.js";
 import { CampaignCharacterPanel } from "./CampaignCharacterPanel.js";
+import { QuestCharacterContinuityPanel } from "./QuestCharacterContinuityPanel.js";
 import { formatGoalPassageLog } from "./goalPassage.js";
 import { FRESH_GAME_TUTORIAL } from "../../src/world/fresh_game_tutorial.js";
 import { timeLabel } from "../../src/world/session_journal_codec.js";
@@ -1223,6 +1224,9 @@ export default function App(): JSX.Element {
           </div>
 
           <aside className="state">
+            {questView.characterContinuity && (
+              <QuestCharacterContinuityPanel continuity={questView.characterContinuity} />
+            )}
             <h3>{worldView.current.name} Record</h3>
             {questView.facts.length > 0 && (
               <ul className="facts">

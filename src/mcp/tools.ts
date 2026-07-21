@@ -18,6 +18,7 @@ import { hashState } from "../core/hash.js";
 import type { CompiledRpgSource } from "../rpg/source.js";
 import { assertRpgStateReferences } from "../rpg/state_integrity.js";
 import { initStateForRpgPack } from "../rpg/runner.js";
+import { buildEmbeddedQuestCharacterContinuity } from "../rpg/embedded_quest_character_continuity.js";
 
 import type { ValidationReport } from "../validate/report.js";
 import { assertWellFormedState } from "../persist/save_load.js";
@@ -30,6 +31,7 @@ import { type McpActionOption, type McpBlockedActionOption, type McpObservation 
 import type { RpgCompactLegend, RpgCompactObservation } from "./compact_rpg_observation.js";
 import type { RpgCompactState } from "./compact_rpg_state.js";
 import { RpgMcpSessionRuntime } from "./rpg_session_runtime.js";
+import type { EmbeddedQuestCharacterContinuityField } from "./embedded_quest_character_continuity_projection.js";
 import {
   runRpgLoadGame,
   runRpgNewGame,
@@ -165,11 +167,13 @@ type RpgSessionPayload<Args extends RpgViewOptions = RpgViewOptions> = {
   legend?: RpgCompactLegend;
 } & RpgSourceFields &
   RpgViewField<Args> &
+  EmbeddedQuestCharacterContinuityField<Args> &
   Partial<EmbeddedJourneyField>;
 
 type RpgObservationPayload<Args extends RpgViewOptions> = {
   state_hash: string;
 } & RpgViewField<Args> &
+  EmbeddedQuestCharacterContinuityField<Args> &
   Partial<EmbeddedJourneyField>;
 
 type RpgObservationUnchanged = RpgStateUnchanged & Partial<EmbeddedJourneyField>;
@@ -487,12 +491,18 @@ export function createToolApi(opts: { root: string; embeddedQuestSeed?: number }
                 character: context.character,
                 imports: source.campaignImports,
               });
+        const embeddedCharacterContinuity = buildEmbeddedQuestCharacterContinuity({
+          character: context.character,
+          pack: source.compiled.pack,
+          state: initialState,
+        });
         return rpgRuntime.startRpgSession(
           source.compiled,
           responseOptions,
           {
             worldQuestId: source.questId,
             overworldSessionId: context.overworldSessionId,
+            embeddedCharacterContinuity,
           },
           initialState,
         );

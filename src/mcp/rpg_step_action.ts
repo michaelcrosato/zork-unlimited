@@ -28,6 +28,10 @@ import {
 } from "./action_labels.js";
 import { classifyRpgJourneyDecision, excludedJourneyDecision } from "../world/journey_decision.js";
 import type { JourneyDecisionClassification } from "../world/journey_contract.js";
+import {
+  embeddedQuestCharacterContinuityField,
+  type EmbeddedQuestCharacterContinuityField,
+} from "./embedded_quest_character_continuity_projection.js";
 
 export const REJECTED_ACTION_ID_TRANSCRIPT_LIMIT = MCP_TRANSCRIPT_ACTION_ID_CHAR_LIMIT;
 
@@ -49,6 +53,7 @@ type RpgStepActionBase<Args extends RpgViewOptions & RpgEventOptions> = {
   state_hash: string;
 } & RpgStepEventVersion<Args> &
   RpgViewField<Args> &
+  EmbeddedQuestCharacterContinuityField<Args> &
   RpgJourneyDecisionFields;
 
 type RpgStepResponseOptions = RpgViewOptions & RpgEventOptions & { expected_state_hash?: string };
@@ -145,6 +150,7 @@ export function runRpgStepAction<Args extends RpgStepActionArgs>(
         args,
         beforeObsOpts,
       ),
+      ...embeddedQuestCharacterContinuityField(s, args),
       state_hash: publicRpgStateHash(currentStateHash),
       journeyDecision: excludedJourneyDecision("rejected"),
       journeyActionId: null,
@@ -175,6 +181,7 @@ export function runRpgStepAction<Args extends RpgStepActionArgs>(
       events: rpgStepEvents(result.events, args),
       ...rpgStepEventVersion(args),
       ...rpgViewField(sessions, s, after, args, afterObsOpts),
+      ...embeddedQuestCharacterContinuityField(s, args),
       state_hash: publicRpgStateHash(s.stateHash),
       journeyDecision: classifyRpgJourneyDecision({
         action: actionOption.action,
@@ -192,6 +199,7 @@ export function runRpgStepAction<Args extends RpgStepActionArgs>(
     events: rpgStepEvents(result.events, args),
     ...rpgStepEventVersion(args),
     ...rpgViewField(sessions, s, after, args, afterObsOpts),
+    ...embeddedQuestCharacterContinuityField(s, args),
     state_hash: publicRpgStateHash(s.stateHash),
     journeyDecision: classifyRpgJourneyDecision({
       action: actionOption.action,

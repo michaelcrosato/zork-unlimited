@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 598 -->
+<!-- historical_cycle_count: 599 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - embedded_quest_character_continuity
+
+- Evidence choice: recurring exact-run S2 reports showed that the persistent traveler stayed intact while unexplained quest-local numbers and kit looked like a replacement character, so this cycle explains that boundary generically instead of special-casing Wolf-Winter or The Gallowmere.
+- Surface: full/compact launch, read, step, load, parent-resume, and browser views keep identity/import provenance immutable while deriving HP, combat values, skills, and kit from the live child state; a versioned save sidecar survives detached restore, while direct/generated starts omit it and GameState/proof hashes remain unchanged.
+- Counterfactual: two review passes caught a resume omission, a launch snapshot presented as live, missing recurring response fields, and save/load loss; importless/imported mutation, strict sidecar, byte-identical resave, forged direct authority, backward-compatible omission, UI, and detached full/compact lifecycle tests close each path with no remaining P0-P2.
+- Pure evidence: exact clean Terra seed 4308 (`79e7de47`) and Sol seed 4310 (`117f51cf`) are 2/2 first-attempt valid; both continued after Wolf-Winter into The Gallowmere, scored clarity/enjoyment 4/4, were unstuck/replay-yes, and reported no identity or stat discontinuity.
+- Measured result: both players understood the launch explanation, with seed 4310 explicitly reasoning about its lower quest-local defenses; the later live/read/step/save/load corrections pass deterministic tests but remain blind-unexercised, and neither two runs nor the patch claims recurring-cluster resolution at cohort scale.
+- Feedback/follow-through: compile `20260721T062538Z` remains 928 verified/58 rejected inputs; one later valid report is below the next compile threshold, and the regenerated ledger is 928 accepted/59 rejected. Fresh friction targets stale Wolf lure prose, duplicate Rowan identity, dense setup, and compact consequence length.
+- Guard: the earlier feature build passed health at 395 files/3,024 tests plus UI/all packs; the reviewed lifecycle correction passes 8 focused files/148 tests, both typechecks, lint/format/integrity, and zero-finding crawl `20260721T072702Z`, with exact full health intentionally left to landing.
 
 ### Cycle result - albany_market_policy
 
@@ -154,13 +164,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Pure evidence: clean commit `d8df814a` Terra seed 4194 completed recovered all-wolves-alive fortification at decision 21 and The Gallowmere at 44, continued twice, rated clarity/enjoyment 4/4, and was unstuck/replay-yes; seed 4193 remains rejected because its interview omitted the mandatory playthrough log.
 - Feedback/self-critique: compile `20260719T184312Z` remains 875 verified/124 current pure exits/105 continuing; two clean reports are new, below the next compile threshold, and the ledger is 876 accepted/59 rejected. PASS for the recurring irreversible-boundary S2, not the greater-than-BG3 milestone; setup density and a separate road-field alias remain.
 - Guard: two red-team rounds caught compact overflow, erased legacy signposts, stale-state copy, and relabel risk before landing; crawl `20260719T193859Z` is zero-finding at 247/247 nodes, 344/344 edges, and 12/12 boards/quests, and exact stacked health passes 387 files/2,959 tests plus UI/all packs.
-
-### Cycle result - visible_route_id_alias
-
-- Evidence choice: three of the twelve latest verified Terra players, including three of ten on the clean Campus cohort, passed the exact displayed Civic-to-Hub edge as `route_id`; each rejection was mutation-free but recurring S1 friction.
-- Surface: local area movement now accepts canonical `area_route_id`, exact-edge alias `route_id`, or destination alias `area_id`; equal dual/triple selectors normalize and every conflicting combination rejects before movement.
-- Authority: pure compact mode accepts either exact-edge spelling only from its currently disclosed 12-route projection, while full mode retains every visible discovered edge and `area_id` keeps its bounded destination-resolution semantics.
-- Recovery: root schemas truthfully publish all three selectors; malformed and missing inputs preserve their own paths, conflict messages retain the field the caller actually supplied, and ambiguous destinations name both exact-edge spellings.
-- Pure evidence: clean commit `65a123a8` Terra seed 4192 completed all-wolves-alive pack diversion at decision 29 and The Gallowmere at 53, continued twice, rated clarity/enjoyment 4/5, was unstuck/replay-yes, and made no rejected player call; deterministic tests carry the exact repaired edge alias.
-- Feedback/self-critique: compile `20260719T184312Z` has 875 verified reports, 124 current pure exits, and 105 continuing; this one clean run is below the next compile threshold, and the ledger is 875 accepted/59 rejected. PASS for the recurring alias S1, not the greater-than-BG3 milestone; summary-first setup presentation remains next.
-- Guard: adversarial review found and closed a guessed-hidden-edge cap bypass plus misleading diagnostics; crawl `20260719T185058Z` is zero-finding at 247/247 nodes, 344/344 edges, and 12/12 boards/quests, and health passes 385 files/2,957 tests plus UI/all packs.

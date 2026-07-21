@@ -13,6 +13,11 @@ import { MAX_ENGINE_STEP, cloneGameState, isRuntimeSeed, type GameState } from "
 import { canonicalize } from "../core/hash.js";
 import { generatedRpgSeedValidationMessage, isGeneratedRpgSeed } from "../gen/seed.js";
 import {
+  EmbeddedQuestCharacterContinuitySchema,
+  cloneEmbeddedQuestCharacterContinuity,
+  type EmbeddedQuestCharacterContinuity,
+} from "../rpg/embedded_quest_character_continuity.js";
+import {
   compactSourceRefFromMetadata,
   compactSourceRefLegacyConsistency,
   compactSourceRefValidationError,
@@ -21,6 +26,7 @@ import {
 
 export const SAVE_VERSION = 1 as const;
 export const SAVE_MODE = "rpg" as const;
+export const EMBEDDED_QUEST_CONTINUITY_SAVE_VERSION = 1 as const;
 export type SaveMode = typeof SAVE_MODE;
 
 /**
@@ -111,13 +117,28 @@ export type SaveBundle = {
   /** Compact canonical source identity for world quests or generated RPG runs. */
   source_ref: SaveSourceRef;
   state: GameState;
+  /** Optional campaign-parent sidecar; absent on standalone/direct quest saves. */
+  embedded_character_continuity?: EmbeddedQuestCharacterContinuitySave;
 };
+
+export type EmbeddedQuestCharacterContinuitySave = {
+  version: typeof EMBEDDED_QUEST_CONTINUITY_SAVE_VERSION;
+  character_continuity: EmbeddedQuestCharacterContinuity;
+};
+
+const EmbeddedQuestCharacterContinuitySaveSchema = z
+  .object({
+    version: z.literal(EMBEDDED_QUEST_CONTINUITY_SAVE_VERSION),
+    character_continuity: EmbeddedQuestCharacterContinuitySchema,
+  })
+  .strict();
 
 export type SaveSourceRef = CompactSourceRef;
 
 export type SaveMetadata = {
   worldQuestId?: string | null;
   generatedRpgSeed?: number | null;
+  embeddedCharacterContinuity?: EmbeddedQuestCharacterContinuity | null;
 };
 
 function assertNonEmptyString(value: unknown, label: string): asserts value is string {
@@ -157,6 +178,16 @@ function immutableLoadedSaveBundle(bundle: SaveBundle): SaveBundle {
     ...canonicalBundle,
     state: cloneGameState(bundle.state),
     source_ref: sourceRef,
+    ...(bundle.embedded_character_continuity
+      ? {
+          embedded_character_continuity: {
+            version: bundle.embedded_character_continuity.version,
+            character_continuity: cloneEmbeddedQuestCharacterContinuity(
+              bundle.embedded_character_continuity.character_continuity,
+            ),
+          },
+        }
+      : {}),
   });
 }
 
@@ -191,14 +222,49 @@ export function save(
   assertNonEmptyString(contentHash, "Save contentHash");
   assertWellFormedState(state);
   const sourceRef = saveSourceRef(metadata);
+  const continuity = metadata.embeddedCharacterContinuity ?? undefined;
+  if (continuity !== undefined) {
+    if (sourceRef[0] !== "wq") {
+      throw new SaveIntegrityError(
+        "Embedded quest character continuity requires a world-quest save source.",
+      );
+    }
+    const parsed = EmbeddedQuestCharacterContinuitySchema.safeParse(continuity);
+    if (!parsed.success) {
+      throw new SaveIntegrityError(
+        `Embedded quest character continuity is malformed: ${parsed.error.message}`,
+      );
+    }
+    assertEmbeddedContinuityMatchesState(continuity, state);
+  }
   const bundle: SaveBundle = {
     version: SAVE_VERSION,
     contentHash,
     state,
     mode,
     source_ref: sourceRef,
+    ...(continuity
+      ? {
+          embedded_character_continuity: {
+            version: EMBEDDED_QUEST_CONTINUITY_SAVE_VERSION,
+            character_continuity: cloneEmbeddedQuestCharacterContinuity(continuity),
+          },
+        }
+      : {}),
   };
   return canonicalize(bundle);
+}
+
+function assertEmbeddedContinuityMatchesState(
+  continuity: EmbeddedQuestCharacterContinuity,
+  state: GameState,
+): void {
+  const stateEffects = state.campaignImportReceipt?.effects ?? [];
+  if (canonicalize(continuity.applied_campaign_import_effects) !== canonicalize(stateEffects)) {
+    throw new SaveIntegrityError(
+      "Embedded quest character continuity import effects do not match the saved GameState receipt.",
+    );
+  }
 }
 
 export class SaveIntegrityError extends Error {}
@@ -330,6 +396,22 @@ export function load(
     throw new SaveIntegrityError(
       `Save state is malformed or non-finite: ${parsedState.error.message}`,
     );
+  }
+  const rawContinuity = (bundle as { embedded_character_continuity?: unknown })
+    .embedded_character_continuity;
+  if (rawContinuity !== undefined) {
+    if (bundle.source_ref[0] !== "wq") {
+      throw new SaveIntegrityError(
+        "Embedded quest character continuity requires a world-quest save source.",
+      );
+    }
+    const parsedContinuity = EmbeddedQuestCharacterContinuitySaveSchema.safeParse(rawContinuity);
+    if (!parsedContinuity.success) {
+      throw new SaveIntegrityError(
+        `Embedded quest character continuity save metadata is malformed: ${parsedContinuity.error.message}`,
+      );
+    }
+    assertEmbeddedContinuityMatchesState(parsedContinuity.data.character_continuity, bundle.state);
   }
   return immutableLoadedSaveBundle(bundle);
 }

@@ -20,6 +20,10 @@ import {
 } from "./rpg_view_projection.js";
 import { rpgSourceFields, type RpgMcpSessionRuntime } from "./rpg_session_runtime.js";
 import {
+  embeddedQuestCharacterContinuityField,
+  type EmbeddedQuestCharacterContinuityField,
+} from "./embedded_quest_character_continuity_projection.js";
+import {
   publicRpgStateHash,
   rpgStateHashMatches,
   rpgStateHashRejection,
@@ -51,7 +55,8 @@ export type RpgGetObservationToolArgs = {
 
 type RpgObservationToolPayload<Args extends RpgViewOptions> = {
   state_hash: string;
-} & RpgViewField<Args>;
+} & RpgViewField<Args> &
+  EmbeddedQuestCharacterContinuityField<Args>;
 
 export type RpgObservationToolResponse<Args extends RpgGetObservationToolArgs> = Args extends {
   if_state_hash: string;
@@ -210,6 +215,7 @@ export function runRpgGetObservation<Args extends RpgGetObservationToolArgs>(
       args,
       obsOpts,
     ),
+    ...embeddedQuestCharacterContinuityField(s, args),
     state_hash: publicRpgStateHash(stateHash),
   } as RpgObservationToolResponse<Args>;
 }
@@ -320,6 +326,9 @@ export function runRpgSaveGame<Args extends RpgSaveToolArgs>(
   const saveMetadata = {
     ...(s.worldQuestId ? { worldQuestId: s.worldQuestId } : {}),
     ...(s.generatedRpgSeed !== undefined ? { generatedRpgSeed: s.generatedRpgSeed } : {}),
+    ...(s.embeddedCharacterContinuity
+      ? { embeddedCharacterContinuity: s.embeddedCharacterContinuity }
+      : {}),
   };
   return {
     ok: true,

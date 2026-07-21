@@ -37,6 +37,11 @@ import {
   type RpgObservation,
 } from "../../src/rpg/observation.js";
 import {
+  buildEmbeddedQuestCharacterContinuity,
+  projectEmbeddedQuestCharacterContinuity,
+  type EmbeddedQuestCharacterContinuity,
+} from "../../src/rpg/embedded_quest_character_continuity.js";
+import {
   classifyRpgJourneyDecision,
   excludedJourneyDecision,
 } from "../../src/world/journey_decision.js";
@@ -76,6 +81,7 @@ export type View = {
   ended: boolean;
   endingId: string | null;
   stateHash: string;
+  characterContinuity?: EmbeddedQuestCharacterContinuity;
 };
 
 export type StepOutcome = {
@@ -101,6 +107,7 @@ export class GameSession {
   private readonly rules: Rules<RpgAction>;
   private readonly index: RpgIndex;
   private readonly fresh: () => GameState;
+  private readonly characterContinuity: EmbeddedQuestCharacterContinuity | undefined;
   private state: GameState;
 
   private constructor(opts: {
@@ -110,6 +117,7 @@ export class GameSession {
     rules: Rules<RpgAction>;
     index: RpgIndex;
     fresh: () => GameState;
+    campaignCharacter?: CampaignCharacterState;
   }) {
     this.packId = opts.packId;
     this.title = opts.title;
@@ -118,6 +126,13 @@ export class GameSession {
     this.index = opts.index;
     this.fresh = opts.fresh;
     this.state = opts.fresh();
+    this.characterContinuity = opts.campaignCharacter
+      ? buildEmbeddedQuestCharacterContinuity({
+          character: opts.campaignCharacter,
+          pack: opts.index.pack,
+          state: this.state,
+        })
+      : undefined;
   }
 
   /** Compile an RPG pack source and start a session (throws on schema failure, §10). */
@@ -163,6 +178,7 @@ export class GameSession {
               character: characterSnapshot,
               imports: importsSnapshot,
             }),
+      campaignCharacter: characterSnapshot,
     });
   }
 
@@ -205,6 +221,15 @@ export class GameSession {
       ended: o.ended,
       endingId: o.ending_id,
       stateHash: hashState(this.state),
+      ...(this.characterContinuity
+        ? {
+            characterContinuity: projectEmbeddedQuestCharacterContinuity({
+              continuity: this.characterContinuity,
+              pack: this.index.pack,
+              state: this.state,
+            }),
+          }
+        : {}),
     };
   }
 

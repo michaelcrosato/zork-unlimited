@@ -750,6 +750,9 @@ describe("MCP journey surface", () => {
       journey: continued.journey,
       overworld_snapshot_hash: continued.snapshot_hash,
     });
+    expect(resumed.character_continuity).toEqual(
+      a.sessions.get(rpgSessionId).embeddedCharacterContinuity,
+    );
 
     const resumedIds = resumed.observation.available_actions.map((action) => action.id);
     const listed = a.list_legal_actions({ session_id: rpgSessionId, compact_actions: true });
@@ -822,6 +825,15 @@ describe("MCP journey surface", () => {
     expect(resumed.context).toEqual(compactReread.context);
     expect(resumed.journey).toEqual(continued.journey);
     expect(resumed.overworld_snapshot_hash).toBe(continued.snapshot_hash);
+    expect(resumed.character_continuity).toEqual([
+      "same_campaign_character",
+      "quest_local",
+      expect.any(Array),
+      expect.any(Array),
+      expect.any(Array),
+      expect.any(String),
+    ]);
+    expect(resumed.character_continuity_legend).toContain("profile_scope");
 
     const endedRun = mcpWolfWinterCheckpointInsideQuest();
     const ended = endedRun.a.choose_overworld_session_journey({

@@ -62,6 +62,7 @@ import {
   rpgStateHashRejection,
   type RpgStateHashRejection,
 } from "./rpg_state_guards.js";
+import { embeddedQuestCharacterContinuityField } from "./embedded_quest_character_continuity_projection.js";
 import {
   rpgSourceFields,
   type RpgMcpSessionRuntime,
@@ -710,6 +711,7 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
           session_id: pausedRpgSession.id,
           ...rpgView,
           ...rpgSourceFields(pausedRpgSession),
+          ...embeddedQuestCharacterContinuityField(pausedRpgSession, responseOptions),
           ...embeddedJourney,
         },
       } as OverworldJourneyChoiceResponse<DefaultCompactOverworldQuestStart<Args>>;
