@@ -40,6 +40,11 @@ export const AUTHORED_ALBANY_MARKET_PREDECESSOR_WORLD_HASH =
   "9ae4b2be87d9f5bf0ede03aed8c7c775bdd7ac327dfd96c2f1e4b2154ee610f0";
 export const AUTHORED_ALBANY_MARKET_EVENT_ID = "albany_city__market__event";
 export const AUTHORED_ALBANY_MARKET_EVENT_SCENE_ID = "albany:winter-price-policy";
+/** Exact manifest immediately before Albany Greenway gained its authored trail policy. */
+export const AUTHORED_ALBANY_GREENWAY_PREDECESSOR_WORLD_HASH =
+  "8e0bd691f77d7be3154866531b18c5e8c2920e51317beab97bf8d267ae6d6bfa";
+export const AUTHORED_ALBANY_GREENWAY_EVENT_ID = "albany_city__greenway__event";
+export const AUTHORED_ALBANY_GREENWAY_EVENT_SCENE_ID = "albany:greenway-trail-policy";
 
 export const AUTHORED_ALBANY_CHARTER_LEGACY_EVENT: OverworldLocalEvent = Object.freeze({
   id: AUTHORED_ALBANY_CHARTER_EVENT_ID,
@@ -61,6 +66,17 @@ export const AUTHORED_ALBANY_MARKET_LEGACY_EVENT: OverworldLocalEvent = Object.f
   intensity: 3,
   summary:
     "Albany Market Streets is under opportunity pressure around shortages, disputed deliveries, and late counters. Resolving it requires scouting this area, talking to its contact, and investigating on site.",
+});
+
+export const AUTHORED_ALBANY_GREENWAY_LEGACY_EVENT: OverworldLocalEvent = Object.freeze({
+  id: AUTHORED_ALBANY_GREENWAY_EVENT_ID,
+  home: "albany_city",
+  area: "albany_city__greenway",
+  title: "Albany Greenway: trail sign damage",
+  pressure: "hazard",
+  intensity: 3,
+  summary:
+    "Albany Greenway is under hazard pressure around tracks, utility cuts, and witnesses who avoid main streets. Resolving it requires scouting this area, talking to its contact, and investigating on site.",
 });
 
 export type AuthoredLocalEventLegacyDefinition = Readonly<{
@@ -98,6 +114,16 @@ export const AUTHORED_LOCAL_EVENT_LEGACY_DEFINITIONS: readonly AuthoredLocalEven
       sceneId: AUTHORED_ALBANY_MARKET_EVENT_SCENE_ID,
       legacyEvent: AUTHORED_ALBANY_MARKET_LEGACY_EVENT,
       acceptedSourceWorldHashes: new Set([AUTHORED_ALBANY_MARKET_PREDECESSOR_WORLD_HASH]),
+    }),
+    Object.freeze({
+      sourceWorldHash: AUTHORED_ALBANY_GREENWAY_PREDECESSOR_WORLD_HASH,
+      eventId: AUTHORED_ALBANY_GREENWAY_EVENT_ID,
+      sceneId: AUTHORED_ALBANY_GREENWAY_EVENT_SCENE_ID,
+      legacyEvent: AUTHORED_ALBANY_GREENWAY_LEGACY_EVENT,
+      acceptedSourceWorldHashes: new Set([
+        AUTHORED_ALBANY_MARKET_PREDECESSOR_WORLD_HASH,
+        AUTHORED_ALBANY_GREENWAY_PREDECESSOR_WORLD_HASH,
+      ]),
     }),
   ]);
 

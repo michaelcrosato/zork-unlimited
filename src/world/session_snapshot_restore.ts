@@ -97,6 +97,7 @@ import {
   OVERWORLD_AUTHORED_LOCAL_JOB_PREDECESSOR_WORLD_HASH,
 } from "./local_job_scene_legacy.js";
 import {
+  AUTHORED_ALBANY_GREENWAY_PREDECESSOR_WORLD_HASH,
   AUTHORED_LOCAL_EVENT_LEGACY_DEFINITIONS,
   AUTHORED_ALBANY_MARKET_PREDECESSOR_WORLD_HASH,
   WINTER_RETURN_DOCKET_PREDECESSOR_WORLD_HASH,
@@ -369,7 +370,7 @@ export { OVERWORLD_AUTHORED_LOCAL_JOB_PREDECESSOR_WORLD_HASH };
 export const OVERWORLD_AUTHORED_LOCAL_JOB_FIRST_SCENE_WORLD_HASH =
   "9b8cc75b05e77af160f46dbcd177333cc0f27af89e56f504af0bf6c6a2422c31";
 export const OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH =
-  "8e0bd691f77d7be3154866531b18c5e8c2920e51317beab97bf8d267ae6d6bfa";
+  "9238b5f273e03e0a49487058233443e872c18a542525dcd449531708cd3003e5";
 /** Exact manifest immediately before preparation moved from Civic to the Station board. */
 export const OVERWORLD_FIELD_TIMED_PREPARATION_PREDECESSOR_WORLD_HASH =
   "be2bb804d5e107449aeab1fd6e96cbfb6f0b71d587ee40283d0aac8b28298f6f";
@@ -386,6 +387,7 @@ export const OVERWORLD_AUTHORED_LOCAL_JOB_TRUSTED_PREDECESSOR_WORLD_HASHES: Read
     AUTHORED_ALBANY_CAMPUS_PREDECESSOR_WORLD_HASH,
     AUTHORED_ALBANY_STATION_PREDECESSOR_WORLD_HASH,
     AUTHORED_ALBANY_MARKET_PREDECESSOR_WORLD_HASH,
+    AUTHORED_ALBANY_GREENWAY_PREDECESSOR_WORLD_HASH,
   ]);
 /** Exact supported manifests in which opening preparation was still anchored at Civic. */
 const OVERWORLD_CIVIC_PREPARATION_TRUSTED_SOURCE_WORLD_HASHES: ReadonlySet<string> = new Set([
@@ -397,13 +399,14 @@ const OVERWORLD_CIVIC_PREPARATION_TRUSTED_SOURCE_WORLD_HASHES: ReadonlySet<strin
   OVERWORLD_CRISIS_PRIORITY_PREDECESSOR_WORLD_HASH,
   OVERWORLD_OPENING_ALLY_PREDECESSOR_WORLD_HASH,
   OVERWORLD_JUNE_RETURN_COPY_PREDECESSOR_WORLD_HASH,
-  // Station and later local-scene predecessors already carry the current
-  // field-timed proof; normalizing either as Civic evidence would move its
-  // authored departure boundary backward.
+  // These later authored-scene predecessors already carry the current
+  // field-timed proof; normalizing them as Civic evidence would move their
+  // authored boundary backward.
   ...[...OVERWORLD_AUTHORED_LOCAL_JOB_TRUSTED_PREDECESSOR_WORLD_HASHES].filter(
     (sourceWorldHash) =>
       sourceWorldHash !== AUTHORED_ALBANY_STATION_PREDECESSOR_WORLD_HASH &&
-      sourceWorldHash !== AUTHORED_ALBANY_MARKET_PREDECESSOR_WORLD_HASH,
+      sourceWorldHash !== AUTHORED_ALBANY_MARKET_PREDECESSOR_WORLD_HASH &&
+      sourceWorldHash !== AUTHORED_ALBANY_GREENWAY_PREDECESSOR_WORLD_HASH,
   ),
 ]);
 /**
@@ -2269,7 +2272,8 @@ export function planOverworldSessionSnapshotRestore(args: {
       ? null
       : sourceSnapshot.worldHash === OVERWORLD_RELIEF_OATH_PREDECESSOR_WORLD_HASH
         ? "relief_oath"
-        : sourceSnapshot.worldHash === AUTHORED_ALBANY_MARKET_PREDECESSOR_WORLD_HASH
+        : sourceSnapshot.worldHash === AUTHORED_ALBANY_MARKET_PREDECESSOR_WORLD_HASH ||
+            sourceSnapshot.worldHash === AUTHORED_ALBANY_GREENWAY_PREDECESSOR_WORLD_HASH
           ? "field_timed_preparation"
           : sourceSnapshot.worldHash === OVERWORLD_FIELD_TIMED_PREPARATION_PREDECESSOR_WORLD_HASH
             ? "field_timed_preparation"

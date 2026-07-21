@@ -32015,7 +32015,39 @@
       "title": "Albany Greenway: trail sign damage",
       "pressure": "hazard",
       "intensity": 3,
-      "summary": "Albany Greenway is under hazard pressure around tracks, utility cuts, and witnesses who avoid main streets. Resolving it requires scouting this area, talking to its contact, and investigating on site."
+      "summary": "Storm damage erased the Greenway's safe crossing marks where a public footpath meets the winter wildlife corridor. Emery Sloane needs one permanent trail policy before the next thaw traffic arrives.",
+      "authored_scene": {
+        "version": 1,
+        "id": "albany:greenway-trail-policy",
+        "prompt": "Emery can post an obvious accessible public detour that any traveler can follow, or keep the crossing low-profile with quiet steward markers that preserve the wildlife corridor. Both make today's damaged junction safe, but the policy is public and irreversible: the later corridor survey must carry the same access promise into the field.",
+        "required_poi_id": "albany_city__greenway__poi",
+        "required_contact_id": "albany_city__greenway__contact",
+        "requires_completed_quests": [
+          "wolf_winter"
+        ],
+        "options": [
+          {
+            "id": "post_accessible_public_detour",
+            "title": "Post an accessible public detour",
+            "preview": "Spend 35 minutes posting obvious, accessible detour marks for the damaged crossing. Earn 2 Capital / Mohawk renown.",
+            "consequence": "Emery posts a plainly visible public detour with accessible grades and open crossing notices. The policy cannot be withdrawn later: the follow-up survey must either stake its shortest usable line or spend longer mapping an all-weather public loop.",
+            "terms": {
+              "minutes": 35,
+              "renown": 2
+            }
+          },
+          {
+            "id": "place_quiet_corridor_markers",
+            "title": "Place quiet wildlife-corridor markers",
+            "preview": "Spend 35 minutes placing low-profile steward marks that keep casual traffic out of the winter corridor. Earn 2 Capital / Mohawk renown.",
+            "consequence": "Emery records a low-profile steward route that keeps obvious signs away from the winter wildlife corridor. The policy cannot be withdrawn later: the follow-up survey must either reset its minimum markers or spend longer tracing the corridor with witnessed points.",
+            "terms": {
+              "minutes": 35,
+              "renown": 2
+            }
+          }
+        ]
+      }
     },
     {
       "id": "albany_city__campus__event",
@@ -51899,13 +51931,92 @@
       "home": "albany_city",
       "area": "albany_city__greenway",
       "kind": "survey",
-      "title": "Albany Greenway: Greenway Survey",
-      "summary": "Albany Greenway has trailheads, utility cuts, camps, and quiet witnesses. The job is small enough to finish locally but specific enough to make Albany City feel worked-in rather than decorative.",
-      "objective": "Spend time in Albany Greenway to walk the paths, mark fresh tracks, and confirm which approach is still passable.",
-      "reward": "Earn 4 Capital / Mohawk renown and a concrete lead about Albany City.",
+      "title": "Emery's Corridor Survey",
+      "summary": "Emery must carry the Greenway's irreversible trail policy from the damaged crossing into a finished corridor survey. Public-detour and quiet-corridor records authorize different field work; neither can be relabeled at the board.",
+      "objective": "Complete one survey action that honors the exact Greenway trail policy already entered with Emery.",
+      "reward": "Choose a faster field mark or a slower, higher-standing survey record under the policy you actually authored. Public work takes longer but earns more standing than the corresponding quiet-corridor work.",
       "minutes": 87,
       "difficulty": 4,
-      "visibility": "local_job_board"
+      "visibility": "local_job_board",
+      "authored_scene": {
+        "version": 1,
+        "id": "albany:greenway-corridor-survey",
+        "prompt": "Emery opens the permanent trail-policy entry beside the field board. The policy fixes which two survey actions are lawful; within that policy, you may finish a fast practical mark for modest standing or spend longer on a publicly useful record for greater standing.",
+        "required_poi_id": "albany_city__greenway__poi",
+        "required_contact_id": "albany_city__greenway__contact",
+        "requires_completed_quests": [
+          "wolf_winter"
+        ],
+        "requires_resolved_events": [
+          "albany_city__greenway__event"
+        ],
+        "options": [
+          {
+            "id": "stake_shortest_accessible_detour",
+            "title": "Stake the shortest accessible detour",
+            "preview": "Spend 30 minutes staking the shortest passable public detour. Earn 3 Capital / Mohawk renown—enough after the truthful Wolf-Winter return and trail policy to reach Rowan's 13-standing Civic recovery threshold.",
+            "consequence": "You stake a direct accessible line around the damaged crossing. Emery can open it immediately, but the record covers only this season's shortest usable detour.",
+            "terms": {
+              "minutes": 30,
+              "renown": 3
+            },
+            "requires_event_options": [
+              {
+                "event_id": "albany_city__greenway__event",
+                "option_id": "post_accessible_public_detour"
+              }
+            ]
+          },
+          {
+            "id": "map_all_weather_public_loop",
+            "title": "Map an all-weather public loop",
+            "preview": "Spend 75 minutes mapping accessible grades, thaw drainage, and public crossings. Earn 5 Capital / Mohawk renown.",
+            "consequence": "You map a complete all-weather public loop with accessible grades and signed crossings. Emery files the durable route for public use and credits the deeper survey.",
+            "terms": {
+              "minutes": 75,
+              "renown": 5
+            },
+            "requires_event_options": [
+              {
+                "event_id": "albany_city__greenway__event",
+                "option_id": "post_accessible_public_detour"
+              }
+            ]
+          },
+          {
+            "id": "reset_steward_markers",
+            "title": "Reset the steward markers",
+            "preview": "Spend 20 minutes resetting the minimum low-profile corridor marks. Earn 1 Capital / Mohawk renown.",
+            "consequence": "You reset the quiet steward marks without advertising the wildlife crossing. Emery can guide trained stewards now, but the record remains a minimal seasonal line.",
+            "terms": {
+              "minutes": 20,
+              "renown": 1
+            },
+            "requires_event_options": [
+              {
+                "event_id": "albany_city__greenway__event",
+                "option_id": "place_quiet_corridor_markers"
+              }
+            ]
+          },
+          {
+            "id": "trace_winter_wildlife_corridor_with_witness_points",
+            "title": "Trace the winter wildlife corridor with witness points",
+            "preview": "Spend 60 minutes tracing winter movement and witnessed steward points without posting a public route. Earn 4 Capital / Mohawk renown.",
+            "consequence": "You trace the winter wildlife corridor through witnessed, low-profile steward points. Emery files a durable conservation record without turning the crossing into an obvious public path.",
+            "terms": {
+              "minutes": 60,
+              "renown": 4
+            },
+            "requires_event_options": [
+              {
+                "event_id": "albany_city__greenway__event",
+                "option_id": "place_quiet_corridor_markers"
+              }
+            ]
+          }
+        ]
+      }
     },
     {
       "id": "albany_city__campus__job",

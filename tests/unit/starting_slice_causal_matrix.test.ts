@@ -10,8 +10,8 @@ describe("starting-slice causal matrix", () => {
     const matrix = loadStartingSliceCausalMatrix();
 
     expect(matrix.status).toBe("active_unproven");
-    expect(matrix.forks).toHaveLength(13);
-    expect(new Set(matrix.forks.map((fork) => fork.id)).size).toBe(13);
+    expect(matrix.forks).toHaveLength(15);
+    expect(new Set(matrix.forks.map((fork) => fork.id)).size).toBe(15);
     expect(
       matrix.forks.filter((fork) => fork.counts_toward_contract).map((fork) => fork.id),
     ).toEqual([

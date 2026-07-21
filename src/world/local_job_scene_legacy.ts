@@ -6,6 +6,7 @@ import type {
 } from "./session_snapshot.js";
 import { describeOverworldJobAction } from "./local_actions.js";
 import {
+  AUTHORED_ALBANY_GREENWAY_PREDECESSOR_WORLD_HASH,
   AUTHORED_ALBANY_MARKET_PREDECESSOR_WORLD_HASH,
   WINTER_RETURN_DOCKET_GENERIC_PREDECESSOR_WORLD_HASHES,
 } from "./local_event_scene_legacy.js";
@@ -50,6 +51,8 @@ export const AUTHORED_ALBANY_STATION_JOB_ID = "albany_city__transport_hub__job";
 export const AUTHORED_ALBANY_STATION_SCENE_ID = "albany:cade-return-packet";
 export const AUTHORED_ALBANY_MARKET_JOB_ID = "albany_city__market__job";
 export const AUTHORED_ALBANY_MARKET_SCENE_ID = "albany:disputed-winter-crates";
+export const AUTHORED_ALBANY_GREENWAY_JOB_ID = "albany_city__greenway__job";
+export const AUTHORED_ALBANY_GREENWAY_JOB_SCENE_ID = "albany:greenway-corridor-survey";
 
 export const AUTHORED_ALBANY_WORKS_LEGACY_JOB: OverworldLocalJob = Object.freeze({
   id: AUTHORED_ALBANY_WORKS_JOB_ID,
@@ -132,6 +135,22 @@ export const AUTHORED_ALBANY_MARKET_LEGACY_JOB: OverworldLocalJob = Object.freez
   visibility: "local_job_board",
 });
 
+export const AUTHORED_ALBANY_GREENWAY_LEGACY_JOB: OverworldLocalJob = Object.freeze({
+  id: AUTHORED_ALBANY_GREENWAY_JOB_ID,
+  home: "albany_city",
+  area: "albany_city__greenway",
+  kind: "survey",
+  title: "Albany Greenway: Greenway Survey",
+  summary:
+    "Albany Greenway has trailheads, utility cuts, camps, and quiet witnesses. The job is small enough to finish locally but specific enough to make Albany City feel worked-in rather than decorative.",
+  objective:
+    "Spend time in Albany Greenway to walk the paths, mark fresh tracks, and confirm which approach is still passable.",
+  reward: "Earn 4 Capital / Mohawk renown and a concrete lead about Albany City.",
+  minutes: 87,
+  difficulty: 4,
+  visibility: "local_job_board",
+});
+
 export const AUTHORED_LOCAL_JOB_LEGACY_DEFINITIONS: readonly AuthoredLocalJobLegacyDefinition[] =
   Object.freeze([
     Object.freeze({
@@ -167,6 +186,16 @@ export const AUTHORED_LOCAL_JOB_LEGACY_DEFINITIONS: readonly AuthoredLocalJobLeg
       sceneId: AUTHORED_ALBANY_MARKET_SCENE_ID,
       legacyJob: AUTHORED_ALBANY_MARKET_LEGACY_JOB,
       acceptedSourceWorldHashes: new Set([AUTHORED_ALBANY_MARKET_PREDECESSOR_WORLD_HASH]),
+    }),
+    Object.freeze({
+      sourceWorldHash: AUTHORED_ALBANY_GREENWAY_PREDECESSOR_WORLD_HASH,
+      jobId: AUTHORED_ALBANY_GREENWAY_JOB_ID,
+      sceneId: AUTHORED_ALBANY_GREENWAY_JOB_SCENE_ID,
+      legacyJob: AUTHORED_ALBANY_GREENWAY_LEGACY_JOB,
+      acceptedSourceWorldHashes: new Set([
+        AUTHORED_ALBANY_MARKET_PREDECESSOR_WORLD_HASH,
+        AUTHORED_ALBANY_GREENWAY_PREDECESSOR_WORLD_HASH,
+      ]),
     }),
   ]);
 
