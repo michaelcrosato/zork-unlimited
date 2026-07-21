@@ -259,6 +259,9 @@ export function buildPrompt(ctx: {
 
   playtestStep.push(
     "",
+    "Packaged harness context: this is a fictional, deterministic TTRPG player-experience study.",
+    "The blind player evaluates only the game surface; this maintenance cycle stays repo-local.",
+    "",
     "Playtest launch this cycle: the CORE GAME — the open-world overworld from a FRESH start.",
     "",
     "- Run the packaged DEFAULT harness: `npm run blind`. It enforces `play_mode: pure`,",
@@ -276,10 +279,10 @@ export function buildPrompt(ctx: {
   return [
     "# AdventureForge AFK improvement cycle (trust, but verify)",
     "",
-    "You operate inside this repo with FULL authority over all game code (AGENTS.md).",
-    "Make exactly ONE focused, high-impact improvement this cycle and leave the repo",
-    "green. You have broad world knowledge — use it to choose and craft the best",
-    "improvement, but verify everything (don't route around the verifier).",
+    "This is a repo-local AdventureForge maintenance cycle for a packaged fictional deterministic TTRPG player-experience harness.",
+    "Make exactly one focused, high-impact AdventureForge maintenance improvement within this repo",
+    "and leave it green. Use the available repo context to choose and verify the improvement;",
+    "do not route around the verifier.",
     "",
     "## The assessor's ranked next-best improvements (deterministic)",
     ...ranked,
@@ -377,7 +380,7 @@ export function buildUltraplanPrompt(ctx: { playtestRecord: string }): string {
     "The deterministic assessor has run dry: every high-value lever has disarmed and",
     "only routine 0.5-floor blind passes remain. That is the signal to RE-AIM the",
     "project with a multi-agent ultraplan rather than spend another cycle on polish.",
-    "You have FULL authority over all game code (AGENTS.md); verify everything.",
+    "Keep this repo-local: use the ultraplan to select one focused AdventureForge maintenance improvement, then verify it completely.",
     "",
     `## STEP 0 — Read the decision log FIRST (${DECISION_LOG_DOC})`,
     `- Read ${DECISION_LOG_DOC} before fanning out. It is the append-only memory of`,

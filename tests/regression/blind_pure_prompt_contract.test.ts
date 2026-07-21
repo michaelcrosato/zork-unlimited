@@ -9,6 +9,9 @@ const mockAgent = readFileSync(join(ROOT, "blind-tester", "mock-agent.mjs"), "ut
 
 describe("pure blind prompt + runner contract", () => {
   it("contains transport and game-owned exit instructions without guided coverage", () => {
+    expect(prompt).toContain("fictional, deterministic TTRPG player-experience study");
+    expect(prompt).toContain("PLAYER-SURFACE CONTRACT");
+    expect(prompt).toContain("Use only AdventureForge gameplay actions exposed for this pure run");
     expect(prompt).toContain("mcp__adventureforge__start_overworld");
     expect(prompt).toContain("first tool invocation");
     expect(prompt).toContain("MCP resources are empty");
@@ -42,7 +45,7 @@ describe("pure blind prompt + runner contract", () => {
     expect(prompt).toContain("truthful unfinished-goal");
     expect(prompt).toContain("Never invent a resurrection");
     expect(prompt).toContain("or request a separate technical foldback");
-    expect(prompt).toContain("Do not inspect MCP resources");
+    expect(prompt).toContain("MCP resources, and other external\n  tools are not gameplay actions");
     expect(prompt).toContain("mcp__adventureforge__start_overworld_session_quest");
     expect(prompt).toContain("normal player");
     expect(prompt).toContain("context.quest_starts");

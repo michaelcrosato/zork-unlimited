@@ -164,6 +164,9 @@ describe("compact AFK handoff metadata", () => {
 
 describe("buildPrompt blind-playtest contract", () => {
   function expectFreshOverworldContract(prompt: string): void {
+    expect(prompt).toContain(
+      "Packaged harness context: this is a fictional, deterministic TTRPG player-experience study.",
+    );
     expect(prompt).toContain("the CORE GAME — the open-world overworld from a FRESH start");
     expect(prompt).toContain("`npm run blind`");
     expect(prompt).toContain("`play_mode: pure`");
@@ -195,6 +198,10 @@ describe("buildPrompt blind-playtest contract", () => {
     });
 
     expect(prompt).toContain("## STEP 1 — MANDATORY fresh-overworld LLM playtest");
+    expect(prompt).toContain(
+      "one focused, high-impact AdventureForge maintenance improvement within this repo",
+    );
+    expect(prompt).not.toContain("FULL authority");
     expectFreshOverworldContract(prompt);
   });
 
@@ -252,6 +259,8 @@ describe("buildUltraplanPrompt blind-playtest contract", () => {
 
     expect(prompt).toContain("overworld from a FRESH start");
     expect(prompt).toContain("default `npm run blind`");
+    expect(prompt).toContain("one focused AdventureForge maintenance improvement");
+    expect(prompt).not.toContain("FULL authority");
     expect(prompt).toContain(
       "Do not pass `--quest`, a quest id, a persona overlay, or a saved session",
     );

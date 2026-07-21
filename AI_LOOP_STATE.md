@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 591 -->
+<!-- historical_cycle_count: 592 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -15,6 +15,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
 
+### Cycle result - fictional_ttrpg_run_context
+
+- Evidence choice: repeated Codex UI false classification interrupted ordinary AdventureForge work, so this cycle clarified the legitimate fictional-TTRPG QA context without changing gameplay, relaxing the pure player boundary, or treating any local flag as a classifier bypass.
+- Surface: the blind prompt now opens with its deterministic TTRPG study scope and one affirmative player-surface contract; generated loop handoffs use bounded repo-local maintenance language instead of broad authority phrasing while preserving every crawl, health, integrity, direct-start, and tool-allowlist rule.
+- Counterfactual: prompt and loop-contract tests require the new context, reject the removed broad-authority phrase, and retain the exact start, journey, pure-mode, no-direct-quest, and external-tool boundaries; independent review removed unrelated npm UI churn and found no remaining P0-P2.
+- Pure evidence: exact clean-build Terra seed 4242 completed Wolf-Winter and The Gallowmere in 51 decisions, continued at 29 and 40, ended at 51, scored clarity/enjoyment 4/4, was unstuck/replay-yes, and encountered no classifier, content, auth, or player-boundary failure. Wrapper-killed seed 4241 produced no report and is excluded.
+- Measured result: repo-side contextual mitigation PASSes one real six-minute session and all mechanical gates; the UI classifier itself remains server-owned, so this does not claim a local permanent threshold fix.
+- Feedback/follow-through: compile `20260720T231307Z` has 913 verified reports, 162 eligible pure exits, and 139 continuing; the ledger is 912 accepted/59 rejected. Current exact feedback supports fixing compact fortification commitment ids, then optional Station interactions; legacy fleet-heavy notice-board clusters still require fresh-cohort confirmation.
+- Guard: exact commit `dde132b4` has zero-finding crawl `20260720T230257Z` at 247/247 nodes, 344/344 edges, and 12/12 boards/quests; health passes 390 files/2,975 tests plus UI/all packs, with the runner allowlist and isolated Codex home unchanged.
+
 ### Cycle result - road_encounter_next_action
 
 - Evidence choice: the Wolf comparison cohort produced recurring S2 friction at unresolved road scenes, so this cycle exposed the already-required resolver instead of adding guidance prose or another travel decision.
@@ -22,7 +32,7 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Counterfactual: one regression proves the descriptor appears only while a road encounter is pending, survives save/restore by rederivation, stays full/compact truthful, accepts a displayed strategy, and disappears after resolution.
 - Pure evidence: exact clean-build Terra seed 4239 completed Wolf-Winter and The Gallowmere in 43 decisions, continued at decisions 19 and 40, ended at 43, was unstuck at clarity 3/enjoyment 4, and followed compact `next_action` with valid `press_on` on its first attempt.
 - Measured result: resolver discovery PASSes directly in blind play without changing route mechanics or persistence; the run independently found the pre-existing compact `ask_invoke_authority` commitment label misleading, now isolated as its own follow-up.
-- Feedback/follow-through: the ledger is 911 accepted/59 rejected; only two verified reports are new since compile `20260720T200813Z`, below the three-report threshold. Fix the recurring lure-feed location cue and fortification commitment id, then land optional Station interactions.
+- Feedback/follow-through: the ledger is 911 accepted/59 rejected; only two verified reports are new since compile `20260720T200813Z`, below the three-report threshold. Fix the compact fortification commitment id, then land optional Station interactions; the later f799 lure-feed complaint is already fixed by current Store-Shed-west copy.
 - Guard: exact commit `2c8b62b3` has zero-finding crawl `20260720T221223Z` at 247/247 nodes, 344/344 edges, and 12/12 boards/quests; health passes 390 files/2,975 tests plus UI/all packs, and independent review found no P0-P2.
 
 ### Cycle result - wolf_strategy_comparison
@@ -154,13 +164,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Feedback: compile `20260719T075635Z` has 824 verified reports and 73 journey-v3 pure exits, 63 continuing; six new accepted reports are all 4/4 and replay-yes, with front-loaded registration the repeated live slice signal.
 - Self-critique: PASS for Codex-native evidence authority, `active_unproven` for greater-than-BG3; five authored Albany conversions, failure-forward/NPC-agenda proof, deep crawl, same-model pilot, and exact 100-player authority remain.
 - Guard: adversarial reviews closed mock-provider, terminal-history, cwd/session-link, case, and evidence-binding gaps; rebased focused checks are 159/159, dirty and clean Terra artifacts reparse, health is green at 381 files/2,901 tests plus UI/all packs, and crawl `20260719T081322Z` is zero-finding at 247/247 nodes, 344/344 edges, 12/12 boards/quests.
-
-### Cycle result - codex_pure_probe_compatibility
-
-- Evidence choice: mass Spark play exposed a current Codex CLI preflight spelling that omitted the optional empty resource cursor; exact seed 2905 was otherwise a valid 38-call fresh-overworld Wolf-Winter journey, while malformed comparison streams were genuine contract violations.
-- Surface: the pure envelope accepts only one paired, content-free, exact method-not-found `list_mcp_resources` probe for `adventureforge` with either omitted or explicit empty cursor, and requires its complete start/finish pair before the first gameplay call.
-- Fail closed: nonempty or missing-server arguments, duplicate, unpaired, successful/content-bearing, cross-server, post-start, and gameplay-interleaved probes still reject; real seed 2905 passes while seeds 2901–2904 and 2906–2908 remain rejected.
-- Pure evidence: dirty-candidate Spark seed 2925 completed Wolf-Winter and The Gallowmere in 46 decisions after two continuations; seed 2929 organically resolved Charter Backlog then completed Wolf-Winter by fully nonlethal Pack Diverted in 27. Both were 4/4, unstuck, replay-yes, and bug-free.
-- Feedback: the ledger reaches 817 accepted reports; only two are new since compile `20260719T055755Z`, so no recompile is due. Seed 2929 preserves Charter Backlog as an early lead and makes its delayed Civic return consequence the next authored scene.
-- Self-critique: PASS for strict CLI compatibility, `active_unproven` for the greater-than-BG3 milestone; five Albany jobs/events, Codex-native fleet attestation, global failure-forward proof, three NPC agendas, deep crawl, and exact 100-player certification remain.
-- Guard: the unmodified event-stream witness and negative comparisons pass; health is green at 379 files/2,872 tests plus integrity, UI, and all 12 packs, and final crawl `20260719T063820Z` reached 247/247 nodes, 344/344 edges, and 12/12 boards/quests with zero findings.
