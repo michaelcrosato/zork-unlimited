@@ -155,6 +155,7 @@ function expectExactAlbanyLeads(session: OverworldSession): void {
     "kind",
     "title",
   ]);
+  expect(session.compactView().opportunity_guidance).toBe(JOURNEY_OPPORTUNITY_GUIDANCE);
   expect(session.compactView().opportunity_leads).toEqual(EXPECTED_COMPACT);
   expect(JSON.stringify(opportunities)).not.toMatch(
     /dispatch_|hold_household|post_accessible|terms|minutes|renown|reward|consequence|prompt/i,
@@ -173,6 +174,7 @@ describe("optional return opportunity leads", () => {
 
     const prepared = preparedForWolf();
     expect(prepared.session.journey().opportunities).toBeNull();
+    expect(prepared.session.compactView().opportunity_guidance).toBeUndefined();
     expect(prepared.session.compactView().opportunity_leads).toBeUndefined();
 
     prepared.session.startQuest(prepared.wolfId, "albany:wolf_approach_sheltered_stockway");
@@ -209,6 +211,7 @@ describe("optional return opportunity leads", () => {
     const ended = atWolfCompletion();
     ended.chooseJourney("end");
     expect(ended.journey().opportunities).toBeNull();
+    expect(ended.compactView().opportunity_guidance).toBeUndefined();
     expect(ended.compactView().opportunity_leads).toBeUndefined();
     expect("opportunities" in ended.journeyExitReceipt()!).toBe(false);
   });
@@ -226,7 +229,9 @@ describe("optional return opportunity leads", () => {
     expect("opportunities" in full.observation).toBe(false);
     expect(compact.journey.opportunities).toEqual(full.journey.opportunities);
     expect(compact.context.v).toBe(OVERWORLD_COMPACT_VIEW_VERSION);
+    expect(compact.context.opportunity_guidance).toBe(JOURNEY_OPPORTUNITY_GUIDANCE);
     expect(compact.context.opportunity_leads).toEqual(EXPECTED_COMPACT);
+    expect(compact.legend?.opportunity_guidance).toMatch(/pursuit guidance/i);
     expect(compact.legend?.opportunity_leads).toMatch(/here\|mapped\|route_unmapped/);
     expect(compact.legend?.opportunity_leads).toMatch(/no choices, rewards, or outcomes/i);
     expect(

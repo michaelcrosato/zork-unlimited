@@ -123,6 +123,7 @@ describe("journey opportunity UI", () => {
         expect(markup).toContain("Optional aftermath");
         expect(markup).toContain("Return opportunities");
         expect(markup).toContain(JOURNEY_OPPORTUNITY_GUIDANCE);
+        expect(markup).toContain("When town actions are available");
         expect(markup).toContain("Albany Greenway: trail sign damage");
         expect(markup).toContain("Albany Station Quarter");
         expect(markup).toContain("Here now");

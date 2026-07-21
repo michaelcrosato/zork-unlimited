@@ -177,7 +177,12 @@ export function buildOverworldSessionCompactView(
     ],
     ...(serviceOffers.length > 0 ? { service_offers: serviceOffers } : {}),
     ...(departureInteractions.length > 0 ? { departure_interactions: departureInteractions } : {}),
-    ...(opportunityLeads.length > 0 ? { opportunity_leads: opportunityLeads } : {}),
+    ...(opportunityLeads.length > 0 && state.opportunities
+      ? {
+          opportunity_guidance: state.opportunities.guidance,
+          opportunity_leads: opportunityLeads,
+        }
+      : {}),
     ...(state.opportunities &&
     state.opportunities.leads.length > OVERWORLD_COMPACT_OPPORTUNITY_LEAD_LIMIT
       ? { opportunity_leads_truncated: true as const }

@@ -336,6 +336,7 @@ export type OverworldCompactView = {
   vitals: OverworldCompactVitals;
   service_offers?: OverworldCompactServiceOffer[];
   departure_interactions?: OverworldCompactDepartureInteraction[];
+  opportunity_guidance?: string;
   opportunity_leads?: OverworldCompactOpportunityLead[];
   opportunity_leads_truncated?: true;
   hidden: OverworldCompactHiddenCounts;
@@ -393,6 +394,8 @@ export const OVERWORLD_COMPACT_LEGEND = {
     "[[offer_id, action, title, terms_summary, minutes], ...] current one-time service terms; use the normal rest or resupply action named by action to accept that offer",
   departure_interactions:
     "[[story_choice_id, kind, title], ...] optional Station departure interactions; inspect with inspect_overworld_session_story(story_choice_id), then choose one id from story.options[*].id with choose_overworld_session_story(story_choice_id, choice), or depart without choosing",
+  opportunity_guidance:
+    "player-facing pursuit guidance for opportunity_leads; shown beside those leads on every compact response where they exist",
   opportunity_leads:
     "[[kind, root_id, title, district, access], ...] optional authored aftermath; access is here|mapped|route_unmapped, the journey objective remains available, and no choices, rewards, or outcomes are disclosed",
   opportunity_leads_truncated: "true when more optional aftermath leads exist than listed",
@@ -1153,6 +1156,7 @@ export function cloneOverworldCompactView(view: OverworldCompactView): Overworld
   if (view.departure_interactions) {
     clone.departure_interactions = cloneTupleList(view.departure_interactions);
   }
+  if (view.opportunity_guidance) clone.opportunity_guidance = view.opportunity_guidance;
   if (view.opportunity_leads) {
     clone.opportunity_leads = cloneTupleList(view.opportunity_leads);
   }
