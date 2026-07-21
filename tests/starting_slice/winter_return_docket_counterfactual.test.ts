@@ -10,6 +10,7 @@ import { createToolApi } from "../../src/mcp/tools.js";
 import { deriveCampaignWorldFactIds } from "../../src/world/campaign_consequences.js";
 import { availableLocalJobSceneOptions } from "../../src/world/local_job_scene.js";
 import {
+  AUTHORED_ALBANY_CHARTER_LEGACY_EVENT,
   AUTHORED_ALBANY_CHARTER_LEGACY_OPTION_ID,
   WINTER_RETURN_DOCKET_PREDECESSOR_WORLD_HASH,
   authoredLocalEventLegacyOptionId,
@@ -490,5 +491,133 @@ describe("Winter Return Docket", () => {
     expect(() => restored.resolveEvent(EVENT_ID, PROTECTED)).toThrow(
       /Before resolving|must be made before completing/i,
     );
+  });
+
+  it("reveals a post-quest authored event only after its required completion and rejects backdating", () => {
+    const postWolfWorld = structuredClone(WORLD);
+    const event = postWolfWorld.local_events.find((candidate) => candidate.id === EVENT_ID);
+    if (!event?.authored_scene) throw new Error("expected authored Civic event");
+    event.authored_scene.requires_completed_quests = ["wolf_winter"];
+    event.authored_scene.forbids_completed_quests = undefined;
+
+    const before = preparedForWolf(null, postWolfWorld).session;
+    moveToArea(before, CIVIC_AREA, postWolfWorld);
+    expect(before.view().events.map((candidate) => candidate.id)).not.toContain(EVENT_ID);
+    expect(() => before.investigateEvent(EVENT_ID)).toThrow(/only after completing wolf_winter/i);
+
+    const after = returnedToCivic(null, "ending_held", "The Byre Held", postWolfWorld);
+    expect(
+      after.view().events.find((candidate) => candidate.id === EVENT_ID)?.authored_scene
+        ?.requires_completed_quests,
+    ).toEqual(["wolf_winter"]);
+    expect(after.compactView().event_scenes?.[0]?.[5]).toEqual(["wolf_winter"]);
+    after.investigateEvent(EVENT_ID);
+    const unresolvedBackdated = after.snapshot();
+    const unresolvedInvestigationIndex = unresolvedBackdated.journalEntries.findIndex(
+      (entry) => entry.id === `investigate:${EVENT_ID}`,
+    );
+    const unresolvedQuestIndex = unresolvedBackdated.journalEntries.findIndex(
+      (entry) => entry.id === "quest_done:wolf_winter",
+    );
+    if (unresolvedInvestigationIndex < 0 || unresolvedQuestIndex < 0) {
+      throw new Error("expected investigation and quest proofs");
+    }
+    const unresolvedQuestEntry = unresolvedBackdated.journalEntries[unresolvedQuestIndex]!;
+    const [unresolvedInvestigation] = unresolvedBackdated.journalEntries.splice(
+      unresolvedInvestigationIndex,
+      1,
+    );
+    unresolvedInvestigation!.recordedAt = unresolvedQuestEntry.recordedAt;
+    const shiftedUnresolvedQuestIndex = unresolvedBackdated.journalEntries.findIndex(
+      (entry) => entry.id === "quest_done:wolf_winter",
+    );
+    unresolvedBackdated.journalEntries.splice(
+      shiftedUnresolvedQuestIndex + 1,
+      0,
+      unresolvedInvestigation!,
+    );
+    expect(() => OverworldSession.restore(postWolfWorld, unresolvedBackdated)).toThrow(
+      /investigation.*required quest/i,
+    );
+
+    after.resolveEvent(EVENT_ID, PUBLIC);
+    expect(() => OverworldSession.restore(postWolfWorld, after.snapshot())).not.toThrow();
+
+    const backdated = after.snapshot();
+    const eventIndex = backdated.journalEntries.findIndex(
+      (entry) => entry.id === `resolve:${EVENT_ID}`,
+    );
+    const questIndex = backdated.journalEntries.findIndex(
+      (entry) => entry.id === "quest_done:wolf_winter",
+    );
+    if (eventIndex < 0 || questIndex < 0) throw new Error("expected event and quest proofs");
+    const [eventEntry] = backdated.journalEntries.splice(eventIndex, 1);
+    backdated.journalEntries.splice(questIndex, 0, eventEntry!);
+    expect(() => OverworldSession.restore(postWolfWorld, backdated)).toThrow(
+      /chronology|newest-first/i,
+    );
+
+    const setupBackdated = after.snapshot();
+    const investigationIndex = setupBackdated.journalEntries.findIndex(
+      (entry) => entry.id === `investigate:${EVENT_ID}`,
+    );
+    const completedQuestIndex = setupBackdated.journalEntries.findIndex(
+      (entry) => entry.id === "quest_done:wolf_winter",
+    );
+    if (investigationIndex < 0 || completedQuestIndex < 0) {
+      throw new Error("expected resolved investigation and quest proofs");
+    }
+    const completedQuestEntry = setupBackdated.journalEntries[completedQuestIndex]!;
+    const [investigation] = setupBackdated.journalEntries.splice(investigationIndex, 1);
+    investigation!.recordedAt = completedQuestEntry.recordedAt;
+    const shiftedQuestIndex = setupBackdated.journalEntries.findIndex(
+      (entry) => entry.id === "quest_done:wolf_winter",
+    );
+    setupBackdated.journalEntries.splice(shiftedQuestIndex + 1, 0, investigation!);
+    expect(() => OverworldSession.restore(postWolfWorld, setupBackdated)).toThrow(
+      /investigation.*required quest/i,
+    );
+
+    const genericPredecessorWorld = structuredClone(postWolfWorld);
+    const genericEvent = genericPredecessorWorld.local_events.find(
+      (candidate) => candidate.id === EVENT_ID,
+    );
+    if (!genericEvent) throw new Error("expected generic predecessor event");
+    genericEvent.authored_scene = undefined;
+    const legacyPrepared = preparedForWolf(null, genericPredecessorWorld);
+    moveToArea(legacyPrepared.session, CIVIC_AREA, genericPredecessorWorld);
+    legacyPrepared.session.investigateEvent(EVENT_ID);
+    legacyPrepared.session.resolveEvent(EVENT_ID);
+    moveToArea(legacyPrepared.session, legacyPrepared.wolf.area, genericPredecessorWorld);
+    legacyPrepared.session.startQuest(
+      legacyPrepared.wolf.id,
+      "albany:wolf_approach_sheltered_stockway",
+    );
+    legacyPrepared.session.completeQuest(legacyPrepared.wolf.id, {
+      endingId: "ending_held",
+      endingTitle: "The Byre Held",
+      death: false,
+    });
+    const grandfathered = legacyPrepared.session.snapshot();
+    grandfathered.worldHash = hashState(postWolfWorld);
+    const legacyResolution = grandfathered.journalEntries.find(
+      (entry) => entry.id === `resolve:${EVENT_ID}`,
+    );
+    if (!legacyResolution) throw new Error("expected grandfathered resolution");
+    expect(legacyResolution.title).toBe(`Resolved ${AUTHORED_ALBANY_CHARTER_LEGACY_EVENT.title}`);
+    legacyResolution.localSceneProof = {
+      sceneId: EVENT_SCENE_ID,
+      optionId: AUTHORED_ALBANY_CHARTER_LEGACY_OPTION_ID,
+      sourceWorldHash: WINTER_RETURN_DOCKET_PREDECESSOR_WORLD_HASH,
+    };
+    const restoredGrandfathered = OverworldSession.restore(postWolfWorld, grandfathered);
+    expect(
+      restoredGrandfathered
+        .snapshot()
+        .journalEntries.find((entry) => entry.id === `resolve:${EVENT_ID}`)?.localSceneProof,
+    ).toMatchObject({
+      optionId: AUTHORED_ALBANY_CHARTER_LEGACY_OPTION_ID,
+      sourceWorldHash: WINTER_RETURN_DOCKET_PREDECESSOR_WORLD_HASH,
+    });
   });
 });

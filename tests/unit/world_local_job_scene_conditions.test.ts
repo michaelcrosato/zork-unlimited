@@ -74,6 +74,30 @@ describe("generic authored local-job conditions", () => {
     ).toEqual(["sealed_evacuated"]);
   });
 
+  it("keeps event-choice gating local to an option instead of forcing the whole scene", () => {
+    const optionLocalScene: LocalJobScene = {
+      ...structuredClone(SYNTHETIC_SCENE),
+      requires_resolved_events: undefined,
+    };
+    expect(
+      availableLocalJobSceneOptions(optionLocalScene, conditionState()).map((option) => option.id),
+    ).toEqual(["open_held"]);
+    expect(
+      availableLocalJobSceneOptions(
+        optionLocalScene,
+        conditionState({ resolved: [], eventOption: "open" }),
+      ),
+    ).toEqual([]);
+
+    const optionLocalWorld = structuredClone(WORLD);
+    const civic = optionLocalWorld.local_jobs.find(
+      (job) => job.id === "albany_city__civic_core__job",
+    );
+    if (!civic?.authored_scene) throw new Error("expected Civic scene");
+    civic.authored_scene.requires_resolved_events = undefined;
+    expect(() => assertOverworldIntegrity(optionLocalWorld)).not.toThrow();
+  });
+
   it("grants no option for missing chronology, contradictory facts, or a neutral legacy event", () => {
     expect(availableLocalJobSceneOptions(SYNTHETIC_SCENE, conditionState({ quests: [] }))).toEqual(
       [],
@@ -146,5 +170,13 @@ describe("generic authored local-job conditions", () => {
     if (!secondCivic?.authored_scene) throw new Error("expected Civic scene");
     secondCivic.authored_scene.options[0]!.requires_all_world_facts = ["fact:invented"];
     expect(() => assertOverworldIntegrity(missingFact)).toThrow(/unauthored world fact/i);
+  });
+
+  it("fails manifest integrity for an authored event's missing required quest", () => {
+    const missingQuest = structuredClone(WORLD);
+    const event = missingQuest.local_events.find((candidate) => candidate.authored_scene);
+    if (!event?.authored_scene) throw new Error("expected authored event scene");
+    event.authored_scene.requires_completed_quests = ["quest:invented"];
+    expect(() => assertOverworldIntegrity(missingQuest)).toThrow(/requires missing quest/i);
   });
 });

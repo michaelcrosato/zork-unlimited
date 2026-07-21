@@ -82,6 +82,11 @@ export function cloneOverworldLocalEvent(event: OverworldLocalEvent): OverworldL
       ? {
           authored_scene: {
             ...event.authored_scene,
+            ...(event.authored_scene.requires_completed_quests
+              ? {
+                  requires_completed_quests: [...event.authored_scene.requires_completed_quests],
+                }
+              : {}),
             ...(event.authored_scene.forbids_completed_quests
               ? {
                   forbids_completed_quests: [...event.authored_scene.forbids_completed_quests],

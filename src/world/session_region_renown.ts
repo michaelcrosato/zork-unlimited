@@ -14,7 +14,7 @@ import { roadEncounterOptionFor } from "./travel_mechanics.js";
 import { resolveLocalJobSceneOption } from "./local_job_scene.js";
 import { authoredLocalJobLegacyCompletion } from "./local_job_scene_legacy.js";
 import { resolveLocalEventSceneOption } from "./local_event_scene.js";
-import { authoredAlbanyCharterLegacyCompletion } from "./local_event_scene_legacy.js";
+import { authoredLocalEventLegacyCompletion } from "./local_event_scene_legacy.js";
 
 export type OverworldRegionRenownSourceIndex = {
   eventsById: ReadonlyMap<string, OverworldLocalEvent>;
@@ -99,9 +99,9 @@ export function expectedSnapshotRegionRenown(
           `Overworld session snapshot authored event "${event.id}" is missing its renown proof.`,
         );
       }
-      const legacyCompletion = authoredAlbanyCharterLegacyCompletion(event.id, proof);
+      const legacyCompletion = authoredLocalEventLegacyCompletion(event.id, proof);
       if (legacyCompletion) {
-        renown = legacyCompletion.legacyEvent.intensity;
+        renown = legacyCompletion.definition.legacyEvent.intensity;
       } else if (proof.sourceWorldHash === undefined) {
         renown = resolveLocalEventSceneOption(event.authored_scene, proof.optionId).terms.renown;
       } else {

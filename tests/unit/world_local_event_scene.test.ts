@@ -15,6 +15,7 @@ const CHARTER_SCENE: LocalEventScene = {
   prompt: "Choose how the relief affidavits enter the permanent record.",
   required_poi_id: "test:notice_hall",
   required_contact_id: "test:clerk",
+  requires_completed_quests: ["test:prior_return"],
   forbids_completed_quests: ["test:field_return"],
   options: [
     {
@@ -49,11 +50,16 @@ describe("strict authored local-event scenes", () => {
       /Unknown local-event scene option/i,
     );
     expect(localEventSceneRequirementsMet(CHARTER_SCENE, { completedQuestIds: new Set() })).toBe(
-      true,
+      false,
     );
     expect(
       localEventSceneRequirementsMet(CHARTER_SCENE, {
-        completedQuestIds: new Set(["test:field_return"]),
+        completedQuestIds: new Set(["test:prior_return"]),
+      }),
+    ).toBe(true);
+    expect(
+      localEventSceneRequirementsMet(CHARTER_SCENE, {
+        completedQuestIds: new Set(["test:prior_return", "test:field_return"]),
       }),
     ).toBe(false);
   });
@@ -102,6 +108,18 @@ describe("strict authored local-event scenes", () => {
         forbids_completed_quests: ["test:field_return", "test:field_return"],
       }),
     ).toThrow(/Duplicate forbidden completed quest/i);
+    expect(() =>
+      LocalEventSceneSchema.parse({
+        ...CHARTER_SCENE,
+        forbids_completed_quests: ["test:prior_return"],
+      }),
+    ).toThrow(/both required and forbidden/i);
+    expect(() =>
+      LocalEventSceneSchema.parse({
+        ...CHARTER_SCENE,
+        requires_completed_quests: ["test:prior_return", "test:prior_return"],
+      }),
+    ).toThrow(/Duplicate required completed quest/i);
     expect(() =>
       LocalEventSceneSchema.parse({
         ...CHARTER_SCENE,

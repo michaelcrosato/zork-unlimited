@@ -32,7 +32,7 @@ export const OVERWORLD_COMPACT_TITLE_CHAR_LIMIT = 140;
 export const OVERWORLD_COMPACT_RISK_CHAR_LIMIT = 160;
 export const OVERWORLD_COMPACT_ROAD_EVENT_SUMMARY_CHAR_LIMIT = 240;
 export const OVERWORLD_COMPACT_SERVICE_SUMMARY_CHAR_LIMIT = 240;
-export const OVERWORLD_COMPACT_VIEW_VERSION = 23 as const;
+export const OVERWORLD_COMPACT_VIEW_VERSION = 24 as const;
 
 export type OverworldCompactRef = readonly [id: string, name: string];
 export type OverworldCompactEventSceneOption = readonly [
@@ -49,6 +49,8 @@ export type OverworldCompactEventScene = readonly [
   prompt: string,
   requiredPoiId: string,
   requiredContactId: string,
+  requiredQuestIds: readonly string[],
+  forbiddenQuestIds: readonly string[],
   options: readonly OverworldCompactEventSceneOption[],
 ];
 export type OverworldCompactEventChoice = readonly [eventId: string, optionId: string];
@@ -397,7 +399,7 @@ export const OVERWORLD_COMPACT_LEGEND = {
   contacts: "[[character_id, name], ...] people here (talk_overworld_session_contact)",
   events: "[[event_id, title], ...] local events (investigate/resolve_overworld_session_event)",
   event_scenes:
-    "[[event_id, scene_id, prompt, required_poi_id, required_contact_id, [[option_id, title, minutes, renown, preview, consequence]]], ...] authored event scenes; complete the named setup and investigate before choosing",
+    "[[event_id, scene_id, prompt, required_poi_id, required_contact_id, [required_quest_ids], [forbidden_quest_ids], [[option_id, title, minutes, renown, preview, consequence]]], ...] authored event scenes; complete the named setup and requirements, then investigate before choosing",
   event_choices:
     "[[event_id, option_id], ...] currently legal authored event choices; call resolve_overworld_session_event with these exact ids",
   local_refs_truncated:
@@ -546,6 +548,8 @@ export function compactOverworldEventScenes(
       compactText(scene.prompt, OVERWORLD_COMPACT_SERVICE_SUMMARY_CHAR_LIMIT),
       scene.required_poi_id,
       scene.required_contact_id,
+      [...(scene.requires_completed_quests ?? [])],
+      [...(scene.forbids_completed_quests ?? [])],
       scene.options.map((option) => [
         option.id,
         compactOverworldTitle(option.title),
@@ -1109,7 +1113,9 @@ export function cloneOverworldCompactView(view: OverworldCompactView): Overworld
       scene[2],
       scene[3],
       scene[4],
-      cloneTupleList(scene[5]),
+      [...scene[5]],
+      [...scene[6]],
+      cloneTupleList(scene[7]),
     ]);
   }
   if (view.event_choices) clone.event_choices = cloneTupleList(view.event_choices);
