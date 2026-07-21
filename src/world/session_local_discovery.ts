@@ -10,6 +10,7 @@ import {
   type OverworldQuestLaunchResources,
   type OverworldQuestLaunchView,
 } from "./quest_launch.js";
+import { wolfHillRoutePresentation } from "./wolf_hill_route_presentation.js";
 
 export type OverworldQuestView = {
   id: string;
@@ -53,6 +54,7 @@ export function questView(
   quest: OverworldQuest,
   resources?: OverworldQuestLaunchResources,
   selectedApproachId?: string,
+  knowledgeIds?: readonly string[],
 ): OverworldQuestView {
   return {
     id: quest.id,
@@ -62,7 +64,14 @@ export function questView(
     discovery: quest.discovery,
     visibility: quest.visibility,
     ...(quest.launch
-      ? { launch: presentOverworldQuestLaunch(quest.launch, resources, selectedApproachId) }
+      ? {
+          launch: presentOverworldQuestLaunch(
+            quest.launch,
+            resources,
+            selectedApproachId,
+            knowledgeIds,
+          ),
+        }
       : {}),
   };
 }
@@ -70,19 +79,33 @@ export function questView(
 export function projectOverworldQuestView(
   quest: OverworldQuestView,
   resources: OverworldQuestLaunchResources,
+  knowledgeIds?: readonly string[],
 ): OverworldQuestView {
-  if (!quest.launch) return { ...quest };
+  const launch = quest.launch;
+  if (!launch) return { ...quest };
   return {
     ...quest,
     launch: {
-      id: quest.launch.id,
-      prompt: quest.launch.prompt,
-      options: quest.launch.options.map((option) => ({
-        ...option,
-        terms: { ...option.terms },
-        projection: projectOverworldQuestLaunchOption(option, resources),
-      })),
-      ...(quest.launch.selected ? { selected: { ...quest.launch.selected } } : {}),
+      id: launch.id,
+      prompt: launch.prompt,
+      options: launch.options.map((option) => {
+        const routePresentation = wolfHillRoutePresentation({
+          launchId: launch.id,
+          optionId: option.id,
+          ...(knowledgeIds ? { knowledgeIds } : {}),
+        });
+        return {
+          id: option.id,
+          title: option.title,
+          summary: option.summary,
+          preview: routePresentation?.previewOverride ?? option.preview,
+          consequence: option.consequence,
+          ...(routePresentation ? { tradeoffSummary: routePresentation.tradeoffSummary } : {}),
+          terms: { ...option.terms },
+          projection: projectOverworldQuestLaunchOption(option, resources),
+        };
+      }),
+      ...(launch.selected ? { selected: { ...launch.selected } } : {}),
     },
   };
 }

@@ -241,11 +241,15 @@ export function buildOverworldSessionViewModelState(
   const localView: OverworldSessionLocalView = {
     ...source.localView,
     quests: source.localView.quests.map((quest) =>
-      projectOverworldQuestView(quest, {
-        minutes: source.minutes,
-        supplies: source.supplies,
-        fatigue: source.fatigue,
-      }),
+      projectOverworldQuestView(
+        quest,
+        {
+          minutes: source.minutes,
+          supplies: source.supplies,
+          fatigue: source.fatigue,
+        },
+        source.character.knowledge,
+      ),
     ),
   };
 

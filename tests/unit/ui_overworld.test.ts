@@ -841,6 +841,8 @@ describe("OverworldSession", () => {
               summary: "Spend less supply but arrive winded.",
               preview: "The ridge is fast and visible from the valley.",
               consequence: "You accept the wind and reach the steading first.",
+              tradeoffSummary:
+                "Arrival alarm 1; first lure cast DC 10; a clean lure reaches alarm 4 and scatters two cattle.",
               terms: { minutes: 30, supplies: 1, fatigue: 25 },
               projection: {
                 available: true,
@@ -884,6 +886,10 @@ describe("OverworldSession", () => {
       expect(markup).toContain("Take the Exposed Ridge");
       expect(markup).toContain("Spend less supply but arrive winded.");
       expect(markup).toContain("The ridge is fast and visible from the valley.");
+      expect(markup).toContain("Route tradeoff:");
+      expect(markup).toContain(
+        "Arrival alarm 1; first lure cast DC 10; a clean lure reaches alarm 4 and scatters two cattle.",
+      );
       expect(markup).toContain("You accept the wind and reach the steading first.");
       expect(markup).toContain("Actual cost: 30 min, 1 supply, fatigue +25.");
       expect(markup).toContain(

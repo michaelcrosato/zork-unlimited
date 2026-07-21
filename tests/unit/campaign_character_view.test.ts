@@ -211,7 +211,7 @@ describe("campaign character player view", () => {
     expect(source.relationships[0]?.memories).toEqual(["memory:kept_watch"]);
 
     const compact = compactCampaignCharacterView(source);
-    expect(OVERWORLD_COMPACT_VIEW_VERSION).toBe(25);
+    expect(OVERWORLD_COMPACT_VIEW_VERSION).toBe(26);
     expect(compact).toHaveLength(15);
     expect(compact[0]).toBe("background:road_warden");
     expect(compact[1]).toEqual([23, 30]);

@@ -34,7 +34,7 @@ export const OVERWORLD_COMPACT_TITLE_CHAR_LIMIT = 140;
 export const OVERWORLD_COMPACT_RISK_CHAR_LIMIT = 160;
 export const OVERWORLD_COMPACT_ROAD_EVENT_SUMMARY_CHAR_LIMIT = 240;
 export const OVERWORLD_COMPACT_SERVICE_SUMMARY_CHAR_LIMIT = 240;
-export const OVERWORLD_COMPACT_VIEW_VERSION = 25 as const;
+export const OVERWORLD_COMPACT_VIEW_VERSION = 26 as const;
 
 export type OverworldCompactRef = readonly [id: string, name: string];
 export type OverworldCompactOpportunityLead = readonly [
@@ -96,6 +96,7 @@ export type OverworldCompactQuestLaunchOption = readonly [
   blockedReason: string | null,
   preview: string,
   consequence: string,
+  tradeoffSummary: string | null,
 ];
 export type OverworldCompactQuestLaunch = readonly [
   id: string,
@@ -430,7 +431,7 @@ export const OVERWORLD_COMPACT_LEGEND = {
     "[[job_id, title, area_id], ...] discovered unfinished jobs in other known areas; walk to area_id via area_routes before work_overworld_session_job",
   sites: "[[site_id, title], ...] discovered sites (explore_overworld_session_site)",
   quests:
-    "[[quest_id, title, anchor_area_id, [launch_id, prompt, [[approach_id, title, minutes, supplies_cost, fatigue_gained, available|null, minutes_after|null, supplies_after|null, fatigue_after|null, condition_after|null, blocked_reason|null, preview, consequence]], selected_approach_id|null]?], ...] discovered quest leads; choose one available approach for launch-enabled quests, then be IN anchor_area_id (compare to here[3]; walk there via area_routes) before start_overworld_session_quest",
+    "[[quest_id, title, anchor_area_id, [launch_id, prompt, [[approach_id, title, minutes, supplies_cost, fatigue_gained, available|null, minutes_after|null, supplies_after|null, fatigue_after|null, condition_after|null, blocked_reason|null, preview, consequence, tradeoff_summary|null]], selected_approach_id|null]?], ...] discovered quest leads; choose one available approach for launch-enabled quests, then be IN anchor_area_id (compare to here[3]; walk there via area_routes) before start_overworld_session_quest",
   quest_starts:
     "[[quest_id, approach_id|null], ...] currently legal quest launches; call start_overworld_session_quest with these exact quest_id and approach_id values (omit approach_id when null)",
   pending_road:
@@ -526,6 +527,7 @@ export function compactOverworldQuestRef(value: {
         projection?.blockedReason ?? null,
         compactText(option.preview, OVERWORLD_COMPACT_SERVICE_SUMMARY_CHAR_LIMIT),
         compactText(option.consequence, OVERWORLD_COMPACT_SERVICE_SUMMARY_CHAR_LIMIT),
+        option.tradeoffSummary ?? null,
       ] as const;
     }),
     value.launch.selected?.optionId ?? null,

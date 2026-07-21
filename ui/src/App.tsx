@@ -209,6 +209,11 @@ export function QuestNotice({
                   <small>
                     <b>What you expect:</b> {option.preview}
                   </small>
+                  {option.tradeoffSummary ? (
+                    <small className="quest-launch-projection">
+                      <b>Route tradeoff:</b> {option.tradeoffSummary}
+                    </small>
+                  ) : null}
                   <small>
                     <b>Commitment:</b> {option.consequence}
                   </small>
