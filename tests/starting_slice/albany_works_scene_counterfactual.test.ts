@@ -401,10 +401,10 @@ describe("Depth Contract #11 — authored Albany Works scene", () => {
       expect(proof).not.toHaveProperty("boundary");
       expect(migratedSnapshot.minutes).toBe(predecessorSnapshot.minutes);
       expect(migratedSnapshot.regionRenown).toEqual(predecessorSnapshot.regionRenown);
-      // The current world also contains the unavailable Winter Return Docket and
-      // Campus Archive Query. Their truthful hidden count is independent of
-      // preserving this Works completion.
-      expect(migrated.view().hiddenJobCount).toBe(legacyHiddenJobCount + 2);
+      // The current world also contains the unavailable Winter Return Docket,
+      // Campus Archive Query, and Cade Return Packet. Their truthful hidden
+      // count is independent of preserving this Works completion.
+      expect(migrated.view().hiddenJobCount).toBe(legacyHiddenJobCount + 3);
       expect(OverworldSession.restore(WORLD, migratedSnapshot).snapshot()).toEqual(
         migratedSnapshot,
       );

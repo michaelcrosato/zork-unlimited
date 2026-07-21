@@ -40,6 +40,11 @@ export const AUTHORED_ALBANY_CAMPUS_PREDECESSOR_WORLD_HASH =
   "db23dea42bb2cd62beb8ac5871e4b5c74ee127c05b36941b4e170247ab8a5858";
 export const AUTHORED_ALBANY_CAMPUS_JOB_ID = "albany_city__campus__job";
 export const AUTHORED_ALBANY_CAMPUS_SCENE_ID = "albany:campus-wolf-archive-query";
+/** Exact manifest immediately before Albany Station gained Cade's authored return packet. */
+export const AUTHORED_ALBANY_STATION_PREDECESSOR_WORLD_HASH =
+  "a27b2db04b359e9ca38380ca2b0b7a328df4008d1f899bf65e1332d0998aa6b2";
+export const AUTHORED_ALBANY_STATION_JOB_ID = "albany_city__transport_hub__job";
+export const AUTHORED_ALBANY_STATION_SCENE_ID = "albany:cade-return-packet";
 
 export const AUTHORED_ALBANY_WORKS_LEGACY_JOB: OverworldLocalJob = Object.freeze({
   id: AUTHORED_ALBANY_WORKS_JOB_ID,
@@ -89,6 +94,23 @@ export const AUTHORED_ALBANY_CAMPUS_LEGACY_JOB: OverworldLocalJob = Object.freez
   visibility: "local_job_board",
 });
 
+export const AUTHORED_ALBANY_STATION_LEGACY_JOB: OverworldLocalJob = Object.freeze({
+  id: AUTHORED_ALBANY_STATION_JOB_ID,
+  home: "albany_city",
+  area: "albany_city__transport_hub",
+  kind: "courier",
+  title: "Albany Station Quarter: Relief Packet",
+  summary:
+    "Drivers and dispatchers sort road reports beside crates marked for hill farms; one packet keeps returning with the words wolf-winter penciled on the tag.",
+  objective:
+    "Spend time in Albany Station Quarter to match route notes, passenger names, and weather warnings to the relief wagon that never checked in.",
+  reward:
+    "Earn 4 Capital / Mohawk renown and a concrete lead about Albany's hill-country relief work.",
+  minutes: 79,
+  difficulty: 4,
+  visibility: "local_job_board",
+});
+
 export const AUTHORED_LOCAL_JOB_LEGACY_DEFINITIONS: readonly AuthoredLocalJobLegacyDefinition[] =
   Object.freeze([
     Object.freeze({
@@ -111,6 +133,13 @@ export const AUTHORED_LOCAL_JOB_LEGACY_DEFINITIONS: readonly AuthoredLocalJobLeg
       legacyJob: AUTHORED_ALBANY_CAMPUS_LEGACY_JOB,
       acceptedSourceWorldHashes: new Set([AUTHORED_ALBANY_CAMPUS_PREDECESSOR_WORLD_HASH]),
     }),
+    Object.freeze({
+      sourceWorldHash: AUTHORED_ALBANY_STATION_PREDECESSOR_WORLD_HASH,
+      jobId: AUTHORED_ALBANY_STATION_JOB_ID,
+      sceneId: AUTHORED_ALBANY_STATION_SCENE_ID,
+      legacyJob: AUTHORED_ALBANY_STATION_LEGACY_JOB,
+      acceptedSourceWorldHashes: new Set([AUTHORED_ALBANY_STATION_PREDECESSOR_WORLD_HASH]),
+    }),
   ]);
 
 export function authoredLocalJobLegacyOptionId(sourceWorldHash: string): string {
@@ -119,6 +148,10 @@ export function authoredLocalJobLegacyOptionId(sourceWorldHash: string): string 
 
 export const AUTHORED_ALBANY_WORKS_LEGACY_OPTION_ID = authoredLocalJobLegacyOptionId(
   OVERWORLD_AUTHORED_LOCAL_JOB_PREDECESSOR_WORLD_HASH,
+);
+
+export const AUTHORED_ALBANY_STATION_LEGACY_OPTION_ID = authoredLocalJobLegacyOptionId(
+  AUTHORED_ALBANY_STATION_PREDECESSOR_WORLD_HASH,
 );
 
 export function authoredLocalJobLegacyDefinitionForJob(

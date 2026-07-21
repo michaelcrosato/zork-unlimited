@@ -915,6 +915,91 @@
       ]
     },
     {
+      "id": "albany:cade_paling_rebuild_works_rest",
+      "home": "albany_city",
+      "area": "albany_city__industrial",
+      "action": "rest",
+      "title": "Take Reese's Closed-Rebuild Recovery Cot",
+      "summary": "Because you committed Albany's immediate hill crew to Cade's broken outer paling, Reese closes the packet at the Works counter and releases one recovery cot. It restores fatigue only and does not complete another deferred loss.",
+      "provider_character_id": "albany_city__industrial__contact",
+      "minutes": 15,
+      "requires_all_local_job_options": [
+        {
+          "job_id": "albany_city__transport_hub__job",
+          "option_id": "dispatch_paling_rebuild"
+        }
+      ]
+    },
+    {
+      "id": "albany:cade_evacuation_line_works_rest",
+      "home": "albany_city",
+      "area": "albany_city__industrial",
+      "action": "rest",
+      "title": "Take Reese's Re-staked-Line Recovery Cot",
+      "summary": "Because you committed Albany's immediate hill crew to re-stake Cade's abandoned outer line, Reese closes the materials count and releases one recovery cot. It restores fatigue only and does not complete another deferred loss.",
+      "provider_character_id": "albany_city__industrial__contact",
+      "minutes": 15,
+      "requires_all_local_job_options": [
+        {
+          "job_id": "albany_city__transport_hub__job",
+          "option_id": "dispatch_evacuation_line"
+        }
+      ]
+    },
+    {
+      "id": "albany:cade_pasture_search_greenway_resupply",
+      "home": "albany_city",
+      "area": "albany_city__greenway",
+      "action": "resupply",
+      "title": "Claim Emery's Lower-Pasture Search Stores",
+      "summary": "Because you committed Albany's immediate hill crew to the missing-cattle search, Emery releases one bounded Greenway cache of road food, lamp oil, search line, and tally chalk. It does not repair Cade's deferred infrastructure loss.",
+      "provider_character_id": "albany_city__greenway__contact",
+      "minutes": 15,
+      "forbids_any_story_choices": [
+        {
+          "story_choice_id": "albany:wolf_relief_oath",
+          "choice_id": "albany:oath_unaffiliated_personal_bond"
+        }
+      ],
+      "requires_all_local_job_options": [
+        {
+          "job_id": "albany_city__transport_hub__job",
+          "option_id": "dispatch_pasture_search"
+        }
+      ]
+    },
+    {
+      "id": "albany:cade_pasture_search_unaffiliated_greenway_resupply",
+      "home": "albany_city",
+      "area": "albany_city__greenway",
+      "action": "resupply",
+      "title": "Claim the Personal-Bond Pasture Stores Line",
+      "summary": "Your kept personal bond and Emery's committed lower-pasture search open one Greenway stores line after a diverted pack left cattle missing. This 15-minute cache honors both proofs without duplicating a returned-rig cache.",
+      "provider_character_id": "albany_city__greenway__contact",
+      "minutes": 15,
+      "forbids_any_world_facts": [
+        "fact:wolf_winter_pack_driven_alive"
+      ],
+      "requires_all_story_choices": [
+        {
+          "story_choice_id": "albany:wolf_relief_oath",
+          "choice_id": "albany:oath_unaffiliated_personal_bond"
+        }
+      ],
+      "requires_all_promises": [
+        {
+          "promise_id": "albany:promise_wolf_unaffiliated_bond",
+          "status": "kept"
+        }
+      ],
+      "requires_all_local_job_options": [
+        {
+          "job_id": "albany_city__transport_hub__job",
+          "option_id": "dispatch_pasture_search"
+        }
+      ]
+    },
+    {
       "id": "albany:resident_shelter_return_rest",
       "home": "albany_city",
       "area": "albany_city__market",
@@ -51594,13 +51679,64 @@
       "home": "albany_city",
       "area": "albany_city__transport_hub",
       "kind": "courier",
-      "title": "Albany Station Quarter: Relief Packet",
-      "summary": "Drivers and dispatchers sort road reports beside crates marked for hill farms; one packet keeps returning with the words wolf-winter penciled on the tag.",
-      "objective": "Spend time in Albany Station Quarter to match route notes, passenger names, and weather warnings to the relief wagon that never checked in.",
-      "reward": "Earn 4 Capital / Mohawk renown and a concrete lead about Albany's hill-country relief work.",
+      "title": "Hayden's Cade Return Packet",
+      "summary": "Cade's field dispatch is closed, but Hayden's return packet still carries the exact repair, abandoned-line, or missing-cattle claim certified by the Wolf-Winter return.",
+      "objective": "Commit Albany's one immediate follow-up crew to one loss the certified Cade return actually left behind.",
+      "reward": "Earn 2-4 Capital / Mohawk renown and create one exact downstream recovery or create/consolidate one stores line; any other simultaneous loss remains deferred.",
       "minutes": 79,
       "difficulty": 4,
-      "visibility": "local_job_board"
+      "visibility": "local_job_board",
+      "authored_scene": {
+        "version": 1,
+        "id": "albany:cade-return-packet",
+        "prompt": "Hayden can release one immediate follow-up crew before the next snow closes the hill road. Every available option below comes from the certified Cade return. If two losses remain, choosing one retires this packet and leaves the other honestly deferred.",
+        "required_poi_id": "albany_city__transport_hub__poi",
+        "required_contact_id": "albany_city__transport_hub__contact",
+        "requires_completed_quests": [
+          "wolf_winter"
+        ],
+        "options": [
+          {
+            "id": "dispatch_paling_rebuild",
+            "title": "Dispatch Reese's crew to rebuild Cade's outer paling",
+            "preview": "Spend 45 minutes matching the broken-paling count to Reese's cold-set crew. Earn 3 Capital / Mohawk renown and reserve one 15-minute Works recovery cot.",
+            "consequence": "Hayden gives the immediate hill slot to the paling rebuild. Any simultaneous missing-cattle search remains deferred on Cade's return ledger.",
+            "terms": {
+              "minutes": 45,
+              "renown": 3
+            },
+            "requires_all_world_facts": [
+              "fact:wolf_winter_outer_paling_broken"
+            ]
+          },
+          {
+            "id": "dispatch_evacuation_line",
+            "title": "Dispatch a crew to re-stake Cade's abandoned outer line",
+            "preview": "Spend 35 minutes turning the abandoned-line return into posts, lamps, and a marked evacuation route. Earn 2 Capital / Mohawk renown and reserve one 15-minute Works recovery cot.",
+            "consequence": "Hayden gives the immediate hill slot to the evacuation line. Any simultaneous missing-cattle search remains deferred on Cade's return ledger.",
+            "terms": {
+              "minutes": 35,
+              "renown": 2
+            },
+            "requires_all_world_facts": [
+              "fact:wolf_winter_outer_line_abandoned"
+            ]
+          },
+          {
+            "id": "dispatch_pasture_search",
+            "title": "Dispatch Emery's lower-pasture search for Cade's missing cattle",
+            "preview": "Spend 60 minutes reconciling the missing-cattle marks with Emery's search grid. Earn 4 Capital / Mohawk renown and create or consolidate one 15-minute Greenway stores line; an already-claimed returned-rig cache satisfies that shared line.",
+            "consequence": "Hayden gives the immediate hill slot to the lower-pasture search. Emery creates a Greenway stores line unless your personal-bond returned-rig cache already satisfied it; any simultaneous paling or evacuation-line work remains deferred.",
+            "terms": {
+              "minutes": 60,
+              "renown": 4
+            },
+            "requires_all_world_facts": [
+              "fact:wolf_winter_cattle_scattered"
+            ]
+          }
+        ]
+      }
     },
     {
       "id": "albany_city__industrial__job",

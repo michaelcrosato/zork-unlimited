@@ -54,9 +54,42 @@ const JUNE_LEFT_AFTER_BLOOD_PREDECESSOR_SUMMARY =
 const CIVIC_PREPARATION_MESSAGE =
   "The hill dispatch can carry one specialist allocation before it leaves Rowan's counter. Reese Pryce can mark a cold-set repair sequence onto the failing paling, Emery Sloane can map a drover's cut that peels a fouled yearling away from the herd, or Jamie Tanner can seal a relief protocol for calming the cattle after an improvised recovery. Each plan remains usable by any registered traveler, but the provider who sponsored your registration can waive the public charge and shorten the handoff. Choose one: Albany cannot put three incompatible field plans into the same urgent packet.";
 
+const CADE_RETURN_PACKET_SERVICE_IDS: ReadonlySet<string> = new Set([
+  "albany:cade_paling_rebuild_works_rest",
+  "albany:cade_evacuation_line_works_rest",
+  "albany:cade_pasture_search_greenway_resupply",
+  "albany:cade_pasture_search_unaffiliated_greenway_resupply",
+]);
+
+/** Reconstruct the exact manifest immediately before Cade's authored Station return packet. */
+export function exactCadeReturnPacketPredecessor(current: OverworldManifest): OverworldManifest {
+  const predecessor = structuredClone(current);
+  const job = predecessor.local_jobs.find(
+    (candidate) => candidate.id === "albany_city__transport_hub__job",
+  );
+  if (!job) throw new Error("Albany Station must have its local job");
+  job.title = "Albany Station Quarter: Relief Packet";
+  job.summary =
+    "Drivers and dispatchers sort road reports beside crates marked for hill farms; one packet keeps returning with the words wolf-winter penciled on the tag.";
+  job.objective =
+    "Spend time in Albany Station Quarter to match route notes, passenger names, and weather warnings to the relief wagon that never checked in.";
+  job.reward =
+    "Earn 4 Capital / Mohawk renown and a concrete lead about Albany's hill-country relief work.";
+  delete job.authored_scene;
+  predecessor.campaign_service_rules = (predecessor.campaign_service_rules ?? []).filter(
+    (rule) => !CADE_RETURN_PACKET_SERVICE_IDS.has(rule.id),
+  );
+  const unaffiliated = predecessor.campaign_service_rules?.find(
+    (rule) => rule.id === "albany:unaffiliated_bond_returned_rig_resupply",
+  );
+  if (!unaffiliated) throw new Error("Albany must retain its unaffiliated return service");
+  delete unaffiliated.forbids_any_local_job_options;
+  return predecessor;
+}
+
 /** Reconstruct the manifest immediately before preparation moved to the Station board. */
 export function exactCivicPreparationPredecessor(current: OverworldManifest): OverworldManifest {
-  const predecessor = structuredClone(current);
+  const predecessor = exactCadeReturnPacketPredecessor(current);
   const preparation = predecessor.opening_preparation;
   if (!preparation) throw new Error("Albany must have Wolf-Winter preparation");
   preparation.area = "albany_city__civic_core";

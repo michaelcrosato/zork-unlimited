@@ -1372,10 +1372,16 @@ describe("OverworldSession", () => {
 
     session.talkToCharacter(start.characters[0]!.id);
     settleOpeningRegistration(session);
-    moveToArea(session, currentAreaId);
-    const scouted = session.scoutPoi(start.pois[0]!.id);
-    const rememberedJob = (scouted.discoveredJobs ?? []).find((job) => job.area !== currentAreaId);
+    moveToArea(session, "albany_city__market");
+    const marketPoi = session.view().pois.find((poi) => poi.id === "albany_city__market__poi");
+    if (!marketPoi) throw new Error("Expected Albany Market's visible POI.");
+    session.scoutPoi(marketPoi.id);
+    const rememberedJob = world.local_jobs.find(
+      (job) => job.id === "albany_city__market__job" && job.area !== currentAreaId,
+    );
     expect(rememberedJob).toBeDefined();
+    expect(session.view().discoveredJobIds).toContain(rememberedJob!.id);
+    moveToArea(session, currentAreaId);
 
     const afterDiscovery = session.view();
     expect(afterDiscovery.currentArea?.id).toBe(currentAreaId);
