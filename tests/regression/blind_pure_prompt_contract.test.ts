@@ -28,6 +28,9 @@ describe("pure blind prompt + runner contract", () => {
     expect(prompt).toContain("`overworld_snapshot_hash`");
     expect(prompt).toContain("state-bearing compact embedded-quest");
     expect(prompt).toContain("current legal ids in `context.actions`");
+    expect(prompt).toMatch(
+      /`mcp__adventureforge__step_action`, passing\s+`session_id: current rpg_session_id`, `action_id: exact visible id`, and\s+`expected_state_hash: latest state_hash`/,
+    );
     expect(prompt).toMatch(/replace\s+any older menu/);
     expect(prompt).toContain("unchanged hash reply has no context");
     expect(prompt).toContain("journey-choice pause suppresses");

@@ -44,6 +44,9 @@ READING THE PLAYER SURFACE
   fresh start; later compact responses may omit it.
 - Each state-bearing compact embedded-quest start, read, or step response carries
   the bounded current legal ids in `context.actions` while quest play is active.
+  Submit one of those visible ids with `mcp__adventureforge__step_action`, passing
+  `session_id: current rpg_session_id`, `action_id: exact visible id`, and
+  `expected_state_hash: latest state_hash`.
   Treat that menu as authoritative for the response that returned it and replace
   any older menu; do not assume a previously visible action is still legal. An
   unchanged hash reply has no context, and a journey-choice pause suppresses
