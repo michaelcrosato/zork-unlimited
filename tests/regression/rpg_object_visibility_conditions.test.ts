@@ -176,14 +176,14 @@ describe("RPG object visible_when world gates", () => {
       ]),
     );
 
-    state = act(state, "use_switch").state;
+    state = act(state, "hide_switch").state;
     const concealed = view(state);
     expect(concealed.observation.visible_objects.map((object) => object.id)).toEqual(["switch"]);
     expect(concealed.compact.objects).toEqual(["switch"]);
     expect(concealed.ids.some((id) => /panel|chest|locked_box/.test(id))).toBe(false);
     expect(concealed.compact.actions?.some((id) => /panel|chest|locked_box/.test(id))).toBe(false);
 
-    state = act(state, "use_switch").state;
+    state = act(state, "reveal_switch").state;
     expect(view(state).observation.visible_objects.map((object) => object.id)).toEqual(
       before.observation.visible_objects.map((object) => object.id),
     );
@@ -224,7 +224,7 @@ describe("RPG object visible_when world gates", () => {
 
   it("keeps inventory authoritative, then reapplies the gate when the item is dropped", () => {
     let state = act(fresh(), "take_panel").state;
-    state = act(state, "use_switch").state;
+    state = act(state, "hide_switch").state;
     const carried = view(state);
     expect(carried.observation.inventory).toContain("panel");
     expect(carried.compact.inv).toContain("panel");
@@ -241,7 +241,7 @@ describe("RPG object visible_when world gates", () => {
     );
     expect(droppedWhileHidden.ids.some((id) => id.endsWith("_panel"))).toBe(false);
 
-    state = act(state, "use_switch").state;
+    state = act(state, "reveal_switch").state;
     expect(view(state).observation.visible_objects.map((object) => object.id)).toContain("panel");
   });
 
@@ -260,7 +260,7 @@ describe("RPG object visible_when world gates", () => {
       "sealed_note",
     );
 
-    state = act(state, "use_switch").state;
+    state = act(state, "hide_switch").state;
     const hiddenParent = view(state);
     expect(hiddenParent.observation.visible_objects.map((object) => object.id)).not.toContain(
       "chest",
