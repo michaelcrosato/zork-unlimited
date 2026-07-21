@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 597 -->
+<!-- historical_cycle_count: 598 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - albany_market_policy
+
+- Evidence choice: Jamie now offers one optional, irreversible post-Wolf Market policy rather than another opening gate: hold named household/kitchen prices or publish an open-bid ceiling and visible buyer board.
+- Surface: the bound disputed-crates job makes household fast/audit 30/75 minutes for 3/5 standing, versus open-bid 20/60 for 1/4; neither policy has a disguised dominant settlement.
+- Counterfactual: from the held-byre 8-standing return, each policy first adds 2; household-fast reaches the existing 13-standing Civic cot in 30 minutes, while open-bid-fast ends at 11 but saves 10 minutes; thorough paths retain the same time/standing frontier.
+- Authority: full, compact, UI, and MCP projections, exact option gating, both-policy/job counterfactuals, predecessor migration, snapshot integrity, and local-world hash acceptance are covered; independent review's sole stale-doc P2 was fixed and found no P0-P1.
+- Pure evidence: exact clean commit `1656675d` Terra seed 4306 was valid on its first attempt (53 decisions; Wolf pack diverted, Gallowmere hunt won; continue at goal/40, then end), clarity/enjoyment 4/4, unstuck/replay-yes, with no auth/security/provider/tool failure; the player did not encounter or choose the Market policy, so uptake remains UNPROVEN.
+- Feedback: the fresh player praised linked consequences and tactical resolutions, but repeated the embedded-action bridge S2 and dense Station consequence-comparison S1; compile `20260721T054326Z` has 925 verified/58 rejected, 174 pure exits and 151 continuations, while the deterministic ledger has 924 accepted/59 rejected.
+- Guard: combined pre-evidence health passed 395 files/3,027 tests and crawl `20260721T051450Z` was zero-finding; final exact landing health remains due after this docs-only commit.
 
 ### Cycle result - authored_event_foundation
 
@@ -154,13 +164,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Pure evidence: clean commit `65a123a8` Terra seed 4192 completed all-wolves-alive pack diversion at decision 29 and The Gallowmere at 53, continued twice, rated clarity/enjoyment 4/5, was unstuck/replay-yes, and made no rejected player call; deterministic tests carry the exact repaired edge alias.
 - Feedback/self-critique: compile `20260719T184312Z` has 875 verified reports, 124 current pure exits, and 105 continuing; this one clean run is below the next compile threshold, and the ledger is 875 accepted/59 rejected. PASS for the recurring alias S1, not the greater-than-BG3 milestone; summary-first setup presentation remains next.
 - Guard: adversarial review found and closed a guessed-hidden-edge cap bypass plus misleading diagnostics; crawl `20260719T185058Z` is zero-finding at 247/247 nodes, 344/344 edges, and 12/12 boards/quests, and health passes 385 files/2,957 tests plus UI/all packs.
-
-### Cycle result - campus_archive_query
-
-- Evidence choice: Depth Contract #11 and the existing Works preparation relationship made Blair's generic Campus job the next bounded Albany conversion; it remains an optional post-Wolf scene rather than mandatory opening length.
-- Surface: warning spends 35 minutes/+2 renown and banks one exact 15-minute rest, while archive spends 75 minutes/+5 and banks one exact 15-minute resupply; the held/evacuated byre fact changes truthful aftermath copy without changing the mutually exclusive terms.
-- Counterfactual: generic exact local-job option predicates drive later services without Campus conditionals; paired scene/service, clone, journal, save/restore, full/compact MCP, UI, collision, tamper, and static reachability proofs preserve the chosen option and consume each benefit once.
-- Compatibility: every exact trusted predecessor carrying Blair's old contact copy normalizes it without inventing a Campus completion, option, or service; unsupported or inconsistent snapshots still fail closed.
-- Pure evidence: clean commit `d223430f` Terra seed 4181 completed all-wolves-alive fortification at decision 22, continued through The Gallowmere at decision 47, rated clarity/enjoyment 4/4, was unstuck/replay-yes, and skipped the optional Campus scene, so deterministic pairs carry its direct behavior.
-- Feedback/self-critique: the ledger is 864 accepted/59 rejected with one new report since the last compile. PASS for Albany's third of six authored jobs, not the greater-than-BG3 milestone; setup density and local `route_id` discoverability repeated and remain the next presentation/tooling work.
-- Guard: an independent audit caught and closed the older-save contact migration gap; crawl `20260719T172303Z` is zero-finding at 247/247 nodes, 344/344 edges, and 12/12 boards/quests, and health passes 385 files/2,955 tests plus UI/all packs.
