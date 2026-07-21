@@ -3629,8 +3629,8 @@ npcs:
                 bond: exposes property, saves public seals, gains Cade aid. ALBANY breaks bond:
                 saves property, spends seals, no Cade aid. Works/mobile support first seam.
           topics:
-            - id: accept_terms
-              aliases: [accept_household_terms, take_shutters]
+            - id: commit_cade_terms
+              aliases: [accept_terms, accept_household_terms, take_shutters]
               prompt: "Commit Cade's terms: no retreat; no strategy switch to lure, drive, or combat. Expose outer property; preserve public seals; gain one failed-seat aid."
               conditions:
                 - { not_flag: strategy_lure_committed }
@@ -3638,8 +3638,8 @@ npcs:
                 - { not_flag: strategy_fortify_committed }
                 - { not_visited: paling_gap }
               goto: cade_fortify_cade_terms
-            - id: invoke_authority
-              aliases: [order_public_seals, invoke_albany]
+            - id: commit_albany_authority
+              aliases: [invoke_authority, order_public_seals, invoke_albany]
               prompt: "Commit Albany authority: no retreat; no strategy switch to lure, drive, or combat. Preserve property; spend public seals; no aid after a failed seat."
               conditions:
                 - { not_flag: strategy_lure_committed }

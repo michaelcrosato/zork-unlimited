@@ -57,7 +57,7 @@ type Stance = "cade" | "authority";
 
 const STANCES = {
   cade: {
-    choice: "ask_accept_terms",
+    choice: "ask_commit_cade_terms",
     flag: "fortify_cade_terms_accepted",
     otherFlag: "fortify_albany_authority_invoked",
     item: "cade_household_shutters",
@@ -72,7 +72,7 @@ const STANCES = {
     title: "Dawn Behind Cade's Shutters",
   },
   authority: {
-    choice: "ask_invoke_authority",
+    choice: "ask_commit_albany_authority",
     flag: "fortify_albany_authority_invoked",
     otherFlag: "fortify_cade_terms_accepted",
     item: "albany_relief_seals",
@@ -175,7 +175,7 @@ function commitFortify(stance: Stance, withJune = false): GameState {
 
   expect(state.flags.strategy_fortify_committed).not.toBe(true);
   expect(actionIds(state)).toEqual(
-    expect.arrayContaining(["ask_accept_terms", "ask_invoke_authority", "ask_leave"]),
+    expect.arrayContaining(["ask_commit_cade_terms", "ask_commit_albany_authority", "ask_leave"]),
   );
   expect(buildRpgObservation(index, state).dialogue?.npc_text).toMatch(
     /household terms[^]*(?:Albany|authority)[^]*(?:dawn|outlast)/i,
@@ -273,8 +273,8 @@ describe("SS-F08 — Cade terms versus Albany authority under fortification", ()
     boundary = act(boundary, "ask_fortify");
     const boundaryHash = hashState(boundary);
 
-    let cade = act(structuredClone(boundary), "ask_accept_terms");
-    let authority = act(structuredClone(boundary), "ask_invoke_authority");
+    let cade = act(structuredClone(boundary), "ask_commit_cade_terms");
+    let authority = act(structuredClone(boundary), "ask_commit_albany_authority");
     expect(hashState(boundary)).toBe(boundaryHash);
     cade = act(cade, "ask_leave");
     authority = act(authority, "ask_leave");
@@ -302,11 +302,11 @@ describe("SS-F08 — Cade terms versus Albany authority under fortification", ()
     stale = act(stale, "go_north");
     stale = act(stale, "talk_houndsman");
     stale = act(stale, "ask_fortify");
-    expect(actionIds(stale)).toContain("ask_accept_terms");
+    expect(actionIds(stale)).toContain("ask_commit_cade_terms");
     stale = act(stale, "go_north");
     stale = act(stale, "go_south");
-    expect(actionIds(stale)).not.toContain("ask_accept_terms");
-    expect(actionIds(stale)).not.toContain("ask_invoke_authority");
+    expect(actionIds(stale)).not.toContain("ask_commit_cade_terms");
+    expect(actionIds(stale)).not.toContain("ask_commit_albany_authority");
 
     for (const stance of ["cade", "authority"] as const) {
       const state = commitFortify(stance);
