@@ -120,17 +120,19 @@ function launchMcpWolf(sourceId: string): {
     session_id: pending.sessionId,
     area_route_id: preparationRoute.id,
   });
-  expect(atPreparation.journey.storyChoice?.kind).toBe("preparation");
+  expect(atPreparation.observation.departureInteractions[0]?.kind).toBe("preparation");
   expect(questIds(atPreparation.observation)).toContain(WOLF_ID);
   const prepared = api.choose_overworld_session_story({
     ...FULL_OVERWORLD,
     session_id: pending.sessionId,
+    story_choice_id: WORLD.opening_preparation!.id,
     choice: COUNTERFACTUAL_PREPARATION,
   });
-  expect(prepared.journey.storyChoice?.kind).toBe("relief_allocation");
+  expect(prepared.observation.departureInteractions[0]?.kind).toBe("relief_allocation");
   const allocated = api.choose_overworld_session_story({
     ...FULL_OVERWORLD,
     session_id: pending.sessionId,
+    story_choice_id: WORLD.opening_relief_allocation!.id,
     choice: RESIDENT_SHELTER_ALLOCATION,
   });
   const wolf = allocated.observation.quests.find((quest) => quest.id === WOLF_ID);
@@ -304,7 +306,7 @@ describe("SS-F03 — Albany lead-source counterfactual", () => {
         session_id: pending.sessionId,
         choice: ROWAN_SOURCE,
       }),
-    ).toThrow(/unknown story choice|no story consequence/i);
+    ).toThrow(/unknown story choice|no (?:presented )?story consequence/i);
     const afterRejectedRepeat = api.export_overworld_session({
       session_id: pending.sessionId,
     });
@@ -400,7 +402,7 @@ describe("SS-F03 — Albany lead-source counterfactual", () => {
     expect(restored.snapshot()).toEqual(snapshot);
     expect(restored.journey().storyChoice).toBeNull();
     moveToOpeningPreparation(restored);
-    expect(restored.journey().storyChoice?.kind).toBe("preparation");
+    expect(restored.view().departureInteractions[0]?.kind).toBe("preparation");
     restored.chooseJourneyStory(DEFAULT_PREPARATION);
     restored.chooseJourneyStory(RESIDENT_SHELTER_ALLOCATION);
     const hayden = WORLD.characters.find((character) => character.id === HAYDEN_ID);
@@ -425,7 +427,7 @@ describe("SS-F03 — Albany lead-source counterfactual", () => {
       const session = reachDirectLeadSource(COURIER);
       session.chooseJourneyStory(sourceId);
       moveToOpeningPreparation(session);
-      expect(session.journey().storyChoice?.kind).toBe("preparation");
+      expect(session.view().departureInteractions[0]?.kind).toBe("preparation");
       session.chooseJourneyStory(DEFAULT_PREPARATION);
       session.chooseJourneyStory(RESIDENT_SHELTER_ALLOCATION);
       const hayden = session.view().characters.find((candidate) => candidate.id === HAYDEN_ID);

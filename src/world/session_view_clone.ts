@@ -17,6 +17,7 @@ import type { OverworldView } from "./session_view.js";
 import { cloneCampaignCharacterView } from "./campaign_character_view.js";
 import { redactOverworldJournalEntryForPresentation } from "./session_snapshot.js";
 import { cloneOverworldQuestView } from "./session_result_clone.js";
+import { cloneOverworldDepartureInteraction } from "./session_departure_interactions.js";
 
 export function cloneOverworldView(view: OverworldView): OverworldView {
   return {
@@ -46,6 +47,7 @@ export function cloneOverworldView(view: OverworldView): OverworldView {
         ? { providerId: offer.providerId, providerName: offer.providerName }
         : {}),
     })),
+    departureInteractions: view.departureInteractions.map(cloneOverworldDepartureInteraction),
     routeOptions: view.routeOptions.map((plan) => cloneOverworldRouteOption(plan)),
     discovered: view.discovered.map(cloneOverworldNode),
     journal: view.journal.map(redactOverworldJournalEntryForPresentation),

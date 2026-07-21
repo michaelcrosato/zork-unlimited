@@ -12,6 +12,8 @@ const WORLD = loadOverworldManifest(process.cwd());
 const ALBANY_TO_SARATOGA = "road_albany_city__saratoga_springs_city";
 const SARATOGA_TO_QUEENSBURY = "road_saratoga_springs_city__queensbury_town";
 const ALBANY_TO_COLONIE = "road_colonie_town__albany_city";
+const PREPARATION_ID = "albany:wolf_preparation";
+const RELIEF_ALLOCATION_ID = "albany:wolf_relief_allocation";
 
 function moveToArea(session: OverworldSession, destinationAreaId: string): void {
   if (session.view().currentArea?.id === destinationAreaId) return;
@@ -36,13 +38,16 @@ function sessionAtGallowmereGoal(): OverworldSession {
   expect(session.journey().storyChoice?.kind).toBe("lead_source");
   session.chooseJourneyStory("albany:source_rowan_civic_docket");
   moveToArea(session, WORLD.opening_preparation!.area);
-  expect(session.journey().storyChoice?.kind).toBe("preparation");
+  expect(session.view().departureInteractions[0]).toMatchObject({
+    id: PREPARATION_ID,
+    kind: "preparation",
+  });
   expect(session.view().quests.map((candidate) => candidate.id)).toContain("wolf_winter");
-  session.chooseJourneyStory("albany:prep_works_fortification");
+  session.chooseJourneyStory("albany:prep_works_fortification", PREPARATION_ID);
   const quest = session.view().quests.find((candidate) => candidate.id === "wolf_winter");
   if (!quest) throw new Error("Expected Wolf-Winter to be discovered in Albany.");
   moveToArea(session, quest.area);
-  session.chooseJourneyStory("albany:relief_resident_shelter");
+  session.chooseJourneyStory("albany:relief_resident_shelter", RELIEF_ALLOCATION_ID);
   session.startQuest(quest.id, "albany:wolf_approach_sheltered_stockway");
   session.completeQuest(quest.id, {
     endingId: "ending_held",

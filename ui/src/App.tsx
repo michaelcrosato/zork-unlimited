@@ -27,7 +27,10 @@ import { CampaignCharacterPanel } from "./CampaignCharacterPanel.js";
 import { formatGoalPassageLog } from "./goalPassage.js";
 import { FRESH_GAME_TUTORIAL } from "../../src/world/fresh_game_tutorial.js";
 import { timeLabel } from "../../src/world/session_journal_codec.js";
-import type { JourneyChoice } from "../../src/world/journey_contract.js";
+import type {
+  JourneyChoice,
+  JourneyStoryChoicePrompt,
+} from "../../src/world/journey_contract.js";
 import type { OverworldQuest } from "../../src/world/overworld.js";
 import type { OverworldQuestView } from "../../src/world/session_local_discovery.js";
 
@@ -246,6 +249,8 @@ export default function App(): JSX.Element {
   const [questView, setQuestView] = useState<View | null>(null);
   const [activeQuest, setActiveQuest] = useState<OverworldQuestView | null>(null);
   const [tutorialOpen, setTutorialOpen] = useState(() => worldState.origin === "new");
+  const [inspectedDepartureStory, setInspectedDepartureStory] =
+    useState<JourneyStoryChoicePrompt | null>(null);
   const [log, setLog] = useState<string[]>(() => {
     const opener = worldState.origin === "resume"
       ? `Resumed in ${worldView.current.name}.`
@@ -492,6 +497,7 @@ export default function App(): JSX.Element {
     setQuestSession(null);
     setQuestView(null);
     setActiveQuest(null);
+    setInspectedDepartureStory(null);
     setLog([
       `Started a new journey in ${session.view().current.name}. Roads leave town, but the work is local until you find it.`,
     ]);
@@ -512,15 +518,20 @@ export default function App(): JSX.Element {
   }
 
   function chooseJourneyStory(choiceId: string): void {
-    const isRegistration = journey.storyChoice?.kind === "registration";
-    const isLeadSource = journey.storyChoice?.kind === "lead_source";
-    const isPreparation = journey.storyChoice?.kind === "preparation";
-    const isAlly = journey.storyChoice?.kind === "ally";
-    const isReliefAllocation = journey.storyChoice?.kind === "relief_allocation";
-    const isReliefOath = journey.storyChoice?.kind === "relief_oath";
+    const storyChoice = inspectedDepartureStory ?? journey.storyChoice;
+    const isRegistration = storyChoice?.kind === "registration";
+    const isLeadSource = storyChoice?.kind === "lead_source";
+    const isPreparation = storyChoice?.kind === "preparation";
+    const isAlly = storyChoice?.kind === "ally";
+    const isReliefAllocation = storyChoice?.kind === "relief_allocation";
+    const isReliefOath = storyChoice?.kind === "relief_oath";
     try {
-      const result = worldSession.chooseJourneyStory(choiceId);
+      const result = worldSession.chooseJourneyStory(
+        choiceId,
+        inspectedDepartureStory?.id,
+      );
       setWorldView(worldSession.view());
+      setInspectedDepartureStory(null);
       setLog((previous) =>
         isRegistration
           ? [
@@ -570,6 +581,15 @@ export default function App(): JSX.Element {
     }
   }
 
+  function inspectDepartureStory(storyChoiceId: string): void {
+    try {
+      setInspectedDepartureStory(worldSession.inspectJourneyStory(storyChoiceId));
+      setError(null);
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  }
+
   if (tutorialOpen) {
     return (
       <NewJourneyTutorial
@@ -583,8 +603,20 @@ export default function App(): JSX.Element {
     return <JourneyChoiceScreen journey={journey} onChoose={chooseJourney} />;
   }
 
-  if (journey.storyChoice) {
-    return <JourneyStoryChoiceScreen journey={journey} onChoose={chooseJourneyStory} />;
+  if (journey.storyChoice || inspectedDepartureStory) {
+    return (
+      <JourneyStoryChoiceScreen
+        journey={
+          inspectedDepartureStory
+            ? { ...journey, storyChoice: inspectedDepartureStory }
+            : journey
+        }
+        onChoose={chooseJourneyStory}
+        {...(inspectedDepartureStory
+          ? { onDismiss: () => setInspectedDepartureStory(null) }
+          : {})}
+      />
+    );
   }
 
   if (journey.status === "ended") {
@@ -654,6 +686,22 @@ export default function App(): JSX.Element {
               New Journey
             </button>
           </div>
+          {worldView.departureInteractions.length > 0 && (
+            <div className="departure-interactions">
+              <h3>Before you depart</h3>
+              <p>Optional Station decisions; you may inspect one or leave without choosing.</p>
+              {worldView.departureInteractions.map((interaction) => (
+                <button
+                  className="mini-command"
+                  key={interaction.id}
+                  type="button"
+                  onClick={() => inspectDepartureStory(interaction.id)}
+                >
+                  Inspect {interaction.title}
+                </button>
+              ))}
+            </div>
+          )}
         </article>
 
         <aside className="atlas-panel">

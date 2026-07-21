@@ -35,6 +35,8 @@ const REGISTRATION =
 const FULL = { compact_context: false, compact_result: false } as const;
 const PROFILE = "albany:prep_drover_route";
 const NEUTRAL_RELIEF_ALLOCATION = "albany:relief_resident_shelter";
+const PREPARATION_STORY_ID = "albany:wolf_preparation";
+const RELIEF_ALLOCATION_STORY_ID = "albany:wolf_relief_allocation";
 const SERVICE_ID = "albany:wolf_drover_route_return_rest";
 const CAMPUS_AREA = "albany_city__campus";
 const ROUTE = [
@@ -160,17 +162,23 @@ function launchPreparedWolf(api: ToolApi) {
     session_id: overworldSessionId,
     area_route_id: preparationRoute.id,
   });
-  expect(atPreparation.journey.storyChoice).toMatchObject({
-    id: "albany:wolf_preparation",
+  expect(atPreparation.observation.departureInteractions[0]).toMatchObject({
+    id: PREPARATION_STORY_ID,
     kind: "preparation",
   });
-  expect(
-    atPreparation.journey.storyChoice?.options.find((option) => option.id === PROFILE)?.consequence,
-  ).toMatch(/actual cost: 5 minutes and \$0[^]*independent bond/i);
+  const preparation = api.inspect_overworld_session_story({
+    ...FULL,
+    session_id: overworldSessionId,
+    story_choice_id: PREPARATION_STORY_ID,
+  }).story;
+  expect(preparation.options.find((option) => option.id === PROFILE)?.consequence).toMatch(
+    /actual cost: 5 minutes and \$0[^]*independent bond/i,
+  );
 
   const prepared = api.choose_overworld_session_story({
     ...FULL,
     session_id: overworldSessionId,
+    story_choice_id: PREPARATION_STORY_ID,
     choice: PROFILE,
   });
   expect(prepared.observation.character).toMatchObject({
@@ -189,6 +197,7 @@ function launchPreparedWolf(api: ToolApi) {
   api.choose_overworld_session_story({
     ...FULL,
     session_id: overworldSessionId,
+    story_choice_id: RELIEF_ALLOCATION_STORY_ID,
     choice: NEUTRAL_RELIEF_ALLOCATION,
   });
   moveToVisibleArea(api, overworldSessionId, WOLF.area);

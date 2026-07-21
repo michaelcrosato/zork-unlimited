@@ -133,15 +133,36 @@ function launchBreakingWeir(api: ToolApi): { overworldSessionId: string; rpgSess
     session_id: overworldSessionId,
     area_route_id: preparationRoute.id,
   });
-  expect(atPreparation.journey.storyChoice?.kind).toBe("preparation");
+  expect(atPreparation.journey.storyChoice).toBeNull();
+  expect(atPreparation.observation.departureInteractions).toEqual([
+    {
+      id: "albany:wolf_preparation",
+      kind: "preparation",
+      title: world.opening_preparation!.title,
+      inspect: {
+        tool: "inspect_overworld_session_story",
+        storyChoiceId: "albany:wolf_preparation",
+        arguments: { story_choice_id: "albany:wolf_preparation" },
+      },
+      choose: {
+        tool: "choose_overworld_session_story",
+        storyChoiceId: "albany:wolf_preparation",
+        arguments: { story_choice_id: "albany:wolf_preparation" },
+        argument: "choice",
+        valuesFrom: "story.options[*].id",
+      },
+    },
+  ]);
   api.choose_overworld_session_story({
     ...full,
     session_id: overworldSessionId,
+    story_choice_id: "albany:wolf_preparation",
     choice: "albany:prep_works_fortification",
   });
   api.choose_overworld_session_story({
     ...full,
     session_id: overworldSessionId,
+    story_choice_id: "albany:wolf_relief_allocation",
     choice: "albany:relief_resident_shelter",
   });
 

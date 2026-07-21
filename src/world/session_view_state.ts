@@ -48,6 +48,7 @@ import {
 } from "./campaign_character_view.js";
 import type { CampaignServiceOffer } from "./campaign_service_rules.js";
 import { projectOverworldQuestView } from "./session_local_discovery.js";
+import type { OverworldDepartureInteraction } from "./session_departure_interactions.js";
 
 type OverworldSessionViewLocalContentState = Pick<
   MutableOverworldSessionLocalState,
@@ -64,6 +65,7 @@ export type OverworldSessionViewModelState = {
   supplies: number;
   fatigue: number;
   serviceOffers: readonly CampaignServiceOffer[];
+  departureInteractions: readonly OverworldDepartureInteraction[];
   roads: readonly OverworldExit[];
   areaExits: readonly OverworldAreaExit[];
   routeOptions: readonly OverworldSessionRoutePlan[];
@@ -99,6 +101,7 @@ export type OverworldSessionViewModelSourceState = {
   supplies: number;
   fatigue: number;
   serviceOffers: readonly CampaignServiceOffer[];
+  departureInteractions: readonly OverworldDepartureInteraction[];
   roads: readonly OverworldExit[];
   areaExits: readonly OverworldAreaExit[];
   localState: OverworldSessionViewLocalContentState;
@@ -183,6 +186,7 @@ export function buildOverworldSessionViewModelState(
       supplies: source.supplies,
       fatigue: source.fatigue,
       serviceOffers: [],
+      departureInteractions: [],
       roads: [],
       areaExits: [],
       routeOptions: [],
@@ -260,6 +264,7 @@ export function buildOverworldSessionViewModelState(
         ? { providerId: offer.providerId, providerName: offer.providerName }
         : {}),
     })),
+    departureInteractions: source.departureInteractions,
     roads: source.roads,
     areaExits: source.areaExits,
     routeOptions,
@@ -308,6 +313,7 @@ function compactViewState(state: OverworldSessionViewModelState): OverworldSessi
     supplies: state.supplies,
     fatigue: state.fatigue,
     serviceOffers: state.serviceOffers,
+    departureInteractions: state.departureInteractions,
     roads: state.roads,
     areaExits: state.areaExits,
     routeOptions: state.routeOptions,
@@ -361,6 +367,7 @@ export function buildOverworldSessionViewFromState(
     supplies: state.supplies,
     fatigue: state.fatigue,
     serviceOffers: state.serviceOffers,
+    departureInteractions: state.departureInteractions,
     roads: state.roads,
     areaExits: state.areaExits,
     areas: state.localView.areas,

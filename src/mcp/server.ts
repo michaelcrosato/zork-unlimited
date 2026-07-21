@@ -71,6 +71,7 @@ export const PURE_PLAYER_TOOLS = new Set<string>([
   "work_overworld_session_job",
   "start_overworld_session_quest",
   "choose_overworld_session_journey",
+  "inspect_overworld_session_story",
   "choose_overworld_session_story",
   "get_observation",
   "list_legal_actions",
@@ -869,6 +870,7 @@ export const READ_ONLY_TOOLS = new Set<string>([
   "get_overworld_session",
   "get_overworld_session_context",
   "export_overworld_session",
+  "inspect_overworld_session_story",
   "plan_overworld_session_route",
   "get_observation",
   "list_legal_actions",
@@ -1467,11 +1469,25 @@ tool(
   (a) => api.choose_overworld_session_journey(defaultCompactOverworldAndRpg(a)),
 );
 tool(
+  "inspect_overworld_session_story",
+  "Inspect one available optional departure story without changing the journey or snapshot.",
+  {
+    ...OVERWORLD_SESSION,
+    story_choice_id: z.string().describe("Story choice id from departure_interactions."),
+    ...OVERWORLD_ACTION_CONTEXT,
+  },
+  (a) => api.inspect_overworld_session_story(defaultCompactOverworld(a)),
+);
+tool(
   "choose_overworld_session_story",
-  "Choose a presented story, registration, lead, preparation, or field-team option.",
+  "Choose a presented story option, or atomically choose an inspected optional departure story by story_choice_id.",
   {
     ...OVERWORLD_SESSION,
     choice: z.string().describe("Choice id from journey.storyChoice.options."),
+    story_choice_id: z
+      .string()
+      .optional()
+      .describe("Optional story id from departure_interactions for a pull-based choice."),
     ...OVERWORLD_ACTION_CONTEXT,
   },
   (a) => api.choose_overworld_session_story(defaultCompactOverworld(a)),

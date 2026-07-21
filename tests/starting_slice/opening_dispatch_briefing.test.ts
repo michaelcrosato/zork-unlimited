@@ -147,36 +147,39 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
       .areaExits.find((candidate) => candidate.destination.id === RELIEF_ALLOCATION.area);
     if (!route) throw new Error("Expected a route to Albany's departure board.");
     session.moveArea(route.id);
-    const preparation = expectStage(session, {
+    expect(session.journey().storyChoice).toBeNull();
+    expect(session.view().departureInteractions[0]).toMatchObject({
       id: PREPARATION.id,
       kind: "preparation",
-      phase: "Departure plan",
-      step: 1,
-      total: 2,
-      label: "preparation",
-      originalTitle: PREPARATION.title,
-      originalMessage: PREPARATION.message,
     });
+    const preparation = session.inspectJourneyStory(PREPARATION.id);
+    expect(preparation).toMatchObject({ id: PREPARATION.id, kind: "preparation" });
+    expect(preparation.message).toContain(`${WOLF.title} Departure plan · 1/2 — preparation.`);
+    expect(preparation.message).toContain(`${PREPARATION.title}. ${PREPARATION.message}`);
     expect(preparation.message).toContain("Still ahead: relief allocation.");
     expect(preparation.message).toContain(`Mission — ${WOLF.discovery}`);
     expectCompactRoutePreview(preparation);
     expectSummaryFirstOptions(preparation);
     expect(preparation.options.every((option) => option.summary?.immediateCost)).toBe(true);
-    expect(OverworldSession.restore(WORLD, session.snapshot()).journey().storyChoice).toEqual(
-      preparation,
-    );
+    expect(
+      OverworldSession.restore(WORLD, session.snapshot()).inspectJourneyStory(PREPARATION.id),
+    ).toEqual(preparation);
 
     session.chooseJourneyStory(PREPARATION.profiles[0]!.id);
-    const allocation = expectStage(session, {
+    expect(session.journey().storyChoice).toBeNull();
+    expect(session.view().departureInteractions[0]).toMatchObject({
       id: RELIEF_ALLOCATION.id,
       kind: "relief_allocation",
-      phase: "Departure plan",
-      step: 2,
-      total: 2,
-      label: "relief allocation",
-      originalTitle: RELIEF_ALLOCATION.title,
-      originalMessage: RELIEF_ALLOCATION.message,
     });
+    const allocation = session.inspectJourneyStory(RELIEF_ALLOCATION.id);
+    expect(allocation).toMatchObject({
+      id: RELIEF_ALLOCATION.id,
+      kind: "relief_allocation",
+    });
+    expect(allocation.message).toContain(`${WOLF.title} Departure plan · 2/2 — relief allocation.`);
+    expect(allocation.message).toContain(
+      `${RELIEF_ALLOCATION.title}. ${RELIEF_ALLOCATION.message}`,
+    );
     expect(allocation.message).toContain("Still ahead: none.");
     expect(allocation.message).toContain(
       `Optional field-team choice follows: ${ALLY.options
@@ -188,9 +191,9 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
     expectCompactRoutePreview(allocation);
     expectSummaryFirstOptions(allocation);
     expect(allocation.options.every((option) => option.summary?.immediateCost)).toBe(true);
-    expect(OverworldSession.restore(WORLD, session.snapshot()).journey().storyChoice).toEqual(
-      allocation,
-    );
+    expect(
+      OverworldSession.restore(WORLD, session.snapshot()).inspectJourneyStory(RELIEF_ALLOCATION.id),
+    ).toEqual(allocation);
   });
 
   it("presents the exact same first briefing through UI and MCP", () => {
@@ -247,9 +250,18 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
       compact_result: true,
     }).journey;
     expect(compactJourney.storyChoice).toEqual(ui.journey().storyChoice);
-    expect(compactJourney.storyChoice?.kind).toBe("preparation");
-    expect(compactJourney.storyChoice?.message).toContain(`Mission — ${WOLF.discovery}`);
-    expectCompactRoutePreview(compactJourney.storyChoice!);
-    expectSummaryFirstOptions(compactJourney.storyChoice!);
+    expect(compactJourney.storyChoice).toBeNull();
+    expect(ui.view().departureInteractions[0]?.id).toBe(PREPARATION.id);
+    const uiPreparation = ui.inspectJourneyStory(PREPARATION.id);
+    const mcpPreparation = api.inspect_overworld_session_story({
+      session_id: started.session_id,
+      story_choice_id: PREPARATION.id,
+      compact_context: true,
+      compact_result: true,
+    }).story;
+    expect(mcpPreparation).toEqual(uiPreparation);
+    expect(mcpPreparation.message).toContain(`Mission — ${WOLF.discovery}`);
+    expectCompactRoutePreview(mcpPreparation);
+    expectSummaryFirstOptions(mcpPreparation);
   });
 });

@@ -75,7 +75,10 @@ import {
   suppressRpgGameplayActions,
   type EmbeddedJourneyField,
 } from "./journey_projection.js";
-import type { JourneyDecisionClassification } from "../world/journey_contract.js";
+import type {
+  JourneyDecisionClassification,
+  JourneyStoryChoicePrompt,
+} from "../world/journey_contract.js";
 
 type OverworldResponseOptions = OverworldMcpResponseOptions;
 
@@ -716,6 +719,7 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
       Args extends {
         session_id: string;
         choice: string;
+        story_choice_id?: string;
       } & OverworldResponseOptions,
     >(
       args: Args,
@@ -729,8 +733,37 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
         responseOptions,
         args.session_id,
         "result",
-        (session) => session.chooseJourneyStory(args.choice),
+        (session) => {
+          if (args.story_choice_id === undefined && session.journey().storyChoice === null) {
+            throw new Error(
+              "There is no presented story consequence; optional departure stories require story_choice_id.",
+            );
+          }
+          return session.chooseJourneyStory(args.choice, args.story_choice_id);
+        },
         (result): OverworldJourneyStoryChoiceResult => result,
+      );
+    },
+
+    inspect_overworld_session_story<
+      Args extends {
+        session_id: string;
+        story_choice_id: string;
+      } & OverworldResponseOptions,
+    >(
+      args: Args,
+    ): OverworldSessionResponse<
+      "story",
+      JourneyStoryChoicePrompt,
+      DefaultCompactOverworldResponse<Args>
+    > {
+      const responseOptions = defaultCompactOverworldResponse(args);
+      return overworldSessions.run(
+        responseOptions,
+        args.session_id,
+        "story",
+        (session) => session.inspectJourneyStory(args.story_choice_id),
+        (story): JourneyStoryChoicePrompt => story,
       );
     },
 

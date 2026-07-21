@@ -38,6 +38,33 @@ function moveToOpeningPreparation(session: OverworldSession, world: OverworldMan
   }
 }
 
+function expectDepartureInteraction(
+  session: OverworldSession,
+  scene: { id: string; title: string },
+  kind: "preparation" | "relief_allocation",
+): void {
+  expect(session.journey().storyChoice).toBeNull();
+  expect(session.view().departureInteractions).toEqual([
+    {
+      id: scene.id,
+      kind,
+      title: scene.title,
+      inspect: {
+        tool: "inspect_overworld_session_story",
+        storyChoiceId: scene.id,
+        arguments: { story_choice_id: scene.id },
+      },
+      choose: {
+        tool: "choose_overworld_session_story",
+        storyChoiceId: scene.id,
+        arguments: { story_choice_id: scene.id },
+        argument: "choice",
+        valuesFrom: "story.options[*].id",
+      },
+    },
+  ]);
+}
+
 function sessionAtPendingLead(
   world: OverworldManifest,
   registrationId = "albany:ledger_advocate",
@@ -54,7 +81,7 @@ function sessionAtPendingPreparation(world: OverworldManifest): OverworldSession
   const session = sessionAtPendingLead(world);
   session.chooseJourneyStory("albany:source_rowan_civic_docket");
   moveToOpeningPreparation(session, world);
-  expect(session.journey().storyChoice?.kind).toBe("preparation");
+  expectDepartureInteraction(session, world.opening_preparation!, "preparation");
   return session;
 }
 
@@ -62,7 +89,7 @@ function completedWolfSession(world: OverworldManifest): OverworldSession {
   const session = sessionAtPendingPreparation(world);
   session.chooseJourneyStory("albany:prep_works_fortification");
   moveToArea(session, "albany_city__transport_hub");
-  expect(session.journey().storyChoice?.kind).toBe("relief_allocation");
+  expectDepartureInteraction(session, world.opening_relief_allocation!, "relief_allocation");
   session.chooseJourneyStory("albany:relief_cade_fodder");
   session.startQuest(QUEST_ID, RIDGE_APPROACH_ID);
   session.completeQuest(QUEST_ID, {
@@ -168,7 +195,7 @@ describe("F06 to F02 relief-oath migration integrity", () => {
 
     expect(restoredSession.journey().storyChoice).toBeNull();
     moveToOpeningPreparation(restoredSession, WORLD);
-    expect(restoredSession.journey().storyChoice?.kind).toBe("preparation");
+    expectDepartureInteraction(restoredSession, WORLD.opening_preparation!, "preparation");
     expect(openingReliefOathLegacySourceWorldHash(marker!.id)).toBe(
       OVERWORLD_RELIEF_OATH_PREDECESSOR_WORLD_HASH,
     );
@@ -201,7 +228,7 @@ describe("F06 to F02 relief-oath migration integrity", () => {
     expect(restoredTwice.snapshot()).toEqual(restored);
     expect(restoredTwice.journey().storyChoice).toBeNull();
     moveToOpeningPreparation(restoredTwice, WORLD);
-    expect(restoredTwice.journey().storyChoice?.kind).toBe("preparation");
+    expectDepartureInteraction(restoredTwice, WORLD.opening_preparation!, "preparation");
   });
 
   it("preserves completed progress without inventing character, time, resources, or services", () => {

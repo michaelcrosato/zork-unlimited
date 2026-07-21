@@ -4,11 +4,13 @@ import type { JourneyPresentation } from "../../src/world/journey_contract.js";
 type JourneyStoryChoiceScreenProps = {
   journey: JourneyPresentation;
   onChoose: (choiceId: string) => void;
+  onDismiss?: () => void;
 };
 
 export function JourneyStoryChoiceScreen({
   journey,
   onChoose,
+  onDismiss,
 }: JourneyStoryChoiceScreenProps): JSX.Element {
   const headingRef = useRef<HTMLHeadingElement>(null);
   const storyChoice = journey.storyChoice;
@@ -136,6 +138,11 @@ export function JourneyStoryChoiceScreen({
             );
           })}
         </div>
+        {onDismiss && (
+          <button className="secondary" type="button" onClick={onDismiss}>
+            Return to the Station without choosing
+          </button>
+        )}
       </section>
     </main>
   );

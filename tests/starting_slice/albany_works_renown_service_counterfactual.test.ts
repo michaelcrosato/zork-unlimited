@@ -59,13 +59,13 @@ function returnedToWorks(): OverworldSession {
   session.chooseJourneyStory("albany:source_rowan_civic_docket");
   moveToArea(session, WORLD.opening_preparation!.area);
   session.chooseJourneyStory("albany:prep_works_fortification");
+  if (session.view().departureInteractions[0]?.kind === "relief_allocation") {
+    session.chooseJourneyStory("albany:relief_cade_fodder");
+  }
 
   const wolf = session.view().quests.find((quest) => quest.id === "wolf_winter");
   if (!wolf) throw new Error("The Albany opening must expose Wolf-Winter.");
   moveToArea(session, wolf.area);
-  if (session.journey().storyChoice?.kind === "relief_allocation") {
-    session.chooseJourneyStory("albany:relief_cade_fodder");
-  }
 
   session.scoutPoi("albany_city__transport_hub__poi");
   session.talkToCharacter("albany_city__transport_hub__contact");

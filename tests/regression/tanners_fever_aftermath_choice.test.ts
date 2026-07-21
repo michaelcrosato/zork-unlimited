@@ -58,9 +58,9 @@ function reachTannersGoalCompletion(): OverworldSession {
   session.chooseJourneyStory("albany:oath_limited_aid_only");
   session.chooseJourneyStory("albany:source_rowan_civic_docket");
   moveToArea(session, WORLD.opening_preparation!.area);
-  expect(session.journey().storyChoice?.kind).toBe("preparation");
+  expect(session.view().departureInteractions[0]?.kind).toBe("preparation");
   session.chooseJourneyStory("albany:prep_works_fortification");
-  expect(session.journey().storyChoice?.kind).toBe("relief_allocation");
+  expect(session.view().departureInteractions[0]?.kind).toBe("relief_allocation");
   session.chooseJourneyStory("albany:relief_resident_shelter");
   moveToArea(session, "albany_city__market");
   session.scoutPoi("albany_city__market__poi");

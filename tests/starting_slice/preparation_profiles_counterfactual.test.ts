@@ -27,6 +27,7 @@ const PREPARATION =
   (() => {
     throw new Error("the Albany starting slice requires preparation");
   })();
+const RELIEF_ALLOCATION = WORLD.opening_relief_allocation!;
 const WOLF =
   WORLD.quests.find((quest) => quest.id === "wolf_winter") ??
   (() => {
@@ -158,7 +159,7 @@ function choosePreparation(args: {
   session.chooseJourneyStory(args.sourceId);
   moveToArea(session, PREPARATION.area);
 
-  const prompt = session.journey().storyChoice;
+  const prompt = session.inspectJourneyStory(PREPARATION.id);
   expect(prompt).toMatchObject({ id: PREPARATION.id, kind: "preparation" });
   expect(prompt?.options.map((option) => option.id)).toEqual(PROFILE_IDS);
   const before = session.snapshot();
@@ -212,7 +213,10 @@ function returnedSession(args: {
   const baselineMinutes = prepared.minutes - minutesPaid;
   const baselineMoney = prepared.character.money + moneyPaid;
   moveToArea(session, WOLF.area);
-  expect(session.journey().storyChoice).toMatchObject({ kind: "relief_allocation" });
+  expect(session.view().departureInteractions[0]).toMatchObject({
+    id: RELIEF_ALLOCATION.id,
+    kind: "relief_allocation",
+  });
   session.chooseJourneyStory(NEUTRAL_RELIEF_ALLOCATION);
   session.startQuest(WOLF.id, "albany:wolf_approach_sheltered_stockway");
   const ending = WOLF.campaign_exports?.find((candidate) => candidate.ending_id === "ending_held");

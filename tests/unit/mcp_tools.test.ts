@@ -62,6 +62,8 @@ const FULL_OVERWORLD_QUEST_START = {
 } as const;
 const SHELTERED_APPROACH_ID = "albany:wolf_approach_sheltered_stockway";
 const RESIDENT_SHELTER_ALLOCATION_ID = "albany:relief_resident_shelter";
+const PREPARATION_STORY_ID = "albany:wolf_preparation";
+const RELIEF_ALLOCATION_STORY_ID = "albany:wolf_relief_allocation";
 const PUBLIC_RPG_STATE_HASH_RE = new RegExp(`^[0-9a-f]{${RPG_PUBLIC_STATE_HASH_LENGTH}}$`);
 const PUBLIC_RPG_TRANSCRIPT_HASH_RE = new RegExp(
   `^[0-9a-f]{${RPG_PUBLIC_TRANSCRIPT_HASH_LENGTH}}$`,
@@ -329,17 +331,19 @@ function registerLedgerAdvocate(a: ReturnType<typeof api>, sessionId: string): v
       });
     }
   }
-  if (stationed.journey.storyChoice?.kind !== "preparation") {
-    throw new Error("Expected Hayden's Station to present Albany preparation.");
+  if (!stationed.observation.departureInteractions.some(({ id }) => id === PREPARATION_STORY_ID)) {
+    throw new Error("Expected Hayden's Station to expose Albany preparation.");
   }
   a.choose_overworld_session_story({
     ...FULL_OVERWORLD_RESPONSE,
     session_id: sessionId,
+    story_choice_id: PREPARATION_STORY_ID,
     choice: "albany:prep_works_fortification",
   });
   a.choose_overworld_session_story({
     ...FULL_OVERWORLD_RESPONSE,
     session_id: sessionId,
+    story_choice_id: RELIEF_ALLOCATION_STORY_ID,
     choice: RESIDENT_SHELTER_ALLOCATION_ID,
   });
 }
@@ -406,21 +410,27 @@ function resolveCurrentOverworldSessionEvent(
         });
       }
     }
-    if (stationed.journey.storyChoice?.kind !== "preparation") {
-      throw new Error("Expected Hayden's Station to present Albany preparation.");
+    if (
+      !stationed.observation.departureInteractions.some(({ id }) => id === PREPARATION_STORY_ID)
+    ) {
+      throw new Error("Expected Hayden's Station to expose Albany preparation.");
     }
   }
   if (
-    a.get_overworld_session({ session_id: sessionId }).journey.storyChoice?.kind === "preparation"
+    a
+      .get_overworld_session({ include_observation: true, session_id: sessionId })
+      .observation.departureInteractions.some(({ id }) => id === PREPARATION_STORY_ID)
   ) {
     a.choose_overworld_session_story({
       ...FULL_OVERWORLD_RESPONSE,
       session_id: sessionId,
+      story_choice_id: PREPARATION_STORY_ID,
       choice: "albany:prep_works_fortification",
     });
     a.choose_overworld_session_story({
       ...FULL_OVERWORLD_RESPONSE,
       session_id: sessionId,
+      story_choice_id: RELIEF_ALLOCATION_STORY_ID,
       choice: RESIDENT_SHELTER_ALLOCATION_ID,
     });
   }

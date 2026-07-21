@@ -158,18 +158,20 @@ function launchAlbanyWolf(api: ToolApi) {
     session_id: overworldSessionId,
     area_route_id: preparationRoute.id,
   });
-  expect(atPreparation.journey.storyChoice?.kind).toBe("preparation");
+  expect(atPreparation.observation.departureInteractions[0]?.kind).toBe("preparation");
   expect(atPreparation.observation.quests.map((candidate) => candidate.id)).toContain(
     WOLF_QUEST.id,
   );
   const prepared = api.choose_overworld_session_story({
     ...FULL,
     session_id: overworldSessionId,
+    story_choice_id: "albany:wolf_preparation",
     choice: "albany:prep_works_fortification",
   });
   api.choose_overworld_session_story({
     ...FULL,
     session_id: overworldSessionId,
+    story_choice_id: "albany:wolf_relief_allocation",
     choice: NEUTRAL_RELIEF_ALLOCATION,
   });
   const quest = prepared.observation.quests.find((candidate) => candidate.id === WOLF_QUEST.id);

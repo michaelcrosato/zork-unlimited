@@ -29,16 +29,16 @@ function settleOpeningChoices(session: OverworldSession): void {
     session.chooseJourneyStory("albany:source_rowan_civic_docket");
     moveToOpeningPreparation(session);
   }
-  if (session.journey().storyChoice?.kind === "preparation") {
+  if (session.view().departureInteractions[0]?.kind === "preparation") {
     session.chooseJourneyStory("albany:prep_works_fortification");
   }
-  if (session.journey().storyChoice?.kind === "relief_allocation") {
+  if (session.view().departureInteractions[0]?.kind === "relief_allocation") {
     session.chooseJourneyStory("albany:relief_resident_shelter");
   }
 }
 
 function startVisibleQuest(session: OverworldSession, quest: OverworldQuestView): void {
-  if (session.journey().storyChoice?.kind === "relief_allocation") {
+  if (session.view().departureInteractions[0]?.kind === "relief_allocation") {
     session.chooseJourneyStory("albany:relief_resident_shelter");
   }
   const approach = quest.launch?.options.find((option) => option.projection?.available === true);

@@ -109,12 +109,12 @@ function returnedToCampus(
   session.chooseJourneyStory("albany:source_rowan_civic_docket");
   moveToArea(session, world.opening_preparation!.area, world);
   session.chooseJourneyStory(options.preparationId ?? "albany:prep_works_fortification");
+  if (session.view().departureInteractions[0]?.kind === "relief_allocation") {
+    session.chooseJourneyStory(options.reliefAllocationId ?? "albany:relief_cade_fodder");
+  }
   const wolf = session.view().quests.find((quest) => quest.id === "wolf_winter");
   if (!wolf) throw new Error("Wolf-Winter must be exposed.");
   moveToArea(session, wolf.area, world);
-  if (session.journey().storyChoice?.kind === "relief_allocation") {
-    session.chooseJourneyStory(options.reliefAllocationId ?? "albany:relief_cade_fodder");
-  }
   session.scoutPoi("albany_city__transport_hub__poi");
   session.talkToCharacter("albany_city__transport_hub__contact");
   session.startQuest(wolf.id, "albany:wolf_approach_sheltered_stockway");

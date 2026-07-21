@@ -101,10 +101,10 @@ function registerSession(profileId: string): OverworldSession {
   });
   session.chooseJourneyStory(DEFAULT_SOURCE_ID);
   moveSessionToArea(session, WORLD.opening_preparation!.area);
-  expect(session.journey().storyChoice?.kind).toBe("preparation");
+  expect(session.view().departureInteractions[0]?.kind).toBe("preparation");
   expect(session.view().quests.map((quest) => quest.id)).toContain("wolf_winter");
   session.chooseJourneyStory(DEFAULT_PREPARATION_ID);
-  expect(session.journey().storyChoice?.kind).toBe("relief_allocation");
+  expect(session.view().departureInteractions[0]?.kind).toBe("relief_allocation");
   expect(session.view().quests.map((quest) => quest.id)).toContain("wolf_winter");
   return session;
 }
@@ -256,16 +256,18 @@ function launchRegisteredWolf(profileId: string): {
     session_id: sessionId,
     area_route_id: preparationRoute.id,
   });
-  expect(atPreparation.journey.storyChoice?.kind).toBe("preparation");
+  expect(atPreparation.observation.departureInteractions[0]?.kind).toBe("preparation");
   expect(atPreparation.observation.quests.map((quest) => quest.id)).toContain("wolf_winter");
   api.choose_overworld_session_story({
     ...FULL_OVERWORLD,
     session_id: sessionId,
+    story_choice_id: PREPARATION.id,
     choice: COUNTERFACTUAL_PREPARATION_ID,
   });
   api.choose_overworld_session_story({
     ...FULL_OVERWORLD,
     session_id: sessionId,
+    story_choice_id: WORLD.opening_relief_allocation!.id,
     choice: RESIDENT_SHELTER_ALLOCATION_ID,
   });
 
@@ -382,7 +384,9 @@ describe("SS-F01 — Albany character background counterfactual", () => {
       expect(restored.campaignCharacterState()).toEqual(
         expectedPreparedCharacter(profile.character),
       );
-      expect(restored.journey().storyChoice).toMatchObject({ kind: "relief_allocation" });
+      expect(restored.view().departureInteractions[0]).toMatchObject({
+        kind: "relief_allocation",
+      });
       restored.chooseJourneyStory(
         profile.character.relationships.some(
           (relationship) => relationship.npcId === "albany:jamie_tanner",
@@ -463,9 +467,9 @@ describe("SS-F01 — Albany character background counterfactual", () => {
     );
     session.chooseJourneyStory(DEFAULT_SOURCE_ID);
     moveSessionToArea(session, WORLD.opening_preparation!.area);
-    expect(session.journey().storyChoice?.kind).toBe("preparation");
+    expect(session.view().departureInteractions[0]?.kind).toBe("preparation");
     expect(session.view().quests.map((quest) => quest.id)).toContain(wolf.id);
-    expect(() => session.previewQuestStart(wolf.id)).toThrow(/preparation/i);
+    expect(session.previewQuestStart(wolf.id).id).toBe(wolf.id);
     session.chooseJourneyStory(DEFAULT_PREPARATION_ID);
     session.chooseJourneyStory(RESIDENT_SHELTER_ALLOCATION_ID);
     moveSessionToArea(session, wolf.area);
@@ -803,7 +807,7 @@ describe("SS-F01 — Albany character background counterfactual", () => {
     movedAfterSelection.chooseJourneyStory(DEFAULT_OATH_ID);
     movedAfterSelection.chooseJourneyStory(DEFAULT_SOURCE_ID);
     moveSessionToArea(movedAfterSelection, WORLD.opening_preparation!.area);
-    expect(movedAfterSelection.journey().storyChoice?.kind).toBe("preparation");
+    expect(movedAfterSelection.view().departureInteractions[0]?.kind).toBe("preparation");
     movedAfterSelection.chooseJourneyStory(DEFAULT_PREPARATION_ID);
     movedAfterSelection.chooseJourneyStory(RESIDENT_SHELTER_ALLOCATION_ID);
     moveSessionToArea(movedAfterSelection, "albany_city__market");

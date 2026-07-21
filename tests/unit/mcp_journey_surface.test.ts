@@ -21,6 +21,8 @@ const HAYDEN_ID = "albany_city__transport_hub__contact";
 const LIMITED_RELIEF_OATH_ID = "albany:oath_limited_aid_only";
 const SHELTERED_APPROACH_ID = "albany:wolf_approach_sheltered_stockway";
 const RESIDENT_SHELTER_ALLOCATION_ID = "albany:relief_resident_shelter";
+const PREPARATION_STORY_ID = "albany:wolf_preparation";
+const RELIEF_ALLOCATION_STORY_ID = "albany:wolf_relief_allocation";
 const ALBANY_TO_SARATOGA = "road_albany_city__saratoga_springs_city";
 const SARATOGA_TO_QUEENSBURY = "road_saratoga_springs_city__queensbury_town";
 
@@ -40,7 +42,7 @@ function uiSessionAtPostGallowmereHayden(): OverworldSession {
   session.chooseJourneyStory(LIMITED_RELIEF_OATH_ID);
   session.chooseJourneyStory("albany:source_rowan_civic_docket");
   moveUiSessionToArea(session, "albany_city__transport_hub");
-  expect(session.journey().storyChoice?.kind).toBe("preparation");
+  expect(session.view().departureInteractions[0]?.kind).toBe("preparation");
   session.chooseJourneyStory("albany:prep_works_fortification");
   session.chooseJourneyStory(RESIDENT_SHELTER_ALLOCATION_ID);
   moveUiSessionToArea(session, "albany_city__market");
@@ -94,7 +96,7 @@ function uiSessionAtAlbanyStoryChoice(): OverworldSession {
   expect(session.journey().storyChoice?.kind).toBe("lead_source");
   session.chooseJourneyStory("albany:source_rowan_civic_docket");
   moveUiSessionToArea(session, "albany_city__transport_hub");
-  expect(session.journey().storyChoice?.kind).toBe("preparation");
+  expect(session.view().departureInteractions[0]?.kind).toBe("preparation");
   expect(session.view().quests.map((candidate) => candidate.id)).toContain("wolf_winter");
   session.chooseJourneyStory("albany:prep_works_fortification");
   session.chooseJourneyStory(RESIDENT_SHELTER_ALLOCATION_ID);
@@ -207,15 +209,17 @@ function mcpWolfWinterCheckpointInsideQuest() {
     session_id: overworldSessionId,
     area_route_id: stationRoute.id,
   });
-  expect(stationed.journey.storyChoice?.kind).toBe("preparation");
-  const prepared = a.choose_overworld_session_story({
+  expect(stationed.observation.departureInteractions[0]?.kind).toBe("preparation");
+  a.choose_overworld_session_story({
     ...FULL_OVERWORLD,
     session_id: overworldSessionId,
+    story_choice_id: PREPARATION_STORY_ID,
     choice: "albany:prep_works_fortification",
   });
   const allocationChosen = a.choose_overworld_session_story({
     ...FULL_OVERWORLD,
     session_id: overworldSessionId,
+    story_choice_id: RELIEF_ALLOCATION_STORY_ID,
     choice: RESIDENT_SHELTER_ALLOCATION_ID,
   });
   view = allocationChosen.observation;
@@ -239,7 +243,9 @@ function mcpWolfWinterCheckpointInsideQuest() {
     session_id: overworldSessionId,
     poi_id: view.pois[0]!.id,
   });
-  const quest = prepared.observation.quests.find((candidate) => candidate.id === "wolf_winter");
+  const quest = allocationChosen.observation.quests.find(
+    (candidate) => candidate.id === "wolf_winter",
+  );
   if (!quest) throw new Error("expected Albany quest lead");
   const questRoute = revealed.observation.areaExits.find(
     (route) => route.destination.id === quest.area,
@@ -639,21 +645,48 @@ describe("MCP journey surface", () => {
     choose(full.session_id, "albany:source_rowan_civic_docket", false);
     const compactPreparation = moveToAllocation(compact.session_id, true);
     const fullPreparation = moveToAllocation(full.session_id, false);
-    expectStoryChoiceParity(compactPreparation.journey, fullPreparation.journey, "preparation");
-
-    choose(compact.session_id, "albany:prep_works_fortification", true);
-    choose(full.session_id, "albany:prep_works_fortification", false);
-    const compactAllocation = a.get_overworld_session({
+    expect(compactPreparation.journey.storyChoice).toBeNull();
+    expect(fullPreparation.journey.storyChoice).toBeNull();
+    const compactPreparationStory = a.inspect_overworld_session_story({
       session_id: compact.session_id,
+      story_choice_id: PREPARATION_STORY_ID,
       compact_context: true,
-      include_observation: true,
-    });
-    const fullAllocation = a.get_overworld_session({
+      compact_result: true,
+    }).story;
+    const fullPreparationStory = a.inspect_overworld_session_story({
       session_id: full.session_id,
-      compact_context: false,
-      include_observation: true,
+      story_choice_id: PREPARATION_STORY_ID,
+      ...FULL_OVERWORLD,
+    }).story;
+    expect(compactPreparationStory).toEqual(fullPreparationStory);
+    expect(compactPreparationStory).toMatchObject({ kind: "preparation" });
+
+    a.choose_overworld_session_story({
+      session_id: compact.session_id,
+      story_choice_id: PREPARATION_STORY_ID,
+      choice: "albany:prep_works_fortification",
+      compact_context: true,
+      compact_result: true,
     });
-    expectStoryChoiceParity(compactAllocation.journey, fullAllocation.journey, "relief_allocation");
+    a.choose_overworld_session_story({
+      session_id: full.session_id,
+      story_choice_id: PREPARATION_STORY_ID,
+      choice: "albany:prep_works_fortification",
+      ...FULL_OVERWORLD,
+    });
+    const compactAllocation = a.inspect_overworld_session_story({
+      session_id: compact.session_id,
+      story_choice_id: RELIEF_ALLOCATION_STORY_ID,
+      compact_context: true,
+      compact_result: true,
+    }).story;
+    const fullAllocation = a.inspect_overworld_session_story({
+      session_id: full.session_id,
+      story_choice_id: RELIEF_ALLOCATION_STORY_ID,
+      ...FULL_OVERWORLD,
+    }).story;
+    expect(compactAllocation).toEqual(fullAllocation);
+    expect(compactAllocation).toMatchObject({ kind: "relief_allocation" });
   });
 
   it("makes a pending parent choice the only legal move inside an embedded quest", () => {

@@ -101,7 +101,8 @@ describe("hill-approach predecessor migration integrity", () => {
 
   it("keeps an unstarted F11 lead route-neutral and offers the current F06 allocation", () => {
     const predecessor = sessionAtWolf(exactF11World(WORLD)).snapshot();
-    const restored = OverworldSession.restore(WORLD, predecessor).snapshot();
+    const restoredSession = OverworldSession.restore(WORLD, predecessor);
+    const restored = restoredSession.snapshot();
 
     expect(restored.worldHash).toBe(OVERWORLD_RELIEF_ALLOCATION_WORLD_HASH);
     expect(restored.minutes).toBe(predecessor.minutes);
@@ -115,7 +116,29 @@ describe("hill-approach predecessor migration integrity", () => {
     );
     expect(
       restored.journalEntries.filter((entry) => entry.kind === "relief_allocation_offer"),
-    ).toHaveLength(1);
+    ).toHaveLength(0);
+
+    moveToArea(restoredSession, WORLD.opening_relief_allocation!.area);
+    expect(restoredSession.journey().storyChoice).toBeNull();
+    expect(restoredSession.view().departureInteractions).toEqual([
+      {
+        id: "albany:wolf_relief_allocation",
+        kind: "relief_allocation",
+        title: WORLD.opening_relief_allocation!.title,
+        inspect: {
+          tool: "inspect_overworld_session_story",
+          storyChoiceId: "albany:wolf_relief_allocation",
+          arguments: { story_choice_id: "albany:wolf_relief_allocation" },
+        },
+        choose: {
+          tool: "choose_overworld_session_story",
+          storyChoiceId: "albany:wolf_relief_allocation",
+          arguments: { story_choice_id: "albany:wolf_relief_allocation" },
+          argument: "choice",
+          valuesFrom: "story.options[*].id",
+        },
+      },
+    ]);
   });
 
   it("migrates a started F11 quest to one neutral legacy proof and stays idempotent", () => {

@@ -2,10 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { hashState } from "../../src/core/hash.js";
 import { serializeCampaignCharacterState } from "../../src/world/campaign_character_state.js";
-import {
-  openingReliefAllocationLegacySourceWorldHash,
-  openingReliefAllocationOfferJournalId,
-} from "../../src/world/opening_relief_allocation_journal.js";
+import { openingReliefAllocationLegacySourceWorldHash } from "../../src/world/opening_relief_allocation_journal.js";
 import type { OverworldManifest } from "../../src/world/overworld.js";
 import { OverworldSession } from "../../src/world/session.js";
 import {
@@ -71,6 +68,33 @@ function travelAndResolve(session: OverworldSession, roadId: string): void {
   if (session.view().pendingRoadEncounter) session.resolveRoadEncounter("press_on");
 }
 
+function expectDepartureInteraction(
+  session: OverworldSession,
+  scene: { id: string; title: string },
+  kind: "preparation" | "relief_allocation",
+): void {
+  expect(session.journey().storyChoice).toBeNull();
+  expect(session.view().departureInteractions).toEqual([
+    {
+      id: scene.id,
+      kind,
+      title: scene.title,
+      inspect: {
+        tool: "inspect_overworld_session_story",
+        storyChoiceId: scene.id,
+        arguments: { story_choice_id: scene.id },
+      },
+      choose: {
+        tool: "choose_overworld_session_story",
+        storyChoiceId: scene.id,
+        arguments: { story_choice_id: scene.id },
+        argument: "choice",
+        valuesFrom: "story.options[*].id",
+      },
+    },
+  ]);
+}
+
 describe("F12 to F06 relief-allocation migration integrity", () => {
   it("reconstructs the exact F12 predecessor rather than today's F06 manifest", () => {
     const predecessor = exactF12World(WORLD);
@@ -84,21 +108,23 @@ describe("F12 to F06 relief-allocation migration integrity", () => {
     expect(hashState(WORLD)).toBe(OVERWORLD_RELIEF_ALLOCATION_WORLD_HASH);
   });
 
-  it("offers the real allocation to an unstarted F12 save without inventing legacy effects", () => {
+  it("exposes the real allocation to an unstarted F12 save without inventing legacy effects", () => {
     const predecessor = sessionAtWolf(exactF12World(WORLD)).snapshot();
     expect(predecessor.worldHash).toBe(OVERWORLD_HILL_APPROACH_WORLD_HASH);
     expect(allocationCharacterEvidence(predecessor)).toEqual([]);
 
-    const restored = OverworldSession.restore(WORLD, predecessor).snapshot();
+    const restoredSession = OverworldSession.restore(WORLD, predecessor);
+    const restored = restoredSession.snapshot();
     const offers = restored.journalEntries.filter(
       (entry) => entry.kind === "relief_allocation_offer",
     );
     expect(restored.worldHash).toBe(OVERWORLD_RELIEF_ALLOCATION_WORLD_HASH);
-    expect(offers).toHaveLength(1);
-    expect(offers[0]?.id).toBe(
-      openingReliefAllocationOfferJournalId("albany:wolf_relief_allocation"),
+    expect(offers).toHaveLength(0);
+    expectDepartureInteraction(
+      restoredSession,
+      WORLD.opening_relief_allocation!,
+      "relief_allocation",
     );
-    expect(restored.journalEntries[0]).toEqual(offers[0]);
     expect(restored.journalEntries.some((entry) => entry.kind === "relief_allocation_legacy")).toBe(
       false,
     );
@@ -124,7 +150,7 @@ describe("F12 to F06 relief-allocation migration integrity", () => {
     );
 
     const migrated = OverworldSession.restore(WORLD, predecessor);
-    expect(migrated.journey().storyChoice?.kind).toBe("relief_allocation");
+    expectDepartureInteraction(migrated, WORLD.opening_relief_allocation!, "relief_allocation");
     migrated.chooseJourneyStory("albany:relief_mobile_reserve");
     const selected = migrated.snapshot();
     expect(
@@ -150,7 +176,7 @@ describe("F12 to F06 relief-allocation migration integrity", () => {
     );
   });
 
-  it("keeps a pending current offer replayable after unrelated quest work", () => {
+  it("keeps current departure interactions derived after unrelated quest work", () => {
     const session = new OverworldSession(WORLD);
     session.scoutPoi("albany_city__civic_core__poi");
     session.talkToCharacter("albany_city__civic_core__contact");
@@ -172,13 +198,18 @@ describe("F12 to F06 relief-allocation migration integrity", () => {
     travelAndResolve(session, "road_saratoga_springs_city__queensbury_town");
     travelAndResolve(session, "road_albany_city__saratoga_springs_city");
     moveToArea(session, "albany_city__transport_hub");
-    expect(session.journey().storyChoice?.kind).toBe("preparation");
+    expectDepartureInteraction(session, WORLD.opening_preparation!, "preparation");
     session.chooseJourneyStory("albany:prep_works_fortification");
-    expect(session.journey().storyChoice?.kind).toBe("relief_allocation");
+    expectDepartureInteraction(session, WORLD.opening_relief_allocation!, "relief_allocation");
     expect(session.snapshot().startedQuestIds).toContain("gallowmere");
 
-    const pending = session.snapshot();
-    expect(OverworldSession.restore(WORLD, pending).snapshot()).toEqual(pending);
+    const available = session.snapshot();
+    expect(available.journalEntries.some((entry) => entry.kind === "relief_allocation_offer")).toBe(
+      false,
+    );
+    const restored = OverworldSession.restore(WORLD, available);
+    expect(restored.snapshot()).toEqual(available);
+    expectDepartureInteraction(restored, WORLD.opening_relief_allocation!, "relief_allocation");
   });
 
   it("grandfathers a started F12 save neutrally while preserving its exact approach proof", () => {

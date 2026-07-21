@@ -44,6 +44,7 @@ export const CODEX_PURE_PLAYER_TOOLS = new Set([
   "work_overworld_session_job",
   "start_overworld_session_quest",
   "choose_overworld_session_journey",
+  "inspect_overworld_session_story",
   "choose_overworld_session_story",
   "get_observation",
   "list_legal_actions",

@@ -85,7 +85,7 @@ function reachAlly(
   session.chooseJourneyStory(args.sourceId ?? LEAD.options[0]!.id);
   moveToArea(session, PREPARATION.area);
   session.chooseJourneyStory(args.preparationId ?? PREPARATION.profiles[0]!.id);
-  expect(session.journey().storyChoice).toMatchObject({
+  expect(session.view().departureInteractions[0]).toMatchObject({
     id: RELIEF_ALLOCATION.id,
     kind: "relief_allocation",
   });

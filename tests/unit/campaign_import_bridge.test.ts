@@ -21,6 +21,8 @@ import { GameSession } from "../../ui/src/engine.js";
 const ROOT = process.cwd();
 const SHELTERED_APPROACH_ID = "albany:wolf_approach_sheltered_stockway";
 const RESIDENT_SHELTER_ALLOCATION_ID = "albany:relief_resident_shelter";
+const PREPARATION_ID = "albany:wolf_preparation";
+const RELIEF_ALLOCATION_ID = "albany:wolf_relief_allocation";
 const LIMITED_AID_OATH_ID = "albany:oath_limited_aid_only";
 const WORLD = loadOverworldManifest(ROOT);
 const WOLF_SOURCE = readFileSync("content/rpg/quests/wolf_winter.yaml", "utf8");
@@ -54,11 +56,15 @@ function revealAlbanyWolf(session: OverworldSession) {
   expect(session.journey().storyChoice?.kind).toBe("lead_source");
   session.chooseJourneyStory("albany:source_rowan_civic_docket");
   moveToOpeningPreparation(session);
-  expect(session.journey().storyChoice?.kind).toBe("preparation");
+  expect(session.view().departureInteractions).toContainEqual(
+    expect.objectContaining({ id: PREPARATION_ID, kind: "preparation" }),
+  );
   expect(session.view().quests.map((candidate) => candidate.id)).toContain("wolf_winter");
-  session.chooseJourneyStory("albany:prep_works_fortification");
-  expect(session.journey().storyChoice?.kind).toBe("relief_allocation");
-  session.chooseJourneyStory(RESIDENT_SHELTER_ALLOCATION_ID);
+  session.chooseJourneyStory("albany:prep_works_fortification", PREPARATION_ID);
+  expect(session.view().departureInteractions).toContainEqual(
+    expect.objectContaining({ id: RELIEF_ALLOCATION_ID, kind: "relief_allocation" }),
+  );
+  session.chooseJourneyStory(RESIDENT_SHELTER_ALLOCATION_ID, RELIEF_ALLOCATION_ID);
   const quest = session.view().quests.find((candidate) => candidate.id === "wolf_winter");
   if (!quest) throw new Error("Expected the Albany Wolf-Winter lead.");
   if (session.view().currentArea?.id !== quest.area) {
@@ -133,19 +139,25 @@ function launchAlbanyWolf(
             area_route_id: preparationRoute.id,
           });
         })();
-  expect(atPreparation.journey.storyChoice?.kind).toBe("preparation");
+  expect(atPreparation.observation.departureInteractions).toContainEqual(
+    expect.objectContaining({ id: PREPARATION_ID, kind: "preparation" }),
+  );
   expect(atPreparation.observation.quests.map((candidate) => candidate.id)).toContain(
     "wolf_winter",
   );
   const prepared = api.choose_overworld_session_story({
     ...full,
     session_id: overworldSessionId,
+    story_choice_id: PREPARATION_ID,
     choice: "albany:prep_works_fortification",
   });
-  expect(prepared.journey.storyChoice?.kind).toBe("relief_allocation");
+  expect(prepared.observation.departureInteractions).toContainEqual(
+    expect.objectContaining({ id: RELIEF_ALLOCATION_ID, kind: "relief_allocation" }),
+  );
   const allocated = api.choose_overworld_session_story({
     ...full,
     session_id: overworldSessionId,
+    story_choice_id: RELIEF_ALLOCATION_ID,
     choice: RESIDENT_SHELTER_ALLOCATION_ID,
   });
   expect(allocated.journey.storyChoice?.kind).not.toBe("relief_allocation");

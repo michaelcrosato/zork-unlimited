@@ -11,6 +11,10 @@ import {
   compactOverworldRoadEncounterNextAction,
   type OverworldCompactRoadEncounterNextAction,
 } from "./session_road_next_action.js";
+import {
+  compactOverworldDepartureInteractions,
+  type OverworldCompactDepartureInteraction,
+} from "./session_departure_interactions.js";
 
 export const OVERWORLD_COMPACT_JOURNAL_LIMIT = 5;
 export const OVERWORLD_COMPACT_ROUTE_LIMIT = 8;
@@ -28,7 +32,7 @@ export const OVERWORLD_COMPACT_TITLE_CHAR_LIMIT = 140;
 export const OVERWORLD_COMPACT_RISK_CHAR_LIMIT = 160;
 export const OVERWORLD_COMPACT_ROAD_EVENT_SUMMARY_CHAR_LIMIT = 240;
 export const OVERWORLD_COMPACT_SERVICE_SUMMARY_CHAR_LIMIT = 240;
-export const OVERWORLD_COMPACT_VIEW_VERSION = 22 as const;
+export const OVERWORLD_COMPACT_VIEW_VERSION = 23 as const;
 
 export type OverworldCompactRef = readonly [id: string, name: string];
 export type OverworldCompactEventSceneOption = readonly [
@@ -320,6 +324,7 @@ export type OverworldCompactView = {
   here: OverworldCompactHere;
   vitals: OverworldCompactVitals;
   service_offers?: OverworldCompactServiceOffer[];
+  departure_interactions?: OverworldCompactDepartureInteraction[];
   hidden: OverworldCompactHiddenCounts;
   roads: OverworldCompactRoad[];
   roads_truncated?: true;
@@ -373,6 +378,8 @@ export const OVERWORLD_COMPACT_LEGEND = {
   vitals: "[supplies, max_supplies, fatigue_0to100, condition_label] travel readiness",
   service_offers:
     "[[offer_id, action, title, terms_summary, minutes], ...] current one-time service terms; use the normal rest or resupply action named by action to accept that offer",
+  departure_interactions:
+    "[[story_choice_id, kind, title], ...] optional Station departure interactions; inspect with inspect_overworld_session_story(story_choice_id), then choose one id from story.options[*].id with choose_overworld_session_story(story_choice_id, choice), or depart without choosing",
   hidden:
     "[areas, jobs, sites, quests] counts still undiscovered at this town; scout/talk/explore to reveal them",
   roads:
@@ -1107,6 +1114,9 @@ export function cloneOverworldCompactView(view: OverworldCompactView): Overworld
   }
   if (view.event_choices) clone.event_choices = cloneTupleList(view.event_choices);
   if (view.service_offers) clone.service_offers = cloneTupleList(view.service_offers);
+  if (view.departure_interactions) {
+    clone.departure_interactions = cloneTupleList(view.departure_interactions);
+  }
   if (view.roads_truncated) clone.roads_truncated = true;
   if (view.area_routes_truncated) clone.area_routes_truncated = true;
   if (view.route_options_truncated) clone.route_options_truncated = true;
@@ -1190,6 +1200,7 @@ export function compactOverworldView(view: OverworldView): OverworldCompactView 
   const quests = compactOverworldQuestRefs(view.quests);
   const questStarts = compactOverworldQuestStarts(view.questStarts);
   const serviceOffers = compactCampaignServiceOffers(view.serviceOffers);
+  const departureInteractions = compactOverworldDepartureInteractions(view.departureInteractions);
   const localRefsTruncated = compactLocalRefTruncation({
     areas: view.areas.length,
     poi: view.pois.length,
@@ -1235,6 +1246,7 @@ export function compactOverworldView(view: OverworldView): OverworldCompactView 
     ],
     vitals: [view.supplies, view.maxSupplies, view.fatigue, view.travelCondition],
     ...(serviceOffers.length > 0 ? { service_offers: serviceOffers } : {}),
+    ...(departureInteractions.length > 0 ? { departure_interactions: departureInteractions } : {}),
     hidden: [
       view.hiddenAreaCount,
       view.hiddenJobCount,

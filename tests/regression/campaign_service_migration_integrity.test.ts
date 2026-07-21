@@ -154,7 +154,10 @@ function livePackCompletion(): OverworldSession {
   if (session.view().currentArea?.id !== liveWorld.opening_preparation?.area) {
     moveToArea(session, liveWorld.opening_preparation!.area);
   }
-  expect(session.journey().storyChoice?.kind).toBe("preparation");
+  expect(session.journey().storyChoice).toBeNull();
+  expect(session.view().departureInteractions.map((interaction) => interaction.id)).toEqual([
+    "albany:wolf_preparation",
+  ]);
   session.chooseJourneyStory("albany:prep_works_fortification");
 
   moveToArea(session, "albany_city__market");
