@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { createToolApi } from "../../src/mcp/tools.js";
+import { compactJourneyStoryChoicePrompt } from "../../src/mcp/journey_projection.js";
 import type { JourneyStoryChoicePrompt } from "../../src/world/journey_contract.js";
 import { OverworldSession } from "../../src/world/session.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
@@ -65,6 +66,19 @@ function expectSummaryFirstOptions(storyChoice: JourneyStoryChoicePrompt): void 
     expect(option.summary?.fieldTrigger.length).toBeGreaterThan(0);
     expect(option.consequence).toContain(option.summary!.commitment);
     expect(option.consequence).toContain(option.summary!.fieldTrigger);
+  }
+}
+
+function expectCompactSummaryOptions(storyChoice: JourneyStoryChoicePrompt): void {
+  for (const option of storyChoice.options) {
+    expect(option.summary).toMatchObject({
+      commitment: expect.any(String),
+      fieldTrigger: expect.any(String),
+    });
+    expect(option.consequence.startsWith(`${option.summary!.commitment} `)).toBe(false);
+    if (option.summary?.immediateCost) {
+      expect(option.consequence).not.toContain(`Actual cost: ${option.summary.immediateCost}.`);
+    }
   }
 }
 
@@ -259,9 +273,11 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
       compact_context: true,
       compact_result: true,
     }).story;
-    expect(mcpPreparation).toEqual(uiPreparation);
+    expect(mcpPreparation).toEqual(compactJourneyStoryChoicePrompt(uiPreparation));
+    expect(mcpPreparation).not.toEqual(uiPreparation);
     expect(mcpPreparation.message).toContain(`Mission — ${WOLF.discovery}`);
     expectCompactRoutePreview(mcpPreparation);
-    expectSummaryFirstOptions(mcpPreparation);
+    expectCompactSummaryOptions(mcpPreparation);
+    expectSummaryFirstOptions(uiPreparation);
   });
 });

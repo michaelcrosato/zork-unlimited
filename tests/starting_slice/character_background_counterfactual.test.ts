@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { makeStep } from "../../src/core/engine.js";
 import type { Rng } from "../../src/core/rng.js";
 import type { GameState } from "../../src/core/state.js";
+import { compactJourneyPresentation } from "../../src/mcp/journey_projection.js";
 import { createToolApi } from "../../src/mcp/tools.js";
 import { buildRpgRules, enumerateRpgActions, indexRpgPack } from "../../src/rpg/runner.js";
 import { loadRpgSourceFile } from "../../src/rpg/source.js";
@@ -226,7 +227,7 @@ function launchRegisteredWolf(profileId: string): {
       session_id: sessionId,
       compact_context: true,
     }).journey,
-  ).toEqual(talked.journey);
+  ).toEqual(compactJourneyPresentation(talked.journey));
   const registered = api.choose_overworld_session_story({
     ...FULL_OVERWORLD,
     session_id: sessionId,
