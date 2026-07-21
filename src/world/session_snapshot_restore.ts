@@ -2848,7 +2848,7 @@ export function planOverworldSessionSnapshotRestore(args: {
     targetLeadQuestId !== null &&
     (startedQuestIds.has(targetLeadQuestId) || completedQuestIds.has(targetLeadQuestId));
   const leadDiscoveryDeferredToPreparation =
-    (usesCurrentCampaignSchema ||
+    (migrationEra === "field_timed_preparation" ||
       migrationEra === "relief_oath" ||
       migrationEra === "relief_allocation" ||
       migrationEra === "hill_approach" ||
@@ -3017,10 +3017,9 @@ export function planOverworldSessionSnapshotRestore(args: {
     trustedLegacySourceWorldHash: storedPreparationLegacySourceWorldHash ?? null,
     trustedCivicSourceWorldHash: storedCivicPreparationSourceWorldHash ?? null,
   });
-  const preparationRequiredByCurrentManifest =
+  const preparationRequiredByMigration =
     indexes.openingPreparation !== null &&
-    (usesCurrentCampaignSchema ||
-      migrationEra === "relief_oath" ||
+    (migrationEra === "relief_oath" ||
       migrationEra === "relief_allocation" ||
       migrationEra === "hill_approach" ||
       migrationEra === "fortify_outlast" ||
@@ -3043,7 +3042,7 @@ export function planOverworldSessionSnapshotRestore(args: {
   const targetPreparationQuestDiscovered =
     targetPreparationQuestId !== null && discoveredQuestIds.has(targetPreparationQuestId);
   if (
-    preparationRequiredByCurrentManifest &&
+    preparationRequiredByMigration &&
     leadSourceProof.option !== null &&
     !preparationProof.offered &&
     !preparationProof.legacy &&
@@ -3062,7 +3061,7 @@ export function planOverworldSessionSnapshotRestore(args: {
   // offer/source proofs make that single missing id safe to reconstruct; a
   // resolved preparation with the id removed still fails below.
   const repairsPendingPreparationQuestDiscovery =
-    preparationRequiredByCurrentManifest &&
+    preparationRequiredByMigration &&
     preparationProof.offered &&
     preparationProof.profile === null &&
     preparationProof.selectionBoundary === null &&
@@ -3078,7 +3077,7 @@ export function planOverworldSessionSnapshotRestore(args: {
     );
   }
   if (
-    preparationRequiredByCurrentManifest &&
+    preparationRequiredByMigration &&
     targetPreparationQuestProgressed &&
     preparationProof.profile === null &&
     !preparationProof.legacy
@@ -3088,7 +3087,7 @@ export function planOverworldSessionSnapshotRestore(args: {
     );
   }
   if (
-    preparationRequiredByCurrentManifest &&
+    preparationRequiredByMigration &&
     (preparationProof.profile !== null || preparationProof.legacy) &&
     !targetPreparationQuestDiscovered
   ) {
@@ -3186,7 +3185,7 @@ export function planOverworldSessionSnapshotRestore(args: {
     (startedQuestIds.has(targetReliefAllocationQuestId) ||
       completedQuestIds.has(targetReliefAllocationQuestId));
   if (
-    (usesCurrentCampaignSchema || migrationEra === "relief_oath") &&
+    migrationEra === "relief_oath" &&
     targetReliefAllocationQuestProgressed &&
     reliefAllocationProof.option === null &&
     !reliefAllocationProof.legacy
@@ -3196,7 +3195,7 @@ export function planOverworldSessionSnapshotRestore(args: {
     );
   }
   if (
-    (usesCurrentCampaignSchema || migrationEra === "relief_oath") &&
+    migrationEra === "relief_oath" &&
     indexes.openingReliefAllocation !== null &&
     (preparationProof.profile !== null || preparationProof.legacy) &&
     !targetReliefAllocationQuestProgressed &&

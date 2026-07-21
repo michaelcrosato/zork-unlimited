@@ -35,6 +35,10 @@ import {
   overworldRoadEncounterNextAction,
   type OverworldRoadEncounterNextAction,
 } from "./session_road_next_action.js";
+import {
+  cloneOverworldDepartureInteraction,
+  type OverworldDepartureInteraction,
+} from "./session_departure_interactions.js";
 
 export type OverworldPendingRoadEncounterView = OverworldPendingRoadEncounter & {
   nextAction: OverworldRoadEncounterNextAction;
@@ -71,6 +75,7 @@ export type OverworldView = {
   fatigue: number;
   travelCondition: string;
   serviceOffers: CampaignServiceOffer[];
+  departureInteractions: OverworldDepartureInteraction[];
   journal: OverworldJournalEntry[];
   discoveredSiteIds: string[];
   discoveredAreaIds: string[];
@@ -100,6 +105,7 @@ export type OverworldSessionViewState = {
   supplies: number;
   fatigue: number;
   serviceOffers: readonly CampaignServiceOffer[];
+  departureInteractions: readonly OverworldDepartureInteraction[];
   roads: readonly OverworldExit[];
   areaExits: readonly OverworldAreaExit[];
   areas: readonly OverworldArea[];
@@ -209,6 +215,7 @@ export function buildOverworldSessionView(state: OverworldSessionViewState): Ove
         ? { providerId: offer.providerId, providerName: offer.providerName }
         : {}),
     })),
+    departureInteractions: state.departureInteractions.map(cloneOverworldDepartureInteraction),
     journal: state.journalEntries.map(redactOverworldJournalEntryForPresentation),
     discoveredAreaIds: [...state.discoveredAreaIds].sort(),
     discoveredJobIds: [...state.discoveredJobIds].sort(),

@@ -50,10 +50,10 @@ function startAlbanyWolf(session: OverworldSession): void {
     session.chooseJourneyStory("albany:source_rowan_civic_docket");
   }
   moveToArea(session, world.opening_preparation!.area);
-  if (session.journey().storyChoice?.kind === "preparation") {
+  if (session.view().departureInteractions[0]?.kind === "preparation") {
     session.chooseJourneyStory("albany:prep_works_fortification");
   }
-  if (session.journey().storyChoice?.kind === "relief_allocation") {
+  if (session.view().departureInteractions[0]?.kind === "relief_allocation") {
     session.chooseJourneyStory("albany:relief_resident_shelter");
   }
   moveToArea(session, "albany_city__market");
@@ -79,10 +79,10 @@ function revealAlbanyWolfAtStation(session: OverworldSession): void {
     session.chooseJourneyStory("albany:source_rowan_civic_docket");
   }
   moveToArea(session, world.opening_preparation!.area);
-  if (session.journey().storyChoice?.kind === "preparation") {
+  if (session.view().departureInteractions[0]?.kind === "preparation") {
     session.chooseJourneyStory("albany:prep_works_fortification");
   }
-  if (session.journey().storyChoice?.kind === "relief_allocation") {
+  if (session.view().departureInteractions[0]?.kind === "relief_allocation") {
     session.chooseJourneyStory("albany:relief_resident_shelter");
   }
   moveToArea(session, "albany_city__market");
@@ -511,9 +511,9 @@ describe("Wolf-Winter to Gallowmere authored handoff", () => {
     session.chooseJourneyStory("albany:oath_limited_aid_only");
     session.chooseJourneyStory("albany:source_rowan_civic_docket");
     moveToArea(session, world.opening_preparation!.area);
-    expect(session.journey().storyChoice?.kind).toBe("preparation");
+    expect(session.view().departureInteractions[0]?.kind).toBe("preparation");
     session.chooseJourneyStory("albany:prep_works_fortification");
-    expect(session.journey().storyChoice?.kind).toBe("relief_allocation");
+    expect(session.view().departureInteractions[0]?.kind).toBe("relief_allocation");
     session.chooseJourneyStory("albany:relief_resident_shelter");
     session.travel(ALBANY_TO_SARATOGA);
     if (session.view().pendingRoadEncounter) session.resolveRoadEncounter("press_on");

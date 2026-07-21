@@ -86,13 +86,13 @@ function preparedForWolf(
   session.chooseJourneyStory("albany:source_rowan_civic_docket");
   moveToArea(session, world.opening_preparation!.area, world);
   session.chooseJourneyStory(preparationId);
+  if (session.view().departureInteractions[0]?.kind === "relief_allocation") {
+    session.chooseJourneyStory("albany:relief_resident_shelter");
+  }
 
   const wolf = session.view().quests.find((quest) => quest.id === "wolf_winter");
   if (!wolf) throw new Error("The registered Albany opening must reveal Wolf-Winter.");
   moveToArea(session, wolf.area, world);
-  if (session.journey().storyChoice?.kind === "relief_allocation") {
-    session.chooseJourneyStory("albany:relief_resident_shelter");
-  }
 
   const leadView = session.view();
   session.scoutPoi(leadView.pois[0]!.id);

@@ -71,7 +71,10 @@ function selectSource(
   if (preparationArea && session.view().currentArea?.id !== preparationArea) {
     moveToArea(session, preparationArea);
   }
-  expect(session.journey().storyChoice?.kind).toBe("preparation");
+  expect(session.journey().storyChoice).toBeNull();
+  expect(session.view().departureInteractions.map((interaction) => interaction.id)).toEqual([
+    "albany:wolf_preparation",
+  ]);
   return session;
 }
 
@@ -82,7 +85,11 @@ function selectSourceAndPrepare(
 ): OverworldSession {
   const session = selectSource(profileId, sourceId, world);
   session.chooseJourneyStory(DEFAULT_PREPARATION);
-  if (session.journey().storyChoice?.kind === "relief_allocation") {
+  if (
+    session
+      .view()
+      .departureInteractions.some((interaction) => interaction.kind === "relief_allocation")
+  ) {
     session.chooseJourneyStory(NEUTRAL_RELIEF_ALLOCATION);
   }
   expect(session.journey().storyChoice).toBeNull();
@@ -195,7 +202,10 @@ describe("opening lead-source snapshot integrity", () => {
     expect(restoredSelected.snapshotHash()).toBe(restoredPending.snapshotHash());
     expect(restoredSelected.journey().storyChoice).toBeNull();
     moveToArea(restoredSelected, WORLD.opening_preparation!.area);
-    expect(restoredSelected.journey().storyChoice?.kind).toBe("preparation");
+    expect(restoredSelected.journey().storyChoice).toBeNull();
+    expect(
+      restoredSelected.view().departureInteractions.map((interaction) => interaction.id),
+    ).toEqual(["albany:wolf_preparation"]);
   });
 
   it("rejects duplicate offer and selection evidence", () => {
@@ -442,7 +452,10 @@ describe("opening lead-source snapshot integrity", () => {
     if (preparationArea && restoredAgain.view().currentArea?.id !== preparationArea) {
       moveToArea(restoredAgain, preparationArea);
     }
-    expect(restoredAgain.journey().storyChoice?.kind).toBe("preparation");
+    expect(restoredAgain.journey().storyChoice).toBeNull();
+    expect(restoredAgain.view().departureInteractions.map((interaction) => interaction.id)).toEqual(
+      ["albany:wolf_preparation"],
+    );
     expect(restoredAgain.view().quests.map((quest) => quest.id)).toContain(TARGET_QUEST);
   });
 
@@ -469,13 +482,13 @@ describe("opening lead-source snapshot integrity", () => {
     const restored = OverworldSession.restore(WORLD, migrated);
     expect(restored.journey().storyChoice).toBeNull();
     moveToArea(restored, WORLD.opening_preparation!.area);
-    expect(restored.journey().storyChoice?.kind).toBe("preparation");
-    expect(restored.snapshot().journalEntries).toContainEqual(
-      expect.objectContaining({
-        kind: "preparation_offer",
-        id: "preparation_offer:albany:wolf_preparation",
-      }),
-    );
+    expect(restored.journey().storyChoice).toBeNull();
+    expect(restored.view().departureInteractions.map((interaction) => interaction.id)).toEqual([
+      "albany:wolf_preparation",
+    ]);
+    expect(
+      restored.snapshot().journalEntries.some((entry) => entry.kind === "preparation_offer"),
+    ).toBe(false);
     restored.chooseJourneyStory(DEFAULT_PREPARATION);
     expect(restored.view().quests.map((quest) => quest.id)).toContain(TARGET_QUEST);
   });

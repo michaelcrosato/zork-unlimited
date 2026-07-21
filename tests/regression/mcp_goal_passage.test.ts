@@ -37,10 +37,16 @@ function sessionAtQueensburyGoalPassage(): OverworldSession {
   expect(session.journey().storyChoice?.kind).toBe("lead_source");
   session.chooseJourneyStory("albany:source_rowan_civic_docket");
   moveToArea(session, WORLD.opening_preparation!.area);
-  expect(session.journey().storyChoice?.kind).toBe("preparation");
+  expect(session.journey().storyChoice).toBeNull();
+  expect(session.view().departureInteractions.map((interaction) => interaction.id)).toEqual([
+    "albany:wolf_preparation",
+  ]);
   expect(session.view().quests.map((candidate) => candidate.id)).toContain("wolf_winter");
   session.chooseJourneyStory("albany:prep_works_fortification");
-  expect(session.journey().storyChoice?.kind).toBe("relief_allocation");
+  expect(session.journey().storyChoice).toBeNull();
+  expect(session.view().departureInteractions.map((interaction) => interaction.id)).toEqual([
+    "albany:wolf_relief_allocation",
+  ]);
   session.chooseJourneyStory("albany:relief_resident_shelter");
   const quest = session.view().quests.find((candidate) => candidate.id === "wolf_winter");
   if (!quest) throw new Error("expected the Albany Wolf-Winter lead");

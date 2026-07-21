@@ -212,11 +212,13 @@ function launchAlbanyWolf(api: ToolApi, seed: number) {
   api.choose_overworld_session_story({
     ...FULL,
     session_id: overworldSessionId,
+    story_choice_id: "albany:wolf_preparation",
     choice: "albany:prep_works_fortification",
   });
   api.choose_overworld_session_story({
     ...FULL,
     session_id: overworldSessionId,
+    story_choice_id: "albany:wolf_relief_allocation",
     choice: RESIDENT_SHELTER,
   });
 

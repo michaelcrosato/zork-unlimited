@@ -78,6 +78,7 @@ function launchSeed4174Imports(): GameState {
   const prepared = api.choose_overworld_session_story({
     ...FULL,
     session_id: sessionId,
+    story_choice_id: "albany:wolf_preparation",
     choice: openingChoices.at(-1)!,
   });
   const wolf = prepared.observation.quests.find((quest) => quest.id === "wolf_winter");
@@ -85,6 +86,7 @@ function launchSeed4174Imports(): GameState {
   api.choose_overworld_session_story({
     ...FULL,
     session_id: sessionId,
+    story_choice_id: "albany:wolf_relief_allocation",
     choice: "albany:relief_resident_shelter",
   });
 

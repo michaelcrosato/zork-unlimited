@@ -1131,7 +1131,8 @@ describe("New York overworld graph", () => {
     expect(app).toContain("Rest");
     expect(app).toContain("<JourneyStatus journey={journey}");
     expect(app).toContain("<JourneyChoiceScreen journey={journey}");
-    expect(app).toContain("<JourneyStoryChoiceScreen journey={journey}");
+    expect(app).toContain("<JourneyStoryChoiceScreen");
+    expect(app).toContain("inspectedDepartureStory");
     expect(app).toContain("<JourneyEndedScreen journey={journey}");
     expect(journeyStatus).toContain("journey.goalGuidance");
     expect(journeyStatus).toContain('aria-label="Objective guidance"');

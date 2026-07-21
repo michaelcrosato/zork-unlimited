@@ -56,6 +56,10 @@ import type {
 } from "./session_snapshot.js";
 import { timeLabel } from "./session_journal_codec.js";
 import { OVERWORLD_MAX_SUPPLIES as MAX_SUPPLIES, travelCondition } from "./travel_mechanics.js";
+import {
+  compactOverworldDepartureInteractions,
+  type OverworldDepartureInteraction,
+} from "./session_departure_interactions.js";
 
 export type OverworldSessionCompactViewState = {
   character: CampaignCharacterView;
@@ -67,6 +71,7 @@ export type OverworldSessionCompactViewState = {
   supplies: number;
   fatigue: number;
   serviceOffers: readonly CampaignServiceOffer[];
+  departureInteractions?: readonly OverworldDepartureInteraction[];
   roads: readonly OverworldExit[];
   areaExits: readonly OverworldAreaExit[];
   routeOptions: readonly OverworldSessionRoutePlan[];
@@ -133,6 +138,9 @@ export function buildOverworldSessionCompactView(
     (state.eventChoices ?? []).filter(([eventId]) => visibleEventIds.has(eventId)),
   );
   const serviceOffers = compactCampaignServiceOffers(state.serviceOffers);
+  const departureInteractions = compactOverworldDepartureInteractions(
+    state.departureInteractions ?? [],
+  );
   const localRefsTruncated = compactLocalRefTruncation({
     areas: state.areas.length,
     poi: state.poi.length,
@@ -163,6 +171,7 @@ export function buildOverworldSessionCompactView(
       travelCondition(state.fatigue, state.supplies),
     ],
     ...(serviceOffers.length > 0 ? { service_offers: serviceOffers } : {}),
+    ...(departureInteractions.length > 0 ? { departure_interactions: departureInteractions } : {}),
     hidden: [
       state.hiddenAreaCount,
       state.hiddenJobCount,

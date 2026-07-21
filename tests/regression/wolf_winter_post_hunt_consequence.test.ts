@@ -35,6 +35,8 @@ import { loadOverworldManifest } from "../../src/world/source.js";
 
 const WORLD = loadOverworldManifest(process.cwd());
 const RESIDENT_SHELTER_ALLOCATION = "albany:relief_resident_shelter";
+const PREPARATION_STORY = "albany:wolf_preparation";
+const RELIEF_ALLOCATION_STORY = "albany:wolf_relief_allocation";
 
 const loaded = loadRpgSourceFile("content/rpg/quests/wolf_winter.yaml");
 if (!loaded.ok) throw new Error("wolf_winter must compile");
@@ -207,15 +209,17 @@ function launchAlbanyWolf(api: ToolApi): {
     session_id: overworldSessionId,
     area_route_id: preparationRoute.id,
   });
-  expect(atPreparation.journey.storyChoice?.kind).toBe("preparation");
+  expect(atPreparation.observation.departureInteractions[0]?.kind).toBe("preparation");
   api.choose_overworld_session_story({
     ...full,
     session_id: overworldSessionId,
+    story_choice_id: PREPARATION_STORY,
     choice: "albany:prep_works_fortification",
   });
   api.choose_overworld_session_story({
     ...full,
     session_id: overworldSessionId,
+    story_choice_id: RELIEF_ALLOCATION_STORY,
     choice: RESIDENT_SHELTER_ALLOCATION,
   });
   view = api.get_overworld_session({
@@ -433,15 +437,17 @@ describe("bug_0505 — Wolf-Winter saved wood has a post-hunt consequence", () =
       session_id: sessionId,
       area_route_id: preparationRoute.id,
     });
-    expect(atPreparation.journey.storyChoice?.kind).toBe("preparation");
+    expect(atPreparation.observation.departureInteractions[0]?.kind).toBe("preparation");
     api.choose_overworld_session_story({
       ...full,
       session_id: sessionId,
+      story_choice_id: PREPARATION_STORY,
       choice: "albany:prep_works_fortification",
     });
     api.choose_overworld_session_story({
       ...full,
       session_id: sessionId,
+      story_choice_id: RELIEF_ALLOCATION_STORY,
       choice: RESIDENT_SHELTER_ALLOCATION,
     });
     view = api.get_overworld_session({

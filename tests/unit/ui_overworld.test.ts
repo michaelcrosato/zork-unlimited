@@ -161,14 +161,14 @@ function settleOpeningRegistration(session: OverworldSession): void {
     session.chooseJourneyStory("albany:source_rowan_civic_docket");
     moveToOpeningPreparation(session);
   }
-  if (session.journey().storyChoice?.kind === "preparation") {
+  if (session.view().departureInteractions[0]?.kind === "preparation") {
     session.chooseJourneyStory("albany:prep_works_fortification");
   }
   settleReliefAllocation(session);
 }
 
 function settleReliefAllocation(session: OverworldSession): void {
-  if (session.journey().storyChoice?.kind === "relief_allocation") {
+  if (session.view().departureInteractions[0]?.kind === "relief_allocation") {
     session.chooseJourneyStory("albany:relief_resident_shelter");
   }
 }
@@ -399,13 +399,15 @@ describe("OverworldSession", () => {
     expect(handlerEnd).toBeGreaterThan(handlerStart);
     const handler = app.slice(handlerStart, handlerEnd);
 
-    expect(handler).toContain("worldSession.chooseJourneyStory(choiceId)");
-    expect(handler).toContain('journey.storyChoice?.kind === "registration"');
-    expect(handler).toContain('journey.storyChoice?.kind === "lead_source"');
-    expect(handler).toContain('journey.storyChoice?.kind === "preparation"');
-    expect(handler).toContain('journey.storyChoice?.kind === "relief_allocation"');
-    expect(handler).toContain('journey.storyChoice?.kind === "relief_oath"');
-    expect(handler).toContain('journey.storyChoice?.kind === "ally"');
+    expect(handler).toContain("inspectedDepartureStory ?? journey.storyChoice");
+    expect(handler).toContain("worldSession.chooseJourneyStory(");
+    expect(handler).toContain("inspectedDepartureStory?.id");
+    expect(handler).toContain('storyChoice?.kind === "registration"');
+    expect(handler).toContain('storyChoice?.kind === "lead_source"');
+    expect(handler).toContain('storyChoice?.kind === "preparation"');
+    expect(handler).toContain('storyChoice?.kind === "relief_allocation"');
+    expect(handler).toContain('storyChoice?.kind === "relief_oath"');
+    expect(handler).toContain('storyChoice?.kind === "ally"');
     expect(handler).toContain("Character registered: ${result.consequence}");
     expect(handler).toContain("Current goal: ${result.goal.text}");
     expect(handler).toContain("Lead source certified: ${result.consequence}");
@@ -419,6 +421,9 @@ describe("OverworldSession", () => {
     expect(handler).not.toMatch(
       /targetQuestId|targetTownId|targetAreaId|questOutcomeIds|endingId|content\/rpg/i,
     );
+    expect(app).toContain("worldView.departureInteractions.map");
+    expect(app).toContain("worldSession.inspectJourneyStory(storyChoiceId)");
+    expect(app).toContain("you may inspect one or leave without choosing");
     expect(screen).toContain("Journey consequence");
     expect(screen).toContain("Choose what follows");
     expect(screen).toContain("Character registration");
@@ -854,7 +859,7 @@ describe("OverworldSession", () => {
     }
   });
 
-  it("renders the source-earned Wolf-Winter mission and compact route preview on the blocking preparation screen", async () => {
+  it("renders the source-earned Wolf-Winter mission and compact route preview from the optional Station interaction", async () => {
     const session = new OverworldSession(world);
     const opening = session.view();
     session.scoutPoi(opening.pois[0]!.id);
@@ -863,8 +868,11 @@ describe("OverworldSession", () => {
     session.chooseJourneyStory("albany:oath_limited_aid_only");
     session.chooseJourneyStory("albany:source_rowan_civic_docket");
     moveToOpeningPreparation(session);
-    const journey = session.journey();
-    expect(journey.storyChoice?.kind).toBe("preparation");
+    const beforeInspection = session.snapshot();
+    const storyChoice = session.inspectJourneyStory("albany:wolf_preparation");
+    const journey = { ...session.journey(), storyChoice };
+    expect(storyChoice.kind).toBe("preparation");
+    expect(session.snapshot()).toEqual(beforeInspection);
 
     const uiRoot = resolve(process.cwd(), "ui");
     const server = await createServer({
@@ -890,6 +898,7 @@ describe("OverworldSession", () => {
         react.createElement(module.JourneyStoryChoiceScreen, {
           journey,
           onChoose: () => undefined,
+          onDismiss: () => undefined,
         }),
       );
 
@@ -903,7 +912,8 @@ describe("OverworldSession", () => {
       expect(markup).toContain("75 min, 2 supplies, fatigue +10");
       expect(markup).toContain("keep the herd calm");
       expect(markup).not.toContain("clean three-cast lure line");
-      expect(markup.match(/<button/g)).toHaveLength(3);
+      expect(markup).toContain("Return to the Station without choosing");
+      expect(markup.match(/<button/g)).toHaveLength(4);
     } finally {
       await server.close();
     }

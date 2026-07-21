@@ -97,7 +97,7 @@ function preparedForWolf(
   session.chooseJourneyStory("albany:source_rowan_civic_docket");
   moveToArea(session, world.opening_preparation!.area, world);
   session.chooseJourneyStory("albany:prep_works_fortification");
-  if (session.journey().storyChoice?.kind === "relief_allocation") {
+  if (session.view().departureInteractions[0]?.kind === "relief_allocation") {
     session.chooseJourneyStory("albany:relief_cade_fodder");
   }
 

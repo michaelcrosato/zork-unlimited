@@ -352,16 +352,22 @@ function resolveCurrentOverworldSessionEvent(a: ReturnType<typeof api>, sessionI
     );
     if (!preparationRoute) throw new Error("expected a route to the opening preparation board");
     const stationed = a.move_overworld_session_area({
+      ...FULL_OVERWORLD_RESPONSE,
       session_id: sessionId,
       area_route_id: preparationRoute.id,
     });
-    expect(stationed.journey.storyChoice?.kind).toBe("preparation");
+    expect(stationed.journey.storyChoice).toBeNull();
+    expect(
+      stationed.observation.departureInteractions.map((interaction) => interaction.id),
+    ).toEqual(["albany:wolf_preparation"]);
     a.choose_overworld_session_story({
       session_id: sessionId,
+      story_choice_id: "albany:wolf_preparation",
       choice: "albany:prep_works_fortification",
     });
     a.choose_overworld_session_story({
       session_id: sessionId,
+      story_choice_id: "albany:wolf_relief_allocation",
       choice: "albany:relief_resident_shelter",
     });
   }
@@ -1325,15 +1331,20 @@ describe("overworld snapshot restore integrity", () => {
         session_id: started.session_id,
         area_route_id: preparationRoute.id,
       });
-      expect(stationed.journey.storyChoice?.kind).toBe("preparation");
+      expect(stationed.journey.storyChoice).toBeNull();
+      expect(
+        stationed.observation.departureInteractions.map((interaction) => interaction.id),
+      ).toEqual(["albany:wolf_preparation"]);
       a.choose_overworld_session_story({
         ...FULL_OVERWORLD_RESPONSE,
         session_id: started.session_id,
+        story_choice_id: "albany:wolf_preparation",
         choice: "albany:prep_works_fortification",
       });
       a.choose_overworld_session_story({
         ...FULL_OVERWORLD_RESPONSE,
         session_id: started.session_id,
+        story_choice_id: "albany:wolf_relief_allocation",
         choice: "albany:relief_resident_shelter",
       });
     }
@@ -1584,15 +1595,20 @@ describe("overworld snapshot restore integrity", () => {
       session_id: started.session_id,
       area_route_id: preparationRoute.id,
     });
-    expect(stationed.journey.storyChoice?.kind).toBe("preparation");
+    expect(stationed.journey.storyChoice).toBeNull();
+    expect(
+      stationed.observation.departureInteractions.map((interaction) => interaction.id),
+    ).toEqual(["albany:wolf_preparation"]);
     a.choose_overworld_session_story({
       ...FULL_OVERWORLD_RESPONSE,
       session_id: started.session_id,
+      story_choice_id: "albany:wolf_preparation",
       choice: "albany:prep_works_fortification",
     });
     a.choose_overworld_session_story({
       ...FULL_OVERWORLD_RESPONSE,
       session_id: started.session_id,
+      story_choice_id: "albany:wolf_relief_allocation",
       choice: "albany:relief_resident_shelter",
     });
     const quest = overworld.opening_lead_source?.target_quest;
@@ -1604,7 +1620,7 @@ describe("overworld snapshot restore integrity", () => {
     };
 
     expect(() => a.restore_overworld_session({ snapshot: forgedMissingQuest })).toThrow(
-      /resolved preparation did not reveal its target quest/i,
+      /selected lead source did not reveal its target quest/i,
     );
   });
 

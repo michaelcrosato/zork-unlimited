@@ -307,13 +307,13 @@ function startedCampaign(oathId: OathId, profileId = LEDGER_PROFILE): OverworldS
   const session = selectOath(oathId, profileId);
   session.chooseJourneyStory("albany:source_rowan_civic_docket");
   moveToArea(session, PREPARATION.area);
-  expect(session.journey().storyChoice).toMatchObject({
+  expect(session.view().departureInteractions[0]).toMatchObject({
     id: PREPARATION.id,
     kind: "preparation",
   });
   session.chooseJourneyStory("albany:prep_works_fortification");
   moveToArea(session, ALLOCATION.area);
-  expect(session.journey().storyChoice).toMatchObject({
+  expect(session.view().departureInteractions[0]).toMatchObject({
     id: ALLOCATION.id,
     kind: "relief_allocation",
   });

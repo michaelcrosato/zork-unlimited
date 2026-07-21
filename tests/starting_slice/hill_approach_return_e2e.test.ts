@@ -191,12 +191,14 @@ function buildAlbanyPreStartBoundary(api: ToolApi) {
   const prepared = api.choose_overworld_session_story({
     ...FULL,
     session_id: sessionId,
+    story_choice_id: "albany:wolf_preparation",
     choice: "albany:prep_works_fortification",
   });
   expect(prepared.observation.quests.map((quest) => quest.id)).toContain(WOLF.id);
   api.choose_overworld_session_story({
     ...FULL,
     session_id: sessionId,
+    story_choice_id: "albany:wolf_relief_allocation",
     choice: RESIDENT_SHELTER,
   });
 

@@ -32,6 +32,33 @@ const LEAD_SOURCE = "albany:source_jamie_market_testimony";
 const RELIEF_OATH = "albany:oath_limited_aid_only";
 const PREPARATION_PROFILE = "albany:prep_relief_protocol";
 
+function expectDepartureInteraction(
+  session: OverworldSession,
+  scene: { id: string; title: string },
+  kind: "preparation" | "relief_allocation",
+): void {
+  expect(session.journey().storyChoice).toBeNull();
+  expect(session.view().departureInteractions).toEqual([
+    {
+      id: scene.id,
+      kind,
+      title: scene.title,
+      inspect: {
+        tool: "inspect_overworld_session_story",
+        storyChoiceId: scene.id,
+        arguments: { story_choice_id: scene.id },
+      },
+      choose: {
+        tool: "choose_overworld_session_story",
+        storyChoiceId: scene.id,
+        arguments: { story_choice_id: scene.id },
+        argument: "choice",
+        valuesFrom: "story.options[*].id",
+      },
+    },
+  ]);
+}
+
 function registerAndSelectLeadAtSource(world: typeof WORLD = WORLD): OverworldSession {
   const session = new OverworldSession(world);
   const opening = session.view();
@@ -59,18 +86,21 @@ function registerAndSelectLead(world: typeof WORLD = WORLD): OverworldSession {
     if (!route) throw new Error("expected a route to Wolf-Winter preparation");
     session.moveArea(route.id);
   }
-  expect(session.journey().storyChoice?.kind).toBe("preparation");
+  expectDepartureInteraction(session, preparation, "preparation");
   return session;
 }
 
 function selectPreparation(world: typeof WORLD = WORLD): OverworldSession {
   const session = registerAndSelectLead(world);
   session.chooseJourneyStory(PREPARATION_PROFILE);
-  expect(session.journey().storyChoice?.kind).toBe(
-    world.opening_relief_allocation?.area === world.opening_preparation?.area
-      ? "relief_allocation"
-      : undefined,
-  );
+  if (
+    world.opening_relief_allocation &&
+    world.opening_relief_allocation.area === world.opening_preparation?.area
+  ) {
+    expectDepartureInteraction(session, world.opening_relief_allocation, "relief_allocation");
+  } else {
+    expect(session.view().departureInteractions).toEqual([]);
+  }
   return session;
 }
 
@@ -98,27 +128,26 @@ function timeLabel(minutes: number): string {
 }
 
 describe("opening preparation snapshot integrity", () => {
-  it("round-trips pending and selected preparation with replayed character effects", () => {
+  it("round-trips derived and selected preparation with replayed character effects", () => {
     expect(hashState(WORLD)).toBe(OVERWORLD_OPENING_PREPARATION_WORLD_HASH);
 
-    const pending = registerAndSelectLead().snapshot();
-    expect(journalEntry(pending, "preparation_offer").storyChoiceBoundary).toBeDefined();
-    expect(pending.discoveredQuestIds).toContain(PREPARATION.target_quest);
-    expect(OverworldSession.restore(WORLD, pending).snapshot()).toEqual(pending);
+    const availableSession = registerAndSelectLead();
+    const available = availableSession.snapshot();
+    expect(available.journalEntries.some((entry) => entry.kind === "preparation_offer")).toBe(
+      false,
+    );
+    expect(available.discoveredQuestIds).toContain(PREPARATION.target_quest);
+    const restoredAvailable = OverworldSession.restore(WORLD, available);
+    expect(restoredAvailable.snapshot()).toEqual(available);
+    expectDepartureInteraction(restoredAvailable, PREPARATION, "preparation");
 
-    const preMissionPreview = structuredClone(pending);
+    const preMissionPreview = structuredClone(available);
     preMissionPreview.discoveredQuestIds = preMissionPreview.discoveredQuestIds.filter(
       (questId) => questId !== PREPARATION.target_quest,
     );
-    const upgraded = OverworldSession.restore(WORLD, preMissionPreview).snapshot();
-    expect(upgraded).toEqual({
-      ...preMissionPreview,
-      discoveredQuestIds: [
-        ...preMissionPreview.discoveredQuestIds,
-        PREPARATION.target_quest,
-      ].sort(),
-    });
-    expect(OverworldSession.restore(WORLD, upgraded).snapshot()).toEqual(upgraded);
+    expect(() => OverworldSession.restore(WORLD, preMissionPreview)).toThrow(
+      /selected lead source did not reveal its target quest/i,
+    );
 
     const selected = selectPreparation().snapshot();
     expect(selected.discoveredQuestIds).toContain(PREPARATION.target_quest);
@@ -146,7 +175,9 @@ describe("opening preparation snapshot integrity", () => {
     );
 
     const pendingPredecessor = registerAndSelectLead(predecessorWorld).snapshot();
-    expect(journalEntry(pendingPredecessor, "preparation_offer").sourceWorldHash).toBeUndefined();
+    expect(
+      pendingPredecessor.journalEntries.some((entry) => entry.kind === "preparation_offer"),
+    ).toBe(false);
     const pendingSession = OverworldSession.restore(WORLD, pendingPredecessor);
     const pendingMigrated = pendingSession.snapshot();
     expect(pendingMigrated.journalEntries.some((entry) => entry.kind === "preparation_offer")).toBe(
@@ -155,7 +186,7 @@ describe("opening preparation snapshot integrity", () => {
     expect(pendingSession.journey().storyChoice).toBeNull();
     expect(OverworldSession.restore(WORLD, pendingMigrated).snapshot()).toEqual(pendingMigrated);
     moveToArea(pendingSession, PREPARATION.area);
-    expect(pendingSession.journey().storyChoice?.kind).toBe("preparation");
+    expectDepartureInteraction(pendingSession, PREPARATION, "preparation");
 
     const selectedPredecessor = selectPreparation(predecessorWorld).snapshot();
     const selectedSession = OverworldSession.restore(WORLD, selectedPredecessor);
@@ -171,7 +202,11 @@ describe("opening preparation snapshot integrity", () => {
     expect(selectedMigrated.character.knowledge).toContain("albany:knowledge_wolf_relief_protocol");
     expect(OverworldSession.restore(WORLD, selectedMigrated).snapshot()).toEqual(selectedMigrated);
     moveToArea(selectedSession, PREPARATION.area);
-    expect(selectedSession.journey().storyChoice?.kind).toBe("relief_allocation");
+    expectDepartureInteraction(
+      selectedSession,
+      WORLD.opening_relief_allocation!,
+      "relief_allocation",
+    );
   });
 
   it("rejects current Station evidence relabeled as trusted Civic provenance", () => {
@@ -276,21 +311,50 @@ describe("opening preparation snapshot integrity", () => {
     );
   });
 
-  it("rejects a current departure snapshot with its pending preparation offer removed", () => {
-    const forged = registerAndSelectLead().snapshot();
-    forged.journalEntries = forged.journalEntries.filter(
-      (entry) => entry.kind !== "preparation_offer",
+  it("keeps an existing persisted preparation offer blocking and finishable", () => {
+    const session = registerAndSelectLead();
+    const pending = session.snapshot();
+    pending.journalEntries.unshift(
+      openingPreparationOfferJournalEntry({
+        scene: PREPARATION,
+        town: session.view().current.name,
+        recordedAt: timeLabel(pending.minutes),
+        storyChoiceBoundary: {
+          acceptedDecisions: pending.journey.acceptedDecisions,
+          decisionProofHash: pending.journey.decisionProof.hash,
+          townId: pending.currentId,
+          areaId: pending.currentAreaId!,
+          minutes: pending.minutes,
+        },
+      }),
     );
-    expect(() => OverworldSession.restore(WORLD, forged)).toThrow(
-      /reached the departure area without its required opening preparation offer/i,
-    );
+
+    const restored = OverworldSession.restore(WORLD, pending);
+    expect(restored.journey().storyChoice).toMatchObject({
+      id: PREPARATION.id,
+      kind: "preparation",
+    });
+    expect(restored.view().departureInteractions).toEqual([]);
+    restored.chooseJourneyStory(PREPARATION_PROFILE);
+    expect(
+      restored
+        .snapshot()
+        .journalEntries.slice(0, 2)
+        .map((entry) => entry.kind),
+    ).toEqual(["preparation", "preparation_offer"]);
+    const selected = restored.snapshot();
+    expect(OverworldSession.restore(WORLD, selected).snapshot()).toEqual(selected);
   });
 
   it("preserves exact-predecessor quest, return, and bound service evidence", () => {
     const predecessorWorld = exactCivicPreparationPredecessor(WORLD);
     const predecessorSession = selectPreparation(predecessorWorld);
     moveToArea(predecessorSession, PREPARATION.area);
-    expect(predecessorSession.journey().storyChoice?.kind).toBe("relief_allocation");
+    expectDepartureInteraction(
+      predecessorSession,
+      WORLD.opening_relief_allocation!,
+      "relief_allocation",
+    );
     predecessorSession.chooseJourneyStory("albany:relief_cade_fodder");
     predecessorSession.startQuest("wolf_winter", "albany:wolf_approach_sheltered_stockway");
     predecessorSession.completeQuest("wolf_winter", {
@@ -383,23 +447,19 @@ describe("opening preparation snapshot integrity", () => {
       .areaExits.find((candidate) => candidate.destination.id === PREPARATION.area);
     if (!stationRoute) throw new Error("expected a route to the preparation board");
     restoredAgain.moveArea(stationRoute.id);
-    expect(restoredAgain.journey().storyChoice?.kind).toBe("preparation");
+    expectDepartureInteraction(restoredAgain, PREPARATION, "preparation");
     restoredAgain.chooseJourneyStory(PREPARATION_PROFILE);
     expect(restoredAgain.view().quests.map((quest) => quest.id)).toContain(
       PREPARATION.target_quest,
     );
   });
 
-  it("rejects a current save that replaces the pending offer with a self-minted legacy marker", () => {
+  it("rejects a current save with a self-minted legacy marker", () => {
     const forged = registerAndSelectLead().snapshot();
-    const offer = journalEntry(forged, "preparation_offer");
     const lead = journalEntry(forged, "lead_source");
-    if (!offer.storyChoiceBoundary || !lead.storyChoiceBoundary) {
-      throw new Error("expected preparation and lead boundaries");
+    if (!lead.storyChoiceBoundary) {
+      throw new Error("expected the lead boundary");
     }
-    forged.journalEntries = forged.journalEntries.filter(
-      (entry) => entry.kind !== "preparation_offer",
-    );
     forged.journalEntries.unshift(
       openingPreparationLegacyJournalEntry({
         sourceWorldHash: OVERWORLD_OPENING_PREPARATION_PREDECESSOR_WORLD_HASH,

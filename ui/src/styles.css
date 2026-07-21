@@ -806,6 +806,27 @@ h3 {
   justify-self: start;
 }
 
+.departure-interactions {
+  border-top: 1px solid var(--line);
+  display: grid;
+  gap: 0.55rem;
+  margin-top: 1rem;
+  padding-top: 0.85rem;
+}
+
+.departure-interactions h3,
+.departure-interactions p {
+  margin: 0;
+}
+
+.departure-interactions p {
+  color: var(--muted);
+}
+
+.departure-interactions .mini-command {
+  justify-self: start;
+}
+
 .service-offer-terms {
   color: var(--muted);
   line-height: 1.45;
