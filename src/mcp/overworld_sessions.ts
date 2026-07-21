@@ -11,6 +11,7 @@ import { OverworldSession, type OverworldSessionSnapshot } from "../world/sessio
 import type { OverworldView } from "../world/session_view.js";
 import type { JourneyDecisionClassification } from "../world/journey_contract.js";
 import { excludedJourneyDecision } from "../world/journey_decision.js";
+import { compactJourneyPresentation } from "./journey_projection.js";
 
 export type OverworldMcpJourney = ReturnType<OverworldSession["journey"]>;
 
@@ -321,24 +322,26 @@ export function overworldSnapshotHashMatches(expectedSnapshotHash: string, snaps
 export function overworldReadUnchanged(
   snapshotHash: string,
   journey: OverworldMcpJourney,
+  compactContext = false,
 ): OverworldMcpReadUnchanged {
   return {
     snapshot_hash: publicOverworldSnapshotHash(snapshotHash),
     unchanged: true,
-    journey,
+    journey: compactContext ? compactJourneyPresentation(journey) : journey,
   };
 }
 
 export function overworldSnapshotHashRejection(
   snapshotHash: string,
   journey: OverworldMcpJourney,
+  compactContext = false,
 ): OverworldMcpRejectedSessionPayload {
   return {
     ok: false,
     snapshot_hash: publicOverworldSnapshotHash(snapshotHash),
     rejection_reason: OVERWORLD_SNAPSHOT_HASH_MISMATCH_REASON,
     journeyDecision: excludedJourneyDecision("rejected"),
-    journey,
+    journey: compactContext ? compactJourneyPresentation(journey) : journey,
   };
 }
 
@@ -391,17 +394,21 @@ export class OverworldMcpSessionStore {
     return publicOverworldSnapshotHash(this.fullSnapshotHash(session));
   }
 
-  guardedSession<Args extends OverworldMcpSnapshotGuardOptions>(
-    args: Args,
-    sessionId: string,
-  ): OverworldMcpGuardedSession {
+  guardedSession<
+    Args extends OverworldMcpSnapshotGuardOptions &
+      Pick<OverworldMcpResponseOptions, "compact_context">,
+  >(args: Args, sessionId: string): OverworldMcpGuardedSession {
     const session = this.get(sessionId);
     const snapshotHash = this.fullSnapshotHash(session);
     if (
       args.expected_snapshot_hash !== undefined &&
       !overworldSnapshotHashMatches(args.expected_snapshot_hash, snapshotHash)
     ) {
-      return overworldSnapshotHashRejection(snapshotHash, session.journey());
+      return overworldSnapshotHashRejection(
+        snapshotHash,
+        session.journey(),
+        args.compact_context === true,
+      );
     }
     return { session_id: sessionId, session };
   }
@@ -426,7 +433,10 @@ export class OverworldMcpSessionStore {
       session_id: created.session_id,
       snapshot_hash: this.snapshotHash(created.session),
       tutorial: freshGameTutorial(),
-      journey: created.session.journey(),
+      journey:
+        args.compact_context === true
+          ? compactJourneyPresentation(created.session.journey())
+          : created.session.journey(),
       // The legend rides only on session-creating responses (here and in
       // restoreResponse), keeping every subsequent per-action payload lean.
       ...(args.compact_context === true ? { legend: OVERWORLD_COMPACT_LEGEND } : {}),
@@ -443,7 +453,10 @@ export class OverworldMcpSessionStore {
       ok: true,
       session_id: restored.session_id,
       snapshot_hash: this.snapshotHash(restored.session),
-      journey: restored.session.journey(),
+      journey:
+        args.compact_context === true
+          ? compactJourneyPresentation(restored.session.journey())
+          : restored.session.journey(),
       ...(args.compact_context === true ? { legend: OVERWORLD_COMPACT_LEGEND } : {}),
       ...this.viewField(args, restored.session),
     } as unknown as OverworldMcpRestoreResponse<Args>;
@@ -459,6 +472,7 @@ export class OverworldMcpSessionStore {
       return overworldReadUnchanged(
         snapshotHash,
         session.journey(),
+        args.include_observation !== true,
       ) as OverworldMcpReadResponse<Args>;
     }
     if (args.include_observation !== true) {
@@ -466,7 +480,7 @@ export class OverworldMcpSessionStore {
         args,
         snapshotHash,
         projectOverworldCompactContext(session.compactView(), args),
-        session.journey(),
+        compactJourneyPresentation(session.journey()),
       ) as OverworldMcpReadResponse<Args>;
     }
     return {
@@ -487,13 +501,14 @@ export class OverworldMcpSessionStore {
       return overworldReadUnchanged(
         snapshotHash,
         session.journey(),
+        true,
       ) as OverworldMcpContextResponse<Args>;
     }
     return overworldCompactReadPayload(
       args,
       snapshotHash,
       projectOverworldCompactContext(session.compactView(), args),
-      session.journey(),
+      compactJourneyPresentation(session.journey()),
     ) as OverworldMcpContextResponse<Args>;
   }
 
@@ -544,7 +559,10 @@ export class OverworldMcpSessionStore {
       ok: true,
       session_id: sessionId,
       snapshot_hash: this.snapshotHash(session),
-      journey: session.journey(),
+      journey:
+        args.compact_context === true
+          ? compactJourneyPresentation(session.journey())
+          : session.journey(),
       ...(journeyDecision ? { journeyDecision } : {}),
       [key]: responseValue,
       ...this.viewField(args, session),

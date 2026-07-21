@@ -4,6 +4,7 @@ import {
   compactOverworldActionResult,
   compactOverworldAreaTravelResult,
   compactOverworldGoalPassageResult,
+  compactOverworldJourneyStoryChoiceResult,
   compactOverworldQuestCompletionResult,
   compactOverworldRoadEncounterResult,
   compactOverworldServiceResult,
@@ -23,6 +24,7 @@ import type {
   OverworldActionResult,
   OverworldAreaTravelResult,
   OverworldJourneyGoalPassageResult,
+  OverworldJourneyStoryChoiceResult,
   OverworldQuestCompletionResult,
   OverworldRoadEncounterResult,
   OverworldServiceResult,
@@ -36,6 +38,76 @@ function refs(count: number): { id: string; name: string; title: string }[] {
     title: `Dense Title ${index}`,
   }));
 }
+
+function storyChoiceResult(
+  consequence: string,
+  entryText = consequence,
+): OverworldJourneyStoryChoiceResult {
+  return {
+    storyChoiceId: "albany:relief_registration",
+    choiceId: "albany:road_warden",
+    consequence,
+    goal: {
+      version: 1,
+      id: "albany_local_lead",
+      text: "Find one local lead in Albany and see it through.",
+      status: "active",
+      completedAtDecision: null,
+    },
+    entry: {
+      id: "registration:albany:road_warden",
+      kind: "registration",
+      town: "Albany city",
+      title: "Registered as a Road-Warden Relief Hand",
+      text: entryText,
+      recordedAt: "Day 1, 08:00",
+      registrationBoundary: {
+        acceptedDecisions: 1,
+        decisionProofHash: "a".repeat(64),
+        townId: "albany_city",
+        areaId: "albany_civic_center",
+        minutes: 480,
+      },
+    },
+    journeyDecision: { countsTowardJourney: true, reason: "situation_changed" },
+  };
+}
+
+describe("compactOverworldJourneyStoryChoiceResult", () => {
+  it("keeps one authoritative opening consequence and redacts journal proof metadata", () => {
+    const consequence = "The Road-Warden commission is now permanent.";
+    const result = storyChoiceResult(consequence);
+    const before = structuredClone(result);
+
+    const compact = compactOverworldJourneyStoryChoiceResult(result);
+
+    expect(compact).toEqual({
+      storyChoiceId: result.storyChoiceId,
+      choiceId: result.choiceId,
+      consequence,
+      goal: result.goal,
+      entry: ["registration", "Registered as a Road-Warden Relief Hand", "Day 1, 08:00"],
+      journeyDecision: result.journeyDecision,
+    });
+    expect(JSON.stringify(compact).match(new RegExp(consequence, "g"))).toHaveLength(1);
+    expect(JSON.stringify(compact)).not.toContain("registrationBoundary");
+    expect(JSON.stringify(compact)).not.toContain("a".repeat(64));
+    expect(result).toEqual(before);
+  });
+
+  it("preserves distinct campaign journal prose without truncating either receipt", () => {
+    const consequence = `The selected consequence ${"remains complete ".repeat(40)}`;
+    const entryText = `A distinct next-goal journal entry ${"also remains complete ".repeat(40)}`;
+
+    const compact = compactOverworldJourneyStoryChoiceResult(
+      storyChoiceResult(consequence, entryText),
+    );
+
+    expect(compact.consequence).toBe(consequence);
+    expect(compact.entry_text).toBe(entryText);
+    expect(JSON.stringify(compact)).not.toMatch(/\.\.\.\(\+\d+ chars\)/);
+  });
+});
 
 describe("compactOverworldActionResult", () => {
   it("caps compact discovery buckets and reports truncated keys", () => {

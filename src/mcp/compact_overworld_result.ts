@@ -2,6 +2,7 @@ import type {
   OverworldActionResult,
   OverworldAreaTravelResult,
   OverworldJourneyGoalPassageResult,
+  OverworldJourneyStoryChoiceResult,
   OverworldQuestCompletionResult,
   OverworldRoadEncounterResult,
   OverworldRoadEncounterStrategy,
@@ -50,6 +51,16 @@ export type OverworldCompactActionResult = {
   sites?: OverworldCompactRef[];
   quests?: OverworldCompactQuestRef[];
   discovered_truncated?: OverworldCompactDiscoveryKey[];
+};
+
+export type OverworldCompactJourneyStoryChoiceResult = {
+  storyChoiceId: string;
+  choiceId: string;
+  consequence: string;
+  goal: OverworldJourneyStoryChoiceResult["goal"];
+  entry: OverworldCompactJournalEntry;
+  entry_text?: string;
+  journeyDecision: OverworldJourneyStoryChoiceResult["journeyDecision"];
 };
 
 export type OverworldCompactQuestCompletionResult = {
@@ -134,6 +145,27 @@ function compactOverworldJournalEntry(entry: {
   recordedAt: string;
 }): OverworldCompactJournalEntry {
   return compactOverworldJournalEntries([entry])[0]!;
+}
+
+/**
+ * Keep the selected consequence as the one authoritative receipt while reducing
+ * its journal record to the same tuple used by rolling compact context. Opening
+ * setup entries deliberately repeat the consequence byte-for-byte, so their prose
+ * appears once. Campaign follow-through can journal different prose; preserve that
+ * distinct text explicitly rather than silently dropping it.
+ */
+export function compactOverworldJourneyStoryChoiceResult(
+  result: OverworldJourneyStoryChoiceResult,
+): OverworldCompactJourneyStoryChoiceResult {
+  return {
+    storyChoiceId: result.storyChoiceId,
+    choiceId: result.choiceId,
+    consequence: result.consequence,
+    goal: result.goal,
+    entry: compactOverworldJournalEntry(result.entry),
+    ...(result.entry.text !== result.consequence ? { entry_text: result.entry.text } : {}),
+    journeyDecision: result.journeyDecision,
+  };
 }
 
 export function compactOverworldActionResult(

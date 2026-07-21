@@ -2,6 +2,10 @@ import { describe, expect, it } from "vitest";
 
 import { createToolApi } from "../../src/mcp/tools.js";
 import {
+  compactJourneyPresentation,
+  compactJourneyStoryChoicePrompt,
+} from "../../src/mcp/journey_projection.js";
+import {
   INITIAL_JOURNEY_GOAL,
   INITIAL_JOURNEY_GOAL_GUIDANCE,
   JOURNEY_CONTRACT_VERSION,
@@ -560,7 +564,114 @@ describe("MCP journey surface", () => {
     );
   });
 
-  it("deep-compares every Albany setup story-choice payload across compact and full MCP play", () => {
+  it("projects setup cards on compact restore, read, unchanged, rejection, and action responses", () => {
+    const source = new OverworldSession(WORLD);
+    const registrationContact = WORLD.opening_registration?.contact;
+    if (!registrationContact) throw new Error("expected Albany registration contact");
+    const poi = source.view().pois[0];
+    if (!poi) throw new Error("expected Albany Civic POI");
+    source.scoutPoi(poi.id);
+    source.talkToCharacter(registrationContact);
+    const authoredJourney = source.journey();
+    const compactJourney = compactJourneyPresentation(authoredJourney);
+    expect(compactJourney).not.toEqual(authoredJourney);
+
+    const a = api();
+    const compactRestore = a.restore_overworld_session({
+      snapshot: source.snapshot(),
+      compact_context: true,
+      compact_result: true,
+    });
+    const fullRestore = a.restore_overworld_session({
+      snapshot: source.snapshot(),
+      ...FULL_OVERWORLD,
+    });
+    expect(compactRestore.journey).toEqual(compactJourney);
+    expect(fullRestore.journey).toEqual(authoredJourney);
+
+    expect(
+      a.get_overworld_session_context({ session_id: compactRestore.session_id }).journey,
+    ).toEqual(compactJourney);
+    expect(
+      a.get_overworld_session({
+        session_id: compactRestore.session_id,
+        include_observation: true,
+      }).journey,
+    ).toEqual(authoredJourney);
+
+    const compactUnchanged = a.get_overworld_session_context({
+      session_id: compactRestore.session_id,
+      if_snapshot_hash: compactRestore.snapshot_hash,
+    });
+    expect(compactUnchanged).toMatchObject({ unchanged: true, journey: compactJourney });
+    const fullUnchanged = a.get_overworld_session({
+      session_id: compactRestore.session_id,
+      include_observation: true,
+      if_snapshot_hash: compactRestore.snapshot_hash,
+    });
+    expect(fullUnchanged).toMatchObject({ unchanged: true, journey: authoredJourney });
+
+    const compactRejected = a.choose_overworld_session_story({
+      session_id: compactRestore.session_id,
+      choice: "albany:ledger_advocate",
+      expected_snapshot_hash: "stale",
+      compact_context: true,
+      compact_result: true,
+    });
+    expect(compactRejected).toMatchObject({ ok: false, journey: compactJourney });
+    const fullRejected = a.choose_overworld_session_story({
+      session_id: fullRestore.session_id,
+      choice: "albany:ledger_advocate",
+      expected_snapshot_hash: "stale",
+      ...FULL_OVERWORLD,
+    });
+    expect(fullRejected).toMatchObject({ ok: false, journey: authoredJourney });
+
+    const compactAction = a.choose_overworld_session_story({
+      session_id: compactRestore.session_id,
+      choice: "albany:ledger_advocate",
+      compact_context: true,
+      compact_result: true,
+    });
+    const fullAction = a.choose_overworld_session_story({
+      session_id: fullRestore.session_id,
+      choice: "albany:ledger_advocate",
+      ...FULL_OVERWORLD,
+    });
+    expect(compactAction.ok).toBe(true);
+    expect(fullAction.ok).toBe(true);
+    if (compactAction.ok !== true || fullAction.ok !== true) {
+      throw new Error("expected accepted story choices");
+    }
+    expect(fullAction.result.entry.text).toBe(fullAction.result.consequence);
+    expect(compactAction.result).toMatchObject({
+      storyChoiceId: fullAction.result.storyChoiceId,
+      choiceId: fullAction.result.choiceId,
+      consequence: fullAction.result.consequence,
+      goal: fullAction.result.goal,
+      entry: [
+        fullAction.result.entry.kind,
+        fullAction.result.entry.title,
+        fullAction.result.entry.recordedAt,
+      ],
+      journeyDecision: fullAction.result.journeyDecision,
+    });
+    expect("entry_text" in compactAction.result).toBe(false);
+    const compactResultJson = JSON.stringify(compactAction.result);
+    const firstConsequence = compactResultJson.indexOf(fullAction.result.consequence);
+    expect(firstConsequence).toBeGreaterThanOrEqual(0);
+    expect(
+      compactResultJson.indexOf(
+        fullAction.result.consequence,
+        firstConsequence + fullAction.result.consequence.length,
+      ),
+    ).toBe(-1);
+    expect(compactAction.snapshot_hash).toBe(fullAction.snapshot_hash);
+    expect(compactAction.journey).toEqual(compactJourneyPresentation(fullAction.journey));
+    expect(compactAction.journey).not.toEqual(fullAction.journey);
+  });
+
+  it("preserves Albany setup semantics while de-duplicating only compact story cards", () => {
     const a = api();
     const compact = a.start_overworld();
     const full = a.start_overworld({ compact_context: false });
@@ -574,19 +685,35 @@ describe("MCP journey surface", () => {
       fullJourney: typeof full.journey,
       kind: string,
     ) => {
-      expect(compactJourney.storyChoice).toEqual(fullJourney.storyChoice);
-      expect(compactJourney.storyChoice).toMatchObject({ kind });
-      expect(compactJourney.storyChoice?.options).toEqual(
-        expect.arrayContaining([
-          expect.objectContaining({
-            consequence: expect.any(String),
-            summary: expect.objectContaining({
-              commitment: expect.any(String),
-              fieldTrigger: expect.any(String),
-            }),
-          }),
-        ]),
+      if (!fullJourney.storyChoice) throw new Error(`expected full ${kind} story choice`);
+      expect(compactJourney.storyChoice).toEqual(
+        compactJourneyStoryChoicePrompt(fullJourney.storyChoice),
       );
+      expect(compactJourney.storyChoice).not.toEqual(fullJourney.storyChoice);
+      expect(compactJourney.storyChoice).toMatchObject({ kind });
+      for (const compactOption of compactJourney.storyChoice!.options) {
+        const fullOption = fullJourney.storyChoice.options.find(
+          (option) => option.id === compactOption.id,
+        );
+        if (!fullOption?.summary) throw new Error(`expected summary for ${compactOption.id}`);
+        expect(compactOption).toMatchObject({
+          id: fullOption.id,
+          label: fullOption.label,
+          summary: fullOption.summary,
+          consequence: expect.any(String),
+        });
+        expect(compactOption.consequence.length).toBeLessThan(fullOption.consequence.length);
+        expect(fullOption.consequence).toContain(fullOption.summary.commitment);
+        expect(fullOption.consequence).toContain(fullOption.summary.fieldTrigger);
+        expect(compactOption.consequence.startsWith(`${fullOption.summary.commitment} `)).toBe(
+          false,
+        );
+        if (fullOption.summary.immediateCost) {
+          expect(compactOption.consequence).not.toContain(
+            `Actual cost: ${fullOption.summary.immediateCost}.`,
+          );
+        }
+      }
     };
     const reachRegistration = (sessionId: string, compactResult: boolean) => {
       const observation = a.get_overworld_session({
@@ -658,7 +785,22 @@ describe("MCP journey surface", () => {
       story_choice_id: PREPARATION_STORY_ID,
       ...FULL_OVERWORLD,
     }).story;
-    expect(compactPreparationStory).toEqual(fullPreparationStory);
+    const compactContextFullStory = a.inspect_overworld_session_story({
+      session_id: compact.session_id,
+      story_choice_id: PREPARATION_STORY_ID,
+      compact_context: true,
+      compact_result: false,
+    }).story;
+    const fullContextCompactStory = a.inspect_overworld_session_story({
+      session_id: full.session_id,
+      story_choice_id: PREPARATION_STORY_ID,
+      compact_context: false,
+      compact_result: true,
+    }).story;
+    expect(compactPreparationStory).toEqual(compactJourneyStoryChoicePrompt(fullPreparationStory));
+    expect(compactPreparationStory).not.toEqual(fullPreparationStory);
+    expect(compactContextFullStory).toEqual(fullPreparationStory);
+    expect(fullContextCompactStory).toEqual(compactPreparationStory);
     expect(compactPreparationStory).toMatchObject({ kind: "preparation" });
 
     a.choose_overworld_session_story({
@@ -685,7 +827,8 @@ describe("MCP journey surface", () => {
       story_choice_id: RELIEF_ALLOCATION_STORY_ID,
       ...FULL_OVERWORLD,
     }).story;
-    expect(compactAllocation).toEqual(fullAllocation);
+    expect(compactAllocation).toEqual(compactJourneyStoryChoicePrompt(fullAllocation));
+    expect(compactAllocation).not.toEqual(fullAllocation);
     expect(compactAllocation).toMatchObject({ kind: "relief_allocation" });
   });
 
