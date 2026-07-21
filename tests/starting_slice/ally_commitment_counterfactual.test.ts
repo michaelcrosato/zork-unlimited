@@ -477,9 +477,9 @@ describe("SS-F04 — Albany ally commitment counterfactual", () => {
       session_id: rpgSessionId,
       compact_actions: false,
     }).actions;
-    expect(
-      bracedActions.find((action) => action.id === "turn_paling_rail")?.command,
-    ).toMatch(/turn.*braced scent-pen/i);
+    expect(bracedActions.find((action) => action.id === "turn_paling_rail")?.command).toMatch(
+      /turn.*braced scent-pen/i,
+    );
     expect(
       browser.view().choices.find((choice) => choice.id === "turn_paling_rail")?.label,
     ).toMatch(/turn.*braced scent-pen/i);

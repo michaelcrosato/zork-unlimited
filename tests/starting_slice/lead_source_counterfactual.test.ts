@@ -608,8 +608,7 @@ describe("SS-F03 — Albany lead-source counterfactual", () => {
       /Hayden's report marks a frost-jammed brace north.*leave the rail unbound.*bind.*commit away/is,
     );
     expect(
-      forkObservation.available_actions.find((action) => action.id === "bind_paling_rail")
-        ?.command,
+      forkObservation.available_actions.find((action) => action.id === "bind_paling_rail")?.command,
     ).toMatch(/bind.*rail/i);
     boundHayden = act(boundHayden, "bind_paling_rail");
     expect(boundHayden.flags.split_rail_guard_made).toBe(true);
