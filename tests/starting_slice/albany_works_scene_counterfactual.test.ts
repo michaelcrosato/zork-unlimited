@@ -108,6 +108,7 @@ function returnedToWorks(
   world: OverworldManifest = WORLD,
   preparationId = "albany:prep_works_fortification",
   expectWorksVisible = true,
+  discoverWorks = true,
 ): OverworldSession {
   const { session, wolf } = preparedForWolf(world, preparationId);
 
@@ -121,8 +122,10 @@ function returnedToWorks(
   session.chooseJourneyStory("send_wardens_north");
 
   moveToArea(session, WORKS_AREA_ID, world);
-  session.scoutPoi(WORKS_POI_ID);
-  session.talkToCharacter(WORKS_CONTACT_ID);
+  if (discoverWorks) {
+    session.scoutPoi(WORKS_POI_ID);
+    session.talkToCharacter(WORKS_CONTACT_ID);
+  }
   if (expectWorksVisible) expect(session.view().jobs.map((job) => job.id)).toContain(JOB_ID);
   return session;
 }
@@ -189,19 +192,22 @@ describe("Depth Contract #11 — authored Albany Works scene", () => {
   it("keeps a real full-session authored choice legal beyond the compact twelve-job window", () => {
     const denseWorld = structuredClone(WORLD);
     const worksIndex = denseWorld.local_jobs.findIndex((job) => job.id === JOB_ID);
-    const generic = denseWorld.local_jobs.find(
-      (job) => job.home === "albany_city" && job.authored_scene === undefined,
-    );
+    const generic = denseWorld.local_jobs.find((job) => job.id === "albany_city__greenway__job");
     const worksPoi = denseWorld.points_of_interest.find((poi) => poi.id === WORKS_POI_ID);
-    if (worksIndex < 0 || !generic || !worksPoi) {
+    if (worksIndex < 0 || !generic || generic.authored_scene !== undefined || !worksPoi) {
       throw new Error("Expected Works and generic Albany fixtures.");
     }
-    const denseJobs = Array.from({ length: 12 }, (_, index) => ({
+    // Market is now a fourth post-Wolf authored scene hidden until its policy
+    // event resolves, so retain twelve visible generic predecessors ahead of
+    // Works in this compact-cap regression fixture.
+    const denseJobs = Array.from({ length: 13 }, (_, index) => ({
       ...structuredClone(generic),
       id: `albany_city__industrial__dense_job_${index}`,
       home: "albany_city",
       area: WORKS_AREA_ID,
       title: `Dense predecessor job ${index}`,
+      minutes: 20 + index,
+      difficulty: 1,
     }));
     denseWorld.local_jobs.splice(worksIndex, 0, ...denseJobs);
     const discoveryPois = Array.from({ length: 12 }, (_, index) => ({
@@ -211,12 +217,13 @@ describe("Depth Contract #11 — authored Albany Works scene", () => {
     }));
     denseWorld.points_of_interest.push(...discoveryPois);
 
-    const session = returnedToWorks(denseWorld, "albany:prep_works_fortification", false);
+    const session = returnedToWorks(denseWorld, "albany:prep_works_fortification", false, false);
     for (const poi of discoveryPois) {
-      if (session.view().jobs.some((job) => job.id === JOB_ID)) break;
       if (session.journey().status === "awaiting_choice") session.chooseJourney("continue");
       session.scoutPoi(poi.id);
     }
+    session.scoutPoi(WORKS_POI_ID);
+    session.talkToCharacter(WORKS_CONTACT_ID);
     expect(session.view().jobs.findIndex((job) => job.id === JOB_ID)).toBeGreaterThanOrEqual(12);
     expect(session.view().jobChoices).toEqual([
       [JOB_ID, PROTECT_SHIFT],
@@ -402,9 +409,9 @@ describe("Depth Contract #11 — authored Albany Works scene", () => {
       expect(migratedSnapshot.minutes).toBe(predecessorSnapshot.minutes);
       expect(migratedSnapshot.regionRenown).toEqual(predecessorSnapshot.regionRenown);
       // The current world also contains the unavailable Winter Return Docket,
-      // Campus Archive Query, and Cade Return Packet. Their truthful hidden
+      // Campus Archive Query, Cade Return Packet, and Market crates scene. Their truthful hidden
       // count is independent of preserving this Works completion.
-      expect(migrated.view().hiddenJobCount).toBe(legacyHiddenJobCount + 3);
+      expect(migrated.view().hiddenJobCount).toBe(legacyHiddenJobCount + 4);
       expect(OverworldSession.restore(WORLD, migratedSnapshot).snapshot()).toEqual(
         migratedSnapshot,
       );

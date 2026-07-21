@@ -1,4 +1,7 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, onTestFinished } from "vitest";
+import { cpSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { createToolApi } from "../../src/mcp/tools.js";
 import { createInitialCampaignCharacterState } from "../../src/world/campaign_character_state.js";
 import {
@@ -17,6 +20,29 @@ const FULL_OVERWORLD_RESPONSE = {
   compact_context: false,
   compact_result: false,
 } as const;
+
+function syntheticLegacyGenericMarketJob(): {
+  a: ReturnType<typeof api>;
+  world: typeof overworld;
+} {
+  const root = mkdtempSync(join(tmpdir(), "snapshot-generic-jobs-"));
+  onTestFinished(() => rmSync(root, { recursive: true, force: true }));
+  const world = structuredClone(overworld);
+  const marketJob = world.local_jobs.find(
+    (candidate) => candidate.id === "albany_city__market__job",
+  );
+  if (!marketJob) throw new Error("expected the synthetic Market job fixture");
+  delete marketJob.authored_scene;
+  mkdirSync(join(root, "content", "world"), { recursive: true });
+  writeFileSync(
+    join(root, "content", "world", "new_york_overworld.json"),
+    `${JSON.stringify(world, null, 2)}\n`,
+  );
+  cpSync(join(process.cwd(), "content", "rpg", "quests"), join(root, "content", "rpg", "quests"), {
+    recursive: true,
+  });
+  return { a: createToolApi({ root }), world };
+}
 
 type Snapshot = ReturnType<typeof exportedSnapshotAfterTwoRoads>["snapshot"];
 type JournalEntry = Snapshot["journalEntries"][number];
@@ -443,7 +469,7 @@ const localActionJournalCases: readonly LocalActionJournalCase[] = [
     label: "event investigation",
     kind: "event",
     prefix: "investigate",
-    sources: overworld.local_events,
+    sources: overworld.local_events.filter((event) => !event.authored_scene),
     chronologyPattern: /journal event.*before visiting town/,
     unvisitedPattern: /journal event.*unvisited town/,
     undiscoveredPattern: /journal event.*undiscovered area/,
@@ -1231,7 +1257,7 @@ describe("overworld snapshot restore integrity", () => {
   });
 
   it("rejects local job journal entries recorded before job discovery", () => {
-    const a = api();
+    const { a } = syntheticLegacyGenericMarketJob();
     const started = a.start_overworld({ compact_context: false });
     const civicPoi = started.observation.pois[0];
     if (!civicPoi) throw new Error("expected an initial point of interest");
@@ -1288,7 +1314,7 @@ describe("overworld snapshot restore integrity", () => {
   });
 
   it("rejects local job journal entries recorded before that job's reveal order", () => {
-    const a = api();
+    const { a, world } = syntheticLegacyGenericMarketJob();
     const started = a.start_overworld({ compact_context: false });
     const poi = started.observation.pois[0];
     const contact = started.observation.characters[0];
@@ -1320,7 +1346,7 @@ describe("overworld snapshot restore integrity", () => {
         session_id: started.session_id,
         choice: "albany:source_rowan_civic_docket",
       });
-      const preparationArea = overworld.opening_preparation?.area;
+      const preparationArea = world.opening_preparation?.area;
       if (!preparationArea) throw new Error("expected Albany opening preparation");
       const preparationRoute = sourced.observation.areaExits.find(
         (route) => route.destination.id === preparationArea,
@@ -1712,6 +1738,7 @@ describe("overworld snapshot restore integrity", () => {
     const { a, snapshot } = exportedSnapshotAfterTwoRoads();
     const event = overworld.local_events.find(
       (candidate) =>
+        !candidate.authored_scene &&
         snapshot.visitedIds.includes(candidate.home) &&
         !snapshot.discoveredAreaIds.includes(candidate.area),
     );

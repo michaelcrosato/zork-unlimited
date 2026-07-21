@@ -31953,10 +31953,42 @@
       "id": "albany_city__market__event",
       "home": "albany_city",
       "area": "albany_city__market",
-      "title": "Albany Market Streets: supply price spike",
+      "title": "Jamie Tanner's Winter Price Policy",
       "pressure": "opportunity",
       "intensity": 3,
-      "summary": "Albany Market Streets is under opportunity pressure around shortages, disputed deliveries, and late counters. Resolving it requires scouting this area, talking to its contact, and investigating on site."
+      "summary": "After The Wolf-Winter, Jamie Tanner has one evening to decide how Albany's winter crates are priced: hold named household and kitchen prices, or publish an open-bid ceiling and visible buyer board. The permanent policy determines which disputed-crate settlement can later be defended.",
+      "authored_scene": {
+        "version": 1,
+        "id": "albany:winter-price-policy",
+        "prompt": "Jamie has counted the returned relief stock and the late carts. Albany can protect named household and kitchen prices, whose later crate settlements take longer but earn stronger standing, or publish a ceiling and every buyer's place in line, whose settlements move faster for less standing. Jamie will not reopen the policy once the board goes up.",
+        "required_poi_id": "albany_city__market__poi",
+        "required_contact_id": "albany_city__market__contact",
+        "requires_completed_quests": [
+          "wolf_winter"
+        ],
+        "options": [
+          {
+            "id": "hold_household_kitchen_prices",
+            "title": "Hold named household and kitchen prices",
+            "preview": "Spend 35 minutes posting the named household and kitchen rates before the late carts unload. Earn 2 Capital / Mohawk renown.",
+            "consequence": "Jamie fixes the named household and kitchen prices for this relief stock. The later disputed crates can be released through the named kitchen ledger in 30 minutes for 3 standing or audited through the full household chain in 75 minutes for 5 standing.",
+            "terms": {
+              "minutes": 35,
+              "renown": 2
+            }
+          },
+          {
+            "id": "publish_open_bid_ceiling",
+            "title": "Publish an open-bid ceiling and visible buyer board",
+            "preview": "Spend 35 minutes posting the ceiling, bid order, and named buyers before the late carts unload. Earn 2 Capital / Mohawk renown.",
+            "consequence": "Jamie posts the ceiling and a visible buyer board for this relief stock. The later disputed crates can be released from the board in 20 minutes for 1 standing or audited through the public bid chain in 60 minutes for 4 standing.",
+            "terms": {
+              "minutes": 35,
+              "renown": 2
+            }
+          }
+        ]
+      }
     },
     {
       "id": "albany_city__transport_hub__event",
@@ -51666,13 +51698,92 @@
       "home": "albany_city",
       "area": "albany_city__market",
       "kind": "supply_run",
-      "title": "Albany Market Streets: Market Shortfall",
-      "summary": "Albany Market Streets has trade gossip, missing crates, and practical bargaining. The job is small enough to finish locally but specific enough to make Albany City feel worked-in rather than decorative.",
-      "objective": "Spend time in Albany Market Streets to move supplies between stalls, kitchens, and a buyer who cannot wait for a formal posting.",
-      "reward": "Earn 3 Capital / Mohawk renown and a concrete lead about Albany City.",
+      "title": "Jamie's Disputed Crates",
+      "summary": "The late relief crates arrived under the exact price policy Jamie posted after The Wolf-Winter. Two claimants now want the same stock; a quick operational release keeps kitchens moving, while a slower audited chain makes the policy answerable in public.",
+      "objective": "Settle the disputed crates through the one permanent Market policy actually posted, choosing the speed of release or the standing of an auditable chain.",
+      "reward": "Earn 1-5 Capital / Mohawk renown according to the bound policy and settlement: household-price work takes longer but earns more standing, while open-bid work releases the crates faster.",
       "minutes": 65,
       "difficulty": 3,
-      "visibility": "local_job_board"
+      "visibility": "local_job_board",
+      "authored_scene": {
+        "version": 1,
+        "id": "albany:disputed-winter-crates",
+        "prompt": "Jamie puts the two claims beside the policy you already posted. There is no neutral settlement: the household-price line takes 30 or 75 minutes for 3 or 5 standing, while the open-bid line takes 20 or 60 minutes for 1 or 4 standing. Only the two settlements authorized by your policy are legal, and choosing one retires the other claim path.",
+        "required_poi_id": "albany_city__market__poi",
+        "required_contact_id": "albany_city__market__contact",
+        "requires_completed_quests": [
+          "wolf_winter"
+        ],
+        "requires_resolved_events": [
+          "albany_city__market__event"
+        ],
+        "options": [
+          {
+            "id": "release_price_hold_operational",
+            "title": "Release the price-hold crates through Jamie's kitchen ledger",
+            "preview": "Spend 30 minutes matching the named kitchen ledger to the two carts and release the crates before service. Earn 3 Capital / Mohawk renown.",
+            "consequence": "Jamie releases the crates through the protected kitchen ledger. Service resumes quickly, but the household rate chain remains a narrow operational record rather than an audited public account.",
+            "terms": {
+              "minutes": 30,
+              "renown": 3
+            },
+            "requires_event_options": [
+              {
+                "event_id": "albany_city__market__event",
+                "option_id": "hold_household_kitchen_prices"
+              }
+            ]
+          },
+          {
+            "id": "audit_price_hold_household_chain",
+            "title": "Audit the price-hold household chain in public",
+            "preview": "Spend 75 minutes auditing each named household and kitchen claim against the held-rate ledger. Earn 5 Capital / Mohawk renown.",
+            "consequence": "Jamie publishes the household chain behind the held prices, resolves the disputed crates under the policy Albany actually chose, and leaves the relief account strong enough for later Civic standing review.",
+            "terms": {
+              "minutes": 75,
+              "renown": 5
+            },
+            "requires_event_options": [
+              {
+                "event_id": "albany_city__market__event",
+                "option_id": "hold_household_kitchen_prices"
+              }
+            ]
+          },
+          {
+            "id": "release_open_bid_operational",
+            "title": "Release the open-bid crates from the visible buyer board",
+            "preview": "Spend 20 minutes matching the ceiling and board order to the two carts and release the crates before service. Earn 1 Capital / Mohawk renown.",
+            "consequence": "Jamie releases the crates in the posted buyer order under the public ceiling. Service resumes quickly, but the board remains an operational posting rather than an audited public chain.",
+            "terms": {
+              "minutes": 20,
+              "renown": 1
+            },
+            "requires_event_options": [
+              {
+                "event_id": "albany_city__market__event",
+                "option_id": "publish_open_bid_ceiling"
+              }
+            ]
+          },
+          {
+            "id": "audit_open_bid_public_chain",
+            "title": "Audit the open-bid public chain",
+            "preview": "Spend 60 minutes auditing the ceiling, board order, and each buyer claim before releasing the crates. Earn 4 Capital / Mohawk renown.",
+            "consequence": "Jamie audits the visible buyer chain behind the ceiling, resolves the disputed crates under the policy Albany actually chose, and leaves the relief account strong enough for later Civic standing review.",
+            "terms": {
+              "minutes": 60,
+              "renown": 4
+            },
+            "requires_event_options": [
+              {
+                "event_id": "albany_city__market__event",
+                "option_id": "publish_open_bid_ceiling"
+              }
+            ]
+          }
+        ]
+      }
     },
     {
       "id": "albany_city__transport_hub__job",

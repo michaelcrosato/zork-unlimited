@@ -55,7 +55,10 @@ const TEST_CAMPAIGN_EFFECTS = [
 type FixtureOverworld = Record<string, unknown> & {
   characters: Array<{ variants?: unknown }>;
   local_events: Array<{
-    authored_scene?: { forbids_completed_quests?: string[] };
+    authored_scene?: {
+      forbids_completed_quests?: string[];
+      requires_completed_quests?: string[];
+    };
   }>;
   local_jobs: Array<{ authored_scene?: unknown }>;
   opening_ally?: unknown;
@@ -77,7 +80,10 @@ function fixtureOverworldWithoutQuestConditionedFeatures(): FixtureOverworld {
   // Keep the topology, but remove authored event overlays that name a quest no
   // longer present in that catalog. A generic event remains a valid fixture.
   for (const event of world.local_events) {
-    if ((event.authored_scene?.forbids_completed_quests?.length ?? 0) > 0) {
+    if (
+      (event.authored_scene?.forbids_completed_quests?.length ?? 0) > 0 ||
+      (event.authored_scene?.requires_completed_quests?.length ?? 0) > 0
+    ) {
       delete event.authored_scene;
     }
   }

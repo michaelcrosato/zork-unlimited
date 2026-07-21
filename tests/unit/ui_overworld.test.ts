@@ -1366,7 +1366,13 @@ describe("OverworldSession", () => {
   });
 
   it("remembers unfinished jobs discovered outside the current local area", () => {
-    const session = new OverworldSession(world);
+    const genericWorld = structuredClone(world);
+    const rememberedJob = genericWorld.local_jobs.find(
+      (job) => job.id === "albany_city__market__job",
+    );
+    if (!rememberedJob) throw new Error("Expected Albany Market's local-job fixture.");
+    delete rememberedJob.authored_scene;
+    const session = new OverworldSession(genericWorld);
     const start = session.view();
     const currentAreaId = start.currentArea!.id;
 
@@ -1376,49 +1382,44 @@ describe("OverworldSession", () => {
     const marketPoi = session.view().pois.find((poi) => poi.id === "albany_city__market__poi");
     if (!marketPoi) throw new Error("Expected Albany Market's visible POI.");
     session.scoutPoi(marketPoi.id);
-    const rememberedJob = world.local_jobs.find(
-      (job) => job.id === "albany_city__market__job" && job.area !== currentAreaId,
-    );
-    expect(rememberedJob).toBeDefined();
-    expect(session.view().discoveredJobIds).toContain(rememberedJob!.id);
+    expect(rememberedJob.area).not.toBe(currentAreaId);
+    expect(session.view().discoveredJobIds).toContain(rememberedJob.id);
     moveToArea(session, currentAreaId);
 
     const afterDiscovery = session.view();
     expect(afterDiscovery.currentArea?.id).toBe(currentAreaId);
-    expect(afterDiscovery.jobs.map((job) => job.id)).not.toContain(rememberedJob!.id);
-    expect(afterDiscovery.rememberedJobs.map((job) => job.id)).toContain(rememberedJob!.id);
-    expect(afterDiscovery.rememberedJobs.find((job) => job.id === rememberedJob!.id)).toMatchObject(
-      {
-        id: rememberedJob!.id,
-        area: rememberedJob!.area,
-      },
-    );
-    expect(() => session.workLocalJob(rememberedJob!.id)).toThrow(/Move to that local area/i);
+    expect(afterDiscovery.jobs.map((job) => job.id)).not.toContain(rememberedJob.id);
+    expect(afterDiscovery.rememberedJobs.map((job) => job.id)).toContain(rememberedJob.id);
+    expect(afterDiscovery.rememberedJobs.find((job) => job.id === rememberedJob.id)).toMatchObject({
+      id: rememberedJob.id,
+      area: rememberedJob.area,
+    });
+    expect(() => session.workLocalJob(rememberedJob.id)).toThrow(/Move to that local area/i);
 
     const compactAfterDiscovery = session.compactView();
-    expect(compactAfterDiscovery.jobs?.map(([id]) => id) ?? []).not.toContain(rememberedJob!.id);
+    expect(compactAfterDiscovery.jobs?.map(([id]) => id) ?? []).not.toContain(rememberedJob.id);
     expect(compactAfterDiscovery.remembered_jobs).toContainEqual([
-      rememberedJob!.id,
-      rememberedJob!.title,
-      rememberedJob!.area,
+      rememberedJob.id,
+      rememberedJob.title,
+      rememberedJob.area,
     ]);
 
     const routeToRememberedJob = afterDiscovery.areaExits.find(
-      (exit) => exit.destination.id === rememberedJob!.area,
+      (exit) => exit.destination.id === rememberedJob.area,
     );
     expect(routeToRememberedJob).toBeDefined();
     session.moveArea(routeToRememberedJob!.id);
 
     const inJobArea = session.view();
-    expect(inJobArea.currentArea?.id).toBe(rememberedJob!.area);
-    expect(inJobArea.jobs.map((job) => job.id)).toContain(rememberedJob!.id);
-    expect(inJobArea.rememberedJobs.map((job) => job.id)).not.toContain(rememberedJob!.id);
+    expect(inJobArea.currentArea?.id).toBe(rememberedJob.area);
+    expect(inJobArea.jobs.map((job) => job.id)).toContain(rememberedJob.id);
+    expect(inJobArea.rememberedJobs.map((job) => job.id)).not.toContain(rememberedJob.id);
 
-    session.workLocalJob(rememberedJob!.id);
+    session.workLocalJob(rememberedJob.id);
     const afterCompletion = session.view();
-    expect(afterCompletion.completedJobIds).toContain(rememberedJob!.id);
-    expect(afterCompletion.jobs.map((job) => job.id)).not.toContain(rememberedJob!.id);
-    expect(afterCompletion.rememberedJobs.map((job) => job.id)).not.toContain(rememberedJob!.id);
+    expect(afterCompletion.completedJobIds).toContain(rememberedJob.id);
+    expect(afterCompletion.jobs.map((job) => job.id)).not.toContain(rememberedJob.id);
+    expect(afterCompletion.rememberedJobs.map((job) => job.id)).not.toContain(rememberedJob.id);
   });
 
   it("advances location, clock, supplies, and fatigue by the selected road travel time", () => {
