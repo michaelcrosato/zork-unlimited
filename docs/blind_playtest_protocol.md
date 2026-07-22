@@ -191,10 +191,30 @@ empty, injected, reformatted, duplicate-key, truncated, mismatched, duplicate,
 orphan, or nonadjacent output rejects before verification or publication. The
 private rollout also has one finite task/input/context topology: exact prelude
 roles, one byte-bound text-only prompt with no auxiliary inputs, and only exact
-compaction replays plus passive assistant/reasoning shapes. Feedback compilation
-and ledger refresh rerun the full provider authority validator for current
-evidence, binding report, envelope, run evidence, provider session/model, copied
-rollout, and capture hash. Failure text exposes no hidden response.
+compaction replays plus passive assistant/reasoning shapes. Sol and Terra must
+serialize the v2 `explicitRequestOnly` profile with three ordered developer
+messages (the first containing exactly the permission and skills blocks) before
+the environment message. Luna alone may serialize the native v1 profile: model
+`gpt-5.6-luna`, no `multi_agent_mode`, one developer message containing those
+same two ordered blocks, then the environment message. Spark retains its separate
+native `multi_agent_version: "disabled"` profile with the same one-developer
+layout and no `multi_agent_mode`. All profiles then require the exact
+`world_state`, `turn_context`, player-prompt, and `user_message` order. The wrapper
+may omit its argument literal only as `start_overworld()` on the first
+gameplay call, where the recorded invocation arguments must still be exactly
+`{}`; every other call and position requires one literal object argument.
+Every native profile also requires the exact observed `collaboration_mode`
+object: mode `default`, no missing or extra keys, inner model equal to both the
+outer and requested model, `reasoning_effort: "xhigh"` equal to the outer effort,
+and null developer instructions. Luna and Spark gain no synthetic
+`multi_agent_mode` field from this identity binding.
+The Luna compatibility does not rehabilitate retained seed `4398`: its capture
+still contains unsuccessful gameplay results and its report receipt does not
+reproduce authoritative evidence, so it remains unpublished diagnostic data.
+Feedback compilation and ledger refresh rerun the full provider authority
+validator for current evidence, binding report, envelope, run evidence, provider
+session/model, copied rollout, and capture hash. Failure text exposes no hidden
+response.
 A Codex report outside that single receipt-only case remains rejected and must
 use a fresh seed. For a fleet member, the runner also
 captures exactly one non-linked rollout JSONL from that sterile home and verifies
@@ -243,7 +263,11 @@ labeled `{ id, command }` options in pure mode; `compact_actions = true` remains
 an explicit id-only transport option. Verbose pure observations likewise
 default to labeled `available_actions`. These projections expose only the same
 current commands a human sees; they neither select an action nor reveal
-authoring structure.
+authoring structure. `list_legal_actions` is a child-quest tool: the player calls
+it only while an embedded quest is active, with the exact current
+`rpg_session_id`, never the parent `overworld_session_id`. Ordinary overworld
+legal choices already appear in the current overworld response and use their
+corresponding overworld tools.
 
 Pure mode repeats the parent `overworld_session_id` on every successful player
 response. While an embedded quest is unresolved, it also repeats the current
@@ -251,8 +275,17 @@ child `rpg_session_id`; the two handles are never interchangeable. Missing,
 mistyped, stale, or wrong-domain handles receive a structured error containing
 the authoritative recoverable handle(s) and the expected field. Starting again
 cannot mint a second fresh run, and parent gameplay mutations cannot orphan an
-active child. Pure overworld reads always remain on the compact player surface;
+active child. The player copies each exact current handle from the latest
+response and never reconstructs, shortens, or hand-types a handle or its suffix.
+Pure overworld reads always remain on the compact player surface;
 verbose observation, graph, id-catalog, and route-expansion knobs are absent.
+
+A non-null `journey.goalPassage` exposes the optional player movement action
+`id: follow_current_goal`. If the player chooses it, the transport binding is
+exactly `follow_overworld_session_goal` with the parent `session_id` and latest
+`snapshot_hash` passed as `expected_snapshot_hash`; the player never invents, infers, or substitutes a
+differently named goal tool. This binding adds no route advice: the game owns
+the passage and stops it at the objective, a road choice, or a resource boundary.
 
 A non-death terminal quest step folds its result back automatically and stops
 echoing the child. A death ending does not complete that quest or resurrect the

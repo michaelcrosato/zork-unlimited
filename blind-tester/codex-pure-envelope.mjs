@@ -29,6 +29,14 @@ const ALLOWED_ROLLOUT_METADATA_ROWS = new Set([
   "turn_context",
   "compacted",
 ]);
+const LUNA_V1_MODEL = "gpt-5.6-luna";
+const SPARK_DISABLED_MODEL = "gpt-5.3-codex-spark";
+const V2_MULTI_AGENT_MODELS = new Set(["gpt-5.6-sol", "gpt-5.6-terra"]);
+const SUPPORTED_CODEX_MODELS = new Set([
+  ...V2_MULTI_AGENT_MODELS,
+  LUNA_V1_MODEL,
+  SPARK_DISABLED_MODEL,
+]);
 const MAX_ITEM_ID_LENGTH = 128;
 // Keep this transport audit synchronized with the server's authoritative
 // PURE_PLAYER_TOOLS set. A regression imports both sets and compares them.
@@ -326,7 +334,11 @@ function exactResultEmitter(statement, variableName) {
   return exactContentLoop(statement, variableName) ? "content_blocks" : null;
 }
 
-function inspectExactGameplayWrapper(input, invocation) {
+function inspectExactGameplayWrapper(
+  input,
+  invocation,
+  { allowArgumentlessFreshStart = false } = {},
+) {
   const source = ts.createSourceFile(
     "blind-wrapper.js",
     input,
@@ -360,13 +372,17 @@ function inspectExactGameplayWrapper(input, invocation) {
     call.expression.questionDotToken !== undefined ||
     !ts.isIdentifier(call.expression.expression) ||
     call.expression.expression.text !== "tools" ||
-    !call.expression.name.text.startsWith("mcp__adventureforge__") ||
-    call.arguments.length !== 1
+    !call.expression.name.text.startsWith("mcp__adventureforge__")
   ) {
     return null;
   }
   const tool = call.expression.name.text.slice("mcp__adventureforge__".length);
-  const args = jsonLiteralValue(call.arguments[0]);
+  const args =
+    call.arguments.length === 1
+      ? jsonLiteralValue(call.arguments[0])
+      : call.arguments.length === 0 && allowArgumentlessFreshStart && tool === "start_overworld"
+        ? { ok: true, value: {} }
+        : { ok: false };
   if (
     !CODEX_PURE_PLAYER_TOOLS.has(tool) ||
     !args.ok ||
@@ -459,6 +475,112 @@ function validPrivateInputMessage(payload, role, turnId) {
   );
 }
 
+function exactTaggedInputBlock(block, tag) {
+  return (
+    isRecord(block) &&
+    hasOnlyKeys(block, ["type", "text"]) &&
+    block.type === "input_text" &&
+    typeof block.text === "string" &&
+    block.text.startsWith(`<${tag}>`) &&
+    block.text.endsWith(`</${tag}>`)
+  );
+}
+
+function validPermissionsAndSkillsMessage(payload, turnId) {
+  return (
+    validPrivateInputMessage(payload, "developer", turnId) &&
+    payload.content.length === 2 &&
+    exactTaggedInputBlock(payload.content[0], "permissions instructions") &&
+    exactTaggedInputBlock(payload.content[1], "skills_instructions")
+  );
+}
+
+function validSingleInputMessage(payload, role, turnId, predicate) {
+  return (
+    validPrivateInputMessage(payload, role, turnId) &&
+    payload.content.length === 1 &&
+    predicate(payload.content[0].text)
+  );
+}
+
+function validV2TeamMessage(payload, turnId) {
+  return validSingleInputMessage(payload, "developer", turnId, (text) =>
+    text.startsWith(
+      "You are `/root`, the primary agent in a team of agents collaborating to fulfill the user's goals.",
+    ),
+  );
+}
+
+function validV2MultiAgentModeMessage(payload, turnId) {
+  return validSingleInputMessage(
+    payload,
+    "developer",
+    turnId,
+    (text) => text.startsWith("<multi_agent_mode>") && text.endsWith("</multi_agent_mode>"),
+  );
+}
+
+function validEnvironmentMessage(payload, turnId) {
+  return validSingleInputMessage(
+    payload,
+    "user",
+    turnId,
+    (text) => text.startsWith("<environment_context>") && text.endsWith("</environment_context>"),
+  );
+}
+
+function validNativeCollaborationMode(turnContext, expectedModel) {
+  if (
+    turnContext.effort !== "xhigh" ||
+    !isRecord(turnContext.collaboration_mode) ||
+    !hasOnlyKeys(turnContext.collaboration_mode, ["mode", "settings"]) ||
+    turnContext.collaboration_mode.mode !== "default" ||
+    !isRecord(turnContext.collaboration_mode.settings) ||
+    !hasOnlyKeys(turnContext.collaboration_mode.settings, [
+      "model",
+      "reasoning_effort",
+      "developer_instructions",
+    ])
+  ) {
+    return false;
+  }
+  const settings = turnContext.collaboration_mode.settings;
+  return (
+    settings.model === turnContext.model &&
+    (expectedModel === undefined || settings.model === expectedModel) &&
+    settings.reasoning_effort === turnContext.effort &&
+    settings.developer_instructions === null
+  );
+}
+
+function codexCaptureProfile(turnContext, expectedModel) {
+  if (!isRecord(turnContext) || typeof turnContext.model !== "string") return null;
+  if (expectedModel !== undefined && turnContext.model !== expectedModel) return null;
+  if (!validNativeCollaborationMode(turnContext, expectedModel)) return null;
+  if (
+    turnContext.model === LUNA_V1_MODEL &&
+    turnContext.multi_agent_version === "v1" &&
+    !Object.hasOwn(turnContext, "multi_agent_mode")
+  ) {
+    return { kind: "luna_v1", preludeCount: 2 };
+  }
+  if (
+    turnContext.model === SPARK_DISABLED_MODEL &&
+    turnContext.multi_agent_version === "disabled" &&
+    !Object.hasOwn(turnContext, "multi_agent_mode")
+  ) {
+    return { kind: "spark_disabled", preludeCount: 2 };
+  }
+  if (
+    V2_MULTI_AGENT_MODELS.has(turnContext.model) &&
+    turnContext.multi_agent_version === "v2" &&
+    turnContext.multi_agent_mode === "explicitRequestOnly"
+  ) {
+    return { kind: "multi_agent_v2", preludeCount: 4 };
+  }
+  return null;
+}
+
 function validPrivateAssistantMessage(payload, turnId) {
   return (
     isRecord(payload) &&
@@ -545,7 +667,7 @@ function validPrivateWrapperOutputPayload(payload, turnId) {
   );
 }
 
-function inspectCodexRolloutStructure(rows) {
+function inspectCodexRolloutStructure(rows, expectedModel) {
   if (!Array.isArray(rows) || rows.length === 0) return rolloutReject("rollout is empty");
   const indices = {
     sessions: [],
@@ -620,20 +742,30 @@ function inspectCodexRolloutStructure(rows) {
   const promptContent = promptMessage?.content;
   const promptBlock = Array.isArray(promptContent) ? promptContent[0] : null;
   const turnId = rows[initialTurnContext]?.payload?.turn_id;
-  const preludeIndices = [
-    indices.taskStarts[0] + 1,
-    indices.taskStarts[0] + 2,
-    indices.taskStarts[0] + 3,
-    indices.taskStarts[0] + 4,
-  ];
+  const profile = codexCaptureProfile(rows[initialTurnContext]?.payload, expectedModel);
+  if (profile === null) {
+    return rolloutReject("rollout model and multi-agent capture profile is unsupported");
+  }
+  const preludeIndices = Array.from(
+    { length: profile.preludeCount },
+    (_, index) => indices.taskStarts[0] + index + 1,
+  );
   const expectedPromptIndices = [...preludeIndices, promptMessageIndex];
+  const validPrelude =
+    validPermissionsAndSkillsMessage(rows[preludeIndices[0]]?.payload, turnId) &&
+    (profile.kind !== "multi_agent_v2"
+      ? validEnvironmentMessage(rows[preludeIndices[1]]?.payload, turnId)
+      : validV2TeamMessage(rows[preludeIndices[1]]?.payload, turnId) &&
+        validV2MultiAgentModeMessage(rows[preludeIndices[2]]?.payload, turnId) &&
+        validEnvironmentMessage(rows[preludeIndices[3]]?.payload, turnId));
   if (
     !(
       indices.taskStarts[0] === 1 &&
       indices.taskStarts[0] < initialWorldState &&
-      initialWorldState === indices.taskStarts[0] + 5 &&
+      initialWorldState === indices.taskStarts[0] + profile.preludeCount + 1 &&
       initialWorldState + 1 === initialTurnContext &&
-      initialTurnContext < userEvent &&
+      initialTurnContext + 1 === promptMessageIndex &&
+      promptMessageIndex + 1 === userEvent &&
       userEvent < firstGameplay &&
       firstGameplay < indices.taskCompletes[0]
     ) ||
@@ -641,10 +773,7 @@ function inspectCodexRolloutStructure(rows) {
     rows[indices.taskStarts[0]]?.payload?.turn_id !== turnId ||
     rows[indices.taskCompletes[0]]?.payload?.turn_id !== turnId ||
     !sameJsonValue(indices.promptMessages, expectedPromptIndices) ||
-    !validPrivateInputMessage(rows[preludeIndices[0]]?.payload, "developer", turnId) ||
-    !validPrivateInputMessage(rows[preludeIndices[1]]?.payload, "developer", turnId) ||
-    !validPrivateInputMessage(rows[preludeIndices[2]]?.payload, "developer", turnId) ||
-    !validPrivateInputMessage(rows[preludeIndices[3]]?.payload, "user", turnId) ||
+    !validPrelude ||
     !validPrivateInputMessage(promptMessage, "user", turnId) ||
     indices.gameplay.some((index) => !validPrivateWrapperPayload(rows[index]?.payload, turnId)) ||
     indices.wrapperOutputs.some(
@@ -791,7 +920,9 @@ export function inspectCodexGameplayResultForwarding(rows) {
       return rolloutReject(`gameplay call ${ordinal} has an invalid or duplicate MCP call id`);
     }
     gameplayCallIds.add(payload.call_id);
-    const wrapper = inspectExactGameplayWrapper(rowPayload.input, payload.invocation);
+    const wrapper = inspectExactGameplayWrapper(rowPayload.input, payload.invocation, {
+      allowArgumentlessFreshStart: gameplayCalls.length === 0,
+    });
     if (!wrapper) {
       return rolloutReject(`gameplay call ${ordinal} used a forbidden wrapper program`);
     }
@@ -1032,10 +1163,10 @@ export function inspectCodexPureEvents(rows) {
 }
 
 /** Cross-bind the public Codex event stream to the private raw wrapper trace. */
-export function inspectCodexPureEvidence(publicRows, rolloutRows) {
+export function inspectCodexPureEvidence(publicRows, rolloutRows, expectedModel = undefined) {
   const publicEvidence = inspectCodexPureEvents(publicRows);
   if (!publicEvidence.ok) return publicEvidence;
-  const rolloutStructure = inspectCodexRolloutStructure(rolloutRows);
+  const rolloutStructure = inspectCodexRolloutStructure(rolloutRows, expectedModel);
   if (!rolloutStructure.ok) return rolloutStructure;
   const privateEvidence = inspectCodexGameplayResultForwarding(rolloutRows);
   if (!privateEvidence.ok) return privateEvidence;
@@ -1051,17 +1182,17 @@ export function inspectCodexPureEvidence(publicRows, rolloutRows) {
 }
 
 export function buildCodexPureEnvelope({ rows, rolloutRows, report, model, durationMs }) {
-  const inspected = inspectCodexPureEvidence(rows, rolloutRows);
-  if (!inspected.ok) return inspected;
   if (typeof report !== "string" || report.trim().length === 0) {
     return reject("Codex pure run produced no final report");
   }
-  if (typeof model !== "string" || model.trim().length === 0) {
+  if (typeof model !== "string" || !SUPPORTED_CODEX_MODELS.has(model)) {
     return reject("Codex pure run is missing its requested model");
   }
   if (!nonNegativeInteger(durationMs)) {
     return reject("Codex pure run is missing a valid duration");
   }
+  const inspected = inspectCodexPureEvidence(rows, rolloutRows, model);
+  if (!inspected.ok) return inspected;
 
   const usage = {
     input_tokens: inspected.usage.input_tokens,

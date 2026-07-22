@@ -329,7 +329,7 @@ function writeCodexGameplayArtifacts(
       num_turns: 1,
       result: report,
       session_id: session,
-      requested_model: "gpt-5.3-codex-spark",
+      requested_model: "gpt-5.6-terra",
       terminal_reason: "completed",
     })}\n`,
   );
@@ -364,12 +364,12 @@ function writeCodexGameplayArtifacts(
       .join("\n")}\n`,
   );
   const cwd = "C:\\private\\player";
-  const inputMessage = (role: "developer" | "user", text: string) => ({
+  const inputMessage = (role: "developer" | "user", ...texts: string[]) => ({
     type: "response_item",
     payload: {
       type: "message",
       role,
-      content: [{ type: "input_text", text }],
+      content: texts.map((text) => ({ type: "input_text", text })),
       internal_chat_message_metadata_passthrough: { turn_id: turn },
     },
   });
@@ -379,10 +379,20 @@ function writeCodexGameplayArtifacts(
       payload: { id: session, cwd, cli_version: "0.145.0", model_provider: "openai" },
     },
     { type: "event_msg", payload: { type: "task_started", turn_id: turn } },
-    inputMessage("developer", "permissions"),
-    inputMessage("developer", "app context"),
-    inputMessage("developer", "repository instructions"),
-    inputMessage("user", "environment context"),
+    inputMessage(
+      "developer",
+      "<permissions instructions>read-only player</permissions instructions>",
+      "<skills_instructions>player skills</skills_instructions>",
+    ),
+    inputMessage(
+      "developer",
+      "You are `/root`, the primary agent in a team of agents collaborating to fulfill the user's goals.",
+    ),
+    inputMessage(
+      "developer",
+      "<multi_agent_mode>Only explicit requests permit delegation.</multi_agent_mode>",
+    ),
+    inputMessage("user", "<environment_context>isolated player</environment_context>"),
     { type: "world_state", payload: { full: true } },
     {
       type: "turn_context",
@@ -391,7 +401,17 @@ function writeCodexGameplayArtifacts(
         cwd,
         approval_policy: "never",
         sandbox_policy: { type: "read-only" },
-        model: "gpt-5.3-codex-spark",
+        model: "gpt-5.6-terra",
+        collaboration_mode: {
+          mode: "default",
+          settings: {
+            model: "gpt-5.6-terra",
+            reasoning_effort: "xhigh",
+            developer_instructions: null,
+          },
+        },
+        multi_agent_version: "v2",
+        multi_agent_mode: "explicitRequestOnly",
         effort: "xhigh",
       },
     },

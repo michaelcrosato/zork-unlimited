@@ -17,6 +17,13 @@ const {
 } = codexProvider;
 
 const THREAD_ID = "019f7250-1ed0-7102-be6c-4f1d5513d91e";
+const PERMISSIONS_BLOCK = "<permissions instructions>read-only player</permissions instructions>";
+const SKILLS_BLOCK = "<skills_instructions>player skills</skills_instructions>";
+const V2_TEAM_BLOCK =
+  "You are `/root`, the primary agent in a team of agents collaborating to fulfill the user's goals.";
+const V2_MODE_BLOCK =
+  "<multi_agent_mode>Only explicit requests permit delegation.</multi_agent_mode>";
+const ENVIRONMENT_BLOCK = "<environment_context>isolated player</environment_context>";
 
 type TestItem = {
   id: string;
@@ -167,25 +174,63 @@ function twoPrivateGameplayCalls(
   return [...forwardingRollout(undefined, result), ...second];
 }
 
-function completeRollout(gameplayRows: unknown[]): unknown[] {
-  const inputMessage = (role: "developer" | "user", text: string) => ({
+function completeRollout(
+  gameplayRows: unknown[],
+  profile: "sol_v2" | "terra_v2" | "luna_v1" | "spark_disabled" = "sol_v2",
+): unknown[] {
+  const inputMessage = (role: "developer" | "user", ...texts: string[]) => ({
     type: "response_item",
     payload: {
       type: "message",
       role,
-      content: [{ type: "input_text", text }],
+      content: texts.map((text) => ({ type: "input_text", text })),
       internal_chat_message_metadata_passthrough: { turn_id: "turn-1" },
     },
   });
+  const model =
+    profile === "luna_v1"
+      ? "gpt-5.6-luna"
+      : profile === "spark_disabled"
+        ? "gpt-5.3-codex-spark"
+        : profile === "terra_v2"
+          ? "gpt-5.6-terra"
+          : "gpt-5.6-sol";
+  const singleDeveloperPrelude = profile === "luna_v1" || profile === "spark_disabled";
+  const prelude = singleDeveloperPrelude
+    ? [
+        inputMessage("developer", PERMISSIONS_BLOCK, SKILLS_BLOCK),
+        inputMessage("user", ENVIRONMENT_BLOCK),
+      ]
+    : [
+        inputMessage("developer", PERMISSIONS_BLOCK, SKILLS_BLOCK),
+        inputMessage("developer", V2_TEAM_BLOCK),
+        inputMessage("developer", V2_MODE_BLOCK),
+        inputMessage("user", ENVIRONMENT_BLOCK),
+      ];
   return [
     { type: "session_meta", payload: { id: THREAD_ID } },
     { type: "event_msg", payload: { type: "task_started", turn_id: "turn-1" } },
-    inputMessage("developer", "permissions"),
-    inputMessage("developer", "app context"),
-    inputMessage("developer", "repository instructions"),
-    inputMessage("user", "environment context"),
+    ...prelude,
     { type: "world_state", payload: { full: true } },
-    { type: "turn_context", payload: { turn_id: "turn-1" } },
+    {
+      type: "turn_context",
+      payload: {
+        turn_id: "turn-1",
+        model,
+        effort: "xhigh",
+        collaboration_mode: {
+          mode: "default",
+          settings: {
+            model,
+            reasoning_effort: "xhigh",
+            developer_instructions: null,
+          },
+        },
+        multi_agent_version:
+          profile === "luna_v1" ? "v1" : profile === "spark_disabled" ? "disabled" : "v2",
+        ...(singleDeveloperPrelude ? {} : { multi_agent_mode: "explicitRequestOnly" }),
+      },
+    },
     inputMessage("user", "blind prompt"),
     {
       type: "event_msg",
@@ -499,6 +544,380 @@ describe("Codex pure blind provider envelope", () => {
     ).toEqual({
       ok: false,
       reason: expect.stringMatching(/differs at call 2/i),
+    });
+  });
+
+  it("accepts each exact native Codex capture profile", () => {
+    const lunaGameplay = forwardingRollout(undefined, { content: [] });
+    rolloutPayload(lunaGameplay, 0).input =
+      "const result = await tools.mcp__adventureforge__start_overworld();\n" +
+      "text(JSON.stringify(result));\n";
+    const luna = completeRollout(lunaGameplay, "luna_v1");
+    expect(inspectCodexPureEvidence(validRows(), luna, "gpt-5.6-luna")).toMatchObject({
+      ok: true,
+    });
+    expect(
+      buildCodexPureEnvelope({
+        rows: validRows(),
+        rolloutRows: luna,
+        report: "report",
+        model: "gpt-5.6-luna",
+        durationMs: 1,
+      }),
+    ).toMatchObject({ ok: true, envelope: { requested_model: "gpt-5.6-luna" } });
+
+    expect(
+      inspectCodexPureEvidence(
+        validRows(),
+        completeRollout(forwardingRollout(undefined, { content: [] }), "sol_v2"),
+        "gpt-5.6-sol",
+      ),
+    ).toMatchObject({ ok: true });
+    expect(
+      inspectCodexPureEvidence(
+        validRows(),
+        completeRollout(forwardingRollout(undefined, { content: [] }), "terra_v2"),
+        "gpt-5.6-terra",
+      ),
+    ).toMatchObject({ ok: true });
+    expect(
+      inspectCodexPureEvidence(
+        validRows(),
+        completeRollout(forwardingRollout(undefined, { content: [] }), "spark_disabled"),
+        "gpt-5.3-codex-spark",
+      ),
+    ).toMatchObject({ ok: true });
+  });
+
+  it.each([
+    [
+      "an inner Terra model under outer Sol",
+      (context: Record<string, unknown>) => {
+        const collaboration = context.collaboration_mode as Record<string, unknown>;
+        const settings = collaboration.settings as Record<string, unknown>;
+        settings.model = "gpt-5.6-terra";
+      },
+    ],
+    [
+      "a missing collaboration mode",
+      (context: Record<string, unknown>) => delete context.collaboration_mode,
+    ],
+    [
+      "an extra collaboration field",
+      (context: Record<string, unknown>) => {
+        const collaboration = context.collaboration_mode as Record<string, unknown>;
+        collaboration.extra = true;
+      },
+    ],
+    [
+      "a missing inner model",
+      (context: Record<string, unknown>) => {
+        const collaboration = context.collaboration_mode as Record<string, unknown>;
+        const settings = collaboration.settings as Record<string, unknown>;
+        delete settings.model;
+      },
+    ],
+    [
+      "an extra collaboration setting",
+      (context: Record<string, unknown>) => {
+        const collaboration = context.collaboration_mode as Record<string, unknown>;
+        const settings = collaboration.settings as Record<string, unknown>;
+        settings.extra = true;
+      },
+    ],
+    [
+      "a non-default collaboration mode",
+      (context: Record<string, unknown>) => {
+        const collaboration = context.collaboration_mode as Record<string, unknown>;
+        collaboration.mode = "plan";
+      },
+    ],
+    [
+      "a reasoning-effort mismatch",
+      (context: Record<string, unknown>) => {
+        const collaboration = context.collaboration_mode as Record<string, unknown>;
+        const settings = collaboration.settings as Record<string, unknown>;
+        settings.reasoning_effort = "high";
+      },
+    ],
+    [
+      "a missing reasoning effort",
+      (context: Record<string, unknown>) => {
+        const collaboration = context.collaboration_mode as Record<string, unknown>;
+        const settings = collaboration.settings as Record<string, unknown>;
+        delete settings.reasoning_effort;
+      },
+    ],
+    [
+      "injected developer instructions",
+      (context: Record<string, unknown>) => {
+        const collaboration = context.collaboration_mode as Record<string, unknown>;
+        const settings = collaboration.settings as Record<string, unknown>;
+        settings.developer_instructions = "injected";
+      },
+    ],
+    ["an outer effort mismatch", (context: Record<string, unknown>) => (context.effort = "high")],
+  ])("rejects $0 in the native collaboration identity", (_label, mutate) => {
+    const rows = completeRollout(forwardingRollout(undefined, { content: [] }), "sol_v2") as Array<{
+      type?: string;
+      payload?: Record<string, unknown>;
+    }>;
+    const context = rows.find((row) => row.type === "turn_context")?.payload;
+    if (!context) throw new Error("missing collaboration context fixture");
+    mutate(context);
+    expect(inspectCodexPureEvidence(validRows(), rows, "gpt-5.6-sol")).toMatchObject({
+      ok: false,
+    });
+  });
+
+  it("rejects the inverse inner Sol model under outer Terra", () => {
+    const rows = completeRollout(
+      forwardingRollout(undefined, { content: [] }),
+      "terra_v2",
+    ) as Array<{ type?: string; payload?: Record<string, unknown> }>;
+    const context = rows.find((row) => row.type === "turn_context")?.payload;
+    const collaboration = context?.collaboration_mode as Record<string, unknown> | undefined;
+    const settings = collaboration?.settings as Record<string, unknown> | undefined;
+    if (!settings) throw new Error("missing Terra collaboration fixture");
+    settings.model = "gpt-5.6-sol";
+    expect(inspectCodexPureEvidence(validRows(), rows, "gpt-5.6-terra")).toMatchObject({
+      ok: false,
+    });
+  });
+
+  it.each([
+    ["a Luna model alias", (context: Record<string, unknown>) => (context.model = "luna")],
+    [
+      "Luna serialized as v2",
+      (context: Record<string, unknown>) => {
+        context.multi_agent_version = "v2";
+        context.multi_agent_mode = "explicitRequestOnly";
+      },
+    ],
+    [
+      "Luna with a multi-agent mode",
+      (context: Record<string, unknown>) => {
+        context.multi_agent_mode = "explicitRequestOnly";
+      },
+    ],
+    [
+      "Luna with the wrong version",
+      (context: Record<string, unknown>) => {
+        context.multi_agent_version = "v0";
+      },
+    ],
+  ])("rejects $0", (_label, mutate) => {
+    const rows = completeRollout(
+      forwardingRollout(undefined, { content: [] }),
+      "luna_v1",
+    ) as Array<{
+      type?: string;
+      payload?: Record<string, unknown>;
+    }>;
+    const context = rows.find((row) => row.type === "turn_context")?.payload;
+    if (!context) throw new Error("missing Luna context fixture");
+    mutate(context);
+    expect(inspectCodexPureEvidence(validRows(), rows)).toEqual({
+      ok: false,
+      reason: expect.stringMatching(/capture profile is unsupported/i),
+    });
+  });
+
+  it.each(["gpt-5.6-sol", "gpt-5.6-terra"])("rejects %s serialized as v1", (model) => {
+    const profile = model.endsWith("terra") ? "terra_v2" : "sol_v2";
+    const rows = completeRollout(forwardingRollout(undefined, { content: [] }), profile) as Array<{
+      type?: string;
+      payload?: Record<string, unknown>;
+    }>;
+    const context = rows.find((row) => row.type === "turn_context")?.payload;
+    if (!context) throw new Error("missing v2 context fixture");
+    context.multi_agent_version = "v1";
+    delete context.multi_agent_mode;
+    expect(inspectCodexPureEvidence(validRows(), rows)).toMatchObject({ ok: false });
+  });
+
+  it("retains Spark's exact disabled multi-agent capture profile", () => {
+    const rows = completeRollout(
+      forwardingRollout(undefined, { content: [] }),
+      "spark_disabled",
+    ) as Array<{ type?: string; payload?: Record<string, unknown> }>;
+    const context = rows.find((row) => row.type === "turn_context")?.payload;
+    if (!context) throw new Error("missing Spark context fixture");
+    context.multi_agent_version = "v1";
+    expect(inspectCodexPureEvidence(validRows(), rows)).toMatchObject({ ok: false });
+  });
+
+  it("retains the exact v2 developer ordering and explicitRequestOnly mode", () => {
+    const baseline = completeRollout(
+      forwardingRollout(undefined, { content: [] }),
+      "sol_v2",
+    ) as Array<{ type?: string; payload?: Record<string, unknown> }>;
+    const mutations: Array<[string, (rows: typeof baseline) => void]> = [
+      ["swapped team and mode messages", (rows) => ([rows[3], rows[4]] = [rows[4]!, rows[3]!])],
+      ["missing mode message", (rows) => rows.splice(4, 1)],
+      [
+        "wrong turn mode",
+        (rows) => {
+          const context = rows.find((row) => row.type === "turn_context")?.payload;
+          if (context) context.multi_agent_mode = "auto";
+        },
+      ],
+    ];
+    for (const [label, mutate] of mutations) {
+      const rows = structuredClone(baseline);
+      mutate(rows);
+      expect(inspectCodexPureEvidence(validRows(), rows), label).toMatchObject({ ok: false });
+    }
+  });
+
+  it("rejects every Luna v1 prelude topology mutation", () => {
+    const baseline = completeRollout(
+      forwardingRollout(undefined, { content: [] }),
+      "luna_v1",
+    ) as Array<{
+      type?: string;
+      payload?: {
+        role?: string;
+        content?: Array<{ type?: string; text?: string }>;
+        internal_chat_message_metadata_passthrough?: { turn_id?: string };
+      };
+    }>;
+    const mutations: Array<[string, (rows: typeof baseline) => void]> = [
+      ["permission/skills block count", (rows) => rows[2]?.payload?.content?.pop()],
+      [
+        "permission/skills block order",
+        (rows) => {
+          const content = rows[2]?.payload?.content;
+          if (content) content.reverse();
+        },
+      ],
+      [
+        "environment role",
+        (rows) => {
+          const environment = rows[3]?.payload;
+          if (environment) environment.role = "developer";
+        },
+      ],
+      [
+        "environment turn",
+        (rows) => {
+          const metadata = rows[3]?.payload?.internal_chat_message_metadata_passthrough;
+          if (metadata) metadata.turn_id = "other-turn";
+        },
+      ],
+      ["world/context order", (rows) => ([rows[4], rows[5]] = [rows[5]!, rows[4]!])],
+      ["extra prelude row", (rows) => rows.splice(4, 0, structuredClone(rows[2]!))],
+    ];
+    for (const [label, mutate] of mutations) {
+      const rows = structuredClone(baseline);
+      mutate(rows);
+      expect(inspectCodexPureEvidence(validRows(), rows), label).toMatchObject({ ok: false });
+    }
+  });
+
+  it("binds the requested model to the private capture profile", () => {
+    const luna = completeRollout(forwardingRollout(undefined, { content: [] }), "luna_v1");
+    expect(
+      buildCodexPureEnvelope({
+        rows: validRows(),
+        rolloutRows: luna,
+        report: "report",
+        model: "gpt-5.6-sol",
+        durationMs: 1,
+      }),
+    ).toEqual({ ok: false, reason: expect.stringMatching(/capture profile is unsupported/i) });
+    expect(
+      buildCodexPureEnvelope({
+        rows: validRows(),
+        rolloutRows: luna,
+        report: "report",
+        model: "gpt-5.6-luna-latest",
+        durationMs: 1,
+      }),
+    ).toEqual({ ok: false, reason: "Codex pure run is missing its requested model" });
+  });
+
+  it("permits argumentless syntax only for the first start_overworld wrapper", () => {
+    const argumentless = forwardingRollout();
+    rolloutPayload(argumentless, 0).input =
+      "const result = await tools.mcp__adventureforge__start_overworld();\n" +
+      "text(JSON.stringify(result));\n";
+    expect(inspectCodexGameplayResultForwarding(argumentless)).toMatchObject({ ok: true });
+
+    const nonemptyRecordedArguments = structuredClone(argumentless);
+    const recordedInvocation = rolloutPayload(nonemptyRecordedArguments, 1).invocation as Record<
+      string,
+      unknown
+    >;
+    recordedInvocation.arguments = { seed: 7 };
+    expect(inspectCodexGameplayResultForwarding(nonemptyRecordedArguments)).toMatchObject({
+      ok: false,
+    });
+
+    const otherTool = forwardingRollout();
+    rolloutPayload(otherTool, 0).input =
+      "const result = await tools.mcp__adventureforge__get_overworld_session_context();\n" +
+      "text(JSON.stringify(result));\n";
+    const otherInvocation = rolloutPayload(otherTool, 1).invocation as Record<string, unknown>;
+    otherInvocation.tool = "get_overworld_session_context";
+    expect(inspectCodexGameplayResultForwarding(otherTool)).toMatchObject({ ok: false });
+
+    const laterStart = twoPrivateGameplayCalls();
+    rolloutPayload(laterStart, 3).input =
+      "const result = await tools.mcp__adventureforge__start_overworld();\n" +
+      "text(JSON.stringify(result));\n";
+    const laterInvocation = rolloutPayload(laterStart, 4).invocation as Record<string, unknown>;
+    laterInvocation.tool = "start_overworld";
+    expect(inspectCodexGameplayResultForwarding(laterStart)).toMatchObject({ ok: false });
+
+    const nonemptyFreshStart = forwardingRollout();
+    rolloutPayload(nonemptyFreshStart, 0).input =
+      "const result = await tools.mcp__adventureforge__start_overworld({seed:7});\n" +
+      "text(JSON.stringify(result));\n";
+    const nonemptyInvocation = rolloutPayload(nonemptyFreshStart, 1).invocation as Record<
+      string,
+      unknown
+    >;
+    nonemptyInvocation.arguments = { seed: 7 };
+    const publicRows = validRows();
+    for (const row of publicRows) {
+      if (row.item?.type === "mcp_tool_call") row.item.arguments = { seed: 7 };
+    }
+    expect(
+      inspectCodexPureEvidence(publicRows, completeRollout(nonemptyFreshStart, "luna_v1")),
+    ).toEqual({
+      ok: false,
+      reason: expect.stringMatching(/must begin gameplay with start_overworld and no arguments/i),
+    });
+  });
+
+  it.each([
+    [
+      "an aliased call",
+      "const start = tools.mcp__adventureforge__start_overworld;\nconst result = await start();\ntext(JSON.stringify(result));\n",
+    ],
+    [
+      "an optional call",
+      "const result = await tools.mcp__adventureforge__start_overworld?.();\ntext(JSON.stringify(result));\n",
+    ],
+    [
+      "a computed call",
+      'const result = await tools["mcp__adventureforge__start_overworld"]();\ntext(JSON.stringify(result));\n',
+    ],
+    [
+      "an extra statement",
+      "const result = await tools.mcp__adventureforge__start_overworld();\ntext(JSON.stringify(result));\ntext('extra');\n",
+    ],
+    [
+      "a truncated wrapper",
+      "const result = await tools.mcp__adventureforge__start_overworld(\ntext(JSON.stringify(result));\n",
+    ],
+  ])("keeps rejecting $0 around the Luna argumentless exception", (_label, input) => {
+    const rows = forwardingRollout();
+    rolloutPayload(rows, 0).input = input;
+    expect(inspectCodexGameplayResultForwarding(rows)).toEqual({
+      ok: false,
+      reason: expect.stringMatching(/forbidden wrapper program/i),
     });
   });
 

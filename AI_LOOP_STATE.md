@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 610 -->
+<!-- historical_cycle_count: 611 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - luna_v1_capture_authority
+
+- Evidence choice: Luna seed 4398 exposed a legitimate native v1 capture layout that the Sol/Terra-only topology rejected before reaching its independent gameplay and receipt failures, so this cycle models actual provider profiles without weakening common authority.
+- Surface: exact requested-model-bound profiles now admit Sol/Terra v2, Luna v1, and Spark-disabled preludes; collaboration identity is exact, only first-call `start_overworld()` may omit `{}`, and the pure prompt binds RPG-only action listing to an active exact child handle plus visible `follow_current_goal` to its exact route-neutral transport while forbidding reconstructed ids or invented goal-tool aliases.
+- Counterfactual: wrong model/version/mode/prelude/order/collaboration fields, relabeled Sol/Terra, argumentless later/other calls, failed results, bad rollout receipts, and auxiliary activity remain fail-closed through fleet, compile, ledger, and certification.
+- Diagnostic only: Luna 4398/4399/4400 pass native-v1 profile recognition but remain unpublished/excluded: the first two made failed domain/handle calls (4398 also copied a bad receipt), while 4400 preserved every real handle then invented nonexistent `advance_overworld_session_goal`; no candidate play is evidence.
+- Pure evidence: exact-clean Luna 4401 verifies `ok: true` across 133 error-free MCP calls and 103 accepted decisions: pack-diverted Wolf-Winter, hunt-won Gallowmere, recovered Tanner's Fever, five honest continues, then a truthful death exit in Breaking Weir; clarity/enjoyment 4/4, unstuck, replay-yes.
+- Measured result: real Sol 4351/4354/4386, Terra 4397, and Luna 4401 pass; Spark 4368 reaches its pre-existing forbidden-resource rejection, all three earlier Luna diagnostics reach independent fail-closed rejections, and 160 profile plus 119 prompt-focused tests pass with independent re-reviews finding no P0-P2.
+- Guard: tooling/docs only; pre/post crawl stays zero-finding at 247/247 nodes, 344/344 edges, and 12/12 quests, while full health passes 406 files/3,167 tests plus both typechecks/all packs with no engine, world, save, or gameplay-content change.
 
 ### Cycle result - strict_codex_result_authority
 
@@ -154,13 +164,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Measured result: nonblocking authored-event visibility and ordinary two-quest play PASS; organic policy selection and delayed Return Docket use remain UNPROVEN. The run repeated character-sheet continuity as S2, plus June continuity and dense/truncated Albany copy as S1s.
 - Feedback/follow-through: compile `20260721T035637Z` has 919 verified reports, 168 eligible pure exits, and 145 continuing; the ledger is 918 accepted/59 rejected. Its top ten remain flat historical fleet clusters, while fresh exact reports prioritize persistent-to-quest character mapping, then companion continuity and dense compact copy.
 - Guard: exact rebased increment `ce9679b5` passes health at 394 files/3,019 tests plus UI/all packs; post-rebase crawl `20260721T041411Z` is zero-finding at 247/247 nodes, 344/344 edges, and 12/12 boards/quests, and the clean independent review found no P0-P2.
-
-### Cycle result - blind_receipt_binding
-
-- Evidence choice: a malformed Codex journey receipt had invalidated an otherwise complete pure run, so this cycle bound only that attempt-zero failure path to the work-private server receipt instead of retrying the model or relaxing verification.
-- Surface: strict, duplicate-key-safe metadata records deterministic receipt binding through report, fleet manifest, summary, and attestation; ordinary valid reports remain unbound and byte-for-byte on the existing publication path.
-- Counterfactual: adversarial tests reject forged-first duplicate values and incomplete provenance chains, preserve v3 readability only for zero-bound fleets, and prove malformed recovery cannot alter the original provider report, envelope, subjective answers, or hashes.
-- Pure evidence: exact clean-build Terra seed 4248 completed Wolf-Winter (`ending_fortified_albany_authority`) and The Gallowmere (`ending_hunt_won`) in 43 decisions, continued at goal 20/checkpoint 40, ended at goal 43, rated clarity 3/enjoyment 4, was unstuck/replay-no, and published `verified` with no binding artifact, provenance, or count.
-- Measured result: normal live-path noninterference PASSes; malformed-path recovery is established by deterministic tests, not claimed from this valid run. Feedback retained one S2 identity-continuity gap plus S1 Rowan duplication and mid-combat checkpoint interruption; no auth, security, model, or tool failure occurred.
-- Feedback/follow-through: the ledger is 917 accepted/59 rejected with two verified reports since compile `20260721T012144Z`, below the three-report threshold; dense setup remains the worst moment.
-- Guard: exact rebased increment `fdac1679` has zero-finding crawl at 247/247 nodes, 344/344 edges, and 12/12 boards/quests; health passes 393 files/3,013 tests plus UI/all packs, and independent review found no remaining P0-P2.
