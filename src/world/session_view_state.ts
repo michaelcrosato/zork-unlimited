@@ -47,6 +47,10 @@ import {
   type CampaignCharacterView,
 } from "./campaign_character_view.js";
 import type { CampaignServiceOffer } from "./campaign_service_rules.js";
+import {
+  cloneOverworldServiceActionPresentation,
+  type OverworldServiceActionPresentation,
+} from "./session_service_presentation.js";
 import { projectOverworldQuestView } from "./session_local_discovery.js";
 import type { OverworldDepartureInteraction } from "./session_departure_interactions.js";
 import type { JourneyOpportunityPresentation } from "./journey_contract.js";
@@ -67,6 +71,7 @@ export type OverworldSessionViewModelState = {
   fatigue: number;
   opportunities: JourneyOpportunityPresentation | null;
   serviceOffers: readonly CampaignServiceOffer[];
+  serviceActions: readonly OverworldServiceActionPresentation[];
   departureInteractions: readonly OverworldDepartureInteraction[];
   roads: readonly OverworldExit[];
   areaExits: readonly OverworldAreaExit[];
@@ -104,6 +109,7 @@ export type OverworldSessionViewModelSourceState = {
   fatigue: number;
   opportunities: JourneyOpportunityPresentation | null;
   serviceOffers: readonly CampaignServiceOffer[];
+  serviceActions: readonly OverworldServiceActionPresentation[];
   departureInteractions: readonly OverworldDepartureInteraction[];
   roads: readonly OverworldExit[];
   areaExits: readonly OverworldAreaExit[];
@@ -190,6 +196,7 @@ export function buildOverworldSessionViewModelState(
       fatigue: source.fatigue,
       opportunities: source.opportunities,
       serviceOffers: [],
+      serviceActions: [],
       departureInteractions: [],
       roads: [],
       areaExits: [],
@@ -273,6 +280,7 @@ export function buildOverworldSessionViewModelState(
         ? { providerId: offer.providerId, providerName: offer.providerName }
         : {}),
     })),
+    serviceActions: source.serviceActions.map(cloneOverworldServiceActionPresentation),
     departureInteractions: source.departureInteractions,
     roads: source.roads,
     areaExits: source.areaExits,
@@ -323,6 +331,7 @@ function compactViewState(state: OverworldSessionViewModelState): OverworldSessi
     fatigue: state.fatigue,
     opportunities: state.opportunities,
     serviceOffers: state.serviceOffers,
+    serviceActions: state.serviceActions,
     departureInteractions: state.departureInteractions,
     roads: state.roads,
     areaExits: state.areaExits,
@@ -377,6 +386,7 @@ export function buildOverworldSessionViewFromState(
     supplies: state.supplies,
     fatigue: state.fatigue,
     serviceOffers: state.serviceOffers,
+    serviceActions: state.serviceActions,
     departureInteractions: state.departureInteractions,
     roads: state.roads,
     areaExits: state.areaExits,

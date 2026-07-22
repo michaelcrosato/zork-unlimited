@@ -3,6 +3,7 @@ import {
   OVERWORLD_COMPACT_OPPORTUNITY_LEAD_LIMIT,
   OVERWORLD_COMPACT_VIEW_VERSION,
   compactCampaignServiceOffers,
+  compactOverworldServiceActions,
   compactCampaignCharacterView,
   compactJourneyOpportunityLeads,
   compactOverworldEventChoices,
@@ -63,6 +64,7 @@ import {
   type OverworldDepartureInteraction,
 } from "./session_departure_interactions.js";
 import type { JourneyOpportunityPresentation } from "./journey_contract.js";
+import type { OverworldServiceActionPresentation } from "./session_service_presentation.js";
 
 export type OverworldSessionCompactViewState = {
   character: CampaignCharacterView;
@@ -75,6 +77,7 @@ export type OverworldSessionCompactViewState = {
   fatigue: number;
   opportunities?: JourneyOpportunityPresentation | null;
   serviceOffers: readonly CampaignServiceOffer[];
+  serviceActions: readonly OverworldServiceActionPresentation[];
   departureInteractions?: readonly OverworldDepartureInteraction[];
   roads: readonly OverworldExit[];
   areaExits: readonly OverworldAreaExit[];
@@ -142,6 +145,7 @@ export function buildOverworldSessionCompactView(
     (state.eventChoices ?? []).filter(([eventId]) => visibleEventIds.has(eventId)),
   );
   const serviceOffers = compactCampaignServiceOffers(state.serviceOffers);
+  const serviceActions = compactOverworldServiceActions(state.serviceActions);
   const departureInteractions = compactOverworldDepartureInteractions(
     state.departureInteractions ?? [],
   );
@@ -176,6 +180,7 @@ export function buildOverworldSessionCompactView(
       travelCondition(state.fatigue, state.supplies),
     ],
     ...(serviceOffers.length > 0 ? { service_offers: serviceOffers } : {}),
+    ...(serviceActions.length > 0 ? { service_actions: serviceActions } : {}),
     ...(departureInteractions.length > 0 ? { departure_interactions: departureInteractions } : {}),
     ...(opportunityLeads.length > 0 && state.opportunities
       ? {

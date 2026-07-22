@@ -381,6 +381,8 @@ describe("OverworldSession", () => {
     expect(JSON.stringify({ goal: journey.goal, storyChoice: journey.storyChoice })).not.toMatch(
       /targetQuestId|endingId|ending_held|wolf_winter|content\/rpg|win_conditions|maneuver_/i,
     );
+    expect(session.view().serviceActions).toEqual([]);
+    expect("service_actions" in session.compactView()).toBe(false);
 
     expect(() => session.restAtTown()).toThrow(/presented story consequence/i);
     expect(session.snapshotHash()).toBe(snapshotHash);
@@ -409,6 +411,10 @@ describe("OverworldSession", () => {
     expect(JSON.stringify(session.journey().goalGuidance)).not.toMatch(
       /targetQuestId|endingId|wolf_winter|content\/rpg|win_conditions|maneuver_/i,
     );
+    expect(session.view().serviceActions.map((action) => action.action)).toEqual([
+      "resupply",
+      "rest",
+    ]);
   });
 
   it("renders state-neutral return-opportunity guidance at the first-goal pause and dawn story", async () => {
@@ -686,6 +692,8 @@ describe("OverworldSession", () => {
     const restored = OverworldSession.restore(world, pendingSnapshot);
     const pendingJourney = restored.journey();
     expect(pendingJourney.pendingChoice?.options.map((option) => option.id)).toEqual(["end"]);
+    expect(restored.view().serviceActions).toEqual([]);
+    expect("service_actions" in restored.compactView()).toBe(false);
 
     const uiRoot = resolve(process.cwd(), "ui");
     const server = await createServer({
@@ -723,6 +731,7 @@ describe("OverworldSession", () => {
       expect(choiceMarkup).not.toContain("Continue this journey?");
 
       restored.chooseJourney("end");
+      expect(restored.view().serviceActions).toEqual([]);
       const endedMarkup = reactDomServer.renderToStaticMarkup(
         react.createElement(endedModule.JourneyEndedScreen, {
           journey: restored.journey(),
@@ -749,9 +758,12 @@ describe("OverworldSession", () => {
 
     expect(actions).toContain("worldSession.resupplyAtTown()");
     expect(actions).toContain("worldSession.restAtTown()");
-    expect(actions).toContain('action="resupply"');
-    expect(actions).toContain('action="rest"');
-    expect(app).toContain("aria-describedby={termsId}");
+    expect(actions).toContain("worldView.serviceActions.map");
+    expect(actions).toContain('serviceAction.action === "rest"');
+    expect(app).toContain("aria-disabled={!serviceAction.available}");
+    expect(app).toContain("onClick={serviceAction.available ? onActivate : undefined}");
+    expect(app).toContain("serviceAction.suppliesBefore");
+    expect(app).toContain("serviceAction.fatigueAfter");
     expect(app).toContain("{offer.title}");
     expect(app).toContain("{offer.summary}");
     expect(app).toContain("{offer.minutes} min, one time");
@@ -787,17 +799,58 @@ describe("OverworldSession", () => {
       } as const;
       const markup = reactDomServer.renderToStaticMarkup(
         react.createElement(module.ServiceAction, {
-          action: "resupply",
+          serviceAction: {
+            action: "resupply",
+            source: "campaign_override",
+            offerId: offer.id,
+            available: true,
+            changed: true,
+            minutes: 15,
+            suppliesBefore: 2,
+            suppliesAfter: 8,
+            fatigueBefore: 12,
+            fatigueAfter: 12,
+            message: "The relief stores fill the field pack.",
+            blockedReason: null,
+          },
           offer,
           onActivate: () => undefined,
         }),
       );
 
-      expect(markup).toContain('aria-describedby="service-offer-resupply-terms"');
+      expect(markup).toContain(
+        'aria-describedby="service-action-resupply-preview service-offer-resupply-terms"',
+      );
+      expect(markup).toContain('id="service-action-resupply-preview"');
       expect(markup).toContain('id="service-offer-resupply-terms"');
+      expect(markup).toContain("15 min · supplies 2→8 · fatigue 12→12");
       expect(markup).toContain("Draw the one-time relief issue");
       expect(markup).toContain("Available from Jamie Tanner.");
       expect(markup).toContain("15 min, one time");
+
+      const unavailable = reactDomServer.renderToStaticMarkup(
+        react.createElement(module.ServiceAction, {
+          serviceAction: {
+            action: "rest",
+            source: "ordinary",
+            offerId: null,
+            available: false,
+            changed: false,
+            minutes: 0,
+            suppliesBefore: 3,
+            suppliesAfter: 3,
+            fatigueBefore: 20,
+            fatigueAfter: 20,
+            message: "There is no inn or healer here to rest safely.",
+            blockedReason: "There is no inn or healer here to rest safely.",
+          },
+          offer: undefined,
+          onActivate: () => undefined,
+        }),
+      );
+      expect(unavailable).toContain('aria-disabled="true"');
+      expect(unavailable).not.toContain('disabled=""');
+      expect(unavailable).toContain("There is no inn or healer here to rest safely.");
     } finally {
       await server.close();
     }
@@ -1631,6 +1684,7 @@ describe("OverworldSession", () => {
     expect(after.areas).toEqual([]);
     expect(after.jobs).toEqual([]);
     expect(after.routeOptions).toEqual([]);
+    expect(after.serviceActions).toEqual([]);
     expect(entry.baseMinutes).toBe(road!.travel_minutes);
     expect(entry.delayMinutes).toBe(0);
     expect(entry.minutes).toBe(road!.travel_minutes);
@@ -1669,9 +1723,11 @@ describe("OverworldSession", () => {
       "press_on",
     ]);
     expect(session.compactView()).toEqual(compactOverworldView(after));
+    expect("service_actions" in session.compactView()).toBe(false);
     expect(() => session.planRoute("albany_city")).toThrow(/pending road encounter/i);
     session.resolveRoadEncounter("press_on");
     expect(session.view().current.id).toBe("colonie_town");
+    expect(session.view().serviceActions).toHaveLength(2);
     const backRoute = session.planRoute("albany_city");
     expect(backRoute.totalMinutes).toBe(road!.travel_minutes);
     expect(backRoute.steps.map((step) => step.to.id)).toEqual(["albany_city"]);
@@ -1932,11 +1988,16 @@ describe("OverworldSession", () => {
 
     fullClone.serviceOffers[0]!.summary = "mutated full clone";
     expect(sourceOffers[0]!.summary).toBe(`Emery Sloane opens the shelter. ${longSummary}`);
+    (fullClone.serviceActions[0] as { suppliesAfter: number }).suppliesAfter = 99;
+    expect(view.serviceActions[0]?.suppliesAfter).toBe(view.maxSupplies);
 
     const cloned = cloneOverworldCompactView(compact);
     if (!cloned.service_offers) throw new Error("expected cloned service offers");
+    if (!cloned.service_actions) throw new Error("expected cloned service actions");
     (cloned.service_offers[0] as unknown as string[])[2] = "mutated clone";
+    (cloned.service_actions[0]![6] as unknown as number[])[1] = 99;
     expect(compact.service_offers?.[0]?.[2]).toBe("Rest under Rowan's relief seal");
+    expect(compact.service_actions?.[0]?.[6][1]).toBe(view.maxSupplies);
   });
 
   it("caps compact context progress lists while marking truncated renown and completed arcs", () => {
@@ -1982,6 +2043,7 @@ describe("OverworldSession", () => {
       supplies: view.supplies,
       fatigue: view.fatigue,
       serviceOffers: view.serviceOffers,
+      serviceActions: view.serviceActions,
       roads: view.exits,
       areaExits: view.areaExits,
       routeOptions: view.routeOptions,
@@ -2084,6 +2146,7 @@ describe("OverworldSession", () => {
       supplies: view.supplies,
       fatigue: view.fatigue,
       serviceOffers: view.serviceOffers,
+      serviceActions: view.serviceActions,
       roads: denseRoads,
       areaExits: denseAreaRoutes,
       routeOptions: view.routeOptions,
@@ -2173,6 +2236,7 @@ describe("OverworldSession", () => {
       supplies: view.supplies,
       fatigue: view.fatigue,
       serviceOffers: view.serviceOffers,
+      serviceActions: view.serviceActions,
       roads: view.exits,
       areaExits: view.areaExits,
       routeOptions: [densePlan],
@@ -2283,6 +2347,7 @@ describe("OverworldSession", () => {
       supplies: view.supplies,
       fatigue: view.fatigue,
       serviceOffers: view.serviceOffers,
+      serviceActions: view.serviceActions,
       roads: view.exits,
       areaExits: view.areaExits,
       routeOptions: view.routeOptions,
@@ -2462,6 +2527,16 @@ describe("OverworldSession", () => {
     const worn = session.view();
     expect(worn.supplies).toBeLessThan(worn.maxSupplies);
     expect(worn.fatigue).toBeGreaterThan(0);
+    const resupplyPreview = worn.serviceActions.find((action) => action.action === "resupply");
+    expect(resupplyPreview).toMatchObject({
+      available: true,
+      changed: true,
+      minutes: 45,
+      suppliesBefore: worn.supplies,
+      suppliesAfter: worn.maxSupplies,
+      fatigueBefore: worn.fatigue,
+      fatigueAfter: worn.fatigue,
+    });
 
     const resupplied = session.resupplyAtTown();
     expect(resupplied).toMatchObject({
@@ -2473,10 +2548,21 @@ describe("OverworldSession", () => {
       fatigueBefore: worn.fatigue,
       fatigueAfter: worn.fatigue,
     });
+    expect(resupplied).toMatchObject({
+      action: resupplyPreview!.action,
+      changed: resupplyPreview!.changed,
+      minutes: resupplyPreview!.minutes,
+      suppliesBefore: resupplyPreview!.suppliesBefore,
+      suppliesAfter: resupplyPreview!.suppliesAfter,
+      fatigueBefore: resupplyPreview!.fatigueBefore,
+      fatigueAfter: resupplyPreview!.fatigueAfter,
+      message: resupplyPreview!.message,
+    });
     expect(resupplied.entry?.kind).toBe("service");
     expect(session.view().supplies).toBe(worn.maxSupplies);
     expect(session.view().journal[0]?.title).toContain("Resupplied");
 
+    const restPreview = session.view().serviceActions.find((action) => action.action === "rest");
     const rested = session.restAtTown();
     expect(rested.action).toBe("rest");
     expect(rested.changed).toBe(true);
@@ -2484,12 +2570,27 @@ describe("OverworldSession", () => {
     expect(rested.fatigueBefore).toBe(worn.fatigue);
     expect(rested.fatigueAfter).toBe(0);
     expect(rested.entry?.kind).toBe("service");
+    expect(rested).toMatchObject({
+      action: restPreview!.action,
+      changed: restPreview!.changed,
+      minutes: restPreview!.minutes,
+      suppliesBefore: restPreview!.suppliesBefore,
+      suppliesAfter: restPreview!.suppliesAfter,
+      fatigueBefore: restPreview!.fatigueBefore,
+      fatigueAfter: restPreview!.fatigueAfter,
+      message: restPreview!.message,
+    });
 
     const ready = session.view();
     expect(ready.fatigue).toBe(0);
     expect(ready.supplies).toBe(ready.maxSupplies);
     expect(ready.travelCondition).toBe("ready");
     expect(ready.journal[0]?.title).toContain("Rested");
+    expect(ready.serviceActions).toMatchObject([
+      { action: "resupply", available: true, changed: false, minutes: 0 },
+      { action: "rest", available: true, changed: false, minutes: 0 },
+    ]);
+    expect(session.compactView()).toEqual(compactOverworldView(ready));
 
     expect(session.restAtTown()).toMatchObject({
       changed: false,

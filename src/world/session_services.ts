@@ -42,6 +42,10 @@ export type OverworldServiceState = {
   fatigue: number;
 };
 
+export const OVERWORLD_REST_UNAVAILABLE_MESSAGE = "There is no inn or healer here to rest safely.";
+export const OVERWORLD_RESUPPLY_UNAVAILABLE_MESSAGE =
+  "There is no market, inn, or stable here to resupply.";
+
 function campaignServiceRule(
   state: OverworldServiceState,
   action: OverworldServiceAction,
@@ -121,7 +125,7 @@ export function applyOverworldServicePlan(
 export function planOverworldTownRest(state: OverworldServiceState): OverworldServicePlan {
   const rule = campaignServiceRule(state, "rest");
   if (!rule && !canRestAtOverworldTown(state.services)) {
-    throw new Error("There is no inn or healer here to rest safely.");
+    throw new Error(OVERWORLD_REST_UNAVAILABLE_MESSAGE);
   }
   if (state.fatigue === 0) {
     return {
@@ -164,7 +168,7 @@ export function planOverworldTownRest(state: OverworldServiceState): OverworldSe
 export function planOverworldTownResupply(state: OverworldServiceState): OverworldServicePlan {
   const rule = campaignServiceRule(state, "resupply");
   if (!rule && !canResupplyAtOverworldTown(state.services)) {
-    throw new Error("There is no market, inn, or stable here to resupply.");
+    throw new Error(OVERWORLD_RESUPPLY_UNAVAILABLE_MESSAGE);
   }
   if (state.supplies >= MAX_SUPPLIES) {
     return {

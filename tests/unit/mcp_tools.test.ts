@@ -1675,6 +1675,21 @@ describe("MCP tools — validate / load (§9.4)", () => {
       full.fatigue,
       full.travelCondition,
     ]);
+    expect(compact.context.service_actions).toEqual([
+      [
+        "resupply",
+        "ordinary",
+        null,
+        true,
+        true,
+        45,
+        [6, 8],
+        [0, 0],
+        "You spend 45 minutes buying food, lamp oil, and road gear. Supplies rise from 6 to 8.",
+        null,
+      ],
+      ["rest", "ordinary", null, true, false, 0, [6, 6], [0, 0], "You are already rested.", null],
+    ]);
     expect(compact.context.hidden).toEqual([
       full.hiddenAreaCount,
       full.hiddenJobCount,
@@ -1778,6 +1793,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
       compactTravel.travel.fatigueGained,
       compactTravel.travel.roadEvent?.id ?? null,
     ]);
+    expect("service_actions" in compactTravel.context).toBe(false);
     expect("travel_log_truncated" in compactTravel.context).toBe(false);
     expect("observation" in compactTravel).toBe(false);
 
