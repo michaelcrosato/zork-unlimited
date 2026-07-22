@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 618 -->
+<!-- historical_cycle_count: 619 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - codex_only_outer_loop
+
+- Evidence choice: the recurring app false-positive banner coincided with an obsolete outer-loop provider fallback, raw login-file probe, and stale default-provider prose; routine TTRPG development now uses Codex and fresh Codex subagents.
+- Surface: `loop.sh` resolves an explicit `AI_AGENT_CMD` first and otherwise only the installed Codex CLI, with no credential-file inspection or automatic external-model fallback; explicit historical blind-provider compatibility remains separate.
+- Counterfactual: regression proves the explicit override wins, installed Codex resolves automatically, and the automatic resolver contains neither the retired provider nor an `auth.json` probe; absent Codex still yields evidence-only, while continuous execution and every verification/commit gate remain unchanged.
+- Pure evidence: exact tracked-clean candidate `355fcbcd` passes strict capture-v2 Terra 4586 at 61/61 calls and 47 accepted decisions, completes Wolf-Winter plus Gallowmere, continues at goal 23/checkpoint 40, ends voluntarily at goal 47, rates clarity/enjoyment 4/4, remains unstuck, and chooses replay-yes.
+- Measured result: the exact world remains `282cf14228d10495a12632919a50567960d06325e9182aa77232fc1c333d0aa9`; the player fortifies Cade's byre bloodlessly, recovers from a failed Gallowmere spoor check, and reports no rejection, loop, broken state, or soft-lock.
+- Feedback/follow-through: dense permanent registration text and the decision-40 interruption recur; progressive disclosure and truthful checkpoint work remain queued rather than being mixed into this automation-only increment.
+- Guard: post-change crawl is zero-finding at 247/247 nodes, 344/344 edges, and 12/12 quests; 15 focused loop tests, independent no-P0-P2 re-review, and supported two-worker health pass 408 files/3,227 tests plus UI typecheck and pack validation.
 
 ### Cycle result - audited_codex_code_mode
 
@@ -153,13 +163,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Measured result: Terra organically used `set_paling_rail` then `turn_paling_rail`, redirected the yearling, and called the recovery its best moment with no rail confusion; Sol's clean lure and Luna's frost-report route did not expose a recovery id, so one direct witness is a targeted PASS rather than cohort-scale resolution proof.
 - Feedback/follow-through: compile `20260721T153042Z` has 954 verified/58 rejected reports, 203 eligible pure exits, and 179 continuing; the ledger is 953/59. Dense/truncated setup and checkpoint interruption persist, while the rebuilt Works event remains the next systemic starting-slice increment.
 - Guard: exact pre/post crawl is zero-finding at 247/247 nodes, 344/344 edges, and 12/12 boards/quests; health passes 404 files/3,096 tests plus UI/all packs, the independent 630k-state relabel oracle and review are green, and Wolf/world hashes stay `e1a7d6ac…`/`9238b5f2…` with save/trace replay unchanged.
-
-### Cycle result - compact_setup_prose_dedup
-
-- Evidence choice: fresh cohorts still called the pre-mission cards repetitive and dense, so compact MCP removes only exact summary, field-trigger, and immediate-cost sentences already carried by structured fields; canonical full/UI prose and every mechanic remain untouched.
-- Surface: compact start, restore, read, context, rejection, story, and manual-quest paths share one fail-closed projection; the selected consequence appears once while distinct later prose survives.
-- Counterfactual: summary-bearing cards shed only exact leading duplicates, no-summary/ally cards are identities, a cost elsewhere in the lead-in cannot be removed, and copies remain immutable; compact semantic/lifecycle parity and full exports are covered.
-- Pure evidence: exact clean `e291103e` passed Terra 4332, Sol 4334, and Luna 4333; all completed Wolf-Winter at decisions 28/31/27, continued, were unstuck/replay-yes, and rated clarity/enjoyment 4/4. Seed 4331 timed out before launching a process and is excluded.
-- Measured result: Terra no longer reported repeated wording and Sol called preparation unusually transparent; all three still cited working-memory density, terminology, or truncation, so this is a partial presentation PASS rather than a solved onboarding claim.
-- Feedback/follow-through: compile `20260721T131104Z` has 947 verified/58 rejected reports, 196 eligible pure exits, and 172 continuing; the regenerated ledger is 946/59. Distinct player-facing paling-rail stages remain the next current-build gameplay debt.
-- Guard: compact v26, route tuple, world hash `9238b5f2…`, RNG, actions, and full/UI surfaces are unchanged; exact pre/post crawl is zero-finding at 247/247 nodes, 344/344 edges, and 12/12 boards/quests, independent review found no P0-P2, and health passes 403 files/3,091 tests plus UI/all packs.
