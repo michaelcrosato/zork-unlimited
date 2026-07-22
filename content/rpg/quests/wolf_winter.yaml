@@ -448,7 +448,17 @@ rooms:
       overlooks the flank-wolf circling the door-post. You reclaim the one-use guard and
       haul the ladder after you; this recovery route now commits east through the hatch.
     variants:
-      - when: [{ has_flag: strategy_lure_committed }, { has_item: winter_feed_sack }]
+      - when:
+          - { has_flag: strategy_lure_committed }
+          - { has_flag: flank_redirected }
+        text: >
+          The second feed measure is spent beyond the low hatch. The flank-wolf followed
+          it alive into the high wood, leaving the byre threshold empty east. The hauled
+          ladder still leaves no retreat.
+      - when:
+          - { has_flag: strategy_lure_committed }
+          - { has_item: winter_feed_sack }
+          - { not_flag: flank_redirected }
         text: >
           Cade's local feed-plan instruction takes you across the feed-hauler's crawlboard
           with his sack. Below, the flank-wolf circles from the low hatch. Cast the second
@@ -1104,7 +1114,12 @@ rooms:
           the rig, but gives you an untreated gate wound (-6 HP). People first saves everyone
           and returns the rig, but loses two cattle. Reserve consumes the rig to save people
           and herd unwounded.
-      - when: [{ has_flag: leader_redirected }]
+      - when: [{ has_flag: leader_redirected }, { has_flag: yearling_down }]
+        text: >
+          The yearling lies dead at the broken paling. Beyond it, the grey leader follows
+          the last feed cast and the living flank-wolf into the high wood. The route to the
+          cattle is open north. Behind you, the empty threshold runs south to the spent scent line.
+      - when: [{ has_flag: leader_redirected }, { not_flag: yearling_down }]
         text: >
           The grey leader is alive beyond the broken paling, following the last feed
           cast and the two younger wolves into the high wood. The route to the cattle is
@@ -1122,6 +1137,30 @@ rooms:
           reaches the inner rail from the lower stock path. The failed lure left the
           herd pressing; speak to her before the last cast if her cattle-first authority
           still matters. The byre door is south.
+      - when:
+          - { has_flag: strategy_lure_committed }
+          - { has_item: winter_feed_sack }
+          - { has_flag: yearling_down }
+          - { has_flag: flank_redirected }
+          - { not_flag: leader_down }
+          - { not_flag: leader_redirected }
+        text: >
+          The yearling lies dead at the paling, but the flank-wolf followed the second feed
+          cast alive into the high wood. Cade's last measure remains: cast it through the
+          outer scent gate to draw old grey away. Earlier blood and cattle alarm still stand.
+          The door is south.
+      - when:
+          - { has_flag: strategy_lure_committed }
+          - { has_item: winter_feed_sack }
+          - { has_flag: yearling_redirected }
+          - { has_flag: flank_redirected }
+          - { not_flag: yearling_down }
+          - { not_flag: leader_down }
+          - { not_flag: leader_redirected }
+        text: >
+          Both younger wolves are alive in the high wood beyond the spent scent line.
+          Cade's last feed measure remains: cast it through the outer scent gate to draw
+          old grey after them. The herd's current alarm still decides its cost. The door is south.
       - when:
           - { has_flag: leader_down }
           - { has_item: split_rail_guard }
@@ -2733,6 +2772,14 @@ objects:
       A low fodder hatch above the byre door. The flank-wolf circles the post below
       without looking up. The hauled store ladder lies behind you across the hay; east
       through this hatch is the committed drop, with no safe climb back during the fight.
+    variants:
+      - when:
+          - { has_flag: strategy_lure_committed }
+          - { has_flag: flank_redirected }
+        text: >
+          The low hatch now frames an empty door-post. The second feed measure lies beyond
+          it, and the flank-wolf followed that scent alive into the high wood. East is the
+          committed drop; the hauled ladder gives no safe climb back.
     interactions:
       - verb: USE
         item: winter_feed_sack

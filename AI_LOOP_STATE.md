@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 612 -->
+<!-- historical_cycle_count: 613 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - wolf_postcast_state_truth
+
+- Evidence choice: exact-clean strict Sol 4402 exposed three mutually corroborating Wolf-Winter state/prose faults after successful LURE casts, and a full route audit found the same contradictions in clean, recovered, and hybrid paths rather than treating one transcript as sufficient.
+- Surface: Fodder-Loft and its hatch now switch to completed-cast prose, Deep Byre gives pending-final-LURE text before every guard/combat variant, and the post-final pack account distinguishes a dead yearling from two living younger wolves.
+- Counterfactual: June-unresolved retains first precedence; clean, split, braced, hybrid retained-guard, Jamie, ordinary hunt, DRIVE, FORTIFY, full/compact, and post-final states are disjoint and truthful; production changes add no effects, gates, resources, scores, actions, or ending semantics.
+- Pure evidence: exact-clean Sol 4404 verifies `ok: true` across 70 error-free calls/48 decisions, fortifies Wolf-Winter under Albany authority and wins Gallowmere; Luna 4407 verifies across 125 decisions, diverts the pack, wins Gallowmere, recovers Tanner, and holds Breaking Weir; both rate 4/4, unstuck, replay-yes, without repeating the corrected post-cast contradictions.
+- Diagnostic only: Terra 4405/4406 remain unpublished and excluded after truncated/malformed forwarding wrappers correctly failed the exact-program audit; neither candidate play, rating, finding, or token count is evidence.
+- Measured result: independent exact-commit review finds no P0-P2 across 8 files/50 tests, every declared Wolf variant remains first-match reachable, and the fresh valid cohort moves remaining work to broader truncation, opening density, continuity, stale-menu recovery, and late-journey resupply rather than expanding this increment.
+- Guard: the 6,000-step post-change crawl remains zero-finding at 247/247 nodes, 344/344 edges, and 12/12 quests; full repaired-environment health passes 407 files/3,175 tests plus integrity, lint, format, compact limits, both typechecks, and all 12 packs with Wolf hash `48085079f5e6247f54caf9f0064f7dc60dc488511e1e351a526f72f87aa8e24d`.
 
 ### Cycle result - wolf_live_gate_and_june_closure
 
@@ -153,13 +163,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Measured result: deterministic Market+Greenway mechanics PASS, but organic policy uptake remains UNPROVEN—0/2 combined runs and 0/5 eligible fresh feature runs encountered either policy; opportunity-led follow-through is the next evidence need, not a claim of player uptake.
 - Feedback/follow-through: compile `20260721T062538Z` has 928 verified/58 rejected, 177 eligible pure exits, and 154 continuing; the markdown ledger is 927/59. Fresh friction clusters around Station/Market route discovery, checkpoint interruption, compact truncation, and continuity, while the historical top ten remain flat.
 - Guard: exact combined health passes 396 files/3,038 tests plus UI/all packs; exact crawl `20260721T061730Z` is zero-finding at 247/247 nodes, 344/344 edges, and 12/12 boards/quests.
-
-### Cycle result - albany_market_policy
-
-- Evidence choice: Jamie now offers one optional, irreversible post-Wolf Market policy rather than another opening gate: hold named household/kitchen prices or publish an open-bid ceiling and visible buyer board.
-- Surface: the bound disputed-crates job makes household fast/audit 30/75 minutes for 3/5 standing, versus open-bid 20/60 for 1/4; neither policy has a disguised dominant settlement.
-- Counterfactual: from the held-byre 8-standing return, each policy first adds 2; household-fast reaches the existing 13-standing Civic cot in 30 minutes, while open-bid-fast ends at 11 but saves 10 minutes; thorough paths retain the same time/standing frontier.
-- Authority: full, compact, UI, and MCP projections, exact option gating, both-policy/job counterfactuals, predecessor migration, snapshot integrity, and local-world hash acceptance are covered; independent review's sole stale-doc P2 was fixed and found no P0-P1.
-- Pure evidence: exact clean commit `1656675d` Terra seed 4306 was valid on its first attempt (53 decisions; Wolf pack diverted, Gallowmere hunt won; continue at goal/40, then end), clarity/enjoyment 4/4, unstuck/replay-yes, with no auth/security/provider/tool failure; the player did not encounter or choose the Market policy, so uptake remains UNPROVEN.
-- Feedback: the fresh player praised linked consequences and tactical resolutions, but repeated the embedded-action bridge S2 and dense Station consequence-comparison S1; compile `20260721T054326Z` has 925 verified/58 rejected, 174 pure exits and 151 continuations, while the deterministic ledger has 924 accepted/59 rejected.
-- Guard: combined pre-evidence health passed 395 files/3,027 tests and crawl `20260721T051450Z` was zero-finding; final exact landing health remains due after this docs-only commit.
