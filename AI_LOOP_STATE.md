@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 611 -->
+<!-- historical_cycle_count: 612 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,15 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - wolf_live_gate_and_june_closure
+
+- Evidence choice: independent strict Sol runs 4334 and 4387 found the same Wolf-Winter presentation fault—north repeated a stale LURE route outside its live state, while June accepted cattle-first terms with a generic close that did not explain what remained open.
+- Surface: north now states only its exhaustive live preconditions, and asking June to keep cattle-first terms reaches an authored confirmation that says no strategy was committed, names Cade's three living plans, and truthfully keeps north closed.
+- Counterfactual: the confirmation has no effects, flags, journal write, or journey count; LURE, DRIVE, and FORTIFY remain available, every genuine gate-opening state still opens north exactly once, and failed lure recovery remains intact.
+- Pure evidence: exact-clean Sol 4402 verifies `ok: true` across 55 error-free calls/40 decisions, diverts every wolf with the herd whole, continues at goal 34, and ends at checkpoint 40; Terra 4403 verifies across 62 calls/47 decisions, fortifies under Cade's terms, wins Gallowmere, continues at 23/40, and ends at goal 47; both rate 4/4, unstuck, replay-yes.
+- Measured result: independent review finds no P0-P2 across 32 files/182 tests; strict compile `20260722T085747Z` reaches 810 verified/218 rejected reports and 59 current pure exits with 57 continuing, while the fresh cohort queues post-cast Loft/Byre prose and compact clipping for later cycles instead of expanding this increment.
+- Guard: the 6,000-step post-change crawl remains zero-finding at 247/247 nodes, 344/344 edges, and 12/12 quests; full health passes 406 files/3,169 tests plus both typechecks/all packs with no schema, engine, save, world, combat, or ending-semantics change.
 
 ### Cycle result - luna_v1_capture_authority
 
@@ -154,13 +163,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Pure evidence: exact clean commit `1656675d` Terra seed 4306 was valid on its first attempt (53 decisions; Wolf pack diverted, Gallowmere hunt won; continue at goal/40, then end), clarity/enjoyment 4/4, unstuck/replay-yes, with no auth/security/provider/tool failure; the player did not encounter or choose the Market policy, so uptake remains UNPROVEN.
 - Feedback: the fresh player praised linked consequences and tactical resolutions, but repeated the embedded-action bridge S2 and dense Station consequence-comparison S1; compile `20260721T054326Z` has 925 verified/58 rejected, 174 pure exits and 151 continuations, while the deterministic ledger has 924 accepted/59 rejected.
 - Guard: combined pre-evidence health passed 395 files/3,027 tests and crawl `20260721T051450Z` was zero-finding; final exact landing health remains due after this docs-only commit.
-
-### Cycle result - authored_event_foundation
-
-- Evidence choice: Depth Contract #11 still had only generic checklist events, so this cycle established one reusable authored-event grammar and converted Civic's charter backlog into a policy whose delayed payoff depends on the truthful Wolf-Winter return.
-- Surface: after exact Notice Hall and Rowan setup, equal-cost public-record versus protected-household terms become permanent; the post-Wolf Return Docket then exposes exactly one of four held/evacuated policy closures with outcome-dependent duration and policy-dependent standing.
-- Counterfactual: full/compact/UI/MCP choice parity, both policy/outcome reversals, exact event-to-job predicates, one lawful closure, legacy migration, replay, chronology/tamper rejection, action-order independence, and clone boundaries are covered; independent review found no P0-P2.
-- Pure evidence: exact clean commit `5e98a620` Sol seed 4300 used compact v24 without a rejected call, bypassed the optional charter event, completed Wolf-Winter and The Gallowmere in 54 decisions, continued at 29 and 40, then ended unstuck/replay-yes at clarity/enjoyment 4/4 with no auth, classifier, provider, or tool failure.
-- Measured result: nonblocking authored-event visibility and ordinary two-quest play PASS; organic policy selection and delayed Return Docket use remain UNPROVEN. The run repeated character-sheet continuity as S2, plus June continuity and dense/truncated Albany copy as S1s.
-- Feedback/follow-through: compile `20260721T035637Z` has 919 verified reports, 168 eligible pure exits, and 145 continuing; the ledger is 918 accepted/59 rejected. Its top ten remain flat historical fleet clusters, while fresh exact reports prioritize persistent-to-quest character mapping, then companion continuity and dense compact copy.
-- Guard: exact rebased increment `ce9679b5` passes health at 394 files/3,019 tests plus UI/all packs; post-rebase crawl `20260721T041411Z` is zero-finding at 247/247 nodes, 344/344 edges, and 12/12 boards/quests, and the clean independent review found no P0-P2.

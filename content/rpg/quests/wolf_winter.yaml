@@ -381,7 +381,7 @@ rooms:
               - { has_flag: strategy_lure_committed }
               - { has_flag: strategy_drive_committed }
               - { has_flag: strategy_fortify_committed }
-        locked_msg: "LURE: commit with Cade; feed then waits west—take it, return east, cross north. After first cast: west, then up. Otherwise speak at gate or carry committed rig/shutters/seals."
+        locked_msg: "North waits for its live precondition: June's gate terms resolved; pre-cast feed, drive rig, shutters, or seals carried; or the first-lure west-up loft beat completed."
 
   - id: store
     name: "The Store-Shed"
@@ -3754,7 +3754,7 @@ npcs:
             - id: keep_cattle_terms
               aliases: [choose_living_plan, ask_cade]
               prompt: "Keep June's terms and ask Cade here for the feed lure, pack drive, or joined-seal plan."
-              end: true
+              goto: june_cattle_terms_confirmed
         - id: june_combat_line_disclosed
           npc_text: >
             Exact: wedge or bind for a safer spear line, but neither spares the yearling
@@ -3767,6 +3767,16 @@ npcs:
             - id: leave_june_boundary
               aliases: [cross_to_paling, leave_june]
               prompt: "End the exchange; the north gate is open, and Cade's living commitments remain available until you cross."
+              end: true
+        - id: june_cattle_terms_confirmed
+          npc_text: >-
+            Your cattle-first terms already stand; nothing here commits a plan. Cade waits
+            beside the day-book: settle the feed lure, pack drive, or joined seals with him.
+            Until one is committed, north remains closed.
+          topics:
+            - id: return_to_cade
+              aliases: [leave_june_boundary, ask_cade]
+              prompt: "End the exchange and return to Cade beside the day-book; all three living plans remain open, and north remains closed."
               end: true
 
   # June is an optional campaign companion, never a direct-start assumption or

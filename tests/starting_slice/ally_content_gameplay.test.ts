@@ -308,9 +308,8 @@ describe("SS-F04 — June Pike authored ally gameplay", () => {
     expect(actionIds(withJune)).not.toContain("go_north");
     expect(boundary.blocked_exits).toContainEqual({
       direction: "north",
-      message: expect.stringMatching(
-        /commit with Cade[^]*feed then waits west[^]*carry committed rig/i,
-      ),
+      message:
+        "North waits for its live precondition: June's gate terms resolved; pre-cast feed, drive rig, shutters, or seals carried; or the first-lure west-up loft beat completed.",
     });
 
     withJune = act(withJune, "talk_june_pike_combat_boundary");
@@ -318,10 +317,60 @@ describe("SS-F04 — June Pike authored ally gameplay", () => {
       expect.arrayContaining(["ask_acknowledge_combat_line", "ask_keep_cattle_terms"]),
     );
 
-    const keepTerms = act(withJune, "ask_keep_cattle_terms");
+    const keepTermsAction = enumerateRpgActions(index, withJune).find(
+      (candidate) => candidate.id === "ask_keep_cattle_terms",
+    );
+    if (!keepTermsAction) throw new Error("June must offer her cattle-terms clarification");
+    const keepTermsResult = makeStep(buildRpgRules(index, () => fixedRolls()))(
+      withJune,
+      keepTermsAction.action,
+    );
+    expect(keepTermsResult.ok).toBe(true);
+    expect(keepTermsResult.events).toEqual([
+      {
+        type: "state_change",
+        effect: "set_var",
+        name: "__dlg_june_pike_combat_boundary",
+        value: 3,
+      },
+      {
+        type: "narration",
+        text: `Road Warden June Pike: "Your cattle-first terms already stand; nothing here commits a plan. Cade waits beside the day-book: settle the feed lure, pack drive, or joined seals with him. Until one is committed, north remains closed."`,
+      },
+    ]);
+    const keepTerms = keepTermsResult.state;
+    expect(keepTerms).toEqual({
+      ...withJune,
+      step: withJune.step + 1,
+      vars: { ...withJune.vars, __dlg_june_pike_combat_boundary: 3 },
+    });
+    expect(buildRpgObservation(index, keepTerms).dialogue).toEqual({
+      npc: "june_pike_combat_boundary",
+      npc_text:
+        "Your cattle-first terms already stand; nothing here commits a plan. Cade waits beside the day-book: settle the feed lure, pack drive, or joined seals with him. Until one is committed, north remains closed.",
+    });
     expect(keepTerms.flags.june_combat_line_acknowledged).not.toBe(true);
     expect(actionIds(keepTerms)).not.toContain("go_north");
-    expect(actionIds(keepTerms)).toContain("talk_houndsman");
+    expect(actionIds(keepTerms).filter((id) => id.startsWith("ask_"))).toEqual([
+      "ask_return_to_cade",
+    ]);
+
+    const backWithCade = act(keepTerms, "ask_return_to_cade");
+    expect(backWithCade).toEqual({
+      ...withJune,
+      step: withJune.step + 2,
+      vars: { ...withJune.vars, __dlg_june_pike_combat_boundary: 0 },
+    });
+    expect(actionIds(backWithCade)).not.toContain("go_north");
+    expect(actionIds(backWithCade)).toContain("talk_houndsman");
+    const askingCade = act(backWithCade, "talk_houndsman");
+    expect(actionIds(askingCade)).toEqual(
+      expect.arrayContaining(["ask_lure", "ask_drive", "ask_fortify"]),
+    );
+    expect(actionIds(askingCade)).not.toContain("go_north");
+    expect(askingCade.flags.strategy_lure_committed).not.toBe(true);
+    expect(askingCade.flags.strategy_drive_committed).not.toBe(true);
+    expect(askingCade.flags.strategy_fortify_committed).not.toBe(true);
 
     let acknowledged = act(withJune, "ask_acknowledge_combat_line");
     expect(acknowledged.flags.june_combat_line_acknowledged).toBe(true);

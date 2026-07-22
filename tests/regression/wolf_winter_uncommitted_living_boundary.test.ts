@@ -215,9 +215,9 @@ describe("Wolf-Winter uncommitted living-plan boundary", () => {
       /released[^]*feed sack[^]*west[^]*take the winter-feed sack[^]*return east[^]*go north[^]*not available before you committed/i,
     );
     expect(committedPickup.available_actions.map((action) => action.id)).toContain("go_west");
-    expect(
-      committedPickup.blocked_exits.find((exit) => exit.direction === "north")?.message,
-    ).toMatch(/commit with Cade[^]*feed then waits west[^]*take it[^]*return east[^]*cross north/i);
+    expect(committedPickup.blocked_exits.find((exit) => exit.direction === "north")?.message).toBe(
+      "North waits for its live precondition: June's gate terms resolved; pre-cast feed, drive rig, shutters, or seals carried; or the first-lure west-up loft beat completed.",
+    );
     expect(compactRpgObservation(committedPickup, [], { includeActions: true }).text).toMatch(
       /go west[^]*take the winter-feed sack[^]*return east[^]*go north/i,
     );

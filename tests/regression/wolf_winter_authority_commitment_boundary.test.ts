@@ -27,6 +27,8 @@ const ALBANY_STANCE = /ALBANY[^]*covers property[^]*spends seals[^]*no aid/i;
 const FULL_DUTY_TERMS =
   /breach full duty[^]*first Albany Repair 2 easier[^]*Mobile stabilizes a recovered miss[^]*dawn/i;
 const TRUNCATION_MARKER = /(?:\.\.\.\(\+\d+ chars\)|#[0-9a-f]{12}\b)/i;
+const NORTH_PENDING_GUIDANCE =
+  "North waits for its live precondition: June's gate terms resolved; pre-cast feed, drive rig, shutters, or seals carried; or the first-lure west-up loft beat completed.";
 
 function act(state: GameState, actionId: string): GameState {
   const option = enumerateRpgActions(index, state).find((candidate) => candidate.id === actionId);
@@ -41,6 +43,46 @@ function observation(state: GameState) {
   return buildRpgObservation(index, state, {
     availableActions: enumerateRpgActions(index, state),
   });
+}
+
+function assertNorthBlockedOnce(state: GameState): void {
+  const full = observation(state);
+  const compact = compactRpgObservation(
+    full,
+    full.available_actions.map((action) => action.id),
+    { includeActions: true },
+  );
+  const compactNorthExits = (compact.exits ?? []).filter(
+    (exit) => (typeof exit === "string" ? exit : exit[0]) === "north",
+  );
+  const compactNorthBlocks = (compact.blocked ?? []).filter(([direction]) => direction === "north");
+
+  expect(full.available_actions.filter((action) => action.id === "go_north")).toEqual([]);
+  expect(full.exits.filter((exit) => exit.direction === "north")).toEqual([]);
+  expect(full.blocked_exits.filter((exit) => exit.direction === "north")).toEqual([
+    { direction: "north", message: NORTH_PENDING_GUIDANCE },
+  ]);
+  expect(compactNorthExits).toEqual([]);
+  expect(compactNorthBlocks).toEqual([["north", NORTH_PENDING_GUIDANCE]]);
+}
+
+function assertNorthOpenOnce(state: GameState): void {
+  const full = observation(state);
+  const compact = compactRpgObservation(
+    full,
+    full.available_actions.map((action) => action.id),
+    { includeActions: true },
+  );
+  const compactNorthExits = (compact.exits ?? []).filter(
+    (exit) => (typeof exit === "string" ? exit : exit[0]) === "north",
+  );
+  const compactNorthBlocks = (compact.blocked ?? []).filter(([direction]) => direction === "north");
+
+  expect(full.available_actions.filter((action) => action.id === "go_north")).toHaveLength(1);
+  expect(full.exits.filter((exit) => exit.direction === "north")).toHaveLength(1);
+  expect(full.blocked_exits.filter((exit) => exit.direction === "north")).toEqual([]);
+  expect(compactNorthExits).toEqual([["north", "paling_gap"]]);
+  expect(compactNorthBlocks).toEqual([]);
 }
 
 function launchSeed4177Imports(): GameState {
@@ -199,5 +241,46 @@ describe("Wolf-Winter authority commitment boundary", () => {
     expect(enumerateRpgActions(index, state).map((action) => action.id)).not.toEqual(
       expect.arrayContaining(["go_south", "go_west", "ask_lure", "ask_drive", "ask_fortify"]),
     );
+
+    assertNorthBlockedOnce(state);
+    expect(NORTH_PENDING_GUIDANCE.length).toBe(167);
+    expect(NORTH_PENDING_GUIDANCE.length).toBeLessThan(180);
+
+    state = act(state, "take_albany_relief_seals");
+    assertNorthOpenOnce(state);
   });
+
+  it.each([
+    {
+      strategy: "drive",
+      discuss: "ask_drive",
+      commit: "ask_commit_drive",
+      committedFlag: "strategy_drive_committed",
+      pickup: "take_drive_signal_rope_kit",
+    },
+    {
+      strategy: "Cade fortification",
+      discuss: "ask_fortify",
+      commit: "ask_commit_cade_terms",
+      committedFlag: "fortify_cade_terms_accepted",
+      pickup: "take_cade_household_shutters",
+    },
+  ])(
+    "keeps one truthful north gate while the $strategy resource waits, then opens it once carried",
+    ({ discuss, commit, committedFlag, pickup }) => {
+      let state = launchSeed4177Imports();
+      state = act(state, "use_sheltered_stockway_last_mile");
+      state = act(state, "talk_houndsman");
+      state = act(state, discuss);
+      state = act(state, commit);
+      state = act(state, "ask_leave");
+
+      expect(state.flags[committedFlag]).toBe(true);
+      expect(enumerateRpgActions(index, state).map((action) => action.id)).toContain(pickup);
+      assertNorthBlockedOnce(state);
+
+      state = act(state, pickup);
+      assertNorthOpenOnce(state);
+    },
+  );
 });
