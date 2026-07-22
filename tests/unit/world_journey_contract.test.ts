@@ -140,11 +140,12 @@ describe("journey contract v3 goals", () => {
           checkpoint,
           goalVersion: null,
           goalId: null,
+          message: `You have reached the ${String(checkpoint)}-decision checkpoint. Continue until the current goal is completed or the fixed checkpoint at decision ${String(checkpoint + 40)}, whichever comes first, or end this journey?`,
           options: [
             {
               id: "continue",
-              label: "Continue for 40 more decisions",
-              consequence: `Play remains open; the next fixed checkpoint is decision ${String(checkpoint + 40)}.`,
+              label: `Continue until an active goal completes or decision ${String(checkpoint + 40)}`,
+              consequence: `Play remains open; you may end again when an active goal completes or at the next fixed checkpoint, decision ${String(checkpoint + 40)}, whichever comes first.`,
             },
             { id: "end" },
           ],
@@ -186,8 +187,9 @@ describe("journey contract v3 goals", () => {
       options: [
         {
           id: "continue",
-          label: "Continue to decision 40",
-          consequence: "Play remains open; the next fixed checkpoint is decision 40.",
+          label: "Continue until an active goal completes or decision 40",
+          consequence:
+            "Play remains open; you may end again when an active goal completes or at the next fixed checkpoint, decision 40, whichever comes first.",
         },
         { id: "end" },
       ],
@@ -216,6 +218,77 @@ describe("journey contract v3 goals", () => {
       goalHistory: [{ version: 1, id: INITIAL_JOURNEY_GOAL.id, status: "completed" }],
     });
     expect(JourneyContractSnapshotSchema.parse(activated)).toEqual(activated);
+  });
+
+  it("offers another choice when the goal completes before the next fixed checkpoint", () => {
+    const checkpoint = decideUntil(createInitialJourneyContractSnapshot(), 40);
+    const continuedCheckpoint = chooseJourney(checkpoint, "continue").state;
+    expect(continuedCheckpoint).toMatchObject({
+      status: "active",
+      acceptedDecisions: 40,
+      nextCheckpoint: 80,
+      pendingChoice: null,
+      retentionHistory: [{ checkpoint: 40, choice: "continue" }],
+    });
+
+    const completed = recordJourneyGoalCompleted(
+      decide(continuedCheckpoint, "quest:ending", "quest"),
+    );
+    expect(completed).toMatchObject({
+      status: "awaiting_choice",
+      acceptedDecisions: 41,
+      nextCheckpoint: 80,
+      pendingChoice: {
+        atDecision: 41,
+        reasons: ["goal_completed"],
+        checkpoint: null,
+        goalVersion: 1,
+        goalId: INITIAL_JOURNEY_GOAL.id,
+      },
+    });
+    expect(journeyPresentation(completed).pendingChoice).toMatchObject({
+      message:
+        "You completed your current goal after 41 meaningful decisions. Continue until another goal is completed or the fixed checkpoint at decision 80, whichever comes first, or end this journey?",
+      options: [
+        {
+          id: "continue",
+          label: "Continue until an active goal completes or decision 80",
+          consequence:
+            "Play remains open; you may end again when an active goal completes or at the next fixed checkpoint, decision 80, whichever comes first.",
+        },
+        { id: "end" },
+      ],
+    });
+
+    const continuedGoal = chooseJourney(completed, "continue").state;
+    const activated = activateJourneyGoal(continuedGoal, GOAL_TWO);
+    const nextCheckpoint = decideUntil(activated, 80);
+    expect(nextCheckpoint).toMatchObject({
+      status: "awaiting_choice",
+      acceptedDecisions: 80,
+      nextCheckpoint: 80,
+      goal: { ...GOAL_TWO, status: "active", completedAtDecision: null },
+      pendingChoice: {
+        atDecision: 80,
+        reasons: ["checkpoint"],
+        checkpoint: 80,
+        goalVersion: null,
+        goalId: null,
+      },
+      retentionHistory: [
+        { sequence: 1, checkpoint: 40, choice: "continue" },
+        {
+          sequence: 2,
+          atDecision: 41,
+          reasons: ["goal_completed"],
+          checkpoint: null,
+          goalVersion: 1,
+          goalId: INITIAL_JOURNEY_GOAL.id,
+          choice: "continue",
+        },
+      ],
+    });
+    expect(JourneyContractSnapshotSchema.parse(nextCheckpoint)).toEqual(nextCheckpoint);
   });
 
   it("tracks two completed goals and emits goal-bound retention evidence in the end receipt", () => {
@@ -314,6 +387,19 @@ describe("journey contract v3 goals", () => {
       goalVersion: 2,
       goalId: GOAL_TWO.id,
     });
+    expect(journeyPresentation(state).pendingChoice).toMatchObject({
+      message:
+        "You completed your current goal at the 80-decision checkpoint. Continue until another goal is completed or the fixed checkpoint at decision 120, whichever comes first, or end this journey?",
+      options: [
+        {
+          id: "continue",
+          label: "Continue until an active goal completes or decision 120",
+          consequence:
+            "Play remains open; you may end again when an active goal completes or at the next fixed checkpoint, decision 120, whichever comes first.",
+        },
+        { id: "end" },
+      ],
+    });
     expect(JourneyContractSnapshotSchema.parse(state)).toEqual(state);
 
     const continued = chooseJourney(state, "continue").state;
@@ -344,6 +430,13 @@ describe("journey contract v3 goals", () => {
     expect(journeyPresentation(died).pendingChoice?.options).toHaveLength(1);
     expect(journeyPresentation(died).goalGuidance).toBeNull();
     expect(() => chooseJourney(died, "continue")).toThrow(/character died/i);
+
+    const deathWithoutContinuation = cloneJourneyContractSnapshot(died);
+    deathWithoutContinuation.nextCheckpoint = null;
+    expect(journeyPresentation(deathWithoutContinuation).pendingChoice).toMatchObject({
+      reasons: ["character_died"],
+      options: [{ id: "end" }],
+    });
 
     const ended = chooseJourney(died, "end").state;
     expect(JourneyContractSnapshotSchema.safeParse(ended).success).toBe(true);
@@ -434,7 +527,7 @@ describe("journey contract presentation context", () => {
       `Cade's cattle survived. ${baseMessage} Hayden has another live packet.`,
     );
     expect(view.pendingChoice?.options[0].consequence).toBe(
-      "Continue to allocate the wagon. Play remains open; the next fixed checkpoint is decision 40. Your choice will shape the next lead.",
+      "Continue to allocate the wagon. Play remains open; you may end again when an active goal completes or at the next fixed checkpoint, decision 40, whichever comes first. Your choice will shape the next lead.",
     );
     expect(view.storyChoice).toEqual(storyChoice);
     expect(Object.keys(view.storyChoice!).sort()).toEqual(["id", "message", "options"]);

@@ -33,7 +33,8 @@ describe("fresh-game tutorial", () => {
     expect(copy).toMatch(/Goal Passage.*each road.*pauses/is);
     expect(copy).toMatch(/journal.*save.*export.*resume/is);
     expect(copy).toMatch(/40.*80.*every 40/is);
-    expect(copy).toMatch(/completing the goal.*sooner/is);
+    expect(copy).toMatch(/active-goal completion.*offer.*sooner/is);
+    expect(copy).toMatch(/Continue.*goal completion.*next fixed checkpoint.*whichever is first/is);
     expect(copy).not.toMatch(/wolf_winter|world_quest_id|session_id|mcp__/i);
   });
 
