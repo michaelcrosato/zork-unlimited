@@ -368,9 +368,10 @@ rhythm. The structural-only [`prompt.md`](./prompt.md) is a QA fixture.
 ## Files
 
 - `run.sh` — the runner: builds the pure MCP config and private evidence path,
-  fills the transport-only prompt, runs `claude -p` from an isolated directory,
-  and verifies the report/receipt after game-confirmed exit. `--smoke` selects
-  the structural no-LLM path.
+  fills the transport-only prompt, runs the default Codex/Spark CLI (or the
+  explicitly selected Claude compatibility provider) from an isolated
+  directory, and verifies the report/receipt after game-confirmed exit.
+  `--smoke` selects the structural no-LLM path.
 - `smoke.mjs` — token-free MCP smoke test via the MCP SDK client: spawn server,
   `tools/list`, exercise overworld and direct quest starts, step a few actions,
   assert. Run

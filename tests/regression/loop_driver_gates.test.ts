@@ -96,6 +96,53 @@ describe("loop.sh verification gates", () => {
   });
 });
 
+describe("loop.sh agent selection", () => {
+  const agentCommand = `${sectionBetween("agent_cmd() {", "\n}\n\nrun_agent()")}\n}`;
+
+  it("uses installed Codex as the only automatic agent and never inspects auth.json", () => {
+    expect(agentCommand).toContain("if command -v codex >/dev/null 2>&1; then");
+    expect(agentCommand).not.toMatch(/claude/i);
+    expect(agentCommand).not.toMatch(/auth\.json/i);
+  });
+
+  it("resolves the installed Codex CLI for automatic runs", () => {
+    const result = spawnSync("bash", ["-s"], {
+      cwd: process.cwd(),
+      env: process.env,
+      input: [
+        "set -uo pipefail",
+        "unset AI_AGENT_CMD AI_CODEX_SANDBOX",
+        "codex() { :; }",
+        agentCommand,
+        "agent_cmd",
+      ].join("\n"),
+      encoding: "utf8",
+    });
+
+    expect(result.status, `${result.stdout}\n${result.stderr}`).toBe(0);
+    expect(result.stdout).toContain("codex -a never exec --sandbox workspace-write --cd ");
+  });
+
+  it("gives an explicit AI_AGENT_CMD precedence over automatic Codex selection", () => {
+    const result = spawnSync("bash", ["-s"], {
+      cwd: process.cwd(),
+      env: process.env,
+      input: [
+        "set -uo pipefail",
+        "unset AI_CODEX_SANDBOX",
+        "codex() { :; }",
+        'AI_AGENT_CMD="explicit-agent --headless"',
+        agentCommand,
+        "agent_cmd",
+      ].join("\n"),
+      encoding: "utf8",
+    });
+
+    expect(result.status, `${result.stdout}\n${result.stderr}`).toBe(0);
+    expect(result.stdout).toBe("explicit-agent --headless\n");
+  });
+});
+
 describe("require_playtest_record", () => {
   const gate = `${sectionBetween("require_playtest_record() {", "\n}\n\nrun_cycle()")}\n}`;
 

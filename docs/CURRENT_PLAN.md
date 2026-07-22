@@ -43,10 +43,6 @@ The latest feedback compile contains 916 verified reports, but it mixes builds
 and modes and therefore cannot certify the consolidated slice. Current-build
 Terra, Sol, and Luna cohorts remain required after the authored Albany work.
 
-The recurring app security banner is not a game or authentication defect. The
-repo now front-loads bounded fictional TTRPG context, and verifier-valid seeds
-4242, 4243, 4245, and 4246 completed without an auth or security warning.
-
 ## Chosen Move
 
 Land Market and Greenway as one ordered, green increment after the reusable

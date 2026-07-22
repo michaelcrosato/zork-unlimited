@@ -2,7 +2,7 @@
 # loop-status.sh — one-command monitoring snapshot for THIS project's AFK loop.
 #
 # PROJECT-SCOPED (2026-06-09): several projects run identical-looking `./loop.sh` /
-# `claude -p` processes, so pattern-matching across all of them mis-reads (and risks
+# headless-agent processes, so pattern-matching across all of them mis-reads (and risks
 # killing) other projects' work. This reads ONLY the pids THIS loop recorded
 # (ai-runs/loop.pid = loop.sh; ai-runs/agent.pid = the worker, written by run_agent).
 # Liveness is checked with `kill -0` on those exact pids — never a global ps grep.
