@@ -22,6 +22,7 @@ import {
   MCP_TRANSCRIPT_TITLE_CHAR_LIMIT,
 } from "../../src/mcp/action_labels.js";
 import type { RpgObservation } from "../../src/rpg/observation.js";
+import { MCP_VISIBLE_JOURNAL_PROSE_CHAR_LIMIT } from "../../src/mcp/journal_prose.js";
 
 function ids(prefix: string, count: number): string[] {
   return Array.from({ length: count }, (_, i) => `${prefix}_${i.toString().padStart(2, "0")}`);
@@ -65,6 +66,7 @@ describe("compactRpgObservation", () => {
     expect(compactRpgObservation(obs, ["look"], { includeVersion: true }).v).toBe(
       RPG_COMPACT_OBSERVATION_VERSION,
     );
+    expect(RPG_COMPACT_OBSERVATION_VERSION).toBe(18);
     expect("mode" in compact).toBe(false);
     expect(compact.inv).toEqual(ids("item", 16));
     expect(compact.flags).toEqual(ids("flag", 16));
@@ -267,7 +269,7 @@ describe("compactRpgObservation", () => {
 
   it("caps long prose fields in compact loop context only", () => {
     const longDescription = `${"room ".repeat(260)}\n\n`;
-    const longDialogue = `${"dialogue ".repeat(120)}\n`;
+    const longDialogue = `${"dialogue ".repeat(150)}\n`;
     const longBlockedExit = `${"blocked ".repeat(80)}\n`;
     const longEndingText = `${"ending ".repeat(180)}\n`;
     const obs: RpgObservation = {
@@ -348,7 +350,9 @@ describe("compactRpgObservation", () => {
     expect(compact.here[1]).toHaveLength(MCP_TRANSCRIPT_TITLE_CHAR_LIMIT);
     expect(compact.inv?.[0]).toHaveLength(MCP_TRANSCRIPT_SUMMARY_VALUE_CHAR_LIMIT);
     expect(compact.flags?.[0]).toHaveLength(MCP_TRANSCRIPT_SUMMARY_VALUE_CHAR_LIMIT);
-    expect(compact.journal?.[0]).toHaveLength(MCP_TRANSCRIPT_SUMMARY_VALUE_CHAR_LIMIT);
+    expect(compact.journal?.[0]).toHaveLength(MCP_VISIBLE_JOURNAL_PROSE_CHAR_LIMIT);
+    expect(compact.journal?.[0]).toMatch(/\.\.\.\(\+\d+ chars\)$/);
+    expect(compact.journal?.[0]).not.toMatch(/#[0-9a-f]{12}$/);
     expect(compactVarKey).toHaveLength(MCP_TRANSCRIPT_SUMMARY_VALUE_CHAR_LIMIT);
     expect(compactExit).toEqual([
       expect.stringMatching(/\.\.\.\(\+\d+ chars\)#[0-9a-f]{12}$/),

@@ -15,8 +15,8 @@ import {
 import type { GameEvent } from "../../src/core/events.js";
 
 describe("compactPlayerEvent", () => {
-  it("uses the v6 single-character event contract", () => {
-    expect(RPG_COMPACT_EVENT_VERSION).toBe(6);
+  it("uses the v7 single-character event contract", () => {
+    expect(RPG_COMPACT_EVENT_VERSION).toBe(7);
     expect(compactPlayerEvent({ type: "rejected", reason: "no" })).toEqual(["r", "no"]);
     expect(compactPlayerEvent({ type: "move", from: "yard", to: "road" })).toEqual([
       "m",
@@ -108,7 +108,7 @@ describe("compactPlayerEvent", () => {
   });
 
   it("caps prose-bearing compact event fields", () => {
-    const longNarration = "narration ".repeat(80);
+    const longNarration = "narration ".repeat(160);
     const longRejection = "rejected ".repeat(40);
     const longJournal = "journal ".repeat(80);
     const longDiagnostic = "diagnostic ".repeat(40);
@@ -140,6 +140,7 @@ describe("compactPlayerEvent", () => {
     expect(rejection[1]).toMatch(/\.\.\.\(\+\d+ chars\)$/);
     expect(journal[2]!.length).toBeLessThanOrEqual(COMPACT_EVENT_JOURNAL_CHAR_LIMIT);
     expect(journal[2]).toMatch(/\.\.\.\(\+\d+ chars\)$/);
+    expect(journal[2]).not.toMatch(/#[0-9a-f]{12}$/);
     expect(diagnostic[3]).toBe(1);
     expect(String(diagnostic[4]).length).toBeLessThanOrEqual(COMPACT_EVENT_DIAGNOSTIC_CHAR_LIMIT);
     expect(String(diagnostic[4])).toMatch(/\.\.\.\(\+\d+ chars\)$/);

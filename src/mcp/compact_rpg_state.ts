@@ -13,11 +13,12 @@ import {
   omittedCount,
 } from "./compact_truncation.js";
 import { compactMcpTranscriptSceneId, compactMcpTranscriptSummaryValue } from "./action_labels.js";
+import { compactMcpVisibleJournalProse } from "./journal_prose.js";
 
 const MAX_SCORE_VAR = "max_score";
 const CORE_STATE_VARS = new Set([ATTACK_VAR, DEFENSE_VAR, HP_VAR, MAX_SCORE_VAR, SCORE_VAR]);
 
-export const RPG_COMPACT_STATE_VERSION = 1 as const;
+export const RPG_COMPACT_STATE_VERSION = 2 as const;
 export const COMPACT_STATE_INVENTORY_LIMIT = 16;
 export const COMPACT_STATE_FLAG_LIMIT = 16;
 export const COMPACT_STATE_VAR_LIMIT = 16;
@@ -161,7 +162,7 @@ export function compactRpgState(state: GameState, opts: CompactStateOptions = {}
     compactMcpTranscriptSummaryValue,
   );
   const compactJournal = compactRecent(journal, COMPACT_STATE_JOURNAL_LIMIT).map(
-    compactMcpTranscriptSummaryValue,
+    compactMcpVisibleJournalProse,
   );
   const compactVisited = compactHead(visited, COMPACT_STATE_VISITED_LIMIT).map(
     compactMcpTranscriptSceneId,

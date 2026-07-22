@@ -18,6 +18,7 @@ import {
   MCP_TRANSCRIPT_TITLE_CHAR_LIMIT,
 } from "../../src/mcp/action_labels.js";
 import {
+  TRANSCRIPT_SUMMARY_PROJECTION_COMPACT,
   TRANSCRIPT_TURN_LIMIT_DEFAULT,
   transcriptTurnsFor,
   transcriptTurnsOmitted,
@@ -27,6 +28,12 @@ import type { RpgActionOption } from "../../src/rpg/legal_actions.js";
 import type { RpgObservation } from "../../src/rpg/observation.js";
 import type { RpgIndex } from "../../src/rpg/runner.js";
 import type { RpgAction } from "../../src/api/types.js";
+import { MCP_VISIBLE_JOURNAL_PROSE_CHAR_LIMIT } from "../../src/mcp/journal_prose.js";
+import { RPG_COMPACT_OBSERVATION_VERSION } from "../../src/mcp/compact_rpg_observation.js";
+import { RPG_COMPACT_STATE_VERSION } from "../../src/mcp/compact_rpg_state.js";
+
+const STATE_PROJECTION_COMPACT = `compact-state:v${RPG_COMPACT_STATE_VERSION}`;
+const OBSERVATION_PROJECTION_COMPACT = `compact-observation:v${RPG_COMPACT_OBSERVATION_VERSION}`;
 
 const rules: Rules<RpgAction> = {
   legalActions: () => [],
@@ -297,11 +304,19 @@ describe("SessionStore", () => {
 
     store.legalActions(session.id, () => actions);
     store.legalActionProjection(session.id, "rows:compact:1", () => actionProjection);
-    store.stateProjection(session.id, "compact-state:v1", () => stateProjection);
+    store.stateProjection(session.id, STATE_PROJECTION_COMPACT, () => stateProjection);
     store.observation(session.id, {}, () => obs);
-    store.observationProjection(session.id, "compact:v6", () => observationProjection);
+    store.observationProjection(
+      session.id,
+      OBSERVATION_PROJECTION_COMPACT,
+      () => observationProjection,
+    );
     store.transcriptSummary(session.id, () => summary);
-    store.transcriptSummaryProjection(session.id, "summary:compact:1", () => summaryProjection);
+    store.transcriptSummaryProjection(
+      session.id,
+      TRANSCRIPT_SUMMARY_PROJECTION_COMPACT,
+      () => summaryProjection,
+    );
 
     const stateHash = session.stateHash;
     const equalState = JSON.parse(JSON.stringify(initialState)) as GameState;
@@ -333,7 +348,7 @@ describe("SessionStore", () => {
       }),
     ).toBe(actionProjection);
     expect(
-      store.stateProjection(session.id, "compact-state:v1", () => {
+      store.stateProjection(session.id, STATE_PROJECTION_COMPACT, () => {
         rebuilds += 1;
         return { at: "rebuilt", vitals: [1, 1, 1] };
       }),
@@ -345,7 +360,7 @@ describe("SessionStore", () => {
       }),
     ).toBe(obs);
     expect(
-      store.observationProjection(session.id, "compact:v6", () => {
+      store.observationProjection(session.id, OBSERVATION_PROJECTION_COMPACT, () => {
         rebuilds += 1;
         return { here: ["rebuilt", "Rebuilt"] };
       }),
@@ -357,7 +372,7 @@ describe("SessionStore", () => {
       }),
     ).toBe(summary);
     expect(
-      store.transcriptSummaryProjection(session.id, "summary:compact:1", () => {
+      store.transcriptSummaryProjection(session.id, TRANSCRIPT_SUMMARY_PROJECTION_COMPACT, () => {
         rebuilds += 1;
         return { steps: 1 };
       }),
@@ -771,7 +786,9 @@ describe("SessionStore", () => {
     expect(full.summary.scenes[0]).toHaveLength(MCP_TRANSCRIPT_SCENE_ID_CHAR_LIMIT);
     expect(full.summary.inventory[0]).toHaveLength(MCP_TRANSCRIPT_SUMMARY_VALUE_CHAR_LIMIT);
     expect(full.summary.flags[0]).toHaveLength(MCP_TRANSCRIPT_SUMMARY_VALUE_CHAR_LIMIT);
-    expect(full.summary.journal[0]).toHaveLength(MCP_TRANSCRIPT_SUMMARY_VALUE_CHAR_LIMIT);
+    expect(full.summary.journal[0]).toHaveLength(MCP_VISIBLE_JOURNAL_PROSE_CHAR_LIMIT);
+    expect(full.summary.journal[0]).toMatch(/\.\.\.\(\+\d+ chars\)$/);
+    expect(full.summary.journal[0]).not.toMatch(/#[0-9a-f]{12}$/);
     expect(full.summary.ending_id).toHaveLength(MCP_TRANSCRIPT_SUMMARY_VALUE_CHAR_LIMIT);
     expect(compact.summary.scenes[0]).toBe(full.summary.scenes[0]);
     expect(compact.summary.inventory?.[0]).toBe(full.summary.inventory[0]);
@@ -1022,11 +1039,11 @@ describe("SessionStore", () => {
     const otherProjection = { at: "start", flags: ["visited"] };
     let builds = 0;
 
-    const first = store.stateProjection(session.id, "compact-state:v1", () => {
+    const first = store.stateProjection(session.id, STATE_PROJECTION_COMPACT, () => {
       builds += 1;
       return firstProjection;
     });
-    const cached = store.stateProjection(session.id, "compact-state:v1", () => {
+    const cached = store.stateProjection(session.id, STATE_PROJECTION_COMPACT, () => {
       builds += 1;
       return nextProjection;
     });
@@ -1039,7 +1056,7 @@ describe("SessionStore", () => {
     expect(cached).toBe(firstProjection);
     expect(otherShape).toBe(otherProjection);
     expect(builds).toBe(2);
-    expect(session.stateProjectionCaches?.get("compact-state:v1")?.stateHash).toBe(
+    expect(session.stateProjectionCaches?.get(STATE_PROJECTION_COMPACT)?.stateHash).toBe(
       session.stateHash,
     );
 
@@ -1059,7 +1076,7 @@ describe("SessionStore", () => {
     store.update(session.id, state("next"));
     expect(session.stateProjectionCaches).toBeUndefined();
 
-    const afterState = store.stateProjection(session.id, "compact-state:v1", () => {
+    const afterState = store.stateProjection(session.id, STATE_PROJECTION_COMPACT, () => {
       builds += 1;
       return nextProjection;
     });
@@ -1243,14 +1260,24 @@ describe("SessionStore", () => {
     };
     let builds = 0;
 
-    const first = store.transcriptSummaryProjection(session.id, "compact-summary:v1", () => {
-      builds += 1;
-      return firstProjection;
-    });
-    const cached = store.transcriptSummaryProjection(session.id, "compact-summary:v1", () => {
-      builds += 1;
-      return nextProjection;
-    });
+    expect(TRANSCRIPT_SUMMARY_PROJECTION_COMPACT).toBe("compact-summary:v2");
+
+    const first = store.transcriptSummaryProjection(
+      session.id,
+      TRANSCRIPT_SUMMARY_PROJECTION_COMPACT,
+      () => {
+        builds += 1;
+        return firstProjection;
+      },
+    );
+    const cached = store.transcriptSummaryProjection(
+      session.id,
+      TRANSCRIPT_SUMMARY_PROJECTION_COMPACT,
+      () => {
+        builds += 1;
+        return nextProjection;
+      },
+    );
     const otherShape = store.transcriptSummaryProjection(session.id, "audit-summary:v1", () => {
       builds += 1;
       return nextProjection;
@@ -1260,20 +1287,26 @@ describe("SessionStore", () => {
     expect(cached).toBe(firstProjection);
     expect(otherShape).toBe(nextProjection);
     expect(builds).toBe(2);
-    expect(session.transcriptSummaryProjectionCaches?.get("compact-summary:v1")?.stateHash).toBe(
-      session.stateHash,
-    );
     expect(
-      session.transcriptSummaryProjectionCaches?.get("compact-summary:v1")?.transcriptLogHash,
+      session.transcriptSummaryProjectionCaches?.get(TRANSCRIPT_SUMMARY_PROJECTION_COMPACT)
+        ?.stateHash,
+    ).toBe(session.stateHash);
+    expect(
+      session.transcriptSummaryProjectionCaches?.get(TRANSCRIPT_SUMMARY_PROJECTION_COMPACT)
+        ?.transcriptLogHash,
     ).toBe(session.transcriptLogHash);
 
     store.update(session.id, state("next"));
     expect(session.transcriptSummaryProjectionCaches).toBeUndefined();
 
-    const afterState = store.transcriptSummaryProjection(session.id, "compact-summary:v1", () => {
-      builds += 1;
-      return nextProjection;
-    });
+    const afterState = store.transcriptSummaryProjection(
+      session.id,
+      TRANSCRIPT_SUMMARY_PROJECTION_COMPACT,
+      () => {
+        builds += 1;
+        return nextProjection;
+      },
+    );
     expect(afterState).toBe(nextProjection);
     expect(builds).toBe(3);
 

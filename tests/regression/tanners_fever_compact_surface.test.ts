@@ -7,7 +7,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import type { Effect } from "../../src/core/effects.js";
-import { compactMcpTranscriptSummaryValue } from "../../src/mcp/action_labels.js";
+import { compactMcpVisibleJournalProse } from "../../src/mcp/journal_prose.js";
 import { compactText } from "../../src/mcp/compact_truncation.js";
 import { compactPlayerEvent } from "../../src/mcp/compact_rpg_event.js";
 import {
@@ -167,11 +167,7 @@ describe("bug_0515 - Tanner's Fever compact surface preserves the whole medical 
       if (prose !== undefined) expectExact(`${entry.label}.narrate`, prose, narrationText(prose));
       const memory = journal(entry.effect);
       if (memory !== undefined) {
-        expectExact(
-          `${entry.label}.recent_journal`,
-          memory,
-          compactMcpTranscriptSummaryValue(memory),
-        );
+        expectExact(`${entry.label}.recent_journal`, memory, compactMcpVisibleJournalProse(memory));
         expectExact(`${entry.label}.journal_event`, memory, journalEventText(memory));
       }
     }

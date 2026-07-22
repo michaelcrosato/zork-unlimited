@@ -1,10 +1,14 @@
 import type { GameEvent } from "../core/events.js";
 import { compactText } from "./compact_truncation.js";
 import { compactMcpTranscriptSceneId, compactMcpTranscriptSummaryValue } from "./action_labels.js";
+import {
+  compactMcpVisibleJournalProse,
+  MCP_VISIBLE_JOURNAL_PROSE_CHAR_LIMIT,
+} from "./journal_prose.js";
 
-export const COMPACT_EVENT_NARRATION_CHAR_LIMIT = 280;
+export const COMPACT_EVENT_NARRATION_CHAR_LIMIT = 1200;
 export const COMPACT_EVENT_REJECTION_CHAR_LIMIT = 180;
-export const COMPACT_EVENT_JOURNAL_CHAR_LIMIT = 220;
+export const COMPACT_EVENT_JOURNAL_CHAR_LIMIT = MCP_VISIBLE_JOURNAL_PROSE_CHAR_LIMIT;
 export const COMPACT_EVENT_DIAGNOSTIC_CHAR_LIMIT = 180;
 
 export type RpgCompactEvent =
@@ -27,7 +31,7 @@ export type RpgCompactEvent =
   | readonly ["q", npc: string, node: string]
   | readonly ["e", endingId: string];
 
-export const RPG_COMPACT_EVENT_VERSION = 6 as const;
+export const RPG_COMPACT_EVENT_VERSION = 7 as const;
 
 /**
  * Agent-facing one-line legend for the RpgCompactEvent tuples above; co-located
@@ -120,7 +124,7 @@ function compactStateChangeEvent(event: RpgStateChangeEvent): RpgCompactEvent {
       return withDiagnostic(event, [
         "s",
         "j",
-        compactText(stringField(event, "text"), COMPACT_EVENT_JOURNAL_CHAR_LIMIT),
+        compactMcpVisibleJournalProse(stringField(event, "text")),
       ]);
     case "set_object_locked":
       return withDiagnostic(event, [
