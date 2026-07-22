@@ -30,6 +30,10 @@ const SPARK_UNSTABLE_WARNING_PREFIX =
   "Under-development features enabled: code_mode_only. Under-development features are incomplete and may behave unpredictably. To suppress this warning, set `suppress_unstable_features_warning = true` in ";
 const SPARK_METADATA_WARNING =
   "Code Mode is enabled in configuration, but model `gpt-5.3-codex-spark` does not advertise Code Mode support. This may degrade model performance. Disable `features.code_mode` and `features.code_mode_only`, or select a model whose metadata enables Code Mode.";
+const TOOL_ERROR_RESULT = {
+  content: [{ type: "text", text: '{"ok":false,"error":"move first"}' }],
+  isError: true,
+};
 
 function canonicalGameplayWrapper(call: string): string {
   return `${CODEX_EXEC_YIELD_PRAGMA}\nconst result = await ${call};\ntext(JSON.stringify(result));\n`;
@@ -209,6 +213,7 @@ function twoPrivateGameplayCalls(
   result: Record<string, unknown> = {
     content: [{ type: "text", text: '{"state_hash":"next"}' }],
   },
+  firstResult: Record<string, unknown> = result,
 ): unknown[] {
   const second = forwardingRollout(undefined, result);
   const start = rolloutPayload(second, 0);
@@ -222,7 +227,7 @@ function twoPrivateGameplayCalls(
   const invocation = completion.invocation as Record<string, unknown>;
   invocation.tool = "get_overworld_session_context";
   rolloutPayload(second, 2).call_id = "call-wrapper-2";
-  return [...forwardingRollout(undefined, result), ...second];
+  return [...forwardingRollout(undefined, firstResult), ...second];
 }
 
 function completeRollout(
@@ -375,6 +380,82 @@ describe("Codex pure blind provider envelope", () => {
       { type: "input_text", text: '{"state_hash":"next"}' },
     ];
     expect(inspectCodexGameplayResultForwarding(contentLoop)).toMatchObject({ ok: true });
+  });
+
+  it("authenticates an exactly forwarded MCP tool error as failed gameplay", () => {
+    expect(
+      inspectCodexGameplayResultForwarding(forwardingRollout(undefined, TOOL_ERROR_RESULT)),
+    ).toEqual({
+      ok: true,
+      completedGameplayCalls: 1,
+      gameplayCalls: [
+        {
+          tool: "start_overworld",
+          arguments: {},
+          status: "failed",
+          result: { content: TOOL_ERROR_RESULT.content },
+          error: null,
+        },
+      ],
+    });
+
+    const omittedErrorMarker = forwardingRollout(undefined, TOOL_ERROR_RESULT);
+    rolloutPayload(omittedErrorMarker, 2).output = [
+      { type: "input_text", text: "Script completed\nWall time 0.0 seconds\nOutput:\n" },
+      { type: "input_text", text: JSON.stringify({ content: TOOL_ERROR_RESULT.content }) },
+    ];
+    expect(inspectCodexGameplayResultForwarding(omittedErrorMarker)).toEqual({
+      ok: false,
+      reason: expect.stringMatching(/missing.*mismatched.*truncated/i),
+    });
+
+    const legacyRendererHidingErrorMarker = forwardingRollout(undefined, TOOL_ERROR_RESULT);
+    rolloutPayload(legacyRendererHidingErrorMarker, 0).input =
+      "const r = await tools.mcp__adventureforge__start_overworld({});\n" +
+      "for (const c of (r?.content ?? [])) {\n" +
+      '  if (c.type === "image") image(c);\n' +
+      '  else if (c.type === "text") text(c.text);\n' +
+      "}\n";
+    rolloutPayload(legacyRendererHidingErrorMarker, 2).output = [
+      { type: "input_text", text: "Script completed\nWall time 0.0 seconds\nOutput:\n" },
+      { type: "input_text", text: TOOL_ERROR_RESULT.content[0]!.text },
+    ];
+    expect(inspectCodexGameplayResultForwarding(legacyRendererHidingErrorMarker)).toEqual({
+      ok: false,
+      reason: expect.stringMatching(/missing.*mismatched.*truncated/i),
+    });
+  });
+
+  it.each([
+    {
+      label: "isError false",
+      result: { content: TOOL_ERROR_RESULT.content, isError: false },
+    },
+    {
+      label: "a non-boolean isError",
+      result: { content: TOOL_ERROR_RESULT.content, isError: "true" },
+    },
+    {
+      label: "an extra private field on a tool error",
+      result: { ...TOOL_ERROR_RESULT, private_only: "hidden" },
+    },
+  ])("rejects $label in a private MCP result", ({ result }) => {
+    expect(inspectCodexGameplayResultForwarding(forwardingRollout(undefined, result))).toEqual({
+      ok: false,
+      reason: expect.stringMatching(/no auditable successful result/i),
+    });
+  });
+
+  it("still rejects a malformed wrapper around a canonical tool error", () => {
+    const rows = forwardingRollout(undefined, TOOL_ERROR_RESULT);
+    rolloutPayload(rows, 0).input =
+      "const result = await tools.mcp__adventureforge__start_overworld({});\n" +
+      "text(JSON.stringify(result));\n" +
+      'text("extra");\n';
+    expect(inspectCodexGameplayResultForwarding(rows)).toEqual({
+      ok: false,
+      reason: expect.stringMatching(/forbidden wrapper program/i),
+    });
   });
 
   it("accepts the canonical exec yield pragma without retroactively requiring it", () => {
@@ -668,7 +749,24 @@ describe("Codex pure blind provider envelope", () => {
     expect(
       inspectCodexPureEvidence(
         failedPublicCall,
+        completeRollout(twoPrivateGameplayCalls({ content: [], isError: true }, { content: [] })),
+      ),
+    ).toMatchObject({ ok: true, completedMcpCalls: 2 });
+
+    expect(
+      inspectCodexPureEvidence(
+        failedPublicCall,
         completeRollout(twoPrivateGameplayCalls({ content: [] })),
+      ),
+    ).toEqual({
+      ok: false,
+      reason: expect.stringMatching(/differs at call 2/i),
+    });
+
+    expect(
+      inspectCodexPureEvidence(
+        twoPublicGameplayCalls(),
+        completeRollout(twoPrivateGameplayCalls({ content: [], isError: true }, { content: [] })),
       ),
     ).toEqual({
       ok: false,

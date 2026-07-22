@@ -139,7 +139,14 @@ function rolloutReject(reason) {
 
 function gameplayResult(payload) {
   const result = payload?.result?.Ok;
-  if (!isRecord(result) || !hasOnlyKeys(result, ["content"]) || !Array.isArray(result.content)) {
+  if (
+    !isRecord(result) ||
+    !(
+      hasOnlyKeys(result, ["content"]) ||
+      (hasOnlyKeys(result, ["content", "isError"]) && result.isError === true)
+    ) ||
+    !Array.isArray(result.content)
+  ) {
     return null;
   }
   if (
@@ -419,6 +426,7 @@ function exactForwardedOutput(output, result, emitter) {
   if (!WRAPPER_BANNER_RE.test(output[0].text)) return false;
   const visible = output.slice(1).map((block) => block.text);
   if (emitter === "content_blocks") {
+    if (result.isError === true) return false;
     return sameJsonValue(
       visible,
       result.content.filter((block) => block.type === "text").map((block) => block.text),
@@ -431,7 +439,7 @@ function privateGameplayLifecycle(payload, result) {
   return {
     tool: payload.invocation.tool,
     arguments: payload.invocation.arguments,
-    status: "completed",
+    status: result.isError === true ? "failed" : "completed",
     result: { content: result.content },
     error: null,
   };
