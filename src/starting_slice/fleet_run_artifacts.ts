@@ -473,7 +473,7 @@ function parseCodexAuthority(
   if (!events.ok) return events;
   const rollout = parseJsonLines(rolloutText, "Codex rollout");
   if (!rollout.ok) return rollout;
-  const inspected = inspectCodexPureEvidence(events.rows, rollout.rows) as
+  const inspected = inspectCodexPureEvidence(events.rows, rollout.rows, expectedModel) as
     | { ok: true; threadId: string }
     | { ok: false; reason: string };
   if (!inspected.ok)

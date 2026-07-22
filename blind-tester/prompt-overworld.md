@@ -53,13 +53,19 @@ READING THE PLAYER SURFACE
   options in this pure run. Passing `compact_actions: true` remains available
   when an id-only list is useful. A verbose embedded-quest observation likewise
   defaults to labeled `available_actions`.
+- Call `mcp__adventureforge__list_legal_actions` only while an embedded quest is
+  active and only with `session_id: exact current rpg_session_id` for that child.
+  Never pass the parent `overworld_session_id` to this quest-only tool. Ordinary
+  overworld legal choices are already in the current overworld response; use the
+  corresponding overworld tools for them.
 - Use only ids and choices visible in the current player response. Preserve both
   session handles: every overworld tool after the fresh start takes the parent
   `session_id`, while an embedded quest uses its child `rpg_session_id`. Embedded
   quest responses echo the parent as `overworld_session_id`; while a quest is
   unresolved, pure responses and recoverable errors also repeat its current
-  `rpg_session_id`. Retain those exact values instead of substituting either
-  handle for the other. Use the latest
+  `rpg_session_id`. Copy each exact current handle from the latest response;
+  never reconstruct, shorten, or hand-type a handle or its suffix, and never
+  substitute either handle for the other. Use the latest
   `state_hash` for the child and `snapshot_hash` for the parent when a tool offers
   those guards. Embedded quest responses can also return
   `overworld_snapshot_hash`; keep the latest one as the overworld guard when
@@ -92,6 +98,12 @@ WHEN TO CONTINUE OR END
   `mcp__adventureforge__choose_overworld_session_story` with the same overworld
   `session_id` and that option's visible `id`. This is a normal gameplay
   decision that can set the next current goal; it is not a harness task.
+- A non-null `journey.goalPassage` is a visible optional movement choice. If you
+  choose its exact `id: follow_current_goal`, call
+  `mcp__adventureforge__follow_overworld_session_goal` with the parent
+  `session_id` and `expected_snapshot_hash: latest snapshot_hash`; do not invent, infer, or
+  substitute a differently named goal tool. The game, not the harness, decides
+  where that passage stops.
 - The context may also list optional `departure_interactions` at the Station.
   You may leave without choosing one. To consider one, first call
   `mcp__adventureforge__inspect_overworld_session_story` with its visible

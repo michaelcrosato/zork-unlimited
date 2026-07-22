@@ -179,12 +179,26 @@ output` lifecycle. The wrapper may invoke only that allowlisted gameplay tool
   statements, output, mismatched ids/results, truncation, duplication, and
   orphan lifecycle rows reject the attempt. Private input, prompt, context,
   compaction, assistant, and reasoning rows also have a finite authenticated
-  topology; auxiliary inputs or native-tool-shaped rows reject. Before reusing
-  a current-schema report, the feedback compiler and ledger rerun the full
+  topology. Sol and Terra require the v2 `explicitRequestOnly` three-developer
+  prelude. Luna alone accepts its native v1 capture: exact model
+  `gpt-5.6-luna`, no `multi_agent_mode`, and one developer message containing
+  exactly the ordered permission and skills blocks before the environment. Spark
+  retains its native `multi_agent_version: "disabled"` one-developer profile
+  with no `multi_agent_mode`. Every profile then requires the same world, turn,
+  prompt, and user-message order. The first wrapper may use `start_overworld()`
+  when its recorded arguments are exactly `{}`; zero arguments anywhere else
+  reject. Auxiliary inputs or native-tool-shaped rows also reject.
+  The native `collaboration_mode` object is also exact: `default`, `xhigh`, null
+  developer instructions, no missing/extra fields, and one inner model equal to
+  both the outer turn model and requested model. This does not add a
+  `multi_agent_mode` field to Luna or Spark.
+  Before reusing a current-schema report, the feedback compiler and ledger rerun the full
   provider authority chain, including report/envelope/session/model/capture
   hashes. Retained seeds `2825`, `2850`, `4352`, `4353`, and `4385` predate the
   complete authority chain and are diagnostic only; `4351`, `4354`, and `4386`
-  still satisfy it.
+  still satisfy it. Retained Luna seed `4398` demonstrates the v1 serialization
+  shape but remains diagnostic and unpublished because its gameplay/result and
+  receipt evidence still fail independently.
   `task_complete` must be the final rollout row and any abort/error lifecycle
   history rejects the run. All artifact bytes are hashed. Requested-model and
   synthesized usage fields are not authority; missing or ambiguous rollout proof

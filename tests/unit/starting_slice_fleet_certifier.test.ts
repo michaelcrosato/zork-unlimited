@@ -727,12 +727,12 @@ describe("closed fleet filesystem integrity", () => {
       ]
         .map((event) => JSON.stringify(event))
         .join("\n")}\n`;
-      const providerInputMessage = (role: "developer" | "user", text: string) => ({
+      const providerInputMessage = (role: "developer" | "user", ...texts: string[]) => ({
         type: "response_item",
         payload: {
           type: "message",
           role,
-          content: [{ type: "input_text", text }],
+          content: texts.map((text) => ({ type: "input_text", text })),
           internal_chat_message_metadata_passthrough: { turn_id: providerTurnId },
         },
       });
@@ -752,10 +752,12 @@ describe("closed fleet filesystem integrity", () => {
           type: "event_msg",
           payload: { type: "task_started", turn_id: providerTurnId },
         },
-        providerInputMessage("developer", "permissions"),
-        providerInputMessage("developer", "app context"),
-        providerInputMessage("developer", "repository instructions"),
-        providerInputMessage("user", "environment context"),
+        providerInputMessage(
+          "developer",
+          "<permissions instructions>read-only player</permissions instructions>",
+          "<skills_instructions>player skills</skills_instructions>",
+        ),
+        providerInputMessage("user", "<environment_context>isolated player</environment_context>"),
         { type: "world_state", payload: { full: true } },
         {
           timestamp: "2026-07-19T00:00:00.002Z",
@@ -766,6 +768,15 @@ describe("closed fleet filesystem integrity", () => {
             approval_policy: "never",
             sandbox_policy: { type: "read-only" },
             model,
+            collaboration_mode: {
+              mode: "default",
+              settings: {
+                model,
+                reasoning_effort: "xhigh",
+                developer_instructions: null,
+              },
+            },
+            multi_agent_version: "v1",
             effort: "xhigh",
           },
         },
@@ -790,7 +801,7 @@ describe("closed fleet filesystem integrity", () => {
             call_id: "call-wrapper-1",
             name: "exec",
             input:
-              "const result = await tools.mcp__adventureforge__start_overworld({});\n" +
+              "const result = await tools.mcp__adventureforge__start_overworld();\n" +
               "text(JSON.stringify(result));\n",
             internal_chat_message_metadata_passthrough: { turn_id: providerTurnId },
           },

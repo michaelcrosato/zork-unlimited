@@ -15,6 +15,13 @@ import {
 const SESSION = "019f7250-1ed0-7102-be6c-4f1d5513d91e";
 const TURN = "119f7250-1ed0-7102-be6c-4f1d5513d91e";
 const REPORT = "# Playthrough log\n\nDone.\n";
+const PERMISSIONS_BLOCK = "<permissions instructions>read-only player</permissions instructions>";
+const SKILLS_BLOCK = "<skills_instructions>player skills</skills_instructions>";
+const V2_TEAM_BLOCK =
+  "You are `/root`, the primary agent in a team of agents collaborating to fulfill the user's goals.";
+const V2_MODE_BLOCK =
+  "<multi_agent_mode>Only explicit requests permit delegation.</multi_agent_mode>";
+const ENVIRONMENT_BLOCK = "<environment_context>isolated player</environment_context>";
 
 function jsonl(rows: unknown[]): string {
   return `${rows.map((row) => JSON.stringify(row)).join("\n")}\n`;
@@ -81,13 +88,13 @@ function publicEvents(report = REPORT): unknown[] {
 function rollout(report = REPORT): unknown[] {
   // Observed Codex CLI ordering: session, task start, turn context, final
   // assistant response, then task_complete as the terminal rollout row.
-  const inputMessage = (role: "developer" | "user", text: string) => ({
+  const inputMessage = (role: "developer" | "user", ...texts: string[]) => ({
     timestamp: "2026-07-19T00:00:00.0006Z",
     type: "response_item",
     payload: {
       type: "message",
       role,
-      content: [{ type: "input_text", text }],
+      content: texts.map((text) => ({ type: "input_text", text })),
       internal_chat_message_metadata_passthrough: { turn_id: TURN },
     },
   });
@@ -107,10 +114,10 @@ function rollout(report = REPORT): unknown[] {
       type: "event_msg",
       payload: { type: "task_started", turn_id: TURN },
     },
-    inputMessage("developer", "permissions"),
-    inputMessage("developer", "app context"),
-    inputMessage("developer", "repository instructions"),
-    inputMessage("user", "environment context"),
+    inputMessage("developer", PERMISSIONS_BLOCK, SKILLS_BLOCK),
+    inputMessage("developer", V2_TEAM_BLOCK),
+    inputMessage("developer", V2_MODE_BLOCK),
+    inputMessage("user", ENVIRONMENT_BLOCK),
     {
       timestamp: "2026-07-19T00:00:00.0007Z",
       type: "world_state",
@@ -124,7 +131,17 @@ function rollout(report = REPORT): unknown[] {
         cwd: "C:\\private\\player",
         approval_policy: "never",
         sandbox_policy: { type: "read-only" },
-        model: "gpt-5.3-codex-spark",
+        model: "gpt-5.6-terra",
+        collaboration_mode: {
+          mode: "default",
+          settings: {
+            model: "gpt-5.6-terra",
+            reasoning_effort: "xhigh",
+            developer_instructions: null,
+          },
+        },
+        multi_agent_version: "v2",
+        multi_agent_mode: "explicitRequestOnly",
         effort: "xhigh",
       },
     },
@@ -205,6 +222,41 @@ function rollout(report = REPORT): unknown[] {
       payload: { type: "task_complete", turn_id: TURN, last_agent_message: report },
     },
   ];
+}
+
+function lunaV1Rollout(report = REPORT): unknown[] {
+  const rows = rollout(report);
+  rows.splice(3, 2);
+  const context = rows.find((row) => (row as { type?: string }).type === "turn_context") as {
+    payload: Record<string, unknown>;
+  };
+  context.payload.model = "gpt-5.6-luna";
+  const collaboration = context.payload.collaboration_mode as Record<string, unknown>;
+  const settings = collaboration.settings as Record<string, unknown>;
+  settings.model = "gpt-5.6-luna";
+  context.payload.multi_agent_version = "v1";
+  delete context.payload.multi_agent_mode;
+  const wrapper = rows.find(
+    (row) =>
+      (row as { type?: string; payload?: { type?: string } }).type === "response_item" &&
+      (row as { payload?: { type?: string } }).payload?.type === "custom_tool_call",
+  ) as { payload: Record<string, unknown> };
+  wrapper.payload.input =
+    "const result = await tools.mcp__adventureforge__start_overworld();\n" +
+    "text(JSON.stringify(result));\n";
+  return rows;
+}
+
+function solV2Rollout(report = REPORT): unknown[] {
+  const rows = rollout(report);
+  const context = rows.find((row) => (row as { type?: string }).type === "turn_context") as {
+    payload: Record<string, unknown>;
+  };
+  context.payload.model = "gpt-5.6-sol";
+  const collaboration = context.payload.collaboration_mode as Record<string, unknown>;
+  const settings = collaboration.settings as Record<string, unknown>;
+  settings.model = "gpt-5.6-sol";
+  return rows;
 }
 
 function insertCompactedContextReplay(rows: unknown[]): void {
@@ -357,7 +409,7 @@ ${JSON.stringify({
     num_turns: 1,
     result: originalReport,
     session_id: SESSION,
-    requested_model: "gpt-5.3-codex-spark",
+    requested_model: "gpt-5.6-terra",
     terminal_reason: "completed",
     usage: {
       input_tokens: 10,
@@ -366,7 +418,7 @@ ${JSON.stringify({
       reasoning_output_tokens: 0,
     },
     modelUsage: {
-      "gpt-5.3-codex-spark": {
+      "gpt-5.6-terra": {
         inputTokens: 10,
         cacheReadInputTokens: 2,
         outputTokens: 3,
@@ -380,7 +432,7 @@ ${JSON.stringify({
     agentExitStatus: 0,
     verifierExitStatus: 5,
     attempt: 0,
-    requestedModel: "gpt-5.3-codex-spark",
+    requestedModel: "gpt-5.6-terra",
     expectedRunSeed: 4244,
     expectedGitCommit: BUILD.git_commit,
     expectedTrackedWorktreeClean: true,
@@ -402,17 +454,84 @@ describe("Codex certified fleet rollout authority", () => {
         events: jsonl(publicEvents()),
         rollout: jsonl(rows),
         capture: captureReceipt(rows),
-        model: "gpt-5.3-codex-spark",
+        model: "gpt-5.6-terra",
         report: REPORT,
       }),
     ).toEqual({
       ok: true,
       facts: {
         sessionId: SESSION,
-        actualModel: "gpt-5.3-codex-spark",
+        actualModel: "gpt-5.6-terra",
         turnId: TURN,
         cwd: "C:\\private\\player",
       },
+    });
+  });
+
+  it("authenticates the exact Luna v1 topology without trusting a rewritten capture receipt", () => {
+    const rows = lunaV1Rollout();
+    expect(
+      validateCodexFleetProviderAuthority({
+        events: jsonl(publicEvents()),
+        rollout: jsonl(rows),
+        capture: captureReceipt(rows),
+        model: "gpt-5.6-luna",
+        report: REPORT,
+      }),
+    ).toMatchObject({
+      ok: true,
+      facts: { actualModel: "gpt-5.6-luna", turnId: TURN },
+    });
+
+    const badReceipt = JSON.parse(captureReceipt(rows)) as Record<string, unknown>;
+    badReceipt.copied_rollout_sha256 = "0".repeat(64);
+    expect(
+      validateCodexFleetProviderAuthority({
+        events: jsonl(publicEvents()),
+        rollout: jsonl(rows),
+        capture: `${JSON.stringify(badReceipt)}\n`,
+        model: "gpt-5.6-luna",
+        report: REPORT,
+      }),
+    ).toEqual({ ok: false, reason: expect.stringMatching(/rollout hash differs/i) });
+
+    const invalidProfile = structuredClone(rows);
+    const context = invalidProfile.find(
+      (row) => (row as { type?: string }).type === "turn_context",
+    ) as { payload: Record<string, unknown> };
+    context.payload.multi_agent_mode = "explicitRequestOnly";
+    expect(
+      validateCodexFleetProviderAuthority({
+        events: jsonl(publicEvents()),
+        rollout: jsonl(invalidProfile),
+        capture: captureReceipt(invalidProfile),
+        model: "gpt-5.6-luna",
+        report: REPORT,
+      }),
+    ).toEqual({
+      ok: false,
+      reason: expect.stringMatching(/capture profile is unsupported/i),
+    });
+  });
+
+  it("rejects a Sol capture relabeled Terra behind a regenerated rollout receipt", () => {
+    const rows = solV2Rollout();
+    const context = rows.find((row) => (row as { type?: string }).type === "turn_context") as {
+      payload: Record<string, unknown>;
+    };
+    context.payload.model = "gpt-5.6-terra";
+
+    expect(
+      validateCodexFleetProviderAuthority({
+        events: jsonl(publicEvents()),
+        rollout: jsonl(rows),
+        capture: captureReceipt(rows),
+        model: "gpt-5.6-terra",
+        report: REPORT,
+      }),
+    ).toEqual({
+      ok: false,
+      reason: expect.stringMatching(/capture profile is unsupported/i),
     });
   });
 
@@ -459,7 +578,7 @@ describe("Codex certified fleet rollout authority", () => {
         events: jsonl(publicEvents()),
         rollout: jsonl(rows),
         capture: captureReceipt(rows),
-        model: "gpt-5.3-codex-spark",
+        model: "gpt-5.6-terra",
         report: REPORT,
       }),
     ).toEqual({ ok: false, reason: expect.stringMatching(reason) });
@@ -485,7 +604,7 @@ describe("Codex certified fleet rollout authority", () => {
     const expected = {
       seed: 4244,
       provider: "codex" as const,
-      model: "gpt-5.3-codex-spark" as const,
+      model: "gpt-5.6-terra" as const,
       build: BUILD,
     };
     expect(validatePureFleetRunArtifactBytes(artifacts, expected)).toMatchObject({
@@ -544,7 +663,7 @@ describe("Codex certified fleet rollout authority", () => {
         events: jsonl(publicEvents()),
         rollout: jsonl(rows),
         capture: captureReceipt(rows),
-        model: "gpt-5.3-codex-spark",
+        model: "gpt-5.6-terra",
         report: REPORT,
       }),
     ).toMatchObject({ ok: true, facts: { turnId: TURN } });
@@ -554,7 +673,7 @@ describe("Codex certified fleet rollout authority", () => {
     [
       "model substitution",
       (rows: unknown[]) => (payload(rows, 7).model = "gpt-5.6-sol"),
-      /differs from planned/i,
+      /capture profile is unsupported|differs from planned/i,
     ],
     [
       "provider substitution",
@@ -569,7 +688,7 @@ describe("Codex certified fleet rollout authority", () => {
     [
       "effort downgrade",
       (rows: unknown[]) => (payload(rows, 7).effort = "high"),
-      /strict read-only xhigh/i,
+      /capture profile is unsupported|strict read-only xhigh/i,
     ],
     [
       "sandbox widening",
@@ -667,7 +786,7 @@ describe("Codex certified fleet rollout authority", () => {
         events: jsonl(publicEvents()),
         rollout: jsonl(rows),
         capture: captureReceipt(rows),
-        model: "gpt-5.3-codex-spark",
+        model: "gpt-5.6-terra",
         report: REPORT,
       }),
     ).toEqual({ ok: false, reason: expect.stringMatching(reason) });
@@ -704,7 +823,7 @@ describe("Codex certified fleet rollout authority", () => {
         events: jsonl(publicEvents()),
         rollout: jsonl(rows),
         capture: `${JSON.stringify(receipt)}\n`,
-        model: "gpt-5.3-codex-spark",
+        model: "gpt-5.6-terra",
         report: REPORT,
       }),
     ).toEqual({ ok: false, reason: expect.stringMatching(reason) });
