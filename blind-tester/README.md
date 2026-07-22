@@ -78,8 +78,10 @@ runtime tree. Keeping the sterile home outside the operating-system temp directo
 lets Codex create its normal PATH aliases without a warning. The home contains
 only a private copy of `auth.json`, is removed on exit, ignores
 user/project config and rules, disables shell/web/apps/plugins/browser/computer,
-the unused shell snapshot, and subagent capabilities, injects only the pure
-AdventureForge MCP server, and pair-audits every normal game call. The audit
+the unused shell snapshot, and subagent capabilities. It also passes
+`--enable code_mode_only`, forcing gameplay through the audited `functions.exec`
+wrapper instead of direct MCP dispatch. The runner injects only the pure
+AdventureForge MCP server and pair-audits every normal game call. The audit
 accepts no discovery, resource, planning, task, or other non-game event; another
 server, malformed lifecycle, or unbounded payload rejects the run. Codex never
 uses a report-recovery model turn. On attempt zero only, an otherwise-valid

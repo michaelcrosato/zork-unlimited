@@ -172,7 +172,9 @@ its normal PATH aliases without a warning) and contains only a private copy of
 `auth.json`; both isolated directories are removed on exit. User/project config
 and rules are ignored, shell/web/apps/plugins/browser/computer/subagents and the
 unused shell snapshot are disabled, and only the exact pure AdventureForge MCP
-tools are enabled. It audits the provider JSONL and rejects
+tools are enabled. The built-in launch also requires `--enable code_mode_only`,
+forcing every gameplay call through the audited code-mode wrapper; direct-mode
+calls are not current pure evidence. It audits the provider JSONL and rejects
 unknown events, non-game tools, another MCP server, incomplete/duplicate turns,
 or malformed final output. The audit accepts only reasoning, agent messages, and
 paired AdventureForge gameplay calls. Resource discovery, task planning, another

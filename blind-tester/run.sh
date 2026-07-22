@@ -753,6 +753,7 @@ if [[ "$PROVIDER" == "codex" ]]; then
     --ignore-user-config \
     --ignore-rules \
     --strict-config \
+    --enable code_mode_only \
     --disable apps \
     --disable auth_elicitation \
     --disable browser_use \

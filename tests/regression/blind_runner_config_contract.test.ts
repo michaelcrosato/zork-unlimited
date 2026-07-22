@@ -262,6 +262,7 @@ describe("blind runner MCP config contract", () => {
     expect(codexLaunch).toContain("--ignore-user-config");
     expect(codexLaunch).toContain("--ignore-rules");
     expect(codexLaunch).toContain("--strict-config");
+    expect(codexLaunch).toContain("--enable code_mode_only");
     expect(codexLaunch).toContain("--disable apps");
     expect(codexLaunch).toContain("--disable browser_use");
     expect(codexLaunch).toContain("--disable computer_use");
