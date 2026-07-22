@@ -76,8 +76,13 @@ import {
   applyOverworldSessionTownResupplyFromState,
   type OverworldServiceResult,
   type OverworldSessionServiceApplication,
+  type OverworldSessionTownServicePlanState,
 } from "./session_service_lifecycle.js";
 import { campaignServiceJourneyActionId } from "./session_services.js";
+import {
+  presentOverworldServiceActions,
+  type OverworldServiceActionPresentation,
+} from "./session_service_presentation.js";
 import { type OverworldAreaTravelResult } from "./session_local_actions.js";
 import {
   applyOverworldSessionAreaFromState,
@@ -574,6 +579,33 @@ export class OverworldSession {
       regionRenown: this.regionRenown,
       providersById: this.charactersById,
     });
+  }
+
+  private townServicePlanState(currentAreaId: string): OverworldSessionTownServicePlanState {
+    return {
+      currentTown: this.currentNode(),
+      currentAreaId,
+      campaignServiceRules: this.world.campaign_service_rules ?? [],
+      campaignWorldFactIds: this.campaignWorldFactIds(),
+      campaignStoryChoiceRefs: this.selectedCampaignStoryChoiceRefs(),
+      consumedCampaignServiceRuleIds: this.consumedCampaignServiceRuleIds(),
+      completedLocalJobOptions: this.completedLocalJobOptions(),
+      campaignCharacter: this.characterState,
+      regionRenown: this.regionRenown,
+      fatigue: this.fatigue,
+      supplies: this.supplies,
+    };
+  }
+
+  private currentServiceActions(currentAreaId: string): OverworldServiceActionPresentation[] {
+    if (
+      this.pendingRoadEncounter !== null ||
+      this.journeyState.status !== "active" ||
+      this.journey().storyChoice !== null
+    ) {
+      return [];
+    }
+    return presentOverworldServiceActions(this.townServicePlanState(currentAreaId));
   }
 
   private currentGoalRoute(): OverworldSessionRoutePlan | null {
@@ -2046,6 +2078,7 @@ export class OverworldSession {
     const localState = this.localState();
     const currentAreaId = requireOverworldSessionCurrentAreaId(currentArea);
     const localView = buildOverworldSessionCurrentLocalView(localState, currentAreaId);
+    const serviceOffers = this.campaignServiceOffers(currentAreaId);
     return {
       caches: this.caches,
       character: this.characterState,
@@ -2058,7 +2091,8 @@ export class OverworldSession {
       supplies: this.supplies,
       fatigue: this.fatigue,
       opportunities: this.journeyOpportunities(),
-      serviceOffers: this.campaignServiceOffers(currentAreaId),
+      serviceOffers,
+      serviceActions: this.currentServiceActions(currentAreaId),
       departureInteractions: this.departureInteractions(),
       roads: this.roadsFrom(this.currentId),
       areaExits: visibleOverworldSessionAreaExits(localState, currentArea),
@@ -2601,21 +2635,10 @@ export class OverworldSession {
   restAtTown(): OverworldJourneyServiceResult {
     this.assertJourneyAcceptingDecision();
     this.assertNoPendingRoadEncounter("resting at town");
-    const current = this.currentNode();
     return this.applyServiceApplication(
       applyOverworldSessionTownRestFromState({
         ...this.actionJournalState(),
-        currentTown: current,
-        currentAreaId: this.currentAreaIdOrThrow(),
-        campaignServiceRules: this.world.campaign_service_rules ?? [],
-        campaignWorldFactIds: this.campaignWorldFactIds(),
-        campaignStoryChoiceRefs: this.selectedCampaignStoryChoiceRefs(),
-        consumedCampaignServiceRuleIds: this.consumedCampaignServiceRuleIds(),
-        completedLocalJobOptions: this.completedLocalJobOptions(),
-        campaignCharacter: this.characterState,
-        regionRenown: this.regionRenown,
-        fatigue: this.fatigue,
-        supplies: this.supplies,
+        ...this.townServicePlanState(this.currentAreaIdOrThrow()),
       }),
       "rest",
     );
@@ -2624,21 +2647,10 @@ export class OverworldSession {
   resupplyAtTown(): OverworldJourneyServiceResult {
     this.assertJourneyAcceptingDecision();
     this.assertNoPendingRoadEncounter("resupplying at town");
-    const current = this.currentNode();
     return this.applyServiceApplication(
       applyOverworldSessionTownResupplyFromState({
         ...this.actionJournalState(),
-        currentTown: current,
-        currentAreaId: this.currentAreaIdOrThrow(),
-        campaignServiceRules: this.world.campaign_service_rules ?? [],
-        campaignWorldFactIds: this.campaignWorldFactIds(),
-        campaignStoryChoiceRefs: this.selectedCampaignStoryChoiceRefs(),
-        consumedCampaignServiceRuleIds: this.consumedCampaignServiceRuleIds(),
-        completedLocalJobOptions: this.completedLocalJobOptions(),
-        campaignCharacter: this.characterState,
-        regionRenown: this.regionRenown,
-        fatigue: this.fatigue,
-        supplies: this.supplies,
+        ...this.townServicePlanState(this.currentAreaIdOrThrow()),
       }),
       "resupply",
     );

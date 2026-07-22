@@ -8,6 +8,7 @@ import { describe, expect, it } from "vitest";
 
 import { hashState } from "../../src/core/hash.js";
 import { createToolApi } from "../../src/mcp/tools.js";
+import { compactOverworldView } from "../../src/world/compact_view.js";
 import { OverworldSession } from "../../src/world/session.js";
 import type { OverworldSessionSnapshot } from "../../src/world/session_snapshot.js";
 import { OVERWORLD_OPENING_ALLY_PREDECESSOR_WORLD_HASH } from "../../src/world/session_snapshot_restore.js";
@@ -293,6 +294,8 @@ describe("SS-F04 — Albany ally commitment counterfactual", () => {
     expect(cooperative.view().serviceOffers.map((offer) => offer.id)).toEqual([
       "albany:june_kept_line_station_resupply",
     ]);
+    expect(cooperative.view().serviceActions).toEqual([]);
+    expect("service_actions" in cooperative.compactView()).toBe(false);
     expect(
       cooperative.view().characters.find((character) => character.id === ALLY.contact)?.summary,
     ).toMatch(/matching account|returned beside/i);
@@ -308,6 +311,38 @@ describe("SS-F04 — Albany ally commitment counterfactual", () => {
     moveToArea(claimant, ALLY.area);
     const beforeClaim = claimant.view();
     expect(beforeClaim.supplies).toBeLessThan(beforeClaim.maxSupplies);
+    const claimPreview = beforeClaim.serviceActions.find((action) => action.action === "resupply");
+    expect(claimPreview).toMatchObject({
+      source: "campaign_override",
+      offerId: "albany:june_kept_line_station_resupply",
+      available: true,
+      changed: true,
+      minutes: 15,
+      suppliesBefore: beforeClaim.supplies,
+      suppliesAfter: beforeClaim.maxSupplies,
+      fatigueBefore: beforeClaim.fatigue,
+      fatigueAfter: beforeClaim.fatigue,
+      blockedReason: null,
+    });
+    expect(claimant.compactView().service_actions).toEqual(
+      compactOverworldView(beforeClaim).service_actions,
+    );
+    expect(claimant.compactView().service_actions?.[0]).toEqual([
+      "resupply",
+      "campaign_override",
+      "albany:june_kept_line_station_resupply",
+      true,
+      true,
+      15,
+      [beforeClaim.supplies, beforeClaim.maxSupplies],
+      [beforeClaim.fatigue, beforeClaim.fatigue],
+      expect.stringContaining("second-seat stores"),
+      null,
+    ]);
+    const preClaimSnapshot = claimant.snapshot();
+    expect(OverworldSession.restore(WORLD, preClaimSnapshot).view().serviceActions).toEqual(
+      beforeClaim.serviceActions,
+    );
     const claimed = claimant.resupplyAtTown();
     expect(claimed).toMatchObject({
       action: "resupply",
@@ -317,7 +352,31 @@ describe("SS-F04 — Albany ally commitment counterfactual", () => {
       suppliesAfter: beforeClaim.maxSupplies,
       message: expect.stringContaining("second-seat stores"),
     });
+    expect(claimed).toMatchObject({
+      action: claimPreview!.action,
+      changed: claimPreview!.changed,
+      minutes: claimPreview!.minutes,
+      suppliesBefore: claimPreview!.suppliesBefore,
+      suppliesAfter: claimPreview!.suppliesAfter,
+      fatigueBefore: claimPreview!.fatigueBefore,
+      fatigueAfter: claimPreview!.fatigueAfter,
+      message: claimPreview!.message,
+    });
     expect(claimant.view().serviceOffers).toEqual([]);
+    expect(claimant.view().serviceActions[0]).toMatchObject({
+      action: "resupply",
+      source: "ordinary",
+      offerId: null,
+      available: true,
+      changed: false,
+      minutes: 0,
+      suppliesBefore: beforeClaim.maxSupplies,
+      suppliesAfter: beforeClaim.maxSupplies,
+      fatigueBefore: beforeClaim.fatigue,
+      fatigueAfter: beforeClaim.fatigue,
+      message: "Your supplies are already full.",
+      blockedReason: null,
+    });
     const consumedSnapshot = claimant.snapshot();
     expect(consumedSnapshot.journalEntries).toContainEqual(
       expect.objectContaining({
@@ -325,7 +384,9 @@ describe("SS-F04 — Albany ally commitment counterfactual", () => {
         serviceRuleId: "albany:june_kept_line_station_resupply",
       }),
     );
-    expect(OverworldSession.restore(WORLD, consumedSnapshot).view().serviceOffers).toEqual([]);
+    const restoredConsumed = OverworldSession.restore(WORLD, consumedSnapshot).view();
+    expect(restoredConsumed.serviceOffers).toEqual([]);
+    expect(restoredConsumed.serviceActions).toEqual(claimant.view().serviceActions);
 
     const lost = selectAlly(ACCEPT);
     completeWolf(lost, "ending_pack_diverted_after_blood");

@@ -128,20 +128,31 @@ export function ServiceOfferTerms({
 }
 
 export function ServiceAction({
-  action,
+  serviceAction,
   offer,
   onActivate,
 }: {
-  action: "rest" | "resupply";
+  serviceAction: OverworldView["serviceActions"][number];
   offer: OverworldView["serviceOffers"][number] | undefined;
   onActivate: () => void;
 }): JSX.Element {
+  const action = serviceAction.action;
   const termsId = offer ? `service-offer-${action}-terms` : undefined;
+  const previewId = `service-action-${action}-preview`;
   return (
     <div>
-      <button aria-describedby={termsId} onClick={onActivate}>
+      <button
+        aria-describedby={[previewId, termsId].filter(Boolean).join(" ")}
+        aria-disabled={!serviceAction.available}
+        onClick={serviceAction.available ? onActivate : undefined}
+      >
         {action === "rest" ? "Rest" : "Resupply"}
       </button>
+      <small className="service-action-preview" id={previewId}>
+        {serviceAction.message} {serviceAction.minutes} min · supplies {serviceAction.suppliesBefore}
+        →{serviceAction.suppliesAfter} · fatigue {serviceAction.fatigueBefore}→
+        {serviceAction.fatigueAfter}
+      </small>
       <ServiceOfferTerms id={termsId} offer={offer} />
     </div>
   );
@@ -294,9 +305,6 @@ export default function App(): JSX.Element {
       ),
     [worldView.eventChoices],
   );
-  const resupplyOffer = worldView.serviceOffers.find((offer) => offer.action === "resupply");
-  const restOffer = worldView.serviceOffers.find((offer) => offer.action === "rest");
-
   function questAreaName(quest: OverworldQuestView): string {
     return OVERWORLD.areas.find((area) => area.id === quest.area)?.name ?? quest.area;
   }
@@ -678,16 +686,22 @@ export default function App(): JSX.Element {
             </div>
           </dl>
           <div className="service-actions">
-            <ServiceAction
-              action="resupply"
-              offer={resupplyOffer}
-              onActivate={() => runServiceAction(() => worldSession.resupplyAtTown())}
-            />
-            <ServiceAction
-              action="rest"
-              offer={restOffer}
-              onActivate={() => runServiceAction(() => worldSession.restAtTown())}
-            />
+            {worldView.serviceActions.map((serviceAction) => (
+              <ServiceAction
+                key={serviceAction.action}
+                serviceAction={serviceAction}
+                offer={worldView.serviceOffers.find(
+                  (offer) => offer.id === serviceAction.offerId,
+                )}
+                onActivate={() =>
+                  runServiceAction(() =>
+                    serviceAction.action === "rest"
+                      ? worldSession.restAtTown()
+                      : worldSession.resupplyAtTown(),
+                  )
+                }
+              />
+            ))}
             <button className="secondary" onClick={startNewJourney}>
               New Journey
             </button>

@@ -73,6 +73,16 @@ describe("compact legends", () => {
     expect(OVERWORLD_COMPACT_LEGEND.opportunity_leads).not.toContain(
       "journey objective remains available",
     );
+
+    expect(OVERWORLD_COMPACT_LEGEND.service_actions).toContain("resupply_overworld_session");
+    expect(OVERWORLD_COMPACT_LEGEND.service_actions).toContain("rest_overworld_session");
+    expect(OVERWORLD_COMPACT_LEGEND.service_actions).toContain("available");
+    expect(OVERWORLD_COMPACT_LEGEND.service_actions).toContain("blocked_reason");
+    expect(OVERWORLD_COMPACT_LEGEND.service_actions).toContain("campaign_override");
+    expect(OVERWORLD_COMPACT_LEGEND.service_offers).toContain(
+      "informational and deferred while service_actions is absent",
+    );
+    expect(OVERWORLD_COMPACT_LEGEND.service_offers).toContain("present and available");
   });
 
   it("restore_overworld_session repeats the legend; per-action responses do not", () => {

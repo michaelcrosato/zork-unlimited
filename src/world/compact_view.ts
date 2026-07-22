@@ -16,6 +16,10 @@ import {
   type OverworldCompactDepartureInteraction,
 } from "./session_departure_interactions.js";
 import type { JourneyOpportunityPresentation } from "./journey_contract.js";
+import type {
+  OverworldServiceActionPresentation,
+  OverworldServiceActionSource,
+} from "./session_service_presentation.js";
 
 export const OVERWORLD_COMPACT_JOURNAL_LIMIT = 5;
 export const OVERWORLD_COMPACT_ROUTE_LIMIT = 8;
@@ -34,7 +38,7 @@ export const OVERWORLD_COMPACT_TITLE_CHAR_LIMIT = 140;
 export const OVERWORLD_COMPACT_RISK_CHAR_LIMIT = 160;
 export const OVERWORLD_COMPACT_ROAD_EVENT_SUMMARY_CHAR_LIMIT = 240;
 export const OVERWORLD_COMPACT_SERVICE_SUMMARY_CHAR_LIMIT = 240;
-export const OVERWORLD_COMPACT_VIEW_VERSION = 26 as const;
+export const OVERWORLD_COMPACT_VIEW_VERSION = 27 as const;
 
 export type OverworldCompactRef = readonly [id: string, name: string];
 export type OverworldCompactOpportunityLead = readonly [
@@ -114,6 +118,18 @@ export type OverworldCompactServiceOffer = readonly [
   title: string,
   summary: string,
   minutes: number,
+];
+export type OverworldCompactServiceAction = readonly [
+  action: OverworldServiceActionPresentation["action"],
+  source: OverworldServiceActionSource,
+  offerId: string | null,
+  available: boolean,
+  changed: boolean,
+  minutes: number,
+  supplies: readonly [before: number, after: number],
+  fatigue: readonly [before: number, after: number],
+  message: string,
+  blockedReason: string | null,
 ];
 export type OverworldCompactHere = readonly [
   id: string,
@@ -336,6 +352,7 @@ export type OverworldCompactView = {
   here: OverworldCompactHere;
   vitals: OverworldCompactVitals;
   service_offers?: OverworldCompactServiceOffer[];
+  service_actions?: OverworldCompactServiceAction[];
   departure_interactions?: OverworldCompactDepartureInteraction[];
   opportunity_guidance?: string;
   opportunity_leads?: OverworldCompactOpportunityLead[];
@@ -392,7 +409,9 @@ export const OVERWORLD_COMPACT_LEGEND = {
   here: "[town_id, town_name, region_name, area_id|null, area_name|null] current location; when pending_road exists this is the on-route id/name instead of a town",
   vitals: "[supplies, max_supplies, fatigue_0to100, condition_label] travel readiness",
   service_offers:
-    "[[offer_id, action, title, terms_summary, minutes], ...] current one-time service terms; use the normal rest or resupply action named by action to accept that offer",
+    "[[offer_id, action, title, terms_summary, minutes], ...] current one-time service terms; these terms are informational and deferred while service_actions is absent. Accept an offer with the normal rest or resupply tool only when its matching service_actions entry is present and available",
+  service_actions:
+    "[[action, source, offer_id|null, available, changed, minutes, [supplies_before, supplies_after], [fatigue_before, fatigue_after], message, blocked_reason|null], ...] current town service choices; use resupply_overworld_session for resupply and rest_overworld_session for rest. campaign_override with a non-null offer_id means matching service_offers terms replace ordinary timing for this action, unavailable choices are still listed, and the field is omitted while gameplay actions are paused",
   departure_interactions:
     "[[story_choice_id, kind, title], ...] optional Station departure interactions; inspect with inspect_overworld_session_story(story_choice_id), then choose one id from story.options[*].id with choose_overworld_session_story(story_choice_id, choice), or depart without choosing",
   opportunity_guidance:
@@ -677,6 +696,31 @@ export function compactCampaignServiceOffers(
   values: readonly CampaignServiceOffer[],
 ): OverworldCompactServiceOffer[] {
   return values.map(compactCampaignServiceOffer);
+}
+
+export function compactOverworldServiceAction(
+  value: OverworldServiceActionPresentation,
+): OverworldCompactServiceAction {
+  return [
+    value.action,
+    value.source,
+    value.offerId,
+    value.available,
+    value.changed,
+    value.minutes,
+    [value.suppliesBefore, value.suppliesAfter],
+    [value.fatigueBefore, value.fatigueAfter],
+    compactText(value.message, OVERWORLD_COMPACT_SERVICE_SUMMARY_CHAR_LIMIT),
+    value.blockedReason
+      ? compactText(value.blockedReason, OVERWORLD_COMPACT_SERVICE_SUMMARY_CHAR_LIMIT)
+      : null,
+  ];
+}
+
+export function compactOverworldServiceActions(
+  values: readonly OverworldServiceActionPresentation[],
+): OverworldCompactServiceAction[] {
+  return values.map(compactOverworldServiceAction);
 }
 
 export function compactLocalRefTruncation(
@@ -1155,6 +1199,20 @@ export function cloneOverworldCompactView(view: OverworldCompactView): Overworld
   }
   if (view.event_choices) clone.event_choices = cloneTupleList(view.event_choices);
   if (view.service_offers) clone.service_offers = cloneTupleList(view.service_offers);
+  if (view.service_actions) {
+    clone.service_actions = view.service_actions.map((action) => [
+      action[0],
+      action[1],
+      action[2],
+      action[3],
+      action[4],
+      action[5],
+      [...action[6]] as readonly [before: number, after: number],
+      [...action[7]] as readonly [before: number, after: number],
+      action[8],
+      action[9],
+    ]);
+  }
   if (view.departure_interactions) {
     clone.departure_interactions = cloneTupleList(view.departure_interactions);
   }
@@ -1246,6 +1304,7 @@ export function compactOverworldView(view: OverworldView): OverworldCompactView 
   const quests = compactOverworldQuestRefs(view.quests);
   const questStarts = compactOverworldQuestStarts(view.questStarts);
   const serviceOffers = compactCampaignServiceOffers(view.serviceOffers);
+  const serviceActions = compactOverworldServiceActions(view.serviceActions);
   const departureInteractions = compactOverworldDepartureInteractions(view.departureInteractions);
   const localRefsTruncated = compactLocalRefTruncation({
     areas: view.areas.length,
@@ -1292,6 +1351,7 @@ export function compactOverworldView(view: OverworldView): OverworldCompactView 
     ],
     vitals: [view.supplies, view.maxSupplies, view.fatigue, view.travelCondition],
     ...(serviceOffers.length > 0 ? { service_offers: serviceOffers } : {}),
+    ...(serviceActions.length > 0 ? { service_actions: serviceActions } : {}),
     ...(departureInteractions.length > 0 ? { departure_interactions: departureInteractions } : {}),
     hidden: [
       view.hiddenAreaCount,

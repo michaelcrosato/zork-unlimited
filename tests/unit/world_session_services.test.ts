@@ -9,6 +9,7 @@ import {
   planOverworldTownResupply,
 } from "../../src/world/session_services.js";
 import { OVERWORLD_MAX_SUPPLIES } from "../../src/world/travel_mechanics.js";
+import { presentOverworldServiceActions } from "../../src/world/session_service_presentation.js";
 
 function actionJournalState(minutes = 480): OverworldActionJournalState {
   return {
@@ -285,5 +286,150 @@ describe("overworld town service planning", () => {
     });
     expect(state.journalEntries).toEqual([result.entry]);
     expect(state.journalEntriesById.get("service:resupply:525")).toBe(result.entry);
+  });
+});
+
+describe("overworld town service presentation", () => {
+  it("projects exact ordinary changed and no-op plans in the established action order", () => {
+    const actions = presentOverworldServiceActions({
+      currentTown: { id: "rome_city", name: "Rome city", services: ["inn"] },
+      supplies: 0,
+      fatigue: 73,
+    });
+
+    expect(actions).toEqual([
+      {
+        action: "resupply",
+        source: "ordinary",
+        offerId: null,
+        available: true,
+        changed: true,
+        minutes: 45,
+        suppliesBefore: 0,
+        suppliesAfter: OVERWORLD_MAX_SUPPLIES,
+        fatigueBefore: 73,
+        fatigueAfter: 73,
+        message: `You spend 45 minutes buying food, lamp oil, and road gear. Supplies rise from 0 to ${OVERWORLD_MAX_SUPPLIES}.`,
+        blockedReason: null,
+      },
+      {
+        action: "rest",
+        source: "ordinary",
+        offerId: null,
+        available: true,
+        changed: true,
+        minutes: 240,
+        suppliesBefore: 0,
+        suppliesAfter: 0,
+        fatigueBefore: 73,
+        fatigueAfter: 0,
+        message:
+          "You spend 240 minutes recovering at a safe local service. Fatigue falls from 73 to 0.",
+        blockedReason: null,
+      },
+    ]);
+
+    const full = presentOverworldServiceActions({
+      currentTown: { id: "alden", name: "Alden", services: ["inn"] },
+      supplies: OVERWORLD_MAX_SUPPLIES,
+      fatigue: 0,
+    });
+    expect(
+      full.map(({ action, available, changed, minutes, message }) => ({
+        action,
+        available,
+        changed,
+        minutes,
+        message,
+      })),
+    ).toEqual([
+      {
+        action: "resupply",
+        available: true,
+        changed: false,
+        minutes: 0,
+        message: "Your supplies are already full.",
+      },
+      {
+        action: "rest",
+        available: true,
+        changed: false,
+        minutes: 0,
+        message: "You are already rested.",
+      },
+    ]);
+  });
+
+  it("lists incompatible actions with exact reasons and projects a coherent override", () => {
+    const unavailable = presentOverworldServiceActions({
+      currentTown: { id: "crossroads", name: "Crossroads", services: [] },
+      supplies: 3,
+      fatigue: 20,
+    });
+    expect(unavailable).toMatchObject([
+      {
+        action: "resupply",
+        available: false,
+        changed: false,
+        minutes: 0,
+        suppliesBefore: 3,
+        suppliesAfter: 3,
+        fatigueBefore: 20,
+        fatigueAfter: 20,
+        message: "There is no market, inn, or stable here to resupply.",
+        blockedReason: "There is no market, inn, or stable here to resupply.",
+      },
+      {
+        action: "rest",
+        available: false,
+        changed: false,
+        minutes: 0,
+        message: "There is no inn or healer here to rest safely.",
+        blockedReason: "There is no inn or healer here to rest safely.",
+      },
+    ]);
+
+    const rule = campaignServiceRule("resupply");
+    const override = presentOverworldServiceActions({
+      currentTown: { id: "albany_city", name: "Albany city", services: [] },
+      currentAreaId: "albany_city__transport_hub",
+      campaignServiceRules: [rule],
+      campaignWorldFactIds: ["fact:wolf_winter_repair_timber_available"],
+      supplies: 1,
+      fatigue: 7,
+    });
+    expect(override[0]).toMatchObject({
+      action: "resupply",
+      source: "campaign_override",
+      offerId: rule.id,
+      available: true,
+      changed: true,
+      minutes: 15,
+      suppliesBefore: 1,
+      suppliesAfter: OVERWORLD_MAX_SUPPLIES,
+      fatigueBefore: 7,
+      fatigueAfter: 7,
+      blockedReason: null,
+    });
+    expect(override[0]!.message).toContain("The service takes 15 minutes");
+    expect(override[1]).toMatchObject({ action: "rest", available: false });
+
+    const noOpOverride = presentOverworldServiceActions({
+      currentTown: { id: "albany_city", name: "Albany city", services: [] },
+      currentAreaId: "albany_city__transport_hub",
+      campaignServiceRules: [rule],
+      campaignWorldFactIds: ["fact:wolf_winter_repair_timber_available"],
+      supplies: OVERWORLD_MAX_SUPPLIES,
+      fatigue: 7,
+    });
+    expect(noOpOverride[0]).toMatchObject({
+      action: "resupply",
+      source: "campaign_override",
+      offerId: rule.id,
+      available: true,
+      changed: false,
+      minutes: 0,
+      message: "Your supplies are already full.",
+    });
   });
 });

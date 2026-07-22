@@ -38,29 +38,33 @@ export type OverworldSessionTownServicePlanState = {
 export type OverworldSessionTownServiceState = OverworldSessionTownServicePlanState &
   OverworldActionJournalState;
 
+export function resolveOverworldSessionTownServiceRules(
+  state: OverworldSessionTownServicePlanState,
+): CampaignServiceRule[] {
+  return state.currentAreaId === undefined || state.campaignServiceRules === undefined
+    ? []
+    : resolveActiveCampaignServiceRules({
+        rules: state.campaignServiceRules,
+        currentTownId: state.currentTown.id,
+        currentAreaId: state.currentAreaId,
+        worldFactIds: state.campaignWorldFactIds ?? [],
+        selectedStoryChoices: state.campaignStoryChoiceRefs ?? [],
+        consumedRuleIds: state.consumedCampaignServiceRuleIds ?? [],
+        ...(state.completedLocalJobOptions
+          ? { completedLocalJobOptions: state.completedLocalJobOptions }
+          : {}),
+        ...(state.campaignCharacter ? { character: state.campaignCharacter } : {}),
+        ...(state.regionRenown ? { regionRenown: state.regionRenown } : {}),
+      });
+}
+
 function overworldSessionTownServiceState(
   state: OverworldSessionTownServicePlanState,
 ): OverworldServiceState {
-  const activeCampaignServiceRules: CampaignServiceRule[] =
-    state.currentAreaId === undefined || state.campaignServiceRules === undefined
-      ? []
-      : resolveActiveCampaignServiceRules({
-          rules: state.campaignServiceRules,
-          currentTownId: state.currentTown.id,
-          currentAreaId: state.currentAreaId,
-          worldFactIds: state.campaignWorldFactIds ?? [],
-          selectedStoryChoices: state.campaignStoryChoiceRefs ?? [],
-          consumedRuleIds: state.consumedCampaignServiceRuleIds ?? [],
-          ...(state.completedLocalJobOptions
-            ? { completedLocalJobOptions: state.completedLocalJobOptions }
-            : {}),
-          ...(state.campaignCharacter ? { character: state.campaignCharacter } : {}),
-          ...(state.regionRenown ? { regionRenown: state.regionRenown } : {}),
-        });
   return {
     townName: state.currentTown.name,
     services: state.currentTown.services,
-    activeCampaignServiceRules,
+    activeCampaignServiceRules: resolveOverworldSessionTownServiceRules(state),
     supplies: state.supplies,
     fatigue: state.fatigue,
   };

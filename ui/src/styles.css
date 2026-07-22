@@ -868,6 +868,15 @@ h3 {
   justify-self: start;
 }
 
+.service-action-preview {
+  color: var(--muted);
+}
+
+.service-actions button[aria-disabled="true"] {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
 .departure-interactions {
   border-top: 1px solid var(--line);
   display: grid;
