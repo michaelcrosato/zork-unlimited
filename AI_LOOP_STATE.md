@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 609 -->
+<!-- historical_cycle_count: 610 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - strict_codex_result_authority
+
+- Evidence choice: retained provider traces showed that a report could verify without proving every AdventureForge result reached the blind player, so this cycle closes the delivery-authority gap instead of trusting artifact presence or a self-reported exit.
+- Surface: each public gameplay call now cross-binds to one adjacent private `exec → MCP completion → visible output` lifecycle with an exact literal wrapper, exact result bytes, finite input/turn/compaction topology, and no auxiliary tools; fleet certification, feedback compilation, and the ledger reuse the full report/envelope/session/model/capture authority chain.
+- Counterfactual: retained 4351/4354/4386 and schema-v2 Claude 2802 remain valid; 4352, 4353, 4385, artifactless Spark 2825/2850, transplants, wrong turns, duplicate keys, reformats, truncation, injection, and orphan or duplicate lifecycle rows fail closed.
+- Pure evidence: exact-clean `8a60050e` Sol 4387 completed Wolf-Winter (`ending_fortified_albany_authority`) at decision 22, continued at 22/40, won The Gallowmere at 46, then ended; clarity/enjoyment 4/4, unstuck/replay-yes, with no rejection, loop, death, repair, auth, or warning.
+- Measured result: the full authority audit returned `ok: true` across 62 MCP calls, exact visible bytes, private lifecycle, clean commit/world/model/capture binding, and 46 accepted decisions; focused coverage passes 130/130 plus 107/107 reviewer checks, and independent final review found no P0-P2.
+- Feedback/follow-through: strict compile `20260722T025001Z` retains 806 verified/217 rejected reports and 55 eligible pure exits with 53 continuing; seed 4387 independently repeats stale LURE guidance, compact prose clipping, and generic June acknowledgement, so fresh cohorts—not rejected history—will arbitrate the next gameplay fix.
+- Guard: pre/post crawl remains zero-finding at 247/247 nodes, 344/344 edges, and 12/12 boards/quests; full exact-source health passes 406 files/3,135 tests plus both typechecks/all packs, and the fresh clean landing journey is independently revalidated under the combined gate.
 
 ### Cycle result - cade_packet_story_predicates
 
@@ -154,13 +164,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Measured result: normal live-path noninterference PASSes; malformed-path recovery is established by deterministic tests, not claimed from this valid run. Feedback retained one S2 identity-continuity gap plus S1 Rowan duplication and mid-combat checkpoint interruption; no auth, security, model, or tool failure occurred.
 - Feedback/follow-through: the ledger is 917 accepted/59 rejected with two verified reports since compile `20260721T012144Z`, below the three-report threshold; dense setup remains the worst moment.
 - Guard: exact rebased increment `fdac1679` has zero-finding crawl at 247/247 nodes, 344/344 edges, and 12/12 boards/quests; health passes 393 files/3,013 tests plus UI/all packs, and independent review found no remaining P0-P2.
-
-### Cycle result - cade_return_packet
-
-- Evidence choice: Wolf-Winter exported exact surviving losses but Albany offered no bounded way to act on them, so this cycle converted the generic Station job into one optional post-return crew allocation rather than adding another mandatory opening decision.
-- Surface: all eleven Wolf endings expose only their certified paling, evacuation-line, or pasture-search dispatches; simultaneous losses compete for one crew, and the selected proof grants one exact Works recovery or creates/consolidates one Greenway stores line while the other loss stays deferred.
-- Counterfactual: full/compact/UI/MCP parity, every ending, mutual exclusion, both cache-consumption orders, downstream one-shot services, tamper rejection, exact predecessor service replay, generic-job migration, collision guards, and clone boundaries are covered; independent re-review found no P0-P2.
-- Pure evidence: exact clean commit `a6ad1937` Terra seed 4246 completed Wolf-Winter at decision 32, continued, ended unstuck/replay-yes at 40 with clarity/enjoyment 4/4, and had no auth, classifier, boundary, or tool failure. The two loss-backed packet options surfaced organically after the return, but the player followed the north goal without selecting one.
-- Measured result: exact loss-to-option discovery PASSes; organic packet use remains UNPROVEN and its salience against the immediate north goal is a one-report P2 signal. Repeated `use_paling_rail` labels were also understandable but awkward S1/P2 debt.
-- Feedback/follow-through: compile `20260721T012144Z` has 916 verified reports, 165 eligible pure exits, and 142 continuing; the ledger is 917 accepted/59 rejected with two later verified reports, still below the three-report compile threshold. Current-build triage ranks conditional hill-route tradeoff projection above stale fleet-heavy hotspots, then Station-route guidance and embedded-action naming.
-- Guard: the final combined tree has zero-finding crawl at 247/247 nodes, 344/344 edges, and 12/12 boards/quests; health passes 392 files/2,991 tests plus UI/all packs, and the exact gameplay build carries verified seed 4246.

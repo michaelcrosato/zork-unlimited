@@ -148,7 +148,7 @@ describe("blind runner MCP config contract", () => {
     // The pure prompt carries only transport syntax. Gameplay objectives,
     // routes, coverage targets, and stopping are owned by the game itself.
     expect(owPrompt).toContain("mcp__adventureforge__start_overworld");
-    expect(owPrompt).toContain("first tool invocation");
+    expect(owPrompt).toContain("first and only pre-game tool invocation");
     expect(owPrompt).toContain("one-time tutorial");
     expect(owPrompt).not.toMatch(/30.?45|tool calls|take at least one road/i);
     expect(owPrompt).not.toMatch(
@@ -254,6 +254,7 @@ describe("blind runner MCP config contract", () => {
     expect(codexLaunch).toContain('cd "$CODEX_PLAYER_CWD"');
     expect(codexLaunch).toContain('CODEX_HOME="$STERILE_CODEX_HOME_ARG"');
     expect(codexLaunch).toContain('CODEX_ROLLOUT="$OUT.codex-rollout.jsonl"');
+    expect(codexLaunch).toContain('--rollout "$CODEX_ROLLOUT_ARG"');
     expect(codexLaunch).toContain('CODEX_CAPTURE="$OUT.codex-capture.json"');
     expect(codexLaunch).toContain('--receipt "$CODEX_CAPTURE_ARG"');
     expect(codexLaunch).toContain('--expected-cwd "$CODEX_PLAYER_CWD_ARG"');
@@ -275,9 +276,7 @@ describe("blind runner MCP config contract", () => {
     expect(codexLaunch).not.toContain("dangerously-bypass");
     expect(codexLaunch).not.toContain("danger-full-access");
 
-    expect(envelope).toContain(
-      'new Set(["agent_message", "reasoning", "mcp_tool_call", "todo_list"])',
-    );
+    expect(envelope).toContain('new Set(["agent_message", "reasoning", "mcp_tool_call"])');
     expect(envelope).toContain('item.server !== "adventureforge"');
     expect(envelope).toContain("CODEX_PURE_PLAYER_TOOLS.has(item.tool)");
     expect(envelope).toContain('rows.at(-1)?.type !== "turn.completed"');

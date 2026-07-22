@@ -727,6 +727,15 @@ describe("closed fleet filesystem integrity", () => {
       ]
         .map((event) => JSON.stringify(event))
         .join("\n")}\n`;
+      const providerInputMessage = (role: "developer" | "user", text: string) => ({
+        type: "response_item",
+        payload: {
+          type: "message",
+          role,
+          content: [{ type: "input_text", text }],
+          internal_chat_message_metadata_passthrough: { turn_id: providerTurnId },
+        },
+      });
       const providerRolloutBody = `${[
         {
           timestamp: "2026-07-19T00:00:00.000Z",
@@ -743,6 +752,11 @@ describe("closed fleet filesystem integrity", () => {
           type: "event_msg",
           payload: { type: "task_started", turn_id: providerTurnId },
         },
+        providerInputMessage("developer", "permissions"),
+        providerInputMessage("developer", "app context"),
+        providerInputMessage("developer", "repository instructions"),
+        providerInputMessage("user", "environment context"),
+        { type: "world_state", payload: { full: true } },
         {
           timestamp: "2026-07-19T00:00:00.002Z",
           type: "turn_context",
@@ -755,13 +769,68 @@ describe("closed fleet filesystem integrity", () => {
             effort: "xhigh",
           },
         },
+        providerInputMessage("user", "blind prompt"),
+        {
+          type: "event_msg",
+          payload: {
+            type: "user_message",
+            message: "blind prompt",
+            images: [],
+            local_images: [],
+            text_elements: [],
+          },
+        },
+        {
+          timestamp: "2026-07-19T00:00:00.100Z",
+          type: "response_item",
+          payload: {
+            type: "custom_tool_call",
+            id: "wrapper-item-1",
+            status: "completed",
+            call_id: "call-wrapper-1",
+            name: "exec",
+            input:
+              "const result = await tools.mcp__adventureforge__start_overworld({});\n" +
+              "text(JSON.stringify(result));\n",
+            internal_chat_message_metadata_passthrough: { turn_id: providerTurnId },
+          },
+        },
+        {
+          timestamp: "2026-07-19T00:00:00.200Z",
+          type: "event_msg",
+          payload: {
+            type: "mcp_tool_call_end",
+            call_id: "exec-gameplay-1",
+            invocation: { server: "adventureforge", tool: "start_overworld", arguments: {} },
+            result: { Ok: { content: [] } },
+          },
+        },
+        {
+          timestamp: "2026-07-19T00:00:00.300Z",
+          type: "response_item",
+          payload: {
+            type: "custom_tool_call_output",
+            call_id: "call-wrapper-1",
+            internal_chat_message_metadata_passthrough: { turn_id: providerTurnId },
+            output: [
+              {
+                type: "input_text",
+                text: "Script completed\nWall time 0.0 seconds\nOutput:\n",
+              },
+              { type: "input_text", text: '{"content":[]}' },
+            ],
+          },
+        },
         {
           timestamp: "2026-07-19T00:00:01.000Z",
           type: "response_item",
           payload: {
             type: "message",
+            id: "final-message",
             role: "assistant",
             content: [{ type: "output_text", text: reportBody }],
+            phase: "final_answer",
+            internal_chat_message_metadata_passthrough: { turn_id: providerTurnId },
           },
         },
         {

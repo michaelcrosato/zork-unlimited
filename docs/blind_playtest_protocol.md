@@ -174,14 +174,27 @@ and rules are ignored, shell/web/apps/plugins/browser/computer/subagents and the
 unused shell snapshot are disabled, and only the exact pure AdventureForge MCP
 tools are enabled. It audits the provider JSONL and rejects
 unknown events, non-game tools, another MCP server, incomplete/duplicate turns,
-or malformed final output. Codex may emit generic resource-transport probes even
-when the player obeys the game-tool boundary. The audit tolerates only a bounded,
-paired `-32601 Method not found` failure against AdventureForge's empty resource
-namespace, with a null result, plus one bounded in-memory todo lifecycle. These
-events expose no content, do not count as gameplay, and fail closed on success,
-content, another server, malformed pairing, or an unbounded payload. Every normal
-AdventureForge call is separately paired by id, tool, arguments, status, and
-result; the first pair must be a successful argument-free `start_overworld`.
+or malformed final output. The audit accepts only reasoning, agent messages, and
+paired AdventureForge gameplay calls. Resource discovery, task planning, another
+MCP server, a non-game tool, and every unexpected lifecycle event reject the run.
+Every AdventureForge call is separately paired by id, tool, arguments, status,
+and result; the first pair must be a successful argument-free `start_overworld`.
+The copied rollout then independently requires one adjacent three-row lifecycle
+for every public gameplay call: an `exec` wrapper, its MCP completion, and the
+player-visible wrapper output. The wrapper is parsed as code and may contain only
+one allowlisted AdventureForge gameplay invocation with literal arguments plus
+an exact result emitter (normally `text(JSON.stringify(result))`). Tool,
+arguments, status, result, order, count, identifiers, and exact visible bytes
+are cross-bound between the public events and private rollout. Any other wrapper
+activity (`ALL_TOOLS`, resources, planning, aliases, extra statements), or bare,
+empty, injected, reformatted, duplicate-key, truncated, mismatched, duplicate,
+orphan, or nonadjacent output rejects before verification or publication. The
+private rollout also has one finite task/input/context topology: exact prelude
+roles, one byte-bound text-only prompt with no auxiliary inputs, and only exact
+compaction replays plus passive assistant/reasoning shapes. Feedback compilation
+and ledger refresh rerun the full provider authority validator for current
+evidence, binding report, envelope, run evidence, provider session/model, copied
+rollout, and capture hash. Failure text exposes no hidden response.
 A Codex report outside that single receipt-only case remains rejected and must
 use a fresh seed. For a fleet member, the runner also
 captures exactly one non-linked rollout JSONL from that sterile home and verifies

@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { describe, expect, it, beforeAll } from "vitest";
 import { mkdirSync, mkdtempSync, readFileSync, utimesSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -261,6 +262,221 @@ ${JSON.stringify(interview, null, 2)}
   return { report, sidecar };
 }
 
+function writeCodexGameplayArtifacts(
+  base: string,
+  report: string,
+  legacySidecar: string,
+  {
+    forbiddenWrapper = false,
+    runSeed = 5,
+    session = "019f7250-1ed0-7102-be6c-4f1d5513d91e",
+    turn = "119f7250-1ed0-7102-be6c-4f1d5513d91e",
+  } = {},
+): void {
+  const legacy = JSON.parse(legacySidecar) as Record<string, unknown>;
+  const gameSessionId = legacy.session_id;
+  const receipt = legacy.receipt;
+  if (typeof gameSessionId !== "string" || receipt === null || typeof receipt !== "object") {
+    throw new Error("invalid pure sidecar fixture");
+  }
+  const build = {
+    git_commit: "a".repeat(40),
+    tracked_worktree_clean: true,
+    world_id: "new_york_overworld",
+    world_hash: "b".repeat(64),
+  };
+  const sidecar = {
+    ...legacy,
+    schema_version: 2,
+    run_seed: runSeed,
+    build,
+    quest_outcomes: [],
+  };
+  writeFileSync(`${base}.run.json`, `${JSON.stringify(sidecar)}\n`);
+  const evidenceCommon = {
+    schema_version: 2,
+    play_mode: "pure",
+    start_surface: "fresh_overworld",
+    session_id: gameSessionId,
+    run_seed: runSeed,
+    build,
+  };
+  writeFileSync(
+    `${base}.evidence.jsonl`,
+    `${JSON.stringify({ ...evidenceCommon, event: "fresh_start" })}\n${JSON.stringify({
+      ...evidenceCommon,
+      event: "journey_exit",
+      quest_outcomes: [],
+      receipt,
+    })}\n`,
+  );
+  const result = { content: [] };
+  const call = {
+    id: "item_1",
+    type: "mcp_tool_call",
+    server: "adventureforge",
+    tool: "start_overworld",
+    arguments: {},
+  };
+  writeFileSync(
+    `${base}.json`,
+    `${JSON.stringify({
+      type: "result",
+      subtype: "success",
+      provider: "codex",
+      is_error: false,
+      duration_ms: 1,
+      num_turns: 1,
+      result: report,
+      session_id: session,
+      requested_model: "gpt-5.3-codex-spark",
+      terminal_reason: "completed",
+    })}\n`,
+  );
+  writeFileSync(
+    `${base}.codex.jsonl`,
+    `${[
+      { type: "thread.started", thread_id: session },
+      { type: "turn.started" },
+      {
+        type: "item.started",
+        item: { ...call, result: null, error: null, status: "in_progress" },
+      },
+      {
+        type: "item.completed",
+        item: {
+          ...call,
+          result: { ...result, structured_content: null },
+          error: null,
+          status: "completed",
+        },
+      },
+      {
+        type: "item.completed",
+        item: { id: "item_2", type: "agent_message", text: report },
+      },
+      {
+        type: "turn.completed",
+        usage: { input_tokens: 1, cached_input_tokens: 0, output_tokens: 1 },
+      },
+    ]
+      .map((row) => JSON.stringify(row))
+      .join("\n")}\n`,
+  );
+  const cwd = "C:\\private\\player";
+  const inputMessage = (role: "developer" | "user", text: string) => ({
+    type: "response_item",
+    payload: {
+      type: "message",
+      role,
+      content: [{ type: "input_text", text }],
+      internal_chat_message_metadata_passthrough: { turn_id: turn },
+    },
+  });
+  const rolloutRows = [
+    {
+      type: "session_meta",
+      payload: { id: session, cwd, cli_version: "0.145.0", model_provider: "openai" },
+    },
+    { type: "event_msg", payload: { type: "task_started", turn_id: turn } },
+    inputMessage("developer", "permissions"),
+    inputMessage("developer", "app context"),
+    inputMessage("developer", "repository instructions"),
+    inputMessage("user", "environment context"),
+    { type: "world_state", payload: { full: true } },
+    {
+      type: "turn_context",
+      payload: {
+        turn_id: turn,
+        cwd,
+        approval_policy: "never",
+        sandbox_policy: { type: "read-only" },
+        model: "gpt-5.3-codex-spark",
+        effort: "xhigh",
+      },
+    },
+    inputMessage("user", "blind prompt"),
+    {
+      type: "event_msg",
+      payload: {
+        type: "user_message",
+        message: "blind prompt",
+        images: [],
+        local_images: [],
+        text_elements: [],
+      },
+    },
+    {
+      type: "response_item",
+      payload: {
+        type: "custom_tool_call",
+        id: "wrapper-item-1",
+        status: "completed",
+        call_id: "call-wrapper-1",
+        name: "exec",
+        input: forbiddenWrapper
+          ? "const hits = ALL_TOOLS.filter((tool) => tool.name);\ntext(hits);\n"
+          : "const result = await tools.mcp__adventureforge__start_overworld({});\ntext(JSON.stringify(result));\n",
+        internal_chat_message_metadata_passthrough: { turn_id: turn },
+      },
+    },
+    {
+      type: "event_msg",
+      payload: {
+        type: "mcp_tool_call_end",
+        call_id: "exec-gameplay-1",
+        invocation: { server: "adventureforge", tool: "start_overworld", arguments: {} },
+        result: { Ok: result },
+      },
+    },
+    {
+      type: "response_item",
+      payload: {
+        type: "custom_tool_call_output",
+        call_id: "call-wrapper-1",
+        internal_chat_message_metadata_passthrough: { turn_id: turn },
+        output: [
+          { type: "input_text", text: "Script completed\nWall time 0.0 seconds\nOutput:\n" },
+          { type: "input_text", text: JSON.stringify(result) },
+        ],
+      },
+    },
+    {
+      type: "response_item",
+      payload: {
+        type: "message",
+        id: "final-message",
+        role: "assistant",
+        content: [{ type: "output_text", text: report }],
+        phase: "final_answer",
+        internal_chat_message_metadata_passthrough: { turn_id: turn },
+      },
+    },
+    {
+      type: "event_msg",
+      payload: { type: "task_complete", turn_id: turn, last_agent_message: report },
+    },
+  ];
+  const rolloutText = `${rolloutRows.map((row) => JSON.stringify(row)).join("\n")}\n`;
+  writeFileSync(`${base}.codex-rollout.jsonl`, rolloutText);
+  writeFileSync(
+    `${base}.codex-capture.json`,
+    `${JSON.stringify({
+      schema_version: 1,
+      binding: "runner_work_player",
+      recorded_session_cwd: cwd,
+      recorded_turn_cwd: cwd,
+      canonical_expected_cwd: cwd,
+      canonical_session_cwd: cwd,
+      canonical_turn_cwd: cwd,
+      expected_directory_identity: { device_id: "1", file_id: "2" },
+      session_directory_identity: { device_id: "1", file_id: "2" },
+      turn_directory_identity: { device_id: "1", file_id: "2" },
+      copied_rollout_sha256: createHash("sha256").update(rolloutText).digest("hex"),
+    })}\n`,
+  );
+}
+
 function structuralReport(): string {
   const interview = {
     schema_version: 2,
@@ -388,6 +604,54 @@ describe("collectInputs", () => {
     const staleTime = new Date("2000-01-01T00:00:00.000Z");
     utimesSync(`${base}.run.json`, staleTime, staleTime);
     expect(collectInputs(process.cwd(), [dir])).toMatchObject({ verified: 0, rejected: 1 });
+  });
+
+  it("re-audits retained Codex wrapper evidence before compiling feedback", () => {
+    const dir = mkdtempSync(join(tmpdir(), "feedback-codex-reaudit-"));
+    const base = join(dir, "20260101T000005Z_overworld_seed5");
+    const fixture = pureReportAndSidecar();
+    writeFileSync(`${base}.md`, fixture.report);
+    writeCodexGameplayArtifacts(base, fixture.report, fixture.sidecar);
+    expect(collectInputs(process.cwd(), [dir])).toMatchObject({ verified: 1, rejected: 0 });
+
+    writeCodexGameplayArtifacts(base, fixture.report, fixture.sidecar, {
+      forbiddenWrapper: true,
+    });
+    expect(collectInputs(process.cwd(), [dir])).toMatchObject({ verified: 0, rejected: 1 });
+
+    writeCodexGameplayArtifacts(base, fixture.report, fixture.sidecar);
+    const unknownProvider = JSON.parse(readFileSync(`${base}.json`, "utf8")) as Record<
+      string,
+      unknown
+    >;
+    unknownProvider.provider = "untrusted-provider";
+    writeFileSync(`${base}.json`, JSON.stringify(unknownProvider));
+    expect(collectInputs(process.cwd(), [`${base}.md`])).toMatchObject({
+      verified: 0,
+      rejected: 1,
+    });
+
+    writeCodexGameplayArtifacts(base, fixture.report, fixture.sidecar);
+    const transplantedFixture = pureReportAndSidecar({ proofCharacter: "c" });
+    const transplantedBase = join(dir, "20260101T000006Z_overworld_seed6");
+    writeFileSync(`${transplantedBase}.md`, transplantedFixture.report);
+    writeCodexGameplayArtifacts(
+      transplantedBase,
+      transplantedFixture.report,
+      transplantedFixture.sidecar,
+      {
+        runSeed: 6,
+        session: "219f7250-1ed0-7102-be6c-4f1d5513d91e",
+        turn: "319f7250-1ed0-7102-be6c-4f1d5513d91e",
+      },
+    );
+    for (const suffix of [".codex.jsonl", ".codex-rollout.jsonl", ".codex-capture.json"]) {
+      writeFileSync(`${transplantedBase}${suffix}`, readFileSync(`${base}${suffix}`));
+    }
+    expect(collectInputs(process.cwd(), [`${transplantedBase}.md`])).toMatchObject({
+      verified: 0,
+      rejected: 1,
+    });
   });
 });
 

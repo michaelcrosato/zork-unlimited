@@ -798,7 +798,7 @@ if [[ "$PROVIDER" == "codex" ]]; then
   fi
   if [[ "$STATUS" -eq 0 ]]; then
     "$NODE_CMD" "$CODEX_ENVELOPE_SCRIPT" \
-      --events "$CODEX_EVENTS_ARG" --report "$CODEX_REPORT_ARG" \
+      --events "$CODEX_EVENTS_ARG" --rollout "$CODEX_ROLLOUT_ARG" --report "$CODEX_REPORT_ARG" \
       --model "$MODEL" --started-at-ms "$CODEX_STARTED_AT_MS" \
       > "$OUT.json" 2> "$OUT.codex-audit.log"
     CODEX_AUDIT_STATUS=$?

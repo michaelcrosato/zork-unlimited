@@ -3,7 +3,7 @@ import { basename, isAbsolute, win32 } from "node:path";
 import { isDeepStrictEqual } from "node:util";
 import { z } from "zod";
 // @ts-expect-error -- hardened runner module is intentionally plain ESM.
-import { inspectCodexPureEvents } from "../../blind-tester/codex-pure-envelope.mjs";
+import { inspectCodexPureEvidence } from "../../blind-tester/codex-pure-envelope.mjs";
 import { verifyBlindReportText } from "../blind/report_verifier.js";
 import {
   PureReportRecoveryMetadataSchema,
@@ -471,17 +471,16 @@ function parseCodexAuthority(
 ): { ok: true; facts: CodexAuthorityFacts } | { ok: false; reason: string } {
   const events = parseJsonLines(eventsText, "Codex provider events");
   if (!events.ok) return events;
-  const inspected = inspectCodexPureEvents(events.rows) as
+  const rollout = parseJsonLines(rolloutText, "Codex rollout");
+  if (!rollout.ok) return rollout;
+  const inspected = inspectCodexPureEvidence(events.rows, rollout.rows) as
     | { ok: true; threadId: string }
     | { ok: false; reason: string };
   if (!inspected.ok)
-    return { ok: false, reason: `Codex provider events rejected: ${inspected.reason}` };
+    return { ok: false, reason: `Codex provider evidence rejected: ${inspected.reason}` };
   if (finalCodexPublicMessage(events.rows) !== report) {
     return { ok: false, reason: "Codex public final message bytes do not equal the report" };
   }
-
-  const rollout = parseJsonLines(rolloutText, "Codex rollout");
-  if (!rollout.ok) return rollout;
   const sessionRows = rollout.rows.flatMap((row, index) =>
     isRecord(row) && row.type === "session_meta" ? [{ index, row }] : [],
   );

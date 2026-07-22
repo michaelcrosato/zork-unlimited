@@ -7,6 +7,7 @@ import {
   type ExitInterview,
 } from "./exit_interview.js";
 import { parseBlindRunSidecar } from "./run_evidence.js";
+import { validateAdjacentPureProviderAuthority } from "./pure_artifact_gate.js";
 
 export const DEFAULT_FEEDBACK_RECENT_LIMIT = 100;
 
@@ -193,6 +194,11 @@ export function buildBlindFeedbackLedger(
       }
       const parsedSidecar = parseBlindRunSidecar(readFileSync(sidecarPath, "utf8"));
       if (!parsedSidecar.ok) {
+        rejectedReports += 1;
+        continue;
+      }
+      const providerAuthority = validateAdjacentPureProviderAuthority(fullPath);
+      if (!providerAuthority.ok) {
         rejectedReports += 1;
         continue;
       }

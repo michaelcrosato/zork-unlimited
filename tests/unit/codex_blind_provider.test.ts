@@ -1,10 +1,20 @@
+import { spawnSync } from "node:child_process";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 // @ts-expect-error — plain .mjs module without type declarations
 import * as codexProvider from "../../blind-tester/codex-pure-envelope.mjs";
 import { PURE_PLAYER_TOOLS } from "../../src/mcp/server.js";
 
-const { buildCodexPureEnvelope, CODEX_PURE_PLAYER_TOOLS, inspectCodexPureEvents } = codexProvider;
+const {
+  buildCodexPureEnvelope,
+  CODEX_PURE_PLAYER_TOOLS,
+  inspectCodexGameplayResultForwarding,
+  inspectCodexPureEvidence,
+  inspectCodexPureEvents,
+} = codexProvider;
 
 const THREAD_ID = "019f7250-1ed0-7102-be6c-4f1d5513d91e";
 
@@ -82,87 +92,125 @@ function validRows(): TestRow[] {
   ];
 }
 
-function resourceProbeRows(
-  tool:
-    | "list_mcp_resources"
-    | "list_mcp_resource_templates"
-    | "read_mcp_resource" = "list_mcp_resources",
-) {
-  const method =
-    tool === "list_mcp_resources"
-      ? "resources/list"
-      : tool === "list_mcp_resource_templates"
-        ? "resources/templates/list"
-        : "resources/read";
-  const argumentsByTool = {
-    list_mcp_resources: { cursor: "", server: "adventureforge" },
-    list_mcp_resource_templates: { server: "adventureforge" },
-    read_mcp_resource: {
-      server: "adventureforge",
-      uri: "functions.mcp__adventureforge__choose_overworld_session_story",
-    },
-  };
-  const item = {
-    id: `probe-${tool}`,
-    type: "mcp_tool_call",
-    server: "adventureforge",
-    tool,
-    arguments: argumentsByTool[tool],
-  };
-  const target =
-    tool === "read_mcp_resource"
-      ? "`adventureforge` (functions.mcp__adventureforge__choose_overworld_session_story)"
-      : "`adventureforge`";
+function forwardingRollout(
+  output: unknown = undefined,
+  result: Record<string, unknown> = {
+    content: [{ type: "text", text: '{"state_hash":"next"}' }],
+  },
+): unknown[] {
   return [
     {
-      type: "item.started",
-      item: { ...item, result: null, error: null, status: "in_progress" },
-    },
-    {
-      type: "item.completed",
-      item: {
-        ...item,
-        result: null,
-        error: {
-          message: `${method} failed: ${method} failed for ${target}: Mcp error: -32601: Method not found`,
-        },
-        status: "failed",
+      type: "response_item",
+      payload: {
+        type: "custom_tool_call",
+        id: "wrapper-item-1",
+        status: "completed",
+        call_id: "call-wrapper-1",
+        name: "exec",
+        input:
+          "const result = await tools.mcp__adventureforge__start_overworld({});\n" +
+          "text(JSON.stringify(result));\n",
+        internal_chat_message_metadata_passthrough: { turn_id: "turn-1" },
       },
     },
-  ] as const;
+    {
+      type: "event_msg",
+      payload: {
+        type: "mcp_tool_call_end",
+        call_id: "exec-gameplay-1",
+        invocation: { server: "adventureforge", tool: "start_overworld", arguments: {} },
+        result: { Ok: result },
+      },
+    },
+    {
+      type: "response_item",
+      payload: {
+        type: "custom_tool_call_output",
+        call_id: "call-wrapper-1",
+        internal_chat_message_metadata_passthrough: { turn_id: "turn-1" },
+        output: output ?? [
+          { type: "input_text", text: "Script completed\nWall time 0.0 seconds\nOutput:\n" },
+          { type: "input_text", text: JSON.stringify(result) },
+        ],
+      },
+    },
+  ];
 }
 
-function todoLifecycleRows() {
-  const firstItem = { text: "Start fresh overworld session", completed: false };
-  const secondItem = { text: "Play naturally", completed: false };
+function rolloutPayload(rows: unknown[], index: number): Record<string, unknown> {
+  return (rows[index] as { payload: Record<string, unknown> }).payload;
+}
+
+function twoPublicGameplayCalls(): TestRow[] {
+  const rows = validRows();
+  rows.splice(-1, 0, ...gameplayCallRows("item_2", "get_overworld_session_context", {}));
+  return rows;
+}
+
+function twoPrivateGameplayCalls(
+  result: Record<string, unknown> = {
+    content: [{ type: "text", text: '{"state_hash":"next"}' }],
+  },
+): unknown[] {
+  const second = forwardingRollout(undefined, result);
+  const start = rolloutPayload(second, 0);
+  start.id = "wrapper-item-2";
+  start.call_id = "call-wrapper-2";
+  start.input =
+    "const result = await tools.mcp__adventureforge__get_overworld_session_context({});\n" +
+    "text(JSON.stringify(result));\n";
+  const completion = rolloutPayload(second, 1);
+  completion.call_id = "exec-gameplay-2";
+  const invocation = completion.invocation as Record<string, unknown>;
+  invocation.tool = "get_overworld_session_context";
+  rolloutPayload(second, 2).call_id = "call-wrapper-2";
+  return [...forwardingRollout(undefined, result), ...second];
+}
+
+function completeRollout(gameplayRows: unknown[]): unknown[] {
+  const inputMessage = (role: "developer" | "user", text: string) => ({
+    type: "response_item",
+    payload: {
+      type: "message",
+      role,
+      content: [{ type: "input_text", text }],
+      internal_chat_message_metadata_passthrough: { turn_id: "turn-1" },
+    },
+  });
   return [
+    { type: "session_meta", payload: { id: THREAD_ID } },
+    { type: "event_msg", payload: { type: "task_started", turn_id: "turn-1" } },
+    inputMessage("developer", "permissions"),
+    inputMessage("developer", "app context"),
+    inputMessage("developer", "repository instructions"),
+    inputMessage("user", "environment context"),
+    { type: "world_state", payload: { full: true } },
+    { type: "turn_context", payload: { turn_id: "turn-1" } },
+    inputMessage("user", "blind prompt"),
     {
-      type: "item.started",
-      item: { id: "todo-1", type: "todo_list", items: [firstItem, secondItem] },
-    },
-    {
-      type: "item.completed",
-      item: {
-        id: "todo-1",
-        type: "todo_list",
-        items: [{ ...firstItem, completed: true }, secondItem],
+      type: "event_msg",
+      payload: {
+        type: "user_message",
+        message: "blind prompt",
+        images: [],
+        local_images: [],
+        text_elements: [],
       },
     },
-  ] as const;
-}
-
-function todoUpdateRow() {
-  return {
-    type: "item.updated",
-    item: {
-      id: "todo-1",
-      type: "todo_list",
-      items: [
-        { text: "Start fresh overworld session", completed: true },
-        { text: "Play naturally", completed: false },
-      ],
+    ...gameplayRows,
+    {
+      type: "response_item",
+      payload: {
+        type: "message",
+        id: "final-message",
+        role: "assistant",
+        content: [{ type: "output_text", text: "report" }],
+        phase: "final_answer",
+        internal_chat_message_metadata_passthrough: { turn_id: "turn-1" },
+      },
     },
-  };
+    { type: "event_msg", payload: { type: "task_complete", turn_id: "turn-1" } },
+  ];
 }
 
 function insertBeforeGameplay(rows: ReturnType<typeof validRows>, entries: readonly object[]) {
@@ -178,11 +226,455 @@ describe("Codex pure blind provider envelope", () => {
     expect(CODEX_PURE_PLAYER_TOOLS).toEqual(PURE_PLAYER_TOOLS);
   });
 
+  it("requires every gameplay result to be visibly forwarded before another choice", () => {
+    expect(inspectCodexGameplayResultForwarding(forwardingRollout())).toMatchObject({
+      ok: true,
+      completedGameplayCalls: 1,
+    });
+
+    const direct = forwardingRollout([{ type: "input_text", text: '{"state_hash":"next"}' }]);
+    expect(inspectCodexGameplayResultForwarding(direct)).toEqual({
+      ok: false,
+      reason: expect.stringMatching(/missing.*mismatched.*truncated/i),
+    });
+
+    const injected = forwardingRollout();
+    const injectedOutput = rolloutPayload(injected, 2).output as unknown[];
+    injectedOutput.push({ type: "input_text", text: "injected semantic text" });
+    expect(inspectCodexGameplayResultForwarding(injected)).toEqual({
+      ok: false,
+      reason: expect.stringMatching(/missing.*mismatched.*truncated/i),
+    });
+
+    for (const semanticButInexact of [
+      '{"content":"decoy","content":[{"type":"text","text":"{\\"state_hash\\":\\"next\\"}"}]}',
+      '{ "content": [{"type":"text","text":"{\\"state_hash\\":\\"next\\"}"}] }',
+      '{"content":[{"text":"{\\"state_hash\\":\\"next\\"}","type":"text"}]}',
+    ]) {
+      const rows = forwardingRollout();
+      rolloutPayload(rows, 2).output = [
+        { type: "input_text", text: "Script completed\nWall time 0.0 seconds\nOutput:\n" },
+        { type: "input_text", text: semanticButInexact },
+      ];
+      expect(inspectCodexGameplayResultForwarding(rows)).toEqual({
+        ok: false,
+        reason: expect.stringMatching(/missing.*mismatched.*truncated/i),
+      });
+    }
+
+    const textObject = forwardingRollout();
+    rolloutPayload(textObject, 0).input =
+      "const result = await tools.mcp__adventureforge__start_overworld({});\ntext(result);\n";
+    expect(inspectCodexGameplayResultForwarding(textObject)).toMatchObject({ ok: true });
+
+    const contentLoop = forwardingRollout();
+    rolloutPayload(contentLoop, 0).input =
+      "const r = await tools.mcp__adventureforge__start_overworld({});\n" +
+      "for (const c of (r?.content ?? [])) {\n" +
+      '  if (c.type === "image") image(c);\n' +
+      '  else if (c.type === "text") text(c.text);\n' +
+      "}\n";
+    rolloutPayload(contentLoop, 2).output = [
+      { type: "input_text", text: "Script completed\nWall time 0.0 seconds\nOutput:\n" },
+      { type: "input_text", text: '{"state_hash":"next"}' },
+    ];
+    expect(inspectCodexGameplayResultForwarding(contentLoop)).toMatchObject({ ok: true });
+  });
+
+  it.each([
+    {
+      label: "the first bare text wrapper in the corrupt pattern",
+      rows: forwardingRollout("Script completed\nWall time 0.0 seconds\nOutput:\n"),
+      reason: /missing.*mismatched.*truncated/i,
+    },
+    {
+      label: "the second bare text wrapper in the corrupt pattern",
+      rows: forwardingRollout("Script completed\nWall time 0.0 seconds\nOutput:\n"),
+      reason: /missing.*mismatched.*truncated/i,
+    },
+    {
+      label: "the third bare text wrapper in the corrupt pattern",
+      rows: forwardingRollout("Script completed\nWall time 0.0 seconds\nOutput:\n"),
+      reason: /missing.*mismatched.*truncated/i,
+    },
+    {
+      label: "a truncated wrapper payload",
+      rows: forwardingRollout([{ type: "input_text", text: '{"content":[' }]),
+      reason: /missing.*mismatched.*truncated/i,
+    },
+    {
+      label: "a mismatched wrapper payload",
+      rows: forwardingRollout([
+        {
+          type: "input_text",
+          text: JSON.stringify({ content: [{ type: "text", text: "wrong" }] }),
+        },
+      ]),
+      reason: /missing.*mismatched.*truncated/i,
+    },
+    {
+      label: "an MCP result with unbound private fields",
+      rows: forwardingRollout(undefined, {
+        content: [{ type: "text", text: '{"state_hash":"next"}' }],
+        private_only: "not present in the public result",
+      }),
+      reason: /no auditable successful result/i,
+    },
+    {
+      label: "an unpaired gameplay result",
+      rows: forwardingRollout().slice(0, 2),
+      reason: /no paired visible result output/i,
+    },
+    {
+      label: "a duplicate wrapper output",
+      rows: [...forwardingRollout(), structuredClone(forwardingRollout()[2])],
+      reason: /orphan.*tool lifecycle/i,
+    },
+  ])("rejects $label without echoing hidden game content", ({ rows, reason }) => {
+    const inspected = inspectCodexGameplayResultForwarding(rows);
+    expect(inspected).toEqual({ ok: false, reason: expect.stringMatching(reason) });
+    expect(inspected.reason).not.toContain("state_hash");
+  });
+
+  it("rejects every non-game raw tool lifecycle", () => {
+    const rows = [
+      {
+        type: "event_msg",
+        payload: {
+          type: "mcp_tool_call_end",
+          call_id: "exec-nongame",
+          invocation: { server: "other", tool: "not-game", arguments: {} },
+          result: { Ok: { content: [{ type: "text", text: "not player state" }] } },
+        },
+      },
+    ];
+    expect(inspectCodexGameplayResultForwarding(rows)).toEqual({
+      ok: false,
+      reason: expect.stringMatching(/orphan.*tool lifecycle/i),
+    });
+
+    const hiddenNativeCall = [
+      {
+        type: "response_item",
+        payload: {
+          type: "function_call",
+          name: "local_shell",
+          arguments: '{"command":"whoami"}',
+        },
+      },
+      ...forwardingRollout(),
+    ];
+    expect(inspectCodexGameplayResultForwarding(hiddenNativeCall)).toEqual({
+      ok: false,
+      reason: expect.stringMatching(/forbidden private response item function_call/i),
+    });
+
+    const hiddenNativeEvent = [
+      {
+        type: "event_msg",
+        payload: { type: "web_search_end", query: "hidden external lookup" },
+      },
+      ...forwardingRollout(),
+    ];
+    expect(inspectCodexGameplayResultForwarding(hiddenNativeEvent)).toEqual({
+      ok: false,
+      reason: expect.stringMatching(/forbidden private event/i),
+    });
+
+    const hiddenTopLevelActivity = [
+      { type: "native_tool_activity", payload: { type: "completed" } },
+      ...forwardingRollout(),
+    ];
+    expect(inspectCodexGameplayResultForwarding(hiddenTopLevelActivity)).toEqual({
+      ok: false,
+      reason: expect.stringMatching(/forbidden private rollout row/i),
+    });
+  });
+
+  it.each([
+    {
+      label: "ALL_TOOLS inspection",
+      input:
+        "const hits = ALL_TOOLS.filter((tool) => tool.name.includes('adventureforge'));\ntext(hits);\n",
+      server: "adventureforge",
+      tool: "start_overworld",
+    },
+    {
+      label: "resource access",
+      input:
+        "const result = await tools.mcp__adventureforge__list_mcp_resources({});\n" +
+        "text(JSON.stringify(result));\n",
+      server: "adventureforge",
+      tool: "list_mcp_resources",
+    },
+    {
+      label: "forbidden gameplay alias",
+      input:
+        "const result = await tools.mcp__adventureforge__step_rpg_session({});\n" +
+        "text(JSON.stringify(result));\n",
+      server: "adventureforge",
+      tool: "step_rpg_session",
+    },
+    {
+      label: "todo tool",
+      input: "const result = await tools.update_plan({});\ntext(JSON.stringify(result));\n",
+      server: "codex",
+      tool: "update_plan",
+    },
+    {
+      label: "extra wrapper activity",
+      input:
+        "const result = await tools.mcp__adventureforge__start_overworld({});\n" +
+        "text(JSON.stringify(result));\ntext('extra');\n",
+      server: "adventureforge",
+      tool: "start_overworld",
+    },
+  ])("rejects $label in the raw wrapper", ({ input, server, tool }) => {
+    const rows = forwardingRollout();
+    rolloutPayload(rows, 0).input = input;
+    const invocation = rolloutPayload(rows, 1).invocation as Record<string, unknown>;
+    invocation.server = server;
+    invocation.tool = tool;
+    expect(inspectCodexGameplayResultForwarding(rows)).toEqual({
+      ok: false,
+      reason: expect.stringMatching(/forbidden wrapper program/i),
+    });
+  });
+
+  it("cross-binds every ordered public/private gameplay lifecycle", () => {
+    const publicRows = validRows();
+    const privateRows = completeRollout(forwardingRollout(undefined, { content: [] }));
+    expect(inspectCodexPureEvidence(publicRows, privateRows)).toMatchObject({
+      ok: true,
+      completedMcpCalls: 1,
+    });
+
+    const missing = inspectCodexPureEvidence(
+      twoPublicGameplayCalls(),
+      completeRollout(forwardingRollout(undefined, { content: [] })),
+    );
+    expect(missing).toEqual({ ok: false, reason: expect.stringMatching(/count differs/i) });
+
+    const extra = inspectCodexPureEvidence(publicRows, completeRollout(twoPrivateGameplayCalls()));
+    expect(extra).toEqual({ ok: false, reason: expect.stringMatching(/count differs/i) });
+
+    const reordered = twoPrivateGameplayCalls();
+    const first = reordered.splice(0, 3);
+    reordered.push(...first);
+    expect(inspectCodexPureEvidence(twoPublicGameplayCalls(), completeRollout(reordered))).toEqual({
+      ok: false,
+      reason: expect.stringMatching(/differs at call 1/i),
+    });
+
+    const mismatched = forwardingRollout(undefined, { content: [] });
+    rolloutPayload(mismatched, 0).input =
+      "const result = await tools.mcp__adventureforge__get_overworld_session_context({});\n" +
+      "text(JSON.stringify(result));\n";
+    const mismatchedInvocation = rolloutPayload(mismatched, 1).invocation as Record<
+      string,
+      unknown
+    >;
+    mismatchedInvocation.tool = "get_overworld_session_context";
+    expect(inspectCodexPureEvidence(publicRows, completeRollout(mismatched))).toEqual({
+      ok: false,
+      reason: expect.stringMatching(/differs at call 1/i),
+    });
+
+    expect(inspectCodexPureEvidence(publicRows, completeRollout(forwardingRollout()))).toEqual({
+      ok: false,
+      reason: expect.stringMatching(/differs at call 1/i),
+    });
+
+    const failedPublicCall = twoPublicGameplayCalls();
+    const failedCompletion = failedPublicCall.find(
+      (row) => row.type === "item.completed" && row.item?.id === "item_2",
+    );
+    if (!failedCompletion?.item) throw new Error("missing test gameplay completion");
+    failedCompletion.item.status = "failed";
+    expect(
+      inspectCodexPureEvidence(
+        failedPublicCall,
+        completeRollout(twoPrivateGameplayCalls({ content: [] })),
+      ),
+    ).toEqual({
+      ok: false,
+      reason: expect.stringMatching(/differs at call 2/i),
+    });
+  });
+
+  it("rejects injected private input and orphan context lifecycles", () => {
+    const publicRows = validRows();
+    const baseline = completeRollout(forwardingRollout(undefined, { content: [] }));
+    const firstGameplay = baseline.findIndex(
+      (row) =>
+        (row as { type?: string; payload?: { type?: string } }).type === "response_item" &&
+        (row as { payload?: { type?: string } }).payload?.type === "custom_tool_call",
+    );
+    const initialTurnContext = baseline.find(
+      (row) => (row as { type?: string }).type === "turn_context",
+    );
+    const mutations: Array<[string, unknown]> = [
+      ["duplicate user input", { type: "event_msg", payload: { type: "user_message" } }],
+      ["orphan world state", { type: "world_state", payload: { full: false } }],
+      ["orphan turn context", structuredClone(initialTurnContext)],
+      [
+        "late developer input",
+        { type: "response_item", payload: { type: "message", role: "developer", content: [] } },
+      ],
+      [
+        "tool-role message",
+        { type: "response_item", payload: { type: "message", role: "tool", content: [] } },
+      ],
+    ];
+    for (const [label, injected] of mutations) {
+      const rows = structuredClone(baseline);
+      rows.splice(firstGameplay, 0, injected);
+      expect(inspectCodexPureEvidence(publicRows, rows), label).toMatchObject({ ok: false });
+    }
+
+    const hiddenPrelude = structuredClone(baseline);
+    const worldState = hiddenPrelude.findIndex(
+      (row) => (row as { type?: string }).type === "world_state",
+    );
+    hiddenPrelude.splice(worldState, 0, structuredClone(baseline[2]));
+    expect(inspectCodexPureEvidence(publicRows, hiddenPrelude)).toMatchObject({ ok: false });
+
+    const auxiliaryInput = structuredClone(baseline) as Array<{
+      type?: string;
+      payload?: { type?: string; message?: string; images?: unknown[] };
+    }>;
+    const userMessage = auxiliaryInput.find((row) => row.payload?.type === "user_message");
+    if (!userMessage?.payload?.images) throw new Error("missing private user-message fixture");
+    userMessage.payload.images.push("hidden image hint");
+    expect(inspectCodexPureEvidence(publicRows, auxiliaryInput)).toMatchObject({ ok: false });
+
+    const mismatchedPrompt = structuredClone(baseline) as Array<{
+      payload?: { type?: string; message?: string };
+    }>;
+    const promptEvent = mismatchedPrompt.find((row) => row.payload?.type === "user_message");
+    if (!promptEvent?.payload) throw new Error("missing private prompt event fixture");
+    promptEvent.payload.message = "different prompt";
+    expect(inspectCodexPureEvidence(publicRows, mismatchedPrompt)).toMatchObject({ ok: false });
+
+    for (const [label, payloadType, mutateMetadata] of [
+      [
+        "wrong wrapper turn",
+        "custom_tool_call",
+        (metadata: Record<string, unknown>) => {
+          metadata.turn_id = "other-turn";
+        },
+      ],
+      [
+        "wrong output turn",
+        "custom_tool_call_output",
+        (metadata: Record<string, unknown>) => {
+          metadata.turn_id = "other-turn";
+        },
+      ],
+      ["missing wrapper metadata", "custom_tool_call", null],
+      [
+        "extra output metadata",
+        "custom_tool_call_output",
+        (metadata: Record<string, unknown>) => {
+          metadata.hidden = true;
+        },
+      ],
+    ] as const) {
+      const rows = structuredClone(baseline) as Array<{
+        payload?: {
+          type?: string;
+          internal_chat_message_metadata_passthrough?: Record<string, unknown>;
+        };
+      }>;
+      const target = rows.find((row) => row.payload?.type === payloadType);
+      if (!target?.payload) throw new Error(`missing ${label} fixture`);
+      if (mutateMetadata === null) {
+        delete target.payload.internal_chat_message_metadata_passthrough;
+      } else {
+        const metadata = target.payload.internal_chat_message_metadata_passthrough;
+        if (!metadata) throw new Error(`missing ${label} metadata fixture`);
+        mutateMetadata(metadata);
+      }
+      expect(inspectCodexPureEvidence(publicRows, rows), label).toMatchObject({ ok: false });
+    }
+
+    const invalidAssistantContent = structuredClone(baseline) as Array<{
+      payload?: { type?: string; role?: string; content?: Array<{ type?: string }> };
+    }>;
+    const assistant = invalidAssistantContent.find(
+      (row) => row.payload?.type === "message" && row.payload.role === "assistant",
+    );
+    if (!assistant?.payload?.content?.[0]) throw new Error("missing assistant fixture");
+    assistant.payload.content[0].type = "input_image";
+    expect(inspectCodexPureEvidence(publicRows, invalidAssistantContent)).toMatchObject({
+      ok: false,
+    });
+
+    const reasoningRows = structuredClone(baseline) as Array<{
+      payload?: Record<string, unknown>;
+    }>;
+    reasoningRows.splice(firstGameplay, 0, {
+      type: "response_item",
+      payload: {
+        type: "reasoning",
+        id: "reasoning-1",
+        summary: [],
+        encrypted_content: "opaque",
+        internal_chat_message_metadata_passthrough: { turn_id: "turn-1" },
+      },
+    } as (typeof reasoningRows)[number]);
+    expect(inspectCodexPureEvidence(publicRows, reasoningRows)).toMatchObject({ ok: true });
+    const reasoning = reasoningRows.find((row) => row.payload?.type === "reasoning");
+    if (!reasoning?.payload) throw new Error("missing reasoning fixture");
+    reasoning.payload.tool_input = "hidden";
+    expect(inspectCodexPureEvidence(publicRows, reasoningRows)).toMatchObject({ ok: false });
+
+    const compacted = structuredClone(baseline);
+    compacted.splice(-2, 0, { type: "compacted", payload: { window_number: 2 } });
+    compacted.splice(-2, 0, { type: "world_state", payload: { full: true } });
+    compacted.splice(-2, 0, structuredClone(initialTurnContext));
+    compacted.splice(-2, 0, { type: "event_msg", payload: { type: "context_compacted" } });
+    expect(inspectCodexPureEvidence(publicRows, compacted)).toMatchObject({ ok: true });
+  });
+
+  it("binds wrapper output ids and rejects duplicates and orphans anywhere", () => {
+    const wrongOutputId = forwardingRollout();
+    rolloutPayload(wrongOutputId, 2).call_id = "unrelated-output";
+    expect(inspectCodexGameplayResultForwarding(wrongOutputId)).toEqual({
+      ok: false,
+      reason: expect.stringMatching(/missing.*mismatched.*truncated/i),
+    });
+
+    const duplicate = twoPrivateGameplayCalls();
+    rolloutPayload(duplicate, 3).call_id = "call-wrapper-1";
+    rolloutPayload(duplicate, 5).call_id = "call-wrapper-1";
+    expect(inspectCodexGameplayResultForwarding(duplicate)).toEqual({
+      ok: false,
+      reason: expect.stringMatching(/duplicate wrapper start/i),
+    });
+
+    const orphanStart = forwardingRollout();
+    orphanStart.push(structuredClone(orphanStart[0]));
+    expect(inspectCodexGameplayResultForwarding(orphanStart)).toEqual({
+      ok: false,
+      reason: expect.stringMatching(/duplicate wrapper start/i),
+    });
+  });
+
   it("accepts one completed AdventureForge-only thread and normalizes telemetry", () => {
     expect(inspectCodexPureEvents(validRows())).toEqual({
       ok: true,
       threadId: THREAD_ID,
       completedMcpCalls: 1,
+      gameplayCalls: [
+        {
+          tool: "start_overworld",
+          arguments: {},
+          status: "completed",
+          result: { content: [] },
+          error: null,
+        },
+      ],
       usage: {
         input_tokens: 120,
         cached_input_tokens: 80,
@@ -193,6 +685,7 @@ describe("Codex pure blind provider envelope", () => {
 
     const built = buildCodexPureEnvelope({
       rows: validRows(),
+      rolloutRows: completeRollout(forwardingRollout(undefined, { content: [] })),
       report: "# Playthrough log\n\n# Verdict\n\n```json exit-interview\n{}\n```\n",
       model: "gpt-5.6-sol",
       durationMs: 1234,
@@ -217,243 +710,98 @@ describe("Codex pure blind provider envelope", () => {
     });
   });
 
-  it("accepts only paired inert built-in resource failures and excludes them from gameplay", () => {
+  it.each([
+    {
+      label: "AdventureForge resource listing",
+      server: "adventureforge",
+      tool: "list_mcp_resources",
+    },
+    {
+      label: "AdventureForge resource template listing",
+      server: "adventureforge",
+      tool: "list_mcp_resource_templates",
+    },
+    { label: "AdventureForge resource read", server: "adventureforge", tool: "read_mcp_resource" },
+    { label: "Codex resource listing", server: "codex", tool: "resources/list" },
+  ])("rejects $label before gameplay", ({ server, tool }) => {
     const rows = insertBeforeGameplay(validRows(), [
-      ...resourceProbeRows("list_mcp_resources"),
-      ...resourceProbeRows("list_mcp_resource_templates"),
-      ...resourceProbeRows("read_mcp_resource"),
+      {
+        type: "item.started",
+        item: {
+          id: `forbidden-${tool}`,
+          type: "mcp_tool_call",
+          server,
+          tool,
+          arguments: {},
+          result: null,
+          error: null,
+          status: "in_progress",
+        },
+      },
     ]);
 
-    expect(inspectCodexPureEvents(rows)).toMatchObject({ ok: true, completedMcpCalls: 1 });
+    expect(inspectCodexPureEvents(rows)).toEqual({
+      ok: false,
+      reason: expect.stringMatching(
+        server === "adventureforge"
+          ? new RegExp(`forbidden AdventureForge tool ${tool}`, "i")
+          : new RegExp(`forbidden MCP server ${server}`, "i"),
+      ),
+    });
   });
 
-  it("accepts Codex's omitted optional resource cursor before gameplay", () => {
-    const probe = resourceProbeRows("list_mcp_resources");
-    for (const row of probe) {
-      delete (row as { item: { arguments: Record<string, unknown> } }).item.arguments.cursor;
-    }
-    const rows = insertBeforeGameplay(validRows(), probe);
+  it("rejects a todo lifecycle instead of treating planning as gameplay", () => {
+    const rows = insertBeforeGameplay(validRows(), [
+      {
+        type: "item.started",
+        item: { id: "todo-1", type: "todo_list", items: [] },
+      },
+    ]);
 
-    expect(inspectCodexPureEvents(rows)).toMatchObject({ ok: true, completedMcpCalls: 1 });
-  });
-
-  it("accepts one paired in-memory todo lifecycle and excludes it from gameplay", () => {
-    const todo = todoLifecycleRows();
-    const rows = insertBeforeGameplay(validRows(), [todo[0], todoUpdateRow(), todo[1]]);
-
-    expect(inspectCodexPureEvents(rows)).toMatchObject({ ok: true, completedMcpCalls: 1 });
+    expect(inspectCodexPureEvents(rows)).toEqual({
+      ok: false,
+      reason: expect.stringMatching(/forbidden item type todo_list/i),
+    });
   });
 
   it.each([
     {
-      label: "a successful resource probe",
-      mutate: (rows: ReturnType<typeof validRows>) => {
-        const completed = resourceProbeRows()[1] as { item: Record<string, unknown> };
-        completed.item.status = "completed";
-        completed.item.result = { content: [] };
-        insertBeforeGameplay(rows, [resourceProbeRows()[0], completed]);
-      },
-      reason: /unpaired or invalid resource probe list_mcp_resources/i,
+      label: "a non-AdventureForge first MCP call",
+      server: "filesystem",
+      tool: "read_file",
+      arguments_: {},
+      reason: /forbidden MCP server filesystem/i,
     },
     {
-      label: "a resource probe with content despite failure",
-      mutate: (rows: ReturnType<typeof validRows>) => {
-        const probe = resourceProbeRows();
-        (probe[1] as { item: Record<string, unknown> }).item.result = { content: [] };
-        insertBeforeGameplay(rows, probe);
-      },
-      reason: /unpaired or invalid resource probe list_mcp_resources/i,
+      label: "a non-start AdventureForge first MCP call",
+      server: "adventureforge",
+      tool: "get_overworld_session",
+      arguments_: {},
+      reason: /must begin gameplay with start_overworld and no arguments/i,
     },
     {
-      label: "a resource probe on another server",
-      mutate: (rows: ReturnType<typeof validRows>) => {
-        const probe = resourceProbeRows();
-        (probe[0] as { item: Record<string, unknown> }).item.server = "filesystem";
-        insertBeforeGameplay(rows, probe);
-      },
-      reason: /invalid or duplicate resource probe list_mcp_resources/i,
+      label: "an argument-bearing fresh start",
+      server: "adventureforge",
+      tool: "start_overworld",
+      arguments_: { seed: 7 },
+      reason: /must begin gameplay with start_overworld and no arguments/i,
     },
-    {
-      label: "an unpaired resource probe",
-      mutate: (rows: ReturnType<typeof validRows>) =>
-        insertBeforeGameplay(rows, [resourceProbeRows()[0]]),
-      reason: /unpaired resource probe list_mcp_resources/i,
-    },
-    {
-      label: "a duplicate resource probe",
-      mutate: (rows: ReturnType<typeof validRows>) => {
-        const first = resourceProbeRows();
-        const duplicate = resourceProbeRows();
-        (duplicate[0] as { item: Record<string, unknown> }).item.id = "probe-duplicate";
-        (duplicate[1] as { item: Record<string, unknown> }).item.id = "probe-duplicate";
-        insertBeforeGameplay(rows, [...first, ...duplicate]);
-      },
-      reason: /invalid or duplicate resource probe list_mcp_resources/i,
-    },
-    {
-      label: "a resource probe after gameplay starts",
-      mutate: (rows: ReturnType<typeof validRows>) => {
-        const terminalIndex = rows.findIndex((row) => row.type === "turn.completed");
-        rows.splice(terminalIndex, 0, ...resourceProbeRows());
-      },
-      reason: /invalid or duplicate resource probe list_mcp_resources/i,
-    },
-    {
-      label: "a resource probe that completes after gameplay starts",
-      mutate: (rows: ReturnType<typeof validRows>) => {
-        const probe = resourceProbeRows();
-        insertBeforeGameplay(rows, [probe[0]]);
-        const terminalIndex = rows.findIndex((row) => row.type === "turn.completed");
-        rows.splice(terminalIndex, 0, probe[1]);
-      },
-      reason: /unpaired or invalid resource probe list_mcp_resources/i,
-    },
-    {
-      label: "a nonempty resource cursor",
-      mutate: (rows: ReturnType<typeof validRows>) => {
-        const probe = resourceProbeRows();
-        for (const row of probe) {
-          (row as { item: { arguments: { cursor: string } } }).item.arguments.cursor = "n/a";
-        }
-        insertBeforeGameplay(rows, probe);
-      },
-      reason: /invalid or duplicate resource probe list_mcp_resources/i,
-    },
-    {
-      label: "a resource probe without its server",
-      mutate: (rows: ReturnType<typeof validRows>) => {
-        const probe = resourceProbeRows();
-        for (const row of probe) {
-          (row as { item: { arguments: Record<string, unknown> } }).item.arguments = {};
-        }
-        insertBeforeGameplay(rows, probe);
-      },
-      reason: /invalid or duplicate resource probe list_mcp_resources/i,
-    },
-    {
-      label: "a mismatched resource probe completion",
-      mutate: (rows: ReturnType<typeof validRows>) => {
-        const probe = resourceProbeRows();
-        (probe[1] as { item: { arguments: { cursor: string; server: string } } }).item.arguments = {
-          cursor: "later",
-          server: "adventureforge",
-        };
-        insertBeforeGameplay(rows, probe);
-      },
-      reason: /unpaired or invalid resource probe list_mcp_resources/i,
-    },
-    {
-      label: "a resource probe with a non-method-not-found error",
-      mutate: (rows: ReturnType<typeof validRows>) => {
-        const probe = resourceProbeRows();
-        (probe[1] as { item: { error: { message: string } } }).item.error.message =
-          "network failed";
-        insertBeforeGameplay(rows, probe);
-      },
-      reason: /unpaired or invalid resource probe list_mcp_resources/i,
-    },
-    {
-      label: "a second todo lifecycle",
-      mutate: (rows: ReturnType<typeof validRows>) => {
-        const another = todoLifecycleRows().map((entry) => ({
-          ...entry,
-          item: { ...entry.item, id: "todo-2" },
-        }));
-        insertBeforeGameplay(rows, [...todoLifecycleRows(), ...another]);
-      },
-      reason: /more than one todo_list lifecycle/i,
-    },
-    {
-      label: "a todo completion before its start",
-      mutate: (rows: ReturnType<typeof validRows>) => {
-        const todo = todoLifecycleRows();
-        insertBeforeGameplay(rows, [todo[1], todo[0]]);
-      },
-      reason: /unpaired or mismatched todo_list lifecycle/i,
-    },
-    {
-      label: "too many todo updates",
-      mutate: (rows: ReturnType<typeof validRows>) => {
-        const todo = todoLifecycleRows();
-        insertBeforeGameplay(rows, [
-          todo[0],
-          todoUpdateRow(),
-          todoUpdateRow(),
-          todoUpdateRow(),
-          todoUpdateRow(),
-          todoUpdateRow(),
-          todo[1],
-        ]);
-      },
-      reason: /invalid todo_list update/i,
-    },
-    {
-      label: "an oversized todo list",
-      mutate: (rows: ReturnType<typeof validRows>) => {
-        const todo = todoLifecycleRows();
-        (
-          todo[0] as unknown as {
-            item: { items: Array<{ text: string; completed: boolean }> };
-          }
-        ).item.items = [
-          { text: "one", completed: false },
-          { text: "two", completed: false },
-          { text: "three", completed: false },
-          { text: "four", completed: false },
-        ];
-        insertBeforeGameplay(rows, todo);
-      },
-      reason: /invalid todo_list lifecycle/i,
-    },
-    {
-      label: "an oversized todo text payload",
-      mutate: (rows: ReturnType<typeof validRows>) => {
-        const todo = todoLifecycleRows();
-        (
-          todo[0] as unknown as {
-            item: { items: Array<{ text: string; completed: boolean }> };
-          }
-        ).item.items = [{ text: "x".repeat(161), completed: false }];
-        insertBeforeGameplay(rows, todo);
-      },
-      reason: /invalid todo_list lifecycle/i,
-    },
-    {
-      label: "a resource read outside the AdventureForge player surface",
-      mutate: (rows: ReturnType<typeof validRows>) => {
-        const probe = resourceProbeRows("read_mcp_resource");
-        (probe[0] as { item: { arguments: { server: string; uri: string } } }).item.arguments = {
-          server: "adventureforge",
-          uri: "resource://outside-the-game",
-        };
-        insertBeforeGameplay(rows, probe);
-      },
-      reason: /invalid or duplicate resource probe read_mcp_resource/i,
-    },
-    {
-      label: "a todo item with an external-looking field",
-      mutate: (rows: ReturnType<typeof validRows>) => {
-        const todo = todoLifecycleRows();
-        (todo[0] as { item: Record<string, unknown> }).item.command = "dir";
-        insertBeforeGameplay(rows, todo);
-      },
-      reason: /malformed todo_list item/i,
-    },
-    {
-      label: "an oversized todo lifecycle id",
-      mutate: (rows: ReturnType<typeof validRows>) => {
-        const todo = todoLifecycleRows();
-        const oversizedId = "x".repeat(129);
-        for (const row of todo) {
-          (row as unknown as { item: { id: string } }).item.id = oversizedId;
-        }
-        insertBeforeGameplay(rows, todo);
-      },
-      reason: /invalid todo_list lifecycle/i,
-    },
-  ])("rejects $label", ({ mutate, reason }) => {
+  ])("rejects $label", ({ server, tool, arguments_, reason }) => {
     const rows = validRows();
-    mutate(rows);
+    const start = rows.find(
+      (row) => row.type === "item.started" && row.item?.type === "mcp_tool_call",
+    );
+    const completed = rows.find(
+      (row) => row.type === "item.completed" && row.item?.type === "mcp_tool_call",
+    );
+    if (!start?.item || !completed?.item) throw new Error("missing valid test gameplay pair");
+    start.item.server = server;
+    start.item.tool = tool;
+    start.item.arguments = arguments_;
+    completed.item.server = server;
+    completed.item.tool = tool;
+    completed.item.arguments = arguments_;
+
     expect(inspectCodexPureEvents(rows)).toEqual({
       ok: false,
       reason: expect.stringMatching(reason),
@@ -604,11 +952,24 @@ describe("Codex pure blind provider envelope", () => {
     expect(
       buildCodexPureEnvelope({
         rows: validRows(),
+        rolloutRows: completeRollout(forwardingRollout(undefined, { content: [] })),
         report: "",
         model: "gpt-5.6-sol",
         durationMs: 1,
       }),
     ).toEqual({ ok: false, reason: "Codex pure run produced no final report" });
+
+    expect(
+      buildCodexPureEnvelope({
+        rows: validRows(),
+        report: "report",
+        model: "gpt-5.6-sol",
+        durationMs: 1,
+      }),
+    ).toEqual({
+      ok: false,
+      reason: expect.stringMatching(/forwarding audit failed: rollout is empty/i),
+    });
 
     const rows = validRows();
     const completed = rows.at(-1);
@@ -617,5 +978,41 @@ describe("Codex pure blind provider envelope", () => {
       ok: false,
       reason: "Codex completed turn is missing valid token usage",
     });
+  });
+
+  it("reports malformed private JSON by path and line without echoing hidden bytes", () => {
+    const root = mkdtempSync(join(tmpdir(), "af-codex-json-sanitize-"));
+    try {
+      const events = join(root, "events.jsonl");
+      const rollout = join(root, "rollout.jsonl");
+      const report = join(root, "report.md");
+      writeFileSync(events, '{"hidden_player_response":"SECRET_PLAYER_PAYLOAD"\n');
+      writeFileSync(rollout, "{}\n");
+      writeFileSync(report, "report\n");
+      const result = spawnSync(
+        process.execPath,
+        [
+          join(process.cwd(), "blind-tester", "codex-pure-envelope.mjs"),
+          "--events",
+          events,
+          "--rollout",
+          rollout,
+          "--report",
+          report,
+          "--model",
+          "gpt-5.6-sol",
+          "--started-at-ms",
+          "0",
+        ],
+        { cwd: process.cwd(), encoding: "utf8" },
+      );
+      const output = `${result.stdout}\n${result.stderr}`;
+      expect(result.status).toBe(1);
+      expect(output).toContain(`${events} contains invalid JSON at line 1`);
+      expect(output).not.toContain("SECRET_PLAYER_PAYLOAD");
+      expect(output).not.toContain("hidden_player_response");
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 });
